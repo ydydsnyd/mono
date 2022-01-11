@@ -1,0 +1,48 @@
+{
+  "name": "reps",
+  "description": "Multiplayer server for Replicache",
+  "version": "0.1.0",
+  "repository": "github:rocicorp/reps",
+  "scripts": {
+    "format": "prettier --write 'src/**/*.{js,jsx,json,ts,tsx,html,css,md}' '*.{cjs,js,jsx,json,ts,tsx,html,css,md}'",
+    "check-format": "prettier --check '**/*.{js,jsx,json,ts,tsx,html,css,md}' '*.{cjs,js,jsx,json,ts,tsx,html,css,md}'",
+    "lint": "eslint --ext .ts,.tsx,.js,.jsx src/",
+    "build-dts": "rm -rf out/.dts/ && tsc --emitDeclarationOnly --outDir out/.dts/ && rollup --config rollup.config.js && rm -rf out/.dts",
+    "build-mjs": "esbuild --bundle --target=es2018 --outfile=out/reps.mjs --format=esm src/mod.ts",
+    "build-cjs": "esbuild --bundle --target=es2018 --outfile=out/reps.js --format=cjs src/mod.ts",
+    "build-min-mjs": "esbuild --bundle --target=es2018 --outfile=out/reps.min.mjs --format=esm src/mod.ts --minify",
+    "build": "rm -rf out && npm run build-dts && npm run build-mjs && npm run build-cjs && npm run build-min-mjs",
+    "prepack": "npm run lint && npm run test && npm run build"
+  },
+  "dependencies": {
+    "pg": "^8.7.1",
+    "pg-error": "^1.1.0",
+    "tdigest": "^0.1.1",
+    "ws": "^8.2.3",
+    "zod": "^3.11.6"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.2.22",
+    "@types/mocha": "^9.0.0",
+    "@types/node": "^14.14.37",
+    "@types/pg": "^8.6.1",
+    "@types/ws": "^8.2.0",
+    "chai": "^4.3.4",
+    "mocha": "^9.1.3",
+    "prettier": "^2.2.1",
+    "typescript": "^4.1.5"
+  },
+  "main": "out/reps.js",
+  "module": "out/reps.mjs",
+  "types": "out/reps.d.ts",
+  "exports": {
+    "module": "./out/reps.mjs",
+    "require": "./out/reps.js",
+    "default": "./out/reps.mjs"
+  },
+  "files": [
+    "out/reps.d.ts",
+    "out/reps.js",
+    "out/reps.mjs"
+  ]
+}
