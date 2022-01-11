@@ -8,6 +8,7 @@ import { LogContext } from "../util/logger";
 import { handleClose } from "./close";
 import { handleConnection } from "./connect";
 import { handleMessage } from "./message";
+import { performance } from "perf_hooks";
 
 // We aim to process frames 30 times per second.
 const PROCESS_INTERVAL_MS = 1000 / 30;
