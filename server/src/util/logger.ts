@@ -20,8 +20,10 @@ export type LogLevel = "error" | "info" | "debug";
 
 export function getLogger(prefix: string[], level: LogLevel): Logger {
   const logger: Logger = {};
-  const impl = (name: LogLevel) => (...args: unknown[]) =>
-    console[name](...prefix, ...args);
+  const impl =
+    (name: LogLevel) =>
+    (...args: unknown[]) =>
+      console[name](...prefix, ...args);
   /* eslint-disable no-fallthrough , @typescript-eslint/ban-ts-comment */
   switch (level) {
     // @ts-ignore
@@ -48,8 +50,10 @@ export class LogContext implements Logger {
   constructor(level: LogLevel = "info", s = "") {
     this._s = s;
 
-    const impl = (name: LogLevel) => (...args: unknown[]) =>
-      console[name](this._s, ...args);
+    const impl =
+      (name: LogLevel) =>
+      (...args: unknown[]) =>
+        console[name](this._s, ...args);
 
     /* eslint-disable no-fallthrough , @typescript-eslint/ban-ts-comment */
     switch (level) {

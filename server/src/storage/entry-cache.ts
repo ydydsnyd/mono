@@ -13,10 +13,8 @@ import { Storage } from "./storage";
  */
 export class EntryCache implements Storage {
   private _storage: Storage;
-  private _cache: Map<
-    string,
-    { value?: JSONValue; dirty: boolean }
-  > = new Map();
+  private _cache: Map<string, { value?: JSONValue; dirty: boolean }> =
+    new Map();
 
   constructor(storage: Storage) {
     this._storage = storage;

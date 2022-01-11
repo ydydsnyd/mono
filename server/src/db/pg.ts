@@ -36,7 +36,7 @@ export async function withExecutor<R>(
       return await client.query(sql, params);
     } catch (e) {
       throw new Error(
-        `Error executing SQL: ${sql}: ${((e as unknown) as any).toString()}`
+        `Error executing SQL: ${sql}: ${(e as unknown as any).toString()}`
       );
     }
   };

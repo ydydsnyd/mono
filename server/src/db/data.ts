@@ -32,12 +32,10 @@ export async function getEntry<T extends JSONValue>(
   key: string,
   schema: ZodSchema<T>
 ): Promise<T | undefined> {
-  const {
-    rows,
-  } = await executor("select value from entry where roomid = $1 and key = $2", [
-    roomid,
-    key,
-  ]);
+  const { rows } = await executor(
+    "select value from entry where roomid = $1 and key = $2",
+    [roomid, key]
+  );
   const value = rows[0]?.value;
   if (value === undefined) {
     return undefined;
