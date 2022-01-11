@@ -19,7 +19,7 @@ export function room(
 export function client(
   id: ClientID,
   socket: Socket = new Mocket(),
-  clockBehindByMs: number = 1,
+  clockBehindByMs = 1,
   ...mutations: Mutation[]
 ): [ClientID, ClientState] {
   return [id, { clockBehindByMs, pending: mutations, socket }] as [
@@ -30,7 +30,7 @@ export function client(
 
 export function mutation(
   id: number,
-  name: string = "foo",
+  name = "foo",
   args: JSONType = [],
   timestamp = 1
 ): Mutation {
@@ -45,7 +45,7 @@ export function mutation(
 export function clientMutation(
   clientID: ClientID,
   id: number,
-  name: string = "foo",
+  name = "foo",
   args: JSONType = [],
   timestamp = 1
 ): ClientMutation {
@@ -69,7 +69,7 @@ export class Mocket implements Socket {
 
 export function clientRecord(
   baseCookie: NullableVersion = null,
-  lastMutationID: number = 1
+  lastMutationID = 1
 ) {
   return {
     baseCookie,

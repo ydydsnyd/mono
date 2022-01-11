@@ -67,7 +67,7 @@ export async function fastForwardRoom(
         cookie: currentVersion,
         lastMutationID: record.lastMutationID,
         timestamp,
-        patch: patch,
+        patch,
       },
     };
     ret.push(poke);

@@ -17,6 +17,7 @@
   "dependencies": {
     "pg": "^8.7.1",
     "pg-error": "^1.1.0",
+    "replicache": "^8.0.2",
     "tdigest": "^0.1.1",
     "ws": "^8.2.3",
     "zod": "^3.11.6"

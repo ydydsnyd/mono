@@ -182,7 +182,7 @@ test("handlePush", async () => {
       push,
       s1,
       () => 42,
-      () => {}
+      () => undefined
     );
     if (c.expectedError) {
       expect(s1.log, c.name).deep.equal([

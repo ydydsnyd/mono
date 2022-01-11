@@ -6,6 +6,7 @@ import { getClientRecord, putClientRecord } from "../types/client-record";
 import { putVersion, Version } from "../types/version";
 import { LogContext } from "../util/logger";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Mutator = (tx: ReplicacheTransaction, args: any) => Promise<void>;
 export type MutatorMap = Map<string, Mutator>;
 

@@ -44,10 +44,12 @@ export async function processFrame(
 
   for (; !mutations.peek().done; mutations.next()) {
     const { value: mutation } = mutations.peek();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     if (mutation!.timestamp >= endTime) {
       lc.debug?.("reached end of frame", mutation);
       break;
     }
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     await processMutation(lc, mutation!, mutators, cache, nextVersion);
   }
 
@@ -61,6 +63,7 @@ export async function processFrame(
   const patch = unwrapPatch(cache.pending());
   const ret: ClientPokeBody[] = [];
   for (const clientID of clients) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const clientRecord = (await getClientRecord(clientID, cache))!;
     clientRecord.baseCookie = nextVersion;
     await putClientRecord(clientID, clientRecord, cache);

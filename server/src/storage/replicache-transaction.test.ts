@@ -1,10 +1,7 @@
 import { ReplicacheTransaction } from "./replicache-transaction";
-import { transact, withExecutor } from "../db/pg";
 import { expect } from "chai";
-import { setup, test } from "mocha";
+import { test } from "mocha";
 import { EntryCache } from "./entry-cache";
-import { DBStorage } from "./db-storage";
-import { createDatabase, getEntry } from "../db/data";
 import { UserValue, userValueKey, userValueSchema } from "../types/user-value";
 import { MemStorage } from "./mem-storage";
 

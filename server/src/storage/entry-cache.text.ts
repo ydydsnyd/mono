@@ -50,7 +50,7 @@ test("pending", async () => {
     const entryCache = new EntryCache(storage);
     expect(entryCache.pending()).deep.equal([]);
 
-    entryCache.put("foo", "bar");
+    await entryCache.put("foo", "bar");
     expect(entryCache.pending()).deep.equal([
       {
         op: "put",
@@ -60,7 +60,7 @@ test("pending", async () => {
     ]);
 
     // change the value at a key, should still have one entry in patch
-    entryCache.put("foo", "baz");
+    await entryCache.put("foo", "baz");
     expect(entryCache.pending()).deep.equal([
       {
         op: "put",
@@ -70,7 +70,7 @@ test("pending", async () => {
     ]);
 
     // don't change anything, just reset
-    entryCache.put("foo", "baz");
+    await entryCache.put("foo", "baz");
     expect(entryCache.pending()).deep.equal([
       {
         op: "put",
@@ -80,7 +80,7 @@ test("pending", async () => {
     ]);
 
     // change only version
-    entryCache.put("foo", "qux");
+    await entryCache.put("foo", "qux");
     expect(entryCache.pending()).deep.equal([
       {
         op: "put",
@@ -90,7 +90,7 @@ test("pending", async () => {
     ]);
 
     // change only version
-    entryCache.del("foo");
+    await entryCache.del("foo");
     expect(entryCache.pending()).deep.equal([
       {
         op: "del",
@@ -99,7 +99,7 @@ test("pending", async () => {
     ]);
 
     // change only version
-    entryCache.put("hot", "dog");
+    await entryCache.put("hot", "dog");
     expect(entryCache.pending()).deep.equal([
       {
         op: "del",

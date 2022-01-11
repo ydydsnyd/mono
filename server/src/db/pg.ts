@@ -21,6 +21,7 @@ pool.on("error", (err) => {
 });
 
 pool.on("connect", (client) => {
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises
   client.query(
     "SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL SERIALIZABLE"
   );
@@ -31,11 +32,13 @@ export async function withExecutor<R>(
 ): Promise<R> {
   const client = await pool.connect();
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const executor = async (sql: string, params?: any[]) => {
     try {
       return await client.query(sql, params);
     } catch (e) {
       throw new Error(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         `Error executing SQL: ${sql}: ${(e as unknown as any).toString()}`
       );
     }
@@ -48,6 +51,7 @@ export async function withExecutor<R>(
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Executor = (sql: string, params?: any[]) => Promise<QueryResult>;
 export type TransactionBodyFn<R> = (executor: Executor) => Promise<R>;
 
@@ -92,6 +96,7 @@ async function transactWithExecutor<R>(
 
 //stackoverflow.com/questions/60339223/node-js-transaction-coflicts-in-postgresql-optimistic-concurrency-control-and
 function shouldRetryTransaction(err: unknown) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const code = typeof err === "object" ? String((err as any).code) : null;
   return code === "40001" || code === "40P01";
 }

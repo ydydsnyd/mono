@@ -44,7 +44,7 @@ test("processPending", async () => {
       {
         version: Version;
         pokes?: Map<Mocket, PokeBody[]>;
-        userValues?: Map<String, UserValue>;
+        userValues?: Map<string, UserValue>;
         clientRecords?: Map<ClientID, ClientRecord>;
       }
     >;

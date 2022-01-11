@@ -11,9 +11,9 @@ import { putUserValue, UserValue } from "../types/user-value";
 import { Version } from "../types/version";
 import { must } from "../util/must";
 import { expect } from "chai";
-import { setup, test } from "mocha";
+import { test } from "mocha";
 import { createDatabase } from "../db/data";
-import { transact, withExecutor } from "../db/pg";
+import { transact } from "../db/pg";
 import { fastForwardRoom } from "./fast-forward";
 
 test("fastForward", async () => {

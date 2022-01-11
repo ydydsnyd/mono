@@ -19,6 +19,7 @@ export function* generateMergedMutations(clients: ClientMap) {
       return;
     }
     const pos = iterators.findIndex(
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       (it) => it.peek().value!.timestamp > value!.timestamp
     );
     iterators.splice(pos === -1 ? iterators.length : pos, 0, ins);
@@ -29,6 +30,7 @@ export function* generateMergedMutations(clients: ClientMap) {
     insertIterator(new PeekIterator(clientMutations[Symbol.iterator]()));
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const dumpIterators = (msg: string) => {
     console.log(`iterators - ${msg}`);
     for (const it of iterators) {

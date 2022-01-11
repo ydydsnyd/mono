@@ -53,6 +53,7 @@ test("getEntry", async () => {
 
       const promise = getEntry(executor, "r1", "foo", z.number());
       let result: number | undefined;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let error: any | undefined;
       await promise.then(
         (r) => (result = r),
@@ -126,8 +127,7 @@ test("putEntry", async () => {
         res = putEntry(executor, "r1", "foo", 42);
       }
 
-      let error: any | undefined;
-      await res.catch((e) => (error = String(e)));
+      await res.catch(() => ({}));
 
       const qr = await executor(
         `select roomid, key, value from entry where roomid = 'r1' and key = 'foo'`
@@ -167,6 +167,7 @@ test("delEntry", async () => {
         );
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let error: any | undefined;
       await delEntry(executor, "r1", "foo").catch((e) => (error = String(e)));
 

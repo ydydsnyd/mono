@@ -1,3 +1,4 @@
+import { performance } from "perf_hooks";
 import { TDigest } from "tdigest";
 
 export class GapTracker {
@@ -6,6 +7,7 @@ export class GapTracker {
   private _lastSummaryMs: number | undefined;
   private _last: number | undefined;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private readonly _digest: any;
   constructor(name: string, summaryFrequencyMs = 1000) {
     this._name = name;

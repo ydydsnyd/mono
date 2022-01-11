@@ -126,8 +126,8 @@ test("handleConnection", async () => {
     });
 
     const rooms = new Map(c.existingRooms);
-    const onMessage = () => {};
-    const onClose = () => {};
+    const onMessage = () => undefined;
+    const onClose = () => undefined;
     const mocket = new Mocket();
 
     await handleConnection(

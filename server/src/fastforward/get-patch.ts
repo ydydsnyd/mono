@@ -9,7 +9,6 @@ export async function getPatch(
   roomID: string,
   fromCookie: NullableVersion
 ): Promise<Patch> {
-  const t0 = Date.now();
   const vals = await executor(
     `select key, value from entry where
         starts_with(key, '${userValuePrefix}') and
@@ -19,7 +18,7 @@ export async function getPatch(
   );
 
   const patch: Patch = [];
-  for (let row of vals.rows) {
+  for (const row of vals.rows) {
     const { key, value } = row;
     const validKey = z.string().parse(key);
     const validValue = userValueSchema.parse(value);

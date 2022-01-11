@@ -40,6 +40,7 @@ export async function handleConnection(
   const { result, error } = getConnectRequest(url);
   if (result === null) {
     lc.info?.("invalid connection request", error);
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     ws.send(error!);
     ws.close();
     return;
@@ -50,7 +51,7 @@ export async function handleConnection(
     .addContext("client", result.clientID);
   lc.debug?.("parsed request", result);
 
-  const { clientID, roomID, baseCookie, timestamp } = result;
+  const { clientID, roomID, baseCookie } = result;
   await transact(async (executor) => {
     const storage = new DBStorage(executor, roomID);
     const existingRecord = await storage.get(
@@ -129,9 +130,12 @@ export function getConnectRequest(urlString: string) {
   };
 
   try {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const roomID = getParam("roomID", true)!;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const clientID = getParam("clientID", true)!;
     const baseCookie = getIntegerParam("baseCookie", false);
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const timestamp = getIntegerParam("ts", true)!;
 
     return {

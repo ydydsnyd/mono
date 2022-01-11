@@ -1,3 +1,4 @@
+/*
 import { ClientID, Socket } from "../types/client-state";
 import { RoomID, RoomMap } from "../types/room-state";
 import { Mocket } from "../util/test-utils";
@@ -6,7 +7,6 @@ import { expect } from "chai";
 import { test } from "mocha";
 import { Server } from "./server";
 import { MessageHandler, CloseHandler } from "./connect";
-/*
 test("serialization", async () => {
   const s1 = new Mocket();
   const url = "u1";

@@ -51,6 +51,7 @@ test("handleMessage", async () => {
     const clientID = "c1";
     const s1 = new Mocket();
     let called = false;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const handlePush = (
       pRooms: RoomMap,
       pRoomID: RoomID,
@@ -72,7 +73,7 @@ test("handleMessage", async () => {
       clientID,
       c.data,
       s1,
-      () => {}
+      () => undefined
     );
     if (c.expectedError) {
       expect(s1.log.length, c.name).equal(1);

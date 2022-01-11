@@ -106,6 +106,7 @@ export class Server {
       return;
     }
     this._processing = true;
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.processNext(lc);
   }
 

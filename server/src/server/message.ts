@@ -5,6 +5,7 @@ import { LogContext } from "../util/logger";
 import { sendError } from "../util/socket";
 import { handlePush, ProcessUntilDone } from "./push";
 import { handlePing } from "./ping";
+import { performance } from "perf_hooks";
 
 /**
  * Handles an upstream message coming into the server by dispatching to the
@@ -33,6 +34,7 @@ export function handleMessage(
     return;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const message = msg.result!;
 
   switch (message[0]) {

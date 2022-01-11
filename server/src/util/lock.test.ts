@@ -23,8 +23,8 @@ test("Lock", async () => {
   const [t3, r3] = makeTask("t3");
 
   const loop = new Lock();
-  loop.withLock(t1);
-  loop.withLock(t2);
+  await loop.withLock(t1);
+  await loop.withLock(t2);
 
   await sleep();
   expect(log).deep.equal(["t1 enter"]);
@@ -36,7 +36,7 @@ test("Lock", async () => {
   expect(log).deep.equal(["t1 enter", "t1 exit", "t2 enter", "t2 exit"]);
 
   r3();
-  loop.withLock(t3);
+  await loop.withLock(t3);
   await sleep();
   expect(log).deep.equal([
     "t1 enter",

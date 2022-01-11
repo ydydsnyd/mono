@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import { test } from "mocha";
-import { JSONType } from "../protocol/json";
 import { WriteTransaction } from "replicache";
 import { MemStorage } from "../storage/mem-storage";
 import { ClientMutation } from "../types/client-mutation";
@@ -79,13 +78,13 @@ test("processMutation", async () => {
   const mutators: MutatorMap = new Map([
     [
       "foo",
-      async (tx: WriteTransaction, args: JSONType) => {
+      async (tx: WriteTransaction) => {
         await tx.put("foo", "bar");
       },
     ],
     [
       "throws",
-      async (tx: WriteTransaction, args: JSONType) => {
+      async () => {
         throw new Error("bonk");
       },
     ],

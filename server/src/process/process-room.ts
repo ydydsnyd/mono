@@ -63,7 +63,7 @@ export async function processRoom(
   let currentVersion = await getVersion(cache);
   if (currentVersion === undefined) {
     currentVersion = 0;
-    putVersion(currentVersion, cache);
+    await putVersion(currentVersion, cache);
   }
   lc.debug?.("currentVersion", currentVersion);
 
@@ -80,7 +80,7 @@ export async function processRoom(
   for (const poke of pokes) {
     const cr = must(await getClientRecord(poke.clientID, cache));
     cr.baseCookie = poke.poke.cookie;
-    putClientRecord(poke.clientID, cr, cache);
+    await putClientRecord(poke.clientID, cr, cache);
   }
 
   const mergedMutations = new PeekIterator(generateMergedMutations(clients));
