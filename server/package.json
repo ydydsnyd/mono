@@ -8,10 +8,9 @@
     "check-format": "prettier --check '**/*.{js,jsx,json,ts,tsx,html,css,md}' '*.{cjs,js,jsx,json,ts,tsx,html,css,md}'",
     "lint": "eslint --ext .ts,.tsx,.js,.jsx src/",
     "build-dts": "rm -rf out/.dts/ && tsc --emitDeclarationOnly --outDir out/.dts/ && rollup --config rollup.config.js && rm -rf out/.dts",
-    "build-mjs": "esbuild --bundle --target=es2018 --outfile=out/reps.mjs --format=esm src/mod.ts",
-    "build-cjs": "esbuild --bundle --target=es2018 --outfile=out/reps.js --format=cjs src/mod.ts",
-    "build-min-mjs": "esbuild --bundle --target=es2018 --outfile=out/reps.min.mjs --format=esm src/mod.ts --minify",
-    "build": "rm -rf out && npm run build-dts && npm run build-mjs && npm run build-cjs && npm run build-min-mjs",
+    "build-mjs": "esbuild --bundle --target=es2018 --platform=node --external:pg-native --outfile=out/reps.mjs --format=esm src/mod.ts",
+    "build-cjs": "esbuild --bundle --target=es2018 --platform=node --external:pg-native --outfile=out/reps.js --format=cjs src/mod.ts",
+    "build": "rm -rf out && npm run build-dts && npm run build-mjs && npm run build-cjs",
     "prepack": "npm run lint && npm run test && npm run build"
   },
   "dependencies": {
