@@ -14,9 +14,10 @@
     "prepack": "npm run lint && npm run test && npm run build"
   },
   "dependencies": {
+    "nanoid": "^3.1.31",
     "pg": "^8.7.1",
     "pg-error": "^1.1.0",
-    "replicache": "^8.0.2",
+    "replicache": "file:replicache-8.0.0.tgz",
     "tdigest": "^0.1.1",
     "ws": "^8.2.3",
     "zod": "^3.11.6"

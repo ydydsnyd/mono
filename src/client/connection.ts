@@ -1,13 +1,12 @@
 import { nanoid } from "nanoid";
 import { PingMessage } from "../protocol/ping";
-import { Replicache, Poke, PullerResult } from "replicache";
+import { Replicache, MutatorDefs, Poke, PullerResult } from "replicache";
 import { NullableVersion, nullableVersionSchema } from "../types/version";
 import { downstreamSchema } from "../protocol/down";
 import { PokeBody } from "../protocol/poke";
 import { PushBody, PushMessage } from "../protocol/push";
 import { GapTracker } from "../util/gap-tracker";
 import { LogContext } from "../util/logger";
-import { M } from "../../datamodel/mutators";
 import { resolver } from "../util/resolver";
 import { sleep } from "../util/sleep";
 
@@ -17,7 +16,7 @@ const timestampTracker = new GapTracker("timestamp");
 
 export type ConnectionState = "DISCONNECTED" | "CONNECTING" | "CONNECTED";
 
-export class Connection {
+export class Connection<M extends MutatorDefs> {
   private _rep: Replicache<M>;
   private _socket?: WebSocket;
   private _serverBehindBy?: number;
@@ -25,7 +24,7 @@ export class Connection {
   private _roomID: string;
   private _l: LogContext;
   private _state: ConnectionState;
-  private _onPong: () => void = () => {};
+  private _onPong: () => void = () => undefined;
 
   constructor(rep: Replicache<M>, roomID: string) {
     this._rep = rep;
@@ -34,7 +33,7 @@ export class Connection {
     this._l = new LogContext("debug").addContext("roomID", roomID);
     this._lastMutationIDSent = -1;
     this._state = "DISCONNECTED";
-    this._watchdog();
+    void this._watchdog();
   }
 
   private async _connect(l: LogContext) {
@@ -64,7 +63,7 @@ export class Connection {
         this._serverBehindBy = undefined;
         this._lastMutationIDSent = -1;
 
-        forcePush(this._rep);
+        void forcePush(this._rep);
         return;
       }
 
@@ -72,7 +71,7 @@ export class Connection {
         throw new Error(downMessage[1]);
       }
 
-      if (downMessage[0] == "pong") {
+      if (downMessage[0] === "pong") {
         this._onPong();
         return;
       }
@@ -141,7 +140,7 @@ export class Connection {
 
   private async _pusher(req: Request) {
     if (!this._socket) {
-      this._connect(this._l);
+      void this._connect(this._l);
       return {
         errorMessage: "",
         httpStatusCode: 200,
@@ -163,6 +162,7 @@ export class Connection {
       pushBody.mutations = newMutations;
       pushBody.timestamp = performance.now();
       pushTracker.push(performance.now());
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       this._socket!.send(JSON.stringify(msg));
     }
 
@@ -173,13 +173,13 @@ export class Connection {
   }
 
   private async _watchdog() {
-    while (true) {
+    for (;;) {
       const l = this._l.addContext("req", nanoid());
       l.debug?.("watchdog fired");
       if (this._state === "CONNECTED") {
         await this._ping(l);
       } else {
-        this._connect(l);
+        void this._connect(l);
       }
       await sleep(5000);
     }
@@ -191,6 +191,7 @@ export class Connection {
     this._onPong = resolve;
     const pingMessage: PingMessage = ["ping", {}];
     const t0 = performance.now();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     this._socket!.send(JSON.stringify(pingMessage));
     const connected = await Promise.race([
       promise.then(() => true),
@@ -207,7 +208,7 @@ export class Connection {
 }
 
 // Hack to force a push to occur
-async function forcePush(rep: Replicache<M>) {
+async function forcePush<M extends MutatorDefs>(rep: Replicache<M>) {
   await rep.mutate.nop();
 }
 
