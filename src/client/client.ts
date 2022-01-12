@@ -16,7 +16,7 @@ const timestampTracker = new GapTracker("timestamp");
 
 export type ConnectionState = "DISCONNECTED" | "CONNECTING" | "CONNECTED";
 
-export class Connection<M extends MutatorDefs> {
+export class Client<M extends MutatorDefs> {
   private _rep: Replicache<M>;
   private _socket?: WebSocket;
   private _serverBehindBy?: number;
