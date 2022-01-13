@@ -1,4 +1,3 @@
-import { performance } from "perf_hooks";
 import { TDigest } from "tdigest";
 
 export class GapTracker {
