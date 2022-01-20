@@ -29,27 +29,32 @@ export async function processPending(
 ): Promise<void> {
   lc.debug?.("process pending - startTime", startTime, "endTime", endTime);
 
-  const pokes = await transact(async (executor) => {
-    const pokes: Map<RoomID, ClientPokeBody[]> = new Map();
-    for (const [roomID, roomState] of rooms) {
-      pokes.set(
-        roomID,
-        await processRoom(
-          lc,
+  const t0 = performance.now();
+  try {
+    const pokes = await transact(async (executor) => {
+      const pokes: Map<RoomID, ClientPokeBody[]> = new Map();
+      for (const [roomID, roomState] of rooms) {
+        pokes.set(
           roomID,
-          roomState.clients,
-          mutators,
-          startTime,
-          endTime,
-          executor
-        )
-      );
-    }
-    return pokes;
-  });
+          await processRoom(
+            lc,
+            roomID,
+            roomState.clients,
+            mutators,
+            startTime,
+            endTime,
+            executor
+          )
+        );
+      }
+      return pokes;
+    });
 
-  sendPokes(lc, pokes, rooms);
-  clearPendingMutations(lc, pokes, rooms);
+    sendPokes(lc, pokes, rooms);
+    clearPendingMutations(lc, pokes, rooms);
+  } finally {
+    lc.debug?.(`processPending took ${performance.now() - t0} ms`);
+  }
 }
 
 function sendPokes(
