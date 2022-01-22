@@ -1,15 +1,18 @@
 import { TDigest } from "tdigest";
+import { LogContext } from "./logger";
 
 export class GapTracker {
   private _name: string;
   private _summaryFrequencyMs: number;
   private _lastSummaryMs: number | undefined;
   private _last: number | undefined;
+  private _lc: LogContext;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private readonly _digest: any;
-  constructor(name: string, summaryFrequencyMs = 1000) {
+  constructor(name: string, lc: LogContext, summaryFrequencyMs = 1000) {
     this._name = name;
+    this._lc = lc;
     this._summaryFrequencyMs = summaryFrequencyMs;
     this._digest = new TDigest();
   }
@@ -25,7 +28,7 @@ export class GapTracker {
     if (this._lastSummaryMs === undefined) {
       this._lastSummaryMs = now;
     } else if (now - this._lastSummaryMs > this._summaryFrequencyMs) {
-      console.log(`${this._name} gap summary`, this._digest.summary());
+      this._lc.debug?.(`${this._name} gap summary`, this._digest.summary());
       this._lastSummaryMs = now;
     }
   }

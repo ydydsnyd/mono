@@ -10,9 +10,9 @@ import { LogContext } from "../util/logger";
 import { must } from "../util/must";
 import { PeekIterator } from "../util/peek-iterator";
 import { MutatorMap, processMutation } from "./process-mutation";
-import { GapTracker } from "../util/gap-tracker";
+//import { GapTracker } from "../util/gap-tracker";
 
-const tracker = new GapTracker("processFrame");
+//const tracker = new GapTracker("processFrame", new LogContext("debug"));
 
 // Processes zero or more mutations as a single "frame", returning pokes.
 // Pokes are returned if the version changes, even if there is no patch,
@@ -58,7 +58,7 @@ export async function processFrame(
     return [];
   }
 
-  tracker.push(startTime);
+  //tracker.push(startTime);
 
   const patch = unwrapPatch(cache.pending());
   const ret: ClientPokeBody[] = [];

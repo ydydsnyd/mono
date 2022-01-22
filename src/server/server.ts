@@ -9,6 +9,7 @@ import { handleClose } from "./close";
 import { handleConnection } from "./connect";
 import { handleMessage } from "./message";
 import { performance } from "perf_hooks";
+import { LogLevel } from "replicache";
 
 // We aim to process frames 30 times per second.
 const PROCESS_INTERVAL_MS = 1000 / 30;
@@ -29,22 +30,25 @@ export type ProcessHandler = (
 ) => Promise<void>;
 
 export class Server {
-  private _rooms: RoomMap = new Map();
-  private _lock = new Lock();
-  private _processHandler: ProcessHandler;
-  private _now: Now;
-  private _setTimeout: SetTimeout;
+  private readonly _rooms: RoomMap = new Map();
+  private readonly _lock = new Lock();
+  private readonly _processHandler: ProcessHandler;
+  private readonly _now: Now;
+  private readonly _setTimeout: SetTimeout;
+  private readonly _mutators: MutatorMap;
+  private readonly _logLevel: LogLevel;
   private _processing = false;
-  private _mutators: MutatorMap;
 
   constructor(
     mutators: Record<string, Mutator>,
+    logLevel = "info" as LogLevel,
     rooms: RoomMap = new Map(),
     processHandler: ProcessHandler = processPending,
     now: Now = performance.now,
     setTimeout: SetTimeout = globalThis.setTimeout
   ) {
     this._mutators = new Map([...Object.entries(mutators)]);
+    this._logLevel = logLevel;
     this._rooms = rooms;
     this._processHandler = processHandler;
     this._now = now;
@@ -57,7 +61,7 @@ export class Server {
   }
 
   async handleConnection(ws: Socket, url: string) {
-    const lc = new LogContext("debug").addContext(
+    const lc = new LogContext(this._logLevel).addContext(
       "req",
       Math.random().toString(36).substr(2)
     );
@@ -82,7 +86,7 @@ export class Server {
     data: string,
     ws: Socket
   ) {
-    const lc = new LogContext("debug")
+    const lc = new LogContext(this._logLevel)
       .addContext("req", Math.random().toString(36).substr(2))
       .addContext("room", roomID)
       .addContext("client", clientID);
@@ -97,7 +101,7 @@ export class Server {
   }
 
   async processUntilDone() {
-    const lc = new LogContext("debug").addContext(
+    const lc = new LogContext(this._logLevel).addContext(
       "req",
       Math.random().toString(36).substr(2)
     );
@@ -140,7 +144,7 @@ export class Server {
   }
 
   async handleClose(roomID: RoomID, clientID: ClientID): Promise<void> {
-    const lc = new LogContext("debug")
+    const lc = new LogContext(this._logLevel)
       .addContext("req", Math.random().toString(36).substr(2))
       .addContext("room", roomID)
       .addContext("client", clientID);

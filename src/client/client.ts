@@ -10,27 +10,43 @@ import { LogContext } from "../util/logger";
 import { resolver } from "../util/resolver";
 import { sleep } from "../util/sleep";
 
-const pushTracker = new GapTracker("push");
-const updateTracker = new GapTracker("update");
-const timestampTracker = new GapTracker("timestamp");
-
 export type ConnectionState = "DISCONNECTED" | "CONNECTING" | "CONNECTED";
 
 export class Client<M extends MutatorDefs> {
-  private _rep: Replicache<M>;
+  private readonly _rep: Replicache<M>;
+  private readonly _socketURL: string | undefined;
+  private readonly _roomID: string;
+  private readonly _l: LogContext;
+
+  private readonly _pushTracker: GapTracker;
+  private readonly _updateTracker: GapTracker;
+  private readonly _timestampTracker: GapTracker;
+
   private _socket?: WebSocket;
   private _serverBehindBy?: number;
   private _lastMutationIDSent: number;
-  private _roomID: string;
-  private _l: LogContext;
   private _state: ConnectionState;
   private _onPong: () => void = () => undefined;
 
-  constructor(rep: Replicache<M>, roomID: string) {
+  /**
+   * Constructs a new reps client.
+   * @param rep Instance of replicache to use.
+   * @param roomID RoomID we are in.
+   * @param socketURL URL of web socket to connect to. This should be either a ws/wss protocol URL or undefined.
+   * If undefined, we default to <scheme>://<host>:<port>/rs where host and port are the current page's host and port,
+   * and scheme is "ws" if the current page is "http" or "wss" if the current page is "https".
+   */
+  constructor(rep: Replicache<M>, roomID: string, socketURL?: string) {
     this._rep = rep;
     this._rep.pusher = (req: Request) => this._pusher(req);
+
+    this._socketURL = socketURL;
     this._roomID = roomID;
     this._l = new LogContext("debug").addContext("roomID", roomID);
+    this._pushTracker = new GapTracker("push", this._l);
+    this._updateTracker = new GapTracker("update", this._l);
+    this._timestampTracker = new GapTracker("update", this._l);
+
     this._lastMutationIDSent = -1;
     this._state = "DISCONNECTED";
     void this._watchdog();
@@ -46,7 +62,12 @@ export class Client<M extends MutatorDefs> {
     this._state = "CONNECTING";
 
     const baseCookie = await getBaseCookie(this._rep);
-    const ws = createSocket(baseCookie, await this._rep.clientID, this._roomID);
+    const ws = createSocket(
+      this._socketURL,
+      baseCookie,
+      await this._rep.clientID,
+      this._roomID
+    );
 
     ws.addEventListener("message", (e) => {
       l.addContext("req", nanoid());
@@ -98,8 +119,8 @@ export class Client<M extends MutatorDefs> {
   }
 
   private _handlePoke(l: LogContext, pokeBody: PokeBody) {
-    updateTracker.push(performance.now());
-    timestampTracker.push(pokeBody.timestamp);
+    this._updateTracker.push(performance.now());
+    this._timestampTracker.push(pokeBody.timestamp);
 
     if (this._serverBehindBy === undefined) {
       this._serverBehindBy = performance.now() - pokeBody.timestamp;
@@ -161,7 +182,7 @@ export class Client<M extends MutatorDefs> {
     if (newMutations.length > 0) {
       pushBody.mutations = newMutations;
       pushBody.timestamp = performance.now();
-      pushTracker.push(performance.now());
+      this._pushTracker.push(performance.now());
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       this._socket!.send(JSON.stringify(msg));
     }
@@ -231,13 +252,20 @@ async function getBaseCookie(rep: Replicache) {
 }
 
 function createSocket(
+  socketURL: string | undefined,
   baseCookie: NullableVersion,
   clientID: string,
   roomID: string
 ) {
-  const url = new URL(location.href);
-  url.pathname = "/rs";
-  url.protocol = url.protocol.replace("http", "ws");
+  let url: URL;
+  if (socketURL) {
+    url = new URL(socketURL);
+  } else {
+    url = new URL(location.href);
+    url.protocol = url.protocol.replace("http", "ws");
+    url.pathname = "/rs";
+  }
+
   url.searchParams.set("clientID", clientID);
   url.searchParams.set("roomID", roomID);
   url.searchParams.set(
@@ -245,5 +273,6 @@ function createSocket(
     baseCookie === null ? "" : String(baseCookie)
   );
   url.searchParams.set("ts", String(performance.now()));
+
   return new WebSocket(url.toString());
 }
