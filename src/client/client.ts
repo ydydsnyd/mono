@@ -228,8 +228,7 @@ export class Client<M extends MutatorDefs> {
       pushBody.mutations = newMutations;
       pushBody.timestamp = performance.now();
       this._pushTracker.push(performance.now());
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      this._socket!.send(JSON.stringify(msg));
+      this._socket.send(JSON.stringify(msg));
     }
 
     return {
@@ -280,7 +279,7 @@ async function forcePush<M extends MutatorDefs>(rep: Replicache<M>) {
 
 // Total hack to get base cookie
 async function getBaseCookie(rep: Replicache) {
-  const { promise, resolve } = await resolver<NullableVersion>();
+  const { promise, resolve } = resolver<NullableVersion>();
   rep.puller = async (req): Promise<PullerResult> => {
     const val = await req.json();
     const parsed = nullableVersionSchema.parse(val.cookie);
