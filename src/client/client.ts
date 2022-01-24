@@ -27,6 +27,8 @@ export class Client<M extends MutatorDefs> {
   private _lastMutationIDSent: number;
   private _state: ConnectionState;
   private _onPong: () => void = () => undefined;
+  private _pendingPokes: PokeBody[] = [];
+  private _pokeLoopRunning = false;
 
   /**
    * Constructs a new reps client.
@@ -102,7 +104,7 @@ export class Client<M extends MutatorDefs> {
       }
 
       const pokeBody = downMessage[1];
-      this._handlePoke(l, pokeBody);
+      void this._handlePoke(l, pokeBody);
     });
 
     ws.addEventListener("close", (e) => {
@@ -118,45 +120,88 @@ export class Client<M extends MutatorDefs> {
     this._lastMutationIDSent = -1;
   }
 
-  private _handlePoke(l: LogContext, pokeBody: PokeBody) {
-    this._updateTracker.push(performance.now());
+  private async _handlePoke(l: LogContext, pokeBody: PokeBody) {
+    const now = performance.now();
+    this._updateTracker.push(now);
     this._timestampTracker.push(pokeBody.timestamp);
 
     if (this._serverBehindBy === undefined) {
-      this._serverBehindBy = performance.now() - pokeBody.timestamp;
-      l.debug?.(
-        "local clock is",
-        performance.now(),
-        "serverBehindBy",
-        this._serverBehindBy
-      );
+      this._serverBehindBy = now - pokeBody.timestamp;
+      l.debug?.("local clock is", now, "serverBehindBy", this._serverBehindBy);
     }
 
-    const localTimestamp = pokeBody.timestamp + this._serverBehindBy;
-    const delay = Math.max(0, localTimestamp - performance.now());
-    const p: Poke = {
-      baseCookie: pokeBody.baseCookie,
-      pullResponse: {
-        lastMutationID: pokeBody.lastMutationID,
-        patch: pokeBody.patch,
-        cookie: pokeBody.cookie,
-      },
-    };
-    l.debug?.("localTimestamp of poke", localTimestamp);
-    l.debug?.("playing poke", p, "with delay", delay);
-
-    window.setTimeout(async () => {
-      try {
-        await this._rep.poke(p);
-      } catch (e) {
-        if (String(e).indexOf("unexpected base cookie for poke") > -1) {
-          this._l.info?.("out of order poke, disconnecting");
-          this._socket?.close();
-          return;
-        }
-        throw e;
+    // Insert the poke in the pending pokes making sure to keep it sorted.
+    let i = this._pendingPokes.length - 1;
+    for (; i >= 0; i--) {
+      if (this._pendingPokes[i].timestamp < pokeBody.timestamp) {
+        break;
       }
-    }, delay);
+    }
+    this._pendingPokes.splice(i + 1, 0, pokeBody);
+
+    if (!this._pokeLoopRunning) {
+      this._pokeLoopRunning = true;
+      try {
+        await this._runPokeLoop(l, this._serverBehindBy);
+      } finally {
+        this._pokeLoopRunning = false;
+      }
+    }
+  }
+
+  private async _runPokeLoop(l: LogContext, serverBehindBy: number) {
+    // This keeps on looping as long as we have pending pushes.
+    for (;;) {
+      const now = await waitForAnimationFrame();
+
+      // Do this after the animation frame delay.
+      if (this._pendingPokes.length === 0) {
+        break;
+      }
+
+      // Find all pokes that should be applied now. In other words all the pokes
+      // that have a timestamp in the past.
+      let i = 0;
+      for (; i < this._pendingPokes.length; i++) {
+        const pokeBody = this._pendingPokes[i];
+        const localTimestamp = pokeBody.timestamp + serverBehindBy;
+        l.debug?.("localTimestamp of poke", localTimestamp);
+        if (localTimestamp > now) {
+          l.debug?.(
+            "poke is in the future, will play it later",
+            localTimestamp,
+            now
+          );
+          break;
+        }
+      }
+      const pokes: PokeBody[] = this._pendingPokes.splice(0, i);
+
+      l.debug?.(
+        "pokes to apply",
+        pokes.length,
+        "remaining:",
+        this._pendingPokes.length
+      );
+
+      for (const pokeBody of pokes) {
+        const p: Poke = {
+          baseCookie: pokeBody.baseCookie,
+          pullResponse: pokeBody,
+        };
+
+        try {
+          await this._rep.poke(p);
+        } catch (e) {
+          if (String(e).indexOf("unexpected base cookie for poke") > -1) {
+            this._l.info?.("out of order poke, disconnecting");
+            this._socket?.close();
+            return;
+          }
+          throw e;
+        }
+      }
+    }
   }
 
   private async _pusher(req: Request) {
@@ -275,4 +320,15 @@ function createSocket(
   url.searchParams.set("ts", String(performance.now()));
 
   return new WebSocket(url.toString());
+}
+
+/**
+ * @returns a Promise that resolves when it is time to animate again. It
+ * resolves with the current time relative to the start of the page, just like
+ * with `performance.now()`.
+ */
+function waitForAnimationFrame(): Promise<number> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(resolve);
+  });
 }
