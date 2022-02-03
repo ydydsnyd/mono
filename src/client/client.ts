@@ -51,7 +51,7 @@ export class Client<M extends MutatorDefs> {
     void this._watchdog();
   }
 
-  _onMessage = (e: MessageEvent<string>) => {
+  private _onMessage = (e: MessageEvent<string>) => {
     const l = this._l;
     l.addContext("req", nanoid());
     l.debug?.("received message", e.data);

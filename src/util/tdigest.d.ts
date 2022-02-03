@@ -1,4 +1,4 @@
-declare module 'tdigest' {
+declare module "tdigest" {
   export class TDigest {
     constructor();
     push(value: number): void;

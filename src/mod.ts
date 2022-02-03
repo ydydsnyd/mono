@@ -1,2 +1,2 @@
-export {Client} from './client/client.js';
-export * from 'replicache';
+export { Client } from "./client/client.js";
+export * from "replicache";
