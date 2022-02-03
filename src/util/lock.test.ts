@@ -1,8 +1,6 @@
-import { expect } from "chai";
-import { test } from "mocha";
-import { resolver } from "./resolver";
-import { Lock } from "./lock";
-import { sleep } from "./sleep";
+import { resolver } from "../../src/util/resolver";
+import { Lock } from "../../src/util/lock";
+import { sleep } from "../../src/util/sleep";
 
 test("Lock", async () => {
   type Task = () => Promise<void>;
@@ -22,23 +20,23 @@ test("Lock", async () => {
   const [t2, r2] = makeTask("t2");
   const [t3, r3] = makeTask("t3");
 
-  const loop = new Lock();
-  await loop.withLock(t1);
-  await loop.withLock(t2);
+  const lock = new Lock();
+  void lock.withLock(t1);
+  void lock.withLock(t2);
 
   await sleep();
-  expect(log).deep.equal(["t1 enter"]);
+  expect(log).toEqual(["t1 enter"]);
   r1();
   await sleep();
-  expect(log).deep.equal(["t1 enter", "t1 exit", "t2 enter"]);
+  expect(log).toEqual(["t1 enter", "t1 exit", "t2 enter"]);
   r2();
   await sleep();
-  expect(log).deep.equal(["t1 enter", "t1 exit", "t2 enter", "t2 exit"]);
+  expect(log).toEqual(["t1 enter", "t1 exit", "t2 enter", "t2 exit"]);
 
   r3();
-  await loop.withLock(t3);
+  await lock.withLock(t3);
   await sleep();
-  expect(log).deep.equal([
+  expect(log).toEqual([
     "t1 enter",
     "t1 exit",
     "t2 enter",

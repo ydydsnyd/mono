@@ -1,5 +1,5 @@
-import { PokeBody } from "../protocol/poke";
-import { ClientID } from "./client-state";
+import type { PokeBody } from "../protocol/poke.js";
+import type { ClientID } from "./client-state.js";
 
 export type ClientPokeBody = {
   clientID: ClientID;

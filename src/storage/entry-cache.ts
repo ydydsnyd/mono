@@ -1,8 +1,8 @@
-import { JSONType } from "../protocol/json";
-import { Patch } from "../protocol/poke";
-import { JSONValue } from "replicache";
-import { ZodSchema } from "zod";
-import { Storage } from "./storage";
+import type { JSONValue } from "replicache";
+import type { ZodSchema } from "zod";
+import type { JSONType } from "../protocol/json.js";
+import type { Patch } from "../protocol/poke.js";
+import type { Storage } from "./storage.js";
 
 /**
  * Implements a read/write cache for key/value pairs on top of some lower-level
@@ -10,6 +10,8 @@ import { Storage } from "./storage";
  *
  * This is designed to be stacked: EntryCache itself implements Storage so that
  * you can create multiple layers of caches and control when they flush.
+ *
+ * TODO: We can remove the read side of this since DO does caching itself internally!
  */
 export class EntryCache implements Storage {
   private _storage: Storage;

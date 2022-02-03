@@ -1,15 +1,13 @@
-import { Mutation } from "../protocol/push";
-import { CloseEvent, MessageEvent } from "ws";
+import type { Mutation } from "../protocol/push.js";
 
 export type ClientID = string;
 
 export type ClientMap = Map<ClientID, ClientState>;
 
-export interface Socket {
+export interface Socket extends EventTarget<WebSocketEventMap> {
+  accept(): void;
   send(data: string): void;
   close(): void;
-  onclose?: (event: CloseEvent) => void;
-  onmessage?: (event: MessageEvent) => void;
 }
 
 export type ClientState = {

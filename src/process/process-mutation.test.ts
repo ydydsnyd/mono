@@ -1,18 +1,22 @@
-import { expect } from "chai";
-import { test } from "mocha";
-import { WriteTransaction } from "replicache";
-import { MemStorage } from "../storage/mem-storage";
-import { ClientMutation } from "../types/client-mutation";
+import type { WriteTransaction } from "replicache";
+import { DurableStorage } from "../../src/storage/durable-storage.js";
+import type { ClientMutation } from "../../src/types/client-mutation.js";
 import {
   ClientRecord,
   getClientRecord,
   putClientRecord,
-} from "../types/client-record";
-import { getUserValue } from "../types/user-value";
-import { getVersion } from "../types/version";
-import { clientMutation, clientRecord } from "../util/test-utils";
-import { MutatorMap, processMutation } from "./process-mutation";
-import { LogContext } from "../util/logger";
+} from "../../src/types/client-record.js";
+import { getUserValue } from "../../src/types/user-value.js";
+import { getVersion } from "../../src/types/version.js";
+import { clientMutation, clientRecord } from "../util/test-utils.js";
+import {
+  MutatorMap,
+  processMutation,
+} from "../../src/process/process-mutation.js";
+import { LogContext } from "../../src/util/logger.js";
+
+const { server } = getMiniflareBindings();
+const id = server.newUniqueId();
 
 test("processMutation", async () => {
   type Case = {
@@ -90,8 +94,10 @@ test("processMutation", async () => {
     ],
   ]);
 
+  const durable = await getMiniflareDurableObjectStorage(id);
+
   for (const c of cases) {
-    const storage = new MemStorage();
+    const storage = new DurableStorage(durable);
     const version = 2;
     const { clientID } = c.mutation;
 
@@ -112,15 +118,13 @@ test("processMutation", async () => {
       err = String(e);
     }
 
-    expect(err, c.name).equal(c.expectedError);
-    expect(await getClientRecord(clientID, storage), c.name).deep.equal(
-      c.expectedRecord
-    );
-    expect(await getUserValue("foo", storage), c.name).deep.equal(
+    expect(err).toEqual(c.expectedError);
+    expect(await getClientRecord(clientID, storage)).toEqual(c.expectedRecord);
+    expect(await getUserValue("foo", storage)).toEqual(
       c.expectAppWrite ? { version, deleted: false, value: "bar" } : undefined
     );
 
     const expectedVersion = c.expectVersionWrite ? version : undefined;
-    expect(await getVersion(storage), c.name).equal(expectedVersion);
+    expect(await getVersion(storage)).toEqual(expectedVersion);
   }
 });

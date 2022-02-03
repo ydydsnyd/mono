@@ -1,19 +1,23 @@
-import { expect } from "chai";
-import { test } from "mocha";
-import { JSONType } from "../protocol/json";
-import { WriteTransaction } from "replicache";
 import { z } from "zod";
-import { MemStorage } from "../storage/mem-storage";
-import { ClientMutation } from "../types/client-mutation";
-import { ClientPokeBody } from "../types/client-poke-body";
-import { ClientRecord, clientRecordKey } from "../types/client-record";
-import { ClientID } from "../types/client-state";
-import { UserValue, userValueKey } from "../types/user-value";
-import { Version, versionKey } from "../types/version";
-import { PeekIterator } from "../util/peek-iterator";
-import { clientMutation, clientRecord, userValue } from "../util/test-utils";
-import { processFrame } from "./process-frame";
-import { LogContext } from "../util/logger";
+import type { WriteTransaction } from "replicache";
+import type { JSONType } from "../../src/protocol/json.js";
+import { DurableStorage } from "../../src/storage/durable-storage.js";
+import type { ClientMutation } from "../../src/types/client-mutation.js";
+import type { ClientPokeBody } from "../../src/types/client-poke-body.js";
+import {
+  ClientRecord,
+  clientRecordKey,
+} from "../../src/types/client-record.js";
+import type { ClientID } from "../../src/types/client-state.js";
+import { UserValue, userValueKey } from "../../src/types/user-value.js";
+import { Version, versionKey } from "../../src/types/version.js";
+import { PeekIterator } from "../../src/util/peek-iterator.js";
+import { clientMutation, clientRecord, userValue } from "../util/test-utils.js";
+import { processFrame } from "../../src/process/process-frame.js";
+import { LogContext } from "../../src/util/logger.js";
+
+const { server } = getMiniflareBindings();
+const id = server.newUniqueId();
 
 test("processFrame", async () => {
   const records = new Map([
@@ -21,7 +25,6 @@ test("processFrame", async () => {
     [clientRecordKey("c2"), clientRecord(1, 7)],
   ]);
   const startTime = 100;
-  const endTime = 200;
   const startVersion = 1;
   const endVersion = 2;
 
@@ -180,45 +183,12 @@ test("processFrame", async () => {
       ]),
       expectedVersion: endVersion,
     },
-    {
-      name: "frame cutoff",
-      mutations: [
-        clientMutation("c1", 2, "put", { key: "foo", value: "bar" }, 50),
-        clientMutation("c1", 3, "put", { key: "foo", value: "baz" }, 150),
-        clientMutation("c1", 4, "put", { key: "foo", value: "bonk" }, 250),
-      ],
-      clients: ["c1"],
-      expectedPokes: [
-        {
-          clientID: "c1",
-          poke: {
-            baseCookie: startVersion,
-            cookie: endVersion,
-            lastMutationID: 3,
-            patch: [
-              {
-                op: "put",
-                key: "foo",
-                value: "baz",
-              },
-            ],
-            timestamp: startTime,
-          },
-        },
-      ],
-      expectedUserValues: new Map([
-        [userValueKey("foo"), userValue("baz", endVersion)],
-      ]),
-      expectedClientRecords: new Map([
-        ...records,
-        [clientRecordKey("c1"), clientRecord(endVersion, 3)],
-      ]),
-      expectedVersion: endVersion,
-    },
   ];
 
+  const durable = await getMiniflareDurableObjectStorage(id);
+
   for (const c of cases) {
-    const storage = new MemStorage();
+    const storage = new DurableStorage(durable);
 
     await storage.put(versionKey, startVersion);
     for (const [key, value] of records) {
@@ -231,20 +201,19 @@ test("processFrame", async () => {
       mutators,
       c.clients,
       storage,
-      startTime,
-      endTime
+      startTime
     );
 
-    expect(result, c.name).deep.equal(c.expectedPokes);
+    expect(result).toEqual(c.expectedPokes);
 
     const expectedState = new Map([
       ...(c.expectedUserValues as Map<string, JSONType>),
       ...(c.expectedClientRecords as Map<string, JSONType>),
       [versionKey, c.expectedVersion],
     ]);
-    expect(storage.size, c.name).equal(expectedState.size);
+    expect((await durable.list()).size).toEqual(expectedState.size);
     for (const [key, value] of expectedState) {
-      expect(await storage.get(key, z.any()), c.name).deep.equal(value);
+      expect(await storage.get(key, z.any())).toEqual(value);
     }
   }
 });

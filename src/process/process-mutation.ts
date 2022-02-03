@@ -1,10 +1,10 @@
-import { EntryCache } from "../storage/entry-cache";
-import { ReplicacheTransaction } from "../storage/replicache-transaction";
-import { Storage } from "../storage/storage";
-import { ClientMutation } from "../types/client-mutation";
-import { getClientRecord, putClientRecord } from "../types/client-record";
-import { putVersion, Version } from "../types/version";
-import { LogContext } from "../util/logger";
+import { EntryCache } from "../storage/entry-cache.js";
+import { ReplicacheTransaction } from "../storage/replicache-transaction.js";
+import type { Storage } from "../storage/storage.js";
+import type { ClientMutation } from "../types/client-mutation.js";
+import { getClientRecord, putClientRecord } from "../types/client-record.js";
+import { putVersion, Version } from "../types/version.js";
+import type { LogContext } from "../util/logger.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Mutator = (tx: ReplicacheTransaction, args: any) => Promise<void>;
@@ -22,7 +22,7 @@ export async function processMutation(
   storage: Storage,
   version: Version
 ): Promise<void> {
-  const t0 = performance.now();
+  const t0 = Date.now();
   try {
     lc.debug?.(
       "processing mutation",
@@ -66,6 +66,6 @@ export async function processMutation(
     await putVersion(version, cache);
     await cache.flush();
   } finally {
-    lc.debug?.(`processMutation took ${performance.now() - t0} ms`);
+    lc.debug?.(`processMutation took ${Date.now() - t0} ms`);
   }
 }

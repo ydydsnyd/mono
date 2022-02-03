@@ -3,10 +3,9 @@
 // than:
 // - each client maintains a list of pending mutations sorted by lmid
 
-import { ClientMutation } from "../types/client-mutation";
-import { ClientMap } from "../types/client-state";
-import { PeekIterator } from "../util/peek-iterator";
-import { assert } from "console";
+import type { ClientMutation } from "../types/client-mutation.js";
+import type { ClientMap } from "../types/client-state.js";
+import { PeekIterator } from "../util/peek-iterator.js";
 
 // - we merge sort those lists, but the merge function is the server timestamp
 export function* generateMergedMutations(clients: ClientMap) {
@@ -30,13 +29,12 @@ export function* generateMergedMutations(clients: ClientMap) {
     insertIterator(new PeekIterator(clientMutations[Symbol.iterator]()));
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const dumpIterators = (msg: string) => {
-    console.log(`iterators - ${msg}`);
-    for (const it of iterators) {
-      console.log(it.peek());
-    }
-  };
+  // const dumpIterators = (msg: string) => {
+  //   console.log(`iterators - ${msg}`);
+  //   for (const it of iterators) {
+  //     console.log(it.peek());
+  //   }
+  // };
 
   //dumpIterators("start");
 
@@ -47,7 +45,9 @@ export function* generateMergedMutations(clients: ClientMap) {
       break;
     }
     const { value, done } = next.peek();
-    assert(!done);
+    if (done) {
+      throw new Error("unexpected state");
+    }
     yield value as ClientMutation;
     next.next();
     insertIterator(next);

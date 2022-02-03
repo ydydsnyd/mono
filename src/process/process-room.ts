@@ -1,20 +1,18 @@
 // Processes zero or more mutations against a room, returning necessary pokes
 
-import { Executor } from "../db/pg";
-import { fastForwardRoom } from "../fastforward/fast-forward";
-import { DBStorage } from "../storage/db-storage";
-import { EntryCache } from "../storage/entry-cache";
-import { ClientPokeBody } from "../types/client-poke-body";
-import { getClientRecord, putClientRecord } from "../types/client-record";
-import { ClientID, ClientMap } from "../types/client-state";
-import { RoomID } from "../types/room-state";
-import { getVersion, putVersion } from "../types/version";
-import { LogContext } from "../util/logger";
-import { must } from "../util/must";
-import { PeekIterator } from "../util/peek-iterator";
-import { generateMergedMutations } from "./generate-merged-mutations";
-import { processFrame } from "./process-frame";
-import { MutatorMap } from "./process-mutation";
+import { fastForwardRoom } from "../ff/fast-forward.js";
+import { DurableStorage } from "../storage/durable-storage.js";
+import { EntryCache } from "../storage/entry-cache.js";
+import type { ClientPokeBody } from "../types/client-poke-body.js";
+import { getClientRecord, putClientRecord } from "../types/client-record.js";
+import type { ClientID, ClientMap } from "../types/client-state.js";
+import { getVersion, putVersion } from "../types/version.js";
+import type { LogContext } from "../util/logger.js";
+import { must } from "../util/must.js";
+import { PeekIterator } from "../util/peek-iterator.js";
+import { generateMergedMutations } from "./generate-merged-mutations.js";
+import { processFrame } from "./process-frame.js";
+import type { MutatorMap } from "./process-mutation.js";
 
 export const FRAME_LENGTH_MS = 1000 / 60;
 
@@ -23,35 +21,23 @@ export const FRAME_LENGTH_MS = 1000 / 60;
  * @param roomID room to process mutations for
  * @param clients active clients in the room
  * @param mutators all known mutators
- * @param startTime simulation time to start at
- * @param endTime simulation time to end at
- * @param executor database executor
+ * @param timestamp timestamp to put in resulting pokes
+ * @param durable storage to read/write to
  * @returns
  */
 export async function processRoom(
   lc: LogContext,
-  roomID: RoomID,
   clients: ClientMap,
   mutators: MutatorMap,
-  startTime: number,
-  endTime: number,
-  executor: Executor
+  durable: DurableObjectStorage,
+  timestamp: number
 ): Promise<ClientPokeBody[]> {
-  const storage = new DBStorage(executor, roomID);
+  const storage = new DurableStorage(durable);
   const cache = new EntryCache(storage);
 
   // TODO: can/should we pass `clients` to fastForward instead?
   const clientIDs = [...clients.keys()];
-  lc.debug?.(
-    "processing room",
-    roomID,
-    "clientIDs",
-    clientIDs,
-    "startTime",
-    startTime,
-    "endTime",
-    endTime
-  );
+  lc.debug?.("processing room", "clientIDs", clientIDs);
 
   // Before running any mutations, fast forward connected clients to
   // current state.
@@ -68,12 +54,11 @@ export async function processRoom(
   lc.debug?.("currentVersion", currentVersion);
 
   const pokes: ClientPokeBody[] = await fastForwardRoom(
-    roomID,
     clientIDs,
     gcr,
     currentVersion,
-    executor,
-    startTime
+    durable,
+    timestamp
   );
   lc.debug?.("pokes from fastforward", JSON.stringify(pokes));
 
@@ -84,23 +69,16 @@ export async function processRoom(
   }
 
   const mergedMutations = new PeekIterator(generateMergedMutations(clients));
-  for (
-    let frameStart = startTime;
-    frameStart < endTime;
-    frameStart += FRAME_LENGTH_MS
-  ) {
-    pokes.push(
-      ...(await processFrame(
-        lc,
-        mergedMutations,
-        mutators,
-        clientIDs,
-        cache,
-        frameStart,
-        Math.min(frameStart + FRAME_LENGTH_MS, endTime)
-      ))
-    );
-  }
+  pokes.push(
+    ...(await processFrame(
+      lc,
+      mergedMutations,
+      mutators,
+      clientIDs,
+      cache,
+      timestamp
+    ))
+  );
 
   await cache.flush();
   return pokes;

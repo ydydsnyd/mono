@@ -1,12 +1,10 @@
-import { Executor } from "../db/pg";
-import { ClientRecord } from "../types/client-record";
-import { ClientID } from "../types/client-state";
-import { RoomID } from "../types/room-state";
-import { NullableVersion, Version } from "../types/version";
-import { ClientPokeBody } from "../types/client-poke-body";
-import { getPatch } from "./get-patch";
-import { Patch } from "../protocol/poke";
-import { must } from "../util/must";
+import type { ClientRecord } from "../types/client-record.js";
+import type { ClientID } from "../types/client-state.js";
+import type { NullableVersion, Version } from "../types/version.js";
+import type { ClientPokeBody } from "../types/client-poke-body.js";
+import { getPatch } from "./get-patch.js";
+import type { Patch } from "../protocol/poke.js";
+import { must } from "../util/must.js";
 
 export type GetClientRecord = (clientID: ClientID) => Promise<ClientRecord>;
 
@@ -22,11 +20,10 @@ export type GetClientRecord = (clientID: ClientID) => Promise<ClientRecord>;
  * @returns
  */
 export async function fastForwardRoom(
-  roomID: RoomID,
   clients: ClientID[],
   getClientRecord: GetClientRecord,
   currentVersion: Version,
-  executor: Executor,
+  durable: DurableObjectStorage,
   timestamp: number
 ): Promise<ClientPokeBody[]> {
   // Load all the client records in parallel
@@ -45,7 +42,7 @@ export async function fastForwardRoom(
 
   // Calculate all the distinct patches in parallel
   const getPatchEntry = async (baseCookie: NullableVersion) =>
-    [baseCookie, await getPatch(executor, roomID, baseCookie ?? 0)] as [
+    [baseCookie, await getPatch(durable, baseCookie ?? 0)] as [
       NullableVersion,
       Patch
     ];

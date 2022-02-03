@@ -1,35 +1,34 @@
+test("foo", () => {
+  console.log("hi");
+});
+
 /*
-import { ClientID, Socket } from "../types/client-state";
-import { RoomID, RoomMap } from "../types/room-state";
+import { ClientID, ClientMap, Socket } from "../../src/types/client-state";
 import { Mocket } from "../util/test-utils";
-import { sleep } from "../util/sleep";
-import { expect } from "chai";
-import { test } from "mocha";
-import { Server } from "./server";
-import { MessageHandler, CloseHandler } from "./connect";
+import { sleep } from "../../src/util/sleep";
+import { Server } from "../../src/server/server";
+import { MessageHandler, CloseHandler } from "../../src/server/connect";
 test("serialization", async () => {
   const s1 = new Mocket();
   const url = "u1";
-  const rooms: RoomMap = new Map();
+  const clients: ClientMap = new Map();
   const roomID = "r1";
   const clientID = "c1";
   const data = "data";
 
-  let log: string[] = [];
+  const log: string[] = [];
 
   const messageHandler = (
-    pRooms: RoomMap,
-    pRoomID: RoomID,
+    pClients: ClientMap,
     pClientID: ClientID,
     pData: string,
     pWS: Socket
   ) => {
     log.push("> message");
-    expect(pRooms).equal(rooms);
-    expect(pRoomID).equal(roomID);
-    expect(pClientID).equal(clientID);
-    expect(pData).equal(data);
-    expect(pWS).equal(s1);
+    expect(pClients).toEqual(clients);
+    expect(pClientID).toEqual(clientID);
+    expect(pData).toEqual(data);
+    expect(pWS).toEqual(s1);
     log.push("< message");
   };
 
@@ -39,9 +38,9 @@ test("serialization", async () => {
     pClientID: ClientID
   ) => {
     log.push("> close");
-    expect(pRooms).equal(rooms);
-    expect(pRoomID).equal(roomID);
-    expect(pClientID).equal(clientID);
+    expect(pRooms).toEqual(rooms);
+    expect(pRoomID).toEqual(roomID);
+    expect(pClientID).toEqual(clientID);
     log.push("< close");
   };
 
@@ -52,9 +51,9 @@ test("serialization", async () => {
     onMessage: MessageHandler,
     onClose: CloseHandler
   ): Promise<void> => {
-    expect(pWS).equal(s1);
-    expect(pURL).equal(url);
-    expect(pRooms).deep.equal(rooms);
+    expect(pWS).toEqual(s1);
+    expect(pURL).toEqual(url);
+    expect(pRooms).deep.toEqual(rooms);
     log.push("> connect");
     onMessage(roomID, clientID, data, pWS);
     onClose(roomID, clientID);
@@ -73,7 +72,7 @@ test("serialization", async () => {
   server.handleConnection(s1, url);
   server.handleConnection(s1, url);
   await sleep(50);
-  expect(log).deep.equal([
+  expect(log).deep.toEqual([
     "> connect",
     "< connect",
     "> connect",

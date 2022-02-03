@@ -1,5 +1,5 @@
 import type { JSONValue } from "replicache";
-import { ZodSchema } from "zod";
+import type { ZodSchema } from "zod";
 
 /**
  * Abstract storage interface used throughout the server for storing both user

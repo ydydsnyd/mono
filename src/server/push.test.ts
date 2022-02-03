@@ -1,10 +1,8 @@
-import { expect } from "chai";
-import { test } from "mocha";
-import { RoomMap } from "../types/room-state";
-import { Mutation } from "../protocol/push";
-import { client, Mocket, mutation, room, roomMap } from "../util/test-utils";
-import { handlePush } from "./push";
-import { LogContext } from "../util/logger";
+import type { Mutation } from "../../src/protocol/push.js";
+import { client, Mocket, mutation } from "../util/test-utils.js";
+import { handlePush } from "../../src/server/push.js";
+import { LogContext } from "../../src/util/logger.js";
+import type { ClientMap } from "../../src/types/client-state.js";
 
 test("handlePush", async () => {
   const s1 = new Mocket();
@@ -13,152 +11,127 @@ test("handlePush", async () => {
 
   type Case = {
     name: string;
-    existingRooms: RoomMap;
+    existingClients: ClientMap;
     mutations: Mutation[];
     expectedError: string;
-    expectedRooms: RoomMap;
+    expectedClients: ClientMap;
   };
 
   const cases: Case[] = [
     {
-      name: "no rooms",
-      existingRooms: roomMap(),
-      mutations: [],
-      expectedError: "no such room: r1",
-      expectedRooms: roomMap(),
-    },
-    {
       name: "no clients",
-      existingRooms: roomMap(room("r1")),
+      existingClients: new Map(),
       mutations: [],
       expectedError: "no such client: c1",
-      expectedRooms: roomMap(room("r1")),
+      expectedClients: new Map(),
     },
     {
       name: "wrong client",
-      existingRooms: roomMap(room("r1", client("c2", s2))),
+      existingClients: new Map([client("c2", s2)]),
       mutations: [],
       expectedError: "no such client: c1",
-      expectedRooms: roomMap(room("r1", client("c2", s2))),
+      expectedClients: new Map([client("c2", s2)]),
     },
     {
       name: "no mutations",
-      existingRooms: roomMap(
-        room("r1", client("c1", s1, 1, mutation(1, "foo", {}, 1)))
-      ),
+      existingClients: new Map([
+        client("c1", s1, 1, mutation(1, "foo", {}, 1)),
+      ]),
       mutations: [],
       expectedError: "",
-      expectedRooms: roomMap(
-        room("r1", client("c1", s1, 1, mutation(1, "foo", {}, 1)))
-      ),
+      expectedClients: new Map([
+        client("c1", s1, 1, mutation(1, "foo", {}, 1)),
+      ]),
     },
     {
       name: "empty pending, single mutation",
-      existingRooms: roomMap(room("r1", client("c1", s1, 0))),
+      existingClients: new Map([client("c1", s1, 0)]),
       mutations: [mutation(1)],
       expectedError: "",
-      expectedRooms: roomMap(room("r1", client("c1", s1, 0, mutation(1)))),
+      expectedClients: new Map([client("c1", s1, 0, mutation(1))]),
     },
     {
       name: "empty pending, multiple mutations",
-      existingRooms: roomMap(room("r1", client("c1", s1, 0))),
+      existingClients: new Map([client("c1", s1, 0)]),
       mutations: [mutation(1), mutation(2)],
       expectedError: "",
-      expectedRooms: roomMap(
-        room("r1", client("c1", s1, 0, mutation(1), mutation(2)))
-      ),
+      expectedClients: new Map([client("c1", s1, 0, mutation(1), mutation(2))]),
     },
     {
       name: "empty pending, multiple mutations ooo",
-      existingRooms: roomMap(room("r1", client("c1", s1, 0))),
+      existingClients: new Map([client("c1", s1, 0)]),
       mutations: [mutation(2), mutation(1)],
       expectedError: "",
-      expectedRooms: roomMap(
-        room("r1", client("c1", s1, 0, mutation(1), mutation(2)))
-      ),
+      expectedClients: new Map([client("c1", s1, 0, mutation(1), mutation(2))]),
     },
     {
       name: "single pending, single mutation end",
-      existingRooms: roomMap(room("r1", client("c1", s1, 0, mutation(1)))),
+      existingClients: new Map([client("c1", s1, 0, mutation(1))]),
       mutations: [mutation(2)],
       expectedError: "",
-      expectedRooms: roomMap(
-        room("r1", client("c1", s1, 0, mutation(1), mutation(2)))
-      ),
+      expectedClients: new Map([client("c1", s1, 0, mutation(1), mutation(2))]),
     },
     {
       name: "single pending, single mutation start",
-      existingRooms: roomMap(room("r1", client("c1", s1, 0, mutation(2)))),
+      existingClients: new Map([client("c1", s1, 0, mutation(2))]),
       mutations: [mutation(1)],
       expectedError: "",
-      expectedRooms: roomMap(
-        room("r1", client("c1", s1, 0, mutation(1), mutation(2)))
-      ),
+      expectedClients: new Map([client("c1", s1, 0, mutation(1), mutation(2))]),
     },
     {
       name: "multi pending, single mutation middle",
-      existingRooms: roomMap(
-        room("r1", client("c1", s1, 0, mutation(1), mutation(3)))
-      ),
+      existingClients: new Map([client("c1", s1, 0, mutation(1), mutation(3))]),
       mutations: [mutation(2)],
       expectedError: "",
-      expectedRooms: roomMap(
-        room("r1", client("c1", s1, 0, mutation(1), mutation(2), mutation(3)))
-      ),
+      expectedClients: new Map([
+        client("c1", s1, 0, mutation(1), mutation(2), mutation(3)),
+      ]),
     },
     {
       name: "single pending, gap after",
-      existingRooms: roomMap(room("r1", client("c1", s1, 0, mutation(1)))),
+      existingClients: new Map([client("c1", s1, 0, mutation(1))]),
       mutations: [mutation(3)],
       expectedError: "",
-      expectedRooms: roomMap(
-        room("r1", client("c1", s1, 0, mutation(1), mutation(3)))
-      ),
+      expectedClients: new Map([client("c1", s1, 0, mutation(1), mutation(3))]),
     },
     {
       name: "single pending, gap before",
-      existingRooms: roomMap(room("r1", client("c1", s1, 0, mutation(3)))),
+      existingClients: new Map([client("c1", s1, 0, mutation(3))]),
       mutations: [mutation(1)],
       expectedError: "",
-      expectedRooms: roomMap(
-        room("r1", client("c1", s1, 0, mutation(1), mutation(3)))
-      ),
+      expectedClients: new Map([client("c1", s1, 0, mutation(1), mutation(3))]),
     },
     {
       name: "single pending, duplicate",
-      existingRooms: roomMap(room("r1", client("c1", s1, 0, mutation(1)))),
+      existingClients: new Map([client("c1", s1, 0, mutation(1))]),
       mutations: [mutation(1)],
       expectedError: "",
-      expectedRooms: roomMap(room("r1", client("c1", s1, 0, mutation(1)))),
+      expectedClients: new Map([client("c1", s1, 0, mutation(1))]),
     },
     {
       name: "multi pending, duplicate",
-      existingRooms: roomMap(
-        room("r1", client("c1", s1, 0, mutation(1), mutation(2)))
-      ),
+      existingClients: new Map([client("c1", s1, 0, mutation(1), mutation(2))]),
       mutations: [mutation(1)],
       expectedError: "",
-      expectedRooms: roomMap(
-        room("r1", client("c1", s1, 0, mutation(1), mutation(2)))
-      ),
+      expectedClients: new Map([client("c1", s1, 0, mutation(1), mutation(2))]),
     },
     {
       name: "timestamp adjustment",
-      existingRooms: roomMap(room("r1", client("c1", s1, 7))),
+      existingClients: new Map([client("c1", s1, 7)]),
       mutations: [mutation(1, "foo", {}, 3)],
       expectedError: "",
-      expectedRooms: roomMap(
-        room("r1", client("c1", s1, 7, mutation(1, "foo", {}, 10)))
-      ),
+      expectedClients: new Map([
+        client("c1", s1, 7, mutation(1, "foo", {}, 10)),
+      ]),
     },
     {
       name: "negative timestamp adjustment",
-      existingRooms: roomMap(room("r1", client("c1", s1, -7))),
+      existingClients: new Map([client("c1", s1, -7)]),
       mutations: [mutation(1, "foo", {}, 3)],
       expectedError: "",
-      expectedRooms: roomMap(
-        room("r1", client("c1", s1, -7, mutation(1, "foo", {}, -4)))
-      ),
+      expectedClients: new Map([
+        client("c1", s1, -7, mutation(1, "foo", {}, -4)),
+      ]),
     },
   ];
 
@@ -173,11 +146,10 @@ test("handlePush", async () => {
       schemaVersion: "",
       timestamp: 42,
     };
-    const rooms = c.existingRooms;
+    const clients = c.existingClients;
     handlePush(
       new LogContext("info"),
-      rooms,
-      "r1",
+      clients,
       "c1",
       push,
       s1,
@@ -185,20 +157,20 @@ test("handlePush", async () => {
       () => undefined
     );
     if (c.expectedError) {
-      expect(s1.log, c.name).deep.equal([
+      expect(s1.log).toEqual([
         ["send", JSON.stringify(["error", c.expectedError])],
       ]);
     } else {
-      expect(s1.log, c.name).deep.equal([]);
+      expect(s1.log).toEqual([]);
     }
     /*
     console.log(
       JSON.stringify(server.rooms.get("r1")?.clients.get("c1")?.pending)
     );
     console.log(
-      JSON.stringify(c.expectedRooms.get("r1")?.clients.get("c1")?.pending)
+      JSON.stringify(c.expectedClients.get("r1")?.clients.get("c1")?.pending)
     );
     */
-    expect(rooms, c.name).deep.equal(c.expectedRooms);
+    expect(clients).toEqual(c.expectedClients);
   }
 });

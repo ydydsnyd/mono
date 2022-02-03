@@ -1,7 +1,7 @@
-import { jsonSchema } from "../protocol/json";
-import { versionSchema } from "./version";
-import { Storage } from "../storage/storage";
 import { z } from "zod";
+import { jsonSchema } from "../protocol/json.js";
+import { versionSchema } from "./version.js";
+import type { Storage } from "../storage/storage.js";
 
 export const userValueSchema = z.object({
   version: versionSchema,

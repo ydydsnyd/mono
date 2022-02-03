@@ -1,21 +1,20 @@
-import { expect } from "chai";
-import { test } from "mocha";
-import { WriteTransaction } from "replicache";
-import { createDatabase } from "../db/data";
-import { transact } from "../db/pg";
-import { DBStorage } from "../storage/db-storage";
-import { ClientPokeBody } from "../types/client-poke-body";
+import type { WriteTransaction } from "replicache";
+import { DurableStorage } from "../../src/storage/durable-storage.js";
+import type { ClientPokeBody } from "../../src/types/client-poke-body.js";
 import {
   ClientRecord,
   getClientRecord,
   putClientRecord,
-} from "../types/client-record";
-import { ClientMap } from "../types/client-state";
-import { getUserValue, UserValue } from "../types/user-value";
-import { getVersion, Version, versionKey } from "../types/version";
-import { client, clientRecord, mutation } from "../util/test-utils";
-import { FRAME_LENGTH_MS, processRoom } from "./process-room";
-import { LogContext } from "../util/logger";
+} from "../../src/types/client-record.js";
+import type { ClientMap } from "../../src/types/client-state.js";
+import { getUserValue, UserValue } from "../../src/types/user-value.js";
+import { getVersion, Version, versionKey } from "../../src/types/version.js";
+import { client, clientRecord, fail, mutation } from "../util/test-utils.js";
+import { processRoom } from "../../src/process/process-room.js";
+import { LogContext } from "../../src/util/logger.js";
+
+const { server } = getMiniflareBindings();
+const id = server.newUniqueId();
 
 test("processRoom", async () => {
   type Case = {
@@ -31,8 +30,6 @@ test("processRoom", async () => {
   };
 
   const startTime = 100;
-  const endTime = 200;
-  const roomID = "r1";
 
   const cases: Case[] = [
     {
@@ -109,112 +106,33 @@ test("processRoom", async () => {
       expectedVersion: 1,
     },
     {
-      name: "mutations after range",
+      name: "one mutation",
       clientRecords: new Map([["c1", clientRecord(1)]]),
       headVersion: 1,
-      // mutation is at time=300, but we only play from 100-200
       clients: new Map([
-        client("c1", undefined, 0, mutation(1, "inc", null, 300)),
-      ]),
-      expectedPokes: [],
-      expectedClientRecords: new Map([["c1", clientRecord(1)]]),
-      expectedUserValues: new Map(),
-      expectedVersion: 1,
-    },
-    {
-      name: "mutations in range",
-      clientRecords: new Map([
-        ["c1", clientRecord(1)],
-        ["c2", clientRecord(1)],
-      ]),
-      headVersion: 1,
-      clients: new Map([
-        client(
-          "c1",
-          undefined,
-          0,
-          mutation(2, "inc", null, 105),
-          mutation(3, "inc", null, 125)
-        ),
-        client("c2", undefined, 0, mutation(2, "inc", null, 100)),
+        client("c1", undefined, 0, mutation(2, "inc", null, 300)),
       ]),
       expectedPokes: [
         {
           clientID: "c1",
           poke: {
             baseCookie: 1,
-            // even though two mutations play we only bump version at most once per frame
-            cookie: 2,
-            // c1 played one mutation this frame
-            lastMutationID: 2,
-            patch: [
-              // two count mutations played, leaving value at 2
-              {
-                op: "put",
-                key: "count",
-                value: 2,
-              },
-            ],
-            timestamp: 100,
-          },
-        },
-        // same thing for second client
-        {
-          clientID: "c2",
-          poke: {
-            baseCookie: 1,
             cookie: 2,
             lastMutationID: 2,
             patch: [
               {
-                op: "put",
                 key: "count",
-                value: 2,
+                op: "put",
+                value: 1,
               },
             ],
             timestamp: 100,
-          },
-        },
-        {
-          clientID: "c1",
-          poke: {
-            baseCookie: 2,
-            cookie: 3,
-            lastMutationID: 3,
-            patch: [
-              {
-                op: "put",
-                key: "count",
-                value: 3,
-              },
-            ],
-            timestamp: 100 + FRAME_LENGTH_MS,
-          },
-        },
-        {
-          clientID: "c2",
-          poke: {
-            baseCookie: 2,
-            cookie: 3,
-            // only c1 played a mutation this time
-            lastMutationID: 2,
-            patch: [
-              {
-                op: "put",
-                key: "count",
-                value: 3,
-              },
-            ],
-            timestamp: 100 + FRAME_LENGTH_MS,
           },
         },
       ],
-      expectedClientRecords: new Map([
-        ["c1", clientRecord(3, 3)],
-        ["c2", clientRecord(3, 2)],
-      ]),
+      expectedClientRecords: new Map([["c1", clientRecord(2, 2)]]),
       expectedUserValues: new Map(),
-      expectedVersion: 3,
+      expectedVersion: 2,
     },
     {
       name: "mutations before range are included",
@@ -254,38 +172,9 @@ test("processRoom", async () => {
       expectedUserValues: new Map(),
       expectedVersion: 2,
     },
-    {
-      name: "mutations late in range",
-      clientRecords: new Map([["c1", clientRecord(1)]]),
-      headVersion: 1,
-      clients: new Map([
-        client("c1", undefined, 0, mutation(2, "inc", null, 150)),
-      ]),
-      expectedPokes: [
-        {
-          clientID: "c1",
-          poke: {
-            baseCookie: 1,
-            cookie: 2,
-            lastMutationID: 2,
-            patch: [
-              {
-                op: "put",
-                key: "count",
-                value: 1,
-              },
-            ],
-            // We don't get a poke until several frames go by
-            timestamp:
-              100 + FRAME_LENGTH_MS + FRAME_LENGTH_MS + FRAME_LENGTH_MS,
-          },
-        },
-      ],
-      expectedClientRecords: new Map([["c1", clientRecord(2, 2)]]),
-      expectedUserValues: new Map(),
-      expectedVersion: 2,
-    },
   ];
+
+  const durable = await getMiniflareDurableObjectStorage(id);
 
   const mutators = new Map(
     Object.entries({
@@ -298,46 +187,40 @@ test("processRoom", async () => {
   );
 
   for (const c of cases) {
-    await createDatabase();
-    await transact(async (executor) => {
-      const storage = new DBStorage(executor, roomID);
-      await storage.put(versionKey, c.headVersion);
-      for (const [clientID, record] of c.clientRecords) {
-        await putClientRecord(clientID, record, storage);
-      }
+    await durable.deleteAll();
+    const storage = new DurableStorage(durable);
+    await storage.put(versionKey, c.headVersion);
+    for (const [clientID, record] of c.clientRecords) {
+      await putClientRecord(clientID, record, storage);
+    }
 
-      const p = processRoom(
-        new LogContext("info"),
-        roomID,
-        c.clients,
-        mutators,
-        startTime,
-        endTime,
-        executor
-      );
-      if (c.expectedError) {
-        try {
-          await p;
-          expect.fail("Expected error", c.name);
-        } catch (e) {
-          expect(String(e), c.name).equal(c.expectedError);
-        }
-      } else {
-        const pokes = await p;
-        expect(pokes, c.name).deep.equal(c.expectedPokes);
+    const p = processRoom(
+      new LogContext("info"),
+      c.clients,
+      mutators,
+      durable,
+      startTime
+    );
+    if (c.expectedError) {
+      try {
+        await p;
+        fail("Expected error");
+      } catch (e) {
+        expect(String(e)).toEqual(c.expectedError);
       }
+    } else {
+      const pokes = await p;
+      expect(pokes).toEqual(c.expectedPokes);
+    }
 
-      for (const [clientID, record] of c.expectedClientRecords ?? new Map()) {
-        expect(await getClientRecord(clientID, storage), c.name).deep.equal(
-          record
-        );
-      }
+    for (const [clientID, record] of c.expectedClientRecords ?? new Map()) {
+      expect(await getClientRecord(clientID, storage)).toEqual(record);
+    }
 
-      for (const [key, value] of c.expectedUserValues ?? new Map()) {
-        expect(await getUserValue(key, storage), c.name).deep.equal(value);
-      }
+    for (const [key, value] of c.expectedUserValues ?? new Map()) {
+      expect(await getUserValue(key, storage)).toEqual(value);
+    }
 
-      expect(await getVersion(storage), c.name).equal(c.expectedVersion);
-    });
+    expect(await getVersion(storage)).toEqual(c.expectedVersion);
   }
 });

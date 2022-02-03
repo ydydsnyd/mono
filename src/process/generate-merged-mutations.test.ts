@@ -1,9 +1,12 @@
-import { ClientMutation } from "../types/client-mutation";
-import { ClientMap } from "../types/client-state";
-import { expect } from "chai";
-import { test } from "mocha";
-import { generateMergedMutations } from "./generate-merged-mutations";
-import { client, clientMutation, Mocket, mutation } from "../util/test-utils";
+import type { ClientMutation } from "../../src/types/client-mutation.js";
+import type { ClientMap } from "../../src/types/client-state.js";
+import { generateMergedMutations } from "../../src/process/generate-merged-mutations.js";
+import {
+  client,
+  clientMutation,
+  Mocket,
+  mutation,
+} from "../util/test-utils.js";
 
 test("generateMergedMutations", () => {
   type Case = {
@@ -94,9 +97,9 @@ test("generateMergedMutations", () => {
   ];
   for (const c of cases) {
     const gen = generateMergedMutations(c.clients);
-    for (const [i, m] of c.expected.entries()) {
-      expect(gen.next().value, `c.name - entry ${i}`).deep.equal(m);
+    for (const [, m] of c.expected.entries()) {
+      expect(gen.next().value).toEqual(m);
     }
-    expect(gen.next().done, c.name).true;
+    expect(gen.next().done);
   }
 });

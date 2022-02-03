@@ -1,5 +1,5 @@
-import { Storage } from "../storage/storage";
 import { z } from "zod";
+import type { Storage } from "../storage/storage.js";
 
 export const versionSchema = z.number();
 export const nullableVersionSchema = z.union([versionSchema, z.null()]);

@@ -1,29 +1,22 @@
-import { expect } from "chai";
-import { setup, test } from "mocha";
 import {
   ClientRecord,
   clientRecordKey,
   clientRecordSchema,
-} from "../types/client-record";
-import { createDatabase, getEntry, putEntry } from "../db/data";
-import { transact, withExecutor } from "../db/pg";
-import { RoomMap } from "../types/room-state";
-import { Socket } from "../types/client-state";
-import {
-  client,
-  clientRecord,
-  Mocket,
-  room,
-  roomMap,
-} from "../util/test-utils";
-import { handleConnection } from "./connect";
-import { LogContext } from "../util/logger";
+} from "../../src/types/client-record.js";
+import { getEntry, putEntry } from "../../src/db/data.js";
+import type { ClientMap, Socket } from "../../src/types/client-state.js";
+import { client, clientRecord, Mocket } from "../util/test-utils.js";
+import { handleConnection } from "../../src/server/connect.js";
+import { LogContext } from "../../src/util/logger.js";
 
-setup(async () => {
-  await withExecutor(async () => {
-    await createDatabase();
-  });
-});
+const { server } = getMiniflareBindings();
+const id = server.newUniqueId();
+
+function freshClient(id: string, socket: Socket = new Mocket()) {
+  const [clientID, c] = client(id, socket);
+  c.clockBehindByMs = undefined;
+  return [clientID, c] as const;
+}
 
 test("handleConnection", async () => {
   type Case = {
@@ -32,100 +25,72 @@ test("handleConnection", async () => {
     expectErrorResponse?: string;
     existingRecord?: ClientRecord;
     expectedRecord?: ClientRecord;
-    existingRooms: RoomMap;
-    expectedRooms: (socket: Socket) => RoomMap;
+    existingClients: ClientMap;
+    expectedClients: (socket: Socket) => ClientMap;
     socket?: Socket;
   };
-  const c2 = client("c1");
-  const c3 = client("c2");
+  const c2 = client("c2");
   const cases: Case[] = [
     {
-      name: "empty",
-      url: "",
-      expectErrorResponse:
-        "Error: invalid querystring parameter roomID, url: , got: undefined",
-      existingRooms: roomMap(),
-      expectedRooms: (_) => roomMap(),
-    },
-    {
-      name: "invalid roomid",
-      url: "?clientID=c1&baseCookie=1&timestamp=t1",
-      expectErrorResponse:
-        "Error: invalid querystring parameter roomID, url: ?clientID=c1&baseCookie=1&timestamp=t1, got: undefined",
-      existingRooms: roomMap(),
-      expectedRooms: (_) => roomMap(),
-    },
-    {
       name: "invalid clientid",
-      url: "?roomID=r1&baseCookie=1&timestamp=t1",
-      expectErrorResponse:
-        "Error: invalid querystring parameter clientID, url: ?roomID=r1&baseCookie=1&timestamp=t1, got: undefined",
-      existingRooms: roomMap(),
-      expectedRooms: (_) => roomMap(),
+      url: "http://google.com/?baseCookie=1&timestamp=t1",
+      expectErrorResponse: "Error: invalid querystring - missing clientID",
+      existingClients: new Map(),
+      expectedClients: () => new Map(),
     },
     {
       name: "invalid timestamp",
-      url: "?roomID=r1&clientID=c1&baseCookie=1",
-      expectErrorResponse:
-        "Error: invalid querystring parameter ts, url: ?roomID=r1&clientID=c1&baseCookie=1, got: undefined",
-      existingRooms: roomMap(),
-      expectedRooms: (_) => roomMap(),
+      url: "http://google.com/?clientID=c1&baseCookie=1",
+      expectErrorResponse: "Error: invalid querystring - missing ts",
+      existingClients: new Map(),
+      expectedClients: () => new Map(),
     },
     {
       name: "invalid (non-numeric) timestamp",
-      url: "?roomID=r1&clientID=c1&baseCookie=1&ts=xx",
+      url: "http://google.com/?clientID=c1&baseCookie=1&ts=xx",
       expectErrorResponse:
-        "Error: invalid querystring parameter ts, url: ?roomID=r1&clientID=c1&baseCookie=1&ts=xx, got: xx",
-      existingRooms: roomMap(),
-      expectedRooms: (_) => roomMap(),
+        "Error: invalid querystring parameter ts, url: http://google.com/?clientID=c1&baseCookie=1&ts=xx, got: xx",
+      existingClients: new Map(),
+      expectedClients: () => new Map(),
     },
     {
-      name: "no existing rooms",
-      url: "?clientID=c1&roomID=r1&baseCookie=1&ts=42",
-      existingRooms: roomMap(),
-      expectedRooms: (socket) => roomMap(room("r1", client("c1", socket))),
+      name: "no existing clients",
+      url: "http://google.com/?clientID=c1&baseCookie=1&ts=42",
+      existingClients: new Map(),
+      expectedClients: (socket) => new Map([freshClient("c1", socket)]),
       expectedRecord: clientRecord(1, 0),
     },
     {
       name: "baseCookie: null",
-      url: "?clientID=c1&roomID=r1&baseCookie=&ts=42",
-      existingRooms: roomMap(),
-      expectedRooms: (socket) => roomMap(room("r1", client("c1", socket))),
+      url: "http://google.com/?clientID=c1&baseCookie=&ts=42",
+      existingClients: new Map(),
+      expectedClients: (socket) => new Map([freshClient("c1", socket)]),
       expectedRecord: clientRecord(null, 0),
     },
     {
       name: "existing clients",
-      url: "?clientID=c1&roomID=r1&baseCookie=1&ts=42",
-      existingRooms: roomMap(room("r1", c2)),
-      expectedRooms: (socket) => roomMap(room("r1", client("c1", socket), c2)),
-      expectedRecord: clientRecord(1, 0),
-    },
-    {
-      name: "existing rooms",
-      url: "?clientID=c1&roomID=r1&baseCookie=1&ts=42",
-      existingRooms: roomMap(room("r1", c2), room("r2", c3)),
-      expectedRooms: (socket) =>
-        roomMap(room("r1", client("c1", socket), c2), room("r2", c3)),
+      url: "http://google.com/?clientID=c1&baseCookie=1&ts=42",
+      existingClients: new Map([c2]),
+      expectedClients: (socket) => new Map([freshClient("c1", socket), c2]),
       expectedRecord: clientRecord(1, 0),
     },
     {
       name: "existing record",
-      url: "?clientID=c1&roomID=r1&baseCookie=7&ts=42",
-      existingRooms: roomMap(),
-      expectedRooms: (socket) => roomMap(room("r1", client("c1", socket))),
+      url: "http://google.com/?clientID=c1&baseCookie=7&ts=42",
+      existingClients: new Map(),
+      expectedClients: (socket) => new Map([freshClient("c1", socket)]),
       existingRecord: clientRecord(1, 88),
       expectedRecord: clientRecord(7, 88),
     },
   ];
 
-  for (const c of cases) {
-    await transact(async (executor) => {
-      if (c.existingRecord) {
-        await putEntry(executor, "r1", clientRecordKey("c1"), c.existingRecord);
-      }
-    });
+  const durable = await getMiniflareDurableObjectStorage(id);
 
-    const rooms = new Map(c.existingRooms);
+  for (const c of cases) {
+    if (c.existingRecord) {
+      await putEntry(durable, clientRecordKey("c1"), c.existingRecord);
+    }
+
     const onMessage = () => undefined;
     const onClose = () => undefined;
     const mocket = new Mocket();
@@ -133,34 +98,27 @@ test("handleConnection", async () => {
     await handleConnection(
       new LogContext("info"),
       mocket,
-      c.url,
-      rooms,
+      durable,
+      new URL(c.url),
+      c.existingClients,
       onMessage,
       onClose
     );
 
     if (c.expectErrorResponse) {
-      expect(mocket.log, c.name).to.deep.equal([
-        ["send", c.expectErrorResponse],
-        ["close"],
-      ]);
-      return;
+      expect(mocket.log).toEqual([["send", c.expectErrorResponse], ["close"]]);
+      continue;
     }
-    expect(mocket.log, c.name).to.deep.equal([]);
-    expect(mocket.onmessage, c.name).equal(onMessage);
-    expect(mocket.onclose, c.name).equal(onClose);
+    expect(mocket.log).toEqual([["send", JSON.stringify(["connected", {}])]]);
 
-    const expectedRooms = c.expectedRooms(mocket);
-    expect(rooms, c.name).deep.equal(expectedRooms);
+    const expectedClients = c.expectedClients(mocket);
+    expect(c.existingClients).toEqual(expectedClients);
 
-    await transact(async (executor) => {
-      const actualRecord = await getEntry(
-        executor,
-        "r1",
-        clientRecordKey("c1"),
-        clientRecordSchema
-      );
-      expect(actualRecord, c.name).to.deep.equal(c.expectedRecord);
-    });
+    const actualRecord = await getEntry(
+      durable,
+      clientRecordKey("c1"),
+      clientRecordSchema
+    );
+    expect(actualRecord).toEqual(c.expectedRecord);
   }
 });

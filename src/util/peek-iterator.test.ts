@@ -1,19 +1,17 @@
-import { expect } from "chai";
-import { PeekIterator } from "./peek-iterator";
-import { test } from "mocha";
+import { PeekIterator } from "../../src/util/peek-iterator.js";
 
 test("PeekIterator", () => {
   const c = new PeekIterator("abc"[Symbol.iterator]());
-  expect(c.peek().value).to.equal("a");
-  expect(c.peek().value).to.equal("a");
-  expect(c.next().value).to.equal("a");
-  expect(c.peek().value).to.equal("b");
-  expect(c.peek().value).to.equal("b");
-  expect(c.next().value).to.equal("b");
-  expect(c.peek().value).to.equal("c");
-  expect(c.peek().value).to.equal("c");
-  expect(c.next().value).to.equal("c");
-  expect(c.peek().done).to.be.true;
-  expect(c.peek().done).to.be.true;
-  expect(c.next().done).to.be.true;
+  expect(c.peek().value).toEqual("a");
+  expect(c.peek().value).toEqual("a");
+  expect(c.next().value).toEqual("a");
+  expect(c.peek().value).toEqual("b");
+  expect(c.peek().value).toEqual("b");
+  expect(c.next().value).toEqual("b");
+  expect(c.peek().value).toEqual("c");
+  expect(c.peek().value).toEqual("c");
+  expect(c.next().value).toEqual("c");
+  expect(c.peek().done);
+  expect(c.peek().done);
+  expect(c.next().done);
 });

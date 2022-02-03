@@ -1,16 +1,16 @@
-import { EntryCache } from "../storage/entry-cache";
-import { unwrapPatch } from "../storage/replicache-transaction";
-import { Storage } from "../storage/storage";
-import { ClientMutation } from "../types/client-mutation";
-import { ClientPokeBody } from "../types/client-poke-body";
-import { getClientRecord, putClientRecord } from "../types/client-record";
-import { ClientID } from "../types/client-state";
-import { getVersion } from "../types/version";
-import { LogContext } from "../util/logger";
-import { must } from "../util/must";
-import { PeekIterator } from "../util/peek-iterator";
-import { MutatorMap, processMutation } from "./process-mutation";
-//import { GapTracker } from "../util/gap-tracker";
+import { EntryCache } from "../storage/entry-cache.js";
+import { unwrapPatch } from "../storage/replicache-transaction.js";
+import type { Storage } from "../storage/storage.js";
+import type { ClientMutation } from "../types/client-mutation.js";
+import type { ClientPokeBody } from "../types/client-poke-body.js";
+import { getClientRecord, putClientRecord } from "../types/client-record.js";
+import type { ClientID } from "../types/client-state.js";
+import { getVersion } from "../types/version.js";
+import type { LogContext } from "../util/logger.js";
+import { must } from "../util/must.js";
+import type { PeekIterator } from "../util/peek-iterator.js";
+import { MutatorMap, processMutation } from "./process-mutation.js";
+//import { GapTracker } from "../util/gap-tracker.js";
 
 //const tracker = new GapTracker("processFrame", new LogContext("debug"));
 
@@ -24,17 +24,9 @@ export async function processFrame(
   mutators: MutatorMap,
   clients: ClientID[],
   storage: Storage,
-  startTime: number,
-  endTime: number
+  timestamp: number
 ): Promise<ClientPokeBody[]> {
-  lc.debug?.(
-    "processing frame - startTime",
-    startTime,
-    "endTime",
-    endTime,
-    "clients",
-    clients
-  );
+  lc.debug?.("processing frame - clients", clients);
 
   const cache = new EntryCache(storage);
   const prevVersion = must(await getVersion(cache));
@@ -44,11 +36,6 @@ export async function processFrame(
 
   for (; !mutations.peek().done; mutations.next()) {
     const { value: mutation } = mutations.peek();
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    if (mutation!.timestamp >= endTime) {
-      lc.debug?.("reached end of frame", mutation);
-      break;
-    }
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     await processMutation(lc, mutation!, mutators, cache, nextVersion);
   }
@@ -75,7 +62,7 @@ export async function processFrame(
         cookie: nextVersion,
         lastMutationID: clientRecord.lastMutationID,
         patch,
-        timestamp: startTime,
+        timestamp,
       },
     };
     ret.push(poke);

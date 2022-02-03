@@ -1,15 +1,15 @@
-import { JSONValue, ScanResult, WriteTransaction } from "replicache";
-import { Version } from "../types/version";
+import type { JSONValue, ScanResult, WriteTransaction } from "replicache";
+import type { Version } from "../types/version.js";
 import {
   UserValue,
   userValueKey,
   userValuePrefix,
   userValueSchema,
-} from "../types/user-value";
-import { JSONType } from "../protocol/json";
-import { ClientID } from "../types/client-state";
-import { Patch } from "../protocol/poke";
-import { Storage } from "./storage";
+} from "../types/user-value.js";
+import type { JSONType } from "../protocol/json.js";
+import type { ClientID } from "../types/client-state.js";
+import type { Patch } from "../protocol/poke.js";
+import type { Storage } from "./storage.js";
 
 /**
  * Implements Replicache's WriteTransaction in terms of EntryCache.

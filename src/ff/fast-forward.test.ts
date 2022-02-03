@@ -1,29 +1,24 @@
-import { DBStorage } from "../storage/db-storage";
-import { ClientPokeBody } from "../types/client-poke-body";
+import { DurableStorage } from "../../src/storage/durable-storage.js";
+import type { ClientPokeBody } from "../../src/types/client-poke-body.js";
 import {
   ClientRecord,
   getClientRecord,
   putClientRecord,
-} from "../types/client-record";
-import { ClientID } from "../types/client-state";
-import { RoomID } from "../types/room-state";
-import { putUserValue, UserValue } from "../types/user-value";
-import { Version } from "../types/version";
-import { must } from "../util/must";
-import { expect } from "chai";
-import { test } from "mocha";
-import { createDatabase } from "../db/data";
-import { transact } from "../db/pg";
-import { fastForwardRoom } from "./fast-forward";
+} from "../../src/types/client-record.js";
+import type { ClientID } from "../../src/types/client-state.js";
+import { putUserValue, UserValue } from "../../src/types/user-value.js";
+import { must } from "../../src/util/must.js";
+import { fastForwardRoom } from "../../src/ff/fast-forward.js";
+
+const { server } = getMiniflareBindings();
+const id = server.newUniqueId();
 
 test("fastForward", async () => {
   type Case = {
     name: string;
     state: Map<string, UserValue>;
     clientRecords: Map<string, ClientRecord>;
-    roomID: RoomID;
     clients: ClientID[];
-    headVersion: Version;
     timestamp: number;
     expectedError?: string;
     expectedPokes?: ClientPokeBody[];
@@ -34,9 +29,7 @@ test("fastForward", async () => {
       name: "no clients",
       state: new Map([["foo", { value: "bar", version: 1, deleted: false }]]),
       clientRecords: new Map([["c1", { lastMutationID: 1, baseCookie: 0 }]]),
-      roomID: "r1",
       clients: [],
-      headVersion: 1,
       timestamp: 1,
       expectedPokes: [],
     },
@@ -44,9 +37,7 @@ test("fastForward", async () => {
       name: "no data",
       state: new Map(),
       clientRecords: new Map([["c1", { lastMutationID: 1, baseCookie: 0 }]]),
-      roomID: "r1",
       clients: ["c1"],
-      headVersion: 1,
       timestamp: 1,
       expectedPokes: [
         {
@@ -65,9 +56,7 @@ test("fastForward", async () => {
       name: "up to date",
       state: new Map(),
       clientRecords: new Map([["c1", { lastMutationID: 1, baseCookie: 42 }]]),
-      roomID: "r1",
       clients: ["c1"],
-      headVersion: 1,
       timestamp: 1,
       expectedPokes: [],
     },
@@ -78,9 +67,7 @@ test("fastForward", async () => {
         ["hot", { value: "dog", version: 42, deleted: true }],
       ]),
       clientRecords: new Map([["c1", { lastMutationID: 3, baseCookie: 41 }]]),
-      roomID: "r1",
       clients: ["c1"],
-      headVersion: 1,
       timestamp: 1,
       expectedPokes: [
         {
@@ -115,9 +102,7 @@ test("fastForward", async () => {
         ["c1", { lastMutationID: 3, baseCookie: 40 }],
         ["c2", { lastMutationID: 1, baseCookie: 41 }],
       ]),
-      roomID: "r1",
       clients: ["c1", "c2"],
-      headVersion: 1,
       timestamp: 1,
       expectedPokes: [
         {
@@ -167,9 +152,7 @@ test("fastForward", async () => {
         ["c1", { lastMutationID: 3, baseCookie: 40 }],
         ["c2", { lastMutationID: 1, baseCookie: 41 }],
       ]),
-      roomID: "r1",
       clients: ["c1"],
-      headVersion: 1,
       timestamp: 1,
       expectedPokes: [
         {
@@ -196,31 +179,30 @@ test("fastForward", async () => {
     },
   ];
 
+  const durable = await getMiniflareDurableObjectStorage(id);
+
   for (const c of cases) {
-    await createDatabase();
-    await transact(async (executor) => {
-      const storage = new DBStorage(executor, c.roomID);
-      for (const [clientID, clientRecord] of c.clientRecords) {
-        await putClientRecord(clientID, clientRecord, storage);
-      }
-      for (const [key, value] of c.state) {
-        await putUserValue(key, value, storage);
-      }
+    await durable.deleteAll();
+    const storage = new DurableStorage(durable);
+    for (const [clientID, clientRecord] of c.clientRecords) {
+      await putClientRecord(clientID, clientRecord, storage);
+    }
+    for (const [key, value] of c.state) {
+      await putUserValue(key, value, storage);
+    }
 
-      const gcr = async (clientID: ClientID) => {
-        return must(await getClientRecord(clientID, storage));
-      };
+    const gcr = async (clientID: ClientID) => {
+      return must(await getClientRecord(clientID, storage));
+    };
 
-      const pokes = await fastForwardRoom(
-        c.roomID,
-        c.clients,
-        gcr,
-        42,
-        executor,
-        c.timestamp
-      );
+    const pokes = await fastForwardRoom(
+      c.clients,
+      gcr,
+      42,
+      durable,
+      c.timestamp
+    );
 
-      expect(pokes, c.name).deep.equal(c.expectedPokes);
-    });
+    expect(pokes).toEqual(c.expectedPokes);
   }
 });

@@ -1,5 +1,5 @@
-import { JSONType } from "../protocol/json";
-import { hasOwn } from "./has-own";
+import type { JSONType } from "../protocol/json.js";
+import { hasOwn } from "./has-own.js";
 
 export function deepClone(value: JSONType): JSONType {
   const seen: Array<JSONType | ReadonlyArray<JSONType>> = [];

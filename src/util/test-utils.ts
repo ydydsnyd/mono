@@ -1,20 +1,12 @@
-import { JSONType } from "../protocol/json";
-import { Mutation } from "../protocol/push";
-import { ClientMutation } from "../types/client-mutation";
-import { ClientID, ClientState, Socket } from "../types/client-state";
-import { RoomID, RoomMap, RoomState } from "../types/room-state";
-import { NullableVersion } from "../types/version";
-
-export function roomMap(...rooms: [RoomID, RoomState][]): RoomMap {
-  return new Map(rooms);
-}
-
-export function room(
-  id: RoomID,
-  ...clients: [ClientID, ClientState][]
-): [RoomID, RoomState] {
-  return [id, { clients: new Map(clients) }];
-}
+import type { JSONType } from "../../src/protocol/json.js";
+import type { Mutation } from "../../src/protocol/push.js";
+import type { ClientMutation } from "../../src/types/client-mutation.js";
+import type {
+  ClientID,
+  ClientState,
+  Socket,
+} from "../../src/types/client-state.js";
+import type { NullableVersion } from "../../src/types/version.js";
 
 export function client(
   id: ClientID,
@@ -55,7 +47,9 @@ export function clientMutation(
   };
 }
 
-export class Mocket implements Socket {
+export class Mocket extends EventTarget implements Socket {
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  accept(): void {}
   log: string[][] = [];
   send(data: string): void {
     this.log.push(["send", data]);
@@ -83,4 +77,8 @@ export function userValue(value: JSONType, version = 1, deleted = false) {
     version,
     deleted,
   };
+}
+
+export function fail(s: string): never {
+  throw new Error(s);
 }

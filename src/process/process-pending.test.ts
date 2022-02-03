@@ -1,53 +1,39 @@
-import { expect } from "chai";
-import { test } from "mocha";
-import { PokeBody } from "../protocol/poke";
-import { WriteTransaction } from "replicache";
-import { createDatabase } from "../db/data";
-import { transact } from "../db/pg";
-import { DBStorage } from "../storage/db-storage";
+import type { WriteTransaction } from "replicache";
+import type { PokeBody } from "../../src/protocol/poke.js";
+import { DurableStorage } from "../../src/storage/durable-storage.js";
 import {
   ClientRecord,
   getClientRecord,
   putClientRecord,
-} from "../types/client-record";
-import { ClientID } from "../types/client-state";
-import { RoomID, RoomMap } from "../types/room-state";
-import { getUserValue, UserValue } from "../types/user-value";
-import { getVersion, putVersion, Version } from "../types/version";
+} from "../../src/types/client-record.js";
+import type { ClientID, ClientMap } from "../../src/types/client-state.js";
+import { getUserValue, UserValue } from "../../src/types/user-value.js";
+import { getVersion, putVersion, Version } from "../../src/types/version.js";
 import {
   client,
   clientRecord,
+  fail,
   Mocket,
   mutation,
-  room,
-  roomMap,
-} from "../util/test-utils";
-import { processPending } from "./process-pending";
-import { FRAME_LENGTH_MS } from "./process-room";
-import { LogContext } from "../util/logger";
+} from "../util/test-utils.js";
+import { processPending } from "../../src/process/process-pending.js";
+import { LogContext } from "../../src/util/logger.js";
+
+const { server } = getMiniflareBindings();
+const id = server.newUniqueId();
 
 test("processPending", async () => {
   type Case = {
     name: string;
-    start: Map<
-      RoomID,
-      {
-        version: Version;
-        clientRecords: Map<ClientID, ClientRecord>;
-      }
-    >;
-    rooms: RoomMap;
+    version: Version;
+    clientRecords: Map<ClientID, ClientRecord>;
+    clients: ClientMap;
     expectedError?: string;
-    expectedRooms: RoomMap;
-    expected: Map<
-      RoomID,
-      {
-        version: Version;
-        pokes?: Map<Mocket, PokeBody[]>;
-        userValues?: Map<string, UserValue>;
-        clientRecords?: Map<ClientID, ClientRecord>;
-      }
-    >;
+    expectedClients: ClientMap;
+    expectedVersion: Version;
+    expectedPokes?: Map<Mocket, PokeBody[]>;
+    expectedUserValues?: Map<string, UserValue>;
+    expectedClientRecords?: Map<ClientID, ClientRecord>;
   };
 
   const s1 = new Mocket();
@@ -56,219 +42,163 @@ test("processPending", async () => {
   const cases: Case[] = [
     {
       name: "none pending",
-      start: new Map([
+      version: 1,
+      clientRecords: new Map([["c1", clientRecord(1)]]),
+      clients: new Map(),
+      expectedClients: new Map(),
+      expectedVersion: 1,
+      expectedPokes: new Map(),
+      expectedUserValues: new Map(),
+      expectedClientRecords: new Map([["c1", clientRecord(1)]]),
+    },
+    {
+      name: "one client, one mutation",
+      version: 1,
+      clientRecords: new Map([["c1", clientRecord(1)]]),
+      clients: new Map([client("c1", s1, 0, mutation(2, "inc", null, 100))]),
+      expectedClients: new Map([client("c1", s1, 0)]),
+      expectedVersion: 2,
+      expectedPokes: new Map([
         [
-          "r1",
-          {
-            version: 1,
-            clientRecords: new Map([["c1", clientRecord(1)]]),
-          },
+          s1,
+          [
+            {
+              baseCookie: 1,
+              cookie: 2,
+              lastMutationID: 2,
+              patch: [
+                {
+                  op: "put",
+                  key: "count",
+                  value: 1,
+                },
+              ],
+              timestamp: 100,
+            },
+          ],
         ],
       ]),
-      rooms: roomMap(),
-      expectedRooms: roomMap(),
-      expected: new Map([
+      expectedUserValues: new Map([
+        ["count", { value: 1, version: 2, deleted: false }],
+      ]),
+      expectedClientRecords: new Map([["c1", clientRecord(2, 2)]]),
+    },
+    {
+      name: "two clients, two mutations",
+      version: 1,
+      clientRecords: new Map([
+        ["c1", clientRecord(1)],
+        ["c2", clientRecord(1)],
+      ]),
+      clients: new Map([
+        client("c1", s1, 0, mutation(2, "inc", null, 100)),
+        client("c2", s2, 0, mutation(2, "inc", null, 120)),
+      ]),
+      expectedClients: new Map([client("c1", s1, 0), client("c2", s2, 0)]),
+      expectedVersion: 2,
+      expectedPokes: new Map([
         [
-          "r1",
-          {
-            version: 1,
-            pokes: new Map(),
-            userValues: new Map(),
-            clientRecords: new Map([["c1", clientRecord(1)]]),
-          },
+          s1,
+          [
+            {
+              baseCookie: 1,
+              cookie: 2,
+              lastMutationID: 2,
+              patch: [
+                {
+                  op: "put",
+                  key: "count",
+                  value: 2,
+                },
+              ],
+              timestamp: 100,
+            },
+          ],
         ],
+        [
+          s2,
+          [
+            {
+              baseCookie: 1,
+              cookie: 2,
+              lastMutationID: 2,
+              patch: [
+                {
+                  op: "put",
+                  key: "count",
+                  value: 2,
+                },
+              ],
+              timestamp: 100,
+            },
+          ],
+        ],
+      ]),
+      expectedUserValues: new Map([
+        ["count", { value: 2, version: 2, deleted: false }],
+      ]),
+      expectedClientRecords: new Map([
+        ["c1", clientRecord(2, 2)],
+        ["c2", clientRecord(2, 2)],
       ]),
     },
     {
-      name: "one room, one client, one mutation",
-      start: new Map([
-        [
-          "r1",
-          {
-            version: 1,
-            clientRecords: new Map([["c1", clientRecord(1)]]),
-          },
-        ],
+      name: "two clients, two mutations, one not ready",
+      version: 1,
+      clientRecords: new Map([
+        ["c1", clientRecord(1)],
+        ["c2", clientRecord(1)],
       ]),
-      rooms: roomMap(
-        room("r1", client("c1", s1, 0, mutation(2, "inc", null, 100)))
-      ),
-      expectedRooms: roomMap(),
-      expected: new Map([
+      clients: new Map([
+        client("c1", s1, 0, mutation(2, "inc", null, 100)),
+        client("c2", s2, 0, mutation(2, "inc", null, 300)),
+      ]),
+      expectedClients: new Map([client("c1", s1, 0), client("c2", s2, 0)]),
+      expectedVersion: 2,
+      expectedPokes: new Map([
         [
-          "r1",
-          {
-            version: 2,
-            pokes: new Map([
-              [
-                s1,
-                [
-                  {
-                    baseCookie: 1,
-                    cookie: 2,
-                    lastMutationID: 2,
-                    patch: [
-                      {
-                        op: "put",
-                        key: "count",
-                        value: 1,
-                      },
-                    ],
-                    timestamp: 100,
-                  },
-                ],
+          s1,
+          [
+            {
+              baseCookie: 1,
+              cookie: 2,
+              lastMutationID: 2,
+              patch: [
+                {
+                  op: "put",
+                  key: "count",
+                  value: 2,
+                },
               ],
-            ]),
-            userValues: new Map([
-              ["count", { value: 1, version: 2, deleted: false }],
-            ]),
-            clientRecords: new Map([["c1", clientRecord(2, 2)]]),
-          },
-        ],
-      ]),
-    },
-    {
-      name: "two rooms, two clients, two mutations",
-      start: new Map([
-        [
-          "r1",
-          {
-            version: 1,
-            clientRecords: new Map([["c1", clientRecord(1)]]),
-          },
+              timestamp: 100,
+            },
+          ],
         ],
         [
-          "r2",
-          {
-            version: 2,
-            clientRecords: new Map([["c2", clientRecord(2)]]),
-          },
-        ],
-      ]),
-      rooms: roomMap(
-        room("r1", client("c1", s1, 0, mutation(2, "inc", null, 100))),
-        room("r2", client("c2", s2, 0, mutation(2, "inc", null, 120)))
-      ),
-      expectedRooms: roomMap(),
-      expected: new Map([
-        [
-          "r1",
-          {
-            version: 2,
-            pokes: new Map([
-              [
-                s1,
-                [
-                  {
-                    baseCookie: 1,
-                    cookie: 2,
-                    lastMutationID: 2,
-                    patch: [
-                      {
-                        op: "put",
-                        key: "count",
-                        value: 1,
-                      },
-                    ],
-                    timestamp: 100,
-                  },
-                ],
+          s2,
+          [
+            {
+              baseCookie: 1,
+              cookie: 2,
+              lastMutationID: 2,
+              patch: [
+                {
+                  op: "put",
+                  key: "count",
+                  value: 2,
+                },
               ],
-            ]),
-            userValues: new Map([
-              ["count", { value: 1, version: 2, deleted: false }],
-            ]),
-            clientRecords: new Map([["c1", clientRecord(2, 2)]]),
-          },
-        ],
-        [
-          "r2",
-          {
-            version: 3,
-            pokes: new Map([
-              [
-                s2,
-                [
-                  {
-                    baseCookie: 2,
-                    cookie: 3,
-                    lastMutationID: 2,
-                    patch: [
-                      {
-                        op: "put",
-                        key: "count",
-                        value: 1,
-                      },
-                    ],
-                    timestamp: 100 + FRAME_LENGTH_MS,
-                  },
-                ],
-              ],
-            ]),
-            userValues: new Map([
-              ["count", { value: 1, version: 3, deleted: false }],
-            ]),
-            clientRecords: new Map([["c2", clientRecord(3, 2)]]),
-          },
+              timestamp: 100,
+            },
+          ],
         ],
       ]),
-    },
-    {
-      name: "two rooms, two clients, two mutations, one not ready",
-      start: new Map([
-        [
-          "r1",
-          {
-            version: 1,
-            clientRecords: new Map([["c1", clientRecord(1)]]),
-          },
-        ],
-        [
-          "r2",
-          {
-            version: 2,
-            clientRecords: new Map([["c2", clientRecord(2)]]),
-          },
-        ],
+      expectedUserValues: new Map([
+        ["count", { value: 2, version: 2, deleted: false }],
       ]),
-      rooms: roomMap(
-        room("r1", client("c1", s1, 0, mutation(2, "inc", null, 100))),
-        room("r2", client("c2", s2, 0, mutation(2, "inc", null, 300)))
-      ),
-      expectedRooms: roomMap(
-        room("r2", client("c2", s2, 0, mutation(2, "inc", null, 300)))
-      ),
-      expected: new Map([
-        [
-          "r1",
-          {
-            version: 2,
-            pokes: new Map([
-              [
-                s1,
-                [
-                  {
-                    baseCookie: 1,
-                    cookie: 2,
-                    lastMutationID: 2,
-                    patch: [
-                      {
-                        op: "put",
-                        key: "count",
-                        value: 1,
-                      },
-                    ],
-                    timestamp: 100,
-                  },
-                ],
-              ],
-            ]),
-            userValues: new Map([
-              ["count", { value: 1, version: 2, deleted: false }],
-            ]),
-            clientRecords: new Map([["c1", clientRecord(2, 2)]]),
-          },
-        ],
+      expectedClientRecords: new Map([
+        ["c1", clientRecord(2, 2)],
+        ["c2", clientRecord(2, 2)],
       ]),
     },
   ];
@@ -284,66 +214,52 @@ test("processPending", async () => {
   );
 
   const startTime = 100;
-  const endTime = 200;
+  const durable = await getMiniflareDurableObjectStorage(id);
 
   for (const c of cases) {
-    await createDatabase();
-    await transact(async (executor) => {
-      for (const [roomID, { version, clientRecords }] of c.start) {
-        const storage = new DBStorage(executor, roomID);
-        await putVersion(version, storage);
-        for (const [clientID, record] of clientRecords) {
-          await putClientRecord(clientID, record, storage);
-        }
-      }
-    });
-    for (const [, roomState] of c.rooms) {
-      for (const [, clientState] of roomState.clients) {
-        (clientState.socket as Mocket).log.length = 0;
-      }
+    console.log(c.name);
+    await durable.deleteAll();
+    const storage = new DurableStorage(durable);
+    await putVersion(c.version, storage);
+    for (const [clientID, record] of c.clientRecords) {
+      await putClientRecord(clientID, record, storage);
+    }
+    for (const [, clientState] of c.clients) {
+      (clientState.socket as Mocket).log.length = 0;
     }
     const p = processPending(
       new LogContext("info"),
-      c.rooms,
+      durable,
+      c.clients,
       mutators,
-      startTime,
-      endTime
+      startTime
     );
     if (c.expectedError) {
       try {
         await p;
-        expect.fail("should have thrown");
+        fail("should have thrown");
       } catch (e) {
-        expect(String(e), c.name).equal(c.expectedError);
+        expect(String(e)).toEqual(c.expectedError);
       }
       continue;
     }
 
     await p;
-    expect(c.rooms, c.name).deep.equal(c.expectedRooms);
+    expect(c.clients).toEqual(c.expectedClients);
 
-    await transact(async (executor) => {
-      expect(c.expectedError).undefined;
-      for (const [roomID, exp] of c.expected) {
-        const storage = new DBStorage(executor, roomID);
-        expect(await getVersion(storage), c.name).equal(exp.version);
-        for (const [mocket, clientPokes] of exp.pokes ?? []) {
-          expect(mocket.log, c.name).deep.equal(
-            clientPokes.map((poke) => ["send", JSON.stringify(["poke", poke])])
-          );
-        }
-        for (const [expKey, expValue] of exp.userValues ?? new Map()) {
-          expect(await getUserValue(expKey, storage), c.name).deep.equal(
-            expValue
-          );
-        }
-        for (const [expClientID, expRecord] of exp.clientRecords ?? new Map()) {
-          expect(
-            await getClientRecord(expClientID, storage),
-            c.name
-          ).deep.equal(expRecord);
-        }
-      }
-    });
+    expect(c.expectedError).toBeUndefined;
+    expect(await getVersion(storage)).toEqual(c.expectedVersion);
+    for (const [mocket, clientPokes] of c.expectedPokes ?? []) {
+      expect(mocket.log).toEqual(
+        clientPokes.map((poke) => ["send", JSON.stringify(["poke", poke])])
+      );
+    }
+    for (const [expKey, expValue] of c.expectedUserValues ?? new Map()) {
+      expect(await getUserValue(expKey, storage)).toEqual(expValue);
+    }
+    for (const [expClientID, expRecord] of c.expectedClientRecords ??
+      new Map()) {
+      expect(await getClientRecord(expClientID, storage)).toEqual(expRecord);
+    }
   }
 });
