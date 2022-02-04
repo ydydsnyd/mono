@@ -6,9 +6,9 @@ import dts from "rollup-plugin-dts";
 // We use esbuild for building the actual code.
 
 export default {
-  input: "out/.dts/client.d.ts",
+  input: "out/.dts/src/index.d.ts",
   output: {
-    file: `./out/client.d.ts`,
+    file: `./out/index.d.ts`,
   },
   plugins: [dts()],
 };
