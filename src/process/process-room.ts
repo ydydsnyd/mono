@@ -9,7 +9,6 @@ import type { ClientID, ClientMap } from "../types/client-state.js";
 import { getVersion, putVersion } from "../types/version.js";
 import type { LogContext } from "../util/logger.js";
 import { must } from "../util/must.js";
-import { PeekIterator } from "../util/peek-iterator.js";
 import { generateMergedMutations } from "./generate-merged-mutations.js";
 import { processFrame } from "./process-frame.js";
 import type { MutatorMap } from "./process-mutation.js";
@@ -18,12 +17,10 @@ export const FRAME_LENGTH_MS = 1000 / 60;
 
 /**
  * Process all pending mutations that are ready to be processed for a room.
- * @param roomID room to process mutations for
  * @param clients active clients in the room
  * @param mutators all known mutators
- * @param timestamp timestamp to put in resulting pokes
  * @param durable storage to read/write to
- * @returns
+ * @param timestamp timestamp to put in resulting pokes
  */
 export async function processRoom(
   lc: LogContext,
@@ -68,7 +65,7 @@ export async function processRoom(
     await putClientRecord(poke.clientID, cr, cache);
   }
 
-  const mergedMutations = new PeekIterator(generateMergedMutations(clients));
+  const mergedMutations = generateMergedMutations(clients);
   pokes.push(
     ...(await processFrame(
       lc,

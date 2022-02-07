@@ -1,9 +1,9 @@
-import type { LogLevel, MutatorDefs } from "replicache";
+import type { MutatorDefs } from "replicache";
 import { processPending } from "../process/process-pending.js";
 import type { MutatorMap } from "../process/process-mutation.js";
 import type { ClientID, ClientMap, Socket } from "../types/client-state.js";
 import { Lock } from "../util/lock.js";
-import { LogContext } from "../util/logger.js";
+import { LogContext, type LogLevel } from "../util/logger.js";
 import { handleClose } from "./close.js";
 import { handleConnection } from "./connect.js";
 import { handleMessage } from "./message.js";
@@ -25,13 +25,17 @@ export class Server<MD extends MutatorDefs> {
   private readonly _lock = new Lock();
   private readonly _mutators: MutatorMap;
   private readonly _logLevel: LogLevel;
+  private readonly _state: DurableObjectState;
   private _turnTimerID: number | null = null;
 
-  constructor(mutators: MD, private readonly _state: DurableObjectState) {
+  constructor(
+    mutators: MD,
+    state: DurableObjectState,
+    logLevel: LogLevel = "debug"
+  ) {
     this._mutators = new Map([...Object.entries(mutators)]) as MutatorMap;
-    // TODO: make configurable
-    this._logLevel = "debug";
-    this._clients = new Map();
+    this._state = state;
+    this._logLevel = logLevel;
   }
 
   async fetch(request: Request) {
@@ -42,18 +46,15 @@ export class Server<MD extends MutatorDefs> {
         return new Response("expected websocket", { status: 400 });
       }
       const pair = new WebSocketPair();
-      void this.handleConnection(pair[1], url);
+      void this._handleConnection(pair[1], url);
       return new Response(null, { status: 101, webSocket: pair[0] });
     }
 
     throw new Error("unexpected path");
   }
 
-  async handleConnection(ws: Socket, url: URL) {
-    const lc = new LogContext(this._logLevel).addContext(
-      "req",
-      Math.random().toString(36).substr(2)
-    );
+  private async _handleConnection(ws: Socket, url: URL) {
+    const lc = new LogContext(this._logLevel).addContext("req", randomID());
 
     lc.debug?.("connection request", url.toString(), "waiting for lock");
     ws.accept();
@@ -66,43 +67,43 @@ export class Server<MD extends MutatorDefs> {
         this._state.storage,
         url,
         this._clients,
-        this.handleMessage.bind(this),
-        this.handleClose.bind(this)
+        this._handleMessage,
+        this._handleClose
       );
     });
   }
 
-  async handleMessage(clientID: ClientID, data: string, ws: Socket) {
+  private _handleMessage = async (
+    clientID: ClientID,
+    data: string,
+    ws: Socket
+  ): Promise<void> => {
     const lc = new LogContext(this._logLevel)
-      .addContext("req", Math.random().toString(36).substr(2))
+      .addContext("req", randomID())
       .addContext("client", clientID);
     lc.debug?.("handling message", data, "waiting for lock");
 
     await this._lock.withLock(async () => {
       lc.debug?.("received lock");
       handleMessage(lc, this._clients, clientID, data, ws, () =>
-        this.processUntilDone()
+        this._processUntilDone()
       );
     });
-  }
+  };
 
-  async processUntilDone() {
-    const lc = new LogContext(this._logLevel).addContext(
-      "req",
-      Math.random().toString(36).substr(2)
-    );
+  private async _processUntilDone() {
+    const lc = new LogContext(this._logLevel).addContext("req", randomID());
     lc.debug?.("handling processUntilDone");
     if (this._turnTimerID !== null) {
       lc.debug?.("already processing, nothing to do");
       return;
     }
     this._turnTimerID = setInterval(() => {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.processNext(lc);
+      void this._processNext(lc);
     }, 1000 / 60);
   }
 
-  async processNext(lc: LogContext) {
+  private async _processNext(lc: LogContext) {
     lc.debug?.(
       `processNext - starting turn at ${Date.now()} - waiting for lock`
     );
@@ -126,16 +127,16 @@ export class Server<MD extends MutatorDefs> {
     });
   }
 
-  async handleClose(clientID: ClientID): Promise<void> {
+  private _handleClose = async (clientID: ClientID): Promise<void> => {
     const lc = new LogContext(this._logLevel)
-      .addContext("req", Math.random().toString(36).substr(2))
+      .addContext("req", randomID())
       .addContext("client", clientID);
     lc.debug?.("handling close - waiting for lock");
     await this._lock.withLock(async () => {
       lc.debug?.("received lock");
       handleClose(this._clients, clientID);
     });
-  }
+  };
 }
 
 function hasPendingMutations(clients: ClientMap) {
@@ -145,4 +146,8 @@ function hasPendingMutations(clients: ClientMap) {
     }
   }
   return false;
+}
+
+function randomID(): string {
+  return Math.random().toString(36).substring(2);
 }

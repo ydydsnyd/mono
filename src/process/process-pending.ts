@@ -11,15 +11,13 @@ import { processRoom } from "./process-room.js";
 
 /**
  * Processes all mutations in all rooms for a time range, and send relevant pokes.
- * @param rooms All active rooms
+ * @param clients Rooms to process mutations for
  * @param mutators All known mutators
  */
 export async function processPending(
   lc: LogContext,
   durable: DurableObjectStorage,
-  // Rooms to process mutations for
   clients: ClientMap,
-  // All known mutators
   mutators: MutatorMap,
   timestamp: number
 ): Promise<void> {

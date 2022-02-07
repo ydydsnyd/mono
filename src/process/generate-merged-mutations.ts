@@ -26,7 +26,7 @@ export function* generateMergedMutations(clients: ClientMap) {
 
   for (const [clientID, c] of clients) {
     const clientMutations = c.pending.map((m) => ({ clientID, ...m }));
-    insertIterator(new PeekIterator(clientMutations[Symbol.iterator]()));
+    insertIterator(new PeekIterator(clientMutations.values()));
   }
 
   // const dumpIterators = (msg: string) => {

@@ -11,13 +11,11 @@ export type GetClientRecord = (clientID: ClientID) => Promise<ClientRecord>;
 /**
  * Returns zero or more pokes necessary to fast forward any clients in a room
  * that are behind head.
- * @param roomID room to fast-forward
  * @param clients clients active in room
  * @param getClientRecord function to get a client record by ID
  * @param currentVersion head version to fast-forward to
- * @param executor raw DB executor for finding entries by version quickly
+ * @param durable storage to read/write to
  * @param timestamp for resulting pokes
- * @returns
  */
 export async function fastForwardRoom(
   clients: ClientID[],

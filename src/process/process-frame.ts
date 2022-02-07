@@ -8,7 +8,6 @@ import type { ClientID } from "../types/client-state.js";
 import { getVersion } from "../types/version.js";
 import type { LogContext } from "../util/logger.js";
 import { must } from "../util/must.js";
-import type { PeekIterator } from "../util/peek-iterator.js";
 import { MutatorMap, processMutation } from "./process-mutation.js";
 //import { GapTracker } from "../util/gap-tracker.js";
 
@@ -20,7 +19,7 @@ import { MutatorMap, processMutation } from "./process-mutation.js";
 // can continue to apply.
 export async function processFrame(
   lc: LogContext,
-  mutations: PeekIterator<ClientMutation>,
+  mutations: Iterable<ClientMutation>,
   mutators: MutatorMap,
   clients: ClientID[],
   storage: Storage,
@@ -34,10 +33,8 @@ export async function processFrame(
 
   lc.debug?.("prevVersion", prevVersion, "nextVersion", nextVersion);
 
-  for (; !mutations.peek().done; mutations.next()) {
-    const { value: mutation } = mutations.peek();
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    await processMutation(lc, mutation!, mutators, cache, nextVersion);
+  for (const mutation of mutations) {
+    await processMutation(lc, mutation, mutators, cache, nextVersion);
   }
 
   if (must(await getVersion(cache)) === prevVersion) {
