@@ -1,16 +1,24 @@
 import { nanoid } from "nanoid";
-import type { Replicache, MutatorDefs, Poke, PullerResult } from "replicache";
-import type { PingMessage } from "../protocol/ping.js";
-import { NullableVersion, nullableVersionSchema } from "../types/version.js";
+import type { MutatorDefs, Poke, PullerResult, Replicache } from "replicache";
 import { downstreamSchema } from "../protocol/down.js";
+import type { PingMessage } from "../protocol/ping.js";
 import type { PokeBody } from "../protocol/poke.js";
 import type { PushBody, PushMessage } from "../protocol/push.js";
+import {
+  type NullableVersion,
+  nullableVersionSchema,
+} from "../types/version.js";
+import { assert } from "../util/asserts.js";
 import { GapTracker } from "../util/gap-tracker.js";
 import { LogContext } from "../util/logger.js";
 import { resolver } from "../util/resolver.js";
 import { sleep } from "../util/sleep.js";
 
-export type ConnectionState = "DISCONNECTED" | "CONNECTING" | "CONNECTED";
+const enum ConnectionState {
+  Disconnected,
+  Connecting,
+  Connected,
+}
 
 export class Client<M extends MutatorDefs> {
   private readonly _rep: Replicache<M>;
@@ -23,9 +31,10 @@ export class Client<M extends MutatorDefs> {
   private readonly _timestampTracker: GapTracker;
 
   private _socket: WebSocket | undefined = undefined;
-  private _lastMutationIDSent: number;
-  private _state: ConnectionState;
+  private _lastMutationIDSent = -1;
+  private _state: ConnectionState = ConnectionState.Disconnected;
   private _onPong: () => void = () => undefined;
+  private _connectResolver = resolver<WebSocket>();
 
   /**
    * Constructs a new reps client.
@@ -45,9 +54,6 @@ export class Client<M extends MutatorDefs> {
     this._pushTracker = new GapTracker("push", this._l);
     this._updateTracker = new GapTracker("update", this._l);
     this._timestampTracker = new GapTracker("update", this._l);
-
-    this._lastMutationIDSent = -1;
-    this._state = "DISCONNECTED";
     void this._watchdog();
   }
 
@@ -62,10 +68,10 @@ export class Client<M extends MutatorDefs> {
     if (downMessage[0] === "connected") {
       l.info?.("Connected");
 
-      this._state = "CONNECTED";
+      this._state = ConnectionState.Connected;
       this._lastMutationIDSent = -1;
-
-      void forcePush(this._rep);
+      assert(this._socket);
+      this._connectResolver.resolve(this._socket);
       return;
     }
 
@@ -93,13 +99,13 @@ export class Client<M extends MutatorDefs> {
   };
 
   private async _connect(l: LogContext) {
-    if (this._state === "CONNECTING") {
+    if (this._state === ConnectionState.Connecting) {
       l.debug?.("Skipping duplicate connect request");
       return;
     }
     l.info?.("Connecting...");
 
-    this._state = "CONNECTING";
+    this._state = ConnectionState.Connecting;
 
     const baseCookie = await getBaseCookie(this._rep);
     const ws = createSocket(
@@ -115,7 +121,14 @@ export class Client<M extends MutatorDefs> {
   }
 
   private _disconnect() {
-    this._state = "DISCONNECTED";
+    if (this._state === ConnectionState.Connected) {
+      // Only create a new resolver if the one we have was previously resolved,
+      // which happens when the socket became connected.
+      this._connectResolver = resolver();
+    }
+    this._state = ConnectionState.Disconnected;
+    this._socket?.removeEventListener("message", this._onMessage);
+    this._socket?.removeEventListener("close", this._onClose);
     this._socket = undefined;
     this._lastMutationIDSent = -1;
   }
@@ -150,11 +163,9 @@ export class Client<M extends MutatorDefs> {
   private async _pusher(req: Request) {
     if (!this._socket) {
       void this._connect(this._l);
-      return {
-        errorMessage: "",
-        httpStatusCode: 200,
-      };
     }
+
+    const socket = await this._connectResolver.promise;
 
     const pushBody = (await req.json()) as PushBody;
     const msg: PushMessage = ["push", pushBody];
@@ -171,7 +182,7 @@ export class Client<M extends MutatorDefs> {
       pushBody.mutations = newMutations;
       pushBody.timestamp = performance.now();
       this._pushTracker.push(performance.now());
-      this._socket.send(JSON.stringify(msg));
+      socket.send(JSON.stringify(msg));
     }
 
     return {
@@ -184,7 +195,7 @@ export class Client<M extends MutatorDefs> {
     for (;;) {
       const l = this._l.addContext("req", nanoid());
       l.debug?.("watchdog fired");
-      if (this._state === "CONNECTED") {
+      if (this._state === ConnectionState.Connected) {
         await this._ping(l);
       } else {
         void this._connect(l);
@@ -213,11 +224,6 @@ export class Client<M extends MutatorDefs> {
       this._socket?.close();
     }
   }
-}
-
-// Hack to force a push to occur
-async function forcePush<M extends MutatorDefs>(rep: Replicache<M>) {
-  await rep.mutate.nop();
 }
 
 // Total hack to get base cookie
