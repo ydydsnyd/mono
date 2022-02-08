@@ -1,20 +1,13 @@
-import { upstreamSchema } from "../protocol/up.js";
+import { type Upstream, upstreamSchema } from "../protocol/up.js";
 import type { ClientID, ClientMap, Socket } from "../types/client-state.js";
 import type { LogContext } from "../util/logger.js";
 import { sendError } from "../util/socket.js";
-import { handlePush, ProcessUntilDone } from "./push.js";
+import { handlePush, type ProcessUntilDone } from "./push.js";
 import { handlePing } from "./ping.js";
 
 /**
  * Handles an upstream message coming into the server by dispatching to the
  * appropriate handler.
- * @param handlePush handles a push message
- * @param roomMap currently running rooms
- * @param roomID destination room
- * @param clientID client message came from
- * @param data raw message data
- * @param ws socket connection to source client
- * @returns
  */
 export function handleMessage(
   lc: LogContext,
@@ -24,15 +17,14 @@ export function handleMessage(
   ws: Socket,
   processUntilDone: ProcessUntilDone
 ) {
-  const msg = getMessage(data);
-  if (msg.error) {
-    lc.info?.("invalid message", msg.error);
-    sendError(ws, msg.error);
+  let message;
+  try {
+    message = getMessage(data);
+  } catch (e) {
+    lc.info?.("invalid message", e);
+    sendError(ws, String(e));
     return;
   }
-
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const message = msg.result!;
 
   switch (message[0]) {
     case "ping":
@@ -54,13 +46,7 @@ export function handleMessage(
   }
 }
 
-function getMessage(data: string) {
-  let json;
-  try {
-    json = JSON.parse(data);
-    const message = upstreamSchema.parse(json);
-    return { result: message };
-  } catch (e) {
-    return { error: String(e) };
-  }
+function getMessage(data: string): Upstream {
+  const json = JSON.parse(data);
+  return upstreamSchema.parse(json);
 }

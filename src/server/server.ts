@@ -26,7 +26,7 @@ export class Server<MD extends MutatorDefs> {
   private readonly _mutators: MutatorMap;
   private readonly _logLevel: LogLevel;
   private readonly _state: DurableObjectState;
-  private _turnTimerID: number | null = null;
+  private _turnTimerID = 0;
 
   constructor(
     mutators: MD,
@@ -94,7 +94,7 @@ export class Server<MD extends MutatorDefs> {
   private async _processUntilDone() {
     const lc = new LogContext(this._logLevel).addContext("req", randomID());
     lc.debug?.("handling processUntilDone");
-    if (this._turnTimerID !== null) {
+    if (this._turnTimerID) {
       lc.debug?.("already processing, nothing to do");
       return;
     }
@@ -113,7 +113,7 @@ export class Server<MD extends MutatorDefs> {
       if (!hasPendingMutations(this._clients)) {
         lc.debug?.("No pending mutations to process, exiting");
         clearInterval(this._turnTimerID);
-        this._turnTimerID = null;
+        this._turnTimerID = 0;
         return;
       }
 

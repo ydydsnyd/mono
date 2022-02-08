@@ -9,12 +9,6 @@ export type ProcessUntilDone = () => void;
 /**
  * handles the 'push' upstream message by queueing the mutations included in
  * [[body]] in the appropriate client state.
- * @param rooms currently running rooms
- * @param roomID destination room
- * @param clientID source client
- * @param body body of push message
- * @param ws socket connection to requesting client
- * @returns
  */
 export function handlePush(
   lc: LogContext,
