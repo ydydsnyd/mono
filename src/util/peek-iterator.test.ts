@@ -1,3 +1,4 @@
+import { test, expect } from "@jest/globals";
 import { PeekIterator } from "../../src/util/peek-iterator.js";
 
 test("PeekIterator", () => {

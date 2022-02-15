@@ -1,3 +1,4 @@
+import { test, expect } from "@jest/globals";
 import type { ClientMutation } from "../../src/types/client-mutation.js";
 import type { ClientMap } from "../../src/types/client-state.js";
 import { generateMergedMutations } from "../../src/process/generate-merged-mutations.js";

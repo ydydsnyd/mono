@@ -1,3 +1,4 @@
+import { test, expect } from "@jest/globals";
 import type { JSONType } from "../../src/protocol/json";
 import { deepClone } from "../../src/util/deep-clone";
 

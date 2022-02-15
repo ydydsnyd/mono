@@ -26,7 +26,7 @@ export class Server<MD extends MutatorDefs> {
   private readonly _mutators: MutatorMap;
   private readonly _logLevel: LogLevel;
   private readonly _state: DurableObjectState;
-  private _turnTimerID = 0;
+  private _turnTimerID: ReturnType<typeof setInterval> | 0 = 0;
 
   constructor(
     mutators: MD,
@@ -112,8 +112,10 @@ export class Server<MD extends MutatorDefs> {
 
       if (!hasPendingMutations(this._clients)) {
         lc.debug?.("No pending mutations to process, exiting");
-        clearInterval(this._turnTimerID);
-        this._turnTimerID = 0;
+        if (this._turnTimerID) {
+          clearInterval(this._turnTimerID);
+          this._turnTimerID = 0;
+        }
         return;
       }
 

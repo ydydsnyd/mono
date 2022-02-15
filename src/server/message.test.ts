@@ -1,3 +1,4 @@
+import { test, expect } from "@jest/globals";
 import type { PushBody } from "../../src/protocol/push.js";
 import type { ClientMap } from "../../src/types/client-state.js";
 import { Mocket, mutation } from "../util/test-utils.js";

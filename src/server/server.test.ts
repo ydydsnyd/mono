@@ -1,3 +1,5 @@
+import { test } from "@jest/globals";
+
 test("foo", () => {
   console.log("hi");
 });
