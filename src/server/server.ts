@@ -36,6 +36,8 @@ export class Server<MD extends MutatorDefs> {
     this._mutators = new Map([...Object.entries(mutators)]) as MutatorMap;
     this._state = state;
     this._logLevel = logLevel;
+
+    new LogContext(this._logLevel).info?.("Starting server");
   }
 
   async fetch(request: Request) {
