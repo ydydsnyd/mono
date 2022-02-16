@@ -1,36 +1,54 @@
+// @ts-check
+
 import path from "path";
 import { fileURLToPath } from "url";
 import { build } from "esbuild";
 
+// @ts-ignore
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 function buildESM() {
-  return buildInternal("esm", { ".js": ".mjs" });
+  return buildInternal({
+    format: "esm",
+    outExtension: { ".js": ".mjs" },
+    entryPoints: [path.join(__dirname, "src", "index.ts")],
+    outdir: path.join(__dirname, "out"),
+  });
 }
 
 function buildCJS() {
-  return buildInternal("cjs", undefined);
+  return buildInternal({
+    format: "cjs",
+    entryPoints: [path.join(__dirname, "src", "index.ts")],
+    outdir: path.join(__dirname, "out"),
+  });
+}
+
+function buildExample() {
+  return buildInternal({
+    format: "esm",
+    outExtension: { ".js": ".mjs" },
+    entryPoints: [path.join(__dirname, "example", "index.ts")],
+    outdir: path.join(__dirname, "out", "example"),
+  });
 }
 
 /**
- * @param {"esm"|"cjs"} format
- * @param {Record<string,string>|undefined} outExtension
+ * @param {Partial<import("esbuild").BuildOptions>} options
  */
-function buildInternal(format, outExtension) {
+function buildInternal(options) {
   return build({
     bundle: true,
     sourcemap: true,
-    format,
     target: "esnext",
-    entryPoints: [path.join(__dirname, "src", "index.ts")],
-    outdir: path.join(__dirname, "out"),
-    outExtension,
+    ...options,
   });
 }
 
 try {
-  await Promise.all([buildESM(), `${buildCJS()}`]);
+  // @ts-ignore
+  await Promise.all([buildESM(), buildCJS(), buildExample()]);
 } catch {
   process.exitCode = 1;
 }

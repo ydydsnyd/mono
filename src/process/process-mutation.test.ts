@@ -14,7 +14,7 @@ import {
   MutatorMap,
   processMutation,
 } from "../../src/process/process-mutation.js";
-import { LogContext } from "../../src/util/logger.js";
+import { LogContext, SilentLogger } from "../../src/util/logger.js";
 
 const { server } = getMiniflareBindings();
 const id = server.newUniqueId();
@@ -109,7 +109,7 @@ test("processMutation", async () => {
     let err: string | undefined;
     try {
       await processMutation(
-        new LogContext("info"),
+        new LogContext(new SilentLogger()),
         c.mutation,
         mutators,
         storage,

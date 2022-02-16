@@ -8,7 +8,7 @@ import { getEntry, putEntry } from "../../src/db/data.js";
 import type { ClientMap, Socket } from "../../src/types/client-state.js";
 import { client, clientRecord, Mocket } from "../util/test-utils.js";
 import { handleConnection } from "../../src/server/connect.js";
-import { LogContext } from "../../src/util/logger.js";
+import { LogContext, SilentLogger } from "../../src/util/logger.js";
 
 const { server } = getMiniflareBindings();
 const id = server.newUniqueId();
@@ -97,7 +97,7 @@ test("handleConnection", async () => {
     const mocket = new Mocket();
 
     await handleConnection(
-      new LogContext("info"),
+      new LogContext(new SilentLogger()),
       mocket,
       durable,
       new URL(c.url),

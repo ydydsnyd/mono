@@ -18,42 +18,20 @@ export interface Logger {
  */
 export type LogLevel = "error" | "info" | "debug";
 
-export function getLogger(prefix: string[], level: LogLevel): Logger {
-  const logger: Logger = {};
-  const impl =
-    (name: LogLevel) =>
-    (...args: unknown[]) =>
-      console[name](...prefix, ...args);
-  /* eslint-disable no-fallthrough , @typescript-eslint/ban-ts-comment */
-  switch (level) {
-    // @ts-ignore
-    case "debug":
-      logger.debug = impl("debug");
-    // @ts-ignore
-    case "info":
-      logger.info = impl("info");
-    case "error":
-      logger.error = impl("error");
-  }
-  /* eslint-ensable @typescript-eslint/ban-ts-comment, no-fallthrough */
-
-  return logger;
+export interface Log {
+  log(level: LogLevel, ...args: unknown[]): void;
 }
 
-export class LogContext implements Logger {
-  private readonly _s;
-
+export class LoggerImpl implements Logger {
   readonly debug?: (...args: unknown[]) => void = undefined;
   readonly info?: (...args: unknown[]) => void = undefined;
   readonly error?: (...args: unknown[]) => void = undefined;
 
-  constructor(level: LogLevel = "info", s = "") {
-    this._s = s;
-
+  constructor(logger: Log, level: LogLevel = "info") {
     const impl =
-      (name: LogLevel) =>
+      (level: LogLevel) =>
       (...args: unknown[]) =>
-        console[name](this._s, ...args);
+        logger.log(level, ...args);
 
     /* eslint-disable no-fallthrough , @typescript-eslint/ban-ts-comment */
     switch (level) {
@@ -68,13 +46,85 @@ export class LogContext implements Logger {
     }
     /* eslint-ensable @typescript-eslint/ban-ts-comment, no-fallthrough */
   }
+}
 
-  addContext(key: string, value: unknown): LogContext {
+/**
+ * Create a logger that will log to the console.
+ */
+export class ConsoleLogger extends LoggerImpl {
+  constructor(level: LogLevel) {
+    super(consoleLog, level);
+  }
+}
+
+export const consoleLog: Log = {
+  log(level: LogLevel, ...args: unknown[]): void {
+    console[level](...args);
+  },
+};
+
+/**
+ * A logger that logs nothing.
+ */
+export class SilentLogger implements Logger {}
+
+/**
+ * The LogContext carries a contextual tag around and it prefixes the log
+ * messages with a tag.
+ *
+ * Typical usage is something like:
+ *
+ *   const lc = new LogContext('debug');
+ *   lc.debug?.('hello');
+ *   const lc2 = lc.addContext('foo');
+ *   f(lc2);  // logging inside f will be prefixed with 'foo'
+ */
+export class LogContext extends LoggerImpl {
+  private readonly _s;
+  private readonly _logger: Logger;
+
+  /**
+   * @param loggerOrLevel If passed a LogLevel a ConsoleLogget is used
+   */
+  constructor(loggerOrLevel: Logger | LogLevel, tag = "") {
+    const actualLogger: Logger = isLogLevel(loggerOrLevel)
+      ? new LoggerImpl(consoleLog, loggerOrLevel)
+      : loggerOrLevel;
+
+    super(
+      {
+        log(name: LogLevel, ...args: unknown[]) {
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          actualLogger[name]!(tag, ...args);
+        },
+      },
+      getLogLevel(actualLogger)
+    );
+    this._s = tag;
+    this._logger = actualLogger;
+  }
+
+  /**
+   * Creates a new Logger that will prefix all log messages with the given key
+   * and value.
+   */
+  addContext(key: string, value?: unknown): LogContext {
     const space = this._s ? " " : "";
-    return new LogContext(this._logLevel, `${this._s}${space}${key}=${value}`);
+    const tag = value === undefined ? key : `${key}=${value}`;
+    return new LogContext(this._logger, `${this._s}${space}${tag}`);
   }
+}
 
-  private get _logLevel(): LogLevel {
-    return this.debug ? "debug" : this.info ? "info" : "error";
+function getLogLevel(logger: Logger): LogLevel {
+  return logger.debug ? "debug" : logger.info ? "info" : "error";
+}
+
+function isLogLevel(v: unknown): v is LogLevel {
+  switch (v) {
+    case "error":
+    case "info":
+    case "debug":
+      return true;
   }
+  return false;
 }

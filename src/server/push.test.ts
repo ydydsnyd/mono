@@ -2,7 +2,7 @@ import { test, expect } from "@jest/globals";
 import type { Mutation } from "../../src/protocol/push.js";
 import { client, Mocket, mutation } from "../util/test-utils.js";
 import { handlePush } from "../../src/server/push.js";
-import { LogContext } from "../../src/util/logger.js";
+import { LogContext, SilentLogger } from "../../src/util/logger.js";
 import type { ClientMap } from "../../src/types/client-state.js";
 
 test("handlePush", async () => {
@@ -149,7 +149,7 @@ test("handlePush", async () => {
     };
     const clients = c.existingClients;
     handlePush(
-      new LogContext("info"),
+      new LogContext(new SilentLogger()),
       clients,
       "c1",
       push,

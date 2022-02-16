@@ -18,7 +18,7 @@ import {
   mutation,
 } from "../util/test-utils.js";
 import { processPending } from "../../src/process/process-pending.js";
-import { LogContext } from "../../src/util/logger.js";
+import { LogContext, SilentLogger } from "../../src/util/logger.js";
 
 const { server } = getMiniflareBindings();
 const id = server.newUniqueId();
@@ -229,7 +229,7 @@ test("processPending", async () => {
       (clientState.socket as Mocket).log.length = 0;
     }
     const p = processPending(
-      new LogContext("info"),
+      new LogContext(new SilentLogger()),
       durable,
       c.clients,
       mutators,

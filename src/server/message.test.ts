@@ -3,7 +3,7 @@ import type { PushBody } from "../../src/protocol/push.js";
 import type { ClientMap } from "../../src/types/client-state.js";
 import { Mocket, mutation } from "../util/test-utils.js";
 import { handleMessage } from "../../src/server/message.js";
-import { LogContext } from "../../src/util/logger.js";
+import { LogContext, SilentLogger } from "../../src/util/logger.js";
 
 test("handleMessage", async () => {
   type Case = {
@@ -61,7 +61,7 @@ test("handleMessage", async () => {
     //   called = true;
     // };
     handleMessage(
-      new LogContext("info"),
+      new LogContext(new SilentLogger()),
       clients,
       clientID,
       c.data,

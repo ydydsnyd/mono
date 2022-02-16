@@ -14,6 +14,6 @@ type M = typeof mutators;
 
 export class Server extends BaseServer<M> {
   constructor(state: DurableObjectState) {
-    super(mutators, state);
+    super({ mutators, state });
   }
 }

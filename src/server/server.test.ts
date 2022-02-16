@@ -1,7 +1,7 @@
-import { test } from "@jest/globals";
+import { test, expect } from "@jest/globals";
 
 test("foo", () => {
-  console.log("hi");
+  expect("hi").toEqual("hi");
 });
 
 /*

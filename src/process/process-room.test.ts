@@ -12,7 +12,7 @@ import { getUserValue, UserValue } from "../../src/types/user-value.js";
 import { getVersion, Version, versionKey } from "../../src/types/version.js";
 import { client, clientRecord, fail, mutation } from "../util/test-utils.js";
 import { processRoom } from "../../src/process/process-room.js";
-import { LogContext } from "../../src/util/logger.js";
+import { LogContext, SilentLogger } from "../../src/util/logger.js";
 
 const { server } = getMiniflareBindings();
 const id = server.newUniqueId();
@@ -196,7 +196,7 @@ test("processRoom", async () => {
     }
 
     const p = processRoom(
-      new LogContext("info"),
+      new LogContext(new SilentLogger()),
       c.clients,
       mutators,
       durable,

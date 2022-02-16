@@ -14,7 +14,7 @@ import { UserValue, userValueKey } from "../../src/types/user-value.js";
 import { Version, versionKey } from "../../src/types/version.js";
 import { clientMutation, clientRecord, userValue } from "../util/test-utils.js";
 import { processFrame } from "../../src/process/process-frame.js";
-import { LogContext } from "../../src/util/logger.js";
+import { LogContext, SilentLogger } from "../../src/util/logger.js";
 
 const { server } = getMiniflareBindings();
 const id = server.newUniqueId();
@@ -196,7 +196,7 @@ test("processFrame", async () => {
     }
 
     const result = await processFrame(
-      new LogContext("info"),
+      new LogContext(new SilentLogger()),
       c.mutations,
       mutators,
       c.clients,

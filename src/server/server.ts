@@ -3,13 +3,19 @@ import { processPending } from "../process/process-pending.js";
 import type { MutatorMap } from "../process/process-mutation.js";
 import type { ClientID, ClientMap, Socket } from "../types/client-state.js";
 import { Lock } from "../util/lock.js";
-import { LogContext, type LogLevel } from "../util/logger.js";
+import {
+  Log,
+  LoggerImpl,
+  LogContext,
+  LogLevel,
+  type Logger,
+  consoleLog,
+} from "../util/logger.js";
 import { handleClose } from "./close.js";
 import { handleConnection } from "./connect.js";
 import { handleMessage } from "./message.js";
 
 export type Now = () => number;
-export type SetTimeout = (callback: () => void, delay: number) => void;
 
 export type ProcessHandler = (
   lc: LogContext,
@@ -20,24 +26,36 @@ export type ProcessHandler = (
   endTime: number
 ) => Promise<void>;
 
+export interface ServerOptions<MD extends MutatorDefs> {
+  mutators: MD;
+  state: DurableObjectState;
+  logger?: Log;
+  logLevel?: LogLevel;
+  onClose?: () => void;
+}
 export class Server<MD extends MutatorDefs> {
   private readonly _clients: ClientMap = new Map();
   private readonly _lock = new Lock();
   private readonly _mutators: MutatorMap;
-  private readonly _logLevel: LogLevel;
+  private readonly _logger: Logger;
   private readonly _state: DurableObjectState;
   private _turnTimerID: ReturnType<typeof setInterval> | 0 = 0;
+  private readonly _onClose: () => void | Promise<void>;
 
-  constructor(
-    mutators: MD,
-    state: DurableObjectState,
-    logLevel: LogLevel = "debug"
-  ) {
+  constructor(options: ServerOptions<MD>) {
+    const {
+      mutators,
+      state,
+      logger = consoleLog,
+      logLevel = "debug",
+      onClose = () => undefined,
+    } = options;
+
     this._mutators = new Map([...Object.entries(mutators)]) as MutatorMap;
     this._state = state;
-    this._logLevel = logLevel;
-
-    new LogContext(this._logLevel).info?.("Starting server");
+    this._logger = new LoggerImpl(logger, logLevel);
+    this._onClose = onClose;
+    this._logger.info?.("Starting server");
   }
 
   async fetch(request: Request) {
@@ -56,7 +74,7 @@ export class Server<MD extends MutatorDefs> {
   }
 
   private async _handleConnection(ws: Socket, url: URL) {
-    const lc = new LogContext(this._logLevel).addContext("req", randomID());
+    const lc = new LogContext(this._logger).addContext("req", randomID());
 
     lc.debug?.("connection request", url.toString(), "waiting for lock");
     ws.accept();
@@ -80,7 +98,7 @@ export class Server<MD extends MutatorDefs> {
     data: string,
     ws: Socket
   ): Promise<void> => {
-    const lc = new LogContext(this._logLevel)
+    const lc = new LogContext(this._logger)
       .addContext("req", randomID())
       .addContext("client", clientID);
     lc.debug?.("handling message", data, "waiting for lock");
@@ -94,7 +112,7 @@ export class Server<MD extends MutatorDefs> {
   };
 
   private async _processUntilDone() {
-    const lc = new LogContext(this._logLevel).addContext("req", randomID());
+    const lc = new LogContext(this._logger).addContext("req", randomID());
     lc.debug?.("handling processUntilDone");
     if (this._turnTimerID) {
       lc.debug?.("already processing, nothing to do");
@@ -132,13 +150,14 @@ export class Server<MD extends MutatorDefs> {
   }
 
   private _handleClose = async (clientID: ClientID): Promise<void> => {
-    const lc = new LogContext(this._logLevel)
+    const lc = new LogContext(this._logger)
       .addContext("req", randomID())
       .addContext("client", clientID);
     lc.debug?.("handling close - waiting for lock");
     await this._lock.withLock(async () => {
       lc.debug?.("received lock");
       handleClose(this._clients, clientID);
+      await this._onClose();
     });
   };
 }
