@@ -57,6 +57,9 @@ export class ConsoleLogger extends LoggerImpl {
   }
 }
 
+/**
+ * An implementation of [[Log]] that logs using `console.log` etc
+ */
 export const consoleLog: Log = {
   log(level: LogLevel, ...args: unknown[]): void {
     console[level](...args);

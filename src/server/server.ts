@@ -29,7 +29,7 @@ export type ProcessHandler = (
 export interface ServerOptions<MD extends MutatorDefs> {
   mutators: MD;
   state: DurableObjectState;
-  logger?: Log;
+  log?: Log;
   logLevel?: LogLevel;
 }
 export class Server<MD extends MutatorDefs> {
@@ -41,16 +41,11 @@ export class Server<MD extends MutatorDefs> {
   private _turnTimerID: ReturnType<typeof setInterval> | 0 = 0;
 
   constructor(options: ServerOptions<MD>) {
-    const {
-      mutators,
-      state,
-      logger = consoleLog,
-      logLevel = "debug",
-    } = options;
+    const { mutators, state, log = consoleLog, logLevel = "debug" } = options;
 
     this._mutators = new Map([...Object.entries(mutators)]) as MutatorMap;
     this._state = state;
-    this._logger = new LoggerImpl(logger, logLevel);
+    this._logger = new LoggerImpl(log, logLevel);
     this._logger.info?.("Starting server");
   }
 
