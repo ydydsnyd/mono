@@ -39,9 +39,15 @@ async function handleRequest(
     });
   }
 
-  const auth = request.headers.get("Sec-WebSocket-Protocol");
-  if (!auth) {
+  const encodedAuth = request.headers.get("Sec-WebSocket-Protocol");
+  if (encodedAuth === null) {
     return createUnauthorizedResponse("auth required");
+  }
+  let auth: string | undefined;
+  try {
+    auth = decodeURIComponent(encodedAuth);
+  } catch (e) {
+    return createUnauthorizedResponse("invalid auth");
   }
 
   let userData: UserData | undefined;
@@ -71,7 +77,7 @@ async function handleRequest(
   // Send a Sec-WebSocket-Protocol response header with a value
   // matching the Sec-WebSocket-Protocol request header, to indicate
   // support for the protocol, otherwise the client will close the connection.
-  responseHeaders.set("Sec-WebSocket-Protocol", auth);
+  responseHeaders.set("Sec-WebSocket-Protocol", encodedAuth);
   const response = new Response(responseFromDO.body, {
     status: responseFromDO.status,
     statusText: responseFromDO.statusText,

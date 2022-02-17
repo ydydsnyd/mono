@@ -33,10 +33,11 @@ function createEnvThatThrowsIfFetchIsCalled() {
 test("worker calls authHandler and sends returned user data in header to DO", async () => {
   const testRoomID = "testRoomID1";
   const testClientID = "testClientID1";
-  const testAuth = "testAuthTokenValue";
+  const encodedTestAuth = "test%20auth%20token%20value%20%25%20encoded";
+  const testAuth = "test auth token value % encoded";
 
   const headers = new Headers();
-  headers.set("Sec-WebSocket-Protocol", testAuth);
+  headers.set("Sec-WebSocket-Protocol", encodedTestAuth);
   const testRequest = new Request(
     `ws://test.roci.dev/connect?roomID=${testRoomID}&clientID=${testClientID}`,
     {
@@ -59,11 +60,11 @@ test("worker calls authHandler and sends returned user data in header to DO", as
             expect(request.url).toEqual(testRequest.url);
             expect(request.headers.get(USER_DATA_HEADER_NAME)).toEqual(
               encodeHeaderValue(
-                JSON.stringify({ userID: "test" + testAuth + ":" + testRoomID })
+                JSON.stringify({ userID: testAuth + ":" + testRoomID })
               )
             );
             expect(request.headers.get("Sec-WebSocket-Protocol")).toEqual(
-              testAuth
+              encodedTestAuth
             );
             return new Response(null, { status: 101, webSocket: mocket });
           },
@@ -75,7 +76,7 @@ test("worker calls authHandler and sends returned user data in header to DO", as
   const worker = createWorker(async (auth, roomID) => {
     expect(auth).toEqual(testAuth);
     expect(roomID).toEqual(testRoomID);
-    return { userID: "test" + auth + ":" + roomID };
+    return { userID: auth + ":" + roomID };
   });
 
   if (!worker.fetch) {
@@ -90,7 +91,9 @@ test("worker calls authHandler and sends returned user data in header to DO", as
 
   expect(response.status).toEqual(101);
   expect(response.webSocket).toBe(mocket);
-  expect(response.headers.get("Sec-WebSocket-Protocol")).toEqual(testAuth);
+  expect(response.headers.get("Sec-WebSocket-Protocol")).toEqual(
+    encodedTestAuth
+  );
 });
 
 test("worker returns a 401 without calling DO if authHandler rejects", async () => {
