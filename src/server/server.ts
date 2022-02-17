@@ -31,7 +31,6 @@ export interface ServerOptions<MD extends MutatorDefs> {
   state: DurableObjectState;
   logger?: Log;
   logLevel?: LogLevel;
-  onClose?: () => void;
 }
 export class Server<MD extends MutatorDefs> {
   private readonly _clients: ClientMap = new Map();
@@ -40,7 +39,6 @@ export class Server<MD extends MutatorDefs> {
   private readonly _logger: Logger;
   private readonly _state: DurableObjectState;
   private _turnTimerID: ReturnType<typeof setInterval> | 0 = 0;
-  private readonly _onClose: () => void | Promise<void>;
 
   constructor(options: ServerOptions<MD>) {
     const {
@@ -48,13 +46,11 @@ export class Server<MD extends MutatorDefs> {
       state,
       logger = consoleLog,
       logLevel = "debug",
-      onClose = () => undefined,
     } = options;
 
     this._mutators = new Map([...Object.entries(mutators)]) as MutatorMap;
     this._state = state;
     this._logger = new LoggerImpl(logger, logLevel);
-    this._onClose = onClose;
     this._logger.info?.("Starting server");
   }
 
@@ -157,7 +153,6 @@ export class Server<MD extends MutatorDefs> {
     await this._lock.withLock(async () => {
       lc.debug?.("received lock");
       handleClose(this._clients, clientID);
-      await this._onClose();
     });
   };
 }
