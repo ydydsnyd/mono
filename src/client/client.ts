@@ -108,11 +108,14 @@ export class Client<M extends MutatorDefs> {
     this._state = ConnectionState.Connecting;
 
     const baseCookie = await getBaseCookie(this._rep);
+    // TODO if connection fails with 401 use this._rep.getAuth to
+    // try to refresh this._rep.auth and then retry connection
     const ws = createSocket(
       this._socketURL,
       baseCookie,
       await this._rep.clientID,
-      this._roomID
+      this._roomID,
+      this._rep.auth
     );
 
     ws.addEventListener("message", this._onMessage);
@@ -248,7 +251,8 @@ function createSocket(
   socketURL: string | undefined,
   baseCookie: NullableVersion,
   clientID: string,
-  roomID: string
+  roomID: string,
+  auth: string
 ) {
   let url: URL;
   if (socketURL) {
@@ -267,5 +271,9 @@ function createSocket(
   );
   url.searchParams.set("ts", String(performance.now()));
 
-  return new WebSocket(url.toString());
+  // Pass auth to the server via the `Sec-WebSocket-Protocol` header by passing
+  // it as a `protocol` to the `WebSocket` constructor.  The empty string is an
+  // invalid `protocol`, and will result in an exception, so pass undefined
+  // instead.
+  return new WebSocket(url.toString(), auth === "" ? undefined : auth);
 }
