@@ -12,6 +12,9 @@ import type {
 } from "../types/client-state.js";
 import type { LogContext } from "../util/logger.js";
 import type { ConnectedMessage } from "../protocol/connected.js";
+import type { UserData } from "./auth.js";
+import { USER_DATA_HEADER_NAME } from "./auth.js";
+import { decodeHeaderValue } from "../util/headers.js";
 
 export type MessageHandler = (
   clientID: ClientID,
@@ -35,11 +38,12 @@ export async function handleConnection(
   ws: Socket,
   durable: DurableObjectStorage,
   url: URL,
+  headers: Headers,
   clients: ClientMap,
   onMessage: MessageHandler,
   onClose: CloseHandler
 ) {
-  const { result, error } = getConnectRequest(url);
+  const { result, error } = getConnectRequest(url, headers);
   if (result === null) {
     lc.info?.("invalid connection request", error);
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -49,7 +53,7 @@ export async function handleConnection(
   }
 
   lc = lc.addContext("client", result.clientID);
-  lc.debug?.("parsed request", result);
+  lc.info?.("parsed request", { ...result, userData: "redacted" });
 
   const { clientID, baseCookie } = result;
   const storage = new DurableStorage(durable);
@@ -89,7 +93,7 @@ export async function handleConnection(
   ws.send(JSON.stringify(connectedMessage));
 }
 
-export function getConnectRequest(url: URL) {
+export function getConnectRequest(url: URL, headers: Headers) {
   const getParam = (name: string, required: boolean) => {
     const value = url.searchParams.get(name);
     if (value === "" || value === null) {
@@ -114,16 +118,34 @@ export function getConnectRequest(url: URL) {
     return int;
   };
 
+  const getUserData = (headers: Headers): UserData => {
+    const encodedValue = headers.get(USER_DATA_HEADER_NAME);
+    if (!encodedValue) {
+      throw new Error("missing user-data");
+    }
+    let jsonValue;
+    try {
+      jsonValue = JSON.parse(decodeHeaderValue(encodedValue));
+    } catch (e) {
+      throw new Error("invalid user-data - failed to decode/parse");
+    }
+    if (!jsonValue.userID) {
+      throw new Error("invalid user-data - missing userID");
+    }
+    return jsonValue;
+  };
+
   try {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const clientID = getParam("clientID", true)!;
     const baseCookie = getIntegerParam("baseCookie", false);
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const timestamp = getIntegerParam("ts", true)!;
-
+    const userData = getUserData(headers);
     return {
       result: {
         clientID,
+        userData,
         baseCookie,
         timestamp,
       },

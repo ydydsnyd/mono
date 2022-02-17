@@ -9,6 +9,8 @@ import type { ClientMap, Socket } from "../../src/types/client-state.js";
 import { client, clientRecord, Mocket } from "../util/test-utils.js";
 import { handleConnection } from "../../src/server/connect.js";
 import { LogContext, SilentLogger } from "../../src/util/logger.js";
+import { USER_DATA_HEADER_NAME } from "./auth.js";
+import { encodeHeaderValue } from "../util/headers.js";
 
 const { server } = getMiniflareBindings();
 const id = server.newUniqueId();
@@ -19,10 +21,41 @@ function freshClient(id: string, socket: Socket = new Mocket()) {
   return [clientID, c] as const;
 }
 
+function createHeadersWithValidUserData() {
+  const headers = new Headers();
+  headers.set(
+    USER_DATA_HEADER_NAME,
+    encodeHeaderValue(JSON.stringify({ userID: "testUserID" }))
+  );
+  return headers;
+}
+
+function createHeadersWithInvalidUserData() {
+  const headers = new Headers();
+  headers.set(USER_DATA_HEADER_NAME, "invalid");
+  return headers;
+}
+
+function createHeadersWithUserDataMissingUserID() {
+  const headers = new Headers();
+  headers.set(USER_DATA_HEADER_NAME, encodeHeaderValue(JSON.stringify({})));
+  return headers;
+}
+
+function createHeadersWithUserDataWithEmptyUserID() {
+  const headers = new Headers();
+  headers.set(
+    USER_DATA_HEADER_NAME,
+    encodeHeaderValue(JSON.stringify({ userID: "" }))
+  );
+  return headers;
+}
+
 test("handleConnection", async () => {
   type Case = {
     name: string;
     url: string;
+    headers: Headers;
     expectErrorResponse?: string;
     existingRecord?: ClientRecord;
     expectedRecord?: ClientRecord;
@@ -35,6 +68,7 @@ test("handleConnection", async () => {
     {
       name: "invalid clientid",
       url: "http://google.com/?baseCookie=1&timestamp=t1",
+      headers: createHeadersWithValidUserData(),
       expectErrorResponse: "Error: invalid querystring - missing clientID",
       existingClients: new Map(),
       expectedClients: () => new Map(),
@@ -42,6 +76,7 @@ test("handleConnection", async () => {
     {
       name: "invalid timestamp",
       url: "http://google.com/?clientID=c1&baseCookie=1",
+      headers: createHeadersWithValidUserData(),
       expectErrorResponse: "Error: invalid querystring - missing ts",
       existingClients: new Map(),
       expectedClients: () => new Map(),
@@ -49,6 +84,7 @@ test("handleConnection", async () => {
     {
       name: "invalid (non-numeric) timestamp",
       url: "http://google.com/?clientID=c1&baseCookie=1&ts=xx",
+      headers: createHeadersWithValidUserData(),
       expectErrorResponse:
         "Error: invalid querystring parameter ts, url: http://google.com/?clientID=c1&baseCookie=1&ts=xx, got: xx",
       existingClients: new Map(),
@@ -57,6 +93,7 @@ test("handleConnection", async () => {
     {
       name: "no existing clients",
       url: "http://google.com/?clientID=c1&baseCookie=1&ts=42",
+      headers: createHeadersWithValidUserData(),
       existingClients: new Map(),
       expectedClients: (socket) => new Map([freshClient("c1", socket)]),
       expectedRecord: clientRecord(1, 0),
@@ -64,6 +101,7 @@ test("handleConnection", async () => {
     {
       name: "baseCookie: null",
       url: "http://google.com/?clientID=c1&baseCookie=&ts=42",
+      headers: createHeadersWithValidUserData(),
       existingClients: new Map(),
       expectedClients: (socket) => new Map([freshClient("c1", socket)]),
       expectedRecord: clientRecord(null, 0),
@@ -71,6 +109,7 @@ test("handleConnection", async () => {
     {
       name: "existing clients",
       url: "http://google.com/?clientID=c1&baseCookie=1&ts=42",
+      headers: createHeadersWithValidUserData(),
       existingClients: new Map([c2]),
       expectedClients: (socket) => new Map([freshClient("c1", socket), c2]),
       expectedRecord: clientRecord(1, 0),
@@ -78,10 +117,43 @@ test("handleConnection", async () => {
     {
       name: "existing record",
       url: "http://google.com/?clientID=c1&baseCookie=7&ts=42",
+      headers: createHeadersWithValidUserData(),
       existingClients: new Map(),
       expectedClients: (socket) => new Map([freshClient("c1", socket)]),
       existingRecord: clientRecord(1, 88),
       expectedRecord: clientRecord(7, 88),
+    },
+    {
+      name: "missing user data",
+      url: "http://google.com/?clientID=c1&baseCookie=7&ts=42",
+      headers: new Headers(),
+      expectErrorResponse: "Error: missing user-data",
+      existingClients: new Map(),
+      expectedClients: () => new Map(),
+    },
+    {
+      name: "invalid user data",
+      url: "http://google.com/?clientID=c1&baseCookie=7&ts=42",
+      headers: createHeadersWithInvalidUserData(),
+      expectErrorResponse: "Error: invalid user-data - failed to decode/parse",
+      existingClients: new Map(),
+      expectedClients: () => new Map(),
+    },
+    {
+      name: "user data missing userID",
+      url: "http://google.com/?clientID=c1&baseCookie=7&ts=42",
+      headers: createHeadersWithUserDataMissingUserID(),
+      expectErrorResponse: "Error: invalid user-data - missing userID",
+      existingClients: new Map(),
+      expectedClients: () => new Map(),
+    },
+    {
+      name: "user data with empty userID",
+      url: "http://google.com/?clientID=c1&baseCookie=7&ts=42",
+      headers: createHeadersWithUserDataWithEmptyUserID(),
+      expectErrorResponse: "Error: invalid user-data - missing userID",
+      existingClients: new Map(),
+      expectedClients: () => new Map(),
     },
   ];
 
@@ -101,6 +173,7 @@ test("handleConnection", async () => {
       mocket,
       durable,
       new URL(c.url),
+      c.headers,
       c.existingClients,
       onMessage,
       onClose

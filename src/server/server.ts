@@ -62,14 +62,14 @@ export class Server<MD extends MutatorDefs> {
         return new Response("expected websocket", { status: 400 });
       }
       const pair = new WebSocketPair();
-      void this._handleConnection(pair[1], url);
+      void this._handleConnection(pair[1], url, request.headers);
       return new Response(null, { status: 101, webSocket: pair[0] });
     }
 
     throw new Error("unexpected path");
   }
 
-  private async _handleConnection(ws: Socket, url: URL) {
+  private async _handleConnection(ws: Socket, url: URL, headers: Headers) {
     const lc = new LogContext(this._logger).addContext("req", randomID());
 
     lc.debug?.("connection request", url.toString(), "waiting for lock");
@@ -82,6 +82,7 @@ export class Server<MD extends MutatorDefs> {
         ws,
         this._state.storage,
         url,
+        headers,
         this._clients,
         this._handleMessage,
         this._handleClose
