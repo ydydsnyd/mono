@@ -274,6 +274,10 @@ function createSocket(
   // Pass auth to the server via the `Sec-WebSocket-Protocol` header by passing
   // it as a `protocol` to the `WebSocket` constructor.  The empty string is an
   // invalid `protocol`, and will result in an exception, so pass undefined
-  // instead.
-  return new WebSocket(url.toString(), auth === "" ? undefined : auth);
+  // instead.  encodeURIComponent to ensure it only contains chars allowed
+  // for a `protocol`.
+  return new WebSocket(
+    url.toString(),
+    auth === "" ? undefined : encodeURIComponent(auth)
+  );
 }
