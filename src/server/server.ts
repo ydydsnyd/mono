@@ -4,12 +4,12 @@ import type { MutatorMap } from "../process/process-mutation.js";
 import type { ClientID, ClientMap, Socket } from "../types/client-state.js";
 import { Lock } from "../util/lock.js";
 import {
-  Log,
-  LoggerImpl,
+  Logger,
+  OptionalLoggerImpl,
   LogContext,
   LogLevel,
-  type Logger,
-  consoleLog,
+  type OptionalLogger,
+  consoleLogger,
 } from "../util/logger.js";
 import { handleClose } from "./close.js";
 import { handleConnection } from "./connect.js";
@@ -29,23 +29,28 @@ export type ProcessHandler = (
 export interface ServerOptions<MD extends MutatorDefs> {
   mutators: MD;
   state: DurableObjectState;
-  log?: Log;
+  logger?: Logger;
   logLevel?: LogLevel;
 }
 export class Server<MD extends MutatorDefs> {
   private readonly _clients: ClientMap = new Map();
   private readonly _lock = new Lock();
   private readonly _mutators: MutatorMap;
-  private readonly _logger: Logger;
+  private readonly _logger: OptionalLogger;
   private readonly _state: DurableObjectState;
   private _turnTimerID: ReturnType<typeof setInterval> | 0 = 0;
 
   constructor(options: ServerOptions<MD>) {
-    const { mutators, state, log = consoleLog, logLevel = "debug" } = options;
+    const {
+      mutators,
+      state,
+      logger = consoleLogger,
+      logLevel = "debug",
+    } = options;
 
     this._mutators = new Map([...Object.entries(mutators)]) as MutatorMap;
     this._state = state;
-    this._logger = new LoggerImpl(log, logLevel);
+    this._logger = new OptionalLoggerImpl(logger, logLevel);
     this._logger.info?.("Starting server");
   }
 

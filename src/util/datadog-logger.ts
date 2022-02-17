@@ -1,5 +1,5 @@
 import { Lock } from "./lock.js";
-import type { LogLevel, Log } from "./logger.js";
+import type { LogLevel, Logger } from "./logger.js";
 
 export interface DatadogLoggerOptions {
   apiKey: string;
@@ -11,7 +11,7 @@ export interface DatadogLoggerOptions {
 
 const DD_URL = "https://http-intake.logs.datadoghq.com/api/v2/logs";
 
-export class DatadogLogger implements Log {
+export class DatadogLogger implements Logger {
   private _messages: Message[] = [];
   private readonly _apiKey: string;
   private readonly _service: string | undefined;

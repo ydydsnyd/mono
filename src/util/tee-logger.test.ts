@@ -1,8 +1,8 @@
 import { test, expect } from "@jest/globals";
-import type { Log, LogLevel } from "./logger.js";
-import { TeeLog } from "./tee-log.js";
+import type { Logger, LogLevel } from "./logger.js";
+import { TeeLogger } from "./tee-logger.js";
 
-class TestLog implements Log {
+class TestLogger implements Logger {
   messages: [LogLevel, ...unknown[]][] = [];
 
   log(level: LogLevel, ...args: unknown[]): void {
@@ -11,9 +11,9 @@ class TestLog implements Log {
 }
 
 test("tee logger", () => {
-  const l1 = new TestLog();
-  const l2 = new TestLog();
-  const tl = new TeeLog([l1, l2]);
+  const l1 = new TestLogger();
+  const l2 = new TestLogger();
+  const tl = new TeeLogger([l1, l2]);
 
   expect(l1.messages).toEqual([]);
   expect(l2.messages).toEqual([]);

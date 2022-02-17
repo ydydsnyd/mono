@@ -5,7 +5,7 @@
  * then [[error]] and [[info]] should be present and if [[LogLevel]] is 'error'
  * only [[error]] will be present.
  */
-export interface Logger {
+export interface OptionalLogger {
   error?(...args: unknown[]): void;
   info?(...args: unknown[]): void;
   debug?(...args: unknown[]): void;
@@ -18,16 +18,16 @@ export interface Logger {
  */
 export type LogLevel = "error" | "info" | "debug";
 
-export interface Log {
+export interface Logger {
   log(level: LogLevel, ...args: unknown[]): void;
 }
 
-export class LoggerImpl implements Logger {
+export class OptionalLoggerImpl implements OptionalLogger {
   readonly debug?: (...args: unknown[]) => void = undefined;
   readonly info?: (...args: unknown[]) => void = undefined;
   readonly error?: (...args: unknown[]) => void = undefined;
 
-  constructor(logger: Log, level: LogLevel = "info") {
+  constructor(logger: Logger, level: LogLevel = "info") {
     const impl =
       (level: LogLevel) =>
       (...args: unknown[]) =>
@@ -51,16 +51,16 @@ export class LoggerImpl implements Logger {
 /**
  * Create a logger that will log to the console.
  */
-export class ConsoleLogger extends LoggerImpl {
+export class ConsoleLogger extends OptionalLoggerImpl {
   constructor(level: LogLevel) {
-    super(consoleLog, level);
+    super(consoleLogger, level);
   }
 }
 
 /**
- * An implementation of [[Log]] that logs using `console.log` etc
+ * An implementation of [[Logger]] that logs using `console.log` etc
  */
-export const consoleLog: Log = {
+export const consoleLogger: Logger = {
   log(level: LogLevel, ...args: unknown[]): void {
     console[level](...args);
   },
@@ -69,7 +69,7 @@ export const consoleLog: Log = {
 /**
  * A logger that logs nothing.
  */
-export class SilentLogger implements Logger {}
+export class SilentLogger implements OptionalLogger {}
 
 /**
  * The LogContext carries a contextual tag around and it prefixes the log
@@ -82,16 +82,16 @@ export class SilentLogger implements Logger {}
  *   const lc2 = lc.addContext('foo');
  *   f(lc2);  // logging inside f will be prefixed with 'foo'
  */
-export class LogContext extends LoggerImpl {
+export class LogContext extends OptionalLoggerImpl {
   private readonly _s;
-  private readonly _logger: Logger;
+  private readonly _logger: OptionalLogger;
 
   /**
    * @param loggerOrLevel If passed a LogLevel a ConsoleLogget is used
    */
-  constructor(loggerOrLevel: Logger | LogLevel, tag = "") {
-    const actualLogger: Logger = isLogLevel(loggerOrLevel)
-      ? new LoggerImpl(consoleLog, loggerOrLevel)
+  constructor(loggerOrLevel: OptionalLogger | LogLevel, tag = "") {
+    const actualLogger: OptionalLogger = isLogLevel(loggerOrLevel)
+      ? new OptionalLoggerImpl(consoleLogger, loggerOrLevel)
       : loggerOrLevel;
 
     super(
@@ -118,7 +118,7 @@ export class LogContext extends LoggerImpl {
   }
 }
 
-function getLogLevel(logger: Logger): LogLevel {
+function getLogLevel(logger: OptionalLogger): LogLevel {
   return logger.debug ? "debug" : logger.info ? "info" : "error";
 }
 
