@@ -3,6 +3,8 @@ import { AuthHandler, UserData, USER_DATA_HEADER_NAME } from "./auth";
 
 export interface Bindings {
   server: DurableObjectNamespace;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  REQUIRE_SEC_WEBSOCKET_PROTOCOL_RESPONSE_HEADER?: string;
 }
 
 function createUnauthorizedResponse(message = "Unauthorized"): Response {
@@ -77,7 +79,13 @@ async function handleRequest(
   // Send a Sec-WebSocket-Protocol response header with a value
   // matching the Sec-WebSocket-Protocol request header, to indicate
   // support for the protocol, otherwise the client will close the connection.
-  responseHeaders.set("Sec-WebSocket-Protocol", encodedAuth);
+  if (env.REQUIRE_SEC_WEBSOCKET_PROTOCOL_RESPONSE_HEADER) {
+    // ...miniflare doesn't like it though. If we set this header under MF,
+    // sending the response fails. See:
+    // https://github.com/cloudflare/miniflare/issues/179
+    responseHeaders.set("Sec-WebSocket-Protocol", encodedAuth);
+  }
+
   const response = new Response(responseFromDO.body, {
     status: responseFromDO.status,
     statusText: responseFromDO.statusText,

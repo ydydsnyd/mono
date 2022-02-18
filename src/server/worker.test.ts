@@ -48,6 +48,8 @@ test("worker calls authHandler and sends returned user data in header to DO", as
   const mocket = new Mocket();
 
   const env = {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    REQUIRE_SEC_WEBSOCKET_PROTOCOL_RESPONSE_HEADER: "1",
     server: {
       idFromName: (name: string) => {
         expect(name).toEqual(testRoomID);
@@ -94,6 +96,19 @@ test("worker calls authHandler and sends returned user data in header to DO", as
   expect(response.headers.get("Sec-WebSocket-Protocol")).toEqual(
     encodedTestAuth
   );
+
+  const env2 = {
+    server: env.server,
+  };
+  const response2 = await worker.fetch(
+    testRequest,
+    env2 as unknown as Bindings,
+    new TestExecutionContext()
+  );
+
+  expect(response2.status).toEqual(101);
+  expect(response2.webSocket).toBe(mocket);
+  expect(response2.headers.get("Sec-WebSocket-Protocol")).toBeNull;
 });
 
 test("worker returns a 401 without calling DO if authHandler rejects", async () => {
