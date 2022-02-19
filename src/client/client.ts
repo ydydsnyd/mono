@@ -124,6 +124,7 @@ export class Client<M extends MutatorDefs> {
   }
 
   private _disconnect() {
+    this._l.debug?.("disconnecting");
     if (this._state === ConnectionState.Connected) {
       // Only create a new resolver if the one we have was previously resolved,
       // which happens when the socket became connected.
@@ -156,7 +157,7 @@ export class Client<M extends MutatorDefs> {
     } catch (e) {
       if (String(e).indexOf("unexpected base cookie for poke") > -1) {
         this._l.info?.("out of order poke, disconnecting");
-        this._socket?.close();
+        this._disconnect();
         return;
       }
       throw e;
@@ -224,7 +225,7 @@ export class Client<M extends MutatorDefs> {
       l.debug?.("ping succeeded in", delta, "ms");
     } else {
       l.debug?.("ping failed in", delta, "ms - disconnecting");
-      this._socket?.close();
+      this._disconnect();
     }
   }
 }
