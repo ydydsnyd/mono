@@ -99,7 +99,13 @@ export function createWorker(
   authHandler: AuthHandler
 ): ExportedHandler<Bindings> {
   return {
-    fetch: (request: Request, env: Bindings) =>
-      handleRequest(request, env, authHandler),
+    fetch: async (request: Request, env: Bindings) => {
+      console.debug("handling connection:", request.url);
+      const resp = await handleRequest(request, env, authHandler);
+      console.debug(
+        `Returning connect response: ${resp.status} ${resp.statusText}`
+      );
+      return resp;
+    },
   };
 }
