@@ -79,7 +79,7 @@ async function handleRequest(
   // Send a Sec-WebSocket-Protocol response header with a value
   // matching the Sec-WebSocket-Protocol request header, to indicate
   // support for the protocol, otherwise the client will close the connection.
-  if (env.REQUIRE_SEC_WEBSOCKET_PROTOCOL_RESPONSE_HEADER) {
+  if (typeof MINIFLARE === "undefined") {
     // ...miniflare doesn't like it though. If we set this header under MF,
     // sending the response fails. See:
     // https://github.com/cloudflare/miniflare/issues/179

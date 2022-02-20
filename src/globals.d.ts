@@ -4,6 +4,8 @@ declare global {
   function getMiniflareDurableObjectStorage(
     id: DurableObjectId
   ): Promise<DurableObjectStorage>;
+
+  const MINIFLARE: boolean | undefined;
 }
 
 export {};
