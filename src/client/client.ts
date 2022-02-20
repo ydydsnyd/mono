@@ -10,6 +10,7 @@ import {
 } from "../types/version.js";
 import { assert } from "../util/asserts.js";
 import { GapTracker } from "../util/gap-tracker.js";
+import { Lock } from "../util/lock.js";
 import { LogContext } from "../util/logger.js";
 import { resolver } from "../util/resolver.js";
 import { sleep } from "../util/sleep.js";
@@ -25,6 +26,10 @@ export class Client<M extends MutatorDefs> {
   private readonly _socketURL: string | undefined;
   private readonly _roomID: string;
   private readonly _l: LogContext;
+
+  // Protects _handlePoke. We need pokes to be serialized, otherwise we
+  // can cause out of order poke errors.
+  private readonly _pokeLock = new Lock();
 
   private readonly _pushTracker: GapTracker;
   private readonly _updateTracker: GapTracker;
@@ -138,30 +143,32 @@ export class Client<M extends MutatorDefs> {
   }
 
   private async _handlePoke(l: LogContext, pokeBody: PokeBody) {
-    l.debug?.("Applying poke", pokeBody);
+    await this._pokeLock.withLock(async () => {
+      l.debug?.("Applying poke", pokeBody);
 
-    this._updateTracker.push(performance.now());
-    this._timestampTracker.push(pokeBody.timestamp);
+      this._updateTracker.push(performance.now());
+      this._timestampTracker.push(pokeBody.timestamp);
 
-    const p: Poke = {
-      baseCookie: pokeBody.baseCookie,
-      pullResponse: {
-        lastMutationID: pokeBody.lastMutationID,
-        patch: pokeBody.patch,
-        cookie: pokeBody.cookie,
-      },
-    };
+      const p: Poke = {
+        baseCookie: pokeBody.baseCookie,
+        pullResponse: {
+          lastMutationID: pokeBody.lastMutationID,
+          patch: pokeBody.patch,
+          cookie: pokeBody.cookie,
+        },
+      };
 
-    try {
-      await this._rep.poke(p);
-    } catch (e) {
-      if (String(e).indexOf("unexpected base cookie for poke") > -1) {
-        this._l.info?.("out of order poke, disconnecting");
-        this._disconnect();
-        return;
+      try {
+        await this._rep.poke(p);
+      } catch (e) {
+        if (String(e).indexOf("unexpected base cookie for poke") > -1) {
+          this._l.info?.("out of order poke, disconnecting");
+          this._disconnect();
+          return;
+        }
+        throw e;
       }
-      throw e;
-    }
+    });
   }
 
   private async _pusher(req: Request) {
