@@ -58,7 +58,7 @@ export class Client<M extends MutatorDefs> {
     this._l = new LogContext("debug").addContext("roomID", roomID);
     this._pushTracker = new GapTracker("push", this._l);
     this._updateTracker = new GapTracker("update", this._l);
-    this._timestampTracker = new GapTracker("update", this._l);
+    this._timestampTracker = new GapTracker("timestamp", this._l);
     void this._watchdog();
   }
 
