@@ -1,5 +1,19 @@
+import {
+  consoleLogger,
+  LogContext,
+  Logger,
+  LogLevel,
+  OptionalLoggerImpl,
+} from "../util/logger";
 import { encodeHeaderValue } from "../util/headers";
 import { AuthHandler, UserData, USER_DATA_HEADER_NAME } from "./auth";
+import { randomID } from "../util/rand";
+
+export interface WorkerOptions {
+  authHandler: AuthHandler;
+  logger?: Logger;
+  logLevel?: LogLevel;
+}
 
 export interface Bindings {
   server: DurableObjectNamespace;
@@ -15,6 +29,7 @@ async function handleRequest(
   request: Request,
   env: Bindings,
   authHandler: AuthHandler,
+  lc: LogContext,
   isMiniflare: boolean
 ): Promise<Response> {
   // Match route against pattern /:name/*action
@@ -40,14 +55,18 @@ async function handleRequest(
     });
   }
 
+  lc = lc.addContext("client", clientID).addContext("room", roomID);
+
   const encodedAuth = request.headers.get("Sec-WebSocket-Protocol");
   if (!encodedAuth) {
+    lc.info?.("auth not found in Sec-WebSocket-Protocol header.");
     return createUnauthorizedResponse("auth required");
   }
   let auth: string | undefined;
   try {
     auth = decodeURIComponent(encodedAuth);
   } catch (e) {
+    lc.info?.("error decoding auth found in Sec-WebSocket-Protocol header.");
     return createUnauthorizedResponse("invalid auth");
   }
 
@@ -58,6 +77,11 @@ async function handleRequest(
     return createUnauthorizedResponse();
   }
   if (!userData || !userData.userID) {
+    if (!userData) {
+      lc.info?.("userData returned by authHandler is falsey.");
+    } else if (!userData.userID) {
+      lc.info?.("userData returned by authHandler has no userID.");
+    }
     return createUnauthorizedResponse();
   }
 
@@ -95,21 +119,32 @@ async function handleRequest(
 }
 
 export function createWorker(
-  authHandler: AuthHandler
+  options: WorkerOptions
 ): ExportedHandler<Bindings> {
-  return createWorkerInternal(authHandler, typeof MINIFLARE !== "undefined");
+  return createWorkerInternal(options, typeof MINIFLARE !== "undefined");
 }
 
 // Exported for testing.
 export function createWorkerInternal(
-  authHandler: AuthHandler,
+  options: WorkerOptions,
   isMiniflare: boolean
 ): ExportedHandler<Bindings> {
+  const { authHandler, logger = consoleLogger, logLevel = "debug" } = options;
+  const optionalLogger = new OptionalLoggerImpl(logger, logLevel);
   return {
     fetch: async (request: Request, env: Bindings) => {
-      console.debug("handling connection:", request.url);
-      const resp = await handleRequest(request, env, authHandler, isMiniflare);
-      console.debug(
+      // TODO: pass request id through to DO so that requests can be
+      // traced between worker and DO.
+      const lc = new LogContext(optionalLogger).addContext("req", randomID());
+      lc.debug?.("Handling connection:", request.url);
+      const resp = await handleRequest(
+        request,
+        env,
+        authHandler,
+        lc,
+        isMiniflare
+      );
+      lc.debug?.(
         `Returning connect response: ${resp.status} ${resp.statusText}`
       );
       return resp;

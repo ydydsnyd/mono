@@ -14,6 +14,7 @@ import {
 import { handleClose } from "./close.js";
 import { handleConnection } from "./connect.js";
 import { handleMessage } from "./message.js";
+import { randomID } from "../util/rand.js";
 
 export type Now = () => number;
 
@@ -165,8 +166,4 @@ function hasPendingMutations(clients: ClientMap) {
     }
   }
   return false;
-}
-
-function randomID(): string {
-  return Math.random().toString(36).substring(2);
 }

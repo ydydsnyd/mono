@@ -73,11 +73,16 @@ test("worker calls authHandler and sends returned user data in header to DO", as
     },
   };
 
-  const workerNotMiniflare = createWorkerInternal(async (auth, roomID) => {
-    expect(auth).toEqual(testAuth);
-    expect(roomID).toEqual(testRoomID);
-    return { userID: auth + ":" + roomID };
-  }, false);
+  const workerNotMiniflare = createWorkerInternal(
+    {
+      authHandler: async (auth, roomID) => {
+        expect(auth).toEqual(testAuth);
+        expect(roomID).toEqual(testRoomID);
+        return { userID: auth + ":" + roomID };
+      },
+    },
+    false
+  );
 
   if (!workerNotMiniflare.fetch) {
     throw new Error("Expect fetch to be defined");
@@ -95,11 +100,16 @@ test("worker calls authHandler and sends returned user data in header to DO", as
     encodedTestAuth
   );
 
-  const workerMiniflare = createWorkerInternal(async (auth, roomID) => {
-    expect(auth).toEqual(testAuth);
-    expect(roomID).toEqual(testRoomID);
-    return { userID: auth + ":" + roomID };
-  }, true);
+  const workerMiniflare = createWorkerInternal(
+    {
+      authHandler: async (auth, roomID) => {
+        expect(auth).toEqual(testAuth);
+        expect(roomID).toEqual(testRoomID);
+        return { userID: auth + ":" + roomID };
+      },
+    },
+    true
+  );
 
   if (!workerMiniflare.fetch) {
     throw new Error("Expect fetch to be defined");
@@ -130,10 +140,12 @@ test("worker returns a 401 without calling DO if authHandler rejects", async () 
   );
   const env = createEnvThatThrowsIfFetchIsCalled();
 
-  const worker = createWorker(async (auth, roomID) => {
-    expect(auth).toEqual(testAuth);
-    expect(roomID).toEqual(testRoomID);
-    throw new Error("Test authHandler reject");
+  const worker = createWorker({
+    authHandler: async (auth, roomID) => {
+      expect(auth).toEqual(testAuth);
+      expect(roomID).toEqual(testRoomID);
+      throw new Error("Test authHandler reject");
+    },
   });
 
   if (!worker.fetch) {
@@ -163,8 +175,10 @@ test("worker returns a 401 without calling DO if Sec-WebSocket-Protocol header i
   );
   const env = createEnvThatThrowsIfFetchIsCalled();
 
-  const worker = createWorker(async (_auth, _roomID) => {
-    throw new Error("Unexpected call to authHandler");
+  const worker = createWorker({
+    authHandler: async (_auth, _roomID) => {
+      throw new Error("Unexpected call to authHandler");
+    },
   });
 
   if (!worker.fetch) {
