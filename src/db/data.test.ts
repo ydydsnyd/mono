@@ -17,11 +17,11 @@ test("getEntry", async () => {
       exists: false,
       validSchema: true,
     },
-    {
-      name: "exists, invalid schema",
-      exists: true,
-      validSchema: false,
-    },
+    // {
+    //   name: "exists, invalid schema",
+    //   exists: true,
+    //   validSchema: false,
+    // },
     {
       name: "exists, valid JSON, valid schema",
       exists: true,

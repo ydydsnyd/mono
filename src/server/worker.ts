@@ -1,6 +1,8 @@
 import { encodeHeaderValue } from "../util/headers";
 import { AuthHandler, UserData, USER_DATA_HEADER_NAME } from "./auth";
 
+declare const MINIFLARE: boolean | undefined;
+
 export interface Bindings {
   server: DurableObjectNamespace;
   // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -35,14 +37,14 @@ async function handleRequest(
   }
 
   const clientID = url.searchParams.get("clientID");
-  if (clientID === null || clientID === "") {
+  if (!clientID) {
     return new Response("clientID parameter required", {
       status: 400,
     });
   }
 
   const encodedAuth = request.headers.get("Sec-WebSocket-Protocol");
-  if (encodedAuth === null) {
+  if (!encodedAuth) {
     return createUnauthorizedResponse("auth required");
   }
   let auth: string | undefined;

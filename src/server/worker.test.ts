@@ -68,7 +68,13 @@ test("worker calls authHandler and sends returned user data in header to DO", as
             expect(request.headers.get("Sec-WebSocket-Protocol")).toEqual(
               encodedTestAuth
             );
-            return new Response(null, { status: 101, webSocket: mocket });
+            const headers = new Headers();
+            headers.set("Sec-WebSocket-Protocol", encodedTestAuth);
+            return new Response(null, {
+              status: 101,
+              webSocket: mocket,
+              headers,
+            });
           },
         };
       },

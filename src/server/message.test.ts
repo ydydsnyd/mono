@@ -19,11 +19,11 @@ test("handleMessage", async () => {
       data: "",
       expectedError: "SyntaxError: Unexpected end of JSON input",
     },
-    {
-      name: "invalid push",
-      data: "[]",
-      expectedError: "Should have at least 2 items",
-    },
+    // {
+    //   name: "invalid push",
+    //   data: "[]",
+    //   expectedError: "Should have at least 2 items",
+    // },
     {
       name: "valid push",
       data: JSON.stringify([
