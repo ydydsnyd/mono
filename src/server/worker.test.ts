@@ -2,7 +2,7 @@ import { test, expect } from "@jest/globals";
 import { encodeHeaderValue } from "../util/headers.js";
 import { Mocket } from "../util/test-utils.js";
 import { USER_DATA_HEADER_NAME } from "./auth";
-import { createWorker } from "./worker";
+import { createWorker, createWorkerInternal } from "./worker";
 
 class TestExecutionContext implements ExecutionContext {
   waitUntil(_promise: Promise<unknown>): void {
@@ -48,8 +48,6 @@ test("worker calls authHandler and sends returned user data in header to DO", as
   const mocket = new Mocket();
 
   const env = {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    REQUIRE_SEC_WEBSOCKET_PROTOCOL_RESPONSE_HEADER: "1",
     server: {
       idFromName: (name: string) => {
         expect(name).toEqual(testRoomID);
@@ -68,30 +66,24 @@ test("worker calls authHandler and sends returned user data in header to DO", as
             expect(request.headers.get("Sec-WebSocket-Protocol")).toEqual(
               encodedTestAuth
             );
-            const headers = new Headers();
-            headers.set("Sec-WebSocket-Protocol", encodedTestAuth);
-            return new Response(null, {
-              status: 101,
-              webSocket: mocket,
-              headers,
-            });
+            return new Response(null, { status: 101, webSocket: mocket });
           },
         };
       },
     },
   };
 
-  const worker = createWorker(async (auth, roomID) => {
+  const workerNotMiniflare = createWorkerInternal(async (auth, roomID) => {
     expect(auth).toEqual(testAuth);
     expect(roomID).toEqual(testRoomID);
     return { userID: auth + ":" + roomID };
-  });
+  }, false);
 
-  if (!worker.fetch) {
+  if (!workerNotMiniflare.fetch) {
     throw new Error("Expect fetch to be defined");
   }
 
-  const response = await worker.fetch(
+  const response = await workerNotMiniflare.fetch(
     testRequest,
     env as unknown as Bindings,
     new TestExecutionContext()
@@ -103,15 +95,21 @@ test("worker calls authHandler and sends returned user data in header to DO", as
     encodedTestAuth
   );
 
-  const env2 = {
-    server: env.server,
-  };
-  const response2 = await worker.fetch(
+  const workerMiniflare = createWorkerInternal(async (auth, roomID) => {
+    expect(auth).toEqual(testAuth);
+    expect(roomID).toEqual(testRoomID);
+    return { userID: auth + ":" + roomID };
+  }, true);
+
+  if (!workerMiniflare.fetch) {
+    throw new Error("Expect fetch to be defined");
+  }
+
+  const response2 = await workerMiniflare.fetch(
     testRequest,
-    env2 as unknown as Bindings,
+    env as unknown as Bindings,
     new TestExecutionContext()
   );
-
   expect(response2.status).toEqual(101);
   expect(response2.webSocket).toBe(mocket);
   expect(response2.headers.get("Sec-WebSocket-Protocol")).toBeNull;

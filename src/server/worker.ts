@@ -5,8 +5,6 @@ declare const MINIFLARE: boolean | undefined;
 
 export interface Bindings {
   server: DurableObjectNamespace;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  REQUIRE_SEC_WEBSOCKET_PROTOCOL_RESPONSE_HEADER?: string;
 }
 
 function createUnauthorizedResponse(message = "Unauthorized"): Response {
@@ -18,7 +16,8 @@ function createUnauthorizedResponse(message = "Unauthorized"): Response {
 async function handleRequest(
   request: Request,
   env: Bindings,
-  authHandler: AuthHandler
+  authHandler: AuthHandler,
+  isMiniflare: boolean
 ): Promise<Response> {
   // Match route against pattern /:name/*action
   const url = new URL(request.url);
@@ -81,7 +80,7 @@ async function handleRequest(
   // Send a Sec-WebSocket-Protocol response header with a value
   // matching the Sec-WebSocket-Protocol request header, to indicate
   // support for the protocol, otherwise the client will close the connection.
-  if (typeof MINIFLARE === "undefined") {
+  if (!isMiniflare) {
     // ...miniflare doesn't like it though. If we set this header under MF,
     // sending the response fails. See:
     // https://github.com/cloudflare/miniflare/issues/179
@@ -100,10 +99,18 @@ async function handleRequest(
 export function createWorker(
   authHandler: AuthHandler
 ): ExportedHandler<Bindings> {
+  return createWorkerInternal(authHandler, typeof MINIFLARE !== "undefined");
+}
+
+// Exported for testing.
+export function createWorkerInternal(
+  authHandler: AuthHandler,
+  isMiniflare: boolean
+): ExportedHandler<Bindings> {
   return {
     fetch: async (request: Request, env: Bindings) => {
       console.debug("handling connection:", request.url);
-      const resp = await handleRequest(request, env, authHandler);
+      const resp = await handleRequest(request, env, authHandler, isMiniflare);
       console.debug(
         `Returning connect response: ${resp.status} ${resp.statusText}`
       );
