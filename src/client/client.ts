@@ -4,10 +4,7 @@ import { downstreamSchema } from "../protocol/down.js";
 import type { PingMessage } from "../protocol/ping.js";
 import type { PokeBody } from "../protocol/poke.js";
 import type { PushBody, PushMessage } from "../protocol/push.js";
-import {
-  type NullableVersion,
-  nullableVersionSchema,
-} from "../types/version.js";
+import { NullableVersion, nullableVersionSchema } from "../types/version.js";
 import { assert } from "../util/asserts.js";
 import { GapTracker } from "../util/gap-tracker.js";
 import { Lock } from "../util/lock.js";
@@ -40,6 +37,7 @@ export class Client<M extends MutatorDefs> {
   private _state: ConnectionState = ConnectionState.Disconnected;
   private _onPong: () => void = () => undefined;
   private _connectResolver = resolver<WebSocket>();
+  private _lastMutationIDReceived = 0;
 
   /**
    * Constructs a new reps client.
@@ -117,10 +115,12 @@ export class Client<M extends MutatorDefs> {
     // try to refresh this._rep.auth and then retry connection
     const ws = createSocket(
       this._socketURL,
+      location.href,
       baseCookie,
       await this._rep.clientID,
       this._roomID,
-      this._rep.auth
+      this._rep.auth,
+      this._lastMutationIDReceived
     );
 
     ws.addEventListener("message", this._onMessage);
@@ -149,12 +149,14 @@ export class Client<M extends MutatorDefs> {
       this._updateTracker.push(performance.now());
       this._timestampTracker.push(pokeBody.timestamp);
 
+      const { lastMutationID, baseCookie, patch, cookie } = pokeBody;
+      this._lastMutationIDReceived = lastMutationID;
       const p: Poke = {
-        baseCookie: pokeBody.baseCookie,
+        baseCookie,
         pullResponse: {
-          lastMutationID: pokeBody.lastMutationID,
-          patch: pokeBody.patch,
-          cookie: pokeBody.cookie,
+          lastMutationID,
+          patch,
+          cookie,
         },
       };
 
@@ -255,29 +257,31 @@ async function getBaseCookie(rep: Replicache) {
   return await promise;
 }
 
-function createSocket(
+export function createSocket(
   socketURL: string | undefined,
+  baseURL: string | undefined,
   baseCookie: NullableVersion,
   clientID: string,
   roomID: string,
-  auth: string
-) {
+  auth: string,
+  lmid: number
+): WebSocket {
   let url: URL;
   if (socketURL) {
     url = new URL(socketURL);
   } else {
-    url = new URL(location.href);
+    assert(baseURL);
+    url = new URL(baseURL);
     url.protocol = url.protocol.replace("http", "ws");
     url.pathname = "/rs";
   }
 
-  url.searchParams.set("clientID", clientID);
-  url.searchParams.set("roomID", roomID);
-  url.searchParams.set(
-    "baseCookie",
-    baseCookie === null ? "" : String(baseCookie)
-  );
-  url.searchParams.set("ts", String(performance.now()));
+  const { searchParams } = url;
+  searchParams.set("clientID", clientID);
+  searchParams.set("roomID", roomID);
+  searchParams.set("baseCookie", baseCookie === null ? "" : String(baseCookie));
+  searchParams.set("ts", String(performance.now()));
+  searchParams.set("lmid", String(lmid));
 
   // Pass auth to the server via the `Sec-WebSocket-Protocol` header by passing
   // it as a `protocol` to the `WebSocket` constructor.  The empty string is an
