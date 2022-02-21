@@ -20,6 +20,7 @@ export type LogLevel = "error" | "info" | "debug";
 
 export interface Logger {
   log(level: LogLevel, ...args: unknown[]): void;
+  flush?(): Promise<void>;
 }
 
 export class OptionalLoggerImpl implements OptionalLogger {

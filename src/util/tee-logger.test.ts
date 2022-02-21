@@ -10,6 +10,20 @@ class TestLogger implements Logger {
   }
 }
 
+class TestLoggerWithFlush extends TestLogger {
+  messages: [LogLevel, ...unknown[]][] = [];
+  flushCount = 0;
+
+  log(level: LogLevel, ...args: unknown[]): void {
+    this.messages.push([level, ...args]);
+  }
+
+  flush(): Promise<void> {
+    this.flushCount++;
+    return Promise.resolve();
+  }
+}
+
 test("tee logger", () => {
   const l1 = new TestLogger();
   const l2 = new TestLogger();
@@ -43,4 +57,17 @@ test("tee logger", () => {
     ["debug", 3],
     ["error", 4, 5, 6],
   ]);
+});
+
+test("tee logger flush", async () => {
+  const l1 = new TestLoggerWithFlush();
+  const l2 = new TestLogger();
+  const l3 = new TestLoggerWithFlush();
+  const tl = new TeeLogger([l1, l2, l3]);
+
+  expect(l1.flushCount).toEqual(0);
+  expect(l3.flushCount).toEqual(0);
+  await tl.flush();
+  expect(l1.flushCount).toEqual(1);
+  expect(l3.flushCount).toEqual(1);
 });

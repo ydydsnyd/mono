@@ -1,8 +1,9 @@
 import { test, expect } from "@jest/globals";
+import type { LogLevel } from "../util/logger.js";
 import { encodeHeaderValue } from "../util/headers.js";
 import { Mocket } from "../util/test-utils.js";
 import { USER_DATA_HEADER_NAME } from "./auth";
-import { createWorker, createWorkerInternal } from "./worker";
+import { BaseWorkerEnv, createWorker, createWorkerInternal } from "./worker";
 
 class TestExecutionContext implements ExecutionContext {
   waitUntil(_promise: Promise<unknown>): void {
@@ -13,24 +14,7 @@ class TestExecutionContext implements ExecutionContext {
   }
 }
 
-function createEnvThatThrowsIfFetchIsCalled() {
-  return {
-    server: {
-      idFromName: (name: string) => {
-        return "server-name-" + name;
-      },
-      get: (_id: string) => {
-        return {
-          fetch: async (_request: Request) => {
-            throw new Error("Unexpected call to DO fetch");
-          },
-        };
-      },
-    },
-  };
-}
-
-test("worker calls authHandler and sends returned user data in header to DO", async () => {
+function createTestFixture() {
   const testRoomID = "testRoomID1";
   const testClientID = "testClientID1";
   const encodedTestAuth = "test%20auth%20token%20value%20%25%20encoded";
@@ -47,7 +31,7 @@ test("worker calls authHandler and sends returned user data in header to DO", as
 
   const mocket = new Mocket();
 
-  const env = {
+  const testEnv = {
     server: {
       idFromName: (name: string) => {
         expect(name).toEqual(testRoomID);
@@ -71,7 +55,44 @@ test("worker calls authHandler and sends returned user data in header to DO", as
         };
       },
     },
+  } as unknown as BaseWorkerEnv;
+
+  return {
+    testAuth,
+    testRoomID,
+    testRequest,
+    testEnv,
+    mocket,
+    encodedTestAuth,
   };
+}
+
+function createEnvThatThrowsIfFetchIsCalled() {
+  return {
+    server: {
+      idFromName: (name: string) => {
+        return "server-name-" + name;
+      },
+      get: (_id: string) => {
+        return {
+          fetch: async (_request: Request) => {
+            throw new Error("Unexpected call to DO fetch");
+          },
+        };
+      },
+    },
+  };
+}
+
+test("worker calls authHandler and sends returned user data in header to DO", async () => {
+  const {
+    testAuth,
+    testRoomID,
+    testRequest,
+    testEnv,
+    mocket,
+    encodedTestAuth,
+  } = createTestFixture();
 
   const workerNotMiniflare = createWorkerInternal(
     {
@@ -90,7 +111,7 @@ test("worker calls authHandler and sends returned user data in header to DO", as
 
   const response = await workerNotMiniflare.fetch(
     testRequest,
-    env as unknown as Bindings,
+    testEnv,
     new TestExecutionContext()
   );
 
@@ -117,7 +138,7 @@ test("worker calls authHandler and sends returned user data in header to DO", as
 
   const response2 = await workerMiniflare.fetch(
     testRequest,
-    env as unknown as Bindings,
+    testEnv,
     new TestExecutionContext()
   );
   expect(response2.status).toEqual(101);
@@ -193,4 +214,84 @@ test("worker returns a 401 without calling DO if Sec-WebSocket-Protocol header i
 
   expect(response.status).toEqual(401);
   expect(response.webSocket).toBeUndefined();
+});
+
+test("logging", async () => {
+  const { testAuth, testRoomID, testRequest, testEnv } = createTestFixture();
+
+  const waitUntilCalls: Promise<unknown>[] = [];
+  const executionContext = {
+    waitUntil: (promise: Promise<unknown>): void => {
+      waitUntilCalls.push(promise);
+      return;
+    },
+    passThroughOnException: (): void => {
+      return;
+    },
+  };
+
+  let createLoggerCallCount = 0;
+  let getLogLevelCallCount = 0;
+  let logCallCount = 0;
+  const logFlushPromise = Promise.resolve();
+  const workerNotMiniflare = createWorkerInternal(
+    {
+      authHandler: async (auth, roomID) => {
+        expect(auth).toEqual(testAuth);
+        expect(roomID).toEqual(testRoomID);
+        return { userID: auth + ":" + roomID };
+      },
+      createLogger: (env) => {
+        createLoggerCallCount++;
+        expect(env).toBe(testEnv);
+        return {
+          log: (_level: LogLevel, ..._args: unknown[]): void => {
+            logCallCount++;
+          },
+          flush: (): Promise<void> => {
+            return logFlushPromise;
+          },
+        };
+      },
+      getLogLevel: (env) => {
+        getLogLevelCallCount++;
+        expect(env).toBe(testEnv);
+        return "debug";
+      },
+    },
+    false
+  );
+
+  if (!workerNotMiniflare.fetch) {
+    throw new Error("Expect fetch to be defined");
+  }
+
+  expect(createLoggerCallCount).toEqual(0);
+  expect(getLogLevelCallCount).toEqual(0);
+  expect(logCallCount).toEqual(0);
+
+  const response = await workerNotMiniflare.fetch(
+    testRequest,
+    testEnv,
+    executionContext
+  );
+  expect(response.status).toEqual(101);
+  expect(createLoggerCallCount).toEqual(1);
+  expect(getLogLevelCallCount).toEqual(1);
+  const logCallCountAfterFirstFetch = logCallCount;
+  expect(logCallCountAfterFirstFetch).toBeGreaterThan(0);
+  expect(waitUntilCalls.length).toBe(1);
+  expect(waitUntilCalls[0]).toBe(logFlushPromise);
+
+  const response2 = await workerNotMiniflare.fetch(
+    testRequest,
+    testEnv,
+    executionContext
+  );
+  expect(response2.status).toEqual(101);
+  expect(createLoggerCallCount).toEqual(2);
+  expect(getLogLevelCallCount).toEqual(2);
+  expect(logCallCount).toBeGreaterThan(logCallCountAfterFirstFetch);
+  expect(waitUntilCalls.length).toBe(2);
+  expect(waitUntilCalls[1]).toBe(logFlushPromise);
 });

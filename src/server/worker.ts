@@ -9,13 +9,13 @@ import { encodeHeaderValue } from "../util/headers";
 import { AuthHandler, UserData, USER_DATA_HEADER_NAME } from "./auth";
 import { randomID } from "../util/rand";
 
-export interface WorkerOptions {
+export interface WorkerOptions<Env extends BaseWorkerEnv> {
   authHandler: AuthHandler;
-  logger?: Logger;
-  logLevel?: LogLevel;
+  createLogger?: (env: Env) => Logger;
+  getLogLevel?: (env: Env) => LogLevel;
 }
 
-export interface Bindings {
+export interface BaseWorkerEnv {
   server: DurableObjectNamespace;
 }
 
@@ -25,9 +25,9 @@ function createUnauthorizedResponse(message = "Unauthorized"): Response {
   });
 }
 
-async function handleRequest(
+async function handleRequest<Env extends BaseWorkerEnv>(
   request: Request,
-  env: Bindings,
+  env: Env,
   authHandler: AuthHandler,
   lc: LogContext,
   isMiniflare: boolean
@@ -118,21 +118,26 @@ async function handleRequest(
   return response;
 }
 
-export function createWorker(
-  options: WorkerOptions
-): ExportedHandler<Bindings> {
+export function createWorker<Env extends BaseWorkerEnv>(
+  options: WorkerOptions<Env>
+): ExportedHandler<Env> {
   return createWorkerInternal(options, typeof MINIFLARE !== "undefined");
 }
 
 // Exported for testing.
-export function createWorkerInternal(
-  options: WorkerOptions,
+export function createWorkerInternal<Env extends BaseWorkerEnv>(
+  options: WorkerOptions<Env>,
   isMiniflare: boolean
-): ExportedHandler<Bindings> {
-  const { authHandler, logger = consoleLogger, logLevel = "debug" } = options;
-  const optionalLogger = new OptionalLoggerImpl(logger, logLevel);
+): ExportedHandler<Env> {
+  const {
+    authHandler,
+    createLogger = (_env) => consoleLogger,
+    getLogLevel = (_env) => "debug",
+  } = options;
   return {
-    fetch: async (request: Request, env: Bindings) => {
+    fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
+      const logger = createLogger(env);
+      const optionalLogger = new OptionalLoggerImpl(logger, getLogLevel(env));
       // TODO: pass request id through to DO so that requests can be
       // traced between worker and DO.
       const lc = new LogContext(optionalLogger).addContext("req", randomID());
@@ -147,6 +152,9 @@ export function createWorkerInternal(
       lc.debug?.(
         `Returning connect response: ${resp.status} ${resp.statusText}`
       );
+      if (logger.flush) {
+        ctx.waitUntil(logger.flush());
+      }
       return resp;
     },
   };

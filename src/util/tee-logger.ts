@@ -15,4 +15,8 @@ export class TeeLogger implements Logger {
       logger.log(level, ...args);
     }
   }
+
+  async flush(): Promise<void> {
+    await Promise.all(this._loggers.map((logger) => logger.flush?.()));
+  }
 }
