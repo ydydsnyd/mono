@@ -17,13 +17,14 @@ const options = {
 export async function getEntry<T extends JSONValue>(
   durable: DurableObjectStorage,
   key: string,
-  schema: ZodSchema<T>
+  _: ZodSchema<T>
 ): Promise<T | undefined> {
   const value = await durable.get(key, options);
   if (value === undefined) {
     return undefined;
   }
-  return schema.parse(value);
+  return value as T;
+  //return schema.parse(value);
 }
 
 export async function putEntry<T extends JSONValue>(

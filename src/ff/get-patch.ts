@@ -1,5 +1,5 @@
 import type { Patch } from "../protocol/poke.js";
-import { userValuePrefix, userValueSchema } from "../types/user-value.js";
+import { UserValue, userValuePrefix } from "../types/user-value.js";
 import type { Version } from "../types/version.js";
 
 export async function getPatch(
@@ -13,7 +13,8 @@ export async function getPatch(
 
   const patch: Patch = [];
   for (const [key, value] of result) {
-    const validValue = userValueSchema.parse(value);
+    //const validValue = userValueSchema.parse(value);
+    const validValue = value as UserValue;
 
     // TODO: More efficient way of finding changed values.
     if (validValue.version <= fromCookie) {
