@@ -1,8 +1,6 @@
 import { encodeHeaderValue } from "../util/headers";
 import { AuthHandler, UserData, USER_DATA_HEADER_NAME } from "./auth";
 
-declare const MINIFLARE: boolean | undefined;
-
 export interface Bindings {
   server: DurableObjectNamespace;
 }
