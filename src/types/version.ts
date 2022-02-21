@@ -1,4 +1,4 @@
-import { z } from "zod";
+import {z} from 'zod';
 
 export const versionSchema = z.number();
 export const nullableVersionSchema = z.union([versionSchema, z.null()]);

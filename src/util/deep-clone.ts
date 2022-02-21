@@ -1,5 +1,5 @@
-import type { JSONType } from "../protocol/json.js";
-import { hasOwn } from "./has-own.js";
+import type {JSONType} from '../protocol/json.js';
+import {hasOwn} from './has-own.js';
 
 export function deepClone(value: JSONType): JSONType {
   const seen: Array<JSONType | ReadonlyArray<JSONType>> = [];
@@ -8,20 +8,20 @@ export function deepClone(value: JSONType): JSONType {
 
 export function internalDeepClone(
   value: JSONType,
-  seen: Array<JSONType | ReadonlyArray<JSONType>>
+  seen: Array<JSONType | ReadonlyArray<JSONType>>,
 ): JSONType {
   switch (typeof value) {
-    case "boolean":
-    case "number":
-    case "string":
-    case "undefined":
+    case 'boolean':
+    case 'number':
+    case 'string':
+    case 'undefined':
       return value;
-    case "object": {
+    case 'object': {
       if (value === null) {
         return null;
       }
       if (seen.includes(value)) {
-        throw new Error("Cyclic object");
+        throw new Error('Cyclic object');
       }
       seen.push(value);
       if (Array.isArray(value)) {

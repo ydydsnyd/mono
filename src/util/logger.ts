@@ -16,7 +16,7 @@ export interface Logger {
  * `'error'` > `'info'` > `'debug'`... meaning `'error'` has highest priority
  * and `'debug'` lowest.
  */
-export type LogLevel = "error" | "info" | "debug";
+export type LogLevel = 'error' | 'info' | 'debug';
 
 export function getLogger(prefix: string[], level: LogLevel): Logger {
   const logger: Logger = {};
@@ -27,13 +27,13 @@ export function getLogger(prefix: string[], level: LogLevel): Logger {
   /* eslint-disable no-fallthrough , @typescript-eslint/ban-ts-comment */
   switch (level) {
     // @ts-ignore
-    case "debug":
-      logger.debug = impl("debug");
+    case 'debug':
+      logger.debug = impl('debug');
     // @ts-ignore
-    case "info":
-      logger.info = impl("info");
-    case "error":
-      logger.error = impl("error");
+    case 'info':
+      logger.info = impl('info');
+    case 'error':
+      logger.error = impl('error');
   }
   /* eslint-ensable @typescript-eslint/ban-ts-comment, no-fallthrough */
 
@@ -47,7 +47,7 @@ export class LogContext implements Logger {
   readonly info?: (...args: unknown[]) => void = undefined;
   readonly error?: (...args: unknown[]) => void = undefined;
 
-  constructor(level: LogLevel = "info", s = "") {
+  constructor(level: LogLevel = 'info', s = '') {
     this._s = s;
 
     const impl =
@@ -58,23 +58,23 @@ export class LogContext implements Logger {
     /* eslint-disable no-fallthrough , @typescript-eslint/ban-ts-comment */
     switch (level) {
       // @ts-ignore
-      case "debug":
-        this.debug = impl("debug");
+      case 'debug':
+        this.debug = impl('debug');
       // @ts-ignore
-      case "info":
-        this.info = impl("info");
-      case "error":
-        this.error = impl("error");
+      case 'info':
+        this.info = impl('info');
+      case 'error':
+        this.error = impl('error');
     }
     /* eslint-ensable @typescript-eslint/ban-ts-comment, no-fallthrough */
   }
 
   addContext(key: string, value: unknown): LogContext {
-    const space = this._s ? " " : "";
+    const space = this._s ? ' ' : '';
     return new LogContext(this._logLevel, `${this._s}${space}${key}=${value}`);
   }
 
   private get _logLevel(): LogLevel {
-    return this.debug ? "debug" : this.info ? "info" : "error";
+    return this.debug ? 'debug' : this.info ? 'info' : 'error';
   }
 }

@@ -1,15 +1,15 @@
-import { z } from "zod";
-import { nullableVersionSchema, versionSchema } from "../types/version.js";
-import { jsonSchema } from "./json.js";
+import {z} from 'zod';
+import {nullableVersionSchema, versionSchema} from '../types/version.js';
+import {jsonSchema} from './json.js';
 
 const putOpSchema = z.object({
-  op: z.literal("put"),
+  op: z.literal('put'),
   key: z.string(),
   value: jsonSchema,
 });
 
 const delOpSchema = z.object({
-  op: z.literal("del"),
+  op: z.literal('del'),
   key: z.string(),
 });
 
@@ -27,7 +27,7 @@ const pokeBodySchema = z.object({
   timestamp: z.number(),
 });
 
-export const pokeMessageSchema = z.tuple([z.literal("poke"), pokeBodySchema]);
+export const pokeMessageSchema = z.tuple([z.literal('poke'), pokeBodySchema]);
 
 export type PutOp = z.infer<typeof putOpSchema>;
 export type DelOp = z.infer<typeof delOpSchema>;

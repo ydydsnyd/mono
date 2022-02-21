@@ -1,9 +1,9 @@
-import { z } from "zod";
+import {z} from 'zod';
 
 export const connectedBodySchema = z.object({});
 
 export const connectedMessageSchema = z.tuple([
-  z.literal("connected"),
+  z.literal('connected'),
   connectedBodySchema,
 ]);
 

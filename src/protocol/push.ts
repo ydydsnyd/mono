@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { jsonSchema } from "./json.js";
+import {z} from 'zod';
+import {jsonSchema} from './json.js';
 
 export const mutationSchema = z.object({
   id: z.number(),
@@ -15,7 +15,7 @@ export const pushBodySchema = z.object({
   timestamp: z.number(),
 });
 
-export const pushMessageSchema = z.tuple([z.literal("push"), pushBodySchema]);
+export const pushMessageSchema = z.tuple([z.literal('push'), pushBodySchema]);
 
 export type Mutation = z.infer<typeof mutationSchema>;
 export type PushBody = z.infer<typeof pushBodySchema>;

@@ -11,5 +11,5 @@ export function resolver<R = void, E = unknown>(): Resolver<R, E> {
     resolve = res;
     reject = rej;
   });
-  return { promise, resolve, reject };
+  return {promise, resolve, reject};
 }

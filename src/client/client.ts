@@ -1,16 +1,16 @@
-import { nanoid } from "nanoid";
-import type { MutatorDefs, Poke, PullerResult, Replicache } from "replicache";
-import { downstreamSchema } from "../protocol/down.js";
-import type { PingMessage } from "../protocol/ping.js";
-import type { PokeBody } from "../protocol/poke.js";
-import type { PushBody, PushMessage } from "../protocol/push.js";
-import { NullableVersion, nullableVersionSchema } from "../types/version.js";
-import { assert } from "../util/asserts.js";
-import { GapTracker } from "../util/gap-tracker.js";
-import { Lock } from "../util/lock.js";
-import { LogContext } from "../util/logger.js";
-import { resolver } from "../util/resolver.js";
-import { sleep } from "../util/sleep.js";
+import {nanoid} from 'nanoid';
+import type {MutatorDefs, Poke, PullerResult, Replicache} from 'replicache';
+import {downstreamSchema} from '../protocol/down.js';
+import type {PingMessage} from '../protocol/ping.js';
+import type {PokeBody} from '../protocol/poke.js';
+import type {PushBody, PushMessage} from '../protocol/push.js';
+import {NullableVersion, nullableVersionSchema} from '../types/version.js';
+import {assert} from '../util/asserts.js';
+import {GapTracker} from '../util/gap-tracker.js';
+import {Lock} from '../util/lock.js';
+import {LogContext} from '../util/logger.js';
+import {resolver} from '../util/resolver.js';
+import {sleep} from '../util/sleep.js';
 
 const enum ConnectionState {
   Disconnected,
@@ -53,23 +53,23 @@ export class Client<M extends MutatorDefs> {
 
     this._socketURL = socketURL;
     this._roomID = roomID;
-    this._l = new LogContext("debug").addContext("roomID", roomID);
-    this._pushTracker = new GapTracker("push", this._l);
-    this._updateTracker = new GapTracker("update", this._l);
-    this._timestampTracker = new GapTracker("timestamp", this._l);
+    this._l = new LogContext('debug').addContext('roomID', roomID);
+    this._pushTracker = new GapTracker('push', this._l);
+    this._updateTracker = new GapTracker('update', this._l);
+    this._timestampTracker = new GapTracker('timestamp', this._l);
     void this._watchdog();
   }
 
   private _onMessage = (e: MessageEvent<string>) => {
     const l = this._l;
-    l.addContext("req", nanoid());
-    l.debug?.("received message", e.data);
+    l.addContext('req', nanoid());
+    l.debug?.('received message', e.data);
 
     const data = JSON.parse(e.data);
     const downMessage = downstreamSchema.parse(data);
 
-    if (downMessage[0] === "connected") {
-      l.info?.("Connected");
+    if (downMessage[0] === 'connected') {
+      l.info?.('Connected');
 
       this._state = ConnectionState.Connected;
       this._lastMutationIDSent = -1;
@@ -78,16 +78,16 @@ export class Client<M extends MutatorDefs> {
       return;
     }
 
-    if (downMessage[0] === "error") {
+    if (downMessage[0] === 'error') {
       throw new Error(downMessage[1]);
     }
 
-    if (downMessage[0] === "pong") {
+    if (downMessage[0] === 'pong') {
       this._onPong();
       return;
     }
 
-    if (downMessage[0] !== "poke") {
+    if (downMessage[0] !== 'poke') {
       throw new Error(`Unexpected message: ${downMessage}`);
     }
 
@@ -97,16 +97,16 @@ export class Client<M extends MutatorDefs> {
 
   private _onClose = (e: CloseEvent) => {
     const l = this._l;
-    l.info?.("got socket close event", e);
+    l.info?.('got socket close event', e);
     this._disconnect();
   };
 
   private async _connect(l: LogContext) {
     if (this._state === ConnectionState.Connecting) {
-      l.debug?.("Skipping duplicate connect request");
+      l.debug?.('Skipping duplicate connect request');
       return;
     }
-    l.info?.("Connecting...");
+    l.info?.('Connecting...');
 
     this._state = ConnectionState.Connecting;
 
@@ -120,36 +120,36 @@ export class Client<M extends MutatorDefs> {
       await this._rep.clientID,
       this._roomID,
       this._rep.auth,
-      this._lastMutationIDReceived
+      this._lastMutationIDReceived,
     );
 
-    ws.addEventListener("message", this._onMessage);
-    ws.addEventListener("close", this._onClose);
+    ws.addEventListener('message', this._onMessage);
+    ws.addEventListener('close', this._onClose);
     this._socket = ws;
   }
 
   private _disconnect() {
-    this._l.debug?.("disconnecting");
+    this._l.debug?.('disconnecting');
     if (this._state === ConnectionState.Connected) {
       // Only create a new resolver if the one we have was previously resolved,
       // which happens when the socket became connected.
       this._connectResolver = resolver();
     }
     this._state = ConnectionState.Disconnected;
-    this._socket?.removeEventListener("message", this._onMessage);
-    this._socket?.removeEventListener("close", this._onClose);
+    this._socket?.removeEventListener('message', this._onMessage);
+    this._socket?.removeEventListener('close', this._onClose);
     this._socket = undefined;
     this._lastMutationIDSent = -1;
   }
 
   private async _handlePoke(l: LogContext, pokeBody: PokeBody) {
     await this._pokeLock.withLock(async () => {
-      l.debug?.("Applying poke", pokeBody);
+      l.debug?.('Applying poke', pokeBody);
 
       this._updateTracker.push(performance.now());
       this._timestampTracker.push(pokeBody.timestamp);
 
-      const { lastMutationID, baseCookie, patch, cookie } = pokeBody;
+      const {lastMutationID, baseCookie, patch, cookie} = pokeBody;
       this._lastMutationIDReceived = lastMutationID;
       const p: Poke = {
         baseCookie,
@@ -163,8 +163,8 @@ export class Client<M extends MutatorDefs> {
       try {
         await this._rep.poke(p);
       } catch (e) {
-        if (String(e).indexOf("unexpected base cookie for poke") > -1) {
-          this._l.info?.("out of order poke, disconnecting");
+        if (String(e).indexOf('unexpected base cookie for poke') > -1) {
+          this._l.info?.('out of order poke, disconnecting');
           this._disconnect();
           return;
         }
@@ -181,7 +181,7 @@ export class Client<M extends MutatorDefs> {
     const socket = await this._connectResolver.promise;
 
     const pushBody = (await req.json()) as PushBody;
-    const msg: PushMessage = ["push", pushBody];
+    const msg: PushMessage = ['push', pushBody];
 
     const newMutations = [];
     for (const m of msg[1].mutations) {
@@ -199,15 +199,15 @@ export class Client<M extends MutatorDefs> {
     }
 
     return {
-      errorMessage: "",
+      errorMessage: '',
       httpStatusCode: 200,
     };
   }
 
   private async _watchdog() {
     for (;;) {
-      const l = this._l.addContext("req", nanoid());
-      l.debug?.("watchdog fired");
+      const l = this._l.addContext('req', nanoid());
+      l.debug?.('watchdog fired');
       if (this._state === ConnectionState.Connected) {
         await this._ping(l);
       } else {
@@ -218,10 +218,10 @@ export class Client<M extends MutatorDefs> {
   }
 
   private async _ping(l: LogContext) {
-    l.debug?.("pinging");
-    const { promise, resolve } = resolver();
+    l.debug?.('pinging');
+    const {promise, resolve} = resolver();
     this._onPong = resolve;
-    const pingMessage: PingMessage = ["ping", {}];
+    const pingMessage: PingMessage = ['ping', {}];
     const t0 = performance.now();
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     this._socket!.send(JSON.stringify(pingMessage));
@@ -231,9 +231,9 @@ export class Client<M extends MutatorDefs> {
     ]);
     const delta = performance.now() - t0;
     if (connected) {
-      l.debug?.("ping succeeded in", delta, "ms");
+      l.debug?.('ping succeeded in', delta, 'ms');
     } else {
-      l.debug?.("ping failed in", delta, "ms - disconnecting");
+      l.debug?.('ping failed in', delta, 'ms - disconnecting');
       this._disconnect();
     }
   }
@@ -241,14 +241,14 @@ export class Client<M extends MutatorDefs> {
 
 // Total hack to get base cookie
 async function getBaseCookie(rep: Replicache) {
-  const { promise, resolve } = resolver<NullableVersion>();
+  const {promise, resolve} = resolver<NullableVersion>();
   rep.puller = async (req): Promise<PullerResult> => {
     const val = await req.json();
     const parsed = nullableVersionSchema.parse(val.cookie);
     resolve(parsed);
     return {
       httpRequestInfo: {
-        errorMessage: "",
+        errorMessage: '',
         httpStatusCode: 200,
       },
     };
@@ -264,7 +264,7 @@ export function createSocket(
   clientID: string,
   roomID: string,
   auth: string,
-  lmid: number
+  lmid: number,
 ): WebSocket {
   let url: URL;
   if (socketURL) {
@@ -272,16 +272,16 @@ export function createSocket(
   } else {
     assert(baseURL);
     url = new URL(baseURL);
-    url.protocol = url.protocol.replace("http", "ws");
-    url.pathname = "/rs";
+    url.protocol = url.protocol.replace('http', 'ws');
+    url.pathname = '/rs';
   }
 
-  const { searchParams } = url;
-  searchParams.set("clientID", clientID);
-  searchParams.set("roomID", roomID);
-  searchParams.set("baseCookie", baseCookie === null ? "" : String(baseCookie));
-  searchParams.set("ts", String(performance.now()));
-  searchParams.set("lmid", String(lmid));
+  const {searchParams} = url;
+  searchParams.set('clientID', clientID);
+  searchParams.set('roomID', roomID);
+  searchParams.set('baseCookie', baseCookie === null ? '' : String(baseCookie));
+  searchParams.set('ts', String(performance.now()));
+  searchParams.set('lmid', String(lmid));
 
   // Pass auth to the server via the `Sec-WebSocket-Protocol` header by passing
   // it as a `protocol` to the `WebSocket` constructor.  The empty string is an
@@ -290,6 +290,6 @@ export function createSocket(
   // for a `protocol`.
   return new WebSocket(
     url.toString(),
-    auth === "" ? undefined : encodeURIComponent(auth)
+    auth === '' ? undefined : encodeURIComponent(auth),
   );
 }

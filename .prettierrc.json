@@ -1,8 +1,9 @@
 {
-  "singleQuote": false,
-  "trailingComma": "es5",
+  "singleQuote": true,
+  "trailingComma": "all",
   "arrowParens": "always",
-  "bracketSpacing": true,
+  "bracketSpacing": false,
   "tabWidth": 2,
-  "useTabs": false
+  "useTabs": false,
+  "quoteProps": "consistent"
 }
