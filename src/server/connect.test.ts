@@ -67,7 +67,7 @@ test("handleConnection", async () => {
   const cases: Case[] = [
     {
       name: "invalid clientid",
-      url: "http://google.com/?baseCookie=1&timestamp=t1",
+      url: "http://google.com/?baseCookie=1&timestamp=t1&lmid=0",
       headers: createHeadersWithValidUserData(),
       expectErrorResponse: "Error: invalid querystring - missing clientID",
       existingClients: new Map(),
@@ -75,7 +75,7 @@ test("handleConnection", async () => {
     },
     {
       name: "invalid timestamp",
-      url: "http://google.com/?clientID=c1&baseCookie=1",
+      url: "http://google.com/?clientID=c1&baseCookie=1&lmid=0",
       headers: createHeadersWithValidUserData(),
       expectErrorResponse: "Error: invalid querystring - missing ts",
       existingClients: new Map(),
@@ -83,16 +83,33 @@ test("handleConnection", async () => {
     },
     {
       name: "invalid (non-numeric) timestamp",
-      url: "http://google.com/?clientID=c1&baseCookie=1&ts=xx",
+      url: "http://google.com/?clientID=c1&baseCookie=1&ts=xx&lmid=0",
       headers: createHeadersWithValidUserData(),
       expectErrorResponse:
-        "Error: invalid querystring parameter ts, url: http://google.com/?clientID=c1&baseCookie=1&ts=xx, got: xx",
+        "Error: invalid querystring parameter ts, url: http://google.com/?clientID=c1&baseCookie=1&ts=xx&lmid=0, got: xx",
+      existingClients: new Map(),
+      expectedClients: () => new Map(),
+    },
+    {
+      name: "missing lmid",
+      url: "http://google.com/?clientID=c1&baseCookie=1&ts=123",
+      headers: createHeadersWithValidUserData(),
+      expectErrorResponse: "Error: invalid querystring - missing lmid",
+      existingClients: new Map(),
+      expectedClients: () => new Map(),
+    },
+    {
+      name: "inmvalid (non-numeric) lmid",
+      url: "http://google.com/?clientID=c1&baseCookie=1&ts=123&lmid=xx",
+      headers: createHeadersWithValidUserData(),
+      expectErrorResponse:
+        "Error: invalid querystring parameter lmid, url: http://google.com/?clientID=c1&baseCookie=1&ts=123&lmid=xx, got: xx",
       existingClients: new Map(),
       expectedClients: () => new Map(),
     },
     {
       name: "no existing clients",
-      url: "http://google.com/?clientID=c1&baseCookie=1&ts=42",
+      url: "http://google.com/?clientID=c1&baseCookie=1&ts=42&lmid=0",
       headers: createHeadersWithValidUserData(),
       existingClients: new Map(),
       expectedClients: (socket) => new Map([freshClient("c1", socket)]),
@@ -100,7 +117,7 @@ test("handleConnection", async () => {
     },
     {
       name: "baseCookie: null",
-      url: "http://google.com/?clientID=c1&baseCookie=&ts=42",
+      url: "http://google.com/?clientID=c1&baseCookie=&ts=42&lmid=0",
       headers: createHeadersWithValidUserData(),
       existingClients: new Map(),
       expectedClients: (socket) => new Map([freshClient("c1", socket)]),
@@ -108,7 +125,7 @@ test("handleConnection", async () => {
     },
     {
       name: "existing clients",
-      url: "http://google.com/?clientID=c1&baseCookie=1&ts=42",
+      url: "http://google.com/?clientID=c1&baseCookie=1&ts=42&lmid=0",
       headers: createHeadersWithValidUserData(),
       existingClients: new Map([c2]),
       expectedClients: (socket) => new Map([freshClient("c1", socket), c2]),
@@ -116,16 +133,16 @@ test("handleConnection", async () => {
     },
     {
       name: "existing record",
-      url: "http://google.com/?clientID=c1&baseCookie=7&ts=42",
+      url: "http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0",
       headers: createHeadersWithValidUserData(),
       existingClients: new Map(),
       expectedClients: (socket) => new Map([freshClient("c1", socket)]),
-      existingRecord: clientRecord(1, 88),
-      expectedRecord: clientRecord(7, 88),
+      existingRecord: clientRecord(1, 42),
+      expectedRecord: clientRecord(7, 42),
     },
     {
       name: "missing user data",
-      url: "http://google.com/?clientID=c1&baseCookie=7&ts=42",
+      url: "http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0",
       headers: new Headers(),
       expectErrorResponse: "Error: missing user-data",
       existingClients: new Map(),
@@ -133,7 +150,7 @@ test("handleConnection", async () => {
     },
     {
       name: "invalid user data",
-      url: "http://google.com/?clientID=c1&baseCookie=7&ts=42",
+      url: "http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0",
       headers: createHeadersWithInvalidUserData(),
       expectErrorResponse: "Error: invalid user-data - failed to decode/parse",
       existingClients: new Map(),
@@ -141,7 +158,7 @@ test("handleConnection", async () => {
     },
     {
       name: "user data missing userID",
-      url: "http://google.com/?clientID=c1&baseCookie=7&ts=42",
+      url: "http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0",
       headers: createHeadersWithUserDataMissingUserID(),
       expectErrorResponse: "Error: invalid user-data - missing userID",
       existingClients: new Map(),
@@ -149,11 +166,19 @@ test("handleConnection", async () => {
     },
     {
       name: "user data with empty userID",
-      url: "http://google.com/?clientID=c1&baseCookie=7&ts=42",
+      url: "http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0",
       headers: createHeadersWithUserDataWithEmptyUserID(),
       expectErrorResponse: "Error: invalid user-data - missing userID",
       existingClients: new Map(),
       expectedClients: () => new Map(),
+    },
+    {
+      name: "Invalid lastMutationID",
+      url: "http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=100",
+      existingClients: new Map(),
+      expectedClients: (socket) => new Map([freshClient("c1", socket)]),
+      headers: createHeadersWithValidUserData(),
+      expectErrorResponse: "Unexpected lmid",
     },
   ];
 
@@ -180,7 +205,10 @@ test("handleConnection", async () => {
     );
 
     if (c.expectErrorResponse) {
-      expect(mocket.log).toEqual([["send", c.expectErrorResponse], ["close"]]);
+      expect(mocket.log).toEqual([
+        ["send", JSON.stringify(["error", c.expectErrorResponse])],
+        ["close"],
+      ]);
       continue;
     }
     expect(mocket.log).toEqual([["send", JSON.stringify(["connected", {}])]]);

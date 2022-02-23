@@ -2,7 +2,7 @@ import { DurableStorage } from "../storage/durable-storage.js";
 import {
   ClientRecord,
   clientRecordKey,
-  clientRecordSchema,
+  getClientRecord,
 } from "../types/client-record.js";
 import type {
   ClientID,
@@ -43,12 +43,17 @@ export async function handleConnection(
   onMessage: MessageHandler,
   onClose: CloseHandler
 ) {
-  const { result, error } = getConnectRequest(url, headers);
-  if (result === null) {
+  const sendError = (error: string) => {
     lc.info?.("invalid connection request", error);
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    ws.send(error!);
+    ws.send(JSON.stringify(["error", error]));
     ws.close();
+  };
+
+  const req = getConnectRequest(url, headers);
+  const { result } = req;
+  if (result === null) {
+    const { error } = req;
+    sendError(error);
     return;
   }
 
@@ -57,12 +62,21 @@ export async function handleConnection(
 
   const { clientID, baseCookie } = result;
   const storage = new DurableStorage(durable);
-  const existingRecord = await storage.get(
-    clientRecordKey(clientID),
-    clientRecordSchema
-  );
+  const existingRecord = await getClientRecord(clientID, storage);
   lc.debug?.("Existing client record", existingRecord);
   const lastMutationID = existingRecord?.lastMutationID ?? 0;
+
+  if (result.lmid > lastMutationID) {
+    lc.info?.(
+      "Unexepted lmid when connecting. Got",
+      result.lmid,
+      "old lastMutationID",
+      lastMutationID
+    );
+    sendError("Unexpected lmid");
+    return;
+  }
+
   const record: ClientRecord = {
     baseCookie,
     lastMutationID,
@@ -141,6 +155,9 @@ export function getConnectRequest(url: URL, headers: Headers) {
     const baseCookie = getIntegerParam("baseCookie", false);
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const timestamp = getIntegerParam("ts", true)!;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const lmid = getIntegerParam("lmid", true)!;
+
     const userData = getUserData(headers);
     return {
       result: {
@@ -148,6 +165,7 @@ export function getConnectRequest(url: URL, headers: Headers) {
         userData,
         baseCookie,
         timestamp,
+        lmid,
       },
       error: null,
     };
