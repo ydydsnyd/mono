@@ -40,7 +40,7 @@ export class Client<M extends MutatorDefs> {
   private _lastMutationIDReceived = 0;
 
   /**
-   * Constructs a new reps client.
+   * Constructs a new reflect client.
    * @param rep Instance of replicache to use.
    * @param roomID RoomID we are in.
    * @param socketURL URL of web socket to connect to. This should be either a ws/wss protocol URL or undefined.
