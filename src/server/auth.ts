@@ -23,4 +23,4 @@ export type UserData = ReadonlyJSONObject & { userID: string };
  * Value should be a `UserData` value JSON stringified and encoded
  * with `encodeUrlComponent`.
  */
-export const USER_DATA_HEADER_NAME = "x-reps-user-data";
+export const USER_DATA_HEADER_NAME = "x-reflect-user-data";
