@@ -1,6 +1,6 @@
 import {nanoid} from 'nanoid';
 import type {MutatorDefs, Poke, PullerResult, Replicache} from 'replicache';
-import {downstreamSchema} from '../protocol/down.js';
+import type {Downstream} from '../protocol/down.js';
 import type {PingMessage} from '../protocol/ping.js';
 import type {PokeBody} from '../protocol/poke.js';
 import type {PushBody, PushMessage} from '../protocol/push.js';
@@ -66,7 +66,7 @@ export class Client<M extends MutatorDefs> {
     l.debug?.('received message', e.data);
 
     const data = JSON.parse(e.data);
-    const downMessage = downstreamSchema.parse(data);
+    const downMessage = data as Downstream; //downstreamSchema.parse(data);
 
     if (downMessage[0] === 'connected') {
       l.info?.('Connected');
