@@ -22,7 +22,7 @@ export type MessageHandler = (
   ws: Socket
 ) => void;
 
-export type CloseHandler = (clientID: ClientID) => void;
+export type CloseHandler = (clientID: ClientID, ws: Socket) => void;
 
 /**
  * Handles the connect message from a client, registering the client state in memory and updating the persistent client-record.
@@ -84,7 +84,6 @@ export async function handleConnection(
   await storage.put(clientRecordKey(clientID), record);
   lc.debug?.("Put client record", record);
 
-  // Add or update ClientState.
   const existing = clients.get(clientID);
   if (existing) {
     lc.debug?.("Closing old socket");
@@ -94,13 +93,14 @@ export async function handleConnection(
   ws.addEventListener("message", (event) =>
     onMessage(clientID, event.data.toString(), ws)
   );
-  ws.addEventListener("close", () => onClose(clientID));
+  ws.addEventListener("close", () => onClose(clientID, ws));
 
   const client: ClientState = {
     socket: ws,
     clockBehindByMs: undefined,
     pending: [],
   };
+  lc.debug?.("Setting client map entry", clientID, client);
   clients.set(clientID, client);
 
   const connectedMessage: ConnectedMessage = ["connected", {}];

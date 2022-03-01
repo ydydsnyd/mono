@@ -147,14 +147,17 @@ export class Server<MD extends MutatorDefs> {
     });
   }
 
-  private _handleClose = async (clientID: ClientID): Promise<void> => {
+  private _handleClose = async (
+    clientID: ClientID,
+    ws: Socket
+  ): Promise<void> => {
     const lc = new LogContext(this._logger)
       .addContext("req", randomID())
       .addContext("client", clientID);
     lc.debug?.("handling close - waiting for lock");
     await this._lock.withLock(async () => {
       lc.debug?.("received lock");
-      handleClose(this._clients, clientID);
+      handleClose(lc, this._clients, clientID, ws);
     });
   };
 }
