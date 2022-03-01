@@ -98,8 +98,7 @@ export class LogContext extends OptionalLoggerImpl {
     super(
       {
         log(name: LogLevel, ...args: unknown[]) {
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          actualLogger[name]!(tag, ...args);
+          actualLogger[name]?.(tag, ...args);
         },
       },
       getLogLevel(actualLogger)

@@ -23,8 +23,12 @@ export function handlePush(
 
   const client = clients.get(clientID);
   if (!client) {
-    lc.info?.("client not found");
+    lc.error?.("client not found, closing socket");
     sendError(ws, `no such client: ${clientID}`);
+    // This is not expected to ever occur.  However if it does no pushes will
+    // ever succeed over this connection since it is missing an entry in
+    // ClientMap.  Close connection so client can try to reconnect and recover.
+    ws.close();
     return;
   }
 

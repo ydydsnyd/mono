@@ -160,6 +160,7 @@ test("handlePush", async () => {
     if (c.expectedError) {
       expect(s1.log).toEqual([
         ["send", JSON.stringify(["error", c.expectedError])],
+        ["close"],
       ]);
     } else {
       expect(s1.log).toEqual([]);
