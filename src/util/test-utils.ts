@@ -7,7 +7,6 @@ import type {
   Socket,
 } from "../../src/types/client-state.js";
 import type { NullableVersion } from "../../src/types/version.js";
-import type { Logger, LogLevel } from "./logger.js";
 
 export function client(
   id: ClientID,
@@ -60,7 +59,6 @@ export class Mocket extends EventTarget implements Socket {
   }
   onclose: undefined;
   onmessage: undefined;
-  readyState = 1;
 }
 
 export function clientRecord(
@@ -83,12 +81,4 @@ export function userValue(value: JSONType, version = 1, deleted = false) {
 
 export function fail(s: string): never {
   throw new Error(s);
-}
-
-export class TestLogger implements Logger {
-  messages: [LogLevel, ...unknown[]][] = [];
-
-  log(level: LogLevel, ...args: unknown[]): void {
-    this.messages.push([level, ...args]);
-  }
 }

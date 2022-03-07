@@ -15,7 +15,6 @@ import { handleClose } from "./close.js";
 import { handleConnection } from "./connect.js";
 import { handleMessage } from "./message.js";
 import { randomID } from "../util/rand.js";
-import { version } from "../util/version.js";
 
 export type Now = () => number;
 
@@ -54,7 +53,6 @@ export class Server<MD extends MutatorDefs> {
     this._state = state;
     this._logger = new OptionalLoggerImpl(logger, logLevel);
     this._logger.info?.("Starting server");
-    this._logger.info?.("Version:", version);
   }
 
   async fetch(request: Request) {
