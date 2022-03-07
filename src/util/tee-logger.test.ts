@@ -1,14 +1,7 @@
 import { test, expect } from "@jest/globals";
-import type { Logger, LogLevel } from "./logger.js";
+import type { LogLevel } from "./logger.js";
 import { TeeLogger } from "./tee-logger.js";
-
-class TestLogger implements Logger {
-  messages: [LogLevel, ...unknown[]][] = [];
-
-  log(level: LogLevel, ...args: unknown[]): void {
-    this.messages.push([level, ...args]);
-  }
-}
+import { TestLogger } from "./test-utils.js";
 
 class TestLoggerWithFlush extends TestLogger {
   messages: [LogLevel, ...unknown[]][] = [];
