@@ -1,7 +1,6 @@
+import type { ClientState } from "../types/client-state.js";
 import type { PushBody } from "../protocol/push.js";
-import type { ClientID, ClientMap, Socket } from "../types/client-state.js";
 import type { LogContext } from "../util/logger.js";
-import { sendError } from "../util/socket.js";
 
 export type Now = () => number;
 export type ProcessUntilDone = () => void;
@@ -12,25 +11,12 @@ export type ProcessUntilDone = () => void;
  */
 export function handlePush(
   lc: LogContext,
-  clients: ClientMap,
-  clientID: ClientID,
+  client: ClientState,
   body: PushBody,
-  ws: Socket,
   now: Now,
   processUntilDone: ProcessUntilDone
 ) {
   lc.debug?.("handling push", JSON.stringify(body));
-
-  const client = clients.get(clientID);
-  if (!client) {
-    lc.error?.("client not found, closing socket");
-    sendError(ws, `no such client: ${clientID}`);
-    // This is not expected to ever occur.  However if it does no pushes will
-    // ever succeed over this connection since it is missing an entry in
-    // ClientMap.  Close connection so client can try to reconnect and recover.
-    ws.close();
-    return;
-  }
 
   if (client.clockBehindByMs === undefined) {
     client.clockBehindByMs = now() - body.timestamp;

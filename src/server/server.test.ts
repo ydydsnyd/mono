@@ -3,10 +3,6 @@ import { TestLogger } from "../util/test-utils.js";
 import { version } from "../util/version.js";
 import { Server } from "./server.js";
 
-test("foo", () => {
-  expect("hi").toEqual("hi");
-});
-
 test("Logs version during construction", async () => {
   const testLogger = new TestLogger();
   new Server({

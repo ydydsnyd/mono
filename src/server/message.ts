@@ -26,20 +26,23 @@ export function handleMessage(
     return;
   }
 
+  const client = clientMap.get(clientID);
+  if (!client) {
+    lc.error?.("client not found, closing socket");
+    sendError(ws, `no such client: ${clientID}`);
+    // This is not expected to ever occur.  However if it does no pushes will
+    // ever succeed over this connection since it is missing an entry in
+    // ClientMap.  Close connection so client can try to reconnect and recover.
+    ws.close();
+    return;
+  }
+
   switch (message[0]) {
     case "ping":
       handlePing(lc, ws);
       break;
     case "push":
-      handlePush(
-        lc,
-        clientMap,
-        clientID,
-        message[1],
-        ws,
-        () => Date.now(),
-        processUntilDone
-      );
+      handlePush(lc, client, message[1], () => Date.now(), processUntilDone);
       break;
     default:
       throw new Error(`Unknown message type: ${message[0]}`);
