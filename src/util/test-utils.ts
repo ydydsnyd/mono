@@ -48,17 +48,21 @@ export function clientMutation(
 }
 
 export class Mocket extends EventTarget implements Socket {
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  accept(): void {}
   log: string[][] = [];
+  readyState = 1;
+  onclose: undefined;
+  onmessage: undefined;
+
+  accept(): void {
+    // noop
+  }
   send(data: string): void {
     this.log.push(["send", data]);
   }
+
   close(): void {
     this.log.push(["close"]);
   }
-  onclose: undefined;
-  onmessage: undefined;
 }
 
 export function clientRecord(

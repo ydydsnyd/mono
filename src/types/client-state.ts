@@ -6,8 +6,9 @@ export type ClientMap = Map<ClientID, ClientState>;
 
 export interface Socket extends EventTarget<WebSocketEventMap> {
   accept(): void;
-  send(data: string): void;
-  close(): void;
+  send(message: ArrayBuffer | string): void;
+  close(code?: number, reason?: string): void;
+  readonly readyState: number;
 }
 
 export type ClientState = {
