@@ -1,7 +1,7 @@
-import { z } from "zod";
+import * as s from "superstruct";
 import { pingMessageSchema } from "./ping";
 import { pushMessageSchema } from "./push";
 
-export const upstreamSchema = z.union([pushMessageSchema, pingMessageSchema]);
+export const upstreamSchema = s.union([pushMessageSchema, pingMessageSchema]);
 
-export type Upstream = z.infer<typeof upstreamSchema>;
+export type Upstream = s.Infer<typeof upstreamSchema>;

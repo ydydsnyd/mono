@@ -1,5 +1,5 @@
 import { test, expect } from "@jest/globals";
-import { z } from "zod";
+import * as s from "superstruct";
 import { delEntry, getEntry, putEntry } from "./data.js";
 
 const { server } = getMiniflareBindings();
@@ -37,7 +37,7 @@ test("getEntry", async () => {
       await storage.put("foo", c.validSchema ? 42 : {});
     }
 
-    const promise = getEntry(storage, "foo", z.number());
+    const promise = getEntry(storage, "foo", s.number());
     let result: number | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let error: any | undefined;
@@ -68,17 +68,17 @@ test("getEntry RoundTrip types", async () => {
   await putEntry(storage, "array", [1, 2, 3]);
   await putEntry(storage, "object", { a: 1, b: 2 });
 
-  expect(await getEntry(storage, "boolean", z.boolean())).toEqual(true);
-  expect(await getEntry(storage, "number", z.number())).toEqual(42);
-  expect(await getEntry(storage, "string", z.string())).toEqual("foo");
-  expect(await getEntry(storage, "array", z.array(z.number()))).toEqual([
+  expect(await getEntry(storage, "boolean", s.boolean())).toEqual(true);
+  expect(await getEntry(storage, "number", s.number())).toEqual(42);
+  expect(await getEntry(storage, "string", s.string())).toEqual("foo");
+  expect(await getEntry(storage, "array", s.array(s.number()))).toEqual([
     1, 2, 3,
   ]);
   expect(
     await getEntry(
       storage,
       "object",
-      z.object({ a: z.number(), b: z.number() })
+      s.object({ a: s.number(), b: s.number() })
     )
   ).toEqual({ a: 1, b: 2 });
 });

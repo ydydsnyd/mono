@@ -1,37 +1,37 @@
 import { nullableVersionSchema, versionSchema } from "../types/version";
-import { z } from "zod";
+import * as s from "superstruct";
 import { jsonSchema } from "./json";
 
-export const putOpSchema = z.object({
-  op: z.literal("put"),
-  key: z.string(),
+export const putOpSchema = s.object({
+  op: s.literal("put"),
+  key: s.string(),
   value: jsonSchema,
 });
 
-export const delOpSchema = z.object({
-  op: z.literal("del"),
-  key: z.string(),
+export const delOpSchema = s.object({
+  op: s.literal("del"),
+  key: s.string(),
 });
 
-export const patchOpSchema = z.union([putOpSchema, delOpSchema]);
-export const patchSchema = z.array(patchOpSchema);
+export const patchOpSchema = s.union([putOpSchema, delOpSchema]);
+export const patchSchema = s.array(patchOpSchema);
 
-export const pokeBodySchema = z.object({
+export const pokeBodySchema = s.object({
   // We always specify a Version as our cookie, but Replicache starts clients
   // with initial cookie `null`, before the first request. So we have to be
   // able to send a base cookie with value `null` to match that state.
   baseCookie: nullableVersionSchema,
   cookie: versionSchema,
-  lastMutationID: z.number(),
+  lastMutationID: s.number(),
   patch: patchSchema,
-  timestamp: z.number(),
+  timestamp: s.number(),
 });
 
-export const pokeMessageSchema = z.tuple([z.literal("poke"), pokeBodySchema]);
+export const pokeMessageSchema = s.tuple([s.literal("poke"), pokeBodySchema]);
 
-export type PutOp = z.infer<typeof putOpSchema>;
-export type DelOp = z.infer<typeof delOpSchema>;
-export type PatchOp = z.infer<typeof patchOpSchema>;
-export type Patch = z.infer<typeof patchSchema>;
-export type PokeBody = z.infer<typeof pokeBodySchema>;
-export type PokeMessage = z.infer<typeof pokeMessageSchema>;
+export type PutOp = s.Infer<typeof putOpSchema>;
+export type DelOp = s.Infer<typeof delOpSchema>;
+export type PatchOp = s.Infer<typeof patchOpSchema>;
+export type Patch = s.Infer<typeof patchSchema>;
+export type PokeBody = s.Infer<typeof pokeBodySchema>;
+export type PokeMessage = s.Infer<typeof pokeMessageSchema>;

@@ -1,5 +1,6 @@
+import * as s from "superstruct";
 import type { Patch } from "../protocol/poke.js";
-import { UserValue, userValuePrefix } from "../types/user-value.js";
+import { userValuePrefix, userValueSchema } from "../types/user-value.js";
 import type { Version } from "../types/version.js";
 
 export async function getPatch(
@@ -13,8 +14,8 @@ export async function getPatch(
 
   const patch: Patch = [];
   for (const [key, value] of result) {
-    //const validValue = userValueSchema.parse(value);
-    const validValue = value as UserValue;
+    s.assert(value, userValueSchema);
+    const validValue = value;
 
     // TODO: More efficient way of finding changed values.
     if (validValue.version <= fromCookie) {

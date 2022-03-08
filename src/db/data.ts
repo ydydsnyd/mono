@@ -1,5 +1,5 @@
 import type { JSONValue } from "replicache";
-import type { ZodSchema } from "zod";
+import * as s from "superstruct";
 
 // DurableObjects has a lot of clever optimisations we can take advantage of,
 // but they require some thought as to whether they fit with what we are doing.
@@ -17,14 +17,14 @@ const options = {
 export async function getEntry<T extends JSONValue>(
   durable: DurableObjectStorage,
   key: string,
-  _: ZodSchema<T>
+  schema: s.Struct<T>
 ): Promise<T | undefined> {
   const value = await durable.get(key, options);
   if (value === undefined) {
     return undefined;
   }
-  return value as T;
-  //return schema.parse(value);
+  s.assert(value, schema);
+  return value;
 }
 
 export async function putEntry<T extends JSONValue>(

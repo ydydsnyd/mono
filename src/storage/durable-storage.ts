@@ -1,5 +1,5 @@
 import type { JSONValue } from "replicache";
-import type { ZodSchema } from "zod";
+import type * as z from "superstruct";
 import { delEntry, getEntry, putEntry } from "../db/data.js";
 import type { Storage } from "./storage.js";
 
@@ -21,7 +21,7 @@ export class DurableStorage implements Storage {
   }
   async get<T extends JSONValue>(
     key: string,
-    schema: ZodSchema<T>
+    schema: z.Struct<T>
   ): Promise<T | undefined> {
     return await getEntry(this._durable, key, schema);
   }

@@ -1,14 +1,14 @@
-import { z } from "zod";
+import * as s from "superstruct";
 import { connectedMessageSchema } from "./connected";
 import { errorMessageSchema } from "./error";
 import { pokeMessageSchema } from "./poke";
 import { pongMessageSchema } from "./pong";
 
-export const downstreamSchema = z.union([
+export const downstreamSchema = s.union([
   connectedMessageSchema,
   pokeMessageSchema,
   errorMessageSchema,
   pongMessageSchema,
 ]);
 
-export type Downstream = z.infer<typeof downstreamSchema>;
+export type Downstream = s.Infer<typeof downstreamSchema>;

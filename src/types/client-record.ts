@@ -1,14 +1,14 @@
-import { z } from "zod";
+import * as s from "superstruct";
 import { nullableVersionSchema } from "./version.js";
 import type { ClientID } from "./client-state.js";
 import type { Storage } from "../storage/storage.js";
 
-export const clientRecordSchema = z.object({
-  lastMutationID: z.number(),
+export const clientRecordSchema = s.object({
+  lastMutationID: s.number(),
   baseCookie: nullableVersionSchema,
 });
 
-export type ClientRecord = z.infer<typeof clientRecordSchema>;
+export type ClientRecord = s.Infer<typeof clientRecordSchema>;
 
 export const clientRecordPrefix = "client/";
 

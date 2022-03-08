@@ -1,4 +1,5 @@
-import type { Upstream } from "../protocol/up.js";
+import * as s from "superstruct";
+import { Upstream, upstreamSchema } from "../protocol/up.js";
 import type { ClientID, ClientMap, Socket } from "../types/client-state.js";
 import type { LogContext } from "../util/logger.js";
 import { sendError } from "../util/socket.js";
@@ -50,7 +51,7 @@ export function handleMessage(
 }
 
 function getMessage(data: string): Upstream {
-  const json = JSON.parse(data);
-  //return upstreamSchema.parse(json);
-  return json as Upstream;
+  const value = JSON.parse(data);
+  s.assert(value, upstreamSchema);
+  return value;
 }

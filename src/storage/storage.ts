@@ -1,5 +1,5 @@
 import type { JSONValue } from "replicache";
-import type { ZodSchema } from "zod";
+import type * as z from "superstruct";
 
 /**
  * Abstract storage interface used throughout the server for storing both user
@@ -10,7 +10,7 @@ export interface Storage {
   del(key: string): Promise<void>;
   get<T extends JSONValue>(
     key: string,
-    schema: ZodSchema<T>
+    schema: z.Struct<T>
   ): Promise<T | undefined>;
   // TODO: support for scanning.
 }

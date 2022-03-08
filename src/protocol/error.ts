@@ -1,5 +1,5 @@
-import { z } from "zod";
+import * as s from "superstruct";
 
-export const errorMessageSchema = z.tuple([z.literal("error"), z.string()]);
+export const errorMessageSchema = s.tuple([s.literal("error"), s.string()]);
 
-export type ErrorMessage = z.infer<typeof errorMessageSchema>;
+export type ErrorMessage = s.Infer<typeof errorMessageSchema>;

@@ -1,5 +1,5 @@
 import { test, expect } from "@jest/globals";
-import { z } from "zod";
+import * as s from "superstruct";
 import type { WriteTransaction } from "replicache";
 import type { JSONType } from "../../src/protocol/json.js";
 import { DurableStorage } from "../../src/storage/durable-storage.js";
@@ -213,7 +213,7 @@ test("processFrame", async () => {
     ]);
     expect((await durable.list()).size).toEqual(expectedState.size);
     for (const [key, value] of expectedState) {
-      expect(await storage.get(key, z.any())).toEqual(value);
+      expect(await storage.get(key, s.any())).toEqual(value);
     }
   }
 });

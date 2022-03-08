@@ -1,15 +1,15 @@
-import { z } from "zod";
+import * as s from "superstruct";
 import { jsonSchema } from "../protocol/json.js";
 import { versionSchema } from "./version.js";
 import type { Storage } from "../storage/storage.js";
 
-export const userValueSchema = z.object({
+export const userValueSchema = s.object({
   version: versionSchema,
-  deleted: z.boolean(),
+  deleted: s.boolean(),
   value: jsonSchema,
 });
 
-export type UserValue = z.infer<typeof userValueSchema>;
+export type UserValue = s.Infer<typeof userValueSchema>;
 
 export const userValuePrefix = "user/";
 

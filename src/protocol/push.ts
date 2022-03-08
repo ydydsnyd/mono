@@ -1,22 +1,22 @@
-import { z } from "zod";
+import * as s from "superstruct";
 import { jsonSchema } from "./json";
 
-export const mutationSchema = z.object({
-  id: z.number(),
-  name: z.string(),
+export const mutationSchema = s.object({
+  id: s.number(),
+  name: s.string(),
   args: jsonSchema,
-  timestamp: z.number(),
+  timestamp: s.number(),
 });
 
-export const pushBodySchema = z.object({
-  mutations: z.array(mutationSchema),
-  pushVersion: z.number(),
-  schemaVersion: z.string(),
-  timestamp: z.number(),
+export const pushBodySchema = s.object({
+  mutations: s.array(mutationSchema),
+  pushVersion: s.number(),
+  schemaVersion: s.string(),
+  timestamp: s.number(),
 });
 
-export const pushMessageSchema = z.tuple([z.literal("push"), pushBodySchema]);
+export const pushMessageSchema = s.tuple([s.literal("push"), pushBodySchema]);
 
-export type Mutation = z.infer<typeof mutationSchema>;
-export type PushBody = z.infer<typeof pushBodySchema>;
-export type PushMessage = z.infer<typeof pushMessageSchema>;
+export type Mutation = s.Infer<typeof mutationSchema>;
+export type PushBody = s.Infer<typeof pushBodySchema>;
+export type PushMessage = s.Infer<typeof pushMessageSchema>;

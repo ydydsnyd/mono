@@ -1,11 +1,11 @@
-import { z } from "zod";
+import * as s from "superstruct";
 
-export const connectedBodySchema = z.object({});
+export const connectedBodySchema = s.object({});
 
-export const connectedMessageSchema = z.tuple([
-  z.literal("connected"),
+export const connectedMessageSchema = s.tuple([
+  s.literal("connected"),
   connectedBodySchema,
 ]);
 
-export type ConnectedBody = z.infer<typeof connectedBodySchema>;
-export type ConnectedMessage = z.infer<typeof connectedMessageSchema>;
+export type ConnectedBody = s.Infer<typeof connectedBodySchema>;
+export type ConnectedMessage = s.Infer<typeof connectedMessageSchema>;

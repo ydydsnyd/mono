@@ -1,5 +1,5 @@
 import type { JSONValue } from "replicache";
-import type { ZodSchema } from "zod";
+import type * as z from "superstruct";
 import type { JSONType } from "../protocol/json.js";
 import type { Patch } from "../protocol/poke.js";
 import type { Storage } from "./storage.js";
@@ -30,7 +30,7 @@ export class EntryCache implements Storage {
   }
   async get<T extends JSONValue>(
     key: string,
-    schema: ZodSchema<T>
+    schema: z.Struct<T>
   ): Promise<T | undefined> {
     const cached = this._cache.get(key);
     if (cached) {
