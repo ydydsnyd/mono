@@ -1,7 +1,25 @@
 import { test, expect } from "@jest/globals";
+import { TestLogger } from "../util/test-utils.js";
+import { version } from "../util/version.js";
+import { Server } from "./server.js";
 
 test("foo", () => {
   expect("hi").toEqual("hi");
+});
+
+test("Logs version during construction", async () => {
+  const testLogger = new TestLogger();
+  new Server({
+    mutators: {},
+    state: {} as DurableObjectState,
+    logger: testLogger,
+    logLevel: "info",
+  });
+  expect(testLogger.messages).toEqual([
+    ["info", "Starting server"],
+    ["info", "Version:", version],
+  ]);
+  expect(testLogger.messages[1][2]).toMatch(/^\d+\.\d+\.\d+/);
 });
 
 /*
