@@ -70,7 +70,13 @@ export const consoleLogger: Logger = {
 /**
  * A logger that logs nothing.
  */
-export class SilentLogger implements OptionalLogger {}
+export class SilentLogger implements OptionalLogger {
+  error() {
+    // We want at least error to be defined but it can be a noop. This is
+    // because when composing loggers getLogLevel will return error for silent
+    // logger.
+  }
+}
 
 /**
  * The LogContext carries a contextual tag around and it prefixes the log
@@ -98,7 +104,8 @@ export class LogContext extends OptionalLoggerImpl {
     super(
       {
         log(name: LogLevel, ...args: unknown[]) {
-          actualLogger[name]?.(tag, ...args);
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          actualLogger[name]!(tag, ...args);
         },
       },
       getLogLevel(actualLogger)
