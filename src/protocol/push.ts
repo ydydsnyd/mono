@@ -1,14 +1,14 @@
 import * as s from "superstruct";
 import { jsonSchema } from "./json";
 
-export const mutationSchema = s.object({
+export const mutationSchema = s.type({
   id: s.number(),
   name: s.string(),
   args: jsonSchema,
   timestamp: s.number(),
 });
 
-export const pushBodySchema = s.object({
+export const pushBodySchema = s.type({
   clientID: s.string(),
   mutations: s.array(mutationSchema),
   pushVersion: s.number(),

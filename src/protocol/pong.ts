@@ -1,6 +1,6 @@
 import * as s from "superstruct";
 
-export const pongBodySchema = s.object({});
+export const pongBodySchema = s.type({});
 export const pongMessageSchema = s.tuple([s.literal("pong"), pongBodySchema]);
 
 export type PongBody = s.Infer<typeof pongBodySchema>;

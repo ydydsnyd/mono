@@ -3,7 +3,7 @@ import { jsonSchema } from "../protocol/json.js";
 import { versionSchema } from "./version.js";
 import type { Storage } from "../storage/storage.js";
 
-export const userValueSchema = s.object({
+export const userValueSchema = s.type({
   version: versionSchema,
   deleted: s.boolean(),
   value: jsonSchema,

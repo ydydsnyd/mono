@@ -1,6 +1,6 @@
 import * as s from "superstruct";
 
-export const connectedBodySchema = s.object({});
+export const connectedBodySchema = s.type({});
 
 export const connectedMessageSchema = s.tuple([
   s.literal("connected"),

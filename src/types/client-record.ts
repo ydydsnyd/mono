@@ -3,7 +3,7 @@ import { nullableVersionSchema } from "./version.js";
 import type { ClientID } from "./client-state.js";
 import type { Storage } from "../storage/storage.js";
 
-export const clientRecordSchema = s.object({
+export const clientRecordSchema = s.type({
   lastMutationID: s.number(),
   baseCookie: nullableVersionSchema,
 });

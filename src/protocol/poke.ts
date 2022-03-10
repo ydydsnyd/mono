@@ -2,13 +2,13 @@ import { nullableVersionSchema, versionSchema } from "../types/version";
 import * as s from "superstruct";
 import { jsonSchema } from "./json";
 
-export const putOpSchema = s.object({
+export const putOpSchema = s.type({
   op: s.literal("put"),
   key: s.string(),
   value: jsonSchema,
 });
 
-export const delOpSchema = s.object({
+export const delOpSchema = s.type({
   op: s.literal("del"),
   key: s.string(),
 });
@@ -16,7 +16,7 @@ export const delOpSchema = s.object({
 export const patchOpSchema = s.union([putOpSchema, delOpSchema]);
 export const patchSchema = s.array(patchOpSchema);
 
-export const pokeBodySchema = s.object({
+export const pokeBodySchema = s.type({
   // We always specify a Version as our cookie, but Replicache starts clients
   // with initial cookie `null`, before the first request. So we have to be
   // able to send a base cookie with value `null` to match that state.
