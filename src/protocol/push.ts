@@ -9,6 +9,7 @@ export const mutationSchema = s.object({
 });
 
 export const pushBodySchema = s.object({
+  clientID: s.string(),
   mutations: s.array(mutationSchema),
   pushVersion: s.number(),
   schemaVersion: s.string(),

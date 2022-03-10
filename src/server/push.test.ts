@@ -114,6 +114,7 @@ test("handlePush", async () => {
     s1.log.length = 0;
 
     const push = {
+      clientID: "c1",
       mutations: c.mutations,
       pushVersion: 0,
       schemaVersion: "",

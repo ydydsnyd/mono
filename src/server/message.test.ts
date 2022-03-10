@@ -32,6 +32,7 @@ test("handleMessage", async () => {
       data: JSON.stringify([
         "push",
         {
+          clientID: "c1",
           mutations: [mutation(1), mutation(2)],
           pushVersion: 1,
           schemaVersion: "",
@@ -39,6 +40,7 @@ test("handleMessage", async () => {
         },
       ]),
       expectedPush: {
+        clientID: "c1",
         mutations: [mutation(1), mutation(2)],
         pushVersion: 1,
         schemaVersion: "",
@@ -50,6 +52,7 @@ test("handleMessage", async () => {
       data: JSON.stringify([
         "push",
         {
+          clientID: "c1",
           mutations: [mutation(1), mutation(2)],
           pushVersion: 1,
           schemaVersion: "",
