@@ -2,8 +2,8 @@ import { test, expect } from "@jest/globals";
 import * as s from "superstruct";
 import { delEntry, getEntry, putEntry } from "./data.js";
 
-const { server } = getMiniflareBindings();
-const id = server.newUniqueId();
+const { roomDO } = getMiniflareBindings();
+const id = roomDO.newUniqueId();
 
 test("getEntry", async () => {
   type Case = {

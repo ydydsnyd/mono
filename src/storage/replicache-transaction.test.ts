@@ -8,8 +8,8 @@ import {
   userValueSchema,
 } from "../../src/types/user-value.js";
 
-const { server } = getMiniflareBindings();
-const id = server.newUniqueId();
+const { roomDO } = getMiniflareBindings();
+const id = roomDO.newUniqueId();
 
 test("ReplicacheTransaction", async () => {
   const storage = new DurableStorage(

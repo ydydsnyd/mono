@@ -14,8 +14,8 @@ import { client, clientRecord, fail, mutation } from "../util/test-utils.js";
 import { processRoom } from "../../src/process/process-room.js";
 import { LogContext, SilentLogger } from "../../src/util/logger.js";
 
-const { server } = getMiniflareBindings();
-const id = server.newUniqueId();
+const { roomDO } = getMiniflareBindings();
+const id = roomDO.newUniqueId();
 
 test("processRoom", async () => {
   type Case = {

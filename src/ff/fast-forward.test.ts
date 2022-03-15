@@ -11,8 +11,8 @@ import { putUserValue, UserValue } from "../../src/types/user-value.js";
 import { must } from "../../src/util/must.js";
 import { fastForwardRoom } from "../../src/ff/fast-forward.js";
 
-const { server } = getMiniflareBindings();
-const id = server.newUniqueId();
+const { roomDO } = getMiniflareBindings();
+const id = roomDO.newUniqueId();
 
 test("fastForward", async () => {
   type Case = {

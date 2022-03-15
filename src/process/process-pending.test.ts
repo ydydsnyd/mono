@@ -20,8 +20,8 @@ import {
 import { processPending } from "../../src/process/process-pending.js";
 import { LogContext, SilentLogger } from "../../src/util/logger.js";
 
-const { server } = getMiniflareBindings();
-const id = server.newUniqueId();
+const { roomDO } = getMiniflareBindings();
+const id = roomDO.newUniqueId();
 
 test("processPending", async () => {
   type Case = {

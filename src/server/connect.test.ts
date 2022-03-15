@@ -12,8 +12,8 @@ import { LogContext, SilentLogger } from "../../src/util/logger.js";
 import { USER_DATA_HEADER_NAME } from "./auth.js";
 import { encodeHeaderValue } from "../util/headers.js";
 
-const { server } = getMiniflareBindings();
-const id = server.newUniqueId();
+const { roomDO } = getMiniflareBindings();
+const id = roomDO.newUniqueId();
 
 function freshClient(id: string, socket: Socket = new Mocket()) {
   const [clientID, c] = client(id, socket);

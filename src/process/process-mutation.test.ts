@@ -16,8 +16,8 @@ import {
 } from "../../src/process/process-mutation.js";
 import { LogContext, SilentLogger } from "../../src/util/logger.js";
 
-const { server } = getMiniflareBindings();
-const id = server.newUniqueId();
+const { roomDO } = getMiniflareBindings();
+const id = roomDO.newUniqueId();
 
 test("processMutation", async () => {
   type Case = {

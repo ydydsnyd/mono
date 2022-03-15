@@ -16,8 +16,8 @@ import { clientMutation, clientRecord, userValue } from "../util/test-utils.js";
 import { processFrame } from "../../src/process/process-frame.js";
 import { LogContext, SilentLogger } from "../../src/util/logger.js";
 
-const { server } = getMiniflareBindings();
-const id = server.newUniqueId();
+const { roomDO } = getMiniflareBindings();
+const id = roomDO.newUniqueId();
 
 test("processFrame", async () => {
   const records = new Map([

@@ -2,8 +2,8 @@ import { test, expect } from "@jest/globals";
 //import { handleRequest } from "@/index";
 
 test("should pass-through to durable object", async () => {
-  const { server } = getMiniflareBindings();
-  const id = server.newUniqueId();
+  const { roomDO } = getMiniflareBindings();
+  const id = roomDO.newUniqueId();
   const storage = await getMiniflareDurableObjectStorage(id);
   expect(storage).toBeDefined();
   /*

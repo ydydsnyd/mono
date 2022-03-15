@@ -8,8 +8,6 @@ import {
   OptionalLoggerImpl,
   LogContext,
   LogLevel,
-  type OptionalLogger,
-  consoleLogger,
 } from "../util/logger.js";
 import { handleClose } from "./close.js";
 import { handleConnection } from "./connect.js";
@@ -28,36 +26,33 @@ export type ProcessHandler = (
   endTime: number
 ) => Promise<void>;
 
-export interface ServerOptions<MD extends MutatorDefs> {
+export interface RoomDOOptions<MD extends MutatorDefs> {
   mutators: MD;
   state: DurableObjectState;
-  logger?: Logger;
-  logLevel?: LogLevel;
+  logger: Logger;
+  logLevel: LogLevel;
 }
-export class Server<MD extends MutatorDefs> {
+export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   private readonly _clients: ClientMap = new Map();
   private readonly _lock = new Lock();
   private readonly _mutators: MutatorMap;
-  private readonly _logger: OptionalLogger;
+  private readonly _lc: LogContext;
   private readonly _state: DurableObjectState;
   private _turnTimerID: ReturnType<typeof setInterval> | 0 = 0;
 
-  constructor(options: ServerOptions<MD>) {
-    const {
-      mutators,
-      state,
-      logger = consoleLogger,
-      logLevel = "debug",
-    } = options;
+  constructor(options: RoomDOOptions<MD>) {
+    const { mutators, state, logger, logLevel } = options;
 
     this._mutators = new Map([...Object.entries(mutators)]) as MutatorMap;
     this._state = state;
-    this._logger = new OptionalLoggerImpl(logger, logLevel);
-    this._logger.info?.("Starting server");
-    this._logger.info?.("Version:", version);
+    this._lc = new LogContext(
+      new OptionalLoggerImpl(logger, logLevel)
+    ).addContext("RoomDO");
+    this._lc.info?.("Starting server");
+    this._lc.info?.("Version:", version);
   }
 
-  async fetch(request: Request) {
+  async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/connect") {
@@ -73,7 +68,7 @@ export class Server<MD extends MutatorDefs> {
   }
 
   private async _handleConnection(ws: Socket, url: URL, headers: Headers) {
-    const lc = new LogContext(this._logger).addContext("req", randomID());
+    const lc = new LogContext(this._lc).addContext("req", randomID());
 
     lc.debug?.("connection request", url.toString(), "waiting for lock");
     ws.accept();
@@ -98,7 +93,7 @@ export class Server<MD extends MutatorDefs> {
     data: string,
     ws: Socket
   ): Promise<void> => {
-    const lc = new LogContext(this._logger)
+    const lc = new LogContext(this._lc)
       .addContext("req", randomID())
       .addContext("client", clientID);
     lc.debug?.("handling message", data, "waiting for lock");
@@ -112,7 +107,7 @@ export class Server<MD extends MutatorDefs> {
   };
 
   private async _processUntilDone() {
-    const lc = new LogContext(this._logger).addContext("req", randomID());
+    const lc = new LogContext(this._lc).addContext("req", randomID());
     lc.debug?.("handling processUntilDone");
     if (this._turnTimerID) {
       lc.debug?.("already processing, nothing to do");
@@ -153,7 +148,7 @@ export class Server<MD extends MutatorDefs> {
     clientID: ClientID,
     ws: Socket
   ): Promise<void> => {
-    const lc = new LogContext(this._logger)
+    const lc = new LogContext(this._lc)
       .addContext("req", randomID())
       .addContext("client", clientID);
     lc.debug?.("handling close - waiting for lock");
