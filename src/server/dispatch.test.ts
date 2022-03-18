@@ -58,18 +58,6 @@ test("connect good request", async () => {
 });
 
 test("connect request with validation errors", async () => {
-  const testRequestBadProtocol = new Request("https://test.roci.dev/connect");
-  const responseForBadProtocol = await dispatch(
-    testRequestBadProtocol,
-    new LogContext(new SilentLogger()),
-    undefined,
-    createThrowingHandlers()
-  );
-  expect(responseForBadProtocol.status).toEqual(400);
-  expect(await responseForBadProtocol.text()).toEqual(
-    'Unsupported protocol. Use "ws:".'
-  );
-
   const testRequestBadMethod = new Request("ws://test.roci.dev/connect", {
     method: "post",
   });
@@ -123,27 +111,6 @@ test("authInvalidateForUser good request", async () => {
 
 test("authInvalidateForUser request with validation errors", async () => {
   const testUserID = "testUserID1";
-  const testRequestBadProtocol = new Request(
-    `http://test.roci.dev/api/auth/v0/invalidateForUser`,
-    {
-      method: "post",
-      headers: createAuthAPIHeaders(testAuthApiKey),
-      body: JSON.stringify({
-        userID: testUserID,
-      }),
-    }
-  );
-  const responseForBadProtocol = await dispatch(
-    testRequestBadProtocol,
-    new LogContext(new SilentLogger()),
-    testAuthApiKey,
-    createThrowingHandlers()
-  );
-  expect(responseForBadProtocol.status).toEqual(400);
-  expect(await responseForBadProtocol.text()).toEqual(
-    'Unsupported protocol. Use "https:".'
-  );
-
   const testRequestBadMethod = new Request(
     `https://test.roci.dev/api/auth/v0/invalidateForUser`,
     {
@@ -261,27 +228,6 @@ test("authInvalidateForRoom good request", async () => {
 
 test("authInvalidateForRoom request with validation errors", async () => {
   const testRoomID = "testRoomID1";
-  const testRequestBadProtocol = new Request(
-    `http://test.roci.dev/api/auth/v0/invalidateForRoom`,
-    {
-      method: "post",
-      headers: createAuthAPIHeaders(testAuthApiKey),
-      body: JSON.stringify({
-        roomID: testRoomID,
-      }),
-    }
-  );
-  const responseForBadProtocol = await dispatch(
-    testRequestBadProtocol,
-    new LogContext(new SilentLogger()),
-    testAuthApiKey,
-    createThrowingHandlers()
-  );
-  expect(responseForBadProtocol.status).toEqual(400);
-  expect(await responseForBadProtocol.text()).toEqual(
-    'Unsupported protocol. Use "https:".'
-  );
-
   const testRequestBadMethod = new Request(
     `https://test.roci.dev/api/auth/v0/invalidateForRoom`,
     {
@@ -392,24 +338,6 @@ test("authInvalidateAll good request", async () => {
 });
 
 test("authInvalidateAll request with validation errors", async () => {
-  const testRequestBadProtocol = new Request(
-    `http://test.roci.dev/api/auth/v0/invalidateAll`,
-    {
-      headers: createAuthAPIHeaders(testAuthApiKey),
-      method: "post",
-    }
-  );
-  const responseForBadProtocol = await dispatch(
-    testRequestBadProtocol,
-    new LogContext(new SilentLogger()),
-    testAuthApiKey,
-    createThrowingHandlers()
-  );
-  expect(responseForBadProtocol.status).toEqual(400);
-  expect(await responseForBadProtocol.text()).toEqual(
-    'Unsupported protocol. Use "https:".'
-  );
-
   const testRequestBadMethod = new Request(
     `https://test.roci.dev/api/auth/v0/invalidateAll`,
     {

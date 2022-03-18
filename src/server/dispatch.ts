@@ -43,7 +43,6 @@ export function dispatch(
 
   async function validateAndDispatch<T>(
     handlerName: string,
-    protocol: "https:" | "ws:",
     method: string,
     validateBody: (request: Request) => Promise<ValidateResult<T>>,
     handler: Handler<T>,
@@ -60,12 +59,8 @@ export function dispatch(
         return createUnauthorizedResponse();
       }
     }
-    if (url.protocol.toLowerCase() !== protocol.toLowerCase()) {
-      return createBadRequestResponse(
-        `Unsupported protocol. Use "${protocol}".`
-      );
-    }
     if (request.method.toLowerCase() !== method.toLowerCase()) {
+      lc.debug?.(`Unsupported method ${request.method.toLowerCase()}`);
       return createBadRequestResponse(`Unsupported method. Use "${method}".`);
     }
     const validateResult = await validateBody(request);
@@ -80,7 +75,6 @@ export function dispatch(
     case "/connect":
       return validateAndDispatch(
         "connect",
-        "ws:",
         "get",
         noOpValidateBody,
         handlers.connect
@@ -88,7 +82,6 @@ export function dispatch(
     case "/api/auth/v0/invalidateForUser":
       return validateAndDispatch(
         "authInvalidateForUser",
-        "https:",
         "post",
         (request) => validateBody(request, invalidateForUserSchema),
         handlers.authInvalidateForUser,
@@ -97,7 +90,6 @@ export function dispatch(
     case "/api/auth/v0/invalidateForRoom":
       return validateAndDispatch(
         "authInvalidateForRoom",
-        "https:",
         "post",
         (request) => validateBody(request, invalidateForRoomSchema),
         handlers.authInvalidateForRoom,
@@ -106,7 +98,6 @@ export function dispatch(
     case "/api/auth/v0/invalidateAll":
       return validateAndDispatch(
         "authInvalidateForRoom",
-        "https:",
         "post",
         noOpValidateBody,
         handlers.authInvalidateAll,
@@ -130,7 +121,7 @@ async function validateBody<T>(
 ): Promise<ValidateResult<T>> {
   let json;
   try {
-    json = await request.json();
+    json = await request.clone().json();
   } catch (e) {
     return {
       errorResponse: new Response("Body must be valid json.", { status: 400 }),
