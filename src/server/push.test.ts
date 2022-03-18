@@ -18,7 +18,7 @@ function clientWTimestampAdjust(
   clockBehindByMs: number,
   ...mutations: Mutation[]
 ): ClientState {
-  return clientUtil("c1", s1, clockBehindByMs, ...mutations)[1];
+  return clientUtil("c1", "u1", s1, clockBehindByMs, ...mutations)[1];
 }
 
 test("handlePush", async () => {

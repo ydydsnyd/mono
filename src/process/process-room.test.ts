@@ -37,7 +37,7 @@ test("processRoom", async () => {
       name: "no client record",
       clientRecords: new Map(),
       headVersion: 42,
-      clients: new Map([client("c1")]),
+      clients: new Map([client("c1", "u1")]),
       expectedUserValues: new Map(),
       expectedError: "Error: Client record not found: c1",
       expectedVersion: 42,
@@ -49,7 +49,7 @@ test("processRoom", async () => {
         ["c2", clientRecord()],
       ]),
       headVersion: 1,
-      clients: new Map([client("c1"), client("c2")]),
+      clients: new Map([client("c1", "u1"), client("c2", "u2")]),
       expectedPokes: [
         {
           clientID: "c1",
@@ -86,7 +86,7 @@ test("processRoom", async () => {
         ["c2", clientRecord()],
       ]),
       headVersion: 1,
-      clients: new Map([client("c1"), client("c2")]),
+      clients: new Map([client("c1", "u1"), client("c2", "u2")]),
       expectedPokes: [
         {
           clientID: "c2",
@@ -111,7 +111,7 @@ test("processRoom", async () => {
       clientRecords: new Map([["c1", clientRecord(1)]]),
       headVersion: 1,
       clients: new Map([
-        client("c1", undefined, 0, mutation(2, "inc", null, 300)),
+        client("c1", "u1", undefined, 0, mutation(2, "inc", null, 300)),
       ]),
       expectedPokes: [
         {
@@ -142,6 +142,7 @@ test("processRoom", async () => {
       clients: new Map([
         client(
           "c1",
+          "u1",
           undefined,
           0,
           mutation(2, "inc", null, 50),

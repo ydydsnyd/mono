@@ -97,6 +97,7 @@ export async function handleConnection(
 
   const client: ClientState = {
     socket: ws,
+    userData: result.userData,
     clockBehindByMs: undefined,
     pending: [],
   };

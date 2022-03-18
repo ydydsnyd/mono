@@ -27,6 +27,29 @@ export class TestDurableObjectStub implements DurableObjectStub {
   }
 }
 
+export async function createTestDurableObjectState(
+  name: string
+): Promise<TestDurableObjectState> {
+  const id = new TestDurableObjectId(name);
+  const storage = await getMiniflareDurableObjectStorage(id);
+  return new TestDurableObjectState(id, storage);
+}
+
+export class TestDurableObjectState implements DurableObjectState {
+  readonly id: DurableObjectId | string;
+  readonly storage: DurableObjectStorage;
+  constructor(id: DurableObjectId, storage: DurableObjectStorage) {
+    this.id = id;
+    this.storage = storage;
+  }
+  waitUntil(_promise: Promise<any>): void {
+    return;
+  }
+  blockConcurrencyWhile<T>(callback: () => Promise<T>): Promise<T> {
+    return callback();
+  }
+}
+
 export function createTestDurableObjectNamespace(): DurableObjectNamespace {
   return {
     newUniqueId: (_options?: DurableObjectNamespaceNewUniqueIdOptions) => {

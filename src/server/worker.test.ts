@@ -1,4 +1,5 @@
 import { test, expect } from "@jest/globals";
+import type { ReadonlyJSONObject } from "replicache";
 import type { LogLevel } from "../util/logger.js";
 import { Mocket, TestLogger } from "../util/test-utils.js";
 import {
@@ -17,8 +18,15 @@ class TestExecutionContext implements ExecutionContext {
   }
 }
 
-function createTestFixture(requestUrl: string) {
-  const testRequest = new Request(requestUrl);
+function createTestFixture(
+  requestUrl: string,
+  method = "get",
+  body?: ReadonlyJSONObject
+) {
+  const testRequest = new Request(requestUrl, {
+    method,
+    body: JSON.stringify(body),
+  });
 
   const authDOFetchResponses: Response[] = [];
 
@@ -67,9 +75,15 @@ function createEnvThatThrowsIfAuthDOFetchIsCalled(): BaseWorkerEnv {
   };
 }
 
-test("worker forwards connect to authDO", async () => {
+async function testForwardedToAuthDO(
+  url: string,
+  method = "get",
+  body?: ReadonlyJSONObject
+) {
   const { testRequest, testEnv, authDOFetchResponses } = createTestFixture(
-    "ws://test.roci.dev/connect"
+    url,
+    method,
+    body
   );
   const worker = createWorker({
     createLogger: (_env) => new TestLogger(),
@@ -85,10 +99,10 @@ test("worker forwards connect to authDO", async () => {
   );
   expect(authDOFetchResponses.length).toEqual(1);
   expect(response).toBe(authDOFetchResponses[0]);
-});
+}
 
-test("worker does not forward unknown paths to authDO and returns statusCode 400", async () => {
-  const testRequest = new Request("ws://test.roci.dev/badPath");
+async function testNotForwardedToAuthDO(url: string) {
+  const testRequest = new Request(url);
   const worker = createWorker({
     createLogger: (_env) => new TestLogger(),
     getLogLevel: (_env) => "error",
@@ -102,6 +116,44 @@ test("worker does not forward unknown paths to authDO and returns statusCode 400
     new TestExecutionContext()
   );
   expect(response.status).toEqual(400);
+}
+
+test("worker forwards connect requests to authDO", async () => {
+  await testForwardedToAuthDO("ws://test.roci.dev/connect");
+});
+
+test("worker does not forward connect requests with wrong protocol to authDO and returns statusCode 400", async () => {
+  await testNotForwardedToAuthDO("https://test.roci.dev/connect");
+});
+
+test("worker forwards auth api requests to authDO", async () => {
+  await testForwardedToAuthDO(
+    "https://test.roci.dev/api/auth/v0/invalidateForUser",
+    "post",
+    { userID: "userID1" }
+  );
+  await testForwardedToAuthDO(
+    "https://test.roci.dev/api/auth/v0/invalidateForRoom",
+    "post",
+    { roomID: "roomID1" }
+  );
+  await testForwardedToAuthDO(
+    "https://test.roci.dev/api/auth/v0/invalidateAll",
+    "post"
+  );
+});
+
+test("worker does not forward auth api requests with wrong protocol to authDO and returns statusCode 400", async () => {
+  await testNotForwardedToAuthDO(
+    "http://test.roci.dev/api/auth/v0/invalidateForUser"
+  );
+  await testNotForwardedToAuthDO(
+    "ws://test.roci.dev/api/auth/v0/invalidateForUser"
+  );
+});
+
+test("worker does not forward unknown paths to authDO and returns statusCode 400", async () => {
+  await testNotForwardedToAuthDO("ws://test.roci.dev/badPath");
 });
 
 test("logging", async () => {

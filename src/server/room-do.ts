@@ -1,8 +1,13 @@
 import type { MutatorDefs } from "replicache";
 import { processPending } from "../process/process-pending.js";
 import type { MutatorMap } from "../process/process-mutation.js";
-import type { ClientID, ClientMap, Socket } from "../types/client-state.js";
-import { Lock } from "../util/lock.js";
+import type {
+  ClientID,
+  ClientMap,
+  ClientState,
+  Socket,
+} from "../types/client-state.js";
+import { Lock } from "@rocicorp/lock";
 import {
   Logger,
   OptionalLoggerImpl,
@@ -14,6 +19,8 @@ import { handleConnection } from "./connect.js";
 import { handleMessage } from "./message.js";
 import { randomID } from "../util/rand.js";
 import { version } from "../util/version.js";
+import { dispatch } from "./dispatch.js";
+import type { InvalidateForUser } from "../protocol/api/auth.js";
 
 export type Now = () => number;
 
@@ -53,38 +60,79 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   }
 
   async fetch(request: Request): Promise<Response> {
-    const url = new URL(request.url);
-
-    if (url.pathname === "/connect") {
-      if (request.headers.get("Upgrade") !== "websocket") {
-        return new Response("expected websocket", { status: 400 });
-      }
-      const pair = new WebSocketPair();
-      void this._handleConnection(pair[1], url, request.headers);
-      return new Response(null, { status: 101, webSocket: pair[0] });
-    }
-
-    throw new Error("unexpected path");
+    return dispatch(request, this._lc, this);
   }
 
-  private async _handleConnection(ws: Socket, url: URL, headers: Headers) {
-    const lc = new LogContext(this._lc).addContext("req", randomID());
-
+  async connect(lc: LogContext, request: Request): Promise<Response> {
+    if (request.headers.get("Upgrade") !== "websocket") {
+      return new Response("expected websocket", { status: 400 });
+    }
+    const pair = new WebSocketPair();
+    const ws = pair[1];
+    const url = new URL(request.url);
     lc.debug?.("connection request", url.toString(), "waiting for lock");
     ws.accept();
 
-    await this._lock.withLock(async () => {
+    void this._lock.withLock(async () => {
       lc.debug?.("received lock");
       await handleConnection(
         lc,
         ws,
         this._state.storage,
         url,
-        headers,
+        request.headers,
         this._clients,
         this._handleMessage,
         this._handleClose
       );
+    });
+    return new Response(null, { status: 101, webSocket: pair[0] });
+  }
+
+  async authInvalidateForUser(
+    lc: LogContext,
+    _request: Request,
+    { userID }: InvalidateForUser
+  ): Promise<Response> {
+    lc.debug?.(
+      `Closing user ${userID}'s connections fulfilling auth api invalidateForUser request.`
+    );
+    await this._closeConnections(
+      (clientState) => clientState.userData.userID === userID
+    );
+    return new Response("Success", { status: 200 });
+  }
+
+  async authInvalidateForRoom(
+    lc: LogContext
+    // Ideally we'd ensure body.roomID matches this DO's roomID but we
+    // don't know this DO's roomID...
+    // { roomID }: InvalidateForRoom
+  ): Promise<Response> {
+    lc.info?.(
+      "Closing all connections fulfilling auth api invalidateForRoom request."
+    );
+    await this._closeConnections((_) => true);
+    return new Response("Success", { status: 200 });
+  }
+
+  async authInvalidateAll(lc: LogContext): Promise<Response> {
+    lc.info?.(
+      "Closing all connections fulfilling auth api invalidateAll request."
+    );
+    await this._closeConnections((_) => true);
+    return new Response("Success", { status: 200 });
+  }
+
+  private async _closeConnections(
+    predicate: (clientState: ClientState) => boolean
+  ) {
+    await this._lock.withLock(async () => {
+      for (const clientState of this._clients.values()) {
+        if (predicate(clientState)) {
+          clientState.socket.close();
+        }
+      }
     });
   }
 

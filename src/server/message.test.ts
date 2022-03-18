@@ -77,7 +77,8 @@ test("handleMessage", async () => {
   for (const c of cases) {
     const s1 = new Mocket();
     const clientID = c.clientID !== undefined ? c.clientID : "c1";
-    const clients: ClientMap = c.clients || new Map([client(clientID, s1)]);
+    const clients: ClientMap =
+      c.clients || new Map([client(clientID, "u1", s1)]);
     // let called = false;
 
     // const handlePush = (

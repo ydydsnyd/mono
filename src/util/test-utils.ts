@@ -11,13 +11,19 @@ import type { Logger, LogLevel } from "./logger.js";
 
 export function client(
   id: ClientID,
+  userID: string,
   socket: Socket = new Mocket(),
   clockBehindByMs = 1,
   ...mutations: Mutation[]
 ): [ClientID, ClientState] {
-  return [id, { clockBehindByMs, pending: mutations, socket }] as [
-    string,
-    ClientState
+  return [
+    id,
+    {
+      clockBehindByMs,
+      pending: mutations,
+      socket,
+      userData: { userID },
+    },
   ];
 }
 

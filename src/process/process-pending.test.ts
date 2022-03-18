@@ -56,8 +56,10 @@ test("processPending", async () => {
       name: "one client, one mutation",
       version: 1,
       clientRecords: new Map([["c1", clientRecord(1)]]),
-      clients: new Map([client("c1", s1, 0, mutation(2, "inc", null, 100))]),
-      expectedClients: new Map([client("c1", s1, 0)]),
+      clients: new Map([
+        client("c1", "u1", s1, 0, mutation(2, "inc", null, 100)),
+      ]),
+      expectedClients: new Map([client("c1", "u1", s1, 0)]),
       expectedVersion: 2,
       expectedPokes: new Map([
         [
@@ -92,10 +94,13 @@ test("processPending", async () => {
         ["c2", clientRecord(1)],
       ]),
       clients: new Map([
-        client("c1", s1, 0, mutation(2, "inc", null, 100)),
-        client("c2", s2, 0, mutation(2, "inc", null, 120)),
+        client("c1", "u1", s1, 0, mutation(2, "inc", null, 100)),
+        client("c2", "u2", s2, 0, mutation(2, "inc", null, 120)),
       ]),
-      expectedClients: new Map([client("c1", s1, 0), client("c2", s2, 0)]),
+      expectedClients: new Map([
+        client("c1", "u1", s1, 0),
+        client("c2", "u2", s2, 0),
+      ]),
       expectedVersion: 2,
       expectedPokes: new Map([
         [
@@ -151,10 +156,13 @@ test("processPending", async () => {
         ["c2", clientRecord(1)],
       ]),
       clients: new Map([
-        client("c1", s1, 0, mutation(2, "inc", null, 100)),
-        client("c2", s2, 0, mutation(2, "inc", null, 300)),
+        client("c1", "u1", s1, 0, mutation(2, "inc", null, 100)),
+        client("c2", "u2", s2, 0, mutation(2, "inc", null, 300)),
       ]),
-      expectedClients: new Map([client("c1", s1, 0), client("c2", s2, 0)]),
+      expectedClients: new Map([
+        client("c1", "u1", s1, 0),
+        client("c2", "u2", s2, 0),
+      ]),
       expectedVersion: 2,
       expectedPokes: new Map([
         [

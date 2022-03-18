@@ -23,7 +23,7 @@ test("generateMergedMutations", () => {
     },
     {
       name: "one mutation",
-      clients: new Map([client("c1", new Mocket(), 1, mutation(1))]),
+      clients: new Map([client("c1", "u1", new Mocket(), 1, mutation(1))]),
       expected: [clientMutation("c1", 1)],
     },
     {
@@ -31,6 +31,7 @@ test("generateMergedMutations", () => {
       clients: new Map([
         client(
           "c1",
+          "u1",
           new Mocket(),
           1,
           mutation(1, "a", null, 3),
@@ -39,6 +40,7 @@ test("generateMergedMutations", () => {
         ),
         client(
           "c2",
+          "u2",
           new Mocket(),
           1,
           mutation(4, "a", null, 1),
@@ -47,6 +49,7 @@ test("generateMergedMutations", () => {
         ),
         client(
           "c3",
+          "u3",
           new Mocket(),
           1,
           mutation(5, "a", null, 2),
@@ -71,6 +74,7 @@ test("generateMergedMutations", () => {
       clients: new Map([
         client(
           "c1",
+          "u1",
           new Mocket(),
           1,
           mutation(1, "a", null, 1),
@@ -79,6 +83,7 @@ test("generateMergedMutations", () => {
         ),
         client(
           "c2",
+          "u2",
           new Mocket(),
           1,
           mutation(4, "a", null, 2),

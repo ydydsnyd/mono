@@ -14,11 +14,13 @@ test("handleClose deletes client map entry for client id if socket matches", () 
       [client1ID]: {
         socket: client1Socket,
         pending: [],
+        userData: { userID: "userID1" },
         clockBehindByMs: 1000,
       },
       [client2ID]: {
         socket: client2Socket,
         pending: [],
+        userData: { userID: "userID2" },
         clockBehindByMs: 2000,
       },
     })
@@ -29,6 +31,7 @@ test("handleClose deletes client map entry for client id if socket matches", () 
   expect(clientMap.get(client2ID)).toEqual({
     socket: client2Socket,
     pending: [],
+    userData: { userID: "userID2" },
     clockBehindByMs: 2000,
   });
 });
@@ -45,11 +48,13 @@ test("handleClose does not delete client map entry for client id if socket does 
       [client1ID]: {
         socket: client1Socket2,
         pending: [],
+        userData: { userID: "userID1" },
         clockBehindByMs: 1000,
       },
       [client2ID]: {
         socket: client2Socket,
         pending: [],
+        userData: { userID: "userID2" },
         clockBehindByMs: 2000,
       },
     })
@@ -58,11 +63,13 @@ test("handleClose does not delete client map entry for client id if socket does 
   expect(clientMap.get(client1ID)).toEqual({
     socket: client1Socket2,
     pending: [],
+    userData: { userID: "userID1" },
     clockBehindByMs: 1000,
   });
   expect(clientMap.get(client2ID)).toEqual({
     socket: client2Socket,
     pending: [],
+    userData: { userID: "userID2" },
     clockBehindByMs: 2000,
   });
 });

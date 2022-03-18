@@ -1,4 +1,4 @@
-import { Lock } from "./lock.js";
+import { Lock } from "@rocicorp/lock";
 import type { LogLevel, Logger } from "./logger.js";
 
 export interface DatadogLoggerOptions {

@@ -5,6 +5,7 @@ import {
   OptionalLoggerImpl,
 } from "../util/logger";
 import { randomID } from "../util/rand";
+import { dispatch } from "./dispatch";
 
 export interface WorkerOptions<Env extends BaseWorkerEnv> {
   createLogger: (env: Env) => Logger;
@@ -60,26 +61,16 @@ async function handleRequest(
   lc: LogContext,
   env: BaseWorkerEnv
 ): Promise<Response> {
-  // Match route against pattern /:name/*action
-  const url = new URL(request.url);
-
-  switch (url.pathname) {
-    case "/connect":
-      lc.debug?.("Handling connect.");
-      return forwardToAuthServer(request, env);
-    default:
-      return new Response("unknown route", {
-        status: 400,
-      });
-  }
-}
-
-async function forwardToAuthServer(
-  request: Request,
-  env: BaseWorkerEnv
-): Promise<Response> {
-  const { authDO } = env;
-  const id = authDO.idFromName("auth");
-  const stub = authDO.get(id);
-  return stub.fetch(request);
+  const forwardToAuthServer = (_lc: LogContext, request: Request) => {
+    const { authDO } = env;
+    const id = authDO.idFromName("auth");
+    const stub = authDO.get(id);
+    return stub.fetch(request);
+  };
+  return dispatch(request, lc, {
+    connect: forwardToAuthServer,
+    authInvalidateForUser: forwardToAuthServer,
+    authInvalidateForRoom: forwardToAuthServer,
+    authInvalidateAll: forwardToAuthServer,
+  });
 }
