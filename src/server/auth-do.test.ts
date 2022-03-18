@@ -9,7 +9,9 @@ import {
   TestDurableObjectStub,
 } from "./do-test-utils.js";
 import { BaseAuthDO, ConnectionRecord } from "./auth-do.js";
+import { createAuthAPIHeaders } from "./auth-api-test-utils.js";
 
+const TEST_AUTH_API_KEY = "TEST_REFLECT_AUTH_API_KEY_TEST";
 const { authDO } = getMiniflareBindings();
 const authDOID = authDO.idFromName("auth");
 
@@ -117,6 +119,7 @@ test("connect calls authHandler and sends resolved UserData in header to Room DO
         expect(roomID).toEqual(testRoomID);
         return { userID: testUserID };
       },
+      authApiKey: TEST_AUTH_API_KEY,
       logger: new TestLogger(),
       logLevel: "debug",
     },
@@ -166,6 +169,7 @@ test("connect percent escapes components of the connection key", async () => {
         expect(roomID).toEqual(testRoomID);
         return { userID: testUserID };
       },
+      authApiKey: TEST_AUTH_API_KEY,
       logger: new TestLogger(),
       logLevel: "debug",
     },
@@ -204,6 +208,7 @@ test("connect does not set Sec-WebSocket-Protocol response header when on minifl
         expect(roomID).toEqual(testRoomID);
         return { userID: testUserID };
       },
+      authApiKey: TEST_AUTH_API_KEY,
       logger: new TestLogger(),
       logLevel: "debug",
     },
@@ -239,6 +244,7 @@ test("connect returns a 401 without calling Room DO if authHandler rejects", asy
         expect(roomID).toEqual(testRoomID);
         throw new Error("Test authHandler reject");
       },
+      authApiKey: TEST_AUTH_API_KEY,
       logger: new TestLogger(),
       logLevel: "debug",
     },
@@ -270,6 +276,7 @@ test("connect returns a 401 without calling Room DO if Sec-WebSocket-Protocol he
       authHandler: async (_auth, _roomID) => {
         throw new Error("Unexpected call to authHandler");
       },
+      authApiKey: TEST_AUTH_API_KEY,
       logger: new TestLogger(),
       logLevel: "debug",
     },
@@ -288,6 +295,7 @@ test("authInvalidateForUser when requests to roomDOs are successful", async () =
     `https://test.roci.dev/api/auth/v0/invalidateForUser`,
     {
       method: "post",
+      headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
       body: JSON.stringify({
         userID: testUserID,
       }),
@@ -335,6 +343,7 @@ test("authInvalidateForUser when requests to roomDOs are successful", async () =
       authHandler: async (_auth, _roomID) => {
         throw new Error("Unexpected call to authHandler");
       },
+      authApiKey: TEST_AUTH_API_KEY,
       logger: new TestLogger(),
       logLevel: "debug",
     },
@@ -355,6 +364,7 @@ test("authInvalidateForUser when connection ids have chars that need to be perce
     `https://test.roci.dev/api/auth/v0/invalidateForUser`,
     {
       method: "post",
+      headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
       body: JSON.stringify({
         userID: testUserID,
       }),
@@ -411,6 +421,7 @@ test("authInvalidateForUser when connection ids have chars that need to be perce
       authHandler: async (_auth, _roomID) => {
         throw new Error("Unexpected call to authHandler");
       },
+      authApiKey: TEST_AUTH_API_KEY,
       logger: new TestLogger(),
       logLevel: "debug",
     },
@@ -431,6 +442,7 @@ test("authInvalidateForUser when any request to roomDOs returns error response",
     `https://test.roci.dev/api/auth/v0/invalidateForUser`,
     {
       method: "post",
+      headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
       body: JSON.stringify({
         userID: testUserID,
       }),
@@ -483,6 +495,7 @@ test("authInvalidateForUser when any request to roomDOs returns error response",
       authHandler: async (_auth, _roomID) => {
         throw new Error("Unexpected call to authHandler");
       },
+      authApiKey: TEST_AUTH_API_KEY,
       logger: new TestLogger(),
       logLevel: "debug",
     },
@@ -507,6 +520,7 @@ test("authInvalidateForRoom when request to roomDO is successful", async () => {
     `https://test.roci.dev/api/auth/v0/invalidateForRoom`,
     {
       method: "post",
+      headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
       body: JSON.stringify({
         roomID: testRoomID,
       }),
@@ -537,6 +551,7 @@ test("authInvalidateForRoom when request to roomDO is successful", async () => {
       authHandler: async (_auth, _roomID) => {
         throw new Error("Unexpected call to authHandler");
       },
+      authApiKey: TEST_AUTH_API_KEY,
       logger: new TestLogger(),
       logLevel: "debug",
     },
@@ -555,6 +570,7 @@ test("authInvalidateForRoom when request to roomDO returns error response", asyn
     `https://test.roci.dev/api/auth/v0/invalidateForRoom`,
     {
       method: "post",
+      headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
       body: JSON.stringify({
         roomID: testRoomID,
       }),
@@ -588,6 +604,7 @@ test("authInvalidateForRoom when request to roomDO returns error response", asyn
       authHandler: async (_auth, _roomID) => {
         throw new Error("Unexpected call to authHandler");
       },
+      authApiKey: TEST_AUTH_API_KEY,
       logger: new TestLogger(),
       logLevel: "debug",
     },
@@ -606,9 +623,7 @@ test("authInvalidateForRoom when request to roomDO returns error response", asyn
 test("authInvalidateAll when requests to roomDOs are successful", async () => {
   const testRequest = new Request(
     `https://test.roci.dev/api/auth/v0/invalidateAll`,
-    {
-      method: "post",
-    }
+    { headers: createAuthAPIHeaders(TEST_AUTH_API_KEY), method: "post" }
   );
 
   const storage = await getMiniflareDurableObjectStorage(authDOID);
@@ -661,6 +676,7 @@ test("authInvalidateAll when requests to roomDOs are successful", async () => {
       authHandler: async (_auth, _roomID) => {
         throw new Error("Unexpected call to authHandler");
       },
+      authApiKey: TEST_AUTH_API_KEY,
       logger: new TestLogger(),
       logLevel: "debug",
     },
@@ -681,6 +697,7 @@ test("authInvalidateAll when any request to roomDOs returns error response", asy
   const testRequest = new Request(
     `https://test.roci.dev/api/auth/v0/invalidateAll`,
     {
+      headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
       method: "post",
     }
   );
@@ -739,6 +756,7 @@ test("authInvalidateAll when any request to roomDOs returns error response", asy
       authHandler: async (_auth, _roomID) => {
         throw new Error("Unexpected call to authHandler");
       },
+      authApiKey: TEST_AUTH_API_KEY,
       logger: new TestLogger(),
       logLevel: "debug",
     },

@@ -2,12 +2,15 @@ import { test, expect } from "@jest/globals";
 import type { ReadonlyJSONObject } from "replicache";
 import type { LogLevel } from "../util/logger.js";
 import { Mocket, TestLogger } from "../util/test-utils.js";
+import { createAuthAPIHeaders } from "./auth-api-test-utils.js";
 import {
   createTestDurableObjectNamespace,
   TestDurableObjectId,
   TestDurableObjectStub,
 } from "./do-test-utils.js";
 import { BaseWorkerEnv, createWorker } from "./worker";
+
+const TEST_AUTH_API_KEY = "TEST_REFLECT_AUTH_API_KEY_TEST";
 
 class TestExecutionContext implements ExecutionContext {
   waitUntil(_promise: Promise<unknown>): void {
@@ -21,10 +24,12 @@ class TestExecutionContext implements ExecutionContext {
 function createTestFixture(
   requestUrl: string,
   method = "get",
+  headers?: Headers,
   body?: ReadonlyJSONObject
 ) {
   const testRequest = new Request(requestUrl, {
     method,
+    headers: headers || new Headers(),
     body: JSON.stringify(body),
   });
 
@@ -50,6 +55,8 @@ function createTestFixture(
         });
       },
     },
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    REFLECT_AUTH_API_KEY: TEST_AUTH_API_KEY,
   };
 
   return {
@@ -59,30 +66,15 @@ function createTestFixture(
   };
 }
 
-function createEnvThatThrowsIfAuthDOFetchIsCalled(): BaseWorkerEnv {
-  return {
-    authDO: {
-      ...createTestDurableObjectNamespace(),
-      idFromName: (name: string) => {
-        return new TestDurableObjectId("test-auth-do-" + name);
-      },
-      get: (id: DurableObjectId) => {
-        return new TestDurableObjectStub(id, async (_request: Request) => {
-          throw new Error("Unexpected call to authDO fetch");
-        });
-      },
-    },
-  };
-}
-
 async function testForwardedToAuthDO(
   url: string,
-  method = "get",
-  body?: ReadonlyJSONObject
+  body?: ReadonlyJSONObject,
+  method = "post"
 ) {
   const { testRequest, testEnv, authDOFetchResponses } = createTestFixture(
     url,
     method,
+    createAuthAPIHeaders(TEST_AUTH_API_KEY),
     body
   );
   const worker = createWorker({
@@ -101,59 +93,22 @@ async function testForwardedToAuthDO(
   expect(response).toBe(authDOFetchResponses[0]);
 }
 
-async function testNotForwardedToAuthDO(url: string) {
-  const testRequest = new Request(url);
-  const worker = createWorker({
-    createLogger: (_env) => new TestLogger(),
-    getLogLevel: (_env) => "error",
-  });
-  if (!worker.fetch) {
-    throw new Error("Expect fetch to be defined");
-  }
-  const response = await worker.fetch?.(
-    testRequest,
-    createEnvThatThrowsIfAuthDOFetchIsCalled(),
-    new TestExecutionContext()
-  );
-  expect(response.status).toEqual(400);
-}
-
 test("worker forwards connect requests to authDO", async () => {
-  await testForwardedToAuthDO("ws://test.roci.dev/connect");
-});
-
-test("worker does not forward connect requests with wrong protocol to authDO and returns statusCode 400", async () => {
-  await testNotForwardedToAuthDO("https://test.roci.dev/connect");
+  await testForwardedToAuthDO("ws://test.roci.dev/connect", undefined, "get");
 });
 
 test("worker forwards auth api requests to authDO", async () => {
   await testForwardedToAuthDO(
     "https://test.roci.dev/api/auth/v0/invalidateForUser",
-    "post",
     { userID: "userID1" }
   );
   await testForwardedToAuthDO(
     "https://test.roci.dev/api/auth/v0/invalidateForRoom",
-    "post",
     { roomID: "roomID1" }
   );
   await testForwardedToAuthDO(
-    "https://test.roci.dev/api/auth/v0/invalidateAll",
-    "post"
+    "https://test.roci.dev/api/auth/v0/invalidateAll"
   );
-});
-
-test("worker does not forward auth api requests with wrong protocol to authDO and returns statusCode 400", async () => {
-  await testNotForwardedToAuthDO(
-    "http://test.roci.dev/api/auth/v0/invalidateForUser"
-  );
-  await testNotForwardedToAuthDO(
-    "ws://test.roci.dev/api/auth/v0/invalidateForUser"
-  );
-});
-
-test("worker does not forward unknown paths to authDO and returns statusCode 400", async () => {
-  await testNotForwardedToAuthDO("ws://test.roci.dev/badPath");
 });
 
 test("logging", async () => {

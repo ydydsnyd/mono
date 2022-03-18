@@ -29,3 +29,6 @@ main = "./example/index.mjs"
 
 [miniflare]
 durable_objects_persist = true
+
+#[secrets]
+#REFLECT_AUTH_API_KEY

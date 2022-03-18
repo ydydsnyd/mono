@@ -19,6 +19,7 @@ export interface AuthDOOptions {
   roomDO: DurableObjectNamespace;
   state: DurableObjectState;
   authHandler: AuthHandler;
+  authApiKey: string | undefined;
   logger: Logger;
   logLevel: LogLevel;
 }
@@ -31,6 +32,7 @@ export class BaseAuthDO implements DurableObject {
   private readonly _roomDO: DurableObjectNamespace;
   private readonly _state: DurableObjectState;
   private readonly _authHandler: AuthHandler;
+  private readonly _authApiKey?: string;
   private readonly _lc: LogContext;
   private readonly _isMiniflare: boolean;
   private readonly _lock: RWLock;
@@ -39,10 +41,12 @@ export class BaseAuthDO implements DurableObject {
     options: AuthDOOptions,
     isMiniflare = typeof MINIFLARE !== "undefined"
   ) {
-    const { roomDO, state, authHandler, logger, logLevel } = options;
+    const { roomDO, state, authHandler, authApiKey, logger, logLevel } =
+      options;
     this._roomDO = roomDO;
     this._state = state;
     this._authHandler = authHandler;
+    this._authApiKey = authApiKey;
     this._lc = new LogContext(
       new OptionalLoggerImpl(logger, logLevel)
     ).addContext("AuthDO");
@@ -57,7 +61,7 @@ export class BaseAuthDO implements DurableObject {
     const lc = new LogContext(this._lc).addContext("req", randomID());
     lc.debug?.("Handling request:", request.url);
     try {
-      const resp = await dispatch(request, lc, this);
+      const resp = await dispatch(request, lc, this._authApiKey, this);
       lc.debug?.(`Returning response: ${resp.status} ${resp.statusText}`);
       return resp;
     } catch (e) {

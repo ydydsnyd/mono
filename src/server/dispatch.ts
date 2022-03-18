@@ -20,9 +20,22 @@ export interface Handlers {
   authInvalidateAll: Handler;
 }
 
+function createUnauthorizedResponse(message = "Unauthorized"): Response {
+  return new Response(message, {
+    status: 401,
+  });
+}
+
+function createBadRequestResponse(message = "Bad Request"): Response {
+  return new Response(message, {
+    status: 400,
+  });
+}
+
 export function dispatch(
   request: Request,
   lc: LogContext,
+  authApiKey: string | undefined,
   handlers: Handlers
 ): Promise<Response> {
   const url = new URL(request.url);
@@ -33,17 +46,27 @@ export function dispatch(
     protocol: "https:" | "ws:",
     method: string,
     validateBody: (request: Request) => Promise<ValidateResult<T>>,
-    handler: Handler<T>
+    handler: Handler<T>,
+    apiKey?: "authApiKey"
   ): Promise<Response> {
+    if (apiKey === "authApiKey") {
+      if (authApiKey === undefined) {
+        return createUnauthorizedResponse();
+      }
+      const authApiKeyHeaderValue = request.headers.get(
+        "x-reflect-auth-api-key"
+      );
+      if (authApiKeyHeaderValue !== authApiKey) {
+        return createUnauthorizedResponse();
+      }
+    }
     if (url.protocol.toLowerCase() !== protocol.toLowerCase()) {
-      return new Response(`Unsupported protocol. Use "${protocol}".`, {
-        status: 400,
-      });
+      return createBadRequestResponse(
+        `Unsupported protocol. Use "${protocol}".`
+      );
     }
     if (request.method.toLowerCase() !== method.toLowerCase()) {
-      return new Response(`Unsupported method. Use "${method}".`, {
-        status: 400,
-      });
+      return createBadRequestResponse(`Unsupported method. Use "${method}".`);
     }
     const validateResult = await validateBody(request);
     if (validateResult.errorResponse) {
@@ -68,7 +91,8 @@ export function dispatch(
         "https:",
         "post",
         (request) => validateBody(request, invalidateForUserSchema),
-        handlers.authInvalidateForUser
+        handlers.authInvalidateForUser,
+        "authApiKey"
       );
     case "/api/auth/v0/invalidateForRoom":
       return validateAndDispatch(
@@ -76,7 +100,8 @@ export function dispatch(
         "https:",
         "post",
         (request) => validateBody(request, invalidateForRoomSchema),
-        handlers.authInvalidateForRoom
+        handlers.authInvalidateForRoom,
+        "authApiKey"
       );
     case "/api/auth/v0/invalidateAll":
       return validateAndDispatch(
@@ -84,14 +109,11 @@ export function dispatch(
         "https:",
         "post",
         noOpValidateBody,
-        handlers.authInvalidateAll
+        handlers.authInvalidateAll,
+        "authApiKey"
       );
     default:
-      return Promise.resolve(
-        new Response("Unsupported path.", {
-          status: 400,
-        })
-      );
+      return Promise.resolve(createBadRequestResponse("Unsupported path."));
   }
 }
 
@@ -118,11 +140,8 @@ async function validateBody<T>(
   const validateResult = validate(json, struct);
   if (validateResult[0]) {
     return {
-      errorResponse: new Response(
-        "Body schema error. " + validateResult[0].message,
-        {
-          status: 400,
-        }
+      errorResponse: createBadRequestResponse(
+        "Body schema error. " + validateResult[0].message
       ),
       value: undefined,
     };

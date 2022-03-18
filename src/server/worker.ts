@@ -14,6 +14,8 @@ export interface WorkerOptions<Env extends BaseWorkerEnv> {
 
 export interface BaseWorkerEnv {
   authDO: DurableObjectNamespace;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  REFLECT_AUTH_API_KEY?: string;
 }
 
 export function createWorker<Env extends BaseWorkerEnv>(
@@ -67,7 +69,7 @@ async function handleRequest(
     const stub = authDO.get(id);
     return stub.fetch(request);
   };
-  return dispatch(request, lc, {
+  return dispatch(request, lc, env.REFLECT_AUTH_API_KEY, {
     connect: forwardToAuthServer,
     authInvalidateForUser: forwardToAuthServer,
     authInvalidateForRoom: forwardToAuthServer,

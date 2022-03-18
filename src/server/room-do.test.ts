@@ -12,6 +12,7 @@ test("Logs version during construction", async () => {
   new BaseRoomDO({
     mutators: {},
     state: {} as DurableObjectState,
+    authApiKey: undefined,
     logger: testLogger,
     logLevel: "info",
   });

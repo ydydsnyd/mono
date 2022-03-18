@@ -18,6 +18,11 @@ export interface ReflectOptions<
 export interface ReflectBaseEnv {
   roomDO: DurableObjectNamespace;
   authDO: DurableObjectNamespace;
+  /**
+   * If not bound the Auth API will be disabled.
+   */
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  REFLECT_AUTH_API_KEY?: string;
 }
 
 export type DurableObjectCtor<Env> = new (
@@ -48,6 +53,7 @@ export function createReflect<
       super({
         mutators: options.mutators,
         state,
+        authApiKey: env.REFLECT_AUTH_API_KEY,
         logger: createLogger(env),
         logLevel: getLogLevel(env),
       });
@@ -60,6 +66,7 @@ export function createReflect<
         roomDO: env.roomDO,
         state,
         authHandler,
+        authApiKey: env.REFLECT_AUTH_API_KEY,
         logger: createLogger(env),
         logLevel: getLogLevel(env),
       });

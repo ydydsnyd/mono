@@ -36,6 +36,7 @@ export type ProcessHandler = (
 export interface RoomDOOptions<MD extends MutatorDefs> {
   mutators: MD;
   state: DurableObjectState;
+  authApiKey: string | undefined;
   logger: Logger;
   logLevel: LogLevel;
 }
@@ -45,13 +46,15 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   private readonly _mutators: MutatorMap;
   private readonly _lc: LogContext;
   private readonly _state: DurableObjectState;
+  private readonly _authApiKey: string | undefined;
   private _turnTimerID: ReturnType<typeof setInterval> | 0 = 0;
 
   constructor(options: RoomDOOptions<MD>) {
-    const { mutators, state, logger, logLevel } = options;
+    const { mutators, state, authApiKey, logger, logLevel } = options;
 
     this._mutators = new Map([...Object.entries(mutators)]) as MutatorMap;
     this._state = state;
+    this._authApiKey = authApiKey;
     this._lc = new LogContext(
       new OptionalLoggerImpl(logger, logLevel)
     ).addContext("RoomDO");
@@ -60,7 +63,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   }
 
   async fetch(request: Request): Promise<Response> {
-    return dispatch(request, this._lc, this);
+    return dispatch(request, this._lc, this._authApiKey, this);
   }
 
   async connect(lc: LogContext, request: Request): Promise<Response> {
