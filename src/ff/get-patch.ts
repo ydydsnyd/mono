@@ -1,4 +1,4 @@
-import * as s from "superstruct";
+import { superstructAssert } from "../util/superstruct.js";
 import type { Patch } from "../protocol/poke.js";
 import { userValuePrefix, userValueSchema } from "../types/user-value.js";
 import type { Version } from "../types/version.js";
@@ -14,7 +14,7 @@ export async function getPatch(
 
   const patch: Patch = [];
   for (const [key, value] of result) {
-    s.assert(value, userValueSchema);
+    superstructAssert(value, userValueSchema);
     const validValue = value;
 
     // TODO: More efficient way of finding changed values.

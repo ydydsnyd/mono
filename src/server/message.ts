@@ -1,10 +1,10 @@
-import * as s from "superstruct";
 import { Upstream, upstreamSchema } from "../protocol/up.js";
 import type { ClientID, ClientMap, Socket } from "../types/client-state.js";
 import type { LogContext } from "../util/logger.js";
 import { sendError } from "../util/socket.js";
 import { handlePush, type ProcessUntilDone } from "./push.js";
 import { handlePing } from "./ping.js";
+import { superstructAssert } from "../util/superstruct.js";
 
 /**
  * Handles an upstream message coming into the server by dispatching to the
@@ -52,6 +52,6 @@ export function handleMessage(
 
 function getMessage(data: string): Upstream {
   const value = JSON.parse(data);
-  s.assert(value, upstreamSchema);
+  superstructAssert(value, upstreamSchema);
   return value;
 }

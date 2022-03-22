@@ -1,5 +1,6 @@
 import type { JSONValue } from "replicache";
-import * as s from "superstruct";
+import type * as s from "superstruct";
+import { superstructAssert } from "../util/superstruct";
 
 // DurableObjects has a lot of clever optimisations we can take advantage of,
 // but they require some thought as to whether they fit with what we are doing.
@@ -23,7 +24,7 @@ export async function getEntry<T extends JSONValue>(
   if (value === undefined) {
     return undefined;
   }
-  s.assert(value, schema);
+  superstructAssert(value, schema);
   return value;
 }
 
