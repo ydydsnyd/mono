@@ -8,6 +8,7 @@ import { Struct, validate } from "superstruct";
 import type { LogContext } from "../util/logger";
 
 export type Handler<T = undefined> = (
+  this: Handlers,
   lc: LogContext,
   request: Request,
   body: T
@@ -61,7 +62,11 @@ export function dispatch(
     }
     if (request.method.toLowerCase() !== method.toLowerCase()) {
       lc.debug?.(`Unsupported method ${request.method.toLowerCase()}`);
-      return createBadRequestResponse(`Unsupported method. Use "${method}".`);
+      return Promise.resolve(
+        new Response(`Method not allowed. Use "${method}".`, {
+          status: 405,
+        })
+      );
     }
     const validateResult = await validateBody(request);
     if (validateResult.errorResponse) {

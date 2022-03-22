@@ -67,9 +67,9 @@ test("connect request with validation errors", async () => {
     undefined,
     createThrowingHandlers()
   );
-  expect(responseForBadMethod.status).toEqual(400);
+  expect(responseForBadMethod.status).toEqual(405);
   expect(await responseForBadMethod.text()).toEqual(
-    'Unsupported method. Use "get".'
+    'Method not allowed. Use "get".'
   );
 });
 
@@ -127,9 +127,9 @@ test("authInvalidateForUser request with validation errors", async () => {
     testAuthApiKey,
     createThrowingHandlers()
   );
-  expect(responseForBadMethod.status).toEqual(400);
+  expect(responseForBadMethod.status).toEqual(405);
   expect(await responseForBadMethod.text()).toEqual(
-    'Unsupported method. Use "post".'
+    'Method not allowed. Use "post".'
   );
 
   const testRequestBadBody = new Request(
@@ -244,9 +244,9 @@ test("authInvalidateForRoom request with validation errors", async () => {
     testAuthApiKey,
     createThrowingHandlers()
   );
-  expect(responseForBadMethod.status).toEqual(400);
+  expect(responseForBadMethod.status).toEqual(405);
   expect(await responseForBadMethod.text()).toEqual(
-    'Unsupported method. Use "post".'
+    'Method not allowed. Use "post".'
   );
 
   const testRequestBadBody = new Request(
@@ -351,9 +351,9 @@ test("authInvalidateAll request with validation errors", async () => {
     testAuthApiKey,
     createThrowingHandlers()
   );
-  expect(responseForBadMethod.status).toEqual(400);
+  expect(responseForBadMethod.status).toEqual(405);
   expect(await responseForBadMethod.text()).toEqual(
-    'Unsupported method. Use "post".'
+    'Method not allowed. Use "post".'
   );
 
   const testRequestMissingAuthApiKey = new Request(

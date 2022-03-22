@@ -180,6 +180,8 @@ export class BaseAuthDO implements DurableObject {
           prefix: toConnectionKeyUserPrefix(userID),
         })
       ).keys();
+      // The requests to the Room DOs must be completed inside the write lock
+      // to avoid races with new connect requests for this user.
       return this._forwardInvalidateRequest(
         lc,
         "authInvalidateForUser",
@@ -198,6 +200,8 @@ export class BaseAuthDO implements DurableObject {
     return this._lock.withWrite(async () => {
       lc.debug?.("got lock.");
       lc.debug?.(`Sending authInvalidateForRoom request to ${roomID}`);
+      // The request to the Room DO must be completed inside the write lock
+      // to avoid races with connect requests for this room.
       const id = this._roomDO.idFromName(roomID);
       const stub = this._roomDO.get(id);
       const response = await stub.fetch(request);
@@ -221,6 +225,8 @@ export class BaseAuthDO implements DurableObject {
           prefix: CONNECTION_KEY_PREFIX,
         })
       ).keys();
+      // The request to the Room DOs must be completed inside the write lock
+      // to avoid races with connect requests.
       return this._forwardInvalidateRequest(lc, "authInvalidateAll", request, [
         ...connectionKeys,
       ]);
@@ -240,14 +246,14 @@ export class BaseAuthDO implements DurableObject {
       }
       return connection;
     });
-    const roomIDs = [
-      ...new Set(
-        connections
-          .map((connection) => connection?.roomID)
-          .filter((roomID): roomID is string => roomID !== undefined)
-      ),
-    ];
+    const roomIDSet = new Set<string>();
+    for (const connection of connections) {
+      if (connection) {
+        roomIDSet.add(connection.roomID);
+      }
+    }
 
+    const roomIDs = [...roomIDSet];
     const responsePromises = [];
     lc.debug?.(
       `Sending ${invalidateRequestName} requests to ${roomIDs.length} rooms`
@@ -297,18 +303,20 @@ function toConnectionKeyUserPrefix(userID: string): string {
   return `${CONNECTION_KEY_PREFIX}${encodeURIComponent(userID)}/`;
 }
 
-const connectionKeyRegex = /^connection\/([^/]*)\/([^/]*)\/([^/]*)\/$/;
 export function fromConnectionKey(
   key: string
 ): { userID: string; roomID: string; clientID: string } | undefined {
-  const matches = key.match(connectionKeyRegex);
-  if (!matches) {
+  if (!key.startsWith(CONNECTION_KEY_PREFIX)) {
+    return undefined;
+  }
+  const parts = key.split("/");
+  if (parts.length !== 5 || parts[4] !== "") {
     return undefined;
   }
   return {
-    userID: decodeURIComponent(matches[1]),
-    roomID: decodeURIComponent(matches[2]),
-    clientID: decodeURIComponent(matches[3]),
+    userID: decodeURIComponent(parts[1]),
+    roomID: decodeURIComponent(parts[2]),
+    clientID: decodeURIComponent(parts[3]),
   };
 }
 
