@@ -58,7 +58,7 @@ export class BaseAuthDO implements DurableObject {
 
   async fetch(request: Request): Promise<Response> {
     // Match route against pattern /:name/*action
-    const lc = new LogContext(this._lc).addContext("req", randomID());
+    const lc = this._lc.addContext("req", randomID());
     lc.debug?.("Handling request:", request.url);
     try {
       const resp = await dispatch(request, lc, this._authApiKey, this);

@@ -63,7 +63,12 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   }
 
   async fetch(request: Request): Promise<Response> {
-    return dispatch(request, this._lc, this._authApiKey, this);
+    return dispatch(
+      request,
+      this._lc.addContext("req", randomID()),
+      this._authApiKey,
+      this
+    );
   }
 
   async connect(lc: LogContext, request: Request): Promise<Response> {
@@ -144,7 +149,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     data: string,
     ws: Socket
   ): Promise<void> => {
-    const lc = new LogContext(this._lc)
+    const lc = this._lc
       .addContext("req", randomID())
       .addContext("client", clientID);
     lc.debug?.("handling message", data, "waiting for lock");
@@ -158,7 +163,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   };
 
   private async _processUntilDone() {
-    const lc = new LogContext(this._lc).addContext("req", randomID());
+    const lc = this._lc.addContext("req", randomID());
     lc.debug?.("handling processUntilDone");
     if (this._turnTimerID) {
       lc.debug?.("already processing, nothing to do");
@@ -199,7 +204,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     clientID: ClientID,
     ws: Socket
   ): Promise<void> => {
-    const lc = new LogContext(this._lc)
+    const lc = this._lc
       .addContext("req", randomID())
       .addContext("client", clientID);
     lc.debug?.("handling close - waiting for lock");
