@@ -1,8 +1,8 @@
 import {
-  InvalidateForRoom,
-  invalidateForRoomSchema,
-  InvalidateForUser,
-  invalidateForUserSchema,
+  InvalidateForRoomRequest,
+  invalidateForRoomRequestSchema,
+  InvalidateForUserRequest,
+  invalidateForUserRequestSchema,
 } from "../protocol/api/auth";
 import { Struct, validate } from "superstruct";
 import type { LogContext } from "../util/logger";
@@ -16,9 +16,11 @@ export type Handler<T = undefined> = (
 
 export interface Handlers {
   connect: Handler;
-  authInvalidateForUser: Handler<InvalidateForUser>;
-  authInvalidateForRoom: Handler<InvalidateForRoom>;
+  authInvalidateForUser: Handler<InvalidateForUserRequest>;
+  authInvalidateForRoom: Handler<InvalidateForRoomRequest>;
   authInvalidateAll: Handler;
+  authRevalidateConnections?: Handler;
+  authConnections?: Handler;
 }
 
 function createUnauthorizedResponse(message = "Unauthorized"): Response {
@@ -43,12 +45,15 @@ export function dispatch(
   lc.debug?.("Dispatching path", url.pathname);
 
   async function validateAndDispatch<T>(
-    handlerName: string,
+    handlerName: keyof Handlers,
     method: string,
     validateBody: (request: Request) => Promise<ValidateResult<T>>,
-    handler: Handler<T>,
+    handler: Handler<T> | undefined,
     apiKey?: "authApiKey"
   ): Promise<Response> {
+    if (!handler) {
+      return createBadRequestResponse("Unsupported path.");
+    }
     if (apiKey === "authApiKey") {
       if (authApiKey === undefined) {
         return createUnauthorizedResponse();
@@ -88,7 +93,7 @@ export function dispatch(
       return validateAndDispatch(
         "authInvalidateForUser",
         "post",
-        (request) => validateBody(request, invalidateForUserSchema),
+        (request) => validateBody(request, invalidateForUserRequestSchema),
         handlers.authInvalidateForUser,
         "authApiKey"
       );
@@ -96,7 +101,7 @@ export function dispatch(
       return validateAndDispatch(
         "authInvalidateForRoom",
         "post",
-        (request) => validateBody(request, invalidateForRoomSchema),
+        (request) => validateBody(request, invalidateForRoomRequestSchema),
         handlers.authInvalidateForRoom,
         "authApiKey"
       );
@@ -106,6 +111,22 @@ export function dispatch(
         "post",
         noOpValidateBody,
         handlers.authInvalidateAll,
+        "authApiKey"
+      );
+    case "/api/auth/v0/revalidateConnections":
+      return validateAndDispatch(
+        "authRevalidateConnections",
+        "post",
+        noOpValidateBody,
+        handlers.authRevalidateConnections,
+        "authApiKey"
+      );
+    case "/api/auth/v0/connections":
+      return validateAndDispatch(
+        "authConnections",
+        "get",
+        noOpValidateBody,
+        handlers.authConnections,
         "authApiKey"
       );
     default:

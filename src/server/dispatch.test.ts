@@ -1,11 +1,11 @@
 import { test, expect } from "@jest/globals";
 import type {
-  InvalidateForRoom,
-  InvalidateForUser,
+  InvalidateForRoomRequest,
+  InvalidateForUserRequest,
 } from "../protocol/api/auth";
 import { LogContext, SilentLogger } from "../util/logger";
-import { createAuthAPIHeaders } from "./auth-api-test-utils";
-import { dispatch } from "./dispatch";
+import { createAuthAPIHeaders } from "./auth-api-headers";
+import { dispatch, Handlers } from "./dispatch";
 
 const testAuthApiKey = "TEST_REFLECT_AUTH_API_KEY_TEST";
 
@@ -23,19 +23,88 @@ function createThrowingHandlers() {
     authInvalidateAll: () => {
       throw new Error("unexpect call to authInvalidateAll handler");
     },
+    authConnections: () => {
+      throw new Error("unexpect call to authInvalidateAll handler");
+    },
+    authRevalidateConnections: () => {
+      throw new Error("unexpect call to authInvalidateAll handler");
+    },
   };
 }
 
-test("unsupported path", async () => {
-  const testRequest = new Request("https://test.roci.dev/bad_path");
+async function testMethodNotAllowedValidationError(
+  testRequestBadMethod: Request,
+  allowedMethod: string
+) {
+  const responseForBadMethod = await dispatch(
+    testRequestBadMethod,
+    new LogContext(new SilentLogger()),
+    testAuthApiKey,
+    createThrowingHandlers()
+  );
+  expect(responseForBadMethod.status).toEqual(405);
+  expect(await responseForBadMethod.text()).toEqual(
+    `Method not allowed. Use "${allowedMethod}".`
+  );
+}
+
+async function testApiKeyValidationErrors(baseRequest: Request) {
+  const testRequestMissingAuthApiKey = baseRequest.clone();
+  const responseForMissingAuthApiKey = await dispatch(
+    testRequestMissingAuthApiKey,
+    new LogContext(new SilentLogger()),
+    testAuthApiKey,
+    createThrowingHandlers()
+  );
+  expect(responseForMissingAuthApiKey.status).toEqual(401);
+  expect(await responseForMissingAuthApiKey.text()).toEqual("Unauthorized");
+
+  const testRequestWrongAuthApiKey = new Request(baseRequest, {
+    headers: createAuthAPIHeaders("WRONG_API_KEY"),
+  });
+  const responseForWrongAuthApiKey = await dispatch(
+    testRequestWrongAuthApiKey,
+    new LogContext(new SilentLogger()),
+    testAuthApiKey,
+    createThrowingHandlers()
+  );
+  expect(responseForWrongAuthApiKey.status).toEqual(401);
+  expect(await responseForWrongAuthApiKey.text()).toEqual("Unauthorized");
+}
+
+async function testUnsupportedPathValidationError(
+  requestWUnsupportedPath: Request,
+  handlers: Handlers
+) {
   const response = await dispatch(
-    testRequest,
+    requestWUnsupportedPath,
     new LogContext(new SilentLogger()),
     undefined,
-    createThrowingHandlers()
+    handlers
   );
   expect(response.status).toEqual(400);
   expect(await response.text()).toEqual("Unsupported path.");
+}
+
+test("unsupported path", async () => {
+  await testUnsupportedPathValidationError(
+    new Request("https://test.roci.dev/bad_path"),
+    createThrowingHandlers()
+  );
+});
+
+test("unsupported path for optional handlers", async () => {
+  const handlers: Handlers = createThrowingHandlers();
+  delete handlers.authRevalidateConnections;
+  delete handlers.authConnections;
+  await testUnsupportedPathValidationError(
+    new Request("https://test.roci.dev/api/auth/v0/reavalidateConnections"),
+    handlers
+  );
+  await testUnsupportedPathValidationError(
+    new Request("https://test.roci.dev/api/auth/v0/connections"),
+    handlers
+  );
 });
 
 test("connect good request", async () => {
@@ -58,24 +127,16 @@ test("connect good request", async () => {
 });
 
 test("connect request with validation errors", async () => {
-  const testRequestBadMethod = new Request("ws://test.roci.dev/connect", {
-    method: "post",
-  });
-  const responseForBadMethod = await dispatch(
-    testRequestBadMethod,
-    new LogContext(new SilentLogger()),
-    undefined,
-    createThrowingHandlers()
-  );
-  expect(responseForBadMethod.status).toEqual(405);
-  expect(await responseForBadMethod.text()).toEqual(
-    'Method not allowed. Use "get".'
+  await testMethodNotAllowedValidationError(
+    new Request("ws://test.roci.dev/connect", {
+      method: "post",
+    }),
+    "get"
   );
 });
 
 test("authInvalidateForUser good request", async () => {
   const testUserID = "testUserID1";
-
   const testRequest = new Request(
     `https://test.roci.dev/api/auth/v0/invalidateForUser`,
     {
@@ -96,7 +157,7 @@ test("authInvalidateForUser good request", async () => {
       authInvalidateForUser: (
         _lc: LogContext,
         request: Request,
-        body: InvalidateForUser
+        body: InvalidateForUserRequest
       ) => {
         expect(request).toBe(testRequest);
         expect(body).toEqual({
@@ -111,25 +172,24 @@ test("authInvalidateForUser good request", async () => {
 
 test("authInvalidateForUser request with validation errors", async () => {
   const testUserID = "testUserID1";
-  const testRequestBadMethod = new Request(
-    `https://test.roci.dev/api/auth/v0/invalidateForUser`,
-    {
+  await testMethodNotAllowedValidationError(
+    new Request(`https://test.roci.dev/api/auth/v0/invalidateForUser`, {
       method: "put",
       headers: createAuthAPIHeaders(testAuthApiKey),
       body: JSON.stringify({
         userID: testUserID,
       }),
-    }
+    }),
+    "post"
   );
-  const responseForBadMethod = await dispatch(
-    testRequestBadMethod,
-    new LogContext(new SilentLogger()),
-    testAuthApiKey,
-    createThrowingHandlers()
-  );
-  expect(responseForBadMethod.status).toEqual(405);
-  expect(await responseForBadMethod.text()).toEqual(
-    'Method not allowed. Use "post".'
+
+  await testApiKeyValidationErrors(
+    new Request(`https://test.roci.dev/api/auth/v0/invalidateForUser`, {
+      method: "post",
+      body: JSON.stringify({
+        userID: testUserID,
+      }),
+    })
   );
 
   const testRequestBadBody = new Request(
@@ -152,43 +212,6 @@ test("authInvalidateForUser request with validation errors", async () => {
   expect(await responseForBadBody.text()).toEqual(
     "Body schema error. At path: userID -- Expected a string, but received: undefined"
   );
-
-  const testRequestMissingAuthApiKey = new Request(
-    `https://test.roci.dev/api/auth/v0/invalidateForUser`,
-    {
-      method: "post",
-      body: JSON.stringify({
-        userID: testUserID,
-      }),
-    }
-  );
-  const responseForMissingAuthApiKey = await dispatch(
-    testRequestMissingAuthApiKey,
-    new LogContext(new SilentLogger()),
-    testAuthApiKey,
-    createThrowingHandlers()
-  );
-  expect(responseForMissingAuthApiKey.status).toEqual(401);
-  expect(await responseForMissingAuthApiKey.text()).toEqual("Unauthorized");
-
-  const testRequestWrongAuthApiKey = new Request(
-    `https://test.roci.dev/api/auth/v0/invalidateForUser`,
-    {
-      method: "post",
-      headers: createAuthAPIHeaders("WRONG_API_KEY"),
-      body: JSON.stringify({
-        userID: testUserID,
-      }),
-    }
-  );
-  const responseForWrongAuthApiKey = await dispatch(
-    testRequestWrongAuthApiKey,
-    new LogContext(new SilentLogger()),
-    testAuthApiKey,
-    createThrowingHandlers()
-  );
-  expect(responseForWrongAuthApiKey.status).toEqual(401);
-  expect(await responseForWrongAuthApiKey.text()).toEqual("Unauthorized");
 });
 
 test("authInvalidateForRoom good request", async () => {
@@ -213,7 +236,7 @@ test("authInvalidateForRoom good request", async () => {
       authInvalidateForRoom: (
         _lc: LogContext,
         request: Request,
-        body: InvalidateForRoom
+        body: InvalidateForRoomRequest
       ) => {
         expect(request).toBe(testRequest);
         expect(body).toEqual({
@@ -228,25 +251,15 @@ test("authInvalidateForRoom good request", async () => {
 
 test("authInvalidateForRoom request with validation errors", async () => {
   const testRoomID = "testRoomID1";
-  const testRequestBadMethod = new Request(
-    `https://test.roci.dev/api/auth/v0/invalidateForRoom`,
-    {
+  await testMethodNotAllowedValidationError(
+    new Request(`https://test.roci.dev/api/auth/v0/invalidateForRoom`, {
       method: "put",
       headers: createAuthAPIHeaders(testAuthApiKey),
       body: JSON.stringify({
         roomID: testRoomID,
       }),
-    }
-  );
-  const responseForBadMethod = await dispatch(
-    testRequestBadMethod,
-    new LogContext(new SilentLogger()),
-    testAuthApiKey,
-    createThrowingHandlers()
-  );
-  expect(responseForBadMethod.status).toEqual(405);
-  expect(await responseForBadMethod.text()).toEqual(
-    'Method not allowed. Use "post".'
+    }),
+    "post"
   );
 
   const testRequestBadBody = new Request(
@@ -270,42 +283,14 @@ test("authInvalidateForRoom request with validation errors", async () => {
     "Body schema error. At path: roomID -- Expected a string, but received: undefined"
   );
 
-  const testRequestMissingAuthApiKey = new Request(
-    `https://test.roci.dev/api/auth/v0/invalidateForRoom`,
-    {
+  await testApiKeyValidationErrors(
+    new Request(`https://test.roci.dev/api/auth/v0/invalidateForRoom`, {
       method: "post",
       body: JSON.stringify({
         roomID: testRoomID,
       }),
-    }
+    })
   );
-  const responseForMissingAuthApiKey = await dispatch(
-    testRequestMissingAuthApiKey,
-    new LogContext(new SilentLogger()),
-    testAuthApiKey,
-    createThrowingHandlers()
-  );
-  expect(responseForMissingAuthApiKey.status).toEqual(401);
-  expect(await responseForMissingAuthApiKey.text()).toEqual("Unauthorized");
-
-  const testRequestWrongAuthApiKey = new Request(
-    `https://test.roci.dev/api/auth/v0/invalidateForRoom`,
-    {
-      method: "post",
-      headers: createAuthAPIHeaders("WRONG_API_KEY"),
-      body: JSON.stringify({
-        roomID: testRoomID,
-      }),
-    }
-  );
-  const responseForWrongAuthApiKey = await dispatch(
-    testRequestWrongAuthApiKey,
-    new LogContext(new SilentLogger()),
-    testAuthApiKey,
-    createThrowingHandlers()
-  );
-  expect(responseForWrongAuthApiKey.status).toEqual(401);
-  expect(await responseForWrongAuthApiKey.text()).toEqual("Unauthorized");
 });
 
 test("authInvalidateAll good request", async () => {
@@ -338,54 +323,104 @@ test("authInvalidateAll good request", async () => {
 });
 
 test("authInvalidateAll request with validation errors", async () => {
-  const testRequestBadMethod = new Request(
-    `https://test.roci.dev/api/auth/v0/invalidateAll`,
-    {
+  await testMethodNotAllowedValidationError(
+    new Request(`https://test.roci.dev/api/auth/v0/invalidateAll`, {
       headers: createAuthAPIHeaders(testAuthApiKey),
       method: "put",
-    }
-  );
-  const responseForBadMethod = await dispatch(
-    testRequestBadMethod,
-    new LogContext(new SilentLogger()),
-    testAuthApiKey,
-    createThrowingHandlers()
-  );
-  expect(responseForBadMethod.status).toEqual(405);
-  expect(await responseForBadMethod.text()).toEqual(
-    'Method not allowed. Use "post".'
+    }),
+    "post"
   );
 
-  const testRequestMissingAuthApiKey = new Request(
-    `https://test.roci.dev/api/auth/v0/invalidateAll`,
+  await testApiKeyValidationErrors(
+    new Request(`https://test.roci.dev/api/auth/v0/invalidateAll`, {
+      method: "post",
+    })
+  );
+});
+
+test("authRevalidateConnections good request", async () => {
+  const testRequest = new Request(
+    `https://test.roci.dev/api/auth/v0/revalidateConnections`,
     {
+      headers: createAuthAPIHeaders(testAuthApiKey),
       method: "post",
     }
   );
-  const responseForMissingAuthApiKey = await dispatch(
-    testRequestMissingAuthApiKey,
+  const testResponse = new Response("");
+  const response = await dispatch(
+    testRequest,
     new LogContext(new SilentLogger()),
     testAuthApiKey,
-    createThrowingHandlers()
-  );
-  expect(responseForMissingAuthApiKey.status).toEqual(401);
-  expect(await responseForMissingAuthApiKey.text()).toEqual("Unauthorized");
-
-  const testRequestWrongAuthApiKey = new Request(
-    `https://test.roci.dev/api/auth/v0/invalidateAll`,
     {
-      method: "post",
-      headers: createAuthAPIHeaders("WRONG_API_KEY"),
+      ...createThrowingHandlers(),
+      authRevalidateConnections: (
+        _lc: LogContext,
+        request: Request,
+        body: undefined
+      ) => {
+        expect(request).toBe(testRequest);
+        expect(body).toBeUndefined();
+        return Promise.resolve(testResponse);
+      },
     }
   );
-  const responseForWrongAuthApiKey = await dispatch(
-    testRequestWrongAuthApiKey,
+  expect(response).toBe(testResponse);
+});
+
+test("authRevalidateConnections request with validation errors", async () => {
+  await testMethodNotAllowedValidationError(
+    new Request(`https://test.roci.dev/api/auth/v0/revalidateConnections`, {
+      headers: createAuthAPIHeaders(testAuthApiKey),
+      method: "put",
+    }),
+    "post"
+  );
+
+  await testApiKeyValidationErrors(
+    new Request(`https://test.roci.dev/api/auth/v0/revalidateConnections`, {
+      method: "post",
+    })
+  );
+});
+
+test("authConnections good request", async () => {
+  const testRequest = new Request(
+    `https://test.roci.dev/api/auth/v0/connections`,
+    {
+      headers: createAuthAPIHeaders(testAuthApiKey),
+      method: "get",
+    }
+  );
+  const testResponse = new Response("");
+  const response = await dispatch(
+    testRequest,
     new LogContext(new SilentLogger()),
     testAuthApiKey,
-    createThrowingHandlers()
+    {
+      ...createThrowingHandlers(),
+      authConnections: (_lc: LogContext, request: Request, body: undefined) => {
+        expect(request).toBe(testRequest);
+        expect(body).toBeUndefined();
+        return Promise.resolve(testResponse);
+      },
+    }
   );
-  expect(responseForWrongAuthApiKey.status).toEqual(401);
-  expect(await responseForWrongAuthApiKey.text()).toEqual("Unauthorized");
+  expect(response).toBe(testResponse);
+});
+
+test("authConnections request with validation errors", async () => {
+  await testMethodNotAllowedValidationError(
+    new Request(`https://test.roci.dev/api/auth/v0/connections`, {
+      headers: createAuthAPIHeaders(testAuthApiKey),
+      method: "post",
+    }),
+    "get"
+  );
+  await testApiKeyValidationErrors(
+    new Request(`https://test.roci.dev/api/auth/v0/connections`, {
+      method: "get",
+    })
+  );
 });
 
 test("auth api returns 401 for all requests when authApiKey is undefined", async () => {
@@ -420,6 +455,18 @@ test("auth api returns 401 for all requests when authApiKey is undefined", async
   await testUnauthorizedWhenAuthApiKeyIsUndefined(
     new Request(`https://test.roci.dev/api/auth/v0/invalidateAll`, {
       method: "post",
+      headers: createAuthAPIHeaders(testAuthApiKey),
+    })
+  );
+  await testUnauthorizedWhenAuthApiKeyIsUndefined(
+    new Request(`https://test.roci.dev/api/auth/v0/revalidateConnections`, {
+      method: "post",
+      headers: createAuthAPIHeaders(testAuthApiKey),
+    })
+  );
+  await testUnauthorizedWhenAuthApiKeyIsUndefined(
+    new Request(`https://test.roci.dev/api/auth/v0/connections`, {
+      method: "get",
       headers: createAuthAPIHeaders(testAuthApiKey),
     })
   );

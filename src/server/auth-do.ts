@@ -10,10 +10,14 @@ import { version } from "../util/version.js";
 import { AuthHandler, UserData, USER_DATA_HEADER_NAME } from "./auth.js";
 import { dispatch } from "./dispatch.js";
 import { RWLock } from "@rocicorp/lock";
-import type {
-  InvalidateForRoom,
-  InvalidateForUser,
+import {
+  ConnectionsResponse,
+  connectionsResponseSchema,
+  InvalidateForRoomRequest,
+  InvalidateForUserRequest,
 } from "../protocol/api/auth.js";
+import * as s from "superstruct";
+import { createAuthAPIHeaders } from "./auth-api-headers.js";
 
 export interface AuthDOOptions {
   roomDO: DurableObjectNamespace;
@@ -23,7 +27,11 @@ export interface AuthDOOptions {
   logger: Logger;
   logLevel: LogLevel;
 }
-
+export type ConnectionKey = {
+  userID: string;
+  roomID: string;
+  clientID: string;
+};
 export type ConnectionRecord = {
   connectTimestamp: number;
 };
@@ -124,7 +132,7 @@ export class BaseAuthDO implements DurableObject {
       }
 
       // Record the connection in DO storage
-      const connectionKey = toConnectionKey({
+      const connectionKey = connectionKeyToString({
         userID: userData.userID,
         roomID,
         clientID,
@@ -170,14 +178,14 @@ export class BaseAuthDO implements DurableObject {
   async authInvalidateForUser(
     lc: LogContext,
     request: Request,
-    { userID }: InvalidateForUser
+    { userID }: InvalidateForUserRequest
   ): Promise<Response> {
     lc.debug?.(`authInvalidateForUser ${userID} waiting for lock.`);
     return this._lock.withWrite(async () => {
       lc.debug?.("got lock.");
       const connectionKeys = (
         await this._state.storage.list({
-          prefix: toConnectionKeyUserPrefix(userID),
+          prefix: getConnectionKeyStringUserPrefix(userID),
         })
       ).keys();
       // The requests to the Room DOs must be completed inside the write lock
@@ -194,7 +202,7 @@ export class BaseAuthDO implements DurableObject {
   async authInvalidateForRoom(
     lc: LogContext,
     request: Request,
-    { roomID }: InvalidateForRoom
+    { roomID }: InvalidateForRoomRequest
   ): Promise<Response> {
     lc.debug?.(`authInvalidateForRoom ${roomID} waiting for lock.`);
     return this._lock.withWrite(async () => {
@@ -233,23 +241,113 @@ export class BaseAuthDO implements DurableObject {
     });
   }
 
+  async authRevalidateConnections(lc: LogContext): Promise<Response> {
+    lc.info?.(`Starting auth revalidation.`);
+    const connectionRecords = await this._state.storage.list({
+      prefix: CONNECTION_KEY_PREFIX,
+    });
+    lc.info?.(`Revalidating ${connectionRecords.size} ConnectionRecords.`);
+    const authApiKey = this._authApiKey;
+    if (authApiKey === undefined) {
+      return new Response("Unauthorized", {
+        status: 401,
+      });
+    }
+    const connectionKeyStringsByRoomID = new Map<string, Set<string>>();
+    for (const keyString of connectionRecords.keys()) {
+      const connectionKey = connectionKeyFromString(keyString);
+      if (!connectionKey) {
+        lc.error?.("Failed to parse connection key", keyString);
+        continue;
+      }
+      const { roomID } = connectionKey;
+      let keyStringSet = connectionKeyStringsByRoomID.get(roomID);
+      if (!keyStringSet) {
+        keyStringSet = new Set();
+        connectionKeyStringsByRoomID.set(roomID, keyStringSet);
+      }
+      keyStringSet.add(keyString);
+    }
+    let deleteCount = 0;
+    for (const [
+      roomID,
+      connectionKeyStringsForRoomID,
+    ] of connectionKeyStringsByRoomID) {
+      lc.debug?.(`revalidating connections for ${roomID} waiting for lock.`);
+      await this._lock.withWrite(async () => {
+        lc.debug?.("got lock.");
+        const id = this._roomDO.idFromName(roomID);
+        const stub = this._roomDO.get(id);
+        const response = await stub.fetch(
+          new Request(
+            "https://unused-reflect-room-do.dev/api/auth/v0/connections",
+            {
+              headers: createAuthAPIHeaders(authApiKey),
+            }
+          )
+        );
+        let connectionsResponse: ConnectionsResponse | undefined;
+        try {
+          const responseJson = await response.json();
+          s.assert(responseJson, connectionsResponseSchema);
+          connectionsResponse = responseJson;
+        } catch (e) {
+          lc.error?.("Bad api/auth/v0/connections response from roomDO");
+        }
+        if (connectionsResponse) {
+          const openConnectionKeyStrings = new Set();
+          for (const { userID, clientID } of connectionsResponse) {
+            openConnectionKeyStrings.add(
+              connectionKeyToString({
+                roomID,
+                userID,
+                clientID,
+              })
+            );
+          }
+          const deletes = [];
+          for (const keyString of connectionKeyStringsForRoomID) {
+            if (!openConnectionKeyStrings.has(keyString)) {
+              deletes.push([keyString, this._state.storage.delete(keyString)]);
+            }
+          }
+          for (const [keyString, del] of deletes) {
+            try {
+              await del;
+              deleteCount++;
+            } catch (e) {
+              lc.error?.(
+                `Failed to delete connection record with key ${keyString}.`,
+                e
+              );
+            }
+          }
+        }
+      });
+    }
+    lc.info?.(
+      `Revalidated ${connectionRecords.size} ConnectionRecords, deleted ${deleteCount} ConnectionRecords.`
+    );
+    return new Response("Complete", { status: 200 });
+  }
+
   private async _forwardInvalidateRequest(
     lc: LogContext,
     invalidateRequestName: string,
     request: Request,
-    connectionKeys: string[]
+    connectionKeyStrings: string[]
   ): Promise<Response> {
-    const connections = connectionKeys.map((key) => {
-      const connection = fromConnectionKey(key);
-      if (!connection) {
-        lc.error?.("Failed to parse connection key", key);
+    const connectionKeys = connectionKeyStrings.map((keyString) => {
+      const connectionKey = connectionKeyFromString(keyString);
+      if (!connectionKey) {
+        lc.error?.("Failed to parse connection key", keyString);
       }
-      return connection;
+      return connectionKey;
     });
     const roomIDSet = new Set<string>();
-    for (const connection of connections) {
-      if (connection) {
-        roomIDSet.add(connection.roomID);
+    for (const connectionKey of connectionKeys) {
+      if (connectionKey) {
+        roomIDSet.add(connectionKey.roomID);
       }
     }
 
@@ -287,25 +385,19 @@ export class BaseAuthDO implements DurableObject {
 
 const CONNECTION_KEY_PREFIX = "connection/";
 
-function toConnectionKey(connection: {
-  userID: string;
-  roomID: string;
-  clientID: string;
-}): string {
+function connectionKeyToString(key: ConnectionKey): string {
   return `${CONNECTION_KEY_PREFIX}${encodeURIComponent(
-    connection.userID
-  )}/${encodeURIComponent(connection.roomID)}/${encodeURIComponent(
-    connection.clientID
-  )}/`;
+    key.userID
+  )}/${encodeURIComponent(key.roomID)}/${encodeURIComponent(key.clientID)}/`;
 }
 
-function toConnectionKeyUserPrefix(userID: string): string {
+function getConnectionKeyStringUserPrefix(userID: string): string {
   return `${CONNECTION_KEY_PREFIX}${encodeURIComponent(userID)}/`;
 }
 
-export function fromConnectionKey(
+export function connectionKeyFromString(
   key: string
-): { userID: string; roomID: string; clientID: string } | undefined {
+): ConnectionKey | undefined {
   if (!key.startsWith(CONNECTION_KEY_PREFIX)) {
     return undefined;
   }

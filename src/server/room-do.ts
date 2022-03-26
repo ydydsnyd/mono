@@ -20,7 +20,8 @@ import { handleMessage } from "./message.js";
 import { randomID } from "../util/rand.js";
 import { version } from "../util/version.js";
 import { dispatch } from "./dispatch.js";
-import type { InvalidateForUser } from "../protocol/api/auth.js";
+import type { InvalidateForUserRequest } from "../protocol/api/auth.js";
+import { closeConnections, getConnections } from "./connections.js";
 
 export type Now = () => number;
 
@@ -100,7 +101,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   async authInvalidateForUser(
     lc: LogContext,
     _request: Request,
-    { userID }: InvalidateForUser
+    { userID }: InvalidateForUserRequest
   ): Promise<Response> {
     lc.debug?.(
       `Closing user ${userID}'s connections fulfilling auth api invalidateForUser request.`
@@ -132,16 +133,18 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     return new Response("Success", { status: 200 });
   }
 
-  private async _closeConnections(
+  async authConnections(): Promise<Response> {
+    // Note this intentionally does not acquire this._lock, as it is
+    // unnecessary and can add latency.
+    return new Response(JSON.stringify(getConnections(this._clients)));
+  }
+
+  private _closeConnections(
     predicate: (clientState: ClientState) => boolean
-  ) {
-    await this._lock.withLock(async () => {
-      for (const clientState of this._clients.values()) {
-        if (predicate(clientState)) {
-          clientState.socket.close();
-        }
-      }
-    });
+  ): Promise<void> {
+    return this._lock.withLock(() =>
+      closeConnections(this._clients, predicate)
+    );
   }
 
   private _handleMessage = async (

@@ -9,7 +9,7 @@ import {
   TestDurableObjectStub,
 } from "./do-test-utils.js";
 import { BaseAuthDO, ConnectionRecord } from "./auth-do.js";
-import { createAuthAPIHeaders } from "./auth-api-test-utils.js";
+import { createAuthAPIHeaders } from "./auth-api-headers.js";
 
 const TEST_AUTH_API_KEY = "TEST_REFLECT_AUTH_API_KEY_TEST";
 const { authDO } = getMiniflareBindings();
@@ -774,4 +774,197 @@ test("authInvalidateAll when any request to roomDOs returns error response", asy
   expect(await response.text()).toEqual(
     "Test authInvalidateAll Internal Server Error Msg"
   );
+});
+
+test("revalidateConnections", async () => {
+  const testRequest = new Request(
+    `https://test.roci.dev/api/auth/v0/revalidateConnections`,
+    {
+      headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
+      method: "post",
+    }
+  );
+
+  const storage = await getMiniflareDurableObjectStorage(authDOID);
+  const state = new TestDurableObjectState(authDOID, storage);
+  await storage.put("connection/testUserID1/testRoomID1/testClientID1/", {
+    connectTimestamp: 1000,
+  });
+  await storage.put("connection/testUserID1/testRoomID1/testClientID2/", {
+    connectTimestamp: 1000,
+  });
+  await storage.put("connection/testUserID2/testRoomID1/testClientID1/", {
+    connectTimestamp: 1000,
+  });
+  await storage.put("connection/testUserID1/testRoomID2/testClientID1/", {
+    connectTimestamp: 1000,
+  });
+  await storage.put("connection/testUserID2/testRoomID3/testClientID1/", {
+    connectTimestamp: 1000,
+  });
+  await storage.put("connection/testUserID3/testRoomID3/testClientID1/", {
+    connectTimestamp: 1000,
+  });
+
+  const roomDORequestCountsByRoomID = new Map();
+  const testRoomDO: DurableObjectNamespace = {
+    ...createTestDurableObjectNamespace(),
+    idFromName: (name: string) => {
+      return new TestDurableObjectId(name);
+    },
+    get: (id: DurableObjectId) => {
+      const { name: roomID } = id;
+      return new TestDurableObjectStub(id, async (request: Request) => {
+        roomDORequestCountsByRoomID.set(
+          roomID,
+          (roomDORequestCountsByRoomID.get(roomID) || 0) + 1
+        );
+        expect(request.url).toEqual(
+          "https://unused-reflect-room-do.dev/api/auth/v0/connections"
+        );
+        switch (roomID) {
+          case "testRoomID1":
+            return new Response(
+              JSON.stringify([
+                { userID: "testUserID1", clientID: "testClientID1" },
+                { userID: "testUserID2", clientID: "testClientID1" },
+              ])
+            );
+          case "testRoomID2":
+            return new Response(
+              JSON.stringify([
+                { userID: "testUserID1", clientID: "testClientID1" },
+              ])
+            );
+          case "testRoomID3":
+            return new Response(JSON.stringify([]));
+          default:
+            throw new Error(`Unexpected roomID ${roomID}`);
+        }
+      });
+    },
+  };
+
+  const authDO = new BaseAuthDO(
+    {
+      roomDO: testRoomDO,
+      state,
+      authHandler: async (_auth, _roomID) => {
+        throw new Error("Unexpected call to authHandler");
+      },
+      authApiKey: TEST_AUTH_API_KEY,
+      logger: new TestLogger(),
+      logLevel: "debug",
+    },
+    false
+  );
+
+  const response = await authDO.fetch(testRequest);
+  expect(response.status).toEqual(200);
+  expect(roomDORequestCountsByRoomID.get("testRoomID1")).toEqual(1);
+  expect(roomDORequestCountsByRoomID.get("testRoomID2")).toEqual(1);
+  expect(roomDORequestCountsByRoomID.get("testRoomID3")).toEqual(1);
+
+  expect([...(await storage.list({ prefix: "connection/" })).keys()]).toEqual([
+    "connection/testUserID1/testRoomID1/testClientID1/",
+    "connection/testUserID1/testRoomID2/testClientID1/",
+    "connection/testUserID2/testRoomID1/testClientID1/",
+  ]);
+});
+
+test("revalidateConnections continues if one roomDO returns an error", async () => {
+  const testRequest = new Request(
+    `https://test.roci.dev/api/auth/v0/revalidateConnections`,
+    {
+      headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
+      method: "post",
+    }
+  );
+
+  const storage = await getMiniflareDurableObjectStorage(authDOID);
+  const state = new TestDurableObjectState(authDOID, storage);
+  await storage.put("connection/testUserID1/testRoomID1/testClientID1/", {
+    connectTimestamp: 1000,
+  });
+  await storage.put("connection/testUserID1/testRoomID1/testClientID2/", {
+    connectTimestamp: 1000,
+  });
+  await storage.put("connection/testUserID2/testRoomID1/testClientID1/", {
+    connectTimestamp: 1000,
+  });
+  await storage.put("connection/testUserID1/testRoomID2/testClientID1/", {
+    connectTimestamp: 1000,
+  });
+  await storage.put("connection/testUserID2/testRoomID3/testClientID1/", {
+    connectTimestamp: 1000,
+  });
+  await storage.put("connection/testUserID3/testRoomID3/testClientID1/", {
+    connectTimestamp: 1000,
+  });
+
+  const roomDORequestCountsByRoomID = new Map();
+  const testRoomDO: DurableObjectNamespace = {
+    ...createTestDurableObjectNamespace(),
+    idFromName: (name: string) => {
+      return new TestDurableObjectId(name);
+    },
+    get: (id: DurableObjectId) => {
+      const { name: roomID } = id;
+      return new TestDurableObjectStub(id, async (request: Request) => {
+        roomDORequestCountsByRoomID.set(
+          roomID,
+          (roomDORequestCountsByRoomID.get(roomID) || 0) + 1
+        );
+        expect(request.url).toEqual(
+          "https://unused-reflect-room-do.dev/api/auth/v0/connections"
+        );
+        switch (roomID) {
+          case "testRoomID1":
+            return new Response(
+              "Test revalidateConnections Internal Server Error Msg",
+              {
+                status: 500,
+              }
+            );
+          case "testRoomID2":
+            return new Response(
+              JSON.stringify([
+                { userID: "testUserID1", clientID: "testClientID1" },
+              ])
+            );
+          case "testRoomID3":
+            return new Response(JSON.stringify([]));
+          default:
+            throw new Error(`Unexpected roomID ${roomID}`);
+        }
+      });
+    },
+  };
+
+  const authDO = new BaseAuthDO(
+    {
+      roomDO: testRoomDO,
+      state,
+      authHandler: async (_auth, _roomID) => {
+        throw new Error("Unexpected call to authHandler");
+      },
+      authApiKey: TEST_AUTH_API_KEY,
+      logger: new TestLogger(),
+      logLevel: "debug",
+    },
+    false
+  );
+
+  const response = await authDO.fetch(testRequest);
+  expect(response.status).toEqual(200);
+  expect(roomDORequestCountsByRoomID.get("testRoomID1")).toEqual(1);
+  expect(roomDORequestCountsByRoomID.get("testRoomID2")).toEqual(1);
+  expect(roomDORequestCountsByRoomID.get("testRoomID3")).toEqual(1);
+
+  expect([...(await storage.list({ prefix: "connection/" })).keys()]).toEqual([
+    "connection/testUserID1/testRoomID1/testClientID1/",
+    "connection/testUserID1/testRoomID1/testClientID2/",
+    "connection/testUserID1/testRoomID2/testClientID1/",
+    "connection/testUserID2/testRoomID1/testClientID1/",
+  ]);
 });

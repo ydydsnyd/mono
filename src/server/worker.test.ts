@@ -1,8 +1,7 @@
 import { test, expect } from "@jest/globals";
-import type { ReadonlyJSONObject } from "replicache";
 import type { LogLevel } from "../util/logger.js";
 import { Mocket, TestLogger } from "../util/test-utils.js";
-import { createAuthAPIHeaders } from "./auth-api-test-utils.js";
+import { createAuthAPIHeaders } from "./auth-api-headers.js";
 import {
   createTestDurableObjectNamespace,
   TestDurableObjectId,
@@ -22,18 +21,11 @@ class TestExecutionContext implements ExecutionContext {
 }
 
 function createTestFixture(
-  requestUrl: string,
-  method = "get",
-  headers?: Headers,
-  body?: ReadonlyJSONObject
+  createTestResponse: (req: Request) => Response = () =>
+    new Response("success", { status: 200 }),
+  authApiKeyDefined = true
 ) {
-  const testRequest = new Request(requestUrl, {
-    method,
-    headers: headers || new Headers(),
-    body: JSON.stringify(body),
-  });
-
-  const authDOFetchResponses: Response[] = [];
+  const authDORequests: { req: Request; resp: Response }[] = [];
 
   const testEnv: BaseWorkerEnv = {
     authDO: {
@@ -45,38 +37,27 @@ function createTestFixture(
       get: (id: DurableObjectId) => {
         expect(id.name).toEqual("test-auth-do-id");
         return new TestDurableObjectStub(id, async (request: Request) => {
-          expect(request).toBe(testRequest);
-          const response = new Response(null, {
-            status: 101,
-            webSocket: new Mocket(),
-          });
-          authDOFetchResponses.push(response);
-          return response;
+          const testResponse = createTestResponse(request);
+          authDORequests.push({ req: request, resp: testResponse });
+          return testResponse;
         });
       },
     },
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    REFLECT_AUTH_API_KEY: TEST_AUTH_API_KEY,
+    REFLECT_AUTH_API_KEY: authApiKeyDefined ? TEST_AUTH_API_KEY : undefined,
   };
 
   return {
-    testRequest,
     testEnv,
-    authDOFetchResponses,
+    authDORequests,
   };
 }
 
 async function testForwardedToAuthDO(
-  url: string,
-  body?: ReadonlyJSONObject,
-  method = "post"
+  testRequest: Request,
+  testResponse = new Response("success", { status: 200 })
 ) {
-  const { testRequest, testEnv, authDOFetchResponses } = createTestFixture(
-    url,
-    method,
-    createAuthAPIHeaders(TEST_AUTH_API_KEY),
-    body
-  );
+  const { testEnv, authDORequests } = createTestFixture(() => testResponse);
   const worker = createWorker({
     createLogger: (_env) => new TestLogger(),
     getLogLevel: (_env) => "error",
@@ -89,35 +70,99 @@ async function testForwardedToAuthDO(
     testEnv,
     new TestExecutionContext()
   );
-  expect(authDOFetchResponses.length).toEqual(1);
-  expect(response).toBe(authDOFetchResponses[0]);
+  expect(authDORequests.length).toEqual(1);
+  expect(authDORequests[0].req).toBe(testRequest);
+  expect(authDORequests[0].resp).toBe(response);
 }
 
 test("worker forwards connect requests to authDO", async () => {
-  await testForwardedToAuthDO("ws://test.roci.dev/connect", undefined, "get");
+  await testForwardedToAuthDO(
+    new Request("ws://test.roci.dev/connect"),
+    new Response(null, {
+      status: 101,
+      webSocket: new Mocket(),
+    })
+  );
 });
 
 test("worker forwards auth api requests to authDO", async () => {
   await testForwardedToAuthDO(
-    "https://test.roci.dev/api/auth/v0/invalidateForUser",
-    { userID: "userID1" }
+    new Request("https://test.roci.dev/api/auth/v0/invalidateForUser", {
+      method: "post",
+      headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
+      body: JSON.stringify({ userID: "userID1" }),
+    })
   );
   await testForwardedToAuthDO(
-    "https://test.roci.dev/api/auth/v0/invalidateForRoom",
-    { roomID: "roomID1" }
+    new Request("https://test.roci.dev/api/auth/v0/invalidateForRoom", {
+      method: "post",
+      headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
+      body: JSON.stringify({ roomID: "roomID1" }),
+    })
   );
   await testForwardedToAuthDO(
-    "https://test.roci.dev/api/auth/v0/invalidateAll"
+    new Request("https://test.roci.dev/api/auth/v0/invalidateAll", {
+      method: "post",
+      headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
+    })
   );
 });
 
-test("logging", async () => {
-  const { testRequest, testEnv } = createTestFixture(
-    "ws://test.roci.dev/connect"
+test("on scheduled event sends api/auth/v0/revalidateConnections to AuthDO when REFLECT_AUTH_API_KEY is defined", async () => {
+  const worker = createWorker({
+    createLogger: (_env) => new TestLogger(),
+    getLogLevel: (_env) => "error",
+  });
+
+  const { testEnv, authDORequests } = createTestFixture();
+
+  if (!worker.scheduled) {
+    throw new Error("Expect scheduled to be defined");
+  }
+  await worker.scheduled(
+    { scheduledTime: 100, cron: "", noRetry: () => undefined },
+    testEnv,
+    new TestExecutionContext()
   );
+  expect(authDORequests.length).toEqual(1);
+  const { req } = authDORequests[0];
+  expect(req.method).toEqual("POST");
+  expect(req.url).toEqual(
+    "https://unused-reflect-auth-do.dev/api/auth/v0/revalidateConnections"
+  );
+  expect(req.headers.get("x-reflect-auth-api-key")).toEqual(TEST_AUTH_API_KEY);
+});
+
+test("on scheduled event does not send api/auth/v0/revalidateConnections to AuthDO when REFLECT_AUTH_API_KEY is undefined", async () => {
+  const worker = createWorker({
+    createLogger: (_env) => new TestLogger(),
+    getLogLevel: (_env) => "error",
+  });
+
+  const { testEnv, authDORequests } = createTestFixture(undefined, false);
+
+  if (!worker.scheduled) {
+    throw new Error("Expect scheduled to be defined");
+  }
+  await worker.scheduled(
+    { scheduledTime: 100, cron: "", noRetry: () => undefined },
+    testEnv,
+    new TestExecutionContext()
+  );
+  expect(authDORequests.length).toEqual(0);
+});
+
+async function testLogging(
+  fn: (
+    worker: ExportedHandler<BaseWorkerEnv>,
+    testEnv: BaseWorkerEnv,
+    testExecutionContext: ExecutionContext
+  ) => Promise<unknown>
+) {
+  const { testEnv } = createTestFixture();
 
   const waitUntilCalls: Promise<unknown>[] = [];
-  const executionContext = {
+  const testExecutionContext = {
     waitUntil: (promise: Promise<unknown>): void => {
       waitUntilCalls.push(promise);
       return;
@@ -151,16 +196,12 @@ test("logging", async () => {
     },
   });
 
-  if (!worker.fetch) {
-    throw new Error("Expect fetch to be defined");
-  }
-
   expect(createLoggerCallCount).toEqual(0);
   expect(getLogLevelCallCount).toEqual(0);
   expect(logCallCount).toEqual(0);
 
-  const response = await worker.fetch(testRequest, testEnv, executionContext);
-  expect(response.status).toEqual(101);
+  await fn(worker, testEnv, testExecutionContext);
+
   expect(createLoggerCallCount).toEqual(1);
   expect(getLogLevelCallCount).toEqual(1);
   const logCallCountAfterFirstFetch = logCallCount;
@@ -168,11 +209,34 @@ test("logging", async () => {
   expect(waitUntilCalls.length).toBe(1);
   expect(waitUntilCalls[0]).toBe(logFlushPromise);
 
-  const response2 = await worker.fetch(testRequest, testEnv, executionContext);
-  expect(response2.status).toEqual(101);
+  await fn(worker, testEnv, testExecutionContext);
+
   expect(createLoggerCallCount).toEqual(2);
   expect(getLogLevelCallCount).toEqual(2);
   expect(logCallCount).toBeGreaterThan(logCallCountAfterFirstFetch);
   expect(waitUntilCalls.length).toBe(2);
   expect(waitUntilCalls[1]).toBe(logFlushPromise);
+}
+
+test("fetch logging", async () => {
+  await testLogging(async (worker, testEnv, testExecutionContext) => {
+    const testRequest = new Request("ws://test.roci.dev/connect");
+    if (!worker.fetch) {
+      throw new Error("Expected fetch to be defined");
+    }
+    return worker.fetch(testRequest, testEnv, testExecutionContext);
+  });
+});
+
+test("scheduled logging", async () => {
+  await testLogging(async (worker, testEnv, testExecutionContext) => {
+    if (!worker.scheduled) {
+      throw new Error("Expected scheduled to be defined");
+    }
+    return worker.scheduled(
+      { scheduledTime: 100, cron: "", noRetry: () => undefined },
+      testEnv,
+      testExecutionContext
+    );
+  });
 });
