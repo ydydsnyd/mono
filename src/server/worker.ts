@@ -1,15 +1,10 @@
-import {
-  LogContext,
-  Logger,
-  LogLevel,
-  OptionalLoggerImpl,
-} from "../util/logger";
+import { LogContext, LogSink, LogLevel } from "@rocicorp/logger";
 import { randomID } from "../util/rand";
 import { createAuthAPIHeaders } from "./auth-api-headers";
 import { dispatch, paths } from "./dispatch";
 
 export interface WorkerOptions<Env extends BaseWorkerEnv> {
-  createLogger: (env: Env) => Logger;
+  getLogSink: (env: Env) => LogSink;
   getLogLevel: (env: Env) => LogLevel;
 }
 
@@ -22,13 +17,13 @@ export interface BaseWorkerEnv {
 export function createWorker<Env extends BaseWorkerEnv>(
   options: WorkerOptions<Env>
 ): ExportedHandler<Env> {
-  const { createLogger, getLogLevel } = options;
+  const { getLogSink, getLogLevel } = options;
   return {
     fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
       return withLogContext(
         env,
         ctx,
-        createLogger,
+        getLogSink,
         getLogLevel,
         (lc: LogContext) => fetch(request, env, lc)
       );
@@ -41,7 +36,7 @@ export function createWorker<Env extends BaseWorkerEnv>(
       return withLogContext(
         env,
         ctx,
-        createLogger,
+        getLogSink,
         getLogLevel,
         (lc: LogContext) => scheduled(env, lc)
       );
@@ -105,18 +100,17 @@ async function handleRequest(
 async function withLogContext<Env extends BaseWorkerEnv, R>(
   env: Env,
   ctx: ExecutionContext,
-  createLogger: (env: Env) => Logger,
+  getLogSink: (env: Env) => LogSink,
   getLogLevel: (env: Env) => LogLevel,
   fn: (lc: LogContext) => Promise<R>
 ): Promise<R> {
-  const logger = createLogger(env);
-  const optionalLogger = new OptionalLoggerImpl(logger, getLogLevel(env));
-  const lc = new LogContext(optionalLogger).addContext("Worker");
+  const logSink = getLogSink(env);
+  const lc = new LogContext(getLogLevel(env), logSink).addContext("Worker");
   try {
     return await fn(lc);
   } finally {
-    if (logger.flush) {
-      ctx.waitUntil(logger.flush());
+    if (logSink.flush) {
+      ctx.waitUntil(logSink.flush());
     }
   }
 }

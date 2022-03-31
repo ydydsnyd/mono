@@ -12,9 +12,13 @@ import {
 import type { ClientID } from "../../src/types/client-state.js";
 import { UserValue, userValueKey } from "../../src/types/user-value.js";
 import { Version, versionKey } from "../../src/types/version.js";
-import { clientMutation, clientRecord, userValue } from "../util/test-utils.js";
+import {
+  clientMutation,
+  clientRecord,
+  createSilentLogContext,
+  userValue,
+} from "../util/test-utils.js";
 import { processFrame } from "../../src/process/process-frame.js";
-import { LogContext, SilentLogger } from "../../src/util/logger.js";
 
 const { roomDO } = getMiniflareBindings();
 const id = roomDO.newUniqueId();
@@ -196,7 +200,7 @@ test("processFrame", async () => {
     }
 
     const result = await processFrame(
-      new LogContext(new SilentLogger()),
+      createSilentLogContext(),
       c.mutations,
       mutators,
       c.clients,

@@ -9,12 +9,15 @@ import {
 } from "../../src/types/client-record.js";
 import { getUserValue } from "../../src/types/user-value.js";
 import { getVersion } from "../../src/types/version.js";
-import { clientMutation, clientRecord } from "../util/test-utils.js";
+import {
+  clientMutation,
+  clientRecord,
+  createSilentLogContext,
+} from "../util/test-utils.js";
 import {
   MutatorMap,
   processMutation,
 } from "../../src/process/process-mutation.js";
-import { LogContext, SilentLogger } from "../../src/util/logger.js";
 
 const { roomDO } = getMiniflareBindings();
 const id = roomDO.newUniqueId();
@@ -109,7 +112,7 @@ test("processMutation", async () => {
     let err: string | undefined;
     try {
       await processMutation(
-        new LogContext(new SilentLogger()),
+        createSilentLogContext(),
         c.mutation,
         mutators,
         storage,

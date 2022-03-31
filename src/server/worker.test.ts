@@ -1,6 +1,6 @@
 import { test, expect } from "@jest/globals";
-import type { LogLevel } from "../util/logger.js";
-import { Mocket, TestLogger } from "../util/test-utils.js";
+import type { LogLevel } from "@rocicorp/logger";
+import { Mocket, TestLogSink } from "../util/test-utils.js";
 import { createAuthAPIHeaders } from "./auth-api-headers.js";
 import {
   createTestDurableObjectNamespace,
@@ -59,7 +59,7 @@ async function testForwardedToAuthDO(
 ) {
   const { testEnv, authDORequests } = createTestFixture(() => testResponse);
   const worker = createWorker({
-    createLogger: (_env) => new TestLogger(),
+    getLogSink: (_env) => new TestLogSink(),
     getLogLevel: (_env) => "error",
   });
   if (!worker.fetch) {
@@ -110,7 +110,7 @@ test("worker forwards auth api requests to authDO", async () => {
 
 test("on scheduled event sends api/auth/v0/revalidateConnections to AuthDO when REFLECT_AUTH_API_KEY is defined", async () => {
   const worker = createWorker({
-    createLogger: (_env) => new TestLogger(),
+    getLogSink: (_env) => new TestLogSink(),
     getLogLevel: (_env) => "error",
   });
 
@@ -135,7 +135,7 @@ test("on scheduled event sends api/auth/v0/revalidateConnections to AuthDO when 
 
 test("on scheduled event does not send api/auth/v0/revalidateConnections to AuthDO when REFLECT_AUTH_API_KEY is undefined", async () => {
   const worker = createWorker({
-    createLogger: (_env) => new TestLogger(),
+    getLogSink: (_env) => new TestLogSink(),
     getLogLevel: (_env) => "error",
   });
 
@@ -172,13 +172,13 @@ async function testLogging(
     },
   };
 
-  let createLoggerCallCount = 0;
+  let getLogSinkCallCount = 0;
   let getLogLevelCallCount = 0;
   let logCallCount = 0;
   const logFlushPromise = Promise.resolve();
   const worker = createWorker({
-    createLogger: (env) => {
-      createLoggerCallCount++;
+    getLogSink: (env) => {
+      getLogSinkCallCount++;
       expect(env).toBe(testEnv);
       return {
         log: (_level: LogLevel, ..._args: unknown[]): void => {
@@ -196,13 +196,13 @@ async function testLogging(
     },
   });
 
-  expect(createLoggerCallCount).toEqual(0);
+  expect(getLogSinkCallCount).toEqual(0);
   expect(getLogLevelCallCount).toEqual(0);
   expect(logCallCount).toEqual(0);
 
   await fn(worker, testEnv, testExecutionContext);
 
-  expect(createLoggerCallCount).toEqual(1);
+  expect(getLogSinkCallCount).toEqual(1);
   expect(getLogLevelCallCount).toEqual(1);
   const logCallCountAfterFirstFetch = logCallCount;
   expect(logCallCountAfterFirstFetch).toBeGreaterThan(0);
@@ -211,7 +211,7 @@ async function testLogging(
 
   await fn(worker, testEnv, testExecutionContext);
 
-  expect(createLoggerCallCount).toEqual(2);
+  expect(getLogSinkCallCount).toEqual(2);
   expect(getLogLevelCallCount).toEqual(2);
   expect(logCallCount).toBeGreaterThan(logCallCountAfterFirstFetch);
   expect(waitUntilCalls.length).toBe(2);

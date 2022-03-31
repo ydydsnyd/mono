@@ -1,5 +1,5 @@
 import { Lock } from "@rocicorp/lock";
-import type { LogLevel, Logger } from "./logger.js";
+import type { LogLevel, LogSink } from "@rocicorp/logger";
 
 export interface DatadogLoggerOptions {
   apiKey: string;
@@ -11,7 +11,7 @@ export interface DatadogLoggerOptions {
 
 const DD_URL = "https://http-intake.logs.datadoghq.com/api/v2/logs";
 
-export class DatadogLogger implements Logger {
+export class DatadogLogSink implements LogSink {
   private _messages: Message[] = [];
   private readonly _apiKey: string;
   private readonly _service: string | undefined;

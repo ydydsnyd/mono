@@ -10,9 +10,14 @@ import {
 import type { ClientMap } from "../../src/types/client-state.js";
 import { getUserValue, UserValue } from "../../src/types/user-value.js";
 import { getVersion, Version, versionKey } from "../../src/types/version.js";
-import { client, clientRecord, fail, mutation } from "../util/test-utils.js";
+import {
+  client,
+  clientRecord,
+  createSilentLogContext,
+  fail,
+  mutation,
+} from "../util/test-utils.js";
 import { processRoom } from "../../src/process/process-room.js";
-import { LogContext, SilentLogger } from "../../src/util/logger.js";
 
 const { roomDO } = getMiniflareBindings();
 const id = roomDO.newUniqueId();
@@ -197,7 +202,7 @@ test("processRoom", async () => {
     }
 
     const p = processRoom(
-      new LogContext(new SilentLogger()),
+      createSilentLogContext(),
       c.clients,
       mutators,
       durable,

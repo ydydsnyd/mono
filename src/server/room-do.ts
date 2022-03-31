@@ -8,12 +8,7 @@ import type {
   Socket,
 } from "../types/client-state.js";
 import { Lock } from "@rocicorp/lock";
-import {
-  Logger,
-  OptionalLoggerImpl,
-  LogContext,
-  LogLevel,
-} from "../util/logger.js";
+import { LogSink, LogContext, LogLevel } from "@rocicorp/logger";
 import { handleClose } from "./close.js";
 import { handleConnection } from "./connect.js";
 import { handleMessage } from "./message.js";
@@ -38,7 +33,7 @@ export interface RoomDOOptions<MD extends MutatorDefs> {
   mutators: MD;
   state: DurableObjectState;
   authApiKey: string | undefined;
-  logger: Logger;
+  logSink: LogSink;
   logLevel: LogLevel;
 }
 export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
@@ -51,14 +46,12 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   private _turnTimerID: ReturnType<typeof setInterval> | 0 = 0;
 
   constructor(options: RoomDOOptions<MD>) {
-    const { mutators, state, authApiKey, logger, logLevel } = options;
+    const { mutators, state, authApiKey, logSink, logLevel } = options;
 
     this._mutators = new Map([...Object.entries(mutators)]) as MutatorMap;
     this._state = state;
     this._authApiKey = authApiKey;
-    this._lc = new LogContext(
-      new OptionalLoggerImpl(logger, logLevel)
-    ).addContext("RoomDO");
+    this._lc = new LogContext(logLevel, logSink).addContext("RoomDO");
     this._lc.info?.("Starting server");
     this._lc.info?.("Version:", version);
   }

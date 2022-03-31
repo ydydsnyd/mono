@@ -10,7 +10,7 @@ import type {
   ClientState,
   Socket,
 } from "../types/client-state.js";
-import type { LogContext } from "../util/logger.js";
+import type { LogContext } from "@rocicorp/logger";
 import type { ConnectedMessage } from "../protocol/connected.js";
 import type { UserData } from "./auth.js";
 import { USER_DATA_HEADER_NAME } from "./auth.js";

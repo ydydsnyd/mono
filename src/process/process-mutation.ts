@@ -4,7 +4,7 @@ import type { Storage } from "../storage/storage.js";
 import type { ClientMutation } from "../types/client-mutation.js";
 import { getClientRecord, putClientRecord } from "../types/client-record.js";
 import { putVersion, Version } from "../types/version.js";
-import type { LogContext } from "../util/logger.js";
+import type { LogContext } from "@rocicorp/logger";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Mutator = (tx: ReplicacheTransaction, args: any) => Promise<void>;

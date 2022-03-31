@@ -1,8 +1,12 @@
 import { test, expect, beforeEach } from "@jest/globals";
 import type { Mutation } from "../protocol/push.js";
-import { client as clientUtil, Mocket, mutation } from "../util/test-utils.js";
+import {
+  client as clientUtil,
+  createSilentLogContext,
+  Mocket,
+  mutation,
+} from "../util/test-utils.js";
 import { handlePush } from "../server/push.js";
-import { LogContext, SilentLogger } from "../util/logger.js";
 import type { ClientState } from "../types/client-state.js";
 
 let s1: Mocket;
@@ -121,7 +125,7 @@ test("handlePush", async () => {
       timestamp: 42,
     };
     handlePush(
-      new LogContext(new SilentLogger()),
+      createSilentLogContext(),
       c.client,
       push,
       () => 42,

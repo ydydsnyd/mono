@@ -1,9 +1,13 @@
 import { test, expect } from "@jest/globals";
 import type { PushBody } from "../../src/protocol/push.js";
 import type { ClientID, ClientMap } from "../../src/types/client-state.js";
-import { client, Mocket, mutation } from "../util/test-utils.js";
+import {
+  client,
+  createSilentLogContext,
+  Mocket,
+  mutation,
+} from "../util/test-utils.js";
 import { handleMessage } from "../../src/server/message.js";
-import { LogContext, SilentLogger } from "../../src/util/logger.js";
 
 test("handleMessage", async () => {
   type Case = {
@@ -93,7 +97,7 @@ test("handleMessage", async () => {
     //   called = true;
     // };
     handleMessage(
-      new LogContext(new SilentLogger()),
+      createSilentLogContext(),
       clients,
       clientID,
       c.data,

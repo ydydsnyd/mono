@@ -1,4 +1,4 @@
-import type { LogContext } from "../util/logger.js";
+import type { LogContext } from "@rocicorp/logger";
 import type { ClientID, ClientMap, Socket } from "../types/client-state.js";
 
 export function handleClose(

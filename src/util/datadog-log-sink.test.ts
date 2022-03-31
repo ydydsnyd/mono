@@ -1,7 +1,7 @@
 import { jest, afterEach, beforeEach, test, expect } from "@jest/globals";
 import type { SpyInstance } from "jest-mock";
 import type { ReadonlyJSONObject } from "replicache";
-import { DatadogLogger } from "./datadog-logger.js";
+import { DatadogLogSink } from "./datadog-log-sink.js";
 
 let fetchSpy: SpyInstance<
   Promise<Response>,
@@ -25,7 +25,7 @@ function stringifyMany(...messages: ReadonlyJSONObject[]): string {
 }
 
 test("calling error also calls flush", async () => {
-  const l = new DatadogLogger({
+  const l = new DatadogLogSink({
     apiKey: "apiKey",
   });
   const flushSpy = jest
@@ -36,7 +36,7 @@ test("calling error also calls flush", async () => {
 });
 
 test("flush calls fetch", async () => {
-  const l = new DatadogLogger({
+  const l = new DatadogLogSink({
     apiKey: "apiKey",
   });
   jest.setSystemTime(1);
@@ -66,7 +66,7 @@ test("flush calls fetch", async () => {
 });
 
 test("flush calls fetch but includes logs efter the error", async () => {
-  const l = new DatadogLogger({
+  const l = new DatadogLogSink({
     apiKey: "apiKey",
   });
   jest.useFakeTimers();
@@ -99,7 +99,7 @@ test("flush calls fetch but includes logs efter the error", async () => {
 });
 
 test("flush is called 1s after a log", async () => {
-  const l = new DatadogLogger({
+  const l = new DatadogLogSink({
     apiKey: "apiKey",
     interval: 1000,
   });
@@ -123,7 +123,7 @@ test("flush is called 1s after a log", async () => {
 });
 
 test("flush is called again in case of failure", async () => {
-  const l = new DatadogLogger({
+  const l = new DatadogLogSink({
     apiKey: "apiKey",
     interval: 1000,
   });
@@ -178,7 +178,7 @@ async function microtasksUntil(p: () => boolean) {
 
 test("aborting stops timers", async () => {
   const ac = new AbortController();
-  const l = new DatadogLogger({
+  const l = new DatadogLogSink({
     apiKey: "apiKey",
     interval: 1000,
     signal: ac.signal,

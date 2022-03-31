@@ -3,9 +3,10 @@ import type {
   InvalidateForRoomRequest,
   InvalidateForUserRequest,
 } from "../protocol/api/auth";
-import { LogContext, SilentLogger } from "../util/logger";
+import type { LogContext } from "@rocicorp/logger";
 import { createAuthAPIHeaders } from "./auth-api-headers";
 import { dispatch, Handlers } from "./dispatch";
+import { createSilentLogContext } from "../util/test-utils";
 
 const testAuthApiKey = "TEST_REFLECT_AUTH_API_KEY_TEST";
 
@@ -38,7 +39,7 @@ async function testMethodNotAllowedValidationError(
 ) {
   const responseForBadMethod = await dispatch(
     testRequestBadMethod,
-    new LogContext(new SilentLogger()),
+    createSilentLogContext(),
     testAuthApiKey,
     createThrowingHandlers()
   );
@@ -52,7 +53,7 @@ async function testApiKeyValidationErrors(baseRequest: Request) {
   const testRequestMissingAuthApiKey = baseRequest.clone();
   const responseForMissingAuthApiKey = await dispatch(
     testRequestMissingAuthApiKey,
-    new LogContext(new SilentLogger()),
+    createSilentLogContext(),
     testAuthApiKey,
     createThrowingHandlers()
   );
@@ -64,7 +65,7 @@ async function testApiKeyValidationErrors(baseRequest: Request) {
   });
   const responseForWrongAuthApiKey = await dispatch(
     testRequestWrongAuthApiKey,
-    new LogContext(new SilentLogger()),
+    createSilentLogContext(),
     testAuthApiKey,
     createThrowingHandlers()
   );
@@ -78,7 +79,7 @@ async function testUnsupportedPathValidationError(
 ) {
   const response = await dispatch(
     requestWUnsupportedPath,
-    new LogContext(new SilentLogger()),
+    createSilentLogContext(),
     undefined,
     handlers
   );
@@ -112,7 +113,7 @@ test("connect good request", async () => {
   const testResponse = new Response("");
   const response = await dispatch(
     testRequest,
-    new LogContext(new SilentLogger()),
+    createSilentLogContext(),
     undefined,
     {
       ...createThrowingHandlers(),
@@ -150,7 +151,7 @@ test("authInvalidateForUser good request", async () => {
   const testResponse = new Response("");
   const response = await dispatch(
     testRequest,
-    new LogContext(new SilentLogger()),
+    createSilentLogContext(),
     testAuthApiKey,
     {
       ...createThrowingHandlers(),
@@ -204,7 +205,7 @@ test("authInvalidateForUser request with validation errors", async () => {
   );
   const responseForBadBody = await dispatch(
     testRequestBadBody,
-    new LogContext(new SilentLogger()),
+    createSilentLogContext(),
     testAuthApiKey,
     createThrowingHandlers()
   );
@@ -229,7 +230,7 @@ test("authInvalidateForRoom good request", async () => {
   const testResponse = new Response("");
   const response = await dispatch(
     testRequest,
-    new LogContext(new SilentLogger()),
+    createSilentLogContext(),
     testAuthApiKey,
     {
       ...createThrowingHandlers(),
@@ -274,7 +275,7 @@ test("authInvalidateForRoom request with validation errors", async () => {
   );
   const responseForBadBody = await dispatch(
     testRequestBadBody,
-    new LogContext(new SilentLogger()),
+    createSilentLogContext(),
     testAuthApiKey,
     createThrowingHandlers()
   );
@@ -304,7 +305,7 @@ test("authInvalidateAll good request", async () => {
   const testResponse = new Response("");
   const response = await dispatch(
     testRequest,
-    new LogContext(new SilentLogger()),
+    createSilentLogContext(),
     testAuthApiKey,
     {
       ...createThrowingHandlers(),
@@ -349,7 +350,7 @@ test("authRevalidateConnections good request", async () => {
   const testResponse = new Response("");
   const response = await dispatch(
     testRequest,
-    new LogContext(new SilentLogger()),
+    createSilentLogContext(),
     testAuthApiKey,
     {
       ...createThrowingHandlers(),
@@ -394,7 +395,7 @@ test("authConnections good request", async () => {
   const testResponse = new Response("");
   const response = await dispatch(
     testRequest,
-    new LogContext(new SilentLogger()),
+    createSilentLogContext(),
     testAuthApiKey,
     {
       ...createThrowingHandlers(),
@@ -427,7 +428,7 @@ test("auth api returns 401 for all requests when authApiKey is undefined", async
   async function testUnauthorizedWhenAuthApiKeyIsUndefined(request: Request) {
     const response = await dispatch(
       request,
-      new LogContext(new SilentLogger()),
+      createSilentLogContext(),
       undefined,
       createThrowingHandlers()
     );

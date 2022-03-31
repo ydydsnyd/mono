@@ -1,6 +1,6 @@
 import type { Socket } from "../types/client-state.js";
 import type { PongMessage } from "../protocol/pong.js";
-import type { LogContext } from "../util/logger.js";
+import type { LogContext } from "@rocicorp/logger";
 
 /**
  * handles the 'ping' upstream message by sending a pong!

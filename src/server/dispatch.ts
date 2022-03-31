@@ -5,7 +5,7 @@ import {
   invalidateForUserRequestSchema,
 } from "../protocol/api/auth";
 import { Struct, validate } from "superstruct";
-import type { LogContext } from "../util/logger";
+import type { LogContext } from "@rocicorp/logger";
 
 export type Handler<T = undefined> = (
   this: Handlers,

@@ -1,5 +1,10 @@
 import type { MutatorDefs } from "replicache";
-import { consoleLogger, Logger, LogLevel } from "../util/logger";
+import {
+  consoleLogSink,
+  LogSink,
+  LogLevel,
+  TeeLogSink,
+} from "@rocicorp/logger";
 import type { AuthHandler } from "./auth";
 import { BaseAuthDO } from "./auth-do";
 import { BaseRoomDO } from "./room-do";
@@ -11,8 +16,15 @@ export interface ReflectOptions<
 > {
   mutators: MD;
   authHandler: AuthHandler;
-  createLogger?: (env: Env) => Logger;
+  getLogSinks?: (env: Env) => LogSink[];
   getLogLevel?: (env: Env) => LogLevel;
+}
+
+function combineLogSinks(sinks: LogSink[]): LogSink {
+  if (sinks.length === 1) {
+    return sinks[0];
+  }
+  return new TeeLogSink(sinks);
 }
 
 export interface ReflectBaseEnv {
@@ -44,7 +56,7 @@ export function createReflect<
 } {
   const {
     authHandler,
-    createLogger = (_env) => consoleLogger,
+    getLogSinks = (_env) => [consoleLogSink],
     getLogLevel = (_env) => "debug",
   } = options;
 
@@ -54,7 +66,7 @@ export function createReflect<
         mutators: options.mutators,
         state,
         authApiKey: env.REFLECT_AUTH_API_KEY,
-        logger: createLogger(env),
+        logSink: combineLogSinks(getLogSinks(env)),
         logLevel: getLogLevel(env),
       });
     }
@@ -67,14 +79,14 @@ export function createReflect<
         state,
         authHandler,
         authApiKey: env.REFLECT_AUTH_API_KEY,
-        logger: createLogger(env),
+        logSink: combineLogSinks(getLogSinks(env)),
         logLevel: getLogLevel(env),
       });
     }
   };
 
   const worker = createWorker<Env>({
-    createLogger,
+    getLogSink: (env) => combineLogSinks(getLogSinks(env)),
     getLogLevel,
   });
 

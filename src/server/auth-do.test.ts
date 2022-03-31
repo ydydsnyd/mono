@@ -1,6 +1,6 @@
 import { jest, afterEach, beforeEach, test, expect } from "@jest/globals";
 import { encodeHeaderValue } from "../util/headers.js";
-import { Mocket, TestLogger } from "../util/test-utils.js";
+import { Mocket, TestLogSink } from "../util/test-utils.js";
 import { USER_DATA_HEADER_NAME } from "./auth.js";
 import {
   createTestDurableObjectNamespace,
@@ -120,7 +120,7 @@ test("connect calls authHandler and sends resolved UserData in header to Room DO
         return { userID: testUserID };
       },
       authApiKey: TEST_AUTH_API_KEY,
-      logger: new TestLogger(),
+      logSink: new TestLogSink(),
       logLevel: "debug",
     },
     false /* isMiniflare */
@@ -170,7 +170,7 @@ test("connect percent escapes components of the connection key", async () => {
         return { userID: testUserID };
       },
       authApiKey: TEST_AUTH_API_KEY,
-      logger: new TestLogger(),
+      logSink: new TestLogSink(),
       logLevel: "debug",
     },
     false /* isMiniflare */
@@ -209,7 +209,7 @@ test("connect does not set Sec-WebSocket-Protocol response header when on minifl
         return { userID: testUserID };
       },
       authApiKey: TEST_AUTH_API_KEY,
-      logger: new TestLogger(),
+      logSink: new TestLogSink(),
       logLevel: "debug",
     },
     true /* isMiniflare */
@@ -245,7 +245,7 @@ test("connect returns a 401 without calling Room DO if authHandler rejects", asy
         throw new Error("Test authHandler reject");
       },
       authApiKey: TEST_AUTH_API_KEY,
-      logger: new TestLogger(),
+      logSink: new TestLogSink(),
       logLevel: "debug",
     },
     false
@@ -277,7 +277,7 @@ test("connect returns a 401 without calling Room DO if Sec-WebSocket-Protocol he
         throw new Error("Unexpected call to authHandler");
       },
       authApiKey: TEST_AUTH_API_KEY,
-      logger: new TestLogger(),
+      logSink: new TestLogSink(),
       logLevel: "debug",
     },
     false
@@ -344,7 +344,7 @@ test("authInvalidateForUser when requests to roomDOs are successful", async () =
         throw new Error("Unexpected call to authHandler");
       },
       authApiKey: TEST_AUTH_API_KEY,
-      logger: new TestLogger(),
+      logSink: new TestLogSink(),
       logLevel: "debug",
     },
     false
@@ -422,7 +422,7 @@ test("authInvalidateForUser when connection ids have chars that need to be perce
         throw new Error("Unexpected call to authHandler");
       },
       authApiKey: TEST_AUTH_API_KEY,
-      logger: new TestLogger(),
+      logSink: new TestLogSink(),
       logLevel: "debug",
     },
     false
@@ -496,7 +496,7 @@ test("authInvalidateForUser when any request to roomDOs returns error response",
         throw new Error("Unexpected call to authHandler");
       },
       authApiKey: TEST_AUTH_API_KEY,
-      logger: new TestLogger(),
+      logSink: new TestLogSink(),
       logLevel: "debug",
     },
     false
@@ -552,7 +552,7 @@ test("authInvalidateForRoom when request to roomDO is successful", async () => {
         throw new Error("Unexpected call to authHandler");
       },
       authApiKey: TEST_AUTH_API_KEY,
-      logger: new TestLogger(),
+      logSink: new TestLogSink(),
       logLevel: "debug",
     },
     false
@@ -605,7 +605,7 @@ test("authInvalidateForRoom when request to roomDO returns error response", asyn
         throw new Error("Unexpected call to authHandler");
       },
       authApiKey: TEST_AUTH_API_KEY,
-      logger: new TestLogger(),
+      logSink: new TestLogSink(),
       logLevel: "debug",
     },
     false
@@ -677,7 +677,7 @@ test("authInvalidateAll when requests to roomDOs are successful", async () => {
         throw new Error("Unexpected call to authHandler");
       },
       authApiKey: TEST_AUTH_API_KEY,
-      logger: new TestLogger(),
+      logSink: new TestLogSink(),
       logLevel: "debug",
     },
     false
@@ -757,7 +757,7 @@ test("authInvalidateAll when any request to roomDOs returns error response", asy
         throw new Error("Unexpected call to authHandler");
       },
       authApiKey: TEST_AUTH_API_KEY,
-      logger: new TestLogger(),
+      logSink: new TestLogSink(),
       logLevel: "debug",
     },
     false
@@ -853,7 +853,7 @@ async function createRevalidateConnectionsTestFixture() {
         throw new Error("Unexpected call to authHandler");
       },
       authApiKey: TEST_AUTH_API_KEY,
-      logger: new TestLogger(),
+      logSink: new TestLogSink(),
       logLevel: "debug",
     },
     false
@@ -977,7 +977,7 @@ test("revalidateConnections continues if one roomDO returns an error", async () 
         throw new Error("Unexpected call to authHandler");
       },
       authApiKey: TEST_AUTH_API_KEY,
-      logger: new TestLogger(),
+      logSink: new TestLogSink(),
       logLevel: "debug",
     },
     false

@@ -1,5 +1,5 @@
 import { test, expect } from "@jest/globals";
-import { TestLogger } from "../util/test-utils.js";
+import { TestLogSink } from "../util/test-utils.js";
 import { version } from "../util/version.js";
 import { BaseRoomDO } from "./room-do.js";
 
@@ -8,19 +8,19 @@ test("foo", () => {
 });
 
 test("Logs version during construction", async () => {
-  const testLogger = new TestLogger();
+  const testLogSink = new TestLogSink();
   new BaseRoomDO({
     mutators: {},
     state: {} as DurableObjectState,
     authApiKey: undefined,
-    logger: testLogger,
+    logSink: testLogSink,
     logLevel: "info",
   });
-  expect(testLogger.messages).toEqual([
+  expect(testLogSink.messages).toEqual([
     ["info", "RoomDO", "Starting server"],
     ["info", "RoomDO", "Version:", version],
   ]);
-  expect(testLogger.messages[1][3]).toMatch(/^\d+\.\d+\.\d+/);
+  expect(testLogSink.messages[1][3]).toMatch(/^\d+\.\d+\.\d+/);
 });
 
 /*

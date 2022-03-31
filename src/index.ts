@@ -4,7 +4,11 @@ export {
   ReflectBaseEnv,
 } from "./server/reflect.js";
 export type { AuthHandler, UserData } from "./server/auth.js";
-export { consoleLogger, type Logger } from "./util/logger.js";
-export { DatadogLogger } from "./util/datadog-logger.js";
-export { TeeLogger } from "./util/tee-logger.js";
+export {
+  consoleLogSink,
+  TeeLogSink,
+  type LogSink,
+  type LogLevel,
+} from "@rocicorp/logger";
+export { DatadogLogSink } from "./util/datadog-log-sink.js";
 export { version } from "./util/version.js";

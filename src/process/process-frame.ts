@@ -1,3 +1,4 @@
+import type { LogContext } from "@rocicorp/logger";
 import { EntryCache } from "../storage/entry-cache.js";
 import { unwrapPatch } from "../storage/replicache-transaction.js";
 import type { Storage } from "../storage/storage.js";
@@ -6,7 +7,6 @@ import type { ClientPokeBody } from "../types/client-poke-body.js";
 import { getClientRecord, putClientRecord } from "../types/client-record.js";
 import type { ClientID } from "../types/client-state.js";
 import { getVersion } from "../types/version.js";
-import type { LogContext } from "../util/logger.js";
 import { must } from "../util/must.js";
 import { MutatorMap, processMutation } from "./process-mutation.js";
 //import { GapTracker } from "../util/gap-tracker.js";

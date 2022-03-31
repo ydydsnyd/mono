@@ -1,10 +1,9 @@
 import { test, expect } from "@jest/globals";
-import { LogContext, SilentLogger } from "../util/logger";
-import { Mocket } from "../util/test-utils";
+import { createSilentLogContext, Mocket } from "../util/test-utils";
 import { handleClose } from "./close";
 
 test("handleClose deletes client map entry for client id if socket matches", () => {
-  const lc = new LogContext(new SilentLogger());
+  const lc = createSilentLogContext();
   const client1ID = "clientID1";
   const client1Socket = new Mocket();
   const client2ID = "clientID2";
@@ -37,7 +36,7 @@ test("handleClose deletes client map entry for client id if socket matches", () 
 });
 
 test("handleClose does not delete client map entry for client id if socket does not match", () => {
-  const lc = new LogContext(new SilentLogger());
+  const lc = createSilentLogContext();
   const client1ID = "clientID1";
   const client1Socket1 = new Mocket();
   const client1Socket2 = new Mocket();

@@ -1,5 +1,6 @@
 // Processes zero or more mutations against a room, returning necessary pokes
 
+import type { LogContext } from "@rocicorp/logger";
 import { fastForwardRoom } from "../ff/fast-forward.js";
 import { DurableStorage } from "../storage/durable-storage.js";
 import { EntryCache } from "../storage/entry-cache.js";
@@ -7,7 +8,6 @@ import type { ClientPokeBody } from "../types/client-poke-body.js";
 import { getClientRecord, putClientRecord } from "../types/client-record.js";
 import type { ClientID, ClientMap } from "../types/client-state.js";
 import { getVersion, putVersion } from "../types/version.js";
-import type { LogContext } from "../util/logger.js";
 import { must } from "../util/must.js";
 import { generateMergedMutations } from "./generate-merged-mutations.js";
 import { processFrame } from "./process-frame.js";

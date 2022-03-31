@@ -1,11 +1,6 @@
 import { encodeHeaderValue } from "../util/headers.js";
 import { randomID } from "../util/rand.js";
-import {
-  Logger,
-  OptionalLoggerImpl,
-  LogContext,
-  LogLevel,
-} from "../util/logger.js";
+import { LogSink, LogContext, LogLevel } from "@rocicorp/logger";
 import { version } from "../util/version.js";
 import { AuthHandler, UserData, USER_DATA_HEADER_NAME } from "./auth.js";
 import { dispatch, paths } from "./dispatch.js";
@@ -24,7 +19,7 @@ export interface AuthDOOptions {
   state: DurableObjectState;
   authHandler: AuthHandler;
   authApiKey: string | undefined;
-  logger: Logger;
+  logSink: LogSink;
   logLevel: LogLevel;
 }
 export type ConnectionKey = {
@@ -49,15 +44,13 @@ export class BaseAuthDO implements DurableObject {
     options: AuthDOOptions,
     isMiniflare = typeof MINIFLARE !== "undefined"
   ) {
-    const { roomDO, state, authHandler, authApiKey, logger, logLevel } =
+    const { roomDO, state, authHandler, authApiKey, logSink, logLevel } =
       options;
     this._roomDO = roomDO;
     this._state = state;
     this._authHandler = authHandler;
     this._authApiKey = authApiKey;
-    this._lc = new LogContext(
-      new OptionalLoggerImpl(logger, logLevel)
-    ).addContext("AuthDO");
+    this._lc = new LogContext(logLevel, logSink).addContext("AuthDO");
     this._isMiniflare = isMiniflare;
     this._lock = new RWLock();
     this._lc.info?.("Starting server");

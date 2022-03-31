@@ -6,9 +6,13 @@ import {
 } from "../../src/types/client-record.js";
 import { getEntry, putEntry } from "../../src/db/data.js";
 import type { ClientMap, Socket } from "../../src/types/client-state.js";
-import { client, clientRecord, Mocket } from "../util/test-utils.js";
+import {
+  client,
+  clientRecord,
+  createSilentLogContext,
+  Mocket,
+} from "../util/test-utils.js";
 import { handleConnection } from "../../src/server/connect.js";
-import { LogContext, SilentLogger } from "../../src/util/logger.js";
 import { USER_DATA_HEADER_NAME } from "./auth.js";
 import { encodeHeaderValue } from "../util/headers.js";
 
@@ -200,7 +204,7 @@ test("handleConnection", async () => {
     const clients = c.existingClients;
 
     await handleConnection(
-      new LogContext(new SilentLogger()),
+      createSilentLogContext(),
       mocket,
       durable,
       new URL(c.url),

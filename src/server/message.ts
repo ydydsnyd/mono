@@ -1,6 +1,6 @@
 import { Upstream, upstreamSchema } from "../protocol/up.js";
 import type { ClientID, ClientMap, Socket } from "../types/client-state.js";
-import type { LogContext } from "../util/logger.js";
+import type { LogContext } from "@rocicorp/logger";
 import { sendError } from "../util/socket.js";
 import { handlePush, type ProcessUntilDone } from "./push.js";
 import { handlePing } from "./ping.js";

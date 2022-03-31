@@ -1,3 +1,4 @@
+import { LogContext, LogLevel, LogSink } from "@rocicorp/logger";
 import type { JSONType } from "../../src/protocol/json.js";
 import type { Mutation } from "../../src/protocol/push.js";
 import type { ClientMutation } from "../../src/types/client-mutation.js";
@@ -7,7 +8,6 @@ import type {
   Socket,
 } from "../../src/types/client-state.js";
 import type { NullableVersion } from "../../src/types/version.js";
-import type { Logger, LogLevel } from "./logger.js";
 
 export function client(
   id: ClientID,
@@ -95,10 +95,20 @@ export function fail(s: string): never {
   throw new Error(s);
 }
 
-export class TestLogger implements Logger {
+export class TestLogSink implements LogSink {
   messages: [LogLevel, ...unknown[]][] = [];
 
   log(level: LogLevel, ...args: unknown[]): void {
     this.messages.push([level, ...args]);
   }
+}
+
+export class SilentLogSink implements LogSink {
+  log(_level: LogLevel, ..._args: unknown[]): void {
+    return;
+  }
+}
+
+export function createSilentLogContext() {
+  return new LogContext("error", new SilentLogSink());
 }

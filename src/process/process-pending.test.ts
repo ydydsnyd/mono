@@ -13,12 +13,12 @@ import { getVersion, putVersion, Version } from "../../src/types/version.js";
 import {
   client,
   clientRecord,
+  createSilentLogContext,
   fail,
   Mocket,
   mutation,
 } from "../util/test-utils.js";
 import { processPending } from "../../src/process/process-pending.js";
-import { LogContext, SilentLogger } from "../../src/util/logger.js";
 
 const { roomDO } = getMiniflareBindings();
 const id = roomDO.newUniqueId();
@@ -237,7 +237,7 @@ test("processPending", async () => {
       (clientState.socket as Mocket).log.length = 0;
     }
     const p = processPending(
-      new LogContext(new SilentLogger()),
+      createSilentLogContext(),
       durable,
       c.clients,
       mutators,

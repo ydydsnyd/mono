@@ -4,7 +4,7 @@
 import type { ClientMap } from "../types/client-state.js";
 import type { PokeMessage } from "../protocol/poke.js";
 import type { ClientPokeBody } from "../types/client-poke-body.js";
-import type { LogContext } from "../util/logger.js";
+import type { LogContext } from "@rocicorp/logger";
 import { must } from "../util/must.js";
 import type { MutatorMap } from "./process-mutation.js";
 import { processRoom } from "./process-room.js";

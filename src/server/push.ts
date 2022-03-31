@@ -1,6 +1,6 @@
 import type { ClientState } from "../types/client-state.js";
 import type { PushBody } from "../protocol/push.js";
-import type { LogContext } from "../util/logger.js";
+import type { LogContext } from "@rocicorp/logger";
 
 export type Now = () => number;
 export type ProcessUntilDone = () => void;

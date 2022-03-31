@@ -1,5 +1,5 @@
 import type { ClientMap } from "../types/client-state.js";
-import type { LogContext } from "../util/logger.js";
+import type { LogContext } from "@rocicorp/logger";
 
 export function handleAuthInvalidate(
   clients: ClientMap,
