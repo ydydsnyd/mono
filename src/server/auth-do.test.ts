@@ -776,7 +776,7 @@ test("authInvalidateAll when any request to roomDOs returns error response", asy
   );
 });
 
-test("revalidateConnections", async () => {
+async function createRevalidateConnectionsTestFixture() {
   const testRequest = new Request(
     `https://test.roci.dev/api/auth/v0/revalidateConnections`,
     {
@@ -858,6 +858,12 @@ test("revalidateConnections", async () => {
     },
     false
   );
+  return { authDO, testRequest, roomDORequestCountsByRoomID, storage };
+}
+
+test("revalidateConnections", async () => {
+  const { authDO, testRequest, roomDORequestCountsByRoomID, storage } =
+    await createRevalidateConnectionsTestFixture();
 
   const response = await authDO.fetch(testRequest);
   expect(response.status).toEqual(200);
@@ -867,6 +873,28 @@ test("revalidateConnections", async () => {
 
   expect([...(await storage.list({ prefix: "connection/" })).keys()]).toEqual([
     "connection/testUserID1/testRoomID1/testClientID1/",
+    "connection/testUserID1/testRoomID2/testClientID1/",
+    "connection/testUserID2/testRoomID1/testClientID1/",
+  ]);
+});
+
+test("revalidateConnections continues if one storage delete throws an error", async () => {
+  const { authDO, testRequest, roomDORequestCountsByRoomID, storage } =
+    await createRevalidateConnectionsTestFixture();
+
+  jest.spyOn(storage, "delete").mockImplementationOnce(() => {
+    throw new Error("test delete error");
+  });
+
+  const response = await authDO.fetch(testRequest);
+  expect(response.status).toEqual(200);
+  expect(roomDORequestCountsByRoomID.get("testRoomID1")).toEqual(1);
+  expect(roomDORequestCountsByRoomID.get("testRoomID2")).toEqual(1);
+  expect(roomDORequestCountsByRoomID.get("testRoomID3")).toEqual(1);
+
+  expect([...(await storage.list({ prefix: "connection/" })).keys()]).toEqual([
+    "connection/testUserID1/testRoomID1/testClientID1/",
+    "connection/testUserID1/testRoomID1/testClientID2/",
     "connection/testUserID1/testRoomID2/testClientID1/",
     "connection/testUserID2/testRoomID1/testClientID1/",
   ]);

@@ -6,7 +6,7 @@ import {
 } from "../util/logger";
 import { randomID } from "../util/rand";
 import { createAuthAPIHeaders } from "./auth-api-headers";
-import { dispatch } from "./dispatch";
+import { dispatch, paths } from "./dispatch";
 
 export interface WorkerOptions<Env extends BaseWorkerEnv> {
   createLogger: (env: Env) => Logger;
@@ -58,11 +58,11 @@ async function scheduled(env: BaseWorkerEnv, lc: LogContext): Promise<void> {
     );
     return;
   }
-  lc.info?.("Sending api/auth/v0/revalidateConnections requests to AuthDO");
+  lc.info?.(`Sending ${paths.authRevalidateConnections} request to AuthDO`);
   const resp = await sendToAuthDO(
     env,
     new Request(
-      "https://unused-reflect-auth-do.dev/api/auth/v0/revalidateConnections",
+      `https://unused-reflect-auth-do.dev${paths.authRevalidateConnections}`,
       {
         headers: createAuthAPIHeaders(env.REFLECT_AUTH_API_KEY),
         method: "POST",

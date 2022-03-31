@@ -23,6 +23,15 @@ export interface Handlers {
   authConnections?: Handler;
 }
 
+export const paths: Readonly<Record<keyof Handlers, string>> = {
+  connect: "/connect",
+  authInvalidateForUser: "/api/auth/v0/invalidateForUser",
+  authInvalidateForRoom: "/api/auth/v0/invalidateForRoom",
+  authInvalidateAll: "/api/auth/v0/invalidateAll",
+  authRevalidateConnections: "/api/auth/v0/revalidateConnections",
+  authConnections: "/api/auth/v0/connections",
+};
+
 function createUnauthorizedResponse(message = "Unauthorized"): Response {
   return new Response(message, {
     status: 401,
@@ -45,7 +54,6 @@ export function dispatch(
   lc.debug?.("Dispatching path", url.pathname);
 
   async function validateAndDispatch<T>(
-    handlerName: keyof Handlers,
     method: string,
     validateBody: (request: Request) => Promise<ValidateResult<T>>,
     handler: Handler<T> | undefined,
@@ -77,53 +85,43 @@ export function dispatch(
     if (validateResult.errorResponse) {
       return validateResult.errorResponse;
     }
-    lc.debug?.("Dispatching to handler", handlerName);
+    lc.debug?.("Calling handler");
     return handler.call(handlers, lc, request, validateResult.value);
   }
 
   switch (url.pathname) {
-    case "/connect":
+    case paths.connect:
+      return validateAndDispatch("get", noOpValidateBody, handlers.connect);
+    case paths.authInvalidateForUser:
       return validateAndDispatch(
-        "connect",
-        "get",
-        noOpValidateBody,
-        handlers.connect
-      );
-    case "/api/auth/v0/invalidateForUser":
-      return validateAndDispatch(
-        "authInvalidateForUser",
         "post",
         (request) => validateBody(request, invalidateForUserRequestSchema),
         handlers.authInvalidateForUser,
         "authApiKey"
       );
-    case "/api/auth/v0/invalidateForRoom":
+    case paths.authInvalidateForRoom:
       return validateAndDispatch(
-        "authInvalidateForRoom",
         "post",
         (request) => validateBody(request, invalidateForRoomRequestSchema),
         handlers.authInvalidateForRoom,
         "authApiKey"
       );
-    case "/api/auth/v0/invalidateAll":
+    case paths.authInvalidateAll:
       return validateAndDispatch(
-        "authInvalidateForRoom",
         "post",
         noOpValidateBody,
         handlers.authInvalidateAll,
         "authApiKey"
       );
-    case "/api/auth/v0/revalidateConnections":
+    case paths.authRevalidateConnections:
       return validateAndDispatch(
-        "authRevalidateConnections",
         "post",
         noOpValidateBody,
         handlers.authRevalidateConnections,
         "authApiKey"
       );
-    case "/api/auth/v0/connections":
+    case paths.authConnections:
       return validateAndDispatch(
-        "authConnections",
         "get",
         noOpValidateBody,
         handlers.authConnections,

@@ -8,7 +8,7 @@ import {
 } from "../util/logger.js";
 import { version } from "../util/version.js";
 import { AuthHandler, UserData, USER_DATA_HEADER_NAME } from "./auth.js";
-import { dispatch } from "./dispatch.js";
+import { dispatch, paths } from "./dispatch.js";
 import { RWLock } from "@rocicorp/lock";
 import {
   ConnectionsResponse,
@@ -243,16 +243,18 @@ export class BaseAuthDO implements DurableObject {
 
   async authRevalidateConnections(lc: LogContext): Promise<Response> {
     lc.info?.(`Starting auth revalidation.`);
-    const connectionRecords = await this._state.storage.list({
-      prefix: CONNECTION_KEY_PREFIX,
-    });
-    lc.info?.(`Revalidating ${connectionRecords.size} ConnectionRecords.`);
     const authApiKey = this._authApiKey;
     if (authApiKey === undefined) {
+      lc.info?.(
+        "Returning Unauthorized because REFLECT_AUTH_API_KEY is not defined in env."
+      );
       return new Response("Unauthorized", {
         status: 401,
       });
     }
+    const connectionRecords = await this._state.storage.list({
+      prefix: CONNECTION_KEY_PREFIX,
+    });
     const connectionKeyStringsByRoomID = new Map<string, Set<string>>();
     for (const keyString of connectionRecords.keys()) {
       const connectionKey = connectionKeyFromString(keyString);
@@ -268,6 +270,9 @@ export class BaseAuthDO implements DurableObject {
       }
       keyStringSet.add(keyString);
     }
+    lc.info?.(
+      `Revalidating ${connectionRecords.size} ConnectionRecords across ${connectionKeyStringsByRoomID.size} rooms.`
+    );
     let deleteCount = 0;
     for (const [
       roomID,
@@ -280,7 +285,7 @@ export class BaseAuthDO implements DurableObject {
         const stub = this._roomDO.get(id);
         const response = await stub.fetch(
           new Request(
-            "https://unused-reflect-room-do.dev/api/auth/v0/connections",
+            `https://unused-reflect-room-do.dev${paths.authConnections}`,
             {
               headers: createAuthAPIHeaders(authApiKey),
             }
@@ -288,39 +293,29 @@ export class BaseAuthDO implements DurableObject {
         );
         let connectionsResponse: ConnectionsResponse | undefined;
         try {
-          const responseJson = await response.json();
-          s.assert(responseJson, connectionsResponseSchema);
-          connectionsResponse = responseJson;
+          const responseJSON = await response.json();
+          s.assert(responseJSON, connectionsResponseSchema);
+          connectionsResponse = responseJSON;
         } catch (e) {
-          lc.error?.("Bad api/auth/v0/connections response from roomDO");
+          lc.error?.(`Bad ${paths.authConnections} response from roomDO`, e);
         }
         if (connectionsResponse) {
-          const openConnectionKeyStrings = new Set();
-          for (const { userID, clientID } of connectionsResponse) {
-            openConnectionKeyStrings.add(
+          const openConnectionKeyStrings = new Set(
+            connectionsResponse.map(({ userID, clientID }) =>
               connectionKeyToString({
                 roomID,
                 userID,
                 clientID,
               })
-            );
-          }
-          const deletes = [];
-          for (const keyString of connectionKeyStringsForRoomID) {
-            if (!openConnectionKeyStrings.has(keyString)) {
-              deletes.push([keyString, this._state.storage.delete(keyString)]);
-            }
-          }
-          for (const [keyString, del] of deletes) {
-            try {
-              await del;
-              deleteCount++;
-            } catch (e) {
-              lc.error?.(
-                `Failed to delete connection record with key ${keyString}.`,
-                e
-              );
-            }
+            )
+          );
+          const keysToDelete: string[] = [
+            ...connectionKeyStringsForRoomID,
+          ].filter((keyString) => !openConnectionKeyStrings.has(keyString));
+          try {
+            deleteCount += await this._state.storage.delete(keysToDelete);
+          } catch (e) {
+            lc.info?.("Failed to delete connections for roomID", roomID);
           }
         }
       });
