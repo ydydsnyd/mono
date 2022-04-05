@@ -40,6 +40,7 @@ function buildExample() {
 function buildInternal(options) {
   return build({
     bundle: true,
+    minify: true,
     sourcemap: true,
     target: "esnext",
     ...options,
