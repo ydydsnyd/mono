@@ -1,5 +1,5 @@
 import type { JSONValue, WriteTransaction } from "replicache";
-import { createReflect } from "../src/index.js";
+import { createReflect } from "../src/mod.js";
 
 const mutators = {
   async addData(tx: WriteTransaction, object: { [key: string]: JSONValue }) {

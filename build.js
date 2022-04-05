@@ -11,17 +11,8 @@ const __dirname = path.dirname(__filename);
 function buildESM() {
   return buildInternal({
     format: "esm",
-    outExtension: { ".js": ".mjs" },
-    entryPoints: [path.join(__dirname, "src", "index.ts")],
-    outdir: path.join(__dirname, "out"),
-  });
-}
-
-function buildCJS() {
-  return buildInternal({
-    format: "cjs",
-    entryPoints: [path.join(__dirname, "src", "index.ts")],
-    outdir: path.join(__dirname, "out"),
+    entryPoints: [path.join(__dirname, "src", "mod.ts")],
+    outfile: path.join(__dirname, "out/reflect.mjs"),
   });
 }
 
@@ -41,7 +32,6 @@ function buildInternal(options) {
   return build({
     bundle: true,
     minify: true,
-    sourcemap: true,
     target: "esnext",
     ...options,
   });
@@ -49,7 +39,7 @@ function buildInternal(options) {
 
 try {
   // @ts-ignore
-  await Promise.all([buildESM(), buildCJS(), buildExample()]);
+  await Promise.all([buildESM(), buildExample()]);
 } catch {
   process.exitCode = 1;
 }
