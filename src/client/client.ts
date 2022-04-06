@@ -1,5 +1,12 @@
 import {nanoid} from 'nanoid';
-import type {MutatorDefs, Poke, PullerResult, Replicache} from 'replicache';
+import {
+  MutatorDefs,
+  Poke,
+  PullerResult,
+  ReadonlyJSONValue,
+  ReadTransaction,
+  Replicache,
+} from 'replicache';
 import type {Downstream} from '../protocol/down.js';
 import type {PingMessage} from '../protocol/ping.js';
 import type {PokeBody} from '../protocol/poke.js';
@@ -11,6 +18,7 @@ import {Lock} from '../util/lock.js';
 import {LogContext} from '../util/logger.js';
 import {resolver} from '../util/resolver.js';
 import {sleep} from '../util/sleep.js';
+import type {ReflectClientOptions} from './options.js';
 
 const enum ConnectionState {
   Disconnected,
@@ -18,10 +26,11 @@ const enum ConnectionState {
   Connected,
 }
 
-export class Client<M extends MutatorDefs> {
-  private readonly _rep: Replicache<M>;
-  private readonly _socketURL: string | undefined;
-  private readonly _roomID: string;
+export class ReflectClient<MD extends MutatorDefs> {
+  private readonly _rep: Replicache<MD>;
+  private readonly _socketOrigin: string;
+  readonly userID: string;
+  readonly roomID: string;
   private readonly _l: LogContext;
 
   // Protects _handlePoke. We need pokes to be serialized, otherwise we
@@ -40,24 +49,144 @@ export class Client<M extends MutatorDefs> {
   private _lastMutationIDReceived = 0;
 
   /**
-   * Constructs a new reflect client.
-   * @param rep Instance of replicache to use.
-   * @param roomID RoomID we are in.
-   * @param socketURL URL of web socket to connect to. This should be either a ws/wss protocol URL or undefined.
-   * If undefined, we default to <scheme>://<host>:<port>/rs where host and port are the current page's host and port,
-   * and scheme is "ws" if the current page is "http" or "wss" if the current page is "https".
+   * Constructs a new Reflect client.
+   * @param options: ReflectClientOptions
    */
-  constructor(rep: Replicache<M>, roomID: string, socketURL?: string) {
-    this._rep = rep;
-    this._rep.pusher = (req: Request) => this._pusher(req);
+  constructor(options: ReflectClientOptions<MD>) {
+    if (options.userID === '') {
+      throw new Error('ReflectClientOptions.userID must not be empty.');
+    }
+    const {socketOrigin} = options;
+    if (socketOrigin) {
+      if (
+        !socketOrigin.startsWith('ws://') &&
+        !socketOrigin.startsWith('wss://')
+      ) {
+        throw new Error(
+          "ReflectClientOptions.socketOrigin must use the 'ws' or 'wss' scheme.",
+        );
+      }
+    }
 
-    this._socketURL = socketURL;
-    this._roomID = roomID;
-    this._l = new LogContext('debug').addContext('roomID', roomID);
+    this._rep = new Replicache({
+      auth: options.auth,
+      schemaVersion: options.schemaVersion,
+      logLevel: options.logLevel,
+      mutators: options.mutators,
+      name: `reflect-${options.userID}-${options.roomID}`,
+      pusher: (req: Request) => this._pusher(req),
+      // TODO: Do we need these?
+      // TODO: figure out backoff?
+      pushDelay: 0,
+      requestOptions: {
+        maxDelayMs: 0,
+        minDelayMs: 0,
+      },
+    });
+    this._rep.getAuth = options.getAuth;
+    this._socketOrigin = options.socketOrigin;
+    this.roomID = options.roomID;
+    this.userID = options.userID;
+    this._l = new LogContext('debug').addContext('roomID', options.roomID);
     this._pushTracker = new GapTracker('push', this._l);
     this._updateTracker = new GapTracker('update', this._l);
     this._timestampTracker = new GapTracker('timestamp', this._l);
     void this._watchdog();
+  }
+
+  /**
+   * The name of the IndexedDB database in which this ReflectClient't data
+   * is persisted.
+   */
+  get idbName(): string {
+    return this._rep.idbName;
+  }
+
+  /**
+   * The schema version of the data understood by this application.
+   * See [[ReflectClientOptions.schemaVersion]].
+   */
+  get schemaVersion(): string {
+    return this._rep.schemaVersion;
+  }
+
+  /**
+   * The client ID for this instance of ReflectClient. Each instance
+   * gets a unique client ID.
+   */
+  get clientID(): Promise<string> {
+    return this._rep.clientID;
+  }
+
+  /**
+   * The authorization token used when opening a WebSocket connection to
+   * the Reflect server.
+   */
+  get auth(): string {
+    return this._rep.auth;
+  }
+
+  /**
+   * The registered mutators (see [[ReflectClientOptions.mutators]]).
+   */
+  get mutate() {
+    return this._rep.mutate;
+  }
+
+  /**
+   * Whether the ReflectClient database has been closed. Once ReflectClient has
+   * been closed it no longer syncs and you can no longer read or write data out
+   * of it. After it has been closed it is pretty much useless and should not be
+   * used any more.
+   */
+  get closed(): boolean {
+    return this._rep.closed;
+  }
+
+  /**
+   * Closes this ReflectClient instance.
+   *
+   * When closed all subscriptions end and no more read or writes are allowed.
+   */
+  async close(): Promise<void> {
+    return this._rep.close();
+  }
+
+  /**
+   * Subscribe to changes to Reflect data. Every time the underlying data
+   * changes `body` is called and if the result of `body` changes compared to
+   * last time `onData` is called. The function is also called once the first
+   * time the subscription is added.
+   *
+   * This returns a function that can be used to cancel the subscription.
+   *
+   * If an error occurs in the `body` the `onError` function is called if
+   * present. Otherwise, the error is thrown.
+   */
+  subscribe<R extends ReadonlyJSONValue | undefined, E>(
+    body: (tx: ReadTransaction) => Promise<R>,
+    {
+      onData,
+      onError,
+      onDone,
+    }: {
+      onData: (result: R) => void;
+      onError?: (error: E) => void;
+      onDone?: () => void;
+    },
+  ): () => void {
+    return this._rep.subscribe(body, {
+      onData,
+      onError,
+      onDone,
+    });
+  }
+
+  /**
+   * Transactionally read Reflect data.
+   */
+  async query<R>(body: (tx: ReadTransaction) => Promise<R> | R): Promise<R> {
+    return this._rep.query(body);
   }
 
   private _onMessage = (e: MessageEvent<string>) => {
@@ -114,11 +243,10 @@ export class Client<M extends MutatorDefs> {
     // TODO if connection fails with 401 use this._rep.getAuth to
     // try to refresh this._rep.auth and then retry connection
     const ws = createSocket(
-      this._socketURL,
-      location.href,
+      this._socketOrigin,
       baseCookie,
       await this._rep.clientID,
-      this._roomID,
+      this.roomID,
       this._rep.auth,
       this._lastMutationIDReceived,
     );
@@ -258,31 +386,21 @@ async function getBaseCookie(rep: Replicache) {
 }
 
 export function createSocket(
-  socketURL: string | undefined,
-  baseURL: string | undefined,
+  socketOrigin: string,
   baseCookie: NullableVersion,
   clientID: string,
   roomID: string,
   auth: string,
   lmid: number,
 ): WebSocket {
-  let url: URL;
-  if (socketURL) {
-    url = new URL(socketURL);
-  } else {
-    assert(baseURL);
-    url = new URL(baseURL);
-    url.protocol = url.protocol.replace('http', 'ws');
-    url.pathname = '/rs';
-  }
-
+  const url = new URL(socketOrigin);
+  url.pathname = '/connect';
   const {searchParams} = url;
   searchParams.set('clientID', clientID);
   searchParams.set('roomID', roomID);
   searchParams.set('baseCookie', baseCookie === null ? '' : String(baseCookie));
   searchParams.set('ts', String(performance.now()));
   searchParams.set('lmid', String(lmid));
-
   // Pass auth to the server via the `Sec-WebSocket-Protocol` header by passing
   // it as a `protocol` to the `WebSocket` constructor.  The empty string is an
   // invalid `protocol`, and will result in an exception, so pass undefined
