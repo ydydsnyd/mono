@@ -28,7 +28,7 @@ command = "npm run build"
 [build.upload]
 format = "modules"
 dir = "out"
-main = "./example/index.mjs"
+main = "./example/index.js"
 
 [miniflare]
 durable_objects_persist = true

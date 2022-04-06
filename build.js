@@ -12,14 +12,13 @@ function buildESM() {
   return buildInternal({
     format: "esm",
     entryPoints: [path.join(__dirname, "src", "mod.ts")],
-    outfile: path.join(__dirname, "out/reflect.mjs"),
+    outfile: path.join(__dirname, "out/reflect.js"),
   });
 }
 
 function buildExample() {
   return buildInternal({
     format: "esm",
-    outExtension: { ".js": ".mjs" },
     entryPoints: [path.join(__dirname, "example", "index.ts")],
     outdir: path.join(__dirname, "out", "example"),
   });
