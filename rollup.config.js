@@ -10,5 +10,9 @@ export default {
   output: {
     file: `./out/reflect.d.ts`,
   },
-  plugins: [dts()],
+  plugins: [
+    dts({
+      respectExternal: true,
+    }),
+  ],
 };
