@@ -1,4 +1,4 @@
-import type {LogLevel, MutatorDefs} from 'replicache';
+import type {LogLevel, LogSink, MutatorDefs} from 'replicache';
 
 /**
  * Configuration for [[Reflect]].
@@ -77,6 +77,22 @@ export interface ReflectOptions<MD extends MutatorDefs> {
    * Default is `'info'`.
    */
   logLevel?: LogLevel;
+
+  /**
+   * Enables custom handling of logs.
+   *
+   * By default logs are logged to the console.  If you would like logs to be
+   * sent elsewhere (e.g. to a cloud logging service like DataDog) you can
+   * provide an array of [[LogSink]]s.  Logs at or above
+   * [[ReflectOptions.logLevel]] are sent to each of these [[LogSink]]s.
+   * If you would still like logs to go to the console, include
+   * [[consoleLogSink]] in the array.
+   *
+   * ```ts
+   * logSinks: [consoleLogSink, myCloudLogSink],
+   * ```
+   */
+  logSinks?: LogSink[];
 
   /**
    * An object used as a map to define the *mutators* for this application.

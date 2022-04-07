@@ -6,6 +6,7 @@ import {
   ReadonlyJSONValue,
   ReadTransaction,
   Replicache,
+  ReplicacheOptions,
 } from 'replicache';
 import type {Downstream} from '../protocol/down.js';
 import type {PingMessage} from '../protocol/ping.js';
@@ -67,10 +68,11 @@ export class Reflect<MD extends MutatorDefs> {
       }
     }
 
-    this._rep = new Replicache({
+    const replicacheOptions: ReplicacheOptions<MD> = {
       auth: options.auth,
       schemaVersion: options.schemaVersion,
       logLevel: options.logLevel,
+      logSinks: options.logSinks,
       mutators: options.mutators,
       name: `reflect-${options.userID}-${options.roomID}`,
       pusher: (req: Request) => this._pusher(req),
@@ -81,6 +83,16 @@ export class Reflect<MD extends MutatorDefs> {
         maxDelayMs: 0,
         minDelayMs: 0,
       },
+      licenseKey: 'reflect-client-static-key',
+    };
+    const replicacheInternalOptions = {
+      enableLicensing: false,
+      enableMutationRecovery: false,
+    };
+
+    this._rep = new Replicache({
+      ...replicacheOptions,
+      ...replicacheInternalOptions,
     });
     this._rep.getAuth = options.getAuth;
     this._socketOrigin = options.socketOrigin;
