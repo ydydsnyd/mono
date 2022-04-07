@@ -8,7 +8,7 @@ import dts from "rollup-plugin-dts";
 export default {
   input: "out/.dts/src/mod.d.ts",
   output: {
-    file: `./out/reflect.d.ts`,
+    file: `./out/reflect-server.d.ts`,
   },
   plugins: [
     dts({

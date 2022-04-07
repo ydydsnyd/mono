@@ -1,5 +1,5 @@
 import type { JSONValue, WriteTransaction } from "replicache";
-import { createReflect } from "../src/mod.js";
+import { createReflectServer } from "../src/mod.js";
 
 const mutators = {
   async addData(tx: WriteTransaction, object: { [key: string]: JSONValue }) {
@@ -25,7 +25,7 @@ const authHandler = async (auth: string, _roomID: string) => {
   throw Error("Unauthorized");
 };
 
-const { worker, RoomDO, AuthDO } = createReflect({
+const { worker, RoomDO, AuthDO } = createReflectServer({
   mutators,
   authHandler,
 });

@@ -1,7 +1,7 @@
 export {
-  createReflect,
-  ReflectOptions,
-  ReflectBaseEnv,
+  createReflectServer,
+  ReflectServerOptions,
+  ReflectServerBaseEnv,
 } from "./server/reflect.js";
 export type { AuthHandler, UserData } from "./server/auth.js";
 export {

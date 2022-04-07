@@ -10,8 +10,8 @@ import { BaseAuthDO } from "./auth-do";
 import { BaseRoomDO } from "./room-do";
 import { createWorker } from "./worker";
 
-export interface ReflectOptions<
-  Env extends ReflectBaseEnv,
+export interface ReflectServerOptions<
+  Env extends ReflectServerBaseEnv,
   MD extends MutatorDefs
 > {
   mutators: MD;
@@ -27,7 +27,7 @@ function combineLogSinks(sinks: LogSink[]): LogSink {
   return new TeeLogSink(sinks);
 }
 
-export interface ReflectBaseEnv {
+export interface ReflectServerBaseEnv {
   roomDO: DurableObjectNamespace;
   authDO: DurableObjectNamespace;
   /**
@@ -42,11 +42,11 @@ export type DurableObjectCtor<Env> = new (
   env: Env
 ) => DurableObject;
 
-export function createReflect<
-  Env extends ReflectBaseEnv,
+export function createReflectServer<
+  Env extends ReflectServerBaseEnv,
   MD extends MutatorDefs
 >(
-  options: ReflectOptions<Env, MD>
+  options: ReflectServerOptions<Env, MD>
 ): {
   worker: ExportedHandler<Env>;
   // eslint-disable-next-line @typescript-eslint/naming-convention
