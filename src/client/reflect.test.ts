@@ -1,7 +1,7 @@
 import {expect} from '@esm-bundle/chai';
 import * as sinon from 'sinon';
 import type {NullableVersion} from '../types/version.js';
-import {createSocket} from './client.js';
+import {createSocket} from './reflect.js';
 
 teardown(() => {
   sinon.restore();

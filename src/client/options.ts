@@ -1,9 +1,9 @@
 import type {LogLevel, MutatorDefs} from 'replicache';
 
 /**
- * Configuration for [[ReflectClient]].
+ * Configuration for [[Reflect]].
  */
-export interface ReflectClientOptions<MD extends MutatorDefs> {
+export interface ReflectOptions<MD extends MutatorDefs> {
   /**
    * Origin for WebSocket connections to the Reflect server. This must have a
    * `'ws'` or `'wss'` scheme.
@@ -15,8 +15,8 @@ export interface ReflectClientOptions<MD extends MutatorDefs> {
    * connection to the Reflect server.
    *
    * This token is used initially, but if an authentication error occurs
-   * it will be replaced by calling [[ReflectClientOptions.getAuth]].
-   * [[ReflectClient.auth]] will return the current token.
+   * it will be replaced by calling [[ReflectOptions.getAuth]].
+   * [[Reflect.auth]] will return the current token.
    *
    * The `authHandler` you provide to the Reflect server will be used
    * to validate this token on the server.
@@ -35,17 +35,17 @@ export interface ReflectClientOptions<MD extends MutatorDefs> {
 
   /**
    * A unique identifier for the user authenticated by
-   * [[ReflectClientOptions.auth]]. Must be non-empty.
+   * [[ReflectOptions.auth]]. Must be non-empty.
    *
    * This must be the same as the `userID` returned by the `authHandler` you
    * provide to the Reflect server.
    *
-   * For efficiency, a new ReflectClient instance will initialize its state from
-   * the persisted state of an existing ReflectClient instance with the same
+   * For efficiency, a new Reflect instance will initialize its state from
+   * the persisted state of an existing Reflect instance with the same
    * `userID`, `roomID`, domain and browser profile.
    *
-   * Mutations from one ReflectClient instance may be pushed using the
-   * [[ReflectClient.auth]] of another ReflectClient instance with the same
+   * Mutations from one Reflect instance may be pushed using the
+   * [[Reflect.auth]] of another Reflect instance with the same
    * `userID`, `roomID`, domain and browser profile.
    */
   userID: string;
@@ -53,12 +53,12 @@ export interface ReflectClientOptions<MD extends MutatorDefs> {
   /**
    * A unique identifier for the room.
    *
-   * For efficiency, a new ReflectClient instance will initialize its state from
-   * the persisted state of an existing ReflectClient instance with the same
+   * For efficiency, a new Reflect instance will initialize its state from
+   * the persisted state of an existing Reflect instance with the same
    * `userID`, `roomID`, domain and browser profile.
    *
-   * Mutations from one ReflectClient instance may be pushed using the
-   * [[ReflectClient.auth]] of another ReflectClient instance with the same
+   * Mutations from one Reflect instance may be pushed using the
+   * [[Reflect.auth]] of another Reflect instance with the same
    * `userID`, `roomID`, domain and browser profile.
    */
   roomID: string;
@@ -84,12 +84,12 @@ export interface ReflectClientOptions<MD extends MutatorDefs> {
    * *Mutators* are used to make changes to the Reflect data.
    *
    * The registered *mutations* are reflected on the
-   * [[ReflectClient.mutate|mutate]] property of the [[ReflectClient]] instance.
+   * [[Reflect.mutate|mutate]] property of the [[Reflect]] instance.
    *
    * #### Example
    *
    * ```ts
-   * const reflectClient = new ReflectClient({
+   * const reflect = new Reflect({
    *   socketOrigin: 'wss://example.com/',
    *   userID: 'user-id',
    *   roomID: 'room-id',
@@ -111,7 +111,7 @@ export interface ReflectClientOptions<MD extends MutatorDefs> {
    * This will create the function to later use:
    *
    * ```ts
-   * await reflectClient.mutate.createTodo({
+   * await reflect.mutate.createTodo({
    *   id: 1234,
    *   title: 'Make things realtime',
    *   complete: true,

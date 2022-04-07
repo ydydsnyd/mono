@@ -1,3 +1,3 @@
-export {ReflectClient} from './client/client.js';
-export type {ReflectClientOptions} from './client/options.js';
+export {Reflect} from './client/reflect.js';
+export type {ReflectOptions} from './client/options.js';
 export * from 'replicache';

@@ -18,7 +18,7 @@ import {Lock} from '../util/lock.js';
 import {LogContext} from '../util/logger.js';
 import {resolver} from '../util/resolver.js';
 import {sleep} from '../util/sleep.js';
-import type {ReflectClientOptions} from './options.js';
+import type {ReflectOptions} from './options.js';
 
 const enum ConnectionState {
   Disconnected,
@@ -26,7 +26,7 @@ const enum ConnectionState {
   Connected,
 }
 
-export class ReflectClient<MD extends MutatorDefs> {
+export class Reflect<MD extends MutatorDefs> {
   private readonly _rep: Replicache<MD>;
   private readonly _socketOrigin: string;
   readonly userID: string;
@@ -50,11 +50,10 @@ export class ReflectClient<MD extends MutatorDefs> {
 
   /**
    * Constructs a new Reflect client.
-   * @param options: ReflectClientOptions
    */
-  constructor(options: ReflectClientOptions<MD>) {
+  constructor(options: ReflectOptions<MD>) {
     if (options.userID === '') {
-      throw new Error('ReflectClientOptions.userID must not be empty.');
+      throw new Error('ReflectOptions.userID must not be empty.');
     }
     const {socketOrigin} = options;
     if (socketOrigin) {
@@ -63,7 +62,7 @@ export class ReflectClient<MD extends MutatorDefs> {
         !socketOrigin.startsWith('wss://')
       ) {
         throw new Error(
-          "ReflectClientOptions.socketOrigin must use the 'ws' or 'wss' scheme.",
+          "ReflectOptions.socketOrigin must use the 'ws' or 'wss' scheme.",
         );
       }
     }
@@ -95,8 +94,8 @@ export class ReflectClient<MD extends MutatorDefs> {
   }
 
   /**
-   * The name of the IndexedDB database in which this ReflectClient't data
-   * is persisted.
+   * The name of the IndexedDB database in which the data of this
+   * instance of Reflect is stored.
    */
   get idbName(): string {
     return this._rep.idbName;
@@ -104,14 +103,14 @@ export class ReflectClient<MD extends MutatorDefs> {
 
   /**
    * The schema version of the data understood by this application.
-   * See [[ReflectClientOptions.schemaVersion]].
+   * See [[ReflectOptions.schemaVersion]].
    */
   get schemaVersion(): string {
     return this._rep.schemaVersion;
   }
 
   /**
-   * The client ID for this instance of ReflectClient. Each instance
+   * The client ID for this instance of Reflect. Each instance
    * gets a unique client ID.
    */
   get clientID(): Promise<string> {
@@ -127,14 +126,14 @@ export class ReflectClient<MD extends MutatorDefs> {
   }
 
   /**
-   * The registered mutators (see [[ReflectClientOptions.mutators]]).
+   * The registered mutators (see [[ReflectOptions.mutators]]).
    */
   get mutate() {
     return this._rep.mutate;
   }
 
   /**
-   * Whether the ReflectClient database has been closed. Once ReflectClient has
+   * Whether this Reflect instance has been closed. Once a Reflect instance has
    * been closed it no longer syncs and you can no longer read or write data out
    * of it. After it has been closed it is pretty much useless and should not be
    * used any more.
@@ -144,7 +143,7 @@ export class ReflectClient<MD extends MutatorDefs> {
   }
 
   /**
-   * Closes this ReflectClient instance.
+   * Closes this Reflect instance.
    *
    * When closed all subscriptions end and no more read or writes are allowed.
    */
