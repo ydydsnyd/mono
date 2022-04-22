@@ -166,4 +166,7 @@ Results here:
 - [Performance Benchmarks](https://rocicorp.github.io/replicache-internal/perf-v2/)
 - [Bundle Sizes](https://rocicorp.github.io/replicache-internal/bundle-sizes)
 
-(The runner is on an ec2 instance.)
+The runner runs on an ec2 instance you can find [here](https://us-east-1.console.aws.amazon.com/ec2/v2/home?region=us-east-1#InstanceDetails:instanceId=i-0492542c9af59b8e7) or through the ec2 aws console. If you need
+to set it up again you can kill the existing runner processes, rm the old `actions-runner` directory, and
+then [follow the github instructions for installing a runner](https://github.com/rocicorp/replicache-internal/settings/actions/runners/new?arch=x64&os=linux). You will want to use `runsvc.sh install` and `runsvc.sh start` instead of `run.sh` so it
+keeps running after you detach.
