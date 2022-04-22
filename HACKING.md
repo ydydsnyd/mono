@@ -163,5 +163,5 @@ During release, below, we reset the `docs` branch to main, dropping these cherry
 We continuously track performance across a variety of benchmarks and the size of Replicache's bundle.
 Results here:
 
-- [Performance Benchmarks](https://rocicorp.github.io/replicache/perf-v2/)
-- [Bundle Sizes](https://rocicorp.github.io/replicache/bundle-sizes)
+- [Performance Benchmarks](https://rocicorp.github.io/replicache-internal/perf-v2/)
+- [Bundle Sizes](https://rocicorp.github.io/replicache-internal/bundle-sizes)
