@@ -165,3 +165,5 @@ Results here:
 
 - [Performance Benchmarks](https://rocicorp.github.io/replicache-internal/perf-v2/)
 - [Bundle Sizes](https://rocicorp.github.io/replicache-internal/bundle-sizes)
+
+(The runner is on an ec2 instance.)
