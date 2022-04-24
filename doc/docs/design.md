@@ -180,9 +180,20 @@ Imagine a simple database consisting of only a single integer set to the value `
 
 What is the correct resolution? We can't possibly know without more information about what the _intent_ of those changes were. Were they adding? setting? multiplying? clearing? In real life applications with complex data models, many developers, and many versions of the application live at once, this problem is much worse.
 
-A better strategy is to capture the _intent_ of changes. Replicache embraces this idea by recording, alongside each change, the name of the function that created the change along with the arguments it was passed. Later, when we need to rebase forks, we _replay_ one fork atop the other by re-running the series of transaction functions against the newest state. The transaction functions have arbitrary logic and can realize the intended change differently depending on the state they are running against.
+A better strategy is to capture the _intent_ of changes. Replicache embraces this idea by recording, alongside each change, the name of the function that created the change along with the arguments it was passed. For example, in our example above, Replicache might have recorded the following history of *pending mutations* on the client:
 
-For example, a transaction that reserves an hour on a user's calendar could keep a status for the reservation in the user's data. The transaction might successfully reserve the hour when running locally for the first time, setting the status to RESERVED. Later, if still pending, the transaction might be replayed on top of a state where that hour is unavailable. In this case the transaction might update the status to UNAVAILABLE. Later during Push when played against the Data Layer the transaction will settle on one value or the other, and the client will converge on the value in the Data Layer. App code can rely on subscriptions to keep the UI correctly reflective of the reservation status, or to trigger notification of the user or some other kind of followup such trying the next available slot.
+```js
+[
+  { id: 1, name: "add", key: "myNumber", args: 2 },
+  { id: 2, name: "subtract", key: "myNumber", args: 1 },
+]
+```
+
+Now we have a lot better idea of what happened here: `1 + 2 - 1 -> 2`!
+
+When these mutations get pushed to the server, they get replayed in order. So we end up with `0 + 2 - 1 -> 1` on the server. But notice how this was neither the client value, nor the server value -- it was a merge of the two, and that merge was computed by simply applying developer-provided functions in order. This approach of linearizing a series of user-supplied functions is very powerful and generalizes to much more complex problems.
+
+For a more interesting example, consider a transaction that reserves an hour on a user's calendar could keep a status for the reservation in the user's data. The transaction might successfully reserve the hour when running locally for the first time, setting the status to RESERVED. Later, if still pending, the transaction might be replayed on top of a state where that hour is unavailable. In this case the transaction might update the status to UNAVAILABLE. Later during push when played against the Data Layer the transaction will settle on one value or the other, and the client will converge on the value in the Data Layer. App code can rely on subscriptions to keep the UI correctly reflective of the reservation status, or to trigger notification of the user or some other kind of followup such trying the next available slot.
 
 We believe the Replicache model for dealing with conflicts — to have defensively written, programmatic transaction logic that is replayed atop the latest state — leads to fewer actual conflicts in practice. Our experience is that it preserves expressiveness of the data model and is far easier to reason about than other general models for avoiding or minimizing conflicts.
 
@@ -194,4 +205,4 @@ A second concern with data size is that it might be infeasible to complete large
 
 **Blobs** A realtime sync engine should have first class bidirectional support for binary assets aka blobs (eg, profile pictures). In some cases these assets should be managed transactionally along with the user's data: either you get all the data and all the blobs it references or you get none of it. In any case, there is presently no special support for blobs in Replicache. Users who need blobs are advised to base64 encode them as JSON strings in the user data. We plan to address this shortcoming in the future.
 
-**Duplicate transaction logic** You have to implement transactions twice, once in the mobile app and once in the Data Layer. Bummer. We can imagine potential solutions to this problem but it's not clear if the benefit would be worth the cost, or widely usable. It is also expected that client-side transactions will be significantly simpler as they are by nature _speculative_, having the canonical answer come from the server-side implementation.
+**Duplicate transaction logic** The core Replicache protocol requires implementing each mutation twice, once in the app and once in the Data Layer. This is unfortunate, but a tradeoff required for the properties Replicache provides. Developers can work around this by sharing code between client and server. In the extreme case where the server is JavaScript, it can even feel like zero server code has to get written because Replicache mutations can be reused as-is.
