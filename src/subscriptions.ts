@@ -101,15 +101,22 @@ class SubscriptionImpl<R, E> implements Subscription<R, E> {
 }
 
 /**
- * Function that gets passed into [[Replicache.watch]] and gets called when the
- * data in Replicache changes.
+ * Function that gets passed into [[Replicache.experimentalWatch]] and gets
+ * called when the data in Replicache changes.
+ *
+ * @experimental This type is experimental and may change in the future.
  */
 export type WatchCallback = (diff: Diff) => void;
 
-export type WatchCallbackEntry = {cb: WatchCallback; prefix: string};
+export type CallbackEntry = {
+  cb: WatchCallback;
+  prefix: string;
+};
 
 /**
- * Options for [[Replicache.watch]].
+ * Options for [[Replicache.experimentalWatch]].
+ *
+ * @experimental This interface is experimental and may change in the future.
  */
 export interface WatchOptions {
   /**
