@@ -62,12 +62,9 @@ export {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
 
 export type {IndexKey} from './db/index';
 
+export type {Diff, DiffOperation} from './btree/node';
 export type {
-  Diff as ExperimentalDiff,
-  DiffOperation as ExperimentalDiffOperation,
-} from './btree/node';
-export type {
-  WatchCallback as ExperimentalWatchCallback,
-  WatchOptions as ExperimentalWatchOptions,
+  WatchCallback,
+  WatchOptions,
   SubscribeOptions,
 } from './subscriptions';

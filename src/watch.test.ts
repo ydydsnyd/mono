@@ -22,7 +22,7 @@ test('watch', async () => {
   });
 
   const spy = sinon.spy();
-  const unwatch = rep.experimentalWatch(spy);
+  const unwatch = rep.watch(spy);
 
   await rep.mutate.addData({a: 1, b: 2});
 
@@ -85,7 +85,7 @@ test('watch with prefix', async () => {
   });
 
   const spy = sinon.spy();
-  const unwatch = rep.experimentalWatch(spy, {prefix: 'b'});
+  const unwatch = rep.watch(spy, {prefix: 'b'});
 
   await rep.mutate.addData({a: 1, b: 2});
 
@@ -151,7 +151,7 @@ test('watch and initial callback with no data', async () => {
   });
 
   const spy = sinon.spy();
-  const unwatch = rep.experimentalWatch(spy, {initialValuesInFirstDiff: true});
+  const unwatch = rep.watch(spy, {initialValuesInFirstDiff: true});
   await tickAFewTimes();
   expect(spy.callCount).to.equal(1);
   expect(spy.lastCall.args).to.deep.equal([[]]);
@@ -168,7 +168,7 @@ test('watch and initial callback with data', async () => {
   await rep.mutate.addData({a: 1, b: 2});
 
   const spy = sinon.spy();
-  const unwatch = rep.experimentalWatch(spy, {initialValuesInFirstDiff: true});
+  const unwatch = rep.watch(spy, {initialValuesInFirstDiff: true});
   await tickAFewTimes();
   expect(spy.callCount).to.equal(1);
   expect(spy.lastCall.args).to.deep.equal([
@@ -197,10 +197,7 @@ test('watch with prefix and initial callback no data', async () => {
   });
 
   const spy = sinon.spy();
-  const unwatch = rep.experimentalWatch(spy, {
-    prefix: 'b',
-    initialValuesInFirstDiff: true,
-  });
+  const unwatch = rep.watch(spy, {prefix: 'b', initialValuesInFirstDiff: true});
 
   await tickAFewTimes();
 
@@ -231,10 +228,7 @@ test('watch with prefix and initial callback and data', async () => {
   await rep.mutate.addData({a: 1, b: 2});
 
   const spy = sinon.spy();
-  const unwatch = rep.experimentalWatch(spy, {
-    prefix: 'b',
-    initialValuesInFirstDiff: true,
-  });
+  const unwatch = rep.watch(spy, {prefix: 'b', initialValuesInFirstDiff: true});
 
   await tickAFewTimes();
 
