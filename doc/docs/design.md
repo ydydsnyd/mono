@@ -184,9 +184,9 @@ A better strategy is to capture the _intent_ of changes. Replicache embraces thi
 
 ```js
 [
-  { id: 1, name: "add", key: "myNumber", args: 2, result: {myNumber: 3} },
-  { id: 2, name: "subtract", key: "myNumber", args: 1, result: {myNumber: 2} },
-]
+  {id: 1, name: 'add', key: 'myNumber', args: 2, result: {myNumber: 3}},
+  {id: 2, name: 'subtract', key: 'myNumber', args: 1, result: {myNumber: 2}},
+];
 ```
 
 Now we have a lot better idea of what happened here!
