@@ -1038,7 +1038,7 @@ test('Errors in subscriptions are logged if no onError', async () => {
     const consoleErrorStub = sinon.stub(console, 'error');
 
     let called = false;
-    const rep = await replicacheForTesting('subscription-with-exception');
+    const rep = await replicacheForTesting('subscrition-with-exception');
 
     rep.subscribe(
       async () => {

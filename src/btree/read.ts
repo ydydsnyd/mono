@@ -17,7 +17,6 @@ import {
   isInternalNode,
   DataNode,
   InternalNode,
-  Diff,
 } from './node';
 import {
   computeSplices,
@@ -296,7 +295,7 @@ export async function* scanForHash(
 export async function allEntriesAsDiff(
   map: BTreeRead,
   op: 'add' | 'del',
-): Promise<Diff> {
+): Promise<DiffOperation[]> {
   const diff: DiffOperation[] = [];
   const make: (entry: ReadonlyEntry<ReadonlyJSONValue>) => DiffOperation =
     op === 'add'

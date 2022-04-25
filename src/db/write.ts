@@ -21,7 +21,7 @@ import {IndexWrite, IndexOperation, indexValue, IndexRead} from './index';
 import {BTreeRead, BTreeWrite} from '../btree/mod';
 import {lazy} from '../lazy';
 import {emptyHash, Hash} from '../hash';
-import type {Diff} from '../btree/node.js';
+import type {DiffOperation} from '../btree/node.js';
 import {allEntriesAsDiff} from '../btree/read.js';
 import type {DiffsMap} from '../sync/mod.js';
 
@@ -276,13 +276,13 @@ export class Write extends Read {
     generateDiffs: boolean,
   ): Promise<[Hash, DiffsMap]> {
     const valueHash = await this.map.flush();
-    let valueDiff: Diff = [];
+    let valueDiff: DiffOperation[] = [];
     if (generateDiffs && this._basis) {
       const basisMap = new BTreeRead(this._dagWrite, this._basis.valueHash);
-      valueDiff = await btree.diff(basisMap, this.map);
+      valueDiff = await btree.diff(this.map, basisMap);
     }
     const indexRecords: IndexRecord[] = [];
-    const diffMap: Map<string, Diff> = new Map();
+    const diffMap: Map<string, DiffOperation[]> = new Map();
     if (valueDiff.length > 0) {
       diffMap.set('', valueDiff);
     }
@@ -300,7 +300,7 @@ export class Write extends Read {
       const indexDiffResult = await index.withMap(this._dagWrite, async map => {
         if (basisIndex) {
           return basisIndex.withMap(this._dagWrite, basisMap =>
-            btree.diff(basisMap, map),
+            btree.diff(map, basisMap),
           );
         }
 
