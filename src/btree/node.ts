@@ -4,6 +4,7 @@ import {Hash, emptyHash, newTempHash} from '../hash';
 import type {BTreeRead} from './read';
 import type {BTreeWrite} from './write';
 import {skipBTreeNodeAsserts} from '../config.js';
+import {binarySearch as binarySearchWithFunc} from '../binary-search.js';
 
 export type Entry<V> = [key: string, value: V];
 export type ReadonlyEntry<V> = readonly [key: string, value: V];
@@ -72,10 +73,6 @@ export async function findLeaf(
   }
   const {entries} = node;
   let i = binarySearch(key, entries);
-  if (i < 0) {
-    // not found
-    i = ~i;
-  }
   if (i === entries.length) {
     i--;
   }
@@ -89,39 +86,21 @@ export async function findLeaf(
  * If the key found then the return value is the index it was found at.
  *
  * If the key was *not* found then the return value is the index where it should
- * be inserted at bitwise or'ed (`~index`). This is the same as `-index -1`. For
- * example if not found and needs to be inserted at `0` then we return `-1`.
+ * be inserted at
  */
 export function binarySearch<V>(
   key: string,
   entries: ReadonlyArray<ReadonlyEntry<V>>,
 ): number {
-  let {length} = entries;
-  if (length === 0) {
-    return ~0;
-  }
-  let base = 0;
+  return binarySearchWithFunc(entries.length, i => key <= entries[i][0]);
+}
 
-  while (length > 1) {
-    const half = length >> 1;
-    const mid = base + half;
-    // mid is always in [0, size), that means mid is >= 0 and < size.
-    // mid >= 0: by definition
-    // mid < size: mid = size / 2 + size / 4 + size / 8 ...
-    const midKey = entries[mid][0];
-    if (midKey <= key) {
-      base = mid;
-    }
-    length -= half;
-  }
-
-  // base is always in [0, size) because base <= mid.
-  const baseKey = entries[base][0];
-  if (baseKey === key) {
-    return base;
-  }
-  const index = base + (baseKey < key ? 1 : 0);
-  return ~index;
+export function binarySearchFound<V>(
+  i: number,
+  entries: ReadonlyArray<ReadonlyEntry<V>>,
+  key: string,
+): boolean {
+  return i !== entries.length && entries[i][0] === key;
 }
 
 export function assertBTreeNode(
@@ -200,10 +179,9 @@ export class DataNodeImpl extends NodeImpl<ReadonlyJSONValue> {
     tree: BTreeWrite,
   ): Promise<DataNodeImpl> {
     let deleteCount: number;
-    let i = binarySearch(key, this.entries);
-    if (i < 0) {
+    const i = binarySearch(key, this.entries);
+    if (!binarySearchFound(i, this.entries, key)) {
       // Not found, insert.
-      i = ~i;
       deleteCount = 0;
     } else {
       deleteCount = 1;
@@ -230,7 +208,7 @@ export class DataNodeImpl extends NodeImpl<ReadonlyJSONValue> {
 
   async del(key: string, tree: BTreeWrite): Promise<DataNodeImpl> {
     const i = binarySearch(key, this.entries);
-    if (i < 0) {
+    if (!binarySearchFound(i, this.entries, key)) {
       // Not found. Return this without changes.
       return this;
     }
@@ -295,12 +273,9 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
     tree: BTreeWrite,
   ): Promise<InternalNodeImpl> {
     let i = binarySearch(key, this.entries);
-    if (i < 0) {
-      i = ~i;
-      if (i >= this.entries.length) {
-        // We are going to insert into last (right most) leaf.
-        i = this.entries.length - 1;
-      }
+    if (i === this.entries.length) {
+      // We are going to insert into last (right most) leaf.
+      i--;
     }
 
     const childHash = this.entries[i][1];
@@ -398,13 +373,10 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
     key: string,
     tree: BTreeWrite,
   ): Promise<InternalNodeImpl | DataNodeImpl> {
-    let i = binarySearch(key, this.entries);
-    if (i < 0) {
-      i = ~i;
-      if (i >= this.entries.length) {
-        // Key is larger than maxKey of rightmost entry so it is not present.
-        return this;
-      }
+    const i = binarySearch(key, this.entries);
+    if (i === this.entries.length) {
+      // Key is larger than maxKey of rightmost entry so it is not present.
+      return this;
     }
 
     const childHash = this.entries[i][1];
