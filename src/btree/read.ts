@@ -9,6 +9,7 @@ import {
   assertBTreeNode,
   newNodeImpl,
   findLeaf,
+  binarySearch,
   DiffOperation,
   ReadonlyEntry,
   NODE_LEVEL,
@@ -17,8 +18,6 @@ import {
   DataNode,
   InternalNode,
   Diff,
-  binarySearch,
-  binarySearchFound,
 } from './node';
 import {
   computeSplices,
@@ -86,7 +85,7 @@ export class BTreeRead
   async get(key: string): Promise<ReadonlyJSONValue | undefined> {
     const leaf = await findLeaf(key, this.rootHash, this);
     const index = binarySearch(key, leaf.entries);
-    if (!binarySearchFound(index, leaf.entries, key)) {
+    if (index < 0) {
       return undefined;
     }
     return leaf.entries[index][1];
@@ -94,8 +93,7 @@ export class BTreeRead
 
   async has(key: string): Promise<boolean> {
     const leaf = await findLeaf(key, this.rootHash, this);
-    const index = binarySearch(key, leaf.entries);
-    return binarySearchFound(index, leaf.entries, key);
+    return binarySearch(key, leaf.entries) >= 0;
   }
 
   async isEmpty(): Promise<boolean> {
@@ -274,6 +272,9 @@ export async function* scanForHash(
   let i = 0;
   if (fromKey) {
     i = binarySearch(fromKey, entries);
+    if (i < 0) {
+      i = ~i;
+    }
   }
 
   if (isInternalNode(data)) {

@@ -3,11 +3,11 @@ import type * as sync from './sync/mod';
 import {assert} from './asserts';
 import type {Diff, DiffOperation} from './btree/node';
 import {deepEqual, JSONValue, ReadonlyJSONValue} from './json';
+import {stringCompare} from './string-compare';
 import type {DiffsMap} from './sync/pull';
 import {ReadTransaction, SubscriptionTransactionWrapper} from './transactions';
 import type {QueryInternal} from './replicache';
 import type {LogContext} from '@rocicorp/logger';
-import {binarySearch} from './binary-search';
 
 const enum InvokeKind {
   IndexChange,
@@ -187,10 +187,9 @@ class WatchImpl implements Subscription<Diff | undefined, unknown> {
 
     const newDiff: DiffOperation[] = [];
     const {length} = diff;
-    const prefix = this._prefix;
-    const compare = (i: number) => prefix <= diff[i].key;
+    const compare = (i: number) => stringCompare(this._prefix, diff[i].key);
 
-    for (let i = binarySearch(length, compare); i < length; i++) {
+    for (let i = binarySearchInsertionIndex(length, compare); i < length; i++) {
       if (diff[i].key.startsWith(this._prefix)) {
         newDiff.push(diff[i]);
       } else {
@@ -549,7 +548,33 @@ function watcherMatchesDiff(diff: Diff, prefix: string): boolean {
     return true;
   }
 
-  const i = binarySearch(diff.length, i => prefix <= diff[i].key);
+  const i = binarySearchInsertionIndex(diff.length, i =>
+    stringCompare(prefix, diff[i].key),
+  );
 
   return i < diff.length && diff[i].key.startsWith(prefix);
+}
+
+/**
+ * This is a binary search that returns the index of the first element in the
+ * array that is greater than or equal to the given value.
+ */
+function binarySearchInsertionIndex(
+  length: number,
+  compare: (i: number) => number,
+) {
+  let low = 0;
+  let high = length;
+  while (low < high) {
+    const mid = low + ((high - low) >> 1);
+    const cmp = compare(mid);
+    if (cmp < 0) {
+      high = mid;
+    } else if (cmp > 0) {
+      low = mid + 1;
+    } else {
+      return mid;
+    }
+  }
+  return low;
 }
