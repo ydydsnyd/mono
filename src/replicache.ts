@@ -1052,7 +1052,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
    * from the server and re-register, which transmits the cookie the client actually
    * has.
    *
-   * @experimental - This method is under development and its semantics will change.
+   * @experimental This method is under development and its semantics will change.
    */
   async poke(poke: Poke): Promise<void> {
     await this._ready;
@@ -1221,8 +1221,13 @@ export class Replicache<MD extends MutatorDefs = {}> {
    * an empty diff.
    *
    * This gets called after commit (a mutation or a rebase).
+   *
+   * @experimental This method is under development and its semantics will change.
    */
-  watch(callback: WatchCallback, options?: WatchOptions): () => void {
+  experimentalWatch(
+    callback: WatchCallback,
+    options?: WatchOptions,
+  ): () => void {
     return this._subscriptions.addWatch(callback, options);
   }
 
