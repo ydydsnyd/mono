@@ -262,7 +262,14 @@ export type GetScanIterator = (
 ) => AsyncIterable<ReadonlyEntry<ReadonlyJSONValue>>;
 
 /**
- * This is called when doing a [[ReadTransaction.scan|scan]] with an
+ * TODO
+ */
+export type GetScanIteratorWithDeletes = (
+  fromKey: string,
+) => AsyncIterable<ReadonlyEntry<ReadonlyJSONValue | undefined>>;
+
+/**
+ * When using [[makeScanResult]] this is the type used for the function called when doing a [[ReadTransaction.scan|scan]] with an
  * `indexName`.
  *
  * @param indexName The name of the index we are scanning over.
@@ -280,8 +287,45 @@ export type GetIndexScanIterator = (
 ) => AsyncIterable<readonly [key: IndexKey, value: ReadonlyJSONValue]>;
 
 /**
+ * TODO
+ */
+export type GetIndexScanIteratorWithDeletes = (
+  indexName: string,
+  fromSecondaryKey: string,
+  fromPrimaryKey: string | undefined,
+) => AsyncIterable<
+  readonly [key: IndexKey, value: ReadonlyJSONValue | undefined]
+>;
+
+/**
  * A helper function that makes it easier to implement [[ReadTransaction.scan]]
- * with a custom backend
+ * with a custom backend.
+ *
+ * If you are implementing a custom backend and have an in memory pending async
+ * iterable we provide two helper functions to make it easier to merge these
+ * together. [[mergeAsyncIterables]] and [[filterAsyncIterable]].
+ *
+ * For example:
+ *
+ * ```ts
+ * const scanResult = makeScanResult(
+ *   options,
+ *   options.indexName
+ *     ? () => {
+ *         throw Error('not implemented');
+ *       }
+ *     : fromKey => {
+ *         const persisted: AsyncIterable<Entry<ReadonlyJSONValue>> = ...;
+ *         const pending: AsyncIterable<Entry<ReadonlyJSONValue | undefined>> = ...;
+ *         const iter = await mergeAsyncIterables(persisted, pending);
+ *         const filteredIter = await filterAsyncIterable(
+ *           iter,
+ *           entry => entry[1] !== undefined,
+ *         );
+ *         return filteredIter;
+ *       },
+ * );
+ * ```
  */
 export function makeScanResult<Options extends ScanOptions>(
   options: Options,
@@ -293,13 +337,12 @@ export function makeScanResult<Options extends ScanOptions>(
 
   if (isScanIndexOptions(options)) {
     const [fromSecondaryKey, fromPrimaryKey] = fromKeyForIndexScan(options);
-    const iter = (getScanIterator as GetIndexScanIterator)(
-      options.indexName,
-      fromSecondaryKey,
-      fromPrimaryKey,
-    ) as AsyncIter;
     return new ScanResultImpl(
-      iter,
+      (getScanIterator as GetIndexScanIterator)(
+        options.indexName,
+        fromSecondaryKey,
+        fromPrimaryKey,
+      ) as AsyncIter,
       options,
       {closed: false, shouldDeepClone: false},
       _ => {
@@ -308,10 +351,8 @@ export function makeScanResult<Options extends ScanOptions>(
     );
   }
   const fromKey = fromKeyForNonIndexScan(options);
-  const iter = (getScanIterator as GetScanIterator)(fromKey) as AsyncIter;
-
   return new ScanResultImpl(
-    iter,
+    (getScanIterator as GetScanIterator)(fromKey) as AsyncIter,
     options,
     {closed: false, shouldDeepClone: false},
     _ => {

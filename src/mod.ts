@@ -71,3 +71,6 @@ export type {
   WatchOptions as ExperimentalWatchOptions,
   SubscribeOptions,
 } from './subscriptions';
+
+export {mergeAsyncIterables} from './merge-async-iterables';
+export {filterAsyncIterable} from './filter-async-iterable';
