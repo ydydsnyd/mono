@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1650982653365,
+  "lastUpdate": 1651000022129,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -12173,6 +12173,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 21693,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c25ed255e78b805d45d5c6ed137ecb8f8baf9fcd",
+          "message": "feat: Add helper functions for pending with makeScanResult (#11)\n\n`makeScanResult` takes an `AsyncIterable`  but sometimes the backend\r\nmight use different data store without a unified entry point. For these\r\ncases you might want to merge a \"pending\" iterator on top of a\r\n\"persisted\" iterator. To do this we provide a `mergeAsyncIterators`\r\nfunction as well as a `filterAsyncIterator` function. The filter version\r\nis useful if you want to filter out tombstones from the iterator.",
+          "timestamp": "2022-04-26T21:05:46+02:00",
+          "tree_id": "483531343e858af6c02345cc61ceecae3eca010d",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/c25ed255e78b805d45d5c6ed137ecb8f8baf9fcd"
+        },
+        "date": 1651000017733,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 167222,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 31206,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 166121,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 30917,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 76102,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 21815,
             "unit": "bytes"
           }
         ]
