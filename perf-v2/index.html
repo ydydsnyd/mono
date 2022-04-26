@@ -187,7 +187,7 @@
               d.commit.message.startsWith('feat: Add persist'),
             );
             if (index !== -1) {
-              dataset = dataset.slice(index, dataset.length - 1);
+              dataset = dataset.slice(index);
             }
             const canvas = document.createElement('canvas');
             canvas.className = 'benchmark-chart';
