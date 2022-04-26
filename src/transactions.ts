@@ -75,7 +75,7 @@ export class ReadTransactionImpl<
 > implements ReadTransaction
 {
   readonly clientID: string;
-  protected readonly _dbtx: db.Read;
+  readonly dbtx: db.Read;
   protected readonly _lc: LogContext;
 
   constructor(
@@ -85,29 +85,25 @@ export class ReadTransactionImpl<
     rpcName = 'openReadTransaction',
   ) {
     this.clientID = clientID;
-    this._dbtx = dbRead;
+    this.dbtx = dbRead;
     this._lc = lc
       .addContext(rpcName)
       .addContext('txid', transactionIDCounter++);
   }
 
   async get(key: string): Promise<Value | undefined> {
-    throwIfClosed(this._dbtx);
-    const rv = await this._dbtx.get(key);
-    if (this._dbtx instanceof db.Write) {
-      return (rv && deepClone(rv)) as Value | undefined;
-    }
-    return rv as Value | undefined;
+    throwIfClosed(this.dbtx);
+    return this.dbtx.get(key) as Promise<Value | undefined>;
   }
 
   async has(key: string): Promise<boolean> {
-    throwIfClosed(this._dbtx);
-    return this._dbtx.has(key);
+    throwIfClosed(this.dbtx);
+    return this.dbtx.has(key);
   }
 
   async isEmpty(): Promise<boolean> {
-    throwIfClosed(this._dbtx);
-    return this._dbtx.isEmpty();
+    throwIfClosed(this.dbtx);
+    return this.dbtx.isEmpty();
   }
 
   scan(): ScanResult<string, Value>;
@@ -117,7 +113,7 @@ export class ReadTransactionImpl<
   scan<Options extends ScanOptions>(
     options?: Options,
   ): ScanResult<KeyTypeForScanOptions<Options>, Value> {
-    return scan(options, this._dbtx, noop);
+    return scan(options, this.dbtx, noop);
   }
 }
 
@@ -182,8 +178,7 @@ export class SubscriptionTransactionWrapper implements ReadTransaction {
       inclusiveLimitKey: undefined,
     };
     this._scans.push(scanInfo);
-    // @ts-expect-error _dbtx is protected
-    return scan(options, this._tx._dbtx, inclusiveLimitKey => {
+    return scan(options, this._tx.dbtx, inclusiveLimitKey => {
       scanInfo.inclusiveLimitKey = inclusiveLimitKey;
     });
   }
@@ -234,7 +229,7 @@ export class WriteTransactionImpl
   implements WriteTransaction
 {
   // use `declare` to specialize the type.
-  protected declare readonly _dbtx: db.Write;
+  declare readonly dbtx: db.Write;
 
   constructor(
     clientID: string,
@@ -246,17 +241,17 @@ export class WriteTransactionImpl
   }
 
   async put(key: string, value: JSONValue): Promise<void> {
-    throwIfClosed(this._dbtx);
-    await this._dbtx.put(this._lc, key, deepClone(value));
+    throwIfClosed(this.dbtx);
+    await this.dbtx.put(this._lc, key, deepClone(value));
   }
 
   async del(key: string): Promise<boolean> {
-    throwIfClosed(this._dbtx);
-    return await this._dbtx.del(this._lc, key);
+    throwIfClosed(this.dbtx);
+    return await this.dbtx.del(this._lc, key);
   }
 
   async commit(generateDiffs: boolean): Promise<[Hash, sync.DiffsMap]> {
-    const txn = this._dbtx;
+    const txn = this.dbtx;
     throwIfClosed(txn);
 
     const headName = txn.isRebase()
@@ -316,8 +311,8 @@ export class IndexTransactionImpl
   }
 
   async createIndex(options: CreateIndexDefinition): Promise<void> {
-    throwIfClosed(this._dbtx);
-    await this._dbtx.createIndex(
+    throwIfClosed(this.dbtx);
+    await this.dbtx.createIndex(
       this._lc,
       options.name,
       options.prefix ?? '',
@@ -326,8 +321,8 @@ export class IndexTransactionImpl
   }
 
   async dropIndex(name: string): Promise<void> {
-    throwIfClosed(this._dbtx);
-    await this._dbtx.dropIndex(name);
+    throwIfClosed(this.dbtx);
+    await this.dbtx.dropIndex(name);
   }
 
   async commit(): Promise<[Hash, sync.DiffsMap]> {
