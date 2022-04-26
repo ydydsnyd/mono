@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1650979168055,
+  "lastUpdate": 1650981175308,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -12011,6 +12011,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 21312,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "distinct": true,
+          "id": "6ec6b9f6a6302d038c4bbbe2ca84e5cb961e71e9",
+          "message": "feat: Add watch function\n\nSecond try, keeping the queryInternal function as before\n\nNow you can get called after a commit is complete and the arguments\npassed to the watch function includes a diff of the changes.\n\nCloses #839",
+          "timestamp": "2022-04-26T15:51:53+02:00",
+          "tree_id": "a33da60bb6af12cdb148776ae961cd9792c96a29",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/6ec6b9f6a6302d038c4bbbe2ca84e5cb961e71e9"
+        },
+        "date": 1650981171511,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 166528,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 31146,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 165481,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 30856,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 75732,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 21781,
             "unit": "bytes"
           }
         ]
