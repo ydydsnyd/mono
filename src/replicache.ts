@@ -1,7 +1,7 @@
 import {consoleLogSink, LogContext, TeeLogSink} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
 import {Lock} from '@rocicorp/lock';
-import {deepClone, deepEqual, ReadonlyJSONValue} from './json';
+import {deepClone, ReadonlyJSONValue} from './json';
 import type {JSONValue} from './json';
 import {Pusher, PushError} from './pusher';
 import {
@@ -12,7 +12,6 @@ import {
   PullResponseOK,
 } from './puller';
 import {
-  SubscriptionTransactionWrapper,
   IndexTransactionImpl,
   ReadTransactionImpl,
   WriteTransactionImpl,
@@ -30,10 +29,11 @@ import type {
   ReplicacheOptions,
 } from './replicache-options';
 import {PullDelegate, PushDelegate} from './connection-loop-delegates';
-import type {Subscription} from './subscriptions';
 import {
-  subscriptionsForDiffs,
-  subscriptionsForIndexDefinitionChanged,
+  SubscribeOptions,
+  SubscriptionsManager,
+  WatchCallback,
+  WatchOptions,
 } from './subscriptions';
 import {IDBStore} from './kv/mod';
 import * as dag from './dag/mod';
@@ -59,7 +59,7 @@ import {
 } from '@rocicorp/licensing/src/client';
 import {mustSimpleFetch} from './simple-fetch';
 import {initBgIntervalProcess} from './persist/bg-interval';
-import {setIntervalWithSignal} from './set-interval-with-signal.js';
+import {setIntervalWithSignal} from './set-interval-with-signal';
 
 export type BeginPullResult = {
   requestID: string;
@@ -152,11 +152,6 @@ export interface RequestOptions {
   maxDelayMs?: number;
 }
 
-const emptySet: ReadonlySet<string> = new Set();
-
-type UnknownSubscription = Subscription<JSONValue | undefined, unknown>;
-type SubscriptionSet = Set<UnknownSubscription>;
-
 /**
  * The reason [[onClientStateNotFound]] was called.
  */
@@ -172,6 +167,10 @@ const reasonClient = {
   type: 'NotFoundOnClient',
 } as const;
 
+export type QueryInternal = <R>(
+  body: (tx: ReadTransactionImpl) => MaybePromise<R>,
+) => Promise<R>;
+
 // eslint-disable-next-line @typescript-eslint/ban-types
 export class Replicache<MD extends MutatorDefs = {}> {
   /** The URL to use when doing a pull request. */
@@ -185,6 +184,8 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
   /** The name of the Replicache database. */
   readonly name: string;
+
+  private readonly _subscriptions: SubscriptionsManager;
 
   /**
    * This is the name Replicache uses for the IndexedDB database where data is
@@ -235,9 +236,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
   private _pullConnectionLoop: ConnectionLoop;
   private _pushConnectionLoop: ConnectionLoop;
 
-  private readonly _subscriptions: SubscriptionSet = new Set();
-  private readonly _pendingSubscriptions: SubscriptionSet = new Set();
-
   /**
    * The duration between each periodic [[pull]]. Setting this to `null`
    * disables periodic pull completely. Pull will still happen if you call
@@ -269,7 +267,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
   private readonly _perdag: dag.Store;
   private readonly _idbDatabases: persist.IDBDatabasesStore =
     new persist.IDBDatabasesStore();
-  private _hasPendingSubscriptionRuns = false;
   private readonly _lc: LogContext;
 
   private readonly _closeAbortController = new AbortController();
@@ -373,6 +370,11 @@ export class Replicache<MD extends MutatorDefs = {}> {
     const logSink =
       logSinks.length === 1 ? logSinks[0] : new TeeLogSink(logSinks);
     this._lc = new LogContext(logLevel, logSink).addContext('name', name);
+
+    this._subscriptions = new SubscriptionsManager(
+      this._queryInternal,
+      this._lc,
+    );
 
     const perKvStore = experimentalKVStore || new IDBStore(this.idbName);
     this._perdag = new dag.StoreImpl(
@@ -709,10 +711,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
     this._pullConnectionLoop.close();
     this._pushConnectionLoop.close();
 
-    // Clear subscriptions
-    for (const subscription of this._subscriptions) {
-      subscription.onDone?.();
-    }
     this._subscriptions.clear();
 
     await Promise.all(closingPromises);
@@ -735,7 +733,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     const currentRoot = await this._root; // instantaneous except maybe first time
     if (root !== undefined && root !== currentRoot) {
       this._root = Promise.resolve(root);
-      await this._fireOnChange(diffs);
+      await this._subscriptions.fire(diffs);
     }
   }
 
@@ -748,7 +746,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
    */
   async createIndex(def: CreateIndexDefinition): Promise<void> {
     await this._indexOp(tx => tx.createIndex(def));
-    await this._indexDefinitionChanged(def.name);
+    await this._subscriptions.indexDefinitionChanged(def.name);
   }
 
   /**
@@ -756,7 +754,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
    */
   async dropIndex(name: string): Promise<void> {
     await this._indexOp(tx => tx.dropIndex(name));
-    await this._indexDefinitionChanged(name);
+    await this._subscriptions.indexDefinitionChanged(name);
   }
 
   private async _indexOp(
@@ -1195,71 +1193,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
     }
   }
 
-  private async _fireOnChange(diffs: sync.DiffsMap): Promise<void> {
-    const subscriptions = subscriptionsForDiffs(this._subscriptions, diffs);
-    await this._fireSubscriptions(subscriptions, false);
-  }
-
-  private async _indexDefinitionChanged(name: string): Promise<void> {
-    // When an index definition changes we fire all subscriptions that uses
-    // index scans with that index.
-    const subscriptions = subscriptionsForIndexDefinitionChanged(
-      this._subscriptions,
-      name,
-    );
-    await this._fireSubscriptions(subscriptions, false);
-  }
-
-  private async _fireSubscriptions(
-    subscriptions: Iterable<Subscription<JSONValue | undefined, unknown>>,
-    skipEqualsCheck: boolean,
-  ) {
-    const subs = [...subscriptions];
-    if (subs.length === 0) {
-      return;
-    }
-
-    type R =
-      | {ok: true; value: JSONValue | undefined}
-      | {ok: false; error: unknown};
-    const results = await this._queryInternal(async tx => {
-      const promises = subs.map(async s => {
-        // Tag the result so we can deal with success vs error below.
-        const stx = new SubscriptionTransactionWrapper(tx);
-        try {
-          const value = await s.body(stx);
-          return {ok: true, value} as R;
-        } catch (error) {
-          return {ok: false, error} as R;
-        } finally {
-          // We need to keep track of the subscription keys even if there was an
-          // exception because changes to the keys can make the subscription
-          // body succeed.
-          s.keys = stx.keys;
-          s.scans = stx.scans;
-        }
-      });
-      return await Promise.all(promises);
-    });
-    for (let i = 0; i < subs.length; i++) {
-      const s = subs[i];
-      const result = results[i];
-      if (result.ok) {
-        const {value} = result;
-        if (skipEqualsCheck || !deepEqual(value, s.lastValue)) {
-          s.lastValue = value;
-          s.onData(value);
-        }
-      } else {
-        if (s.onError) {
-          s.onError(result.error);
-        } else {
-          this._lc.error?.(result.error);
-        }
-      }
-    }
-  }
-
   /**
    * Subscribe to changes to the underlying data. Every time the underlying data
    * changes `body` is called and if the result of `body` changes compared to
@@ -1273,44 +1206,24 @@ export class Replicache<MD extends MutatorDefs = {}> {
    */
   subscribe<R extends ReadonlyJSONValue | undefined, E>(
     body: (tx: ReadTransaction) => Promise<R>,
-    {
-      onData,
-      onError,
-      onDone,
-    }: {
-      onData: (result: R) => void;
-      onError?: (error: E) => void;
-      onDone?: () => void;
-    },
+    options: SubscribeOptions<R, E>,
   ): () => void {
-    const s = {
-      body,
-      onData,
-      onError,
-      onDone,
-      lastValue: undefined,
-      keys: emptySet,
-      scans: [],
-    } as unknown as UnknownSubscription;
-    this._subscriptions.add(s);
-
-    void this._scheduleInitialSubscriptionRun(s);
-
-    return (): void => {
-      this._subscriptions.delete(s);
-    };
+    return this._subscriptions.addSubscription(body, options);
   }
-  private async _scheduleInitialSubscriptionRun(s: UnknownSubscription) {
-    this._pendingSubscriptions.add(s);
 
-    if (!this._hasPendingSubscriptionRuns) {
-      this._hasPendingSubscriptionRuns = true;
-      await Promise.resolve();
-      this._hasPendingSubscriptionRuns = false;
-      const subscriptions = [...this._pendingSubscriptions];
-      this._pendingSubscriptions.clear();
-      await this._fireSubscriptions(subscriptions, true);
-    }
+  /**
+   * Watches Replicache for changes.
+   *
+   * The `callback` gets called whenever the underlying data changes and the
+   * `key` changes matches the [[WatchOptions.prefix]] if present. If a change
+   * occurs to the data but the change does not impact the key space the
+   * callback is not called. In other words, the callback is never called with
+   * an empty diff.
+   *
+   * This gets called after commit (a mutation or a rebase).
+   */
+  watch(callback: WatchCallback, options?: WatchOptions): () => void {
+    return this._subscriptions.addWatch(callback, options);
   }
 
   /**
@@ -1322,9 +1235,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     return this._queryInternal(body);
   }
 
-  private async _queryInternal<R>(
-    body: (tx: ReadTransactionImpl) => Promise<R> | R,
-  ): Promise<R> {
+  private _queryInternal: QueryInternal = async body => {
     await this._ready;
     const clientID = await this._clientIDPromise;
     return this._memdag.withRead(async dagRead => {
@@ -1336,7 +1247,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         throw await this._convertToClientStateNotFoundError(ex);
       }
     });
-  }
+  };
 
   private _register<Return extends JSONValue | void, Args extends JSONValue>(
     name: string,
@@ -1386,7 +1297,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   ): Promise<{result: R; ref: Hash}> {
     // Ensure that we run initial pending subscribe functions before starting a
     // write transaction.
-    if (this._hasPendingSubscriptionRuns) {
+    if (this._subscriptions.hasPendingSubscriptionRuns) {
       await Promise.resolve();
     }
 
