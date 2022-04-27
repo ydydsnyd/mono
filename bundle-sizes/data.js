@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1651048840307,
+  "lastUpdate": 1651053814552,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -12251,6 +12251,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/7e72ce49c1f0a38d821e8401a02247c37ffaa1d0"
         },
         "date": 1651048836921,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 167261,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 31243,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 166161,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 30939,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 76146,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 21893,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "committer": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "distinct": true,
+          "id": "f59e600c1cf34af644856911b7898ed7916aa020",
+          "message": "Bump version to 10.0.0-beta.0.",
+          "timestamp": "2022-04-27T12:02:13+02:00",
+          "tree_id": "904d0f5c01de864602996c4a27b54d4daf6c4a19",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/f59e600c1cf34af644856911b7898ed7916aa020"
+        },
+        "date": 1651053810319,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
