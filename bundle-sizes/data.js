@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1651000022129,
+  "lastUpdate": 1651048840307,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -12227,6 +12227,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 21815,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7e72ce49c1f0a38d821e8401a02247c37ffaa1d0",
+          "message": "chore: Always build with sourcemaps (#20)\n\nThis is so that we can deobfuscate stack traces.\r\n\r\nOne way to deobfuscate the stack trace is to copy the stack trace to the clipboard and then run\r\n\r\n```sh\r\nnpx stacktracify out/replicache.mjs.map\r\n```\r\n\r\nyou can also save the stacktrace to a file and use `--file`",
+          "timestamp": "2022-04-27T08:39:36Z",
+          "tree_id": "b005a5e62028ca286f2475e637aa6c91a37ba67a",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/7e72ce49c1f0a38d821e8401a02247c37ffaa1d0"
+        },
+        "date": 1651048836921,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 167261,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 31243,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 166161,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 30939,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 76146,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 21893,
             "unit": "bytes"
           }
         ]
