@@ -32,11 +32,11 @@ async function buildReplicache(options) {
   });
 }
 
-async function buildMJS({minify = true, ext = 'mjs', sourcemap = false} = {}) {
+async function buildMJS({minify = true, ext = 'mjs', sourcemap = true} = {}) {
   await buildReplicache({format: 'esm', minify, ext, sourcemap});
 }
 
-async function buildCJS({minify = true, ext = 'js', sourcemap = false} = {}) {
+async function buildCJS({minify = true, ext = 'js', sourcemap = true} = {}) {
   await buildReplicache({format: 'cjs', minify, ext, sourcemap});
 }
 
@@ -51,13 +51,8 @@ async function buildCLI() {
   });
 }
 
-async function buildPerf() {
-  // Same as what wev build for the npm package but we turn on sourcemaps.
-  await buildMJS({sourcemap: true});
-}
-
 if (perf) {
-  await buildPerf();
+  await buildMJS();
 } else if (forBundleSizeDashboard) {
   await Promise.all([
     buildMJS({minify: false, ext: 'mjs'}),
