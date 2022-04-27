@@ -20,10 +20,30 @@ test('mergeAsyncIterables', async () => {
     expected: (A | B)[],
     compare: (a: A, b: B) => number,
   ) => {
-    const iter = makeAsyncIterable(a);
-    const iter2 = makeAsyncIterable(b);
-    const merged = mergeAsyncIterables(iter, iter2, compare);
-    expect(await asyncIterableToArray(merged)).to.deep.equal(expected);
+    {
+      const iter = makeAsyncIterable(a);
+      const iter2 = makeAsyncIterable(b);
+      const merged = mergeAsyncIterables(iter, iter2, compare);
+      expect(await asyncIterableToArray(merged)).to.deep.equal(expected);
+    }
+    {
+      const iter = a;
+      const iter2 = makeAsyncIterable(b);
+      const merged = mergeAsyncIterables(iter, iter2, compare);
+      expect(await asyncIterableToArray(merged)).to.deep.equal(expected);
+    }
+    {
+      const iter = makeAsyncIterable(a);
+      const iter2 = b;
+      const merged = mergeAsyncIterables(iter, iter2, compare);
+      expect(await asyncIterableToArray(merged)).to.deep.equal(expected);
+    }
+    {
+      const iter = a;
+      const iter2 = b;
+      const merged = mergeAsyncIterables(iter, iter2, compare);
+      expect(await asyncIterableToArray(merged)).to.deep.equal(expected);
+    }
   };
 
   await t([1, 2, 3], [4, 5, 6], [1, 2, 3, 4, 5, 6], numCompare);

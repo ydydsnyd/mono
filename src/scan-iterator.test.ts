@@ -12,13 +12,25 @@ import {
 } from './scan-iterator.js';
 
 test('makeScanResult', async () => {
-  function getTestScanIterator(
+  function getTestScanAsyncIterator(
     entries: (readonly [key: string, value: ReadonlyJSONValue])[],
   ): GetScanIterator<ReadonlyJSONValue> {
     return async function* (fromKey: string) {
       for (const [key, value] of entries) {
         if (key >= fromKey) {
-          yield [key, value];
+          yield [key, value] as const;
+        }
+      }
+    };
+  }
+
+  function getTestScanIterator(
+    entries: (readonly [key: string, value: ReadonlyJSONValue])[],
+  ): GetScanIterator<ReadonlyJSONValue> {
+    return function* (fromKey: string) {
+      for (const [key, value] of entries) {
+        if (key >= fromKey) {
+          yield [key, value] as const;
         }
       }
     };
@@ -29,10 +41,18 @@ test('makeScanResult', async () => {
     options: ScanOptions,
     expectedEntries = entries,
   ) => {
-    const iter = makeScanResult(options, getTestScanIterator(entries));
-    expect(await asyncIterableToArray(iter.entries())).to.deep.equal(
-      expectedEntries,
-    );
+    {
+      const iter = makeScanResult(options, getTestScanAsyncIterator(entries));
+      expect(await asyncIterableToArray(iter.entries())).to.deep.equal(
+        expectedEntries,
+      );
+    }
+    {
+      const iter = makeScanResult(options, getTestScanIterator(entries));
+      expect(await asyncIterableToArray(iter.entries())).to.deep.equal(
+        expectedEntries,
+      );
+    }
   };
 
   await t([], {});
@@ -290,7 +310,7 @@ test('makeScanResult', async () => {
 });
 
 test('makeScanResult with index', async () => {
-  function getTestScanIterator(
+  function getTestScanAsyncIterator(
     entries: (readonly [key: IndexKey, value: ReadonlyJSONValue])[],
   ): GetIndexScanIterator<ReadonlyJSONValue> {
     return async function* (indexName, secondaryKey, primaryKey) {
@@ -298,7 +318,22 @@ test('makeScanResult with index', async () => {
       for (const [key, value] of entries) {
         if (key[0] >= secondaryKey) {
           if (primaryKey === undefined || key[1] >= primaryKey) {
-            yield [key, value];
+            yield [key, value] as const;
+          }
+        }
+      }
+    };
+  }
+
+  function getTestScanIterator(
+    entries: (readonly [key: IndexKey, value: ReadonlyJSONValue])[],
+  ): GetIndexScanIterator<ReadonlyJSONValue> {
+    return function* (indexName, secondaryKey, primaryKey) {
+      expect(indexName).to.equal('index');
+      for (const [key, value] of entries) {
+        if (key[0] >= secondaryKey) {
+          if (primaryKey === undefined || key[1] >= primaryKey) {
+            yield [key, value] as const;
           }
         }
       }
@@ -310,11 +345,23 @@ test('makeScanResult with index', async () => {
     options: Omit<ScanIndexOptions, 'indexName'> = {},
     expectedEntries = entries,
   ) => {
-    const indexOptions = {indexName: 'index', ...options};
-    const iter = makeScanResult(indexOptions, getTestScanIterator(entries));
-    expect(await asyncIterableToArray(iter.entries())).to.deep.equal(
-      expectedEntries,
-    );
+    {
+      const indexOptions = {indexName: 'index', ...options};
+      const iter = makeScanResult(
+        indexOptions,
+        getTestScanAsyncIterator(entries),
+      );
+      expect(await asyncIterableToArray(iter.entries())).to.deep.equal(
+        expectedEntries,
+      );
+    }
+    {
+      const indexOptions = {indexName: 'index', ...options};
+      const iter = makeScanResult(indexOptions, getTestScanIterator(entries));
+      expect(await asyncIterableToArray(iter.entries())).to.deep.equal(
+        expectedEntries,
+      );
+    }
   };
 
   await t([]);

@@ -1,3 +1,5 @@
+import type {IterableUnion} from './iterable-union';
+
 /**
  * Filters an async iterable.
  *
@@ -6,7 +8,7 @@
  * for example.
  */
 export async function* filterAsyncIterable<V>(
-  iter: AsyncIterable<V>,
+  iter: IterableUnion<V>,
   predicate: (v: V) => boolean,
 ): AsyncIterable<V> {
   for await (const v of iter) {

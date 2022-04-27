@@ -1,3 +1,5 @@
+import {getIterator, IterableUnion} from './iterable-union';
+
 /**
  * Merges an iterable on to another iterable.
  *
@@ -12,12 +14,12 @@
  * iterable on to a persistent async iterable for example.
  */
 export async function* mergeAsyncIterables<A, B>(
-  iterableBase: AsyncIterable<A>,
-  iterableOverlay: AsyncIterable<B>,
+  iterableBase: IterableUnion<A>,
+  iterableOverlay: IterableUnion<B>,
   compare: (a: A, b: B) => number,
 ): AsyncIterable<A | B> {
-  const a = iterableBase[Symbol.asyncIterator]();
-  const b = iterableOverlay[Symbol.asyncIterator]();
+  const a = getIterator(iterableBase);
+  const b = getIterator(iterableOverlay);
 
   let iterResultA = await a.next();
   let iterResultB = await b.next();
