@@ -15,9 +15,9 @@ import {EntryForOptions, fromKeyForNonIndexScan} from './transactions.js';
 
 type ScanKey = string | IndexKey;
 
-type ToValue<Options extends ScanOptions, V> = (
-  entry: EntryForOptions<Options>,
-) => V;
+type ToValue<Options extends ScanOptions, Value> = (
+  entry: EntryForOptions<Options, Value>,
+) => Value;
 
 type ShouldDeepClone = {shouldDeepClone: boolean};
 
@@ -27,18 +27,16 @@ type ShouldDeepClone = {shouldDeepClone: boolean};
  * await` loop. There are also methods to iterate over the [[keys]],
  * [[entries]] or [[values]].
  */
-export class ScanResultImpl<
-  Options extends ScanOptions,
-  V extends ReadonlyJSONValue,
-> implements ScanResult<KeyTypeForScanOptions<Options>, V>
+export class ScanResultImpl<Options extends ScanOptions, Value>
+  implements ScanResult<KeyTypeForScanOptions<Options>, Value>
 {
-  private readonly _iter: AsyncIterable<EntryForOptions<Options>>;
+  private readonly _iter: AsyncIterable<EntryForOptions<Options, Value>>;
   private readonly _options: Options;
   private readonly _dbDelegateOptions: Closed & ShouldDeepClone;
   private readonly _onLimitKey: (inclusiveLimitKey: string) => void;
 
   constructor(
-    iter: AsyncIterable<EntryForOptions<Options>>,
+    iter: AsyncIterable<EntryForOptions<Options, Value>>,
     options: Options,
     dbDelegateOptions: Closed & ShouldDeepClone,
     onLimitKey: (inclusiveLimitKey: string) => void,
@@ -50,18 +48,17 @@ export class ScanResultImpl<
   }
 
   /** The default AsyncIterable. This is the same as [[values]]. */
-  [Symbol.asyncIterator](): AsyncIterableIteratorToArrayWrapper<V> {
+  [Symbol.asyncIterator](): AsyncIterableIteratorToArrayWrapper<Value> {
     return this.values();
   }
 
   /** Async iterator over the values of the [[ReadTransaction.scan|scan]] call. */
-  values(): AsyncIterableIteratorToArrayWrapper<V> {
+  values(): AsyncIterableIteratorToArrayWrapper<Value> {
     const clone = this._dbDelegateOptions.shouldDeepClone
       ? deepClone
       : (x: ReadonlyJSONValue) => x;
-    return new AsyncIterableIteratorToArrayWrapper(
-      this._newIterator(e => clone(e[1])) as AsyncIterableIterator<V>,
-    );
+    const toValue: ToValue<Options, Value> = e => clone(e[1]) as Value;
+    return new AsyncIterableIteratorToArrayWrapper(this._newIterator(toValue));
   }
 
   /**
@@ -71,9 +68,9 @@ export class ScanResultImpl<
    */
   keys(): AsyncIterableIteratorToArrayWrapper<KeyTypeForScanOptions<Options>> {
     type K = KeyTypeForScanOptions<Options>;
-    const toValue = (e: EntryForOptions<Options>) => e[0];
-    return new AsyncIterableIteratorToArrayWrapper(
-      this._newIterator(toValue as ToValue<Options, K>),
+    const toValue: ToValue<Options, K> = e => e[0] as K;
+    return new AsyncIterableIteratorToArrayWrapper<K>(
+      this._newIterator<K>(toValue),
     );
   }
 
@@ -84,20 +81,20 @@ export class ScanResultImpl<
    * `[secondaryKey: string, primaryKey]`
    */
   entries(): AsyncIterableIteratorToArrayWrapper<
-    readonly [KeyTypeForScanOptions<Options>, V]
+    readonly [KeyTypeForScanOptions<Options>, Value]
   > {
-    type K = KeyTypeForScanOptions<Options>;
+    type Entry = readonly [KeyTypeForScanOptions<Options>, Value];
     const clone = this._dbDelegateOptions.shouldDeepClone
       ? deepClone
       : (x: ReadonlyJSONValue) => x;
-    const toValue = (e: EntryForOptions<Options>) => clone(e);
+    const toValue: ToValue<Options, Entry> = e => clone(e) as Entry;
     return new AsyncIterableIteratorToArrayWrapper(
-      this._newIterator(toValue as ToValue<Options, readonly [K, V]>),
+      this._newIterator<Entry>(toValue),
     );
   }
 
   /** Returns all the values as an array. Same as `values().toArray()` */
-  toArray(): Promise<V[]> {
+  toArray(): Promise<Value[]> {
     return this.values().toArray();
   }
 
@@ -106,7 +103,7 @@ export class ScanResultImpl<
   ): AsyncIterableIterator<T> {
     return scanIterator(
       toValue,
-      this._iter,
+      this._iter as unknown as AsyncIterable<EntryForOptions<Options, T>>,
       this._options,
       this._dbDelegateOptions,
       this._onLimitKey,
@@ -182,13 +179,13 @@ export class AsyncIterableIteratorToArrayWrapper<V>
   }
 }
 
-async function* scanIterator<Options extends ScanOptions, V>(
-  toValue: ToValue<Options, V>,
-  iter: AsyncIterable<EntryForOptions<Options>>,
+async function* scanIterator<Options extends ScanOptions, Value>(
+  toValue: ToValue<Options, Value>,
+  iter: AsyncIterable<EntryForOptions<Options, Value>>,
   options: Options,
   closed: Closed,
   onLimitKey: (inclusiveLimitKey: string) => void,
-): AsyncIterableIterator<V> {
+): AsyncIterableIterator<Value> {
   throwIfClosed(closed);
 
   let {limit = Infinity} = options;
@@ -257,16 +254,9 @@ function shouldSkipNonIndexScan(key: string, startKey: string): boolean {
  * first entry to return in the iterator. It is based on `prefix` and
  * `start.key` of the [[ScanNoIndexOptions]].
  */
-export type GetScanIterator = (
+export type GetScanIterator<V> = (
   fromKey: string,
-) => AsyncIterable<ReadonlyEntry<ReadonlyJSONValue>>;
-
-/**
- * TODO
- */
-export type GetScanIteratorWithDeletes = (
-  fromKey: string,
-) => AsyncIterable<ReadonlyEntry<ReadonlyJSONValue | undefined>>;
+) => AsyncIterable<ReadonlyEntry<V>>;
 
 /**
  * When using [[makeScanResult]] this is the type used for the function called when doing a [[ReadTransaction.scan|scan]] with an
@@ -280,22 +270,11 @@ export type GetScanIteratorWithDeletes = (
  * primary key of the first entry to return in the iterator. It is based on
  * `prefix` and `start.key` of the [[ScanIndexOptions]].
  */
-export type GetIndexScanIterator = (
+export type GetIndexScanIterator<V> = (
   indexName: string,
   fromSecondaryKey: string,
   fromPrimaryKey: string | undefined,
-) => AsyncIterable<readonly [key: IndexKey, value: ReadonlyJSONValue]>;
-
-/**
- * TODO
- */
-export type GetIndexScanIteratorWithDeletes = (
-  indexName: string,
-  fromSecondaryKey: string,
-  fromPrimaryKey: string | undefined,
-) => AsyncIterable<
-  readonly [key: IndexKey, value: ReadonlyJSONValue | undefined]
->;
+) => AsyncIterable<readonly [key: IndexKey, value: V]>;
 
 /**
  * A helper function that makes it easier to implement [[ReadTransaction.scan]]
@@ -327,18 +306,18 @@ export type GetIndexScanIteratorWithDeletes = (
  * );
  * ```
  */
-export function makeScanResult<Options extends ScanOptions>(
+export function makeScanResult<Options extends ScanOptions, Value>(
   options: Options,
   getScanIterator: Options extends ScanIndexOptions
-    ? GetIndexScanIterator
-    : GetScanIterator,
-): ScanResult<KeyTypeForScanOptions<Options>, ReadonlyJSONValue> {
-  type AsyncIter = AsyncIterable<EntryForOptions<Options>>;
+    ? GetIndexScanIterator<Value>
+    : GetScanIterator<Value>,
+): ScanResult<KeyTypeForScanOptions<Options>, Value> {
+  type AsyncIter = AsyncIterable<EntryForOptions<Options, Value>>;
 
   if (isScanIndexOptions(options)) {
     const [fromSecondaryKey, fromPrimaryKey] = fromKeyForIndexScan(options);
     return new ScanResultImpl(
-      (getScanIterator as GetIndexScanIterator)(
+      (getScanIterator as GetIndexScanIterator<Value>)(
         options.indexName,
         fromSecondaryKey,
         fromPrimaryKey,
@@ -352,7 +331,7 @@ export function makeScanResult<Options extends ScanOptions>(
   }
   const fromKey = fromKeyForNonIndexScan(options);
   return new ScanResultImpl(
-    (getScanIterator as GetScanIterator)(fromKey) as AsyncIter,
+    (getScanIterator as GetScanIterator<Value>)(fromKey) as AsyncIter,
     options,
     {closed: false, shouldDeepClone: false},
     _ => {
