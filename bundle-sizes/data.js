@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1651053814552,
+  "lastUpdate": 1651067679482,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -12335,6 +12335,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 21893,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c51e5640200c4426825b80e1786882d71e51c0a9",
+          "message": "fix: makeScanResult etc needs Value param type (#23)\n\nSince ReadTransaction scan uses ReadonlyJSONValue but WriteTransaction\r\nscan uses JSONValue we need to parameterize the value type.",
+          "timestamp": "2022-04-27T15:53:35+02:00",
+          "tree_id": "528de59a0f0c2a559db728c29df1367201eae698",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/c51e5640200c4426825b80e1786882d71e51c0a9"
+        },
+        "date": 1651067675918,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 167290,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 31235,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 166190,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 30940,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 76150,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 21828,
             "unit": "bytes"
           }
         ]
