@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1651067679482,
+  "lastUpdate": 1651069875083,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -12389,6 +12389,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 21828,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4f2715cb71a813a00cfd684102c4da711bab1ae9",
+          "message": "feat: Relax iterable types in makeScanResult etc (#24)\n\nIn most places where an AsyncIterable/AsyncIterator is wanted ES\r\nsupports passing in an Iterable/Iterator instead.",
+          "timestamp": "2022-04-27T14:29:59Z",
+          "tree_id": "977433699bbeea8fa738ccc25b915f788c0cd408",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/4f2715cb71a813a00cfd684102c4da711bab1ae9"
+        },
+        "date": 1651069870814,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 167433,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 31298,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 166333,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 30997,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 76212,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 21894,
             "unit": "bytes"
           }
         ]
