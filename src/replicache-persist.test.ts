@@ -101,6 +101,8 @@ test('basic persist & load', async () => {
   });
 
   expect(await rep.clientID).to.not.equal(await rep2.clientID);
+
+  await perdag.close();
 });
 
 suite('onClientStateNotFound', () => {

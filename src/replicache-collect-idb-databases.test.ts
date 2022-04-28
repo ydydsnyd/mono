@@ -1,4 +1,5 @@
 import {expect} from '@esm-bundle/chai';
+import {sleep} from './sleep.js';
 import {clock, initReplicacheTesting, replicacheForTesting} from './test-util';
 
 initReplicacheTesting();
@@ -35,6 +36,10 @@ test('collect IDB databases', async () => {
   const rep3 = await replicacheForTesting('collect-idb-databases-3');
   await clock.tickAsync(FIVE_MINUTES);
   await rep3.close();
+
+  // Restore real timers and wait a few ms to let the idb state "flush"
+  clock.restore();
+  await sleep(500);
 
   expect(await getDatabases()).to.deep.equal([
     'collect-idb-databases-2',

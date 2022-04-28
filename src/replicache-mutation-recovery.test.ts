@@ -89,7 +89,7 @@ async function createAndPersistClientWithPendingLocal(
     await addLocal(chain, testMemdag);
     localMetas.push(chain[chain.length - 1].meta as db.LocalMeta);
   }
-  await persist.persist(clientID, testMemdag, perdag);
+  await persist.persist(clientID, testMemdag, perdag, () => false);
   return localMetas;
 }
 

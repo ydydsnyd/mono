@@ -1148,11 +1148,18 @@ export class Replicache<MD extends MutatorDefs = {}> {
     const clientID = await this.clientID;
     try {
       await this._persistLock.withLock(() =>
-        persist.persist(clientID, this._memdag, this._perdag),
+        persist.persist(
+          clientID,
+          this._memdag,
+          this._perdag,
+          () => this.closed,
+        ),
       );
     } catch (e) {
       if (e instanceof persist.ClientStateNotFoundError) {
         this._fireOnClientStateNotFound(clientID, reasonClient);
+      } else if (this._closed) {
+        this._lc.debug?.('Exception persisting during close', e);
       } else {
         throw e;
       }

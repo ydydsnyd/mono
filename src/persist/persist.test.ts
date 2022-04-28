@@ -227,7 +227,7 @@ test('We get a MissingClientException during persist if client is missing', asyn
 
   let err;
   try {
-    await persist(clientID, memdag, perdag);
+    await persist(clientID, memdag, perdag, () => false);
   } catch (e) {
     err = e;
   }
@@ -252,7 +252,7 @@ function setupPersistTest() {
   const chain: Chain = [];
 
   const testPersist = async () => {
-    await persist(clientID, memdag, perdag);
+    await persist(clientID, memdag, perdag, () => false);
     await assertSameDagData(clientID, memdag, perdag);
     await assertClientMutationIDsCorrect(clientID, perdag);
   };

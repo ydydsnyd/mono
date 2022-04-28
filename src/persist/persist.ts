@@ -25,7 +25,12 @@ export async function persist(
   clientID: ClientID,
   memdag: dag.Store,
   perdag: dag.Store,
+  closed: () => boolean,
 ): Promise<void> {
+  if (closed()) {
+    return;
+  }
+
   // Start checking if client exists while we do other async work
   const clientExistsCheckP = perdag.withRead(read =>
     assertHasClientState(clientID, read),
@@ -47,6 +52,10 @@ export async function persist(
   await clientExistsCheckP;
 
   const [fixedChunks, mappings, mainHeadHash] = await computeHashesP;
+
+  if (closed()) {
+    return;
+  }
 
   // 3. write chunks to perdag.
   await writeFixedChunks(
