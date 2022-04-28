@@ -22,7 +22,7 @@ Here are some axes along which you could measure the workload that Replicache is
 | Axis                                 | Expectation                               |
 | ------------------------------------ | ----------------------------------------- |
 | Total data size                      | < 64MB per Replicache instance            |
-| Typical key-value size               | ~1KB                                      |
+| Typical key-value size               | < 100KB                                   |
 | Max key-value size                   | < 1MB (see also [blobs](recipe-blobs.md)) |
 | Average push-pull round trip latency | 100's of ms                               |
 | Number of indexes                    | < 10                                      |
