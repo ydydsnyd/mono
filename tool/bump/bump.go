@@ -50,11 +50,6 @@ func impl() error {
 		fmt.Println("WARNING: new version is smaller than old version. Carefully check changed files to be sure this is what you want.")
 	}
 
-	err = updateLicense(*rootDir, oldVersion, v)
-	if err != nil {
-		return errors.Wrap(err, "Could not update license")
-	}
-
 	err = updatePackageJSON(path.Join(*rootDir, "package.json"), v.String())
 	if err != nil {
 		return err
@@ -90,28 +85,6 @@ func updateVersionFile(rootDir string, newVersion semver.Version) (semver.Versio
 	}
 
 	return oldVersion, nil
-}
-
-func updateLicense(rootDir string, oldVersion, newVersion semver.Version) error {
-	p := path.Join(rootDir, "licenses", "BSL.txt")
-	err := updateFile(p,
-		"Licensed Work:        Replicache (.*)\n",
-		newVersion.String())
-	if err != nil {
-		return err
-	}
-	if newVersion.Major != oldVersion.Major || newVersion.Minor != oldVersion.Minor {
-		fmt.Println("Major or minor component changed. Updating Change Date.")
-		now := time.Now()
-		err = updateFile(p, "Change Date:          (.*)\n",
-			fmt.Sprintf("%d-%02d-%02d", now.Year()+2, now.Month(), now.Day()))
-		if err != nil {
-			return err
-		}
-	} else {
-		fmt.Println("Patch release. Not updating Change Date.")
-	}
-	return nil
 }
 
 func updatePackageJSON(p, newVersion string) error {
