@@ -3,6 +3,7 @@ module.exports = {
     'getting-started',
     'how-it-works',
     'consistency',
+    'offline',
     {
       Reference: [
         {
