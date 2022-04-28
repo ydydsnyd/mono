@@ -2,8 +2,6 @@ module.exports = {
   docs: [
     'getting-started',
     'how-it-works',
-    'consistency',
-    'offline',
     {
       Reference: [
         {
