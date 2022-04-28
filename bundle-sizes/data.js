@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1651069875083,
+  "lastUpdate": 1651134018437,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -12443,6 +12443,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 21894,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ab18acf79ee9b763c70c61773a5e5e98a26faadd",
+          "message": "chore: Assert that we have no cyclic chunks (#22)\n\nAdd asserts so that we do not iloop when we end up with cyclic refs.\r\n\r\nThis adds assert both in `LazyStore` and `Chunk` creation.\r\n\r\nIf this impacts the perf we might consider turning these of in production mode.\r\n\r\nTowards #21",
+          "timestamp": "2022-04-28T08:18:58Z",
+          "tree_id": "2f4f6cbda8149061c530772649c717932936fcd3",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/ab18acf79ee9b763c70c61773a5e5e98a26faadd"
+        },
+        "date": 1651134013745,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 167597,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 31333,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 166497,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 31023,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 76318,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 21954,
             "unit": "bytes"
           }
         ]
