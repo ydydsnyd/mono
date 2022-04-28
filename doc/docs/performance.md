@@ -29,10 +29,40 @@ Here are some axes along which you could measure the workload that Replicache is
 
 ## Specific Performance Metrics
 
-Below find specific performance metrics that Replicache meets or exceeds. Automated performance testing is part of our continuous integration strategy, so these performance metrics are monitored for every change we make to the codebase.
+Below find some specific performance metrics that Replicache meets or exceeds. We track these metrics (and more) as part of our continuous integration strategy, measuring them on stock desktop hardware (4-core Xeon from 2018-ish, 16GB RAM) for every change to the codebase.
 
-TODO
+Note that these are microbenchmarks with very specific payloads. Actual performance will vary. If you experience worse performance than suggested below we'd likely consider it a bug, so please contact us.
+<br/><br/>
 
-- be sure to include approx hardware
-- also that these are microbenchmarks with very specific payloads
-- actual results may vary, but if they vary badly in the bad direction it is a bug
+### Scan: 650MB/s
+
+---
+
+This is the rate at which key-values can be iterated in key order.
+<br/><br/>
+
+### Reactive Loop w/16MB cache: 3.5ms @p50, 6ms @p95
+
+### Reactive Loop w/64MB cache: 3.5ms @p50, 25ms @p95
+
+---
+
+The reactive loop latency is the time it takes to write new data, notify all subscribers of the change, and for them to read the new data out. Assumptions: there are 100 open subscriptions 5 of which are dirty, and each of these 5 reads 10KB of data.
+<br/><br/>
+
+### Populate 1MB w/0 indexes: 25MB/s
+
+### Populate 1MB w/1 indexes: 17MB/s
+
+### Populate 1MB w/2 indexes: 13MB/s
+
+---
+
+This measures the rate at which callers can write 1MB's worth of 1KB key-values.
+<br/><br/>
+
+### Startup: 100KB in < 150ms @p95
+
+---
+
+This measures the p95 time to read the first 100KB of data from disk at Replicache startup.
