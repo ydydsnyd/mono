@@ -5,7 +5,7 @@ slug: /performance
 
 ## Performance Intuitions
 
-Your intuition should be that Replicache has "memory-fast" performance for common operations. Here are some rough rules of thumb you that should serve you well.
+Your intuition should be that Replicache has "memory-fast" performance for common operations. Here are some rough rules of thumb that should serve you well.
 
 | Operation                              | Expectation            |
 | -------------------------------------- | ---------------------- |
