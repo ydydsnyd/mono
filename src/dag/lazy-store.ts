@@ -495,6 +495,10 @@ class ChunksCache {
         this._refCounts.delete(refHash);
         const refCacheEntry = this._cacheEntries.get(refHash);
         if (refCacheEntry) {
+          assert(
+            cacheEntry.chunk.hash !== refHash,
+            'Found a chunk that references itself',
+          );
           this.delete(refCacheEntry);
         }
       } else {

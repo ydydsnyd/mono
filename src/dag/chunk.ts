@@ -1,4 +1,4 @@
-import {assertString} from '../asserts';
+import {assert, assertString} from '../asserts';
 import {Hash, makeNewFakeHashFunction, hashOf} from '../hash';
 import type {Value} from '../kv/store';
 
@@ -41,7 +41,7 @@ export function createChunk<V extends Value>(
   chunkHasher: ChunkHasher,
 ): Chunk<V> {
   const hash = chunkHasher(data);
-  return new ChunkImpl(hash, data, refs);
+  return createChunkWithHash(hash, data, refs);
 }
 
 export function createChunkWithHash<V extends Value>(
@@ -49,6 +49,7 @@ export function createChunkWithHash<V extends Value>(
   data: V,
   refs: Refs,
 ): Chunk<V> {
+  assert(!refs.includes(hash), 'Chunk cannot reference itself');
   return new ChunkImpl(hash, data, refs);
 }
 
