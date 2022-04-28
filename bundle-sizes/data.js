@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1651134018437,
+  "lastUpdate": 1651155003083,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -12497,6 +12497,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 21954,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f3cc13c4bd7de891c1e5f0c464cec29ff7637013",
+          "message": "chore: Try to silence errors in IDB during IDB close (#26)\n\nWe now ignore errors in persist if the DB was closed.\r\n\r\nTowards https://github.com/rocicorp/replicache/issues/973",
+          "timestamp": "2022-04-28T14:08:30Z",
+          "tree_id": "499f8987177a966fe1a599c4512d1d51be4a2b44",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/f3cc13c4bd7de891c1e5f0c464cec29ff7637013"
+        },
+        "date": 1651154998205,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 167842,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 31355,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 166742,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 31061,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 76456,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 21962,
             "unit": "bytes"
           }
         ]
