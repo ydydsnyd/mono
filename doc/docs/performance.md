@@ -30,6 +30,5 @@ Here are some axes along which you could measure the workload that Replicache is
 ## Specific Performance Metrics
 
 Below find specific performance metrics that Replicache meets or exceeds. Automated performance testing is part of our continuous integration strategy, so these performance metrics are monitored for every change we make to the codebase.
-<br><br>
 
 TODO
