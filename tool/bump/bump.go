@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
-	"time"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/blang/semver/v4"
