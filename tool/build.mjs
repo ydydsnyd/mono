@@ -1,6 +1,7 @@
 // @ts-check
 
 import * as esbuild from 'esbuild';
+import {readFile} from 'fs/promises';
 
 const forBundleSizeDashboard = process.argv.includes('--bundle-sizes');
 const perf = process.argv.includes('--perf');
@@ -11,6 +12,12 @@ const sharedOptions = {
   mangleProps: /^_./,
   reserveProps: /^__.*__$/,
 };
+
+async function readPackageJSON() {
+  const url = new URL('../package.json', import.meta.url);
+  const s = await readFile(url, 'utf-8');
+  return JSON.parse(s);
+}
 
 /**
  * @param {{
@@ -29,6 +36,9 @@ async function buildReplicache(options) {
     platform: 'neutral',
     outfile: 'out/replicache.' + ext,
     entryPoints: ['src/mod.ts'],
+    define: {
+      REPLICACHE_VERSION: JSON.stringify((await readPackageJSON()).version),
+    },
   });
 }
 
