@@ -1,7 +1,7 @@
 module.exports = {
   docs: [
     'getting-started',
-    'how-it-works',
+    'how-replicache-works',
     {
       Reference: [
         {
