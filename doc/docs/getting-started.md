@@ -43,4 +43,4 @@ You can start modifying this app to build something new with Replicache.
 
 ## Next
 
-To understand the big picture of how to use Replicache, see [How Replicache Works](./how-it-works.md).
+To understand the big picture of how to use Replicache, see [How Replicache Works](./how-replicache-works.md).
