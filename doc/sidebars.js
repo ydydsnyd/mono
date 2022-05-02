@@ -1,7 +1,21 @@
+const {toEditorSettings} = require('typescript');
+
 module.exports = {
   docs: [
-    'getting-started',
-    'how-it-works',
+    // TODO clean out the unused docs
+    'get-started',
+    {
+      Examples: ['sample-todo', 'sample-replidraw'],
+      // TODO sample => example
+      // TODO repliear
+    },
+    {
+      'Understand Replicache': [
+        'how-it-works',
+        'faq', // TODO review
+        // TODO what replicache is good for
+      ],
+    },
     {
       Reference: [
         {
@@ -17,28 +31,27 @@ module.exports = {
       ],
     },
     {
-      'Integration Guide': [
-        'guide-intro',
-        'guide-design-client-view',
-        'guide-install-replicache',
-        'guide-render-ui',
-        'guide-local-mutations',
-        'guide-database-setup',
-        'guide-remote-mutations',
-        'guide-dynamic-pull',
-        'guide-poke',
-        'guide-conclusion',
+      HOWTO: [
+        // TODO review and rename
+        'licensing',
+        'recipe-blobs',
+        'launch-checklist',
+        {
+          // TODO figure out what to do with this
+          'Integration Guide': [
+            'guide-intro',
+            'guide-design-client-view',
+            'guide-install-replicache',
+            'guide-render-ui',
+            'guide-local-mutations',
+            'guide-database-setup',
+            'guide-remote-mutations',
+            'guide-dynamic-pull',
+            'guide-poke',
+            'guide-conclusion',
+          ],
+        },
       ],
     },
-    {
-      Recipes: ['recipe-blobs'],
-    },
-    {
-      Samples: ['sample-todo', 'sample-replidraw'],
-    },
-    'licensing',
-    'launch-checklist',
-    'design',
-    'faq',
   ],
 };
