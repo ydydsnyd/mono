@@ -36,27 +36,15 @@ export default {
       retries: process.env.CI ? 3 : 0, // Firefox is flaky
     },
   },
-  groups: [
-    {
-      name: 'Main',
-      files: [
-        'src/*.test.ts',
-        'src/dag/*.test.ts',
-        'src/db/*.test.ts',
-        'src/kv/*.test.ts',
-        'src/sync/*.test.ts',
-        'src/migrate/*.test.ts',
-        'src/btree/*.test.ts',
-        'src/persist/*.test.ts',
-        // src/worker-tests/ intentionally excluded, see separate Worker group below
-      ],
-      browsers: [firefox, chromium, webkit],
-    },
-    {
-      name: 'Worker',
-      files: 'src/worker-tests/worker.test.ts',
-      // Only Chrome supports modules in workers at the moment
-      browsers: [chromium],
-    },
+  files: [
+    'src/*.test.ts',
+    'src/dag/*.test.ts',
+    'src/db/*.test.ts',
+    'src/kv/*.test.ts',
+    'src/sync/*.test.ts',
+    'src/migrate/*.test.ts',
+    'src/btree/*.test.ts',
+    'src/persist/*.test.ts',
   ],
+  browsers: [firefox, chromium, webkit],
 };
