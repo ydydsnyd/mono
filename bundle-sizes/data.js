@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1651656481762,
+  "lastUpdate": 1651691788814,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -13307,6 +13307,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 22006,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4657518df48e8e4e4508989ddac01ce1397825a7",
+          "message": "fix!: Make AsyncIterableIteratorToArray an interface (#40)\n\nPreviously we had a concrete class called\r\n`AsyncIterableIteratorToArrayWrapper`. When you have a concrete class it\r\nleads to problems because `ReadTransaction` and `WriteTransaction` now\r\ndepend on a concrete class. When you have a concrete class you can not\r\nuse duck typing. You can not reuse the `ReadTransaction` and\r\n`WriteTransaction` on the client and server unless they point at the same\r\nexact file defining the concrete type.\r\n\r\nBy making this an interface it is OK to have duplicate compatible\r\ndefinition of the type.\r\n\r\nThis removes the possibility to reuse the old\r\n`AsyncIterableIteratorToArrayWrapper` class in code that depends on\r\nreplicache.\r\n\r\nBREAKING CHANGE!",
+          "timestamp": "2022-05-04T12:15:18-07:00",
+          "tree_id": "cd901821fa34359a79b887652f5827668ef11320",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/4657518df48e8e4e4508989ddac01ce1397825a7"
+        },
+        "date": 1651691783695,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 167825,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 31382,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 166710,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 31079,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 76417,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 21988,
             "unit": "bytes"
           }
         ]
