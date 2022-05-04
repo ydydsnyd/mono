@@ -1,4 +1,4 @@
-import type { JSONValue, WriteTransaction } from "replicache";
+import type { JSONValue, WriteTransaction } from "../src/mod.js";
 import { createReflectServer } from "../src/mod.js";
 
 const mutators = {
