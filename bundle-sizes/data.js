@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1651585902790,
+  "lastUpdate": 1651656481762,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -13223,6 +13223,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/9e7ce103546c4a888bfe97478ca60484c69149ef"
         },
         "date": 1651585899062,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 167918,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 31421,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 166803,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 31098,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 76493,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 22006,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6b98f472e059bcd22f4268afac0b778cd92ce514",
+          "message": "chore(deps): bump cross-fetch from 3.1.4 to 3.1.5 in /doc (#29)\n\nBumps [cross-fetch](https://github.com/lquixada/cross-fetch) from 3.1.4 to 3.1.5.\r\n- [Release notes](https://github.com/lquixada/cross-fetch/releases)\r\n- [Commits](https://github.com/lquixada/cross-fetch/compare/v3.1.4...v3.1.5)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: cross-fetch\r\n  dependency-type: indirect\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\n\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>\r\nCo-authored-by: Erik Arvidsson <erik.arvidsson@gmail.com>",
+          "timestamp": "2022-05-04T09:26:57Z",
+          "tree_id": "f8aa26f42bc5bfc0fd159d423019cf8cc1a1a4a9",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/6b98f472e059bcd22f4268afac0b778cd92ce514"
+        },
+        "date": 1651656478423,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
