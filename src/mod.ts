@@ -12,3 +12,7 @@ export {
 } from "@rocicorp/logger";
 export { DatadogLogSink } from "./util/datadog-log-sink.js";
 export { version } from "./util/version.js";
+
+// TODO(arv): Only export the types that are actually used.
+// https://github.com/rocicorp/reflect-server/issues/117
+export * from "replicache";
