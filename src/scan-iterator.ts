@@ -49,17 +49,19 @@ export class ScanResultImpl<Options extends ScanOptions, Value>
   }
 
   /** The default AsyncIterable. This is the same as [[values]]. */
-  [Symbol.asyncIterator](): AsyncIterableIteratorToArrayWrapper<Value> {
+  [Symbol.asyncIterator](): AsyncIterableIteratorToArray<Value> {
     return this.values();
   }
 
   /** Async iterator over the values of the [[ReadTransaction.scan|scan]] call. */
-  values(): AsyncIterableIteratorToArrayWrapper<Value> {
+  values(): AsyncIterableIteratorToArray<Value> {
     const clone = this._dbDelegateOptions.shouldDeepClone
       ? deepClone
       : (x: ReadonlyJSONValue) => x;
     const toValue: ToValue<Options, Value> = e => clone(e[1]) as Value;
-    return new AsyncIterableIteratorToArrayWrapper(this._newIterator(toValue));
+    return new AsyncIterableIteratorToArrayWrapperImpl(
+      this._newIterator(toValue),
+    );
   }
 
   /**
@@ -67,10 +69,10 @@ export class ScanResultImpl<Options extends ScanOptions, Value>
    * call. If the [[ReadTransaction.scan|scan]] is over an index the key
    * is a tuple of `[secondaryKey: string, primaryKey]`
    */
-  keys(): AsyncIterableIteratorToArrayWrapper<KeyTypeForScanOptions<Options>> {
+  keys(): AsyncIterableIteratorToArray<KeyTypeForScanOptions<Options>> {
     type K = KeyTypeForScanOptions<Options>;
     const toValue: ToValue<Options, K> = e => e[0] as K;
-    return new AsyncIterableIteratorToArrayWrapper<K>(
+    return new AsyncIterableIteratorToArrayWrapperImpl<K>(
       this._newIterator<K>(toValue),
     );
   }
@@ -81,7 +83,7 @@ export class ScanResultImpl<Options extends ScanOptions, Value>
    * [[ReadTransaction.scan|scan]] is over an index the key is a tuple of
    * `[secondaryKey: string, primaryKey]`
    */
-  entries(): AsyncIterableIteratorToArrayWrapper<
+  entries(): AsyncIterableIteratorToArray<
     readonly [KeyTypeForScanOptions<Options>, Value]
   > {
     type Entry = readonly [KeyTypeForScanOptions<Options>, Value];
@@ -89,7 +91,7 @@ export class ScanResultImpl<Options extends ScanOptions, Value>
       ? deepClone
       : (x: ReadonlyJSONValue) => x;
     const toValue: ToValue<Options, Entry> = e => clone(e) as Entry;
-    return new AsyncIterableIteratorToArrayWrapper(
+    return new AsyncIterableIteratorToArrayWrapperImpl(
       this._newIterator<Entry>(toValue),
     );
   }
@@ -115,17 +117,17 @@ export class ScanResultImpl<Options extends ScanOptions, Value>
 export interface ScanResult<K extends ScanKey, V extends ReadonlyJSONValue>
   extends AsyncIterable<V> {
   /** The default AsyncIterable. This is the same as [[values]]. */
-  [Symbol.asyncIterator](): AsyncIterableIteratorToArrayWrapper<V>;
+  [Symbol.asyncIterator](): AsyncIterableIteratorToArray<V>;
 
   /** Async iterator over the values of the [[ReadTransaction.scan|scan]] call. */
-  values(): AsyncIterableIteratorToArrayWrapper<V>;
+  values(): AsyncIterableIteratorToArray<V>;
 
   /**
    * Async iterator over the keys of the [[ReadTransaction.scan|scan]]
    * call. If the [[ReadTransaction.scan|scan]] is over an index the key
    * is a tuple of `[secondaryKey: string, primaryKey]`
    */
-  keys(): AsyncIterableIteratorToArrayWrapper<K>;
+  keys(): AsyncIterableIteratorToArray<K>;
 
   /**
    * Async iterator over the entries of the [[ReadTransaction.scan|scan]]
@@ -133,14 +135,14 @@ export interface ScanResult<K extends ScanKey, V extends ReadonlyJSONValue>
    * [[ReadTransaction.scan|scan]] is over an index the key is a tuple of
    * `[secondaryKey: string, primaryKey]`
    */
-  entries(): AsyncIterableIteratorToArrayWrapper<readonly [K, V]>;
+  entries(): AsyncIterableIteratorToArray<readonly [K, V]>;
 
   /** Returns all the values as an array. Same as `values().toArray()` */
   toArray(): Promise<V[]>;
 }
 
 /**
- * A class that wraps an async iterable iterator to add a [[toArray]] method.
+ * An interface that adds a [[toArray]] method to `AsyncIterableIterator`.
  *
  * Usage:
  *
@@ -148,35 +150,30 @@ export interface ScanResult<K extends ScanKey, V extends ReadonlyJSONValue>
  * const keys: string[] = await rep.scan().keys().toArray();
  * ```
  */
-export class AsyncIterableIteratorToArrayWrapper<V>
+export interface AsyncIterableIteratorToArray<V>
+  extends AsyncIterableIterator<V> {
+  toArray(): Promise<V[]>;
+}
+
+class AsyncIterableIteratorToArrayWrapperImpl<V>
   implements AsyncIterableIterator<V>
 {
   private readonly _it: AsyncIterableIterator<V>;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  readonly next: (v?: any) => Promise<IteratorResult<V>>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  readonly return?: (value?: any) => Promise<IteratorResult<V>>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  readonly throw?: (e?: any) => Promise<IteratorResult<V>>;
-
   constructor(it: AsyncIterableIterator<V>) {
     this._it = it;
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    this.next = (v: any) => it.next(v);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion
-    this.return = it.return ? (v: any) => it.return!(v) : undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion
-    this.throw = it.throw ? (v: any) => it.throw!(v) : undefined;
   }
 
-  toArray(): Promise<V[]> {
-    return asyncIterableToArray(this._it);
+  next() {
+    return this._it.next();
   }
 
   [Symbol.asyncIterator](): AsyncIterableIterator<V> {
     return this._it[Symbol.asyncIterator]();
+  }
+
+  toArray(): Promise<V[]> {
+    return asyncIterableToArray(this._it);
   }
 }
 

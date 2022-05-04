@@ -19,7 +19,7 @@ export type {
   GetScanIterator,
   GetIndexScanIterator,
   ScanResult,
-  AsyncIterableIteratorToArrayWrapper,
+  AsyncIterableIteratorToArray,
 } from './scan-iterator';
 export {makeScanResult} from './scan-iterator';
 export type {LogSink, LogLevel} from '@rocicorp/logger';
