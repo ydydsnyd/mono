@@ -42,7 +42,7 @@ export class TestDurableObjectState implements DurableObjectState {
     this.id = id;
     this.storage = storage;
   }
-  waitUntil(_promise: Promise<any>): void {
+  waitUntil(_promise: Promise<unknown>): void {
     return;
   }
   blockConcurrencyWhile<T>(callback: () => Promise<T>): Promise<T> {

@@ -60,6 +60,10 @@ export class Mocket extends EventTarget implements Socket {
   onclose = undefined;
   onmessage = undefined;
 
+  readonly url: string | null = null;
+  readonly protocol: string | null = null;
+  readonly extensions: string | null = null;
+
   accept(): void {
     // noop
   }

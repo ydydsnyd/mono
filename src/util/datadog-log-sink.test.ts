@@ -3,10 +3,7 @@ import type { SpyInstance } from "jest-mock";
 import type { ReadonlyJSONObject } from "replicache";
 import { DatadogLogSink } from "./datadog-log-sink.js";
 
-let fetchSpy: SpyInstance<
-  Promise<Response>,
-  [request: string | Request, requestInitr?: Request | RequestInit | undefined]
->;
+let fetchSpy: SpyInstance<typeof fetch>;
 
 beforeEach(() => {
   jest.useFakeTimers();
