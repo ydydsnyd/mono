@@ -81,6 +81,6 @@ Voila. We're now round-tripping browsers and devices!
 
 Also notice that if we go offline for awhile, make some changes, then come back online, the mutations get sent when possible.
 
-We don't have any conflicts in this simple data model, but Replicache makes it easy to reason about most conflicts. See the [Design Doc](/design) for more details.
+We don't have any conflicts in this simple data model, but Replicache makes it easy to reason about most conflicts. See the [How Replicache Works](/how-it-works) for more details.
 
 The only thing left is to make it live — we obviously don't want the user to have to manually refresh to get new data 🙄.
