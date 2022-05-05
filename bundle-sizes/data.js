@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1651691788814,
+  "lastUpdate": 1651719317539,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -13331,6 +13331,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/4657518df48e8e4e4508989ddac01ce1397825a7"
         },
         "date": 1651691783695,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 167825,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 31382,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 166710,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 31079,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 76417,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 21988,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "phritz@users.noreply.github.com",
+            "name": "phritz",
+            "username": "phritz"
+          },
+          "committer": {
+            "email": "157153+phritz@users.noreply.github.com",
+            "name": "Phritz",
+            "username": "phritz"
+          },
+          "distinct": true,
+          "id": "c8459752da5ecd59b4cb576943e36ed0282d883a",
+          "message": "docs: whoops repliear does not use react designer",
+          "timestamp": "2022-05-04T16:54:18-10:00",
+          "tree_id": "67c053b393a9a1560213227ffbb56457673f220f",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/c8459752da5ecd59b4cb576943e36ed0282d883a"
+        },
+        "date": 1651719314624,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
