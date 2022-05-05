@@ -19,13 +19,13 @@ Your intuition should be that Replicache has "memory-fast" performance for commo
 
 Here are some axes along which you could measure the workload that Replicache is designed to work with. These are not hard constraints, they give ranges in which we would expect Replicache to work without caveats. If you want to operate outside of these ranges, it's probably a good idea to talk to us.
 
-| Axis                                 | Expectation                               |
-| ------------------------------------ | ----------------------------------------- |
-| Total data size                      | < 64MB per cache                          |
-| Typical key-value size               | 100 bytes - 10KB                          |
-| Max key-value size                   | < 1MB (see also [blobs](recipe-blobs.md)) |
-| Average push-pull round trip latency | 100's of ms                               |
-| Number of indexes                    | < 5                                       |
+| Axis                                 | Expectation                     |
+| ------------------------------------ | ------------------------------- |
+| Total data size                      | < 64MB per cache                |
+| Typical key-value size               | 100 bytes - 10KB                |
+| Max key-value size                   | < 1MB (see also [blobs](blobs)) |
+| Average push-pull round trip latency | 100's of ms                     |
+| Number of indexes                    | < 5                             |
 
 ## Specific Performance Metrics
 

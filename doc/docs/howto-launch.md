@@ -1,6 +1,6 @@
 ---
-title: Launch Checklist
-slug: /launch-checklist
+title: Launch to Production
+slug: /launch
 ---
 
 Before you launch with Replicache in your product, it's a good idea to double-check that you have correctly covered all the small details of integration. This list can help you determine if you might have missed a detail, or deferred and then forgotten about one.

@@ -30,13 +30,12 @@ module.exports = {
     },
     {
       HOWTO: [
-        // TODO review and rename
-        'licensing',
-        'recipe-blobs',
-        'launch-checklist',
+        'howto-licensing',
+        'howto-blobs',
+        'howto-launch',
         {
           // TODO figure out what to do with this
-          'Integration Guide': [
+          'Integrate with your own backend': [
             'guide-intro',
             'guide-design-client-view',
             'guide-install-replicache',

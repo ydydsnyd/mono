@@ -1,9 +1,9 @@
 ---
-title: Licensing
+title: Get a License Key
 slug: /licensing
 ---
 
-## Getting a License Key
+## Get a License Key
 
 The [Replicache Terms of Service](https://roci.dev/terms.html) require that anyone using
 Replicache acquire and use their own license key. A license key is required for _any_ use

@@ -176,7 +176,7 @@ This is useful in case the request cookie is invalid or not known to the server,
 
 ## Pull Launch Checklist
 
-- Check the [Launch Checklist](launch-checklist#all-endpoints) for the checklist
+- Check the [Launch Checklist](launch#all-endpoints) for the checklist
   that is common for both push and pull.
 - Ensure that the [`lastMutationID`](#lastmutationid-1) returned in the response
   is read in the same transaction as the client view data (ie, is consistent

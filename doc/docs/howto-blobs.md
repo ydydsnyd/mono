@@ -1,6 +1,6 @@
 ---
-title: Blobs
-slug: /recipes/blobs
+title: Work with Blobs
+slug: /blobs
 ---
 
 Binary data is often referred to as "blobs". This recipe shows a few ways to use
