@@ -5,8 +5,7 @@ module.exports = {
     // TODO clean out the unused docs
     'get-started',
     {
-      Examples: ['sample-todo', 'sample-replidraw'],
-      // TODO sample => example
+      Examples: ['example-todo', 'example-replidraw'],
       // TODO repliear
     },
     {

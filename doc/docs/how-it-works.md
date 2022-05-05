@@ -163,7 +163,7 @@ The push endpoint processes the sent mutations in order by running code on the s
 
 :::note
 
-The [replicache-todo](/samples/todo) starter app contains a generic push endpoint that automatically implements mutators by reusing the JavaScript mutator code from the the client. This Shared Mutator Pattern (TODO link) is very common in Replicache apps and is convenient because it means that frontend devs can add most functionality to apps without touching the server at all.
+The [replicache-todo](/examples/todo) starter app contains a generic push endpoint that automatically implements mutators by reusing the JavaScript mutator code from the the client. This Shared Mutator Pattern (TODO link) is very common in Replicache apps and is convenient because it means that frontend devs can add most functionality to apps without touching the server at all.
 
 :::
 
@@ -211,4 +211,4 @@ Replicache can call pull on a timer (see `pullInterval`) but this is really only
 
 This is done by sending the client a hint that it should pull soon. This hint message is called a _poke_. The poke doesn’t contain any actual data. All the poke does is tell the client that it should pull again soon.
 
-There are many ways to send pokes. The [replicache-todo](/samples/todo) starter app does it using Supabase’s built-in realtime features. However, you can also use a push service like PusherJS or a hand-rolled websocket.
+There are many ways to send pokes. The [replicache-todo](/examples/todo) starter app does it using Supabase’s built-in realtime features. However, you can also use a push service like PusherJS or a hand-rolled websocket.

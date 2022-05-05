@@ -1,6 +1,6 @@
 ---
 title: Replidraw
-slug: /samples/replidraw
+slug: /examples/replidraw
 ---
 
 A tiny Figma-like multiplayer graphics editor.

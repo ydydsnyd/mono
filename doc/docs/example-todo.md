@@ -1,6 +1,6 @@
 ---
 title: Todo
-slug: /samples/todo
+slug: /examples/todo
 ---
 
 A super fast (and offline-compatible) implementation of TodoMVC using Replicache.
