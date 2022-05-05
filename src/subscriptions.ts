@@ -2,7 +2,7 @@ import * as db from './db/mod';
 import type * as sync from './sync/mod';
 import {assert} from './asserts';
 import type {Diff, DiffOperation} from './btree/node';
-import {deepEqual, JSONValue, ReadonlyJSONValue} from './json';
+import {deepEqual, ReadonlyJSONValue} from './json';
 import type {DiffsMap} from './sync/pull';
 import {ReadTransaction, SubscriptionTransactionWrapper} from './transactions';
 import type {QueryInternal} from './replicache';
@@ -317,39 +317,32 @@ export class SubscriptionsManager {
       return;
     }
 
-    type R =
-      | {ok: true; value: JSONValue | undefined}
-      | {ok: false; error: unknown};
-    const results = await this._queryInternal(async tx => {
-      // TODO(arv): Use Promise.allSettled instead of manually doing this.
-      const promises = subs.map(async s => {
-        // Tag the result so we can deal with success vs error below.
-        const stx = new SubscriptionTransactionWrapper(tx);
-        try {
-          const value = await s.invoke(stx, kind, diffs);
-          return {ok: true, value} as R;
-        } catch (error) {
-          return {ok: false, error} as R;
-        } finally {
-          // We need to keep track of the subscription keys even if there was an
-          // exception because changes to the keys can make the subscription
-          // body succeed.
-          s.updateDeps(stx.keys, stx.scans);
-        }
-      });
-      return await Promise.all(promises);
-    });
+    // Use allSettled to gather fulfilled and rejected promises.
+    const results = await this._queryInternal(tx =>
+      Promise.allSettled(
+        subs.map(async s => {
+          const stx = new SubscriptionTransactionWrapper(tx);
+          try {
+            return await s.invoke(stx, kind, diffs);
+          } finally {
+            // We need to keep track of the subscription keys even if there was an
+            // exception because changes to the keys can make the subscription
+            // body succeed.
+            s.updateDeps(stx.keys, stx.scans);
+          }
+        }),
+      ),
+    );
     for (let i = 0; i < subs.length; i++) {
       const s = subs[i];
       const result = results[i];
-      if (result.ok) {
+      if (result.status === 'fulfilled') {
         s.onData(result.value);
-        // }
       } else {
         if (s.onError) {
-          s.onError(result.error);
+          s.onError(result.reason);
         } else {
-          this._lc.error?.(result.error);
+          this._lc.error?.(result.reason);
         }
       }
     }
