@@ -16,9 +16,13 @@ git clone https://github.com/rocicorp/replicache-todo my-app
 cd my-app
 npm install
 
-# Docker is required for supabase
+# install supabase cli if necessary
+# (MacOS, for other platforms: https://github.com/supabase/cli#getting-started)
+brew install supabase/tap/supabase
+
 supabase init
 
+# Docker is required for supabase
 # If the supabase server is already running, run `supabase stop` before
 # running the following command (so we can grab config values)
 supabase start
