@@ -1,5 +1,5 @@
 ---
-title: Offline
+title: Offline Operation
 slug: /offline
 ---
 

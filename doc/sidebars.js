@@ -10,6 +10,9 @@ module.exports = {
     {
       'Understand Replicache': [
         'how-it-works',
+        'performance',
+        'offline',
+        'consistency',
         'faq', // TODO review
         // TODO what replicache is good for
       ],

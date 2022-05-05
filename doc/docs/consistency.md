@@ -1,5 +1,5 @@
 ---
-title: Consistency
+title: Consistency Model
 slug: /consistency
 ---
 
