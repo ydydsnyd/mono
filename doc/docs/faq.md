@@ -3,6 +3,10 @@ title: Frequently Asked Questions
 slug: /faq
 ---
 
+import TOCInline from '@theme/TOCInline';
+
+<TOCInline toc={toc} />
+
 ## How does the client know when to sync? Does it poll?
 
 Typically, servers send a _poke_ (a content-less hint) over a websocket to tell the client to sync. There are many services you can use for this, and since no content flows over the socket there is no security/privacy concern. See the [integration guide](/guide/poke) for more information.
@@ -22,3 +26,7 @@ Options:
 - You could implement a custom `puller`/`pusher`.
 
 If you would like better / more first-class support for this please [file an issue](https://github.com/rocicorp/replicache/issues/new).
+
+## How can I tell if Replicache has unpushed local mutations? {#unpushed}
+
+Replicache doesn't currently have first-class support for this. It is possible to implement an "unconfirmed changes" monitor using the Client View, by keeping your own mutation sequence number and having the server include its high-water mark in the Client View. If you would like better / more first-class support for this please [file an issue](https://github.com/rocicorp/replicache/issues/new).

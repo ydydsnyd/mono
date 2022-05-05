@@ -12,4 +12,4 @@ Functionally:
 - For the same reason as above, if a tab is closed while offline then a new tab is started while still offline, the new tab will not see changes the first tab made. We do not recommend / support using Replicache with apps that can be started fully offline (e.g., via service worker).
 - While offline, changes in one tab are not reflected in other tabs; the tabs will "catch up" with each other when back online.
 
-In practice most modern web applications are not intended to be used for long periods offline and can’t start up offline anyway. Replicache optimizes for online performance, but is resilient against short periods of network loss.
+In practice most modern web applications are not intended to be used for long periods offline and can’t start up offline anyway. Replicache optimizes for online performance, but is resilient against short periods of network loss. If your application is intended to transit periods of offline you should [monitor when you have unsaved changes](faq.md#unpushed) and prompt the user before closing.
