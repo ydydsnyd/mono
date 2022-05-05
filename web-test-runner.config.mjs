@@ -1,3 +1,4 @@
+// @ts-check
 import {esbuildPlugin} from '@web/dev-server-esbuild';
 import {playwrightLauncher} from '@web/test-runner-playwright';
 import {readFileSync} from 'fs';
@@ -14,7 +15,8 @@ function readPackageJSON() {
 
 const json = readPackageJSON();
 
-export default {
+/** @type {import('@web/test-runner').TestRunnerConfig} */
+const config = {
   concurrentBrowsers: 3,
   nodeResolve: true,
   plugins: [
@@ -48,3 +50,5 @@ export default {
   ],
   browsers: [firefox, chromium, webkit],
 };
+
+export {config as default};
