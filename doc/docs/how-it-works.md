@@ -9,31 +9,43 @@ slug: /how-it-works
 
 Replicache enables instantaneous UI and realtime updates by taking the server round-trip off the application’s critical path, and instead syncing data continuously in the background.
 
+The Replicache model has several parts:
+
+**Replicache**: an in-browser persistent key-value store that is git-like under the hood. Your application reads and writes to Replicache at memory-fast speed and those changes are synchronized to the server in the background. Synchronization is bidirectional, so Replicache also pulls down in the background changes that have happened on the server from other users or processes. The git-like nature of Replicache enables changes flowing down from the server to be merged with local changes in a principled fashion. A detailed understanding of how this works is not required to get started; if you wish, you can read more about it in the Sync Details section.
+
+**Your application**: your application stores its state in Replicache. The app is implemented in terms of:
+
+- _Mutators_: JavaScript functions encapsulating change and conflict resolution logic. A mutator transactionally reads and writes keys and values in Replicache. You might have a mutator to create a TODO item, or to mark an item done.
+- _Subscriptions_: subscriptions are how your app is notified about changes to Replicache. A subscription is a standing query that fires a notification when its results change. Your application renders UI directly from the results of subscription notifications. You might for example have a subscription that queries a list of items so your app gets notified when items are added, changed, or deleted.
+
+**Your server**: Your server has a datastore containing the canonical application state. In the example Todo app this is a supabase postgres database. The server provides up- and downstream endpoints that users’ Replicaches use to sync. The example Todo app has this endpoint glue ready to go.
+
+- _Push_: Replicache pushes changes to the push endpoint. This endpoint has an implementation for each mutator your application defines. Typically, as in the sample TODO app, the endpoint is implemented in JavaScript, so the client-side mutator is used pretty much as-is on the server. Whereas the client-side mutator writes to the local Replicache, the push endpoint mutator writes to the canonical server-side datastore. As we will see, changes (mutator invocations aka mutations) that have run locally against Replicache are re-run on the server when pushed.
+- _Pull_: Replicache periodically fetches the latest canonical state that the server has from the pull endpoint. The endpoint returns an update from the state that the local Replicache has to the latest state the server has, in the form of a diff over the key-value space they both store. We touch briefly on how this works in a moment, but if you want the full details see the Sync Details section below.
+- _Poke_: While Replicache will by default pull at regular intervals, it is a better user experience to reflect changes in realtime from one user to the others. Therefore when data changes on the server, the server can send a _poke_ to Replicache telling it to initiate a pull. A poke is a contentless hint delivered over pubsub to all connected Replicaches that they should pull. The Todo example app sends a poke after a user pushes a batch of changes, thus ensuring everyone quickly sees changes from the server.
+
 <p class="text--center">
   <img src="/img/diagram.png" width="650"/>
 </p>
 
-Replicache is a key-value store running in the browser. Your application reads and writes to Replicache at memory-fast speed and those changes are synchronized to the server in the background. Meanwhile, changes from other users or processes happening on the server are pulled down into Replicache, merged with local changes, and revealed to your application in a principled fashion.
+**Sync**: when a user takes an action in your app, the app invokes a mutator. The mutator modifies the local Replicache, and your subscriptions fire to update your UI. In the background, these changes are pushed to the server in batches, where they are run again against the server-side mutators, updating the canonical datastore. When data changes on the server, the server pokes connected Replicaches. In response, a Replicache pulls the new state from the server and reveals it to your app. Your subscriptions fire because the data have changed, which updates your app’s UI.
 
-The Replicache model has several parts:
+<p class="text--center">
+  <img src="/img/flow.png" width="650"/>
+</p>
 
-1. Replicache itself: a transactional in-browser key-value store that is git-like under the hood. The git-like features enable Replicache to merge changes from the server in a principled fashion with local changes that might or might not have yet been synchronized.
+The sync process happens in a principled fashion such that:
 
-2. Your application: your application’s operations are implemented using Replicache. Your app defines _mutators_, JavaScript functions encapsulating change and conflict resolution logic, and subscriptions*,* standing queries against Replicache that fire a notification when their result changes.
+- local changes are guaranteed to get pushed to the server and
+- changes pulled from the server are merged with local changes in a sensible and predictable way. For example if a user creates a TODO item, Replicache guarantees that all users including the author see it created exactly once, and with the same results.
 
-3. Your server: Replicache requires two server endpoints to synchronize data: a _push_ endpoint to receive mutations from users; and a _pull_ endpoint, from which users’ Replicaches retrieve changes. Servers also might implement _poke_, an optional server-to-client message that hints the client it should pull soon.
+If you are interested in the details of how this happens, see the [Sync Details](#sync-details) and [Conflict Resolution](#conflict-resolution) sections.
 
 :::note
 
 The replicache-todo starter app contains a fully functioning server you can start with, or you can implement your own by implementing push, pull, and poke.
 
 :::
-
-4. Sync: changes flow through the system in a loop. The user does something which causes the application to invoke one or more mutators. The mutators change local state in Replicache (potentially notifying subscriptions) and these mutations — the mutator identifier along with the parameters it was invoked with — are persisted locally. Replicache periodically pushes these mutations to the server by passing them to the server’s push endpoint, where they are applied to the server’s canonical state. Replicache periodically calls the pull endpoint and the server returns a delta from the state of the user’s Replicache to the canonical state on the server. Replicache forks its database, applies the delta from the server, and then replays on top any local mutations that have not yet been seen by the server. (Such mutations might exist if for example mutations were applied while pull was running.) The fork is then revealed as the “main” database to the app, potentially firing subscriptions, and the cycle continues.
-
-<p class="text--center">
-  <img src="/img/flow.png" width="650"/>
-</p>
 
 ## Clients and Caches
 
@@ -141,7 +153,7 @@ Internally, calling a mutator also creates a _mutation_: a record of a mutator b
 
 Until the mutations above are pushed by Replicache to the server during sync they are pending.
 
-## Sync
+## Sync Details
 
 The above sections describe how Replicache works on the client-side.
 
@@ -212,3 +224,7 @@ Replicache can call pull on a timer (see `pullInterval`) but this is really only
 This is done by sending the client a hint that it should pull soon. This hint message is called a _poke_. The poke doesn’t contain any actual data. All the poke does is tell the client that it should pull again soon.
 
 There are many ways to send pokes. The [replicache-todo](/examples/todo) starter app does it using Supabase’s built-in realtime features. However, you can also use a push service like PusherJS or a hand-rolled websocket.
+
+### Conflict Resolution
+
+TODO
