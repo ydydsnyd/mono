@@ -11,15 +11,21 @@ For information about the license key step, see [Licensing](/licensing).
 # Get a Replicache license key
 npx replicache get-license
 
-# Clone the repo if you have not already, and start supabase
-git clone https://github.com/rocicorp/replicache-todo
-cd replicache-todo
+# Clone the repo if you have not already
+git clone https://github.com/rocicorp/replicache-todo my-app
+cd my-app
 npm install
+
+# Docker is required for supabase
 supabase init
+
+# If the supabase server is already running, run `supabase stop` before
+# running the following command (so we can grab config values)
 supabase start
 
 # Use license key printed out by `npx replicache get-license`
-export REPLICACHE_LICENSE_KEY="<license key>"
+export NEXT_PUBLIC_REPLICACHE_LICENSE_KEY="<license key>"
+
 # Use URLs and keys printed out by `supabase start`
 export DATABASE_URL="<DB URL>"
 export NEXT_PUBLIC_SUPABASE_URL="<API URL>"
