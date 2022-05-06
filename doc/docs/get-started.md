@@ -25,9 +25,10 @@ brew install supabase/tap/supabase
 # Initialize supabase.
 supabase init
 
-# Docker is required for supabase.
+# Docker is required for supabase, if you need it see:
+# https://docs.docker.com/engine/install/
 
-# Start supbase. If you are already running supabase for another
+# Start supabase. If you are already running supabase for another
 # application, first run `supabase stop` before running the
 # following command so it will output the config values.
 supabase start
