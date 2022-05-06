@@ -6,7 +6,7 @@ module.exports = {
   baseUrl: '/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
-  favicon: 'img/replicache.png',
+  favicon: 'img/favicon.png',
   organizationName: 'Rocicorp', // Usually your GitHub org/user name.
   projectName: 'replicache', // Usually your repo name.
   plugins: [
@@ -45,7 +45,7 @@ module.exports = {
       title: 'Replicache Documentation',
       logo: {
         alt: 'Shiny Replicache Logo',
-        src: 'img/replicache.svg',
+        src: 'img/replicache-logo-32.png',
       },
       items: [
         {
@@ -55,7 +55,6 @@ module.exports = {
         },
       ],
     },
-    image: 'img/replicache.png',
     footer: {
       style: 'dark',
       links: [
@@ -77,7 +76,7 @@ module.exports = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Rocicorp, LLC.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Rocicorp LLC.`,
     },
     algolia: {
       appId: 'Y3T1SV2WRD',
