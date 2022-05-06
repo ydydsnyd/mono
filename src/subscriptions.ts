@@ -23,8 +23,6 @@ interface Subscription<R, E> {
 
   matches(diffs: DiffsMap): boolean;
 
-  matchesIndexDefinitionChange(name: string): boolean;
-
   updateDeps(
     keys: ReadonlySet<string>,
     scans: ReadonlyArray<Readonly<ScanSubscriptionInfo>>,
@@ -76,10 +74,6 @@ class SubscriptionImpl<R, E> implements Subscription<R, E> {
     }
 
     return false;
-  }
-
-  matchesIndexDefinitionChange(name: string): boolean {
-    return this._scans.some(scanInfo => scanInfo.options.indexName === name);
   }
 
   updateDeps(
@@ -213,10 +207,6 @@ class WatchImpl implements Subscription<Diff | undefined, unknown> {
     }
 
     return watcherMatchesDiff(diff, this._prefix);
-  }
-
-  matchesIndexDefinitionChange(_name: string): boolean {
-    return false;
   }
 
   updateDeps(
