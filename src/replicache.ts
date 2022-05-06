@@ -49,7 +49,7 @@ import {
 import * as persist from './persist/mod';
 import {requestIdle} from './request-idle';
 import type {HTTPRequestInfo} from './http-request-info';
-import {assertNotUndefined} from './asserts';
+import {assert, assertNotUndefined} from './asserts';
 import {
   getLicenseStatus,
   licenseActive,
@@ -753,7 +753,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
    */
   async createIndex(def: CreateIndexDefinition): Promise<void> {
     await this._indexOp(tx => tx.createIndex(def));
-    await this._subscriptions.indexDefinitionChanged(def.name);
   }
 
   /**
@@ -761,7 +760,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
    */
   async dropIndex(name: string): Promise<void> {
     await this._indexOp(tx => tx.dropIndex(name));
-    await this._subscriptions.indexDefinitionChanged(name);
   }
 
   private async _indexOp(
@@ -776,7 +774,10 @@ export class Replicache<MD extends MutatorDefs = {}> {
       );
       const tx = new IndexTransactionImpl(clientID, dbWrite, this._lc);
       await f(tx);
-      await tx.commit();
+      const [ref, diffs] = await tx.commit(true);
+      // Changing an index should not affect the primary map.
+      assert(!diffs.has(''));
+      await this._checkChange(ref, diffs);
     });
   }
 

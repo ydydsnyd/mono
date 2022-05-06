@@ -296,28 +296,49 @@ export class Write extends Read {
 
     for (const [name, index] of this.indexes) {
       const valueHash = await index.flush();
-      const basisIndex = basisIndexes.get(name);
-      const indexDiffResult = await index.withMap(this._dagWrite, async map => {
-        if (basisIndex) {
-          return basisIndex.withMap(this._dagWrite, basisMap =>
-            btree.diff(basisMap, map),
-          );
+      if (generateDiffs) {
+        const basisIndex = basisIndexes.get(name);
+        const indexDiffResult = await index.withMap(
+          this._dagWrite,
+          async map => {
+            if (basisIndex) {
+              return basisIndex.withMap(this._dagWrite, basisMap =>
+                btree.diff(basisMap, map),
+              );
+            }
+
+            // No basis. All keys are new.
+            return allEntriesAsDiff(map, 'add');
+          },
+        );
+
+        if (indexDiffResult.length > 0) {
+          diffMap.set(name, indexDiffResult);
         }
-
-        // No basis. All keys are new.
-        return allEntriesAsDiff(map, 'add');
-      });
-
-      if (indexDiffResult.length > 0) {
-        diffMap.set(name, indexDiffResult);
       }
-
       const indexRecord: IndexRecord = {
         definition: index.meta.definition,
         valueHash,
       };
       indexRecords.push(indexRecord);
     }
+
+    if (generateDiffs) {
+      // Handle indexes in basisIndex but not in this.indexes. All keys are
+      // deleted.
+      for (const [name, basisIndex] of basisIndexes) {
+        if (!this.indexes.has(name)) {
+          const indexDiffResult = await basisIndex.withMap(
+            this._dagWrite,
+            map => allEntriesAsDiff(map, 'del'),
+          );
+          if (indexDiffResult.length > 0) {
+            diffMap.set(name, indexDiffResult);
+          }
+        }
+      }
+    }
+
     const basisHash = this._basis ? this._basis.chunk.hash : null;
     let commit;
     const meta = this._meta;

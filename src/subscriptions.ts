@@ -10,7 +10,6 @@ import type {LogContext} from '@rocicorp/logger';
 import {binarySearch} from './binary-search';
 
 const enum InvokeKind {
-  IndexChange,
   InitialRun,
   Regular,
 }
@@ -348,21 +347,6 @@ export class SubscriptionsManager {
     }
   }
 
-  async indexDefinitionChanged(name: string): Promise<void> {
-    // When an index definition changes we fire all subscriptions that uses
-    // index scans with that index.
-    const subscriptions = subscriptionsForIndexDefinitionChanged(
-      this._subscriptions,
-      name,
-    );
-
-    await this._fireSubscriptions(
-      subscriptions,
-      InvokeKind.IndexChange,
-      undefined,
-    );
-  }
-
   private async _scheduleInitialSubscriptionRun(s: UnknownSubscription) {
     this._pendingSubscriptions.add(s);
 
@@ -526,17 +510,6 @@ function* subscriptionsForDiffs<V, E>(
 ): Generator<Subscription<V, E>> {
   for (const subscription of subscriptions) {
     if (subscription.matches(diffs)) {
-      yield subscription;
-    }
-  }
-}
-
-function* subscriptionsForIndexDefinitionChanged<V, E>(
-  subscriptions: Set<Subscription<V, E>>,
-  name: string,
-): Generator<Subscription<V, E>> {
-  for (const subscription of subscriptions) {
-    if (subscription.matchesIndexDefinitionChange(name)) {
       yield subscription;
     }
   }

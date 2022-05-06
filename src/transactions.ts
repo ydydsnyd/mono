@@ -261,7 +261,7 @@ export class WriteTransactionImpl
   }
 }
 
-export interface IndexTransaction extends ReadTransaction {
+interface IndexTransaction extends ReadTransaction {
   /**
    * Creates a persistent secondary index in Replicache which can be used with
    * scan.
@@ -323,10 +323,6 @@ export class IndexTransactionImpl
   async dropIndex(name: string): Promise<void> {
     throwIfClosed(this.dbtx);
     await this.dbtx.dropIndex(name);
-  }
-
-  async commit(): Promise<[Hash, sync.DiffsMap]> {
-    return super.commit(false);
   }
 }
 
