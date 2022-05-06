@@ -43,7 +43,7 @@ Always `application/json`.
 
 ### `Authorization`
 
-This is a string that can be used to authorize a user. The auth token is set by
+This is a string that should be used to authorize the user. If you don't authenticate the user and verify that the `clientID` passed in the `PushRequest` in fact belongs to that user, users can push mutations as each other, which is probably undesirable. The auth token is set by
 defining [`auth`](api/interfaces/ReplicacheOptions#auth).
 
 ### `X-Replicache-RequestID`
@@ -65,6 +65,7 @@ When pushing we `POST` an HTTP request with a [JSON encoded body](/api#pushreque
 type PushRequest = {
   clientID: string;
   mutations: Mutation[];
+  profileID: string;
   pushVersion: number;
   schemaVersion: string;
 };
@@ -88,6 +89,10 @@ per-client unsigned integer. Each mutation will have an ID exactly one greater
 than the previous one in the list. The `name` is the name of the mutator that
 was invoked (e.g., from [Replicache.mutate](api/classes/Replicache#mutate)). The
 `args` are the arguments that were passed to the mutator.
+
+### `profileID`
+
+The [`profileID`](api/classes/Replicache#profileid) of the requesting Replicache instance. All clients within a browser profile share the same `profileID`. It can be used for windowing the Client View, which one typically wants to do per-browser-profile, not per-client.
 
 ### `pushVersion`
 
@@ -123,36 +128,34 @@ The response body to the push endpoint is ignored.
 
 ### Mutation Status
 
-The server marks a mutation with id `x` _processed_ by returning a
-[`lastMutationID`](server-pull#lastmutationid) in the Pull Response greater than
-or equal to `x`.
+The server marks indicates that mutation was applied by returning a
+[`lastMutationID`](server-pull#lastmutationid) in the `PullResponse` greater than
+or equal to its mutation id.
 
 Replicache will continue retrying a mutation until the server marks the mutation
 processed in this way.
 
 ### Mutations are Atomic and Ordered
 
-The effect of a mutation and the corresponding change to the `lastMutationID` as
-reported by the Pull Response must happen atomically. If the Pull Response
-indicates that mutation `42` has been processed, then the effects of mutation
-`42` (and all prior mutations from this client) must be present in the Pull
-Response. Additionally the effects of mutation `43` (or any higher mutation from
-this client) must _not_ be present in the Pull Response.
+The effects of a mutation (its changes to the underlying datastore) and the corresponding update to the `lastMutationID` must be revealed atomically by the datastore. For example, in a SQL database both changes should be committed as part of the same transaction. If a mutation's effects are not revealed atomically with the update to the client's `lastMutationID`, then the sync protocol will have undefined and likely mysterious behavior.
+
+Said another way, if the `PullResponse` indicates that mutation `42` has been processed, then the effects of mutation `42` (and all prior mutations from this client) must be present in the `PullResponse`. Additionally the effects of mutation `43` (or any higher mutation from this client) must _not_ be present in the `PullResponse`.
+
+### Applying Mutations in Batches
+
+The simplest way to process mutations is to run and commit each mutation and its `lastMutationID` update in its own transaction. However, for efficiency, you can apply a batch of mutations together and then update the database with their effects and the new `lastMutationID` in a single transaction. The [Example Todo app](https://github.com/rocicorp/replicache-todo) contains an example of this pattern in [replicache-transaction.ts](https://github.com/rocicorp/replicache-todo/blob/main/backend/replicache-transaction.ts).
 
 ### Error Handling
 
-If a mutation is invalid and cannot be handled, the server **must still mark the
+**If a mutation is invalid or cannot be handled, the server must still mark the
 mutation as processed** by updating the `lastMutationID`. Otherwise, the client
 will keep trying to send the mutation and be blocked forever.
 
 If the server knows that the mutation cannot be handled _now_, but will be able
 to be handled later (e.g., because some server-side resource is unavailable),
-the push endpoint can abort processing without updating the `lastMutationID`.
-Replicache will consider the server offline and try again later.
+the push endpoint can abort processing without updating the `lastMutationID`. Replicache will consider the server offline and try again later.
 
-The server can also _optionally_ include an appropriate HTTP error code for
-debugging purposes (e.g., HTTP 500 for internal error) in this case, but this is
-for developer convenience only and has no effect on the sync protocol.
+For debugging/monitoring/understandability purposes, the server can _optionally_ return an appropriate HTTP error code instead of 200 e.g., HTTP 500 for internal error). However, this is for developer convenience only and has no effect on the sync protocol.
 
 :::caution
 
