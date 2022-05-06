@@ -21,7 +21,7 @@ No problem. You can implement the integration points as serverless functions. Ou
 
 Options:
 
-- Set `pullURL` and `pushURL` to `''`. These are read/write so clearing them prevents next push/pull.
+- Set `pullURL` and `pushURL` to `undefined`. These are read/write so clearing them prevents next push/pull.
 - Set a large delay: setting a large `pushDelay` will prevent automatically pushing after a mutation. Setting `pullInterval` will increase the time to the next pull.
 - You could implement a custom `puller`/`pusher`.
 
