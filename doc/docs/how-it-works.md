@@ -239,4 +239,13 @@ There are many ways to send pokes. The [replicache-todo](/examples/todo) starter
 
 ### Conflict Resolution
 
-TODO
+The potential for merge conflicts is unavoidable in a system like Replicache. Clients and the server operate on the key-value space independently, and all but the most trivial applications will feature concurrent changes by different clients to overlapping parts of the keyspace. During push and pull, these changes have to _merge_ in a way that is predictable to the developer and makes sense for the application. For example, a meeting room reservation app might resolve a room reservation conflict by allocating a room to the first party to land the reservation. One change wins, the other loses. However, the preferred merge strategy in a collaborative Todo app where two parties concurrently add items to a list might be to append both of the items. Both changes "win."
+
+The potential for merge conflicts arises in Replicache in two places. First, when a speculative mutation from a client is applied on the server. The state on the server that the mutation operates on could be different from the state it was originally applied on in the client. Second, when a speculative mutation is rebased in the client. The mutation could be re-applied on state that is different from the previous time it ran.
+
+Replicache embraces the application-specific nature of conflict resolution by enabling developers to express their conflict resolution intentions programmatically. Mutators are arbitrary JavaScript code, so they can programmatically express whatever conflict resolution policy makes the most sense for the application. To take the previous two examples:
+
+- a `reserveRoom` mutator when run locally for the first time might find a room in state `AVAILABLE`, and mark it as `RESERVED` for the user. Later, when run on the server, the mutator might find that the room status is already `RESERVED` for a different user. The server-executed mutator behavior here takes a different branch than it did when run locally: it leaves the room reservation untouched and instead sets a bit in the user's state indicating that their attempt to book the room failed. When the user's client next pulls, that bit is included in the Client View. The app presumably has a subscription to watch for this bit being set, and the UI shows the room as unavailable and notifies the user that the reservation failed.
+- an `addItem` mutator for a Todo app might not require any conflict resolution whatsover. Its implementation can simply append the new item to the end of whatever it finds on the list!
+
+We believe the Replicache model for dealing with conflicts — to have defensively written, programmatic mutation logic that is replayed atop the latest state — leads to few real problems in practice. Our experience is that it preserves expressiveness of the data model and is far easier to reason about than other general models for avoiding or minimizing conflicts.
