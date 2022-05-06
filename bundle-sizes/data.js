@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1651846001326,
+  "lastUpdate": 1651848389359,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -14009,6 +14009,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 21995,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bd2ec366bb770fd3c4dea1038e9e6971813d257c",
+          "message": "refactor: Deal with index map diffs (#96)\n\nPreviously we missed some index map diffs. But things worked because we\r\nwere rerunning all subscriptions that reference the index that was\r\nchanged, no matter what the keys were.\r\n\r\nFixes #44",
+          "timestamp": "2022-05-06T14:45:12Z",
+          "tree_id": "40d07811f77f8e6c35a14fe6dd77ae922b7ad7b5",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/bd2ec366bb770fd3c4dea1038e9e6971813d257c"
+        },
+        "date": 1651848384741,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 167842,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 31390,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 166727,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 31083,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 76399,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 22022,
             "unit": "bytes"
           }
         ]
