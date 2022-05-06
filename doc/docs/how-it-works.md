@@ -26,15 +26,15 @@ The Replicache model has several parts:
 
 **Your server**: Your server has a datastore containing the canonical application state. In the example Todo app this is a supabase postgres database. The server provides up- and downstream endpoints that users’ Replicaches use to sync. The example Todo app has this endpoint glue ready to go.
 
-- _Push_: Replicache pushes changes to the push endpoint. This endpoint has an implementation for each mutator your application defines. Typically, as in the sample TODO app, the endpoint is implemented in JavaScript, so the client-side mutator is used pretty much as-is on the server. Whereas the client-side mutator writes to the local Replicache, the push endpoint mutator writes to the canonical server-side datastore. As we will see, changes (mutator invocations aka mutations) that have run locally against Replicache are re-run on the server when pushed.
-- _Pull_: Replicache periodically fetches the latest canonical state that the server has from the pull endpoint. The endpoint returns an update from the state that the local Replicache has to the latest state the server has, in the form of a diff over the key-value space they both store. We touch briefly on how this works in a moment, but if you want the full details see the [Sync Details](#sync-details) section below.
+- _Push (upstream)_: Replicache pushes changes to the push endpoint. This endpoint has a corresponding mutator for each one your application defines. Typically, as in the sample TODO app, the endpoint is implemented in JavaScript, so your application's mutators are used pretty much as-is on the server. Whereas the client-side mutator writes to the local Replicache, the push endpoint mutator writes to the canonical server-side datastore. As we will see, changes (mutator invocations aka mutations) that have run locally against Replicache are re-run on the server when pushed.
+- _Pull (downstream)_: Replicache periodically fetches the latest canonical state that the server has from the pull endpoint. The endpoint returns an update from the state that the local Replicache has to the latest state the server has, in the form of a diff over the key-value space they both store. We touch briefly on how this works in a moment, but if you want the full details see the [Sync Details](#sync-details) section below.
 - _Poke_: While Replicache will by default pull at regular intervals, it is a better user experience to reflect changes in realtime from one user to the others. Therefore when data changes on the server, the server can send a _poke_ to Replicache telling it to initiate a pull. A poke is a contentless hint delivered over pubsub to all connected Replicaches that they should pull. The Todo example app sends a poke after a user pushes a batch of changes, thus ensuring everyone quickly sees changes from other users.
 
 <p class="text--center">
   <img src="/img/diagram.png" width="650"/>
 </p>
 
-**Sync**: when a user takes an action in your app, the app invokes a mutator. The mutator modifies the local Replicache, and your subscriptions fire to update your UI. In the background, these changes are pushed to the server in batches, where they are run again against the server-side mutators, updating the canonical datastore. When data changes on the server, the server pokes connected Replicaches. In response, a Replicache pulls the new state from the server and reveals it to your app. Your subscriptions fire because the data have changed, which updates your app’s UI.
+**Sync**: When a user takes an action in your app, the app invokes a mutator. The mutator modifies the local Replicache, and your subscriptions fire to update your UI. In the background, these changes are pushed to the server in batches, where they are run using the server-side mutators, updating the canonical datastore. When data changes on the server, the server pokes connected Replicaches. In response, Replicache pulls the new state from the server and reveals it to your app. Your subscriptions fire because the data have changed, which updates your app’s UI.
 
 <p class="text--center">
   <img src="/img/flow.png" width="650"/>
@@ -49,7 +49,7 @@ If you are interested in the details of how this happens, see the [Sync Details]
 
 :::note
 
-The replicache-todo starter app contains a fully functioning server you can start with, or you can implement your own by implementing push, pull, and poke.
+The [replicache-todo](/examples/todo) starter app contains a fully functioning server you can start with, or you can implement your own by implementing push, pull, and poke.
 
 :::
 
@@ -57,7 +57,7 @@ The replicache-todo starter app contains a fully functioning server you can star
 
 An instance of the Replicache class in memory is called a client.
 
-```
+```ts
 import {Replicache} from "replicache";
 
 const rep = new Replicache({
@@ -74,7 +74,7 @@ The client sits on top of an on-disk persistent cache identified by the `name` p
 
 :::caution
 
-It’s important to give each user of your application their own Replicache cache. That is, different users should have different cache names. This ensures that different users within the same browser profile never see or modify each others' data.
+It’s important that each user of your application uses a different Replicache `name`. That way, different users will have separate caches. This ensures that different users within the same browser profile never see or modify each others' data.
 
 :::
 
@@ -92,13 +92,17 @@ You do not need to keep a separate copy of the client view in memory (e.g., `use
 
 UI is typically built using the `subscribe()` method (or `useSubscribe()` in React):
 
-```
+```tsx
 const todos = useSubscribe(rep, async tx => {
-  return await tx.scan({prefix: "todo/"}).toArray();
+  return await tx.scan({prefix: 'todo/'}).toArray();
 });
-return <ul>
-  { todos.map(todo => <li key={todo.id}>{todo.text}</li>) }
-</ul>;
+return (
+  <ul>
+    {todos.map(todo => (
+      <li key={todo.id}>{todo.text}</li>
+    ))}
+  </ul>
+);
 ```
 
 The subscribe method gets passed a function that receives a `ReadTransaction` parameter. You can do any number of reads from Replicache inside this function, and compute some result.
@@ -113,7 +117,7 @@ Mutations are the way that data changes in Replicache, and are at the core of ho
 
 At startup, register one or more _mutators_ with Replicache. A mutator is a named JavaScript function that operates on Replicache. Both `createTodo` and `markTodoComplete` below are mutators.
 
-```
+```ts
 const rep = new Replicache({
   ...
   mutators: {
@@ -140,10 +144,10 @@ async function markTodoComplete(tx: WriteTransaction,
 
 To change the Client View, call a mutator and pass it arguments:
 
-```
+```ts
 await rep.mutate.createTodo({id: nanoid(), text: "take out the trash"});
 ...
-await rep.mutate.markTodoComplete({id: nanoid(), complete: true});
+await rep.mutate.markTodoComplete({id: "t1", complete: true});
 ```
 
 This applies the changes to the Client View, causing any relevant subscriptions to re-run and fire if necessary. In React, this will cause the dependent components to re-render automatically.
@@ -161,7 +165,7 @@ Until the mutations above are pushed by Replicache to the server during sync the
 
 ## Sync Details
 
-The above sections describe how Replicache works on the client-side. This is all you need to know to get started using Replicache using the Todo starter app. That’s because the starter app includes a generic server that fully implements the sync protocol.
+The above sections describe how Replicache works on the client-side. This is all you need to know to get started using Replicache using the [Todo starter app](/examples/todo). That’s because the starter app includes a generic server that fully implements the sync protocol.
 
 However, to use Replicache well, it is important to understand how sync works conceptually. And you _need_ to know this if you plan to modify the server, use Replicache with your own existing backend, or swap out the datastore.
 
@@ -175,11 +179,11 @@ In the following discussion we use "state" as shorthand for "the state of the ke
 
 The "sync problem" that Replicache solves is how to enable decoupled, concurrent changes to a key-value space across many clients and a server such that:
 
-1. the key-value space kept by the server is the canonical source of truth to which all clients converge
+1. the key-value space kept by the server is the canonical source of truth to which all clients converge.
 2. local changes to the space in a client are immediately (optimistically) visible to the app that is using that client. We call these changes _speculative_, as opposed to canonical.
-3. local changes can be applied in the background on the server such that:
+3. local changes can be applied (in the background) on the server such that:
    - a change is applied exactly once on the server, with predicable results and
-   - changes that have been applied on the server can sensibly be merged with the local state of the key-value space
+   - new changes that have been applied on the server can sensibly be merged with the local state of the key-value space
 
 The last item on the list above merits taking a moment to expand upon and internalize. In order to sensibly merge new state from the server with local changes, the client must account for any or all of the following cases:
 
@@ -189,7 +193,7 @@ The last item on the list above merits taking a moment to expand upon and intern
 
 How Replicache implements these steps is explained next.
 
-### Local exuection
+### Local execution
 
 When a mutator is invoked, Replicache applies its changes to the local Client View. It also queues a corresponding pending mutation record to be pushed to the server, and this record is persisted in case the tab closes before it can be pushed. When created, a mutation is assigned a _mutation id_, a sequential integer uniquely identifying the mutation in this client. The mutation id also describes a causal order to mutations from this client, and that order is respected by the server.
 
@@ -201,7 +205,7 @@ Mutations carry exactly the information the server needs to execute the mutator 
 
 :::note
 
-The [replicache-todo](/examples/todo) starter app contains a generic push endpoint that automatically implements mutators by reusing the JavaScript mutator code from the the client. This shared mutator pattern is very common in Replicache apps and is convenient because it means that frontend devs can add most functionality to apps without touching the server at all.
+The [replicache-todo](/examples/todo) starter app contains a generic push endpoint that automatically implements mutators by reusing the JavaScript mutator code from the the client. This shared mutator pattern is very common in Replicache apps and is convenient because it means that developers can add most functionality to apps without touching the server code at all.
 
 :::
 
@@ -217,11 +221,11 @@ Periodically, Replicache requests an update to the Client View by calling the _p
 
 The pull request contains a _cookie_ and the response contains a new _cookie,_ a _patch,_ and the requesting client’s _lastMutationID_.
 
-The cookie is a value opaque to the client identifying the state from the server that the client has. It is used during pull by the server to compute a patch that brings the client’s state up to date with the server’s. In its simplest implementation, the cookie encapsulates the entire state of all data in the client view. You can think of this as a global “version” of the data in the backend datastore. More fine-grained cookie versioning strategies are possible, but outside the scope of this document.
+The cookie is a value opaque to the client identifying the canonical server state that the client has. It is used by the server during pull to compute a patch that brings the client’s state up to date with the server’s. In its simplest implementation, the cookie encapsulates the entire state of all data in the client view. You can think of this as a global “version” of the data in the backend datastore. More fine-grained cookie versioning strategies are possible, but outside the scope of this document.
 
-The lastMutationID returned in the response tells the client which of its mutations have been confirmed by the server and therefore have their effects if any are represented in the patch. Upon rebasing on top of the new state (see below), the client does not have to re-run and can discard records for any pending mutations with mutation id ≤ the lastMutationID of the pull response. Those mutations are no longer pending, they are confirmed.
+The lastMutationID returned in the response tells the client which of its mutations have been confirmed by the server, and therefore have their effects, if any, represented in the patch. The client should now discard any pending mutations with id ≤ lastMutationID of the pull response. Those mutations are no longer pending, they are confirmed.
 
-#### Rebase
+### Rebase
 
 Once the client receives a pull response, it needs to apply the patch to the local state to bring the client's state up to date with that of the server.
 
