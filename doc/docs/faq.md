@@ -30,3 +30,15 @@ If you would like better / more first-class support for this please [file an iss
 ## How can I tell if Replicache has unpushed local mutations? {#unpushed}
 
 Replicache doesn't currently have first-class support for this. It is possible to implement an "unconfirmed changes" monitor using the Client View, by keeping your own mutation sequence number and having the server include its high-water mark in the Client View. If you would like better / more first-class support for this please [file an issue](https://github.com/rocicorp/replicache/issues/new).
+
+## Do you support collaborative text editing?
+
+No, but it's high on the todo list. Many applications can get by without a full collaborative editing solution if their text is highly structured (e.g., like Notion). But we plan on having first-class text support. (Let us know if you are interested).
+
+## What about undo?
+
+We do not have a first-class API for undo, but it is relatively easy to build your own on top of Replicache's conflict resolution model. Several of our customers have done this. Hop in discord and let us know if you need help working this out.
+
+## How can I implement presence?
+
+Replicache is a general purpose synchronization system. It doesn't have a first-class concept of presence, but it is easy to build one that works exactly how you want. See [Replidraw](https://github.com/rocicorp/replidraw) for an example.
