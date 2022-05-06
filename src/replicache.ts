@@ -271,7 +271,14 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
   private readonly _closeAbortController = new AbortController();
 
-  private readonly _persistLock = new Lock();
+  // We must not do persists in parallel. Also, we must not do persists while we
+  // are in the middle of a pull because persist rewrites chunks and changes
+  // hashes.
+  //
+  // TODO(arv): This lock makes parallel pulls impossible. The ConnectionLoop
+  // supports that but we do not use it. Consider removing that feature from the
+  // ConnectionLoop.
+  private readonly _persistPullLock = new Lock();
   private _persistIsScheduled = false;
   private _recoveringMutations = false;
 
@@ -851,21 +858,26 @@ export class Replicache<MD extends MutatorDefs = {}> {
     if (this._isPullDisabled()) {
       return true;
     }
-    return await this._wrapInOnlineCheck(async () => {
-      try {
-        this._changeSyncCounters(0, 1);
-        const beginPullResult = await this._beginPull();
-        if (!beginPullResult.ok) {
-          return false;
+
+    // We must not do a pull and a persist in parallel. Persist changes the head
+    // hashes which leads to pull failing.
+    return this._persistPullLock.withLock(() =>
+      this._wrapInOnlineCheck(async () => {
+        try {
+          this._changeSyncCounters(0, 1);
+          const beginPullResult = await this._beginPull();
+          if (!beginPullResult.ok) {
+            return false;
+          }
+          if (beginPullResult.syncHead !== emptyHash) {
+            await this._maybeEndPull(beginPullResult);
+          }
+        } finally {
+          this._changeSyncCounters(0, -1);
         }
-        if (beginPullResult.syncHead !== emptyHash) {
-          await this._maybeEndPull(beginPullResult);
-        }
-      } finally {
-        this._changeSyncCounters(0, -1);
-      }
-      return true;
-    }, 'Pull');
+        return true;
+      }, 'Pull'),
+    );
   }
 
   private _isPullDisabled() {
@@ -1147,7 +1159,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     await this._ready;
     const clientID = await this.clientID;
     try {
-      await this._persistLock.withLock(() =>
+      await this._persistPullLock.withLock(() =>
         persist.persist(
           clientID,
           this._memdag,

@@ -6,6 +6,9 @@ export class ConnectionLoopDelegateImpl implements OptionalLogger {
   readonly rep: Replicache;
   readonly invokeSend: () => Promise<boolean>;
   readonly logger: OptionalLogger;
+
+  // Beware: We have a lock around pull so changing this to >1  will dead lock!
+  // TODO(arv): Consider removing this property!
   readonly maxConnections = 1;
 
   constructor(

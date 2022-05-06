@@ -266,6 +266,12 @@ export async function maybeEndPull(
       throw new Error('Missing sync head');
     }
     if (syncHeadHash !== expectedSyncHead) {
+      lc.error?.(
+        'maybeEndPull, Wrong sync head. Expecting:',
+        expectedSyncHead,
+        'got:',
+        syncHeadHash,
+      );
       throw new Error('Wrong sync head');
     }
 
@@ -356,12 +362,21 @@ export async function maybeEndPull(
       const [oldLastMutationID, oldCookie] = db.snapshotMetaParts(mainSnapshot);
       const [newLastMutationID, newCookie] = db.snapshotMetaParts(syncSnapshot);
       lc.debug(
-        'Successfully pulled new snapshot w/last_mutation_id={} (prev. {}), cookie={} (prev. {}), and value_hash={} (prev. {}).',
+        `Successfully pulled new snapshot w/last_mutation_id:`,
         newLastMutationID,
+        `(prev:`,
         oldLastMutationID,
+        `), cookie: `,
         newCookie,
+        `(prev:`,
         oldCookie,
+        `), sync head hash:`,
+        syncHeadHash,
+        ', main head hash:',
+        mainHeadHash,
+        `, value_hash:`,
         syncHead.valueHash,
+        `(prev:`,
         mainSnapshot.valueHash,
       );
     }
