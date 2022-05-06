@@ -28,24 +28,16 @@ Before you launch with Replicache in your product, it's a good idea to double-ch
   represent a running session (e.g., a mouse cursor), because in most
   multiplayer applications the design goal is that two tabs from the same user
   should show up as two separate cursors to other users.
-- Do not use the `clientID` to look up what information was last sent to a
-  client when computing the `PullResponse`. Since a `clientID` represents a
-  unique running instance of `Replicache`, that design would result in each new
-  tab pulling down a fresh snapshot. Instead, use the `cookie` feature of
-  `PullResponse` to assign a unique ID to each returned pull. Replicache
-  internally forks the cache when creating a new client and will reuse these
-  cookie values across clients, resulting in new clients being able to startup
-  from previous clients' state with minimal download at startup.
 - The `name` property of `ReplicacheOptions` is required to differentiate
   Replicache instances for different users. This is important for the following
   reasons:
-  - For efficiency and performance, a new [[Replicache]] instance will
-    initialize its state from the persisted state of an existing [[Replicache]]
+  - For efficiency and performance, a new `Replicache` instance will
+    initialize its state from the persisted state of an existing `Replicache`
     instance with the same `name`, domain and browser profile.
-  - Mutations from one [[Replicache]] instance may be pushed using the
-    [[ReplicacheOptions.auth]], [[ReplicacheOptions.pushURL]],
-    [[ReplicacheOptions.pullURL]], [[ReplicacheOptions.pusher]], and
-    [[ReplicacheOptions.puller]] of another Replicache instance with the same
+  - Mutations from one `Replicache` instance may be pushed using the
+    `ReplicacheOptions.auth`, `ReplicacheOptions.pushURL`,
+    `ReplicacheOptions.pullURL`, `ReplicacheOptions.pusher`, and
+    `ReplicacheOptions.puller` of another Replicache instance with the same
     `name`, domain and browser profile.
 
 ## All endpoints
@@ -56,10 +48,12 @@ Before you launch with Replicache in your product, it's a good idea to double-ch
 - It is extremely important to ensure that your datastore and/or the way you use it guarantees the consistency and isolation properties required for Replicache to work as designed. These properties are:
 
   - the effects of a transaction are revealed atomically
-  - within a transaction, reads are consistent, ie, reading the same item twice always results in the value, unless changed within the transaction
+  - within a transaction, reads are consistent, ie, reading the same item twice always results in the same value, unless changed within the transaction
   - a transaction sees the effects of all previously committed transactions
 
-  For example, MySQL's **SERIALIZABLE** isolation level provides these guarantees. We need to add here information for popular datastores, so if you would like us to look into your particular datastore or if you have any questions, please [contact us](https://replicache.dev/#contact).
+  For example, MySQL's **SERIALIZABLE** isolation level provides these guarantees.
+
+  If would like some advice on how to set up your particular datastore correctly, or if you have any questions, please [contact us](https://replicache.dev/#contact).
 
 ## Push endpoint
 

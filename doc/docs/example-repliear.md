@@ -3,9 +3,11 @@ title: Repliear
 slug: /examples/repliear
 ---
 
-A tiny [Linear](https://linear.app)-like issue tracker.
+A tiny [Linear](https://linear.app)-like issue tracker demonstrating the power of Replicache.
 
 Built with [Replicache](https://replicache.dev), [Next.js](https://nextjs.org/), and
 [Supabase](https://supabase.com/).
 
-Running live at https://repliear.vercel.app.
+Running live at https://repliear.vercel.app. To see realtime changes in action, click the link, copy the resulting URL, open a second browser window to it, and watch changes you make in one window sync to the other.
+
+Source code at https://github.com/rocicorp/repliear.

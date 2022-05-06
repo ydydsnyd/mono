@@ -5,7 +5,7 @@ slug: /server-push
 
 The Push Endpoint applies batches of mutations to the server.
 
-For more information, see [How Replicache Works — Push](how-it-works#④-push).
+For more information, see [How Replicache Works — Push](how-it-works#push).
 
 ## Configuration
 

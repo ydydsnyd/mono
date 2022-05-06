@@ -190,3 +190,11 @@ This is useful in case the request cookie is invalid or not known to the server,
   cookie).
 - Ignore all pull requests with an unexpected
   [`pullVersion`](server-pull#pullversion).
+- Do not use the `clientID` to look up what information was last sent to a
+  client when computing the `PullResponse`. Since a `clientID` represents a
+  unique running instance of `Replicache`, that design would result in each new
+  tab pulling down a fresh snapshot. Instead, use the `cookie` feature of
+  `PullResponse` to assign a unique ID to each returned pull. Replicache
+  internally forks the cache when creating a new client and will reuse these
+  cookie values across clients, resulting in new clients being able to startup
+  from previous clients' state with minimal download at startup.

@@ -1,5 +1,5 @@
 ---
-title: Get a License Key
+title: Replicache Licensing
 slug: /licensing
 ---
 
