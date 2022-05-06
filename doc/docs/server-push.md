@@ -43,8 +43,9 @@ Always `application/json`.
 
 ### `Authorization`
 
-This is a string that should be used to authorize the user. If you don't authenticate the user and verify that the `clientID` passed in the `PushRequest` in fact belongs to that user, users can push mutations as each other, which is probably undesirable. The auth token is set by
-defining [`auth`](api/interfaces/ReplicacheOptions#auth).
+This is a string that should be used to authorize the user. It is prudent to also verify that the `clientID` passed in the `PushRequest` in fact belongs to that user. If not, and users' `clientID`s are somehow visible, a user could push mutations on behalf of another user.
+
+The auth token is set by defining [`auth`](api/interfaces/ReplicacheOptions#auth).
 
 ### `X-Replicache-RequestID`
 
@@ -92,7 +93,7 @@ was invoked (e.g., from [Replicache.mutate](api/classes/Replicache#mutate)). The
 
 ### `profileID`
 
-The [`profileID`](api/classes/Replicache#profileid) of the requesting Replicache instance. All clients within a browser profile share the same `profileID`. It can be used for windowing the Client View, which one typically wants to do per-browser-profile, not per-client.
+The [`profileID`](api/classes/Replicache#profileid) of the requesting Replicache instance. All clients within a browser profile share the same `profileID`.
 
 ### `pushVersion`
 
