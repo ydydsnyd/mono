@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1651823354033,
+  "lastUpdate": 1651846001326,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -13955,6 +13955,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 21935,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "345df2b3594352dcd6cab64b58956711473892ee",
+          "message": "fix: Prevent concurrent pulls and persists (#95)\n\nWe had a lock around persist to ensure that we only do one at a time.\r\n\r\nConnectionLoop limited the number of concurrent pulls to 1\r\n(configurable).\r\n\r\nHowever...\r\n\r\nIf a persist happens during a pull the hash of the SYNC_HEAD might change.\r\n\r\nWe therefore we use the lock for both pull and push to ensure they do\r\nnot happen concurrently.",
+          "timestamp": "2022-05-06T07:05:35-07:00",
+          "tree_id": "42f97ca54a8b2618b38f6f69fab68379f5e77a04",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/345df2b3594352dcd6cab64b58956711473892ee"
+        },
+        "date": 1651845997490,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 167899,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 31391,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 166784,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 31077,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 76504,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 21995,
             "unit": "bytes"
           }
         ]
