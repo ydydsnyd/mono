@@ -64,7 +64,7 @@ console.log(rep.clientID);
 
 A client is identified by a unique, randomly generated `clientID`. There is typically one client (instance of Replicache) per tab. A client is ephemeral, being instantiated for the lifetime of the application in the tab. The client provides fast access to and persistence for the keys and values used by the application. Each client syncs independently, and there are no consistency guarantees across clients.
 
-The client sits on top of an on-disk persistent cache identified by the `name` parameter to the `Replicache` constructor. Many clients can use the same underlying cache. Sharing the same cache across multiple clients de-duplicates work that the clients have to do. So for example, two tabs open to the same app with the same user would each have their own client, but should use the same underlying cache (`name`). Note that the cache is not directly visible to the application, it is an implementation detail of the client.
+The client sits on top of an on-disk persistent cache identified by the `name` parameter to the `Replicache` constructor. Many clients in the same browser profile can use the same underlying cache. Sharing the same cache across multiple clients de-duplicates work that the clients have to do. So for example, two tabs open to the same app with the same user would each have their own client, but should use the same underlying cache (`name`). Note that the cache is not directly visible to the application, it is an implementation detail of the client.
 
 :::caution
 
@@ -74,13 +74,13 @@ It’s important to give each user of your application their own Replicache cach
 
 ## The Client View
 
-Each client contains an ordered map of key/value pairs called the _Client View_ that is persisted in the underlying cache. The Client View is the application data that Replicache syncs with the server. Client View keys are strings and the values are JSON-compatible values.
+Each client keeps an ordered map of key/value pairs called the _Client View_ that is persisted in the underlying cache. Client View keys are strings and the values are JSON-compatible values. The Client View is the application data that Replicache syncs with the server. We call it the "Client View" because different clients might have different views of the state of the server. For example, one user's Client View might contain state just visible to or modifiable by that user.
 
 The size of a Client View is limited primarily by [browser policies](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API/Browser_storage_limits_and_eviction_criteria). You can store hundreds of MB in a Replicache Client View without affecting performance significantly, though HTTP request limits to your endpoints might come into play.
 
 Access to the Client View is fast. Reads and writes generally have latency < 1ms and data can be scanned at over 500MB/s on most devices.
 
-You do not need to keep a separate copy of the client view in memory (e.g., `useState` in React). The idea is that you read data out of Replicache and directly render it. To make changes, you modify Replicache using mutators (see below). Invocations of mutators fire subscriptions (see below) that cause the UI to re-read the relevant data and re-render the UI.
+You do not need to keep a separate copy of the client view in memory (e.g., `useState` in React). The idea is that you read data out of Replicache and directly render it. To make changes, you modify Replicache using mutators (see below). When mutators change the Client View Replicache fire subscriptions (see below) that cause the UI to re-read the relevant data and re-render the UI.
 
 ## Subscriptions
 
@@ -151,27 +151,47 @@ Internally, calling a mutator also creates a _mutation_: a record of a mutator b
 ]
 ```
 
-Until the mutations above are pushed by Replicache to the server during sync they are pending.
+Until the mutations above are pushed by Replicache to the server during sync they are _pending_ (optimistic).
 
 ## Sync Details
 
-The above sections describe how Replicache works on the client-side.
+The above sections describe how Replicache works on the client-side. This is all you need to know to get started using Replicache using the Todo starter app. That’s because the starter app includes a generic server that fully implements the sync protocol.
 
-This is all you need to know to get started using Replicache using the starter app. That’s because the starter app includes a generic server that fully implements the sync protocol.
+However, to use Replicache well, it is important to understand how sync works conceptually. And you _need_ to know this if you plan to modify the server, use Replicache with your own existing backend, or swap out the datastore.
 
-However, to use Replicache well, it’s still important to understand how sync works conceptually. And you _need_ to know this if you plan to use Replicache with your own backend, whether existing or new.
+:::note
 
-At a high level sync works as follows. Recall that a mutation is the name of a mutator that was invoked along with the arguments it was invoked with.
+In the following discussion we use "state" as shorthand for "the state of the key-value space", the set of keys that exist and their values. We often say that some state is used as a "base" for a change, or that a change is applied "on top of" a state. By this we simply mean that the change is made with the base state as its starting input.
 
-- When a mutation is invoked on the client, its effects are applied to the local Client View and it is assigned a sequential per-client _mutation id._ The mutation including its id is recorded as pending in the client.
-- The client periodically pushes pending mutations to the server. The server has an implementation for each named mutator, and applies the mutations pushed to it from a client transactionally in the order they are received. It also records the _lastMutationID_, the high water mark of mutation ids seen from that client.
-- The client periodically pulls the most recent state from the server. The server returns a delta and enough information for the client to bring its Client View up to date with the server, as well as the lastMutationId from that client, so the client knows which pending mutations to re-apply (their effects will not yet have been seen by the server).
+:::
+
+### The Sync Problem
+
+The "sync problem" that Replicache solves is how to enable concurrent changes to a key-value space across many clients and a server such that:
+
+1. the key-value space kept by the server is the canonical source of truth to which all clients converge
+2. local changes to the space in a client are immediately (optimistically) visible to the app that is using that client. We call these changes _speculative_, as opposed to canonical.
+3. local changes can be applied in the background on the server such that:
+   - a change is applied exactly once on the server, with predicable results and
+   - changes that have been applied on the server can sensibly be merged with the local state of the key-value space
+
+The last item on the list above merits taking a moment to expand upon and internalize. In order to sensibly merge new state from the server with local changes, the client must account for any or all of the following cases:
+
+- A local change in the client has not yet been applied to the server. In this case, Replicache needs to ensure that this local change is not "lost" from the app's UI in the process of updating to the new server state. In fact, as we will see, Replicache effectively _re-runs_ such changes "on top of" the new state from the server before revealing the new state to the app.
+- A local change in the client _has already_ been applied to the server in the background. Yay. The effects of this local change are visible in the new state from the server, so Replicache does not need to re-run the change on the new state. In fact, it must not: if it did, the change would be applied twice, once on the server and then again by the client on top of the new state already containing its effects.
+- Some other client or process changed part of the key-value space that the client has. Since the server's state is canonical and the client's is speculative, any local changes not yet applied on the server must be re-applied on top of the new canonical state before it is revealed. This _could_ modify the effect of the local unsynchronized change, for example if some other user marked an issue "Complete" but locally we have an unsynchronized change that marks it "Will not fix". Some logic needs to run to resolve the merge conflict. (Spoiler: mutators contain this logic. More on this below.)
+
+How Replicache implements these steps is explained next.
+
+### Local exuection
+
+When a mutator is invoked, Replicache applies its changes to the local Client View. It also queues a corresponding pending mutation record to be pushed to the server, and this record is persisted in case the tab closes before it can be pushed. When created, a mutation is assigned a _mutation id_, a sequential integer uniquely identifying the mutation in this client. The mutation id also gives a causal order to mutations, and that order is respected by the server.
 
 ### Push
 
-Mutations are sent in batches to the _push endpoint_ on your server (conventionally called `replicache-push`).
+Pending mutations are sent in batches to the _push endpoint_ on your server (conventionally called `replicache-push`).
 
-The push endpoint processes the sent mutations in order by running code on the server that implements each named mutator.
+Mutations carry exactly the information the server needs to execute the mutator that was invoked on the client, specifically the order of invocation (mutation id order), the name of the mutator invoked, and its arguments. The push endpoint executes the pushed mutations in order by executing the named mutator with the given arguments, canonicalizing the mutations' effects in the server's state. It also updates the corresponding last mutation id for the client that is pushing. This is the high water mark of mutations seen from that client and is information used by the client during pull.
 
 :::note
 
@@ -183,9 +203,7 @@ If the server is not JavaScript-based, or otherwise unable to use the Shared Mut
 
 #### Speculative Execution and Confirmation
 
-It is important to understand that the push endpoint is _not_ expected to necessarily compute the same result that the mutator on the client did. This is a feature. The server may have newer or different state than the client has. That’s fine —- the pending mutations applied on the client are _speculative_ until applied on the server. In Replicache, the server is authoritative. The client-side mutators create speculative results, then the mutations are pushed and executed by the server creating _confirmed_, canonical results. The confirmed results are later pulled by the client, with the server-calculated state taking precedence over the speculative result.
-
-The mechanism by which this happens is described below in Rebase.
+It is important to understand that the push endpoint is _not necessarily_ expected to compute the same result that the mutator on the client did. This is a feature. The server may have newer or different state than the client has. That’s fine —- the pending mutations applied on the client are _speculative_ until applied on the server. In Replicache, the server is authoritative. The client-side mutators create speculative results, then the mutations are pushed and executed by the server creating _confirmed_, canonical results. The confirmed results are later pulled by the client, with the server-calculated state taking precedence over the speculative result. This precedence happens because once confirmed by the server, a mutation is no longer re-run by the client.
 
 ### Pull
 
@@ -193,29 +211,23 @@ Periodically, Replicache requests an update to the Client View by calling the _p
 
 The pull request contains a _cookie_ and the response contains a new _cookie,_ a _patch,_ and the requesting client’s _lastMutationID_.
 
-The cookie is a value opaque to the client identifying the state from the server that the client has. It is used during pull by the server to compute a patch that brings the client’s state up to date with the server’s. Typically the cookie encapsulates the entire state of all data in the client view, not just the data for the requesting user. You can think of this as something like the “version” of the data in the backend datastore.
+The cookie is a value opaque to the client identifying the state from the server that the client has. It is used during pull by the server to compute a patch that brings the client’s state up to date with the server’s. Typically, the cookie encapsulates the entire state of all data in the client view, not just the data for the requesting user. You can think of this as something like the “version” of the data in the backend datastore.
 
-The lastMutationID returned in the response tells the client which of its mutations have been confirmed by the server and therefore whose results if any are represented in the patch. Upon rebasing on top of the new state (see below), the client can discard any pending mutations with mutation id ≤ lastMutationID in the pull response: they are no longer pending, they are confirmed.
+The lastMutationID returned in the response tells the client which of its mutations have been confirmed by the server and therefore have their effects if any are represented in the patch. Upon rebasing on top of the new state (see below), the client can discard any pending mutations with mutation id ≤ lastMutationID in the pull response: they are no longer pending, they are confirmed.
 
 #### Rebase
 
 Once the client receives a pull response, it needs to apply the patch to the local state.
 
-But it can’t apply the patch to the _current_ local state because that state likely includes changes caused by optimistic mutations. The patch would effectively double-apply those changes, if it can be sensibly applied at all.
+But it can’t apply the patch to the _current_ local state because that state likely includes changes caused by pending mutations. It's unclear how Replicache would apply the patch such that the outcome was sensible. So it doesn't. Instead, hidden from the application's view, it _rewinds_ the state of the Client View to the last version it got from the server, applies the patch to get to the state the server currently has, and then replays any pending mutations on top. It then atomically reveals this new state to the app, which triggers subscriptions and the UI to re-render.
 
-To address this problem, Replicache is modeled under the hood like git. It maintains historical versions of the Client View and, like git branches, has the ability to work with a historical version of the Client View behind the scenes, and then reveal it to the application. To apply the patch from a pull response, Replicache _forks_ into a branch the canonical Client View received from the server in the previous pull. It then applies the patch received in the current pull response to arrive at the new canonical state of the Client View that the server has. (Recall that the server returns an opaque-to-the-client cookie with each pull response. This cookie is sent along with the next pull request, and is the mechanism by which the server knows how to generate the patch.)
-
-The client now has in a branch a Client View identical to the server’s. However there might be pending mutations that have been applied locally to the main/current Client View that are as yet unconfirmed by the server (specifically, those with mutation IDs ≥ the lastMutationID in the current pull response). These pending mutations are not represented in the new Client View in the branch, but need to be, otherwise their changes will appear to be lost to the application when the new Client View is revealed. The client now replays (_rebases_ in git terms) pending mutations on top of the branched Client View, in order, to arrive at a Client View that has as a base a very recent snapshot of the server’s state, plus any pending mutations rebased on top.
+In order to support the capability to rewind the Client View and apply changes out of view of the app, Replicache is modeled under the hood like git. It maintains historical versions of the Client View and, like git branches, has the ability to work with a historical version of the Client View behind the scenes. So when the client pulls new state from the server, it forks from the previous Client View received from the server, applies the patch, _rebases_ (re-runs) pending mutations, and then reveals the new branch to the app.
 
 :::note
 
 It’s possible and common for mutations to calculate a different effect when they run during rebase. For example, a calendar invite may run during rebase and find that the booked room is no longer available. In this case, it may add an error message to the client view that the UI displays, or just book some different but similar room.
 
 :::
-
-Once all the pending mutations have been replayed, Replicache sets the fork to be the main branch the UI reads and writes to. Thus revealed, any affected subscriptions fire, and the UI updates.
-
-The rebase step explains the mechanism by which the effect of a speculative mutation on the local Client View is superseded by the mutation’s effect when confirmed by the server. The server applies the mutation to the canonical state on the server, perhaps with different effects than the when the mutation was applied locally on the client. The client then pulls the updated, canonical server state down. Because the lastMutationID returned by pull is ≥ the speculative mutation’s id, the (now no longer) speculative mutation is discarded. It is not rebased on top of the new state which includes its canonical effects.
 
 ### Poke (optional)
 
