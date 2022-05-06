@@ -37,7 +37,7 @@ No, but it's high on the todo list. Many applications can get by without a full 
 
 ## What about undo?
 
-We do not have a first-class API for undo, but it is relatively easy to build your own on top of Replicache's conflict resolution model. Several of our customers have done this. Hop in discord and let us know if you need help working this out.
+We do not have a first-class API for undo, but it is relatively easy to build your own on top of Replicache's conflict resolution model. Several of our customers have done this. Hop in [Discord](https://discord.replicache.dev) and let us know if you need help working this out.
 
 ## How can I implement presence?
 
