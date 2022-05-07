@@ -45,7 +45,7 @@ module.exports = {
       title: 'Replicache Documentation',
       logo: {
         alt: 'Shiny Replicache Logo',
-        src: 'img/replicache-logo-32.png',
+        src: 'img/replicache.svg',
       },
       items: [
         {
