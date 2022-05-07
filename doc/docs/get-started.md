@@ -48,7 +48,7 @@ You now have a simple todo app powered by Replicache, <a href="https://nextjs.or
   <img src="/img/setup/todo.webp" width="650"/>
 </p>
 
-You can start modifying this app to build something new with Replicache. For starters, open the app in a browser window, copy the resulting url, and open a second browser window to it. With the twp windows side-by-side, add some items in one window and see them reflected in the other. Tada! Instant UI and Realtime Sync!
+You can start modifying this app to build something new with Replicache. For starters, open the app in a browser window, copy the resulting url, and open a second browser window to it. With the two windows side-by-side, add some items in one window and see them reflected in the other. Tada! Instant UI and Realtime Sync!
 
 ## A Quick Tour of the Starter App
 
