@@ -104,8 +104,7 @@ Walk through [the integration guide](https://doc.replicache.dev/guide/intro) and
 ```
 # edit package.json to have the new version
 npm install
-git add package-lock.json
-git commit --amend --no-edit
+git commit -a -m 'Bump version to <semver>.'
 # push to github and merge
 # pull merged commit
 git tag v<semver>
