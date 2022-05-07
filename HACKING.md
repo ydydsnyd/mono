@@ -102,10 +102,7 @@ Walk through [the integration guide](https://doc.replicache.dev/guide/intro) and
 ## Build the Release
 
 ```
-cd tool/bump
-go build
-./bump --root=../../ <semver>
-cd -
+# edit package.json to have the new version
 npm install
 git add package-lock.json
 git commit --amend --no-edit
