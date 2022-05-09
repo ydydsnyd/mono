@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1652088833115,
+  "lastUpdate": 1652097212113,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -14789,6 +14789,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/5a5da4e5e30756af67397e6a5ae49d8515c8aa1a"
         },
         "date": 1652088827582,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 167655,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 31366,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 166540,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 31028,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 76272,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 21996,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "79c1d9499e57e507f24c61c7f67b9cf78302a3c5",
+          "message": "chore: Add something about API review to HACKING (#108)",
+          "timestamp": "2022-05-09T11:52:24Z",
+          "tree_id": "5d31febb2683bc02b0793da7ec22f7890bd5b6a5",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/79c1d9499e57e507f24c61c7f67b9cf78302a3c5"
+        },
+        "date": 1652097208100,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
