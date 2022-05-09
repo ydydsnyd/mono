@@ -95,6 +95,10 @@ npm run dev
 
 Open two windows and make sure that the changes are reflected in each window.
 
+### API review
+
+Diff `out/replicache.d.ts` with the last stable version (mpm pack replicachec@old-version).
+
 ### Integration Guide
 
 Walk through [the integration guide](https://doc.replicache.dev/guide/intro) and make sure things still work.

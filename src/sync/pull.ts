@@ -232,7 +232,7 @@ export async function handlePullResponse(
 }
 
 /**
- * ReplayMutation is used int the RPC between EndPull so that we can replay
+ * ReplayMutation is used in the RPC between EndPull so that we can replay
  * mutations on top of the current state. It is never exposed to the public.
  */
 export type ReplayMutation = {
