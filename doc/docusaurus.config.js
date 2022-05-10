@@ -36,11 +36,6 @@ module.exports = {
       disableSwitch: true,
       respectPrefersColorScheme: false,
     },
-    googleAnalytics: {
-      trackingID: 'UA-166756598-1',
-      // Optional fields.
-      anonymizeIP: true, // Should IPs be anonymized?
-    },
     navbar: {
       title: 'Replicache Documentation',
       logo: {
@@ -93,6 +88,11 @@ module.exports = {
           routeBasePath: '/',
           sidebarPath: require.resolve('./sidebars.js'),
           editUrl: 'https://github.com/rocicorp/replicache/tree/main/doc',
+        },
+        googleAnalytics: {
+          trackingID: 'UA-166756598-1',
+          // Optional fields.
+          anonymizeIP: true, // Should IPs be anonymized?
         },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
