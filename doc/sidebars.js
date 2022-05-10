@@ -5,7 +5,7 @@ module.exports = {
     // TODO clean out the unused docs
     'get-started',
     {
-      Examples: ['example-todo', 'example-replidraw', 'example-repliear'],
+      Examples: ['example-todo', 'example-repliear', 'example-replidraw'],
     },
     {
       'Understand Replicache': [
