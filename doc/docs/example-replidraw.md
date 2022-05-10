@@ -5,11 +5,9 @@ slug: /examples/replidraw
 
 A tiny Figma-like multiplayer graphics editor demonstrating the power of Replicache.
 
-Built with [Replicache](https://replicache.dev), [Next.js](https://nextjs.org/),
-[MySQL](https://mysql.com/), and [React
-Designer](https://react-designer.github.io/react-designer/).
+Built with [Replicache](https://replicache.dev), [Next.js](https://nextjs.org/), and [Heroku](https://heroku.com/).
 
-Running live at https://replidraw2.vercel.app. To see realtime changes in action, click the link, copy the resulting URL, open a second browser window to it, and watch changes you make in one window sync to the other.
+Running live at https://replidraw.herokuapp.com/. Tor see realtime changes in action, click the link, copy the resulting URL, open a second browser window to it, and watch changes you make in one window sync to the other.
 
 Source code at https://github.com/rocicorp/replidraw.
 
