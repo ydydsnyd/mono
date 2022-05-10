@@ -3,7 +3,7 @@ title: Repliear
 slug: /examples/repliear
 ---
 
-A tiny [Linear](https://linear.app)-like issue tracker demonstrating the power of Replicache.
+A tiny [Linear](https://linear.app)-like issue tracker.
 
 Built with [Replicache](https://replicache.dev), [Next.js](https://nextjs.org/), and
 [Supabase](https://supabase.com/).
