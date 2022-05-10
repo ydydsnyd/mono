@@ -33,7 +33,13 @@ Replicache doesn't currently have first-class support for this. It is possible t
 
 ## Do you support collaborative text editing?
 
-No, but it's high on the todo list. Many applications can get by without a full collaborative editing solution if their text is highly structured (e.g., like Notion). But we plan on having first-class text support. (Let us know if you are interested).
+We don't have first-class support for collaborative-text yet.
+
+However, some users implement collaborative text in a Replicache application by sending [yjs](https://github.com/yjs/yjs) documents over push and pull, and this seems to work pretty well. You can easily send just the deltas over push, but for pull, sending just deltas is more difficult.
+
+Many applications can also get by without a full collaborative editing solution if their text is highly structured (e.g., like Notion). 
+
+We do plan to offer first-class collaborative text in the future.
 
 ## What about undo?
 
