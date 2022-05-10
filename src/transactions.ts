@@ -28,6 +28,11 @@ export interface ReadTransaction {
   /**
    * Get a single value from the database. If the `key` is not present this
    * returns `undefined`.
+   *
+   * Important: The returned JSON is readonly and should not be modified. This
+   * is only enforced statically by TypeScript and there are no runtime checks
+   * for performance reasons. If you mutate the return value you will get
+   * undefined behavior.
    */
   get(key: string): Promise<ReadonlyJSONValue | undefined>;
 
@@ -39,29 +44,39 @@ export interface ReadTransaction {
 
   /**
    * Gets many values from the database. This returns a [[ScanResult]] which
-   * implements `AsyncIterable`. It also has methods to iterate over the [[ScanResult.keys|keys]]
-   * and [[ScanResult.entries|entries]].
+   * implements `AsyncIterable`. It also has methods to iterate over the
+   * [[ScanResult.keys|keys]] and [[ScanResult.entries|entries]].
    *
    * If `options` has an `indexName`, then this does a scan over an index with
    * that name. A scan over an index uses a tuple for the key consisting of
    * `[secondary: string, primary: string]`.
    *
-   * If the [[ScanResult]] is used after the `ReadTransaction` has been closed it
-   * will throw a [[TransactionClosedError]].
+   * If the [[ScanResult]] is used after the `ReadTransaction` has been closed
+   * it will throw a [[TransactionClosedError]].
+   *
+   * Important: The returned JSON is readonly and should not be modified. This
+   * is only enforced statically by TypeScript and there are no runtime checks
+   * for performance reasons. If you mutate the return value you will get
+   * undefined behavior.
    */
   scan(): ScanResult<string, ReadonlyJSONValue>;
 
   /**
    * Gets many values from the database. This returns a [[ScanResult]] which
-   * implements `AsyncIterable`. It also has methods to iterate over the [[ScanResult.keys|keys]]
-   * and [[ScanResult.entries|entries]].
+   * implements `AsyncIterable`. It also has methods to iterate over the
+   * [[ScanResult.keys|keys]] and [[ScanResult.entries|entries]].
    *
    * If `options` has an `indexName`, then this does a scan over an index with
    * that name. A scan over an index uses a tuple for the key consisting of
    * `[secondary: string, primary: string]`.
    *
-   * If the [[ScanResult]] is used after the `ReadTransaction` has been closed it
-   * will throw a [[TransactionClosedError]].
+   * If the [[ScanResult]] is used after the `ReadTransaction` has been closed
+   * it will throw a [[TransactionClosedError]].
+   *
+   * Important: The returned JSON is readonly and should not be modified. This
+   * is only enforced statically by TypeScript and there are no runtime checks
+   * for performance reasons. If you mutate the return value you will get
+   * undefined behavior.
    */
   scan<Options extends ScanOptions>(
     options?: Options,
