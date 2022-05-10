@@ -12,5 +12,5 @@ Running live at https://replidraw.herokuapp.com/. To see realtime changes in act
 Source code at https://github.com/rocicorp/replidraw.
 
 <p class="text--center">
-  <img src="/img/setup/replidraw.webp" width="650"/>
+  <img src="/img/setup/replidraw.gif" width="720"/>
 </p>
