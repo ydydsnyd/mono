@@ -3,7 +3,7 @@ title: Consistency Model
 slug: /consistency
 ---
 
-The [Consistentcy Model](https://en.wikipedia.org/wiki/Consistency_model) of a distributed system like Replicache describes the guarantees the system makes about how operations are applied within the system.
+The [Consistency Model](https://en.wikipedia.org/wiki/Consistency_model) of a distributed system like Replicache describes the guarantees the system makes about how operations are applied within the system.
 
 Replicache was designed in consultation with indepedent distributed systems expert [Kyle Kingsbury](https://aphyr.com/about) of [Jepsen](https://jepsen.io/). When properly integrated with your backend, Replicache provides [Causal+ Consistency](https://jepsen.io/consistency/models/causal) — one of the strongest consistency models possible in a synchronizing system. Causal+ Consistency essentially guarantees that the system is:
 
