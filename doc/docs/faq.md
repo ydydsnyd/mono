@@ -35,7 +35,7 @@ Replicache doesn't currently have first-class support for this. It is possible t
 
 We don't have first-class support for collaborative-text yet.
 
-However, some users implement collaborative text in Replicache applications by just sending [Yjs](https://github.com/yjs/yjs) documents over push and pull, and this seems to work fairly well.
+Some users implement collaborative text elements within a Replicache applications by sending [Yjs](https://github.com/yjs/yjs) documents over push and pull. This works fairly well. It's easy to send just deltas upstream via Replicache mutations. For downstream, sending just deltas is more difficult. Current users we are aware of just send the whole document which is fine for smaller documents.
 
 Many applications can also get by without a full collaborative editing solution if their text is highly structured (e.g., like Notion). 
 
