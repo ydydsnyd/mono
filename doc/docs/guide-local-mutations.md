@@ -66,7 +66,5 @@ Careful readers may be wondering what happens with the order field during sync. 
 Restart the server and you should now be able to make changes!
 
 <p class="text--center">
-  <img src="/img/setup/local-mutation.webp" width="650"/>
+  <img src="/img/setup/local-mutation.gif" width="650"/>
 </p>
-
-Notice that even though we're not saving anything to the server yet, the mutations are saved locally across sessions, and it even works across tabs. Whee!

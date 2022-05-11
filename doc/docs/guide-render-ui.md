@@ -11,7 +11,13 @@ Whenever the data in Replicache changes — either due to local mutations or syn
 
 To create a subscription, use the `useSubscribe()` React hook. You can do multiple reads and compute a result. Your React component only re-renders when the returned result changes.
 
-Let's use a subscription to implement our chat UI. Replace `index.js` with this:
+Let's use a subscription to implement our chat UI. Replace `index.js` with the below.
+
+:::warning
+
+Make sure to add your [Replicache license key](../licensing) as a parameter to the constructor below.
+
+:::
 
 ```js
 import React, {useEffect, useRef, useState} from 'react';
@@ -25,7 +31,7 @@ export default function Home() {
   useEffect(async () => {
     const rep = new Replicache({
       name: 'chat-user-id',
-      licenseKey: '...';
+      licenseKey: '<your-license-key-here>',
       pushURL: '/api/replicache-push',
       pullURL: '/api/replicache-pull',
     });
