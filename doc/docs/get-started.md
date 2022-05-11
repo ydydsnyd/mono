@@ -8,13 +8,13 @@ The easiest way to get started is with our Todo starter app. This app is a good 
 For information about the license key step, see [Licensing](/licensing).
 
 ```bash
-# Get a Replicache license key.
-npx replicache get-license
-
-# Clone the repo if you have not already.
-git clone https://github.com/rocicorp/replicache-todo my-app
+# Get the code and install
+npx degit rocicorp/replicache-todo my-app
 cd my-app
 npm install
+
+# Get a Replicache license key.
+npx replicache get-license
 
 # Install supabase cli, if you don't already have it.
 # For MacOS:
