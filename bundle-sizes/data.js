@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1652245356479,
+  "lastUpdate": 1652362848028,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -15953,6 +15953,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 21996,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "da923d81f73b416119fa49fc155ee64aa6e8144b",
+          "message": "fix: Add a lock around poke as well (#118)\n\nTurns out we get \"Wrong sync head\" errors with poke too.\r\n\r\nAdded test that failed and then fixed the code to make the test pass.\r\n\r\nFixes #109",
+          "timestamp": "2022-05-12T13:39:36Z",
+          "tree_id": "bc50a84599153cb2698b95aca3b6f2867b5a52fe",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/da923d81f73b416119fa49fc155ee64aa6e8144b"
+        },
+        "date": 1652362843222,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 167730,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 31364,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 166615,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 31044,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 76307,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 21992,
             "unit": "bytes"
           }
         ]
