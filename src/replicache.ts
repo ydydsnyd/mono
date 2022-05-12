@@ -1081,27 +1081,29 @@ export class Replicache<MD extends MutatorDefs = {}> {
       .addContext('handlePullResponse')
       .addContext('request_id', requestID);
 
-    if (isClientStateNotFoundResponse(poke.pullResponse)) {
-      this._fireOnClientStateNotFound(clientID, reasonServer);
-      return;
-    }
+    await this._persistPullLock.withLock(async () => {
+      if (isClientStateNotFoundResponse(poke.pullResponse)) {
+        this._fireOnClientStateNotFound(clientID, reasonServer);
+        return;
+      }
 
-    const syncHead = await sync.handlePullResponse(
-      lc,
-      this._memdag,
-      poke.baseCookie,
-      poke.pullResponse,
-    );
-    if (syncHead === null) {
-      throw new Error(
-        'unexpected base cookie for poke: ' + JSON.stringify(poke),
+      const syncHead = await sync.handlePullResponse(
+        lc,
+        this._memdag,
+        poke.baseCookie,
+        poke.pullResponse,
       );
-    }
+      if (syncHead === null) {
+        throw new Error(
+          'unexpected base cookie for poke: ' + JSON.stringify(poke),
+        );
+      }
 
-    await this._maybeEndPull({
-      requestID,
-      syncHead,
-      ok: true,
+      await this._maybeEndPull({
+        requestID,
+        syncHead,
+        ok: true,
+      });
     });
   }
 
