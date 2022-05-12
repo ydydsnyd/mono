@@ -1,7 +1,14 @@
 import * as db from './db/mod';
 import type * as sync from './sync/mod';
 import {assert} from './asserts';
-import type {Diff, DiffOperation} from './btree/node';
+import type {
+  Diff,
+  DiffOperation,
+  IndexDiff,
+  InternalDiff,
+  InternalDiffOperation,
+  NoIndexDiff,
+} from './btree/node';
 import {deepEqual, ReadonlyJSONValue} from './json';
 import type {DiffsMap} from './sync/pull';
 import {ReadTransaction, SubscriptionTransactionWrapper} from './transactions';
@@ -99,10 +106,22 @@ class SubscriptionImpl<R, E> implements Subscription<R, E> {
  *
  * @experimental This type is experimental and may change in the future.
  */
-export type WatchCallback = (diff: Diff) => void;
+export type WatchNoIndexCallback = (diff: NoIndexDiff) => void;
+
+export type WatchCallbackForOptions<Options extends WatchOptions> =
+  Options extends WatchIndexOptions ? WatchIndexCallback : WatchNoIndexCallback;
+
+/**
+ * Function that gets passed into [[Replicache.experimentalWatch]] when doing a
+ * watch on a secondary index map and gets called when the data in Replicache
+ * changes.
+ *
+ * @experimental This type is experimental and may change in the future.
+ */
+export type WatchIndexCallback = (diff: IndexDiff) => void;
 
 export type CallbackEntry = {
-  cb: WatchCallback;
+  cb: WatchIndexCallback | WatchNoIndexCallback;
   prefix: string;
 };
 
@@ -111,10 +130,27 @@ export type CallbackEntry = {
  *
  * @experimental This interface is experimental and may change in the future.
  */
-export interface WatchOptions {
+export type WatchOptions = WatchIndexOptions | WatchNoIndexOptions;
+
+/**
+ * Options object passed to [[Replicache.experimentalWatch]]. This is for an
+ * index watch.
+ */
+export type WatchIndexOptions = WatchNoIndexOptions & {
   /**
-   * When provided, the `watch` is limited to changes where the `key` starts with
-   * `prefix`.
+   * When provided, the `watch` is limited to the changes that apply to the index map.
+   */
+  indexName: string;
+};
+
+/**
+ * Options object passed to [[Replicache.experimentalWatch]]. This is for a non
+ * index watch.
+ */
+export type WatchNoIndexOptions = {
+  /**
+   * When provided, the `watch` is limited to changes where the `key` starts
+   * with `prefix`.
    */
   prefix?: string;
 
@@ -125,11 +161,14 @@ export interface WatchOptions {
    * being added.
    */
   initialValuesInFirstDiff?: boolean;
-}
+};
+
+export type WatchCallback = (diff: Diff) => void;
 
 class WatchImpl implements Subscription<Diff | undefined, unknown> {
   private readonly _callback: WatchCallback;
   private readonly _prefix: string;
+  private readonly _indexName: string | undefined;
   private readonly _initialValuesInFirstDiff: boolean;
 
   readonly onError: ((error: unknown) => void) | undefined = undefined;
@@ -138,6 +177,7 @@ class WatchImpl implements Subscription<Diff | undefined, unknown> {
   constructor(callback: WatchCallback, options: WatchOptions) {
     this._callback = callback;
     this._prefix = options.prefix ?? '';
+    this._indexName = (options as WatchIndexOptions).indexName;
     this._initialValuesInFirstDiff = options.initialValuesInFirstDiff ?? false;
   }
 
@@ -152,61 +192,82 @@ class WatchImpl implements Subscription<Diff | undefined, unknown> {
     kind: InvokeKind,
     diffs: DiffsMap | undefined,
   ): Promise<Diff | undefined> {
-    let diff: Diff;
-    if (kind === InvokeKind.InitialRun) {
-      if (!this._initialValuesInFirstDiff) {
-        // We are using `undefined` here as a sentinel value to indicate that we
-        // should not call the callback in `onDone`.
-        return undefined;
-      }
+    const invoke = async <T extends db.IndexKey | string>(
+      indexName: string | undefined,
+      prefix: string,
+      compareKey: (diff: DiffOperation<T>) => string,
+      convertInternalDiff: (diff: InternalDiff) => readonly DiffOperation<T>[],
+    ): Promise<readonly DiffOperation<T>[] | undefined> => {
+      let diff: readonly DiffOperation<T>[];
+      if (kind === InvokeKind.InitialRun) {
+        if (!this._initialValuesInFirstDiff) {
+          // We are using `undefined` here as a sentinel value to indicate that we
+          // should not call the callback in `onDone`.
+          return undefined;
+        }
 
-      // For the initial run, we need to get the "diffs" for the whole tree.
+        // For the initial run, we need to get the "diffs" for the whole tree.
+        assert(diffs === undefined);
 
-      assert(diffs === undefined);
-      const newDiff: DiffOperation[] = [];
-      for await (const entry of tx.scan({prefix: this._prefix}).entries()) {
-        newDiff.push({
-          op: 'add',
-          key: entry[0],
-          newValue: entry[1],
-        });
-      }
-      diff = newDiff;
-    } else {
-      assert(diffs);
-      const maybeDiff = diffs.get('');
-      if (maybeDiff === undefined) {
-        return [];
-      }
-      diff = maybeDiff;
-    }
-
-    if (this._prefix === '') {
-      return diff;
-    }
-
-    const newDiff: DiffOperation[] = [];
-    const {length} = diff;
-    const prefix = this._prefix;
-    const compare = (i: number) => prefix <= diff[i].key;
-
-    for (let i = binarySearch(length, compare); i < length; i++) {
-      if (diff[i].key.startsWith(this._prefix)) {
-        newDiff.push(diff[i]);
+        const newDiff: DiffOperation<T>[] = [];
+        for await (const entry of tx.scan({prefix, indexName}).entries()) {
+          newDiff.push({
+            op: 'add',
+            key: entry[0] as T,
+            newValue: entry[1],
+          });
+        }
+        diff = newDiff;
       } else {
-        break;
+        assert(diffs);
+        const maybeDiff = diffs.get(indexName ?? '') ?? [];
+        diff = convertInternalDiff(maybeDiff);
       }
+      const newDiff: DiffOperation<T>[] = [];
+      const {length} = diff;
+      const compare = (i: number) => prefix <= compareKey(diff[i]);
+      for (let i = binarySearch(length, compare); i < length; i++) {
+        if (compareKey(diff[i]).startsWith(prefix)) {
+          newDiff.push(diff[i]);
+        } else {
+          break;
+        }
+      }
+
+      // For initial run we should always return something.
+      return kind === InvokeKind.InitialRun || newDiff.length > 0
+        ? newDiff
+        : undefined;
+    };
+
+    if (this._indexName) {
+      return await invoke<db.IndexKey>(
+        this._indexName,
+        this._prefix,
+        diff => diff.key[0],
+        internalDiff =>
+          internalDiff.map(op => ({
+            ...op,
+            key: db.decodeIndexKey(op.key),
+          })),
+      );
     }
-    return newDiff.length > 0 ? newDiff : undefined;
+
+    return await invoke<string>(
+      undefined,
+      this._prefix,
+      diff => diff.key,
+      x => x,
+    );
   }
 
   matches(diffs: DiffsMap): boolean {
-    const diff = diffs.get('');
+    const diff = diffs.get(this._indexName ?? '');
     if (diff === undefined) {
       return false;
     }
 
-    return watcherMatchesDiff(diff, this._prefix);
+    return watcherMatchesDiff(diff, this._prefix, this._indexName);
   }
 
   updateDeps(
@@ -364,7 +425,7 @@ function diffMatchesSubscription(
   keys: ReadonlySet<string>,
   scans: Iterable<Readonly<ScanSubscriptionInfo>>,
   indexName: string,
-  diff: Diff,
+  diff: InternalDiff,
 ): boolean {
   // Keys can only match for non index scans.
   if (indexName === '') {
@@ -386,7 +447,7 @@ function diffMatchesSubscription(
 export function scanInfoMatchesDiff(
   scanInfo: ScanSubscriptionInfo,
   changeIndexName: string,
-  diff: Diff,
+  diff: InternalDiff,
 ): boolean {
   // TODO(arv): Use binary search
   for (const diffEntry of diff) {
@@ -505,12 +566,19 @@ function* subscriptionsForDiffs<V, E>(
   }
 }
 
-function watcherMatchesDiff(diff: Diff, prefix: string): boolean {
+function watcherMatchesDiff(
+  diff: InternalDiff,
+  prefix: string,
+  indexName: string | undefined,
+): boolean {
   if (prefix === '') {
     return true;
   }
 
-  const i = binarySearch(diff.length, i => prefix <= diff[i].key);
+  const key = indexName
+    ? (diffOp: InternalDiffOperation) => db.decodeIndexKey(diffOp.key)[0]
+    : (diffOp: InternalDiffOperation) => diffOp.key;
 
-  return i < diff.length && diff[i].key.startsWith(prefix);
+  const i = binarySearch(diff.length, i => prefix <= key(diff[i]));
+  return i < diff.length && key(diff[i]).startsWith(prefix);
 }

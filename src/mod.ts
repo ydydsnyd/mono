@@ -65,10 +65,16 @@ export type {IndexKey} from './db/index';
 export type {
   Diff as ExperimentalDiff,
   DiffOperation as ExperimentalDiffOperation,
+  IndexDiff as ExperimentalIndexDiff,
+  NoIndexDiff as ExperimentalNoIndexDiff,
 } from './btree/node';
 export type {
-  WatchCallback as ExperimentalWatchCallback,
+  WatchNoIndexCallback as ExperimentalWatchNoIndexCallback,
   WatchOptions as ExperimentalWatchOptions,
+  WatchNoIndexOptions as ExperimentalWatchNoIndexOptions,
+  WatchIndexOptions as ExperimentalWatchIndexOptions,
+  WatchCallbackForOptions as ExperimentalWatchCallbackForOptions,
+  WatchIndexCallback as ExperimentalWatchIndexCallback,
   SubscribeOptions,
 } from './subscriptions';
 

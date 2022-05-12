@@ -10,9 +10,9 @@ import {
   newNodeImpl,
   partition,
   ReadonlyEntry,
-  DiffOperation,
   emptyDataNode,
   isDataNodeImpl,
+  InternalDiffOperation,
 } from './node';
 import type {CreateChunk} from '../dag/chunk';
 import {assert} from '../asserts';
@@ -141,7 +141,9 @@ export class BTreeWrite extends BTreeRead {
     yield* runRead(this._rwLock, super.entries());
   }
 
-  override async *diff(last: BTreeRead): AsyncIterableIterator<DiffOperation> {
+  override async *diff(
+    last: BTreeRead,
+  ): AsyncIterableIterator<InternalDiffOperation> {
     yield* runRead(this._rwLock, super.diff(last));
   }
 

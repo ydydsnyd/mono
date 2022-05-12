@@ -9,16 +9,16 @@ import {
   assertBTreeNode,
   newNodeImpl,
   findLeaf,
-  DiffOperation,
   ReadonlyEntry,
   NODE_LEVEL,
   NODE_ENTRIES,
   isInternalNode,
   DataNode,
   InternalNode,
-  Diff,
+  InternalDiff,
   binarySearch,
   binarySearchFound,
+  InternalDiffOperation,
 } from './node';
 import {
   computeSplices,
@@ -137,7 +137,7 @@ export class BTreeRead
     return this.entries();
   }
 
-  async *diff(last: BTreeRead): AsyncIterableIterator<DiffOperation> {
+  async *diff(last: BTreeRead): AsyncIterableIterator<InternalDiffOperation> {
     const [currentNode, lastNode] = await Promise.all([
       this.getNode(this.rootHash),
       last.getNode(last.rootHash),
@@ -151,7 +151,7 @@ async function* diffNodes(
   current: InternalNodeImpl | DataNodeImpl,
   lastTree: BTreeRead,
   currentTree: BTreeRead,
-): AsyncIterableIterator<DiffOperation> {
+): AsyncIterableIterator<InternalDiffOperation> {
   if (last.level > current.level) {
     // merge all of last's children into a new node
     // We know last is an internal node because level > 0.
@@ -206,7 +206,7 @@ async function* diffNodes(
 function* diffEntries<T>(
   lastEntries: ReadonlyArray<ReadonlyEntry<T>>,
   currentEntries: ReadonlyArray<ReadonlyEntry<T>>,
-): IterableIterator<DiffOperation> {
+): IterableIterator<InternalDiffOperation> {
   const lastLength = lastEntries.length;
   const currentLength = currentEntries.length;
   let i = 0;
@@ -295,9 +295,11 @@ export async function* scanForHash(
 export async function allEntriesAsDiff(
   map: BTreeRead,
   op: 'add' | 'del',
-): Promise<Diff> {
-  const diff: DiffOperation[] = [];
-  const make: (entry: ReadonlyEntry<ReadonlyJSONValue>) => DiffOperation =
+): Promise<InternalDiff> {
+  const diff: InternalDiffOperation[] = [];
+  const make: (
+    entry: ReadonlyEntry<ReadonlyJSONValue>,
+  ) => InternalDiffOperation =
     op === 'add'
       ? entry => {
           return {

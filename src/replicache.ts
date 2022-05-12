@@ -30,10 +30,12 @@ import type {
 } from './replicache-options';
 import {PullDelegate, PushDelegate} from './connection-loop-delegates';
 import {
+  WatchNoIndexCallback,
   SubscribeOptions,
   SubscriptionsManager,
-  WatchCallback,
   WatchOptions,
+  WatchCallbackForOptions,
+  WatchCallback,
 } from './subscriptions';
 import {IDBStore} from './kv/mod';
 import * as dag from './dag/mod';
@@ -1237,20 +1239,27 @@ export class Replicache<MD extends MutatorDefs = {}> {
    * Watches Replicache for changes.
    *
    * The `callback` gets called whenever the underlying data changes and the
-   * `key` changes matches the [[WatchOptions.prefix]] if present. If a change
-   * occurs to the data but the change does not impact the key space the
-   * callback is not called. In other words, the callback is never called with
-   * an empty diff.
+   * `key` changes matches the
+   * [[ExperimentalWatchNoIndexOptions|ExperimentalWatchOptions.prefix]]
+   * if present. If a change occurs to the data but the change does not impact
+   * the key space the callback is not called. In other words, the callback is
+   * never called with an empty diff.
    *
    * This gets called after commit (a mutation or a rebase).
    *
-   * @experimental This method is under development and its semantics will change.
+   * @experimental This method is under development and its semantics will
+   * change.
    */
-  experimentalWatch(
-    callback: WatchCallback,
-    options?: WatchOptions,
+  experimentalWatch(callback: WatchNoIndexCallback): () => void;
+  experimentalWatch<Options extends WatchOptions>(
+    callback: WatchCallbackForOptions<Options>,
+    options?: Options,
+  ): () => void;
+  experimentalWatch<Options extends WatchOptions>(
+    callback: WatchCallbackForOptions<Options>,
+    options?: Options,
   ): () => void {
-    return this._subscriptions.addWatch(callback, options);
+    return this._subscriptions.addWatch(callback as WatchCallback, options);
   }
 
   /**

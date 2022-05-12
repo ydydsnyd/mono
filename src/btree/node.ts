@@ -5,6 +5,7 @@ import type {BTreeRead} from './read';
 import type {BTreeWrite} from './write';
 import {skipBTreeNodeAsserts} from '../config.js';
 import {binarySearch as binarySearchWithFunc} from '../binary-search.js';
+import type {IndexKey} from '../mod.js';
 
 export type Entry<V> = [key: string, value: V];
 export type ReadonlyEntry<V> = readonly [key: string, value: V];
@@ -33,7 +34,24 @@ export function getRefs(node: Node): ReadonlyArray<Hash> {
  *
  * @experimental This type is experimental and may change in the future.
  */
-export type Diff = readonly DiffOperation[];
+export type Diff = IndexDiff | NoIndexDiff;
+
+/**
+ * @experimental This type is experimental and may change in the future.
+ */
+export type IndexDiff = readonly DiffOperation<IndexKey>[];
+
+/**
+ * @experimental This type is experimental and may change in the future.
+ */
+export type NoIndexDiff = readonly DiffOperation<string>[];
+
+/**
+ * InternalDiff uses string keys even for the secondary index maps.
+ */
+export type InternalDiff = readonly DiffOperation<string>[];
+
+export type InternalDiffOperation = DiffOperation<string>;
 
 /**
  * The individual parts describing the changes that happened to the Replicache
@@ -44,20 +62,20 @@ export type Diff = readonly DiffOperation[];
  *
  * @experimental This type is experimental and may change in the future.
  */
-export type DiffOperation =
+export type DiffOperation<Key> =
   | {
       readonly op: 'add';
-      readonly key: string;
+      readonly key: Key;
       readonly newValue: ReadonlyJSONValue;
     }
   | {
       readonly op: 'del';
-      readonly key: string;
+      readonly key: Key;
       readonly oldValue: ReadonlyJSONValue;
     }
   | {
       readonly op: 'change';
-      readonly key: string;
+      readonly key: Key;
       readonly oldValue: ReadonlyJSONValue;
       readonly newValue: ReadonlyJSONValue;
     };
