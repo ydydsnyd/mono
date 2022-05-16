@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1652364943930,
+  "lastUpdate": 1652694787399,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -16061,6 +16061,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 22060,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3f0853b171f9795369406e2cb49aaa78efc32548",
+          "message": "feat: Use UTF8 compare for strings (#42)\n\nThis adds a function to compare two strings as if they were UTF8\r\nstrings. The result should be the same as if the strings encoded as UTF8\r\nand compared byte-wise.\r\n\r\nThen use this in the B+Tree and scan\r\n\r\nTowards #41",
+          "timestamp": "2022-05-16T02:52:01-07:00",
+          "tree_id": "d5efca2f7ebb87d94d5c4b46c5fe4ecae5eee20b",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/3f0853b171f9795369406e2cb49aaa78efc32548"
+        },
+        "date": 1652694783865,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 170440,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 31974,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 169306,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 31664,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 77373,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 22394,
             "unit": "bytes"
           }
         ]
