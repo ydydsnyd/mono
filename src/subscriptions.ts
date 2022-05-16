@@ -15,7 +15,12 @@ import {ReadTransaction, SubscriptionTransactionWrapper} from './transactions';
 import type {QueryInternal} from './replicache';
 import type {LogContext} from '@rocicorp/logger';
 import {binarySearch} from './binary-search';
-import {greaterThan, lessThan, lessThanEq} from './compare-utf8.js';
+import {
+  compareUTF8,
+  greaterThan,
+  lessThan,
+  lessThanEq,
+} from './compare-utf8.js';
 
 const enum InvokeKind {
   InitialRun,
@@ -226,8 +231,11 @@ class WatchImpl implements Subscription<Diff | undefined, unknown> {
       }
       const newDiff: DiffOperation<T>[] = [];
       const {length} = diff;
-      const compare = (i: number) => lessThanEq(prefix, compareKey(diff[i]));
-      for (let i = binarySearch(length, compare); i < length; i++) {
+      for (
+        let i = diffBinarySearch(diff, prefix, compareKey);
+        i < length;
+        i++
+      ) {
         if (compareKey(diff[i]).startsWith(prefix)) {
           newDiff.push(diff[i]);
         } else {
@@ -576,9 +584,19 @@ function watcherMatchesDiff(
     return true;
   }
 
-  const key = indexName
+  const compareKey = indexName
     ? (diffOp: InternalDiffOperation) => db.decodeIndexKey(diffOp.key)[0]
     : (diffOp: InternalDiffOperation) => diffOp.key;
-  const i = binarySearch(diff.length, i => lessThanEq(prefix, key(diff[i])));
-  return i < diff.length && key(diff[i]).startsWith(prefix);
+  const i = diffBinarySearch(diff, prefix, compareKey);
+  return i < diff.length && compareKey(diff[i]).startsWith(prefix);
+}
+
+function diffBinarySearch<T>(
+  diff: readonly DiffOperation<T>[],
+  prefix: string,
+  compareKey: (diff: DiffOperation<T>) => string,
+): number {
+  return binarySearch(diff.length, i =>
+    compareUTF8(prefix, compareKey(diff[i])),
+  );
 }

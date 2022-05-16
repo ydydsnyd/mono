@@ -5,7 +5,7 @@ import type {BTreeRead} from './read';
 import type {BTreeWrite} from './write';
 import {skipBTreeNodeAsserts} from '../config';
 import {binarySearch as binarySearchWithFunc} from '../binary-search';
-import {lessThanEq} from '../compare-utf8';
+import {compareUTF8} from '../compare-utf8';
 import type {IndexKey} from '../mod.js';
 
 export type Entry<V> = [key: string, value: V];
@@ -116,7 +116,7 @@ export function binarySearch<V>(
   entries: ReadonlyArray<ReadonlyEntry<V>>,
 ): number {
   return binarySearchWithFunc(entries.length, i =>
-    lessThanEq(key, entries[i][0]),
+    compareUTF8(key, entries[i][0]),
   );
 }
 

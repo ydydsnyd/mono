@@ -2,10 +2,10 @@ import {expect} from '@esm-bundle/chai';
 import {binarySearch} from './binary-search.js';
 
 test('binarySearch', () => {
-  expect(binarySearch(0, () => false)).to.equal(0);
+  // expect(binarySearch(0, () => -1)).to.equal(0);
 
-  const t = <T>(needle: T, haystack: T[], expected: number) => {
-    expect(binarySearch(haystack.length, i => needle <= haystack[i])).to.equal(
+  const t = (needle: number, haystack: number[], expected: number) => {
+    expect(binarySearch(haystack.length, i => needle - haystack[i])).to.equal(
       expected,
     );
   };
