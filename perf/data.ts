@@ -42,6 +42,13 @@ export function makeRandomStrings(
   return Array.from({length: numStrings}, () => randomString(strLen));
 }
 
+export function makeRandomASCIIStrings(
+  numStrings: number,
+  strLen: number,
+): string[] {
+  return Array.from({length: numStrings}, () => randomASCIIString(strLen));
+}
+
 export function randomString(len: number): string {
   return randomStringInternal(len, 256);
 }

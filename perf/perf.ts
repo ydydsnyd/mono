@@ -2,6 +2,7 @@ import {benchmarks as replicacheBenchmarks} from './replicache';
 import {benchmarkIDBRead, benchmarkIDBWrite} from './idb';
 import {benchmarks as hashBenchmarks} from './hash';
 import {benchmarks as storageBenchmarks} from './storage';
+import {benchmarks as compareBenchmarks} from './compare-utf8';
 import {
   formatAsBenchmarkJS,
   formatAsReplicache,
@@ -133,6 +134,7 @@ export const benchmarks = [
   ...replicacheBenchmarks(),
   ...hashBenchmarks(),
   ...storageBenchmarks(),
+  ...compareBenchmarks(),
 ];
 
 for (const b of [benchmarkIDBRead, benchmarkIDBWrite]) {

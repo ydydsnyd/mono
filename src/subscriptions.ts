@@ -15,6 +15,7 @@ import {ReadTransaction, SubscriptionTransactionWrapper} from './transactions';
 import type {QueryInternal} from './replicache';
 import type {LogContext} from '@rocicorp/logger';
 import {binarySearch} from './binary-search';
+import {greaterThan, lessThan, lessThanEq} from './compare-utf8.js';
 
 const enum InvokeKind {
   InitialRun,
@@ -225,7 +226,7 @@ class WatchImpl implements Subscription<Diff | undefined, unknown> {
       }
       const newDiff: DiffOperation<T>[] = [];
       const {length} = diff;
-      const compare = (i: number) => prefix <= compareKey(diff[i]);
+      const compare = (i: number) => lessThanEq(prefix, compareKey(diff[i]));
       for (let i = binarySearch(length, compare); i < length; i++) {
         if (compareKey(diff[i]).startsWith(prefix)) {
           newDiff.push(diff[i]);
@@ -499,8 +500,8 @@ export function scanInfoMatchesKey(
 
     if (
       startKey &&
-      ((startExclusive && changedKey <= startKey) ||
-        changedKey < startKey ||
+      ((startExclusive && lessThanEq(changedKey, startKey)) ||
+        lessThan(changedKey, startKey) ||
         isKeyPastInclusiveLimit(scanInfo, changedKey))
     ) {
       return false;
@@ -526,16 +527,16 @@ export function scanInfoMatchesKey(
 
   if (
     startSecondaryKey &&
-    ((startExclusive && changedKeySecondary <= startSecondaryKey) ||
-      changedKeySecondary < startSecondaryKey)
+    ((startExclusive && lessThanEq(changedKeySecondary, startSecondaryKey)) ||
+      lessThan(changedKeySecondary, startSecondaryKey))
   ) {
     return false;
   }
 
   if (
     startKey &&
-    ((startExclusive && changedKeyPrimary <= startKey) ||
-      changedKeyPrimary < startKey)
+    ((startExclusive && lessThanEq(changedKeyPrimary, startKey)) ||
+      lessThan(changedKeyPrimary, startKey))
   ) {
     return false;
   }
@@ -551,7 +552,7 @@ function isKeyPastInclusiveLimit(
   return (
     scanInfo.options.limit !== undefined &&
     inclusiveLimitKey !== undefined &&
-    changedKey > inclusiveLimitKey
+    greaterThan(changedKey, inclusiveLimitKey)
   );
 }
 
@@ -578,7 +579,6 @@ function watcherMatchesDiff(
   const key = indexName
     ? (diffOp: InternalDiffOperation) => db.decodeIndexKey(diffOp.key)[0]
     : (diffOp: InternalDiffOperation) => diffOp.key;
-
-  const i = binarySearch(diff.length, i => prefix <= key(diff[i]));
+  const i = binarySearch(diff.length, i => lessThanEq(prefix, key(diff[i])));
   return i < diff.length && key(diff[i]).startsWith(prefix);
 }

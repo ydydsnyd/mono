@@ -13,6 +13,7 @@ import type {ReadonlyEntry} from './btree/node';
 import {encodeIndexScanKey, IndexKey} from './db/index.js';
 import {EntryForOptions, fromKeyForNonIndexScan} from './transactions.js';
 import type {IterableUnion} from './iterable-union.js';
+import {greaterThan} from './compare-utf8.js';
 
 type ScanKey = string | IndexKey;
 
@@ -337,6 +338,7 @@ export function makeScanResult<Options extends ScanOptions, Value>(
     },
   );
 }
+
 export function fromKeyForIndexScan(
   options: ScanIndexOptions,
 ): readonly [secondary: string, primary?: string] {
@@ -351,7 +353,7 @@ export function fromKeyForIndexScan(
   }
 
   const startKeyNormalized = normalizeScanOptionIndexedStartKey(start.key);
-  if (startKeyNormalized[0] > prefixNormalized[0]) {
+  if (greaterThan(startKeyNormalized[0], prefixNormalized[0])) {
     return startKeyNormalized;
   }
   if (
@@ -378,7 +380,7 @@ export function fromKeyForIndexScanInternal(options: ScanIndexOptions): string {
   const [secondary, primary] = normalizeScanOptionIndexedStartKey(key);
   const startKey = encodeIndexScanKey(secondary, primary);
 
-  if (startKey > prefix2) {
+  if (greaterThan(startKey, prefix2)) {
     return startKey;
   }
 

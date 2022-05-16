@@ -3,8 +3,9 @@ import {assert, assertArray, assertNumber, assertString} from '../asserts';
 import {Hash, emptyHash, newTempHash} from '../hash';
 import type {BTreeRead} from './read';
 import type {BTreeWrite} from './write';
-import {skipBTreeNodeAsserts} from '../config.js';
-import {binarySearch as binarySearchWithFunc} from '../binary-search.js';
+import {skipBTreeNodeAsserts} from '../config';
+import {binarySearch as binarySearchWithFunc} from '../binary-search';
+import {lessThanEq} from '../compare-utf8';
 import type {IndexKey} from '../mod.js';
 
 export type Entry<V> = [key: string, value: V];
@@ -114,7 +115,9 @@ export function binarySearch<V>(
   key: string,
   entries: ReadonlyArray<ReadonlyEntry<V>>,
 ): number {
-  return binarySearchWithFunc(entries.length, i => key <= entries[i][0]);
+  return binarySearchWithFunc(entries.length, i =>
+    lessThanEq(key, entries[i][0]),
+  );
 }
 
 export function binarySearchFound<V>(

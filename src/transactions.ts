@@ -16,6 +16,7 @@ import type {Hash} from './hash';
 import type {ScanSubscriptionInfo} from './subscriptions';
 import type {ScanNoIndexOptions} from './mod.js';
 import {decodeIndexKey, IndexKey} from './db/index.js';
+import {greaterThan} from './compare-utf8.js';
 
 /**
  * ReadTransactions are used with [[Replicache.query]] and
@@ -377,7 +378,7 @@ export function fromKeyForNonIndexScan(
   }
 
   const {prefix = '', start} = options;
-  if (start && start.key > prefix) {
+  if (start && greaterThan(start.key, prefix)) {
     return start.key;
   }
   return prefix;
