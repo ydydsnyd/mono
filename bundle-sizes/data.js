@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1652805456943,
+  "lastUpdate": 1652809531512,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -16355,6 +16355,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/bd57dd7af12b5bfc2a34aa21dacea0cc1625ff7d"
         },
         "date": 1652805452623,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 171926,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 32286,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 170792,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 31979,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 77840,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 22618,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ingar@users.noreply.github.com",
+            "name": "Ingar Shu",
+            "username": "ingar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0b1562797975df47f27b502ebbddf6dce4061797",
+          "message": "chore: enforce leading underscore on private props (#128)",
+          "timestamp": "2022-05-17T17:44:09Z",
+          "tree_id": "bc703471698818bf292c3b155e40c81ee0431f30",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/0b1562797975df47f27b502ebbddf6dce4061797"
+        },
+        "date": 1652809527873,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
