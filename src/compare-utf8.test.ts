@@ -1,5 +1,5 @@
 import {expect} from '@esm-bundle/chai';
-import {compareUTF8} from './compare-utf8';
+import {compareUTF8, utf16LengthForCodePoint} from './compare-utf8';
 
 function compareArrays(
   a: number[] | Uint8Array,
@@ -51,6 +51,13 @@ test('compareStringsAsUTF8', () => {
   t('\u{ffff}', '\u{10000}');
   t('\u{10fffe}', '\u{10ffff}');
 
+  // U+D800 to U+DFFF should not be used and TextEncoder does not work with these
+  t('\u{d7ff}', '\u{d800}');
+  t('\u{dfff}', '\u{e0000}');
+
+  t('\u{d7fe}', '\u{d7ff}');
+  t('\u{e000}', '\u{e001}');
+
   // In UTF-8 they will sort in this order:
   // Z U+005A [5A]
   // Ｚ U+FF3A [EF BC BA]
@@ -63,4 +70,10 @@ test('compareStringsAsUTF8', () => {
   t('\u005A', '\uFF3A');
   t('\uFF3A', '\u{1D655}');
   t('\u005A', '\u{1D655}');
+});
+
+test('length', () => {
+  for (let i = 1; i < 0x10ffff; i *= 2) {
+    expect(utf16LengthForCodePoint(i)).to.equal(String.fromCodePoint(i).length);
+  }
 });

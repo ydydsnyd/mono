@@ -11,6 +11,8 @@ export function compareUTF8(a: string, b: string): number {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const bCodePoint = b.codePointAt(i)!;
     if (aCodePoint !== bCodePoint) {
+      // Code points below 0x80 are represented the same way in UTF-8 as in
+      // UTF-16.
       if (aCodePoint < 0x80 && bCodePoint < 0x80) {
         return aCodePoint - bCodePoint;
       }
@@ -44,8 +46,8 @@ function compareArrays(
   return aLength - bLength;
 }
 
-function utf16LengthForCodePoint(aCodePoint: number): number {
-  return aCodePoint < 0xdb00 || aCodePoint > 0xdfff ? 1 : 2;
+export function utf16LengthForCodePoint(aCodePoint: number): number {
+  return aCodePoint > 0xffff ? 2 : 1;
 }
 
 // 2 preallocated arrays for utf8Bytes.
