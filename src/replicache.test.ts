@@ -2011,6 +2011,7 @@ type LicenseKeyCheckTestCase = {
   expectValid: boolean;
   expectDisable: boolean;
   expectFetchCalled: boolean;
+  expectDisableAfter?: number;
 };
 
 // TODO(phritz) ick, export these urls from the licensing client.
@@ -2047,6 +2048,11 @@ async function licenseKeyCheckTest(tc: LicenseKeyCheckTestCase) {
     expect(consoleErrorStub.lastCall.args[1]).to.match(/REPLICACHE DISABLED/);
   } else {
     expect(rep.closed).to.be.false;
+
+    if (tc.expectDisableAfter !== undefined) {
+      await clock.tickAsync(tc.expectDisableAfter);
+      expect(rep.closed).to.be.true;
+    }
   }
   if (!tc.expectValid) {
     expect(consoleErrorStub.getCall(0).args[1]).to.match(
@@ -2075,6 +2081,7 @@ test('test licensing key is valid and does not send status check', async () => {
     expectValid: true,
     expectDisable: false,
     expectFetchCalled: false,
+    expectDisableAfter: 5 * 60 * 1000,
   });
 });
 

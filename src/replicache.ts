@@ -81,6 +81,7 @@ const LAZY_STORE_SOURCE_CHUNK_CACHE_SIZE_LIMIT = 100 * 2 ** 20; // 100 MB
 
 const RECOVER_MUTATIONS_INTERVAL_MS = 5 * 60 * 1000; // 5 mins
 const LICENSE_ACTIVE_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const TEST_LICENSE_KEY_TTL_MS = 5 * 60 * 1000;
 
 export type MaybePromise<T> = T | Promise<T>;
 
@@ -221,6 +222,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
    * for the TEST_LICENSE_KEY.
    */
   protected _licenseActivePromise: Promise<boolean>;
+  private _testLicenseKeyTimeout: ReturnType<typeof setTimeout> | null = null;
   private _root: Promise<Hash | undefined> = Promise.resolve(undefined);
   private readonly _mutatorRegistry = new Map<
     string,
@@ -566,8 +568,17 @@ export class Replicache<MD extends MutatorDefs = {}> {
           // TODO(phritz) maybe use a more specific URL
           `See https://replicache.dev for more information.`,
       );
-      // TODO(phritz) test key should time out after 5m
       resolveLicenseCheck(true);
+
+      this._testLicenseKeyTimeout = setTimeout(async () => {
+        await this._licenseInvalid(
+          this._lc,
+          'Test key expired',
+          true,
+          resolveLicenseCheck,
+        );
+      }, TEST_LICENSE_KEY_TTL_MS);
+
       return;
     }
     try {
@@ -728,6 +739,10 @@ export class Replicache<MD extends MutatorDefs = {}> {
     this._pushConnectionLoop.close();
 
     this._subscriptions.clear();
+
+    if (this._testLicenseKeyTimeout) {
+      clearTimeout(this._testLicenseKeyTimeout);
+    }
 
     await Promise.all(closingPromises);
     closingInstances.delete(this.name);

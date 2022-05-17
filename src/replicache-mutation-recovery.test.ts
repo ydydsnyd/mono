@@ -1204,7 +1204,9 @@ test('mutation recovery is invoked on change from offline to online', async () =
 });
 
 test('mutation recovery is invoked on 5 minute interval', async () => {
-  const rep = await replicacheForTesting('mutation-recovery-startup');
+  const rep = await replicacheForTesting('mutation-recovery-startup', {
+    enableLicensing: false,
+  });
   expect(rep.recoverMutationsSpy.callCount).to.equal(1);
   await clock.tickAsync(5 * 60 * 1000);
   expect(rep.recoverMutationsSpy.callCount).to.equal(2);
