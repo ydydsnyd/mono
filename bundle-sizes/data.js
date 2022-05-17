@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1652788545902,
+  "lastUpdate": 1652805456943,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -16331,6 +16331,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 22546,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ingar@users.noreply.github.com",
+            "name": "Ingar Shu",
+            "username": "ingar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bd57dd7af12b5bfc2a34aa21dacea0cc1625ff7d",
+          "message": "fix: timeout test license key after 5 minutes (#123)\n\n* set a timer to stop replicache if test key is used\r\n\r\n* remove helper fn and default licensing option for test\r\n\r\n* initialize timeout handle in ctor",
+          "timestamp": "2022-05-17T09:36:21-07:00",
+          "tree_id": "2a11efcbd38496b7e4e07431f3636aebd7c2c1c7",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/bd57dd7af12b5bfc2a34aa21dacea0cc1625ff7d"
+        },
+        "date": 1652805452623,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 171926,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 32286,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 170792,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 31979,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 77840,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 22618,
             "unit": "bytes"
           }
         ]
