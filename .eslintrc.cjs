@@ -17,6 +17,12 @@ module.exports = {
         leadingUnderscore: 'forbid',
       },
       {
+        selector: 'memberLike',
+        modifiers: ['private'],
+        format: ['camelCase'],
+        leadingUnderscore: 'require',
+      },
+      {
         selector: ['property', 'method'],
         format: null,
         modifiers: ['requiresQuotes'],
