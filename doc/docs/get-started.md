@@ -11,8 +11,8 @@ For information about the license key step, see [Licensing](/licensing).
 
 The following software must be installed to use the starter app:
 
-* Docker: https://docs.docker.com/engine/install/
-* Supabase CLI: https://github.com/supabase/cli#getting-started
+- Docker: https://docs.docker.com/engine/install/
+- Supabase CLI: https://github.com/supabase/cli#getting-started
 
 # Install
 
