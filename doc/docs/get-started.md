@@ -7,6 +7,15 @@ The easiest way to get started is with our Todo starter app. This app is a good 
 
 For information about the license key step, see [Licensing](/licensing).
 
+# Prerequisites
+
+The following software must be installed to use the starter app:
+
+* Docker: https://docs.docker.com/engine/install/
+* Supabase CLI: https://github.com/supabase/cli#getting-started
+
+# Install
+
 ```bash
 # Get the code and install
 npx degit rocicorp/replicache-todo my-app
@@ -16,17 +25,8 @@ npm install
 # Get a Replicache license key.
 npx replicache get-license
 
-# Install supabase cli, if you don't already have it.
-# For MacOS:
-brew install supabase/tap/supabase
-# For other platforms, see:
-# https://github.com/supabase/cli#getting-started
-
 # Initialize supabase.
 supabase init
-
-# Docker is required for supabase, if you need it see:
-# https://docs.docker.com/engine/install/
 
 # Start supabase. If you are already running supabase for another
 # application, first run `supabase stop` before running the
