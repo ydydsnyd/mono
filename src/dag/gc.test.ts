@@ -225,3 +225,20 @@ test('computeRefCountUpdates for 3 incoming refs bypassing one level', async () 
     e: 1,
   });
 });
+
+test('computeRefCountUpdates for heads updating to same hash should have no refcount updates', async () => {
+  const {hashes, delegate} = createGraph({
+    graph: {
+      r: ['a'],
+      a: [],
+    },
+    heads: ['r'],
+  });
+
+  const refCountUpdates = await computeRefCountUpdates(
+    [{old: hashes['r'], new: hashes['r']}],
+    new Set(),
+    delegate,
+  );
+  expectRefCountUpdates(refCountUpdates, {});
+});

@@ -32,8 +32,10 @@ export async function computeRefCountUpdates(
   const newHeads: Hash[] = [];
   const oldHeads: Hash[] = [];
   for (const changedHead of headChanges) {
-    changedHead.old && oldHeads.push(changedHead.old);
-    changedHead.new && newHeads.push(changedHead.new);
+    if (changedHead.old !== changedHead.new) {
+      changedHead.old && oldHeads.push(changedHead.old);
+      changedHead.new && newHeads.push(changedHead.new);
+    }
   }
 
   const refCountUpdates: RefCountUpdates = new Map();
