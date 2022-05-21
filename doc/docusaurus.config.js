@@ -30,7 +30,6 @@ module.exports = {
     ],
   ],
   themeConfig: {
-    plugins: ['@docusaurus/plugin-google-analytics'],
     colorMode: {
       defaultMode: 'light',
       disableSwitch: true,
@@ -89,8 +88,8 @@ module.exports = {
           sidebarPath: require.resolve('./sidebars.js'),
           editUrl: 'https://github.com/rocicorp/replicache/tree/main/doc',
         },
-        googleAnalytics: {
-          trackingID: 'UA-166756598-1',
+        gtag: {
+          trackingID: 'GTM-PTN768T',
           // Optional fields.
           anonymizeIP: true, // Should IPs be anonymized?
         },
