@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1652978654803,
+  "lastUpdate": 1653094219310,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -16571,6 +16571,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/a6816652f56f2fccae247a0b0a9d3549e5ab1e74"
         },
         "date": 1652978651517,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 171983,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 32286,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 170849,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 31981,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 77857,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 22639,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "phritz@users.noreply.github.com",
+            "name": "phritz",
+            "username": "phritz"
+          },
+          "committer": {
+            "email": "157153+phritz@users.noreply.github.com",
+            "name": "Phritz",
+            "username": "phritz"
+          },
+          "distinct": true,
+          "id": "b80ed2cb7916c96c0300edfd9bb3a1b4a99f11d7",
+          "message": "switch to google tag manager",
+          "timestamp": "2022-05-20T14:49:17-10:00",
+          "tree_id": "4fecf7a66ee3093d42a1d5e7957375a2d7de1adf",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/b80ed2cb7916c96c0300edfd9bb3a1b4a99f11d7"
+        },
+        "date": 1653094216356,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
