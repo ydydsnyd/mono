@@ -5,6 +5,7 @@ import {readFile} from 'fs/promises';
 
 const forBundleSizeDashboard = process.argv.includes('--bundle-sizes');
 const perf = process.argv.includes('--perf');
+const debug = process.argv.includes('--debug');
 
 const sharedOptions = {
   bundle: true,
@@ -72,5 +73,9 @@ if (perf) {
     buildCLI(),
   ]);
 } else {
-  await Promise.all([buildMJS(), buildCJS(), buildCLI()]);
+  let opts = {};
+  if (debug) {
+    opts = {minify: false, mangleProps: null};
+  }
+  await Promise.all([buildMJS(opts), buildCJS(opts), buildCLI()]);
 }

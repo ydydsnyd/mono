@@ -170,3 +170,45 @@ The runner runs on an ec2 instance you can find [here](https://us-east-1.console
 to set it up again you can kill the existing runner processes, rm the old `actions-runner` directory, and
 then [follow the github instructions for installing a runner](https://github.com/rocicorp/replicache-internal/settings/actions/runners/new?arch=x64&os=linux). You will want to use `runsvc.sh install` and `runsvc.sh start` instead of `run.sh` so it
 keeps running after you detach.
+
+# Local Debugging with Source Maps
+
+To debug and develop Replicache locally in a webpack-based app, you need to tweak a few things.
+
+If you haven't already done so, make `replicache-internal` available to npm by using [npm-link](https://docs.npmjs.com/cli/v8/commands/npm-link), and create a debug build.
+
+```bash
+# in your replicache-internal dir
+npm link
+
+# creates an unminified and unmangled build so that you can see symbols in the debugger/watches
+npm run build -- --debug
+```
+
+In your app you want to debug, link the replicache package, and install the [`source-map-loader`](https://github.com/webpack-contrib/source-map-loader) package:
+
+```bash
+cd <your replicache app, like repliear or replicache-todo>
+npm link replicache
+
+npm install -D source-map-loader
+```
+
+Modify the webpack config to include third-party source maps in its bundle.
+For our sample apps (Next.js based), modify the next config:
+
+```js
+// next.config.js
+module.exports = {
+  ...
+  webpack: (config) => {
+    config.module.rules.push({
+      test: /\.mjs$/,
+      use: ["source-map-loader"],
+    });
+    return config;
+  },
+  ...
+}
+
+```
