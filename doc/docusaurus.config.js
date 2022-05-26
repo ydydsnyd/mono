@@ -10,6 +10,7 @@ module.exports = {
   organizationName: 'Rocicorp', // Usually your GitHub org/user name.
   projectName: 'replicache', // Usually your repo name.
   plugins: [
+    process.env.NODE_ENV === 'production' && 'docusaurus-plugin-script-tags',
     [
       'docusaurus-plugin-typedoc',
 
@@ -28,8 +29,22 @@ module.exports = {
         watch: process.env.TYPEDOC_WATCH ?? false,
       },
     ],
-  ],
+  ].filter(Boolean),
   themeConfig: {
+    tags: {
+      headTags: [
+        {
+          tagName: 'script',
+          innerHTML: `
+          (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+          new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+          j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+          'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+          })(window,document,'script','dataLayer','GTM-PTN768T');
+          `,
+        },
+      ],
+    },
     colorMode: {
       defaultMode: 'light',
       disableSwitch: true,
@@ -87,11 +102,6 @@ module.exports = {
           routeBasePath: '/',
           sidebarPath: require.resolve('./sidebars.js'),
           editUrl: 'https://github.com/rocicorp/replicache/tree/main/doc',
-        },
-        gtag: {
-          trackingID: 'GTM-PTN768T',
-          // Optional fields.
-          anonymizeIP: true, // Should IPs be anonymized?
         },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
