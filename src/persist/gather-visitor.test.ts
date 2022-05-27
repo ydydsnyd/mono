@@ -148,6 +148,7 @@ test('dag with some permanent hashes and some temp hashes on top', async () => {
                 jsonPointer: '',
                 keyPrefix: 'local',
                 name: '4',
+                allowEmpty: false,
               },
               valueHash: 't/000000000000000000000000000002',
             },

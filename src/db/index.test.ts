@@ -124,10 +124,12 @@ test('get index keys', () => {
     expected: IndexKey[] | string | RegExp,
   ) => {
     if (Array.isArray(expected)) {
-      const keys = getIndexKeys(key, input, jsonPointer);
+      const keys = getIndexKeys(key, input, jsonPointer, false);
       expect(keys).to.deep.equal(expected.map(k => encodeIndexKey(k)));
     } else {
-      expect(() => getIndexKeys(key, input, jsonPointer)).to.throw(expected);
+      expect(() => getIndexKeys(key, input, jsonPointer, false)).to.throw(
+        expected,
+      );
     }
   };
 
@@ -160,8 +162,11 @@ test('get index keys', () => {
 
 test('json pointer', () => {
   for (const v of [null, 42, true, false, [], {}, 'foo']) {
+    expect(() => evaluateJSONPointer(null, 'x')).to.throw(
+      'Invalid JSON pointer',
+    );
+
     expect(evaluateJSONPointer(v, '')).to.equal(v);
-    expect(evaluateJSONPointer(null, 'x')).to.equal(undefined);
     expect(evaluateJSONPointer(v, '/')).to.equal(undefined);
     expect(evaluateJSONPointer(v, '/a')).to.equal(undefined);
   }

@@ -316,6 +316,11 @@ export interface CreateIndexDefinition {
    * `createIndex({name: 'usersByAge', keyPrefix: '/user/', jsonPointer: '/age'})`
    */
   jsonPointer: string;
+
+  /**
+   * If `true`, indexing empty values will not emit a warning.  Defaults to `false`.
+   */
+  allowEmpty?: boolean;
 }
 
 export class IndexTransactionImpl
@@ -333,6 +338,7 @@ export class IndexTransactionImpl
       options.name,
       options.prefix ?? '',
       options.jsonPointer,
+      options.allowEmpty ?? false,
     );
   }
 

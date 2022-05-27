@@ -78,9 +78,10 @@ export async function indexValue(
   key: string,
   val: ReadonlyJSONValue,
   jsonPointer: string,
+  allowEmpty = false,
 ): Promise<void> {
   try {
-    for (const entry of getIndexKeys(key, val, jsonPointer)) {
+    for (const entry of getIndexKeys(key, val, jsonPointer, allowEmpty)) {
       switch (op) {
         case IndexOperation.Add:
           await index.put(entry, val);
@@ -103,9 +104,13 @@ export function getIndexKeys(
   primary: string,
   value: ReadonlyJSONValue,
   jsonPointer: string,
+  allowEmpty: boolean,
 ): string[] {
   const target = evaluateJSONPointer(value, jsonPointer);
   if (target === undefined) {
+    if (allowEmpty) {
+      return [];
+    }
     throw new Error(`No value at path: ${jsonPointer}`);
   }
 
@@ -221,7 +226,7 @@ export function evaluateJSONPointer(
     return value;
   }
   if (!pointer.startsWith('/')) {
-    return undefined;
+    throw new Error(`Invalid JSON pointer: ${pointer}`);
   }
 
   const tokens = pointer

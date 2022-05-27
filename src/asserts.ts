@@ -17,6 +17,10 @@ export function assertNumber(v: unknown): asserts v is number {
   assertType(v, 'number');
 }
 
+export function assertBoolean(v: unknown): asserts v is boolean {
+  assertType(v, 'boolean');
+}
+
 function assertType(v: unknown, t: string) {
   if (typeof v !== t) {
     throwInvalidType(v, t);

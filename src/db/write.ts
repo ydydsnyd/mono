@@ -205,6 +205,7 @@ export class Write extends Read {
     name: string,
     keyPrefix: string,
     jsonPointer: string,
+    allowEmpty: boolean,
   ): Promise<void> {
     if (this._meta.type === MetaType.Local) {
       throw new Error('Not allowed');
@@ -214,16 +215,19 @@ export class Write extends Read {
       name,
       keyPrefix,
       jsonPointer,
+      allowEmpty,
     };
 
     // Check to see if the index already exists.
     const index = this.indexes.get(name);
     if (index) {
       const oldDefinition = index.meta.definition;
+      const oldAllowEmpty = oldDefinition.allowEmpty ?? false;
       if (
         oldDefinition.name === name &&
         oldDefinition.keyPrefix === keyPrefix &&
-        oldDefinition.jsonPointer === jsonPointer
+        oldDefinition.jsonPointer === jsonPointer &&
+        oldAllowEmpty === allowEmpty
       ) {
         return;
       } else {
@@ -240,6 +244,7 @@ export class Write extends Read {
         entry[0],
         entry[1],
         jsonPointer,
+        allowEmpty,
       );
     }
 
@@ -430,6 +435,7 @@ export async function updateIndexes(
               key,
               oldVal,
               idx.meta.definition.jsonPointer,
+              idx.meta.definition.allowEmpty,
             ),
           );
         }
@@ -442,6 +448,7 @@ export async function updateIndexes(
               key,
               newVal,
               idx.meta.definition.jsonPointer,
+              idx.meta.definition.allowEmpty,
             ),
           );
         }

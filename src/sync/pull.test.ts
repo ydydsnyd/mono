@@ -777,7 +777,7 @@ test('changed keys', async () => {
     if (indexDef) {
       const {name, prefix, jsonPointer} = indexDef;
 
-      chain.push(await createIndex(name, prefix, jsonPointer, store));
+      chain.push(await createIndex(name, prefix, jsonPointer, store, false));
     }
 
     const entries = [...baseMap];

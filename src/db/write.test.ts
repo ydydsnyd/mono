@@ -99,7 +99,7 @@ test('index commit type constraints', async () => {
 
   let err;
   try {
-    await w.createIndex(lc, 'foo', '', '');
+    await w.createIndex(lc, 'foo', '', '', false);
   } catch (e) {
     err = e;
   }
@@ -138,7 +138,7 @@ test('clear', async () => {
       whenceHead(DEFAULT_HEAD_NAME),
       dagWrite,
     );
-    await w.createIndex(lc, 'idx', '', '');
+    await w.createIndex(lc, 'idx', '', '', false);
     await w.commit(DEFAULT_HEAD_NAME);
   });
 
@@ -221,7 +221,7 @@ test('create and drop index', async () => {
         whenceHead(DEFAULT_HEAD_NAME),
         dagWrite,
       );
-      await w.createIndex(lc, indexName, '', '/s');
+      await w.createIndex(lc, indexName, '', '/s', false);
       await w.commit(DEFAULT_HEAD_NAME);
     });
 
@@ -250,6 +250,7 @@ test('create and drop index', async () => {
       expect(idx.definition.name).to.equal(indexName);
       expect(idx.definition.keyPrefix).to.be.empty;
       expect(idx.definition.jsonPointer).to.equal('/s');
+      expect(idx.definition.allowEmpty).to.be.false;
       const indexMap = new BTreeRead(dagRead, idx.valueHash);
 
       const entries = await asyncIterableToArray(indexMap);
@@ -275,4 +276,47 @@ test('create and drop index', async () => {
 
   await t(true);
   await t(false);
+});
+
+test('legacy index definitions imply allowEmpty = false', async () => {
+  const ds = new dag.TestStore();
+  const lc = new LogContext();
+  await ds.withWrite(dagWrite => initDB(dagWrite, DEFAULT_HEAD_NAME));
+
+  const indexName = 'legacyIndex';
+  await ds.withWrite(async dagWrite => {
+    const w = await Write.newIndexChange(
+      whenceHead(DEFAULT_HEAD_NAME),
+      dagWrite,
+    );
+    await w.createIndex(lc, indexName, '', '', false);
+    await w.commit(DEFAULT_HEAD_NAME);
+  });
+
+  await ds.withWrite(async dagWrite => {
+    const [, commit] = await readCommit(
+      whenceHead(DEFAULT_HEAD_NAME),
+      dagWrite,
+    );
+    // tweak the index def to look like an old one
+    const indexDef = commit.indexes[0].definition as {allowEmpty?: boolean};
+    indexDef.allowEmpty = undefined;
+  });
+
+  await ds.withWrite(async dagWrite => {
+    const w = await Write.newIndexChange(
+      whenceHead(DEFAULT_HEAD_NAME),
+      dagWrite,
+    );
+
+    let error: unknown;
+    try {
+      await w.createIndex(lc, indexName, '', '', false);
+    } catch (e) {
+      error = e;
+    }
+    expect(error).to.be.undefined;
+
+    await w.commit(DEFAULT_HEAD_NAME);
+  });
 });

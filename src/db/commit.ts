@@ -4,6 +4,7 @@ import {assertJSONValue} from '../json';
 import {
   assert,
   assertArray,
+  assertBoolean,
   assertNumber,
   assertObject,
   assertString,
@@ -243,6 +244,8 @@ export type IndexDefinition = {
   readonly keyPrefix: string;
   // jsonPointer describes the (sub-)value to index (secondary index)
   readonly jsonPointer: string;
+
+  readonly allowEmpty?: boolean;
 };
 
 function assertIndexDefinition(v: unknown): asserts v is IndexDefinition {
@@ -250,6 +253,10 @@ function assertIndexDefinition(v: unknown): asserts v is IndexDefinition {
   assertString(v.name);
   assertString(v.keyPrefix);
   assertString(v.jsonPointer);
+
+  if (v.allowEmpty !== undefined) {
+    assertBoolean(v.allowEmpty);
+  }
 }
 
 export type IndexRecord = {

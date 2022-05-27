@@ -71,7 +71,7 @@ export async function addIndexChange(
 ): Promise<Chain> {
   expect(chain).to.have.length.greaterThan(0);
   const i = chain.length;
-  const commit = await createIndex(i + '', 'local', '', store);
+  const commit = await createIndex(i + '', 'local', '', store, false);
   chain.push(commit);
   return chain;
 }
@@ -81,6 +81,7 @@ export async function createIndex(
   prefix: string,
   jsonPointer: string,
   store: dag.Store,
+  allowEmpty: boolean,
 ): Promise<Commit<Meta>> {
   const lc = new LogContext();
   await store.withWrite(async dagWrite => {
@@ -88,7 +89,7 @@ export async function createIndex(
       whenceHead(DEFAULT_HEAD_NAME),
       dagWrite,
     );
-    await w.createIndex(lc, name, prefix, jsonPointer);
+    await w.createIndex(lc, name, prefix, jsonPointer, allowEmpty);
     await w.commit(DEFAULT_HEAD_NAME);
   });
   return store.withRead(async dagRead => {
