@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1653669246737,
+  "lastUpdate": 1653906660035,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -16817,6 +16817,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 22699,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "52f689ff55ad035d9c42127cf11f971b6bb62993",
+          "message": "refactor: Introduce InternalValue (#136)\n\nInternalValue represents a readonly JSON value that we use internally in\r\nReplicache. It is an opaque type that is not exposed to the user.\r\nConceptually, all the API endpoints use `toInternalValue` and\r\n`fromInternalValue` which clones the json to ensure no mutations of\r\ninternal value can ever occur. However, for performance reasons we do\r\nnot always clone. In those cases we use `safeCastToJSON` which does no\r\ncopying.\r\n\r\nTo make sure we never copy a value twice, we keep track of the internal\r\nvalues in a `WeakSet`.\r\n\r\nTo make things clearer where these conversions are used, these methods\r\ntakes a \"reason\" enumeration.\r\n\r\nThere is also a config flag that disables the internal value assertions\r\nwhich also allows skipping creating the WeakSet.\r\n\r\nTowards #56",
+          "timestamp": "2022-05-30T10:29:39Z",
+          "tree_id": "25b39bd08142930e455eb0dc33f804edbc1f07db",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/52f689ff55ad035d9c42127cf11f971b6bb62993"
+        },
+        "date": 1653906656500,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 175417,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 32880,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 174283,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 32584,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 79101,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 22965,
             "unit": "bytes"
           }
         ]
