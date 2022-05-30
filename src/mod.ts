@@ -86,4 +86,3 @@ export {filterAsyncIterable} from './filter-async-iterable';
 export type {IterableUnion} from './iterable-union';
 
 export {version} from './version';
-export {compareUTF8} from './compare-utf8';

@@ -1,3 +1,4 @@
+import {compareUTF8} from 'compare-utf8';
 import {assertJSONValue, JSONValue, ReadonlyJSONValue} from '../json';
 import {assert, assertArray, assertNumber, assertString} from '../asserts';
 import {Hash, emptyHash, newTempHash} from '../hash';
@@ -5,7 +6,6 @@ import type {BTreeRead} from './read';
 import type {BTreeWrite} from './write';
 import {skipBTreeNodeAsserts} from '../config';
 import {binarySearch as binarySearchWithFunc} from '../binary-search';
-import {compareUTF8} from '../compare-utf8';
 import type {IndexKey} from '../mod.js';
 import type {InternalValue} from '../internal-value.js';
 

@@ -1,3 +1,4 @@
+import {compareUTF8, greaterThan, lessThan, lessThanEq} from 'compare-utf8';
 import * as db from './db/mod';
 import type * as sync from './sync/mod';
 import {assert} from './asserts';
@@ -15,12 +16,6 @@ import {ReadTransaction, SubscriptionTransactionWrapper} from './transactions';
 import type {QueryInternal} from './replicache';
 import type {LogContext} from '@rocicorp/logger';
 import {binarySearch} from './binary-search';
-import {
-  compareUTF8,
-  greaterThan,
-  lessThan,
-  lessThanEq,
-} from './compare-utf8.js';
 import {fromInternalValue, FromInternalValueReason} from './internal-value.js';
 
 const enum InvokeKind {

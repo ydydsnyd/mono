@@ -1,3 +1,4 @@
+import {greaterThan} from 'compare-utf8';
 import type {ReadonlyJSONValue} from './json';
 import {Closed, throwIfClosed} from './transaction-closed-error';
 import {
@@ -13,7 +14,6 @@ import type {ReadonlyEntry} from './btree/node';
 import {encodeIndexScanKey, IndexKey} from './db/index.js';
 import {EntryForOptions, fromKeyForNonIndexScan} from './transactions.js';
 import type {IterableUnion} from './iterable-union.js';
-import {greaterThan} from './compare-utf8.js';
 import {
   CastReason,
   fromInternalValue,

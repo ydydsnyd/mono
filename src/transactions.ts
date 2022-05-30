@@ -1,4 +1,5 @@
 import type {LogContext} from '@rocicorp/logger';
+import {greaterThan} from 'compare-utf8';
 import type {JSONValue, ReadonlyJSONValue} from './json';
 import {
   isScanIndexOptions,
@@ -16,7 +17,6 @@ import type {Hash} from './hash';
 import type {ScanSubscriptionInfo} from './subscriptions';
 import type {ScanNoIndexOptions} from './mod.js';
 import {decodeIndexKey, IndexKey} from './db/index.js';
-import {greaterThan} from './compare-utf8.js';
 import {
   toInternalValue,
   InternalValue,

@@ -1,4 +1,4 @@
-import {compareUTF8} from '../src/compare-utf8.js';
+import {compareUTF8} from 'compare-utf8';
 import {makeRandomASCIIStrings, makeRandomStrings} from './data';
 import type {Benchmark} from './perf';
 
