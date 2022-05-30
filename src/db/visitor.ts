@@ -110,7 +110,6 @@ export class Visitor {
     const chunk = await this.dagRead.mustGetChunk(h);
     const {data} = chunk;
     assertBTreeNode(data);
-
     await this.visitBTreeNodeChunk(chunk as dag.Chunk<Node>);
   }
 

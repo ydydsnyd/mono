@@ -130,10 +130,8 @@ export class WriteImpl extends ReadImpl implements Write {
     this._chunkHasher = chunkHasher;
   }
 
-  createChunk = <V extends ReadonlyJSONValue>(
-    data: V,
-    refs: readonly Hash[],
-  ): Chunk<V> => createChunk(data, refs, this._chunkHasher);
+  createChunk = <V>(data: V, refs: readonly Hash[]): Chunk<V> =>
+    createChunk(data, refs, this._chunkHasher);
 
   get kvWrite(): kv.Write {
     return this._tx;
@@ -144,7 +142,8 @@ export class WriteImpl extends ReadImpl implements Write {
     // We never want to write temp hashes to the underlying store.
     this.assertValidHash(hash);
     const key = chunkDataKey(hash);
-    const p1 = this._tx.put(key, data);
+    // Commit contains InternalValue and Hash which are opaque types.
+    const p1 = this._tx.put(key, data as ReadonlyJSONValue);
     let p2;
     if (meta.length > 0) {
       for (const h of meta) {

@@ -1,4 +1,3 @@
-import type * as kv from '../kv/mod';
 import * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import {Hash, isTempHash} from '../hash';
@@ -39,7 +38,7 @@ export class FixupTransformer extends db.Transformer {
     return this._mappings.has(h);
   }
 
-  protected override async writeChunk<D extends kv.Value>(
+  protected override async writeChunk<D>(
     oldHash: OldHash,
     data: D,
     getRefs: (data: D) => readonly Hash[],

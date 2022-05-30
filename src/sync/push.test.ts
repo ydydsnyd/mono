@@ -14,6 +14,7 @@ import type {HTTPRequestInfo} from '../http-request-info';
 import {SYNC_HEAD_NAME} from './sync-head-name';
 import {push, PushRequest, PUSH_VERSION} from './push';
 import type {Pusher} from '../pusher';
+import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 
 type FakePusherArgs = {
   expPush: boolean;
@@ -106,7 +107,7 @@ test('try push', async () => {
           {
             id: 2,
             name: 'mutator_name_3',
-            args: [3],
+            args: toInternalValue([3], ToInternalValueReason.Test),
             timestamp: 42,
           },
         ],
@@ -132,13 +133,13 @@ test('try push', async () => {
           {
             id: 2,
             name: 'mutator_name_3',
-            args: [3],
+            args: toInternalValue([3], ToInternalValueReason.Test),
             timestamp: 42,
           },
           {
             id: 3,
             name: 'mutator_name_5',
-            args: [5],
+            args: toInternalValue([5], ToInternalValueReason.Test),
             timestamp: 42,
           },
         ],
@@ -164,13 +165,13 @@ test('try push', async () => {
           {
             id: 2,
             name: 'mutator_name_3',
-            args: [3],
+            args: toInternalValue([3], ToInternalValueReason.Test),
             timestamp: 42,
           },
           {
             id: 3,
             name: 'mutator_name_5',
-            args: [5],
+            args: toInternalValue([5], ToInternalValueReason.Test),
             timestamp: 42,
           },
         ],

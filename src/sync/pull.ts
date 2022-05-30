@@ -1,7 +1,7 @@
 import type {LogContext} from '@rocicorp/logger';
 import type * as dag from '../dag/mod';
 import * as db from '../db/mod';
-import {deepClone, deepEqual, JSONValue, ReadonlyJSONValue} from '../json';
+import {deepEqual, ReadonlyJSONValue} from '../json';
 import {
   assertPullResponse,
   isClientStateNotFoundResponse,
@@ -23,6 +23,13 @@ import {emptyHash, Hash} from '../hash';
 import type {Meta} from '../db/commit';
 import type {InternalDiff} from '../btree/node.js';
 import {allEntriesAsDiff} from '../btree/read.js';
+import {
+  CastReason,
+  toInternalValue,
+  InternalValue,
+  safeCastToJSON,
+  ToInternalValueReason,
+} from '../internal-value.js';
 
 export const PULL_VERSION = 0;
 
@@ -75,7 +82,11 @@ export async function beginPull(
     return await db.baseSnapshot(mainHeadHash, dagRead);
   });
 
-  const [, baseCookie] = db.snapshotMetaParts(baseSnapshot);
+  const snapshotMetaParts = db.snapshotMetaParts(baseSnapshot);
+  const baseCookie = safeCastToJSON(
+    snapshotMetaParts[1],
+    CastReason.CookieToRequest,
+  );
 
   const pullReq = {
     profileID,
@@ -152,7 +163,12 @@ export async function handlePullResponse(
     // the base snapshot changed, which is the check we used to do. I don't think this
     // is quite right. We need to firm up under what conditions we will/not accept an
     // update from the server: https://github.com/rocicorp/replicache/issues/713.
-    if (!deepEqual(expectedBaseCookie, baseCookie)) {
+    if (
+      !deepEqual(
+        expectedBaseCookie,
+        safeCastToJSON(baseCookie, CastReason.CompareCookies),
+      )
+    ) {
       return null;
     }
 
@@ -171,7 +187,10 @@ export async function handlePullResponse(
     if (
       response.patch.length === 0 &&
       response.lastMutationID === baseLastMutationID &&
-      (response.cookie ?? null) === baseCookie
+      deepEqual(
+        response.cookie ?? null,
+        safeCastToJSON(baseCookie, CastReason.CompareCookies),
+      )
     ) {
       return emptyHash;
     }
@@ -204,7 +223,10 @@ export async function handlePullResponse(
     const dbWrite = await db.Write.newSnapshot(
       db.whenceHash(baseSnapshot.chunk.hash),
       response.lastMutationID,
-      response.cookie ?? null,
+      toInternalValue(
+        response.cookie ?? null,
+        ToInternalValueReason.CookieFromResponse,
+      ),
       dagWrite,
       db.readIndexesForWrite(lastIntegrated),
     );
@@ -221,9 +243,9 @@ export async function handlePullResponse(
         change.key,
         () =>
           Promise.resolve(
-            (change as {oldValue: ReadonlyJSONValue | undefined}).oldValue,
+            (change as {oldValue: InternalValue | undefined}).oldValue,
           ),
-        (change as {newValue: ReadonlyJSONValue | undefined}).newValue,
+        (change as {newValue: InternalValue | undefined}).newValue,
       );
     }
 
@@ -238,7 +260,7 @@ export async function handlePullResponse(
 export type ReplayMutation = {
   id: number;
   name: string;
-  args: JSONValue;
+  args: InternalValue;
   original: Hash;
   timestamp: number;
 };
@@ -310,7 +332,7 @@ export async function maybeEndPull(
       const replayMutations: ReplayMutation[] = [];
       for (const c of pending) {
         let name: string;
-        let args: ReadonlyJSONValue;
+        let args: InternalValue;
         let timestamp: number;
         if (c.isLocal()) {
           const lm = c.meta;
@@ -323,7 +345,7 @@ export async function maybeEndPull(
         replayMutations.push({
           id: c.mutationID,
           name,
-          args: deepClone(args),
+          args,
           original: c.chunk.hash,
           timestamp,
         });

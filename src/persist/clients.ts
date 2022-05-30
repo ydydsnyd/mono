@@ -15,7 +15,7 @@ export type ClientMap = ReadonlyMap<sync.ClientID, Client>;
 export type Client = {
   /**
    * A UNIX timestamp in milliseconds updated by the client once a minute
-   * while it is active and everytime the client persists its state to
+   * while it is active and every time the client persists its state to
    * the perdag.
    * Should only be updated by the client represented by this structure.
    */
@@ -65,7 +65,7 @@ function assertClient(value: unknown): asserts value is Client {
   assertHash(headHash);
 }
 
-function chunkDataToClientMap(chunkData?: ReadonlyJSONValue): ClientMap {
+function chunkDataToClientMap(chunkData: unknown): ClientMap {
   assertObject(chunkData);
   const clients = new Map();
   for (const key in chunkData) {

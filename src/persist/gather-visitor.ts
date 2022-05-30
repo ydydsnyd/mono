@@ -6,9 +6,9 @@ import type {HashRefType} from '../db/hash-ref-type';
 import type {Meta} from '../db/commit';
 
 export class GatherVisitor extends db.Visitor {
-  private readonly _gatheredChunks: Map<Hash, dag.Chunk> = new Map();
+  private readonly _gatheredChunks: Map<Hash, dag.Chunk<unknown>> = new Map();
 
-  get gatheredChunks(): ReadonlyMap<Hash, dag.Chunk> {
+  get gatheredChunks(): ReadonlyMap<Hash, dag.Chunk<unknown>> {
     return this._gatheredChunks;
   }
 

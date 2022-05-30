@@ -7,9 +7,16 @@ import {skipBTreeNodeAsserts} from '../config';
 import {binarySearch as binarySearchWithFunc} from '../binary-search';
 import {compareUTF8} from '../compare-utf8';
 import type {IndexKey} from '../mod.js';
+import type {InternalValue} from '../internal-value.js';
 
 export type Entry<V> = [key: string, value: V];
 export type ReadonlyEntry<V> = readonly [key: string, value: V];
+
+export type ValueEntry = ReadonlyEntry<InternalValue>;
+export type HashEntry = ReadonlyEntry<Hash>;
+
+export type ValueEntries = readonly ValueEntry[];
+export type HashEntries = readonly HashEntry[];
 
 export const NODE_LEVEL = 0;
 export const NODE_ENTRIES = 1;
@@ -21,7 +28,7 @@ type BaseNode<V> = readonly [level: number, entries: ReadonlyArray<Entry<V>>];
 
 export type InternalNode = BaseNode<Hash>;
 
-export type DataNode = BaseNode<ReadonlyJSONValue>;
+export type DataNode = BaseNode<InternalValue>;
 
 export type Node = DataNode | InternalNode;
 
@@ -50,9 +57,26 @@ export type NoIndexDiff = readonly DiffOperation<string>[];
 /**
  * InternalDiff uses string keys even for the secondary index maps.
  */
-export type InternalDiff = readonly DiffOperation<string>[];
+export type InternalDiff = readonly InternalDiffOperation[];
 
-export type InternalDiffOperation = DiffOperation<string>;
+export type DiffOperationAdd<Key, Value = ReadonlyJSONValue> = {
+  readonly op: 'add';
+  readonly key: Key;
+  readonly newValue: Value;
+};
+
+export type DiffOperationDel<Key, Value = ReadonlyJSONValue> = {
+  readonly op: 'del';
+  readonly key: Key;
+  readonly oldValue: Value;
+};
+
+export type DiffOperationChange<Key, Value = ReadonlyJSONValue> = {
+  readonly op: 'change';
+  readonly key: Key;
+  readonly oldValue: Value;
+  readonly newValue: Value;
+};
 
 /**
  * The individual parts describing the changes that happened to the Replicache
@@ -64,22 +88,15 @@ export type InternalDiffOperation = DiffOperation<string>;
  * @experimental This type is experimental and may change in the future.
  */
 export type DiffOperation<Key> =
-  | {
-      readonly op: 'add';
-      readonly key: Key;
-      readonly newValue: ReadonlyJSONValue;
-    }
-  | {
-      readonly op: 'del';
-      readonly key: Key;
-      readonly oldValue: ReadonlyJSONValue;
-    }
-  | {
-      readonly op: 'change';
-      readonly key: Key;
-      readonly oldValue: ReadonlyJSONValue;
-      readonly newValue: ReadonlyJSONValue;
-    };
+  | DiffOperationAdd<Key>
+  | DiffOperationDel<Key>
+  | DiffOperationChange<Key>;
+
+// Duplicated with DiffOperation to make the docs less confusing.
+export type InternalDiffOperation<Key = string, Value = InternalValue> =
+  | DiffOperationAdd<Key, Value>
+  | DiffOperationDel<Key, Value>
+  | DiffOperationChange<Key, Value>;
 
 /**
  * Finds the leaf where a key is (if present) or where it should go if not
@@ -163,7 +180,7 @@ export function isInternalNode(node: Node): node is InternalNode {
   return node[NODE_LEVEL] > 0;
 }
 
-abstract class NodeImpl<Value extends Hash | ReadonlyJSONValue> {
+abstract class NodeImpl<Value> {
   entries: Array<Entry<Value>>;
   hash: Hash;
   abstract readonly level: number;
@@ -177,7 +194,7 @@ abstract class NodeImpl<Value extends Hash | ReadonlyJSONValue> {
 
   abstract set(
     key: string,
-    value: Value,
+    value: InternalValue,
     tree: BTreeWrite,
   ): Promise<NodeImpl<Value>>;
 
@@ -190,17 +207,17 @@ abstract class NodeImpl<Value extends Hash | ReadonlyJSONValue> {
     return this.entries[this.entries.length - 1][0];
   }
 
-  toChunkData(): Node {
+  toChunkData(): BaseNode<Value> {
     return [this.level, this.entries];
   }
 }
 
-export class DataNodeImpl extends NodeImpl<ReadonlyJSONValue> {
+export class DataNodeImpl extends NodeImpl<InternalValue> {
   readonly level = 0;
 
   async set(
     key: string,
-    value: ReadonlyJSONValue,
+    value: InternalValue,
     tree: BTreeWrite,
   ): Promise<DataNodeImpl> {
     let deleteCount: number;
@@ -219,7 +236,7 @@ export class DataNodeImpl extends NodeImpl<ReadonlyJSONValue> {
     tree: BTreeWrite,
     start: number,
     deleteCount: number,
-    ...items: Entry<ReadonlyJSONValue>[]
+    ...items: Entry<InternalValue>[]
   ): DataNodeImpl {
     if (this.isMutable) {
       this.entries.splice(start, deleteCount, ...items);
@@ -248,9 +265,7 @@ export class DataNodeImpl extends NodeImpl<ReadonlyJSONValue> {
     }
   }
 
-  async *entriesIter(
-    _tree: BTreeRead,
-  ): AsyncGenerator<ReadonlyEntry<ReadonlyJSONValue>, void> {
+  async *entriesIter(_tree: BTreeRead): AsyncGenerator<ValueEntry, void> {
     for (const entry of this.entries) {
       yield entry;
     }
@@ -294,7 +309,7 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
 
   async set(
     key: string,
-    value: ReadonlyJSONValue,
+    value: InternalValue,
     tree: BTreeWrite,
   ): Promise<InternalNodeImpl> {
     let i = binarySearch(key, this.entries);
@@ -328,29 +343,35 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
     const level = this.level - 1;
     const thisEntries = this.entries;
 
-    let values: Iterable<Entry<Hash> | Entry<ReadonlyJSONValue>>;
+    let values: Iterable<Entry<Hash>>;
     let startIndex: number;
     let removeCount: number;
     if (i > 0) {
       const hash = thisEntries[i - 1][1];
       const previousSibling = await tree.getNode(hash);
-      values = joinIterables(previousSibling.entries, childNode.entries);
+      values = joinIterables(
+        previousSibling.entries as Iterable<Entry<Hash>>,
+        childNode.entries as Iterable<Entry<Hash>>,
+      );
       startIndex = i - 1;
       removeCount = 2;
     } else if (i < thisEntries.length - 1) {
       const hash = thisEntries[i + 1][1];
       const nextSibling = await tree.getNode(hash);
-      values = joinIterables(childNode.entries, nextSibling.entries);
+      values = joinIterables(
+        childNode.entries as Iterable<Entry<Hash>>,
+        nextSibling.entries as Iterable<Entry<Hash>>,
+      );
       startIndex = i;
       removeCount = 2;
     } else {
-      values = childNode.entries;
+      values = childNode.entries as Iterable<Entry<Hash>>;
       startIndex = i;
       removeCount = 1;
     }
 
     const partitions = partition(
-      values,
+      values as Entry<Hash>[],
       tree.getEntrySize,
       tree.minSize - tree.chunkHeaderSize,
       tree.maxSize - tree.chunkHeaderSize,
@@ -360,7 +381,10 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
     // means more memory churn but also more writes to the underlying KV store.
     const newEntries: Entry<Hash>[] = [];
     for (const entries of partitions) {
-      const node = tree.newNodeImpl(entries, level);
+      const node = tree.newNodeImpl(
+        entries as Entry<Hash>[] | Entry<InternalValue>[],
+        level,
+      );
       newEntries.push([node.maxKey(), node.hash]);
     }
 
@@ -439,9 +463,7 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
     }
   }
 
-  async *entriesIter(
-    tree: BTreeRead,
-  ): AsyncGenerator<ReadonlyEntry<ReadonlyJSONValue>, void> {
+  async *entriesIter(tree: BTreeRead): AsyncGenerator<ValueEntry, void> {
     for (const entry of this.entries) {
       const childNode = await tree.getNode(entry[1]);
       yield* childNode.entriesIter(tree);
@@ -482,7 +504,7 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
     }
 
     assert(level === 1);
-    const entries: Entry<ReadonlyJSONValue>[] = [];
+    const entries: Entry<InternalValue>[] = [];
     for (const child of output as DataNodeImpl[]) {
       entries.push(...child.entries);
     }
@@ -491,7 +513,7 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
 }
 
 export function newNodeImpl(
-  entries: Array<Entry<ReadonlyJSONValue>>,
+  entries: Array<Entry<InternalValue>>,
   hash: Hash,
   level: number,
   isMutable: boolean,
@@ -503,19 +525,19 @@ export function newNodeImpl(
   isMutable: boolean,
 ): InternalNodeImpl;
 export function newNodeImpl(
-  entries: Array<Entry<ReadonlyJSONValue>> | Array<Entry<Hash>>,
+  entries: Array<Entry<InternalValue>> | Array<Entry<Hash>>,
   hash: Hash,
   level: number,
   isMutable: boolean,
 ): DataNodeImpl | InternalNodeImpl;
 export function newNodeImpl(
-  entries: Array<Entry<ReadonlyJSONValue>> | Array<Entry<Hash>>,
+  entries: Array<Entry<InternalValue>> | Array<Entry<Hash>>,
   hash: Hash,
   level: number,
   isMutable: boolean,
 ): DataNodeImpl | InternalNodeImpl {
   if (level === 0) {
-    return new DataNodeImpl(entries, hash, isMutable);
+    return new DataNodeImpl(entries as Entry<InternalValue>[], hash, isMutable);
   }
   return new InternalNodeImpl(entries as Entry<Hash>[], hash, level, isMutable);
 }

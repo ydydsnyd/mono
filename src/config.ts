@@ -5,3 +5,5 @@ export const skipCommitDataAsserts = isProd;
 export const skipAssertJSONValue = isProd;
 
 export const skipBTreeNodeAsserts = isProd;
+
+export const skipInternalValueAsserts = isProd;

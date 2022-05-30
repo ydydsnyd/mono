@@ -17,6 +17,7 @@ import {
 } from './index';
 import {BTreeWrite} from '../btree/mod';
 import {asyncIterableToArray} from '../async-iterable-to-array';
+import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 
 test('test index key', () => {
   const testValid = (secondary: string, primary: string) => {
@@ -124,12 +125,22 @@ test('get index keys', () => {
     expected: IndexKey[] | string | RegExp,
   ) => {
     if (Array.isArray(expected)) {
-      const keys = getIndexKeys(key, input, jsonPointer, false);
+      const keys = getIndexKeys(
+        key,
+        toInternalValue(input, ToInternalValueReason.Test),
+        jsonPointer,
+        false,
+      );
       expect(keys).to.deep.equal(expected.map(k => encodeIndexKey(k)));
     } else {
-      expect(() => getIndexKeys(key, input, jsonPointer, false)).to.throw(
-        expected,
-      );
+      expect(() =>
+        getIndexKeys(
+          key,
+          toInternalValue(input, ToInternalValueReason.Test),
+          jsonPointer,
+          false,
+        ),
+      ).to.throw(expected);
     }
   };
 
@@ -200,7 +211,14 @@ test('index value', async () => {
       await index.put(encodeIndexKey(['s2', '2']), 'v2');
 
       if (Array.isArray(expected)) {
-        await indexValue(new LogContext(), index, op, key, value, jsonPointer);
+        await indexValue(
+          new LogContext(),
+          index,
+          op,
+          key,
+          toInternalValue(value, ToInternalValueReason.Test),
+          jsonPointer,
+        );
 
         const actualVal = await asyncIterableToArray(index.entries());
         expect(expected.length).to.equal(actualVal.length);
@@ -214,7 +232,14 @@ test('index value', async () => {
         }
       } else {
         expect(() =>
-          indexValue(new LogContext(), index, op, key, value, jsonPointer),
+          indexValue(
+            new LogContext(),
+            index,
+            op,
+            key,
+            toInternalValue(value, ToInternalValueReason.Test),
+            jsonPointer,
+          ),
         ).to.throw(expected);
       }
     });

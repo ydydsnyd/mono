@@ -67,7 +67,7 @@ test('scan index startKey', async () => {
         start: {key: [startSecondaryKey, startPrimaryKey]},
         indexName: 'dummy',
       });
-      const actual: ScanItem[] = [];
+      const actual = [];
       for await (const entry of map.scan(fromKey)) {
         const [secondaryKey, primaryKey] = decodeIndexKey(entry[0]);
         actual.push({primaryKey, secondaryKey, val: entry[1]});

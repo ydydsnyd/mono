@@ -12,12 +12,13 @@ import {
   NODE_LEVEL,
   NODE_ENTRIES,
   emptyDataNode,
-  ReadonlyEntry,
   Diff,
+  ValueEntry,
 } from './node';
 import {BTreeWrite} from './write';
 import {makeTestChunkHasher} from '../dag/chunk';
 import {BTreeRead, NODE_HEADER_SIZE} from './read';
+import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 
 test('findLeaf', async () => {
   const dagStore = new dag.TestStore();
@@ -138,7 +139,13 @@ function makeTree(node: TreeData, dagStore: dag.Store): Promise<Hash> {
       node,
     ).filter(e => e[0] !== '$level');
     if (node.$level === 0) {
-      const dataNode: DataNode = [0, entries];
+      const dataNode: DataNode = [
+        0,
+        entries.map(entry => [
+          entry[0],
+          toInternalValue(entry[1], ToInternalValueReason.Test),
+        ]),
+      ];
       const chunk = dagWrite.createChunk(dataNode, []);
       await dagWrite.putChunk(chunk);
       return [chunk.hash, 0];
@@ -163,12 +170,12 @@ function makeTree(node: TreeData, dagStore: dag.Store): Promise<Hash> {
 async function readTreeData(
   rootHash: Hash,
   dagRead: dag.Read,
-): Promise<Record<string, ReadonlyJSONValue>> {
+): Promise<Record<string, unknown>> {
   const chunk = await dagRead.getChunk(rootHash);
   const node = chunk?.data;
   assertBTreeNode(node);
   let lastKey: string | undefined;
-  const rv: Record<string, ReadonlyJSONValue> = {
+  const rv: Record<string, unknown> = {
     $level: node[NODE_LEVEL],
   };
 
@@ -542,7 +549,7 @@ test('put', async () => {
         chunkHeaderSize,
       );
       for (const [k, v] of Object.entries(data)) {
-        await w.put(k, v);
+        await w.put(k, toInternalValue(v, ToInternalValueReason.Test));
         expect(await w.get(k)).to.equal(v);
         expect(await w.has(k)).to.equal(true);
       }
@@ -1209,12 +1216,12 @@ test('scan', async () => {
 
     rootHash = await doWrite(rootHash, dagStore, async w => {
       for (const [k, v] of entries) {
-        await w.put(k, v);
+        await w.put(k, toInternalValue(v, ToInternalValueReason.Test));
       }
     });
 
     await doRead(rootHash, dagStore, async r => {
-      const res: ReadonlyEntry<ReadonlyJSONValue>[] = [];
+      const res: ValueEntry[] = [];
       const scanResult = r.scan(fromKey);
       for await (const e of scanResult) {
         res.push(e);
@@ -1310,7 +1317,10 @@ test('diff', async () => {
         chunkHeaderSize,
       );
       for (const entry of oldEntries) {
-        await oldTree.put(entry[0], entry[1]);
+        await oldTree.put(
+          entry[0],
+          toInternalValue(entry[1], ToInternalValueReason.Test),
+        );
       }
 
       const newTree = new BTreeWrite(
@@ -1322,7 +1332,10 @@ test('diff', async () => {
         chunkHeaderSize,
       );
       for (const entry of newEntries) {
-        await newTree.put(entry[0], entry[1]);
+        await newTree.put(
+          entry[0],
+          toInternalValue(entry[1], ToInternalValueReason.Test),
+        );
       }
 
       const oldHash = await oldTree.flush();

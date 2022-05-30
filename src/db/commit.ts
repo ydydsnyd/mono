@@ -1,5 +1,4 @@
 import type * as dag from '../dag/mod';
-import type {ReadonlyJSONValue} from '../json';
 import {assertJSONValue} from '../json';
 import {
   assert,
@@ -9,9 +8,9 @@ import {
   assertObject,
   assertString,
 } from '../asserts';
-import type {Value} from '../kv/store';
 import {assertHash, Hash} from '../hash';
 import {skipCommitDataAsserts} from '../config.js';
+import type {InternalValue} from '../internal-value.js';
 
 export const DEFAULT_HEAD_NAME = 'main';
 
@@ -108,7 +107,7 @@ export async function baseSnapshot(
 
 export function snapshotMetaParts(
   c: Commit<SnapshotMeta>,
-): [lastMutationID: number, cookie: ReadonlyJSONValue] {
+): [lastMutationID: number, cookie: InternalValue] {
   const m = c.meta;
   return [m.lastMutationID, m.cookieJSON];
 }
@@ -181,7 +180,7 @@ export type LocalMeta = BasisHash & {
   readonly type: MetaTyped.Local;
   readonly mutationID: number;
   readonly mutatorName: string;
-  readonly mutatorArgsJSON: ReadonlyJSONValue;
+  readonly mutatorArgsJSON: InternalValue;
   readonly originalHash: Hash | null;
   readonly timestamp: number;
 };
@@ -203,7 +202,7 @@ function assertLocalMeta(v: Record<string, unknown>): asserts v is LocalMeta {
 export type SnapshotMeta = BasisHash & {
   readonly type: MetaTyped.Snapshot;
   readonly lastMutationID: number;
-  readonly cookieJSON: ReadonlyJSONValue;
+  readonly cookieJSON: InternalValue;
 };
 
 function assertSnapshotMeta(
@@ -275,7 +274,7 @@ export function newLocal(
   basisHash: Hash | null,
   mutationID: number,
   mutatorName: string,
-  mutatorArgsJSON: ReadonlyJSONValue,
+  mutatorArgsJSON: InternalValue,
   originalHash: Hash | null,
   valueHash: Hash,
   indexes: readonly IndexRecord[],
@@ -297,7 +296,7 @@ export function newSnapshot(
   createChunk: dag.CreateChunk,
   basisHash: Hash | null,
   lastMutationID: number,
-  cookieJSON: ReadonlyJSONValue,
+  cookieJSON: InternalValue,
   valueHash: Hash,
   indexes: readonly IndexRecord[],
 ): Commit<SnapshotMeta> {
@@ -316,7 +315,7 @@ export function newSnapshot(
 export function newSnapshotCommitData(
   basisHash: Hash | null,
   lastMutationID: number,
-  cookieJSON: ReadonlyJSONValue,
+  cookieJSON: InternalValue,
   valueHash: Hash,
   indexes: readonly IndexRecord[],
 ): CommitData<SnapshotMeta> {
@@ -344,7 +343,7 @@ export function newIndexChange(
   return commitFromCommitData(createChunk, {meta, valueHash, indexes});
 }
 
-export function fromChunk(chunk: dag.Chunk): Commit<Meta> {
+export function fromChunk(chunk: dag.Chunk<unknown>): Commit<Meta> {
   validateChunk(chunk);
   return new Commit(chunk);
 }
@@ -400,7 +399,7 @@ export function assertCommitData(v: unknown): asserts v is CommitData<Meta> {
 }
 
 function validateChunk(
-  chunk: dag.Chunk<Value>,
+  chunk: dag.Chunk<unknown>,
 ): asserts chunk is dag.Chunk<CommitData<Meta>> {
   const {data} = chunk;
   assertCommitData(data);

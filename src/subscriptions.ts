@@ -3,10 +3,10 @@ import type * as sync from './sync/mod';
 import {assert} from './asserts';
 import type {
   Diff,
+  InternalDiffOperation,
   DiffOperation,
   IndexDiff,
   InternalDiff,
-  InternalDiffOperation,
   NoIndexDiff,
 } from './btree/node';
 import {deepEqual, ReadonlyJSONValue} from './json';
@@ -21,6 +21,7 @@ import {
   lessThan,
   lessThanEq,
 } from './compare-utf8.js';
+import {fromInternalValue, FromInternalValueReason} from './internal-value.js';
 
 const enum InvokeKind {
   InitialRun,
@@ -198,13 +199,15 @@ class WatchImpl implements Subscription<Diff | undefined, unknown> {
     kind: InvokeKind,
     diffs: DiffsMap | undefined,
   ): Promise<Diff | undefined> {
-    const invoke = async <T extends db.IndexKey | string>(
+    const invoke = async <Key extends db.IndexKey | string>(
       indexName: string | undefined,
       prefix: string,
-      compareKey: (diff: DiffOperation<T>) => string,
-      convertInternalDiff: (diff: InternalDiff) => readonly DiffOperation<T>[],
-    ): Promise<readonly DiffOperation<T>[] | undefined> => {
-      let diff: readonly DiffOperation<T>[];
+      compareKey: (diff: DiffOperation<Key>) => string,
+      convertInternalDiff: (
+        diff: InternalDiff,
+      ) => readonly DiffOperation<Key>[],
+    ): Promise<readonly DiffOperation<Key>[] | undefined> => {
+      let diff: readonly DiffOperation<Key>[];
       if (kind === InvokeKind.InitialRun) {
         if (!this._initialValuesInFirstDiff) {
           // We are using `undefined` here as a sentinel value to indicate that we
@@ -215,11 +218,11 @@ class WatchImpl implements Subscription<Diff | undefined, unknown> {
         // For the initial run, we need to get the "diffs" for the whole tree.
         assert(diffs === undefined);
 
-        const newDiff: DiffOperation<T>[] = [];
+        const newDiff: DiffOperation<Key>[] = [];
         for await (const entry of tx.scan({prefix, indexName}).entries()) {
           newDiff.push({
             op: 'add',
-            key: entry[0] as T,
+            key: entry[0] as Key,
             newValue: entry[1],
           });
         }
@@ -229,7 +232,7 @@ class WatchImpl implements Subscription<Diff | undefined, unknown> {
         const maybeDiff = diffs.get(indexName ?? '') ?? [];
         diff = convertInternalDiff(maybeDiff);
       }
-      const newDiff: DiffOperation<T>[] = [];
+      const newDiff: DiffOperation<Key>[] = [];
       const {length} = diff;
       for (
         let i = diffBinarySearch(diff, prefix, compareKey);
@@ -254,11 +257,7 @@ class WatchImpl implements Subscription<Diff | undefined, unknown> {
         this._indexName,
         this._prefix,
         diff => diff.key[0],
-        internalDiff =>
-          internalDiff.map(op => ({
-            ...op,
-            key: db.decodeIndexKey(op.key),
-          })),
+        internalDiff => convertDiffValues(internalDiff, db.decodeIndexKey),
       );
     }
 
@@ -266,7 +265,7 @@ class WatchImpl implements Subscription<Diff | undefined, unknown> {
       undefined,
       this._prefix,
       diff => diff.key,
-      x => x,
+      internalDiff => convertDiffValues(internalDiff, k => k),
     );
   }
 
@@ -285,6 +284,48 @@ class WatchImpl implements Subscription<Diff | undefined, unknown> {
   ): void {
     // not used
   }
+}
+
+function convertDiffValues<Key>(
+  diff: InternalDiff,
+  convertKey: (k: string) => Key,
+): DiffOperation<Key>[] {
+  return diff.map(op => {
+    const key = convertKey(op.key);
+    switch (op.op) {
+      case 'add':
+        return {
+          op: 'add',
+          key,
+          newValue: fromInternalValue(
+            op.newValue,
+            FromInternalValueReason.WatchDiff,
+          ),
+        };
+      case 'change':
+        return {
+          op: 'change',
+          key,
+          oldValue: fromInternalValue(
+            op.oldValue,
+            FromInternalValueReason.WatchDiff,
+          ),
+          newValue: fromInternalValue(
+            op.newValue,
+            FromInternalValueReason.WatchDiff,
+          ),
+        };
+      case 'del':
+        return {
+          op: 'del',
+          key,
+          oldValue: fromInternalValue(
+            op.oldValue,
+            FromInternalValueReason.WatchDiff,
+          ),
+        };
+    }
+  });
 }
 
 /**
@@ -591,10 +632,10 @@ function watcherMatchesDiff(
   return i < diff.length && compareKey(diff[i]).startsWith(prefix);
 }
 
-function diffBinarySearch<T>(
-  diff: readonly DiffOperation<T>[],
+function diffBinarySearch<Key, Value>(
+  diff: readonly InternalDiffOperation<Key, Value>[],
   prefix: string,
-  compareKey: (diff: DiffOperation<T>) => string,
+  compareKey: (diff: InternalDiffOperation<Key, Value>) => string,
 ): number {
   return binarySearch(diff.length, i =>
     compareUTF8(prefix, compareKey(diff[i])),

@@ -1,7 +1,6 @@
 import type {LogContext} from '@rocicorp/logger';
 import type * as dag from '../dag/mod';
 import * as btree from '../btree/mod';
-import type {ReadonlyJSONValue} from '../json';
 import {
   Commit,
   Meta as CommitMeta,
@@ -24,6 +23,7 @@ import {emptyHash, Hash} from '../hash';
 import type {InternalDiff} from '../btree/node.js';
 import {allEntriesAsDiff} from '../btree/read.js';
 import type {DiffsMap} from '../sync/mod.js';
+import type {InternalValue} from '../internal-value.js';
 
 type IndexChangeMeta = {
   type: MetaType.IndexChange;
@@ -33,7 +33,7 @@ type IndexChangeMeta = {
 type LocalMeta = {
   type: MetaType.Local;
   mutatorName: string;
-  mutatorArgs: ReadonlyJSONValue;
+  mutatorArgs: InternalValue;
   mutationID: number;
   originalHash: Hash | null;
   timestamp: number;
@@ -42,7 +42,7 @@ type LocalMeta = {
 type SnapshotMeta = {
   type: MetaType.Snapshot;
   lastMutationID: number;
-  cookie: ReadonlyJSONValue;
+  cookie: InternalValue;
 };
 
 type Meta = SnapshotMeta | LocalMeta | IndexChangeMeta;
@@ -81,7 +81,7 @@ export class Write extends Read {
   static async newLocal(
     whence: Whence,
     mutatorName: string,
-    mutatorArgs: ReadonlyJSONValue,
+    mutatorArgs: InternalValue,
     originalHash: Hash | null,
     dagWrite: dag.Write,
     timestamp: number,
@@ -111,7 +111,7 @@ export class Write extends Read {
   static async newSnapshot(
     whence: Whence,
     mutationID: number,
-    cookie: ReadonlyJSONValue,
+    cookie: InternalValue,
     dagWrite: dag.Write,
     indexes: Map<string, IndexWrite>,
   ): Promise<Write> {
@@ -153,11 +153,7 @@ export class Write extends Read {
     );
   }
 
-  async put(
-    lc: LogContext,
-    key: string,
-    val: ReadonlyJSONValue,
-  ): Promise<void> {
+  async put(lc: LogContext, key: string, val: InternalValue): Promise<void> {
     if (this._meta.type === MetaType.IndexChange) {
       throw new Error('Not allowed');
     }
@@ -397,6 +393,7 @@ export class Write extends Read {
         break;
       }
     }
+    // (property) Commit<M extends Meta>.chunk: dag.Chunk<CommitData<IndexChangeMeta>> | dag.Chunk<CommitData<SnapshotMeta>> | dag.Chunk<CommitData<LocalMeta>>
 
     await Promise.all([
       this._dagWrite.putChunk(commit.chunk),
@@ -418,8 +415,8 @@ export async function updateIndexes(
   indexes: Map<string, IndexWrite>,
   dagWrite: dag.Write,
   key: string,
-  oldValGetter: () => Promise<ReadonlyJSONValue | undefined>,
-  newVal: ReadonlyJSONValue | undefined,
+  oldValGetter: () => Promise<InternalValue | undefined>,
+  newVal: InternalValue | undefined,
 ): Promise<void> {
   const ps: Promise<void>[] = [];
   for (const idx of indexes.values()) {

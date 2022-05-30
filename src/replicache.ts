@@ -1,7 +1,7 @@
 import {consoleLogSink, LogContext, TeeLogSink} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
 import {Lock} from '@rocicorp/lock';
-import {deepClone, ReadonlyJSONValue} from './json';
+import type {ReadonlyJSONValue} from './json';
 import type {JSONValue} from './json';
 import {Pusher, PushError} from './pusher';
 import {
@@ -62,6 +62,14 @@ import {mustSimpleFetch} from './simple-fetch';
 import {initBgIntervalProcess} from './persist/bg-interval';
 import {setIntervalWithSignal} from './set-interval-with-signal';
 import {MutationRecovery} from './mutation-recovery';
+import {
+  assertInternalValue,
+  fromInternalValue,
+  FromInternalValueReason,
+  InternalValue,
+  toInternalValue,
+  ToInternalValueReason,
+} from './internal-value.js';
 
 export type BeginPullResult = {
   requestID: string;
@@ -846,11 +854,11 @@ export class Replicache<MD extends MutatorDefs = {}> {
     await this._maybeEndPull({...beginPullResult, syncHead});
   }
 
-  private async _replay<A extends JSONValue>(
+  private async _replay(
     basis: Hash,
     original: Hash,
     name: string,
-    args: A,
+    args: InternalValue,
     timestamp: number,
   ): Promise<Hash> {
     let mutatorImpl = this._mutatorRegistry.get(name);
@@ -1348,11 +1356,29 @@ export class Replicache<MD extends MutatorDefs = {}> {
   private async _mutate<R extends JSONValue | void, A extends JSONValue>(
     name: string,
     mutatorImpl: (tx: WriteTransaction, args?: A) => MaybePromise<R>,
-    args: A | undefined,
+    args: InternalValue | A | undefined,
     timestamp: number,
     rebaseOpts: sync.RebaseOpts | undefined,
     isReplay: boolean,
   ): Promise<{result: R; ref: Hash}> {
+    let internalArgs: InternalValue;
+    let jsonArgs: A;
+
+    if (isReplay) {
+      assertInternalValue(args);
+      internalArgs = args;
+      jsonArgs = fromInternalValue(
+        args as InternalValue,
+        FromInternalValueReason.WriteTransactionMutateArgs,
+      ) as A;
+    } else {
+      internalArgs = toInternalValue(
+        (args ?? null) as ReadonlyJSONValue,
+        ToInternalValueReason.WriteTransactionMutateArgs,
+      );
+      jsonArgs = args as A;
+    }
+
     // Ensure that we run initial pending subscribe functions before starting a
     // write transaction.
     if (this._subscriptions.hasPendingSubscriptionRuns) {
@@ -1367,7 +1393,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       if (rebaseOpts === undefined) {
         whence = db.whenceHead(db.DEFAULT_HEAD_NAME);
       } else {
-        await sync.validateRebase(rebaseOpts, dagWrite, name, args);
+        await sync.validateRebase(rebaseOpts, dagWrite, name, internalArgs);
         whence = db.whenceHash(rebaseOpts.basis);
         originalHash = rebaseOpts.original;
       }
@@ -1375,7 +1401,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       const dbWrite = await db.Write.newLocal(
         whence,
         name,
-        deepClone(args ?? null),
+        internalArgs,
         originalHash,
         dagWrite,
         timestamp,
@@ -1383,7 +1409,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
       const tx = new WriteTransactionImpl(clientID, dbWrite, this._lc);
       try {
-        const result: R = await mutatorImpl(tx, args);
+        const result: R = await mutatorImpl(tx, jsonArgs);
 
         const [ref, diffs] = await tx.commit(!isReplay);
         if (!isReplay) {

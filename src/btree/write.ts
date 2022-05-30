@@ -9,13 +9,14 @@ import {
   Entry,
   newNodeImpl,
   partition,
-  ReadonlyEntry,
   emptyDataNode,
   isDataNodeImpl,
   InternalDiffOperation,
+  ValueEntry,
 } from './node';
 import type {CreateChunk} from '../dag/chunk';
 import {assert} from '../asserts';
+import type {InternalValue} from '../internal-value.js';
 
 export class BTreeWrite extends BTreeRead {
   /**
@@ -85,20 +86,20 @@ export class BTreeWrite extends BTreeRead {
     return n;
   }
 
-  newDataNodeImpl(entries: Entry<ReadonlyJSONValue>[]): DataNodeImpl {
+  newDataNodeImpl(entries: Entry<InternalValue>[]): DataNodeImpl {
     const n = new DataNodeImpl(entries, newTempHash(), true);
     this._addToModified(n);
     return n;
   }
 
-  newNodeImpl(entries: Entry<ReadonlyJSONValue>[], level: number): DataNodeImpl;
+  newNodeImpl(entries: Entry<InternalValue>[], level: number): DataNodeImpl;
   newNodeImpl(entries: Entry<Hash>[], level: number): InternalNodeImpl;
   newNodeImpl(
-    entries: Entry<Hash>[] | Entry<ReadonlyJSONValue>[],
+    entries: Entry<Hash>[] | Entry<InternalValue>[],
     level: number,
   ): InternalNodeImpl | DataNodeImpl;
   newNodeImpl(
-    entries: Entry<Hash>[] | Entry<ReadonlyJSONValue>[],
+    entries: Entry<Hash>[] | Entry<InternalValue>[],
     level: number,
   ): InternalNodeImpl | DataNodeImpl {
     const n = newNodeImpl(entries, newTempHash(), level, true);
@@ -109,13 +110,13 @@ export class BTreeWrite extends BTreeRead {
   childNodeSize(node: InternalNodeImpl | DataNodeImpl): number {
     let sum = this.chunkHeaderSize;
     for (const entry of node.entries) {
-      sum += this.getEntrySize(entry);
+      sum += this.getEntrySize(entry as Entry<Hash | InternalValue>);
     }
     return sum;
   }
 
   // Override BTree to wrap all of these in a read lock
-  override get(key: string): Promise<ReadonlyJSONValue | undefined> {
+  override get(key: string): Promise<InternalValue | undefined> {
     return this._rwLock.withRead(() => super.get(key));
   }
 
@@ -127,9 +128,7 @@ export class BTreeWrite extends BTreeRead {
     return this._rwLock.withRead(() => super.isEmpty());
   }
 
-  override async *scan(
-    fromKey: string,
-  ): AsyncIterableIterator<ReadonlyEntry<ReadonlyJSONValue>> {
+  override async *scan(fromKey: string): AsyncIterableIterator<ValueEntry> {
     yield* runRead(this._rwLock, super.scan(fromKey));
   }
 
@@ -137,7 +136,7 @@ export class BTreeWrite extends BTreeRead {
     yield* runRead(this._rwLock, super.keys());
   }
 
-  async *entries(): AsyncIterableIterator<ReadonlyEntry<ReadonlyJSONValue>> {
+  async *entries(): AsyncIterableIterator<ValueEntry> {
     yield* runRead(this._rwLock, super.entries());
   }
 
@@ -147,7 +146,7 @@ export class BTreeWrite extends BTreeRead {
     yield* runRead(this._rwLock, super.diff(last));
   }
 
-  put(key: string, value: ReadonlyJSONValue): Promise<void> {
+  put(key: string, value: InternalValue): Promise<void> {
     return this._rwLock.withWrite(async () => {
       const oldRootNode = await this.getNode(this.rootHash);
       const rootNode = await oldRootNode.set(key, value, this);
@@ -156,7 +155,7 @@ export class BTreeWrite extends BTreeRead {
       if (this.childNodeSize(rootNode) > this.maxSize) {
         const headerSize = this.chunkHeaderSize;
         const partitions = partition(
-          rootNode.entries,
+          rootNode.entries as Entry<Hash>[],
           this.getEntrySize,
           this.minSize - headerSize,
           this.maxSize - headerSize,
@@ -215,7 +214,7 @@ export class BTreeWrite extends BTreeRead {
         return hash;
       }
       if (isDataNodeImpl(node)) {
-        const chunk = createChunk(node.toChunkData(), []);
+        const chunk = createChunk(node.toChunkData() as ReadonlyJSONValue, []);
         newChunks.push(chunk);
         return chunk.hash;
       }
@@ -241,7 +240,7 @@ export class BTreeWrite extends BTreeRead {
       if (this.rootHash === emptyHash) {
         // Write a chunk for the empty tree.
         const chunk = dagWrite.createChunk(emptyDataNode, []);
-        await dagWrite.putChunk(chunk);
+        await dagWrite.putChunk(chunk as dag.Chunk<ReadonlyJSONValue>);
         return chunk.hash;
       }
 

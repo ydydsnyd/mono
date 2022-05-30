@@ -1,6 +1,5 @@
 import {RWLock} from '@rocicorp/lock';
 import {Hash, isTempHash} from '../hash';
-import type * as kv from '../kv/mod';
 import {Chunk, ChunkHasher, createChunk} from './chunk';
 import {Store, Read, Write, mustGetChunk} from './store';
 import {getSizeOfValue as defaultGetSizeOfValue} from '../json';
@@ -288,7 +287,7 @@ export class LazyWrite
     refs: readonly Hash[],
   ): Chunk<V> => createChunk(data, refs, this._chunkHasher);
 
-  async putChunk(c: Chunk): Promise<void> {
+  async putChunk<V>(c: Chunk<V>): Promise<void> {
     const {hash, meta} = c;
     this.assertValidHash(hash);
     if (meta.length > 0) {
@@ -406,7 +405,7 @@ type CacheEntry = {
 
 class ChunksCache {
   private readonly _cacheSizeLimit: number;
-  private readonly _getSizeOfValue: (v: kv.Value) => number;
+  private readonly _getSizeOfValue: (v: unknown) => number;
   private readonly _refCounts: Map<Hash, number>;
   /**
    * Iteration order is from least to most recently used.
@@ -416,7 +415,7 @@ class ChunksCache {
 
   constructor(
     cacheSizeLimit: number,
-    getSizeOfValue: (v: kv.Value) => number,
+    getSizeOfValue: (v: unknown) => number,
     refCounts: Map<Hash, number>,
   ) {
     this._cacheSizeLimit = cacheSizeLimit;
@@ -454,7 +453,7 @@ class ChunksCache {
     if (refCount === undefined || refCount < 1) {
       return;
     }
-    const valueSize = this._getSizeOfValue(chunk.data);
+    const valueSize = this._getSizeOfValue(chunk.data as ReadonlyJSONValue);
     if (valueSize > this._cacheSizeLimit) {
       // This value cannot be cached due to its size exceeding the
       // cache size limit, don't evict other entries to try to make
@@ -528,7 +527,7 @@ class ChunksCache {
         this._cacheEntries.delete(hash);
         this._cacheEntries.set(hash, oldCacheEntry);
       } else {
-        const valueSize = this._getSizeOfValue(chunk.data);
+        const valueSize = this._getSizeOfValue(chunk.data as ReadonlyJSONValue);
         this._size += valueSize;
         const cacheEntry = {chunk, size: valueSize};
         this._cacheEntries.set(hash, cacheEntry);
