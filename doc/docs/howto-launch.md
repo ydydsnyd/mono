@@ -55,6 +55,14 @@ Before you launch with Replicache in your product, it's a good idea to double-ch
 
   If would like some advice on how to set up your particular datastore correctly, or if you have any questions, please [contact us](https://replicache.dev/#contact).
 
+- The keys in Replicache are conceptually strings encoded using UTF-8. The
+  ordering of the keys when doing `scan` is a bitwise compare of UTF-8 encoded
+  strings. If you are implement `ReadTransaction` (or `WriteTransaction`) in
+  your own backend make sure you are treating these strings as UTF-8. We provide
+  and npm package called
+  [compare-utf8](https://www.npmjs.com/package/compare-utf8) which can be used
+  to compare JS strings using UTF-8 bitwise comparison
+
 ## Push endpoint
 
 See [Push Launch Checklist](server-push#push-launch-checklist).
