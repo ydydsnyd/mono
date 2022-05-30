@@ -729,7 +729,7 @@ test('pull', async () => {
     lastMutationID: 3,
     patch: [],
   });
-  await rep.maybeEndPull(beginPullResult);
+  await rep.maybeEndPull(beginPullResult.syncHead, beginPullResult.requestID);
 
   expect(createCount).to.equal(3);
 

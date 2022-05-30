@@ -814,44 +814,42 @@ export class Replicache<MD extends MutatorDefs = {}> {
   }
 
   protected async _maybeEndPull(
-    beginPullResult: BeginPullResult,
+    syncHead: Hash,
+    requestID: string,
   ): Promise<void> {
-    if (this._closed) {
-      return;
-    }
+    for (;;) {
+      if (this._closed) {
+        return;
+      }
 
-    let {syncHead} = beginPullResult;
-    const {requestID} = beginPullResult;
-
-    await this._ready;
-    const lc = this._lc
-      .addContext('maybeEndPull')
-      .addContext('request_id', requestID);
-    const {replayMutations, diffs} = await sync.maybeEndPull(
-      this._memdag,
-      lc,
-      syncHead,
-    );
-
-    if (!replayMutations || replayMutations.length === 0) {
-      // All done.
-      await this._checkChange(syncHead, diffs);
-      this._schedulePersist();
-      return;
-    }
-
-    // Replay.
-    for (const mutation of replayMutations) {
-      syncHead = await this._replay(
+      await this._ready;
+      const lc = this._lc
+        .addContext('maybeEndPull')
+        .addContext('request_id', requestID);
+      const {replayMutations, diffs} = await sync.maybeEndPull(
+        this._memdag,
+        lc,
         syncHead,
-        mutation.original,
-        mutation.name,
-        mutation.args,
-        mutation.timestamp,
       );
-    }
 
-    await this._maybeEndPull({...beginPullResult, syncHead});
+      if (!replayMutations || replayMutations.length === 0) {
+        // All done.
+        await this._checkChange(syncHead, diffs);
+        this._schedulePersist();
+        return;
+      }
+
+      // Replay.
+      for (const mutation of replayMutations) {
+        syncHead = await this._replay(
+          syncHead,
+          mutation.original,
+          mutation.name,
+          mutation.args,
+          mutation.timestamp,
+        );
+      }
+    }
   }
 
   private async _replay(
@@ -898,12 +896,12 @@ export class Replicache<MD extends MutatorDefs = {}> {
       this._wrapInOnlineCheck(async () => {
         try {
           this._changeSyncCounters(0, 1);
-          const beginPullResult = await this._beginPull();
-          if (!beginPullResult.ok) {
+          const {syncHead, requestID, ok} = await this._beginPull();
+          if (!ok) {
             return false;
           }
-          if (beginPullResult.syncHead !== emptyHash) {
-            await this._maybeEndPull(beginPullResult);
+          if (syncHead !== emptyHash) {
+            await this._maybeEndPull(syncHead, requestID);
           }
         } finally {
           this._changeSyncCounters(0, -1);
@@ -1131,11 +1129,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         );
       }
 
-      await this._maybeEndPull({
-        requestID,
-        syncHead,
-        ok: true,
-      });
+      await this._maybeEndPull(syncHead, requestID);
     });
   }
 
