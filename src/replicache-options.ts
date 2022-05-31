@@ -65,8 +65,8 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
   schemaVersion?: string;
 
   /**
-   * The duration between each [[pull]]. Set this to `null` to prevent pulling
-   * in the background.
+   * The duration between each [[pull]] in milliseconds. Set this to `null` to
+   * prevent pulling in the background.  Defaults to 60 seconds.
    */
   pullInterval?: number | null;
 
