@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1653918749900,
+  "lastUpdate": 1653986359229,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -17003,6 +17003,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/ce465d693b12e20e820a9bc548b31eab22f80683"
         },
         "date": 1653918745881,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 175261,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 32860,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 174146,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 32545,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 79017,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 22944,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fa42cff3899fbde6bcc3faa61864ad398aa30d5b",
+          "message": "chore: Update gh actions versions (#140)",
+          "timestamp": "2022-05-31T01:38:18-07:00",
+          "tree_id": "935c5a2b169e3f87b841b0247f21ec5407c59d98",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/fa42cff3899fbde6bcc3faa61864ad398aa30d5b"
+        },
+        "date": 1653986355705,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
