@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1653986359229,
+  "lastUpdate": 1654026337857,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -17057,6 +17057,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/fa42cff3899fbde6bcc3faa61864ad398aa30d5b"
         },
         "date": 1653986355705,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 175261,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 32860,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 174146,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 32545,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 79017,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 22944,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ingar@users.noreply.github.com",
+            "name": "Ingar Shu",
+            "username": "ingar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b84be81dee45c42f811cadc7a4f8e9a6245d8a03",
+          "message": "docs: units and default for pullInterval (#141)",
+          "timestamp": "2022-05-31T19:44:11Z",
+          "tree_id": "c4ac86ff8d89b9cf314b3ccfc4913121d0d24aed",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/b84be81dee45c42f811cadc7a4f8e9a6245d8a03"
+        },
+        "date": 1654026333563,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
