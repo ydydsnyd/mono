@@ -1,15 +1,11 @@
 # Building a release
 
-Get the dependencies
-
 ```
+git checkout -b release HEAD
+jq '.version = "<new_version>"' package.json | sponge package.json
 npm install
-```
-
-## Run Automated Tests
-
-```
-npm run test
+git commit -a -m 'Bump version to <new_version>.'
+npm install
 ```
 
 ## Manual Testing
@@ -39,78 +35,33 @@ Recreate the deps:
 npm install
 ```
 
-Run Replidraw with environment variables:
-
-```
-AMAZON_ACCESS_KEY_ID=... \
-AMAZON_SECRET_ACCESS_KEY=... \
-AMAZON_REGION=us-west-2 \
-REPLIDRAW_DB_NAME=... \
-REPLIDRAW_RESOURCE_ARN=... \
-REPLIDRAW_SECRET_ARN=... \
-npm run dev
-```
-
-The Amazon credentials can be found in `~/.aws/credentials`. See [Replidraw
-Hacking.md](https://github.com/rocicorp/replidraw/blob/master/HACKING.md) for
-instructions.
-
-You might need to initialize the DB by going to `http://localhost:3000/api/init`.
-
-Open two windows and make sure that the changes are reflected in each window.
+Follow instructions in repo to finish setting up app, and run to make sure it works.
 
 ### Todo Sample
 
 Check out [rocicorp/replicache-todo](https://github.com/rocicorp/replicache-todo)
 
-Replace the replicache dependency in
-[package.json](https://github.com/rocicorp/replicache-todo/blob/master/package.json)
-with the tarball.
+Same as Replidraw test.
 
-```
-// package.json
-"replicache": "file:../replicache/replicache.tar.gz",
-```
+### Repliear Sample
 
-Recreate the deps:
+Check out [rocicorp/repliear](https://github.com/rocicorp/repliear)
 
-```
-npm install
-```
-
-Start Supabase:
-
-```
-supabase start
-```
-
-Run the app:
-
-```
-DATABASE_URL=... \
-NEXT_PUBLIC_SUPABASE_URL=... \
-NEXT_PUBLIC_SUPABASE_KEY=... \
-npm run dev
-```
-
-Open two windows and make sure that the changes are reflected in each window.
-
-### API review
-
-Diff `out/replicache.d.ts` with the last stable version (mpm pack replicachec@old-version).
+Same as Replidraw test.
 
 ### Integration Guide
 
 Walk through [the integration guide](https://doc.replicache.dev/guide/intro) and make sure things still work.
 
-## Build the Release
+## Check for API Changes
+
+We need to be very careful about public API changes as we then have to maintain them.
+
+Check whether there are any public API changes by diffing `out/replicache.d.ts` between the previous released version and the new candidate. Make sure all new API has been discussed and agreed to by the team.
+
+## Push the Release
 
 ```
-# edit package.json to have the new version
-npm install
-git commit -a -m 'Bump version to <semver>.'
-# push to github and merge
-# pull merged commit
 git tag v<semver>
 git push origin v<semver>
 # update release notes on github
@@ -120,12 +71,6 @@ git push origin v<semver>
 # add the `--tag=beta` flag to this command.
 npm publish
 ```
-
-## Check for API Changes
-
-We need to be very careful about public API changes as we then have to maintain them.
-
-Check whether there are any public API changes by diffing `out/replicache.d.ts` between the previous released version and the new candidate. Make sure all new API has been discussed and agreed to by the team.
 
 ## Release docs
 
