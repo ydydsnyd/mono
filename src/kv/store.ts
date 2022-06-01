@@ -1,6 +1,4 @@
-// import type {ReadonlyJSONValue} from '../json';
-
-import type {ReadonlyJSONValue} from '../json.js';
+import type {ReadonlyJSONValue} from '../json';
 
 export type Value = ReadonlyJSONValue;
 
@@ -46,7 +44,7 @@ export interface Release {
  */
 export interface Read extends Release {
   has(key: string): Promise<boolean>;
-  get(key: string): Promise<ReadonlyJSONValue | undefined>;
+  get(key: string): Promise<Value | undefined>;
   closed: boolean;
 }
 
@@ -54,7 +52,7 @@ export interface Read extends Release {
  * @experimental
  */
 export interface Write extends Read {
-  put(key: string, value: ReadonlyJSONValue): Promise<void>;
+  put(key: string, value: Value): Promise<void>;
   del(key: string): Promise<void>;
   commit(): Promise<void>;
 }

@@ -14,7 +14,7 @@ import {
 test('makeScanResult', async () => {
   function getTestScanAsyncIterator(
     entries: (readonly [key: string, value: ReadonlyJSONValue])[],
-  ): GetScanIterator {
+  ): GetScanIterator<ReadonlyJSONValue> {
     return async function* (fromKey: string) {
       for (const [key, value] of entries) {
         if (key >= fromKey) {
@@ -26,7 +26,7 @@ test('makeScanResult', async () => {
 
   function getTestScanIterator(
     entries: (readonly [key: string, value: ReadonlyJSONValue])[],
-  ): GetScanIterator {
+  ): GetScanIterator<ReadonlyJSONValue> {
     return function* (fromKey: string) {
       for (const [key, value] of entries) {
         if (key >= fromKey) {
@@ -312,7 +312,7 @@ test('makeScanResult', async () => {
 test('makeScanResult with index', async () => {
   function getTestScanAsyncIterator(
     entries: (readonly [key: IndexKey, value: ReadonlyJSONValue])[],
-  ): GetIndexScanIterator {
+  ): GetIndexScanIterator<ReadonlyJSONValue> {
     return async function* (indexName, secondaryKey, primaryKey) {
       expect(indexName).to.equal('index');
       for (const [key, value] of entries) {
@@ -327,7 +327,7 @@ test('makeScanResult with index', async () => {
 
   function getTestScanIterator(
     entries: (readonly [key: IndexKey, value: ReadonlyJSONValue])[],
-  ): GetIndexScanIterator {
+  ): GetIndexScanIterator<ReadonlyJSONValue> {
     return function* (indexName, secondaryKey, primaryKey) {
       expect(indexName).to.equal('index');
       for (const [key, value] of entries) {

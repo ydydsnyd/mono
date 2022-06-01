@@ -6,9 +6,9 @@ import {
   fromHash as commitFromHash,
   Meta,
 } from './commit';
+import type {ReadonlyJSONValue} from '../json';
 import {BTreeRead, BTreeWrite} from '../btree/mod';
 import type {Hash} from '../hash';
-import type {InternalValue} from '../internal-value.js';
 
 export class Read {
   private readonly _dagRead: dag.Read;
@@ -30,7 +30,7 @@ export class Read {
     return this.map.has(key);
   }
 
-  get(key: string): Promise<InternalValue | undefined> {
+  get(key: string): Promise<ReadonlyJSONValue | undefined> {
     return this.map.get(key);
   }
 

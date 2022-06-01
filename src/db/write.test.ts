@@ -13,7 +13,6 @@ import {initDB, Write} from './write';
 import {encodeIndexKey} from './index';
 import {asyncIterableToArray} from '../async-iterable-to-array';
 import {BTreeRead} from '../btree/mod';
-import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 
 test('basics', async () => {
   const ds = new dag.TestStore();
@@ -210,11 +209,7 @@ test('create and drop index', async () => {
           42,
         );
         for (let i = 0; i < 3; i++) {
-          await w.put(
-            lc,
-            `k${i}`,
-            toInternalValue({s: `s${i}`}, ToInternalValueReason.Test),
-          );
+          await w.put(lc, `k${i}`, {s: `s${i}`});
         }
         await w.commit(DEFAULT_HEAD_NAME);
       });
@@ -241,11 +236,7 @@ test('create and drop index', async () => {
           42,
         );
         for (let i = 0; i < 3; i++) {
-          await w.put(
-            lc,
-            `k${i}`,
-            toInternalValue({s: `s${i}`}, ToInternalValueReason.Test),
-          );
+          await w.put(lc, `k${i}`, {s: `s${i}`});
         }
         await w.commit(DEFAULT_HEAD_NAME);
       });

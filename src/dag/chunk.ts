@@ -1,13 +1,10 @@
 import {assert, assertString} from '../asserts';
 import {Hash, makeNewFakeHashFunction, hashOf} from '../hash';
-import type {ReadonlyJSONValue} from '../json.js';
+import type {Value} from '../kv/store';
 
 type Refs = readonly Hash[];
 
-// TODO(arv): Remove Value type param now that most chunks contains
-// InternalValue and Hash!
-
-export interface Chunk<V = unknown> {
+export interface Chunk<V extends Value = Value> {
   readonly hash: Hash;
   readonly data: V;
   /**
@@ -17,7 +14,7 @@ export interface Chunk<V = unknown> {
   readonly meta: Refs;
 }
 
-class ChunkImpl<V = ReadonlyJSONValue> implements Chunk<V> {
+class ChunkImpl<V extends Value = Value> implements Chunk<V> {
   readonly hash: Hash;
   readonly data: V;
   readonly meta: Refs;
@@ -38,7 +35,7 @@ export function assertMeta(v: unknown): asserts v is Refs {
   }
 }
 
-export function createChunk<V>(
+export function createChunk<V extends Value>(
   data: V,
   refs: Refs,
   chunkHasher: ChunkHasher,
@@ -47,7 +44,7 @@ export function createChunk<V>(
   return createChunkWithHash(hash, data, refs);
 }
 
-export function createChunkWithHash<V>(
+export function createChunkWithHash<V extends Value>(
   hash: Hash,
   data: V,
   refs: Refs,
@@ -56,7 +53,7 @@ export function createChunkWithHash<V>(
   return new ChunkImpl(hash, data, refs);
 }
 
-export async function createChunkWithNativeHash<V>(
+export async function createChunkWithNativeHash<V extends Value>(
   data: V,
   refs: Refs,
 ): Promise<Chunk<V>> {
@@ -64,9 +61,9 @@ export async function createChunkWithNativeHash<V>(
   return createChunkWithHash(hash, data, refs);
 }
 
-export type CreateChunk = <V>(data: V, refs: Refs) => Chunk<V>;
+export type CreateChunk = <V extends Value>(data: V, refs: Refs) => Chunk<V>;
 
-export type ChunkHasher = <V>(data: V) => Hash;
+export type ChunkHasher = (data: Value) => Hash;
 
 export function makeTestChunkHasher(prefix = 'fake'): ChunkHasher {
   const makeHash = makeNewFakeHashFunction(prefix);
@@ -84,6 +81,6 @@ export function makeTestChunkHasher(prefix = 'fake'): ChunkHasher {
   return ch;
 }
 
-export function throwChunkHasher(_data: unknown): Hash {
+export function throwChunkHasher(_data: Value): Hash {
   throw new Error('unexpected call to compute chunk hash');
 }

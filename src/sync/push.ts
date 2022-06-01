@@ -1,11 +1,11 @@
 import type {LogContext} from '@rocicorp/logger';
+import type {ReadonlyJSONValue} from '../json';
 import * as db from '../db/mod';
 import type * as dag from '../dag/mod';
 import {assertHTTPRequestInfo, HTTPRequestInfo} from '../http-request-info';
 import {Pusher, PushError} from '../pusher';
 import {callJSRequest} from './js-request';
 import {toError} from '../to-error';
-import type {InternalValue} from '../internal-value.js';
 
 export const PUSH_VERSION = 0;
 
@@ -30,7 +30,7 @@ export type PushRequest = {
 export type Mutation = {
   readonly id: number;
   readonly name: string;
-  readonly args: InternalValue;
+  readonly args: ReadonlyJSONValue;
   readonly timestamp: number;
 };
 

@@ -1,8 +1,8 @@
 import type * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import * as sync from './mod';
+import type {ReadonlyJSONValue} from '../json';
 import type {Hash} from '../hash';
-import type {InternalValue} from '../internal-value.js';
 
 export type RebaseOpts = {
   basis: Hash;
@@ -13,7 +13,8 @@ export async function validateRebase(
   opts: RebaseOpts,
   dagRead: dag.Read,
   mutatorName: string,
-  _args: InternalValue | undefined,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _args: ReadonlyJSONValue | undefined,
 ): Promise<void> {
   // Ensure the rebase commit is going on top of the current sync head.
   const syncHeadHash = await dagRead.getHead(sync.SYNC_HEAD_NAME);

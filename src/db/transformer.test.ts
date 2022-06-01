@@ -13,8 +13,8 @@ import {Transformer} from './transformer';
 import {Hash, makeNewTempHashFunction} from '../hash';
 import {BTreeRead, BTreeWrite, Entry} from '../btree/mod';
 import type {DataNode} from '../btree/node';
+import type {ReadonlyJSONValue} from '../json';
 import {assert} from '../asserts';
-import type {InternalValue} from '../internal-value.js';
 
 test('transformBTreeInternalEntry - noop', async () => {
   const dagStore = new dag.TestStore();
@@ -110,8 +110,8 @@ test('transforms data entry', async () => {
 
   class TestTransformer extends Transformer {
     override async transformBTreeDataEntry(
-      entry: Entry<InternalValue>,
-    ): Promise<Entry<InternalValue>> {
+      entry: Entry<ReadonlyJSONValue>,
+    ): Promise<Entry<ReadonlyJSONValue>> {
       if (entry[0] === 'k') {
         return ['k', entry[0] + ' - Changed!'];
       }

@@ -5,7 +5,6 @@ import {Commit, DEFAULT_HEAD_NAME, Meta} from './commit';
 import {readCommit, whenceHead} from './read';
 import {initDB, Write, readIndexesForWrite} from './write';
 import type {JSONValue} from '../json';
-import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 
 export type Chain = Commit<Meta>[];
 
@@ -50,13 +49,13 @@ export async function createLocal(
     const w = await Write.newLocal(
       whenceHead(DEFAULT_HEAD_NAME),
       `mutator_name_${i}`,
-      toInternalValue([i], ToInternalValueReason.Test),
+      [i],
       null,
       dagWrite,
       42,
     );
     for (const [key, val] of entries) {
-      await w.put(lc, key, toInternalValue(val, ToInternalValueReason.Test));
+      await w.put(lc, key, val);
     }
     await w.commit(DEFAULT_HEAD_NAME);
   });
@@ -122,7 +121,7 @@ export async function addSnapshot(
 
     if (map) {
       for (const [k, v] of map) {
-        await w.put(lc, k, toInternalValue(v, ToInternalValueReason.Test));
+        await w.put(lc, k, v);
       }
     }
     await w.commit(DEFAULT_HEAD_NAME);

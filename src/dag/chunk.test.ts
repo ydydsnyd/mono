@@ -1,12 +1,12 @@
 import {expect} from '@esm-bundle/chai';
 import {Hash, fakeHash, parse} from '../hash';
+import type {Value} from '../kv/store';
 import {createChunk, createChunkWithHash, makeTestChunkHasher} from './chunk';
 import type {Chunk} from './chunk';
-import type {ReadonlyJSONValue} from '../json.js';
 
 test('round trip', async () => {
   const chunkHasher = makeTestChunkHasher();
-  const t = (hash: Hash, data: ReadonlyJSONValue, refs: Hash[]) => {
+  const t = (hash: Hash, data: Value, refs: Hash[]) => {
     const c = createChunk(data, refs, chunkHasher);
     expect(c.hash).to.equal(hash);
     expect(c.data).to.deep.equal(data);
@@ -37,7 +37,7 @@ test('equals', async () => {
 
   const chunkHasher = makeTestChunkHasher('fake');
 
-  const newChunk = (data: ReadonlyJSONValue, refs: Hash[]) => {
+  const newChunk = (data: Value, refs: Hash[]) => {
     return createChunk(data, refs, chunkHasher);
   };
 

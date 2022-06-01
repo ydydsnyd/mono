@@ -6,7 +6,6 @@ import type {IndexRecord} from './commit';
 import {BTreeRead, BTreeWrite} from '../btree/mod';
 import type {Hash} from '../hash';
 import {stringCompare} from '../string-compare.js';
-import {CastReason, InternalValue, safeCastToJSON} from '../internal-value.js';
 
 abstract class Index<DagReadWrite, BTree> {
   readonly meta: IndexRecord;
@@ -77,7 +76,7 @@ export async function indexValue(
   index: BTreeWrite,
   op: IndexOperation,
   key: string,
-  val: InternalValue,
+  val: ReadonlyJSONValue,
   jsonPointer: string,
   allowEmpty = false,
 ): Promise<void> {
@@ -103,11 +102,10 @@ export async function indexValue(
 // Gets the set of index keys for a given primary key and value.
 export function getIndexKeys(
   primary: string,
-  internalValue: InternalValue,
+  value: ReadonlyJSONValue,
   jsonPointer: string,
   allowEmpty: boolean,
 ): string[] {
-  const value = safeCastToJSON(internalValue, CastReason.EvaluateJSONPointer);
   const target = evaluateJSONPointer(value, jsonPointer);
   if (target === undefined) {
     if (allowEmpty) {

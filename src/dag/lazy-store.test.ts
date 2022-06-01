@@ -6,14 +6,15 @@ import {
   makeNewTempHashFunction,
   newTempHash,
 } from '../hash';
+import type {Value} from '../kv/mod';
 import {makeTestChunkHasher} from './chunk';
 import {LazyStore} from './lazy-store';
 import {TestStore} from './test-store';
 
 const DEFAULT_VALUE_SIZE = 100;
-function getSizeOfValueForTest(value: unknown): number {
+function getSizeOfValueForTest(value: Value): number {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
-    const {size} = value as {size?: unknown};
+    const {size} = value as {size?: Value};
     if (typeof size === 'number') {
       return size;
     }

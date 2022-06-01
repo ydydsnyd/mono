@@ -5,7 +5,6 @@ import {fakeHash, makeNewTempHashFunction, parse as parseHash} from '../hash';
 import {BTreeWrite} from '../btree/write';
 import {FixupTransformer} from './fixup-transformer';
 import type {ReadonlyJSONValue} from '../json';
-import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 
 test('fixup of a single snapshot commit with empty btree', async () => {
   const memdag = new dag.TestStore(
@@ -87,7 +86,7 @@ test('fixup of a single snapshot commit with empty btree', async () => {
         newHeadHash,
         1,
         'test',
-        toInternalValue({v: 42}, ToInternalValueReason.Test),
+        {v: 42},
         null,
         fakeHash('value'),
         [],
@@ -219,7 +218,7 @@ test('fixup base snapshot when there is a local commit on top of it', async () =
         snapshotCommit.chunk.hash,
         1,
         'test',
-        toInternalValue({v: 42}, ToInternalValueReason.Test),
+        {v: 42},
         null,
         fakeHash('value'),
         [],
@@ -342,7 +341,7 @@ async function makeBTree(
 ): Promise<BTreeWrite> {
   const tree = new BTreeWrite(dagWrite, undefined, 2, 4, () => 1, 0);
   for (const [k, v] of entries) {
-    await tree.put(k, toInternalValue(v, ToInternalValueReason.Test));
+    await tree.put(k, v);
   }
   return tree;
 }

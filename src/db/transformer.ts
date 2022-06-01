@@ -13,9 +13,10 @@ import {
 } from './commit';
 import type {Hash} from '../hash';
 import type * as dag from '../dag/mod';
+import type {ReadonlyJSONValue} from '../json';
 import {HashRefType} from './hash-ref-type';
+import type {Value} from '../kv/store';
 import {mustGetChunk} from '../dag/store.js';
-import type {InternalValue} from '../internal-value.js';
 
 type OldHash = Hash;
 type NewHash = Hash;
@@ -98,7 +99,7 @@ export abstract class BaseTransformer {
     return mustGetChunk(this, oldHash);
   }
 
-  private async _maybeWriteChunk<D>(
+  private async _maybeWriteChunk<D extends Value>(
     oldHash: OldHash,
     newData: D,
     oldData: D,
@@ -112,7 +113,7 @@ export abstract class BaseTransformer {
     return oldHash;
   }
 
-  protected abstract writeChunk<D>(
+  protected abstract writeChunk<D extends Value>(
     oldHash: OldHash,
     newData: D,
     getRefs: (data: D) => readonly NewHash[],
@@ -247,7 +248,6 @@ export abstract class BaseTransformer {
 
   transformBTreeNodeData(data: btree.DataNode): Promise<btree.DataNode>;
   transformBTreeNodeData(data: btree.InternalNode): Promise<btree.InternalNode>;
-  transformBTreeNodeData(data: btree.Node): Promise<btree.Node>;
   async transformBTreeNodeData(data: btree.Node): Promise<btree.Node> {
     const level = data[0];
     const entries = data[1];
@@ -257,27 +257,25 @@ export abstract class BaseTransformer {
         entries as btree.InternalNode[1],
       );
     } else {
-      newEntries = await this._transformBTreeDataEntries(
-        entries as btree.DataNode[1],
-      );
+      newEntries = await this._transformBTreeDataEntries(entries);
     }
     if (newEntries === entries) {
       return data;
     }
 
     // Changed. Need to create a new chunk.
-    return [level, newEntries] as btree.Node;
+    return [level, newEntries];
   }
 
   async transformBTreeDataEntry(
-    entry: btree.Entry<InternalValue>,
-  ): Promise<btree.Entry<InternalValue>> {
+    entry: btree.Entry<ReadonlyJSONValue>,
+  ): Promise<btree.Entry<ReadonlyJSONValue>> {
     return entry;
   }
 
   private async _transformBTreeDataEntries(
-    entries: readonly btree.Entry<InternalValue>[],
-  ): Promise<readonly btree.Entry<InternalValue>[]> {
+    entries: readonly btree.Entry<ReadonlyJSONValue>[],
+  ): Promise<readonly btree.Entry<ReadonlyJSONValue>[]> {
     return this._transformArray(entries, e => this.transformBTreeDataEntry(e));
   }
 
@@ -342,7 +340,7 @@ export class Transformer extends BaseTransformer {
     return this.dagWrite.getChunk(oldHash);
   }
 
-  protected override async writeChunk<D>(
+  protected override async writeChunk<D extends Value>(
     _oldHash: OldHash,
     newData: D,
     getRefs: (data: D) => readonly NewHash[],

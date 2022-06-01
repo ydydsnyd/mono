@@ -36,13 +36,6 @@ import {emptyHash} from '../hash';
 import {stringCompare} from '../string-compare';
 import {asyncIterableToArray} from '../async-iterable-to-array';
 import type {SnapshotMeta} from '../db/commit';
-import {
-  toInternalValue,
-  fromInternalValue,
-  FromInternalValueReason,
-  InternalValue,
-  ToInternalValueReason,
-} from '../internal-value.js';
 
 test('begin try pull', async () => {
   const store = new dag.TestStore();
@@ -53,10 +46,9 @@ test('begin try pull', async () => {
   await addIndexChange(chain, store);
   const startingNumCommits = chain.length;
   const baseSnapshot = chain[1];
-  const parts = db.snapshotMetaParts(baseSnapshot as Commit<SnapshotMeta>);
-
-  const baseLastMutationID = parts[0];
-  const baseCookie = fromInternalValue(parts[1], FromInternalValueReason.Test);
+  const [baseLastMutationID, baseCookie] = db.snapshotMetaParts(
+    baseSnapshot as Commit<SnapshotMeta>,
+  );
   const baseValueMap = new Map([['foo', '"bar"']]);
 
   const requestID = 'requestID';
@@ -647,7 +639,7 @@ test('maybe end try pull', async () => {
       const chainIndex = i + 1; // chain[0] is genesis
       const original = chain[chainIndex];
       let mutatorName: string;
-      let mutatorArgs: InternalValue;
+      let mutatorArgs: ReadonlyJSONValue;
       if (original.isLocal()) {
         const lm = original.meta;
         mutatorName = lm.mutatorName;
@@ -792,11 +784,8 @@ test('changed keys', async () => {
     await addSnapshot(chain, store, entries);
 
     const baseSnapshot = chain[chain.length - 1];
-    const parts = db.snapshotMetaParts(baseSnapshot as Commit<SnapshotMeta>);
-    const baseLastMutationID = parts[0];
-    const baseCookie = fromInternalValue(
-      parts[1],
-      FromInternalValueReason.Test,
+    const [baseLastMutationID, baseCookie] = db.snapshotMetaParts(
+      baseSnapshot as Commit<SnapshotMeta>,
     );
 
     const requestID = 'request_id';
@@ -967,29 +956,14 @@ test('changed keys', async () => {
     },
     [{op: 'put', key: 'a2', value: {id: 'a-2', x: 2}}],
     new Map([
-      [
-        '',
-        [
-          {
-            op: 'add',
-            key: 'a2',
-            newValue: toInternalValue(
-              {id: 'a-2', x: 2},
-              ToInternalValueReason.Test,
-            ),
-          },
-        ],
-      ],
+      ['', [{op: 'add', key: 'a2', newValue: {id: 'a-2', x: 2}}]],
       [
         'i1',
         [
           {
             op: 'add',
             key: '\u{0}a-2\u{0}a2',
-            newValue: toInternalValue(
-              {id: 'a-2', x: 2},
-              ToInternalValueReason.Test,
-            ),
+            newValue: {id: 'a-2', x: 2},
           },
         ],
       ],
@@ -1011,22 +985,8 @@ test('changed keys', async () => {
       [
         '',
         [
-          {
-            op: 'add',
-            key: 'a1',
-            newValue: toInternalValue(
-              {id: 'a-1', x: 1},
-              ToInternalValueReason.Test,
-            ),
-          },
-          {
-            op: 'add',
-            key: 'a2',
-            newValue: toInternalValue(
-              {id: 'a-2', x: 2},
-              ToInternalValueReason.Test,
-            ),
-          },
+          {op: 'add', key: 'a1', newValue: {id: 'a-1', x: 1}},
+          {op: 'add', key: 'a2', newValue: {id: 'a-2', x: 2}},
         ],
       ],
       [
@@ -1035,18 +995,12 @@ test('changed keys', async () => {
           {
             op: 'add',
             key: '\u{0}a-1\u{0}a1',
-            newValue: toInternalValue(
-              {id: 'a-1', x: 1},
-              ToInternalValueReason.Test,
-            ),
+            newValue: {id: 'a-1', x: 1},
           },
           {
             op: 'add',
             key: '\u{0}a-2\u{0}a2',
-            newValue: toInternalValue(
-              {id: 'a-2', x: 2},
-              ToInternalValueReason.Test,
-            ),
+            newValue: {id: 'a-2', x: 2},
           },
         ],
       ],
@@ -1062,29 +1016,14 @@ test('changed keys', async () => {
     },
     [{op: 'put', key: 'a2', value: {id: 'a-2', x: 2}}],
     new Map([
-      [
-        '',
-        [
-          {
-            op: 'add',
-            key: 'a2',
-            newValue: toInternalValue(
-              {id: 'a-2', x: 2},
-              ToInternalValueReason.Test,
-            ),
-          },
-        ],
-      ],
+      ['', [{op: 'add', key: 'a2', newValue: {id: 'a-2', x: 2}}]],
       [
         'i1',
         [
           {
             op: 'add',
             key: '\u{0}a-2\u{0}a2',
-            newValue: toInternalValue(
-              {id: 'a-2', x: 2},
-              ToInternalValueReason.Test,
-            ),
+            newValue: {id: 'a-2', x: 2},
           },
         ],
       ],

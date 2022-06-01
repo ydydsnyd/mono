@@ -19,6 +19,7 @@ import {
   isTempHash,
   makeNewFakeHashFunction,
 } from '../hash';
+import type {Value} from '../kv/store';
 import type {ClientID} from '../sync/client-id';
 import {getClient, ClientStateNotFoundError} from './clients';
 import {addSyncSnapshot} from '../sync/test-helpers';
@@ -75,7 +76,7 @@ async function assertClientMutationIDsCorrect(
 }
 
 class ChunkSnapshotVisitor extends db.Visitor {
-  snapshot: Record<string, unknown> = {};
+  snapshot: Record<string, Value> = {};
 
   override visitCommitChunk(
     chunk: dag.Chunk<db.CommitData<db.Meta>>,
@@ -93,7 +94,7 @@ class ChunkSnapshotVisitor extends db.Visitor {
 async function getChunkSnapshot(
   dagStore: dag.Store,
   hash: Hash,
-): Promise<Record<string, unknown>> {
+): Promise<Record<string, Value>> {
   return dagStore.withRead(async dagRead => {
     const v = new ChunkSnapshotVisitor(dagRead);
     await v.visitCommit(hash);
