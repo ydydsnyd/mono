@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1654110944135,
+  "lastUpdate": 1654160355308,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -17273,6 +17273,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/e3676d43549cf94baf7c3164e1e0c4477293a351"
         },
         "date": 1654110939730,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 172369,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 32336,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 171254,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 32035,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 78055,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 22673,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "75c6b35ccfd1d22ee75df81d4464d66aac11647d",
+          "message": "docs: Follow-up (#144)\n\nFollow-up to #138",
+          "timestamp": "2022-06-02T08:58:12Z",
+          "tree_id": "29a8b6412372994d3882551c25b83e737b3d77b3",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/75c6b35ccfd1d22ee75df81d4464d66aac11647d"
+        },
+        "date": 1654160351236,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
