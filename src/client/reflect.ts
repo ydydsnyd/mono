@@ -21,7 +21,7 @@ import {resolver} from '../util/resolver.js';
 import {sleep} from '../util/sleep.js';
 import type {ReflectOptions} from './options.js';
 
-const enum ConnectionState {
+export const enum ConnectionState {
   Disconnected,
   Connecting,
   Connected,
@@ -42,12 +42,15 @@ export class Reflect<MD extends MutatorDefs> {
   private readonly _updateTracker: GapTracker;
   private readonly _timestampTracker: GapTracker;
 
-  private _socket: WebSocket | undefined = undefined;
   private _lastMutationIDSent = -1;
-  private _state: ConnectionState = ConnectionState.Disconnected;
   private _onPong: () => void = () => undefined;
+  private _onOnlineChange: ((online: boolean) => void) | null = null;
   private _connectResolver = resolver<WebSocket>();
   private _lastMutationIDReceived = 0;
+
+  protected _WSClass = WebSocket;
+  protected _socket: WebSocket | undefined = undefined;
+  protected _state: ConnectionState = ConnectionState.Disconnected;
 
   /**
    * Constructs a new Reflect client.
@@ -66,6 +69,10 @@ export class Reflect<MD extends MutatorDefs> {
           "ReflectOptions.socketOrigin must use the 'ws' or 'wss' scheme.",
         );
       }
+    }
+
+    if (options.onOnlineChange) {
+      this._onOnlineChange = options.onOnlineChange;
     }
 
     const replicacheOptions: ReplicacheOptions<MD> = {
@@ -215,6 +222,7 @@ export class Reflect<MD extends MutatorDefs> {
       this._lastMutationIDSent = -1;
       assert(this._socket);
       this._connectResolver.resolve(this._socket);
+      this._onOnlineChange?.(true);
       return;
     }
 
@@ -260,6 +268,7 @@ export class Reflect<MD extends MutatorDefs> {
       this.roomID,
       this._rep.auth,
       this._lastMutationIDReceived,
+      this._WSClass,
     );
 
     ws.addEventListener('message', this._onMessage);
@@ -273,6 +282,7 @@ export class Reflect<MD extends MutatorDefs> {
       // Only create a new resolver if the one we have was previously resolved,
       // which happens when the socket became connected.
       this._connectResolver = resolver();
+      this._onOnlineChange?.(false);
     }
     this._state = ConnectionState.Disconnected;
     this._socket?.removeEventListener('message', this._onMessage);
@@ -403,6 +413,7 @@ export function createSocket(
   roomID: string,
   auth: string,
   lmid: number,
+  wsClass: typeof WebSocket,
 ): WebSocket {
   const url = new URL(socketOrigin);
   url.pathname = '/connect';
@@ -417,7 +428,7 @@ export function createSocket(
   // invalid `protocol`, and will result in an exception, so pass undefined
   // instead.  encodeURIComponent to ensure it only contains chars allowed
   // for a `protocol`.
-  return new WebSocket(
+  return new wsClass(
     url.toString(),
     auth === '' ? undefined : encodeURIComponent(auth),
   );

@@ -159,4 +159,9 @@ export interface ReflectOptions<MD extends MutatorDefs> {
    * the cache while they run.
    */
   mutators?: MD;
+
+  /**
+   * `onOnlineChange` is called when the Reflect instance's online status changes
+   */
+  onOnlineChange?: (online: boolean) => void;
 }
