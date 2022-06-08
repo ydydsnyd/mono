@@ -5,44 +5,39 @@ slug: /
 
 The easiest way to get started is with our Todo starter app. This app is a good way to play with Replicache, but it is _also_ a great foundation on which to build your own app using Replicache. Since it is simple and has all the pieces you'll need already in place, you can clone it and then start evolving it to suit your own needs.
 
-For information about the license key step, see [Licensing](/licensing).
-
 # Prerequisites
 
-The following software must be installed to use the starter app:
-
-- Docker: https://docs.docker.com/engine/install/
-- Supabase CLI: https://github.com/supabase/cli#getting-started
+1. [Get a Replicache license key](https://doc.replicache.dev/licensing)
+2. Install PostgreSQL. On MacOS, we recommend using [Postgres.app](https://postgresapp.com/). For other OSes and options, see [Postgres Downloads](https://www.postgresql.org/download/).
+3. [Sign up for a free pusher.com account](https://pusher.com/) and create a new "channels" app.
 
 # Install
 
+Get the Pusher environment variables from the ["App Keys" section](https://i.imgur.com/7DNmTKZ.png) of the Pusher App UI.
+
+**Note:** These instructions assume you installed PostgreSQL via Postgres.app on MacOS. If you installed some other way, or configured PostgreSQL specially, you may additionally need to set the `PGUSER` and `PGPASSWORD` environment variables.
+
 ```bash
 # Get the code and install
-npx degit rocicorp/replicache-todo my-app
-cd my-app
+npx degit rocicorp/replicache-todo myapp
+cd myapp
 npm install
 
-# Get a Replicache license key.
-npx replicache get-license
+# Set environment variables for postgres and pusher.
+export PGDATABASE="myapp"
+export NEXT_PUBLIC_REPLICACHE_LICENSE_KEY="<your license key>"
+export NEXT_PUBLIC_PUSHER_APP_ID=<appid>
+export NEXT_PUBLIC_PUSHER_KEY=<pusherkey>
+export NEXT_PUBLIC_PUSHER_SECRET=<pushersecret>
+export NEXT_PUBLIC_PUSHER_CLUSTER=<pushercluster>
 
-# Initialize supabase.
-supabase init
+# Create a new database for Repliear
+psql -d postgres -c 'create database myapp'
 
-# Start supabase. If you are already running supabase for another
-# application, first run `supabase stop` before running the
-# following command so it will output the config values.
-supabase start
-
-# Use license key printed out by `npx replicache get-license`.
-export NEXT_PUBLIC_REPLICACHE_LICENSE_KEY="<license key>"
-# Use URLs and keys printed out by `supabase start`.
-export DATABASE_URL="<DB URL>"
-export NEXT_PUBLIC_SUPABASE_URL="<API URL>"
-export NEXT_PUBLIC_SUPABASE_KEY="<anon key>"
 npm run dev
 ```
 
-You now have a simple todo app powered by Replicache, <a href="https://nextjs.org/">Next.js</a>, and <a href="https://supabase.com/">Supabase</a>.
+You now have a simple todo app powered by Replicache, <a href="https://nextjs.org/">Next.js</a>, <a href="https://www.postgresql.org/">Postgres</a>, and <a href="https://pusher.com/">Pusher</a>.
 
 <p class="text--center">
   <img src="/img/setup/todo.webp" width="650"/>
@@ -52,10 +47,11 @@ Open the app in a browser window, copy the resulting url, and open a second brow
 
 ## A Quick Tour of the Starter App
 
+- **[`backend/`](https://github.com/rocicorp/replicache-todo/blob/main/backend)** contains a simple, generic Replicache server that stores data in Postgres. You don't need to worry about this directory for now -- you only need to modify it for more advanced cases. If you're curious, you can learn more at [How Replicache Works](how-it-works.md).
 - **[`frontend/`](https://github.com/rocicorp/replicache-todo/blob/main/frontend)** contains the UI. This is mostly a standard React/Next.js application.
-- **[`frontend/app.tsx`](https://github.com/rocicorp/replicache-todo/blob/main/frontend/app.tsx)** subscribes to all the todos in the app using `useSubscribe()`. This is how you typically build UI using Replicache: the hook will re-fire when the result of the subscription changes, either due to local (optimistic) changes, or changes that were synced from the server. This app is simple so it just has one subscription, but bigger apps will often have a handful — one for each major view.
+- **[`frontend/todo.ts`](https://github.com/rocicorp/replicache-todo/blob/main/frontend/todo.ts)** defines the `Todo` entity and a simple crud interface for reading and writing it.
 - **[`frontend/mutators.ts`](https://github.com/rocicorp/replicache-todo/blob/main/frontend/mutators.ts)** defines the _mutators_ for this application. This is how you write data using Replicache. Call these functions from the UI to add or modify data. The mutations will be pushed to the server in the background automatically.
-- **[`backend/`](https://github.com/rocicorp/replicache-todo/blob/main/backend)** contains a simple, generic Replicache server that stores data in Supabase. You probably don't need to worry about this directory for now. The mutators defined for the client-side (frontend) are re-used by backend / server automatically, so unless you want them to diverge in behavior you shouldn't need to touch these files. If that sentence doesn't make sense, don't worry, you can learn more at [How Replicache Works](how-it-works.md).
+- **[`frontend/app.tsx`](https://github.com/rocicorp/replicache-todo/blob/main/frontend/app.tsx)** subscribes to all the todos in the app using `useSubscribe()`. This is how you typically build UI using Replicache: the hook will re-fire when the result of the subscription changes, either due to local (optimistic) changes, or changes that were synced from the server. This app is simple so it just has one subscription, but bigger apps will often have a handful — one for each major view.
 
 ## My First Replicache Feature
 
