@@ -1,5 +1,5 @@
 import {TDigest} from 'tdigest';
-import type {LogContext} from './logger.js';
+import type {LogContext} from '@rocicorp/logger';
 
 export class GapTracker {
   private _name: string;

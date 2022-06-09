@@ -1,3 +1,4 @@
+import {LogContext} from '@rocicorp/logger';
 import {nanoid} from 'nanoid';
 import {
   MutatorDefs,
@@ -16,7 +17,6 @@ import {NullableVersion, nullableVersionSchema} from '../types/version.js';
 import {assert} from '../util/asserts.js';
 import {GapTracker} from '../util/gap-tracker.js';
 import {Lock} from '../util/lock.js';
-import {LogContext} from '../util/logger.js';
 import {resolver} from '../util/resolver.js';
 import {sleep} from '../util/sleep.js';
 import type {ReflectOptions} from './options.js';
