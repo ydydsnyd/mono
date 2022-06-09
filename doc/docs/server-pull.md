@@ -196,7 +196,7 @@ It is important with this strategy to ensure that transactions are in fact seria
 4. Client Q pulls with cookie 0
 5. Transaction A commits
 
-Client Q receives Transaction B's changes, but then is at version 2 and thus sees transaction A's changes. It is now permanently out of sync. For the same reason, you should not use a timestamp like SQL `NOW()` or `Date.now()` as a global version number.
+Client Q receives Transaction B's changes, but then is at version 2 and thus never sees transaction A's changes. It is now permanently out of sync. For the same reason, you should not use a timestamp like SQL `NOW()` or `Date.now()` as a global version number.
 
 :::
 
