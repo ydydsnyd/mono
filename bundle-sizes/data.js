@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1654650018857,
+  "lastUpdate": 1654743590695,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -17543,6 +17543,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/8a124ba2dd6a884b65161a37bc1a300826c1adf2"
         },
         "date": 1654650014432,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 172369,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 32341,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 171254,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 32027,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 78055,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 22681,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "committer": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "distinct": true,
+          "id": "b23dd59548eac60d0670bd2f9638d100f9dfde5b",
+          "message": "doc: improve diff calculation docs",
+          "timestamp": "2022-06-08T16:58:31-10:00",
+          "tree_id": "e44ab9c711dd8e56e0607b0b9bc9c6510ca3cbb1",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/b23dd59548eac60d0670bd2f9638d100f9dfde5b"
+        },
+        "date": 1654743586993,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
