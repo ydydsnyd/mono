@@ -1,4 +1,4 @@
-import {LogContext} from '@rocicorp/logger';
+import {consoleLogSink, LogContext, TeeLogSink} from '@rocicorp/logger';
 import {nanoid} from 'nanoid';
 import {
   MutatorDefs,
@@ -111,7 +111,15 @@ export class Reflect<MD extends MutatorDefs> {
     this._socketOrigin = options.socketOrigin;
     this.roomID = options.roomID;
     this.userID = options.userID;
-    this._l = new LogContext('debug').addContext('roomID', options.roomID);
+
+    const {logSinks = [consoleLogSink]} = options;
+    const logSink =
+      logSinks.length === 1 ? logSinks[0] : new TeeLogSink(logSinks);
+    this._l = new LogContext(options.logLevel, logSink).addContext(
+      'roomID',
+      options.roomID,
+    );
+
     this._pushTracker = new GapTracker('push', this._l);
     this._updateTracker = new GapTracker('update', this._l);
     this._timestampTracker = new GapTracker('timestamp', this._l);
