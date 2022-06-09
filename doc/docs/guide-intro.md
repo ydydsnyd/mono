@@ -11,7 +11,7 @@ The main reasons to do this would be:
 - You want to build a Replicache backend in some language other than JavaScript, so you can't use the starter app
 - You just like knowing how things work
 
-:::note
+:::caution
 
 Building a Replicache backend isn't _super_ hard, but there is some subtlety to getting push and pull correct and efficient. As such, we generally recommend users start with the [replicache-todo starter app](../examples/todo) if possible and fork it to taste. Easier to start with something that already works!
 
