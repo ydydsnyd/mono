@@ -182,23 +182,39 @@ In the simplest case, the server could not bother with `cookie`s or sending a pa
 
 A complete discussion of strategies for efficiently computing patches is outside the scope of this document, but here are a couple of the most common strategies:
 
-- **Global Version Number**: In this strategy a monotonically increasing global version number is used to track when an entity in your datastore has changed. On push, the next version number is acquired and updates to datastore entities are marked with this version. For example, you might have a `Version` column on a database table and set it to the current version when a row is inserted or modified. The pull handler returns the current version number in the `cookie` in pull. To compute the patch from a client's state to the current state of the server, select all the entities in the datastore with a version number greater than that passed in the client's `PullRequest`. This strategy requires using soft deletes. At scale, contention for the global version number could be a performance bottleneck.
+### Global Version Number
 
-  The [example Todo app](https://github.com/rocicorp/replicache-todo/) uses this strategy, see [backend/](https://github.com/rocicorp/replicache-todo/blob/main/backend/).
+In this strategy a monotonically increasing global version number is used to track when an entity in your datastore has changed. On push, the next version number is acquired and updates to datastore entities are marked with this version. For example, you might have a `Version` column on a database table and set it to the current version when a row is inserted or modified. The pull handler returns the current version number in the `cookie` in pull. To compute the patch from a client's state to the current state of the server, select all the entities in the datastore with a version number greater than that passed in the client's `PullRequest`. This strategy requires using soft deletes.
 
-  This simple strategy is the one we recommend starting with, and what you get by default if you start your project with the example Todo app as a base.
+It is important with this strategy to ensure that transactions are in fact serialized by the global version number. For example it would _not_ be correct to use a [Postgres sequence](https://www.postgresql.org/docs/current/sql-createsequence.html) to generate this version because the sequence number changes independently from push transactions. It would allow the following anomaly:
 
-- **LastModified**: in this strategy a timestamp is used as a global version number, as above. This strategy might be easier and more performant to implement in some databases, but comes with all the attendant problems that timestamps have (clocks jumping around, etc.).
+1. Transaction A obtains sequence number 1
+2. Transaction B obtains sequence number 2
+3. Transaction B commits
+4. Client Q pulls with cookie 0
+5. Transaction A commits
 
-  The [example Replidraw app](https://github.com/rocicorp/replidraw/) uses this strategy, see [backend/rds.ts](https://github.com/rocicorp/replidraw/blob/main/backend/rds.ts).
+Client Q receives Transaction B's changes, but then is at version 2 and thus sees transaction A's changes. It is now permanently out of sync. For the same reason, you should not use a timestamp like SQL `NOW()` or `Date.now()` as a global version number.
 
-- **Row Versioning**: associate an independent `Version` with each entity in the your datastore and update it whenever that entity is changed. For example, you could have a `Version` column and a trigger to increment the `Version` on a row when it is updated. Note this is different than the global version strategy: in that strategy there is a single incrementing global version; in this strategy each entity has its own, _independent_ version.
+At scale, contention for the global version number could be a performance bottleneck. It limits the number of pushes your application can process per second to about `~1000/<average-length-of-push-transaction-in-ms>`.
 
-  This strategy keeps in look-aside storage a record of which entity versions a client has. This storage could be ephemeral, for example kept in memcache or redis, as it is easy to rebuild if necessary (if a record is lost, return the entire client view and create a new record). Each record needs a unique identifier which is returned as the `cookie`, a simple integer suffices. On pull, select any entities that are not present in the client's record: these have been added since the last pull. Also select entities that are present in the record but that have larger version numbers in the datastore: these have changed since the last pull. And finally, find those entities that are present in the record but not present in the datastore: these have been deleted since last pull.
+This performance can be improved by partitioning the datastore into separate _spaces_ which each have their own global version number and which are each synced independently. For example, a project management app might partition by project.
 
-  This strategy has much better performance characteristics than global versioning, so we recommend it if global versioning becomes a performance problem. It is, however, more work to set up.
+The [example Todo app](https://github.com/rocicorp/replicache-todo/) uses this strategy, see [backend/](https://github.com/rocicorp/replicache-todo/blob/main/backend/), and it includes the space partitioning technique.
 
-- **Additional options**: there are a variety of other strategies you could use to compute the patch, and we plan to document the space of possibilities better in the future. Until then, please [contact us](https://replicache.dev/#contact) if you'd like to discuss options and tradeoffs.
+This simple strategy is the one we recommend starting with, and what you get by default if you start your project with the example Todo app as a base.
+
+### Row Versioning\*\*
+
+In this strategy you associate an independent `Version` with each entity in the your datastore and update it whenever that entity is changed. For example, you could have a `Version` column and a trigger to increment the `Version` on a row when it is updated. Note this is different than the global version strategy: in that strategy there is a single incrementing global version; in this strategy each entity has its own, _independent_ version.
+
+This strategy keeps in look-aside storage a record of which entity versions a client has. This storage could be ephemeral, for example kept in memcache or redis, as it is easy to rebuild if necessary (if a record is lost, return the entire client view and create a new record). Each record needs a unique identifier which is returned as the `cookie`, a simple integer suffices. On pull, select any entities that are not present in the client's record: these have been added since the last pull. Also select entities that are present in the record but that have larger version numbers in the datastore: these have changed since the last pull. And finally, find those entities that are present in the record but not present in the datastore: these have been deleted since last pull.
+
+This strategy has much better performance characteristics than global versioning, so we recommend it if global versioning becomes a performance problem. It is, however, more work to set up.
+
+### Additional options
+
+Tere are a variety of other strategies you could use to compute the patch, and we plan to document the space of possibilities better in the future. Until then, please [contact us](https://replicache.dev/#contact) if you'd like to discuss options and tradeoffs.
 
 ## Pull Launch Checklist
 
