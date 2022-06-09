@@ -204,7 +204,7 @@ The [example Todo app](https://github.com/rocicorp/replicache-todo/) uses this s
 
 This simple strategy is the one we recommend starting with, and what you get by default if you start your project with the example Todo app as a base.
 
-### Row Versioning\*\*
+### Row Versioning
 
 In this strategy you associate an independent `Version` with each entity in the your datastore and update it whenever that entity is changed. For example, you could have a `Version` column and a trigger to increment the `Version` on a row when it is updated. Note this is different than the global version strategy: in that strategy there is a single incrementing global version; in this strategy each entity has its own, _independent_ version.
 
