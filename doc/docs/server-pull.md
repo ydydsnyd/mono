@@ -184,7 +184,7 @@ A complete discussion of strategies for efficiently computing patches is outside
 
 ### Global Version Number
 
-In this strategy a monotonically increasing global version number is used to track when an entity in your datastore has changed. On push, the next version number is acquired and updates to datastore entities are marked with this version. For example, you might have a `Version` column on a database table and set it to the current version when a row is inserted or modified. The pull handler returns the current version number in the `cookie` in pull. To compute the patch from a client's state to the current state of the server, select all the entities in the datastore with a version number greater than that passed in the client's `PullRequest`. This strategy requires using soft deletes.
+In this strategy a monotonically increasing global version number is used to track when an entity in your datastore has changed. On push, in a single serialized transaction, the next version number is acquired and updates to datastore entities are marked with this version. For example, you might have a `Version` column on a database table and set it to the current version when a row is inserted or modified. The pull handler returns the current version number in the `cookie` in pull. To compute the patch from a client's state to the current state of the server, select all the entities in the datastore with a version number greater than that passed in the client's `PullRequest`. This strategy requires using soft deletes.
 
 :::caution
 
