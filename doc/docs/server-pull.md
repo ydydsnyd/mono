@@ -186,6 +186,8 @@ A complete discussion of strategies for efficiently computing patches is outside
 
 In this strategy a monotonically increasing global version number is used to track when an entity in your datastore has changed. On push, the next version number is acquired and updates to datastore entities are marked with this version. For example, you might have a `Version` column on a database table and set it to the current version when a row is inserted or modified. The pull handler returns the current version number in the `cookie` in pull. To compute the patch from a client's state to the current state of the server, select all the entities in the datastore with a version number greater than that passed in the client's `PullRequest`. This strategy requires using soft deletes.
 
+:::warn
+
 It is important with this strategy to ensure that transactions are in fact serialized by the global version number. For example it would _not_ be correct to use a [Postgres sequence](https://www.postgresql.org/docs/current/sql-createsequence.html) to generate this version because the sequence number changes independently from push transactions. It would allow the following anomaly:
 
 1. Transaction A obtains sequence number 1
@@ -195,6 +197,8 @@ It is important with this strategy to ensure that transactions are in fact seria
 5. Transaction A commits
 
 Client Q receives Transaction B's changes, but then is at version 2 and thus sees transaction A's changes. It is now permanently out of sync. For the same reason, you should not use a timestamp like SQL `NOW()` or `Date.now()` as a global version number.
+
+:::
 
 At scale, contention for the global version number could be a performance bottleneck. It limits the sustained rate of pushes your application can process to about `1000/<average-push-transaction-duration-in-ms>/s`.
 
