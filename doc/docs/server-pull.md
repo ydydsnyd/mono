@@ -196,7 +196,7 @@ It is important with this strategy to ensure that transactions are in fact seria
 
 Client Q receives Transaction B's changes, but then is at version 2 and thus sees transaction A's changes. It is now permanently out of sync. For the same reason, you should not use a timestamp like SQL `NOW()` or `Date.now()` as a global version number.
 
-At scale, contention for the global version number could be a performance bottleneck. It limits the number of pushes your application can process per second to about `~1000/<average-length-of-push-transaction-in-ms>`.
+At scale, contention for the global version number could be a performance bottleneck. It limits the sustained rate of pushes your application can process to about `1000/<average-push-transaction-duration-in-ms>/s`.
 
 This performance can be improved by partitioning the datastore into separate _spaces_ which each have their own global version number and which are each synced independently. For example, a project management app might partition by project.
 
