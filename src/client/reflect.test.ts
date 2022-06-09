@@ -51,6 +51,22 @@ test('onOnlineChange callback', async () => {
   expect(onlineCount).to.equal(2);
   expect(offlineCount).to.equal(1);
 
+  r.onOnlineChange = null;
+  await tickAFewTimes(clock);
+  r.triggerClose();
+  expect(r.connectionState).to.equal(ConnectionState.Disconnected);
+  expect(onlineCount).to.equal(2);
+  expect(offlineCount).to.equal(1);
+
+  await r.close();
+});
+
+test('onOnlineChange reflection on Reflect class', async () => {
+  const f = () => 42;
+  const r = reflectForTest({
+    onOnlineChange: f,
+  });
+  expect(r.onOnlineChange).to.equal(f);
   await r.close();
 });
 

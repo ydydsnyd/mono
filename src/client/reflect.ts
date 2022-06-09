@@ -44,7 +44,13 @@ export class Reflect<MD extends MutatorDefs> {
 
   private _lastMutationIDSent = -1;
   private _onPong: () => void = () => undefined;
-  private _onOnlineChange: ((online: boolean) => void) | null = null;
+
+  /**
+   * `onOnlineChange` is called when the Reflect instance's online status
+   * changes.
+   */
+  onOnlineChange: ((online: boolean) => void) | null = null;
+
   private _connectResolver = resolver<WebSocket>();
   private _lastMutationIDReceived = 0;
 
@@ -72,7 +78,7 @@ export class Reflect<MD extends MutatorDefs> {
     }
 
     if (options.onOnlineChange) {
-      this._onOnlineChange = options.onOnlineChange;
+      this.onOnlineChange = options.onOnlineChange;
     }
 
     const replicacheOptions: ReplicacheOptions<MD> = {
@@ -222,7 +228,7 @@ export class Reflect<MD extends MutatorDefs> {
       this._lastMutationIDSent = -1;
       assert(this._socket);
       this._connectResolver.resolve(this._socket);
-      this._onOnlineChange?.(true);
+      this.onOnlineChange?.(true);
       return;
     }
 
@@ -282,7 +288,7 @@ export class Reflect<MD extends MutatorDefs> {
       // Only create a new resolver if the one we have was previously resolved,
       // which happens when the socket became connected.
       this._connectResolver = resolver();
-      this._onOnlineChange?.(false);
+      this.onOnlineChange?.(false);
     }
     this._state = ConnectionState.Disconnected;
     this._socket?.removeEventListener('message', this._onMessage);
