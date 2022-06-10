@@ -7,13 +7,11 @@ The easiest way to get started is with our Todo starter app. This app is a good 
 
 # Prerequisites
 
-1. [Get a Replicache license key](https://doc.replicache.dev/licensing)
+1. [Node.js](https://nodejs.dev/) v14.19.1 or greater. Check which version you have by running `node --version` on the command line. If you don't have Node or the version is old, install at https://nodejs.dev/download.
 2. Install PostgreSQL. On MacOS, we recommend using [Postgres.app](https://postgresapp.com/). For other OSes and options, see [Postgres Downloads](https://www.postgresql.org/download/).
 3. [Sign up for a free pusher.com account](https://pusher.com/) and create a new "channels" app.
 
 # Install
-
-Get the Pusher environment variables from the ["App Keys" section](https://i.imgur.com/7DNmTKZ.png) of the Pusher App UI.
 
 **Note:** These instructions assume you installed PostgreSQL via Postgres.app on MacOS. If you installed some other way, or configured PostgreSQL specially, you may additionally need to set the `PGUSER` and `PGPASSWORD` environment variables.
 
@@ -23,16 +21,23 @@ npx degit rocicorp/replicache-todo myapp
 cd myapp
 npm install
 
-# Set environment variables for postgres and pusher.
 export PGDATABASE="myapp"
+
+# Get a Replicache license key. The command below will ask you a few quick
+# questions and then print out your key.
+npx replicache get-license
+
 export NEXT_PUBLIC_REPLICACHE_LICENSE_KEY="<your license key>"
+
+# Get the Pusher environment variables from the "App Keys" section
+# of the Pusher App UI. See: https://i.imgur.com/7DNmTKZ.png
 export NEXT_PUBLIC_PUSHER_APP_ID=<appid>
 export NEXT_PUBLIC_PUSHER_KEY=<pusherkey>
 export NEXT_PUBLIC_PUSHER_SECRET=<pushersecret>
 export NEXT_PUBLIC_PUSHER_CLUSTER=<pushercluster>
 
 # Create a new database for Repliear
-psql -d postgres -c 'create database myapp'
+psql -d postgres -c "create database $PGDATABASE"
 
 npm run dev
 ```
