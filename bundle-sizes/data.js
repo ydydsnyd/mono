@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1654826324900,
+  "lastUpdate": 1654873682799,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -18059,6 +18059,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 22681,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fed8365052f79680d5f3ae5eaaddc90a20366086",
+          "message": "Arv/internal value take 3 (#145)\n\n* Revert \"Revert \"refactor: Introduce InternalValue (#136)\" (#143)\"\r\n\r\nThis reverts commit e3676d43549cf94baf7c3164e1e0c4477293a351.\r\n\r\n* refactor: Use InternalValue\r\n\r\nTwo fixes over the revert:\r\n1. When reading a chunk out of the dag store the values are marked as\r\n   internal.\r\n2. ReadTransaction get/scan also get a deep clone in debug mode.",
+          "timestamp": "2022-06-10T08:06:59-07:00",
+          "tree_id": "533e8cdebf8f4bbf0cae8b7c171cf3a4de45e87e",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/fed8365052f79680d5f3ae5eaaddc90a20366086"
+        },
+        "date": 1654873678223,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 175724,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 32919,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 174609,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 32617,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 79122,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 22955,
             "unit": "bytes"
           }
         ]
