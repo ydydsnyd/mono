@@ -1,5 +1,4 @@
 import type {Chunk} from './chunk';
-import type {ReadonlyJSONValue} from '../mod';
 import type {Hash} from '../hash';
 
 export interface Store {
@@ -23,10 +22,7 @@ export interface Read extends GetChunk {
 }
 
 export interface Write extends Read {
-  createChunk<V extends ReadonlyJSONValue>(
-    data: V,
-    refs: readonly Hash[],
-  ): Chunk<V>;
+  createChunk<V>(data: V, refs: readonly Hash[]): Chunk<V>;
   putChunk(c: Chunk): Promise<void>;
   setHead(name: string, hash: Hash): Promise<void>;
   removeHead(name: string): Promise<void>;

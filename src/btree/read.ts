@@ -1,4 +1,4 @@
-import {deepEqual, getSizeOfValue, ReadonlyJSONValue} from '../json';
+import {getSizeOfValue} from '../json';
 import type * as dag from '../dag/mod';
 import {Hash, emptyHash} from '../hash';
 import {
@@ -6,10 +6,8 @@ import {
   InternalNodeImpl,
   Entry,
   emptyDataNodeImpl,
-  assertBTreeNode,
   newNodeImpl,
   findLeaf,
-  ReadonlyEntry,
   NODE_LEVEL,
   NODE_ENTRIES,
   isInternalNode,
@@ -19,6 +17,10 @@ import {
   binarySearch,
   binarySearchFound,
   InternalDiffOperation,
+  ValueEntry,
+  HashEntry,
+  ValueEntries,
+  internalizeBTreeNode,
 } from './node';
 import {
   computeSplices,
@@ -27,6 +29,7 @@ import {
   SPLICE_FROM,
   SPLICE_REMOVED,
 } from './splice';
+import {deepEqual, InternalValue} from '../internal-value.js';
 
 /**
  * The size of the header of a node. (If we had compile time
@@ -36,9 +39,7 @@ import {
  */
 export const NODE_HEADER_SIZE = 11;
 
-export class BTreeRead
-  implements AsyncIterable<ReadonlyEntry<ReadonlyJSONValue>>
-{
+export class BTreeRead implements AsyncIterable<ValueEntry> {
   rootHash: Hash;
   protected readonly _dagRead: dag.Read;
   private readonly _cache: Map<Hash, DataNodeImpl | InternalNodeImpl> =
@@ -70,11 +71,11 @@ export class BTreeRead
     }
 
     const {data} = await this._dagRead.mustGetChunk(hash);
-    assertBTreeNode(data);
+    internalizeBTreeNode(data);
     const impl = newNodeImpl(
       // We enforce that we do not mutate this at runtime by first checking the
       // hash.
-      data[NODE_ENTRIES] as Entry<ReadonlyJSONValue>[],
+      data[NODE_ENTRIES] as Entry<InternalValue>[],
       hash,
       data[NODE_LEVEL],
       false,
@@ -83,7 +84,7 @@ export class BTreeRead
     return impl;
   }
 
-  async get(key: string): Promise<ReadonlyJSONValue | undefined> {
+  async get(key: string): Promise<InternalValue | undefined> {
     const leaf = await findLeaf(key, this.rootHash, this);
     const index = binarySearch(key, leaf.entries);
     if (!binarySearchFound(index, leaf.entries, key)) {
@@ -107,16 +108,14 @@ export class BTreeRead
   // determining from an entry.key alone whether it is a regular key or an
   // encoded IndexKey in an index map. Without encoding regular map keys the
   // caller has to deal with encoding and decoding the keys for the index map.
-  scan(
-    fromKey: string,
-  ): AsyncIterableIterator<ReadonlyEntry<ReadonlyJSONValue>> {
+  scan(fromKey: string): AsyncIterableIterator<ValueEntry> {
     return scanForHash(this.rootHash, fromKey, async (hash: Hash) => {
       const cached = await this.getNode(hash);
       if (cached) {
         return cached.toChunkData();
       }
       const {data} = await this._dagRead.mustGetChunk(hash);
-      assertBTreeNode(data);
+      internalizeBTreeNode(data);
       return data;
     });
   }
@@ -126,14 +125,12 @@ export class BTreeRead
     yield* node.keys(this);
   }
 
-  async *entries(): AsyncIterableIterator<ReadonlyEntry<ReadonlyJSONValue>> {
+  async *entries(): AsyncIterableIterator<ValueEntry> {
     const node = await this.getNode(this.rootHash);
     yield* node.entriesIter(this);
   }
 
-  [Symbol.asyncIterator](): AsyncIterableIterator<
-    ReadonlyEntry<ReadonlyJSONValue>
-  > {
+  [Symbol.asyncIterator](): AsyncIterableIterator<ValueEntry> {
     return this.entries();
   }
 
@@ -178,14 +175,20 @@ async function* diffNodes(
   }
 
   if (last.level === 0 && current.level === 0) {
-    yield* diffEntries(last.entries, current.entries);
+    yield* diffEntries(
+      (last as DataNodeImpl).entries,
+      (current as DataNodeImpl).entries,
+    );
     return;
   }
 
   // Now we have two internal nodes with the same level. We compute the diff as
   // splices for the internal node entries. We then flatten these and call diff
   // recursively.
-  const initialSplices = computeSplices(last.entries, current.entries);
+  const initialSplices = computeSplices(
+    (last as InternalNodeImpl).entries,
+    (current as InternalNodeImpl).entries,
+  );
   for (const splice of initialSplices) {
     const [lastChild, currentChild] = await Promise.all([
       (last as InternalNodeImpl).getCompositeChildren(
@@ -203,9 +206,9 @@ async function* diffNodes(
   }
 }
 
-function* diffEntries<T>(
-  lastEntries: ReadonlyArray<ReadonlyEntry<T>>,
-  currentEntries: ReadonlyArray<ReadonlyEntry<T>>,
+function* diffEntries(
+  lastEntries: ValueEntries,
+  currentEntries: ValueEntries,
 ): IterableIterator<InternalDiffOperation> {
   const lastLength = lastEntries.length;
   const currentLength = currentEntries.length;
@@ -263,14 +266,13 @@ export async function* scanForHash(
   hash: Hash,
   fromKey: string,
   readNode: ReadNode,
-): AsyncIterableIterator<ReadonlyEntry<ReadonlyJSONValue>> {
+): AsyncIterableIterator<ValueEntry> {
   if (hash === emptyHash) {
     return;
   }
 
   const data = await readNode(hash);
-  assertBTreeNode(data);
-  const entries = data[NODE_ENTRIES];
+  const entries: readonly Entry<unknown>[] = data[NODE_ENTRIES];
   let i = 0;
   if (fromKey) {
     i = binarySearch(fromKey, entries);
@@ -278,16 +280,12 @@ export async function* scanForHash(
 
   if (isInternalNode(data)) {
     for (; i < entries.length; i++) {
-      yield* scanForHash(
-        (entries[i] as ReadonlyEntry<Hash>)[1],
-        fromKey,
-        readNode,
-      );
+      yield* scanForHash((entries[i] as HashEntry)[1], fromKey, readNode);
       fromKey = '';
     }
   } else {
     for (; i < entries.length; i++) {
-      yield entries[i];
+      yield entries[i] as ValueEntry;
     }
   }
 }
@@ -297,9 +295,7 @@ export async function allEntriesAsDiff(
   op: 'add' | 'del',
 ): Promise<InternalDiff> {
   const diff: InternalDiffOperation[] = [];
-  const make: (
-    entry: ReadonlyEntry<ReadonlyJSONValue>,
-  ) => InternalDiffOperation =
+  const make: (entry: ValueEntry) => InternalDiffOperation =
     op === 'add'
       ? entry => {
           return {

@@ -1,4 +1,3 @@
-import {assertBTreeNode} from '../btree/mod';
 import {
   assertCommitData,
   CommitData,
@@ -11,7 +10,12 @@ import {
 } from './commit';
 import type * as dag from '../dag/mod';
 import {emptyHash, Hash} from '../hash';
-import {InternalNode, isInternalNode, Node} from '../btree/node';
+import {
+  internalizeBTreeNode,
+  InternalNode,
+  isInternalNode,
+  Node,
+} from '../btree/node';
 import {HashRefType} from './hash-ref-type';
 import {ChunkNotFoundError} from '../dag/store.js';
 
@@ -109,8 +113,7 @@ export class Visitor {
 
     const chunk = await this.dagRead.mustGetChunk(h);
     const {data} = chunk;
-    assertBTreeNode(data);
-
+    internalizeBTreeNode(data);
     await this.visitBTreeNodeChunk(chunk as dag.Chunk<Node>);
   }
 

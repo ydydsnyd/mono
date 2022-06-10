@@ -65,6 +65,9 @@ export type {IndexKey} from './db/index';
 export type {
   Diff as ExperimentalDiff,
   DiffOperation as ExperimentalDiffOperation,
+  DiffOperationAdd as ExperimentalDiffOperationAdd,
+  DiffOperationDel as ExperimentalDiffOperationDel,
+  DiffOperationChange as ExperimentalDiffOperationChange,
   IndexDiff as ExperimentalIndexDiff,
   NoIndexDiff as ExperimentalNoIndexDiff,
 } from './btree/node';

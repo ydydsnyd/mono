@@ -1,6 +1,6 @@
 import type {LogContext} from '@rocicorp/logger';
 import {greaterThan} from 'compare-utf8';
-import {deepClone, JSONValue, ReadonlyJSONValue} from './json';
+import type {JSONValue, ReadonlyJSONValue} from './json';
 import {
   isScanIndexOptions,
   KeyTypeForScanOptions,
@@ -17,6 +17,13 @@ import type {Hash} from './hash';
 import type {ScanSubscriptionInfo} from './subscriptions';
 import type {ScanNoIndexOptions} from './mod.js';
 import {decodeIndexKey, IndexKey} from './db/index.js';
+import {
+  toInternalValue,
+  InternalValue,
+  ToInternalValueReason,
+  fromInternalValue,
+  FromInternalValueReason,
+} from './internal-value.js';
 
 /**
  * ReadTransactions are used with [[Replicache.query]] and
@@ -109,7 +116,13 @@ export class ReadTransactionImpl<
 
   async get(key: string): Promise<Value | undefined> {
     throwIfClosed(this.dbtx);
-    return this.dbtx.get(key) as Promise<Value | undefined>;
+    const v = await this.dbtx.get(key);
+    return v !== undefined
+      ? (fromInternalValue(
+          v,
+          FromInternalValueReason.ReadTransactionGet,
+        ) as Value)
+      : undefined;
   }
 
   async has(key: string): Promise<boolean> {
@@ -142,7 +155,7 @@ function scan<Options extends ScanOptions, Value>(
   dbRead: db.Read,
   onLimitKey: (inclusiveLimitKey: string) => void,
 ): ScanResult<KeyTypeForScanOptions<Options>, Value> {
-  const iter = getScanIterator<Options, Value>(dbRead, options);
+  const iter = getScanIterator<Options>(dbRead, options);
   return makeScanResultFromScanIteratorInternal(
     iter,
     options ?? ({} as Options),
@@ -256,9 +269,24 @@ export class WriteTransactionImpl
     super(clientID, dbWrite, lc, rpcName);
   }
 
+  async get(key: string): Promise<JSONValue | undefined> {
+    throwIfClosed(this.dbtx);
+    const v = await this.dbtx.get(key);
+    return v === undefined
+      ? undefined
+      : (fromInternalValue(
+          v,
+          FromInternalValueReason.WriteTransactionGet,
+        ) as JSONValue);
+  }
+
   async put(key: string, value: JSONValue): Promise<void> {
     throwIfClosed(this.dbtx);
-    await this.dbtx.put(this._lc, key, deepClone(value));
+    const internalValue = toInternalValue(
+      value,
+      ToInternalValueReason.WriteTransactionPut,
+    );
+    await this.dbtx.put(this._lc, key, internalValue);
   }
 
   async del(key: string): Promise<boolean> {
@@ -354,25 +382,23 @@ type IndexKeyEntry<Value> = Entry<IndexKey, Value>;
 
 type StringKeyEntry<Value> = Entry<string, Value>;
 
-export type EntryForOptions<
-  Options extends ScanOptions,
-  Value,
-> = Options extends ScanIndexOptions
-  ? IndexKeyEntry<Value>
-  : StringKeyEntry<Value>;
+export type EntryForOptions<Options extends ScanOptions> =
+  Options extends ScanIndexOptions
+    ? IndexKeyEntry<InternalValue>
+    : StringKeyEntry<InternalValue>;
 
-function getScanIterator<Options extends ScanOptions, Value>(
+function getScanIterator<Options extends ScanOptions>(
   dbRead: db.Read,
   options: Options | undefined,
-): AsyncIterable<EntryForOptions<Options, Value>> {
+): AsyncIterable<EntryForOptions<Options>> {
   if (options && isScanIndexOptions(options)) {
     return getScanIteratorForIndexMap(dbRead, options) as AsyncIterable<
-      EntryForOptions<Options, Value>
+      EntryForOptions<Options>
     >;
   }
 
   return dbRead.map.scan(fromKeyForNonIndexScan(options)) as AsyncIterable<
-    EntryForOptions<Options, Value>
+    EntryForOptions<Options>
   >;
 }
 
@@ -394,7 +420,7 @@ function makeScanResultFromScanIteratorInternal<
   Options extends ScanOptions,
   Value,
 >(
-  iter: AsyncIterable<EntryForOptions<Options, Value>>,
+  iter: AsyncIterable<EntryForOptions<Options>>,
   options: Options,
   dbRead: db.Read,
   onLimitKey: (inclusiveLimitKey: string) => void,
@@ -402,14 +428,14 @@ function makeScanResultFromScanIteratorInternal<
   return new ScanResultImpl(iter, options, dbRead, onLimitKey);
 }
 
-async function* getScanIteratorForIndexMap<Value>(
+async function* getScanIteratorForIndexMap(
   dbRead: db.Read,
   options: ScanIndexOptions,
-): AsyncIterable<IndexKeyEntry<Value>> {
+): AsyncIterable<IndexKeyEntry<InternalValue>> {
   const map = await dbRead.getMapForIndex(options.indexName);
   for await (const entry of map.scan(fromKeyForIndexScanInternal(options))) {
     // No need to clone the value since it will be cloned as needed by
     // ScanResultImpl.
-    yield [decodeIndexKey(entry[0]), entry[1] as Value];
+    yield [decodeIndexKey(entry[0]), entry[1]];
   }
 }

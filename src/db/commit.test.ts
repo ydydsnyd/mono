@@ -23,9 +23,12 @@ import {
   Chain,
 } from './test-helpers';
 import {Hash, fakeHash} from '../hash';
-import type {JSONValue} from '../json';
-import type {Value} from '../kv/store';
 import {makeTestChunkHasher} from '../dag/chunk';
+import {
+  toInternalValue,
+  InternalValue,
+  ToInternalValueReason,
+} from '../internal-value.js';
 
 test('base snapshot', async () => {
   const store = new dag.TestStore();
@@ -115,7 +118,7 @@ test('chain', async () => {
 });
 
 test('load roundtrip', async () => {
-  const t = (chunk: dag.Chunk, expected: Commit<Meta> | Error) => {
+  const t = (chunk: dag.Chunk<unknown>, expected: Commit<Meta> | Error) => {
     {
       if (expected instanceof Error) {
         expect(() => fromChunk(chunk)).to.throw(
@@ -244,11 +247,15 @@ test('load roundtrip', async () => {
     new Error('Invalid type: undefined, expected string'),
   );
 
-  const cookie = {foo: 'bar'};
+  const cookie = toInternalValue({foo: 'bar'}, ToInternalValueReason.Test);
   for (const basisHash of [null, fakeHash(''), fakeHash('hash')]) {
     t(
       await makeCommit(
-        makeSnapshotMeta(basisHash ?? null, 0, {foo: 'bar'}),
+        makeSnapshotMeta(
+          basisHash ?? null,
+          0,
+          toInternalValue({foo: 'bar'}, ToInternalValueReason.Test),
+        ),
         fakeHash('vh'),
         [fakeHash('vh')],
       ),
@@ -362,10 +369,7 @@ test('accessors', async () => {
 
 const chunkHasher = makeTestChunkHasher('test');
 
-function createChunk<V extends Value>(
-  data: V,
-  refs: readonly Hash[],
-): dag.Chunk<V> {
+function createChunk<V>(data: V, refs: readonly Hash[]): dag.Chunk<V> {
   return dag.createChunk(data, refs, chunkHasher);
 }
 
@@ -385,7 +389,7 @@ async function makeCommit<M extends Meta>(
 function makeSnapshotMeta(
   basisHash: Hash | null,
   lastMutationID: number,
-  cookieJSON: JSONValue,
+  cookieJSON: InternalValue,
 ): SnapshotMeta {
   return {
     type: MetaTyped.Snapshot,

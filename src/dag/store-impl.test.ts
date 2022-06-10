@@ -2,7 +2,6 @@ import {expect} from '@esm-bundle/chai';
 import {MemStore} from '../kv/mod';
 import {createChunk, createChunkWithHash, makeTestChunkHasher} from './chunk';
 import {StoreImpl, ReadImpl, WriteImpl} from './store-impl';
-import type {Value} from '../kv/store';
 import {chunkDataKey, chunkMetaKey, chunkRefCountKey, headKey} from './key';
 import type * as kv from '../kv/mod';
 import {
@@ -16,6 +15,7 @@ import {
 import {assert} from '../asserts';
 import {TestStore} from './test-store';
 import {ChunkNotFoundError} from './store.js';
+import type {ReadonlyJSONValue} from '../json.js';
 
 suite('read', () => {
   test('has chunk', async () => {
@@ -39,7 +39,11 @@ suite('read', () => {
 
   test('get chunk', async () => {
     const chunkHasher = makeTestChunkHasher('fake');
-    const t = async (data: Value, refs: Hash[], getSameChunk: boolean) => {
+    const t = async (
+      data: ReadonlyJSONValue,
+      refs: Hash[],
+      getSameChunk: boolean,
+    ) => {
       const kv = new MemStore();
       const chunk = createChunk(data, refs, chunkHasher);
       await kv.withWrite(async kvw => {
@@ -82,7 +86,7 @@ suite('read', () => {
 suite('write', () => {
   test('put chunk', async () => {
     const chunkHasher = makeTestChunkHasher('fake');
-    const t = async (data: Value, refs: Hash[]) => {
+    const t = async (data: ReadonlyJSONValue, refs: Hash[]) => {
       const kv = new MemStore();
       await kv.withWrite(async kvw => {
         const w = new WriteImpl(kvw, chunkHasher, assertNotTempHash);
@@ -277,7 +281,7 @@ suite('write', () => {
 
   test('roundtrip', async () => {
     const chunkHasher = makeTestChunkHasher('fake');
-    const t = async (name: string, data: Value, refs: Hash[]) => {
+    const t = async (name: string, data: ReadonlyJSONValue, refs: Hash[]) => {
       const kv = new MemStore();
       const hash = chunkHasher(data);
       const c = createChunkWithHash(hash, data, refs);
@@ -321,7 +325,7 @@ suite('write', () => {
     const chunkHasher = makeTestChunkHasher('fake');
 
     const t = async (
-      chunkHasher: (v: Value) => Hash,
+      chunkHasher: (v: ReadonlyJSONValue) => Hash,
       assertValidHash: (h: Hash) => void,
     ) => {
       const store = new StoreImpl(new MemStore(), chunkHasher, assertValidHash);

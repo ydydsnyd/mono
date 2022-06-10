@@ -8,7 +8,6 @@ import {assertHasClientState, updateClients} from './clients';
 import {ComputeHashTransformer, FixedChunks} from './compute-hash-transformer';
 import {GatherVisitor} from './gather-visitor';
 import {FixupTransformer} from './fixup-transformer';
-import type {ReadonlyJSONValue} from '../json';
 
 /**
  * Computes permanent hashes from all temp chunks in `memdag` and writes them
@@ -98,7 +97,7 @@ async function gatherTempChunks(
 }
 
 async function computeHashes(
-  gatheredChunks: ReadonlyMap<Hash, dag.Chunk<ReadonlyJSONValue>>,
+  gatheredChunks: ReadonlyMap<Hash, dag.Chunk>,
   mainHeadTempHash: Hash,
 ): Promise<[FixedChunks, ReadonlyMap<Hash, Hash>, Hash]> {
   const transformer = new ComputeHashTransformer(gatheredChunks, hashOf);

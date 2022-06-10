@@ -2,7 +2,6 @@ import {assert} from '../asserts';
 import * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import type {Hash} from '../hash';
-import type {Value} from '../kv/mod';
 import type {MaybePromise} from '../replicache';
 
 export type GatheredChunks = ReadonlyMap<Hash, dag.Chunk>;
@@ -14,7 +13,7 @@ export type FixedChunks = ReadonlyMap<Hash, dag.Chunk>;
 export class ComputeHashTransformer extends db.BaseTransformer {
   private readonly _fixedChunks: Map<Hash, dag.Chunk> = new Map();
   private readonly _gatheredChunks: GatheredChunks;
-  private readonly _hashFunc: (value: Value) => MaybePromise<Hash>;
+  private readonly _hashFunc: <V>(value: V) => MaybePromise<Hash>;
 
   /**
    * @param dagWrite The destination dag.
@@ -23,7 +22,7 @@ export class ComputeHashTransformer extends db.BaseTransformer {
    */
   constructor(
     gatheredChunks: GatheredChunks,
-    hashFunc: (value: Value) => MaybePromise<Hash>,
+    hashFunc: <V>(value: V) => MaybePromise<Hash>,
   ) {
     super();
     this._gatheredChunks = gatheredChunks;
@@ -34,9 +33,9 @@ export class ComputeHashTransformer extends db.BaseTransformer {
     return this._fixedChunks;
   }
 
-  override shouldSkip(oldhash: Hash): boolean {
+  override shouldSkip(oldHash: Hash): boolean {
     // Skip all chunks that we did not get from the source.
-    return !this._gatheredChunks.has(oldhash);
+    return !this._gatheredChunks.has(oldHash);
   }
 
   protected override shouldForceWrite(oldHash: Hash): boolean {
@@ -53,7 +52,7 @@ export class ComputeHashTransformer extends db.BaseTransformer {
     return gatheredChunk;
   }
 
-  protected override async writeChunk<D extends Value>(
+  protected override async writeChunk<D>(
     _h: Hash,
     data: D,
     getRefs: (data: D) => readonly Hash[],

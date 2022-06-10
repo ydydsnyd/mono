@@ -186,7 +186,7 @@ const SIZE_DOUBLE = 8;
  * - Use 1 byte tag
  * - Numbers are either stored as Int32 or Float6
  */
-export function getSizeOfValue(value: ReadonlyJSONValue): number {
+export function getSizeOfValue(value: unknown): number {
   switch (typeof value) {
     case 'string':
       // Assumes all strings are one byte strings. V8 writes OneByteString and
