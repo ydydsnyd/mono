@@ -8,6 +8,7 @@ export type {
   Poke,
   RequestOptions,
   ClientStateNotFoundReason,
+  PendingMutation,
 } from './replicache';
 export type {ReplicacheOptions} from './replicache-options';
 export type {

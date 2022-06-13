@@ -86,6 +86,8 @@ export const enum FromInternalValueReason {
   WriteTransactionScan,
   WriteTransactionGet,
   WriteTransactionMutateArgs,
+  // Pending Mutation
+  PendingMutationGet,
 
   // ReadTransactions are grouped together because of
   // `skipCloneReadTransactionReturnValue`

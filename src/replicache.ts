@@ -182,6 +182,12 @@ export type QueryInternal = <R>(
   body: (tx: ReadTransactionImpl) => MaybePromise<R>,
 ) => Promise<R>;
 
+export type PendingMutation = {
+  readonly name: string;
+  readonly id: number;
+  readonly args: ReadonlyJSONValue;
+};
+
 // eslint-disable-next-line @typescript-eslint/ban-types
 export class Replicache<MD extends MutatorDefs = {}> {
   /** The URL to use when doing a pull request. */
@@ -1449,6 +1455,32 @@ export class Replicache<MD extends MutatorDefs = {}> {
       this._idbDatabase,
       this._idbDatabases,
     );
+  }
+
+  /**
+   * List of pending mutations.
+   *
+   * Gives a list of local mutations that have
+   * mutationID > syncHead.mutationID that exists on the main branch.
+   *
+   * @experimental This method is experimental and may change in the future.
+   */
+  experimentalPendingMutations(): Promise<readonly PendingMutation[]> {
+    return this._memdag.withRead(async dagRead => {
+      const mainHeadHash = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
+      if (mainHeadHash === undefined) {
+        throw new Error('Missing main head');
+      }
+      const pending = await db.localMutations(mainHeadHash, dagRead);
+      return pending.map(p => ({
+        id: p.mutationID,
+        name: p.meta.mutatorName,
+        args: fromInternalValue(
+          p.meta.mutatorArgsJSON,
+          FromInternalValueReason.PendingMutationGet,
+        ),
+      }));
+    });
   }
 }
 
