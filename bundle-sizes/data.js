@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1655117039547,
+  "lastUpdate": 1655140323098,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -18167,6 +18167,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 22955,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cesara@gmail.com",
+            "name": "Cesar Alaestante",
+            "username": "cesara"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ca12caa1af9beb24965fb50b8bee4d83de715d80",
+          "message": "feat: experimental pending mutations (#146)\n\n* feat: experimental pending mutations\r\n\r\n* fix: fix test to work correctly\r\n\r\n* fix: pr requested changes\r\n\r\n* fix: update map call\r\n\r\nCo-authored-by: Erik Arvidsson <erik.arvidsson@gmail.com>\r\n\r\n* chore: fix merge from main\r\n\r\n* chore: clean up documentation\r\n\r\nCo-authored-by: Erik Arvidsson <erik.arvidsson@gmail.com>",
+          "timestamp": "2022-06-13T10:10:48-07:00",
+          "tree_id": "b9622cf0c56c50969f7f94c534106836e8eca950",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/ca12caa1af9beb24965fb50b8bee4d83de715d80"
+        },
+        "date": 1655140318590,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 176236,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 33000,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 175121,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 32679,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 79371,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23006,
             "unit": "bytes"
           }
         ]
