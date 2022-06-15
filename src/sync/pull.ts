@@ -29,6 +29,7 @@ import {
   ToInternalValueReason,
   deepEqual,
 } from '../internal-value.js';
+import {assert} from '../asserts.js';
 
 export const PULL_VERSION = 0;
 
@@ -448,6 +449,7 @@ async function addDiffsForIndexes(
     await oldIndex.withMap(read, async oldMap => {
       const newIndex = newIndexes.get(oldIndexName);
       if (newIndex !== undefined) {
+        assert(newIndex !== oldIndex);
         const diffs = await newIndex.withMap(read, async newMap => {
           return btree.diff(oldMap, newMap);
         });

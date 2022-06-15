@@ -24,6 +24,7 @@ import type {InternalDiff} from '../btree/node.js';
 import {allEntriesAsDiff} from '../btree/read.js';
 import type {DiffsMap} from '../sync/mod.js';
 import type {InternalValue} from '../internal-value.js';
+import {assert} from '../asserts.js';
 
 type IndexChangeMeta = {
   type: MetaType.IndexChange;
@@ -299,6 +300,7 @@ export class Write extends Read {
       const valueHash = await index.flush();
       if (generateDiffs) {
         const basisIndex = basisIndexes.get(name);
+        assert(index !== basisIndex);
         const indexDiffResult = await index.withMap(
           this._dagWrite,
           async map => {
