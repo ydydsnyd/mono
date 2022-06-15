@@ -23,9 +23,7 @@ abstract class Index<DagReadWrite, BTree> {
     cb: (map: BTree) => T | Promise<T>,
   ): Promise<T> {
     if (!this._map) {
-      await this._rwLock.withWrite(async () => {
-        return (this._map = this.createBTree(dagReadWrite));
-      });
+      this._map = this.createBTree(dagReadWrite);
     }
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     return this._rwLock.withRead(() => cb(this._map!));
