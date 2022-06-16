@@ -162,7 +162,7 @@ test('patch', async () => {
         1,
         'cookie',
         dagWrite,
-        db.readIndexesForWrite(chain[0]),
+        db.readIndexesForWrite(chain[0], dagWrite),
       );
       await dbWrite.put(lc, 'key', 'value');
 

@@ -92,7 +92,7 @@ export class Write extends Read {
       dagWrite,
     );
     const mutationID = basis.nextMutationID;
-    const indexes = readIndexesForWrite(basis);
+    const indexes = readIndexesForWrite(basis, dagWrite);
     return new Write(
       dagWrite,
       bTreeWrite,
@@ -138,7 +138,7 @@ export class Write extends Read {
       dagWrite,
     );
     const lastMutationID = basis.mutationID;
-    const indexes = readIndexesForWrite(basis);
+    const indexes = readIndexesForWrite(basis, dagWrite);
     return new Write(
       dagWrite,
       bTreeWrite,
@@ -159,7 +159,7 @@ export class Write extends Read {
       throw new Error('Not allowed');
     }
     const oldVal = lazy(() => this.map.get(key));
-    await updateIndexes(lc, this.indexes, this._dagWrite, key, oldVal, val);
+    await updateIndexes(lc, this.indexes, key, oldVal, val);
 
     await this.map.put(key, val);
   }
@@ -172,14 +172,7 @@ export class Write extends Read {
     // TODO(arv): This does the binary search twice. We can do better.
     const oldVal = lazy(() => this.map.get(key));
     if (oldVal !== undefined) {
-      await updateIndexes(
-        lc,
-        this.indexes,
-        this._dagWrite,
-        key,
-        oldVal,
-        undefined,
-      );
+      await updateIndexes(lc, this.indexes, key, oldVal, undefined);
     }
     return this.map.del(key);
   }
@@ -291,7 +284,7 @@ export class Write extends Read {
 
     let basisIndexes: Map<string, IndexRead>;
     if (generateDiffs && this._basis) {
-      basisIndexes = readIndexesForRead(this._basis);
+      basisIndexes = readIndexesForRead(this._basis, this._dagWrite);
     } else {
       basisIndexes = new Map();
     }
@@ -301,19 +294,11 @@ export class Write extends Read {
       if (generateDiffs) {
         const basisIndex = basisIndexes.get(name);
         assert(index !== basisIndex);
-        const indexDiffResult = await index.withMap(
-          this._dagWrite,
-          async map => {
-            if (basisIndex) {
-              return basisIndex.withMap(this._dagWrite, basisMap =>
-                btree.diff(basisMap, map),
-              );
-            }
 
-            // No basis. All keys are new.
-            return allEntriesAsDiff(map, 'add');
-          },
-        );
+        const indexDiffResult = await (basisIndex
+          ? btree.diff(basisIndex.map, index.map)
+          : // No basis. All keys are new.
+            allEntriesAsDiff(index.map, 'add'));
 
         if (indexDiffResult.length > 0) {
           diffMap.set(name, indexDiffResult);
@@ -331,10 +316,7 @@ export class Write extends Read {
       // deleted.
       for (const [name, basisIndex] of basisIndexes) {
         if (!this.indexes.has(name)) {
-          const indexDiffResult = await basisIndex.withMap(
-            this._dagWrite,
-            map => allEntriesAsDiff(map, 'del'),
-          );
+          const indexDiffResult = await allEntriesAsDiff(basisIndex.map, 'del');
           if (indexDiffResult.length > 0) {
             diffMap.set(name, indexDiffResult);
           }
@@ -414,7 +396,6 @@ export class Write extends Read {
 export async function updateIndexes(
   lc: LogContext,
   indexes: Map<string, IndexWrite>,
-  dagWrite: dag.Write,
   key: string,
   oldValGetter: () => Promise<InternalValue | undefined>,
   newVal: InternalValue | undefined,
@@ -423,34 +404,32 @@ export async function updateIndexes(
   for (const idx of indexes.values()) {
     if (key.startsWith(idx.meta.definition.keyPrefix)) {
       const oldVal = await oldValGetter();
-      await idx.withMap(dagWrite, async map => {
-        if (oldVal !== undefined) {
-          ps.push(
-            indexValue(
-              lc,
-              map,
-              IndexOperation.Remove,
-              key,
-              oldVal,
-              idx.meta.definition.jsonPointer,
-              idx.meta.definition.allowEmpty,
-            ),
-          );
-        }
-        if (newVal !== undefined) {
-          ps.push(
-            indexValue(
-              lc,
-              map,
-              IndexOperation.Add,
-              key,
-              newVal,
-              idx.meta.definition.jsonPointer,
-              idx.meta.definition.allowEmpty,
-            ),
-          );
-        }
-      });
+      if (oldVal !== undefined) {
+        ps.push(
+          indexValue(
+            lc,
+            idx.map,
+            IndexOperation.Remove,
+            key,
+            oldVal,
+            idx.meta.definition.jsonPointer,
+            idx.meta.definition.allowEmpty,
+          ),
+        );
+      }
+      if (newVal !== undefined) {
+        ps.push(
+          indexValue(
+            lc,
+            idx.map,
+            IndexOperation.Add,
+            key,
+            newVal,
+            idx.meta.definition.jsonPointer,
+            idx.meta.definition.allowEmpty,
+          ),
+        );
+      }
     }
   }
   await Promise.all(ps);
@@ -472,10 +451,14 @@ export async function initDB(
 
 export function readIndexesForWrite(
   commit: Commit<CommitMeta>,
+  dagWrite: dag.Write,
 ): Map<string, IndexWrite> {
   const m = new Map();
   for (const index of commit.indexes) {
-    m.set(index.definition.name, new IndexWrite(index, undefined));
+    m.set(
+      index.definition.name,
+      new IndexWrite(index, new BTreeWrite(dagWrite, index.valueHash)),
+    );
   }
   return m;
 }

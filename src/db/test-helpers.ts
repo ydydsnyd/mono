@@ -117,7 +117,7 @@ export async function addSnapshot(
       chain[chain.length - 1].nextMutationID,
       cookie,
       dagWrite,
-      readIndexesForWrite(chain[chain.length - 1]),
+      readIndexesForWrite(chain[chain.length - 1], dagWrite),
     );
 
     if (map) {

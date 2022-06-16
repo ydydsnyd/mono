@@ -158,20 +158,20 @@ test('clear', async () => {
     expect(keys).to.have.lengthOf(2);
     let index = w.indexes.get('idx');
     assertNotUndefined(index);
-    await index.withMap(dagWrite, async map => {
-      const keys = await asyncIterableToArray(map.keys());
+    {
+      const keys = await asyncIterableToArray(index.map.keys());
       expect(keys).to.have.lengthOf(2);
-    });
+    }
 
     await w.clear();
     const keys2 = await asyncIterableToArray(w.map.keys());
     expect(keys2).to.have.lengthOf(0);
     index = w.indexes.get('idx');
     assertNotUndefined(index);
-    await index.withMap(dagWrite, async map => {
-      const keys = await asyncIterableToArray(map.keys());
+    {
+      const keys = await asyncIterableToArray(index.map.keys());
       expect(keys).to.have.lengthOf(0);
-    });
+    }
 
     await w.commit(DEFAULT_HEAD_NAME);
   });
@@ -181,15 +181,15 @@ test('clear', async () => {
       whenceHead(DEFAULT_HEAD_NAME),
       dagRead,
     );
-    const indexes = readIndexesForRead(c);
+    const indexes = readIndexesForRead(c, dagRead);
     const keys = await asyncIterableToArray(r.keys());
     expect(keys).to.have.lengthOf(0);
     const index = indexes.get('idx');
     assertNotUndefined(index);
-    await index.withMap(dagRead, async map => {
-      const keys = await asyncIterableToArray(map.keys());
+    {
+      const keys = await asyncIterableToArray(index.map.keys());
       expect(keys).to.have.lengthOf(0);
-    });
+    }
   });
 });
 

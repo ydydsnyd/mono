@@ -209,7 +209,7 @@ test('try push', async () => {
         const read = await fromWhence(whenceHead(DEFAULT_HEAD_NAME), dagRead);
         let got = false;
 
-        const indexMap = await read.getMapForIndex('2');
+        const indexMap = read.getMapForIndex('2');
 
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         for await (const _ of indexMap.scan('')) {

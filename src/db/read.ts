@@ -38,12 +38,12 @@ export class Read {
     return this.map.isEmpty();
   }
 
-  async getMapForIndex(indexName: string): Promise<BTreeRead> {
+  getMapForIndex(indexName: string): BTreeRead {
     const idx = this.indexes.get(indexName);
     if (idx === undefined) {
       throw new Error(`Unknown index name: ${indexName}`);
     }
-    return idx.withMap(this._dagRead, map => map);
+    return idx.map;
   }
 
   get closed(): boolean {
@@ -93,7 +93,7 @@ export async function fromWhence(
   dagRead: dag.Read,
 ): Promise<Read> {
   const [, basis, map] = await readCommitForBTreeRead(whence, dagRead);
-  const indexes = readIndexesForRead(basis);
+  const indexes = readIndexesForRead(basis, dagRead);
   return new Read(dagRead, map, indexes);
 }
 
@@ -138,10 +138,14 @@ export async function readCommitForBTreeWrite(
 
 export function readIndexesForRead(
   commit: Commit<Meta>,
+  dagRead: dag.Read,
 ): Map<string, IndexRead> {
   const m = new Map();
   for (const index of commit.indexes) {
-    m.set(index.definition.name, new IndexRead(index, undefined));
+    m.set(
+      index.definition.name,
+      new IndexRead(index, new BTreeRead(dagRead, index.valueHash)),
+    );
   }
   return m;
 }

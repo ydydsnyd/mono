@@ -219,7 +219,7 @@ export async function handlePullResponse(
       response.lastMutationID,
       internalCookie,
       dagWrite,
-      db.readIndexesForWrite(lastIntegrated),
+      db.readIndexesForWrite(lastIntegrated, dagWrite),
     );
 
     await patch.apply(lc, dbWrite, response.patch);
@@ -230,7 +230,6 @@ export async function handlePullResponse(
       await updateIndexes(
         lc,
         dbWrite.indexes,
-        dagWrite,
         change.key,
         () =>
           Promise.resolve(
@@ -442,39 +441,32 @@ async function addDiffsForIndexes(
   read: dag.Read,
   diffsMap: DiffsMap,
 ) {
-  const oldIndexes = db.readIndexesForRead(mainCommit);
-  const newIndexes = db.readIndexesForRead(syncCommit);
+  const oldIndexes = db.readIndexesForRead(mainCommit, read);
+  const newIndexes = db.readIndexesForRead(syncCommit, read);
 
   for (const [oldIndexName, oldIndex] of oldIndexes) {
-    await oldIndex.withMap(read, async oldMap => {
-      const newIndex = newIndexes.get(oldIndexName);
-      if (newIndex !== undefined) {
-        assert(newIndex !== oldIndex);
-        const diffs = await newIndex.withMap(read, async newMap => {
-          return btree.diff(oldMap, newMap);
-        });
-
-        newIndexes.delete(oldIndexName);
-        if (diffs.length > 0) {
-          diffsMap.set(oldIndexName, diffs);
-        }
-      } else {
-        // old index name is not in the new indexes. All entries removed!
-        const diffs = await allEntriesAsDiff(oldMap, 'del');
-        if (diffs.length > 0) {
-          diffsMap.set(oldIndexName, diffs);
-        }
+    const newIndex = newIndexes.get(oldIndexName);
+    if (newIndex !== undefined) {
+      assert(newIndex !== oldIndex);
+      const diffs = await btree.diff(oldIndex.map, newIndex.map);
+      newIndexes.delete(oldIndexName);
+      if (diffs.length > 0) {
+        diffsMap.set(oldIndexName, diffs);
       }
-    });
+    } else {
+      // old index name is not in the new indexes. All entries removed!
+      const diffs = await allEntriesAsDiff(oldIndex.map, 'del');
+      if (diffs.length > 0) {
+        diffsMap.set(oldIndexName, diffs);
+      }
+    }
   }
 
   for (const [newIndexName, newIndex] of newIndexes) {
     // new index name is not in the old indexes. All keys added!
-    await newIndex.withMap(read, async newMap => {
-      const diffs = await allEntriesAsDiff(newMap, 'add');
-      if (diffs.length > 0) {
-        diffsMap.set(newIndexName, diffs);
-      }
-    });
+    const diffs = await allEntriesAsDiff(newIndex.map, 'add');
+    if (diffs.length > 0) {
+      diffsMap.set(newIndexName, diffs);
+    }
   }
 }

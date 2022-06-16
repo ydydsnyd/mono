@@ -410,7 +410,7 @@ test('begin try pull', async () => {
         );
         let got = false;
 
-        const indexMap = await read.getMapForIndex('2');
+        const indexMap = read.getMapForIndex('2');
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         for await (const _ of indexMap.scan('')) {
           got = true;
@@ -512,7 +512,7 @@ test('begin try pull', async () => {
               db.whenceHead(SYNC_HEAD_NAME),
               dagRead,
             );
-            const indexMap = await read.getMapForIndex('2');
+            const indexMap = read.getMapForIndex('2');
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             for await (const _ of indexMap.scan('')) {
               expect(false).to.be.true;
@@ -633,7 +633,7 @@ test('maybe end try pull', async () => {
         0,
         'sync_cookie',
         dagWrite,
-        db.readIndexesForWrite(chain[0]),
+        db.readIndexesForWrite(chain[0], dagWrite),
       );
       await w.put(lc, `key/${i}`, `${i}`);
       return await w.commit(SYNC_HEAD_NAME);
