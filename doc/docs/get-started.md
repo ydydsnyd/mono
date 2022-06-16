@@ -110,9 +110,10 @@ We need to add a UI element so that the user can toggle the "urgent" flag. This 
 ```tsx title="frontend/todo-item.tsx"
 <div className="view">
   ...
+  {/* add this button to the view div */}
   <button
     style={{all: 'revert'}}
-    onClick={() => onUpdate({urgent: !todo.urgent})}
+    onClick={() => onUpdate({id, urgent: !todo.urgent})}
   >
     !
   </button>
@@ -129,6 +130,7 @@ Just to prove to ourselves that this is happening, let's render some text when t
 
 ```tsx title="frontend/todo-item.tsx"
 <label onDoubleClick={handleDoubleClick}>
+  {/* Add the URGENT label if urgent flag is set */}
   {todo.text} {todo.urgent && '(URGENT!)'}
 </label>
 ```
