@@ -7,12 +7,25 @@ const forBundleSizeDashboard = process.argv.includes('--bundle-sizes');
 const perf = process.argv.includes('--perf');
 const debug = process.argv.includes('--debug');
 
-const sharedOptions = {
-  bundle: true,
-  target: 'es2018',
-  mangleProps: /^_./,
-  reserveProps: /^__.*__$/,
-};
+/**
+ * @param {boolean} minify
+ * @returns {{
+ *   bundle: boolean;
+ *   target: string;
+ *   mangleProps?: RegExp;
+ *   reserveProps?: RegExp;
+ * }}
+ */
+function sharedOptions(minify) {
+  const opts = {
+    bundle: true,
+    target: 'es2018',
+  };
+  if (minify) {
+    return {...opts, mangleProps: /^_./, reserveProps: /^__.*__$/};
+  }
+  return opts;
+}
 
 async function readPackageJSON() {
   const url = new URL('../package.json', import.meta.url);
@@ -31,7 +44,7 @@ async function readPackageJSON() {
 async function buildReplicache(options) {
   const {ext, ...restOfOptions} = options;
   await esbuild.build({
-    ...sharedOptions,
+    ...sharedOptions(options.minify),
     ...restOfOptions,
     // Use neutral to remove the automatic define for process.env.NODE_ENV
     platform: 'neutral',
@@ -53,7 +66,7 @@ async function buildCJS({minify = true, ext = 'js', sourcemap = true} = {}) {
 
 async function buildCLI() {
   await esbuild.build({
-    ...sharedOptions,
+    ...sharedOptions(true),
     platform: 'node',
     external: ['node:*'],
     outfile: 'out/cli.cjs',
@@ -75,7 +88,7 @@ if (perf) {
 } else {
   let opts = {};
   if (debug) {
-    opts = {minify: false, mangleProps: null};
+    opts = {minify: false};
   }
   await Promise.all([buildMJS(opts), buildCJS(opts), buildCLI()]);
 }
