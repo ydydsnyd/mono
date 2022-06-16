@@ -432,7 +432,7 @@ async function* getScanIteratorForIndexMap(
   dbRead: db.Read,
   options: ScanIndexOptions,
 ): AsyncIterable<IndexKeyEntry<InternalValue>> {
-  const map = await dbRead.getMapForIndex(options.indexName);
+  const map = dbRead.getMapForIndex(options.indexName);
   for await (const entry of map.scan(fromKeyForIndexScanInternal(options))) {
     // No need to clone the value since it will be cloned as needed by
     // ScanResultImpl.
