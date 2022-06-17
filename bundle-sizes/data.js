@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1655461365295,
+  "lastUpdate": 1655463567819,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -18869,6 +18869,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 22928,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c41252b601c62a12b06f5c93524f680103e8d0ae",
+          "message": "chore: Make BTree immutable (#159)\n\nWe used to mutate new btree nodes during a transaction. Now we create\r\nnew nodes if a node is mutated.\r\n\r\nThere is still one mutation and that is to update the hash when we\r\nfinally flush the new nodes in flush.",
+          "timestamp": "2022-06-17T10:58:27Z",
+          "tree_id": "d4715102767670be354326a9dc63d825b20c9503",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/c41252b601c62a12b06f5c93524f680103e8d0ae"
+        },
+        "date": 1655463564006,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 183061,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 33302,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 181946,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 32993,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 78552,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 22860,
             "unit": "bytes"
           }
         ]
