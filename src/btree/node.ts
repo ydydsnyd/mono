@@ -9,7 +9,7 @@ import {binarySearch as binarySearchWithFunc} from '../binary-search';
 import type {IndexKey} from '../mod.js';
 import {InternalValue, markValueAsInternal} from '../internal-value.js';
 
-type Entry<V> = [key: string, value: V];
+export type Entry<V> = [key: string, value: V];
 export type ReadonlyEntry<V> = readonly [key: string, value: V];
 
 export type ValueEntry = ReadonlyEntry<InternalValue>;
@@ -24,10 +24,7 @@ export const NODE_ENTRIES = 1;
 /**
  * The type of B+Tree node chunk data
  */
-type BaseNode<V> = readonly [
-  level: number,
-  entries: readonly ReadonlyEntry<V>[],
-];
+type BaseNode<V> = readonly [level: number, entries: ReadonlyArray<Entry<V>>];
 
 export type InternalNode = BaseNode<Hash>;
 
@@ -204,13 +201,15 @@ export function isDataNode(node: Node): node is DataNode {
 }
 
 abstract class NodeImpl<Value> {
-  entries: readonly ReadonlyEntry<Value>[];
+  entries: Array<Entry<Value>>;
   hash: Hash;
   abstract readonly level: number;
+  readonly isMutable: boolean;
 
-  constructor(entries: readonly ReadonlyEntry<Value>[], hash: Hash) {
+  constructor(entries: Array<Entry<Value>>, hash: Hash, isMutable: boolean) {
     this.entries = entries;
     this.hash = hash;
+    this.isMutable = isMutable;
   }
 
   abstract set(
@@ -250,11 +249,23 @@ export class DataNodeImpl extends NodeImpl<InternalValue> {
       deleteCount = 1;
     }
 
-    const newEntries = readonlySplice(this.entries, i, deleteCount, [
-      key,
-      value,
-    ]);
-    return tree.newDataNodeImpl(newEntries);
+    return this._splice(tree, i, deleteCount, [key, value]);
+  }
+
+  private _splice(
+    tree: BTreeWrite,
+    start: number,
+    deleteCount: number,
+    ...items: Entry<InternalValue>[]
+  ): DataNodeImpl {
+    if (this.isMutable) {
+      this.entries.splice(start, deleteCount, ...items);
+      tree.updateNode(this);
+      return this;
+    }
+
+    const entries = readonlySplice(this.entries, start, deleteCount, ...items);
+    return tree.newDataNodeImpl(entries);
   }
 
   async del(key: string, tree: BTreeWrite): Promise<DataNodeImpl> {
@@ -265,8 +276,7 @@ export class DataNodeImpl extends NodeImpl<InternalValue> {
     }
 
     // Found. Create new node or mutate existing one.
-    const newEntries = readonlySplice(this.entries, i, 1);
-    return tree.newDataNodeImpl(newEntries);
+    return this._splice(tree, i, 1);
   }
 
   async *keys(_tree: BTreeRead): AsyncGenerator<string, void> {
@@ -307,8 +317,13 @@ function* joinIterables<T>(...iters: Iterable<T>[]) {
 export class InternalNodeImpl extends NodeImpl<Hash> {
   readonly level: number;
 
-  constructor(entries: HashEntries, hash: Hash, level: number) {
-    super(entries, hash);
+  constructor(
+    entries: Array<Entry<Hash>>,
+    hash: Hash,
+    level: number,
+    isMutable: boolean,
+  ) {
+    super(entries, hash, isMutable);
     this.level = level;
   }
 
@@ -384,13 +399,19 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
 
     // TODO: There are cases where we can reuse the old nodes. Creating new ones
     // means more memory churn but also more writes to the underlying KV store.
-    const newEntries: HashEntry[] = [];
+    const newEntries: Entry<Hash>[] = [];
     for (const entries of partitions) {
       const node = tree.newNodeImpl(
         entries as Entry<Hash>[] | Entry<InternalValue>[],
         level,
       );
       newEntries.push([node.maxKey(), node.hash]);
+    }
+
+    if (this.isMutable) {
+      this.entries.splice(startIndex, removeCount, ...newEntries);
+      tree.updateNode(this);
+      return this;
     }
 
     const entries = readonlySplice(
@@ -408,6 +429,11 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
     index: number,
     newEntry: Entry<Hash>,
   ): InternalNodeImpl {
+    if (this.isMutable) {
+      this.entries.splice(index, 1, newEntry);
+      tree.updateNode(this);
+      return this;
+    }
     const entries = readonlySplice(this.entries, index, 1, newEntry);
     return tree.newInternalNodeImpl(entries, this.level);
   }
@@ -484,52 +510,56 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
     const {level} = this;
 
     if (length === 0) {
-      return new InternalNodeImpl([], newTempHash(), level - 1);
+      return new InternalNodeImpl([], newTempHash(), level - 1, true);
     }
 
     const output = await this.getChildren(start, start + length, tree);
 
     if (level > 1) {
-      const entries: HashEntry[] = [];
+      const entries: Entry<Hash>[] = [];
       for (const child of output as InternalNodeImpl[]) {
         entries.push(...child.entries);
       }
-      return new InternalNodeImpl(entries, newTempHash(), level - 1);
+      return new InternalNodeImpl(entries, newTempHash(), level - 1, true);
     }
 
     assert(level === 1);
-    const entries: ValueEntry[] = [];
+    const entries: Entry<InternalValue>[] = [];
     for (const child of output as DataNodeImpl[]) {
       entries.push(...child.entries);
     }
-    return new DataNodeImpl(entries, newTempHash());
+    return new DataNodeImpl(entries, newTempHash(), true);
   }
 }
 
 export function newNodeImpl(
-  entries: ValueEntries,
+  entries: Array<Entry<InternalValue>>,
   hash: Hash,
   level: number,
+  isMutable: boolean,
 ): DataNodeImpl;
 export function newNodeImpl(
-  entries: HashEntries,
+  entries: Array<Entry<Hash>>,
   hash: Hash,
   level: number,
+  isMutable: boolean,
 ): InternalNodeImpl;
 export function newNodeImpl(
-  entries: ValueEntries | HashEntries,
+  entries: Array<Entry<InternalValue>> | Array<Entry<Hash>>,
   hash: Hash,
   level: number,
+  isMutable: boolean,
 ): DataNodeImpl | InternalNodeImpl;
 export function newNodeImpl(
-  entries: ValueEntries | HashEntries,
+  entries: Array<Entry<InternalValue>> | Array<Entry<Hash>>,
   hash: Hash,
   level: number,
+  isMutable: boolean,
 ): DataNodeImpl | InternalNodeImpl {
   if (level === 0) {
-    return new DataNodeImpl(entries as ValueEntry[], hash);
+    return new DataNodeImpl(entries as Entry<InternalValue>[], hash, isMutable);
   }
-  return new InternalNodeImpl(entries as HashEntry[], hash, level);
+  return new InternalNodeImpl(entries as Entry<Hash>[], hash, level, isMutable);
 }
 
 export function isDataNodeImpl(
@@ -549,6 +579,7 @@ export function partition<T>(
   let sum = 0;
   let accum: T[] = [];
   for (const value of values) {
+    // for (let i = 0; i < values.length; i++) {
     const size = getValueSize(value);
     if (size >= max) {
       if (accum.length > 0) {
@@ -583,4 +614,4 @@ export function partition<T>(
 }
 
 export const emptyDataNode: DataNode = [0, []];
-export const emptyDataNodeImpl = new DataNodeImpl([], emptyHash);
+export const emptyDataNodeImpl = new DataNodeImpl([], emptyHash, false);

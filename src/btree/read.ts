@@ -4,6 +4,7 @@ import {Hash, emptyHash} from '../hash';
 import {
   DataNodeImpl,
   InternalNodeImpl,
+  Entry,
   emptyDataNodeImpl,
   newNodeImpl,
   findLeaf,
@@ -20,7 +21,6 @@ import {
   HashEntry,
   ValueEntries,
   internalizeBTreeNode,
-  ReadonlyEntry,
 } from './node';
 import {
   computeSplices,
@@ -45,13 +45,13 @@ export class BTreeRead implements AsyncIterable<ValueEntry> {
   private readonly _cache: Map<Hash, DataNodeImpl | InternalNodeImpl> =
     new Map();
 
-  readonly getEntrySize: <T>(e: ReadonlyEntry<T>) => number;
+  readonly getEntrySize: <T>(e: Entry<T>) => number;
   readonly chunkHeaderSize: number;
 
   constructor(
     dagRead: dag.Read,
     root: Hash = emptyHash,
-    getEntrySize: <T>(e: ReadonlyEntry<T>) => number = getSizeOfValue,
+    getEntrySize: <T>(e: Entry<T>) => number = getSizeOfValue,
     chunkHeaderSize = NODE_HEADER_SIZE,
   ) {
     this.rootHash = root;
@@ -72,7 +72,14 @@ export class BTreeRead implements AsyncIterable<ValueEntry> {
 
     const {data} = await this._dagRead.mustGetChunk(hash);
     internalizeBTreeNode(data);
-    const impl = newNodeImpl(data[NODE_ENTRIES], hash, data[NODE_LEVEL]);
+    const impl = newNodeImpl(
+      // We enforce that we do not mutate this at runtime by first checking the
+      // hash.
+      data[NODE_ENTRIES] as Entry<InternalValue>[],
+      hash,
+      data[NODE_LEVEL],
+      false,
+    );
     this._cache.set(hash, impl);
     return impl;
   }
@@ -265,7 +272,7 @@ export async function* scanForHash(
   }
 
   const data = await readNode(hash);
-  const entries: readonly ReadonlyEntry<unknown>[] = data[NODE_ENTRIES];
+  const entries: readonly Entry<unknown>[] = data[NODE_ENTRIES];
   let i = 0;
   if (fromKey) {
     i = binarySearch(fromKey, entries);

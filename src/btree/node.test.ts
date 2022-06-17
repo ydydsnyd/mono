@@ -7,13 +7,13 @@ import {
   findLeaf,
   InternalNode,
   partition,
+  Entry,
   NODE_LEVEL,
   NODE_ENTRIES,
   emptyDataNode,
   Diff,
   ValueEntry,
   internalizeBTreeNode,
-  ReadonlyEntry,
 } from './node';
 import {BTreeWrite} from './write';
 import {makeTestChunkHasher} from '../dag/chunk';
@@ -212,7 +212,7 @@ async function expectTree(
 
 let minSize: number;
 let maxSize: number;
-let getEntrySize: <T>(e: ReadonlyEntry<T>) => number;
+let getEntrySize: <T>(e: Entry<T>) => number;
 let chunkHeaderSize: number;
 
 setup(() => {
@@ -1202,7 +1202,7 @@ test('put/del - getSize', async () => {
 
 test('scan', async () => {
   const t = async (
-    entries: readonly ReadonlyEntry<ReadonlyJSONValue>[],
+    entries: Entry<ReadonlyJSONValue>[],
     fromKey = '',
     expectedEntries = entries,
   ) => {
@@ -1301,8 +1301,8 @@ test('scan', async () => {
 
 test('diff', async () => {
   const t = async (
-    oldEntries: readonly ReadonlyEntry<ReadonlyJSONValue>[],
-    newEntries: readonly ReadonlyEntry<ReadonlyJSONValue>[],
+    oldEntries: Entry<ReadonlyJSONValue>[],
+    newEntries: Entry<ReadonlyJSONValue>[],
     expectedDiff: Diff,
   ) => {
     const dagStore = new dag.TestStore();

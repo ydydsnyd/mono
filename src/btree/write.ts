@@ -6,18 +6,16 @@ import {BTreeRead} from './read';
 import {
   DataNodeImpl,
   InternalNodeImpl,
+  Entry,
   newNodeImpl,
   partition,
   emptyDataNode,
   isDataNodeImpl,
   InternalDiffOperation,
   ValueEntry,
-  HashEntry,
-  ReadonlyEntry,
-  HashEntries,
-  ValueEntries,
 } from './node';
 import type {CreateChunk} from '../dag/chunk';
+import {assert} from '../asserts';
 import type {InternalValue} from '../internal-value.js';
 
 export class BTreeWrite extends BTreeRead {
@@ -51,7 +49,7 @@ export class BTreeWrite extends BTreeRead {
     root: Hash = emptyHash,
     minSize = 8 * 1024,
     maxSize = 16 * 1024,
-    getEntrySize?: <T>(e: ReadonlyEntry<T>) => number,
+    getEntrySize?: <T>(e: Entry<T>) => number,
     chunkHeaderSize?: number,
   ) {
     super(dagWrite, root, getEntrySize, chunkHeaderSize);
@@ -68,32 +66,43 @@ export class BTreeWrite extends BTreeRead {
   }
 
   private _addToModified(node: DataNodeImpl | InternalNodeImpl): void {
+    assert(node.isMutable);
     this._modified.set(node.hash, node);
   }
 
-  newInternalNodeImpl(entries: HashEntries, level: number): InternalNodeImpl {
-    const n = new InternalNodeImpl(entries, newTempHash(), level);
+  updateNode(node: DataNodeImpl | InternalNodeImpl): void {
+    assert(node.isMutable);
+    this._modified.delete(node.hash);
+    node.hash = newTempHash();
+    this._addToModified(node);
+  }
+
+  newInternalNodeImpl(
+    entries: Array<Entry<Hash>>,
+    level: number,
+  ): InternalNodeImpl {
+    const n = new InternalNodeImpl(entries, newTempHash(), level, true);
     this._addToModified(n);
     return n;
   }
 
-  newDataNodeImpl(entries: ValueEntries): DataNodeImpl {
-    const n = new DataNodeImpl(entries, newTempHash());
+  newDataNodeImpl(entries: Entry<InternalValue>[]): DataNodeImpl {
+    const n = new DataNodeImpl(entries, newTempHash(), true);
     this._addToModified(n);
     return n;
   }
 
-  newNodeImpl(entries: ValueEntries, level: number): DataNodeImpl;
-  newNodeImpl(entries: HashEntries, level: number): InternalNodeImpl;
+  newNodeImpl(entries: Entry<InternalValue>[], level: number): DataNodeImpl;
+  newNodeImpl(entries: Entry<Hash>[], level: number): InternalNodeImpl;
   newNodeImpl(
-    entries: HashEntries | ValueEntries,
+    entries: Entry<Hash>[] | Entry<InternalValue>[],
     level: number,
   ): InternalNodeImpl | DataNodeImpl;
   newNodeImpl(
-    entries: HashEntries | ValueEntries,
+    entries: Entry<Hash>[] | Entry<InternalValue>[],
     level: number,
   ): InternalNodeImpl | DataNodeImpl {
-    const n = newNodeImpl(entries, newTempHash(), level);
+    const n = newNodeImpl(entries, newTempHash(), level, true);
     this._addToModified(n);
     return n;
   }
@@ -101,7 +110,7 @@ export class BTreeWrite extends BTreeRead {
   childNodeSize(node: InternalNodeImpl | DataNodeImpl): number {
     let sum = this.chunkHeaderSize;
     for (const entry of node.entries) {
-      sum += this.getEntrySize(entry as ReadonlyEntry<Hash | InternalValue>);
+      sum += this.getEntrySize(entry as Entry<Hash | InternalValue>);
     }
     return sum;
   }
@@ -146,13 +155,13 @@ export class BTreeWrite extends BTreeRead {
       if (this.childNodeSize(rootNode) > this.maxSize) {
         const headerSize = this.chunkHeaderSize;
         const partitions = partition(
-          rootNode.entries as HashEntry[],
+          rootNode.entries as Entry<Hash>[],
           this.getEntrySize,
           this.minSize - headerSize,
           this.maxSize - headerSize,
         );
         const {level} = rootNode;
-        const entries: HashEntry[] = partitions.map(entries => {
+        const entries: Entry<Hash>[] = partitions.map(entries => {
           const node = this.newNodeImpl(entries, level);
           return [node.maxKey(), node.hash];
         });
@@ -204,26 +213,23 @@ export class BTreeWrite extends BTreeRead {
         // Not modified, use the original.
         return hash;
       }
-
       if (isDataNodeImpl(node)) {
         const chunk = createChunk(node.toChunkData() as ReadonlyJSONValue, []);
         newChunks.push(chunk);
         return chunk.hash;
       }
-
       const refs: Hash[] = [];
-      const newEntries: HashEntry[] = node.entries.concat();
-      for (let i = 0; i < node.entries.length; i++) {
-        const entry = node.entries[i];
+
+      for (const entry of node.entries) {
         const childHash = entry[1];
         const newChildHash = walk(childHash, newChunks, createChunk);
         if (newChildHash !== childHash) {
-          newEntries[i] = [entry[0], newChildHash];
+          // MUTATES the node!
+          entry[1] = newChildHash;
         }
         refs.push(newChildHash);
       }
-      const chunkData = [node.level, newEntries];
-      const chunk = createChunk(chunkData, refs);
+      const chunk = createChunk(node.toChunkData(), refs);
       newChunks.push(chunk);
       return chunk.hash;
     };

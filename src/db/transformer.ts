@@ -15,6 +15,7 @@ import type {Hash} from '../hash';
 import type * as dag from '../dag/mod';
 import {HashRefType} from './hash-ref-type';
 import {mustGetChunk} from '../dag/store.js';
+import type {InternalValue} from '../internal-value.js';
 
 type OldHash = Hash;
 type NewHash = Hash;
@@ -269,20 +270,20 @@ export abstract class BaseTransformer {
   }
 
   async transformBTreeDataEntry(
-    entry: btree.ValueEntry,
-  ): Promise<btree.ValueEntry> {
+    entry: btree.Entry<InternalValue>,
+  ): Promise<btree.Entry<InternalValue>> {
     return entry;
   }
 
   private async _transformBTreeDataEntries(
-    entries: btree.ValueEntries,
-  ): Promise<btree.ValueEntries> {
+    entries: readonly btree.Entry<InternalValue>[],
+  ): Promise<readonly btree.Entry<InternalValue>[]> {
     return this._transformArray(entries, e => this.transformBTreeDataEntry(e));
   }
 
   async transformBTreeInternalEntry(
-    entry: btree.ReadonlyEntry<OldHash>,
-  ): Promise<btree.ReadonlyEntry<NewHash>> {
+    entry: btree.Entry<OldHash>,
+  ): Promise<btree.Entry<NewHash>> {
     const hash = await this._transformBTreeNodeWithCache(entry[1]);
     if (hash === entry[1]) {
       return entry;
@@ -291,8 +292,8 @@ export abstract class BaseTransformer {
   }
 
   private async _transformBTreeInternalEntries(
-    entries: readonly btree.ReadonlyEntry<OldHash>[],
-  ): Promise<readonly btree.ReadonlyEntry<NewHash>[]> {
+    entries: readonly btree.Entry<OldHash>[],
+  ): Promise<readonly btree.Entry<NewHash>[]> {
     return this._transformArray(entries, e =>
       this.transformBTreeInternalEntry(e),
     );

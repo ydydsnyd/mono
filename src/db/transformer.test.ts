@@ -10,10 +10,11 @@ import {
 import {Commit, fromHash as commitFromHash} from './commit';
 import type {IndexRecord, Meta} from './commit';
 import {Transformer} from './transformer';
-import {makeNewTempHashFunction} from '../hash';
-import {BTreeRead, BTreeWrite} from '../btree/mod';
-import type {DataNode, HashEntry, ValueEntry} from '../btree/node';
+import {Hash, makeNewTempHashFunction} from '../hash';
+import {BTreeRead, BTreeWrite, Entry} from '../btree/mod';
+import type {DataNode} from '../btree/node';
 import {assert} from '../asserts';
+import type {InternalValue} from '../internal-value.js';
 
 test('transformBTreeInternalEntry - noop', async () => {
   const dagStore = new dag.TestStore();
@@ -24,7 +25,7 @@ test('transformBTreeInternalEntry - noop', async () => {
     const dataNode: DataNode = [0, [['k', 42]]];
     const chunk = dagWrite.createChunk(dataNode, []);
     await dagWrite.putChunk(chunk);
-    const entry: HashEntry = ['key', chunk.hash];
+    const entry: Entry<Hash> = ['key', chunk.hash];
 
     expect(await transformer.transformBTreeInternalEntry(entry)).to.equal(
       entry,
@@ -109,8 +110,8 @@ test('transforms data entry', async () => {
 
   class TestTransformer extends Transformer {
     override async transformBTreeDataEntry(
-      entry: ValueEntry,
-    ): Promise<ValueEntry> {
+      entry: Entry<InternalValue>,
+    ): Promise<Entry<InternalValue>> {
       if (entry[0] === 'k') {
         return ['k', entry[0] + ' - Changed!'];
       }
