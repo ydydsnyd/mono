@@ -7,21 +7,17 @@ import {
   addSnapshot,
   Chain,
 } from './test-helpers';
-import {fakeHash, Hash} from '../hash';
-import type {Entry, Node} from '../btree/node';
+import {fakeHash} from '../hash';
+import type {HashEntries, Node, ValueEntries} from '../btree/node';
 import type {ReadonlyJSONValue} from '../json';
 import {Visitor} from './visitor';
 import {Commit, Meta, newLocal} from './commit';
-import {
-  toInternalValue,
-  InternalValue,
-  ToInternalValueReason,
-} from '../internal-value.js';
+import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 
 test('test that we get to the data nodes', async () => {
   const dagStore = new dag.TestStore();
 
-  const log: (readonly Entry<Hash>[] | readonly Entry<InternalValue>[])[] = [];
+  const log: (HashEntries | ValueEntries)[] = [];
   const chain: Chain = [];
 
   class TestVisitor extends Visitor {
