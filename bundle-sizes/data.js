@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1655465342305,
+  "lastUpdate": 1655468134259,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -18977,6 +18977,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 22928,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7c0430519f9e71f65d274b86ac5a49682386efe3",
+          "message": "fix: Allow scan to contain puts (#158)\n\nWe remove the read lock on BTreeWrite.\r\n\r\nThis means that it is possible for the tree to change during one of the\r\nread operations. If that happens then we start over from the new root.\r\nFor scan it means that we create a new scan from the root given the\r\nkey we are currently at.\r\n\r\nFixes #157",
+          "timestamp": "2022-06-17T05:14:33-07:00",
+          "tree_id": "1ac11d151416003eb6545d19ef19fbc28ac25c43",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/7c0430519f9e71f65d274b86ac5a49682386efe3"
+        },
+        "date": 1655468130550,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 183572,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 33354,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 182457,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33035,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 78710,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 22904,
             "unit": "bytes"
           }
         ]
