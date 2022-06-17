@@ -3,6 +3,7 @@ import * as json from './json';
 import {
   skipCloneReadTransactionReturnValue,
   skipInternalValueAsserts,
+  skipCloneInputValues,
 } from './config';
 
 // By using declare we tell the type system that there is a unique symbol.
@@ -49,17 +50,26 @@ export function assertInternalValue(v: unknown): asserts v is InternalValue {
 
 export const enum ToInternalValueReason {
   Test,
-  CookieFromResponse,
-  ApplyPatch,
   WriteTransactionPut,
   WriteTransactionMutateArgs,
+
+  // The rest skip the clone in release mode. (Controlled by
+  // `skipCloneInputValues`
+  CookieFromResponse = 0x100,
+  ApplyPatch,
 }
 
 export function toInternalValue(
   v: ReadonlyJSONValue,
-  _reason: ToInternalValueReason,
+  reason: ToInternalValueReason,
 ): InternalValue {
   if (skipInternalValueAsserts) {
+    if (
+      skipCloneInputValues &&
+      reason >= ToInternalValueReason.CookieFromResponse
+    ) {
+      return v as unknown as InternalValue;
+    }
     return deepClone(v) as unknown as InternalValue;
   }
 
@@ -75,7 +85,7 @@ export function toInternalValue(
 }
 
 export function markValueAsInternal(v: ReadonlyJSONValue): void {
-  if (isObject(v)) {
+  if (!skipInternalValueAsserts && isObject(v)) {
     internalValues.add(v);
   }
 }
@@ -86,11 +96,10 @@ export const enum FromInternalValueReason {
   WriteTransactionScan,
   WriteTransactionGet,
   WriteTransactionMutateArgs,
-  // Pending Mutation
   PendingMutationGet,
 
-  // ReadTransactions are grouped together because of
-  // `skipCloneReadTransactionReturnValue`
+  // The rest skip the clone in release mode (controlled by
+  // `skipCloneReadTransactionReturnValue`)
   ReadTransactionScan = 0x100,
   ReadTransactionGet,
 }

@@ -4,7 +4,7 @@ import {assert, assertArray, assertNumber, assertString} from '../asserts';
 import {Hash, emptyHash, newTempHash} from '../hash';
 import type {BTreeRead} from './read';
 import type {BTreeWrite} from './write';
-import {skipBTreeNodeAsserts} from '../config';
+import {skipBTreeNodeAsserts, skipInternalValueAsserts} from '../config';
 import {binarySearch as binarySearchWithFunc} from '../binary-search';
 import type {IndexKey} from '../mod.js';
 import {InternalValue, markValueAsInternal} from '../internal-value.js';
@@ -153,7 +153,7 @@ export function internalizeBTreeNode(
   v: unknown,
 ): asserts v is InternalNode | DataNode {
   assertBTreeNodeShape(v);
-  if (isDataNode(v)) {
+  if (!skipInternalValueAsserts && isDataNode(v)) {
     const entries = v[NODE_ENTRIES];
     for (const entry of entries) {
       markValueAsInternal(entry[1] as ReadonlyJSONValue);
