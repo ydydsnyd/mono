@@ -1,4 +1,4 @@
-import {RWLock} from '@rocicorp/lock';
+import {Lock} from '@rocicorp/lock';
 import type {ReadonlyJSONValue} from '../json';
 import type * as dag from '../dag/mod';
 import {Hash, emptyHash, newTempHash} from '../hash';
@@ -11,8 +11,6 @@ import {
   partition,
   emptyDataNode,
   isDataNodeImpl,
-  InternalDiffOperation,
-  ValueEntry,
 } from './node';
 import type {CreateChunk} from '../dag/chunk';
 import {assert} from '../asserts';
@@ -35,7 +33,7 @@ export class BTreeWrite extends BTreeRead {
    * them actually working, and it is not deterministic which one would finish
    * last.
    */
-  private readonly _rwLock = new RWLock();
+  private readonly _lock = new Lock();
   private readonly _modified: Map<Hash, DataNodeImpl | InternalNodeImpl> =
     new Map();
 
@@ -115,39 +113,8 @@ export class BTreeWrite extends BTreeRead {
     return sum;
   }
 
-  // Override BTree to wrap all of these in a read lock
-  override get(key: string): Promise<InternalValue | undefined> {
-    return this._rwLock.withRead(() => super.get(key));
-  }
-
-  override has(key: string): Promise<boolean> {
-    return this._rwLock.withRead(() => super.has(key));
-  }
-
-  override isEmpty(): Promise<boolean> {
-    return this._rwLock.withRead(() => super.isEmpty());
-  }
-
-  override async *scan(fromKey: string): AsyncIterableIterator<ValueEntry> {
-    yield* runRead(this._rwLock, super.scan(fromKey));
-  }
-
-  override async *keys(): AsyncIterableIterator<string> {
-    yield* runRead(this._rwLock, super.keys());
-  }
-
-  async *entries(): AsyncIterableIterator<ValueEntry> {
-    yield* runRead(this._rwLock, super.entries());
-  }
-
-  override async *diff(
-    last: BTreeRead,
-  ): AsyncIterableIterator<InternalDiffOperation> {
-    yield* runRead(this._rwLock, super.diff(last));
-  }
-
   put(key: string, value: InternalValue): Promise<void> {
-    return this._rwLock.withWrite(async () => {
+    return this._lock.withLock(async () => {
       const oldRootNode = await this.getNode(this.rootHash);
       const rootNode = await oldRootNode.set(key, value, this);
 
@@ -175,7 +142,7 @@ export class BTreeWrite extends BTreeRead {
   }
 
   del(key: string): Promise<boolean> {
-    return this._rwLock.withWrite(async () => {
+    return this._lock.withLock(async () => {
       const oldRootNode = await this.getNode(this.rootHash);
       const newRootNode = await oldRootNode.del(key, this);
 
@@ -196,7 +163,7 @@ export class BTreeWrite extends BTreeRead {
   }
 
   clear(): Promise<void> {
-    return this._rwLock.withWrite(async () => {
+    return this._lock.withLock(async () => {
       this._modified.clear();
       this.rootHash = emptyHash;
     });
@@ -234,7 +201,7 @@ export class BTreeWrite extends BTreeRead {
       return chunk.hash;
     };
 
-    return this._rwLock.withWrite(async () => {
+    return this._lock.withLock(async () => {
       const dagWrite = this._dagRead;
 
       if (this.rootHash === emptyHash) {
@@ -245,27 +212,11 @@ export class BTreeWrite extends BTreeRead {
       }
 
       const newChunks: dag.Chunk[] = [];
-
       const newRoot = walk(this.rootHash, newChunks, dagWrite.createChunk);
-
       await Promise.all(newChunks.map(chunk => dagWrite.putChunk(chunk)));
-
       this._modified.clear();
-
       this.rootHash = newRoot;
       return newRoot;
     });
-  }
-}
-
-async function* runRead<T>(
-  lock: RWLock,
-  ai: AsyncIterableIterator<T>,
-): AsyncIterableIterator<T> {
-  const release = await lock.read();
-  try {
-    yield* ai;
-  } finally {
-    release();
   }
 }

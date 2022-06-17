@@ -85,7 +85,7 @@ export class BTreeRead implements AsyncIterable<ValueEntry> {
   }
 
   async get(key: string): Promise<InternalValue | undefined> {
-    const leaf = await findLeaf(key, this.rootHash, this);
+    const leaf = await findLeaf(key, this.rootHash, this, this.rootHash);
     const index = binarySearch(key, leaf.entries);
     if (!binarySearchFound(index, leaf.entries, key)) {
       return undefined;
@@ -94,13 +94,18 @@ export class BTreeRead implements AsyncIterable<ValueEntry> {
   }
 
   async has(key: string): Promise<boolean> {
-    const leaf = await findLeaf(key, this.rootHash, this);
+    const leaf = await findLeaf(key, this.rootHash, this, this.rootHash);
     const index = binarySearch(key, leaf.entries);
     return binarySearchFound(index, leaf.entries, key);
   }
 
   async isEmpty(): Promise<boolean> {
+    const {rootHash} = this;
     const node = await this.getNode(this.rootHash);
+    // The root hash has changed, so the tree has been modified.
+    if (this.rootHash !== rootHash) {
+      return this.isEmpty();
+    }
     return node.entries.length === 0;
   }
 
@@ -109,15 +114,21 @@ export class BTreeRead implements AsyncIterable<ValueEntry> {
   // encoded IndexKey in an index map. Without encoding regular map keys the
   // caller has to deal with encoding and decoding the keys for the index map.
   scan(fromKey: string): AsyncIterableIterator<ValueEntry> {
-    return scanForHash(this.rootHash, fromKey, async (hash: Hash) => {
-      const cached = await this.getNode(hash);
-      if (cached) {
-        return cached.toChunkData();
-      }
-      const {data} = await this._dagRead.mustGetChunk(hash);
-      internalizeBTreeNode(data);
-      return data;
-    });
+    return scanForHash(
+      this.rootHash,
+      () => this.rootHash,
+      this.rootHash,
+      fromKey,
+      async (hash: Hash) => {
+        const cached = await this.getNode(hash);
+        if (cached) {
+          return cached.toChunkData();
+        }
+        const {data} = await this._dagRead.mustGetChunk(hash);
+        internalizeBTreeNode(data);
+        return data;
+      },
+    );
   }
 
   async *keys(): AsyncIterableIterator<string> {
@@ -263,6 +274,8 @@ function* diffEntries(
 type ReadNode = (hash: Hash) => Promise<InternalNode | DataNode>;
 
 export async function* scanForHash(
+  expectedRootHash: Hash,
+  getRootHash: () => Hash,
   hash: Hash,
   fromKey: string,
   readNode: ReadNode,
@@ -272,7 +285,8 @@ export async function* scanForHash(
   }
 
   const data = await readNode(hash);
-  const entries: readonly Entry<unknown>[] = data[NODE_ENTRIES];
+  // Clone to ensure we are not affected by mutated entry arrays.
+  const entries: readonly Entry<unknown>[] = [...data[NODE_ENTRIES]];
   let i = 0;
   if (fromKey) {
     i = binarySearch(fromKey, entries);
@@ -280,11 +294,29 @@ export async function* scanForHash(
 
   if (isInternalNode(data)) {
     for (; i < entries.length; i++) {
-      yield* scanForHash((entries[i] as HashEntry)[1], fromKey, readNode);
+      yield* scanForHash(
+        expectedRootHash,
+        getRootHash,
+        (entries[i] as HashEntry)[1],
+        fromKey,
+        readNode,
+      );
       fromKey = '';
     }
   } else {
     for (; i < entries.length; i++) {
+      const rootHash = getRootHash();
+      // If rootHash changed then we start a new iterator from the key.
+      if (expectedRootHash !== rootHash) {
+        yield* scanForHash(
+          rootHash,
+          getRootHash,
+          rootHash,
+          entries[i][0],
+          readNode,
+        );
+        return;
+      }
       yield entries[i] as ValueEntry;
     }
   }

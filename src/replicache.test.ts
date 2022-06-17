@@ -2537,3 +2537,158 @@ test('scan in write transaction', async () => {
 
   expect(x).to.equal(1);
 });
+
+test('scan mutate', async () => {
+  const log: unknown[] = [];
+  const rep = await replicacheForTesting('scan-mutate', {
+    mutators: {
+      addData,
+      async test(tx) {
+        for await (const entry of tx.scan().entries()) {
+          log.push(entry);
+          switch (entry[0]) {
+            case 'a':
+              // put upcoming entry
+              await tx.put('e', 4);
+              break;
+            case 'b':
+              // delete upcoming entry
+              await tx.del('c');
+              break;
+            case 'f':
+              // delete already visited
+              await tx.del('a');
+              break;
+            case 'g':
+              // set existing key to new value
+              await tx.put('h', 77);
+              break;
+            case 'h':
+              // set already visited key to new value
+              await tx.put('b', 11);
+              break;
+          }
+        }
+      },
+    },
+  });
+
+  await rep.mutate.addData({
+    a: 0,
+    b: 1,
+    c: 2,
+    d: 3,
+
+    f: 5,
+    g: 6,
+    h: 7,
+  });
+
+  await rep.mutate.test();
+  expect(log).to.deep.equal([
+    ['a', 0],
+    ['b', 1],
+    ['d', 3],
+    ['e', 4],
+    ['f', 5],
+    ['g', 6],
+    ['h', 77],
+  ]);
+});
+
+test('index scan mutate', async () => {
+  const log: unknown[] = [];
+  const rep = await replicacheForTesting('index-scan-mutate', {
+    mutators: {
+      addData,
+      async test(tx) {
+        for await (const entry of tx.scan({indexName: 'i'}).entries()) {
+          log.push(entry);
+
+          switch (entry[0][1]) {
+            case 'a':
+              // put upcoming entry
+              await tx.put('e', {a: '4'});
+              break;
+            case 'b':
+              // delete upcoming entry
+              await tx.del('c');
+              break;
+            case 'f':
+              // delete already visited
+              await tx.del('a');
+              break;
+            case 'g':
+              // set existing key to new value
+              await tx.put('h', {a: '77'});
+              break;
+            case 'h':
+              // set already visited key to new value
+              await tx.put('b', {a: '11'});
+              break;
+          }
+        }
+      },
+    },
+  });
+
+  await rep.createIndex({name: 'i', jsonPointer: '/a'});
+
+  await rep.mutate.addData({
+    a: {a: '0'},
+    b: {a: '1'},
+    c: {a: '2'},
+    d: {a: '3'},
+
+    f: {a: '5'},
+    g: {a: '6'},
+    h: {a: '7'},
+  });
+
+  await rep.mutate.test();
+  expect(log).to.deep.equal([
+    [['0', 'a'], {a: '0'}],
+    [['1', 'b'], {a: '1'}],
+    [['3', 'd'], {a: '3'}],
+    [['4', 'e'], {a: '4'}],
+    [['5', 'f'], {a: '5'}],
+    [['6', 'g'], {a: '6'}],
+    [['77', 'h'], {a: '77'}],
+  ]);
+});
+
+test.only('concurrent puts and gets', async () => {
+  const rep = await replicacheForTesting('concurrent-puts', {
+    mutators: {
+      async insert(tx, args: Record<string, number>) {
+        const ps = Object.entries(args).map(([k, v]) => tx.put(k, v));
+        await Promise.all(ps);
+      },
+      async race(tx) {
+        // Conceptually the put could finish first but in practice that does not
+        // happen.
+        const p1 = tx.put('a', 4);
+        const p2 = tx.get('a');
+        await Promise.all([p1, p2]);
+        const v = await p2;
+        await tx.put('d', v ?? null);
+      },
+    },
+  });
+
+  await rep.mutate.insert({a: 1, b: 2, c: 3});
+
+  const keys = ['a', 'b', 'c'];
+  const values = await rep.query(tx => {
+    const ps = keys.map(k => tx.get(k));
+    return Promise.all(ps);
+  });
+  expect(values).to.deep.equal([1, 2, 3]);
+
+  await rep.mutate.race();
+  const v = await rep.query(tx => tx.get('d'));
+  expect(v === 1 || v === 4).to.be.true;
+
+  const v2 = await rep.query(tx => tx.get('a'));
+  expect(v2).to.equal(4);
+});

@@ -97,7 +97,7 @@ test('findLeaf', async () => {
       source: BTreeRead,
       expected: DataNode,
     ) => {
-      const actual = await findLeaf(key, hash, source);
+      const actual = await findLeaf(key, hash, source, source.rootHash);
       expect(actual.level).to.deep.equal(expected[NODE_LEVEL]);
       expect(actual.entries).to.deep.equal(expected[NODE_ENTRIES]);
     };

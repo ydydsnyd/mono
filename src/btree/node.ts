@@ -106,8 +106,13 @@ export async function findLeaf(
   key: string,
   hash: Hash,
   source: BTreeRead,
+  expectedRootHash: Hash,
 ): Promise<DataNodeImpl> {
   const node = await source.getNode(hash);
+  // The root changed. Try again
+  if (expectedRootHash !== source.rootHash) {
+    return findLeaf(key, source.rootHash, source, source.rootHash);
+  }
   if (isDataNodeImpl(node)) {
     return node;
   }
@@ -117,7 +122,7 @@ export async function findLeaf(
     i--;
   }
   const entry = entries[i];
-  return findLeaf(key, entry[1], source);
+  return findLeaf(key, entry[1], source, expectedRootHash);
 }
 
 /**
