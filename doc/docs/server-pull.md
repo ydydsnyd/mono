@@ -119,12 +119,20 @@ Replicache will exponentially back off sending pushes in the case of both networ
 The response body is a JSON object of the [`PullResponse`](api#PullResponse) type:
 
 ```ts
-type PullResponse = {
-  cookie: JSONValue;
+export type PullResponse = PullResponseOK | ClientStateNotFoundResponse;
+
+export type PullResponseOK = {
+  cookie?: ReadonlyJSONValue;
   lastMutationID: number;
   patch: PatchOperation[];
 };
+
+export type ClientStateNotFoundResponse = {
+  error: 'ClientStateNotFound';
+};
 ```
+
+The `ClientStateNotFound` response should be sent by the server when `lastMutationID` is greater than zero and the specified `clientID` is not known. This causes the client's [onClientStateNotFound](https://doc.replicache.dev/api/classes/Replicache#onclientstatenotfound) method to be called, which by default refreshes the page, assigning a new `clientID`.
 
 ### `cookie`
 
