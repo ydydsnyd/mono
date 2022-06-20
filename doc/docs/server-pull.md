@@ -132,7 +132,7 @@ export type ClientStateNotFoundResponse = {
 };
 ```
 
-The `ClientStateNotFound` response should be sent by the server when `lastMutationID` is greater than zero and the specified `clientID` is not known. This causes the client's [onClientStateNotFound](https://doc.replicache.dev/api/classes/Replicache#onclientstatenotfound) method to be called, which by default refreshes the page, assigning a new `clientID`.
+The `ClientStateNotFound` response MAY be sent by the server when `lastMutationID` is greater than zero and the specified `clientID` is not known. This causes Replicache's [onClientStateNotFound](https://doc.replicache.dev/api/classes/Replicache#onclientstatenotfound) method to be called. The default implementation of `onClientStateNotFound` refreshes the page, assigning a new `clientID`.
 
 ### `cookie`
 
