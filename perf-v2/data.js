@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1655810362911,
+  "lastUpdate": 1655810616559,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Benchmark": [
@@ -61280,6 +61280,135 @@ window.BENCHMARK_DATA = {
             "unit": "median ms",
             "range": "±5.7%",
             "extra": "startup scan 1024x100 from 1024x100000 stored 50/75/90/95%=33.10/35.50/38.40/38.80 ms avg=37.41 ms (14 runs sampled)"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3ba9b3536fd1c998aad7388b0cd9dee251c448e0",
+          "message": "chore: Add DD31 compile time flag (#166)\n\nThis adds a global flag called `DD31` which gets stripped when building\r\nthe npm package.\r\n\r\nThe tests can now also be run as:\r\n\r\n```\r\nDD31=true npm run test\r\n```\r\n\r\nto enable the flag in the tests.",
+          "timestamp": "2022-06-21T04:20:52-07:00",
+          "tree_id": "ad380a3caa0a09d9105a2403e356128d041d9657",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/3ba9b3536fd1c998aad7388b0cd9dee251c448e0"
+        },
+        "date": 1655810612705,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "writeSubRead 1MB total, 64 subs total, 5 subs dirty, 16kb read per sub",
+            "value": 1.2000000476837158,
+            "unit": "median ms",
+            "range": "±1.8%",
+            "extra": "writeSubRead 1MB total, 64 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=1.20/1.40/2.90/3.00 ms avg=1.47 ms (19 runs sampled)"
+          },
+          {
+            "name": "writeSubRead 4MB total, 128 subs total, 5 subs dirty, 16kb read per sub",
+            "value": 2,
+            "unit": "median ms",
+            "range": "±3.0%",
+            "extra": "writeSubRead 4MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=2.00/2.20/4.30/5.00 ms avg=2.47 ms (15 runs sampled)"
+          },
+          {
+            "name": "writeSubRead 16MB total, 128 subs total, 5 subs dirty, 16kb read per sub",
+            "value": 5.1000001430511475,
+            "unit": "median ms",
+            "range": "±9.0%",
+            "extra": "writeSubRead 16MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=5.10/6.10/14.10/14.10 ms avg=6.41 ms (7 runs sampled)"
+          },
+          {
+            "name": "writeSubRead 64MB total, 128 subs total, 5 subs dirty, 16kb read per sub",
+            "value": 3.5999999046325684,
+            "unit": "median ms",
+            "range": "±18.8%",
+            "extra": "writeSubRead 64MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=3.60/6.30/22.40/22.40 ms avg=7.34 ms (7 runs sampled)"
+          },
+          {
+            "name": "populate 1024x1000 (clean, indexes: 0)",
+            "value": 31,
+            "unit": "median ms",
+            "range": "±59.8%",
+            "extra": "populate 1024x1000 (clean, indexes: 0) 50/75/90/95%=31.00/33.30/38.60/90.80 ms avg=40.58 ms (13 runs sampled)"
+          },
+          {
+            "name": "populate 1024x1000 (clean, indexes: 1)",
+            "value": 42.299999952316284,
+            "unit": "median ms",
+            "range": "±73.1%",
+            "extra": "populate 1024x1000 (clean, indexes: 1) 50/75/90/95%=42.30/53.40/115.40/115.40 ms avg=62.53 ms (8 runs sampled)"
+          },
+          {
+            "name": "populate 1024x1000 (clean, indexes: 2)",
+            "value": 61.30000019073486,
+            "unit": "median ms",
+            "range": "±67.1%",
+            "extra": "populate 1024x1000 (clean, indexes: 2) 50/75/90/95%=61.30/69.30/128.40/128.40 ms avg=88.36 ms (7 runs sampled)"
+          },
+          {
+            "name": "populate 1024x10000 (clean, indexes: 0)",
+            "value": 321.7999999523163,
+            "unit": "median ms",
+            "range": "±35.3%",
+            "extra": "populate 1024x10000 (clean, indexes: 0) 50/75/90/95%=321.80/325.10/357.10/357.10 ms avg=402.63 ms (7 runs sampled)"
+          },
+          {
+            "name": "populate 1024x10000 (clean, indexes: 1)",
+            "value": 564.6000001430511,
+            "unit": "median ms",
+            "range": "±80.0%",
+            "extra": "populate 1024x10000 (clean, indexes: 1) 50/75/90/95%=564.60/583.70/644.60/644.60 ms avg=735.06 ms (7 runs sampled)"
+          },
+          {
+            "name": "populate 1024x10000 (clean, indexes: 2)",
+            "value": 805.7000000476837,
+            "unit": "median ms",
+            "range": "±54.9%",
+            "extra": "populate 1024x10000 (clean, indexes: 2) 50/75/90/95%=805.70/817.00/860.60/860.60 ms avg=1033.23 ms (7 runs sampled)"
+          },
+          {
+            "name": "scan 1024x1000",
+            "value": 2.1000001430511475,
+            "unit": "median ms",
+            "range": "±3.4%",
+            "extra": "scan 1024x1000 50/75/90/95%=2.10/2.50/4.60/5.50 ms avg=2.48 ms (19 runs sampled)"
+          },
+          {
+            "name": "scan 1024x10000",
+            "value": 16.299999952316284,
+            "unit": "median ms",
+            "range": "±8.0%",
+            "extra": "scan 1024x10000 50/75/90/95%=16.30/16.80/23.70/24.30 ms avg=18.71 ms (19 runs sampled)"
+          },
+          {
+            "name": "create index 1024x5000",
+            "value": 107.09999990463257,
+            "unit": "median ms",
+            "range": "±27.2%",
+            "extra": "create index 1024x5000 50/75/90/95%=107.10/112.20/134.30/134.30 ms avg=139.47 ms (7 runs sampled)"
+          },
+          {
+            "name": "startup read 1024x100 from 1024x100000 stored",
+            "value": 134.59999990463257,
+            "unit": "median ms",
+            "range": "±3.6%",
+            "extra": "startup read 1024x100 from 1024x100000 stored 50/75/90/95%=134.60/137.80/138.20/138.20 ms avg=171.60 ms (7 runs sampled)"
+          },
+          {
+            "name": "startup scan 1024x100 from 1024x100000 stored",
+            "value": 31.5,
+            "unit": "median ms",
+            "range": "±8.4%",
+            "extra": "startup scan 1024x100 from 1024x100000 stored 50/75/90/95%=31.50/34.60/35.60/39.90 ms avg=36.04 ms (14 runs sampled)"
           }
         ]
       }
