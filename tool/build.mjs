@@ -6,6 +6,7 @@ import {readFile} from 'fs/promises';
 const forBundleSizeDashboard = process.argv.includes('--bundle-sizes');
 const perf = process.argv.includes('--perf');
 const debug = process.argv.includes('--debug');
+const dd31 = process.argv.includes('--dd31');
 
 /**
  * @param {boolean} minify
@@ -52,6 +53,7 @@ async function buildReplicache(options) {
     entryPoints: ['src/mod.ts'],
     define: {
       REPLICACHE_VERSION: JSON.stringify((await readPackageJSON()).version),
+      DD31: JSON.stringify(dd31),
     },
   });
 }

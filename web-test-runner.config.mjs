@@ -26,6 +26,7 @@ const config = {
       define: {
         'process.env.NODE_ENV': '"development"',
         'REPLICACHE_VERSION': JSON.stringify(json.version),
+        'DD31': JSON.stringify(process.env.DD31 === 'true'),
       },
     }),
   ],
