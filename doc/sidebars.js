@@ -3,7 +3,16 @@ const {toEditorSettings} = require('typescript');
 module.exports = {
   docs: [
     // TODO clean out the unused docs
-    'get-started',
+    {
+      'Get Started': [
+        'quickstart',
+        'app-structure',
+        'first-replicache-feature',
+        'local-postgres',
+        'deploy',
+        'next-steps',
+      ],
+    },
     {
       Examples: ['example-todo', 'example-repliear', 'example-replidraw'],
     },
