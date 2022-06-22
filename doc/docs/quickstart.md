@@ -28,7 +28,7 @@ npm run dev
 
 # 🎉 Tada!
 
-You now have a simple todo app powered by Replicache, <a href="https://nextjs.org/">Next.js</a>, <a href="https://www.postgresql.org/">Postgres</a>, and <a href="https://pusher.com/">Pusher</a>.
+You now have a simple todo app powered by Replicache, <a href="https://nextjs.org/">Next.js</a>, and <a href="https://www.postgresql.org/">Postgres</a>.
 
 <p class="text--center">
   <img src="/img/setup/todo.webp" width="650"/>
