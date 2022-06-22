@@ -7,8 +7,7 @@ The easiest way to get started is with our Todo starter app. This app is a good 
 
 # Prerequisites
 
-1. [Node.js](https://nodejs.dev/) v14.19.1 or greater. Check which version you have by running `node --version` on the command line. If you don't have Node or the version is old, install at https://nodejs.dev/download.
-2. [Sign up for a free pusher.com account](https://pusher.com/) and create a new "channels" app.
+You'll need [Node.js](https://nodejs.dev/) v14.19.1 or greater.
 
 # Install
 
@@ -24,15 +23,10 @@ npx replicache get-license
 
 export NEXT_PUBLIC_REPLICACHE_LICENSE_KEY="<your license key>"
 
-# Get the Pusher environment variables from the "App Keys" section
-# of the Pusher App UI. See: https://i.imgur.com/7DNmTKZ.png
-export NEXT_PUBLIC_PUSHER_APP_ID=<appid>
-export NEXT_PUBLIC_PUSHER_KEY=<pusherkey>
-export NEXT_PUBLIC_PUSHER_SECRET=<pushersecret>
-export NEXT_PUBLIC_PUSHER_CLUSTER=<pushercluster>
-
 npm run dev
 ```
+
+# 🎉 Tada!
 
 You now have a simple todo app powered by Replicache, <a href="https://nextjs.org/">Next.js</a>, <a href="https://www.postgresql.org/">Postgres</a>, and <a href="https://pusher.com/">Pusher</a>.
 
@@ -40,6 +34,26 @@ You now have a simple todo app powered by Replicache, <a href="https://nextjs.or
   <img src="/img/setup/todo.webp" width="650"/>
 </p>
 
-Open the app in a browser window, copy the resulting url, and open a second browser window to it. With the two windows side-by-side, add some items in one window and see them reflected in the other. Tada! Instant UI and Realtime Sync!
+Open the app in a browser window, copy the resulting url, and open a second browser window to it. With the two windows side-by-side, add some items in one window and see them reflected in the other. Woo!
+
+:::note
 
 By default the dev backend stores data in memory, so if you restart the server, the data is lost. See [Local Postgres](/local-postgres) for setting up local persistence.
+
+:::
+
+# Other Things to Try
+
+- Open the web inspector in one window and throttle the network. Notice that the UI still responds instantly.
+- Open the web inspector in one window and completely disable the network. When the network comes back, everything syncs up!
+- Disable the network and engineer a conflict. For example, delete a todo in the online tab, and edit the same todo in the offline tab. When the offline tab comes back both todos will be deleted.
+
+The thing to understand is that **you do not have to write _any_ code to get these behaviors**. You write your Replicache app in terms of simple _mutators_ and _subscriptions_, very much like a Redux app, and you automatically get:
+
+- Optimistic mutations everywhere, automatically.
+- Correct rollback and reconciliaton when server mutation is different than optimistic.
+- Instant UI, even when network is slow.
+- Offline support.
+- An intuitive way to resolve conflicting mutations.
+
+The [next sections](/app-structure) walk you through the basic structure of this starter app, and explain how Replicache provides these benefits.
