@@ -8,9 +8,7 @@ module.exports = {
         'quickstart',
         'app-structure',
         'first-replicache-feature',
-        'local-postgres',
-        'deploy',
-        'next-steps',
+        {'Next Steps': ['learn', 'local-postgres', 'deploy']},
       ],
     },
     {
