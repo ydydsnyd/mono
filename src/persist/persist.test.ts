@@ -109,7 +109,7 @@ suite('persist on top of different kinds of commits', () => {
     perdag.clear();
     chain.length = 0;
     await initClientWithClientID(clientID, perdag);
-    await addGenesis(chain, memdag);
+    await addGenesis(chain, memdag, clientID);
   });
 
   teardown(async () => {
@@ -121,55 +121,60 @@ suite('persist on top of different kinds of commits', () => {
   });
 
   test('local', async () => {
-    await addLocal(chain, memdag);
+    await addLocal(chain, memdag, clientID);
   });
 
   test('snapshot', async () => {
-    await addSnapshot(chain, memdag, [
-      ['a', 0],
-      ['b', 1],
-      ['c', 2],
-    ]);
+    await addSnapshot(
+      chain,
+      memdag,
+      [
+        ['a', 0],
+        ['b', 1],
+        ['c', 2],
+      ],
+      clientID,
+    );
   });
 
   test('local + syncSnapshot', async () => {
-    await addLocal(chain, memdag);
-    await addSyncSnapshot(chain, memdag, 1);
+    await addLocal(chain, memdag, clientID);
+    await addSyncSnapshot(chain, memdag, 1, clientID);
   });
 
   test('local + local', async () => {
-    await addLocal(chain, memdag);
-    await addLocal(chain, memdag);
+    await addLocal(chain, memdag, clientID);
+    await addLocal(chain, memdag, clientID);
   });
 
   test('local on to of a persisted local', async () => {
-    await addLocal(chain, memdag);
+    await addLocal(chain, memdag, clientID);
     await testPersist();
-    await addLocal(chain, memdag);
+    await addLocal(chain, memdag, clientID);
   });
 
   test('local * 3', async () => {
-    await addLocal(chain, memdag);
-    await addLocal(chain, memdag);
-    await addLocal(chain, memdag);
+    await addLocal(chain, memdag, clientID);
+    await addLocal(chain, memdag, clientID);
+    await addLocal(chain, memdag, clientID);
   });
 
   test('local + snapshot', async () => {
-    await addLocal(chain, memdag);
-    await addSnapshot(chain, memdag, [['changed', 3]]);
+    await addLocal(chain, memdag, clientID);
+    await addSnapshot(chain, memdag, [['changed', 3]], clientID);
   });
 
   test('local + snapshot + local', async () => {
-    await addLocal(chain, memdag);
-    await addSnapshot(chain, memdag, [['changed', 4]]);
-    await addLocal(chain, memdag);
+    await addLocal(chain, memdag, clientID);
+    await addSnapshot(chain, memdag, [['changed', 4]], clientID);
+    await addLocal(chain, memdag, clientID);
   });
 
   test('local + snapshot + local + syncSnapshot', async () => {
-    await addLocal(chain, memdag);
-    await addSnapshot(chain, memdag, [['changed', 5]]);
-    await addLocal(chain, memdag);
-    await addSyncSnapshot(chain, memdag, 3);
+    await addLocal(chain, memdag, clientID);
+    await addSnapshot(chain, memdag, [['changed', 5]], clientID);
+    await addLocal(chain, memdag, clientID);
+    await addSyncSnapshot(chain, memdag, 3, clientID);
 
     const syncHeadCommitBefore = await memdag.withRead(async dagRead => {
       const h = await dagRead.getHead(sync.SYNC_HEAD_NAME);
@@ -204,8 +209,8 @@ suite('persist on top of different kinds of commits', () => {
   });
 
   test('local + indexChange', async () => {
-    await addLocal(chain, memdag);
-    await addIndexChange(chain, memdag);
+    await addLocal(chain, memdag, clientID);
+    await addIndexChange(chain, memdag, clientID);
   });
 });
 
@@ -213,11 +218,11 @@ test('We get a MissingClientException during persist if client is missing', asyn
   const {memdag, perdag, chain, testPersist, clientID} = setupPersistTest();
   await initClientWithClientID(clientID, perdag);
 
-  await addGenesis(chain, memdag);
-  await addLocal(chain, memdag);
+  await addGenesis(chain, memdag, clientID);
+  await addLocal(chain, memdag, clientID);
   await testPersist();
 
-  await addLocal(chain, memdag);
+  await addLocal(chain, memdag, clientID);
 
   await clock.tickAsync(14 * 24 * 60 * 60 * 1000);
 

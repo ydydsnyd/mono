@@ -11,15 +11,17 @@ import {
 import {GatherVisitor} from './gather-visitor';
 import {TestMemStore} from '../kv/test-mem-store';
 import {sortByHash} from '../dag/test-store';
+import type {JSONObject} from '../json.js';
 
 test('dag with no temp hashes gathers nothing', async () => {
+  const clientID = 'client-id';
   const dagStore = new dag.TestStore();
 
   const chain: Chain = [];
-  await addGenesis(chain, dagStore);
-  await addLocal(chain, dagStore);
-  await addIndexChange(chain, dagStore);
-  await addLocal(chain, dagStore);
+  await addGenesis(chain, dagStore, clientID);
+  await addLocal(chain, dagStore, clientID);
+  await addIndexChange(chain, dagStore, clientID);
+  await addLocal(chain, dagStore, clientID);
 
   await dagStore.withRead(async dagRead => {
     for (const commit of chain) {
@@ -29,7 +31,7 @@ test('dag with no temp hashes gathers nothing', async () => {
     }
   });
 
-  await addSnapshot(chain, dagStore, undefined);
+  await addSnapshot(chain, dagStore, undefined, clientID);
 
   await dagStore.withRead(async dagRead => {
     const visitor = new GatherVisitor(dagRead);
@@ -38,7 +40,8 @@ test('dag with no temp hashes gathers nothing', async () => {
   });
 });
 
-test('dag with only temp hashes gathers eveything', async () => {
+test('dag with only temp hashes gathers everything', async () => {
+  const clientID = 'client-id';
   const kvStore = new TestMemStore();
   const dagStore = new dag.TestStore(kvStore, newTempHash, () => void 0);
   const chain: Chain = [];
@@ -53,25 +56,26 @@ test('dag with only temp hashes gathers eveything', async () => {
     });
   };
 
-  await addGenesis(chain, dagStore);
-  await addLocal(chain, dagStore);
+  await addGenesis(chain, dagStore, clientID);
+  await addLocal(chain, dagStore, clientID);
   await testGatheredChunks();
 
-  await addIndexChange(chain, dagStore);
-  await addLocal(chain, dagStore);
+  await addIndexChange(chain, dagStore, clientID);
+  await addLocal(chain, dagStore, clientID);
   await testGatheredChunks();
 
-  await addSnapshot(chain, dagStore, undefined);
+  await addSnapshot(chain, dagStore, undefined, clientID);
   await testGatheredChunks();
 });
 
 test('dag with some permanent hashes and some temp hashes on top', async () => {
+  const clientID = 'client-id';
   const kvStore = new TestMemStore();
   const perdag = new dag.TestStore(kvStore);
   const chain: Chain = [];
 
-  await addGenesis(chain, perdag);
-  await addLocal(chain, perdag);
+  await addGenesis(chain, perdag, clientID);
+  await addLocal(chain, perdag, clientID);
 
   await perdag.withRead(async dagRead => {
     const visitor = new GatherVisitor(dagRead);
@@ -85,11 +89,23 @@ test('dag with some permanent hashes and some temp hashes on top', async () => {
     () => void 0,
   );
 
-  await addLocal(chain, memdag);
+  await addLocal(chain, memdag, clientID);
 
   await memdag.withRead(async dagRead => {
     const visitor = new GatherVisitor(dagRead);
     await visitor.visitCommit(chain[chain.length - 1].chunk.hash);
+    const meta: JSONObject = {
+      basisHash: 'fakehash000000000000000000000003',
+      mutationID: 2,
+      mutatorArgsJSON: [2],
+      mutatorName: 'mutator_name_2',
+      originalHash: null,
+      timestamp: 42,
+      type: 2,
+    };
+    if (DD31) {
+      meta.clientID = clientID;
+    }
     expect(Object.fromEntries(visitor.gatheredChunks)).to.deep.equal({
       't/000000000000000000000000000000': {
         data: [0, [['local', '2']]],
@@ -99,15 +115,7 @@ test('dag with some permanent hashes and some temp hashes on top', async () => {
       't/000000000000000000000000000001': {
         data: {
           indexes: [],
-          meta: {
-            basisHash: 'fakehash000000000000000000000003',
-            mutationID: 2,
-            mutatorArgsJSON: [2],
-            mutatorName: 'mutator_name_2',
-            originalHash: null,
-            timestamp: 42,
-            type: 2,
-          },
+          meta,
           valueHash: 't/000000000000000000000000000000',
         },
         hash: 't/000000000000000000000000000001',
@@ -128,8 +136,9 @@ test('dag with some permanent hashes and some temp hashes on top', async () => {
       c: 3,
       d: 4,
     }),
+    clientID,
   );
-  await addIndexChange(chain, memdag);
+  await addIndexChange(chain, memdag, clientID);
 
   await memdag.withRead(async dagRead => {
     const visitor = new GatherVisitor(dagRead);

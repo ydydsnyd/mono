@@ -17,6 +17,7 @@ export async function addSyncSnapshot(
   chain: Chain,
   store: dag.Store,
   takeIndexesFrom: number,
+  clientID: sync.ClientID,
 ): Promise<Chain> {
   expect(chain.length >= 2).to.be.true;
 
@@ -44,6 +45,7 @@ export async function addSyncSnapshot(
       cookie,
       dagWrite,
       indexes,
+      clientID,
     );
     await w.commit(sync.SYNC_HEAD_NAME);
   });

@@ -10,6 +10,8 @@ import {
   LocalMeta,
   CommitData,
   IndexRecord,
+  LocalMetaDD31,
+  isLocalMetaDD31,
 } from './commit';
 import type {Hash} from '../hash';
 import type * as dag from '../dag/mod';
@@ -181,7 +183,11 @@ export abstract class BaseTransformer {
     };
   }
 
-  private async _transformLocalMeta(meta: LocalMeta): Promise<LocalMeta> {
+  private _transformLocalMeta(meta: LocalMetaDD31): Promise<LocalMetaDD31>;
+  private _transformLocalMeta(meta: LocalMeta): Promise<LocalMeta>;
+  private async _transformLocalMeta(
+    meta: LocalMeta | LocalMetaDD31,
+  ): Promise<LocalMeta | LocalMetaDD31> {
     const basisHashP = this._transformBasisHash(
       meta.basisHash,
       HashRefType.RequireStrong,
@@ -197,6 +203,20 @@ export abstract class BaseTransformer {
     if (basisHash === meta.basisHash && originalHash === meta.originalHash) {
       return meta;
     }
+
+    if (DD31 && isLocalMetaDD31(meta)) {
+      return {
+        basisHash,
+        type: meta.type,
+        mutationID: meta.mutationID,
+        mutatorName: meta.mutatorName,
+        mutatorArgsJSON: meta.mutatorArgsJSON,
+        originalHash,
+        timestamp: meta.timestamp,
+        clientID: meta.clientID,
+      };
+    }
+
     return {
       basisHash,
       type: meta.type,

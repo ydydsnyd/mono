@@ -30,6 +30,7 @@ import {
   deepEqual,
 } from '../internal-value.js';
 import {assert} from '../asserts.js';
+import type {ClientID} from './client-id.js';
 
 export const PULL_VERSION = 0;
 
@@ -126,7 +127,13 @@ export async function beginPull(
     };
   }
 
-  const syncHead = await handlePullResponse(lc, store, baseCookie, response);
+  const syncHead = await handlePullResponse(
+    lc,
+    store,
+    baseCookie,
+    response,
+    clientID,
+  );
   if (syncHead === null) {
     throw new Error('Overlapping sync JsLogInfo');
   }
@@ -143,6 +150,7 @@ export async function handlePullResponse(
   store: dag.Store,
   expectedBaseCookie: InternalValue,
   response: PullResponseOK,
+  clientID: ClientID,
 ): Promise<Hash | null> {
   // It is possible that another sync completed while we were pulling. Ensure
   // that is not the case by re-checking the base snapshot.
@@ -220,6 +228,7 @@ export async function handlePullResponse(
       internalCookie,
       dagWrite,
       db.readIndexesForWrite(lastIntegrated, dagWrite),
+      clientID,
     );
 
     await patch.apply(lc, dbWrite, response.patch);

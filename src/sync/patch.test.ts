@@ -8,6 +8,7 @@ import {apply} from './patch';
 import {assertPatchOperations} from '../puller';
 
 test('patch', async () => {
+  const clientID = 'client-id';
   const store = new dag.TestStore();
   const lc = new LogContext();
 
@@ -155,7 +156,7 @@ test('patch', async () => {
 
   for (const c of cases) {
     const chain: Chain = [];
-    await addGenesis(chain, store);
+    await addGenesis(chain, store, clientID);
     await store.withWrite(async dagWrite => {
       const dbWrite = await db.Write.newSnapshot(
         db.whenceHash(chain[0].chunk.hash),
@@ -163,6 +164,7 @@ test('patch', async () => {
         'cookie',
         dagWrite,
         db.readIndexesForWrite(chain[0], dagWrite),
+        clientID,
       );
       await dbWrite.put(lc, 'key', 'value');
 

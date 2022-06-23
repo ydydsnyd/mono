@@ -22,7 +22,7 @@ import {lazy} from '../lazy';
 import {emptyHash, Hash} from '../hash';
 import type {InternalDiff} from '../btree/node.js';
 import {allEntriesAsDiff} from '../btree/read.js';
-import type {DiffsMap} from '../sync/mod.js';
+import type {ClientID, DiffsMap} from '../sync/mod.js';
 import type {InternalValue} from '../internal-value.js';
 import {assert} from '../asserts.js';
 
@@ -40,13 +40,15 @@ type LocalMeta = {
   timestamp: number;
 };
 
+type LocalMetaDD31 = LocalMeta & {clientID: ClientID};
+
 type SnapshotMeta = {
   type: MetaType.Snapshot;
   lastMutationID: number;
   cookie: InternalValue;
 };
 
-type Meta = SnapshotMeta | LocalMeta | IndexChangeMeta;
+type Meta = SnapshotMeta | LocalMeta | LocalMetaDD31 | IndexChangeMeta;
 
 const enum MetaType {
   IndexChange,
@@ -64,6 +66,7 @@ export class Write extends Read {
   declare map: BTreeWrite;
 
   declare readonly indexes: Map<string, IndexWrite>;
+  private readonly _clientID: string;
 
   constructor(
     dagWrite: dag.Write,
@@ -71,12 +74,14 @@ export class Write extends Read {
     basis: Commit<CommitMeta> | undefined,
     meta: Meta,
     indexes: Map<string, IndexWrite>,
+    clientID: ClientID,
   ) {
     // TypeScript has trouble
     super(dagWrite, map, indexes);
     this._dagWrite = dagWrite;
     this._basis = basis;
     this._meta = meta;
+    this._clientID = clientID;
   }
 
   static async newLocal(
@@ -86,6 +91,7 @@ export class Write extends Read {
     originalHash: Hash | null,
     dagWrite: dag.Write,
     timestamp: number,
+    clientID: ClientID,
   ): Promise<Write> {
     const [, basis, bTreeWrite] = await readCommitForBTreeWrite(
       whence,
@@ -97,15 +103,26 @@ export class Write extends Read {
       dagWrite,
       bTreeWrite,
       basis,
-      {
-        type: MetaType.Local,
-        mutatorName,
-        mutatorArgs,
-        mutationID,
-        originalHash,
-        timestamp,
-      },
+      DD31
+        ? {
+            type: MetaType.Local,
+            mutatorName,
+            mutatorArgs,
+            mutationID,
+            originalHash,
+            timestamp,
+            clientID,
+          }
+        : {
+            type: MetaType.Local,
+            mutatorName,
+            mutatorArgs,
+            mutationID,
+            originalHash,
+            timestamp,
+          },
       indexes,
+      clientID,
     );
   }
 
@@ -115,6 +132,7 @@ export class Write extends Read {
     cookie: InternalValue,
     dagWrite: dag.Write,
     indexes: Map<string, IndexWrite>,
+    clientID: ClientID,
   ): Promise<Write> {
     const [, basis, bTreeWrite] = await readCommitForBTreeWrite(
       whence,
@@ -126,12 +144,14 @@ export class Write extends Read {
       basis,
       {type: MetaType.Snapshot, lastMutationID: mutationID, cookie},
       indexes,
+      clientID,
     );
   }
 
   static async newIndexChange(
     whence: Whence,
     dagWrite: dag.Write,
+    clientID: ClientID,
   ): Promise<Write> {
     const [, basis, bTreeWrite] = await readCommitForBTreeWrite(
       whence,
@@ -145,6 +165,7 @@ export class Write extends Read {
       basis,
       {type: MetaType.IndexChange, lastMutationID},
       indexes,
+      clientID,
     );
   }
 
@@ -262,8 +283,7 @@ export class Write extends Read {
 
   // Return value is the hash of the new commit.
   async commit(headName: string): Promise<Hash> {
-    const [hash] = await this.commitWithDiffs(headName, false);
-    return hash;
+    return (await this.commitWithDiffs(headName, false))[0];
   }
 
   async commitWithDiffs(
@@ -341,6 +361,7 @@ export class Write extends Read {
           valueHash,
           indexRecords,
           timestamp,
+          this._clientID,
         );
         break;
       }
@@ -438,13 +459,16 @@ export async function updateIndexes(
 export async function initDB(
   dagWrite: dag.Write,
   headName: string,
+  clientID: ClientID,
 ): Promise<Hash> {
+  // TODO(arv): There are no callers outside tests? Move to db/test-helpers.ts
   const w = new Write(
     dagWrite,
     new BTreeWrite(dagWrite),
     undefined,
     {type: MetaType.Snapshot, lastMutationID: 0, cookie: null},
     new Map(),
+    clientID,
   );
   return await w.commit(headName);
 }

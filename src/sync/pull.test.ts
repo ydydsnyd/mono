@@ -45,12 +45,13 @@ import {
 } from '../internal-value.js';
 
 test('begin try pull', async () => {
+  const clientID = 'test_client_id';
   const store = new dag.TestStore();
   const chain: Chain = [];
-  await addGenesis(chain, store);
-  await addSnapshot(chain, store, [['foo', '"bar"']]);
+  await addGenesis(chain, store, clientID);
+  await addSnapshot(chain, store, [['foo', '"bar"']], clientID);
   // chain[2] is an index change
-  await addIndexChange(chain, store);
+  await addIndexChange(chain, store, clientID);
   const startingNumCommits = chain.length;
   const baseSnapshot = chain[1];
   const parts = db.snapshotMetaParts(baseSnapshot as Commit<SnapshotMeta>);
@@ -61,7 +62,6 @@ test('begin try pull', async () => {
 
   const requestID = 'requestID';
   const profileID = 'test_profile_id';
-  const clientID = 'test_client_id';
   const pullAuth = 'pull_auth';
   const pullURL = 'pull_url';
   const schemaVersion = 'schema_version';
@@ -394,8 +394,8 @@ test('begin try pull', async () => {
       await w.commit();
     });
     for (let i = 0; i < c.numPendingMutations; i++) {
-      await addLocal(chain, store);
-      await addIndexChange(chain, store);
+      await addLocal(chain, store, clientID);
+      await addIndexChange(chain, store, clientID);
     }
 
     // There was an index added after the snapshot, and one for each local commit.
@@ -554,6 +554,7 @@ test('begin try pull', async () => {
 });
 
 test('maybe end try pull', async () => {
+  const clientID = 'client-id';
   type Case = {
     name: string;
     numPending: number;
@@ -616,10 +617,10 @@ test('maybe end try pull', async () => {
     const store = new dag.TestStore();
     const lc = new LogContext();
     const chain: Chain = [];
-    await addGenesis(chain, store);
+    await addGenesis(chain, store, clientID);
     // Add pending commits to the main chain.
     for (let j = 0; j < c.numPending; j++) {
-      await addLocal(chain, store);
+      await addLocal(chain, store, clientID);
     }
     let basisHash = await store.withWrite(async dagWrite => {
       await dagWrite.setHead(
@@ -634,13 +635,14 @@ test('maybe end try pull', async () => {
         'sync_cookie',
         dagWrite,
         db.readIndexesForWrite(chain[0], dagWrite),
+        clientID,
       );
       await w.put(lc, `key/${i}`, `${i}`);
       return await w.commit(SYNC_HEAD_NAME);
     });
 
     if (c.interveningSync) {
-      await addSnapshot(chain, store, undefined);
+      await addSnapshot(chain, store, undefined, clientID);
     }
 
     for (let i = 0; i < c.numPending - c.numNeedingReplay; i++) {
@@ -663,6 +665,7 @@ test('maybe end try pull', async () => {
           original.chunk.hash,
           dagWrite,
           original.meta.timestamp,
+          clientID,
         );
         return await w.commit(SYNC_HEAD_NAME);
       });
@@ -777,19 +780,22 @@ test('changed keys', async () => {
     patch: PatchOperation[],
     expectedDiffsMap: sync.DiffsMap,
   ) => {
+    const clientID = 'test_client_id';
     const store = new dag.TestStore();
     const lc = new LogContext();
     const chain: Chain = [];
-    await addGenesis(chain, store);
+    await addGenesis(chain, store, clientID);
 
     if (indexDef) {
       const {name, prefix, jsonPointer} = indexDef;
 
-      chain.push(await createIndex(name, prefix, jsonPointer, store, false));
+      chain.push(
+        await createIndex(name, prefix, jsonPointer, store, false, clientID),
+      );
     }
 
     const entries = [...baseMap];
-    await addSnapshot(chain, store, entries);
+    await addSnapshot(chain, store, entries, clientID);
 
     const baseSnapshot = chain[chain.length - 1];
     const parts = db.snapshotMetaParts(baseSnapshot as Commit<SnapshotMeta>);
@@ -801,7 +807,6 @@ test('changed keys', async () => {
 
     const requestID = 'request_id';
     const profileID = 'test_profile_id';
-    const clientID = 'test_client_id';
     const pullAuth = 'pull_auth';
     const pullURL = 'pull_url';
     const schemaVersion = 'schema_version';

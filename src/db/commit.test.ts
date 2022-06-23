@@ -29,11 +29,13 @@ import {
   InternalValue,
   ToInternalValueReason,
 } from '../internal-value.js';
+import type {ClientID} from '../sync/client-id.js';
 
 test('base snapshot', async () => {
+  const clientID = 'client-id';
   const store = new dag.TestStore();
   const chain: Chain = [];
-  await addGenesis(chain, store);
+  await addGenesis(chain, store, clientID);
   let genesisHash = chain[0].chunk.hash;
   await store.withRead(async dagRead => {
     expect((await baseSnapshot(genesisHash, dagRead)).chunk.hash).to.equal(
@@ -41,9 +43,9 @@ test('base snapshot', async () => {
     );
   });
 
-  await addLocal(chain, store);
-  await addIndexChange(chain, store);
-  await addLocal(chain, store);
+  await addLocal(chain, store, clientID);
+  await addIndexChange(chain, store, clientID);
+  await addLocal(chain, store, clientID);
   genesisHash = chain[0].chunk.hash;
   await store.withRead(async dagRead => {
     expect(
@@ -52,7 +54,7 @@ test('base snapshot', async () => {
     ).to.equal(genesisHash);
   });
 
-  await addSnapshot(chain, store, undefined);
+  await addSnapshot(chain, store, undefined, clientID);
   const baseHash = await store.withRead(async dagRead => {
     const baseHash = await dagRead.getHead('main');
     expect(
@@ -62,8 +64,8 @@ test('base snapshot', async () => {
     return baseHash;
   });
 
-  await addLocal(chain, store);
-  await addLocal(chain, store);
+  await addLocal(chain, store, clientID);
+  await addLocal(chain, store, clientID);
   await store.withRead(async dagRead => {
     expect(
       (await baseSnapshot(chain[chain.length - 1].chunk.hash, dagRead)).chunk
@@ -73,18 +75,19 @@ test('base snapshot', async () => {
 });
 
 test('local mutations', async () => {
+  const clientID = 'client-id';
   const store = new dag.TestStore();
   const chain: Chain = [];
-  await addGenesis(chain, store);
+  await addGenesis(chain, store, clientID);
   const genesisHash = chain[0].chunk.hash;
   await store.withRead(async dagRead => {
     expect(await localMutations(genesisHash, dagRead)).to.have.lengthOf(0);
   });
 
-  await addLocal(chain, store);
-  await addIndexChange(chain, store);
-  await addLocal(chain, store);
-  await addIndexChange(chain, store);
+  await addLocal(chain, store, clientID);
+  await addIndexChange(chain, store, clientID);
+  await addLocal(chain, store, clientID);
+  await addIndexChange(chain, store, clientID);
   const headHash = chain[chain.length - 1].chunk.hash;
   const commits = await store.withRead(dagRead =>
     localMutations(headHash, dagRead),
@@ -95,9 +98,10 @@ test('local mutations', async () => {
 });
 
 test('chain', async () => {
+  const clientID = 'client-id';
   const store = new dag.TestStore();
   const chain: Chain = [];
-  await addGenesis(chain, store);
+  await addGenesis(chain, store, clientID);
 
   let got = await store.withRead(dagRead =>
     commitChain(chain[chain.length - 1].chunk.hash, dagRead),
@@ -106,9 +110,9 @@ test('chain', async () => {
   expect(got).to.have.lengthOf(1);
   expect(got[0]).to.deep.equal(chain[0]);
 
-  await addSnapshot(chain, store, undefined);
-  await addLocal(chain, store);
-  await addIndexChange(chain, store);
+  await addSnapshot(chain, store, undefined, clientID);
+  await addLocal(chain, store, clientID);
+  await addIndexChange(chain, store, clientID);
   const headHash = chain[chain.length - 1].chunk.hash;
   got = await store.withRead(dagRead => commitChain(headHash, dagRead));
   expect(got).to.have.lengthOf(3);
@@ -118,6 +122,7 @@ test('chain', async () => {
 });
 
 test('load roundtrip', async () => {
+  const clientID = 'client-id';
   const t = (chunk: dag.Chunk<unknown>, expected: Commit<Meta> | Error) => {
     {
       if (expected instanceof Error) {
@@ -151,6 +156,7 @@ test('load roundtrip', async () => {
         },
         valueHash,
         basisHash === null ? [valueHash] : [valueHash, basisHash],
+        clientID,
       ),
       commitNewLocal(
         createChunk,
@@ -162,6 +168,7 @@ test('load roundtrip', async () => {
         valueHash,
         [],
         timestamp,
+        clientID,
       ),
     );
   }
@@ -179,6 +186,7 @@ test('load roundtrip', async () => {
       },
       fakeHash('valuehash'),
       [fakeHash(''), fakeHash('')],
+      clientID,
     ),
     new Error('Missing mutator name'),
   );
@@ -195,6 +203,7 @@ test('load roundtrip', async () => {
       },
       fakeHash('valuehash'),
       ['', ''],
+      clientID,
     ),
     new Error('Invalid type: undefined, expected string'),
   );
@@ -213,8 +222,9 @@ test('load roundtrip', async () => {
         },
         fakeHash('vh'),
         basisHash === null ? [fakeHash('vh')] : [fakeHash('vh'), basisHash],
+        clientID,
       ),
-      await commitNewLocal(
+      commitNewLocal(
         createChunk,
         basisHash,
         0,
@@ -224,6 +234,7 @@ test('load roundtrip', async () => {
         fakeHash('vh'),
         [],
         timestamp,
+        clientID,
       ),
     );
   }
@@ -239,10 +250,10 @@ test('load roundtrip', async () => {
         originalHash: emptyStringHash,
         timestamp,
       },
-
       //@ts-expect-error we are testing invalid types
       undefined,
       ['', ''],
+      clientID,
     ),
     new Error('Invalid type: undefined, expected string'),
   );
@@ -258,6 +269,7 @@ test('load roundtrip', async () => {
         ),
         fakeHash('vh'),
         [fakeHash('vh')],
+        clientID,
       ),
       commitNewSnapshot(createChunk, basisHash, 0, cookie, fakeHash('vh'), []),
     );
@@ -272,6 +284,7 @@ test('load roundtrip', async () => {
       ),
       fakeHash('vh'),
       [fakeHash('vh'), fakeHash('')],
+      clientID,
     ),
     new Error('Invalid type: undefined, expected JSON value'),
   );
@@ -284,19 +297,16 @@ test('load roundtrip', async () => {
         basisHash === null
           ? [fakeHash('value')]
           : [fakeHash('value'), basisHash],
+        clientID,
       ),
-      await commitNewIndexChange(
-        createChunk,
-        basisHash,
-        0,
-        fakeHash('value'),
-        [],
-      ),
+      commitNewIndexChange(createChunk, basisHash, 0, fakeHash('value'), []),
     );
   }
 });
 
 test('accessors', async () => {
+  const clientID = 'client-id';
+
   const originalHash = fakeHash('originalhash');
   const basisHash = fakeHash('basishash');
   const valueHash = fakeHash('valuehash');
@@ -314,6 +324,7 @@ test('accessors', async () => {
       },
       valueHash,
       [valueHash, basisHash],
+      clientID,
     ),
   );
   const lm = local.meta;
@@ -335,6 +346,7 @@ test('accessors', async () => {
       makeSnapshotMeta(fakeHash('basishash2'), 2, 'cookie 2'),
       fakeHash('valuehash2'),
       [fakeHash('valuehash2'), fakeHash('basishash2')],
+      clientID,
     ),
   );
   const sm = snapshot.meta;
@@ -354,6 +366,7 @@ test('accessors', async () => {
       makeIndexChangeMeta(fakeHash('basishash3'), 3),
       fakeHash('valuehash3'),
       [fakeHash('valuehash3'), fakeHash('basishash3')],
+      clientID,
     ),
   );
   const ic = indexChange.meta;
@@ -377,7 +390,13 @@ async function makeCommit<M extends Meta>(
   meta: M,
   valueHash: Hash,
   refs: Hash[],
+  clientID: ClientID,
 ): Promise<dag.Chunk<CommitData<M>>> {
+  if (DD31) {
+    if (meta.type === MetaTyped.Local) {
+      meta = {...meta, clientID};
+    }
+  }
   const data: CommitData<M> = {
     meta,
     valueHash,

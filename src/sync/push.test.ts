@@ -61,18 +61,18 @@ function makeFakePusher(options: FakePusherArgs): Pusher {
 }
 
 test('try push', async () => {
+  const clientID = 'test_client_id';
   const store = new dag.TestStore();
   const lc = new LogContext();
   const chain: Chain = [];
-  await addGenesis(chain, store);
-  await addSnapshot(chain, store, [['foo', 'bar']]);
+  await addGenesis(chain, store, clientID);
+  await addSnapshot(chain, store, [['foo', 'bar']], clientID);
   // chain[2] is an index change
-  await addIndexChange(chain, store);
+  await addIndexChange(chain, store, clientID);
   const startingNumCommits = chain.length;
 
   const requestID = 'request_id';
   const profileID = 'test_profile_id';
-  const clientID = 'test_client_id';
 
   const auth = 'auth';
 
@@ -195,8 +195,8 @@ test('try push', async () => {
       await w.commit();
     });
     for (let i = 0; i < c.numPendingMutations; i++) {
-      await addLocal(chain, store);
-      await addIndexChange(chain, store);
+      await addLocal(chain, store, clientID);
+      await addIndexChange(chain, store, clientID);
     }
 
     // There was an index added after the snapshot, and one for each local
@@ -242,7 +242,6 @@ test('try push', async () => {
       err: pushErr,
     });
 
-    const clientID = 'test_client_id';
     const batchPushInfo = await push(
       requestID,
       store,

@@ -11,6 +11,7 @@ import {
 import {assertHash, Hash} from '../hash';
 import {skipCommitDataAsserts} from '../config.js';
 import type {InternalValue} from '../internal-value.js';
+import type {ClientID} from '../sync/client-id.js';
 
 export const DEFAULT_HEAD_NAME = 'main';
 
@@ -185,6 +186,10 @@ export type LocalMeta = BasisHash & {
   readonly timestamp: number;
 };
 
+export type LocalMetaDD31 = LocalMeta & {
+  readonly clientID: ClientID;
+};
+
 function assertLocalMeta(v: Record<string, unknown>): asserts v is LocalMeta {
   // type already asserted
   assertNumber(v.mutationID);
@@ -197,6 +202,29 @@ function assertLocalMeta(v: Record<string, unknown>): asserts v is LocalMeta {
     assertHash(v.originalHash);
   }
   assertNumber(v.timestamp);
+}
+
+export function assertLocalMetaDD31(
+  v: Record<string, unknown>,
+): asserts v is LocalMetaDD31 {
+  // type already asserted
+  assertNumber(v.mutationID);
+  assertString(v.mutatorName);
+  if (!v.mutatorName) {
+    throw new Error('Missing mutator name');
+  }
+  assertJSONValue(v.mutatorArgsJSON);
+  if (v.originalHash !== null) {
+    assertHash(v.originalHash);
+  }
+  assertNumber(v.timestamp);
+  assertString(v.clientID);
+}
+
+export function isLocalMetaDD31(
+  meta: LocalMeta | LocalMetaDD31,
+): meta is LocalMetaDD31 {
+  return (meta as Partial<LocalMetaDD31>).clientID !== undefined;
 }
 
 export type SnapshotMeta = BasisHash & {
@@ -213,7 +241,7 @@ function assertSnapshotMeta(
   assertJSONValue(v.cookieJSON);
 }
 
-export type Meta = IndexChangeMeta | LocalMeta | SnapshotMeta;
+export type Meta = IndexChangeMeta | LocalMeta | LocalMetaDD31 | SnapshotMeta;
 
 function assertMeta(v: unknown): asserts v is Meta {
   assertObject(v);
@@ -227,7 +255,11 @@ function assertMeta(v: unknown): asserts v is Meta {
       assertIndexChangeMeta(v);
       break;
     case MetaTyped.Local:
-      assertLocalMeta(v);
+      if (DD31) {
+        assertLocalMetaDD31(v);
+      } else {
+        assertLocalMeta(v);
+      }
       break;
     case MetaTyped.Snapshot:
       assertSnapshotMeta(v);
@@ -279,7 +311,21 @@ export function newLocal(
   valueHash: Hash,
   indexes: readonly IndexRecord[],
   timestamp: number,
-): Commit<LocalMeta> {
+  clientID: ClientID,
+): Commit<LocalMeta | LocalMetaDD31> {
+  if (DD31) {
+    const meta: LocalMetaDD31 = {
+      type: MetaTyped.Local,
+      basisHash,
+      mutationID,
+      mutatorName,
+      mutatorArgsJSON,
+      originalHash,
+      timestamp,
+      clientID,
+    };
+    return commitFromCommitData(createChunk, {meta, valueHash, indexes});
+  }
   const meta: LocalMeta = {
     type: MetaTyped.Local,
     basisHash,

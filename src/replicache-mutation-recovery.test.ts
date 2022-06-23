@@ -80,14 +80,14 @@ async function createAndPersistClientWithPendingLocal(
     assertHash,
   );
   const chain: Chain = [];
-  await addGenesis(chain, testMemdag);
-  await addSnapshot(chain, testMemdag, [['unique', uuid()]]);
+  await addGenesis(chain, testMemdag, clientID);
+  await addSnapshot(chain, testMemdag, [['unique', uuid()]], clientID);
 
   await initClientWithClientID(clientID, perdag);
 
   const localMetas: db.LocalMeta[] = [];
   for (let i = 0; i < numLocal; i++) {
-    await addLocal(chain, testMemdag);
+    await addLocal(chain, testMemdag, clientID);
     localMetas.push(chain[chain.length - 1].meta as db.LocalMeta);
   }
   await persist.persist(clientID, testMemdag, perdag, () => false);

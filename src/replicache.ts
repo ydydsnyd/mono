@@ -809,6 +809,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       const dbWrite = await db.Write.newIndexChange(
         db.whenceHead(db.DEFAULT_HEAD_NAME),
         dagWrite,
+        clientID,
       );
       const tx = new IndexTransactionImpl(clientID, dbWrite, this._lc);
       await f(tx);
@@ -1131,6 +1132,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
           ToInternalValueReason.CookieFromResponse,
         ),
         poke.pullResponse,
+        clientID,
       );
       if (syncHead === null) {
         throw new Error(
@@ -1408,6 +1410,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         originalHash,
         dagWrite,
         timestamp,
+        clientID,
       );
 
       const tx = new WriteTransactionImpl(clientID, dbWrite, this._lc);

@@ -568,18 +568,19 @@ test('initClient creates new empty snapshot when no existing snapshot to bootstr
 });
 
 test('initClient bootstraps from base snapshot of client with highest heartbeat', async () => {
+  const clientID = 'client-id';
   const dagStore = new dag.TestStore();
 
   const chain: Chain = [];
-  await addGenesis(chain, dagStore);
-  await addSnapshot(chain, dagStore, [['foo', 'bar']]);
-  await addLocal(chain, dagStore);
+  await addGenesis(chain, dagStore, clientID);
+  await addSnapshot(chain, dagStore, [['foo', 'bar']], clientID);
+  await addLocal(chain, dagStore, clientID);
   const client1HeadCommit = chain[chain.length - 1];
-  await addIndexChange(chain, dagStore);
-  await addSnapshot(chain, dagStore, [['fuz', 'bang']]);
+  await addIndexChange(chain, dagStore, clientID);
+  await addSnapshot(chain, dagStore, [['fuz', 'bang']], clientID);
   const client2BaseSnapshotCommit = chain[chain.length - 1];
-  await addLocal(chain, dagStore);
-  await addLocal(chain, dagStore);
+  await addLocal(chain, dagStore, clientID);
+  await addLocal(chain, dagStore, clientID);
   const client2HeadCommit = chain[chain.length - 1];
 
   const clientMap = new Map(

@@ -19,6 +19,7 @@ import {
 } from '../internal-value.js';
 
 test('test that we get to the data nodes', async () => {
+  const clientID = 'client-id';
   const dagStore = new dag.TestStore();
 
   const log: (readonly Entry<Hash>[] | readonly Entry<InternalValue>[])[] = [];
@@ -39,16 +40,16 @@ test('test that we get to the data nodes', async () => {
     });
   };
 
-  await addGenesis(chain, dagStore);
+  await addGenesis(chain, dagStore, clientID);
   await t(chain[0], [[]]);
 
-  await addLocal(chain, dagStore);
+  await addLocal(chain, dagStore, clientID);
   await t(chain[1], [[['local', '1']], []]);
 
-  await addIndexChange(chain, dagStore);
+  await addIndexChange(chain, dagStore, clientID);
   await t(chain[2], [[['local', '1']], [['\u00001\u0000local', '1']], []]);
 
-  await addLocal(chain, dagStore);
+  await addLocal(chain, dagStore, clientID);
   await t(chain[3], [
     [['local', '3']],
     [['\u00003\u0000local', '3']],
@@ -57,7 +58,7 @@ test('test that we get to the data nodes', async () => {
     [],
   ]);
 
-  await addSnapshot(chain, dagStore, [['k', 42]]);
+  await addSnapshot(chain, dagStore, [['k', 42]], clientID);
   await t(chain[4], [
     [
       ['k', 42],
@@ -89,6 +90,7 @@ test('test that we get to the data nodes', async () => {
       prevCommit.valueHash,
       prevCommit.indexes,
       88,
+      clientID,
     );
     await dagWrite.putChunk(localCommit.chunk);
     await dagWrite.setHead('test', localCommit.chunk.hash);
@@ -115,6 +117,7 @@ test('test that we get to the data nodes', async () => {
       prevCommit.valueHash,
       prevCommit.indexes,
       88,
+      clientID,
     );
     await dagWrite.putChunk(localCommit2.chunk);
     await dagWrite.setHead('test2', localCommit2.chunk.hash);

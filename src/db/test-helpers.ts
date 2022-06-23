@@ -6,22 +6,27 @@ import {readCommit, whenceHead} from './read';
 import {initDB, Write, readIndexesForWrite} from './write';
 import type {JSONValue} from '../json';
 import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
+import type {ClientID} from '../sync/client-id.js';
 
 export type Chain = Commit<Meta>[];
 
 export async function addGenesis(
   chain: Chain,
   store: dag.Store,
+  clientID: ClientID,
 ): Promise<Chain> {
   expect(chain).to.have.length(0);
-  const commit = await createGenesis(store);
+  const commit = await createGenesis(store, clientID);
   chain.push(commit);
   return chain;
 }
 
-export async function createGenesis(store: dag.Store): Promise<Commit<Meta>> {
+export async function createGenesis(
+  store: dag.Store,
+  clientID: ClientID,
+): Promise<Commit<Meta>> {
   await store.withWrite(async w => {
-    await initDB(w, DEFAULT_HEAD_NAME);
+    await initDB(w, DEFAULT_HEAD_NAME, clientID);
   });
   return await store.withRead(async read => {
     const [, commit] = await readCommit(whenceHead(DEFAULT_HEAD_NAME), read);
@@ -31,10 +36,14 @@ export async function createGenesis(store: dag.Store): Promise<Commit<Meta>> {
 
 // Local commit has mutator name and args according to its index in the
 // chain.
-export async function addLocal(chain: Chain, store: dag.Store): Promise<Chain> {
+export async function addLocal(
+  chain: Chain,
+  store: dag.Store,
+  clientID: ClientID,
+): Promise<Chain> {
   expect(chain).to.have.length.greaterThan(0);
   const i = chain.length;
-  const commit = await createLocal([[`local`, `${i}`]], store, i);
+  const commit = await createLocal([[`local`, `${i}`]], store, i, clientID);
 
   chain.push(commit);
   return chain;
@@ -44,6 +53,7 @@ export async function createLocal(
   entries: [string, JSONValue][],
   store: dag.Store,
   i: number,
+  clientID: ClientID,
 ): Promise<Commit<Meta>> {
   const lc = new LogContext();
   await store.withWrite(async dagWrite => {
@@ -54,6 +64,7 @@ export async function createLocal(
       null,
       dagWrite,
       42,
+      clientID,
     );
     for (const [key, val] of entries) {
       await w.put(lc, key, toInternalValue(val, ToInternalValueReason.Test));
@@ -69,10 +80,11 @@ export async function createLocal(
 export async function addIndexChange(
   chain: Chain,
   store: dag.Store,
+  clientID: ClientID,
 ): Promise<Chain> {
   expect(chain).to.have.length.greaterThan(0);
   const i = chain.length;
-  const commit = await createIndex(i + '', 'local', '', store, false);
+  const commit = await createIndex(i + '', 'local', '', store, false, clientID);
   chain.push(commit);
   return chain;
 }
@@ -83,12 +95,14 @@ export async function createIndex(
   jsonPointer: string,
   store: dag.Store,
   allowEmpty: boolean,
+  clientID: ClientID,
 ): Promise<Commit<Meta>> {
   const lc = new LogContext();
   await store.withWrite(async dagWrite => {
     const w = await Write.newIndexChange(
       whenceHead(DEFAULT_HEAD_NAME),
       dagWrite,
+      clientID,
     );
     await w.createIndex(lc, name, prefix, jsonPointer, allowEmpty);
     await w.commit(DEFAULT_HEAD_NAME);
@@ -107,6 +121,7 @@ export async function addSnapshot(
   chain: Chain,
   store: dag.Store,
   map: [string, JSONValue][] | undefined,
+  clientID: ClientID,
 ): Promise<Chain> {
   expect(chain).to.have.length.greaterThan(0);
   const lc = new LogContext();
@@ -118,6 +133,7 @@ export async function addSnapshot(
       cookie,
       dagWrite,
       readIndexesForWrite(chain[chain.length - 1], dagWrite),
+      clientID,
     );
 
     if (map) {

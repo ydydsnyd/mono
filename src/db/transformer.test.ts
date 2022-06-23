@@ -51,6 +51,7 @@ test('transformBTreeNode - noop', async () => {
 });
 
 test('transformCommit - noop', async () => {
+  const clientID = 'client-id';
   const dagStore = new dag.TestStore();
 
   const testChain = async (chain: Commit<Meta>[]) => {
@@ -66,14 +67,14 @@ test('transformCommit - noop', async () => {
   };
 
   const chain: Chain = [];
-  await addGenesis(chain, dagStore);
-  await addLocal(chain, dagStore);
-  await addIndexChange(chain, dagStore);
-  await addLocal(chain, dagStore);
+  await addGenesis(chain, dagStore, clientID);
+  await addLocal(chain, dagStore, clientID);
+  await addIndexChange(chain, dagStore, clientID);
+  await addLocal(chain, dagStore, clientID);
   await testChain(chain);
 
-  await addSnapshot(chain, dagStore, [['k', 42]]);
-  await addLocal(chain, dagStore);
+  await addSnapshot(chain, dagStore, [['k', 42]], clientID);
+  await addLocal(chain, dagStore, clientID);
   await testChain(chain.slice(-2));
 });
 
@@ -102,6 +103,7 @@ test('transformIndexRecord - noop', async () => {
 });
 
 test('transforms data entry', async () => {
+  const clientID = 'client-id';
   const dagStore = new dag.TestStore(
     undefined,
     makeNewTempHashFunction(),
@@ -120,9 +122,9 @@ test('transforms data entry', async () => {
   }
 
   const chain: Chain = [];
-  await addGenesis(chain, dagStore);
-  await addSnapshot(chain, dagStore, [['k', 42]]);
-  await addLocal(chain, dagStore);
+  await addGenesis(chain, dagStore, clientID);
+  await addSnapshot(chain, dagStore, [['k', 42]], clientID);
+  await addLocal(chain, dagStore, clientID);
 
   await dagStore.withWrite(async write => {
     const transformer = new TestTransformer(write);

@@ -4,10 +4,12 @@ import * as db from '../db/mod';
 import {fakeHash, makeNewTempHashFunction, parse as parseHash} from '../hash';
 import {BTreeWrite} from '../btree/write';
 import {FixupTransformer} from './fixup-transformer';
-import type {ReadonlyJSONValue} from '../json';
+import type {JSONObject, ReadonlyJSONValue} from '../json';
 import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 
 test('fixup of a single snapshot commit with empty btree', async () => {
+  const clientID = 'client-id';
+
   const memdag = new dag.TestStore(
     undefined,
     makeNewTempHashFunction(),
@@ -92,6 +94,7 @@ test('fixup of a single snapshot commit with empty btree', async () => {
         fakeHash('value'),
         [],
         42,
+        clientID,
       );
       await dagWrite.putChunk(c.chunk);
       await dagWrite.setHead('test', c.chunk.hash);
@@ -99,6 +102,20 @@ test('fixup of a single snapshot commit with empty btree', async () => {
       return c.chunk.hash;
     });
 
+    const meta: JSONObject = {
+      basisHash: 'fake000000000000000000000000head',
+      mutationID: 1,
+      mutatorArgsJSON: {
+        v: 42,
+      },
+      mutatorName: 'test',
+      originalHash: null,
+      timestamp: 42,
+      type: 2,
+    };
+    if (DD31) {
+      meta.clientID = clientID;
+    }
     assert.deepEqual(memdag.kvStore.snapshot(), {
       'c/fake000000000000000000000000head/d': {
         indexes: [],
@@ -118,17 +135,7 @@ test('fixup of a single snapshot commit with empty btree', async () => {
       'c/fake00000000000000000000000value/r': 2,
       'c/t/000000000000000000000000000002/d': {
         indexes: [],
-        meta: {
-          basisHash: 'fake000000000000000000000000head',
-          mutationID: 1,
-          mutatorArgsJSON: {
-            v: 42,
-          },
-          mutatorName: 'test',
-          originalHash: null,
-          timestamp: 42,
-          type: 2,
-        },
+        meta,
         valueHash: 'fake00000000000000000000000value',
       },
       'c/t/000000000000000000000000000002/m': [
@@ -150,50 +157,57 @@ test('fixup of a single snapshot commit with empty btree', async () => {
       return newHeadHash;
     });
 
-    assert.deepEqual(memdag.kvStore.snapshot(), {
-      'c/fake000000000000000000000000head/d': {
-        indexes: [],
-        meta: {
-          basisHash: null,
-          cookieJSON: null,
-          lastMutationID: 0,
-          type: 3,
+    {
+      const meta: JSONObject = {
+        basisHash: 'fake000000000000000000000000head',
+        mutationID: 1,
+        mutatorArgsJSON: {
+          v: 42,
         },
-        valueHash: 'fake00000000000000000000000value',
-      },
-      'c/fake000000000000000000000000head/m': [
-        'fake00000000000000000000000value',
-      ],
-      'c/fake000000000000000000000000head/r': 1,
-      'c/fake00000000000000000000000head2/d': {
-        indexes: [],
-        meta: {
-          basisHash: 'fake000000000000000000000000head',
-          mutationID: 1,
-          mutatorArgsJSON: {
-            v: 42,
+        mutatorName: 'test',
+        originalHash: null,
+        timestamp: 42,
+        type: 2,
+      };
+      if (DD31) {
+        meta.clientID = clientID;
+      }
+      assert.deepEqual(memdag.kvStore.snapshot(), {
+        'c/fake000000000000000000000000head/d': {
+          indexes: [],
+          meta: {
+            basisHash: null,
+            cookieJSON: null,
+            lastMutationID: 0,
+            type: 3,
           },
-          mutatorName: 'test',
-          originalHash: null,
-          timestamp: 42,
-          type: 2,
+          valueHash: 'fake00000000000000000000000value',
         },
-        valueHash: 'fake00000000000000000000000value',
-      },
-      'c/fake00000000000000000000000head2/m': [
-        'fake00000000000000000000000value',
-        'fake000000000000000000000000head',
-      ],
-      'c/fake00000000000000000000000head2/r': 1,
-      'c/fake00000000000000000000000value/d': [0, []],
-      'c/fake00000000000000000000000value/r': 2,
-      'h/test': 'fake00000000000000000000000head2',
-    });
-    assert.equal(newHeadHash2, fakeHash('head2'));
+        'c/fake000000000000000000000000head/m': [
+          'fake00000000000000000000000value',
+        ],
+        'c/fake000000000000000000000000head/r': 1,
+        'c/fake00000000000000000000000head2/d': {
+          indexes: [],
+          meta,
+          valueHash: 'fake00000000000000000000000value',
+        },
+        'c/fake00000000000000000000000head2/m': [
+          'fake00000000000000000000000value',
+          'fake000000000000000000000000head',
+        ],
+        'c/fake00000000000000000000000head2/r': 1,
+        'c/fake00000000000000000000000value/d': [0, []],
+        'c/fake00000000000000000000000value/r': 2,
+        'h/test': 'fake00000000000000000000000head2',
+      });
+      assert.equal(newHeadHash2, fakeHash('head2'));
+    }
   }
 });
 
 test('fixup base snapshot when there is a local commit on top of it', async () => {
+  const clientID = 'client-id';
   const memdag = new dag.TestStore(
     undefined,
     makeNewTempHashFunction(),
@@ -224,6 +238,7 @@ test('fixup base snapshot when there is a local commit on top of it', async () =
         fakeHash('value'),
         [],
         42,
+        clientID,
       );
       await dagWrite.putChunk(localCommit.chunk);
 
@@ -232,47 +247,52 @@ test('fixup base snapshot when there is a local commit on top of it', async () =
       return [snapshotCommit, localCommit, valueHash];
     },
   );
-
-  assert.deepEqual(memdag.kvStore.snapshot(), {
-    'c/fake00000000000000000000000value/r': 1,
-    'c/t/000000000000000000000000000000/d': [0, []],
-    'c/t/000000000000000000000000000000/r': 1,
-    'c/t/000000000000000000000000000001/d': {
-      indexes: [],
-      meta: {
-        basisHash: null,
-        cookieJSON: null,
-        lastMutationID: 0,
-        type: 3,
+  {
+    const meta: JSONObject = {
+      basisHash: 't/000000000000000000000000000001',
+      mutationID: 1,
+      mutatorArgsJSON: {
+        v: 42,
       },
-      valueHash: 't/000000000000000000000000000000',
-    },
-    'c/t/000000000000000000000000000001/m': [
-      't/000000000000000000000000000000',
-    ],
-    'c/t/000000000000000000000000000001/r': 1,
-    'c/t/000000000000000000000000000002/d': {
-      indexes: [],
-      meta: {
-        basisHash: 't/000000000000000000000000000001',
-        mutationID: 1,
-        mutatorArgsJSON: {
-          v: 42,
+      mutatorName: 'test',
+      originalHash: null,
+      timestamp: 42,
+      type: 2,
+    };
+    if (DD31) {
+      meta.clientID = clientID;
+    }
+    assert.deepEqual(memdag.kvStore.snapshot(), {
+      'c/fake00000000000000000000000value/r': 1,
+      'c/t/000000000000000000000000000000/d': [0, []],
+      'c/t/000000000000000000000000000000/r': 1,
+      'c/t/000000000000000000000000000001/d': {
+        indexes: [],
+        meta: {
+          basisHash: null,
+          cookieJSON: null,
+          lastMutationID: 0,
+          type: 3,
         },
-        mutatorName: 'test',
-        originalHash: null,
-        timestamp: 42,
-        type: 2,
+        valueHash: 't/000000000000000000000000000000',
       },
-      valueHash: 'fake00000000000000000000000value',
-    },
-    'c/t/000000000000000000000000000002/m': [
-      'fake00000000000000000000000value',
-      't/000000000000000000000000000001',
-    ],
-    'c/t/000000000000000000000000000002/r': 1,
-    'h/test': 't/000000000000000000000000000002',
-  });
+      'c/t/000000000000000000000000000001/m': [
+        't/000000000000000000000000000000',
+      ],
+      'c/t/000000000000000000000000000001/r': 1,
+      'c/t/000000000000000000000000000002/d': {
+        indexes: [],
+        meta,
+        valueHash: 'fake00000000000000000000000value',
+      },
+      'c/t/000000000000000000000000000002/m': [
+        'fake00000000000000000000000value',
+        't/000000000000000000000000000001',
+      ],
+      'c/t/000000000000000000000000000002/r': 1,
+      'h/test': 't/000000000000000000000000000002',
+    });
+  }
 
   // These mappings do not contain the local commit. This is simulating that a
   // local commit happened after we got the result back from the perdag persist
@@ -295,45 +315,51 @@ test('fixup base snapshot when there is a local commit on top of it', async () =
 
   assert.notEqual(newLocalCommitHash, localCommit.chunk.hash);
 
-  assert.deepEqual(memdag.kvStore.snapshot(), {
-    'c/fake00000000000000000000000value/d': [0, []],
-    'c/fake00000000000000000000000value/r': 2,
-    'c/fake00000000000000000000snapshot/d': {
-      indexes: [],
-      meta: {
-        basisHash: null,
-        cookieJSON: null,
-        lastMutationID: 0,
-        type: 3,
+  {
+    const meta: JSONObject = {
+      basisHash: 'fake00000000000000000000snapshot',
+      mutationID: 1,
+      mutatorArgsJSON: {
+        v: 42,
       },
-      valueHash: 'fake00000000000000000000000value',
-    },
-    'c/fake00000000000000000000snapshot/m': [
-      'fake00000000000000000000000value',
-    ],
-    'c/fake00000000000000000000snapshot/r': 1,
-    'c/t/000000000000000000000000000003/d': {
-      indexes: [],
-      meta: {
-        basisHash: 'fake00000000000000000000snapshot',
-        mutationID: 1,
-        mutatorArgsJSON: {
-          v: 42,
+      mutatorName: 'test',
+      originalHash: null,
+      timestamp: 42,
+      type: 2,
+    };
+    if (DD31) {
+      meta.clientID = clientID;
+    }
+    assert.deepEqual(memdag.kvStore.snapshot(), {
+      'c/fake00000000000000000000000value/d': [0, []],
+      'c/fake00000000000000000000000value/r': 2,
+      'c/fake00000000000000000000snapshot/d': {
+        indexes: [],
+        meta: {
+          basisHash: null,
+          cookieJSON: null,
+          lastMutationID: 0,
+          type: 3,
         },
-        mutatorName: 'test',
-        originalHash: null,
-        timestamp: 42,
-        type: 2,
+        valueHash: 'fake00000000000000000000000value',
       },
-      valueHash: 'fake00000000000000000000000value',
-    },
-    'c/t/000000000000000000000000000003/m': [
-      'fake00000000000000000000000value',
-      'fake00000000000000000000snapshot',
-    ],
-    'c/t/000000000000000000000000000003/r': 1,
-    'h/test': 't/000000000000000000000000000003',
-  });
+      'c/fake00000000000000000000snapshot/m': [
+        'fake00000000000000000000000value',
+      ],
+      'c/fake00000000000000000000snapshot/r': 1,
+      'c/t/000000000000000000000000000003/d': {
+        indexes: [],
+        meta,
+        valueHash: 'fake00000000000000000000000value',
+      },
+      'c/t/000000000000000000000000000003/m': [
+        'fake00000000000000000000000value',
+        'fake00000000000000000000snapshot',
+      ],
+      'c/t/000000000000000000000000000003/r': 1,
+      'h/test': 't/000000000000000000000000000003',
+    });
+  }
 });
 
 async function makeBTree(

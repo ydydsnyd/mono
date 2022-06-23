@@ -6,9 +6,10 @@ import {fromWhence, whenceHead} from './read';
 import {initDB, Write} from './write';
 
 test('basics', async () => {
+  const clientID = 'client-id';
   const ds = new dag.TestStore();
   const lc = new LogContext();
-  await initDB(await ds.write(), DEFAULT_HEAD_NAME);
+  await initDB(await ds.write(), DEFAULT_HEAD_NAME, clientID);
   const w = await Write.newLocal(
     whenceHead(DEFAULT_HEAD_NAME),
     'mutator_name',
@@ -16,6 +17,7 @@ test('basics', async () => {
     null,
     await ds.write(),
     42,
+    clientID,
   );
   await w.put(lc, 'foo', 'bar');
   await w.commit(DEFAULT_HEAD_NAME);
