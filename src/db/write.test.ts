@@ -9,11 +9,12 @@ import {
   readIndexesForRead,
   whenceHead,
 } from './read';
-import {initDB, Write} from './write';
+import {Write} from './write';
 import {encodeIndexKey} from './index';
 import {asyncIterableToArray} from '../async-iterable-to-array';
 import {BTreeRead} from '../btree/mod';
 import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
+import {initDB} from './test-helpers.js';
 
 test('basics', async () => {
   const clientID = 'client-id';

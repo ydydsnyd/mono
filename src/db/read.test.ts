@@ -3,7 +3,8 @@ import {expect} from '@esm-bundle/chai';
 import * as dag from '../dag/mod';
 import {DEFAULT_HEAD_NAME} from './commit';
 import {fromWhence, whenceHead} from './read';
-import {initDB, Write} from './write';
+import {Write} from './write';
+import {initDB} from './test-helpers.js';
 
 test('basics', async () => {
   const clientID = 'client-id';

@@ -50,7 +50,7 @@ type SnapshotMeta = {
 
 type Meta = SnapshotMeta | LocalMeta | LocalMetaDD31 | IndexChangeMeta;
 
-const enum MetaType {
+export const enum MetaType {
   IndexChange,
   Local,
   Snapshot,
@@ -454,23 +454,6 @@ export async function updateIndexes(
     }
   }
   await Promise.all(ps);
-}
-
-export async function initDB(
-  dagWrite: dag.Write,
-  headName: string,
-  clientID: ClientID,
-): Promise<Hash> {
-  // TODO(arv): There are no callers outside tests? Move to db/test-helpers.ts
-  const w = new Write(
-    dagWrite,
-    new BTreeWrite(dagWrite),
-    undefined,
-    {type: MetaType.Snapshot, lastMutationID: 0, cookie: null},
-    new Map(),
-    clientID,
-  );
-  return await w.commit(headName);
 }
 
 export function readIndexesForWrite(

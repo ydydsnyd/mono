@@ -3,10 +3,12 @@ import {expect} from '@esm-bundle/chai';
 import type * as dag from '../dag/mod';
 import {Commit, DEFAULT_HEAD_NAME, Meta} from './commit';
 import {readCommit, whenceHead} from './read';
-import {initDB, Write, readIndexesForWrite} from './write';
+import {Write, readIndexesForWrite, MetaType} from './write';
 import type {JSONValue} from '../json';
 import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 import type {ClientID} from '../sync/client-id.js';
+import type {Hash} from '../hash.js';
+import {BTreeWrite} from '../btree/mod.js';
 
 export type Chain = Commit<Meta>[];
 
@@ -148,4 +150,21 @@ export async function addSnapshot(
     chain.push(commit);
     return chain;
   });
+}
+
+export async function initDB(
+  dagWrite: dag.Write,
+  headName: string,
+  clientID: ClientID,
+): Promise<Hash> {
+  // TODO(arv): There are no callers outside tests? Move to db/test-helpers.ts
+  const w = new Write(
+    dagWrite,
+    new BTreeWrite(dagWrite),
+    undefined,
+    {type: MetaType.Snapshot, lastMutationID: 0, cookie: null},
+    new Map(),
+    clientID,
+  );
+  return await w.commit(headName);
 }
