@@ -9,7 +9,7 @@ The [Replicache Terms of Service](https://roci.dev/terms.html) require that anyo
 Replicache acquire and use their own license key. A license key is required for _any_ use
 of Replicache, commercial or non-commercial, including tire-kicking, evaluation, and
 just playing around. But don't worry: getting a key is fast, low commitment (no credit card),
-and there is no charge for many uses of Replicache (see [Replicache Pricing](https://replicache.dev/#price)).
+and there is no charge for many uses of Replicache (see [Replicache Pricing](https://replicache.dev/#pricing)).
 
 To get a key run:
 
@@ -57,7 +57,7 @@ instantiated with it will shut itself down after a few minutes.
 
 ## License pings
 
-Per [Replicache Pricing](https://replicache.dev/#price), we charge post-funding/revenue
+Per [Replicache Pricing](https://replicache.dev/#pricing), we charge post-funding/revenue
 commercial customers based on _Monthly Active Browser Profiles_, meaning unique browser
 instances that instantiate Replicache in a calendar month. The way we accomplish this
 is to send a ping to our servers containing your license key and a unique browser profile
