@@ -3,9 +3,16 @@ title: Deploy to Production
 slug: /deploy
 ---
 
-The todo app is just a standard Next.js app with a dependency on Postgres.
+The todo app is just a standard [Next.js](https://nextjs.org/) app with a Postgres database. So when you're ready to ship, you can deploy it basically anywhere you can run a Node app.
 
-So when you're ready to ship, you can deploy it basically anywhere you can run a Next.js app. One easy option we like is [Render](https://render.com/), and we've included a `render.yaml` file to make this easy.
+One especially easy option we like is [Render](https://render.com/). To deploy there:
+
+1. Fork [rocicorp/replicache-todo](https://github.com/rocicorp/replicache-todo) into your own repository.
+1. [Create a Render account](https://dashboard.render.com/register).
+1. Create a new Blueprint instance and link to the forked repo.
+1. In the web server settings, set the `NEXT_PUBLIC_REPLICACHE_LICENSE_KEY` environment variable to your license key.
+
+But you can also deploy on Heroku, AWS, or other places you can run Next.js/Postgres apps.
 
 :::note
 
