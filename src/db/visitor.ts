@@ -7,6 +7,7 @@ import {
   Meta,
   MetaTyped,
   SnapshotMeta,
+  SnapshotMetaDD31,
 } from './commit';
 import type * as dag from '../dag/mod';
 import {emptyHash, Hash} from '../hash';
@@ -80,7 +81,9 @@ export class Visitor {
     }
   }
 
-  private async _visitSnapshot(meta: SnapshotMeta): Promise<void> {
+  private async _visitSnapshot(
+    meta: SnapshotMeta | SnapshotMetaDD31,
+  ): Promise<void> {
     // basisHash is weak for Snapshot Commits
     await this._visitBasisHash(meta.basisHash, HashRefType.AllowWeak);
   }

@@ -536,19 +536,19 @@ test('updateClients throws errors if chunk pointed to by clients head does not c
 test('initClient creates new empty snapshot when no existing snapshot to bootstrap from', async () => {
   const dagStore = new dag.TestStore();
   clock.tick(4000);
-  const [clientId, client, clients] = await initClient(dagStore);
+  const [clientID, client, clients] = await initClient(dagStore);
 
   expect(clients).to.deep.equal(
     new Map(
       Object.entries({
-        [clientId]: client,
+        [clientID]: client,
       }),
     ),
   );
 
   await dagStore.withRead(async (read: dag.Read) => {
     // New client was added to the client map.
-    expect(await getClient(clientId, read)).to.deep.equal(client);
+    expect(await getClient(clientID, read)).to.deep.equal(client);
     expect(client.heartbeatTimestampMs).to.equal(clock.now);
     expect(client.mutationID).to.equal(0);
     expect(client.lastServerAckdMutationID).to.equal(0);
@@ -561,7 +561,7 @@ test('initClient creates new empty snapshot when no existing snapshot to bootstr
     const snapshotMeta = commit.meta as SnapshotMeta;
     expect(snapshotMeta.basisHash).to.be.null;
     expect(snapshotMeta.cookieJSON).to.be.null;
-    expect(commit.mutationID).to.equal(0);
+    expect(await commit.getMutationID(clientID)).to.equal(0);
     expect(commit.indexes).to.be.empty;
     expect(await new BTreeRead(read, commit.valueHash).isEmpty()).to.be.true;
   });
@@ -598,13 +598,13 @@ test('initClient bootstraps from base snapshot of client with highest heartbeat'
   await setClients(clientMap, dagStore);
 
   clock.tick(4000);
-  const [clientId, client, clients] = await initClient(dagStore);
+  const [clientID2, client, clients] = await initClient(dagStore);
 
-  expect(clients).to.deep.equal(new Map(clientMap).set(clientId, client));
+  expect(clients).to.deep.equal(new Map(clientMap).set(clientID2, client));
 
   await dagStore.withRead(async (read: dag.Read) => {
     // New client was added to the client map.
-    expect(await getClient(clientId, read)).to.deep.equal(client);
+    expect(await getClient(clientID2, read)).to.deep.equal(client);
     expect(client.heartbeatTimestampMs).to.equal(clock.now);
     expect(client.mutationID).to.equal(0);
     expect(client.lastServerAckdMutationID).to.equal(0);
@@ -624,7 +624,7 @@ test('initClient bootstraps from base snapshot of client with highest heartbeat'
     expect(snapshotMeta.cookieJSON).to.equal(
       client2BaseSnapshotMeta.cookieJSON,
     );
-    expect(commit.mutationID).to.equal(0);
+    expect(await commit.getMutationID(clientID2)).to.equal(0);
     expect(commit.indexes).to.not.be.empty;
     expect(commit.indexes).to.deep.equal(client2BaseSnapshotCommit.indexes);
     expect(commit.valueHash).to.equal(client2BaseSnapshotCommit.valueHash);

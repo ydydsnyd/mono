@@ -14,6 +14,7 @@ import {encode} from '../base32-encode';
 import type {ReadonlyJSONValue} from '../json';
 
 test('fix hashes up of a single snapshot commit with empty btree', async () => {
+  const clientID = 'client-id';
   const memdag = new dag.TestStore(
     undefined,
     makeNewFakeHashFunction('t/aaa'),
@@ -23,14 +24,16 @@ test('fix hashes up of a single snapshot commit with empty btree', async () => {
   const [headChunk, treeChunk] = await memdag.withWrite(async dagWrite => {
     const tree = new BTreeWrite(dagWrite);
     const valueHash = await tree.flush();
-    const c = db.newSnapshot(
-      dagWrite.createChunk,
-      null,
-      0,
-      null,
-      valueHash,
-      [],
-    );
+    const c = DD31
+      ? db.newSnapshotDD31(
+          dagWrite.createChunk,
+          null,
+          {[clientID]: 0},
+          null,
+          valueHash,
+          [],
+        )
+      : db.newSnapshot(dagWrite.createChunk, null, 0, null, valueHash, []);
     await dagWrite.putChunk(c.chunk);
     await dagWrite.setHead('test', c.chunk.hash);
     await dagWrite.commit();
@@ -41,7 +44,7 @@ test('fix hashes up of a single snapshot commit with empty btree', async () => {
   assert.deepEqual(snapshot, {
     'c/t/aaa000000000000000000000000000/d': [0, []],
     'c/t/aaa000000000000000000000000001/d': {
-      meta: {type: 3, basisHash: null, lastMutationID: 0, cookieJSON: null},
+      meta: makeSnapshotMetaForTesting(clientID),
       valueHash: 't/aaa000000000000000000000000000',
       indexes: [],
     },
@@ -73,26 +76,32 @@ test('fix hashes up of a single snapshot commit with empty btree', async () => {
 
   const transformer = new ComputeHashTransformer(gatheredChunk, hashFunc);
   const newHeadHash = await transformer.transformCommit(headChunk.hash);
-  assert.equal(newHeadHash, parseHash('9lrb08p9b7jqo8oad3aef60muj4td8ke'));
+  assert.equal(
+    newHeadHash,
+    parseHash(
+      DD31
+        ? '0tb6u6bkfvivbu1f0sjkl58kjmj13ac2'
+        : '9lrb08p9b7jqo8oad3aef60muj4td8ke',
+    ),
+  );
 
   assert.deepEqual(Object.fromEntries(transformer.fixedChunks), {
-    'mdcncodijhl6jk2o8bb7m0hg15p3sf24': {
+    mdcncodijhl6jk2o8bb7m0hg15p3sf24: {
       data: [0, []],
       hash: 'mdcncodijhl6jk2o8bb7m0hg15p3sf24',
       meta: [],
     },
-    '9lrb08p9b7jqo8oad3aef60muj4td8ke': {
+    [DD31
+      ? '0tb6u6bkfvivbu1f0sjkl58kjmj13ac2'
+      : '9lrb08p9b7jqo8oad3aef60muj4td8ke']: {
       data: {
         indexes: [],
-        meta: {
-          basisHash: null,
-          cookieJSON: null,
-          lastMutationID: 0,
-          type: 3,
-        },
+        meta: makeSnapshotMetaForTesting(clientID),
         valueHash: 'mdcncodijhl6jk2o8bb7m0hg15p3sf24',
       },
-      hash: '9lrb08p9b7jqo8oad3aef60muj4td8ke',
+      hash: DD31
+        ? '0tb6u6bkfvivbu1f0sjkl58kjmj13ac2'
+        : '9lrb08p9b7jqo8oad3aef60muj4td8ke',
       meta: ['mdcncodijhl6jk2o8bb7m0hg15p3sf24'],
     },
   });
@@ -105,23 +114,47 @@ test('fix hashes up of a single snapshot commit with empty btree', async () => {
 
     const transformer = new ComputeHashTransformer(gatheredChunk, hashFunc);
     const newHeadHash = await transformer.transformCommit(headChunk.hash);
-    assert.equal(newHeadHash, parseHash('1fgr18o8m8p503lt3e9oaoct8k9ch47b'));
+    assert.equal(
+      newHeadHash,
+      parseHash(
+        DD31
+          ? 'cm6vbtkg2m7cuhkadd3pkoskes2pl9ea'
+          : '1fgr18o8m8p503lt3e9oaoct8k9ch47b',
+      ),
+    );
 
     assert.deepEqual(Object.fromEntries(transformer.fixedChunks), {
-      '1fgr18o8m8p503lt3e9oaoct8k9ch47b': {
+      [DD31
+        ? 'cm6vbtkg2m7cuhkadd3pkoskes2pl9ea'
+        : '1fgr18o8m8p503lt3e9oaoct8k9ch47b']: {
         data: {
           indexes: [],
-          meta: {
-            basisHash: null,
-            cookieJSON: null,
-            lastMutationID: 0,
-            type: 3,
-          },
+          meta: makeSnapshotMetaForTesting(clientID),
           valueHash: 't/aaa000000000000000000000000000',
         },
-        hash: '1fgr18o8m8p503lt3e9oaoct8k9ch47b',
+        hash: DD31
+          ? 'cm6vbtkg2m7cuhkadd3pkoskes2pl9ea'
+          : '1fgr18o8m8p503lt3e9oaoct8k9ch47b',
         meta: ['t/aaa000000000000000000000000000'],
       },
     });
   }
 });
+
+function makeSnapshotMetaForTesting(
+  clientID: string,
+): ReadonlyJSONValue | undefined {
+  return DD31
+    ? {
+        basisHash: null,
+        cookieJSON: null,
+        lastMutationIDs: {[clientID]: 0},
+        type: 3,
+      }
+    : {
+        basisHash: null,
+        cookieJSON: null,
+        lastMutationID: 0,
+        type: 3,
+      };
+}

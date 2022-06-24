@@ -14,6 +14,7 @@ export async function validateRebase(
   dagRead: dag.Read,
   mutatorName: string,
   _args: InternalValue | undefined,
+  clientID: sync.ClientID,
 ): Promise<void> {
   // Ensure the rebase commit is going on top of the current sync head.
   const syncHeadHash = await dagRead.getHead(sync.SYNC_HEAD_NAME);
@@ -41,9 +42,14 @@ export async function validateRebase(
 
   // Ensure rebase and original commit mutation ids names match.
   const [, basis] = await db.readCommit(db.whenceHash(opts.basis), dagRead);
-  if (basis.nextMutationID !== original.mutationID) {
+  if (
+    (await basis.getNextMutationID(clientID)) !==
+    (await original.getMutationID(clientID))
+  ) {
     throw new Error(
-      `Inconsistent mutation ID: original: ${original.mutationID}, next: ${basis.nextMutationID}`,
+      `Inconsistent mutation ID: original: ${await original.getMutationID(
+        clientID,
+      )}, next: ${await basis.getNextMutationID(clientID)}`,
     );
   }
 

@@ -25,6 +25,7 @@ import {addSyncSnapshot} from '../sync/test-helpers';
 import {persist} from './persist';
 import {gcClients} from './client-gc.js';
 import {initClientWithClientID} from './clients-test-helpers.js';
+import {assertSnapshotMeta, assertSnapshotMetaDD31} from '../db/commit.js';
 
 let clock: SinonFakeTimers;
 setup(() => {
@@ -67,10 +68,20 @@ async function assertClientMutationIDsCorrect(
     assert(client);
     const headCommit = await db.commitFromHash(client.headHash, dagRead);
     const baseSnapshotCommit = await db.baseSnapshot(client.headHash, dagRead);
-    expect(client.mutationID).to.equal(headCommit.mutationID);
-    expect(client.lastServerAckdMutationID).to.equal(
-      baseSnapshotCommit.meta.lastMutationID,
+    expect(client.mutationID).to.equal(
+      await headCommit.getMutationID(clientID),
     );
+    const {meta} = baseSnapshotCommit;
+    if (DD31) {
+      assertSnapshotMetaDD31(meta);
+      expect(client.lastServerAckdMutationID).to.equal(
+        meta.lastMutationIDs[clientID],
+      );
+    } else {
+      assertSnapshotMeta(meta);
+
+      expect(client.lastServerAckdMutationID).to.equal(meta.lastMutationID);
+    }
   });
 }
 

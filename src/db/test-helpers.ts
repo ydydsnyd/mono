@@ -3,7 +3,7 @@ import {expect} from '@esm-bundle/chai';
 import type * as dag from '../dag/mod';
 import {Commit, DEFAULT_HEAD_NAME, Meta} from './commit';
 import {readCommit, whenceHead} from './read';
-import {Write, readIndexesForWrite, MetaType} from './write';
+import {Write, readIndexesForWrite, WriteMetaType} from './write';
 import type {JSONValue} from '../json';
 import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 import type {ClientID} from '../sync/client-id.js';
@@ -129,14 +129,28 @@ export async function addSnapshot(
   const lc = new LogContext();
   const cookie = `cookie_${chain.length}`;
   await store.withWrite(async dagWrite => {
-    const w = await Write.newSnapshot(
-      whenceHead(DEFAULT_HEAD_NAME),
-      chain[chain.length - 1].nextMutationID,
-      cookie,
-      dagWrite,
-      readIndexesForWrite(chain[chain.length - 1], dagWrite),
-      clientID,
-    );
+    let w;
+    if (DD31) {
+      w = await Write.newSnapshotDD31(
+        whenceHead(DEFAULT_HEAD_NAME),
+        {
+          [clientID]: await chain[chain.length - 1].getNextMutationID(clientID),
+        },
+        cookie,
+        dagWrite,
+        readIndexesForWrite(chain[chain.length - 1], dagWrite),
+        clientID,
+      );
+    } else {
+      w = await Write.newSnapshot(
+        whenceHead(DEFAULT_HEAD_NAME),
+        await chain[chain.length - 1].getNextMutationID(clientID),
+        cookie,
+        dagWrite,
+        readIndexesForWrite(chain[chain.length - 1], dagWrite),
+        clientID,
+      );
+    }
 
     if (map) {
       for (const [k, v] of map) {
@@ -157,12 +171,26 @@ export async function initDB(
   headName: string,
   clientID: ClientID,
 ): Promise<Hash> {
-  // TODO(arv): There are no callers outside tests? Move to db/test-helpers.ts
+  if (DD31) {
+    const w = new Write(
+      dagWrite,
+      new BTreeWrite(dagWrite),
+      undefined,
+      {
+        type: WriteMetaType.Snapshot,
+        lastMutationIDs: {[clientID]: 0},
+        cookie: null,
+      },
+      new Map(),
+      clientID,
+    );
+    return await w.commit(headName);
+  }
   const w = new Write(
     dagWrite,
     new BTreeWrite(dagWrite),
     undefined,
-    {type: MetaType.Snapshot, lastMutationID: 0, cookie: null},
+    {type: WriteMetaType.Snapshot, lastMutationID: 0, cookie: null},
     new Map(),
     clientID,
   );

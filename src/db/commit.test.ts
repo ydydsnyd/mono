@@ -10,10 +10,14 @@ import {
   newIndexChange as commitNewIndexChange,
   newLocal as commitNewLocal,
   newSnapshot as commitNewSnapshot,
+  newSnapshotDD31 as commitNewSnapshotDD31,
   SnapshotMeta,
   chain as commitChain,
   localMutations,
   baseSnapshot,
+  assertSnapshotMetaDD31,
+  assertSnapshotMeta,
+  SnapshotMetaDD31,
 } from './commit';
 import {
   addGenesis,
@@ -266,12 +270,29 @@ test('load roundtrip', async () => {
           basisHash ?? null,
           0,
           toInternalValue({foo: 'bar'}, ToInternalValueReason.Test),
+          clientID,
         ),
         fakeHash('vh'),
         [fakeHash('vh')],
         clientID,
       ),
-      commitNewSnapshot(createChunk, basisHash, 0, cookie, fakeHash('vh'), []),
+      DD31
+        ? commitNewSnapshotDD31(
+            createChunk,
+            basisHash,
+            {[clientID]: 0},
+            cookie,
+            fakeHash('vh'),
+            [],
+          )
+        : commitNewSnapshot(
+            createChunk,
+            basisHash,
+            0,
+            cookie,
+            fakeHash('vh'),
+            [],
+          ),
     );
   }
   t(
@@ -281,6 +302,7 @@ test('load roundtrip', async () => {
         0,
         // @ts-expect-error we are testing invalid types
         undefined,
+        clientID,
       ),
       fakeHash('vh'),
       [fakeHash('vh'), fakeHash('')],
@@ -339,11 +361,11 @@ test('accessors', async () => {
   }
   expect(local.meta.basisHash).to.equal(basisHash);
   expect(local.valueHash).to.equal(valueHash);
-  expect(local.nextMutationID).to.equal(2);
+  expect(await local.getNextMutationID(clientID)).to.equal(2);
 
   const snapshot = fromChunk(
     await makeCommit(
-      makeSnapshotMeta(fakeHash('basishash2'), 2, 'cookie 2'),
+      makeSnapshotMeta(fakeHash('basishash2'), 2, 'cookie 2', clientID),
       fakeHash('valuehash2'),
       [fakeHash('valuehash2'), fakeHash('basishash2')],
       clientID,
@@ -351,7 +373,13 @@ test('accessors', async () => {
   );
   const sm = snapshot.meta;
   if (sm.type === MetaTyped.Snapshot) {
-    expect(sm.lastMutationID).to.equal(2);
+    if (DD31) {
+      assertSnapshotMetaDD31(sm);
+      expect(sm.lastMutationIDs[clientID]).to.equal(2);
+    } else {
+      assertSnapshotMeta(sm);
+      expect(sm.lastMutationID).to.equal(2);
+    }
     expect(sm.cookieJSON).to.deep.equal('cookie 2');
     expect(sm.cookieJSON).to.deep.equal('cookie 2');
   } else {
@@ -359,7 +387,7 @@ test('accessors', async () => {
   }
   expect(snapshot.meta.basisHash).to.equal(fakeHash('basishash2'));
   expect(snapshot.valueHash).to.equal(fakeHash('valuehash2'));
-  expect(snapshot.nextMutationID).to.equal(3);
+  expect(await snapshot.getNextMutationID(clientID)).to.equal(3);
 
   const indexChange = fromChunk(
     await makeCommit(
@@ -377,7 +405,7 @@ test('accessors', async () => {
   }
   expect(indexChange.meta.basisHash).to.equal(fakeHash('basishash3'));
   expect(indexChange.valueHash).to.equal(fakeHash('valuehash3'));
-  expect(indexChange.mutationID).to.equal(3);
+  expect(await indexChange.getMutationID(clientID)).to.equal(3);
 });
 
 const chunkHasher = makeTestChunkHasher('test');
@@ -409,7 +437,16 @@ function makeSnapshotMeta(
   basisHash: Hash | null,
   lastMutationID: number,
   cookieJSON: InternalValue,
-): SnapshotMeta {
+  clientID: ClientID,
+): SnapshotMeta | SnapshotMetaDD31 {
+  if (DD31) {
+    return {
+      type: MetaTyped.Snapshot,
+      basisHash,
+      lastMutationIDs: {[clientID]: lastMutationID},
+      cookieJSON,
+    };
+  }
   return {
     type: MetaTyped.Snapshot,
     basisHash,

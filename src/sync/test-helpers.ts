@@ -30,7 +30,7 @@ export async function addSyncSnapshot(
     }
   }
   if (maybeBaseSnapshot === undefined) {
-    throw new Error('main chain doesnt have a snapshot or local commit');
+    throw new Error("main chain doesn't have a snapshot or local commit");
   }
   const baseSnapshot = maybeBaseSnapshot;
   const syncChain: Chain = [];
@@ -39,15 +39,27 @@ export async function addSyncSnapshot(
   const cookie = `sync_cookie_${chain.length}`;
   await store.withWrite(async dagWrite => {
     const indexes = db.readIndexesForWrite(chain[takeIndexesFrom], dagWrite);
-    const w = await db.Write.newSnapshot(
-      db.whenceHash(baseSnapshot.chunk.hash),
-      baseSnapshot.mutationID,
-      cookie,
-      dagWrite,
-      indexes,
-      clientID,
-    );
-    await w.commit(sync.SYNC_HEAD_NAME);
+    if (DD31) {
+      const w = await db.Write.newSnapshotDD31(
+        db.whenceHash(baseSnapshot.chunk.hash),
+        {[clientID]: await baseSnapshot.getMutationID(clientID)},
+        cookie,
+        dagWrite,
+        indexes,
+        clientID,
+      );
+      await w.commit(sync.SYNC_HEAD_NAME);
+    } else {
+      const w = await db.Write.newSnapshot(
+        db.whenceHash(baseSnapshot.chunk.hash),
+        await baseSnapshot.getMutationID(clientID),
+        cookie,
+        dagWrite,
+        indexes,
+        clientID,
+      );
+      await w.commit(sync.SYNC_HEAD_NAME);
+    }
   });
   const [, commit] = await store.withRead(async dagRead => {
     return await db.readCommit(db.whenceHead(sync.SYNC_HEAD_NAME), dagRead);

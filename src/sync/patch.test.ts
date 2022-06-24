@@ -158,14 +158,26 @@ test('patch', async () => {
     const chain: Chain = [];
     await addGenesis(chain, store, clientID);
     await store.withWrite(async dagWrite => {
-      const dbWrite = await db.Write.newSnapshot(
-        db.whenceHash(chain[0].chunk.hash),
-        1,
-        'cookie',
-        dagWrite,
-        db.readIndexesForWrite(chain[0], dagWrite),
-        clientID,
-      );
+      let dbWrite;
+      if (DD31) {
+        dbWrite = await db.Write.newSnapshotDD31(
+          db.whenceHash(chain[0].chunk.hash),
+          {[clientID]: 1},
+          'cookie',
+          dagWrite,
+          db.readIndexesForWrite(chain[0], dagWrite),
+          clientID,
+        );
+      } else {
+        dbWrite = await db.Write.newSnapshot(
+          db.whenceHash(chain[0].chunk.hash),
+          1,
+          'cookie',
+          dagWrite,
+          db.readIndexesForWrite(chain[0], dagWrite),
+          clientID,
+        );
+      }
       await dbWrite.put(lc, 'key', 'value');
 
       const ops = c.patch;

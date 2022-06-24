@@ -83,14 +83,14 @@ export async function beginPull(
     return await db.baseSnapshot(mainHeadHash, dagRead);
   });
 
-  const snapshotMetaParts = db.snapshotMetaParts(baseSnapshot);
+  const snapshotMetaParts = db.snapshotMetaParts(baseSnapshot, clientID);
   const baseCookie = snapshotMetaParts[1];
 
   const pullReq = {
     profileID,
     clientID,
     cookie: baseCookie,
-    lastMutationID: baseSnapshot.mutationID,
+    lastMutationID: await baseSnapshot.getMutationID(clientID),
     pullVersion: PULL_VERSION,
     schemaVersion,
   };
@@ -162,7 +162,10 @@ export async function handlePullResponse(
       throw new Error('Main head disappeared');
     }
     const baseSnapshot = await db.baseSnapshot(mainHead, dagRead);
-    const [baseLastMutationID, baseCookie] = db.snapshotMetaParts(baseSnapshot);
+    const [baseLastMutationID, baseCookie] = db.snapshotMetaParts(
+      baseSnapshot,
+      clientID,
+    );
 
     // TODO(MP) Here we are using whether the cookie has changes as a proxy for whether
     // the base snapshot changed, which is the check we used to do. I don't think this
@@ -215,21 +218,37 @@ export async function handlePullResponse(
     // We start with the index definitions in the last commit that was
     // integrated into the new snapshot.
     const chain = await db.commitChain(mainHead, dagRead);
-    const lastIntegrated = chain.find(
-      c => c.mutationID <= response.lastMutationID,
-    );
+    let lastIntegrated: db.Commit<db.Meta> | undefined;
+    for (const commit of chain) {
+      if ((await commit.getMutationID(clientID)) <= response.lastMutationID) {
+        lastIntegrated = commit;
+        break;
+      }
+    }
+
     if (!lastIntegrated) {
       throw new Error('Internal invalid chain');
     }
 
-    const dbWrite = await db.Write.newSnapshot(
-      db.whenceHash(baseSnapshot.chunk.hash),
-      response.lastMutationID,
-      internalCookie,
-      dagWrite,
-      db.readIndexesForWrite(lastIntegrated, dagWrite),
-      clientID,
-    );
+    // TODO(arv): Make these module level functions instead of statics so the
+    // esbuild can strip them.
+    const dbWrite = DD31
+      ? await db.Write.newSnapshotDD31(
+          db.whenceHash(baseSnapshot.chunk.hash),
+          {[clientID]: response.lastMutationID},
+          internalCookie,
+          dagWrite,
+          db.readIndexesForWrite(lastIntegrated, dagWrite),
+          clientID,
+        )
+      : await db.Write.newSnapshot(
+          db.whenceHash(baseSnapshot.chunk.hash),
+          response.lastMutationID,
+          internalCookie,
+          dagWrite,
+          db.readIndexesForWrite(lastIntegrated, dagWrite),
+          clientID,
+        );
 
     await patch.apply(lc, dbWrite, response.patch);
 
@@ -278,6 +297,7 @@ export async function maybeEndPull(
   store: dag.Store,
   lc: LogContext,
   expectedSyncHead: Hash,
+  clientID: ClientID,
 ): Promise<MaybeEndPullResult> {
   // Ensure sync head is what the caller thinks it is.
   return await store.withWrite(async dagWrite => {
@@ -315,9 +335,15 @@ export async function maybeEndPull(
 
     // Collect pending commits from the main chain and determine which
     // of them if any need to be replayed.
-    let pending = await db.localMutations(mainHeadHash, dagRead);
+    const localMutations = await db.localMutations(mainHeadHash, dagRead);
     const syncHead = await db.commitFromHash(syncHeadHash, dagRead);
-    pending = pending.filter(c => c.mutationID > syncHead.mutationID);
+    const pending = [];
+    const syncHeadMutationID = await syncHead.getMutationID(clientID);
+    for (const commit of localMutations) {
+      if ((await commit.getMutationID(clientID)) > syncHeadMutationID) {
+        pending.push(commit);
+      }
+    }
     // pending() gave us the pending mutations in sync-head-first order whereas
     // caller wants them in the order to replay (lower mutation ids first).
     pending.reverse();
@@ -342,7 +368,7 @@ export async function maybeEndPull(
           throw new Error('pending mutation is not local');
         }
         replayMutations.push({
-          id: c.mutationID,
+          id: await c.getMutationID(clientID),
           name,
           args,
           original: c.chunk.hash,
@@ -380,8 +406,14 @@ export async function maybeEndPull(
     await dagWrite.commit();
 
     if (lc.debug) {
-      const [oldLastMutationID, oldCookie] = db.snapshotMetaParts(mainSnapshot);
-      const [newLastMutationID, newCookie] = db.snapshotMetaParts(syncSnapshot);
+      const [oldLastMutationID, oldCookie] = db.snapshotMetaParts(
+        mainSnapshot,
+        clientID,
+      );
+      const [newLastMutationID, newCookie] = db.snapshotMetaParts(
+        syncSnapshot,
+        clientID,
+      );
       lc.debug(
         `Successfully pulled new snapshot w/last_mutation_id:`,
         newLastMutationID,

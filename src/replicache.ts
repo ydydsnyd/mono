@@ -830,6 +830,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       }
 
       await this._ready;
+      const clientID = await this._clientIDPromise;
       const lc = this._lc
         .addContext('maybeEndPull')
         .addContext('request_id', requestID);
@@ -837,6 +838,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         this._memdag,
         lc,
         syncHead,
+        clientID,
       );
 
       if (!replayMutations || replayMutations.length === 0) {
@@ -1398,7 +1400,13 @@ export class Replicache<MD extends MutatorDefs = {}> {
       if (rebaseOpts === undefined) {
         whence = db.whenceHead(db.DEFAULT_HEAD_NAME);
       } else {
-        await sync.validateRebase(rebaseOpts, dagWrite, name, internalArgs);
+        await sync.validateRebase(
+          rebaseOpts,
+          dagWrite,
+          name,
+          internalArgs,
+          clientID,
+        );
         whence = db.whenceHash(rebaseOpts.basis);
         originalHash = rebaseOpts.original;
       }
@@ -1474,15 +1482,21 @@ export class Replicache<MD extends MutatorDefs = {}> {
       if (mainHeadHash === undefined) {
         throw new Error('Missing main head');
       }
+      // TODO(arv, DD31): Should we rename localMutations?
       const pending = await db.localMutations(mainHeadHash, dagRead);
-      return pending.map(p => ({
-        id: p.mutationID,
-        name: p.meta.mutatorName,
-        args: fromInternalValue(
-          p.meta.mutatorArgsJSON,
-          FromInternalValueReason.PendingMutationGet,
-        ),
-      }));
+      const clientID = await this._clientIDPromise;
+      return Promise.all(
+        pending.map(async p => {
+          return {
+            id: await p.getMutationID(clientID),
+            name: p.meta.mutatorName,
+            args: fromInternalValue(
+              p.meta.mutatorArgsJSON,
+              FromInternalValueReason.PendingMutationGet,
+            ),
+          };
+        }),
+      );
     });
   }
 }

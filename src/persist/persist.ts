@@ -1,4 +1,4 @@
-import {assert} from '../asserts';
+import {assert, assertNumber} from '../asserts';
 import type * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import * as sync from '../sync/mod';
@@ -8,6 +8,7 @@ import {assertHasClientState, updateClients} from './clients';
 import {ComputeHashTransformer, FixedChunks} from './compute-hash-transformer';
 import {GatherVisitor} from './gather-visitor';
 import {FixupTransformer} from './fixup-transformer';
+import {assertSnapshotMeta, assertSnapshotMetaDD31} from '../db/commit.js';
 
 /**
  * Computes permanent hashes from all temp chunks in `memdag` and writes them
@@ -37,7 +38,7 @@ export async function persist(
 
   // 1. Gather all temp chunks from main head on the memdag.
   const [gatheredChunks, mainHeadTempHash, mutationID, lastMutationID] =
-    await gatherTempChunks(memdag);
+    await gatherTempChunks(memdag, clientID);
 
   if (gatheredChunks.size === 0) {
     // Nothing to persist
@@ -72,6 +73,7 @@ export async function persist(
 
 async function gatherTempChunks(
   memdag: dag.Store,
+  clientID: ClientID,
 ): Promise<
   [
     map: ReadonlyMap<Hash, dag.Chunk>,
@@ -87,11 +89,22 @@ async function gatherTempChunks(
     await visitor.visitCommit(mainHeadHash);
     const headCommit = await db.commitFromHash(mainHeadHash, dagRead);
     const baseSnapshotCommit = await db.baseSnapshot(mainHeadHash, dagRead);
+    let lastMutationID: number;
+    const {meta} = baseSnapshotCommit;
+    if (DD31) {
+      assertSnapshotMetaDD31(meta);
+      const lmid = meta.lastMutationIDs[clientID];
+      assertNumber(lmid);
+      lastMutationID = lmid;
+    } else {
+      assertSnapshotMeta(meta);
+      lastMutationID = meta.lastMutationID;
+    }
     return [
       visitor.gatheredChunks,
       mainHeadHash,
-      headCommit.mutationID,
-      baseSnapshotCommit.meta.lastMutationID,
+      await headCommit.getMutationID(clientID),
+      lastMutationID,
     ];
   });
 }

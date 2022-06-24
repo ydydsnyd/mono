@@ -15,6 +15,7 @@ import type {ClientID} from '../sync/client-id.js';
 
 export const DEFAULT_HEAD_NAME = 'main';
 
+// TODO(arv): Add new entries for DD31
 export const enum MetaTyped {
   NONE = 0,
   IndexChange = 1,
@@ -50,19 +51,28 @@ export class Commit<M extends Meta> {
     return this.chunk.data.valueHash;
   }
 
-  get mutationID(): number {
+  async getMutationID(clientID: ClientID): Promise<number> {
     const {meta} = this;
     switch (meta.type) {
       case MetaTyped.IndexChange:
-      case MetaTyped.Snapshot:
         return meta.lastMutationID;
+      case MetaTyped.Snapshot: {
+        if (DD31) {
+          assertSnapshotMetaDD31(meta);
+          const lmid = meta.lastMutationIDs[clientID];
+          assertNumber(lmid);
+          return lmid;
+        }
+        assertSnapshotMeta(meta);
+        return meta.lastMutationID;
+      }
       case MetaTyped.Local:
         return meta.mutationID;
     }
   }
 
-  get nextMutationID(): number {
-    return this.mutationID + 1;
+  async getNextMutationID(clientID: ClientID): Promise<number> {
+    return (await this.getMutationID(clientID)) + 1;
   }
 
   get indexes(): readonly IndexRecord[] {
@@ -93,7 +103,7 @@ export async function localMutations(
 export async function baseSnapshot(
   hash: Hash,
   dagRead: dag.Read,
-): Promise<Commit<SnapshotMeta>> {
+): Promise<Commit<SnapshotMeta | SnapshotMetaDD31>> {
   let commit = await fromHash(hash, dagRead);
   while (!commit.isSnapshot()) {
     const {meta} = commit;
@@ -107,9 +117,19 @@ export async function baseSnapshot(
 }
 
 export function snapshotMetaParts(
-  c: Commit<SnapshotMeta>,
+  c: Commit<SnapshotMeta | SnapshotMetaDD31>,
+  clientID: ClientID,
 ): [lastMutationID: number, cookie: InternalValue] {
   const m = c.meta;
+  let lmid;
+  if (DD31) {
+    assertSnapshotMetaDD31(m);
+    lmid = m.lastMutationIDs[clientID];
+    assertNumber(lmid);
+    return [lmid, m.cookieJSON];
+  }
+
+  assertSnapshotMeta(m);
   return [m.lastMutationID, m.cookieJSON];
 }
 
@@ -224,7 +244,7 @@ export function assertLocalMetaDD31(
 export function isLocalMetaDD31(
   meta: LocalMeta | LocalMetaDD31,
 ): meta is LocalMetaDD31 {
-  return (meta as Partial<LocalMetaDD31>).clientID !== undefined;
+  return DD31 && (meta as Partial<LocalMetaDD31>).clientID !== undefined;
 }
 
 export type SnapshotMeta = BasisHash & {
@@ -233,15 +253,47 @@ export type SnapshotMeta = BasisHash & {
   readonly cookieJSON: InternalValue;
 };
 
-function assertSnapshotMeta(
+export type SnapshotMetaDD31 = BasisHash & {
+  readonly type: MetaTyped.Snapshot;
+  readonly lastMutationIDs: Record<ClientID, number>;
+  readonly cookieJSON: InternalValue;
+};
+
+export function assertSnapshotMeta(
   v: Record<string, unknown>,
 ): asserts v is SnapshotMeta {
+  assert(!DD31);
   // type already asserted
   assertNumber(v.lastMutationID);
   assertJSONValue(v.cookieJSON);
 }
 
-export type Meta = IndexChangeMeta | LocalMeta | LocalMetaDD31 | SnapshotMeta;
+export type Meta =
+  | IndexChangeMeta
+  | LocalMeta
+  | LocalMetaDD31
+  | SnapshotMeta
+  | SnapshotMetaDD31;
+
+export function assertSnapshotMetaDD31(
+  v: Record<string, unknown>,
+): asserts v is SnapshotMetaDD31 {
+  assert(DD31);
+  // type already asserted
+  assertObject(v.lastMutationIDs);
+  for (const lmid of Object.values(v.lastMutationIDs)) {
+    assertNumber(lmid);
+  }
+  assertJSONValue(v.cookieJSON);
+}
+
+export function isSnapshotMetaDD31(
+  meta: SnapshotMeta | SnapshotMetaDD31,
+): meta is SnapshotMetaDD31 {
+  return (
+    DD31 && (meta as Partial<SnapshotMetaDD31>).lastMutationIDs !== undefined
+  );
+}
 
 function assertMeta(v: unknown): asserts v is Meta {
   assertObject(v);
@@ -262,7 +314,11 @@ function assertMeta(v: unknown): asserts v is Meta {
       }
       break;
     case MetaTyped.Snapshot:
-      assertSnapshotMeta(v);
+      if (DD31) {
+        assertSnapshotMetaDD31(v);
+      } else {
+        assertSnapshotMeta(v);
+      }
       break;
     default:
       throw new Error(`Invalid enum value ${v.type}`);
@@ -358,6 +414,26 @@ export function newSnapshot(
   );
 }
 
+export function newSnapshotDD31(
+  createChunk: dag.CreateChunk,
+  basisHash: Hash | null,
+  lastMutationIDs: Record<ClientID, number>,
+  cookieJSON: InternalValue,
+  valueHash: Hash,
+  indexes: readonly IndexRecord[],
+): Commit<SnapshotMetaDD31> {
+  return commitFromCommitData(
+    createChunk,
+    newSnapshotCommitDataDD31(
+      basisHash,
+      lastMutationIDs,
+      cookieJSON,
+      valueHash,
+      indexes,
+    ),
+  );
+}
+
 export function newSnapshotCommitData(
   basisHash: Hash | null,
   lastMutationID: number,
@@ -365,10 +441,28 @@ export function newSnapshotCommitData(
   valueHash: Hash,
   indexes: readonly IndexRecord[],
 ): CommitData<SnapshotMeta> {
+  assert(!DD31);
   const meta: SnapshotMeta = {
     type: MetaTyped.Snapshot,
     basisHash,
     lastMutationID,
+    cookieJSON,
+  };
+  return {meta, valueHash, indexes};
+}
+
+export function newSnapshotCommitDataDD31(
+  basisHash: Hash | null,
+  lastMutationIDs: Record<ClientID, number>,
+  cookieJSON: InternalValue,
+  valueHash: Hash,
+  indexes: readonly IndexRecord[],
+): CommitData<SnapshotMetaDD31> {
+  assert(DD31);
+  const meta: SnapshotMetaDD31 = {
+    type: MetaTyped.Snapshot,
+    basisHash,
+    lastMutationIDs,
     cookieJSON,
   };
   return {meta, valueHash, indexes};

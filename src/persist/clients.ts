@@ -7,7 +7,11 @@ import type {ReadonlyJSONValue} from '../json';
 import {assertNotUndefined, assertNumber, assertObject} from '../asserts';
 import {hasOwn} from '../has-own';
 import {uuid as makeUuid} from '../uuid';
-import {getRefs, newSnapshotCommitData} from '../db/commit';
+import {
+  getRefs,
+  newSnapshotCommitData,
+  newSnapshotCommitDataDD31,
+} from '../db/commit';
 import type {MaybePromise} from '../mod';
 
 export type ClientMap = ReadonlyMap<sync.ClientID, Client>;
@@ -179,6 +183,15 @@ export async function initClient(
         // server implementations expect new client ids to start with last mutation id 0.
         // If a server sees a new client id with a non-0 last mutation id, it may conclude
         // this is a very old client whose state has been garbage collected on the server.
+        if (DD31) {
+          return newSnapshotCommitDataDD31(
+            bootstrapCommit.meta.basisHash,
+            {[newClientID]: 0},
+            bootstrapCommit.meta.cookieJSON,
+            bootstrapCommit.valueHash,
+            bootstrapCommit.indexes,
+          );
+        }
         return newSnapshotCommitData(
           bootstrapCommit.meta.basisHash,
           0 /* lastMutationID */,
@@ -194,13 +207,23 @@ export async function initClient(
         [],
       );
       chunksToPut.push(emptyBTreeChunk);
-      newClientCommitData = newSnapshotCommitData(
-        null /* basisHash */,
-        0 /* lastMutationID */,
-        null /* cookie */,
-        emptyBTreeChunk.hash,
-        [] /* indexes */,
-      );
+      if (DD31) {
+        newClientCommitData = newSnapshotCommitDataDD31(
+          null,
+          {[newClientID]: 0},
+          null,
+          emptyBTreeChunk.hash,
+          [],
+        );
+      } else {
+        newClientCommitData = newSnapshotCommitData(
+          null /* basisHash */,
+          0 /* lastMutationID */,
+          null /* cookie */,
+          emptyBTreeChunk.hash,
+          [] /* indexes */,
+        );
+      }
     }
 
     const newClientCommitChunk = await dag.createChunkWithNativeHash(

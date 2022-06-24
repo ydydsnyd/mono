@@ -17,6 +17,7 @@ export {
   newIndexChange,
   newLocal,
   newSnapshot,
+  newSnapshotDD31,
   assertCommitData,
   fromHash as commitFromHash,
   fromHead as commitFromHead,

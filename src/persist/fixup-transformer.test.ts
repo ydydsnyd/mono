@@ -19,14 +19,16 @@ test('fixup of a single snapshot commit with empty btree', async () => {
   const [headHash, valueHash] = await memdag.withWrite(async dagWrite => {
     const tree = new BTreeWrite(dagWrite);
     const valueHash = await tree.flush();
-    const c = db.newSnapshot(
-      dagWrite.createChunk,
-      null,
-      0,
-      null,
-      valueHash,
-      [],
-    );
+    const c = DD31
+      ? db.newSnapshotDD31(
+          dagWrite.createChunk,
+          null,
+          {[clientID]: 0},
+          null,
+          valueHash,
+          [],
+        )
+      : db.newSnapshot(dagWrite.createChunk, null, 0, null, valueHash, []);
     await dagWrite.putChunk(c.chunk);
     await dagWrite.setHead('test', c.chunk.hash);
     await dagWrite.commit();
@@ -38,7 +40,7 @@ test('fixup of a single snapshot commit with empty btree', async () => {
   assert.deepEqual(snapshot, {
     'c/t/000000000000000000000000000000/d': [0, []],
     'c/t/000000000000000000000000000001/d': {
-      meta: {type: 3, basisHash: null, lastMutationID: 0, cookieJSON: null},
+      meta: makeSnapshotMetaForTesting(clientID),
       valueHash: 't/000000000000000000000000000000',
       indexes: [],
     },
@@ -70,7 +72,7 @@ test('fixup of a single snapshot commit with empty btree', async () => {
     'h/test': 'fake000000000000000000000000head',
     'c/fake00000000000000000000000value/d': [0, []],
     'c/fake000000000000000000000000head/d': {
-      meta: {type: 3, basisHash: null, lastMutationID: 0, cookieJSON: null},
+      meta: makeSnapshotMetaForTesting(clientID),
       valueHash: 'fake00000000000000000000000value',
       indexes: [],
     },
@@ -119,12 +121,7 @@ test('fixup of a single snapshot commit with empty btree', async () => {
     assert.deepEqual(memdag.kvStore.snapshot(), {
       'c/fake000000000000000000000000head/d': {
         indexes: [],
-        meta: {
-          basisHash: null,
-          cookieJSON: null,
-          lastMutationID: 0,
-          type: 3,
-        },
+        meta: makeSnapshotMetaForTesting(clientID),
         valueHash: 'fake00000000000000000000000value',
       },
       'c/fake000000000000000000000000head/m': [
@@ -175,12 +172,19 @@ test('fixup of a single snapshot commit with empty btree', async () => {
       assert.deepEqual(memdag.kvStore.snapshot(), {
         'c/fake000000000000000000000000head/d': {
           indexes: [],
-          meta: {
-            basisHash: null,
-            cookieJSON: null,
-            lastMutationID: 0,
-            type: 3,
-          },
+          meta: DD31
+            ? {
+                basisHash: null,
+                cookieJSON: null,
+                lastMutationIDs: {[clientID]: 0},
+                type: 3,
+              }
+            : {
+                basisHash: null,
+                cookieJSON: null,
+                lastMutationID: 0,
+                type: 3,
+              },
           valueHash: 'fake00000000000000000000000value',
         },
         'c/fake000000000000000000000000head/m': [
@@ -218,14 +222,16 @@ test('fixup base snapshot when there is a local commit on top of it', async () =
     async dagWrite => {
       const tree = new BTreeWrite(dagWrite);
       const valueHash = await tree.flush();
-      const snapshotCommit = db.newSnapshot(
-        dagWrite.createChunk,
-        null,
-        0,
-        null,
-        valueHash,
-        [],
-      );
+      const snapshotCommit = DD31
+        ? db.newSnapshotDD31(
+            dagWrite.createChunk,
+            null,
+            {[clientID]: 0},
+            null,
+            valueHash,
+            [],
+          )
+        : db.newSnapshot(dagWrite.createChunk, null, 0, null, valueHash, []);
       await dagWrite.putChunk(snapshotCommit.chunk);
 
       const localCommit = db.newLocal(
@@ -268,12 +274,19 @@ test('fixup base snapshot when there is a local commit on top of it', async () =
       'c/t/000000000000000000000000000000/r': 1,
       'c/t/000000000000000000000000000001/d': {
         indexes: [],
-        meta: {
-          basisHash: null,
-          cookieJSON: null,
-          lastMutationID: 0,
-          type: 3,
-        },
+        meta: DD31
+          ? {
+              basisHash: null,
+              cookieJSON: null,
+              lastMutationIDs: {[clientID]: 0},
+              type: 3,
+            }
+          : {
+              basisHash: null,
+              cookieJSON: null,
+              lastMutationID: 0,
+              type: 3,
+            },
         valueHash: 't/000000000000000000000000000000',
       },
       'c/t/000000000000000000000000000001/m': [
@@ -335,12 +348,7 @@ test('fixup base snapshot when there is a local commit on top of it', async () =
       'c/fake00000000000000000000000value/r': 2,
       'c/fake00000000000000000000snapshot/d': {
         indexes: [],
-        meta: {
-          basisHash: null,
-          cookieJSON: null,
-          lastMutationID: 0,
-          type: 3,
-        },
+        meta: makeSnapshotMetaForTesting(clientID),
         valueHash: 'fake00000000000000000000000value',
       },
       'c/fake00000000000000000000snapshot/m': [
@@ -362,6 +370,24 @@ test('fixup base snapshot when there is a local commit on top of it', async () =
   }
 });
 
+function makeSnapshotMetaForTesting(
+  clientID: string,
+): ReadonlyJSONValue | undefined {
+  return DD31
+    ? {
+        basisHash: null,
+        cookieJSON: null,
+        lastMutationIDs: {[clientID]: 0},
+        type: 3,
+      }
+    : {
+        basisHash: null,
+        cookieJSON: null,
+        lastMutationID: 0,
+        type: 3,
+      };
+}
+
 async function makeBTree(
   dagWrite: dag.Write,
   entries: [string, ReadonlyJSONValue][],
@@ -374,6 +400,7 @@ async function makeBTree(
 }
 
 test('fixup of a single snapshot commit with a btree with internal nodes', async () => {
+  const clientID = 'client-id';
   const memdag = new dag.TestStore(
     undefined,
     makeNewTempHashFunction(),
@@ -393,14 +420,16 @@ test('fixup of a single snapshot commit with a btree with internal nodes', async
     const tree = await makeBTree(dagWrite, entries);
 
     const valueHash = await tree.flush();
-    const c = db.newSnapshot(
-      dagWrite.createChunk,
-      null,
-      0,
-      null,
-      valueHash,
-      [],
-    );
+    const c = DD31
+      ? db.newSnapshotDD31(
+          dagWrite.createChunk,
+          null,
+          {[clientID]: 0},
+          null,
+          valueHash,
+          [],
+        )
+      : db.newSnapshot(dagWrite.createChunk, null, 0, null, valueHash, []);
     await dagWrite.putChunk(c.chunk);
     await dagWrite.setHead('test', c.chunk.hash);
     await dagWrite.commit();
@@ -439,12 +468,7 @@ test('fixup of a single snapshot commit with a btree with internal nodes', async
         't/000000000000000000000000000001',
       ],
       'c/t/000000000000000000000000000003/d': {
-        meta: {
-          type: 3,
-          basisHash: null,
-          lastMutationID: 0,
-          cookieJSON: null,
-        },
+        meta: makeSnapshotMetaForTesting(clientID),
         valueHash: 't/000000000000000000000000000002',
         indexes: [],
       },
@@ -510,12 +534,7 @@ test('fixup of a single snapshot commit with a btree with internal nodes', async
         'fake00000000000000000000000data1',
       ],
       'c/fake000000000000000000000000head/d': {
-        meta: {
-          type: 3,
-          basisHash: null,
-          lastMutationID: 0,
-          cookieJSON: null,
-        },
+        meta: makeSnapshotMetaForTesting(clientID),
         valueHash: 'fake00000000000000000000000value',
         indexes: [],
       },
@@ -531,6 +550,7 @@ test('fixup of a single snapshot commit with a btree with internal nodes', async
 });
 
 test('fixup of a base snapshot with an index', async () => {
+  const clientID = 'client-id';
   const memdag = new dag.TestStore(
     undefined,
     makeNewTempHashFunction(),
@@ -562,16 +582,26 @@ test('fixup of a base snapshot with an index', async () => {
       const indexTree = await makeBTree(dagWrite, indexEntries);
       const indexHash = await indexTree.flush();
 
-      const c = db.newSnapshot(dagWrite.createChunk, null, 0, null, valueHash, [
-        {
-          definition: {
-            jsonPointer: '/a',
-            keyPrefix: '',
-            name: 'idx',
-          },
-          valueHash: indexHash,
+      const indexes = {
+        definition: {
+          jsonPointer: '/a',
+          keyPrefix: '',
+          name: 'idx',
         },
-      ]);
+        valueHash: indexHash,
+      };
+      const c = DD31
+        ? db.newSnapshotDD31(
+            dagWrite.createChunk,
+            null,
+            {[clientID]: 0},
+            null,
+            valueHash,
+            [indexes],
+          )
+        : db.newSnapshot(dagWrite.createChunk, null, 0, null, valueHash, [
+            indexes,
+          ]);
       await dagWrite.putChunk(c.chunk);
       await dagWrite.setHead('test', c.chunk.hash);
       await dagWrite.commit();
@@ -636,7 +666,7 @@ test('fixup of a base snapshot with an index', async () => {
       't/000000000000000000000000000004',
     ],
     'c/t/000000000000000000000000000006/d': {
-      meta: {type: 3, basisHash: null, lastMutationID: 0, cookieJSON: null},
+      meta: makeSnapshotMetaForTesting(clientID),
       valueHash: 't/000000000000000000000000000002',
       indexes: [
         {
@@ -692,12 +722,7 @@ test('fixup of a base snapshot with an index', async () => {
           valueHash: 'fake0000000000000000000000indecs',
         },
       ],
-      meta: {
-        basisHash: null,
-        cookieJSON: null,
-        lastMutationID: 0,
-        type: 3,
-      },
+      meta: makeSnapshotMetaForTesting(clientID),
       valueHash: 'fake00000000000000000000000value',
     },
     'c/fake000000000000000000000000head/m': [

@@ -54,7 +54,10 @@ test('begin try pull', async () => {
   await addIndexChange(chain, store, clientID);
   const startingNumCommits = chain.length;
   const baseSnapshot = chain[1];
-  const parts = db.snapshotMetaParts(baseSnapshot as Commit<SnapshotMeta>);
+  const parts = db.snapshotMetaParts(
+    baseSnapshot as Commit<SnapshotMeta>,
+    clientID,
+  );
 
   const baseLastMutationID = parts[0];
   const baseCookie = fromInternalValue(parts[1], FromInternalValueReason.Test);
@@ -477,6 +480,7 @@ test('begin try pull', async () => {
         const syncHead = db.fromChunk(chunk);
         const [gotLastMutationID, gotCookie] = db.snapshotMetaParts(
           syncHead as Commit<SnapshotMeta>,
+          clientID,
         );
         expect(expSyncHead.lastMutationID).to.equal(gotLastMutationID);
         expect(expSyncHead.cookie).to.deep.equal(gotCookie);
@@ -629,14 +633,23 @@ test('maybe end try pull', async () => {
       );
 
       // Add snapshot and replayed commits to the sync chain.
-      const w = await db.Write.newSnapshot(
-        db.whenceHash(chain[0].chunk.hash),
-        0,
-        'sync_cookie',
-        dagWrite,
-        db.readIndexesForWrite(chain[0], dagWrite),
-        clientID,
-      );
+      const w = DD31
+        ? await db.Write.newSnapshotDD31(
+            db.whenceHash(chain[0].chunk.hash),
+            {[clientID]: 0},
+            'sync_cookie',
+            dagWrite,
+            db.readIndexesForWrite(chain[0], dagWrite),
+            clientID,
+          )
+        : await db.Write.newSnapshot(
+            db.whenceHash(chain[0].chunk.hash),
+            0,
+            'sync_cookie',
+            dagWrite,
+            db.readIndexesForWrite(chain[0], dagWrite),
+            clientID,
+          );
       await w.put(lc, `key/${i}`, `${i}`);
       return await w.commit(SYNC_HEAD_NAME);
     });
@@ -674,7 +687,7 @@ test('maybe end try pull', async () => {
 
     let result: MaybeEndPullResult | string;
     try {
-      result = await maybeEndPull(store, lc, syncHead);
+      result = await maybeEndPull(store, lc, syncHead, clientID);
     } catch (e) {
       result = (e as Error).message;
     }
@@ -798,7 +811,10 @@ test('changed keys', async () => {
     await addSnapshot(chain, store, entries, clientID);
 
     const baseSnapshot = chain[chain.length - 1];
-    const parts = db.snapshotMetaParts(baseSnapshot as Commit<SnapshotMeta>);
+    const parts = db.snapshotMetaParts(
+      baseSnapshot as Commit<SnapshotMeta>,
+      clientID,
+    );
     const baseLastMutationID = parts[0];
     const baseCookie = fromInternalValue(
       parts[1],
@@ -857,7 +873,7 @@ test('changed keys', async () => {
       new LogContext(),
     );
 
-    const result = await maybeEndPull(store, lc, pullResult.syncHead);
+    const result = await maybeEndPull(store, lc, pullResult.syncHead, clientID);
     expect(Object.fromEntries(result.diffs)).to.deep.equal(
       Object.fromEntries(expectedDiffsMap),
     );

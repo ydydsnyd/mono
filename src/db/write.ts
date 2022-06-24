@@ -9,6 +9,7 @@ import {
   newIndexChange as commitNewIndexChange,
   newLocal as commitNewLocal,
   newSnapshot as commitNewSnapshot,
+  newSnapshotDD31 as commitNewSnapshotDD31,
 } from './commit';
 import {
   Read,
@@ -24,15 +25,15 @@ import type {InternalDiff} from '../btree/node.js';
 import {allEntriesAsDiff} from '../btree/read.js';
 import type {ClientID, DiffsMap} from '../sync/mod.js';
 import type {InternalValue} from '../internal-value.js';
-import {assert} from '../asserts.js';
+import {assert, assertNumber} from '../asserts.js';
 
-type IndexChangeMeta = {
-  type: MetaType.IndexChange;
+type IndexChangeWriteMeta = {
+  type: WriteMetaType.IndexChange;
   lastMutationID: number;
 };
 
-type LocalMeta = {
-  type: MetaType.Local;
+type LocalWriteMeta = {
+  type: WriteMetaType.Local;
   mutatorName: string;
   mutatorArgs: InternalValue;
   mutationID: number;
@@ -40,17 +41,44 @@ type LocalMeta = {
   timestamp: number;
 };
 
-type LocalMetaDD31 = LocalMeta & {clientID: ClientID};
+type LocalWriteMetaDD31 = LocalWriteMeta & {clientID: ClientID};
 
-type SnapshotMeta = {
-  type: MetaType.Snapshot;
+type SnapshotWriteMeta = {
+  type: WriteMetaType.Snapshot;
   lastMutationID: number;
   cookie: InternalValue;
 };
 
-type Meta = SnapshotMeta | LocalMeta | LocalMetaDD31 | IndexChangeMeta;
+type SnapshotWriteMetaDD31 = {
+  type: WriteMetaType.Snapshot;
+  lastMutationIDs: Record<ClientID, number>;
+  cookie: InternalValue;
+};
 
-export const enum MetaType {
+function assertSnapshotMeta(
+  meta: SnapshotWriteMeta | SnapshotWriteMetaDD31,
+): asserts meta is SnapshotWriteMeta {
+  assertNumber((meta as Partial<SnapshotWriteMeta>).lastMutationID);
+}
+
+function assertSnapshotMetaDD31(
+  meta: SnapshotWriteMeta | SnapshotWriteMetaDD31,
+): asserts meta is SnapshotWriteMetaDD31 {
+  assert(
+    (meta as Partial<SnapshotWriteMetaDD31>).lastMutationIDs !== undefined,
+  );
+}
+
+// TODO(arv): This need to be cleaned up. Why do we have this and the "same"
+// enums and types in commit.ts?
+type WriteMeta =
+  | SnapshotWriteMeta
+  | SnapshotWriteMetaDD31
+  | LocalWriteMeta
+  | LocalWriteMetaDD31
+  | IndexChangeWriteMeta;
+
+export const enum WriteMetaType {
   IndexChange,
   Local,
   Snapshot,
@@ -59,7 +87,7 @@ export const enum MetaType {
 export class Write extends Read {
   private readonly _dagWrite: dag.Write;
   private readonly _basis: Commit<CommitMeta> | undefined;
-  private readonly _meta: Meta;
+  private readonly _meta: WriteMeta;
 
   shouldDeepClone = true;
 
@@ -72,7 +100,7 @@ export class Write extends Read {
     dagWrite: dag.Write,
     map: BTreeWrite,
     basis: Commit<CommitMeta> | undefined,
-    meta: Meta,
+    meta: WriteMeta,
     indexes: Map<string, IndexWrite>,
     clientID: ClientID,
   ) {
@@ -81,6 +109,9 @@ export class Write extends Read {
     this._dagWrite = dagWrite;
     this._basis = basis;
     this._meta = meta;
+    if (DD31 && meta.type === WriteMetaType.Snapshot) {
+      assertSnapshotMetaDD31(meta);
+    }
     this._clientID = clientID;
   }
 
@@ -97,7 +128,7 @@ export class Write extends Read {
       whence,
       dagWrite,
     );
-    const mutationID = basis.nextMutationID;
+    const mutationID = await basis.getNextMutationID(clientID);
     const indexes = readIndexesForWrite(basis, dagWrite);
     return new Write(
       dagWrite,
@@ -105,7 +136,7 @@ export class Write extends Read {
       basis,
       DD31
         ? {
-            type: MetaType.Local,
+            type: WriteMetaType.Local,
             mutatorName,
             mutatorArgs,
             mutationID,
@@ -114,7 +145,7 @@ export class Write extends Read {
             clientID,
           }
         : {
-            type: MetaType.Local,
+            type: WriteMetaType.Local,
             mutatorName,
             mutatorArgs,
             mutationID,
@@ -128,12 +159,13 @@ export class Write extends Read {
 
   static async newSnapshot(
     whence: Whence,
-    mutationID: number,
+    lastMutationID: number,
     cookie: InternalValue,
     dagWrite: dag.Write,
     indexes: Map<string, IndexWrite>,
     clientID: ClientID,
   ): Promise<Write> {
+    assert(!DD31);
     const [, basis, bTreeWrite] = await readCommitForBTreeWrite(
       whence,
       dagWrite,
@@ -142,7 +174,30 @@ export class Write extends Read {
       dagWrite,
       bTreeWrite,
       basis,
-      {type: MetaType.Snapshot, lastMutationID: mutationID, cookie},
+      {type: WriteMetaType.Snapshot, lastMutationID, cookie},
+      indexes,
+      clientID,
+    );
+  }
+
+  static async newSnapshotDD31(
+    whence: Whence,
+    lastMutationIDs: Record<ClientID, number>,
+    cookie: InternalValue,
+    dagWrite: dag.Write,
+    indexes: Map<string, IndexWrite>,
+    clientID: ClientID,
+  ): Promise<Write> {
+    assert(DD31);
+    const [, basis, bTreeWrite] = await readCommitForBTreeWrite(
+      whence,
+      dagWrite,
+    );
+    return new Write(
+      dagWrite,
+      bTreeWrite,
+      basis,
+      {type: WriteMetaType.Snapshot, lastMutationIDs, cookie},
       indexes,
       clientID,
     );
@@ -157,13 +212,13 @@ export class Write extends Read {
       whence,
       dagWrite,
     );
-    const lastMutationID = basis.mutationID;
+    const lastMutationID = await basis.getMutationID(clientID);
     const indexes = readIndexesForWrite(basis, dagWrite);
     return new Write(
       dagWrite,
       bTreeWrite,
       basis,
-      {type: MetaType.IndexChange, lastMutationID},
+      {type: WriteMetaType.IndexChange, lastMutationID},
       indexes,
       clientID,
     );
@@ -171,12 +226,13 @@ export class Write extends Read {
 
   isRebase(): boolean {
     return (
-      this._meta.type === MetaType.Local && this._meta.originalHash !== null
+      this._meta.type === WriteMetaType.Local &&
+      this._meta.originalHash !== null
     );
   }
 
   async put(lc: LogContext, key: string, val: InternalValue): Promise<void> {
-    if (this._meta.type === MetaType.IndexChange) {
+    if (this._meta.type === WriteMetaType.IndexChange) {
       throw new Error('Not allowed');
     }
     const oldVal = lazy(() => this.map.get(key));
@@ -186,7 +242,7 @@ export class Write extends Read {
   }
 
   async del(lc: LogContext, key: string): Promise<boolean> {
-    if (this._meta.type === MetaType.IndexChange) {
+    if (this._meta.type === WriteMetaType.IndexChange) {
       throw new Error('Not allowed');
     }
 
@@ -199,7 +255,7 @@ export class Write extends Read {
   }
 
   async clear(): Promise<void> {
-    if (this._meta.type === MetaType.IndexChange) {
+    if (this._meta.type === WriteMetaType.IndexChange) {
       throw new Error('Not allowed');
     }
 
@@ -218,7 +274,7 @@ export class Write extends Read {
     jsonPointer: string,
     allowEmpty: boolean,
   ): Promise<void> {
-    if (this._meta.type === MetaType.Local) {
+    if (this._meta.type === WriteMetaType.Local) {
       throw new Error('Not allowed');
     }
 
@@ -272,7 +328,7 @@ export class Write extends Read {
   }
 
   async dropIndex(name: string): Promise<void> {
-    if (this._meta.type === MetaType.Local) {
+    if (this._meta.type === WriteMetaType.Local) {
       throw new Error('Not allowed');
     }
 
@@ -348,7 +404,7 @@ export class Write extends Read {
     let commit;
     const meta = this._meta;
     switch (meta.type) {
-      case MetaType.Local: {
+      case WriteMetaType.Local: {
         const {mutationID, mutatorName, mutatorArgs, originalHash, timestamp} =
           meta;
         commit = commitNewLocal(
@@ -365,22 +421,38 @@ export class Write extends Read {
         );
         break;
       }
-      case MetaType.Snapshot: {
-        const {lastMutationID, cookie} = meta;
-        commit = commitNewSnapshot(
-          this._dagWrite.createChunk,
-          basisHash,
-          lastMutationID,
-          cookie,
-          valueHash,
-          indexRecords,
-        );
+      case WriteMetaType.Snapshot: {
+        if (DD31) {
+          assertSnapshotMetaDD31(meta);
+          const {lastMutationIDs, cookie} = meta;
+          commit = commitNewSnapshotDD31(
+            this._dagWrite.createChunk,
+            basisHash,
+            lastMutationIDs,
+            cookie,
+            valueHash,
+            indexRecords,
+          );
+        } else {
+          assertSnapshotMeta(meta);
+          const {lastMutationID, cookie} = meta;
+          commit = commitNewSnapshot(
+            this._dagWrite.createChunk,
+            basisHash,
+            lastMutationID,
+            cookie,
+            valueHash,
+            indexRecords,
+          );
+        }
         break;
       }
-      case MetaType.IndexChange: {
+      case WriteMetaType.IndexChange: {
         const {lastMutationID} = meta;
         if (this._basis !== undefined) {
-          if (this._basis.mutationID !== lastMutationID) {
+          if (
+            (await this._basis.getMutationID(this._clientID)) !== lastMutationID
+          ) {
             throw new Error('Index change must not change mutationID');
           }
           if (this._basis.valueHash !== valueHash) {

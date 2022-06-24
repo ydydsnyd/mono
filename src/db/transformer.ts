@@ -12,6 +12,8 @@ import {
   IndexRecord,
   LocalMetaDD31,
   isLocalMetaDD31,
+  SnapshotMetaDD31,
+  isSnapshotMetaDD31,
 } from './commit';
 import type {Hash} from '../hash';
 import type * as dag from '../dag/mod';
@@ -166,7 +168,9 @@ export abstract class BaseTransformer {
     return null;
   }
 
-  private async _transformSnapshot(meta: SnapshotMeta): Promise<SnapshotMeta> {
+  private async _transformSnapshot(
+    meta: SnapshotMeta | SnapshotMetaDD31,
+  ): Promise<SnapshotMeta | SnapshotMetaDD31> {
     // basisHash is weak for Snapshot Commits
     const basisHash = await this._transformBasisHash(
       meta.basisHash,
@@ -175,11 +179,19 @@ export abstract class BaseTransformer {
     if (basisHash === meta.basisHash) {
       return meta;
     }
+    if (isSnapshotMetaDD31(meta)) {
+      return {
+        basisHash,
+        type: meta.type,
+        lastMutationIDs: meta.lastMutationIDs,
+        cookieJSON: meta.cookieJSON,
+      };
+    }
     return {
       basisHash,
-      type: meta.type,
-      lastMutationID: meta.lastMutationID,
-      cookieJSON: meta.cookieJSON,
+      type: (meta as SnapshotMeta).type,
+      lastMutationID: (meta as SnapshotMeta).lastMutationID,
+      cookieJSON: (meta as SnapshotMeta).cookieJSON,
     };
   }
 
