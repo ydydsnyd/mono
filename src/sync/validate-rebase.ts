@@ -43,13 +43,14 @@ export async function validateRebase(
   // Ensure rebase and original commit mutation ids names match.
   const [, basis] = await db.readCommit(db.whenceHash(opts.basis), dagRead);
   if (
-    (await basis.getNextMutationID(clientID)) !==
-    (await original.getMutationID(clientID))
+    (await basis.getNextMutationID(clientID, dagRead)) !==
+    (await original.getMutationID(clientID, dagRead))
   ) {
     throw new Error(
       `Inconsistent mutation ID: original: ${await original.getMutationID(
         clientID,
-      )}, next: ${await basis.getNextMutationID(clientID)}`,
+        dagRead,
+      )}, next: ${await basis.getNextMutationID(clientID, dagRead)}`,
     );
   }
 

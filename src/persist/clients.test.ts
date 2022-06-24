@@ -546,24 +546,24 @@ test('initClient creates new empty snapshot when no existing snapshot to bootstr
     ),
   );
 
-  await dagStore.withRead(async (read: dag.Read) => {
+  await dagStore.withRead(async (dagRead: dag.Read) => {
     // New client was added to the client map.
-    expect(await getClient(clientID, read)).to.deep.equal(client);
+    expect(await getClient(clientID, dagRead)).to.deep.equal(client);
     expect(client.heartbeatTimestampMs).to.equal(clock.now);
     expect(client.mutationID).to.equal(0);
     expect(client.lastServerAckdMutationID).to.equal(0);
 
     // New client's head hash points to an empty snapshot with an empty btree.
-    const headChunk = await read.getChunk(client.headHash);
+    const headChunk = await dagRead.getChunk(client.headHash);
     assertNotUndefined(headChunk);
     const commit = fromChunk(headChunk);
     expect(commit.isSnapshot()).to.be.true;
     const snapshotMeta = commit.meta as SnapshotMeta;
     expect(snapshotMeta.basisHash).to.be.null;
     expect(snapshotMeta.cookieJSON).to.be.null;
-    expect(await commit.getMutationID(clientID)).to.equal(0);
+    expect(await commit.getMutationID(clientID, dagRead)).to.equal(0);
     expect(commit.indexes).to.be.empty;
-    expect(await new BTreeRead(read, commit.valueHash).isEmpty()).to.be.true;
+    expect(await new BTreeRead(dagRead, commit.valueHash).isEmpty()).to.be.true;
   });
 });
 
@@ -602,16 +602,16 @@ test('initClient bootstraps from base snapshot of client with highest heartbeat'
 
   expect(clients).to.deep.equal(new Map(clientMap).set(clientID2, client));
 
-  await dagStore.withRead(async (read: dag.Read) => {
+  await dagStore.withRead(async (dagRead: dag.Read) => {
     // New client was added to the client map.
-    expect(await getClient(clientID2, read)).to.deep.equal(client);
+    expect(await getClient(clientID2, dagRead)).to.deep.equal(client);
     expect(client.heartbeatTimestampMs).to.equal(clock.now);
     expect(client.mutationID).to.equal(0);
     expect(client.lastServerAckdMutationID).to.equal(0);
 
-    // New client's head hash points to a commit that matches client2BaseSnapshoCommit
-    // but with a local mutation id of 0.
-    const headChunk = await read.getChunk(client.headHash);
+    // New client's head hash points to a commit that matches
+    // client2BaseSnapshotCommit but with a local mutation id of 0.
+    const headChunk = await dagRead.getChunk(client.headHash);
     assertNotUndefined(headChunk);
     const commit = fromChunk(headChunk);
     expect(commit.isSnapshot()).to.be.true;
@@ -624,7 +624,7 @@ test('initClient bootstraps from base snapshot of client with highest heartbeat'
     expect(snapshotMeta.cookieJSON).to.equal(
       client2BaseSnapshotMeta.cookieJSON,
     );
-    expect(await commit.getMutationID(clientID2)).to.equal(0);
+    expect(await commit.getMutationID(clientID2, dagRead)).to.equal(0);
     expect(commit.indexes).to.not.be.empty;
     expect(commit.indexes).to.deep.equal(client2BaseSnapshotCommit.indexes);
     expect(commit.valueHash).to.equal(client2BaseSnapshotCommit.valueHash);

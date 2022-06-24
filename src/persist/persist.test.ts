@@ -69,7 +69,7 @@ async function assertClientMutationIDsCorrect(
     const headCommit = await db.commitFromHash(client.headHash, dagRead);
     const baseSnapshotCommit = await db.baseSnapshot(client.headHash, dagRead);
     expect(client.mutationID).to.equal(
-      await headCommit.getMutationID(clientID),
+      await headCommit.getMutationID(clientID, dagRead),
     );
     const {meta} = baseSnapshotCommit;
     if (DD31) {

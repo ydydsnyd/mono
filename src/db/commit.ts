@@ -51,7 +51,7 @@ export class Commit<M extends Meta> {
     return this.chunk.data.valueHash;
   }
 
-  async getMutationID(clientID: ClientID): Promise<number> {
+  async getMutationID(clientID: ClientID, dagRead: dag.Read): Promise<number> {
     const {meta} = this;
     switch (meta.type) {
       case MetaType.IndexChange:
@@ -60,19 +60,36 @@ export class Commit<M extends Meta> {
         if (DD31) {
           assertSnapshotMetaDD31(meta);
           const lmid = meta.lastMutationIDs[clientID];
-          assertNumber(lmid);
+          if (lmid === undefined) {
+            // TODO(DD31, arv): Is this the right behavior?
+            // Not in the base snap shot. This is a new client.
+            return 0;
+          }
           return lmid;
         }
         assertSnapshotMeta(meta);
         return meta.lastMutationID;
       }
-      case MetaType.Local:
+      case MetaType.Local: {
+        if (DD31) {
+          assertLocalMetaDD31(meta);
+          if (meta.clientID === clientID) {
+            return meta.mutationID;
+          }
+          const {basisHash} = meta;
+          const basisCommit = await fromHash(basisHash, dagRead);
+          return basisCommit.getMutationID(clientID, dagRead);
+        }
         return meta.mutationID;
+      }
     }
   }
 
-  async getNextMutationID(clientID: ClientID): Promise<number> {
-    return (await this.getMutationID(clientID)) + 1;
+  async getNextMutationID(
+    clientID: ClientID,
+    dagRead: dag.Read,
+  ): Promise<number> {
+    return (await this.getMutationID(clientID, dagRead)) + 1;
   }
 
   get indexes(): readonly IndexRecord[] {

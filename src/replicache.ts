@@ -1488,7 +1488,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       return Promise.all(
         pending.map(async p => {
           return {
-            id: await p.getMutationID(clientID),
+            id: await p.getMutationID(clientID, dagRead),
             name: p.meta.mutatorName,
             args: fromInternalValue(
               p.meta.mutatorArgsJSON,

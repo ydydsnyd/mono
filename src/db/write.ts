@@ -299,7 +299,10 @@ export class Write extends Read {
         const {basisHash, lastMutationID} = meta;
         if (this._basis !== undefined) {
           if (
-            (await this._basis.getMutationID(this._clientID)) !== lastMutationID
+            (await this._basis.getMutationID(
+              this._clientID,
+              this._dagWrite,
+            )) !== lastMutationID
           ) {
             throw new Error('Index change must not change mutationID');
           }
@@ -347,7 +350,7 @@ export async function newWriteLocal(
     dagWrite,
   );
 
-  const mutationID = await basis.getNextMutationID(clientID);
+  const mutationID = await basis.getNextMutationID(clientID, dagWrite);
   const indexes = readIndexesForWrite(basis, dagWrite);
   return new Write(
     dagWrite,
@@ -431,7 +434,7 @@ export async function newWriteIndexChange(
     whence,
     dagWrite,
   );
-  const lastMutationID = await basis.getMutationID(clientID);
+  const lastMutationID = await basis.getMutationID(clientID, dagWrite);
   const indexes = readIndexesForWrite(basis, dagWrite);
   return new Write(
     dagWrite,

@@ -75,22 +75,22 @@ export async function beginPull(
 ): Promise<BeginPullResponse> {
   const {pullURL, pullAuth, schemaVersion} = beginPullReq;
 
-  const baseSnapshot = await store.withRead(async dagRead => {
+  const [lastMutationID, baseCookie] = await store.withRead(async dagRead => {
     const mainHeadHash = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
     if (!mainHeadHash) {
       throw new Error('Internal no main head found');
     }
-    return await db.baseSnapshot(mainHeadHash, dagRead);
+    const baseSnapshot = await db.baseSnapshot(mainHeadHash, dagRead);
+    const lastMutationID = await baseSnapshot.getMutationID(clientID, dagRead);
+    const baseCookie = baseSnapshot.meta.cookieJSON;
+    return [lastMutationID, baseCookie];
   });
-
-  const snapshotMetaParts = db.snapshotMetaParts(baseSnapshot, clientID);
-  const baseCookie = snapshotMetaParts[1];
 
   const pullReq = {
     profileID,
     clientID,
     cookie: baseCookie,
-    lastMutationID: await baseSnapshot.getMutationID(clientID),
+    lastMutationID,
     pullVersion: PULL_VERSION,
     schemaVersion,
   };
@@ -220,7 +220,10 @@ export async function handlePullResponse(
     const chain = await db.commitChain(mainHead, dagRead);
     let lastIntegrated: db.Commit<db.Meta> | undefined;
     for (const commit of chain) {
-      if ((await commit.getMutationID(clientID)) <= response.lastMutationID) {
+      if (
+        (await commit.getMutationID(clientID, dagRead)) <=
+        response.lastMutationID
+      ) {
         lastIntegrated = commit;
         break;
       }
@@ -338,9 +341,11 @@ export async function maybeEndPull(
     const localMutations = await db.localMutations(mainHeadHash, dagRead);
     const syncHead = await db.commitFromHash(syncHeadHash, dagRead);
     const pending = [];
-    const syncHeadMutationID = await syncHead.getMutationID(clientID);
+    const syncHeadMutationID = await syncHead.getMutationID(clientID, dagRead);
     for (const commit of localMutations) {
-      if ((await commit.getMutationID(clientID)) > syncHeadMutationID) {
+      if (
+        (await commit.getMutationID(clientID, dagRead)) > syncHeadMutationID
+      ) {
         pending.push(commit);
       }
     }
@@ -368,7 +373,7 @@ export async function maybeEndPull(
           throw new Error('pending mutation is not local');
         }
         replayMutations.push({
-          id: await c.getMutationID(clientID),
+          id: await c.getMutationID(clientID, dagRead),
           name,
           args,
           original: c.chunk.hash,

@@ -141,7 +141,10 @@ export async function addSnapshot(
       w = await newWriteSnapshotDD31(
         whenceHead(DEFAULT_HEAD_NAME),
         {
-          [clientID]: await chain[chain.length - 1].getNextMutationID(clientID),
+          [clientID]: await chain[chain.length - 1].getNextMutationID(
+            clientID,
+            dagWrite,
+          ),
         },
         cookie,
         dagWrite,
@@ -151,7 +154,7 @@ export async function addSnapshot(
     } else {
       w = await newWriteSnapshot(
         whenceHead(DEFAULT_HEAD_NAME),
-        await chain[chain.length - 1].getNextMutationID(clientID),
+        await chain[chain.length - 1].getNextMutationID(clientID, dagWrite),
         cookie,
         dagWrite,
         readIndexesForWrite(chain[chain.length - 1], dagWrite),

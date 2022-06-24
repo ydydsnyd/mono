@@ -361,7 +361,13 @@ test('accessors', async () => {
   }
   expect(local.meta.basisHash).to.equal(basisHash);
   expect(local.valueHash).to.equal(valueHash);
-  expect(await local.getNextMutationID(clientID)).to.equal(2);
+  expect(
+    await local.getNextMutationID(
+      clientID,
+      // @ts-expect-error: we do not have a dag.Read here
+      null,
+    ),
+  ).to.equal(2);
 
   const snapshot = fromChunk(
     await makeCommit(
@@ -387,7 +393,13 @@ test('accessors', async () => {
   }
   expect(snapshot.meta.basisHash).to.equal(fakeHash('basishash2'));
   expect(snapshot.valueHash).to.equal(fakeHash('valuehash2'));
-  expect(await snapshot.getNextMutationID(clientID)).to.equal(3);
+  expect(
+    await snapshot.getNextMutationID(
+      clientID,
+      // @ts-expect-error: we do not have a dag.Read here
+      null,
+    ),
+  ).to.equal(3);
 
   const indexChange = fromChunk(
     await makeCommit(
@@ -405,7 +417,13 @@ test('accessors', async () => {
   }
   expect(indexChange.meta.basisHash).to.equal(fakeHash('basishash3'));
   expect(indexChange.valueHash).to.equal(fakeHash('valuehash3'));
-  expect(await indexChange.getMutationID(clientID)).to.equal(3);
+  expect(
+    await indexChange.getMutationID(
+      clientID,
+      // @ts-expect-error: we do not have a dag.Read here
+      null,
+    ),
+  ).to.equal(3);
 });
 
 const chunkHasher = makeTestChunkHasher('test');
@@ -465,3 +483,25 @@ function makeIndexChangeMeta(
     lastMutationID,
   };
 }
+
+test('getMutationID', async () => {
+  if (!DD31) {
+    return;
+  }
+
+  const clientID = 'client-id';
+  const clientID2 = 'client-id-2';
+  const store = new dag.TestStore();
+  const chain: Chain = [];
+  await addGenesis(chain, store, clientID);
+  await addLocal(chain, store, clientID);
+  await addLocal(chain, store, clientID);
+  await addLocal(chain, store, clientID2);
+
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const local = chain.at(-1)!;
+  await store.withRead(async dagRead => {
+    expect(await local.getMutationID(clientID, dagRead)).to.equal(2);
+    expect(await local.getMutationID(clientID2, dagRead)).to.equal(1);
+  });
+});

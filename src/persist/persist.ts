@@ -103,7 +103,7 @@ async function gatherTempChunks(
     return [
       visitor.gatheredChunks,
       mainHeadHash,
-      await headCommit.getMutationID(clientID),
+      await headCommit.getMutationID(clientID, dagRead),
       lastMutationID,
     ];
   });

@@ -42,7 +42,7 @@ export async function addSyncSnapshot(
     if (DD31) {
       const w = await db.newWriteSnapshotDD31(
         db.whenceHash(baseSnapshot.chunk.hash),
-        {[clientID]: await baseSnapshot.getMutationID(clientID)},
+        {[clientID]: await baseSnapshot.getMutationID(clientID, dagWrite)},
         cookie,
         dagWrite,
         indexes,
@@ -52,7 +52,7 @@ export async function addSyncSnapshot(
     } else {
       const w = await db.newWriteSnapshot(
         db.whenceHash(baseSnapshot.chunk.hash),
-        await baseSnapshot.getMutationID(clientID),
+        await baseSnapshot.getMutationID(clientID, dagWrite),
         cookie,
         dagWrite,
         indexes,
