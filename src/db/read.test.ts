@@ -3,7 +3,7 @@ import {expect} from '@esm-bundle/chai';
 import * as dag from '../dag/mod';
 import {DEFAULT_HEAD_NAME} from './commit';
 import {fromWhence, whenceHead} from './read';
-import {Write} from './write';
+import {newWriteLocal} from './write';
 import {initDB} from './test-helpers.js';
 
 test('basics', async () => {
@@ -11,7 +11,7 @@ test('basics', async () => {
   const ds = new dag.TestStore();
   const lc = new LogContext();
   await initDB(await ds.write(), DEFAULT_HEAD_NAME, clientID);
-  const w = await Write.newLocal(
+  const w = await newWriteLocal(
     whenceHead(DEFAULT_HEAD_NAME),
     'mutator_name',
     JSON.stringify([]),

@@ -1,4 +1,11 @@
-export {Write, readIndexesForWrite} from './write';
+export {
+  Write,
+  readIndexesForWrite,
+  newWriteIndexChange,
+  newWriteLocal,
+  newWriteSnapshot,
+  newWriteSnapshotDD31,
+} from './write';
 export {
   Read,
   readIndexesForRead,

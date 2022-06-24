@@ -115,115 +115,6 @@ export class Write extends Read {
     this._clientID = clientID;
   }
 
-  static async newLocal(
-    whence: Whence,
-    mutatorName: string,
-    mutatorArgs: InternalValue,
-    originalHash: Hash | null,
-    dagWrite: dag.Write,
-    timestamp: number,
-    clientID: ClientID,
-  ): Promise<Write> {
-    const [, basis, bTreeWrite] = await readCommitForBTreeWrite(
-      whence,
-      dagWrite,
-    );
-    const mutationID = await basis.getNextMutationID(clientID);
-    const indexes = readIndexesForWrite(basis, dagWrite);
-    return new Write(
-      dagWrite,
-      bTreeWrite,
-      basis,
-      DD31
-        ? {
-            type: WriteMetaType.Local,
-            mutatorName,
-            mutatorArgs,
-            mutationID,
-            originalHash,
-            timestamp,
-            clientID,
-          }
-        : {
-            type: WriteMetaType.Local,
-            mutatorName,
-            mutatorArgs,
-            mutationID,
-            originalHash,
-            timestamp,
-          },
-      indexes,
-      clientID,
-    );
-  }
-
-  static async newSnapshot(
-    whence: Whence,
-    lastMutationID: number,
-    cookie: InternalValue,
-    dagWrite: dag.Write,
-    indexes: Map<string, IndexWrite>,
-    clientID: ClientID,
-  ): Promise<Write> {
-    assert(!DD31);
-    const [, basis, bTreeWrite] = await readCommitForBTreeWrite(
-      whence,
-      dagWrite,
-    );
-    return new Write(
-      dagWrite,
-      bTreeWrite,
-      basis,
-      {type: WriteMetaType.Snapshot, lastMutationID, cookie},
-      indexes,
-      clientID,
-    );
-  }
-
-  static async newSnapshotDD31(
-    whence: Whence,
-    lastMutationIDs: Record<ClientID, number>,
-    cookie: InternalValue,
-    dagWrite: dag.Write,
-    indexes: Map<string, IndexWrite>,
-    clientID: ClientID,
-  ): Promise<Write> {
-    assert(DD31);
-    const [, basis, bTreeWrite] = await readCommitForBTreeWrite(
-      whence,
-      dagWrite,
-    );
-    return new Write(
-      dagWrite,
-      bTreeWrite,
-      basis,
-      {type: WriteMetaType.Snapshot, lastMutationIDs, cookie},
-      indexes,
-      clientID,
-    );
-  }
-
-  static async newIndexChange(
-    whence: Whence,
-    dagWrite: dag.Write,
-    clientID: ClientID,
-  ): Promise<Write> {
-    const [, basis, bTreeWrite] = await readCommitForBTreeWrite(
-      whence,
-      dagWrite,
-    );
-    const lastMutationID = await basis.getMutationID(clientID);
-    const indexes = readIndexesForWrite(basis, dagWrite);
-    return new Write(
-      dagWrite,
-      bTreeWrite,
-      basis,
-      {type: WriteMetaType.IndexChange, lastMutationID},
-      indexes,
-      clientID,
-    );
-  }
-
   isRebase(): boolean {
     return (
       this._meta.type === WriteMetaType.Local &&
@@ -484,6 +375,103 @@ export class Write extends Read {
   close(): void {
     this._dagWrite.close();
   }
+}
+
+export async function newWriteLocal(
+  whence: Whence,
+  mutatorName: string,
+  mutatorArgs: InternalValue,
+  originalHash: Hash | null,
+  dagWrite: dag.Write,
+  timestamp: number,
+  clientID: ClientID,
+): Promise<Write> {
+  const [, basis, bTreeWrite] = await readCommitForBTreeWrite(whence, dagWrite);
+  const mutationID = await basis.getNextMutationID(clientID);
+  const indexes = readIndexesForWrite(basis, dagWrite);
+  return new Write(
+    dagWrite,
+    bTreeWrite,
+    basis,
+    DD31
+      ? {
+          type: WriteMetaType.Local,
+          mutatorName,
+          mutatorArgs,
+          mutationID,
+          originalHash,
+          timestamp,
+          clientID,
+        }
+      : {
+          type: WriteMetaType.Local,
+          mutatorName,
+          mutatorArgs,
+          mutationID,
+          originalHash,
+          timestamp,
+        },
+    indexes,
+    clientID,
+  );
+}
+
+export async function newWriteSnapshot(
+  whence: Whence,
+  lastMutationID: number,
+  cookie: InternalValue,
+  dagWrite: dag.Write,
+  indexes: Map<string, IndexWrite>,
+  clientID: ClientID,
+): Promise<Write> {
+  assert(!DD31);
+  const [, basis, bTreeWrite] = await readCommitForBTreeWrite(whence, dagWrite);
+  return new Write(
+    dagWrite,
+    bTreeWrite,
+    basis,
+    {type: WriteMetaType.Snapshot, lastMutationID, cookie},
+    indexes,
+    clientID,
+  );
+}
+
+export async function newWriteSnapshotDD31(
+  whence: Whence,
+  lastMutationIDs: Record<ClientID, number>,
+  cookie: InternalValue,
+  dagWrite: dag.Write,
+  indexes: Map<string, IndexWrite>,
+  clientID: ClientID,
+): Promise<Write> {
+  assert(DD31);
+  const [, basis, bTreeWrite] = await readCommitForBTreeWrite(whence, dagWrite);
+  return new Write(
+    dagWrite,
+    bTreeWrite,
+    basis,
+    {type: WriteMetaType.Snapshot, lastMutationIDs, cookie},
+    indexes,
+    clientID,
+  );
+}
+
+export async function newWriteIndexChange(
+  whence: Whence,
+  dagWrite: dag.Write,
+  clientID: ClientID,
+): Promise<Write> {
+  const [, basis, bTreeWrite] = await readCommitForBTreeWrite(whence, dagWrite);
+  const lastMutationID = await basis.getMutationID(clientID);
+  const indexes = readIndexesForWrite(basis, dagWrite);
+  return new Write(
+    dagWrite,
+    bTreeWrite,
+    basis,
+    {type: WriteMetaType.IndexChange, lastMutationID},
+    indexes,
+    clientID,
+  );
 }
 
 export async function updateIndexes(

@@ -160,7 +160,7 @@ test('patch', async () => {
     await store.withWrite(async dagWrite => {
       let dbWrite;
       if (DD31) {
-        dbWrite = await db.Write.newSnapshotDD31(
+        dbWrite = await db.newWriteSnapshotDD31(
           db.whenceHash(chain[0].chunk.hash),
           {[clientID]: 1},
           'cookie',
@@ -169,7 +169,7 @@ test('patch', async () => {
           clientID,
         );
       } else {
-        dbWrite = await db.Write.newSnapshot(
+        dbWrite = await db.newWriteSnapshot(
           db.whenceHash(chain[0].chunk.hash),
           1,
           'cookie',

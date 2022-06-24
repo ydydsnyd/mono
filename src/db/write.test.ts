@@ -9,7 +9,7 @@ import {
   readIndexesForRead,
   whenceHead,
 } from './read';
-import {Write} from './write';
+import {newWriteIndexChange, newWriteLocal} from './write';
 import {encodeIndexKey} from './index';
 import {asyncIterableToArray} from '../async-iterable-to-array';
 import {BTreeRead} from '../btree/mod';
@@ -24,7 +24,7 @@ test('basics', async () => {
 
   // Put.
   await ds.withWrite(async dagWrite => {
-    const w = await Write.newLocal(
+    const w = await newWriteLocal(
       whenceHead(DEFAULT_HEAD_NAME),
       'mutator_name',
       JSON.stringify([]),
@@ -42,7 +42,7 @@ test('basics', async () => {
 
   // As well as after it has committed.
   await ds.withWrite(async dagWrite => {
-    const w = await Write.newLocal(
+    const w = await newWriteLocal(
       whenceHead(DEFAULT_HEAD_NAME),
       'mutator_name',
       JSON.stringify(null),
@@ -57,7 +57,7 @@ test('basics', async () => {
 
   // Del.
   await ds.withWrite(async dagWrite => {
-    const w = await Write.newLocal(
+    const w = await newWriteLocal(
       whenceHead(DEFAULT_HEAD_NAME),
       'mutator_name',
       JSON.stringify([]),
@@ -75,7 +75,7 @@ test('basics', async () => {
 
   // As well as after it has committed.
   await ds.withWrite(async dagWrite => {
-    const w = await Write.newLocal(
+    const w = await newWriteLocal(
       whenceHead(DEFAULT_HEAD_NAME),
       'mutator_name',
       JSON.stringify(null),
@@ -96,7 +96,7 @@ test('index commit type constraints', async () => {
   await initDB(await ds.write(), DEFAULT_HEAD_NAME, clientID);
 
   // Test that local changes cannot create or drop an index.
-  const w = await Write.newLocal(
+  const w = await newWriteLocal(
     whenceHead(DEFAULT_HEAD_NAME),
     'mutator_name',
     JSON.stringify([]),
@@ -131,7 +131,7 @@ test('clear', async () => {
   const lc = new LogContext();
   await ds.withWrite(dagWrite => initDB(dagWrite, DEFAULT_HEAD_NAME, clientID));
   await ds.withWrite(async dagWrite => {
-    const w = await Write.newLocal(
+    const w = await newWriteLocal(
       whenceHead(DEFAULT_HEAD_NAME),
       'mutator_name',
       JSON.stringify([]),
@@ -145,7 +145,7 @@ test('clear', async () => {
   });
 
   await ds.withWrite(async dagWrite => {
-    const w = await Write.newIndexChange(
+    const w = await newWriteIndexChange(
       whenceHead(DEFAULT_HEAD_NAME),
       dagWrite,
       clientID,
@@ -155,7 +155,7 @@ test('clear', async () => {
   });
 
   await ds.withWrite(async dagWrite => {
-    const w = await Write.newLocal(
+    const w = await newWriteLocal(
       whenceHead(DEFAULT_HEAD_NAME),
       'mutator_name',
       JSON.stringify([]),
@@ -216,7 +216,7 @@ test('create and drop index', async () => {
 
     if (writeBeforeIndexing) {
       await ds.withWrite(async dagWrite => {
-        const w = await Write.newLocal(
+        const w = await newWriteLocal(
           whenceHead(DEFAULT_HEAD_NAME),
           'mutator_name',
           JSON.stringify([]),
@@ -238,7 +238,7 @@ test('create and drop index', async () => {
 
     const indexName = 'i1';
     await ds.withWrite(async dagWrite => {
-      const w = await Write.newIndexChange(
+      const w = await newWriteIndexChange(
         whenceHead(DEFAULT_HEAD_NAME),
         dagWrite,
         clientID,
@@ -249,7 +249,7 @@ test('create and drop index', async () => {
 
     if (!writeBeforeIndexing) {
       await ds.withWrite(async dagWrite => {
-        const w = await Write.newLocal(
+        const w = await newWriteLocal(
           whenceHead(DEFAULT_HEAD_NAME),
           'mutator_name',
           JSON.stringify([]),
@@ -289,7 +289,7 @@ test('create and drop index', async () => {
 
     // Ensure drop works.
     await ds.withWrite(async dagWrite => {
-      const w = await Write.newIndexChange(
+      const w = await newWriteIndexChange(
         whenceHead(DEFAULT_HEAD_NAME),
         dagWrite,
         clientID,
@@ -314,7 +314,7 @@ test('legacy index definitions imply allowEmpty = false', async () => {
 
   const indexName = 'legacyIndex';
   await ds.withWrite(async dagWrite => {
-    const w = await Write.newIndexChange(
+    const w = await newWriteIndexChange(
       whenceHead(DEFAULT_HEAD_NAME),
       dagWrite,
       clientID,
@@ -334,7 +334,7 @@ test('legacy index definitions imply allowEmpty = false', async () => {
   });
 
   await ds.withWrite(async dagWrite => {
-    const w = await Write.newIndexChange(
+    const w = await newWriteIndexChange(
       whenceHead(DEFAULT_HEAD_NAME),
       dagWrite,
       clientID,

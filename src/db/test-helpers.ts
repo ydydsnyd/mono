@@ -3,7 +3,15 @@ import {expect} from '@esm-bundle/chai';
 import type * as dag from '../dag/mod';
 import {Commit, DEFAULT_HEAD_NAME, Meta} from './commit';
 import {readCommit, whenceHead} from './read';
-import {Write, readIndexesForWrite, WriteMetaType} from './write';
+import {
+  Write,
+  readIndexesForWrite,
+  WriteMetaType,
+  newWriteSnapshot,
+  newWriteSnapshotDD31,
+  newWriteLocal,
+  newWriteIndexChange,
+} from './write';
 import type {JSONValue} from '../json';
 import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 import type {ClientID} from '../sync/client-id.js';
@@ -59,7 +67,7 @@ export async function createLocal(
 ): Promise<Commit<Meta>> {
   const lc = new LogContext();
   await store.withWrite(async dagWrite => {
-    const w = await Write.newLocal(
+    const w = await newWriteLocal(
       whenceHead(DEFAULT_HEAD_NAME),
       `mutator_name_${i}`,
       toInternalValue([i], ToInternalValueReason.Test),
@@ -101,7 +109,7 @@ export async function createIndex(
 ): Promise<Commit<Meta>> {
   const lc = new LogContext();
   await store.withWrite(async dagWrite => {
-    const w = await Write.newIndexChange(
+    const w = await newWriteIndexChange(
       whenceHead(DEFAULT_HEAD_NAME),
       dagWrite,
       clientID,
@@ -131,7 +139,7 @@ export async function addSnapshot(
   await store.withWrite(async dagWrite => {
     let w;
     if (DD31) {
-      w = await Write.newSnapshotDD31(
+      w = await newWriteSnapshotDD31(
         whenceHead(DEFAULT_HEAD_NAME),
         {
           [clientID]: await chain[chain.length - 1].getNextMutationID(clientID),
@@ -142,7 +150,7 @@ export async function addSnapshot(
         clientID,
       );
     } else {
-      w = await Write.newSnapshot(
+      w = await newWriteSnapshot(
         whenceHead(DEFAULT_HEAD_NAME),
         await chain[chain.length - 1].getNextMutationID(clientID),
         cookie,

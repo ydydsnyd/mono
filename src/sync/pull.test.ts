@@ -634,7 +634,7 @@ test('maybe end try pull', async () => {
 
       // Add snapshot and replayed commits to the sync chain.
       const w = DD31
-        ? await db.Write.newSnapshotDD31(
+        ? await db.newWriteSnapshotDD31(
             db.whenceHash(chain[0].chunk.hash),
             {[clientID]: 0},
             'sync_cookie',
@@ -642,7 +642,7 @@ test('maybe end try pull', async () => {
             db.readIndexesForWrite(chain[0], dagWrite),
             clientID,
           )
-        : await db.Write.newSnapshot(
+        : await db.newWriteSnapshot(
             db.whenceHash(chain[0].chunk.hash),
             0,
             'sync_cookie',
@@ -671,7 +671,7 @@ test('maybe end try pull', async () => {
         throw new Error('impossible');
       }
       basisHash = await store.withWrite(async dagWrite => {
-        const w = await db.Write.newLocal(
+        const w = await db.newWriteLocal(
           db.whenceHash(basisHash),
           mutatorName,
           mutatorArgs,

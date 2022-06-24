@@ -233,7 +233,7 @@ export async function handlePullResponse(
     // TODO(arv): Make these module level functions instead of statics so the
     // esbuild can strip them.
     const dbWrite = DD31
-      ? await db.Write.newSnapshotDD31(
+      ? await db.newWriteSnapshotDD31(
           db.whenceHash(baseSnapshot.chunk.hash),
           {[clientID]: response.lastMutationID},
           internalCookie,
@@ -241,7 +241,7 @@ export async function handlePullResponse(
           db.readIndexesForWrite(lastIntegrated, dagWrite),
           clientID,
         )
-      : await db.Write.newSnapshot(
+      : await db.newWriteSnapshot(
           db.whenceHash(baseSnapshot.chunk.hash),
           response.lastMutationID,
           internalCookie,

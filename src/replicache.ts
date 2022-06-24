@@ -806,7 +806,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     await this._ready;
     const clientID = await this._clientIDPromise;
     await this._memdag.withWrite(async dagWrite => {
-      const dbWrite = await db.Write.newIndexChange(
+      const dbWrite = await db.newWriteIndexChange(
         db.whenceHead(db.DEFAULT_HEAD_NAME),
         dagWrite,
         clientID,
@@ -1411,7 +1411,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         originalHash = rebaseOpts.original;
       }
 
-      const dbWrite = await db.Write.newLocal(
+      const dbWrite = await db.newWriteLocal(
         whence,
         name,
         internalArgs,
