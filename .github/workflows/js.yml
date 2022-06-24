@@ -54,7 +54,7 @@ jobs:
         run: npm config set '//registry.npmjs.org/:_authToken' "${NPM_TOKEN}"
         env:
           NPM_TOKEN: ${{secrets.NPM_TOKEN}}
-      - name: npm install
-        run: npm install
+      - run: npm install
       - run: npx playwright install --with-deps
       - run: npm test
+      - run: DD31=true npm test
