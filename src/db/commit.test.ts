@@ -6,7 +6,7 @@ import {
   fromChunk,
   IndexChangeMeta,
   Meta,
-  MetaTyped,
+  MetaType,
   newIndexChange as commitNewIndexChange,
   newLocal as commitNewLocal,
   newSnapshot as commitNewSnapshot,
@@ -150,7 +150,7 @@ test('load roundtrip', async () => {
     t(
       await makeCommit(
         {
-          type: MetaTyped.Local,
+          type: MetaType.Local,
           basisHash,
           mutationID: 0,
           mutatorName: 'mutname',
@@ -180,7 +180,7 @@ test('load roundtrip', async () => {
   t(
     await makeCommit(
       {
-        type: MetaTyped.Local,
+        type: MetaType.Local,
         basisHash: fakeHash('basis'),
         mutationID: 0,
         mutatorName: '',
@@ -197,7 +197,7 @@ test('load roundtrip', async () => {
   t(
     await makeCommit(
       {
-        type: MetaTyped.Local,
+        type: MetaType.Local,
         basisHash: emptyStringHash,
         mutationID: 0,
         // @ts-expect-error We are testing invalid types
@@ -216,7 +216,7 @@ test('load roundtrip', async () => {
     t(
       await makeCommit(
         {
-          type: MetaTyped.Local,
+          type: MetaType.Local,
           basisHash,
           mutationID: 0,
           mutatorName: 'mutname',
@@ -246,7 +246,7 @@ test('load roundtrip', async () => {
   t(
     await makeCommit(
       {
-        type: MetaTyped.Local,
+        type: MetaType.Local,
         basisHash: emptyStringHash,
         mutationID: 0,
         mutatorName: 'mutname',
@@ -337,7 +337,7 @@ test('accessors', async () => {
     await makeCommit(
       {
         basisHash,
-        type: MetaTyped.Local,
+        type: MetaType.Local,
         mutationID: 1,
         mutatorName: 'foo_mutator',
         mutatorArgsJSON: 42,
@@ -350,7 +350,7 @@ test('accessors', async () => {
     ),
   );
   const lm = local.meta;
-  if (lm.type === MetaTyped.Local) {
+  if (lm.type === MetaType.Local) {
     expect(lm.mutationID).to.equal(1);
     expect(lm.mutatorName).to.equal('foo_mutator');
     expect(lm.mutatorArgsJSON).to.equal(42);
@@ -372,7 +372,7 @@ test('accessors', async () => {
     ),
   );
   const sm = snapshot.meta;
-  if (sm.type === MetaTyped.Snapshot) {
+  if (sm.type === MetaType.Snapshot) {
     if (DD31) {
       assertSnapshotMetaDD31(sm);
       expect(sm.lastMutationIDs[clientID]).to.equal(2);
@@ -398,7 +398,7 @@ test('accessors', async () => {
     ),
   );
   const ic = indexChange.meta;
-  if (ic.type === MetaTyped.IndexChange) {
+  if (ic.type === MetaType.IndexChange) {
     expect(ic.lastMutationID).to.equal(3);
   } else {
     throw new Error('unexpected type');
@@ -421,7 +421,7 @@ async function makeCommit<M extends Meta>(
   clientID: ClientID,
 ): Promise<dag.Chunk<CommitData<M>>> {
   if (DD31) {
-    if (meta.type === MetaTyped.Local) {
+    if (meta.type === MetaType.Local) {
       meta = {...meta, clientID};
     }
   }
@@ -441,14 +441,14 @@ function makeSnapshotMeta(
 ): SnapshotMeta | SnapshotMetaDD31 {
   if (DD31) {
     return {
-      type: MetaTyped.Snapshot,
+      type: MetaType.Snapshot,
       basisHash,
       lastMutationIDs: {[clientID]: lastMutationID},
       cookieJSON,
     };
   }
   return {
-    type: MetaTyped.Snapshot,
+    type: MetaType.Snapshot,
     basisHash,
     lastMutationID,
     cookieJSON,
@@ -460,7 +460,7 @@ function makeIndexChangeMeta(
   lastMutationID: number,
 ): IndexChangeMeta {
   return {
-    type: MetaTyped.IndexChange,
+    type: MetaType.IndexChange,
     basisHash,
     lastMutationID,
   };

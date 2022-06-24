@@ -5,7 +5,7 @@ import {
   IndexRecord,
   LocalMeta,
   Meta,
-  MetaTyped,
+  MetaType,
   SnapshotMeta,
   SnapshotMetaDD31,
 } from './commit';
@@ -61,13 +61,13 @@ export class Visitor {
 
   private _visitCommitMeta(meta: Meta): Promise<void> {
     switch (meta.type) {
-      case MetaTyped.IndexChange:
+      case MetaType.IndexChange:
         return this._visitIndexChangeMeta(meta);
 
-      case MetaTyped.Local:
+      case MetaType.Local:
         return this._visitLocalMeta(meta);
 
-      case MetaTyped.Snapshot:
+      case MetaType.Snapshot:
         return this._visitSnapshot(meta);
     }
   }

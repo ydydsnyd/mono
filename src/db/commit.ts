@@ -16,7 +16,7 @@ import type {ClientID} from '../sync/client-id.js';
 export const DEFAULT_HEAD_NAME = 'main';
 
 // TODO(arv): Add new entries for DD31
-export const enum MetaTyped {
+export const enum MetaType {
   NONE = 0,
   IndexChange = 1,
   Local = 2,
@@ -35,15 +35,15 @@ export class Commit<M extends Meta> {
   }
 
   isLocal(): this is Commit<LocalMeta> {
-    return this.meta.type === MetaTyped.Local;
+    return this.meta.type === MetaType.Local;
   }
 
   isSnapshot(): this is Commit<SnapshotMeta> {
-    return this.meta.type === MetaTyped.Snapshot;
+    return this.meta.type === MetaType.Snapshot;
   }
 
   isIndexChange(): this is Commit<IndexChangeMeta> {
-    return this.meta.type === MetaTyped.IndexChange;
+    return this.meta.type === MetaType.IndexChange;
   }
 
   get valueHash(): Hash {
@@ -54,9 +54,9 @@ export class Commit<M extends Meta> {
   async getMutationID(clientID: ClientID): Promise<number> {
     const {meta} = this;
     switch (meta.type) {
-      case MetaTyped.IndexChange:
+      case MetaType.IndexChange:
         return meta.lastMutationID;
-      case MetaTyped.Snapshot: {
+      case MetaType.Snapshot: {
         if (DD31) {
           assertSnapshotMetaDD31(meta);
           const lmid = meta.lastMutationIDs[clientID];
@@ -66,7 +66,7 @@ export class Commit<M extends Meta> {
         assertSnapshotMeta(meta);
         return meta.lastMutationID;
       }
-      case MetaTyped.Local:
+      case MetaType.Local:
         return meta.mutationID;
     }
   }
@@ -179,7 +179,7 @@ type BasisHash = {
 };
 
 export type IndexChangeMeta = BasisHash & {
-  readonly type: MetaTyped.IndexChange;
+  readonly type: MetaType.IndexChange;
   readonly lastMutationID: number;
 };
 
@@ -198,7 +198,7 @@ function assertIndexChangeMeta(
 }
 
 export type LocalMeta = BasisHash & {
-  readonly type: MetaTyped.Local;
+  readonly type: MetaType.Local;
   readonly mutationID: number;
   readonly mutatorName: string;
   readonly mutatorArgsJSON: InternalValue;
@@ -248,13 +248,13 @@ export function isLocalMetaDD31(
 }
 
 export type SnapshotMeta = BasisHash & {
-  readonly type: MetaTyped.Snapshot;
+  readonly type: MetaType.Snapshot;
   readonly lastMutationID: number;
   readonly cookieJSON: InternalValue;
 };
 
 export type SnapshotMetaDD31 = BasisHash & {
-  readonly type: MetaTyped.Snapshot;
+  readonly type: MetaType.Snapshot;
   readonly lastMutationIDs: Record<ClientID, number>;
   readonly cookieJSON: InternalValue;
 };
@@ -303,17 +303,17 @@ function assertMeta(v: unknown): asserts v is Meta {
 
   assertNumber(v.type);
   switch (v.type) {
-    case MetaTyped.IndexChange:
+    case MetaType.IndexChange:
       assertIndexChangeMeta(v);
       break;
-    case MetaTyped.Local:
+    case MetaType.Local:
       if (DD31) {
         assertLocalMetaDD31(v);
       } else {
         assertLocalMeta(v);
       }
       break;
-    case MetaTyped.Snapshot:
+    case MetaType.Snapshot:
       if (DD31) {
         assertSnapshotMetaDD31(v);
       } else {
@@ -371,7 +371,7 @@ export function newLocal(
 ): Commit<LocalMeta | LocalMetaDD31> {
   if (DD31) {
     const meta: LocalMetaDD31 = {
-      type: MetaTyped.Local,
+      type: MetaType.Local,
       basisHash,
       mutationID,
       mutatorName,
@@ -383,7 +383,7 @@ export function newLocal(
     return commitFromCommitData(createChunk, {meta, valueHash, indexes});
   }
   const meta: LocalMeta = {
-    type: MetaTyped.Local,
+    type: MetaType.Local,
     basisHash,
     mutationID,
     mutatorName,
@@ -443,7 +443,7 @@ export function newSnapshotCommitData(
 ): CommitData<SnapshotMeta> {
   assert(!DD31);
   const meta: SnapshotMeta = {
-    type: MetaTyped.Snapshot,
+    type: MetaType.Snapshot,
     basisHash,
     lastMutationID,
     cookieJSON,
@@ -460,7 +460,7 @@ export function newSnapshotCommitDataDD31(
 ): CommitData<SnapshotMetaDD31> {
   assert(DD31);
   const meta: SnapshotMetaDD31 = {
-    type: MetaTyped.Snapshot,
+    type: MetaType.Snapshot,
     basisHash,
     lastMutationIDs,
     cookieJSON,
@@ -476,7 +476,7 @@ export function newIndexChange(
   indexes: readonly IndexRecord[],
 ): Commit<IndexChangeMeta> {
   const meta: IndexChangeMeta = {
-    type: MetaTyped.IndexChange,
+    type: MetaType.IndexChange,
     basisHash,
     lastMutationID,
   };
@@ -499,14 +499,14 @@ export function getRefs(data: CommitData<Meta>): Hash[] {
   const refs: Hash[] = [data.valueHash];
   const {meta} = data;
   switch (meta.type) {
-    case MetaTyped.IndexChange:
+    case MetaType.IndexChange:
       meta.basisHash && refs.push(meta.basisHash);
       break;
-    case MetaTyped.Local:
+    case MetaType.Local:
       meta.basisHash && refs.push(meta.basisHash);
       // Local has weak originalHash
       break;
-    case MetaTyped.Snapshot:
+    case MetaType.Snapshot:
       // Snapshot has weak basisHash
       break;
   }

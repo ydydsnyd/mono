@@ -3,7 +3,7 @@ import * as btree from '../btree/mod';
 import {
   IndexChangeMeta,
   Meta,
-  MetaTyped,
+  MetaType,
   SnapshotMeta,
   getRefs as getRefsFromCommitData,
   assertCommitData,
@@ -147,13 +147,13 @@ export abstract class BaseTransformer {
 
   private _transformCommitMeta<M extends Meta>(meta: M): Promise<Meta> {
     switch (meta.type) {
-      case MetaTyped.IndexChange:
+      case MetaType.IndexChange:
         return this._transformIndexChangeMeta(meta);
 
-      case MetaTyped.Local:
+      case MetaType.Local:
         return this._transformLocalMeta(meta);
 
-      case MetaTyped.Snapshot:
+      case MetaType.Snapshot:
         return this._transformSnapshot(meta);
     }
   }

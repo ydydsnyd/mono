@@ -1,12 +1,11 @@
 import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
 import type * as dag from '../dag/mod';
-import {Commit, DEFAULT_HEAD_NAME, Meta} from './commit';
+import {Commit, DEFAULT_HEAD_NAME, Meta, MetaType} from './commit';
 import {readCommit, whenceHead} from './read';
 import {
   Write,
   readIndexesForWrite,
-  WriteMetaType,
   newWriteSnapshot,
   newWriteSnapshotDD31,
   newWriteLocal,
@@ -15,7 +14,7 @@ import {
 import type {JSONValue} from '../json';
 import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 import type {ClientID} from '../sync/client-id.js';
-import type {Hash} from '../hash.js';
+import {emptyHash, Hash} from '../hash.js';
 import {BTreeWrite} from '../btree/mod.js';
 
 export type Chain = Commit<Meta>[];
@@ -179,15 +178,17 @@ export async function initDB(
   headName: string,
   clientID: ClientID,
 ): Promise<Hash> {
+  const basisHash = emptyHash;
   if (DD31) {
     const w = new Write(
       dagWrite,
       new BTreeWrite(dagWrite),
       undefined,
       {
-        type: WriteMetaType.Snapshot,
+        basisHash,
+        type: MetaType.Snapshot,
         lastMutationIDs: {[clientID]: 0},
-        cookie: null,
+        cookieJSON: null,
       },
       new Map(),
       clientID,
@@ -198,7 +199,7 @@ export async function initDB(
     dagWrite,
     new BTreeWrite(dagWrite),
     undefined,
-    {type: WriteMetaType.Snapshot, lastMutationID: 0, cookie: null},
+    {basisHash, type: MetaType.Snapshot, lastMutationID: 0, cookieJSON: null},
     new Map(),
     clientID,
   );
