@@ -159,6 +159,15 @@ export abstract class BaseTransformer {
   }
 
   private _transformBasisHash(
+    basisHash: OldHash,
+    hashRefType: HashRefType,
+  ): Promise<NewHash>;
+  private _transformBasisHash(basisHash: null, hashRefType: HashRefType): null;
+  private _transformBasisHash(
+    basisHash: OldHash | null,
+    hashRefType: HashRefType,
+  ): Promise<NewHash> | null;
+  private _transformBasisHash(
     basisHash: OldHash | null,
     hashRefType: HashRefType,
   ): Promise<NewHash> | null {

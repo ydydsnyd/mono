@@ -174,12 +174,9 @@ export async function fromHead(
   return fromHash(hash, dagRead);
 }
 
-type BasisHash = {
-  readonly basisHash: Hash | null;
-};
-
-export type IndexChangeMeta = BasisHash & {
+export type IndexChangeMeta = {
   readonly type: MetaType.IndexChange;
+  readonly basisHash: Hash;
   readonly lastMutationID: number;
 };
 
@@ -197,8 +194,9 @@ function assertIndexChangeMeta(
   // commit time.
 }
 
-export type LocalMeta = BasisHash & {
+export type LocalMeta = {
   readonly type: MetaType.Local;
+  readonly basisHash: Hash;
   readonly mutationID: number;
   readonly mutatorName: string;
   readonly mutatorArgsJSON: InternalValue;
@@ -247,14 +245,16 @@ export function isLocalMetaDD31(
   return DD31 && (meta as Partial<LocalMetaDD31>).clientID !== undefined;
 }
 
-export type SnapshotMeta = BasisHash & {
+export type SnapshotMeta = {
   readonly type: MetaType.Snapshot;
+  readonly basisHash: Hash | null;
   readonly lastMutationID: number;
   readonly cookieJSON: InternalValue;
 };
 
-export type SnapshotMetaDD31 = BasisHash & {
+export type SnapshotMetaDD31 = {
   readonly type: MetaType.Snapshot;
+  readonly basisHash: Hash | null;
   readonly lastMutationIDs: Record<ClientID, number>;
   readonly cookieJSON: InternalValue;
 };
@@ -359,7 +359,7 @@ function assertIndexRecord(v: unknown): asserts v is IndexRecord {
 
 export function newLocal(
   createChunk: dag.CreateChunk,
-  basisHash: Hash | null,
+  basisHash: Hash,
   mutationID: number,
   mutatorName: string,
   mutatorArgsJSON: InternalValue,
@@ -470,7 +470,7 @@ export function newSnapshotCommitDataDD31(
 
 export function newIndexChange(
   createChunk: dag.CreateChunk,
-  basisHash: Hash | null,
+  basisHash: Hash,
   lastMutationID: number,
   valueHash: Hash,
   indexes: readonly IndexRecord[],

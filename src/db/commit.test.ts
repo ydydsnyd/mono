@@ -146,7 +146,7 @@ test('load roundtrip', async () => {
   const hashHash = fakeHash('hash');
   const timestamp = 42;
 
-  for (const basisHash of [null, emptyStringHash, hashHash]) {
+  for (const basisHash of [emptyStringHash, hashHash]) {
     t(
       await makeCommit(
         {
@@ -212,7 +212,7 @@ test('load roundtrip', async () => {
     new Error('Invalid type: undefined, expected string'),
   );
 
-  for (const basisHash of [null, fakeHash(''), fakeHash('hash')]) {
+  for (const basisHash of [fakeHash(''), fakeHash('hash')]) {
     t(
       await makeCommit(
         {
@@ -311,7 +311,7 @@ test('load roundtrip', async () => {
     new Error('Invalid type: undefined, expected JSON value'),
   );
 
-  for (const basisHash of [null, fakeHash(''), fakeHash('hash')]) {
+  for (const basisHash of [fakeHash(''), fakeHash('hash')]) {
     t(
       await makeCommit(
         makeIndexChangeMeta(basisHash, 0),
@@ -336,8 +336,8 @@ test('accessors', async () => {
   const local = fromChunk(
     await makeCommit(
       {
-        basisHash,
         type: MetaType.Local,
+        basisHash,
         mutationID: 1,
         mutatorName: 'foo_mutator',
         mutatorArgsJSON: 42,
@@ -456,7 +456,7 @@ function makeSnapshotMeta(
 }
 
 function makeIndexChangeMeta(
-  basisHash: Hash | null,
+  basisHash: Hash,
   lastMutationID: number,
 ): IndexChangeMeta {
   return {

@@ -243,12 +243,12 @@ export class Write extends Read {
       }
     }
 
-    const basisHash = this._basis ? this._basis.chunk.hash : null;
     let commit;
     const meta = this._meta;
     switch (meta.type) {
       case MetaType.Local: {
         const {
+          basisHash,
           mutationID,
           mutatorName,
           mutatorArgsJSON,
@@ -272,7 +272,7 @@ export class Write extends Read {
       case MetaType.Snapshot: {
         if (DD31) {
           assertSnapshotMetaDD31(meta);
-          const {lastMutationIDs, cookieJSON} = meta;
+          const {basisHash, lastMutationIDs, cookieJSON} = meta;
           commit = commitNewSnapshotDD31(
             this._dagWrite.createChunk,
             basisHash,
@@ -283,7 +283,7 @@ export class Write extends Read {
           );
         } else {
           assertSnapshotMeta(meta);
-          const {lastMutationID, cookieJSON} = meta;
+          const {basisHash, lastMutationID, cookieJSON} = meta;
           commit = commitNewSnapshot(
             this._dagWrite.createChunk,
             basisHash,
@@ -296,7 +296,7 @@ export class Write extends Read {
         break;
       }
       case MetaType.IndexChange: {
-        const {lastMutationID} = meta;
+        const {basisHash, lastMutationID} = meta;
         if (this._basis !== undefined) {
           if (
             (await this._basis.getMutationID(this._clientID)) !== lastMutationID
@@ -307,7 +307,6 @@ export class Write extends Read {
             throw new Error('Index change must not change valueHash');
           }
         }
-
         commit = commitNewIndexChange(
           this._dagWrite.createChunk,
           basisHash,
@@ -356,8 +355,8 @@ export async function newWriteLocal(
     basis,
     DD31
       ? {
-          basisHash,
           type: MetaType.Local,
+          basisHash,
           mutatorName,
           mutatorArgsJSON,
           mutationID,
@@ -366,8 +365,8 @@ export async function newWriteLocal(
           clientID,
         }
       : {
-          basisHash,
           type: MetaType.Local,
+          basisHash,
           mutatorName,
           mutatorArgsJSON,
           mutationID,
