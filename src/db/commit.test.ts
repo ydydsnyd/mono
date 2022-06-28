@@ -361,13 +361,15 @@ test('accessors', async () => {
   }
   expect(local.meta.basisHash).to.equal(basisHash);
   expect(local.valueHash).to.equal(valueHash);
-  expect(
-    await local.getNextMutationID(
-      clientID,
-      // @ts-expect-error: we do not have a dag.Read here
-      null,
-    ),
-  ).to.equal(2);
+
+  const fakeRead = {
+    async mustGetChunk() {
+      // This test does not read from the dag and if it does, lets just fail.
+      throw new Error('Method not implemented.');
+    },
+  };
+
+  expect(await local.getNextMutationID(clientID, fakeRead)).to.equal(2);
 
   const snapshot = fromChunk(
     await makeCommit(
@@ -393,13 +395,7 @@ test('accessors', async () => {
   }
   expect(snapshot.meta.basisHash).to.equal(fakeHash('basishash2'));
   expect(snapshot.valueHash).to.equal(fakeHash('valuehash2'));
-  expect(
-    await snapshot.getNextMutationID(
-      clientID,
-      // @ts-expect-error: we do not have a dag.Read here
-      null,
-    ),
-  ).to.equal(3);
+  expect(await snapshot.getNextMutationID(clientID, fakeRead)).to.equal(3);
 
   const indexChange = fromChunk(
     await makeCommit(
@@ -417,13 +413,7 @@ test('accessors', async () => {
   }
   expect(indexChange.meta.basisHash).to.equal(fakeHash('basishash3'));
   expect(indexChange.valueHash).to.equal(fakeHash('valuehash3'));
-  expect(
-    await indexChange.getMutationID(
-      clientID,
-      // @ts-expect-error: we do not have a dag.Read here
-      null,
-    ),
-  ).to.equal(3);
+  expect(await indexChange.getMutationID(clientID, fakeRead)).to.equal(3);
 });
 
 const chunkHasher = makeTestChunkHasher('test');
@@ -484,7 +474,8 @@ function makeIndexChangeMeta(
   };
 }
 
-test('getMutationID', async () => {
+test('getMutationID across commits with different clients', async () => {
+  // In DD31 the commits can be from different clients.
   if (!DD31) {
     return;
   }

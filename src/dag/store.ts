@@ -13,9 +13,12 @@ interface GetChunk {
   getChunk(hash: Hash): Promise<Chunk | undefined>;
 }
 
-export interface Read extends GetChunk {
-  hasChunk(hash: Hash): Promise<boolean>;
+export interface MustGetChunk {
   mustGetChunk(hash: Hash): Promise<Chunk>;
+}
+
+export interface Read extends GetChunk, MustGetChunk {
+  hasChunk(hash: Hash): Promise<boolean>;
   getHead(name: string): Promise<Hash | undefined>;
   close(): void;
   get closed(): boolean;

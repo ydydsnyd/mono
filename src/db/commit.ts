@@ -12,6 +12,7 @@ import {assertHash, Hash} from '../hash';
 import {skipCommitDataAsserts} from '../config.js';
 import type {InternalValue} from '../internal-value.js';
 import type {ClientID} from '../sync/client-id.js';
+import type {MustGetChunk} from '../dag/store.js';
 
 export const DEFAULT_HEAD_NAME = 'main';
 
@@ -51,7 +52,10 @@ export class Commit<M extends Meta> {
     return this.chunk.data.valueHash;
   }
 
-  async getMutationID(clientID: ClientID, dagRead: dag.Read): Promise<number> {
+  async getMutationID(
+    clientID: ClientID,
+    dagRead: dag.MustGetChunk,
+  ): Promise<number> {
     const {meta} = this;
     switch (meta.type) {
       case MetaType.IndexChange:
@@ -87,7 +91,7 @@ export class Commit<M extends Meta> {
 
   async getNextMutationID(
     clientID: ClientID,
-    dagRead: dag.Read,
+    dagRead: dag.MustGetChunk,
   ): Promise<number> {
     return (await this.getMutationID(clientID, dagRead)) + 1;
   }
@@ -176,7 +180,7 @@ export async function chain(
 
 export async function fromHash(
   hash: Hash,
-  dagRead: dag.Read,
+  dagRead: MustGetChunk,
 ): Promise<Commit<Meta>> {
   const chunk = await dagRead.mustGetChunk(hash);
   return fromChunk(chunk);
