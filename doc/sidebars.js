@@ -6,9 +6,17 @@ module.exports = {
     {
       'Get Started': [
         'quickstart',
+        'app-features',
         'app-structure',
         'first-replicache-feature',
-        {'Next Steps': ['deploy', 'learn', 'local-postgres']},
+        {
+          'Next Steps': [
+            'deploy-render',
+            'deploy-vercel-supabase',
+            'deploy-elsewhere',
+            'local-postgres',
+          ],
+        },
       ],
     },
     {

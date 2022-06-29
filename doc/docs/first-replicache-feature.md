@@ -84,4 +84,4 @@ It's not beautiful, but you get the idea. In summary, developers can often imple
 
 # Next
 
-Now let's [Deploy our app to production](/deploy).
+Now let's [Deploy our app to production](/deploy-render).

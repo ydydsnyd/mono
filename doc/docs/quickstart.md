@@ -3,7 +3,9 @@ title: Quickstart
 slug: /
 ---
 
-The easiest way to get started is with our Todo starter app. This app is a good way to play with Replicache, but it is _also_ a great foundation on which to build your own app using Replicache. Since it is simple and has all the pieces you'll need already in place, you can clone it and then start evolving it to suit your own needs.
+The easiest way to get started is with our Todo starter app. This app is a good way to play with Replicache, but it is _also_ a great foundation on which to build your own app using Replicache.
+
+Since it is simple and has all the pieces you'll need, you can clone it and then build your own app from there. We recommend that most users start their Replicache projects by cloning this quickstart.
 
 # Prerequisites
 
@@ -42,19 +44,6 @@ By default the dev backend stores data in memory, so if you restart the server, 
 
 :::
 
-# Other Things to Try
-
-- Open the web inspector in one window and throttle the network. Notice that the UI still responds instantly.
-- Open the web inspector in one window and completely disable the network. When the network comes back, everything syncs up!
-- Disable the network and engineer a conflict. For example, delete a todo in the online tab, and edit the same todo in the offline tab. When the offline tab comes back both todos will be deleted.
-
-The thing to understand is that **you do not have to write _any_ code to get these behaviors**. You write your Replicache app almost entirely client-side, and you get:
-
-- Optimistic mutations everywhere, automatically.
-- Correct rollback and reconciliaton when server mutation is different than optimistic.
-- Instant UI, even when network is slow.
-- Offline support.
-
 # Next
 
-The [next sections](/app-structure) walk you through the basic structure of this starter app, and explain how Replicache provides these benefits.
+The [next section](/app-features) walks through some of the key features of this little demo app which are enabled by Replicache.
