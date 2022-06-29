@@ -5,7 +5,7 @@ slug: /
 
 The easiest way to get started is with our Todo starter app. This app is a good way to play with Replicache, but it is _also_ a great foundation on which to build your own app using Replicache.
 
-Since it is simple and has all the pieces you'll need, you can clone it and then build your own app from there. We recommend that most users start their Replicache projects by cloning this quickstart.
+Since it is simple and has all the pieces you'll need, you can clone it and then build your own app from there. We recommend that most users start their Replicache projects this way.
 
 # Prerequisites
 
@@ -46,4 +46,4 @@ By default the dev backend stores data in memory, so if you restart the server, 
 
 # Next
 
-The [next section](/app-features) walks through some of the key features of this little demo app which are enabled by Replicache.
+The [next section](/app-features) reiterates some of the key features of this little demo app that Replicache enables.
