@@ -56,4 +56,6 @@ The thing to understand is that **you do not have to write _any_ code to get the
 - Offline support.
 - An intuitive way to resolve conflicting mutations.
 
+# Next
+
 The [next sections](/app-structure) walk you through the basic structure of this starter app, and explain how Replicache provides these benefits.

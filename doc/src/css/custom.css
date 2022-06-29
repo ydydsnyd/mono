@@ -31,3 +31,7 @@
 .theme-doc-footer-edit-meta-row {
   display: none;
 }
+
+summary h2 {
+  margin-bottom: 0;
+}
