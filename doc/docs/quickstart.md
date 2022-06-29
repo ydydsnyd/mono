@@ -48,13 +48,12 @@ By default the dev backend stores data in memory, so if you restart the server, 
 - Open the web inspector in one window and completely disable the network. When the network comes back, everything syncs up!
 - Disable the network and engineer a conflict. For example, delete a todo in the online tab, and edit the same todo in the offline tab. When the offline tab comes back both todos will be deleted.
 
-The thing to understand is that **you do not have to write _any_ code to get these behaviors**. You write your Replicache app in terms of simple _mutators_ and _subscriptions_, very much like a Redux app, and you automatically get:
+The thing to understand is that **you do not have to write _any_ code to get these behaviors**. You write your Replicache app almost entirely client-side, and you get:
 
 - Optimistic mutations everywhere, automatically.
 - Correct rollback and reconciliaton when server mutation is different than optimistic.
 - Instant UI, even when network is slow.
 - Offline support.
-- An intuitive way to resolve conflicting mutations.
 
 # Next
 

@@ -20,24 +20,24 @@ A few recommended deployment targets are described below.
 - [Create a Render account](https://dashboard.render.com/register), then a new Blueprint
 - Choose the GitHub project you pushed
 
-<p class="text--center">
-  <video src="/img/deploy/render-create-project.m4v" autoplay="true" loop="true" style={{width: "100%", maxWidth:700}} controls="true" muted="true"/>
+<p className="text--center">
+  <video src="/img/deploy/render-create-project.m4v" autoPlay={true} loop={true} style={{width: "100%", maxWidth:700}} controls={true} muted={true}/>
 </p>
 
 ### Step 2: Add license key environment variable
 
 - In the web server settings, set the `NEXT_PUBLIC_REPLICACHE_LICENSE_KEY` environment variable to your [Replicache License Key](/licensing).
 
-<p class="text--center">
-  <video src="/img/deploy/render-license-key.m4v" autoplay="true" loop="true" style={{width: "100%", maxWidth:700}} controls="true" muted="true"/>
+<p className="text--center">
+  <video src="/img/deploy/render-license-key.m4v" autoPlay={true} loop={true} style={{width: "100%", maxWidth:700}} controls={true} muted={true}/>
 </p>
 
 ### Step 3: 🎉
 
 When the deploy finishes, you should have a working app live on Render!
 
-<p class="text--center">
-  <video src="/img/deploy/render-success.m4v" autoplay="true" loop="true" style={{width: "100%", maxWidth:700}} controls="true" muted="true"/>
+<p className="text--center">
+  <video src="/img/deploy/render-success.m4v" autoPlay={true} loop={true} style={{width: "100%", maxWidth:700}} controls={true} muted={true}/>
 </p>
 
 </details>
@@ -55,8 +55,8 @@ We recommend pairing with [Supabase](https://supabase.com) for storage, since Su
 - Create in `East US` because that's where Vercel functions are deployed by default, and they should be close.
 - **Important:** Don't forget to copy the password you choose to some scratch file. You'll need that later and can't retrieve it after this screen.
 
-<p class="text--center">
-  <video src="/img/deploy/vercel-create-supabase-project.m4v" autoplay="true" loop="true" style={{width: "100%", maxWidth:700}} controls="true" muted="true"/>
+<p className="text--center">
+  <video src="/img/deploy/vercel-create-supabase-project.m4v" autoPlay={true} loop={true} style={{width: "100%", maxWidth:700}} controls={true} muted={true}/>
 </p>
 
 ### Step 2: Create Vercel Project
@@ -65,8 +65,8 @@ We recommend pairing with [Supabase](https://supabase.com) for storage, since Su
 - Create a new project at [Vercel](https://vercel.com) and link to the GitHub project.
 - **Note:** This will deploy but the app will not run yet. We will fix that next.
 
-<p class="text--center">
-  <video src="/img/deploy/vercel-create-project.m4v" autoplay="true" loop="true" style={{width: "100%", maxWidth:700}} controls="true" muted="true"/>
+<p className="text--center">
+  <video src="/img/deploy/vercel-create-project.m4v" autoPlay={true} loop={true} style={{width: "100%", maxWidth:700}} controls={true} muted={true}/>
 </p>
 
 ### Step 3: Add Supabase Integration to Vercel Project
@@ -76,8 +76,8 @@ We recommend pairing with [Supabase](https://supabase.com) for storage, since Su
 - This will add several environment variables to your project (you may have to refresh the page before they appear).
 - **Note:** It still won't quite work. One more step to go.
 
-<p class="text--center">
-  <video src="/img/deploy/vercel-integrate-supabase.m4v" autoplay="true" loop="true" style={{width: "100%", maxWidth:700}} controls="true" muted="true"/>
+<p className="text--center">
+  <video src="/img/deploy/vercel-integrate-supabase.m4v" autoPlay={true} loop={true} style={{width: "100%", maxWidth:700}} controls={true} muted={true}/>
 </p>
 
 ### Step 4: Add Final Environment Variables
@@ -87,16 +87,16 @@ We recommend pairing with [Supabase](https://supabase.com) for storage, since Su
 - Add `SUPABASE_DATABASE_PASSWORD` with the password you copied from your Supabase setup in Step 1.
 - Go to Deployments and redeploy the latest build to pick up the new variables.
 
-<p class="text--center">
-  <video src="/img/deploy/vercel-final-env-vars.m4v" autoplay="true" loop="true" style={{width: "100%", maxWidth:700}} controls="true" muted="true"/>
+<p className="text--center">
+  <video src="/img/deploy/vercel-final-env-vars.m4v" autoPlay={true} loop={true} style={{width: "100%", maxWidth:700}} controls={true} muted={true}/>
 </p>
 
 ### Step 5: 🎉
 
 When the deploy finishes, you should have a working app live on Vercel and Supabase!
 
-<p class="text--center">
-  <video src="/img/deploy/vercel-success.m4v" autoplay="true" loop="true" style={{width: "100%", maxWidth:700}} controls="true" muted="true"/>
+<p className="text--center">
+  <video src="/img/deploy/vercel-success.m4v" autoPlay={true} loop={true} style={{width: "100%", maxWidth:700}} controls={true} muted={true}/>
 </p>
 
 </details>
