@@ -15,8 +15,8 @@ You'll need [Node.js](https://nodejs.dev/) v14.19.1 or greater.
 
 ```bash
 # Get the code and install
-npx degit rocicorp/replicache-todo myapp
-cd myapp
+npx degit rocicorp/replicache-todo my-app
+cd my-app
 npm install
 
 # Get a Replicache license key. The command below will ask you a few quick
