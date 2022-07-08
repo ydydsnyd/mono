@@ -69,7 +69,7 @@ export class IDBDatabasesStore {
   constructor(
     createKVStore: (name: string) => kv.Store = name => new kv.IDBStore(name),
   ) {
-    this._kvStore = createKVStore(IDB_DATABASES_DB_NAME);
+    this._kvStore = createKVStore(getIDBDatabasesDBName());
   }
 
   putDatabase(db: IndexedDBDatabase): Promise<IndexedDBDatabaseRecord> {
