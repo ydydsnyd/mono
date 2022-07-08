@@ -12,7 +12,7 @@ slug: /deploy-render
 - Choose the GitHub project you pushed
 
 <p className="text--center">
-  <video src="/img/deploy/render-create-project.m4v" autoPlay={true} loop={true} style={{width: "100%", maxWidth:700}} controls={true} muted={true}/>
+  <video src="/img/deploy/render-create-project.mp4" autoPlay={true} loop={true} style={{width: "100%", maxWidth:700}} controls={true} muted={true}/>
 </p>
 
 ### Step 2: Add license key environment variable
@@ -20,7 +20,7 @@ slug: /deploy-render
 - In the web server settings, set the `NEXT_PUBLIC_REPLICACHE_LICENSE_KEY` environment variable to your [Replicache License Key](/licensing).
 
 <p className="text--center">
-  <video src="/img/deploy/render-license-key.m4v" autoPlay={true} loop={true} style={{width: "100%", maxWidth:700}} controls={true} muted={true}/>
+  <video src="/img/deploy/render-license-key.mp4" autoPlay={true} loop={true} style={{width: "100%", maxWidth:700}} controls={true} muted={true}/>
 </p>
 
 ### Step 3: 🎉
@@ -28,7 +28,7 @@ slug: /deploy-render
 When the deploy finishes, you should have a working app live on Render!
 
 <p className="text--center">
-  <video src="/img/deploy/render-success.m4v" autoPlay={true} loop={true} style={{width: "100%", maxWidth:700}} controls={true} muted={true}/>
+  <video src="/img/deploy/render-success.mp4" autoPlay={true} loop={true} style={{width: "100%", maxWidth:700}} controls={true} muted={true}/>
 </p>
 
 # Next
