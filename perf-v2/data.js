@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1657316563913,
+  "lastUpdate": 1657575477549,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Benchmark": [
@@ -65537,6 +65537,135 @@ window.BENCHMARK_DATA = {
             "unit": "median ms",
             "range": "±4.2%",
             "extra": "startup scan 1024x100 from 1024x100000 stored 50/75/90/95%=34.10/35.30/37.40/38.30 ms avg=37.51 ms (14 runs sampled)"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "273bee0bdc9d0fd3744b872211a0b36372174cc6",
+          "message": "fix: update test to close idb stores before trying to delete the dbs. (#192)\n\nThe test updated here currently work because in src/kv/idb-store.ts we currently close idb databases when we get a onversionchange event indicating someone is trying to delete the idb database.  \r\n\r\n```\r\nfunction openDatabase(name: string): Promise<IDBDatabase> {\r\n  const req = indexedDB.open(name);\r\n  req.onupgradeneeded = () => {\r\n    const db = req.result;\r\n    db.createObjectStore(OBJECT_STORE);\r\n  };\r\n  const wrapped = wrap(req);\r\n  void wrapped.then(db => {\r\n    // *** this is the relevant auto close when someone tries to delete code ***\r\n    db.onversionchange = () => db.close();\r\n  });\r\n  return wrapped;\r\n}\r\n```\r\nOtherwise they would hang (because we would be awaiting a delete that would never complete). \r\n\r\nI don't want these test to rely on the auto-closing behavior, because it seems like something we may want to change \r\nin the future.\r\n\r\nUpdated the structure of the test to instead close the idb stores before try to delete the dbs.",
+          "timestamp": "2022-07-11T14:35:03-07:00",
+          "tree_id": "48acf6eabf2ea71fe19dc9ca7d1acf0c92387efd",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/273bee0bdc9d0fd3744b872211a0b36372174cc6"
+        },
+        "date": 1657575473830,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "writeSubRead 1MB total, 64 subs total, 5 subs dirty, 16kb read per sub",
+            "value": 1.1000003814697266,
+            "unit": "median ms",
+            "range": "±2.3%",
+            "extra": "writeSubRead 1MB total, 64 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=1.10/1.50/3.30/3.40 ms avg=1.54 ms (19 runs sampled)"
+          },
+          {
+            "name": "writeSubRead 4MB total, 128 subs total, 5 subs dirty, 16kb read per sub",
+            "value": 2,
+            "unit": "median ms",
+            "range": "±2.8%",
+            "extra": "writeSubRead 4MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=2.00/2.30/2.90/4.80 ms avg=2.45 ms (15 runs sampled)"
+          },
+          {
+            "name": "writeSubRead 16MB total, 128 subs total, 5 subs dirty, 16kb read per sub",
+            "value": 2.9000000953674316,
+            "unit": "median ms",
+            "range": "±4.9%",
+            "extra": "writeSubRead 16MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=2.90/5.50/7.80/7.80 ms avg=4.94 ms (7 runs sampled)"
+          },
+          {
+            "name": "writeSubRead 64MB total, 128 subs total, 5 subs dirty, 16kb read per sub",
+            "value": 3.200000286102295,
+            "unit": "median ms",
+            "range": "±18.8%",
+            "extra": "writeSubRead 64MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=3.20/6.70/22.00/22.00 ms avg=7.23 ms (7 runs sampled)"
+          },
+          {
+            "name": "populate 1024x1000 (clean, indexes: 0)",
+            "value": 34.5,
+            "unit": "median ms",
+            "range": "±45.3%",
+            "extra": "populate 1024x1000 (clean, indexes: 0) 50/75/90/95%=34.50/39.90/43.70/79.80 ms avg=43.26 ms (12 runs sampled)"
+          },
+          {
+            "name": "populate 1024x1000 (clean, indexes: 1)",
+            "value": 44.5,
+            "unit": "median ms",
+            "range": "±27.5%",
+            "extra": "populate 1024x1000 (clean, indexes: 1) 50/75/90/95%=44.50/52.40/72.00/72.00 ms avg=55.72 ms (9 runs sampled)"
+          },
+          {
+            "name": "populate 1024x1000 (clean, indexes: 2)",
+            "value": 59.80000019073486,
+            "unit": "median ms",
+            "range": "±37.7%",
+            "extra": "populate 1024x1000 (clean, indexes: 2) 50/75/90/95%=59.80/74.40/97.50/97.50 ms avg=82.69 ms (7 runs sampled)"
+          },
+          {
+            "name": "populate 1024x10000 (clean, indexes: 0)",
+            "value": 295.30000019073486,
+            "unit": "median ms",
+            "range": "±63.1%",
+            "extra": "populate 1024x10000 (clean, indexes: 0) 50/75/90/95%=295.30/319.20/358.40/358.40 ms avg=387.24 ms (7 runs sampled)"
+          },
+          {
+            "name": "populate 1024x10000 (clean, indexes: 1)",
+            "value": 564.5,
+            "unit": "median ms",
+            "range": "±83.3%",
+            "extra": "populate 1024x10000 (clean, indexes: 1) 50/75/90/95%=564.50/572.10/647.80/647.80 ms avg=734.99 ms (7 runs sampled)"
+          },
+          {
+            "name": "populate 1024x10000 (clean, indexes: 2)",
+            "value": 799.3000001907349,
+            "unit": "median ms",
+            "range": "±117.4%",
+            "extra": "populate 1024x10000 (clean, indexes: 2) 50/75/90/95%=799.30/810.60/916.70/916.70 ms avg=1038.47 ms (7 runs sampled)"
+          },
+          {
+            "name": "scan 1024x1000",
+            "value": 2.0999999046325684,
+            "unit": "median ms",
+            "range": "±4.7%",
+            "extra": "scan 1024x1000 50/75/90/95%=2.10/2.60/3.40/6.80 ms avg=2.53 ms (19 runs sampled)"
+          },
+          {
+            "name": "scan 1024x10000",
+            "value": 16.399999618530273,
+            "unit": "median ms",
+            "range": "±7.4%",
+            "extra": "scan 1024x10000 50/75/90/95%=16.40/17.30/22.00/23.80 ms avg=18.76 ms (19 runs sampled)"
+          },
+          {
+            "name": "create index 1024x5000",
+            "value": 106.90000009536743,
+            "unit": "median ms",
+            "range": "±30.0%",
+            "extra": "create index 1024x5000 50/75/90/95%=106.90/110.40/136.90/136.90 ms avg=140.01 ms (7 runs sampled)"
+          },
+          {
+            "name": "startup read 1024x100 from 1024x100000 stored",
+            "value": 141.59999990463257,
+            "unit": "median ms",
+            "range": "±13.8%",
+            "extra": "startup read 1024x100 from 1024x100000 stored 50/75/90/95%=141.60/143.80/153.20/153.20 ms avg=174.53 ms (7 runs sampled)"
+          },
+          {
+            "name": "startup scan 1024x100 from 1024x100000 stored",
+            "value": 31.200000286102295,
+            "unit": "median ms",
+            "range": "±7.4%",
+            "extra": "startup scan 1024x100 from 1024x100000 stored 50/75/90/95%=31.20/35.70/36.80/38.60 ms avg=36.45 ms (14 runs sampled)"
           }
         ]
       }
