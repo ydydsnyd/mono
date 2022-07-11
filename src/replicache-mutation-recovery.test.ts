@@ -2,10 +2,11 @@ import {
   initReplicacheTesting,
   replicacheForTesting,
   tickAFewTimes,
-  dbsToDrop,
   clock,
   createReplicacheNameForTest,
   replicacheForTestingNoDefaultURLs,
+  dbsToDrop,
+  closeablesToClose,
 } from './test-util';
 import {makeIDBName, REPLICACHE_FORMAT_VERSION} from './replicache';
 import {addGenesis, addLocal, addSnapshot, Chain} from './db/test-helpers';
@@ -30,24 +31,15 @@ import {fromInternalValue, FromInternalValueReason} from './internal-value.js';
 
 initReplicacheTesting();
 
-const dagsToClose: dag.Store[] = [];
-
-teardown(async () => {
-  for (const dagToClose of dagsToClose) {
-    await dagToClose.close();
-  }
-  dagsToClose.length = 0;
-  sinon.restore();
-});
-
 async function createPerdag(args: {
   replicacheName: string;
   schemaVersion: string;
 }): Promise<dag.Store> {
   const {replicacheName, schemaVersion} = args;
   const idbName = makeIDBName(replicacheName, schemaVersion);
-  dbsToDrop.add(idbName);
   const idb = new kv.IDBStore(idbName);
+  closeablesToClose.add(idb);
+  dbsToDrop.add(idbName);
 
   const idbDatabases = new persist.IDBDatabasesStore();
   try {
@@ -65,7 +57,6 @@ async function createPerdag(args: {
     dag.throwChunkHasher,
     assertNotTempHash,
   );
-  dagsToClose.push(perdag);
   return perdag;
 }
 

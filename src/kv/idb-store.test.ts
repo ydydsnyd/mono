@@ -28,6 +28,7 @@ test('dropStore', async () => {
   });
 
   // Drop db
+  await store.close();
   await dropStore(name);
 
   // Reopen store, verify data is gone

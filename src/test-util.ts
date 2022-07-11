@@ -95,18 +95,31 @@ export class ReplicacheTest<
 }
 
 export const reps: Set<ReplicacheTest> = new Set();
-
 export async function closeAllReps(): Promise<void> {
   for (const rep of reps) {
     if (!rep.closed) {
       await rep.close();
     }
-    reps.delete(rep);
   }
+  reps.clear();
+}
+
+/**
+ * Additional closeables to close as part of teardown.
+ * Likely kb.Store(s) or dag.Store(s), which should be closed before
+ * deleting the underlying IndexedDB databases.  These are closed before
+ * `dbsToDrop` are deleted.
+ */
+export const closeablesToClose: Set<{close: () => Promise<unknown>}> =
+  new Set();
+export async function closeAllCloseables(): Promise<void> {
+  for (const closeable of closeablesToClose) {
+    await closeable.close();
+  }
+  closeablesToClose.clear();
 }
 
 export const dbsToDrop: Set<string> = new Set();
-
 export async function deleteAllDatabases(): Promise<void> {
   for (const name of dbsToDrop) {
     await kv.dropIDBStore(name);
@@ -208,6 +221,7 @@ export function initReplicacheTesting(): void {
     sinon.restore();
     partialNamesToReplicacheNames.clear();
     await closeAllReps();
+    await closeAllCloseables();
     await deleteAllDatabases();
     await persist.teardownIDBDatabasesStoreForTest();
   });
