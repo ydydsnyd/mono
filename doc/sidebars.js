@@ -51,6 +51,7 @@ module.exports = {
         'howto-licensing',
         'howto-blobs',
         'howto-launch',
+        'howto-undo',
         {
           // TODO figure out what to do with this
           'Integrate with your own backend': [
