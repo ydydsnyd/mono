@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1658459794668,
+  "lastUpdate": 1658459834902,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -21431,6 +21431,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/df3f5d15a0bfce37540c7819597f5f8c8b05b04c"
         },
         "date": 1658459789300,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 188416,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 33898,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 187301,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33571,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 79448,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23085,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5ff550bb535a7f0a5bad6840f4df6812ab944f5a",
+          "message": "Update HACKING.md",
+          "timestamp": "2022-07-21T17:16:11-10:00",
+          "tree_id": "57d04e151a83c24e495645f5e81e04621f4b7bb1",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/5ff550bb535a7f0a5bad6840f4df6812ab944f5a"
+        },
+        "date": 1658459830683,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
