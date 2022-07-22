@@ -60,13 +60,24 @@ We need to be very careful about public API changes as we then have to maintain 
 
 Check whether there are any public API changes by diffing `out/replicache.d.ts` between the previous released version and the new candidate. Make sure all new API has been discussed and agreed to by the team.
 
+## Land the Release
+
+Send out the release branch as a PR like normal and land it.
+
+## Tag the Release
+
+```
+git checkout main
+git pull
+# Make sure you're at the commit that bumps the version
+export NEW_TAG="v$NEW_VERSION"
+git tag $NEW_TAG
+git push origin $NEW_TAG
+```
+
 ## Push the Release
 
 ```
-git tag v<semver>
-git push origin v<semver>
-# update release notes on github
-
 # note: this will push the release to the "latest" tag, which means it's what
 # people will get when they `npm install`. If this is a beta release, you should
 # add the `--tag=beta` flag to this command.
@@ -88,6 +99,14 @@ git push origin docs
 **Important:** Only do this when releasing a new version, otherwise we will release early docs that don't match current released code. To cherry-pick doc improvements see: "sprucing the docs", below.
 
 **Note:** It's likely that when you `git push origin docs` above, you'll get a conflict error. This is expected if there have been any cherry-picks onto this branch as would happen if somebody "spruced" (below). Check that all the new commits on this docs branch since the last release are present in `origin/main` (note that they won't have same hash - you have to check by commit description) and if they are, then you can force the push with `git push origin docs --force`. If there is a commit on this branch which is missing from `origin/main` then somebody edited directly on this branch and it should be investigated.
+
+## Write Release Notes
+
+Our release notes are now blog posts.
+
+TODO: Document how to do this.
+
+---
 
 # Sprucing the docs
 
