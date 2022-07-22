@@ -2,6 +2,7 @@
 
 ```
 export NEW_VERSION="<new_version>"
+git branch -D release
 git checkout -b release HEAD
 jq ".version = \"$NEW_VERSION\"" package.json | sponge package.json
 npm install
