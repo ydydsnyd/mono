@@ -1,10 +1,11 @@
 # Building a release
 
 ```
+export NEW_VERSION="<new_version>"
 git checkout -b release HEAD
-jq '.version = "<new_version>"' package.json | sponge package.json
+jq ".version = \"$NEW_VERSION\"" package.json | sponge package.json
 npm install
-git commit -a -m 'Bump version to <new_version>.'
+git commit -a -m "Bump version to $NEW_VERSION."
 ```
 
 ## Manual Testing
