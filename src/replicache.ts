@@ -574,7 +574,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       );
       return;
     }
-    this._lc.info?.(`Replicache license key: ${this._licenseKey}`);
+    this._lc.debug?.(`Replicache license key: ${this._licenseKey}`);
     if (this._licenseKey === TEST_LICENSE_KEY) {
       this._lc.info?.(
         `Skipping license check for TEST_LICENSE_KEY. ` +
@@ -609,7 +609,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         );
       }
       if (resp.status === LicenseStatus.Valid) {
-        this._lc.info?.(`License is valid.`);
+        this._lc.debug?.(`License is valid.`);
       } else {
         await this._licenseInvalid(
           this._lc,
