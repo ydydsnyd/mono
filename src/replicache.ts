@@ -964,22 +964,30 @@ export class Replicache<MD extends MutatorDefs = {}> {
   }
 
   private async _wrapInReauthRetries<R>(
-    f: () => Promise<{
+    f: (
+      requestID: string,
+      requestLc: LogContext,
+    ) => Promise<{
       httpRequestInfo: HTTPRequestInfo | undefined;
       result: R;
     }>,
     verb: string,
     serverURL: string,
+    lc: LogContext,
     preAuth: () => MaybePromise<void> = noop,
     postAuth: () => MaybePromise<void> = noop,
   ): Promise<{
     result: R;
     authFailure: boolean;
   }> {
+    const clientID = await this.clientID;
     let reauthAttempts = 0;
     let lastResult;
+    lc = lc.addContext(verb);
     do {
-      const {httpRequestInfo, result} = await f();
+      const requestID = sync.newRequestID(clientID);
+      const requestLc = lc.addContext('request_id', requestID);
+      const {httpRequestInfo, result} = await f(requestID, requestLc);
       lastResult = result;
       if (!httpRequestInfo) {
         return {
@@ -992,7 +1000,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       if (errorMessage || httpStatusCode >= 400) {
         // TODO(arv): Maybe we should not log the server URL when the error comes
         // from a Pusher/Puller?
-        this._lc.error?.(
+        requestLc.error?.(
           `Got error response from server (${serverURL}) doing ${verb}: ${httpStatusCode}` +
             (errorMessage ? `: ${errorMessage}` : ''),
         );
@@ -1025,7 +1033,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       this.auth = auth;
       reauthAttempts++;
     } while (reauthAttempts < MAX_REAUTH_TRIES);
-    this._lc.info?.('Tried to reauthenticate too many times');
+    lc.info?.('Tried to reauthenticate too many times');
     return {
       result: lastResult,
       authFailure: true,
@@ -1041,22 +1049,18 @@ export class Replicache<MD extends MutatorDefs = {}> {
       return true;
     }
 
+    await this._ready;
+    const profileID = await this._profileIDPromise;
+    const clientID = await this._clientIDPromise;
     return this._wrapInOnlineCheck(async () => {
       const {result: pushResponse} = await this._wrapInReauthRetries(
-        async () => {
-          await this._ready;
-          const profileID = await this._profileIDPromise;
-          const clientID = await this._clientIDPromise;
-          const requestID = sync.newRequestID(clientID);
-          const lc = this._lc
-            .addContext('push')
-            .addContext('request_id', requestID);
+        async (requestID: string, requestLc: LogContext) => {
           try {
             this._changeSyncCounters(1, 0);
             const pushResponse = await sync.push(
               requestID,
               this._memdag,
-              lc,
+              requestLc,
               profileID,
               clientID,
               this.pusher,
@@ -1071,6 +1075,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         },
         'push',
         this.pushURL,
+        this._lc,
       );
       // No pushResponse means we didn't do a push because there were no
       // pending mutations.
@@ -1147,18 +1152,13 @@ export class Replicache<MD extends MutatorDefs = {}> {
   }
 
   protected async _beginPull(): Promise<BeginPullResult> {
+    await this._ready;
+    const profileID = await this.profileID;
+    const clientID = await this._clientIDPromise;
     const {
       result: {beginPullResponse, requestID},
     } = await this._wrapInReauthRetries(
-      async () => {
-        await this._ready;
-        const profileID = await this.profileID;
-        const clientID = await this._clientIDPromise;
-
-        const requestID = sync.newRequestID(clientID);
-        const lc = this._lc
-          .addContext('beginPull')
-          .addContext('request_id', requestID);
+      async (requestID: string, requestLc: LogContext) => {
         const req = {
           pullAuth: this.auth,
           pullURL: this.pullURL,
@@ -1172,7 +1172,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
           req.puller,
           requestID,
           this._memdag,
-          lc,
+          requestLc,
         );
         return {
           result: {beginPullResponse, requestID},
@@ -1181,6 +1181,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       },
       'pull',
       this.pullURL,
+      this._lc,
       () => this._changeSyncCounters(0, -1),
       () => this._changeSyncCounters(0, 1),
     );

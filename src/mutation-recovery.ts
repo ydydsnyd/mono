@@ -27,12 +27,16 @@ interface ReplicacheOptions {
     name: string,
   ) => Promise<boolean>;
   readonly wrapInReauthRetries: <R>(
-    f: () => Promise<{
+    f: (
+      requestID: string,
+      requestLc: LogContext,
+    ) => Promise<{
       httpRequestInfo: HTTPRequestInfo | undefined;
       result: R;
     }>,
     verb: string,
     serverURL: string,
+    lc: LogContext,
     preAuth?: () => MaybePromise<void>,
     postAuth?: () => MaybePromise<void>,
   ) => Promise<{
@@ -55,11 +59,18 @@ export class MutationRecovery<M extends MutatorDefs> {
     name: string,
   ) => Promise<boolean>;
   private readonly _wrapInReauthRetries: <R>(
-    f: () => Promise<{httpRequestInfo: HTTPRequestInfo | undefined; result: R}>,
+    f: (
+      requestID: string,
+      requestLc: LogContext,
+    ) => Promise<{
+      httpRequestInfo: HTTPRequestInfo | undefined;
+      result: R;
+    }>,
     verb: string,
     serverURL: string,
-    preAuth?: (() => MaybePromise<void>) | undefined,
-    postAuth?: (() => MaybePromise<void>) | undefined,
+    lc: LogContext,
+    preAuth?: () => MaybePromise<void>,
+    postAuth?: () => MaybePromise<void>,
   ) => Promise<{result: R; authFailure: boolean}>;
   private readonly _isPushDisabled: () => boolean;
   private readonly _isPullDisabled: () => boolean;
@@ -233,19 +244,15 @@ export class MutationRecovery<M extends MutatorDefs> {
       }
       const {pusher, pushURL} = delegate;
 
-      const pushRequestID = sync.newRequestID(clientID);
       const pushDescription = 'recoveringMutationsPush';
-      const pushLC = lc
-        .addContext(pushDescription)
-        .addContext('request_id', pushRequestID);
       const pushSucceeded = await wrapInOnlineCheck(async () => {
         const {result: pushResponse} = await wrapInReauthRetries(
-          async () => {
+          async (requestID: string, requestLc: LogContext) => {
             assertNotUndefined(dagForOtherClient);
             const pushResponse = await sync.push(
-              pushRequestID,
+              requestID,
               dagForOtherClient,
-              pushLC,
+              requestLc,
               await delegate.profileID,
               clientID,
               pusher,
@@ -257,6 +264,7 @@ export class MutationRecovery<M extends MutatorDefs> {
           },
           pushDescription,
           delegate.pushURL,
+          lc,
         );
         return !!pushResponse && pushResponse.httpStatusCode === 200;
       }, pushDescription);
@@ -276,16 +284,11 @@ export class MutationRecovery<M extends MutatorDefs> {
       }
       const {puller, pullURL} = delegate;
 
-      const requestID = sync.newRequestID(clientID);
       const pullDescription = 'recoveringMutationsPull';
-      const pullLC = lc
-        .addContext(pullDescription)
-        .addContext('request_id', requestID);
-
       let pullResponse: PullResponse | undefined;
       const pullSucceeded = await wrapInOnlineCheck(async () => {
         const {result: beginPullResponse} = await wrapInReauthRetries(
-          async () => {
+          async (requestID: string, requestLc: LogContext) => {
             const beginPullRequest = {
               pullAuth: delegate.auth,
               pullURL,
@@ -299,7 +302,7 @@ export class MutationRecovery<M extends MutatorDefs> {
               beginPullRequest.puller,
               requestID,
               dagForOtherClient,
-              pullLC,
+              requestLc,
               false,
             );
             return {
@@ -309,6 +312,7 @@ export class MutationRecovery<M extends MutatorDefs> {
           },
           pullDescription,
           delegate.pullURL,
+          lc,
         );
         pullResponse = beginPullResponse.pullResponse;
         return (
