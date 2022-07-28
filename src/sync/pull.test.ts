@@ -709,17 +709,12 @@ test('maybe end try pull', async () => {
 
       for (let i = 0; i < c.expReplayIDs.length; i++) {
         const chainIdx = chain.length - c.numNeedingReplay + i;
-        expect(c.expReplayIDs[i]).to.equal(resp.replayMutations?.[i].id);
+        expect(c.expReplayIDs[i]).to.equal(
+          resp.replayMutations?.[i].meta.mutationID,
+        );
         const commit = chain[chainIdx];
         if (commit.isLocal()) {
-          const lm = commit.meta;
-          expect(lm.mutatorName).to.equal(
-            resp.replayMutations?.[i].name,
-            `${c.name}: expected ${lm.mutatorName}, got ${resp.replayMutations?.[i].name}`,
-          );
-          const gotArgs = resp.replayMutations?.[i].args;
-          const expArgs = lm.mutatorArgsJSON;
-          expect(expArgs).to.deep.equal(gotArgs);
+          expect(resp.replayMutations?.[i]).to.deep.equal(commit);
         } else {
           throw new Error('inconceivable');
         }

@@ -103,14 +103,14 @@ export class Commit<M extends Meta> {
 }
 
 /**
- * Returns the set of local commits from the given from_commit_hash back to but not
- * including its base snapshot. If from_commit_hash is a snapshot, the returned vector
- * will be empty. When, as typical, from_commit_hash is the head of the default chain
+ * Returns the set of local commits from the given `fromCommitHash` back to but not
+ * including its base snapshot. If `fromCommitHash` is a snapshot, the returned vector
+ * will be empty. When, as typical, `fromCommitHash` is the head of the default chain
  * then the returned commits are the set of pending commits, ie the set of local commits
  * that have not yet been pushed to the data layer.
  *
  * The vector of commits is returned in reverse chain order, that is, starting
- * with the commit with hash from_commit_hash and walking backwards.
+ * with the commit with hash `fromCommitHash` and walking backwards.
  */
 export async function localMutations(
   fromCommitHash: Hash,

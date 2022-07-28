@@ -274,24 +274,12 @@ export async function handlePullResponse(
   });
 }
 
-/**
- * ReplayMutation is used in the RPC between EndPull so that we can replay
- * mutations on top of the current state. It is never exposed to the public.
- */
-export type ReplayMutation = {
-  id: number;
-  name: string;
-  args: InternalValue;
-  original: Hash;
-  timestamp: number;
-};
-
 // The diffs in different indexes. The key of the map is the index name.
 // "" is used for the primary index.
 export type DiffsMap = Map<string, InternalDiff>;
 
 export type MaybeEndPullResult = {
-  replayMutations?: ReplayMutation[];
+  replayMutations?: db.Commit<db.LocalMeta>[];
   syncHead: Hash;
   diffs: DiffsMap;
 };
@@ -338,10 +326,10 @@ export async function maybeEndPull(
 
     // Collect pending commits from the main chain and determine which
     // of them if any need to be replayed.
-    const localMutations = await db.localMutations(mainHeadHash, dagRead);
     const syncHead = await db.commitFromHash(syncHeadHash, dagRead);
     const pending = [];
     const syncHeadMutationID = await syncHead.getMutationID(clientID, dagRead);
+    const localMutations = await db.localMutations(mainHeadHash, dagRead);
     for (const commit of localMutations) {
       if (
         (await commit.getMutationID(clientID, dagRead)) > syncHeadMutationID
@@ -359,30 +347,9 @@ export async function maybeEndPull(
 
     // Return replay commits if any.
     if (pending.length > 0) {
-      const replayMutations: ReplayMutation[] = [];
-      for (const c of pending) {
-        let name: string;
-        let args: InternalValue;
-        let timestamp: number;
-        if (c.isLocal()) {
-          const lm = c.meta;
-          name = lm.mutatorName;
-          args = lm.mutatorArgsJSON;
-          timestamp = lm.timestamp;
-        } else {
-          throw new Error('pending mutation is not local');
-        }
-        replayMutations.push({
-          id: await c.getMutationID(clientID, dagRead),
-          name,
-          args,
-          original: c.chunk.hash,
-          timestamp,
-        });
-      }
       return {
         syncHead: syncHeadHash,
-        replayMutations,
+        replayMutations: pending,
         // The changed keys are not reported when further replays are
         // needed. The diffs will be reported at the end when there
         // are no more mutations to be replay and then it will be reported

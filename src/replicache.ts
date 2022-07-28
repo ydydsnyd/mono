@@ -63,13 +63,12 @@ import {initBgIntervalProcess} from './persist/bg-interval';
 import {setIntervalWithSignal} from './set-interval-with-signal';
 import {MutationRecovery} from './mutation-recovery';
 import {
-  assertInternalValue,
   fromInternalValue,
   FromInternalValueReason,
-  InternalValue,
   toInternalValue,
   ToInternalValueReason,
 } from './internal-value.js';
+import {rebaseMutation} from './sync/rebase';
 
 export type BeginPullResult = {
   requestID: string;
@@ -118,6 +117,7 @@ const noop = () => {
   // noop
 };
 
+export type MutatorReturn = MaybePromise<JSONValue | void>;
 /**
  * The type used to describe the mutator definitions passed into [Replicache](classes/Replicache)
  * constructor as part of the [[ReplicacheOptions]].
@@ -131,10 +131,8 @@ export type MutatorDefs = {
     // Not sure how to not use any here...
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     args?: any,
-  ) => MaybePromise<JSONValue | void>;
+  ) => MutatorReturn;
 };
-
-type MutatorReturn = MaybePromise<JSONValue | void>;
 
 type MakeMutator<
   F extends (tx: WriteTransaction, ...args: [] | [JSONValue]) => MutatorReturn,
@@ -238,10 +236,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   protected _licenseActivePromise: Promise<boolean>;
   private _testLicenseKeyTimeout: ReturnType<typeof setTimeout> | null = null;
   private _root: Promise<Hash | undefined> = Promise.resolve(undefined);
-  private readonly _mutatorRegistry = new Map<
-    string,
-    (tx: WriteTransaction, args?: JSONValue) => MutatorReturn
-  >();
+  private readonly _mutatorRegistry: MutatorDefs = {};
 
   /**
    * The mutators that was registered in the constructor.
@@ -850,48 +845,24 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
       // Replay.
       for (const mutation of replayMutations) {
-        syncHead = await this._replay(
-          syncHead,
-          mutation.original,
-          mutation.name,
-          mutation.args,
-          mutation.timestamp,
+        // TODO(greg): I'm not sure why this was in Replicache#_mutate...
+        // Ensure that we run initial pending subscribe functions before starting a
+        // write transaction.
+        if (this._subscriptions.hasPendingSubscriptionRuns) {
+          await Promise.resolve();
+        }
+        syncHead = await this._memdag.withWrite(dagWrite =>
+          rebaseMutation(
+            mutation,
+            dagWrite,
+            syncHead,
+            this._mutatorRegistry,
+            lc,
+            clientID,
+          ),
         );
       }
     }
-  }
-
-  private async _replay(
-    basis: Hash,
-    original: Hash,
-    name: string,
-    args: InternalValue,
-    timestamp: number,
-  ): Promise<Hash> {
-    let mutatorImpl = this._mutatorRegistry.get(name);
-    if (!mutatorImpl) {
-      // Developers must not remove mutator names from the set once registered,
-      // because Replicache needs to be able to replay mutations during sync.
-      //
-      // If we detect that this has happened, stub in a no-op mutator so that at
-      // least sync can move forward. Note that the server-side mutation will
-      // still get sent. This doesn't remove the queued local mutation, it just
-      // removes its visible effects.
-      this._lc.error?.(`Unknown mutator ${name}`);
-      mutatorImpl = async () => {
-        // no op
-      };
-    }
-    const res = await this._mutate(
-      name,
-      mutatorImpl,
-      args,
-      timestamp,
-      {basis, original},
-      true, // isReplay
-    );
-
-    return res.ref;
   }
 
   private async _invokePull(): Promise<boolean> {
@@ -912,6 +883,8 @@ export class Replicache<MD extends MutatorDefs = {}> {
           if (syncHead !== emptyHash) {
             await this._maybeEndPull(syncHead, requestID);
           }
+        } catch (e) {
+          throw await this._convertToClientStateNotFoundError(e);
         } finally {
           this._changeSyncCounters(0, -1);
         }
@@ -1327,25 +1300,13 @@ export class Replicache<MD extends MutatorDefs = {}> {
     name: string,
     mutatorImpl: (tx: WriteTransaction, args?: Args) => MaybePromise<Return>,
   ): (args?: Args) => Promise<Return> {
-    this._mutatorRegistry.set(
-      name,
-      mutatorImpl as (
-        tx: WriteTransaction,
-        args: JSONValue | undefined,
-      ) => Promise<void | JSONValue>,
-    );
+    this._mutatorRegistry[name] = mutatorImpl as (
+      tx: WriteTransaction,
+      args: JSONValue | undefined,
+    ) => Promise<void | JSONValue>;
 
     return async (args?: Args): Promise<Return> =>
-      (
-        await this._mutate(
-          name,
-          mutatorImpl,
-          args,
-          performance.now(),
-          undefined, // rebaseOpts
-          false, // isReplay
-        )
-      ).result;
+      (await this._mutate(name, mutatorImpl, args, performance.now())).result;
   }
 
   private _registerMutators<
@@ -1364,28 +1325,13 @@ export class Replicache<MD extends MutatorDefs = {}> {
   private async _mutate<R extends JSONValue | void, A extends JSONValue>(
     name: string,
     mutatorImpl: (tx: WriteTransaction, args?: A) => MaybePromise<R>,
-    args: InternalValue | A | undefined,
+    args: A | undefined,
     timestamp: number,
-    rebaseOpts: sync.RebaseOpts | undefined,
-    isReplay: boolean,
   ): Promise<{result: R; ref: Hash}> {
-    let internalArgs: InternalValue;
-    let jsonArgs: A;
-
-    if (isReplay) {
-      assertInternalValue(args);
-      internalArgs = args;
-      jsonArgs = fromInternalValue(
-        args as InternalValue,
-        FromInternalValueReason.WriteTransactionMutateArgs,
-      ) as A;
-    } else {
-      internalArgs = toInternalValue(
-        (args ?? null) as ReadonlyJSONValue,
-        ToInternalValueReason.WriteTransactionMutateArgs,
-      );
-      jsonArgs = args as A;
-    }
+    const internalArgs = toInternalValue(
+      (args ?? null) as ReadonlyJSONValue,
+      ToInternalValueReason.WriteTransactionMutateArgs,
+    );
 
     // Ensure that we run initial pending subscribe functions before starting a
     // write transaction.
@@ -1396,21 +1342,8 @@ export class Replicache<MD extends MutatorDefs = {}> {
     await this._ready;
     const clientID = await this._clientIDPromise;
     return await this._memdag.withWrite(async dagWrite => {
-      let whence: db.Whence | undefined;
-      let originalHash: Hash | null = null;
-      if (rebaseOpts === undefined) {
-        whence = db.whenceHead(db.DEFAULT_HEAD_NAME);
-      } else {
-        await sync.validateRebase(
-          rebaseOpts,
-          dagWrite,
-          name,
-          internalArgs,
-          clientID,
-        );
-        whence = db.whenceHash(rebaseOpts.basis);
-        originalHash = rebaseOpts.original;
-      }
+      const whence: db.Whence = db.whenceHead(db.DEFAULT_HEAD_NAME);
+      const originalHash = null;
 
       const dbWrite = await db.newWriteLocal(
         whence,
@@ -1424,15 +1357,12 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
       const tx = new WriteTransactionImpl(clientID, dbWrite, this._lc);
       try {
-        const result: R = await mutatorImpl(tx, jsonArgs);
+        const result: R = await mutatorImpl(tx, args);
 
-        const [ref, diffs] = await tx.commit(!isReplay);
-        if (!isReplay) {
-          this._pushConnectionLoop.send();
-          await this._checkChange(ref, diffs);
-          this._schedulePersist();
-        }
-
+        const [ref, diffs] = await tx.commit(true);
+        this._pushConnectionLoop.send();
+        await this._checkChange(ref, diffs);
+        this._schedulePersist();
         return {result, ref};
       } catch (ex) {
         throw await this._convertToClientStateNotFoundError(ex);
