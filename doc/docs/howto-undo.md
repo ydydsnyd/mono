@@ -43,7 +43,7 @@ Instead of calling Replicache mutations directly you will want to wrap the calls
 
 ### Calling `undo` and `redo` functions
 
-It is as easy as calling `undoManager.undo` and `undoManager.redo` to undo or redo of your mutations.
+It is as easy as calling `undoManager.undo` and `undoManager.redo` to undo or redo your mutations.
 
 ### Add keyboard bindings for `undo` / `redo` (optional)
 
@@ -86,8 +86,6 @@ const App = ({ rep }: { rep: Replicache<M>; undoManager: UndoManager }) => {
   const todos = useSubscribe(rep, listTodos, [], [rep]);
 
   // new item with undo
-  const handleNewItem = (text: string) => {
-    const id = nanoid();
   const handleNewItem = (text: string) => {
       const id = nanoid();
       undoManager.add({
