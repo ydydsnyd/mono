@@ -3,7 +3,8 @@ import * as dag from '../dag/mod';
 import {ClientMap, getClients} from './clients.js';
 import {assertNotTempHash} from '../hash.js';
 import {dropStore} from '../kv/idb-store.js';
-import type {IDBDatabasesStore, IndexedDBDatabase} from './idb-databases-store';
+import {IDBDatabasesStore} from './idb-databases-store';
+import type {IndexedDBDatabase} from './idb-databases-store';
 import {initBgIntervalProcess} from './bg-interval.js';
 import type {LogContext} from '@rocicorp/logger';
 import {sleep} from '../sleep.js';
@@ -77,6 +78,22 @@ export async function collectIDBDatabases(
     .filter(result => result[1])
     .map(result => result[0]);
 
+  const {errors} = await dropDatabases(
+    idbDatabasesStore,
+    namesToRemove,
+    signal,
+  );
+
+  if (errors.length) {
+    throw errors[0];
+  }
+}
+
+async function dropDatabases(
+  idbDatabasesStore: IDBDatabasesStore,
+  namesToRemove: string[],
+  signal?: AbortSignal,
+): Promise<{dropped: string[]; errors: unknown[]}> {
   // Try to remove the databases in parallel. Don't let a single reject fail the
   // other ones. We will check for failures afterwards.
   const dropStoreResults = await Promise.allSettled(
@@ -86,24 +103,22 @@ export async function collectIDBDatabases(
     }),
   );
 
-  const idbRemovedNames: string[] = [];
+  const dropped: string[] = [];
   const errors: unknown[] = [];
   for (const result of dropStoreResults) {
     if (result.status === 'fulfilled') {
-      idbRemovedNames.push(result.value);
+      dropped.push(result.value);
     } else {
       errors.push(result.reason);
     }
   }
 
-  if (idbRemovedNames.length && !signal.aborted) {
+  if (dropped.length && !signal?.aborted) {
     // Remove the database name from the meta table.
-    await idbDatabasesStore.deleteDatabases(idbRemovedNames);
+    await idbDatabasesStore.deleteDatabases(dropped);
   }
 
-  if (errors.length) {
-    throw errors[0];
-  }
+  return {dropped, errors};
 }
 
 function defaultNewDagStore(name: string): dag.Store {
@@ -146,4 +161,31 @@ function allClientsOlderThan(
     }
   }
   return true;
+}
+
+/**
+ * Deletes all IndexedDB data associated with Replicache.
+ *
+ * Returns an object with the names of the dropped databases and any errors.
+ *
+ * Note: Calling this while running a Replicache instance will cause errors.
+ */
+export async function deleteAllReplicacheData() {
+  return internalDeleteAllReplicacheData();
+}
+
+export async function internalDeleteAllReplicacheData(
+  createKVStore: (name: string) => kv.Store = name => new kv.IDBStore(name),
+): Promise<{dropped: string[]; errors: unknown[]}> {
+  const store = new IDBDatabasesStore(createKVStore);
+  const databases = await store.getDatabases();
+  const dbNames = Object.values(databases).map(db => db.name);
+
+  const result = await dropDatabases(store, dbNames);
+
+  if (result.dropped.length) {
+    await store.deleteDatabases(result.dropped);
+  }
+
+  return result;
 }

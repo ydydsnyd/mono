@@ -7,7 +7,10 @@ import {
   IndexedDBDatabase,
   IndexedDBName,
 } from './idb-databases-store';
-import {collectIDBDatabases} from './collect-idb-databases';
+import {
+  collectIDBDatabases,
+  internalDeleteAllReplicacheData,
+} from './collect-idb-databases';
 import * as dag from '../dag/mod';
 import type {ClientMap} from './clients.js';
 import {assertNotUndefined} from '../asserts.js';
@@ -233,4 +236,29 @@ suite('collectIDBDatabases', async () => {
     t('one idb, one client, old format version', entries, 0, ['a']);
     t('one idb, one client, old format version', entries, 1000, []);
   }
+});
+
+test('deleteAllReplicacheData', async () => {
+  const memStore = new TestMemStore();
+  const store = new IDBDatabasesStore(_ => memStore);
+  const numDbs = 10;
+
+  for (let i = 0; i < numDbs; i++) {
+    const db = {
+      name: `db${i}`,
+      replicacheName: `testReplicache${i}`,
+      replicacheFormatVersion: 1,
+      schemaVersion: 'testSchemaVersion1',
+    };
+
+    expect(await store.putDatabase(db)).to.have.property(db.name);
+  }
+
+  expect(Object.values(await store.getDatabases())).to.have.length(numDbs);
+
+  const result = await internalDeleteAllReplicacheData(_ => memStore);
+
+  expect(Object.values(await store.getDatabases())).to.have.length(0);
+  expect(result.dropped).to.have.length(numDbs);
+  expect(result.errors).to.have.length(0);
 });

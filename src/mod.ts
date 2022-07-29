@@ -84,6 +84,7 @@ export type {
 
 export {mergeAsyncIterables} from './merge-async-iterables';
 export {filterAsyncIterable} from './filter-async-iterable';
+export {deleteAllReplicacheData} from './persist/mod';
 export type {IterableUnion} from './iterable-union';
 
 export {version} from './version';
