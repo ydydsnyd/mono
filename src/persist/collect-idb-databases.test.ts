@@ -9,7 +9,7 @@ import {
 } from './idb-databases-store';
 import {
   collectIDBDatabases,
-  internalDeleteAllReplicacheData,
+  deleteAllReplicacheData,
 } from './collect-idb-databases';
 import * as dag from '../dag/mod';
 import type {ClientMap} from './clients.js';
@@ -239,8 +239,7 @@ suite('collectIDBDatabases', async () => {
 });
 
 test('deleteAllReplicacheData', async () => {
-  const memStore = new TestMemStore();
-  const store = new IDBDatabasesStore(_ => memStore);
+  const store = new IDBDatabasesStore();
   const numDbs = 10;
 
   for (let i = 0; i < numDbs; i++) {
@@ -256,7 +255,7 @@ test('deleteAllReplicacheData', async () => {
 
   expect(Object.values(await store.getDatabases())).to.have.length(numDbs);
 
-  const result = await internalDeleteAllReplicacheData(_ => memStore);
+  const result = await deleteAllReplicacheData();
 
   expect(Object.values(await store.getDatabases())).to.have.length(0);
   expect(result.dropped).to.have.length(numDbs);

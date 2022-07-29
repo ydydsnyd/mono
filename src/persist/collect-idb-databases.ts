@@ -166,18 +166,14 @@ function allClientsOlderThan(
 /**
  * Deletes all IndexedDB data associated with Replicache.
  *
- * Returns an object with the names of the dropped databases and any errors.
- *
- * Note: Calling this while running a Replicache instance will cause errors.
+ * Returns an object with the names of the successfully dropped databases
+ * and any errors encountered while dropping.
  */
-export async function deleteAllReplicacheData() {
-  return internalDeleteAllReplicacheData();
-}
-
-export async function internalDeleteAllReplicacheData(
-  createKVStore: (name: string) => kv.Store = name => new kv.IDBStore(name),
-): Promise<{dropped: string[]; errors: unknown[]}> {
-  const store = new IDBDatabasesStore(createKVStore);
+export async function deleteAllReplicacheData(): Promise<{
+  dropped: string[];
+  errors: unknown[];
+}> {
+  const store = new IDBDatabasesStore();
   const databases = await store.getDatabases();
   const dbNames = Object.values(databases).map(db => db.name);
 
