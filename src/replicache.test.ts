@@ -61,6 +61,8 @@ async function expectAsyncFuncToThrow(f: () => unknown, c: unknown) {
   (await expectPromiseToReject(f())).to.be.instanceof(c);
 }
 
+const requestIDLogContextRegex = /^request_id=[a-z,0-9,-]*$/;
+
 test('name is required', () => {
   expect(
     () =>
@@ -756,11 +758,20 @@ function expectConsoleLogContextStub(
   name: string,
   call: sinon.SinonSpyCall,
   expectedMessage: string,
+  additionalContexts: (string | RegExp)[] = [],
 ) {
   const {args} = call;
-  expect(args).to.have.length(2);
+  expect(args).to.have.length(2 + additionalContexts.length);
   expect(args[0]).to.equal(`name=${name}`);
-  expect(args[1]).to.equal(expectedMessage);
+  let i = 1;
+  for (const context of additionalContexts) {
+    if (typeof context === 'string') {
+      expect(args[i++]).to.equal(context);
+    } else {
+      expect(args[i++]).to.match(context);
+    }
+  }
+  expect(args[i]).to.equal(expectedMessage);
 }
 
 test('reauth pull', async () => {
@@ -786,8 +797,8 @@ test('reauth pull', async () => {
     rep.name,
     consoleErrorStub.lastCall,
     'Got error response from server (https://diff.com/pull) doing pull: 401: xxx',
+    ['pull', requestIDLogContextRegex],
   );
-
   {
     const consoleInfoStub = sinon.stub(console, 'info');
     const getAuthFake = sinon.fake(() => 'boo');
@@ -801,6 +812,7 @@ test('reauth pull', async () => {
       rep.name,
       consoleInfoStub.lastCall,
       'Tried to reauthenticate too many times',
+      ['pull'],
     );
   }
 });
@@ -868,6 +880,7 @@ test('pull request is only sent when pullURL or non-default puller are set', asy
     rep.name,
     consoleErrorStub.firstCall,
     'Got error response from server () doing pull: 500: Test failure',
+    ['pull', requestIDLogContextRegex],
   );
   consoleErrorStub.restore();
 
@@ -913,6 +926,7 @@ test('reauth push', async () => {
     rep.name,
     consoleErrorStub.firstCall,
     'Got error response from server (https://diff.com/push) doing push: 401: xxx',
+    ['push', requestIDLogContextRegex],
   );
 
   {
@@ -929,6 +943,7 @@ test('reauth push', async () => {
       rep.name,
       consoleInfoStub.firstCall,
       'Tried to reauthenticate too many times',
+      ['push'],
     );
   }
 });
@@ -965,11 +980,13 @@ test('HTTP status pull', async () => {
     rep.name,
     consoleErrorStub.firstCall,
     'Got error response from server (https://diff.com/pull) doing pull: 500: internal error',
+    ['pull', requestIDLogContextRegex],
   );
   expectConsoleLogContextStub(
     rep.name,
     consoleErrorStub.lastCall,
     'Got error response from server (https://diff.com/pull) doing pull: 404: not found',
+    ['pull', requestIDLogContextRegex],
   );
 
   expect(okCalled).to.equal(true);
@@ -1012,11 +1029,13 @@ test('HTTP status push', async () => {
     rep.name,
     consoleErrorStub.firstCall,
     'Got error response from server (https://diff.com/push) doing push: 500: internal error',
+    ['push', requestIDLogContextRegex],
   );
   expectConsoleLogContextStub(
     rep.name,
     consoleErrorStub.lastCall,
     'Got error response from server (https://diff.com/push) doing push: 404: not found',
+    ['push', requestIDLogContextRegex],
   );
 
   expect(okCalled).to.equal(true);
@@ -1305,7 +1324,7 @@ test('logLevel', async () => {
 
   rep = await replicacheForTesting('log-level', {logLevel: 'info'});
   await rep.query(() => 42);
-  expect(info.callCount).to.equal(2 /* licensing log lines */);
+  expect(info.callCount).to.be.greaterThan(0);
   expect(debug.callCount).to.equal(0);
   await rep.close();
 
@@ -1316,7 +1335,7 @@ test('logLevel', async () => {
   rep = await replicacheForTesting('log-level', {logLevel: 'debug'});
 
   await rep.query(() => 42);
-  expect(info.callCount).to.equal(2 /* licensing log lines */);
+  expect(info.callCount).to.be.greaterThan(0);
   expect(debug.callCount).to.be.greaterThan(0);
 
   expect(
@@ -1587,6 +1606,7 @@ test('onSync', async () => {
       rep.name,
       consoleErrorStub.firstCall,
       'Got error response from server (https://push.com/push) doing push: 401: xxx',
+      ['push', requestIDLogContextRegex],
     );
 
     expect(onSync.callCount).to.equal(4);
@@ -2657,7 +2677,7 @@ test('index scan mutate', async () => {
   ]);
 });
 
-test.only('concurrent puts and gets', async () => {
+test('concurrent puts and gets', async () => {
   const rep = await replicacheForTesting('concurrent-puts', {
     mutators: {
       async insert(tx, args: Record<string, number>) {

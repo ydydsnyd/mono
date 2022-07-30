@@ -1,7 +1,7 @@
 module.exports = {
   root: true,
   parser: '@typescript-eslint/parser',
-  plugins: ['@typescript-eslint'],
+  plugins: ['@typescript-eslint', 'no-only-tests'],
   extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended'],
   parserOptions: {
     project: './**/tsconfig.json',
@@ -43,6 +43,7 @@ module.exports = {
         enforceForRenamedProperties: false,
       },
     ],
+    'no-only-tests/no-only-tests': 'error',
     'no-unused-vars': 'off',
     '@typescript-eslint/no-unused-vars': ['error', {argsIgnorePattern: '^_'}],
   },

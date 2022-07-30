@@ -102,7 +102,7 @@ test('local mutations', async () => {
   expect(commits[1]).to.deep.equal(chain[1]);
 });
 
-test.only('local mutations greater than', async () => {
+test('local mutations greater than', async () => {
   if (DD31) {
     const clientID1 = 'client-id-1';
     const clientID2 = 'client-id-2';
@@ -501,7 +501,11 @@ test('accessors', async () => {
   }
   expect(indexChange.meta.basisHash).to.equal(fakeHash('basishash3'));
   expect(indexChange.valueHash).to.equal(fakeHash('valuehash3'));
-  expect(await indexChange.getMutationID(clientID, fakeRead)).to.equal(3);
+  if (!DD31) {
+    // In DD31 IndexChange commits do not have mutationID(s).
+    // See: 'getMutationID with IndexChange commits' test below
+    expect(await indexChange.getMutationID(clientID, fakeRead)).to.equal(3);
+  }
 });
 
 const chunkHasher = makeTestChunkHasher('test');
@@ -576,6 +580,33 @@ test('getMutationID across commits with different clients', async () => {
   await addLocal(chain, store, clientID);
   await addLocal(chain, store, clientID);
   await addLocal(chain, store, clientID2);
+
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const local = chain.at(-1)!;
+  await store.withRead(async dagRead => {
+    expect(await local.getMutationID(clientID, dagRead)).to.equal(2);
+    expect(await local.getMutationID(clientID2, dagRead)).to.equal(1);
+  });
+});
+
+test('getMutationID with IndexChange commits', async () => {
+  // In DD31 the commits can be from different clients, and
+  // IndexChange commits do not have mutationID(s) (rather we continue looking
+  // for the mutation id from their basis commit).
+  if (!DD31) {
+    return;
+  }
+
+  const clientID = 'client-id';
+  const clientID2 = 'client-id-2';
+  const store = new dag.TestStore();
+  const chain: Chain = [];
+  await addGenesis(chain, store, clientID);
+  await addLocal(chain, store, clientID);
+  await addLocal(chain, store, clientID);
+  await addIndexChange(chain, store, clientID);
+  await addLocal(chain, store, clientID2);
+  await addIndexChange(chain, store, clientID);
 
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const local = chain.at(-1)!;
