@@ -26,14 +26,7 @@ Replace the replicache dependency in
 with the tarball.
 
 ```
-// package.json
-"replicache": "file:../replicache/replicache.tar.gz",
-```
-
-Recreate the deps:
-
-```
-npm install
+npm add /path/to/replicache-<version>.tgz
 ```
 
 Follow instructions in repo to finish setting up app, and run to make sure it works.
