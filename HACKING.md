@@ -1,4 +1,13 @@
-# Building a release
+# Cutting a release
+
+## Decide what the new version should be.
+Look through the changes since the last tag.
+
+* If there are any breaking changes, then this needs to be a new major version.
+* If there are any new (non-breaking) features, then this needs to be a new minor version.
+* Otherwise, if there are only non-breaking bugfixes, it's a patch.
+
+## Build the release
 
 ```
 export NEW_VERSION="<new_version>"
