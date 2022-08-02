@@ -95,6 +95,7 @@ At this point, we have actually finished the basic plumbing of our feature. Clic
 Just to prove to ourselves that this is happening, let's change the look of the todo when it's urgent:
 
 ```tsx title="src/components/todo-item.tsx"
+{/* add the style attribute to change the todo-item's background when urgent */}
 <div
   className="view"
   style={{

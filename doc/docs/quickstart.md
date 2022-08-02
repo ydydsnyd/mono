@@ -3,9 +3,11 @@ title: Quickstart
 slug: /
 ---
 
-The easiest way to get started is with our Todo starter app. This app is a good way to play with Replicache, but it is _also_ a great foundation on which to build your own app using Replicache.
+The easiest way to get started is with our Todo starter app.
 
-Since it is simple and has all the pieces you'll need, you can clone it and then build your own app from there. We recommend that most users start their Replicache projects this way.
+This app is a simple, but fully-functional Replicache app built with Next.js. The backend is provided by [replicache-nextjs](https://github.com/rocicorp/replicache-nextjs) — a generic Next.js Replicache server.
+
+This app is a good way to play with Replicache, but it is _also_ a great foundation on which to build your own app using Replicache. Since it is small and has all the pieces you'll need, you can clone it and then build your own app from there.
 
 # Prerequisites
 
@@ -30,7 +32,7 @@ npm run dev
 
 # 🎉 Tada!
 
-You now have a simple todo app powered by Replicache, <a href="https://nextjs.org/">Next.js</a>, and <a href="https://www.postgresql.org/">Postgres</a>.
+You now have a simple todo app powered by Replicache and <a href="https://nextjs.org/">Next.js</a>.
 
 <p class="text--center">
   <img src="/img/setup/todo.webp" width="650"/>
