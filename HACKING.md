@@ -100,7 +100,9 @@ git push origin docs
 
 **Important:** Only do this when releasing a new version, otherwise we will release early docs that don't match current released code. To cherry-pick doc improvements see: "sprucing the docs", below.
 
-**Note:** It's likely that when you `git push origin docs` above, you'll get a conflict error. This is expected if there have been any cherry-picks onto this branch as would happen if somebody "spruced" (below). Check that all the new commits on this docs branch since the last release are present in `origin/main` (note that they won't have same hash - you have to check by commit description) and if they are, then you can force the push with `git push origin docs --force`. If there is a commit on this branch which is missing from `origin/main` then somebody edited directly on this branch and it should be investigated.
+**Note:** It's likely that when you `git push origin docs` above, you'll get a conflict error. This is expected if there have been any cherry-picks onto this branch as would happen if somebody "spruced" (below). Check that all the new commits on this docs branch since the last release are present in `origin/main`. To do this, for each such commit, there should be a message `Cherry-picked from <original-hash>` in the commit message. This message is added by the "spruce" procedure. Look for each such `<original-hash>` in `origin/main`. If all such commits on `docs` are present in `origin/main` then you can force the push with `git push origin docs --force`. If there is a commit on this branch which is missing from `origin/main` then somebody edited directly on this branch and it should be investigated.
+
+**TODO:** We should write a script `release-docs.sh` to automate the above.
 
 ## Write Release Notes
 
@@ -119,7 +121,9 @@ However, this means that if you do cleanup docs changes that you want to show up
 ```
 git checkout docs
 git pull
-git cherry-pick <hash-of-spruce-commit>
+# The '-x' appends the hash of the original commit to the cherry-pick'd commit.
+# This makes it easier to find missing commits during releases.
+git cherry-pick -x <hash-of-spruce-commit>
 git push origin docs
 ```
 
