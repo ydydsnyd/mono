@@ -77,11 +77,12 @@ git tag $NEW_TAG
 git push origin $NEW_TAG
 ```
 
-## Update the dependent libraries for compat with the new Replicache
+## Update the peer libraries for compat with the new Replicache
 
-This should have been tested as part of above. The following have peerDependencies that have to be updated:
+The following have peerDependencies that should to be updated to the new Replicache version:
 * `replicache-react`
 * `replicache-nextjs`
+* `rails`
 
 ## Push the Release
 
