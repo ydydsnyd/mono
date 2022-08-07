@@ -77,6 +77,12 @@ git tag $NEW_TAG
 git push origin $NEW_TAG
 ```
 
+## Update the dependent libraries for compat with the new Replicache
+
+This should have been tested as part of above. The following have peerDependencies that have to be updated:
+* `replicache-react`
+* `replicache-nextjs`
+
 ## Push the Release
 
 ```
@@ -103,6 +109,12 @@ git push origin docs
 **Note:** It's likely that when you `git push origin docs` above, you'll get a conflict error. This is expected if there have been any cherry-picks onto this branch as would happen if somebody "spruced" (below). Check that all the new commits on this docs branch since the last release are present in `origin/main`. To do this, for each such commit, there should be a message `Cherry-picked from <original-hash>` in the commit message. This message is added by the "spruce" procedure. Look for each such `<original-hash>` in `origin/main`. If all such commits on `docs` are present in `origin/main` then you can force the push with `git push origin docs --force`. If there is a commit on this branch which is missing from `origin/main` then somebody edited directly on this branch and it should be investigated.
 
 **TODO:** We should write a script `release-docs.sh` to automate the above.
+
+## Push updates to the sample apps that update their dependency on Replicache
+
+* replicache-todo
+* repliear
+* replidraw{-do}
 
 ## Write Release Notes
 
