@@ -1,11 +1,12 @@
 # Cutting a release
 
 ## Decide what the new version should be.
+
 Look through the changes since the last tag.
 
-* If there are any breaking changes, then this needs to be a new major version.
-* If there are any new (non-breaking) features, then this needs to be a new minor version.
-* Otherwise, if there are only non-breaking bugfixes, it's a patch.
+- If there are any breaking changes, then this needs to be a new major version.
+- If there are any new (non-breaking) features, then this needs to be a new minor version.
+- Otherwise, if there are only non-breaking bugfixes, it's a patch.
 
 ## Build the release
 
@@ -80,9 +81,10 @@ git push origin $NEW_TAG
 ## Update the peer libraries for compat with the new Replicache
 
 The following have peerDependencies that should to be updated to the new Replicache version:
-* `replicache-react`
-* `replicache-nextjs`
-* `rails`
+
+- `replicache-react`
+- `replicache-nextjs`
+- `rails`
 
 ## Push the Release
 
@@ -113,9 +115,9 @@ git push origin docs
 
 ## Push updates to the sample apps that update their dependency on Replicache
 
-* replicache-todo
-* repliear
-* replidraw{-do}
+- replicache-todo
+- repliear
+- replidraw{-do}
 
 ## Write Release Notes
 

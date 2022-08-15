@@ -38,3 +38,61 @@ test('dropStore', async () => {
     expect(await rt.has('foo')).to.be.false;
   });
 });
+
+suite('reopening IDB', async () => {
+  let name: string;
+  let idb: Promise<IDBDatabase>;
+  let store: IDBStore;
+
+  setup(async () => {
+    name = `reopen-${Math.random()}`;
+    await dropStore(name);
+
+    store = new IDBStore(name);
+    const propAccessor = store as unknown as {
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      _db: Promise<IDBDatabase>;
+    };
+    idb = propAccessor._db;
+  });
+
+  test('succeeds if IDB still exists', async () => {
+    // Write a value.
+    await store.withWrite(async wt => {
+      await wt.put('foo', 'bar');
+      await wt.commit();
+    });
+
+    // close the IDB from under the IDBStore
+    (await idb).close();
+
+    // write again, without error
+    await store.withWrite(async wt => {
+      await wt.put('baz', 'qux');
+      await wt.commit();
+    });
+
+    await store.withRead(async rt => {
+      expect(await rt.get('foo')).to.deep.equal('bar');
+      expect(await rt.get('baz')).to.deep.equal('qux');
+    });
+  });
+
+  test('throws if IDB was deleted', async () => {
+    // Write a value.
+    await store.withWrite(async wt => {
+      await wt.put('foo', 'bar');
+      await wt.commit();
+    });
+
+    await dropStore(name);
+
+    try {
+      await store.withWrite(async wt => {
+        await wt.put('baz', 'qux');
+      });
+    } catch (e) {
+      expect(e as Error).to.match(/Replicache IndexedDB not found/);
+    }
+  });
+});
