@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1660903647006,
+  "lastUpdate": 1660928129110,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -22973,6 +22973,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23165,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ingar@users.noreply.github.com",
+            "name": "Ingar Shu",
+            "username": "ingar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "575e07a562d9744aa8aba22102c1bd3cd6dc8815",
+          "message": "bugfix: clean up half-created new database when failing to reopen existing db (#215)\n\n* Clean up half-created new database when failing to reopen existing db\r\n\r\n* Rethow errors other than \"db not found\"",
+          "timestamp": "2022-08-19T16:54:20Z",
+          "tree_id": "f5ad3d5c01f6426a1ed8b6103f189b2455a3d6d9",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/575e07a562d9744aa8aba22102c1bd3cd6dc8815"
+        },
+        "date": 1660928124192,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 188908,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 33991,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 187762,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33680,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 79567,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23178,
             "unit": "bytes"
           }
         ]
