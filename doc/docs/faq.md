@@ -70,3 +70,7 @@ Yes!
 - Example 5: You are using Replicache for a new product that is a free add-on to your company's SaaS offering. You have been using Replicache for more than 2 months and are generating 15k MAPs. Your company is bootstrapped and making $300k/yr. **Your price is $3000/mo**.
 
 If you are not sure if your application is commercial or not, [drop us a line](https://replicache.dev/#contact).
+
+## Can I get access to the source code?
+
+Yes! We do offer source licenses to commerical users. [Let us know](https://replicache.dev/#contact) if you are interested.
