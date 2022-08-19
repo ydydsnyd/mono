@@ -201,11 +201,20 @@ function reopenExistingDb(name: string): Promise<IDBDatabase> {
     reject(req.error);
   };
 
-  return promise.then(db => {
-    // Another tab/process wants to modify the db, so release it.
-    db.onversionchange = () => db.close();
-    return db;
-  });
+  void promise
+    .then(db => {
+      db.onversionchange = () => db.close();
+    })
+    .catch(err => {
+      if (notFound) {
+        // clean up half-created db
+        indexedDB.deleteDatabase(name);
+      } else {
+        throw err;
+      }
+    });
+
+  return promise;
 }
 
 function objectStore(tx: IDBTransaction): IDBObjectStore {

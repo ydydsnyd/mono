@@ -94,5 +94,19 @@ suite('reopening IDB', async () => {
     } catch (e) {
       expect(e as Error).to.match(/Replicache IndexedDB not found/);
     }
+
+    // ensure that the db created in the reopening process was cleaned up
+    const req = indexedDB.open(name);
+
+    let dbDeleted = false;
+
+    const promise = new Promise((resolve, reject) => {
+      req.onupgradeneeded = () => (dbDeleted = true);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+
+    await promise;
+    expect(dbDeleted).to.be.true;
   });
 });
