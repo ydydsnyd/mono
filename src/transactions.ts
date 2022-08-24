@@ -24,6 +24,7 @@ import {
   fromInternalValue,
   FromInternalValueReason,
 } from './internal-value.js';
+import type {CreateIndexDefinition} from './db/commit.js';
 
 /**
  * ReadTransactions are used with [[Replicache.query]] and
@@ -320,35 +321,6 @@ interface IndexTransaction extends ReadTransaction {
    * Drops an index previously created with [[createIndex]].
    */
   dropIndex(name: string): Promise<void>;
-}
-
-/**
- * The definition of an index. This is used with
- * [[Replicache.createIndex|createIndex]] when creating indexes.
- */
-export interface CreateIndexDefinition {
-  /** The name of the index. This is used when you [[ReadTransaction.scan|scan]] over an index. */
-  name: string;
-
-  /**
-   * The prefix, if any, to limit the index over. If not provided the values of
-   * all keys are indexed.
-   */
-  prefix?: string;
-
-  /**
-   * A [JSON Pointer](https://tools.ietf.org/html/rfc6901) pointing at the sub
-   * value inside each value to index over.
-   *
-   * For example, one might index over users' ages like so:
-   * `createIndex({name: 'usersByAge', prefix: '/user/', jsonPointer: '/age'})`
-   */
-  jsonPointer: string;
-
-  /**
-   * If `true`, indexing empty values will not emit a warning.  Defaults to `false`.
-   */
-  allowEmpty?: boolean;
 }
 
 export class IndexTransactionImpl

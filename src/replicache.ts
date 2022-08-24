@@ -15,11 +15,7 @@ import {
   ReadTransactionImpl,
   WriteTransactionImpl,
 } from './transactions';
-import type {
-  CreateIndexDefinition,
-  ReadTransaction,
-  WriteTransaction,
-} from './transactions';
+import type {ReadTransaction, WriteTransaction} from './transactions';
 import {ConnectionLoop, MAX_DELAY_MS, MIN_DELAY_MS} from './connection-loop';
 import {defaultPuller} from './puller';
 import {defaultPusher} from './pusher';
@@ -69,6 +65,7 @@ import {
   ToInternalValueReason,
 } from './internal-value.js';
 import {rebaseMutation} from './sync/rebase';
+import type {CreateIndexDefinition} from './db/commit.js';
 
 export type BeginPullResult = {
   requestID: string;

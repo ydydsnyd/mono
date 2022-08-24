@@ -4,7 +4,7 @@ import * as btree from '../btree/mod';
 import {
   Commit,
   Meta as CommitMeta,
-  IndexDefinition,
+  CreateIndexDefinition,
   IndexRecord,
   newIndexChange as commitNewIndexChange,
   newLocal as commitNewLocal,
@@ -121,7 +121,7 @@ export class Write extends Read {
       throw new Error('Not allowed');
     }
 
-    const definition: IndexDefinition = {
+    const definition: CreateIndexDefinition = {
       name,
       prefix,
       jsonPointer,

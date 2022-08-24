@@ -11,11 +11,7 @@ export type {
   PendingMutation,
 } from './replicache';
 export type {ReplicacheOptions} from './replicache-options';
-export type {
-  CreateIndexDefinition,
-  ReadTransaction,
-  WriteTransaction,
-} from './transactions';
+export type {ReadTransaction, WriteTransaction} from './transactions';
 export type {
   GetScanIterator,
   GetIndexScanIterator,
@@ -88,3 +84,5 @@ export {deleteAllReplicacheData} from './persist/mod';
 export type {IterableUnion} from './iterable-union';
 
 export {version} from './version';
+
+export type {CreateIndexDefinition} from './db/commit';

@@ -390,17 +390,38 @@ function assertMeta(v: unknown): asserts v is Meta {
   }
 }
 
-export type IndexDefinition = {
-  readonly name: string;
-  // prefix describes a subset of the primary key to index
-  readonly prefix?: string;
-  // jsonPointer describes the (sub-)value to index (secondary index)
-  readonly jsonPointer: string;
+/**
+ * The definition of an index. This is used with
+ * [[Replicache.createIndex|createIndex]] when creating indexes.
+ */
+export interface CreateIndexDefinition {
+  /** The name of the index. This is used when you [[ReadTransaction.scan|scan]] over an index. */
+  name: string;
 
-  readonly allowEmpty?: boolean;
-};
+  /**
+   * The prefix, if any, to limit the index over. If not provided the values of
+   * all keys are indexed.
+   */
+  prefix?: string;
 
-function assertIndexDefinition(v: unknown): asserts v is IndexDefinition {
+  /**
+   * A [JSON Pointer](https://tools.ietf.org/html/rfc6901) pointing at the sub
+   * value inside each value to index over.
+   *
+   * For example, one might index over users' ages like so:
+   * `createIndex({name: 'usersByAge', prefix: '/user/', jsonPointer: '/age'})`
+   */
+  jsonPointer: string;
+
+  /**
+   * If `true`, indexing empty values will not emit a warning.  Defaults to `false`.
+   */
+  allowEmpty?: boolean;
+}
+
+function assertCreateIndexDefinition(
+  v: unknown,
+): asserts v is CreateIndexDefinition {
   assertObject(v);
   assertString(v.name);
   assertString(v.prefix);
@@ -412,13 +433,13 @@ function assertIndexDefinition(v: unknown): asserts v is IndexDefinition {
 }
 
 export type IndexRecord = {
-  readonly definition: IndexDefinition;
+  readonly definition: CreateIndexDefinition;
   readonly valueHash: Hash;
 };
 
 function assertIndexRecord(v: unknown): asserts v is IndexRecord {
   assertObject(v);
-  assertIndexDefinition(v.definition);
+  assertCreateIndexDefinition(v.definition);
   assertString(v.valueHash);
 }
 
