@@ -155,7 +155,7 @@ test('dag with some permanent hashes and some temp hashes on top', async () => {
             {
               definition: {
                 jsonPointer: '',
-                keyPrefix: 'local',
+                prefix: 'local',
                 name: '4',
                 allowEmpty: false,
               },

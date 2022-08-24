@@ -113,7 +113,7 @@ export class Write extends Read {
   async createIndex(
     lc: LogContext,
     name: string,
-    keyPrefix: string,
+    prefix: string,
     jsonPointer: string,
     allowEmpty: boolean,
   ): Promise<void> {
@@ -123,7 +123,7 @@ export class Write extends Read {
 
     const definition: IndexDefinition = {
       name,
-      keyPrefix,
+      prefix,
       jsonPointer,
       allowEmpty,
     };
@@ -135,7 +135,7 @@ export class Write extends Read {
       const oldAllowEmpty = oldDefinition.allowEmpty ?? false;
       if (
         oldDefinition.name === name &&
-        oldDefinition.keyPrefix === keyPrefix &&
+        oldDefinition.prefix === prefix &&
         oldDefinition.jsonPointer === jsonPointer &&
         oldAllowEmpty === allowEmpty
       ) {
@@ -146,7 +146,7 @@ export class Write extends Read {
     }
 
     const indexMap = new BTreeWrite(this._dagWrite);
-    for await (const entry of this.map.scan(keyPrefix)) {
+    for await (const entry of this.map.scan(prefix)) {
       await indexValue(
         lc,
         indexMap,
@@ -455,7 +455,7 @@ export async function updateIndexes(
 ): Promise<void> {
   const ps: Promise<void>[] = [];
   for (const idx of indexes.values()) {
-    if (key.startsWith(idx.meta.definition.keyPrefix)) {
+    if (key.startsWith(idx.meta.definition.prefix)) {
       const oldVal = await oldValGetter();
       if (oldVal !== undefined) {
         ps.push(

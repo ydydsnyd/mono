@@ -392,8 +392,8 @@ function assertMeta(v: unknown): asserts v is Meta {
 
 export type IndexDefinition = {
   readonly name: string;
-  // keyPrefix describes a subset of the primary key to index
-  readonly keyPrefix: string;
+  // prefix describes a subset of the primary key to index
+  readonly prefix: string;
   // jsonPointer describes the (sub-)value to index (secondary index)
   readonly jsonPointer: string;
 
@@ -403,7 +403,7 @@ export type IndexDefinition = {
 function assertIndexDefinition(v: unknown): asserts v is IndexDefinition {
   assertObject(v);
   assertString(v.name);
-  assertString(v.keyPrefix);
+  assertString(v.prefix);
   assertString(v.jsonPointer);
 
   if (v.allowEmpty !== undefined) {

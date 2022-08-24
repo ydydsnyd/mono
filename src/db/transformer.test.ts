@@ -91,7 +91,7 @@ test('transformIndexRecord - noop', async () => {
     const index: IndexRecord = {
       definition: {
         jsonPointer: '',
-        keyPrefix: '',
+        prefix: '',
         name: 'index',
       },
       valueHash,

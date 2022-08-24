@@ -585,7 +585,7 @@ test('fixup of a base snapshot with an index', async () => {
       const indexes = {
         definition: {
           jsonPointer: '/a',
-          keyPrefix: '',
+          prefix: '',
           name: 'idx',
         },
         valueHash: indexHash,
@@ -670,7 +670,7 @@ test('fixup of a base snapshot with an index', async () => {
       valueHash: 't/000000000000000000000000000002',
       indexes: [
         {
-          definition: {jsonPointer: '/a', keyPrefix: '', name: 'idx'},
+          definition: {jsonPointer: '/a', prefix: '', name: 'idx'},
           valueHash: 't/000000000000000000000000000005',
         },
       ],
@@ -716,7 +716,7 @@ test('fixup of a base snapshot with an index', async () => {
         {
           definition: {
             jsonPointer: '/a',
-            keyPrefix: '',
+            prefix: '',
             name: 'idx',
           },
           valueHash: 'fake0000000000000000000000indecs',

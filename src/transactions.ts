@@ -341,7 +341,7 @@ export interface CreateIndexDefinition {
    * value inside each value to index over.
    *
    * For example, one might index over users' ages like so:
-   * `createIndex({name: 'usersByAge', keyPrefix: '/user/', jsonPointer: '/age'})`
+   * `createIndex({name: 'usersByAge', prefix: '/user/', jsonPointer: '/age'})`
    */
   jsonPointer: string;
 
