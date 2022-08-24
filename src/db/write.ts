@@ -455,7 +455,8 @@ export async function updateIndexes(
 ): Promise<void> {
   const ps: Promise<void>[] = [];
   for (const idx of indexes.values()) {
-    if (key.startsWith(idx.meta.definition.prefix)) {
+    const {prefix} = idx.meta.definition;
+    if (!prefix || key.startsWith(prefix)) {
       const oldVal = await oldValGetter();
       if (oldVal !== undefined) {
         ps.push(

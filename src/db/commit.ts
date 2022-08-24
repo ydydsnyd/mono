@@ -393,7 +393,7 @@ function assertMeta(v: unknown): asserts v is Meta {
 export type IndexDefinition = {
   readonly name: string;
   // prefix describes a subset of the primary key to index
-  readonly prefix: string;
+  readonly prefix?: string;
   // jsonPointer describes the (sub-)value to index (secondary index)
   readonly jsonPointer: string;
 
