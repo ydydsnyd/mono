@@ -328,12 +328,11 @@ async function updateClientsInternal(
   });
   if (result.updateApplied) {
     return result.clients;
-  } else {
-    return updateClientsInternal(
-      update,
-      result.clients,
-      result.clientsHash,
-      dagStore,
-    );
   }
+  return updateClientsInternal(
+    update,
+    result.clients,
+    result.clientsHash,
+    dagStore,
+  );
 }

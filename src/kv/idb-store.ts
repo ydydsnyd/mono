@@ -75,9 +75,8 @@ export class IDBStore implements Store {
         this._db = reopenExistingDb(db.name);
         const reopened = await this._db;
         return fn(reopened);
-      } else {
-        throw e;
       }
+      throw e;
     }
   }
 }

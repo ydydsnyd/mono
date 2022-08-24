@@ -140,9 +140,8 @@ export class Write extends Read {
         oldAllowEmpty === allowEmpty
       ) {
         return;
-      } else {
-        throw new Error('Index exists with different definition');
       }
+      throw new Error('Index exists with different definition');
     }
 
     const indexMap = new BTreeWrite(this._dagWrite);

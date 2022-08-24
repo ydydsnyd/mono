@@ -63,9 +63,9 @@ export class Commit<M extends Meta> {
           const {basisHash} = meta;
           const basisCommit = await fromHash(basisHash, dagRead);
           return basisCommit.getMutationID(clientID, dagRead);
-        } else {
-          return meta.lastMutationID;
         }
+        return meta.lastMutationID;
+
       case MetaType.Snapshot: {
         if (DD31) {
           assertSnapshotMetaDD31(meta);
@@ -160,9 +160,8 @@ export async function localMutationsGreaterThan(
       commit = await fromHash(basisHash, dagRead);
     }
     return commits;
-  } else {
-    throw new Error('localMutationsGreaterThan should only be called in DD31');
   }
+  throw new Error('localMutationsGreaterThan should only be called in DD31');
 }
 
 export async function baseSnapshot(

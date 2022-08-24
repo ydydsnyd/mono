@@ -48,9 +48,8 @@ function makeFakePusher(options: FakePusherArgs): Pusher {
           httpStatusCode: 500,
           errorMessage: 'Fetch not OK',
         };
-      } else {
-        throw new Error('not implented');
       }
+      throw new Error('not implemented');
     }
 
     return {
