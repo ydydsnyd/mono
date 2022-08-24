@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1660945829297,
+  "lastUpdate": 1661350075737,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -23135,6 +23135,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23137,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "distinct": true,
+          "id": "3ad51b5b040c687154b85886336578721cb384bb",
+          "message": "refactor: Dedupe IndexDefinition\n\nWe had both IndexDefinition and CreateIndexDefinition which were pretty\nmuch the same. Now we only have the public interface\nCreateIndexDefinition.",
+          "timestamp": "2022-08-24T16:06:31+02:00",
+          "tree_id": "b4b1ed7d3a279ae6b8e2dfe2e6552db0978f5d7e",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/3ad51b5b040c687154b85886336578721cb384bb"
+        },
+        "date": 1661350068783,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 188934,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34026,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 187788,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33694,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 79570,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23157,
             "unit": "bytes"
           }
         ]
