@@ -379,6 +379,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     if (internalOptions.exposeInternalAPI) {
       internalOptions.exposeInternalAPI({
         persist: () => this._persist(),
+        schedulePersist: () => this._schedulePersist(),
       });
     }
 
@@ -836,7 +837,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       if (!replayMutations || replayMutations.length === 0) {
         // All done.
         await this._checkChange(syncHead, diffs);
-        this._schedulePersist();
+        void this._schedulePersist();
         return;
       }
 
@@ -1198,16 +1199,18 @@ export class Replicache<MD extends MutatorDefs = {}> {
     this.onClientStateNotFound?.(reason);
   }
 
-  private _schedulePersist(): void {
+  private async _schedulePersist(): Promise<boolean> {
     if (this._persistIsScheduled) {
-      return;
+      return false;
     }
     this._persistIsScheduled = true;
-    void (async () => {
+    try {
       await requestIdle(PERSIST_TIMEOUT);
       await this._persist();
+      return true;
+    } finally {
       this._persistIsScheduled = false;
-    })();
+    }
   }
 
   private _changeSyncCounters(pushDelta: 0, pullDelta: 1 | -1): void;
@@ -1359,7 +1362,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         const [ref, diffs] = await tx.commit(true);
         this._pushConnectionLoop.send();
         await this._checkChange(ref, diffs);
-        this._schedulePersist();
+        void this._schedulePersist();
         return {result, ref};
       } catch (ex) {
         throw await this._convertToClientStateNotFoundError(ex);

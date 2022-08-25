@@ -69,6 +69,10 @@ export class ReplicacheTest<
     // return this[persistSymbol]();
   }
 
+  schedulePersist() {
+    return this._internalAPI.schedulePersist();
+  }
+
   recoverMutationsSpy = sinon.spy(this, 'recoverMutations');
 
   recoverMutations(): Promise<boolean> {
@@ -91,6 +95,11 @@ export class ReplicacheTest<
   get perdag() {
     // @ts-expect-error Property '_perdag' is private
     return this._perdag;
+  }
+
+  get persistIsScheduled() {
+    // @ts-expect-error Property '_persistIsScheduled' is private
+    return this._persistIsScheduled;
   }
 }
 

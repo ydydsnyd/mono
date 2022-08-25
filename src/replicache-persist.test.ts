@@ -230,3 +230,33 @@ suite('onClientStateNotFound', () => {
     ]);
   });
 });
+
+suite('persist scheduling', () => {
+  test('handles exceptions thrown in persist()', async () => {
+    const rep = await replicacheForTesting('persist-test');
+    const persistStub = sinon
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .stub(rep, <any>'_persist')
+      .throws(new Error('persist error'));
+
+    expect(rep.persistIsScheduled).to.be.false;
+
+    let ex;
+    rep.schedulePersist().catch(err => (ex = err));
+    expect(rep.persistIsScheduled).to.be.true;
+
+    await tickAFewTimes(11, 100);
+    expect((ex as unknown as Error).message).to.equal('persist error');
+    expect(persistStub.callCount).to.equal(1);
+    expect(rep.persistIsScheduled).to.be.false;
+
+    // ensure that persist can be scheduled again
+    rep.schedulePersist().catch(err => (ex = err));
+    expect(rep.persistIsScheduled).to.be.true;
+
+    await tickAFewTimes(11, 100);
+    expect((ex as unknown as Error).message).to.equal('persist error');
+    expect(persistStub.callCount).to.equal(2);
+    expect(rep.persistIsScheduled).to.be.false;
+  });
+});

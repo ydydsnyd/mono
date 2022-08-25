@@ -87,26 +87,68 @@ suite('reopening IDB', async () => {
 
     await dropStore(name);
 
+    let ex;
     try {
       await store.withWrite(async wt => {
         await wt.put('baz', 'qux');
       });
     } catch (e) {
-      expect(e as Error).to.match(/Replicache IndexedDB not found/);
+      ex = e;
     }
+    expect(ex as Error).to.match(/Replicache IndexedDB not found/);
 
-    // ensure that the db created in the reopening process was cleaned up
+    // ensure that any db creation during the reopening process was aborted
     const req = indexedDB.open(name);
-
-    let dbDeleted = false;
+    let aborted = false;
 
     const promise = new Promise((resolve, reject) => {
-      req.onupgradeneeded = () => (dbDeleted = true);
+      req.onupgradeneeded = evt => (aborted = evt.oldVersion === 0);
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
 
     await promise;
-    expect(dbDeleted).to.be.true;
+    expect(aborted).to.be.true;
+  });
+
+  test('deletes corrupt IDB and throws error', async () => {
+    await dropStore(name);
+
+    // create a corrupt IDB (ver. 1, no object stores)
+    const createReq = new Promise<IDBDatabase>((resolve, reject) => {
+      const req = indexedDB.open(name);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+
+    (await createReq).close();
+
+    // a new IDBStore encountering the corrupt db
+    store = new IDBStore(name);
+
+    let ex;
+    try {
+      await store.withWrite(async wt => {
+        await wt.put('baz', 'qux');
+      });
+    } catch (e) {
+      ex = e;
+    }
+    expect((ex as Error).message).to.match(
+      /Replicache IndexedDB .* missing object store/,
+    );
+
+    // ensure that the corrupt db was deleted
+    const req = indexedDB.open(name);
+    let newlyCreated = false;
+
+    const promise = new Promise((resolve, reject) => {
+      req.onupgradeneeded = evt => (newlyCreated = evt.oldVersion === 0);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+
+    await promise;
+    expect(newlyCreated).to.be.true;
   });
 });

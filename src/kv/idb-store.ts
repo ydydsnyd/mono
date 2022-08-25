@@ -1,6 +1,7 @@
 import {deleteSentinel, WriteImplBase} from './write-impl-base';
 import type {Read, Store, Value, Write} from './store';
 import {resolver} from '@rocicorp/resolver';
+import {assertNotNull} from '../asserts';
 
 const RELAXED = {durability: 'relaxed'};
 const OBJECT_STORE = 'chunks';
@@ -67,14 +68,20 @@ export class IDBStore implements Store {
     try {
       return fn(db);
     } catch (e: unknown) {
-      if (
-        !this._closed &&
-        e instanceof DOMException &&
-        e.name === 'InvalidStateError'
-      ) {
-        this._db = reopenExistingDb(db.name);
-        const reopened = await this._db;
-        return fn(reopened);
+      if (!this._closed && e instanceof DOMException) {
+        if (e.name === 'InvalidStateError') {
+          this._db = reopenExistingDb(db.name);
+          const reopened = await this._db;
+          return fn(reopened);
+        } else if (e.name === 'NotFoundError') {
+          // This edge-case can happen if the db has been deleted and the
+          // user/developer has DevTools open in certain browsers.
+          // See discussion at https://github.com/rocicorp/replicache-internal/pull/216
+          indexedDB.deleteDatabase(db.name);
+          throw new Error(
+            `Replicache IndexedDB ${db.name} missing object store.  Deleting db.`,
+          );
+        }
       }
       throw e;
     }
@@ -180,40 +187,20 @@ function reopenExistingDb(name: string): Promise<IDBDatabase> {
   const {promise, resolve, reject} = resolver<IDBDatabase>();
   const req = indexedDB.open(name);
 
-  let notFound = false;
-
   req.onupgradeneeded = () => {
-    notFound = true;
+    const tx = req.transaction;
+    assertNotNull(tx);
+    tx.abort();
     reject(new Error(`Replicache IndexedDB not found: ${name}`));
   };
 
-  req.onsuccess = () => {
-    if (notFound) {
-      // Existing db not found, close connection.
-      req.result.close();
-    } else {
-      resolve(req.result);
-    }
-  };
+  req.onsuccess = () => resolve(req.result);
+  req.onerror = () => reject(req.error);
 
-  req.onerror = () => {
-    reject(req.error);
-  };
-
-  void promise
-    .then(db => {
-      db.onversionchange = () => db.close();
-    })
-    .catch(err => {
-      if (notFound) {
-        // clean up half-created db
-        indexedDB.deleteDatabase(name);
-      } else {
-        throw err;
-      }
-    });
-
-  return promise;
+  return promise.then(db => {
+    db.onversionchange = () => db.close();
+    return db;
+  });
 }
 
 function objectStore(tx: IDBTransaction): IDBObjectStore {
