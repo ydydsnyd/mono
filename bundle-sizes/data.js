@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1661460405255,
+  "lastUpdate": 1661520996238,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -23267,6 +23267,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/c94ec4d2dc13f0e088676fdb662ce2fa46c61731"
         },
         "date": 1661460400022,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 189105,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34014,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 187959,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33702,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 79788,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23180,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b8fe10f0665af9092e9f8402f9405bb84f046017",
+          "message": "chore: Update docusaurus to v2 (#222)",
+          "timestamp": "2022-08-26T13:35:26Z",
+          "tree_id": "460f42c2f45885becd28ddae3f4016ea256b9da2",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/b8fe10f0665af9092e9f8402f9405bb84f046017"
+        },
+        "date": 1661520991117,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
