@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1661522248369,
+  "lastUpdate": 1661522578895,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -23405,6 +23405,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23180,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "603bda224dfbab6731e8e8d41563cdd6b77d3426",
+          "message": "feat: Add indexes to ReplicacheOptions (#221)\n\nThis adds `indexes` to ReplicacheOptions. It also deprecates\r\n`createIndex` and `dropIndex`.\r\n\r\nFor now it uses index commits under the hood but that is an\r\nimplementation detail and we plan to get rid of these index commits in\r\nthe future.\r\n\r\nAs expected, the new create index perf test is a lot slower (~4x)\r\nbecause it reads the data from IDB. The old perf test wrote to the in\r\nmemory store and then created the index which meant that the data was in\r\nmemory when building the index.\r\n\r\nTowards #221 \r\nCloses https://github.com/rocicorp/replicache/issues/602",
+          "timestamp": "2022-08-26T14:01:53Z",
+          "tree_id": "c608f98e4232f398f4313b466d3468aabda32e12",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/603bda224dfbab6731e8e8d41563cdd6b77d3426"
+        },
+        "date": 1661522574440,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 190253,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34196,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 189107,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33886,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 80419,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23279,
             "unit": "bytes"
           }
         ]
