@@ -5,13 +5,16 @@ import {
   tickAFewTimes,
   tickUntil,
 } from './test-util';
-import type {PatchOperation} from './mod';
-import type {ReadTransaction, WriteTransaction} from './mod';
 import type {JSONValue, ReadonlyJSONValue} from './json';
 import {expect} from '@esm-bundle/chai';
 import {sleep} from './sleep';
 import type * as dag from './dag/mod';
 import * as sinon from 'sinon';
+import type {IndexDefinitions} from './replicache-options';
+import type {ReadTransaction, WriteTransaction} from './transactions';
+import type {PatchOperation} from './puller';
+import type {ScanOptions} from './scan-options';
+import type {IndexKey} from './db/index';
 
 // fetch-mock has invalid d.ts file so we removed that on npm install.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -89,363 +92,334 @@ test('subscribe', async () => {
   expect(queryCallCount).to.equal(4);
 });
 
-test('subscribe with index', async () => {
-  const log: (readonly [readonly [string, string], ReadonlyJSONValue])[] = [];
+suite('subscribe', () => {
+  async function make(
+    indexes: IndexDefinitions | undefined,
+    scanOptions: ScanOptions,
+  ) {
+    const log: (readonly [string | IndexKey, ReadonlyJSONValue])[] = [];
 
-  const rep = await replicacheForTesting('subscribe-with-index', {
-    mutators: {
-      addData,
-    },
-  });
-
-  await rep.createIndex({
-    name: 'i1',
-    jsonPointer: '/id',
-    prefix: 'a',
-  });
-
-  const onErrorFake = sinon.fake();
-
-  let queryCallCount = 0;
-  let onDataCallCount = 0;
-
-  const cancel = rep.subscribe(
-    async (tx: ReadTransaction) => {
-      queryCallCount++;
-      return await tx.scan({indexName: 'i1'}).entries().toArray();
-    },
-    {
-      onData: (
-        values: Iterable<
-          readonly [readonly [string, string], ReadonlyJSONValue]
-        >,
-      ) => {
-        onDataCallCount++;
-        for (const entry of values) {
-          log.push(entry);
-        }
+    const rep = await replicacheForTesting('subscribe-with-index-no-prefix', {
+      mutators: {
+        addData,
       },
-      onError: onErrorFake,
-    },
-  );
+      indexes,
+    });
 
-  expect(log).to.have.length(0);
-  expect(queryCallCount).to.equal(0);
-  expect(onDataCallCount).to.equal(0);
-  expect(onErrorFake.callCount).to.equal(0);
+    const onErrorFake = sinon.fake();
 
-  await tickUntil(() => queryCallCount > 0);
+    let queryCallCount = 0;
+    let onDataCallCount = 0;
 
-  await rep.mutate.addData({
-    a1: {id: 'a-1', x: 1},
-    a2: {id: 'a-2', x: 2},
-    b: {id: 'bx'},
-  });
-
-  expect(log).to.deep.equal([
-    [
-      ['a-1', 'a1'],
+    const cancel = rep.subscribe(
+      async (tx: ReadTransaction) => {
+        queryCallCount++;
+        return await tx.scan(scanOptions).entries().toArray();
+      },
       {
-        id: 'a-1',
-        x: 1,
+        onData: values => {
+          onDataCallCount++;
+          for (const entry of values) {
+            log.push(entry);
+          }
+        },
+        onError: onErrorFake,
       },
-    ],
-    [
-      ['a-2', 'a2'],
+    );
+
+    expect(queryCallCount).to.equal(0);
+    expect(onDataCallCount).to.equal(0);
+    expect(onErrorFake.callCount).to.equal(0);
+
+    await tickUntil(() => queryCallCount > 0);
+
+    return {
+      log,
+      rep,
+      onErrorFake,
+      cancel,
+      queryCallCount: () => queryCallCount,
+      onDataCallCount: () => onDataCallCount,
+    };
+  }
+
+  test('index with a prefix', async () => {
+    const {log, rep, onErrorFake, cancel, queryCallCount, onDataCallCount} =
+      await make(
+        {
+          i1: {
+            jsonPointer: '/id',
+            prefix: 'a',
+          },
+        },
+        {indexName: 'i1'},
+      );
+
+    await tickUntil(() => queryCallCount() > 0);
+
+    await rep.mutate.addData({
+      a1: {id: 'a-1', x: 1},
+      a2: {id: 'a-2', x: 2},
+      b: {id: 'bx'},
+    });
+
+    expect(log).to.deep.equal([
+      [
+        ['a-1', 'a1'],
+        {
+          id: 'a-1',
+          x: 1,
+        },
+      ],
+      [
+        ['a-2', 'a2'],
+        {
+          id: 'a-2',
+          x: 2,
+        },
+      ],
+    ]);
+    expect(queryCallCount()).to.equal(2); // One for initial subscribe and one for the add.
+    expect(onDataCallCount()).to.equal(2);
+    expect(onErrorFake.callCount).to.equal(0);
+
+    log.length = 0;
+    await rep.mutate.addData({a3: {id: 'a-3', x: 3}});
+
+    expect(queryCallCount()).to.equal(3);
+    expect(onDataCallCount()).to.equal(3);
+    expect(onErrorFake.callCount).to.equal(0);
+    expect(log).to.deep.equal([
+      [
+        ['a-1', 'a1'],
+        {
+          id: 'a-1',
+          x: 1,
+        },
+      ],
+      [
+        ['a-2', 'a2'],
+        {
+          id: 'a-2',
+          x: 2,
+        },
+      ],
+      [
+        ['a-3', 'a3'],
+        {
+          id: 'a-3',
+          x: 3,
+        },
+      ],
+    ]);
+
+    cancel();
+  });
+
+  test('missing index', async () => {
+    const {rep, onErrorFake, cancel} = await make(undefined, {indexName: 'i1'});
+
+    await rep.mutate.addData({
+      a1: {id: 'a-1', x: 1},
+      a2: {id: 'a-2', x: 2},
+      b: {id: 'bx'},
+    });
+
+    expect(onErrorFake.callCount).to.equal(1);
+    expect(onErrorFake.getCall(0).args[0])
+      .to.be.instanceOf(Error)
+      .with.property('message', 'Unknown index name: i1');
+
+    cancel();
+  });
+
+  test('no prefix', async () => {
+    const {log, rep, cancel} = await make(
       {
-        id: 'a-2',
-        x: 2,
+        i1: {
+          jsonPointer: '/id',
+        },
       },
-    ],
-  ]);
-  expect(queryCallCount).to.equal(2); // One for initial subscribe and one for the add.
-  expect(onDataCallCount).to.equal(2);
-  expect(onErrorFake.callCount).to.equal(0);
+      {indexName: 'i1'},
+    );
 
-  log.length = 0;
-  await rep.mutate.addData({a3: {id: 'a-3', x: 3}});
+    await rep.mutate.addData({
+      a1: {id: 'a-1', x: 1},
+      a2: {id: 'a-2', x: 2},
+      b: {id: 'bx'},
+    });
 
-  expect(queryCallCount).to.equal(3);
-  expect(onDataCallCount).to.equal(3);
-  expect(onErrorFake.callCount).to.equal(0);
-  expect(log).to.deep.equal([
-    [
-      ['a-1', 'a1'],
+    expect(log).to.deep.equal([
+      [
+        ['a-1', 'a1'],
+        {
+          id: 'a-1',
+          x: 1,
+        },
+      ],
+      [
+        ['a-2', 'a2'],
+        {
+          id: 'a-2',
+          x: 2,
+        },
+      ],
+      [
+        ['bx', 'b'],
+        {
+          id: 'bx',
+        },
+      ],
+    ]);
+
+    cancel();
+  });
+
+  test('index and start', async () => {
+    const {log, rep, cancel, queryCallCount, onDataCallCount} = await make(
       {
-        id: 'a-1',
-        x: 1,
+        i1: {
+          jsonPointer: '/id',
+        },
       },
-    ],
-    [
-      ['a-2', 'a2'],
+      {indexName: 'i1', start: {key: 'a-2'}},
+    );
+
+    await rep.mutate.addData({
+      a1: {id: 'a-1', x: 1},
+      a2: {id: 'a-2', x: 2},
+      b: {id: 'bx'},
+    });
+
+    expect(log).to.deep.equal([
+      [
+        ['a-2', 'a2'],
+        {
+          id: 'a-2',
+          x: 2,
+        },
+      ],
+      [
+        ['bx', 'b'],
+        {
+          id: 'bx',
+        },
+      ],
+    ]);
+    expect(queryCallCount()).to.equal(2); // One for initial subscribe and one for the add.
+    expect(onDataCallCount()).to.equal(2);
+
+    log.length = 0;
+    await rep.mutate.addData({
+      b: {id: 'bx2'},
+    });
+    expect(log).to.deep.equal([
+      [
+        ['a-2', 'a2'],
+        {
+          id: 'a-2',
+          x: 2,
+        },
+      ],
+      [
+        ['bx2', 'b'],
+        {
+          id: 'bx2',
+        },
+      ],
+    ]);
+    expect(queryCallCount()).to.equal(3); // One for initial subscribe and one for the add.
+    expect(onDataCallCount()).to.equal(3);
+
+    // Adding a entry that does not match the index... no id property
+    await rep.mutate.addData({
+      c: {noid: 'c-3'},
+    });
+    expect(queryCallCount()).to.equal(3); // One for initial subscribe and one for the add.
+    expect(onDataCallCount()).to.equal(3);
+
+    // Changing a entry before the start key
+    await rep.mutate.addData({
+      a1: {id: 'a-1', x: 2},
+    });
+    expect(queryCallCount()).to.equal(3); // One for initial subscribe and one for the add.
+    expect(onDataCallCount()).to.equal(3);
+
+    // Changing a entry to the same value we do not fire the subscription any more.
+    await rep.mutate.addData({
+      a2: {id: 'a-2', x: 2},
+    });
+    expect(queryCallCount()).to.equal(3); // One for initial subscribe and one for the add.
+    expect(onDataCallCount()).to.equal(3);
+
+    cancel();
+  });
+
+  test('index and prefix', async () => {
+    const {log, rep, cancel, queryCallCount, onDataCallCount} = await make(
       {
-        id: 'a-2',
-        x: 2,
+        i1: {
+          jsonPointer: '/id',
+        },
       },
-    ],
-    [
-      ['a-3', 'a3'],
-      {
-        id: 'a-3',
-        x: 3,
-      },
-    ],
-  ]);
+      {indexName: 'i1', prefix: 'b'},
+    );
 
-  await rep.dropIndex('i1');
-  expect(queryCallCount).to.equal(4);
-  expect(onDataCallCount).to.equal(3); // scan({indexName: 'i1'}) fails since we do not have that index any more.
-  expect(onErrorFake.callCount).to.equal(1);
-  expect(onErrorFake.getCall(0).args[0])
-    .to.be.instanceOf(Error)
-    .with.property('message', 'Unknown index name: i1');
+    await rep.mutate.addData({
+      a1: {id: 'a-1', x: 1},
+      a2: {id: 'a-2', x: 2},
+      b: {id: 'bx'},
+    });
 
-  log.length = 0;
-  await rep.createIndex({
-    name: 'i1',
-    jsonPointer: '/id',
+    expect(log).to.deep.equal([
+      [
+        ['bx', 'b'],
+        {
+          id: 'bx',
+        },
+      ],
+    ]);
+    expect(queryCallCount()).to.equal(2); // One for initial subscribe and one for the add.
+    expect(onDataCallCount()).to.equal(2);
+
+    log.length = 0;
+    await rep.mutate.addData({
+      b: {id: 'bx2'},
+    });
+    expect(log).to.deep.equal([
+      [
+        ['bx2', 'b'],
+        {
+          id: 'bx2',
+        },
+      ],
+    ]);
+    expect(queryCallCount()).to.equal(3); // One for initial subscribe and one for the add.
+    expect(onDataCallCount()).to.equal(3);
+
+    // Adding a entry that does not match the index... no id property
+    await rep.mutate.addData({
+      c: {noid: 'c-3'},
+    });
+    expect(queryCallCount()).to.equal(3); // One for initial subscribe and one for the add.
+    expect(onDataCallCount()).to.equal(3);
+
+    // Changing a entry but still matching prefix
+    await rep.mutate.addData({
+      b: {id: 'bx3', x: 3},
+    });
+    expect(queryCallCount()).to.equal(4);
+    expect(onDataCallCount()).to.equal(4);
+
+    // Changing a entry to the same value will not trigger the subscription.
+    await rep.mutate.addData({
+      b: {id: 'bx3', x: 3},
+    });
+    expect(queryCallCount()).to.equal(4); // One for initial subscribe and one for the add.
+    expect(onDataCallCount()).to.equal(4);
+
+    cancel();
   });
-
-  expect(queryCallCount).to.equal(5);
-  expect(onDataCallCount).to.equal(4);
-  expect(log).to.deep.equal([
-    [
-      ['a-1', 'a1'],
-      {
-        id: 'a-1',
-        x: 1,
-      },
-    ],
-    [
-      ['a-2', 'a2'],
-      {
-        id: 'a-2',
-        x: 2,
-      },
-    ],
-    [
-      ['a-3', 'a3'],
-      {
-        id: 'a-3',
-        x: 3,
-      },
-    ],
-    [
-      ['bx', 'b'],
-      {
-        id: 'bx',
-      },
-    ],
-  ]);
-
-  cancel();
-});
-
-test('subscribe with index and start', async () => {
-  const log: (readonly [readonly [string, string], ReadonlyJSONValue])[] = [];
-
-  const rep = await replicacheForTesting('subscribe-with-index-and-start', {
-    mutators: {
-      addData,
-    },
-  });
-
-  await rep.createIndex({
-    name: 'i1',
-    jsonPointer: '/id',
-  });
-
-  let queryCallCount = 0;
-  let onDataCallCount = 0;
-  const cancel = rep.subscribe(
-    async (tx: ReadTransaction) => {
-      queryCallCount++;
-      return await tx
-        .scan({indexName: 'i1', start: {key: 'a-2'}})
-        .entries()
-        .toArray();
-    },
-    {
-      onData: (
-        values: Iterable<
-          readonly [readonly [string, string], ReadonlyJSONValue]
-        >,
-      ) => {
-        onDataCallCount++;
-        for (const entry of values) {
-          log.push(entry);
-        }
-      },
-    },
-  );
-
-  expect(log).to.have.length(0);
-  expect(queryCallCount).to.equal(0);
-  expect(onDataCallCount).to.equal(0);
-
-  await rep.mutate.addData({
-    a1: {id: 'a-1', x: 1},
-    a2: {id: 'a-2', x: 2},
-    b: {id: 'bx'},
-  });
-
-  expect(log).to.deep.equal([
-    [
-      ['a-2', 'a2'],
-      {
-        id: 'a-2',
-        x: 2,
-      },
-    ],
-    [
-      ['bx', 'b'],
-      {
-        id: 'bx',
-      },
-    ],
-  ]);
-  expect(queryCallCount).to.equal(2); // One for initial subscribe and one for the add.
-  expect(onDataCallCount).to.equal(2);
-
-  log.length = 0;
-  await rep.mutate.addData({
-    b: {id: 'bx2'},
-  });
-  expect(log).to.deep.equal([
-    [
-      ['a-2', 'a2'],
-      {
-        id: 'a-2',
-        x: 2,
-      },
-    ],
-    [
-      ['bx2', 'b'],
-      {
-        id: 'bx2',
-      },
-    ],
-  ]);
-  expect(queryCallCount).to.equal(3); // One for initial subscribe and one for the add.
-  expect(onDataCallCount).to.equal(3);
-
-  // Adding a entry that does not match the index... no id property
-  await rep.mutate.addData({
-    c: {noid: 'c-3'},
-  });
-  expect(queryCallCount).to.equal(3); // One for initial subscribe and one for the add.
-  expect(onDataCallCount).to.equal(3);
-
-  // Changing a entry before the start key
-  await rep.mutate.addData({
-    a1: {id: 'a-1', x: 2},
-  });
-  expect(queryCallCount).to.equal(3); // One for initial subscribe and one for the add.
-  expect(onDataCallCount).to.equal(3);
-
-  // Changing a entry to the same value we do not fire the subscription any more.
-  await rep.mutate.addData({
-    a2: {id: 'a-2', x: 2},
-  });
-  expect(queryCallCount).to.equal(3); // One for initial subscribe and one for the add.
-  expect(onDataCallCount).to.equal(3);
-
-  cancel();
-});
-
-test('subscribe with index and prefix', async () => {
-  const log: (readonly [readonly [string, string], ReadonlyJSONValue])[] = [];
-
-  const rep = await replicacheForTesting('subscribe-with-index-and-prefix', {
-    mutators: {
-      addData,
-    },
-  });
-
-  await rep.createIndex({
-    name: 'i1',
-    jsonPointer: '/id',
-  });
-
-  let queryCallCount = 0;
-  let onDataCallCount = 0;
-  const cancel = rep.subscribe(
-    async (tx: ReadTransaction) => {
-      queryCallCount++;
-      return await tx.scan({indexName: 'i1', prefix: 'b'}).entries().toArray();
-    },
-    {
-      onData: (
-        values: Iterable<
-          readonly [readonly [string, string], ReadonlyJSONValue]
-        >,
-      ) => {
-        onDataCallCount++;
-        for (const entry of values) {
-          log.push(entry);
-        }
-      },
-    },
-  );
-
-  expect(log).to.have.length(0);
-  expect(queryCallCount).to.equal(0);
-  expect(onDataCallCount).to.equal(0);
-
-  await rep.mutate.addData({
-    a1: {id: 'a-1', x: 1},
-    a2: {id: 'a-2', x: 2},
-    b: {id: 'bx'},
-  });
-
-  expect(log).to.deep.equal([
-    [
-      ['bx', 'b'],
-      {
-        id: 'bx',
-      },
-    ],
-  ]);
-  expect(queryCallCount).to.equal(2); // One for initial subscribe and one for the add.
-  expect(onDataCallCount).to.equal(2);
-
-  log.length = 0;
-  await rep.mutate.addData({
-    b: {id: 'bx2'},
-  });
-  expect(log).to.deep.equal([
-    [
-      ['bx2', 'b'],
-      {
-        id: 'bx2',
-      },
-    ],
-  ]);
-  expect(queryCallCount).to.equal(3); // One for initial subscribe and one for the add.
-  expect(onDataCallCount).to.equal(3);
-
-  // Adding a entry that does not match the index... no id property
-  await rep.mutate.addData({
-    c: {noid: 'c-3'},
-  });
-  expect(queryCallCount).to.equal(3); // One for initial subscribe and one for the add.
-  expect(onDataCallCount).to.equal(3);
-
-  // Changing a entry but still matching prefix
-  await rep.mutate.addData({
-    b: {id: 'bx3', x: 3},
-  });
-  expect(queryCallCount).to.equal(4);
-  expect(onDataCallCount).to.equal(4);
-
-  // Changing a entry to the same value will not trigger the subscription.
-  await rep.mutate.addData({
-    b: {id: 'bx3', x: 3},
-  });
-  expect(queryCallCount).to.equal(4); // One for initial subscribe and one for the add.
-  expect(onDataCallCount).to.equal(4);
-
-  cancel();
 });
 
 test('subscribe with isEmpty and prefix', async () => {
@@ -672,13 +646,12 @@ test('subscribe with error', async () => {
 
 test('subscribe pull and index update', async () => {
   const pullURL = 'https://pull.com/rep';
+  const indexName = 'idx1';
   const rep = await replicacheForTesting('subscribe-pull-and-index-update', {
     pullURL,
     mutators: {addData},
+    indexes: {[indexName]: {jsonPointer: '/id'}},
   });
-
-  const indexName = 'idx1';
-  await rep.createIndex({name: indexName, jsonPointer: '/id'});
 
   const log: ReadonlyJSONValue[] = [];
   let queryCallCount = 0;

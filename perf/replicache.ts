@@ -18,9 +18,14 @@ import {
 } from '../src/persist/mod';
 import {uuid} from '../src/uuid';
 import {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
-import type {ReplicacheInternalAPI} from '../src/replicache-options.js';
+import type {
+  IndexDefinitions,
+  ReplicacheInternalAPI,
+} from '../src/replicache-options';
 
 const valSize = 1024;
+
+type Writable<T> = {-readonly [P in keyof T]: T[P]};
 
 export function benchmarkPopulate(opts: {
   numKeys: number;
@@ -42,17 +47,19 @@ export function benchmarkPopulate(opts: {
       await closeAndCleanupRep(repToClose);
     },
     async run(bencher: Bencher) {
-      const rep = (repToClose = makeRepWithPopulate());
+      const indexes: Writable<IndexDefinitions> = {};
+      if (opts.indexes) {
+        for (let i = 0; i < opts.indexes; i++) {
+          indexes[`idx${i}`] = {
+            jsonPointer: '/ascii',
+          };
+        }
+      }
+      const rep = (repToClose = makeRepWithPopulate({indexes}));
       if (!opts.clean) {
         await rep.mutate.populate({
           numKeys: opts.numKeys,
           randomValues: jsonArrayTestData(opts.numKeys, valSize),
-        });
-      }
-      for (let i = 0; i < (opts.indexes || 0); i++) {
-        await rep.createIndex({
-          name: `idx${i}`,
-          jsonPointer: '/ascii',
         });
       }
       const randomValues = jsonArrayTestData(opts.numKeys, valSize);
@@ -309,6 +316,57 @@ export function benchmarkScan(opts: {numKeys: number}): Benchmark {
 }
 
 export function benchmarkCreateIndex(opts: {numKeys: number}): Benchmark {
+  // Creation of indexes is part of creating a Replicache instance. Creating an
+  // index on an empty Replicache instance is not very interesting. We therefore
+  // populate the instance with persisted data. We then create a Replicache
+  // instance without an index and one with an index. We then subtract the time
+  // it took to create the instance without the index.
+  let rep: Replicache | undefined;
+  const repName = makeRepName();
+  return {
+    name: `create index with definition ${valSize}x${opts.numKeys}`,
+    group: 'replicache',
+    async setup() {
+      setupIDBDatabasesStoreForTest();
+    },
+    async setupEach() {
+      await setupPersistedData(repName, opts.numKeys);
+    },
+    async teardownEach() {
+      await closeAndCleanupRep(rep);
+    },
+    async teardown() {
+      await teardownIDBDatabasesStoreForTest();
+    },
+    async run(bencher: Bencher) {
+      const t0 = performance.now();
+      const repNoIndex = makeRep({
+        name: repName,
+      });
+      // Wait for opening being done.
+      await repNoIndex.query(() => undefined);
+      const t1 = performance.now();
+      await repNoIndex.close();
+
+      bencher.reset();
+      rep = makeRep({
+        name: repName,
+        indexes: {
+          idx: {jsonPointer: '/ascii'},
+        },
+      });
+      // Wait for opening being done.
+      await rep.query(() => undefined);
+
+      bencher.stop();
+      bencher.subtract(t1 - t0);
+    },
+  };
+}
+
+export function benchmarkCreateIndexDeprecated(opts: {
+  numKeys: number;
+}): Benchmark {
   let repToClose: Replicache | undefined;
   return {
     name: `create index ${valSize}x${opts.numKeys}`,
@@ -459,7 +517,9 @@ function makeRepName(): string {
 }
 
 function makeRep<MD extends MutatorDefs>(
-  options: Omit<ReplicacheOptions<MD>, 'name' | 'licenseKey'> = {},
+  options: Omit<ReplicacheOptions<MD>, 'name' | 'licenseKey'> & {
+    name?: string;
+  } = {},
 ) {
   const name = makeRepName();
   return new Replicache<MD>({
@@ -475,22 +535,24 @@ type ReplicacheWithPopulate = UnwrapPromise<
   ReturnType<typeof makeRepWithPopulate>
 >;
 
-function makeRepWithPopulate() {
-  const mutators = {
-    populate: async (
-      tx: WriteTransaction,
-      {
-        numKeys,
-        randomValues: randomValues,
-      }: {numKeys: number; randomValues: TestDataObject[]},
-    ) => {
-      for (let i = 0; i < numKeys; i++) {
-        await tx.put(`key${i}`, randomValues[i]);
-      }
-    },
+function makeRepWithPopulate<MD extends MutatorDefs>(
+  options: Partial<ReplicacheOptions<MD>> = {},
+) {
+  const populate = async (
+    tx: WriteTransaction,
+    {
+      numKeys,
+      randomValues: randomValues,
+    }: {numKeys: number; randomValues: TestDataObject[]},
+  ) => {
+    for (let i = 0; i < numKeys; i++) {
+      await tx.put(`key${i}`, randomValues[i]);
+    }
   };
+
   return makeRep({
-    mutators,
+    ...options,
+    mutators: {...(options.mutators ?? {}), populate},
   });
 }
 
@@ -545,6 +607,7 @@ export function benchmarks(): Benchmark[] {
     benchmarkScan({numKeys: 1000}),
     benchmarkScan({numKeys: 10_000}),
     benchmarkCreateIndex({numKeys: 5000}),
+    benchmarkCreateIndexDeprecated({numKeys: 5000}),
     benchmarkStartupUsingBasicReadsFromPersistedData({
       numKeysPersisted: 100000,
       numKeysToRead: 100,

@@ -25,6 +25,7 @@ export type Benchmark = {
 export type Bencher = {
   reset: () => void;
   stop: () => void;
+  subtract: (a: number) => void;
 };
 
 export type BenchmarkResult = {
@@ -72,13 +73,18 @@ async function runBenchmark(
 
         let t0 = 0;
         let t1 = 0;
+        let subtracted = 0;
         const reset = () => {
           performance.mark('mark-' + i);
           t0 = performance.now();
+          subtracted = 0;
         };
         const stop = () => {
           t1 = performance.now();
           performance.measure(benchmark.name, 'mark-' + i);
+        };
+        const subtract = (n: number) => {
+          subtracted += n;
         };
         reset();
 
@@ -86,13 +92,14 @@ async function runBenchmark(
           {
             reset,
             stop,
+            subtract,
           },
           i,
         );
         if (t1 === 0) {
           stop();
         }
-        const dur = t1 - t0;
+        const dur = t1 - t0 - subtracted;
         times.push(dur);
         sum += dur;
       } finally {

@@ -20,6 +20,7 @@ import {ConnectionLoop, MAX_DELAY_MS, MIN_DELAY_MS} from './connection-loop';
 import {defaultPuller} from './puller';
 import {defaultPusher} from './pusher';
 import type {
+  IndexDefinitions,
   ReplicacheInternalOptions,
   ReplicacheOptions,
 } from './replicache-options';
@@ -453,6 +454,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     });
 
     void this._open(
+      options.indexes,
       profileIDResolver.resolve,
       clientIDResolver.resolve,
       readyResolver.resolve,
@@ -468,6 +470,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   }
 
   private async _open(
+    indexes: IndexDefinitions | undefined,
     profileIDResolver: (profileID: string) => void,
     resolveClientID: (clientID: string) => void,
     resolveReady: () => void,
@@ -485,6 +488,10 @@ export class Replicache<MD extends MutatorDefs = {}> {
       await write.setHead(db.DEFAULT_HEAD_NAME, client.headHash);
       await write.commit();
     });
+
+    if (indexes) {
+      await this._syncIndexes(indexes);
+    }
 
     // Now we have a profileID, a clientID, and DB!
     resolveReady();
@@ -525,6 +532,11 @@ export class Replicache<MD extends MutatorDefs = {}> {
     );
 
     await this._startLicenseActive(resolveLicenseActive, this._lc, signal);
+  }
+  private async _syncIndexes(indexes: IndexDefinitions): Promise<void> {
+    // Do not wait for _ready here since this needs to be done before we
+    // consider the database ready.
+    await this._indexOp(async tx => tx.syncIndexes(indexes), false);
   }
 
   private _onVisibilityChange = async () => {
@@ -781,22 +793,27 @@ export class Replicache<MD extends MutatorDefs = {}> {
    * If the named index already exists with the same definition this returns success
    * immediately. If the named index already exists, but with a different definition
    * an error is thrown.
+   * @deprecated Use [[ReplicacheOptions.indexes]] instead.
    */
   async createIndex(def: CreateIndexDefinition): Promise<void> {
-    await this._indexOp(tx => tx.createIndex(def));
+    await this._ready;
+    await this._indexOp(tx => tx.createIndex(def), true);
   }
 
   /**
    * Drops an index previously created with [[createIndex]].
+   * @deprecated Use [[ReplicacheOptions.indexes]] instead.
    */
   async dropIndex(name: string): Promise<void> {
-    await this._indexOp(tx => tx.dropIndex(name));
+    await this._ready;
+    await this._indexOp(tx => tx.dropIndex(name), true);
   }
 
   private async _indexOp(
     f: (tx: IndexTransactionImpl) => Promise<void>,
+    generateDiffs: boolean,
   ): Promise<void> {
-    await this._ready;
+    // TODO(arv): Remove generateDiffs when the deprecated callers have been removed.
     const clientID = await this._clientIDPromise;
     await this._memdag.withWrite(async dagWrite => {
       const dbWrite = await db.newWriteIndexChange(
@@ -806,7 +823,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       );
       const tx = new IndexTransactionImpl(clientID, dbWrite, this._lc);
       await f(tx);
-      const [ref, diffs] = await tx.commit(true);
+      const [ref, diffs] = await tx.commit(generateDiffs);
       // Changing an index should not affect the primary map.
       assert(!diffs.has(''));
       await this._checkChange(ref, diffs);

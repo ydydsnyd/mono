@@ -25,6 +25,7 @@ import {
   FromInternalValueReason,
 } from './internal-value.js';
 import type {CreateIndexDefinition} from './db/commit.js';
+import type {IndexDefinitions} from './replicache-options.js';
 
 /**
  * ReadTransactions are used with [[Replicache.query]] and
@@ -321,6 +322,12 @@ interface IndexTransaction extends ReadTransaction {
    * Drops an index previously created with [[createIndex]].
    */
   dropIndex(name: string): Promise<void>;
+
+  /**
+   * Adds and removes indexes so that the index definitions are the same as the
+   * one provided.
+   */
+  syncIndexes(indexes: IndexDefinitions): Promise<void>;
 }
 
 export class IndexTransactionImpl
@@ -345,6 +352,11 @@ export class IndexTransactionImpl
   async dropIndex(name: string): Promise<void> {
     throwIfClosed(this.dbtx);
     await this.dbtx.dropIndex(name);
+  }
+
+  async syncIndexes(indexes: IndexDefinitions): Promise<void> {
+    throwIfClosed(this.dbtx);
+    await this.dbtx.syncIndexes(this._lc, indexes);
   }
 }
 

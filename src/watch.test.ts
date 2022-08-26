@@ -257,8 +257,8 @@ test('watch with prefix and initial callback and data', async () => {
 test('watch on index', async () => {
   const rep = await replicacheForTesting('watch-on-index', {
     mutators: {addData, del: (tx, key) => tx.del(key)},
+    indexes: {id1: {jsonPointer: '/id'}},
   });
-  await rep.createIndex({name: 'id1', jsonPointer: '/id'});
 
   const spy = sinon.spy();
   const unwatch = rep.experimentalWatch(spy, {
@@ -318,8 +318,8 @@ test('watch on index', async () => {
 test('watch on index with prefix', async () => {
   const rep = await replicacheForTesting('watch-on-index-with-prefix', {
     mutators: {addData, del: (tx, key) => tx.del(key)},
+    indexes: {id1: {jsonPointer: '/id'}},
   });
-  await rep.createIndex({name: 'id1', jsonPointer: '/id'});
 
   const spy = sinon.spy();
   const unwatch = rep.experimentalWatch(spy, {
@@ -392,8 +392,8 @@ test('watch on index with prefix', async () => {
 test('watch with index and initial callback with no data', async () => {
   const rep = await replicacheForTesting('watch-with-index-initial-no-data', {
     mutators: {addData, del: (tx, key) => tx.del(key)},
+    indexes: {id1: {jsonPointer: '/id'}},
   });
-  await rep.createIndex({name: 'id1', jsonPointer: '/id'});
 
   const spy = sinon.spy();
   const unwatch = rep.experimentalWatch(spy, {
@@ -413,10 +413,10 @@ test('watch with index and initial callback with no data', async () => {
 test('watch and initial callback with data', async () => {
   const rep = await replicacheForTesting('watch-with-index-initial-and-data', {
     mutators: {addData, del: (tx, key) => tx.del(key)},
+    indexes: {id1: {jsonPointer: '/id'}},
   });
 
   await rep.mutate.addData({a: {id: 'aaa'}, b: {id: 'bbb'}});
-  await rep.createIndex({name: 'id1', jsonPointer: '/id'});
 
   const spy = sinon.spy();
   const unwatch = rep.experimentalWatch(spy, {
@@ -446,10 +446,10 @@ test('watch and initial callback with data', async () => {
 test('watch with index and prefix and initial callback and data', async () => {
   const rep = await replicacheForTesting('watch-with-index-and-prefix', {
     mutators: {addData, del: (tx, key) => tx.del(key)},
+    indexes: {id1: {jsonPointer: '/id'}},
   });
 
   await rep.mutate.addData({a: {id: 'aaa'}, b: {id: 'bbb'}});
-  await rep.createIndex({name: 'id1', jsonPointer: '/id'});
 
   const spy = sinon.spy();
   const unwatch = rep.experimentalWatch(spy, {

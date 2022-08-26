@@ -24,11 +24,12 @@ import {IndexWrite, IndexOperation, indexValue, IndexRead} from './index';
 import {BTreeRead, BTreeWrite} from '../btree/mod';
 import {lazy} from '../lazy';
 import {emptyHash, Hash} from '../hash';
-import type {InternalDiff} from '../btree/node.js';
-import {allEntriesAsDiff} from '../btree/read.js';
-import type {ClientID, DiffsMap} from '../sync/mod.js';
-import type {InternalValue} from '../internal-value.js';
-import {assert} from '../asserts.js';
+import type {InternalDiff} from '../btree/node';
+import {allEntriesAsDiff} from '../btree/read';
+import type {ClientID, DiffsMap} from '../sync/mod';
+import type {InternalValue} from '../internal-value';
+import {assert} from '../asserts';
+import type {IndexDefinition, IndexDefinitions} from '../replicache-options';
 
 export class Write extends Read {
   private readonly _dagWrite: dag.Write;
@@ -131,17 +132,9 @@ export class Write extends Read {
     // Check to see if the index already exists.
     const index = this.indexes.get(name);
     if (index) {
-      const oldDefinition = index.meta.definition;
-      const oldAllowEmpty = oldDefinition.allowEmpty ?? false;
-      if (
-        oldDefinition.name === name &&
-        oldDefinition.prefix === prefix &&
-        oldDefinition.jsonPointer === jsonPointer &&
-        oldAllowEmpty === allowEmpty
-      ) {
-        return;
+      if (!indexDefinitionEqual(definition, index.meta.definition)) {
+        throw new Error('Index exists with different definition');
       }
-      throw new Error('Index exists with different definition');
     }
 
     const indexMap = new BTreeWrite(this._dagWrite);
@@ -176,6 +169,42 @@ export class Write extends Read {
 
     if (!this.indexes.delete(name)) {
       throw new Error(`No such index: ${name}`);
+    }
+  }
+
+  async syncIndexes(lc: LogContext, indexes: IndexDefinitions): Promise<void> {
+    const newIndexNames = new Set<string>();
+
+    await Promise.all(
+      Object.entries(indexes).map(
+        async ([name, definition]: [
+          name: string,
+          definition: IndexDefinition,
+        ]) => {
+          newIndexNames.add(name);
+          const index = this.indexes.get(name);
+          if (index) {
+            if (indexDefinitionEqual(definition, index.meta.definition)) {
+              return;
+            }
+            await this.dropIndex(name);
+          }
+          await this.createIndex(
+            lc,
+            name,
+            definition.prefix ?? '',
+            definition.jsonPointer,
+            definition.allowEmpty ?? false,
+          );
+        },
+      ),
+    );
+
+    // Drop old.
+    for (const oldName of this.indexes.keys()) {
+      if (!newIndexNames.has(oldName)) {
+        await this.dropIndex(oldName);
+      }
     }
   }
 
@@ -500,4 +529,12 @@ export function readIndexesForWrite(
     );
   }
   return m;
+}
+
+function indexDefinitionEqual(a: IndexDefinition, b: IndexDefinition): boolean {
+  return (
+    a.jsonPointer === b.jsonPointer &&
+    (a.allowEmpty ?? false) === (b.allowEmpty ?? false) &&
+    (a.prefix ?? '') === (b.prefix ?? '')
+  );
 }

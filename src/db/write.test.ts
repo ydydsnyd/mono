@@ -2,7 +2,7 @@ import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
 import {assertNotUndefined} from '../asserts';
 import * as dag from '../dag/mod';
-import {DEFAULT_HEAD_NAME} from './commit';
+import {DEFAULT_HEAD_NAME, IndexRecord} from './commit';
 import {
   readCommit,
   readCommitForBTreeRead,
@@ -15,6 +15,8 @@ import {asyncIterableToArray} from '../async-iterable-to-array';
 import {BTreeRead} from '../btree/mod';
 import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 import {initDB} from './test-helpers.js';
+import type {IndexDefinitions} from '../replicache-options.js';
+import type {Writable} from '../writable';
 
 test('basics', async () => {
   const clientID = 'client-id';
@@ -351,3 +353,158 @@ test('legacy index definitions imply allowEmpty = false', async () => {
     await w.commit(DEFAULT_HEAD_NAME);
   });
 });
+
+test('resync indexes', async () => {
+  const t = async (
+    indexesBefore: IndexDefinitions,
+    indexesToSync: IndexDefinitions,
+  ) => {
+    const clientID = 'client-id';
+    const ds = new dag.TestStore();
+    const lc = new LogContext();
+    await ds.withWrite(dagWrite =>
+      initDB(dagWrite, DEFAULT_HEAD_NAME, clientID),
+    );
+
+    await ds.withWrite(async dagWrite => {
+      const w = await newWriteIndexChange(
+        whenceHead(DEFAULT_HEAD_NAME),
+        dagWrite,
+        clientID,
+      );
+      for (const [name, value] of Object.entries(indexesBefore)) {
+        await w.createIndex(
+          lc,
+          name,
+          value.prefix ?? '',
+          value.jsonPointer,
+          value.allowEmpty ?? false,
+        );
+      }
+
+      await w.syncIndexes(lc, indexesToSync);
+      await w.commit(DEFAULT_HEAD_NAME);
+    });
+
+    await ds.withRead(async dagRead => {
+      const [, c] = await readCommit(whenceHead(DEFAULT_HEAD_NAME), dagRead);
+      const {indexes} = c;
+      expect(indexRecordsToIndexDefinitions(indexes)).to.deep.equal(
+        indexesToSync,
+      );
+    });
+  };
+
+  await t({}, {});
+
+  await t(
+    {},
+    {
+      i1: {prefix: '', jsonPointer: '/s', allowEmpty: false},
+    },
+  );
+
+  await t(
+    {
+      i1: {prefix: '', jsonPointer: '/s', allowEmpty: false},
+    },
+    {},
+  );
+
+  await t(
+    {
+      i1: {prefix: '', jsonPointer: '/s', allowEmpty: false},
+    },
+    {
+      i1: {prefix: '', jsonPointer: '/s', allowEmpty: false},
+    },
+  );
+
+  // Change in prefix
+  await t(
+    {
+      i1: {prefix: '', jsonPointer: '/s', allowEmpty: false},
+    },
+    {
+      i1: {prefix: 'ppp', jsonPointer: '/s', allowEmpty: false},
+    },
+  );
+
+  // Change in allowEmpty
+  await t(
+    {
+      i1: {prefix: '', jsonPointer: '/s', allowEmpty: false},
+    },
+    {
+      i1: {prefix: '', jsonPointer: '/s', allowEmpty: true},
+    },
+  );
+
+  // Change in jsonPointer
+  await t(
+    {
+      i1: {prefix: '', jsonPointer: '/s', allowEmpty: false},
+    },
+    {
+      i1: {prefix: '', jsonPointer: '/s/p', allowEmpty: false},
+    },
+  );
+
+  // Change in name
+  await t(
+    {
+      i1: {prefix: '', jsonPointer: '/s', allowEmpty: false},
+    },
+    {
+      i2: {prefix: '', jsonPointer: '/s', allowEmpty: false},
+    },
+  );
+
+  // Order
+  await t(
+    {
+      i1: {prefix: 'i1', jsonPointer: '/s', allowEmpty: false},
+      i2: {prefix: 'i2', jsonPointer: '/s', allowEmpty: false},
+    },
+    {
+      i2: {prefix: 'i2', jsonPointer: '/s', allowEmpty: false},
+      i1: {prefix: 'i1', jsonPointer: '/s', allowEmpty: false},
+    },
+  );
+
+  // Add more indexes
+  await t(
+    {
+      i1: {prefix: '', jsonPointer: '/s', allowEmpty: false},
+    },
+    {
+      i1: {prefix: '', jsonPointer: '/s', allowEmpty: false},
+      i2: {prefix: '', jsonPointer: '/s', allowEmpty: false},
+    },
+  );
+
+  // Remove indexes
+  await t(
+    {
+      i1: {prefix: '', jsonPointer: '/s', allowEmpty: false},
+      i2: {prefix: '', jsonPointer: '/s', allowEmpty: false},
+    },
+    {
+      i1: {prefix: '', jsonPointer: '/s', allowEmpty: false},
+    },
+  );
+});
+
+function indexRecordsToIndexDefinitions(
+  indexes: readonly IndexRecord[],
+): IndexDefinitions {
+  const defs: Writable<IndexDefinitions> = {};
+  for (const index of indexes) {
+    defs[index.definition.name] = {
+      prefix: index.definition.prefix,
+      jsonPointer: index.definition.jsonPointer,
+      allowEmpty: index.definition.allowEmpty,
+    };
+  }
+  return defs;
+}

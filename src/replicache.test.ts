@@ -1076,8 +1076,10 @@ test('pullInterval in constructor', async () => {
   await rep.close();
 });
 
-test('index', async () => {
-  const rep = await replicacheForTesting('test-index', {mutators: {addData}});
+test('index (deprecated methods)', async () => {
+  const rep = await replicacheForTesting('test-index-legacy', {
+    mutators: {addData},
+  });
 
   const add = rep.mutate.addData;
   await add({
@@ -1154,8 +1156,121 @@ test('index', async () => {
   await rep.dropIndex('emptyKeyIndex');
 });
 
+test('index in options', async () => {
+  const rep = await replicacheForTesting('test-index-in-options', {
+    mutators: {addData},
+    indexes: {
+      aIndex: {jsonPointer: '/a'},
+      bc: {prefix: 'c/', jsonPointer: '/bc'},
+      dIndex: {jsonPointer: '/d/e/f'},
+      emptyKeyIndex: {jsonPointer: '/'},
+    },
+  });
+
+  await testScanResult(rep, {indexName: 'aIndex'}, []);
+
+  const add = rep.mutate.addData;
+  await add({
+    'a/0': {a: '0'},
+    'a/1': {a: '1'},
+    'a/2': {a: '2'},
+    'a/3': {a: '3'},
+    'a/4': {a: '4'},
+    'b/0': {bc: '5'},
+    'b/1': {bc: '6'},
+    'b/2': {bc: '7'},
+    'c/0': {bc: '8'},
+    'd/0': {d: {e: {f: '9'}}},
+  });
+
+  await testScanResult(rep, {indexName: 'aIndex'}, [
+    [['0', 'a/0'], {a: '0'}],
+    [['1', 'a/1'], {a: '1'}],
+    [['2', 'a/2'], {a: '2'}],
+    [['3', 'a/3'], {a: '3'}],
+    [['4', 'a/4'], {a: '4'}],
+  ]);
+
+  await testScanResult(rep, {indexName: 'bc'}, [[['8', 'c/0'], {bc: '8'}]]);
+  await add({
+    'c/1': {bc: '88'},
+  });
+  await testScanResult(rep, {indexName: 'bc'}, [
+    [['8', 'c/0'], {bc: '8'}],
+    [['88', 'c/1'], {bc: '88'}],
+  ]);
+
+  await testScanResult(rep, {indexName: 'dIndex'}, [
+    [['9', 'd/0'], {d: {e: {f: '9'}}}],
+  ]);
+
+  await add({
+    'e/0': {'': ''},
+  });
+
+  await testScanResult(rep, {indexName: 'emptyKeyIndex'}, [
+    [['', 'e/0'], {'': ''}],
+  ]);
+});
+
+test('allow redefinition of indexes', async () => {
+  {
+    const pullURL = 'https://diff.com/pull';
+    const rep = await replicacheForTesting('index-redefinition', {
+      pullURL,
+      indexes: {
+        aIndex: {jsonPointer: '/a'},
+      },
+    });
+
+    fetchMock.postOnce(pullURL, {
+      cookie: '',
+      lastMutationID: 2,
+      patch: [
+        {op: 'put', key: 'a/0', value: {a: '0'}},
+        {op: 'put', key: 'a/1', value: {a: '1'}},
+        {op: 'put', key: 'b/2', value: {a: '2'}},
+        {op: 'put', key: 'b/3', value: {a: '3'}},
+      ],
+    });
+
+    rep.pull();
+
+    // Allow pull to finish (larger than PERSIST_TIMEOUT)
+    // await clock.tickAsync(2 * 1000);
+    await tickAFewTimes(20, 100);
+
+    await testScanResult(rep, {indexName: 'aIndex'}, [
+      [['0', 'a/0'], {a: '0'}],
+      [['1', 'a/1'], {a: '1'}],
+      [['2', 'b/2'], {a: '2'}],
+      [['3', 'b/3'], {a: '3'}],
+    ]);
+
+    await rep.close();
+  }
+
+  {
+    const rep = await replicacheForTesting('index-redefinition', {
+      indexes: {
+        aIndex: {jsonPointer: '/a', prefix: 'b'},
+      },
+    });
+
+    await testScanResult(rep, {indexName: 'aIndex'}, [
+      [['2', 'b/2'], {a: '2'}],
+      [['3', 'b/3'], {a: '3'}],
+    ]);
+
+    await rep.close();
+  }
+});
+
 test('index array', async () => {
-  const rep = await replicacheForTesting('test-index', {mutators: {addData}});
+  const rep = await replicacheForTesting('test-index', {
+    mutators: {addData},
+    indexes: {aIndex: {jsonPointer: '/a'}},
+  });
 
   const add = rep.mutate.addData;
   await add({
@@ -1170,7 +1285,6 @@ test('index array', async () => {
     'c/0': {bc: '8'},
   });
 
-  await rep.createIndex({name: 'aIndex', jsonPointer: '/a'});
   await testScanResult(rep, {indexName: 'aIndex'}, [
     [['0', 'a/1'], {a: ['0']}],
     [['1', 'a/2'], {a: ['1', '2']}],
@@ -1178,12 +1292,16 @@ test('index array', async () => {
     [['3', 'a/3'], {a: '3'}],
     [['4', 'a/4'], {a: ['4']}],
   ]);
-  await rep.dropIndex('aIndex');
 });
 
 test('index scan start', async () => {
   const rep = await replicacheForTesting('test-index-scan', {
     mutators: {addData},
+    indexes: {
+      bIndex: {
+        jsonPointer: '/b',
+      },
+    },
   });
 
   const add = rep.mutate.addData;
@@ -1193,11 +1311,6 @@ test('index scan start', async () => {
     'b/1': {b: 'a6'},
     'b/2': {b: 'b7'},
     'b/3': {b: 'b8'},
-  });
-
-  await rep.createIndex({
-    name: 'bIndex',
-    jsonPointer: '/b',
   });
 
   for (const key of ['a6', ['a6'], ['a6', undefined], ['a6', '']] as (
@@ -1304,8 +1417,6 @@ test('index scan start', async () => {
       [['b8', 'b/3'], {b: 'b8'}],
     ],
   );
-
-  await rep.dropIndex('bIndex');
 });
 
 test('logLevel', async () => {
@@ -1845,11 +1956,12 @@ test('profileID', async () => {
 
 test('pull and index update', async () => {
   const pullURL = 'https://pull.com/rep';
+  const indexName = 'idx1';
   const rep = await replicacheForTesting('pull-and-index-update', {
     pullURL,
+    indexes: {[indexName]: {jsonPointer: '/id'}},
   });
 
-  const indexName = 'idx1';
   let lastMutationID = 0;
 
   async function testPull(opt: {
@@ -1875,8 +1987,6 @@ test('pull and index update', async () => {
     );
     expect(actualResult).to.deep.equal(opt.expectedResult);
   }
-
-  await rep.createIndex({name: indexName, jsonPointer: '/id'});
 
   await testPull({patch: [], expectedResult: []});
 
@@ -2650,9 +2760,8 @@ test('index scan mutate', async () => {
         }
       },
     },
+    indexes: {i: {jsonPointer: '/a'}},
   });
-
-  await rep.createIndex({name: 'i', jsonPointer: '/a'});
 
   await rep.mutate.addData({
     a: {a: '0'},

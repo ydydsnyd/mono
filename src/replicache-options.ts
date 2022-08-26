@@ -213,6 +213,11 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
    * in the future without following semver versioning. Please be cautious.
    */
   experimentalKVStore?: kv.Store;
+
+  /**
+   * Defines the indexes, if any, to use on the data.
+   */
+  readonly indexes?: IndexDefinitions;
 }
 
 export type ReplicacheInternalOptions = {
@@ -236,3 +241,34 @@ export interface ReplicacheInternalAPI {
   persist(): Promise<void>;
   schedulePersist(): Promise<boolean>;
 }
+
+/**
+ * The definition of a single index.
+ */
+export interface IndexDefinition {
+  /**
+   * The prefix, if any, to limit the index over. If not provided the values of
+   * all keys are indexed.
+   */
+  readonly prefix?: string;
+
+  /**
+   * A [JSON Pointer](https://tools.ietf.org/html/rfc6901) pointing at the sub
+   * value inside each value to index over.
+   *
+   * For example, one might index over users' ages like so:
+   * `{prefix: '/user/', jsonPointer: '/age'}`
+   */
+  readonly jsonPointer: string;
+
+  /**
+   * If `true`, indexing empty values will not emit a warning.  Defaults to `false`.
+   */
+  readonly allowEmpty?: boolean;
+}
+
+/**
+ * An object as a map defining the indexes. The keys are the index names and the
+ * values are the index definitions.
+ */
+export type IndexDefinitions = {readonly [name: string]: IndexDefinition};
