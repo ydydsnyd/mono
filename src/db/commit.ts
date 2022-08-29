@@ -13,6 +13,7 @@ import {skipCommitDataAsserts} from '../config.js';
 import type {InternalValue} from '../internal-value.js';
 import type {ClientID} from '../sync/client-id.js';
 import type {MustGetChunk} from '../dag/store.js';
+import type {IndexDefinition} from '../replicache-options.js';
 
 export const DEFAULT_HEAD_NAME = 'main';
 
@@ -393,29 +394,9 @@ function assertMeta(v: unknown): asserts v is Meta {
  * The definition of an index. This is used with
  * [[Replicache.createIndex|createIndex]] when creating indexes.
  */
-export interface CreateIndexDefinition {
+export interface CreateIndexDefinition extends IndexDefinition {
   /** The name of the index. This is used when you [[ReadTransaction.scan|scan]] over an index. */
   name: string;
-
-  /**
-   * The prefix, if any, to limit the index over. If not provided the values of
-   * all keys are indexed.
-   */
-  prefix?: string;
-
-  /**
-   * A [JSON Pointer](https://tools.ietf.org/html/rfc6901) pointing at the sub
-   * value inside each value to index over.
-   *
-   * For example, one might index over users' ages like so:
-   * `createIndex({name: 'usersByAge', prefix: '/user/', jsonPointer: '/age'})`
-   */
-  jsonPointer: string;
-
-  /**
-   * If `true`, indexing empty values will not emit a warning.  Defaults to `false`.
-   */
-  allowEmpty?: boolean;
 }
 
 function assertCreateIndexDefinition(

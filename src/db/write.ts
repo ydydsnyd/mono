@@ -137,18 +137,12 @@ export class Write extends Read {
       }
     }
 
-    const indexMap = new BTreeWrite(this._dagWrite);
-    for await (const entry of this.map.scan(prefix)) {
-      await indexValue(
-        lc,
-        indexMap,
-        IndexOperation.Add,
-        entry[0],
-        entry[1],
-        jsonPointer,
-        allowEmpty,
-      );
-    }
+    const indexMap = await this._createIndexBTree(
+      lc,
+      prefix,
+      jsonPointer,
+      allowEmpty,
+    );
 
     this.indexes.set(
       name,
@@ -162,6 +156,27 @@ export class Write extends Read {
     );
   }
 
+  private async _createIndexBTree(
+    lc: LogContext,
+    prefix: string,
+    jsonPointer: string,
+    allowEmpty: boolean,
+  ) {
+    const indexMap = new BTreeWrite(this._dagWrite);
+    for await (const entry of this.map.scan(prefix)) {
+      await indexValue(
+        lc,
+        indexMap,
+        IndexOperation.Add,
+        entry[0],
+        entry[1],
+        jsonPointer,
+        allowEmpty,
+      );
+    }
+    return indexMap;
+  }
+
   async dropIndex(name: string): Promise<void> {
     if (this._meta.type === MetaType.Local) {
       throw new Error('Not allowed');
@@ -172,39 +187,55 @@ export class Write extends Read {
     }
   }
 
-  async syncIndexes(lc: LogContext, indexes: IndexDefinitions): Promise<void> {
-    const newIndexNames = new Set<string>();
+  private async _maybeReuseExistingIndex(
+    name: string,
+    definition: IndexDefinition,
+  ): Promise<IndexWrite | null> {
+    for (const [oldName, oldIndexWrite] of this.indexes) {
+      if (indexDefinitionEqual(definition, oldIndexWrite.meta.definition)) {
+        if (name === oldName) {
+          // "renamed" to same name, noop
+          return oldIndexWrite;
+        }
 
-    await Promise.all(
-      Object.entries(indexes).map(
-        async ([name, definition]: [
-          name: string,
-          definition: IndexDefinition,
-        ]) => {
-          newIndexNames.add(name);
-          const index = this.indexes.get(name);
-          if (index) {
-            if (indexDefinitionEqual(definition, index.meta.definition)) {
-              return;
-            }
-            await this.dropIndex(name);
-          }
-          await this.createIndex(
-            lc,
-            name,
-            definition.prefix ?? '',
-            definition.jsonPointer,
-            definition.allowEmpty ?? false,
-          );
-        },
-      ),
-    );
-
-    // Drop old.
-    for (const oldName of this.indexes.keys()) {
-      if (!newIndexNames.has(oldName)) {
-        await this.dropIndex(oldName);
+        // Create a new def that looks the same. Change the name and keep the
+        // map.
+        return new IndexWrite(
+          {
+            definition: nameIndexDefinition(name, definition),
+            valueHash: emptyHash,
+          },
+          oldIndexWrite.map,
+        );
       }
+    }
+    return null;
+  }
+
+  async syncIndexes(lc: LogContext, indexes: IndexDefinitions): Promise<void> {
+    const newIndexes = new Map<string, IndexWrite>();
+    for (const [name, definition] of Object.entries(indexes)) {
+      let indexWrite = await this._maybeReuseExistingIndex(name, definition);
+      if (!indexWrite) {
+        const indexMap = await this._createIndexBTree(
+          lc,
+          definition.prefix ?? '',
+          definition.jsonPointer,
+          definition.allowEmpty ?? false,
+        );
+        indexWrite = new IndexWrite(
+          {
+            definition: nameIndexDefinition(name, definition),
+            valueHash: emptyHash,
+          },
+          indexMap,
+        );
+      }
+      newIndexes.set(name, indexWrite);
+    }
+    this.indexes.clear();
+    for (const [name, indexWrite] of newIndexes) {
+      this.indexes.set(name, indexWrite);
     }
   }
 
@@ -537,4 +568,16 @@ function indexDefinitionEqual(a: IndexDefinition, b: IndexDefinition): boolean {
     (a.allowEmpty ?? false) === (b.allowEmpty ?? false) &&
     (a.prefix ?? '') === (b.prefix ?? '')
   );
+}
+
+function nameIndexDefinition(
+  name: string,
+  def: IndexDefinition,
+): Required<CreateIndexDefinition> {
+  return {
+    name,
+    prefix: def.prefix ?? '',
+    jsonPointer: def.jsonPointer,
+    allowEmpty: def.allowEmpty ?? false,
+  };
 }

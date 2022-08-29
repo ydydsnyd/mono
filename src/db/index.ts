@@ -17,7 +17,7 @@ export class IndexRead<BTree = BTreeRead> {
 }
 
 export class IndexWrite extends IndexRead<BTreeWrite> {
-  // Note: does not update self.meta.value_hash (doesn't need to at this point as flush
+  // Note: does not update self.meta.valueHash (doesn't need to at this point as flush
   // is only called during commit.)
   flush(): Promise<Hash> {
     return this.map.flush();

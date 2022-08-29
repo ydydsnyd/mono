@@ -17,6 +17,7 @@ import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 import {initDB} from './test-helpers.js';
 import type {IndexDefinitions} from '../replicache-options.js';
 import type {Writable} from '../writable';
+import {commitFromHead} from './mod.js';
 
 test('basics', async () => {
   const clientID = 'client-id';
@@ -358,15 +359,21 @@ test('resync indexes', async () => {
   const t = async (
     indexesBefore: IndexDefinitions,
     indexesToSync: IndexDefinitions,
+    postTest = (
+      _before: readonly IndexRecord[],
+      _after: readonly IndexRecord[],
+    ) => {
+      // noop
+    },
   ) => {
     const clientID = 'client-id';
-    const ds = new dag.TestStore();
+    const dagStore = new dag.TestStore();
     const lc = new LogContext();
-    await ds.withWrite(dagWrite =>
+    await dagStore.withWrite(dagWrite =>
       initDB(dagWrite, DEFAULT_HEAD_NAME, clientID),
     );
 
-    await ds.withWrite(async dagWrite => {
+    await dagStore.withWrite(async dagWrite => {
       const w = await newWriteIndexChange(
         whenceHead(DEFAULT_HEAD_NAME),
         dagWrite,
@@ -382,17 +389,36 @@ test('resync indexes', async () => {
         );
       }
 
+      await w.commit(DEFAULT_HEAD_NAME);
+    });
+
+    const indexesA = await dagStore.withRead(async dagRead => {
+      return (await commitFromHead(DEFAULT_HEAD_NAME, dagRead)).indexes;
+    });
+
+    await dagStore.withWrite(async dagWrite => {
+      const w = await newWriteIndexChange(
+        whenceHead(DEFAULT_HEAD_NAME),
+        dagWrite,
+        clientID,
+      );
       await w.syncIndexes(lc, indexesToSync);
       await w.commit(DEFAULT_HEAD_NAME);
     });
 
-    await ds.withRead(async dagRead => {
-      const [, c] = await readCommit(whenceHead(DEFAULT_HEAD_NAME), dagRead);
-      const {indexes} = c;
+    await dagStore.withRead(async dagRead => {
+      const commit = await commitFromHead(DEFAULT_HEAD_NAME, dagRead);
+      const {indexes} = commit;
       expect(indexRecordsToIndexDefinitions(indexes)).to.deep.equal(
         indexesToSync,
       );
     });
+
+    const indexesB = await dagStore.withRead(async dagRead => {
+      return (await commitFromHead(DEFAULT_HEAD_NAME, dagRead)).indexes;
+    });
+
+    postTest(indexesA, indexesB);
   };
 
   await t({}, {});
@@ -491,6 +517,61 @@ test('resync indexes', async () => {
     },
     {
       i1: {prefix: '', jsonPointer: '/s', allowEmpty: false},
+    },
+  );
+
+  // Rename indexes
+  await t(
+    {
+      i1: {prefix: 'a', jsonPointer: '/s', allowEmpty: false},
+      i2: {prefix: 'b', jsonPointer: '/s', allowEmpty: false},
+    },
+    {
+      i3: {prefix: 'b', jsonPointer: '/s', allowEmpty: false},
+      i4: {prefix: 'a', jsonPointer: '/s', allowEmpty: false},
+    },
+  );
+
+  await t(
+    {
+      i1: {prefix: 'a', jsonPointer: '/s', allowEmpty: false},
+    },
+    {
+      i2: {prefix: 'a', jsonPointer: '/s', allowEmpty: false},
+    },
+    (before: readonly IndexRecord[], after: readonly IndexRecord[]) => {
+      expect(before[0].definition.name).to.equal('i1');
+      expect(after[0].definition.name).to.equal('i2');
+      expect(before[0].valueHash).to.equal(after[0].valueHash);
+    },
+  );
+
+  await t(
+    {
+      i1: {prefix: 'a', jsonPointer: '/s', allowEmpty: false},
+      i2: {prefix: 'b', jsonPointer: '/s', allowEmpty: false},
+    },
+    {
+      i1: {prefix: 'b', jsonPointer: '/s', allowEmpty: false},
+      i2: {prefix: 'a', jsonPointer: '/s', allowEmpty: false},
+    },
+    (before: readonly IndexRecord[], after: readonly IndexRecord[]) => {
+      expect(before[0].valueHash).equal(after[1].valueHash);
+      expect(before[1].valueHash).equal(after[0].valueHash);
+    },
+  );
+
+  await t(
+    {
+      i1: {prefix: 'a', jsonPointer: '/s', allowEmpty: false},
+    },
+    {
+      i2: {prefix: 'a', jsonPointer: '/s', allowEmpty: false},
+      i3: {prefix: 'a', jsonPointer: '/s', allowEmpty: false},
+    },
+    (before: readonly IndexRecord[], after: readonly IndexRecord[]) => {
+      expect(before[0].valueHash).equal(after[0].valueHash);
+      expect(before[0].valueHash).equal(after[1].valueHash);
     },
   );
 });
