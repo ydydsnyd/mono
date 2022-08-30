@@ -3,7 +3,6 @@ import type * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import * as sync from '../sync/mod';
 import {Hash, hashOf} from '../hash';
-import type {ClientID} from '../sync/client-id';
 import {assertHasClientState, updateClients} from './clients';
 import {ComputeHashTransformer, FixedChunks} from './compute-hash-transformer';
 import {GatherVisitor} from './gather-visitor';
@@ -22,7 +21,7 @@ import {assertSnapshotMeta, assertSnapshotMetaDD31} from '../db/commit.js';
  * or is rejected if the persist fails.
  */
 export async function persist(
-  clientID: ClientID,
+  clientID: sync.ClientID,
   memdag: dag.Store,
   perdag: dag.Store,
   closed: () => boolean,
@@ -73,7 +72,7 @@ export async function persist(
 
 async function gatherTempChunks(
   memdag: dag.Store,
-  clientID: ClientID,
+  clientID: sync.ClientID,
 ): Promise<
   [
     map: ReadonlyMap<Hash, dag.Chunk>,

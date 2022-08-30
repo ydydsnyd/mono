@@ -15,17 +15,17 @@ import * as db from './db/mod';
 import * as sync from './sync/mod';
 import type {Hash} from './hash';
 import type {ScanSubscriptionInfo} from './subscriptions';
-import type {ScanNoIndexOptions} from './mod.js';
-import {decodeIndexKey, IndexKey} from './db/index.js';
+import type {ScanNoIndexOptions} from './mod';
+import {decodeIndexKey, IndexKey} from './db/index';
 import {
   toInternalValue,
   InternalValue,
   ToInternalValueReason,
   fromInternalValue,
   FromInternalValueReason,
-} from './internal-value.js';
-import type {CreateIndexDefinition} from './db/commit.js';
-import type {IndexDefinitions} from './replicache-options.js';
+} from './internal-value';
+import type {CreateIndexDefinition} from './db/commit';
+import type {IndexDefinitions} from './index-defs';
 
 /**
  * ReadTransactions are used with [[Replicache.query]] and

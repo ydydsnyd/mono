@@ -11,7 +11,7 @@ import type {MutatorDefs} from '../replicache';
 import {WriteTransactionImpl} from '../transactions';
 import {fromInternalValue, FromInternalValueReason} from '../internal-value';
 import type {LogContext} from '@rocicorp/logger';
-import type {ClientID} from './client-id';
+import type {ClientID} from './ids';
 import {isLocalMetaDD31} from '../db/commit';
 import {assert} from '../asserts';
 

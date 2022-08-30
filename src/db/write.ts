@@ -29,7 +29,11 @@ import {allEntriesAsDiff} from '../btree/read';
 import type {ClientID, DiffsMap} from '../sync/mod';
 import type {InternalValue} from '../internal-value';
 import {assert} from '../asserts';
-import type {IndexDefinition, IndexDefinitions} from '../replicache-options';
+import {
+  IndexDefinition,
+  indexDefinitionEqual,
+  IndexDefinitions,
+} from '../index-defs';
 
 export class Write extends Read {
   private readonly _dagWrite: dag.Write;
@@ -560,14 +564,6 @@ export function readIndexesForWrite(
     );
   }
   return m;
-}
-
-function indexDefinitionEqual(a: IndexDefinition, b: IndexDefinition): boolean {
-  return (
-    a.jsonPointer === b.jsonPointer &&
-    (a.allowEmpty ?? false) === (b.allowEmpty ?? false) &&
-    (a.prefix ?? '') === (b.prefix ?? '')
-  );
 }
 
 function nameIndexDefinition(

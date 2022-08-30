@@ -1,4 +1,5 @@
 import type * as dag from '../dag/mod';
+import type * as sync from '../sync/mod';
 import {assertJSONValue} from '../json';
 import {
   assert,
@@ -9,11 +10,10 @@ import {
   assertString,
 } from '../asserts';
 import {assertHash, Hash} from '../hash';
-import {skipCommitDataAsserts} from '../config.js';
-import type {InternalValue} from '../internal-value.js';
-import type {ClientID} from '../sync/client-id.js';
-import type {MustGetChunk} from '../dag/store.js';
-import type {IndexDefinition} from '../replicache-options.js';
+import {skipCommitDataAsserts} from '../config';
+import type {InternalValue} from '../internal-value';
+import type {MustGetChunk} from '../dag/store';
+import type {IndexDefinition} from '../index-defs';
 
 export const DEFAULT_HEAD_NAME = 'main';
 
@@ -54,7 +54,7 @@ export class Commit<M extends Meta> {
   }
 
   async getMutationID(
-    clientID: ClientID,
+    clientID: sync.ClientID,
     dagRead: dag.MustGetChunk,
   ): Promise<number> {
     const {meta} = this;
@@ -97,7 +97,7 @@ export class Commit<M extends Meta> {
   }
 
   async getNextMutationID(
-    clientID: ClientID,
+    clientID: sync.ClientID,
     dagRead: dag.MustGetChunk,
   ): Promise<number> {
     return (await this.getMutationID(clientID, dagRead)) + 1;
@@ -130,7 +130,7 @@ export async function localMutations(
 
 export async function localMutationsGreaterThan(
   fromCommitHash: Hash,
-  mutationIDLimits: Record<ClientID, number>,
+  mutationIDLimits: Record<sync.ClientID, number>,
   dagRead: dag.Read,
 ): Promise<Commit<LocalMeta>[]> {
   if (DD31) {
@@ -183,7 +183,7 @@ export async function baseSnapshot(
 
 export function snapshotMetaParts(
   c: Commit<SnapshotMeta | SnapshotMetaDD31>,
-  clientID: ClientID,
+  clientID: sync.ClientID,
 ): [lastMutationID: number, cookie: InternalValue] {
   const m = c.meta;
   let lmid;
@@ -270,7 +270,7 @@ export type LocalMeta = {
 };
 
 export type LocalMetaDD31 = LocalMeta & {
-  readonly clientID: ClientID;
+  readonly clientID: sync.ClientID;
 };
 
 function assertLocalMeta(v: Record<string, unknown>): asserts v is LocalMeta {
@@ -311,7 +311,7 @@ export type SnapshotMeta = {
 export type SnapshotMetaDD31 = {
   readonly type: MetaType.Snapshot;
   readonly basisHash: Hash | null;
-  readonly lastMutationIDs: Record<ClientID, number>;
+  readonly lastMutationIDs: Record<sync.ClientID, number>;
   readonly cookieJSON: InternalValue;
 };
 
@@ -385,10 +385,10 @@ function assertMeta(v: unknown): asserts v is Meta {
  * The definition of an index. This is used with
  * [[Replicache.createIndex|createIndex]] when creating indexes.
  */
-export interface CreateIndexDefinition extends IndexDefinition {
+export type CreateIndexDefinition = IndexDefinition & {
   /** The name of the index. This is used when you [[ReadTransaction.scan|scan]] over an index. */
   name: string;
-}
+};
 
 function assertCreateIndexDefinition(
   v: unknown,
@@ -424,7 +424,7 @@ export function newLocal(
   valueHash: Hash,
   indexes: readonly IndexRecord[],
   timestamp: number,
-  clientID: ClientID,
+  clientID: sync.ClientID,
 ): Commit<LocalMeta | LocalMetaDD31> {
   if (DD31) {
     const meta: LocalMetaDD31 = {
@@ -474,7 +474,7 @@ export function newSnapshot(
 export function newSnapshotDD31(
   createChunk: dag.CreateChunk,
   basisHash: Hash | null,
-  lastMutationIDs: Record<ClientID, number>,
+  lastMutationIDs: Record<sync.ClientID, number>,
   cookieJSON: InternalValue,
   valueHash: Hash,
   indexes: readonly IndexRecord[],
@@ -510,7 +510,7 @@ export function newSnapshotCommitData(
 
 export function newSnapshotCommitDataDD31(
   basisHash: Hash | null,
-  lastMutationIDs: Record<ClientID, number>,
+  lastMutationIDs: Record<sync.ClientID, number>,
   cookieJSON: InternalValue,
   valueHash: Hash,
   indexes: readonly IndexRecord[],

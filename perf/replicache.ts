@@ -8,6 +8,7 @@ import {
   Replicache,
   ReplicacheOptions,
   WriteTransaction,
+  IndexDefinitions,
 } from '../out/replicache';
 import {jsonArrayTestData, TestDataObject, jsonObjectTestData} from './data';
 import type {Bencher, Benchmark} from './perf';
@@ -18,10 +19,7 @@ import {
 } from '../src/persist/mod';
 import {uuid} from '../src/uuid';
 import {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
-import type {
-  IndexDefinitions,
-  ReplicacheInternalAPI,
-} from '../src/replicache-options';
+import type {ReplicacheInternalAPI} from '../src/replicache-options';
 
 const valSize = 1024;
 

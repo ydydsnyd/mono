@@ -10,11 +10,8 @@ export type {
   ClientStateNotFoundReason,
   PendingMutation,
 } from './replicache';
-export type {
-  IndexDefinition,
-  IndexDefinitions,
-  ReplicacheOptions,
-} from './replicache-options';
+export type {ReplicacheOptions} from './replicache-options';
+export type {IndexDefinition, IndexDefinitions} from './index-defs';
 export type {ReadTransaction, WriteTransaction} from './transactions';
 export type {
   GetScanIterator,

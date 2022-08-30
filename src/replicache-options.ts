@@ -3,6 +3,7 @@ import type {Pusher} from './pusher';
 import type {Puller} from './puller';
 import type {MutatorDefs, RequestOptions} from './replicache';
 import type * as kv from './kv/mod';
+import type {IndexDefinitions} from './index-defs';
 
 /**
  * The options passed to [[Replicache]].
@@ -241,34 +242,3 @@ export interface ReplicacheInternalAPI {
   persist(): Promise<void>;
   schedulePersist(): Promise<boolean>;
 }
-
-/**
- * The definition of a single index.
- */
-export interface IndexDefinition {
-  /**
-   * The prefix, if any, to limit the index over. If not provided the values of
-   * all keys are indexed.
-   */
-  readonly prefix?: string;
-
-  /**
-   * A [JSON Pointer](https://tools.ietf.org/html/rfc6901) pointing at the sub
-   * value inside each value to index over.
-   *
-   * For example, one might index over users' ages like so:
-   * `{prefix: '/user/', jsonPointer: '/age'}`
-   */
-  readonly jsonPointer: string;
-
-  /**
-   * If `true`, indexing empty values will not emit a warning.  Defaults to `false`.
-   */
-  readonly allowEmpty?: boolean;
-}
-
-/**
- * An object as a map defining the indexes. The keys are the index names and the
- * values are the index definitions.
- */
-export type IndexDefinitions = {readonly [name: string]: IndexDefinition};

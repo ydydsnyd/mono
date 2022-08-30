@@ -10,7 +10,7 @@ import {expect} from '@esm-bundle/chai';
 import {sleep} from './sleep';
 import type * as dag from './dag/mod';
 import * as sinon from 'sinon';
-import type {IndexDefinitions} from './replicache-options';
+import type {IndexDefinitions} from './index-defs';
 import type {ReadTransaction, WriteTransaction} from './transactions';
 import type {PatchOperation} from './puller';
 import type {ScanOptions} from './scan-options';

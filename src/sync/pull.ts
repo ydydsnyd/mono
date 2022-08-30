@@ -30,7 +30,7 @@ import {
   deepEqual,
 } from '../internal-value.js';
 import {assert} from '../asserts.js';
-import type {ClientID} from './client-id.js';
+import type {ClientID} from './ids.js';
 
 export const PULL_VERSION = 0;
 

@@ -19,7 +19,6 @@ import {
   isTempHash,
   makeNewFakeHashFunction,
 } from '../hash';
-import type {ClientID} from '../sync/client-id';
 import {getClient, ClientStateNotFoundError} from './clients';
 import {addSyncSnapshot} from '../sync/test-helpers';
 import {persist} from './persist';
@@ -37,7 +36,7 @@ teardown(() => {
 });
 
 async function assertSameDagData(
-  clientID: ClientID,
+  clientID: sync.ClientID,
   memdag: dag.TestStore,
   perdag: dag.TestStore,
 ): Promise<void> {
@@ -60,7 +59,7 @@ async function assertSameDagData(
   expect(memSnapshot).to.deep.equal(perSnapshot);
 }
 async function assertClientMutationIDsCorrect(
-  clientID: ClientID,
+  clientID: sync.ClientID,
   perdag: dag.TestStore,
 ): Promise<void> {
   await perdag.withRead(async dagRead => {

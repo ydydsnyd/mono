@@ -13,11 +13,11 @@ import {newWriteIndexChange, newWriteLocal} from './write';
 import {encodeIndexKey} from './index';
 import {asyncIterableToArray} from '../async-iterable-to-array';
 import {BTreeRead} from '../btree/mod';
-import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
-import {initDB} from './test-helpers.js';
-import type {IndexDefinitions} from '../replicache-options.js';
+import {toInternalValue, ToInternalValueReason} from '../internal-value';
+import {initDB} from './test-helpers';
+import type {IndexDefinitions} from '../index-defs';
 import type {Writable} from '../writable';
-import {commitFromHead} from './mod.js';
+import {commitFromHead} from './mod';
 
 test('basics', async () => {
   const clientID = 'client-id';

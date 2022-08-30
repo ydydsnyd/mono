@@ -1,6 +1,4 @@
-export type {BranchID} from './branch-id';
-export type {ClientID} from './client-id';
-export {init as initClientID, CID_KEY} from './client-id';
+export type {ClientID, BranchID} from './ids';
 export {maybeEndPull, beginPull, handlePullResponse} from './pull';
 export {push} from './push';
 export {newRequestID} from './request-id';

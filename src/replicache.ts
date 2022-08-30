@@ -20,7 +20,6 @@ import {ConnectionLoop, MAX_DELAY_MS, MIN_DELAY_MS} from './connection-loop';
 import {defaultPuller} from './puller';
 import {defaultPusher} from './pusher';
 import type {
-  IndexDefinitions,
   ReplicacheInternalOptions,
   ReplicacheOptions,
 } from './replicache-options';
@@ -67,6 +66,7 @@ import {
 } from './internal-value.js';
 import {rebaseMutation} from './sync/rebase';
 import type {CreateIndexDefinition} from './db/commit.js';
+import type {IndexDefinitions} from './index-defs';
 
 export type BeginPullResult = {
   requestID: string;
