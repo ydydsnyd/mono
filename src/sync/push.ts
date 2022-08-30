@@ -5,9 +5,13 @@ import {assertHTTPRequestInfo, HTTPRequestInfo} from '../http-request-info';
 import {Pusher, PushError} from '../pusher';
 import {callJSRequest} from './js-request';
 import {toError} from '../to-error';
-import type {InternalValue} from '../internal-value.js';
+import type {InternalValue} from '../internal-value';
+import {assertLocalMetaDD31} from '../db/commit';
+import {assert} from '../asserts.js';
+import type {BranchID} from './branch-id.js';
 
 export const PUSH_VERSION = 0;
+export const PUSH_VERSION_DD31 = 1;
 
 /**
  * The JSON value used as the body when doing a POST to the [push
@@ -17,7 +21,19 @@ export type PushRequest = {
   profileID: string;
   clientID: string;
   mutations: Mutation[];
-  pushVersion: number;
+  pushVersion: typeof PUSH_VERSION;
+  // schema_version can optionally be used to specify to the push endpoint
+  // version information about the mutators the app is using (e.g., format
+  // of mutator args).
+  schemaVersion: string;
+};
+
+export type PushRequestDD31 = {
+  profileID: string;
+  branchID: BranchID;
+  clientID: string;
+  mutations: MutationDD31[];
+  pushVersion: typeof PUSH_VERSION_DD31;
   // schema_version can optionally be used to specify to the push endpoint
   // version information about the mutators the app is using (e.g., format
   // of mutator args).
@@ -34,6 +50,17 @@ export type Mutation = {
   readonly timestamp: number;
 };
 
+/**
+ * Mutation describes a single mutation done on the client.
+ */
+export type MutationDD31 = {
+  readonly clientID: string;
+  readonly id: number;
+  readonly name: string;
+  readonly args: InternalValue;
+  readonly timestamp: number;
+};
+
 export function convert(lm: db.LocalMeta): Mutation {
   return {
     id: lm.mutationID,
@@ -43,11 +70,17 @@ export function convert(lm: db.LocalMeta): Mutation {
   };
 }
 
+export function convertDD31(lm: db.LocalMeta): MutationDD31 {
+  assertLocalMetaDD31(lm);
+  return {clientID: lm.clientID, ...convert(lm)};
+}
+
 export async function push(
   requestID: string,
   store: dag.Store,
   lc: LogContext,
   profileID: string,
+  branchID: BranchID | undefined,
   clientID: string,
   pusher: Pusher,
   pushURL: string,
@@ -69,22 +102,46 @@ export async function push(
   pending.reverse();
 
   let httpRequestInfo: HTTPRequestInfo | undefined = undefined;
+  let pushReq: PushRequest | PushRequestDD31;
+
   if (pending.length > 0) {
-    const pushMutations: Mutation[] = [];
-    for (const commit of pending) {
-      if (commit.isLocal()) {
-        pushMutations.push(convert(commit.meta));
-      } else {
-        throw new Error('Internal non local pending commit');
+    if (DD31) {
+      const pushMutations: MutationDD31[] = [];
+      for (const commit of pending) {
+        if (commit.isLocal()) {
+          pushMutations.push(convertDD31(commit.meta));
+        } else {
+          throw new Error('Internal non local pending commit');
+        }
       }
+      assert(branchID);
+      const r: PushRequestDD31 = {
+        profileID,
+        branchID,
+        clientID,
+        mutations: pushMutations,
+        pushVersion: PUSH_VERSION_DD31,
+        schemaVersion,
+      };
+      pushReq = r;
+    } else {
+      assert(!branchID);
+      const pushMutations: Mutation[] = [];
+      for (const commit of pending) {
+        if (commit.isLocal()) {
+          pushMutations.push(convert(commit.meta));
+        } else {
+          throw new Error('Internal non local pending commit');
+        }
+      }
+      pushReq = {
+        profileID,
+        clientID,
+        mutations: pushMutations,
+        pushVersion: PUSH_VERSION,
+        schemaVersion,
+      };
     }
-    const pushReq = {
-      profileID,
-      clientID,
-      mutations: pushMutations,
-      pushVersion: PUSH_VERSION,
-      schemaVersion,
-    };
     lc.debug?.('Starting push...');
     const pushStart = Date.now();
     httpRequestInfo = await callPusher(
@@ -103,7 +160,7 @@ export async function push(
 async function callPusher(
   pusher: Pusher,
   url: string,
-  body: PushRequest,
+  body: PushRequest | PushRequestDD31,
   auth: string,
   requestID: string,
 ): Promise<HTTPRequestInfo> {

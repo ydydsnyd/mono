@@ -173,6 +173,8 @@ export class MutationRecovery<M extends MutatorDefs> {
             clientIDsVisited.add(clientID);
             newClientMap = await this._recoverMutationsOfClient(
               client,
+              // TODO(dd31): Iterate over all branch ids...
+              DD31 ? 'FAKE_BRANCH_ID_FOR_RECOVER_MUTATION' : undefined,
               clientID,
               perdag,
               database,
@@ -200,6 +202,7 @@ export class MutationRecovery<M extends MutatorDefs> {
    */
   private async _recoverMutationsOfClient(
     client: persist.Client,
+    branchID: sync.BranchID | undefined,
     clientID: sync.ClientID,
     perdag: dag.Store,
     database: persist.IndexedDBDatabase,
@@ -254,6 +257,7 @@ export class MutationRecovery<M extends MutatorDefs> {
               dagForOtherClient,
               requestLc,
               await delegate.profileID,
+              branchID,
               clientID,
               pusher,
               pushURL,

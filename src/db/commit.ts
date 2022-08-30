@@ -291,17 +291,8 @@ export function assertLocalMetaDD31(
   v: Record<string, unknown>,
 ): asserts v is LocalMetaDD31 {
   // type already asserted
-  assertNumber(v.mutationID);
-  assertString(v.mutatorName);
-  if (!v.mutatorName) {
-    throw new Error('Missing mutator name');
-  }
-  assertJSONValue(v.mutatorArgsJSON);
-  if (v.originalHash !== null) {
-    assertHash(v.originalHash);
-  }
-  assertNumber(v.timestamp);
   assertString(v.clientID);
+  assertLocalMeta(v);
 }
 
 export function isLocalMetaDD31(

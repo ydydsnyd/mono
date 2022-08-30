@@ -225,6 +225,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   private readonly _ready: Promise<void>;
   private readonly _profileIDPromise: Promise<string>;
   private readonly _clientIDPromise: Promise<string>;
+  private readonly _branchIDPromise: Promise<string | undefined>;
   protected readonly _licenseCheckPromise: Promise<boolean>;
 
   /* The license is active if we have sent at least one license active ping
@@ -441,6 +442,8 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
     const profileIDResolver = resolver<string>();
     this._profileIDPromise = profileIDResolver.promise;
+    const branchIDResolver = resolver<string | undefined>();
+    this._branchIDPromise = branchIDResolver.promise;
     const clientIDResolver = resolver<string>();
     this._clientIDPromise = clientIDResolver.promise;
 
@@ -456,6 +459,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     void this._open(
       options.indexes,
       profileIDResolver.resolve,
+      branchIDResolver.resolve,
       clientIDResolver.resolve,
       readyResolver.resolve,
       licenseCheckResolver.resolve,
@@ -472,6 +476,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   private async _open(
     indexes: IndexDefinitions | undefined,
     profileIDResolver: (profileID: string) => void,
+    resolveBranchID: (branchID: sync.BranchID | undefined) => void,
     resolveClientID: (clientID: string) => void,
     resolveReady: () => void,
     resolveLicenseCheck: (valid: boolean) => void,
@@ -483,6 +488,8 @@ export class Replicache<MD extends MutatorDefs = {}> {
     await this._idbDatabases.getProfileID().then(profileIDResolver);
     await this._idbDatabases.putDatabase(this._idbDatabase);
     const [clientID, client, clients] = await persist.initClient(this._perdag);
+    // TODO(DD31): Get the branchID from initClient.
+    resolveBranchID(DD31 ? 'FAKE_BRANCH_ID' : undefined);
     resolveClientID(clientID);
     await this._memdag.withWrite(async write => {
       await write.setHead(db.DEFAULT_HEAD_NAME, client.headHash);
@@ -1040,6 +1047,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     await this._ready;
     const profileID = await this._profileIDPromise;
     const clientID = await this._clientIDPromise;
+    const branchID = await this._branchIDPromise;
     return this._wrapInOnlineCheck(async () => {
       const {result: pushResponse} = await this._wrapInReauthRetries(
         async (requestID: string, requestLc: LogContext) => {
@@ -1050,6 +1058,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
               this._memdag,
               requestLc,
               profileID,
+              branchID,
               clientID,
               this.pusher,
               this.pushURL,

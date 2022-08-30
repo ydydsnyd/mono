@@ -12,13 +12,20 @@ import {
 } from '../db/test-helpers';
 import type {HTTPRequestInfo} from '../http-request-info';
 import {SYNC_HEAD_NAME} from './sync-head-name';
-import {push, PushRequest, PUSH_VERSION} from './push';
+import {
+  push,
+  PushRequest,
+  PushRequestDD31,
+  PUSH_VERSION,
+  PUSH_VERSION_DD31,
+} from './push';
 import type {Pusher} from '../pusher';
 import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
+import type {BranchID} from './branch-id.js';
 
 type FakePusherArgs = {
   expPush: boolean;
-  expPushReq?: PushRequest;
+  expPushReq?: PushRequest | PushRequestDD31;
   expPushURL: string;
   expAuth: string;
   expRequestID: string;
@@ -60,6 +67,7 @@ function makeFakePusher(options: FakePusherArgs): Pusher {
 }
 
 test('try push', async () => {
+  const branchID = DD31 ? 'test_branch_id' : undefined;
   const clientID = 'test_client_id';
   const store = new dag.TestStore();
   const lc = new LogContext();
@@ -84,7 +92,7 @@ test('try push', async () => {
 
     // Push expectations.
     numPendingMutations: number;
-    expPushReq: PushRequest | undefined;
+    expPushReq: PushRequest | PushRequestDD31 | undefined;
     pushResult: undefined | 'ok' | {error: string};
     expBatchPushInfo: HTTPRequestInfo | undefined;
   };
@@ -99,20 +107,37 @@ test('try push', async () => {
     {
       name: '1 pending',
       numPendingMutations: 1,
-      expPushReq: {
-        profileID,
-        clientID,
-        mutations: [
-          {
-            id: 2,
-            name: 'mutator_name_3',
-            args: toInternalValue([3], ToInternalValueReason.Test),
-            timestamp: 42,
+      expPushReq: DD31
+        ? {
+            profileID,
+            branchID: branchID as BranchID,
+            clientID,
+            mutations: [
+              {
+                clientID,
+                id: 2,
+                name: 'mutator_name_3',
+                args: toInternalValue([3], ToInternalValueReason.Test),
+                timestamp: 42,
+              },
+            ],
+            pushVersion: PUSH_VERSION_DD31,
+            schemaVersion: pushSchemaVersion,
+          }
+        : {
+            profileID,
+            clientID,
+            mutations: [
+              {
+                id: 2,
+                name: 'mutator_name_3',
+                args: toInternalValue([3], ToInternalValueReason.Test),
+                timestamp: 42,
+              },
+            ],
+            pushVersion: PUSH_VERSION,
+            schemaVersion: pushSchemaVersion,
           },
-        ],
-        pushVersion: PUSH_VERSION,
-        schemaVersion: pushSchemaVersion,
-      },
       pushResult: 'ok',
       expBatchPushInfo: {
         httpStatusCode: 200,
@@ -122,29 +147,56 @@ test('try push', async () => {
     {
       name: '2 pending',
       numPendingMutations: 2,
-      expPushReq: {
-        profileID,
-        clientID,
-        mutations: [
-          // These mutations aren't actually added to the chain until the test
-          // case runs, but we happen to know how they are created by the db
-          // test helpers so we use that knowledge here.
-          {
-            id: 2,
-            name: 'mutator_name_3',
-            args: toInternalValue([3], ToInternalValueReason.Test),
-            timestamp: 42,
+      expPushReq: DD31
+        ? {
+            profileID,
+            branchID: branchID as BranchID,
+            clientID,
+            mutations: [
+              // These mutations aren't actually added to the chain until the test
+              // case runs, but we happen to know how they are created by the db
+              // test helpers so we use that knowledge here.
+              {
+                clientID,
+                id: 2,
+                name: 'mutator_name_3',
+                args: toInternalValue([3], ToInternalValueReason.Test),
+                timestamp: 42,
+              },
+              {
+                clientID,
+                id: 3,
+                name: 'mutator_name_5',
+                args: toInternalValue([5], ToInternalValueReason.Test),
+                timestamp: 42,
+              },
+            ],
+            pushVersion: PUSH_VERSION_DD31,
+            schemaVersion: pushSchemaVersion,
+          }
+        : {
+            profileID,
+            clientID,
+            mutations: [
+              // These mutations aren't actually added to the chain until the test
+              // case runs, but we happen to know how they are created by the db
+              // test helpers so we use that knowledge here.
+              {
+                id: 2,
+                name: 'mutator_name_3',
+                args: toInternalValue([3], ToInternalValueReason.Test),
+                timestamp: 42,
+              },
+              {
+                id: 3,
+                name: 'mutator_name_5',
+                args: toInternalValue([5], ToInternalValueReason.Test),
+                timestamp: 42,
+              },
+            ],
+            pushVersion: PUSH_VERSION,
+            schemaVersion: pushSchemaVersion,
           },
-          {
-            id: 3,
-            name: 'mutator_name_5',
-            args: toInternalValue([5], ToInternalValueReason.Test),
-            timestamp: 42,
-          },
-        ],
-        pushVersion: PUSH_VERSION,
-        schemaVersion: pushSchemaVersion,
-      },
       pushResult: 'ok',
       expBatchPushInfo: {
         httpStatusCode: 200,
@@ -154,29 +206,56 @@ test('try push', async () => {
     {
       name: '2 mutations to push, push errors',
       numPendingMutations: 2,
-      expPushReq: {
-        profileID,
-        clientID,
-        mutations: [
-          // These mutations aren't actually added to the chain until the test
-          // case runs, but we happen to know how they are created by the db
-          // test helpers so we use that knowledge here.
-          {
-            id: 2,
-            name: 'mutator_name_3',
-            args: toInternalValue([3], ToInternalValueReason.Test),
-            timestamp: 42,
+      expPushReq: DD31
+        ? {
+            profileID,
+            branchID: branchID as BranchID,
+            clientID,
+            mutations: [
+              // These mutations aren't actually added to the chain until the test
+              // case runs, but we happen to know how they are created by the db
+              // test helpers so we use that knowledge here.
+              {
+                clientID,
+                id: 2,
+                name: 'mutator_name_3',
+                args: toInternalValue([3], ToInternalValueReason.Test),
+                timestamp: 42,
+              },
+              {
+                clientID,
+                id: 3,
+                name: 'mutator_name_5',
+                args: toInternalValue([5], ToInternalValueReason.Test),
+                timestamp: 42,
+              },
+            ],
+            pushVersion: PUSH_VERSION_DD31,
+            schemaVersion: pushSchemaVersion,
+          }
+        : {
+            profileID,
+            clientID,
+            mutations: [
+              // These mutations aren't actually added to the chain until the test
+              // case runs, but we happen to know how they are created by the db
+              // test helpers so we use that knowledge here.
+              {
+                id: 2,
+                name: 'mutator_name_3',
+                args: toInternalValue([3], ToInternalValueReason.Test),
+                timestamp: 42,
+              },
+              {
+                id: 3,
+                name: 'mutator_name_5',
+                args: toInternalValue([5], ToInternalValueReason.Test),
+                timestamp: 42,
+              },
+            ],
+            pushVersion: PUSH_VERSION,
+            schemaVersion: pushSchemaVersion,
           },
-          {
-            id: 3,
-            name: 'mutator_name_5',
-            args: toInternalValue([5], ToInternalValueReason.Test),
-            timestamp: 42,
-          },
-        ],
-        pushVersion: PUSH_VERSION,
-        schemaVersion: pushSchemaVersion,
-      },
       pushResult: {error: 'FetchNotOk(500)'},
       expBatchPushInfo: {
         httpStatusCode: 500,
@@ -246,6 +325,7 @@ test('try push', async () => {
       store,
       lc,
       profileID,
+      branchID,
       clientID,
       pusher,
       pushURL,

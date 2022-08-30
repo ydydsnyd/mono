@@ -428,10 +428,30 @@ test('push', async () => {
   await tickAFewTimes();
   expect(deleteCount).to.equal(2);
   const {mutations} = await fetchMock.lastCall().request.json();
-  expect(mutations).to.deep.equal([
-    {id: 1, name: 'deleteTodo', args: {id: id1}, timestamp: 100},
-    {id: 2, name: 'deleteTodo', args: {id: id2}, timestamp: 100},
-  ]);
+  const clientID = await rep.clientID;
+  expect(mutations).to.deep.equal(
+    DD31
+      ? [
+          {
+            clientID,
+            id: 1,
+            name: 'deleteTodo',
+            args: {id: id1},
+            timestamp: 100,
+          },
+          {
+            clientID,
+            id: 2,
+            name: 'deleteTodo',
+            args: {id: id2},
+            timestamp: 100,
+          },
+        ]
+      : [
+          {id: 1, name: 'deleteTodo', args: {id: id1}, timestamp: 100},
+          {id: 2, name: 'deleteTodo', args: {id: id2}, timestamp: 100},
+        ],
+  );
 
   await createTodo({
     id: id1,
@@ -448,16 +468,47 @@ test('push', async () => {
   await tickAFewTimes();
   {
     const {mutations} = await fetchMock.lastCall().request.json();
-    expect(mutations).to.deep.equal([
-      {id: 1, name: 'deleteTodo', args: {id: id1}, timestamp: 100},
-      {id: 2, name: 'deleteTodo', args: {id: id2}, timestamp: 100},
-      {
-        id: 3,
-        name: 'createTodo',
-        args: {id: id1, text: 'Test'},
-        timestamp: 200,
-      },
-    ]);
+    expect(mutations).to.deep.equal(
+      DD31
+        ? [
+            {
+              clientID,
+              id: 1,
+              name: 'deleteTodo',
+              args: {id: id1},
+              timestamp: 100,
+            },
+            {
+              clientID,
+              id: 2,
+              name: 'deleteTodo',
+              args: {id: id2},
+              timestamp: 100,
+            },
+            {
+              clientID,
+              id: 3,
+              name: 'createTodo',
+              args: {id: id1, text: 'Test'},
+              timestamp: 200,
+            },
+          ]
+        : [
+            {id: 1, name: 'deleteTodo', args: {id: id1}, timestamp: 100},
+            {
+              id: 2,
+              name: 'deleteTodo',
+              args: {id: id2},
+              timestamp: 100,
+            },
+            {
+              id: 3,
+              name: 'createTodo',
+              args: {id: id1, text: 'Test'},
+              timestamp: 200,
+            },
+          ],
+    );
   }
 
   await createTodo({
@@ -482,24 +533,71 @@ test('push', async () => {
   await tickAFewTimes();
   {
     const {mutations} = await fetchMock.lastCall().request.json();
-    expect(mutations).to.deep.equal([
-      {id: 1, name: 'deleteTodo', args: {id: id1}, timestamp: 100},
-      {id: 2, name: 'deleteTodo', args: {id: id2}, timestamp: 100},
-      {
-        id: 3,
-        name: 'createTodo',
-        args: {id: id1, text: 'Test'},
-        timestamp: 200,
-      },
-      {
-        id: 4,
-        name: 'createTodo',
-        args: {id: id2, text: 'Test 2'},
-        timestamp: 300,
-      },
-      {id: 5, name: 'deleteTodo', args: {id: id1}, timestamp: 300},
-      {id: 6, name: 'deleteTodo', args: {id: id2}, timestamp: 300},
-    ]);
+    expect(mutations).to.deep.equal(
+      DD31
+        ? [
+            {
+              clientID,
+              id: 1,
+              name: 'deleteTodo',
+              args: {id: id1},
+              timestamp: 100,
+            },
+            {
+              clientID,
+              id: 2,
+              name: 'deleteTodo',
+              args: {id: id2},
+              timestamp: 100,
+            },
+            {
+              clientID,
+              id: 3,
+              name: 'createTodo',
+              args: {id: id1, text: 'Test'},
+              timestamp: 200,
+            },
+            {
+              clientID,
+              id: 4,
+              name: 'createTodo',
+              args: {id: id2, text: 'Test 2'},
+              timestamp: 300,
+            },
+            {
+              clientID,
+              id: 5,
+              name: 'deleteTodo',
+              args: {id: id1},
+              timestamp: 300,
+            },
+            {
+              clientID,
+              id: 6,
+              name: 'deleteTodo',
+              args: {id: id2},
+              timestamp: 300,
+            },
+          ]
+        : [
+            {id: 1, name: 'deleteTodo', args: {id: id1}, timestamp: 100},
+            {id: 2, name: 'deleteTodo', args: {id: id2}, timestamp: 100},
+            {
+              id: 3,
+              name: 'createTodo',
+              args: {id: id1, text: 'Test'},
+              timestamp: 200,
+            },
+            {
+              id: 4,
+              name: 'createTodo',
+              args: {id: id2, text: 'Test 2'},
+              timestamp: 300,
+            },
+            {id: 5, name: 'deleteTodo', args: {id: id1}, timestamp: 300},
+            {id: 6, name: 'deleteTodo', args: {id: id2}, timestamp: 300},
+          ],
+    );
   }
 
   expect(deleteCount).to.equal(4);
@@ -2563,14 +2661,26 @@ test('mutation timestamps are immutable', async () => {
   // Create a mutation and verify it has been assigned current time.
   await rep.mutate.foo(null);
   await rep.invokePush();
-  expect(pending).deep.equal([
-    {
-      id: 1,
-      name: 'foo',
-      args: null,
-      timestamp: 100,
-    },
-  ]);
+  expect(pending).deep.equal(
+    DD31
+      ? [
+          {
+            clientID: await rep.clientID,
+            id: 1,
+            name: 'foo',
+            args: null,
+            timestamp: 100,
+          },
+        ]
+      : [
+          {
+            id: 1,
+            name: 'foo',
+            args: null,
+            timestamp: 100,
+          },
+        ],
+  );
 
   // Move clock forward, then cause a rebase, the pending mutation will
   // replay internally.
@@ -2598,14 +2708,26 @@ test('mutation timestamps are immutable', async () => {
 
   // Check that mutation timestamp did not change
   await rep.invokePush();
-  expect(pending).deep.equal([
-    {
-      id: 1,
-      name: 'foo',
-      args: null,
-      timestamp: 100,
-    },
-  ]);
+  expect(pending).deep.equal(
+    DD31
+      ? [
+          {
+            clientID: await rep.clientID,
+            id: 1,
+            name: 'foo',
+            args: null,
+            timestamp: 100,
+          },
+        ]
+      : [
+          {
+            id: 1,
+            name: 'foo',
+            args: null,
+            timestamp: 100,
+          },
+        ],
+  );
 });
 
 // Define this here to prevent issues with building docs
