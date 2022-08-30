@@ -29,16 +29,12 @@ export async function processDisconnects(
   for (const clientID of storedConnectedClients) {
     if (!currentlyConnectedClients.has(clientID)) {
       lc.debug?.("Executing disconnectHandler for:", clientID);
-      const disconnectHandlerCache = new EntryCache(storage);
-      const tx = new ReplicacheTransaction(
-        disconnectHandlerCache,
-        clientID,
-        nextVersion
-      );
+      const cache = new EntryCache(storage);
+      const tx = new ReplicacheTransaction(cache, clientID, nextVersion);
       try {
         await disconnectHandler(tx);
-        await putVersion(nextVersion, disconnectHandlerCache);
-        await disconnectHandlerCache.flush();
+        await putVersion(nextVersion, cache);
+        await cache.flush();
       } catch (e) {
         lc.info?.("Error executing disconnectHandler for:", clientID, e);
       }

@@ -200,11 +200,6 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
           break;
         }
       }
-      lc.info?.(
-        storedConnectedClients,
-        [...this._clients.keys()],
-        hasDisconnectsToProcess
-      );
       if (!hasPendingMutations(this._clients) && !hasDisconnectsToProcess) {
         lc.debug?.("No pending mutations or disconnects to process, exiting");
         if (this._turnTimerID) {

@@ -371,7 +371,6 @@ test("processFrame", async () => {
 
   for (const c of cases) {
     await durable.deleteAll();
-    console.log(c.name);
     const storage = new DurableStorage(durable);
 
     await storage.put(versionKey, startVersion);
@@ -407,8 +406,6 @@ test("processFrame", async () => {
       [connectedClientsKey, c.clients],
     ]);
 
-    console.log(expectedState);
-    console.log(await durable.list());
     expect((await durable.list()).size).toEqual(expectedState.size);
     for (const [key, value] of expectedState) {
       expect(await storage.get(key, s.any())).toEqual(value);

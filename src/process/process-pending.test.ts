@@ -226,7 +226,6 @@ test("processPending", async () => {
   const durable = await getMiniflareDurableObjectStorage(id);
 
   for (const c of cases) {
-    console.log(c.name);
     await durable.deleteAll();
     const storage = new DurableStorage(durable);
     await putVersion(c.version, storage);
