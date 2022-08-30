@@ -240,5 +240,4 @@ export type ReplicacheInternalOptions = {
 
 export interface ReplicacheInternalAPI {
   persist(): Promise<void>;
-  schedulePersist(): Promise<boolean>;
 }

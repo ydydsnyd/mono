@@ -70,7 +70,8 @@ export class ReplicacheTest<
   }
 
   schedulePersist() {
-    return this._internalAPI.schedulePersist();
+    // @ts-expect-error Property '_schedulePersist' is private
+    return super._schedulePersist();
   }
 
   recoverMutationsSpy = sinon.spy(this, 'recoverMutations');

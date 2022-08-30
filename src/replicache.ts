@@ -381,7 +381,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
     if (internalOptions.exposeInternalAPI) {
       internalOptions.exposeInternalAPI({
         persist: () => this._persist(),
-        schedulePersist: () => this._schedulePersist(),
       });
     }
 
