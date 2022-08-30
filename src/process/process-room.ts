@@ -1,6 +1,7 @@
 // Processes zero or more mutations against a room, returning necessary pokes
 
 import type { LogContext } from "@rocicorp/logger";
+import type { DisconnectHandler } from "../server/disconnect.js";
 import { fastForwardRoom } from "../ff/fast-forward.js";
 import { DurableStorage } from "../storage/durable-storage.js";
 import { EntryCache } from "../storage/entry-cache.js";
@@ -26,6 +27,7 @@ export async function processRoom(
   lc: LogContext,
   clients: ClientMap,
   mutators: MutatorMap,
+  disconnectHandler: DisconnectHandler,
   durable: DurableObjectStorage,
   timestamp: number
 ): Promise<ClientPokeBody[]> {
@@ -71,6 +73,7 @@ export async function processRoom(
       lc,
       mergedMutations,
       mutators,
+      disconnectHandler,
       clientIDs,
       cache,
       timestamp

@@ -205,6 +205,7 @@ test("processRoom", async () => {
       createSilentLogContext(),
       c.clients,
       mutators,
+      () => Promise.resolve(),
       durable,
       startTime
     );

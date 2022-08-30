@@ -8,6 +8,7 @@ import type { LogContext } from "@rocicorp/logger";
 import { must } from "../util/must.js";
 import type { MutatorMap } from "./process-mutation.js";
 import { processRoom } from "./process-room.js";
+import type { DisconnectHandler } from "../server/disconnect.js";
 
 /**
  * Processes all mutations in all rooms for a time range, and send relevant pokes.
@@ -19,13 +20,21 @@ export async function processPending(
   durable: DurableObjectStorage,
   clients: ClientMap,
   mutators: MutatorMap,
+  disconnectHandler: DisconnectHandler,
   timestamp: number
 ): Promise<void> {
   lc.debug?.("process pending");
 
   const t0 = Date.now();
   try {
-    const pokes = await processRoom(lc, clients, mutators, durable, timestamp);
+    const pokes = await processRoom(
+      lc,
+      clients,
+      mutators,
+      disconnectHandler,
+      durable,
+      timestamp
+    );
 
     sendPokes(lc, pokes, clients);
     clearPendingMutations(lc, pokes, clients);

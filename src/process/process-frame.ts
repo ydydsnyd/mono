@@ -1,4 +1,5 @@
 import type { LogContext } from "@rocicorp/logger";
+import type { DisconnectHandler } from "../server/disconnect.js";
 import { EntryCache } from "../storage/entry-cache.js";
 import { unwrapPatch } from "../storage/replicache-transaction.js";
 import type { Storage } from "../storage/storage.js";
@@ -8,6 +9,7 @@ import { getClientRecord, putClientRecord } from "../types/client-record.js";
 import type { ClientID } from "../types/client-state.js";
 import { getVersion } from "../types/version.js";
 import { must } from "../util/must.js";
+import { processDisconnects } from "./process-disconnects.js";
 import { MutatorMap, processMutation } from "./process-mutation.js";
 //import { GapTracker } from "../util/gap-tracker.js";
 
@@ -21,6 +23,7 @@ export async function processFrame(
   lc: LogContext,
   mutations: Iterable<ClientMutation>,
   mutators: MutatorMap,
+  disconnectHandler: DisconnectHandler,
   clients: ClientID[],
   storage: Storage,
   timestamp: number
@@ -37,14 +40,16 @@ export async function processFrame(
     await processMutation(lc, mutation, mutators, cache, nextVersion);
   }
 
+  await processDisconnects(lc, disconnectHandler, clients, cache, nextVersion);
+
   if (must(await getVersion(cache)) === prevVersion) {
     lc.debug?.("no change in frame, skipping poke");
     return [];
   }
 
   //tracker.push(startTime);
-
   const patch = unwrapPatch(cache.pending());
+
   const ret: ClientPokeBody[] = [];
   for (const clientID of clients) {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

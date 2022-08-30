@@ -1,5 +1,5 @@
 import { test, expect } from "@jest/globals";
-import type { ClientState } from "src/types/client-state";
+import type { ClientState } from "../types/client-state";
 import { client, Mocket } from "../util/test-utils";
 import { closeConnections, getConnections } from "./connections";
 

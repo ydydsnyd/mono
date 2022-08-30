@@ -1,8 +1,8 @@
 import { DurableStorage } from "../storage/durable-storage.js";
 import {
   ClientRecord,
-  clientRecordKey,
   getClientRecord,
+  putClientRecord,
 } from "../types/client-record.js";
 import type {
   ClientID,
@@ -15,6 +15,7 @@ import type { ConnectedMessage } from "../protocol/connected.js";
 import type { UserData } from "./auth.js";
 import { USER_DATA_HEADER_NAME } from "./auth.js";
 import { decodeHeaderValue } from "../util/headers.js";
+import { addConnectedClient } from "../types/connected-clients.js";
 
 export type MessageHandler = (
   clientID: ClientID,
@@ -81,8 +82,9 @@ export async function handleConnection(
     baseCookie,
     lastMutationID,
   };
-  await storage.put(clientRecordKey(clientID), record);
+  await putClientRecord(clientID, record, storage);
   lc.debug?.("Put client record", record);
+  await addConnectedClient(clientID, storage);
 
   const existing = clients.get(clientID);
   if (existing) {

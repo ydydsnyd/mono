@@ -11,6 +11,7 @@ test("Logs version during construction", async () => {
   const testLogSink = new TestLogSink();
   new BaseRoomDO({
     mutators: {},
+    disconnectHandler: () => Promise.resolve(),
     state: {} as DurableObjectState,
     authApiKey: undefined,
     logSink: testLogSink,

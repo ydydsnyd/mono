@@ -17,6 +17,9 @@ import { version } from "../util/version.js";
 import { dispatch } from "./dispatch.js";
 import type { InvalidateForUserRequest } from "../protocol/api/auth.js";
 import { closeConnections, getConnections } from "./connections.js";
+import type { DisconnectHandler } from "./disconnect.js";
+import { DurableStorage } from "../storage/durable-storage.js";
+import { getConnectedClients } from "../types/connected-clients.js";
 
 export type Now = () => number;
 
@@ -33,6 +36,7 @@ export interface RoomDOOptions<MD extends MutatorDefs> {
   mutators: MD;
   state: DurableObjectState;
   authApiKey: string | undefined;
+  disconnectHandler: DisconnectHandler;
   logSink: LogSink;
   logLevel: LogLevel;
 }
@@ -40,15 +44,24 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   private readonly _clients: ClientMap = new Map();
   private readonly _lock = new Lock();
   private readonly _mutators: MutatorMap;
+  private readonly _disconnectHandler: DisconnectHandler;
   private readonly _lc: LogContext;
   private readonly _state: DurableObjectState;
   private readonly _authApiKey: string | undefined;
   private _turnTimerID: ReturnType<typeof setInterval> | 0 = 0;
 
   constructor(options: RoomDOOptions<MD>) {
-    const { mutators, state, authApiKey, logSink, logLevel } = options;
+    const {
+      mutators,
+      disconnectHandler,
+      state,
+      authApiKey,
+      logSink,
+      logLevel,
+    } = options;
 
     this._mutators = new Map([...Object.entries(mutators)]) as MutatorMap;
+    this._disconnectHandler = disconnectHandler;
     this._state = state;
     this._authApiKey = authApiKey;
     this._lc = new LogContext(logLevel, logSink).addContext("RoomDO");
@@ -177,8 +190,23 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     await this._lock.withLock(async () => {
       lc.debug?.(`received lock at ${Date.now()}`);
 
-      if (!hasPendingMutations(this._clients)) {
-        lc.debug?.("No pending mutations to process, exiting");
+      const storedConnectedClients = await getConnectedClients(
+        new DurableStorage(this._state.storage)
+      );
+      let hasDisconnectsToProcess = false;
+      for (const clientID of storedConnectedClients) {
+        if (!this._clients.has(clientID)) {
+          hasDisconnectsToProcess = true;
+          break;
+        }
+      }
+      lc.info?.(
+        storedConnectedClients,
+        [...this._clients.keys()],
+        hasDisconnectsToProcess
+      );
+      if (!hasPendingMutations(this._clients) && !hasDisconnectsToProcess) {
+        lc.debug?.("No pending mutations or disconnects to process, exiting");
         if (this._turnTimerID) {
           clearInterval(this._turnTimerID);
           this._turnTimerID = 0;
@@ -191,6 +219,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
         this._state.storage,
         this._clients,
         this._mutators,
+        this._disconnectHandler,
         Date.now()
       );
     });
@@ -207,6 +236,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     await this._lock.withLock(async () => {
       lc.debug?.("received lock");
       handleClose(lc, this._clients, clientID, ws);
+      await this._processUntilDone();
     });
   };
 }

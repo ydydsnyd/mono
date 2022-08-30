@@ -241,6 +241,7 @@ test("processPending", async () => {
       durable,
       c.clients,
       mutators,
+      () => Promise.resolve(),
       startTime
     );
     if (c.expectedError) {

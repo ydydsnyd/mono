@@ -9,6 +9,7 @@ import type { AuthHandler } from "./auth";
 import { BaseAuthDO } from "./auth-do";
 import { BaseRoomDO } from "./room-do";
 import { createWorker } from "./worker";
+import type { DisconnectHandler } from "./disconnect";
 
 export interface ReflectServerOptions<
   Env extends ReflectServerBaseEnv,
@@ -16,6 +17,7 @@ export interface ReflectServerOptions<
 > {
   mutators: MD;
   authHandler: AuthHandler;
+  disconnectHandler?: DisconnectHandler;
   getLogSinks?: (env: Env) => LogSink[];
   getLogLevel?: (env: Env) => LogLevel;
 }
@@ -56,6 +58,7 @@ export function createReflectServer<
 } {
   const {
     authHandler,
+    disconnectHandler = () => Promise.resolve(),
     getLogSinks = (_env) => [consoleLogSink],
     getLogLevel = (_env) => "debug",
   } = options;
@@ -65,6 +68,7 @@ export function createReflectServer<
       super({
         mutators: options.mutators,
         state,
+        disconnectHandler,
         authApiKey: env.REFLECT_AUTH_API_KEY,
         logSink: combineLogSinks(getLogSinks(env)),
         logLevel: getLogLevel(env),
