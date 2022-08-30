@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1661864616976,
+  "lastUpdate": 1661880928430,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -23567,6 +23567,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23472,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "62a623ae41425f36a105f20c6eb0c34e65dd5f96",
+          "message": "feat: DD31: Branch helpers. (#231)\n\nCreate Branch helpers analogous to Client helpers. getBranch, getBranches, setBranches.\r\nEnsure that the chunk that contains the BranchMap has refs to each Branches' headHash.\r\nEnforce some biz logic like disallowing changing `indexes` and `mutatorNames` of existing branches.\r\n\r\nTowards #165",
+          "timestamp": "2022-08-30T10:34:24-07:00",
+          "tree_id": "b867dc5b69d9e35c48d1046e2ca5e8c43ddbd75f",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/62a623ae41425f36a105f20c6eb0c34e65dd5f96"
+        },
+        "date": 1661880922880,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 192089,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34452,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 190943,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34131,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 80795,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23465,
             "unit": "bytes"
           }
         ]
