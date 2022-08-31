@@ -134,10 +134,40 @@ function flattenMessage(message: unknown): unknown {
   return message;
 }
 
+function convertError(e: Error): {
+  name: string;
+  message: string;
+  stack: string | undefined;
+} {
+  return {
+    name: e.name,
+    message: e.message,
+    stack: e.stack,
+  };
+}
+
+function convertErrors(message: unknown): unknown {
+  if (message instanceof Error) {
+    return convertError(message);
+  }
+  if (message instanceof Array) {
+    const convertedMessage = [];
+    for (const item of message) {
+      if (item instanceof Error) {
+        convertedMessage.push(convertError(item));
+      } else {
+        convertedMessage.push(item);
+      }
+    }
+    return convertedMessage;
+  }
+  return message;
+}
+
 function makeMessage(message: unknown, logLevel: LogLevel): Message {
   const msg: Message = {
     date: Date.now(),
-    message: flattenMessage(message),
+    message: convertErrors(flattenMessage(message)),
     status: logLevel,
   };
   if (logLevel === "error") {

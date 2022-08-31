@@ -62,6 +62,79 @@ test("flush calls fetch", async () => {
   );
 });
 
+test("Errors in multi arg messages are converted to JSON", async () => {
+  const l = new DatadogLogSink({
+    apiKey: "apiKey",
+  });
+
+  jest.setSystemTime(1);
+  l.log("info", "Logging an error", new Error("Test error msg"), "after");
+
+  await l.flush();
+
+  expect(fetchSpy).toHaveBeenCalledTimes(1);
+  expect(fetchSpy.mock.calls[0][0]).toEqual(
+    "https://http-intake.logs.datadoghq.com/api/v2/logs?ddsource=worker"
+  );
+  const request = fetchSpy.mock.calls[0][1];
+  expect(request).toBeDefined();
+  if (request === undefined) {
+    throw new Error("Expect request to be defined");
+  }
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  expect(request.headers).toEqual({ "DD-API-KEY": "apiKey" });
+  expect(request.method).toEqual("POST");
+  const { body } = request;
+  expect(body).toBeDefined();
+  if (!body) {
+    throw new Error("Expect body to be defined and non-null");
+  }
+  const parsedBody = JSON.parse(body.toString());
+  expect(parsedBody.date).toEqual(1);
+  expect(parsedBody.status).toEqual("info");
+  expect(parsedBody.message.length).toEqual(3);
+  expect(parsedBody.message[0]).toEqual("Logging an error");
+  expect(parsedBody.message[1].name).toEqual("Error");
+  expect(parsedBody.message[1].message).toEqual("Test error msg");
+  expect(parsedBody.message[1].stack).toBeDefined();
+  expect(parsedBody.message[2]).toEqual("after");
+});
+
+test("Errors in single arg messages are converted to JSON", async () => {
+  const l = new DatadogLogSink({
+    apiKey: "apiKey",
+  });
+
+  jest.setSystemTime(1);
+  l.log("info", new Error("Test error msg"));
+
+  await l.flush();
+
+  expect(fetchSpy).toHaveBeenCalledTimes(1);
+  expect(fetchSpy.mock.calls[0][0]).toEqual(
+    "https://http-intake.logs.datadoghq.com/api/v2/logs?ddsource=worker"
+  );
+  const request = fetchSpy.mock.calls[0][1];
+  expect(request).toBeDefined();
+  if (request === undefined) {
+    throw new Error("Expect request to be defined");
+  }
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  expect(request.headers).toEqual({ "DD-API-KEY": "apiKey" });
+  expect(request.method).toEqual("POST");
+  const { body } = request;
+  expect(body).toBeDefined();
+  if (!body) {
+    throw new Error("Expect body to be defined and non-null");
+  }
+  const parsedBody = JSON.parse(body.toString());
+  expect(parsedBody.date).toEqual(1);
+  expect(parsedBody.status).toEqual("info");
+  expect(parsedBody.message.name).toEqual("Error");
+  expect(parsedBody.message.message).toEqual("Test error msg");
+  expect(parsedBody.message.stack).toBeDefined();
+});
+
 test("flush calls fetch but includes logs efter the error", async () => {
   const l = new DatadogLogSink({
     apiKey: "apiKey",
