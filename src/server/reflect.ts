@@ -10,6 +10,7 @@ import { BaseAuthDO } from "./auth-do";
 import { BaseRoomDO } from "./room-do";
 import { createWorker } from "./worker";
 import type { DisconnectHandler } from "./disconnect";
+import { createNoAuthDOWorker } from "./no-auth-do-worker";
 
 export interface ReflectServerOptions<
   Env extends ReflectServerBaseEnv,
@@ -96,4 +97,44 @@ export function createReflectServer<
 
   // eslint-disable-next-line @typescript-eslint/naming-convention
   return { worker, RoomDO: roomDOClass, AuthDO: authDOClass };
+}
+
+export function createReflectServerWithoutAuthDO<
+  Env extends ReflectServerBaseEnv,
+  MD extends MutatorDefs
+>(
+  options: ReflectServerOptions<Env, MD>
+): {
+  worker: ExportedHandler<Env>;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  RoomDO: DurableObjectCtor<Env>;
+} {
+  const {
+    authHandler,
+    disconnectHandler = () => Promise.resolve(),
+    getLogSinks = (_env) => [consoleLogSink],
+    getLogLevel = (_env) => "debug",
+  } = options;
+
+  const roomDOClass = class extends BaseRoomDO<MD> {
+    constructor(state: DurableObjectState, env: Env) {
+      super({
+        mutators: options.mutators,
+        state,
+        disconnectHandler,
+        authApiKey: env.REFLECT_AUTH_API_KEY,
+        logSink: combineLogSinks(getLogSinks(env)),
+        logLevel: getLogLevel(env),
+      });
+    }
+  };
+
+  const worker = createNoAuthDOWorker<Env>({
+    getLogSink: (env) => combineLogSinks(getLogSinks(env)),
+    getLogLevel,
+    authHandler,
+  });
+
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  return { worker, RoomDO: roomDOClass };
 }

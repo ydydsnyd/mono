@@ -1,5 +1,6 @@
 export {
   createReflectServer,
+  createReflectServerWithoutAuthDO,
   ReflectServerOptions,
   ReflectServerBaseEnv,
 } from "./server/reflect.js";
