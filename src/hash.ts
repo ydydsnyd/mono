@@ -2,6 +2,7 @@ import {assert} from './asserts';
 import {encode} from './base32-encode';
 import type {ReadonlyJSONValue} from './json';
 import * as utf8 from './utf8';
+import {uuid} from './uuid.js';
 
 export const BYTE_LENGTH = 20;
 
@@ -29,6 +30,7 @@ export type Hash = {[hashTag]: true};
 
 const hashRe = /^[0-9a-v]{32}$/;
 const tempHashRe = /^t\/[0-9a-v]{30}$/;
+const uuidHashRe = /^u\/[0-9a-f-]{36}$/;
 
 /**
  * Computes a SHA512 hash of the given data.
@@ -55,17 +57,22 @@ export const newTempHash = makeNewTempHashFunction();
 
 /**
  * Creates a new temp hash function.
- * @param prefix The prefix of the hash. If left out the prefix is 't/' which
- * signifies a temp hash.
  */
 export function makeNewTempHashFunction(): () => Hash {
   return makeNewFakeHashFunction('t/');
 }
 
 /**
+ * Creates a new "Hash" that is a UUID.
+ */
+export function newUUIDHash(): Hash {
+  return ('u/' + uuid()) as unknown as Hash;
+}
+
+/**
  * Creates a new fake hash function.
- * @param prefix The prefix of the hash. If the prefix starts with 't/' it is
- * considered a temp hash.
+ * @param hashPrefix The prefix of the hash. If the prefix starts with 't/' it is
+considered a temp hash.
  */
 export function makeNewFakeHashFunction(hashPrefix: string): () => Hash {
   let tempHashCounter = 0;
@@ -79,11 +86,18 @@ export function makeNewFakeHashFunction(hashPrefix: string): () => Hash {
 }
 
 export function isHash(v: unknown): v is Hash {
-  return typeof v === 'string' && (hashRe.test(v) || tempHashRe.test(v));
+  return (
+    typeof v === 'string' &&
+    (hashRe.test(v) || tempHashRe.test(v) || uuidHashRe.test(v))
+  );
 }
 
 export function isTempHash(v: unknown): v is Hash {
   return typeof v === 'string' && tempHashRe.test(v);
+}
+
+export function isUUIDHash(v: unknown): v is Hash {
+  return typeof v === 'string' && uuidHashRe.test(v);
 }
 
 export function assertNotTempHash(hash: Hash): void {

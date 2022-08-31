@@ -7,6 +7,8 @@ import {
   hashOf,
   newTempHash,
   parse,
+  newUUIDHash,
+  isUUIDHash,
 } from './hash';
 import type {ReadonlyJSONValue} from './json';
 
@@ -83,4 +85,16 @@ test('hashOf with different types', async () => {
   await t([1, 2, 3]);
   await t({});
   await t({a: 1, b: 2});
+});
+
+test('uuid hash', async () => {
+  const h1 = newUUIDHash();
+  const h2 = newUUIDHash();
+  expect(h1).to.not.equal(h2);
+  expect(isHash(h1)).to.be.true;
+  expect(isHash(h2)).to.be.true;
+  assertNotTempHash(h1);
+  assertNotTempHash(h2);
+  expect(isUUIDHash(h1)).to.be.true;
+  expect(isUUIDHash(h2)).to.be.true;
 });
