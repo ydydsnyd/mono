@@ -45,7 +45,8 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   private readonly _lock = new Lock();
   private readonly _mutators: MutatorMap;
   private readonly _disconnectHandler: DisconnectHandler;
-  private readonly _lc: LogContext;
+  private _lcHasRoomIdContext = false;
+  private _lc: LogContext;
   private readonly _state: DurableObjectState;
   private readonly _authApiKey: string | undefined;
   private _turnTimerID: ReturnType<typeof setInterval> | 0 = 0;
@@ -64,18 +65,42 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     this._disconnectHandler = disconnectHandler;
     this._state = state;
     this._authApiKey = authApiKey;
-    this._lc = new LogContext(logLevel, logSink).addContext("RoomDO");
+    this._lc = new LogContext(logLevel, logSink)
+      .addContext("RoomDO")
+      .addContext("doID", state.id.toString());
     this._lc.info?.("Starting server");
     this._lc.info?.("Version:", version);
   }
 
   async fetch(request: Request): Promise<Response> {
-    return dispatch(
-      request,
-      this._lc.addContext("req", randomID()),
-      this._authApiKey,
-      this
-    );
+    try {
+      // This is ugly, but there is no way to get
+      // the DO name (as opposed to the DO id), so instead
+      // we get it from the first request carrying a roomID
+      // param (the roomID is the DO name).
+      if (!this._lcHasRoomIdContext) {
+        const url = new URL(request.url);
+        const roomID = url.searchParams.get("roomID");
+        if (roomID) {
+          this._lc = this._lc.addContext("roomID", roomID);
+          this._lcHasRoomIdContext = true;
+        }
+      }
+      return await dispatch(
+        request,
+        this._lc.addContext("req", randomID()),
+        this._authApiKey,
+        this
+      );
+    } catch (e) {
+      this._lc.error?.("Unhandled exception in fetch", e);
+      return new Response(
+        e instanceof Error ? e.message : "Unexpected error.",
+        {
+          status: 500,
+        }
+      );
+    }
   }
 
   async connect(lc: LogContext, request: Request): Promise<Response> {
@@ -159,16 +184,20 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     ws: Socket
   ): Promise<void> => {
     const lc = this._lc
-      .addContext("req", randomID())
+      .addContext("msg", randomID())
       .addContext("client", clientID);
     lc.debug?.("handling message", data, "waiting for lock");
 
-    await this._lock.withLock(async () => {
-      lc.debug?.("received lock");
-      handleMessage(lc, this._clients, clientID, data, ws, () =>
-        this._processUntilDone()
-      );
-    });
+    try {
+      await this._lock.withLock(async () => {
+        lc.debug?.("received lock");
+        handleMessage(lc, this._clients, clientID, data, ws, () =>
+          this._processUntilDone()
+        );
+      });
+    } catch (e) {
+      this._lc.error?.("Unhandled exception in _handleMessage", e);
+    }
   };
 
   private async _processUntilDone() {

@@ -77,8 +77,10 @@ async function fetch(request: Request, env: BaseWorkerEnv, lc: LogContext) {
     lc.debug?.(`Returning response: ${resp.status} ${resp.statusText}`);
     return resp;
   } catch (e) {
-    lc.info?.("Unhandled exception", e);
-    throw e;
+    lc.error?.("Unhandled exception in fetch", e);
+    return new Response(e instanceof Error ? e.message : "Unexpected error.", {
+      status: 500,
+    });
   }
 }
 

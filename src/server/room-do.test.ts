@@ -3,25 +3,21 @@ import { TestLogSink } from "../util/test-utils.js";
 import { version } from "../util/version.js";
 import { BaseRoomDO } from "./room-do.js";
 
-test("foo", () => {
-  expect("hi").toEqual("hi");
-});
-
 test("Logs version during construction", async () => {
   const testLogSink = new TestLogSink();
   new BaseRoomDO({
     mutators: {},
     disconnectHandler: () => Promise.resolve(),
-    state: {} as DurableObjectState,
+    state: { id: "test-do-id" } as DurableObjectState,
     authApiKey: undefined,
     logSink: testLogSink,
     logLevel: "info",
   });
   expect(testLogSink.messages).toEqual([
-    ["info", "RoomDO", "Starting server"],
-    ["info", "RoomDO", "Version:", version],
+    ["info", "RoomDO", "doID=test-do-id", "Starting server"],
+    ["info", "RoomDO", "doID=test-do-id", "Version:", version],
   ]);
-  expect(testLogSink.messages[1][3]).toMatch(/^\d+\.\d+\.\d+/);
+  expect(testLogSink.messages[1][4]).toMatch(/^\d+\.\d+\.\d+/);
 });
 
 /*

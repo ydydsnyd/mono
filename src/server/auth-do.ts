@@ -50,7 +50,9 @@ export class BaseAuthDO implements DurableObject {
     this._state = state;
     this._authHandler = authHandler;
     this._authApiKey = authApiKey;
-    this._lc = new LogContext(logLevel, logSink).addContext("AuthDO");
+    this._lc = new LogContext(logLevel, logSink)
+      .addContext("AuthDO")
+      .addContext("doID", state.id.toString());
     this._isMiniflare = isMiniflare;
     this._lock = new RWLock();
     this._lc.info?.("Starting server");
@@ -66,8 +68,13 @@ export class BaseAuthDO implements DurableObject {
       lc.debug?.(`Returning response: ${resp.status} ${resp.statusText}`);
       return resp;
     } catch (e) {
-      lc.info?.("Unhandled exception", e);
-      throw e;
+      lc.error?.("Unhandled exception in fetch", e);
+      return new Response(
+        e instanceof Error ? e.message : "Unexpected error.",
+        {
+          status: 500,
+        }
+      );
     }
   }
 

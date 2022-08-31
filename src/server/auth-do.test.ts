@@ -238,7 +238,7 @@ test("connect returns a 401 without calling Room DO if authHandler rejects", asy
   const authDO = new BaseAuthDO(
     {
       roomDO: createRoomDOThatThrowsIfFetchIsCalled(),
-      state: {} as DurableObjectState,
+      state: { id: authDOID } as DurableObjectState,
       authHandler: async (auth, roomID) => {
         expect(auth).toEqual(testAuth);
         expect(roomID).toEqual(testRoomID);
@@ -272,7 +272,7 @@ test("connect returns a 401 without calling Room DO if Sec-WebSocket-Protocol he
   const authDO = new BaseAuthDO(
     {
       roomDO: createRoomDOThatThrowsIfFetchIsCalled(),
-      state: {} as DurableObjectState,
+      state: { id: authDOID } as DurableObjectState,
       authHandler: async (_auth, _roomID) => {
         throw new Error("Unexpected call to authHandler");
       },
@@ -547,7 +547,7 @@ test("authInvalidateForRoom when request to roomDO is successful", async () => {
   const authDO = new BaseAuthDO(
     {
       roomDO: testRoomDO,
-      state: {} as DurableObjectState,
+      state: { id: authDOID } as DurableObjectState,
       authHandler: async (_auth, _roomID) => {
         throw new Error("Unexpected call to authHandler");
       },
@@ -600,7 +600,7 @@ test("authInvalidateForRoom when request to roomDO returns error response", asyn
   const authDO = new BaseAuthDO(
     {
       roomDO: testRoomDO,
-      state: {} as DurableObjectState,
+      state: { id: authDOID } as DurableObjectState,
       authHandler: async (_auth, _roomID) => {
         throw new Error("Unexpected call to authHandler");
       },

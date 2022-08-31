@@ -95,7 +95,27 @@ export async function handleConnection(
   ws.addEventListener("message", (event) =>
     onMessage(clientID, event.data.toString(), ws)
   );
-  ws.addEventListener("close", () => onClose(clientID, ws));
+  ws.addEventListener("close", (e) => {
+    lc.info?.("WebSocket CloseEvent for client", clientID, {
+      reason: e.reason,
+      code: e.code,
+      wasClean: e.wasClean,
+    });
+    onClose(clientID, ws);
+  });
+  ws.addEventListener("error", (e) => {
+    lc.error?.(
+      "WebSocket ErrorEvent for client",
+      clientID,
+      {
+        filename: e.filename,
+        message: e.message,
+        lineno: e.lineno,
+        colno: e.colno,
+      },
+      e.error
+    );
+  });
 
   const client: ClientState = {
     socket: ws,
