@@ -50,6 +50,7 @@ export class Reflect<MD extends MutatorDefs> {
    * changes.
    */
   onOnlineChange: ((online: boolean) => void) | null = null;
+  onSocketError: ((msg: string) => void) | null = null;
 
   private _connectResolver = resolver<WebSocket>();
   private _lastMutationIDReceived = 0;
@@ -241,7 +242,11 @@ export class Reflect<MD extends MutatorDefs> {
     }
 
     if (downMessage[0] === 'error') {
-      throw new Error(downMessage[1]);
+      try {
+        this.onSocketError?.(downMessage[1]);
+      } finally {
+        throw new Error(downMessage[1]);
+      }
     }
 
     if (downMessage[0] === 'pong') {
