@@ -12,8 +12,7 @@ test('uuid', () => {
   arr.fill(15);
   expect(uuidFromNumbers(arr)).to.equal('ffffffff-ffff-4fff-bfff-ffffffffffff');
 
-  const re =
-    /^[0-9:A-z]{8}-[0-9:A-z]{4}-4[0-9:A-z]{3}-[0-9:A-z]{4}-[0-9:A-z]{12}$/;
+  const re = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
   expect(re.test(uuidFromNumbers(arr))).to.be.true;
 
