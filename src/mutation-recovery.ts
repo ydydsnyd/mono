@@ -18,6 +18,7 @@ import {
 } from './replicache';
 import type {Replicache} from './replicache';
 import {IDBStore} from './kv/idb-store.js';
+import {ClientSDD, isClientSDD} from './persist/clients.js';
 
 const MUTATION_RECOVERY_LAZY_STORE_SOURCE_CHUNK_CACHE_SIZE_LIMIT = 10 * 2 ** 20; // 10 MB
 
@@ -206,11 +207,19 @@ export class MutationRecovery<M extends MutatorDefs> {
     clientID: sync.ClientID,
     perdag: dag.Store,
     database: persist.IndexedDBDatabase,
-  ) {
-    const {_lc: lc} = this;
-    const delegate = this._replicache;
+  ): Promise<persist.ClientMap | undefined> {
+    // TODO(DD31): Implement this.
+    if (DD31) {
+      return;
+    }
+
+    if (!isClientSDD(client)) {
+      return undefined;
+    }
 
     const {
+      _replicache: delegate,
+      _lc: lc,
       _wrapInOnlineCheck: wrapInOnlineCheck,
       _wrapInReauthRetries: wrapInReauthRetries,
       _isPushDisabled: isPushDisabled,
@@ -347,37 +356,36 @@ export class MutationRecovery<M extends MutatorDefs> {
           },
         );
       }
-      const newClientMap = await persist.updateClients(
-        (clients: persist.ClientMap) => {
-          assertNotUndefined(pullResponse);
+      const newClientMap = await persist.updateClients(clients => {
+        assertNotUndefined(pullResponse);
 
-          const clientToUpdate = clients.get(clientID);
-          if (!clientToUpdate) {
-            return persist.noClientUpdates;
-          }
+        // TODO(DD31): We can probably get rid of this cast with some type
+        // parameters.
+        const clientToUpdate = clients.get(clientID) as ClientSDD;
+        if (!clientToUpdate) {
+          return persist.noClientUpdates;
+        }
 
-          if (isClientStateNotFoundResponse(pullResponse)) {
-            const newClients = new Map(clients);
-            newClients.delete(clientID);
-            return {clients: newClients};
-          }
+        if (isClientStateNotFoundResponse(pullResponse)) {
+          const newClients = new Map(clients);
+          newClients.delete(clientID);
+          return {clients: newClients};
+        }
 
-          if (
-            clientToUpdate.lastServerAckdMutationID >=
-            (pullResponse as PullResponseOK).lastMutationID
-          ) {
-            return persist.noClientUpdates;
-          }
-          return {
-            clients: new Map(clients).set(clientID, {
-              ...clientToUpdate,
-              lastServerAckdMutationID: (pullResponse as PullResponseOK)
-                .lastMutationID,
-            }),
-          };
-        },
-        perdag,
-      );
+        if (
+          clientToUpdate.lastServerAckdMutationID >=
+          (pullResponse as PullResponseOK).lastMutationID
+        ) {
+          return persist.noClientUpdates;
+        }
+        return {
+          clients: new Map(clients).set(clientID, {
+            ...clientToUpdate,
+            lastServerAckdMutationID: (pullResponse as PullResponseOK)
+              .lastMutationID,
+          }),
+        };
+      }, perdag);
       return newClientMap;
     } catch (e) {
       logMutationRecoveryError(e, lc, stepDescription, delegate);

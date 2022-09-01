@@ -4,7 +4,13 @@ import * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import type * as sync from '../sync/mod';
 import type {ReadonlyJSONValue} from '../json';
-import {assertNotUndefined, assertNumber, assertObject} from '../asserts';
+import {
+  assert,
+  assertNotUndefined,
+  assertNumber,
+  assertObject,
+  assertString,
+} from '../asserts';
 import {hasOwn} from '../has-own';
 import {uuid as makeUuid} from '../uuid';
 import {
@@ -14,9 +20,9 @@ import {
 } from '../db/commit';
 import type {MaybePromise} from '../mod';
 
-export type ClientMap = ReadonlyMap<sync.ClientID, Client>;
+export type ClientMap = ReadonlyMap<sync.ClientID, ClientSDD | ClientDD31>;
 
-export type Client = {
+export type ClientSDD = {
   /**
    * A UNIX timestamp in milliseconds updated by the client once a minute
    * while it is active and every time the client persists its state to
@@ -60,13 +66,76 @@ export type Client = {
    */
   readonly lastServerAckdMutationID: number;
 };
-const CLIENTS_HEAD = 'clients';
+
+export type ClientDD31 = {
+  readonly heartbeatTimestampMs: number;
+  readonly headHash: Hash;
+
+  /**
+   * The hash of a commit we are in the middle of refreshing into this client's
+   * memdag.
+   */
+  readonly tempRefreshHash?: Hash;
+
+  /**
+   * ID of this client's perdag branch. This needs to be sent in pull request
+   * (to enable syncing all last mutation ids in the branch).
+   */
+  readonly branchID: sync.BranchID;
+};
+
+export type Client = ClientSDD | ClientDD31;
+
+export function isClientDD31(client: Client): client is ClientDD31 {
+  return DD31 && (client as ClientDD31).branchID !== undefined;
+}
+
+export function isClientSDD(client: Client): client is ClientSDD {
+  return !DD31 || (client as ClientSDD).lastServerAckdMutationID !== undefined;
+}
+
+export const CLIENTS_HEAD = 'clients';
 
 function assertClient(value: unknown): asserts value is Client {
+  assertClientBase(value);
+
+  if (typeof value.mutationID === 'number') {
+    assertNumber(value.lastServerAckdMutationID);
+  } else {
+    const {tempRefreshHash} = value;
+    if (tempRefreshHash) {
+      assertHash(tempRefreshHash);
+    }
+    assertString(value.branchID);
+  }
+}
+
+function assertClientBase(value: unknown): asserts value is {
+  heartbeatTimestampMs: number;
+  headHash: Hash;
+  [key: string]: unknown;
+} {
   assertObject(value);
   const {heartbeatTimestampMs, headHash} = value;
   assertNumber(heartbeatTimestampMs);
   assertHash(headHash);
+}
+
+export function assertClientSDD(value: unknown): asserts value is ClientSDD {
+  assertClientBase(value);
+  const {mutationID, lastServerAckdMutationID} = value;
+  assertNumber(mutationID);
+  assertNumber(lastServerAckdMutationID);
+}
+
+export function assertClientDD31(value: unknown): asserts value is ClientDD31 {
+  assert(DD31);
+  assertClientBase(value);
+  const {tempRefreshHash} = value;
+  if (tempRefreshHash) {
+    assertHash(tempRefreshHash);
+  }
+  assertString(value.branchID);
 }
 
 function chunkDataToClientMap(chunkData: unknown): ClientMap {
@@ -90,6 +159,9 @@ function clientMapToChunkData(
 ): ReadonlyJSONValue {
   clients.forEach(client => {
     dagWrite.assertValidHash(client.headHash);
+    if (isClientDD31(client) && client.tempRefreshHash) {
+      dagWrite.assertValidHash(client.tempRefreshHash);
+    }
   });
   return Object.fromEntries(clients);
 }
@@ -236,6 +308,7 @@ export async function initClient(
       clients: new Map(clients).set(newClientID, {
         heartbeatTimestampMs: Date.now(),
         headHash: newClientCommitChunk.hash,
+        // TODO(DD31): tempRefreshHash and branchID
         mutationID: 0,
         lastServerAckdMutationID: 0,
       }),
@@ -255,7 +328,7 @@ function hashOfClients(clients: ClientMap): Promise<Hash> {
 export const noUpdates = Symbol();
 export type NoUpdates = typeof noUpdates;
 
-export type ClientsUpdate = (
+type ClientsUpdate = (
   clients: ClientMap,
 ) => MaybePromise<
   {clients: ClientMap; chunksToPut?: Iterable<dag.Chunk>} | NoUpdates
@@ -299,10 +372,15 @@ async function updateClientsInternal(
       updatedClients,
       dagWrite,
     );
-    const updateClientsRefs = Array.from(
-      updatedClients.values(),
-      client => client.headHash,
-    );
+
+    const updateClientsRefs: Hash[] = [];
+    for (const client of updatedClients.values()) {
+      updateClientsRefs.push(client.headHash);
+      if (DD31 && isClientDD31(client) && client.tempRefreshHash) {
+        updateClientsRefs.push(client.tempRefreshHash);
+      }
+    }
+
     const updateClientsChunk = dag.createChunkWithHash(
       updatedClientsHash,
       updatedClientsChunkData,

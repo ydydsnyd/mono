@@ -29,6 +29,7 @@ import fetchMock from 'fetch-mock/esm/client';
 import {initClientWithClientID} from './persist/clients-test-helpers.js';
 import {fromInternalValue, FromInternalValueReason} from './internal-value.js';
 import {PUSH_VERSION, PUSH_VERSION_DD31} from './sync/push.js';
+import {assertClientSDD} from './persist/clients.js';
 
 initReplicacheTesting();
 
@@ -136,6 +137,11 @@ async function testRecoveringMutationsOfClient(args: {
   schemaVersionOfClientRecoveringMutations: string;
   numMutationsNotAcknowledgedByPull?: number;
 }) {
+  if (DD31) {
+    // TODO(DD31): Implement
+    return;
+  }
+
   sinon.stub(console, 'error');
 
   const {
@@ -176,7 +182,7 @@ async function testRecoveringMutationsOfClient(args: {
   const client1 = await testPerdag.withRead(read =>
     persist.getClient(client1ID, read),
   );
-  assertNotUndefined(client1);
+  assertClientSDD(client1);
 
   fetchMock.reset();
   fetchMock.post(pushURL, 'ok');
@@ -253,7 +259,7 @@ async function testRecoveringMutationsOfClient(args: {
   const updatedClient1 = await testPerdag.withRead(read =>
     persist.getClient(client1ID, read),
   );
-  assertNotUndefined(updatedClient1);
+  assertClientSDD(updatedClient1);
   expect(updatedClient1.mutationID).to.equal(client1.mutationID);
   expect(updatedClient1.lastServerAckdMutationID).to.equal(pullLastMutationID);
   expect(updatedClient1.headHash).to.equal(client1.headHash);
@@ -300,6 +306,10 @@ test('recovering mutations with pull disabled', async () => {
   const profileID = await rep.profileID;
 
   await tickAFewTimes();
+  if (DD31) {
+    // TODO(DD31): Implement
+    return;
+  }
 
   const testPerdag = await createPerdag({
     replicacheName: rep.name,
@@ -421,7 +431,7 @@ test('client does not attempt to recover mutations from IndexedDB with different
   const clientWPendingMutations = await testPerdag.withRead(read =>
     persist.getClient(clientWPendingMutationsID, read),
   );
-  assertNotUndefined(clientWPendingMutations);
+  assertClientSDD(clientWPendingMutations);
 
   fetchMock.reset();
   fetchMock.post(pushURL, 'ok');
@@ -439,6 +449,11 @@ test('client does not attempt to recover mutations from IndexedDB with different
 });
 
 test('successfully recovering mutations of multiple clients with mix of schema versions and same replicache format version', async () => {
+  if (DD31) {
+    // TODO(DD31): Implement
+    return;
+  }
+
   const schemaVersionOfClients1Thru3AndClientRecoveringMutations =
     'testSchema1';
   const schemaVersionOfClient4 = 'testSchema2';
@@ -500,16 +515,16 @@ test('successfully recovering mutations of multiple clients with mix of schema v
     persist.getClients(read),
   );
   const client1 = clients1Thru3.get(client1ID);
-  assertNotUndefined(client1);
+  assertClientSDD(client1);
   const client2 = clients1Thru3.get(client2ID);
-  assertNotUndefined(client2);
+  assertClientSDD(client2);
   const client3 = clients1Thru3.get(client3ID);
-  assertNotUndefined(client3);
+  assertClientSDD(client3);
 
   const client4 = await testPerdagForClient4.withRead(read =>
     persist.getClient(client4ID, read),
   );
-  assertNotUndefined(client4);
+  assertClientSDD(client4);
 
   const pullRequestJsonBodies: JSONObject[] = [];
   fetchMock.reset();
@@ -608,16 +623,16 @@ test('successfully recovering mutations of multiple clients with mix of schema v
     persist.getClients(read),
   );
   const updatedClient1 = updateClients1Thru3.get(client1ID);
-  assertNotUndefined(updatedClient1);
+  assertClientSDD(updatedClient1);
   const updatedClient2 = updateClients1Thru3.get(client2ID);
-  assertNotUndefined(updatedClient2);
+  assertClientSDD(updatedClient2);
   const updatedClient3 = updateClients1Thru3.get(client3ID);
-  assertNotUndefined(updatedClient3);
+  assertClientSDD(updatedClient3);
 
   const updatedClient4 = await testPerdagForClient4.withRead(read =>
     persist.getClient(client4ID, read),
   );
-  assertNotUndefined(updatedClient4);
+  assertClientSDD(updatedClient4);
 
   expect(updatedClient1.mutationID).to.equal(client1.mutationID);
   // lastServerAckdMutationID is updated to high mutationID as mutations
@@ -645,6 +660,11 @@ test('successfully recovering mutations of multiple clients with mix of schema v
 });
 
 test('if a push error occurs, continues to try to recover other clients', async () => {
+  if (DD31) {
+    // TODO(DD31): Implement
+    return;
+  }
+
   const schemaVersion = 'testSchema1';
   // client1 has same schema version as recovering client and 2 mutations to recover
   const client1ID = 'client1';
@@ -689,11 +709,11 @@ test('if a push error occurs, continues to try to recover other clients', async 
 
   const clients = await testPerdag.withRead(read => persist.getClients(read));
   const client1 = clients.get(client1ID);
-  assertNotUndefined(client1);
+  assertClientSDD(client1);
   const client2 = clients.get(client2ID);
-  assertNotUndefined(client2);
+  assertClientSDD(client2);
   const client3 = clients.get(client3ID);
-  assertNotUndefined(client3);
+  assertClientSDD(client3);
 
   const pushRequestJsonBodies: JSONObject[] = [];
   const pullRequestJsonBodies: JSONObject[] = [];
@@ -791,11 +811,11 @@ test('if a push error occurs, continues to try to recover other clients', async 
     persist.getClients(read),
   );
   const updatedClient1 = updateClients.get(client1ID);
-  assertNotUndefined(updatedClient1);
+  assertClientSDD(updatedClient1);
   const updatedClient2 = updateClients.get(client2ID);
-  assertNotUndefined(updatedClient2);
+  assertClientSDD(updatedClient2);
   const updatedClient3 = updateClients.get(client3ID);
-  assertNotUndefined(updatedClient3);
+  assertClientSDD(updatedClient3);
 
   expect(updatedClient1.mutationID).to.equal(client1.mutationID);
   // lastServerAckdMutationID is updated to high mutationID as mutations
@@ -818,6 +838,11 @@ test('if a push error occurs, continues to try to recover other clients', async 
 });
 
 test('if an error occurs recovering one client, continues to try to recover other clients', async () => {
+  if (DD31) {
+    // TODO(DD31): Implement
+    return;
+  }
+
   const schemaVersion = 'testSchema1';
   // client1 has same schema version as recovering client and 2 mutations to recover
   const client1ID = 'client1';
@@ -858,11 +883,11 @@ test('if an error occurs recovering one client, continues to try to recover othe
 
   const clients = await testPerdag.withRead(read => persist.getClients(read));
   const client1 = clients.get(client1ID);
-  assertNotUndefined(client1);
+  assertClientSDD(client1);
   const client2 = clients.get(client2ID);
-  assertNotUndefined(client2);
+  assertClientSDD(client2);
   const client3 = clients.get(client3ID);
-  assertNotUndefined(client3);
+  assertClientSDD(client3);
 
   const pullRequestJsonBodies: JSONObject[] = [];
   fetchMock.reset();
@@ -948,11 +973,11 @@ test('if an error occurs recovering one client, continues to try to recover othe
     persist.getClients(read),
   );
   const updatedClient1 = updateClients.get(client1ID);
-  assertNotUndefined(updatedClient1);
+  assertClientSDD(updatedClient1);
   const updatedClient2 = updateClients.get(client2ID);
-  assertNotUndefined(updatedClient2);
+  assertClientSDD(updatedClient2);
   const updatedClient3 = updateClients.get(client3ID);
-  assertNotUndefined(updatedClient3);
+  assertClientSDD(updatedClient3);
 
   expect(updatedClient1.mutationID).to.equal(client1.mutationID);
   // lastServerAckdMutationID is updated to high mutationID as mutations
@@ -975,6 +1000,10 @@ test('if an error occurs recovering one client, continues to try to recover othe
 });
 
 test('if an error occurs recovering one db, continues to try to recover clients from other dbs', async () => {
+  if (DD31) {
+    // TODO(DD31): Implement
+    return;
+  }
   const schemaVersionOfClient1 = 'testSchema1';
   const schemaVersionOfClient2 = 'testSchema2';
   const schemaVersionOfRecoveringClient = 'testSchemaOfRecovering';
@@ -1017,12 +1046,12 @@ test('if an error occurs recovering one db, continues to try to recover clients 
   const client1 = await testPerdagForClient1.withRead(read =>
     persist.getClient(client1ID, read),
   );
-  assertNotUndefined(client1);
+  assertClientSDD(client1);
 
   const client2 = await testPerdagForClient2.withRead(read =>
     persist.getClient(client2ID, read),
   );
-  assertNotUndefined(client2);
+  assertClientSDD(client2);
 
   const pullRequestJsonBodies: JSONObject[] = [];
   fetchMock.reset();
@@ -1084,12 +1113,12 @@ test('if an error occurs recovering one db, continues to try to recover clients 
   const updatedClient1 = await testPerdagForClient1.withRead(read =>
     persist.getClient(client1ID, read),
   );
-  assertNotUndefined(updatedClient1);
+  assertClientSDD(updatedClient1);
 
   const updatedClient2 = await testPerdagForClient2.withRead(read =>
     persist.getClient(client2ID, read),
   );
-  assertNotUndefined(updatedClient2);
+  assertClientSDD(updatedClient2);
 
   expect(updatedClient1.mutationID).to.equal(client1.mutationID);
   // lastServerAckdMutationID not updated due to error when recovering this
@@ -1107,6 +1136,10 @@ test('if an error occurs recovering one db, continues to try to recover clients 
 });
 
 test('mutation recovery exits early if Replicache is closed', async () => {
+  if (DD31) {
+    // TODO(DD31): Implement
+    return;
+  }
   const schemaVersion = 'testSchema1';
   const client1ID = 'client1';
   const client2ID = 'client2';
@@ -1138,9 +1171,9 @@ test('mutation recovery exits early if Replicache is closed', async () => {
 
   const clients = await testPerdag.withRead(read => persist.getClients(read));
   const client1 = clients.get(client1ID);
-  assertNotUndefined(client1);
+  assertClientSDD(client1);
   const client2 = clients.get(client2ID);
-  assertNotUndefined(client2);
+  assertClientSDD(client2);
 
   const pullRequestJsonBodies: JSONObject[] = [];
   fetchMock.reset();
@@ -1200,9 +1233,9 @@ test('mutation recovery exits early if Replicache is closed', async () => {
     persist.getClients(read),
   );
   const updatedClient1 = updateClients.get(client1ID);
-  assertNotUndefined(updatedClient1);
+  assertClientSDD(updatedClient1);
   const updatedClient2 = updateClients.get(client2ID);
-  assertNotUndefined(updatedClient2);
+  assertClientSDD(updatedClient2);
 
   expect(updatedClient1.mutationID).to.equal(client1.mutationID);
   // lastServerAckdMutationID is updated to high mutationID as mutations

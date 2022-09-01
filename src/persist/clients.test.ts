@@ -1,14 +1,16 @@
 import {expect} from '@esm-bundle/chai';
-import {assertNotUndefined} from '../asserts';
+import {assert, assertNotUndefined} from '../asserts';
 import {BTreeRead} from '../btree/read';
 import * as dag from '../dag/mod';
 import {fromChunk, SnapshotMeta} from '../db/commit';
 import {assertHash, fakeHash, newTempHash} from '../hash';
 import {
   ClientMap,
+  CLIENTS_HEAD,
   getClient,
   getClients,
   initClient,
+  isClientSDD,
   noUpdates,
   updateClients,
 } from './clients';
@@ -58,6 +60,56 @@ test('updateClients and getClients', async () => {
   await dagStore.withRead(async (read: dag.Read) => {
     const readClientMap = await getClients(read);
     expect(readClientMap).to.deep.equal(clientMap);
+  });
+});
+
+test('updateClients and getClients for DD31', async () => {
+  if (!DD31) {
+    return;
+  }
+
+  const dagStore = new dag.TestStore();
+  const clientMap = new Map(
+    Object.entries({
+      client1: makeClient({
+        heartbeatTimestampMs: 1000,
+        headHash: fakeHash('headclient1'),
+        branchID: 'branch-id-1',
+        tempRefreshHash: fakeHash('refreshhash1'),
+      }),
+      client2: {
+        heartbeatTimestampMs: 3000,
+        headHash: fakeHash('headclient2'),
+        branchID: 'branch-id-2',
+        // missing tempRefreshHash
+      },
+      client3: {
+        heartbeatTimestampMs: 5000,
+        headHash: fakeHash('headclient3'),
+        branchID: 'branch-id-3',
+        tempRefreshHash: undefined,
+      },
+    }),
+  );
+  await setClients(clientMap, dagStore);
+
+  await dagStore.withRead(async (read: dag.Read) => {
+    const readClientMap = await getClients(read);
+    expect(readClientMap).to.deep.equal(clientMap);
+  });
+
+  // Make sure we write the tempRefreshHash as well.
+  await dagStore.withRead(async read => {
+    const h = await read.getHead(CLIENTS_HEAD);
+    assert(h);
+    const chunk = await read.getChunk(h);
+    assert(chunk);
+    expect(chunk.meta).to.deep.equal([
+      'fake00000000000000000headclient1',
+      'fake0000000000000000refreshhash1',
+      'fake00000000000000000headclient2',
+      'fake00000000000000000headclient3',
+    ]);
   });
 });
 
@@ -550,8 +602,13 @@ test('initClient creates new empty snapshot when no existing snapshot to bootstr
     // New client was added to the client map.
     expect(await getClient(clientID, dagRead)).to.deep.equal(client);
     expect(client.heartbeatTimestampMs).to.equal(clock.now);
-    expect(client.mutationID).to.equal(0);
-    expect(client.lastServerAckdMutationID).to.equal(0);
+    if (isClientSDD(client)) {
+      expect(client.mutationID).to.equal(0);
+      expect(client.lastServerAckdMutationID).to.equal(0);
+    } else {
+      // TODO(DD31): Implement
+      // expect(client.branchID).to.equal('TODO DD31');
+    }
 
     // New client's head hash points to an empty snapshot with an empty btree.
     const headChunk = await dagRead.getChunk(client.headHash);
@@ -606,8 +663,12 @@ test('initClient bootstraps from base snapshot of client with highest heartbeat'
     // New client was added to the client map.
     expect(await getClient(clientID2, dagRead)).to.deep.equal(client);
     expect(client.heartbeatTimestampMs).to.equal(clock.now);
-    expect(client.mutationID).to.equal(0);
-    expect(client.lastServerAckdMutationID).to.equal(0);
+    if (isClientSDD(client)) {
+      expect(client.mutationID).to.equal(0);
+      expect(client.lastServerAckdMutationID).to.equal(0);
+    } else {
+      // TODO(DD31): Implement
+    }
 
     // New client's head hash points to a commit that matches
     // client2BaseSnapshotCommit but with a local mutation id of 0.

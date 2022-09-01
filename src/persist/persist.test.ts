@@ -19,7 +19,7 @@ import {
   isTempHash,
   makeNewFakeHashFunction,
 } from '../hash';
-import {getClient, ClientStateNotFoundError} from './clients';
+import {getClient, ClientStateNotFoundError, assertClientSDD} from './clients';
 import {addSyncSnapshot} from '../sync/test-helpers';
 import {persist} from './persist';
 import {gcClients} from './client-gc.js';
@@ -64,7 +64,7 @@ async function assertClientMutationIDsCorrect(
 ): Promise<void> {
   await perdag.withRead(async dagRead => {
     const client = await getClient(clientID, dagRead);
-    assert(client);
+    assertClientSDD(client);
     const headCommit = await db.commitFromHash(client.headHash, dagRead);
     const baseSnapshotCommit = await db.baseSnapshot(client.headHash, dagRead);
     expect(client.mutationID).to.equal(

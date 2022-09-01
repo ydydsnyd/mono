@@ -4,6 +4,7 @@ import type * as dag from '../dag/mod';
 import {
   ClientMap,
   ClientStateNotFoundError,
+  isClientSDD,
   noUpdates,
   updateClients,
 } from './clients';
@@ -49,12 +50,24 @@ export async function writeHeartbeat(
     if (!client) {
       return noUpdates;
     }
+
+    if (isClientSDD(client)) {
+      return {
+        clients: new Map(clients).set(clientID, {
+          heartbeatTimestampMs: Date.now(),
+          headHash: client.headHash,
+          mutationID: client.mutationID,
+          lastServerAckdMutationID: client.lastServerAckdMutationID,
+        }),
+      };
+    }
+
     return {
       clients: new Map(clients).set(clientID, {
         heartbeatTimestampMs: Date.now(),
         headHash: client.headHash,
-        mutationID: client.mutationID,
-        lastServerAckdMutationID: client.lastServerAckdMutationID,
+        branchID: client.branchID,
+        tempRefreshHash: client.tempRefreshHash,
       }),
     };
   }, dagStore);
