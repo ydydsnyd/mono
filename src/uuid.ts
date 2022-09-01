@@ -1,5 +1,7 @@
 export const uuid: () => string =
-  typeof crypto.randomUUID !== 'undefined' ? uuidNative : uuidNoNative;
+  typeof crypto !== 'undefined' && typeof crypto.randomUUID !== 'undefined'
+    ? uuidNative
+    : uuidNoNative;
 
 export function uuidNoNative(): string {
   const numbers = new Uint8Array(36);
