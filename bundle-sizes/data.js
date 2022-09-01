@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1661975643689,
+  "lastUpdate": 1662028469473,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -23729,6 +23729,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23491,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8b0bd49aea779ddd0da2018fc1c6124233b22e01",
+          "message": "chore(DD31): Add ClientDD31 (#234)\n\nThis one does not follow the existing pattern. It creates two Client\r\ntypes; ClientSDD and ClientDD32. It then uses a union of those two for\r\nmost code.\r\n\r\nMutation recovery is disabled under DD31 for now.",
+          "timestamp": "2022-09-01T10:33:28Z",
+          "tree_id": "5b5bbd8a3f3f62a59826e028cd259e55a1ab7e79",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/8b0bd49aea779ddd0da2018fc1c6124233b22e01"
+        },
+        "date": 1662028465124,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 193257,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34661,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 192111,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34344,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81301,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23614,
             "unit": "bytes"
           }
         ]
