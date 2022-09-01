@@ -242,11 +242,8 @@ export class Reflect<MD extends MutatorDefs> {
     }
 
     if (downMessage[0] === 'error') {
-      try {
-        this.onSocketError?.(downMessage[1]);
-      } finally {
-        throw new Error(downMessage[1]);
-      }
+      this.onSocketError?.(downMessage[1]);
+      throw new Error(downMessage[1]);
     }
 
     if (downMessage[0] === 'pong') {
@@ -296,7 +293,7 @@ export class Reflect<MD extends MutatorDefs> {
   }
 
   private _disconnect() {
-    this._l.debug?.('disconnecting');
+    this._l.info?.('disconnecting');
     if (this._state === ConnectionState.Connected) {
       // Only create a new resolver if the one we have was previously resolved,
       // which happens when the socket became connected.
@@ -397,11 +394,14 @@ export class Reflect<MD extends MutatorDefs> {
       promise.then(() => true),
       sleep(2000).then(() => false),
     ]);
+    if (this._state !== ConnectionState.Connected) {
+      return;
+    }
     const delta = performance.now() - t0;
     if (connected) {
       l.debug?.('ping succeeded in', delta, 'ms');
     } else {
-      l.debug?.('ping failed in', delta, 'ms - disconnecting');
+      l.info?.('ping failed in', delta, 'ms - disconnecting');
       this._disconnect();
     }
   }
