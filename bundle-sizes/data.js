@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1662028469473,
+  "lastUpdate": 1662101776022,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -23778,6 +23778,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs",
             "value": 81301,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23614,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "is@roci.dev",
+            "name": "ingar",
+            "username": "ingar"
+          },
+          "committer": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "distinct": true,
+          "id": "9982954f251c3a8d43e0e697e22a33bc55ff8eb8",
+          "message": "check for crypto before accessing props on it",
+          "timestamp": "2022-09-02T08:55:10+02:00",
+          "tree_id": "2f025757d9a25ae465bd913c9f248309e372db86",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/9982954f251c3a8d43e0e697e22a33bc55ff8eb8"
+        },
+        "date": 1662101771247,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 193290,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34681,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 192144,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34349,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81329,
             "unit": "bytes"
           },
           {
