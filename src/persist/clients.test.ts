@@ -5,13 +5,15 @@ import * as dag from '../dag/mod';
 import {fromChunk, SnapshotMeta} from '../db/commit';
 import {assertHash, fakeHash, newTempHash} from '../hash';
 import {
+  ClientDD31,
   ClientMap,
-  CLIENTS_HEAD,
+  CLIENTS_HEAD_NAME,
   getClient,
   getClients,
   initClient,
   isClientSDD,
   noUpdates,
+  setClient,
   updateClients,
 } from './clients';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
@@ -23,6 +25,7 @@ import {
   Chain,
 } from '../db/test-helpers';
 import {makeClient, setClients} from './clients-test-helpers';
+import type {ClientID} from '../sync/client-id.js';
 
 let clock: SinonFakeTimers;
 setup(() => {
@@ -100,7 +103,7 @@ test('updateClients and getClients for DD31', async () => {
 
   // Make sure we write the tempRefreshHash as well.
   await dagStore.withRead(async read => {
-    const h = await read.getHead(CLIENTS_HEAD);
+    const h = await read.getHead(CLIENTS_HEAD_NAME);
     assert(h);
     const chunk = await read.getChunk(h);
     assert(chunk);
@@ -689,5 +692,43 @@ test('initClient bootstraps from base snapshot of client with highest heartbeat'
     expect(commit.indexes).to.not.be.empty;
     expect(commit.indexes).to.deep.equal(client2BaseSnapshotCommit.indexes);
     expect(commit.valueHash).to.equal(client2BaseSnapshotCommit.valueHash);
+  });
+});
+
+test('setClient', async () => {
+  const dagStore = new dag.TestStore();
+
+  const t = async (clientID: ClientID, client: ClientDD31) => {
+    await dagStore.withWrite(async (write: dag.Write) => {
+      await setClient(clientID, client, write);
+      await write.commit();
+    });
+
+    await dagStore.withRead(async (read: dag.Read) => {
+      const actualClient = await getClient(clientID, read);
+      expect(actualClient).to.deep.equal(client);
+    });
+  };
+
+  const clientID = 'client-id';
+  await t(clientID, {
+    branchID: 'branch-id-1',
+    headHash: fakeHash('bid'),
+    heartbeatTimestampMs: 1,
+  });
+
+  await t(clientID, {
+    branchID: 'branch-id-1',
+    headHash: fakeHash('bid2'),
+    heartbeatTimestampMs: 2,
+    tempRefreshHash: fakeHash('trh'),
+  });
+
+  const clientID2 = 'client-id-2';
+  await t(clientID2, {
+    branchID: 'branch-id-1',
+    headHash: fakeHash('bid3'),
+    heartbeatTimestampMs: 3,
+    tempRefreshHash: fakeHash('trh2'),
   });
 });

@@ -161,7 +161,7 @@ test('setBranches throws error if indexes are modified', async () => {
         lastServerAckdMutationIDs: {c1: 2},
       },
     },
-    "A branch's index defintions must never change.",
+    "A branch's index definitions must never change.",
     new dag.TestStore(),
   );
 });
@@ -435,7 +435,7 @@ test('setBranch throws error if indexes are modified', async () => {
         lastServerAckdMutationIDs: {c1: 2},
       },
     ],
-    "A branch's index defintions must never change.",
+    "A branch's index definitions must never change.",
     new dag.TestStore(),
   );
 });

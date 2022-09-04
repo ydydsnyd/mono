@@ -19,6 +19,7 @@ import {
   newSnapshotCommitDataDD31,
 } from '../db/commit';
 import type {MaybePromise} from '../mod';
+import type {ClientID} from '../sync/ids.js';
 
 export type ClientMap = ReadonlyMap<sync.ClientID, ClientSDD | ClientDD31>;
 
@@ -94,7 +95,7 @@ export function isClientSDD(client: Client): client is ClientSDD {
   return !DD31 || (client as ClientSDD).lastServerAckdMutationID !== undefined;
 }
 
-export const CLIENTS_HEAD = 'clients';
+export const CLIENTS_HEAD_NAME = 'clients';
 
 function assertClient(value: unknown): asserts value is Client {
   assertClientBase(value);
@@ -173,7 +174,7 @@ function clientMapToChunkDataNoHashValidation(
 }
 
 export async function getClients(dagRead: dag.Read): Promise<ClientMap> {
-  const hash = await dagRead.getHead(CLIENTS_HEAD);
+  const hash = await dagRead.getHead(CLIENTS_HEAD_NAME);
   return getClientsAtHash(hash, dagRead);
 }
 
@@ -320,7 +321,7 @@ export async function initClient(
   return [newClientID, newClient, updatedClients];
 }
 
-function hashOfClients(clients: ClientMap): Promise<Hash> {
+function asyncHashOfClients(clients: ClientMap): Promise<Hash> {
   const data = clientMapToChunkDataNoHashValidation(clients);
   return hashOf(data);
 }
@@ -339,7 +340,7 @@ export async function updateClients(
   dagStore: dag.Store,
 ): Promise<ClientMap> {
   const [clients, clientsHash] = await dagStore.withRead(async dagRead => {
-    const clientsHash = await dagRead.getHead(CLIENTS_HEAD);
+    const clientsHash = await dagRead.getHead(CLIENTS_HEAD_NAME);
     const clients = await getClientsAtHash(clientsHash, dagRead);
     return [clients, clientsHash];
   });
@@ -357,9 +358,9 @@ async function updateClientsInternal(
     return clients;
   }
   const {clients: updatedClients, chunksToPut} = updateResults;
-  const updatedClientsHash = await hashOfClients(updatedClients);
+  const updatedClientsHash = await asyncHashOfClients(updatedClients);
   const result = await dagStore.withWrite(async dagWrite => {
-    const currClientsHash = await dagWrite.getHead(CLIENTS_HEAD);
+    const currClientsHash = await dagWrite.getHead(CLIENTS_HEAD_NAME);
     if (currClientsHash !== clientsHash) {
       // Conflict!  Someone else updated the ClientsMap.  Retry update.
       return {
@@ -373,13 +374,7 @@ async function updateClientsInternal(
       dagWrite,
     );
 
-    const updateClientsRefs: Hash[] = [];
-    for (const client of updatedClients.values()) {
-      updateClientsRefs.push(client.headHash);
-      if (DD31 && isClientDD31(client) && client.tempRefreshHash) {
-        updateClientsRefs.push(client.tempRefreshHash);
-      }
-    }
+    const updateClientsRefs: Hash[] = getRefsForClients(updatedClients);
 
     const updateClientsChunk = dag.createChunkWithHash(
       updatedClientsHash,
@@ -395,7 +390,7 @@ async function updateClientsInternal(
     await Promise.all([
       ...chunksToPutPromises,
       dagWrite.putChunk(updateClientsChunk),
-      dagWrite.setHead(CLIENTS_HEAD, updateClientsChunk.hash),
+      dagWrite.setHead(CLIENTS_HEAD_NAME, updateClientsChunk.hash),
     ]);
     await dagWrite.commit();
     return {
@@ -413,4 +408,35 @@ async function updateClientsInternal(
     result.clientsHash,
     dagStore,
   );
+}
+
+function getRefsForClients(clients: ClientMap): Hash[] {
+  const refs: Hash[] = [];
+  for (const client of clients.values()) {
+    refs.push(client.headHash);
+    if (DD31 && isClientDD31(client) && client.tempRefreshHash) {
+      refs.push(client.tempRefreshHash);
+    }
+  }
+  return refs;
+}
+
+/**
+ * Adds a Client to the ClientMap and updates the 'clients' head top point at
+ * the updated clients.
+ */
+export async function setClient(
+  clientID: ClientID,
+  client: Client,
+  dagWrite: dag.Write,
+): Promise<Hash> {
+  const clientsHash = await dagWrite.getHead(CLIENTS_HEAD_NAME);
+  const clients = await getClientsAtHash(clientsHash, dagWrite);
+  const newClients = new Map(clients).set(clientID, client);
+
+  const chunkData = clientMapToChunkData(newClients, dagWrite);
+  const chunk = dagWrite.createChunk(chunkData, getRefsForClients(newClients));
+  await dagWrite.putChunk(chunk);
+  await dagWrite.setHead(CLIENTS_HEAD_NAME, chunk.hash);
+  return chunk.hash;
 }

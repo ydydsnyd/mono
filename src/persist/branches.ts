@@ -51,7 +51,7 @@ export type Branch = {
    *
    * Should be updated by the clients assigned to this branch whenever they
    * persist to this branch.
-   * Read by other clients to determine if there are unacknowledge pending
+   * Read by other clients to determine if there are unacknowledged pending
    * mutations for them to recover and *updated* by other clients upon
    * successfully recovering pending mutations to avoid redundant pushes of
    * pending mutations.
@@ -65,7 +65,7 @@ export type Branch = {
   readonly lastServerAckdMutationIDs: Record<sync.ClientID, number>;
 };
 
-const BRANCHES_HEAD = 'branches';
+const BRANCHES_HEAD_NAME = 'branches';
 
 function assertBranch(value: unknown): asserts value is Branch {
   assertObject(value);
@@ -127,7 +127,7 @@ async function getBranchesAtHash(
 }
 
 export async function getBranches(dagRead: dag.Read): Promise<BranchMap> {
-  const hash = await dagRead.getHead(BRANCHES_HEAD);
+  const hash = await dagRead.getHead(BRANCHES_HEAD_NAME);
   if (!hash) {
     return new Map();
   }
@@ -181,7 +181,7 @@ function validateBranchUpdate(branch: Branch, currBranch: Branch | undefined) {
   if (currBranch !== undefined) {
     assert(
       indexDefinitionsEqual(currBranch.indexes, branch.indexes),
-      "A branch's index defintions must never change.",
+      "A branch's index definitions must never change.",
     );
     assert(
       mutatorNamesEqual(mutatorNamesSet, currBranch.mutatorNames),
@@ -198,7 +198,7 @@ async function setValidatedBranches(
   const refs = Array.from(branches.values(), branch => branch.headHash);
   const chunk = dagWrite.createChunk(chunkData, refs);
   await dagWrite.putChunk(chunk);
-  await dagWrite.setHead(BRANCHES_HEAD, chunk.hash);
+  await dagWrite.setHead(BRANCHES_HEAD_NAME, chunk.hash);
   return branches;
 }
 
