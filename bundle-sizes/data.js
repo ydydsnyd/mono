@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1662323237007,
+  "lastUpdate": 1662454208122,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -23861,6 +23861,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/e9651dd97b7920305d40498820b1516479020204"
         },
         "date": 1662323231373,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 193385,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34711,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 192239,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34360,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81361,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23635,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e731b69a46282f2d079aef240eee59660a0a2037",
+          "message": "chore(DD31): Add a db diff function (#240)\n\nFor `refresh` we need to diff between two different commits. This code\r\nneed to diff the main btree as well as the index btrees.",
+          "timestamp": "2022-09-06T08:49:05Z",
+          "tree_id": "a65221b0bb265c67767332bb43b3dbadc9c1b53e",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/e731b69a46282f2d079aef240eee59660a0a2037"
+        },
+        "date": 1662454202690,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
