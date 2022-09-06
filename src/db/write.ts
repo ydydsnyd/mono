@@ -1,6 +1,8 @@
 import type {LogContext} from '@rocicorp/logger';
 import type * as dag from '../dag/mod';
 import * as btree from '../btree/mod';
+import * as sync from '../sync/mod';
+import type {ClientID} from '../sync/mod';
 import {
   Commit,
   Meta as CommitMeta,
@@ -26,7 +28,6 @@ import {lazy} from '../lazy';
 import {emptyHash, Hash} from '../hash';
 import type {InternalDiff} from '../btree/node';
 import {allEntriesAsDiff} from '../btree/read';
-import type {ClientID, DiffsMap} from '../sync/mod';
 import type {InternalValue} from '../internal-value';
 import {assert} from '../asserts';
 import {
@@ -251,7 +252,7 @@ export class Write extends Read {
   async commitWithDiffs(
     headName: string,
     generateDiffs: boolean,
-  ): Promise<[Hash, DiffsMap]> {
+  ): Promise<[Hash, sync.DiffsMap]> {
     const valueHash = await this.map.flush();
     let valueDiff: InternalDiff = [];
     if (generateDiffs && this._basis) {
@@ -259,10 +260,8 @@ export class Write extends Read {
       valueDiff = await btree.diff(basisMap, this.map);
     }
     const indexRecords: IndexRecord[] = [];
-    const diffMap: Map<string, InternalDiff> = new Map();
-    if (valueDiff.length > 0) {
-      diffMap.set('', valueDiff);
-    }
+    const diffsMap = new sync.DiffsMap();
+    diffsMap.set('', valueDiff);
 
     let basisIndexes: Map<string, IndexRead>;
     if (generateDiffs && this._basis) {
@@ -281,10 +280,7 @@ export class Write extends Read {
           ? btree.diff(basisIndex.map, index.map)
           : // No basis. All keys are new.
             allEntriesAsDiff(index.map, 'add'));
-
-        if (indexDiffResult.length > 0) {
-          diffMap.set(name, indexDiffResult);
-        }
+        diffsMap.set(name, indexDiffResult);
       }
       const indexRecord: IndexRecord = {
         definition: index.meta.definition,
@@ -299,9 +295,7 @@ export class Write extends Read {
       for (const [name, basisIndex] of basisIndexes) {
         if (!this.indexes.has(name)) {
           const indexDiffResult = await allEntriesAsDiff(basisIndex.map, 'del');
-          if (indexDiffResult.length > 0) {
-            diffMap.set(name, indexDiffResult);
-          }
+          diffsMap.set(name, indexDiffResult);
         }
       }
     }
@@ -391,7 +385,7 @@ export class Write extends Read {
 
     await this._dagWrite.commit();
 
-    return [commit.chunk.hash, diffMap];
+    return [commit.chunk.hash, diffsMap];
   }
 
   close(): void {

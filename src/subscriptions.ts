@@ -11,7 +11,6 @@ import type {
   NoIndexDiff,
 } from './btree/node';
 import {deepEqual, ReadonlyJSONValue} from './json';
-import type {DiffsMap} from './sync/pull';
 import {ReadTransaction, SubscriptionTransactionWrapper} from './transactions';
 import type {QueryInternal} from './replicache';
 import type {LogContext} from '@rocicorp/logger';
@@ -27,10 +26,10 @@ interface Subscription<R, E> {
   invoke(
     tx: ReadTransaction,
     kind: InvokeKind,
-    diffs: DiffsMap | undefined,
+    diffs: sync.DiffsMap | undefined,
   ): Promise<R>;
 
-  matches(diffs: DiffsMap): boolean;
+  matches(diffs: sync.DiffsMap): boolean;
 
   updateDeps(
     keys: ReadonlySet<string>,
@@ -70,12 +69,12 @@ class SubscriptionImpl<R, E> implements Subscription<R, E> {
   invoke(
     tx: ReadTransaction,
     _kind: InvokeKind,
-    _diffs: DiffsMap | undefined,
+    _diffs: sync.DiffsMap | undefined,
   ): Promise<R> {
     return this._body(tx);
   }
 
-  matches(diffs: DiffsMap): boolean {
+  matches(diffs: sync.DiffsMap): boolean {
     for (const [indexName, diff] of diffs) {
       if (diffMatchesSubscription(this._keys, this._scans, indexName, diff)) {
         return true;
@@ -192,7 +191,7 @@ class WatchImpl implements Subscription<Diff | undefined, unknown> {
   async invoke(
     tx: ReadTransaction,
     kind: InvokeKind,
-    diffs: DiffsMap | undefined,
+    diffs: sync.DiffsMap | undefined,
   ): Promise<Diff | undefined> {
     const invoke = async <Key extends db.IndexKey | string>(
       indexName: string | undefined,
@@ -264,7 +263,7 @@ class WatchImpl implements Subscription<Diff | undefined, unknown> {
     );
   }
 
-  matches(diffs: DiffsMap): boolean {
+  matches(diffs: sync.DiffsMap): boolean {
     const diff = diffs.get(this._indexName ?? '');
     if (diff === undefined) {
       return false;

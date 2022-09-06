@@ -4,7 +4,6 @@ import {assertNotUndefined} from '../asserts';
 import {assertObject, assertString} from '../asserts';
 import * as dag from '../dag/mod';
 import * as db from '../db/mod';
-import type * as sync from '../sync/mod';
 import {Commit, DEFAULT_HEAD_NAME} from '../db/mod';
 import {
   addGenesis,
@@ -43,6 +42,7 @@ import {
   InternalValue,
   ToInternalValueReason,
 } from '../internal-value.js';
+import type {DiffsMap} from './diff.js';
 
 test('begin try pull', async () => {
   const clientID = 'test_client_id';
@@ -567,7 +567,7 @@ test('maybe end try pull', async () => {
     expReplayIDs: number[];
     expErr?: string;
     // The expected diffs as reported by the maybe end pull.
-    expDiffs: sync.DiffsMap;
+    expDiffs: DiffsMap;
   };
   const cases: Case[] = [
     {
@@ -786,7 +786,7 @@ test('changed keys', async () => {
     baseMap: Map<string, string>,
     indexDef: IndexDef | undefined,
     patch: PatchOperation[],
-    expectedDiffsMap: sync.DiffsMap,
+    expectedDiffsMap: DiffsMap,
   ) => {
     const clientID = 'test_client_id';
     const store = new dag.TestStore();

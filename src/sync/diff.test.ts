@@ -8,7 +8,7 @@ import {
   addLocal,
   addSnapshot,
   Chain,
-} from './test-helpers';
+} from '../db/test-helpers';
 
 type DiffsRecord = Record<string, InternalDiff>;
 
@@ -22,12 +22,12 @@ test('db diff', async () => {
 
   const t = async (iOld: number, iNew: number, expectedDiff: DiffsRecord) => {
     await store.withRead(async read => {
-      const valueDiff = await diff(
+      const diffsMap = await diff(
         chain[iOld].chunk.hash,
         chain[iNew].chunk.hash,
         read,
       );
-      expect(Object.fromEntries(valueDiff)).to.deep.equal(expectedDiff);
+      expect(Object.fromEntries(diffsMap)).to.deep.equal(expectedDiff);
     });
   };
 
