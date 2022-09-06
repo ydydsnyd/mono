@@ -16,6 +16,7 @@ import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 import type {ClientID} from '../sync/client-id.js';
 import {emptyHash, Hash} from '../hash.js';
 import {BTreeWrite} from '../btree/mod.js';
+import type {IndexDefinition} from '../index-defs.js';
 
 export type Chain = Commit<Meta>[];
 
@@ -49,10 +50,16 @@ export async function addLocal(
   chain: Chain,
   store: dag.Store,
   clientID: ClientID,
+  entries?: [string, JSONValue][],
 ): Promise<Chain> {
   expect(chain).to.have.length.greaterThan(0);
   const i = chain.length;
-  const commit = await createLocal([[`local`, `${i}`]], store, i, clientID);
+  const commit = await createLocal(
+    entries ?? [[`local`, `${i}`]],
+    store,
+    i,
+    clientID,
+  );
 
   chain.push(commit);
   return chain;
@@ -90,10 +97,26 @@ export async function addIndexChange(
   chain: Chain,
   store: dag.Store,
   clientID: ClientID,
+  indexName?: string,
+  indexDefinition?: IndexDefinition,
 ): Promise<Chain> {
   expect(chain).to.have.length.greaterThan(0);
   const i = chain.length;
-  const commit = await createIndex(i + '', 'local', '', store, false, clientID);
+  const name = indexName ?? `${i}`;
+  const {
+    prefix = 'local',
+    jsonPointer = '',
+    allowEmpty = false,
+  } = indexDefinition ?? {};
+
+  const commit = await createIndex(
+    name,
+    prefix,
+    jsonPointer,
+    store,
+    allowEmpty,
+    clientID,
+  );
   chain.push(commit);
   return chain;
 }
