@@ -1,20 +1,16 @@
-import { superstructAssert } from "../util/superstruct.js";
 import type { Patch } from "../protocol/poke.js";
 import { userValuePrefix, userValueSchema } from "../types/user-value.js";
 import type { Version } from "../types/version.js";
+import type { DurableStorage } from "../storage/durable-storage.js";
 
 export async function getPatch(
-  durable: DurableObjectStorage,
+  storage: DurableStorage,
   fromCookie: Version
 ): Promise<Patch> {
-  const result = await durable.list({
-    prefix: userValuePrefix,
-    allowConcurrency: true,
-  });
+  const result = await storage.list(userValuePrefix, userValueSchema);
 
   const patch: Patch = [];
   for (const [key, value] of result) {
-    superstructAssert(value, userValueSchema);
     const validValue = value;
 
     // TODO: More efficient way of finding changed values.

@@ -3,7 +3,7 @@
 import type { LogContext } from "@rocicorp/logger";
 import type { DisconnectHandler } from "../server/disconnect.js";
 import { fastForwardRoom } from "../ff/fast-forward.js";
-import { DurableStorage } from "../storage/durable-storage.js";
+import type { DurableStorage } from "../storage/durable-storage.js";
 import { EntryCache } from "../storage/entry-cache.js";
 import type { ClientPokeBody } from "../types/client-poke-body.js";
 import { getClientRecord, putClientRecord } from "../types/client-record.js";
@@ -28,10 +28,9 @@ export async function processRoom(
   clients: ClientMap,
   mutators: MutatorMap,
   disconnectHandler: DisconnectHandler,
-  durable: DurableObjectStorage,
+  storage: DurableStorage,
   timestamp: number
 ): Promise<ClientPokeBody[]> {
-  const storage = new DurableStorage(durable);
   const cache = new EntryCache(storage);
 
   // TODO: can/should we pass `clients` to fastForward instead?
@@ -56,7 +55,7 @@ export async function processRoom(
     clientIDs,
     gcr,
     currentVersion,
-    durable,
+    storage,
     timestamp
   );
   lc.debug?.("pokes from fastforward", JSON.stringify(pokes));

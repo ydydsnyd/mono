@@ -15,6 +15,7 @@ import {
 import { handleConnection } from "../../src/server/connect.js";
 import { USER_DATA_HEADER_NAME } from "./auth.js";
 import { encodeHeaderValue } from "../util/headers.js";
+import { DurableStorage } from "../storage/durable-storage.js";
 
 const { roomDO } = getMiniflareBindings();
 const id = roomDO.newUniqueId();
@@ -192,10 +193,11 @@ test("handleConnection", async () => {
   ];
 
   const durable = await getMiniflareDurableObjectStorage(id);
+  const storage = new DurableStorage(durable);
 
   for (const c of cases) {
     if (c.existingRecord) {
-      await putEntry(durable, clientRecordKey("c1"), c.existingRecord);
+      await putEntry(durable, clientRecordKey("c1"), c.existingRecord, {});
     }
 
     const onMessage = () => undefined;
@@ -206,7 +208,7 @@ test("handleConnection", async () => {
     await handleConnection(
       createSilentLogContext(),
       mocket,
-      durable,
+      storage,
       new URL(c.url),
       c.headers,
       clients,
@@ -229,7 +231,8 @@ test("handleConnection", async () => {
     const actualRecord = await getEntry(
       durable,
       clientRecordKey("c1"),
-      clientRecordSchema
+      clientRecordSchema,
+      {}
     );
     expect(actualRecord).toEqual(c.expectedRecord);
   }

@@ -1,5 +1,5 @@
 import { LogContext, LogSink, LogLevel } from "@rocicorp/logger";
-import { encodeHeaderValue } from "src/util/headers";
+import { encodeHeaderValue } from "../util/headers";
 import { randomID } from "../util/rand";
 import { AuthHandler, UserData, USER_DATA_HEADER_NAME } from "./auth";
 

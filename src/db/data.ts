@@ -1,24 +1,15 @@
 import type { JSONValue } from "replicache";
 import type * as s from "superstruct";
-import { superstructAssert } from "../util/superstruct";
-
-// DurableObjects has a lot of clever optimisations we can take advantage of,
-// but they require some thought as to whether they fit with what we are doing.
-// These settings make DO behave more like a basic kv store and thus work
-// better with our existing code.
-// TODO: Evaluate these options and perhaps simplify our code by taking advantage.
-const options = {
-  // We already the currency at a higher level in the game loop.
-  allowConcurrency: true,
-  // Only for writes: We need to carefully consider transactionality and when we
-  // return responses.
-  allowUnconfirmed: true,
-};
+import {
+  superstructAssert,
+  superstructAssertMapValues,
+} from "../util/superstruct";
 
 export async function getEntry<T extends JSONValue>(
   durable: DurableObjectStorage,
   key: string,
-  schema: s.Struct<T>
+  schema: s.Struct<T>,
+  options: DurableObjectGetOptions
 ): Promise<T | undefined> {
   const value = await durable.get(key, options);
   if (value === undefined) {
@@ -28,17 +19,33 @@ export async function getEntry<T extends JSONValue>(
   return value;
 }
 
+export async function listEntries<T extends JSONValue>(
+  durable: DurableObjectStorage,
+  prefix: string,
+  schema: s.Struct<T>,
+  options: DurableObjectGetOptions
+): Promise<Map<string, T>> {
+  const result = await durable.list({
+    ...options,
+    prefix,
+  });
+  superstructAssertMapValues(result, schema);
+  return result;
+}
+
 export async function putEntry<T extends JSONValue>(
   durable: DurableObjectStorage,
   key: string,
-  value: T
+  value: T,
+  options: DurableObjectPutOptions
 ): Promise<void> {
   await durable.put(key, value, options);
 }
 
 export async function delEntry(
   durable: DurableObjectStorage,
-  key: string
+  key: string,
+  options: DurableObjectPutOptions
 ): Promise<void> {
   await durable.delete(key, options);
 }

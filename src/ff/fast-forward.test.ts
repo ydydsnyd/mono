@@ -200,7 +200,7 @@ test("fastForward", async () => {
       c.clients,
       gcr,
       42,
-      durable,
+      storage,
       c.timestamp
     );
 

@@ -5,6 +5,7 @@ import type { ClientPokeBody } from "../types/client-poke-body.js";
 import { getPatch } from "./get-patch.js";
 import type { Patch } from "../protocol/poke.js";
 import { must } from "../util/must.js";
+import type { DurableStorage } from "../storage/durable-storage.js";
 
 export type GetClientRecord = (clientID: ClientID) => Promise<ClientRecord>;
 
@@ -21,7 +22,7 @@ export async function fastForwardRoom(
   clients: ClientID[],
   getClientRecord: GetClientRecord,
   currentVersion: Version,
-  durable: DurableObjectStorage,
+  storage: DurableStorage,
   timestamp: number
 ): Promise<ClientPokeBody[]> {
   // Load all the client records in parallel
@@ -40,7 +41,7 @@ export async function fastForwardRoom(
 
   // Calculate all the distinct patches in parallel
   const getPatchEntry = async (baseCookie: NullableVersion) =>
-    [baseCookie, await getPatch(durable, baseCookie ?? 0)] as [
+    [baseCookie, await getPatch(storage, baseCookie ?? 0)] as [
       NullableVersion,
       Patch
     ];

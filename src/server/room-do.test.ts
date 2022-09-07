@@ -12,6 +12,7 @@ test("Logs version during construction", async () => {
     authApiKey: undefined,
     logSink: testLogSink,
     logLevel: "info",
+    allowUnconfirmedWrites: true,
   });
   expect(testLogSink.messages).toEqual([
     ["info", "RoomDO", "doID=test-do-id", "Starting server"],

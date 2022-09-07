@@ -9,6 +9,7 @@ import { must } from "../util/must.js";
 import type { MutatorMap } from "./process-mutation.js";
 import { processRoom } from "./process-room.js";
 import type { DisconnectHandler } from "../server/disconnect.js";
+import type { DurableStorage } from "../storage/durable-storage.js";
 
 /**
  * Processes all mutations in all rooms for a time range, and send relevant pokes.
@@ -17,7 +18,7 @@ import type { DisconnectHandler } from "../server/disconnect.js";
  */
 export async function processPending(
   lc: LogContext,
-  durable: DurableObjectStorage,
+  storage: DurableStorage,
   clients: ClientMap,
   mutators: MutatorMap,
   disconnectHandler: DisconnectHandler,
@@ -32,7 +33,7 @@ export async function processPending(
       clients,
       mutators,
       disconnectHandler,
-      durable,
+      storage,
       timestamp
     );
 

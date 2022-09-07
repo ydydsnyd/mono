@@ -21,6 +21,15 @@ export interface ReflectServerOptions<
   disconnectHandler?: DisconnectHandler;
   getLogSinks?: (env: Env) => LogSink[];
   getLogLevel?: (env: Env) => LogLevel;
+  /**
+   * If true, outgoing network messages are sent before the writes
+   * they reflect are confirmed to be durable. This enables
+   * lower latency but can result in clients losing some mutations
+   * in the case of an untimely server restart.
+   *
+   * Default is true.
+   */
+  allowUnconfirmedWrites?: boolean;
 }
 
 function combineLogSinks(sinks: LogSink[]): LogSink {
@@ -57,26 +66,9 @@ export function createReflectServer<
   // eslint-disable-next-line @typescript-eslint/naming-convention
   AuthDO: DurableObjectCtor<Env>;
 } {
-  const {
-    authHandler,
-    disconnectHandler = () => Promise.resolve(),
-    getLogSinks = (_env) => [consoleLogSink],
-    getLogLevel = (_env) => "debug",
-  } = options;
-
-  const roomDOClass = class extends BaseRoomDO<MD> {
-    constructor(state: DurableObjectState, env: Env) {
-      super({
-        mutators: options.mutators,
-        state,
-        disconnectHandler,
-        authApiKey: env.REFLECT_AUTH_API_KEY,
-        logSink: combineLogSinks(getLogSinks(env)),
-        logLevel: getLogLevel(env),
-      });
-    }
-  };
-
+  const optionsWithDefaults = getOptionsWithDefaults(options);
+  const roomDOClass = createRoomDOClass(optionsWithDefaults);
+  const { authHandler, getLogSinks, getLogLevel } = optionsWithDefaults;
   const authDOClass = class extends BaseAuthDO {
     constructor(state: DurableObjectState, env: Env) {
       super({
@@ -109,26 +101,9 @@ export function createReflectServerWithoutAuthDO<
   // eslint-disable-next-line @typescript-eslint/naming-convention
   RoomDO: DurableObjectCtor<Env>;
 } {
-  const {
-    authHandler,
-    disconnectHandler = () => Promise.resolve(),
-    getLogSinks = (_env) => [consoleLogSink],
-    getLogLevel = (_env) => "debug",
-  } = options;
-
-  const roomDOClass = class extends BaseRoomDO<MD> {
-    constructor(state: DurableObjectState, env: Env) {
-      super({
-        mutators: options.mutators,
-        state,
-        disconnectHandler,
-        authApiKey: env.REFLECT_AUTH_API_KEY,
-        logSink: combineLogSinks(getLogSinks(env)),
-        logLevel: getLogLevel(env),
-      });
-    }
-  };
-
+  const optionsWithDefaults = getOptionsWithDefaults(options);
+  const roomDOClass = createRoomDOClass(optionsWithDefaults);
+  const { authHandler, getLogSinks, getLogLevel } = optionsWithDefaults;
   const worker = createNoAuthDOWorker<Env>({
     getLogSink: (env) => combineLogSinks(getLogSinks(env)),
     getLogLevel,
@@ -137,4 +112,51 @@ export function createReflectServerWithoutAuthDO<
 
   // eslint-disable-next-line @typescript-eslint/naming-convention
   return { worker, RoomDO: roomDOClass };
+}
+
+function getOptionsWithDefaults<
+  Env extends ReflectServerBaseEnv,
+  MD extends MutatorDefs
+>(
+  options: ReflectServerOptions<Env, MD>
+): Required<ReflectServerOptions<Env, MD>> {
+  const {
+    disconnectHandler = () => Promise.resolve(),
+    getLogSinks = (_env) => [consoleLogSink],
+    getLogLevel = (_env) => "debug",
+    allowUnconfirmedWrites = true,
+  } = options;
+  return {
+    ...options,
+    disconnectHandler,
+    getLogSinks,
+    getLogLevel,
+    allowUnconfirmedWrites,
+  };
+}
+
+function createRoomDOClass<
+  Env extends ReflectServerBaseEnv,
+  MD extends MutatorDefs
+>(optionsWithDefaults: Required<ReflectServerOptions<Env, MD>>) {
+  const {
+    mutators,
+    disconnectHandler,
+    getLogSinks,
+    getLogLevel,
+    allowUnconfirmedWrites,
+  } = optionsWithDefaults;
+  return class extends BaseRoomDO<MD> {
+    constructor(state: DurableObjectState, env: Env) {
+      super({
+        mutators,
+        state,
+        disconnectHandler,
+        authApiKey: env.REFLECT_AUTH_API_KEY,
+        logSink: combineLogSinks(getLogSinks(env)),
+        logLevel: getLogLevel(env),
+        allowUnconfirmedWrites,
+      });
+    }
+  };
 }

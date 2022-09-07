@@ -1,4 +1,3 @@
-import { DurableStorage } from "../storage/durable-storage.js";
 import {
   ClientRecord,
   getClientRecord,
@@ -16,6 +15,7 @@ import type { UserData } from "./auth.js";
 import { USER_DATA_HEADER_NAME } from "./auth.js";
 import { decodeHeaderValue } from "../util/headers.js";
 import { addConnectedClient } from "../types/connected-clients.js";
+import type { DurableStorage } from "../storage/durable-storage.js";
 
 export type MessageHandler = (
   clientID: ClientID,
@@ -37,7 +37,7 @@ export type CloseHandler = (clientID: ClientID, ws: Socket) => void;
 export async function handleConnection(
   lc: LogContext,
   ws: Socket,
-  durable: DurableObjectStorage,
+  storage: DurableStorage,
   url: URL,
   headers: Headers,
   clients: ClientMap,
@@ -62,7 +62,6 @@ export async function handleConnection(
   lc.info?.("parsed request", { ...result, userData: "redacted" });
 
   const { clientID, baseCookie } = result;
-  const storage = new DurableStorage(durable);
   const existingRecord = await getClientRecord(clientID, storage);
   lc.debug?.("Existing client record", existingRecord);
   const lastMutationID = existingRecord?.lastMutationID ?? 0;

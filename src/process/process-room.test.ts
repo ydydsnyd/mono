@@ -206,7 +206,7 @@ test("processRoom", async () => {
       c.clients,
       mutators,
       () => Promise.resolve(),
-      durable,
+      storage,
       startTime
     );
     if (c.expectedError) {

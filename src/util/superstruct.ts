@@ -10,3 +10,12 @@ export function superstructAssert<T, S>(
     s.assert(value, struct);
   }
 }
+
+export function superstructAssertMapValues<T, S>(
+  map: Map<string, unknown>,
+  struct: s.Struct<T, S>
+): asserts map is Map<string, T> {
+  for (const [, value] of map) {
+    superstructAssert(value, struct);
+  }
+}

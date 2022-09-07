@@ -105,15 +105,13 @@ test("getPatch", async () => {
     },
   ];
 
-  const storage = await getMiniflareDurableObjectStorage(id);
+  const storage = new DurableStorage(
+    await getMiniflareDurableObjectStorage(id)
+  );
 
   for (const c of cases) {
     for (const p of c.muts || []) {
-      const tx = new ReplicacheTransaction(
-        new DurableStorage(storage),
-        "c1",
-        p.version
-      );
+      const tx = new ReplicacheTransaction(storage, "c1", p.version);
       if (p.value !== undefined) {
         await tx.put(p.key, p.value);
       } else {

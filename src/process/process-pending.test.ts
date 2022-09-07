@@ -237,7 +237,7 @@ test("processPending", async () => {
     }
     const p = processPending(
       createSilentLogContext(),
-      durable,
+      storage,
       c.clients,
       mutators,
       () => Promise.resolve(),

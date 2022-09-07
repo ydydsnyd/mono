@@ -21,17 +21,6 @@ import type { DisconnectHandler } from "./disconnect.js";
 import { DurableStorage } from "../storage/durable-storage.js";
 import { getConnectedClients } from "../types/connected-clients.js";
 
-export type Now = () => number;
-
-export type ProcessHandler = (
-  lc: LogContext,
-  durable: DurableObjectStorage,
-  clients: ClientMap,
-  mutators: MutatorMap,
-  startTime: number,
-  endTime: number
-) => Promise<void>;
-
 export interface RoomDOOptions<MD extends MutatorDefs> {
   mutators: MD;
   state: DurableObjectState;
@@ -39,6 +28,7 @@ export interface RoomDOOptions<MD extends MutatorDefs> {
   disconnectHandler: DisconnectHandler;
   logSink: LogSink;
   logLevel: LogLevel;
+  allowUnconfirmedWrites: boolean;
 }
 export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   private readonly _clients: ClientMap = new Map();
@@ -47,7 +37,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   private readonly _disconnectHandler: DisconnectHandler;
   private _lcHasRoomIdContext = false;
   private _lc: LogContext;
-  private readonly _state: DurableObjectState;
+  private readonly _storage: DurableStorage;
   private readonly _authApiKey: string | undefined;
   private _turnTimerID: ReturnType<typeof setInterval> | 0 = 0;
 
@@ -63,7 +53,10 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
     this._mutators = new Map([...Object.entries(mutators)]) as MutatorMap;
     this._disconnectHandler = disconnectHandler;
-    this._state = state;
+    this._storage = new DurableStorage(
+      state.storage,
+      options.allowUnconfirmedWrites
+    );
     this._authApiKey = authApiKey;
     this._lc = new LogContext(logLevel, logSink)
       .addContext("RoomDO")
@@ -118,7 +111,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       await handleConnection(
         lc,
         ws,
-        this._state.storage,
+        this._storage,
         url,
         request.headers,
         this._clients,
@@ -219,9 +212,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     await this._lock.withLock(async () => {
       lc.debug?.(`received lock at ${Date.now()}`);
 
-      const storedConnectedClients = await getConnectedClients(
-        new DurableStorage(this._state.storage)
-      );
+      const storedConnectedClients = await getConnectedClients(this._storage);
       let hasDisconnectsToProcess = false;
       for (const clientID of storedConnectedClients) {
         if (!this._clients.has(clientID)) {
@@ -240,7 +231,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
       await processPending(
         lc,
-        this._state.storage,
+        this._storage,
         this._clients,
         this._mutators,
         this._disconnectHandler,
