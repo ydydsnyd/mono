@@ -2,7 +2,9 @@ import {httpStatusUnauthorized} from './replicache';
 import {
   addData,
   clock,
+  expectAsyncFuncToThrow,
   expectLogContext,
+  expectPromiseToReject,
   initReplicacheTesting,
   MemStoreWithCounters,
   replicacheForTesting,
@@ -46,20 +48,6 @@ import {
 const {fail} = assert;
 
 initReplicacheTesting();
-
-async function expectPromiseToReject(p: unknown): Promise<Chai.Assertion> {
-  let e;
-  try {
-    await p;
-  } catch (ex) {
-    e = ex;
-  }
-  return expect(e);
-}
-
-async function expectAsyncFuncToThrow(f: () => unknown, c: unknown) {
-  (await expectPromiseToReject(f())).to.be.instanceof(c);
-}
 
 const requestIDLogContextRegex = /^request_id=[a-z,0-9,-]*$/;
 

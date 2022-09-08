@@ -87,7 +87,10 @@ async function gatherTempChunks(
     const visitor = new GatherVisitor(dagRead);
     await visitor.visitCommit(mainHeadHash);
     const headCommit = await db.commitFromHash(mainHeadHash, dagRead);
-    const baseSnapshotCommit = await db.baseSnapshot(mainHeadHash, dagRead);
+    const baseSnapshotCommit = await db.baseSnapshotFromHash(
+      mainHeadHash,
+      dagRead,
+    );
     let lastMutationID: number;
     const {meta} = baseSnapshotCommit;
     if (DD31) {

@@ -66,7 +66,10 @@ async function assertClientMutationIDsCorrect(
     const client = await getClient(clientID, dagRead);
     assertClientSDD(client);
     const headCommit = await db.commitFromHash(client.headHash, dagRead);
-    const baseSnapshotCommit = await db.baseSnapshot(client.headHash, dagRead);
+    const baseSnapshotCommit = await db.baseSnapshotFromHash(
+      client.headHash,
+      dagRead,
+    );
     expect(client.mutationID).to.equal(
       await headCommit.getMutationID(clientID, dagRead),
     );

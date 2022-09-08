@@ -20,6 +20,7 @@ import {
 } from '../db/commit';
 import type {MaybePromise} from '../mod';
 import type {ClientID} from '../sync/ids.js';
+import {Branch, getBranch} from './branches.js';
 
 export type ClientMap = ReadonlyMap<sync.ClientID, ClientSDD | ClientDD31>;
 
@@ -248,7 +249,7 @@ export async function initClient(
     if (bootstrapClient) {
       const constBootstrapClient = bootstrapClient;
       newClientCommitData = await dagStore.withRead(async dagRead => {
-        const bootstrapCommit = await db.baseSnapshot(
+        const bootstrapCommit = await db.baseSnapshotFromHash(
           constBootstrapClient.headHash,
           dagRead,
         );
@@ -421,6 +422,30 @@ function getRefsForClients(clients: ClientMap): Hash[] {
   return refs;
 }
 
+export async function getMainBranch(
+  clientID: ClientID,
+  read: dag.Read,
+): Promise<Branch | undefined> {
+  assert(DD31);
+  const branchID = await getMainBranchID(clientID, read);
+  if (!branchID) {
+    return undefined;
+  }
+  return await getBranch(branchID, read);
+}
+
+export async function getMainBranchID(
+  clientID: ClientID,
+  read: dag.Read,
+): Promise<sync.BranchID | undefined> {
+  assert(DD31);
+  const client = await getClient(clientID, read);
+  if (!client || !isClientDD31(client)) {
+    return undefined;
+  }
+  return client.branchID;
+}
+
 /**
  * Adds a Client to the ClientMap and updates the 'clients' head top point at
  * the updated clients.
@@ -433,7 +458,6 @@ export async function setClient(
   const clientsHash = await dagWrite.getHead(CLIENTS_HEAD_NAME);
   const clients = await getClientsAtHash(clientsHash, dagWrite);
   const newClients = new Map(clients).set(clientID, client);
-
   const chunkData = clientMapToChunkData(newClients, dagWrite);
   const chunk = dagWrite.createChunk(chunkData, getRefsForClients(newClients));
   await dagWrite.putChunk(chunk);

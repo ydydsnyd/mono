@@ -29,12 +29,24 @@ export async function diff(
   newHash: Hash,
   read: dag.Read,
 ): Promise<DiffsMap> {
-  const diffsMap = new DiffsMap();
-
   const [oldCommit, newCommit] = await Promise.all([
     fromHash(oldHash, read),
     fromHash(newHash, read),
   ]);
+
+  return diffCommits(oldCommit, newCommit, read);
+}
+
+/**
+ * Diffs the state of the db at two different commits.
+ * It will include the primary indexes as well as all the secondary indexes.
+ */
+export async function diffCommits(
+  oldCommit: Commit<Meta>,
+  newCommit: Commit<Meta>,
+  read: dag.Read,
+): Promise<DiffsMap> {
+  const diffsMap = new DiffsMap();
 
   const oldMap = new BTreeRead(read, oldCommit.valueHash);
   const newMap = new BTreeRead(read, newCommit.valueHash);

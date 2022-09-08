@@ -5,11 +5,14 @@ import * as dag from '../dag/mod';
 import {fromChunk, SnapshotMeta} from '../db/commit';
 import {assertHash, fakeHash, newTempHash} from '../hash';
 import {
+  Client,
   ClientDD31,
   ClientMap,
   CLIENTS_HEAD_NAME,
   getClient,
   getClients,
+  getMainBranch,
+  getMainBranchID,
   initClient,
   isClientSDD,
   noUpdates,
@@ -26,6 +29,8 @@ import {
 } from '../db/test-helpers';
 import {makeClient, setClients} from './clients-test-helpers';
 import type {ClientID} from '../sync/client-id.js';
+import {Branch, setBranch} from './branches.js';
+import type {BranchID} from '../sync/ids.js';
 
 let clock: SinonFakeTimers;
 setup(() => {
@@ -731,4 +736,82 @@ test('setClient', async () => {
     heartbeatTimestampMs: 3,
     tempRefreshHash: fakeHash('trh2'),
   });
+});
+
+test('getMainBranchID', async () => {
+  if (!DD31) {
+    return;
+  }
+
+  const dagStore = new dag.TestStore();
+
+  const t = async (
+    clientID: ClientID,
+    client: Client,
+    branchID: BranchID,
+    branch: Branch,
+    expectedBranchID: BranchID | undefined,
+    expectedBranch: Branch | undefined,
+  ) => {
+    await dagStore.withWrite(async write => {
+      await setClient(clientID, client, write);
+      await setBranch(branchID, branch, write);
+      await write.commit();
+    });
+
+    const actualBranchID = await dagStore.withRead(read =>
+      getMainBranchID(clientID, read),
+    );
+    expect(actualBranchID).to.equal(expectedBranchID);
+
+    const actualBranch = await dagStore.withRead(read =>
+      getMainBranch(clientID, read),
+    );
+    expect(actualBranch).to.deep.equal(expectedBranch);
+  };
+
+  const clientID = 'client-id-1';
+  const branchID = 'branch-id-1';
+
+  const branch = {
+    headHash: fakeHash('bid'),
+    lastServerAckdMutationIDs: {[clientID]: 0},
+    mutationIDs: {[clientID]: 0},
+    indexes: {},
+    mutatorNames: [],
+  };
+  {
+    const client = {
+      branchID,
+      headHash: fakeHash('bid'),
+      heartbeatTimestampMs: 1,
+    };
+    await t(clientID, client, branchID, branch, branchID, branch);
+  }
+
+  {
+    const client = {
+      branchID: 'branch-id-wrong',
+      headHash: fakeHash('bid'),
+      heartbeatTimestampMs: 1,
+    };
+    let err;
+    try {
+      await t(clientID, client, branchID, branch, undefined, undefined);
+    } catch (e) {
+      err = e;
+    }
+    // Invalid client branch ID.
+    expect(err).to.be.instanceOf(Error);
+  }
+
+  const actualBranchID2 = await dagStore.withRead(read =>
+    getMainBranchID(clientID, read),
+  );
+  expect(actualBranchID2).to.equal('branch-id-wrong');
+
+  const actualBranch2 = await dagStore.withRead(read =>
+    getMainBranch(clientID, read),
+  );
+  expect(actualBranch2).to.be.undefined;
 });

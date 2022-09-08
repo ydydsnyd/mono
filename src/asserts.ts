@@ -78,3 +78,11 @@ export function assertInstanceof<T>(
 export function assertUint8Array(v: unknown): asserts v is Uint8Array {
   assertInstanceof(v, Uint8Array);
 }
+
+export function unreachable(): never {
+  throw new Error('Unreachable');
+}
+
+export function notImplemented(): never {
+  throw new Error('Not implemented');
+}

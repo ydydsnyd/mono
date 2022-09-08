@@ -77,7 +77,7 @@ export async function beginPull(
     if (!mainHeadHash) {
       throw new Error('Internal no main head found');
     }
-    const baseSnapshot = await db.baseSnapshot(mainHeadHash, dagRead);
+    const baseSnapshot = await db.baseSnapshotFromHash(mainHeadHash, dagRead);
     const lastMutationID = await baseSnapshot.getMutationID(clientID, dagRead);
     const baseCookie = baseSnapshot.meta.cookieJSON;
     return [lastMutationID, baseCookie];
@@ -158,7 +158,7 @@ export async function handlePullResponse(
     if (mainHead === undefined) {
       throw new Error('Main head disappeared');
     }
-    const baseSnapshot = await db.baseSnapshot(mainHead, dagRead);
+    const baseSnapshot = await db.baseSnapshotFromHash(mainHead, dagRead);
     const [baseLastMutationID, baseCookie] = db.snapshotMetaParts(
       baseSnapshot,
       clientID,
@@ -301,12 +301,12 @@ export async function maybeEndPull(
     }
 
     // Ensure another sync has not landed a new snapshot on the main chain.
-    const syncSnapshot = await db.baseSnapshot(syncHeadHash, dagRead);
+    const syncSnapshot = await db.baseSnapshotFromHash(syncHeadHash, dagRead);
     const mainHeadHash = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
     if (mainHeadHash === undefined) {
       throw new Error('Missing main head');
     }
-    const mainSnapshot = await db.baseSnapshot(mainHeadHash, dagRead);
+    const mainSnapshot = await db.baseSnapshotFromHash(mainHeadHash, dagRead);
 
     const {meta} = syncSnapshot;
     const syncSnapshotBasis = meta.basisHash;

@@ -8,6 +8,7 @@ import {
   assertNumber,
   assertObject,
   assertString,
+  unreachable,
 } from '../asserts';
 import {assertHash, Hash} from '../hash';
 import {skipCommitDataAsserts} from '../config';
@@ -129,28 +130,25 @@ export async function localMutations(
 }
 
 export async function localMutationsGreaterThan(
-  fromCommitHash: Hash,
+  commit: Commit<Meta>,
   mutationIDLimits: Record<sync.ClientID, number>,
   dagRead: dag.Read,
-): Promise<Commit<LocalMeta>[]> {
+): Promise<Commit<LocalMetaDD31>[]> {
   if (DD31) {
-    let commit = await fromHash(fromCommitHash, dagRead);
-    const commits: Commit<LocalMeta>[] = [];
-    const remainingMutationIDLimits = {...mutationIDLimits};
-    while (
-      !commit.isSnapshot() &&
-      Object.keys(remainingMutationIDLimits).length > 0
-    ) {
+    const commits: Commit<LocalMetaDD31>[] = [];
+    const remainingMutationIDLimits = new Map(Object.entries(mutationIDLimits));
+    while (!commit.isSnapshot() && remainingMutationIDLimits.size > 0) {
       if (commit.isLocal()) {
         const {meta} = commit;
-        const {mutationID} = meta;
         assertLocalMetaDD31(meta);
-        const mutationIDLowerLimit = remainingMutationIDLimits[meta.clientID];
+        const mutationIDLowerLimit = remainingMutationIDLimits.get(
+          meta.clientID,
+        );
         if (mutationIDLowerLimit !== undefined) {
-          if (mutationID <= mutationIDLowerLimit) {
-            delete remainingMutationIDLimits[meta.clientID];
+          if (meta.mutationID <= mutationIDLowerLimit) {
+            remainingMutationIDLimits.delete(meta.clientID);
           } else {
-            commits.push(commit);
+            commits.push(commit as Commit<LocalMetaDD31>);
           }
         }
       }
@@ -162,14 +160,21 @@ export async function localMutationsGreaterThan(
     }
     return commits;
   }
-  throw new Error('localMutationsGreaterThan should only be called in DD31');
+  unreachable();
 }
 
-export async function baseSnapshot(
+export async function baseSnapshotFromHash(
   hash: Hash,
   dagRead: dag.Read,
 ): Promise<Commit<SnapshotMeta | SnapshotMetaDD31>> {
-  let commit = await fromHash(hash, dagRead);
+  const commit = await fromHash(hash, dagRead);
+  return baseSnapshotFromCommit(commit, dagRead);
+}
+
+export async function baseSnapshotFromCommit(
+  commit: Commit<Meta>,
+  dagRead: dag.Read,
+): Promise<Commit<SnapshotMeta | SnapshotMetaDD31>> {
   while (!commit.isSnapshot()) {
     const {meta} = commit;
     const {basisHash} = meta;
@@ -196,6 +201,26 @@ export function snapshotMetaParts(
 
   assertSnapshotMeta(m);
   return [m.lastMutationID, m.cookieJSON];
+}
+
+export function compareCookiesForSnapshots(
+  a: Commit<SnapshotMeta | SnapshotMetaDD31>,
+  b: Commit<SnapshotMeta | SnapshotMetaDD31>,
+): number {
+  return compareCookies(a.meta.cookieJSON, b.meta.cookieJSON);
+}
+
+export function compareCookies(a: InternalValue, b: InternalValue): number {
+  // TODO(DD31): Define Cookie type and use it here.
+  assert(typeof a === typeof b);
+
+  if (a === b) {
+    return 0;
+  }
+  if ((a as string | number) < (b as string | number)) {
+    return -1;
+  }
+  return 1;
 }
 
 /**
@@ -343,6 +368,12 @@ export function assertSnapshotMetaDD31(
   assertJSONValue(v.cookieJSON);
 }
 
+export function assertSnapshotCommitDD31(
+  c: Commit<Meta>,
+): asserts c is Commit<SnapshotMetaDD31> {
+  assertSnapshotMetaDD31(c.meta);
+}
+
 export function isSnapshotMetaDD31(
   meta: SnapshotMeta | SnapshotMetaDD31,
 ): meta is SnapshotMetaDD31 {
@@ -427,17 +458,18 @@ export function newLocal(
   clientID: sync.ClientID,
 ): Commit<LocalMeta | LocalMetaDD31> {
   if (DD31) {
-    const meta: LocalMetaDD31 = {
-      type: MetaType.Local,
+    return newLocalDD31(
+      createChunk,
       basisHash,
       mutationID,
       mutatorName,
       mutatorArgsJSON,
       originalHash,
+      valueHash,
+      indexes,
       timestamp,
       clientID,
-    };
-    return commitFromCommitData(createChunk, {meta, valueHash, indexes});
+    );
   }
   const meta: LocalMeta = {
     type: MetaType.Local,
@@ -447,6 +479,32 @@ export function newLocal(
     mutatorArgsJSON,
     originalHash,
     timestamp,
+  };
+  return commitFromCommitData(createChunk, {meta, valueHash, indexes});
+}
+
+export function newLocalDD31(
+  createChunk: dag.CreateChunk,
+  basisHash: Hash,
+  mutationID: number,
+  mutatorName: string,
+  mutatorArgsJSON: InternalValue,
+  originalHash: Hash | null,
+  valueHash: Hash,
+  indexes: readonly IndexRecord[],
+  timestamp: number,
+  clientID: sync.ClientID,
+): Commit<LocalMetaDD31> {
+  assert(DD31);
+  const meta: LocalMetaDD31 = {
+    type: MetaType.Local,
+    basisHash,
+    mutationID,
+    mutatorName,
+    mutatorArgsJSON,
+    originalHash,
+    timestamp,
+    clientID,
   };
   return commitFromCommitData(createChunk, {meta, valueHash, indexes});
 }

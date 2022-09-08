@@ -1,7 +1,7 @@
 import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
 import type * as dag from '../dag/mod';
-import {Commit, DEFAULT_HEAD_NAME, Meta, MetaType} from './commit';
+import {Commit, DEFAULT_HEAD_NAME, fromHead, Meta, MetaType} from './commit';
 import {readCommit, whenceHead} from './read';
 import {
   Write,
@@ -87,10 +87,7 @@ export async function createLocal(
     }
     await w.commit(DEFAULT_HEAD_NAME);
   });
-  return await store.withRead(async dagRead => {
-    const [, commit] = await readCommit(whenceHead(DEFAULT_HEAD_NAME), dagRead);
-    return commit;
-  });
+  return store.withRead(dagRead => fromHead(DEFAULT_HEAD_NAME, dagRead));
 }
 
 export async function addIndexChange(
@@ -145,7 +142,7 @@ export async function createIndex(
   });
 }
 
-// See also sync.test_helpers for add_sync_snapshot, which can't go here because
+// See also sync.test_helpers for addSyncSnapshot, which can't go here because
 // it depends on details of sync and sync depends on db.
 
 // The optional map for the commit is treated as key, value pairs.
@@ -154,22 +151,23 @@ export async function addSnapshot(
   store: dag.Store,
   map: [string, JSONValue][] | undefined,
   clientID: ClientID,
+  cookie: JSONValue = `cookie_${chain.length}`,
+  lastMutationIDs?: Record<ClientID, number>,
 ): Promise<Chain> {
   expect(chain).to.have.length.greaterThan(0);
   const lc = new LogContext();
-  const cookie = `cookie_${chain.length}`;
   await store.withWrite(async dagWrite => {
     let w;
     if (DD31) {
       w = await newWriteSnapshotDD31(
         whenceHead(DEFAULT_HEAD_NAME),
-        {
+        lastMutationIDs ?? {
           [clientID]: await chain[chain.length - 1].getNextMutationID(
             clientID,
             dagWrite,
           ),
         },
-        cookie,
+        toInternalValue(cookie, ToInternalValueReason.Test),
         dagWrite,
         readIndexesForWrite(chain[chain.length - 1], dagWrite),
         clientID,
@@ -178,7 +176,7 @@ export async function addSnapshot(
       w = await newWriteSnapshot(
         whenceHead(DEFAULT_HEAD_NAME),
         await chain[chain.length - 1].getNextMutationID(clientID, dagWrite),
-        cookie,
+        toInternalValue(cookie, ToInternalValueReason.Test),
         dagWrite,
         readIndexesForWrite(chain[chain.length - 1], dagWrite),
         clientID,

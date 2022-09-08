@@ -30,7 +30,9 @@ export {
   fromHead as commitFromHead,
   localMutations,
   snapshotMetaParts,
-  baseSnapshot,
+  baseSnapshotFromHash,
+  baseSnapshotFromCommit,
+  compareCookiesForSnapshots,
   chain as commitChain,
 } from './commit';
 export {getRoot} from './root';
@@ -41,7 +43,9 @@ export {BaseTransformer, Transformer} from './transformer';
 
 export type {
   SnapshotMeta,
+  SnapshotMetaDD31,
   LocalMeta,
+  LocalMetaDD31,
   IndexChangeMeta,
   IndexRecord,
   CommitData,

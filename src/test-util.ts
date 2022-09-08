@@ -312,3 +312,19 @@ export function expectLogContext(
   expect(args[0]).to.equal(`name=${rep.name}`);
   expect(args[1]).to.equal(expectedContext);
 }
+
+export async function expectPromiseToReject(
+  p: unknown,
+): Promise<Chai.Assertion> {
+  let e;
+  try {
+    await p;
+  } catch (ex) {
+    e = ex;
+  }
+  return expect(e);
+}
+
+export async function expectAsyncFuncToThrow(f: () => unknown, c: unknown) {
+  (await expectPromiseToReject(f())).to.be.instanceof(c);
+}

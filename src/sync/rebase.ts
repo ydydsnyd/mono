@@ -1,10 +1,4 @@
-import {
-  readCommit,
-  whenceHash,
-  newWriteLocal,
-  Commit,
-  LocalMeta,
-} from '../db/mod';
+import {whenceHash, newWriteLocal, Commit, LocalMeta} from '../db/mod';
 import type * as dag from '../dag/mod';
 import type {Hash} from '../hash';
 import type {MutatorDefs} from '../replicache';
@@ -12,7 +6,7 @@ import {WriteTransactionImpl} from '../transactions';
 import {fromInternalValue, FromInternalValueReason} from '../internal-value';
 import type {LogContext} from '@rocicorp/logger';
 import type {ClientID} from './ids';
-import {isLocalMetaDD31} from '../db/commit';
+import {fromHash, isLocalMetaDD31} from '../db/commit';
 import {assert} from '../asserts';
 
 export async function rebaseMutation(
@@ -57,7 +51,7 @@ export async function rebaseMutation(
     FromInternalValueReason.WriteTransactionMutateArgs,
   );
 
-  const [, basisCommit] = await readCommit(whenceHash(basis), dagWrite);
+  const basisCommit = await fromHash(basis, dagWrite);
   const nextMutationID = await basisCommit.getNextMutationID(
     mutationClientID,
     dagWrite,
