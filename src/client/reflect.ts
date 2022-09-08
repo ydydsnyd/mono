@@ -182,6 +182,7 @@ export class Reflect<MD extends MutatorDefs> {
    * When closed all subscriptions end and no more read or writes are allowed.
    */
   async close(): Promise<void> {
+    this._disconnect();
     return this._rep.close();
   }
 
@@ -226,6 +227,10 @@ export class Reflect<MD extends MutatorDefs> {
     const l = this._l;
     l.addContext('req', nanoid());
     l.debug?.('received message', e.data);
+    if (this.closed) {
+      l.debug?.('ignoring message because already closed');
+      return;
+    }
 
     const data = JSON.parse(e.data);
     const downMessage = data as Downstream; //downstreamSchema.parse(data);
@@ -303,6 +308,7 @@ export class Reflect<MD extends MutatorDefs> {
     this._state = ConnectionState.Disconnected;
     this._socket?.removeEventListener('message', this._onMessage);
     this._socket?.removeEventListener('close', this._onClose);
+    this._socket?.close();
     this._socket = undefined;
     this._lastMutationIDSent = -1;
   }
@@ -370,7 +376,7 @@ export class Reflect<MD extends MutatorDefs> {
   }
 
   private async _watchdog() {
-    for (;;) {
+    while (!this.closed) {
       const l = this._l.addContext('req', nanoid());
       l.debug?.('watchdog fired');
       if (this._state === ConnectionState.Connected) {

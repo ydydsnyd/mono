@@ -16,6 +16,7 @@ export async function tickAFewTimes(clock: SinonFakeTimers, duration = 100) {
 export class MockSocket extends EventTarget {
   args: unknown[] = [];
   messages: string[] = [];
+  closed = false;
 
   constructor(...args: unknown[]) {
     super();
@@ -24,6 +25,10 @@ export class MockSocket extends EventTarget {
 
   send(message: string) {
     this.messages.push(message);
+  }
+
+  close() {
+    this.closed = true;
   }
 }
 
