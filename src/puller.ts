@@ -2,9 +2,15 @@ import {assertArray, assertNumber, assertObject, assertString} from './asserts';
 import {httpRequest} from './http-request';
 import {assertJSONValue, JSONValue, ReadonlyJSONValue} from './json';
 import type {HTTPRequestInfo} from './http-request-info';
+import type {ClientID} from './sync/ids.js';
 
 export type PullerResult = {
   response?: PullResponse;
+  httpRequestInfo: HTTPRequestInfo;
+};
+
+export type PullerResultDD31 = {
+  response?: PullResponseDD31;
   httpRequestInfo: HTTPRequestInfo;
 };
 
@@ -15,11 +21,26 @@ export type PullerResult = {
 export type Puller = (request: Request) => Promise<PullerResult>;
 
 /**
+ * Puller is the function type used to do the fetch part of a pull. The request
+ * is a POST request where the body is JSON with the type [[PullRequest]].
+ */
+export type PullerDD31 = (request: Request) => Promise<PullerResultDD31>;
+
+/**
  * The shape of a pull response under normal circumstances.
  */
 export type PullResponseOK = {
   cookie?: ReadonlyJSONValue;
   lastMutationID: number;
+  patch: PatchOperation[];
+};
+
+/**
+ * The shape of a pull response under normal circumstances.
+ */
+export type PullResponseOKDD31 = {
+  cookie?: ReadonlyJSONValue;
+  lastMutationIDs: Record<ClientID, number>;
   patch: PatchOperation[];
 };
 
@@ -36,6 +57,12 @@ export type ClientStateNotFoundResponse = {
  * the JSON you should return from your pull server endpoint.
  */
 export type PullResponse = PullResponseOK | ClientStateNotFoundResponse;
+
+/**
+ * PullResponse defines the shape and type of the response of a pull. This is
+ * the JSON you should return from your pull server endpoint.
+ */
+export type PullResponseDD31 = PullResponseOKDD31 | ClientStateNotFoundResponse;
 
 export function isClientStateNotFoundResponse(
   result: unknown,
@@ -63,6 +90,33 @@ export function assertPullResponse(v: unknown): asserts v is PullResponse {
   assertPatchOperations(v2.patch);
 }
 
+export function assertPullResponseDD31(
+  v: unknown,
+): asserts v is PullResponseDD31 {
+  if (typeof v !== 'object' || v === null) {
+    throw new Error('PullResponseDD31 must be an object');
+  }
+  if (isClientStateNotFoundResponse(v)) {
+    return;
+  }
+  const v2 = v as Partial<PullResponseOKDD31>;
+  if (v2.cookie !== undefined) {
+    assertJSONValue(v2.cookie);
+  }
+  assertLastMutationIDs(v2.lastMutationIDs);
+  assertPatchOperations(v2.patch);
+}
+
+function assertLastMutationIDs(
+  lastMutationIDs: unknown,
+): asserts lastMutationIDs is Record<string, number> {
+  assertObject(lastMutationIDs);
+  for (const [key, value] of Object.entries(lastMutationIDs)) {
+    assertString(key);
+    assertNumber(value);
+  }
+}
+
 /**
  * This type describes the patch field in a [[PullResponse]] and it is used
  * to describe how to update the Replicache key-value store.
@@ -76,18 +130,25 @@ export type PatchOperation =
   | {op: 'del'; key: string}
   | {op: 'clear'};
 
-export const defaultPuller: Puller = async request => {
+const defaultPullerShared = async (request: Request) => {
   const {httpRequestInfo, response} = await httpRequest(request);
   if (httpRequestInfo.httpStatusCode !== 200) {
     return {
       httpRequestInfo,
     };
   }
+  // TODO(greg): Should this assertPullResponseDD31, we also assert
+  // in pull.ts/pulldd31.ts (since it may be a non default puller
+  // that doesn't assert itself)
   return {
     response: await response.json(),
     httpRequestInfo,
   };
 };
+
+export const defaultPuller: Puller = defaultPullerShared;
+
+export const defaultPullerDD31: PullerDD31 = defaultPullerShared;
 
 export function assertPatchOperations(
   p: unknown,
