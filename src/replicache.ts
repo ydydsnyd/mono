@@ -195,7 +195,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   /** The authorization token used when doing a push request. */
   auth: string;
 
-  /** The name of the Replicache database. */
+  /** The name of the Replicache database. Populated by [[ReplicacheOptions#name]]. */
   readonly name: string;
 
   private readonly _subscriptions: SubscriptionsManager;
