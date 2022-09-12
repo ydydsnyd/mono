@@ -6,13 +6,15 @@ This website is built using [Docusaurus 2](https://v2.docusaurus.io/), a modern 
 
 ```console
 cd doc/
-yarn install
+npm install --force
 ```
+
+(`force` is needed because due to invalid peer dependencies)
 
 ## Local Development
 
 ```console
-yarn start
+npm run start
 ```
 
 This command starts a local development server and open up a browser window. Most changes are reflected live without having to restart the server.
@@ -20,15 +22,13 @@ This command starts a local development server and open up a browser window. Mos
 ## Build
 
 ```console
-yarn build
+npm run build
 ```
 
 This command generates static content into the `build` directory and can be served using any static contents hosting service.
 
-## Deployment
+To serve the build output you can run:
 
 ```console
-GIT_USER=<Your GitHub username> USE_SSH=true yarn deploy
+npm run serve
 ```
-
-If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.
