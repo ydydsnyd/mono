@@ -582,11 +582,12 @@ test('fixup of a base snapshot with an index', async () => {
       const indexTree = await makeBTree(dagWrite, indexEntries);
       const indexHash = await indexTree.flush();
 
-      const indexes = {
+      const indexes: db.IndexRecord = {
         definition: {
+          name: 'idx',
           jsonPointer: '/a',
           prefix: '',
-          name: 'idx',
+          allowEmpty: false,
         },
         valueHash: indexHash,
       };
@@ -670,7 +671,12 @@ test('fixup of a base snapshot with an index', async () => {
       valueHash: 't/000000000000000000000000000002',
       indexes: [
         {
-          definition: {jsonPointer: '/a', prefix: '', name: 'idx'},
+          definition: {
+            allowEmpty: false,
+            jsonPointer: '/a',
+            prefix: '',
+            name: 'idx',
+          },
           valueHash: 't/000000000000000000000000000005',
         },
       ],
@@ -715,9 +721,10 @@ test('fixup of a base snapshot with an index', async () => {
       indexes: [
         {
           definition: {
+            name: 'idx',
             jsonPointer: '/a',
             prefix: '',
-            name: 'idx',
+            allowEmpty: false,
           },
           valueHash: 'fake0000000000000000000000indecs',
         },

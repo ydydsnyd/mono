@@ -127,7 +127,7 @@ export class Write extends Read {
       throw new Error('Not allowed');
     }
 
-    const definition: CreateIndexDefinition = {
+    const definition: Required<CreateIndexDefinition> = {
       name,
       prefix,
       jsonPointer,
@@ -142,12 +142,11 @@ export class Write extends Read {
       }
     }
 
-    const indexMap = await this._createIndexBTree(
-      lc,
+    const indexMap = await createIndexBTree(lc, this._dagWrite, this.map, {
       prefix,
       jsonPointer,
       allowEmpty,
-    );
+    });
 
     this.indexes.set(
       name,
@@ -159,27 +158,6 @@ export class Write extends Read {
         indexMap,
       ),
     );
-  }
-
-  private async _createIndexBTree(
-    lc: LogContext,
-    prefix: string,
-    jsonPointer: string,
-    allowEmpty: boolean,
-  ) {
-    const indexMap = new BTreeWrite(this._dagWrite);
-    for await (const entry of this.map.scan(prefix)) {
-      await indexValue(
-        lc,
-        indexMap,
-        IndexOperation.Add,
-        entry[0],
-        entry[1],
-        jsonPointer,
-        allowEmpty,
-      );
-    }
-    return indexMap;
   }
 
   async dropIndex(name: string): Promise<void> {
@@ -222,11 +200,11 @@ export class Write extends Read {
     for (const [name, definition] of Object.entries(indexes)) {
       let indexWrite = await this._maybeReuseExistingIndex(name, definition);
       if (!indexWrite) {
-        const indexMap = await this._createIndexBTree(
+        const indexMap = await createIndexBTree(
           lc,
-          definition.prefix ?? '',
-          definition.jsonPointer,
-          definition.allowEmpty ?? false,
+          this._dagWrite,
+          this.map,
+          definition,
         );
         indexWrite = new IndexWrite(
           {
@@ -570,4 +548,26 @@ function nameIndexDefinition(
     jsonPointer: def.jsonPointer,
     allowEmpty: def.allowEmpty ?? false,
   };
+}
+
+export async function createIndexBTree(
+  lc: LogContext,
+  dagWrite: dag.Write,
+  valueMap: BTreeRead,
+  indexDefinition: IndexDefinition,
+): Promise<BTreeWrite> {
+  const indexMap = new BTreeWrite(dagWrite);
+  const {prefix = '', jsonPointer, allowEmpty} = indexDefinition;
+  for await (const entry of valueMap.scan(prefix)) {
+    await indexValue(
+      lc,
+      indexMap,
+      IndexOperation.Add,
+      entry[0],
+      entry[1],
+      jsonPointer,
+      allowEmpty,
+    );
+  }
+  return indexMap;
 }

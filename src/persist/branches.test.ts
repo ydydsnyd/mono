@@ -11,6 +11,7 @@ import {
   getBranch,
   getBranches,
   hasBranchState,
+  mutatorNamesEqual,
   setBranch,
   setBranches,
 } from './branches';
@@ -910,4 +911,26 @@ test('assertHasBranchState', async () => {
     }
     expect(expectedE).instanceOf(BranchStateNotFoundError);
   });
+});
+
+test('mutatorNamesEqual', () => {
+  const t = (a: string[], b: string[] = a) => {
+    expect(mutatorNamesEqual(new Set(a), b)).true;
+    expect(mutatorNamesEqual(new Set(b), a)).true;
+  };
+  const f = (a: string[], b: string[] = a) => {
+    expect(mutatorNamesEqual(new Set(a), b)).false;
+    expect(mutatorNamesEqual(new Set(b), a)).false;
+  };
+
+  t([]);
+  t(['a']);
+  t(['a', 'b']);
+  t(['a', 'b'], ['b', 'a']);
+  t(['a', 'b', 'c']);
+  t(['a', 'b', 'c'], ['c', 'b', 'a']);
+
+  f([], ['b']);
+  f(['a'], ['b']);
+  f(['a', 'b'], ['b', 'c']);
 });

@@ -4,6 +4,7 @@ export {
   createChunkWithHash,
   createChunkWithNativeHash,
   throwChunkHasher,
+  uuidChunkHasher,
 } from './chunk';
 export {ChunkNotFoundError} from './store';
 export type {Store, Read, Write, MustGetChunk} from './store';

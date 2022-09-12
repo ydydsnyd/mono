@@ -1300,6 +1300,10 @@ test('index in options', async () => {
 });
 
 test('allow redefinition of indexes', async () => {
+  if (DD31) {
+    // TODO(DD31): Without persist we cannot test this.
+    return;
+  }
   {
     const pullURL = 'https://diff.com/pull';
     const rep = await replicacheForTesting('index-redefinition', {
@@ -2524,7 +2528,9 @@ test('experiment KV Store', async () => {
     mutators: {addData},
   });
 
-  expect(store.readCount).to.equal(3, 'readCount');
+  // TODO(DD31): persist is temporarily disable for DD31
+  const readCountStart = DD31 ? 2 : 3;
+  expect(store.readCount).to.equal(readCountStart, 'readCount');
   expect(store.writeCount).to.equal(1, 'writeCount');
   expect(store.closeCount).to.equal(0, 'closeCount');
   store.resetCounters();
@@ -2544,7 +2550,11 @@ test('experiment KV Store', async () => {
   store.resetCounters();
 
   await rep.persist();
-  expect(store.readCount).to.equal(2, 'readCount');
+
+  // TODO(DD31): persist is temporarily disable for DD31
+  const readCountAfterPersist = DD31 ? 1 : 2;
+
+  expect(store.readCount).to.equal(readCountAfterPersist, 'readCount');
   expect(store.writeCount).to.equal(1, 'writeCount');
   expect(store.closeCount).to.equal(0, 'closeCount');
   store.resetCounters();

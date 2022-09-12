@@ -5,14 +5,23 @@ import {
   ClientMap,
   ClientDD31,
   ClientSDD,
+  setClients as setClientsDD31,
 } from './clients';
 import type * as dag from '../dag/mod';
 import type * as sync from '../sync/mod';
+import {LogContext} from '@rocicorp/logger';
 
 export function setClients(
   clients: ClientMap,
   dagStore: dag.Store,
 ): Promise<ClientMap> {
+  if (DD31) {
+    return dagStore.withWrite(async dagWrite => {
+      await setClientsDD31(clients, dagWrite);
+      await dagWrite.commit();
+      return clients;
+    });
+  }
   return updateClients(_ => {
     return Promise.resolve({
       clients,
@@ -94,7 +103,12 @@ export async function initClientWithClientID(
   clientID: sync.ClientID,
   dagStore: dag.Store,
 ): Promise<void> {
-  const [generatedClientID, client, clientMap] = await initClient(dagStore);
+  const [generatedClientID, client, clientMap] = await initClient(
+    new LogContext(),
+    dagStore,
+    [],
+    {},
+  );
   const newMap = new Map(clientMap);
   newMap.delete(generatedClientID);
   newMap.set(clientID, client);

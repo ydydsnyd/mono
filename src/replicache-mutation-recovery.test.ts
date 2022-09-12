@@ -58,7 +58,7 @@ async function createPerdag(args: {
   }
   const perdag = new dag.StoreImpl(
     idb,
-    dag.throwChunkHasher,
+    DD31 ? dag.uuidChunkHasher : dag.throwChunkHasher,
     assertNotTempHash,
   );
   return perdag;

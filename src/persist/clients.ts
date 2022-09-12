@@ -1,3 +1,4 @@
+import type {LogContext} from '@rocicorp/logger';
 import {assertHash, Hash, hashOf} from '../hash';
 import * as btree from '../btree/mod';
 import * as dag from '../dag/mod';
@@ -14,13 +15,19 @@ import {
 import {hasOwn} from '../has-own';
 import {uuid as makeUuid} from '../uuid';
 import {
+  assertSnapshotCommitDD31,
+  compareCookies,
+  CreateIndexDefinition,
   getRefs,
   newSnapshotCommitData,
   newSnapshotCommitDataDD31,
 } from '../db/commit';
-import type {MaybePromise} from '../mod';
-import type {ClientID} from '../sync/ids.js';
-import {Branch, getBranch} from './branches.js';
+import type {ClientID} from '../sync/ids';
+import {Branch, getBranch, mutatorNamesEqual, setBranch} from './branches';
+import {IndexDefinitions, indexDefinitionsEqual} from '../index-defs';
+import {CastReason, safeCastToJSON} from '../internal-value.js';
+import {createIndexBTree} from '../db/write.js';
+import type {MaybePromise} from '../replicache.js';
 
 export type ClientMap = ReadonlyMap<sync.ClientID, ClientSDD | ClientDD31>;
 
@@ -73,6 +80,7 @@ export type ClientDD31 = {
   readonly heartbeatTimestampMs: number;
   readonly headHash: Hash;
 
+  // TODO(arv, DD31): We should not use undefined here. Use required null instead?
   /**
    * The hash of a commit we are in the middle of refreshing into this client's
    * memdag.
@@ -230,8 +238,15 @@ export async function getClient(
 }
 
 export async function initClient(
-  dagStore: dag.Store,
+  lc: LogContext,
+  perdag: dag.Store,
+  mutatorNames: string[],
+  indexes: IndexDefinitions,
 ): Promise<[sync.ClientID, Client, ClientMap]> {
+  if (DD31) {
+    return initClientDD31(lc, perdag, mutatorNames, indexes);
+  }
+
   const newClientID = makeUuid();
   const updatedClients = await updateClients(async clients => {
     let bootstrapClient: Client | undefined;
@@ -248,7 +263,7 @@ export async function initClient(
     const chunksToPut = [];
     if (bootstrapClient) {
       const constBootstrapClient = bootstrapClient;
-      newClientCommitData = await dagStore.withRead(async dagRead => {
+      newClientCommitData = await perdag.withRead(async dagRead => {
         const bootstrapCommit = await db.baseSnapshotFromHash(
           constBootstrapClient.headHash,
           dagRead,
@@ -257,15 +272,6 @@ export async function initClient(
         // server implementations expect new client ids to start with last mutation id 0.
         // If a server sees a new client id with a non-0 last mutation id, it may conclude
         // this is a very old client whose state has been garbage collected on the server.
-        if (DD31) {
-          return newSnapshotCommitDataDD31(
-            bootstrapCommit.meta.basisHash,
-            {[newClientID]: 0},
-            bootstrapCommit.meta.cookieJSON,
-            bootstrapCommit.valueHash,
-            bootstrapCommit.indexes,
-          );
-        }
         return newSnapshotCommitData(
           bootstrapCommit.meta.basisHash,
           0 /* lastMutationID */,
@@ -281,23 +287,13 @@ export async function initClient(
         [],
       );
       chunksToPut.push(emptyBTreeChunk);
-      if (DD31) {
-        newClientCommitData = newSnapshotCommitDataDD31(
-          null,
-          {[newClientID]: 0},
-          null,
-          emptyBTreeChunk.hash,
-          [],
-        );
-      } else {
-        newClientCommitData = newSnapshotCommitData(
-          null /* basisHash */,
-          0 /* lastMutationID */,
-          null /* cookie */,
-          emptyBTreeChunk.hash,
-          [] /* indexes */,
-        );
-      }
+      newClientCommitData = newSnapshotCommitData(
+        null /* basisHash */,
+        0 /* lastMutationID */,
+        null /* cookie */,
+        emptyBTreeChunk.hash,
+        [] /* indexes */,
+      );
     }
 
     const newClientCommitChunk = await dag.createChunkWithNativeHash(
@@ -310,16 +306,284 @@ export async function initClient(
       clients: new Map(clients).set(newClientID, {
         heartbeatTimestampMs: Date.now(),
         headHash: newClientCommitChunk.hash,
-        // TODO(DD31): tempRefreshHash and branchID
         mutationID: 0,
         lastServerAckdMutationID: 0,
       }),
       chunksToPut,
     };
-  }, dagStore);
+  }, perdag);
   const newClient = updatedClients.get(newClientID);
   assertNotUndefined(newClient);
   return [newClientID, newClient, updatedClients];
+}
+
+export function initClientDD31(
+  lc: LogContext,
+  perdag: dag.Store,
+
+  mutatorNames: string[],
+  indexes: IndexDefinitions,
+): Promise<[sync.ClientID, Client, ClientMap]> {
+  assert(DD31);
+
+  return perdag.withWrite(async dagWrite => {
+    const newClientID = makeUuid();
+    const clients = await getClients(dagWrite);
+
+    const res = await findMatchingClient(
+      dagWrite,
+      clients,
+      mutatorNames,
+      indexes,
+    );
+    if (res.type === FIND_MATCHING_CLIENT_TYPE_HEAD) {
+      // We found a branch with matching mutators and indexes. We can reuse it.
+      const {client, branch} = res;
+      const {branchID} = client;
+
+      // Update Branch with our new client ID.
+      const newBranch: Branch = {
+        ...branch,
+        mutationIDs: {...branch.mutationIDs, [newClientID]: 0},
+        lastServerAckdMutationIDs: {
+          ...branch.lastServerAckdMutationIDs,
+          [newClientID]: 0,
+        },
+      };
+
+      const newClient: ClientDD31 = {
+        ...client,
+        heartbeatTimestampMs: Date.now(),
+      };
+      const newClients = new Map(clients).set(newClientID, newClient);
+
+      await Promise.all([
+        setBranch(branchID, newBranch, dagWrite),
+        setClients(newClients, dagWrite),
+      ]);
+
+      await dagWrite.commit();
+      return [newClientID, newClient, newClients];
+    }
+
+    if (res.type === FIND_MATCHING_CLIENT_TYPE_NEW) {
+      // No branch to fork from. Create empty snapshot.
+      const emptyBTreeChunk = dagWrite.createChunk(btree.emptyDataNode, []);
+
+      // Create indexes
+      const indexRecords: db.IndexRecord[] = [];
+
+      // At this point the value of replicache is the empty tree so all index
+      // maps will also be the empty tree.
+      for (const [name, indexDefinition] of Object.entries(indexes)) {
+        const createIndexDefinition: Required<CreateIndexDefinition> = {
+          name,
+          prefix: indexDefinition.prefix ?? '',
+          jsonPointer: indexDefinition.jsonPointer,
+          allowEmpty: indexDefinition.allowEmpty ?? false,
+        };
+        indexRecords.push({
+          definition: createIndexDefinition,
+          valueHash: emptyBTreeChunk.hash,
+        });
+      }
+
+      const newBranchID = makeUuid();
+
+      const newSnapshotData = newSnapshotCommitDataDD31(
+        null,
+        {[newClientID]: 0},
+        null,
+        emptyBTreeChunk.hash,
+        indexRecords,
+      );
+      const chunk = dagWrite.createChunk(
+        newSnapshotData,
+        getRefs(newSnapshotData),
+      );
+
+      const newClient: ClientDD31 = {
+        heartbeatTimestampMs: Date.now(),
+        headHash: chunk.hash,
+        tempRefreshHash: undefined,
+        branchID: newBranchID,
+      };
+
+      const newClients = new Map(clients).set(newClientID, newClient);
+
+      const branch: Branch = {
+        headHash: chunk.hash,
+        mutatorNames,
+        indexes,
+        mutationIDs: {[newClientID]: 0},
+        lastServerAckdMutationIDs: {[newClientID]: 0},
+      };
+
+      await Promise.all([
+        dagWrite.putChunk(emptyBTreeChunk),
+        dagWrite.putChunk(chunk),
+        setClients(newClients, dagWrite),
+        setBranch(newBranchID, branch, dagWrite),
+      ]);
+
+      await dagWrite.commit();
+
+      return [newClientID, newClient, newClients];
+    }
+
+    // Now we create a new client and branch that we fork from the found snapshot.
+    assert(res.type === FIND_MATCHING_CLIENT_TYPE_FORK);
+
+    const {snapshot} = res;
+
+    const newBranchID = makeUuid();
+
+    // Create indexes
+    const indexRecords: db.IndexRecord[] = [];
+    const {valueHash} = snapshot;
+    const map = new btree.BTreeRead(dagWrite, valueHash);
+    for (const [name, indexDefinition] of Object.entries(indexes)) {
+      const createIndexDefinition: Required<CreateIndexDefinition> = {
+        name,
+        prefix: indexDefinition.prefix ?? '',
+        jsonPointer: indexDefinition.jsonPointer,
+        allowEmpty: indexDefinition.allowEmpty ?? false,
+      };
+
+      const indexBTree = await createIndexBTree(
+        lc,
+        dagWrite,
+        map,
+        indexDefinition,
+      );
+
+      indexRecords.push({
+        definition: createIndexDefinition,
+        valueHash: await indexBTree.flush(),
+      });
+    }
+
+    const newSnapshotData = newSnapshotCommitDataDD31(
+      snapshot.meta.basisHash,
+      {[newClientID]: 0},
+      snapshot.meta.cookieJSON,
+      snapshot.valueHash,
+      indexRecords,
+    );
+    const chunk = dagWrite.createChunk(
+      newSnapshotData,
+      getRefs(newSnapshotData),
+    );
+
+    const newClient: ClientDD31 = {
+      heartbeatTimestampMs: Date.now(),
+      headHash: chunk.hash,
+      tempRefreshHash: undefined,
+      branchID: newBranchID,
+    };
+
+    const newClients = new Map(clients).set(newClientID, newClient);
+
+    const branch: Branch = {
+      headHash: chunk.hash,
+      mutatorNames,
+      indexes,
+      mutationIDs: {[newClientID]: 0},
+      lastServerAckdMutationIDs: {[newClientID]: 0},
+    };
+
+    await Promise.all([
+      dagWrite.putChunk(chunk),
+      setClients(newClients, dagWrite),
+      setBranch(newBranchID, branch, dagWrite),
+    ]);
+
+    await dagWrite.commit();
+
+    return [newClientID, newClient, newClients];
+  });
+}
+
+export const FIND_MATCHING_CLIENT_TYPE_NEW = 0;
+export const FIND_MATCHING_CLIENT_TYPE_FORK = 1;
+export const FIND_MATCHING_CLIENT_TYPE_HEAD = 2;
+
+export type FindMatchingClientResult =
+  | {
+      type: typeof FIND_MATCHING_CLIENT_TYPE_NEW;
+    }
+  | {
+      type: typeof FIND_MATCHING_CLIENT_TYPE_FORK;
+      snapshot: db.Commit<db.SnapshotMetaDD31>;
+    }
+  | {
+      type: typeof FIND_MATCHING_CLIENT_TYPE_HEAD;
+      client: ClientDD31;
+      branch: Branch;
+    };
+
+export async function findMatchingClient(
+  dagRead: dag.Read,
+  clients: ClientMap,
+  mutatorNames: string[],
+  indexes: IndexDefinitions,
+): Promise<FindMatchingClientResult> {
+  let newestCookie: ReadonlyJSONValue | undefined;
+  let bestBranch: Branch | undefined;
+  let bestClient: ClientDD31 | undefined;
+  let bestSnapshot: db.Commit<db.SnapshotMetaDD31> | undefined;
+  const mutatorNamesSet = new Set(mutatorNames);
+
+  for (const client of clients.values()) {
+    if (!isClientDD31(client)) {
+      continue;
+    }
+
+    const {branchID} = client;
+    const branch = await getBranch(branchID, dagRead);
+    assert(branch);
+
+    if (
+      mutatorNamesEqual(mutatorNamesSet, branch.mutatorNames) &&
+      indexDefinitionsEqual(indexes, branch.indexes)
+    ) {
+      // exact match
+      return {type: FIND_MATCHING_CLIENT_TYPE_HEAD, client, branch};
+    }
+
+    const branchSnapshotCommit = await db.baseSnapshotFromHash(
+      branch.headHash,
+      dagRead,
+    );
+    assertSnapshotCommitDD31(branchSnapshotCommit);
+
+    const cookieJSON = safeCastToJSON(
+      branchSnapshotCommit.meta.cookieJSON,
+      CastReason.CompareCookies,
+    );
+    if (
+      newestCookie === undefined ||
+      compareCookies(cookieJSON, newestCookie) > 0
+    ) {
+      newestCookie = cookieJSON;
+      bestBranch = branch;
+      bestClient = client;
+      bestSnapshot = branchSnapshotCommit;
+    }
+  }
+
+  if (bestBranch) {
+    assert(bestClient);
+    assert(bestBranch);
+    assert(bestSnapshot);
+
+    return {
+      type: FIND_MATCHING_CLIENT_TYPE_FORK,
+      snapshot: bestSnapshot,
+    };
+  }
+
+  return {type: FIND_MATCHING_CLIENT_TYPE_NEW};
 }
 
 function asyncHashOfClients(clients: ClientMap): Promise<Hash> {
@@ -340,6 +604,26 @@ export async function updateClients(
   update: ClientsUpdate,
   dagStore: dag.Store,
 ): Promise<ClientMap> {
+  if (DD31) {
+    // TODO(DD31): Update callers to use setClients for DD31c instead.
+    return dagStore.withWrite(async dagWrite => {
+      const clients = await getClients(dagWrite);
+      const res = await update(clients);
+      if (res === noUpdates) {
+        return clients;
+      }
+
+      const {clients: newClients, chunksToPut} = res;
+      await setClients(newClients, dagWrite);
+      if (chunksToPut) {
+        await Promise.all(Array.from(chunksToPut, c => dagWrite.putChunk(c)));
+      }
+
+      await dagWrite.commit();
+      return clients;
+    });
+  }
+
   const [clients, clientsHash] = await dagStore.withRead(async dagRead => {
     const clientsHash = await dagRead.getHead(CLIENTS_HEAD_NAME);
     const clients = await getClientsAtHash(clientsHash, dagRead);
@@ -458,8 +742,19 @@ export async function setClient(
   const clientsHash = await dagWrite.getHead(CLIENTS_HEAD_NAME);
   const clients = await getClientsAtHash(clientsHash, dagWrite);
   const newClients = new Map(clients).set(clientID, client);
-  const chunkData = clientMapToChunkData(newClients, dagWrite);
-  const chunk = dagWrite.createChunk(chunkData, getRefsForClients(newClients));
+  return setClients(newClients, dagWrite);
+}
+
+/**
+ * Sets the ClientMap and updates the 'clients' head top point at the new
+ * clients.
+ */
+export async function setClients(
+  clients: ClientMap,
+  dagWrite: dag.Write,
+): Promise<Hash> {
+  const chunkData = clientMapToChunkData(clients, dagWrite);
+  const chunk = dagWrite.createChunk(chunkData, getRefsForClients(clients));
   await dagWrite.putChunk(chunk);
   await dagWrite.setHead(CLIENTS_HEAD_NAME, chunk.hash);
   return chunk.hash;

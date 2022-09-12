@@ -93,6 +93,7 @@ test('transformIndexRecord - noop', async () => {
         jsonPointer: '',
         prefix: '',
         name: 'index',
+        allowEmpty: false,
       },
       valueHash,
     };

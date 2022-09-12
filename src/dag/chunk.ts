@@ -1,5 +1,5 @@
 import {assert, assertString} from '../asserts';
-import {Hash, makeNewFakeHashFunction, hashOf} from '../hash';
+import {Hash, makeNewFakeHashFunction, hashOf, newUUIDHash} from '../hash';
 import type {ReadonlyJSONValue} from '../json.js';
 
 type Refs = readonly Hash[];
@@ -83,4 +83,8 @@ export function makeTestChunkHasher(prefix = 'fake'): ChunkHasher {
 
 export function throwChunkHasher(_data: unknown): Hash {
   throw new Error('unexpected call to compute chunk hash');
+}
+
+export function uuidChunkHasher(_data: unknown): Hash {
+  return newUUIDHash();
 }

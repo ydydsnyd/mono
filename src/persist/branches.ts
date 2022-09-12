@@ -202,8 +202,8 @@ async function setValidatedBranches(
   return branches;
 }
 
-function mutatorNamesEqual(
-  mutatorNamesSet: Set<string>,
+export function mutatorNamesEqual(
+  mutatorNamesSet: ReadonlySet<string>,
   mutatorNames: string[],
 ): boolean {
   if (mutatorNames.length !== mutatorNamesSet.size) {

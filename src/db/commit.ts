@@ -1,6 +1,6 @@
 import type * as dag from '../dag/mod';
 import type * as sync from '../sync/mod';
-import {assertJSONValue} from '../json';
+import {assertJSONValue, ReadonlyJSONValue} from '../json';
 import {
   assert,
   assertArray,
@@ -12,7 +12,7 @@ import {
 } from '../asserts';
 import {assertHash, Hash} from '../hash';
 import {skipCommitDataAsserts} from '../config';
-import type {InternalValue} from '../internal-value';
+import {CastReason, InternalValue, safeCastToJSON} from '../internal-value';
 import type {MustGetChunk} from '../dag/store';
 import type {IndexDefinition} from '../index-defs';
 
@@ -207,11 +207,18 @@ export function compareCookiesForSnapshots(
   a: Commit<SnapshotMeta | SnapshotMetaDD31>,
   b: Commit<SnapshotMeta | SnapshotMetaDD31>,
 ): number {
-  return compareCookies(a.meta.cookieJSON, b.meta.cookieJSON);
+  return compareCookies(
+    safeCastToJSON(a.meta.cookieJSON, CastReason.CompareCookies),
+    safeCastToJSON(b.meta.cookieJSON, CastReason.CompareCookies),
+  );
 }
 
-export function compareCookies(a: InternalValue, b: InternalValue): number {
+export function compareCookies(
+  a: ReadonlyJSONValue,
+  b: ReadonlyJSONValue,
+): number {
   // TODO(DD31): Define Cookie type and use it here.
+  // TODO(DD31): Use null for genesis snapshot cookie?
   assert(typeof a === typeof b);
 
   if (a === b) {
@@ -224,9 +231,9 @@ export function compareCookies(a: InternalValue, b: InternalValue): number {
 }
 
 /**
- * Returns all commits from the commit with from_commit_hash to its base
- * snapshot, inclusive of both. Resulting vector is in chain-head-first order
- * (so snapshot comes last).
+ * Returns all commits from the commit with fromCommitHash to its base snapshot,
+ * inclusive of both. Resulting vector is in chain-head-first order (so snapshot
+ * comes last).
  */
 export async function chain(
   fromCommitHash: Hash,
@@ -435,7 +442,7 @@ function assertCreateIndexDefinition(
 }
 
 export type IndexRecord = {
-  readonly definition: CreateIndexDefinition;
+  readonly definition: Required<CreateIndexDefinition>;
   readonly valueHash: Hash;
 };
 
@@ -443,6 +450,13 @@ function assertIndexRecord(v: unknown): asserts v is IndexRecord {
   assertObject(v);
   assertCreateIndexDefinition(v.definition);
   assertString(v.valueHash);
+}
+
+function assertIndexRecords(v: unknown): asserts v is IndexRecord[] {
+  assertArray(v);
+  for (const ir of v) {
+    assertIndexRecord(ir);
+  }
 }
 
 export function newLocal(
@@ -647,10 +661,7 @@ export function assertCommitData(v: unknown): asserts v is CommitData<Meta> {
   assertObject(v);
   assertMeta(v.meta);
   assertString(v.valueHash);
-  assertArray(v.indexes);
-  for (const index of v.indexes) {
-    assertIndexRecord(index);
-  }
+  assertIndexRecords(v.indexes);
 }
 
 function validateChunk(

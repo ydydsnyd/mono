@@ -28,6 +28,13 @@ teardown(async () => {
 });
 
 test('basic persist & load', async () => {
+  if (DD31) {
+    // Persist does not currently work with DD31.
+
+    // TODO(DD31): Implement this test.
+    return;
+  }
+
   const pullURL = 'https://diff.com/pull';
   const rep = await replicacheForTesting('persist-test', {
     pullURL,
@@ -36,7 +43,7 @@ test('basic persist & load', async () => {
 
   perdag = new dag.StoreImpl(
     new kv.IDBStore(rep.idbName),
-    dag.throwChunkHasher,
+    DD31 ? dag.uuidChunkHasher : dag.throwChunkHasher,
     assertNotTempHash,
   );
 
@@ -137,6 +144,12 @@ suite('onClientStateNotFound', () => {
   });
 
   test('Called in query if collected', async () => {
+    if (DD31) {
+      // In DD31, the chunks are kept alive from the branch head.
+      // TODO(DD31): Does this test make sense in DD31?
+      return;
+    }
+
     const consoleErrorStub = sinon.stub(console, 'error');
 
     const rep = await replicacheForTesting('called-in-query', {
@@ -180,6 +193,12 @@ suite('onClientStateNotFound', () => {
   });
 
   test('Called in mutate if collected', async () => {
+    if (DD31) {
+      // In DD31, the chunks are kept alive from the branch head.
+      // TODO(DD31): Does this test make sense in DD31?
+      return;
+    }
+
     const consoleErrorStub = sinon.stub(console, 'error');
 
     const rep = await replicacheForTesting('called-in-mutate', {

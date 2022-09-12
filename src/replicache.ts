@@ -67,6 +67,7 @@ import {
 import {rebaseMutation} from './sync/rebase';
 import type {CreateIndexDefinition} from './db/commit.js';
 import type {IndexDefinitions} from './index-defs';
+import {assertClientDD31} from './persist/clients.js';
 
 export type BeginPullResult = {
   requestID: string;
@@ -359,6 +360,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       pusher = defaultPusher,
       licenseKey,
       experimentalKVStore,
+      indexes = {},
     } = options;
     this.auth = auth ?? '';
     this.pullURL = pullURL;
@@ -396,7 +398,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     const perKvStore = experimentalKVStore || new IDBStore(this.idbName);
     this._perdag = new dag.StoreImpl(
       perKvStore,
-      dag.throwChunkHasher,
+      DD31 ? dag.uuidChunkHasher : dag.throwChunkHasher,
       assertNotTempHash,
     );
     this._memdag = new dag.LazyStore(
@@ -456,7 +458,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     });
 
     void this._open(
-      options.indexes,
+      indexes,
       profileIDResolver.resolve,
       branchIDResolver.resolve,
       clientIDResolver.resolve,
@@ -473,7 +475,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   }
 
   private async _open(
-    indexes: IndexDefinitions | undefined,
+    indexes: IndexDefinitions,
     profileIDResolver: (profileID: string) => void,
     resolveBranchID: (branchID: sync.BranchID | undefined) => void,
     resolveClientID: (clientID: string) => void,
@@ -486,20 +488,30 @@ export class Replicache<MD extends MutatorDefs = {}> {
     await closingInstances.get(this.name);
     await this._idbDatabases.getProfileID().then(profileIDResolver);
     await this._idbDatabases.putDatabase(this._idbDatabase);
-    const [clientID, client, clients] = await persist.initClient(this._perdag);
-    // TODO(DD31): Get the branchID from initClient.
-    resolveBranchID(DD31 ? 'FAKE_BRANCH_ID' : undefined);
+    const [clientID, client, clients] = await persist.initClient(
+      this._lc,
+      this._perdag,
+      Object.keys(this._mutatorRegistry),
+      indexes,
+    );
+    if (DD31) {
+      assertClientDD31(client);
+      resolveBranchID(client.branchID);
+    } else {
+      resolveBranchID(undefined);
+    }
     resolveClientID(clientID);
     await this._memdag.withWrite(async write => {
       await write.setHead(db.DEFAULT_HEAD_NAME, client.headHash);
       await write.commit();
     });
 
-    if (indexes) {
+    if (!DD31) {
+      // DD31 syncs the indexes as part of initClient
       await this._syncIndexes(indexes);
     }
 
-    // Now we have a profileID, a clientID, and DB!
+    // Now we have a profileID, a clientID, a branchID and DB!
     resolveReady();
 
     this._root = this._getRoot();
@@ -540,6 +552,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     await this._startLicenseActive(resolveLicenseActive, this._lc, signal);
   }
   private async _syncIndexes(indexes: IndexDefinitions): Promise<void> {
+    assert(!DD31);
     // Do not wait for _ready here since this needs to be done before we
     // consider the database ready.
     await this._indexOp(async tx => tx.syncIndexes(indexes), false);
