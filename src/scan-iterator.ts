@@ -30,8 +30,10 @@ type ShouldDeepClone = {shouldDeepClone: boolean};
  * await` loop. There are also methods to iterate over the [[keys]],
  * [[entries]] or [[values]].
  */
-export class ScanResultImpl<Options extends ScanOptions, Value>
-  implements ScanResult<KeyTypeForScanOptions<Options>, Value>
+export class ScanResultImpl<
+  Options extends ScanOptions,
+  Value extends ReadonlyJSONValue,
+> implements ScanResult<KeyTypeForScanOptions<Options>, Value>
 {
   private readonly _iter: AsyncIterable<EntryForOptions<Options>>;
   private readonly _options: Options;
@@ -325,7 +327,10 @@ export type GetIndexScanIterator = (
  * );
  * ```
  */
-export function makeScanResult<Options extends ScanOptions, Value>(
+export function makeScanResult<
+  Options extends ScanOptions,
+  Value extends ReadonlyJSONValue,
+>(
   options: Options,
   getScanIterator: Options extends ScanIndexOptions
     ? GetIndexScanIterator

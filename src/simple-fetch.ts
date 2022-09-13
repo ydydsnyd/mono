@@ -7,7 +7,7 @@ export async function browserSimpleFetch(
   method: string,
   url: string,
   body: string | null,
-  headers: string[][],
+  headers: [string, string][],
 ): Promise<FetchResponse> {
   const requestInit = {
     method,
@@ -22,7 +22,7 @@ export async function mustSimpleFetch(
   method: string,
   url: string,
   body: string | null,
-  headers: string[][],
+  headers: [string, string][],
 ): Promise<FetchResponse> {
   const resp = await browserSimpleFetch(method, url, body, headers);
   if (resp.status !== 200) {

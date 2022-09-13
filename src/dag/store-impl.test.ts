@@ -325,7 +325,7 @@ suite('write', () => {
     const chunkHasher = makeTestChunkHasher('fake');
 
     const t = async (
-      chunkHasher: (v: ReadonlyJSONValue) => Hash,
+      chunkHasher: <V>(v: V) => Hash,
       assertValidHash: (h: Hash) => void,
     ) => {
       const store = new StoreImpl(new MemStore(), chunkHasher, assertValidHash);

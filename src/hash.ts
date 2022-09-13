@@ -1,6 +1,5 @@
 import {assert} from './asserts';
 import {encode} from './base32-encode';
-import type {ReadonlyJSONValue} from './json';
 import * as utf8 from './utf8';
 import {uuid} from './uuid.js';
 
@@ -35,7 +34,7 @@ const uuidHashRe = /^u\/[0-9a-f-]{36}$/;
 /**
  * Computes a SHA512 hash of the given data.
  */
-export async function hashOf(value: ReadonlyJSONValue): Promise<Hash> {
+export async function hashOf<V>(value: V): Promise<Hash> {
   const typedArray = utf8.encode(JSON.stringify(value));
   const buf = await crypto.subtle.digest('SHA-512', typedArray);
   const buf2 = new Uint8Array(buf, 0, BYTE_LENGTH);

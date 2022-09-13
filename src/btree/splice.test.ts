@@ -1,9 +1,10 @@
 import {expect} from '@esm-bundle/chai';
 import {computeSplices, Splice} from './splice';
 import type {ReadonlyEntry} from './node';
+import type {ReadonlyJSONValue} from '../json.js';
 
 test('splice', () => {
-  const t = <T>(
+  const t = <T extends ReadonlyJSONValue>(
     previous: ReadonlyEntry<T>[],
     current: ReadonlyEntry<T>[],
     expected: Splice[],

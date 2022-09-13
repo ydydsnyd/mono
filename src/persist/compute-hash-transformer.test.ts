@@ -65,7 +65,7 @@ test('fix hashes up of a single snapshot commit with empty btree', async () => {
     [treeChunk.hash, treeChunk],
   ]);
 
-  const hashFunc = async (v: ReadonlyJSONValue): Promise<Hash> => {
+  const hashFunc = async <V>(v: V): Promise<Hash> => {
     const buf = await crypto.subtle.digest(
       'SHA-512',
       utf8.encode(JSON.stringify(v)),

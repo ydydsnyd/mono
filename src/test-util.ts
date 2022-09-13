@@ -9,7 +9,7 @@ import * as kv from './kv/mod';
 import * as persist from './persist/mod';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import * as sinon from 'sinon';
-import type {JSONValue, ReadonlyJSONValue} from './json';
+import type {JSONValue} from './json';
 import {Hash, makeNewTempHashFunction} from './hash';
 
 // fetch-mock has invalid d.ts file so we removed that on npm install.
@@ -49,9 +49,7 @@ export class ReplicacheTest<
     return super._invokePush();
   }
 
-  protected override _memdagHashFunction(): <V extends ReadonlyJSONValue>(
-    data: V,
-  ) => Hash {
+  protected override _memdagHashFunction(): <V>(data: V) => Hash {
     return makeNewTempHashFunction();
   }
 

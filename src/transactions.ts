@@ -152,7 +152,7 @@ function noop(_: unknown): void {
   // empty
 }
 
-function scan<Options extends ScanOptions, Value>(
+function scan<Options extends ScanOptions, Value extends ReadonlyJSONValue>(
   options: Options | undefined,
   dbRead: db.Read,
   onLimitKey: (inclusiveLimitKey: string) => void,
@@ -402,7 +402,7 @@ export function fromKeyForNonIndexScan(
 
 function makeScanResultFromScanIteratorInternal<
   Options extends ScanOptions,
-  Value,
+  Value extends ReadonlyJSONValue,
 >(
   iter: AsyncIterable<EntryForOptions<Options>>,
   options: Options,

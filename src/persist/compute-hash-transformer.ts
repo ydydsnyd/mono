@@ -16,7 +16,6 @@ export class ComputeHashTransformer extends db.BaseTransformer {
   private readonly _hashFunc: <V>(value: V) => MaybePromise<Hash>;
 
   /**
-   * @param dagWrite The destination dag.
    * @param gatheredChunks The chunks that were gathered on the source dag in
    * a previous pass.
    */

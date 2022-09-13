@@ -3,7 +3,6 @@ import {Hash, isTempHash} from '../hash';
 import {Chunk, ChunkHasher, createChunk} from './chunk';
 import {Store, Read, Write, mustGetChunk} from './store';
 import {getSizeOfValue as defaultGetSizeOfValue} from '../json';
-import type {ReadonlyJSONValue} from '../mod';
 import {
   computeRefCountUpdates,
   GarbageCollectionDelegate,
@@ -282,10 +281,8 @@ export class LazyWrite
     this._refCounts = refCounts;
     this._chunkHasher = chunkHasher;
   }
-  createChunk = <V extends ReadonlyJSONValue>(
-    data: V,
-    refs: readonly Hash[],
-  ): Chunk<V> => createChunk(data, refs, this._chunkHasher);
+  createChunk = <V>(data: V, refs: readonly Hash[]): Chunk<V> =>
+    createChunk(data, refs, this._chunkHasher);
 
   async putChunk<V>(c: Chunk<V>): Promise<void> {
     const {hash, meta} = c;

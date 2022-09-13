@@ -53,6 +53,7 @@ import {
   PROD_LICENSE_SERVER_URL,
   LicenseStatus,
   TEST_LICENSE_KEY,
+  SimpleFetch,
 } from '@rocicorp/licensing/src/client';
 import {mustSimpleFetch} from './simple-fetch';
 import {initBgIntervalProcess} from './persist/bg-interval';
@@ -468,9 +469,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     );
   }
 
-  protected _memdagHashFunction(): <V extends ReadonlyJSONValue>(
-    data: V,
-  ) => Hash {
+  protected _memdagHashFunction(): <V>(data: V) => Hash {
     return newTempHash;
   }
 
@@ -621,7 +620,8 @@ export class Replicache<MD extends MutatorDefs = {}> {
     }
     try {
       const resp = await getLicenseStatus(
-        mustSimpleFetch,
+        // TODO(arv): Fix @rocicorp/license
+        mustSimpleFetch as SimpleFetch,
         PROD_LICENSE_SERVER_URL,
         this._licenseKey,
         this._lc,
@@ -685,7 +685,8 @@ export class Replicache<MD extends MutatorDefs = {}> {
     const markActive = async () => {
       try {
         await licenseActive(
-          mustSimpleFetch,
+          // TODO(arv): Update @rocicorp/licensing
+          mustSimpleFetch as SimpleFetch,
           PROD_LICENSE_SERVER_URL,
           this._licenseKey as string,
           await this.profileID,

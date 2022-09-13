@@ -43,7 +43,9 @@ interface Subscription<R, E> {
 
 const emptySet: ReadonlySet<string> = new Set();
 
-class SubscriptionImpl<R, E> implements Subscription<R, E> {
+class SubscriptionImpl<R extends ReadonlyJSONValue | undefined, E>
+  implements Subscription<R, E>
+{
   private readonly _body: (tx: ReadTransaction) => Promise<R>;
   private readonly _onData: (result: R) => void;
   private _skipEqualsCheck = true;
