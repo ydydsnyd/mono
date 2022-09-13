@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1662968703873,
+  "lastUpdate": 1663063092402,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -24215,6 +24215,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23662,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "distinct": true,
+          "id": "abbd140190ecda6e1555af650aa8f72609f3decc",
+          "message": "Code review response\n\n- make tempRefreshHash Hash | null\n- Do not include lmid 0 in the commit records for lastMutationIDs and\n  lastServerAckdMutationIDs.\n- Reuse index maps when forking when possible",
+          "timestamp": "2022-09-13T11:56:44+02:00",
+          "tree_id": "1a722f344d6ff1eea08bf32502da917a7ba3f45d",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/abbd140190ecda6e1555af650aa8f72609f3decc"
+        },
+        "date": 1663063085563,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 193703,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34798,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 192557,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34475,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81463,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23653,
             "unit": "bytes"
           }
         ]
