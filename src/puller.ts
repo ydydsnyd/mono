@@ -40,7 +40,7 @@ export type PullResponseOK = {
  */
 export type PullResponseOKDD31 = {
   cookie?: ReadonlyJSONValue;
-  lastMutationIDs: Record<ClientID, number>;
+  lastMutationIDChanges: Record<ClientID, number>;
   patch: PatchOperation[];
 };
 
@@ -103,15 +103,15 @@ export function assertPullResponseDD31(
   if (v2.cookie !== undefined) {
     assertJSONValue(v2.cookie);
   }
-  assertLastMutationIDs(v2.lastMutationIDs);
+  assertLastMutationIDChanges(v2.lastMutationIDChanges);
   assertPatchOperations(v2.patch);
 }
 
-function assertLastMutationIDs(
-  lastMutationIDs: unknown,
-): asserts lastMutationIDs is Record<string, number> {
-  assertObject(lastMutationIDs);
-  for (const [key, value] of Object.entries(lastMutationIDs)) {
+function assertLastMutationIDChanges(
+  lastMutationIDChanges: unknown,
+): asserts lastMutationIDChanges is Record<string, number> {
+  assertObject(lastMutationIDChanges);
+  for (const [key, value] of Object.entries(lastMutationIDChanges)) {
     assertString(key);
     assertNumber(value);
   }
