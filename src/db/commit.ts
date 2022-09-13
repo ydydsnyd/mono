@@ -71,13 +71,7 @@ export class Commit<M extends Meta> {
       case MetaType.Snapshot: {
         if (DD31) {
           assertSnapshotMetaDD31(meta);
-          const lmid = meta.lastMutationIDs[clientID];
-          if (lmid === undefined) {
-            // TODO(DD31, arv): Is this the right behavior?
-            // Not in the base snap shot. This is a new client.
-            return 0;
-          }
-          return lmid;
+          return meta.lastMutationIDs[clientID] ?? 0;
         }
         assertSnapshotMeta(meta);
         return meta.lastMutationID;
@@ -194,8 +188,7 @@ export function snapshotMetaParts(
   let lmid;
   if (DD31) {
     assertSnapshotMetaDD31(m);
-    lmid = m.lastMutationIDs[clientID];
-    assertNumber(lmid);
+    lmid = m.lastMutationIDs[clientID] ?? 0;
     return [lmid, m.cookieJSON];
   }
 

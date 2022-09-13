@@ -218,6 +218,7 @@ test('index value', async () => {
           key,
           toInternalValue(value, ToInternalValueReason.Test),
           jsonPointer,
+          false,
         );
 
         const actualVal = await asyncIterableToArray(index.entries());
@@ -239,6 +240,7 @@ test('index value', async () => {
             key,
             toInternalValue(value, ToInternalValueReason.Test),
             jsonPointer,
+            false,
           ),
         ).to.throw(expected);
       }

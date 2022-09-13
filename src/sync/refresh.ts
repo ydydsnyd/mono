@@ -162,7 +162,7 @@ export async function refresh(
     const newClient = {
       ...client,
       headHash: result.state === ABORTED ? client.headHash : perdagMainHead,
-      tempRefreshHash: undefined,
+      tempRefreshHash: null,
     };
 
     // If this cleanup never happens, it's no big deal, some data will stay

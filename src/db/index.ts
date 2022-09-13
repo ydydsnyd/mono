@@ -36,7 +36,7 @@ export async function indexValue(
   key: string,
   val: InternalValue,
   jsonPointer: string,
-  allowEmpty = false,
+  allowEmpty: boolean,
 ): Promise<void> {
   try {
     for (const entry of getIndexKeys(key, val, jsonPointer, allowEmpty)) {

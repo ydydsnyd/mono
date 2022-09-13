@@ -75,7 +75,7 @@ async function setClientsAndBranches(
     headHash: perdagHeadHash,
     // Not used
     heartbeatTimestampMs: -1,
-    tempRefreshHash: undefined,
+    tempRefreshHash: null,
   };
 
   await perdag.withWrite(async perdagWrite => {
@@ -484,6 +484,7 @@ suite('refresh', () => {
           branchID,
           headHash: l2.chunk.hash,
           heartbeatTimestampMs: 1,
+          tempRefreshHash: null,
         },
         dagWrite,
       );
@@ -493,6 +494,7 @@ suite('refresh', () => {
           branchID,
           headHash: l2.chunk.hash,
           heartbeatTimestampMs: 2,
+          tempRefreshHash: null,
         },
         dagWrite,
       );

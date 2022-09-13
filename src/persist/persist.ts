@@ -1,4 +1,4 @@
-import {assert, assertNumber} from '../asserts';
+import {assert} from '../asserts';
 import type * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import * as sync from '../sync/mod';
@@ -95,9 +95,7 @@ async function gatherTempChunks(
     const {meta} = baseSnapshotCommit;
     if (DD31) {
       assertSnapshotMetaDD31(meta);
-      const lmid = meta.lastMutationIDs[clientID];
-      assertNumber(lmid);
-      lastMutationID = lmid;
+      lastMutationID = meta.lastMutationIDs[clientID] ?? 0;
     } else {
       assertSnapshotMeta(meta);
       lastMutationID = meta.lastMutationID;

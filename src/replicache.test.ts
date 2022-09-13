@@ -801,7 +801,11 @@ test('pull', async () => {
   });
   beginPullResult = await rep.beginPull();
   ({syncHead} = beginPullResult);
-  expect(syncHead).equal('t/000000000000000000000000000007');
+  expect(syncHead).equal(
+    DD31
+      ? 't/000000000000000000000000000007'
+      : 't/000000000000000000000000000008',
+  );
 
   await createTodo({
     id: id2,

@@ -557,7 +557,7 @@ export async function createIndexBTree(
   indexDefinition: IndexDefinition,
 ): Promise<BTreeWrite> {
   const indexMap = new BTreeWrite(dagWrite);
-  const {prefix = '', jsonPointer, allowEmpty} = indexDefinition;
+  const {prefix = '', jsonPointer, allowEmpty = false} = indexDefinition;
   for await (const entry of valueMap.scan(prefix)) {
     await indexValue(
       lc,

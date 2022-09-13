@@ -1,7 +1,14 @@
 import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
 import type * as dag from '../dag/mod';
-import {Commit, DEFAULT_HEAD_NAME, fromHead, Meta, MetaType} from './commit';
+import {
+  Commit,
+  DEFAULT_HEAD_NAME,
+  fromHead,
+  IndexRecord,
+  Meta,
+  MetaType,
+} from './commit';
 import {readCommit, whenceHead} from './read';
 import {
   Write,
@@ -10,13 +17,15 @@ import {
   newWriteSnapshotDD31,
   newWriteLocal,
   newWriteIndexChange,
+  createIndexBTree,
 } from './write';
 import type {JSONValue} from '../json';
 import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 import type {ClientID} from '../sync/client-id.js';
 import {emptyHash, Hash} from '../hash.js';
-import {BTreeWrite} from '../btree/mod.js';
-import type {IndexDefinition} from '../index-defs.js';
+import {BTreeRead, BTreeWrite} from '../btree/mod.js';
+import type {IndexDefinition, IndexDefinitions} from '../index-defs.js';
+import {IndexWrite} from './index.js';
 
 export type Chain = Commit<Meta>[];
 
@@ -153,12 +162,44 @@ export async function addSnapshot(
   clientID: ClientID,
   cookie: JSONValue = `cookie_${chain.length}`,
   lastMutationIDs?: Record<ClientID, number>,
+  indexDefinitions?: IndexDefinitions,
 ): Promise<Chain> {
   expect(chain).to.have.length.greaterThan(0);
   const lc = new LogContext();
   await store.withWrite(async dagWrite => {
     let w;
+    let indexes: Map<string, IndexWrite>;
     if (DD31) {
+      if (indexDefinitions) {
+        indexes = new Map();
+        for (const [name, indexDefinition] of Object.entries(
+          indexDefinitions,
+        )) {
+          const valueMap = new BTreeRead(
+            dagWrite,
+            chain[chain.length - 1].valueHash,
+          );
+          const indexMap = await createIndexBTree(
+            new LogContext(),
+            dagWrite,
+            valueMap,
+            indexDefinition,
+          );
+          const indexMapHash = await indexMap.flush();
+          const indexRecord: IndexRecord = {
+            definition: {
+              name,
+              prefix: indexDefinition.prefix ?? '',
+              jsonPointer: indexDefinition.jsonPointer,
+              allowEmpty: indexDefinition.allowEmpty ?? false,
+            },
+            valueHash: indexMapHash,
+          };
+          indexes.set(name, new IndexWrite(indexRecord, indexMap));
+        }
+      } else {
+        indexes = readIndexesForWrite(chain[chain.length - 1], dagWrite);
+      }
       w = await newWriteSnapshotDD31(
         whenceHead(DEFAULT_HEAD_NAME),
         lastMutationIDs ?? {
@@ -169,7 +210,7 @@ export async function addSnapshot(
         },
         toInternalValue(cookie, ToInternalValueReason.Test),
         dagWrite,
-        readIndexesForWrite(chain[chain.length - 1], dagWrite),
+        indexes,
         clientID,
       );
     } else {
@@ -211,7 +252,7 @@ export async function initDB(
       {
         basisHash,
         type: MetaType.Snapshot,
-        lastMutationIDs: {[clientID]: 0},
+        lastMutationIDs: {},
         cookieJSON: null,
       },
       new Map(),

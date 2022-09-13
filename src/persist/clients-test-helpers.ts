@@ -44,7 +44,9 @@ export function makeClient(partialClient: PartialClient): Client {
     // Forced DD31 path
     return {
       branchID: p31.branchID,
-      ...partialClient,
+      headHash: p31.headHash,
+      heartbeatTimestampMs: p31.heartbeatTimestampMs,
+      tempRefreshHash: p31.tempRefreshHash ?? null,
     };
   }
 
@@ -64,7 +66,9 @@ export function makeClient(partialClient: PartialClient): Client {
   if (DD31) {
     return {
       branchID: 'make-client-branch-id',
-      ...partialClient,
+      headHash: partialClient.headHash,
+      heartbeatTimestampMs: partialClient.heartbeatTimestampMs,
+      tempRefreshHash: null,
     };
   }
 

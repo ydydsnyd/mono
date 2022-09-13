@@ -23,8 +23,19 @@ import {
   newSnapshotCommitDataDD31,
 } from '../db/commit';
 import type {ClientID} from '../sync/ids';
-import {Branch, getBranch, mutatorNamesEqual, setBranch} from './branches';
-import {IndexDefinitions, indexDefinitionsEqual} from '../index-defs';
+import {
+  Branch,
+  getBranch,
+  getBranches,
+  mutatorNamesEqual,
+  setBranch,
+} from './branches';
+import {
+  IndexDefinition,
+  indexDefinitionEqual,
+  IndexDefinitions,
+  indexDefinitionsEqual,
+} from '../index-defs';
 import {CastReason, InternalValue, safeCastToJSON} from '../internal-value.js';
 import {createIndexBTree} from '../db/write.js';
 import type {MaybePromise} from '../replicache.js';
@@ -80,12 +91,11 @@ export type ClientDD31 = {
   readonly heartbeatTimestampMs: number;
   readonly headHash: Hash;
 
-  // TODO(arv, DD31): We should not use undefined here. Use required null instead?
   /**
    * The hash of a commit we are in the middle of refreshing into this client's
    * memdag.
    */
-  readonly tempRefreshHash?: Hash;
+  readonly tempRefreshHash: Hash | null;
 
   /**
    * ID of this client's perdag branch. This needs to be sent in pull request
@@ -335,7 +345,7 @@ export function initClientDD31(
     ): Promise<[sync.ClientID, Client, ClientMap]> {
       const newSnapshotData = newSnapshotCommitDataDD31(
         basisHash,
-        {[newClientID]: 0},
+        {},
         cookieJSON,
         valueHash,
         indexRecords,
@@ -350,7 +360,7 @@ export function initClientDD31(
       const newClient: ClientDD31 = {
         heartbeatTimestampMs: Date.now(),
         headHash: chunk.hash,
-        tempRefreshHash: undefined,
+        tempRefreshHash: null,
         branchID: newBranchID,
       };
 
@@ -360,8 +370,8 @@ export function initClientDD31(
         headHash: chunk.hash,
         mutatorNames,
         indexes,
-        mutationIDs: {[newClientID]: 0},
-        lastServerAckdMutationIDs: {[newClientID]: 0},
+        mutationIDs: {},
+        lastServerAckdMutationIDs: {},
       };
 
       await Promise.all([
@@ -386,29 +396,16 @@ export function initClientDD31(
     );
     if (res.type === FIND_MATCHING_CLIENT_TYPE_HEAD) {
       // We found a branch with matching mutators and indexes. We can reuse it.
-      const {client, branch} = res;
-      const {branchID} = client;
-
-      // Update Branch with our new client ID.
-      const newBranch: Branch = {
-        ...branch,
-        mutationIDs: {...branch.mutationIDs, [newClientID]: 0},
-        lastServerAckdMutationIDs: {
-          ...branch.lastServerAckdMutationIDs,
-          [newClientID]: 0,
-        },
-      };
+      const {branchID, headHash} = res;
 
       const newClient: ClientDD31 = {
-        ...client,
+        branchID,
+        headHash,
         heartbeatTimestampMs: Date.now(),
+        tempRefreshHash: null,
       };
       const newClients = new Map(clients).set(newClientID, newClient);
-
-      await Promise.all([
-        setBranch(branchID, newBranch, dagWrite),
-        setClients(newClients, dagWrite),
-      ]);
+      await setClients(newClients, dagWrite);
 
       await dagWrite.commit();
       return [newClientID, newClient, newClients];
@@ -452,27 +449,36 @@ export function initClientDD31(
 
     // Create indexes
     const indexRecords: db.IndexRecord[] = [];
-    const {valueHash} = snapshot;
+    const {valueHash, indexes: oldIndexes} = snapshot;
     const map = new btree.BTreeRead(dagWrite, valueHash);
+
     for (const [name, indexDefinition] of Object.entries(indexes)) {
+      const {prefix = '', jsonPointer, allowEmpty = false} = indexDefinition;
       const createIndexDefinition: Required<CreateIndexDefinition> = {
         name,
-        prefix: indexDefinition.prefix ?? '',
-        jsonPointer: indexDefinition.jsonPointer,
-        allowEmpty: indexDefinition.allowEmpty ?? false,
+        prefix,
+        jsonPointer,
+        allowEmpty,
       };
 
-      const indexBTree = await createIndexBTree(
-        lc,
-        dagWrite,
-        map,
-        indexDefinition,
-      );
-
-      indexRecords.push({
-        definition: createIndexDefinition,
-        valueHash: await indexBTree.flush(),
-      });
+      const oldIndex = findMatchingOldIndex(oldIndexes, indexDefinition);
+      if (oldIndex) {
+        indexRecords.push({
+          definition: createIndexDefinition,
+          valueHash: oldIndex.valueHash,
+        });
+      } else {
+        const indexBTree = await createIndexBTree(
+          lc,
+          dagWrite,
+          map,
+          indexDefinition,
+        );
+        indexRecords.push({
+          definition: createIndexDefinition,
+          valueHash: await indexBTree.flush(),
+        });
+      }
     }
 
     return setClientsAndBranchAndCommit(
@@ -482,6 +488,15 @@ export function initClientDD31(
       indexRecords,
     );
   });
+}
+
+function findMatchingOldIndex(
+  oldIndexes: readonly db.IndexRecord[],
+  indexDefinition: IndexDefinition,
+) {
+  return oldIndexes.find(index =>
+    indexDefinitionEqual(index.definition, indexDefinition),
+  );
 }
 
 export const FIND_MATCHING_CLIENT_TYPE_NEW = 0;
@@ -498,8 +513,8 @@ export type FindMatchingClientResult =
     }
   | {
       type: typeof FIND_MATCHING_CLIENT_TYPE_HEAD;
-      client: ClientDD31;
-      branch: Branch;
+      branchID: sync.BranchID;
+      headHash: Hash;
     };
 
 export async function findMatchingClient(
@@ -509,18 +524,15 @@ export async function findMatchingClient(
   indexes: IndexDefinitions,
 ): Promise<FindMatchingClientResult> {
   let newestCookie: ReadonlyJSONValue | undefined;
-  let bestBranch: Branch | undefined;
-  let bestClient: ClientDD31 | undefined;
   let bestSnapshot: db.Commit<db.SnapshotMetaDD31> | undefined;
   const mutatorNamesSet = new Set(mutatorNames);
 
+  const branches = await getBranches(dagRead);
   for (const client of clients.values()) {
-    if (!isClientDD31(client)) {
-      continue;
-    }
+    assertClientDD31(client);
 
     const {branchID} = client;
-    const branch = await getBranch(branchID, dagRead);
+    const branch = branches.get(branchID);
     assert(branch);
 
     if (
@@ -528,7 +540,11 @@ export async function findMatchingClient(
       indexDefinitionsEqual(indexes, branch.indexes)
     ) {
       // exact match
-      return {type: FIND_MATCHING_CLIENT_TYPE_HEAD, client, branch};
+      return {
+        type: FIND_MATCHING_CLIENT_TYPE_HEAD,
+        branchID,
+        headHash: branch.headHash,
+      };
     }
 
     const branchSnapshotCommit = await db.baseSnapshotFromHash(
@@ -546,17 +562,11 @@ export async function findMatchingClient(
       compareCookies(cookieJSON, newestCookie) > 0
     ) {
       newestCookie = cookieJSON;
-      bestBranch = branch;
-      bestClient = client;
       bestSnapshot = branchSnapshotCommit;
     }
   }
 
-  if (bestBranch) {
-    assert(bestClient);
-    assert(bestBranch);
-    assert(bestSnapshot);
-
+  if (bestSnapshot) {
     return {
       type: FIND_MATCHING_CLIENT_TYPE_FORK,
       snapshot: bestSnapshot,

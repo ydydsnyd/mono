@@ -3,7 +3,13 @@ import {expect} from '@esm-bundle/chai';
 import {assert, assertNotUndefined} from '../asserts';
 import {BTreeRead} from '../btree/read';
 import * as dag from '../dag/mod';
-import {Commit, fromChunk, SnapshotMeta, SnapshotMetaDD31} from '../db/commit';
+import {
+  Commit,
+  fromChunk,
+  fromHash,
+  SnapshotMeta,
+  SnapshotMetaDD31,
+} from '../db/commit';
 import {assertHash, fakeHash, newTempHash} from '../hash';
 import {
   assertClientDD31,
@@ -98,13 +104,7 @@ test('updateClients and getClients for DD31', async () => {
         heartbeatTimestampMs: 3000,
         headHash: fakeHash('headclient2'),
         branchID: 'branch-id-2',
-        // missing tempRefreshHash
-      },
-      client3: {
-        heartbeatTimestampMs: 5000,
-        headHash: fakeHash('headclient3'),
-        branchID: 'branch-id-3',
-        tempRefreshHash: undefined,
+        tempRefreshHash: null,
       },
     }),
   );
@@ -125,7 +125,6 @@ test('updateClients and getClients for DD31', async () => {
       'fake00000000000000000headclient1',
       'fake0000000000000000refreshhash1',
       'fake00000000000000000headclient2',
-      'fake00000000000000000headclient3',
     ]);
   });
 });
@@ -754,6 +753,7 @@ test('setClient', async () => {
     branchID: 'branch-id-1',
     headHash: fakeHash('bid'),
     heartbeatTimestampMs: 1,
+    tempRefreshHash: null,
   });
 
   await t(clientID, {
@@ -819,6 +819,7 @@ test('getMainBranchID', async () => {
       branchID,
       headHash: fakeHash('bid'),
       heartbeatTimestampMs: 1,
+      tempRefreshHash: null,
     };
     await t(clientID, client, branchID, branch, branchID, branch);
   }
@@ -828,6 +829,7 @@ test('getMainBranchID', async () => {
       branchID: 'branch-id-wrong',
       headHash: fakeHash('bid'),
       heartbeatTimestampMs: 1,
+      tempRefreshHash: null,
     };
     let err;
     try {
@@ -889,7 +891,7 @@ suite('findMatchingClient', () => {
         branchID,
         headHash: chain[1].chunk.hash,
         heartbeatTimestampMs: 1,
-        tempRefreshHash: undefined,
+        tempRefreshHash: null,
       };
       await setClient(clientID, client, write);
 
@@ -971,7 +973,7 @@ suite('findMatchingClient', () => {
       branchID,
       headHash,
       heartbeatTimestampMs: 1,
-      tempRefreshHash: undefined,
+      tempRefreshHash: null,
     };
     const branch: Branch = {
       headHash: chain[1].chunk.hash,
@@ -996,8 +998,8 @@ suite('findMatchingClient', () => {
       );
       const expected: FindMatchingClientResult = {
         type: FIND_MATCHING_CLIENT_TYPE_HEAD,
-        client,
-        branch,
+        branchID,
+        headHash,
       };
       expect(res).deep.equal(expected);
     });
@@ -1041,7 +1043,7 @@ suite('initClientDD31', () => {
     assertClientDD31(client);
     expect(clientMap.size).to.equal(1);
     expect(clientMap.get(clientID)).to.equal(client);
-    expect(client.tempRefreshHash).to.be.undefined;
+    expect(client.tempRefreshHash).to.be.null;
   });
 
   test('reuse head', async () => {
@@ -1063,7 +1065,7 @@ suite('initClientDD31', () => {
       branchID,
       headHash,
       heartbeatTimestampMs: 1,
-      tempRefreshHash: undefined,
+      tempRefreshHash: null,
     };
     const branch1: Branch = {
       headHash: chain[1].chunk.hash,
@@ -1090,6 +1092,7 @@ suite('initClientDD31', () => {
     expect(client2).to.deep.equal({
       ...client1,
       heartbeatTimestampMs: 10,
+      tempRefreshHash: null,
     });
 
     const branch2 = await perdag.withRead(read => getBranch(branchID, read));
@@ -1097,11 +1100,9 @@ suite('initClientDD31', () => {
       ...branch1,
       lastServerAckdMutationIDs: {
         [clientID1]: 0,
-        [clientID2]: 0,
       },
       mutationIDs: {
         [clientID1]: 1,
-        [clientID2]: 0,
       },
     });
   });
@@ -1127,7 +1128,7 @@ suite('initClientDD31', () => {
       branchID: branchID1,
       headHash,
       heartbeatTimestampMs: 1,
-      tempRefreshHash: undefined,
+      tempRefreshHash: null,
     };
     const branch1: Branch = {
       headHash,
@@ -1160,19 +1161,115 @@ suite('initClientDD31', () => {
       'Forked so we need a new head',
     );
     expect(client2.heartbeatTimestampMs).to.equal(10);
-    expect(client2.tempRefreshHash).to.be.undefined;
+    expect(client2.tempRefreshHash).to.be.null;
 
     const branch2 = await perdag.withRead(read => getBranch(branchID2, read));
     expect(branch2).to.deep.equal({
       headHash: client2.headHash,
       indexes: newIndexes,
       mutatorNames: newMutatorNames,
-      lastServerAckdMutationIDs: {
-        [clientID2]: 0,
-      },
-      mutationIDs: {
-        [clientID2]: 0,
-      },
+      lastServerAckdMutationIDs: {},
+      mutationIDs: {},
+    });
+  });
+
+  test('fork snapshot due to incompatible index names - reuse index maps', async () => {
+    const lc = new LogContext();
+
+    const perdag = new dag.TestStore();
+    const clientID1 = 'client-id-1';
+    const branchID1 = 'branch-id-1';
+    const chain: Chain = [];
+    await addGenesis(chain, perdag, clientID1);
+
+    const initialIndexes: IndexDefinitions = {
+      a1: {jsonPointer: '', prefix: 'a'},
+    };
+    const newMutatorNames = ['x'];
+    const newIndexes: IndexDefinitions = {
+      a2: {jsonPointer: '', prefix: 'a'},
+      b: {jsonPointer: ''},
+    };
+
+    await addSnapshot(
+      chain,
+      perdag,
+      [
+        ['a', 'b'],
+        ['c', 'd'],
+      ],
+      clientID1,
+      1,
+      {[clientID1]: 10},
+      initialIndexes,
+    );
+    await addLocal(chain, perdag, clientID1, []);
+    const headHash = chain[2].chunk.hash;
+    const initialMutatorNames = ['x'];
+
+    clock.setSystemTime(10);
+
+    const client1: ClientDD31 = {
+      branchID: branchID1,
+      headHash,
+      heartbeatTimestampMs: 1,
+      tempRefreshHash: null,
+    };
+    const branch1: Branch = {
+      headHash,
+      lastServerAckdMutationIDs: {[clientID1]: 0},
+      mutationIDs: {[clientID1]: 1},
+      indexes: initialIndexes,
+      mutatorNames: initialMutatorNames,
+    };
+
+    await perdag.withWrite(async write => {
+      await setClient(clientID1, client1, write);
+      await setBranch(branchID1, branch1, write);
+      await write.commit();
+    });
+
+    const [clientID2, client2, clientMap] = await initClientDD31(
+      lc,
+      perdag,
+      newMutatorNames,
+      newIndexes,
+    );
+    expect(clientID2).to.not.equal(clientID1);
+    assertClientDD31(client2);
+    const branchID2 = client2.branchID;
+    expect(branchID2).to.not.equal(branchID1);
+    expect(clientMap.size).to.equal(2);
+
+    expect(client2.headHash).to.not.equal(
+      client1.headHash,
+      'Forked so we need a new head',
+    );
+    expect(client2.heartbeatTimestampMs).to.equal(10);
+    expect(client2.tempRefreshHash).to.be.null;
+
+    const branch2 = await perdag.withRead(read => getBranch(branchID2, read));
+    expect(branch2).to.deep.equal({
+      headHash: client2.headHash,
+      indexes: newIndexes,
+      mutatorNames: newMutatorNames,
+      lastServerAckdMutationIDs: {},
+      mutationIDs: {},
+    });
+
+    await perdag.withRead(async read => {
+      const c1 = await fromHash(client1.headHash, read);
+      expect(c1.chunk.data.indexes).length(1);
+
+      const c2 = await fromHash(client2.headHash, read);
+      expect(c2.chunk.data.indexes).length(2);
+
+      expect(c1.chunk.data.indexes[0].valueHash).to.equal(
+        c2.chunk.data.indexes[0].valueHash,
+      );
+      expect(c1.chunk.data.indexes[0].valueHash).to.not.equal(
+        c2.chunk.data.indexes[1].valueHash,
+      );
     });
   });
 });

@@ -77,7 +77,7 @@ async function assertClientMutationIDsCorrect(
     if (DD31) {
       assertSnapshotMetaDD31(meta);
       expect(client.lastServerAckdMutationID).to.equal(
-        meta.lastMutationIDs[clientID],
+        meta.lastMutationIDs[clientID] ?? 0,
       );
     } else {
       assertSnapshotMeta(meta);
