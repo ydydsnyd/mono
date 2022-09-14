@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1663094011007,
+  "lastUpdate": 1663128132560,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -24377,6 +24377,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23674,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fdd4711984a1ea08ed6984ba6cee063c91858e30",
+          "message": "refactor(DD31): Add put commit variants to WriteTransactionImpl and db.Write (#251)\n\nFor DD31 `persist` needs to be able to rebase multiple `Commit<LocalMeta>`a in a single `dag.WriteTransaction`. \r\nThis refactor enables this.  \r\n\r\nThis refactor also fixes an issue where `refresh` was updating the `sync` head when it should have been updating the `refresh` head, by making `WriteTransactionImpl.commit` take a head name arg rather than inferring it from whether or not the transaction is a rebase.",
+          "timestamp": "2022-09-13T21:01:10-07:00",
+          "tree_id": "443b0aa6112765ffa6ec6e39f52a0a8d61a32536",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/fdd4711984a1ea08ed6984ba6cee063c91858e30"
+        },
+        "date": 1663128127886,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 194085,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34851,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 192939,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34533,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81607,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23664,
             "unit": "bytes"
           }
         ]
