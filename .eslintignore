@@ -5,7 +5,6 @@ tool
 bin
 *_generated.ts
 src/*/generated/
-.eslintrc.cjs
 web-test-runner.config.mjs
 rollup.config.js
 perf/index.js
