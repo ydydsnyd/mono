@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1663128132560,
+  "lastUpdate": 1663146564010,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -24431,6 +24431,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23664,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "000847c0cd6282a60e9c46d2c3e71f8d8316749d",
+          "message": "refactor: Use dbWrite in more places (#252)\n\nWe were using WriteTransactionImpl in a few internal places, which\r\nforced us to add a few methods to WriteTransactionImpl that were not\r\npart of the WriteTransaction interface.\r\n\r\nInternally, we can use dbWrite instead which allows us to remove these\r\nforwarding methods from WriteTransactionImpl.",
+          "timestamp": "2022-09-14T09:08:20Z",
+          "tree_id": "e0d279887a4e05c56d6e68f09d5798f4f75ebbbb",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/000847c0cd6282a60e9c46d2c3e71f8d8316749d"
+        },
+        "date": 1663146558855,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 193909,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34839,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 192763,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34510,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81502,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23650,
             "unit": "bytes"
           }
         ]
