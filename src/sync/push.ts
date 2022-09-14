@@ -22,7 +22,7 @@ export type PushRequest = {
   clientID: string;
   mutations: Mutation[];
   pushVersion: typeof PUSH_VERSION;
-  // schema_version can optionally be used to specify to the push endpoint
+  // schemaVersion can optionally be used to specify to the push endpoint
   // version information about the mutators the app is using (e.g., format
   // of mutator args).
   schemaVersion: string;
@@ -34,7 +34,7 @@ export type PushRequestDD31 = {
   clientID: string;
   mutations: MutationDD31[];
   pushVersion: typeof PUSH_VERSION_DD31;
-  // schema_version can optionally be used to specify to the push endpoint
+  // schemaVersion can optionally be used to specify to the push endpoint
   // version information about the mutators the app is using (e.g., format
   // of mutator args).
   schemaVersion: string;

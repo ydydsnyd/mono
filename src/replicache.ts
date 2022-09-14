@@ -1419,7 +1419,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
   /**
    * In the case we get a ChunkNotFoundError we check if the client got garbage
-   * collected and if so change the error to a ClientNotFoundError instead
+   * collected and if so change the error to a ClientStateNotFoundError instead
    */
   private async _convertToClientStateNotFoundError(
     ex: unknown,

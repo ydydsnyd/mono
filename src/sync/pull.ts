@@ -41,7 +41,7 @@ export type PullRequest<Cookie = ReadonlyJSONValue> = {
   cookie: Cookie;
   lastMutationID: number;
   pullVersion: number;
-  // schema_version can optionally be used by the customer's app
+  // schemaVersion can optionally be used by the customer's app
   // to indicate to the data layer what format of Client View the
   // app understands.
   schemaVersion: string;
