@@ -12,8 +12,6 @@ import {fromKeyForIndexScanInternal, ScanResultImpl} from './scan-iterator';
 import type {ScanResult} from './scan-iterator';
 import {throwIfClosed} from './transaction-closed-error';
 import type * as db from './db/mod';
-import type * as sync from './sync/mod';
-import type {Hash} from './hash';
 import type {ScanSubscriptionInfo} from './subscriptions';
 import type {ScanNoIndexOptions} from './mod';
 import {decodeIndexKey, IndexKey} from './db/index';
@@ -294,21 +292,6 @@ export class WriteTransactionImpl
   async del(key: string): Promise<boolean> {
     throwIfClosed(this.dbtx);
     return await this.dbtx.del(this._lc, key);
-  }
-
-  async putCommit(): Promise<db.Commit<db.Meta>> {
-    const txn = this.dbtx;
-    throwIfClosed(txn);
-    return txn.putCommit();
-  }
-
-  async commit(
-    headName: string,
-    generateDiffs: boolean,
-  ): Promise<[Hash, sync.DiffsMap]> {
-    const txn = this.dbtx;
-    throwIfClosed(txn);
-    return txn.commitWithDiffs(headName, generateDiffs);
   }
 }
 

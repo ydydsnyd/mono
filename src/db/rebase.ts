@@ -7,7 +7,7 @@ import type {LogContext} from '@rocicorp/logger';
 import type {ClientID} from '../sync/mod';
 import {assert} from '../asserts';
 import {Commit, fromHash, isLocalMetaDD31, LocalMeta, Meta} from './commit';
-import {newWriteLocal} from './write';
+import {newWriteLocal, Write} from './write';
 import {whenceHash} from './read';
 
 async function rebaseMutation(
@@ -17,7 +17,7 @@ async function rebaseMutation(
   mutators: MutatorDefs,
   lc: LogContext,
   mutationClientID: ClientID,
-): Promise<WriteTransactionImpl> {
+): Promise<Write> {
   const localMeta = mutation.meta;
   const name = localMeta.mutatorName;
   if (isLocalMetaDD31(localMeta)) {
@@ -73,7 +73,7 @@ async function rebaseMutation(
 
   const tx = new WriteTransactionImpl(mutationClientID, dbWrite, lc);
   await mutatorImpl(tx, jsonArgs);
-  return tx;
+  return dbWrite;
 }
 
 export async function rebaseMutationAndPutCommit(
@@ -116,5 +116,5 @@ export async function rebaseMutationAndCommit(
     lc,
     mutationClientID,
   );
-  return (await tx.commit(headName, false))[0];
+  return await tx.commit(headName);
 }

@@ -68,6 +68,7 @@ import {
 import type {CreateIndexDefinition} from './db/commit.js';
 import type {IndexDefinitions} from './index-defs';
 import {assertClientDD31} from './persist/clients.js';
+import {throwIfClosed} from './transaction-closed-error.js';
 
 export type BeginPullResult = {
   requestID: string;
@@ -842,7 +843,11 @@ export class Replicache<MD extends MutatorDefs = {}> {
       );
       const tx = new IndexTransactionImpl(clientID, dbWrite, this._lc);
       await f(tx);
-      const [ref, diffs] = await tx.commit(db.DEFAULT_HEAD_NAME, generateDiffs);
+      throwIfClosed(dbWrite);
+      const [ref, diffs] = await dbWrite.commitWithDiffs(
+        db.DEFAULT_HEAD_NAME,
+        generateDiffs,
+      );
       // Changing an index should not affect the primary map.
       assert(!diffs.has(''));
       await this._checkChange(ref, diffs);
@@ -1397,8 +1402,11 @@ export class Replicache<MD extends MutatorDefs = {}> {
       const tx = new WriteTransactionImpl(clientID, dbWrite, this._lc);
       try {
         const result: R = await mutatorImpl(tx, args);
-
-        const [ref, diffs] = await tx.commit(db.DEFAULT_HEAD_NAME, true);
+        throwIfClosed(dbWrite);
+        const [ref, diffs] = await dbWrite.commitWithDiffs(
+          db.DEFAULT_HEAD_NAME,
+          true,
+        );
         this._pushConnectionLoop.send();
         await this._checkChange(ref, diffs);
         void this._schedulePersist();
