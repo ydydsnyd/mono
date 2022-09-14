@@ -18,7 +18,6 @@ import {
 import type {MutatorDefs} from '../replicache.js';
 import type {ClientID} from './client-id.js';
 import {diffCommits, DiffsMap} from './diff.js';
-import {rebaseMutation} from './rebase.js';
 
 const ABORTED = 1;
 const COMPLETED = 2;
@@ -140,16 +139,15 @@ export async function refresh(
         const commit = result.mutations[i];
         await memdag.withWrite(async memdagWrite => {
           assert(refreshHead);
-          refreshHead = await rebaseMutation(
+          refreshHead = await db.rebaseMutationAndCommit(
             commit,
             memdagWrite,
             refreshHead,
+            REFRESH_HEAD_NAME,
             mutators,
             lc,
             clientID,
           );
-          await memdagWrite.setHead(REFRESH_HEAD_NAME, refreshHead);
-          await memdagWrite.commit();
         });
       }
     }

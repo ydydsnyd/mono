@@ -1,24 +1,23 @@
-import {whenceHash, newWriteLocal, Commit, LocalMeta} from '../db/mod';
 import type * as dag from '../dag/mod';
 import type {Hash} from '../hash';
 import type {MutatorDefs} from '../replicache';
 import {WriteTransactionImpl} from '../transactions';
 import {fromInternalValue, FromInternalValueReason} from '../internal-value';
 import type {LogContext} from '@rocicorp/logger';
-import type {ClientID} from './ids';
-import {fromHash, isLocalMetaDD31} from '../db/commit';
+import type {ClientID} from '../sync/mod';
 import {assert} from '../asserts';
+import {Commit, fromHash, isLocalMetaDD31, LocalMeta, Meta} from './commit';
+import {newWriteLocal} from './write';
+import {whenceHash} from './read';
 
-export async function rebaseMutation(
+async function rebaseMutation(
   mutation: Commit<LocalMeta>,
   dagWrite: dag.Write,
   basis: Hash,
   mutators: MutatorDefs,
   lc: LogContext,
-  // TODO(greg): mutationClientID can be retrieved from mutation if LocalMeta
-  // is a LocalMetaDD31.  As part of DD31 cleanup we can remove this arg.
   mutationClientID: ClientID,
-): Promise<Hash> {
+): Promise<WriteTransactionImpl> {
   const localMeta = mutation.meta;
   const name = localMeta.mutatorName;
   if (isLocalMetaDD31(localMeta)) {
@@ -74,6 +73,48 @@ export async function rebaseMutation(
 
   const tx = new WriteTransactionImpl(mutationClientID, dbWrite, lc);
   await mutatorImpl(tx, jsonArgs);
-  const [ref] = await tx.commit(false);
-  return ref;
+  return tx;
+}
+
+export async function rebaseMutationAndPutCommit(
+  mutation: Commit<LocalMeta>,
+  dagWrite: dag.Write,
+  basis: Hash,
+  mutators: MutatorDefs,
+  lc: LogContext,
+  // TODO(greg): mutationClientID can be retrieved from mutation if LocalMeta
+  // is a LocalMetaDD31.  As part of DD31 cleanup we can remove this arg.
+  mutationClientID: ClientID,
+): Promise<Commit<Meta>> {
+  const tx = await rebaseMutation(
+    mutation,
+    dagWrite,
+    basis,
+    mutators,
+    lc,
+    mutationClientID,
+  );
+  return tx.putCommit();
+}
+
+export async function rebaseMutationAndCommit(
+  mutation: Commit<LocalMeta>,
+  dagWrite: dag.Write,
+  basis: Hash,
+  headName: string,
+  mutators: MutatorDefs,
+  lc: LogContext,
+  // TODO(greg): mutationClientID can be retrieved from mutation if LocalMeta
+  // is a LocalMetaDD31.  As part of DD31 cleanup we can remove this arg.
+  mutationClientID: ClientID,
+): Promise<Hash> {
+  const tx = await rebaseMutation(
+    mutation,
+    dagWrite,
+    basis,
+    mutators,
+    lc,
+    mutationClientID,
+  );
+  return (await tx.commit(headName, false))[0];
 }

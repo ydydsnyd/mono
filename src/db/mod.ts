@@ -26,6 +26,7 @@ export {
   newSnapshot,
   newSnapshotDD31,
   assertCommitData,
+  isLocalMetaDD31,
   fromHash as commitFromHash,
   fromHead as commitFromHead,
   localMutations,
@@ -40,6 +41,7 @@ export {decodeIndexKey, encodeIndexKey} from './index';
 export type {IndexKey} from './index';
 export {Visitor} from './visitor';
 export {BaseTransformer, Transformer} from './transformer';
+export {rebaseMutationAndCommit, rebaseMutationAndPutCommit} from './rebase';
 
 export type {
   SnapshotMeta,

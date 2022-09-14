@@ -7,6 +7,7 @@ import {
   readCommit,
   readCommitForBTreeRead,
   readIndexesForRead,
+  whenceHash,
   whenceHead,
 } from './read';
 import {newWriteIndexChange, newWriteLocal} from './write';
@@ -19,7 +20,7 @@ import type {IndexDefinitions} from '../index-defs';
 import type {Writable} from '../writable';
 import {commitFromHead} from './mod';
 
-test('basics', async () => {
+test('basics w/ commit', async () => {
   const clientID = 'client-id';
   const ds = new dag.TestStore();
   const lc = new LogContext();
@@ -80,6 +81,85 @@ test('basics', async () => {
   await ds.withWrite(async dagWrite => {
     const w = await newWriteLocal(
       whenceHead(DEFAULT_HEAD_NAME),
+      'mutator_name',
+      JSON.stringify(null),
+      null,
+      dagWrite,
+      42,
+      clientID,
+    );
+    const val = await w.get(`foo`);
+    expect(val).to.be.undefined;
+  });
+});
+
+test('basics w/ putCommit', async () => {
+  const clientID = 'client-id';
+  const ds = new dag.TestStore();
+  const lc = new LogContext();
+  await initDB(await ds.write(), DEFAULT_HEAD_NAME, clientID);
+
+  // Put.
+  const commit1 = await ds.withWrite(async dagWrite => {
+    const w = await newWriteLocal(
+      whenceHead(DEFAULT_HEAD_NAME),
+      'mutator_name',
+      JSON.stringify([]),
+      null,
+      dagWrite,
+      42,
+      clientID,
+    );
+    await w.put(lc, 'foo', 'bar');
+    // Assert we can read the same value from within this transaction.;
+    const val = await w.get('foo');
+    expect(val).to.deep.equal('bar');
+    const commit = await w.putCommit();
+    await dagWrite.setHead('test', commit.chunk.hash);
+    await dagWrite.commit();
+    return commit;
+  });
+
+  // As well as from the Commit that was put.
+  await ds.withWrite(async dagWrite => {
+    const w = await newWriteLocal(
+      whenceHash(commit1.chunk.hash),
+      'mutator_name',
+      JSON.stringify(null),
+      null,
+      dagWrite,
+      42,
+      clientID,
+    );
+    const val = await w.get('foo');
+    expect(val).to.deep.equal('bar');
+  });
+
+  // Del.
+  const commit2 = await ds.withWrite(async dagWrite => {
+    const w = await newWriteLocal(
+      whenceHash(commit1.chunk.hash),
+      'mutator_name',
+      JSON.stringify([]),
+      null,
+      dagWrite,
+      42,
+      clientID,
+    );
+    await w.del(lc, 'foo');
+    // Assert it is gone while still within this transaction.
+    const val = await w.get('foo');
+    expect(val).to.be.undefined;
+    const commit = await w.putCommit();
+    await dagWrite.setHead('test', commit.chunk.hash);
+    await dagWrite.commit();
+    return commit;
+  });
+
+  // As well as from the commit after it was put.
+  await ds.withWrite(async dagWrite => {
+    const w = await newWriteLocal(
+      whenceHash(commit2.chunk.hash),
       'mutator_name',
       JSON.stringify(null),
       null,

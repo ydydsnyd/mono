@@ -74,12 +74,6 @@ export class Write extends Read {
     }
   }
 
-  isRebase(): boolean {
-    return (
-      this._meta.type === MetaType.Local && this._meta.originalHash !== null
-    );
-  }
-
   async put(lc: LogContext, key: string, val: InternalValue): Promise<void> {
     if (this._meta.type === MetaType.IndexChange) {
       throw new Error('Not allowed');
@@ -222,60 +216,17 @@ export class Write extends Read {
     }
   }
 
-  // Return value is the hash of the new commit.
-  async commit(headName: string): Promise<Hash> {
-    return (await this.commitWithDiffs(headName, false))[0];
-  }
-
-  async commitWithDiffs(
-    headName: string,
-    generateDiffs: boolean,
-  ): Promise<[Hash, sync.DiffsMap]> {
+  async putCommit(): Promise<Commit<CommitMeta>> {
     const valueHash = await this.map.flush();
-    let valueDiff: InternalDiff = [];
-    if (generateDiffs && this._basis) {
-      const basisMap = new BTreeRead(this._dagWrite, this._basis.valueHash);
-      valueDiff = await btree.diff(basisMap, this.map);
-    }
     const indexRecords: IndexRecord[] = [];
-    const diffsMap = new sync.DiffsMap();
-    diffsMap.set('', valueDiff);
 
-    let basisIndexes: Map<string, IndexRead>;
-    if (generateDiffs && this._basis) {
-      basisIndexes = readIndexesForRead(this._basis, this._dagWrite);
-    } else {
-      basisIndexes = new Map();
-    }
-
-    for (const [name, index] of this.indexes) {
+    for (const index of this.indexes.values()) {
       const valueHash = await index.flush();
-      if (generateDiffs) {
-        const basisIndex = basisIndexes.get(name);
-        assert(index !== basisIndex);
-
-        const indexDiffResult = await (basisIndex
-          ? btree.diff(basisIndex.map, index.map)
-          : // No basis. All keys are new.
-            allEntriesAsDiff(index.map, 'add'));
-        diffsMap.set(name, indexDiffResult);
-      }
       const indexRecord: IndexRecord = {
         definition: index.meta.definition,
         valueHash,
       };
       indexRecords.push(indexRecord);
-    }
-
-    if (generateDiffs) {
-      // Handle indexes in basisIndex but not in this.indexes. All keys are
-      // deleted.
-      for (const [name, basisIndex] of basisIndexes) {
-        if (!this.indexes.has(name)) {
-          const indexDiffResult = await allEntriesAsDiff(basisIndex.map, 'del');
-          diffsMap.set(name, indexDiffResult);
-        }
-      }
     }
 
     let commit;
@@ -355,15 +306,62 @@ export class Write extends Read {
         break;
       }
     }
+    await this._dagWrite.putChunk(commit.chunk);
+    return commit;
+  }
 
-    await Promise.all([
-      this._dagWrite.putChunk(commit.chunk),
-      this._dagWrite.setHead(headName, commit.chunk.hash),
-    ]);
+  // Return value is the hash of the new commit.
+  async commit(headName: string): Promise<Hash> {
+    return (await this.commitWithDiffs(headName, false))[0];
+  }
 
+  async commitWithDiffs(
+    headName: string,
+    generateDiffs: boolean,
+  ): Promise<[Hash, sync.DiffsMap]> {
+    const commit = this.putCommit();
+    const diffMap = generateDiffs ? await this._generateDiffs() : new Map();
+    const commitHash = (await commit).chunk.hash;
+    await this._dagWrite.setHead(headName, commitHash);
     await this._dagWrite.commit();
+    return [commitHash, diffMap];
+  }
 
-    return [commit.chunk.hash, diffsMap];
+  private async _generateDiffs(): Promise<sync.DiffsMap> {
+    let valueDiff: InternalDiff = [];
+    if (this._basis) {
+      const basisMap = new BTreeRead(this._dagWrite, this._basis.valueHash);
+      valueDiff = await btree.diff(basisMap, this.map);
+    }
+    const diffsMap = new sync.DiffsMap();
+    diffsMap.set('', valueDiff);
+    let basisIndexes: Map<string, IndexRead>;
+    if (this._basis) {
+      basisIndexes = readIndexesForRead(this._basis, this._dagWrite);
+    } else {
+      basisIndexes = new Map();
+    }
+
+    for (const [name, index] of this.indexes) {
+      const basisIndex = basisIndexes.get(name);
+      assert(index !== basisIndex);
+
+      const indexDiffResult = await (basisIndex
+        ? btree.diff(basisIndex.map, index.map)
+        : // No basis. All keys are new.
+          allEntriesAsDiff(index.map, 'add'));
+      diffsMap.set(name, indexDiffResult);
+    }
+
+    // Handle indexes in basisIndex but not in this.indexes. All keys are
+    // deleted.
+    for (const [name, basisIndex] of basisIndexes) {
+      if (!this.indexes.has(name)) {
+        const indexDiffResult = await allEntriesAsDiff(basisIndex.map, 'del');
+        diffsMap.set(name, indexDiffResult);
+      }
+    }
+    return diffsMap;
   }
 
   close(): void {

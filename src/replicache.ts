@@ -65,7 +65,6 @@ import {
   toInternalValue,
   ToInternalValueReason,
 } from './internal-value.js';
-import {rebaseMutation} from './sync/rebase';
 import type {CreateIndexDefinition} from './db/commit.js';
 import type {IndexDefinitions} from './index-defs';
 import {assertClientDD31} from './persist/clients.js';
@@ -843,7 +842,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       );
       const tx = new IndexTransactionImpl(clientID, dbWrite, this._lc);
       await f(tx);
-      const [ref, diffs] = await tx.commit(generateDiffs);
+      const [ref, diffs] = await tx.commit(db.DEFAULT_HEAD_NAME, generateDiffs);
       // Changing an index should not affect the primary map.
       assert(!diffs.has(''));
       await this._checkChange(ref, diffs);
@@ -887,10 +886,11 @@ export class Replicache<MD extends MutatorDefs = {}> {
           await Promise.resolve();
         }
         syncHead = await this._memdag.withWrite(dagWrite =>
-          rebaseMutation(
+          db.rebaseMutationAndCommit(
             mutation,
             dagWrite,
             syncHead,
+            sync.SYNC_HEAD_NAME,
             this._mutatorRegistry,
             lc,
             clientID,
@@ -1398,7 +1398,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       try {
         const result: R = await mutatorImpl(tx, args);
 
-        const [ref, diffs] = await tx.commit(true);
+        const [ref, diffs] = await tx.commit(db.DEFAULT_HEAD_NAME, true);
         this._pushConnectionLoop.send();
         await this._checkChange(ref, diffs);
         void this._schedulePersist();
