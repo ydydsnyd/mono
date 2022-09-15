@@ -69,13 +69,35 @@ test('transformCommit - noop', async () => {
   const chain: Chain = [];
   await addGenesis(chain, dagStore, clientID);
   await addLocal(chain, dagStore, clientID);
-  await addIndexChange(chain, dagStore, clientID);
+  if (!DD31) {
+    await addIndexChange(chain, dagStore, clientID);
+  }
   await addLocal(chain, dagStore, clientID);
   await testChain(chain);
 
   await addSnapshot(chain, dagStore, [['k', 42]], clientID);
   await addLocal(chain, dagStore, clientID);
   await testChain(chain.slice(-2));
+
+  if (DD31) {
+    await addSnapshot(
+      chain,
+      dagStore,
+      [['k', 42]],
+      clientID,
+      undefined,
+      undefined,
+      {
+        idx: {
+          prefix: 'prefix',
+          jsonPointer: 'p',
+          allowEmpty: true,
+        },
+      },
+    );
+    await addLocal(chain, dagStore, clientID);
+    await testChain(chain.slice(-2));
+  }
 });
 
 test('transformIndexRecord - noop', async () => {

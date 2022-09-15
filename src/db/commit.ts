@@ -434,6 +434,18 @@ function assertCreateIndexDefinition(
   }
 }
 
+export function nameIndexDefinition(
+  name: string,
+  indexDefinition: IndexDefinition,
+): Required<CreateIndexDefinition> {
+  return {
+    name,
+    prefix: indexDefinition.prefix ?? '',
+    jsonPointer: indexDefinition.jsonPointer,
+    allowEmpty: indexDefinition.allowEmpty ?? false,
+  };
+}
+
 export type IndexRecord = {
   readonly definition: Required<CreateIndexDefinition>;
   readonly valueHash: Hash;

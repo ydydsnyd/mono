@@ -8,6 +8,7 @@ import {
   IndexRecord,
   Meta,
   MetaType,
+  nameIndexDefinition,
 } from './commit';
 import {readCommit, whenceHead} from './read';
 import {
@@ -24,6 +25,7 @@ import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 import type {ClientID} from '../sync/client-id.js';
 import {emptyHash, Hash} from '../hash.js';
 import {BTreeRead, BTreeWrite} from '../btree/mod.js';
+import * as btree from '../btree/mod.js';
 import type {IndexDefinition, IndexDefinitions} from '../index-defs.js';
 import {IndexWrite} from './index.js';
 
@@ -187,12 +189,7 @@ export async function addSnapshot(
           );
           const indexMapHash = await indexMap.flush();
           const indexRecord: IndexRecord = {
-            definition: {
-              name,
-              prefix: indexDefinition.prefix ?? '',
-              jsonPointer: indexDefinition.jsonPointer,
-              allowEmpty: indexDefinition.allowEmpty ?? false,
-            },
+            definition: nameIndexDefinition(name, indexDefinition),
             valueHash: indexMapHash,
           };
           indexes.set(name, new IndexWrite(indexRecord, indexMap));
@@ -242,8 +239,10 @@ export async function initDB(
   dagWrite: dag.Write,
   headName: string,
   clientID: ClientID,
+  indexDefinitions: IndexDefinitions = {},
 ): Promise<Hash> {
   const basisHash = emptyHash;
+  const indexes = await createEmptyIndexMaps(indexDefinitions, dagWrite);
   if (DD31) {
     const w = new Write(
       dagWrite,
@@ -255,7 +254,7 @@ export async function initDB(
         lastMutationIDs: {},
         cookieJSON: null,
       },
-      new Map(),
+      indexes,
       clientID,
     );
     return await w.commit(headName);
@@ -265,8 +264,33 @@ export async function initDB(
     new BTreeWrite(dagWrite),
     undefined,
     {basisHash, type: MetaType.Snapshot, lastMutationID: 0, cookieJSON: null},
-    new Map(),
+    indexes,
     clientID,
   );
   return await w.commit(headName);
+}
+
+async function createEmptyIndexMaps(
+  indexDefinitions: IndexDefinitions,
+  dagWrite: dag.Write,
+): Promise<Map<string, IndexWrite>> {
+  const indexes = new Map();
+
+  let emptyTreeHash: Hash | undefined;
+  for (const [name, indexDefinition] of Object.entries(indexDefinitions)) {
+    if (!emptyTreeHash) {
+      const emptyBTreeChunk = dagWrite.createChunk(btree.emptyDataNode, []);
+      await dagWrite.putChunk(emptyBTreeChunk);
+      emptyTreeHash = emptyBTreeChunk.hash;
+    }
+    const indexRecord: IndexRecord = {
+      definition: nameIndexDefinition(name, indexDefinition),
+      valueHash: emptyTreeHash,
+    };
+    indexes.set(
+      name,
+      new IndexWrite(indexRecord, new BTreeWrite(dagWrite, emptyTreeHash)),
+    );
+  }
+  return indexes;
 }

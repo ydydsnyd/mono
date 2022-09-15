@@ -17,6 +17,7 @@ import {
   InternalValue,
   ToInternalValueReason,
 } from '../internal-value.js';
+import {addSyncSnapshot} from '../sync/test-helpers.js';
 
 test('test that we get to the data nodes', async () => {
   const clientID = 'client-id';
@@ -46,17 +47,41 @@ test('test that we get to the data nodes', async () => {
   await addLocal(chain, dagStore, clientID);
   await t(chain[1], [[['local', '1']], []]);
 
-  await addIndexChange(chain, dagStore, clientID);
-  await t(chain[2], [[['local', '1']], [['\u00001\u0000local', '1']], []]);
+  if (DD31) {
+    await addSnapshot(
+      chain,
+      dagStore,
+      undefined,
+      clientID,
+      undefined,
+      undefined,
+      {
+        1: {prefix: 'local', jsonPointer: '', allowEmpty: false},
+      },
+    );
+    await t(chain[2], [[['local', '1']], [['\u00001\u0000local', '1']]]);
+  } else {
+    await addIndexChange(chain, dagStore, clientID);
+    await t(chain[2], [[['local', '1']], [['\u00001\u0000local', '1']], []]);
+  }
 
   await addLocal(chain, dagStore, clientID);
-  await t(chain[3], [
-    [['local', '3']],
-    [['\u00003\u0000local', '3']],
-    [['local', '1']],
-    [['\u00001\u0000local', '1']],
-    [],
-  ]);
+  if (DD31) {
+    await t(chain[3], [
+      [['local', '3']],
+      [['\u00003\u0000local', '3']],
+      [['local', '1']],
+      [['\u00001\u0000local', '1']],
+    ]);
+  } else {
+    await t(chain[3], [
+      [['local', '3']],
+      [['\u00003\u0000local', '3']],
+      [['local', '1']],
+      [['\u00001\u0000local', '1']],
+      [],
+    ]);
+  }
 
   await addSnapshot(chain, dagStore, [['k', 42]], clientID);
   await t(chain[4], [
@@ -67,16 +92,21 @@ test('test that we get to the data nodes', async () => {
     [['\u00003\u0000local', '3']],
   ]);
 
-  // await addLocal(chain, dagStore);
-  // const syncChain = await addSyncSnapshot(chain, dagStore, chain.length - 1);
-  // await t(syncChain[0], [
-  //   [
-  //     ['k', 42],
-  //     ['local', '3'],
-  //   ],
-  //   [['\u00005\u0000local', '5']],
-  //   [['\u00003\u0000local', '3']],
-  // ]);
+  await addLocal(chain, dagStore, clientID);
+  const syncChain = await addSyncSnapshot(
+    chain,
+    dagStore,
+    chain.length - 1,
+    clientID,
+  );
+  await t(syncChain[0], [
+    [
+      ['k', 42],
+      ['local', '3'],
+    ],
+    [['\u00005\u0000local', '5']],
+    [['\u00003\u0000local', '3']],
+  ]);
 
   const localCommit = await dagStore.withWrite(async dagWrite => {
     const prevCommit = chain[chain.length - 1];
@@ -98,6 +128,11 @@ test('test that we get to the data nodes', async () => {
     return localCommit;
   });
   await t(localCommit, [
+    [
+      ['k', 42],
+      ['local', '5'],
+    ],
+    [['\u00005\u0000local', '5']],
     [
       ['k', 42],
       ['local', '3'],
@@ -125,6 +160,11 @@ test('test that we get to the data nodes', async () => {
     return localCommit2;
   });
   await t(localCommit2, [
+    [
+      ['k', 42],
+      ['local', '5'],
+    ],
+    [['\u00005\u0000local', '5']],
     [
       ['k', 42],
       ['local', '3'],

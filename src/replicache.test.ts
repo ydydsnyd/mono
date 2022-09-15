@@ -1167,6 +1167,10 @@ test('pullInterval in constructor', async () => {
 });
 
 test('index (deprecated methods)', async () => {
+  if (DD31) {
+    return;
+  }
+
   const rep = await replicacheForTesting('test-index-legacy', {
     mutators: {addData},
   });

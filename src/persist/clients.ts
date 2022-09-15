@@ -19,6 +19,7 @@ import {
   compareCookies,
   CreateIndexDefinition,
   getRefs,
+  nameIndexDefinition,
   newSnapshotCommitData,
   newSnapshotCommitDataDD31,
 } from '../db/commit';
@@ -422,12 +423,10 @@ export function initClientDD31(
       // At this point the value of replicache is the empty tree so all index
       // maps will also be the empty tree.
       for (const [name, indexDefinition] of Object.entries(indexes)) {
-        const createIndexDefinition: Required<CreateIndexDefinition> = {
+        const createIndexDefinition = nameIndexDefinition(
           name,
-          prefix: indexDefinition.prefix ?? '',
-          jsonPointer: indexDefinition.jsonPointer,
-          allowEmpty: indexDefinition.allowEmpty ?? false,
-        };
+          indexDefinition,
+        );
         indexRecords.push({
           definition: createIndexDefinition,
           valueHash: emptyBTreeChunk.hash,

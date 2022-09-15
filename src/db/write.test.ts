@@ -173,6 +173,10 @@ test('basics w/ putCommit', async () => {
 });
 
 test('index commit type constraints', async () => {
+  if (DD31) {
+    // db.Write createIndex is going away
+    return;
+  }
   const clientID = 'client-id';
   const ds = new dag.TestStore();
   const lc = new LogContext();
@@ -212,7 +216,18 @@ test('clear', async () => {
   const clientID = 'client-id';
   const ds = new dag.TestStore();
   const lc = new LogContext();
-  await ds.withWrite(dagWrite => initDB(dagWrite, DEFAULT_HEAD_NAME, clientID));
+  await ds.withWrite(dagWrite =>
+    initDB(
+      dagWrite,
+      DEFAULT_HEAD_NAME,
+      clientID,
+      DD31
+        ? {
+            idx: {prefix: '', jsonPointer: '', allowEmpty: false},
+          }
+        : {},
+    ),
+  );
   await ds.withWrite(async dagWrite => {
     const w = await newWriteLocal(
       whenceHead(DEFAULT_HEAD_NAME),
@@ -227,15 +242,17 @@ test('clear', async () => {
     await w.commit(DEFAULT_HEAD_NAME);
   });
 
-  await ds.withWrite(async dagWrite => {
-    const w = await newWriteIndexChange(
-      whenceHead(DEFAULT_HEAD_NAME),
-      dagWrite,
-      clientID,
-    );
-    await w.createIndex(lc, 'idx', '', '', false);
-    await w.commit(DEFAULT_HEAD_NAME);
-  });
+  if (!DD31) {
+    await ds.withWrite(async dagWrite => {
+      const w = await newWriteIndexChange(
+        whenceHead(DEFAULT_HEAD_NAME),
+        dagWrite,
+        clientID,
+      );
+      await w.createIndex(lc, 'idx', '', '', false);
+      await w.commit(DEFAULT_HEAD_NAME);
+    });
+  }
 
   await ds.withWrite(async dagWrite => {
     const w = await newWriteLocal(
@@ -289,6 +306,9 @@ test('clear', async () => {
 });
 
 test('create and drop index', async () => {
+  if (DD31) {
+    return;
+  }
   const t = async (writeBeforeIndexing: boolean) => {
     const clientID = 'client-id';
     const ds = new dag.TestStore();
@@ -390,6 +410,9 @@ test('create and drop index', async () => {
 });
 
 test('legacy index definitions imply allowEmpty = false', async () => {
+  if (DD31) {
+    return;
+  }
   const clientID = 'client-id';
   const ds = new dag.TestStore();
   const lc = new LogContext();
@@ -436,6 +459,10 @@ test('legacy index definitions imply allowEmpty = false', async () => {
 });
 
 test('resync indexes', async () => {
+  if (DD31) {
+    return;
+  }
+
   const t = async (
     indexesBefore: IndexDefinitions,
     indexesToSync: IndexDefinitions,

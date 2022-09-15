@@ -223,7 +223,9 @@ suite('persist on top of different kinds of commits', () => {
 
   test('local + indexChange', async () => {
     await addLocal(chain, memdag, clientID);
-    await addIndexChange(chain, memdag, clientID);
+    if (!DD31) {
+      await addIndexChange(chain, memdag, clientID);
+    }
   });
 });
 

@@ -58,49 +58,71 @@ test('db diff', async () => {
 
   await t(0, 0, {});
 
-  await addSnapshot(
-    chain,
-    store,
-    [
+  if (DD31) {
+    await addSnapshot(chain, store, [], clientID, undefined, undefined, {
+      'index-c': {prefix: 'c', jsonPointer: ''},
+    });
+    await addLocal(chain, store, clientID, [
       ['c1', 'c1'],
       ['c2', 'c2'],
-    ],
-    clientID,
-  );
-  await addIndexChange(chain, store, clientID, 'index-c', {
-    prefix: 'c',
-    jsonPointer: '',
-  });
+    ]);
 
-  await t(chain.length - 2, chain.length - 1, {
-    'index-c': [
-      {
-        key: '\u0000c1\u0000c1',
-        newValue: 'c1',
-        op: 'add',
-      },
-      {
-        key: '\u0000c2\u0000c2',
-        newValue: 'c2',
-        op: 'add',
-      },
-    ],
-  });
+    await t(chain.length - 2, chain.length - 1, {
+      '': [
+        {
+          key: 'c1',
+          newValue: 'c1',
+          op: 'add',
+        },
+        {
+          key: 'c2',
+          newValue: 'c2',
+          op: 'add',
+        },
+      ],
+      'index-c': [
+        {
+          key: '\u0000c1\u0000c1',
+          newValue: 'c1',
+          op: 'add',
+        },
+        {
+          key: '\u0000c2\u0000c2',
+          newValue: 'c2',
+          op: 'add',
+        },
+      ],
+    });
+  } else {
+    await addSnapshot(
+      chain,
+      store,
+      [
+        ['c1', 'c1'],
+        ['c2', 'c2'],
+      ],
+      clientID,
+    );
+    await addIndexChange(chain, store, clientID, 'index-c', {
+      prefix: 'c',
+      jsonPointer: '',
+    });
 
-  await t(chain.length - 2, chain.length - 1, {
-    'index-c': [
-      {
-        key: '\u0000c1\u0000c1',
-        newValue: 'c1',
-        op: 'add',
-      },
-      {
-        key: '\u0000c2\u0000c2',
-        newValue: 'c2',
-        op: 'add',
-      },
-    ],
-  });
+    await t(chain.length - 2, chain.length - 1, {
+      'index-c': [
+        {
+          key: '\u0000c1\u0000c1',
+          newValue: 'c1',
+          op: 'add',
+        },
+        {
+          key: '\u0000c2\u0000c2',
+          newValue: 'c2',
+          op: 'add',
+        },
+      ],
+    });
+  }
 
   await addLocal(chain, store, clientID, [['c1', 'c1-new']]);
   await t(chain.length - 2, chain.length - 1, {
@@ -126,26 +148,55 @@ test('db diff', async () => {
     ],
   });
 
-  await t(chain.length - 3, chain.length - 1, {
-    '': [
-      {
-        key: 'c1',
-        newValue: 'c1-new',
-        oldValue: 'c1',
-        op: 'change',
-      },
-    ],
-    'index-c': [
-      {
-        key: '\u0000c1-new\u0000c1',
-        newValue: 'c1-new',
-        op: 'add',
-      },
-      {
-        key: '\u0000c2\u0000c2',
-        newValue: 'c2',
-        op: 'add',
-      },
-    ],
-  });
+  if (DD31) {
+    await t(chain.length - 3, chain.length - 1, {
+      '': [
+        {
+          key: 'c1',
+          newValue: 'c1-new',
+          op: 'add',
+        },
+        {
+          key: 'c2',
+          newValue: 'c2',
+          op: 'add',
+        },
+      ],
+      'index-c': [
+        {
+          key: '\u0000c1-new\u0000c1',
+          newValue: 'c1-new',
+          op: 'add',
+        },
+        {
+          key: '\u0000c2\u0000c2',
+          newValue: 'c2',
+          op: 'add',
+        },
+      ],
+    });
+  } else {
+    await t(chain.length - 3, chain.length - 1, {
+      '': [
+        {
+          key: 'c1',
+          newValue: 'c1-new',
+          oldValue: 'c1',
+          op: 'change',
+        },
+      ],
+      'index-c': [
+        {
+          key: '\u0000c1-new\u0000c1',
+          newValue: 'c1-new',
+          op: 'add',
+        },
+        {
+          key: '\u0000c2\u0000c2',
+          newValue: 'c2',
+          op: 'add',
+        },
+      ],
+    });
+  }
 });

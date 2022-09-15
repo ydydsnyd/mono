@@ -15,6 +15,7 @@ import {
   MetaType,
   assertSnapshotMetaDD31,
   assertSnapshotMeta,
+  nameIndexDefinition,
 } from './commit';
 import {
   Read,
@@ -117,6 +118,8 @@ export class Write extends Read {
     jsonPointer: string,
     allowEmpty: boolean,
   ): Promise<void> {
+    assert(!DD31);
+
     if (this._meta.type === MetaType.Local) {
       throw new Error('Not allowed');
     }
@@ -155,6 +158,7 @@ export class Write extends Read {
   }
 
   async dropIndex(name: string): Promise<void> {
+    assert(!DD31);
     if (this._meta.type === MetaType.Local) {
       throw new Error('Not allowed');
     }
@@ -463,6 +467,7 @@ export async function newWriteIndexChange(
   dagWrite: dag.Write,
   clientID: ClientID,
 ): Promise<Write> {
+  assert(!DD31);
   const [basisHash, basis, bTreeWrite] = await readCommitForBTreeWrite(
     whence,
     dagWrite,
@@ -534,18 +539,6 @@ export function readIndexesForWrite(
     );
   }
   return m;
-}
-
-function nameIndexDefinition(
-  name: string,
-  def: IndexDefinition,
-): Required<CreateIndexDefinition> {
-  return {
-    name,
-    prefix: def.prefix ?? '',
-    jsonPointer: def.jsonPointer,
-    allowEmpty: def.allowEmpty ?? false,
-  };
 }
 
 export async function createIndexBTree(

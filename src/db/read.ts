@@ -120,6 +120,7 @@ export async function readCommit(
   return [hash, commit];
 }
 
+// TODO(arv): It looks like never read index 0 of the result.
 export async function readCommitForBTreeRead(
   whence: Whence,
   dagRead: dag.Read,
