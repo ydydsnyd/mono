@@ -1,20 +1,21 @@
-import type {
+import {
+  isScanIndexOptions,
   JSONValue,
-  KeyTypeForScanOptions,
+  makeScanResult,
+  ScanNoIndexOptions,
   ScanOptions,
-  ScanResult,
   WriteTransaction,
 } from "replicache";
-import type { Version } from "../types/version.js";
+import type { JSONType } from "../protocol/json.js";
+import type { Patch } from "../protocol/poke.js";
+import type { ClientID } from "../types/client-state.js";
 import {
   UserValue,
   userValueKey,
   userValuePrefix,
   userValueSchema,
 } from "../types/user-value.js";
-import type { JSONType } from "../protocol/json.js";
-import type { ClientID } from "../types/client-state.js";
-import type { Patch } from "../protocol/poke.js";
+import type { Version } from "../types/version.js";
 import type { Storage } from "./storage.js";
 
 /**
@@ -22,15 +23,15 @@ import type { Storage } from "./storage.js";
  */
 export class ReplicacheTransaction implements WriteTransaction {
   private _clientID: ClientID;
-  private _inner: Storage;
+  private _storage: Storage;
   private _version: Version;
 
   get clientID(): string {
     return this._clientID;
   }
 
-  constructor(inner: Storage, clientID: string, version: Version) {
-    this._inner = inner;
+  constructor(storage: Storage, clientID: string, version: Version) {
+    this._storage = storage;
     this._clientID = clientID;
     this._version = version;
   }
@@ -41,7 +42,7 @@ export class ReplicacheTransaction implements WriteTransaction {
       version: this._version,
       value: value as JSONType,
     };
-    await this._inner.put(userValueKey(key), userValue);
+    await this._storage.put(userValueKey(key), userValue);
   }
 
   async del(key: string): Promise<boolean> {
@@ -56,12 +57,12 @@ export class ReplicacheTransaction implements WriteTransaction {
       version: this._version,
       value: prev as JSONType,
     };
-    await this._inner.put(userValueKey(key), userValue);
+    await this._storage.put(userValueKey(key), userValue);
     return prev !== undefined;
   }
 
   async get(key: string): Promise<JSONValue | undefined> {
-    const entry = await this._inner.get(userValueKey(key), userValueSchema);
+    const entry = await this._storage.get(userValueKey(key), userValueSchema);
     if (entry === undefined) {
       return undefined;
     }
@@ -73,17 +74,45 @@ export class ReplicacheTransaction implements WriteTransaction {
     return val !== undefined;
   }
 
-  // TODO!
   async isEmpty(): Promise<boolean> {
-    throw new Error("not implemented");
+    const sr = this.scan();
+    const { done } = await sr.keys().next();
+    return !!done;
   }
 
-  scan(): ScanResult<string, JSONValue>;
-  scan<Options extends ScanOptions>(
-    _options?: Options
-  ): ScanResult<KeyTypeForScanOptions<Options>, JSONValue> {
-    throw new Error("Method not implemented.");
+  scan(options: ScanOptions = {}) {
+    if (isScanIndexOptions(options)) {
+      throw new Error("not implemented");
+    }
+
+    return makeScanResult<ScanNoIndexOptions, JSONValue>(options, () =>
+      this._list(options)
+    );
   }
+
+  private async *_list(options: ScanNoIndexOptions) {
+    const { prefix, start } = options;
+
+    const optsInternal = {
+      ...options,
+      limit: undefined, // remove for soft delete
+      prefix: prefix && userValueKey(prefix),
+      start: start && { key: userValueKey(start.key) }, // remove exclusive option, as makeScanResult will take care of it
+    };
+
+    const entriesMap = await this._storage.list(optsInternal, userValueSchema);
+
+    for (const [k, v] of entriesMap) {
+      if (!v.deleted) {
+        const entry: [string, JSONValue] = [stripPrefix(k), v.value];
+        yield entry;
+      }
+    }
+  }
+}
+
+function stripPrefix(key: string) {
+  return key.slice(userValuePrefix.length);
 }
 
 export function unwrapPatch(inner: Patch): Patch {
@@ -91,7 +120,7 @@ export function unwrapPatch(inner: Patch): Patch {
     .filter((p) => p.key.startsWith(userValuePrefix))
     .map((p) => {
       const { key, op } = p;
-      const unwrappedKey = key.substring(userValuePrefix.length);
+      const unwrappedKey = stripPrefix(key);
       if (op === "put") {
         const userValue = p.value as UserValue;
         if (userValue.deleted) {

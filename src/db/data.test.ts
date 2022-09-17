@@ -17,14 +17,11 @@ test("getEntry", async () => {
       exists: false,
       validSchema: true,
     },
-    // TODO: figure out how to set MINIFLARE
-    // true in tests, so that these schema asserts
-    // can be tested (see superstruct.ts)
-    // {
-    //   name: "exists, invalid schema",
-    //   exists: true,
-    //   validSchema: false,
-    // },
+    {
+      name: "exists, invalid schema",
+      exists: true,
+      validSchema: false,
+    },
     {
       name: "exists, valid JSON, valid schema",
       exists: true,
@@ -54,7 +51,7 @@ test("getEntry", async () => {
       expect(error).toBeUndefined();
     } else if (!c.validSchema) {
       expect(result).toBeUndefined();
-      expect(error).toContain("Expected number, received object");
+      expect(String(error)).toMatch("Expected a number");
     } else {
       expect(result).toEqual(42);
       expect(error).toBeUndefined();
@@ -99,14 +96,11 @@ test("listEntries", async () => {
       exists: false,
       validSchema: true,
     },
-    // TODO: figure out how to set MINIFLARE
-    // true in tests, so that these schema asserts
-    // can be tested (see superstruct.ts)
-    // {
-    //   name: "exists, invalid schema",
-    //   exists: true,
-    //   validSchema: false,
-    // },
+    {
+      name: "exists, invalid schema",
+      exists: true,
+      validSchema: false,
+    },
     {
       name: "exists, valid JSON, valid schema",
       exists: true,
@@ -128,7 +122,7 @@ test("listEntries", async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let error: any | undefined;
     try {
-      result = await listEntries(storage, "foos/", s.number(), {});
+      result = await listEntries(storage, s.number(), { prefix: "foos/" });
     } catch (e) {
       error = e;
     }
@@ -140,7 +134,7 @@ test("listEntries", async () => {
       expect(result.size).toEqual(0);
     } else if (!c.validSchema) {
       expect(result).toBeUndefined();
-      expect(error).toContain("Expected number, received object");
+      expect(String(error)).toMatch("Expected a number");
     } else {
       expect(result).toBeDefined();
       if (result === undefined) {
@@ -151,6 +145,25 @@ test("listEntries", async () => {
       expect(result.get("foos/2")).toEqual(22);
     }
   }
+});
+
+test("listEntries ordering", async () => {
+  const storage = await getMiniflareDurableObjectStorage(id);
+
+  // Use these keys to test collation: Z,𝙕,Ｚ, from
+  // https://github.com/rocicorp/compare-utf8/blob/b0b21f235d3227b42e565708647649c160fabacb/src/index.test.js#L63-L71
+  await putEntry(storage, "Z", 1, {});
+  await putEntry(storage, "𝙕", 2, {});
+  await putEntry(storage, "Ｚ", 3, {});
+
+  const entriesMap = await listEntries(storage, s.number(), {});
+  const entries = Array.from(entriesMap);
+
+  expect(entries).toEqual([
+    ["Z", 1],
+    ["Ｚ", 3],
+    ["𝙕", 2],
+  ]);
 });
 
 test("putEntry", async () => {

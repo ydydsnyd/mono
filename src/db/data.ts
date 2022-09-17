@@ -1,3 +1,4 @@
+import { compareUTF8 } from "compare-utf8";
 import type { JSONValue } from "replicache";
 import type * as s from "superstruct";
 import {
@@ -21,14 +22,19 @@ export async function getEntry<T extends JSONValue>(
 
 export async function listEntries<T extends JSONValue>(
   durable: DurableObjectStorage,
-  prefix: string,
   schema: s.Struct<T>,
-  options: DurableObjectGetOptions
+  options: DurableObjectListOptions
 ): Promise<Map<string, T>> {
-  const result = await durable.list({
-    ...options,
-    prefix,
-  });
+  let result = await durable.list(options);
+
+  // `durable.list()` on CF prod returns keys UTF-8 sorted.
+  // When running in miniflare, this is JS/UTF-16 collation.
+  if (typeof MINIFLARE !== "undefined") {
+    const entries = Array.from(result);
+    entries.sort((a, b) => compareUTF8(a[0], b[0]));
+    result = new Map(entries);
+  }
+
   superstructAssertMapValues(result, schema);
   return result;
 }

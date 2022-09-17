@@ -1,6 +1,7 @@
 import { test, expect } from "@jest/globals";
 import { TestLogSink } from "../util/test-utils.js";
 import { version } from "../util/version.js";
+import { TestDurableObjectId } from "./do-test-utils.js";
 import { BaseRoomDO } from "./room-do.js";
 
 test("Logs version during construction", async () => {
@@ -8,7 +9,7 @@ test("Logs version during construction", async () => {
   new BaseRoomDO({
     mutators: {},
     disconnectHandler: () => Promise.resolve(),
-    state: { id: "test-do-id" } as DurableObjectState,
+    state: { id: new TestDurableObjectId("test-do-id") } as DurableObjectState,
     authApiKey: undefined,
     logSink: testLogSink,
     logLevel: "info",

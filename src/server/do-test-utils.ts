@@ -36,7 +36,7 @@ export async function createTestDurableObjectState(
 }
 
 export class TestDurableObjectState implements DurableObjectState {
-  readonly id: DurableObjectId | string;
+  readonly id: DurableObjectId;
   readonly storage: DurableObjectStorage;
   constructor(id: DurableObjectId, storage: DurableObjectStorage) {
     this.id = id;

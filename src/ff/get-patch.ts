@@ -7,7 +7,10 @@ export async function getPatch(
   storage: DurableStorage,
   fromCookie: Version
 ): Promise<Patch> {
-  const result = await storage.list(userValuePrefix, userValueSchema);
+  const result = await storage.list(
+    { prefix: userValuePrefix },
+    userValueSchema
+  );
 
   const patch: Patch = [];
   for (const [key, value] of result) {

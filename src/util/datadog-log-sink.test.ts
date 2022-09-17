@@ -9,7 +9,7 @@ beforeEach(() => {
   jest.useFakeTimers();
   jest.setSystemTime(0);
   fetchSpy = jest
-    .spyOn(global, "fetch")
+    .spyOn(globalThis, "fetch")
     .mockReturnValue(Promise.resolve(new Response("{}")));
 });
 
