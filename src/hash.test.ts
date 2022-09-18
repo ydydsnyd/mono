@@ -9,6 +9,7 @@ import {
   parse,
   newUUIDHash,
   isUUIDHash,
+  SUBTLE_CRYPTO_SECURE_DOMAIN_ERROR,
 } from './hash';
 import type {ReadonlyJSONValue} from './json';
 
@@ -97,4 +98,17 @@ test('uuid hash', async () => {
   assertNotTempHash(h2);
   expect(isUUIDHash(h1)).to.be.true;
   expect(isUUIDHash(h2)).to.be.true;
+});
+
+test('crypto.subtle not available', async () => {
+  try {
+    await hashOf('abc', () => undefined);
+    expect(false, 'should throw');
+  } catch (e) {
+    if (e instanceof Error) {
+      expect(e.message).to.equal(SUBTLE_CRYPTO_SECURE_DOMAIN_ERROR);
+    } else {
+      expect(false, 'should throw an Error');
+    }
+  }
 });

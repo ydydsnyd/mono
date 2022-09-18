@@ -31,12 +31,26 @@ const hashRe = /^[0-9a-v]{32}$/;
 const tempHashRe = /^t\/[0-9a-v]{30}$/;
 const uuidHashRe = /^u\/[0-9a-f-]{36}$/;
 
+export const SUBTLE_CRYPTO_SECURE_DOMAIN_ERROR =
+  'SubtleCrypto is not available, this is probably because you are running in a non-secure context. See: https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts and https://stackoverflow.com/questions/64521474/how-to-enable-subtlecrypto-in-insecure-context-for-testing.';
+
 /**
  * Computes a SHA512 hash of the given data.
  */
-export async function hashOf<V>(value: V): Promise<Hash> {
+export async function hashOf<V>(
+  value: V,
+  getSubtle?: () => SubtleCrypto | undefined,
+): Promise<Hash> {
   const typedArray = utf8.encode(JSON.stringify(value));
-  const buf = await crypto.subtle.digest('SHA-512', typedArray);
+
+  // Note: despite lib.dom.ts saying that crypto.subtle is type SubtleCrypto, it's
+  // actually SubtleCrypto|undefined because of secure contexts.
+  const subtle = getSubtle ? getSubtle() : crypto.subtle;
+
+  if (subtle === undefined) {
+    throw new Error(SUBTLE_CRYPTO_SECURE_DOMAIN_ERROR);
+  }
+  const buf = await subtle.digest('SHA-512', typedArray);
   const buf2 = new Uint8Array(buf, 0, BYTE_LENGTH);
   return encode(buf2) as unknown as Hash;
 }
