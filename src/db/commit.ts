@@ -212,10 +212,16 @@ export function compareCookies(
 ): number {
   // TODO(DD31): Define Cookie type and use it here.
   // TODO(DD31): Use null for genesis snapshot cookie?
-  assert(typeof a === typeof b);
+  assert(typeof a === typeof b || a === null || b === null);
 
   if (a === b) {
     return 0;
+  }
+  if (a === null) {
+    return -1;
+  }
+  if (b === null) {
+    return 1;
   }
   if ((a as string | number) < (b as string | number)) {
     return -1;

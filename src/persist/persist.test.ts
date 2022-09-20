@@ -1,7 +1,6 @@
 import {expect} from '@esm-bundle/chai';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import {assert} from '../asserts';
-import type {Node} from '../btree/node';
 import * as dag from '../dag/mod';
 import * as sync from '../sync/mod';
 import * as db from '../db/mod';
@@ -11,11 +10,11 @@ import {
   addLocal,
   addSnapshot,
   Chain,
+  getChunkSnapshot,
 } from '../db/test-helpers';
 import {
   assertHash,
   assertNotTempHash,
-  Hash,
   isTempHash,
   makeNewFakeHashFunction,
 } from '../hash';
@@ -24,7 +23,8 @@ import {addSyncSnapshot} from '../sync/test-helpers';
 import {persist} from './persist';
 import {gcClients} from './client-gc.js';
 import {initClientWithClientID} from './clients-test-helpers.js';
-import {assertSnapshotMeta, assertSnapshotMetaDD31} from '../db/commit.js';
+import {assertSnapshotMeta} from '../db/commit.js';
+import {LogContext} from '@rocicorp/logger';
 
 let clock: SinonFakeTimers;
 setup(() => {
@@ -74,47 +74,17 @@ async function assertClientMutationIDsCorrect(
       await headCommit.getMutationID(clientID, dagRead),
     );
     const {meta} = baseSnapshotCommit;
-    if (DD31) {
-      assertSnapshotMetaDD31(meta);
-      expect(client.lastServerAckdMutationID).to.equal(
-        meta.lastMutationIDs[clientID] ?? 0,
-      );
-    } else {
-      assertSnapshotMeta(meta);
+    assertSnapshotMeta(meta);
 
-      expect(client.lastServerAckdMutationID).to.equal(meta.lastMutationID);
-    }
-  });
-}
-
-class ChunkSnapshotVisitor extends db.Visitor {
-  snapshot: Record<string, unknown> = {};
-
-  override visitCommitChunk(
-    chunk: dag.Chunk<db.CommitData<db.Meta>>,
-  ): Promise<void> {
-    this.snapshot[chunk.hash.toString()] = chunk.data;
-    return super.visitCommitChunk(chunk);
-  }
-
-  override visitBTreeNodeChunk(chunk: dag.Chunk<Node>): Promise<void> {
-    this.snapshot[chunk.hash.toString()] = chunk.data;
-    return super.visitBTreeNodeChunk(chunk);
-  }
-}
-
-async function getChunkSnapshot(
-  dagStore: dag.Store,
-  hash: Hash,
-): Promise<Record<string, unknown>> {
-  return dagStore.withRead(async dagRead => {
-    const v = new ChunkSnapshotVisitor(dagRead);
-    await v.visitCommit(hash);
-    return v.snapshot;
+    expect(client.lastServerAckdMutationID).to.equal(meta.lastMutationID);
   });
 }
 
 suite('persist on top of different kinds of commits', () => {
+  if (DD31) {
+    // persitDD31 is tested in persist-dd31.test.ts
+    return;
+  }
   const {memdag, perdag, chain, testPersist, clientID} = setupPersistTest();
 
   setup(async () => {
@@ -223,13 +193,15 @@ suite('persist on top of different kinds of commits', () => {
 
   test('local + indexChange', async () => {
     await addLocal(chain, memdag, clientID);
-    if (!DD31) {
-      await addIndexChange(chain, memdag, clientID);
-    }
+    await addIndexChange(chain, memdag, clientID);
   });
 });
 
 test('We get a MissingClientException during persist if client is missing', async () => {
+  if (DD31) {
+    // persitDD31 is tested in persist-dd31.test.ts
+    return;
+  }
   const {memdag, perdag, chain, testPersist, clientID} = setupPersistTest();
   await initClientWithClientID(clientID, perdag);
 
@@ -246,7 +218,7 @@ test('We get a MissingClientException during persist if client is missing', asyn
 
   let err;
   try {
-    await persist(clientID, memdag, perdag, () => false);
+    await persist(new LogContext(), clientID, memdag, perdag, {}, () => false);
   } catch (e) {
     err = e;
   }
@@ -271,7 +243,7 @@ function setupPersistTest() {
   const chain: Chain = [];
 
   const testPersist = async () => {
-    await persist(clientID, memdag, perdag, () => false);
+    await persist(new LogContext(), clientID, memdag, perdag, {}, () => false);
     await assertSameDagData(clientID, memdag, perdag);
     await assertClientMutationIDsCorrect(clientID, perdag);
   };

@@ -19,6 +19,7 @@ import * as persist from './persist/mod';
 import {assertNotTempHash} from './hash';
 import {assertNotUndefined} from './asserts';
 import {deleteClientForTesting} from './persist/clients-test-helpers.js';
+import {assertClientDD31} from './persist/clients';
 
 initReplicacheTesting();
 
@@ -28,13 +29,6 @@ teardown(async () => {
 });
 
 test('basic persist & load', async () => {
-  if (DD31) {
-    // Persist does not currently work with DD31.
-
-    // TODO(DD31): Implement this test.
-    return;
-  }
-
   const pullURL = 'https://diff.com/pull';
   const rep = await replicacheForTesting('persist-test', {
     pullURL,
@@ -52,8 +46,17 @@ test('basic persist & load', async () => {
   );
   assertNotUndefined(clientBeforePull);
 
+  let branchBeforePull: persist.Branch | undefined;
+  if (DD31) {
+    assertClientDD31(clientBeforePull);
+    branchBeforePull = await perdag.withRead(read =>
+      persist.getBranch(clientBeforePull.branchID, read),
+    );
+    assertNotUndefined(branchBeforePull);
+  }
+
   fetchMock.postOnce(pullURL, {
-    cookie: '',
+    cookie: 1,
     lastMutationID: 2,
     patch: [
       {
@@ -84,13 +87,26 @@ test('basic persist & load', async () => {
       );
     }
     await tickAFewTimes(waitMs);
-    const client: persist.Client | undefined = await perdag.withRead(read =>
-      persist.getClient(clientID, read),
-    );
-    assertNotUndefined(client);
-    if (clientBeforePull.headHash !== client.headHash) {
-      // persist has completed
-      break;
+    if (DD31) {
+      assertClientDD31(clientBeforePull);
+      assertNotUndefined(branchBeforePull);
+      const branch: persist.Branch | undefined = await perdag.withRead(read =>
+        persist.getBranch(clientBeforePull.branchID, read),
+      );
+      assertNotUndefined(branch);
+      if (branchBeforePull.headHash !== branch.headHash) {
+        // persist has completed
+        break;
+      }
+    } else {
+      const client: persist.Client | undefined = await perdag.withRead(read =>
+        persist.getClient(clientID, read),
+      );
+      assertNotUndefined(client);
+      if (clientBeforePull.headHash !== client.headHash) {
+        // persist has completed
+        break;
+      }
     }
   }
 
@@ -115,6 +131,12 @@ test('basic persist & load', async () => {
 
 suite('onClientStateNotFound', () => {
   test('Called in persist if collected', async () => {
+    if (DD31) {
+      // In DD31, the chunks are kept alive from the branch head.
+      // TODO(DD31): Does this test make sense in DD31?
+      return;
+    }
+
     const consoleErrorStub = sinon.stub(console, 'error');
 
     const rep = await replicacheForTesting('called-in-persist', {

@@ -22,7 +22,6 @@ import {asyncIterableToArray} from './async-iterable-to-array';
 import {sleep} from './sleep';
 import * as db from './db/mod';
 import {TestMemStore} from './kv/test-mem-store';
-import {WriteTransactionImpl} from './transactions';
 import {emptyHash, Hash} from './hash';
 import {defaultPuller} from './puller';
 import {defaultPusher} from './pusher';
@@ -381,21 +380,16 @@ test('push', async () => {
         tx: WriteTransaction,
         args: A,
       ) => {
-        createCount++;
         await tx.put(`/todo/${args.id}`, args);
       },
       deleteTodo: async <A extends {id: number}>(
         tx: WriteTransaction,
         args: A,
       ) => {
-        deleteCount++;
         await tx.del(`/todo/${args.id}`);
       },
     },
   });
-
-  let createCount = 0;
-  let deleteCount = 0;
 
   const {createTodo, deleteTodo} = rep.mutate;
 
@@ -405,8 +399,6 @@ test('push', async () => {
   await deleteTodo({id: id1});
   await deleteTodo({id: id2});
 
-  expect(deleteCount).to.equal(2);
-
   fetchMock.postOnce(pushURL, {
     mutationInfos: [
       {id: 1, error: 'deleteTodo: todo not found'},
@@ -414,7 +406,6 @@ test('push', async () => {
     ],
   });
   await tickAFewTimes();
-  expect(deleteCount).to.equal(2);
   const {mutations} = await fetchMock.lastCall().request.json();
   const clientID = await rep.clientID;
   expect(mutations).to.deep.equal(
@@ -445,7 +436,6 @@ test('push', async () => {
     id: id1,
     text: 'Test',
   });
-  expect(createCount).to.equal(1);
   expect(
     ((await rep?.query(tx => tx.get(`/todo/${id1}`))) as {text: string}).text,
   ).to.equal('Test');
@@ -503,7 +493,6 @@ test('push', async () => {
     id: id2,
     text: 'Test 2',
   });
-  expect(createCount).to.equal(2);
   expect(
     ((await rep?.query(tx => tx.get(`/todo/${id2}`))) as {text: string}).text,
   ).to.equal('Test 2');
@@ -511,9 +500,6 @@ test('push', async () => {
   // Clean up
   await deleteTodo({id: id1});
   await deleteTodo({id: id2});
-
-  expect(deleteCount).to.equal(4);
-  expect(createCount).to.equal(2);
 
   fetchMock.postOnce(pushURL, {
     mutationInfos: [],
@@ -587,9 +573,6 @@ test('push', async () => {
           ],
     );
   }
-
-  expect(deleteCount).to.equal(4);
-  expect(createCount).to.equal(2);
 });
 
 test('push delay', async () => {
@@ -1900,13 +1883,11 @@ test('push and pull concurrently', async () => {
   const beginPullSpy = sinon.spy(rep, 'beginPull');
   const commitSpy = sinon.spy(db.Write.prototype, 'commitWithDiffs');
   const invokePushSpy = sinon.spy(rep, 'invokePush');
-  const putSpy = sinon.spy(WriteTransactionImpl.prototype, 'put');
 
   function resetSpies() {
     beginPullSpy.resetHistory();
     commitSpy.resetHistory();
     invokePushSpy.resetHistory();
-    putSpy.resetHistory();
   }
 
   const callCounts = () => {
@@ -1914,7 +1895,6 @@ test('push and pull concurrently', async () => {
       beginPull: beginPullSpy.callCount,
       commit: commitSpy.callCount,
       invokePush: invokePushSpy.callCount,
-      put: putSpy.callCount,
     };
     resetSpies();
     return rv;
@@ -1946,7 +1926,6 @@ test('push and pull concurrently', async () => {
     beginPull: 1,
     commit: 1,
     invokePush: 1,
-    put: 1,
   });
 
   await tickAFewTimes();
@@ -1961,7 +1940,6 @@ test('push and pull concurrently', async () => {
     beginPull: 0,
     commit: 0,
     invokePush: 0,
-    put: 0,
   });
 });
 

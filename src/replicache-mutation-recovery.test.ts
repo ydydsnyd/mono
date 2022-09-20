@@ -30,6 +30,7 @@ import {initClientWithClientID} from './persist/clients-test-helpers.js';
 import {fromInternalValue, FromInternalValueReason} from './internal-value.js';
 import {PUSH_VERSION, PUSH_VERSION_DD31} from './sync/push.js';
 import {assertClientSDD} from './persist/clients.js';
+import {LogContext} from '@rocicorp/logger';
 
 initReplicacheTesting();
 
@@ -85,7 +86,14 @@ async function createAndPersistClientWithPendingLocal(
     await addLocal(chain, testMemdag, clientID);
     localMetas.push(chain[chain.length - 1].meta as db.LocalMeta);
   }
-  await persist.persist(clientID, testMemdag, perdag, () => false);
+  await persist.persist(
+    new LogContext(),
+    clientID,
+    testMemdag,
+    perdag,
+    {},
+    () => false,
+  );
   return localMetas;
 }
 
@@ -415,6 +423,10 @@ test('client does not attempt to recover mutations from IndexedDB with different
   );
 
   await tickAFewTimes();
+  if (DD31) {
+    // TODO(DD31): Implement
+    return;
+  }
 
   const testPerdag = await createPerdag({
     replicacheName: createReplicacheNameForTest(

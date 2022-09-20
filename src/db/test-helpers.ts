@@ -3,6 +3,7 @@ import {expect} from '@esm-bundle/chai';
 import type * as dag from '../dag/mod';
 import {
   Commit,
+  CommitData,
   DEFAULT_HEAD_NAME,
   fromHead,
   IndexRecord,
@@ -24,10 +25,11 @@ import type {JSONValue} from '../json';
 import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 import type {ClientID} from '../sync/client-id.js';
 import {emptyHash, Hash} from '../hash.js';
-import {BTreeRead, BTreeWrite} from '../btree/mod.js';
+import {BTreeRead, BTreeWrite, Node} from '../btree/mod.js';
 import * as btree from '../btree/mod.js';
 import type {IndexDefinition, IndexDefinitions} from '../index-defs.js';
 import {IndexWrite} from './index.js';
+import {Visitor} from './visitor';
 
 export type Chain = Commit<Meta>[];
 
@@ -86,7 +88,7 @@ export async function createLocal(
   await store.withWrite(async dagWrite => {
     const w = await newWriteLocal(
       whenceHead(DEFAULT_HEAD_NAME),
-      `mutator_name_${i}`,
+      createMutatorName(i),
       toInternalValue([i], ToInternalValueReason.Test),
       null,
       dagWrite,
@@ -99,6 +101,10 @@ export async function createLocal(
     await w.commit(DEFAULT_HEAD_NAME);
   });
   return store.withRead(dagRead => fromHead(DEFAULT_HEAD_NAME, dagRead));
+}
+
+export function createMutatorName(chainIndex: number): string {
+  return `mutator_name_${chainIndex}`;
 }
 
 export async function addIndexChange(
@@ -293,4 +299,29 @@ async function createEmptyIndexMaps(
     );
   }
   return indexes;
+}
+
+export class ChunkSnapshotVisitor extends Visitor {
+  snapshot: Record<string, unknown> = {};
+
+  override visitCommitChunk(chunk: dag.Chunk<CommitData<Meta>>): Promise<void> {
+    this.snapshot[chunk.hash.toString()] = chunk.data;
+    return super.visitCommitChunk(chunk);
+  }
+
+  override visitBTreeNodeChunk(chunk: dag.Chunk<Node>): Promise<void> {
+    this.snapshot[chunk.hash.toString()] = chunk.data;
+    return super.visitBTreeNodeChunk(chunk);
+  }
+}
+
+export async function getChunkSnapshot(
+  dagStore: dag.Store,
+  hash: Hash,
+): Promise<Record<string, unknown>> {
+  return dagStore.withRead(async dagRead => {
+    const v = new ChunkSnapshotVisitor(dagRead);
+    await v.visitCommit(hash);
+    return v.snapshot;
+  });
 }

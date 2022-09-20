@@ -1219,9 +1219,11 @@ export class Replicache<MD extends MutatorDefs = {}> {
     try {
       await this._persistPullLock.withLock(() =>
         persist.persist(
+          this._lc,
           clientID,
           this._memdag,
           this._perdag,
+          this._mutatorRegistry,
           () => this.closed,
         ),
       );

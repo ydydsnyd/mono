@@ -30,6 +30,7 @@ export {
   fromHash as commitFromHash,
   fromHead as commitFromHead,
   localMutations,
+  localMutationsGreaterThan,
   snapshotMetaParts,
   baseSnapshotFromHash,
   baseSnapshotFromCommit,

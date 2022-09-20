@@ -7,7 +7,10 @@ import {assertHasClientState, updateClients} from './clients';
 import {ComputeHashTransformer, FixedChunks} from './compute-hash-transformer';
 import {GatherVisitor} from './gather-visitor';
 import {FixupTransformer} from './fixup-transformer';
-import {assertSnapshotMeta, assertSnapshotMetaDD31} from '../db/commit.js';
+import {assertSnapshotMeta} from '../db/commit.js';
+import {persistDD31} from './persist-dd31';
+import type {LogContext} from '@rocicorp/logger';
+import type {MutatorDefs} from '../replicache';
 
 /**
  * Computes permanent hashes from all temp chunks in `memdag` and writes them
@@ -21,11 +24,16 @@ import {assertSnapshotMeta, assertSnapshotMetaDD31} from '../db/commit.js';
  * or is rejected if the persist fails.
  */
 export async function persist(
+  lc: LogContext,
   clientID: sync.ClientID,
   memdag: dag.Store,
   perdag: dag.Store,
+  mutators: MutatorDefs,
   closed: () => boolean,
 ): Promise<void> {
+  if (DD31) {
+    return persistDD31(lc, clientID, memdag, perdag, mutators, closed);
+  }
   if (closed()) {
     return;
   }
@@ -91,20 +99,13 @@ async function gatherTempChunks(
       mainHeadHash,
       dagRead,
     );
-    let lastMutationID: number;
     const {meta} = baseSnapshotCommit;
-    if (DD31) {
-      assertSnapshotMetaDD31(meta);
-      lastMutationID = meta.lastMutationIDs[clientID] ?? 0;
-    } else {
-      assertSnapshotMeta(meta);
-      lastMutationID = meta.lastMutationID;
-    }
+    assertSnapshotMeta(meta);
     return [
       visitor.gatheredChunks,
       mainHeadHash,
       await headCommit.getMutationID(clientID, dagRead),
-      lastMutationID,
+      meta.lastMutationID,
     ];
   });
 }
