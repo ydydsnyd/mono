@@ -54,6 +54,10 @@ export function benchmarkPopulate(opts: {
         }
       }
       const rep = (repToClose = makeRepWithPopulate({indexes}));
+
+      // Wait for init.
+      await rep.clientID;
+
       if (!opts.clean) {
         await rep.mutate.populate({
           numKeys: opts.numKeys,
