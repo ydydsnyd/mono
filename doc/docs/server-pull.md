@@ -212,7 +212,7 @@ At scale, contention for the global version number could be a performance bottle
 
 This performance can be improved by partitioning the datastore into separate _spaces_ which each have their own global version number and which are each synced independently. For example, a project management app might partition by project.
 
-The [example Todo app](https://github.com/rocicorp/replicache-todo/) uses this strategy, see [backend/](https://github.com/rocicorp/replicache-todo/blob/main/backend/), and it includes the space partitioning technique.
+The [example Todo app](https://github.com/rocicorp/replicache-todo/) uses this strategy, see [`createSpace()`](https://github.com/rocicorp/replicache-todo/blob/main/pages/index.tsx#L19) and the corresponding implementation in [replicache-nextjs](https://github.com/rocicorp/replicache-nextjs/blob/main/src/backend/data.ts#L77).
 
 This simple strategy is the one we recommend starting with, and what you get by default if you start your project with the example Todo app as a base.
 

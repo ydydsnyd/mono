@@ -144,7 +144,7 @@ Said another way, if the `PullResponse` indicates that mutation `42` has been pr
 
 ### Applying Mutations in Batches
 
-The simplest way to process mutations is to run and commit each mutation and its `lastMutationID` update in its own transaction. However, for efficiency, you can apply a batch of mutations together and then update the database with their effects and the new `lastMutationID` in a single transaction. The [Example Todo app](https://github.com/rocicorp/replicache-todo) contains an example of this pattern in [replicache-transaction.ts](https://github.com/rocicorp/replicache-todo/blob/main/backend/replicache-transaction.ts).
+The simplest way to process mutations is to run and commit each mutation and its `lastMutationID` update in its own transaction. However, for efficiency, you can apply a batch of mutations together and then update the database with their effects and the new `lastMutationID` in a single transaction. The [Example Todo app](https://github.com/rocicorp/replicache-todo) contains an example of this pattern in [replicache-transaction.ts](https://github.com/rocicorp/replicache-nextjs/blob/main/src/backend/replicache-transaction.ts).
 
 ### Error Handling
 
