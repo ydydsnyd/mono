@@ -101,8 +101,12 @@ test('uuid hash', async () => {
 });
 
 test('crypto.subtle not available', async () => {
+  Object.defineProperty(crypto, 'subtle', {
+    value: undefined,
+    configurable: true,
+  });
   try {
-    await hashOf('abc', () => undefined);
+    await hashOf('abc');
     expect(false, 'should throw');
   } catch (e) {
     if (e instanceof Error) {
@@ -110,5 +114,7 @@ test('crypto.subtle not available', async () => {
     } else {
       expect(false, 'should throw an Error');
     }
+  } finally {
+    delete (crypto as {subtle?: SubtleCrypto})['subtle'];
   }
 });

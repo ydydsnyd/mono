@@ -37,20 +37,16 @@ export const SUBTLE_CRYPTO_SECURE_DOMAIN_ERROR =
 /**
  * Computes a SHA512 hash of the given data.
  */
-export async function hashOf<V>(
-  value: V,
-  getSubtle?: () => SubtleCrypto | undefined,
-): Promise<Hash> {
+export async function hashOf<V>(value: V): Promise<Hash> {
   const typedArray = utf8.encode(JSON.stringify(value));
 
   // Note: despite lib.dom.ts saying that crypto.subtle is type SubtleCrypto, it's
   // actually SubtleCrypto|undefined because of secure contexts.
-  const subtle = getSubtle ? getSubtle() : crypto.subtle;
-
-  if (subtle === undefined) {
+  // See: https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts
+  if (crypto.subtle === undefined) {
     throw new Error(SUBTLE_CRYPTO_SECURE_DOMAIN_ERROR);
   }
-  const buf = await subtle.digest('SHA-512', typedArray);
+  const buf = await crypto.subtle.digest('SHA-512', typedArray);
   const buf2 = new Uint8Array(buf, 0, BYTE_LENGTH);
   return encode(buf2) as unknown as Hash;
 }
