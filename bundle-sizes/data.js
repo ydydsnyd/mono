@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1663768717754,
+  "lastUpdate": 1663834549185,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -24961,6 +24961,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.mjs.br (Brotli compressed)",
             "value": 34697,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81869,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23792,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7747430f8cfd6b61c6b3dc88ea181fa394fb4844",
+          "message": "chore: Use different way to override crypto.subtle in test. (#261)\n\nFollow up to https://github.com/rocicorp/replicache-internal/pull/260.",
+          "timestamp": "2022-09-22T08:14:44Z",
+          "tree_id": "6239de0ddc1daade05112707aab61c97ca9a597c",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/7747430f8cfd6b61c6b3dc88ea181fa394fb4844"
+        },
+        "date": 1663834543952,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 194348,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34995,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 193202,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34676,
             "unit": "bytes"
           },
           {
