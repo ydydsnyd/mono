@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1663834549185,
+  "lastUpdate": 1663865667865,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -24995,6 +24995,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/7747430f8cfd6b61c6b3dc88ea181fa394fb4844"
         },
         "date": 1663834543952,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 194348,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34995,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 193202,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34676,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81869,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23792,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cesara@gmail.com",
+            "name": "Cesar Alaestante",
+            "username": "cesara"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "67e52ee6efe63f485da91336d0fe37cede379bb8",
+          "message": "doc: update examples (#259)\n\n* doc: update quickstart, examples, hello\r\n\r\n* doc: introduce quickstarts\r\n\r\nI futzed with this awhile and this is what I think is best given\r\nthe content we have right now.\r\n\r\nIf you do the init app this will change a little.\r\n\r\nCo-authored-by: Aaron Boodman <aaron@aaronboodman.com>",
+          "timestamp": "2022-09-22T16:53:22Z",
+          "tree_id": "ddbc31def0686bb4a0beb0658d70e2f30e5694b0",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/67e52ee6efe63f485da91336d0fe37cede379bb8"
+        },
+        "date": 1663865662159,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
