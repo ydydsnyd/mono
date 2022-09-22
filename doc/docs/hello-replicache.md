@@ -1,5 +1,5 @@
 ---
-title: Quickstart
+title: Hello, Replicache
 slug: /
 ---
 

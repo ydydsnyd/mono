@@ -5,18 +5,28 @@ module.exports = {
     // TODO clean out the unused docs
     {
       'Get Started': [
-        'quickstart',
-        'app-features',
-        'app-structure',
-        'first-replicache-feature',
         {
-          'Next Steps': [
-            'deploy-render',
-            'deploy-vercel-supabase',
-            'deploy-elsewhere',
-            'local-postgres',
+          type: 'category',
+          label: 'Hello, Replicache',
+          link: {
+            type: 'doc',
+            id: 'hello-replicache',
+          },
+          items: [
+            'app-features',
+            'app-structure',
+            'first-replicache-feature',
+            {
+              'Next Steps': [
+                'deploy-render',
+                'deploy-vercel-supabase',
+                'deploy-elsewhere',
+                'local-postgres',
+              ],
+            },
           ],
         },
+        'quickstarts',
       ],
     },
     {
