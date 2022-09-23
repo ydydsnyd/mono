@@ -8,6 +8,9 @@ import {
   ReadTransaction,
   Replicache,
   ReplicacheOptions,
+  ExperimentalWatchNoIndexCallback,
+  ExperimentalWatchOptions,
+  ExperimentalWatchCallbackForOptions,
 } from 'replicache';
 import type {Downstream} from '../protocol/down.js';
 import type {PingMessage} from '../protocol/ping.js';
@@ -221,6 +224,33 @@ export class Reflect<MD extends MutatorDefs> {
    */
   async query<R>(body: (tx: ReadTransaction) => Promise<R> | R): Promise<R> {
     return this._rep.query(body);
+  }
+
+  /**
+   * Watches Reflect for changes.
+   *
+   * The `callback` gets called whenever the underlying data changes and the
+   * `key` changes matches the
+   * [[ExperimentalWatchNoIndexOptions|ExperimentalWatchOptions.prefix]]
+   * if present. If a change occurs to the data but the change does not impact
+   * the key space the callback is not called. In other words, the callback is
+   * never called with an empty diff.
+   *
+   * This gets called after commit (a mutation or a rebase).
+   *
+   * @experimental This method is under development and its semantics will
+   * change.
+   */
+  experimentalWatch(callback: ExperimentalWatchNoIndexCallback): () => void;
+  experimentalWatch<Options extends ExperimentalWatchOptions>(
+    callback: ExperimentalWatchCallbackForOptions<Options>,
+    options?: Options,
+  ): () => void;
+  experimentalWatch<Options extends ExperimentalWatchOptions>(
+    callback: ExperimentalWatchCallbackForOptions<Options>,
+    options?: Options,
+  ): () => void {
+    return this._rep.experimentalWatch(callback, options);
   }
 
   private _onMessage = (e: MessageEvent<string>) => {

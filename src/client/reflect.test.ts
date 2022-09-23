@@ -1,4 +1,5 @@
 import {expect} from '@esm-bundle/chai';
+import type {JSONValue, WriteTransaction} from 'replicache';
 import * as sinon from 'sinon';
 import {Mutation, pushMessageSchema, PushBody} from '../protocol/push.js';
 import type {NullableVersion} from '../types/version.js';
@@ -233,4 +234,79 @@ test('pusher sends one mutation per push message', async () => {
     ],
     1,
   );
+});
+
+test('watchSmokeTest', async () => {
+  const rep = reflectForTest({
+    mutators: {
+      addData: async (
+        tx: WriteTransaction,
+        data: {[key: string]: JSONValue},
+      ) => {
+        for (const [key, value] of Object.entries(data)) {
+          await tx.put(key, value);
+        }
+      },
+      del: async (tx: WriteTransaction, key: string) => {
+        await tx.del(key);
+      },
+    },
+  });
+
+  const spy = sinon.spy();
+  const unwatch = rep.experimentalWatch(spy);
+
+  await rep.mutate.addData({a: 1, b: 2});
+
+  expect(spy.callCount).to.equal(1);
+  expect(spy.lastCall.args).to.deep.equal([
+    [
+      {
+        op: 'add',
+        key: 'a',
+        newValue: 1,
+      },
+      {
+        op: 'add',
+        key: 'b',
+        newValue: 2,
+      },
+    ],
+  ]);
+
+  spy.resetHistory();
+  await rep.mutate.addData({a: 1, b: 2});
+  expect(spy.callCount).to.equal(0);
+
+  await rep.mutate.addData({a: 11});
+  expect(spy.callCount).to.equal(1);
+  expect(spy.lastCall.args).to.deep.equal([
+    [
+      {
+        op: 'change',
+        key: 'a',
+        newValue: 11,
+        oldValue: 1,
+      },
+    ],
+  ]);
+
+  spy.resetHistory();
+  await rep.mutate.del('b');
+  expect(spy.callCount).to.equal(1);
+  expect(spy.lastCall.args).to.deep.equal([
+    [
+      {
+        op: 'del',
+        key: 'b',
+        oldValue: 2,
+      },
+    ],
+  ]);
+
+  unwatch();
+
+  spy.resetHistory();
+  await rep.mutate.addData({c: 6});
+  expect(spy.callCount).to.equal(0);
 });
