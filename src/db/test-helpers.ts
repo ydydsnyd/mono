@@ -2,14 +2,18 @@ import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
 import type * as dag from '../dag/mod';
 import {
+  assertLocalCommitDD31,
+  assertSnapshotCommitDD31,
   Commit,
   CommitData,
   DEFAULT_HEAD_NAME,
   fromHead,
   IndexRecord,
+  LocalMetaDD31,
   Meta,
   MetaType,
   nameIndexDefinition,
+  SnapshotMetaDD31,
 } from './commit';
 import {readCommit, whenceHead} from './read';
 import {
@@ -30,6 +34,7 @@ import * as btree from '../btree/mod.js';
 import type {IndexDefinition, IndexDefinitions} from '../index-defs.js';
 import {IndexWrite} from './index.js';
 import {Visitor} from './visitor';
+import {assert, assertNotUndefined} from '../asserts';
 
 export type Chain = Commit<Meta>[];
 
@@ -37,9 +42,10 @@ export async function addGenesis(
   chain: Chain,
   store: dag.Store,
   clientID: ClientID,
+  headName = DEFAULT_HEAD_NAME,
 ): Promise<Chain> {
   expect(chain).to.have.length(0);
-  const commit = await createGenesis(store, clientID);
+  const commit = await createGenesis(store, clientID, headName);
   chain.push(commit);
   return chain;
 }
@@ -47,12 +53,13 @@ export async function addGenesis(
 export async function createGenesis(
   store: dag.Store,
   clientID: ClientID,
+  headName = DEFAULT_HEAD_NAME,
 ): Promise<Commit<Meta>> {
   await store.withWrite(async w => {
-    await initDB(w, DEFAULT_HEAD_NAME, clientID);
+    await initDB(w, headName, clientID);
   });
   return await store.withRead(async read => {
-    const [, commit] = await readCommit(whenceHead(DEFAULT_HEAD_NAME), read);
+    const [, commit] = await readCommit(whenceHead(headName), read);
     return commit;
   });
 }
@@ -64,6 +71,7 @@ export async function addLocal(
   store: dag.Store,
   clientID: ClientID,
   entries?: [string, JSONValue][],
+  headName = DEFAULT_HEAD_NAME,
 ): Promise<Chain> {
   expect(chain).to.have.length.greaterThan(0);
   const i = chain.length;
@@ -72,6 +80,7 @@ export async function addLocal(
     store,
     i,
     clientID,
+    headName,
   );
 
   chain.push(commit);
@@ -83,11 +92,12 @@ export async function createLocal(
   store: dag.Store,
   i: number,
   clientID: ClientID,
+  headName = DEFAULT_HEAD_NAME,
 ): Promise<Commit<Meta>> {
   const lc = new LogContext();
   await store.withWrite(async dagWrite => {
     const w = await newWriteLocal(
-      whenceHead(DEFAULT_HEAD_NAME),
+      whenceHead(headName),
       createMutatorName(i),
       toInternalValue([i], ToInternalValueReason.Test),
       null,
@@ -98,9 +108,9 @@ export async function createLocal(
     for (const [key, val] of entries) {
       await w.put(lc, key, toInternalValue(val, ToInternalValueReason.Test));
     }
-    await w.commit(DEFAULT_HEAD_NAME);
+    await w.commit(headName);
   });
-  return store.withRead(dagRead => fromHead(DEFAULT_HEAD_NAME, dagRead));
+  return store.withRead(dagRead => fromHead(headName, dagRead));
 }
 
 export function createMutatorName(chainIndex: number): string {
@@ -113,6 +123,7 @@ export async function addIndexChange(
   clientID: ClientID,
   indexName?: string,
   indexDefinition?: IndexDefinition,
+  headName = DEFAULT_HEAD_NAME,
 ): Promise<Chain> {
   expect(chain).to.have.length.greaterThan(0);
   const i = chain.length;
@@ -130,6 +141,7 @@ export async function addIndexChange(
     store,
     allowEmpty,
     clientID,
+    headName,
   );
   chain.push(commit);
   return chain;
@@ -142,19 +154,20 @@ export async function createIndex(
   store: dag.Store,
   allowEmpty: boolean,
   clientID: ClientID,
+  headName = DEFAULT_HEAD_NAME,
 ): Promise<Commit<Meta>> {
   const lc = new LogContext();
   await store.withWrite(async dagWrite => {
     const w = await newWriteIndexChange(
-      whenceHead(DEFAULT_HEAD_NAME),
+      whenceHead(headName),
       dagWrite,
       clientID,
     );
     await w.createIndex(lc, name, prefix, jsonPointer, allowEmpty);
-    await w.commit(DEFAULT_HEAD_NAME);
+    await w.commit(headName);
   });
   return store.withRead(async dagRead => {
-    const [, commit] = await readCommit(whenceHead(DEFAULT_HEAD_NAME), dagRead);
+    const [, commit] = await readCommit(whenceHead(headName), dagRead);
     return commit;
   });
 }
@@ -171,6 +184,7 @@ export async function addSnapshot(
   cookie: JSONValue = `cookie_${chain.length}`,
   lastMutationIDs?: Record<ClientID, number>,
   indexDefinitions?: IndexDefinitions,
+  headName = DEFAULT_HEAD_NAME,
 ): Promise<Chain> {
   expect(chain).to.have.length.greaterThan(0);
   const lc = new LogContext();
@@ -204,7 +218,7 @@ export async function addSnapshot(
         indexes = readIndexesForWrite(chain[chain.length - 1], dagWrite);
       }
       w = await newWriteSnapshotDD31(
-        whenceHead(DEFAULT_HEAD_NAME),
+        whenceHead(headName),
         lastMutationIDs ?? {
           [clientID]: await chain[chain.length - 1].getNextMutationID(
             clientID,
@@ -232,13 +246,76 @@ export async function addSnapshot(
         await w.put(lc, k, toInternalValue(v, ToInternalValueReason.Test));
       }
     }
-    await w.commit(DEFAULT_HEAD_NAME);
+    await w.commit(headName);
   });
   return store.withRead(async dagRead => {
-    const [, commit] = await readCommit(whenceHead(DEFAULT_HEAD_NAME), dagRead);
+    const [, commit] = await readCommit(whenceHead(headName), dagRead);
     chain.push(commit);
     return chain;
   });
+}
+
+export class ChainBuilder {
+  store: dag.Store;
+  headName: string;
+  chain: Chain;
+
+  constructor(store: dag.Store, headName = DEFAULT_HEAD_NAME) {
+    assert(DD31);
+    this.store = store;
+    this.headName = headName;
+    this.chain = [];
+  }
+
+  async addGenesis(clientID: ClientID): Promise<Commit<SnapshotMetaDD31>> {
+    await addGenesis(this.chain, this.store, clientID, this.headName);
+    const commit = this.chain.at(-1);
+    assertNotUndefined(commit);
+    assertSnapshotCommitDD31(commit);
+    return commit;
+  }
+
+  async addLocal(
+    clientID: ClientID,
+    entries?: [string, JSONValue][],
+  ): Promise<Commit<LocalMetaDD31>> {
+    await addLocal(this.chain, this.store, clientID, entries, this.headName);
+    const commit = this.chain.at(-1);
+    assertNotUndefined(commit);
+    assertLocalCommitDD31(commit);
+    return commit;
+  }
+
+  async addSnapshot(
+    map: [string, JSONValue][] | undefined,
+    clientID: ClientID,
+    cookie: JSONValue = `cookie_${this.chain.length}`,
+    lastMutationIDs?: Record<ClientID, number>,
+    indexDefinitions?: IndexDefinitions,
+  ): Promise<Commit<SnapshotMetaDD31>> {
+    assert(DD31);
+    await addSnapshot(
+      this.chain,
+      this.store,
+      map,
+      clientID,
+      cookie,
+      lastMutationIDs,
+      indexDefinitions,
+      this.headName,
+    );
+    const commit = this.chain.at(-1);
+    assertNotUndefined(commit);
+    assertSnapshotCommitDD31(commit);
+    return commit;
+  }
+
+  async removeHead(): Promise<void> {
+    await this.store.withWrite(async write => {
+      await write.removeHead(this.headName);
+      await write.commit();
+    });
+  }
 }
 
 export async function initDB(

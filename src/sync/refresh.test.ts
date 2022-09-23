@@ -10,7 +10,7 @@ import {
   newSnapshotDD31,
   SnapshotMetaDD31,
 } from '../db/commit';
-import {addGenesis, addLocal, addSnapshot, Chain} from '../db/test-helpers';
+import {ChainBuilder} from '../db/test-helpers';
 import * as db from '../db/mod';
 import {assertHash, Hash, makeNewFakeHashFunction} from '../hash';
 import {toInternalValue, ToInternalValueReason} from '../internal-value';
@@ -22,18 +22,82 @@ import type {ClientID} from './ids';
 import {refresh} from './refresh';
 import type {Entry} from '../btree/node.js';
 import type {MutatorDefs, WriteTransaction} from '../mod.js';
-import {assert} from '../asserts.js';
+import {assert, assertNotUndefined} from '../asserts.js';
 
 async function makeChain(
   store: dag.Store,
   clientID: ClientID,
   cookie: number,
-): Promise<Chain> {
-  const chain: Chain = [];
-  await addGenesis(chain, store, clientID);
-  await addSnapshot(chain, store, [], clientID, cookie);
-  await addLocal(chain, store, clientID, []);
-  return chain;
+  headName: string,
+): Promise<{headHash: Hash; chainBuilder: ChainBuilder}> {
+  const chainBuilder: ChainBuilder = new ChainBuilder(store, headName);
+  await chainBuilder.addGenesis(clientID);
+  await chainBuilder.addSnapshot([], clientID, cookie);
+  await chainBuilder.addLocal(clientID, []);
+  const headHash = chainBuilder.chain.at(-1)?.chunk.hash;
+  assertNotUndefined(headHash);
+  return {headHash, chainBuilder};
+}
+
+async function makeMemdagChain(
+  memdag: dag.Store,
+  clientID: ClientID,
+  cookie: number,
+): Promise<{headHash: Hash; chainBuilder: ChainBuilder}> {
+  return makeChain(memdag, clientID, cookie, db.DEFAULT_HEAD_NAME);
+}
+
+const PERDAG_TEST_SETUP_HEAD_NAME = 'test-setup-head';
+async function makePerdagChainAndSetClientsAndBranch(
+  perdag: dag.Store,
+  clientID: ClientID,
+  cookie: number,
+): Promise<{headHash: Hash; chainBuilder: ChainBuilder}> {
+  const {headHash, chainBuilder} = await makeChain(
+    perdag,
+    clientID,
+    cookie,
+    PERDAG_TEST_SETUP_HEAD_NAME,
+  );
+  await setClientsAndBranches(headHash, clientID, perdag);
+  return {headHash, chainBuilder};
+}
+
+async function setClientsAndBranches(
+  headHash: Hash,
+  clientID: string,
+  perdag: dag.Store,
+) {
+  const branchID = 'branch-1';
+  const branches: BranchMap = new Map([
+    [
+      branchID,
+      {
+        headHash,
+        indexes: {},
+        // Not used
+        mutationIDs: {[clientID]: -1},
+        // Not used
+        lastServerAckdMutationIDs: {[clientID]: -1},
+        mutatorNames: [],
+      },
+    ],
+  ]);
+
+  const client: ClientDD31 = {
+    branchID,
+    headHash,
+    // Not used
+    heartbeatTimestampMs: -1,
+    tempRefreshHash: null,
+  };
+
+  await perdag.withWrite(async perdagWrite => {
+    await setBranches(branches, perdagWrite);
+    await setClient(clientID, client, perdagWrite);
+    await perdagWrite.removeHead(PERDAG_TEST_SETUP_HEAD_NAME);
+    await perdagWrite.commit();
+  });
 }
 
 function makeStores() {
@@ -47,42 +111,6 @@ function makeStores() {
     assertHash,
   );
   return {perdag, memdag};
-}
-
-async function setClientsAndBranches(
-  perdagHeadHash: Hash,
-  clientID: string,
-  perdag: dag.TestStore,
-) {
-  const branchID = 'branch-1';
-  const branches: BranchMap = new Map([
-    [
-      branchID,
-      {
-        headHash: perdagHeadHash,
-        indexes: {},
-        // Not used
-        mutationIDs: {[clientID]: -1},
-        // Not used
-        lastServerAckdMutationIDs: {[clientID]: -1},
-        mutatorNames: [],
-      },
-    ],
-  ]);
-
-  const client: ClientDD31 = {
-    branchID,
-    headHash: perdagHeadHash,
-    // Not used
-    heartbeatTimestampMs: -1,
-    tempRefreshHash: null,
-  };
-
-  await perdag.withWrite(async perdagWrite => {
-    await setBranches(branches, perdagWrite);
-    await setClient(clientID, client, perdagWrite);
-    await perdagWrite.commit();
-  });
 }
 
 function mutatorsProxy(): MutatorDefs {
@@ -109,13 +137,8 @@ suite('refresh', () => {
     const clientID = 'client-id-1';
     const mutators = mutatorsProxy();
 
-    const perdagChain = await makeChain(perdag, clientID, 1);
-    const perdagHeadHash = perdagChain.at(-1)?.chunk.hash;
-    assert(perdagHeadHash);
-
-    await makeChain(memdag, clientID, 1);
-
-    await setClientsAndBranches(perdagHeadHash, clientID, perdag);
+    await makePerdagChainAndSetClientsAndBranch(perdag, clientID, 1);
+    await makeMemdagChain(memdag, clientID, 1);
 
     const diffs = await refresh(
       new LogContext(),
@@ -133,15 +156,15 @@ suite('refresh', () => {
     const clientID = 'client-id-1';
     const mutators: MutatorDefs = mutatorsProxy();
 
-    const perdagChain = await makeChain(perdag, clientID, 1);
-    const perdagHeadHash = perdagChain.at(-1)?.chunk.hash;
-    assert(perdagHeadHash);
+    await makePerdagChainAndSetClientsAndBranch(perdag, clientID, 1);
 
     // Memdag has one more LM than perdag.
-    const memdagChain = await makeChain(memdag, clientID, 1);
-    await addLocal(memdagChain, memdag, clientID, []);
-
-    await setClientsAndBranches(perdagHeadHash, clientID, perdag);
+    const {chainBuilder: memdagChainBuilder} = await makeMemdagChain(
+      memdag,
+      clientID,
+      1,
+    );
+    await memdagChainBuilder.addLocal(clientID, []);
 
     const diffs = await refresh(
       new LogContext(),
@@ -167,16 +190,16 @@ suite('refresh', () => {
     const clientID = 'client-id-1';
     const mutators: MutatorDefs = mutatorsProxy();
 
-    const perdagChain = await makeChain(perdag, clientID, 1);
-    const perdagHeadHash = perdagChain.at(-1)?.chunk.hash;
-    assert(perdagHeadHash);
+    await makePerdagChainAndSetClientsAndBranch(perdag, clientID, 1);
 
     // Memdag has a newer cookie than perdag so we abort the refresh
-    const memdagChain = await makeChain(memdag, clientID, 2);
+    const {chainBuilder: memdagChainBuilder} = await makeMemdagChain(
+      memdag,
+      clientID,
+      2,
+    );
     // Memdag has one more LM than perdag.
-    await addLocal(memdagChain, memdag, clientID, []);
-
-    await setClientsAndBranches(perdagHeadHash, clientID, perdag);
+    await memdagChainBuilder.addLocal(clientID, []);
 
     const diffs = await refresh(
       new LogContext(),
@@ -193,16 +216,16 @@ suite('refresh', () => {
     const clientID = 'client-id-1';
     const mutators: MutatorDefs = mutatorsProxy();
 
-    const perdagChain = await makeChain(perdag, clientID, 1);
-    const perdagHeadHash = perdagChain.at(-1)?.chunk.hash;
-    assert(perdagHeadHash);
+    await makePerdagChainAndSetClientsAndBranch(perdag, clientID, 1);
 
     // Memdag has two more LM than perdag.
-    const memdagChain = await makeChain(memdag, clientID, 1);
-    await addLocal(memdagChain, memdag, clientID, []);
-    await addLocal(memdagChain, memdag, clientID, []);
-
-    await setClientsAndBranches(perdagHeadHash, clientID, perdag);
+    const {chainBuilder: memdagChainBuilder} = await makeMemdagChain(
+      memdag,
+      clientID,
+      1,
+    );
+    await memdagChainBuilder.addLocal(clientID, []);
+    await memdagChainBuilder.addLocal(clientID, []);
 
     const diffs = await refresh(
       new LogContext(),
@@ -235,28 +258,31 @@ suite('refresh', () => {
 
     const mutators: MutatorDefs = mutatorsProxy();
 
-    const perdagChain: Chain = [];
-    await addGenesis(perdagChain, perdag, clientID1);
-    await addSnapshot(perdagChain, perdag, [], clientID1, 1, {
+    const perdagChainBuilder: ChainBuilder = new ChainBuilder(
+      perdag,
+      PERDAG_TEST_SETUP_HEAD_NAME,
+    );
+    await perdagChainBuilder.addGenesis(clientID1);
+    await perdagChainBuilder.addSnapshot([], clientID1, 1, {
       [clientID1]: 0,
       [clientID2]: 0,
     });
-    await addLocal(perdagChain, perdag, clientID1, []);
-    await addLocal(perdagChain, perdag, clientID2, []);
-
-    const perdagHeadHash = perdagChain.at(-1)?.chunk.hash;
-    assert(perdagHeadHash);
-
-    const memdagChain: Chain = [];
-    await addGenesis(memdagChain, memdag, clientID1);
-    await addSnapshot(memdagChain, memdag, [], clientID1, 1, {
-      [clientID1]: 0,
-      [clientID2]: 0,
-    });
-    await addLocal(memdagChain, memdag, clientID1, []);
-    await addLocal(memdagChain, memdag, clientID1, []);
-
+    await perdagChainBuilder.addLocal(clientID1, []);
+    const perdagHeadCommit = await perdagChainBuilder.addLocal(clientID2, []);
+    const perdagHeadHash = perdagHeadCommit.chunk.hash;
     await setClientsAndBranches(perdagHeadHash, clientID1, perdag);
+
+    const memdagChainBuilder: ChainBuilder = new ChainBuilder(
+      memdag,
+      db.DEFAULT_HEAD_NAME,
+    );
+    await memdagChainBuilder.addGenesis(clientID1);
+    await memdagChainBuilder.addSnapshot([], clientID1, 1, {
+      [clientID1]: 0,
+      [clientID2]: 0,
+    });
+    await memdagChainBuilder.addLocal(clientID1, []);
+    await memdagChainBuilder.addLocal(clientID1, []);
 
     const diffs = await refresh(
       new LogContext(),
@@ -282,15 +308,15 @@ suite('refresh', () => {
     const clientID = 'client-id-1';
     const mutators: MutatorDefs = mutatorsProxy();
 
-    const perdagChain = await makeChain(perdag, clientID, 2);
-    const perdagHeadHash = perdagChain.at(-1)?.chunk.hash;
-    assert(perdagHeadHash);
+    await makePerdagChainAndSetClientsAndBranch(perdag, clientID, 2);
 
     // Memdag has one more LM than perdag.
-    const memdagChain = await makeChain(memdag, clientID, 2);
-    await addLocal(memdagChain, memdag, clientID, []);
-
-    await setClientsAndBranches(perdagHeadHash, clientID, perdag);
+    const {chainBuilder: memdagChainBuilder} = await makeMemdagChain(
+      memdag,
+      clientID,
+      2,
+    );
+    await memdagChainBuilder.addLocal(clientID, []);
 
     // Here we use a brittle way to inject a snapshot in the middle of the refresh
     // algorithm.
@@ -299,8 +325,8 @@ suite('refresh', () => {
     // @ts-expect-error Don't care that TS is complaining about the type of the RHS.
     memdag.withWrite = async fn => {
       if (withWriteCalls++ === 1) {
-        await addSnapshot(memdagChain, memdag, [], clientID, 3);
-        await addLocal(memdagChain, memdag, clientID, []);
+        await memdagChainBuilder.addSnapshot([], clientID, 3);
+        await memdagChainBuilder.addLocal(clientID, []);
       }
       return withWrite.call(memdag, fn);
     };

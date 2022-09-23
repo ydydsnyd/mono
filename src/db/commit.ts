@@ -332,6 +332,12 @@ export function isLocalMetaDD31(
   return DD31 && (meta as Partial<LocalMetaDD31>).clientID !== undefined;
 }
 
+export function assertLocalCommitDD31(
+  c: Commit<Meta>,
+): asserts c is Commit<LocalMetaDD31> {
+  assertLocalMetaDD31(c.meta);
+}
+
 export type SnapshotMeta = {
   readonly type: MetaType.Snapshot;
   readonly basisHash: Hash | null;

@@ -4,10 +4,7 @@ import * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import type * as sync from '../sync/mod';
 import {
-  addGenesis,
-  addLocal,
-  addSnapshot,
-  Chain,
+  ChainBuilder,
   createMutatorName,
   getChunkSnapshot,
 } from '../db/test-helpers';
@@ -26,14 +23,16 @@ import type {WriteTransaction} from '../transactions';
 import type {JSONValue} from '../json';
 import type {MutatorDefs} from '../mod';
 
+const PERDAG_TEST_SETUP_HEAD_NAME = 'test-setup-head';
+
 suite('persistDD31', () => {
   if (!DD31) {
     return;
   }
   let memdag: dag.TestStore,
     perdag: dag.TestStore,
-    memdagChain: Chain,
-    perdagBranchChain: Chain,
+    memdagChainBuilder: ChainBuilder,
+    perdagBranchChainBuilder: ChainBuilder,
     clients: {clientID: sync.ClientID; client: Client}[],
     branchID: sync.BranchID,
     mutators: MutatorDefs;
@@ -42,8 +41,8 @@ suite('persistDD31', () => {
     ({
       memdag,
       perdag,
-      memdagChain,
-      perdagBranchChain,
+      memdagChainBuilder,
+      perdagBranchChainBuilder,
       clients,
       branchID,
       mutators,
@@ -69,29 +68,23 @@ suite('persistDD31', () => {
       memdagMutationIDs = {},
       perdagBranchMutationIDs = {},
     } = options || {};
-    await addGenesis(perdagBranchChain, perdag, clients[0].clientID);
-    await addSnapshot(
-      perdagBranchChain,
-      perdag,
+    await perdagBranchChainBuilder.addGenesis(clients[0].clientID);
+    const perdagBranchSnapshot = await perdagBranchChainBuilder.addSnapshot(
       [],
       clients[0].clientID,
       perdagBranchCookie,
       perdagBranchMutationIDs,
     );
-    const perdagBranchHeadHash = perdagBranchChain.at(-1)?.chunk.hash;
-    assertNotUndefined(perdagBranchHeadHash);
+    const perdagBranchHeadHash = perdagBranchSnapshot.chunk.hash;
 
-    await addGenesis(memdagChain, memdag, clients[0].clientID);
-    await addSnapshot(
-      memdagChain,
-      memdag,
+    await memdagChainBuilder.addGenesis(clients[0].clientID);
+    const memdagSnapshot = await memdagChainBuilder.addSnapshot(
       memdagValueMap,
       clients[0].clientID,
       memdagCookie,
       memdagMutationIDs,
     );
-    const memdagHeadHash = memdagChain.at(-1)?.chunk.hash;
-    assertNotUndefined(memdagHeadHash);
+    const memdagHeadHash = memdagSnapshot.chunk.hash;
 
     await setupBranch(perdagBranchHeadHash, {
       mutationIDs: perdagBranchMutationIDs,
@@ -151,17 +144,16 @@ suite('persistDD31', () => {
    * See setupLocals comment.
    */
   async function setupMemdagLocals() {
-    await addLocal(memdagChain, memdag, clients[0].clientID);
-    const memdagLocalCommit1Client0M1 = memdagChain.at(-1);
-    assertNotUndefined(memdagLocalCommit1Client0M1);
-    await addLocal(memdagChain, memdag, clients[1].clientID);
-    const memdagLocalCommit2Client1M1 = memdagChain.at(-1);
-    assertNotUndefined(memdagLocalCommit2Client1M1);
-    await addLocal(memdagChain, memdag, clients[0].clientID);
-    const memdagLocalCommit3Client0M2 = memdagChain.at(-1);
-    assertNotUndefined(memdagLocalCommit3Client0M2);
-    const memdagHeadHash = memdagChain.at(-1)?.chunk.hash;
-    assertNotUndefined(memdagHeadHash);
+    const memdagLocalCommit1Client0M1 = await memdagChainBuilder.addLocal(
+      clients[0].clientID,
+    );
+    const memdagLocalCommit2Client1M1 = await memdagChainBuilder.addLocal(
+      clients[1].clientID,
+    );
+    const memdagLocalCommit3Client0M2 = await memdagChainBuilder.addLocal(
+      clients[0].clientID,
+    );
+    const memdagHeadHash = memdagLocalCommit3Client0M2.chunk.hash;
     return {
       memdagLocalCommit1Client0M1,
       memdagLocalCommit2Client1M1,
@@ -174,17 +166,13 @@ suite('persistDD31', () => {
    * See setupLocals comment.
    */
   async function setupPerdagBranchLocals() {
-    await addLocal(perdagBranchChain, perdag, clients[0].clientID);
-    const perdagBranchLocalCommit1Client0M1 = perdagBranchChain.at(-1);
-    assertNotUndefined(perdagBranchLocalCommit1Client0M1);
-    await addLocal(perdagBranchChain, perdag, clients[1].clientID);
-    const perdagBranchLocalCommit2Client1M1 = perdagBranchChain.at(-1);
-    assertNotUndefined(perdagBranchLocalCommit2Client1M1);
-    await addLocal(perdagBranchChain, perdag, clients[2].clientID);
-    const perdagBranchLocalCommit3Client2M1 = perdagBranchChain.at(-1);
-    assertNotUndefined(perdagBranchLocalCommit3Client2M1);
-    const perdagBranchHeadHash = perdagBranchChain.at(-1)?.chunk.hash;
-    assertNotUndefined(perdagBranchHeadHash);
+    const perdagBranchLocalCommit1Client0M1 =
+      await perdagBranchChainBuilder.addLocal(clients[0].clientID);
+    const perdagBranchLocalCommit2Client1M1 =
+      await perdagBranchChainBuilder.addLocal(clients[1].clientID);
+    const perdagBranchLocalCommit3Client2M1 =
+      await perdagBranchChainBuilder.addLocal(clients[2].clientID);
+    const perdagBranchHeadHash = perdagBranchLocalCommit3Client2M1.chunk.hash;
     await setupBranch(perdagBranchHeadHash, {
       mutationIDs: {
         [clients[0].clientID]: 1,
@@ -237,6 +225,7 @@ suite('persistDD31', () => {
 
   test('equal snapshot cookies no locals', async () => {
     const {perdagBranchHeadHash, memdagHeadHash} = await setupSnapshots();
+    await perdagBranchChainBuilder.removeHead();
 
     const branchSnapshot = await getBranchHelper(perdag, branchID);
     const memdagSnapshot = await getChunkSnapshot(memdag, memdagHeadHash);
@@ -274,6 +263,7 @@ suite('persistDD31', () => {
       memdagLocalCommit3Client0M2,
       memdagHeadHash,
     } = await setupLocals();
+    await perdagBranchChainBuilder.removeHead();
 
     const branchSnapshot = await getBranchHelper(perdag, branchID);
     const memdagSnapshot = await getChunkSnapshot(memdag, memdagHeadHash);
@@ -332,6 +322,7 @@ suite('persistDD31', () => {
       perdagBranchCookie: 'cookie2',
       memdagCookie: 'cookie1',
     });
+    await perdagBranchChainBuilder.removeHead();
 
     const branchSnapshot = await getBranchHelper(perdag, branchID);
     const memdagSnapshot = await getChunkSnapshot(memdag, memdagHeadHash);
@@ -372,6 +363,7 @@ suite('persistDD31', () => {
       memdagLocalCommit3Client0M2,
       memdagHeadHash,
     } = await setupLocals();
+    await perdagBranchChainBuilder.removeHead();
 
     const branchSnapshot = await getBranchHelper(perdag, branchID);
     const memdagSnapshot = await getChunkSnapshot(memdag, memdagHeadHash);
@@ -442,13 +434,10 @@ suite('persistDD31', () => {
     //    <- Local Client 1 MutationID 1 (perdagBranchLocalCommit1Client1M1)
     //    <- Local Client 2 MutationID 1 (perdagBranchLocalCommit2Client2M1)
     //    <- perdag branch head (perdagBranchHeadHash)
-    await addLocal(perdagBranchChain, perdag, clients[1].clientID);
-    const perdagBranchLocalCommit1Client1M1 = perdagBranchChain.at(-1);
-    assertNotUndefined(perdagBranchLocalCommit1Client1M1);
-    await addLocal(perdagBranchChain, perdag, clients[2].clientID);
-    const perdagBranchLocalCommit2Client2M1 = perdagBranchChain.at(-1);
-    assertNotUndefined(perdagBranchLocalCommit2Client2M1);
-    const perdagBranchHeadHash = perdagBranchChain.at(-1)?.chunk.hash;
+    await perdagBranchChainBuilder.addLocal(clients[1].clientID);
+    const perdagBranchLocalCommit2Client2M1 =
+      await perdagBranchChainBuilder.addLocal(clients[2].clientID);
+    const perdagBranchHeadHash = perdagBranchLocalCommit2Client2M1.chunk.hash;
     assertNotUndefined(perdagBranchHeadHash);
     await setupBranch(perdagBranchHeadHash, {
       mutationIDs: {
@@ -457,6 +446,7 @@ suite('persistDD31', () => {
         [clients[2].clientID]: 1,
       },
     });
+    await perdagBranchChainBuilder.removeHead();
 
     const branchSnapshot = await getBranchHelper(perdag, branchID);
     const memdagSnapshot = await getChunkSnapshot(memdag, memdagHeadHash);
@@ -502,6 +492,7 @@ suite('persistDD31', () => {
         [clients[1].clientID]: 2,
       },
     });
+    await perdagBranchChainBuilder.removeHead();
 
     const branchSnapshot = await getBranchHelper(perdag, branchID);
     await persistDD31(
@@ -570,14 +561,11 @@ suite('persistDD31', () => {
     //    <- Local Client 1 MutationID 1 (memdagLocalCommit1Client1M1)
     //    <- Local Client 0 MutationID 2 (memdagLocalCommit2Client0M2)
     //    <- memdag DEFAULT_HEAD_NAME head (memdagHeadHash)
-    await addLocal(memdagChain, memdag, clients[1].clientID);
-    const memdagLocalCommit1Client1M1 = memdagChain.at(-1);
-    assertNotUndefined(memdagLocalCommit1Client1M1);
-    await addLocal(memdagChain, memdag, clients[0].clientID);
-    const memdagLocalCommit2Client0M2 = memdagChain.at(-1);
-    assertNotUndefined(memdagLocalCommit2Client0M2);
-    const memdagHeadHash = memdagChain.at(-1)?.chunk.hash;
-    assertNotUndefined(memdagHeadHash);
+    await memdagChainBuilder.addLocal(clients[1].clientID);
+    const memdagLocalCommit2Client0M2 = await memdagChainBuilder.addLocal(
+      clients[0].clientID,
+    );
+    await perdagBranchChainBuilder.removeHead();
 
     const branchSnapshot = await getBranchHelper(perdag, branchID);
     await persistDD31(
@@ -681,6 +669,8 @@ suite('persistDD31', () => {
 
     const {memdagLocalCommit3Client0M2, memdagHeadHash} = await setupLocals();
 
+    await perdagBranchChainBuilder.removeHead();
+
     let perdagBranchUpdatedToNewerSnapshot = false;
     const updatedPerdagBranchCookie = 'cookie3';
     let updatedPerdagBranchHeadHash: undefined | Hash;
@@ -690,27 +680,30 @@ suite('persistDD31', () => {
         return;
       }
       perdagBranchUpdatedToNewerSnapshot = true;
-      const updatedPerdagBranchChain: Chain = [];
+      const updatedPerdagBranchChainBuilder: ChainBuilder = new ChainBuilder(
+        perdag,
+        PERDAG_TEST_SETUP_HEAD_NAME,
+      );
       const mutationIDs = {
         [clients[0].clientID]: 1,
         [clients[1].clientID]: 1,
         [clients[2].clientID]: 1,
       };
-      await addGenesis(updatedPerdagBranchChain, perdag, clients[0].clientID);
-      await addSnapshot(
-        updatedPerdagBranchChain,
-        perdag,
-        [],
-        clients[0].clientID,
-        updatedPerdagBranchCookie,
-        mutationIDs,
-      );
-      updatedPerdagBranchHeadHash = updatedPerdagBranchChain.at(-1)?.chunk.hash;
+      await updatedPerdagBranchChainBuilder.addGenesis(clients[0].clientID);
+      const updatePerdagBranchSnapshot =
+        await updatedPerdagBranchChainBuilder.addSnapshot(
+          [],
+          clients[0].clientID,
+          updatedPerdagBranchCookie,
+          mutationIDs,
+        );
+      updatedPerdagBranchHeadHash = updatePerdagBranchSnapshot.chunk.hash;
       assertNotUndefined(updatedPerdagBranchHeadHash);
       await setupBranch(updatedPerdagBranchHeadHash, {
         mutationIDs,
         lastServerAckdMutationIDs: mutationIDs,
       });
+      await perdagBranchChainBuilder.removeHead();
       updatedPerdagBranchSnapshot = await getChunkSnapshot(
         perdag,
         updatedPerdagBranchHeadHash,
@@ -864,8 +857,11 @@ async function setupPersistTest() {
   return {
     memdag,
     perdag,
-    memdagChain: [],
-    perdagBranchChain: [],
+    memdagChainBuilder: new ChainBuilder(memdag),
+    perdagBranchChainBuilder: new ChainBuilder(
+      perdag,
+      PERDAG_TEST_SETUP_HEAD_NAME,
+    ),
     clients,
     branchID,
     mutators,
