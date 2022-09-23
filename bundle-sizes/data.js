@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1663865667865,
+  "lastUpdate": 1663945722060,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -25049,6 +25049,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/67e52ee6efe63f485da91336d0fe37cede379bb8"
         },
         "date": 1663865662159,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 194348,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34995,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 193202,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34676,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81869,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23792,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2bce16433d1baff6e3d7201b60cf837412206690",
+          "message": "refactor: improve db test utils for working with perdag (#268)\n\nProblem\r\n=======\r\nCurrently db test utils like (addSnapshot, addLocal, etc), add to the `db.DEFAULT_HEAD_NAME`.  This is not ideal\r\nfor working with the dd31 perdag, where `db.DEFAULT_HEAD_NAME` is not used.  \r\n\r\nSolution\r\n=======\r\nUpdate these utils to take a `headName` arg, defaulting to `db.DEFAULT_HEAD_NAME`.  Update\r\nDD31 perdag related tests that use these utils to build up their commit chains on a \r\ntest head name, and then remove this head after they have setup the BranchMap to retain\r\nthe commit chain.\r\n\r\nAdd a ChainBuilder utility that remembers what dag store, head and chain to build on.  Also\r\nhave its method return the added commits (which tends to be more useful than the chain, since\r\nwith the chain you have to grab commits out of the array and then assert they are not defined and\r\nassert what type of commit they are).",
+          "timestamp": "2022-09-23T08:07:17-07:00",
+          "tree_id": "4a1f9124fda3f80fa19844c5587f58393b4d7e8c",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/2bce16433d1baff6e3d7201b60cf837412206690"
+        },
+        "date": 1663945716643,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
