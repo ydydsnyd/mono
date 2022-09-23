@@ -255,3 +255,17 @@ export async function hasBranchState(
 ): Promise<boolean> {
   return !!(await getBranch(id, dagRead));
 }
+
+export function branchHasPendingMutations(branch: Branch) {
+  for (const [clientID, mutationID] of Object.entries(branch.mutationIDs)) {
+    const lastServerAckedMutationID =
+      branch.lastServerAckdMutationIDs[clientID];
+    if (
+      (lastServerAckedMutationID === undefined && mutationID !== 0) ||
+      lastServerAckedMutationID < mutationID
+    ) {
+      return true;
+    }
+  }
+  return false;
+}

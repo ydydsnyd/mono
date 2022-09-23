@@ -5,6 +5,7 @@ import {assertHash, fakeHash, Hash} from '../hash';
 import {
   assertHasBranchState,
   Branch,
+  branchHasPendingMutations,
   BranchMap,
   BranchStateNotFoundError,
   deleteBranch,
@@ -933,4 +934,61 @@ test('mutatorNamesEqual', () => {
   f([], ['b']);
   f(['a'], ['b']);
   f(['a', 'b'], ['b', 'c']);
+});
+
+test('branchHasPendingMutations', () => {
+  expect(
+    branchHasPendingMutations(
+      makeBranch({
+        headHash: fakeHash('headbranch1'),
+        mutationIDs: {},
+        lastServerAckdMutationIDs: {},
+      }),
+    ),
+  ).to.be.false;
+  expect(
+    branchHasPendingMutations(
+      makeBranch({
+        headHash: fakeHash('headbranch1'),
+        mutationIDs: {client1: 1},
+        lastServerAckdMutationIDs: {},
+      }),
+    ),
+  ).to.be.true;
+  expect(
+    branchHasPendingMutations(
+      makeBranch({
+        headHash: fakeHash('headbranch1'),
+        mutationIDs: {client1: 1},
+        lastServerAckdMutationIDs: {client1: 1},
+      }),
+    ),
+  ).to.be.false;
+  expect(
+    branchHasPendingMutations(
+      makeBranch({
+        headHash: fakeHash('headbranch1'),
+        mutationIDs: {client1: 0},
+        lastServerAckdMutationIDs: {},
+      }),
+    ),
+  ).to.be.false;
+  expect(
+    branchHasPendingMutations(
+      makeBranch({
+        headHash: fakeHash('headbranch1'),
+        mutationIDs: {client1: 1, client2: 2},
+        lastServerAckdMutationIDs: {client1: 1, client2: 1},
+      }),
+    ),
+  ).to.be.true;
+  expect(
+    branchHasPendingMutations(
+      makeBranch({
+        headHash: fakeHash('headbranch1'),
+        mutationIDs: {client1: 0, client2: 2},
+        lastServerAckdMutationIDs: {client2: 2},
+      }),
+    ),
+  ).to.be.false;
 });

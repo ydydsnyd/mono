@@ -533,8 +533,10 @@ export class Replicache<MD extends MutatorDefs = {}> {
       signal,
     );
     persist.initClientGC(clientID, this._perdag, this._lc, signal);
-
     persist.initCollectIDBDatabases(this._idbDatabases, this._lc, signal);
+    if (DD31) {
+      persist.initBranchGC(this._perdag, this._lc, signal);
+    }
 
     setIntervalWithSignal(
       () => this._recoverMutations(),
