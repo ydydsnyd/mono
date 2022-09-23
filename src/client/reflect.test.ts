@@ -1,7 +1,6 @@
 import {expect} from '@esm-bundle/chai';
-import type {PushRequest} from 'replicache';
 import * as sinon from 'sinon';
-import {Mutation, pushMessageSchema} from '../protocol/push.js';
+import {Mutation, pushMessageSchema, PushBody} from '../protocol/push.js';
 import type {NullableVersion} from '../types/version.js';
 import {ConnectionState, createSocket} from './reflect.js';
 import {MockSocket, reflectForTest, tickAFewTimes} from './test-utils.js';
@@ -188,16 +187,17 @@ test('pusher sends one mutation per push message', async () => {
     r.triggerConnected();
     const mockSocket = r.socket as unknown as MockSocket;
 
-    const pushReq: PushRequest = {
-      profileID: 'profileID',
-      clientID: 'clientID',
+    const overwrittenAndNotUsedLol = 42;
+
+    const pushBody: PushBody = {
       pushVersion: 0,
       schemaVersion: '1',
       mutations,
+      timestamp: overwrittenAndNotUsedLol,
     };
 
     const req = new Request('http://example.com/push', {
-      body: JSON.stringify(pushReq),
+      body: JSON.stringify(pushBody),
       method: 'POST',
     });
 
