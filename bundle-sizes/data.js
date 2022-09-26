@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1663947252765,
+  "lastUpdate": 1664202558495,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -25157,6 +25157,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/063834e12fd84b6cfb714994399728324667862d"
         },
         "date": 1663947247768,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 194490,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 35019,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 193344,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34699,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81885,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23782,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "88d3ac8a59a27fcad6ba99c54fb67f76e8f7817b",
+          "message": "chore: Add tmcw perf tests (#276)\n\nThis turns the reduced test case Tom McWrite provided to us into a perf\r\ntest.\r\n\r\nI reduced the sample data from `25413` elements of \"features\" to `6353`\r\nelements to make the test run faster.",
+          "timestamp": "2022-09-26T14:28:15Z",
+          "tree_id": "7017192f385b1a8bd99dd76cff0057af161078be",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/88d3ac8a59a27fcad6ba99c54fb67f76e8f7817b"
+        },
+        "date": 1664202552548,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
