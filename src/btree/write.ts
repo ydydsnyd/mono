@@ -6,11 +6,13 @@ import {BTreeRead} from './read';
 import {
   DataNodeImpl,
   InternalNodeImpl,
-  Entry,
   newNodeImpl,
   partition,
   emptyDataNode,
   isDataNodeImpl,
+  EntryWithOptionalSize,
+  createNewInternalEntryForNode,
+  Entry,
 } from './node';
 import type {CreateChunk} from '../dag/chunk';
 import {assert} from '../asserts';
@@ -47,7 +49,7 @@ export class BTreeWrite extends BTreeRead {
     root: Hash = emptyHash,
     minSize = 8 * 1024,
     maxSize = 16 * 1024,
-    getEntrySize?: <T>(e: Entry<T>) => number,
+    getEntrySize?: <T>(e: T) => number,
     chunkHeaderSize?: number,
   ) {
     super(dagWrite, root, getEntrySize, chunkHeaderSize);
@@ -63,6 +65,12 @@ export class BTreeWrite extends BTreeRead {
     return super.getNode(hash);
   }
 
+  protected override _chunkEntriesToTreeEntries<V>(
+    entries: readonly Entry<V>[],
+  ): EntryWithOptionalSize<V>[] {
+    return entries.map(entry => [entry[0], entry[1], this.getEntrySize(entry)]);
+  }
+
   private _addToModified(node: DataNodeImpl | InternalNodeImpl): void {
     assert(node.isMutable);
     this._modified.set(node.hash, node);
@@ -76,7 +84,7 @@ export class BTreeWrite extends BTreeRead {
   }
 
   newInternalNodeImpl(
-    entries: Array<Entry<Hash>>,
+    entries: Array<EntryWithOptionalSize<Hash>>,
     level: number,
   ): InternalNodeImpl {
     const n = new InternalNodeImpl(entries, newTempHash(), level, true);
@@ -84,20 +92,32 @@ export class BTreeWrite extends BTreeRead {
     return n;
   }
 
-  newDataNodeImpl(entries: Entry<InternalValue>[]): DataNodeImpl {
+  newDataNodeImpl(
+    entries: EntryWithOptionalSize<InternalValue>[],
+  ): DataNodeImpl {
     const n = new DataNodeImpl(entries, newTempHash(), true);
     this._addToModified(n);
     return n;
   }
 
-  newNodeImpl(entries: Entry<InternalValue>[], level: number): DataNodeImpl;
-  newNodeImpl(entries: Entry<Hash>[], level: number): InternalNodeImpl;
   newNodeImpl(
-    entries: Entry<Hash>[] | Entry<InternalValue>[],
+    entries: EntryWithOptionalSize<InternalValue>[],
+    level: number,
+  ): DataNodeImpl;
+  newNodeImpl(
+    entries: EntryWithOptionalSize<Hash>[],
+    level: number,
+  ): InternalNodeImpl;
+  newNodeImpl(
+    entries:
+      | EntryWithOptionalSize<Hash>[]
+      | EntryWithOptionalSize<InternalValue>[],
     level: number,
   ): InternalNodeImpl | DataNodeImpl;
   newNodeImpl(
-    entries: Entry<Hash>[] | Entry<InternalValue>[],
+    entries:
+      | EntryWithOptionalSize<Hash>[]
+      | EntryWithOptionalSize<InternalValue>[],
     level: number,
   ): InternalNodeImpl | DataNodeImpl {
     const n = newNodeImpl(entries, newTempHash(), level, true);
@@ -105,33 +125,31 @@ export class BTreeWrite extends BTreeRead {
     return n;
   }
 
-  childNodeSize(node: InternalNodeImpl | DataNodeImpl): number {
-    let sum = this.chunkHeaderSize;
-    for (const entry of node.entries) {
-      sum += this.getEntrySize(entry as Entry<Hash | InternalValue>);
-    }
-    return sum;
-  }
-
   put(key: string, value: InternalValue): Promise<void> {
     return this._lock.withLock(async () => {
       const oldRootNode = await this.getNode(this.rootHash);
-      const rootNode = await oldRootNode.set(key, value, this);
+      const entrySize = this.getEntrySize([key, value]);
+      const rootNode = await oldRootNode.set(key, value, entrySize, this);
 
       // We do the rebalancing in the parent so we need to do it here as well.
-      if (this.childNodeSize(rootNode) > this.maxSize) {
+      if (rootNode.getChildNodeSize(this) > this.maxSize) {
         const headerSize = this.chunkHeaderSize;
         const partitions = partition(
-          rootNode.entries as Entry<Hash>[],
-          this.getEntrySize,
+          rootNode.entries as EntryWithOptionalSize<Hash>[],
+          value => {
+            assert(value[2]);
+            return value[2];
+          },
           this.minSize - headerSize,
           this.maxSize - headerSize,
         );
         const {level} = rootNode;
-        const entries: Entry<Hash>[] = partitions.map(entries => {
-          const node = this.newNodeImpl(entries, level);
-          return [node.maxKey(), node.hash];
-        });
+        const entries: EntryWithOptionalSize<Hash>[] = partitions.map(
+          entries => {
+            const node = this.newNodeImpl(entries, level);
+            return createNewInternalEntryForNode(node, this.getEntrySize);
+          },
+        );
         const newRoot = this.newInternalNodeImpl(entries, level + 1);
         this.rootHash = newRoot.hash;
         return;
@@ -187,12 +205,14 @@ export class BTreeWrite extends BTreeRead {
       }
       const refs: Hash[] = [];
 
-      for (const entry of node.entries) {
+      const {entries} = node;
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
         const childHash = entry[1];
         const newChildHash = walk(childHash, newChunks, createChunk);
         if (newChildHash !== childHash) {
-          // MUTATES the node!
-          entry[1] = newChildHash;
+          // MUTATES the entries!
+          entries[i] = [entry[0], newChildHash];
         }
         refs.push(newChildHash);
       }

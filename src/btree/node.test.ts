@@ -12,13 +12,17 @@ import {
   NODE_ENTRIES,
   emptyDataNode,
   Diff,
-  ValueEntry,
   internalizeBTreeNode,
+  EntryWithOptionalSize,
 } from './node';
 import {BTreeWrite} from './write';
 import {makeTestChunkHasher} from '../dag/chunk';
 import {BTreeRead, NODE_HEADER_SIZE} from './read';
-import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
+import {
+  InternalValue,
+  toInternalValue,
+  ToInternalValueReason,
+} from '../internal-value.js';
 
 test('findLeaf', async () => {
   const dagStore = new dag.TestStore();
@@ -98,8 +102,7 @@ test('findLeaf', async () => {
       expected: DataNode,
     ) => {
       const actual = await findLeaf(key, hash, source, source.rootHash);
-      expect(actual.level).to.deep.equal(expected[NODE_LEVEL]);
-      expect(actual.entries).to.deep.equal(expected[NODE_ENTRIES]);
+      expect(actual.toChunkData()).to.deep.equal(expected);
     };
 
     await t('b', h0, source, leaf0);
@@ -212,7 +215,7 @@ async function expectTree(
 
 let minSize: number;
 let maxSize: number;
-let getEntrySize: <T>(e: Entry<T>) => number;
+let getEntrySize: <T>(e: T) => number;
 let chunkHeaderSize: number;
 
 setup(() => {
@@ -1221,7 +1224,7 @@ test('scan', async () => {
     });
 
     await doRead(rootHash, dagStore, async r => {
-      const res: ValueEntry[] = [];
+      const res: EntryWithOptionalSize<InternalValue>[] = [];
       const scanResult = r.scan(fromKey);
       for await (const e of scanResult) {
         res.push(e);

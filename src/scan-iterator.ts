@@ -10,7 +10,7 @@ import {
   ScanOptions,
 } from './scan-options';
 import {asyncIterableToArray} from './async-iterable-to-array';
-import type {ReadonlyEntry} from './btree/node';
+import type {Entry} from './btree/node';
 import {encodeIndexScanKey, IndexKey} from './db/index.js';
 import {EntryForOptions, fromKeyForNonIndexScan} from './transactions.js';
 import type {IterableUnion} from './iterable-union.js';
@@ -277,7 +277,7 @@ function shouldSkipNonIndexScan(key: string, startKey: string): boolean {
  */
 export type GetScanIterator = (
   fromKey: string,
-) => IterableUnion<ReadonlyEntry<ReadonlyJSONValue>>;
+) => IterableUnion<Entry<ReadonlyJSONValue>>;
 
 /**
  * When using [[makeScanResult]] this is the type used for the function called when doing a [[ReadTransaction.scan|scan]] with an

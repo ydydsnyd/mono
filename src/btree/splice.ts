@@ -1,5 +1,5 @@
 import {deepEqual, ReadonlyJSONValue} from '../json.js';
-import type {ReadonlyEntry} from './node';
+import type {EntryWithOptionalSize} from './node';
 
 export type Splice = [at: number, removed: number, added: number, from: number];
 
@@ -13,8 +13,8 @@ const KEY = 0;
 const VALUE = 1;
 
 export function* computeSplices<T>(
-  previous: readonly ReadonlyEntry<T>[],
-  current: readonly ReadonlyEntry<T>[],
+  previous: readonly EntryWithOptionalSize<T>[],
+  current: readonly EntryWithOptionalSize<T>[],
 ): Generator<Splice, void> {
   let previousIndex = 0;
   let currentIndex = 0;
@@ -34,6 +34,7 @@ export function* computeSplices<T>(
     if (previous[previousIndex][KEY] === current[currentIndex][KEY]) {
       if (
         deepEqual(
+          // These are really Hash | InternalValue
           previous[previousIndex][VALUE] as ReadonlyJSONValue,
           current[currentIndex][VALUE] as ReadonlyJSONValue,
         )

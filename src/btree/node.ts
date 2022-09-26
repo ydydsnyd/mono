@@ -6,17 +6,18 @@ import type {BTreeRead} from './read';
 import type {BTreeWrite} from './write';
 import {skipBTreeNodeAsserts, skipInternalValueAsserts} from '../config';
 import {binarySearch as binarySearchWithFunc} from '../binary-search';
-import type {IndexKey} from '../mod.js';
-import {InternalValue, markValueAsInternal} from '../internal-value.js';
+import type {IndexKey} from '../mod';
+import {InternalValue, markValueAsInternal} from '../internal-value';
 
-export type Entry<V> = [key: string, value: V];
-export type ReadonlyEntry<V> = readonly [key: string, value: V];
+export type Entry<V> = readonly [key: string, value: V];
 
-export type ValueEntry = ReadonlyEntry<InternalValue>;
-export type HashEntry = ReadonlyEntry<Hash>;
+export type EntryWithSize<V> = readonly [key: string, value: V, size: number];
 
-export type ValueEntries = readonly ValueEntry[];
-export type HashEntries = readonly HashEntry[];
+export type EntryWithOptionalSize<V> = readonly [
+  key: string,
+  value: V,
+  size?: number,
+];
 
 export const NODE_LEVEL = 0;
 export const NODE_ENTRIES = 1;
@@ -125,6 +126,8 @@ export async function findLeaf(
   return findLeaf(key, entry[1], source, expectedRootHash);
 }
 
+type BinarySearchEntries = readonly EntryWithOptionalSize<unknown>[];
+
 /**
  * Does a binary search over entries
  *
@@ -133,18 +136,18 @@ export async function findLeaf(
  * If the key was *not* found then the return value is the index where it should
  * be inserted at
  */
-export function binarySearch<V>(
+export function binarySearch(
   key: string,
-  entries: ReadonlyArray<ReadonlyEntry<V>>,
+  entries: BinarySearchEntries,
 ): number {
   return binarySearchWithFunc(entries.length, i =>
     compareUTF8(key, entries[i][0]),
   );
 }
 
-export function binarySearchFound<V>(
+export function binarySearchFound(
   i: number,
-  entries: ReadonlyArray<ReadonlyEntry<V>>,
+  entries: BinarySearchEntries,
   key: string,
 ): boolean {
   return i !== entries.length && entries[i][0] === key;
@@ -206,12 +209,18 @@ export function isDataNode(node: Node): node is DataNode {
 }
 
 abstract class NodeImpl<Value> {
-  entries: Array<Entry<Value>>;
+  entries: Array<EntryWithOptionalSize<Value>>;
   hash: Hash;
   abstract readonly level: number;
   readonly isMutable: boolean;
 
-  constructor(entries: Array<Entry<Value>>, hash: Hash, isMutable: boolean) {
+  private _childNodeSize = -1;
+
+  constructor(
+    entries: Array<EntryWithOptionalSize<Value>>,
+    hash: Hash,
+    isMutable: boolean,
+  ) {
     this.entries = entries;
     this.hash = hash;
     this.isMutable = isMutable;
@@ -220,6 +229,7 @@ abstract class NodeImpl<Value> {
   abstract set(
     key: string,
     value: InternalValue,
+    size: number,
     tree: BTreeWrite,
   ): Promise<NodeImpl<Value>>;
 
@@ -233,7 +243,27 @@ abstract class NodeImpl<Value> {
   }
 
   toChunkData(): BaseNode<Value> {
-    return [this.level, this.entries];
+    return [this.level, this.entries.map(e => [e[0], e[1]])];
+  }
+
+  getChildNodeSize(tree: BTreeRead): number {
+    if (this._childNodeSize !== -1) {
+      return this._childNodeSize;
+    }
+
+    let sum = tree.chunkHeaderSize;
+    for (const entry of this.entries) {
+      assertNumber(entry[2]);
+      sum += entry[2];
+    }
+    return (this._childNodeSize = sum);
+  }
+
+  protected _updateNode(tree: BTreeWrite) {
+    this._childNodeSize = -1;
+    tree.updateNode(
+      this as NodeImpl<unknown> as DataNodeImpl | InternalNodeImpl,
+    );
   }
 }
 
@@ -243,6 +273,7 @@ export class DataNodeImpl extends NodeImpl<InternalValue> {
   async set(
     key: string,
     value: InternalValue,
+    entrySize: number,
     tree: BTreeWrite,
   ): Promise<DataNodeImpl> {
     let deleteCount: number;
@@ -254,18 +285,18 @@ export class DataNodeImpl extends NodeImpl<InternalValue> {
       deleteCount = 1;
     }
 
-    return this._splice(tree, i, deleteCount, [key, value]);
+    return this._splice(tree, i, deleteCount, [key, value, entrySize]);
   }
 
   private _splice(
     tree: BTreeWrite,
     start: number,
     deleteCount: number,
-    ...items: Entry<InternalValue>[]
+    ...items: EntryWithSize<InternalValue>[]
   ): DataNodeImpl {
     if (this.isMutable) {
       this.entries.splice(start, deleteCount, ...items);
-      tree.updateNode(this);
+      this._updateNode(tree);
       return this;
     }
 
@@ -290,7 +321,9 @@ export class DataNodeImpl extends NodeImpl<InternalValue> {
     }
   }
 
-  async *entriesIter(_tree: BTreeRead): AsyncGenerator<ValueEntry, void> {
+  async *entriesIter(
+    _tree: BTreeRead,
+  ): AsyncGenerator<EntryWithOptionalSize<InternalValue>, void> {
     for (const entry of this.entries) {
       yield entry;
     }
@@ -323,7 +356,7 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
   readonly level: number;
 
   constructor(
-    entries: Array<Entry<Hash>>,
+    entries: Array<EntryWithOptionalSize<Hash>>,
     hash: Hash,
     level: number,
     isMutable: boolean,
@@ -335,6 +368,7 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
   async set(
     key: string,
     value: InternalValue,
+    entrySize: number,
     tree: BTreeWrite,
   ): Promise<InternalNodeImpl> {
     let i = binarySearch(key, this.entries);
@@ -346,14 +380,18 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
     const childHash = this.entries[i][1];
     const oldChildNode = await tree.getNode(childHash);
 
-    const childNode = await oldChildNode.set(key, value, tree);
+    const childNode = await oldChildNode.set(key, value, entrySize, tree);
 
-    const childNodeSize = tree.childNodeSize(childNode);
+    const childNodeSize = childNode.getChildNodeSize(tree);
     if (childNodeSize > tree.maxSize || childNodeSize < tree.minSize) {
       return this._mergeAndPartition(tree, i, childNode);
     }
 
-    return this._replaceChild(tree, i, [childNode.maxKey(), childNode.hash]);
+    const newEntry = createNewInternalEntryForNode(
+      childNode,
+      tree.getEntrySize,
+    );
+    return this._replaceChild(tree, i, newEntry);
   }
 
   /**
@@ -368,15 +406,17 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
     const level = this.level - 1;
     const thisEntries = this.entries;
 
-    let values: Iterable<Entry<Hash>>;
+    type IterableHashEntries = Iterable<EntryWithSize<Hash>>;
+
+    let values: IterableHashEntries;
     let startIndex: number;
     let removeCount: number;
     if (i > 0) {
       const hash = thisEntries[i - 1][1];
       const previousSibling = await tree.getNode(hash);
       values = joinIterables(
-        previousSibling.entries as Iterable<Entry<Hash>>,
-        childNode.entries as Iterable<Entry<Hash>>,
+        previousSibling.entries as IterableHashEntries,
+        childNode.entries as IterableHashEntries,
       );
       startIndex = i - 1;
       removeCount = 2;
@@ -384,38 +424,43 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
       const hash = thisEntries[i + 1][1];
       const nextSibling = await tree.getNode(hash);
       values = joinIterables(
-        childNode.entries as Iterable<Entry<Hash>>,
-        nextSibling.entries as Iterable<Entry<Hash>>,
+        childNode.entries as IterableHashEntries,
+        nextSibling.entries as IterableHashEntries,
       );
       startIndex = i;
       removeCount = 2;
     } else {
-      values = childNode.entries as Iterable<Entry<Hash>>;
+      values = childNode.entries as IterableHashEntries;
       startIndex = i;
       removeCount = 1;
     }
 
     const partitions = partition(
-      values as Entry<Hash>[],
-      tree.getEntrySize,
+      values,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      value => {
+        assertNumber(value[2]);
+        return value[2];
+      },
       tree.minSize - tree.chunkHeaderSize,
       tree.maxSize - tree.chunkHeaderSize,
     );
 
     // TODO: There are cases where we can reuse the old nodes. Creating new ones
     // means more memory churn but also more writes to the underlying KV store.
-    const newEntries: Entry<Hash>[] = [];
+    const newEntries: EntryWithOptionalSize<Hash>[] = [];
     for (const entries of partitions) {
-      const node = tree.newNodeImpl(
-        entries as Entry<Hash>[] | Entry<InternalValue>[],
-        level,
+      const node = tree.newNodeImpl(entries, level);
+      const newHashEntry = createNewInternalEntryForNode(
+        node,
+        tree.getEntrySize,
       );
-      newEntries.push([node.maxKey(), node.hash]);
+      newEntries.push(newHashEntry);
     }
 
     if (this.isMutable) {
       this.entries.splice(startIndex, removeCount, ...newEntries);
-      tree.updateNode(this);
+      this._updateNode(tree);
       return this;
     }
 
@@ -432,11 +477,11 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
   private _replaceChild(
     tree: BTreeWrite,
     index: number,
-    newEntry: Entry<Hash>,
+    newEntry: EntryWithSize<Hash>,
   ): InternalNodeImpl {
     if (this.isMutable) {
       this.entries.splice(index, 1, newEntry);
-      tree.updateNode(this);
+      this._updateNode(tree);
       return this;
     }
     const entries = readonlySplice(this.entries, index, 1, newEntry);
@@ -459,22 +504,27 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
 
     const childNode = await oldChildNode.del(key, tree);
     if (childNode.hash === oldHash) {
+      // Not changed so not found.
       return this;
     }
 
     if (childNode.entries.length === 0) {
+      // Subtree is now empty. Remove internal node.
       const entries = readonlySplice(this.entries, i, 1);
       return tree.newInternalNodeImpl(entries, this.level);
     }
 
     if (i === 0 && this.entries.length === 1) {
+      // There was only one node at this level and it was removed. We can return
+      // the modified subtree.
       return childNode;
     }
 
     // The child node is still a good size.
-    if (tree.childNodeSize(childNode) > tree.minSize) {
+    if (childNode.getChildNodeSize(tree) > tree.minSize) {
       // No merging needed.
-      return this._replaceChild(tree, i, [childNode.maxKey(), childNode.hash]);
+      const entry = createNewInternalEntryForNode(childNode, tree.getEntrySize);
+      return this._replaceChild(tree, i, entry);
     }
 
     // Child node size is too small.
@@ -488,7 +538,9 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
     }
   }
 
-  async *entriesIter(tree: BTreeRead): AsyncGenerator<ValueEntry, void> {
+  async *entriesIter(
+    tree: BTreeRead,
+  ): AsyncGenerator<EntryWithOptionalSize<InternalValue>, void> {
     for (const entry of this.entries) {
       const childNode = await tree.getNode(entry[1]);
       yield* childNode.entriesIter(tree);
@@ -521,7 +573,7 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
     const output = await this.getChildren(start, start + length, tree);
 
     if (level > 1) {
-      const entries: Entry<Hash>[] = [];
+      const entries: EntryWithOptionalSize<Hash>[] = [];
       for (const child of output as InternalNodeImpl[]) {
         entries.push(...child.entries);
       }
@@ -529,7 +581,7 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
     }
 
     assert(level === 1);
-    const entries: Entry<InternalValue>[] = [];
+    const entries: EntryWithOptionalSize<InternalValue>[] = [];
     for (const child of output as DataNodeImpl[]) {
       entries.push(...child.entries);
     }
@@ -537,34 +589,59 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
   }
 }
 
+export function isInternalNodeImpl(
+  v: InternalNodeImpl | DataNodeImpl,
+): v is InternalNodeImpl {
+  return !isDataNodeImpl(v);
+}
+
+export function assertInternalNodeImpl(
+  v: InternalNodeImpl | DataNodeImpl,
+): asserts v is InternalNodeImpl {
+  assert(isInternalNodeImpl(v));
+}
+
 export function newNodeImpl(
-  entries: Array<Entry<InternalValue>>,
+  entries: Array<EntryWithOptionalSize<InternalValue>>,
   hash: Hash,
   level: number,
   isMutable: boolean,
 ): DataNodeImpl;
 export function newNodeImpl(
-  entries: Array<Entry<Hash>>,
+  entries: Array<EntryWithOptionalSize<Hash>>,
   hash: Hash,
   level: number,
   isMutable: boolean,
 ): InternalNodeImpl;
 export function newNodeImpl(
-  entries: Array<Entry<InternalValue>> | Array<Entry<Hash>>,
+  entries:
+    | Array<EntryWithOptionalSize<InternalValue>>
+    | Array<EntryWithOptionalSize<Hash>>,
   hash: Hash,
   level: number,
   isMutable: boolean,
 ): DataNodeImpl | InternalNodeImpl;
 export function newNodeImpl(
-  entries: Array<Entry<InternalValue>> | Array<Entry<Hash>>,
+  entries:
+    | Array<EntryWithOptionalSize<InternalValue>>
+    | Array<EntryWithOptionalSize<Hash>>,
   hash: Hash,
   level: number,
   isMutable: boolean,
 ): DataNodeImpl | InternalNodeImpl {
   if (level === 0) {
-    return new DataNodeImpl(entries as Entry<InternalValue>[], hash, isMutable);
+    return new DataNodeImpl(
+      entries as EntryWithOptionalSize<InternalValue>[],
+      hash,
+      isMutable,
+    );
   }
-  return new InternalNodeImpl(entries as Entry<Hash>[], hash, level, isMutable);
+  return new InternalNodeImpl(
+    entries as EntryWithOptionalSize<Hash>[],
+    hash,
+    level,
+    isMutable,
+  );
 }
 
 export function isDataNodeImpl(
@@ -575,7 +652,7 @@ export function isDataNodeImpl(
 
 export function partition<T>(
   values: Iterable<T>,
-  getValueSize: (v: T) => number,
+  getSize: (v: T) => number,
   min: number,
   max: number,
 ): T[][] {
@@ -584,8 +661,7 @@ export function partition<T>(
   let sum = 0;
   let accum: T[] = [];
   for (const value of values) {
-    // for (let i = 0; i < values.length; i++) {
-    const size = getValueSize(value);
+    const size = getSize(value);
     if (size >= max) {
       if (accum.length > 0) {
         partitions.push(accum);
@@ -620,3 +696,16 @@ export function partition<T>(
 
 export const emptyDataNode: DataNode = [0, []];
 export const emptyDataNodeImpl = new DataNodeImpl([], emptyHash, false);
+
+export function createNewInternalEntryForNode(
+  node: NodeImpl<unknown>,
+  getSizeOfValue: <T>(v: T) => number,
+): [string, Hash, number] {
+  const e: [key: string, value: Hash, size?: number] = [
+    node.maxKey(),
+    node.hash,
+  ];
+  const size = getSizeOfValue(e);
+  e[2] = size;
+  return e as [string, Hash, number];
+}

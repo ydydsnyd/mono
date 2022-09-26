@@ -1,15 +1,15 @@
 import {expect} from '@esm-bundle/chai';
-import {asyncIterableToArray} from './async-iterable-to-array.js';
-import type {ReadonlyEntry} from './btree/node.js';
-import type {IndexKey} from './db/index.js';
-import type {ReadonlyJSONValue} from './json.js';
-import type {ScanIndexOptions, ScanOptions} from './mod.js';
+import {asyncIterableToArray} from './async-iterable-to-array';
+import type {Entry} from './btree/node';
+import type {IndexKey} from './db/index';
+import type {ReadonlyJSONValue} from './json';
+import type {ScanIndexOptions, ScanOptions} from './mod';
 import {
   fromKeyForIndexScan,
   GetIndexScanIterator,
   GetScanIterator,
   makeScanResult,
-} from './scan-iterator.js';
+} from './scan-iterator';
 
 test('makeScanResult', async () => {
   function getTestScanAsyncIterator(
@@ -37,7 +37,7 @@ test('makeScanResult', async () => {
   }
 
   const t = async (
-    entries: ReadonlyEntry<ReadonlyJSONValue>[],
+    entries: Entry<ReadonlyJSONValue>[],
     options: ScanOptions,
     expectedEntries = entries,
   ) => {

@@ -4,23 +4,19 @@ import {Hash, emptyHash} from '../hash';
 import {
   DataNodeImpl,
   InternalNodeImpl,
-  Entry,
   emptyDataNodeImpl,
   newNodeImpl,
   findLeaf,
   NODE_LEVEL,
   NODE_ENTRIES,
-  isInternalNode,
-  DataNode,
-  InternalNode,
   InternalDiff,
   binarySearch,
   binarySearchFound,
   InternalDiffOperation,
-  ValueEntry,
-  HashEntry,
-  ValueEntries,
   internalizeBTreeNode,
+  isDataNodeImpl,
+  EntryWithOptionalSize,
+  Entry,
 } from './node';
 import {
   computeSplices,
@@ -39,19 +35,21 @@ import {deepEqual, InternalValue} from '../internal-value.js';
  */
 export const NODE_HEADER_SIZE = 11;
 
-export class BTreeRead implements AsyncIterable<ValueEntry> {
+export class BTreeRead
+  implements AsyncIterable<EntryWithOptionalSize<InternalValue>>
+{
   rootHash: Hash;
   protected readonly _dagRead: dag.Read;
   private readonly _cache: Map<Hash, DataNodeImpl | InternalNodeImpl> =
     new Map();
 
-  readonly getEntrySize: <T>(e: Entry<T>) => number;
+  readonly getEntrySize: <T>(e: T) => number;
   readonly chunkHeaderSize: number;
 
   constructor(
     dagRead: dag.Read,
     root: Hash = emptyHash,
-    getEntrySize: <T>(e: Entry<T>) => number = getSizeOfValue,
+    getEntrySize: <T>(e: T) => number = getSizeOfValue,
     chunkHeaderSize = NODE_HEADER_SIZE,
   ) {
     this.rootHash = root;
@@ -73,15 +71,22 @@ export class BTreeRead implements AsyncIterable<ValueEntry> {
     const {data} = await this._dagRead.mustGetChunk(hash);
     internalizeBTreeNode(data);
     const impl = newNodeImpl(
-      // We enforce that we do not mutate this at runtime by first checking the
-      // hash.
-      data[NODE_ENTRIES] as Entry<InternalValue>[],
+      this._chunkEntriesToTreeEntries(
+        data[NODE_ENTRIES] as readonly Entry<InternalValue>[],
+      ),
       hash,
       data[NODE_LEVEL],
       false,
     );
     this._cache.set(hash, impl);
     return impl;
+  }
+
+  protected _chunkEntriesToTreeEntries<V>(
+    entries: readonly Entry<V>[],
+  ): EntryWithOptionalSize<V>[] {
+    // Remove readonly modifier
+    return entries as unknown as EntryWithOptionalSize<V>[];
   }
 
   async get(key: string): Promise<InternalValue | undefined> {
@@ -113,20 +118,25 @@ export class BTreeRead implements AsyncIterable<ValueEntry> {
   // determining from an entry.key alone whether it is a regular key or an
   // encoded IndexKey in an index map. Without encoding regular map keys the
   // caller has to deal with encoding and decoding the keys for the index map.
-  scan(fromKey: string): AsyncIterableIterator<ValueEntry> {
+  scan(
+    fromKey: string,
+  ): AsyncIterableIterator<EntryWithOptionalSize<InternalValue>> {
     return scanForHash(
       this.rootHash,
       () => this.rootHash,
       this.rootHash,
       fromKey,
-      async (hash: Hash) => {
+      async hash => {
         const cached = await this.getNode(hash);
         if (cached) {
-          return cached.toChunkData();
+          return [
+            cached.level,
+            cached.isMutable ? cached.entries.slice() : cached.entries,
+          ] as ReadNodeResult;
         }
         const {data} = await this._dagRead.mustGetChunk(hash);
         internalizeBTreeNode(data);
-        return data;
+        return data as ReadNodeResult;
       },
     );
   }
@@ -136,12 +146,16 @@ export class BTreeRead implements AsyncIterable<ValueEntry> {
     yield* node.keys(this);
   }
 
-  async *entries(): AsyncIterableIterator<ValueEntry> {
+  async *entries(): AsyncIterableIterator<
+    EntryWithOptionalSize<InternalValue>
+  > {
     const node = await this.getNode(this.rootHash);
     yield* node.entriesIter(this);
   }
 
-  [Symbol.asyncIterator](): AsyncIterableIterator<ValueEntry> {
+  [Symbol.asyncIterator](): AsyncIterableIterator<
+    EntryWithOptionalSize<InternalValue>
+  > {
     return this.entries();
   }
 
@@ -185,7 +199,7 @@ async function* diffNodes(
     return;
   }
 
-  if (last.level === 0 && current.level === 0) {
+  if (isDataNodeImpl(last) && isDataNodeImpl(current)) {
     yield* diffEntries(
       (last as DataNodeImpl).entries,
       (current as DataNodeImpl).entries,
@@ -218,8 +232,8 @@ async function* diffNodes(
 }
 
 function* diffEntries(
-  lastEntries: ValueEntries,
-  currentEntries: ValueEntries,
+  lastEntries: readonly EntryWithOptionalSize<InternalValue>[],
+  currentEntries: readonly EntryWithOptionalSize<InternalValue>[],
 ): IterableIterator<InternalDiffOperation> {
   const lastLength = lastEntries.length;
   const currentLength = currentEntries.length;
@@ -271,7 +285,15 @@ function* diffEntries(
   }
 }
 
-type ReadNode = (hash: Hash) => Promise<InternalNode | DataNode>;
+// Redefine the type here to allow the optional size in the tuple.
+type ReadNodeResult = readonly [
+  level: number,
+  data:
+    | readonly EntryWithOptionalSize<InternalValue>[]
+    | readonly EntryWithOptionalSize<Hash>[],
+];
+
+type ReadNode = (hash: Hash) => Promise<ReadNodeResult>;
 
 export async function* scanForHash(
   expectedRootHash: Hash,
@@ -279,25 +301,23 @@ export async function* scanForHash(
   hash: Hash,
   fromKey: string,
   readNode: ReadNode,
-): AsyncIterableIterator<ValueEntry> {
+): AsyncIterableIterator<EntryWithOptionalSize<InternalValue>> {
   if (hash === emptyHash) {
     return;
   }
 
   const data = await readNode(hash);
-  // Clone to ensure we are not affected by mutated entry arrays.
-  const entries: readonly Entry<unknown>[] = [...data[NODE_ENTRIES]];
+  const entries = data[NODE_ENTRIES];
   let i = 0;
   if (fromKey) {
     i = binarySearch(fromKey, entries);
   }
-
-  if (isInternalNode(data)) {
+  if (data[NODE_LEVEL] > 0) {
     for (; i < entries.length; i++) {
       yield* scanForHash(
         expectedRootHash,
         getRootHash,
-        (entries[i] as HashEntry)[1],
+        (entries[i] as EntryWithOptionalSize<Hash>)[1],
         fromKey,
         readNode,
       );
@@ -317,7 +337,7 @@ export async function* scanForHash(
         );
         return;
       }
-      yield entries[i] as ValueEntry;
+      yield entries[i] as EntryWithOptionalSize<InternalValue>;
     }
   }
 }
@@ -327,7 +347,9 @@ export async function allEntriesAsDiff(
   op: 'add' | 'del',
 ): Promise<InternalDiff> {
   const diff: InternalDiffOperation[] = [];
-  const make: (entry: ValueEntry) => InternalDiffOperation =
+  const make: (
+    entry: EntryWithOptionalSize<InternalValue>,
+  ) => InternalDiffOperation =
     op === 'add'
       ? entry => {
           return {

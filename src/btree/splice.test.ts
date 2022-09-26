@@ -1,12 +1,12 @@
 import {expect} from '@esm-bundle/chai';
 import {computeSplices, Splice} from './splice';
-import type {ReadonlyEntry} from './node';
+import type {Entry} from './node';
 import type {ReadonlyJSONValue} from '../json.js';
 
 test('splice', () => {
   const t = <T extends ReadonlyJSONValue>(
-    previous: ReadonlyEntry<T>[],
-    current: ReadonlyEntry<T>[],
+    previous: Entry<T>[],
+    current: Entry<T>[],
     expected: Splice[],
   ) => {
     expect([...computeSplices(previous, current)]).to.deep.equal(expected);
@@ -246,10 +246,10 @@ test('splice', () => {
 
 test('splice roundtrip', () => {
   const t = <T>(
-    arr: readonly ReadonlyEntry<T>[],
+    arr: readonly Entry<T>[],
     start: number,
     deleteCount: number,
-    ...items: readonly ReadonlyEntry<T>[]
+    ...items: readonly Entry<T>[]
   ) => {
     const current = arr.slice();
     current.splice(start, deleteCount, ...items);
