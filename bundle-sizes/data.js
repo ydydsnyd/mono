@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1664204468497,
+  "lastUpdate": 1664208362869,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -25295,6 +25295,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23940,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "513e4395014ad75b4b1d679f591ba00c84c6df3f",
+          "message": "feat: Use a UUID instead of a hash (#275)\n\nInstead of using a slow hash function we use a UUID.\r\nThe main downside of this is that we do not get deduplication of data any more. Another downside is that diffing unrelated btrees will not be able to skip equal subtrees because their \"hashes \"will no longer match.",
+          "timestamp": "2022-09-26T16:04:53Z",
+          "tree_id": "33f20870facee40e661f54884bfd7b10b84e7aa0",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/513e4395014ad75b4b1d679f591ba00c84c6df3f"
+        },
+        "date": 1664208357166,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 194169,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34795,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 193023,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34481,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81510,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23644,
             "unit": "bytes"
           }
         ]
