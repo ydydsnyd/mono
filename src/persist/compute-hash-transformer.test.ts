@@ -1,23 +1,20 @@
 import {assert} from '@esm-bundle/chai';
 import * as dag from '../dag/mod';
 import * as db from '../db/mod';
-import * as utf8 from '../utf8';
 import {
-  BYTE_LENGTH,
-  Hash,
   makeNewFakeHashFunction,
+  makeNewTempHashFunction,
   parse as parseHash,
 } from '../hash';
 import {BTreeWrite} from '../btree/write';
 import {ComputeHashTransformer} from './compute-hash-transformer';
-import {encode} from '../base32-encode';
 import type {ReadonlyJSONValue} from '../json';
 
 test('fix hashes up of a single snapshot commit with empty btree', async () => {
   const clientID = 'client-id';
   const memdag = new dag.TestStore(
     undefined,
-    makeNewFakeHashFunction('t/aaa'),
+    makeNewTempHashFunction(),
     () => undefined,
   );
 
@@ -42,18 +39,18 @@ test('fix hashes up of a single snapshot commit with empty btree', async () => {
 
   const snapshot = memdag.kvStore.snapshot();
   assert.deepEqual(snapshot, {
-    'c/t/aaa000000000000000000000000000/d': [0, []],
-    'c/t/aaa000000000000000000000000001/d': {
+    'c/t/0000000000000000000000000000000000/d': [0, []],
+    'c/t/0000000000000000000000000000000001/d': {
       meta: makeSnapshotMetaForTesting(clientID),
-      valueHash: 't/aaa000000000000000000000000000',
+      valueHash: 't/0000000000000000000000000000000000',
       indexes: [],
     },
-    'c/t/aaa000000000000000000000000001/m': [
-      't/aaa000000000000000000000000000',
+    'c/t/0000000000000000000000000000000001/m': [
+      't/0000000000000000000000000000000000',
     ],
-    'h/test': 't/aaa000000000000000000000000001',
-    'c/t/aaa000000000000000000000000000/r': 1,
-    'c/t/aaa000000000000000000000000001/r': 1,
+    'h/test': 't/0000000000000000000000000000000001',
+    'c/t/0000000000000000000000000000000000/r': 1,
+    'c/t/0000000000000000000000000000000001/r': 1,
   });
 
   if (!treeChunk) {
@@ -65,14 +62,7 @@ test('fix hashes up of a single snapshot commit with empty btree', async () => {
     [treeChunk.hash, treeChunk],
   ]);
 
-  const hashFunc = async <V>(v: V): Promise<Hash> => {
-    const buf = await crypto.subtle.digest(
-      'SHA-512',
-      utf8.encode(JSON.stringify(v)),
-    );
-    const buf2 = new Uint8Array(buf, 0, BYTE_LENGTH);
-    return encode(buf2) as unknown as Hash;
-  };
+  const hashFunc = makeNewFakeHashFunction('9ea');
 
   const transformer = new ComputeHashTransformer(gatheredChunk, hashFunc);
   const newHeadHash = await transformer.transformCommit(headChunk.hash);
@@ -80,29 +70,29 @@ test('fix hashes up of a single snapshot commit with empty btree', async () => {
     newHeadHash,
     parseHash(
       DD31
-        ? '0tb6u6bkfvivbu1f0sjkl58kjmj13ac2'
-        : '9lrb08p9b7jqo8oad3aef60muj4td8ke',
+        ? '9ea00000-0000-4000-8000-000000000001'
+        : '9ea00000-0000-4000-8000-000000000001',
     ),
   );
 
   assert.deepEqual(Object.fromEntries(transformer.fixedChunks), {
-    mdcncodijhl6jk2o8bb7m0hg15p3sf24: {
+    '9ea00000-0000-4000-8000-000000000000': {
       data: [0, []],
-      hash: 'mdcncodijhl6jk2o8bb7m0hg15p3sf24',
+      hash: '9ea00000-0000-4000-8000-000000000000',
       meta: [],
     },
     [DD31
-      ? '0tb6u6bkfvivbu1f0sjkl58kjmj13ac2'
-      : '9lrb08p9b7jqo8oad3aef60muj4td8ke']: {
+      ? '9ea00000-0000-4000-8000-000000000001'
+      : '9ea00000-0000-4000-8000-000000000001']: {
       data: {
         indexes: [],
         meta: makeSnapshotMetaForTesting(clientID),
-        valueHash: 'mdcncodijhl6jk2o8bb7m0hg15p3sf24',
+        valueHash: '9ea00000-0000-4000-8000-000000000000',
       },
       hash: DD31
-        ? '0tb6u6bkfvivbu1f0sjkl58kjmj13ac2'
-        : '9lrb08p9b7jqo8oad3aef60muj4td8ke',
-      meta: ['mdcncodijhl6jk2o8bb7m0hg15p3sf24'],
+        ? '9ea00000-0000-4000-8000-000000000001'
+        : '9ea00000-0000-4000-8000-000000000001',
+      meta: ['9ea00000-0000-4000-8000-000000000000'],
     },
   });
 
@@ -116,26 +106,18 @@ test('fix hashes up of a single snapshot commit with empty btree', async () => {
     const newHeadHash = await transformer.transformCommit(headChunk.hash);
     assert.equal(
       newHeadHash,
-      parseHash(
-        DD31
-          ? 'cm6vbtkg2m7cuhkadd3pkoskes2pl9ea'
-          : '1fgr18o8m8p503lt3e9oaoct8k9ch47b',
-      ),
+      parseHash('9ea00000-0000-4000-8000-000000000002'),
     );
 
     assert.deepEqual(Object.fromEntries(transformer.fixedChunks), {
-      [DD31
-        ? 'cm6vbtkg2m7cuhkadd3pkoskes2pl9ea'
-        : '1fgr18o8m8p503lt3e9oaoct8k9ch47b']: {
+      ['9ea00000-0000-4000-8000-000000000002']: {
         data: {
           indexes: [],
           meta: makeSnapshotMetaForTesting(clientID),
-          valueHash: 't/aaa000000000000000000000000000',
+          valueHash: 't/0000000000000000000000000000000000',
         },
-        hash: DD31
-          ? 'cm6vbtkg2m7cuhkadd3pkoskes2pl9ea'
-          : '1fgr18o8m8p503lt3e9oaoct8k9ch47b',
-        meta: ['t/aaa000000000000000000000000000'],
+        hash: '9ea00000-0000-4000-8000-000000000002',
+        meta: ['t/0000000000000000000000000000000000'],
       },
     });
   }

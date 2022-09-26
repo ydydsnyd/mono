@@ -99,7 +99,7 @@ test('dag with some permanent hashes and some temp hashes on top', async () => {
     const visitor = new GatherVisitor(dagRead);
     await visitor.visitCommit(chain[chain.length - 1].chunk.hash);
     const meta: JSONObject = {
-      basisHash: 'fakehash000000000000000000000003',
+      basisHash: 'face0000-0000-4000-8000-000000000003',
       mutationID: 2,
       mutatorArgsJSON: [2],
       mutatorName: 'mutator_name_2',
@@ -111,21 +111,21 @@ test('dag with some permanent hashes and some temp hashes on top', async () => {
       meta.clientID = clientID;
     }
     expect(Object.fromEntries(visitor.gatheredChunks)).to.deep.equal({
-      't/000000000000000000000000000000': {
+      't/0000000000000000000000000000000000': {
         data: [0, [['local', '2']]],
-        hash: 't/000000000000000000000000000000',
+        hash: 't/0000000000000000000000000000000000',
         meta: [],
       },
-      't/000000000000000000000000000001': {
+      't/0000000000000000000000000000000001': {
         data: {
           indexes: [],
           meta,
-          valueHash: 't/000000000000000000000000000000',
+          valueHash: 't/0000000000000000000000000000000000',
         },
-        hash: 't/000000000000000000000000000001',
+        hash: 't/0000000000000000000000000000000001',
         meta: [
-          't/000000000000000000000000000000',
-          'fakehash000000000000000000000003',
+          't/0000000000000000000000000000000000',
+          'face0000-0000-4000-8000-000000000003',
         ],
       },
     });
@@ -168,7 +168,7 @@ test('dag with some permanent hashes and some temp hashes on top', async () => {
     expect(Object.fromEntries(visitor.gatheredChunks)).to.deep.equal(
       DD31
         ? {
-            't/000000000000000000000000000002': {
+            't/0000000000000000000000000000000002': {
               data: {
                 indexes: [
                   {
@@ -178,11 +178,11 @@ test('dag with some permanent hashes and some temp hashes on top', async () => {
                       name: '4',
                       prefix: 'local',
                     },
-                    valueHash: 'fakehash000000000000000000000004',
+                    valueHash: 'face0000-0000-4000-8000-000000000004',
                   },
                 ],
                 meta: {
-                  basisHash: 'fakehash000000000000000000000006',
+                  basisHash: 'face0000-0000-4000-8000-000000000006',
                   clientID: 'client-id',
                   mutationID: 4,
                   mutatorArgsJSON: [4],
@@ -191,23 +191,23 @@ test('dag with some permanent hashes and some temp hashes on top', async () => {
                   timestamp: 42,
                   type: 2,
                 },
-                valueHash: 'fakehash000000000000000000000005',
+                valueHash: 'face0000-0000-4000-8000-000000000005',
               },
-              hash: 't/000000000000000000000000000002',
+              hash: 't/0000000000000000000000000000000002',
               meta: [
-                'fakehash000000000000000000000005',
-                'fakehash000000000000000000000006',
-                'fakehash000000000000000000000004',
+                'face0000-0000-4000-8000-000000000005',
+                'face0000-0000-4000-8000-000000000006',
+                'face0000-0000-4000-8000-000000000004',
               ],
             },
           }
         : {
-            't/000000000000000000000000000002': {
+            't/0000000000000000000000000000000002': {
               data: [0, [['\u00002\u0000local', '2']]],
-              hash: 't/000000000000000000000000000002',
+              hash: 't/0000000000000000000000000000000002',
               meta: [],
             },
-            't/000000000000000000000000000003': {
+            't/0000000000000000000000000000000003': {
               data: {
                 indexes: [
                   {
@@ -217,21 +217,21 @@ test('dag with some permanent hashes and some temp hashes on top', async () => {
                       name: '4',
                       allowEmpty: false,
                     },
-                    valueHash: 't/000000000000000000000000000002',
+                    valueHash: 't/0000000000000000000000000000000002',
                   },
                 ],
                 meta: {
-                  basisHash: 'fakehash000000000000000000000005',
+                  basisHash: 'face0000-0000-4000-8000-000000000005',
                   lastMutationID: 3,
                   type: 1,
                 },
-                valueHash: 'fakehash000000000000000000000004',
+                valueHash: 'face0000-0000-4000-8000-000000000004',
               },
-              hash: 't/000000000000000000000000000003',
+              hash: 't/0000000000000000000000000000000003',
               meta: [
-                'fakehash000000000000000000000004',
-                'fakehash000000000000000000000005',
-                't/000000000000000000000000000002',
+                'face0000-0000-4000-8000-000000000004',
+                'face0000-0000-4000-8000-000000000005',
+                't/0000000000000000000000000000000002',
               ],
             },
           },

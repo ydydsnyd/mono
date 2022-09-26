@@ -2,7 +2,6 @@ export type {Chunk, CreateChunk} from './chunk';
 export {
   createChunk,
   createChunkWithHash,
-  createChunkWithNativeHash,
   throwChunkHasher,
   uuidChunkHasher,
 } from './chunk';

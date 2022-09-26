@@ -399,7 +399,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     const perKvStore = experimentalKVStore || new IDBStore(this.idbName);
     this._perdag = new dag.StoreImpl(
       perKvStore,
-      DD31 ? dag.uuidChunkHasher : dag.throwChunkHasher,
+      dag.uuidChunkHasher,
       assertNotTempHash,
     );
     this._memdag = new dag.LazyStore(
@@ -469,7 +469,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     );
   }
 
-  protected _memdagHashFunction(): <V>(data: V) => Hash {
+  protected _memdagHashFunction(): () => Hash {
     return newTempHash;
   }
 

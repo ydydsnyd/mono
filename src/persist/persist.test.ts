@@ -17,6 +17,7 @@ import {
   assertNotTempHash,
   isTempHash,
   makeNewFakeHashFunction,
+  makeNewTempHashFunction,
 } from '../hash';
 import {getClient, ClientStateNotFoundError, assertClientSDD} from './clients';
 import {addSyncSnapshot} from '../sync/test-helpers';
@@ -230,12 +231,12 @@ test('We get a MissingClientException during persist if client is missing', asyn
 function setupPersistTest() {
   const memdag = new dag.TestStore(
     undefined,
-    makeNewFakeHashFunction('t/memdag'),
+    makeNewTempHashFunction(),
     assertHash,
   );
   const perdag = new dag.TestStore(
     undefined,
-    makeNewFakeHashFunction('perdag'),
+    makeNewFakeHashFunction('eda2'),
     assertNotTempHash,
   );
 

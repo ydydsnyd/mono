@@ -29,6 +29,6 @@ test('getRoot', async () => {
   };
 
   await t(undefined, new Error('No head found for main'));
-  const foo = fakeHash('foo');
+  const foo = fakeHash('f00');
   await t(foo, foo);
 });

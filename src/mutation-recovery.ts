@@ -155,7 +155,7 @@ export class MutationRecovery<M extends MutatorDefs> {
         const perKvStore = new IDBStore(database.name);
         perdag = perDagToClose = new dag.StoreImpl(
           perKvStore,
-          dag.throwChunkHasher,
+          dag.uuidChunkHasher,
           assertNotTempHash,
         );
       }

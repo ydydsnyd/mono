@@ -17,6 +17,10 @@ import {
   setBranches,
 } from './branches';
 
+const headBranch1Hash = fakeHash('b1');
+const headBranch2Hash = fakeHash('b2');
+const headBranch3Hash = fakeHash('b3');
+
 type PartialBranch = Partial<Branch> & Pick<Branch, 'headHash'>;
 
 export function makeBranchMap(
@@ -70,14 +74,14 @@ test('setBranches and getBranches', async () => {
   await testSetBranches(
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1'],
         indexes: {idx1: {jsonPointer: '/foo'}},
         mutationIDs: {c1: 4},
         lastServerAckdMutationIDs: {c1: 2},
       },
       branch2: {
-        headHash: fakeHash('headbranch2'),
+        headHash: headBranch2Hash,
       },
     },
     dagStore,
@@ -116,19 +120,19 @@ test('setBranches and getBranches sequence', async () => {
   await testSetBranchesSequence(
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1', 'mutator2'],
         indexes: {idx1: {jsonPointer: '/foo'}},
         mutationIDs: {c1: 4},
         lastServerAckdMutationIDs: {c1: 2},
       },
       branch2: {
-        headHash: fakeHash('headbranch2'),
+        headHash: headBranch2Hash,
       },
     },
     {
       branch3: {
-        headHash: fakeHash('headbranch3'),
+        headHash: headBranch3Hash,
         // note the order of these names shouldn't matter
         mutatorNames: ['mutator2', 'mutator1'],
         indexes: {idx1: {jsonPointer: '/bar'}},
@@ -144,19 +148,19 @@ test('setBranches throws error if indexes are modified', async () => {
   await testSetBranchesSequenceThrowsError(
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1'],
         indexes: {idx1: {jsonPointer: '/foo'}},
         mutationIDs: {c1: 4},
         lastServerAckdMutationIDs: {c1: 2},
       },
       branch2: {
-        headHash: fakeHash('headbranch2'),
+        headHash: headBranch2Hash,
       },
     },
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1'],
         indexes: {idx1: {jsonPointer: '/bar'}},
         mutationIDs: {c1: 4},
@@ -172,19 +176,19 @@ test('setBranches does not throw error if indexes differ only by default value p
   await testSetBranchesSequence(
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1'],
         indexes: {idx1: {jsonPointer: '/foo'}},
         mutationIDs: {c1: 4},
         lastServerAckdMutationIDs: {c1: 2},
       },
       branch2: {
-        headHash: fakeHash('headbranch2'),
+        headHash: headBranch2Hash,
       },
     },
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1'],
         indexes: {idx1: {jsonPointer: '/foo', prefix: '', allowEmpty: false}},
         mutationIDs: {c1: 4},
@@ -199,19 +203,19 @@ test('setBranches does not throw error if indexes differ only by order', async (
   await testSetBranchesSequence(
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1'],
         indexes: {idx1: {jsonPointer: '/foo'}, idx2: {jsonPointer: '/bar'}},
         mutationIDs: {c1: 4},
         lastServerAckdMutationIDs: {c1: 2},
       },
       branch2: {
-        headHash: fakeHash('headbranch2'),
+        headHash: headBranch2Hash,
       },
     },
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1'],
         indexes: {
           idx2: {jsonPointer: '/bar'},
@@ -229,19 +233,19 @@ test('setBranches throws error if mutatorNames are modified', async () => {
   await testSetBranchesSequenceThrowsError(
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1'],
         indexes: {idx1: {jsonPointer: '/foo'}},
         mutationIDs: {c1: 4},
         lastServerAckdMutationIDs: {c1: 2},
       },
       branch2: {
-        headHash: fakeHash('headbranch2'),
+        headHash: headBranch2Hash,
       },
     },
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1', 'mutator2'],
         indexes: {idx1: {jsonPointer: '/foo'}},
         mutationIDs: {c1: 4},
@@ -257,19 +261,19 @@ test('setBranches does not throw error if mutatorNames differ only by order', as
   await testSetBranchesSequence(
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1', 'mutator2'],
         indexes: {idx1: {jsonPointer: '/foo'}},
         mutationIDs: {c1: 4},
         lastServerAckdMutationIDs: {c1: 2},
       },
       branch2: {
-        headHash: fakeHash('headbranch2'),
+        headHash: headBranch2Hash,
       },
     },
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator2', 'mutator1'],
         indexes: {idx1: {jsonPointer: '/foo'}},
         mutationIDs: {c1: 4},
@@ -284,20 +288,20 @@ test('setBranches throws error if mutatorNames is not a set', async () => {
   await testSetBranchesSequenceThrowsError(
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1'],
       },
       branch2: {
-        headHash: fakeHash('headbranch2'),
+        headHash: headBranch2Hash,
       },
     },
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1', 'mutator1'],
       },
       branch2: {
-        headHash: fakeHash('headbranch2'),
+        headHash: headBranch2Hash,
       },
     },
     "A branch's mutatorNames must be a set.",
@@ -368,20 +372,20 @@ test('setBranch', async () => {
   await testSetBranch(
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1', 'mutator2'],
         indexes: {idx1: {jsonPointer: '/foo'}},
         mutationIDs: {c1: 4},
         lastServerAckdMutationIDs: {c1: 2},
       },
       branch2: {
-        headHash: fakeHash('headbranch2'),
+        headHash: headBranch2Hash,
       },
     },
     [
       'branch3',
       {
-        headHash: fakeHash('headbranch3'),
+        headHash: headBranch3Hash,
         // note the order of these names shouldn't matter
         mutatorNames: ['mutator2', 'mutator1'],
         indexes: {idx1: {jsonPointer: '/bar'}},
@@ -391,17 +395,17 @@ test('setBranch', async () => {
     ],
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1', 'mutator2'],
         indexes: {idx1: {jsonPointer: '/foo'}},
         mutationIDs: {c1: 4},
         lastServerAckdMutationIDs: {c1: 2},
       },
       branch2: {
-        headHash: fakeHash('headbranch2'),
+        headHash: headBranch2Hash,
       },
       branch3: {
-        headHash: fakeHash('headbranch3'),
+        headHash: headBranch3Hash,
         // note the order of these names shouldn't matter
         mutatorNames: ['mutator2', 'mutator1'],
         indexes: {idx1: {jsonPointer: '/bar'}},
@@ -417,20 +421,20 @@ test('setBranch throws error if indexes are modified', async () => {
   await testSetBranchThrowsError(
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1'],
         indexes: {idx1: {jsonPointer: '/foo'}},
         mutationIDs: {c1: 4},
         lastServerAckdMutationIDs: {c1: 2},
       },
       branch2: {
-        headHash: fakeHash('headbranch2'),
+        headHash: headBranch2Hash,
       },
     },
     [
       'branch1',
       {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1'],
         indexes: {idx1: {jsonPointer: '/bar'}},
         mutationIDs: {c1: 4},
@@ -446,20 +450,20 @@ test('setBranch does not throw error if indexes differ only by default value pre
   await testSetBranch(
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1'],
         indexes: {idx1: {jsonPointer: '/foo'}},
         mutationIDs: {c1: 4},
         lastServerAckdMutationIDs: {c1: 2},
       },
       branch2: {
-        headHash: fakeHash('headbranch2'),
+        headHash: headBranch2Hash,
       },
     },
     [
       'branch1',
       {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1'],
         indexes: {idx1: {jsonPointer: '/foo', prefix: '', allowEmpty: false}},
         mutationIDs: {c1: 4},
@@ -468,14 +472,14 @@ test('setBranch does not throw error if indexes differ only by default value pre
     ],
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1'],
         indexes: {idx1: {jsonPointer: '/foo', prefix: '', allowEmpty: false}},
         mutationIDs: {c1: 4},
         lastServerAckdMutationIDs: {c1: 2},
       },
       branch2: {
-        headHash: fakeHash('headbranch2'),
+        headHash: headBranch2Hash,
       },
     },
     new dag.TestStore(),
@@ -486,20 +490,20 @@ test('setBranch does not throw error if indexes differ only by order', async () 
   await testSetBranch(
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1'],
         indexes: {idx1: {jsonPointer: '/foo'}, idx2: {jsonPointer: '/bar'}},
         mutationIDs: {c1: 4},
         lastServerAckdMutationIDs: {c1: 2},
       },
       branch2: {
-        headHash: fakeHash('headbranch2'),
+        headHash: headBranch2Hash,
       },
     },
     [
       'branch1',
       {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1'],
         indexes: {
           idx2: {jsonPointer: '/bar'},
@@ -511,14 +515,14 @@ test('setBranch does not throw error if indexes differ only by order', async () 
     ],
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1'],
         indexes: {idx1: {jsonPointer: '/foo'}, idx2: {jsonPointer: '/bar'}},
         mutationIDs: {c1: 4},
         lastServerAckdMutationIDs: {c1: 2},
       },
       branch2: {
-        headHash: fakeHash('headbranch2'),
+        headHash: headBranch2Hash,
       },
     },
     new dag.TestStore(),
@@ -529,20 +533,20 @@ test('setBranch throws error if mutatorNames are modified', async () => {
   await testSetBranchThrowsError(
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1'],
         indexes: {idx1: {jsonPointer: '/foo'}},
         mutationIDs: {c1: 4},
         lastServerAckdMutationIDs: {c1: 2},
       },
       branch2: {
-        headHash: fakeHash('headbranch2'),
+        headHash: headBranch2Hash,
       },
     },
     [
       'branch1',
       {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1', 'mutator2'],
         indexes: {idx1: {jsonPointer: '/foo'}},
         mutationIDs: {c1: 4},
@@ -558,20 +562,20 @@ test('setBranch does not throw error if mutatorNames differ only by order', asyn
   await testSetBranch(
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1', 'mutator2'],
         indexes: {idx1: {jsonPointer: '/foo'}},
         mutationIDs: {c1: 4},
         lastServerAckdMutationIDs: {c1: 2},
       },
       branch2: {
-        headHash: fakeHash('headbranch2'),
+        headHash: headBranch2Hash,
       },
     },
     [
       'branch1',
       {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator2', 'mutator1'],
         indexes: {idx1: {jsonPointer: '/foo'}},
         mutationIDs: {c1: 4},
@@ -580,14 +584,14 @@ test('setBranch does not throw error if mutatorNames differ only by order', asyn
     ],
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator2', 'mutator1'],
         indexes: {idx1: {jsonPointer: '/foo'}},
         mutationIDs: {c1: 4},
         lastServerAckdMutationIDs: {c1: 2},
       },
       branch2: {
-        headHash: fakeHash('headbranch2'),
+        headHash: headBranch2Hash,
       },
     },
     new dag.TestStore(),
@@ -598,17 +602,17 @@ test('setBranch throws error if mutatorNames is not a set', async () => {
   await testSetBranchThrowsError(
     {
       branch1: {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1'],
       },
       branch2: {
-        headHash: fakeHash('headbranch2'),
+        headHash: headBranch2Hash,
       },
     },
     [
       'branch1',
       {
-        headHash: fakeHash('headbranch1'),
+        headHash: headBranch1Hash,
         mutatorNames: ['mutator1', 'mutator1'],
       },
     ],
@@ -620,11 +624,11 @@ test('setBranch throws error if mutatorNames is not a set', async () => {
 test('deleteBranch', async () => {
   const dagStore = new dag.TestStore();
   const branch2 = makeBranch({
-    headHash: fakeHash('headbranch2'),
+    headHash: headBranch2Hash,
   });
   const branchMap1 = makeBranchMap({
     branch1: {
-      headHash: fakeHash('headbranch1'),
+      headHash: headBranch1Hash,
     },
     branch2,
   });
@@ -673,8 +677,8 @@ async function expectRefs(expected: Hash[], dagStore: dag.Store) {
 
 test('setBranches properly manages refs to branch heads when branches are removed and added', async () => {
   const dagStore = new dag.TestStore();
-  const branch1HeadHash = fakeHash('headbranch1');
-  const branch2HeadHash = fakeHash('headbranch2');
+  const branch1HeadHash = headBranch1Hash;
+  const branch2HeadHash = headBranch2Hash;
 
   const branchMap1 = makeBranchMap({
     branch1: {
@@ -685,7 +689,7 @@ test('setBranches properly manages refs to branch heads when branches are remove
     },
   });
 
-  const branch3HeadHash = fakeHash('headbranch3');
+  const branch3HeadHash = fakeHash('baeada1');
   const branchMap2 = makeBranchMap({
     branch3: {
       headHash: branch3HeadHash,
@@ -708,9 +712,9 @@ test('setBranches properly manages refs to branch heads when branches are remove
 
 test("setBranches properly manages refs to branch heads when a branch's head changes", async () => {
   const dagStore = new dag.TestStore();
-  const branch1V1HeadHash = fakeHash('headbranch1');
-  const branch1V2HeadHash = fakeHash('headbranch1v2');
-  const branch2HeadHash = fakeHash('headbranch2');
+  const branch1V1HeadHash = fakeHash('b11');
+  const branch1V2HeadHash = fakeHash('b12');
+  const branch2HeadHash = fakeHash('b2');
 
   const branch1V1 = makeBranch({
     headHash: branch1V1HeadHash,
@@ -746,9 +750,9 @@ test("setBranches properly manages refs to branch heads when a branch's head cha
 
 test('setBranch properly manages refs to branch heads when a branch is added', async () => {
   const dagStore = new dag.TestStore();
-  const branch1HeadHash = fakeHash('headbranch1');
-  const branch2HeadHash = fakeHash('headbranch2');
-  const branch3HeadHash = fakeHash('headbranch2');
+  const branch1HeadHash = fakeHash('b1');
+  const branch2HeadHash = fakeHash('b2');
+  const branch3HeadHash = fakeHash('b3');
 
   const branchMap1 = makeBranchMap({
     branch1: {
@@ -784,9 +788,9 @@ test('setBranch properly manages refs to branch heads when a branch is added', a
 
 test("setBranch properly manages refs to branch heads when a branch's head changes", async () => {
   const dagStore = new dag.TestStore();
-  const branch1V1HeadHash = fakeHash('headbranch1');
-  const branch1V2HeadHash = fakeHash('headbranch1v2');
-  const branch2HeadHash = fakeHash('headbranch2');
+  const branch1V1HeadHash = fakeHash('b11');
+  const branch1V2HeadHash = fakeHash('b12');
+  const branch2HeadHash = fakeHash('b2');
 
   const branchMap1 = makeBranchMap({
     branch1: {
@@ -819,8 +823,8 @@ test("setBranch properly manages refs to branch heads when a branch's head chang
 
 test('deleteBranch properly manages refs to branch heads', async () => {
   const dagStore = new dag.TestStore();
-  const branch1HeadHash = fakeHash('headbranch1');
-  const branch2HeadHash = fakeHash('headbranch2');
+  const branch1HeadHash = headBranch1Hash;
+  const branch2HeadHash = headBranch2Hash;
 
   const branchMap1 = makeBranchMap({
     branch1: {
@@ -848,12 +852,12 @@ test('deleteBranch properly manages refs to branch heads', async () => {
 test('getBranch', async () => {
   const dagStore = new dag.TestStore();
   const branch1 = makeBranch({
-    headHash: fakeHash('headbranch1'),
+    headHash: headBranch1Hash,
   });
   const branchMap = makeBranchMap({
     branch1,
     branch2: {
-      headHash: fakeHash('headbranch2'),
+      headHash: headBranch2Hash,
     },
   });
   await dagStore.withWrite(async (write: dag.Write) => {
@@ -877,7 +881,7 @@ test('hasBranchState', async () => {
   await dagStore.withWrite(async (write: dag.Write) => {
     await setBranches(
       makeBranchMap({
-        branch1: {headHash: fakeHash('headbranch1')},
+        branch1: {headHash: headBranch1Hash},
       }),
       write,
     );
@@ -895,7 +899,7 @@ test('assertHasBranchState', async () => {
   await dagStore.withWrite(async (write: dag.Write) => {
     await setBranches(
       makeBranchMap({
-        branch1: {headHash: fakeHash('headbranch1')},
+        branch1: {headHash: headBranch1Hash},
       }),
       write,
     );
@@ -940,7 +944,7 @@ test('branchHasPendingMutations', () => {
   expect(
     branchHasPendingMutations(
       makeBranch({
-        headHash: fakeHash('headbranch1'),
+        headHash: fakeHash('f'),
         mutationIDs: {},
         lastServerAckdMutationIDs: {},
       }),
@@ -949,7 +953,7 @@ test('branchHasPendingMutations', () => {
   expect(
     branchHasPendingMutations(
       makeBranch({
-        headHash: fakeHash('headbranch1'),
+        headHash: fakeHash('f1'),
         mutationIDs: {client1: 1},
         lastServerAckdMutationIDs: {},
       }),
@@ -958,7 +962,7 @@ test('branchHasPendingMutations', () => {
   expect(
     branchHasPendingMutations(
       makeBranch({
-        headHash: fakeHash('headbranch1'),
+        headHash: fakeHash('f1'),
         mutationIDs: {client1: 1},
         lastServerAckdMutationIDs: {client1: 1},
       }),
@@ -967,7 +971,7 @@ test('branchHasPendingMutations', () => {
   expect(
     branchHasPendingMutations(
       makeBranch({
-        headHash: fakeHash('headbranch1'),
+        headHash: fakeHash('f1'),
         mutationIDs: {client1: 0},
         lastServerAckdMutationIDs: {},
       }),
@@ -976,7 +980,7 @@ test('branchHasPendingMutations', () => {
   expect(
     branchHasPendingMutations(
       makeBranch({
-        headHash: fakeHash('headbranch1'),
+        headHash: fakeHash('f1'),
         mutationIDs: {client1: 1, client2: 2},
         lastServerAckdMutationIDs: {client1: 1, client2: 1},
       }),
@@ -985,7 +989,7 @@ test('branchHasPendingMutations', () => {
   expect(
     branchHasPendingMutations(
       makeBranch({
-        headHash: fakeHash('headbranch1'),
+        headHash: fakeHash('f1'),
         mutationIDs: {client1: 0, client2: 2},
         lastServerAckdMutationIDs: {client2: 2},
       }),

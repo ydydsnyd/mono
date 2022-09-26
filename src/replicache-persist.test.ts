@@ -37,7 +37,7 @@ test('basic persist & load', async () => {
 
   perdag = new dag.StoreImpl(
     new kv.IDBStore(rep.idbName),
-    DD31 ? dag.uuidChunkHasher : dag.throwChunkHasher,
+    dag.uuidChunkHasher,
     assertNotTempHash,
   );
 

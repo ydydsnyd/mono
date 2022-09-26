@@ -59,27 +59,27 @@ test('computeRefCountUpdates includes entry for every putChunk', async () => {
   // A   B  D
   const {hashes, delegate} = createGraph({
     graph: {
-      r: ['a', 'b'],
-      a: [],
-      b: [],
-      c: ['d'],
-      d: [],
+      '000': ['a', 'b'],
+      'a': [],
+      'b': [],
+      'c': ['d'],
+      'd': [],
     },
     heads: [],
     allZeroRefCounts: true,
   });
 
   const refCountUpdates = await computeRefCountUpdates(
-    [{old: undefined, new: hashes['r']}],
+    [{old: undefined, new: hashes['000']}],
     new Set(Object.values(hashes)),
     delegate,
   );
   expectRefCountUpdates(refCountUpdates, {
-    r: 1,
-    a: 1,
-    b: 1,
-    c: 0,
-    d: 0,
+    '000': 1,
+    'a': 1,
+    'b': 1,
+    'c': 0,
+    'd': 0,
   });
 });
 
@@ -94,26 +94,26 @@ test('computeRefCountUpdates for basic diamond pattern', async () => {
 
   const {hashes, delegate} = createGraph({
     graph: {
-      r: ['a', 'b'],
-      a: ['c'],
-      b: ['c'],
-      c: [],
+      '000': ['a', 'b'],
+      'a': ['c'],
+      'b': ['c'],
+      'c': [],
     },
-    heads: ['r'],
+    heads: ['000'],
   });
 
   const eHash = fakeHash('e');
   const refCountUpdates = await computeRefCountUpdates(
-    [{old: hashes['r'], new: eHash}],
+    [{old: hashes['000'], new: eHash}],
     new Set([eHash]),
     delegate,
   );
   expectRefCountUpdates(refCountUpdates, {
-    r: 0,
-    a: 0,
-    b: 0,
-    c: 0,
-    e: 1,
+    '000': 0,
+    'a': 0,
+    'b': 0,
+    'c': 0,
+    'e': 1,
   });
 });
 
@@ -130,13 +130,13 @@ test('computeRefCountUpdates for a diamond pattern and a child', async () => {
 
   const {hashes, delegate} = createGraph({
     graph: {
-      r: ['a', 'b'],
-      a: ['c'],
-      b: ['c'],
-      c: ['d'],
-      d: [],
+      '000': ['a', 'b'],
+      'a': ['c'],
+      'b': ['c'],
+      'c': ['d'],
+      'd': [],
     },
-    heads: ['r'],
+    heads: ['000'],
   });
 
   // Move test head from R to A
@@ -146,15 +146,15 @@ test('computeRefCountUpdates for a diamond pattern and a child', async () => {
   //  |
   //  D
   const refCountUpdates = await computeRefCountUpdates(
-    [{old: hashes['r'], new: hashes['a']}],
+    [{old: hashes['000'], new: hashes['a']}],
     new Set(),
     delegate,
   );
   expectRefCountUpdates(refCountUpdates, {
-    r: 0,
-    a: 1,
-    b: 0,
-    c: 1,
+    '000': 0,
+    'a': 1,
+    'b': 0,
+    'c': 1,
   });
 });
 
@@ -169,28 +169,28 @@ test('computeRefCountUpdates for 3 incoming refs', async () => {
 
   const {hashes, delegate} = createGraph({
     graph: {
-      r: ['a', 'b', 'c'],
-      a: ['d'],
-      b: ['d'],
-      c: ['d'],
-      d: [],
+      '000': ['a', 'b', 'c'],
+      'a': ['d'],
+      'b': ['d'],
+      'c': ['d'],
+      'd': [],
     },
-    heads: ['r'],
+    heads: ['000'],
   });
 
   const eHash = fakeHash('e');
   const refCountUpdates = await computeRefCountUpdates(
-    [{old: hashes['r'], new: eHash}],
+    [{old: hashes['000'], new: eHash}],
     new Set([eHash]),
     delegate,
   );
   expectRefCountUpdates(refCountUpdates, {
-    r: 0,
-    a: 0,
-    b: 0,
-    c: 0,
-    d: 0,
-    e: 1,
+    '000': 0,
+    'a': 0,
+    'b': 0,
+    'c': 0,
+    'd': 0,
+    'e': 1,
   });
 });
 
@@ -203,40 +203,40 @@ test('computeRefCountUpdates for 3 incoming refs bypassing one level', async () 
 
   const {hashes, delegate} = createGraph({
     graph: {
-      r: ['a', 'b', 'c'],
-      a: ['c'],
-      b: ['c'],
-      c: [],
+      '000': ['a', 'b', 'c'],
+      'a': ['c'],
+      'b': ['c'],
+      'c': [],
     },
-    heads: ['r'],
+    heads: ['000'],
   });
 
   const eHash = fakeHash('e');
   const refCountUpdates = await computeRefCountUpdates(
-    [{old: hashes['r'], new: eHash}],
+    [{old: hashes['000'], new: eHash}],
     new Set([eHash]),
     delegate,
   );
   expectRefCountUpdates(refCountUpdates, {
-    r: 0,
-    a: 0,
-    b: 0,
-    c: 0,
-    e: 1,
+    '000': 0,
+    'a': 0,
+    'b': 0,
+    'c': 0,
+    'e': 1,
   });
 });
 
 test('computeRefCountUpdates for heads updating to same hash should have no refcount updates', async () => {
   const {hashes, delegate} = createGraph({
     graph: {
-      r: ['a'],
-      a: [],
+      '000': ['a'],
+      'a': [],
     },
-    heads: ['r'],
+    heads: ['000'],
   });
 
   const refCountUpdates = await computeRefCountUpdates(
-    [{old: hashes['r'], new: hashes['r']}],
+    [{old: hashes['000'], new: hashes['000']}],
     new Set(),
     delegate,
   );

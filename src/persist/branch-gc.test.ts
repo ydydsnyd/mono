@@ -47,21 +47,21 @@ test('initBranchGC starts 5 min interval that collects branches that are not ref
   }
   const dagStore = new dag.TestStore();
   const branch1 = {
-    headHash: fakeHash('headbranch1'),
+    headHash: fakeHash('eadbac1'),
     mutatorNames: [],
     indexes: {},
     mutationIDs: {client1: 10},
     lastServerAckdMutationIDs: {},
   };
   const branch2 = {
-    headHash: fakeHash('headbranch2'),
+    headHash: fakeHash('eadbac2'),
     mutatorNames: [],
     indexes: {},
     mutationIDs: {client2: 2, client3: 3},
     lastServerAckdMutationIDs: {client2: 2, client3: 3},
   };
   const branch3 = {
-    headHash: fakeHash('headbranch3'),
+    headHash: fakeHash('eadbac3'),
     mutatorNames: [],
     indexes: {},
     mutationIDs: {},
@@ -81,17 +81,17 @@ test('initBranchGC starts 5 min interval that collects branches that are not ref
   });
   const client1 = makeClient({
     heartbeatTimestampMs: START_TIME,
-    headHash: fakeHash('headclient1'),
+    headHash: fakeHash('eadce1'),
     branchID: 'branch1',
   });
   const client2 = makeClient({
     heartbeatTimestampMs: START_TIME,
-    headHash: fakeHash('headclient2'),
+    headHash: fakeHash('eadce2'),
     branchID: 'branch2',
   });
   const client3 = makeClient({
     heartbeatTimestampMs: START_TIME,
-    headHash: fakeHash('headclient3'),
+    headHash: fakeHash('eadce3'),
     branchID: 'branch2',
   });
   await setClients(

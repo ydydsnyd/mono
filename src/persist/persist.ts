@@ -2,7 +2,7 @@ import {assert} from '../asserts';
 import type * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import * as sync from '../sync/mod';
-import {Hash, hashOf} from '../hash';
+import {Hash, newUUIDHash} from '../hash';
 import {assertHasClientState, updateClients} from './clients';
 import {ComputeHashTransformer, FixedChunks} from './compute-hash-transformer';
 import {GatherVisitor} from './gather-visitor';
@@ -53,6 +53,7 @@ export async function persist(
     return;
   }
 
+  // TODO(arv): Remove this step now that we use UUIDs instead of hashes.
   // 2. Compute the hashes for these gathered chunks.
   const computeHashesP = computeHashes(gatheredChunks, mainHeadTempHash);
 
@@ -114,7 +115,7 @@ async function computeHashes(
   gatheredChunks: ReadonlyMap<Hash, dag.Chunk>,
   mainHeadTempHash: Hash,
 ): Promise<[FixedChunks, ReadonlyMap<Hash, Hash>, Hash]> {
-  const transformer = new ComputeHashTransformer(gatheredChunks, hashOf);
+  const transformer = new ComputeHashTransformer(gatheredChunks, newUUIDHash);
   const mainHeadHash = await transformer.transformCommit(mainHeadTempHash);
   const {fixedChunks, mappings} = transformer;
   return [fixedChunks, mappings, mainHeadHash];

@@ -1,5 +1,5 @@
 import type {LogContext} from '@rocicorp/logger';
-import {assertHash, Hash, hashOf} from '../hash';
+import {assertHash, Hash, newUUIDHash} from '../hash';
 import * as btree from '../btree/mod';
 import * as dag from '../dag/mod';
 import * as db from '../db/mod';
@@ -187,12 +187,6 @@ function clientMapToChunkData(
   return Object.fromEntries(clients);
 }
 
-function clientMapToChunkDataNoHashValidation(
-  clients: ClientMap,
-): ReadonlyJSONValue {
-  return Object.fromEntries(clients);
-}
-
 export async function getClients(dagRead: dag.Read): Promise<ClientMap> {
   const hash = await dagRead.getHead(CLIENTS_HEAD_NAME);
   return getClientsAtHash(hash, dagRead);
@@ -293,7 +287,8 @@ export async function initClient(
       });
     } else {
       // No existing snapshot to bootstrap from. Create empty snapshot.
-      const emptyBTreeChunk = await dag.createChunkWithNativeHash(
+      const emptyBTreeChunk = dag.createChunkWithHash(
+        newUUIDHash(),
         btree.emptyDataNode,
         [],
       );
@@ -307,7 +302,8 @@ export async function initClient(
       );
     }
 
-    const newClientCommitChunk = await dag.createChunkWithNativeHash(
+    const newClientCommitChunk = dag.createChunkWithHash(
+      newUUIDHash(),
       newClientCommitData,
       getRefs(newClientCommitData),
     );
@@ -575,11 +571,6 @@ export async function findMatchingClient(
   return {type: FIND_MATCHING_CLIENT_TYPE_NEW};
 }
 
-function asyncHashOfClients(clients: ClientMap): Promise<Hash> {
-  const data = clientMapToChunkDataNoHashValidation(clients);
-  return hashOf(data);
-}
-
 export const noUpdates = Symbol();
 export type NoUpdates = typeof noUpdates;
 
@@ -632,7 +623,6 @@ async function updateClientsInternal(
     return clients;
   }
   const {clients: updatedClients, chunksToPut} = updateResults;
-  const updatedClientsHash = await asyncHashOfClients(updatedClients);
   const result = await dagStore.withWrite(async dagWrite => {
     const currClientsHash = await dagWrite.getHead(CLIENTS_HEAD_NAME);
     if (currClientsHash !== clientsHash) {
@@ -650,11 +640,11 @@ async function updateClientsInternal(
 
     const updateClientsRefs: Hash[] = getRefsForClients(updatedClients);
 
-    const updateClientsChunk = dag.createChunkWithHash(
-      updatedClientsHash,
+    const updateClientsChunk = dagWrite.createChunk(
       updatedClientsChunkData,
       updateClientsRefs,
     );
+    const updatedClientsHash = updateClientsChunk.hash;
     const chunksToPutPromises: Promise<void>[] = [];
     if (chunksToPut) {
       for (const chunk of chunksToPut) {

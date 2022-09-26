@@ -1,5 +1,5 @@
 import {assert, assertString} from '../asserts';
-import {Hash, makeNewFakeHashFunction, hashOf, newUUIDHash} from '../hash';
+import {Hash, newUUIDHash} from '../hash';
 import type {ReadonlyJSONValue} from '../json.js';
 
 type Refs = readonly Hash[];
@@ -40,7 +40,7 @@ export function createChunk<V>(
   refs: Refs,
   chunkHasher: ChunkHasher,
 ): Chunk<V> {
-  const hash = chunkHasher(data);
+  const hash = chunkHasher();
   return createChunkWithHash(hash, data, refs);
 }
 
@@ -53,38 +53,12 @@ export function createChunkWithHash<V>(
   return new ChunkImpl(hash, data, refs);
 }
 
-export async function createChunkWithNativeHash<V>(
-  data: V,
-  refs: Refs,
-): Promise<Chunk<V>> {
-  const hash = await hashOf(data);
-  return createChunkWithHash(hash, data, refs);
-}
-
 export type CreateChunk = <V>(data: V, refs: Refs) => Chunk<V>;
 
-export type ChunkHasher = <V>(data: V) => Hash;
+export type ChunkHasher = () => Hash;
 
-export function makeTestChunkHasher(prefix = 'fake'): ChunkHasher {
-  const makeHash = makeNewFakeHashFunction(prefix);
-  const map = new Map<string, Hash>();
-  const ch: ChunkHasher = data => {
-    const jsonString = JSON.stringify(data);
-    const h = map.get(jsonString);
-    if (h) {
-      return h;
-    }
-    const h2 = makeHash();
-    map.set(jsonString, h2);
-    return h2;
-  };
-  return ch;
-}
+export {newUUIDHash as uuidChunkHasher};
 
-export function throwChunkHasher(_data: unknown): Hash {
+export function throwChunkHasher(): Hash {
   throw new Error('unexpected call to compute chunk hash');
-}
-
-export function uuidChunkHasher(_data: unknown): Hash {
-  return newUUIDHash();
 }

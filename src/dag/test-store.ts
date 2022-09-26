@@ -17,7 +17,7 @@ export class TestStore extends StoreImpl {
 
   constructor(
     kvStore = new TestMemStore(),
-    chunkHasher: ChunkHasher = makeNewFakeHashFunction('fakehash'),
+    chunkHasher: ChunkHasher = makeNewFakeHashFunction(),
     assertValidHash = assertNotTempHash,
   ) {
     super(kvStore, chunkHasher, assertValidHash);

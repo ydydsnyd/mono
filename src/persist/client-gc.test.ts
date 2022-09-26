@@ -3,7 +3,7 @@ import {expect} from '@esm-bundle/chai';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import * as dag from '../dag/mod';
 import {ClientMap, getClients, updateClients} from './clients';
-import {fakeHash} from '../hash';
+import {newUUIDHash} from '../hash';
 import {initClientGC, getLatestGCUpdate} from './client-gc';
 import {makeClient, setClients} from './clients-test-helpers';
 import {assertNotUndefined} from '../asserts';
@@ -30,21 +30,21 @@ test('initClientGC starts 5 min interval that collects clients that have been in
   const dagStore = new dag.TestStore();
   const client1 = makeClient({
     heartbeatTimestampMs: START_TIME,
-    headHash: fakeHash('headclient1'),
+    headHash: newUUIDHash(),
     mutationID: 100,
     lastServerAckdMutationID: 90,
   });
   const client2 = makeClient({
     heartbeatTimestampMs: START_TIME,
-    headHash: fakeHash('headclient2'),
+    headHash: newUUIDHash(),
   });
   const client3 = makeClient({
     heartbeatTimestampMs: START_TIME + 60 * 1000,
-    headHash: fakeHash('headclient3'),
+    headHash: newUUIDHash(),
   });
   const client4 = makeClient({
     heartbeatTimestampMs: START_TIME + 60 * 1000,
-    headHash: fakeHash('headclient4'),
+    headHash: newUUIDHash(),
   });
   const clientMap = new Map(
     Object.entries({
@@ -136,15 +136,15 @@ test('calling function returned by initClientGC, stops Client GCs', async () => 
   const dagStore = new dag.TestStore();
   const client1 = makeClient({
     heartbeatTimestampMs: START_TIME,
-    headHash: fakeHash('headclient1'),
+    headHash: newUUIDHash(),
   });
   const client2 = makeClient({
     heartbeatTimestampMs: START_TIME,
-    headHash: fakeHash('headclient2'),
+    headHash: newUUIDHash(),
   });
   const client3 = makeClient({
     heartbeatTimestampMs: START_TIME + 60 * 1000,
-    headHash: fakeHash('headclient3'),
+    headHash: newUUIDHash(),
   });
   const clientMap = new Map(
     Object.entries({

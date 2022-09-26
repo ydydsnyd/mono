@@ -116,7 +116,7 @@ test('test that we get to the data nodes', async () => {
       42,
       'mutname',
       toInternalValue([], ToInternalValueReason.Test),
-      fakeHash('none'),
+      fakeHash('0e'),
       prevCommit.valueHash,
       prevCommit.indexes,
       88,

@@ -10,7 +10,7 @@ import {
   SnapshotMeta,
   SnapshotMetaDD31,
 } from '../db/commit';
-import {assertHash, fakeHash, newTempHash} from '../hash';
+import {assertHash, fakeHash, newTempHash, newUUIDHash} from '../hash';
 import {
   assertClientDD31,
   Client,
@@ -56,6 +56,14 @@ teardown(() => {
   clock.restore();
 });
 
+const headClient1Hash = fakeHash('f1');
+const headClient2Hash = fakeHash('f2');
+const headClient3Hash = fakeHash('f3');
+const chunkToPut1Hash = fakeHash('c1');
+const chunkToPut2Hash = fakeHash('c2');
+const randomStuffHash = fakeHash('c3');
+const refresh1Hash = fakeHash('e1');
+
 test('getClients with no existing ClientMap in dag store', async () => {
   const dagStore = new dag.TestStore();
   await dagStore.withRead(async (read: dag.Read) => {
@@ -70,11 +78,11 @@ test('updateClients and getClients', async () => {
     Object.entries({
       client1: makeClient({
         heartbeatTimestampMs: 1000,
-        headHash: fakeHash('headclient1'),
+        headHash: headClient1Hash,
       }),
       client2: makeClient({
         heartbeatTimestampMs: 3000,
-        headHash: fakeHash('headclient2'),
+        headHash: headClient2Hash,
       }),
     }),
   );
@@ -96,13 +104,13 @@ test('updateClients and getClients for DD31', async () => {
     Object.entries({
       client1: makeClient({
         heartbeatTimestampMs: 1000,
-        headHash: fakeHash('headclient1'),
+        headHash: headClient1Hash,
         branchID: 'branch-id-1',
-        tempRefreshHash: fakeHash('refreshhash1'),
+        tempRefreshHash: refresh1Hash,
       }),
       client2: {
         heartbeatTimestampMs: 3000,
-        headHash: fakeHash('headclient2'),
+        headHash: headClient2Hash,
         branchID: 'branch-id-2',
         tempRefreshHash: null,
       },
@@ -122,9 +130,9 @@ test('updateClients and getClients for DD31', async () => {
     const chunk = await read.getChunk(h);
     assert(chunk);
     expect(chunk.meta).to.deep.equal([
-      'fake00000000000000000headclient1',
-      'fake0000000000000000refreshhash1',
-      'fake00000000000000000headclient2',
+      headClient1Hash,
+      refresh1Hash,
+      headClient2Hash,
     ]);
   });
 });
@@ -135,11 +143,11 @@ test('updateClients and getClients sequence', async () => {
     Object.entries({
       client1: makeClient({
         heartbeatTimestampMs: 1000,
-        headHash: fakeHash('headclient1'),
+        headHash: headClient1Hash,
       }),
       client2: makeClient({
         heartbeatTimestampMs: 3000,
-        headHash: fakeHash('headclient2'),
+        headHash: headClient2Hash,
       }),
     }),
   );
@@ -148,7 +156,7 @@ test('updateClients and getClients sequence', async () => {
     Object.entries({
       client3: makeClient({
         heartbeatTimestampMs: 4000,
-        headHash: fakeHash('headclient3'),
+        headHash: headClient3Hash,
       }),
     }),
   );
@@ -169,8 +177,8 @@ test('updateClients and getClients sequence', async () => {
 
 test('updateClients properly manages refs to client heads when clients are removed and added', async () => {
   const dagStore = new dag.TestStore();
-  const client1HeadHash = fakeHash('headclient1');
-  const client2HeadHash = fakeHash('headclient2');
+  const client1HeadHash = headClient1Hash;
+  const client2HeadHash = headClient2Hash;
 
   const clientMap1 = new Map(
     Object.entries({
@@ -185,7 +193,7 @@ test('updateClients properly manages refs to client heads when clients are remov
     }),
   );
 
-  const client3HeadHash = fakeHash('headclient3');
+  const client3HeadHash = headClient3Hash;
   const clientMap2 = new Map(
     Object.entries({
       client3: makeClient({
@@ -217,9 +225,9 @@ test('updateClients properly manages refs to client heads when clients are remov
 
 test("updateClients properly manages refs to client heads when a client's head changes", async () => {
   const dagStore = new dag.TestStore();
-  const client1V1HeadHash = fakeHash('headclient1');
-  const client1V2HeadHash = fakeHash('headclient1v2');
-  const client2HeadHash = fakeHash('headclient2');
+  const client1V1HeadHash = fakeHash('c11');
+  const client1V2HeadHash = fakeHash('c12');
+  const client2HeadHash = fakeHash('c2');
 
   const client1V1 = makeClient({
     heartbeatTimestampMs: 1000,
@@ -278,14 +286,14 @@ test('getClient', async () => {
   const dagStore = new dag.TestStore();
   const client1 = makeClient({
     heartbeatTimestampMs: 1000,
-    headHash: fakeHash('headclient1'),
+    headHash: headClient1Hash,
   });
   const clientMap = new Map(
     Object.entries({
       client1,
       client2: makeClient({
         heartbeatTimestampMs: 3000,
-        headHash: fakeHash('headclient2'),
+        headHash: headClient2Hash,
       }),
     }),
   );
@@ -301,11 +309,11 @@ test('updateClients throws error if any client headHash is a temp hash', async (
   const dagStore = new dag.TestStore();
   const client1 = makeClient({
     heartbeatTimestampMs: 1000,
-    headHash: fakeHash('headclient1'),
+    headHash: headClient1Hash,
   });
   const client2 = makeClient({
     heartbeatTimestampMs: 3000,
-    headHash: fakeHash('headclient2'),
+    headHash: headClient2Hash,
   });
   const clientMap = new Map(
     Object.entries({
@@ -348,7 +356,7 @@ test('updateClients throws error if any client headHash is a temp hash', async (
 test('updateClients throws errors if clients head exist but the chunk it refrences does not', async () => {
   const dagStore = new dag.TestStore();
   await dagStore.withWrite(async (write: dag.Write) => {
-    await write.setHead('clients', fakeHash('randomstuff'));
+    await write.setHead('clients', randomStuffHash);
     await write.commit();
   });
   await dagStore.withRead(async (read: dag.Read) => {
@@ -368,11 +376,11 @@ test('updateClients is a noop if noUpdates is returned from update', async () =>
     Object.entries({
       client1: makeClient({
         heartbeatTimestampMs: 1000,
-        headHash: fakeHash('headclient1'),
+        headHash: headClient1Hash,
       }),
       client2: makeClient({
         heartbeatTimestampMs: 3000,
-        headHash: fakeHash('headclient2'),
+        headHash: headClient2Hash,
       }),
     }),
   );
@@ -387,10 +395,8 @@ test('updateClients is a noop if noUpdates is returned from update', async () =>
 test('updateClients puts chunksToPut returned by update', async () => {
   const dagStore = new dag.TestStore();
   const chunksToPut = [
-    dag.createChunkWithHash(fakeHash('chunktoput1'), 'chunktoPut1', []),
-    dag.createChunkWithHash(fakeHash('chunktoput2'), 'chunkToPut2', [
-      fakeHash('chunktoput1'),
-    ]),
+    dag.createChunkWithHash(chunkToPut1Hash, 'chunktoPut1', []),
+    dag.createChunkWithHash(chunkToPut2Hash, 'chunkToPut2', [chunkToPut1Hash]),
   ];
   const clientMap = new Map(
     Object.entries({
@@ -428,11 +434,11 @@ test('updateClients with conflict during update (i.e. testing race case with ret
   const dagStore = new dag.TestStore();
   const client1 = makeClient({
     heartbeatTimestampMs: 1000,
-    headHash: fakeHash('headclient1'),
+    headHash: headClient1Hash,
   });
   const client2 = makeClient({
     heartbeatTimestampMs: 3000,
-    headHash: fakeHash('headclient2'),
+    headHash: headClient2Hash,
   });
   const clientMap = new Map(
     Object.entries({
@@ -443,17 +449,15 @@ test('updateClients with conflict during update (i.e. testing race case with ret
 
   const client3 = makeClient({
     heartbeatTimestampMs: 5000,
-    headHash: fakeHash('headclient3'),
+    headHash: headClient3Hash,
   });
   const clientMap2 = new Map(clientMap).set('client3', client3);
 
   await setClients(clientMap, dagStore);
 
   const chunksToPut = [
-    dag.createChunkWithHash(fakeHash('chunktoput1'), 'chunkToPut1', []),
-    dag.createChunkWithHash(fakeHash('chunktoput2'), 'chunkToPut2', [
-      fakeHash('chunktoput1'),
-    ]),
+    dag.createChunkWithHash(chunkToPut1Hash, 'chunkToPut1', []),
+    dag.createChunkWithHash(chunkToPut2Hash, 'chunkToPut2', [chunkToPut1Hash]),
   ];
   const client4 = makeClient({
     heartbeatTimestampMs: 7000,
@@ -513,11 +517,11 @@ test('updateClients where update return noUpdates after conflict during update',
   const dagStore = new dag.TestStore();
   const client1 = makeClient({
     heartbeatTimestampMs: 1000,
-    headHash: fakeHash('headclient1'),
+    headHash: headClient1Hash,
   });
   const client2 = makeClient({
     heartbeatTimestampMs: 3000,
-    headHash: fakeHash('headclient2'),
+    headHash: headClient2Hash,
   });
   const clientMap = new Map(
     Object.entries({
@@ -528,17 +532,15 @@ test('updateClients where update return noUpdates after conflict during update',
 
   const client3 = makeClient({
     heartbeatTimestampMs: 5000,
-    headHash: fakeHash('headclient3'),
+    headHash: headClient3Hash,
   });
   const clientMap2 = new Map(clientMap).set('client3', client3);
 
   await setClients(clientMap, dagStore);
 
   const chunksToPut = [
-    dag.createChunkWithHash(fakeHash('chunktoput1'), 'chunkToPut1', []),
-    dag.createChunkWithHash(fakeHash('chunktoput2'), 'chunkToPut2', [
-      fakeHash('chunktoput1'),
-    ]),
+    dag.createChunkWithHash(chunkToPut1Hash, 'chunkToPut1', []),
+    dag.createChunkWithHash(chunkToPut2Hash, 'chunkToPut2', [chunkToPut1Hash]),
   ];
   const client4 = makeClient({
     heartbeatTimestampMs: 7000,
@@ -585,7 +587,7 @@ test('updateClients where update return noUpdates after conflict during update',
 test('updateClients throws errors if chunk pointed to by clients head does not contain a valid ClientMap', async () => {
   const dagStore = new dag.TestStore();
   await dagStore.withWrite(async (write: dag.Write) => {
-    const headHash = fakeHash('headclient1');
+    const headHash = headClient1Hash;
     const chunk = write.createChunk(
       {
         heartbeatTimestampMs: 'this should be a number',
@@ -751,24 +753,24 @@ test('setClient', async () => {
   const clientID = 'client-id';
   await t(clientID, {
     branchID: 'branch-id-1',
-    headHash: fakeHash('bid'),
+    headHash: newUUIDHash(),
     heartbeatTimestampMs: 1,
     tempRefreshHash: null,
   });
 
   await t(clientID, {
     branchID: 'branch-id-1',
-    headHash: fakeHash('bid2'),
+    headHash: newUUIDHash(),
     heartbeatTimestampMs: 2,
-    tempRefreshHash: fakeHash('trh'),
+    tempRefreshHash: newUUIDHash(),
   });
 
   const clientID2 = 'client-id-2';
   await t(clientID2, {
     branchID: 'branch-id-1',
-    headHash: fakeHash('bid3'),
+    headHash: newUUIDHash(),
     heartbeatTimestampMs: 3,
-    tempRefreshHash: fakeHash('trh2'),
+    tempRefreshHash: newUUIDHash(),
   });
 });
 
@@ -808,7 +810,7 @@ test('getMainBranchID', async () => {
   const branchID = 'branch-id-1';
 
   const branch = {
-    headHash: fakeHash('bid'),
+    headHash: newUUIDHash(),
     lastServerAckdMutationIDs: {[clientID]: 0},
     mutationIDs: {[clientID]: 0},
     indexes: {},
@@ -817,7 +819,7 @@ test('getMainBranchID', async () => {
   {
     const client = {
       branchID,
-      headHash: fakeHash('bid'),
+      headHash: newUUIDHash(),
       heartbeatTimestampMs: 1,
       tempRefreshHash: null,
     };
@@ -827,7 +829,7 @@ test('getMainBranchID', async () => {
   {
     const client = {
       branchID: 'branch-id-wrong',
-      headHash: fakeHash('bid'),
+      headHash: newUUIDHash(),
       heartbeatTimestampMs: 1,
       tempRefreshHash: null,
     };

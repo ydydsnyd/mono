@@ -49,7 +49,7 @@ export class ReplicacheTest<
     return super._invokePush();
   }
 
-  protected override _memdagHashFunction(): <V>(data: V) => Hash {
+  protected override _memdagHashFunction(): () => Hash {
     return makeNewTempHashFunction();
   }
 

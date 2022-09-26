@@ -123,7 +123,7 @@ async function dropDatabases(
 
 function defaultNewDagStore(name: string): dag.Store {
   const perKvStore = new kv.IDBStore(name);
-  return new dag.StoreImpl(perKvStore, dag.throwChunkHasher, assertNotTempHash);
+  return new dag.StoreImpl(perKvStore, dag.uuidChunkHasher, assertNotTempHash);
 }
 
 async function canCollectDatabase(

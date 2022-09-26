@@ -3,10 +3,10 @@ import {
   assertHash,
   assertNotTempHash,
   isTempHash,
+  makeNewFakeHashFunction,
   makeNewTempHashFunction,
   newTempHash,
 } from '../hash';
-import {makeTestChunkHasher} from './chunk';
 import {LazyStore} from './lazy-store';
 import {TestStore} from './test-store';
 
@@ -28,7 +28,7 @@ function createLazyStoreForTest(
   } = {},
 ) {
   const {cacheSizeLimit = DEFAULT_CACHE_SIZE_LIMIT} = options;
-  const sourceStoreChunkHasher = makeTestChunkHasher('source');
+  const sourceStoreChunkHasher = makeNewFakeHashFunction('50ce');
   const sourceStore = new TestStore(
     undefined,
     sourceStoreChunkHasher,
@@ -48,18 +48,14 @@ function createLazyStoreForTest(
 }
 
 test('chunks with non-temp hashes are loaded from source store and cached if reachable from a LazyStore head', async () => {
-  const {sourceStore, sourceStoreChunkHasher, lazyStore} =
-    createLazyStoreForTest();
+  const {sourceStore, lazyStore} = createLazyStoreForTest();
   const testValue1 = 'testValue1';
-  const testValue1Hash = sourceStoreChunkHasher(testValue1);
-  await lazyStore.withRead(async read => {
-    expect(await read.getChunk(testValue1Hash)).to.be.undefined;
-  });
-  await sourceStore.withWrite(async write => {
+  const testValue1Hash = await sourceStore.withWrite(async write => {
     const testValue1Chunk = write.createChunk(testValue1, []);
     await write.putChunk(testValue1Chunk);
     await write.setHead('testHeadSource', testValue1Chunk.hash);
     await write.commit();
+    return testValue1Chunk.hash;
   });
 
   await lazyStore.withWrite(async write => {
@@ -84,18 +80,14 @@ test('chunks with non-temp hashes are loaded from source store and cached if rea
 });
 
 test('chunks with non-temp hashes are loaded from source store but not cached if not reachable from a LazyStore head', async () => {
-  const {sourceStore, sourceStoreChunkHasher, lazyStore} =
-    createLazyStoreForTest();
+  const {sourceStore, lazyStore} = createLazyStoreForTest();
   const testValue1 = 'testValue1';
-  const testValue1Hash = sourceStoreChunkHasher(testValue1);
-  await lazyStore.withRead(async read => {
-    expect(await read.getChunk(testValue1Hash)).to.be.undefined;
-  });
-  await sourceStore.withWrite(async write => {
+  const testValue1Hash = await sourceStore.withWrite(async write => {
     const testValue1Chunk = write.createChunk(testValue1, []);
     await write.putChunk(testValue1Chunk);
     await write.setHead('testHeadSource', testValue1Chunk.hash);
     await write.commit();
+    return testValue1Chunk.hash;
   });
   await lazyStore.withRead(async read => {
     expect((await read.getChunk(testValue1Hash))?.data).to.equal(testValue1);
@@ -147,7 +139,7 @@ test('heads are *not* loaded from source store', async () => {
   const {sourceStore, sourceStoreChunkHasher, lazyStore} =
     createLazyStoreForTest();
   const testValue1 = 'testValue1';
-  const testValue1Hash = sourceStoreChunkHasher(testValue1);
+  const testValue1Hash = sourceStoreChunkHasher();
   await lazyStore.withRead(async read => {
     expect(await read.getChunk(testValue1Hash)).to.be.undefined;
   });
@@ -191,8 +183,7 @@ test('removeHead removes head from memory but does not write through to source s
     await write.setHead('testHead1', tempHash1);
     await write.commit();
   });
-  const testValue1 = 'testValue1';
-  const testValue1Hash = sourceStoreChunkHasher(testValue1);
+  const testValue1Hash = sourceStoreChunkHasher();
   await sourceStore.withWrite(async write => {
     await write.setHead('testHead1', testValue1Hash);
     await write.commit();
@@ -284,7 +275,7 @@ test('writes are visible within same write transaction but not other transaction
     // do not commit
   });
   await lazyStore.withRead(async read => {
-    // was never commited, so not visible in another transaction
+    // was never committed, so not visible in another transaction
     expect(await read.getChunk(testValue1Chunk.hash)).to.be.undefined;
     expect(await read.getHead('testHeadLazy')).to.be.undefined;
   });

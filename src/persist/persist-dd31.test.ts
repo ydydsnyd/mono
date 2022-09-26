@@ -13,6 +13,7 @@ import {
   assertNotTempHash,
   Hash,
   makeNewFakeHashFunction,
+  makeNewTempHashFunction,
 } from '../hash';
 import {initClient, assertClientDD31, Client} from './clients';
 import {assertLocalMetaDD31, assertSnapshotCommitDD31} from '../db/commit.js';
@@ -810,12 +811,12 @@ suite('persistDD31', () => {
 async function setupPersistTest() {
   const memdag = new dag.TestStore(
     undefined,
-    makeNewFakeHashFunction('t/memdag'),
+    makeNewTempHashFunction(),
     assertHash,
   );
   const perdag = new dag.TestStore(
     undefined,
-    makeNewFakeHashFunction('perdag'),
+    makeNewFakeHashFunction('eda'),
     assertNotTempHash,
   );
 

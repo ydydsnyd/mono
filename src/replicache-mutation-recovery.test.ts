@@ -57,11 +57,7 @@ async function createPerdag(args: {
   } finally {
     await idbDatabases.close();
   }
-  const perdag = new dag.StoreImpl(
-    idb,
-    DD31 ? dag.uuidChunkHasher : dag.throwChunkHasher,
-    assertNotTempHash,
-  );
+  const perdag = new dag.StoreImpl(idb, dag.uuidChunkHasher, assertNotTempHash);
   return perdag;
 }
 

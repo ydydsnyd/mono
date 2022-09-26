@@ -1,11 +1,11 @@
 import {expect} from '@esm-bundle/chai';
-import {Hash, fakeHash, parse} from '../hash';
-import {createChunk, createChunkWithHash, makeTestChunkHasher} from './chunk';
+import {Hash, fakeHash, parse, makeNewFakeHashFunction} from '../hash';
+import {createChunk, createChunkWithHash} from './chunk';
 import type {Chunk} from './chunk';
-import type {ReadonlyJSONValue} from '../json.js';
+import type {ReadonlyJSONValue} from '../json';
 
 test('round trip', async () => {
-  const chunkHasher = makeTestChunkHasher();
+  const chunkHasher = makeNewFakeHashFunction();
   const t = (hash: Hash, data: ReadonlyJSONValue, refs: Hash[]) => {
     const c = createChunk(data, refs, chunkHasher);
     expect(c.hash).to.equal(hash);
@@ -17,12 +17,12 @@ test('round trip', async () => {
     expect(c).to.deep.equal(c2);
   };
 
-  t(parse('fake0000000000000000000000000000'), [], []);
-  t(parse('fake0000000000000000000000000001'), [0], [fakeHash('r1')]);
+  t(parse('face0000-0000-4000-8000-000000000000'), [], []);
+  t(parse('face0000-0000-4000-8000-000000000001'), [0], [fakeHash('a1')]);
   t(
-    parse('fake0000000000000000000000000002'),
+    parse('face0000-0000-4000-8000-000000000002'),
     [0, 1],
-    [fakeHash('r1'), fakeHash('r2')],
+    [fakeHash('a1'), fakeHash('a2')],
   );
 });
 
@@ -35,10 +35,21 @@ test('equals', async () => {
     expect(a).to.not.deep.equal(b);
   };
 
-  const chunkHasher = makeTestChunkHasher('fake');
+  const chunkHasher = makeNewFakeHashFunction();
+
+  const hashMapper: Map<string, Hash> = new Map();
 
   const newChunk = (data: ReadonlyJSONValue, refs: Hash[]) => {
-    return createChunk(data, refs, chunkHasher);
+    // Cache chunks based on the data.
+    // TODO(arv): This is not very useful any more... Remove?
+    const s = JSON.stringify(data);
+    let hash = hashMapper.get(s);
+    if (!hash) {
+      hash = chunkHasher();
+      hashMapper.set(s, hash);
+    }
+
+    return createChunkWithHash(hash, data, refs);
   };
 
   eq(newChunk([], []), newChunk([], []));

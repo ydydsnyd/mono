@@ -102,7 +102,7 @@ async function setClientsAndBranches(
 
 function makeStores() {
   const LAZY_STORE_SOURCE_CHUNK_CACHE_SIZE_LIMIT = 10 * 2 ** 20; // 10 MB
-  const chunkHasher = makeNewFakeHashFunction('fake');
+  const chunkHasher = makeNewFakeHashFunction();
   const perdag = new dag.TestStore(undefined, chunkHasher);
   const memdag = new dag.LazyStore(
     perdag,

@@ -1,6 +1,6 @@
 import {expect, assert} from '@esm-bundle/chai';
 import * as dag from '../dag/mod';
-import {emptyHash, Hash} from '../hash';
+import {emptyHash, Hash, makeNewFakeHashFunction} from '../hash';
 import {getSizeOfValue, ReadonlyJSONValue} from '../json';
 import {
   DataNode,
@@ -10,13 +10,11 @@ import {
   Entry,
   NODE_LEVEL,
   NODE_ENTRIES,
-  emptyDataNode,
   Diff,
   internalizeBTreeNode,
   EntryWithOptionalSize,
 } from './node';
 import {BTreeWrite} from './write';
-import {makeTestChunkHasher} from '../dag/chunk';
 import {BTreeRead, NODE_HEADER_SIZE} from './read';
 import {
   InternalValue,
@@ -277,10 +275,10 @@ test('empty read tree', async () => {
 });
 
 test('empty write tree', async () => {
-  const chunkHasher = makeTestChunkHasher('tree');
+  const chunkHasher = makeNewFakeHashFunction();
   const dagStore = new dag.TestStore(undefined, chunkHasher);
 
-  const emptyTreeHash = chunkHasher(emptyDataNode);
+  const emptyTreeHash = chunkHasher();
 
   await dagStore.withWrite(async dagWrite => {
     const w = new BTreeWrite(
@@ -296,7 +294,7 @@ test('empty write tree', async () => {
     expect(await asyncIterToArray(w.scan(''))).to.deep.equal([]);
 
     const h = await w.flush();
-    expect(h).to.equal(emptyTreeHash);
+    expect(h).to.equal('face0000-0000-4000-8000-000000000001');
   });
   let rootHash = await dagStore.withWrite(async dagWrite => {
     const w = new BTreeWrite(
@@ -322,7 +320,7 @@ test('empty write tree', async () => {
 
   // We do not restore back to empty hash when empty.
   expect(rootHash).to.not.equal(emptyHash);
-  expect(rootHash).to.equal(emptyTreeHash);
+  expect(rootHash).to.equal('face0000-0000-4000-8000-000000000003');
 });
 
 test('get', async () => {
