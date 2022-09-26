@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1664202558495,
+  "lastUpdate": 1664204468497,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -25241,6 +25241,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23782,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8149c18758afbe4d005e451189a1fe6a8ef2d853",
+          "message": "fix: Precompute the size of B+Tree node entries (#273)\n\nWe now compute the size of the B+Tree nodes up front and cache that\r\nresult in the entry. The entry used to be a pair, now it is a 3 element\r\ntuple. We only do this for BTreeWrite because for BTreeRead we do not\r\nneed to know the size.\r\n\r\nThis does not change the chunk format. For the chunk we still use a pair\r\nwith the key and the value.\r\n\r\nTowards #267",
+          "timestamp": "2022-09-26T14:59:43Z",
+          "tree_id": "cffc7964deffb5b087a824d184388eac9606a309",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/8149c18758afbe4d005e451189a1fe6a8ef2d853"
+        },
+        "date": 1664204460584,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 195755,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 35237,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 194609,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34927,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 82269,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23940,
             "unit": "bytes"
           }
         ]
