@@ -138,3 +138,37 @@ function randomFloat64() {
 function randomInt32() {
   return (Math.random() * 2 ** 31 - 1) | 0;
 }
+
+type TmcwData = {
+  type: string;
+  features: {
+    type: string;
+    geometry: {
+      type: string;
+      coordinates: [number, number][];
+    };
+    properties: {
+      /* eslint-disable @typescript-eslint/naming-convention */
+      rwdb_rr_id: number;
+      mult_track: number;
+      electric: number;
+      other_code: number;
+      category: number;
+      disp_scale: string;
+      add: number;
+      featurecla: string;
+      scalerank: number;
+      natlscale: number;
+      part: string;
+      continent: string;
+      /* eslint-enable @typescript-eslint/naming-convention */
+    };
+  }[];
+};
+
+export async function getTmcwData(): Promise<TmcwData> {
+  const response = await fetch(
+    new URL('./resources/tmcw.json', import.meta.url),
+  );
+  return await response.json();
+}

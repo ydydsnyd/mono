@@ -9,8 +9,14 @@ import {
   ReplicacheOptions,
   WriteTransaction,
   IndexDefinitions,
+  JSONValue,
 } from '../out/replicache';
-import {jsonArrayTestData, TestDataObject, jsonObjectTestData} from './data';
+import {
+  jsonArrayTestData,
+  TestDataObject,
+  jsonObjectTestData,
+  getTmcwData,
+} from './data';
 import type {Bencher, Benchmark} from './perf';
 import * as kv from '../src/kv/mod';
 import {
@@ -551,6 +557,53 @@ export function benchmarkWriteSubRead(opts: {
   };
 }
 
+// This benchmark is based on a reduced test case from Tom McWright
+function benchmarkTmcw(kind: 'populate' | 'persist'): Benchmark {
+  let repToClose: Replicache | undefined;
+  let updates: JSONValue[] | undefined;
+
+  return {
+    name: `${kind} tmcw`,
+    group: 'replicache',
+    async setup() {
+      updates = (await getTmcwData()).features;
+    },
+    async setupEach() {
+      setupIDBDatabasesStoreForTest();
+    },
+    async teardownEach() {
+      await teardownIDBDatabasesStoreForTest();
+      await closeAndCleanupRep(repToClose);
+    },
+    async run(bencher: Bencher) {
+      const rep = (repToClose = makeRep({
+        mutators: {
+          async putFeatures(tx: WriteTransaction, updates: Array<JSONValue>) {
+            for (let i = 0; i < updates.length; i++) {
+              await tx.put(String(i), updates[i]);
+            }
+          },
+        },
+      }));
+
+      assert(updates);
+
+      // Wait for init.
+      await rep.clientID;
+
+      if (kind === 'populate') {
+        bencher.reset();
+        await rep.mutate.putFeatures(updates);
+      } else {
+        await rep.mutate.putFeatures(updates);
+        bencher.reset();
+        await rep.persist();
+      }
+      bencher.stop();
+    },
+  };
+}
+
 function makeRepName(): string {
   return `bench${uuid()}`;
 }
@@ -663,6 +716,9 @@ export function benchmarks(): Benchmark[] {
     benchmarkPersist({numKeys: 10000}),
     benchmarkPersist({numKeys: 10000, indexes: 1}),
     benchmarkPersist({numKeys: 10000, indexes: 2}),
+
+    benchmarkTmcw('populate'),
+    benchmarkTmcw('persist'),
   ];
 }
 
