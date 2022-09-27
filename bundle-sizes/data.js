@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1664287336719,
+  "lastUpdate": 1664293859124,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -25619,6 +25619,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23729,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f2e2c77c78afce719d0f2d3b0338a3c46907a489",
+          "message": "fix: Fix assertNotTempHash (#284)\n\nThis could cause a client to not be able to read old data in the perdag.\r\n\r\nThe test was incorrect. In the old release 't' was a valid character in\r\na non temp hash.",
+          "timestamp": "2022-09-27T15:49:50Z",
+          "tree_id": "48f98584eb256fb0f030ca257d7980aca2402f5a",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/f2e2c77c78afce719d0f2d3b0338a3c46907a489"
+        },
+        "date": 1664293853509,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 195273,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34887,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 194127,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34593,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81983,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23677,
             "unit": "bytes"
           }
         ]
