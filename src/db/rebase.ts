@@ -108,7 +108,7 @@ export async function rebaseMutationAndCommit(
   // is a LocalMetaDD31.  As part of DD31 cleanup we can remove this arg.
   mutationClientID: ClientID,
 ): Promise<Hash> {
-  const tx = await rebaseMutation(
+  const dbWrite = await rebaseMutation(
     mutation,
     dagWrite,
     basis,
@@ -116,5 +116,5 @@ export async function rebaseMutationAndCommit(
     lc,
     mutationClientID,
   );
-  return await tx.commit(headName);
+  return await dbWrite.commit(headName);
 }
