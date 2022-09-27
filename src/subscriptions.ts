@@ -360,6 +360,10 @@ export class SubscriptionsManager {
     this._lc = lc;
   }
 
+  get size(): number {
+    return this._subscriptions.size;
+  }
+
   private _add(subscription: UnknownSubscription): () => void {
     this._subscriptions.add(subscription);
     void this._scheduleInitialSubscriptionRun(subscription);

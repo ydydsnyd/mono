@@ -819,7 +819,10 @@ export class Replicache<MD extends MutatorDefs = {}> {
    */
   async createIndex(def: CreateIndexDefinition): Promise<void> {
     await this._ready;
-    await this._indexOp(tx => tx.createIndex(def), true);
+    await this._indexOp(
+      tx => tx.createIndex(def),
+      this._subscriptions.size > 0,
+    );
   }
 
   /**
@@ -828,7 +831,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
    */
   async dropIndex(name: string): Promise<void> {
     await this._ready;
-    await this._indexOp(tx => tx.dropIndex(name), true);
+    await this._indexOp(tx => tx.dropIndex(name), this._subscriptions.size > 0);
   }
 
   private async _indexOp(
@@ -1409,7 +1412,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         throwIfClosed(dbWrite);
         const [ref, diffs] = await dbWrite.commitWithDiffs(
           db.DEFAULT_HEAD_NAME,
-          true,
+          this._subscriptions.size > 0,
         );
         this._pushConnectionLoop.send();
         await this._checkChange(ref, diffs);
