@@ -2,7 +2,7 @@ import {assert} from '../asserts';
 import * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import * as sync from '../sync/mod';
-import {getMainBranchID} from './clients';
+import {assertHasClientState, getMainBranchID} from './clients';
 import {ComputeHashTransformer, FixedChunks} from './compute-hash-transformer';
 import {GatherVisitor} from './gather-visitor';
 import {FixupTransformer} from './fixup-transformer';
@@ -48,6 +48,7 @@ export async function persistDD31(
 
   const [perdagLMID, perdagBaseSnapshot, mainBranchID] = await perdag.withRead(
     async perdagRead => {
+      await assertHasClientState(clientID, perdagRead);
       const mainBranchID = await getMainBranchID(clientID, perdagRead);
       assert(mainBranchID, `No main branch id for clientID: ${clientID}`);
       const [, perdagMainBranchHeadCommit] = await getMainBranchInfo(

@@ -35,7 +35,7 @@ export function initBranchGC(
   );
 }
 
-async function gcBranches(dagStore: dag.Store): Promise<BranchMap> {
+export async function gcBranches(dagStore: dag.Store): Promise<BranchMap> {
   return await dagStore.withWrite(async tx => {
     const clients = await getClients(tx);
     const clientBranchIds = new Set(

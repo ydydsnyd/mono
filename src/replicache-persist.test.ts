@@ -131,12 +131,6 @@ test('basic persist & load', async () => {
 
 suite('onClientStateNotFound', () => {
   test('Called in persist if collected', async () => {
-    if (DD31) {
-      // In DD31, the chunks are kept alive from the branch head.
-      // TODO(DD31): Does this test make sense in DD31?
-      return;
-    }
-
     const consoleErrorStub = sinon.stub(console, 'error');
 
     const rep = await replicacheForTesting('called-in-persist', {
@@ -166,12 +160,6 @@ suite('onClientStateNotFound', () => {
   });
 
   test('Called in query if collected', async () => {
-    if (DD31) {
-      // In DD31, the chunks are kept alive from the branch head.
-      // TODO(DD31): Does this test make sense in DD31?
-      return;
-    }
-
     const consoleErrorStub = sinon.stub(console, 'error');
 
     const rep = await replicacheForTesting('called-in-query', {
@@ -190,6 +178,9 @@ suite('onClientStateNotFound', () => {
 
     const clientID2 = await rep2.clientID;
     await deleteClientForTesting(clientID2, rep2.perdag);
+    if (DD31) {
+      await persist.gcBranches(rep2.perdag);
+    }
 
     const onClientStateNotFound = sinon.fake();
     rep2.onClientStateNotFound = onClientStateNotFound;
@@ -215,12 +206,6 @@ suite('onClientStateNotFound', () => {
   });
 
   test('Called in mutate if collected', async () => {
-    if (DD31) {
-      // In DD31, the chunks are kept alive from the branch head.
-      // TODO(DD31): Does this test make sense in DD31?
-      return;
-    }
-
     const consoleErrorStub = sinon.stub(console, 'error');
 
     const rep = await replicacheForTesting('called-in-mutate', {
@@ -248,6 +233,9 @@ suite('onClientStateNotFound', () => {
 
     const clientID2 = await rep2.clientID;
     await deleteClientForTesting(clientID2, rep2.perdag);
+    if (DD31) {
+      await persist.gcBranches(rep2.perdag);
+    }
 
     const onClientStateNotFound = sinon.fake();
     rep2.onClientStateNotFound = onClientStateNotFound;

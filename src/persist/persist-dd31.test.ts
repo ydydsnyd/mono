@@ -15,7 +15,14 @@ import {
   makeNewFakeHashFunction,
   makeNewTempHashFunction,
 } from '../hash';
-import {initClient, assertClientDD31, Client} from './clients';
+import {
+  initClient,
+  assertClientDD31,
+  Client,
+  setClients,
+  getClients,
+  ClientStateNotFoundError,
+} from './clients';
 import {assertLocalMetaDD31, assertSnapshotCommitDD31} from '../db/commit.js';
 import {LogContext} from '@rocicorp/logger';
 import {Branch, getBranch, setBranch} from './branches';
@@ -778,35 +785,36 @@ suite('persistDD31', () => {
       await getChunkSnapshot(perdag, afterPersistPerdagBranchBaseSnapshotHash),
     ).to.deep.equal(updatedPerdagBranchSnapshot);
   });
+
+  test('persist throws a ClientStateNotFoundError if client is missing', async () => {
+    await setupSnapshots();
+
+    await perdag.withWrite(async perdagWrite => {
+      const clientMap = await getClients(perdagWrite);
+      const newClientMap = new Map(clientMap);
+      newClientMap.delete(clients[0].clientID);
+      await setClients(newClientMap, perdagWrite);
+      await perdagWrite.commit();
+    });
+
+    let err;
+    try {
+      await persistDD31(
+        new LogContext(),
+        clients[0].clientID,
+        memdag,
+        perdag,
+        mutators,
+        () => false,
+      );
+    } catch (e) {
+      err = e;
+    }
+    expect(err)
+      .to.be.an.instanceof(ClientStateNotFoundError)
+      .property('id', clients[0].clientID);
+  });
 });
-
-// TODO(greg, DD31): Determine the right behavior
-// for persistDD31 when branch/client is missing.
-// test('We get a MissingClientException during persist if client is missing', async () => {
-//   const {memdag, perdag, chain, testPersist, clientID} = setupPersistTest();
-//   await initClientWithClientID(clientID, perdag);
-
-//   await addGenesis(chain, memdag, clientID);
-//   await addLocal(chain, memdag, clientID);
-//   await testPersist();
-
-//   await addLocal(chain, memdag, clientID);
-
-//   await clock.tickAsync(14 * 24 * 60 * 60 * 1000);
-
-//   // Remove the client from the clients map.
-//   await gcClients('dummy', perdag);
-
-//   let err;
-//   try {
-//     await persist(new LogContext(), clientID, memdag, perdag, {}, () => false);
-//   } catch (e) {
-//     err = e;
-//   }
-//   expect(err)
-//     .to.be.an.instanceof(ClientStateNotFoundError)
-//     .property('id', clientID);
-// });
 
 async function setupPersistTest() {
   const memdag = new dag.TestStore(

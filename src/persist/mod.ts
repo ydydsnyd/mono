@@ -2,7 +2,7 @@ export {persist} from './persist';
 export {startHeartbeats} from './heartbeat';
 export {getBranch, getBranches, setBranch, setBranches} from './branches';
 export type {Branch, BranchMap} from './branches';
-export {initBranchGC} from './branch-gc';
+export {initBranchGC, gcBranches} from './branch-gc';
 export {
   initClient,
   getClient,
