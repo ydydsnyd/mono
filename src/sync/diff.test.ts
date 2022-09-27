@@ -9,6 +9,7 @@ import {
   addSnapshot,
   Chain,
 } from '../db/test-helpers';
+import {testSubscriptionsManagerOptions} from '../test-util.js';
 
 type DiffsRecord = Record<string, InternalDiff>;
 
@@ -26,6 +27,7 @@ test('db diff', async () => {
         chain[iOld].chunk.hash,
         chain[iNew].chunk.hash,
         read,
+        testSubscriptionsManagerOptions,
       );
       expect(Object.fromEntries(diffsMap)).to.deep.equal(expectedDiff);
     });

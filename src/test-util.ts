@@ -326,3 +326,11 @@ export async function expectPromiseToReject(
 export async function expectAsyncFuncToThrow(f: () => unknown, c: unknown) {
   (await expectPromiseToReject(f())).to.be.instanceof(c);
 }
+
+/**
+ * SubscriptionsManagerOptions that always generates DiffsMaps.
+ */
+export const testSubscriptionsManagerOptions = {
+  size: 1,
+  hasIndexSubscription: () => true,
+} as const;

@@ -6,6 +6,7 @@ import {allEntriesAsDiff, BTreeRead} from '../btree/read';
 import {readIndexesForRead} from '../db/read';
 import {assert} from '../asserts';
 import type {InternalDiff} from '../btree/node';
+import type {SubscriptionsManagerOptions} from '../subscriptions.js';
 
 /**
  * The diffs in different indexes. The key of the map is the index name.
@@ -28,13 +29,14 @@ export async function diff(
   oldHash: Hash,
   newHash: Hash,
   read: dag.Read,
+  subscriptions: SubscriptionsManagerOptions,
 ): Promise<DiffsMap> {
   const [oldCommit, newCommit] = await Promise.all([
     fromHash(oldHash, read),
     fromHash(newHash, read),
   ]);
 
-  return diffCommits(oldCommit, newCommit, read);
+  return diffCommits(oldCommit, newCommit, read, subscriptions);
 }
 
 /**
@@ -45,15 +47,19 @@ export async function diffCommits(
   oldCommit: Commit<Meta>,
   newCommit: Commit<Meta>,
   read: dag.Read,
+  subscriptions: SubscriptionsManagerOptions,
 ): Promise<DiffsMap> {
   const diffsMap = new DiffsMap();
+  if (subscriptions.size === 0) {
+    return diffsMap;
+  }
 
   const oldMap = new BTreeRead(read, oldCommit.valueHash);
   const newMap = new BTreeRead(read, newCommit.valueHash);
   const valueDiff = await btree.diff(oldMap, newMap);
   diffsMap.set('', valueDiff);
 
-  await addDiffsForIndexes(oldCommit, newCommit, read, diffsMap);
+  await addDiffsForIndexes(oldCommit, newCommit, read, diffsMap, subscriptions);
 
   return diffsMap;
 }
@@ -63,11 +69,16 @@ export async function addDiffsForIndexes(
   syncCommit: Commit<Meta>,
   read: dag.Read,
   diffsMap: DiffsMap,
+  subscriptions: SubscriptionsManagerOptions,
 ) {
   const oldIndexes = readIndexesForRead(mainCommit, read);
   const newIndexes = readIndexesForRead(syncCommit, read);
 
   for (const [oldIndexName, oldIndex] of oldIndexes) {
+    if (!subscriptions.hasIndexSubscription(oldIndexName)) {
+      continue;
+    }
+
     const newIndex = newIndexes.get(oldIndexName);
     if (newIndex !== undefined) {
       assert(newIndex !== oldIndex);
@@ -82,6 +93,9 @@ export async function addDiffsForIndexes(
   }
 
   for (const [newIndexName, newIndex] of newIndexes) {
+    if (!subscriptions.hasIndexSubscription(newIndexName)) {
+      continue;
+    }
     // new index name is not in the old indexes. All keys added!
     const diffs = await allEntriesAsDiff(newIndex.map, 'add');
     diffsMap.set(newIndexName, diffs);

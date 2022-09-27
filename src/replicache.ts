@@ -556,7 +556,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     assert(!DD31);
     // Do not wait for _ready here since this needs to be done before we
     // consider the database ready.
-    await this._indexOp(async tx => tx.syncIndexes(indexes), false);
+    await this._indexOp(async tx => tx.syncIndexes(indexes));
   }
 
   private _onVisibilityChange = async () => {
@@ -819,10 +819,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
    */
   async createIndex(def: CreateIndexDefinition): Promise<void> {
     await this._ready;
-    await this._indexOp(
-      tx => tx.createIndex(def),
-      this._subscriptions.size > 0,
-    );
+    await this._indexOp(tx => tx.createIndex(def));
   }
 
   /**
@@ -831,12 +828,11 @@ export class Replicache<MD extends MutatorDefs = {}> {
    */
   async dropIndex(name: string): Promise<void> {
     await this._ready;
-    await this._indexOp(tx => tx.dropIndex(name), this._subscriptions.size > 0);
+    await this._indexOp(tx => tx.dropIndex(name));
   }
 
   private async _indexOp(
     f: (tx: IndexTransactionImpl) => Promise<void>,
-    generateDiffs: boolean,
   ): Promise<void> {
     // TODO(arv): Remove generateDiffs when the deprecated callers have been removed.
     const clientID = await this._clientIDPromise;
@@ -851,7 +847,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       throwIfClosed(dbWrite);
       const [ref, diffs] = await dbWrite.commitWithDiffs(
         db.DEFAULT_HEAD_NAME,
-        generateDiffs,
+        this._subscriptions,
       );
       // Changing an index should not affect the primary map.
       assert(!diffs.has(''));
@@ -878,6 +874,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         lc,
         syncHead,
         clientID,
+        this._subscriptions,
       );
 
       if (!replayMutations || replayMutations.length === 0) {
@@ -1412,7 +1409,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         throwIfClosed(dbWrite);
         const [ref, diffs] = await dbWrite.commitWithDiffs(
           db.DEFAULT_HEAD_NAME,
-          this._subscriptions.size > 0,
+          this._subscriptions,
         );
         this._pushConnectionLoop.send();
         await this._checkChange(ref, diffs);

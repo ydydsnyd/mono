@@ -43,6 +43,7 @@ import {
   ToInternalValueReason,
 } from '../internal-value.js';
 import type {DiffsMap} from './diff.js';
+import {testSubscriptionsManagerOptions} from '../test-util.js';
 
 test('begin try pull', async () => {
   if (DD31) {
@@ -691,7 +692,13 @@ test('maybe end try pull', async () => {
 
     let result: MaybeEndPullResult | string;
     try {
-      result = await maybeEndPull(store, lc, syncHead, clientID);
+      result = await maybeEndPull(
+        store,
+        lc,
+        syncHead,
+        clientID,
+        testSubscriptionsManagerOptions,
+      );
     } catch (e) {
       result = (e as Error).message;
     }
@@ -876,7 +883,13 @@ test('changed keys', async () => {
       new LogContext(),
     );
 
-    const result = await maybeEndPull(store, lc, pullResult.syncHead, clientID);
+    const result = await maybeEndPull(
+      store,
+      lc,
+      pullResult.syncHead,
+      clientID,
+      testSubscriptionsManagerOptions,
+    );
     expect(Object.fromEntries(result.diffs)).to.deep.equal(
       Object.fromEntries(expectedDiffsMap),
     );

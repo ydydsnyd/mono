@@ -22,7 +22,14 @@ const enum InvokeKind {
   Regular,
 }
 
+export interface SubscriptionsManagerOptions {
+  hasIndexSubscription(name: string): boolean;
+  size: number;
+}
+
 interface Subscription<R, E> {
+  hasIndexSubscription(indexName: string): boolean;
+
   invoke(
     tx: ReadTransaction,
     kind: InvokeKind,
@@ -66,6 +73,15 @@ class SubscriptionImpl<R extends ReadonlyJSONValue | undefined, E>
     this._onData = onData;
     this.onError = onError;
     this.onDone = onDone;
+  }
+
+  hasIndexSubscription(indexName: string): boolean {
+    for (const scan of this._scans) {
+      if (scan.options.indexName === indexName) {
+        return true;
+      }
+    }
+    return false;
   }
 
   invoke(
@@ -182,6 +198,10 @@ class WatchImpl implements Subscription<Diff | undefined, unknown> {
     this._prefix = options.prefix ?? '';
     this._indexName = (options as WatchIndexOptions).indexName;
     this._initialValuesInFirstDiff = options.initialValuesInFirstDiff ?? false;
+  }
+
+  hasIndexSubscription(indexName: string): boolean {
+    return this._indexName === indexName;
   }
 
   onData(result: Diff | undefined): void {
@@ -348,7 +368,7 @@ type UnknownSubscription = Subscription<unknown, unknown>;
 
 type SubscriptionSet = Set<UnknownSubscription>;
 
-export class SubscriptionsManager {
+export class SubscriptionsManager implements SubscriptionsManagerOptions {
   private readonly _subscriptions: SubscriptionSet = new Set();
   private readonly _pendingSubscriptions: SubscriptionSet = new Set();
   private readonly _queryInternal: QueryInternal;
@@ -463,6 +483,15 @@ export class SubscriptionsManager {
         undefined,
       );
     }
+  }
+
+  hasIndexSubscription(indexName: string): boolean {
+    for (const s of this._subscriptions) {
+      if (s.hasIndexSubscription(indexName)) {
+        return true;
+      }
+    }
+    return false;
   }
 }
 

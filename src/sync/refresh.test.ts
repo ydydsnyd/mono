@@ -17,7 +17,7 @@ import {toInternalValue, ToInternalValueReason} from '../internal-value';
 import type {JSONValue, ReadonlyJSONValue} from '../json';
 import {BranchMap, setBranch, setBranches} from '../persist/branches';
 import {ClientDD31, setClient} from '../persist/clients';
-import {addData} from '../test-util';
+import {addData, testSubscriptionsManagerOptions} from '../test-util';
 import type {ClientID} from './ids';
 import {refresh} from './refresh';
 import type {Entry} from '../btree/node.js';
@@ -146,6 +146,7 @@ suite('refresh', () => {
       perdag,
       clientID,
       mutators,
+      testSubscriptionsManagerOptions,
     );
     assert(diffs);
     expect(Object.fromEntries(diffs)).to.deep.equal({});
@@ -172,6 +173,7 @@ suite('refresh', () => {
       perdag,
       clientID,
       mutators,
+      testSubscriptionsManagerOptions,
     );
     assert(diffs);
     expect(Object.fromEntries(diffs)).to.deep.equal({
@@ -207,6 +209,7 @@ suite('refresh', () => {
       perdag,
       clientID,
       mutators,
+      testSubscriptionsManagerOptions,
     );
     expect(diffs).undefined;
   });
@@ -233,6 +236,7 @@ suite('refresh', () => {
       perdag,
       clientID,
       mutators,
+      testSubscriptionsManagerOptions,
     );
     assert(diffs);
     expect(Object.fromEntries(diffs)).to.deep.equal({
@@ -290,6 +294,7 @@ suite('refresh', () => {
       perdag,
       clientID1,
       mutators,
+      testSubscriptionsManagerOptions,
     );
     assert(diffs);
     expect(Object.fromEntries(diffs)).to.deep.equal({
@@ -337,6 +342,7 @@ suite('refresh', () => {
       perdag,
       clientID,
       mutators,
+      testSubscriptionsManagerOptions,
     );
     expect(diffs).undefined;
   });
@@ -573,9 +579,16 @@ suite('refresh', () => {
       });
     }
 
-    const diffs = await refresh(new LogContext(), memdag, perdag, clientID1, {
-      addData,
-    });
+    const diffs = await refresh(
+      new LogContext(),
+      memdag,
+      perdag,
+      clientID1,
+      {
+        addData,
+      },
+      testSubscriptionsManagerOptions,
+    );
     assert(diffs);
     expect(Object.fromEntries(diffs)).to.deep.equal({
       '': [{key: 'c', newValue: 3, op: 'add'}],

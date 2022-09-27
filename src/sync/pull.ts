@@ -25,9 +25,10 @@ import {
   InternalValue,
   ToInternalValueReason,
   deepEqual,
-} from '../internal-value.js';
-import type {ClientID} from './ids.js';
-import {addDiffsForIndexes, DiffsMap} from './diff.js';
+} from '../internal-value';
+import type {ClientID} from './ids';
+import {addDiffsForIndexes, DiffsMap} from './diff';
+import type {SubscriptionsManagerOptions} from '../subscriptions';
 
 export const PULL_VERSION = 0;
 
@@ -282,6 +283,7 @@ export async function maybeEndPull(
   lc: LogContext,
   expectedSyncHead: Hash,
   clientID: ClientID,
+  subscriptionsManager: SubscriptionsManagerOptions,
 ): Promise<MaybeEndPullResult> {
   // Ensure sync head is what the caller thinks it is.
   return await store.withWrite(async dagWrite => {
@@ -355,11 +357,19 @@ export async function maybeEndPull(
 
     // Compute diffs (changed keys) for value map and index maps.
     const mainHead = await db.commitFromHash(mainHeadHash, dagRead);
-    const mainHeadMap = new BTreeRead(dagRead, mainHead.valueHash);
-    const syncHeadMap = new BTreeRead(dagRead, syncHead.valueHash);
-    const valueDiff = await btree.diff(mainHeadMap, syncHeadMap);
-    diffsMap.set('', valueDiff);
-    await addDiffsForIndexes(mainHead, syncHead, dagRead, diffsMap);
+    if (subscriptionsManager.size > 0) {
+      const mainHeadMap = new BTreeRead(dagRead, mainHead.valueHash);
+      const syncHeadMap = new BTreeRead(dagRead, syncHead.valueHash);
+      const valueDiff = await btree.diff(mainHeadMap, syncHeadMap);
+      diffsMap.set('', valueDiff);
+      await addDiffsForIndexes(
+        mainHead,
+        syncHead,
+        dagRead,
+        diffsMap,
+        subscriptionsManager,
+      );
+    }
 
     // No mutations to replay so set the main head to the sync head and sync complete!
     await Promise.all([

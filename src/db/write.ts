@@ -36,6 +36,7 @@ import {
   indexDefinitionEqual,
   IndexDefinitions,
 } from '../index-defs';
+import type {SubscriptionsManagerOptions} from '../subscriptions.js';
 
 export class Write extends Read {
   private readonly _dagWrite: dag.Write;
@@ -316,28 +317,38 @@ export class Write extends Read {
 
   // Return value is the hash of the new commit.
   async commit(headName: string): Promise<Hash> {
-    return (await this.commitWithDiffs(headName, false))[0];
+    const commit = await this.putCommit();
+    const commitHash = commit.chunk.hash;
+    await this._dagWrite.setHead(headName, commitHash);
+    await this._dagWrite.commit();
+    return commitHash;
   }
 
   async commitWithDiffs(
     headName: string,
-    generateDiffs: boolean,
+    subscriptions: SubscriptionsManagerOptions,
   ): Promise<[Hash, sync.DiffsMap]> {
     const commit = this.putCommit();
-    const diffMap = generateDiffs ? await this._generateDiffs() : new Map();
+    const diffMap = await this._generateDiffs(subscriptions);
     const commitHash = (await commit).chunk.hash;
     await this._dagWrite.setHead(headName, commitHash);
     await this._dagWrite.commit();
     return [commitHash, diffMap];
   }
 
-  private async _generateDiffs(): Promise<sync.DiffsMap> {
+  private async _generateDiffs(
+    subscriptions: SubscriptionsManagerOptions,
+  ): Promise<sync.DiffsMap> {
+    const diffsMap = new sync.DiffsMap();
+    if (subscriptions.size === 0) {
+      return diffsMap;
+    }
+
     let valueDiff: InternalDiff = [];
     if (this._basis) {
       const basisMap = new BTreeRead(this._dagWrite, this._basis.valueHash);
       valueDiff = await btree.diff(basisMap, this.map);
     }
-    const diffsMap = new sync.DiffsMap();
     diffsMap.set('', valueDiff);
     let basisIndexes: Map<string, IndexRead>;
     if (this._basis) {
@@ -347,6 +358,9 @@ export class Write extends Read {
     }
 
     for (const [name, index] of this.indexes) {
+      if (!subscriptions.hasIndexSubscription(name)) {
+        continue;
+      }
       const basisIndex = basisIndexes.get(name);
       assert(index !== basisIndex);
 
@@ -360,7 +374,7 @@ export class Write extends Read {
     // Handle indexes in basisIndex but not in this.indexes. All keys are
     // deleted.
     for (const [name, basisIndex] of basisIndexes) {
-      if (!this.indexes.has(name)) {
+      if (!this.indexes.has(name) && subscriptions.hasIndexSubscription(name)) {
         const indexDiffResult = await allEntriesAsDiff(basisIndex.map, 'del');
         diffsMap.set(name, indexDiffResult);
       }
