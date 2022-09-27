@@ -12,6 +12,8 @@ import {
   fakeHash,
   STRING_LENGTH,
   makeNewTempHashFunction,
+  Hash,
+  assertHash,
 } from './hash';
 
 const emptyUUID = '00000000-0000-4000-8000-000000000000';
@@ -152,4 +154,18 @@ test('fakeHash', () => {
   expect(String(fakeHash('aa')).length).to.equal(STRING_LENGTH);
   expect(fakeHash('aa')).to.equal(fakeHash('aa'));
   expect(fakeHash('aa')).to.equal('face0000-0000-4000-8000-0000000000aa');
+});
+
+test('assertNotTempHash', () => {
+  expect(() => assertNotTempHash(newTempHash())).to.throw();
+  assertNotTempHash(newUUIDHash());
+  assertNotTempHash(fakeHash(''));
+  assertNotTempHash(fakeHash('a'));
+
+  // Old format
+  assertHash('t'.repeat(32) as unknown as Hash);
+  assertNotTempHash('t'.repeat(32) as unknown as Hash);
+  expect(() =>
+    assertNotTempHash(('t/' + '0'.repeat(30)) as unknown as Hash),
+  ).to.throw();
 });

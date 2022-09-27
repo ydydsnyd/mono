@@ -122,8 +122,7 @@ export function isUUIDHash(v: unknown): v is Hash {
 }
 
 export function assertNotTempHash(hash: Hash): void {
-  // 't'
-  if ((hash as unknown as string).charCodeAt(0) === 116) {
+  if (isTempHash(hash)) {
     throw new Error('Unexpected temp hash');
   }
 }
