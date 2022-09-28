@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1664391613941,
+  "lastUpdate": 1664392174995,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -25889,6 +25889,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23704,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7073fe3675a2aa28010148333e2c140fc7250990",
+          "message": "chore: Micro optimize Map loops (#286)\n\nTurns out for-of is a slightly faster then forEach.\r\n\r\nI started looking at this because the flame charts shows \"anonymous\" for\r\nthe forEach case which makes it harder to reason about where the time is\r\nspent.",
+          "timestamp": "2022-09-28T19:08:32Z",
+          "tree_id": "b75371bbe3c321eb3a37392ea53ee5f65040e7e4",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/7073fe3675a2aa28010148333e2c140fc7250990"
+        },
+        "date": 1664392169333,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 195246,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34874,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 194100,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34581,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 82031,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23708,
             "unit": "bytes"
           }
         ]
