@@ -382,19 +382,21 @@ export class Reflect<MD extends MutatorDefs> {
     const socket = await this._connectResolver.promise;
 
     const pushBody = (await req.json()) as PushBody;
+    const msg: PushMessage = ['push', pushBody];
 
-    for (const m of pushBody.mutations) {
+    const newMutations = [];
+    for (const m of msg[1].mutations) {
       if (m.id > this._lastMutationIDSent) {
         this._lastMutationIDSent = m.id;
-
-        const msg: PushMessage = [
-          'push',
-          {...pushBody, mutations: [m], timestamp: performance.now()},
-        ];
-
-        this._pushTracker.push(performance.now());
-        socket.send(JSON.stringify(msg));
+        newMutations.push(m);
       }
+    }
+
+    if (newMutations.length > 0) {
+      pushBody.mutations = newMutations;
+      pushBody.timestamp = performance.now();
+      this._pushTracker.push(performance.now());
+      socket.send(JSON.stringify(msg));
     }
 
     return {
