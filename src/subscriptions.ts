@@ -16,15 +16,11 @@ import type {QueryInternal} from './replicache';
 import type {LogContext} from '@rocicorp/logger';
 import {binarySearch} from './binary-search';
 import {fromInternalValue, FromInternalValueReason} from './internal-value.js';
+import type {DiffComputationConfig} from './sync/diff';
 
 const enum InvokeKind {
   InitialRun,
   Regular,
-}
-
-export interface SubscriptionsManagerOptions {
-  hasIndexSubscription(name: string): boolean;
-  size: number;
 }
 
 interface Subscription<R, E> {
@@ -368,7 +364,7 @@ type UnknownSubscription = Subscription<unknown, unknown>;
 
 type SubscriptionSet = Set<UnknownSubscription>;
 
-export class SubscriptionsManager implements SubscriptionsManagerOptions {
+export class SubscriptionsManager implements DiffComputationConfig {
   private readonly _subscriptions: SubscriptionSet = new Set();
   private readonly _pendingSubscriptions: SubscriptionSet = new Set();
   private readonly _queryInternal: QueryInternal;
@@ -378,10 +374,6 @@ export class SubscriptionsManager implements SubscriptionsManagerOptions {
   constructor(queryInternal: QueryInternal, lc: LogContext) {
     this._queryInternal = queryInternal;
     this._lc = lc;
-  }
-
-  get size(): number {
-    return this._subscriptions.size;
   }
 
   private _add(subscription: UnknownSubscription): () => void {
@@ -485,7 +477,11 @@ export class SubscriptionsManager implements SubscriptionsManagerOptions {
     }
   }
 
-  hasIndexSubscription(indexName: string): boolean {
+  shouldComputeDiffs(): boolean {
+    return this._subscriptions.size > 0;
+  }
+
+  shouldComputeDiffsForIndex(indexName: string): boolean {
     for (const s of this._subscriptions) {
       if (s.hasIndexSubscription(indexName)) {
         return true;

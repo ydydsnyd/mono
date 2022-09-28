@@ -36,7 +36,7 @@ import {
   indexDefinitionEqual,
   IndexDefinitions,
 } from '../index-defs';
-import type {SubscriptionsManagerOptions} from '../subscriptions.js';
+import type {DiffComputationConfig} from '../sync/diff.js';
 
 export class Write extends Read {
   private readonly _dagWrite: dag.Write;
@@ -326,10 +326,10 @@ export class Write extends Read {
 
   async commitWithDiffs(
     headName: string,
-    subscriptions: SubscriptionsManagerOptions,
+    diffConfig: DiffComputationConfig,
   ): Promise<[Hash, sync.DiffsMap]> {
     const commit = this.putCommit();
-    const diffMap = await this._generateDiffs(subscriptions);
+    const diffMap = await this._generateDiffs(diffConfig);
     const commitHash = (await commit).chunk.hash;
     await this._dagWrite.setHead(headName, commitHash);
     await this._dagWrite.commit();
@@ -337,10 +337,10 @@ export class Write extends Read {
   }
 
   private async _generateDiffs(
-    subscriptions: SubscriptionsManagerOptions,
+    diffConfig: DiffComputationConfig,
   ): Promise<sync.DiffsMap> {
     const diffsMap = new sync.DiffsMap();
-    if (subscriptions.size === 0) {
+    if (!diffConfig.shouldComputeDiffs()) {
       return diffsMap;
     }
 
@@ -358,7 +358,7 @@ export class Write extends Read {
     }
 
     for (const [name, index] of this.indexes) {
-      if (!subscriptions.hasIndexSubscription(name)) {
+      if (!diffConfig.shouldComputeDiffsForIndex(name)) {
         continue;
       }
       const basisIndex = basisIndexes.get(name);
@@ -374,7 +374,10 @@ export class Write extends Read {
     // Handle indexes in basisIndex but not in this.indexes. All keys are
     // deleted.
     for (const [name, basisIndex] of basisIndexes) {
-      if (!this.indexes.has(name) && subscriptions.hasIndexSubscription(name)) {
+      if (
+        !this.indexes.has(name) &&
+        diffConfig.shouldComputeDiffsForIndex(name)
+      ) {
         const indexDiffResult = await allEntriesAsDiff(basisIndex.map, 'del');
         diffsMap.set(name, indexDiffResult);
       }

@@ -19,6 +19,7 @@ import fetchMock from 'fetch-mock/esm/client';
 import {uuid} from './uuid';
 import type {WriteTransaction} from './transactions.js';
 import {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
+import type {DiffComputationConfig} from './sync/diff.js';
 
 export class ReplicacheTest<
   // eslint-disable-next-line @typescript-eslint/ban-types
@@ -330,7 +331,7 @@ export async function expectAsyncFuncToThrow(f: () => unknown, c: unknown) {
 /**
  * SubscriptionsManagerOptions that always generates DiffsMaps.
  */
-export const testSubscriptionsManagerOptions = {
-  size: 1,
-  hasIndexSubscription: () => true,
-} as const;
+export const testSubscriptionsManagerOptions: DiffComputationConfig = {
+  shouldComputeDiffs: () => true,
+  shouldComputeDiffsForIndex: () => true,
+};

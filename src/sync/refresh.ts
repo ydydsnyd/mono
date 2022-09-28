@@ -16,9 +16,8 @@ import {
   setClient,
 } from '../persist/clients.js';
 import type {MutatorDefs} from '../replicache.js';
-import type {SubscriptionsManagerOptions} from '../subscriptions.js';
 import type {ClientID} from './client-id.js';
-import {diffCommits, DiffsMap} from './diff.js';
+import {diffCommits, DiffComputationConfig, DiffsMap} from './diff.js';
 
 const ABORTED = 1;
 const COMPLETED = 2;
@@ -49,7 +48,7 @@ export async function refresh(
   perdag: dag.Store,
   clientID: ClientID,
   mutators: MutatorDefs,
-  subscriptions: SubscriptionsManagerOptions,
+  diffConfig: DiffComputationConfig,
 ): Promise<DiffsMap | undefined> {
   assert(DD31);
 
@@ -119,7 +118,7 @@ export async function refresh(
           currMemdagCommit,
           refreshHeadCommit,
           memdagWrite,
-          subscriptions,
+          diffConfig,
         );
         await memdagWrite.setHead(db.DEFAULT_HEAD_NAME, refreshHead);
         await memdagWrite.removeHead(REFRESH_HEAD_NAME);
