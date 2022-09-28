@@ -15,7 +15,7 @@ export interface GarbageCollectionDelegate {
 }
 
 /**
- * Computes how ref counts should be updated when a dag write is commited.
+ * Computes how ref counts should be updated when a dag write is committed.
  * Does not modify the dag store.
  * @param headChanges Heads that were changed by the dag write.
  * @param putChunks Chunks that were put by the dag write.

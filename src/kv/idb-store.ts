@@ -144,13 +144,13 @@ class WriteImpl extends WriteImplBase {
     }
 
     const store = objectStore(this._tx);
-    this._pending.forEach((val, key) => {
+    for (const [key, val] of this._pending) {
       if (val === deleteSentinel) {
         store.delete(key);
       } else {
         store.put(val, key);
       }
-    });
+    }
     await this._onTxEnd;
 
     if (this._txState === WriteState.ABORTED) {

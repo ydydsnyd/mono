@@ -178,12 +178,12 @@ function clientMapToChunkData(
   clients: ClientMap,
   dagWrite: dag.Write,
 ): ReadonlyJSONValue {
-  clients.forEach(client => {
+  for (const client of clients.values()) {
     dagWrite.assertValidHash(client.headHash);
     if (isClientDD31(client) && client.tempRefreshHash) {
       dagWrite.assertValidHash(client.tempRefreshHash);
     }
-  });
+  }
   return Object.fromEntries(clients);
 }
 

@@ -222,14 +222,14 @@ export class WriteImpl extends ReadImpl implements Write {
     refCountCache: Map<Hash, number>,
   ): Promise<void> {
     const ps: Promise<void>[] = [];
-    refCountCache.forEach((count, hash) => {
+    for (const [hash, count] of refCountCache) {
       if (count === 0) {
         ps.push(this._removeAllRelatedKeys(hash));
       } else {
         const refCountKey = chunkRefCountKey(hash);
         ps.push(this._tx.put(refCountKey, count));
       }
-    });
+    }
     await Promise.all(ps);
   }
 

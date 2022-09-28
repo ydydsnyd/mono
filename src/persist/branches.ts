@@ -78,7 +78,9 @@ function assertBranch(value: unknown): asserts value is Branch {
   } = value;
   assertHash(headHash);
   assertArray(mutatorNames);
-  mutatorNames.forEach(name => assertString(name));
+  for (const name of mutatorNames) {
+    assertString(name);
+  }
   assertObject(indexes);
   assertIndexDefinitions(indexes);
   assertObject(mutationIDs);

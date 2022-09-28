@@ -193,10 +193,9 @@ function assertBTreeNodeShape(
 
   assertNumber(level);
   assertArray(entries);
-  if (level > 0) {
-    entries.forEach(e => assertEntry(e, assertString));
-  } else {
-    entries.forEach(e => assertEntry(e, assertJSONValue));
+
+  for (const e of entries) {
+    assertEntry(e, level > 0 ? assertString : assertJSONValue);
   }
 }
 

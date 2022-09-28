@@ -340,7 +340,7 @@ export class LazyWrite
     const cacheChunksToPut: Array<Chunk> = [];
     const cacheHashesToDelete: Array<Hash> = [];
 
-    refCountUpdates.forEach((count, hash) => {
+    for (const [hash, count] of refCountUpdates) {
       if (count === 0) {
         this._refCounts.delete(hash);
         this._pendingChunks.delete(hash);
@@ -352,23 +352,23 @@ export class LazyWrite
       } else {
         this._refCounts.set(hash, count);
       }
-    });
+    }
 
-    this._pendingChunks.forEach((chunk, hash) => {
+    for (const [hash, chunk] of this._pendingChunks) {
       if (isTempHash(hash)) {
         this._tempChunks.set(hash, chunk);
       } else {
         cacheChunksToPut.push(chunk);
       }
-    });
+    }
 
-    this._pendingHeadChanges.forEach((headChange, name) => {
+    for (const [name, headChange] of this._pendingHeadChanges) {
       if (headChange.new) {
         this._heads.set(name, headChange.new);
       } else {
         this._heads.delete(name);
       }
-    });
+    }
 
     this._sourceChunksCache.updateForCommit(
       cacheChunksToPut,
@@ -459,9 +459,9 @@ class ChunksCache {
     }
     this._size += valueSize;
     this._cacheEntries.set(hash, {chunk, size: valueSize});
-    chunk.meta.forEach(refHash => {
+    for (const refHash of chunk.meta) {
       this._refCounts.set(refHash, (this._refCounts.get(refHash) || 0) + 1);
-    });
+    }
 
     this._ensureCacheSizeLimit();
   }
@@ -482,7 +482,7 @@ class ChunksCache {
     const {hash} = cacheEntry.chunk;
     this._size -= cacheEntry.size;
     this._cacheEntries.delete(hash);
-    cacheEntry.chunk.meta.forEach(refHash => {
+    for (const refHash of cacheEntry.chunk.meta) {
       const oldCount = this._refCounts.get(refHash);
       assertNotUndefined(oldCount);
       assert(oldCount > 0);
@@ -500,7 +500,7 @@ class ChunksCache {
       } else {
         this._refCounts.set(refHash, newCount);
       }
-    });
+    }
   }
 
   updateForCommit(

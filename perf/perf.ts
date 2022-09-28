@@ -4,6 +4,7 @@ import {benchmarks as hashBenchmarks} from './hash';
 import {benchmarks as storageBenchmarks} from './storage';
 import {benchmarks as compareBenchmarks} from './compare-utf8';
 import {benchmarks as uuidBenchmarks} from './uuid';
+import {benchmarks as mapLoopBenchmarks} from './map-loop.js';
 import {
   formatAsBenchmarkJS,
   formatAsReplicache,
@@ -144,6 +145,7 @@ export const benchmarks = [
   ...storageBenchmarks(),
   ...compareBenchmarks(),
   ...uuidBenchmarks(),
+  ...mapLoopBenchmarks(),
 ];
 
 for (const b of [benchmarkIDBRead, benchmarkIDBWrite]) {
