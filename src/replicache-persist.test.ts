@@ -20,6 +20,7 @@ import {assertNotTempHash} from './hash';
 import {assertNotUndefined} from './asserts';
 import {deleteClientForTesting} from './persist/clients-test-helpers.js';
 import {assertClientDD31} from './persist/clients';
+import type {WriteTransaction} from './mod.js';
 
 initReplicacheTesting();
 
@@ -162,8 +163,12 @@ suite('onClientStateNotFound', () => {
   test('Called in query if collected', async () => {
     const consoleErrorStub = sinon.stub(console, 'error');
 
-    const rep = await replicacheForTesting('called-in-query', {
-      mutators: {addData},
+    const name = 'called-in-query';
+    const mutators = {
+      addData,
+    };
+    const rep = await replicacheForTesting(name, {
+      mutators,
     });
 
     await rep.mutate.addData({foo: 'bar'});
@@ -172,8 +177,8 @@ suite('onClientStateNotFound', () => {
     await deleteClientForTesting(clientID, rep.perdag);
     await rep.close();
 
-    const rep2 = await replicacheForTesting('called-in-query', {
-      mutators: {addData},
+    const rep2 = await replicacheForTesting(name, {
+      mutators,
     });
 
     const clientID2 = await rep2.clientID;
@@ -207,14 +212,16 @@ suite('onClientStateNotFound', () => {
 
   test('Called in mutate if collected', async () => {
     const consoleErrorStub = sinon.stub(console, 'error');
-
-    const rep = await replicacheForTesting('called-in-mutate', {
-      mutators: {
-        addData,
-        async check(tx, key) {
-          await tx.has(key);
-        },
+    const name = 'called-in-mutate';
+    const mutators = {
+      addData,
+      async check(tx: WriteTransaction, key: string) {
+        await tx.has(key);
       },
+    };
+
+    const rep = await replicacheForTesting(name, {
+      mutators,
     });
 
     await rep.mutate.addData({foo: 'bar'});
@@ -223,12 +230,8 @@ suite('onClientStateNotFound', () => {
     await deleteClientForTesting(clientID, rep.perdag);
     await rep.close();
 
-    const rep2 = await replicacheForTesting('called-in-query', {
-      mutators: {
-        async check(tx, key) {
-          await tx.has(key);
-        },
-      },
+    const rep2 = await replicacheForTesting(name, {
+      mutators,
     });
 
     const clientID2 = await rep2.clientID;
