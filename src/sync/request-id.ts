@@ -1,3 +1,5 @@
+import type {ClientID} from './ids.js';
+
 let sessionID = '';
 function getSessionID() {
   if (sessionID === '') {
@@ -17,7 +19,7 @@ const REQUEST_COUNTERS: Map<string, number> = new Map();
  * the request_id is probabilistically unique across restarts (which is good
  * enough).
  */
-export function newRequestID(clientID: string): string {
+export function newRequestID(clientID: ClientID): string {
   let counter = REQUEST_COUNTERS.get(clientID);
   if (!counter) {
     REQUEST_COUNTERS.set(clientID, 0);

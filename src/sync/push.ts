@@ -9,6 +9,7 @@ import type {InternalValue} from '../internal-value';
 import {assertLocalMetaDD31} from '../db/commit';
 import {assert} from '../asserts.js';
 import type {BranchID} from './branch-id.js';
+import type {ClientID} from './ids.js';
 
 export const PUSH_VERSION = 0;
 export const PUSH_VERSION_DD31 = 1;
@@ -19,7 +20,7 @@ export const PUSH_VERSION_DD31 = 1;
  */
 export type PushRequest = {
   profileID: string;
-  clientID: string;
+  clientID: ClientID;
   mutations: Mutation[];
   pushVersion: typeof PUSH_VERSION;
   // schemaVersion can optionally be used to specify to the push endpoint
@@ -31,7 +32,7 @@ export type PushRequest = {
 export type PushRequestDD31 = {
   profileID: string;
   branchID: BranchID;
-  clientID: string;
+  clientID: ClientID;
   mutations: MutationDD31[];
   pushVersion: typeof PUSH_VERSION_DD31;
   // schemaVersion can optionally be used to specify to the push endpoint
@@ -54,7 +55,7 @@ export type Mutation = {
  * Mutation describes a single mutation done on the client.
  */
 export type MutationDD31 = {
-  readonly clientID: string;
+  readonly clientID: ClientID;
   readonly id: number;
   readonly name: string;
   readonly args: InternalValue;
@@ -81,7 +82,7 @@ export async function push(
   lc: LogContext,
   profileID: string,
   branchID: BranchID | undefined,
-  clientID: string,
+  clientID: ClientID,
   pusher: Pusher,
   pushURL: string,
   auth: string,

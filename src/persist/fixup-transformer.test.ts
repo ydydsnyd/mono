@@ -6,6 +6,7 @@ import {BTreeWrite} from '../btree/write';
 import {FixupTransformer} from './fixup-transformer';
 import type {JSONObject, ReadonlyJSONValue} from '../json';
 import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
+import type {ClientID} from '../mod.js';
 
 test('fixup of a single snapshot commit with empty btree', async () => {
   const clientID = 'client-id';
@@ -371,7 +372,7 @@ test('fixup base snapshot when there is a local commit on top of it', async () =
 });
 
 function makeSnapshotMetaForTesting(
-  clientID: string,
+  clientID: ClientID,
 ): ReadonlyJSONValue | undefined {
   return DD31
     ? {

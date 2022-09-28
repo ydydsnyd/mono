@@ -9,6 +9,7 @@ import {
 import {BTreeWrite} from '../btree/write';
 import {ComputeHashTransformer} from './compute-hash-transformer';
 import type {ReadonlyJSONValue} from '../json';
+import type {ClientID} from '../mod.js';
 
 test('fix hashes up of a single snapshot commit with empty btree', async () => {
   const clientID = 'client-id';
@@ -124,7 +125,7 @@ test('fix hashes up of a single snapshot commit with empty btree', async () => {
 });
 
 function makeSnapshotMetaForTesting(
-  clientID: string,
+  clientID: ClientID,
 ): ReadonlyJSONValue | undefined {
   return DD31
     ? {

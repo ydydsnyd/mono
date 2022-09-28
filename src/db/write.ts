@@ -48,7 +48,7 @@ export class Write extends Read {
   declare map: BTreeWrite;
 
   declare readonly indexes: Map<string, IndexWrite>;
-  private readonly _clientID: string;
+  private readonly _clientID: ClientID;
 
   constructor(
     dagWrite: dag.Write,

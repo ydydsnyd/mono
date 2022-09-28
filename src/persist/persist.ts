@@ -147,7 +147,7 @@ async function writeFixedChunks(
   perdag: dag.Store,
   fixedChunks: FixedChunks,
   mainHeadHash: Hash,
-  clientID: string,
+  clientID: sync.ClientID,
   mutationID: number,
   lastMutationID: number,
 ) {

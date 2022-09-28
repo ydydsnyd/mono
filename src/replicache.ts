@@ -477,7 +477,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     indexes: IndexDefinitions,
     profileIDResolver: (profileID: string) => void,
     resolveBranchID: (branchID: sync.BranchID | undefined) => void,
-    resolveClientID: (clientID: string) => void,
+    resolveClientID: (clientID: sync.ClientID) => void,
     resolveReady: () => void,
     resolveLicenseCheck: (valid: boolean) => void,
     resolveLicenseActive: (active: boolean) => void,

@@ -12,7 +12,12 @@ import {
   tickAFewTimes,
   tickUntil,
 } from './test-util';
-import {PatchOperation, Replicache, TransactionClosedError} from './mod';
+import {
+  ClientID,
+  PatchOperation,
+  Replicache,
+  TransactionClosedError,
+} from './mod';
 import type {ReadTransaction, WriteTransaction} from './mod';
 import type {JSONValue} from './json';
 import {assert, expect} from '@esm-bundle/chai';
@@ -2608,7 +2613,7 @@ test('client ID is set correctly on transactions', async () => {
     'client-id-is-set-correctly-on-transactions',
     {
       mutators: {
-        async expectClientID(tx, expectedClientID: string) {
+        async expectClientID(tx, expectedClientID: ClientID) {
           expect(tx.clientID).to.equal(expectedClientID);
         },
       },

@@ -55,6 +55,7 @@ export type {
 
 export type {PullRequest} from './sync/pull';
 export type {PushRequest} from './sync/push';
+export type {ClientID} from './sync/ids';
 
 export {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
 

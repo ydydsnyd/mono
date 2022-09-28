@@ -37,7 +37,7 @@ export const PULL_VERSION = 0;
  */
 export type PullRequest<Cookie = ReadonlyJSONValue> = {
   profileID: string;
-  clientID: string;
+  clientID: ClientID;
   cookie: Cookie;
   lastMutationID: number;
   pullVersion: number;
@@ -62,7 +62,7 @@ export type BeginPullResponse = {
 
 export async function beginPull(
   profileID: string,
-  clientID: string,
+  clientID: ClientID,
   beginPullReq: BeginPullRequest,
   puller: Puller,
   requestID: string,

@@ -13,7 +13,7 @@ import type {ScanResult} from './scan-iterator';
 import {throwIfClosed} from './transaction-closed-error';
 import type * as db from './db/mod';
 import type {ScanSubscriptionInfo} from './subscriptions';
-import type {ScanNoIndexOptions} from './mod';
+import type {ClientID, ScanNoIndexOptions} from './mod';
 import {decodeIndexKey, IndexKey} from './db/index';
 import {
   toInternalValue,
@@ -31,7 +31,7 @@ import type {IndexDefinitions} from './index-defs';
  * database.
  */
 export interface ReadTransaction {
-  readonly clientID: string;
+  readonly clientID: ClientID;
 
   /**
    * Get a single value from the database. If the `key` is not present this
@@ -97,12 +97,12 @@ export class ReadTransactionImpl<
   Value extends ReadonlyJSONValue = ReadonlyJSONValue,
 > implements ReadTransaction
 {
-  readonly clientID: string;
+  readonly clientID: ClientID;
   readonly dbtx: db.Read;
   protected readonly _lc: LogContext;
 
   constructor(
-    clientID: string,
+    clientID: ClientID,
     dbRead: db.Read,
     lc: LogContext,
     rpcName = 'openReadTransaction',
@@ -261,7 +261,7 @@ export class WriteTransactionImpl
   declare readonly dbtx: db.Write;
 
   constructor(
-    clientID: string,
+    clientID: ClientID,
     dbWrite: db.Write,
     lc: LogContext,
     rpcName = 'openWriteTransaction',
@@ -322,7 +322,7 @@ export class IndexTransactionImpl
   extends WriteTransactionImpl
   implements IndexTransaction
 {
-  constructor(clientID: string, dbWrite: db.Write, lc: LogContext) {
+  constructor(clientID: ClientID, dbWrite: db.Write, lc: LogContext) {
     super(clientID, dbWrite, lc, 'openIndexTransaction');
   }
 

@@ -65,7 +65,7 @@ async function makePerdagChainAndSetClientsAndBranch(
 
 async function setClientsAndBranches(
   headHash: Hash,
-  clientID: string,
+  clientID: ClientID,
   perdag: dag.Store,
 ) {
   const branchID = 'branch-1';
