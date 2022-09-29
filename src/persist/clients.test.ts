@@ -862,15 +862,9 @@ suite('findMatchingClient', () => {
   test('new (empty perdag)', async () => {
     const perdag = new dag.TestStore();
     await perdag.withRead(async read => {
-      const clients = new Map();
       const mutatorNames: string[] = [];
       const indexes = {};
-      const res = await findMatchingClient(
-        read,
-        clients,
-        mutatorNames,
-        indexes,
-      );
+      const res = await findMatchingClient(read, mutatorNames, indexes);
       expect(res).deep.equal({type: FIND_MATCHING_CLIENT_TYPE_NEW});
     });
   });
@@ -910,13 +904,7 @@ suite('findMatchingClient', () => {
     });
 
     await perdag.withRead(async read => {
-      const clients = await getClients(read);
-      const res = await findMatchingClient(
-        read,
-        clients,
-        newMutatorNames,
-        newIndexes,
-      );
+      const res = await findMatchingClient(read, newMutatorNames, newIndexes);
       const expected: FindMatchingClientResult = {
         type: FIND_MATCHING_CLIENT_TYPE_FORK,
         snapshot: chain[0] as Commit<SnapshotMetaDD31>,
@@ -991,13 +979,7 @@ suite('findMatchingClient', () => {
     });
 
     await perdag.withRead(async read => {
-      const clients = await getClients(read);
-      const res = await findMatchingClient(
-        read,
-        clients,
-        newMutatorNames,
-        newIndexes,
-      );
+      const res = await findMatchingClient(read, newMutatorNames, newIndexes);
       const expected: FindMatchingClientResult = {
         type: FIND_MATCHING_CLIENT_TYPE_HEAD,
         branchID,

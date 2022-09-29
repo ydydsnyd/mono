@@ -4,6 +4,7 @@ import {
   expectLogContext,
   initReplicacheTesting,
   replicacheForTesting,
+  ReplicacheTest,
   tickAFewTimes,
 } from './test-util';
 import {expect} from '@esm-bundle/chai';
@@ -17,10 +18,11 @@ import * as kv from './kv/mod';
 import * as dag from './dag/mod';
 import * as persist from './persist/mod';
 import {assertNotTempHash} from './hash';
-import {assertNotUndefined} from './asserts';
-import {deleteClientForTesting} from './persist/clients-test-helpers.js';
+import {assert, assertNotUndefined} from './asserts';
+import {deleteClientForTesting} from './persist/clients-test-helpers';
 import {assertClientDD31} from './persist/clients';
-import type {WriteTransaction} from './mod.js';
+import type {MutatorDefs, WriteTransaction} from './mod';
+import {deleteBranch} from './persist/branches';
 
 initReplicacheTesting();
 
@@ -182,9 +184,11 @@ suite('onClientStateNotFound', () => {
     });
 
     const clientID2 = await rep2.clientID;
+
     await deleteClientForTesting(clientID2, rep2.perdag);
     if (DD31) {
-      await persist.gcBranches(rep2.perdag);
+      // Cannot simply gcBranches because the branch has pending mutations.
+      await deleteBranchForTesting(rep2);
     }
 
     const onClientStateNotFound = sinon.fake();
@@ -237,7 +241,8 @@ suite('onClientStateNotFound', () => {
     const clientID2 = await rep2.clientID;
     await deleteClientForTesting(clientID2, rep2.perdag);
     if (DD31) {
-      await persist.gcBranches(rep2.perdag);
+      // Cannot simply gcBranches because the branch has pending mutations.
+      await deleteBranchForTesting(rep2);
     }
 
     const onClientStateNotFound = sinon.fake();
@@ -303,3 +308,15 @@ suite('persist scheduling', () => {
     expect(rep.persistIsScheduled).to.be.false;
   });
 });
+
+async function deleteBranchForTesting<
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  MD extends MutatorDefs = {},
+>(rep: ReplicacheTest<MD>) {
+  const branchID = await rep.branchID;
+  assert(branchID);
+  await rep.perdag.withWrite(async tx => {
+    await deleteBranch(branchID, tx);
+    await tx.commit();
+  });
+}

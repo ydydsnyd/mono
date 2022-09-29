@@ -20,6 +20,7 @@ import {uuid} from './uuid';
 import type {WriteTransaction} from './transactions.js';
 import {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
 import type {DiffComputationConfig} from './sync/diff.js';
+import type {BranchID} from './sync/ids.js';
 
 export class ReplicacheTest<
   // eslint-disable-next-line @typescript-eslint/ban-types
@@ -100,6 +101,11 @@ export class ReplicacheTest<
   get persistIsScheduled() {
     // @ts-expect-error Property '_persistIsScheduled' is private
     return this._persistIsScheduled;
+  }
+
+  get branchID(): Promise<BranchID | undefined> {
+    // @ts-expect-error Property '_branchIDPromise' is private
+    return this._branchIDPromise;
   }
 }
 

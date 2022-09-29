@@ -385,12 +385,7 @@ export function initClientDD31(
     const newClientID = makeUuid();
     const clients = await getClients(dagWrite);
 
-    const res = await findMatchingClient(
-      dagWrite,
-      clients,
-      mutatorNames,
-      indexes,
-    );
+    const res = await findMatchingClient(dagWrite, mutatorNames, indexes);
     if (res.type === FIND_MATCHING_CLIENT_TYPE_HEAD) {
       // We found a branch with matching mutators and indexes. We can reuse it.
       const {branchID, headHash} = res;
@@ -514,7 +509,6 @@ export type FindMatchingClientResult =
 
 export async function findMatchingClient(
   dagRead: dag.Read,
-  clients: ClientMap,
   mutatorNames: string[],
   indexes: IndexDefinitions,
 ): Promise<FindMatchingClientResult> {
@@ -523,13 +517,7 @@ export async function findMatchingClient(
   const mutatorNamesSet = new Set(mutatorNames);
 
   const branches = await getBranches(dagRead);
-  for (const client of clients.values()) {
-    assertClientDD31(client);
-
-    const {branchID} = client;
-    const branch = branches.get(branchID);
-    assert(branch);
-
+  for (const [branchID, branch] of branches) {
     if (
       mutatorNamesEqual(mutatorNamesSet, branch.mutatorNames) &&
       indexDefinitionsEqual(indexes, branch.indexes)

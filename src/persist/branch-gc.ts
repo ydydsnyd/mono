@@ -38,12 +38,11 @@ export function initBranchGC(
 export async function gcBranches(dagStore: dag.Store): Promise<BranchMap> {
   return await dagStore.withWrite(async tx => {
     const clients = await getClients(tx);
-    const clientBranchIds = new Set(
-      [...clients.values()].map(client => {
-        assertClientDD31(client);
-        return client.branchID;
-      }),
-    );
+    const clientBranchIds = new Set();
+    for (const client of clients.values()) {
+      assertClientDD31(client);
+      clientBranchIds.add(client.branchID);
+    }
     const branches = new Map();
     for (const [branchID, branch] of await getBranches(tx)) {
       if (clientBranchIds.has(branchID) || branchHasPendingMutations(branch)) {
