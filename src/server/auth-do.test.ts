@@ -110,25 +110,22 @@ test("connect calls authHandler and sends resolved UserData in header to Room DO
 
   const storage = await getMiniflareDurableObjectStorage(authDOID);
   const state = new TestDurableObjectState(authDOID, storage);
-  const authDONonMiniflare = new BaseAuthDO(
-    {
-      roomDO: testRoomDO,
-      state,
-      authHandler: async (auth, roomID) => {
-        expect(auth).toEqual(testAuth);
-        expect(roomID).toEqual(testRoomID);
-        return { userID: testUserID };
-      },
-      authApiKey: TEST_AUTH_API_KEY,
-      logSink: new TestLogSink(),
-      logLevel: "debug",
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async (auth, roomID) => {
+      expect(auth).toEqual(testAuth);
+      expect(roomID).toEqual(testRoomID);
+      return { userID: testUserID };
     },
-    false /* isMiniflare */
-  );
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
 
   const testTime = 1010101;
   jest.setSystemTime(testTime);
-  const response = await authDONonMiniflare.fetch(testRequest);
+  const response = await authDO.fetch(testRequest);
 
   expect(response.status).toEqual(101);
   expect(response.webSocket).toBe(mocket);
@@ -160,25 +157,22 @@ test("connect percent escapes components of the connection key", async () => {
 
   const storage = await getMiniflareDurableObjectStorage(authDOID);
   const state = new TestDurableObjectState(authDOID, storage);
-  const authDONonMiniflare = new BaseAuthDO(
-    {
-      roomDO: testRoomDO,
-      state,
-      authHandler: async (auth, roomID) => {
-        expect(auth).toEqual(testAuth);
-        expect(roomID).toEqual(testRoomID);
-        return { userID: testUserID };
-      },
-      authApiKey: TEST_AUTH_API_KEY,
-      logSink: new TestLogSink(),
-      logLevel: "debug",
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async (auth, roomID) => {
+      expect(auth).toEqual(testAuth);
+      expect(roomID).toEqual(testRoomID);
+      return { userID: testUserID };
     },
-    false /* isMiniflare */
-  );
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
 
   const testTime = 1010101;
   jest.setSystemTime(testTime);
-  const response = await authDONonMiniflare.fetch(testRequest);
+  const response = await authDO.fetch(testRequest);
 
   expect(response.status).toEqual(101);
   expect(response.webSocket).toBe(mocket);
@@ -191,35 +185,6 @@ test("connect percent escapes components of the connection key", async () => {
   )) as ConnectionRecord;
   expect(connectionRecord).toBeDefined();
   expect(connectionRecord.connectTimestamp).toEqual(testTime);
-});
-
-test("connect does not set Sec-WebSocket-Protocol response header when on miniflare ", async () => {
-  const { testAuth, testUserID, testRoomID, testRequest, testRoomDO, mocket } =
-    createConnectTestFixture();
-
-  const storage = await getMiniflareDurableObjectStorage(authDOID);
-  const state = new TestDurableObjectState(authDOID, storage);
-  const authDONonMiniflare = new BaseAuthDO(
-    {
-      roomDO: testRoomDO,
-      state,
-      authHandler: async (auth, roomID) => {
-        expect(auth).toEqual(testAuth);
-        expect(roomID).toEqual(testRoomID);
-        return { userID: testUserID };
-      },
-      authApiKey: TEST_AUTH_API_KEY,
-      logSink: new TestLogSink(),
-      logLevel: "debug",
-    },
-    true /* isMiniflare */
-  );
-
-  const response = await authDONonMiniflare.fetch(testRequest);
-
-  expect(response.status).toEqual(101);
-  expect(response.webSocket).toBe(mocket);
-  expect(response.headers.get("Sec-WebSocket-Protocol")).toBeNull();
 });
 
 test("connect returns a 401 without calling Room DO if authHandler rejects", async () => {
@@ -235,21 +200,18 @@ test("connect returns a 401 without calling Room DO if authHandler rejects", asy
       headers,
     }
   );
-  const authDO = new BaseAuthDO(
-    {
-      roomDO: createRoomDOThatThrowsIfFetchIsCalled(),
-      state: { id: authDOID } as DurableObjectState,
-      authHandler: async (auth, roomID) => {
-        expect(auth).toEqual(testAuth);
-        expect(roomID).toEqual(testRoomID);
-        throw new Error("Test authHandler reject");
-      },
-      authApiKey: TEST_AUTH_API_KEY,
-      logSink: new TestLogSink(),
-      logLevel: "debug",
+  const authDO = new BaseAuthDO({
+    roomDO: createRoomDOThatThrowsIfFetchIsCalled(),
+    state: { id: authDOID } as DurableObjectState,
+    authHandler: async (auth, roomID) => {
+      expect(auth).toEqual(testAuth);
+      expect(roomID).toEqual(testRoomID);
+      throw new Error("Test authHandler reject");
     },
-    false
-  );
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
 
   const response = await authDO.fetch(testRequest);
 
@@ -269,19 +231,16 @@ test("connect returns a 401 without calling Room DO if Sec-WebSocket-Protocol he
     }
   );
 
-  const authDO = new BaseAuthDO(
-    {
-      roomDO: createRoomDOThatThrowsIfFetchIsCalled(),
-      state: { id: authDOID } as DurableObjectState,
-      authHandler: async (_auth, _roomID) => {
-        throw new Error("Unexpected call to authHandler");
-      },
-      authApiKey: TEST_AUTH_API_KEY,
-      logSink: new TestLogSink(),
-      logLevel: "debug",
+  const authDO = new BaseAuthDO({
+    roomDO: createRoomDOThatThrowsIfFetchIsCalled(),
+    state: { id: authDOID } as DurableObjectState,
+    authHandler: async (_auth, _roomID) => {
+      throw new Error("Unexpected call to authHandler");
     },
-    false
-  );
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
 
   const response = await authDO.fetch(testRequest);
 
@@ -336,19 +295,16 @@ test("authInvalidateForUser when requests to roomDOs are successful", async () =
     },
   };
 
-  const authDO = new BaseAuthDO(
-    {
-      roomDO: testRoomDO,
-      state,
-      authHandler: async (_auth, _roomID) => {
-        throw new Error("Unexpected call to authHandler");
-      },
-      authApiKey: TEST_AUTH_API_KEY,
-      logSink: new TestLogSink(),
-      logLevel: "debug",
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async (_auth, _roomID) => {
+      throw new Error("Unexpected call to authHandler");
     },
-    false
-  );
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
 
   const response = await authDO.fetch(testRequest);
 
@@ -414,19 +370,16 @@ test("authInvalidateForUser when connection ids have chars that need to be perce
     },
   };
 
-  const authDO = new BaseAuthDO(
-    {
-      roomDO: testRoomDO,
-      state,
-      authHandler: async (_auth, _roomID) => {
-        throw new Error("Unexpected call to authHandler");
-      },
-      authApiKey: TEST_AUTH_API_KEY,
-      logSink: new TestLogSink(),
-      logLevel: "debug",
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async (_auth, _roomID) => {
+      throw new Error("Unexpected call to authHandler");
     },
-    false
-  );
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
 
   const response = await authDO.fetch(testRequest);
 
@@ -488,19 +441,16 @@ test("authInvalidateForUser when any request to roomDOs returns error response",
     },
   };
 
-  const authDO = new BaseAuthDO(
-    {
-      roomDO: testRoomDO,
-      state,
-      authHandler: async (_auth, _roomID) => {
-        throw new Error("Unexpected call to authHandler");
-      },
-      authApiKey: TEST_AUTH_API_KEY,
-      logSink: new TestLogSink(),
-      logLevel: "debug",
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async (_auth, _roomID) => {
+      throw new Error("Unexpected call to authHandler");
     },
-    false
-  );
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
 
   const response = await authDO.fetch(testRequest);
 
@@ -544,19 +494,16 @@ test("authInvalidateForRoom when request to roomDO is successful", async () => {
     },
   };
 
-  const authDO = new BaseAuthDO(
-    {
-      roomDO: testRoomDO,
-      state: { id: authDOID } as DurableObjectState,
-      authHandler: async (_auth, _roomID) => {
-        throw new Error("Unexpected call to authHandler");
-      },
-      authApiKey: TEST_AUTH_API_KEY,
-      logSink: new TestLogSink(),
-      logLevel: "debug",
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state: { id: authDOID } as DurableObjectState,
+    authHandler: async (_auth, _roomID) => {
+      throw new Error("Unexpected call to authHandler");
     },
-    false
-  );
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
 
   const response = await authDO.fetch(testRequest);
 
@@ -597,19 +544,16 @@ test("authInvalidateForRoom when request to roomDO returns error response", asyn
     },
   };
 
-  const authDO = new BaseAuthDO(
-    {
-      roomDO: testRoomDO,
-      state: { id: authDOID } as DurableObjectState,
-      authHandler: async (_auth, _roomID) => {
-        throw new Error("Unexpected call to authHandler");
-      },
-      authApiKey: TEST_AUTH_API_KEY,
-      logSink: new TestLogSink(),
-      logLevel: "debug",
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state: { id: authDOID } as DurableObjectState,
+    authHandler: async (_auth, _roomID) => {
+      throw new Error("Unexpected call to authHandler");
     },
-    false
-  );
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
 
   const response = await authDO.fetch(testRequest);
 
@@ -669,19 +613,16 @@ test("authInvalidateAll when requests to roomDOs are successful", async () => {
     },
   };
 
-  const authDO = new BaseAuthDO(
-    {
-      roomDO: testRoomDO,
-      state,
-      authHandler: async (_auth, _roomID) => {
-        throw new Error("Unexpected call to authHandler");
-      },
-      authApiKey: TEST_AUTH_API_KEY,
-      logSink: new TestLogSink(),
-      logLevel: "debug",
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async (_auth, _roomID) => {
+      throw new Error("Unexpected call to authHandler");
     },
-    false
-  );
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
 
   const response = await authDO.fetch(testRequest);
 
@@ -749,19 +690,16 @@ test("authInvalidateAll when any request to roomDOs returns error response", asy
     },
   };
 
-  const authDO = new BaseAuthDO(
-    {
-      roomDO: testRoomDO,
-      state,
-      authHandler: async (_auth, _roomID) => {
-        throw new Error("Unexpected call to authHandler");
-      },
-      authApiKey: TEST_AUTH_API_KEY,
-      logSink: new TestLogSink(),
-      logLevel: "debug",
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async (_auth, _roomID) => {
+      throw new Error("Unexpected call to authHandler");
     },
-    false
-  );
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
 
   const response = await authDO.fetch(testRequest);
 
@@ -845,19 +783,16 @@ async function createRevalidateConnectionsTestFixture() {
     },
   };
 
-  const authDO = new BaseAuthDO(
-    {
-      roomDO: testRoomDO,
-      state,
-      authHandler: async (_auth, _roomID) => {
-        throw new Error("Unexpected call to authHandler");
-      },
-      authApiKey: TEST_AUTH_API_KEY,
-      logSink: new TestLogSink(),
-      logLevel: "debug",
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async (_auth, _roomID) => {
+      throw new Error("Unexpected call to authHandler");
     },
-    false
-  );
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
   return { authDO, testRequest, roomDORequestCountsByRoomID, storage };
 }
 
@@ -969,19 +904,16 @@ test("revalidateConnections continues if one roomDO returns an error", async () 
     },
   };
 
-  const authDO = new BaseAuthDO(
-    {
-      roomDO: testRoomDO,
-      state,
-      authHandler: async (_auth, _roomID) => {
-        throw new Error("Unexpected call to authHandler");
-      },
-      authApiKey: TEST_AUTH_API_KEY,
-      logSink: new TestLogSink(),
-      logLevel: "debug",
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async (_auth, _roomID) => {
+      throw new Error("Unexpected call to authHandler");
     },
-    false
-  );
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
 
   const response = await authDO.fetch(testRequest);
   expect(response.status).toEqual(200);

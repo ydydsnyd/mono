@@ -37,13 +37,9 @@ export class BaseAuthDO implements DurableObject {
   private readonly _authHandler: AuthHandler;
   private readonly _authApiKey?: string;
   private readonly _lc: LogContext;
-  private readonly _isMiniflare: boolean;
   private readonly _lock: RWLock;
 
-  constructor(
-    options: AuthDOOptions,
-    isMiniflare = typeof MINIFLARE !== "undefined"
-  ) {
+  constructor(options: AuthDOOptions) {
     const { roomDO, state, authHandler, authApiKey, logSink, logLevel } =
       options;
     this._roomDO = roomDO;
@@ -53,7 +49,6 @@ export class BaseAuthDO implements DurableObject {
     this._lc = new LogContext(logLevel, logSink)
       .addContext("AuthDO")
       .addContext("doID", state.id.toString());
-    this._isMiniflare = isMiniflare;
     this._lock = new RWLock();
     this._lc.info?.("Starting server");
     this._lc.info?.("Version:", version);
@@ -158,12 +153,7 @@ export class BaseAuthDO implements DurableObject {
       // Send a Sec-WebSocket-Protocol response header with a value
       // matching the Sec-WebSocket-Protocol request header, to indicate
       // support for the protocol, otherwise the client will close the connection.
-      if (!this._isMiniflare) {
-        // ...miniflare doesn't like it though. If we set this header under MF,
-        // sending the response fails. See:
-        // https://github.com/cloudflare/miniflare/issues/179
-        responseHeaders.set("Sec-WebSocket-Protocol", encodedAuth);
-      }
+      responseHeaders.set("Sec-WebSocket-Protocol", encodedAuth);
 
       const response = new Response(responseFromDO.body, {
         status: responseFromDO.status,

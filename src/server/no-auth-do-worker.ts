@@ -14,8 +14,7 @@ export interface BaseNoAuthDOWorkerEnv {
 }
 
 export function createNoAuthDOWorker<Env extends BaseNoAuthDOWorkerEnv>(
-  options: NoAuthDOWorkerOptions<Env>,
-  isMiniflare = typeof MINIFLARE !== "undefined"
+  options: NoAuthDOWorkerOptions<Env>
 ): ExportedHandler<Env> {
   const { getLogSink, getLogLevel, authHandler } = options;
   return {
@@ -25,8 +24,7 @@ export function createNoAuthDOWorker<Env extends BaseNoAuthDOWorkerEnv>(
         ctx,
         getLogSink,
         getLogLevel,
-        (lc: LogContext) =>
-          fetch(request, lc, env.roomDO, authHandler, isMiniflare)
+        (lc: LogContext) => fetch(request, lc, env.roomDO, authHandler)
       );
     },
     scheduled: async (
@@ -58,21 +56,14 @@ async function fetch(
   request: Request,
   lc: LogContext,
   roomDO: DurableObjectNamespace,
-  authHandler: AuthHandler,
-  isMiniflare: boolean
+  authHandler: AuthHandler
 ) {
   // TODO: pass request id through so request can be traced across
   // worker and DOs.
   lc = lc.addContext("req", randomID());
   lc.debug?.("Handling request:", request.url);
   try {
-    const resp = await handleRequest(
-      request,
-      lc,
-      roomDO,
-      authHandler,
-      isMiniflare
-    );
+    const resp = await handleRequest(request, lc, roomDO, authHandler);
     lc.debug?.(`Returning response: ${resp.status} ${resp.statusText}`);
     return resp;
   } catch (e) {
@@ -87,8 +78,7 @@ async function handleRequest(
   request: Request,
   lc: LogContext,
   roomDO: DurableObjectNamespace,
-  authHandler: AuthHandler,
-  isMiniflare: boolean
+  authHandler: AuthHandler
 ): Promise<Response> {
   const url = new URL(request.url);
   if (url.pathname !== "/connect") {
@@ -154,12 +144,7 @@ async function handleRequest(
   // Send a Sec-WebSocket-Protocol response header with a value
   // matching the Sec-WebSocket-Protocol request header, to indicate
   // support for the protocol, otherwise the client will close the connection.
-  if (!isMiniflare) {
-    // ...miniflare doesn't like it though. If we set this header under MF,
-    // sending the response fails. See:
-    // https://github.com/cloudflare/miniflare/issues/179
-    responseHeaders.set("Sec-WebSocket-Protocol", encodedAuth);
-  }
+  responseHeaders.set("Sec-WebSocket-Protocol", encodedAuth);
 
   const response = new Response(responseFromDO.body, {
     status: responseFromDO.status,
