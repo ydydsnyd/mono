@@ -316,6 +316,12 @@ export class ChainBuilder {
       await write.commit();
     });
   }
+
+  get headHash(): Hash {
+    const lastCommit = this.chain.at(-1);
+    assert(lastCommit);
+    return lastCommit.chunk.hash;
+  }
 }
 
 export async function initDB(

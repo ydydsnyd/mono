@@ -40,6 +40,7 @@ import {
   addLocal,
   addSnapshot,
   Chain,
+  ChainBuilder,
 } from '../db/test-helpers';
 import {makeClient, setClients} from './clients-test-helpers';
 import type {ClientID} from '../sync/client-id.js';
@@ -954,29 +955,25 @@ suite('findMatchingClient', () => {
     const perdag = new dag.TestStore();
     const clientID = 'client-id';
     const branchID = 'branch-id';
-    const chain: Chain = [];
-    await addGenesis(chain, perdag, clientID);
-    await addLocal(chain, perdag, clientID, []);
-    const headHash = chain[1].chunk.hash;
 
-    const client: ClientDD31 = {
-      branchID,
-      headHash,
-      heartbeatTimestampMs: 1,
-      tempRefreshHash: null,
-    };
+    const chainBuilder = new ChainBuilder(perdag, 'temp-head');
+    await chainBuilder.addGenesis(clientID);
+    await chainBuilder.addLocal(clientID, []);
+    const {headHash} = chainBuilder;
+
     const branch: Branch = {
-      headHash: chain[1].chunk.hash,
+      headHash,
       lastServerAckdMutationIDs: {[clientID]: 0},
       mutationIDs: {[clientID]: 1},
       indexes: initialIndexes,
       mutatorNames: initialMutatorNames,
     };
     await perdag.withWrite(async write => {
-      await setClient(clientID, client, write);
       await setBranch(branchID, branch, write);
       await write.commit();
     });
+
+    await chainBuilder.removeHead();
 
     await perdag.withRead(async read => {
       const res = await findMatchingClient(read, newMutatorNames, newIndexes);
