@@ -4,9 +4,9 @@ import type * as dag from '../dag/mod';
 import {
   ClientMap,
   ClientStateNotFoundError,
+  getClients,
   isClientSDD,
-  noUpdates,
-  updateClients,
+  setClients,
 } from './clients';
 import {initBgIntervalProcess} from './bg-interval';
 
@@ -41,38 +41,36 @@ export function startHeartbeats(
   );
 }
 
-export async function writeHeartbeat(
+export function writeHeartbeat(
   clientID: ClientID,
   dagStore: dag.Store,
 ): Promise<ClientMap> {
-  const updatedClients = await updateClients(clients => {
+  return dagStore.withWrite(async dagWrite => {
+    const clients = await getClients(dagWrite);
     const client = clients.get(clientID);
     if (!client) {
-      return noUpdates;
+      throw new ClientStateNotFoundError(clientID);
     }
 
-    if (isClientSDD(client)) {
-      return {
-        clients: new Map(clients).set(clientID, {
-          heartbeatTimestampMs: Date.now(),
-          headHash: client.headHash,
-          mutationID: client.mutationID,
-          lastServerAckdMutationID: client.lastServerAckdMutationID,
-        }),
-      };
-    }
+    const newClients = new Map(clients).set(
+      clientID,
+      isClientSDD(client)
+        ? {
+            heartbeatTimestampMs: Date.now(),
+            headHash: client.headHash,
+            mutationID: client.mutationID,
+            lastServerAckdMutationID: client.lastServerAckdMutationID,
+          }
+        : {
+            heartbeatTimestampMs: Date.now(),
+            headHash: client.headHash,
+            branchID: client.branchID,
+            tempRefreshHash: client.tempRefreshHash,
+          },
+    );
 
-    return {
-      clients: new Map(clients).set(clientID, {
-        heartbeatTimestampMs: Date.now(),
-        headHash: client.headHash,
-        branchID: client.branchID,
-        tempRefreshHash: client.tempRefreshHash,
-      }),
-    };
-  }, dagStore);
-  if (updatedClients.get(clientID) === undefined) {
-    throw new ClientStateNotFoundError(clientID);
-  }
-  return updatedClients;
+    await setClients(newClients, dagWrite);
+    await dagWrite.commit();
+    return newClients;
+  });
 }

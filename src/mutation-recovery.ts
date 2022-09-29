@@ -18,7 +18,7 @@ import {
 } from './replicache';
 import type {Replicache} from './replicache';
 import {IDBStore} from './kv/idb-store.js';
-import {ClientSDD, isClientSDD} from './persist/clients.js';
+import {assertClientSDD, isClientSDD, setClients} from './persist/clients.js';
 
 const MUTATION_RECOVERY_LAZY_STORE_SOURCE_CHUNK_CACHE_SIZE_LIMIT = 10 * 2 ** 20; // 10 MB
 
@@ -356,37 +356,42 @@ export class MutationRecovery<M extends MutatorDefs> {
           },
         );
       }
-      const newClientMap = await persist.updateClients(clients => {
-        assertNotUndefined(pullResponse);
 
-        // TODO(DD31): We can probably get rid of this cast with some type
-        // parameters.
-        const clientToUpdate = clients.get(clientID) as ClientSDD;
+      return await perdag.withWrite(async dagWrite => {
+        const clients = await persist.getClients(dagWrite);
+        const clientToUpdate = clients.get(clientID);
         if (!clientToUpdate) {
-          return persist.noClientUpdates;
+          return clients;
         }
+
+        assertClientSDD(clientToUpdate);
+
+        const setNewClients = async (newClients: persist.ClientMap) => {
+          await setClients(newClients, dagWrite);
+          await dagWrite.commit();
+          return newClients;
+        };
 
         if (isClientStateNotFoundResponse(pullResponse)) {
           const newClients = new Map(clients);
           newClients.delete(clientID);
-          return {clients: newClients};
+          return await setNewClients(newClients);
         }
 
         if (
           clientToUpdate.lastServerAckdMutationID >=
           (pullResponse as PullResponseOK).lastMutationID
         ) {
-          return persist.noClientUpdates;
+          return clients;
         }
-        return {
-          clients: new Map(clients).set(clientID, {
-            ...clientToUpdate,
-            lastServerAckdMutationID: (pullResponse as PullResponseOK)
-              .lastMutationID,
-          }),
-        };
-      }, perdag);
-      return newClientMap;
+
+        const newClients = new Map(clients).set(clientID, {
+          ...clientToUpdate,
+          lastServerAckdMutationID: (pullResponse as PullResponseOK)
+            .lastMutationID,
+        });
+        return await setNewClients(newClients);
+      });
     } catch (e) {
       logMutationRecoveryError(e, lc, stepDescription, delegate);
       return;
