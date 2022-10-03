@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1664787973716,
+  "lastUpdate": 1664789915328,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -26213,6 +26213,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23822,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "60913b729d8f6b6d1df982ff7122923818cc821e",
+          "message": "chore: Remove updateClient (#296)\n\nupdateClient was needed when we had a n async (non microtask) hash\r\ncomputation function in the persist phase. The code was read the current\r\nhash, compute the new hash and then do a write transaction. If the\r\ncurrent hash still matched it then wrote the new chunks with the\r\ncomputed hashes. If it didn't match we tried again (a few times). Now\r\nthat we use an UUID instead of computing the hash we can remove this\r\nread and write retrial logic.\r\n\r\nTowards #165",
+          "timestamp": "2022-10-03T09:37:10Z",
+          "tree_id": "433db7a8da3ce5fc2645ea78d7fc9200bb10c633",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/60913b729d8f6b6d1df982ff7122923818cc821e"
+        },
+        "date": 1664789909082,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 195123,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34823,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 193977,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34498,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81989,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23678,
             "unit": "bytes"
           }
         ]
