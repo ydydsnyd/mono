@@ -117,12 +117,7 @@ export class MutationRecovery {
         ) {
           continue;
         }
-        await recoverMutationsFromPerdag(
-          database,
-          this._options,
-          undefined,
-          undefined,
-        );
+        await recoverMutationsWithNewPerdag(database, this._options, undefined);
       }
     } catch (e) {
       logMutationRecoveryError(e, lc, stepDescription, delegate);
@@ -370,25 +365,39 @@ async function recoverMutationsOfClient(
   }
 }
 
+async function recoverMutationsWithNewPerdag(
+  database: persist.IndexedDBDatabase,
+  options: ReplicacheOptions,
+  preReadClientMap: persist.ClientMap | undefined,
+) {
+  const perKvStore = new IDBStore(database.name);
+  const perdag = new dag.StoreImpl(
+    perKvStore,
+    dag.uuidChunkHasher,
+    assertNotTempHash,
+  );
+  try {
+    await recoverMutationsFromPerdag(
+      database,
+      options,
+      perdag,
+      preReadClientMap,
+    );
+  } finally {
+    await perdag.close();
+  }
+}
+
 async function recoverMutationsFromPerdag(
   database: persist.IndexedDBDatabase,
   options: ReplicacheOptions,
-  perdag: dag.Store | undefined,
+  perdag: dag.Store,
   preReadClientMap: persist.ClientMap | undefined,
 ): Promise<void> {
   const {delegate, lc} = options;
   const stepDescription = `Recovering mutations from db ${database.name}.`;
   lc.debug?.('Start:', stepDescription);
-  let perDagToClose: dag.Store | undefined = undefined;
   try {
-    if (!perdag) {
-      const perKvStore = new IDBStore(database.name);
-      perdag = perDagToClose = new dag.StoreImpl(
-        perKvStore,
-        dag.uuidChunkHasher,
-        assertNotTempHash,
-      );
-    }
     let clientMap: persist.ClientMap | undefined =
       preReadClientMap ||
       (await perdag.withRead(read => persist.getClients(read)));
@@ -420,8 +429,6 @@ async function recoverMutationsFromPerdag(
     }
   } catch (e) {
     logMutationRecoveryError(e, lc, stepDescription, delegate);
-  } finally {
-    await perDagToClose?.close();
-    lc.debug?.('End:', stepDescription);
   }
+  lc.debug?.('End:', stepDescription);
 }
