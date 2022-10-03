@@ -66,7 +66,7 @@ export async function persist(
   }
 
   // 3. write chunks to perdag.
-  await writeFixedChunks(
+  const writeFixedChunksP = writeFixedChunks(
     perdag,
     fixedChunks,
     mainHeadHash,
@@ -77,6 +77,8 @@ export async function persist(
 
   // 4. fixup the memdag with the new hashes.
   await fixupMemdagWithNewHashes(memdag, mappings);
+
+  await writeFixedChunksP;
 }
 
 async function gatherTempChunks(
