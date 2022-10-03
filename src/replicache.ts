@@ -224,7 +224,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   readonly name: string;
 
   private readonly _subscriptions: SubscriptionsManager;
-  private readonly _mutationRecovery: MutationRecovery<MD>;
+  private readonly _mutationRecovery: MutationRecovery;
 
   /**
    * This is the name Replicache uses for the IndexedDB database where data is
@@ -472,7 +472,8 @@ export class Replicache<MD extends MutatorDefs = {}> {
     const clientIDResolver = resolver<string>();
     this._clientIDPromise = clientIDResolver.promise;
 
-    this._mutationRecovery = new MutationRecovery(this, {
+    this._mutationRecovery = new MutationRecovery({
+      delegate: this,
       lc: this._lc,
       enableMutationRecovery,
       wrapInOnlineCheck: this._wrapInOnlineCheck.bind(this),
