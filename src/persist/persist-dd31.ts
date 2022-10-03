@@ -261,7 +261,7 @@ async function fixupMemdagWithNewHashes(
 }
 
 async function rebase(
-  mutations: db.Commit<db.LocalMeta>[],
+  mutations: db.Commit<db.LocalMetaSDD>[],
   basis: Hash,
   write: dag.Write,
   mutators: MutatorDefs,

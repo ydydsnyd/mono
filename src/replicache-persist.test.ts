@@ -1,8 +1,8 @@
 import {
   addData,
-  clock,
   expectLogContext,
   initReplicacheTesting,
+  makePullResponse,
   replicacheForTesting,
   ReplicacheTest,
   tickAFewTimes,
@@ -58,10 +58,9 @@ test('basic persist & load', async () => {
     assertNotUndefined(branchBeforePull);
   }
 
-  fetchMock.postOnce(pullURL, {
-    cookie: 1,
-    lastMutationID: 2,
-    patch: [
+  fetchMock.postOnce(
+    pullURL,
+    makePullResponse(clientID, 2, [
       {
         op: 'put',
         key: 'a',
@@ -72,8 +71,8 @@ test('basic persist & load', async () => {
         key: 'b',
         value: 2,
       },
-    ],
-  });
+    ]),
+  );
 
   rep.pull();
 
@@ -271,22 +270,28 @@ suite('onClientStateNotFound', () => {
 
 suite('persist scheduling', () => {
   test('handles exceptions thrown in persist()', async () => {
-    clock.restore();
     const rep = await replicacheForTesting('persist-test');
+
+    // Safari does not have requestIdleTimeout so it waits for a second. We need
+    // to wait to have all browsers have a chance to run persist before we
+    // continue.
+    await tickAFewTimes(20, 100);
+    expect(rep.persistIsScheduled).to.be.false;
+
     const persistStub = sinon
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .stub(rep, '_persist' as any)
-      .throws(new Error('persist error'));
-
-    expect(rep.persistIsScheduled).to.be.false;
+      .callsFake(async () => {
+        throw new Error('persist error');
+      });
 
     let ex;
     let p;
 
-    p = rep.schedulePersist();
-    expect(rep.persistIsScheduled).to.be.true;
     try {
-      await p;
+      p = rep.schedulePersist();
+      expect(rep.persistIsScheduled).to.be.true;
+      await Promise.all([tickAFewTimes(20, 100), p]);
     } catch (e) {
       ex = e;
     }
@@ -296,10 +301,10 @@ suite('persist scheduling', () => {
 
     // ensure that persist can be scheduled again
     ex = undefined;
-    p = rep.schedulePersist();
-    expect(rep.persistIsScheduled).to.be.true;
     try {
-      await p;
+      p = rep.schedulePersist();
+      expect(rep.persistIsScheduled).to.be.true;
+      await Promise.all([tickAFewTimes(20, 100), p]);
     } catch (e) {
       ex = e;
     }

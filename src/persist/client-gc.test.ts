@@ -5,7 +5,7 @@ import * as dag from '../dag/mod';
 import {ClientMap, getClients, updateClients} from './clients';
 import {newUUIDHash} from '../hash';
 import {initClientGC, getLatestGCUpdate} from './client-gc';
-import {makeClient, setClients} from './clients-test-helpers';
+import {makeClient, setClientsForTest} from './clients-test-helpers';
 import {assertNotUndefined} from '../asserts';
 
 let clock: SinonFakeTimers;
@@ -55,7 +55,7 @@ test('initClientGC starts 5 min interval that collects clients that have been in
     }),
   );
 
-  await setClients(clientMap, dagStore);
+  await setClientsForTest(clientMap, dagStore);
 
   const controller = new AbortController();
   initClientGC('client1', dagStore, new LogContext(), controller.signal);
@@ -154,7 +154,7 @@ test('calling function returned by initClientGC, stops Client GCs', async () => 
     }),
   );
 
-  await setClients(clientMap, dagStore);
+  await setClientsForTest(clientMap, dagStore);
 
   const controller = new AbortController();
   initClientGC('client1', dagStore, new LogContext(), controller.signal);

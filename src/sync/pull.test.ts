@@ -1,6 +1,6 @@
 import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
-import {assertNotUndefined} from '../asserts';
+import {assert, assertNotUndefined} from '../asserts';
 import {assertObject, assertString} from '../asserts';
 import * as dag from '../dag/mod';
 import * as db from '../db/mod';
@@ -11,45 +11,59 @@ import {
   addLocal,
   addSnapshot,
   Chain,
+  ChainBuilder,
   createIndex,
 } from '../db/test-helpers';
 import type {ReadonlyJSONValue} from '../json';
 import type {
   PatchOperation,
   Puller,
+  PullerDD31,
   PullerResult,
+  PullerResultDD31,
   PullResponse,
+  PullResponseDD31,
+  PullResponseOKDD31,
 } from '../puller';
 import type {HTTPRequestInfo} from '../http-request-info';
 import {SYNC_HEAD_NAME} from './sync-head-name';
 import {
   beginPull,
+  beginPullDD31,
   BeginPullRequest,
+  BeginPullRequestDD31,
   BeginPullResponse,
+  BeginPullResponseDD31,
+  beginPullSDD,
+  handlePullResponseDD31,
+  lastMutationIDsForSnapshotFromHead,
   maybeEndPull,
-  MaybeEndPullResult,
+  MaybeEndPullResultSDD,
   PullRequest,
-  PULL_VERSION,
+  PullRequestDD31,
+  PULL_VERSION_DD31,
+  PULL_VERSION_SDD,
 } from './pull';
-import {emptyHash} from '../hash';
+import {assertHash, emptyHash, Hash, parse as parseHash} from '../hash';
 import {stringCompare} from '../string-compare';
 import {asyncIterableToArray} from '../async-iterable-to-array';
-import type {SnapshotMeta} from '../db/commit';
+import {assertSnapshotCommitDD31, SnapshotMeta} from '../db/commit';
 import {
   toInternalValue,
   fromInternalValue,
   FromInternalValueReason,
   InternalValue,
   ToInternalValueReason,
-} from '../internal-value.js';
-import type {DiffsMap} from './diff.js';
-import {testSubscriptionsManagerOptions} from '../test-util.js';
+} from '../internal-value';
+import type {DiffsMap} from './diff';
+import {testSubscriptionsManagerOptions} from '../test-util';
+import {BTreeRead} from '../btree/read';
 
-test('begin try pull', async () => {
+test('begin try pull SDD', async () => {
   if (DD31) {
-    // TODO(arv): Got changes to these tests coming in another PR.
     return;
   }
+
   const clientID = 'test_client_id';
   const store = new dag.TestStore();
   const chain: Chain = [];
@@ -95,7 +109,7 @@ test('begin try pull', async () => {
       },
     ],
   };
-  const goodPullRespValueMap = new Map([['/new', 'value']]);
+  const goodPullRespValueMap = new Map([['new', 'value']]);
 
   type ExpCommit = {
     cookie: ReadonlyJSONValue;
@@ -119,7 +133,7 @@ test('begin try pull', async () => {
     clientID,
     cookie: baseCookie,
     lastMutationID: baseLastMutationID,
-    pullVersion: PULL_VERSION,
+    pullVersion: PULL_VERSION_SDD,
     schemaVersion,
   };
 
@@ -439,7 +453,7 @@ test('begin try pull', async () => {
       pullResp = c.pullResult;
       pullErr = undefined;
     }
-    const fakePuller = makeFakePuller({
+    const fakePuller = makeFakePullerSDD({
       expPullReq,
       expPullURL: pullURL,
       expPullAuth: pullAuth,
@@ -452,15 +466,11 @@ test('begin try pull', async () => {
       pullURL,
       pullAuth,
       schemaVersion,
-      puller: () => {
-        // not used with fake puller
-        throw new Error('unreachable');
-      },
     };
 
     let result: BeginPullResponse | string;
     try {
-      result = await beginPull(
+      result = await beginPullSDD(
         profileID,
         clientID,
         beginPullReq,
@@ -509,6 +519,537 @@ test('begin try pull', async () => {
         expSyncHead.indexes.forEach(
           i => expect(indexes.includes(i)).to.be.true,
         );
+
+        // Check that we *don't* have old indexed values. The indexes should
+        // have been rebuilt with a client view returned by the server that
+        // does not include local= values. The check for len > 1 is because
+        // the snapshot's index is not what we want; we want the first index
+        // change's index ("2").
+        if (expSyncHead.indexes.length > 1) {
+          await store.withRead(async dagRead => {
+            const read = await db.fromWhence(
+              db.whenceHead(SYNC_HEAD_NAME),
+              dagRead,
+            );
+            const indexMap = read.getMapForIndex('2');
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            for await (const _ of indexMap.scan('')) {
+              expect(false).to.be.true;
+            }
+          });
+
+          assertObject(result);
+          expect(syncHeadHash).to.equal(result.syncHead);
+        }
+      } else {
+        const gotHead = await read.getHead(SYNC_HEAD_NAME);
+        expect(gotHead).to.be.undefined;
+        // When createSyncBranch is false or sync is a noop (empty patch,
+        // same last mutation id, same cookie) we except BeginPull to succeed
+        // but sync_head will be empty.
+        if (typeof c.expBeginPullResult !== 'string') {
+          assertObject(result);
+          expect(result.syncHead).to.be.equal(emptyHash);
+        }
+      }
+
+      expect(typeof result).to.equal(typeof c.expBeginPullResult);
+      if (typeof result === 'object') {
+        assertObject(c.expBeginPullResult);
+        expect(result.httpRequestInfo).to.deep.equal(
+          c.expBeginPullResult.httpRequestInfo,
+        );
+        if (typeof c.pullResult === 'object') {
+          expect(result.pullResponse).to.deep.equal(c.pullResult);
+        } else {
+          expect(result.pullResponse).to.be.undefined;
+        }
+      } else {
+        // use to_debug since some errors cannot be made PartialEq
+        expect(result).to.equal(c.expBeginPullResult);
+      }
+    });
+  }
+});
+
+test('begin try pull DD31', async () => {
+  if (!DD31) {
+    return;
+  }
+
+  const clientID = 'test_client_id';
+  const branchID = 'test_branch_id';
+  const store = new dag.TestStore();
+  const chain: Chain = [];
+  await addGenesis(chain, store, clientID);
+  await addSnapshot(
+    chain,
+    store,
+    [['foo', '"bar"']],
+    clientID,
+    undefined,
+    undefined,
+    {
+      '2': {prefix: 'local', jsonPointer: '', allowEmpty: false},
+    },
+  );
+  // chain[2] is an index change
+  // await addIndexChange(chain, store, clientID);
+  const startingNumCommits = chain.length;
+  const baseSnapshot = chain[1];
+  const parts = db.snapshotMetaParts(
+    baseSnapshot as Commit<SnapshotMeta>,
+    clientID,
+  );
+
+  const baseLastMutationID = parts[0];
+  const baseCookie = fromInternalValue(parts[1], FromInternalValueReason.Test);
+  const baseValueMap = new Map([['foo', '"bar"']]);
+
+  const requestID = 'requestID';
+  const profileID = 'test_profile_id';
+  const pullAuth = 'pull_auth';
+  const pullURL = 'pull_url';
+  const schemaVersion = 'schema_version';
+
+  const goodHttpRequestInfo = {
+    httpStatusCode: 200,
+    errorMessage: '',
+  };
+  // The goodPullResp has a patch, a new cookie, and a new
+  // lastMutationID. Tests can clone it and override those
+  // fields they wish to change. This minimizes test changes required
+  // when PullResponse changes.
+  const newCookie = 'newCookie';
+  const goodPullResp: PullResponseDD31 = {
+    cookie: newCookie,
+    lastMutationIDChanges: {[clientID]: 10},
+    patch: [
+      {op: 'clear'},
+      {
+        op: 'put',
+        key: 'new',
+        value: 'value',
+      },
+    ],
+  };
+  const goodPullRespValueMap = new Map([['new', 'value']]);
+
+  type ExpCommit = {
+    cookie: ReadonlyJSONValue;
+    lastMutationID: number;
+    valueMap: ReadonlyMap<string, ReadonlyJSONValue>;
+    indexes: string[];
+  };
+
+  type Case = {
+    name: string;
+    createSyncBranch?: boolean;
+    numPendingMutations: number;
+    pullResult: PullResponseDD31 | string;
+    // BeginPull expectations.
+    expNewSyncHead: ExpCommit | undefined;
+    expBeginPullResult: BeginPullResponseDD31 | string;
+    isNewBranch?: true;
+  };
+
+  const expPullReq: PullRequestDD31 = {
+    profileID,
+    clientID,
+    branchID,
+    cookie: baseCookie,
+    pullVersion: PULL_VERSION_DD31,
+    schemaVersion,
+    isNewBranch: false,
+  };
+
+  const cases: Case[] = [
+    {
+      name: '0 pending, pulls new state -> beginpull succeeds w/synchead set',
+      numPendingMutations: 0,
+      pullResult: goodPullResp,
+      expNewSyncHead: {
+        cookie: newCookie,
+        lastMutationID: goodPullResp.lastMutationIDChanges[clientID],
+        valueMap: goodPullRespValueMap,
+        indexes: ['2'],
+      },
+      expBeginPullResult: {
+        httpRequestInfo: goodHttpRequestInfo,
+        syncHead: emptyHash,
+      },
+    },
+    {
+      name: '0 pending, createSyncBranch false, pulls new state -> beginpull succeeds w/no synchead',
+      createSyncBranch: false,
+      numPendingMutations: 0,
+      pullResult: goodPullResp,
+      expNewSyncHead: undefined,
+      expBeginPullResult: {
+        httpRequestInfo: goodHttpRequestInfo,
+        syncHead: emptyHash,
+      },
+    },
+    {
+      name: '1 pending, 0 mutations to replay, pulls new state -> beginpull succeeds w/synchead set',
+      numPendingMutations: 1,
+      pullResult: {
+        ...goodPullResp,
+        lastMutationIDChanges: {[clientID]: 2},
+      },
+      expNewSyncHead: {
+        cookie: newCookie,
+        lastMutationID: 2,
+        valueMap: goodPullRespValueMap,
+        indexes: ['2'],
+      },
+      expBeginPullResult: {
+        httpRequestInfo: goodHttpRequestInfo,
+        syncHead: emptyHash,
+      },
+    },
+    {
+      name: '1 pending, 1 mutations to replay, pulls new state -> beginpull succeeds w/synchead set',
+      numPendingMutations: 1,
+      pullResult: {
+        ...goodPullResp,
+        lastMutationIDChanges: {[clientID]: 1},
+      },
+      expNewSyncHead: {
+        cookie: newCookie,
+        lastMutationID: 1,
+        valueMap: goodPullRespValueMap,
+        indexes: ['2'],
+      },
+      expBeginPullResult: {
+        httpRequestInfo: goodHttpRequestInfo,
+        syncHead: emptyHash,
+      },
+    },
+    {
+      name: '2 pending, 0 to replay, pulls new state -> beginpull succeeds w/synchead set',
+      numPendingMutations: 2,
+      pullResult: goodPullResp,
+      expNewSyncHead: {
+        cookie: newCookie,
+        lastMutationID: goodPullResp.lastMutationIDChanges[clientID],
+        valueMap: goodPullRespValueMap,
+        indexes: ['2'],
+      },
+      expBeginPullResult: {
+        httpRequestInfo: goodHttpRequestInfo,
+        syncHead: emptyHash,
+      },
+    },
+    {
+      name: '2 pending, 1 to replay, pulls new state -> beginpull succeeds w/synchead set',
+      numPendingMutations: 2,
+      pullResult: {
+        ...goodPullResp,
+        lastMutationIDChanges: {[clientID]: 2},
+      },
+      expNewSyncHead: {
+        cookie: newCookie,
+        lastMutationID: 2,
+        valueMap: goodPullRespValueMap,
+        indexes: ['2'],
+      },
+      expBeginPullResult: {
+        httpRequestInfo: goodHttpRequestInfo,
+        syncHead: emptyHash,
+      },
+    },
+    // The patch, lastMutationID, and cookie determine whether we write a new
+    // Commit. Here we run through the different combinations.
+    {
+      name: 'no patch, same lmid, same cookie -> beginpull succeeds w/no synchead',
+      numPendingMutations: 0,
+      pullResult: {
+        ...goodPullResp,
+        lastMutationIDChanges: {[clientID]: baseLastMutationID},
+        cookie: baseCookie,
+        patch: [],
+      },
+      expNewSyncHead: undefined,
+      expBeginPullResult: {
+        httpRequestInfo: goodHttpRequestInfo,
+        syncHead: emptyHash,
+      },
+    },
+    {
+      name: 'new patch, same lmid, same cookie -> beginpull succeeds w/synchead set',
+      numPendingMutations: 0,
+      pullResult: {
+        ...goodPullResp,
+        lastMutationIDChanges: {[clientID]: baseLastMutationID},
+        cookie: baseCookie,
+      },
+      expNewSyncHead: {
+        cookie: baseCookie,
+        lastMutationID: baseLastMutationID,
+        valueMap: goodPullRespValueMap,
+        indexes: ['2'],
+      },
+      expBeginPullResult: {
+        httpRequestInfo: goodHttpRequestInfo,
+        syncHead: emptyHash,
+      },
+    },
+    {
+      name: 'no patch, new lmid, same cookie -> beginpull succeeds w/synchead set',
+      numPendingMutations: 0,
+      pullResult: {
+        ...goodPullResp,
+        lastMutationIDChanges: {[clientID]: baseLastMutationID + 1},
+        cookie: baseCookie,
+        patch: [],
+      },
+      expNewSyncHead: {
+        cookie: baseCookie,
+        lastMutationID: baseLastMutationID + 1,
+        valueMap: baseValueMap,
+        indexes: ['2'],
+      },
+      expBeginPullResult: {
+        httpRequestInfo: goodHttpRequestInfo,
+        syncHead: emptyHash,
+      },
+    },
+    {
+      name: 'no patch, same lmid, new cookie -> beginpull succeeds w/synchead set',
+      numPendingMutations: 0,
+      pullResult: {
+        ...goodPullResp,
+        lastMutationIDChanges: {[clientID]: baseLastMutationID},
+        cookie: 'newCookie',
+        patch: [],
+      },
+      expNewSyncHead: {
+        cookie: 'newCookie',
+        lastMutationID: baseLastMutationID,
+        valueMap: baseValueMap,
+        indexes: ['2'],
+      },
+      expBeginPullResult: {
+        httpRequestInfo: goodHttpRequestInfo,
+        syncHead: emptyHash,
+      },
+    },
+    {
+      name: 'new patch, new lmid, same cookie -> beginpull succeeds w/synchead set',
+      numPendingMutations: 0,
+      pullResult: {
+        ...goodPullResp,
+        cookie: baseCookie,
+      },
+      expNewSyncHead: {
+        cookie: baseCookie,
+        lastMutationID: goodPullResp.lastMutationIDChanges[clientID],
+        valueMap: goodPullRespValueMap,
+        indexes: ['2'],
+      },
+      expBeginPullResult: {
+        httpRequestInfo: goodHttpRequestInfo,
+        syncHead: emptyHash,
+      },
+    },
+
+    {
+      name: 'new patch, same lmid, new cookie -> beginpull succeeds w/synchead set',
+      numPendingMutations: 0,
+      pullResult: {
+        ...goodPullResp,
+        lastMutationIDChanges: {[clientID]: baseLastMutationID},
+      },
+      expNewSyncHead: {
+        cookie: goodPullResp.cookie ?? null,
+        lastMutationID: baseLastMutationID,
+        valueMap: goodPullRespValueMap,
+        indexes: ['2'],
+      },
+      expBeginPullResult: {
+        httpRequestInfo: goodHttpRequestInfo,
+        syncHead: emptyHash,
+      },
+    },
+    {
+      name: 'no patch, new lmid, new cookie -> beginpull succeeds w/synchead set',
+      numPendingMutations: 0,
+      pullResult: {
+        ...goodPullResp,
+        patch: [],
+      },
+      expNewSyncHead: {
+        cookie: goodPullResp.cookie ?? null,
+        lastMutationID: goodPullResp.lastMutationIDChanges[clientID],
+        valueMap: baseValueMap,
+        indexes: ['2'],
+      },
+      expBeginPullResult: {
+        httpRequestInfo: goodHttpRequestInfo,
+        syncHead: emptyHash,
+      },
+    },
+    {
+      name: 'new patch, new lmid, new cookie -> beginpull succeeds w/synchead set',
+      numPendingMutations: 0,
+      pullResult: {
+        ...goodPullResp,
+      },
+      expNewSyncHead: {
+        cookie: goodPullResp.cookie ?? null,
+        lastMutationID: goodPullResp.lastMutationIDChanges[clientID],
+        valueMap: goodPullRespValueMap,
+        indexes: ['2'],
+      },
+      expBeginPullResult: {
+        httpRequestInfo: goodHttpRequestInfo,
+        syncHead: emptyHash,
+      },
+    },
+    {
+      name: 'pulls new state w/lesser mutation id -> beginpull errors',
+      numPendingMutations: 0,
+      pullResult: {
+        ...goodPullResp,
+        lastMutationIDChanges: {[clientID]: 0},
+      },
+      expNewSyncHead: undefined,
+      expBeginPullResult:
+        'Received lastMutationID 0 is < than last snapshot lastMutationID 1; ignoring client view',
+    },
+    {
+      name: 'pulls new state with missing client-lmid pair in response',
+      numPendingMutations: 0,
+      pullResult: {
+        ...goodPullResp,
+        lastMutationIDChanges: {},
+      },
+      expNewSyncHead: undefined,
+      expBeginPullResult:
+        'Missing lastMutationID change for client test_client_id',
+    },
+    {
+      name: 'pull 500s -> beginpull errors',
+      numPendingMutations: 0,
+      pullResult: 'FetchNotOk(500)',
+      expNewSyncHead: undefined,
+      expBeginPullResult: {
+        httpRequestInfo: {
+          errorMessage: 'Fetch not OK',
+          httpStatusCode: 500,
+        },
+        syncHead: emptyHash,
+      },
+    },
+  ];
+
+  for (const c of cases) {
+    // Reset state of the store.
+    chain.length = startingNumCommits;
+    await store.withWrite(async w => {
+      await w.setHead(DEFAULT_HEAD_NAME, chain[chain.length - 1].chunk.hash);
+      await w.removeHead(SYNC_HEAD_NAME);
+      await w.commit();
+    });
+    for (let i = 0; i < c.numPendingMutations; i++) {
+      await addLocal(chain, store, clientID);
+    }
+
+    // There was an index added after the snapshot, and one for each local commit.
+    // Here we scan to ensure that we get values when scanning using one of the
+    // indexes created. We do this because after calling beginPull we check that
+    // the index no longer returns values, demonstrating that it was rebuilt.
+    if (c.numPendingMutations > 0) {
+      await store.withRead(async dagRead => {
+        const read = await db.fromWhence(
+          db.whenceHead(DEFAULT_HEAD_NAME),
+          dagRead,
+        );
+        let got = false;
+
+        const indexMap = read.getMapForIndex('2');
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        for await (const _ of indexMap.scan('')) {
+          got = true;
+          break;
+        }
+
+        expect(got, c.name).to.be.true;
+      });
+    }
+
+    // See explanation in FakePuller for why we do this dance with the pull_result.
+    let pullResp: PullResponseDD31 | undefined;
+    let pullErr;
+    if (typeof c.pullResult === 'string') {
+      pullResp = undefined;
+      pullErr = c.pullResult;
+    } else {
+      pullResp = c.pullResult;
+      pullErr = undefined;
+    }
+    const fakePuller = makeFakePullerDD31({
+      expPullReq,
+      expPullURL: pullURL,
+      expPullAuth: pullAuth,
+      expRequestID: requestID,
+      resp: pullResp,
+      err: pullErr,
+    });
+
+    const beginPullReq: BeginPullRequestDD31 = {
+      pullURL,
+      pullAuth,
+      schemaVersion,
+    };
+
+    let result: BeginPullResponseDD31 | string;
+    try {
+      result = await beginPullDD31(
+        profileID,
+        clientID,
+        branchID,
+        beginPullReq,
+        fakePuller,
+        requestID,
+        store,
+        new LogContext(),
+        c.createSyncBranch,
+      );
+    } catch (e) {
+      result = (e as Error).message;
+      assertString(result);
+    }
+
+    await store.withRead(async read => {
+      if (c.expNewSyncHead !== undefined) {
+        const expSyncHead = c.expNewSyncHead;
+        const syncHeadHash = await read.getHead(SYNC_HEAD_NAME);
+        assertString(syncHeadHash);
+        const chunk = await read.getChunk(syncHeadHash);
+        assertNotUndefined(chunk);
+        const syncHead = db.fromChunk(chunk);
+        const [gotLastMutationID, gotCookie] = db.snapshotMetaParts(
+          syncHead as Commit<SnapshotMeta>,
+          clientID,
+        );
+        expect(expSyncHead.lastMutationID).to.equal(gotLastMutationID);
+        expect(expSyncHead.cookie).to.deep.equal(gotCookie);
+        // Check the value is what's expected.
+        const [, , bTreeRead] = await db.readCommitForBTreeRead(
+          db.whenceHash(syncHead.chunk.hash),
+          read,
+        );
+        const gotValueMap = await asyncIterableToArray(bTreeRead.entries());
+        gotValueMap.sort((a, b) => stringCompare(a[0], b[0]));
+        const expValueMap = Array.from(expSyncHead.valueMap);
+        expValueMap.sort((a, b) => stringCompare(a[0], b[0]));
+        expect(expValueMap).to.deep.equal(gotValueMap);
+
+        // Check we have the expected index definitions.
+        const indexes: string[] = syncHead.indexes.map(i => i.definition.name);
+        expect(expSyncHead.indexes).to.deep.equal(indexes);
 
         // Check that we *don't* have old indexed values. The indexes should
         // have been rebuilt with a client view returned by the server that
@@ -690,7 +1231,7 @@ test('maybe end try pull', async () => {
     }
     const syncHead = basisHash;
 
-    let result: MaybeEndPullResult | string;
+    let result: MaybeEndPullResultSDD | string;
     try {
       result = await maybeEndPull(
         store,
@@ -745,7 +1286,7 @@ test('maybe end try pull', async () => {
   }
 });
 
-type FakePullerArgs = {
+type FakePullerArgsSDD = {
   expPullReq: PullRequest;
   expPullURL: string;
   expPullAuth: string;
@@ -754,7 +1295,17 @@ type FakePullerArgs = {
   err?: string;
 };
 
-function makeFakePuller(options: FakePullerArgs): Puller {
+function makeFakePuller(
+  options: FakePullerArgsSDD | FakePullerArgsDD31,
+): Puller | PullerDD31 {
+  if (DD31) {
+    return makeFakePullerDD31(options as FakePullerArgsDD31);
+  }
+  return makeFakePullerSDD(options as FakePullerArgsSDD);
+}
+
+function makeFakePullerSDD(options: FakePullerArgsSDD): Puller {
+  assert(!DD31);
   return async (req: Request): Promise<PullerResult> => {
     const pullReq: PullRequest = await req.json();
     expect(options.expPullReq).to.deep.equal(pullReq);
@@ -787,6 +1338,49 @@ function makeFakePuller(options: FakePullerArgs): Puller {
   };
 }
 
+function makeFakePullerDD31(options: FakePullerArgsDD31): PullerDD31 {
+  assert(DD31);
+  return async (req: Request): Promise<PullerResultDD31> => {
+    const pullReq: PullRequestDD31 = await req.json();
+    expect(options.expPullReq).to.deep.equal(pullReq);
+
+    expect(new URL(options.expPullURL, location.href).toString()).to.equal(
+      req.url,
+    );
+    expect(options.expPullAuth).to.equal(req.headers.get('Authorization'));
+    expect(options.expRequestID).to.equal(
+      req.headers.get('X-Replicache-RequestID'),
+    );
+
+    let httpRequestInfo: HTTPRequestInfo;
+    if (options.err !== undefined) {
+      if (options.err === 'FetchNotOk(500)') {
+        httpRequestInfo = {
+          httpStatusCode: 500,
+          errorMessage: 'Fetch not OK',
+        };
+      } else {
+        throw new Error('not implemented');
+      }
+    } else {
+      httpRequestInfo = {
+        httpStatusCode: 200,
+        errorMessage: '',
+      };
+    }
+    return {response: options.resp, httpRequestInfo};
+  };
+}
+
+type FakePullerArgsDD31 = {
+  expPullReq: PullRequestDD31;
+  expPullURL: string;
+  expPullAuth: string;
+  expRequestID: string;
+  resp?: PullResponseDD31;
+  err?: string;
+};
+
 test('changed keys', async () => {
   if (DD31) {
     return;
@@ -804,6 +1398,7 @@ test('changed keys', async () => {
     expectedDiffsMap: DiffsMap,
   ) => {
     const clientID = 'test_client_id';
+    const branchID = 'test_branch_id';
     const store = new dag.TestStore();
     const lc = new LogContext();
     const chain: Chain = [];
@@ -811,10 +1406,29 @@ test('changed keys', async () => {
 
     if (indexDef) {
       const {name, prefix, jsonPointer} = indexDef;
+      if (DD31) {
+        const indexDefinitions = {
+          [name]: {
+            jsonPointer,
+            prefix,
+            allowEmpty: false,
+          },
+        };
 
-      chain.push(
-        await createIndex(name, prefix, jsonPointer, store, false, clientID),
-      );
+        await addSnapshot(
+          chain,
+          store,
+          [],
+          clientID,
+          undefined,
+          undefined,
+          indexDefinitions,
+        );
+      } else {
+        chain.push(
+          await createIndex(name, prefix, jsonPointer, store, false, clientID),
+        );
+      }
     }
 
     const entries = [...baseMap];
@@ -839,20 +1453,37 @@ test('changed keys', async () => {
 
     const newCookie = 'new_cookie';
 
-    const expPullReq: PullRequest = {
-      profileID,
-      clientID,
-      cookie: baseCookie,
-      lastMutationID: baseLastMutationID,
-      pullVersion: PULL_VERSION,
-      schemaVersion,
-    };
+    const expPullReq: PullRequest | PullRequestDD31 = DD31
+      ? {
+          profileID,
+          clientID,
+          branchID,
+          cookie: baseCookie,
+          // lastMutationID: baseLastMutationID,
+          pullVersion: PULL_VERSION_DD31,
+          schemaVersion,
+          isNewBranch: false,
+        }
+      : {
+          profileID,
+          clientID,
+          cookie: baseCookie,
+          lastMutationID: baseLastMutationID,
+          pullVersion: PULL_VERSION_SDD,
+          schemaVersion,
+        };
 
-    const pullResp: PullResponse = {
-      cookie: newCookie,
-      lastMutationID: baseLastMutationID,
-      patch,
-    };
+    const pullResp: PullResponse | PullResponseDD31 = DD31
+      ? {
+          cookie: newCookie,
+          lastMutationIDChanges: {[clientID]: baseLastMutationID},
+          patch,
+        }
+      : {
+          cookie: newCookie,
+          lastMutationID: baseLastMutationID,
+          patch,
+        };
 
     const fakePuller = makeFakePuller({
       expPullReq,
@@ -861,9 +1492,9 @@ test('changed keys', async () => {
       expRequestID: requestID,
       resp: pullResp,
       err: undefined,
-    });
+    } as FakePullerArgsDD31 | FakePullerArgsDD31);
 
-    const beginPullReq: BeginPullRequest = {
+    const beginPullReq = {
       pullURL,
       pullAuth,
       schemaVersion,
@@ -876,6 +1507,7 @@ test('changed keys', async () => {
     const pullResult = await beginPull(
       profileID,
       clientID,
+      branchID,
       beginPullReq,
       fakePuller,
       requestID,
@@ -1127,4 +1759,498 @@ test('changed keys', async () => {
       ],
     ]),
   );
+});
+
+test('pull isNewBranch for empty client', async () => {
+  if (!DD31) {
+    return;
+  }
+
+  const profileID = 'test-profile-id';
+  const requestID = 'test-request-id';
+  const clientID1 = 'test-client-id-1';
+  const clientID2 = 'test-client-id-2';
+  const branchID = 'test-branch-id';
+  const pullAuth = 'test-pull-auth';
+  const schemaVersion = 'test-schema-version';
+
+  const store = new dag.TestStore();
+  const lc = new LogContext();
+
+  const pullResponse = {
+    cookie: 1,
+    lastMutationIDChanges: {
+      [clientID1]: 11,
+      [clientID2]: 21,
+    },
+    patch: [],
+  };
+
+  const puller = makeFakePullerDD31({
+    expPullAuth: pullAuth,
+    expPullReq: {
+      clientID: clientID1,
+      branchID,
+      cookie: null,
+      isNewBranch: true,
+      profileID,
+      pullVersion: PULL_VERSION_DD31,
+      schemaVersion,
+    },
+    expPullURL: '',
+    expRequestID: requestID,
+    resp: pullResponse,
+  });
+
+  const beginPullRequest: BeginPullRequestDD31 = {
+    pullAuth,
+    pullURL: '',
+    schemaVersion,
+  };
+
+  const chain: Chain = [];
+  await addGenesis(chain, store, clientID1);
+
+  const response: BeginPullResponseDD31 = await beginPullDD31(
+    profileID,
+    clientID1,
+    branchID,
+    beginPullRequest,
+    puller,
+    requestID,
+    store,
+    lc,
+    false,
+  );
+
+  expect(response).to.deep.equal({
+    httpRequestInfo: {
+      errorMessage: '',
+      httpStatusCode: 200,
+    },
+    pullResponse,
+    syncHead: emptyHash,
+  });
+});
+
+test('pull for branch with multiple client local changes', async () => {
+  if (!DD31) {
+    return;
+  }
+
+  const profileID = 'test-profile-id';
+  const requestID = 'test-request-id';
+  const clientID1 = 'test-client-id-1';
+  const clientID2 = 'test-client-id-2';
+  const branchID = 'test-branch-id';
+  const pullAuth = 'test-pull-auth';
+  const schemaVersion = 'test-schema-version';
+
+  const store = new dag.TestStore();
+  const lc = new LogContext();
+
+  const pullResponse = {
+    cookie: 1,
+    lastMutationIDChanges: {
+      [clientID1]: 11,
+      [clientID2]: 21,
+    },
+    patch: [],
+  };
+
+  const puller = makeFakePullerDD31({
+    expPullAuth: pullAuth,
+    expPullReq: {
+      clientID: clientID1,
+      branchID,
+      cookie: 1,
+      isNewBranch: false,
+      profileID,
+      pullVersion: PULL_VERSION_DD31,
+      schemaVersion,
+    },
+    expPullURL: '',
+    expRequestID: requestID,
+    resp: pullResponse,
+  });
+
+  const beginPullRequest: BeginPullRequestDD31 = {
+    pullAuth,
+    pullURL: '',
+    schemaVersion,
+  };
+
+  const chain: Chain = [];
+  await addGenesis(chain, store, clientID1);
+  await addSnapshot(chain, store, [], clientID1, 1, {
+    [clientID1]: 10,
+    [clientID2]: 20,
+  });
+  await addLocal(chain, store, clientID1, []);
+  await addLocal(chain, store, clientID2, []);
+  await addLocal(chain, store, clientID1, []);
+  await addLocal(chain, store, clientID2, []);
+
+  const response: BeginPullResponseDD31 = await beginPullDD31(
+    profileID,
+    clientID1,
+    branchID,
+    beginPullRequest,
+    puller,
+    requestID,
+    store,
+    lc,
+  );
+
+  expect(response).to.deep.equal({
+    httpRequestInfo: {
+      errorMessage: '',
+      httpStatusCode: 200,
+    },
+    pullResponse,
+    syncHead: 'face0000-0000-4000-8000-000000000007',
+  });
+
+  const lastMutationIDs = await lastMutationIDsForSnapshotFromHead(
+    SYNC_HEAD_NAME,
+    store,
+    branchID,
+  );
+  expect(lastMutationIDs).to.deep.equal({
+    [clientID1]: 11,
+    [clientID2]: 21,
+  });
+});
+
+suite('beginPull DD31', () => {
+  if (!DD31) {
+    return;
+  }
+
+  const profileID = 'test-profile-id';
+  const clientID1 = 'test-client-id-1';
+  const clientID2 = 'test-client-id-2';
+  const branchID1 = 'test-branch-id-1';
+  const requestID = 'test-request-id';
+  const lc = new LogContext();
+
+  test('no response should still return http status', async () => {
+    const store = new dag.TestStore();
+
+    const b = new ChainBuilder(store);
+    await b.addGenesis(clientID1);
+
+    const beginPullRequest: BeginPullRequestDD31 = {
+      pullAuth: 'test-pull-auth',
+      pullURL: 'pull-url',
+      schemaVersion: 'test-schema-version',
+    };
+
+    const options: FakePullerArgsDD31 = {
+      expPullAuth: 'test-pull-auth',
+      expPullReq: {
+        branchID: branchID1,
+        clientID: clientID1,
+        cookie: null,
+        isNewBranch: true,
+        profileID,
+        pullVersion: PULL_VERSION_DD31,
+        schemaVersion: 'test-schema-version',
+      },
+      expPullURL: 'pull-url',
+      expRequestID: requestID,
+      resp: undefined,
+    };
+    const puller: PullerDD31 = makeFakePullerDD31(options);
+
+    const response = await beginPullDD31(
+      profileID,
+      clientID1,
+      branchID1,
+      beginPullRequest,
+      puller,
+      requestID,
+      store,
+      lc,
+    );
+
+    expect(response).to.deep.equal({
+      httpRequestInfo: {
+        errorMessage: '',
+        httpStatusCode: 200,
+      },
+      syncHead: '00000000-0000-4000-8000-000000000000',
+    });
+  });
+
+  const testIsNewBranch = async (
+    expectedIsNewBranch: boolean,
+    setupChain?: (b: ChainBuilder) => Promise<unknown>,
+  ) => {
+    const store = new dag.TestStore();
+
+    const b = new ChainBuilder(store);
+    await b.addGenesis(clientID1);
+    await setupChain?.(b);
+
+    const beginPullRequest: BeginPullRequestDD31 = {
+      pullAuth: 'test-pull-auth',
+      pullURL: 'pull-url',
+      schemaVersion: 'test-schema-version',
+    };
+
+    let actualIsNewBranch;
+    const puller: PullerDD31 = async req => {
+      const reqBody = await req.json();
+      assertObject(reqBody);
+      actualIsNewBranch = reqBody.isNewBranch;
+      //
+      return {httpRequestInfo: {errorMessage: '', httpStatusCode: 200}};
+    };
+
+    await beginPullDD31(
+      profileID,
+      clientID1,
+      branchID1,
+      beginPullRequest,
+      puller,
+      requestID,
+      store,
+      lc,
+    );
+
+    expect(actualIsNewBranch, 'isNewBranch').equals(expectedIsNewBranch);
+  };
+
+  suite('isNewBranch', () => {
+    test('all we got is a genesis', async () => {
+      await testIsNewBranch(true);
+    });
+
+    test('we got a snapshot but there are no clients in the lastMutationIDs', async () => {
+      await testIsNewBranch(true, b => b.addSnapshot([], clientID1, 1, {}));
+    });
+
+    test('we got a snapshot with matching client(s) the lastMutationIDs', async () => {
+      await testIsNewBranch(false, b =>
+        b.addSnapshot([], clientID1, 1, {[clientID1]: 10}),
+      );
+      await testIsNewBranch(false, b =>
+        b.addSnapshot([], clientID1, 1, {[clientID1]: 10, [clientID2]: 20}),
+      );
+    });
+
+    test('we got a snapshot with other client(s)', async () => {
+      await testIsNewBranch(false, b =>
+        b.addSnapshot([], clientID1, 1, {[clientID2]: 20}),
+      );
+    });
+  });
+});
+
+suite('handlePullResponseDD31', () => {
+  if (!DD31) {
+    return;
+  }
+
+  const clientID1 = 'test-client-id-1';
+  const clientID2 = 'test-client-id-2';
+
+  async function t({
+    expectedBaseCookieJSON,
+    responseCookie,
+    expectedResult,
+    setupChain,
+    responseLastMutationIDChanges = {},
+    responsePatch = [],
+    expectedMap,
+  }: {
+    expectedBaseCookieJSON: ReadonlyJSONValue;
+    responseCookie: ReadonlyJSONValue;
+    expectedResult: Hash | null;
+    setupChain?: (b: ChainBuilder) => Promise<unknown>;
+    responseLastMutationIDChanges?: {[clientID: string]: number};
+    responsePatch?: PatchOperation[];
+    expectedMap?: {[key: string]: ReadonlyJSONValue};
+  }) {
+    const lc = new LogContext();
+    const store = new dag.TestStore();
+
+    const b = new ChainBuilder(store);
+    await b.addGenesis(clientID1);
+    await setupChain?.(b);
+
+    const expectedBaseCookie: InternalValue = toInternalValue(
+      expectedBaseCookieJSON,
+      ToInternalValueReason.Test,
+    );
+    const requestLastMutationIDs = {};
+    const response: PullResponseOKDD31 = {
+      cookie: responseCookie,
+      lastMutationIDChanges: responseLastMutationIDChanges,
+      patch: responsePatch,
+    };
+
+    const result = await handlePullResponseDD31(
+      lc,
+      store,
+      expectedBaseCookie,
+      requestLastMutationIDs,
+      response,
+      clientID1,
+    );
+
+    if (expectedResult === null || expectedResult === emptyHash) {
+      expect(result).equal(expectedResult);
+    } else {
+      assertHash(result);
+
+      await store.withRead(async dagRead => {
+        const head = await db.commitFromHash(result, dagRead);
+        assertSnapshotCommitDD31(head);
+        expect(head.chunk.data.meta.lastMutationIDs).to.deep.equal(
+          responseLastMutationIDChanges,
+        );
+
+        if (expectedMap) {
+          const map = new BTreeRead(dagRead, head.valueHash);
+          expect(expectedMap).deep.equal(
+            Object.fromEntries(await asyncIterableToArray(map.entries())),
+          );
+        }
+      });
+    }
+  }
+
+  test('If base cookie does not match we get null', async () => {
+    await t({
+      expectedBaseCookieJSON: 1,
+      responseCookie: 2,
+      expectedResult: null,
+    });
+  });
+
+  test('empty patch, no change in cookie, empty lmids', async () => {
+    await t({
+      expectedBaseCookieJSON: 1,
+      responseCookie: 1,
+      expectedResult: emptyHash,
+      setupChain: b => b.addSnapshot([], clientID1, 1, {}),
+    });
+  });
+
+  test('empty patch, no change in cookie, non-empty lmids', async () => {
+    await t({
+      expectedBaseCookieJSON: 1,
+      responseCookie: 1,
+      expectedResult: emptyHash,
+      setupChain: b => b.addSnapshot([], clientID1, 1, {[clientID1]: 10}),
+    });
+    await t({
+      expectedBaseCookieJSON: 1,
+      responseCookie: 1,
+      expectedResult: emptyHash,
+      setupChain: b => b.addSnapshot([], clientID1, 1, {[clientID2]: 20}),
+    });
+    await t({
+      expectedBaseCookieJSON: 1,
+      responseCookie: 1,
+      expectedResult: emptyHash,
+      setupChain: b =>
+        b.addSnapshot([], clientID1, 1, {
+          [clientID1]: 10,
+          [clientID2]: 20,
+        }),
+    });
+  });
+
+  test('change in cookie', async () => {
+    const expectedNewHash = parseHash('face0000-0000-4000-8000-000000000003');
+    await t({
+      expectedBaseCookieJSON: 1,
+      responseCookie: 2,
+      expectedResult: expectedNewHash,
+      setupChain: b => b.addSnapshot([], clientID1, 1, {[clientID1]: 10}),
+    });
+    await t({
+      expectedBaseCookieJSON: 1,
+      responseCookie: 2,
+      expectedResult: expectedNewHash,
+      setupChain: b => b.addSnapshot([], clientID1, 1, {[clientID2]: 20}),
+    });
+    await t({
+      expectedBaseCookieJSON: 1,
+      responseCookie: 2,
+      expectedResult: expectedNewHash,
+      setupChain: b =>
+        b.addSnapshot([], clientID1, 1, {
+          [clientID1]: 10,
+          [clientID2]: 20,
+        }),
+    });
+
+    await t({
+      expectedBaseCookieJSON: 1,
+      responseCookie: 2,
+      expectedResult: expectedNewHash,
+      setupChain: b =>
+        b.addSnapshot([], clientID1, 1, {
+          [clientID1]: 10,
+          [clientID2]: 20,
+        }),
+      responseLastMutationIDChanges: {[clientID1]: 11},
+    });
+
+    await t({
+      expectedBaseCookieJSON: 1,
+      responseCookie: 2,
+      expectedResult: expectedNewHash,
+      setupChain: async b => {
+        await b.addSnapshot([], clientID1, 1, {
+          [clientID1]: 10,
+          [clientID2]: 20,
+        });
+        await b.addLocal(clientID2, []);
+      },
+      responseLastMutationIDChanges: {[clientID1]: 11},
+    });
+  });
+
+  test('apply patch', async () => {
+    const expectedNewHash = parseHash('face0000-0000-4000-8000-000000000003');
+    await t({
+      expectedBaseCookieJSON: 1,
+      responseCookie: 2,
+      expectedResult: expectedNewHash,
+      setupChain: b => b.addSnapshot([], clientID1, 1, {[clientID1]: 10}),
+      responseLastMutationIDChanges: undefined,
+      responsePatch: [
+        {
+          op: 'put',
+          key: 'a',
+          value: 0,
+        },
+      ],
+      expectedMap: {a: 0},
+    });
+
+    await t({
+      expectedBaseCookieJSON: 1,
+      responseCookie: 2,
+      expectedResult: expectedNewHash,
+      setupChain: async b => {
+        await b.addSnapshot([], clientID1, 1, {[clientID1]: 10});
+        await b.addLocal(clientID1, [['b', 1]]);
+      },
+      responseLastMutationIDChanges: undefined,
+      responsePatch: [
+        {
+          op: 'put',
+          key: 'a',
+          value: 0,
+        },
+      ],
+      expectedMap: {a: 0},
+    });
+  });
 });

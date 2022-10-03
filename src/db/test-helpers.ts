@@ -156,6 +156,7 @@ export async function createIndex(
   clientID: ClientID,
   headName = DEFAULT_HEAD_NAME,
 ): Promise<Commit<Meta>> {
+  assert(!DD31);
   const lc = new LogContext();
   await store.withWrite(async dagWrite => {
     const w = await newWriteIndexChange(

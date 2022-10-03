@@ -1,32 +1,25 @@
 import {
   initClient,
-  updateClients,
   Client,
   ClientMap,
   ClientDD31,
   ClientSDD,
-  setClients as setClientsDD31,
+  setClients,
+  getClients,
 } from './clients';
 import type * as dag from '../dag/mod';
 import type * as sync from '../sync/mod';
 import {LogContext} from '@rocicorp/logger';
 
-export function setClients(
+export function setClientsForTest(
   clients: ClientMap,
   dagStore: dag.Store,
 ): Promise<ClientMap> {
-  if (DD31) {
-    return dagStore.withWrite(async dagWrite => {
-      await setClientsDD31(clients, dagWrite);
-      await dagWrite.commit();
-      return clients;
-    });
-  }
-  return updateClients(_ => {
-    return Promise.resolve({
-      clients,
-    });
-  }, dagStore);
+  return dagStore.withWrite(async dagWrite => {
+    await setClients(clients, dagWrite);
+    await dagWrite.commit();
+    return clients;
+  });
 }
 
 type PartialClient = Partial<Client> &
@@ -94,13 +87,12 @@ export async function deleteClientForTesting(
   clientID: sync.ClientID,
   dagStore: dag.Store,
 ): Promise<void> {
-  await updateClients(clients => {
-    const clientsAfterGC = new Map(clients);
-    clientsAfterGC.delete(clientID);
-    return {
-      clients: new Map(clientsAfterGC),
-    };
-  }, dagStore);
+  await dagStore.withWrite(async dagWrite => {
+    const clients = new Map(await getClients(dagWrite));
+    clients.delete(clientID);
+    await setClients(clients, dagWrite);
+    await dagWrite.commit();
+  });
 }
 
 export async function initClientWithClientID(
@@ -116,5 +108,8 @@ export async function initClientWithClientID(
   const newMap = new Map(clientMap);
   newMap.delete(generatedClientID);
   newMap.set(clientID, client);
-  await setClients(newMap, dagStore);
+  await dagStore.withWrite(async dagWrite => {
+    await setClients(newMap, dagWrite);
+    await dagWrite.commit();
+  });
 }

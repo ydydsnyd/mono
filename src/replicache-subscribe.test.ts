@@ -1,6 +1,7 @@
 import {
   clock,
   initReplicacheTesting,
+  makePullResponse,
   replicacheForTesting,
   tickAFewTimes,
   tickUntil,
@@ -681,10 +682,11 @@ test('subscribe pull and index update', async () => {
       expectedQueryCallCount++;
     }
     log.length = 0;
-    fetchMock.post(pullURL, {
-      lastMutationID: lastMutationID++,
-      patch: opt.patch,
-    });
+    const clientID = await rep.clientID;
+    fetchMock.post(
+      pullURL,
+      makePullResponse(clientID, lastMutationID++, opt.patch),
+    );
 
     rep.pull();
     await tickUntil(() => log.length >= opt.expectedLog.length);

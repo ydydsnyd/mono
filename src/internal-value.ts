@@ -103,6 +103,7 @@ export const enum FromInternalValueReason {
   // `skipCloneReadTransactionReturnValue`)
   ReadTransactionScan = 0x100,
   ReadTransactionGet,
+  PullSendCookie,
 }
 
 export function fromInternalValue(

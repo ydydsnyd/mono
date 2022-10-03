@@ -47,7 +47,7 @@ export {rebaseMutationAndCommit, rebaseMutationAndPutCommit} from './rebase';
 export type {
   SnapshotMeta,
   SnapshotMetaDD31,
-  LocalMeta,
+  LocalMetaSDD,
   LocalMetaDD31,
   IndexChangeMeta,
   IndexRecord,

@@ -6,6 +6,7 @@ import {
   expectLogContext,
   expectPromiseToReject,
   initReplicacheTesting,
+  makePullResponse,
   MemStoreWithCounters,
   replicacheForTesting,
   replicacheForTestingNoDefaultURLs,
@@ -15,6 +16,7 @@ import {
 import {
   ClientID,
   PatchOperation,
+  Poke,
   Replicache,
   TransactionClosedError,
 } from './mod';
@@ -28,7 +30,7 @@ import {sleep} from './sleep';
 import * as db from './db/mod';
 import {TestMemStore} from './kv/test-mem-store';
 import {emptyHash, Hash} from './hash';
-import {defaultPuller} from './puller';
+import {defaultPuller, PullResponse} from './puller';
 import {defaultPusher} from './pusher';
 import {
   PROD_LICENSE_SERVER_URL,
@@ -740,28 +742,23 @@ test('pull', async () => {
   await deleteTodo({id: id2});
 
   expect(deleteCount).to.equal(2);
-
-  fetchMock.postOnce(pullURL, {
-    cookie: '',
-    lastMutationID: 2,
-    patch: [
+  const clientID = await rep.clientID;
+  fetchMock.postOnce(
+    pullURL,
+    makePullResponse(clientID, 2, [
       {op: 'del', key: ''},
       {
         op: 'put',
         key: '/list/1',
         value: {id: 1, ownerUserID: 1},
       },
-    ],
-  });
+    ]),
+  );
   rep.pull();
   await tickAFewTimes();
   expect(deleteCount).to.equal(2);
 
-  fetchMock.postOnce(pullURL, {
-    cookie: '',
-    lastMutationID: 2,
-    patch: [],
-  });
+  fetchMock.postOnce(pullURL, makePullResponse(clientID, 2));
   beginPullResult = await rep.beginPull();
   ({syncHead} = beginPullResult);
   expect(syncHead).to.equal(emptyHash);
@@ -776,24 +773,19 @@ test('pull', async () => {
     ((await rep?.query(tx => tx.get(`/todo/${id1}`))) as {text: string}).text,
   ).to.equal('Test');
 
-  fetchMock.postOnce(pullURL, {
-    cookie: '',
-    lastMutationID: 3,
-    patch: [
+  fetchMock.postOnce(
+    pullURL,
+    makePullResponse(clientID, 3, [
       {
         op: 'put',
         key: '/todo/14323534',
         value: {id: 14323534, text: 'Test'},
       },
-    ],
-  });
+    ]),
+  );
   beginPullResult = await rep.beginPull();
   ({syncHead} = beginPullResult);
-  expect(syncHead).equal(
-    DD31
-      ? 't/0000000000000000000000000000000007'
-      : 't/0000000000000000000000000000000008',
-  );
+  expect(syncHead).equal('t/0000000000000000000000000000000008');
 
   await createTodo({
     id: id2,
@@ -804,11 +796,7 @@ test('pull', async () => {
     ((await rep?.query(tx => tx.get(`/todo/${id2}`))) as {text: string}).text,
   ).to.equal('Test 2');
 
-  fetchMock.postOnce(pullURL, {
-    cookie: '',
-    lastMutationID: 3,
-    patch: [],
-  });
+  fetchMock.postOnce(pullURL, makePullResponse(clientID, 3));
   await rep.maybeEndPull(beginPullResult.syncHead, beginPullResult.requestID);
 
   expect(createCount).to.equal(3);
@@ -820,11 +808,10 @@ test('pull', async () => {
   expect(deleteCount).to.equal(4);
   expect(createCount).to.equal(3);
 
-  fetchMock.postOnce(pullURL, {
-    cookie: '',
-    lastMutationID: 6,
-    patch: [{op: 'del', key: '/todo/14323534'}],
-  });
+  fetchMock.postOnce(
+    pullURL,
+    makePullResponse(clientID, 6, [{op: 'del', key: '/todo/14323534'}], ''),
+  );
   rep.pull();
   await tickAFewTimes();
 
@@ -1033,6 +1020,7 @@ test('HTTP status pull', async () => {
     pullURL,
   });
 
+  const clientID = await rep.clientID;
   let okCalled = false;
   let i = 0;
   fetchMock.post(pullURL, () => {
@@ -1041,9 +1029,10 @@ test('HTTP status pull', async () => {
         return {body: 'internal error', status: 500};
       case 1:
         return {body: 'not found', status: 404};
-      default:
+      default: {
         okCalled = true;
-        return {body: {lastMutationID: 0, patch: []}, status: 200};
+        return {body: makePullResponse(clientID, 0), status: 200};
+      }
     }
   });
 
@@ -1755,11 +1744,8 @@ test('onSync', async () => {
 
   expect(onSync.callCount).to.equal(0);
 
-  fetchMock.postOnce(pullURL, {
-    cookie: '',
-    lastMutationID: 2,
-    patch: [],
-  });
+  const clientID = await rep.clientID;
+  fetchMock.postOnce(pullURL, makePullResponse(clientID, 2));
   rep.pull();
   await tickAFewTimes(15);
 
@@ -1909,13 +1895,14 @@ test('push and pull concurrently', async () => {
 
   const requests: string[] = [];
 
+  const clientID = await rep.clientID;
   fetchMock.post(pushURL, async () => {
     requests.push(pushURL);
     return {};
   });
   fetchMock.post(pullURL, () => {
     requests.push(pullURL);
-    return {lastMutationID: 0, patch: []};
+    return makePullResponse(clientID, 0, [], null);
   });
 
   await add({a: 0});
@@ -2042,9 +2029,9 @@ test('pull and index update', async () => {
     pullURL,
     indexes: {[indexName]: {jsonPointer: '/id'}},
   });
+  const clientID = await rep.clientID;
 
   let lastMutationID = 0;
-
   async function testPull(opt: {
     patch: PatchOperation[];
     expectedResult: JSONValue;
@@ -2052,10 +2039,7 @@ test('pull and index update', async () => {
     let pullDone = false;
     fetchMock.post(pullURL, () => {
       pullDone = true;
-      return {
-        lastMutationID: lastMutationID++,
-        patch: opt.patch,
-      };
+      return makePullResponse(clientID, lastMutationID++, opt.patch);
     });
 
     rep.pull();
@@ -2133,16 +2117,12 @@ test('pull mutate options', async () => {
   const rep = await replicacheForTesting('pull-mutate-options', {
     pullURL,
   });
-
+  const clientID = await rep.clientID;
   const log: number[] = [];
 
   fetchMock.post(pullURL, () => {
     log.push(Date.now());
-    return {
-      cookie: '',
-      lastMutationID: 2,
-      patch: [],
-    };
+    return makePullResponse(clientID, 0, [], '');
   });
 
   await tickUntilTimeIs(1000);
@@ -2519,10 +2499,13 @@ test('experiment KV Store', async () => {
     mutators: {addData},
   });
 
-  // TODO(DD31): persist is temporarily disable for DD31
-  const readCountStart = DD31 ? 2 : 3;
-  expect(store.readCount).to.equal(readCountStart, 'readCount');
-  expect(store.writeCount).to.equal(1, 'writeCount');
+  // Safari does not have requestIdleTimeout so it waits for a second. We need
+  // to wait to have all browsers have a chance to run persist before we
+  // continue.
+  await clock.tickAsync(1000);
+
+  expect(store.readCount).to.equal(3);
+  expect(store.writeCount).to.equal(DD31 ? 2 : 1, 'writeCount');
   expect(store.closeCount).to.equal(0, 'closeCount');
   store.resetCounters();
 
@@ -2542,10 +2525,7 @@ test('experiment KV Store', async () => {
 
   await rep.persist();
 
-  // TODO(DD31): persist is temporarily disable for DD31
-  const readCountAfterPersist = DD31 ? 1 : 2;
-
-  expect(store.readCount).to.equal(readCountAfterPersist, 'readCount');
+  expect(store.readCount).to.equal(DD31 ? 1 : 2, 'readCount');
   expect(store.writeCount).to.equal(1, 'writeCount');
   expect(store.closeCount).to.equal(0, 'closeCount');
   store.resetCounters();
@@ -2676,20 +2656,23 @@ test('mutation timestamps are immutable', async () => {
   pending = [];
   await tickAFewTimes();
 
-  await rep.poke({
+  const clientID = await rep.clientID;
+  const poke: Poke = {
     baseCookie: null,
-    pullResponse: {
-      lastMutationID: 0,
-      patch: [
+    pullResponse: makePullResponse(
+      clientID,
+      0,
+      [
         {
           op: 'put',
           key: 'hot',
           value: 'dog',
         },
       ],
-      cookie: 1,
-    },
-  });
+      '',
+    ) as PullResponse,
+  };
+  await rep.poke(poke);
 
   // Verify rebase did occur by checking for the new value.
   const val = await rep.query(async tx => await tx.get('hot'));

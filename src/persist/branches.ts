@@ -260,11 +260,10 @@ export async function hasBranchState(
 
 export function branchHasPendingMutations(branch: Branch) {
   for (const [clientID, mutationID] of Object.entries(branch.mutationIDs)) {
-    const lastServerAckedMutationID =
-      branch.lastServerAckdMutationIDs[clientID];
+    const lastServerAckdMutationID = branch.lastServerAckdMutationIDs[clientID];
     if (
-      (lastServerAckedMutationID === undefined && mutationID !== 0) ||
-      lastServerAckedMutationID < mutationID
+      (lastServerAckdMutationID === undefined && mutationID !== 0) ||
+      lastServerAckdMutationID < mutationID
     ) {
       return true;
     }

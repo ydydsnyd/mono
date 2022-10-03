@@ -35,11 +35,16 @@ export type PullResponseOK = {
   patch: PatchOperation[];
 };
 
+export type PullResponseOKSDD = PullResponseOK;
+
 /**
  * The shape of a pull response under normal circumstances.
  */
 export type PullResponseOKDD31 = {
-  cookie?: ReadonlyJSONValue;
+  // TODO(DD31): Use more specific types for cookie
+  cookie: ReadonlyJSONValue;
+  // All last mutation IDs from clients in branchID that changed
+  // between PullRequest.cookie and PullResponseOK.cookie.
   lastMutationIDChanges: Record<ClientID, number>;
   patch: PatchOperation[];
 };
@@ -58,6 +63,8 @@ export type ClientStateNotFoundResponse = {
  */
 export type PullResponse = PullResponseOK | ClientStateNotFoundResponse;
 
+export type PullResponseSDD = PullResponse;
+
 /**
  * PullResponse defines the shape and type of the response of a pull. This is
  * the JSON you should return from your pull server endpoint.
@@ -75,7 +82,7 @@ export function isClientStateNotFoundResponse(
   );
 }
 
-export function assertPullResponse(v: unknown): asserts v is PullResponse {
+export function assertPullResponseSDD(v: unknown): asserts v is PullResponse {
   if (typeof v !== 'object' || v === null) {
     throw new Error('PullResponse must be an object');
   }

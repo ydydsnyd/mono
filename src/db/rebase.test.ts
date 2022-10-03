@@ -22,9 +22,9 @@ async function createMutationSequenceFixture() {
   await addGenesis(chain, store, clientID);
   await addSnapshot(chain, store, [['foo', 'bar']], clientID);
   await addLocal(chain, store, clientID);
-  const localCommit1 = chain[chain.length - 1] as db.Commit<db.LocalMeta>;
+  const localCommit1 = chain[chain.length - 1] as db.Commit<db.LocalMetaSDD>;
   await addLocal(chain, store, clientID);
-  const localCommit2 = chain[chain.length - 1] as db.Commit<db.LocalMeta>;
+  const localCommit2 = chain[chain.length - 1] as db.Commit<db.LocalMetaSDD>;
   const syncChain = await addSyncSnapshot(chain, store, 1, clientID);
   const syncSnapshotCommit = syncChain[0] as db.Commit<db.SnapshotMeta>;
 
@@ -57,7 +57,7 @@ async function createMutationSequenceFixture() {
     ) => {
       expect(rebasedCommit.isLocal()).to.be.true;
       if (rebasedCommit.isLocal()) {
-        const rebasedCommitLocalMeta: db.LocalMeta = rebasedCommit.meta;
+        const rebasedCommitLocalMeta: db.LocalMetaSDD = rebasedCommit.meta;
         expect(rebasedCommitLocalMeta.basisHash).to.equal(
           syncSnapshotCommit.chunk.hash,
         );
@@ -85,7 +85,7 @@ async function createMutationSequenceFixture() {
     ) => {
       expect(rebasedCommit.isLocal()).to.be.true;
       if (rebasedCommit.isLocal()) {
-        const rebasedCommitLocalMeta: db.LocalMeta = rebasedCommit.meta;
+        const rebasedCommitLocalMeta: db.LocalMetaSDD = rebasedCommit.meta;
         expect(rebasedCommitLocalMeta.basisHash).to.equal(expectedBasis);
         expect(rebasedCommitLocalMeta.mutationID).to.equal(
           localCommit2.meta.mutationID,
@@ -116,7 +116,7 @@ async function createMissingMutatorFixture() {
   await addGenesis(chain, store, clientID);
   await addSnapshot(chain, store, [['foo', 'bar']], clientID);
   await addLocal(chain, store, clientID);
-  const localCommit = chain[chain.length - 1] as db.Commit<db.LocalMeta>;
+  const localCommit = chain[chain.length - 1] as db.Commit<db.LocalMetaSDD>;
   const syncChain = await addSyncSnapshot(chain, store, 1, clientID);
   const syncSnapshotCommit = syncChain[0] as db.Commit<db.SnapshotMeta>;
 
@@ -132,7 +132,7 @@ async function createMissingMutatorFixture() {
     ) => {
       expect(rebasedCommit.isLocal()).to.be.true;
       if (rebasedCommit.isLocal()) {
-        const rebasedCommitLocalMeta: db.LocalMeta = rebasedCommit.meta;
+        const rebasedCommitLocalMeta: db.LocalMetaSDD = rebasedCommit.meta;
         expect(rebasedCommitLocalMeta.basisHash).to.equal(
           syncSnapshotCommit.chunk.hash,
         );
@@ -372,7 +372,7 @@ async function testThrowsErrorOnClientIDMismatch(
   await addGenesis(chain, store, clientID);
   await addSnapshot(chain, store, [['foo', 'bar']], clientID);
   await addLocal(chain, store, clientID);
-  const localCommit = chain[chain.length - 1] as db.Commit<db.LocalMeta>;
+  const localCommit = chain[chain.length - 1] as db.Commit<db.LocalMetaSDD>;
   const syncChain = await addSyncSnapshot(chain, store, 1, clientID);
   const syncSnapshotCommit = syncChain[0] as db.Commit<db.SnapshotMeta>;
 
@@ -424,9 +424,9 @@ async function testThrowsErrorOnMutationIDMismatch(
   await addGenesis(chain, store, clientID);
   await addSnapshot(chain, store, [['foo', 'bar']], clientID);
   await addLocal(chain, store, clientID);
-  const localCommit1 = chain[chain.length - 1] as db.Commit<db.LocalMeta>;
+  const localCommit1 = chain[chain.length - 1] as db.Commit<db.LocalMetaSDD>;
   await addLocal(chain, store, clientID);
-  const localCommit2 = chain[chain.length - 1] as db.Commit<db.LocalMeta>;
+  const localCommit2 = chain[chain.length - 1] as db.Commit<db.LocalMetaSDD>;
   const syncChain = await addSyncSnapshot(chain, store, 1, clientID);
   const syncSnapshotCommit = syncChain[0] as db.Commit<db.SnapshotMeta>;
 

@@ -65,7 +65,7 @@ async function createAndPersistClientWithPendingLocal(
   clientID: sync.ClientID,
   perdag: dag.Store,
   numLocal: number,
-): Promise<db.LocalMeta[]> {
+): Promise<db.LocalMetaSDD[]> {
   const testMemdag = new dag.TestStore(
     undefined,
     makeNewTempHashFunction(),
@@ -77,10 +77,10 @@ async function createAndPersistClientWithPendingLocal(
 
   await initClientWithClientID(clientID, perdag);
 
-  const localMetas: db.LocalMeta[] = [];
+  const localMetas: db.LocalMetaSDD[] = [];
   for (let i = 0; i < numLocal; i++) {
     await addLocal(chain, testMemdag, clientID);
-    localMetas.push(chain[chain.length - 1].meta as db.LocalMeta);
+    localMetas.push(chain[chain.length - 1].meta as db.LocalMetaSDD);
   }
   await persist.persist(
     new LogContext(),
@@ -97,7 +97,7 @@ function createPushBody(
   profileID: string,
   branchID: sync.BranchID,
   clientID: sync.ClientID,
-  localMetas: db.LocalMeta[],
+  localMetas: db.LocalMetaSDD[],
   schemaVersion: string,
 ): ReadonlyJSONObject {
   if (DD31) {
@@ -398,6 +398,11 @@ test('recovering mutations with pull disabled', async () => {
 });
 
 test('client does not attempt to recover mutations from IndexedDB with different replicache name', async () => {
+  if (DD31) {
+    // TODO(DD31): Implement this test.
+    return;
+  }
+
   const clientWPendingMutationsID = 'client1';
   const schemaVersion = 'testSchema';
   const replicachePartialNameOfClientWPendingMutations =
@@ -419,10 +424,6 @@ test('client does not attempt to recover mutations from IndexedDB with different
   );
 
   await tickAFewTimes();
-  if (DD31) {
-    // TODO(DD31): Implement
-    return;
-  }
 
   const testPerdag = await createPerdag({
     replicacheName: createReplicacheNameForTest(
@@ -1309,12 +1310,22 @@ test('mutation recovery is invoked on change from offline to online', async () =
   expect(rep.online).to.equal(false);
   expect(rep.recoverMutationsSpy.callCount).to.equal(1);
 
+  const clientID = await rep.clientID;
   fetchMock.reset();
-  fetchMock.post(pullURL, {
-    cookie: 'test_cookie',
-    lastMutationID: 2,
-    patch: [],
-  });
+  fetchMock.post(
+    pullURL,
+    DD31
+      ? {
+          cookie: 'test_cookie',
+          lastMutationIDChanges: {[clientID]: 2},
+          patch: [],
+        }
+      : {
+          cookie: 'test_cookie',
+          lastMutationID: 2,
+          patch: [],
+        },
+  );
 
   rep.pull();
   expect(rep.recoverMutationsSpy.callCount).to.equal(1);

@@ -2,7 +2,9 @@ import type {LogContext} from '@rocicorp/logger';
 import {
   isClientStateNotFoundResponse,
   PullResponse,
+  PullResponseDD31,
   PullResponseOK,
+  PullResponseOKDD31,
 } from './puller';
 import * as dag from './dag/mod';
 import * as db from './db/mod';
@@ -298,7 +300,7 @@ export class MutationRecovery<M extends MutatorDefs> {
       const {puller, pullURL} = delegate;
 
       const pullDescription = 'recoveringMutationsPull';
-      let pullResponse: PullResponse | undefined;
+      let pullResponse: PullResponse | PullResponseDD31 | undefined;
       const pullSucceeded = await wrapInOnlineCheck(async () => {
         const {result: beginPullResponse} = await wrapInReauthRetries(
           async (requestID: string, requestLc: LogContext) => {
@@ -311,6 +313,7 @@ export class MutationRecovery<M extends MutatorDefs> {
             const beginPullResponse = await sync.beginPull(
               await delegate.profileID,
               clientID,
+              branchID,
               beginPullRequest,
               beginPullRequest.puller,
               requestID,
@@ -327,7 +330,7 @@ export class MutationRecovery<M extends MutatorDefs> {
           delegate.pullURL,
           lc,
         );
-        pullResponse = beginPullResponse.pullResponse;
+        ({pullResponse} = beginPullResponse);
         return (
           !!pullResponse &&
           beginPullResponse.httpRequestInfo.httpStatusCode === 200
@@ -340,21 +343,31 @@ export class MutationRecovery<M extends MutatorDefs> {
         return;
       }
 
-      if (pullResponse && isClientStateNotFoundResponse(pullResponse)) {
-        lc.debug?.(
-          `Client ${selfClientID} cannot recover mutations for client ` +
-            `${clientID}. The client no longer exists on the server.`,
-        );
-      } else {
-        lc.debug?.(
-          `Client ${selfClientID} recovered mutations for client ` +
-            `${clientID}.  Details`,
-          {
-            mutationID: client.mutationID,
-            lastServerAckdMutationID: client.lastServerAckdMutationID,
-            lastMutationID: pullResponse?.lastMutationID,
-          },
-        );
+      if (lc.debug && pullResponse) {
+        if (isClientStateNotFoundResponse(pullResponse)) {
+          lc.debug?.(
+            `Client ${selfClientID} cannot recover mutations for client ` +
+              `${clientID}. The client no longer exists on the server.`,
+          );
+        } else {
+          lc.debug?.(
+            `Client ${selfClientID} recovered mutations for client ` +
+              `${clientID}.  Details`,
+            DD31
+              ? {
+                  mutationID: client.mutationID,
+                  lastServerAckdMutationID: client.lastServerAckdMutationID,
+                  lastMutationIDChanges: (pullResponse as PullResponseOKDD31)
+                    .lastMutationIDChanges,
+                }
+              : {
+                  mutationID: client.mutationID,
+                  lastServerAckdMutationID: client.lastServerAckdMutationID,
+                  lastMutationID: (pullResponse as PullResponseOK)
+                    .lastMutationID,
+                },
+          );
+        }
       }
 
       return await perdag.withWrite(async dagWrite => {

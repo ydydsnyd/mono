@@ -37,7 +37,7 @@ export class Commit<M extends Meta> {
     return this.chunk.data.meta;
   }
 
-  isLocal(): this is Commit<LocalMeta> {
+  isLocal(): this is Commit<LocalMetaSDD> {
     return this.meta.type === MetaType.Local;
   }
 
@@ -117,10 +117,12 @@ export class Commit<M extends Meta> {
 export async function localMutations(
   fromCommitHash: Hash,
   dagRead: dag.Read,
-): Promise<Commit<LocalMeta>[]> {
+): Promise<Commit<LocalMetaSDD | LocalMetaDD31>[]> {
   const commits = await chain(fromCommitHash, dagRead);
   // Filter does not deal with type narrowing.
-  return commits.filter(c => c.isLocal()) as Commit<LocalMeta>[];
+  return commits.filter(c => c.isLocal()) as Commit<
+    LocalMetaSDD | LocalMetaDD31
+  >[];
 }
 
 export async function localMutationsGreaterThan(
@@ -290,7 +292,7 @@ function assertIndexChangeMeta(
   // commit time.
 }
 
-export type LocalMeta = {
+export type LocalMetaSDD = {
   readonly type: MetaType.Local;
   readonly basisHash: Hash;
   readonly mutationID: number;
@@ -300,11 +302,13 @@ export type LocalMeta = {
   readonly timestamp: number;
 };
 
-export type LocalMetaDD31 = LocalMeta & {
+export type LocalMetaDD31 = LocalMetaSDD & {
   readonly clientID: sync.ClientID;
 };
 
-function assertLocalMeta(v: Record<string, unknown>): asserts v is LocalMeta {
+function assertLocalMeta(
+  v: Record<string, unknown>,
+): asserts v is LocalMetaSDD {
   // type already asserted
   assertNumber(v.mutationID);
   assertString(v.mutatorName);
@@ -327,7 +331,7 @@ export function assertLocalMetaDD31(
 }
 
 export function isLocalMetaDD31(
-  meta: LocalMeta | LocalMetaDD31,
+  meta: LocalMetaSDD | LocalMetaDD31,
 ): meta is LocalMetaDD31 {
   return DD31 && (meta as Partial<LocalMetaDD31>).clientID !== undefined;
 }
@@ -363,7 +367,7 @@ export function assertSnapshotMeta(
 
 export type Meta =
   | IndexChangeMeta
-  | LocalMeta
+  | LocalMetaSDD
   | LocalMetaDD31
   | SnapshotMeta
   | SnapshotMetaDD31;
@@ -487,7 +491,7 @@ export function newLocal(
   indexes: readonly IndexRecord[],
   timestamp: number,
   clientID: sync.ClientID,
-): Commit<LocalMeta | LocalMetaDD31> {
+): Commit<LocalMetaSDD | LocalMetaDD31> {
   if (DD31) {
     return newLocalDD31(
       createChunk,
@@ -502,7 +506,7 @@ export function newLocal(
       clientID,
     );
   }
-  const meta: LocalMeta = {
+  const meta: LocalMetaSDD = {
     type: MetaType.Local,
     basisHash,
     mutationID,

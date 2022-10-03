@@ -62,7 +62,7 @@ export type MutationDD31 = {
   readonly timestamp: number;
 };
 
-export function convert(lm: db.LocalMeta): Mutation {
+export function convert(lm: db.LocalMetaSDD): Mutation {
   return {
     id: lm.mutationID,
     name: lm.mutatorName,
@@ -71,7 +71,7 @@ export function convert(lm: db.LocalMeta): Mutation {
   };
 }
 
-export function convertDD31(lm: db.LocalMeta): MutationDD31 {
+export function convertDD31(lm: db.LocalMetaSDD): MutationDD31 {
   assertLocalMetaDD31(lm);
   return {clientID: lm.clientID, ...convert(lm)};
 }

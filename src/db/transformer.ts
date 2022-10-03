@@ -7,7 +7,7 @@ import {
   SnapshotMeta,
   getRefs as getRefsFromCommitData,
   assertCommitData,
-  LocalMeta,
+  LocalMetaSDD,
   CommitData,
   IndexRecord,
   LocalMetaDD31,
@@ -205,10 +205,10 @@ export abstract class BaseTransformer {
   }
 
   private _transformLocalMeta(meta: LocalMetaDD31): Promise<LocalMetaDD31>;
-  private _transformLocalMeta(meta: LocalMeta): Promise<LocalMeta>;
+  private _transformLocalMeta(meta: LocalMetaSDD): Promise<LocalMetaSDD>;
   private async _transformLocalMeta(
-    meta: LocalMeta | LocalMetaDD31,
-  ): Promise<LocalMeta | LocalMetaDD31> {
+    meta: LocalMetaSDD | LocalMetaDD31,
+  ): Promise<LocalMetaSDD | LocalMetaDD31> {
     const basisHashP = this._transformBasisHash(
       meta.basisHash,
       HashRefType.RequireStrong,

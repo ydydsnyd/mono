@@ -9,7 +9,7 @@ import * as kv from './kv/mod';
 import * as persist from './persist/mod';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import * as sinon from 'sinon';
-import type {JSONValue} from './json';
+import type {JSONValue, ReadonlyJSONValue} from './json';
 import {Hash, makeNewTempHashFunction} from './hash';
 
 // fetch-mock has invalid d.ts file so we removed that on npm install.
@@ -21,6 +21,8 @@ import type {WriteTransaction} from './transactions.js';
 import {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
 import type {DiffComputationConfig} from './sync/diff.js';
 import type {BranchID} from './sync/ids.js';
+import type {ClientID} from './sync/ids.js';
+import type {PatchOperation} from './puller.js';
 
 export class ReplicacheTest<
   // eslint-disable-next-line @typescript-eslint/ban-types
@@ -213,8 +215,8 @@ export async function replicacheForTestingNoDefaultURLs<
   rep.onClientStateNotFound = onClientStateNotFound;
 
   // Wait for open to be done.
-  await rep.clientID;
-  fetchMock.post(pullURL, {lastMutationID: 0, patch: []});
+  const clientID = await rep.clientID;
+  fetchMock.post(pullURL, makePullResponse(clientID, 0, [], null));
   fetchMock.post(pushURL, 'ok');
   await tickAFewTimes();
   return rep;
@@ -341,3 +343,23 @@ export const testSubscriptionsManagerOptions: DiffComputationConfig = {
   shouldComputeDiffs: () => true,
   shouldComputeDiffsForIndex: () => true,
 };
+
+export function makePullResponse(
+  clientID: ClientID,
+  lastMutationID: number,
+  patch: PatchOperation[] = [],
+  cookie: ReadonlyJSONValue = '',
+) {
+  if (DD31) {
+    return {
+      cookie,
+      lastMutationIDChanges: {[clientID]: lastMutationID},
+      patch,
+    };
+  }
+  return {
+    cookie,
+    lastMutationID,
+    patch,
+  };
+}

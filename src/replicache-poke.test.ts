@@ -1,10 +1,13 @@
 import {expect} from '@esm-bundle/chai';
+import type {PullResponse} from './puller';
+import type {Poke} from './replicache';
 import {
   addData,
   initReplicacheTesting,
+  makePullResponse,
   replicacheForTesting,
-} from './test-util.js';
-import type {WriteTransaction} from './transactions.js';
+} from './test-util';
+import type {WriteTransaction} from './transactions';
 
 initReplicacheTesting();
 
@@ -25,6 +28,7 @@ test('poke', async () => {
       },
     },
   });
+  const clientID = await rep.clientID;
 
   const {setTodo} = rep.mutate;
 
@@ -36,28 +40,33 @@ test('poke', async () => {
   expect(await rep.query(tx => tx.has(key))).true;
 
   // cookie *does* apply
-  await rep.poke({
+  const poke: Poke = {
     baseCookie: null,
-    pullResponse: {
-      cookie: 'c1',
-      lastMutationID: 1,
-      patch: [{op: 'del', key}],
-    },
-  });
+    pullResponse: makePullResponse(
+      clientID,
+      1,
+      [{op: 'del', key}],
+      'c1',
+    ) as PullResponse,
+  };
+
+  await rep.poke(poke);
   expect(await rep.query(tx => tx.has(key))).false;
 
   // cookie does not apply
   await setTodo({id, text});
   let error = null;
   try {
-    await rep.poke({
+    const poke: Poke = {
       baseCookie: null,
-      pullResponse: {
-        cookie: 'c1',
-        lastMutationID: 1,
-        patch: [{op: 'del', key}],
-      },
-    });
+      pullResponse: makePullResponse(
+        clientID,
+        1,
+        [{op: 'del', key}],
+        'c1',
+      ) as PullResponse,
+    };
+    await rep.poke(poke);
   } catch (e) {
     error = String(e);
   }
@@ -69,14 +78,16 @@ test('poke', async () => {
   error = null;
   try {
     // blech could not figure out how to use chai-as-promised.
-    await rep.poke({
+    const poke: Poke = {
       baseCookie: 'c1',
-      pullResponse: {
-        cookie: 'c2',
-        lastMutationID: 0,
-        patch: [{op: 'del', key}],
-      },
-    });
+      pullResponse: makePullResponse(
+        clientID,
+        0,
+        [{op: 'del', key}],
+        'c2',
+      ) as PullResponse,
+    };
+    await rep.poke(poke);
   } catch (e: unknown) {
     error = String(e);
   }
@@ -92,35 +103,44 @@ test('multiple pokes', async () => {
     },
   });
 
-  const p1 = rep.poke({
+  const clientID = await rep.clientID;
+  const poke: Poke = {
     baseCookie: null,
-    pullResponse: {
-      lastMutationID: 1,
-      patch: [
+    pullResponse: makePullResponse(
+      clientID,
+      1,
+      [
         {
           op: 'put',
           key: 'a',
           value: 1,
         },
       ],
-    },
-  });
+      'c2',
+    ) as PullResponse,
+  };
+
+  const p1 = rep.poke(poke);
 
   const p2 = rep.persist();
 
-  const p3 = rep.poke({
-    baseCookie: null,
-    pullResponse: {
-      lastMutationID: 2,
-      patch: [
+  const poke2: Poke = {
+    baseCookie: 'c2',
+    pullResponse: makePullResponse(
+      clientID,
+      2,
+      [
         {
           op: 'put',
           key: 'a',
           value: 2,
         },
       ],
-    },
-  });
+      'c3',
+    ) as PullResponse,
+  };
+
+  const p3 = rep.poke(poke2);
 
   await p1;
   await p2;

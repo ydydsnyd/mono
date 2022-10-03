@@ -3,7 +3,7 @@ import {
   CommitData,
   IndexChangeMeta,
   IndexRecord,
-  LocalMeta,
+  LocalMetaSDD,
   Meta,
   MetaType,
   SnapshotMeta,
@@ -88,7 +88,7 @@ export class Visitor {
     await this._visitBasisHash(meta.basisHash, HashRefType.AllowWeak);
   }
 
-  private async _visitLocalMeta(meta: LocalMeta): Promise<void> {
+  private async _visitLocalMeta(meta: LocalMetaSDD): Promise<void> {
     await this._visitBasisHash(meta.basisHash, HashRefType.RequireStrong);
     if (meta.originalHash !== null) {
       await this.visitCommit(meta.originalHash, HashRefType.AllowWeak);

@@ -5,10 +5,13 @@ import type {ReadonlyJSONValue} from './json';
 import type {JSONValue} from './json';
 import {Pusher, PushError} from './pusher';
 import {
+  assertPullResponseDD31,
+  assertPullResponseSDD,
   isClientStateNotFoundResponse,
   Puller,
   PullError,
   PullResponse,
+  PullResponseDD31,
 } from './puller';
 import {
   IndexTransactionImpl,
@@ -69,6 +72,7 @@ import type {CreateIndexDefinition} from './db/commit.js';
 import type {IndexDefinitions} from './index-defs';
 import {assertClientDD31} from './persist/clients.js';
 import {throwIfClosed} from './transaction-closed-error.js';
+import {lastMutationIDsForSnapshotFromHead} from './sync/pull.js';
 
 export type BeginPullResult = {
   requestID: string;
@@ -80,6 +84,25 @@ export type Poke = {
   baseCookie: ReadonlyJSONValue;
   pullResponse: PullResponse;
 };
+
+export type PokeSDD = Poke;
+
+export type PokeDD31 = {
+  baseCookie: ReadonlyJSONValue;
+  pullResponse: PullResponseDD31;
+};
+
+export function assertPokeDD31(
+  poke: PokeSDD | PokeDD31,
+): asserts poke is PokeDD31 {
+  assertPullResponseDD31(poke.pullResponse);
+}
+
+export function assertPokeSDD(
+  poke: PokeSDD | PokeDD31,
+): asserts poke is PokeSDD {
+  assertPullResponseSDD(poke.pullResponse);
+}
 
 export const httpStatusUnauthorized = 401;
 
@@ -1129,6 +1152,11 @@ export class Replicache<MD extends MutatorDefs = {}> {
    * @experimental This method is under development and its semantics will change.
    */
   async poke(poke: Poke): Promise<void> {
+    // TODO(DD31): We keep the type of poke for now and cast to allow main to not
+    // introduce API changes until DD31 is on by default.
+    // poke is really PokeSDD | PokeDD31
+    const internalPoke = poke as PokeDD31 | PokeSDD;
+
     await this._ready;
     // TODO(MP) Previously we created a request ID here and included it with the
     // PullRequest to the server so we could tie events across client and server
@@ -1143,24 +1171,53 @@ export class Replicache<MD extends MutatorDefs = {}> {
       .addContext('request_id', requestID);
 
     await this._persistPullLock.withLock(async () => {
-      if (isClientStateNotFoundResponse(poke.pullResponse)) {
+      if (isClientStateNotFoundResponse(internalPoke.pullResponse)) {
         this._fireOnClientStateNotFound(clientID, reasonServer);
         return;
       }
 
-      const syncHead = await sync.handlePullResponse(
-        lc,
-        this._memdag,
-        toInternalValue(
-          poke.baseCookie,
-          ToInternalValueReason.CookieFromResponse,
-        ),
-        poke.pullResponse,
-        clientID,
-      );
+      let syncHead;
+      if (DD31) {
+        const branchID = await this._branchIDPromise;
+        assert(branchID);
+        const lastMutationIDs = await lastMutationIDsForSnapshotFromHead(
+          db.DEFAULT_HEAD_NAME,
+          this._memdag,
+          branchID,
+        );
+        // Do not add the last mutation IDs of local mutations here because the
+        // poke might not include them and we don't want to reject the poke even
+        // if it does not contain these clients.
+
+        assertPokeDD31(internalPoke);
+        syncHead = await sync.handlePullResponseDD31(
+          lc,
+          this._memdag,
+          toInternalValue(
+            internalPoke.baseCookie,
+            ToInternalValueReason.CookieFromResponse,
+          ),
+          lastMutationIDs,
+          internalPoke.pullResponse,
+          clientID,
+        );
+      } else {
+        assertPokeSDD(internalPoke);
+        syncHead = await sync.handlePullResponseSDD(
+          lc,
+          this._memdag,
+          toInternalValue(
+            internalPoke.baseCookie,
+            ToInternalValueReason.CookieFromResponse,
+          ),
+          internalPoke.pullResponse,
+          clientID,
+        );
+      }
+
       if (syncHead === null) {
         throw new Error(
-          'unexpected base cookie for poke: ' + JSON.stringify(poke),
+          'unexpected base cookie for poke: ' + JSON.stringify(internalPoke),
         );
       }
 
@@ -1172,6 +1229,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     await this._ready;
     const profileID = await this.profileID;
     const clientID = await this._clientIDPromise;
+    const branchID = await this._branchIDPromise;
     const {
       result: {beginPullResponse, requestID},
     } = await this._wrapInReauthRetries(
@@ -1180,13 +1238,13 @@ export class Replicache<MD extends MutatorDefs = {}> {
           pullAuth: this.auth,
           pullURL: this.pullURL,
           schemaVersion: this.schemaVersion,
-          puller: this.puller,
         };
         const beginPullResponse = await sync.beginPull(
           profileID,
           clientID,
+          branchID,
           req,
-          req.puller,
+          this.puller,
           requestID,
           this._memdag,
           requestLc,

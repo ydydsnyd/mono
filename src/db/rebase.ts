@@ -6,12 +6,12 @@ import {fromInternalValue, FromInternalValueReason} from '../internal-value';
 import type {LogContext} from '@rocicorp/logger';
 import type {ClientID} from '../sync/mod';
 import {assert} from '../asserts';
-import {Commit, fromHash, isLocalMetaDD31, LocalMeta, Meta} from './commit';
+import {Commit, fromHash, isLocalMetaDD31, LocalMetaSDD, Meta} from './commit';
 import {newWriteLocal, Write} from './write';
 import {whenceHash} from './read';
 
 async function rebaseMutation(
-  mutation: Commit<LocalMeta>,
+  mutation: Commit<LocalMetaSDD>,
   dagWrite: dag.Write,
   basis: Hash,
   mutators: MutatorDefs,
@@ -77,7 +77,7 @@ async function rebaseMutation(
 }
 
 export async function rebaseMutationAndPutCommit(
-  mutation: Commit<LocalMeta>,
+  mutation: Commit<LocalMetaSDD>,
   dagWrite: dag.Write,
   basis: Hash,
   mutators: MutatorDefs,
@@ -98,7 +98,7 @@ export async function rebaseMutationAndPutCommit(
 }
 
 export async function rebaseMutationAndCommit(
-  mutation: Commit<LocalMeta>,
+  mutation: Commit<LocalMetaSDD>,
   dagWrite: dag.Write,
   basis: Hash,
   headName: string,
