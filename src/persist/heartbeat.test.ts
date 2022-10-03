@@ -10,7 +10,7 @@ import {
 } from './heartbeat';
 import {ClientMap, ClientStateNotFoundError, getClients} from './clients';
 import {fakeHash} from '../hash';
-import {makeClient, setClientsForTest} from './clients-test-helpers';
+import {makeClient, setClientsForTesting} from './clients-test-helpers';
 import {assertNotUndefined} from '../asserts';
 
 let clock: SinonFakeTimers;
@@ -50,7 +50,7 @@ test('startHeartbeats starts interval that writes heartbeat each minute', async 
       client2,
     }),
   );
-  await setClientsForTest(clientMap, dagStore);
+  await setClientsForTesting(clientMap, dagStore);
 
   const controller = new AbortController();
   startHeartbeats(
@@ -119,7 +119,7 @@ test('calling function returned by startHeartbeats, stops heartbeats', async () 
       client2,
     }),
   );
-  await setClientsForTest(clientMap, dagStore);
+  await setClientsForTesting(clientMap, dagStore);
 
   const controller = new AbortController();
   startHeartbeats(
@@ -200,7 +200,7 @@ test('writeHeartbeat writes heartbeat', async () => {
     }),
   );
 
-  await setClientsForTest(clientMap, dagStore);
+  await setClientsForTesting(clientMap, dagStore);
 
   const TICK_IN_MS = 20000;
   clock.tick(TICK_IN_MS);

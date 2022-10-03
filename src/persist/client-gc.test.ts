@@ -2,10 +2,10 @@ import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import * as dag from '../dag/mod';
-import {ClientMap, getClients, updateClients} from './clients';
+import {ClientMap, getClients, setClient} from './clients';
 import {newUUIDHash} from '../hash';
 import {initClientGC, getLatestGCUpdate} from './client-gc';
-import {makeClient, setClientsForTest} from './clients-test-helpers';
+import {makeClient, setClientsForTesting} from './clients-test-helpers';
 import {assertNotUndefined} from '../asserts';
 
 let clock: SinonFakeTimers;
@@ -55,7 +55,7 @@ test('initClientGC starts 5 min interval that collects clients that have been in
     }),
   );
 
-  await setClientsForTest(clientMap, dagStore);
+  await setClientsForTesting(clientMap, dagStore);
 
   const controller = new AbortController();
   initClientGC('client1', dagStore, new LogContext(), controller.signal);
@@ -91,11 +91,10 @@ test('initClientGC starts 5 min interval that collects clients that have been in
     heartbeatTimestampMs: clock.now,
   };
 
-  await updateClients(clients => {
-    return Promise.resolve({
-      clients: new Map(clients).set('client4', client4WUpdatedHeartbeat),
-    });
-  }, dagStore);
+  await dagStore.withWrite(async dagWrite => {
+    await setClient('client4', client4WUpdatedHeartbeat, dagWrite);
+    await dagWrite.commit();
+  });
 
   clock.tick(FIVE_MINS_IN_MS);
   await awaitLatestGCUpdate();
@@ -154,7 +153,7 @@ test('calling function returned by initClientGC, stops Client GCs', async () => 
     }),
   );
 
-  await setClientsForTest(clientMap, dagStore);
+  await setClientsForTesting(clientMap, dagStore);
 
   const controller = new AbortController();
   initClientGC('client1', dagStore, new LogContext(), controller.signal);

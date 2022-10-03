@@ -7,8 +7,6 @@ export {
   initClient,
   getClient,
   getClients,
-  updateClients,
-  noUpdates as noClientUpdates,
   hasClientState,
   assertHasClientState,
   ClientStateNotFoundError,

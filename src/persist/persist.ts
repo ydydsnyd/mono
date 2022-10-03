@@ -3,7 +3,7 @@ import type * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import * as sync from '../sync/mod';
 import {Hash, newUUIDHash} from '../hash';
-import {assertHasClientState, updateClients} from './clients';
+import {assertHasClientState, getClients, setClients} from './clients';
 import {ComputeHashTransformer, FixedChunks} from './compute-hash-transformer';
 import {GatherVisitor} from './gather-visitor';
 import {FixupTransformer} from './fixup-transformer';
@@ -152,17 +152,29 @@ async function writeFixedChunks(
   clientID: sync.ClientID,
   mutationID: number,
   lastMutationID: number,
-) {
-  const chunksToPut = fixedChunks.values();
-  await updateClients(clients => {
-    return {
-      clients: new Map(clients).set(clientID, {
-        heartbeatTimestampMs: Date.now(),
-        headHash: mainHeadHash,
-        mutationID,
-        lastServerAckdMutationID: lastMutationID,
-      }),
-      chunksToPut,
-    };
-  }, perdag);
+): Promise<void> {
+  await perdag.withWrite(async dagWrite => {
+    const clients = await getClients(dagWrite);
+    const ps: Promise<unknown>[] = [];
+
+    ps.push(
+      setClients(
+        new Map(clients).set(clientID, {
+          heartbeatTimestampMs: Date.now(),
+          headHash: mainHeadHash,
+          mutationID,
+          lastServerAckdMutationID: lastMutationID,
+        }),
+        dagWrite,
+      ),
+    );
+
+    for (const chunk of fixedChunks.values()) {
+      ps.push(dagWrite.putChunk(chunk));
+    }
+
+    await Promise.all(ps);
+
+    await dagWrite.commit();
+  });
 }

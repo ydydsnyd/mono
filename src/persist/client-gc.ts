@@ -1,7 +1,7 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {ClientID} from '../sync/client-id';
 import type * as dag from '../dag/mod';
-import {ClientMap, noUpdates, updateClients} from './clients';
+import {ClientMap, getClients, setClients} from './clients';
 import {initBgIntervalProcess} from './bg-interval';
 
 const CLIENT_MAX_INACTIVE_IN_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -30,22 +30,25 @@ export function initClientGC(
   );
 }
 
-export async function gcClients(
+export function gcClients(
   clientID: ClientID,
   dagStore: dag.Store,
 ): Promise<ClientMap> {
-  return updateClients(clients => {
+  return dagStore.withWrite(async dagWrite => {
     const now = Date.now();
+    const clients = await getClients(dagWrite);
     const clientsAfterGC = Array.from(clients).filter(
       ([id, client]) =>
         id === clientID /* never collect ourself */ ||
         now - client.heartbeatTimestampMs <= CLIENT_MAX_INACTIVE_IN_MS,
     );
     if (clientsAfterGC.length === clients.size) {
-      return noUpdates;
+      return clients;
     }
-    return {
-      clients: new Map(clientsAfterGC),
-    };
-  }, dagStore);
+
+    const newClients = new Map(clientsAfterGC);
+    await setClients(newClients, dagWrite);
+    await dagWrite.commit();
+    return newClients;
+  });
 }

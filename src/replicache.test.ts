@@ -2504,7 +2504,7 @@ test('experiment KV Store', async () => {
   // continue.
   await clock.tickAsync(1000);
 
-  expect(store.readCount).to.equal(3);
+  expect(store.readCount).to.equal(DD31 ? 3 : 2);
   expect(store.writeCount).to.equal(DD31 ? 2 : 1, 'writeCount');
   expect(store.closeCount).to.equal(0, 'closeCount');
   store.resetCounters();
@@ -2525,7 +2525,7 @@ test('experiment KV Store', async () => {
 
   await rep.persist();
 
-  expect(store.readCount).to.equal(DD31 ? 1 : 2, 'readCount');
+  expect(store.readCount).to.equal(1, 'readCount');
   expect(store.writeCount).to.equal(1, 'writeCount');
   expect(store.closeCount).to.equal(0, 'closeCount');
   store.resetCounters();

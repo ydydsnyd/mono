@@ -1,7 +1,7 @@
 import {expect} from '@esm-bundle/chai';
 import {fakeHash} from '../hash.js';
 import {TestMemStore} from '../kv/test-mem-store';
-import {makeClientMap, setClientsForTest} from './clients-test-helpers';
+import {makeClientMap, setClientsForTesting} from './clients-test-helpers';
 import {
   IDBDatabasesStore,
   IndexedDBDatabase,
@@ -65,7 +65,7 @@ suite('collectIDBDatabases', async () => {
             await store.putDatabaseForTesting(db);
           }
 
-          await setClientsForTest(clients, dagStore);
+          await setClientsForTesting(clients, dagStore);
         }
 
         const newDagStore = (name: string) => {

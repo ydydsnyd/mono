@@ -11,7 +11,7 @@ import type * as dag from '../dag/mod';
 import type * as sync from '../sync/mod';
 import {LogContext} from '@rocicorp/logger';
 
-export function setClientsForTest(
+export function setClientsForTesting(
   clients: ClientMap,
   dagStore: dag.Store,
 ): Promise<ClientMap> {
@@ -108,8 +108,5 @@ export async function initClientWithClientID(
   const newMap = new Map(clientMap);
   newMap.delete(generatedClientID);
   newMap.set(clientID, client);
-  await dagStore.withWrite(async dagWrite => {
-    await setClients(newMap, dagWrite);
-    await dagWrite.commit();
-  });
+  await setClientsForTesting(newMap, dagStore);
 }

@@ -5,13 +5,7 @@ import * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import type * as sync from '../sync/mod';
 import type {ReadonlyJSONValue} from '../json';
-import {
-  assert,
-  assertNotUndefined,
-  assertNumber,
-  assertObject,
-  assertString,
-} from '../asserts';
+import {assert, assertNumber, assertObject, assertString} from '../asserts';
 import {hasOwn} from '../has-own';
 import {uuid as makeUuid} from '../uuid';
 import {
@@ -39,7 +33,6 @@ import {
 } from '../index-defs';
 import {CastReason, InternalValue, safeCastToJSON} from '../internal-value.js';
 import {createIndexBTree} from '../db/write.js';
-import type {MaybePromise} from '../replicache.js';
 
 export type ClientMap = ReadonlyMap<sync.ClientID, ClientSDD | ClientDD31>;
 
@@ -242,7 +235,7 @@ export async function getClient(
   return clients.get(id);
 }
 
-export async function initClient(
+export function initClient(
   lc: LogContext,
   perdag: dag.Store,
   mutatorNames: string[],
@@ -252,8 +245,10 @@ export async function initClient(
     return initClientDD31(lc, perdag, mutatorNames, indexes);
   }
 
-  const newClientID = makeUuid();
-  const updatedClients = await updateClients(async clients => {
+  return perdag.withWrite(async dagWrite => {
+    const newClientID = makeUuid();
+    const clients = await getClients(dagWrite);
+
     let bootstrapClient: Client | undefined;
     for (const client of clients.values()) {
       if (
@@ -264,27 +259,25 @@ export async function initClient(
       }
     }
 
-    let newClientCommitData;
+    let newClientCommitData: db.CommitData<db.SnapshotMeta>;
     const chunksToPut = [];
     if (bootstrapClient) {
       const constBootstrapClient = bootstrapClient;
-      newClientCommitData = await perdag.withRead(async dagRead => {
-        const bootstrapCommit = await db.baseSnapshotFromHash(
-          constBootstrapClient.headHash,
-          dagRead,
-        );
-        // Copy the snapshot with one change: set last mutation id to 0.  Replicache
-        // server implementations expect new client ids to start with last mutation id 0.
-        // If a server sees a new client id with a non-0 last mutation id, it may conclude
-        // this is a very old client whose state has been garbage collected on the server.
-        return newSnapshotCommitData(
-          bootstrapCommit.meta.basisHash,
-          0 /* lastMutationID */,
-          bootstrapCommit.meta.cookieJSON,
-          bootstrapCommit.valueHash,
-          bootstrapCommit.indexes,
-        );
-      });
+      const bootstrapCommit = await db.baseSnapshotFromHash(
+        constBootstrapClient.headHash,
+        dagWrite,
+      );
+      // Copy the snapshot with one change: set last mutation id to 0.  Replicache
+      // server implementations expect new client ids to start with last mutation id 0.
+      // If a server sees a new client id with a non-0 last mutation id, it may conclude
+      // this is a very old client whose state has been garbage collected on the server.
+      newClientCommitData = newSnapshotCommitData(
+        bootstrapCommit.meta.basisHash,
+        0 /* lastMutationID */,
+        bootstrapCommit.meta.cookieJSON,
+        bootstrapCommit.valueHash,
+        bootstrapCommit.indexes,
+      );
     } else {
       // No existing snapshot to bootstrap from. Create empty snapshot.
       const emptyBTreeChunk = dag.createChunkWithHash(
@@ -309,19 +302,21 @@ export async function initClient(
     );
     chunksToPut.push(newClientCommitChunk);
 
-    return {
-      clients: new Map(clients).set(newClientID, {
-        heartbeatTimestampMs: Date.now(),
-        headHash: newClientCommitChunk.hash,
-        mutationID: 0,
-        lastServerAckdMutationID: 0,
-      }),
-      chunksToPut,
+    const newClient: Client = {
+      heartbeatTimestampMs: Date.now(),
+      headHash: newClientCommitChunk.hash,
+      mutationID: 0,
+      lastServerAckdMutationID: 0,
     };
-  }, perdag);
-  const newClient = updatedClients.get(newClientID);
-  assertNotUndefined(newClient);
-  return [newClientID, newClient, updatedClients];
+    const updatedClients = new Map(clients).set(newClientID, newClient);
+    await setClients(updatedClients, dagWrite);
+
+    await Promise.all(chunksToPut.map(c => dagWrite.putChunk(c)));
+
+    await dagWrite.commit();
+
+    return [newClientID, newClient, updatedClients];
+  });
 }
 
 export function initClientDD31(
@@ -559,109 +554,6 @@ export async function findMatchingClient(
   return {type: FIND_MATCHING_CLIENT_TYPE_NEW};
 }
 
-export const noUpdates = Symbol();
-export type NoUpdates = typeof noUpdates;
-
-type ClientsUpdate = (
-  clients: ClientMap,
-) => MaybePromise<
-  {clients: ClientMap; chunksToPut?: Iterable<dag.Chunk>} | NoUpdates
->;
-
-export async function updateClients(
-  update: ClientsUpdate,
-  dagStore: dag.Store,
-): Promise<ClientMap> {
-  if (DD31) {
-    // TODO(DD31): Update callers to use setClients for DD31c instead.
-    return dagStore.withWrite(async dagWrite => {
-      const clients = await getClients(dagWrite);
-      const res = await update(clients);
-      if (res === noUpdates) {
-        return clients;
-      }
-
-      const {clients: newClients, chunksToPut} = res;
-      await setClients(newClients, dagWrite);
-      if (chunksToPut) {
-        await Promise.all(Array.from(chunksToPut, c => dagWrite.putChunk(c)));
-      }
-
-      await dagWrite.commit();
-      return clients;
-    });
-  }
-
-  const [clients, clientsHash] = await dagStore.withRead(async dagRead => {
-    const clientsHash = await dagRead.getHead(CLIENTS_HEAD_NAME);
-    const clients = await getClientsAtHash(clientsHash, dagRead);
-    return [clients, clientsHash];
-  });
-  return updateClientsInternal(update, clients, clientsHash, dagStore);
-}
-
-async function updateClientsInternal(
-  update: ClientsUpdate,
-  clients: ClientMap,
-  clientsHash: Hash | undefined,
-  dagStore: dag.Store,
-): Promise<ClientMap> {
-  const updateResults = await update(clients);
-  if (updateResults === noUpdates) {
-    return clients;
-  }
-  const {clients: updatedClients, chunksToPut} = updateResults;
-  const result = await dagStore.withWrite(async dagWrite => {
-    const currClientsHash = await dagWrite.getHead(CLIENTS_HEAD_NAME);
-    if (currClientsHash !== clientsHash) {
-      // Conflict!  Someone else updated the ClientsMap.  Retry update.
-      return {
-        updateApplied: false,
-        clients: await getClientsAtHash(currClientsHash, dagWrite),
-        clientsHash: currClientsHash,
-      };
-    }
-    const updatedClientsChunkData = clientMapToChunkData(
-      updatedClients,
-      dagWrite,
-    );
-
-    const updateClientsRefs: Hash[] = getRefsForClients(updatedClients);
-
-    const updateClientsChunk = dagWrite.createChunk(
-      updatedClientsChunkData,
-      updateClientsRefs,
-    );
-    const updatedClientsHash = updateClientsChunk.hash;
-    const chunksToPutPromises: Promise<void>[] = [];
-    if (chunksToPut) {
-      for (const chunk of chunksToPut) {
-        chunksToPutPromises.push(dagWrite.putChunk(chunk));
-      }
-    }
-    await Promise.all([
-      ...chunksToPutPromises,
-      dagWrite.putChunk(updateClientsChunk),
-      dagWrite.setHead(CLIENTS_HEAD_NAME, updateClientsChunk.hash),
-    ]);
-    await dagWrite.commit();
-    return {
-      updateApplied: true,
-      clients: updatedClients,
-      clientsHash: updatedClientsHash,
-    };
-  });
-  if (result.updateApplied) {
-    return result.clients;
-  }
-  return updateClientsInternal(
-    update,
-    result.clients,
-    result.clientsHash,
-    dagStore,
-  );
-}
-
 function getRefsForClients(clients: ClientMap): Hash[] {
   const refs: Hash[] = [];
   for (const client of clients.values()) {
@@ -706,8 +598,7 @@ export async function setClient(
   client: Client,
   dagWrite: dag.Write,
 ): Promise<Hash> {
-  const clientsHash = await dagWrite.getHead(CLIENTS_HEAD_NAME);
-  const clients = await getClientsAtHash(clientsHash, dagWrite);
+  const clients = await getClients(dagWrite);
   const newClients = new Map(clients).set(clientID, client);
   return setClients(newClients, dagWrite);
 }

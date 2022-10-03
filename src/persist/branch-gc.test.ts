@@ -10,7 +10,7 @@ import {
 } from './branches';
 import * as dag from '../dag/mod';
 import {fakeHash} from '../hash';
-import {makeClient, setClientsForTest} from './clients-test-helpers';
+import {makeClient, setClientsForTesting} from './clients-test-helpers';
 import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
 
@@ -94,7 +94,7 @@ test('initBranchGC starts 5 min interval that collects branches that are not ref
     headHash: fakeHash('eadce3'),
     branchID: 'branch2',
   });
-  await setClientsForTest(
+  await setClientsForTesting(
     new Map(
       Object.entries({
         client1,
@@ -122,7 +122,7 @@ test('initBranchGC starts 5 min interval that collects branches that are not ref
   await expectBranches(dagStore, {branch1, branch2});
 
   // Delete client1
-  await setClientsForTest(
+  await setClientsForTesting(
     new Map(
       Object.entries({
         client2,
@@ -164,7 +164,7 @@ test('initBranchGC starts 5 min interval that collects branches that are not ref
   await expectBranches(dagStore, {branch2});
 
   // Delete client2
-  await setClientsForTest(
+  await setClientsForTesting(
     new Map(
       Object.entries({
         client3,
@@ -183,7 +183,7 @@ test('initBranchGC starts 5 min interval that collects branches that are not ref
   await expectBranches(dagStore, {branch2});
 
   // Delete client3
-  await setClientsForTest(new Map(Object.entries({})), dagStore);
+  await setClientsForTesting(new Map(Object.entries({})), dagStore);
 
   // nothing collected yet because gc has not run yet
   await expectBranches(dagStore, {branch2});

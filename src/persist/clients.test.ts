@@ -15,7 +15,6 @@ import {
   assertClientDD31,
   Client,
   ClientDD31,
-  ClientMap,
   CLIENTS_HEAD_NAME,
   findMatchingClient,
   FindMatchingClientResult,
@@ -29,9 +28,7 @@ import {
   initClient,
   initClientDD31,
   isClientSDD,
-  noUpdates,
   setClient,
-  updateClients,
 } from './clients';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import {
@@ -42,7 +39,7 @@ import {
   Chain,
   ChainBuilder,
 } from '../db/test-helpers';
-import {makeClient, setClientsForTest} from './clients-test-helpers';
+import {makeClient, setClientsForTesting} from './clients-test-helpers';
 import type {ClientID} from '../sync/client-id.js';
 import {Branch, getBranch, setBranch} from './branches.js';
 import type {BranchID} from '../sync/ids.js';
@@ -60,8 +57,6 @@ teardown(() => {
 const headClient1Hash = fakeHash('f1');
 const headClient2Hash = fakeHash('f2');
 const headClient3Hash = fakeHash('f3');
-const chunkToPut1Hash = fakeHash('c1');
-const chunkToPut2Hash = fakeHash('c2');
 const randomStuffHash = fakeHash('c3');
 const refresh1Hash = fakeHash('e1');
 
@@ -87,7 +82,7 @@ test('updateClients and getClients', async () => {
       }),
     }),
   );
-  await setClientsForTest(clientMap, dagStore);
+  await setClientsForTesting(clientMap, dagStore);
 
   await dagStore.withRead(async (read: dag.Read) => {
     const readClientMap = await getClients(read);
@@ -117,7 +112,7 @@ test('updateClients and getClients for DD31', async () => {
       },
     }),
   );
-  await setClientsForTest(clientMap, dagStore);
+  await setClientsForTesting(clientMap, dagStore);
 
   await dagStore.withRead(async (read: dag.Read) => {
     const readClientMap = await getClients(read);
@@ -161,14 +156,14 @@ test('updateClients and getClients sequence', async () => {
       }),
     }),
   );
-  await setClientsForTest(clientMap1, dagStore);
+  await setClientsForTesting(clientMap1, dagStore);
 
   await dagStore.withRead(async (read: dag.Read) => {
     const readClientMap1 = await getClients(read);
     expect(readClientMap1).to.deep.equal(clientMap1);
   });
 
-  await setClientsForTest(clientMap2, dagStore);
+  await setClientsForTesting(clientMap2, dagStore);
 
   await dagStore.withRead(async (read: dag.Read) => {
     const readClientMap2 = await getClients(read);
@@ -203,7 +198,7 @@ test('updateClients properly manages refs to client heads when clients are remov
       }),
     }),
   );
-  await setClientsForTest(clientMap1, dagStore);
+  await setClientsForTesting(clientMap1, dagStore);
 
   await dagStore.withRead(async (read: dag.Read) => {
     const clientsHash = await read.getHead('clients');
@@ -214,7 +209,7 @@ test('updateClients properly manages refs to client heads when clients are remov
       client2HeadHash,
     ]);
   });
-  await setClientsForTest(clientMap2, dagStore);
+  await setClientsForTesting(clientMap2, dagStore);
 
   await dagStore.withRead(async (read: dag.Read) => {
     const clientsHash = await read.getHead('clients');
@@ -250,7 +245,7 @@ test("updateClients properly manages refs to client heads when a client's head c
     }),
   );
 
-  await setClientsForTest(clientMap1, dagStore);
+  await setClientsForTesting(clientMap1, dagStore);
 
   await dagStore.withRead(async (read: dag.Read) => {
     const clientsHash = await read.getHead('clients');
@@ -262,7 +257,7 @@ test("updateClients properly manages refs to client heads when a client's head c
     ]);
   });
 
-  await setClientsForTest(
+  await setClientsForTesting(
     new Map(
       Object.entries({
         client1: client1V2,
@@ -298,7 +293,7 @@ test('getClient', async () => {
       }),
     }),
   );
-  await setClientsForTest(clientMap, dagStore);
+  await setClientsForTesting(clientMap, dagStore);
 
   await dagStore.withRead(async (read: dag.Read) => {
     const readClient1 = await getClient('client1', read);
@@ -323,7 +318,7 @@ test('updateClients throws error if any client headHash is a temp hash', async (
     }),
   );
 
-  await setClientsForTest(clientMap, dagStore);
+  await setClientsForTesting(clientMap, dagStore);
 
   await dagStore.withRead(async (read: dag.Read) => {
     const readClientMap = await getClients(read);
@@ -342,7 +337,7 @@ test('updateClients throws error if any client headHash is a temp hash', async (
 
   let e;
   try {
-    await setClientsForTest(clientMapWTempHash, dagStore);
+    await setClientsForTesting(clientMapWTempHash, dagStore);
   } catch (ex) {
     e = ex;
   }
@@ -368,220 +363,6 @@ test('updateClients throws errors if clients head exist but the chunk it refrenc
       e = ex;
     }
     expect(e).to.be.instanceOf(Error);
-  });
-});
-
-test('updateClients is a noop if noUpdates is returned from update', async () => {
-  const dagStore = new dag.TestStore();
-  const clientMap = new Map(
-    Object.entries({
-      client1: makeClient({
-        heartbeatTimestampMs: 1000,
-        headHash: headClient1Hash,
-      }),
-      client2: makeClient({
-        heartbeatTimestampMs: 3000,
-        headHash: headClient2Hash,
-      }),
-    }),
-  );
-  await setClientsForTest(clientMap, dagStore);
-  await updateClients(_ => noUpdates, dagStore);
-  await dagStore.withRead(async (read: dag.Read) => {
-    const readClientMap = await getClients(read);
-    expect(readClientMap).to.deep.equal(clientMap);
-  });
-});
-
-test('updateClients puts chunksToPut returned by update', async () => {
-  const dagStore = new dag.TestStore();
-  const chunksToPut = [
-    dag.createChunkWithHash(chunkToPut1Hash, 'chunktoPut1', []),
-    dag.createChunkWithHash(chunkToPut2Hash, 'chunkToPut2', [chunkToPut1Hash]),
-  ];
-  const clientMap = new Map(
-    Object.entries({
-      client1: makeClient({
-        heartbeatTimestampMs: 1000,
-        headHash: chunksToPut[1].hash,
-      }),
-    }),
-  );
-  const update = async (_: ClientMap) => {
-    return {clients: clientMap, chunksToPut};
-  };
-
-  await updateClients(update, dagStore);
-  await dagStore.withRead(async (read: dag.Read) => {
-    const readClientMap = await getClients(read);
-    expect(readClientMap).to.deep.equal(clientMap);
-  });
-  await dagStore.withRead(async (read: dag.Read) => {
-    expect(await read.getChunk(chunksToPut[0].hash)).to.deep.equal(
-      chunksToPut[0],
-    );
-    expect(await read.getChunk(chunksToPut[1].hash)).to.deep.equal(
-      chunksToPut[1],
-    );
-  });
-});
-
-test('updateClients with conflict during update (i.e. testing race case with retry)', async () => {
-  if (DD31) {
-    // For DD31 we use single transaction so this test does not make sense.
-    return;
-  }
-
-  const dagStore = new dag.TestStore();
-  const client1 = makeClient({
-    heartbeatTimestampMs: 1000,
-    headHash: headClient1Hash,
-  });
-  const client2 = makeClient({
-    heartbeatTimestampMs: 3000,
-    headHash: headClient2Hash,
-  });
-  const clientMap = new Map(
-    Object.entries({
-      client1,
-      client2,
-    }),
-  );
-
-  const client3 = makeClient({
-    heartbeatTimestampMs: 5000,
-    headHash: headClient3Hash,
-  });
-  const clientMap2 = new Map(clientMap).set('client3', client3);
-
-  await setClientsForTest(clientMap, dagStore);
-
-  const chunksToPut = [
-    dag.createChunkWithHash(chunkToPut1Hash, 'chunkToPut1', []),
-    dag.createChunkWithHash(chunkToPut2Hash, 'chunkToPut2', [chunkToPut1Hash]),
-  ];
-  const client4 = makeClient({
-    heartbeatTimestampMs: 7000,
-    headHash: chunksToPut[1].hash,
-  });
-
-  let updateCallCount = 0;
-  const update = async (clients: ClientMap) => {
-    updateCallCount++;
-    expect(updateCallCount).to.be.lessThan(
-      3,
-      'Expect update to only be called twice',
-    );
-    if (updateCallCount === 1) {
-      // create conflict
-      await setClientsForTest(clientMap2, dagStore);
-    }
-    if (updateCallCount === 2) {
-      expect(clients).to.deep.equal(clientMap2);
-    }
-    // chunksToPut are not written until there is not conflict.
-    await dagStore.withRead(async (read: dag.Read) => {
-      expect(await read.getChunk(chunksToPut[0].hash)).to.be.undefined;
-      expect(await read.getChunk(chunksToPut[1].hash)).to.be.undefined;
-    });
-    return {clients: new Map(clients).set('client4', client4), chunksToPut};
-  };
-
-  const expectedClientMap = new Map(
-    Object.entries({
-      client1,
-      client2,
-      client3,
-      client4,
-    }),
-  );
-  const updatedClients = await updateClients(update, dagStore);
-  expect(updatedClients).to.deep.equal(expectedClientMap);
-  await dagStore.withRead(async (read: dag.Read) => {
-    const readClientMap = await getClients(read);
-    expect(readClientMap).to.deep.equal(expectedClientMap);
-    expect(await read.getChunk(chunksToPut[0].hash)).to.deep.equal(
-      chunksToPut[0],
-    );
-    expect(await read.getChunk(chunksToPut[1].hash)).to.deep.equal(
-      chunksToPut[1],
-    );
-  });
-});
-
-test('updateClients where update return noUpdates after conflict during update', async () => {
-  if (DD31) {
-    // For DD31 we use single transaction so this test does not make sense.
-    return;
-  }
-
-  const dagStore = new dag.TestStore();
-  const client1 = makeClient({
-    heartbeatTimestampMs: 1000,
-    headHash: headClient1Hash,
-  });
-  const client2 = makeClient({
-    heartbeatTimestampMs: 3000,
-    headHash: headClient2Hash,
-  });
-  const clientMap = new Map(
-    Object.entries({
-      client1,
-      client2,
-    }),
-  );
-
-  const client3 = makeClient({
-    heartbeatTimestampMs: 5000,
-    headHash: headClient3Hash,
-  });
-  const clientMap2 = new Map(clientMap).set('client3', client3);
-
-  await setClientsForTest(clientMap, dagStore);
-
-  const chunksToPut = [
-    dag.createChunkWithHash(chunkToPut1Hash, 'chunkToPut1', []),
-    dag.createChunkWithHash(chunkToPut2Hash, 'chunkToPut2', [chunkToPut1Hash]),
-  ];
-  const client4 = makeClient({
-    heartbeatTimestampMs: 7000,
-    headHash: chunksToPut[1].hash,
-  });
-
-  let updateCallCount = 0;
-  const update = async (clients: ClientMap) => {
-    updateCallCount++;
-    expect(updateCallCount).to.be.lessThan(
-      3,
-      'Expect update to only be called twice',
-    );
-    if (updateCallCount === 1) {
-      // create conflict
-      await setClientsForTest(clientMap2, dagStore);
-      return {clients: new Map(clients).set('client4', client4), chunksToPut};
-    }
-    if (updateCallCount === 2) {
-      expect(clients).to.deep.equal(clientMap2);
-    }
-    return noUpdates;
-  };
-
-  // Client 4 never added.
-  const expectedClientMap = new Map(
-    Object.entries({
-      client1,
-      client2,
-      client3,
-    }),
-  );
-  const updatedClients = await updateClients(update, dagStore);
-  expect(updatedClients).to.deep.equal(expectedClientMap);
-  await dagStore.withRead(async (read: dag.Read) => {
-    const readClientMap = await getClients(read);
-    expect(readClientMap).to.deep.equal(expectedClientMap);
-    // chunks never put
-    expect(await read.getChunk(chunksToPut[0].hash)).to.be.undefined;
-    expect(await read.getChunk(chunksToPut[1].hash)).to.be.undefined;
   });
 });
 
@@ -691,7 +472,7 @@ test('initClient bootstraps from base snapshot of client with highest heartbeat'
       }),
     }),
   );
-  await setClientsForTest(clientMap, dagStore);
+  await setClientsForTesting(clientMap, dagStore);
 
   clock.tick(4000);
   const [clientID2, client, clients] = await initClient(
