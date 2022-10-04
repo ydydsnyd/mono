@@ -45,8 +45,8 @@ export class ReplicacheTest<
     return super._beginPull();
   }
 
-  maybeEndPull(syncHead: Hash, requestID: string): Promise<void> {
-    return super._maybeEndPull(syncHead, requestID);
+  maybeEndPull(requestID: string): Promise<void> {
+    return super._maybeEndPull(requestID);
   }
 
   invokePush(): Promise<boolean> {

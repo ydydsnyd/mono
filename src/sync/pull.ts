@@ -627,28 +627,27 @@ export type MaybeEndPullResultDD31 = {
 export async function maybeEndPull(
   store: dag.Store,
   lc: LogContext,
-  expectedSyncHead: Hash,
   clientID: ClientID,
   diffConfig: DiffComputationConfig,
 ): Promise<MaybeEndPullResultDD31 | MaybeEndPullResultSDD> {
-  // Ensure sync head is what the caller thinks it is.
   return await store.withWrite(async dagWrite => {
     const dagRead = dagWrite;
+
+    // We re-read the sync head here even though begin pull returns it because
+    // it is possible for persist() to run in the gap and change the hashes.
+    // See:
+    // - https://github.com/rocicorp/replicache-internal/pull/95
+    // - https://github.com/rocicorp/replicache-internal/issues/300
+    // TODO: When we get rid of temp hashes, we can assert that the hash of the
+    // sync head does not change between the end of beginPull() and here.
     const syncHeadHash = await dagRead.getHead(SYNC_HEAD_NAME);
     if (syncHeadHash === undefined) {
       throw new Error('Missing sync head');
     }
-    if (syncHeadHash !== expectedSyncHead) {
-      lc.error?.(
-        'maybeEndPull, Wrong sync head. Expecting:',
-        expectedSyncHead,
-        'got:',
-        syncHeadHash,
-      );
-      throw new Error('Wrong sync head');
-    }
 
     // Ensure another sync has not landed a new snapshot on the main chain.
+    // TODO: In DD31, it is expected that a newer snapshot might have appeared
+    // on the main chain. In that case, we just abort this pull.
     const syncSnapshot = await db.baseSnapshotFromHash(syncHeadHash, dagRead);
     const mainHeadHash = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
     if (mainHeadHash === undefined) {

@@ -7,8 +7,8 @@ export class ConnectionLoopDelegateImpl implements OptionalLogger {
   readonly invokeSend: () => Promise<boolean>;
   readonly logger: OptionalLogger;
 
-  // Beware: We have a lock around pull so changing this to >1  will dead lock!
-  // TODO(arv): Consider removing this property!
+  // TODO: Remove the ability to have more than one concurrent connection and update tests.
+  // Bug: https://github.com/rocicorp/replicache-internal/issues/303
   readonly maxConnections = 1;
 
   constructor(

@@ -797,7 +797,7 @@ test('pull', async () => {
   ).to.equal('Test 2');
 
   fetchMock.postOnce(pullURL, makePullResponse(clientID, 3));
-  await rep.maybeEndPull(beginPullResult.syncHead, beginPullResult.requestID);
+  await rep.maybeEndPull(beginPullResult.requestID);
 
   expect(createCount).to.equal(3);
 

@@ -96,7 +96,7 @@ test('poke', async () => {
   );
 });
 
-test('multiple pokes', async () => {
+test('overlapped pokes not supported', async () => {
   const rep = await replicacheForTesting('multiple-pokes', {
     mutators: {
       addData,
@@ -122,8 +122,6 @@ test('multiple pokes', async () => {
 
   const p1 = rep.poke(poke);
 
-  const p2 = rep.persist();
-
   const poke2: Poke = {
     baseCookie: 'c2',
     pullResponse: makePullResponse(
@@ -140,11 +138,17 @@ test('multiple pokes', async () => {
     ) as PullResponse,
   };
 
-  const p3 = rep.poke(poke2);
+  const p2 = rep.poke(poke2);
 
   await p1;
-  await p2;
-  await p3;
 
-  expect(await rep.query(tx => tx.get('a'))).equal(2);
+  let error = null;
+  try {
+    await p2;
+  } catch (e) {
+    error = String(e);
+  }
+  expect(error).contains('unexpected base cookie for poke');
+
+  expect(await rep.query(tx => tx.get('a'))).equal(1);
 });

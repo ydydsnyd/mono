@@ -1,6 +1,5 @@
 import {consoleLogSink, LogContext, TeeLogSink} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
-import {Lock} from '@rocicorp/lock';
 import type {ReadonlyJSONValue} from './json';
 import type {JSONValue} from './json';
 import {Pusher, PushError} from './pusher';
@@ -309,14 +308,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
   private readonly _closeAbortController = new AbortController();
 
-  // We must not do persists in parallel. Also, we must not do persists while we
-  // are in the middle of a pull because persist rewrites chunks and changes
-  // hashes.
-  //
-  // TODO(arv): This lock makes parallel pulls impossible. The ConnectionLoop
-  // supports that but we do not use it. Consider removing that feature from the
-  // ConnectionLoop.
-  private readonly _persistPullLock = new Lock();
   private _persistIsScheduled = false;
 
   private readonly _enableLicensing: boolean;
@@ -879,10 +870,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     });
   }
 
-  protected async _maybeEndPull(
-    syncHead: Hash,
-    requestID: string,
-  ): Promise<void> {
+  protected async _maybeEndPull(requestID: string): Promise<void> {
     for (;;) {
       if (this._closed) {
         return;
@@ -893,10 +881,9 @@ export class Replicache<MD extends MutatorDefs = {}> {
       const lc = this._lc
         .addContext('maybeEndPull')
         .addContext('request_id', requestID);
-      const {replayMutations, diffs} = await sync.maybeEndPull(
+      const {replayMutations, diffs, syncHead} = await sync.maybeEndPull(
         this._memdag,
         lc,
-        syncHead,
         clientID,
         this._subscriptions,
       );
@@ -909,6 +896,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       }
 
       // Replay.
+      let rebasedSyncHead = syncHead;
       for (const mutation of replayMutations) {
         // TODO(greg): I'm not sure why this was in Replicache#_mutate...
         // Ensure that we run initial pending subscribe functions before starting a
@@ -916,11 +904,11 @@ export class Replicache<MD extends MutatorDefs = {}> {
         if (this._subscriptions.hasPendingSubscriptionRuns) {
           await Promise.resolve();
         }
-        syncHead = await this._memdag.withWrite(dagWrite =>
+        rebasedSyncHead = await this._memdag.withWrite(dagWrite =>
           db.rebaseMutationAndCommit(
             mutation,
             dagWrite,
-            syncHead,
+            rebasedSyncHead,
             sync.SYNC_HEAD_NAME,
             this._mutatorRegistry,
             lc,
@@ -936,27 +924,23 @@ export class Replicache<MD extends MutatorDefs = {}> {
       return true;
     }
 
-    // We must not do a pull and a persist in parallel. Persist changes the head
-    // hashes which leads to pull failing.
-    return this._persistPullLock.withLock(() =>
-      this._wrapInOnlineCheck(async () => {
-        try {
-          this._changeSyncCounters(0, 1);
-          const {syncHead, requestID, ok} = await this._beginPull();
-          if (!ok) {
-            return false;
-          }
-          if (syncHead !== emptyHash) {
-            await this._maybeEndPull(syncHead, requestID);
-          }
-        } catch (e) {
-          throw await this._convertToClientStateNotFoundError(e);
-        } finally {
-          this._changeSyncCounters(0, -1);
+    return this._wrapInOnlineCheck(async () => {
+      try {
+        this._changeSyncCounters(0, 1);
+        const {syncHead, requestID, ok} = await this._beginPull();
+        if (!ok) {
+          return false;
         }
-        return true;
-      }, 'Pull'),
-    );
+        if (syncHead !== emptyHash) {
+          await this._maybeEndPull(requestID);
+        }
+      } catch (e) {
+        throw await this._convertToClientStateNotFoundError(e);
+      } finally {
+        this._changeSyncCounters(0, -1);
+      }
+      return true;
+    }, 'Pull');
   }
 
   private _isPullDisabled() {
@@ -1171,59 +1155,57 @@ export class Replicache<MD extends MutatorDefs = {}> {
       .addContext('handlePullResponse')
       .addContext('request_id', requestID);
 
-    await this._persistPullLock.withLock(async () => {
-      if (isClientStateNotFoundResponse(internalPoke.pullResponse)) {
-        this._fireOnClientStateNotFound(clientID, reasonServer);
-        return;
-      }
+    if (isClientStateNotFoundResponse(internalPoke.pullResponse)) {
+      this._fireOnClientStateNotFound(clientID, reasonServer);
+      return;
+    }
 
-      let syncHead;
-      if (DD31) {
-        const branchID = await this._branchIDPromise;
-        assert(branchID);
-        const lastMutationIDs = await lastMutationIDsForSnapshotFromHead(
-          db.DEFAULT_HEAD_NAME,
-          this._memdag,
-          branchID,
-        );
-        // Do not add the last mutation IDs of local mutations here because the
-        // poke might not include them and we don't want to reject the poke even
-        // if it does not contain these clients.
+    let syncHead;
+    if (DD31) {
+      const branchID = await this._branchIDPromise;
+      assert(branchID);
+      const lastMutationIDs = await lastMutationIDsForSnapshotFromHead(
+        db.DEFAULT_HEAD_NAME,
+        this._memdag,
+        branchID,
+      );
+      // Do not add the last mutation IDs of local mutations here because the
+      // poke might not include them and we don't want to reject the poke even
+      // if it does not contain these clients.
 
-        assertPokeDD31(internalPoke);
-        syncHead = await sync.handlePullResponseDD31(
-          lc,
-          this._memdag,
-          toInternalValue(
-            internalPoke.baseCookie,
-            ToInternalValueReason.CookieFromResponse,
-          ),
-          lastMutationIDs,
-          internalPoke.pullResponse,
-          clientID,
-        );
-      } else {
-        assertPokeSDD(internalPoke);
-        syncHead = await sync.handlePullResponseSDD(
-          lc,
-          this._memdag,
-          toInternalValue(
-            internalPoke.baseCookie,
-            ToInternalValueReason.CookieFromResponse,
-          ),
-          internalPoke.pullResponse,
-          clientID,
-        );
-      }
+      assertPokeDD31(internalPoke);
+      syncHead = await sync.handlePullResponseDD31(
+        lc,
+        this._memdag,
+        toInternalValue(
+          internalPoke.baseCookie,
+          ToInternalValueReason.CookieFromResponse,
+        ),
+        lastMutationIDs,
+        internalPoke.pullResponse,
+        clientID,
+      );
+    } else {
+      assertPokeSDD(internalPoke);
+      syncHead = await sync.handlePullResponseSDD(
+        lc,
+        this._memdag,
+        toInternalValue(
+          internalPoke.baseCookie,
+          ToInternalValueReason.CookieFromResponse,
+        ),
+        internalPoke.pullResponse,
+        clientID,
+      );
+    }
 
-      if (syncHead === null) {
-        throw new Error(
-          'unexpected base cookie for poke: ' + JSON.stringify(internalPoke),
-        );
-      }
+    if (syncHead === null) {
+      throw new Error(
+        'unexpected base cookie for poke: ' + JSON.stringify(internalPoke),
+      );
+    }
 
-      await this._maybeEndPull(syncHead, requestID);
-    });
+    await this._maybeEndPull(requestID);
   }
 
   protected async _beginPull(): Promise<BeginPullResult> {
@@ -1278,15 +1260,13 @@ export class Replicache<MD extends MutatorDefs = {}> {
     await this._ready;
     const clientID = await this.clientID;
     try {
-      await this._persistPullLock.withLock(() =>
-        persist.persist(
-          this._lc,
-          clientID,
-          this._memdag,
-          this._perdag,
-          this._mutatorRegistry,
-          () => this.closed,
-        ),
+      await persist.persist(
+        this._lc,
+        clientID,
+        this._memdag,
+        this._perdag,
+        this._mutatorRegistry,
+        () => this.closed,
       );
     } catch (e) {
       if (e instanceof persist.ClientStateNotFoundError) {
