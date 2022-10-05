@@ -3,7 +3,7 @@ import type * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import * as sync from '../sync/mod';
 import {Hash, newUUIDHash} from '../hash';
-import {assertHasClientState, getClients, setClients} from './clients';
+import {assertHasClientState, setClient} from './clients';
 import {ComputeHashTransformer, FixedChunks} from './compute-hash-transformer';
 import {GatherVisitor} from './gather-visitor';
 import {FixupTransformer} from './fixup-transformer';
@@ -154,17 +154,17 @@ async function writeFixedChunks(
   lastMutationID: number,
 ): Promise<void> {
   await perdag.withWrite(async dagWrite => {
-    const clients = await getClients(dagWrite);
     const ps: Promise<unknown>[] = [];
 
     ps.push(
-      setClients(
-        new Map(clients).set(clientID, {
+      setClient(
+        clientID,
+        {
           heartbeatTimestampMs: Date.now(),
           headHash: mainHeadHash,
           mutationID,
           lastServerAckdMutationID: lastMutationID,
-        }),
+        },
         dagWrite,
       ),
     );
