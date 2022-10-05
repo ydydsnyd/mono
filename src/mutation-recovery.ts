@@ -36,7 +36,7 @@ interface ReplicacheDelegate {
   pushURL: string;
 }
 
-interface ReplicacheOptions {
+interface MutationRecoveryOptions {
   delegate: ReplicacheDelegate;
   readonly wrapInOnlineCheck: (
     f: () => Promise<boolean>,
@@ -67,9 +67,9 @@ interface ReplicacheOptions {
 
 export class MutationRecovery {
   private _recoveringMutations = false;
-  private readonly _options: ReplicacheOptions;
+  private readonly _options: MutationRecoveryOptions;
 
-  constructor(options: ReplicacheOptions) {
+  constructor(options: MutationRecoveryOptions) {
     this._options = options;
   }
 
@@ -160,7 +160,7 @@ async function recoverMutationsOfClient(
   clientID: sync.ClientID,
   perdag: dag.Store,
   database: persist.IndexedDBDatabase,
-  options: ReplicacheOptions,
+  options: MutationRecoveryOptions,
 ): Promise<persist.ClientMap | undefined> {
   // TODO(DD31): Implement this.
   if (DD31) {
@@ -367,7 +367,7 @@ async function recoverMutationsOfClient(
 
 async function recoverMutationsWithNewPerdag(
   database: persist.IndexedDBDatabase,
-  options: ReplicacheOptions,
+  options: MutationRecoveryOptions,
   preReadClientMap: persist.ClientMap | undefined,
 ) {
   const perKvStore = new IDBStore(database.name);
@@ -390,7 +390,7 @@ async function recoverMutationsWithNewPerdag(
 
 async function recoverMutationsFromPerdag(
   database: persist.IndexedDBDatabase,
-  options: ReplicacheOptions,
+  options: MutationRecoveryOptions,
   perdag: dag.Store,
   preReadClientMap: persist.ClientMap | undefined,
 ): Promise<void> {
