@@ -54,9 +54,13 @@ function createLoop(
     async invokeSend() {
       const c = counter++;
       const {requestTime = 90, invokeResult = true} = partialDelegate;
-      log.push(`s${c}:${Date.now()}`);
+      log.push(`send:${c}:${Date.now()}`);
       await sleep(requestTime);
-      log.push(`${invokeResult !== true ? 'e' : 'f'}${c}:${Date.now()}`);
+      log.push(
+        `${
+          invokeResult !== true ? 'false-or-throw' : 'true'
+        }:${c}:${Date.now()}`,
+      );
       if (invokeResult === 'throw') {
         throw Error('Intentional error');
       }
@@ -88,7 +92,7 @@ test('basic sequential by awaiting', async () => {
   await clock.runAllAsync();
   expect(Date.now()).to.equal(requestTime + debounceDelay);
 
-  expect(log).to.deep.equal(['s0:3', 'f0:203']);
+  expect(log).to.deep.equal(['send:0:3', 'true:0:203']);
 
   loop.send();
   await clock.runAllAsync();
@@ -97,12 +101,12 @@ test('basic sequential by awaiting', async () => {
   await clock.runAllAsync();
 
   expect(log).to.deep.equal([
-    's0:3',
-    'f0:203',
-    's1:206',
-    'f1:406',
-    's2:409',
-    'f2:609',
+    'send:0:3',
+    'true:0:203',
+    'send:1:206',
+    'true:1:406',
+    'send:2:409',
+    'true:2:609',
   ]);
 });
 
@@ -126,14 +130,19 @@ test('debounce', async () => {
 
   await clock.tickAsync(20);
   send();
-  expect(log).to.deep.equal(['s0:50']);
+  expect(log).to.deep.equal(['send:0:50']);
 
   await clock.tickAsync(40);
-  expect(log).to.deep.equal(['s0:50', 'f0:100']);
+  expect(log).to.deep.equal(['send:0:50', 'true:0:100']);
 
   await clock.runAllAsync();
 
-  expect(log).to.deep.equal(['s0:50', 'f0:100', 's1:110', 'f1:160']);
+  expect(log).to.deep.equal([
+    'send:0:50',
+    'true:0:100',
+    'send:1:110',
+    'true:1:160',
+  ]);
 
   await waitForAll();
 });
@@ -156,12 +165,12 @@ test('sync calls collapsed', async () => {
   await clock.tickAsync(debounceDelay);
   expect(Date.now()).to.equal(debounceDelay);
 
-  expect(log).to.deep.equal(['s0:5']);
+  expect(log).to.deep.equal(['send:0:5']);
 
   await clock.tickAsync(requestTime);
   expect(Date.now()).to.equal(debounceDelay + requestTime);
 
-  expect(log).to.deep.equal(['s0:5', 'f0:55']);
+  expect(log).to.deep.equal(['send:0:5', 'true:0:55']);
 
   await waitForAll();
 });
@@ -184,64 +193,70 @@ test('concurrent connections', async () => {
   await clock.runToLastAsync();
   expect(Date.now()).to.equal(debounceDelay);
 
-  expect(log).to.deep.equal(['s0:5']);
+  expect(log).to.deep.equal(['send:0:5']);
   send();
-  expect(log).to.deep.equal(['s0:5']);
+  expect(log).to.deep.equal(['send:0:5']);
 
   await clock.tickAsync(minDelay);
   expect(Date.now()).to.equal(debounceDelay + minDelay);
 
-  expect(log).to.deep.equal(['s0:5', 's1:35']);
+  expect(log).to.deep.equal(['send:0:5', 'send:1:35']);
 
   send();
   await clock.tickAsync(minDelay);
   expect(Date.now()).to.equal(debounceDelay + 2 * minDelay);
 
-  expect(log).to.deep.equal(['s0:5', 's1:35', 's2:65']);
+  expect(log).to.deep.equal(['send:0:5', 'send:1:35', 'send:2:65']);
 
   send();
   await clock.tickAsync(minDelay);
   expect(Date.now()).to.equal(debounceDelay + 3 * minDelay);
 
-  expect(log).to.deep.equal(['s0:5', 's1:35', 's2:65', 'f0:95', 's3:95']);
+  expect(log).to.deep.equal([
+    'send:0:5',
+    'send:1:35',
+    'send:2:65',
+    'true:0:95',
+    'send:3:95',
+  ]);
 
   await clock.tickAsync(minDelay);
   expect(Date.now()).to.equal(4 * minDelay + debounceDelay);
 
   expect(log).to.deep.equal([
-    's0:5',
-    's1:35',
-    's2:65',
-    'f0:95',
-    's3:95',
-    'f1:125',
+    'send:0:5',
+    'send:1:35',
+    'send:2:65',
+    'true:0:95',
+    'send:3:95',
+    'true:1:125',
   ]);
 
   await clock.tickAsync(minDelay);
   expect(Date.now()).to.equal(5 * minDelay + debounceDelay);
 
   expect(log).to.deep.equal([
-    's0:5',
-    's1:35',
-    's2:65',
-    'f0:95',
-    's3:95',
-    'f1:125',
-    'f2:155',
+    'send:0:5',
+    'send:1:35',
+    'send:2:65',
+    'true:0:95',
+    'send:3:95',
+    'true:1:125',
+    'true:2:155',
   ]);
 
   await clock.tickAsync(minDelay);
   expect(Date.now()).to.equal(6 * minDelay + debounceDelay);
 
   expect(log).to.deep.equal([
-    's0:5',
-    's1:35',
-    's2:65',
-    'f0:95',
-    's3:95',
-    'f1:125',
-    'f2:155',
-    'f3:185',
+    'send:0:5',
+    'send:1:35',
+    'send:2:65',
+    'true:0:95',
+    'send:3:95',
+    'true:1:125',
+    'true:2:155',
+    'true:3:185',
   ]);
 
   await clock.runAllAsync();
@@ -262,27 +277,33 @@ test('maxConnections 1', async () => {
   send();
   await clock.runToLastAsync();
 
-  expect(log).to.deep.equal(['s0:5']);
+  expect(log).to.deep.equal(['send:0:5']);
 
   send();
   await clock.tickAsync(requestTime);
 
-  expect(log).to.deep.equal(['s0:5', 'f0:95', 's1:95']);
+  expect(log).to.deep.equal(['send:0:5', 'true:0:95', 'send:1:95']);
 
   send();
   await clock.tickAsync(requestTime);
 
-  expect(log).to.deep.equal(['s0:5', 'f0:95', 's1:95', 'f1:185', 's2:185']);
+  expect(log).to.deep.equal([
+    'send:0:5',
+    'true:0:95',
+    'send:1:95',
+    'true:1:185',
+    'send:2:185',
+  ]);
 
   await clock.tickAsync(requestTime);
 
   expect(log).to.deep.equal([
-    's0:5',
-    'f0:95',
-    's1:95',
-    'f1:185',
-    's2:185',
-    'f2:275',
+    'send:0:5',
+    'true:0:95',
+    'send:1:95',
+    'true:1:185',
+    'send:2:185',
+    'true:2:275',
   ]);
 
   await clock.runAllAsync();
@@ -324,7 +345,13 @@ test('Adjust delay', async () => {
   send();
   await clock.tickAsync(50);
 
-  expect(log).to.deep.equal(['s0:5', 's1:35', 's2:65', 'f0:105', 's3:105']);
+  expect(log).to.deep.equal([
+    'send:0:5',
+    'send:1:35',
+    'send:2:65',
+    'true:0:105',
+    'send:3:105',
+  ]);
 
   // 4
   send();
@@ -340,20 +367,20 @@ test('Adjust delay', async () => {
 
   await clock.runAllAsync();
   expect(log).to.deep.equal([
-    's0:5',
-    's1:35',
-    's2:65',
-    'f0:105',
-    's3:105',
-    'f3:205',
-    's4:205',
-    'f2:215',
-    'f1:235',
-    's5:238',
-    's6:279',
-    'f6:379',
-    'f5:388',
-    'f4:405',
+    'send:0:5',
+    'send:1:35',
+    'send:2:65',
+    'true:0:105',
+    'send:3:105',
+    'true:3:205',
+    'send:4:205',
+    'true:2:215',
+    'true:1:235',
+    'send:5:238',
+    'send:6:279',
+    'true:6:379',
+    'true:5:388',
+    'true:4:405',
   ]);
   await waitForAll();
 });
@@ -396,50 +423,50 @@ for (const errorKind of [false, 'throw'] as const) {
     await clock.runAllAsync();
 
     expect(log).to.deep.equal([
-      's0:5',
-      's1:35',
-      's2:65',
-      'f0:95',
-      's3:95',
-      'f1:125',
-      's4:125',
-      'f2:155',
-      's5:155',
-      'f3:185',
-      's6:185',
-      'f4:215',
-      's7:215',
-      'e5:245',
-      'e6:275',
-      's8:275',
-      'e7:305',
-      'e8:365',
-      's9:395',
-      'e9:485',
-      's10:635',
-      'e10:725',
-      's11:1115',
-      'e11:1205',
-      's12:2075',
-      'e12:2165',
-      's13:3995',
-      'e13:4085',
-      's14:7835',
-      'e14:7925',
-      's15:15515',
-      'e15:15605',
-      's16:30875',
-      'e16:30965',
-      's17:61595',
-      'f17:61685', // first success
-      's18:61685', // now we go back to 3 concurrent connections
-      's19:61715',
-      's20:61745',
-      'f18:61775',
-      's21:61775',
-      'f19:61805',
-      'f20:61835',
-      'f21:61865',
+      'send:0:5',
+      'send:1:35',
+      'send:2:65',
+      'true:0:95',
+      'send:3:95',
+      'true:1:125',
+      'send:4:125',
+      'true:2:155',
+      'send:5:155',
+      'true:3:185',
+      'send:6:185',
+      'true:4:215',
+      'send:7:215',
+      'false-or-throw:5:245',
+      'false-or-throw:6:275',
+      'send:8:275',
+      'false-or-throw:7:305',
+      'false-or-throw:8:365',
+      'send:9:395',
+      'false-or-throw:9:485',
+      'send:10:635',
+      'false-or-throw:10:725',
+      'send:11:1115',
+      'false-or-throw:11:1205',
+      'send:12:2075',
+      'false-or-throw:12:2165',
+      'send:13:3995',
+      'false-or-throw:13:4085',
+      'send:14:7835',
+      'false-or-throw:14:7925',
+      'send:15:15515',
+      'false-or-throw:15:15605',
+      'send:16:30875',
+      'false-or-throw:16:30965',
+      'send:17:61595',
+      'true:17:61685', // first success
+      'send:18:61685', // now we go back to 3 concurrent connections
+      'send:19:61715',
+      'send:20:61745',
+      'true:18:61775',
+      'send:21:61775',
+      'true:19:61805',
+      'true:20:61835',
+      'true:21:61865',
     ]);
   });
 
@@ -488,28 +515,28 @@ for (const errorKind of [false, 'throw'] as const) {
     await clock.runAllAsync();
 
     expect(log).to.deep.equal([
-      's0:5',
-      'e0:55',
-      's1:85',
-      'e1:135',
-      's2:245',
-      'e2:295',
-      's3:565',
-      'e3:615',
-      's4:1205',
-      'e4:1255',
-      's5:2485',
-      'f5:2535',
-      's6:2565',
-      'f6:2615',
-      's7:2645',
-      'f7:2695',
-      's8:2695',
-      'f8:2745',
-      's9:2745',
-      'f9:2795',
-      's10:2795',
-      'f10:2845',
+      'send:0:5',
+      'false-or-throw:0:55',
+      'send:1:85',
+      'false-or-throw:1:135',
+      'send:2:245',
+      'false-or-throw:2:295',
+      'send:3:565',
+      'false-or-throw:3:615',
+      'send:4:1205',
+      'false-or-throw:4:1255',
+      'send:5:2485',
+      'true:5:2535',
+      'send:6:2565',
+      'true:6:2615',
+      'send:7:2645',
+      'true:7:2695',
+      'send:8:2695',
+      'true:8:2745',
+      'send:9:2745',
+      'true:9:2795',
+      'send:10:2795',
+      'true:10:2845',
     ]);
   });
 }
@@ -530,18 +557,23 @@ test('watchdog timer', async () => {
 
   await clock.tickAsync(debounceDelay);
 
-  expect(log).to.deep.equal(['s0:1010']);
+  expect(log).to.deep.equal(['send:0:1010']);
 
   await clock.tickAsync(requestTime);
-  expect(log).to.deep.equal(['s0:1010', 'f0:1110']);
+  expect(log).to.deep.equal(['send:0:1010', 'true:0:1110']);
 
   await clock.tickAsync(watchdogTimer);
 
-  expect(log).to.deep.equal(['s0:1010', 'f0:1110', 's1:2020']);
+  expect(log).to.deep.equal(['send:0:1010', 'true:0:1110', 'send:1:2020']);
 
   await clock.tickAsync(requestTime);
 
-  expect(log).to.deep.equal(['s0:1010', 'f0:1110', 's1:2020', 'f1:2120']);
+  expect(log).to.deep.equal([
+    'send:0:1010',
+    'true:0:1110',
+    'send:1:2020',
+    'true:1:2120',
+  ]);
 });
 
 test('watchdog timer again', async () => {
@@ -561,18 +593,23 @@ test('watchdog timer again', async () => {
 
   await clock.tickAsync(debounceDelay);
 
-  expect(log).to.deep.equal(['s0:510']);
+  expect(log).to.deep.equal(['send:0:510']);
 
   await clock.tickAsync(requestTime);
-  expect(log).to.deep.equal(['s0:510', 'f0:610']);
+  expect(log).to.deep.equal(['send:0:510', 'true:0:610']);
 
   await clock.tickAsync(watchdogTimer);
 
-  expect(log).to.deep.equal(['s0:510', 'f0:610', 's1:1520']);
+  expect(log).to.deep.equal(['send:0:510', 'true:0:610', 'send:1:1520']);
 
   await clock.tickAsync(requestTime);
 
-  expect(log).to.deep.equal(['s0:510', 'f0:610', 's1:1520', 'f1:1620']);
+  expect(log).to.deep.equal([
+    'send:0:510',
+    'true:0:610',
+    'send:1:1520',
+    'true:1:1620',
+  ]);
 });
 
 test('mutate minDelayMs', async () => {
