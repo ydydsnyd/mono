@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1665039363531,
+  "lastUpdate": 1665052245703,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -26807,6 +26807,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23676,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "460e7e14021a0e061ce2390c64312b56f569582a",
+          "message": "fix: Follow up to pull PR (#308)\n\n* fix: Follow up to pull PR\r\n\r\nFixes issues related to lastMutationIDChanges and updates comments\r\n\r\nNo need to update the index map twice. Applying the patch calls put/delete which will update the index maps.\r\n\r\nFollow up to #292",
+          "timestamp": "2022-10-06T12:29:44+02:00",
+          "tree_id": "d52e49cea14e03cba94f8414ae5d216f7a68509c",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/460e7e14021a0e061ce2390c64312b56f569582a"
+        },
+        "date": 1665052240538,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 194083,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34674,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 192937,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34361,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81916,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23647,
             "unit": "bytes"
           }
         ]
