@@ -95,8 +95,10 @@ export class ReplicacheTransaction implements WriteTransaction {
 
     const optsInternal = {
       ...options,
-      limit: undefined, // remove for soft delete
-      prefix: prefix && userValueKey(prefix),
+      // We cannot use the limit option because we soft-delete entries,
+      // so we grab all entries and let makeScanResult() implement the limit.
+      limit: undefined,
+      prefix: userValueKey(prefix || ""),
       start: start && { key: userValueKey(start.key) }, // remove exclusive option, as makeScanResult will take care of it
     };
 

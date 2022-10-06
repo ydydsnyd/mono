@@ -65,6 +65,10 @@ test("ReplicacheTransaction scan()", async () => {
   const durableStorage = new DurableStorage(cfStorage);
   let version = 1;
 
+  // add some non-user data to durable storage
+  await durableStorage.put("internal-value-1", "foo");
+  await durableStorage.put("internal-value-2", null);
+
   function makeTx(): [ReplicacheTransaction, EntryCache] {
     const cache = new EntryCache(durableStorage);
     const tx = new ReplicacheTransaction(cache, "name", version);
@@ -117,6 +121,14 @@ test("ReplicacheTransaction scan()", async () => {
     ["user/5", "user/5"],
     ["user/6", "user/6"],
   ]);
+  await expectScan(tx, { prefix: "" }, [
+    ["item/1", "item/1"],
+    ["item/2", "item/2"],
+    ["item/3", "item/3"],
+    ["user/4", "user/4"],
+    ["user/5", "user/5"],
+    ["user/6", "user/6"],
+  ]);
   await expectScan(tx, { limit: 3 }, [
     ["item/1", "item/1"],
     ["item/2", "item/2"],
@@ -147,6 +159,16 @@ test("ReplicacheTransaction scan()", async () => {
 
   async function testScanForPuts(tx: ReplicacheTransaction) {
     await expectScan(tx, {}, [
+      ["item/1", "item/1"],
+      ["item/1.5", "item/1.5"],
+      ["item/2", "item/2"],
+      ["item/3", "item/3"],
+      ["user/4", "user/4"],
+      ["user/4.5", "user/4.5"],
+      ["user/5", "user/5"],
+      ["user/6", "user/6"],
+    ]);
+    await expectScan(tx, { prefix: "" }, [
       ["item/1", "item/1"],
       ["item/1.5", "item/1.5"],
       ["item/2", "item/2"],
@@ -197,6 +219,12 @@ test("ReplicacheTransaction scan()", async () => {
 
   async function testScanForDels(tx: ReplicacheTransaction) {
     await expectScan(tx, {}, [
+      ["item/1", "item/1"],
+      ["item/1.5", "item/1.5"],
+      ["item/3", "item/3"],
+      ["user/5", "user/5"],
+    ]);
+    await expectScan(tx, { prefix: "" }, [
       ["item/1", "item/1"],
       ["item/1.5", "item/1.5"],
       ["item/3", "item/3"],
