@@ -22,6 +22,31 @@ test("Logs version during construction", async () => {
   expect(testLogSink.messages[1][4]).toMatch(/^\d+\.\d+\.\d+/);
 });
 
+test("Sets turn duration based on allowUnconfirmedWrites flag", async () => {
+  const cases: { allowUnconfirmed: boolean; turnDuration: number }[] = [
+    { allowUnconfirmed: true, turnDuration: 1000 / 60 },
+    { allowUnconfirmed: false, turnDuration: 1000 / 15 },
+  ];
+  for (const { allowUnconfirmed, turnDuration } of cases) {
+    const testLogSink = new TestLogSink();
+
+    const room = new BaseRoomDO({
+      mutators: {},
+      disconnectHandler: () => Promise.resolve(),
+      state: {
+        id: new TestDurableObjectId("test-do-id"),
+      } as DurableObjectState,
+      authApiKey: undefined,
+      logSink: testLogSink,
+      logLevel: "info",
+      allowUnconfirmedWrites: allowUnconfirmed,
+    });
+
+    // @ts-expect-error: private field
+    expect(room._turnDuration).toEqual(turnDuration);
+  }
+});
+
 /*
 import { ClientID, ClientMap, Socket } from "../../src/types/client-state";
 import { Mocket } from "../util/test-utils";

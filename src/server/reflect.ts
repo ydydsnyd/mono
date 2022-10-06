@@ -27,7 +27,7 @@ export interface ReflectServerOptions<
    * lower latency but can result in clients losing some mutations
    * in the case of an untimely server restart.
    *
-   * Default is true.
+   * Default is false.
    */
   allowUnconfirmedWrites?: boolean;
 }
@@ -124,7 +124,7 @@ function getOptionsWithDefaults<
     disconnectHandler = () => Promise.resolve(),
     getLogSinks = (_env) => [consoleLogSink],
     getLogLevel = (_env) => "debug",
-    allowUnconfirmedWrites = true,
+    allowUnconfirmedWrites = false,
   } = options;
   return {
     ...options,

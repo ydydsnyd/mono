@@ -40,6 +40,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   private readonly _storage: DurableStorage;
   private readonly _authApiKey: string | undefined;
   private _turnTimerID: ReturnType<typeof setInterval> | 0 = 0;
+  private readonly _turnDuration: number;
 
   constructor(options: RoomDOOptions<MD>) {
     const {
@@ -57,6 +58,8 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       state.storage,
       options.allowUnconfirmedWrites
     );
+
+    this._turnDuration = 1000 / (options.allowUnconfirmedWrites ? 60 : 15);
     this._authApiKey = authApiKey;
     this._lc = new LogContext(logLevel, logSink)
       .addContext("RoomDO")
@@ -202,7 +205,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     }
     this._turnTimerID = setInterval(() => {
       void this._processNext(lc);
-    }, 1000 / 60);
+    }, this._turnDuration);
   }
 
   private async _processNext(lc: LogContext) {
