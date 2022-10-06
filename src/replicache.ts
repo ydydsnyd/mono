@@ -72,6 +72,7 @@ import type {IndexDefinitions} from './index-defs';
 import {assertClientDD31} from './persist/clients.js';
 import {throwIfClosed} from './transaction-closed-error.js';
 import {lastMutationIDsForSnapshotFromHead} from './sync/pull.js';
+import {version} from './version';
 
 export type BeginPullResult = {
   requestID: string;
@@ -404,6 +405,10 @@ export class Replicache<MD extends MutatorDefs = {}> {
     const logSink =
       logSinks.length === 1 ? logSinks[0] : new TeeLogSink(logSinks);
     this._lc = new LogContext(logLevel, logSink).addContext('name', name);
+    this._lc.debug?.('Constructing Replicache', {
+      name,
+      'replicache version': version,
+    });
 
     this._subscriptions = new SubscriptionsManager(
       this._queryInternal,
