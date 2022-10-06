@@ -71,7 +71,6 @@ import type {CreateIndexDefinition} from './db/commit.js';
 import type {IndexDefinitions} from './index-defs';
 import {assertClientDD31} from './persist/clients.js';
 import {throwIfClosed} from './transaction-closed-error.js';
-import {lastMutationIDsForSnapshotFromHead} from './sync/pull.js';
 import {version} from './version';
 
 export type BeginPullResult = {
@@ -1165,44 +1164,16 @@ export class Replicache<MD extends MutatorDefs = {}> {
       return;
     }
 
-    let syncHead;
-    if (DD31) {
-      const branchID = await this._branchIDPromise;
-      assert(branchID);
-      const lastMutationIDs = await lastMutationIDsForSnapshotFromHead(
-        db.DEFAULT_HEAD_NAME,
-        this._memdag,
-        branchID,
-      );
-      // Do not add the last mutation IDs of local mutations here because the
-      // poke might not include them and we don't want to reject the poke even
-      // if it does not contain these clients.
-
-      assertPokeDD31(internalPoke);
-      syncHead = await sync.handlePullResponseDD31(
-        lc,
-        this._memdag,
-        toInternalValue(
-          internalPoke.baseCookie,
-          ToInternalValueReason.CookieFromResponse,
-        ),
-        lastMutationIDs,
-        internalPoke.pullResponse,
-        clientID,
-      );
-    } else {
-      assertPokeSDD(internalPoke);
-      syncHead = await sync.handlePullResponseSDD(
-        lc,
-        this._memdag,
-        toInternalValue(
-          internalPoke.baseCookie,
-          ToInternalValueReason.CookieFromResponse,
-        ),
-        internalPoke.pullResponse,
-        clientID,
-      );
-    }
+    const syncHead = await sync.handlePullResponse(
+      lc,
+      this._memdag,
+      toInternalValue(
+        internalPoke.baseCookie,
+        ToInternalValueReason.CookieFromResponse,
+      ),
+      internalPoke.pullResponse,
+      clientID,
+    );
 
     if (syncHead === null) {
       throw new Error(

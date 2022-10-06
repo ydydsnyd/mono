@@ -6,6 +6,7 @@ export {
   handlePullResponseDD31,
   beginPullSDD,
   handlePullResponseSDD,
+  handlePullResponse,
 } from './pull';
 export {push} from './push';
 export {newRequestID} from './request-id';

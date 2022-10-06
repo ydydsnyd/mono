@@ -36,7 +36,6 @@ import {
   BeginPullResponseDD31,
   beginPullSDD,
   handlePullResponseDD31,
-  lastMutationIDsForSnapshotFromHead,
   maybeEndPull,
   MaybeEndPullResultSDD,
   PullRequest,
@@ -919,15 +918,44 @@ test('begin try pull DD31', async () => {
         'Received lastMutationID 0 is < than last snapshot lastMutationID 1; ignoring client view',
     },
     {
-      name: 'pulls new state with missing client-lmid pair in response',
+      name: 'pulls new state with identical client-lmid-changes in response (identical cookie and no patch)',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
+        cookie: 'cookie-x',
+        patch: [],
+        lastMutationIDChanges: {[clientID]: 1},
+      },
+      expNewSyncHead: {
+        cookie: 'cookie-x',
+        lastMutationID: 1,
+        valueMap: baseValueMap,
+        indexes: ['2'],
+      },
+      expBeginPullResult: {
+        httpRequestInfo: goodHttpRequestInfo,
+        syncHead: emptyHash,
+      },
+    },
+    {
+      name: 'pulls new state with empty client-lmid-changes in response (identical cookie and no patch)',
+      numPendingMutations: 0,
+      pullResult: {
+        ...goodPullResp,
+        cookie: 'cookie-x',
+        patch: [],
         lastMutationIDChanges: {},
       },
-      expNewSyncHead: undefined,
-      expBeginPullResult:
-        'Missing lastMutationID change for client test_client_id',
+      expNewSyncHead: {
+        cookie: 'cookie-x',
+        lastMutationID: 1,
+        valueMap: baseValueMap,
+        indexes: ['2'],
+      },
+      expBeginPullResult: {
+        httpRequestInfo: goodHttpRequestInfo,
+        syncHead: emptyHash,
+      },
     },
     {
       name: 'pull 500s -> beginpull errors',
@@ -1908,16 +1936,6 @@ test('pull for branch with multiple client local changes', async () => {
     pullResponse,
     syncHead: 'face0000-0000-4000-8000-000000000007',
   });
-
-  const lastMutationIDs = await lastMutationIDsForSnapshotFromHead(
-    SYNC_HEAD_NAME,
-    store,
-    branchID,
-  );
-  expect(lastMutationIDs).to.deep.equal({
-    [clientID1]: 11,
-    [clientID2]: 21,
-  });
 });
 
 suite('beginPull DD31', () => {
@@ -2062,6 +2080,7 @@ suite('handlePullResponseDD31', () => {
     responseLastMutationIDChanges = {},
     responsePatch = [],
     expectedMap,
+    expectedLastMutationIDs = responseLastMutationIDChanges,
   }: {
     expectedBaseCookieJSON: ReadonlyJSONValue;
     responseCookie: ReadonlyJSONValue;
@@ -2070,6 +2089,7 @@ suite('handlePullResponseDD31', () => {
     responseLastMutationIDChanges?: {[clientID: string]: number};
     responsePatch?: PatchOperation[];
     expectedMap?: {[key: string]: ReadonlyJSONValue};
+    expectedLastMutationIDs?: {[clientID: string]: number};
   }) {
     const lc = new LogContext();
     const store = new dag.TestStore();
@@ -2082,7 +2102,6 @@ suite('handlePullResponseDD31', () => {
       expectedBaseCookieJSON,
       ToInternalValueReason.Test,
     );
-    const requestLastMutationIDs = {};
     const response: PullResponseOKDD31 = {
       cookie: responseCookie,
       lastMutationIDChanges: responseLastMutationIDChanges,
@@ -2093,7 +2112,6 @@ suite('handlePullResponseDD31', () => {
       lc,
       store,
       expectedBaseCookie,
-      requestLastMutationIDs,
       response,
       clientID1,
     );
@@ -2107,7 +2125,7 @@ suite('handlePullResponseDD31', () => {
         const head = await db.commitFromHash(result, dagRead);
         assertSnapshotCommitDD31(head);
         expect(head.chunk.data.meta.lastMutationIDs).to.deep.equal(
-          responseLastMutationIDChanges,
+          expectedLastMutationIDs,
         );
 
         if (expectedMap) {
@@ -2169,12 +2187,14 @@ suite('handlePullResponseDD31', () => {
       responseCookie: 2,
       expectedResult: expectedNewHash,
       setupChain: b => b.addSnapshot([], clientID1, 1, {[clientID1]: 10}),
+      responseLastMutationIDChanges: {[clientID1]: 10},
     });
     await t({
       expectedBaseCookieJSON: 1,
       responseCookie: 2,
       expectedResult: expectedNewHash,
       setupChain: b => b.addSnapshot([], clientID1, 1, {[clientID2]: 20}),
+      responseLastMutationIDChanges: {[clientID2]: 20},
     });
     await t({
       expectedBaseCookieJSON: 1,
@@ -2185,6 +2205,8 @@ suite('handlePullResponseDD31', () => {
           [clientID1]: 10,
           [clientID2]: 20,
         }),
+      responseLastMutationIDChanges: {},
+      expectedLastMutationIDs: {[clientID1]: 10, [clientID2]: 20},
     });
 
     await t({
@@ -2197,6 +2219,32 @@ suite('handlePullResponseDD31', () => {
           [clientID2]: 20,
         }),
       responseLastMutationIDChanges: {[clientID1]: 11},
+      expectedLastMutationIDs: {[clientID1]: 11, [clientID2]: 20},
+    });
+
+    await t({
+      expectedBaseCookieJSON: 1,
+      responseCookie: 2,
+      expectedResult: expectedNewHash,
+      setupChain: b =>
+        b.addSnapshot([], clientID1, 1, {
+          [clientID1]: 10,
+          [clientID2]: 20,
+        }),
+      responseLastMutationIDChanges: {[clientID2]: 21},
+      expectedLastMutationIDs: {[clientID1]: 10, [clientID2]: 21},
+    });
+
+    await t({
+      expectedBaseCookieJSON: 1,
+      responseCookie: 2,
+      expectedResult: expectedNewHash,
+      setupChain: b =>
+        b.addSnapshot([], clientID1, 1, {
+          [clientID1]: 10,
+          [clientID2]: 20,
+        }),
+      responseLastMutationIDChanges: {[clientID1]: 11, [clientID2]: 21},
     });
 
     await t({
@@ -2211,6 +2259,7 @@ suite('handlePullResponseDD31', () => {
         await b.addLocal(clientID2, []);
       },
       responseLastMutationIDChanges: {[clientID1]: 11},
+      expectedLastMutationIDs: {[clientID1]: 11, [clientID2]: 20},
     });
   });
 
@@ -2221,7 +2270,7 @@ suite('handlePullResponseDD31', () => {
       responseCookie: 2,
       expectedResult: expectedNewHash,
       setupChain: b => b.addSnapshot([], clientID1, 1, {[clientID1]: 10}),
-      responseLastMutationIDChanges: undefined,
+      responseLastMutationIDChanges: {[clientID1]: 10},
       responsePatch: [
         {
           op: 'put',
@@ -2240,7 +2289,7 @@ suite('handlePullResponseDD31', () => {
         await b.addSnapshot([], clientID1, 1, {[clientID1]: 10});
         await b.addLocal(clientID1, [['b', 1]]);
       },
-      responseLastMutationIDChanges: undefined,
+      responseLastMutationIDChanges: {[clientID1]: 10},
       responsePatch: [
         {
           op: 'put',

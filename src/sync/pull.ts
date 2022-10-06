@@ -15,6 +15,7 @@ import {
   PullResponseDD31,
   PullResponseOK,
   PullResponseOKDD31,
+  PullResponseOKSDD,
 } from '../puller';
 import {assertHTTPRequestInfo, HTTPRequestInfo} from '../http-request-info';
 import {callJSRequest} from './js-request';
@@ -36,13 +37,7 @@ import {
 import type {BranchID, ClientID} from './ids';
 import {addDiffsForIndexes, DiffComputationConfig, DiffsMap} from './diff';
 import {assert, assertObject} from '../asserts.js';
-import {
-  assertLocalCommitDD31,
-  assertLocalMetaDD31,
-  assertSnapshotMetaDD31,
-} from '../db/commit.js';
-import {assertClientDD31, getClients} from '../persist/clients.js';
-import * as json from '../json';
+import {assertLocalCommitDD31, assertSnapshotMetaDD31} from '../db/commit.js';
 
 export const PULL_VERSION_SDD = 0;
 export const PULL_VERSION_DD31 = 1;
@@ -69,6 +64,7 @@ export type PullRequest<Cookie = ReadonlyJSONValue> = {
  */
 export type PullRequestDD31<Cookie = ReadonlyJSONValue> = {
   profileID: string;
+  // TODO(arv): Remove clientID
   clientID: ClientID;
   // TODO(DD31): Rename to clientGroupID
   branchID: BranchID;
@@ -220,7 +216,7 @@ export async function beginPullSDD(
     clientID,
   );
   if (syncHead === null) {
-    throw new Error('Overlapping sync JsLogInfo');
+    throw new Error('Overlapping sync');
   }
   return {
     httpRequestInfo,
@@ -244,39 +240,20 @@ export async function beginPullDD31(
   assert(branchID);
   const {pullURL, pullAuth, schemaVersion} = beginPullReq;
 
-  const [lastMutationIDs, baseCookie, isNewBranch] = await store.withRead(
-    async dagRead => {
-      const mainHeadHash = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
-      if (!mainHeadHash) {
-        throw new Error('Internal no main head found');
-      }
-      const baseSnapshot = await db.baseSnapshotFromHash(mainHeadHash, dagRead);
-      const baseSnapshotMeta = baseSnapshot.meta;
-      const baseCookie = baseSnapshotMeta.cookieJSON;
-      assertSnapshotMetaDD31(baseSnapshotMeta);
-      const isNewBranch =
-        Object.keys(baseSnapshotMeta.lastMutationIDs).length === 0;
+  const [baseCookie, isNewBranch] = await store.withRead(async dagRead => {
+    const mainHeadHash = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
+    if (!mainHeadHash) {
+      throw new Error('Internal no main head found');
+    }
+    const baseSnapshot = await db.baseSnapshotFromHash(mainHeadHash, dagRead);
+    const baseSnapshotMeta = baseSnapshot.meta;
+    const baseCookie = baseSnapshotMeta.cookieJSON;
+    assertSnapshotMetaDD31(baseSnapshotMeta);
+    const isNewBranch =
+      Object.keys(baseSnapshotMeta.lastMutationIDs).length === 0;
 
-      const lastMutationIDs = await lastMutationIDsForSnapshotMeta(
-        baseSnapshotMeta,
-        dagRead,
-        branchID,
-      );
-
-      // Add `[clientID]: 0` for mutation commits on top of the snapshot that
-      // are not already in the snapshot.
-      const localMutations = await db.localMutations(mainHeadHash, dagRead);
-      for (const {meta} of localMutations) {
-        assertLocalMetaDD31(meta);
-        const {clientID} = meta;
-        if (lastMutationIDs[clientID] === undefined) {
-          lastMutationIDs[clientID] = 0;
-        }
-      }
-
-      return [lastMutationIDs, baseCookie, isNewBranch];
-    },
-  );
+    return [baseCookie, isNewBranch];
+  });
 
   const pullReq: PullRequestDD31<ReadonlyJSONValue> = {
     profileID,
@@ -306,7 +283,7 @@ export async function beginPullDD31(
   );
 
   // If Puller did not get a pull response we still want to return the HTTP
-  // request info to the JS SDK.
+  // request info.
   if (!response) {
     return {
       httpRequestInfo,
@@ -326,60 +303,17 @@ export async function beginPullDD31(
     lc,
     store,
     baseCookie,
-    lastMutationIDs,
     response,
     clientID,
   );
   if (syncHead === null) {
-    throw new Error('Overlapping sync JsLogInfo');
+    throw new Error('Overlapping sync');
   }
   return {
     httpRequestInfo,
     pullResponse: response,
     syncHead,
   };
-}
-
-/**
- * Gets the base snapshot from the branch named by headName and returns the last
- * mutation IDs. This does not include mutation commits on top of the base snapshot.
- */
-export function lastMutationIDsForSnapshotFromHead(
-  headName: string,
-  dagStore: dag.Store,
-  branchID: string,
-) {
-  return dagStore.withRead(async dagRead => {
-    const mainHeadHash = await dagRead.getHead(headName);
-    if (!mainHeadHash) {
-      throw new Error('Internal no main head found');
-    }
-    const baseSnapshot = await db.baseSnapshotFromHash(mainHeadHash, dagRead);
-    const baseSnapshotMeta = baseSnapshot.meta;
-    assertSnapshotMetaDD31(baseSnapshotMeta);
-    return lastMutationIDsForSnapshotMeta(baseSnapshotMeta, dagRead, branchID);
-  });
-}
-
-async function lastMutationIDsForSnapshotMeta(
-  baseSnapshotMeta: db.SnapshotMetaDD31,
-  dagRead: dag.Read,
-  branchID: BranchID,
-) {
-  const lastMutationIDs = {
-    ...baseSnapshotMeta.lastMutationIDs,
-  };
-  const clients = await getClients(dagRead);
-  for (const [clientID, client] of clients) {
-    assertClientDD31(client);
-    if (
-      client.branchID === branchID &&
-      lastMutationIDs[clientID] === undefined
-    ) {
-      lastMutationIDs[clientID] = 0;
-    }
-  }
-  return lastMutationIDs;
 }
 
 // Returns new sync head, or null if response did not apply due to mismatched cookie.
@@ -501,11 +435,37 @@ export async function handlePullResponseSDD(
   });
 }
 
+export function handlePullResponse(
+  lc: LogContext,
+  store: dag.Store,
+  expectedBaseCookie: InternalValue,
+  response: PullResponseOKDD31 | PullResponseOKSDD,
+  clientID: ClientID,
+): Promise<Hash | null> {
+  if (DD31) {
+    assertPullResponseDD31(response);
+    return handlePullResponseDD31(
+      lc,
+      store,
+      expectedBaseCookie,
+      response,
+      clientID,
+    );
+  }
+  assertPullResponseSDD(response);
+  return handlePullResponseSDD(
+    lc,
+    store,
+    expectedBaseCookie,
+    response,
+    clientID,
+  );
+}
+
 export async function handlePullResponseDD31(
   lc: LogContext,
   store: dag.Store,
   expectedBaseCookie: InternalValue,
-  requestLastMutationIDs: Record<ClientID, number>,
   response: PullResponseOKDD31,
   clientID: ClientID,
 ): Promise<Hash | null> {
@@ -531,26 +491,14 @@ export async function handlePullResponseDD31(
       return null;
     }
 
-    // If other entities (eg, other clients) are modifying the client view
-    // the client view can change but the lastMutationID stays the same.
-    // So be careful here to reject only a lesser lastMutationID.
-    for (const [clientID, lastMutationID] of Object.entries(
-      requestLastMutationIDs,
+    // Check that the lastMutationIDs are not going backwards.
+    for (const [clientID, lmidChange] of Object.entries(
+      response.lastMutationIDChanges,
     )) {
-      const responseLastMutationID = response.lastMutationIDChanges[clientID];
-      if (responseLastMutationID === undefined) {
-        throw new Error(`Missing lastMutationID change for client ${clientID}`);
-      }
-      if (responseLastMutationID < lastMutationID) {
-        lc.debug?.(
-          'responseLastMutationID not larger than lastMutationID',
-          'responseLastMutationID',
-          responseLastMutationID,
-          'lastMutationID',
-          lastMutationID,
-        );
+      const lastMutationID = baseSnapshotMeta.lastMutationIDs[clientID];
+      if (lastMutationID !== undefined && lmidChange < lastMutationID) {
         throw new Error(
-          `Received lastMutationID ${responseLastMutationID} is < than last snapshot lastMutationID ${lastMutationID}; ignoring client view`,
+          `Received lastMutationID ${lmidChange} is < than last snapshot lastMutationID ${lastMutationID}; ignoring client view`,
         );
       }
     }
@@ -560,28 +508,24 @@ export async function handlePullResponseDD31(
       ToInternalValueReason.CookieFromResponse,
     );
 
-    // If there is no patch and the lmid and cookie don't change, it's a nop.
-    // Otherwise, we will write a new commit, including for the case of just
-    // a cookie change.
+    // If there is no patch and there are no lmid changes and cookie doesn't
+    // change, it's a nop. Otherwise, something changed (maybe just the cookie)
+    // and we will write a new commit.
     if (
       response.patch.length === 0 &&
-      json.deepEqual(requestLastMutationIDs, response.lastMutationIDChanges) &&
-      deepEqual(internalCookie, baseCookie)
+      deepEqual(internalCookie, baseCookie) &&
+      !anyMutationsToApply(
+        response.lastMutationIDChanges,
+        baseSnapshotMeta.lastMutationIDs,
+      )
     ) {
       return emptyHash;
     }
 
-    // Indexes need to be created for the new snapshot. To create, start
-    // with the indexes of the the main head commit, then
-    // diff the value map of the main head commit against the value map of
-    // the new snapshot, and apply changes to the indexes.
-    // Note: with this approach we won't lose any indexes, however
-    // rebased mutations may see indexes which did not exist when
-    // they were first executed.
     const mainHeadCommit = await db.commitFromHash(mainHead, dagRead);
     const dbWrite = await db.newWriteSnapshotDD31(
       db.whenceHash(baseSnapshot.chunk.hash),
-      response.lastMutationIDChanges,
+      {...baseSnapshotMeta.lastMutationIDs, ...response.lastMutationIDChanges},
       internalCookie,
       dagWrite,
       db.readIndexesForWrite(mainHeadCommit, dagWrite),
@@ -589,24 +533,6 @@ export async function handlePullResponseDD31(
     );
 
     await patch.apply(lc, dbWrite, response.patch);
-
-    const mainHeadMap = new BTreeRead(dagRead, mainHeadCommit.valueHash);
-
-    // No need to diff here if we have no indexes.
-    if (dbWrite.indexes.size > 0) {
-      for await (const change of dbWrite.map.diff(mainHeadMap)) {
-        await updateIndexes(
-          lc,
-          dbWrite.indexes,
-          change.key,
-          () =>
-            Promise.resolve(
-              (change as {oldValue: InternalValue | undefined}).oldValue,
-            ),
-          (change as {newValue: InternalValue | undefined}).newValue,
-        );
-      }
-    }
 
     return await dbWrite.commit(SYNC_HEAD_NAME);
   });
@@ -827,4 +753,18 @@ function assertResultDD31(v: unknown): asserts v is ResultDD31 {
   if (v.response !== undefined) {
     assertPullResponseDD31(v.response);
   }
+}
+
+function anyMutationsToApply(
+  lastMutationIDChanges: Record<string, number>,
+  lastMutationIDs: Record<string, number>,
+) {
+  for (const [clientID, lastMutationIDChange] of Object.entries(
+    lastMutationIDChanges,
+  )) {
+    if (lastMutationIDChange !== lastMutationIDs[clientID]) {
+      return true;
+    }
+  }
+  return false;
 }

@@ -9,6 +9,9 @@ export type PullerResult = {
   httpRequestInfo: HTTPRequestInfo;
 };
 
+// TODO(arv): Does it really make sense to call this httpRequestInfo? It is
+// really the response status code and error message!
+
 export type PullerResultDD31 = {
   response?: PullResponseDD31;
   httpRequestInfo: HTTPRequestInfo;
