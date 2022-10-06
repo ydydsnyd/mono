@@ -64,6 +64,11 @@ export class TestReflect<MD extends MutatorDefs> extends Reflect<MD> {
   triggerClose() {
     this._socket?.dispatchEvent(new CloseEvent('close'));
   }
+
+  get pusher() {
+    // @ts-expect-error Property '_pusher' is private
+    return this._pusher;
+  }
 }
 
 export const reflectForTest = <MD extends MutatorDefs>(

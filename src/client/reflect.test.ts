@@ -1,5 +1,7 @@
 import {expect} from '@esm-bundle/chai';
+import type {JSONValue, WriteTransaction} from 'replicache';
 import * as sinon from 'sinon';
+import {Mutation, pushMessageSchema, PushBody} from '../protocol/push.js';
 import type {NullableVersion} from '../types/version.js';
 import {ConnectionState, createSocket} from './reflect.js';
 import {MockSocket, reflectForTest, tickAFewTimes} from './test-utils.js';
@@ -66,6 +68,8 @@ test('onOnlineChange reflection on Reflect class', async () => {
   const r = reflectForTest({
     onOnlineChange: f,
   });
+  await tickAFewTimes(clock);
+
   expect(r.onOnlineChange).to.equal(f);
   await r.close();
 });
@@ -175,4 +179,134 @@ test('createSocket', () => {
     0,
     'ws://example.com/connect?clientID=clientID&roomID=roomID&baseCookie=&ts=456&lmid=0',
   );
+});
+
+test('pusher sends one mutation per push message', async () => {
+  const t = async (mutations: Mutation[], expectedMessages: number) => {
+    const r = reflectForTest();
+    await tickAFewTimes(clock);
+    r.triggerConnected();
+    const mockSocket = r.socket as unknown as MockSocket;
+
+    const overwrittenAndNotUsedLol = 42;
+
+    const pushBody: PushBody = {
+      pushVersion: 0,
+      schemaVersion: '1',
+      mutations,
+      timestamp: overwrittenAndNotUsedLol,
+    };
+
+    const req = new Request('http://example.com/push', {
+      body: JSON.stringify(pushBody),
+      method: 'POST',
+    });
+
+    await r.pusher(req);
+
+    expect(mockSocket.messages).to.have.lengthOf(expectedMessages);
+
+    for (const raw of mockSocket.messages) {
+      const msg = pushMessageSchema.parse(JSON.parse(raw));
+      expect(msg[1].mutations).to.have.lengthOf(1);
+    }
+
+    await r.close();
+    await tickAFewTimes(clock);
+  };
+
+  await t([], 0);
+  await t([{id: 1, name: 'mut1', args: {d: 1}, timestamp: 1}], 1);
+  await t(
+    [
+      {id: 1, name: 'mut1', args: {d: 1}, timestamp: 1},
+      {id: 2, name: 'mut1', args: {d: 2}, timestamp: 2},
+      {id: 3, name: 'mut1', args: {d: 3}, timestamp: 3},
+    ],
+    3,
+  );
+
+  // skips ids already seen
+  await t(
+    [
+      {id: 1, name: 'mut1', args: {d: 1}, timestamp: 1},
+      {id: 1, name: 'mut1', args: {d: 2}, timestamp: 1},
+    ],
+    1,
+  );
+});
+
+test('watchSmokeTest', async () => {
+  const rep = reflectForTest({
+    mutators: {
+      addData: async (
+        tx: WriteTransaction,
+        data: {[key: string]: JSONValue},
+      ) => {
+        for (const [key, value] of Object.entries(data)) {
+          await tx.put(key, value);
+        }
+      },
+      del: async (tx: WriteTransaction, key: string) => {
+        await tx.del(key);
+      },
+    },
+  });
+
+  const spy = sinon.spy();
+  const unwatch = rep.experimentalWatch(spy);
+
+  await rep.mutate.addData({a: 1, b: 2});
+
+  expect(spy.callCount).to.equal(1);
+  expect(spy.lastCall.args).to.deep.equal([
+    [
+      {
+        op: 'add',
+        key: 'a',
+        newValue: 1,
+      },
+      {
+        op: 'add',
+        key: 'b',
+        newValue: 2,
+      },
+    ],
+  ]);
+
+  spy.resetHistory();
+  await rep.mutate.addData({a: 1, b: 2});
+  expect(spy.callCount).to.equal(0);
+
+  await rep.mutate.addData({a: 11});
+  expect(spy.callCount).to.equal(1);
+  expect(spy.lastCall.args).to.deep.equal([
+    [
+      {
+        op: 'change',
+        key: 'a',
+        newValue: 11,
+        oldValue: 1,
+      },
+    ],
+  ]);
+
+  spy.resetHistory();
+  await rep.mutate.del('b');
+  expect(spy.callCount).to.equal(1);
+  expect(spy.lastCall.args).to.deep.equal([
+    [
+      {
+        op: 'del',
+        key: 'b',
+        oldValue: 2,
+      },
+    ],
+  ]);
+
+  unwatch();
+
+  spy.resetHistory();
+  await rep.mutate.addData({c: 6});
+  expect(spy.callCount).to.equal(0);
 });
