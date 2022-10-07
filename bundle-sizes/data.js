@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1665052245703,
+  "lastUpdate": 1665166393749,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -26831,6 +26831,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/460e7e14021a0e061ce2390c64312b56f569582a"
         },
         "date": 1665052240538,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 194083,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34674,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 192937,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34361,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81916,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23647,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4fd6c9dc8e0b9757894568c744bcf59b6528457b",
+          "message": "fix(DD31): Use correct indexes in handlePullResponseDD31 (#311)\n\nThe indexes for the new snapshot should be built from the base snapshot's indexes,\r\nnot the head commit's indexes.\r\n\r\nAlso reenables some tests for DD31 that I think were accidentally disabled.\r\n\r\nFollow up to #308.",
+          "timestamp": "2022-10-07T11:12:00-07:00",
+          "tree_id": "3fa580221bfeb3fc291cbb6b21cc933431b1765e",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/4fd6c9dc8e0b9757894568c744bcf59b6528457b"
+        },
+        "date": 1665166387234,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
