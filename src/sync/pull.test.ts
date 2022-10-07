@@ -1409,10 +1409,6 @@ type FakePullerArgsDD31 = {
 };
 
 test('changed keys', async () => {
-  if (DD31) {
-    return;
-  }
-
   type IndexDef = {
     name: string;
     prefix: string;
@@ -2080,6 +2076,7 @@ suite('handlePullResponseDD31', () => {
     responseLastMutationIDChanges = {},
     responsePatch = [],
     expectedMap,
+    expectedIndex,
     expectedLastMutationIDs = responseLastMutationIDChanges,
   }: {
     expectedBaseCookieJSON: ReadonlyJSONValue;
@@ -2089,6 +2086,7 @@ suite('handlePullResponseDD31', () => {
     responseLastMutationIDChanges?: {[clientID: string]: number};
     responsePatch?: PatchOperation[];
     expectedMap?: {[key: string]: ReadonlyJSONValue};
+    expectedIndex?: [name: string, map: {[key: string]: ReadonlyJSONValue}];
     expectedLastMutationIDs?: {[clientID: string]: number};
   }) {
     const lc = new LogContext();
@@ -2130,9 +2128,17 @@ suite('handlePullResponseDD31', () => {
 
         if (expectedMap) {
           const map = new BTreeRead(dagRead, head.valueHash);
-          expect(expectedMap).deep.equal(
+          expect(
             Object.fromEntries(await asyncIterableToArray(map.entries())),
-          );
+          ).deep.equal(expectedMap);
+        }
+        if (expectedIndex) {
+          expect(head.indexes.length).to.equal(1);
+          expect(head.indexes[0].definition.name).to.equal(expectedIndex[0]);
+          const map = new BTreeRead(dagRead, head.indexes[0].valueHash);
+          expect(
+            Object.fromEntries(await asyncIterableToArray(map.entries())),
+          ).deep.equal(expectedIndex[1]);
         }
       });
     }
@@ -2298,6 +2304,75 @@ suite('handlePullResponseDD31', () => {
         },
       ],
       expectedMap: {a: 0},
+    });
+  });
+
+  test('indexes do not include local commits', async () => {
+    const expectedNewHash = parseHash('face0000-0000-4000-8000-000000000003');
+    await t({
+      expectedBaseCookieJSON: 1,
+      responseCookie: 2,
+      expectedResult: expectedNewHash,
+      setupChain: b =>
+        b.addSnapshot(
+          [],
+          clientID1,
+          1,
+          {[clientID1]: 10},
+          {
+            i1: {
+              prefix: '',
+              jsonPointer: '/id',
+            },
+          },
+        ),
+      responseLastMutationIDChanges: {[clientID1]: 10},
+      responsePatch: [
+        {
+          op: 'put',
+          key: 'a',
+          value: {id: 'aId', x: 2},
+        },
+      ],
+      expectedMap: {a: {id: 'aId', x: 2}},
+      expectedIndex: [
+        'i1',
+        {[db.encodeIndexKey(['aId', 'a'])]: {id: 'aId', x: 2}},
+      ],
+    });
+
+    await t({
+      expectedBaseCookieJSON: 1,
+      responseCookie: 2,
+      expectedResult: expectedNewHash,
+      setupChain: async b => {
+        await b.addSnapshot(
+          [],
+          clientID1,
+          1,
+          {[clientID1]: 10},
+          {
+            i1: {
+              prefix: '',
+              jsonPointer: '/id',
+            },
+          },
+        );
+        await b.addLocal(clientID1, [['b', {id: 'bId', x: 2}]]);
+      },
+      responseLastMutationIDChanges: {[clientID1]: 10},
+      responsePatch: [
+        {
+          op: 'put',
+          key: 'a',
+          value: {id: 'aId', x: 2},
+        },
+      ],
+      expectedMap: {a: {id: 'aId', x: 2}},
+      expectedIndex: [
+        'i1',
+        {[db.encodeIndexKey(['aId', 'a'])]: {id: 'aId', x: 2}},
+      ],
     });
   });
 });

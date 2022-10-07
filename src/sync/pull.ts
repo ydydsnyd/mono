@@ -522,13 +522,12 @@ export async function handlePullResponseDD31(
       return emptyHash;
     }
 
-    const mainHeadCommit = await db.commitFromHash(mainHead, dagRead);
     const dbWrite = await db.newWriteSnapshotDD31(
       db.whenceHash(baseSnapshot.chunk.hash),
       {...baseSnapshotMeta.lastMutationIDs, ...response.lastMutationIDChanges},
       internalCookie,
       dagWrite,
-      db.readIndexesForWrite(mainHeadCommit, dagWrite),
+      db.readIndexesForWrite(baseSnapshot, dagWrite),
       clientID,
     );
 
