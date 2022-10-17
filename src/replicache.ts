@@ -58,7 +58,7 @@ import {
   SimpleFetch,
 } from '@rocicorp/licensing/src/client';
 import {mustSimpleFetch} from './simple-fetch';
-import {initBgIntervalProcess} from './persist/bg-interval';
+import {initBgIntervalProcess} from './bg-interval';
 import {setIntervalWithSignal} from './set-interval-with-signal';
 import {MutationRecovery} from './mutation-recovery';
 import {

@@ -8,7 +8,7 @@ import {
   isClientSDD,
   setClients,
 } from './clients';
-import {initBgIntervalProcess} from './bg-interval';
+import {initBgIntervalProcess} from '../bg-interval';
 
 const HEARTBEAT_INTERVAL_MS = 60 * 1000;
 

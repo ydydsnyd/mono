@@ -1,7 +1,7 @@
 import type {LogContext} from '@rocicorp/logger';
 import {assert} from '../asserts';
 import type * as dag from '../dag/mod';
-import {initBgIntervalProcess} from './bg-interval';
+import {initBgIntervalProcess} from '../bg-interval';
 import {
   BranchMap,
   getBranches,

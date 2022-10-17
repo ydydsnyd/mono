@@ -14,11 +14,11 @@ teardown(() => {
   sinon.restore();
 });
 
-test('initBgIntervalProcess starts interval that executed process every intervalMs', async () => {
+test('initBgIntervalProcess starts interval that executes process with intervalMs between each execution', async () => {
   let processCallCount = 0;
-  const process = () => {
+  const process = async () => {
     processCallCount++;
-    return Promise.resolve();
+    await clock.tickAsync(50);
   };
   const controller = new AbortController();
   initBgIntervalProcess(
@@ -34,7 +34,10 @@ test('initBgIntervalProcess starts interval that executed process every interval
   expect(processCallCount).to.equal(1);
   await clock.tickAsync(100);
   expect(processCallCount).to.equal(2);
-  await clock.tickAsync(400);
+  await clock.tickAsync(100);
+  await clock.tickAsync(100);
+  await clock.tickAsync(100);
+  await clock.tickAsync(100);
   expect(processCallCount).to.equal(6);
 });
 
@@ -72,8 +75,12 @@ test('error thrown during process (before stop is called) is logged to error', a
   const controller = new AbortController();
   initBgIntervalProcess('testProcess', process, 100, lc, controller.signal);
   await clock.tickAsync(100);
-  expect(errorStub.callCount).to.equal(1);
-  expect(errorStub.getCall(0).args.join(' ')).to.contain('TestErrorBeforeStop');
+  sinon.assert.calledOnceWithExactly(
+    errorStub,
+    'bgIntervalProcess=testProcess',
+    'Error running.',
+    'TestErrorBeforeStop',
+  );
 });
 
 test('error thrown during process (after stop is called) is logged to debug', async () => {
@@ -101,5 +108,10 @@ test('error thrown during process (after stop is called) is logged to debug', as
   }
   expect(errorStub.callCount).to.equal(0);
   expect(debugStub.callCount).to.be.greaterThan(0);
-  expect(debugStub.lastCall.args.join(' ')).to.contain('TestErrorAfterStop');
+  sinon.assert.calledWithExactly(
+    debugStub,
+    'bgIntervalProcess=testProcess',
+    'Error running most likely due to close.',
+    'TestErrorAfterStop',
+  );
 });

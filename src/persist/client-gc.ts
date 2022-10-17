@@ -2,7 +2,7 @@ import type {LogContext} from '@rocicorp/logger';
 import type {ClientID} from '../sync/client-id';
 import type * as dag from '../dag/mod';
 import {ClientMap, getClients, setClients} from './clients';
-import {initBgIntervalProcess} from './bg-interval';
+import {initBgIntervalProcess} from '../bg-interval';
 
 const CLIENT_MAX_INACTIVE_IN_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const GC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -37,15 +37,15 @@ export function gcClients(
   return dagStore.withWrite(async dagWrite => {
     const now = Date.now();
     const clients = await getClients(dagWrite);
-    const clientsAfterGC = Array.from(clients).filter(
-      ([id, client]) =>
+    const clientsAfterGC = Array.from(clients).filter(([id, client]) => {
+      return (
         id === clientID /* never collect ourself */ ||
-        now - client.heartbeatTimestampMs <= CLIENT_MAX_INACTIVE_IN_MS,
-    );
+        now - client.heartbeatTimestampMs <= CLIENT_MAX_INACTIVE_IN_MS
+      );
+    });
     if (clientsAfterGC.length === clients.size) {
       return clients;
     }
-
     const newClients = new Map(clientsAfterGC);
     await setClients(newClients, dagWrite);
     await dagWrite.commit();

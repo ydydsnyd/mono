@@ -113,7 +113,7 @@ test('initBranchGC starts 5 min interval that collects branches that are not ref
     expect(readBranchMap).to.deep.equal(branchMap);
   });
 
-  clock.tick(FIVE_MINS_IN_MS);
+  await clock.tickAsync(FIVE_MINS_IN_MS);
   await awaitLatestGCUpdate();
 
   // branch1 is not collected because it is referred to by client1 and has pending mutations
@@ -135,7 +135,7 @@ test('initBranchGC starts 5 min interval that collects branches that are not ref
   // nothing collected yet because gc has not run yet
   await expectBranches(dagStore, {branch1, branch2});
 
-  clock.tick(FIVE_MINS_IN_MS);
+  await clock.tickAsync(FIVE_MINS_IN_MS);
   await awaitLatestGCUpdate();
 
   // branch1 is not collected because it has pending mutations
@@ -156,7 +156,7 @@ test('initBranchGC starts 5 min interval that collects branches that are not ref
   // nothing collected yet because gc has not run yet
   await expectBranches(dagStore, {branch1: updatedBranch1, branch2});
 
-  clock.tick(FIVE_MINS_IN_MS);
+  await clock.tickAsync(FIVE_MINS_IN_MS);
   await awaitLatestGCUpdate();
 
   // branch1 is collect because it is not referred to and has no pending mutaitons
@@ -176,7 +176,7 @@ test('initBranchGC starts 5 min interval that collects branches that are not ref
   // nothing collected yet because gc has not run yet
   await expectBranches(dagStore, {branch2});
 
-  clock.tick(FIVE_MINS_IN_MS);
+  await clock.tickAsync(FIVE_MINS_IN_MS);
   await awaitLatestGCUpdate();
 
   // branch2 is not collected because it is referred to by client3
@@ -188,7 +188,7 @@ test('initBranchGC starts 5 min interval that collects branches that are not ref
   // nothing collected yet because gc has not run yet
   await expectBranches(dagStore, {branch2});
 
-  clock.tick(FIVE_MINS_IN_MS);
+  await clock.tickAsync(FIVE_MINS_IN_MS);
   await awaitLatestGCUpdate();
 
   // branch2 is collected because it is not referred to and has pending mutations

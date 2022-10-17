@@ -13,7 +13,7 @@ const START_TIME = 0;
 const SEVEN_DAYS_IN_MS = 7 * 24 * 60 * 60 * 1000;
 const FIVE_MINS_IN_MS = 5 * 60 * 1000;
 setup(() => {
-  clock = useFakeTimers(0);
+  clock = useFakeTimers(START_TIME);
 });
 
 teardown(() => {
@@ -39,11 +39,11 @@ test('initClientGC starts 5 min interval that collects clients that have been in
     headHash: newUUIDHash(),
   });
   const client3 = makeClient({
-    heartbeatTimestampMs: START_TIME + 60 * 1000,
+    heartbeatTimestampMs: START_TIME + 6 * 60 * 1000,
     headHash: newUUIDHash(),
   });
   const client4 = makeClient({
-    heartbeatTimestampMs: START_TIME + 60 * 1000,
+    heartbeatTimestampMs: START_TIME + 6 * 60 * 1000,
     headHash: newUUIDHash(),
   });
   const clientMap = new Map(
@@ -65,7 +65,8 @@ test('initClientGC starts 5 min interval that collects clients that have been in
     expect(readClientMap).to.deep.equal(clientMap);
   });
 
-  clock.tick(SEVEN_DAYS_IN_MS + 1);
+  clock.tick(SEVEN_DAYS_IN_MS);
+  await clock.tickAsync(FIVE_MINS_IN_MS);
   await awaitLatestGCUpdate();
 
   // client1 is not collected because it is the current client (despite being old enough to collect)
@@ -74,15 +75,11 @@ test('initClientGC starts 5 min interval that collects clients that have been in
   // client4 is not collected because it is < 7 days inactive (by 1 minute)
   await dagStore.withRead(async (read: dag.Read) => {
     const readClientMap = await getClients(read);
-    expect(readClientMap).to.deep.equal(
-      new Map(
-        Object.entries({
-          client1,
-          client3,
-          client4,
-        }),
-      ),
-    );
+    expect(Object.fromEntries(readClientMap)).to.deep.equal({
+      client1,
+      client3,
+      client4,
+    });
   });
 
   // Update client4's heartbeat to now
@@ -96,7 +93,7 @@ test('initClientGC starts 5 min interval that collects clients that have been in
     await dagWrite.commit();
   });
 
-  clock.tick(FIVE_MINS_IN_MS);
+  await clock.tickAsync(FIVE_MINS_IN_MS);
   await awaitLatestGCUpdate();
 
   // client1 is not collected because it is the current client (despite being old enough to collect)
@@ -104,97 +101,22 @@ test('initClientGC starts 5 min interval that collects clients that have been in
   // client4 is not collected because its update heartbeat is < 7 days inactive (7 days - 5 mins)
   await dagStore.withRead(async (read: dag.Read) => {
     const readClientMap = await getClients(read);
-    expect(readClientMap).to.deep.equal(
-      new Map(
-        Object.entries({
-          client1,
-          client4: client4WUpdatedHeartbeat,
-        }),
-      ),
-    );
+    expect(Object.fromEntries(readClientMap)).to.deep.equal({
+      client1,
+      client4: client4WUpdatedHeartbeat,
+    });
   });
 
-  clock.tick(SEVEN_DAYS_IN_MS);
+  clock.tick(SEVEN_DAYS_IN_MS - FIVE_MINS_IN_MS * 2 + 1);
+  await clock.tickAsync(FIVE_MINS_IN_MS);
   await awaitLatestGCUpdate();
 
   // client1 is not collected because it is the current client (despite being old enough to collect)
   // client4 is collected because it is > 7 days inactive
   await dagStore.withRead(async (read: dag.Read) => {
     const readClientMap = await getClients(read);
-    expect(readClientMap).to.deep.equal(
-      new Map(
-        Object.entries({
-          client1,
-        }),
-      ),
-    );
-  });
-});
-
-test('calling function returned by initClientGC, stops Client GCs', async () => {
-  const dagStore = new dag.TestStore();
-  const client1 = makeClient({
-    heartbeatTimestampMs: START_TIME,
-    headHash: newUUIDHash(),
-  });
-  const client2 = makeClient({
-    heartbeatTimestampMs: START_TIME,
-    headHash: newUUIDHash(),
-  });
-  const client3 = makeClient({
-    heartbeatTimestampMs: START_TIME + 60 * 1000,
-    headHash: newUUIDHash(),
-  });
-  const clientMap = new Map(
-    Object.entries({
+    expect(Object.fromEntries(readClientMap)).to.deep.equal({
       client1,
-      client2,
-      client3,
-    }),
-  );
-
-  await setClientsForTesting(clientMap, dagStore);
-
-  const controller = new AbortController();
-  initClientGC('client1', dagStore, new LogContext(), controller.signal);
-
-  await dagStore.withRead(async (read: dag.Read) => {
-    const readClientMap = await getClients(read);
-    expect(readClientMap).to.deep.equal(clientMap);
-  });
-
-  clock.tick(SEVEN_DAYS_IN_MS + 1);
-  await awaitLatestGCUpdate();
-
-  // client1 is not collected because it is the current client (despite being old enough to collect)
-  // client2 is collected because it is > 7 days inactive
-  // client3 is not collected because it is < 7 days inactive (by 1 minute)
-  await dagStore.withRead(async (read: dag.Read) => {
-    const readClientMap = await getClients(read);
-    expect(readClientMap).to.deep.equal(
-      new Map(
-        Object.entries({
-          client1,
-          client3,
-        }),
-      ),
-    );
-  });
-
-  controller.abort();
-  clock.tick(FIVE_MINS_IN_MS);
-  await awaitLatestGCUpdate();
-
-  // client3 is not collected because GC has been stopped
-  await dagStore.withRead(async (read: dag.Read) => {
-    const readClientMap = await getClients(read);
-    expect(readClientMap).to.deep.equal(
-      new Map(
-        Object.entries({
-          client1,
-          client3,
-        }),
-      ),
-    );
+    });
   });
 });

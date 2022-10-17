@@ -5,7 +5,7 @@ import {assertNotTempHash} from '../hash.js';
 import {dropStore} from '../kv/idb-store.js';
 import {IDBDatabasesStore} from './idb-databases-store';
 import type {IndexedDBDatabase} from './idb-databases-store';
-import {initBgIntervalProcess} from './bg-interval.js';
+import {initBgIntervalProcess} from '../bg-interval';
 import type {LogContext} from '@rocicorp/logger';
 import {sleep} from '../sleep.js';
 import {AbortError} from '../abort-error.js';
