@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1665166393749,
+  "lastUpdate": 1666033528572,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -26915,6 +26915,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23647,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f68f8e8839b05adcb1f9aae1155c2d8d6c89ff0e",
+          "message": "Update bg-interval-process to ensure no overlap of process runs (#312)\n\nAlso move it from src/persist to src/.  With this small tweak will be useful for running refresh and mutation recovery intervals.",
+          "timestamp": "2022-10-17T19:04:26Z",
+          "tree_id": "ed09e9a166bd4a26334df78e21d0c57ffd2d3669",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/f68f8e8839b05adcb1f9aae1155c2d8d6c89ff0e"
+        },
+        "date": 1666033523188,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 194266,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34677,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 193120,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34365,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81923,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23654,
             "unit": "bytes"
           }
         ]
