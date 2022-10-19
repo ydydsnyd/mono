@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1666169357058,
+  "lastUpdate": 1666193166872,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -27131,6 +27131,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 22883,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b1756a1aa2a62db7740bdc34dd421c9d72ad03a2",
+          "message": "chore: Fix perf tests (#320)\n\n237e462d1184a7dc36c43a7c0e6cfe16a3100155 broke the perf tests. The\r\nchange looks innocent enough but it unraveled a few things:\r\n\r\n- The test runner does not fail when the imported ts files fail to\r\n  execute. In this case we had a reference to an undefined binding\r\n  `REPLICACHE_VERSION`.\r\n- Made the perf runner fail if there is an error.\r\n- But why was `REPLICACHE_VERSION` not defined?\r\n- Because, even though we use the compiled replicache js from\r\n  `out/replicache`, there are other imports from the perf tests (like\r\n  src/json) and eventually we import `src/replicache.ts`.\r\n- I refactored the imports a bit so that we do not import the whole\r\n  world again.\r\n- To prevent this from happening again I added an \"allow list\" to the\r\n  perf runner. If the imports change in a way that the perf runner\r\n  imports something not in the allow list it fails.",
+          "timestamp": "2022-10-19T15:24:59Z",
+          "tree_id": "b06eaa32c0252473a0c2dade2e3737c31e249d94",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/b1756a1aa2a62db7740bdc34dd421c9d72ad03a2"
+        },
+        "date": 1666193161266,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 185537,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 33374,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 184391,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33030,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 78478,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 22840,
             "unit": "bytes"
           }
         ]
