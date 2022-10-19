@@ -38,13 +38,7 @@ import {IDBStore} from './kv/mod';
 import * as dag from './dag/mod';
 import * as db from './db/mod';
 import * as sync from './sync/mod';
-import {
-  assertHash,
-  assertNotTempHash,
-  emptyHash,
-  Hash,
-  newTempHash,
-} from './hash';
+import {assertHash, emptyHash, Hash} from './hash';
 import * as persist from './persist/mod';
 import {requestIdle} from './request-idle';
 import type {HTTPRequestInfo} from './http-request-info';
@@ -300,7 +294,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
   private readonly _licenseKey: string | undefined;
 
-  private readonly _memdag: dag.Store;
+  private readonly _memdag: dag.LazyStore;
   private readonly _perdag: dag.Store;
   private readonly _idbDatabases: persist.IDBDatabasesStore =
     new persist.IDBDatabasesStore();
@@ -413,17 +407,16 @@ export class Replicache<MD extends MutatorDefs = {}> {
       this._queryInternal,
       this._lc,
     );
-
     const perKvStore = experimentalKVStore || new IDBStore(this.idbName);
     this._perdag = new dag.StoreImpl(
       perKvStore,
       dag.uuidChunkHasher,
-      assertNotTempHash,
+      assertHash,
     );
     this._memdag = new dag.LazyStore(
       this._perdag,
       LAZY_STORE_SOURCE_CHUNK_CACHE_SIZE_LIMIT,
-      this._memdagHashFunction(),
+      dag.uuidChunkHasher,
       assertHash,
     );
 
@@ -486,10 +479,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
       licenseCheckResolver.resolve,
       licenseActiveResolver.resolve,
     );
-  }
-
-  protected _memdagHashFunction(): () => Hash {
-    return newTempHash;
   }
 
   private async _open(
@@ -874,7 +863,10 @@ export class Replicache<MD extends MutatorDefs = {}> {
     });
   }
 
-  protected async _maybeEndPull(requestID: string): Promise<void> {
+  protected async _maybeEndPull(
+    syncHead: Hash,
+    requestID: string,
+  ): Promise<void> {
     for (;;) {
       if (this._closed) {
         return;
@@ -885,9 +877,10 @@ export class Replicache<MD extends MutatorDefs = {}> {
       const lc = this._lc
         .addContext('maybeEndPull')
         .addContext('request_id', requestID);
-      const {replayMutations, diffs, syncHead} = await sync.maybeEndPull(
+      const {replayMutations, diffs} = await sync.maybeEndPull(
         this._memdag,
         lc,
+        syncHead,
         clientID,
         this._subscriptions,
       );
@@ -900,7 +893,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
       }
 
       // Replay.
-      let rebasedSyncHead = syncHead;
       for (const mutation of replayMutations) {
         // TODO(greg): I'm not sure why this was in Replicache#_mutate...
         // Ensure that we run initial pending subscribe functions before starting a
@@ -908,11 +900,11 @@ export class Replicache<MD extends MutatorDefs = {}> {
         if (this._subscriptions.hasPendingSubscriptionRuns) {
           await Promise.resolve();
         }
-        rebasedSyncHead = await this._memdag.withWrite(dagWrite =>
+        syncHead = await this._memdag.withWrite(dagWrite =>
           db.rebaseMutationAndCommit(
             mutation,
             dagWrite,
-            rebasedSyncHead,
+            syncHead,
             sync.SYNC_HEAD_NAME,
             this._mutatorRegistry,
             lc,
@@ -936,7 +928,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
           return false;
         }
         if (syncHead !== emptyHash) {
-          await this._maybeEndPull(requestID);
+          await this._maybeEndPull(syncHead, requestID);
         }
       } catch (e) {
         throw await this._convertToClientStateNotFoundError(e);
@@ -1181,7 +1173,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       );
     }
 
-    await this._maybeEndPull(requestID);
+    await this._maybeEndPull(syncHead, requestID);
   }
 
   protected async _beginPull(): Promise<BeginPullResult> {

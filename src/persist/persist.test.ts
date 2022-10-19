@@ -1,8 +1,8 @@
 import {expect} from '@esm-bundle/chai';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import {assert} from '../asserts';
-import * as dag from '../dag/mod';
 import * as sync from '../sync/mod';
+import * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import {
   addGenesis,
@@ -12,20 +12,20 @@ import {
   Chain,
   getChunkSnapshot,
 } from '../db/test-helpers';
+import {assertHash, Hash, makeNewFakeHashFunction} from '../hash';
 import {
-  assertHash,
-  assertNotTempHash,
-  isTempHash,
-  makeNewFakeHashFunction,
-  makeNewTempHashFunction,
-} from '../hash';
-import {getClient, ClientStateNotFoundError, assertClientSDD} from './clients';
+  getClient,
+  ClientStateNotFoundError,
+  assertClientSDD,
+  CLIENTS_HEAD_NAME,
+} from './clients';
 import {addSyncSnapshot} from '../sync/test-helpers';
 import {persist} from './persist';
 import {gcClients} from './client-gc.js';
 import {initClientWithClientID} from './clients-test-helpers.js';
 import {assertSnapshotMeta} from '../db/commit.js';
 import {LogContext} from '@rocicorp/logger';
+import sinon from 'sinon';
 
 let clock: SinonFakeTimers;
 setup(() => {
@@ -38,12 +38,13 @@ teardown(() => {
 
 async function assertSameDagData(
   clientID: sync.ClientID,
-  memdag: dag.TestStore,
-  perdag: dag.TestStore,
+  memdag: dag.LazyStore,
+  perdag: dag.Store,
 ): Promise<void> {
   const memdagHeadHash = await memdag.withRead(async dagRead => {
     const headHash = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
-    expect(isTempHash(headHash)).to.be.false;
+    assert(headHash);
+    expect(dagRead.isMemOnlyChunkHash(headHash)).to.be.false;
     return headHash;
   });
   const perdagClientHash = await perdag.withRead(async dagRead => {
@@ -61,7 +62,7 @@ async function assertSameDagData(
 }
 async function assertClientMutationIDsCorrect(
   clientID: sync.ClientID,
-  perdag: dag.TestStore,
+  perdag: dag.Store,
 ): Promise<void> {
   await perdag.withRead(async dagRead => {
     const client = await getClient(clientID, dagRead);
@@ -86,26 +87,25 @@ suite('persist on top of different kinds of commits', () => {
     // persitDD31 is tested in persist-dd31.test.ts
     return;
   }
-  const {memdag, perdag, chain, testPersist, clientID} = setupPersistTest();
+  let memdag: dag.LazyStore,
+    perdag: dag.TestStore,
+    chain: Chain,
+    testPersist: () => Promise<void>,
+    clientID: sync.ClientID;
 
   setup(async () => {
-    memdag.clear();
-    perdag.clear();
-    chain.length = 0;
+    ({memdag, perdag, chain, testPersist, clientID} = setupPersistTest());
     await initClientWithClientID(clientID, perdag);
     await addGenesis(chain, memdag, clientID);
   });
 
-  teardown(async () => {
-    await testPersist();
-  });
-
   test('Genesis only', async () => {
-    // all the required work is done in setup/teardown.
+    await testPersist();
   });
 
   test('local', async () => {
     await addLocal(chain, memdag, clientID);
+    await testPersist();
   });
 
   test('snapshot', async () => {
@@ -119,39 +119,46 @@ suite('persist on top of different kinds of commits', () => {
       ],
       clientID,
     );
+    await testPersist();
   });
 
   test('local + syncSnapshot', async () => {
     await addLocal(chain, memdag, clientID);
     await addSyncSnapshot(chain, memdag, 1, clientID);
+    await testPersist();
   });
 
   test('local + local', async () => {
     await addLocal(chain, memdag, clientID);
     await addLocal(chain, memdag, clientID);
+    await testPersist();
   });
 
-  test('local on to of a persisted local', async () => {
+  test('local on top of a persisted local', async () => {
     await addLocal(chain, memdag, clientID);
     await testPersist();
     await addLocal(chain, memdag, clientID);
+    await testPersist();
   });
 
   test('local * 3', async () => {
     await addLocal(chain, memdag, clientID);
     await addLocal(chain, memdag, clientID);
     await addLocal(chain, memdag, clientID);
+    await testPersist();
   });
 
   test('local + snapshot', async () => {
     await addLocal(chain, memdag, clientID);
     await addSnapshot(chain, memdag, [['changed', 3]], clientID);
+    await testPersist();
   });
 
   test('local + snapshot + local', async () => {
     await addLocal(chain, memdag, clientID);
     await addSnapshot(chain, memdag, [['changed', 4]], clientID);
     await addLocal(chain, memdag, clientID);
+    await testPersist();
   });
 
   test('local + snapshot + local + syncSnapshot', async () => {
@@ -166,12 +173,6 @@ suite('persist on top of different kinds of commits', () => {
       return db.commitFromHash(h, dagRead);
     });
 
-    expect(
-      isTempHash(
-        (syncHeadCommitBefore.chunk.data as db.CommitData<db.SnapshotMeta>)
-          .valueHash,
-      ),
-    ).to.be.true;
     await testPersist();
 
     const syncHeadCommitAfter = await memdag.withRead(async dagRead => {
@@ -180,21 +181,15 @@ suite('persist on top of different kinds of commits', () => {
       return db.commitFromHash(h, dagRead);
     });
 
-    expect(syncHeadCommitBefore.chunk.hash).to.not.equal(
+    expect(syncHeadCommitBefore.chunk.hash).to.equal(
       syncHeadCommitAfter.chunk.hash,
     );
-
-    expect(
-      isTempHash(
-        (syncHeadCommitAfter.chunk.data as db.CommitData<db.SnapshotMeta>)
-          .valueHash,
-      ),
-    ).to.be.false;
   });
 
   test('local + indexChange', async () => {
     await addLocal(chain, memdag, clientID);
     await addIndexChange(chain, memdag, clientID);
+    await testPersist();
   });
 });
 
@@ -229,24 +224,39 @@ test('We get a MissingClientException during persist if client is missing', asyn
 });
 
 function setupPersistTest() {
-  const memdag = new dag.TestStore(
-    undefined,
-    makeNewTempHashFunction(),
+  const hashFunction = makeNewFakeHashFunction('eda2');
+  const perdag = new dag.TestStore(undefined, hashFunction, assertHash);
+  const memdag = new dag.LazyStore(
+    perdag,
+    100 * 2 ** 20, // 100 MB
+    hashFunction,
     assertHash,
   );
-  const perdag = new dag.TestStore(
-    undefined,
-    makeNewFakeHashFunction('eda2'),
-    assertNotTempHash,
-  );
+  const chunksPersistedSpy = sinon.spy(memdag, 'chunksPersisted');
 
   const clientID = 'client-id';
   const chain: Chain = [];
 
   const testPersist = async () => {
+    chunksPersistedSpy.resetHistory();
+    const perdagChunkHashesPrePersist = perdag.chunkHashes();
     await persist(new LogContext(), clientID, memdag, perdag, {}, () => false);
+
     await assertSameDagData(clientID, memdag, perdag);
     await assertClientMutationIDsCorrect(clientID, perdag);
+    const persistedChunkHashes = new Set<Hash>();
+    const clientsHeadHash = await perdag.withRead(read => {
+      return read.getHead(CLIENTS_HEAD_NAME);
+    });
+    for (const hash of perdag.chunkHashes()) {
+      if (!perdagChunkHashesPrePersist.has(hash) && hash !== clientsHeadHash) {
+        persistedChunkHashes.add(hash);
+      }
+    }
+    expect(chunksPersistedSpy.callCount).to.equal(1);
+    expect(new Set(chunksPersistedSpy.lastCall.args[0])).to.deep.equal(
+      persistedChunkHashes,
+    );
   };
-  return {memdag, perdag, chain, testPersist, clientID};
+  return {memdag, perdag, chain, testPersist, clientID, chunksPersistedSpy};
 }

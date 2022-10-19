@@ -785,7 +785,8 @@ test('pull', async () => {
   );
   beginPullResult = await rep.beginPull();
   ({syncHead} = beginPullResult);
-  expect(syncHead).equal('t/0000000000000000000000000000000008');
+  expect(syncHead).to.not.be.undefined;
+  expect(syncHead).to.not.equal(emptyHash);
 
   await createTodo({
     id: id2,
@@ -797,7 +798,7 @@ test('pull', async () => {
   ).to.equal('Test 2');
 
   fetchMock.postOnce(pullURL, makePullResponse(clientID, 3));
-  await rep.maybeEndPull(beginPullResult.requestID);
+  await rep.maybeEndPull(syncHead, beginPullResult.requestID);
 
   expect(createCount).to.equal(3);
 

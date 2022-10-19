@@ -1,9 +1,5 @@
 import {StoreImpl} from './store-impl';
-import {
-  assertNotTempHash,
-  makeNewFakeHashFunction,
-  parse as parseHash,
-} from '../hash';
+import {assertHash, makeNewFakeHashFunction, parse as parseHash} from '../hash';
 import {Chunk, ChunkHasher, createChunkWithHash} from './chunk';
 import type {Hash} from '../hash';
 import {chunkMetaKey, parse as parseKey} from './key';
@@ -18,7 +14,7 @@ export class TestStore extends StoreImpl {
   constructor(
     kvStore = new TestMemStore(),
     chunkHasher: ChunkHasher = makeNewFakeHashFunction(),
-    assertValidHash = assertNotTempHash,
+    assertValidHash = assertHash,
   ) {
     super(kvStore, chunkHasher, assertValidHash);
     this.kvStore = kvStore;
@@ -34,6 +30,17 @@ export class TestStore extends StoreImpl {
       }
     }
     return sortByHash(rv);
+  }
+
+  chunkHashes(): Set<Hash> {
+    const hashes = new Set<Hash>();
+    for (const key of this.kvStore.map().keys()) {
+      const pk = parseKey(key);
+      if (pk.type === KeyType.ChunkData) {
+        hashes.add(pk.hash);
+      }
+    }
+    return hashes;
   }
 
   clear(): void {

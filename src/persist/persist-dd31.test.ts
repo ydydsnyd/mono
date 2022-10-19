@@ -8,13 +8,7 @@ import {
   createMutatorName,
   getChunkSnapshot,
 } from '../db/test-helpers';
-import {
-  assertHash,
-  assertNotTempHash,
-  Hash,
-  makeNewFakeHashFunction,
-  makeNewTempHashFunction,
-} from '../hash';
+import {assertHash, Hash, makeNewFakeHashFunction} from '../hash';
 import {
   initClient,
   assertClientDD31,
@@ -22,28 +16,40 @@ import {
   setClients,
   getClients,
   ClientStateNotFoundError,
+  ClientDD31,
 } from './clients';
 import {assertLocalMetaDD31, assertSnapshotCommitDD31} from '../db/commit.js';
 import {LogContext} from '@rocicorp/logger';
-import {Branch, getBranch, setBranch} from './branches';
+import {Branch, BRANCHES_HEAD_NAME, getBranch, setBranch} from './branches';
 import {persistDD31} from './persist-dd31';
 import type {WriteTransaction} from '../transactions';
 import type {JSONValue} from '../json';
 import type {MutatorDefs} from '../mod';
+import sinon from 'sinon';
 
 const PERDAG_TEST_SETUP_HEAD_NAME = 'test-setup-head';
+
+enum PersistedExpectation {
+  SNAPSHOT,
+  SNAPSHOT_AND_LOCALS,
+  LOCALS,
+  NOTHING,
+}
 
 suite('persistDD31', () => {
   if (!DD31) {
     return;
   }
-  let memdag: dag.TestStore,
+  let memdag: dag.LazyStore,
     perdag: dag.TestStore,
     memdagChainBuilder: ChainBuilder,
     perdagBranchChainBuilder: ChainBuilder,
     clients: {clientID: sync.ClientID; client: Client}[],
     branchID: sync.BranchID,
-    mutators: MutatorDefs;
+    testPersist: (
+      persistedExpectation: PersistedExpectation,
+      onGatherMemOnlyChunksForTest?: () => Promise<void>,
+    ) => Promise<void>;
 
   setup(async () => {
     ({
@@ -53,7 +59,7 @@ suite('persistDD31', () => {
       perdagBranchChainBuilder,
       clients,
       branchID,
-      mutators,
+      testPersist,
     } = await setupPersistTest());
   });
 
@@ -242,14 +248,7 @@ suite('persistDD31', () => {
       perdagBranchHeadHash,
     );
 
-    await persistDD31(
-      new LogContext(),
-      clients[0].clientID,
-      memdag,
-      perdag,
-      mutators,
-      () => false,
-    );
+    await testPersist(PersistedExpectation.NOTHING);
 
     const afterPersist = await getBranchAndHeadHashes();
     // memdag and perdag branch both unchanged
@@ -276,14 +275,7 @@ suite('persistDD31', () => {
     const branchSnapshot = await getBranchHelper(perdag, branchID);
     const memdagSnapshot = await getChunkSnapshot(memdag, memdagHeadHash);
 
-    await persistDD31(
-      new LogContext(),
-      clients[0].clientID,
-      memdag,
-      perdag,
-      mutators,
-      () => false,
-    );
+    await testPersist(PersistedExpectation.LOCALS);
 
     const afterPersist = await getBranchAndHeadHashes();
     expect(afterPersist.branch).to.deep.equal({
@@ -339,14 +331,7 @@ suite('persistDD31', () => {
       perdagBranchHeadHash,
     );
 
-    await persistDD31(
-      new LogContext(),
-      clients[0].clientID,
-      memdag,
-      perdag,
-      mutators,
-      () => false,
-    );
+    await testPersist(PersistedExpectation.NOTHING);
 
     const afterPersist = await getBranchAndHeadHashes();
     // memdag and perdag branch both unchanged
@@ -376,14 +361,7 @@ suite('persistDD31', () => {
     const branchSnapshot = await getBranchHelper(perdag, branchID);
     const memdagSnapshot = await getChunkSnapshot(memdag, memdagHeadHash);
 
-    await persistDD31(
-      new LogContext(),
-      clients[0].clientID,
-      memdag,
-      perdag,
-      mutators,
-      () => false,
-    );
+    await testPersist(PersistedExpectation.LOCALS);
 
     const afterPersist = await getBranchAndHeadHashes();
     expect(afterPersist.branch).to.deep.equal({
@@ -459,14 +437,7 @@ suite('persistDD31', () => {
     const branchSnapshot = await getBranchHelper(perdag, branchID);
     const memdagSnapshot = await getChunkSnapshot(memdag, memdagHeadHash);
 
-    await persistDD31(
-      new LogContext(),
-      clients[0].clientID,
-      memdag,
-      perdag,
-      mutators,
-      () => false,
-    );
+    await testPersist(PersistedExpectation.NOTHING);
 
     const afterPersist = await getBranchAndHeadHashes();
     expect(afterPersist.branch).to.deep.equal({
@@ -503,14 +474,7 @@ suite('persistDD31', () => {
     await perdagBranchChainBuilder.removeHead();
 
     const branchSnapshot = await getBranchHelper(perdag, branchID);
-    await persistDD31(
-      new LogContext(),
-      clients[0].clientID,
-      memdag,
-      perdag,
-      mutators,
-      () => false,
-    );
+    await testPersist(PersistedExpectation.SNAPSHOT);
 
     const afterPersist = await getBranchAndHeadHashes();
 
@@ -576,14 +540,7 @@ suite('persistDD31', () => {
     await perdagBranchChainBuilder.removeHead();
 
     const branchSnapshot = await getBranchHelper(perdag, branchID);
-    await persistDD31(
-      new LogContext(),
-      clients[0].clientID,
-      memdag,
-      perdag,
-      mutators,
-      () => false,
-    );
+    await testPersist(PersistedExpectation.SNAPSHOT_AND_LOCALS);
 
     const afterPersist = await getBranchAndHeadHashes();
 
@@ -721,17 +678,9 @@ suite('persistDD31', () => {
     const branchSnapshot = await getBranchHelper(perdag, branchID);
     const memdagSnapshot = await getChunkSnapshot(memdag, memdagHeadHash);
 
-    await persistDD31(
-      new LogContext(),
-      clients[0].clientID,
-      memdag,
-      perdag,
-      mutators,
-      () => false,
-      async () => {
-        await ensurePerdagBranchUpdatedToNewerSnapshot();
-      },
-    );
+    await testPersist(PersistedExpectation.LOCALS, async () => {
+      await ensurePerdagBranchUpdatedToNewerSnapshot();
+    });
 
     const afterPersist = await getBranchAndHeadHashes();
 
@@ -799,14 +748,7 @@ suite('persistDD31', () => {
 
     let err;
     try {
-      await persistDD31(
-        new LogContext(),
-        clients[0].clientID,
-        memdag,
-        perdag,
-        mutators,
-        () => false,
-      );
+      await testPersist(PersistedExpectation.NOTHING);
     } catch (e) {
       err = e;
     }
@@ -817,16 +759,15 @@ suite('persistDD31', () => {
 });
 
 async function setupPersistTest() {
-  const memdag = new dag.TestStore(
-    undefined,
-    makeNewTempHashFunction(),
+  const hashFunction = makeNewFakeHashFunction();
+  const perdag = new dag.TestStore(undefined, hashFunction);
+  const memdag = new dag.LazyStore(
+    perdag,
+    100 * 2 ** 20, // 100 MB,
+    hashFunction,
     assertHash,
   );
-  const perdag = new dag.TestStore(
-    undefined,
-    makeNewFakeHashFunction('eda'),
-    assertNotTempHash,
-  );
+  const chunksPersistedSpy = sinon.spy(memdag, 'chunksPersisted');
 
   const mutatorNames = Array.from({length: 10}, (_, index) => {
     return createMutatorName(index);
@@ -857,12 +798,67 @@ async function setupPersistTest() {
       client: c,
     };
   };
-  const clients = [];
+  const clients: {clientID: sync.ClientID; client: ClientDD31}[] = [];
   for (let i = 0; i < 3; i++) {
     clients.push(await createClient());
   }
 
   assertNotUndefined(branchID);
+
+  const testPersist = async (
+    persistedExpectation: PersistedExpectation,
+    onGatherMemOnlyChunksForTest = async () => {
+      return;
+    },
+  ) => {
+    chunksPersistedSpy.resetHistory();
+    const perdagChunkHashesPrePersist = perdag.chunkHashes();
+    await persistDD31(
+      new LogContext(),
+      clients[0].clientID,
+      memdag,
+      perdag,
+      mutators,
+      () => false,
+      onGatherMemOnlyChunksForTest,
+    );
+    const persistedChunkHashes = new Set<Hash>();
+    const branchesHeadHash = await perdag.withRead(read => {
+      return read.getHead(BRANCHES_HEAD_NAME);
+    });
+    for (const hash of perdag.chunkHashes()) {
+      if (!perdagChunkHashesPrePersist.has(hash) && hash !== branchesHeadHash) {
+        persistedChunkHashes.add(hash);
+      }
+    }
+    switch (persistedExpectation) {
+      case PersistedExpectation.SNAPSHOT:
+        expect(persistedChunkHashes.size).to.be.greaterThan(0);
+        expect(chunksPersistedSpy.callCount).to.equal(1);
+        expect(new Set(chunksPersistedSpy.lastCall.args[0])).to.deep.equal(
+          persistedChunkHashes,
+        );
+        break;
+      case PersistedExpectation.SNAPSHOT_AND_LOCALS:
+        expect(persistedChunkHashes.size).to.be.greaterThan(0);
+        expect(chunksPersistedSpy.callCount).to.equal(1);
+        // Persisted chunks is a superset of chunks passed to
+        // chunksPersisted
+        expect([...persistedChunkHashes]).to.include.members(
+          chunksPersistedSpy.lastCall.args[0],
+        );
+        break;
+      case PersistedExpectation.LOCALS:
+        expect(persistedChunkHashes.size).to.be.greaterThan(0);
+        expect(chunksPersistedSpy.callCount).to.equal(0);
+        break;
+      case PersistedExpectation.NOTHING:
+        expect(persistedChunkHashes.size).to.equal(0);
+        expect(chunksPersistedSpy.callCount).to.equal(0);
+        break;
+    }
+  };
+
   return {
     memdag,
     perdag,
@@ -873,7 +869,7 @@ async function setupPersistTest() {
     ),
     clients,
     branchID,
-    mutators,
+    testPersist,
   };
 }
 function getBranchHelper(perdag: dag.TestStore, branchID: string) {

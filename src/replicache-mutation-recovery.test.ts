@@ -15,7 +15,7 @@ import * as dag from './dag/mod';
 import * as persist from './persist/mod';
 import * as kv from './kv/mod';
 import type * as sync from './sync/mod';
-import {assertHash, assertNotTempHash, makeNewTempHashFunction} from './hash';
+import {assertHash} from './hash';
 import {assertNotUndefined} from './asserts';
 import {expect} from '@esm-bundle/chai';
 import {uuid} from './uuid';
@@ -57,7 +57,7 @@ async function createPerdag(args: {
   } finally {
     await idbDatabases.close();
   }
-  const perdag = new dag.StoreImpl(idb, dag.uuidChunkHasher, assertNotTempHash);
+  const perdag = new dag.StoreImpl(idb, dag.uuidChunkHasher, assertHash);
   return perdag;
 }
 
@@ -66,9 +66,10 @@ async function createAndPersistClientWithPendingLocal(
   perdag: dag.Store,
   numLocal: number,
 ): Promise<db.LocalMetaSDD[]> {
-  const testMemdag = new dag.TestStore(
-    undefined,
-    makeNewTempHashFunction(),
+  const testMemdag = new dag.LazyStore(
+    perdag,
+    100 * 2 ** 20, // 100 MB,
+    dag.uuidChunkHasher,
     assertHash,
   );
   const chain: Chain = [];

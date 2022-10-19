@@ -10,7 +10,6 @@ import * as persist from './persist/mod';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import * as sinon from 'sinon';
 import type {JSONValue, ReadonlyJSONValue} from './json';
-import {Hash, makeNewTempHashFunction} from './hash';
 
 // fetch-mock has invalid d.ts file so we removed that on npm install.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -23,12 +22,13 @@ import type {DiffComputationConfig} from './sync/diff.js';
 import type {BranchID} from './sync/ids.js';
 import type {ClientID} from './sync/ids.js';
 import type {PatchOperation} from './puller.js';
+import type {Hash} from './hash';
 
 export class ReplicacheTest<
   // eslint-disable-next-line @typescript-eslint/ban-types
   MD extends MutatorDefs = {},
 > extends Replicache<MD> {
-  private _internalAPI!: ReplicacheInternalAPI;
+  private readonly _internalAPI!: ReplicacheInternalAPI;
 
   constructor(options: ReplicacheOptions<MD>) {
     let internalAPI!: ReplicacheInternalAPI;
@@ -45,16 +45,12 @@ export class ReplicacheTest<
     return super._beginPull();
   }
 
-  maybeEndPull(requestID: string): Promise<void> {
-    return super._maybeEndPull(requestID);
+  maybeEndPull(syncHead: Hash, requestID: string): Promise<void> {
+    return super._maybeEndPull(syncHead, requestID);
   }
 
   invokePush(): Promise<boolean> {
     return super._invokePush();
-  }
-
-  protected override _memdagHashFunction(): () => Hash {
-    return makeNewTempHashFunction();
   }
 
   protected override _invokePush(): Promise<boolean> {

@@ -8,6 +8,6 @@ export {
 export {ChunkNotFoundError} from './store';
 export type {Store, Read, Write, MustGetChunk} from './store';
 export {StoreImpl} from './store-impl';
-export {LazyStore} from './lazy-store';
+export {LazyStore, LazyRead} from './lazy-store';
 export {TestStore} from './test-store';
 export * from './key';

@@ -1264,6 +1264,7 @@ test('maybe end try pull', async () => {
       result = await maybeEndPull(
         store,
         lc,
+        syncHead,
         clientID,
         testSubscriptionsManagerOptions,
       );
@@ -1527,7 +1528,7 @@ test('changed keys', async () => {
       },
     };
 
-    await beginPull(
+    const pullResult = await beginPull(
       profileID,
       clientID,
       branchID,
@@ -1541,6 +1542,7 @@ test('changed keys', async () => {
     const result = await maybeEndPull(
       store,
       lc,
+      pullResult.syncHead,
       clientID,
       testSubscriptionsManagerOptions,
     );
