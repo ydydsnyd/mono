@@ -138,6 +138,9 @@ async function main() {
         esbuildPlugin({
           ts: true,
           target: 'esnext',
+          define: {
+            'process.env.NODE_ENV': '"production"',
+          },
         }),
       ],
     },
@@ -161,8 +164,28 @@ async function main() {
     );
     const page = await context.newPage();
 
-    page.on('requestfailed', request => {
-      console.error('Request failed', request.url());
+    // The perf test should only import out/replicache but there are some imports from src/**.
+    const allowedSrcFiles = [
+      'json',
+      'asserts',
+      'uuid',
+      'config',
+      'has-own',
+      'kv/idb-util',
+      'persist/idb-databases-store-test-util',
+    ];
+    page.on('request', request => {
+      const path = new URL(request.url()).pathname;
+      if (path.startsWith('/src/')) {
+        if (!allowedSrcFiles.find(f => path === `/src/${f}.ts`)) {
+          console.error('The perf test should not load:', request.url());
+          process.exit(1);
+        }
+      }
+    });
+
+    page.on('pageerror', e => {
+      console.error(e);
       process.exit(1);
     });
 

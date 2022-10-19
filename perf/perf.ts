@@ -4,7 +4,7 @@ import {benchmarks as hashBenchmarks} from './hash';
 import {benchmarks as storageBenchmarks} from './storage';
 import {benchmarks as compareBenchmarks} from './compare-utf8';
 import {benchmarks as uuidBenchmarks} from './uuid';
-import {benchmarks as mapLoopBenchmarks} from './map-loop.js';
+import {benchmarks as mapLoopBenchmarks} from './map-loop';
 import {
   formatAsBenchmarkJS,
   formatAsReplicache,

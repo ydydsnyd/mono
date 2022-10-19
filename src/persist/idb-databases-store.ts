@@ -1,28 +1,11 @@
 import {assert, assertNumber, assertObject, assertString} from '../asserts';
-import * as kv from '../kv/mod';
+import {IDBStore} from '../kv/idb-store.js';
+import type * as kv from '../kv/mod';
 import {uuid} from '../uuid';
+import {getIDBDatabasesDBName} from './idb-databases-store-db-name';
 
-const IDB_DATABASES_VERSION = 0;
-const IDB_DATABASES_DB_NAME = 'replicache-dbs-v' + IDB_DATABASES_VERSION;
 const DBS_KEY = 'dbs';
 const PROFILE_ID_KEY = 'profileId';
-
-let testNamespace = '';
-
-/** Namespace db name in test to isolate tests' indexeddb state. */
-export function setupForTest(): void {
-  testNamespace = uuid();
-}
-
-export function teardownForTest(): Promise<void> {
-  const idbDatabasesDBName = getIDBDatabasesDBName();
-  testNamespace = '';
-  return kv.dropIDBStore(idbDatabasesDBName);
-}
-
-function getIDBDatabasesDBName(): string {
-  return testNamespace + IDB_DATABASES_DB_NAME;
-}
 
 // TODO: make an opaque type
 export type IndexedDBName = string;
@@ -67,7 +50,7 @@ export class IDBDatabasesStore {
   private readonly _kvStore: kv.Store;
 
   constructor(
-    createKVStore: (name: string) => kv.Store = name => new kv.IDBStore(name),
+    createKVStore: (name: string) => kv.Store = name => new IDBStore(name),
   ) {
     this._kvStore = createKVStore(getIDBDatabasesDBName());
   }

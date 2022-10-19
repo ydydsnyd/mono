@@ -18,11 +18,11 @@ import {
   getTmcwData,
 } from './data';
 import type {Bencher, Benchmark} from './perf';
-import * as kv from '../src/kv/mod';
+import {dropStore as dropIDBStore} from '../src/kv/idb-util';
 import {
-  setupIDBDatabasesStoreForTest,
-  teardownIDBDatabasesStoreForTest,
-} from '../src/persist/mod';
+  setupForTest as setupIDBDatabasesStoreForTest,
+  teardownForTest as teardownIDBDatabasesStoreForTest,
+} from '../src/persist/idb-databases-store-db-name';
 import {uuid} from '../src/uuid';
 import {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
 import type {ReplicacheInternalAPI} from '../src/replicache-options';
@@ -652,7 +652,7 @@ function makeRepWithPopulate<MD extends PopulateMutatorDefs>(
 async function closeAndCleanupRep(rep: Replicache | undefined): Promise<void> {
   if (rep) {
     await rep.close();
-    await kv.dropIDBStore(rep.idbName);
+    await dropIDBStore(rep.idbName);
   }
 }
 

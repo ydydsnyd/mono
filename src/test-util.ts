@@ -6,7 +6,6 @@ import type {
   ReplicacheInternalAPI,
 } from './replicache-options';
 import * as kv from './kv/mod';
-import * as persist from './persist/mod';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import * as sinon from 'sinon';
 import type {JSONValue, ReadonlyJSONValue} from './json';
@@ -23,6 +22,10 @@ import type {BranchID} from './sync/ids.js';
 import type {ClientID} from './sync/ids.js';
 import type {PatchOperation} from './puller.js';
 import type {Hash} from './hash';
+import {
+  setupForTest as setupIDBDatabasesStoreForTest,
+  teardownForTest as teardownIDBDatabasesStoreForTest,
+} from './persist/idb-databases-store-db-name';
 
 export class ReplicacheTest<
   // eslint-disable-next-line @typescript-eslint/ban-types
@@ -225,7 +228,7 @@ export function initReplicacheTesting(): void {
 
   setup(() => {
     clock = useFakeTimers(0);
-    persist.setupIDBDatabasesStoreForTest();
+    setupIDBDatabasesStoreForTest();
   });
 
   teardown(async () => {
@@ -236,7 +239,7 @@ export function initReplicacheTesting(): void {
     await closeAllReps();
     await closeAllCloseables();
     await deleteAllDatabases();
-    await persist.teardownIDBDatabasesStoreForTest();
+    await teardownIDBDatabasesStoreForTest();
   });
 }
 

@@ -1,5 +1,6 @@
 import {runAll, TestStore} from './store-test-util';
-import {dropStore, IDBStore} from './idb-store';
+import {IDBStore} from './idb-store';
+import {dropStore} from './idb-util';
 import {expect} from '@esm-bundle/chai';
 
 async function newRandomIDBStore() {

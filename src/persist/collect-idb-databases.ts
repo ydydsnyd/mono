@@ -1,14 +1,14 @@
 import * as kv from '../kv/mod';
 import * as dag from '../dag/mod';
-import {ClientMap, getClients} from './clients.js';
-import {dropStore} from '../kv/idb-store.js';
+import {ClientMap, getClients} from './clients';
+import {dropStore} from '../kv/idb-util';
 import {IDBDatabasesStore} from './idb-databases-store';
 import type {IndexedDBDatabase} from './idb-databases-store';
 import {initBgIntervalProcess} from '../bg-interval';
 import type {LogContext} from '@rocicorp/logger';
-import {sleep} from '../sleep.js';
-import {AbortError} from '../abort-error.js';
-import {REPLICACHE_FORMAT_VERSION} from '../replicache.js';
+import {sleep} from '../sleep';
+import {AbortError} from '../abort-error';
+import {REPLICACHE_FORMAT_VERSION} from '../replicache';
 import {assertHash} from '../hash';
 
 // How frequently to try to collect
