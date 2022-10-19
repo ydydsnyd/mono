@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1666033528572,
+  "lastUpdate": 1666142218718,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -26969,6 +26969,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23654,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "23822e62e955632c15f29bdcb5626823bad5ec72",
+          "message": "refactor: replace temp hashes with uuid hashes. (#316)\n\nThis eliminates persist modifying the memdag and significantly simplifies persist.\r\n\r\nTemp hashes are eliminated, and the concept of 'temp chunks' is replaced by 'memory-only chunks'.\r\n\r\nInstead of gathering temp chunks identified by their temp hashes, persist now gathers 'memory-only chunks'\r\nidentified via the new API `LazyRead#isMemOnlyChunkHash`.  \r\n\r\nInstead of computing permanent hashes for the perdag and fixing up the memdag hashes, chunks\r\nare now persisted with the uuid hash assigned to them by the memdag.  This eliminates the\r\nneed to \"fixup hashes\" in the memdag.\r\n\r\n`persist` is now explicitly aware that memdag is a `LazyStore` as it now relies on the `LazyStore` specific\r\nAPIs `chunksPersisted` and `LazyRead#isMemOnlyChunkHash`.  This slight increase in coupling seems\r\nfine given LazyStore is designed specifically with persist in mind and overall this change reduces complexity.\r\n\r\n`LazyWrite#putChunk` now only allows putting 'memory-only chunks', that is it disallows directly putting\r\nperdag chunks (i.e. source chunks).   The old hash fixup process had persist putting perdag chunks\r\ninto memdag via `LazyWrite#putChunk`.  However this is eliminated, and writing perdag chunks directly\r\nto the memdag is likely a programming error. \r\n\r\nLazyStore's cache eviction and GC semantics are adjusted slightly for LazyWrite.    Source chunks read \r\nduring a LazyWrite are cache separately until the LazyWrite is committed, at which time their ref\r\ncounts are calculated (considering any head changes made by the LazyWrite), and if referenced\r\nby a head after the commit is added to the source chunks cache.  An example is helpful for\r\nunderstanding the impact of this change.  Consider:\r\n```\r\n  await lazyStore.withWrite(async write => {\r\n    await write.setHead('testLazy', sourceChunkHash);\r\n    const chunk = await write.getChunk(sourceChunkHash);\r\n    await write.commit();\r\n    return chunk;\r\n  });\r\n```\r\nPrior to this change the chunk with hash `sourceChunkHash` would not have been cached by the source chunk\r\ncache, because there is no reference to it from a lazy store head until after the write is committed.\r\n\r\nNow it will be cached (also not it doesn't matter if the head is set before or after the chunk is read).\r\n\r\nThis adjustment will result in less cache churn during the DD31 `refresh` process.\r\n\r\nReintroduces the assert that syncHead doesn't change between beginPull and maybeEndPull removed here: https://github.com/rocicorp/replicache-internal/commit/087c09c2c7b79011eaf09a529a3f4d7299ca8a48\r\nPersist modifying the syncHead (during fixup hashes) could previously make this assert fail.",
+          "timestamp": "2022-10-18T18:15:50-07:00",
+          "tree_id": "61ef33574fe85441160f93f81b2e50ab3115519a",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/23822e62e955632c15f29bdcb5626823bad5ec72"
+        },
+        "date": 1666142213663,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 185467,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 33326,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 184321,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33008,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 78474,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 22883,
             "unit": "bytes"
           }
         ]
