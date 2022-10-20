@@ -2,7 +2,7 @@
 module.exports = {
   title: 'Replicache Docs',
   tagline: 'Realtime Sync for any Backend Stack',
-  url: 'https://doc.replicache.dev/',
+  url: 'https://doc.replicache.dev',
   baseUrl: '/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
