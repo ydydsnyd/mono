@@ -22,8 +22,7 @@ import {
   fromInternalValue,
   FromInternalValueReason,
 } from './internal-value';
-import type {CreateIndexDefinition} from './db/commit';
-import type {IndexDefinitions} from './index-defs';
+import type {IndexDefinition, IndexDefinitions} from './index-defs';
 
 /**
  * ReadTransactions are used with [[Replicache.query]] and
@@ -294,6 +293,8 @@ export class WriteTransactionImpl
     return await this.dbtx.del(this._lc, key);
   }
 }
+
+export type CreateIndexDefinition = IndexDefinition & {name: string};
 
 interface IndexTransaction extends ReadTransaction {
   /**
