@@ -3,7 +3,7 @@ title: Deploy Elsewhere
 slug: /deploy-elsewhere
 ---
 
-The quickstart app is a standard [Next.js](https://nextjs.org/) app with a Postgres database backend, and can therefore be deployed just about anywhere a Node app can be deployed.
+The quickstart app is a standard React app with a Postgres database backend, and can therefore be deployed just about anywhere a Node app can be deployed.
 
 The one slightly tricky bit is that Replicache needs the server to send a server-to-client [poke message](https://doc.replicache.dev/how-it-works) when something has changed, telling Replicache to pull again.
 

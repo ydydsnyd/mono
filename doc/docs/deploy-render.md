@@ -17,10 +17,10 @@ slug: /deploy-render
 
 ### Step 2: Add license key environment variable
 
-- In the web server settings, set the `NEXT_PUBLIC_REPLICACHE_LICENSE_KEY` environment variable to your [Replicache License Key](/licensing).
+- In the web server settings, set the `VITE_REPLICACHE_LICENSE_KEY` environment variable to your [Replicache License Key](/licensing).
 
 <p className="text--center">
-  <video src="/img/deploy/render-license-key.mp4" autoPlay={true} loop={true} style={{width: "100%", maxWidth:700}} controls={true} muted={true}/>
+  <img src="/img/deploy/render-env.png" width="720"/>
 </p>
 
 ### Step 3: 🎉
@@ -30,7 +30,3 @@ When the deploy finishes, you should have a working app live on Render!
 <p className="text--center">
   <video src="/img/deploy/render-success.mp4" autoPlay={true} loop={true} style={{width: "100%", maxWidth:700}} controls={true} muted={true}/>
 </p>
-
-# Next
-
-You can also [deploy the quickstart app to Vercel/Supabase](/deploy-vercel-supabase).

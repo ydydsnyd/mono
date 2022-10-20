@@ -5,19 +5,18 @@ slug: /
 
 The easiest way to get started is with our Todo starter app.
 
-This app is a simple, but fully-functional Replicache app built with Next.js. The backend is provided by [replicache-nextjs](https://github.com/rocicorp/replicache-nextjs) — a generic Next.js Replicache server.
+This app is a simple, but fully-functional Replicache app built with React. The backend is provided by [replicache-express](https://github.com/rocicorp/replicache-express) — a generic Express Replicache server.
 
 This app is a good way to play with Replicache, but it is _also_ a great foundation on which to build your own app using Replicache. Since it is small and has all the pieces you'll need, you can clone it and then build your own app from there.
 
 # Prerequisites
 
-You'll need [Node.js](https://nodejs.dev/) v14.19.1 or greater.
+You'll need [Node.js](https://nodejs.dev/) v16 or greater.
 
 # Install
 
 ```bash
-# Get the code and install
-npx degit rocicorp/replicache-todo my-app
+npx create-replicache-app my-app react
 cd my-app
 npm install
 
@@ -25,14 +24,14 @@ npm install
 # questions and then print out your key.
 npx replicache get-license
 
-export NEXT_PUBLIC_REPLICACHE_LICENSE_KEY="<your license key>"
+export VITE_REPLICACHE_LICENSE_KEY="<your license key>"
 
-npm run dev
+npm run watch --ws
 ```
 
 # 🎉 Tada!
 
-You now have a simple todo app powered by Replicache and <a href="https://nextjs.org/">Next.js</a>.
+You now have a simple todo app powered by Replicache and Express.
 
 <p class="text--center">
   <img src="/img/setup/todo.webp" width="650"/>

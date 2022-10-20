@@ -17,7 +17,7 @@ Because there is already data stored on the client and server that doesn't have 
 
 :::
 
-```ts title="src/todo.ts"
+```ts title="shared/src/todo.ts"
 import {ReadTransaction} from 'replicache';
 
 export type Todo = {
@@ -43,7 +43,7 @@ We need a mutator to save the new field.
 
 The example app already has an `updateTodo` mutator that handles all fields of `Todo`, so there's nothing to do here 🎉:
 
-```ts title="src/mutators.ts"
+```ts title="shared/src/mutators.ts"
 export const mutators = {
   // This already stores all fields of `Todo`. Whee.
   updateTodo: async (tx: WriteTransaction, update: TodoUpdate) => {
@@ -57,7 +57,7 @@ export const mutators = {
 
 :::info
 
-It's common for Replicache apps to have basic CRUD-style mutators for each entity they support. But it's also possible to create more complex mutators for more interesting situations. See the `createTodo` mutator in [mutators.ts](https://github.com/rocicorp/replicache-todo/blob/main/src/mutators.ts#L46) for an example.
+It's common for Replicache apps to have basic CRUD-style mutators for each entity they support. But it's also possible to create more complex mutators for more interesting situations. See the `createTodo` mutator in [mutators.ts](https://github.com/rocicorp/replicache-quickstarts/blob/main/shared/src/mutators.ts#L56) for an example.
 
 :::
 
@@ -65,7 +65,7 @@ It's common for Replicache apps to have basic CRUD-style mutators for each entit
 
 We need to add a UI element so that the user can toggle the "urgent" flag. This is simple to do since the mutator we need is already available in this component as `onUpdate`.
 
-```tsx title="src/components/todo-item.tsx"
+```tsx title="client/react/src/components/todo-item.tsx"
 <div className="view">
   ...
   {/* add this button to the view div right before the "destroy" button */}
@@ -94,7 +94,7 @@ At this point, we have actually finished the basic plumbing of our feature. Clic
 
 Just to prove to ourselves that this is happening, let's change the look of the todo when it's urgent:
 
-```tsx title="src/components/todo-item.tsx"
+```tsx title="client/react/src/components/todo-item.tsx"
 {/* add the style attribute to change the todo-item's background when urgent */}
 <div
   className="view"

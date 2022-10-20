@@ -19,7 +19,6 @@ module.exports = {
             {
               'Next Steps': [
                 'deploy-render',
-                'deploy-vercel-supabase',
                 'deploy-elsewhere',
                 'local-postgres',
               ],
