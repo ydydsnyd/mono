@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1666242208648,
+  "lastUpdate": 1666274373208,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -27239,6 +27239,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 22840,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6c8d5bee412fda01d6c0fb92fd27d0ce34905b35",
+          "message": "chore: Fix perf runner again (#322)\n\nRemove the allow list and only deny /src/replicache\r\n\r\nAdd type checking to perf/runner.js\r\n\r\nFollowup to #320",
+          "timestamp": "2022-10-20T15:58:23+02:00",
+          "tree_id": "345f68c25692677e9c2346cae9de465f207c0579",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/6c8d5bee412fda01d6c0fb92fd27d0ce34905b35"
+        },
+        "date": 1666274368184,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 185504,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 33335,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 184358,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33026,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 78397,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 22792,
             "unit": "bytes"
           }
         ]
