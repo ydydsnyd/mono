@@ -1,7 +1,7 @@
 // @ts-check
 
 import * as esbuild from 'esbuild';
-import {readFile} from 'fs/promises';
+import {makeDefine} from './make-define.mjs';
 
 const forBundleSizeDashboard = process.argv.includes('--bundle-sizes');
 const perf = process.argv.includes('--perf');
@@ -28,12 +28,6 @@ function sharedOptions(minify) {
   return opts;
 }
 
-async function readPackageJSON() {
-  const url = new URL('../package.json', import.meta.url);
-  const s = await readFile(url, 'utf-8');
-  return JSON.parse(s);
-}
-
 /**
  * @param {{
  *   format: "esm" | "cjs";
@@ -51,10 +45,7 @@ async function buildReplicache(options) {
     platform: 'neutral',
     outfile: 'out/replicache.' + ext,
     entryPoints: ['src/mod.ts'],
-    define: {
-      REPLICACHE_VERSION: JSON.stringify((await readPackageJSON()).version),
-      DD31: JSON.stringify(dd31),
-    },
+    define: await makeDefine('release', dd31),
   });
 }
 

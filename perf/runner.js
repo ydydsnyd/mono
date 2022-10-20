@@ -1,4 +1,5 @@
 /* eslint-env node, es2020 */
+// @ts-check
 
 import commandLineArgs from 'command-line-args';
 import commandLineUsage from 'command-line-usage';
@@ -9,38 +10,56 @@ import getPort from 'get-port';
 import * as os from 'os';
 import * as path from 'path';
 import {promises as fs} from 'fs';
+import {makeDefine} from '../tool/make-define.mjs';
+
+/** @typedef {'chromium' | 'firefox' | 'webkit'} Browser */
 
 const allBrowsers = ['chromium', 'firefox', 'webkit'];
 
+class UnknownValueError extends Error {
+  name = 'UNKNOWN_VALUE';
+
+  /**
+   * @param {string} arg
+   * @param {string} optionName
+   */
+  constructor(arg, optionName) {
+    super(`Unknown format ${arg}`);
+    this.value = arg;
+    this.optionName = '--' + optionName;
+  }
+}
+
+/**
+ * @param {string} arg
+ */
 function browser(arg) {
   arg = arg.toLowerCase();
   if (!['all', ...allBrowsers].includes(arg)) {
-    const err = new Error(`Unknown browser ${arg}`);
-    err.name = 'UNKNOWN_VALUE';
-    err.value = arg;
-    err.optionName = '--browsers';
-    throw err;
+    throw new UnknownValueError(arg, 'browsers');
   }
-  return arg;
+  return /** @type {Browser | 'all'} */ (arg);
 }
 
+/**
+ * @param {Browser} browser
+ */
 function browserName(browser) {
-  let name = browser[0].toUpperCase() + browser.substr(1);
+  let name = browser[0].toUpperCase() + browser.slice(1);
   if (name === 'Webkit') {
     name = 'WebKit';
   }
   return name;
 }
 
+/**
+ * @param {string} arg
+ */
 function format(arg) {
   if (!['benchmarkJS', 'json', 'replicache'].includes(arg)) {
-    const err = new Error(`Unknown format ${arg}`);
-    err.name = 'UNKNOWN_VALUE';
-    err.value = arg;
-    err.optionName = '--format';
-    throw err;
+    throw new UnknownValueError(arg, 'format');
   }
-  return arg;
+  return /** @type {'benchmarkJS' | 'json' | 'replicache'} */ (arg);
 }
 
 async function main() {
@@ -138,9 +157,7 @@ async function main() {
         esbuildPlugin({
           ts: true,
           target: 'esnext',
-          define: {
-            'process.env.NODE_ENV': '"production"',
-          },
+          define: await makeDefine('release', false),
         }),
       ],
     },
@@ -153,7 +170,7 @@ async function main() {
     path.join(os.tmpdir(), 'replicache-playwright-'),
   );
   let first = true;
-  for (const browser of options.browsers) {
+  for (const browser of /** @type {Browser[]} */ (options.browsers)) {
     if (!first) {
       logLine('', options);
     }
@@ -164,23 +181,14 @@ async function main() {
     );
     const page = await context.newPage();
 
-    // The perf test should only import out/replicache but there are some imports from src/**.
-    const allowedSrcFiles = [
-      'json',
-      'asserts',
-      'uuid',
-      'config',
-      'has-own',
-      'kv/idb-util',
-      'persist/idb-databases-store-test-util',
-    ];
-    page.on('request', request => {
+    // The perf test should only import out/replicache.
+    page.on('request', (/** @type {{ url: () => string }} */ request) => {
       const path = new URL(request.url()).pathname;
-      if (path.startsWith('/src/')) {
-        if (!allowedSrcFiles.find(f => path === `/src/${f}.ts`)) {
-          console.error('The perf test should not load:', request.url());
-          process.exit(1);
-        }
+      if (path === '/src/replicache.js') {
+        console.error(
+          `The perf test should not load:${path}. The perf tests should use the compiled output`,
+        );
+        process.exit(1);
       }
     });
 
@@ -202,7 +210,7 @@ async function main() {
       await Promise.race([context.close(), wait(1000)]);
     } else {
       await new Promise(resolve => {
-        setTimeout(() => resolve(), 2 ** 31 - 1);
+        setTimeout(() => resolve(undefined), 2 ** 31 - 1);
       }); // Don't let the dev server stop!
     }
   }
@@ -214,6 +222,11 @@ async function main() {
   await server.stop();
 }
 
+/**
+ * @param {Browser} browser
+ * @param {playwright.Page} page
+ * @param {commandLineArgs.CommandLineOptions} options
+ */
 async function runInBrowser(browser, page, options) {
   async function waitForBenchmarks() {
     await page.waitForFunction('typeof benchmarks !==  "undefined"', null, {
@@ -261,6 +274,7 @@ async function runInBrowser(browser, page, options) {
   for (const benchmark of benchmarks) {
     const result = await page.evaluate(
       ({name, group, format}) =>
+        // @ts-expect-error This function is run in a different global
         // eslint-disable-next-line no-undef
         runBenchmarkByNameAndGroup(name, group, format),
       {format: options.format, ...benchmark},
@@ -286,7 +300,10 @@ main().catch(err => {
   process.exit(1);
 });
 
-/** @param {string} s */
+/**
+ * @param {string} s
+ * @param {commandLineArgs.CommandLineOptions} options
+ */
 function logLine(s, options) {
   if (options.format !== 'json') {
     process.stdout.write(s + '\n');
