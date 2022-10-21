@@ -50,7 +50,7 @@ export async function addGenesis(
   return chain;
 }
 
-export async function createGenesis(
+async function createGenesis(
   store: dag.Store,
   clientID: ClientID,
   headName = DEFAULT_HEAD_NAME,
@@ -87,7 +87,7 @@ export async function addLocal(
   return chain;
 }
 
-export async function createLocal(
+async function createLocal(
   entries: [string, JSONValue][],
   store: dag.Store,
   i: number,
@@ -147,7 +147,7 @@ export async function addIndexChange(
   return chain;
 }
 
-export async function createIndex(
+async function createIndex(
   name: string,
   prefix: string,
   jsonPointer: string,

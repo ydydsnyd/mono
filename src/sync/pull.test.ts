@@ -12,7 +12,6 @@ import {
   addSnapshot,
   Chain,
   ChainBuilder,
-  createIndex,
 } from '../db/test-helpers';
 import type {ReadonlyJSONValue} from '../json';
 import type {
@@ -1449,9 +1448,11 @@ test('changed keys', async () => {
           indexDefinitions,
         );
       } else {
-        chain.push(
-          await createIndex(name, prefix, jsonPointer, store, false, clientID),
-        );
+        await addIndexChange(chain, store, clientID, name, {
+          prefix,
+          jsonPointer,
+          allowEmpty: false,
+        });
       }
     }
 
