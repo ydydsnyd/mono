@@ -19,10 +19,6 @@ import {
 } from './data';
 import type {Bencher, Benchmark} from './perf';
 import {dropStore as dropIDBStore} from '../src/kv/idb-util';
-import {
-  setupForTest as setupIDBDatabasesStoreForTest,
-  teardownForTest as teardownIDBDatabasesStoreForTest,
-} from '../src/persist/idb-databases-store-db-name';
 import {uuid} from '../src/uuid';
 import {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
 import type {ReplicacheInternalAPI} from '../src/replicache-options';
@@ -43,11 +39,7 @@ export function benchmarkPopulate(opts: {
     }, ${`indexes: ${opts.indexes || 0}`})`,
     group: 'replicache',
     byteSize: opts.numKeys * valSize,
-    async setupEach() {
-      setupIDBDatabasesStoreForTest();
-    },
     async teardownEach() {
-      await teardownIDBDatabasesStoreForTest();
       await closeAndCleanupRep(repToClose);
     },
     async run(bencher: Bencher) {
@@ -89,11 +81,7 @@ export function benchmarkPersist(opts: {
     }`})`,
     group: 'replicache',
     byteSize: opts.numKeys * valSize,
-    async setupEach() {
-      setupIDBDatabasesStoreForTest();
-    },
     async teardownEach() {
-      await teardownIDBDatabasesStoreForTest();
       await closeAndCleanupRep(repToClose);
     },
     async run(bencher: Bencher) {
@@ -147,7 +135,6 @@ async function setupPersistedData(
     });
   }
 
-  setupIDBDatabasesStoreForTest();
   let repToClose;
   try {
     // populate store using pull (as opposed to mutators)
@@ -178,7 +165,6 @@ async function setupPersistedData(
 
     await rep.persist();
   } finally {
-    await teardownIDBDatabasesStoreForTest();
     await repToClose?.close();
   }
 }
@@ -196,11 +182,7 @@ export function benchmarkStartupUsingBasicReadsFromPersistedData(opts: {
     async setup() {
       await setupPersistedData(repName, opts.numKeysPersisted);
     },
-    async setupEach() {
-      setupIDBDatabasesStoreForTest();
-    },
     async teardownEach() {
-      await teardownIDBDatabasesStoreForTest();
       await repToClose?.close();
     },
     async teardown() {
@@ -245,11 +227,7 @@ export function benchmarkStartupUsingScanFromPersistedData(opts: {
     async setup() {
       await setupPersistedData(repName, opts.numKeysPersisted);
     },
-    async setupEach() {
-      setupIDBDatabasesStoreForTest();
-    },
     async teardownEach() {
-      await teardownIDBDatabasesStoreForTest();
       await repToClose?.close();
     },
     async teardown() {
@@ -299,7 +277,6 @@ export function benchmarkReadTransaction(opts: {
     group: 'replicache',
     byteSize: opts.numKeys * valSize,
     async setup() {
-      setupIDBDatabasesStoreForTest();
       rep = makeRepWithPopulate();
       await rep.mutate.populate({
         numKeys: opts.numKeys,
@@ -307,7 +284,6 @@ export function benchmarkReadTransaction(opts: {
       });
     },
     async teardown() {
-      await teardownIDBDatabasesStoreForTest();
       await closeAndCleanupRep(rep);
     },
     async run(bench: Bencher) {
@@ -336,7 +312,6 @@ export function benchmarkScan(opts: {numKeys: number}): Benchmark {
     byteSize: opts.numKeys * valSize,
 
     async setup() {
-      setupIDBDatabasesStoreForTest();
       rep = makeRepWithPopulate();
       await rep.mutate.populate({
         numKeys: opts.numKeys,
@@ -344,7 +319,6 @@ export function benchmarkScan(opts: {numKeys: number}): Benchmark {
       });
     },
     async teardown() {
-      await teardownIDBDatabasesStoreForTest();
       await closeAndCleanupRep(rep);
     },
     async run() {
@@ -371,17 +345,11 @@ export function benchmarkCreateIndex(opts: {numKeys: number}): Benchmark {
   return {
     name: `create index with definition ${valSize}x${opts.numKeys}`,
     group: 'replicache',
-    async setup() {
-      setupIDBDatabasesStoreForTest();
-    },
     async setupEach() {
       await setupPersistedData(repName, opts.numKeys);
     },
     async teardownEach() {
       await closeAndCleanupRep(rep);
-    },
-    async teardown() {
-      await teardownIDBDatabasesStoreForTest();
     },
     async run(bencher: Bencher) {
       const t0 = performance.now();
@@ -416,11 +384,7 @@ export function benchmarkCreateIndexDeprecated(opts: {
   return {
     name: `create index ${valSize}x${opts.numKeys}`,
     group: 'replicache',
-    async setupEach() {
-      setupIDBDatabasesStoreForTest();
-    },
     async teardownEach() {
-      await teardownIDBDatabasesStoreForTest();
       await closeAndCleanupRep(repToClose);
     },
     async run(bencher: Bencher) {
@@ -465,11 +429,7 @@ export function benchmarkWriteSubRead(opts: {
   return {
     name: `writeSubRead ${cacheSizeMB}MB total, ${numSubsTotal} subs total, ${numSubsDirty} subs dirty, ${kbReadPerSub}kb read per sub`,
     group: 'replicache',
-    async setupEach() {
-      setupIDBDatabasesStoreForTest();
-    },
     async teardownEach() {
-      await teardownIDBDatabasesStoreForTest();
       await closeAndCleanupRep(repToClose);
     },
     async run(bencher: Bencher) {
@@ -568,11 +528,7 @@ function benchmarkTmcw(kind: 'populate' | 'persist'): Benchmark {
     async setup() {
       updates = (await getTmcwData()).features;
     },
-    async setupEach() {
-      setupIDBDatabasesStoreForTest();
-    },
     async teardownEach() {
-      await teardownIDBDatabasesStoreForTest();
       await closeAndCleanupRep(repToClose);
     },
     async run(bencher: Bencher) {
