@@ -218,7 +218,11 @@ async function main() {
   if (!options.list) {
     logLine('Done!', options);
   }
-  await fs.rm(userDataDir, {recursive: true});
+  try {
+    await fs.rm(userDataDir, {recursive: true, force: true});
+  } catch {
+    // Ignore.
+  }
   await server.stop();
 }
 
