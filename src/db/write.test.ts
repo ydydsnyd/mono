@@ -378,7 +378,7 @@ test('create and drop index', async () => {
       expect(indexes).to.have.lengthOf(1);
       const idx = indexes[0];
       expect(idx.definition.name).to.equal(indexName);
-      expect(idx.definition.keyPrefix).to.be.empty;
+      expect(idx.definition.prefix).to.be.empty;
       expect(idx.definition.jsonPointer).to.equal('/s');
       expect(idx.definition.allowEmpty).to.be.false;
       const indexMap = new BTreeRead(dagRead, idx.valueHash);
@@ -689,7 +689,7 @@ function indexRecordsToIndexDefinitions(
   const defs: Writable<IndexDefinitions> = {};
   for (const index of indexes) {
     defs[index.definition.name] = {
-      prefix: index.definition.keyPrefix,
+      prefix: index.definition.prefix,
       jsonPointer: index.definition.jsonPointer,
       allowEmpty: index.definition.allowEmpty,
     };

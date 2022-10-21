@@ -13,7 +13,6 @@ import {
   PullResponseDD31,
 } from './puller';
 import {
-  CreateIndexDefinition,
   IndexTransactionImpl,
   ReadTransactionImpl,
   WriteTransactionImpl,
@@ -62,6 +61,7 @@ import {
   toInternalValue,
   ToInternalValueReason,
 } from './internal-value.js';
+import type {CreateIndexDefinition} from './db/commit.js';
 import type {IndexDefinitions} from './index-defs';
 import {assertClientDD31} from './persist/clients.js';
 import {throwIfClosed} from './transaction-closed-error.js';

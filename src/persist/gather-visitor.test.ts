@@ -228,7 +228,7 @@ test('dag with some permanent hashes and some memory-only hashes on top w index'
                   {
                     definition: {
                       name: 'testIndex',
-                      keyPrefix: '',
+                      prefix: '',
                       jsonPointer: '/name',
                       allowEmpty: true,
                     },
@@ -304,7 +304,7 @@ test('dag with some permanent hashes and some memory-only hashes on top w index'
                   {
                     definition: {
                       name: 'testIndex',
-                      keyPrefix: '',
+                      prefix: '',
                       jsonPointer: '/name',
                       allowEmpty: true,
                     },
@@ -331,7 +331,7 @@ test('dag with some permanent hashes and some memory-only hashes on top w index'
                   {
                     definition: {
                       name: 'testIndex',
-                      keyPrefix: '',
+                      prefix: '',
                       jsonPointer: '/name',
                       allowEmpty: true,
                     },

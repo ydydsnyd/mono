@@ -11,12 +11,11 @@ import {uuid as makeUuid} from '../uuid';
 import {
   assertSnapshotCommitDD31,
   compareCookies,
+  CreateIndexDefinition,
   getRefs,
-  toChunkIndexDefinition,
+  nameIndexDefinition,
   newSnapshotCommitData,
   newSnapshotCommitDataDD31,
-  ChunkIndexDefinition,
-  chunkIndexDefinitionEqualIgnoreName,
 } from '../db/commit';
 import type {ClientID} from '../sync/ids';
 import {
@@ -26,9 +25,14 @@ import {
   mutatorNamesEqual,
   setBranch,
 } from './branches';
-import {IndexDefinitions, indexDefinitionsEqual} from '../index-defs';
-import {CastReason, InternalValue, safeCastToJSON} from '../internal-value';
-import {createIndexBTree} from '../db/write';
+import {
+  IndexDefinition,
+  indexDefinitionEqual,
+  IndexDefinitions,
+  indexDefinitionsEqual,
+} from '../index-defs';
+import {CastReason, InternalValue, safeCastToJSON} from '../internal-value.js';
+import {createIndexBTree} from '../db/write.js';
 
 export type ClientMap = ReadonlyMap<sync.ClientID, ClientSDD | ClientDD31>;
 
@@ -405,12 +409,12 @@ export function initClientDD31(
       // At this point the value of replicache is the empty tree so all index
       // maps will also be the empty tree.
       for (const [name, indexDefinition] of Object.entries(indexes)) {
-        const chunkIndexDefinition = toChunkIndexDefinition(
+        const createIndexDefinition = nameIndexDefinition(
           name,
           indexDefinition,
         );
         indexRecords.push({
-          definition: chunkIndexDefinition,
+          definition: createIndexDefinition,
           valueHash: emptyBTreeChunk.hash,
         });
       }
@@ -435,17 +439,17 @@ export function initClientDD31(
 
     for (const [name, indexDefinition] of Object.entries(indexes)) {
       const {prefix = '', jsonPointer, allowEmpty = false} = indexDefinition;
-      const chunkIndexDefinition: ChunkIndexDefinition = {
+      const createIndexDefinition: Required<CreateIndexDefinition> = {
         name,
-        keyPrefix: prefix,
+        prefix,
         jsonPointer,
         allowEmpty,
       };
 
-      const oldIndex = findMatchingOldIndex(oldIndexes, chunkIndexDefinition);
+      const oldIndex = findMatchingOldIndex(oldIndexes, indexDefinition);
       if (oldIndex) {
         indexRecords.push({
-          definition: chunkIndexDefinition,
+          definition: createIndexDefinition,
           valueHash: oldIndex.valueHash,
         });
       } else {
@@ -453,12 +457,10 @@ export function initClientDD31(
           lc,
           dagWrite,
           map,
-          prefix,
-          jsonPointer,
-          allowEmpty,
+          indexDefinition,
         );
         indexRecords.push({
-          definition: chunkIndexDefinition,
+          definition: createIndexDefinition,
           valueHash: await indexBTree.flush(),
         });
       }
@@ -475,10 +477,10 @@ export function initClientDD31(
 
 function findMatchingOldIndex(
   oldIndexes: readonly db.IndexRecord[],
-  chunkIndexDefinition: ChunkIndexDefinition,
+  indexDefinition: IndexDefinition,
 ) {
   return oldIndexes.find(index =>
-    chunkIndexDefinitionEqualIgnoreName(index.definition, chunkIndexDefinition),
+    indexDefinitionEqual(index.definition, indexDefinition),
   );
 }
 

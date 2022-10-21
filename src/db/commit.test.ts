@@ -19,8 +19,6 @@ import {
   assertSnapshotMeta,
   SnapshotMetaDD31,
   localMutationsGreaterThan,
-  chunkIndexDefinitionEqualIgnoreName,
-  ChunkIndexDefinition,
 } from './commit';
 import {
   addGenesis,
@@ -603,51 +601,4 @@ test('getMutationID across commits with different clients', async () => {
     expect(await local.getMutationID(clientID, dagRead)).to.equal(2);
     expect(await local.getMutationID(clientID2, dagRead)).to.equal(1);
   });
-});
-
-test('chunkIndexDefinitionEqualIgnoreName', () => {
-  const t = (a: ChunkIndexDefinition, b = a) => {
-    expect(chunkIndexDefinitionEqualIgnoreName(a, b)).true;
-  };
-  const f = (a: ChunkIndexDefinition, b = a) => {
-    expect(chunkIndexDefinitionEqualIgnoreName(a, b)).false;
-  };
-
-  t({name: 'a', jsonPointer: '/a', keyPrefix: ''});
-  t({name: 'a', jsonPointer: '/a', keyPrefix: 'x', allowEmpty: true});
-  t({name: 'a', jsonPointer: '/a', keyPrefix: 'x', allowEmpty: false});
-
-  t(
-    {name: 'a', jsonPointer: '/a', keyPrefix: ''},
-    {name: 'a', jsonPointer: '/a', keyPrefix: '', allowEmpty: false},
-  );
-  f(
-    {name: 'a', jsonPointer: '/a', keyPrefix: ''},
-    {name: 'a', jsonPointer: '/a', keyPrefix: '', allowEmpty: true},
-  );
-
-  t(
-    {name: 'a', jsonPointer: '/a', keyPrefix: ''},
-    {name: 'b', jsonPointer: '/a', keyPrefix: ''},
-  );
-
-  f(
-    {name: 'a', jsonPointer: '/a', keyPrefix: ''},
-    {name: 'a', jsonPointer: '/b', keyPrefix: ''},
-  );
-
-  f(
-    {name: 'a', jsonPointer: '/a', keyPrefix: ''},
-    {name: 'a', jsonPointer: '/a', keyPrefix: 'x'},
-  );
-
-  f(
-    {name: 'a', jsonPointer: '/a', keyPrefix: '', allowEmpty: true},
-    {name: 'a', jsonPointer: '/a', keyPrefix: '', allowEmpty: false},
-  );
-
-  f(
-    {name: 'a', jsonPointer: '/a', keyPrefix: '', allowEmpty: true},
-    {name: 'a', jsonPointer: '/a', keyPrefix: ''},
-  );
 });

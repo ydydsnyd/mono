@@ -6,6 +6,7 @@ import type {ClientID} from '../sync/mod';
 import {
   Commit,
   Meta as CommitMeta,
+  CreateIndexDefinition,
   IndexRecord,
   newIndexChange as commitNewIndexChange,
   newLocal as commitNewLocal,
@@ -14,9 +15,7 @@ import {
   MetaType,
   assertSnapshotMetaDD31,
   assertSnapshotMeta,
-  toChunkIndexDefinition,
-  ChunkIndexDefinition,
-  chunkIndexDefinitionEqualIgnoreName,
+  nameIndexDefinition,
 } from './commit';
 import {
   Read,
@@ -32,8 +31,12 @@ import type {InternalDiff} from '../btree/node';
 import {allEntriesAsDiff} from '../btree/read';
 import type {InternalValue} from '../internal-value';
 import {assert} from '../asserts';
-import type {IndexDefinition, IndexDefinitions} from '../index-defs';
-import type {DiffComputationConfig} from '../sync/diff';
+import {
+  IndexDefinition,
+  indexDefinitionEqual,
+  IndexDefinitions,
+} from '../index-defs';
+import type {DiffComputationConfig} from '../sync/diff.js';
 
 export class Write extends Read {
   private readonly _dagWrite: dag.Write;
@@ -122,9 +125,9 @@ export class Write extends Read {
       throw new Error('Not allowed');
     }
 
-    const chunkIndexDefinition: ChunkIndexDefinition = {
+    const definition: Required<CreateIndexDefinition> = {
       name,
-      keyPrefix: prefix,
+      prefix,
       jsonPointer,
       allowEmpty,
     };
@@ -132,31 +135,22 @@ export class Write extends Read {
     // Check to see if the index already exists.
     const index = this.indexes.get(name);
     if (index) {
-      if (
-        // Name already checked
-        !chunkIndexDefinitionEqualIgnoreName(
-          chunkIndexDefinition,
-          index.meta.definition,
-        )
-      ) {
+      if (!indexDefinitionEqual(definition, index.meta.definition)) {
         throw new Error('Index exists with different definition');
       }
     }
 
-    const indexMap = await createIndexBTree(
-      lc,
-      this._dagWrite,
-      this.map,
+    const indexMap = await createIndexBTree(lc, this._dagWrite, this.map, {
       prefix,
       jsonPointer,
       allowEmpty,
-    );
+    });
 
     this.indexes.set(
       name,
       new IndexWrite(
         {
-          definition: chunkIndexDefinition,
+          definition,
           valueHash: emptyHash,
         },
         indexMap,
@@ -180,13 +174,7 @@ export class Write extends Read {
     definition: IndexDefinition,
   ): Promise<IndexWrite | null> {
     for (const [oldName, oldIndexWrite] of this.indexes) {
-      const newChunkIndexDefinition = toChunkIndexDefinition(name, definition);
-      if (
-        chunkIndexDefinitionEqualIgnoreName(
-          newChunkIndexDefinition,
-          oldIndexWrite.meta.definition,
-        )
-      ) {
+      if (indexDefinitionEqual(definition, oldIndexWrite.meta.definition)) {
         if (name === oldName) {
           // "renamed" to same name, noop
           return oldIndexWrite;
@@ -196,7 +184,7 @@ export class Write extends Read {
         // map.
         return new IndexWrite(
           {
-            definition: newChunkIndexDefinition,
+            definition: nameIndexDefinition(name, definition),
             valueHash: emptyHash,
           },
           oldIndexWrite.map,
@@ -215,13 +203,11 @@ export class Write extends Read {
           lc,
           this._dagWrite,
           this.map,
-          definition.prefix ?? '',
-          definition.jsonPointer,
-          definition.allowEmpty ?? false,
+          definition,
         );
         indexWrite = new IndexWrite(
           {
-            definition: toChunkIndexDefinition(name, definition),
+            definition: nameIndexDefinition(name, definition),
             valueHash: emptyHash,
           },
           indexMap,
@@ -524,8 +510,8 @@ export async function updateIndexes(
 ): Promise<void> {
   const ps: Promise<void>[] = [];
   for (const idx of indexes.values()) {
-    const {keyPrefix} = idx.meta.definition;
-    if (!keyPrefix || key.startsWith(keyPrefix)) {
+    const {prefix} = idx.meta.definition;
+    if (!prefix || key.startsWith(prefix)) {
       const oldVal = await oldValGetter();
       if (oldVal !== undefined) {
         ps.push(
@@ -536,7 +522,7 @@ export async function updateIndexes(
             key,
             oldVal,
             idx.meta.definition.jsonPointer,
-            idx.meta.definition.allowEmpty ?? false,
+            idx.meta.definition.allowEmpty,
           ),
         );
       }
@@ -549,7 +535,7 @@ export async function updateIndexes(
             key,
             newVal,
             idx.meta.definition.jsonPointer,
-            idx.meta.definition.allowEmpty ?? false,
+            idx.meta.definition.allowEmpty,
           ),
         );
       }
@@ -576,11 +562,10 @@ export async function createIndexBTree(
   lc: LogContext,
   dagWrite: dag.Write,
   valueMap: BTreeRead,
-  prefix: string,
-  jsonPointer: string,
-  allowEmpty: boolean,
+  indexDefinition: IndexDefinition,
 ): Promise<BTreeWrite> {
   const indexMap = new BTreeWrite(dagWrite);
+  const {prefix = '', jsonPointer, allowEmpty = false} = indexDefinition;
   for await (const entry of valueMap.scan(prefix)) {
     await indexValue(
       lc,

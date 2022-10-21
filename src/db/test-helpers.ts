@@ -12,7 +12,7 @@ import {
   LocalMetaDD31,
   Meta,
   MetaType,
-  toChunkIndexDefinition,
+  nameIndexDefinition,
   SnapshotMetaDD31,
 } from './commit';
 import {readCommit, whenceHead} from './read';
@@ -198,10 +198,6 @@ export async function addSnapshot(
         for (const [name, indexDefinition] of Object.entries(
           indexDefinitions,
         )) {
-          const chunkIndexDefinition = toChunkIndexDefinition(
-            name,
-            indexDefinition,
-          );
           const valueMap = new BTreeRead(
             dagWrite,
             chain[chain.length - 1].valueHash,
@@ -210,13 +206,11 @@ export async function addSnapshot(
             new LogContext(),
             dagWrite,
             valueMap,
-            chunkIndexDefinition.keyPrefix,
-            chunkIndexDefinition.jsonPointer,
-            chunkIndexDefinition.allowEmpty ?? false,
+            indexDefinition,
           );
           const indexMapHash = await indexMap.flush();
           const indexRecord: IndexRecord = {
-            definition: chunkIndexDefinition,
+            definition: nameIndexDefinition(name, indexDefinition),
             valueHash: indexMapHash,
           };
           indexes.set(name, new IndexWrite(indexRecord, indexMap));
@@ -380,7 +374,7 @@ async function createEmptyIndexMaps(
       emptyTreeHash = emptyBTreeChunk.hash;
     }
     const indexRecord: IndexRecord = {
-      definition: toChunkIndexDefinition(name, indexDefinition),
+      definition: nameIndexDefinition(name, indexDefinition),
       valueHash: emptyTreeHash,
     };
     indexes.set(
