@@ -429,47 +429,68 @@ function assertMeta(v: unknown): asserts v is Meta {
 }
 
 /**
- * The definition of an index. This is used with
- * [[Replicache.createIndex|createIndex]] when creating indexes.
+ * This is the type used for index definitions as defined in the Commit chunk data.
+ *
+ * Changing this requires a REPLICACHE_FORMAT_VERSION bump.
  */
-export type CreateIndexDefinition = IndexDefinition & {
-  /** The name of the index. This is used when you [[ReadTransaction.scan|scan]] over an index. */
-  name: string;
+export type ChunkIndexDefinition = {
+  readonly name: string;
+  readonly keyPrefix: string;
+  readonly jsonPointer: string;
+  // Used to not exist
+  readonly allowEmpty?: boolean;
 };
 
-function assertCreateIndexDefinition(
+export function chunkIndexDefinitionEqual(
+  a: ChunkIndexDefinition,
+  b: ChunkIndexDefinition,
+): boolean {
+  return a.name === b.name && chunkIndexDefinitionEqualIgnoreName(a, b);
+}
+
+export function chunkIndexDefinitionEqualIgnoreName(
+  a: ChunkIndexDefinition,
+  b: ChunkIndexDefinition,
+): boolean {
+  return (
+    a.jsonPointer === b.jsonPointer &&
+    (a.allowEmpty ?? false) === (b.allowEmpty ?? false) &&
+    a.keyPrefix === b.keyPrefix
+  );
+}
+
+function assertChunkIndexDefinition(
   v: unknown,
-): asserts v is CreateIndexDefinition {
+): asserts v is ChunkIndexDefinition {
   assertObject(v);
   assertString(v.name);
-  assertString(v.prefix);
+  assertString(v.keyPrefix);
   assertString(v.jsonPointer);
-
   if (v.allowEmpty !== undefined) {
     assertBoolean(v.allowEmpty);
   }
 }
 
-export function nameIndexDefinition(
+export function toChunkIndexDefinition(
   name: string,
   indexDefinition: IndexDefinition,
-): Required<CreateIndexDefinition> {
+): Required<ChunkIndexDefinition> {
   return {
     name,
-    prefix: indexDefinition.prefix ?? '',
+    keyPrefix: indexDefinition.prefix ?? '',
     jsonPointer: indexDefinition.jsonPointer,
     allowEmpty: indexDefinition.allowEmpty ?? false,
   };
 }
 
 export type IndexRecord = {
-  readonly definition: Required<CreateIndexDefinition>;
+  readonly definition: ChunkIndexDefinition;
   readonly valueHash: Hash;
 };
 
 function assertIndexRecord(v: unknown): asserts v is IndexRecord {
   assertObject(v);
-  assertCreateIndexDefinition(v.definition);
+  assertChunkIndexDefinition(v.definition);
   assertString(v.valueHash);
 }
 
@@ -691,7 +712,6 @@ function validateChunk(
   const {data} = chunk;
   assertCommitData(data);
 
-  // Indexes is optional
   const seen = new Set();
   for (const index of data.indexes) {
     const {name} = index.definition;
