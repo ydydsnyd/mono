@@ -13,7 +13,7 @@ import {
   newSnapshotDD31 as commitNewSnapshotDD31,
   MetaType,
   assertSnapshotMetaDD31,
-  assertSnapshotMeta,
+  assertSnapshotMetaSDD,
   toChunkIndexDefinition,
   ChunkIndexDefinition,
   chunkIndexDefinitionEqualIgnoreName,
@@ -287,7 +287,7 @@ export class Write extends Read {
             indexRecords,
           );
         } else {
-          assertSnapshotMeta(meta);
+          assertSnapshotMetaSDD(meta);
           const {basisHash, lastMutationID, cookieJSON} = meta;
           commit = commitNewSnapshot(
             this._dagWrite.createChunk,

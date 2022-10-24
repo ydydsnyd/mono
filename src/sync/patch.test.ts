@@ -3,7 +3,7 @@ import {expect} from '@esm-bundle/chai';
 import * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import type {JSONValue} from '../json';
-import {addGenesis, Chain} from '../db/test-helpers';
+import {ChainBuilder} from '../db/test-helpers';
 import {apply} from './patch';
 import {assertPatchOperations} from '../puller';
 
@@ -155,26 +155,26 @@ test('patch', async () => {
   ];
 
   for (const c of cases) {
-    const chain: Chain = [];
-    await addGenesis(chain, store, clientID);
+    const b = new ChainBuilder(store);
+    await b.addGenesis(clientID);
     await store.withWrite(async dagWrite => {
       let dbWrite;
       if (DD31) {
         dbWrite = await db.newWriteSnapshotDD31(
-          db.whenceHash(chain[0].chunk.hash),
+          db.whenceHash(b.chain[0].chunk.hash),
           {[clientID]: 1},
           'cookie',
           dagWrite,
-          db.readIndexesForWrite(chain[0], dagWrite),
+          db.readIndexesForWrite(b.chain[0], dagWrite),
           clientID,
         );
       } else {
         dbWrite = await db.newWriteSnapshot(
-          db.whenceHash(chain[0].chunk.hash),
+          db.whenceHash(b.chain[0].chunk.hash),
           1,
           'cookie',
           dagWrite,
-          db.readIndexesForWrite(chain[0], dagWrite),
+          db.readIndexesForWrite(b.chain[0], dagWrite),
           clientID,
         );
       }

@@ -3,13 +3,7 @@ import {expect} from '@esm-bundle/chai';
 import * as dag from '../dag/mod';
 import {DEFAULT_HEAD_NAME} from '../db/commit';
 import {fromWhence, whenceHead} from '../db/read';
-import {
-  addGenesis,
-  addIndexChange,
-  addLocal,
-  addSnapshot,
-  Chain,
-} from '../db/test-helpers';
+import {ChainBuilder} from '../db/test-helpers';
 import type {HTTPRequestInfo} from '../http-request-info';
 import {SYNC_HEAD_NAME} from './sync-head-name';
 import {
@@ -75,12 +69,12 @@ test('try push', async () => {
   const clientID = 'test_client_id';
   const store = new dag.TestStore();
   const lc = new LogContext();
-  const chain: Chain = [];
-  await addGenesis(chain, store, clientID);
-  await addSnapshot(chain, store, [['foo', 'bar']], clientID);
+  const b = new ChainBuilder(store);
+  await b.addGenesis(clientID);
+  await b.addSnapshot([['foo', 'bar']], clientID);
   // chain[2] is an index change
-  await addIndexChange(chain, store, clientID);
-  const startingNumCommits = chain.length;
+  await b.addIndexChange(clientID);
+  const startingNumCommits = b.chain.length;
 
   const requestID = 'request_id';
   const profileID = 'test_profile_id';
@@ -199,15 +193,18 @@ test('try push', async () => {
 
   for (const c of cases) {
     // Reset state of the store.
-    chain.length = startingNumCommits;
+    b.chain.length = startingNumCommits;
     await store.withWrite(async w => {
-      await w.setHead(DEFAULT_HEAD_NAME, chain[chain.length - 1].chunk.hash);
+      await w.setHead(
+        DEFAULT_HEAD_NAME,
+        b.chain[b.chain.length - 1].chunk.hash,
+      );
       await w.removeHead(SYNC_HEAD_NAME);
       await w.commit();
     });
     for (let i = 0; i < c.numPendingMutations; i++) {
-      await addLocal(chain, store, clientID);
-      await addIndexChange(chain, store, clientID);
+      await b.addLocal(clientID);
+      await b.addIndexChange(clientID);
     }
 
     // There was an index added after the snapshot, and one for each local
@@ -279,19 +276,13 @@ test('try push DD31', async () => {
   const clientID = 'test_client_id';
   const store = new dag.TestStore();
   const lc = new LogContext();
-  const chain: Chain = [];
-  await addGenesis(chain, store, clientID);
-  await addSnapshot(
-    chain,
-    store,
-    [['foo', 'bar']],
-    clientID,
-    undefined,
-    undefined,
-    {2: {prefix: 'local', jsonPointer: ''}},
-  );
+  const b = new ChainBuilder(store);
+  await b.addGenesis(clientID);
+  await b.addSnapshot([['foo', 'bar']], clientID, undefined, undefined, {
+    2: {prefix: 'local', jsonPointer: ''},
+  });
 
-  const startingNumCommits = chain.length;
+  const startingNumCommits = b.chain.length;
 
   const requestID = 'request_id';
   const profileID = 'test_profile_id';
@@ -418,14 +409,17 @@ test('try push DD31', async () => {
 
   for (const c of cases) {
     // Reset state of the store.
-    chain.length = startingNumCommits;
+    b.chain.length = startingNumCommits;
     await store.withWrite(async w => {
-      await w.setHead(DEFAULT_HEAD_NAME, chain[chain.length - 1].chunk.hash);
+      await w.setHead(
+        DEFAULT_HEAD_NAME,
+        b.chain[b.chain.length - 1].chunk.hash,
+      );
       await w.removeHead(SYNC_HEAD_NAME);
       await w.commit();
     });
     for (let i = 0; i < c.numPendingMutations; i++) {
-      await addLocal(chain, store, clientID);
+      await b.addLocal(clientID);
     }
 
     // There was an index added after the snapshot, and one for each local

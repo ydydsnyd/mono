@@ -2,15 +2,9 @@ import {expect} from '@esm-bundle/chai';
 import * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import {assertHash, makeNewFakeHashFunction} from '../hash';
-import {
-  addGenesis,
-  addIndexChange,
-  addLocal,
-  addSnapshot,
-  Chain,
-} from '../db/test-helpers';
 import {GatherVisitor} from './gather-visitor';
-import type {JSONObject} from '../json.js';
+import type {JSONObject} from '../json';
+import {ChainBuilder} from '../db/test-helpers.js';
 
 test('dag with no memory-only hashes gathers nothing', async () => {
   const clientID = 'client-id';
@@ -23,27 +17,27 @@ test('dag with no memory-only hashes gathers nothing', async () => {
     assertHash,
   );
 
-  const chain: Chain = [];
-  await addGenesis(chain, perdag, clientID);
-  await addLocal(chain, perdag, clientID);
+  const pb = new ChainBuilder(perdag);
+  await pb.addGenesis(clientID);
+  await pb.addLocal(clientID);
   if (!DD31) {
-    await addIndexChange(chain, perdag, clientID);
+    await pb.addIndexChange(clientID);
   }
-  await addLocal(chain, perdag, clientID);
+  await pb.addLocal(clientID);
 
   await memdag.withRead(async dagRead => {
-    for (const commit of chain) {
+    for (const commit of pb.chain) {
       const visitor = new GatherVisitor(dagRead);
       await visitor.visitCommit(commit.chunk.hash);
       expect(visitor.gatheredChunks).to.be.empty;
     }
   });
 
-  await addSnapshot(chain, perdag, undefined, clientID);
+  await pb.addSnapshot(undefined, clientID);
 
   await memdag.withRead(async dagRead => {
     const visitor = new GatherVisitor(dagRead);
-    await visitor.visitCommit(chain[chain.length - 1].chunk.hash);
+    await visitor.visitCommit(pb.headHash);
     expect(visitor.gatheredChunks).to.be.empty;
   });
 });
@@ -58,29 +52,30 @@ test('dag with only temp hashes gathers everything', async () => {
     hashFunction,
     assertHash,
   );
-  const chain: Chain = [];
+
+  const mb = new ChainBuilder(memdag);
 
   const testGatheredChunks = async () => {
     await memdag.withRead(async dagRead => {
       const visitor = new GatherVisitor(dagRead);
-      await visitor.visitCommit(chain[chain.length - 1].chunk.hash);
+      await visitor.visitCommit(mb.headHash);
       expect(memdag.getMemOnlyChunksSnapshot()).to.deep.equal(
         visitor.gatheredChunks,
       );
     });
   };
 
-  await addGenesis(chain, memdag, clientID);
-  await addLocal(chain, memdag, clientID);
+  await mb.addGenesis(clientID);
+  await mb.addLocal(clientID);
   await testGatheredChunks();
 
   if (!DD31) {
-    await addIndexChange(chain, memdag, clientID);
+    await mb.addIndexChange(clientID);
   }
-  await addLocal(chain, memdag, clientID);
+  await mb.addLocal(clientID);
   await testGatheredChunks();
 
-  await addSnapshot(chain, memdag, undefined, clientID);
+  await mb.addSnapshot(undefined, clientID);
   await testGatheredChunks();
 });
 
@@ -94,23 +89,23 @@ test('dag with some permanent hashes and some memory-only hashes on top', async 
     hashFunction,
     assertHash,
   );
-  const chain: Chain = [];
 
-  await addGenesis(chain, perdag, clientID);
-  await addLocal(chain, perdag, clientID);
+  const pb = new ChainBuilder(perdag);
+  const mb = new ChainBuilder(memdag);
+
+  await pb.addGenesis(clientID);
+  await pb.addLocal(clientID);
 
   await memdag.withWrite(async memdagWrite => {
-    await memdagWrite.setHead(
-      db.DEFAULT_HEAD_NAME,
-      chain[chain.length - 1].chunk.hash,
-    );
+    await memdagWrite.setHead(db.DEFAULT_HEAD_NAME, pb.headHash);
     await memdagWrite.commit();
   });
-  await addLocal(chain, memdag, clientID);
+  mb.chain = pb.chain.slice();
+  await mb.addLocal(clientID);
 
   await memdag.withRead(async dagRead => {
     const visitor = new GatherVisitor(dagRead);
-    await visitor.visitCommit(chain[chain.length - 1].chunk.hash);
+    await visitor.visitCommit(mb.headHash);
     const meta: JSONObject = {
       basisHash: 'face0000-0000-4000-8000-000000000003',
       mutationID: 2,
@@ -155,58 +150,43 @@ test('dag with some permanent hashes and some memory-only hashes on top w index'
     hashFunction,
     assertHash,
   );
-  const chain: Chain = [];
 
-  await addGenesis(chain, perdag, clientID);
+  const mb = new ChainBuilder(memdag);
+  const pb = new ChainBuilder(perdag);
+
+  await pb.addGenesis(clientID);
+
+  await pb.addSnapshot(
+    Object.entries({
+      a: 1,
+      b: {name: 'b-name'},
+    }),
+    clientID,
+    undefined,
+    undefined,
+    {testIndex: {prefix: '', jsonPointer: '/name', allowEmpty: true}},
+  );
+  await memdag.withWrite(async memdagWrite => {
+    await memdagWrite.setHead(db.DEFAULT_HEAD_NAME, pb.headHash);
+    await memdagWrite.commit();
+  });
+
   if (DD31) {
-    await addSnapshot(
-      chain,
-      perdag,
-      Object.entries({
-        a: 1,
-        b: {name: 'b-name'},
-      }),
-      clientID,
-      undefined,
-      undefined,
-      {testIndex: {prefix: '', jsonPointer: '/name', allowEmpty: true}},
-    );
-    await memdag.withWrite(async memdagWrite => {
-      await memdagWrite.setHead(
-        db.DEFAULT_HEAD_NAME,
-        chain[chain.length - 1].chunk.hash,
-      );
-      await memdagWrite.commit();
-    });
-    await addLocal(chain, memdag, clientID, [['c', {name: 'c-name'}]]);
+    mb.chain = pb.chain.slice();
+    await mb.addLocal(clientID, [['c', {name: 'c-name'}]]);
   } else {
-    await addSnapshot(
-      chain,
-      perdag,
-      Object.entries({
-        a: 1,
-        b: {name: 'b-name'},
-      }),
-      clientID,
-    );
-    await memdag.withWrite(async memdagWrite => {
-      await memdagWrite.setHead(
-        db.DEFAULT_HEAD_NAME,
-        chain[chain.length - 1].chunk.hash,
-      );
-      await memdagWrite.commit();
-    });
-    await addIndexChange(chain, memdag, clientID, 'testIndex', {
+    mb.chain = pb.chain.slice();
+    await mb.addIndexChange(clientID, 'testIndex', {
       prefix: '',
       jsonPointer: '/name',
       allowEmpty: true,
     });
-    await addLocal(chain, memdag, clientID, [['c', {name: 'c-name'}]]);
+    await mb.addLocal(clientID, [['c', {name: 'c-name'}]]);
   }
 
   await memdag.withRead(async dagRead => {
     const visitor = new GatherVisitor(dagRead);
-    await visitor.visitCommit(chain[chain.length - 1].chunk.hash);
+    await visitor.visitCommit(mb.headHash);
     expect(Object.fromEntries(visitor.gatheredChunks)).to.deep.equal(
       DD31
         ? {

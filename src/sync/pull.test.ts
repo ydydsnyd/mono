@@ -5,14 +5,7 @@ import {assertObject, assertString} from '../asserts';
 import * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import {Commit, DEFAULT_HEAD_NAME} from '../db/mod';
-import {
-  addGenesis,
-  addIndexChange,
-  addLocal,
-  addSnapshot,
-  Chain,
-  ChainBuilder,
-} from '../db/test-helpers';
+import {ChainBuilder} from '../db/test-helpers';
 import type {ReadonlyJSONValue} from '../json';
 import type {
   PatchOperation,
@@ -45,7 +38,7 @@ import {
 import {assertHash, emptyHash, Hash, parse as parseHash} from '../hash';
 import {stringCompare} from '../string-compare';
 import {asyncIterableToArray} from '../async-iterable-to-array';
-import {assertSnapshotCommitDD31, SnapshotMeta} from '../db/commit';
+import {assertSnapshotCommitDD31, SnapshotMetaSDD} from '../db/commit';
 import {
   toInternalValue,
   fromInternalValue,
@@ -64,15 +57,15 @@ test('begin try pull SDD', async () => {
 
   const clientID = 'test_client_id';
   const store = new dag.TestStore();
-  const chain: Chain = [];
-  await addGenesis(chain, store, clientID);
-  await addSnapshot(chain, store, [['foo', '"bar"']], clientID);
+  const b = new ChainBuilder(store);
+  await b.addGenesis(clientID);
+  await b.addSnapshot([['foo', '"bar"']], clientID);
   // chain[2] is an index change
-  await addIndexChange(chain, store, clientID);
-  const startingNumCommits = chain.length;
-  const baseSnapshot = chain[1];
+  await b.addIndexChange(clientID);
+  const startingNumCommits = b.chain.length;
+  const baseSnapshot = b.chain[1];
   const parts = db.snapshotMetaParts(
-    baseSnapshot as Commit<SnapshotMeta>,
+    baseSnapshot as Commit<SnapshotMetaSDD>,
     clientID,
   );
 
@@ -407,15 +400,18 @@ test('begin try pull SDD', async () => {
 
   for (const c of cases) {
     // Reset state of the store.
-    chain.length = startingNumCommits;
+    b.chain.length = startingNumCommits;
     await store.withWrite(async w => {
-      await w.setHead(DEFAULT_HEAD_NAME, chain[chain.length - 1].chunk.hash);
+      await w.setHead(
+        DEFAULT_HEAD_NAME,
+        b.chain[b.chain.length - 1].chunk.hash,
+      );
       await w.removeHead(SYNC_HEAD_NAME);
       await w.commit();
     });
     for (let i = 0; i < c.numPendingMutations; i++) {
-      await addLocal(chain, store, clientID);
-      await addIndexChange(chain, store, clientID);
+      await b.addLocal(clientID);
+      await b.addIndexChange(clientID);
     }
 
     // There was an index added after the snapshot, and one for each local commit.
@@ -492,7 +488,7 @@ test('begin try pull SDD', async () => {
         assertNotUndefined(chunk);
         const syncHead = db.fromChunk(chunk);
         const [gotLastMutationID, gotCookie] = db.snapshotMetaParts(
-          syncHead as Commit<SnapshotMeta>,
+          syncHead as Commit<SnapshotMetaSDD>,
           clientID,
         );
         expect(expSyncHead.lastMutationID).to.equal(gotLastMutationID);
@@ -578,25 +574,17 @@ test('begin try pull DD31', async () => {
   const clientID = 'test_client_id';
   const branchID = 'test_branch_id';
   const store = new dag.TestStore();
-  const chain: Chain = [];
-  await addGenesis(chain, store, clientID);
-  await addSnapshot(
-    chain,
-    store,
-    [['foo', '"bar"']],
-    clientID,
-    undefined,
-    undefined,
-    {
-      '2': {prefix: 'local', jsonPointer: '', allowEmpty: false},
-    },
-  );
+  const b = new ChainBuilder(store);
+  await b.addGenesis(clientID);
+  await b.addSnapshot([['foo', '"bar"']], clientID, undefined, undefined, {
+    '2': {prefix: 'local', jsonPointer: '', allowEmpty: false},
+  });
   // chain[2] is an index change
-  // await addIndexChange(chain, store, clientID);
-  const startingNumCommits = chain.length;
-  const baseSnapshot = chain[1];
+  // await b.addIndexChange(clientID);
+  const startingNumCommits = b.chain.length;
+  const baseSnapshot = b.chain[1];
   const parts = db.snapshotMetaParts(
-    baseSnapshot as Commit<SnapshotMeta>,
+    baseSnapshot as Commit<SnapshotMetaSDD>,
     clientID,
   );
 
@@ -973,14 +961,17 @@ test('begin try pull DD31', async () => {
 
   for (const c of cases) {
     // Reset state of the store.
-    chain.length = startingNumCommits;
+    b.chain.length = startingNumCommits;
     await store.withWrite(async w => {
-      await w.setHead(DEFAULT_HEAD_NAME, chain[chain.length - 1].chunk.hash);
+      await w.setHead(
+        DEFAULT_HEAD_NAME,
+        b.chain[b.chain.length - 1].chunk.hash,
+      );
       await w.removeHead(SYNC_HEAD_NAME);
       await w.commit();
     });
     for (let i = 0; i < c.numPendingMutations; i++) {
-      await addLocal(chain, store, clientID);
+      await b.addLocal(clientID);
     }
 
     // There was an index added after the snapshot, and one for each local commit.
@@ -1058,7 +1049,7 @@ test('begin try pull DD31', async () => {
         assertNotUndefined(chunk);
         const syncHead = db.fromChunk(chunk);
         const [gotLastMutationID, gotCookie] = db.snapshotMetaParts(
-          syncHead as Commit<SnapshotMeta>,
+          syncHead as Commit<SnapshotMetaSDD>,
           clientID,
         );
         expect(expSyncHead.lastMutationID).to.equal(gotLastMutationID);
@@ -1193,34 +1184,34 @@ test('maybe end try pull', async () => {
   for (const [i, c] of cases.entries()) {
     const store = new dag.TestStore();
     const lc = new LogContext();
-    const chain: Chain = [];
-    await addGenesis(chain, store, clientID);
+    const b = new ChainBuilder(store);
+    await b.addGenesis(clientID);
     // Add pending commits to the main chain.
     for (let j = 0; j < c.numPending; j++) {
-      await addLocal(chain, store, clientID);
+      await b.addLocal(clientID);
     }
     let basisHash = await store.withWrite(async dagWrite => {
       await dagWrite.setHead(
         db.DEFAULT_HEAD_NAME,
-        chain[chain.length - 1].chunk.hash,
+        b.chain[b.chain.length - 1].chunk.hash,
       );
 
       // Add snapshot and replayed commits to the sync chain.
       const w = DD31
         ? await db.newWriteSnapshotDD31(
-            db.whenceHash(chain[0].chunk.hash),
+            db.whenceHash(b.chain[0].chunk.hash),
             {[clientID]: 0},
             'sync_cookie',
             dagWrite,
-            db.readIndexesForWrite(chain[0], dagWrite),
+            db.readIndexesForWrite(b.chain[0], dagWrite),
             clientID,
           )
         : await db.newWriteSnapshot(
-            db.whenceHash(chain[0].chunk.hash),
+            db.whenceHash(b.chain[0].chunk.hash),
             0,
             'sync_cookie',
             dagWrite,
-            db.readIndexesForWrite(chain[0], dagWrite),
+            db.readIndexesForWrite(b.chain[0], dagWrite),
             clientID,
           );
       await w.put(lc, `key/${i}`, `${i}`);
@@ -1228,12 +1219,12 @@ test('maybe end try pull', async () => {
     });
 
     if (c.interveningSync) {
-      await addSnapshot(chain, store, undefined, clientID);
+      await b.addSnapshot(undefined, clientID);
     }
 
     for (let i = 0; i < c.numPending - c.numNeedingReplay; i++) {
       const chainIndex = i + 1; // chain[0] is genesis
-      const original = chain[chainIndex];
+      const original = b.chain[chainIndex];
       let mutatorName: string;
       let mutatorArgs: InternalValue;
       if (original.isLocal()) {
@@ -1287,11 +1278,11 @@ test('maybe end try pull', async () => {
       );
 
       for (let i = 0; i < c.expReplayIDs.length; i++) {
-        const chainIdx = chain.length - c.numNeedingReplay + i;
+        const chainIdx = b.chain.length - c.numNeedingReplay + i;
         expect(c.expReplayIDs[i]).to.equal(
           resp.replayMutations?.[i].meta.mutationID,
         );
-        const commit = chain[chainIdx];
+        const commit = b.chain[chainIdx];
         if (commit.isLocal()) {
           expect(resp.replayMutations?.[i]).to.deep.equal(commit);
         } else {
@@ -1424,8 +1415,8 @@ test('changed keys', async () => {
     const branchID = 'test_branch_id';
     const store = new dag.TestStore();
     const lc = new LogContext();
-    const chain: Chain = [];
-    await addGenesis(chain, store, clientID);
+    const b = new ChainBuilder(store);
+    await b.addGenesis(clientID);
 
     if (indexDef) {
       const {name, prefix, jsonPointer} = indexDef;
@@ -1438,9 +1429,7 @@ test('changed keys', async () => {
           },
         };
 
-        await addSnapshot(
-          chain,
-          store,
+        await b.addSnapshot(
           [],
           clientID,
           undefined,
@@ -1448,7 +1437,7 @@ test('changed keys', async () => {
           indexDefinitions,
         );
       } else {
-        await addIndexChange(chain, store, clientID, name, {
+        await b.addIndexChange(clientID, name, {
           prefix,
           jsonPointer,
           allowEmpty: false,
@@ -1457,11 +1446,11 @@ test('changed keys', async () => {
     }
 
     const entries = [...baseMap];
-    await addSnapshot(chain, store, entries, clientID);
+    await b.addSnapshot(entries, clientID);
 
-    const baseSnapshot = chain[chain.length - 1];
+    const baseSnapshot = b.chain[b.chain.length - 1];
     const parts = db.snapshotMetaParts(
-      baseSnapshot as Commit<SnapshotMeta>,
+      baseSnapshot as Commit<SnapshotMetaSDD>,
       clientID,
     );
     const baseLastMutationID = parts[0];
@@ -1833,8 +1822,8 @@ test('pull isNewBranch for empty client', async () => {
     schemaVersion,
   };
 
-  const chain: Chain = [];
-  await addGenesis(chain, store, clientID1);
+  const b = new ChainBuilder(store);
+  await b.addGenesis(clientID1);
 
   const response: BeginPullResponseDD31 = await beginPullDD31(
     profileID,
@@ -1905,16 +1894,16 @@ test('pull for branch with multiple client local changes', async () => {
     schemaVersion,
   };
 
-  const chain: Chain = [];
-  await addGenesis(chain, store, clientID1);
-  await addSnapshot(chain, store, [], clientID1, 1, {
+  const b = new ChainBuilder(store);
+  await b.addGenesis(clientID1);
+  await b.addSnapshot([], clientID1, 1, {
     [clientID1]: 10,
     [clientID2]: 20,
   });
-  await addLocal(chain, store, clientID1, []);
-  await addLocal(chain, store, clientID2, []);
-  await addLocal(chain, store, clientID1, []);
-  await addLocal(chain, store, clientID2, []);
+  await b.addLocal(clientID1, []);
+  await b.addLocal(clientID2, []);
+  await b.addLocal(clientID1, []);
+  await b.addLocal(clientID2, []);
 
   const response: BeginPullResponseDD31 = await beginPullDD31(
     profileID,

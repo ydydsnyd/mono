@@ -5,7 +5,7 @@ import * as db from '../db/mod';
 import type {Hash} from '../hash';
 import {assertHasClientState, setClient} from './clients';
 import {GatherVisitor} from './gather-visitor';
-import {assertSnapshotMeta} from '../db/commit.js';
+import {assertSnapshotMetaSDD} from '../db/commit.js';
 import {persistDD31} from './persist-dd31';
 import type {LogContext} from '@rocicorp/logger';
 import type {MutatorDefs} from '../replicache';
@@ -91,7 +91,7 @@ async function gatherMemOnlyChunks(
       dagRead,
     );
     const {meta} = baseSnapshotCommit;
-    assertSnapshotMeta(meta);
+    assertSnapshotMetaSDD(meta);
     return [
       visitor.gatheredChunks,
       mainHeadHash,

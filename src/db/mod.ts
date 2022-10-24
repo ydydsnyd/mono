@@ -44,7 +44,7 @@ export {Visitor} from './visitor';
 export {rebaseMutationAndCommit, rebaseMutationAndPutCommit} from './rebase';
 
 export type {
-  SnapshotMeta,
+  SnapshotMetaSDD as SnapshotMeta,
   SnapshotMetaDD31,
   LocalMetaSDD,
   LocalMetaDD31,

@@ -4,14 +4,7 @@ import {assert} from '../asserts';
 import * as sync from '../sync/mod';
 import * as dag from '../dag/mod';
 import * as db from '../db/mod';
-import {
-  addGenesis,
-  addIndexChange,
-  addLocal,
-  addSnapshot,
-  Chain,
-  getChunkSnapshot,
-} from '../db/test-helpers';
+import {ChainBuilder, getChunkSnapshot} from '../db/test-helpers';
 import {assertHash, Hash, makeNewFakeHashFunction} from '../hash';
 import {
   getClient,
@@ -19,11 +12,10 @@ import {
   assertClientSDD,
   CLIENTS_HEAD_NAME,
 } from './clients';
-import {addSyncSnapshot} from '../sync/test-helpers';
 import {persist} from './persist';
 import {gcClients} from './client-gc.js';
 import {initClientWithClientID} from './clients-test-helpers.js';
-import {assertSnapshotMeta} from '../db/commit.js';
+import {assertSnapshotMetaSDD} from '../db/commit.js';
 import {LogContext} from '@rocicorp/logger';
 import sinon from 'sinon';
 
@@ -76,7 +68,7 @@ async function assertClientMutationIDsCorrect(
       await headCommit.getMutationID(clientID, dagRead),
     );
     const {meta} = baseSnapshotCommit;
-    assertSnapshotMeta(meta);
+    assertSnapshotMetaSDD(meta);
 
     expect(client.lastServerAckdMutationID).to.equal(meta.lastMutationID);
   });
@@ -89,14 +81,14 @@ suite('persist on top of different kinds of commits', () => {
   }
   let memdag: dag.LazyStore,
     perdag: dag.TestStore,
-    chain: Chain,
+    b: ChainBuilder,
     testPersist: () => Promise<void>,
     clientID: sync.ClientID;
 
   setup(async () => {
-    ({memdag, perdag, chain, testPersist, clientID} = setupPersistTest());
+    ({memdag, perdag, b: b, testPersist, clientID} = setupPersistTest());
     await initClientWithClientID(clientID, perdag);
-    await addGenesis(chain, memdag, clientID);
+    await b.addGenesis(clientID);
   });
 
   test('Genesis only', async () => {
@@ -104,14 +96,12 @@ suite('persist on top of different kinds of commits', () => {
   });
 
   test('local', async () => {
-    await addLocal(chain, memdag, clientID);
+    await b.addLocal(clientID);
     await testPersist();
   });
 
   test('snapshot', async () => {
-    await addSnapshot(
-      chain,
-      memdag,
+    await b.addSnapshot(
       [
         ['a', 0],
         ['b', 1],
@@ -123,49 +113,49 @@ suite('persist on top of different kinds of commits', () => {
   });
 
   test('local + syncSnapshot', async () => {
-    await addLocal(chain, memdag, clientID);
-    await addSyncSnapshot(chain, memdag, 1, clientID);
+    await b.addLocal(clientID);
+    await b.addSyncSnapshot(1, clientID);
     await testPersist();
   });
 
   test('local + local', async () => {
-    await addLocal(chain, memdag, clientID);
-    await addLocal(chain, memdag, clientID);
+    await b.addLocal(clientID);
+    await b.addLocal(clientID);
     await testPersist();
   });
 
   test('local on top of a persisted local', async () => {
-    await addLocal(chain, memdag, clientID);
+    await b.addLocal(clientID);
     await testPersist();
-    await addLocal(chain, memdag, clientID);
+    await b.addLocal(clientID);
     await testPersist();
   });
 
   test('local * 3', async () => {
-    await addLocal(chain, memdag, clientID);
-    await addLocal(chain, memdag, clientID);
-    await addLocal(chain, memdag, clientID);
+    await b.addLocal(clientID);
+    await b.addLocal(clientID);
+    await b.addLocal(clientID);
     await testPersist();
   });
 
   test('local + snapshot', async () => {
-    await addLocal(chain, memdag, clientID);
-    await addSnapshot(chain, memdag, [['changed', 3]], clientID);
+    await b.addLocal(clientID);
+    await b.addSnapshot([['changed', 3]], clientID);
     await testPersist();
   });
 
   test('local + snapshot + local', async () => {
-    await addLocal(chain, memdag, clientID);
-    await addSnapshot(chain, memdag, [['changed', 4]], clientID);
-    await addLocal(chain, memdag, clientID);
+    await b.addLocal(clientID);
+    await b.addSnapshot([['changed', 4]], clientID);
+    await b.addLocal(clientID);
     await testPersist();
   });
 
   test('local + snapshot + local + syncSnapshot', async () => {
-    await addLocal(chain, memdag, clientID);
-    await addSnapshot(chain, memdag, [['changed', 5]], clientID);
-    await addLocal(chain, memdag, clientID);
-    await addSyncSnapshot(chain, memdag, 3, clientID);
+    await b.addLocal(clientID);
+    await b.addSnapshot([['changed', 5]], clientID);
+    await b.addLocal(clientID);
+    await b.addSyncSnapshot(3, clientID);
 
     const syncHeadCommitBefore = await memdag.withRead(async dagRead => {
       const h = await dagRead.getHead(sync.SYNC_HEAD_NAME);
@@ -187,8 +177,8 @@ suite('persist on top of different kinds of commits', () => {
   });
 
   test('local + indexChange', async () => {
-    await addLocal(chain, memdag, clientID);
-    await addIndexChange(chain, memdag, clientID);
+    await b.addLocal(clientID);
+    await b.addIndexChange(clientID);
     await testPersist();
   });
 });
@@ -198,14 +188,14 @@ test('We get a MissingClientException during persist if client is missing', asyn
     // persitDD31 is tested in persist-dd31.test.ts
     return;
   }
-  const {memdag, perdag, chain, testPersist, clientID} = setupPersistTest();
+  const {memdag, perdag, b: b, testPersist, clientID} = setupPersistTest();
   await initClientWithClientID(clientID, perdag);
 
-  await addGenesis(chain, memdag, clientID);
-  await addLocal(chain, memdag, clientID);
+  await b.addGenesis(clientID);
+  await b.addLocal(clientID);
   await testPersist();
 
-  await addLocal(chain, memdag, clientID);
+  await b.addLocal(clientID);
 
   await clock.tickAsync(14 * 24 * 60 * 60 * 1000);
 
@@ -235,7 +225,7 @@ function setupPersistTest() {
   const chunksPersistedSpy = sinon.spy(memdag, 'chunksPersisted');
 
   const clientID = 'client-id';
-  const chain: Chain = [];
+  const b = new ChainBuilder(memdag);
 
   const testPersist = async () => {
     chunksPersistedSpy.resetHistory();
@@ -258,5 +248,12 @@ function setupPersistTest() {
       persistedChunkHashes,
     );
   };
-  return {memdag, perdag, chain, testPersist, clientID, chunksPersistedSpy};
+  return {
+    memdag,
+    perdag,
+    b,
+    testPersist,
+    clientID,
+    chunksPersistedSpy,
+  };
 }

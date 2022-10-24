@@ -2,13 +2,7 @@ import {expect} from '@esm-bundle/chai';
 import type {InternalDiff} from '../btree/node.js';
 import * as dag from '../dag/mod';
 import {diff} from './diff.js';
-import {
-  addGenesis,
-  addIndexChange,
-  addLocal,
-  addSnapshot,
-  Chain,
-} from '../db/test-helpers';
+import {ChainBuilder} from '../db/test-helpers';
 import {testSubscriptionsManagerOptions} from '../test-util.js';
 
 type DiffsRecord = Record<string, InternalDiff>;
@@ -16,16 +10,16 @@ type DiffsRecord = Record<string, InternalDiff>;
 test('db diff', async () => {
   const store = new dag.TestStore();
   const clientID = 'client-id-1';
-  const chain: Chain = [];
-  await addGenesis(chain, store, clientID);
-  await addLocal(chain, store, clientID, [['a', 'a2']]);
-  await addLocal(chain, store, clientID, [['b', 'b1']]);
+  const b = new ChainBuilder(store);
+  await b.addGenesis(clientID);
+  await b.addLocal(clientID, [['a', 'a2']]);
+  await b.addLocal(clientID, [['b', 'b1']]);
 
   const t = async (iOld: number, iNew: number, expectedDiff: DiffsRecord) => {
     await store.withRead(async read => {
       const diffsMap = await diff(
-        chain[iOld].chunk.hash,
-        chain[iNew].chunk.hash,
+        b.chain[iOld].chunk.hash,
+        b.chain[iNew].chunk.hash,
         read,
         testSubscriptionsManagerOptions,
       );
@@ -61,15 +55,15 @@ test('db diff', async () => {
   await t(0, 0, {});
 
   if (DD31) {
-    await addSnapshot(chain, store, [], clientID, undefined, undefined, {
+    await b.addSnapshot([], clientID, undefined, undefined, {
       'index-c': {prefix: 'c', jsonPointer: ''},
     });
-    await addLocal(chain, store, clientID, [
+    await b.addLocal(clientID, [
       ['c1', 'c1'],
       ['c2', 'c2'],
     ]);
 
-    await t(chain.length - 2, chain.length - 1, {
+    await t(b.chain.length - 2, b.chain.length - 1, {
       '': [
         {
           key: 'c1',
@@ -96,21 +90,19 @@ test('db diff', async () => {
       ],
     });
   } else {
-    await addSnapshot(
-      chain,
-      store,
+    await b.addSnapshot(
       [
         ['c1', 'c1'],
         ['c2', 'c2'],
       ],
       clientID,
     );
-    await addIndexChange(chain, store, clientID, 'index-c', {
+    await b.addIndexChange(clientID, 'index-c', {
       prefix: 'c',
       jsonPointer: '',
     });
 
-    await t(chain.length - 2, chain.length - 1, {
+    await t(b.chain.length - 2, b.chain.length - 1, {
       'index-c': [
         {
           key: '\u0000c1\u0000c1',
@@ -126,8 +118,8 @@ test('db diff', async () => {
     });
   }
 
-  await addLocal(chain, store, clientID, [['c1', 'c1-new']]);
-  await t(chain.length - 2, chain.length - 1, {
+  await b.addLocal(clientID, [['c1', 'c1-new']]);
+  await t(b.chain.length - 2, b.chain.length - 1, {
     '': [
       {
         key: 'c1',
@@ -151,7 +143,7 @@ test('db diff', async () => {
   });
 
   if (DD31) {
-    await t(chain.length - 3, chain.length - 1, {
+    await t(b.chain.length - 3, b.chain.length - 1, {
       '': [
         {
           key: 'c1',
@@ -178,7 +170,7 @@ test('db diff', async () => {
       ],
     });
   } else {
-    await t(chain.length - 3, chain.length - 1, {
+    await t(b.chain.length - 3, b.chain.length - 1, {
       '': [
         {
           key: 'c1',

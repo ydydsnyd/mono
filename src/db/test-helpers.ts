@@ -2,18 +2,23 @@ import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
 import type * as dag from '../dag/mod';
 import {
+  assertIndexChangeCommit,
   assertLocalCommitDD31,
+  assertLocalCommitSDD,
   assertSnapshotCommitDD31,
+  assertSnapshotCommitSDD,
   Commit,
   CommitData,
   DEFAULT_HEAD_NAME,
   fromHead,
   IndexRecord,
   LocalMetaDD31,
+  LocalMetaSDD,
   Meta,
   MetaType,
   toChunkIndexDefinition,
   SnapshotMetaDD31,
+  SnapshotMetaSDD,
 } from './commit';
 import {readCommit, whenceHead} from './read';
 import {
@@ -35,10 +40,11 @@ import type {IndexDefinition, IndexDefinitions} from '../index-defs.js';
 import {IndexWrite} from './index.js';
 import {Visitor} from './visitor';
 import {assert, assertNotUndefined} from '../asserts';
+import {addSyncSnapshot} from '../sync/test-helpers';
 
 export type Chain = Commit<Meta>[];
 
-export async function addGenesis(
+async function addGenesis(
   chain: Chain,
   store: dag.Store,
   clientID: ClientID,
@@ -66,7 +72,7 @@ async function createGenesis(
 
 // Local commit has mutator name and args according to its index in the
 // chain.
-export async function addLocal(
+async function addLocal(
   chain: Chain,
   store: dag.Store,
   clientID: ClientID,
@@ -117,7 +123,7 @@ export function createMutatorName(chainIndex: number): string {
   return `mutator_name_${chainIndex}`;
 }
 
-export async function addIndexChange(
+async function addIndexChange(
   chain: Chain,
   store: dag.Store,
   clientID: ClientID,
@@ -135,12 +141,12 @@ export async function addIndexChange(
   } = indexDefinition ?? {};
 
   const commit = await createIndex(
+    store,
+    clientID,
     name,
     prefix,
     jsonPointer,
-    store,
     allowEmpty,
-    clientID,
     headName,
   );
   chain.push(commit);
@@ -148,12 +154,12 @@ export async function addIndexChange(
 }
 
 async function createIndex(
+  store: dag.Store,
+  clientID: ClientID,
   name: string,
   prefix: string,
   jsonPointer: string,
-  store: dag.Store,
   allowEmpty: boolean,
-  clientID: ClientID,
   headName = DEFAULT_HEAD_NAME,
 ): Promise<Commit<Meta>> {
   assert(!DD31);
@@ -177,7 +183,7 @@ async function createIndex(
 // it depends on details of sync and sync depends on db.
 
 // The optional map for the commit is treated as key, value pairs.
-export async function addSnapshot(
+async function addSnapshotDD31(
   chain: Chain,
   store: dag.Store,
   map: [string, JSONValue][] | undefined,
@@ -268,28 +274,37 @@ export class ChainBuilder {
   chain: Chain;
 
   constructor(store: dag.Store, headName = DEFAULT_HEAD_NAME) {
-    assert(DD31);
     this.store = store;
     this.headName = headName;
     this.chain = [];
   }
 
-  async addGenesis(clientID: ClientID): Promise<Commit<SnapshotMetaDD31>> {
+  async addGenesis(
+    clientID: ClientID,
+  ): Promise<Commit<SnapshotMetaDD31 | SnapshotMetaSDD>> {
     await addGenesis(this.chain, this.store, clientID, this.headName);
     const commit = this.chain.at(-1);
     assertNotUndefined(commit);
-    assertSnapshotCommitDD31(commit);
+    if (DD31) {
+      assertSnapshotCommitDD31(commit);
+    } else {
+      assertSnapshotCommitSDD(commit);
+    }
     return commit;
   }
 
   async addLocal(
     clientID: ClientID,
     entries?: [string, JSONValue][],
-  ): Promise<Commit<LocalMetaDD31>> {
+  ): Promise<Commit<LocalMetaDD31 | LocalMetaSDD>> {
     await addLocal(this.chain, this.store, clientID, entries, this.headName);
     const commit = this.chain.at(-1);
     assertNotUndefined(commit);
-    assertLocalCommitDD31(commit);
+    if (DD31) {
+      assertLocalCommitDD31(commit);
+    } else {
+      assertLocalCommitSDD(commit);
+    }
     return commit;
   }
 
@@ -299,9 +314,8 @@ export class ChainBuilder {
     cookie: JSONValue = `cookie_${this.chain.length}`,
     lastMutationIDs?: Record<ClientID, number>,
     indexDefinitions?: IndexDefinitions,
-  ): Promise<Commit<SnapshotMetaDD31>> {
-    assert(DD31);
-    await addSnapshot(
+  ): Promise<Commit<SnapshotMetaDD31 | SnapshotMetaSDD>> {
+    await addSnapshotDD31(
       this.chain,
       this.store,
       map,
@@ -313,8 +327,35 @@ export class ChainBuilder {
     );
     const commit = this.chain.at(-1);
     assertNotUndefined(commit);
-    assertSnapshotCommitDD31(commit);
+    if (DD31) {
+      assertSnapshotCommitDD31(commit);
+    } else {
+      assertSnapshotCommitSDD(commit);
+    }
     return commit;
+  }
+
+  async addIndexChange(
+    clientID: ClientID,
+    indexName?: string,
+    indexDefinition?: IndexDefinition,
+  ): Promise<Commit<Meta>> {
+    await addIndexChange(
+      this.chain,
+      this.store,
+      clientID,
+      indexName,
+      indexDefinition,
+      this.headName,
+    );
+    const commit = this.chain.at(-1);
+    assertNotUndefined(commit);
+    assertIndexChangeCommit(commit);
+    return commit;
+  }
+
+  addSyncSnapshot(takeIndexesFrom: number, clientID: ClientID) {
+    return addSyncSnapshot(this.chain, this.store, takeIndexesFrom, clientID);
   }
 
   async removeHead(): Promise<void> {

@@ -1,12 +1,6 @@
 import {expect} from '@esm-bundle/chai';
 import * as dag from '../dag/mod';
-import {
-  addGenesis,
-  addIndexChange,
-  addLocal,
-  addSnapshot,
-  Chain,
-} from './test-helpers';
+import {ChainBuilder} from './test-helpers';
 import {fakeHash, Hash} from '../hash';
 import type {Entry, Node} from '../btree/node';
 import type {ReadonlyJSONValue} from '../json';
@@ -17,14 +11,13 @@ import {
   InternalValue,
   ToInternalValueReason,
 } from '../internal-value.js';
-import {addSyncSnapshot} from '../sync/test-helpers.js';
 
 test('test that we get to the data nodes', async () => {
   const clientID = 'client-id';
   const dagStore = new dag.TestStore();
 
   const log: (readonly Entry<Hash>[] | readonly Entry<InternalValue>[])[] = [];
-  const chain: Chain = [];
+  const b = new ChainBuilder(dagStore);
 
   class TestVisitor extends Visitor {
     override async visitBTreeNodeChunk(chunk: dag.Chunk<Node>) {
@@ -41,40 +34,32 @@ test('test that we get to the data nodes', async () => {
     });
   };
 
-  await addGenesis(chain, dagStore, clientID);
-  await t(chain[0], [[]]);
+  await b.addGenesis(clientID);
+  await t(b.chain[0], [[]]);
 
-  await addLocal(chain, dagStore, clientID);
-  await t(chain[1], [[['local', '1']], []]);
+  await b.addLocal(clientID);
+  await t(b.chain[1], [[['local', '1']], []]);
 
   if (DD31) {
-    await addSnapshot(
-      chain,
-      dagStore,
-      undefined,
-      clientID,
-      undefined,
-      undefined,
-      {
-        1: {prefix: 'local', jsonPointer: '', allowEmpty: false},
-      },
-    );
-    await t(chain[2], [[['local', '1']], [['\u00001\u0000local', '1']]]);
+    await b.addSnapshot(undefined, clientID, undefined, undefined, {
+      1: {prefix: 'local', jsonPointer: '', allowEmpty: false},
+    });
+    await t(b.chain[2], [[['local', '1']], [['\u00001\u0000local', '1']]]);
   } else {
-    await addIndexChange(chain, dagStore, clientID);
-    await t(chain[2], [[['local', '1']], [['\u00001\u0000local', '1']], []]);
+    await b.addIndexChange(clientID);
+    await t(b.chain[2], [[['local', '1']], [['\u00001\u0000local', '1']], []]);
   }
 
-  await addLocal(chain, dagStore, clientID);
+  await b.addLocal(clientID);
   if (DD31) {
-    await t(chain[3], [
+    await t(b.chain[3], [
       [['local', '3']],
       [['\u00003\u0000local', '3']],
       [['local', '1']],
       [['\u00001\u0000local', '1']],
     ]);
   } else {
-    await t(chain[3], [
+    await t(b.chain[3], [
       [['local', '3']],
       [['\u00003\u0000local', '3']],
       [['local', '1']],
@@ -83,8 +68,8 @@ test('test that we get to the data nodes', async () => {
     ]);
   }
 
-  await addSnapshot(chain, dagStore, [['k', 42]], clientID);
-  await t(chain[4], [
+  await b.addSnapshot([['k', 42]], clientID);
+  await t(b.chain[4], [
     [
       ['k', 42],
       ['local', '3'],
@@ -92,13 +77,8 @@ test('test that we get to the data nodes', async () => {
     [['\u00003\u0000local', '3']],
   ]);
 
-  await addLocal(chain, dagStore, clientID);
-  const syncChain = await addSyncSnapshot(
-    chain,
-    dagStore,
-    chain.length - 1,
-    clientID,
-  );
+  await b.addLocal(clientID);
+  const syncChain = await b.addSyncSnapshot(b.chain.length - 1, clientID);
   await t(syncChain[0], [
     [
       ['k', 42],
@@ -109,7 +89,7 @@ test('test that we get to the data nodes', async () => {
   ]);
 
   const localCommit = await dagStore.withWrite(async dagWrite => {
-    const prevCommit = chain[chain.length - 1];
+    const prevCommit = b.chain[b.chain.length - 1];
     const localCommit = newLocal(
       dagWrite.createChunk,
       prevCommit.chunk.hash,
@@ -141,7 +121,7 @@ test('test that we get to the data nodes', async () => {
   ]);
 
   const localCommit2 = await dagStore.withWrite(async dagWrite => {
-    const prevCommit = chain[chain.length - 1];
+    const prevCommit = b.chain[b.chain.length - 1];
     const localCommit2 = newLocal(
       dagWrite.createChunk,
       prevCommit.chunk.hash,

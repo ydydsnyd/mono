@@ -7,7 +7,7 @@ import {
   Commit,
   fromChunk,
   fromHash,
-  SnapshotMeta,
+  SnapshotMetaSDD,
   SnapshotMetaDD31,
 } from '../db/commit';
 import {assertHash, fakeHash, newUUIDHash} from '../hash';
@@ -31,14 +31,7 @@ import {
   setClient,
 } from './clients';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
-import {
-  addGenesis,
-  addIndexChange,
-  addLocal,
-  addSnapshot,
-  Chain,
-  ChainBuilder,
-} from '../db/test-helpers';
+import {ChainBuilder} from '../db/test-helpers';
 import {makeClient, setClientsForTesting} from './clients-test-helpers';
 import type {ClientID} from '../sync/client-id.js';
 import {Branch, getBranch, setBranch} from './branches.js';
@@ -382,7 +375,7 @@ test('initClient creates new empty snapshot when no existing snapshot to bootstr
     assertNotUndefined(headChunk);
     const commit = fromChunk(headChunk);
     expect(commit.isSnapshot()).to.be.true;
-    const snapshotMeta = commit.meta as SnapshotMeta;
+    const snapshotMeta = commit.meta as SnapshotMetaSDD;
     expect(snapshotMeta.basisHash).to.be.null;
     expect(snapshotMeta.cookieJSON).to.be.null;
     expect(await commit.getMutationID(clientID, dagRead)).to.equal(0);
@@ -400,17 +393,17 @@ test('initClient bootstraps from base snapshot of client with highest heartbeat'
   const clientID = 'client-id';
   const dagStore = new dag.TestStore();
 
-  const chain: Chain = [];
-  await addGenesis(chain, dagStore, clientID);
-  await addSnapshot(chain, dagStore, [['foo', 'bar']], clientID);
-  await addLocal(chain, dagStore, clientID);
-  const client1HeadCommit = chain[chain.length - 1];
-  await addIndexChange(chain, dagStore, clientID);
-  await addSnapshot(chain, dagStore, [['fuz', 'bang']], clientID);
-  const client2BaseSnapshotCommit = chain[chain.length - 1];
-  await addLocal(chain, dagStore, clientID);
-  await addLocal(chain, dagStore, clientID);
-  const client2HeadCommit = chain[chain.length - 1];
+  const b = new ChainBuilder(dagStore);
+  await b.addGenesis(clientID);
+  await b.addSnapshot([['foo', 'bar']], clientID);
+  await b.addLocal(clientID);
+  const client1HeadCommit = b.chain[b.chain.length - 1];
+  await b.addIndexChange(clientID);
+  await b.addSnapshot([['fuz', 'bang']], clientID);
+  const client2BaseSnapshotCommit = b.chain[b.chain.length - 1];
+  await b.addLocal(clientID);
+  await b.addLocal(clientID);
+  const client2HeadCommit = b.chain[b.chain.length - 1];
 
   const clientMap = new Map(
     Object.entries({
@@ -453,10 +446,10 @@ test('initClient bootstraps from base snapshot of client with highest heartbeat'
     assertNotUndefined(headChunk);
     const commit = fromChunk(headChunk);
     expect(commit.isSnapshot()).to.be.true;
-    const snapshotMeta = commit.meta as SnapshotMeta;
+    const snapshotMeta = commit.meta as SnapshotMetaSDD;
     expect(client2BaseSnapshotCommit.isSnapshot()).to.be.true;
     const client2BaseSnapshotMeta =
-      client2BaseSnapshotCommit.meta as SnapshotMeta;
+      client2BaseSnapshotCommit.meta as SnapshotMetaSDD;
 
     expect(snapshotMeta.basisHash).to.equal(client2BaseSnapshotMeta.basisHash);
     expect(snapshotMeta.cookieJSON).to.equal(
@@ -612,21 +605,21 @@ suite('findMatchingClient', () => {
     const perdag = new dag.TestStore();
     const clientID = 'client-id';
     const branchID = 'branch-id';
-    const chain: Chain = [];
-    await addGenesis(chain, perdag, clientID);
-    await addLocal(chain, perdag, clientID, []);
+    const b = new ChainBuilder(perdag);
+    await b.addGenesis(clientID);
+    await b.addLocal(clientID, []);
 
     await perdag.withWrite(async write => {
       const client: ClientDD31 = {
         branchID,
-        headHash: chain[1].chunk.hash,
+        headHash: b.chain[1].chunk.hash,
         heartbeatTimestampMs: 1,
         tempRefreshHash: null,
       };
       await setClient(clientID, client, write);
 
       const branch: Branch = {
-        headHash: chain[1].chunk.hash,
+        headHash: b.chain[1].chunk.hash,
         lastServerAckdMutationIDs: {[clientID]: 0},
         mutationIDs: {[clientID]: 1},
         indexes: initialIndexes,
@@ -641,7 +634,7 @@ suite('findMatchingClient', () => {
       const res = await findMatchingClient(read, newMutatorNames, newIndexes);
       const expected: FindMatchingClientResult = {
         type: FIND_MATCHING_CLIENT_TYPE_FORK,
-        snapshot: chain[0] as Commit<SnapshotMetaDD31>,
+        snapshot: b.chain[0] as Commit<SnapshotMetaDD31>,
       };
       expect(res).deep.equal(expected);
     });
@@ -766,10 +759,10 @@ suite('initClientDD31', () => {
     const perdag = new dag.TestStore();
     const clientID1 = 'client-id-1';
     const branchID = 'branch-id';
-    const chain: Chain = [];
-    await addGenesis(chain, perdag, clientID1);
-    await addLocal(chain, perdag, clientID1, []);
-    const headHash = chain[1].chunk.hash;
+    const b = new ChainBuilder(perdag);
+    await b.addGenesis(clientID1);
+    await b.addLocal(clientID1, []);
+    const headHash = b.chain[1].chunk.hash;
     const mutatorNames: string[] = ['x'];
     const indexes: IndexDefinitions = {};
 
@@ -782,7 +775,7 @@ suite('initClientDD31', () => {
       tempRefreshHash: null,
     };
     const branch1: Branch = {
-      headHash: chain[1].chunk.hash,
+      headHash: b.chain[1].chunk.hash,
       lastServerAckdMutationIDs: {[clientID1]: 0},
       mutationIDs: {[clientID1]: 1},
       indexes,
@@ -827,10 +820,10 @@ suite('initClientDD31', () => {
     const perdag = new dag.TestStore();
     const clientID1 = 'client-id-1';
     const branchID1 = 'branch-id-1';
-    const chain: Chain = [];
-    await addGenesis(chain, perdag, clientID1);
-    await addLocal(chain, perdag, clientID1, []);
-    const headHash = chain[1].chunk.hash;
+    const b = new ChainBuilder(perdag);
+    await b.addGenesis(clientID1);
+    await b.addLocal(clientID1, []);
+    const headHash = b.chain[1].chunk.hash;
     const initialMutatorNames: string[] = ['x'];
     const initialIndexes: IndexDefinitions = {};
     const newMutatorNames = ['y'];
@@ -893,8 +886,8 @@ suite('initClientDD31', () => {
     const perdag = new dag.TestStore();
     const clientID1 = 'client-id-1';
     const branchID1 = 'branch-id-1';
-    const chain: Chain = [];
-    await addGenesis(chain, perdag, clientID1);
+    const b = new ChainBuilder(perdag);
+    await b.addGenesis(clientID1);
 
     const initialIndexes: IndexDefinitions = {
       a1: {jsonPointer: '', prefix: 'a'},
@@ -905,9 +898,7 @@ suite('initClientDD31', () => {
       b: {jsonPointer: ''},
     };
 
-    await addSnapshot(
-      chain,
-      perdag,
+    await b.addSnapshot(
       [
         ['a', 'b'],
         ['c', 'd'],
@@ -917,8 +908,8 @@ suite('initClientDD31', () => {
       {[clientID1]: 10},
       initialIndexes,
     );
-    await addLocal(chain, perdag, clientID1, []);
-    const headHash = chain[2].chunk.hash;
+    await b.addLocal(clientID1, []);
+    const headHash = b.chain[2].chunk.hash;
     const initialMutatorNames = ['x'];
 
     clock.setSystemTime(10);

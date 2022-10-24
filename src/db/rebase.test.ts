@@ -3,10 +3,9 @@ import {LogContext} from '@rocicorp/logger';
 import sinon from 'sinon';
 import * as dag from '../dag/mod';
 import * as db from './mod';
-import {addGenesis, addLocal, addSnapshot, Chain} from './test-helpers';
+import {ChainBuilder} from './test-helpers';
 import type {WriteTransaction} from '../transactions';
 import {rebaseMutationAndCommit, rebaseMutationAndPutCommit} from './rebase';
-import {addSyncSnapshot} from '../sync/test-helpers';
 import {SYNC_HEAD_NAME} from '../sync/sync-head-name';
 import {BTreeRead} from '../btree/read';
 import type {Hash} from '../hash';
@@ -18,14 +17,18 @@ teardown(async () => {
 async function createMutationSequenceFixture() {
   const clientID = 'test_client_id';
   const store = new dag.TestStore();
-  const chain: Chain = [];
-  await addGenesis(chain, store, clientID);
-  await addSnapshot(chain, store, [['foo', 'bar']], clientID);
-  await addLocal(chain, store, clientID);
-  const localCommit1 = chain[chain.length - 1] as db.Commit<db.LocalMetaSDD>;
-  await addLocal(chain, store, clientID);
-  const localCommit2 = chain[chain.length - 1] as db.Commit<db.LocalMetaSDD>;
-  const syncChain = await addSyncSnapshot(chain, store, 1, clientID);
+  const b = new ChainBuilder(store);
+  await b.addGenesis(clientID);
+  await b.addSnapshot([['foo', 'bar']], clientID);
+  await b.addLocal(clientID);
+  const localCommit1 = b.chain[
+    b.chain.length - 1
+  ] as db.Commit<db.LocalMetaSDD>;
+  await b.addLocal(clientID);
+  const localCommit2 = b.chain[
+    b.chain.length - 1
+  ] as db.Commit<db.LocalMetaSDD>;
+  const syncChain = await b.addSyncSnapshot(1, clientID);
   const syncSnapshotCommit = syncChain[0] as db.Commit<db.SnapshotMeta>;
 
   const testMutator1 = async (tx: WriteTransaction, args?: unknown) => {
@@ -112,12 +115,12 @@ async function createMissingMutatorFixture() {
   const consoleErrorStub = sinon.stub(console, 'error');
   const clientID = 'test_client_id';
   const store = new dag.TestStore();
-  const chain: Chain = [];
-  await addGenesis(chain, store, clientID);
-  await addSnapshot(chain, store, [['foo', 'bar']], clientID);
-  await addLocal(chain, store, clientID);
-  const localCommit = chain[chain.length - 1] as db.Commit<db.LocalMetaSDD>;
-  const syncChain = await addSyncSnapshot(chain, store, 1, clientID);
+  const b = new ChainBuilder(store);
+  await b.addGenesis(clientID);
+  await b.addSnapshot([['foo', 'bar']], clientID);
+  await b.addLocal(clientID);
+  const localCommit = b.chain[b.chain.length - 1] as db.Commit<db.LocalMetaSDD>;
+  const syncChain = await b.addSyncSnapshot(1, clientID);
   const syncSnapshotCommit = syncChain[0] as db.Commit<db.SnapshotMeta>;
 
   const fixture = {
@@ -368,12 +371,12 @@ async function testThrowsErrorOnClientIDMismatch(
 ) {
   const clientID = 'test_client_id';
   const store = new dag.TestStore();
-  const chain: Chain = [];
-  await addGenesis(chain, store, clientID);
-  await addSnapshot(chain, store, [['foo', 'bar']], clientID);
-  await addLocal(chain, store, clientID);
-  const localCommit = chain[chain.length - 1] as db.Commit<db.LocalMetaSDD>;
-  const syncChain = await addSyncSnapshot(chain, store, 1, clientID);
+  const b = new ChainBuilder(store);
+  await b.addGenesis(clientID);
+  await b.addSnapshot([['foo', 'bar']], clientID);
+  await b.addLocal(clientID);
+  const localCommit = b.chain[b.chain.length - 1] as db.Commit<db.LocalMetaSDD>;
+  const syncChain = await b.addSyncSnapshot(1, clientID);
   const syncSnapshotCommit = syncChain[0] as db.Commit<db.SnapshotMeta>;
 
   let testMutatorCallCount = 0;
@@ -420,14 +423,18 @@ async function testThrowsErrorOnMutationIDMismatch(
 ) {
   const clientID = 'test_client_id';
   const store = new dag.TestStore();
-  const chain: Chain = [];
-  await addGenesis(chain, store, clientID);
-  await addSnapshot(chain, store, [['foo', 'bar']], clientID);
-  await addLocal(chain, store, clientID);
-  const localCommit1 = chain[chain.length - 1] as db.Commit<db.LocalMetaSDD>;
-  await addLocal(chain, store, clientID);
-  const localCommit2 = chain[chain.length - 1] as db.Commit<db.LocalMetaSDD>;
-  const syncChain = await addSyncSnapshot(chain, store, 1, clientID);
+  const b = new ChainBuilder(store);
+  await b.addGenesis(clientID);
+  await b.addSnapshot([['foo', 'bar']], clientID);
+  await b.addLocal(clientID);
+  const localCommit1 = b.chain[
+    b.chain.length - 1
+  ] as db.Commit<db.LocalMetaSDD>;
+  await b.addLocal(clientID);
+  const localCommit2 = b.chain[
+    b.chain.length - 1
+  ] as db.Commit<db.LocalMetaSDD>;
+  const syncChain = await b.addSyncSnapshot(1, clientID);
   const syncSnapshotCommit = syncChain[0] as db.Commit<db.SnapshotMeta>;
 
   let testMutator1CallCount = 0;

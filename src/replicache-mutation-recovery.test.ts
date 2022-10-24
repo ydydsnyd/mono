@@ -9,7 +9,7 @@ import {
   closeablesToClose,
 } from './test-util';
 import {makeIDBName, REPLICACHE_FORMAT_VERSION} from './replicache';
-import {addGenesis, addLocal, addSnapshot, Chain} from './db/test-helpers';
+import {ChainBuilder} from './db/test-helpers';
 import type * as db from './db/mod';
 import * as dag from './dag/mod';
 import * as persist from './persist/mod';
@@ -72,16 +72,16 @@ async function createAndPersistClientWithPendingLocal(
     dag.uuidChunkHasher,
     assertHash,
   );
-  const chain: Chain = [];
-  await addGenesis(chain, testMemdag, clientID);
-  await addSnapshot(chain, testMemdag, [['unique', uuid()]], clientID);
+  const b = new ChainBuilder(testMemdag);
+  await b.addGenesis(clientID);
+  await b.addSnapshot([['unique', uuid()]], clientID);
 
   await initClientWithClientID(clientID, perdag);
 
   const localMetas: db.LocalMetaSDD[] = [];
   for (let i = 0; i < numLocal; i++) {
-    await addLocal(chain, testMemdag, clientID);
-    localMetas.push(chain[chain.length - 1].meta as db.LocalMetaSDD);
+    await b.addLocal(clientID);
+    localMetas.push(b.chain[b.chain.length - 1].meta as db.LocalMetaSDD);
   }
   await persist.persist(
     new LogContext(),

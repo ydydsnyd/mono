@@ -41,7 +41,7 @@ export class Commit<M extends Meta> {
     return this.meta.type === MetaType.Local;
   }
 
-  isSnapshot(): this is Commit<SnapshotMeta> {
+  isSnapshot(): this is Commit<SnapshotMetaSDD> {
     return this.meta.type === MetaType.Snapshot;
   }
 
@@ -73,7 +73,7 @@ export class Commit<M extends Meta> {
           assertSnapshotMetaDD31(meta);
           return meta.lastMutationIDs[clientID] ?? 0;
         }
-        assertSnapshotMeta(meta);
+        assertSnapshotMetaSDD(meta);
         return meta.lastMutationID;
       }
       case MetaType.Local: {
@@ -162,7 +162,7 @@ export async function localMutationsGreaterThan(
 export async function baseSnapshotFromHash(
   hash: Hash,
   dagRead: dag.Read,
-): Promise<Commit<SnapshotMeta | SnapshotMetaDD31>> {
+): Promise<Commit<SnapshotMetaSDD | SnapshotMetaDD31>> {
   const commit = await fromHash(hash, dagRead);
   return baseSnapshotFromCommit(commit, dagRead);
 }
@@ -170,7 +170,7 @@ export async function baseSnapshotFromHash(
 export async function baseSnapshotFromCommit(
   commit: Commit<Meta>,
   dagRead: dag.Read,
-): Promise<Commit<SnapshotMeta | SnapshotMetaDD31>> {
+): Promise<Commit<SnapshotMetaSDD | SnapshotMetaDD31>> {
   while (!commit.isSnapshot()) {
     const {meta} = commit;
     const {basisHash} = meta;
@@ -183,7 +183,7 @@ export async function baseSnapshotFromCommit(
 }
 
 export function snapshotMetaParts(
-  c: Commit<SnapshotMeta | SnapshotMetaDD31>,
+  c: Commit<SnapshotMetaSDD | SnapshotMetaDD31>,
   clientID: sync.ClientID,
 ): [lastMutationID: number, cookie: InternalValue] {
   const m = c.meta;
@@ -194,13 +194,13 @@ export function snapshotMetaParts(
     return [lmid, m.cookieJSON];
   }
 
-  assertSnapshotMeta(m);
+  assertSnapshotMetaSDD(m);
   return [m.lastMutationID, m.cookieJSON];
 }
 
 export function compareCookiesForSnapshots(
-  a: Commit<SnapshotMeta | SnapshotMetaDD31>,
-  b: Commit<SnapshotMeta | SnapshotMetaDD31>,
+  a: Commit<SnapshotMetaSDD | SnapshotMetaDD31>,
+  b: Commit<SnapshotMetaSDD | SnapshotMetaDD31>,
 ): number {
   return compareCookies(
     safeCastToJSON(a.meta.cookieJSON, CastReason.CompareCookies),
@@ -292,6 +292,12 @@ function assertIndexChangeMeta(
   // commit time.
 }
 
+export function assertIndexChangeCommit(
+  c: Commit<Meta>,
+): asserts c is Commit<IndexChangeMeta> {
+  assertIndexChangeMeta(c.meta);
+}
+
 export type LocalMetaSDD = {
   readonly type: MetaType.Local;
   readonly basisHash: Hash;
@@ -306,7 +312,7 @@ export type LocalMetaDD31 = LocalMetaSDD & {
   readonly clientID: sync.ClientID;
 };
 
-function assertLocalMeta(
+function assertLocalMetaSDD(
   v: Record<string, unknown>,
 ): asserts v is LocalMetaSDD {
   // type already asserted
@@ -327,7 +333,7 @@ export function assertLocalMetaDD31(
 ): asserts v is LocalMetaDD31 {
   // type already asserted
   assertString(v.clientID);
-  assertLocalMeta(v);
+  assertLocalMetaSDD(v);
 }
 
 export function isLocalMetaDD31(
@@ -342,7 +348,13 @@ export function assertLocalCommitDD31(
   assertLocalMetaDD31(c.meta);
 }
 
-export type SnapshotMeta = {
+export function assertLocalCommitSDD(
+  c: Commit<Meta>,
+): asserts c is Commit<LocalMetaSDD> {
+  assertLocalMetaSDD(c.meta);
+}
+
+export type SnapshotMetaSDD = {
   readonly type: MetaType.Snapshot;
   readonly basisHash: Hash | null;
   readonly lastMutationID: number;
@@ -356,20 +368,26 @@ export type SnapshotMetaDD31 = {
   readonly cookieJSON: InternalValue;
 };
 
-export function assertSnapshotMeta(
+export function assertSnapshotMetaSDD(
   v: Record<string, unknown>,
-): asserts v is SnapshotMeta {
+): asserts v is SnapshotMetaSDD {
   assert(!DD31);
   // type already asserted
   assertNumber(v.lastMutationID);
   assertJSONValue(v.cookieJSON);
 }
 
+export function assertSnapshotCommitSDD(
+  c: Commit<Meta>,
+): asserts c is Commit<SnapshotMetaSDD> {
+  assertSnapshotMetaSDD(c.meta);
+}
+
 export type Meta =
   | IndexChangeMeta
   | LocalMetaSDD
   | LocalMetaDD31
-  | SnapshotMeta
+  | SnapshotMetaSDD
   | SnapshotMetaDD31;
 
 export function assertSnapshotMetaDD31(
@@ -391,7 +409,7 @@ export function assertSnapshotCommitDD31(
 }
 
 export function isSnapshotMetaDD31(
-  meta: SnapshotMeta | SnapshotMetaDD31,
+  meta: SnapshotMetaSDD | SnapshotMetaDD31,
 ): meta is SnapshotMetaDD31 {
   return (
     DD31 && (meta as Partial<SnapshotMetaDD31>).lastMutationIDs !== undefined
@@ -413,14 +431,14 @@ function assertMeta(v: unknown): asserts v is Meta {
       if (DD31) {
         assertLocalMetaDD31(v);
       } else {
-        assertLocalMeta(v);
+        assertLocalMetaSDD(v);
       }
       break;
     case MetaType.Snapshot:
       if (DD31) {
         assertSnapshotMetaDD31(v);
       } else {
-        assertSnapshotMeta(v);
+        assertSnapshotMetaSDD(v);
       }
       break;
     default:
@@ -572,7 +590,7 @@ export function newSnapshot(
   cookieJSON: InternalValue,
   valueHash: Hash,
   indexes: readonly IndexRecord[],
-): Commit<SnapshotMeta> {
+): Commit<SnapshotMetaSDD> {
   return commitFromCommitData(
     createChunk,
     newSnapshotCommitData(
@@ -611,9 +629,9 @@ export function newSnapshotCommitData(
   cookieJSON: InternalValue,
   valueHash: Hash,
   indexes: readonly IndexRecord[],
-): CommitData<SnapshotMeta> {
+): CommitData<SnapshotMetaSDD> {
   assert(!DD31);
-  const meta: SnapshotMeta = {
+  const meta: SnapshotMetaSDD = {
     type: MetaType.Snapshot,
     basisHash,
     lastMutationID,
