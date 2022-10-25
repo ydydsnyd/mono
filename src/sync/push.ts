@@ -11,7 +11,7 @@ import {assert} from '../asserts.js';
 import type {BranchID} from './branch-id.js';
 import type {ClientID} from './ids.js';
 
-export const PUSH_VERSION = 0;
+export const PUSH_VERSION_SDD = 0;
 export const PUSH_VERSION_DD31 = 1;
 
 /**
@@ -22,7 +22,8 @@ export type PushRequest = {
   profileID: string;
   clientID: ClientID;
   mutations: Mutation[];
-  pushVersion: typeof PUSH_VERSION;
+  // TODO(DD31): Verify the generated docs!
+  pushVersion: typeof PUSH_VERSION_SDD;
   // schemaVersion can optionally be used to specify to the push endpoint
   // version information about the mutators the app is using (e.g., format
   // of mutator args).
@@ -87,6 +88,7 @@ export async function push(
   pushURL: string,
   auth: string,
   schemaVersion: string,
+  pushVersion: typeof PUSH_VERSION_SDD | typeof PUSH_VERSION_DD31,
 ): Promise<HTTPRequestInfo | undefined> {
   // Find pending commits between the base snapshot and the main head and push
   // them to the data layer.
@@ -106,7 +108,7 @@ export async function push(
   let pushReq: PushRequest | PushRequestDD31;
 
   if (pending.length > 0) {
-    if (DD31) {
+    if (DD31 && pushVersion === PUSH_VERSION_DD31) {
       const pushMutations: MutationDD31[] = [];
       for (const commit of pending) {
         if (commit.isLocal()) {
@@ -126,7 +128,7 @@ export async function push(
       };
       pushReq = r;
     } else {
-      assert(!branchID);
+      assert(pushVersion === PUSH_VERSION_SDD);
       const pushMutations: Mutation[] = [];
       for (const commit of pending) {
         if (commit.isLocal()) {
@@ -139,7 +141,7 @@ export async function push(
         profileID,
         clientID,
         mutations: pushMutations,
-        pushVersion: PUSH_VERSION,
+        pushVersion: PUSH_VERSION_SDD,
         schemaVersion,
       };
     }

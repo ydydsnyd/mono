@@ -19,7 +19,7 @@ import type {MutatorDefs} from '../replicache';
  * @returns A promise that is fulfilled when persist completes successfully,
  * or is rejected if the persist fails.
  */
-export async function persist(
+export function persist(
   lc: LogContext,
   clientID: sync.ClientID,
   memdag: dag.LazyStore,
@@ -30,6 +30,16 @@ export async function persist(
   if (DD31) {
     return persistDD31(lc, clientID, memdag, perdag, mutators, closed);
   }
+
+  return persistSDD(clientID, memdag, perdag, closed);
+}
+
+export async function persistSDD(
+  clientID: sync.ClientID,
+  memdag: dag.LazyStore,
+  perdag: dag.Store,
+  closed: () => boolean,
+): Promise<void> {
   if (closed()) {
     return;
   }

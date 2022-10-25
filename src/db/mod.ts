@@ -3,7 +3,7 @@ export {
   readIndexesForWrite,
   newWriteIndexChange,
   newWriteLocal,
-  newWriteSnapshot,
+  newWriteSnapshotSDD,
   newWriteSnapshotDD31,
 } from './write';
 export {
@@ -23,7 +23,7 @@ export {
   fromChunk,
   newIndexChange,
   newLocal,
-  newSnapshot,
+  newSnapshotSDD,
   newSnapshotDD31,
   assertCommitData,
   isLocalMetaDD31,

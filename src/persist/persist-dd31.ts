@@ -86,7 +86,7 @@ export async function persistDD31(
     db.compareCookiesForSnapshots(memdagBaseSnapshot, perdagBaseSnapshot) > 0
   ) {
     await onGatherMemOnlyChunksForTest();
-    // Might need to perist snapshot, we will have to double check
+    // Might need to persist snapshot, we will have to double check
     // after gathering the snapshot chunks from memdag
     const memdagBaseSnapshotHash = memdagBaseSnapshot.chunk.hash;
     // Gather all memory only chunks from base snapshot on the memdag.

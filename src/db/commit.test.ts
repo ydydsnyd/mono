@@ -9,7 +9,7 @@ import {
   MetaType,
   newIndexChange as commitNewIndexChange,
   newLocal as commitNewLocal,
-  newSnapshot as commitNewSnapshot,
+  newSnapshotSDD as commitNewSnapshotSDD,
   newSnapshotDD31 as commitNewSnapshotDD31,
   SnapshotMetaSDD,
   chain as commitChain,
@@ -386,7 +386,7 @@ test('load roundtrip', async () => {
             fakeHash('face6'),
             [],
           )
-        : commitNewSnapshot(
+        : commitNewSnapshotSDD(
             createChunk,
             basisHash,
             0,

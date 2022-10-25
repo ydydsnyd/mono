@@ -149,7 +149,8 @@ export async function beginPullSDD(
   lc: LogContext,
   createSyncBranch = true,
 ): Promise<BeginPullResponse> {
-  assert(!DD31);
+  // Don't assert !DD31 here because we get here when pulling during a mutation
+  // recovery and we recover SDD mutations even when we are in DD31.
   const {pullURL, pullAuth, schemaVersion} = beginPullReq;
 
   const [lastMutationID, baseCookie] = await store.withRead(async dagRead => {
@@ -405,7 +406,7 @@ export async function handlePullResponseSDD(
       throw new Error('Internal invalid chain');
     }
 
-    const dbWrite = await db.newWriteSnapshot(
+    const dbWrite = await db.newWriteSnapshotSDD(
       db.whenceHash(baseSnapshot.chunk.hash),
       response.lastMutationID,
       internalCookie,

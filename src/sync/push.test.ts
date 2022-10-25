@@ -10,7 +10,7 @@ import {
   push,
   PushRequest,
   PushRequestDD31,
-  PUSH_VERSION,
+  PUSH_VERSION_SDD,
   PUSH_VERSION_DD31,
 } from './push';
 import type {Pusher} from '../pusher';
@@ -116,7 +116,7 @@ test('try push', async () => {
             timestamp: 42,
           },
         ],
-        pushVersion: PUSH_VERSION,
+        pushVersion: PUSH_VERSION_SDD,
         schemaVersion: pushSchemaVersion,
       },
       pushResult: 'ok',
@@ -148,7 +148,7 @@ test('try push', async () => {
             timestamp: 42,
           },
         ],
-        pushVersion: PUSH_VERSION,
+        pushVersion: PUSH_VERSION_SDD,
         schemaVersion: pushSchemaVersion,
       },
       pushResult: 'ok',
@@ -180,7 +180,7 @@ test('try push', async () => {
             timestamp: 42,
           },
         ],
-        pushVersion: PUSH_VERSION,
+        pushVersion: PUSH_VERSION_SDD,
         schemaVersion: pushSchemaVersion,
       },
       pushResult: {error: 'FetchNotOk(500)'},
@@ -261,6 +261,7 @@ test('try push', async () => {
       pushURL,
       auth,
       pushSchemaVersion,
+      DD31 ? PUSH_VERSION_DD31 : PUSH_VERSION_SDD,
     );
 
     expect(batchPushInfo).to.deep.equal(c.expBatchPushInfo, `name: ${c.name}`);
@@ -476,6 +477,7 @@ test('try push DD31', async () => {
       pushURL,
       auth,
       pushSchemaVersion,
+      DD31 ? PUSH_VERSION_DD31 : PUSH_VERSION_SDD,
     );
 
     expect(batchPushInfo).to.deep.equal(c.expBatchPushInfo, `name: ${c.name}`);

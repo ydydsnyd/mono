@@ -28,7 +28,7 @@ import sinon from 'sinon';
 import fetchMock from 'fetch-mock/esm/client';
 import {initClientWithClientID} from './persist/clients-test-helpers.js';
 import {fromInternalValue, FromInternalValueReason} from './internal-value.js';
-import {PUSH_VERSION, PUSH_VERSION_DD31} from './sync/push.js';
+import {PUSH_VERSION_SDD, PUSH_VERSION_DD31} from './sync/push.js';
 import {assertClientSDD} from './persist/clients.js';
 import {LogContext} from '@rocicorp/logger';
 
@@ -76,7 +76,7 @@ async function createAndPersistClientWithPendingLocal(
   await b.addGenesis(clientID);
   await b.addSnapshot([['unique', uuid()]], clientID);
 
-  await initClientWithClientID(clientID, perdag);
+  await initClientWithClientID(clientID, perdag, [], {}, false);
 
   const localMetas: db.LocalMetaSDD[] = [];
   for (let i = 0; i < numLocal; i++) {
@@ -116,7 +116,7 @@ function createPushBody(
         ),
         timestamp: localMeta.timestamp,
       })),
-      pushVersion: DD31 ? PUSH_VERSION_DD31 : PUSH_VERSION,
+      pushVersion: DD31 ? PUSH_VERSION_DD31 : PUSH_VERSION_SDD,
       schemaVersion,
     };
   }
@@ -203,52 +203,26 @@ async function testRecoveringMutationsOfClient(args: {
 
   const pushCalls = fetchMock.calls(pushURL);
   expect(pushCalls.length).to.equal(1);
-  expect(await pushCalls[0].request.json()).to.deep.equal(
-    DD31
-      ? {
-          profileID,
-          branchID,
-          clientID: client1ID,
-          mutations: [
-            {
-              clientID: client1ID,
-              id: client1PendingLocalMetas[0].mutationID,
-              name: client1PendingLocalMetas[0].mutatorName,
-              args: client1PendingLocalMetas[0].mutatorArgsJSON,
-              timestamp: client1PendingLocalMetas[0].timestamp,
-            },
-            {
-              clientID: client1ID,
-              id: client1PendingLocalMetas[1].mutationID,
-              name: client1PendingLocalMetas[1].mutatorName,
-              args: client1PendingLocalMetas[1].mutatorArgsJSON,
-              timestamp: client1PendingLocalMetas[1].timestamp,
-            },
-          ],
-          pushVersion: PUSH_VERSION_DD31,
-          schemaVersion: schemaVersionOfClientWPendingMutations,
-        }
-      : {
-          profileID,
-          clientID: client1ID,
-          mutations: [
-            {
-              id: client1PendingLocalMetas[0].mutationID,
-              name: client1PendingLocalMetas[0].mutatorName,
-              args: client1PendingLocalMetas[0].mutatorArgsJSON,
-              timestamp: client1PendingLocalMetas[0].timestamp,
-            },
-            {
-              id: client1PendingLocalMetas[1].mutationID,
-              name: client1PendingLocalMetas[1].mutatorName,
-              args: client1PendingLocalMetas[1].mutatorArgsJSON,
-              timestamp: client1PendingLocalMetas[1].timestamp,
-            },
-          ],
-          pushVersion: PUSH_VERSION,
-          schemaVersion: schemaVersionOfClientWPendingMutations,
-        },
-  );
+  expect(await pushCalls[0].request.json()).to.deep.equal({
+    profileID,
+    clientID: client1ID,
+    mutations: [
+      {
+        id: client1PendingLocalMetas[0].mutationID,
+        name: client1PendingLocalMetas[0].mutatorName,
+        args: client1PendingLocalMetas[0].mutatorArgsJSON,
+        timestamp: client1PendingLocalMetas[0].timestamp,
+      },
+      {
+        id: client1PendingLocalMetas[1].mutationID,
+        name: client1PendingLocalMetas[1].mutatorName,
+        args: client1PendingLocalMetas[1].mutatorArgsJSON,
+        timestamp: client1PendingLocalMetas[1].timestamp,
+      },
+    ],
+    pushVersion: PUSH_VERSION_SDD,
+    schemaVersion: schemaVersionOfClientWPendingMutations,
+  });
 
   const pullCalls = fetchMock.calls(pullURL);
   expect(pullCalls.length).to.equal(1);
@@ -341,52 +315,26 @@ test('recovering mutations with pull disabled', async () => {
 
   const pushCalls = fetchMock.calls(pushURL);
   expect(pushCalls.length).to.equal(1);
-  expect(await pushCalls[0].request.json()).to.deep.equal(
-    DD31
-      ? {
-          profileID,
-          branchID,
-          clientID: client1ID,
-          mutations: [
-            {
-              clientID: client1ID,
-              id: client1PendingLocalMetas[0].mutationID,
-              name: client1PendingLocalMetas[0].mutatorName,
-              args: client1PendingLocalMetas[0].mutatorArgsJSON,
-              timestamp: client1PendingLocalMetas[0].timestamp,
-            },
-            {
-              clientID: client1ID,
-              id: client1PendingLocalMetas[1].mutationID,
-              name: client1PendingLocalMetas[1].mutatorName,
-              args: client1PendingLocalMetas[1].mutatorArgsJSON,
-              timestamp: client1PendingLocalMetas[1].timestamp,
-            },
-          ],
-          pushVersion: PUSH_VERSION_DD31,
-          schemaVersion: schemaVersionOfClientWPendingMutations,
-        }
-      : {
-          profileID,
-          clientID: client1ID,
-          mutations: [
-            {
-              id: client1PendingLocalMetas[0].mutationID,
-              name: client1PendingLocalMetas[0].mutatorName,
-              args: client1PendingLocalMetas[0].mutatorArgsJSON,
-              timestamp: client1PendingLocalMetas[0].timestamp,
-            },
-            {
-              id: client1PendingLocalMetas[1].mutationID,
-              name: client1PendingLocalMetas[1].mutatorName,
-              args: client1PendingLocalMetas[1].mutatorArgsJSON,
-              timestamp: client1PendingLocalMetas[1].timestamp,
-            },
-          ],
-          pushVersion: PUSH_VERSION,
-          schemaVersion: schemaVersionOfClientWPendingMutations,
-        },
-  );
+  expect(await pushCalls[0].request.json()).to.deep.equal({
+    profileID,
+    clientID: client1ID,
+    mutations: [
+      {
+        id: client1PendingLocalMetas[0].mutationID,
+        name: client1PendingLocalMetas[0].mutatorName,
+        args: client1PendingLocalMetas[0].mutatorArgsJSON,
+        timestamp: client1PendingLocalMetas[0].timestamp,
+      },
+      {
+        id: client1PendingLocalMetas[1].mutationID,
+        name: client1PendingLocalMetas[1].mutatorName,
+        args: client1PendingLocalMetas[1].mutatorArgsJSON,
+        timestamp: client1PendingLocalMetas[1].timestamp,
+      },
+    ],
+    pushVersion: PUSH_VERSION_SDD,
+    schemaVersion: schemaVersionOfClientWPendingMutations,
+  });
 
   // Expect no unmatched fetches (only a push request should be sent, no pull)
   expect(fetchMock.calls('unmatched').length).to.equal(0);

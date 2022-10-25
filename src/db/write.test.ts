@@ -24,7 +24,7 @@ test('basics w/ commit', async () => {
   const clientID = 'client-id';
   const ds = new dag.TestStore();
   const lc = new LogContext();
-  await initDB(await ds.write(), DEFAULT_HEAD_NAME, clientID);
+  await initDB(await ds.write(), DEFAULT_HEAD_NAME, clientID, {}, DD31);
 
   // Put.
   await ds.withWrite(async dagWrite => {
@@ -36,6 +36,7 @@ test('basics w/ commit', async () => {
       dagWrite,
       42,
       clientID,
+      DD31,
     );
     await w.put(lc, 'foo', 'bar');
     // Assert we can read the same value from within this transaction.;
@@ -54,6 +55,7 @@ test('basics w/ commit', async () => {
       dagWrite,
       42,
       clientID,
+      DD31,
     );
     const val = await w.get('foo');
     expect(val).to.deep.equal('bar');
@@ -69,6 +71,7 @@ test('basics w/ commit', async () => {
       dagWrite,
       42,
       clientID,
+      DD31,
     );
     await w.del(lc, 'foo');
     // Assert it is gone while still within this transaction.
@@ -87,6 +90,7 @@ test('basics w/ commit', async () => {
       dagWrite,
       42,
       clientID,
+      DD31,
     );
     const val = await w.get(`foo`);
     expect(val).to.be.undefined;
@@ -97,7 +101,7 @@ test('basics w/ putCommit', async () => {
   const clientID = 'client-id';
   const ds = new dag.TestStore();
   const lc = new LogContext();
-  await initDB(await ds.write(), DEFAULT_HEAD_NAME, clientID);
+  await initDB(await ds.write(), DEFAULT_HEAD_NAME, clientID, {}, DD31);
 
   // Put.
   const commit1 = await ds.withWrite(async dagWrite => {
@@ -109,6 +113,7 @@ test('basics w/ putCommit', async () => {
       dagWrite,
       42,
       clientID,
+      DD31,
     );
     await w.put(lc, 'foo', 'bar');
     // Assert we can read the same value from within this transaction.;
@@ -130,6 +135,7 @@ test('basics w/ putCommit', async () => {
       dagWrite,
       42,
       clientID,
+      DD31,
     );
     const val = await w.get('foo');
     expect(val).to.deep.equal('bar');
@@ -145,6 +151,7 @@ test('basics w/ putCommit', async () => {
       dagWrite,
       42,
       clientID,
+      DD31,
     );
     await w.del(lc, 'foo');
     // Assert it is gone while still within this transaction.
@@ -166,6 +173,7 @@ test('basics w/ putCommit', async () => {
       dagWrite,
       42,
       clientID,
+      DD31,
     );
     const val = await w.get(`foo`);
     expect(val).to.be.undefined;
@@ -180,7 +188,7 @@ test('index commit type constraints', async () => {
   const clientID = 'client-id';
   const ds = new dag.TestStore();
   const lc = new LogContext();
-  await initDB(await ds.write(), DEFAULT_HEAD_NAME, clientID);
+  await initDB(await ds.write(), DEFAULT_HEAD_NAME, clientID, {}, false);
 
   // Test that local changes cannot create or drop an index.
   const w = await newWriteLocal(
@@ -191,6 +199,7 @@ test('index commit type constraints', async () => {
     await ds.write(),
     42,
     clientID,
+    DD31,
   );
 
   let err;
@@ -226,6 +235,7 @@ test('clear', async () => {
             idx: {prefix: '', jsonPointer: '', allowEmpty: false},
           }
         : {},
+      DD31,
     ),
   );
   await ds.withWrite(async dagWrite => {
@@ -237,6 +247,7 @@ test('clear', async () => {
       dagWrite,
       42,
       clientID,
+      DD31,
     );
     await w.put(lc, 'foo', 'bar');
     await w.commit(DEFAULT_HEAD_NAME);
@@ -263,6 +274,7 @@ test('clear', async () => {
       dagWrite,
       42,
       clientID,
+      DD31,
     );
     await w.put(lc, 'hot', 'dog');
 
@@ -314,7 +326,7 @@ test('create and drop index', async () => {
     const ds = new dag.TestStore();
     const lc = new LogContext();
     await ds.withWrite(dagWrite =>
-      initDB(dagWrite, DEFAULT_HEAD_NAME, clientID),
+      initDB(dagWrite, DEFAULT_HEAD_NAME, clientID, {}, false),
     );
 
     if (writeBeforeIndexing) {
@@ -327,6 +339,7 @@ test('create and drop index', async () => {
           dagWrite,
           42,
           clientID,
+          false,
         );
         for (let i = 0; i < 3; i++) {
           await w.put(
@@ -360,6 +373,7 @@ test('create and drop index', async () => {
           dagWrite,
           42,
           clientID,
+          false,
         );
         for (let i = 0; i < 3; i++) {
           await w.put(
@@ -416,7 +430,9 @@ test('legacy index definitions imply allowEmpty = false', async () => {
   const clientID = 'client-id';
   const ds = new dag.TestStore();
   const lc = new LogContext();
-  await ds.withWrite(dagWrite => initDB(dagWrite, DEFAULT_HEAD_NAME, clientID));
+  await ds.withWrite(dagWrite =>
+    initDB(dagWrite, DEFAULT_HEAD_NAME, clientID, {}, false),
+  );
 
   const indexName = 'legacyIndex';
   await ds.withWrite(async dagWrite => {
@@ -477,7 +493,7 @@ test('resync indexes', async () => {
     const dagStore = new dag.TestStore();
     const lc = new LogContext();
     await dagStore.withWrite(dagWrite =>
-      initDB(dagWrite, DEFAULT_HEAD_NAME, clientID),
+      initDB(dagWrite, DEFAULT_HEAD_NAME, clientID, {}, false),
     );
 
     await dagStore.withWrite(async dagWrite => {

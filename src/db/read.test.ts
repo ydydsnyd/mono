@@ -10,7 +10,7 @@ test('basics', async () => {
   const clientID = 'client-id';
   const ds = new dag.TestStore();
   const lc = new LogContext();
-  await initDB(await ds.write(), DEFAULT_HEAD_NAME, clientID);
+  await initDB(await ds.write(), DEFAULT_HEAD_NAME, clientID, {}, DD31);
   const w = await newWriteLocal(
     whenceHead(DEFAULT_HEAD_NAME),
     'mutator_name',
@@ -19,6 +19,7 @@ test('basics', async () => {
     await ds.write(),
     42,
     clientID,
+    DD31,
   );
   await w.put(lc, 'foo', 'bar');
   await w.commit(DEFAULT_HEAD_NAME);

@@ -24,7 +24,7 @@ import {readCommit, whenceHead} from './read';
 import {
   Write,
   readIndexesForWrite,
-  newWriteSnapshot,
+  newWriteSnapshotSDD,
   newWriteSnapshotDD31,
   newWriteLocal,
   newWriteIndexChange,
@@ -49,9 +49,17 @@ async function addGenesis(
   store: dag.Store,
   clientID: ClientID,
   headName = DEFAULT_HEAD_NAME,
+  indexDefinitions: IndexDefinitions,
+  dd31: boolean,
 ): Promise<Chain> {
   expect(chain).to.have.length(0);
-  const commit = await createGenesis(store, clientID, headName);
+  const commit = await createGenesis(
+    store,
+    clientID,
+    headName,
+    indexDefinitions,
+    dd31,
+  );
   chain.push(commit);
   return chain;
 }
@@ -59,10 +67,12 @@ async function addGenesis(
 async function createGenesis(
   store: dag.Store,
   clientID: ClientID,
-  headName = DEFAULT_HEAD_NAME,
+  headName: string,
+  indexDefinitions: IndexDefinitions,
+  dd31: boolean,
 ): Promise<Commit<Meta>> {
   await store.withWrite(async w => {
-    await initDB(w, headName, clientID);
+    await initDB(w, headName, clientID, indexDefinitions, dd31);
   });
   return await store.withRead(async read => {
     const [, commit] = await readCommit(whenceHead(headName), read);
@@ -76,8 +86,9 @@ async function addLocal(
   chain: Chain,
   store: dag.Store,
   clientID: ClientID,
-  entries?: [string, JSONValue][],
-  headName = DEFAULT_HEAD_NAME,
+  entries: [string, JSONValue][] | undefined,
+  headName: string,
+  dd31: boolean,
 ): Promise<Chain> {
   expect(chain).to.have.length.greaterThan(0);
   const i = chain.length;
@@ -87,6 +98,7 @@ async function addLocal(
     i,
     clientID,
     headName,
+    dd31,
   );
 
   chain.push(commit);
@@ -98,7 +110,8 @@ async function createLocal(
   store: dag.Store,
   i: number,
   clientID: ClientID,
-  headName = DEFAULT_HEAD_NAME,
+  headName: string,
+  dd31: boolean,
 ): Promise<Commit<Meta>> {
   const lc = new LogContext();
   await store.withWrite(async dagWrite => {
@@ -110,6 +123,7 @@ async function createLocal(
       dagWrite,
       42,
       clientID,
+      dd31,
     );
     for (const [key, val] of entries) {
       await w.put(lc, key, toInternalValue(val, ToInternalValueReason.Test));
@@ -127,9 +141,9 @@ async function addIndexChange(
   chain: Chain,
   store: dag.Store,
   clientID: ClientID,
-  indexName?: string,
-  indexDefinition?: IndexDefinition,
-  headName = DEFAULT_HEAD_NAME,
+  indexName: string | undefined,
+  indexDefinition: IndexDefinition | undefined,
+  headName: string,
 ): Promise<Chain> {
   expect(chain).to.have.length.greaterThan(0);
   const i = chain.length;
@@ -160,7 +174,7 @@ async function createIndex(
   prefix: string,
   jsonPointer: string,
   allowEmpty: boolean,
-  headName = DEFAULT_HEAD_NAME,
+  headName: string,
 ): Promise<Commit<Meta>> {
   assert(!DD31);
   const lc = new LogContext();
@@ -183,22 +197,23 @@ async function createIndex(
 // it depends on details of sync and sync depends on db.
 
 // The optional map for the commit is treated as key, value pairs.
-async function addSnapshotDD31(
+async function addSnapshot(
   chain: Chain,
   store: dag.Store,
   map: [string, JSONValue][] | undefined,
   clientID: ClientID,
   cookie: JSONValue = `cookie_${chain.length}`,
-  lastMutationIDs?: Record<ClientID, number>,
-  indexDefinitions?: IndexDefinitions,
-  headName = DEFAULT_HEAD_NAME,
+  lastMutationIDs: Record<ClientID, number> | undefined,
+  indexDefinitions: IndexDefinitions | undefined,
+  headName: string,
+  dd31: boolean,
 ): Promise<Chain> {
   expect(chain).to.have.length.greaterThan(0);
   const lc = new LogContext();
   await store.withWrite(async dagWrite => {
     let w;
     let indexes: Map<string, IndexWrite>;
-    if (DD31) {
+    if (dd31) {
       if (indexDefinitions) {
         indexes = new Map();
         for (const [name, indexDefinition] of Object.entries(
@@ -244,7 +259,7 @@ async function addSnapshotDD31(
         clientID,
       );
     } else {
-      w = await newWriteSnapshot(
+      w = await newWriteSnapshotSDD(
         whenceHead(DEFAULT_HEAD_NAME),
         await chain[chain.length - 1].getNextMutationID(clientID, dagWrite),
         toInternalValue(cookie, ToInternalValueReason.Test),
@@ -269,23 +284,33 @@ async function addSnapshotDD31(
 }
 
 export class ChainBuilder {
-  store: dag.Store;
-  headName: string;
+  readonly store: dag.Store;
+  readonly headName: string;
   chain: Chain;
+  readonly dd31: boolean;
 
-  constructor(store: dag.Store, headName = DEFAULT_HEAD_NAME) {
+  constructor(store: dag.Store, headName = DEFAULT_HEAD_NAME, dd31 = DD31) {
     this.store = store;
     this.headName = headName;
     this.chain = [];
+    this.dd31 = dd31;
   }
 
   async addGenesis(
     clientID: ClientID,
-  ): Promise<Commit<SnapshotMetaDD31 | SnapshotMetaSDD>> {
-    await addGenesis(this.chain, this.store, clientID, this.headName);
+    indexDefinitions: IndexDefinitions = {},
+  ): Promise<Commit<SnapshotMetaSDD | SnapshotMetaDD31>> {
+    await addGenesis(
+      this.chain,
+      this.store,
+      clientID,
+      this.headName,
+      indexDefinitions,
+      this.dd31,
+    );
     const commit = this.chain.at(-1);
     assertNotUndefined(commit);
-    if (DD31) {
+    if (this.dd31) {
       assertSnapshotCommitDD31(commit);
     } else {
       assertSnapshotCommitSDD(commit);
@@ -297,10 +322,17 @@ export class ChainBuilder {
     clientID: ClientID,
     entries?: [string, JSONValue][],
   ): Promise<Commit<LocalMetaDD31 | LocalMetaSDD>> {
-    await addLocal(this.chain, this.store, clientID, entries, this.headName);
+    await addLocal(
+      this.chain,
+      this.store,
+      clientID,
+      entries,
+      this.headName,
+      this.dd31,
+    );
     const commit = this.chain.at(-1);
     assertNotUndefined(commit);
-    if (DD31) {
+    if (this.dd31) {
       assertLocalCommitDD31(commit);
     } else {
       assertLocalCommitSDD(commit);
@@ -314,8 +346,8 @@ export class ChainBuilder {
     cookie: JSONValue = `cookie_${this.chain.length}`,
     lastMutationIDs?: Record<ClientID, number>,
     indexDefinitions?: IndexDefinitions,
-  ): Promise<Commit<SnapshotMetaDD31 | SnapshotMetaSDD>> {
-    await addSnapshotDD31(
+  ): Promise<Commit<SnapshotMetaSDD | SnapshotMetaDD31>> {
+    await addSnapshot(
       this.chain,
       this.store,
       map,
@@ -324,10 +356,11 @@ export class ChainBuilder {
       lastMutationIDs,
       indexDefinitions,
       this.headName,
+      this.dd31,
     );
     const commit = this.chain.at(-1);
     assertNotUndefined(commit);
-    if (DD31) {
+    if (this.dd31) {
       assertSnapshotCommitDD31(commit);
     } else {
       assertSnapshotCommitSDD(commit);
@@ -376,11 +409,12 @@ export async function initDB(
   dagWrite: dag.Write,
   headName: string,
   clientID: ClientID,
-  indexDefinitions: IndexDefinitions = {},
+  indexDefinitions: IndexDefinitions,
+  dd31: boolean,
 ): Promise<Hash> {
   const basisHash = emptyHash;
   const indexes = await createEmptyIndexMaps(indexDefinitions, dagWrite);
-  if (DD31) {
+  if (dd31) {
     const w = new Write(
       dagWrite,
       new BTreeWrite(dagWrite),
@@ -393,6 +427,7 @@ export async function initDB(
       },
       indexes,
       clientID,
+      true,
     );
     return await w.commit(headName);
   }
@@ -403,6 +438,7 @@ export async function initDB(
     {basisHash, type: MetaType.Snapshot, lastMutationID: 0, cookieJSON: null},
     indexes,
     clientID,
+    false,
   );
   return await w.commit(headName);
 }

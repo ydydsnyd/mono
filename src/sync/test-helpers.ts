@@ -21,7 +21,9 @@ export async function addSyncSnapshot(
 ): Promise<Chain> {
   expect(chain.length >= 2).to.be.true;
 
-  let maybeBaseSnapshot: db.Commit<SnapshotMetaSDD> | undefined;
+  let maybeBaseSnapshot:
+    | db.Commit<SnapshotMetaSDD | db.SnapshotMetaDD31>
+    | undefined;
   for (let i = chain.length - 1; i > 0; i--) {
     const commit = chain[i - 1];
     if (commit.isSnapshot()) {
@@ -50,7 +52,7 @@ export async function addSyncSnapshot(
       );
       await w.commit(sync.SYNC_HEAD_NAME);
     } else {
-      const w = await db.newWriteSnapshot(
+      const w = await db.newWriteSnapshotSDD(
         db.whenceHash(baseSnapshot.chunk.hash),
         await baseSnapshot.getMutationID(clientID, dagWrite),
         cookie,

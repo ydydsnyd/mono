@@ -1206,7 +1206,7 @@ test('maybe end try pull', async () => {
             db.readIndexesForWrite(b.chain[0], dagWrite),
             clientID,
           )
-        : await db.newWriteSnapshot(
+        : await db.newWriteSnapshotSDD(
             db.whenceHash(b.chain[0].chunk.hash),
             0,
             'sync_cookie',
@@ -1243,6 +1243,7 @@ test('maybe end try pull', async () => {
           dagWrite,
           original.meta.timestamp,
           clientID,
+          DD31,
         );
         return await w.commit(SYNC_HEAD_NAME);
       });

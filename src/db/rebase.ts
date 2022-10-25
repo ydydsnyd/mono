@@ -20,7 +20,8 @@ async function rebaseMutation(
 ): Promise<Write> {
   const localMeta = mutation.meta;
   const name = localMeta.mutatorName;
-  if (isLocalMetaDD31(localMeta)) {
+  const dd31 = isLocalMetaDD31(localMeta);
+  if (dd31) {
     assert(
       localMeta.clientID === mutationClientID,
       'mutationClientID must match clientID of LocalMeta',
@@ -69,6 +70,7 @@ async function rebaseMutation(
     dagWrite,
     localMeta.timestamp,
     mutationClientID,
+    dd31,
   );
 
   const tx = new WriteTransactionImpl(mutationClientID, dbWrite, lc);

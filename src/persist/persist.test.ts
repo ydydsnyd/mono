@@ -76,7 +76,7 @@ async function assertClientMutationIDsCorrect(
 
 suite('persist on top of different kinds of commits', () => {
   if (DD31) {
-    // persitDD31 is tested in persist-dd31.test.ts
+    // persistDD31 is tested in persist-dd31.test.ts
     return;
   }
   let memdag: dag.LazyStore,
@@ -86,8 +86,8 @@ suite('persist on top of different kinds of commits', () => {
     clientID: sync.ClientID;
 
   setup(async () => {
-    ({memdag, perdag, b: b, testPersist, clientID} = setupPersistTest());
-    await initClientWithClientID(clientID, perdag);
+    ({memdag, perdag, b, testPersist, clientID} = setupPersistTest());
+    await initClientWithClientID(clientID, perdag, [], {}, false);
     await b.addGenesis(clientID);
   });
 
@@ -185,11 +185,11 @@ suite('persist on top of different kinds of commits', () => {
 
 test('We get a MissingClientException during persist if client is missing', async () => {
   if (DD31) {
-    // persitDD31 is tested in persist-dd31.test.ts
+    // persistDD31 is tested in persist-dd31.test.ts
     return;
   }
-  const {memdag, perdag, b: b, testPersist, clientID} = setupPersistTest();
-  await initClientWithClientID(clientID, perdag);
+  const {memdag, perdag, b, testPersist, clientID} = setupPersistTest();
+  await initClientWithClientID(clientID, perdag, [], {}, false);
 
   await b.addGenesis(clientID);
   await b.addLocal(clientID);

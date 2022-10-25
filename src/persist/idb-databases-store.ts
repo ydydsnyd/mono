@@ -69,7 +69,7 @@ export class IDBDatabasesStore {
     db: IndexedDBDatabase,
   ): Promise<IndexedDBDatabaseRecord> {
     return this._kvStore.withWrite(async write => {
-      const oldDbRecord = await this._getDatabases(write);
+      const oldDbRecord = await getDatabases(write);
       const dbRecord = {
         ...oldDbRecord,
         [db.name]: db,
@@ -89,7 +89,7 @@ export class IDBDatabasesStore {
 
   deleteDatabases(names: Iterable<IndexedDBName>): Promise<void> {
     return this._kvStore.withWrite(async write => {
-      const oldDbRecord = await this._getDatabases(write);
+      const oldDbRecord = await getDatabases(write);
       const dbRecord = {
         ...oldDbRecord,
       };
@@ -102,20 +102,11 @@ export class IDBDatabasesStore {
   }
 
   getDatabases(): Promise<IndexedDBDatabaseRecord> {
-    return this._kvStore.withRead(read => this._getDatabases(read));
+    return this._kvStore.withRead(getDatabases);
   }
 
   close(): Promise<void> {
     return this._kvStore.close();
-  }
-
-  private async _getDatabases(read: kv.Read): Promise<IndexedDBDatabaseRecord> {
-    let dbRecord = await read.get(DBS_KEY);
-    if (!dbRecord) {
-      dbRecord = {};
-    }
-    assertIndexedDBDatabaseRecord(dbRecord);
-    return dbRecord;
   }
 
   async getProfileID(): Promise<string> {
@@ -131,4 +122,13 @@ export class IDBDatabasesStore {
       return profileId;
     });
   }
+}
+
+async function getDatabases(read: kv.Read): Promise<IndexedDBDatabaseRecord> {
+  let dbRecord = await read.get(DBS_KEY);
+  if (!dbRecord) {
+    dbRecord = {};
+  }
+  assertIndexedDBDatabaseRecord(dbRecord);
+  return dbRecord;
 }

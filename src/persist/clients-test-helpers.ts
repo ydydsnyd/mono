@@ -1,15 +1,17 @@
 import {
-  initClient,
   Client,
   ClientMap,
   ClientDD31,
   ClientSDD,
   setClients,
   getClients,
+  initClientDD31,
+  initClientSDD,
 } from './clients';
 import type * as dag from '../dag/mod';
 import type * as sync from '../sync/mod';
 import {LogContext} from '@rocicorp/logger';
+import type {IndexDefinitions} from '../index-defs.js';
 
 export function setClientsForTesting(
   clients: ClientMap,
@@ -98,13 +100,22 @@ export async function deleteClientForTesting(
 export async function initClientWithClientID(
   clientID: sync.ClientID,
   dagStore: dag.Store,
+  mutatorNames: string[],
+  indexes: IndexDefinitions,
+  dd31: boolean,
 ): Promise<void> {
-  const [generatedClientID, client, clientMap] = await initClient(
-    new LogContext(),
-    dagStore,
-    [],
-    {},
-  );
+  let generatedClientID, client, clientMap;
+  if (dd31) {
+    [generatedClientID, client, clientMap] = await initClientDD31(
+      new LogContext(),
+      dagStore,
+      mutatorNames,
+      indexes,
+    );
+  } else {
+    [generatedClientID, client, clientMap] = await initClientSDD(dagStore);
+  }
+
   const newMap = new Map(clientMap);
   newMap.delete(generatedClientID);
   newMap.set(clientID, client);

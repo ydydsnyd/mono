@@ -13,7 +13,7 @@ import {
   compareCookies,
   getRefs,
   toChunkIndexDefinition,
-  newSnapshotCommitData,
+  newSnapshotCommitDataSDD,
   newSnapshotCommitDataDD31,
   ChunkIndexDefinition,
   chunkIndexDefinitionEqualIgnoreName,
@@ -240,7 +240,12 @@ export function initClient(
   if (DD31) {
     return initClientDD31(lc, perdag, mutatorNames, indexes);
   }
+  return initClientSDD(perdag);
+}
 
+export function initClientSDD(
+  perdag: dag.Store,
+): Promise<[sync.ClientID, Client, ClientMap]> {
   return perdag.withWrite(async dagWrite => {
     const newClientID = makeUuid();
     const clients = await getClients(dagWrite);
@@ -267,7 +272,7 @@ export function initClient(
       // server implementations expect new client ids to start with last mutation id 0.
       // If a server sees a new client id with a non-0 last mutation id, it may conclude
       // this is a very old client whose state has been garbage collected on the server.
-      newClientCommitData = newSnapshotCommitData(
+      newClientCommitData = newSnapshotCommitDataSDD(
         bootstrapCommit.meta.basisHash,
         0 /* lastMutationID */,
         bootstrapCommit.meta.cookieJSON,
@@ -282,7 +287,7 @@ export function initClient(
         [],
       );
       chunksToPut.push(emptyBTreeChunk);
-      newClientCommitData = newSnapshotCommitData(
+      newClientCommitData = newSnapshotCommitDataSDD(
         null /* basisHash */,
         0 /* lastMutationID */,
         null /* cookie */,
@@ -318,7 +323,6 @@ export function initClient(
 export function initClientDD31(
   lc: LogContext,
   perdag: dag.Store,
-
   mutatorNames: string[],
   indexes: IndexDefinitions,
 ): Promise<[sync.ClientID, Client, ClientMap]> {

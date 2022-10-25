@@ -9,7 +9,7 @@ import {
   IndexRecord,
   newIndexChange as commitNewIndexChange,
   newLocal as commitNewLocal,
-  newSnapshot as commitNewSnapshot,
+  newSnapshotSDD as commitNewSnapshotSDD,
   newSnapshotDD31 as commitNewSnapshotDD31,
   MetaType,
   assertSnapshotMetaDD31,
@@ -46,6 +46,7 @@ export class Write extends Read {
 
   declare readonly indexes: Map<string, IndexWrite>;
   private readonly _clientID: ClientID;
+  private readonly _dd31: boolean;
 
   constructor(
     dagWrite: dag.Write,
@@ -54,16 +55,15 @@ export class Write extends Read {
     meta: CommitMeta,
     indexes: Map<string, IndexWrite>,
     clientID: ClientID,
+    dd31: boolean,
   ) {
     // TypeScript has trouble
     super(dagWrite, map, indexes);
     this._dagWrite = dagWrite;
     this._basis = basis;
     this._meta = meta;
-    if (DD31 && meta.type === MetaType.Snapshot) {
-      assertSnapshotMetaDD31(meta);
-    }
     this._clientID = clientID;
+    this._dd31 = dd31;
 
     // TODO(arv): if (DEBUG) { ...
     if (basis === undefined) {
@@ -275,7 +275,7 @@ export class Write extends Read {
         break;
       }
       case MetaType.Snapshot: {
-        if (DD31) {
+        if (this._dd31) {
           assertSnapshotMetaDD31(meta);
           const {basisHash, lastMutationIDs, cookieJSON} = meta;
           commit = commitNewSnapshotDD31(
@@ -289,7 +289,7 @@ export class Write extends Read {
         } else {
           assertSnapshotMetaSDD(meta);
           const {basisHash, lastMutationID, cookieJSON} = meta;
-          commit = commitNewSnapshot(
+          commit = commitNewSnapshotSDD(
             this._dagWrite.createChunk,
             basisHash,
             lastMutationID,
@@ -412,6 +412,7 @@ export async function newWriteLocal(
   dagWrite: dag.Write,
   timestamp: number,
   clientID: ClientID,
+  dd31: boolean,
 ): Promise<Write> {
   const [basisHash, basis, bTreeWrite] = await readCommitForBTreeWrite(
     whence,
@@ -424,7 +425,7 @@ export async function newWriteLocal(
     dagWrite,
     bTreeWrite,
     basis,
-    DD31
+    dd31
       ? {
           type: MetaType.Local,
           basisHash,
@@ -446,10 +447,11 @@ export async function newWriteLocal(
         },
     indexes,
     clientID,
+    DD31,
   );
 }
 
-export async function newWriteSnapshot(
+export async function newWriteSnapshotSDD(
   whence: Whence,
   lastMutationID: number,
   cookieJSON: InternalValue,
@@ -457,7 +459,6 @@ export async function newWriteSnapshot(
   indexes: Map<string, IndexWrite>,
   clientID: ClientID,
 ): Promise<Write> {
-  assert(!DD31);
   const [, basis, bTreeWrite] = await readCommitForBTreeWrite(whence, dagWrite);
   const basisHash = basis.chunk.hash;
   return new Write(
@@ -467,6 +468,7 @@ export async function newWriteSnapshot(
     {basisHash, type: MetaType.Snapshot, lastMutationID, cookieJSON},
     indexes,
     clientID,
+    false,
   );
 }
 
@@ -490,6 +492,7 @@ export async function newWriteSnapshotDD31(
     {basisHash, type: MetaType.Snapshot, lastMutationIDs, cookieJSON},
     indexes,
     clientID,
+    true,
   );
 }
 
@@ -512,6 +515,7 @@ export async function newWriteIndexChange(
     {basisHash, type: MetaType.IndexChange, lastMutationID},
     indexes,
     clientID,
+    false,
   );
 }
 

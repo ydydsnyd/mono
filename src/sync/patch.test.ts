@@ -169,7 +169,7 @@ test('patch', async () => {
           clientID,
         );
       } else {
-        dbWrite = await db.newWriteSnapshot(
+        dbWrite = await db.newWriteSnapshotSDD(
           db.whenceHash(b.chain[0].chunk.hash),
           1,
           'cookie',

@@ -66,6 +66,7 @@ import type {IndexDefinitions} from './index-defs';
 import {assertClientDD31} from './persist/clients.js';
 import {throwIfClosed} from './transaction-closed-error.js';
 import {version} from './version';
+import {PUSH_VERSION_DD31, PUSH_VERSION_SDD} from './sync/push.js';
 
 export type BeginPullResult = {
   requestID: string;
@@ -1088,6 +1089,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
               this.pushURL,
               this.auth,
               this.schemaVersion,
+              DD31 ? PUSH_VERSION_DD31 : PUSH_VERSION_SDD,
             );
             return {result: pushResponse, httpRequestInfo: pushResponse};
           } finally {
@@ -1408,6 +1410,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         dagWrite,
         timestamp,
         clientID,
+        DD31,
       );
 
       const tx = new WriteTransactionImpl(clientID, dbWrite, this._lc);

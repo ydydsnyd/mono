@@ -1,4 +1,5 @@
-export {persist} from './persist';
+export {persist, persistSDD} from './persist';
+export {persistDD31} from './persist-dd31';
 export {startHeartbeats} from './heartbeat';
 export {getBranch, getBranches, setBranch, setBranches} from './branches';
 export type {Branch, BranchMap} from './branches';

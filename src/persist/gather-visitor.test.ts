@@ -171,11 +171,10 @@ test('dag with some permanent hashes and some memory-only hashes on top w index'
     await memdagWrite.commit();
   });
 
+  mb.chain = pb.chain.slice();
   if (DD31) {
-    mb.chain = pb.chain.slice();
     await mb.addLocal(clientID, [['c', {name: 'c-name'}]]);
   } else {
-    mb.chain = pb.chain.slice();
     await mb.addIndexChange(clientID, 'testIndex', {
       prefix: '',
       jsonPointer: '/name',

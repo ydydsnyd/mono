@@ -19,6 +19,7 @@ import {IDBStore} from './kv/idb-store.js';
 import {assertClientSDD, isClientSDD, setClients} from './persist/clients.js';
 import type {ClientID} from './sync/client-id.js';
 import type {Pusher} from './pusher.js';
+import {PUSH_VERSION_SDD} from './sync/push.js';
 
 const MUTATION_RECOVERY_LAZY_STORE_SOURCE_CHUNK_CACHE_SIZE_LIMIT = 10 * 2 ** 20; // 10 MB
 
@@ -226,6 +227,7 @@ async function recoverMutationsOfClient(
             pushURL,
             delegate.auth,
             database.schemaVersion,
+            PUSH_VERSION_SDD,
           );
           return {result: pushResponse, httpRequestInfo: pushResponse};
         },
