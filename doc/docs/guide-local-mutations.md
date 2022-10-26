@@ -3,8 +3,6 @@ title: Local Mutations
 slug: /guide/local-mutations
 ---
 
-Next up: Local mutations. Because read-only apps are not all that useful.
-
 With Replicache, you implement mutations once on the client-side (sometimes called _speculative_ or _optimistic_ mutations), and then again on the server (called _authoritative_ mutations).
 
 :::note info
@@ -68,3 +66,7 @@ Restart the server and you should now be able to make changes!
 <p class="text--center">
   <img src="/img/setup/local-mutation.gif" width="650"/>
 </p>
+
+## Next
+
+That's actually it for the client! Next, we'll start work on our server by [setting up a remote database](./guide-database-setup.md).

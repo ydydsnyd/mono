@@ -57,25 +57,25 @@ module.exports = {
     },
     {
       HOWTO: [
-        'howto-licensing',
-        'howto-blobs',
-        'howto-launch',
-        'howto-undo',
         {
-          // TODO figure out what to do with this
-          'Integrate with your own backend': [
+          'Build Your Own Backend': [
             'guide-intro',
-            'guide-design-client-view',
             'guide-install-replicache',
+            'guide-design-client-view',
             'guide-render-ui',
             'guide-local-mutations',
             'guide-database-setup',
+            'guide-database-schema',
             'guide-remote-mutations',
             'guide-dynamic-pull',
             'guide-poke',
             'guide-conclusion',
           ],
         },
+        'howto-licensing',
+        'howto-blobs',
+        'howto-launch',
+        //'howto-undo',
       ],
     },
   ],

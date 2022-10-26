@@ -20,12 +20,6 @@ export NEXT_PUBLIC_REPLICHAT_PUSHER_SECRET=<secret>
 export NEXT_PUBLIC_REPLICHAT_PUSHER_CLUSTER=<cluster>
 ```
 
-Import the library into `pages/api/replicache-push.js`:
-
-```js
-import Pusher from 'pusher';
-```
-
 Typically you'll establish one WebSocket _channel_ per-document or whatever the unit of collaboration is in your application. For this simple demo, we just create one channel, `"default"`.
 
 Replace the implementation of `sendPoke()` in `replicache-push.js`:
@@ -74,3 +68,7 @@ Restart the app, and make a change, and you should see it propagate live between
 <p class="text--center">
   <img src="/img/setup/sync.webp" width="650"/>
 </p>
+
+## Next
+
+And that's it! The [next section](./guide-conclusion.md) wraps up.

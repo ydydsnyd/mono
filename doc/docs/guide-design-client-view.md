@@ -3,9 +3,9 @@ title: Client View
 slug: /guide/client-view
 ---
 
-The easiest way to start a Replicache project is to design your Client View schema and start serving it. That way, you'll have data to work with when you go to build the UI in the next step.
+An easy way to start a Replicache project is to design your Client View schema and start serving it. That's because the Client View is the interface between the client and server — the data that the UI renders, and that the server must provide.
 
-Recall that the Client View is the string-key-JSON-value map returned by your server and used by your app. Since we're trying to build a chat app, a simple list of messages might be a good starting point for our schema:
+The Client View is a map from string keys to JSON-compatible values. Since we're trying to build a chat app, a simple list of messages is a decent starting point for our schema:
 
 ```js
 {
@@ -32,14 +32,9 @@ Therefore, Replicache requires that clients assign IDs. Browsers have [cryptogra
 
 :::
 
+## Serving the Client View
+
 Now that we know what our schema will look like, let's serve it. Initially, we'll just serve static data, but later we'll build it dynamically from data in the database.
-
-Create an empty Next.js project:
-
-```bash
-npx create-next-app chat --example "https://github.com/vercel/next-learn/tree/master/basics/learn-starter"
-cd chat
-```
 
 Create a file in the project at `pages/api/replicache-pull.js` with the following contents:
 
@@ -94,3 +89,7 @@ Start your app with `npm run dev`, and navigate to [http://localhost:3000/api/re
 <p class="text--center">
   <img src="/img/setup/replicache-pull.webp" width="650"/>
 </p>
+
+## Next
+
+Next, we'll [render our UI](./guide-render-ui.md) from this static Client View.

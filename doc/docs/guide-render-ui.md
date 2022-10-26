@@ -5,33 +5,27 @@ slug: /guide/render-ui
 
 The next step is to use the data in the Client View to render your UI.
 
-The model is that your UI is a [pure function](https://en.wikipedia.org/wiki/Pure_function) of the data in Replicache. There is no separate in-memory state. Everything goes in Replicache.
-
-Whenever the data in Replicache changes — either due to local mutations or syncing with the server — subscriptions will fire, and your UI components re-render. Easy.
+The model is that your UI is a [pure function](https://en.wikipedia.org/wiki/Pure_function) of the data in Replicache. Whenever the data in Replicache changes — either due to local mutations or syncing with the server — subscriptions will fire, and your UI components re-render. Easy.
 
 To create a subscription, use the `useSubscribe()` React hook. You can do multiple reads and compute a result. Your React component only re-renders when the returned result changes.
 
 Let's use a subscription to implement our chat UI. Replace `index.js` with the below.
 
-:::warning
-
-Make sure to add your [Replicache license key](../licensing) as a parameter to the constructor below.
-
-:::
-
 ```js
 import React, {useEffect, useRef, useState} from 'react';
-import {Replicache} from 'replicache';
+import {Replicache, TEST_LICENSE_KEY} from 'replicache';
 import {useSubscribe} from 'replicache-react';
 import {nanoid} from 'nanoid';
 
 export default function Home() {
   const [rep, setRep] = useState(null);
 
+  // We have to do this in a useEffect() to prevent Next.js from trying to run
+  // Replicache server-side :-/.
   useEffect(async () => {
     const rep = new Replicache({
       name: 'chat-user-id',
-      licenseKey: '<your-license-key-here>',
+      licenseKey: TEST_LICENSE_KEY,
       pushURL: '/api/replicache-push',
       pullURL: '/api/replicache-pull',
     });
@@ -46,9 +40,6 @@ function Chat({rep}) {
   const messages = useSubscribe(
     rep,
     async tx => {
-      // Note: Replicache also supports secondary indexes, which can be used
-      // with scan. See:
-      // https://js.replicachedev/classes/replicache.html#createindex
       const list = await tx.scan({prefix: 'message/'}).entries().toArray();
       list.sort(([, {order: a}], [, {order: b}]) => a - b);
       return list;
@@ -124,3 +115,7 @@ Then restart your server and navigate to [http://localhost:3000/](http://localho
 This might not seem that exciting yet, but notice that if you change `replicache-pull` temporarily to return 500 (or remove it, or cause any other error, or just make it really slow), the page still renders instantly.
 
 That's because we're rendering the data from the local cache on startup, not waiting for the server! Woo.
+
+## Next
+
+Enough with static data. The next section adds [local mutations](./guide-local-mutations.md), which is how we implement optimistic UI in Replicache.

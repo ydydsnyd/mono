@@ -5,14 +5,17 @@ slug: /guide/dynamic-pull
 
 Even though in the previous step we're making persistent changes in the remote database, we still aren't _serving_ that data in the pull endpoint (it's still static 🤣).
 
-The reason we don't see the changes disappearing from the source browser is because Replicache is doing its job and holding onto speculative changes until they are confirmed by the server!
+Let's fix that now. [Pull](./server-pull.md) needs to return three things:
 
-Let's fix that now. We'll also use the `cookie` field to return only changed messages.
+1. A _cookie_ that identifies the current state of the requested space. We use the space's `version` for this purpose.
+1. All domain objects that have changed since the last pull, formatted as [JSON Patch](https://jsonpatch.com/). This is easy to do because on each pull request includes the `cookie` the client last received. All we have to do is find domain objects with a bigger `version` than this value.
+1. The last-processed `mutationID` for the calling client. This is how the client knows which mutations have been processed authoritatively and can therefore have their optimistic versions dropped.
 
 Replace the contents of `pages/api/replicache-pull.js` with this code:
 
 ```js
-import {db} from '../../db.js';
+import {tx} from '../../db.js';
+import {defaultSpaceID} from './init.js';
 
 export default async (req, res) => {
   const pull = req.body;
@@ -20,7 +23,9 @@ export default async (req, res) => {
   const t0 = Date.now();
 
   try {
-    await db.tx(async t => {
+    // Read all data in a single transaction so it's consistent.
+    await tx(async t => {
+      // Get the last processed mutationID for requesting client.
       const lastMutationID = parseInt(
         (
           await t.oneOrNone(
@@ -29,15 +34,20 @@ export default async (req, res) => {
           )
         )?.last_mutation_id ?? '0',
       );
+
+      // Get changed domain objects since requested version.
       const changed = await t.manyOrNone(
         'select id, sender, content, ord from message where version > $1',
         parseInt(pull.cookie ?? 0),
       );
-      const cookie = (
-        await t.one('select max(version) as version from message')
-      ).version;
-      console.log({cookie, lastMutationID, changed});
 
+      // Get current version for space.
+      const version = (
+        await t.one('select version from space where key = $1', defaultSpaceID)
+      ).version;
+      console.log({version, lastMutationID, changed});
+
+      // Build and return response.
       const patch = [];
       if (pull.cookie === null) {
         patch.push({
@@ -59,7 +69,7 @@ export default async (req, res) => {
 
       res.json({
         lastMutationID,
-        cookie,
+        cookie: version,
         patch,
       });
       res.end();
@@ -84,3 +94,7 @@ Also notice that if we go offline for awhile, make some changes, then come back 
 We don't have any conflicts in this simple data model, but Replicache makes it easy to reason about most conflicts. See the [How Replicache Works](/how-it-works) for more details.
 
 The only thing left is to make it live — we obviously don't want the user to have to manually refresh to get new data 🙄.
+
+## Next
+
+The [next section](./guide-poke.md) implements realtime updates.
