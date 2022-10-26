@@ -39,7 +39,9 @@ Now that we know what our schema will look like, let's serve it. Initially, we'l
 Create a file in the project at `pages/api/replicache-pull.js` with the following contents:
 
 ```js
-export default async (req, res) => {
+export default handlePull;
+
+async function handlePull(req, res) {
   res.json({
     // We will discuss these two fields in later steps.
     lastMutationID: 0,
@@ -67,7 +69,7 @@ export default async (req, res) => {
     ],
   });
   res.end();
-};
+}
 ```
 
 You'll notice the JSON we're serving is a little different than our idealized schema above.

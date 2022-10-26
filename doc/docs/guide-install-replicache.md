@@ -10,7 +10,7 @@ We're going to use [Next.js](https://nextjs.org/) for this sample app, just beca
 Create an empty Next.js project:
 
 ```bash
-npx create-next-app chat --example "https://github.com/vercel/next-learn/tree/master/basics/learn-starter"
+npx create-next-app chat
 cd chat
 ```
 

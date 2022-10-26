@@ -17,7 +17,9 @@ Replace the contents of `pages/api/replicache-pull.js` with this code:
 import {tx} from '../../db.js';
 import {defaultSpaceID} from './init.js';
 
-export default async (req, res) => {
+export default handlePull;
+
+async function handlePull(req, res) {
   const pull = req.body;
   console.log(`Processing pull`, JSON.stringify(pull));
   const t0 = Date.now();
@@ -80,7 +82,7 @@ export default async (req, res) => {
   } finally {
     console.log('Processed pull in', Date.now() - t0);
   }
-};
+}
 ```
 
 Voila. We're now round-tripping browsers and devices!

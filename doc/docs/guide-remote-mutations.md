@@ -25,7 +25,9 @@ import {tx} from '../../db.js';
 import Pusher from 'pusher';
 import {defaultSpaceID} from './init.js';
 
-export default async (req, res) => {
+export default handlePush;
+
+async function handlePush(req, res) {
   const push = req.body;
   console.log('Processing push', JSON.stringify(push));
 
@@ -137,7 +139,7 @@ export default async (req, res) => {
   } finally {
     console.log('Processed push in', Date.now() - t0);
   }
-};
+}
 
 async function getLastMutationID(t, clientID) {
   const clientRow = await t.oneOrNone(

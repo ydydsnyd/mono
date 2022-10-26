@@ -22,7 +22,7 @@ export default function Home() {
 
   // We have to do this in a useEffect() to prevent Next.js from trying to run
   // Replicache server-side :-/.
-  useEffect(async () => {
+  useEffect(() => {
     const rep = new Replicache({
       name: 'chat-user-id',
       licenseKey: TEST_LICENSE_KEY,
