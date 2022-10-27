@@ -254,7 +254,12 @@ export class LazyRead implements Read {
   close(): void {
     if (!this._closed) {
       this._release();
-      void this._sourceRead?.then(read => read.close());
+      this._sourceRead
+        ?.then(read => read.close())
+        // If creation of the read failed there is nothing to close.
+        // Catch to avoid `Uncaught (in promise)` errors being reported.
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        .catch(_ => {});
       this._closed = true;
     }
   }
