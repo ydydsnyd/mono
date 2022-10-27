@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1666781642301,
+  "lastUpdate": 1666830694223,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -27887,6 +27887,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 22976,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c3a5ee1f6b4d3bc05ba9ff5250d3ccbadb428f9d",
+          "message": "fix: prevent unintended concurrent persists in perf tests (#334)\n\nProblem\r\n======\r\n\r\nSince the persistPullLock was removed in https://github.com/rocicorp/replicache-internal/commit/087c09c2c7b79011eaf09a529a3f4d7299ca8a48 the below benchmarks\r\nhad unintended concurrent persists leading to incorrect timings.  \r\n\r\nbenchmarkCreateIndex\r\nbenchmarkStartupUsingBasicReadsFromPersistedData\r\nbenchmarkStartupUsingScanFromPersistedData\r\nbenchmarkPersist\r\n\r\nExample bad timings:\r\ncreate index with definition 1024x5000 50/75/90/95%=-317.70/-242.20/128.40/128.40 ms avg=-440.17 ms (7 runs sampled)\r\nstartup read 1024x100 from 1024x100000 stored 50/75/90/95%=66.20/82.00/31591.50/31591.50 ms avg=4575.83 ms (7 runs sampled)\r\nstartup scan 1024x100 from 1024x100000 stored 50/75/90/95%=54.50/75.00/30212.40/30212.40 ms avg=4358.93 ms (7 runs sampled)\r\n\r\n\r\nSolution\r\n======\r\n\r\nAdd an internal options to disable auto scheduling of persist, so that these perf tests can explicitly \r\ninvoke persist without being interfered with by normal auto scheduled persist.  Add an \r\nassert to persist so that we get an obvious failure if we accidentally reintroduce concurrent\r\npersists.",
+          "timestamp": "2022-10-26T17:30:21-07:00",
+          "tree_id": "fc3d4e270f4f3501df7715d49eb42762bf124ec4",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/c3a5ee1f6b4d3bc05ba9ff5250d3ccbadb428f9d"
+        },
+        "date": 1666830688334,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 187059,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 33588,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 185913,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33263,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 79250,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23016,
             "unit": "bytes"
           }
         ]
