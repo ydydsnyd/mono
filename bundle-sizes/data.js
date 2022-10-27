@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1666830694223,
+  "lastUpdate": 1666831473295,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -27941,6 +27941,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23016,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6f35abebe9588892e5722bf7c9118271007ab471",
+          "message": "fix: Avoid Uncaught (in promise) errors in lazy store close handling. (#333)\n\nThis is one place where an Uncaught \"InvalidStateError: The database connection is closing.\" can be reported.",
+          "timestamp": "2022-10-26T17:43:31-07:00",
+          "tree_id": "971cbc36c8faa2170808c2d67fefae85118f6d9d",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/6f35abebe9588892e5722bf7c9118271007ab471"
+        },
+        "date": 1666831467279,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 187076,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 33579,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 185930,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33247,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 79263,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23035,
             "unit": "bytes"
           }
         ]
