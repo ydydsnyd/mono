@@ -230,6 +230,10 @@ export type ReplicacheInternalOptions = {
    * Defaults to true.
    */
   enableMutationRecovery?: boolean;
+  /**
+   * Defaults to true.
+   */
+  enableScheduledPersist?: boolean;
 
   /**
    * Allows exposing parts of the internal API to a subclass. This works when

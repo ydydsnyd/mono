@@ -112,6 +112,7 @@ class ReplicacheWithPersist<MD extends MutatorDefs> extends Replicache<MD> {
       exposeInternalAPI: (api: ReplicacheInternalAPI) => {
         internalAPI = api;
       },
+      enableScheduledPersist: false,
     } as ReplicacheOptions<MD>);
     this._internalAPI = internalAPI;
   }

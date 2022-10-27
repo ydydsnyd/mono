@@ -304,6 +304,8 @@ export class Replicache<MD extends MutatorDefs = {}> {
   private readonly _closeAbortController = new AbortController();
 
   private _persistIsScheduled = false;
+  private _persistIsRunning = false;
+  private readonly _enableScheduledPersist: boolean;
 
   private readonly _enableLicensing: boolean;
 
@@ -386,9 +388,13 @@ export class Replicache<MD extends MutatorDefs = {}> {
     this.pusher = pusher;
 
     const internalOptions = options as ReplicacheInternalOptions;
-    const {enableLicensing = true, enableMutationRecovery = true} =
-      internalOptions;
+    const {
+      enableLicensing = true,
+      enableMutationRecovery = true,
+      enableScheduledPersist = true,
+    } = internalOptions;
     this._enableLicensing = enableLicensing;
+    this._enableScheduledPersist = enableScheduledPersist;
 
     if (internalOptions.exposeInternalAPI) {
       internalOptions.exposeInternalAPI({
@@ -1224,28 +1230,34 @@ export class Replicache<MD extends MutatorDefs = {}> {
   }
 
   private async _persist(): Promise<void> {
-    if (this._closed) {
-      return;
-    }
-    await this._ready;
-    const clientID = await this.clientID;
+    assert(!this._persistIsRunning);
+    this._persistIsRunning = true;
     try {
-      await persist.persist(
-        this._lc,
-        clientID,
-        this._memdag,
-        this._perdag,
-        this._mutatorRegistry,
-        () => this.closed,
-      );
-    } catch (e) {
-      if (e instanceof persist.ClientStateNotFoundError) {
-        this._fireOnClientStateNotFound(clientID, reasonClient);
-      } else if (this._closed) {
-        this._lc.debug?.('Exception persisting during close', e);
-      } else {
-        throw e;
+      await this._ready;
+      const clientID = await this.clientID;
+      if (this._closed) {
+        return;
       }
+      try {
+        await persist.persist(
+          this._lc,
+          clientID,
+          this._memdag,
+          this._perdag,
+          this._mutatorRegistry,
+          () => this.closed,
+        );
+      } catch (e) {
+        if (e instanceof persist.ClientStateNotFoundError) {
+          this._fireOnClientStateNotFound(clientID, reasonClient);
+        } else if (this._closed) {
+          this._lc.debug?.('Exception persisting during close', e);
+        } else {
+          throw e;
+        }
+      }
+    } finally {
+      this._persistIsRunning = false;
     }
   }
   private _fireOnClientStateNotFound(
@@ -1257,7 +1269,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   }
 
   private async _schedulePersist(): Promise<boolean> {
-    if (this._persistIsScheduled) {
+    if (this._persistIsScheduled || !this._enableScheduledPersist) {
       return false;
     }
     this._persistIsScheduled = true;
