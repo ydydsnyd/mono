@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1666831473295,
+  "lastUpdate": 1666892472900,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -27995,6 +27995,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23035,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "217116d77f291ce166207919758a9e400f29a3d4",
+          "message": "fix: fix perf regression due to uuid hashes being slower (#338)\n\nProblem\r\n=======\r\nA perf regression was introduced by the replacement of temp hashes (simple counter based hash) with uuid\r\nhashes in the memdag (23822e62e955632c15f29bdcb5626823bad5ec72).\r\n\r\nSolution\r\n======\r\nChange newUUIDHash implementation to use a single uuid for the javascript execution context plus a counter, instead of a new uuid each time.  \r\n\r\nThis increases hash length from 36 to 44.  Dashes are stripped from uuid to avoid increasing to 48.  \r\n\r\nMeaningfully improves perf of `populate`, `create index`,  `create index with definition`, and `persist`.  \r\n\r\nPerf comparisons made on my mac laptop\r\n  Model Name: MacBook Pro\r\n  Model Identifier: MacBookPro18,4\r\n  Chip: Apple M1 Max\r\n  Total Number of Cores: 10 (8 performance and 2 efficiency)\r\n  Memory: 64 GB\r\n  Physical Drive:\r\n    Device Name: APPLE SSD AP1024R\r\n    Media Name: AppleAPFSMedia\r\n    Medium Type: SSD\r\n    Capacity: 994.66 GB (994,662,584,320 bytes)\r\n\r\n**With this change**\r\n```\r\ngreg replicache-internal [grgbkr/fast-uuid-hash]$ npm run perf -- --format replicache\r\n\r\n> replicache@11.3.2 perf\r\n> npm run build-perf && node perf/runner.js \"--format\" \"replicache\"\r\n\r\n\r\n> replicache@11.3.2 build-perf\r\n> node tool/build.mjs --perf\r\n\r\nRunning 24 benchmarks on Chromium...\r\nwriteSubRead 1MB total, 64 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=0.90/1.20/1.40/1.90 ms avg=1.09 ms (19 runs sampled)\r\nwriteSubRead 4MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=0.90/1.00/1.20/2.00 ms avg=1.03 ms (19 runs sampled)\r\nwriteSubRead 16MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=1.10/1.10/1.40/2.20 ms avg=1.19 ms (16 runs sampled)\r\nwriteSubRead 64MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=1.10/1.60/2.30/2.30 ms avg=1.61 ms (7 runs sampled)\r\npopulate 1024x1000 (clean, indexes: 0) 50/75/90/95%=8.40/9.00/9.80/27.00 ms avg=10.02 ms (19 runs sampled)\r\npopulate 1024x1000 (clean, indexes: 1) 50/75/90/95%=14.50/15.40/17.30/38.90 ms avg=17.08 ms (19 runs sampled)\r\npopulate 1024x1000 (clean, indexes: 2) 50/75/90/95%=19.40/19.70/23.00/50.50 ms avg=22.72 ms (19 runs sampled)\r\npopulate 1024x10000 (clean, indexes: 0) 50/75/90/95%=48.10/63.00/77.00/77.00 ms avg=64.46 ms (8 runs sampled)\r\npopulate 1024x10000 (clean, indexes: 1) 50/75/90/95%=108.20/112.90/131.20/131.20 ms avg=141.17 ms (7 runs sampled)\r\npopulate 1024x10000 (clean, indexes: 2) 50/75/90/95%=157.60/184.90/193.20/193.20 ms avg=212.33 ms (7 runs sampled)\r\nscan 1024x1000 50/75/90/95%=0.90/1.10/1.50/1.70 ms avg=0.97 ms (19 runs sampled)\r\nscan 1024x10000 50/75/90/95%=6.40/6.60/8.90/10.60 ms avg=7.39 ms (19 runs sampled)\r\ncreate index with definition 1024x5000 50/75/90/95%=106.10/110.30/117.40/117.40 ms avg=136.41 ms (7 runs sampled)\r\ncreate index 1024x5000 50/75/90/95%=25.60/25.90/27.60/35.50 ms avg=28.88 ms (18 runs sampled)\r\nstartup read 1024x100 from 1024x100000 stored 50/75/90/95%=62.50/72.00/78.60/78.60 ms avg=62.75 ms (8 runs sampled)\r\nstartup scan 1024x100 from 1024x100000 stored 50/75/90/95%=13.90/29.70/60.60/61.80 ms avg=19.83 ms (19 runs sampled)\r\npersist 1024x1000 (indexes: 0) 50/75/90/95%=138.80/279.90/321.00/321.00 ms avg=220.87 ms (7 runs sampled)\r\npersist 1024x1000 (indexes: 1) 50/75/90/95%=172.50/173.70/174.10/174.10 ms avg=206.10 ms (7 runs sampled)\r\npersist 1024x1000 (indexes: 2) 50/75/90/95%=221.70/228.80/239.40/239.40 ms avg=273.63 ms (7 runs sampled)\r\npersist 1024x10000 (indexes: 0) 50/75/90/95%=535.60/555.70/559.10/559.10 ms avg=669.63 ms (7 runs sampled)\r\npersist 1024x10000 (indexes: 1) 50/75/90/95%=2181.70/2272.90/2455.40/2455.40 ms avg=2773.53 ms (7 runs sampled)\r\npersist 1024x10000 (indexes: 2) 50/75/90/95%=3795.40/3803.40/3887.80/3887.80 ms avg=4749.53 ms (7 runs sampled)\r\npopulate tmcw 50/75/90/95%=86.30/122.10/128.10/128.10 ms avg=120.94 ms (7 runs sampled)\r\npersist tmcw 50/75/90/95%=273.60/279.50/288.30/288.30 ms avg=346.84 ms (7 runs sampled)\r\nDone!\r\n```\r\n\r\n**Without this change**\r\n```\r\ngreg replicache-internal [main]$ npm run perf -- --format replicache\r\n\r\n> replicache@11.3.2 perf\r\n> npm run build-perf && node perf/runner.js \"--format\" \"replicache\"\r\n\r\n\r\n> replicache@11.3.2 build-perf\r\n> node tool/build.mjs --perf\r\n\r\nRunning 24 benchmarks on Chromium...\r\nwriteSubRead 1MB total, 64 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=0.90/1.00/1.20/1.80 ms avg=1.01 ms (19 runs sampled)\r\nwriteSubRead 4MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=0.90/1.00/1.20/1.20 ms avg=1.01 ms (19 runs sampled)\r\nwriteSubRead 16MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=1.10/1.30/1.60/2.60 ms avg=1.35 ms (13 runs sampled)\r\nwriteSubRead 64MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=1.40/1.50/2.70/2.70 ms avg=1.84 ms (7 runs sampled)\r\npopulate 1024x1000 (clean, indexes: 0) 50/75/90/95%=12.20/13.20/14.20/20.80 ms avg=14.04 ms (19 runs sampled)\r\npopulate 1024x1000 (clean, indexes: 1) 50/75/90/95%=22.40/23.50/30.10/31.70 ms avg=25.38 ms (19 runs sampled)\r\npopulate 1024x1000 (clean, indexes: 2) 50/75/90/95%=29.00/33.20/38.30/39.40 ms avg=34.29 ms (15 runs sampled)\r\npopulate 1024x10000 (clean, indexes: 0) 50/75/90/95%=92.00/102.10/112.90/112.90 ms avg=113.06 ms (7 runs sampled)\r\npopulate 1024x10000 (clean, indexes: 1) 50/75/90/95%=185.30/227.30/232.20/232.20 ms avg=250.87 ms (7 runs sampled)\r\npopulate 1024x10000 (clean, indexes: 2) 50/75/90/95%=274.30/311.50/320.50/320.50 ms avg=358.77 ms (7 runs sampled)\r\nscan 1024x1000 50/75/90/95%=0.80/1.00/1.50/1.70 ms avg=0.92 ms (19 runs sampled)\r\nscan 1024x10000 50/75/90/95%=6.60/6.70/8.50/10.10 ms avg=7.56 ms (19 runs sampled)\r\ncreate index with definition 1024x5000 50/75/90/95%=128.90/138.80/150.20/150.20 ms avg=168.14 ms (7 runs sampled)\r\ncreate index 1024x5000 50/75/90/95%=44.00/45.50/51.50/51.50 ms avg=52.19 ms (10 runs sampled)\r\nstartup read 1024x100 from 1024x100000 stored 50/75/90/95%=71.20/81.80/86.20/86.20 ms avg=71.51 ms (7 runs sampled)\r\nstartup scan 1024x100 from 1024x100000 stored 50/75/90/95%=18.60/31.40/49.10/59.10 ms avg=22.87 ms (19 runs sampled)\r\npersist 1024x1000 (indexes: 0) 50/75/90/95%=126.10/147.50/269.70/269.70 ms avg=175.93 ms (7 runs sampled)\r\npersist 1024x1000 (indexes: 1) 50/75/90/95%=161.50/164.70/166.30/166.30 ms avg=194.30 ms (7 runs sampled)\r\npersist 1024x1000 (indexes: 2) 50/75/90/95%=228.00/232.30/295.00/295.00 ms avg=284.03 ms (7 runs sampled)\r\npersist 1024x10000 (indexes: 0) 50/75/90/95%=508.90/525.40/528.60/528.60 ms avg=649.40 ms (7 runs sampled)\r\npersist 1024x10000 (indexes: 1) 50/75/90/95%=2227.50/2280.20/2305.50/2305.50 ms avg=2793.11 ms (7 runs sampled)\r\npersist 1024x10000 (indexes: 2) 50/75/90/95%=3997.90/4024.00/4033.50/4033.50 ms avg=5055.93 ms (7 runs sampled)\r\npopulate tmcw 50/75/90/95%=109.90/150.10/150.90/150.90 ms avg=156.03 ms (7 runs sampled)\r\npersist tmcw 50/75/90/95%=259.90/262.20/268.20/268.20 ms avg=333.47 ms (7 runs sampled)\r\nDone!\r\n```",
+          "timestamp": "2022-10-27T10:39:48-07:00",
+          "tree_id": "94146fe44a67dad5dff9b2409813198b8b6710c0",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/217116d77f291ce166207919758a9e400f29a3d4"
+        },
+        "date": 1666892465233,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 187602,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 33734,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 186456,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33437,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 79488,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23079,
             "unit": "bytes"
           }
         ]
