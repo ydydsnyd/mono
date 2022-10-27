@@ -107,7 +107,7 @@ test('dag with some permanent hashes and some memory-only hashes on top', async 
     const visitor = new GatherVisitor(dagRead);
     await visitor.visitCommit(mb.headHash);
     const meta: JSONObject = {
-      basisHash: 'face0000-0000-4000-8000-000000000003',
+      basisHash: 'face0000000040008000000000000000' + '000000000003',
       mutationID: 2,
       mutatorArgsJSON: [2],
       mutatorName: 'mutator_name_2',
@@ -119,21 +119,21 @@ test('dag with some permanent hashes and some memory-only hashes on top', async 
       meta.clientID = clientID;
     }
     expect(Object.fromEntries(visitor.gatheredChunks)).to.deep.equal({
-      'face0000-0000-4000-8000-000000000004': {
+      ['face0000000040008000000000000000' + '000000000004']: {
         data: [0, [['local', '2']]],
-        hash: 'face0000-0000-4000-8000-000000000004',
+        hash: 'face0000000040008000000000000000' + '000000000004',
         meta: [],
       },
-      'face0000-0000-4000-8000-000000000005': {
+      ['face0000000040008000000000000000' + '000000000005']: {
         data: {
           indexes: [],
           meta,
-          valueHash: 'face0000-0000-4000-8000-000000000004',
+          valueHash: 'face0000000040008000000000000000' + '000000000004',
         },
-        hash: 'face0000-0000-4000-8000-000000000005',
+        hash: 'face0000000040008000000000000000' + '000000000005',
         meta: [
-          'face0000-0000-4000-8000-000000000004',
-          'face0000-0000-4000-8000-000000000003',
+          'face0000000040008000000000000000' + '000000000004',
+          'face0000000040008000000000000000' + '000000000003',
         ],
       },
     });
@@ -189,12 +189,13 @@ test('dag with some permanent hashes and some memory-only hashes on top w index'
     expect(Object.fromEntries(visitor.gatheredChunks)).to.deep.equal(
       DD31
         ? {
-            'face0000-0000-4000-8000-000000000008': {
-              hash: 'face0000-0000-4000-8000-000000000008',
+            ['face0000000040008000000000000000' + '000000000008']: {
+              hash: 'face0000000040008000000000000000' + '000000000008',
               data: {
                 meta: {
                   type: 2,
-                  basisHash: 'face0000-0000-4000-8000-000000000005',
+                  basisHash:
+                    'face0000000040008000000000000000' + '000000000005',
                   mutationID: 2,
                   mutatorName: 'mutator_name_2',
                   mutatorArgsJSON: [2],
@@ -202,7 +203,7 @@ test('dag with some permanent hashes and some memory-only hashes on top w index'
                   timestamp: 42,
                   clientID: 'client-id',
                 },
-                valueHash: 'face0000-0000-4000-8000-000000000006',
+                valueHash: 'face0000000040008000000000000000' + '000000000006',
                 indexes: [
                   {
                     definition: {
@@ -211,18 +212,19 @@ test('dag with some permanent hashes and some memory-only hashes on top w index'
                       jsonPointer: '/name',
                       allowEmpty: true,
                     },
-                    valueHash: 'face0000-0000-4000-8000-000000000007',
+                    valueHash:
+                      'face0000000040008000000000000000' + '000000000007',
                   },
                 ],
               },
               meta: [
-                'face0000-0000-4000-8000-000000000006',
-                'face0000-0000-4000-8000-000000000005',
-                'face0000-0000-4000-8000-000000000007',
+                'face0000000040008000000000000000' + '000000000006',
+                'face0000000040008000000000000000' + '000000000005',
+                'face0000000040008000000000000000' + '000000000007',
               ],
             },
-            'face0000-0000-4000-8000-000000000006': {
-              hash: 'face0000-0000-4000-8000-000000000006',
+            ['face0000000040008000000000000000' + '000000000006']: {
+              hash: 'face0000000040008000000000000000' + '000000000006',
               data: [
                 0,
                 [
@@ -243,8 +245,8 @@ test('dag with some permanent hashes and some memory-only hashes on top w index'
               ],
               meta: [],
             },
-            'face0000-0000-4000-8000-000000000007': {
-              hash: 'face0000-0000-4000-8000-000000000007',
+            ['face0000000040008000000000000000' + '000000000007']: {
+              hash: 'face0000000040008000000000000000' + '000000000007',
               data: [
                 0,
                 [
@@ -266,19 +268,20 @@ test('dag with some permanent hashes and some memory-only hashes on top w index'
             },
           }
         : {
-            'face0000-0000-4000-8000-000000000008': {
-              hash: 'face0000-0000-4000-8000-000000000008',
+            ['face0000000040008000000000000000' + '000000000008']: {
+              hash: 'face0000000040008000000000000000' + '000000000008',
               data: {
                 meta: {
                   type: 2,
-                  basisHash: 'face0000-0000-4000-8000-000000000005',
+                  basisHash:
+                    'face0000000040008000000000000000' + '000000000005',
                   mutationID: 2,
                   mutatorName: 'mutator_name_3',
                   mutatorArgsJSON: [3],
                   originalHash: null,
                   timestamp: 42,
                 },
-                valueHash: 'face0000-0000-4000-8000-000000000006',
+                valueHash: 'face0000000040008000000000000000' + '000000000006',
                 indexes: [
                   {
                     definition: {
@@ -287,25 +290,27 @@ test('dag with some permanent hashes and some memory-only hashes on top w index'
                       jsonPointer: '/name',
                       allowEmpty: true,
                     },
-                    valueHash: 'face0000-0000-4000-8000-000000000007',
+                    valueHash:
+                      'face0000000040008000000000000000' + '000000000007',
                   },
                 ],
               },
               meta: [
-                'face0000-0000-4000-8000-000000000006',
-                'face0000-0000-4000-8000-000000000005',
-                'face0000-0000-4000-8000-000000000007',
+                'face0000000040008000000000000000' + '000000000006',
+                'face0000000040008000000000000000' + '000000000005',
+                'face0000000040008000000000000000' + '000000000007',
               ],
             },
-            'face0000-0000-4000-8000-000000000005': {
-              hash: 'face0000-0000-4000-8000-000000000005',
+            ['face0000000040008000000000000000' + '000000000005']: {
+              hash: 'face0000000040008000000000000000' + '000000000005',
               data: {
                 meta: {
                   type: 1,
-                  basisHash: 'face0000-0000-4000-8000-000000000003',
+                  basisHash:
+                    'face0000000040008000000000000000' + '000000000003',
                   lastMutationID: 1,
                 },
-                valueHash: 'face0000-0000-4000-8000-000000000002',
+                valueHash: 'face0000000040008000000000000000' + '000000000002',
                 indexes: [
                   {
                     definition: {
@@ -314,18 +319,19 @@ test('dag with some permanent hashes and some memory-only hashes on top w index'
                       jsonPointer: '/name',
                       allowEmpty: true,
                     },
-                    valueHash: 'face0000-0000-4000-8000-000000000004',
+                    valueHash:
+                      'face0000000040008000000000000000' + '000000000004',
                   },
                 ],
               },
               meta: [
-                'face0000-0000-4000-8000-000000000002',
-                'face0000-0000-4000-8000-000000000003',
-                'face0000-0000-4000-8000-000000000004',
+                'face0000000040008000000000000000' + '000000000002',
+                'face0000000040008000000000000000' + '000000000003',
+                'face0000000040008000000000000000' + '000000000004',
               ],
             },
-            'face0000-0000-4000-8000-000000000006': {
-              hash: 'face0000-0000-4000-8000-000000000006',
+            ['face0000000040008000000000000000' + '000000000006']: {
+              hash: 'face0000000040008000000000000000' + '000000000006',
               data: [
                 0,
                 [
@@ -346,8 +352,8 @@ test('dag with some permanent hashes and some memory-only hashes on top w index'
               ],
               meta: [],
             },
-            'face0000-0000-4000-8000-000000000007': {
-              hash: 'face0000-0000-4000-8000-000000000007',
+            ['face0000000040008000000000000000' + '000000000007']: {
+              hash: 'face0000000040008000000000000000' + '000000000007',
               data: [
                 0,
                 [
@@ -367,8 +373,8 @@ test('dag with some permanent hashes and some memory-only hashes on top w index'
               ],
               meta: [],
             },
-            'face0000-0000-4000-8000-000000000004': {
-              hash: 'face0000-0000-4000-8000-000000000004',
+            ['face0000000040008000000000000000' + '000000000004']: {
+              hash: 'face0000000040008000000000000000' + '000000000004',
               data: [
                 0,
                 [

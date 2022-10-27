@@ -294,7 +294,7 @@ test('empty write tree', async () => {
     expect(await asyncIterToArray(w.scan(''))).to.deep.equal([]);
 
     const h = await w.flush();
-    expect(h).to.equal('face0000-0000-4000-8000-000000000001');
+    expect(h).to.equal('face0000000040008000000000000000' + '000000000001');
   });
   let rootHash = await dagStore.withWrite(async dagWrite => {
     const w = new BTreeWrite(
@@ -320,7 +320,9 @@ test('empty write tree', async () => {
 
   // We do not restore back to empty hash when empty.
   expect(rootHash).to.not.equal(emptyHash);
-  expect(rootHash).to.equal('face0000-0000-4000-8000-000000000003');
+  expect(rootHash).to.equal(
+    'face0000000040008000000000000000' + '000000000003',
+  );
 });
 
 test('get', async () => {

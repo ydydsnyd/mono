@@ -1,7 +1,7 @@
 import {assert} from './asserts';
 import {uuid} from './uuid.js';
 
-export const STRING_LENGTH = 36;
+export const STRING_LENGTH = 44;
 
 // We use an opaque type so that we can make sure that a hash is always a hash.
 // TypeScript does not have direct support but we can use a trick described
@@ -26,7 +26,8 @@ export type Hash = {[hashTag]: true};
 // We are no longer using hashes but due to legacy reason we still refer to
 // them as hashes. We use UUID and counters instead.
 const oldHashRe = /^[0-9a-v]{32}$/;
-const uuidRe = /^[0-9a-f-]{36}$/;
+const oldUUIDRe = /^[0-9a-f-]{36}$/;
+const uuidRe = /^[0-9a-f]{44}$/;
 
 export function parse(s: string): Hash {
   assertHash(s);
@@ -39,9 +40,7 @@ export const emptyHash = emptyUUID as unknown as Hash;
 /**
  * Creates a new "Hash" that is a UUID.
  */
-export function newUUIDHash(): Hash {
-  return uuid() as unknown as Hash;
-}
+export const newUUIDHash = makeNewUUIDHashFunctionInternal('', uuid());
 
 /**
  * Creates a function that generates UUID hashes for tests.
@@ -51,7 +50,7 @@ export function makeNewFakeHashFunction(hashPrefix = 'face'): () => Hash {
     /^[0-9a-f]{0,8}$/.test(hashPrefix),
     `Invalid hash prefix: ${hashPrefix}`,
   );
-  return makeNewFakeHashFunctionInternal(hashPrefix, emptyUUID);
+  return makeNewUUIDHashFunctionInternal(hashPrefix, emptyUUID);
 }
 
 /**
@@ -59,17 +58,25 @@ export function makeNewFakeHashFunction(hashPrefix = 'face'): () => Hash {
  * @param hashPrefix The prefix of the hash. If the prefix starts with 't/' it
  * is considered a temp hash.
  */
-function makeNewFakeHashFunctionInternal(
+function makeNewUUIDHashFunctionInternal(
   hashPrefix: string,
-  template: string,
+  uuid: string,
 ): () => Hash {
-  const s = hashPrefix + template.slice(hashPrefix.length);
+  const base = makeBase(hashPrefix, uuid);
   let tempHashCounter = 0;
   return () => {
     const tail = String(tempHashCounter++);
-    assert(tail.length <= 12);
-    return (s.slice(0, -tail.length) + tail) as unknown as Hash;
+    return makeHash(base, tail);
   };
+}
+
+function makeBase(hashPrefix: string, uuid: string): string {
+  return hashPrefix + uuid.replaceAll('-', '').slice(hashPrefix.length);
+}
+
+function makeHash(base: string, tail: string): Hash {
+  assert(tail.length <= 12);
+  return (base + tail.padStart(12, '0')) as unknown as Hash;
 }
 
 /**
@@ -78,17 +85,15 @@ function makeNewFakeHashFunctionInternal(
 export function fakeHash(word: string): Hash {
   assert(/^[0-9a-f]{0,12}$/.test(word), `Invalid word for fakeHash: ${word}`);
   const fake = 'face';
-  return (fake +
-    emptyUUID.slice(4, emptyUUID.length - word.length) +
-    word) as unknown as Hash;
+  const base = makeBase(fake, emptyUUID);
+  return makeHash(base, word);
 }
 
 export function isHash(v: unknown): v is Hash {
-  return typeof v === 'string' && (uuidRe.test(v) || oldHashRe.test(v));
-}
-
-export function isUUIDHash(v: unknown): v is Hash {
-  return typeof v === 'string' && uuidRe.test(v);
+  return (
+    typeof v === 'string' &&
+    (uuidRe.test(v) || oldUUIDRe.test(v) || oldHashRe.test(v))
+  );
 }
 
 export function assertHash(v: unknown): asserts v is Hash {

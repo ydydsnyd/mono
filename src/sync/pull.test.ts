@@ -1923,7 +1923,7 @@ test('pull for branch with multiple client local changes', async () => {
       httpStatusCode: 200,
     },
     pullResponse,
-    syncHead: 'face0000-0000-4000-8000-000000000007',
+    syncHead: 'face0000000040008000000000000000000000000007',
   });
 });
 
