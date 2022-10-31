@@ -26,6 +26,21 @@ module.exports = {
           ],
         },
         'quickstarts',
+        {
+          'Build Your Own Backend': [
+            'guide-intro',
+            'guide-install-replicache',
+            'guide-design-client-view',
+            'guide-render-ui',
+            'guide-local-mutations',
+            'guide-database-setup',
+            'guide-database-schema',
+            'guide-remote-mutations',
+            'guide-dynamic-pull',
+            'guide-poke',
+            'guide-conclusion',
+          ],
+        },
       ],
     },
     {
@@ -57,21 +72,6 @@ module.exports = {
     },
     {
       HOWTO: [
-        {
-          'Build Your Own Backend': [
-            'guide-intro',
-            'guide-install-replicache',
-            'guide-design-client-view',
-            'guide-render-ui',
-            'guide-local-mutations',
-            'guide-database-setup',
-            'guide-database-schema',
-            'guide-remote-mutations',
-            'guide-dynamic-pull',
-            'guide-poke',
-            'guide-conclusion',
-          ],
-        },
         'howto-licensing',
         'howto-blobs',
         'howto-share-mutators',

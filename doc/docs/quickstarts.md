@@ -3,7 +3,7 @@ title: Quickstarts
 slug: /quickstarts
 ---
 
-We offer quickstarts to get you up and running quick in a variety of frameworks.
+Templates to get you up and running quickly with a variety of frameworks.
 
 ## React/TypeScript/Express
 
