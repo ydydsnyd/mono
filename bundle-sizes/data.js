@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1667243468562,
+  "lastUpdate": 1667252694044,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -28319,6 +28319,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 24183,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f7267ddc97ce74757a54c480325d9c4005353688",
+          "message": "fix: Reduce bundle size impact of refresh scheduling change (#343)\n\n59ab943174bdd9a94e58faba8a3c85a4e1cf4be7 increased compressed bundle size by about 1000 bytes.\r\n\r\nReduce by deduping some logging code and ensuring refresh code is stripped when DD31 is false.\r\n\r\nPerf alert from 59ab943174bdd9a94e58faba8a3c85a4e1cf4be7\r\n=======\r\n\r\n<img width=\"751\" alt=\"image\" src=\"https://user-images.githubusercontent.com/19158916/199114049-c484018d-bbd2-4b9f-8ae8-84e4f8ba132e.png\">\r\n\r\nSizes with this change\r\n======\r\n```\r\ngreg replicache-internal [grgbkr/refresh-scheduler-dd31-gate]$ node perf/bundle-sizes --bundles replicache.js replicache.js.br replicache.mjs replicache.mjs.br replicache.min.mjs replicache.min.mjs.br\r\n[\r\n  {\r\n    \"name\": \"Size of replicache.js\",\r\n    \"unit\": \"bytes\",\r\n    \"value\": 191774\r\n  },\r\n  {\r\n    \"name\": \"Size of replicache.js.br (Brotli compressed)\",\r\n    \"unit\": \"bytes\",\r\n    \"value\": 34315\r\n  },\r\n  {\r\n    \"name\": \"Size of replicache.mjs\",\r\n    \"unit\": \"bytes\",\r\n    \"value\": 190628\r\n  },\r\n  {\r\n    \"name\": \"Size of replicache.mjs.br (Brotli compressed)\",\r\n    \"unit\": \"bytes\",\r\n    \"value\": 33997\r\n  },\r\n  {\r\n    \"name\": \"Size of replicache.min.mjs\",\r\n    \"unit\": \"bytes\",\r\n    \"value\": 80754\r\n  },\r\n  {\r\n    \"name\": \"Size of replicache.min.mjs.br (Brotli compressed)\",\r\n    \"unit\": \"bytes\",\r\n    \"value\": 23450\r\n  }\r\n]\r\n```",
+          "timestamp": "2022-10-31T14:43:31-07:00",
+          "tree_id": "08890ba859fdfa6ca9bc75c2ca1a347be0a34346",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/f7267ddc97ce74757a54c480325d9c4005353688"
+        },
+        "date": 1667252686241,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 191774,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34315,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 190628,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33997,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 80754,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23450,
             "unit": "bytes"
           }
         ]
