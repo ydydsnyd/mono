@@ -9,8 +9,6 @@ With Replicache, you implement mutations once on the client-side (sometimes call
 
 The two implementations need not match exactly. Replicache replaces the result of a speculative change completely with the result of the corresponding authoritative change, once it's known. This is useful because it means the speculative implementation can frequently be pretty simple, not taking into account security, complex business logic edge cases, etc.
 
-Also, if you happen to be running JavaScript on the server, you can of course share mutation code extensively between client and server.
-
 :::
 
 First, let's register a _mutator_ that speculatively creates a message. In `index.js`, expand the options passed to the `Replicache` constructor with:
