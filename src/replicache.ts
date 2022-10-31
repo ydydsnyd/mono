@@ -1300,33 +1300,35 @@ export class Replicache<MD extends MutatorDefs = {}> {
   }
 
   private async _refresh(): Promise<void> {
-    await this._ready;
-    const clientID = await this.clientID;
-    if (this._closed) {
-      return;
-    }
-    let result;
-    try {
-      result = await sync.refresh(
-        this._lc,
-        this._memdag,
-        this._perdag,
-        clientID,
-        this._mutatorRegistry,
-        this._subscriptions,
-        () => this.closed,
-      );
-    } catch (e) {
-      if (e instanceof persist.ClientStateNotFoundError) {
-        this._fireOnClientStateNotFound(clientID, reasonClient);
-      } else if (this._closed) {
-        this._lc.debug?.('Exception refreshing during close', e);
-      } else {
-        throw e;
+    if (DD31) {
+      await this._ready;
+      const clientID = await this.clientID;
+      if (this._closed) {
+        return;
       }
-    }
-    if (result !== undefined) {
-      await this._checkChange(result[0], result[1]);
+      let result;
+      try {
+        result = await sync.refresh(
+          this._lc,
+          this._memdag,
+          this._perdag,
+          clientID,
+          this._mutatorRegistry,
+          this._subscriptions,
+          () => this.closed,
+        );
+      } catch (e) {
+        if (e instanceof persist.ClientStateNotFoundError) {
+          this._fireOnClientStateNotFound(clientID, reasonClient);
+        } else if (this._closed) {
+          this._lc.debug?.('Exception refreshing during close', e);
+        } else {
+          throw e;
+        }
+      }
+      if (result !== undefined) {
+        await this._checkChange(result[0], result[1]);
+      }
     }
   }
 
@@ -1342,15 +1344,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     if (!this._enableScheduledPersist) {
       return;
     }
-    try {
-      await this._persistScheduler.schedule();
-    } catch (e) {
-      if (e instanceof AbortError) {
-        this._lc.debug?.('Scheduled persist did not complete before close.');
-      } else {
-        this._lc.error?.('Error while persisting', e);
-      }
-    }
+    await this._schedule('persist', this._persistScheduler);
   }
 
   private async _handlePersist(persistInfo: PersistInfo): Promise<void> {
@@ -1362,15 +1356,20 @@ export class Replicache<MD extends MutatorDefs = {}> {
   }
 
   private async _scheduleRefresh(): Promise<void> {
+    await this._schedule('refresh from storage', this._refreshScheduler);
+  }
+
+  private async _schedule(
+    name: string,
+    scheduler: ProcessScheduler,
+  ): Promise<void> {
     try {
-      await this._refreshScheduler.schedule();
+      await scheduler.schedule();
     } catch (e) {
       if (e instanceof AbortError) {
-        this._lc.debug?.(
-          'Scheduled refresh from persistent storage did not complete before close.',
-        );
+        this._lc.debug?.(`Scheduled ${name} did not complete before close.`);
       } else {
-        this._lc.error?.('Error while refreshing from persistent storage', e);
+        this._lc.error?.(`Error during ${name}`, e);
       }
     }
   }
