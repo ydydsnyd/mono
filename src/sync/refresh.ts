@@ -9,8 +9,10 @@ import {
   localMutationsGreaterThan,
 } from '../db/commit.js';
 import * as db from '../db/mod';
+import type {Hash} from '../hash.js';
 import {
   assertClientDD31,
+  ClientStateNotFoundError,
   getClient,
   getMainBranch,
   setClient,
@@ -29,6 +31,7 @@ type Result =
     }
   | {
       state: typeof COMPLETED;
+      headHash: Hash;
       diffs: DiffsMap;
     }
   | {
@@ -49,18 +52,28 @@ export async function refresh(
   clientID: ClientID,
   mutators: MutatorDefs,
   diffConfig: DiffComputationConfig,
-): Promise<DiffsMap | undefined> {
+  closed: () => boolean,
+): Promise<[Hash, DiffsMap] | undefined> {
   assert(DD31);
+
+  if (closed()) {
+    return;
+  }
 
   const perdagMainHead = await perdag.withWrite(async perdagWrite => {
     const mainBranch = await getMainBranch(clientID, perdagWrite);
-    assert(mainBranch, `No main branch for clientID: ${clientID}`);
+    if (!mainBranch) {
+      throw new ClientStateNotFoundError(clientID);
+    }
     const perdagMainHead = mainBranch.headHash;
     // Need to pull this head into memdag, but can't have it disappear if
     // perdag moves forward while we're rebasing in memdag. Can't change client
     // headHash until our rebase in memdag is complete, because if rebase fails,
     // then nothing is keeping client's main alive in perdag.
     const client = await getClient(clientID, perdagWrite);
+    if (!client) {
+      throw new ClientStateNotFoundError(clientID);
+    }
     assertClientDD31(client);
     const newClient = {
       ...client,
@@ -74,6 +87,9 @@ export async function refresh(
   let refreshHead = perdagMainHead;
   let result: Result | undefined;
   while (result === undefined || result.state === INPROGRESS) {
+    if (closed()) {
+      return;
+    }
     result = await memdag.withWrite(async (memdagWrite): Promise<Result> => {
       // On the initial iteration this sets refresh head to perdagMainHead
       await memdagWrite.setHead(REFRESH_HEAD_NAME, refreshHead);
@@ -125,6 +141,7 @@ export async function refresh(
         await memdagWrite.commit();
         return {
           state: COMPLETED,
+          headHash: refreshHead,
           diffs,
         };
       }
@@ -140,7 +157,6 @@ export async function refresh(
       for (let i = result.mutations.length - 1; i >= 0; i--) {
         const commit = result.mutations[i];
         await memdag.withWrite(async memdagWrite => {
-          assert(refreshHead);
           refreshHead = await db.rebaseMutationAndCommit(
             commit,
             memdagWrite,
@@ -154,10 +170,15 @@ export async function refresh(
       }
     }
   }
+  if (closed()) {
+    return;
+  }
 
   await perdag.withWrite(async perdagWrite => {
     const client = await getClient(clientID, perdagWrite);
-    assert(client);
+    if (!client) {
+      throw new ClientStateNotFoundError(clientID);
+    }
     assert(result);
     const newClient = {
       ...client,
@@ -174,7 +195,7 @@ export async function refresh(
     case ABORTED:
       return undefined;
     case COMPLETED:
-      return result.diffs;
+      return [result.headHash, result.diffs];
     default:
       unreachable();
   }

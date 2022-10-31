@@ -41,7 +41,6 @@ import * as db from './db/mod';
 import * as sync from './sync/mod';
 import {assertHash, emptyHash, Hash} from './hash';
 import * as persist from './persist/mod';
-import {requestIdle} from './request-idle';
 import type {HTTPRequestInfo} from './http-request-info';
 import {assert} from './asserts';
 import {
@@ -67,6 +66,13 @@ import {assertClientDD31} from './persist/clients.js';
 import {throwIfClosed} from './transaction-closed-error.js';
 import {version} from './version';
 import {PUSH_VERSION_DD31, PUSH_VERSION_SDD} from './sync/push.js';
+import {
+  initOnPersistChannel,
+  OnPersist,
+  PersistInfo,
+} from './on-persist-channel';
+import {ProcessScheduler} from './process-scheduler';
+import {AbortError} from './abort-error';
 
 export type BeginPullResult = {
   requestID: string;
@@ -128,7 +134,11 @@ export function makeIDBName(name: string, schemaVersion?: string): string {
  */
 const MAX_REAUTH_TRIES = 8;
 
-const PERSIST_TIMEOUT = 1000;
+const PERSIST_IDLE_TIMEOUT_MS = 1000;
+const REFRESH_IDLE_TIMEOUT_MS = 1000;
+
+const PERSIST_THROTTLE_MS = 500;
+const REFRESH_THROTTLE_MS = 500;
 
 const noop = () => {
   // noop
@@ -303,9 +313,21 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
   private readonly _closeAbortController = new AbortController();
 
-  private _persistIsScheduled = false;
   private _persistIsRunning = false;
   private readonly _enableScheduledPersist: boolean;
+  private _persistScheduler = new ProcessScheduler(
+    () => this._persist(),
+    PERSIST_IDLE_TIMEOUT_MS,
+    PERSIST_THROTTLE_MS,
+    this._closeAbortController.signal,
+  );
+  private readonly _onPersist: OnPersist;
+  private _refreshScheduler = new ProcessScheduler(
+    () => this._refresh(),
+    REFRESH_IDLE_TIMEOUT_MS,
+    REFRESH_THROTTLE_MS,
+    this._closeAbortController.signal,
+  );
 
   private readonly _enableLicensing: boolean;
 
@@ -476,6 +498,16 @@ export class Replicache<MD extends MutatorDefs = {}> {
       isPullDisabled: this._isPullDisabled.bind(this),
       isPushDisabled: this._isPushDisabled.bind(this),
     });
+
+    this._onPersist = DD31
+      ? initOnPersistChannel(
+          this.name,
+          this._closeAbortController.signal,
+          persistInfo => {
+            void this._handlePersist(persistInfo);
+          },
+        )
+      : (_: PersistInfo) => undefined;
 
     void this._open(
       indexes,
@@ -1233,8 +1265,8 @@ export class Replicache<MD extends MutatorDefs = {}> {
     assert(!this._persistIsRunning);
     this._persistIsRunning = true;
     try {
-      await this._ready;
       const clientID = await this.clientID;
+      await this._ready;
       if (this._closed) {
         return;
       }
@@ -1259,7 +1291,45 @@ export class Replicache<MD extends MutatorDefs = {}> {
     } finally {
       this._persistIsRunning = false;
     }
+    if (DD31) {
+      const clientID = await this.clientID;
+      const branchID = await this._branchIDPromise;
+      assert(branchID);
+      this._onPersist({clientID, branchID});
+    }
   }
+
+  private async _refresh(): Promise<void> {
+    await this._ready;
+    const clientID = await this.clientID;
+    if (this._closed) {
+      return;
+    }
+    let result;
+    try {
+      result = await sync.refresh(
+        this._lc,
+        this._memdag,
+        this._perdag,
+        clientID,
+        this._mutatorRegistry,
+        this._subscriptions,
+        () => this.closed,
+      );
+    } catch (e) {
+      if (e instanceof persist.ClientStateNotFoundError) {
+        this._fireOnClientStateNotFound(clientID, reasonClient);
+      } else if (this._closed) {
+        this._lc.debug?.('Exception refreshing during close', e);
+      } else {
+        throw e;
+      }
+    }
+    if (result !== undefined) {
+      await this._checkChange(result[0], result[1]);
+    }
+  }
+
   private _fireOnClientStateNotFound(
     clientID: sync.ClientID,
     reason: ClientStateNotFoundReason,
@@ -1268,17 +1338,40 @@ export class Replicache<MD extends MutatorDefs = {}> {
     this.onClientStateNotFound?.(reason);
   }
 
-  private async _schedulePersist(): Promise<boolean> {
-    if (this._persistIsScheduled || !this._enableScheduledPersist) {
-      return false;
+  private async _schedulePersist(): Promise<void> {
+    if (!this._enableScheduledPersist) {
+      return;
     }
-    this._persistIsScheduled = true;
     try {
-      await requestIdle(PERSIST_TIMEOUT);
-      await this._persist();
-      return true;
-    } finally {
-      this._persistIsScheduled = false;
+      await this._persistScheduler.schedule();
+    } catch (e) {
+      if (e instanceof AbortError) {
+        this._lc.debug?.('Scheduled persist did not complete before close.');
+      } else {
+        this._lc.error?.('Error while persisting', e);
+      }
+    }
+  }
+
+  private async _handlePersist(persistInfo: PersistInfo): Promise<void> {
+    this._lc.debug?.('Handling persist', persistInfo);
+    const branchID = await this._branchIDPromise;
+    if (persistInfo.branchID === branchID) {
+      void this._scheduleRefresh();
+    }
+  }
+
+  private async _scheduleRefresh(): Promise<void> {
+    try {
+      await this._refreshScheduler.schedule();
+    } catch (e) {
+      if (e instanceof AbortError) {
+        this._lc.debug?.(
+          'Scheduled refresh from persistent storage did not complete before close.',
+        );
+      } else {
+        this._lc.error?.('Error while refreshing from persistent storage', e);
+      }
     }
   }
 

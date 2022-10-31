@@ -2500,13 +2500,11 @@ test('experiment KV Store', async () => {
     mutators: {addData},
   });
 
-  // Safari does not have requestIdleTimeout so it waits for a second. We need
-  // to wait to have all browsers have a chance to run persist before we
-  // continue.
-  await clock.tickAsync(1000);
+  // Safari does not have requestIdleTimeout so it delays 1 second for persist
+  // and 1 second for refresh. We need to wait to have all browsers have a
+  // chance to run persist and the refresh triggered by persist before we continue.
+  await clock.tickAsync(2000);
 
-  expect(store.readCount).to.equal(DD31 ? 3 : 2);
-  expect(store.writeCount).to.equal(DD31 ? 2 : 1, 'writeCount');
   expect(store.closeCount).to.equal(0, 'closeCount');
   store.resetCounters();
 

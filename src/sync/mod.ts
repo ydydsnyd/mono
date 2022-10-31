@@ -9,6 +9,7 @@ export {
   handlePullResponse,
 } from './pull';
 export {push} from './push';
+export {refresh} from './refresh';
 export {newRequestID} from './request-id';
 export {SYNC_HEAD_NAME} from './sync-head-name';
 export {DiffsMap, diff, addDiffsForIndexes} from './diff';

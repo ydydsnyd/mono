@@ -140,16 +140,20 @@ suite('refresh', () => {
     await makePerdagChainAndSetClientsAndBranch(perdag, clientID, 1);
     await makeMemdagChain(memdag, clientID, 1);
 
-    const diffs = await refresh(
+    const result = await refresh(
       new LogContext(),
       memdag,
       perdag,
       clientID,
       mutators,
       testSubscriptionsManagerOptions,
+      () => false,
     );
-    assert(diffs);
-    expect(Object.fromEntries(diffs)).to.deep.equal({});
+    assert(result);
+    expect(result[0]).to.deep.equal(
+      await memdag.withRead(read => read.getHead(db.DEFAULT_HEAD_NAME)),
+    );
+    expect(Object.fromEntries(result[1])).to.deep.equal({});
   });
 
   test('memdag has one more LM', async () => {
@@ -167,16 +171,20 @@ suite('refresh', () => {
     );
     await memdagChainBuilder.addLocal(clientID, []);
 
-    const diffs = await refresh(
+    const result = await refresh(
       new LogContext(),
       memdag,
       perdag,
       clientID,
       mutators,
       testSubscriptionsManagerOptions,
+      () => false,
     );
-    assert(diffs);
-    expect(Object.fromEntries(diffs)).to.deep.equal({
+    assert(result);
+    expect(result[0]).to.deep.equal(
+      await memdag.withRead(read => read.getHead(db.DEFAULT_HEAD_NAME)),
+    );
+    expect(Object.fromEntries(result[1])).to.deep.equal({
       '': [
         {
           key: 'from mutator_name_3',
@@ -210,6 +218,7 @@ suite('refresh', () => {
       clientID,
       mutators,
       testSubscriptionsManagerOptions,
+      () => false,
     );
     expect(diffs).undefined;
   });
@@ -230,16 +239,20 @@ suite('refresh', () => {
     await memdagChainBuilder.addLocal(clientID, []);
     await memdagChainBuilder.addLocal(clientID, []);
 
-    const diffs = await refresh(
+    const result = await refresh(
       new LogContext(),
       memdag,
       perdag,
       clientID,
       mutators,
       testSubscriptionsManagerOptions,
+      () => false,
     );
-    assert(diffs);
-    expect(Object.fromEntries(diffs)).to.deep.equal({
+    assert(result);
+    expect(result[0]).to.deep.equal(
+      await memdag.withRead(read => read.getHead(db.DEFAULT_HEAD_NAME)),
+    );
+    expect(Object.fromEntries(result[1])).to.deep.equal({
       '': [
         {
           key: 'from mutator_name_3',
@@ -288,16 +301,20 @@ suite('refresh', () => {
     await memdagChainBuilder.addLocal(clientID1, []);
     await memdagChainBuilder.addLocal(clientID1, []);
 
-    const diffs = await refresh(
+    const result = await refresh(
       new LogContext(),
       memdag,
       perdag,
       clientID1,
       mutators,
       testSubscriptionsManagerOptions,
+      () => false,
     );
-    assert(diffs);
-    expect(Object.fromEntries(diffs)).to.deep.equal({
+    assert(result);
+    expect(result[0]).to.deep.equal(
+      await memdag.withRead(read => read.getHead(db.DEFAULT_HEAD_NAME)),
+    );
+    expect(Object.fromEntries(result[1])).to.deep.equal({
       '': [
         {
           key: 'from mutator_name_3',
@@ -343,6 +360,7 @@ suite('refresh', () => {
       clientID,
       mutators,
       testSubscriptionsManagerOptions,
+      () => false,
     );
     expect(diffs).undefined;
   });
@@ -579,7 +597,7 @@ suite('refresh', () => {
       });
     }
 
-    const diffs = await refresh(
+    const result = await refresh(
       new LogContext(),
       memdag,
       perdag,
@@ -588,9 +606,13 @@ suite('refresh', () => {
         addData,
       },
       testSubscriptionsManagerOptions,
+      () => false,
     );
-    assert(diffs);
-    expect(Object.fromEntries(diffs)).to.deep.equal({
+    assert(result);
+    expect(result[0]).to.deep.equal(
+      await memdag.withRead(read => read.getHead(db.DEFAULT_HEAD_NAME)),
+    );
+    expect(Object.fromEntries(result[1])).to.deep.equal({
       '': [{key: 'c', newValue: 3, op: 'add'}],
     });
   });

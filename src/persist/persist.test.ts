@@ -26,6 +26,7 @@ setup(() => {
 
 teardown(() => {
   clock.restore();
+  sinon.restore();
 });
 
 async function assertSameDagData(
@@ -222,13 +223,22 @@ function setupPersistTest() {
     hashFunction,
     assertHash,
   );
-  const chunksPersistedSpy = sinon.spy(memdag, 'chunksPersisted');
+  const chunksPersistedCalls: Hash[][] = [];
+  sinon
+    .stub(memdag, 'chunksPersisted')
+    .callsFake((chunkHashes: Iterable<Hash>) => {
+      const chunkHashesArray = [...chunkHashes];
+      chunksPersistedCalls.push(chunkHashesArray);
+      return dag.LazyStore.prototype.chunksPersisted.apply(memdag, [
+        chunkHashesArray,
+      ]);
+    });
 
   const clientID = 'client-id';
   const b = new ChainBuilder(memdag);
 
   const testPersist = async () => {
-    chunksPersistedSpy.resetHistory();
+    chunksPersistedCalls.length = 0;
     const perdagChunkHashesPrePersist = perdag.chunkHashes();
     await persist(new LogContext(), clientID, memdag, perdag, {}, () => false);
 
@@ -243,17 +253,11 @@ function setupPersistTest() {
         persistedChunkHashes.add(hash);
       }
     }
-    expect(chunksPersistedSpy.callCount).to.equal(1);
-    expect(new Set(chunksPersistedSpy.lastCall.args[0])).to.deep.equal(
+    expect(chunksPersistedCalls.length).to.equal(1);
+    expect(new Set(chunksPersistedCalls[0])).to.deep.equal(
       persistedChunkHashes,
     );
   };
-  return {
-    memdag,
-    perdag,
-    b,
-    testPersist,
-    clientID,
-    chunksPersistedSpy,
-  };
+
+  return {memdag, perdag, b, testPersist, clientID};
 }

@@ -132,6 +132,9 @@ test('basic persist & load', async () => {
 });
 
 suite('onClientStateNotFound', () => {
+  teardown(() => {
+    sinon.restore();
+  });
   test('Called in persist if collected', async () => {
     const consoleErrorStub = sinon.stub(console, 'error');
 
@@ -265,52 +268,6 @@ suite('onClientStateNotFound', () => {
     expect(onClientStateNotFound.lastCall.args).to.deep.equal([
       {type: 'NotFoundOnClient'},
     ]);
-  });
-});
-
-suite('persist scheduling', () => {
-  test('handles exceptions thrown in persist()', async () => {
-    const rep = await replicacheForTesting('persist-test');
-
-    // Safari does not have requestIdleTimeout so it waits for a second. We need
-    // to wait to have all browsers have a chance to run persist before we
-    // continue.
-    await tickAFewTimes(20, 100);
-    expect(rep.persistIsScheduled).to.be.false;
-
-    const persistStub = sinon
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .stub(rep, '_persist' as any)
-      .callsFake(async () => {
-        throw new Error('persist error');
-      });
-
-    let ex;
-    let p;
-
-    try {
-      p = rep.schedulePersist();
-      expect(rep.persistIsScheduled).to.be.true;
-      await Promise.all([tickAFewTimes(20, 100), p]);
-    } catch (e) {
-      ex = e;
-    }
-    expect(ex).instanceOf(Error).property('message', 'persist error');
-    expect(persistStub.callCount).to.equal(1);
-    expect(rep.persistIsScheduled).to.be.false;
-
-    // ensure that persist can be scheduled again
-    ex = undefined;
-    try {
-      p = rep.schedulePersist();
-      expect(rep.persistIsScheduled).to.be.true;
-      await Promise.all([tickAFewTimes(20, 100), p]);
-    } catch (e) {
-      ex = e;
-    }
-    expect(ex).instanceOf(Error).property('message', 'persist error');
-    expect(persistStub.callCount).to.equal(2);
-    expect(rep.persistIsScheduled).to.be.false;
   });
 });
 

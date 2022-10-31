@@ -767,7 +767,16 @@ async function setupPersistTest() {
     hashFunction,
     assertHash,
   );
-  const chunksPersistedSpy = sinon.spy(memdag, 'chunksPersisted');
+  const chunksPersistedCalls: Hash[][] = [];
+  sinon
+    .stub(memdag, 'chunksPersisted')
+    .callsFake((chunkHashes: Iterable<Hash>) => {
+      const chunkHashesArray = [...chunkHashes];
+      chunksPersistedCalls.push(chunkHashesArray);
+      return dag.LazyStore.prototype.chunksPersisted.apply(memdag, [
+        chunkHashesArray,
+      ]);
+    });
 
   const mutatorNames = Array.from({length: 10}, (_, index) => {
     return createMutatorName(index);
@@ -811,7 +820,7 @@ async function setupPersistTest() {
       return;
     },
   ) => {
-    chunksPersistedSpy.resetHistory();
+    chunksPersistedCalls.length = 0;
     const perdagChunkHashesPrePersist = perdag.chunkHashes();
     await persistDD31(
       new LogContext(),
@@ -834,27 +843,27 @@ async function setupPersistTest() {
     switch (persistedExpectation) {
       case PersistedExpectation.SNAPSHOT:
         expect(persistedChunkHashes.size).to.be.greaterThan(0);
-        expect(chunksPersistedSpy.callCount).to.equal(1);
-        expect(new Set(chunksPersistedSpy.lastCall.args[0])).to.deep.equal(
+        expect(chunksPersistedCalls.length).to.equal(1);
+        expect(new Set(chunksPersistedCalls[0])).to.deep.equal(
           persistedChunkHashes,
         );
         break;
       case PersistedExpectation.SNAPSHOT_AND_LOCALS:
         expect(persistedChunkHashes.size).to.be.greaterThan(0);
-        expect(chunksPersistedSpy.callCount).to.equal(1);
+        expect(chunksPersistedCalls.length).to.equal(1);
         // Persisted chunks is a superset of chunks passed to
         // chunksPersisted
         expect([...persistedChunkHashes]).to.include.members(
-          chunksPersistedSpy.lastCall.args[0],
+          chunksPersistedCalls[0],
         );
         break;
       case PersistedExpectation.LOCALS:
         expect(persistedChunkHashes.size).to.be.greaterThan(0);
-        expect(chunksPersistedSpy.callCount).to.equal(0);
+        expect(chunksPersistedCalls.length).to.equal(0);
         break;
       case PersistedExpectation.NOTHING:
         expect(persistedChunkHashes.size).to.equal(0);
-        expect(chunksPersistedSpy.callCount).to.equal(0);
+        expect(chunksPersistedCalls.length).to.equal(0);
         break;
     }
   };

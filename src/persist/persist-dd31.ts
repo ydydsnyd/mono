@@ -64,6 +64,9 @@ export async function persistDD31(
     },
   );
 
+  if (closed()) {
+    return;
+  }
   const [newMemdagMutations, memdagBaseSnapshot] = await memdag.withRead(
     async memdagRead => {
       const memdagHeadCommit = await db.commitFromHead(
@@ -95,6 +98,9 @@ export async function persistDD31(
       memdagBaseSnapshotHash,
     );
     let memdagBaseSnapshotPersisted = false;
+    if (closed()) {
+      return;
+    }
     await perdag.withWrite(async perdagWrite => {
       // check if memdag snapshot still newer than perdag snapshot
       const [mainBranch, latestPerdagMainBranchHeadCommit] =
@@ -140,11 +146,6 @@ export async function persistDD31(
         newMainBranchHeadHash = latestPerdagMainBranchHeadCommit.chunk.hash;
         mutationIDs = {...mainBranch.mutationIDs};
       }
-
-      if (memdagBaseSnapshotPersisted) {
-        await memdag.chunksPersisted([...gatheredChunks.keys()]);
-      }
-
       // persist new memdag mutations
       newMainBranchHeadHash = await rebase(
         newMemdagMutations,
@@ -166,7 +167,13 @@ export async function persistDD31(
       );
       await perdagWrite.commit();
     });
+    if (memdagBaseSnapshotPersisted) {
+      await memdag.chunksPersisted(gatheredChunks.keys());
+    }
   } else {
+    if (closed()) {
+      return;
+    }
     // no need to persist snapshot, persist new memdag mutations
     await perdag.withWrite(async perdagWrite => {
       const [mainBranch, latestPerdagMainBranchHeadCommit] =

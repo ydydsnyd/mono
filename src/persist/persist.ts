@@ -60,7 +60,6 @@ export async function persistSDD(
 
   if (gatheredChunks.size === 0) {
     // Nothing to persist
-    console.log('nothing to persist');
     return;
   }
 
@@ -76,7 +75,7 @@ export async function persistSDD(
     mutationID,
     lastMutationID,
   );
-  await memdag.chunksPersisted([...gatheredChunks.keys()]);
+  await memdag.chunksPersisted(gatheredChunks.keys());
 }
 
 async function gatherMemOnlyChunks(

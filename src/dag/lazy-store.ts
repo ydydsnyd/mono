@@ -181,7 +181,7 @@ export class LazyStore implements Store {
     return new Map(this._memOnlyChunks);
   }
 
-  async chunksPersisted(chunkHashes: Array<Hash>): Promise<void> {
+  async chunksPersisted(chunkHashes: Iterable<Hash>): Promise<void> {
     await this.withWrite(() => {
       for (const chunkHash of chunkHashes) {
         const chunk = this._memOnlyChunks.get(chunkHash);
