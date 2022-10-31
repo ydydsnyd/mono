@@ -74,6 +74,7 @@ module.exports = {
         },
         'howto-licensing',
         'howto-blobs',
+        'howto-share-mutators',
         'howto-launch',
         //'howto-undo',
       ],

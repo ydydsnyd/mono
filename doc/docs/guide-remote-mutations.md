@@ -174,6 +174,12 @@ async function sendPoke() {
 
 See [Push Endpoint Reference](../server-push) for complete details on implementing the push endpoint.
 
+:::info
+
+You may be wondering if it possible to share mutator code between the client and server. It is, but constrains how you can design your backend. See [Share Mutators](../share-mutators) for more information.
+
+:::
+
 Restart the server, navigate to [http://localhost:3000/](http://localhost:3000/) and make some changes. You should now see changes getting saved in Supabase. Niiiice.
 
 <p class="text--center">
