@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1667234303069,
+  "lastUpdate": 1667243468562,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -28235,6 +28235,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/59ab943174bdd9a94e58faba8a3c85a4e1cf4be7"
         },
         "date": 1667234295278,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 200050,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 35463,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 198904,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 35145,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 83878,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 24183,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cesar@roci.dev",
+            "name": "Cesar Alaestante",
+            "username": "cesara"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2a6e7404ab457940de2a7f1429839ddcc7941a58",
+          "message": "doc: revert to previous nextjs quickstart commands (#342)",
+          "timestamp": "2022-10-31T12:09:52-07:00",
+          "tree_id": "89a36eebf5d41efbfe12e928a04d84941161d078",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/2a6e7404ab457940de2a7f1429839ddcc7941a58"
+        },
+        "date": 1667243460599,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
