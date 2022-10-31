@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1667206753920,
+  "lastUpdate": 1667234303069,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -28211,6 +28211,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23079,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "59ab943174bdd9a94e58faba8a3c85a4e1cf4be7",
+          "message": "feat(dd31): Schedule refresh after persit on same branch (#326)\n\nUse BroadcastChannel to notify other clients when persist has happened and on which branch.\r\nA client schedules a refresh when it is notified of a persist on it's branch.\r\n\r\nCreate a new `ProcessScheduler` utility and use it for scheduling both refresh and persist.",
+          "timestamp": "2022-10-31T09:37:01-07:00",
+          "tree_id": "72070be2f8be7dc9ee3f107673c4c90b5c73a535",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/59ab943174bdd9a94e58faba8a3c85a4e1cf4be7"
+        },
+        "date": 1667234295278,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 200050,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 35463,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 198904,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 35145,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 83878,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 24183,
             "unit": "bytes"
           }
         ]
