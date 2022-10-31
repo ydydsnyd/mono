@@ -15,12 +15,12 @@ Although using a relational database as a document store is somewhat unconventio
 
 :::
 
-# `replicache-transaction` helper package
+# `replicache-transaction` Helper Package
 
 We provide the [`replicache-transaction` package](https://www.npmjs.com/package/replicache-transaction) to make this usage easier. It adapts Replicache's `WriteTransaction` interface to some backend key/value storage that you provide. See [`PostgresTransaction`](https://github.com/rocicorp/replicache-express/blob/main/src/backend/postgres-storage.ts) in [`replicache-express`](https://github.com/rocicorp/replicache-express) for an example.
 
-# Normalized Backends
+# Other Backend Datastores
 
-If you want to use Replicache with a normalized backend, it typically makes more sense to go ahead and implement the mutators twice, using the mutator signature as the shared interface between client and server.
+If you want to use Replicache with some non-key/value backend datastore, such as a normalized SQL database, it typically makes more sense to implement the mutators twice.
 
 See [Replicache on Rails](https://github.com/rocicorp/rails) for a JS helper library that can automate much of the client-side.
