@@ -64,11 +64,9 @@ export class ProcessScheduler {
   private async _scheduleInternal(): Promise<void> {
     try {
       await this._runPromise;
-      // Prevent errors thrown by process from
-      // cancelling scheduled runs.
-      // this._runPromise is also awaited below and errors
-      // are explicitly propogated to promises returned
-      // from schedule.
+      // Prevent errors thrown by process from cancelling scheduled runs.
+      // this._runPromise is also awaited below and errors are explicitly
+      // propagated to promises returned from schedule.
       // eslint-disable-next-line no-empty
     } catch (e) {}
     await this._throttlePromise;
@@ -76,10 +74,10 @@ export class ProcessScheduler {
       return;
     }
     await this._requestIdle(this._idleTimeoutMs);
-    this._throttlePromise = this._throttle();
     if (!this._scheduledResolver) {
       return;
     }
+    this._throttlePromise = throttle(this._throttleMs, this._abortSignal);
     this._runResolver = this._scheduledResolver;
     this._scheduledResolver = undefined;
     try {
@@ -91,12 +89,15 @@ export class ProcessScheduler {
     }
     this._runResolver = undefined;
   }
+}
 
-  private async _throttle(): Promise<void> {
-    try {
-      await sleep(this._throttleMs, this._abortSignal);
-    } catch (e) {
-      assert(e instanceof AbortError);
-    }
+async function throttle(
+  timeMs: number,
+  abortSignal: AbortSignal,
+): Promise<void> {
+  try {
+    await sleep(timeMs, abortSignal);
+  } catch (e) {
+    assert(e instanceof AbortError);
   }
 }
