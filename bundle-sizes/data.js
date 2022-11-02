@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1667320437412,
+  "lastUpdate": 1667398174765,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -28397,6 +28397,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/36a11aaeb3d1f18e622a051fbf499022eb75dbf2"
         },
         "date": 1667320430666,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 191800,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34299,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 190654,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33998,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 80764,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23472,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fe030920b926426090036479cb945c673ac6cd6f",
+          "message": "chore: Add a perf smoke test (#347)\n\nThis runs a single replicache perf test. This does not in use the github-action-benchmark. If the test harness breaks this will fail as expected. The goal of this is to run this on PRs and prevent merging PRs that would break the perf test bot.",
+          "timestamp": "2022-11-02T14:08:31Z",
+          "tree_id": "82cbc3728032cf2a85ac7880cac8eff3a4ed9192",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/fe030920b926426090036479cb945c673ac6cd6f"
+        },
+        "date": 1667398168825,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
