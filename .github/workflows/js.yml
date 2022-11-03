@@ -64,7 +64,7 @@ jobs:
           path: |
             ~/.cache/ms-playwright
             **/node_modules/playwright
-          key: cache-playwright-linux-1.20.2
+          key: cache-playwright-linux-js-1.20.2
 
       - name: Install Playwright Deps
         if: steps.playwright-cache.outputs.cache-hit != 'true'
