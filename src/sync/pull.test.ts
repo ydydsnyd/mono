@@ -641,7 +641,6 @@ test('begin try pull DD31', async () => {
 
   const expPullReq: PullRequestDD31 = {
     profileID,
-    clientID,
     branchID,
     cookie: baseCookie,
     pullVersion: PULL_VERSION_DD31,
@@ -1471,7 +1470,6 @@ test('changed keys', async () => {
     const expPullReq: PullRequestSDD | PullRequestDD31 = DD31
       ? {
           profileID,
-          clientID,
           branchID,
           cookie: baseCookie,
           // lastMutationID: baseLastMutationID,
@@ -1804,7 +1802,6 @@ test('pull isNewBranch for empty client', async () => {
   const puller = makeFakePullerDD31({
     expPullAuth: pullAuth,
     expPullReq: {
-      clientID: clientID1,
       branchID,
       cookie: null,
       isNewBranch: true,
@@ -1876,7 +1873,6 @@ test('pull for branch with multiple client local changes', async () => {
   const puller = makeFakePullerDD31({
     expPullAuth: pullAuth,
     expPullReq: {
-      clientID: clientID1,
       branchID,
       cookie: 1,
       isNewBranch: false,
@@ -1955,7 +1951,6 @@ suite('beginPull DD31', () => {
       expPullAuth: 'test-pull-auth',
       expPullReq: {
         branchID: branchID1,
-        clientID: clientID1,
         cookie: null,
         isNewBranch: true,
         profileID,

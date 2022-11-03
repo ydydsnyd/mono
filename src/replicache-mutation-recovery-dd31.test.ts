@@ -233,7 +233,6 @@ suite('DD31', () => {
     const pullReq: PullRequestDD31 = {
       profileID,
       branchID: client1.branchID,
-      clientID: client1ID,
       cookie: 1,
       isNewBranch: false,
       pullVersion: PULL_VERSION_DD31,
@@ -553,21 +552,21 @@ suite('DD31', () => {
         const requestJson = await request.json();
         assertJSONObject(requestJson);
         pullRequestJsonBodies.push(requestJson);
-        const {clientID} = requestJson;
-        switch (clientID) {
-          case client1ID:
+        const {branchID} = requestJson;
+        switch (branchID) {
+          case client1.branchID:
             return {
               cookie: 'pull_cookie_1',
               lastMutationIDChanges: branch1.mutationIDs,
               patch: [],
             };
-          case client3ID:
+          case client3.branchID:
             return {
               cookie: 'pull_cookie_3',
               lastMutationIDChanges: branch3.mutationIDs,
               patch: [],
             };
-          case client4ID:
+          case client4.branchID:
             return {
               cookie: 'pull_cookie_4',
               lastMutationIDChanges: branch4.mutationIDs,
@@ -615,7 +614,6 @@ suite('DD31', () => {
     expect(pullRequestJsonBodies[0]).to.deep.equal({
       branchID: client1.branchID,
       profileID,
-      clientID: client1ID,
       schemaVersion: schemaVersionOfClients1Thru3AndClientRecoveringMutations,
       cookie: 1,
       isNewBranch: false,
@@ -624,7 +622,6 @@ suite('DD31', () => {
     expect(pullRequestJsonBodies[1]).to.deep.equal({
       branchID: client3.branchID,
       profileID,
-      clientID: client3ID,
       schemaVersion: schemaVersionOfClients1Thru3AndClientRecoveringMutations,
       cookie: 3,
       isNewBranch: false,
@@ -633,7 +630,6 @@ suite('DD31', () => {
     expect(pullRequestJsonBodies[2]).to.deep.equal({
       profileID,
       branchID: client4.branchID,
-      clientID: client4ID,
       schemaVersion: schemaVersionOfClient4,
       cookie: 4,
       isNewBranch: false,
@@ -857,7 +853,6 @@ suite('DD31', () => {
     expect(pullRequestJsonBodies[0]).to.deep.equal({
       profileID,
       branchID: client1.branchID,
-      clientID: client1ID,
       schemaVersion,
       cookie: 1,
       isNewBranch: false,
@@ -865,7 +860,6 @@ suite('DD31', () => {
     });
     expect(pullRequestJsonBodies[1]).to.deep.equal({
       profileID,
-      clientID: client3ID,
       branchID: client3.branchID,
       schemaVersion,
       cookie: 3,
@@ -1043,7 +1037,6 @@ suite('DD31', () => {
     expect(pullRequestJsonBodies.length).to.equal(2);
     expect(pullRequestJsonBodies[0]).to.deep.equal({
       profileID,
-      clientID: client1ID,
       branchID: client1.branchID,
       schemaVersion,
       cookie: 1,
@@ -1052,7 +1045,6 @@ suite('DD31', () => {
     });
     expect(pullRequestJsonBodies[1]).to.deep.equal({
       profileID,
-      clientID: client3ID,
       branchID: client3.branchID,
       schemaVersion,
       cookie: 3,
@@ -1171,9 +1163,9 @@ suite('DD31', () => {
         const requestJson = await request.json();
         assertJSONObject(requestJson);
         pullRequestJsonBodies.push(requestJson);
-        const {clientID} = requestJson;
-        switch (clientID) {
-          case client2ID: {
+        const {branchID} = requestJson;
+        switch (branchID) {
+          case client2.branchID: {
             const pullResponse: PullResponseDD31 = {
               cookie: 'pull_cookie_2',
               lastMutationIDChanges: {
@@ -1221,7 +1213,6 @@ suite('DD31', () => {
     expect(pullRequestJsonBodies[0]).to.deep.equal({
       branchID: client2.branchID,
       profileID,
-      clientID: client2ID,
       schemaVersion: schemaVersionOfClient2,
       cookie: 2,
       isNewBranch: false,
@@ -1551,7 +1542,10 @@ suite('DD31', () => {
       });
     });
 
-    async function testXXX(schemaVersion1: string, schemaVersion2: string) {
+    async function testWithSDDAndDD31(
+      schemaVersion1: string,
+      schemaVersion2: string,
+    ) {
       const client1ID = 'client1';
       const client2ID = 'client2';
       const auth = '1';
@@ -1630,23 +1624,21 @@ suite('DD31', () => {
           const requestJSON = await request.json();
           assertJSONObject(requestJSON);
           pullRequestJSONBodies.push(requestJSON);
-          switch (requestJSON.clientID) {
-            case client1ID: {
-              const resp: PullResponseSDD = {
-                cookie: 'pull_cookie_1',
-                lastMutationID: client1.mutationID,
-                patch: [],
-              };
-              return resp;
-            }
-            case client2ID: {
-              const resp: PullResponseDD31 = {
-                cookie: 'c3',
-                lastMutationIDChanges: branch2.mutationIDs,
-                patch: [],
-              };
-              return resp;
-            }
+          if (requestJSON.clientID === client1ID) {
+            const resp: PullResponseSDD = {
+              cookie: 'pull_cookie_1',
+              lastMutationID: client1.mutationID,
+              patch: [],
+            };
+            return resp;
+          }
+          if (requestJSON.branchID === client2.branchID) {
+            const resp: PullResponseDD31 = {
+              cookie: 'c3',
+              lastMutationIDChanges: branch2.mutationIDs,
+              patch: [],
+            };
+            return resp;
           }
           throw new Error();
         },
@@ -1686,9 +1678,10 @@ suite('DD31', () => {
       };
 
       const expectRequestBodies = (expected: unknown[], actual: unknown[]) => {
+        expect(actual.length).to.equal(expected.length);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const sortByClientID = (a: any, b: any) =>
-          stringCompare(a.clientID, b.clientID);
+          stringCompare(a.clientID ?? a.branchID, b.clientID ?? b.branchID);
         expect(actual.sort(sortByClientID)).to.deep.equal(
           expected.sort(sortByClientID),
         );
@@ -1707,7 +1700,6 @@ suite('DD31', () => {
         schemaVersion: schemaVersion1,
       };
       const pullRequestBody2: PullRequestDD31 = {
-        clientID: client2ID,
         branchID: client2.branchID,
         cookie: 'c2',
         profileID,
@@ -1750,11 +1742,11 @@ suite('DD31', () => {
     }
 
     test('One SDD client and one DD31 client should be recovered', async () => {
-      await testXXX('test-schema-1', 'test-schema-1');
+      await testWithSDDAndDD31('test-schema-1', 'test-schema-1');
     });
 
     test('One SDD client and one DD31 client should be recovered different perdag due to schema', async () => {
-      await testXXX('test-schema-1', 'test-schema-2');
+      await testWithSDDAndDD31('test-schema-1', 'test-schema-2');
     });
   });
 

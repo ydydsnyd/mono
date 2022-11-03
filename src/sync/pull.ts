@@ -64,8 +64,6 @@ export type PullRequestSDD<Cookie = ReadonlyJSONValue> = {
  */
 export type PullRequestDD31<Cookie = ReadonlyJSONValue> = {
   profileID: string;
-  // TODO(arv): Remove clientID
-  clientID: ClientID;
   // TODO(DD31): Rename to clientGroupID
   branchID: BranchID;
   cookie: Cookie;
@@ -258,7 +256,6 @@ export async function beginPullDD31(
 
   const pullReq: PullRequestDD31<ReadonlyJSONValue> = {
     profileID,
-    clientID,
     branchID,
     cookie: fromInternalValue(
       baseCookie,
