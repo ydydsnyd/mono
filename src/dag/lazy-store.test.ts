@@ -50,7 +50,7 @@ test('isMemOnlyChunkHash', async () => {
     await write.commit();
     return chunk;
   });
-  await lazyStore.withRead(async read => {
+  await lazyStore.withRead(read => {
     // not true for source chunk
     expect(read.isMemOnlyChunkHash(testValue1SourceChunk.hash)).to.be.false;
   });
@@ -65,7 +65,7 @@ test('isMemOnlyChunkHash', async () => {
     // don't commit
     return chunk;
   });
-  await lazyStore.withRead(async read => {
+  await lazyStore.withRead(read => {
     // not true because not commited
     expect(read.isMemOnlyChunkHash(testValue2MemOnlyChunk.hash)).to.be.false;
   });
@@ -82,7 +82,7 @@ test('isMemOnlyChunkHash', async () => {
     return chunk;
   });
 
-  await lazyStore.withRead(async read => {
+  await lazyStore.withRead(read => {
     // not true because not retained with head
     expect(read.isMemOnlyChunkHash(testValue3MemOnlyChunk.hash)).to.be.false;
   });
@@ -99,7 +99,7 @@ test('isMemOnlyChunkHash', async () => {
     return chunk;
   });
 
-  await lazyStore.withRead(async read => {
+  await lazyStore.withRead(read => {
     expect(read.isMemOnlyChunkHash(testValue4MemOnlyChunk.hash)).to.be.true;
   });
 
@@ -110,7 +110,7 @@ test('isMemOnlyChunkHash', async () => {
     await write.commit();
   });
 
-  await lazyStore.withRead(async read => {
+  await lazyStore.withRead(read => {
     // false because gc'd
     expect(read.isMemOnlyChunkHash(testValue4MemOnlyChunk.hash)).to.be.false;
   });
@@ -135,7 +135,7 @@ test('chunksPersisted', async () => {
     await write.commit();
     return chunks;
   });
-  await lazyStore.withRead(async read => {
+  await lazyStore.withRead(read => {
     expect(read.isMemOnlyChunkHash(testValue1MemOnlyChunk.hash)).to.be.true;
     expect(read.isMemOnlyChunkHash(testValue2MemOnlyChunk.hash)).to.be.true;
     expect(read.isMemOnlyChunkHash(testValue3MemOnlyChunk.hash)).to.be.true;
@@ -146,7 +146,7 @@ test('chunksPersisted', async () => {
     testValue3MemOnlyChunk.hash,
   ]);
 
-  await lazyStore.withRead(async read => {
+  await lazyStore.withRead(read => {
     expect(read.isMemOnlyChunkHash(testValue1MemOnlyChunk.hash)).to.be.false;
     expect(read.isMemOnlyChunkHash(testValue2MemOnlyChunk.hash)).to.be.true;
     expect(read.isMemOnlyChunkHash(testValue3MemOnlyChunk.hash)).to.be.false;

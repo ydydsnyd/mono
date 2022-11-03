@@ -10,7 +10,7 @@ import {SYNC_HEAD_NAME} from '../sync/sync-head-name';
 import {BTreeRead} from '../btree/read';
 import type {Hash} from '../hash';
 
-teardown(async () => {
+teardown(() => {
   sinon.restore();
 });
 

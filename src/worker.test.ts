@@ -27,7 +27,7 @@ test.skip('worker test', async () => {
   expect(data).to.be.undefined;
 });
 
-async function send(w: Worker, data: {name: string}): Promise<unknown> {
+function send(w: Worker, data: {name: string}): Promise<unknown> {
   const p = new Promise((resolve, reject) => {
     w.onmessage = e => resolve(e.data);
     w.onerror = reject;
@@ -37,7 +37,7 @@ async function send(w: Worker, data: {name: string}): Promise<unknown> {
   return withTimeout(p);
 }
 
-async function withTimeout<T>(p: Promise<T>): Promise<T> {
+function withTimeout<T>(p: Promise<T>): Promise<T> {
   return Promise.race([
     p,
     sleep(3000).then(() => Promise.reject(new Error('Timed out'))),

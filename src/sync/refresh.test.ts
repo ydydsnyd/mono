@@ -39,7 +39,7 @@ async function makeChain(
   return {headHash, chainBuilder};
 }
 
-async function makeMemdagChain(
+function makeMemdagChain(
   memdag: dag.Store,
   clientID: ClientID,
   cookie: number,

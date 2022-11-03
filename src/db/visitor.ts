@@ -140,7 +140,7 @@ export class Visitor {
     indexes: readonly IndexRecord[],
   ): Promise<void> {
     await Promise.all(
-      indexes.map(async index => this.visitBTreeNode(index.valueHash)),
+      indexes.map(index => this.visitBTreeNode(index.valueHash)),
     );
   }
 }

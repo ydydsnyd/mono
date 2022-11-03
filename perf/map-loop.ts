@@ -12,7 +12,7 @@ function forLoop(): Benchmark {
   return {
     name: 'map for loop',
     group: 'map-loop',
-    async run() {
+    run() {
       let sum = 0;
       for (let i = 0; i < COUNT; i++) {
         for (const [key, value] of m) {
@@ -28,7 +28,7 @@ function forEach(): Benchmark {
   return {
     name: 'map forEach',
     group: 'map-loop',
-    async run() {
+    run() {
       let sum = 0;
       for (let i = 0; i < COUNT; i++) {
         m.forEach((value, key) => {

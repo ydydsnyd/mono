@@ -13,6 +13,7 @@ import {
 initReplicacheTesting();
 
 test('pull returning ClientStateNotFoundResponse should call onClientStateNotFound', async () => {
+  // eslint-disable-next-line require-await
   const puller: Puller = async _req => {
     return {
       httpRequestInfo: {httpStatusCode: 200, errorMessage: ''},
@@ -21,6 +22,7 @@ test('pull returning ClientStateNotFoundResponse should call onClientStateNotFou
       },
     };
   };
+  // eslint-disable-next-line require-await
   const pusher: Pusher = async _req => {
     return {httpStatusCode: 200, errorMessage: ''};
   };
@@ -64,6 +66,7 @@ test('pull returning ClientStateNotFoundResponse should call onClientStateNotFou
 });
 
 test('poke with ClientStateNotFoundResponse should call onClientStateNotFound', async () => {
+  // eslint-disable-next-line require-await
   const puller: Puller = async _req => {
     return {
       httpRequestInfo: {httpStatusCode: 200, errorMessage: ''},

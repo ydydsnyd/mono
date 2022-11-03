@@ -40,7 +40,7 @@ test('dropStore', async () => {
   });
 });
 
-suite('reopening IDB', async () => {
+suite('reopening IDB', () => {
   let name: string;
   let idb: Promise<IDBDatabase>;
   let store: IDBStore;

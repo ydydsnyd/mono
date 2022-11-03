@@ -9,6 +9,7 @@ import {
   HeadChange,
 } from './gc';
 import {assert, assertNotUndefined} from '../asserts';
+import {promiseVoid} from '../resolved-promises.js';
 
 /**
  * Dag Store which lazily loads values from a source store and then caches
@@ -169,8 +170,8 @@ export class LazyStore implements Store {
     }
   }
 
-  async close(): Promise<void> {
-    return;
+  close(): Promise<void> {
+    return promiseVoid;
   }
 
   getRefCountsSnapshot(): ReadonlyMap<Hash, number> {
@@ -243,12 +244,12 @@ export class LazyRead implements Read {
     return chunk;
   }
 
-  async mustGetChunk(hash: Hash): Promise<Chunk> {
+  mustGetChunk(hash: Hash): Promise<Chunk> {
     return mustGetChunk(this, hash);
   }
 
-  async getHead(name: string): Promise<Hash | undefined> {
-    return this._heads.get(name);
+  getHead(name: string): Promise<Hash | undefined> {
+    return Promise.resolve(this._heads.get(name));
   }
 
   close(): void {
@@ -268,7 +269,7 @@ export class LazyRead implements Read {
     return this._closed;
   }
 
-  protected async getSourceRead(): Promise<Read> {
+  protected getSourceRead(): Promise<Read> {
     if (!this._sourceRead) {
       this._sourceRead = this._sourceStore.read();
     }
@@ -315,6 +316,7 @@ export class LazyWrite
     return chunk;
   };
 
+  // eslint-disable-next-line require-await
   async putChunk<V>(c: Chunk<V>): Promise<void> {
     const {hash, meta} = c;
     this.assertValidHash(hash);
@@ -375,10 +377,10 @@ export class LazyWrite
     return chunk;
   }
 
-  override async getHead(name: string): Promise<Hash | undefined> {
+  override getHead(name: string): Promise<Hash | undefined> {
     const headChange = this._pendingHeadChanges.get(name);
     if (headChange) {
-      return headChange.new;
+      return Promise.resolve(headChange.new);
     }
     return super.getHead(name);
   }
@@ -427,11 +429,11 @@ export class LazyWrite
     this.close();
   }
 
-  async getRefCount(hash: Hash): Promise<number | undefined> {
+  getRefCount(hash: Hash): number | undefined {
     return this._refCounts.get(hash);
   }
 
-  async getRefs(hash: Hash): Promise<readonly Hash[] | undefined> {
+  getRefs(hash: Hash): readonly Hash[] | undefined {
     const pendingMemOnlyChunk = this._pendingMemOnlyChunks.get(hash);
     if (pendingMemOnlyChunk) {
       return pendingMemOnlyChunk.meta;

@@ -110,7 +110,7 @@ test('deepClone - reuse references', () => {
   t(['a', arr, {a: [arr]}]);
 });
 
-test('getSizeOfValue', async () => {
+test('getSizeOfValue', () => {
   expect(getSizeOfValue(null)).to.equal(1);
   expect(getSizeOfValue(true)).to.equal(1);
   expect(getSizeOfValue(false)).to.equal(1);

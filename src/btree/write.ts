@@ -57,10 +57,10 @@ export class BTreeWrite extends BTreeRead {
     this.maxSize = maxSize;
   }
 
-  async getNode(hash: Hash): Promise<DataNodeImpl | InternalNodeImpl> {
+  getNode(hash: Hash): Promise<DataNodeImpl | InternalNodeImpl> {
     const node = this._modified.get(hash);
     if (node) {
-      return node;
+      return Promise.resolve(node);
     }
     return super.getNode(hash);
   }
@@ -181,7 +181,7 @@ export class BTreeWrite extends BTreeRead {
   }
 
   clear(): Promise<void> {
-    return this._lock.withLock(async () => {
+    return this._lock.withLock(() => {
       this._modified.clear();
       this.rootHash = emptyHash;
     });

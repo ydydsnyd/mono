@@ -1015,6 +1015,7 @@ test('Errors in subscriptions are logged if no onError', async () => {
     const rep = await replicacheForTesting('subscription-with-exception');
 
     rep.subscribe(
+      // eslint-disable-next-line require-await
       async () => {
         called = true;
         throw err;

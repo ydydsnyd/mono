@@ -12,7 +12,7 @@ function uuidNoNative(): Benchmark {
   return {
     name: 'uuid no native',
     group: 'uuid',
-    async run() {
+    run() {
       for (let i = 0; i < COUNT; i++) {
         m.uuidNoNative();
       }
@@ -24,7 +24,7 @@ function uuidNative(): Benchmark {
   return {
     name: 'uuid native',
     group: 'uuid',
-    async run() {
+    run() {
       for (let i = 0; i < COUNT; i++) {
         m.uuidNative();
       }

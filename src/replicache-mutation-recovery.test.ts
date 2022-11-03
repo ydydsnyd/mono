@@ -1172,7 +1172,7 @@ test('mutation recovery is invoked on change from offline to online', async () =
   expect(rep.recoverMutationsSpy.callCount).to.equal(1);
   expect(rep.online).to.equal(true);
 
-  fetchMock.post(pullURL, async () => {
+  fetchMock.post(pullURL, () => {
     return {throws: new Error('Simulate fetch error in push')};
   });
 

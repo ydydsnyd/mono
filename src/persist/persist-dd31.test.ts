@@ -26,6 +26,7 @@ import type {WriteTransaction} from '../transactions';
 import type {JSONValue} from '../json';
 import type {MutatorDefs} from '../mod';
 import sinon from 'sinon';
+import {promiseVoid} from '../resolved-promises.js';
 
 const PERDAG_TEST_SETUP_HEAD_NAME = 'test-setup-head';
 
@@ -816,9 +817,7 @@ async function setupPersistTest() {
 
   const testPersist = async (
     persistedExpectation: PersistedExpectation,
-    onGatherMemOnlyChunksForTest = async () => {
-      return;
-    },
+    onGatherMemOnlyChunksForTest = () => promiseVoid,
   ) => {
     chunksPersistedCalls.length = 0;
     const perdagChunkHashesPrePersist = perdag.chunkHashes();

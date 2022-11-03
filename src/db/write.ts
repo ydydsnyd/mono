@@ -164,7 +164,7 @@ export class Write extends Read {
     );
   }
 
-  async dropIndex(name: string): Promise<void> {
+  dropIndex(name: string): void {
     assert(!DD31);
     if (this._meta.type === MetaType.Local) {
       throw new Error('Not allowed');
@@ -175,10 +175,10 @@ export class Write extends Read {
     }
   }
 
-  private async _maybeReuseExistingIndex(
+  private _maybeReuseExistingIndex(
     name: string,
     definition: IndexDefinition,
-  ): Promise<IndexWrite | null> {
+  ): IndexWrite | null {
     for (const [oldName, oldIndexWrite] of this.indexes) {
       const newChunkIndexDefinition = toChunkIndexDefinition(name, definition);
       if (
@@ -209,7 +209,7 @@ export class Write extends Read {
   async syncIndexes(lc: LogContext, indexes: IndexDefinitions): Promise<void> {
     const newIndexes = new Map<string, IndexWrite>();
     for (const [name, definition] of Object.entries(indexes)) {
-      let indexWrite = await this._maybeReuseExistingIndex(name, definition);
+      let indexWrite = this._maybeReuseExistingIndex(name, definition);
       if (!indexWrite) {
         const indexMap = await createIndexBTree(
           lc,

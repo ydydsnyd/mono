@@ -482,7 +482,7 @@ export class ChunkSnapshotVisitor extends Visitor {
   }
 }
 
-export async function getChunkSnapshot(
+export function getChunkSnapshot(
   dagStore: dag.Store,
   hash: Hash,
 ): Promise<Record<string, unknown>> {

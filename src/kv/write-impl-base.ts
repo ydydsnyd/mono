@@ -1,3 +1,9 @@
+import {
+  promiseFalse,
+  promiseTrue,
+  promiseUndefined,
+  promiseVoid,
+} from '../resolved-promises.js';
 import type {Read, Value} from './store';
 
 export const deleteSentinel = Symbol();
@@ -11,35 +17,37 @@ export class WriteImplBase {
     this._read = read;
   }
 
-  async has(key: string): Promise<boolean> {
+  has(key: string): Promise<boolean> {
     switch (this._pending.get(key)) {
       case undefined:
         return this._read.has(key);
       case deleteSentinel:
-        return false;
+        return promiseFalse;
       default:
-        return true;
+        return promiseTrue;
     }
   }
 
-  async get(key: string): Promise<Value | undefined> {
+  get(key: string): Promise<Value | undefined> {
     const v = this._pending.get(key);
     switch (v) {
       case deleteSentinel:
-        return undefined;
+        return promiseUndefined;
       case undefined:
         return this._read.get(key);
       default:
-        return v;
+        return Promise.resolve(v);
     }
   }
 
-  async put(key: string, value: Value): Promise<void> {
+  put(key: string, value: Value): Promise<void> {
     this._pending.set(key, value);
+    return promiseVoid;
   }
 
-  async del(key: string): Promise<void> {
+  del(key: string): Promise<void> {
     this._pending.set(key, deleteSentinel);
+    return promiseVoid;
   }
 
   release(): void {

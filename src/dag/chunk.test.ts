@@ -4,7 +4,7 @@ import {createChunk, createChunkWithHash} from './chunk';
 import type {Chunk} from './chunk';
 import type {ReadonlyJSONValue} from '../json';
 
-test('round trip', async () => {
+test('round trip', () => {
   const chunkHasher = makeNewFakeHashFunction();
   const t = (hash: Hash, data: ReadonlyJSONValue, refs: Hash[]) => {
     const c = createChunk(data, refs, chunkHasher);
@@ -30,7 +30,7 @@ test('round trip', async () => {
   );
 });
 
-test('equals', async () => {
+test('equals', () => {
   const eq = (a: Chunk, b: Chunk) => {
     expect(a).to.deep.equal(b);
   };

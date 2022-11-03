@@ -224,7 +224,7 @@ test('chain', async () => {
   expect(got[2]).to.deep.equal(b.chain[1]);
 });
 
-test('load roundtrip', async () => {
+test('load roundtrip', () => {
   const clientID = 'client-id';
   const t = (chunk: dag.Chunk<unknown>, expected: Commit<Meta> | Error) => {
     {
@@ -247,7 +247,7 @@ test('load roundtrip', async () => {
 
   for (const basisHash of [emptyStringHash, hashHash]) {
     t(
-      await makeCommit(
+      makeCommit(
         {
           type: MetaType.Local,
           basisHash,
@@ -277,7 +277,7 @@ test('load roundtrip', async () => {
   }
 
   t(
-    await makeCommit(
+    makeCommit(
       {
         type: MetaType.Local,
         basisHash: fakeHash('ba515'),
@@ -294,7 +294,7 @@ test('load roundtrip', async () => {
     new Error('Missing mutator name'),
   );
   t(
-    await makeCommit(
+    makeCommit(
       {
         type: MetaType.Local,
         basisHash: emptyStringHash,
@@ -313,7 +313,7 @@ test('load roundtrip', async () => {
 
   for (const basisHash of [fakeHash('000'), fakeHash('face3')]) {
     t(
-      await makeCommit(
+      makeCommit(
         {
           type: MetaType.Local,
           basisHash,
@@ -345,7 +345,7 @@ test('load roundtrip', async () => {
   }
 
   t(
-    await makeCommit(
+    makeCommit(
       {
         type: MetaType.Local,
         basisHash: emptyStringHash,
@@ -366,7 +366,7 @@ test('load roundtrip', async () => {
   const cookie = toInternalValue({foo: 'bar'}, ToInternalValueReason.Test);
   for (const basisHash of [null, fakeHash('000'), fakeHash('face3')]) {
     t(
-      await makeCommit(
+      makeCommit(
         makeSnapshotMeta(
           basisHash ?? null,
           0,
@@ -397,7 +397,7 @@ test('load roundtrip', async () => {
     );
   }
   t(
-    await makeCommit(
+    makeCommit(
       makeSnapshotMeta(
         emptyStringHash,
         0,
@@ -414,7 +414,7 @@ test('load roundtrip', async () => {
 
   for (const basisHash of [fakeHash('000'), fakeHash('face3')]) {
     t(
-      await makeCommit(
+      makeCommit(
         makeIndexChangeMeta(basisHash, 0),
         fakeHash('face2'),
         basisHash === null
@@ -435,7 +435,7 @@ test('accessors', async () => {
   const valueHash = fakeHash('face4');
   const timestamp = 42;
   const local = fromChunk(
-    await makeCommit(
+    makeCommit(
       {
         type: MetaType.Local,
         basisHash,
@@ -464,6 +464,7 @@ test('accessors', async () => {
   expect(local.valueHash).to.equal(valueHash);
 
   const fakeRead = {
+    // eslint-disable-next-line require-await
     async mustGetChunk() {
       // This test does not read from the dag and if it does, lets just fail.
       throw new Error('Method not implemented.');
@@ -473,7 +474,7 @@ test('accessors', async () => {
   expect(await local.getNextMutationID(clientID, fakeRead)).to.equal(2);
 
   const snapshot = fromChunk(
-    await makeCommit(
+    makeCommit(
       makeSnapshotMeta(fakeHash('face9'), 2, 'cookie 2', clientID),
       fakeHash('face10'),
       [fakeHash('face10'), fakeHash('face9')],
@@ -499,7 +500,7 @@ test('accessors', async () => {
   expect(await snapshot.getNextMutationID(clientID, fakeRead)).to.equal(3);
 
   const indexChange = fromChunk(
-    await makeCommit(
+    makeCommit(
       makeIndexChangeMeta(fakeHash('face11'), 3),
       fakeHash('face12'),
       [fakeHash('face12'), fakeHash('face11')],
@@ -536,12 +537,12 @@ function createChunk<V>(data: V, refs: readonly Hash[]): dag.Chunk<V> {
   return dag.createChunkWithHash(hash, data, refs);
 }
 
-async function makeCommit<M extends Meta>(
+function makeCommit<M extends Meta>(
   meta: M,
   valueHash: Hash,
   refs: Hash[],
   clientID: ClientID,
-): Promise<dag.Chunk<CommitData<M>>> {
+): dag.Chunk<CommitData<M>> {
   if (DD31) {
     if (meta.type === MetaType.Local) {
       meta = {...meta, clientID};

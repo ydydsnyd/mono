@@ -1,5 +1,6 @@
 import {assertNumber} from '../asserts';
 import type {Hash} from '../hash';
+import type {MaybePromise} from '../replicache.js';
 
 export type HeadChange = {
   new: Hash | undefined;
@@ -10,8 +11,8 @@ export type RefCountUpdates = Map<Hash, number>;
 type LoadedRefCountPromises = Map<Hash, Promise<number>>;
 
 export interface GarbageCollectionDelegate {
-  getRefCount: (hash: Hash) => Promise<number | undefined>;
-  getRefs: (hash: Hash) => Promise<readonly Hash[] | undefined>;
+  getRefCount: (hash: Hash) => MaybePromise<number | undefined>;
+  getRefs: (hash: Hash) => MaybePromise<readonly Hash[] | undefined>;
 }
 
 /**

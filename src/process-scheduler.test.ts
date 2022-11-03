@@ -24,6 +24,7 @@ suite('ProcessScheduler', () => {
 
   test('runs process on idle with specified idleTimeoutMs', async () => {
     let testProcessCallCount = 0;
+    // eslint-disable-next-line require-await
     const testProcess = async () => {
       testProcessCallCount++;
     };
@@ -55,6 +56,7 @@ suite('ProcessScheduler', () => {
   test('rejects if process rejects', async () => {
     let testProcessCallCount = 0;
     let testProcessError;
+    // eslint-disable-next-line require-await
     const testProcess = async () => {
       testProcessCallCount++;
       testProcessError = new Error('testProcess error');
@@ -94,6 +96,7 @@ suite('ProcessScheduler', () => {
   test('rejects if process rejects', async () => {
     let testProcessCallCount = 0;
     let testProcessError;
+    // eslint-disable-next-line require-await
     const testProcess = async () => {
       testProcessCallCount++;
       testProcessError = new Error('testProcess error');
@@ -133,7 +136,7 @@ suite('ProcessScheduler', () => {
   test('multiple calls to schedule while process is running are fullfilled by one process run', async () => {
     let testProcessCallCount = 0;
     const testProcessResolvers: Resolver<void>[] = [];
-    const testProcess = async () => {
+    const testProcess = () => {
       testProcessCallCount++;
       const r = resolver();
       testProcessResolvers.push(r);
@@ -225,7 +228,7 @@ suite('ProcessScheduler', () => {
   test('rejects if process rejects with multiple debounced calls', async () => {
     let testProcessCallCount = 0;
     const testProcessResolvers: Resolver<void>[] = [];
-    const testProcess = async () => {
+    const testProcess = () => {
       testProcessCallCount++;
       const r = resolver();
       testProcessResolvers.push(r);
@@ -307,7 +310,7 @@ suite('ProcessScheduler', () => {
   test('process runs are throttled so that the process runs at most once every throttleMs', async () => {
     let testProcessCallCount = 0;
     const testProcessResolvers: Resolver<void>[] = [];
-    const testProcess = async () => {
+    const testProcess = () => {
       testProcessCallCount++;
       const r = resolver();
       testProcessResolvers.push(r);
@@ -416,6 +419,7 @@ suite('ProcessScheduler', () => {
 
   test('rejects with AbortError if AbortSignal is already aborted', async () => {
     let testProcessCallCount = 0;
+    // eslint-disable-next-line require-await
     const testProcess = async () => {
       testProcessCallCount++;
     };

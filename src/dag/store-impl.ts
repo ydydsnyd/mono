@@ -32,7 +32,7 @@ export class StoreImpl implements Store {
     return new ReadImpl(await this._kv.read(), this._assertValidHash);
   }
 
-  async withRead<R>(fn: (read: Read) => R | Promise<R>): Promise<R> {
+  withRead<R>(fn: (read: Read) => R | Promise<R>): Promise<R> {
     return this._kv.withRead(kvr =>
       fn(new ReadImpl(kvr, this._assertValidHash)),
     );
@@ -46,7 +46,7 @@ export class StoreImpl implements Store {
     );
   }
 
-  async withWrite<R>(fn: (Write: Write) => R | Promise<R>): Promise<R> {
+  withWrite<R>(fn: (Write: Write) => R | Promise<R>): Promise<R> {
     return this._kv.withWrite(kvw =>
       fn(new WriteImpl(kvw, this._chunkHasher, this._assertValidHash)),
     );
@@ -87,7 +87,7 @@ export class ReadImpl implements Read {
     return createChunkWithHash(hash, data, refs);
   }
 
-  async mustGetChunk(hash: Hash): Promise<Chunk> {
+  mustGetChunk(hash: Hash): Promise<Chunk> {
     return mustGetChunk(this, hash);
   }
 

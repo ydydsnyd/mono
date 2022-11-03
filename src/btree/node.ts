@@ -269,7 +269,7 @@ abstract class NodeImpl<Value> {
 export class DataNodeImpl extends NodeImpl<InternalValue> {
   readonly level = 0;
 
-  async set(
+  set(
     key: string,
     value: InternalValue,
     entrySize: number,
@@ -284,7 +284,9 @@ export class DataNodeImpl extends NodeImpl<InternalValue> {
       deleteCount = 1;
     }
 
-    return this._splice(tree, i, deleteCount, [key, value, entrySize]);
+    return Promise.resolve(
+      this._splice(tree, i, deleteCount, [key, value, entrySize]),
+    );
   }
 
   private _splice(
@@ -303,15 +305,15 @@ export class DataNodeImpl extends NodeImpl<InternalValue> {
     return tree.newDataNodeImpl(entries);
   }
 
-  async del(key: string, tree: BTreeWrite): Promise<DataNodeImpl> {
+  del(key: string, tree: BTreeWrite): Promise<DataNodeImpl> {
     const i = binarySearch(key, this.entries);
     if (!binarySearchFound(i, this.entries, key)) {
       // Not found. Return this without changes.
-      return this;
+      return Promise.resolve(this);
     }
 
     // Found. Create new node or mutate existing one.
-    return this._splice(tree, i, 1);
+    return Promise.resolve(this._splice(tree, i, 1));
   }
 
   async *keys(_tree: BTreeRead): AsyncGenerator<string, void> {
@@ -546,7 +548,7 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
     }
   }
 
-  async getChildren(
+  getChildren(
     start: number,
     length: number,
     tree: BTreeRead,

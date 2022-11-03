@@ -1,3 +1,5 @@
+/* eslint-disable require-await */
+
 import {Replicache} from './replicache';
 import type {WriteTransaction} from './transactions';
 import {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
@@ -90,7 +92,7 @@ test.skip('Test partial JSONObject [type checking only]', async () => {
 });
 
 // Only used for type checking
-test.skip('Test register param [type checking only]', async () => {
+test.skip('Test register param [type checking only]', () => {
   const rep = new Replicache({
     licenseKey: TEST_LICENSE_KEY,
     name: 'test-types',

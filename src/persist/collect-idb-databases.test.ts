@@ -20,7 +20,7 @@ import {
   REPLICACHE_FORMAT_VERSION_SDD,
 } from '../replicache.js';
 
-suite('collectIDBDatabases', async () => {
+suite('collectIDBDatabases', () => {
   let clock: SinonFakeTimers;
 
   setup(() => {

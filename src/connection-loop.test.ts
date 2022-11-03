@@ -7,6 +7,7 @@ import {
   MAX_DELAY_MS,
   MIN_DELAY_MS,
 } from './connection-loop';
+import {promiseTrue} from './resolved-promises.js';
 import {sleep} from './sleep';
 
 let clock: SinonFakeTimers;
@@ -616,9 +617,9 @@ test('mutate minDelayMs', async () => {
   let minDelayMs = 50;
   const log: number[] = [];
   loop = new ConnectionLoop({
-    async invokeSend() {
+    invokeSend() {
       log.push(Date.now());
-      return true;
+      return promiseTrue;
     },
     debounceDelay: 0,
     get minDelayMs() {

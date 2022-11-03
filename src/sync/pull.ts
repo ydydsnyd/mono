@@ -100,7 +100,7 @@ export type BeginPullResponseDD31 = {
   syncHead: Hash;
 };
 
-export async function beginPull(
+export function beginPull(
   profileID: string,
   clientID: ClientID,
   branchID: BranchID | undefined,

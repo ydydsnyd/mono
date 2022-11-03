@@ -11,6 +11,7 @@ import {
   InternalValue,
   ToInternalValueReason,
 } from '../internal-value.js';
+import {promiseVoid} from '../resolved-promises.js';
 
 test('test that we get to the data nodes', async () => {
   const clientID = 'client-id';
@@ -20,8 +21,9 @@ test('test that we get to the data nodes', async () => {
   const b = new ChainBuilder(dagStore);
 
   class TestVisitor extends Visitor {
-    override async visitBTreeNodeChunk(chunk: dag.Chunk<Node>) {
+    override visitBTreeNodeChunk(chunk: dag.Chunk<Node>) {
       log.push(chunk.data[1]);
+      return promiseVoid;
     }
   }
 

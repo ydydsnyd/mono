@@ -1,4 +1,5 @@
 import {RWLock} from '@rocicorp/lock';
+import {promiseVoid} from '../resolved-promises.js';
 import {stringCompare} from '../string-compare';
 import type {Read, Store, Value, Write} from './store';
 import {deleteSentinel, WriteImplBase} from './write-impl-base';
@@ -36,8 +37,9 @@ export class TestMemStore implements Store {
     }
   }
 
-  async close(): Promise<void> {
+  close(): Promise<void> {
     this._closed = true;
+    return promiseVoid;
   }
 
   get closed(): boolean {
@@ -93,12 +95,12 @@ class ReadImpl implements Read {
     return this._closed;
   }
 
-  async has(key: string): Promise<boolean> {
-    return this._map.has(key);
+  has(key: string): Promise<boolean> {
+    return Promise.resolve(this._map.has(key));
   }
 
-  async get(key: string): Promise<Value | undefined> {
-    return this._map.get(key);
+  get(key: string): Promise<Value | undefined> {
+    return Promise.resolve(this._map.get(key));
   }
 }
 
@@ -110,7 +112,7 @@ class WriteImpl extends WriteImplBase implements Write {
     this._map = map;
   }
 
-  async commit(): Promise<void> {
+  commit(): Promise<void> {
     // HOT. Do not allocate entry tuple and destructure.
     this._pending.forEach((value, key) => {
       if (value === deleteSentinel) {
@@ -121,5 +123,6 @@ class WriteImpl extends WriteImplBase implements Write {
     });
     this._pending.clear();
     this.release();
+    return promiseVoid;
   }
 }

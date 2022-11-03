@@ -39,7 +39,7 @@ function textEncoderUtf8(): Benchmark {
     setup() {
       randomStrings = makeRandomStrings(NUM_STRINGS, STRING_LENGTH);
     },
-    async run() {
+    run() {
       for (let i = 0; i < randomStrings.length; i++) {
         results.push(stringToUint8Array(randomStrings[i]));
       }
@@ -56,7 +56,7 @@ function textEncoderUtf16(): Benchmark {
     setup() {
       randomStrings = makeRandomStrings(NUM_STRINGS, STRING_LENGTH);
     },
-    async run() {
+    run() {
       for (let i = 0; i < randomStrings.length; i++) {
         results.push(stringToUint16Array(randomStrings[i]));
       }

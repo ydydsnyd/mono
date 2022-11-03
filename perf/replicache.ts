@@ -117,7 +117,7 @@ class ReplicacheWithPersist<MD extends MutatorDefs> extends Replicache<MD> {
     this._internalAPI = internalAPI;
   }
 
-  async persist(): Promise<void> {
+  persist(): Promise<void> {
     return this._internalAPI.persist();
   }
 }
@@ -145,6 +145,7 @@ async function setupPersistedData(
       licenseKey: TEST_LICENSE_KEY,
       name: replicacheName,
       pullInterval: null,
+      // eslint-disable-next-line require-await
       puller: async (_: Request) => {
         return {
           response: {

@@ -310,6 +310,7 @@ test('name', async () => {
 test('register with error', async () => {
   const rep = await replicacheForTesting('regerr', {
     mutators: {
+      // eslint-disable-next-line require-await
       err: async (_: WriteTransaction, args: number) => {
         throw args;
       },
@@ -1112,7 +1113,7 @@ test('HTTP status push', async () => {
 test('closed tx', async () => {
   const rep = await replicacheForTesting('reauth', {
     mutators: {
-      mut: async tx => {
+      mut: tx => {
         wtx = tx;
       },
     },
@@ -1897,7 +1898,7 @@ test('push and pull concurrently', async () => {
   const requests: string[] = [];
 
   const clientID = await rep.clientID;
-  fetchMock.post(pushURL, async () => {
+  fetchMock.post(pushURL, () => {
     requests.push(pushURL);
     return {};
   });
@@ -2592,7 +2593,7 @@ test('client ID is set correctly on transactions', async () => {
     'client-id-is-set-correctly-on-transactions',
     {
       mutators: {
-        async expectClientID(tx, expectedClientID: ClientID) {
+        expectClientID(tx, expectedClientID: ClientID) {
           expect(tx.clientID).to.equal(expectedClientID);
         },
       },

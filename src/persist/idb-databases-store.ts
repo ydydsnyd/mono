@@ -109,7 +109,7 @@ export class IDBDatabasesStore {
     return this._kvStore.close();
   }
 
-  async getProfileID(): Promise<string> {
+  getProfileID(): Promise<string> {
     return this._kvStore.withWrite(async write => {
       let profileId = await write.get(PROFILE_ID_KEY);
       if (profileId === undefined) {

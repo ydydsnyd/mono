@@ -35,9 +35,7 @@ export async function persistDD31(
   perdag: dag.Store,
   mutators: MutatorDefs,
   closed: () => boolean,
-  onGatherMemOnlyChunksForTest = async () => {
-    return;
-  },
+  onGatherMemOnlyChunksForTest = () => Promise.resolve(),
 ): Promise<void> {
   if (closed()) {
     return;

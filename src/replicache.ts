@@ -620,7 +620,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     assert(!DD31);
     // Do not wait for _ready here since this needs to be done before we
     // consider the database ready.
-    await this._indexOp(async tx => tx.syncIndexes(indexes));
+    await this._indexOp(tx => tx.syncIndexes(indexes));
   }
 
   private _onVisibilityChange = async () => {
@@ -971,9 +971,9 @@ export class Replicache<MD extends MutatorDefs = {}> {
     }
   }
 
-  private async _invokePull(): Promise<boolean> {
+  private _invokePull(): Promise<boolean> {
     if (this._isPullDisabled()) {
-      return true;
+      return Promise.resolve(true);
     }
 
     return this._wrapInOnlineCheck(async () => {
@@ -1456,7 +1456,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
    * to ensure you get a consistent view across multiple calls to `get`, `has`
    * and `scan`.
    */
-  async query<R>(body: (tx: ReadTransaction) => Promise<R> | R): Promise<R> {
+  query<R>(body: (tx: ReadTransaction) => Promise<R> | R): Promise<R> {
     return this._queryInternal(body);
   }
 
@@ -1569,7 +1569,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     return ex;
   }
 
-  protected async _recoverMutations(
+  protected _recoverMutations(
     preReadClientMap?: persist.ClientMap,
   ): Promise<boolean> {
     return this._mutationRecovery.recoverMutations(

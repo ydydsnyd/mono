@@ -12,14 +12,14 @@ function localStorageRead() {
     group: 'storage',
     key: '',
     value: <string | null>null,
-    async setup() {
+    setup() {
       this.key = uuid();
       localStorage.setItem(this.key, randomString(100));
     },
-    async teardown() {
+    teardown() {
       localStorage.removeItem(this.key);
     },
-    async run() {
+    run() {
       // Assign to ensure this read isn't optimized away.
       this.value = localStorage.getItem(this.key);
     },
@@ -32,14 +32,14 @@ function localStorageWrite() {
     group: 'storage',
     key: '',
     value: '',
-    async setup() {
+    setup() {
       this.key = uuid();
       this.value = randomString(100);
     },
-    async teardown() {
+    teardown() {
       localStorage.removeItem(this.key);
     },
-    async run() {
+    run() {
       localStorage.setItem(this.key, this.value);
     },
   };

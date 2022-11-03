@@ -31,8 +31,8 @@ function createGraph(args: {
   }
 
   const delegate: GarbageCollectionDelegate = {
-    getRefCount: async hash => refCounts[hash.toString()] || 0,
-    getRefs: async hash => refs[hash.toString()] || [],
+    getRefCount: hash => refCounts[hash.toString()] || 0,
+    getRefs: hash => refs[hash.toString()] || [],
   };
 
   return {

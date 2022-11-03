@@ -379,7 +379,7 @@ async function recoverMutationsWithNewPerdag(
   }
 }
 
-async function recoverMutationsFromPerdag(
+function recoverMutationsFromPerdag(
   database: persist.IndexedDBDatabase,
   options: MutationRecoveryOptions,
   perdag: dag.Store,

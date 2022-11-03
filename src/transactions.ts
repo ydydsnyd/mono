@@ -124,11 +124,13 @@ export class ReadTransactionImpl<
       : undefined;
   }
 
+  // eslint-disable-next-line require-await
   async has(key: string): Promise<boolean> {
     throwIfClosed(this.dbtx);
     return this.dbtx.has(key);
   }
 
+  // eslint-disable-next-line require-await
   async isEmpty(): Promise<boolean> {
     throwIfClosed(this.dbtx);
     return this.dbtx.isEmpty();

@@ -59,7 +59,7 @@ function perf(
     setup() {
       randomStrings = makeRandomStrings(NUM_STRINGS, STRING_LENGTH);
     },
-    async run() {
+    run() {
       for (let i = 0; i < randomStrings.length - 1; i++) {
         results.push(compare(randomStrings[i], randomStrings[i + 1]));
       }
