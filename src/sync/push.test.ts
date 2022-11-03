@@ -8,7 +8,7 @@ import type {HTTPRequestInfo} from '../http-request-info';
 import {SYNC_HEAD_NAME} from './sync-head-name';
 import {
   push,
-  PushRequest,
+  PushRequestSDD,
   PushRequestDD31,
   PUSH_VERSION_SDD,
   PUSH_VERSION_DD31,
@@ -19,7 +19,7 @@ import type {BranchID} from './branch-id.js';
 
 type FakePusherArgs = {
   expPush: boolean;
-  expPushReq?: PushRequest | PushRequestDD31;
+  expPushReq?: PushRequestSDD | PushRequestDD31;
   expPushURL: string;
   expAuth: string;
   expRequestID: string;
@@ -90,7 +90,7 @@ test('try push', async () => {
 
     // Push expectations.
     numPendingMutations: number;
-    expPushReq: PushRequest | undefined;
+    expPushReq: PushRequestSDD | undefined;
     pushResult: undefined | 'ok' | {error: string};
     expBatchPushInfo: HTTPRequestInfo | undefined;
   };

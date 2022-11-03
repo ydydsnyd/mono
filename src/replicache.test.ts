@@ -42,7 +42,7 @@ import {
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
-import type {Mutation} from './sync/push';
+import type {MutationSDD} from './sync/push';
 import type {ReplicacheOptions} from './replicache-options';
 import {deleteClientForTesting} from './persist/clients-test-helpers.js';
 import type {LogLevel} from '@rocicorp/logger';
@@ -2609,7 +2609,7 @@ test('client ID is set correctly on transactions', async () => {
 });
 
 test('mutation timestamps are immutable', async () => {
-  let pending: Mutation[] = [];
+  let pending: MutationSDD[] = [];
   const rep = await replicacheForTesting('mutation-timestamps-are-immutable', {
     mutators: {
       foo: async (tx, _: JSONValue) => {
@@ -2618,7 +2618,7 @@ test('mutation timestamps are immutable', async () => {
     },
     pusher: async (req: Request) => {
       const parsed = await req.json();
-      pending = parsed.mutations as Mutation[];
+      pending = parsed.mutations as MutationSDD[];
       return {
         errorMessage: '',
         httpStatusCode: 200,

@@ -10,6 +10,7 @@ import {assertLocalMetaDD31} from '../db/commit';
 import {assert} from '../asserts.js';
 import type {BranchID} from './branch-id.js';
 import type {ClientID} from './ids.js';
+import type {ReadonlyJSONValue} from '../json.js';
 
 export const PUSH_VERSION_SDD = 0;
 export const PUSH_VERSION_DD31 = 1;
@@ -22,24 +23,24 @@ export type PushRequest = {
   profileID: string;
   clientID: ClientID;
   mutations: Mutation[];
-  // TODO(DD31): Verify the generated docs!
-  pushVersion: typeof PUSH_VERSION_SDD;
-  // schemaVersion can optionally be used to specify to the push endpoint
-  // version information about the mutators the app is using (e.g., format
-  // of mutator args).
+  pushVersion: number;
+  /**
+   * `schemaVersion` can optionally be used to specify to the push endpoint
+   * version information about the mutators the app is using (e.g., format of
+   * mutator args).
+   */
   schemaVersion: string;
 };
 
-export type PushRequestDD31 = {
-  profileID: string;
+export type PushRequestSDD = Omit<PushRequest, 'mutations' | 'pushVersion'> & {
+  mutations: MutationSDD[];
+  pushVersion: typeof PUSH_VERSION_SDD;
+};
+
+export type PushRequestDD31 = Omit<PushRequest, 'mutations' | 'pushVersion'> & {
   branchID: BranchID;
-  clientID: ClientID;
   mutations: MutationDD31[];
   pushVersion: typeof PUSH_VERSION_DD31;
-  // schemaVersion can optionally be used to specify to the push endpoint
-  // version information about the mutators the app is using (e.g., format
-  // of mutator args).
-  schemaVersion: string;
 };
 
 /**
@@ -48,22 +49,22 @@ export type PushRequestDD31 = {
 export type Mutation = {
   readonly id: number;
   readonly name: string;
-  readonly args: InternalValue;
+  readonly args: ReadonlyJSONValue;
   readonly timestamp: number;
+};
+
+export type MutationSDD = Omit<Mutation, 'args'> & {
+  readonly args: InternalValue;
 };
 
 /**
  * Mutation describes a single mutation done on the client.
  */
-export type MutationDD31 = {
+export type MutationDD31 = MutationSDD & {
   readonly clientID: ClientID;
-  readonly id: number;
-  readonly name: string;
-  readonly args: InternalValue;
-  readonly timestamp: number;
 };
 
-export function convert(lm: db.LocalMetaSDD): Mutation {
+export function convert(lm: db.LocalMetaSDD): MutationSDD {
   return {
     id: lm.mutationID,
     name: lm.mutatorName,
@@ -105,7 +106,7 @@ export async function push(
   pending.reverse();
 
   let httpRequestInfo: HTTPRequestInfo | undefined = undefined;
-  let pushReq: PushRequest | PushRequestDD31;
+  let pushReq: PushRequestSDD | PushRequestDD31;
 
   if (pending.length > 0) {
     if (DD31 && pushVersion === PUSH_VERSION_DD31) {
@@ -129,7 +130,7 @@ export async function push(
       pushReq = r;
     } else {
       assert(pushVersion === PUSH_VERSION_SDD);
-      const pushMutations: Mutation[] = [];
+      const pushMutations: MutationSDD[] = [];
       for (const commit of pending) {
         if (commit.isLocal()) {
           pushMutations.push(convert(commit.meta));
@@ -163,7 +164,7 @@ export async function push(
 async function callPusher(
   pusher: Pusher,
   url: string,
-  body: PushRequest | PushRequestDD31,
+  body: PushRequestSDD | PushRequestDD31,
   auth: string,
   requestID: string,
 ): Promise<HTTPRequestInfo> {
