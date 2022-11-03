@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1667482987078,
+  "lastUpdate": 1667483272720,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -28805,6 +28805,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23472,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "105a2e9366b902472bb191a750a66df93488b00d",
+          "message": "feat(dd31): Mutation Recovery (#331)\n\n* feat(dd31): Mutation recovery\r\n\r\nFor DD31 we recover mutations from different branches (aka client\r\ngroups). We also recover old SDD mutations. The idb databases store\r\ncontains the replicache format version and this is used to branch the\r\nmutation recovery code. This means that we have to keep around both\r\npullSDD and pushSDD as long as we want to support recovering SDD\r\nmutations.\r\n\r\nThis code has a lot of code duplication and we really need to go back\r\nand dedupe this code now that it turns out that we do not to keep around\r\nthe SDD code paths for a while.\r\n\r\nThe test for mutation recovery runs the SDD tests both when DD31 is true\r\nand false. The old tests where updated to create DD31 dags and then\r\nfinally a few selected tests were created to test out recovering both\r\nSDD and DD31 dags at the same time.\r\n\r\nTowards #165",
+          "timestamp": "2022-11-03T13:46:50Z",
+          "tree_id": "5b5370011b303fe719e07b91f75a32465d617d5d",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/105a2e9366b902472bb191a750a66df93488b00d"
+        },
+        "date": 1667483267125,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 208767,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 35856,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 207621,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 35557,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 88018,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 24792,
             "unit": "bytes"
           }
         ]
