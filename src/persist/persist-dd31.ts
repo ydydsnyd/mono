@@ -174,6 +174,13 @@ export async function persistDD31(
     if (closed()) {
       return;
     }
+
+    lc.debug?.(
+      'memdag base snapshot is older than (or same as) perdag base snapshot',
+      memdagBaseSnapshot.meta.cookieJSON,
+      perdagBaseSnapshot.meta.cookieJSON,
+    );
+
     // no need to persist snapshot, persist new memdag mutations
     await perdag.withWrite(async perdagWrite => {
       const [mainBranch, latestPerdagMainBranchHeadCommit] =

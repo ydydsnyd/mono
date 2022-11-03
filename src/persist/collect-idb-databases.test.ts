@@ -15,7 +15,10 @@ import * as dag from '../dag/mod';
 import type {ClientMap} from './clients.js';
 import {assertNotUndefined} from '../asserts.js';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
-import {REPLICACHE_FORMAT_VERSION} from '../replicache.js';
+import {
+  REPLICACHE_FORMAT_VERSION,
+  REPLICACHE_FORMAT_VERSION_SDD,
+} from '../replicache.js';
 
 suite('collectIDBDatabases', async () => {
   let clock: SinonFakeTimers;
@@ -224,7 +227,7 @@ suite('collectIDBDatabases', async () => {
   {
     const entries: Entries = [
       [
-        makeIndexedDBDatabase('a', 0, REPLICACHE_FORMAT_VERSION - 1),
+        makeIndexedDBDatabase('a', 0, REPLICACHE_FORMAT_VERSION_SDD - 1),
         makeClientMap({
           clientA1: {
             headHash: fakeHash('a1'),

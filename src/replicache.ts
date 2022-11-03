@@ -106,7 +106,13 @@ export function assertPokeSDD(
 
 export const httpStatusUnauthorized = 401;
 
-export const REPLICACHE_FORMAT_VERSION = 4;
+export const REPLICACHE_FORMAT_VERSION_SDD = 4;
+export const REPLICACHE_FORMAT_VERSION_DD31 = 5;
+
+export const REPLICACHE_FORMAT_VERSION = DD31
+  ? REPLICACHE_FORMAT_VERSION_DD31
+  : REPLICACHE_FORMAT_VERSION_SDD;
+
 const LAZY_STORE_SOURCE_CHUNK_CACHE_SIZE_LIMIT = 100 * 2 ** 20; // 100 MB
 
 const RECOVER_MUTATIONS_INTERVAL_MS = 5 * 60 * 1000; // 5 mins
@@ -124,9 +130,19 @@ type ToPromise<P> = P extends Promise<unknown> ? P : Promise<P>;
  * @returns
  */
 export function makeIDBName(name: string, schemaVersion?: string): string {
-  const n = `rep:${name}:${REPLICACHE_FORMAT_VERSION}`;
+  return makeIDBNameInternal(name, schemaVersion, REPLICACHE_FORMAT_VERSION);
+}
+
+function makeIDBNameInternal(
+  name: string,
+  schemaVersion: string | undefined,
+  replicacheFormatVersion: number,
+): string {
+  const n = `rep:${name}:${replicacheFormatVersion}`;
   return schemaVersion ? `${n}:${schemaVersion}` : n;
 }
+
+export {makeIDBNameInternal as makeIDBNameForTesting};
 
 /**
  * The maximum number of time to call out to getAuth before giving up
@@ -497,6 +513,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       wrapInReauthRetries: this._wrapInReauthRetries.bind(this),
       isPullDisabled: this._isPullDisabled.bind(this),
       isPushDisabled: this._isPushDisabled.bind(this),
+      branchIDPromise: this._branchIDPromise,
     });
 
     this._onPersist = DD31

@@ -902,7 +902,6 @@ test('subscribe perf test regression', async () => {
         );
       },
       async put(tx: WriteTransaction, options: {key: string; val: JSONValue}) {
-        // console.log('put', options.key, options.val);
         await tx.put(options.key, options.val);
       },
     },

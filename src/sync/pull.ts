@@ -46,7 +46,7 @@ export const PULL_VERSION_DD31 = 1;
  * The JSON value used as the body when doing a POST to the [pull
  * endpoint](/server-pull).
  */
-export type PullRequest<Cookie = ReadonlyJSONValue> = {
+export type PullRequestSDD<Cookie = ReadonlyJSONValue> = {
   profileID: string;
   clientID: ClientID;
   cookie: Cookie;
@@ -165,7 +165,7 @@ export async function beginPullSDD(
     return [lastMutationID, baseCookie];
   });
 
-  const pullReq: PullRequest<JSONValue> = {
+  const pullReq: PullRequestSDD<JSONValue> = {
     profileID,
     clientID,
     cookie: fromInternalValue(
@@ -697,7 +697,7 @@ export async function maybeEndPull(
 async function callPuller(
   puller: Puller,
   url: string,
-  body: PullRequest<ReadonlyJSONValue>,
+  body: PullRequestSDD<ReadonlyJSONValue>,
   auth: string,
   requestID: string,
 ): Promise<PullerResult> {

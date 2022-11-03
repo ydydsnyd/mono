@@ -8,7 +8,7 @@ import {initBgIntervalProcess} from '../bg-interval';
 import type {LogContext} from '@rocicorp/logger';
 import {sleep} from '../sleep';
 import {AbortError} from '../abort-error';
-import {REPLICACHE_FORMAT_VERSION} from '../replicache';
+import {REPLICACHE_FORMAT_VERSION} from '../replicache.js';
 import {assertHash} from '../hash';
 
 // How frequently to try to collect

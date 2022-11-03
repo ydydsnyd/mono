@@ -30,7 +30,7 @@ import {
   handlePullResponseDD31,
   maybeEndPull,
   MaybeEndPullResultSDD,
-  PullRequest,
+  PullRequestSDD,
   PullRequestDD31,
   PULL_VERSION_DD31,
   PULL_VERSION_SDD,
@@ -119,7 +119,7 @@ test('begin try pull SDD', async () => {
     expBeginPullResult: BeginPullResponse | string;
   };
 
-  const expPullReq: PullRequest = {
+  const expPullReq: PullRequestSDD = {
     profileID,
     clientID,
     cookie: baseCookie,
@@ -1306,7 +1306,7 @@ test('maybe end try pull', async () => {
 });
 
 type FakePullerArgsSDD = {
-  expPullReq: PullRequest;
+  expPullReq: PullRequestSDD;
   expPullURL: string;
   expPullAuth: string;
   expRequestID: string;
@@ -1326,7 +1326,7 @@ function makeFakePuller(
 function makeFakePullerSDD(options: FakePullerArgsSDD): Puller {
   assert(!DD31);
   return async (req: Request): Promise<PullerResult> => {
-    const pullReq: PullRequest = await req.json();
+    const pullReq: PullRequestSDD = await req.json();
     expect(options.expPullReq).to.deep.equal(pullReq);
 
     expect(new URL(options.expPullURL, location.href).toString()).to.equal(
@@ -1468,7 +1468,7 @@ test('changed keys', async () => {
 
     const newCookie = 'new_cookie';
 
-    const expPullReq: PullRequest | PullRequestDD31 = DD31
+    const expPullReq: PullRequestSDD | PullRequestDD31 = DD31
       ? {
           profileID,
           clientID,

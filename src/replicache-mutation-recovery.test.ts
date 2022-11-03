@@ -8,7 +8,11 @@ import {
   dbsToDrop,
   closeablesToClose,
 } from './test-util';
-import {makeIDBName, REPLICACHE_FORMAT_VERSION} from './replicache';
+import {
+  makeIDBNameForTesting,
+  REPLICACHE_FORMAT_VERSION_DD31,
+  REPLICACHE_FORMAT_VERSION_SDD,
+} from './replicache';
 import {ChainBuilder} from './db/test-helpers';
 import type * as db from './db/mod';
 import * as dag from './dag/mod';
@@ -28,20 +32,24 @@ import sinon from 'sinon';
 import fetchMock from 'fetch-mock/esm/client';
 import {initClientWithClientID} from './persist/clients-test-helpers.js';
 import {fromInternalValue, FromInternalValueReason} from './internal-value.js';
-import {PUSH_VERSION_SDD, PUSH_VERSION_DD31} from './sync/push.js';
+import {PUSH_VERSION_SDD} from './sync/push.js';
 import {assertClientSDD} from './persist/clients.js';
-import {LogContext} from '@rocicorp/logger';
 
 initReplicacheTesting();
 
-const branchID = 'FAKE_BRANCH_ID_FOR_RECOVER_MUTATION';
-
-async function createPerdag(args: {
+export async function createPerdag(args: {
   replicacheName: string;
   schemaVersion: string;
+  replicacheFormatVersion:
+    | typeof REPLICACHE_FORMAT_VERSION_SDD
+    | typeof REPLICACHE_FORMAT_VERSION_DD31;
 }): Promise<dag.Store> {
-  const {replicacheName, schemaVersion} = args;
-  const idbName = makeIDBName(replicacheName, schemaVersion);
+  const {replicacheName, schemaVersion, replicacheFormatVersion} = args;
+  const idbName = makeIDBNameForTesting(
+    replicacheName,
+    schemaVersion,
+    replicacheFormatVersion,
+  );
   const idb = new kv.IDBStore(idbName);
   closeablesToClose.add(idb);
   dbsToDrop.add(idbName);
@@ -52,7 +60,7 @@ async function createPerdag(args: {
       name: idbName,
       replicacheName,
       schemaVersion,
-      replicacheFormatVersion: REPLICACHE_FORMAT_VERSION,
+      replicacheFormatVersion,
     });
   } finally {
     await idbDatabases.close();
@@ -61,7 +69,7 @@ async function createPerdag(args: {
   return perdag;
 }
 
-async function createAndPersistClientWithPendingLocal(
+export async function createAndPersistClientWithPendingLocalSDD(
   clientID: sync.ClientID,
   perdag: dag.Store,
   numLocal: number,
@@ -72,7 +80,7 @@ async function createAndPersistClientWithPendingLocal(
     dag.uuidChunkHasher,
     assertHash,
   );
-  const b = new ChainBuilder(testMemdag);
+  const b = new ChainBuilder(testMemdag, undefined, false);
   await b.addGenesis(clientID);
   await b.addSnapshot([['unique', uuid()]], clientID);
 
@@ -83,43 +91,17 @@ async function createAndPersistClientWithPendingLocal(
     await b.addLocal(clientID);
     localMetas.push(b.chain[b.chain.length - 1].meta as db.LocalMetaSDD);
   }
-  await persist.persist(
-    new LogContext(),
-    clientID,
-    testMemdag,
-    perdag,
-    {},
-    () => false,
-  );
+
+  await persist.persistSDD(clientID, testMemdag, perdag, () => false);
   return localMetas;
 }
 
-function createPushBody(
+export function createPushBodySDD(
   profileID: string,
-  branchID: sync.BranchID,
   clientID: sync.ClientID,
   localMetas: db.LocalMetaSDD[],
   schemaVersion: string,
 ): ReadonlyJSONObject {
-  if (DD31) {
-    return {
-      profileID,
-      branchID,
-      clientID,
-      mutations: localMetas.map(localMeta => ({
-        clientID,
-        id: localMeta.mutationID,
-        name: localMeta.mutatorName,
-        args: fromInternalValue(
-          localMeta.mutatorArgsJSON,
-          FromInternalValueReason.Test,
-        ),
-        timestamp: localMeta.timestamp,
-      })),
-      pushVersion: DD31 ? PUSH_VERSION_DD31 : PUSH_VERSION_SDD,
-      schemaVersion,
-    };
-  }
   return {
     profileID,
     clientID,
@@ -132,31 +114,23 @@ function createPushBody(
       ),
       timestamp: localMeta.timestamp,
     })),
-    pushVersion: 0,
+    pushVersion: PUSH_VERSION_SDD,
     schemaVersion,
   };
 }
 
-async function testRecoveringMutationsOfClient(args: {
+async function testRecoveringMutationsOfClientSDD(args: {
   schemaVersionOfClientWPendingMutations: string;
   schemaVersionOfClientRecoveringMutations: string;
   numMutationsNotAcknowledgedByPull?: number;
 }) {
-  if (DD31) {
-    // TODO(DD31): Implement
-    return;
-  }
-
   sinon.stub(console, 'error');
 
   const {
     schemaVersionOfClientWPendingMutations,
     schemaVersionOfClientRecoveringMutations,
-    numMutationsNotAcknowledgedByPull,
-  } = {
-    numMutationsNotAcknowledgedByPull: 0,
-    ...args,
-  };
+    numMutationsNotAcknowledgedByPull = 0,
+  } = args;
   const client1ID = 'client1';
   const auth = '1';
   const pushURL = 'https://test.replicache.dev/push';
@@ -177,13 +151,11 @@ async function testRecoveringMutationsOfClient(args: {
   const testPerdag = await createPerdag({
     replicacheName: rep.name,
     schemaVersion: schemaVersionOfClientWPendingMutations,
+    replicacheFormatVersion: REPLICACHE_FORMAT_VERSION_SDD,
   });
 
-  const client1PendingLocalMetas = await createAndPersistClientWithPendingLocal(
-    client1ID,
-    testPerdag,
-    2,
-  );
+  const client1PendingLocalMetas =
+    await createAndPersistClientWithPendingLocalSDD(client1ID, testPerdag, 2);
   const client1 = await testPerdag.withRead(read =>
     persist.getClient(client1ID, read),
   );
@@ -245,21 +217,21 @@ async function testRecoveringMutationsOfClient(args: {
 }
 
 test('successfully recovering mutations of client with same schema version and replicache format version', async () => {
-  await testRecoveringMutationsOfClient({
+  await testRecoveringMutationsOfClientSDD({
     schemaVersionOfClientWPendingMutations: 'testSchema1',
     schemaVersionOfClientRecoveringMutations: 'testSchema1',
   });
 });
 
 test('successfully recovering mutations of client with different schema version but same replicache format version', async () => {
-  await testRecoveringMutationsOfClient({
+  await testRecoveringMutationsOfClientSDD({
     schemaVersionOfClientWPendingMutations: 'testSchema1',
     schemaVersionOfClientRecoveringMutations: 'testSchema2',
   });
 });
 
 test('successfully recovering some but not all mutations of another client (pull does not acknowledge all)', async () => {
-  await testRecoveringMutationsOfClient({
+  await testRecoveringMutationsOfClientSDD({
     schemaVersionOfClientWPendingMutations: 'testSchema1',
     schemaVersionOfClientRecoveringMutations: 'testSchema1',
     numMutationsNotAcknowledgedByPull: 1,
@@ -285,21 +257,15 @@ test('recovering mutations with pull disabled', async () => {
   const profileID = await rep.profileID;
 
   await tickAFewTimes();
-  if (DD31) {
-    // TODO(DD31): Implement
-    return;
-  }
 
   const testPerdag = await createPerdag({
     replicacheName: rep.name,
     schemaVersion: schemaVersionOfClientWPendingMutations,
+    replicacheFormatVersion: REPLICACHE_FORMAT_VERSION_SDD,
   });
 
-  const client1PendingLocalMetas = await createAndPersistClientWithPendingLocal(
-    client1ID,
-    testPerdag,
-    2,
-  );
+  const client1PendingLocalMetas =
+    await createAndPersistClientWithPendingLocalSDD(client1ID, testPerdag, 2);
   const client1 = await testPerdag.withRead(read =>
     persist.getClient(client1ID, read),
   );
@@ -347,11 +313,6 @@ test('recovering mutations with pull disabled', async () => {
 });
 
 test('client does not attempt to recover mutations from IndexedDB with different replicache name', async () => {
-  if (DD31) {
-    // TODO(DD31): Implement this test.
-    return;
-  }
-
   const clientWPendingMutationsID = 'client1';
   const schemaVersion = 'testSchema';
   const replicachePartialNameOfClientWPendingMutations =
@@ -379,9 +340,10 @@ test('client does not attempt to recover mutations from IndexedDB with different
       replicachePartialNameOfClientWPendingMutations,
     ),
     schemaVersion,
+    replicacheFormatVersion: REPLICACHE_FORMAT_VERSION_SDD,
   });
 
-  await createAndPersistClientWithPendingLocal(
+  await createAndPersistClientWithPendingLocalSDD(
     clientWPendingMutationsID,
     testPerdag,
     2,
@@ -407,11 +369,6 @@ test('client does not attempt to recover mutations from IndexedDB with different
 });
 
 test('successfully recovering mutations of multiple clients with mix of schema versions and same replicache format version', async () => {
-  if (DD31) {
-    // TODO(DD31): Implement
-    return;
-  }
-
   const schemaVersionOfClients1Thru3AndClientRecoveringMutations =
     'testSchema1';
   const schemaVersionOfClient4 = 'testSchema2';
@@ -440,34 +397,40 @@ test('successfully recovering mutations of multiple clients with mix of schema v
   const testPerdagForClients1Thru3 = await createPerdag({
     replicacheName: rep.name,
     schemaVersion: schemaVersionOfClients1Thru3AndClientRecoveringMutations,
+    replicacheFormatVersion: REPLICACHE_FORMAT_VERSION_SDD,
   });
 
-  const client1PendingLocalMetas = await createAndPersistClientWithPendingLocal(
-    client1ID,
-    testPerdagForClients1Thru3,
-    2,
-  );
-  const client2PendingLocalMetas = await createAndPersistClientWithPendingLocal(
-    client2ID,
-    testPerdagForClients1Thru3,
-    0,
-  );
+  const client1PendingLocalMetas =
+    await createAndPersistClientWithPendingLocalSDD(
+      client1ID,
+      testPerdagForClients1Thru3,
+      2,
+    );
+  const client2PendingLocalMetas =
+    await createAndPersistClientWithPendingLocalSDD(
+      client2ID,
+      testPerdagForClients1Thru3,
+      0,
+    );
   expect(client2PendingLocalMetas.length).to.equal(0);
-  const client3PendingLocalMetas = await createAndPersistClientWithPendingLocal(
-    client3ID,
-    testPerdagForClients1Thru3,
-    1,
-  );
+  const client3PendingLocalMetas =
+    await createAndPersistClientWithPendingLocalSDD(
+      client3ID,
+      testPerdagForClients1Thru3,
+      1,
+    );
 
   const testPerdagForClient4 = await createPerdag({
     replicacheName: rep.name,
     schemaVersion: schemaVersionOfClient4,
+    replicacheFormatVersion: REPLICACHE_FORMAT_VERSION_SDD,
   });
-  const client4PendingLocalMetas = await createAndPersistClientWithPendingLocal(
-    client4ID,
-    testPerdagForClient4,
-    2,
-  );
+  const client4PendingLocalMetas =
+    await createAndPersistClientWithPendingLocalSDD(
+      client4ID,
+      testPerdagForClient4,
+      2,
+    );
 
   const clients1Thru3 = await testPerdagForClients1Thru3.withRead(read =>
     persist.getClients(read),
@@ -524,27 +487,24 @@ test('successfully recovering mutations of multiple clients with mix of schema v
   const pushCalls = fetchMock.calls(pushURL);
   expect(pushCalls.length).to.equal(3);
   expect(await pushCalls[0].request.json()).to.deep.equal(
-    createPushBody(
+    createPushBodySDD(
       profileID,
-      branchID,
       client1ID,
       client1PendingLocalMetas,
       schemaVersionOfClients1Thru3AndClientRecoveringMutations,
     ),
   );
   expect(await pushCalls[1].request.json()).to.deep.equal(
-    createPushBody(
+    createPushBodySDD(
       profileID,
-      branchID,
       client3ID,
       client3PendingLocalMetas,
       schemaVersionOfClients1Thru3AndClientRecoveringMutations,
     ),
   );
   expect(await pushCalls[2].request.json()).to.deep.equal(
-    createPushBody(
+    createPushBodySDD(
       profileID,
-      branchID,
       client4ID,
       client4PendingLocalMetas,
       schemaVersionOfClient4,
@@ -618,11 +578,6 @@ test('successfully recovering mutations of multiple clients with mix of schema v
 });
 
 test('if a push error occurs, continues to try to recover other clients', async () => {
-  if (DD31) {
-    // TODO(DD31): Implement
-    return;
-  }
-
   const schemaVersion = 'testSchema1';
   // client1 has same schema version as recovering client and 2 mutations to recover
   const client1ID = 'client1';
@@ -647,23 +602,15 @@ test('if a push error occurs, continues to try to recover other clients', async 
   const testPerdag = await createPerdag({
     replicacheName: rep.name,
     schemaVersion,
+    replicacheFormatVersion: REPLICACHE_FORMAT_VERSION_SDD,
   });
 
-  const client1PendingLocalMetas = await createAndPersistClientWithPendingLocal(
-    client1ID,
-    testPerdag,
-    2,
-  );
-  const client2PendingLocalMetas = await createAndPersistClientWithPendingLocal(
-    client2ID,
-    testPerdag,
-    1,
-  );
-  const client3PendingLocalMetas = await createAndPersistClientWithPendingLocal(
-    client3ID,
-    testPerdag,
-    1,
-  );
+  const client1PendingLocalMetas =
+    await createAndPersistClientWithPendingLocalSDD(client1ID, testPerdag, 2);
+  const client2PendingLocalMetas =
+    await createAndPersistClientWithPendingLocalSDD(client2ID, testPerdag, 1);
+  const client3PendingLocalMetas =
+    await createAndPersistClientWithPendingLocalSDD(client3ID, testPerdag, 1);
 
   const clients = await testPerdag.withRead(read => persist.getClients(read));
   const client1 = clients.get(client1ID);
@@ -720,27 +667,24 @@ test('if a push error occurs, continues to try to recover other clients', async 
 
   expect(pushRequestJsonBodies.length).to.equal(3);
   expect(await pushRequestJsonBodies[0]).to.deep.equal(
-    createPushBody(
+    createPushBodySDD(
       profileID,
-      branchID,
       client1ID,
       client1PendingLocalMetas,
       schemaVersion,
     ),
   );
   expect(await pushRequestJsonBodies[1]).to.deep.equal(
-    createPushBody(
+    createPushBodySDD(
       profileID,
-      branchID,
       client2ID,
       client2PendingLocalMetas,
       schemaVersion,
     ),
   );
   expect(await pushRequestJsonBodies[2]).to.deep.equal(
-    createPushBody(
+    createPushBodySDD(
       profileID,
-      branchID,
       client3ID,
       client3PendingLocalMetas,
       schemaVersion,
@@ -796,11 +740,6 @@ test('if a push error occurs, continues to try to recover other clients', async 
 });
 
 test('if an error occurs recovering one client, continues to try to recover other clients', async () => {
-  if (DD31) {
-    // TODO(DD31): Implement
-    return;
-  }
-
   const schemaVersion = 'testSchema1';
   // client1 has same schema version as recovering client and 2 mutations to recover
   const client1ID = 'client1';
@@ -825,19 +764,14 @@ test('if an error occurs recovering one client, continues to try to recover othe
   const testPerdag = await createPerdag({
     replicacheName: rep.name,
     schemaVersion,
+    replicacheFormatVersion: REPLICACHE_FORMAT_VERSION_SDD,
   });
 
-  const client1PendingLocalMetas = await createAndPersistClientWithPendingLocal(
-    client1ID,
-    testPerdag,
-    2,
-  );
-  await createAndPersistClientWithPendingLocal(client2ID, testPerdag, 1);
-  const client3PendingLocalMetas = await createAndPersistClientWithPendingLocal(
-    client3ID,
-    testPerdag,
-    1,
-  );
+  const client1PendingLocalMetas =
+    await createAndPersistClientWithPendingLocalSDD(client1ID, testPerdag, 2);
+  await createAndPersistClientWithPendingLocalSDD(client2ID, testPerdag, 1);
+  const client3PendingLocalMetas =
+    await createAndPersistClientWithPendingLocalSDD(client3ID, testPerdag, 1);
 
   const clients = await testPerdag.withRead(read => persist.getClients(read));
   const client1 = clients.get(client1ID);
@@ -891,18 +825,16 @@ test('if an error occurs recovering one client, continues to try to recover othe
   const pushCalls = fetchMock.calls(pushURL);
   expect(pushCalls.length).to.equal(2);
   expect(await pushCalls[0].request.json()).to.deep.equal(
-    createPushBody(
+    createPushBodySDD(
       profileID,
-      branchID,
       client1ID,
       client1PendingLocalMetas,
       schemaVersion,
     ),
   );
   expect(await pushCalls[1].request.json()).to.deep.equal(
-    createPushBody(
+    createPushBodySDD(
       profileID,
-      branchID,
       client3ID,
       client3PendingLocalMetas,
       schemaVersion,
@@ -958,10 +890,6 @@ test('if an error occurs recovering one client, continues to try to recover othe
 });
 
 test('if an error occurs recovering one db, continues to try to recover clients from other dbs', async () => {
-  if (DD31) {
-    // TODO(DD31): Implement
-    return;
-  }
   const schemaVersionOfClient1 = 'testSchema1';
   const schemaVersionOfClient2 = 'testSchema2';
   const schemaVersionOfRecoveringClient = 'testSchemaOfRecovering';
@@ -984,8 +912,9 @@ test('if an error occurs recovering one db, continues to try to recover clients 
   const testPerdagForClient1 = await createPerdag({
     replicacheName: rep.name,
     schemaVersion: schemaVersionOfClient1,
+    replicacheFormatVersion: REPLICACHE_FORMAT_VERSION_SDD,
   });
-  await createAndPersistClientWithPendingLocal(
+  await createAndPersistClientWithPendingLocalSDD(
     client1ID,
     testPerdagForClient1,
     1,
@@ -994,12 +923,14 @@ test('if an error occurs recovering one db, continues to try to recover clients 
   const testPerdagForClient2 = await createPerdag({
     replicacheName: rep.name,
     schemaVersion: schemaVersionOfClient2,
+    replicacheFormatVersion: REPLICACHE_FORMAT_VERSION_SDD,
   });
-  const client2PendingLocalMetas = await createAndPersistClientWithPendingLocal(
-    client2ID,
-    testPerdagForClient2,
-    1,
-  );
+  const client2PendingLocalMetas =
+    await createAndPersistClientWithPendingLocalSDD(
+      client2ID,
+      testPerdagForClient2,
+      1,
+    );
 
   const client1 = await testPerdagForClient1.withRead(read =>
     persist.getClient(client1ID, read),
@@ -1049,9 +980,8 @@ test('if an error occurs recovering one db, continues to try to recover clients 
   const pushCalls = fetchMock.calls(pushURL);
   expect(pushCalls.length).to.equal(1);
   expect(await pushCalls[0].request.json()).to.deep.equal(
-    createPushBody(
+    createPushBodySDD(
       profileID,
-      branchID,
       client2ID,
       client2PendingLocalMetas,
       schemaVersionOfClient2,
@@ -1094,10 +1024,6 @@ test('if an error occurs recovering one db, continues to try to recover clients 
 });
 
 test('mutation recovery exits early if Replicache is closed', async () => {
-  if (DD31) {
-    // TODO(DD31): Implement
-    return;
-  }
   const schemaVersion = 'testSchema1';
   const client1ID = 'client1';
   const client2ID = 'client2';
@@ -1118,14 +1044,12 @@ test('mutation recovery exits early if Replicache is closed', async () => {
   const testPerdag = await createPerdag({
     replicacheName: rep.name,
     schemaVersion,
+    replicacheFormatVersion: REPLICACHE_FORMAT_VERSION_SDD,
   });
 
-  const client1PendingLocalMetas = await createAndPersistClientWithPendingLocal(
-    client1ID,
-    testPerdag,
-    1,
-  );
-  await createAndPersistClientWithPendingLocal(client2ID, testPerdag, 1);
+  const client1PendingLocalMetas =
+    await createAndPersistClientWithPendingLocalSDD(client1ID, testPerdag, 1);
+  await createAndPersistClientWithPendingLocalSDD(client2ID, testPerdag, 1);
 
   const clients = await testPerdag.withRead(read => persist.getClients(read));
   const client1 = clients.get(client1ID);
@@ -1168,9 +1092,8 @@ test('mutation recovery exits early if Replicache is closed', async () => {
   const pushCalls = fetchMock.calls(pushURL);
   expect(pushCalls.length).to.equal(1);
   expect(await pushCalls[0].request.json()).to.deep.equal(
-    createPushBody(
+    createPushBodySDD(
       profileID,
-      branchID,
       client1ID,
       client1PendingLocalMetas,
       schemaVersion,

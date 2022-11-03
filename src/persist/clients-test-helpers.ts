@@ -115,7 +115,6 @@ export async function initClientWithClientID(
   } else {
     [generatedClientID, client, clientMap] = await initClientSDD(dagStore);
   }
-
   const newMap = new Map(clientMap);
   newMap.delete(generatedClientID);
   newMap.set(clientID, client);

@@ -38,7 +38,7 @@ export type PullResponseOK = {
   patch: PatchOperation[];
 };
 
-export type PullResponseOKSDD = PullResponseOK;
+export type {PullResponseOK as PullResponseOKSDD};
 
 /**
  * The shape of a pull response under normal circumstances.
@@ -66,7 +66,7 @@ export type ClientStateNotFoundResponse = {
  */
 export type PullResponse = PullResponseOK | ClientStateNotFoundResponse;
 
-export type PullResponseSDD = PullResponse;
+export type {PullResponse as PullResponseSDD};
 
 /**
  * PullResponse defines the shape and type of the response of a pull. This is

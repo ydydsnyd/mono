@@ -2,24 +2,29 @@ import type {LogContext} from '@rocicorp/logger';
 import {
   isClientStateNotFoundResponse,
   Puller,
-  PullResponse,
+  PullerDD31,
   PullResponseDD31,
   PullResponseOK,
-  PullResponseOKDD31,
+  PullResponseSDD,
 } from './puller';
 import * as dag from './dag/mod';
 import * as db from './db/mod';
 import * as persist from './persist/mod';
 import * as sync from './sync/mod';
 import {assertHash} from './hash';
-import {assertNotUndefined} from './asserts';
+import {assert, assertNotUndefined} from './asserts';
 import type {HTTPRequestInfo} from './http-request-info';
-import {MaybePromise, REPLICACHE_FORMAT_VERSION} from './replicache';
+import {
+  MaybePromise,
+  REPLICACHE_FORMAT_VERSION_DD31,
+  REPLICACHE_FORMAT_VERSION_SDD,
+} from './replicache';
 import {IDBStore} from './kv/idb-store.js';
-import {assertClientSDD, isClientSDD, setClients} from './persist/clients.js';
+import {assertClientSDD, setClients} from './persist/clients.js';
 import type {ClientID} from './sync/client-id.js';
 import type {Pusher} from './pusher.js';
-import {PUSH_VERSION_SDD} from './sync/push.js';
+import type {BranchID} from './sync/branch-id.js';
+import {PUSH_VERSION_DD31, PUSH_VERSION_SDD} from './sync/push.js';
 
 const MUTATION_RECOVERY_LAZY_STORE_SOURCE_CHUNK_CACHE_SIZE_LIMIT = 10 * 2 ** 20; // 10 MB
 
@@ -64,6 +69,7 @@ interface MutationRecoveryOptions {
   readonly isPullDisabled: () => boolean;
   readonly lc: LogContext;
   readonly enableMutationRecovery: boolean;
+  readonly branchIDPromise: Promise<BranchID | undefined>;
 }
 
 export class MutationRecovery {
@@ -110,15 +116,19 @@ export class MutationRecovery {
           return true;
         }
         if (
-          database.name === delegate.idbName ||
-          database.replicacheName !== delegate.name ||
-          // TODO: when REPLICACHE_FORMAT_VERSION is update
-          // need to also handle previous REPLICACHE_FORMAT_VERSIONs
-          database.replicacheFormatVersion !== REPLICACHE_FORMAT_VERSION
+          database.replicacheName === delegate.name &&
+          database.name !== delegate.idbName
         ) {
-          continue;
+          switch (database.replicacheFormatVersion) {
+            case REPLICACHE_FORMAT_VERSION_SDD:
+            case REPLICACHE_FORMAT_VERSION_DD31:
+              await recoverMutationsWithNewPerdag(
+                database,
+                this._options,
+                undefined,
+              );
+          }
         }
-        await recoverMutationsWithNewPerdag(database, this._options, undefined);
       }
     } catch (e) {
       logMutationRecoveryError(e, lc, stepDescription, delegate);
@@ -155,22 +165,15 @@ function logMutationRecoveryError(
  *   recover, or because an error occurred when trying to recover the
  *   mutations.
  */
-async function recoverMutationsOfClient(
+async function recoverMutationsOfClientSDD(
   client: persist.Client,
-  branchID: sync.BranchID | undefined,
   clientID: sync.ClientID,
   perdag: dag.Store,
   database: persist.IndexedDBDatabase,
   options: MutationRecoveryOptions,
 ): Promise<persist.ClientMap | undefined> {
-  // TODO(DD31): Implement this.
-  if (DD31) {
-    return;
-  }
-
-  if (!isClientSDD(client)) {
-    return undefined;
-  }
+  assert(database.replicacheFormatVersion === REPLICACHE_FORMAT_VERSION_SDD);
+  assertClientSDD(client);
 
   const {
     delegate,
@@ -182,22 +185,20 @@ async function recoverMutationsOfClient(
   } = options;
   const selfClientID = await delegate.clientID;
   if (selfClientID === clientID) {
-    return undefined;
+    return;
   }
   if (client.lastServerAckdMutationID >= client.mutationID) {
-    return undefined;
+    return;
   }
   const stepDescription = `Recovering mutations for ${clientID}.`;
   lc.debug?.('Start:', stepDescription);
-  let dagForOtherClientToClose: dag.LazyStore | undefined;
+  const dagForOtherClient = new dag.LazyStore(
+    perdag,
+    MUTATION_RECOVERY_LAZY_STORE_SOURCE_CHUNK_CACHE_SIZE_LIMIT,
+    dag.throwChunkHasher,
+    assertHash,
+  );
   try {
-    const dagForOtherClient = (dagForOtherClientToClose = new dag.LazyStore(
-      perdag,
-      MUTATION_RECOVERY_LAZY_STORE_SOURCE_CHUNK_CACHE_SIZE_LIMIT,
-      dag.throwChunkHasher,
-      assertHash,
-    ));
-
     await dagForOtherClient.withWrite(async write => {
       await write.setHead(db.DEFAULT_HEAD_NAME, client.headHash);
       await write.commit();
@@ -221,7 +222,7 @@ async function recoverMutationsOfClient(
             dagForOtherClient,
             requestLc,
             await delegate.profileID,
-            branchID,
+            undefined,
             clientID,
             pusher,
             pushURL,
@@ -254,7 +255,7 @@ async function recoverMutationsOfClient(
     const {puller, pullURL} = delegate;
 
     const pullDescription = 'recoveringMutationsPull';
-    let pullResponse: PullResponse | PullResponseDD31 | undefined;
+    let pullResponse: PullResponseSDD | undefined;
     const pullSucceeded = await wrapInOnlineCheck(async () => {
       const {result: beginPullResponse} = await wrapInReauthRetries(
         async (requestID: string, requestLc: LogContext) => {
@@ -264,10 +265,9 @@ async function recoverMutationsOfClient(
             schemaVersion: database.schemaVersion,
             puller,
           };
-          const beginPullResponse = await sync.beginPull(
+          const beginPullResponse = await sync.beginPullSDD(
             await delegate.profileID,
             clientID,
-            branchID,
             beginPullRequest,
             beginPullRequest.puller,
             requestID,
@@ -307,18 +307,11 @@ async function recoverMutationsOfClient(
         lc.debug?.(
           `Client ${selfClientID} recovered mutations for client ` +
             `${clientID}.  Details`,
-          DD31
-            ? {
-                mutationID: client.mutationID,
-                lastServerAckdMutationID: client.lastServerAckdMutationID,
-                lastMutationIDChanges: (pullResponse as PullResponseOKDD31)
-                  .lastMutationIDChanges,
-              }
-            : {
-                mutationID: client.mutationID,
-                lastServerAckdMutationID: client.lastServerAckdMutationID,
-                lastMutationID: (pullResponse as PullResponseOK).lastMutationID,
-              },
+          {
+            mutationID: client.mutationID,
+            lastServerAckdMutationID: client.lastServerAckdMutationID,
+            lastMutationID: pullResponse.lastMutationID,
+          },
         );
       }
     }
@@ -344,9 +337,9 @@ async function recoverMutationsOfClient(
         return await setNewClients(newClients);
       }
 
+      assert(pullResponse);
       if (
-        clientToUpdate.lastServerAckdMutationID >=
-        (pullResponse as PullResponseOK).lastMutationID
+        clientToUpdate.lastServerAckdMutationID >= pullResponse.lastMutationID
       ) {
         return clients;
       }
@@ -360,11 +353,11 @@ async function recoverMutationsOfClient(
     });
   } catch (e) {
     logMutationRecoveryError(e, lc, stepDescription, delegate);
-    return;
   } finally {
-    await dagForOtherClientToClose?.close();
+    await dagForOtherClient.close();
     lc.debug?.('End:', stepDescription);
   }
+  return;
 }
 
 async function recoverMutationsWithNewPerdag(
@@ -392,6 +385,23 @@ async function recoverMutationsFromPerdag(
   perdag: dag.Store,
   preReadClientMap: persist.ClientMap | undefined,
 ): Promise<void> {
+  if (database.replicacheFormatVersion === REPLICACHE_FORMAT_VERSION_DD31) {
+    return recoverMutationsFromPerdagDD31(database, options, perdag);
+  }
+  return recoverMutationsFromPerdagSDD(
+    database,
+    options,
+    perdag,
+    preReadClientMap,
+  );
+}
+
+async function recoverMutationsFromPerdagSDD(
+  database: persist.IndexedDBDatabase,
+  options: MutationRecoveryOptions,
+  perdag: dag.Store,
+  preReadClientMap: persist.ClientMap | undefined,
+): Promise<void> {
   const {delegate, lc} = options;
   const stepDescription = `Recovering mutations from db ${database.name}.`;
   lc.debug?.('Start:', stepDescription);
@@ -409,10 +419,8 @@ async function recoverMutationsFromPerdag(
         }
         if (!clientIDsVisited.has(clientID)) {
           clientIDsVisited.add(clientID);
-          newClientMap = await recoverMutationsOfClient(
+          newClientMap = await recoverMutationsOfClientSDD(
             client,
-            // TODO(dd31): Iterate over all branch ids...
-            DD31 ? 'FAKE_BRANCH_ID_FOR_RECOVER_MUTATION' : undefined,
             clientID,
             perdag,
             database,
@@ -429,4 +437,284 @@ async function recoverMutationsFromPerdag(
     logMutationRecoveryError(e, lc, stepDescription, delegate);
   }
   lc.debug?.('End:', stepDescription);
+}
+
+async function recoverMutationsFromPerdagDD31(
+  database: persist.IndexedDBDatabase,
+  options: MutationRecoveryOptions,
+  perdag: dag.Store,
+): Promise<void> {
+  const {delegate, lc} = options;
+  const stepDescription = `Recovering mutations from db ${database.name}.`;
+  lc.debug?.('Start:', stepDescription);
+  try {
+    let branches: persist.BranchMap | undefined = await perdag.withRead(read =>
+      persist.getBranches(read),
+    );
+    const branchIDsVisited = new Set<sync.BranchID>();
+    while (branches) {
+      let newBranches: persist.BranchMap | undefined;
+      for (const [branchID, branch] of branches) {
+        if (delegate.closed) {
+          lc.debug?.('Exiting early due to close:', stepDescription);
+          return;
+        }
+        if (!branchIDsVisited.has(branchID)) {
+          branchIDsVisited.add(branchID);
+          newBranches = await recoverMutationsOfBranchDD31(
+            branch,
+            branchID,
+            perdag,
+            database,
+            options,
+          );
+          if (newBranches) {
+            break;
+          }
+        }
+      }
+      branches = newBranches;
+    }
+  } catch (e) {
+    logMutationRecoveryError(e, lc, stepDescription, delegate);
+  }
+  lc.debug?.('End:', stepDescription);
+}
+
+/**
+ * @returns When mutations are recovered the resulting updated branch map.
+ *   Otherwise undefined, which can be because there were no mutations to
+ *   recover, or because an error occurred when trying to recover the
+ *   mutations.
+ */
+async function recoverMutationsOfBranchDD31(
+  branch: persist.Branch,
+  branchID: sync.BranchID,
+  perdag: dag.Store,
+  database: persist.IndexedDBDatabase,
+  options: MutationRecoveryOptions,
+): Promise<persist.BranchMap | undefined> {
+  assert(DD31);
+  assert(database.replicacheFormatVersion === REPLICACHE_FORMAT_VERSION_DD31);
+
+  const {
+    delegate,
+    lc,
+    wrapInOnlineCheck,
+    wrapInReauthRetries,
+    isPushDisabled,
+    isPullDisabled,
+  } = options;
+  const selfBranchID = await options.branchIDPromise;
+  if (selfBranchID === branchID) {
+    return;
+  }
+
+  let clientID: sync.ClientID | undefined;
+
+  // If all local mutations have been applied then exit.
+  let allAckd = true;
+  for (const [cid, mutationID] of Object.entries(branch.mutationIDs)) {
+    // if not present then the server has not acknowledged this client's mutations.
+    if (
+      !branch.lastServerAckdMutationIDs[cid] ||
+      branch.lastServerAckdMutationIDs[cid] < mutationID
+    ) {
+      clientID = cid;
+      allAckd = false;
+      break;
+    }
+  }
+  if (allAckd) {
+    return;
+  }
+
+  const stepDescription = `Recovering mutations for branch ${branchID}.`;
+  lc.debug?.('Start:', stepDescription);
+  const dagForOtherBranch = new dag.LazyStore(
+    perdag,
+    MUTATION_RECOVERY_LAZY_STORE_SOURCE_CHUNK_CACHE_SIZE_LIMIT,
+    dag.throwChunkHasher,
+    assertHash,
+  );
+  try {
+    await dagForOtherBranch.withWrite(async write => {
+      await write.setHead(db.DEFAULT_HEAD_NAME, branch.headHash);
+      await write.commit();
+    });
+
+    if (isPushDisabled()) {
+      lc.debug?.(
+        `Cannot recover mutations for branch ${branchID} because push is disabled.`,
+      );
+      return;
+    }
+
+    // TODO(DD31) pusher is a really a PusherDD31... Signal that somehow.
+    const {pusher, pushURL} = delegate;
+
+    const pushDescription = 'recoveringMutationsPush';
+    const pushSucceeded = await wrapInOnlineCheck(async () => {
+      const {result: pushResponse} = await wrapInReauthRetries(
+        async (requestID: string, requestLc: LogContext) => {
+          assert(clientID);
+          assert(dagForOtherBranch);
+          const pushResponse = await sync.push(
+            requestID,
+            dagForOtherBranch,
+            requestLc,
+            await delegate.profileID,
+            branchID,
+            // TODO(DD31): clientID is not needed in DD31. It is currently kept for debugging purpose.
+            clientID,
+            pusher,
+            pushURL,
+            delegate.auth,
+            database.schemaVersion,
+            PUSH_VERSION_DD31,
+          );
+          return {result: pushResponse, httpRequestInfo: pushResponse};
+        },
+        pushDescription,
+        delegate.pushURL,
+        lc,
+      );
+      return !!pushResponse && pushResponse.httpStatusCode === 200;
+    }, pushDescription);
+    if (!pushSucceeded) {
+      lc.debug?.(
+        `Failed to recover mutations for client ${branchID} due to a push error.`,
+      );
+      return;
+    }
+
+    if (isPullDisabled()) {
+      lc.debug?.(
+        `Cannot confirm mutations were recovered for client ${branchID} ` +
+          `because pull is disabled.`,
+      );
+      return;
+    }
+    // TODO(DD31) puller is a really a PullerDD31... Signal that somehow.
+    const {puller, pullURL} = delegate;
+
+    const pullDescription = 'recoveringMutationsPull';
+    let pullResponse: PullResponseDD31 | undefined;
+    const pullSucceeded = await wrapInOnlineCheck(async () => {
+      const {result: beginPullResponse} = await wrapInReauthRetries(
+        async (requestID: string, requestLc: LogContext) => {
+          const beginPullRequest = {
+            pullAuth: delegate.auth,
+            pullURL,
+            schemaVersion: database.schemaVersion,
+            puller,
+          };
+          assert(clientID);
+          const beginPullResponse = await sync.beginPullDD31(
+            await delegate.profileID,
+            clientID,
+            branchID,
+            beginPullRequest,
+            // TODO(DD31): Figure this out.
+            beginPullRequest.puller as PullerDD31,
+            requestID,
+            dagForOtherBranch,
+            requestLc,
+            false,
+          );
+          return {
+            result: beginPullResponse,
+            httpRequestInfo: beginPullResponse.httpRequestInfo,
+          };
+        },
+        pullDescription,
+        delegate.pullURL,
+        lc,
+      );
+      ({pullResponse} = beginPullResponse);
+      return (
+        !!pullResponse &&
+        beginPullResponse.httpRequestInfo.httpStatusCode === 200
+      );
+    }, pullDescription);
+    if (!pullSucceeded) {
+      lc.debug?.(
+        `Failed to recover mutations for client ${branchID} due to a pull error.`,
+      );
+      return;
+    }
+
+    // TODO(arv): Refactor to make pullResponse a const.
+    // pullResponse must be non undefined because pullSucceeded is true.
+    assert(pullResponse);
+    if (lc.debug) {
+      if (isClientStateNotFoundResponse(pullResponse)) {
+        lc.debug?.(
+          `Branch ${selfBranchID} cannot recover mutations for branch ${branchID}. The branch no longer exists on the server.`,
+        );
+      } else {
+        lc.debug?.(
+          `Branch ${selfBranchID} recovered mutations for branch ${branchID}.  Details`,
+          {
+            mutationIDs: branch.mutationIDs,
+            lastServerAckdMutationIDs: branch.lastServerAckdMutationIDs,
+            lastMutationIDChanges: pullResponse.lastMutationIDChanges,
+          },
+        );
+      }
+    }
+
+    return await perdag.withWrite(async dagWrite => {
+      const branches = await persist.getBranches(dagWrite);
+      const branchToUpdate = branches.get(branchID);
+      if (!branchToUpdate) {
+        return branches;
+      }
+
+      const setNewBranches = async (newBranches: persist.BranchMap) => {
+        await persist.setBranches(newBranches, dagWrite);
+        await dagWrite.commit();
+        return newBranches;
+      };
+
+      if (isClientStateNotFoundResponse(pullResponse)) {
+        const newBranches = new Map(branches);
+        newBranches.delete(branchID);
+        return await setNewBranches(newBranches);
+      }
+
+      assert(pullResponse);
+      const lastServerAckdMutationIDsUpdates: Record<ClientID, number> = {};
+      let anyMutationIDsUpdated = false;
+      for (const [clientID, lastMutationIDChange] of Object.entries(
+        pullResponse.lastMutationIDChanges,
+      )) {
+        if (
+          branchToUpdate.lastServerAckdMutationIDs[clientID] <
+          lastMutationIDChange
+        ) {
+          lastServerAckdMutationIDsUpdates[clientID] = lastMutationIDChange;
+          anyMutationIDsUpdated = true;
+        }
+      }
+      if (!anyMutationIDsUpdated) {
+        return branches;
+      }
+
+      const newBranches = new Map(branches).set(branchID, {
+        ...branchToUpdate,
+        lastServerAckdMutationIDs: {
+          ...branchToUpdate.lastServerAckdMutationIDs,
+          ...lastServerAckdMutationIDsUpdates,
+        },
+      });
+      return await setNewBranches(newBranches);
+    });
+  } catch (e) {
+    logMutationRecoveryError(e, lc, stepDescription, delegate);
+  } finally {
+    await dagForOtherBranch.close();
+    lc.debug?.('End:', stepDescription);
+  }
+  return;
 }
