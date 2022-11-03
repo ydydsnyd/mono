@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1667468512244,
+  "lastUpdate": 1667469396225,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -28667,6 +28667,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/9cb9eb27773342e966dd5db02cd85c9e546644dc"
         },
         "date": 1667468506331,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 191800,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34299,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 190654,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33998,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 80764,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23472,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "32f2b6187cbab44e7dc447eda7e080d98f8c8784",
+          "message": "fix: Export Mutation (#351)\n\nWe exported `PushRequest` which contained `Mutation` but that was not\r\nexported.\r\n\r\n...but `Mutation` uses `InternalValue` which we do not want to export.\r\nIntroduced a new \"public\" type and used that for the exported type.\r\n\r\nFixes #250",
+          "timestamp": "2022-11-03T10:55:28+01:00",
+          "tree_id": "cd4a6118303d4b76cb6b75aa3cb60c8e22e7e465",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/32f2b6187cbab44e7dc447eda7e080d98f8c8784"
+        },
+        "date": 1667469390161,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
