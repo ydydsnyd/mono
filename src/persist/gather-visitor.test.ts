@@ -3,8 +3,8 @@ import * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import {assertHash, makeNewFakeHashFunction} from '../hash';
 import {GatherVisitor} from './gather-visitor';
-import type {JSONObject} from '../json';
 import {ChainBuilder} from '../db/test-helpers.js';
+import {MetaType} from '../db/commit.js';
 
 test('dag with no memory-only hashes gathers nothing', async () => {
   const clientID = 'client-id';
@@ -106,18 +106,17 @@ test('dag with some permanent hashes and some memory-only hashes on top', async 
   await memdag.withRead(async dagRead => {
     const visitor = new GatherVisitor(dagRead);
     await visitor.visitCommit(mb.headHash);
-    const meta: JSONObject = {
+    const metaBase = {
       basisHash: 'face0000000040008000000000000000' + '000000000003',
       mutationID: 2,
       mutatorArgsJSON: [2],
       mutatorName: 'mutator_name_2',
       originalHash: null,
       timestamp: 42,
-      type: 2,
     };
-    if (DD31) {
-      meta.clientID = clientID;
-    }
+    const meta = DD31
+      ? {type: MetaType.LocalDD31, ...metaBase, clientID}
+      : {type: MetaType.LocalSDD, ...metaBase};
     expect(Object.fromEntries(visitor.gatheredChunks)).to.deep.equal({
       ['face0000000040008000000000000000' + '000000000004']: {
         data: [0, [['local', '2']]],
@@ -193,7 +192,7 @@ test('dag with some permanent hashes and some memory-only hashes on top w index'
               hash: 'face0000000040008000000000000000' + '000000000008',
               data: {
                 meta: {
-                  type: 2,
+                  type: MetaType.LocalDD31,
                   basisHash:
                     'face0000000040008000000000000000' + '000000000005',
                   mutationID: 2,
@@ -272,7 +271,7 @@ test('dag with some permanent hashes and some memory-only hashes on top w index'
               hash: 'face0000000040008000000000000000' + '000000000008',
               data: {
                 meta: {
-                  type: 2,
+                  type: MetaType.LocalSDD,
                   basisHash:
                     'face0000000040008000000000000000' + '000000000005',
                   mutationID: 2,

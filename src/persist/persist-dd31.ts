@@ -7,7 +7,7 @@ import {GatherVisitor} from './gather-visitor';
 import type {MutatorDefs} from '../replicache';
 import type {Hash} from '../hash';
 import type {LogContext} from '@rocicorp/logger';
-import {assertLocalMetaDD31, assertSnapshotCommitDD31} from '../db/commit';
+import {assertSnapshotCommitDD31} from '../db/commit';
 import {Branch, getBranch, setBranch} from './branches';
 
 /**
@@ -124,7 +124,7 @@ export async function persistDD31(
         memdagBaseSnapshotPersisted = true;
         // Rebase local mutations from perdag main branch onto new snapshot
         newMainBranchHeadHash = memdagBaseSnapshotHash;
-        const mainBranchLocalMutations = await db.localMutations(
+        const mainBranchLocalMutations = await db.localMutationsDD31(
           mainBranch.headHash,
           perdagWrite,
         );
@@ -227,7 +227,7 @@ async function gatherMemOnlyChunks(
 }
 
 async function rebase(
-  mutations: db.Commit<db.LocalMetaSDD>[],
+  mutations: db.Commit<db.LocalMetaDD31>[],
   basis: Hash,
   write: dag.Write,
   mutators: MutatorDefs,
@@ -237,7 +237,6 @@ async function rebase(
   for (let i = mutations.length - 1; i >= 0; i--) {
     const mutationCommit = mutations[i];
     const {meta} = mutationCommit;
-    assertLocalMetaDD31(meta);
     const newMainHead = await db.commitFromHash(basis, write);
     if (
       (await mutationCommit.getMutationID(meta.clientID, write)) >

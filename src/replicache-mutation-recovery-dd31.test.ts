@@ -57,7 +57,7 @@ async function createAndPersistClientWithPendingLocalDD31(
   numLocal: number,
   mutatorNames: string[],
   cookie: string | number,
-): Promise<db.LocalMetaSDD[]> {
+): Promise<db.LocalMetaDD31[]> {
   const testMemdag = new dag.LazyStore(
     perdag,
     100 * 2 ** 20, // 100 MB,
@@ -107,7 +107,7 @@ suite('DD31', () => {
     profileID: string,
     branchID: sync.BranchID,
     clientID: sync.ClientID,
-    localMetas: db.LocalMetaSDD[],
+    localMetas: db.LocalMetaDD31[],
     schemaVersion: string,
   ): ReadonlyJSONObject {
     return {

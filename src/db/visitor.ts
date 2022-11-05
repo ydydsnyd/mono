@@ -1,13 +1,12 @@
 import {
   assertCommitData,
   CommitData,
-  IndexChangeMeta,
+  IndexChangeMetaSDD,
   IndexRecord,
-  LocalMetaSDD,
   Meta,
   MetaType,
-  SnapshotMetaSDD,
-  SnapshotMetaDD31,
+  LocalMeta,
+  SnapshotMeta,
 } from './commit';
 import type * as dag from '../dag/mod';
 import {emptyHash, Hash} from '../hash';
@@ -61,13 +60,13 @@ export class Visitor {
 
   private _visitCommitMeta(meta: Meta): Promise<void> {
     switch (meta.type) {
-      case MetaType.IndexChange:
+      case MetaType.IndexChangeSDD:
         return this._visitIndexChangeMeta(meta);
-
-      case MetaType.Local:
+      case MetaType.LocalSDD:
+      case MetaType.LocalDD31:
         return this._visitLocalMeta(meta);
-
-      case MetaType.Snapshot:
+      case MetaType.SnapshotSDD:
+      case MetaType.SnapshotDD31:
         return this._visitSnapshot(meta);
     }
   }
@@ -81,21 +80,19 @@ export class Visitor {
     }
   }
 
-  private async _visitSnapshot(
-    meta: SnapshotMetaSDD | SnapshotMetaDD31,
-  ): Promise<void> {
+  private async _visitSnapshot(meta: SnapshotMeta): Promise<void> {
     // basisHash is weak for Snapshot Commits
     await this._visitBasisHash(meta.basisHash, HashRefType.AllowWeak);
   }
 
-  private async _visitLocalMeta(meta: LocalMetaSDD): Promise<void> {
+  private async _visitLocalMeta(meta: LocalMeta): Promise<void> {
     await this._visitBasisHash(meta.basisHash, HashRefType.RequireStrong);
     if (meta.originalHash !== null) {
       await this.visitCommit(meta.originalHash, HashRefType.AllowWeak);
     }
   }
 
-  private _visitIndexChangeMeta(meta: IndexChangeMeta): Promise<void> {
+  private _visitIndexChangeMeta(meta: IndexChangeMetaSDD): Promise<void> {
     return this._visitBasisHash(meta.basisHash, HashRefType.RequireStrong);
   }
 

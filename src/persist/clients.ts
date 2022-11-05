@@ -260,7 +260,7 @@ export function initClientSDD(
       }
     }
 
-    let newClientCommitData: db.CommitData<db.SnapshotMeta>;
+    let newClientCommitData: db.CommitData<db.SnapshotMetaSDD>;
     const chunksToPut = [];
     if (bootstrapClient) {
       const constBootstrapClient = bootstrapClient;

@@ -23,6 +23,8 @@ export {
   fromChunk,
   newIndexChange,
   newLocal,
+  newLocalSDD,
+  newLocalDD31,
   newSnapshotSDD,
   newSnapshotDD31,
   assertCommitData,
@@ -30,6 +32,7 @@ export {
   fromHash as commitFromHash,
   fromHead as commitFromHead,
   localMutations,
+  localMutationsDD31,
   localMutationsGreaterThan,
   snapshotMetaParts,
   baseSnapshotFromHash,
@@ -44,11 +47,13 @@ export {Visitor} from './visitor';
 export {rebaseMutationAndCommit, rebaseMutationAndPutCommit} from './rebase';
 
 export type {
-  SnapshotMetaSDD as SnapshotMeta,
+  SnapshotMeta,
+  SnapshotMetaSDD,
   SnapshotMetaDD31,
   LocalMetaSDD,
   LocalMetaDD31,
-  IndexChangeMeta,
+  LocalMeta,
+  IndexChangeMetaSDD,
   IndexRecord,
   CommitData,
   Meta,

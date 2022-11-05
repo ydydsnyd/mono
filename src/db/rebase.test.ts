@@ -9,6 +9,11 @@ import {rebaseMutationAndCommit, rebaseMutationAndPutCommit} from './rebase';
 import {SYNC_HEAD_NAME} from '../sync/sync-head-name';
 import {BTreeRead} from '../btree/read';
 import type {Hash} from '../hash';
+import {
+  assertLocalCommitDD31,
+  commitIsLocal,
+  commitIsLocalDD31,
+} from './commit.js';
 
 teardown(() => {
   sinon.restore();
@@ -21,15 +26,11 @@ async function createMutationSequenceFixture() {
   await b.addGenesis(clientID);
   await b.addSnapshot([['foo', 'bar']], clientID);
   await b.addLocal(clientID);
-  const localCommit1 = b.chain[
-    b.chain.length - 1
-  ] as db.Commit<db.LocalMetaSDD>;
+  const localCommit1 = b.chain[b.chain.length - 1] as db.Commit<db.LocalMeta>;
   await b.addLocal(clientID);
-  const localCommit2 = b.chain[
-    b.chain.length - 1
-  ] as db.Commit<db.LocalMetaSDD>;
+  const localCommit2 = b.chain[b.chain.length - 1] as db.Commit<db.LocalMeta>;
   const syncChain = await b.addSyncSnapshot(1, clientID);
-  const syncSnapshotCommit = syncChain[0] as db.Commit<db.SnapshotMeta>;
+  const syncSnapshotCommit = syncChain[0] as db.Commit<db.SnapshotMetaSDD>;
 
   const testMutator1 = async (tx: WriteTransaction, args?: unknown) => {
     await tx.put('whiz', 'bang');
@@ -58,9 +59,9 @@ async function createMutationSequenceFixture() {
       rebasedCommit: db.Commit<db.Meta>,
       btreeRead: BTreeRead,
     ) => {
-      expect(rebasedCommit.isLocal()).to.be.true;
-      if (rebasedCommit.isLocal()) {
-        const rebasedCommitLocalMeta: db.LocalMetaSDD = rebasedCommit.meta;
+      expect(commitIsLocal(rebasedCommit)).to.be.true;
+      if (commitIsLocal(rebasedCommit)) {
+        const rebasedCommitLocalMeta: db.LocalMeta = rebasedCommit.meta;
         expect(rebasedCommitLocalMeta.basisHash).to.equal(
           syncSnapshotCommit.chunk.hash,
         );
@@ -76,6 +77,14 @@ async function createMutationSequenceFixture() {
         expect(rebasedCommitLocalMeta.timestamp).to.equal(
           localCommit1.meta.timestamp,
         );
+
+        if (commitIsLocalDD31(rebasedCommit)) {
+          assertLocalCommitDD31(localCommit1);
+          const rebasedCommitLocalMeta: db.LocalMetaDD31 = rebasedCommit.meta;
+          expect(rebasedCommitLocalMeta.clientID).to.equal(
+            localCommit1.meta.clientID,
+          );
+        }
       }
       expect(await btreeRead.get('fuzzy')).to.be.undefined;
       expect(await btreeRead.get('foo')).to.equal('bar');
@@ -86,9 +95,9 @@ async function createMutationSequenceFixture() {
       btreeRead: BTreeRead,
       expectedBasis: Hash,
     ) => {
-      expect(rebasedCommit.isLocal()).to.be.true;
-      if (rebasedCommit.isLocal()) {
-        const rebasedCommitLocalMeta: db.LocalMetaSDD = rebasedCommit.meta;
+      expect(commitIsLocal(rebasedCommit)).to.be.true;
+      if (commitIsLocal(rebasedCommit)) {
+        const rebasedCommitLocalMeta: db.LocalMeta = rebasedCommit.meta;
         expect(rebasedCommitLocalMeta.basisHash).to.equal(expectedBasis);
         expect(rebasedCommitLocalMeta.mutationID).to.equal(
           localCommit2.meta.mutationID,
@@ -102,6 +111,13 @@ async function createMutationSequenceFixture() {
         expect(rebasedCommitLocalMeta.timestamp).to.equal(
           localCommit2.meta.timestamp,
         );
+        if (commitIsLocalDD31(rebasedCommit)) {
+          assertLocalCommitDD31(localCommit2);
+          const rebasedCommitLocalMeta: db.LocalMetaDD31 = rebasedCommit.meta;
+          expect(rebasedCommitLocalMeta.clientID).to.equal(
+            localCommit2.meta.clientID,
+          );
+        }
       }
       expect(await btreeRead.get('fuzzy')).to.equal('wuzzy');
       expect(await btreeRead.get('foo')).to.equal('bar');
@@ -119,7 +135,7 @@ async function createMissingMutatorFixture() {
   await b.addGenesis(clientID);
   await b.addSnapshot([['foo', 'bar']], clientID);
   await b.addLocal(clientID);
-  const localCommit = b.chain[b.chain.length - 1] as db.Commit<db.LocalMetaSDD>;
+  const localCommit = b.chain[b.chain.length - 1] as db.Commit<db.LocalMeta>;
   const syncChain = await b.addSyncSnapshot(1, clientID);
   const syncSnapshotCommit = syncChain[0] as db.Commit<db.SnapshotMeta>;
 
@@ -133,9 +149,9 @@ async function createMissingMutatorFixture() {
       rebasedCommit: db.Commit<db.Meta>,
       btreeRead: BTreeRead,
     ) => {
-      expect(rebasedCommit.isLocal()).to.be.true;
-      if (rebasedCommit.isLocal()) {
-        const rebasedCommitLocalMeta: db.LocalMetaSDD = rebasedCommit.meta;
+      expect(commitIsLocal(rebasedCommit)).to.be.true;
+      if (commitIsLocal(rebasedCommit)) {
+        const rebasedCommitLocalMeta: db.LocalMeta = rebasedCommit.meta;
         expect(rebasedCommitLocalMeta.basisHash).to.equal(
           syncSnapshotCommit.chunk.hash,
         );
@@ -151,6 +167,13 @@ async function createMissingMutatorFixture() {
         expect(rebasedCommitLocalMeta.timestamp).to.equal(
           localCommit.meta.timestamp,
         );
+        if (commitIsLocalDD31(rebasedCommit)) {
+          assertLocalCommitDD31(localCommit);
+          const rebasedCommitLocalMeta: db.LocalMetaDD31 = rebasedCommit.meta;
+          expect(rebasedCommitLocalMeta.clientID).to.equal(
+            localCommit.meta.clientID,
+          );
+        }
       }
       expect(await btreeRead.get('foo')).to.equal('bar');
     },
@@ -220,7 +243,7 @@ suite('rebaseMutationAndCommit', () => {
     });
   });
 
-  test('with missing mutator, still rebases but doesnt modify btree', async () => {
+  test("with missing mutator, still rebases but doesn't modify btree", async () => {
     const fixture = await createMissingMutatorFixture();
     const hashOfRebasedLocalCommit = await fixture.store.withWrite(
       async write => {
@@ -324,7 +347,7 @@ suite('rebaseMutationAndPutCommit', () => {
     });
   });
 
-  test('with missing mutator, still rebases but doesnt modify btree', async () => {
+  test("with missing mutator, still rebases but doesn't modify btree", async () => {
     const TEST_HEAD_NAME = 'test-head';
     const fixture = await createMissingMutatorFixture();
     const hashOfRebasedLocalCommit = await fixture.store.withWrite(
@@ -377,7 +400,7 @@ async function testThrowsErrorOnClientIDMismatch(
   await b.addLocal(clientID);
   const localCommit = b.chain[b.chain.length - 1] as db.Commit<db.LocalMetaSDD>;
   const syncChain = await b.addSyncSnapshot(1, clientID);
-  const syncSnapshotCommit = syncChain[0] as db.Commit<db.SnapshotMeta>;
+  const syncSnapshotCommit = syncChain[0] as db.Commit<db.SnapshotMetaSDD>;
 
   let testMutatorCallCount = 0;
   const testMutator = async (tx: WriteTransaction, args?: unknown) => {
@@ -435,7 +458,7 @@ async function testThrowsErrorOnMutationIDMismatch(
     b.chain.length - 1
   ] as db.Commit<db.LocalMetaSDD>;
   const syncChain = await b.addSyncSnapshot(1, clientID);
-  const syncSnapshotCommit = syncChain[0] as db.Commit<db.SnapshotMeta>;
+  const syncSnapshotCommit = syncChain[0] as db.Commit<db.SnapshotMetaSDD>;
 
   let testMutator1CallCount = 0;
   const testMutator1 = async (tx: WriteTransaction, args?: unknown) => {

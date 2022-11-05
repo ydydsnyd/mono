@@ -9,6 +9,7 @@ import {
   fromHash,
   SnapshotMetaSDD,
   SnapshotMetaDD31,
+  commitIsSnapshot,
 } from '../db/commit';
 import {assertHash, fakeHash, newUUIDHash} from '../hash';
 import {
@@ -294,7 +295,7 @@ test('getClient', async () => {
   });
 });
 
-test('updateClients throws errors if clients head exist but the chunk it refrences does not', async () => {
+test('updateClients throws errors if clients head exist but the chunk it references does not', async () => {
   const dagStore = new dag.TestStore();
   await dagStore.withWrite(async (write: dag.Write) => {
     await write.setHead('clients', randomStuffHash);
@@ -374,7 +375,7 @@ test('initClient creates new empty snapshot when no existing snapshot to bootstr
     const headChunk = await dagRead.getChunk(client.headHash);
     assertNotUndefined(headChunk);
     const commit = fromChunk(headChunk);
-    expect(commit.isSnapshot()).to.be.true;
+    expect(commitIsSnapshot(commit)).to.be.true;
     const snapshotMeta = commit.meta as SnapshotMetaSDD;
     expect(snapshotMeta.basisHash).to.be.null;
     expect(snapshotMeta.cookieJSON).to.be.null;
@@ -445,9 +446,9 @@ test('initClient bootstraps from base snapshot of client with highest heartbeat'
     const headChunk = await dagRead.getChunk(client.headHash);
     assertNotUndefined(headChunk);
     const commit = fromChunk(headChunk);
-    expect(commit.isSnapshot()).to.be.true;
+    expect(commitIsSnapshot(commit)).to.be.true;
     const snapshotMeta = commit.meta as SnapshotMetaSDD;
-    expect(client2BaseSnapshotCommit.isSnapshot()).to.be.true;
+    expect(commitIsSnapshot(client2BaseSnapshotCommit)).to.be.true;
     const client2BaseSnapshotMeta =
       client2BaseSnapshotCommit.meta as SnapshotMetaSDD;
 

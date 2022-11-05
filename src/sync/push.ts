@@ -6,7 +6,7 @@ import {Pusher, PushError} from '../pusher';
 import {callJSRequest} from './js-request';
 import {toError} from '../to-error';
 import type {InternalValue} from '../internal-value';
-import {assertLocalMetaDD31} from '../db/commit';
+import {commitIsLocalDD31, commitIsLocalSDD} from '../db/commit';
 import {assert} from '../asserts.js';
 import type {BranchID} from './branch-id.js';
 import type {ClientID} from './ids.js';
@@ -64,7 +64,7 @@ export type MutationDD31 = MutationSDD & {
   readonly clientID: ClientID;
 };
 
-export function convert(lm: db.LocalMetaSDD): MutationSDD {
+function convertSDD(lm: db.LocalMetaSDD): MutationSDD {
   return {
     id: lm.mutationID,
     name: lm.mutatorName,
@@ -73,9 +73,14 @@ export function convert(lm: db.LocalMetaSDD): MutationSDD {
   };
 }
 
-export function convertDD31(lm: db.LocalMetaSDD): MutationDD31 {
-  assertLocalMetaDD31(lm);
-  return {clientID: lm.clientID, ...convert(lm)};
+function convertDD31(lm: db.LocalMetaDD31): MutationDD31 {
+  return {
+    id: lm.mutationID,
+    name: lm.mutatorName,
+    args: lm.mutatorArgsJSON,
+    timestamp: lm.timestamp,
+    clientID: lm.clientID,
+  };
 }
 
 export async function push(
@@ -112,7 +117,7 @@ export async function push(
     if (DD31 && pushVersion === PUSH_VERSION_DD31) {
       const pushMutations: MutationDD31[] = [];
       for (const commit of pending) {
-        if (commit.isLocal()) {
+        if (commitIsLocalDD31(commit)) {
           pushMutations.push(convertDD31(commit.meta));
         } else {
           throw new Error('Internal non local pending commit');
@@ -132,8 +137,8 @@ export async function push(
       assert(pushVersion === PUSH_VERSION_SDD);
       const pushMutations: MutationSDD[] = [];
       for (const commit of pending) {
-        if (commit.isLocal()) {
-          pushMutations.push(convert(commit.meta));
+        if (commitIsLocalSDD(commit)) {
+          pushMutations.push(convertSDD(commit.meta));
         } else {
           throw new Error('Internal non local pending commit');
         }

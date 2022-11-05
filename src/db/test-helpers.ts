@@ -12,13 +12,12 @@ import {
   DEFAULT_HEAD_NAME,
   fromHead,
   IndexRecord,
-  LocalMetaDD31,
-  LocalMetaSDD,
   Meta,
   MetaType,
   toChunkIndexDefinition,
   SnapshotMetaDD31,
   SnapshotMetaSDD,
+  LocalMeta,
 } from './commit';
 import {readCommit, whenceHead} from './read';
 import {
@@ -321,7 +320,7 @@ export class ChainBuilder {
   async addLocal(
     clientID: ClientID,
     entries?: [string, JSONValue][],
-  ): Promise<Commit<LocalMetaDD31 | LocalMetaSDD>> {
+  ): Promise<Commit<LocalMeta>> {
     await addLocal(
       this.chain,
       this.store,
@@ -414,31 +413,28 @@ export async function initDB(
 ): Promise<Hash> {
   const basisHash = emptyHash;
   const indexes = await createEmptyIndexMaps(indexDefinitions, dagWrite);
-  if (dd31) {
-    const w = new Write(
-      dagWrite,
-      new BTreeWrite(dagWrite),
-      undefined,
-      {
+  const meta = dd31
+    ? ({
         basisHash,
-        type: MetaType.Snapshot,
+        type: MetaType.SnapshotDD31,
         lastMutationIDs: {},
         cookieJSON: null,
-      },
-      indexes,
-      clientID,
-      true,
-    );
-    return await w.commit(headName);
-  }
+      } as const)
+    : ({
+        basisHash,
+        type: MetaType.SnapshotSDD,
+        lastMutationID: 0,
+        cookieJSON: null,
+      } as const);
+
   const w = new Write(
     dagWrite,
     new BTreeWrite(dagWrite),
     undefined,
-    {basisHash, type: MetaType.Snapshot, lastMutationID: 0, cookieJSON: null},
+    meta,
     indexes,
     clientID,
-    false,
+    dd31,
   );
   return await w.commit(headName);
 }

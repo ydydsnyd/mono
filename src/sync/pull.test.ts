@@ -38,7 +38,11 @@ import {
 import {assertHash, emptyHash, Hash, parse as parseHash} from '../hash';
 import {stringCompare} from '../string-compare';
 import {asyncIterableToArray} from '../async-iterable-to-array';
-import {assertSnapshotCommitDD31, SnapshotMetaSDD} from '../db/commit';
+import {
+  assertSnapshotCommitDD31,
+  commitIsLocal,
+  SnapshotMetaSDD,
+} from '../db/commit';
 import {
   toInternalValue,
   fromInternalValue,
@@ -130,7 +134,7 @@ test('begin try pull SDD', async () => {
 
   const cases: Case[] = [
     {
-      name: '0 pending, pulls new state -> beginpull succeeds w/synchead set',
+      name: '0 pending, pulls new state -> beginPull succeeds w/syncHead set',
       numPendingMutations: 0,
       pullResult: goodPullResp,
       expNewSyncHead: {
@@ -145,7 +149,7 @@ test('begin try pull SDD', async () => {
       },
     },
     {
-      name: '0 pending, createSyncBranch false, pulls new state -> beginpull succeeds w/no synchead',
+      name: '0 pending, createSyncBranch false, pulls new state -> beginPull succeeds w/no syncHead',
       createSyncBranch: false,
       numPendingMutations: 0,
       pullResult: goodPullResp,
@@ -156,7 +160,7 @@ test('begin try pull SDD', async () => {
       },
     },
     {
-      name: '1 pending, 0 mutations to replay, pulls new state -> beginpull succeeds w/synchead set',
+      name: '1 pending, 0 mutations to replay, pulls new state -> beginPull succeeds w/syncHead set',
       numPendingMutations: 1,
       pullResult: {
         ...goodPullResp,
@@ -174,7 +178,7 @@ test('begin try pull SDD', async () => {
       },
     },
     {
-      name: '1 pending, 1 mutations to replay, pulls new state -> beginpull succeeds w/synchead set',
+      name: '1 pending, 1 mutations to replay, pulls new state -> beginPull succeeds w/syncHead set',
       numPendingMutations: 1,
       pullResult: {
         ...goodPullResp,
@@ -192,7 +196,7 @@ test('begin try pull SDD', async () => {
       },
     },
     {
-      name: '2 pending, 0 to replay, pulls new state -> beginpull succeeds w/synchead set',
+      name: '2 pending, 0 to replay, pulls new state -> beginPull succeeds w/syncHead set',
       numPendingMutations: 2,
       pullResult: goodPullResp,
       expNewSyncHead: {
@@ -207,7 +211,7 @@ test('begin try pull SDD', async () => {
       },
     },
     {
-      name: '2 pending, 1 to replay, pulls new state -> beginpull succeeds w/synchead set',
+      name: '2 pending, 1 to replay, pulls new state -> beginPull succeeds w/syncHead set',
       numPendingMutations: 2,
       pullResult: {
         ...goodPullResp,
@@ -227,7 +231,7 @@ test('begin try pull SDD', async () => {
     // The patch, lastMutationID, and cookie determine whether we write a new
     // Commit. Here we run through the different combinations.
     {
-      name: 'no patch, same lmid, same cookie -> beginpull succeeds w/no synchead',
+      name: 'no patch, same lmid, same cookie -> beginPull succeeds w/no syncHead',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
@@ -242,7 +246,7 @@ test('begin try pull SDD', async () => {
       },
     },
     {
-      name: 'new patch, same lmid, same cookie -> beginpull succeeds w/synchead set',
+      name: 'new patch, same lmid, same cookie -> beginPull succeeds w/syncHead set',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
@@ -261,7 +265,7 @@ test('begin try pull SDD', async () => {
       },
     },
     {
-      name: 'no patch, new lmid, same cookie -> beginpull succeeds w/synchead set',
+      name: 'no patch, new lmid, same cookie -> beginPull succeeds w/syncHead set',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
@@ -281,7 +285,7 @@ test('begin try pull SDD', async () => {
       },
     },
     {
-      name: 'no patch, same lmid, new cookie -> beginpull succeeds w/synchead set',
+      name: 'no patch, same lmid, new cookie -> beginPull succeeds w/syncHead set',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
@@ -301,7 +305,7 @@ test('begin try pull SDD', async () => {
       },
     },
     {
-      name: 'new patch, new lmid, same cookie -> beginpull succeeds w/synchead set',
+      name: 'new patch, new lmid, same cookie -> beginPull succeeds w/syncHead set',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
@@ -320,7 +324,7 @@ test('begin try pull SDD', async () => {
     },
 
     {
-      name: 'new patch, same lmid, new cookie -> beginpull succeeds w/synchead set',
+      name: 'new patch, same lmid, new cookie -> beginPull succeeds w/syncHead set',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
@@ -338,7 +342,7 @@ test('begin try pull SDD', async () => {
       },
     },
     {
-      name: 'no patch, new lmid, new cookie -> beginpull succeeds w/synchead set',
+      name: 'no patch, new lmid, new cookie -> beginPull succeeds w/syncHead set',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
@@ -356,7 +360,7 @@ test('begin try pull SDD', async () => {
       },
     },
     {
-      name: 'new patch, new lmid, new cookie -> beginpull succeeds w/synchead set',
+      name: 'new patch, new lmid, new cookie -> beginPull succeeds w/syncHead set',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
@@ -373,7 +377,7 @@ test('begin try pull SDD', async () => {
       },
     },
     {
-      name: 'pulls new state w/lesser mutation id -> beginpull errors',
+      name: 'pulls new state w/lesser mutation id -> beginPull errors',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
@@ -384,7 +388,7 @@ test('begin try pull SDD', async () => {
         'Received lastMutationID 0 is < than last snapshot lastMutationID 1; ignoring client view',
     },
     {
-      name: 'pull 500s -> beginpull errors',
+      name: 'pull 500s -> beginPull errors',
       numPendingMutations: 0,
       pullResult: 'FetchNotOk(500)',
       expNewSyncHead: undefined,
@@ -650,7 +654,7 @@ test('begin try pull DD31', async () => {
 
   const cases: Case[] = [
     {
-      name: '0 pending, pulls new state -> beginpull succeeds w/synchead set',
+      name: '0 pending, pulls new state -> beginPull succeeds w/syncHead set',
       numPendingMutations: 0,
       pullResult: goodPullResp,
       expNewSyncHead: {
@@ -665,7 +669,7 @@ test('begin try pull DD31', async () => {
       },
     },
     {
-      name: '0 pending, createSyncBranch false, pulls new state -> beginpull succeeds w/no synchead',
+      name: '0 pending, createSyncBranch false, pulls new state -> beginPull succeeds w/no syncHead',
       createSyncBranch: false,
       numPendingMutations: 0,
       pullResult: goodPullResp,
@@ -676,7 +680,7 @@ test('begin try pull DD31', async () => {
       },
     },
     {
-      name: '1 pending, 0 mutations to replay, pulls new state -> beginpull succeeds w/synchead set',
+      name: '1 pending, 0 mutations to replay, pulls new state -> beginPull succeeds w/syncHead set',
       numPendingMutations: 1,
       pullResult: {
         ...goodPullResp,
@@ -694,7 +698,7 @@ test('begin try pull DD31', async () => {
       },
     },
     {
-      name: '1 pending, 1 mutations to replay, pulls new state -> beginpull succeeds w/synchead set',
+      name: '1 pending, 1 mutations to replay, pulls new state -> beginPull succeeds w/syncHead set',
       numPendingMutations: 1,
       pullResult: {
         ...goodPullResp,
@@ -712,7 +716,7 @@ test('begin try pull DD31', async () => {
       },
     },
     {
-      name: '2 pending, 0 to replay, pulls new state -> beginpull succeeds w/synchead set',
+      name: '2 pending, 0 to replay, pulls new state -> beginPull succeeds w/syncHead set',
       numPendingMutations: 2,
       pullResult: goodPullResp,
       expNewSyncHead: {
@@ -727,7 +731,7 @@ test('begin try pull DD31', async () => {
       },
     },
     {
-      name: '2 pending, 1 to replay, pulls new state -> beginpull succeeds w/synchead set',
+      name: '2 pending, 1 to replay, pulls new state -> beginPull succeeds w/syncHead set',
       numPendingMutations: 2,
       pullResult: {
         ...goodPullResp,
@@ -747,7 +751,7 @@ test('begin try pull DD31', async () => {
     // The patch, lastMutationID, and cookie determine whether we write a new
     // Commit. Here we run through the different combinations.
     {
-      name: 'no patch, same lmid, same cookie -> beginpull succeeds w/no synchead',
+      name: 'no patch, same lmid, same cookie -> beginPull succeeds w/no syncHead',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
@@ -762,7 +766,7 @@ test('begin try pull DD31', async () => {
       },
     },
     {
-      name: 'new patch, same lmid, same cookie -> beginpull succeeds w/synchead set',
+      name: 'new patch, same lmid, same cookie -> beginPull succeeds w/syncHead set',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
@@ -781,7 +785,7 @@ test('begin try pull DD31', async () => {
       },
     },
     {
-      name: 'no patch, new lmid, same cookie -> beginpull succeeds w/synchead set',
+      name: 'no patch, new lmid, same cookie -> beginPull succeeds w/syncHead set',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
@@ -801,7 +805,7 @@ test('begin try pull DD31', async () => {
       },
     },
     {
-      name: 'no patch, same lmid, new cookie -> beginpull succeeds w/synchead set',
+      name: 'no patch, same lmid, new cookie -> beginPull succeeds w/syncHead set',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
@@ -821,7 +825,7 @@ test('begin try pull DD31', async () => {
       },
     },
     {
-      name: 'new patch, new lmid, same cookie -> beginpull succeeds w/synchead set',
+      name: 'new patch, new lmid, same cookie -> beginPull succeeds w/syncHead set',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
@@ -840,7 +844,7 @@ test('begin try pull DD31', async () => {
     },
 
     {
-      name: 'new patch, same lmid, new cookie -> beginpull succeeds w/synchead set',
+      name: 'new patch, same lmid, new cookie -> beginPull succeeds w/syncHead set',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
@@ -858,7 +862,7 @@ test('begin try pull DD31', async () => {
       },
     },
     {
-      name: 'no patch, new lmid, new cookie -> beginpull succeeds w/synchead set',
+      name: 'no patch, new lmid, new cookie -> beginPull succeeds w/syncHead set',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
@@ -876,7 +880,7 @@ test('begin try pull DD31', async () => {
       },
     },
     {
-      name: 'new patch, new lmid, new cookie -> beginpull succeeds w/synchead set',
+      name: 'new patch, new lmid, new cookie -> beginPull succeeds w/syncHead set',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
@@ -893,7 +897,7 @@ test('begin try pull DD31', async () => {
       },
     },
     {
-      name: 'pulls new state w/lesser mutation id -> beginpull errors',
+      name: 'pulls new state w/lesser mutation id -> beginPull errors',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
@@ -944,7 +948,7 @@ test('begin try pull DD31', async () => {
       },
     },
     {
-      name: 'pull 500s -> beginpull errors',
+      name: 'pull 500s -> beginPull errors',
       numPendingMutations: 0,
       pullResult: 'FetchNotOk(500)',
       expNewSyncHead: undefined,
@@ -1226,7 +1230,7 @@ test('maybe end try pull', async () => {
       const original = b.chain[chainIndex];
       let mutatorName: string;
       let mutatorArgs: InternalValue;
-      if (original.isLocal()) {
+      if (commitIsLocal(original)) {
         const lm = original.meta;
         mutatorName = lm.mutatorName;
         mutatorArgs = lm.mutatorArgsJSON;
@@ -1283,7 +1287,7 @@ test('maybe end try pull', async () => {
           resp.replayMutations?.[i].meta.mutationID,
         );
         const commit = b.chain[chainIdx];
-        if (commit.isLocal()) {
+        if (commitIsLocal(commit)) {
           expect(resp.replayMutations?.[i]).to.deep.equal(commit);
         } else {
           throw new Error('inconceivable');

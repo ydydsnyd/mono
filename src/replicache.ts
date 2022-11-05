@@ -933,7 +933,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       const lc = this._lc
         .addContext('maybeEndPull')
         .addContext('request_id', requestID);
-      const {replayMutations, diffs} = await sync.maybeEndPull(
+      const {replayMutations, diffs} = await sync.maybeEndPull<db.LocalMeta>(
         this._memdag,
         lc,
         syncHead,

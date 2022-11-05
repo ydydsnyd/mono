@@ -8,12 +8,11 @@ import {
   Meta as CommitMeta,
   IndexRecord,
   newIndexChange as commitNewIndexChange,
-  newLocal as commitNewLocal,
+  newLocalSDD as commitNewLocalSDD,
+  newLocalDD31 as commitNewLocalDD31,
   newSnapshotSDD as commitNewSnapshotSDD,
   newSnapshotDD31 as commitNewSnapshotDD31,
   MetaType,
-  assertSnapshotMetaDD31,
-  assertSnapshotMetaSDD,
   toChunkIndexDefinition,
   ChunkIndexDefinition,
   chunkIndexDefinitionEqualIgnoreName,
@@ -74,7 +73,7 @@ export class Write extends Read {
   }
 
   async put(lc: LogContext, key: string, val: InternalValue): Promise<void> {
-    if (this._meta.type === MetaType.IndexChange) {
+    if (this._meta.type === MetaType.IndexChangeSDD) {
       throw new Error('Not allowed');
     }
     const oldVal = lazy(() => this.map.get(key));
@@ -84,7 +83,7 @@ export class Write extends Read {
   }
 
   async del(lc: LogContext, key: string): Promise<boolean> {
-    if (this._meta.type === MetaType.IndexChange) {
+    if (this._meta.type === MetaType.IndexChangeSDD) {
       throw new Error('Not allowed');
     }
 
@@ -97,7 +96,7 @@ export class Write extends Read {
   }
 
   async clear(): Promise<void> {
-    if (this._meta.type === MetaType.IndexChange) {
+    if (this._meta.type === MetaType.IndexChangeSDD) {
       throw new Error('Not allowed');
     }
 
@@ -118,7 +117,7 @@ export class Write extends Read {
   ): Promise<void> {
     assert(!DD31);
 
-    if (this._meta.type === MetaType.Local) {
+    if (this._meta.type === MetaType.LocalSDD) {
       throw new Error('Not allowed');
     }
 
@@ -166,7 +165,7 @@ export class Write extends Read {
 
   dropIndex(name: string): void {
     assert(!DD31);
-    if (this._meta.type === MetaType.Local) {
+    if (this._meta.type === MetaType.LocalSDD) {
       throw new Error('Not allowed');
     }
 
@@ -251,7 +250,7 @@ export class Write extends Read {
     let commit;
     const meta = this._meta;
     switch (meta.type) {
-      case MetaType.Local: {
+      case MetaType.LocalSDD: {
         const {
           basisHash,
           mutationID,
@@ -260,7 +259,31 @@ export class Write extends Read {
           originalHash,
           timestamp,
         } = meta;
-        commit = commitNewLocal(
+        commit = commitNewLocalSDD(
+          this._dagWrite.createChunk,
+          basisHash,
+          mutationID,
+          mutatorName,
+          mutatorArgsJSON,
+          originalHash,
+          valueHash,
+          indexRecords,
+          timestamp,
+        );
+        break;
+      }
+
+      case MetaType.LocalDD31: {
+        assert(this._dd31);
+        const {
+          basisHash,
+          mutationID,
+          mutatorName,
+          mutatorArgsJSON,
+          originalHash,
+          timestamp,
+        } = meta;
+        commit = commitNewLocalDD31(
           this._dagWrite.createChunk,
           basisHash,
           mutationID,
@@ -274,33 +297,36 @@ export class Write extends Read {
         );
         break;
       }
-      case MetaType.Snapshot: {
-        if (this._dd31) {
-          assertSnapshotMetaDD31(meta);
-          const {basisHash, lastMutationIDs, cookieJSON} = meta;
-          commit = commitNewSnapshotDD31(
-            this._dagWrite.createChunk,
-            basisHash,
-            lastMutationIDs,
-            cookieJSON,
-            valueHash,
-            indexRecords,
-          );
-        } else {
-          assertSnapshotMetaSDD(meta);
-          const {basisHash, lastMutationID, cookieJSON} = meta;
-          commit = commitNewSnapshotSDD(
-            this._dagWrite.createChunk,
-            basisHash,
-            lastMutationID,
-            cookieJSON,
-            valueHash,
-            indexRecords,
-          );
-        }
+
+      case MetaType.SnapshotSDD: {
+        assert(!this._dd31);
+        const {basisHash, lastMutationID, cookieJSON} = meta;
+        commit = commitNewSnapshotSDD(
+          this._dagWrite.createChunk,
+          basisHash,
+          lastMutationID,
+          cookieJSON,
+          valueHash,
+          indexRecords,
+        );
         break;
       }
-      case MetaType.IndexChange: {
+
+      case MetaType.SnapshotDD31: {
+        assert(this._dd31);
+        const {basisHash, lastMutationIDs, cookieJSON} = meta;
+        commit = commitNewSnapshotDD31(
+          this._dagWrite.createChunk,
+          basisHash,
+          lastMutationIDs,
+          cookieJSON,
+          valueHash,
+          indexRecords,
+        );
+        break;
+      }
+
+      case MetaType.IndexChangeSDD: {
         const {basisHash, lastMutationID} = meta;
         if (this._basis !== undefined) {
           if (
@@ -427,7 +453,7 @@ export async function newWriteLocal(
     basis,
     dd31
       ? {
-          type: MetaType.Local,
+          type: MetaType.LocalDD31,
           basisHash,
           mutatorName,
           mutatorArgsJSON,
@@ -437,7 +463,7 @@ export async function newWriteLocal(
           clientID,
         }
       : {
-          type: MetaType.Local,
+          type: MetaType.LocalSDD,
           basisHash,
           mutatorName,
           mutatorArgsJSON,
@@ -465,7 +491,7 @@ export async function newWriteSnapshotSDD(
     dagWrite,
     bTreeWrite,
     basis,
-    {basisHash, type: MetaType.Snapshot, lastMutationID, cookieJSON},
+    {basisHash, type: MetaType.SnapshotSDD, lastMutationID, cookieJSON},
     indexes,
     clientID,
     false,
@@ -489,7 +515,7 @@ export async function newWriteSnapshotDD31(
     dagWrite,
     bTreeWrite,
     basis,
-    {basisHash, type: MetaType.Snapshot, lastMutationIDs, cookieJSON},
+    {basisHash, type: MetaType.SnapshotDD31, lastMutationIDs, cookieJSON},
     indexes,
     clientID,
     true,
@@ -512,7 +538,7 @@ export async function newWriteIndexChange(
     dagWrite,
     bTreeWrite,
     basis,
-    {basisHash, type: MetaType.IndexChange, lastMutationID},
+    {basisHash, type: MetaType.IndexChangeSDD, lastMutationID},
     indexes,
     clientID,
     false,

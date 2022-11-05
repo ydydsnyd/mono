@@ -37,7 +37,7 @@ import {
 import type {BranchID, ClientID} from './ids';
 import {addDiffsForIndexes, DiffComputationConfig, DiffsMap} from './diff';
 import {assert, assertObject} from '../asserts.js';
-import {assertLocalCommitDD31, assertSnapshotMetaDD31} from '../db/commit.js';
+import {assertSnapshotMetaDD31, commitIsLocalDD31} from '../db/commit.js';
 
 export const PULL_VERSION_SDD = 0;
 export const PULL_VERSION_DD31 = 1;
@@ -535,25 +535,27 @@ export async function handlePullResponseDD31(
   });
 }
 
-export type MaybeEndPullResultSDD = {
-  replayMutations?: db.Commit<db.LocalMetaSDD>[];
+type MaybeEndPullResultBase<M extends db.Meta> = {
+  replayMutations?: db.Commit<M>[];
   syncHead: Hash;
   diffs: DiffsMap;
 };
 
-export type MaybeEndPullResultDD31 = {
-  replayMutations?: db.Commit<db.LocalMetaDD31>[];
-  syncHead: Hash;
-  diffs: DiffsMap;
-};
+export type MaybeEndPullResultSDD = MaybeEndPullResultBase<db.LocalMetaSDD>;
 
-export async function maybeEndPull(
+export type MaybeEndPullResultDD31 = MaybeEndPullResultBase<db.LocalMetaDD31>;
+
+export async function maybeEndPull<M extends db.LocalMeta>(
   store: dag.Store,
   lc: LogContext,
   expectedSyncHead: Hash,
   clientID: ClientID,
   diffConfig: DiffComputationConfig,
-): Promise<MaybeEndPullResultDD31 | MaybeEndPullResultSDD> {
+): Promise<{
+  syncHead: Hash;
+  replayMutations: db.Commit<M>[];
+  diffs: DiffsMap;
+}> {
   return await store.withWrite(async dagWrite => {
     const dagRead = dagWrite;
     // Ensure sync head is what the caller thinks it is.
@@ -593,19 +595,19 @@ export async function maybeEndPull(
     // Collect pending commits from the main chain and determine which
     // of them if any need to be replayed.
     const syncHead = await db.commitFromHash(syncHeadHash, dagRead);
-    const pending: db.Commit<db.LocalMetaDD31 | db.LocalMetaSDD>[] = [];
+    const pending: db.Commit<M>[] = [];
     const localMutations = await db.localMutations(mainHeadHash, dagRead);
     for (const commit of localMutations) {
       let cid = clientID;
-      if (DD31) {
-        assertLocalCommitDD31(commit);
+      if (commitIsLocalDD31(commit)) {
         cid = commit.meta.clientID;
       }
       if (
         (await commit.getMutationID(cid, dagRead)) >
         (await syncHead.getMutationID(cid, dagRead))
       ) {
-        pending.push(commit);
+        // We know that the dag can only contain either LocalMetaSDD or LocalMetaDD31
+        pending.push(commit as db.Commit<M>);
       }
     }
     // pending() gave us the pending mutations in sync-head-first order whereas
