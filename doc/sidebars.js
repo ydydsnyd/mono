@@ -13,16 +13,11 @@ module.exports = {
             id: 'hello-replicache',
           },
           items: [
-            'app-features',
-            'app-structure',
-            'first-replicache-feature',
-            {
-              'Next Steps': [
-                'deploy-render',
-                'deploy-elsewhere',
-                'local-postgres',
-              ],
-            },
+            'constructing-replicache',
+            'adding-mutators',
+            'subscriptions',
+            'sync',
+            'next-steps',
           ],
         },
         'quickstarts',
