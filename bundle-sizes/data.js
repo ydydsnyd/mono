@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1667487664904,
+  "lastUpdate": 1667620543635,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -28991,6 +28991,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/0c7f0edbeb12cdfd11b3d2579a1ae65f6e11670e"
         },
         "date": 1667487658800,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 192377,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34441,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 191231,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34133,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 80928,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23549,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cesar@roci.dev",
+            "name": "Cesar Alaestante",
+            "username": "cesara"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6a3056d08ebc3bbed48878dee4bf79b39ba4ca45",
+          "message": "doc: new tutorial (#337)\n\ninteractive tutorial using codesandbox",
+          "timestamp": "2022-11-04T20:54:21-07:00",
+          "tree_id": "93738c24ea059e740a6b9275c3256d7f75682ee5",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/6a3056d08ebc3bbed48878dee4bf79b39ba4ca45"
+        },
+        "date": 1667620537285,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
