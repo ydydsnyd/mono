@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1667620543635,
+  "lastUpdate": 1667655182354,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -29075,6 +29075,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23549,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "10fae0633fe8bb871917d40c4dffe858fb7386c0",
+          "message": "refactor: Introduce DD31 commit meta enums (#359)\n\nAdd new enums for LocalMetaDD31 and SnapshotMetaDD31. By doing this we\r\ncan remove the reflection based detection code. But it also opens up\r\nchanging LocalMetaDD31 to use a different type for args.\r\n\r\nWe now have:\r\n\r\n```ts\r\nexport const enum MetaType {\r\n  IndexChangeSDD = 1,\r\n  LocalSDD = 2,\r\n  SnapshotSDD = 3,\r\n  LocalDD31 = 4,\r\n  SnapshotDD31 = 5,\r\n}\r\n```\r\n\r\nTowards #165\r\nTowards #313",
+          "timestamp": "2022-11-05T13:31:38Z",
+          "tree_id": "819c97d8168006e18ff988d4794585bd850a74d0",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/10fae0633fe8bb871917d40c4dffe858fb7386c0"
+        },
+        "date": 1667655175158,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 193887,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34532,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 192741,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34227,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81693,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23692,
             "unit": "bytes"
           }
         ]
