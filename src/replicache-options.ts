@@ -12,7 +12,7 @@ import type {IndexDefinitions} from './index-defs';
 export interface ReplicacheOptions<MD extends MutatorDefs> {
   /**
    * This is the URL to the server endpoint dealing with the push updates. See
-   * [Push Endpoint Reference](https://doc.replicache.dev/server-push) for more
+   * [Push Endpoint Reference](https://doc.replicache.dev/reference/server-push) for more
    * details.
    *
    * If not provided, push requests will not be made unless a custom
@@ -22,14 +22,14 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
 
   /**
    * This is the authorization token used when doing a
-   * [pull](https://doc.replicache.dev/server-pull#authorization) and
-   * [push](https://doc.replicache.dev/server-push#authorization).
+   * [pull](https://doc.replicache.dev/reference/server-pull#authorization) and
+   * [push](https://doc.replicache.dev/reference/server-push#authorization).
    */
   auth?: string;
 
   /**
    * This is the URL to the server endpoint dealing with pull. See [Pull
-   * Endpoint Reference](https://doc.replicache.dev/server-pull) for more
+   * Endpoint Reference](https://doc.replicache.dev/reference/server-pull) for more
    * details.
    *
    * If not provided, pull requests will not be made unless a custom
@@ -153,10 +153,10 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
    * #### Server application
    *
    * During push, a description of each mutation is sent to the server's [push
-   * endpoint](https://doc.replicache.dev/server-push) where it is applied. Once
+   * endpoint](https://doc.replicache.dev/reference/server-push) where it is applied. Once
    * the *mutation* has been applied successfully, as indicated by the client
    * view's
-   * [`lastMutationId`](https://doc.replicache.dev/server-pull#lastmutationid)
+   * [`lastMutationId`](https://doc.replicache.dev/reference/server-pull#lastmutationid)
    * field, the local version of the *mutation* is removed. See the [design
    * doc](https://doc.replicache.dev/design#commits) for additional details on
    * the sync protocol.

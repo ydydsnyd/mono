@@ -44,7 +44,7 @@ export const PULL_VERSION_DD31 = 1;
 
 /**
  * The JSON value used as the body when doing a POST to the [pull
- * endpoint](/server-pull).
+ * endpoint](/reference/server-pull).
  */
 export type PullRequestSDD<Cookie = ReadonlyJSONValue> = {
   profileID: string;
@@ -60,7 +60,7 @@ export type PullRequestSDD<Cookie = ReadonlyJSONValue> = {
 
 /**
  * The JSON value used as the body when doing a POST to the [pull
- * endpoint](/server-pull).
+ * endpoint](/reference/server-pull).
  */
 export type PullRequestDD31<Cookie = ReadonlyJSONValue> = {
   profileID: string;
