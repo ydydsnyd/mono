@@ -1417,9 +1417,9 @@ export class Replicache<MD extends MutatorDefs = {}> {
    * If an error occurs in the `body` the `onError` function is called if
    * present. Otherwise, the error is thrown.
    */
-  subscribe<R extends ReadonlyJSONValue | undefined, E>(
+  subscribe<R extends ReadonlyJSONValue | undefined>(
     body: (tx: ReadTransaction) => Promise<R>,
-    options: SubscribeOptions<R, E>,
+    options: SubscribeOptions<R>,
   ): () => void {
     return this._subscriptions.addSubscription(body, options);
   }

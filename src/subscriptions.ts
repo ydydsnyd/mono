@@ -23,7 +23,7 @@ const enum InvokeKind {
   Regular,
 }
 
-interface Subscription<R, E> {
+interface Subscription<R> {
   hasIndexSubscription(indexName: string): boolean;
 
   invoke(
@@ -40,14 +40,14 @@ interface Subscription<R, E> {
   ): void;
 
   readonly onData: (result: R) => void;
-  readonly onError: ((error: E) => void) | undefined;
+  readonly onError: ((error: unknown) => void) | undefined;
   readonly onDone: (() => void) | undefined;
 }
 
 const emptySet: ReadonlySet<string> = new Set();
 
-class SubscriptionImpl<R extends ReadonlyJSONValue | undefined, E>
-  implements Subscription<R, E>
+class SubscriptionImpl<R extends ReadonlyJSONValue | undefined>
+  implements Subscription<R>
 {
   private readonly _body: (tx: ReadTransaction) => Promise<R>;
   private readonly _onData: (result: R) => void;
@@ -56,13 +56,13 @@ class SubscriptionImpl<R extends ReadonlyJSONValue | undefined, E>
   private _keys = emptySet;
   private _scans: readonly Readonly<ScanSubscriptionInfo>[] = [];
 
-  readonly onError: ((error: E) => void) | undefined;
+  readonly onError: ((error: unknown) => void) | undefined;
   readonly onDone: (() => void) | undefined;
 
   constructor(
     body: (tx: ReadTransaction) => Promise<R>,
     onData: (result: R) => void,
-    onError: ((error: E) => void) | undefined,
+    onError: ((error: unknown) => void) | undefined,
     onDone: (() => void) | undefined,
   ) {
     this._body = body;
@@ -180,7 +180,7 @@ export type WatchNoIndexOptions = {
 
 export type WatchCallback = (diff: Diff) => void;
 
-class WatchImpl implements Subscription<Diff | undefined, unknown> {
+class WatchImpl implements Subscription<Diff | undefined> {
   private readonly _callback: WatchCallback;
   private readonly _prefix: string;
   private readonly _indexName: string | undefined;
@@ -343,7 +343,7 @@ function convertDiffValues<Key>(
 /**
  * The options passed to [[Replicache.subscribe]].
  */
-export interface SubscribeOptions<R extends ReadonlyJSONValue | undefined, E> {
+export interface SubscribeOptions<R extends ReadonlyJSONValue | undefined> {
   /**
    * Called when the return value of the body function changes.
    */
@@ -352,7 +352,7 @@ export interface SubscribeOptions<R extends ReadonlyJSONValue | undefined, E> {
   /**
    * If present, called when an error occurs.
    */
-  onError?: (error: E) => void;
+  onError?: (error: unknown) => void;
 
   /**
    * If present, called when the subscription is removed/done.
@@ -360,7 +360,7 @@ export interface SubscribeOptions<R extends ReadonlyJSONValue | undefined, E> {
   onDone?: () => void;
 }
 
-type UnknownSubscription = Subscription<unknown, unknown>;
+type UnknownSubscription = Subscription<unknown>;
 
 type SubscriptionSet = Set<UnknownSubscription>;
 
@@ -382,9 +382,9 @@ export class SubscriptionsManager implements DiffComputationConfig {
     return () => this._subscriptions.delete(subscription);
   }
 
-  addSubscription<R extends ReadonlyJSONValue | undefined, E>(
+  addSubscription<R extends ReadonlyJSONValue | undefined>(
     body: (tx: ReadTransaction) => Promise<R>,
-    {onData, onError, onDone}: SubscribeOptions<R, E>,
+    {onData, onError, onDone}: SubscribeOptions<R>,
   ): () => void {
     const s = new SubscriptionImpl(
       body,
@@ -421,10 +421,7 @@ export class SubscriptionsManager implements DiffComputationConfig {
     kind: InvokeKind,
     diffs: sync.DiffsMap | undefined,
   ) {
-    const subs = [...subscriptions] as readonly Subscription<
-      unknown,
-      unknown
-    >[];
+    const subs = [...subscriptions] as readonly Subscription<unknown>[];
     if (subs.length === 0) {
       return;
     }
@@ -630,10 +627,10 @@ function isKeyPastInclusiveLimit(
   );
 }
 
-function* subscriptionsForDiffs<V, E>(
-  subscriptions: Set<Subscription<V, E>>,
+function* subscriptionsForDiffs<V>(
+  subscriptions: Set<Subscription<V>>,
   diffs: sync.DiffsMap,
-): Generator<Subscription<V, E>> {
+): Generator<Subscription<V>> {
   for (const subscription of subscriptions) {
     if (subscription.matches(diffs)) {
       yield subscription;

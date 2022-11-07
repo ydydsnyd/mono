@@ -1006,7 +1006,7 @@ test('subscription with error in body', async () => {
 
 test('Errors in subscriptions are logged if no onError', async () => {
   const t = async (
-    onError?: (err: Error) => void,
+    onError?: (err: unknown) => void,
     err: unknown = new Error(),
   ) => {
     const consoleErrorStub = sinon.stub(console, 'error');
