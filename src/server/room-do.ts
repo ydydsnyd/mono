@@ -70,6 +70,9 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
   async fetch(request: Request): Promise<Response> {
     try {
+      // TODO(fritz) Yay we can get rid of this. We can set the
+      // roomID in roomDO.createRoom and just use it here.
+
       // This is ugly, but there is no way to get
       // the DO name (as opposed to the DO id), so instead
       // we get it from the first request carrying a roomID
@@ -97,6 +100,14 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
         }
       );
     }
+  }
+
+  // A more appropriate name might be init(), but this is easy since authDO and
+  // roomDO share dispatch and handlers.
+  async createRoom() {
+    // TODO(fritz) get the roomID out of the request and store it in storage
+    // for use in the log context.
+    return new Response("ok");
   }
 
   async connect(lc: LogContext, request: Request): Promise<Response> {

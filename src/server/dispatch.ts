@@ -1,4 +1,6 @@
 import {
+  CreateRoomRequest,
+  createRoomRequestSchema,
   InvalidateForRoomRequest,
   invalidateForRoomRequestSchema,
   InvalidateForUserRequest,
@@ -14,7 +16,19 @@ export type Handler<T = undefined> = (
   body: T
 ) => Promise<Response>;
 
+// TODO This definition and dispatch() itself are used by *both* the
+// authDO and the roomDO to route requests. This forces both DOs to
+// implement exactly the same handlers and routes. It'd be better if each
+// DO implemented its own dispatch, that way they could implement handlers
+// that make sense for each. If we wanted to share dispatch implementation
+// between DOs there'd be nothing stopping us from doing so, but we
+// wouldn't be *forced* to have exact parity.
+//
+// TODO Also, we should probably use a routing library. Lots of this code
+// can go away and what remains can become more DRY if we did. Two options
+// that come to mind are itty router or express (itty more minimalist).
 export interface Handlers {
+  createRoom: Handler<CreateRoomRequest>;
   connect: Handler;
   authInvalidateForUser: Handler<InvalidateForUserRequest>;
   authInvalidateForRoom: Handler<InvalidateForRoomRequest>;
@@ -24,6 +38,7 @@ export interface Handlers {
 }
 
 export const paths: Readonly<Record<keyof Handlers, string>> = {
+  createRoom: "/createRoom",
   connect: "/connect",
   authInvalidateForUser: "/api/auth/v0/invalidateForUser",
   authInvalidateForRoom: "/api/auth/v0/invalidateForRoom",
@@ -47,6 +62,7 @@ function createBadRequestResponse(message = "Bad Request"): Response {
 export function dispatch(
   request: Request,
   lc: LogContext,
+  // If authApiKey is not provided, then the auth api is disabled.
   authApiKey: string | undefined,
   handlers: Handlers
 ): Promise<Response> {
@@ -57,12 +73,17 @@ export function dispatch(
     method: string,
     validateBody: (request: Request) => Promise<ValidateResult<T>>,
     handler: Handler<T> | undefined,
+    // If set to 'authApiKey' then auth api auth is enforced on the handler. It
+    // checks that the auth api key has been passed in Authorization. The idea is
+    // that we could have multiple api keys, and this string would select which
+    // to require.
     apiKey?: "authApiKey"
   ): Promise<Response> {
     if (!handler) {
       return createBadRequestResponse("Unsupported path.");
     }
     if (apiKey === "authApiKey") {
+      // Auth API is disabled so everything is unauthorized.
       if (authApiKey === undefined) {
         return createUnauthorizedResponse();
       }
@@ -90,6 +111,17 @@ export function dispatch(
   }
 
   switch (url.pathname) {
+    case paths.createRoom:
+      return validateAndDispatch(
+        "post",
+        (request) => validateBody(request, createRoomRequestSchema),
+        handlers.createRoom,
+        "authApiKey"
+      );
+    // TOOD(fritz) make a decision about auth key for createRoom
+    // TODO(fritz) closeRoom. Must be authenticated.
+    // TODO(fritz) deleteRoom. Must be authenticated.
+    // TODO(fritz) migrate. Must be authenticated.
     case paths.connect:
       return validateAndDispatch("get", noOpValidateBody, handlers.connect);
     case paths.authInvalidateForUser:

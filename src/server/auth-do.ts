@@ -4,15 +4,18 @@ import { LogSink, LogContext, LogLevel } from "@rocicorp/logger";
 import { version } from "../util/version.js";
 import { AuthHandler, UserData, USER_DATA_HEADER_NAME } from "./auth.js";
 import { dispatch, paths } from "./dispatch.js";
+import { createRoom, objectIDForRoom } from "./rooms.js";
 import { RWLock } from "@rocicorp/lock";
 import {
   ConnectionsResponse,
   connectionsResponseSchema,
+  CreateRoomRequest,
   InvalidateForRoomRequest,
   InvalidateForUserRequest,
 } from "../protocol/api/auth.js";
 import * as s from "superstruct";
 import { createAuthAPIHeaders } from "./auth-api-headers.js";
+import { DurableStorage } from "../storage/durable-storage.js";
 
 export interface AuthDOOptions {
   roomDO: DurableObjectNamespace;
@@ -34,6 +37,11 @@ export type ConnectionRecord = {
 export class BaseAuthDO implements DurableObject {
   private readonly _roomDO: DurableObjectNamespace;
   private readonly _state: DurableObjectState;
+  // _durableStorage is a type-aware wrapper around _state.storage. It
+  // disables the input gate. Anything that needs to read *values* out of
+  // storage should probably use _durableStorage, and not _state.storage
+  // directly.
+  private readonly _durableStorage: DurableStorage;
   private readonly _authHandler: AuthHandler;
   private readonly _authApiKey?: string;
   private readonly _lc: LogContext;
@@ -44,6 +52,10 @@ export class BaseAuthDO implements DurableObject {
       options;
     this._roomDO = roomDO;
     this._state = state;
+    this._durableStorage = new DurableStorage(
+      state.storage,
+      false /* don't allow uncomfirmed */
+    );
     this._authHandler = authHandler;
     this._authApiKey = authApiKey;
     this._lc = new LogContext(logLevel, logSink)
@@ -71,6 +83,20 @@ export class BaseAuthDO implements DurableObject {
         }
       );
     }
+  }
+
+  async createRoom(
+    lc: LogContext,
+    request: Request,
+    validatedBody: CreateRoomRequest
+  ) {
+    return createRoom(
+      lc,
+      this._roomDO,
+      this._durableStorage,
+      request,
+      validatedBody
+    );
   }
 
   async connect(lc: LogContext, request: Request): Promise<Response> {
@@ -126,6 +152,19 @@ export class BaseAuthDO implements DurableObject {
         return createUnauthorizedResponse();
       }
 
+      // Find the room's objectID so we can connect to it. Do this BEFORE
+      // writing the connection record, in case it doesn't exist.
+      const roomObjectID = await objectIDForRoom(
+        this._durableStorage,
+        this._roomDO,
+        roomID
+      );
+      if (roomObjectID === undefined) {
+        return new Response("room not found", {
+          status: 404,
+        });
+      }
+
       // Record the connection in DO storage
       const connectionKey = connectionKeyToString({
         userID: userData.userID,
@@ -137,9 +176,8 @@ export class BaseAuthDO implements DurableObject {
       };
       await this._state.storage.put(connectionKey, connectionRecord);
 
-      // Forward the request to the Room Durable Object for roomID...
-      const id = this._roomDO.idFromName(roomID);
-      const stub = this._roomDO.get(id);
+      // Forward the request to the Room Durable Object...
+      const stub = this._roomDO.get(roomObjectID);
       const requestToDO = new Request(request);
       requestToDO.headers.set(
         USER_DATA_HEADER_NAME,
@@ -200,14 +238,23 @@ export class BaseAuthDO implements DurableObject {
       lc.debug?.(`Sending authInvalidateForRoom request to ${roomID}`);
       // The request to the Room DO must be completed inside the write lock
       // to avoid races with connect requests for this room.
-      const id = this._roomDO.idFromName(roomID);
-      const stub = this._roomDO.get(id);
+      const roomObjectID = await objectIDForRoom(
+        this._durableStorage,
+        this._roomDO,
+        roomID
+      );
+      if (roomObjectID === undefined) {
+        return new Response("room not found", {
+          status: 404,
+        });
+      }
+      const stub = this._roomDO.get(roomObjectID);
       const response = await stub.fetch(request);
       if (!response.ok) {
         lc.debug?.(
           `Received error response from ${roomID}. ${
             response.status
-          } ${await response.text}`
+          } ${await response.clone().text()}`
         );
       }
       return response;
@@ -271,8 +318,16 @@ export class BaseAuthDO implements DurableObject {
       lc.debug?.(`revalidating connections for ${roomID} waiting for lock.`);
       await this._lock.withWrite(async () => {
         lc.debug?.("got lock.");
-        const id = this._roomDO.idFromName(roomID);
-        const stub = this._roomDO.get(id);
+        const roomObjectID = await objectIDForRoom(
+          this._durableStorage,
+          this._roomDO,
+          roomID
+        );
+        if (roomObjectID === undefined) {
+          lc.error?.(`Can't find room ${roomID}, skipping`);
+          return;
+        }
+        const stub = this._roomDO.get(roomObjectID);
         const response = await stub.fetch(
           new Request(
             `https://unused-reflect-room-do.dev${paths.authConnections}`,
@@ -343,8 +398,20 @@ export class BaseAuthDO implements DurableObject {
     );
     // Send requests to room DOs in parallel
     for (const roomID of roomIDs) {
-      const id = this._roomDO.idFromName(roomID);
-      const stub = this._roomDO.get(id);
+      const roomObjectID = await objectIDForRoom(
+        this._durableStorage,
+        this._roomDO,
+        roomID
+      );
+      if (roomObjectID === undefined) {
+        // Note this stops the iteration if this room is not found, should we try to
+        // continue instead?
+        return new Response("room not found", {
+          status: 404,
+        });
+      }
+
+      const stub = this._roomDO.get(roomObjectID);
       responsePromises.push(stub.fetch(request));
     }
     const errorResponses = [];

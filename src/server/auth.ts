@@ -2,9 +2,10 @@ import type { ReadonlyJSONObject } from "replicache";
 
 /**
  * An `AuthHandler` should validate that the user authenticated by `auth` is
- * authorized to access the room with `roomID`.
+ * authorized to access the room with `roomID`. By 'access' we mean create
+ * or connect to the room.
  * @return A promise which resolves to `UserData` for the user if authentication
- * and authorization is successful, or rejects if authentication or
+ * and authorization is successful, or rejects (throws) if authentication or
  * authorization fail.
  */
 export type AuthHandler = (auth: string, roomID: string) => Promise<UserData>;

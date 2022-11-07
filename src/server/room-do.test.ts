@@ -9,7 +9,9 @@ test("Logs version during construction", async () => {
   new BaseRoomDO({
     mutators: {},
     disconnectHandler: () => Promise.resolve(),
-    state: { id: new TestDurableObjectId("test-do-id") } as DurableObjectState,
+    state: {
+      id: new TestDurableObjectId("test-do-id"),
+    } as unknown as DurableObjectState,
     authApiKey: undefined,
     logSink: testLogSink,
     logLevel: "info",
@@ -35,7 +37,7 @@ test("Sets turn duration based on allowUnconfirmedWrites flag", async () => {
       disconnectHandler: () => Promise.resolve(),
       state: {
         id: new TestDurableObjectId("test-do-id"),
-      } as DurableObjectState,
+      } as unknown as DurableObjectState,
       authApiKey: undefined,
       logSink: testLogSink,
       logLevel: "info",

@@ -1,5 +1,6 @@
 import * as s from "superstruct";
 
+export const createRoomRequestSchema = s.type({ roomID: s.string() });
 export const invalidateForUserRequestSchema = s.type({ userID: s.string() });
 export const invalidateForRoomRequestSchema = s.type({ roomID: s.string() });
 export const connectionsResponseSchema = s.array(
@@ -9,6 +10,7 @@ export const connectionsResponseSchema = s.array(
   })
 );
 
+export type CreateRoomRequest = s.Infer<typeof createRoomRequestSchema>;
 export type InvalidateForUserRequest = s.Infer<
   typeof invalidateForUserRequestSchema
 >;

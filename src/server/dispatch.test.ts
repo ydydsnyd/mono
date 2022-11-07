@@ -12,6 +12,9 @@ const testAuthApiKey = "TEST_REFLECT_AUTH_API_KEY_TEST";
 
 function createThrowingHandlers() {
   return {
+    createRoom: () => {
+      throw new Error("unexpected call to createRoom handler");
+    },
     connect: () => {
       throw new Error("unexpect call to connect handler");
     },

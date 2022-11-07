@@ -1,19 +1,22 @@
 export class TestDurableObjectId implements DurableObjectId {
-  readonly name: string;
-  constructor(name: string) {
+  readonly name?: string;
+  private readonly _objectIDString: string;
+
+  constructor(objectIDString: string, name?: string) {
+    this._objectIDString = objectIDString;
     this.name = name;
   }
   toString(): string {
-    return this.name;
+    return this._objectIDString;
   }
   equals(other: DurableObjectId): boolean {
-    return this.name === other.name;
+    return this.toString() === other.toString();
   }
 }
 
 export class TestDurableObjectStub implements DurableObjectStub {
   readonly id: DurableObjectId;
-  readonly name?: string;
+  readonly objectIDString?: string;
   readonly fetch: InstanceType<typeof Fetcher>["fetch"];
   constructor(
     id: DurableObjectId,
@@ -22,15 +25,15 @@ export class TestDurableObjectStub implements DurableObjectStub {
     }
   ) {
     this.id = id;
-    this.name = id.name;
+    this.objectIDString = id.toString();
     this.fetch = fetch;
   }
 }
 
 export async function createTestDurableObjectState(
-  name: string
+  objectIDString: string
 ): Promise<TestDurableObjectState> {
-  const id = new TestDurableObjectId(name);
+  const id = new TestDurableObjectId(objectIDString);
   const storage = await getMiniflareDurableObjectStorage(id);
   return new TestDurableObjectState(id, storage);
 }
@@ -50,20 +53,21 @@ export class TestDurableObjectState implements DurableObjectState {
   }
 }
 
+let objectIDCounter = 0;
+
 export function createTestDurableObjectNamespace(): DurableObjectNamespace {
   return {
     newUniqueId: (_options?: DurableObjectNamespaceNewUniqueIdOptions) => {
-      throw new Error(
-        "TestDurableObjectNamespace does not yet support newUniqueId"
-      );
+      // TODO(fritz) support options
+      return new TestDurableObjectId("unique-id-" + objectIDCounter++);
     },
+    // Note: uses the given name for both the object ID and the name.
     idFromName: (name: string) => {
-      return new TestDurableObjectId(name);
+      return new TestDurableObjectId(name, name);
     },
-    idFromString: (_id: string) => {
-      throw new Error(
-        "TestDurableObjectNamespace does not yet support idFromString"
-      );
+    idFromString: (objectIDString: string) => {
+      // Note: doesn't support names.
+      return new TestDurableObjectId(objectIDString);
     },
     get: (id: DurableObjectId) => {
       return new TestDurableObjectStub(id);

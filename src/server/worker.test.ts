@@ -32,7 +32,7 @@ function createTestFixture(
       ...createTestDurableObjectNamespace(),
       idFromName: (name: string) => {
         expect(name).toEqual("auth");
-        return new TestDurableObjectId("test-auth-do-id");
+        return new TestDurableObjectId("test-auth-do-id", "test-auth-do-id");
       },
       get: (id: DurableObjectId) => {
         expect(id.name).toEqual("test-auth-do-id");
