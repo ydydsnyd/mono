@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1667733252880,
+  "lastUpdate": 1667812449546,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -29237,6 +29237,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23692,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f5b6dc0af04a87c91223855b9acaeaabb3a7849e",
+          "message": "feat!: Use unknown in SubscribeOptions onError (#363)\n\nBREAKING CHANGE!\r\n\r\nWe used to use `Error` which is not really correct. The type is whatever\r\nwas thrown and JS allows throwing anything.\r\n\r\nFixes #357",
+          "timestamp": "2022-11-07T09:13:04Z",
+          "tree_id": "25bc677b4a2847d4d9f23280b91bdd4f5bfce6db",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/f5b6dc0af04a87c91223855b9acaeaabb3a7849e"
+        },
+        "date": 1667812443208,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 193887,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34532,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 192741,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34227,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81693,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23661,
             "unit": "bytes"
           }
         ]
