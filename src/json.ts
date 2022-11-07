@@ -12,11 +12,9 @@ export type JSONValue =
   | JSONObject;
 
 /**
- * A JSON object. We allow undefined values because in TypeScript there is no
- * way to express optional missing properties vs properties with the value
- * `undefined`.
+ * A JSON object. This is a map from strings to JSON values.
  */
-export type JSONObject = Partial<{[key: string]: JSONValue}>;
+export type JSONObject = {[key: string]: JSONValue};
 
 /** Like [[JSONValue]] but deeply readonly */
 export type ReadonlyJSONValue =
@@ -28,9 +26,9 @@ export type ReadonlyJSONValue =
   | ReadonlyJSONObject;
 
 /** Like [[JSONObject]] but deeply readonly */
-export type ReadonlyJSONObject = Partial<{
+export type ReadonlyJSONObject = {
   readonly [key: string]: ReadonlyJSONValue;
-}>;
+};
 
 /**
  * Checks deep equality of two JSON value with (almost) same semantics as
@@ -64,7 +62,7 @@ export function deepEqual(
 
   // a cannot be undefined here because either a and b are undefined or their
   // types are different.
-  //eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
+  // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
   a = a!;
 
   // 'object'
@@ -131,7 +129,6 @@ export function internalDeepClone(
     case 'boolean':
     case 'number':
     case 'string':
-    case 'undefined':
       return value;
     case 'object': {
       if (value === null) {
@@ -151,10 +148,7 @@ export function internalDeepClone(
 
       for (const k in value) {
         if (hasOwn(value, k)) {
-          const v = (value as ReadonlyJSONObject)[k];
-          if (v !== undefined) {
-            obj[k] = internalDeepClone(v, seen);
-          }
+          obj[k] = internalDeepClone((value as ReadonlyJSONObject)[k], seen);
         }
       }
       seen.pop();
@@ -221,10 +215,7 @@ export function getSizeOfValue(value: unknown): number {
         let sum: number = SIZE_TAG;
         for (const k in val) {
           if (hasOwn(val, k)) {
-            const v = val[k];
-            if (v !== undefined) {
-              sum += getSizeOfValue(k) + getSizeOfValue(v);
-            }
+            sum += getSizeOfValue(k) + getSizeOfValue(val[k]);
           }
         }
         return sum + SIZE_INT32 + SIZE_TAG;
@@ -269,22 +260,13 @@ function assertObjectIsJSONObject(
 ): asserts v is JSONObject {
   for (const k in v) {
     if (hasOwn(v, k)) {
-      const val = v[k];
-      // we allow undefined values because in TypeScript there is no way to
-      // express optional missing properties vs properties with the value
-      // undefined.
-      if (val !== undefined) {
-        assertJSONValue(v[k]);
-      }
+      assertJSONValue(v[k]);
     }
   }
 }
 
 function assertJSONArray(v: unknown[]): asserts v is JSONValue[] {
-  for (let i = 0; i < v.length; i++) {
-    const val = v[i];
-    if (val !== undefined) {
-      assertJSONValue(val);
-    }
+  for (const item of v) {
+    assertJSONValue(item);
   }
 }

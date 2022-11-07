@@ -1,5 +1,5 @@
 import {assert, expect} from '@esm-bundle/chai';
-import {deepClone, deepEqual, getSizeOfValue} from './json';
+import {assertJSONValue, deepClone, deepEqual, getSizeOfValue} from './json';
 import type {JSONValue, ReadonlyJSONValue} from './json';
 
 const {fail} = assert;
@@ -157,4 +157,29 @@ test('getSizeOfValue', () => {
 
   expect(getSizeOfValue({})).to.equal(1 + 4 + 1);
   expect(getSizeOfValue({abc: 'def'})).to.equal(1 + 4 + 8 + 8 + 1);
+});
+
+test('assertJSONValue', () => {
+  assertJSONValue(null);
+  assertJSONValue(true);
+  assertJSONValue(false);
+  assertJSONValue(1);
+  assertJSONValue(123.456);
+  assertJSONValue('');
+  assertJSONValue('abc');
+  assertJSONValue([]);
+  assertJSONValue([1, 2, 3]);
+  assertJSONValue({});
+  assertJSONValue({a: 1, b: 2});
+  assertJSONValue({a: 1, b: 2, c: [3, 4, 5]});
+
+  expect(() => assertJSONValue(Symbol())).to.throw(Error);
+  expect(() => assertJSONValue(() => 0)).to.throw(Error);
+  expect(() => assertJSONValue(undefined)).to.throw(Error);
+  expect(() => assertJSONValue(BigInt(123))).to.throw(Error);
+
+  // Cycle
+  const o = {x: {}};
+  o.x = o;
+  expect(() => assertJSONValue(o)).to.throw(Error);
 });
