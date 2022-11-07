@@ -1,12 +1,12 @@
 import {assert, assertObject, assertString} from './asserts';
-import type {BranchID, ClientID} from './sync/ids';
+import type {ClientGroupID, ClientID} from './sync/ids';
 
 function makeChannelName(replicacheName: string): string {
   return `replicache-on-persist:${replicacheName}`;
 }
 
 export type PersistInfo = {
-  branchID: BranchID;
+  clientGroupID: ClientGroupID;
   clientID: ClientID;
 };
 
@@ -15,7 +15,7 @@ export type HandlePersist = OnPersist;
 
 function assertPersistInfo(value: unknown): asserts value is PersistInfo {
   assertObject(value);
-  assertString(value.branchID);
+  assertString(value.clientGroupID);
   assertString(value.clientID);
 }
 
@@ -34,7 +34,7 @@ export function initOnPersistChannel(
     const {data} = e;
     assertPersistInfo(data);
     handlePersist({
-      branchID: data.branchID,
+      clientGroupID: data.clientGroupID,
       clientID: data.clientID,
     });
   };

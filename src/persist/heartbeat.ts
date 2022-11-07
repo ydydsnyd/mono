@@ -64,7 +64,7 @@ export function writeHeartbeat(
         : {
             heartbeatTimestampMs: Date.now(),
             headHash: client.headHash,
-            branchID: client.branchID,
+            clientGroupID: client.clientGroupID,
             tempRefreshHash: client.tempRefreshHash,
           },
     );

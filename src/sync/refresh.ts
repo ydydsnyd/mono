@@ -14,7 +14,7 @@ import {
   assertClientDD31,
   ClientStateNotFoundError,
   getClient,
-  getMainBranch,
+  getMainClientGroup,
   setClient,
 } from '../persist/clients.js';
 import type {MutatorDefs} from '../replicache.js';
@@ -61,11 +61,11 @@ export async function refresh(
   }
 
   const perdagMainHead = await perdag.withWrite(async perdagWrite => {
-    const mainBranch = await getMainBranch(clientID, perdagWrite);
-    if (!mainBranch) {
+    const mainClientGroup = await getMainClientGroup(clientID, perdagWrite);
+    if (!mainClientGroup) {
       throw new ClientStateNotFoundError(clientID);
     }
-    const perdagMainHead = mainBranch.headHash;
+    const perdagMainHead = mainClientGroup.headHash;
     // Need to pull this head into memdag, but can't have it disappear if
     // perdag moves forward while we're rebasing in memdag. Can't change client
     // headHash until our rebase in memdag is complete, because if rebase fails,

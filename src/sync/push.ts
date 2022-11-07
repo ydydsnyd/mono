@@ -8,7 +8,7 @@ import {toError} from '../to-error';
 import type {InternalValue} from '../internal-value';
 import {commitIsLocalDD31, commitIsLocalSDD} from '../db/commit';
 import {assert} from '../asserts.js';
-import type {BranchID} from './branch-id.js';
+import type {ClientGroupID} from './client-group-id.js';
 import type {ClientID} from './ids.js';
 import type {ReadonlyJSONValue} from '../json.js';
 
@@ -38,7 +38,7 @@ export type PushRequestSDD = Omit<PushRequest, 'mutations' | 'pushVersion'> & {
 };
 
 export type PushRequestDD31 = Omit<PushRequest, 'mutations' | 'pushVersion'> & {
-  branchID: BranchID;
+  clientGroupID: ClientGroupID;
   mutations: MutationDD31[];
   pushVersion: typeof PUSH_VERSION_DD31;
 };
@@ -88,7 +88,7 @@ export async function push(
   store: dag.Store,
   lc: LogContext,
   profileID: string,
-  branchID: BranchID | undefined,
+  clientGroupID: ClientGroupID | undefined,
   clientID: ClientID,
   pusher: Pusher,
   pushURL: string,
@@ -123,10 +123,10 @@ export async function push(
           throw new Error('Internal non local pending commit');
         }
       }
-      assert(branchID);
+      assert(clientGroupID);
       const r: PushRequestDD31 = {
         profileID,
-        branchID,
+        clientGroupID,
         clientID,
         mutations: pushMutations,
         pushVersion: PUSH_VERSION_DD31,

@@ -35,10 +35,10 @@ type PartialClientDD31 = Partial<ClientDD31> &
 
 export function makeClient(partialClient: PartialClient): Client {
   const p31 = partialClient as PartialClientDD31;
-  if (typeof p31.branchID === 'string') {
+  if (typeof p31.clientGroupID === 'string') {
     // Forced DD31 path
     return {
-      branchID: p31.branchID,
+      clientGroupID: p31.clientGroupID,
       headHash: p31.headHash,
       heartbeatTimestampMs: p31.heartbeatTimestampMs,
       tempRefreshHash: p31.tempRefreshHash ?? null,
@@ -60,7 +60,7 @@ export function makeClient(partialClient: PartialClient): Client {
 
   if (DD31) {
     return {
-      branchID: 'make-client-branch-id',
+      clientGroupID: 'make-client-group-id',
       headHash: partialClient.headHash,
       heartbeatTimestampMs: partialClient.heartbeatTimestampMs,
       tempRefreshHash: null,

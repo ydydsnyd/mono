@@ -1,4 +1,4 @@
-export type {ClientID, BranchID} from './ids';
+export type {ClientID, ClientGroupID} from './ids';
 export {
   maybeEndPull,
   beginPull,

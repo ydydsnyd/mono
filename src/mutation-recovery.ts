@@ -23,7 +23,7 @@ import {IDBStore} from './kv/idb-store.js';
 import {assertClientSDD, setClients} from './persist/clients.js';
 import type {ClientID} from './sync/client-id.js';
 import type {Pusher} from './pusher.js';
-import type {BranchID} from './sync/branch-id.js';
+import type {ClientGroupID} from './sync/client-group-id.js';
 import {PUSH_VERSION_DD31, PUSH_VERSION_SDD} from './sync/push.js';
 
 const MUTATION_RECOVERY_LAZY_STORE_SOURCE_CHUNK_CACHE_SIZE_LIMIT = 10 * 2 ** 20; // 10 MB
@@ -69,7 +69,7 @@ interface MutationRecoveryOptions {
   readonly isPullDisabled: () => boolean;
   readonly lc: LogContext;
   readonly enableMutationRecovery: boolean;
-  readonly branchIDPromise: Promise<BranchID | undefined>;
+  readonly clientGroupIDPromise: Promise<ClientGroupID | undefined>;
 }
 
 export class MutationRecovery {
@@ -451,32 +451,31 @@ async function recoverMutationsFromPerdagDD31(
   const stepDescription = `Recovering mutations from db ${database.name}.`;
   lc.debug?.('Start:', stepDescription);
   try {
-    let branches: persist.BranchMap | undefined = await perdag.withRead(read =>
-      persist.getBranches(read),
-    );
-    const branchIDsVisited = new Set<sync.BranchID>();
-    while (branches) {
-      let newBranches: persist.BranchMap | undefined;
-      for (const [branchID, branch] of branches) {
+    let clientGroups: persist.ClientGroupMap | undefined =
+      await perdag.withRead(read => persist.getClientGroups(read));
+    const clientGroupIDsVisited = new Set<sync.ClientGroupID>();
+    while (clientGroups) {
+      let newClientGroups: persist.ClientGroupMap | undefined;
+      for (const [clientGroupID, clientGroup] of clientGroups) {
         if (delegate.closed) {
           lc.debug?.('Exiting early due to close:', stepDescription);
           return;
         }
-        if (!branchIDsVisited.has(branchID)) {
-          branchIDsVisited.add(branchID);
-          newBranches = await recoverMutationsOfBranchDD31(
-            branch,
-            branchID,
+        if (!clientGroupIDsVisited.has(clientGroupID)) {
+          clientGroupIDsVisited.add(clientGroupID);
+          newClientGroups = await recoverMutationsOfClientGroupDD31(
+            clientGroup,
+            clientGroupID,
             perdag,
             database,
             options,
           );
-          if (newBranches) {
+          if (newClientGroups) {
             break;
           }
         }
       }
-      branches = newBranches;
+      clientGroups = newClientGroups;
     }
   } catch (e) {
     logMutationRecoveryError(e, lc, stepDescription, delegate);
@@ -485,18 +484,17 @@ async function recoverMutationsFromPerdagDD31(
 }
 
 /**
- * @returns When mutations are recovered the resulting updated branch map.
+ * @returns When mutations are recovered the resulting updated client group map.
  *   Otherwise undefined, which can be because there were no mutations to
- *   recover, or because an error occurred when trying to recover the
- *   mutations.
+ *   recover, or because an error occurred when trying to recover the mutations.
  */
-async function recoverMutationsOfBranchDD31(
-  branch: persist.Branch,
-  branchID: sync.BranchID,
+async function recoverMutationsOfClientGroupDD31(
+  clientGroup: persist.ClientGroup,
+  clientGroupID: sync.ClientGroupID,
   perdag: dag.Store,
   database: persist.IndexedDBDatabase,
   options: MutationRecoveryOptions,
-): Promise<persist.BranchMap | undefined> {
+): Promise<persist.ClientGroupMap | undefined> {
   assert(DD31);
   assert(database.replicacheFormatVersion === REPLICACHE_FORMAT_VERSION_DD31);
 
@@ -508,8 +506,8 @@ async function recoverMutationsOfBranchDD31(
     isPushDisabled,
     isPullDisabled,
   } = options;
-  const selfBranchID = await options.branchIDPromise;
-  if (selfBranchID === branchID) {
+  const selfClientGroupID = await options.clientGroupIDPromise;
+  if (selfClientGroupID === clientGroupID) {
     return;
   }
 
@@ -517,11 +515,11 @@ async function recoverMutationsOfBranchDD31(
 
   // If all local mutations have been applied then exit.
   let allAckd = true;
-  for (const [cid, mutationID] of Object.entries(branch.mutationIDs)) {
+  for (const [cid, mutationID] of Object.entries(clientGroup.mutationIDs)) {
     // if not present then the server has not acknowledged this client's mutations.
     if (
-      !branch.lastServerAckdMutationIDs[cid] ||
-      branch.lastServerAckdMutationIDs[cid] < mutationID
+      !clientGroup.lastServerAckdMutationIDs[cid] ||
+      clientGroup.lastServerAckdMutationIDs[cid] < mutationID
     ) {
       clientID = cid;
       allAckd = false;
@@ -532,23 +530,23 @@ async function recoverMutationsOfBranchDD31(
     return;
   }
 
-  const stepDescription = `Recovering mutations for branch ${branchID}.`;
+  const stepDescription = `Recovering mutations for client group ${clientGroupID}.`;
   lc.debug?.('Start:', stepDescription);
-  const dagForOtherBranch = new dag.LazyStore(
+  const dagForOtherClientGroup = new dag.LazyStore(
     perdag,
     MUTATION_RECOVERY_LAZY_STORE_SOURCE_CHUNK_CACHE_SIZE_LIMIT,
     dag.throwChunkHasher,
     assertHash,
   );
   try {
-    await dagForOtherBranch.withWrite(async write => {
-      await write.setHead(db.DEFAULT_HEAD_NAME, branch.headHash);
+    await dagForOtherClientGroup.withWrite(async write => {
+      await write.setHead(db.DEFAULT_HEAD_NAME, clientGroup.headHash);
       await write.commit();
     });
 
     if (isPushDisabled()) {
       lc.debug?.(
-        `Cannot recover mutations for branch ${branchID} because push is disabled.`,
+        `Cannot recover mutations for client group ${clientGroupID} because push is disabled.`,
       );
       return;
     }
@@ -561,13 +559,13 @@ async function recoverMutationsOfBranchDD31(
       const {result: pushResponse} = await wrapInReauthRetries(
         async (requestID: string, requestLc: LogContext) => {
           assert(clientID);
-          assert(dagForOtherBranch);
+          assert(dagForOtherClientGroup);
           const pushResponse = await sync.push(
             requestID,
-            dagForOtherBranch,
+            dagForOtherClientGroup,
             requestLc,
             await delegate.profileID,
-            branchID,
+            clientGroupID,
             // TODO(DD31): clientID is not needed in DD31. It is currently kept for debugging purpose.
             clientID,
             pusher,
@@ -586,14 +584,14 @@ async function recoverMutationsOfBranchDD31(
     }, pushDescription);
     if (!pushSucceeded) {
       lc.debug?.(
-        `Failed to recover mutations for client ${branchID} due to a push error.`,
+        `Failed to recover mutations for client ${clientGroupID} due to a push error.`,
       );
       return;
     }
 
     if (isPullDisabled()) {
       lc.debug?.(
-        `Cannot confirm mutations were recovered for client ${branchID} ` +
+        `Cannot confirm mutations were recovered for client ${clientGroupID} ` +
           `because pull is disabled.`,
       );
       return;
@@ -616,12 +614,12 @@ async function recoverMutationsOfBranchDD31(
           const beginPullResponse = await sync.beginPullDD31(
             await delegate.profileID,
             clientID,
-            branchID,
+            clientGroupID,
             beginPullRequest,
             // TODO(DD31): Figure this out.
             beginPullRequest.puller as PullerDD31,
             requestID,
-            dagForOtherBranch,
+            dagForOtherClientGroup,
             requestLc,
             false,
           );
@@ -642,7 +640,7 @@ async function recoverMutationsOfBranchDD31(
     }, pullDescription);
     if (!pullSucceeded) {
       lc.debug?.(
-        `Failed to recover mutations for client ${branchID} due to a pull error.`,
+        `Failed to recover mutations for client ${clientGroupID} due to a pull error.`,
       );
       return;
     }
@@ -653,14 +651,14 @@ async function recoverMutationsOfBranchDD31(
     if (lc.debug) {
       if (isClientStateNotFoundResponse(pullResponse)) {
         lc.debug?.(
-          `Branch ${selfBranchID} cannot recover mutations for branch ${branchID}. The branch no longer exists on the server.`,
+          `Client group ${selfClientGroupID} cannot recover mutations for client group ${clientGroupID}. The client group no longer exists on the server.`,
         );
       } else {
         lc.debug?.(
-          `Branch ${selfBranchID} recovered mutations for branch ${branchID}.  Details`,
+          `Client group ${selfClientGroupID} recovered mutations for client group ${clientGroupID}.  Details`,
           {
-            mutationIDs: branch.mutationIDs,
-            lastServerAckdMutationIDs: branch.lastServerAckdMutationIDs,
+            mutationIDs: clientGroup.mutationIDs,
+            lastServerAckdMutationIDs: clientGroup.lastServerAckdMutationIDs,
             lastMutationIDChanges: pullResponse.lastMutationIDChanges,
           },
         );
@@ -668,22 +666,24 @@ async function recoverMutationsOfBranchDD31(
     }
 
     return await perdag.withWrite(async dagWrite => {
-      const branches = await persist.getBranches(dagWrite);
-      const branchToUpdate = branches.get(branchID);
-      if (!branchToUpdate) {
-        return branches;
+      const clientGroups = await persist.getClientGroups(dagWrite);
+      const clientGroupToUpdate = clientGroups.get(clientGroupID);
+      if (!clientGroupToUpdate) {
+        return clientGroups;
       }
 
-      const setNewBranches = async (newBranches: persist.BranchMap) => {
-        await persist.setBranches(newBranches, dagWrite);
+      const setNewClientGroups = async (
+        newClientGroups: persist.ClientGroupMap,
+      ) => {
+        await persist.setClientGroups(newClientGroups, dagWrite);
         await dagWrite.commit();
-        return newBranches;
+        return newClientGroups;
       };
 
       if (isClientStateNotFoundResponse(pullResponse)) {
-        const newBranches = new Map(branches);
-        newBranches.delete(branchID);
-        return await setNewBranches(newBranches);
+        const newClientGroups = new Map(clientGroups);
+        newClientGroups.delete(clientGroupID);
+        return await setNewClientGroups(newClientGroups);
       }
 
       assert(pullResponse);
@@ -693,7 +693,7 @@ async function recoverMutationsOfBranchDD31(
         pullResponse.lastMutationIDChanges,
       )) {
         if (
-          branchToUpdate.lastServerAckdMutationIDs[clientID] <
+          clientGroupToUpdate.lastServerAckdMutationIDs[clientID] <
           lastMutationIDChange
         ) {
           lastServerAckdMutationIDsUpdates[clientID] = lastMutationIDChange;
@@ -701,22 +701,22 @@ async function recoverMutationsOfBranchDD31(
         }
       }
       if (!anyMutationIDsUpdated) {
-        return branches;
+        return clientGroups;
       }
 
-      const newBranches = new Map(branches).set(branchID, {
-        ...branchToUpdate,
+      const newClientGroups = new Map(clientGroups).set(clientGroupID, {
+        ...clientGroupToUpdate,
         lastServerAckdMutationIDs: {
-          ...branchToUpdate.lastServerAckdMutationIDs,
+          ...clientGroupToUpdate.lastServerAckdMutationIDs,
           ...lastServerAckdMutationIDsUpdates,
         },
       });
-      return await setNewBranches(newBranches);
+      return await setNewClientGroups(newClientGroups);
     });
   } catch (e) {
     logMutationRecoveryError(e, lc, stepDescription, delegate);
   } finally {
-    await dagForOtherBranch.close();
+    await dagForOtherClientGroup.close();
     lc.debug?.('End:', stepDescription);
   }
   return;

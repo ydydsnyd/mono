@@ -24,8 +24,8 @@ import {
   FIND_MATCHING_CLIENT_TYPE_NEW,
   getClient,
   getClients,
-  getMainBranch,
-  getMainBranchID,
+  getMainClientGroup,
+  getMainClientGroupID,
   initClient,
   initClientDD31,
   isClientSDD,
@@ -35,8 +35,8 @@ import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import {ChainBuilder} from '../db/test-helpers';
 import {makeClient, setClientsForTesting} from './clients-test-helpers';
 import type {ClientID} from '../sync/client-id.js';
-import {Branch, getBranch, setBranch} from './branches.js';
-import type {BranchID} from '../sync/ids.js';
+import {ClientGroup, getClientGroup, setClientGroup} from './client-groups.js';
+import type {ClientGroupID} from '../sync/ids.js';
 import type {IndexDefinitions} from '../index-defs.js';
 
 let clock: SinonFakeTimers;
@@ -95,13 +95,13 @@ test('updateClients and getClients for DD31', async () => {
       client1: makeClient({
         heartbeatTimestampMs: 1000,
         headHash: headClient1Hash,
-        branchID: 'branch-id-1',
+        clientGroupID: 'client-group-id-1',
         tempRefreshHash: refresh1Hash,
       }),
       client2: {
         heartbeatTimestampMs: 3000,
         headHash: headClient2Hash,
-        branchID: 'branch-id-2',
+        clientGroupID: 'client-group-id-2',
         tempRefreshHash: null,
       },
     }),
@@ -368,7 +368,7 @@ test('initClient creates new empty snapshot when no existing snapshot to bootstr
       expect(client.lastServerAckdMutationID).to.equal(0);
     } else {
       // TODO(DD31): Implement
-      // expect(client.branchID).to.equal('TODO DD31');
+      // expect(client.clientGroupID).to.equal('TODO DD31');
     }
 
     // New client's head hash points to an empty snapshot with an empty btree.
@@ -480,14 +480,14 @@ test('setClient', async () => {
 
   const clientID = 'client-id';
   await t(clientID, {
-    branchID: 'branch-id-1',
+    clientGroupID: 'client-group-id-1',
     headHash: newUUIDHash(),
     heartbeatTimestampMs: 1,
     tempRefreshHash: null,
   });
 
   await t(clientID, {
-    branchID: 'branch-id-1',
+    clientGroupID: 'client-group-id-1',
     headHash: newUUIDHash(),
     heartbeatTimestampMs: 2,
     tempRefreshHash: newUUIDHash(),
@@ -495,14 +495,14 @@ test('setClient', async () => {
 
   const clientID2 = 'client-id-2';
   await t(clientID2, {
-    branchID: 'branch-id-1',
+    clientGroupID: 'client-group-id-1',
     headHash: newUUIDHash(),
     heartbeatTimestampMs: 3,
     tempRefreshHash: newUUIDHash(),
   });
 });
 
-test('getMainBranchID', async () => {
+test('getMainClientGroupID', async () => {
   if (!DD31) {
     return;
   }
@@ -512,32 +512,32 @@ test('getMainBranchID', async () => {
   const t = async (
     clientID: ClientID,
     client: Client,
-    branchID: BranchID,
-    branch: Branch,
-    expectedBranchID: BranchID | undefined,
-    expectedBranch: Branch | undefined,
+    clientGroupID: ClientGroupID,
+    clientGroup: ClientGroup,
+    expectedClientGroupID: ClientGroupID | undefined,
+    expectedClientGroup: ClientGroup | undefined,
   ) => {
     await dagStore.withWrite(async write => {
       await setClient(clientID, client, write);
-      await setBranch(branchID, branch, write);
+      await setClientGroup(clientGroupID, clientGroup, write);
       await write.commit();
     });
 
-    const actualBranchID = await dagStore.withRead(read =>
-      getMainBranchID(clientID, read),
+    const actualClientGroupID = await dagStore.withRead(read =>
+      getMainClientGroupID(clientID, read),
     );
-    expect(actualBranchID).to.equal(expectedBranchID);
+    expect(actualClientGroupID).to.equal(expectedClientGroupID);
 
-    const actualBranch = await dagStore.withRead(read =>
-      getMainBranch(clientID, read),
+    const actualClientGroup = await dagStore.withRead(read =>
+      getMainClientGroup(clientID, read),
     );
-    expect(actualBranch).to.deep.equal(expectedBranch);
+    expect(actualClientGroup).to.deep.equal(expectedClientGroup);
   };
 
   const clientID = 'client-id-1';
-  const branchID = 'branch-id-1';
+  const clientGroupID = 'client-group-id-1';
 
-  const branch = {
+  const clientGroup = {
     headHash: newUUIDHash(),
     lastServerAckdMutationIDs: {[clientID]: 0},
     mutationIDs: {[clientID]: 0},
@@ -546,40 +546,54 @@ test('getMainBranchID', async () => {
   };
   {
     const client = {
-      branchID,
+      clientGroupID,
       headHash: newUUIDHash(),
       heartbeatTimestampMs: 1,
       tempRefreshHash: null,
     };
-    await t(clientID, client, branchID, branch, branchID, branch);
+    await t(
+      clientID,
+      client,
+      clientGroupID,
+      clientGroup,
+      clientGroupID,
+      clientGroup,
+    );
   }
 
   {
     const client = {
-      branchID: 'branch-id-wrong',
+      clientGroupID: 'client-group-id-wrong',
       headHash: newUUIDHash(),
       heartbeatTimestampMs: 1,
       tempRefreshHash: null,
     };
     let err;
     try {
-      await t(clientID, client, branchID, branch, undefined, undefined);
+      await t(
+        clientID,
+        client,
+        clientGroupID,
+        clientGroup,
+        undefined,
+        undefined,
+      );
     } catch (e) {
       err = e;
     }
-    // Invalid client branch ID.
+    // Invalid client group ID.
     expect(err).to.be.instanceOf(Error);
   }
 
-  const actualBranchID2 = await dagStore.withRead(read =>
-    getMainBranchID(clientID, read),
+  const actualClientGroupID2 = await dagStore.withRead(read =>
+    getMainClientGroupID(clientID, read),
   );
-  expect(actualBranchID2).to.equal('branch-id-wrong');
+  expect(actualClientGroupID2).to.equal('client-group-id-wrong');
 
-  const actualBranch2 = await dagStore.withRead(read =>
-    getMainBranch(clientID, read),
+  const actualClientGroup2 = await dagStore.withRead(read =>
+    getMainClientGroup(clientID, read),
   );
-  expect(actualBranch2).to.be.undefined;
+  expect(actualClientGroup2).to.be.undefined;
 });
 
 suite('findMatchingClient', () => {
@@ -605,28 +619,28 @@ suite('findMatchingClient', () => {
   ) {
     const perdag = new dag.TestStore();
     const clientID = 'client-id';
-    const branchID = 'branch-id';
+    const clientGroupID = 'client-group-id';
     const b = new ChainBuilder(perdag);
     await b.addGenesis(clientID);
     await b.addLocal(clientID, []);
 
     await perdag.withWrite(async write => {
       const client: ClientDD31 = {
-        branchID,
+        clientGroupID,
         headHash: b.chain[1].chunk.hash,
         heartbeatTimestampMs: 1,
         tempRefreshHash: null,
       };
       await setClient(clientID, client, write);
 
-      const branch: Branch = {
+      const clientGroup: ClientGroup = {
         headHash: b.chain[1].chunk.hash,
         lastServerAckdMutationIDs: {[clientID]: 0},
         mutationIDs: {[clientID]: 1},
         indexes: initialIndexes,
         mutatorNames: initialMutatorNames,
       };
-      await setBranch(branchID, branch, write);
+      await setClientGroup(clientGroupID, clientGroup, write);
 
       await write.commit();
     });
@@ -681,14 +695,14 @@ suite('findMatchingClient', () => {
   ) {
     const perdag = new dag.TestStore();
     const clientID = 'client-id';
-    const branchID = 'branch-id';
+    const clientGroupID = 'client-group-id';
 
     const chainBuilder = new ChainBuilder(perdag, 'temp-head');
     await chainBuilder.addGenesis(clientID);
     await chainBuilder.addLocal(clientID, []);
     const {headHash} = chainBuilder;
 
-    const branch: Branch = {
+    const clientGroup: ClientGroup = {
       headHash,
       lastServerAckdMutationIDs: {[clientID]: 0},
       mutationIDs: {[clientID]: 1},
@@ -696,7 +710,7 @@ suite('findMatchingClient', () => {
       mutatorNames: initialMutatorNames,
     };
     await perdag.withWrite(async write => {
-      await setBranch(branchID, branch, write);
+      await setClientGroup(clientGroupID, clientGroup, write);
       await write.commit();
     });
 
@@ -706,7 +720,7 @@ suite('findMatchingClient', () => {
       const res = await findMatchingClient(read, newMutatorNames, newIndexes);
       const expected: FindMatchingClientResult = {
         type: FIND_MATCHING_CLIENT_TYPE_HEAD,
-        branchID,
+        clientGroupID,
         headHash,
       };
       expect(res).deep.equal(expected);
@@ -759,7 +773,7 @@ suite('initClientDD31', () => {
 
     const perdag = new dag.TestStore();
     const clientID1 = 'client-id-1';
-    const branchID = 'branch-id';
+    const clientGroupID = 'client-group-id';
     const b = new ChainBuilder(perdag);
     await b.addGenesis(clientID1);
     await b.addLocal(clientID1, []);
@@ -770,12 +784,12 @@ suite('initClientDD31', () => {
     clock.setSystemTime(10);
 
     const client1: ClientDD31 = {
-      branchID,
+      clientGroupID,
       headHash,
       heartbeatTimestampMs: 1,
       tempRefreshHash: null,
     };
-    const branch1: Branch = {
+    const clientGroup1: ClientGroup = {
       headHash: b.chain[1].chunk.hash,
       lastServerAckdMutationIDs: {[clientID1]: 0},
       mutationIDs: {[clientID1]: 1},
@@ -785,7 +799,7 @@ suite('initClientDD31', () => {
 
     await perdag.withWrite(async write => {
       await setClient(clientID1, client1, write);
-      await setBranch(branchID, branch1, write);
+      await setClientGroup(clientGroupID, clientGroup1, write);
       await write.commit();
     });
 
@@ -803,9 +817,11 @@ suite('initClientDD31', () => {
       tempRefreshHash: null,
     });
 
-    const branch2 = await perdag.withRead(read => getBranch(branchID, read));
-    expect(branch2).to.deep.equal({
-      ...branch1,
+    const clientGroup2 = await perdag.withRead(read =>
+      getClientGroup(clientGroupID, read),
+    );
+    expect(clientGroup2).to.deep.equal({
+      ...clientGroup1,
       lastServerAckdMutationIDs: {
         [clientID1]: 0,
       },
@@ -820,7 +836,7 @@ suite('initClientDD31', () => {
 
     const perdag = new dag.TestStore();
     const clientID1 = 'client-id-1';
-    const branchID1 = 'branch-id-1';
+    const clientGroupID1 = 'client-group-id-1';
     const b = new ChainBuilder(perdag);
     await b.addGenesis(clientID1);
     await b.addLocal(clientID1, []);
@@ -833,12 +849,12 @@ suite('initClientDD31', () => {
     clock.setSystemTime(10);
 
     const client1: ClientDD31 = {
-      branchID: branchID1,
+      clientGroupID: clientGroupID1,
       headHash,
       heartbeatTimestampMs: 1,
       tempRefreshHash: null,
     };
-    const branch1: Branch = {
+    const clientGroup1: ClientGroup = {
       headHash,
       lastServerAckdMutationIDs: {[clientID1]: 0},
       mutationIDs: {[clientID1]: 1},
@@ -848,7 +864,7 @@ suite('initClientDD31', () => {
 
     await perdag.withWrite(async write => {
       await setClient(clientID1, client1, write);
-      await setBranch(branchID1, branch1, write);
+      await setClientGroup(clientGroupID1, clientGroup1, write);
       await write.commit();
     });
 
@@ -860,8 +876,8 @@ suite('initClientDD31', () => {
     );
     expect(clientID2).to.not.equal(clientID1);
     assertClientDD31(client2);
-    const branchID2 = client2.branchID;
-    expect(branchID2).to.not.equal(branchID1);
+    const clientGroupID2 = client2.clientGroupID;
+    expect(clientGroupID2).to.not.equal(clientGroupID1);
     expect(clientMap.size).to.equal(2);
 
     expect(client2.headHash).to.not.equal(
@@ -871,8 +887,10 @@ suite('initClientDD31', () => {
     expect(client2.heartbeatTimestampMs).to.equal(10);
     expect(client2.tempRefreshHash).to.be.null;
 
-    const branch2 = await perdag.withRead(read => getBranch(branchID2, read));
-    expect(branch2).to.deep.equal({
+    const clientGroup2 = await perdag.withRead(read =>
+      getClientGroup(clientGroupID2, read),
+    );
+    expect(clientGroup2).to.deep.equal({
       headHash: client2.headHash,
       indexes: newIndexes,
       mutatorNames: newMutatorNames,
@@ -886,7 +904,7 @@ suite('initClientDD31', () => {
 
     const perdag = new dag.TestStore();
     const clientID1 = 'client-id-1';
-    const branchID1 = 'branch-id-1';
+    const clientGroupID1 = 'client-group-id-1';
     const b = new ChainBuilder(perdag);
     await b.addGenesis(clientID1);
 
@@ -916,12 +934,12 @@ suite('initClientDD31', () => {
     clock.setSystemTime(10);
 
     const client1: ClientDD31 = {
-      branchID: branchID1,
+      clientGroupID: clientGroupID1,
       headHash,
       heartbeatTimestampMs: 1,
       tempRefreshHash: null,
     };
-    const branch1: Branch = {
+    const clientGroup1: ClientGroup = {
       headHash,
       lastServerAckdMutationIDs: {[clientID1]: 0},
       mutationIDs: {[clientID1]: 1},
@@ -931,7 +949,7 @@ suite('initClientDD31', () => {
 
     await perdag.withWrite(async write => {
       await setClient(clientID1, client1, write);
-      await setBranch(branchID1, branch1, write);
+      await setClientGroup(clientGroupID1, clientGroup1, write);
       await write.commit();
     });
 
@@ -943,8 +961,8 @@ suite('initClientDD31', () => {
     );
     expect(clientID2).to.not.equal(clientID1);
     assertClientDD31(client2);
-    const branchID2 = client2.branchID;
-    expect(branchID2).to.not.equal(branchID1);
+    const clientGroupID2 = client2.clientGroupID;
+    expect(clientGroupID2).to.not.equal(clientGroupID1);
     expect(clientMap.size).to.equal(2);
 
     expect(client2.headHash).to.not.equal(
@@ -954,8 +972,10 @@ suite('initClientDD31', () => {
     expect(client2.heartbeatTimestampMs).to.equal(10);
     expect(client2.tempRefreshHash).to.be.null;
 
-    const branch2 = await perdag.withRead(read => getBranch(branchID2, read));
-    expect(branch2).to.deep.equal({
+    const clientGroup2 = await perdag.withRead(read =>
+      getClientGroup(clientGroupID2, read),
+    );
+    expect(clientGroup2).to.deep.equal({
       headHash: client2.headHash,
       indexes: newIndexes,
       mutatorNames: newMutatorNames,

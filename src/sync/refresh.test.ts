@@ -15,7 +15,11 @@ import * as db from '../db/mod';
 import {assertHash, Hash, makeNewFakeHashFunction} from '../hash';
 import {toInternalValue, ToInternalValueReason} from '../internal-value';
 import type {JSONValue, ReadonlyJSONValue} from '../json';
-import {BranchMap, setBranch, setBranches} from '../persist/branches';
+import {
+  ClientGroupMap,
+  setClientGroup,
+  setClientGroups,
+} from '../persist/client-groups';
 import {ClientDD31, setClient} from '../persist/clients';
 import {addData, testSubscriptionsManagerOptions} from '../test-util';
 import type {ClientID} from './ids';
@@ -48,7 +52,7 @@ function makeMemdagChain(
 }
 
 const PERDAG_TEST_SETUP_HEAD_NAME = 'test-setup-head';
-async function makePerdagChainAndSetClientsAndBranch(
+async function makePerdagChainAndSetClientsAndClientGroup(
   perdag: dag.Store,
   clientID: ClientID,
   cookie: number,
@@ -59,19 +63,19 @@ async function makePerdagChainAndSetClientsAndBranch(
     cookie,
     PERDAG_TEST_SETUP_HEAD_NAME,
   );
-  await setClientsAndBranches(headHash, clientID, perdag);
+  await setClientsAndClientGroups(headHash, clientID, perdag);
   return {headHash, chainBuilder};
 }
 
-async function setClientsAndBranches(
+async function setClientsAndClientGroups(
   headHash: Hash,
   clientID: ClientID,
   perdag: dag.Store,
 ) {
-  const branchID = 'branch-1';
-  const branches: BranchMap = new Map([
+  const clientGroupID = 'client-group-1';
+  const clientGroups: ClientGroupMap = new Map([
     [
-      branchID,
+      clientGroupID,
       {
         headHash,
         indexes: {},
@@ -85,7 +89,7 @@ async function setClientsAndBranches(
   ]);
 
   const client: ClientDD31 = {
-    branchID,
+    clientGroupID,
     headHash,
     // Not used
     heartbeatTimestampMs: -1,
@@ -93,7 +97,7 @@ async function setClientsAndBranches(
   };
 
   await perdag.withWrite(async perdagWrite => {
-    await setBranches(branches, perdagWrite);
+    await setClientGroups(clientGroups, perdagWrite);
     await setClient(clientID, client, perdagWrite);
     await perdagWrite.removeHead(PERDAG_TEST_SETUP_HEAD_NAME);
     await perdagWrite.commit();
@@ -137,7 +141,7 @@ suite('refresh', () => {
     const clientID = 'client-id-1';
     const mutators = mutatorsProxy();
 
-    await makePerdagChainAndSetClientsAndBranch(perdag, clientID, 1);
+    await makePerdagChainAndSetClientsAndClientGroup(perdag, clientID, 1);
     await makeMemdagChain(memdag, clientID, 1);
 
     const result = await refresh(
@@ -161,7 +165,7 @@ suite('refresh', () => {
     const clientID = 'client-id-1';
     const mutators: MutatorDefs = mutatorsProxy();
 
-    await makePerdagChainAndSetClientsAndBranch(perdag, clientID, 1);
+    await makePerdagChainAndSetClientsAndClientGroup(perdag, clientID, 1);
 
     // Memdag has one more LM than perdag.
     const {chainBuilder: memdagChainBuilder} = await makeMemdagChain(
@@ -200,7 +204,7 @@ suite('refresh', () => {
     const clientID = 'client-id-1';
     const mutators: MutatorDefs = mutatorsProxy();
 
-    await makePerdagChainAndSetClientsAndBranch(perdag, clientID, 1);
+    await makePerdagChainAndSetClientsAndClientGroup(perdag, clientID, 1);
 
     // Memdag has a newer cookie than perdag so we abort the refresh
     const {chainBuilder: memdagChainBuilder} = await makeMemdagChain(
@@ -228,7 +232,7 @@ suite('refresh', () => {
     const clientID = 'client-id-1';
     const mutators: MutatorDefs = mutatorsProxy();
 
-    await makePerdagChainAndSetClientsAndBranch(perdag, clientID, 1);
+    await makePerdagChainAndSetClientsAndClientGroup(perdag, clientID, 1);
 
     // Memdag has two more LM than perdag.
     const {chainBuilder: memdagChainBuilder} = await makeMemdagChain(
@@ -287,7 +291,7 @@ suite('refresh', () => {
     await perdagChainBuilder.addLocal(clientID1, []);
     const perdagHeadCommit = await perdagChainBuilder.addLocal(clientID2, []);
     const perdagHeadHash = perdagHeadCommit.chunk.hash;
-    await setClientsAndBranches(perdagHeadHash, clientID1, perdag);
+    await setClientsAndClientGroups(perdagHeadHash, clientID1, perdag);
 
     const memdagChainBuilder: ChainBuilder = new ChainBuilder(
       memdag,
@@ -330,7 +334,7 @@ suite('refresh', () => {
     const clientID = 'client-id-1';
     const mutators: MutatorDefs = mutatorsProxy();
 
-    await makePerdagChainAndSetClientsAndBranch(perdag, clientID, 2);
+    await makePerdagChainAndSetClientsAndClientGroup(perdag, clientID, 2);
 
     // Memdag has one more LM than perdag.
     const {chainBuilder: memdagChainBuilder} = await makeMemdagChain(
@@ -369,8 +373,8 @@ suite('refresh', () => {
     // This sample case was used by Greg to explain DD31 refresh to arv. Here is
     // an extract of that explanation (from Slack)
     //
-    // We update the memdags head to the head of the perdag branch The perdag
-    // branch may look like
+    // We update the memdags head to the head of the perdag client group The
+    // perdag client group may look like
     //
     // perdag:mainHead -> LM {clientID: 1 id: 4 } -> LM {clientID: 2 id: 3 } ->
     // Snapshot { lmids: { 1: 3, 2: 2} }
@@ -499,7 +503,7 @@ suite('refresh', () => {
 
     const clientID1 = 'client-id-1';
     const clientID2 = 'client-id-2';
-    const branchID = 'branch-1';
+    const clientGroupID = 'client-group-1';
 
     const s1 = await makeSnapshot({
       store: perdag,
@@ -531,7 +535,7 @@ suite('refresh', () => {
       await setClient(
         clientID1,
         {
-          branchID,
+          clientGroupID,
           headHash: l2.chunk.hash,
           heartbeatTimestampMs: 1,
           tempRefreshHash: null,
@@ -541,15 +545,15 @@ suite('refresh', () => {
       await setClient(
         clientID2,
         {
-          branchID,
+          clientGroupID,
           headHash: l2.chunk.hash,
           heartbeatTimestampMs: 2,
           tempRefreshHash: null,
         },
         dagWrite,
       );
-      await setBranch(
-        branchID,
+      await setClientGroup(
+        clientGroupID,
         {
           headHash: l2.chunk.hash,
           indexes: {},

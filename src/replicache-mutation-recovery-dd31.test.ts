@@ -105,14 +105,14 @@ suite('DD31', () => {
 
   function createPushBodyDD31(
     profileID: string,
-    branchID: sync.BranchID,
+    clientGroupID: sync.ClientGroupID,
     clientID: sync.ClientID,
     localMetas: db.LocalMetaDD31[],
     schemaVersion: string,
   ): ReadonlyJSONObject {
     return {
       profileID,
-      branchID,
+      clientGroupID,
       clientID,
       mutations: localMetas.map(localMeta => ({
         clientID,
@@ -181,15 +181,15 @@ suite('DD31', () => {
       persist.getClient(client1ID, read),
     );
     assertClientDD31(client1);
-    const branch1 = await testPerdag.withRead(read =>
-      persist.getBranch(client1.branchID, read),
+    const clientGroup1 = await testPerdag.withRead(read =>
+      persist.getClientGroup(client1.clientGroupID, read),
     );
-    assert(branch1);
+    assert(clientGroup1);
 
     fetchMock.reset();
     fetchMock.post(pushURL, 'ok');
     const pullLastMutationID =
-      branch1.mutationIDs[client1ID] - numMutationsNotAcknowledgedByPull;
+      clientGroup1.mutationIDs[client1ID] - numMutationsNotAcknowledgedByPull;
     const pullResponse: PullResponseDD31 = {
       cookie: 'pull_cookie_1',
       lastMutationIDChanges: {
@@ -206,7 +206,7 @@ suite('DD31', () => {
     expect(pushCalls.length).to.equal(1);
     expect(await pushCalls[0].request.json()).to.deep.equal({
       profileID,
-      branchID: client1.branchID,
+      clientGroupID: client1.clientGroupID,
       clientID: client1ID,
       mutations: [
         {
@@ -232,9 +232,9 @@ suite('DD31', () => {
     expect(pullCalls.length).to.equal(1);
     const pullReq: PullRequestDD31 = {
       profileID,
-      branchID: client1.branchID,
+      clientGroupID: client1.clientGroupID,
       cookie: 1,
-      isNewBranch: false,
+      isNewClientGroup: false,
       pullVersion: PULL_VERSION_DD31,
       schemaVersion: schemaVersionOfClientWPendingMutations,
     };
@@ -244,21 +244,20 @@ suite('DD31', () => {
       persist.getClient(client1ID, read),
     );
     assertClientDD31(updatedClient1);
-    // const branch = await testPerdag.withRead(read => persist.getBranch(updatedClient1.branchID, read));
 
-    expect(updatedClient1.branchID).to.deep.equal(client1.branchID);
+    expect(updatedClient1.clientGroupID).to.deep.equal(client1.clientGroupID);
     expect(updatedClient1.headHash).to.equal(client1.headHash);
 
-    const updatedBranch1 = await testPerdag.withRead(read =>
-      persist.getBranch(client1.branchID, read),
+    const updatedClientGroup1 = await testPerdag.withRead(read =>
+      persist.getClientGroup(client1.clientGroupID, read),
     );
 
-    assert(updatedBranch1);
-    expect(updatedBranch1.lastServerAckdMutationIDs).to.deep.equal({
+    assert(updatedClientGroup1);
+    expect(updatedClientGroup1.lastServerAckdMutationIDs).to.deep.equal({
       [client1ID]: pullLastMutationID,
     });
-    expect(updatedBranch1.mutationIDs).to.deep.equal({
-      [client1ID]: branch1.mutationIDs[client1ID],
+    expect(updatedClientGroup1.mutationIDs).to.deep.equal({
+      [client1ID]: clientGroup1.mutationIDs[client1ID],
     });
   }
 
@@ -340,7 +339,7 @@ suite('DD31', () => {
     expect(pushCalls.length).to.equal(1, "didn't call push");
     expect(await pushCalls[0].request.json()).to.deep.equal({
       profileID,
-      branchID: client1.branchID,
+      clientGroupID: client1.clientGroupID,
       clientID: client1ID,
       mutations: [
         {
@@ -437,7 +436,7 @@ suite('DD31', () => {
   });
 
   test('successfully recovering mutations of multiple clients with mix of schema versions and same replicache format version', async () => {
-    // These all have different mutator names to force unique branches.
+    // These all have different mutator names to force unique client groups.
     const schemaVersionOfClients1Thru3AndClientRecoveringMutations =
       'testSchema1';
     const schemaVersionOfClient4 = 'testSchema2';
@@ -523,25 +522,34 @@ suite('DD31', () => {
     assertClientDD31(client2);
     const client3 = clients1Thru3.get(client3ID);
     assertClientDD31(client3);
-    const {branch1, branch2, branch3} =
+    const {clientGroup1, clientGroup2, clientGroup3} =
       await testPerdagForClients1Thru3.withRead(async read => {
-        const branch1 = await persist.getBranch(client1.branchID, read);
-        assert(branch1);
-        const branch2 = await persist.getBranch(client2.branchID, read);
-        assert(branch2);
-        const branch3 = await persist.getBranch(client3.branchID, read);
-        assert(branch3);
-        return {branch1, branch2, branch3};
+        const clientGroup1 = await persist.getClientGroup(
+          client1.clientGroupID,
+          read,
+        );
+        assert(clientGroup1);
+        const clientGroup2 = await persist.getClientGroup(
+          client2.clientGroupID,
+          read,
+        );
+        assert(clientGroup2);
+        const clientGroup3 = await persist.getClientGroup(
+          client3.clientGroupID,
+          read,
+        );
+        assert(clientGroup3);
+        return {clientGroup1, clientGroup2, clientGroup3};
       });
 
     const client4 = await testPerdagForClient4.withRead(read =>
       persist.getClient(client4ID, read),
     );
     assertClientDD31(client4);
-    const branch4 = await testPerdagForClient4.withRead(read =>
-      persist.getBranch(client4.branchID, read),
+    const clientGroup4 = await testPerdagForClient4.withRead(read =>
+      persist.getClientGroup(client4.clientGroupID, read),
     );
-    assert(branch4);
+    assert(clientGroup4);
 
     const pullRequestJsonBodies: JSONObject[] = [];
     fetchMock.reset();
@@ -552,24 +560,24 @@ suite('DD31', () => {
         const requestJson = await request.json();
         assertJSONObject(requestJson);
         pullRequestJsonBodies.push(requestJson);
-        const {branchID} = requestJson;
-        switch (branchID) {
-          case client1.branchID:
+        const {clientGroupID} = requestJson;
+        switch (clientGroupID) {
+          case client1.clientGroupID:
             return {
               cookie: 'pull_cookie_1',
-              lastMutationIDChanges: branch1.mutationIDs,
+              lastMutationIDChanges: clientGroup1.mutationIDs,
               patch: [],
             };
-          case client3.branchID:
+          case client3.clientGroupID:
             return {
               cookie: 'pull_cookie_3',
-              lastMutationIDChanges: branch3.mutationIDs,
+              lastMutationIDChanges: clientGroup3.mutationIDs,
               patch: [],
             };
-          case client4.branchID:
+          case client4.clientGroupID:
             return {
               cookie: 'pull_cookie_4',
-              lastMutationIDChanges: branch4.mutationIDs,
+              lastMutationIDChanges: clientGroup4.mutationIDs,
               patch: [],
             };
           default:
@@ -585,7 +593,7 @@ suite('DD31', () => {
     expect(await pushCalls[0].request.json()).to.deep.equal(
       createPushBodyDD31(
         profileID,
-        client1.branchID,
+        client1.clientGroupID,
         client1ID,
         client1PendingLocalMetas,
         schemaVersionOfClients1Thru3AndClientRecoveringMutations,
@@ -594,7 +602,7 @@ suite('DD31', () => {
     expect(await pushCalls[1].request.json()).to.deep.equal(
       createPushBodyDD31(
         profileID,
-        client3.branchID,
+        client3.clientGroupID,
         client3ID,
         client3PendingLocalMetas,
         schemaVersionOfClients1Thru3AndClientRecoveringMutations,
@@ -603,7 +611,7 @@ suite('DD31', () => {
     expect(await pushCalls[2].request.json()).to.deep.equal(
       createPushBodyDD31(
         profileID,
-        client4.branchID,
+        client4.clientGroupID,
         client4ID,
         client4PendingLocalMetas,
         schemaVersionOfClient4,
@@ -612,27 +620,27 @@ suite('DD31', () => {
 
     expect(pullRequestJsonBodies.length).to.equal(3);
     expect(pullRequestJsonBodies[0]).to.deep.equal({
-      branchID: client1.branchID,
+      clientGroupID: client1.clientGroupID,
       profileID,
       schemaVersion: schemaVersionOfClients1Thru3AndClientRecoveringMutations,
       cookie: 1,
-      isNewBranch: false,
+      isNewClientGroup: false,
       pullVersion: 1,
     });
     expect(pullRequestJsonBodies[1]).to.deep.equal({
-      branchID: client3.branchID,
+      clientGroupID: client3.clientGroupID,
       profileID,
       schemaVersion: schemaVersionOfClients1Thru3AndClientRecoveringMutations,
       cookie: 3,
-      isNewBranch: false,
+      isNewClientGroup: false,
       pullVersion: 1,
     });
     expect(pullRequestJsonBodies[2]).to.deep.equal({
       profileID,
-      branchID: client4.branchID,
+      clientGroupID: client4.clientGroupID,
       schemaVersion: schemaVersionOfClient4,
       cookie: 4,
-      isNewBranch: false,
+      isNewClientGroup: false,
       pullVersion: 1,
     });
 
@@ -646,58 +654,58 @@ suite('DD31', () => {
     const updatedClient3 = updateClients1Thru3.get(client3ID);
     assertClientDD31(updatedClient3);
 
-    const updatedBranches = await testPerdagForClients1Thru3.withRead(read =>
-      persist.getBranches(read),
+    const updatedClientGroups = await testPerdagForClients1Thru3.withRead(
+      read => persist.getClientGroups(read),
     );
-    const updatedBranch1 = updatedBranches.get(client1.branchID);
-    assert(updatedBranch1);
-    const updatedBranch2 = updatedBranches.get(client2.branchID);
-    assert(updatedBranch2);
-    const updatedBranch3 = updatedBranches.get(client3.branchID);
-    assert(updatedBranch3);
+    const updatedClientGroup1 = updatedClientGroups.get(client1.clientGroupID);
+    assert(updatedClientGroup1);
+    const updatedClientGroup2 = updatedClientGroups.get(client2.clientGroupID);
+    assert(updatedClientGroup2);
+    const updatedClientGroup3 = updatedClientGroups.get(client3.clientGroupID);
+    assert(updatedClientGroup3);
 
     const updatedClient4 = await testPerdagForClient4.withRead(read =>
       persist.getClient(client4ID, read),
     );
     assertClientDD31(updatedClient4);
-    const updatedBranch4 = await testPerdagForClient4.withRead(read =>
-      persist.getBranch(client4.branchID, read),
+    const updatedClientGroup4 = await testPerdagForClient4.withRead(read =>
+      persist.getClientGroup(client4.clientGroupID, read),
     );
-    assert(updatedBranch4);
+    assert(updatedClientGroup4);
 
     expect(updatedClient1).to.deep.equal(client1);
-    expect(updatedBranch1).to.deep.equal({
-      ...branch1,
+    expect(updatedClientGroup1).to.deep.equal({
+      ...clientGroup1,
       lastServerAckdMutationIDs: {
-        ...branch1.lastServerAckdMutationIDs,
+        ...clientGroup1.lastServerAckdMutationIDs,
         // lastServerAckdMutationIDs is updated to high mutationID as mutations
         // were recovered
-        [client1ID]: branch1.mutationIDs[client1ID],
+        [client1ID]: clientGroup1.mutationIDs[client1ID],
       },
     });
 
     expect(updatedClient2).to.deep.equal(client2);
-    expect(updatedBranch2).to.deep.equal(branch2);
+    expect(updatedClientGroup2).to.deep.equal(clientGroup2);
 
     expect(updatedClient3).to.deep.equal(client3);
-    expect(updatedBranch3).to.deep.equal({
-      ...branch3,
+    expect(updatedClientGroup3).to.deep.equal({
+      ...clientGroup3,
       lastServerAckdMutationIDs: {
-        ...branch3.lastServerAckdMutationIDs,
+        ...clientGroup3.lastServerAckdMutationIDs,
         // lastServerAckdMutationIDs is updated to high mutationID as mutations
         // were recovered
-        [client3ID]: branch3.mutationIDs[client3ID],
+        [client3ID]: clientGroup3.mutationIDs[client3ID],
       },
     });
 
     expect(updatedClient4).to.deep.equal(client4);
-    expect(updatedBranch4).to.deep.equal({
-      ...branch4,
+    expect(updatedClientGroup4).to.deep.equal({
+      ...clientGroup4,
       lastServerAckdMutationIDs: {
-        ...branch4.lastServerAckdMutationIDs,
+        ...clientGroup4.lastServerAckdMutationIDs,
         // lastServerAckdMutationIDs is updated to high mutationID as mutations
         // were recovered
-        [client4ID]: branch4.mutationIDs[client4ID],
+        [client4ID]: clientGroup4.mutationIDs[client4ID],
       },
     });
   });
@@ -763,17 +771,29 @@ suite('DD31', () => {
     const client3 = clients.get(client3ID);
     assertClientDD31(client3);
 
-    const {branch1, branch2, branch3} = await testPerdag.withRead(
-      async read => {
-        const branch1 = await persist.getBranch(client1.branchID, read);
-        assert(branch1);
-        const branch2 = await persist.getBranch(client2.branchID, read);
-        assert(branch2);
-        const branch3 = await persist.getBranch(client3.branchID, read);
-        assert(branch3);
-        return {branch1, branch2, branch3};
-      },
-    );
+    const {clientGroup1, clientGroup2, clientGroup3} =
+      await testPerdag.withRead(async read => {
+        const clientGroup1 = await persist.getClientGroup(
+          client1.clientGroupID,
+          read,
+        );
+        assert(clientGroup1);
+        const clientGroup2 = await persist.getClientGroup(
+          client2.clientGroupID,
+          read,
+        );
+        assert(clientGroup2);
+        const clientGroup3 = await persist.getClientGroup(
+          client3.clientGroupID,
+          read,
+        );
+        assert(clientGroup3);
+        return {
+          clientGroup1,
+          clientGroup2,
+          clientGroup3,
+        };
+      });
 
     const pushRequestJsonBodies: JSONObject[] = [];
     const pullRequestJsonBodies: JSONObject[] = [];
@@ -803,13 +823,13 @@ suite('DD31', () => {
           case client1ID:
             return {
               cookie: 'pull_cookie_1',
-              lastMutationIDChanges: branch1.lastServerAckdMutationIDs,
+              lastMutationIDChanges: clientGroup1.lastServerAckdMutationIDs,
               patch: [],
             };
           case client3ID:
             return {
               cookie: 'pull_cookie_3',
-              lastMutationIDChanges: branch3.lastServerAckdMutationIDs,
+              lastMutationIDChanges: clientGroup3.lastServerAckdMutationIDs,
               patch: [],
             };
           default:
@@ -824,7 +844,7 @@ suite('DD31', () => {
     expect(pushRequestJsonBodies[0]).to.deep.equal(
       createPushBodyDD31(
         profileID,
-        client1.branchID,
+        client1.clientGroupID,
         client1ID,
         client1PendingLocalMetas,
         schemaVersion,
@@ -833,7 +853,7 @@ suite('DD31', () => {
     expect(pushRequestJsonBodies[1]).to.deep.equal(
       createPushBodyDD31(
         profileID,
-        client2.branchID,
+        client2.clientGroupID,
         client2ID,
         client2PendingLocalMetas,
         schemaVersion,
@@ -842,7 +862,7 @@ suite('DD31', () => {
     expect(pushRequestJsonBodies[2]).to.deep.equal(
       createPushBodyDD31(
         profileID,
-        client3.branchID,
+        client3.clientGroupID,
         client3ID,
         client3PendingLocalMetas,
         schemaVersion,
@@ -852,18 +872,18 @@ suite('DD31', () => {
     expect(pullRequestJsonBodies.length).to.equal(2);
     expect(pullRequestJsonBodies[0]).to.deep.equal({
       profileID,
-      branchID: client1.branchID,
+      clientGroupID: client1.clientGroupID,
       schemaVersion,
       cookie: 1,
-      isNewBranch: false,
+      isNewClientGroup: false,
       pullVersion: 1,
     });
     expect(pullRequestJsonBodies[1]).to.deep.equal({
       profileID,
-      branchID: client3.branchID,
+      clientGroupID: client3.clientGroupID,
       schemaVersion,
       cookie: 3,
-      isNewBranch: false,
+      isNewClientGroup: false,
       pullVersion: 1,
     });
 
@@ -877,24 +897,24 @@ suite('DD31', () => {
     const updatedClient3 = updateClients.get(client3ID);
     assertClientDD31(updatedClient3);
 
-    const updatedBranches = await testPerdag.withRead(read =>
-      persist.getBranches(read),
+    const updatedClientGroups = await testPerdag.withRead(read =>
+      persist.getClientGroups(read),
     );
-    const updatedBranch1 = updatedBranches.get(client1.branchID);
-    assert(updatedBranch1);
-    const updatedBranch2 = updatedBranches.get(client2.branchID);
-    assert(updatedBranch2);
-    const updatedBranch3 = updatedBranches.get(client3.branchID);
-    assert(updatedBranch3);
+    const updatedClientGroup1 = updatedClientGroups.get(client1.clientGroupID);
+    assert(updatedClientGroup1);
+    const updatedClientGroup2 = updatedClientGroups.get(client2.clientGroupID);
+    assert(updatedClientGroup2);
+    const updatedClientGroup3 = updatedClientGroups.get(client3.clientGroupID);
+    assert(updatedClientGroup3);
 
     expect(updatedClient1).to.deep.equal(client1);
-    expect(updatedBranch1).to.deep.equal(branch1);
+    expect(updatedClientGroup1).to.deep.equal(clientGroup1);
 
     expect(updatedClient2).to.deep.equal(client2);
-    expect(updatedBranch2).to.deep.equal(branch2);
+    expect(updatedClientGroup2).to.deep.equal(clientGroup2);
 
     expect(updatedClient3).to.deep.equal(client3);
-    expect(updatedBranch3).to.deep.equal(branch3);
+    expect(updatedClientGroup3).to.deep.equal(clientGroup3);
   });
 
   test('if an error occurs recovering one client, continues to try to recover other clients', async () => {
@@ -957,17 +977,29 @@ suite('DD31', () => {
     const client3 = clients.get(client3ID);
     assertClientDD31(client3);
 
-    const {branch1, branch2, branch3} = await testPerdag.withRead(
-      async read => {
-        const branch1 = await persist.getBranch(client1.branchID, read);
-        assert(branch1);
-        const branch2 = await persist.getBranch(client2.branchID, read);
-        assert(branch2);
-        const branch3 = await persist.getBranch(client3.branchID, read);
-        assert(branch3);
-        return {branch1, branch2, branch3};
-      },
-    );
+    const {clientGroup1, clientGroup2, clientGroup3} =
+      await testPerdag.withRead(async read => {
+        const clientGroup1 = await persist.getClientGroup(
+          client1.clientGroupID,
+          read,
+        );
+        assert(clientGroup1);
+        const clientGroup2 = await persist.getClientGroup(
+          client2.clientGroupID,
+          read,
+        );
+        assert(clientGroup2);
+        const clientGroup3 = await persist.getClientGroup(
+          client3.clientGroupID,
+          read,
+        );
+        assert(clientGroup3);
+        return {
+          clientGroup1,
+          clientGroup2,
+          clientGroup3,
+        };
+      });
 
     const pullRequestJsonBodies: JSONObject[] = [];
     fetchMock.reset();
@@ -983,13 +1015,13 @@ suite('DD31', () => {
           case client1ID:
             return {
               cookie: 'pull_cookie_1',
-              lastMutationIDChanges: branch1.lastServerAckdMutationIDs,
+              lastMutationIDChanges: clientGroup1.lastServerAckdMutationIDs,
               patch: [],
             };
           case client3ID:
             return {
               cookie: 'pull_cookie_3',
-              lastMutationIDChanges: branch3.lastServerAckdMutationIDs,
+              lastMutationIDChanges: clientGroup3.lastServerAckdMutationIDs,
               patch: [],
             };
           default:
@@ -1018,7 +1050,7 @@ suite('DD31', () => {
     expect(await pushCalls[0].request.json()).to.deep.equal(
       createPushBodyDD31(
         profileID,
-        client1.branchID,
+        client1.clientGroupID,
         client1ID,
         client1PendingLocalMetas,
         schemaVersion,
@@ -1027,7 +1059,7 @@ suite('DD31', () => {
     expect(await pushCalls[1].request.json()).to.deep.equal(
       createPushBodyDD31(
         profileID,
-        client3.branchID,
+        client3.clientGroupID,
         client3ID,
         client3PendingLocalMetas,
         schemaVersion,
@@ -1037,18 +1069,18 @@ suite('DD31', () => {
     expect(pullRequestJsonBodies.length).to.equal(2);
     expect(pullRequestJsonBodies[0]).to.deep.equal({
       profileID,
-      branchID: client1.branchID,
+      clientGroupID: client1.clientGroupID,
       schemaVersion,
       cookie: 1,
-      isNewBranch: false,
+      isNewClientGroup: false,
       pullVersion: 1,
     });
     expect(pullRequestJsonBodies[1]).to.deep.equal({
       profileID,
-      branchID: client3.branchID,
+      clientGroupID: client3.clientGroupID,
       schemaVersion,
       cookie: 3,
-      isNewBranch: false,
+      isNewClientGroup: false,
       pullVersion: 1,
     });
 
@@ -1062,24 +1094,24 @@ suite('DD31', () => {
     const updatedClient3 = updateClients.get(client3ID);
     assertClientDD31(updatedClient3);
 
-    const updatedBranches = await testPerdag.withRead(read =>
-      persist.getBranches(read),
+    const updatedClientGroups = await testPerdag.withRead(read =>
+      persist.getClientGroups(read),
     );
-    const updatedBranch1 = updatedBranches.get(client1.branchID);
-    assert(updatedBranch1);
-    const updatedBranch2 = updatedBranches.get(client2.branchID);
-    assert(updatedBranch2);
-    const updatedBranch3 = updatedBranches.get(client3.branchID);
-    assert(updatedBranch3);
+    const updatedClientGroup1 = updatedClientGroups.get(client1.clientGroupID);
+    assert(updatedClientGroup1);
+    const updatedClientGroup2 = updatedClientGroups.get(client2.clientGroupID);
+    assert(updatedClientGroup2);
+    const updatedClientGroup3 = updatedClientGroups.get(client3.clientGroupID);
+    assert(updatedClientGroup3);
 
     expect(updatedClient1).to.deep.equal(client1);
-    expect(updatedBranch1).to.deep.equal(branch1);
+    expect(updatedClientGroup1).to.deep.equal(clientGroup1);
 
     expect(updatedClient2).to.deep.equal(client2);
-    expect(updatedBranch2).to.deep.equal(branch2);
+    expect(updatedClientGroup2).to.deep.equal(clientGroup2);
 
     expect(updatedClient3).to.deep.equal(client3);
-    expect(updatedBranch3).to.deep.equal(branch3);
+    expect(updatedClientGroup3).to.deep.equal(clientGroup3);
   });
 
   test('if an error occurs recovering one db, continues to try to recover clients from other dbs', async () => {
@@ -1144,15 +1176,15 @@ suite('DD31', () => {
     );
     assertClientDD31(client2);
 
-    const branch1 = await testPerdagForClient1.withRead(read =>
-      persist.getBranch(client1.branchID, read),
+    const clientGroup1 = await testPerdagForClient1.withRead(read =>
+      persist.getClientGroup(client1.clientGroupID, read),
     );
-    assert(branch1);
+    assert(clientGroup1);
 
-    const branch2 = await testPerdagForClient2.withRead(read =>
-      persist.getBranch(client2.branchID, read),
+    const clientGroup2 = await testPerdagForClient2.withRead(read =>
+      persist.getClientGroup(client2.clientGroupID, read),
     );
-    assert(branch2);
+    assert(clientGroup2);
 
     const pullRequestJsonBodies: JSONObject[] = [];
     fetchMock.reset();
@@ -1163,13 +1195,13 @@ suite('DD31', () => {
         const requestJson = await request.json();
         assertJSONObject(requestJson);
         pullRequestJsonBodies.push(requestJson);
-        const {branchID} = requestJson;
-        switch (branchID) {
-          case client2.branchID: {
+        const {clientGroupID} = requestJson;
+        switch (clientGroupID) {
+          case client2.clientGroupID: {
             const pullResponse: PullResponseDD31 = {
               cookie: 'pull_cookie_2',
               lastMutationIDChanges: {
-                [client2ID]: branch2.mutationIDs[client2ID] ?? 0,
+                [client2ID]: clientGroup2.mutationIDs[client2ID] ?? 0,
               },
               patch: [],
             };
@@ -1202,7 +1234,7 @@ suite('DD31', () => {
     expect(await pushCalls[0].request.json()).to.deep.equal(
       createPushBodyDD31(
         profileID,
-        client2.branchID,
+        client2.clientGroupID,
         client2ID,
         client2PendingLocalMetas,
         schemaVersionOfClient2,
@@ -1211,11 +1243,11 @@ suite('DD31', () => {
 
     expect(pullRequestJsonBodies.length).to.equal(1);
     expect(pullRequestJsonBodies[0]).to.deep.equal({
-      branchID: client2.branchID,
+      clientGroupID: client2.clientGroupID,
       profileID,
       schemaVersion: schemaVersionOfClient2,
       cookie: 2,
-      isNewBranch: false,
+      isNewClientGroup: false,
       pullVersion: PULL_VERSION_DD31,
     });
 
@@ -1229,32 +1261,32 @@ suite('DD31', () => {
     );
     assertClientDD31(updatedClient2);
 
-    const updatedBranch1 = await testPerdagForClient1.withRead(read =>
-      persist.getBranch(updatedClient1.branchID, read),
+    const updatedClientGroup1 = await testPerdagForClient1.withRead(read =>
+      persist.getClientGroup(updatedClient1.clientGroupID, read),
     );
-    assert(updatedBranch1);
-    const updatedBranch2 = await testPerdagForClient2.withRead(read =>
-      persist.getBranch(updatedClient2.branchID, read),
+    assert(updatedClientGroup1);
+    const updatedClientGroup2 = await testPerdagForClient2.withRead(read =>
+      persist.getClientGroup(updatedClient2.clientGroupID, read),
     );
-    assert(updatedBranch2);
+    assert(updatedClientGroup2);
 
-    expect(updatedBranch1.mutationIDs[client1ID]).equal(
-      branch1.mutationIDs[client1ID],
+    expect(updatedClientGroup1.mutationIDs[client1ID]).equal(
+      clientGroup1.mutationIDs[client1ID],
     );
     // lastServerAckdMutationID not updated due to error when recovering this
     // client's db
-    expect(updatedBranch1.lastServerAckdMutationIDs[client1ID]).equal(
-      branch1.lastServerAckdMutationIDs[client1ID],
+    expect(updatedClientGroup1.lastServerAckdMutationIDs[client1ID]).equal(
+      clientGroup1.lastServerAckdMutationIDs[client1ID],
     );
     expect(updatedClient1.headHash).to.equal(client1.headHash);
 
-    expect(updatedBranch2.mutationIDs[client2ID]).equal(
-      branch2.mutationIDs[client2ID],
+    expect(updatedClientGroup2.mutationIDs[client2ID]).equal(
+      clientGroup2.mutationIDs[client2ID],
     );
     // lastServerAckdMutationID is updated to high mutationID as mutations
     // were recovered despite error in other db
-    expect(updatedBranch2.lastServerAckdMutationIDs[client2ID]).equal(
-      branch2.mutationIDs[client2ID],
+    expect(updatedClientGroup2.lastServerAckdMutationIDs[client2ID]).equal(
+      clientGroup2.mutationIDs[client2ID],
     );
     expect(updatedClient2.headHash).to.equal(client2.headHash);
   });
@@ -1301,7 +1333,7 @@ suite('DD31', () => {
       client2ID,
       testPerdag,
       1,
-      // Different mutator names to ensure different branches.
+      // Different mutator names to ensure different client groups.
       ['mutator_name_2', 'client2'],
       2,
     );
@@ -1352,7 +1384,7 @@ suite('DD31', () => {
     expect(await pushCalls[0].request.json()).to.deep.equal(
       createPushBodyDD31(
         profileID,
-        client1.branchID,
+        client1.clientGroupID,
         client1ID,
         client1PendingLocalMetas,
         schemaVersion,
@@ -1600,11 +1632,11 @@ suite('DD31', () => {
         persist.getClient(client2ID, read),
       );
       assertClientDD31(client2);
-      const branch2 = await testPerdagDD31.withRead(read =>
-        persist.getBranch(client2.branchID, read),
+      const clientGroup2 = await testPerdagDD31.withRead(read =>
+        persist.getClientGroup(client2.clientGroupID, read),
       );
-      assert(branch2);
-      expect(branch2.mutationIDs[client2ID]).to.equal(2);
+      assert(clientGroup2);
+      expect(clientGroup2.mutationIDs[client2ID]).to.equal(2);
 
       const pullRequestJSONBodies: JSONObject[] = [];
       const pushRequestJSONBodies: JSONObject[] = [];
@@ -1632,10 +1664,10 @@ suite('DD31', () => {
             };
             return resp;
           }
-          if (requestJSON.branchID === client2.branchID) {
+          if (requestJSON.clientGroupID === client2.clientGroupID) {
             const resp: PullResponseDD31 = {
               cookie: 'c3',
-              lastMutationIDChanges: branch2.mutationIDs,
+              lastMutationIDChanges: clientGroup2.mutationIDs,
               patch: [],
             };
             return resp;
@@ -1662,7 +1694,7 @@ suite('DD31', () => {
       };
       const pushRequestBody2: PushRequestDD31 = {
         clientID: client2ID,
-        branchID: client2.branchID,
+        clientGroupID: client2.clientGroupID,
         mutations: [
           {
             clientID: client2ID,
@@ -1681,7 +1713,10 @@ suite('DD31', () => {
         expect(actual.length).to.equal(expected.length);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const sortByClientID = (a: any, b: any) =>
-          stringCompare(a.clientID ?? a.branchID, b.clientID ?? b.branchID);
+          stringCompare(
+            a.clientID ?? a.clientGroupID,
+            b.clientID ?? b.clientGroupID,
+          );
         expect(actual.sort(sortByClientID)).to.deep.equal(
           expected.sort(sortByClientID),
         );
@@ -1700,12 +1735,12 @@ suite('DD31', () => {
         schemaVersion: schemaVersion1,
       };
       const pullRequestBody2: PullRequestDD31 = {
-        branchID: client2.branchID,
+        clientGroupID: client2.clientGroupID,
         cookie: 'c2',
         profileID,
         pullVersion: PULL_VERSION_DD31,
         schemaVersion: schemaVersion2,
-        isNewBranch: false,
+        isNewClientGroup: false,
       };
       expectRequestBodies(pullRequestJSONBodies, [
         pullRequestBody2,
@@ -1728,15 +1763,15 @@ suite('DD31', () => {
       assertClientDD31(updatedClient2);
       expect(updatedClient2).to.deep.equal(client2);
 
-      const updatedBranch2 = await testPerdagDD31.withRead(read =>
-        persist.getBranch(client2.branchID, read),
+      const updatedClientGroup2 = await testPerdagDD31.withRead(read =>
+        persist.getClientGroup(client2.clientGroupID, read),
       );
-      expect(updatedBranch2).to.deep.equal({
-        ...branch2,
+      expect(updatedClientGroup2).to.deep.equal({
+        ...clientGroup2,
         lastServerAckdMutationIDs: {
-          ...branch2.lastServerAckdMutationIDs,
+          ...clientGroup2.lastServerAckdMutationIDs,
           // This got updated by the mutation recovery!
-          [client2ID]: branch2.mutationIDs[client2ID],
+          [client2ID]: clientGroup2.mutationIDs[client2ID],
         },
       });
     }
@@ -1789,11 +1824,11 @@ suite('DD31', () => {
       persist.getClient(client1ID, read),
     );
     assertClientDD31(client1);
-    const branch1 = await testPerdagDD31.withRead(read =>
-      persist.getBranch(client1.branchID, read),
+    const clientGroup1 = await testPerdagDD31.withRead(read =>
+      persist.getClientGroup(client1.clientGroupID, read),
     );
-    assert(branch1);
-    expect(branch1.mutationIDs[client1ID]).to.equal(2);
+    assert(clientGroup1);
+    expect(clientGroup1.mutationIDs[client1ID]).to.equal(2);
 
     const pullRequestJSONBodies: JSONObject[] = [];
     const pushRequestJSONBodies: JSONObject[] = [];
@@ -1828,10 +1863,10 @@ suite('DD31', () => {
     assertClientDD31(updatedClient1);
     expect(updatedClient1).to.deep.equal(client1);
 
-    const updatedBranch1 = await testPerdagDD31.withRead(read =>
-      persist.getBranch(client1.branchID, read),
+    const updatedClientGroup1 = await testPerdagDD31.withRead(read =>
+      persist.getClientGroup(client1.clientGroupID, read),
     );
-    expect(updatedBranch1).to.deep.equal(branch1);
+    expect(updatedClientGroup1).to.deep.equal(clientGroup1);
   }
 
   test('pushDisabled so no recovery possible', async () => {
@@ -1877,11 +1912,11 @@ suite('DD31', () => {
       persist.getClient(client1ID, read),
     );
     assertClientDD31(client1);
-    const branch1 = await testPerdagDD31.withRead(read =>
-      persist.getBranch(client1.branchID, read),
+    const clientGroup1 = await testPerdagDD31.withRead(read =>
+      persist.getClientGroup(client1.clientGroupID, read),
     );
-    assert(branch1);
-    expect(branch1.mutationIDs[client1ID]).to.equal(2);
+    assert(clientGroup1);
+    expect(clientGroup1.mutationIDs[client1ID]).to.equal(2);
 
     const pullRequestJSONBodies: JSONObject[] = [];
     const pushRequestJSONBodies: JSONObject[] = [];
@@ -1909,7 +1944,7 @@ suite('DD31', () => {
 
     const pushRequestBody1: PushRequestDD31 = {
       clientID: client1ID,
-      branchID: client1.branchID,
+      clientGroupID: client1.clientGroupID,
       mutations: [
         {
           clientID: client1ID,
@@ -1933,11 +1968,11 @@ suite('DD31', () => {
     assertClientDD31(updatedClient1);
     expect(updatedClient1).to.deep.equal(client1);
 
-    const updatedBranch1 = await testPerdagDD31.withRead(read =>
-      persist.getBranch(client1.branchID, read),
+    const updatedClientGroup1 = await testPerdagDD31.withRead(read =>
+      persist.getClientGroup(client1.clientGroupID, read),
     );
     // This did not get updated because pull was disabled!
-    expect(updatedBranch1).to.deep.equal(branch1);
+    expect(updatedClientGroup1).to.deep.equal(clientGroup1);
   }
 
   test('pullDisabled so cannot confirm recovery', async () => {

@@ -20,12 +20,12 @@ import {
 } from '../db/commit';
 import type {ClientID} from '../sync/ids';
 import {
-  Branch,
-  getBranch,
-  getBranches,
+  ClientGroup,
+  getClientGroup,
+  getClientGroups,
   mutatorNamesEqual,
-  setBranch,
-} from './branches';
+  setClientGroup,
+} from './client-groups';
 import {IndexDefinitions, indexDefinitionsEqual} from '../index-defs';
 import {CastReason, InternalValue, safeCastToJSON} from '../internal-value';
 import {createIndexBTree} from '../db/write';
@@ -88,16 +88,16 @@ export type ClientDD31 = {
   readonly tempRefreshHash: Hash | null;
 
   /**
-   * ID of this client's perdag branch. This needs to be sent in pull request
-   * (to enable syncing all last mutation ids in the branch).
+   * ID of this client's perdag client group. This needs to be sent in pull
+   * request (to enable syncing all last mutation ids in the client group).
    */
-  readonly branchID: sync.BranchID;
+  readonly clientGroupID: sync.ClientGroupID;
 };
 
 export type Client = ClientSDD | ClientDD31;
 
 export function isClientDD31(client: Client): client is ClientDD31 {
-  return DD31 && (client as ClientDD31).branchID !== undefined;
+  return DD31 && (client as ClientDD31).clientGroupID !== undefined;
 }
 
 export function isClientSDD(client: Client): client is ClientSDD {
@@ -116,7 +116,7 @@ function assertClient(value: unknown): asserts value is Client {
     if (tempRefreshHash) {
       assertHash(tempRefreshHash);
     }
-    assertString(value.branchID);
+    assertString(value.clientGroupID);
   }
 }
 
@@ -145,7 +145,7 @@ export function assertClientDD31(value: unknown): asserts value is ClientDD31 {
   if (tempRefreshHash) {
     assertHash(tempRefreshHash);
   }
-  assertString(value.branchID);
+  assertString(value.clientGroupID);
 }
 
 function chunkDataToClientMap(chunkData: unknown): ClientMap {
@@ -329,7 +329,7 @@ export function initClientDD31(
   assert(DD31);
 
   return perdag.withWrite(async dagWrite => {
-    async function setClientsAndBranchAndCommit(
+    async function setClientsAndClientGroupAndCommit(
       basisHash: Hash | null,
       cookieJSON: InternalValue,
       valueHash: Hash,
@@ -347,18 +347,18 @@ export function initClientDD31(
         getRefs(newSnapshotData),
       );
 
-      const newBranchID = makeUuid();
+      const newClientGroupID = makeUuid();
 
       const newClient: ClientDD31 = {
         heartbeatTimestampMs: Date.now(),
         headHash: chunk.hash,
         tempRefreshHash: null,
-        branchID: newBranchID,
+        clientGroupID: newClientGroupID,
       };
 
       const newClients = new Map(clients).set(newClientID, newClient);
 
-      const branch: Branch = {
+      const clientGroup: ClientGroup = {
         headHash: chunk.hash,
         mutatorNames,
         indexes,
@@ -369,7 +369,7 @@ export function initClientDD31(
       await Promise.all([
         dagWrite.putChunk(chunk),
         setClients(newClients, dagWrite),
-        setBranch(newBranchID, branch, dagWrite),
+        setClientGroup(newClientGroupID, clientGroup, dagWrite),
       ]);
 
       await dagWrite.commit();
@@ -382,11 +382,12 @@ export function initClientDD31(
 
     const res = await findMatchingClient(dagWrite, mutatorNames, indexes);
     if (res.type === FIND_MATCHING_CLIENT_TYPE_HEAD) {
-      // We found a branch with matching mutators and indexes. We can reuse it.
-      const {branchID, headHash} = res;
+      // We found a client group with matching mutators and indexes. We can
+      // reuse it.
+      const {clientGroupID, headHash} = res;
 
       const newClient: ClientDD31 = {
-        branchID,
+        clientGroupID,
         headHash,
         heartbeatTimestampMs: Date.now(),
         tempRefreshHash: null,
@@ -399,7 +400,7 @@ export function initClientDD31(
     }
 
     if (res.type === FIND_MATCHING_CLIENT_TYPE_NEW) {
-      // No branch to fork from. Create empty snapshot.
+      // No client group to fork from. Create empty snapshot.
       const emptyBTreeChunk = dagWrite.createChunk(btree.emptyDataNode, []);
       await dagWrite.putChunk(emptyBTreeChunk);
 
@@ -419,7 +420,7 @@ export function initClientDD31(
         });
       }
 
-      return setClientsAndBranchAndCommit(
+      return setClientsAndClientGroupAndCommit(
         null,
         null,
         emptyBTreeChunk.hash,
@@ -427,7 +428,8 @@ export function initClientDD31(
       );
     }
 
-    // Now we create a new client and branch that we fork from the found snapshot.
+    // Now we create a new client and client group that we fork from the found
+    // snapshot.
     assert(res.type === FIND_MATCHING_CLIENT_TYPE_FORK);
 
     const {snapshot} = res;
@@ -468,7 +470,7 @@ export function initClientDD31(
       }
     }
 
-    return setClientsAndBranchAndCommit(
+    return setClientsAndClientGroupAndCommit(
       snapshot.meta.basisHash,
       snapshot.meta.cookieJSON,
       snapshot.valueHash,
@@ -500,7 +502,7 @@ export type FindMatchingClientResult =
     }
   | {
       type: typeof FIND_MATCHING_CLIENT_TYPE_HEAD;
-      branchID: sync.BranchID;
+      clientGroupID: sync.ClientGroupID;
       headHash: Hash;
     };
 
@@ -513,28 +515,28 @@ export async function findMatchingClient(
   let bestSnapshot: db.Commit<db.SnapshotMetaDD31> | undefined;
   const mutatorNamesSet = new Set(mutatorNames);
 
-  const branches = await getBranches(dagRead);
-  for (const [branchID, branch] of branches) {
+  const clientGroups = await getClientGroups(dagRead);
+  for (const [clientGroupID, clientGroup] of clientGroups) {
     if (
-      mutatorNamesEqual(mutatorNamesSet, branch.mutatorNames) &&
-      indexDefinitionsEqual(indexes, branch.indexes)
+      mutatorNamesEqual(mutatorNamesSet, clientGroup.mutatorNames) &&
+      indexDefinitionsEqual(indexes, clientGroup.indexes)
     ) {
       // exact match
       return {
         type: FIND_MATCHING_CLIENT_TYPE_HEAD,
-        branchID,
-        headHash: branch.headHash,
+        clientGroupID,
+        headHash: clientGroup.headHash,
       };
     }
 
-    const branchSnapshotCommit = await db.baseSnapshotFromHash(
-      branch.headHash,
+    const clientGroupSnapshotCommit = await db.baseSnapshotFromHash(
+      clientGroup.headHash,
       dagRead,
     );
-    assertSnapshotCommitDD31(branchSnapshotCommit);
+    assertSnapshotCommitDD31(clientGroupSnapshotCommit);
 
     const cookieJSON = safeCastToJSON(
-      branchSnapshotCommit.meta.cookieJSON,
+      clientGroupSnapshotCommit.meta.cookieJSON,
       CastReason.CompareCookies,
     );
     if (
@@ -542,7 +544,7 @@ export async function findMatchingClient(
       compareCookies(cookieJSON, newestCookie) > 0
     ) {
       newestCookie = cookieJSON;
-      bestSnapshot = branchSnapshotCommit;
+      bestSnapshot = clientGroupSnapshotCommit;
     }
   }
 
@@ -567,28 +569,28 @@ function getRefsForClients(clients: ClientMap): Hash[] {
   return refs;
 }
 
-export async function getMainBranch(
+export async function getMainClientGroup(
   clientID: ClientID,
   read: dag.Read,
-): Promise<Branch | undefined> {
+): Promise<ClientGroup | undefined> {
   assert(DD31);
-  const branchID = await getMainBranchID(clientID, read);
-  if (!branchID) {
+  const clientGroupID = await getMainClientGroupID(clientID, read);
+  if (!clientGroupID) {
     return undefined;
   }
-  return await getBranch(branchID, read);
+  return await getClientGroup(clientGroupID, read);
 }
 
-export async function getMainBranchID(
+export async function getMainClientGroupID(
   clientID: ClientID,
   read: dag.Read,
-): Promise<sync.BranchID | undefined> {
+): Promise<sync.ClientGroupID | undefined> {
   assert(DD31);
   const client = await getClient(clientID, read);
   if (!client || !isClientDD31(client)) {
     return undefined;
   }
-  return client.branchID;
+  return client.clientGroupID;
 }
 
 /**

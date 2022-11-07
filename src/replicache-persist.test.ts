@@ -21,7 +21,7 @@ import {assert, assertNotUndefined} from './asserts';
 import {deleteClientForTesting} from './persist/clients-test-helpers';
 import {assertClientDD31} from './persist/clients';
 import type {MutatorDefs, WriteTransaction} from './mod';
-import {deleteBranch} from './persist/branches';
+import {deleteClientGroup} from './persist/client-groups';
 import {assertHash} from './hash';
 
 initReplicacheTesting();
@@ -49,13 +49,13 @@ test('basic persist & load', async () => {
   );
   assertNotUndefined(clientBeforePull);
 
-  let branchBeforePull: persist.Branch | undefined;
+  let clientGroupBeforePull: persist.ClientGroup | undefined;
   if (DD31) {
     assertClientDD31(clientBeforePull);
-    branchBeforePull = await perdag.withRead(read =>
-      persist.getBranch(clientBeforePull.branchID, read),
+    clientGroupBeforePull = await perdag.withRead(read =>
+      persist.getClientGroup(clientBeforePull.clientGroupID, read),
     );
-    assertNotUndefined(branchBeforePull);
+    assertNotUndefined(clientGroupBeforePull);
   }
 
   fetchMock.postOnce(
@@ -91,12 +91,13 @@ test('basic persist & load', async () => {
     await tickAFewTimes(waitMs);
     if (DD31) {
       assertClientDD31(clientBeforePull);
-      assertNotUndefined(branchBeforePull);
-      const branch: persist.Branch | undefined = await perdag.withRead(read =>
-        persist.getBranch(clientBeforePull.branchID, read),
-      );
-      assertNotUndefined(branch);
-      if (branchBeforePull.headHash !== branch.headHash) {
+      assertNotUndefined(clientGroupBeforePull);
+      const clientGroup: persist.ClientGroup | undefined =
+        await perdag.withRead(read =>
+          persist.getClientGroup(clientBeforePull.clientGroupID, read),
+        );
+      assertNotUndefined(clientGroup);
+      if (clientGroupBeforePull.headHash !== clientGroup.headHash) {
         // persist has completed
         break;
       }
@@ -189,8 +190,8 @@ suite('onClientStateNotFound', () => {
 
     await deleteClientForTesting(clientID2, rep2.perdag);
     if (DD31) {
-      // Cannot simply gcBranches because the branch has pending mutations.
-      await deleteBranchForTesting(rep2);
+      // Cannot simply gcClientGroups because the client group has pending mutations.
+      await deleteClientGroupForTesting(rep2);
     }
 
     const onClientStateNotFound = sinon.fake();
@@ -243,8 +244,8 @@ suite('onClientStateNotFound', () => {
     const clientID2 = await rep2.clientID;
     await deleteClientForTesting(clientID2, rep2.perdag);
     if (DD31) {
-      // Cannot simply gcBranches because the branch has pending mutations.
-      await deleteBranchForTesting(rep2);
+      // Cannot simply gcClientGroups because the client group has pending mutations.
+      await deleteClientGroupForTesting(rep2);
     }
 
     const onClientStateNotFound = sinon.fake();
@@ -271,14 +272,14 @@ suite('onClientStateNotFound', () => {
   });
 });
 
-async function deleteBranchForTesting<
+async function deleteClientGroupForTesting<
   // eslint-disable-next-line @typescript-eslint/ban-types
   MD extends MutatorDefs = {},
 >(rep: ReplicacheTest<MD>) {
-  const branchID = await rep.branchID;
-  assert(branchID);
+  const clientGroupID = await rep.clientGroupID;
+  assert(clientGroupID);
   await rep.perdag.withWrite(async tx => {
-    await deleteBranch(branchID, tx);
+    await deleteClientGroup(clientGroupID, tx);
     await tx.commit();
   });
 }

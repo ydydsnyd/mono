@@ -15,7 +15,7 @@ import {
 } from './push';
 import type {Pusher} from '../pusher';
 import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
-import type {BranchID} from './branch-id.js';
+import type {ClientGroupID} from './client-group-id.js';
 
 type FakePusherArgs = {
   expPush: boolean;
@@ -65,7 +65,7 @@ test('try push', async () => {
     return;
   }
 
-  const branchID = undefined;
+  const clientGroupID = undefined;
   const clientID = 'test_client_id';
   const store = new dag.TestStore();
   const lc = new LogContext();
@@ -255,7 +255,7 @@ test('try push', async () => {
       store,
       lc,
       profileID,
-      branchID,
+      clientGroupID,
       clientID,
       pusher,
       pushURL,
@@ -273,7 +273,7 @@ test('try push DD31', async () => {
     return;
   }
 
-  const branchID = 'test_branch_id';
+  const clientGroupID = 'test_client_group_id';
   const clientID = 'test_client_id';
   const store = new dag.TestStore();
   const lc = new LogContext();
@@ -316,7 +316,7 @@ test('try push DD31', async () => {
       numPendingMutations: 1,
       expPushReq: {
         profileID,
-        branchID,
+        clientGroupID,
         clientID,
         mutations: [
           {
@@ -341,7 +341,7 @@ test('try push DD31', async () => {
       numPendingMutations: 2,
       expPushReq: {
         profileID,
-        branchID,
+        clientGroupID,
         clientID,
         mutations: [
           // These mutations aren't actually added to the chain until the test
@@ -376,7 +376,7 @@ test('try push DD31', async () => {
       numPendingMutations: 2,
       expPushReq: {
         profileID,
-        branchID: branchID as BranchID,
+        clientGroupID: clientGroupID as ClientGroupID,
         clientID,
         mutations: [
           // These mutations aren't actually added to the chain until the test
@@ -471,7 +471,7 @@ test('try push DD31', async () => {
       store,
       lc,
       profileID,
-      branchID,
+      clientGroupID,
       clientID,
       pusher,
       pushURL,

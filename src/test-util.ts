@@ -18,7 +18,7 @@ import {uuid} from './uuid';
 import type {WriteTransaction} from './transactions.js';
 import {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
 import type {DiffComputationConfig} from './sync/diff.js';
-import type {BranchID} from './sync/ids.js';
+import type {ClientGroupID} from './sync/ids.js';
 import type {ClientID} from './sync/ids.js';
 import type {PatchOperation} from './puller.js';
 import type {Hash} from './hash';
@@ -104,9 +104,9 @@ export class ReplicacheTest<
     return this._persistIsScheduled;
   }
 
-  get branchID(): Promise<BranchID | undefined> {
-    // @ts-expect-error Property '_branchIDPromise' is private
-    return this._branchIDPromise;
+  get clientGroupID(): Promise<ClientGroupID | undefined> {
+    // @ts-expect-error Property '_clientGroupIDPromise' is private
+    return this._clientGroupIDPromise;
   }
 }
 

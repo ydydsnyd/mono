@@ -1,9 +1,17 @@
 export {persist, persistSDD} from './persist';
 export {persistDD31} from './persist-dd31';
 export {startHeartbeats} from './heartbeat';
-export {getBranch, getBranches, setBranch, setBranches} from './branches';
-export type {Branch, BranchMap} from './branches';
-export {initBranchGC, gcBranches} from './branch-gc';
+export {
+  getClientGroup,
+  getClientGroups,
+  setClientGroup,
+  setClientGroups,
+} from './client-groups';
+export type {ClientGroup, ClientGroupMap} from './client-groups';
+export {
+  initClientGroupGC as initClientGroupGC,
+  gcClientGroups,
+} from './client-group-gc';
 export {
   initClient,
   getClient,

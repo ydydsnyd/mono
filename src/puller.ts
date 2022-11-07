@@ -46,7 +46,7 @@ export type {PullResponseOK as PullResponseOKSDD};
 export type PullResponseOKDD31 = {
   // TODO(DD31): Use more specific types for cookie
   cookie: ReadonlyJSONValue;
-  // All last mutation IDs from clients in branchID that changed
+  // All last mutation IDs from clients in clientGroupID that changed
   // between PullRequest.cookie and PullResponseOK.cookie.
   lastMutationIDChanges: Record<ClientID, number>;
   patch: PatchOperation[];

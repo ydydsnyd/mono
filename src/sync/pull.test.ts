@@ -576,7 +576,7 @@ test('begin try pull DD31', async () => {
   }
 
   const clientID = 'test_client_id';
-  const branchID = 'test_branch_id';
+  const clientGroupID = 'test_client_group_id';
   const store = new dag.TestStore();
   const b = new ChainBuilder(store);
   await b.addGenesis(clientID);
@@ -640,16 +640,16 @@ test('begin try pull DD31', async () => {
     // BeginPull expectations.
     expNewSyncHead: ExpCommit | undefined;
     expBeginPullResult: BeginPullResponseDD31 | string;
-    isNewBranch?: true;
+    isNewClientGroup?: true;
   };
 
   const expPullReq: PullRequestDD31 = {
     profileID,
-    branchID,
+    clientGroupID,
     cookie: baseCookie,
     pullVersion: PULL_VERSION_DD31,
     schemaVersion,
-    isNewBranch: false,
+    isNewClientGroup: false,
   };
 
   const cases: Case[] = [
@@ -1030,7 +1030,7 @@ test('begin try pull DD31', async () => {
       result = await beginPullDD31(
         profileID,
         clientID,
-        branchID,
+        clientGroupID,
         beginPullReq,
         fakePuller,
         requestID,
@@ -1416,7 +1416,7 @@ test('changed keys', async () => {
     expectedDiffsMap: DiffsMap,
   ) => {
     const clientID = 'test_client_id';
-    const branchID = 'test_branch_id';
+    const clientGroupID = 'test_client_group__id';
     const store = new dag.TestStore();
     const lc = new LogContext();
     const b = new ChainBuilder(store);
@@ -1474,12 +1474,12 @@ test('changed keys', async () => {
     const expPullReq: PullRequestSDD | PullRequestDD31 = DD31
       ? {
           profileID,
-          branchID,
+          clientGroupID,
           cookie: baseCookie,
           // lastMutationID: baseLastMutationID,
           pullVersion: PULL_VERSION_DD31,
           schemaVersion,
-          isNewBranch: false,
+          isNewClientGroup: false,
         }
       : {
           profileID,
@@ -1524,7 +1524,7 @@ test('changed keys', async () => {
     const pullResult = await beginPull(
       profileID,
       clientID,
-      branchID,
+      clientGroupID,
       beginPullReq,
       fakePuller,
       requestID,
@@ -1778,7 +1778,7 @@ test('changed keys', async () => {
   );
 });
 
-test('pull isNewBranch for empty client', async () => {
+test('pull isNewClientGroup for empty client', async () => {
   if (!DD31) {
     return;
   }
@@ -1787,7 +1787,7 @@ test('pull isNewBranch for empty client', async () => {
   const requestID = 'test-request-id';
   const clientID1 = 'test-client-id-1';
   const clientID2 = 'test-client-id-2';
-  const branchID = 'test-branch-id';
+  const clientGroupID = 'test-client-group-id';
   const pullAuth = 'test-pull-auth';
   const schemaVersion = 'test-schema-version';
 
@@ -1806,9 +1806,9 @@ test('pull isNewBranch for empty client', async () => {
   const puller = makeFakePullerDD31({
     expPullAuth: pullAuth,
     expPullReq: {
-      branchID,
+      clientGroupID,
       cookie: null,
-      isNewBranch: true,
+      isNewClientGroup: true,
       profileID,
       pullVersion: PULL_VERSION_DD31,
       schemaVersion,
@@ -1830,7 +1830,7 @@ test('pull isNewBranch for empty client', async () => {
   const response: BeginPullResponseDD31 = await beginPullDD31(
     profileID,
     clientID1,
-    branchID,
+    clientGroupID,
     beginPullRequest,
     puller,
     requestID,
@@ -1849,7 +1849,7 @@ test('pull isNewBranch for empty client', async () => {
   });
 });
 
-test('pull for branch with multiple client local changes', async () => {
+test('pull for client group with multiple client local changes', async () => {
   if (!DD31) {
     return;
   }
@@ -1858,7 +1858,7 @@ test('pull for branch with multiple client local changes', async () => {
   const requestID = 'test-request-id';
   const clientID1 = 'test-client-id-1';
   const clientID2 = 'test-client-id-2';
-  const branchID = 'test-branch-id';
+  const clientGroupID = 'test-client-group-id';
   const pullAuth = 'test-pull-auth';
   const schemaVersion = 'test-schema-version';
 
@@ -1877,9 +1877,9 @@ test('pull for branch with multiple client local changes', async () => {
   const puller = makeFakePullerDD31({
     expPullAuth: pullAuth,
     expPullReq: {
-      branchID,
+      clientGroupID,
       cookie: 1,
-      isNewBranch: false,
+      isNewClientGroup: false,
       profileID,
       pullVersion: PULL_VERSION_DD31,
       schemaVersion,
@@ -1909,7 +1909,7 @@ test('pull for branch with multiple client local changes', async () => {
   const response: BeginPullResponseDD31 = await beginPullDD31(
     profileID,
     clientID1,
-    branchID,
+    clientGroupID,
     beginPullRequest,
     puller,
     requestID,
@@ -1935,7 +1935,7 @@ suite('beginPull DD31', () => {
   const profileID = 'test-profile-id';
   const clientID1 = 'test-client-id-1';
   const clientID2 = 'test-client-id-2';
-  const branchID1 = 'test-branch-id-1';
+  const clientGroupID1 = 'test-client-group-id-1';
   const requestID = 'test-request-id';
   const lc = new LogContext();
 
@@ -1954,9 +1954,9 @@ suite('beginPull DD31', () => {
     const options: FakePullerArgsDD31 = {
       expPullAuth: 'test-pull-auth',
       expPullReq: {
-        branchID: branchID1,
+        clientGroupID: clientGroupID1,
         cookie: null,
-        isNewBranch: true,
+        isNewClientGroup: true,
         profileID,
         pullVersion: PULL_VERSION_DD31,
         schemaVersion: 'test-schema-version',
@@ -1970,7 +1970,7 @@ suite('beginPull DD31', () => {
     const response = await beginPullDD31(
       profileID,
       clientID1,
-      branchID1,
+      clientGroupID1,
       beginPullRequest,
       puller,
       requestID,
@@ -1987,8 +1987,8 @@ suite('beginPull DD31', () => {
     });
   });
 
-  const testIsNewBranch = async (
-    expectedIsNewBranch: boolean,
+  const testIsNewClientGroup = async (
+    expectedIsNewClientGroup: boolean,
     setupChain?: (b: ChainBuilder) => Promise<unknown>,
   ) => {
     const store = new dag.TestStore();
@@ -2003,11 +2003,11 @@ suite('beginPull DD31', () => {
       schemaVersion: 'test-schema-version',
     };
 
-    let actualIsNewBranch;
+    let actualIsNewClientGroup;
     const puller: PullerDD31 = async req => {
       const reqBody = await req.json();
       assertObject(reqBody);
-      actualIsNewBranch = reqBody.isNewBranch;
+      actualIsNewClientGroup = reqBody.isNewClientGroup;
       //
       return {httpRequestInfo: {errorMessage: '', httpStatusCode: 200}};
     };
@@ -2015,7 +2015,7 @@ suite('beginPull DD31', () => {
     await beginPullDD31(
       profileID,
       clientID1,
-      branchID1,
+      clientGroupID1,
       beginPullRequest,
       puller,
       requestID,
@@ -2023,29 +2023,33 @@ suite('beginPull DD31', () => {
       lc,
     );
 
-    expect(actualIsNewBranch, 'isNewBranch').equals(expectedIsNewBranch);
+    expect(actualIsNewClientGroup, 'isNewClientGroup').equals(
+      expectedIsNewClientGroup,
+    );
   };
 
-  suite('isNewBranch', () => {
+  suite('isNewClientGroup', () => {
     test('all we got is a genesis', async () => {
-      await testIsNewBranch(true);
+      await testIsNewClientGroup(true);
     });
 
     test('we got a snapshot but there are no clients in the lastMutationIDs', async () => {
-      await testIsNewBranch(true, b => b.addSnapshot([], clientID1, 1, {}));
+      await testIsNewClientGroup(true, b =>
+        b.addSnapshot([], clientID1, 1, {}),
+      );
     });
 
     test('we got a snapshot with matching client(s) the lastMutationIDs', async () => {
-      await testIsNewBranch(false, b =>
+      await testIsNewClientGroup(false, b =>
         b.addSnapshot([], clientID1, 1, {[clientID1]: 10}),
       );
-      await testIsNewBranch(false, b =>
+      await testIsNewClientGroup(false, b =>
         b.addSnapshot([], clientID1, 1, {[clientID1]: 10, [clientID2]: 20}),
       );
     });
 
     test('we got a snapshot with other client(s)', async () => {
-      await testIsNewBranch(false, b =>
+      await testIsNewClientGroup(false, b =>
         b.addSnapshot([], clientID1, 1, {[clientID2]: 20}),
       );
     });

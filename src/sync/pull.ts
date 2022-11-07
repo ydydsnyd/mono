@@ -34,7 +34,7 @@ import {
   FromInternalValueReason,
   fromInternalValue,
 } from '../internal-value';
-import type {BranchID, ClientID} from './ids';
+import type {ClientGroupID, ClientID} from './ids';
 import {addDiffsForIndexes, DiffComputationConfig, DiffsMap} from './diff';
 import {assert, assertObject} from '../asserts.js';
 import {assertSnapshotMetaDD31, commitIsLocalDD31} from '../db/commit.js';
@@ -64,11 +64,9 @@ export type PullRequestSDD<Cookie = ReadonlyJSONValue> = {
  */
 export type PullRequestDD31<Cookie = ReadonlyJSONValue> = {
   profileID: string;
-  // TODO(DD31): Rename to clientGroupID
-  branchID: BranchID;
+  clientGroupID: ClientGroupID;
   cookie: Cookie;
-  // TODO(DD31): Rename to isNewClientGroup
-  isNewBranch: boolean;
+  isNewClientGroup: boolean;
   pullVersion: typeof PULL_VERSION_DD31;
   // schemaVersion can optionally be used by the customer's app
   // to indicate to the data layer what format of Client View the
@@ -103,7 +101,7 @@ export type BeginPullResponseDD31 = {
 export function beginPull(
   profileID: string,
   clientID: ClientID,
-  branchID: BranchID | undefined,
+  clientGroupID: ClientGroupID | undefined,
   beginPullReq: BeginPullRequest | BeginPullRequestDD31,
   puller: Puller | PullerDD31,
   requestID: string,
@@ -112,11 +110,11 @@ export function beginPull(
   createSyncBranch = true,
 ): Promise<BeginPullResponse | BeginPullResponseDD31> {
   if (DD31) {
-    assert(branchID);
+    assert(clientGroupID);
     return beginPullDD31(
       profileID,
       clientID,
-      branchID,
+      clientGroupID,
       beginPullReq as BeginPullRequestDD31,
       puller as PullerDD31,
       requestID,
@@ -227,7 +225,7 @@ export async function beginPullSDD(
 export async function beginPullDD31(
   profileID: string,
   clientID: ClientID,
-  branchID: BranchID,
+  clientGroupID: ClientGroupID,
   beginPullReq: BeginPullRequestDD31,
   puller: PullerDD31,
   requestID: string,
@@ -236,10 +234,10 @@ export async function beginPullDD31(
   createSyncBranch = true,
 ): Promise<BeginPullResponseDD31> {
   assert(DD31);
-  assert(branchID);
+  assert(clientGroupID);
   const {pullURL, pullAuth, schemaVersion} = beginPullReq;
 
-  const [baseCookie, isNewBranch] = await store.withRead(async dagRead => {
+  const [baseCookie, isNewClientGroup] = await store.withRead(async dagRead => {
     const mainHeadHash = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
     if (!mainHeadHash) {
       throw new Error('Internal no main head found');
@@ -248,22 +246,22 @@ export async function beginPullDD31(
     const baseSnapshotMeta = baseSnapshot.meta;
     const baseCookie = baseSnapshotMeta.cookieJSON;
     assertSnapshotMetaDD31(baseSnapshotMeta);
-    const isNewBranch =
+    const isNewClientGroup =
       Object.keys(baseSnapshotMeta.lastMutationIDs).length === 0;
 
-    return [baseCookie, isNewBranch];
+    return [baseCookie, isNewClientGroup];
   });
 
   const pullReq: PullRequestDD31<ReadonlyJSONValue> = {
     profileID,
-    branchID,
+    clientGroupID,
     cookie: fromInternalValue(
       baseCookie,
       FromInternalValueReason.PullSendCookie,
     ),
     pullVersion: PULL_VERSION_DD31,
     schemaVersion,
-    isNewBranch,
+    isNewClientGroup,
   };
   lc.debug?.('Starting pull...');
   const pullStart = Date.now();

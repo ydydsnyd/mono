@@ -59,20 +59,20 @@ suite('initOnPersistChannel', () => {
 
     onPersist1({
       clientID: 'client1',
-      branchID: 'branch1',
+      clientGroupID: 'client-group-1',
     });
     await expectPersistInfo(0, {
       clientID: 'client1',
-      branchID: 'branch1',
+      clientGroupID: 'client-group-1',
     });
 
     onPersist2({
       clientID: 'client2',
-      branchID: 'branch2',
+      clientGroupID: 'client-group-2',
     });
     await expectPersistInfo(1, {
       clientID: 'client2',
-      branchID: 'branch2',
+      clientGroupID: 'client-group-2',
     });
   });
 
@@ -111,7 +111,7 @@ suite('initOnPersistChannel', () => {
 
     const persistInfo1 = {
       clientID: 'client1',
-      branchID: 'branch1',
+      clientGroupID: 'clientGroup1',
     };
     onPersist1(persistInfo1);
     await channelMessageCallResolvers[0].promise;
@@ -123,7 +123,7 @@ suite('initOnPersistChannel', () => {
 
     const persistInfo2 = {
       clientID: 'client2',
-      branchID: 'branch2',
+      clientGroupID: 'clientGroup2',
     };
     onPersist2(persistInfo2);
     await channelMessageCallResolvers[1].promise;

@@ -2,31 +2,31 @@ import {assert} from '../asserts';
 import type * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import type * as sync from '../sync/mod';
-import {assertHasClientState, getMainBranchID} from './clients';
+import {assertHasClientState, getMainClientGroupID} from './clients';
 import {GatherVisitor} from './gather-visitor';
 import type {MutatorDefs} from '../replicache';
 import type {Hash} from '../hash';
 import type {LogContext} from '@rocicorp/logger';
 import {assertSnapshotCommitDD31} from '../db/commit';
-import {Branch, getBranch, setBranch} from './branches';
+import {ClientGroup, getClientGroup, setClientGroup} from './client-groups';
 
 /**
- * Persists the client's memdag state to the client's perdag branch.
+ * Persists the client's memdag state to the client's perdag client group.
  *
- * Persists the base snapshot from memdag to the client's perdag branch,
- * but only if it’s newer than the client's perdag branch’s base snapshot. The
- * base snapshot is persisted by gathering all memory-only chunks in the dag
- * subgraph rooted at the base snapshot's commit and writing them to
- * the perdag.  Once the base snapshot is persisted, rebases onto this new base
- * snapshot all local commits from the client's perdag branch that are not
- * already reflected in the base snapshot.
+ * Persists the base snapshot from memdag to the client's perdag client group,
+ * but only if it’s newer than the client's perdag client group’s base snapshot.
+ * The base snapshot is persisted by gathering all memory-only chunks in the dag
+ * subgraph rooted at the base snapshot's commit and writing them to the perdag.
+ * Once the base snapshot is persisted, rebases onto this new base snapshot all
+ * local commits from the client's perdag client group that are not already
+ * reflected in the base snapshot.
  *
  * Whether or not the base snapshot is persisted, rebases onto the client's
- * perdag branch all memdag local commits not already in the client's perdag
- * branch's history.
+ * perdag client group all memdag local commits not already in the client's
+ * perdag client group's history.
  *
  * Also updates the `lastMutationIDs` and `lastServerAckdMutationIDs` properties
- * of the client's branch's entry in the `BranchMap`.
+ * of the client's client group's entry in the `ClientGroupMap`.
  */
 export async function persistDD31(
   lc: LogContext,
@@ -41,26 +41,34 @@ export async function persistDD31(
     return;
   }
 
-  const [perdagLMID, perdagBaseSnapshot, mainBranchID] = await perdag.withRead(
-    async perdagRead => {
+  const [perdagLMID, perdagBaseSnapshot, mainClientGroupID] =
+    await perdag.withRead(async perdagRead => {
       await assertHasClientState(clientID, perdagRead);
-      const mainBranchID = await getMainBranchID(clientID, perdagRead);
-      assert(mainBranchID, `No main branch id for clientID: ${clientID}`);
-      const [, perdagMainBranchHeadCommit] = await getMainBranchInfo(
+      const mainClientGroupID = await getMainClientGroupID(
+        clientID,
         perdagRead,
-        mainBranchID,
       );
-      const perdagLMID = await perdagMainBranchHeadCommit.getMutationID(
+      assert(
+        mainClientGroupID,
+        `No main client group for clientID: ${clientID}`,
+      );
+      const [, perdagMainClientGroupHeadCommit] = await getMainClientGroupInfo(
+        perdagRead,
+        mainClientGroupID,
+      );
+      const perdagLMID = await perdagMainClientGroupHeadCommit.getMutationID(
         clientID,
         perdagRead,
       );
       return [
         perdagLMID,
-        await db.baseSnapshotFromCommit(perdagMainBranchHeadCommit, perdagRead),
-        mainBranchID,
+        await db.baseSnapshotFromCommit(
+          perdagMainClientGroupHeadCommit,
+          perdagRead,
+        ),
+        mainClientGroupID,
       ];
-    },
-  );
+    });
 
   if (closed()) {
     return;
@@ -101,15 +109,15 @@ export async function persistDD31(
     }
     await perdag.withWrite(async perdagWrite => {
       // check if memdag snapshot still newer than perdag snapshot
-      const [mainBranch, latestPerdagMainBranchHeadCommit] =
-        await getMainBranchInfo(perdagWrite, mainBranchID);
+      const [mainClientGroup, latestPerdagMainClientGroupHeadCommit] =
+        await getMainClientGroupInfo(perdagWrite, mainClientGroupID);
       let mutationIDs;
-      let {lastServerAckdMutationIDs} = mainBranch;
+      let {lastServerAckdMutationIDs} = mainClientGroup;
       const latestPerdagBaseSnapshot = await db.baseSnapshotFromCommit(
-        latestPerdagMainBranchHeadCommit,
+        latestPerdagMainClientGroupHeadCommit,
         perdagWrite,
       );
-      let newMainBranchHeadHash: Hash;
+      let newMainClientGroupHeadHash: Hash;
       // check if memdag snapshot still newer than perdag snapshot
       if (
         db.compareCookiesForSnapshots(
@@ -122,42 +130,44 @@ export async function persistDD31(
           Array.from(gatheredChunks.values(), c => perdagWrite.putChunk(c)),
         );
         memdagBaseSnapshotPersisted = true;
-        // Rebase local mutations from perdag main branch onto new snapshot
-        newMainBranchHeadHash = memdagBaseSnapshotHash;
-        const mainBranchLocalMutations = await db.localMutationsDD31(
-          mainBranch.headHash,
+        // Rebase local mutations from perdag main client group onto new
+        // snapshot
+        newMainClientGroupHeadHash = memdagBaseSnapshotHash;
+        const mainClientGroupLocalMutations = await db.localMutationsDD31(
+          mainClientGroup.headHash,
           perdagWrite,
         );
         assertSnapshotCommitDD31(memdagBaseSnapshot);
         lastServerAckdMutationIDs = memdagBaseSnapshot.meta.lastMutationIDs;
         mutationIDs = {...lastServerAckdMutationIDs};
 
-        newMainBranchHeadHash = await rebase(
-          mainBranchLocalMutations,
-          newMainBranchHeadHash,
+        newMainClientGroupHeadHash = await rebase(
+          mainClientGroupLocalMutations,
+          newMainClientGroupHeadHash,
           perdagWrite,
           mutators,
           mutationIDs,
           lc,
         );
       } else {
-        newMainBranchHeadHash = latestPerdagMainBranchHeadCommit.chunk.hash;
-        mutationIDs = {...mainBranch.mutationIDs};
+        newMainClientGroupHeadHash =
+          latestPerdagMainClientGroupHeadCommit.chunk.hash;
+        mutationIDs = {...mainClientGroup.mutationIDs};
       }
       // persist new memdag mutations
-      newMainBranchHeadHash = await rebase(
+      newMainClientGroupHeadHash = await rebase(
         newMemdagMutations,
-        newMainBranchHeadHash,
+        newMainClientGroupHeadHash,
         perdagWrite,
         mutators,
         mutationIDs,
         lc,
       );
-      await setBranch(
-        mainBranchID,
+      await setClientGroup(
+        mainClientGroupID,
         {
-          ...mainBranch,
-          headHash: newMainBranchHeadHash,
+          ...mainClientGroup,
+          headHash: newMainClientGroupHeadHash,
           mutationIDs,
           lastServerAckdMutationIDs,
         },
@@ -181,22 +191,22 @@ export async function persistDD31(
 
     // no need to persist snapshot, persist new memdag mutations
     await perdag.withWrite(async perdagWrite => {
-      const [mainBranch, latestPerdagMainBranchHeadCommit] =
-        await getMainBranchInfo(perdagWrite, mainBranchID);
-      const mutationIDs = {...mainBranch.mutationIDs};
-      const newMainBranchHeadHash = await rebase(
+      const [mainClientGroup, latestPerdagMainClientGroupHeadCommit] =
+        await getMainClientGroupInfo(perdagWrite, mainClientGroupID);
+      const mutationIDs = {...mainClientGroup.mutationIDs};
+      const newMainClientGroupHeadHash = await rebase(
         newMemdagMutations,
-        latestPerdagMainBranchHeadCommit.chunk.hash,
+        latestPerdagMainClientGroupHeadCommit.chunk.hash,
         perdagWrite,
         mutators,
         mutationIDs,
         lc,
       );
-      await setBranch(
-        mainBranchID,
+      await setClientGroup(
+        mainClientGroupID,
         {
-          ...mainBranch,
-          headHash: newMainBranchHeadHash,
+          ...mainClientGroup,
+          headHash: newMainClientGroupHeadHash,
           mutationIDs,
         },
         perdagWrite,
@@ -206,13 +216,19 @@ export async function persistDD31(
   }
 }
 
-async function getMainBranchInfo(
+async function getMainClientGroupInfo(
   perdagRead: dag.Read,
-  branchID: sync.BranchID,
-): Promise<[Branch, db.Commit<db.Meta>]> {
-  const mainBranch = await getBranch(branchID, perdagRead);
-  assert(mainBranch, `No main branch for branchID: ${branchID}`);
-  return [mainBranch, await db.commitFromHash(mainBranch.headHash, perdagRead)];
+  clientGroupID: sync.ClientGroupID,
+): Promise<[ClientGroup, db.Commit<db.Meta>]> {
+  const mainClientGroup = await getClientGroup(clientGroupID, perdagRead);
+  assert(
+    mainClientGroup,
+    `No main client group for clientGroupID: ${clientGroupID}`,
+  );
+  return [
+    mainClientGroup,
+    await db.commitFromHash(mainClientGroup.headHash, perdagRead),
+  ];
 }
 
 async function gatherMemOnlyChunks(

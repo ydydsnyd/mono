@@ -1,5 +1,10 @@
 // TODO: Make these opaque types
-export type BranchID = string;
+
+/**
+ * The ID describing a group of clients. All clients in the same group share a
+ * perdag.
+ */
+export type ClientGroupID = string;
 
 /**
  * The ID describing a client.

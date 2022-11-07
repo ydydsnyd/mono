@@ -270,7 +270,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   private readonly _ready: Promise<void>;
   private readonly _profileIDPromise: Promise<string>;
   private readonly _clientIDPromise: Promise<string>;
-  private readonly _branchIDPromise: Promise<string | undefined>;
+  private readonly _clientGroupIDPromise: Promise<string | undefined>;
   protected readonly _licenseCheckPromise: Promise<boolean>;
 
   /* The license is active if we have sent at least one license active ping
@@ -500,8 +500,8 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
     const profileIDResolver = resolver<string>();
     this._profileIDPromise = profileIDResolver.promise;
-    const branchIDResolver = resolver<string | undefined>();
-    this._branchIDPromise = branchIDResolver.promise;
+    const clientGroupIDResolver = resolver<string | undefined>();
+    this._clientGroupIDPromise = clientGroupIDResolver.promise;
     const clientIDResolver = resolver<string>();
     this._clientIDPromise = clientIDResolver.promise;
 
@@ -513,7 +513,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       wrapInReauthRetries: this._wrapInReauthRetries.bind(this),
       isPullDisabled: this._isPullDisabled.bind(this),
       isPushDisabled: this._isPushDisabled.bind(this),
-      branchIDPromise: this._branchIDPromise,
+      clientGroupIDPromise: this._clientGroupIDPromise,
     });
 
     this._onPersist = DD31
@@ -529,7 +529,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     void this._open(
       indexes,
       profileIDResolver.resolve,
-      branchIDResolver.resolve,
+      clientGroupIDResolver.resolve,
       clientIDResolver.resolve,
       readyResolver.resolve,
       licenseCheckResolver.resolve,
@@ -540,7 +540,9 @@ export class Replicache<MD extends MutatorDefs = {}> {
   private async _open(
     indexes: IndexDefinitions,
     profileIDResolver: (profileID: string) => void,
-    resolveBranchID: (branchID: sync.BranchID | undefined) => void,
+    resolveClientGroupID: (
+      clientGroupID: sync.ClientGroupID | undefined,
+    ) => void,
     resolveClientID: (clientID: sync.ClientID) => void,
     resolveReady: () => void,
     resolveLicenseCheck: (valid: boolean) => void,
@@ -559,9 +561,9 @@ export class Replicache<MD extends MutatorDefs = {}> {
     );
     if (DD31) {
       assertClientDD31(client);
-      resolveBranchID(client.branchID);
+      resolveClientGroupID(client.clientGroupID);
     } else {
-      resolveBranchID(undefined);
+      resolveClientGroupID(undefined);
     }
     resolveClientID(clientID);
     await this._memdag.withWrite(async write => {
@@ -574,7 +576,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       await this._syncIndexes(indexes);
     }
 
-    // Now we have a profileID, a clientID, a branchID and DB!
+    // Now we have a profileID, a clientID, a clientGroupID and DB!
     resolveReady();
 
     this._root = this._getRoot();
@@ -599,7 +601,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     persist.initClientGC(clientID, this._perdag, this._lc, signal);
     persist.initCollectIDBDatabases(this._idbDatabases, this._lc, signal);
     if (DD31) {
-      persist.initBranchGC(this._perdag, this._lc, signal);
+      persist.initClientGroupGC(this._perdag, this._lc, signal);
     }
 
     setIntervalWithSignal(
@@ -1127,7 +1129,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     await this._ready;
     const profileID = await this._profileIDPromise;
     const clientID = await this._clientIDPromise;
-    const branchID = await this._branchIDPromise;
+    const clientGroupID = await this._clientGroupIDPromise;
     return this._wrapInOnlineCheck(async () => {
       const {result: pushResponse} = await this._wrapInReauthRetries(
         async (requestID: string, requestLc: LogContext) => {
@@ -1138,7 +1140,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
               this._memdag,
               requestLc,
               profileID,
-              branchID,
+              clientGroupID,
               clientID,
               this.pusher,
               this.pushURL,
@@ -1237,7 +1239,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     await this._ready;
     const profileID = await this.profileID;
     const clientID = await this._clientIDPromise;
-    const branchID = await this._branchIDPromise;
+    const clientGroupID = await this._clientGroupIDPromise;
     const {
       result: {beginPullResponse, requestID},
     } = await this._wrapInReauthRetries(
@@ -1250,7 +1252,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         const beginPullResponse = await sync.beginPull(
           profileID,
           clientID,
-          branchID,
+          clientGroupID,
           req,
           this.puller,
           requestID,
@@ -1310,9 +1312,9 @@ export class Replicache<MD extends MutatorDefs = {}> {
     }
     if (DD31) {
       const clientID = await this.clientID;
-      const branchID = await this._branchIDPromise;
-      assert(branchID);
-      this._onPersist({clientID, branchID});
+      const clientGroupID = await this._clientGroupIDPromise;
+      assert(clientGroupID);
+      this._onPersist({clientID, clientGroupID});
     }
   }
 
@@ -1366,8 +1368,8 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
   private async _handlePersist(persistInfo: PersistInfo): Promise<void> {
     this._lc.debug?.('Handling persist', persistInfo);
-    const branchID = await this._branchIDPromise;
-    if (persistInfo.branchID === branchID) {
+    const clientGroupID = await this._clientGroupIDPromise;
+    if (persistInfo.clientGroupID === clientGroupID) {
       void this._scheduleRefresh();
     }
   }
@@ -1585,7 +1587,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
    * List of pending mutations.
    *
    * Gives a list of local mutations that have
-   * mutationID > syncHead.mutationID that exists on the main branch.
+   * mutationID > syncHead.mutationID that exists on the main client group.
    *
    * @experimental This method is experimental and may change in the future.
    */
