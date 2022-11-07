@@ -10,7 +10,7 @@ import {getIterator, IterableUnion} from './iterable-union';
  * second iterable is picked.
  *
  * This utility function is provided because it is useful when using
- * [[makeScanResult]]. It can be used to merge an in memory pending async
+ * {@link makeScanResult}. It can be used to merge an in memory pending async
  * iterable on to a persistent async iterable for example.
  */
 export async function* mergeAsyncIterables<A, B>(

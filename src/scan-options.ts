@@ -2,12 +2,12 @@ import type {IndexKey} from './db/mod';
 import type * as db from './db/mod';
 
 /**
- * Options for [[ReadTransaction.scan|scan]]
+ * Options for {@link ReadTransaction.scan | scan}
  */
 export type ScanOptions = ScanIndexOptions | ScanNoIndexOptions;
 
 /**
- * Options for [[ReadTransaction.scan|scan]] when scanning over the entire key
+ * Options for {@link ReadTransaction.scan | scan} when scanning over the entire key
  * space.
  */
 export type ScanNoIndexOptions = {
@@ -27,7 +27,7 @@ export type ScanNoIndexOptions = {
 };
 
 /**
- * Options for [[ReadTransaction.scan|scan]] when scanning over an index. When
+ * Options for {@link ReadTransaction.scan | scan} when scanning over an index. When
  * scanning over and index you need to provide the `indexName` and the `start`
  * `key` is now a tuple consisting of secondary and primary key
  */
@@ -38,9 +38,9 @@ export type ScanIndexOptions = {
   /** Only include up to `limit` results. */
   limit?: number;
 
-  /** Do a [[ReadTransaction.scan|scan]] over a named index. The `indexName` is
-   * the name of an index defined when creating the [[Replicache]] instance using
-   * [{ReplicacheOptions.indexes]]. */
+  /** Do a {@link ReadTransaction.scan | scan} over a named index. The `indexName` is
+   * the name of an index defined when creating the {@link Replicache} instance using
+   * {@link ReplicacheOptions.indexes}. */
   indexName: string;
 
   /** When provided the scan starts at this key. */
@@ -53,7 +53,7 @@ export type ScanIndexOptions = {
 };
 
 /**
- * Type narrowing of [[ScanOptions]].
+ * Type narrowing of {@link ScanOptions}.
  */
 export function isScanIndexOptions(
   options: ScanOptions,

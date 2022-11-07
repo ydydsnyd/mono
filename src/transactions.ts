@@ -25,8 +25,8 @@ import {
 import type {IndexDefinition, IndexDefinitions} from './index-defs';
 
 /**
- * ReadTransactions are used with [[Replicache.query]] and
- * [[Replicache.subscribe]] and allows read operations on the
+ * ReadTransactions are used with {@link Replicache.query} and
+ * {@link Replicache.subscribe} and allows read operations on the
  * database.
  */
 export interface ReadTransaction {
@@ -50,16 +50,16 @@ export interface ReadTransaction {
   isEmpty(): Promise<boolean>;
 
   /**
-   * Gets many values from the database. This returns a [[ScanResult]] which
+   * Gets many values from the database. This returns a {@link ScanResult} which
    * implements `AsyncIterable`. It also has methods to iterate over the
-   * [[ScanResult.keys|keys]] and [[ScanResult.entries|entries]].
+   * {@link ScanResult.keys | keys} and {@link ScanResult.entries | entries}.
    *
    * If `options` has an `indexName`, then this does a scan over an index with
    * that name. A scan over an index uses a tuple for the key consisting of
    * `[secondary: string, primary: string]`.
    *
-   * If the [[ScanResult]] is used after the `ReadTransaction` has been closed
-   * it will throw a [[TransactionClosedError]].
+   * If the {@link ScanResult} is used after the `ReadTransaction` has been closed
+   * it will throw a {@link TransactionClosedError}.
    *
    * Important: The returned JSON is readonly and should not be modified. This
    * is only enforced statically by TypeScript and there are no runtime checks
@@ -69,16 +69,16 @@ export interface ReadTransaction {
   scan(): ScanResult<string, ReadonlyJSONValue>;
 
   /**
-   * Gets many values from the database. This returns a [[ScanResult]] which
+   * Gets many values from the database. This returns a {@link ScanResult} which
    * implements `AsyncIterable`. It also has methods to iterate over the
-   * [[ScanResult.keys|keys]] and [[ScanResult.entries|entries]].
+   * {@link ScanResult.keys | keys} and {@link ScanResult.entries | entries}.
    *
    * If `options` has an `indexName`, then this does a scan over an index with
    * that name. A scan over an index uses a tuple for the key consisting of
    * `[secondary: string, primary: string]`.
    *
-   * If the [[ScanResult]] is used after the `ReadTransaction` has been closed
-   * it will throw a [[TransactionClosedError]].
+   * If the {@link ScanResult} is used after the `ReadTransaction` has been closed
+   * it will throw a {@link TransactionClosedError}.
    *
    * Important: The returned JSON is readonly and should not be modified. This
    * is only enforced statically by TypeScript and there are no runtime checks
@@ -224,7 +224,7 @@ export class SubscriptionTransactionWrapper implements ReadTransaction {
 
 /**
  * WriteTransactions are used with *mutators* which are registered using
- * [[ReplicacheOptions.mutators]] and allows read and write operations on the
+ * {@link ReplicacheOptions.mutators} and allows read and write operations on the
  * database.
  */
 export interface WriteTransaction extends ReadTransaction {
@@ -241,12 +241,12 @@ export interface WriteTransaction extends ReadTransaction {
   del(key: string): Promise<boolean>;
 
   /**
-   * Overrides [[ReadTransaction.get]] to return a mutable [[JSONValue]].
+   * Overrides {@link ReadTransaction.get} to return a mutable {@link JSONValue}.
    */
   get(key: string): Promise<JSONValue | undefined>;
 
   /**
-   * Overrides [[ReadTransaction.scan]] to return a mutable [[JSONValue]].
+   * Overrides {@link ReadTransaction.scan} to return a mutable {@link JSONValue}.
    */
   scan(): ScanResult<string, JSONValue>;
   scan<Options extends ScanOptions>(
@@ -310,7 +310,7 @@ interface IndexTransaction extends ReadTransaction {
   createIndex(def: CreateIndexDefinition): Promise<void>;
 
   /**
-   * Drops an index previously created with [[createIndex]].
+   * Drops an index previously created with {@link createIndex}.
    */
   dropIndex(name: string): Promise<void>;
 

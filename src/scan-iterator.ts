@@ -25,10 +25,10 @@ type ToValue<Options extends ScanOptions, Value> = (
 type ShouldDeepClone = {shouldDeepClone: boolean};
 
 /**
- * This class is used for the results of [[ReadTransaction.scan|scan]]. It
+ * This class is used for the results of {@link ReadTransaction.scan | scan}. It
  * implements `AsyncIterable<JSONValue>` which allows you to use it in a `for
- * await` loop. There are also methods to iterate over the [[keys]],
- * [[entries]] or [[values]].
+ * await` loop. There are also methods to iterate over the {@link keys},
+ * {@link entries} or {@link values}.
  */
 export class ScanResultImpl<
   Options extends ScanOptions,
@@ -52,12 +52,12 @@ export class ScanResultImpl<
     this._onLimitKey = onLimitKey;
   }
 
-  /** The default AsyncIterable. This is the same as [[values]]. */
+  /** The default AsyncIterable. This is the same as {@link values}. */
   [Symbol.asyncIterator](): AsyncIterableIteratorToArray<Value> {
     return this.values();
   }
 
-  /** Async iterator over the values of the [[ReadTransaction.scan|scan]] call. */
+  /** Async iterator over the values of the {@link ReadTransaction.scan | scan} call. */
   values(): AsyncIterableIteratorToArray<Value> {
     const toValue = this._dbDelegateOptions.shouldDeepClone
       ? (e: EntryForOptions<Options>): Value =>
@@ -76,8 +76,8 @@ export class ScanResultImpl<
   }
 
   /**
-   * Async iterator over the keys of the [[ReadTransaction.scan|scan]]
-   * call. If the [[ReadTransaction.scan|scan]] is over an index the key
+   * Async iterator over the keys of the {@link ReadTransaction.scan | scan}
+   * call. If the {@link ReadTransaction.scan | scan} is over an index the key
    * is a tuple of `[secondaryKey: string, primaryKey]`
    */
   keys(): AsyncIterableIteratorToArray<KeyTypeForScanOptions<Options>> {
@@ -89,9 +89,9 @@ export class ScanResultImpl<
   }
 
   /**
-   * Async iterator over the entries of the [[ReadTransaction.scan|scan]]
+   * Async iterator over the entries of the {@link ReadTransaction.scan | scan}
    * call. An entry is a tuple of key values. If the
-   * [[ReadTransaction.scan|scan]] is over an index the key is a tuple of
+   * {@link ReadTransaction.scan | scan} is over an index the key is a tuple of
    * `[secondaryKey: string, primaryKey]`
    */
   entries(): AsyncIterableIteratorToArray<
@@ -139,23 +139,23 @@ export class ScanResultImpl<
 
 export interface ScanResult<K extends ScanKey, V extends ReadonlyJSONValue>
   extends AsyncIterable<V> {
-  /** The default AsyncIterable. This is the same as [[values]]. */
+  /** The default AsyncIterable. This is the same as {@link values}. */
   [Symbol.asyncIterator](): AsyncIterableIteratorToArray<V>;
 
-  /** Async iterator over the values of the [[ReadTransaction.scan|scan]] call. */
+  /** Async iterator over the values of the {@link ReadTransaction.scan | scan} call. */
   values(): AsyncIterableIteratorToArray<V>;
 
   /**
-   * Async iterator over the keys of the [[ReadTransaction.scan|scan]]
-   * call. If the [[ReadTransaction.scan|scan]] is over an index the key
+   * Async iterator over the keys of the {@link ReadTransaction.scan | scan}
+   * call. If the {@link ReadTransaction.scan | scan} is over an index the key
    * is a tuple of `[secondaryKey: string, primaryKey]`
    */
   keys(): AsyncIterableIteratorToArray<K>;
 
   /**
-   * Async iterator over the entries of the [[ReadTransaction.scan|scan]]
+   * Async iterator over the entries of the {@link ReadTransaction.scan | scan}
    * call. An entry is a tuple of key values. If the
-   * [[ReadTransaction.scan|scan]] is over an index the key is a tuple of
+   * {@link ReadTransaction.scan | scan} is over an index the key is a tuple of
    * `[secondaryKey: string, primaryKey]`
    */
   entries(): AsyncIterableIteratorToArray<readonly [K, V]>;
@@ -165,7 +165,7 @@ export interface ScanResult<K extends ScanKey, V extends ReadonlyJSONValue>
 }
 
 /**
- * An interface that adds a [[toArray]] method to `AsyncIterableIterator`.
+ * An interface that adds a {@link toArray} method to `AsyncIterableIterator`.
  *
  * Usage:
  *
@@ -268,28 +268,28 @@ function shouldSkipNonIndexScan(key: string, startKey: string): boolean {
 }
 
 /**
- * This is called when doing a [[ReadTransaction.scan|scan]] without an
+ * This is called when doing a {@link ReadTransaction.scan | scan} without an
  * `indexName`.
  *
  * @param fromKey The `fromKey` is computed by `scan` and is the key of the
  * first entry to return in the iterator. It is based on `prefix` and
- * `start.key` of the [[ScanNoIndexOptions]].
+ * `start.key` of the {@link ScanNoIndexOptions}.
  */
 export type GetScanIterator = (
   fromKey: string,
 ) => IterableUnion<Entry<ReadonlyJSONValue>>;
 
 /**
- * When using [[makeScanResult]] this is the type used for the function called when doing a [[ReadTransaction.scan|scan]] with an
+ * When using {@link makeScanResult} this is the type used for the function called when doing a {@link ReadTransaction.scan | scan} with an
  * `indexName`.
  *
  * @param indexName The name of the index we are scanning over.
  * @param fromSecondaryKey The `fromSecondaryKey` is computed by `scan` and is
  * the secondary key of the first entry to return in the iterator. It is based
- * on `prefix` and `start.key` of the [[ScanIndexOptions]].
+ * on `prefix` and `start.key` of the {@link ScanIndexOptions}.
  * @param fromPrimaryKey The `fromPrimaryKey` is computed by `scan` and is the
  * primary key of the first entry to return in the iterator. It is based on
- * `prefix` and `start.key` of the [[ScanIndexOptions]].
+ * `prefix` and `start.key` of the {@link ScanIndexOptions}.
  */
 export type GetIndexScanIterator = (
   indexName: string,
@@ -298,12 +298,12 @@ export type GetIndexScanIterator = (
 ) => IterableUnion<readonly [key: IndexKey, value: ReadonlyJSONValue]>;
 
 /**
- * A helper function that makes it easier to implement [[ReadTransaction.scan]]
+ * A helper function that makes it easier to implement {@link ReadTransaction.scan}
  * with a custom backend.
  *
  * If you are implementing a custom backend and have an in memory pending async
  * iterable we provide two helper functions to make it easier to merge these
- * together. [[mergeAsyncIterables]] and [[filterAsyncIterable]].
+ * together. {@link mergeAsyncIterables} and {@link filterAsyncIterable}.
  *
  * For example:
  *

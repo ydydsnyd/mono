@@ -19,13 +19,13 @@ export type PullerResultDD31 = {
 
 /**
  * Puller is the function type used to do the fetch part of a pull. The request
- * is a POST request where the body is JSON with the type [[PullRequest]].
+ * is a POST request where the body is JSON with the type {@link PullRequest}.
  */
 export type Puller = (request: Request) => Promise<PullerResult>;
 
 /**
  * Puller is the function type used to do the fetch part of a pull. The request
- * is a POST request where the body is JSON with the type [[PullRequest]].
+ * is a POST request where the body is JSON with the type {@link PullRequest}.
  */
 export type PullerDD31 = (request: Request) => Promise<PullerResultDD31>;
 
@@ -128,7 +128,7 @@ function assertLastMutationIDChanges(
 }
 
 /**
- * This type describes the patch field in a [[PullResponse]] and it is used
+ * This type describes the patch field in a {@link PullResponse} and it is used
  * to describe how to update the Replicache key-value store.
  */
 export type PatchOperation =

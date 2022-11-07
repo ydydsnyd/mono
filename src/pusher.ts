@@ -3,7 +3,7 @@ import type {HTTPRequestInfo} from './http-request-info';
 
 /**
  * Pusher is the function type used to do the fetch part of a push. The request
- * is a POST request where the body is JSON with the type [[PushRequest]].
+ * is a POST request where the body is JSON with the type {@link PushRequest}.
  */
 export type Pusher = (request: Request) => Promise<HTTPRequestInfo>;
 

@@ -16,7 +16,7 @@ export type JSONValue =
  */
 export type JSONObject = {[key: string]: JSONValue};
 
-/** Like [[JSONValue]] but deeply readonly */
+/** Like {@link JSONValue} but deeply readonly */
 export type ReadonlyJSONValue =
   | null
   | string
@@ -25,7 +25,7 @@ export type ReadonlyJSONValue =
   | ReadonlyArray<ReadonlyJSONValue>
   | ReadonlyJSONObject;
 
-/** Like [[JSONObject]] but deeply readonly */
+/** Like {@link JSONObject} but deeply readonly */
 export type ReadonlyJSONObject = {
   readonly [key: string]: ReadonlyJSONValue;
 };
@@ -34,7 +34,7 @@ export type ReadonlyJSONObject = {
  * Checks deep equality of two JSON value with (almost) same semantics as
  * `JSON.stringify`. The only difference is that with `JSON.stringify` the
  * ordering of the properties in an object/map/dictionary matters. In
- * [[deepEqual]] the following two values are consider equal, even though the
+ * {@link deepEqual} the following two values are consider equal, even though the
  * strings JSON.stringify would produce is different:
  *
  * ```js

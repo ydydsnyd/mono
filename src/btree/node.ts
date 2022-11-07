@@ -39,7 +39,7 @@ export function getRefs(node: Node): ReadonlyArray<Hash> {
 
 /**
  * Describes the changes that happened to Replicache after a
- * [[WriteTransaction]] was committed.
+ * {@link WriteTransaction} was committed.
  *
  * @experimental This type is experimental and may change in the future.
  */

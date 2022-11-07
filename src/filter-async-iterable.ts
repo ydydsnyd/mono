@@ -4,7 +4,7 @@ import type {IterableUnion} from './iterable-union';
  * Filters an async iterable.
  *
  * This utility function is provided because it is useful when using
- * [[makeScanResult]]. It can be used to filter out tombstones (delete entries)
+ * {@link makeScanResult}. It can be used to filter out tombstones (delete entries)
  * for example.
  */
 export async function* filterAsyncIterable<V>(

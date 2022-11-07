@@ -163,9 +163,9 @@ const noop = () => {
 export type MutatorReturn = MaybePromise<JSONValue | void>;
 /**
  * The type used to describe the mutator definitions passed into [Replicache](classes/Replicache)
- * constructor as part of the [[ReplicacheOptions]].
+ * constructor as part of the {@link ReplicacheOptions}.
  *
- * See [[ReplicacheOptions]] [[ReplicacheOptions.mutators|mutators]] for more
+ * See {@link ReplicacheOptions} {@link ReplicacheOptions.mutators | mutators} for more
  * info.
  */
 export type MutatorDefs = {
@@ -188,7 +188,7 @@ type MakeMutators<T extends MutatorDefs> = {
 };
 
 /**
- * Base options for [[PullOptions]] and [[PushOptions]]
+ * Base options for {@link PullOptions} and {@link PushOptions}
  */
 export interface RequestOptions {
   /**
@@ -205,7 +205,7 @@ export interface RequestOptions {
 }
 
 /**
- * The reason [[onClientStateNotFound]] was called.
+ * The reason {@link onClientStateNotFound} was called.
  */
 export type ClientStateNotFoundReason =
   | {type: 'NotFoundOnServer'}
@@ -240,7 +240,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   /** The authorization token used when doing a push request. */
   auth: string;
 
-  /** The name of the Replicache database. Populated by [[ReplicacheOptions#name]]. */
+  /** The name of the Replicache database. Populated by {@link ReplicacheOptions#name}. */
   readonly name: string;
 
   private readonly _subscriptions: SubscriptionsManager;
@@ -295,9 +295,9 @@ export class Replicache<MD extends MutatorDefs = {}> {
   private _pushConnectionLoop: ConnectionLoop;
 
   /**
-   * The duration between each periodic [[pull]]. Setting this to `null`
+   * The duration between each periodic {@link pull}. Setting this to `null`
    * disables periodic pull completely. Pull will still happen if you call
-   * [[pull]] manually.
+   * {@link pull} manually.
    */
   pullInterval: number | null;
 
@@ -348,7 +348,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   private readonly _enableLicensing: boolean;
 
   /**
-   * The options used to control the [[pull]] and push request behavior. This
+   * The options used to control the {@link pull} and push request behavior. This
    * object is live so changes to it will affect the next pull or push call.
    */
   get requestOptions(): Required<RequestOptions> {
@@ -793,8 +793,8 @@ export class Replicache<MD extends MutatorDefs = {}> {
   }
 
   /**
-   * `onOnlineChange` is called when the [[online]] property changes. See
-   * [[online]] for more details.
+   * `onOnlineChange` is called when the {@link online} property changes. See
+   * {@link online} for more details.
    */
   onOnlineChange: ((online: boolean) => void) | null = null;
 
@@ -881,7 +881,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
    * If the named index already exists with the same definition this returns success
    * immediately. If the named index already exists, but with a different definition
    * an error is thrown.
-   * @deprecated Use [[ReplicacheOptions.indexes]] instead.
+   * @deprecated Use {@link ReplicacheOptions.indexes} instead.
    */
   async createIndex(def: CreateIndexDefinition): Promise<void> {
     await this._ready;
@@ -889,8 +889,8 @@ export class Replicache<MD extends MutatorDefs = {}> {
   }
 
   /**
-   * Drops an index previously created with [[createIndex]].
-   * @deprecated Use [[ReplicacheOptions.indexes]] instead.
+   * Drops an index previously created with {@link createIndex}.
+   * @deprecated Use {@link ReplicacheOptions.indexes} instead.
    */
   async dropIndex(name: string): Promise<void> {
     await this._ready;
@@ -1164,9 +1164,9 @@ export class Replicache<MD extends MutatorDefs = {}> {
   }
 
   /**
-   * Push pushes pending changes to the [[pushURL]].
+   * Push pushes pending changes to the {@link pushURL}.
    *
-   * You do not usually need to manually call push. If [[pushDelay]] is non-zero
+   * You do not usually need to manually call push. If {@link pushDelay} is non-zero
    * (which it is by default) pushes happen automatically shortly after
    * mutations.
    */
@@ -1175,7 +1175,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   }
 
   /**
-   * Pull pulls changes from the [[pullURL]]. If there are any changes
+   * Pull pulls changes from the {@link pullURL}. If there are any changes
    * local changes will get replayed on top of the new server state.
    */
   pull(): void {
@@ -1430,11 +1430,11 @@ export class Replicache<MD extends MutatorDefs = {}> {
    * Watches Replicache for changes.
    *
    * The `callback` gets called whenever the underlying data changes and the
-   * `key` changes matches the
-   * [[ExperimentalWatchNoIndexOptions|ExperimentalWatchOptions.prefix]]
-   * if present. If a change occurs to the data but the change does not impact
-   * the key space the callback is not called. In other words, the callback is
-   * never called with an empty diff.
+   * `key` changes matches the `prefix` of {@link ExperimentalWatchIndexOptions} or
+   * {@link ExperimentalWatchNoIndexOptions} if present. If a change
+   * occurs to the data but the change does not impact the key space the
+   * callback is not called. In other words, the callback is never called with
+   * an empty diff.
    *
    * This gets called after commit (a mutation or a rebase).
    *

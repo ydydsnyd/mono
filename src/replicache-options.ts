@@ -6,7 +6,7 @@ import type * as kv from './kv/mod';
 import type {IndexDefinitions} from './index-defs';
 
 /**
- * The options passed to [[Replicache]].
+ * The options passed to {@link Replicache}.
  */
 
 export interface ReplicacheOptions<MD extends MutatorDefs> {
@@ -16,7 +16,7 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
    * details.
    *
    * If not provided, push requests will not be made unless a custom
-   * [[ReplicacheOptions.pusher]] is provided.
+   * {@link ReplicacheOptions.pusher} is provided.
    */
   pushURL?: string;
 
@@ -33,7 +33,7 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
    * details.
    *
    * If not provided, pull requests will not be made unless a custom
-   * [[ReplicacheOptions.puller]] is provided.
+   * {@link ReplicacheOptions.puller} is provided.
    */
   pullURL?: string;
 
@@ -43,14 +43,14 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
    * It is important to use user specific names so that if there are multiple
    * tabs open for different distinct users their data is kept separate.
    *
-   * For efficiency and performance, a new [[Replicache]] instance will
-   * initialize its state from the persisted state of an existing [[Replicache]]
+   * For efficiency and performance, a new {@link Replicache} instance will
+   * initialize its state from the persisted state of an existing {@link Replicache}
    * instance with the same `name`, domain and browser profile.
    *
-   * Mutations from one [[Replicache]] instance may be pushed using the
-   * [[ReplicacheOptions.auth]], [[ReplicacheOptions.pushURL]],
-   * [[ReplicacheOptions.pullURL]], [[ReplicacheOptions.pusher]], and
-   * [[ReplicacheOptions.puller]]  of another Replicache instance with the same
+   * Mutations from one {@link Replicache} instance may be pushed using the
+   * {@link ReplicacheOptions.auth}, {@link ReplicacheOptions.pushURL},
+   * {@link ReplicacheOptions.pullURL}, {@link ReplicacheOptions.pusher}, and
+   * {@link ReplicacheOptions.puller}  of another Replicache instance with the same
    * `name`, domain and browser profile.
    *
    * You can use multiple Replicache instances for the same user as long as the
@@ -66,7 +66,7 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
   schemaVersion?: string;
 
   /**
-   * The duration between each [[pull]] in milliseconds. Set this to `null` to
+   * The duration between each {@link pull} in milliseconds. Set this to `null` to
    * prevent pulling in the background.  Defaults to 60 seconds.
    */
   pullInterval?: number | null;
@@ -91,10 +91,10 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
    *
    * By default logs are logged to the console.  If you would like logs to be
    * sent elsewhere (e.g. to a cloud logging service like DataDog) you can
-   * provide an array of [[LogSink]]s.  Logs at or above
-   * [[ReplicacheOptions.logLevel]] are sent to each of these [[LogSink]]s.
+   * provide an array of {@link LogSink}s.  Logs at or above
+   * {@link ReplicacheOptions.logLevel} are sent to each of these {@link LogSink}s.
    * If you would still like logs to go to the console, include
-   * [[consoleLogSink]] in the array.
+   * `consoleLogSink` in the array.
    *
    * ```ts
    * logSinks: [consoleLogSink, myCloudLogSink],
@@ -104,14 +104,14 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
 
   /**
    * An object used as a map to define the *mutators*. These gets registered at
-   * startup of [[Replicache]].
+   * startup of {@link Replicache}.
    *
    * *Mutators* are used to make changes to the data.
    *
    * #### Example
    *
    * The registered *mutations* are reflected on the
-   * [[Replicache.mutate|mutate]] property of the [[Replicache]] instance.
+   * {@link Replicache.mutate | mutate} property of the {@link Replicache} instance.
    *
    * ```ts
    * const rep = new Replicache({
@@ -165,7 +165,7 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
    *
    * *Mutators* are atomic: all their changes are applied together, or none are.
    * Throwing an exception aborts the transaction. Otherwise, it is committed.
-   * As with [[query]] and [[subscribe]] all reads will see a consistent view of
+   * As with {@link query} and {@link subscribe} all reads will see a consistent view of
    * the cache while they run.
    */
   mutators?: MD;
@@ -176,7 +176,7 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
   requestOptions?: RequestOptions;
 
   /**
-   * Allows passing in a custom implementation of a [[Puller]] function. This
+   * Allows passing in a custom implementation of a {@link Puller} function. This
    * function is called when doing a pull and it is responsible for
    * communicating with the server.
    *
@@ -186,7 +186,7 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
   puller?: Puller;
 
   /**
-   * Allows passing in a custom implementation of a [[Pusher]] function. This
+   * Allows passing in a custom implementation of a {@link Pusher} function. This
    * function is called when doing a push and it is responsible for
    * communicating with the server.
    *

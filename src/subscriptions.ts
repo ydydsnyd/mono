@@ -116,7 +116,7 @@ class SubscriptionImpl<R extends ReadonlyJSONValue | undefined>
 }
 
 /**
- * Function that gets passed into [[Replicache.experimentalWatch]] and gets
+ * Function that gets passed into {@link Replicache.experimentalWatch} and gets
  * called when the data in Replicache changes.
  *
  * @experimental This type is experimental and may change in the future.
@@ -127,7 +127,7 @@ export type WatchCallbackForOptions<Options extends WatchOptions> =
   Options extends WatchIndexOptions ? WatchIndexCallback : WatchNoIndexCallback;
 
 /**
- * Function that gets passed into [[Replicache.experimentalWatch]] when doing a
+ * Function that gets passed into {@link Replicache.experimentalWatch} when doing a
  * watch on a secondary index map and gets called when the data in Replicache
  * changes.
  *
@@ -141,14 +141,14 @@ export type CallbackEntry = {
 };
 
 /**
- * Options for [[Replicache.experimentalWatch]].
+ * Options for {@link Replicache.experimentalWatch}.
  *
  * @experimental This interface is experimental and may change in the future.
  */
 export type WatchOptions = WatchIndexOptions | WatchNoIndexOptions;
 
 /**
- * Options object passed to [[Replicache.experimentalWatch]]. This is for an
+ * Options object passed to {@link Replicache.experimentalWatch}. This is for an
  * index watch.
  */
 export type WatchIndexOptions = WatchNoIndexOptions & {
@@ -159,7 +159,7 @@ export type WatchIndexOptions = WatchNoIndexOptions & {
 };
 
 /**
- * Options object passed to [[Replicache.experimentalWatch]]. This is for a non
+ * Options object passed to {@link Replicache.experimentalWatch}. This is for a non
  * index watch.
  */
 export type WatchNoIndexOptions = {
@@ -341,7 +341,7 @@ function convertDiffValues<Key>(
 }
 
 /**
- * The options passed to [[Replicache.subscribe]].
+ * The options passed to {@link Replicache.subscribe}.
  */
 export interface SubscribeOptions<R extends ReadonlyJSONValue | undefined> {
   /**
