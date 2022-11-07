@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1667812449546,
+  "lastUpdate": 1667822278988,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -29291,6 +29291,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23661,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fa0558584e0a015315f0622521a69399499271db",
+          "message": "feat!: Tighten JSON type a bit (#364)\n\nBREAKING CHANGE!\r\n\r\nWe used to allow undefined as a value in JSON objects. This was done to\r\nallow \"optional\" properties in TS to have an actual value of undefined.\r\n\r\nAllowing undefined makes things less clear and adds one more complication",
+          "timestamp": "2022-11-07T12:56:54+01:00",
+          "tree_id": "b6ad01a410cab846f4e17587ae3dd476f1e6cfea",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/fa0558584e0a015315f0622521a69399499271db"
+        },
+        "date": 1667822273049,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 193595,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34489,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 192449,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34196,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81579,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23592,
             "unit": "bytes"
           }
         ]
