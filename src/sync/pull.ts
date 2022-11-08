@@ -46,16 +46,24 @@ export const PULL_VERSION_DD31 = 1;
  * The JSON value used as the body when doing a POST to the [pull
  * endpoint](/reference/server-pull).
  */
-export type PullRequestSDD<Cookie = ReadonlyJSONValue> = {
+export type PullRequest = {
   profileID: string;
   clientID: ClientID;
-  cookie: Cookie;
+  cookie: ReadonlyJSONValue;
   lastMutationID: number;
-  pullVersion: typeof PULL_VERSION_SDD;
+  pullVersion: number;
   // schemaVersion can optionally be used by the customer's app
   // to indicate to the data layer what format of Client View the
   // app understands.
   schemaVersion: string;
+};
+
+export type PullRequestSDD<Cookie = ReadonlyJSONValue> = Omit<
+  PullRequest,
+  'cookie' | 'pullVersion'
+> & {
+  cookie: Cookie;
+  pullVersion: typeof PULL_VERSION_SDD;
 };
 
 /**

@@ -17,7 +17,7 @@ export const PUSH_VERSION_DD31 = 1;
 
 /**
  * The JSON value used as the body when doing a POST to the [push
- * endpoint](/server-push).
+ * endpoint](/reference/server-push).
  */
 export type PushRequest = {
   profileID: string;

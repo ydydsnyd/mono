@@ -57,8 +57,8 @@ export type {
   Write as ExperimentalKVWrite,
 } from './kv/store';
 
-export type {PullRequestSDD as PullRequest} from './sync/pull';
-export type {PushRequestSDD as PushRequest, Mutation} from './sync/push';
+export type {PullRequest} from './sync/pull';
+export type {PushRequest, Mutation} from './sync/push';
 export type {ClientID} from './sync/ids';
 
 export {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
