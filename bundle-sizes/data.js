@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1667898615802,
+  "lastUpdate": 1667971508888,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -29507,6 +29507,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23663,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5df30ba0704bfb03a5ffb5abee4d4459ad1a1151",
+          "message": "refactor: rework refresh to minimize cache misses with memdag locked (#344)\n\nProblem\r\n======\r\nThe current refresh implementation will commonly block mutations, pulls and queries on idb reads.  This will often cause jank.  This is because the current implementation simply sets the head in the memdag and then uses the LazyStore's lazy-cache-loading to pull the perdag chunks into the memdag *while the memdag is locked*.\r\n\r\nSolution\r\n======\r\nWithout a lock on the memdag, gather not-cached chunks from the perdag.  Then lock the memdag, put the gathered chunks, rebase mutations and diff. \r\n\r\nTo avoid pulling the entire perdag graph into the memdag the amount of chunk data gathered is limited by size (this change sets the limit to 5MB).  In steady state the diffs gathered in refresh will be << 5MB.\r\n\r\nChunks are gathered in the following order:\r\n1. commits in order from newest to oldest\r\n2. within a commit value btree before index btrees\r\n3. value btree and index btree are visited greedily (kind of a hi-bred of BFS and DFs), we start reading all of a node's child nodes in parallel, when a node loads we gather it, and recurse (i.e. start reading all of the node's child nodes in parallel).  index btrees are gathered in parallel.\r\n\r\n \r\nA write lock is not held on the memdag while not-cached chunks are gathered.  This means that the `isCached` value for chunks can change during the gather process due to cache population, cache eviction and/or chunk GC in the memdag.  So when the write lock is acquired on the memdag below gatheredChunks may contain some chunks that are already cached and may be missing some chunks that are not-cached.  It may also be missing chunks that are not-cached due to the gather size limit.  This is OK, because the already cached chunks will just be re-put into the memdag (a no-op), and the missing not-cache chunks will just be cache misses that will then be loaded from the perdag and put into the cache.  This gather and write approach aims to minimize cache misses during refresh's rebase and diff steps.  This is important because cache misses are relatively slow (as they require reading from idb), and thus handling them while having the memdag locked often creates jank by blocking local mutations, pulls and queries on idb.  This approach does not eliminate all cache misses, but it \r\ndoes minimize them.",
+          "timestamp": "2022-11-08T22:24:02-07:00",
+          "tree_id": "a1685217c80030d76713a42718b29de2dca3a53e",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/5df30ba0704bfb03a5ffb5abee4d4459ad1a1151"
+        },
+        "date": 1667971502422,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 194126,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34574,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 192980,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34257,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81763,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23700,
             "unit": "bytes"
           }
         ]
