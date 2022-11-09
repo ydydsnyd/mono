@@ -2506,13 +2506,16 @@ test('experiment KV Store', async () => {
   // chance to run persist and the refresh triggered by persist before we continue.
   await clock.tickAsync(2000);
 
+  expect(store.readCount).to.be.greaterThan(0, 'readCount');
+  expect(store.writeCount).to.be.greaterThan(0, 'writeCount');
   expect(store.closeCount).to.equal(0, 'closeCount');
   store.resetCounters();
 
   const b = await rep.query(tx => tx.has('foo'));
   expect(b).to.be.false;
-
-  expect(store.readCount).to.equal(1, 'readCount');
+  // When DD31 refresh has pulled enough data into the lazy store
+  // to not have to read from the experiment-kv-store
+  expect(store.readCount).to.equal(DD31 ? 0 : 1, 'readCount');
   expect(store.writeCount).to.equal(0, 'writeCount');
   expect(store.closeCount).to.equal(0, 'closeCount');
   store.resetCounters();

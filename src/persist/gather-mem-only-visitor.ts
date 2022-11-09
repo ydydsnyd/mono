@@ -6,7 +6,7 @@ import type {HashRefType} from '../db/hash-ref-type';
 import type {Meta} from '../db/commit';
 import {promiseVoid} from '../resolved-promises.js';
 
-export class GatherVisitor extends db.Visitor {
+export class GatherMemoryOnlyVisitor extends db.Visitor {
   private readonly _gatheredChunks: Map<Hash, dag.Chunk<unknown>> = new Map();
   private readonly _lazyRead: dag.LazyRead;
 

@@ -4,7 +4,7 @@ import type * as sync from '../sync/mod';
 import * as db from '../db/mod';
 import type {Hash} from '../hash';
 import {assertHasClientState, setClient} from './clients';
-import {GatherVisitor} from './gather-visitor';
+import {GatherMemoryOnlyVisitor} from './gather-mem-only-visitor';
 import {assertSnapshotMetaSDD} from '../db/commit.js';
 import {persistDD31} from './persist-dd31';
 import type {LogContext} from '@rocicorp/logger';
@@ -92,7 +92,7 @@ async function gatherMemOnlyChunks(
   return await memdag.withRead(async dagRead => {
     const mainHeadHash = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
     assert(mainHeadHash);
-    const visitor = new GatherVisitor(dagRead);
+    const visitor = new GatherMemoryOnlyVisitor(dagRead);
     await visitor.visitCommit(mainHeadHash);
     const headCommit = await db.commitFromHash(mainHeadHash, dagRead);
     const baseSnapshotCommit = await db.baseSnapshotFromHash(

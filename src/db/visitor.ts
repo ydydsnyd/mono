@@ -51,11 +51,9 @@ export class Visitor {
 
   async visitCommitChunk(chunk: dag.Chunk<CommitData<Meta>>): Promise<void> {
     const {data} = chunk;
-    await Promise.all([
-      this._visitCommitMeta(data.meta),
-      this._visitCommitValue(data.valueHash),
-      this._visitCommitIndexes(data.indexes),
-    ]);
+    await this._visitCommitValue(data.valueHash);
+    await this._visitCommitIndexes(data.indexes);
+    await this._visitCommitMeta(data.meta);
   }
 
   private _visitCommitMeta(meta: Meta): Promise<void> {

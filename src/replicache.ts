@@ -1327,7 +1327,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       }
       let result;
       try {
-        result = await sync.refresh(
+        result = await persist.refresh(
           this._lc,
           this._memdag,
           this._perdag,

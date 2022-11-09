@@ -194,6 +194,15 @@ export async function localMutationsGreaterThan(
   unreachable();
 }
 
+export async function baseSnapshotFromHead(
+  name: string,
+  dagRead: dag.Read,
+): Promise<Commit<SnapshotMetaSDD | SnapshotMetaDD31>> {
+  const hash = await dagRead.getHead(name);
+  assert(hash, `Missing head ${name}`);
+  return baseSnapshotFromHash(hash, dagRead);
+}
+
 export async function baseSnapshotFromHash(
   hash: Hash,
   dagRead: dag.Read,

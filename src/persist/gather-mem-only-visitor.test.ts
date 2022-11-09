@@ -2,7 +2,7 @@ import {expect} from '@esm-bundle/chai';
 import * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import {assertHash, makeNewFakeHashFunction} from '../hash';
-import {GatherVisitor} from './gather-visitor';
+import {GatherMemoryOnlyVisitor} from './gather-mem-only-visitor';
 import {ChainBuilder} from '../db/test-helpers.js';
 import {MetaType} from '../db/commit.js';
 
@@ -27,7 +27,7 @@ test('dag with no memory-only hashes gathers nothing', async () => {
 
   await memdag.withRead(async dagRead => {
     for (const commit of pb.chain) {
-      const visitor = new GatherVisitor(dagRead);
+      const visitor = new GatherMemoryOnlyVisitor(dagRead);
       await visitor.visitCommit(commit.chunk.hash);
       expect(visitor.gatheredChunks).to.be.empty;
     }
@@ -36,13 +36,13 @@ test('dag with no memory-only hashes gathers nothing', async () => {
   await pb.addSnapshot(undefined, clientID);
 
   await memdag.withRead(async dagRead => {
-    const visitor = new GatherVisitor(dagRead);
+    const visitor = new GatherMemoryOnlyVisitor(dagRead);
     await visitor.visitCommit(pb.headHash);
     expect(visitor.gatheredChunks).to.be.empty;
   });
 });
 
-test('dag with only temp hashes gathers everything', async () => {
+test('dag with only memory-only hashes gathers everything', async () => {
   const clientID = 'client-id';
   const hashFunction = makeNewFakeHashFunction();
   const perdag = new dag.TestStore(undefined, hashFunction);
@@ -57,7 +57,7 @@ test('dag with only temp hashes gathers everything', async () => {
 
   const testGatheredChunks = async () => {
     await memdag.withRead(async dagRead => {
-      const visitor = new GatherVisitor(dagRead);
+      const visitor = new GatherMemoryOnlyVisitor(dagRead);
       await visitor.visitCommit(mb.headHash);
       expect(memdag.getMemOnlyChunksSnapshot()).to.deep.equal(
         visitor.gatheredChunks,
@@ -79,7 +79,7 @@ test('dag with only temp hashes gathers everything', async () => {
   await testGatheredChunks();
 });
 
-test('dag with some permanent hashes and some memory-only hashes on top', async () => {
+test('dag with some persisted hashes and some memory-only hashes on top', async () => {
   const clientID = 'client-id';
   const hashFunction = makeNewFakeHashFunction();
   const perdag = new dag.TestStore(undefined, hashFunction);
@@ -104,7 +104,7 @@ test('dag with some permanent hashes and some memory-only hashes on top', async 
   await mb.addLocal(clientID);
 
   await memdag.withRead(async dagRead => {
-    const visitor = new GatherVisitor(dagRead);
+    const visitor = new GatherMemoryOnlyVisitor(dagRead);
     await visitor.visitCommit(mb.headHash);
     const metaBase = {
       basisHash: 'face0000000040008000000000000000' + '000000000003',
@@ -183,7 +183,7 @@ test('dag with some permanent hashes and some memory-only hashes on top w index'
   }
 
   await memdag.withRead(async dagRead => {
-    const visitor = new GatherVisitor(dagRead);
+    const visitor = new GatherMemoryOnlyVisitor(dagRead);
     await visitor.visitCommit(mb.headHash);
     expect(Object.fromEntries(visitor.gatheredChunks)).to.deep.equal(
       DD31

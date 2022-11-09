@@ -1,17 +1,10 @@
 import {expect} from '@esm-bundle/chai';
 import {LogContext} from '@rocicorp/logger';
-import {BTreeWrite} from '../btree/write';
+import type * as sync from '../sync/mod';
 import * as dag from '../dag/mod';
-import {
-  Commit,
-  IndexRecord,
-  LocalMetaDD31,
-  newLocalDD31,
-  newSnapshotDD31,
-  SnapshotMetaDD31,
-} from '../db/commit';
-import {ChainBuilder} from '../db/test-helpers';
 import * as db from '../db/mod';
+import * as btree from '../btree/mod';
+import {ChainBuilder} from '../db/test-helpers';
 import {assertHash, Hash, makeNewFakeHashFunction} from '../hash';
 import {toInternalValue, ToInternalValueReason} from '../internal-value';
 import type {JSONValue, ReadonlyJSONValue} from '../json';
@@ -22,15 +15,14 @@ import {
 } from '../persist/client-groups';
 import {ClientDD31, setClient} from '../persist/clients';
 import {addData, testSubscriptionsManagerOptions} from '../test-util';
-import type {ClientID} from './ids';
 import {refresh} from './refresh';
-import type {Entry} from '../btree/node.js';
-import type {MutatorDefs, WriteTransaction} from '../mod.js';
-import {assert, assertNotUndefined} from '../asserts.js';
+import {assert, assertNotUndefined} from '../asserts';
+import type {MutatorDefs} from '../replicache';
+import type {WriteTransaction} from '../transactions';
 
 async function makeChain(
   store: dag.Store,
-  clientID: ClientID,
+  clientID: sync.ClientID,
   cookie: number,
   headName: string,
 ): Promise<{headHash: Hash; chainBuilder: ChainBuilder}> {
@@ -45,7 +37,7 @@ async function makeChain(
 
 function makeMemdagChain(
   memdag: dag.Store,
-  clientID: ClientID,
+  clientID: sync.ClientID,
   cookie: number,
 ): Promise<{headHash: Hash; chainBuilder: ChainBuilder}> {
   return makeChain(memdag, clientID, cookie, db.DEFAULT_HEAD_NAME);
@@ -54,7 +46,7 @@ function makeMemdagChain(
 const PERDAG_TEST_SETUP_HEAD_NAME = 'test-setup-head';
 async function makePerdagChainAndSetClientsAndClientGroup(
   perdag: dag.Store,
-  clientID: ClientID,
+  clientID: sync.ClientID,
   cookie: number,
 ): Promise<{headHash: Hash; chainBuilder: ChainBuilder}> {
   const {headHash, chainBuilder} = await makeChain(
@@ -69,7 +61,7 @@ async function makePerdagChainAndSetClientsAndClientGroup(
 
 async function setClientsAndClientGroups(
   headHash: Hash,
-  clientID: ClientID,
+  clientID: sync.ClientID,
   perdag: dag.Store,
 ) {
   const clientGroupID = 'client-group-1';
@@ -347,14 +339,14 @@ suite('refresh', () => {
     // Here we use a brittle way to inject a snapshot in the middle of the refresh
     // algorithm.
     let withWriteCalls = 0;
-    const {withWrite} = memdag;
+    const {withWrite} = perdag;
     // @ts-expect-error Don't care that TS is complaining about the type of the RHS.
-    memdag.withWrite = async fn => {
-      if (withWriteCalls++ === 1) {
+    perdag.withWrite = async fn => {
+      if (withWriteCalls++ === 0) {
         await memdagChainBuilder.addSnapshot([], clientID, 3);
         await memdagChainBuilder.addLocal(clientID, []);
       }
-      return withWrite.call(memdag, fn);
+      return withWrite.call(perdag, fn);
     };
 
     const diffs = await refresh(
@@ -419,17 +411,17 @@ suite('refresh', () => {
     }: {
       store: dag.Store;
       basisHash?: Hash | null;
-      lastMutationIDs: Record<ClientID, number>;
+      lastMutationIDs: Record<sync.ClientID, number>;
       cookieJSON: JSONValue;
       valueHash?: Hash;
-      indexes?: IndexRecord[];
-    }): Promise<Commit<SnapshotMetaDD31>> {
+      indexes?: db.IndexRecord[];
+    }): Promise<db.Commit<db.SnapshotMetaDD31>> {
       return await store.withWrite(async dagWrite => {
         if (!valueHash) {
-          const map = new BTreeWrite(dagWrite);
+          const map = new btree.BTreeWrite(dagWrite);
           valueHash = await map.flush();
         }
-        const c = newSnapshotDD31(
+        const c = db.newSnapshotDD31(
           dagWrite.createChunk,
           basisHash,
           lastMutationIDs,
@@ -462,25 +454,25 @@ suite('refresh', () => {
       entries = [],
     }: {
       store: dag.Store;
-      clientID: ClientID;
+      clientID: sync.ClientID;
       mutationID: number;
       basisHash: Hash;
       mutatorName: string;
       mutatorArgsJSON: JSONValue;
       originalHash?: Hash | null;
-      indexes?: readonly IndexRecord[];
+      indexes?: readonly db.IndexRecord[];
       valueHash: Hash;
       timestamp?: number;
-      entries?: readonly Entry<ReadonlyJSONValue>[];
-    }): Promise<Commit<LocalMetaDD31>> {
+      entries?: readonly btree.Entry<ReadonlyJSONValue>[];
+    }): Promise<db.Commit<db.LocalMetaDD31>> {
       return await store.withWrite(async dagWrite => {
-        const m = new BTreeWrite(dagWrite, valueHash);
+        const m = new btree.BTreeWrite(dagWrite, valueHash);
         for (const [k, v] of entries) {
           await m.put(k, toInternalValue(v, ToInternalValueReason.Test));
         }
         const newValueHash = await m.flush();
 
-        const c = newLocalDD31(
+        const c = db.newLocalDD31(
           dagWrite.createChunk,
           basisHash,
           mutationID,

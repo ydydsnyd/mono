@@ -35,6 +35,7 @@ export {
   localMutationsDD31,
   localMutationsGreaterThan,
   snapshotMetaParts,
+  baseSnapshotFromHead,
   baseSnapshotFromHash,
   baseSnapshotFromCommit,
   compareCookiesForSnapshots,
@@ -45,6 +46,7 @@ export {decodeIndexKey, encodeIndexKey} from './index';
 export type {IndexKey} from './index';
 export {Visitor} from './visitor';
 export {rebaseMutationAndCommit, rebaseMutationAndPutCommit} from './rebase';
+export type {HashRefType} from './hash-ref-type';
 
 export type {
   SnapshotMeta,

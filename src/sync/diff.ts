@@ -50,6 +50,7 @@ export async function diff(
  * Diffs the state of the db at two different commits.
  * It will include the primary indexes as well as all the secondary indexes.
  */
+// TODO: this should probably move to db/
 export async function diffCommits(
   oldCommit: Commit<Meta>,
   newCommit: Commit<Meta>,

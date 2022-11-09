@@ -1,5 +1,6 @@
 export {persist, persistSDD} from './persist';
 export {persistDD31} from './persist-dd31';
+export {refresh} from './refresh';
 export {startHeartbeats} from './heartbeat';
 export {
   getClientGroup,

@@ -1,10 +1,12 @@
 import {expect} from '@esm-bundle/chai';
 import {assertHash, fakeHash, Hash, makeNewFakeHashFunction} from '../hash';
+import type {Chunk} from './chunk';
 import {LazyStore} from './lazy-store';
 import {TestStore} from './test-store';
 
 const DEFAULT_VALUE_SIZE = 100;
-function getSizeOfValueForTest(value: unknown): number {
+function getSizeOfChunkForTest(chunk: Chunk): number {
+  const value = chunk.data;
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     const {size} = value as {size?: unknown};
     if (typeof size === 'number') {
@@ -36,7 +38,7 @@ function createLazyStoreForTest(
       cacheSizeLimit,
       lazyStoreChunkHasher,
       assertHash,
-      getSizeOfValueForTest,
+      getSizeOfChunkForTest,
     ),
   };
 }
@@ -279,57 +281,6 @@ test('removeHead removes head from memory but does not write through to source s
   });
   await sourceStore.withRead(async read => {
     expect(await read.getHead('testHead1')).to.equal(testValue1Hash);
-  });
-});
-
-test('putChunk with non-memory-only hash throws an error', async () => {
-  const {sourceStore, lazyStore} = createLazyStoreForTest();
-  const sourceChunk = await sourceStore.withWrite(async write => {
-    const chunk = write.createChunk('sourceChunk', []);
-    await write.setHead('testHeadSource', chunk.hash);
-    await write.commit();
-    return chunk;
-  });
-  await lazyStore.withWrite(async write => {
-    let expectedE;
-    try {
-      await write.putChunk(sourceChunk);
-    } catch (e) {
-      expectedE = e;
-    }
-    expect(expectedE).to.be.instanceOf(Error);
-  });
-
-  const [memOnlyChunk, gcdMemOnlyChunk, neverPutChunk] =
-    await lazyStore.withWrite(async write => {
-      const memOnlyChunk = write.createChunk('memOnlyChunk', []);
-      await write.putChunk(memOnlyChunk);
-      await write.setHead('testHeadLazy', memOnlyChunk.hash);
-      const gcdMemOnlyChunk = write.createChunk('gcdMemOnlyChunk', []);
-      await write.putChunk(gcdMemOnlyChunk);
-      const neverPutChunk = write.createChunk('neverPutChunk', []);
-      await write.commit();
-      return [memOnlyChunk, gcdMemOnlyChunk, neverPutChunk];
-    });
-
-  await lazyStore.withWrite(async write => {
-    let gcdMemOnlyChunkError;
-    try {
-      await write.putChunk(gcdMemOnlyChunk);
-    } catch (e) {
-      gcdMemOnlyChunkError = e;
-    }
-    expect(gcdMemOnlyChunkError).to.be.instanceOf(Error);
-
-    let neverPutChunkError;
-    try {
-      await write.putChunk(neverPutChunk);
-    } catch (e) {
-      neverPutChunkError = e;
-    }
-    expect(neverPutChunkError).to.be.instanceOf(Error);
-
-    await write.putChunk(memOnlyChunk);
   });
 });
 

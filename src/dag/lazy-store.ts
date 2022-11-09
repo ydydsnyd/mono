@@ -2,7 +2,7 @@ import {RWLock} from '@rocicorp/lock';
 import type {Hash} from '../hash';
 import {Chunk, ChunkHasher, createChunk} from './chunk';
 import {Store, Read, Write, mustGetChunk} from './store';
-import {getSizeOfValue as defaultGetSizeOfValue} from '../json';
+import {getSizeOfValue} from '../json';
 import {
   computeRefCountUpdates,
   GarbageCollectionDelegate,
@@ -114,11 +114,11 @@ export class LazyStore implements Store {
     sourceCacheSizeLimit: number,
     chunkHasher: ChunkHasher,
     assertValidHash: (hash: Hash) => void,
-    getSizeOfValue = defaultGetSizeOfValue,
+    getSizeOfChunk: (chunk: Chunk) => number = getSizeOfValue,
   ) {
     this._sourceChunksCache = new ChunksCache(
       sourceCacheSizeLimit,
-      getSizeOfValue,
+      getSizeOfChunk,
       this._refCounts,
     );
     this._sourceStore = sourceStore;
@@ -182,6 +182,18 @@ export class LazyStore implements Store {
     return new Map(this._memOnlyChunks);
   }
 
+  /**
+   * Does not acquire any lock on the store.
+   */
+  isCached(chunkHash: Hash): boolean {
+    return (
+      this._sourceChunksCache.getWithoutUpdatingLRU(chunkHash) !== undefined
+    );
+  }
+
+  /**
+   * Acquires a write lock on the store.
+   */
   async chunksPersisted(chunkHashes: Iterable<Hash>): Promise<void> {
     await this.withWrite(() => {
       for (const chunkHash of chunkHashes) {
@@ -285,7 +297,10 @@ export class LazyWrite
   private readonly _chunkHasher: ChunkHasher;
   protected readonly _pendingHeadChanges = new Map<string, HeadChange>();
   protected readonly _pendingMemOnlyChunks = new Map<Hash, Chunk>();
-  protected readonly _pendingCachedChunks = new Map<Hash, Chunk>();
+  protected readonly _pendingCachedChunks = new Map<
+    Hash,
+    {chunk: Chunk; size: number}
+  >();
   private readonly _createdChunks = new Set<Hash>();
 
   constructor(
@@ -316,8 +331,7 @@ export class LazyWrite
     return chunk;
   };
 
-  // eslint-disable-next-line require-await
-  async putChunk<V>(c: Chunk<V>): Promise<void> {
+  putChunk<V>(c: Chunk<V>, size?: number): Promise<void> {
     const {hash, meta} = c;
     this.assertValidHash(hash);
     if (meta.length > 0) {
@@ -325,8 +339,12 @@ export class LazyWrite
         this.assertValidHash(h);
       }
     }
-    assert(this._createdChunks.has(hash) || this.isMemOnlyChunkHash(c.hash));
-    this._pendingMemOnlyChunks.set(hash, c);
+    if (this._createdChunks.has(hash) || this.isMemOnlyChunkHash(c.hash)) {
+      this._pendingMemOnlyChunks.set(hash, c);
+    } else {
+      this._pendingCachedChunks.set(hash, {chunk: c, size: size ?? -1});
+    }
+    return promiseVoid;
   }
 
   async setHead(name: string, hash: Hash): Promise<void> {
@@ -365,13 +383,13 @@ export class LazyWrite
     }
     const pendingCachedChunk = this._pendingCachedChunks.get(hash);
     if (pendingCachedChunk !== undefined) {
-      return pendingCachedChunk;
+      return pendingCachedChunk.chunk;
     }
     let chunk = this._sourceChunksCache.get(hash);
     if (chunk === undefined) {
       chunk = await (await this.getSourceRead()).getChunk(hash);
       if (chunk !== undefined) {
-        this._pendingCachedChunks.set(chunk.hash, chunk);
+        this._pendingCachedChunks.set(chunk.hash, {chunk, size: -1});
       }
     }
     return chunk;
@@ -444,7 +462,7 @@ export class LazyWrite
     }
     const pendingCachedChunk = this._pendingCachedChunks.get(hash);
     if (pendingCachedChunk !== undefined) {
-      return pendingCachedChunk.meta;
+      return pendingCachedChunk.chunk.meta;
     }
     return this._sourceChunksCache.getWithoutUpdatingLRU(hash)?.meta;
   }
@@ -457,7 +475,7 @@ type CacheEntry = {
 
 class ChunksCache {
   private readonly _cacheSizeLimit: number;
-  private readonly _getSizeOfValue: (v: unknown) => number;
+  private readonly _getSizeOfChunk: (chunk: Chunk) => number;
   private readonly _refCounts: Map<Hash, number>;
   /**
    * Iteration order is from least to most recently used.
@@ -467,11 +485,11 @@ class ChunksCache {
 
   constructor(
     cacheSizeLimit: number,
-    getSizeOfValue: (v: unknown) => number,
+    getSizeOfChunk: (v: Chunk) => number,
     refCounts: Map<Hash, number>,
   ) {
     this._cacheSizeLimit = cacheSizeLimit;
-    this._getSizeOfValue = getSizeOfValue;
+    this._getSizeOfChunk = getSizeOfChunk;
     this._refCounts = refCounts;
   }
 
@@ -505,7 +523,7 @@ class ChunksCache {
     if (refCount === undefined || refCount < 1) {
       return;
     }
-    const valueSize = this._getSizeOfValue(chunk.data);
+    const valueSize = this._getSizeOfChunk(chunk);
     if (valueSize > this._cacheSizeLimit) {
       // This value cannot be cached due to its size exceeding the
       // cache size limit, don't evict other entries to try to make
@@ -559,7 +577,7 @@ class ChunksCache {
   }
 
   updateForCommit(
-    chunksToPut: Iterable<Chunk>,
+    chunksToPut: Iterable<{chunk: Chunk; size: number}>,
     hashesToDelete: Iterable<Hash>,
   ): void {
     // Commit has already updated this._refCounts to reflect these puts and
@@ -569,7 +587,7 @@ class ChunksCache {
     // this._ensureCacheSizeLimit, both of which require this._refCounts and
     // this._cacheEntries to be in a consistent state to work correctly.
     const cacheEntriesLargerThanLimit = [];
-    for (const chunk of chunksToPut) {
+    for (const {chunk, size} of chunksToPut) {
       const {hash} = chunk;
       const oldCacheEntry = this._cacheEntries.get(hash);
       if (oldCacheEntry) {
@@ -579,7 +597,7 @@ class ChunksCache {
         this._cacheEntries.delete(hash);
         this._cacheEntries.set(hash, oldCacheEntry);
       } else {
-        const valueSize = this._getSizeOfValue(chunk.data);
+        const valueSize = size !== -1 ? size : this._getSizeOfChunk(chunk);
         this._size += valueSize;
         const cacheEntry = {chunk, size: valueSize};
         this._cacheEntries.set(hash, cacheEntry);

@@ -3,7 +3,7 @@ import type * as dag from '../dag/mod';
 import * as db from '../db/mod';
 import type * as sync from '../sync/mod';
 import {assertHasClientState, getMainClientGroupID} from './clients';
-import {GatherVisitor} from './gather-visitor';
+import {GatherMemoryOnlyVisitor} from './gather-mem-only-visitor';
 import type {MutatorDefs} from '../replicache';
 import type {Hash} from '../hash';
 import type {LogContext} from '@rocicorp/logger';
@@ -236,7 +236,7 @@ async function gatherMemOnlyChunks(
   baseSnapshotHash: Hash,
 ): Promise<ReadonlyMap<Hash, dag.Chunk>> {
   return await memdag.withRead(async dagRead => {
-    const visitor = new GatherVisitor(dagRead);
+    const visitor = new GatherMemoryOnlyVisitor(dagRead);
     await visitor.visitCommit(baseSnapshotHash);
     return visitor.gatheredChunks;
   });
