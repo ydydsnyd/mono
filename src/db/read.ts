@@ -8,13 +8,12 @@ import {
 } from './commit.js';
 import {BTreeRead, BTreeWrite} from '../btree/mod.js';
 import type {Hash} from '../hash.js';
-import type {InternalValue} from '../internal-value.js';
+import type {FrozenJSONValue} from '../json.js';
 
 export class Read {
   private readonly _dagRead: dag.Read;
   map: BTreeRead;
   readonly indexes: Map<string, IndexRead>;
-  shouldDeepClone = false;
 
   constructor(
     dagRead: dag.Read,
@@ -30,7 +29,7 @@ export class Read {
     return this.map.has(key);
   }
 
-  get(key: string): Promise<InternalValue | undefined> {
+  get(key: string): Promise<FrozenJSONValue | undefined> {
     return this.map.get(key);
   }
 

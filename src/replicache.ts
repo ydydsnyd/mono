@@ -1,6 +1,6 @@
 import {consoleLogSink, LogContext, TeeLogSink} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
-import type {ReadonlyJSONValue} from './json.js';
+import {ReadonlyJSONValue, deepFreeze} from './json.js';
 import type {JSONValue} from './json.js';
 import {Pusher, PushError} from './pusher.js';
 import {
@@ -55,12 +55,6 @@ import {mustSimpleFetch} from './simple-fetch.js';
 import {initBgIntervalProcess} from './bg-interval.js';
 import {setIntervalWithSignal} from './set-interval-with-signal.js';
 import {MutationRecovery} from './mutation-recovery.js';
-import {
-  fromInternalValue,
-  FromInternalValueReason,
-  toInternalValue,
-  ToInternalValueReason,
-} from './internal-value.js';
 import type {IndexDefinitions} from './index-defs.js';
 import {assertClientDD31} from './persist/clients.js';
 import {throwIfClosed} from './transaction-closed-error.js';
@@ -1221,10 +1215,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     const syncHead = await sync.handlePullResponse(
       lc,
       this._memdag,
-      toInternalValue(
-        internalPoke.baseCookie,
-        ToInternalValueReason.CookieFromResponse,
-      ),
+      deepFreeze(internalPoke.baseCookie),
       internalPoke.pullResponse,
       clientID,
     );
@@ -1511,10 +1502,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     args: A | undefined,
     timestamp: number,
   ): Promise<{result: R; ref: Hash}> {
-    const internalArgs = toInternalValue(
-      (args ?? null) as ReadonlyJSONValue,
-      ToInternalValueReason.WriteTransactionMutateArgs,
-    );
+    const frozenArgs = deepFreeze(args ?? null);
 
     // Ensure that we run initial pending subscribe functions before starting a
     // write transaction.
@@ -1531,7 +1519,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       const dbWrite = await db.newWriteLocal(
         whence,
         name,
-        internalArgs,
+        frozenArgs,
         originalHash,
         dagWrite,
         timestamp,
@@ -1608,10 +1596,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
           return {
             id: await p.getMutationID(clientID, dagRead),
             name: p.meta.mutatorName,
-            args: fromInternalValue(
-              p.meta.mutatorArgsJSON,
-              FromInternalValueReason.PendingMutationGet,
-            ),
+            args: p.meta.mutatorArgsJSON,
           };
         }),
       );

@@ -1,5 +1,5 @@
 import {Lock} from '@rocicorp/lock';
-import type {ReadonlyJSONValue} from '../json.js';
+import type {FrozenJSONValue, ReadonlyJSONValue} from '../json.js';
 import type * as dag from '../dag/mod.js';
 import {Hash, emptyHash, newUUIDHash} from '../hash.js';
 import {BTreeRead} from './read.js';
@@ -16,7 +16,6 @@ import {
 } from './node.js';
 import type {CreateChunk} from '../dag/chunk.js';
 import {assert} from '../asserts.js';
-import type {InternalValue} from '../internal-value.js';
 
 export class BTreeWrite extends BTreeRead {
   /**
@@ -93,7 +92,7 @@ export class BTreeWrite extends BTreeRead {
   }
 
   newDataNodeImpl(
-    entries: EntryWithOptionalSize<InternalValue>[],
+    entries: EntryWithOptionalSize<FrozenJSONValue>[],
   ): DataNodeImpl {
     const n = new DataNodeImpl(entries, newUUIDHash(), true);
     this._addToModified(n);
@@ -101,7 +100,7 @@ export class BTreeWrite extends BTreeRead {
   }
 
   newNodeImpl(
-    entries: EntryWithOptionalSize<InternalValue>[],
+    entries: EntryWithOptionalSize<FrozenJSONValue>[],
     level: number,
   ): DataNodeImpl;
   newNodeImpl(
@@ -111,13 +110,13 @@ export class BTreeWrite extends BTreeRead {
   newNodeImpl(
     entries:
       | EntryWithOptionalSize<Hash>[]
-      | EntryWithOptionalSize<InternalValue>[],
+      | EntryWithOptionalSize<FrozenJSONValue>[],
     level: number,
   ): InternalNodeImpl | DataNodeImpl;
   newNodeImpl(
     entries:
       | EntryWithOptionalSize<Hash>[]
-      | EntryWithOptionalSize<InternalValue>[],
+      | EntryWithOptionalSize<FrozenJSONValue>[],
     level: number,
   ): InternalNodeImpl | DataNodeImpl {
     const n = newNodeImpl(entries, newUUIDHash(), level, true);
@@ -125,7 +124,7 @@ export class BTreeWrite extends BTreeRead {
     return n;
   }
 
-  put(key: string, value: InternalValue): Promise<void> {
+  put(key: string, value: FrozenJSONValue): Promise<void> {
     return this._lock.withLock(async () => {
       const oldRootNode = await this.getNode(this.rootHash);
       const entrySize = this.getEntrySize([key, value]);

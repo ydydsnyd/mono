@@ -1,7 +1,5 @@
 import type {ReadonlyJSONValue} from '../json.js';
 
-export type Value = ReadonlyJSONValue;
-
 /**
  * Store defines a transactional key/value store that Replicache stores all data
  * within.
@@ -44,6 +42,9 @@ export interface Release {
  */
 export interface Read extends Release {
   has(key: string): Promise<boolean>;
+  // This returns ReadonlyJSONValue instead of FrozenJSONValue because we don't
+  // want to FrozenJSONValue to be part of our public API. Our implementations
+  // really return FrozenJSONValue but it is not required by the interface.
   get(key: string): Promise<ReadonlyJSONValue | undefined>;
   closed: boolean;
 }

@@ -26,7 +26,6 @@ import sinon from 'sinon';
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
 import {initClientWithClientID} from './persist/clients-test-helpers.js';
-import {fromInternalValue, FromInternalValueReason} from './internal-value.js';
 import {
   PushRequestDD31,
   PushRequestSDD,
@@ -116,10 +115,7 @@ suite('DD31', () => {
         clientID,
         id: localMeta.mutationID,
         name: localMeta.mutatorName,
-        args: fromInternalValue(
-          localMeta.mutatorArgsJSON,
-          FromInternalValueReason.Test,
-        ),
+        args: localMeta.mutatorArgsJSON,
         timestamp: localMeta.timestamp,
       })),
       pushVersion: PUSH_VERSION_DD31,
@@ -1388,7 +1384,7 @@ suite('DD31', () => {
   });
 
   test('mutation recovery is invoked at startup', async () => {
-    const rep = await replicacheForTesting('mutation-recovery-startup');
+    const rep = await replicacheForTesting('mutation-recovery-startup-dd31');
     expect(rep.recoverMutationsSpy.callCount).to.equal(1);
     expect(rep.recoverMutationsSpy.callCount).to.equal(1);
     expect(await rep.recoverMutationsSpy.firstCall.returnValue).to.equal(true);
@@ -1454,7 +1450,7 @@ suite('DD31', () => {
   });
 
   test('mutation recovery is invoked on 5 minute interval', async () => {
-    const rep = await replicacheForTesting('mutation-recovery-startup', {
+    const rep = await replicacheForTesting('mutation-recovery-startup-dd31-4', {
       enableLicensing: false,
     });
     expect(rep.recoverMutationsSpy.callCount).to.equal(1);

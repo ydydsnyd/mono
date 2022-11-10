@@ -29,8 +29,7 @@ import {
   newWriteIndexChange,
   createIndexBTree,
 } from './write.js';
-import type {JSONValue} from '../json.js';
-import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
+import {JSONValue, deepFreeze} from '../json.js';
 import type {ClientID} from '../sync/client-id.js';
 import {emptyHash, Hash} from '../hash.js';
 import {BTreeRead, BTreeWrite, Node} from '../btree/mod.js';
@@ -117,7 +116,7 @@ async function createLocal(
     const w = await newWriteLocal(
       whenceHead(headName),
       createMutatorName(i),
-      toInternalValue([i], ToInternalValueReason.Test),
+      deepFreeze([i]),
       null,
       dagWrite,
       42,
@@ -125,7 +124,7 @@ async function createLocal(
       dd31,
     );
     for (const [key, val] of entries) {
-      await w.put(lc, key, toInternalValue(val, ToInternalValueReason.Test));
+      await w.put(lc, key, deepFreeze(val));
     }
     await w.commit(headName);
   });
@@ -252,7 +251,7 @@ async function addSnapshot(
             dagWrite,
           ),
         },
-        toInternalValue(cookie, ToInternalValueReason.Test),
+        deepFreeze(cookie),
         dagWrite,
         indexes,
         clientID,
@@ -261,7 +260,7 @@ async function addSnapshot(
       w = await newWriteSnapshotSDD(
         whenceHead(DEFAULT_HEAD_NAME),
         await chain[chain.length - 1].getNextMutationID(clientID, dagWrite),
-        toInternalValue(cookie, ToInternalValueReason.Test),
+        deepFreeze(cookie),
         dagWrite,
         readIndexesForWrite(chain[chain.length - 1], dagWrite),
         clientID,
@@ -270,7 +269,7 @@ async function addSnapshot(
 
     if (map) {
       for (const [k, v] of map) {
-        await w.put(lc, k, toInternalValue(v, ToInternalValueReason.Test));
+        await w.put(lc, k, deepFreeze(v));
       }
     }
     await w.commit(headName);

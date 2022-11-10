@@ -1,11 +1,12 @@
 import {RWLock} from '@rocicorp/lock';
+import type {FrozenJSONValue} from '../json.js';
 import {promiseVoid} from '../resolved-promises.js';
 import {stringCompare} from '../string-compare.js';
-import type {Read, Store, Value, Write} from './store.js';
+import type {Read, Store, Write} from './store.js';
 import {deleteSentinel, WriteImplBase} from './write-impl-base.js';
 
 export class TestMemStore implements Store {
-  private readonly _map: Map<string, Value> = new Map();
+  private readonly _map: Map<string, FrozenJSONValue> = new Map();
   private readonly _rwLock = new RWLock();
   private _closed = false;
 
@@ -46,13 +47,13 @@ export class TestMemStore implements Store {
     return this._closed;
   }
 
-  snapshot(): Record<string, Value> {
+  snapshot(): Record<string, FrozenJSONValue> {
     const entries = [...this._map.entries()];
     entries.sort((a, b) => stringCompare(a[0], b[0]));
     return Object.fromEntries(entries);
   }
 
-  restoreSnapshot(snapshot: Record<string, Value>): void {
+  restoreSnapshot(snapshot: Record<string, FrozenJSONValue>): void {
     this._map.clear();
 
     for (const [k, v] of Object.entries(snapshot)) {
@@ -63,11 +64,11 @@ export class TestMemStore implements Store {
   /**
    * This exposes the underlying map for testing purposes.
    */
-  entries(): IterableIterator<[string, Value]> {
+  entries(): IterableIterator<[string, FrozenJSONValue]> {
     return this._map.entries();
   }
 
-  map(): Map<string, Value> {
+  map(): Map<string, FrozenJSONValue> {
     return this._map;
   }
 
@@ -77,13 +78,13 @@ export class TestMemStore implements Store {
 }
 
 class ReadImpl implements Read {
-  private readonly _map: Map<string, Value>;
+  private readonly _map: Map<string, FrozenJSONValue>;
   private readonly _release: () => void;
   private _closed = false;
 
-  constructor(map: Map<string, Value>, relase: () => void) {
+  constructor(map: Map<string, FrozenJSONValue>, release: () => void) {
     this._map = map;
-    this._release = relase;
+    this._release = release;
   }
 
   release() {
@@ -99,15 +100,15 @@ class ReadImpl implements Read {
     return Promise.resolve(this._map.has(key));
   }
 
-  get(key: string): Promise<Value | undefined> {
+  get(key: string): Promise<FrozenJSONValue | undefined> {
     return Promise.resolve(this._map.get(key));
   }
 }
 
 class WriteImpl extends WriteImplBase implements Write {
-  private readonly _map: Map<string, Value>;
+  private readonly _map: Map<string, FrozenJSONValue>;
 
-  constructor(map: Map<string, Value>, release: () => void) {
+  constructor(map: Map<string, FrozenJSONValue>, release: () => void) {
     super(new ReadImpl(map, release));
     this._map = map;
   }

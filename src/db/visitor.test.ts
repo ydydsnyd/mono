@@ -3,21 +3,17 @@ import * as dag from '../dag/mod.js';
 import {ChainBuilder} from './test-helpers.js';
 import {fakeHash, Hash} from '../hash.js';
 import type {Entry, Node} from '../btree/node.js';
-import type {ReadonlyJSONValue} from '../json.js';
+import {FrozenJSONValue, ReadonlyJSONValue, deepFreeze} from '../json.js';
 import {Visitor} from './visitor.js';
 import {Commit, Meta, newLocal} from './commit.js';
-import {
-  toInternalValue,
-  InternalValue,
-  ToInternalValueReason,
-} from '../internal-value.js';
 import {promiseVoid} from '../resolved-promises.js';
 
 test('test that we get to the data nodes', async () => {
   const clientID = 'client-id';
   const dagStore = new dag.TestStore();
 
-  const log: (readonly Entry<Hash>[] | readonly Entry<InternalValue>[])[] = [];
+  const log: (readonly Entry<Hash>[] | readonly Entry<FrozenJSONValue>[])[] =
+    [];
   const b = new ChainBuilder(dagStore);
 
   class TestVisitor extends Visitor {
@@ -97,7 +93,7 @@ test('test that we get to the data nodes', async () => {
       prevCommit.chunk.hash,
       42,
       'mutator-name',
-      toInternalValue([], ToInternalValueReason.Test),
+      deepFreeze([]),
       fakeHash('0e'),
       prevCommit.valueHash,
       prevCommit.indexes,
@@ -129,7 +125,7 @@ test('test that we get to the data nodes', async () => {
       prevCommit.chunk.hash,
       42,
       'mutator-name',
-      toInternalValue([], ToInternalValueReason.Test),
+      deepFreeze([]),
       localCommit.chunk.hash,
       prevCommit.valueHash,
       prevCommit.indexes,

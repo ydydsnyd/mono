@@ -8,7 +8,7 @@ import {assertHash, fakeHash, Hash, makeNewFakeHashFunction} from '../hash.js';
 import {assert} from '../asserts.js';
 import {TestStore} from './test-store.js';
 import {ChunkNotFoundError} from './store.js';
-import type {ReadonlyJSONValue} from '../json.js';
+import {ReadonlyJSONValue, deepFreeze} from '../json.js';
 
 suite('read', () => {
   test('has chunk', async () => {
@@ -83,7 +83,7 @@ suite('write', () => {
       const kv = new MemStore();
       await kv.withWrite(async kvw => {
         const w = new WriteImpl(kvw, chunkHasher, assertHash);
-        const c = w.createChunk(data, refs);
+        const c = w.createChunk(deepFreeze(data), refs);
         await w.putChunk(c);
 
         const kd = chunkDataKey(c.hash);
@@ -244,7 +244,7 @@ suite('write', () => {
       const kv = new MemStore();
       await kv.withWrite(async kvw => {
         const w = new WriteImpl(kvw, chunkHasher, assertHash);
-        const c = w.createChunk([0, 1], []);
+        const c = w.createChunk(deepFreeze([0, 1]), []);
         await w.putChunk(c);
 
         key = chunkDataKey(c.hash);
@@ -277,7 +277,7 @@ suite('write', () => {
     const t = async (name: string, data: ReadonlyJSONValue, refs: Hash[]) => {
       const kv = new MemStore();
       const hash = chunkHasher();
-      const c = createChunkWithHash(hash, data, refs);
+      const c = createChunkWithHash(hash, deepFreeze(data), refs);
       await kv.withWrite(async kvw => {
         const w = new WriteImpl(kvw, chunkHasher, assertHash);
         await w.putChunk(c);
@@ -323,7 +323,7 @@ suite('write', () => {
     ) => {
       const store = new StoreImpl(new MemStore(), chunkHasher, assertValidHash);
 
-      const data = [true, 42];
+      const data = deepFreeze([true, 42]);
 
       await store.withWrite(async dagWrite => {
         const c = dagWrite.createChunk(data, []);

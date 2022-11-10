@@ -1,6 +1,7 @@
 import {expect} from '@esm-bundle/chai';
 import {assertHash, fakeHash, Hash, makeNewFakeHashFunction} from '../hash.js';
 import type {Chunk} from './chunk.js';
+import {deepFreeze} from '../json.js';
 import {LazyStore} from './lazy-store.js';
 import {TestStore} from './test-store.js';
 
@@ -68,7 +69,7 @@ test('isMemOnlyChunkHash', async () => {
     return chunk;
   });
   await lazyStore.withRead(read => {
-    // not true because not commited
+    // not true because not committed
     expect(read.isMemOnlyChunkHash(testValue2MemOnlyChunk.hash)).to.be.false;
   });
 
@@ -567,10 +568,10 @@ test('cache will evict multiple chunks to make room for newly read chunk', async
   const {sourceStore, lazyStore} = createLazyStoreForTest({
     cacheSizeLimit: 300,
   });
-  const testValue1 = 'testValue1',
-    testValue2 = 'testValue2',
-    testValue3 = 'testValue3',
-    testValue4 = {name: 'testValue4', size: 200};
+  const testValue1 = 'testValue1';
+  const testValue2 = 'testValue2';
+  const testValue3 = 'testValue3';
+  const testValue4 = deepFreeze({name: 'testValue4', size: 200});
   const {testValue1Chunk, testValue2Chunk, testValue3Chunk, testValue4Chunk} =
     await sourceStore.withWrite(async write => {
       const testValue1Chunk = write.createChunk(testValue1, []);
@@ -644,10 +645,10 @@ test('cache will evict multiple chunks to make room for newly cached chunk on Wr
   const {sourceStore, lazyStore} = createLazyStoreForTest({
     cacheSizeLimit: 300,
   });
-  const testValue1 = 'testValue1',
-    testValue2 = 'testValue2',
-    testValue3 = 'testValue3',
-    testValue4 = {name: 'testValue4', size: 200};
+  const testValue1 = 'testValue1';
+  const testValue2 = 'testValue2';
+  const testValue3 = 'testValue3';
+  const testValue4 = deepFreeze({name: 'testValue4', size: 200});
   const {testValue1Chunk, testValue2Chunk, testValue3Chunk, testValue4Chunk} =
     await sourceStore.withWrite(async write => {
       const testValue1Chunk = write.createChunk(testValue1, []);
@@ -723,10 +724,10 @@ test('cache will evict all cached values to make room for new chunk', async () =
   const {sourceStore, lazyStore} = createLazyStoreForTest({
     cacheSizeLimit: 300,
   });
-  const testValue1 = 'testValue1',
-    testValue2 = 'testValue2',
-    testValue3 = 'testValue3',
-    testValue4 = {name: 'testValue4', size: 250};
+  const testValue1 = 'testValue1';
+  const testValue2 = 'testValue2';
+  const testValue3 = 'testValue3';
+  const testValue4 = deepFreeze({name: 'testValue4', size: 250});
   const {testValue1Chunk, testValue2Chunk, testValue3Chunk, testValue4Chunk} =
     await sourceStore.withWrite(async write => {
       const testValue1Chunk = write.createChunk(testValue1, []);
@@ -799,10 +800,10 @@ test('cache does not cache read chunks with size greater than cacheSizeLimit, an
   const {sourceStore, lazyStore} = createLazyStoreForTest({
     cacheSizeLimit: 300,
   });
-  const testValue1 = 'testValue1',
-    testValue2 = 'testValue2',
-    testValue3 = 'testValue3',
-    testValue4 = {name: 'testValue4', size: 400};
+  const testValue1 = 'testValue1';
+  const testValue2 = 'testValue2';
+  const testValue3 = 'testValue3';
+  const testValue4 = deepFreeze({name: 'testValue4', size: 400});
   const {testValue1Chunk, testValue2Chunk, testValue3Chunk, testValue4Chunk} =
     await sourceStore.withWrite(async write => {
       const testValue1Chunk = write.createChunk(testValue1, []);
@@ -878,11 +879,11 @@ test('on write commit cache does not cache chunks with size greater than cacheSi
   const {sourceStore, lazyStore} = createLazyStoreForTest({
     cacheSizeLimit: 200,
   });
-  const testValue1 = 'testValue1',
-    testValue2 = 'testValue2',
-    testValue3 = 'testValue3',
-    testValue4 = {name: 'testValue4', size: 400},
-    testValue5 = {name: 'testValue5', size: 400};
+  const testValue1 = 'testValue1';
+  const testValue2 = 'testValue2';
+  const testValue3 = 'testValue3';
+  const testValue4 = deepFreeze({name: 'testValue4', size: 400});
+  const testValue5 = deepFreeze({name: 'testValue5', size: 400});
   const {
     testValue1Chunk,
     testValue2Chunk,
@@ -971,10 +972,10 @@ test('cache eviction updates ref counts and removes cache chunks when their ref 
   const {sourceStore, lazyStore} = createLazyStoreForTest({
     cacheSizeLimit: 300,
   });
-  const testValue1 = 'testValue1',
-    testValue2 = 'testValue2',
-    testValue3 = {name: 'testValue3', size: 200},
-    testValue4 = 'testValue4';
+  const testValue1 = 'testValue1';
+  const testValue2 = 'testValue2';
+  const testValue3 = deepFreeze({name: 'testValue3', size: 200});
+  const testValue4 = 'testValue4';
   //    4
   //  / |
   //  3 2

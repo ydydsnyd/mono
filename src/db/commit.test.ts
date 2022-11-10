@@ -18,10 +18,11 @@ import {
   localMutationsGreaterThan,
   chunkIndexDefinitionEqualIgnoreName,
   ChunkIndexDefinition,
+  makeCommitData,
 } from './commit.js';
 import {ChainBuilder} from './test-helpers.js';
 import {Hash, fakeHash, makeNewFakeHashFunction} from '../hash.js';
-import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
+import {deepFreeze} from '../json.js';
 
 test('base snapshot', async () => {
   const clientID = 'client-id';
@@ -337,14 +338,14 @@ test('load roundtrip', () => {
         basisHash: emptyStringHash,
         mutationID: 0,
         // @ts-expect-error We are testing invalid types
-        mutatorName: undefined,
+        mutatorName: null,
         mutatorArgsJSON: 43,
         originalHash: emptyStringHash,
       },
       fakeHash('face4'),
       ['', ''],
     ),
-    new Error('Invalid type: undefined, expected string'),
+    new Error('Invalid type: null, expected string'),
   );
   DD31 &&
     t(
@@ -354,7 +355,7 @@ test('load roundtrip', () => {
           basisHash: emptyStringHash,
           mutationID: 0,
           // @ts-expect-error We are testing invalid types
-          mutatorName: undefined,
+          mutatorName: null,
           mutatorArgsJSON: 43,
           originalHash: emptyStringHash,
           clientID,
@@ -362,7 +363,7 @@ test('load roundtrip', () => {
         fakeHash('face4'),
         ['', ''],
       ),
-      new Error('Invalid type: undefined, expected string'),
+      new Error('Invalid type: null, expected string'),
     );
 
   for (const basisHash of [fakeHash('000'), fakeHash('face3')]) {
@@ -439,10 +440,10 @@ test('load roundtrip', () => {
         timestamp,
       },
       //@ts-expect-error we are testing invalid types
-      undefined,
+      null,
       ['', ''],
     ),
-    new Error('Invalid type: undefined, expected string'),
+    new Error('Invalid type: null, expected string'),
   );
   DD31 &&
     t(
@@ -458,13 +459,13 @@ test('load roundtrip', () => {
           clientID,
         },
         //@ts-expect-error we are testing invalid types
-        undefined,
+        null,
         ['', ''],
       ),
-      new Error('Invalid type: undefined, expected string'),
+      new Error('Invalid type: null, expected string'),
     );
 
-  const cookie = toInternalValue({foo: 'bar'}, ToInternalValueReason.Test);
+  const cookie = deepFreeze({foo: 'bar'});
   for (const basisHash of [null, fakeHash('000'), fakeHash('face3')]) {
     t(
       makeCommit(
@@ -511,12 +512,12 @@ test('load roundtrip', () => {
 
   t(
     makeCommit(
+      // @ts-expect-error We are testing invalid types
       {
         type: MetaType.SnapshotSDD,
         basisHash: emptyStringHash,
         lastMutationID: 0,
-        // @ts-expect-error we are testing invalid types
-        undefined,
+        // missing cookieJSON
       },
       fakeHash('face6'),
       [fakeHash('face6'), fakeHash('000')],
@@ -526,12 +527,12 @@ test('load roundtrip', () => {
   DD31 &&
     t(
       makeCommit(
+        // @ts-expect-error we are testing invalid types
         {
           type: MetaType.SnapshotDD31,
           basisHash: emptyStringHash,
           lastMutationIDs: {[clientID]: 0},
-          // @ts-expect-error we are testing invalid types
-          undefined,
+          // missing cookieJSON
         },
         fakeHash('face6'),
         [fakeHash('face6'), fakeHash('000')],
@@ -759,11 +760,7 @@ function makeCommit<M extends Meta>(
   valueHash: Hash,
   refs: Hash[],
 ): dag.Chunk<CommitData<M>> {
-  const data: CommitData<M> = {
-    meta,
-    valueHash,
-    indexes: [],
-  };
+  const data: CommitData<M> = makeCommitData(meta, valueHash, []);
   return createChunk(data, refs);
 }
 

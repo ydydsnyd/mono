@@ -1,6 +1,6 @@
 import type {LogContext} from '@rocicorp/logger';
 import type * as db from '../db/mod.js';
-import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
+import {deepFreeze} from '../json.js';
 import type {PatchOperation} from '../puller.js';
 
 export async function apply(
@@ -11,11 +11,7 @@ export async function apply(
   for (const p of patch) {
     switch (p.op) {
       case 'put': {
-        await dbWrite.put(
-          lc,
-          p.key,
-          toInternalValue(p.value, ToInternalValueReason.ApplyPatch),
-        );
+        await dbWrite.put(lc, p.key, deepFreeze(p.value));
         break;
       }
       case 'del':

@@ -1,13 +1,20 @@
 import {compareUTF8} from 'compare-utf8';
-import {assertJSONValue, JSONValue, ReadonlyJSONValue} from '../json.js';
+import {
+  assertDeepFrozen,
+  assertFrozenJSONValue,
+  FrozenJSONValue,
+  FrozenTag,
+  JSONValue,
+  ReadonlyJSONValue,
+  deepFreeze,
+} from '../json.js';
 import {assert, assertArray, assertNumber, assertString} from '../asserts.js';
 import {Hash, emptyHash, newUUIDHash} from '../hash.js';
 import type {BTreeRead} from './read.js';
 import type {BTreeWrite} from './write.js';
-import {skipBTreeNodeAsserts, skipInternalValueAsserts} from '../config.js';
+import {skipBTreeNodeAsserts} from '../config.js';
 import {binarySearch as binarySearchWithFunc} from '../binary-search.js';
 import type {IndexKey} from '../mod.js';
-import {InternalValue, markValueAsInternal} from '../internal-value.js';
 
 export type Entry<V> = readonly [key: string, value: V];
 
@@ -25,11 +32,22 @@ export const NODE_ENTRIES = 1;
 /**
  * The type of B+Tree node chunk data
  */
-type BaseNode<V> = readonly [level: number, entries: ReadonlyArray<Entry<V>>];
-
+type BaseNode<V> = FrozenTag<
+  readonly [level: number, entries: ReadonlyArray<Entry<V>>]
+>;
 export type InternalNode = BaseNode<Hash>;
 
-export type DataNode = BaseNode<InternalValue>;
+export type DataNode = BaseNode<FrozenJSONValue>;
+
+export function makeNodeChunkData<V>(
+  level: number,
+  entries: ReadonlyArray<Entry<V>>,
+): BaseNode<V> {
+  return deepFreeze([
+    level,
+    entries as readonly ReadonlyJSONValue[],
+  ]) as BaseNode<V>;
+}
 
 export type Node = DataNode | InternalNode;
 
@@ -94,7 +112,7 @@ export type DiffOperation<Key> =
   | DiffOperationChange<Key>;
 
 // Duplicated with DiffOperation to make the docs less confusing.
-export type InternalDiffOperation<Key = string, Value = InternalValue> =
+export type InternalDiffOperation<Key = string, Value = FrozenJSONValue> =
   | DiffOperationAdd<Key, Value>
   | DiffOperationDel<Key, Value>
   | DiffOperationChange<Key, Value>;
@@ -154,19 +172,13 @@ export function binarySearchFound(
 }
 
 /**
- * Asserts `v` is a valid B+Tree node as well as marks the values as
- * InternalValue.
+ * Asserts `v` is a valid B+Tree node. This includes checking that the node is
+ * deep frozen as well.
  */
 export function internalizeBTreeNode(
   v: unknown,
 ): asserts v is InternalNode | DataNode {
   assertBTreeNodeShape(v);
-  if (!skipInternalValueAsserts && isDataNode(v)) {
-    const entries = v[NODE_ENTRIES];
-    for (const entry of entries) {
-      markValueAsInternal(entry[1] as ReadonlyJSONValue);
-    }
-  }
 }
 
 function assertBTreeNodeShape(
@@ -176,6 +188,7 @@ function assertBTreeNodeShape(
     return;
   }
   assertArray(v);
+  assertDeepFrozen(v);
 
   function assertEntry(
     v: unknown,
@@ -184,6 +197,7 @@ function assertBTreeNodeShape(
       | ((v: unknown) => asserts v is JSONValue),
   ): asserts v is Entry<Hash | JSONValue> {
     assertArray(v);
+    assertDeepFrozen(v);
     assertString(v[0]);
     f(v[1]);
   }
@@ -195,7 +209,7 @@ function assertBTreeNodeShape(
   assertArray(entries);
 
   for (const e of entries) {
-    assertEntry(e, level > 0 ? assertString : assertJSONValue);
+    assertEntry(e, level > 0 ? assertString : assertFrozenJSONValue);
   }
 }
 
@@ -227,7 +241,7 @@ abstract class NodeImpl<Value> {
 
   abstract set(
     key: string,
-    value: InternalValue,
+    value: FrozenJSONValue,
     size: number,
     tree: BTreeWrite,
   ): Promise<NodeImpl<Value>>;
@@ -242,7 +256,10 @@ abstract class NodeImpl<Value> {
   }
 
   toChunkData(): BaseNode<Value> {
-    return [this.level, this.entries.map(e => [e[0], e[1]])];
+    return makeNodeChunkData(
+      this.level,
+      this.entries.map(e => [e[0], e[1]]),
+    );
   }
 
   getChildNodeSize(tree: BTreeRead): number {
@@ -266,12 +283,12 @@ abstract class NodeImpl<Value> {
   }
 }
 
-export class DataNodeImpl extends NodeImpl<InternalValue> {
+export class DataNodeImpl extends NodeImpl<FrozenJSONValue> {
   readonly level = 0;
 
   set(
     key: string,
-    value: InternalValue,
+    value: FrozenJSONValue,
     entrySize: number,
     tree: BTreeWrite,
   ): Promise<DataNodeImpl> {
@@ -293,7 +310,7 @@ export class DataNodeImpl extends NodeImpl<InternalValue> {
     tree: BTreeWrite,
     start: number,
     deleteCount: number,
-    ...items: EntryWithSize<InternalValue>[]
+    ...items: EntryWithSize<FrozenJSONValue>[]
   ): DataNodeImpl {
     if (this.isMutable) {
       this.entries.splice(start, deleteCount, ...items);
@@ -324,7 +341,7 @@ export class DataNodeImpl extends NodeImpl<InternalValue> {
 
   async *entriesIter(
     _tree: BTreeRead,
-  ): AsyncGenerator<EntryWithOptionalSize<InternalValue>, void> {
+  ): AsyncGenerator<EntryWithOptionalSize<FrozenJSONValue>, void> {
     for (const entry of this.entries) {
       yield entry;
     }
@@ -368,7 +385,7 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
 
   async set(
     key: string,
-    value: InternalValue,
+    value: FrozenJSONValue,
     entrySize: number,
     tree: BTreeWrite,
   ): Promise<InternalNodeImpl> {
@@ -541,7 +558,7 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
 
   async *entriesIter(
     tree: BTreeRead,
-  ): AsyncGenerator<EntryWithOptionalSize<InternalValue>, void> {
+  ): AsyncGenerator<EntryWithOptionalSize<FrozenJSONValue>, void> {
     for (const entry of this.entries) {
       const childNode = await tree.getNode(entry[1]);
       yield* childNode.entriesIter(tree);
@@ -582,7 +599,7 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
     }
 
     assert(level === 1);
-    const entries: EntryWithOptionalSize<InternalValue>[] = [];
+    const entries: EntryWithOptionalSize<FrozenJSONValue>[] = [];
     for (const child of output as DataNodeImpl[]) {
       entries.push(...child.entries);
     }
@@ -603,7 +620,7 @@ export function assertInternalNodeImpl(
 }
 
 export function newNodeImpl(
-  entries: Array<EntryWithOptionalSize<InternalValue>>,
+  entries: Array<EntryWithOptionalSize<FrozenJSONValue>>,
   hash: Hash,
   level: number,
   isMutable: boolean,
@@ -616,7 +633,7 @@ export function newNodeImpl(
 ): InternalNodeImpl;
 export function newNodeImpl(
   entries:
-    | Array<EntryWithOptionalSize<InternalValue>>
+    | Array<EntryWithOptionalSize<FrozenJSONValue>>
     | Array<EntryWithOptionalSize<Hash>>,
   hash: Hash,
   level: number,
@@ -624,7 +641,7 @@ export function newNodeImpl(
 ): DataNodeImpl | InternalNodeImpl;
 export function newNodeImpl(
   entries:
-    | Array<EntryWithOptionalSize<InternalValue>>
+    | Array<EntryWithOptionalSize<FrozenJSONValue>>
     | Array<EntryWithOptionalSize<Hash>>,
   hash: Hash,
   level: number,
@@ -632,7 +649,7 @@ export function newNodeImpl(
 ): DataNodeImpl | InternalNodeImpl {
   if (level === 0) {
     return new DataNodeImpl(
-      entries as EntryWithOptionalSize<InternalValue>[],
+      entries as EntryWithOptionalSize<FrozenJSONValue>[],
       hash,
       isMutable,
     );
@@ -695,7 +712,7 @@ export function partition<T>(
   return partitions;
 }
 
-export const emptyDataNode: DataNode = [0, []];
+export const emptyDataNode = makeNodeChunkData<ReadonlyJSONValue>(0, []);
 export const emptyDataNodeImpl = new DataNodeImpl([], emptyHash, false);
 
 export function createNewInternalEntryForNode(

@@ -1,6 +1,12 @@
 import {assert, expect} from '@esm-bundle/chai';
-import {assertJSONValue, deepClone, deepEqual, getSizeOfValue} from './json.js';
-import type {JSONValue, ReadonlyJSONValue} from './json.js';
+import {
+  assertJSONValue,
+  deepEqual,
+  getSizeOfValue,
+  ReadonlyJSONValue,
+  deepFreeze,
+} from './json.js';
+import type {JSONValue} from './json.js';
 
 const {fail} = assert;
 
@@ -53,61 +59,6 @@ test('JSON deep equal', () => {
   }
 
   t({a: 1, b: 2}, {b: 2, a: 1});
-});
-
-test('deepClone', () => {
-  const t = (v: ReadonlyJSONValue) => {
-    expect(deepClone(v)).to.deep.equal(v);
-  };
-
-  t(null);
-  t(1);
-  t(1.2);
-  t(0);
-  t(-3412);
-  t(1e20);
-  t('');
-  t('hi');
-  t(true);
-  t(false);
-  t([]);
-  t({});
-
-  t({a: 42});
-  t({a: 42, b: null});
-  t({a: 42, b: 0});
-  t({a: 42, b: true, c: false});
-  t({a: 42, b: [1, 2, 3]});
-  t([1, {}, 2]);
-
-  const cyclicObject: JSONValue = {a: 42, cycle: null};
-  cyclicObject.cycle = cyclicObject;
-  expect(() => deepClone(cyclicObject))
-    .to.throw(Error)
-    .with.property('message', 'Cyclic object');
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const cyclicArray: any = {a: 42, cycle: [null]};
-  cyclicArray.cycle[0] = cyclicArray;
-  expect(() => deepClone(cyclicArray))
-    .to.throw(Error)
-    .with.property('message', 'Cyclic object');
-
-  const sym = Symbol();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  expect(() => deepClone(sym as any))
-    .to.throw(Error)
-    .with.property('message', 'Invalid type: symbol');
-});
-
-test('deepClone - reuse references', () => {
-  const t = (v: ReadonlyJSONValue) => expect(deepClone(v)).to.deep.equal(v);
-  const arr: number[] = [0, 1];
-
-  t({a: arr, b: arr});
-  t(['a', [arr, arr]]);
-  t(['a', arr, {a: arr}]);
-  t(['a', arr, {a: [arr]}]);
 });
 
 test('getSizeOfValue', () => {
@@ -182,4 +133,36 @@ test('assertJSONValue', () => {
   const o = {x: {}};
   o.x = o;
   expect(() => assertJSONValue(o)).to.throw(Error);
+});
+
+test('toDeepFrozen', () => {
+  expect(deepFreeze(null)).to.equal(null);
+  expect(deepFreeze(true)).to.equal(true);
+  expect(deepFreeze(false)).to.equal(false);
+  expect(deepFreeze(1)).to.equal(1);
+  expect(deepFreeze(123.456)).to.equal(123.456);
+  expect(deepFreeze('')).to.equal('');
+  expect(deepFreeze('abc')).to.equal('abc');
+
+  const expectSameObject = (v: ReadonlyJSONValue) => {
+    expect(deepFreeze(v)).to.equal(v);
+  };
+
+  const expectFrozen = (v: ReadonlyJSONValue) => {
+    expectSameObject(v);
+    expect(v).frozen;
+  };
+
+  expectFrozen([]);
+  expectFrozen([1, 2, 3]);
+  expectFrozen({});
+  expectFrozen({a: 1, b: 2});
+  expectFrozen({a: 1, b: 2, c: [3, 4, 5]});
+
+  const o = [0, 1, {a: 2, b: 3, c: [4, 5, 6]}] as const;
+  const o2 = deepFreeze(o);
+  expect(o2).equal(o);
+  expect(o2).frozen;
+  expect(o[2]).frozen;
+  expect(o[2].c).frozen;
 });

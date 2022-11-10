@@ -1,6 +1,13 @@
 import type * as dag from '../dag/mod.js';
 import type * as sync from '../sync/mod.js';
-import {assertJSONValue, ReadonlyJSONValue} from '../json.js';
+import {
+  assertDeepFrozen,
+  assertJSONValue,
+  FrozenJSONValue,
+  FrozenTag,
+  ReadonlyJSONValue,
+  deepFreeze,
+} from '../json.js';
 import {
   assert,
   assertArray,
@@ -12,7 +19,6 @@ import {
 } from '../asserts.js';
 import {assertHash, Hash} from '../hash.js';
 import {skipCommitDataAsserts} from '../config.js';
-import {CastReason, InternalValue, safeCastToJSON} from '../internal-value.js';
 import type {MustGetChunk} from '../dag/store.js';
 import type {IndexDefinition} from '../index-defs.js';
 
@@ -229,7 +235,7 @@ export async function baseSnapshotFromCommit(
 export function snapshotMetaParts(
   c: Commit<SnapshotMetaSDD | SnapshotMetaDD31>,
   clientID: sync.ClientID,
-): [lastMutationID: number, cookie: InternalValue] {
+): [lastMutationID: number, cookie: FrozenJSONValue] {
   const m = c.meta;
   let lmid;
   if (DD31) {
@@ -246,10 +252,7 @@ export function compareCookiesForSnapshots(
   a: Commit<SnapshotMetaSDD | SnapshotMetaDD31>,
   b: Commit<SnapshotMetaSDD | SnapshotMetaDD31>,
 ): number {
-  return compareCookies(
-    safeCastToJSON(a.meta.cookieJSON, CastReason.CompareCookies),
-    safeCastToJSON(b.meta.cookieJSON, CastReason.CompareCookies),
-  );
+  return compareCookies(a.meta.cookieJSON, b.meta.cookieJSON);
 }
 
 export function compareCookies(
@@ -347,7 +350,7 @@ export type LocalMetaSDD = {
   readonly basisHash: Hash;
   readonly mutationID: number;
   readonly mutatorName: string;
-  readonly mutatorArgsJSON: InternalValue;
+  readonly mutatorArgsJSON: FrozenJSONValue;
   readonly originalHash: Hash | null;
   readonly timestamp: number;
 };
@@ -408,14 +411,14 @@ export type SnapshotMetaSDD = {
   readonly type: MetaType.SnapshotSDD;
   readonly basisHash: Hash | null;
   readonly lastMutationID: number;
-  readonly cookieJSON: InternalValue;
+  readonly cookieJSON: FrozenJSONValue;
 };
 
 export type SnapshotMetaDD31 = {
   readonly type: MetaType.SnapshotDD31;
   readonly basisHash: Hash | null;
   readonly lastMutationIDs: Record<sync.ClientID, number>;
-  readonly cookieJSON: InternalValue;
+  readonly cookieJSON: FrozenJSONValue;
 };
 
 export type SnapshotMeta = SnapshotMetaSDD | SnapshotMetaDD31;
@@ -484,6 +487,7 @@ export function isIndexChangeSDD(meta: Meta): meta is IndexChangeMetaSDD {
 
 function assertMeta(v: unknown): asserts v is Meta {
   assertObject(v);
+  assertDeepFrozen(v);
   if (v.basisHash !== null) {
     assertString(v.basisHash);
   }
@@ -545,6 +549,7 @@ function assertChunkIndexDefinition(
   v: unknown,
 ): asserts v is ChunkIndexDefinition {
   assertObject(v);
+  assertDeepFrozen(v);
   assertString(v.name);
   assertString(v.keyPrefix);
   assertString(v.jsonPointer);
@@ -572,12 +577,14 @@ export type IndexRecord = {
 
 function assertIndexRecord(v: unknown): asserts v is IndexRecord {
   assertObject(v);
+  assertDeepFrozen(v);
   assertChunkIndexDefinition(v.definition);
   assertString(v.valueHash);
 }
 
 function assertIndexRecords(v: unknown): asserts v is IndexRecord[] {
   assertArray(v);
+  assertDeepFrozen(v);
   for (const ir of v) {
     assertIndexRecord(ir);
   }
@@ -588,7 +595,7 @@ export function newLocal(
   basisHash: Hash,
   mutationID: number,
   mutatorName: string,
-  mutatorArgsJSON: InternalValue,
+  mutatorArgsJSON: FrozenJSONValue,
   originalHash: Hash | null,
   valueHash: Hash,
   indexes: readonly IndexRecord[],
@@ -627,7 +634,7 @@ export function newLocalSDD(
   basisHash: Hash,
   mutationID: number,
   mutatorName: string,
-  mutatorArgsJSON: InternalValue,
+  mutatorArgsJSON: FrozenJSONValue,
   originalHash: Hash | null,
   valueHash: Hash,
   indexes: readonly IndexRecord[],
@@ -642,7 +649,10 @@ export function newLocalSDD(
     originalHash,
     timestamp,
   };
-  return commitFromCommitData(createChunk, {meta, valueHash, indexes});
+  return commitFromCommitData(
+    createChunk,
+    makeCommitData(meta, valueHash, indexes),
+  );
 }
 
 export function newLocalDD31(
@@ -650,7 +660,7 @@ export function newLocalDD31(
   basisHash: Hash,
   mutationID: number,
   mutatorName: string,
-  mutatorArgsJSON: InternalValue,
+  mutatorArgsJSON: FrozenJSONValue,
   originalHash: Hash | null,
   valueHash: Hash,
   indexes: readonly IndexRecord[],
@@ -668,14 +678,17 @@ export function newLocalDD31(
     timestamp,
     clientID,
   };
-  return commitFromCommitData(createChunk, {meta, valueHash, indexes});
+  return commitFromCommitData(
+    createChunk,
+    makeCommitData(meta, valueHash, indexes),
+  );
 }
 
 export function newSnapshotSDD(
   createChunk: dag.CreateChunk,
   basisHash: Hash | null,
   lastMutationID: number,
-  cookieJSON: InternalValue,
+  cookieJSON: FrozenJSONValue,
   valueHash: Hash,
   indexes: readonly IndexRecord[],
 ): Commit<SnapshotMetaSDD> {
@@ -695,7 +708,7 @@ export function newSnapshotDD31(
   createChunk: dag.CreateChunk,
   basisHash: Hash | null,
   lastMutationIDs: Record<sync.ClientID, number>,
-  cookieJSON: InternalValue,
+  cookieJSON: FrozenJSONValue,
   valueHash: Hash,
   indexes: readonly IndexRecord[],
 ): Commit<SnapshotMetaDD31> {
@@ -715,7 +728,7 @@ export function newSnapshotDD31(
 export function newSnapshotCommitDataSDD(
   basisHash: Hash | null,
   lastMutationID: number,
-  cookieJSON: InternalValue,
+  cookieJSON: FrozenJSONValue,
   valueHash: Hash,
   indexes: readonly IndexRecord[],
 ): CommitData<SnapshotMetaSDD> {
@@ -725,13 +738,13 @@ export function newSnapshotCommitDataSDD(
     lastMutationID,
     cookieJSON,
   };
-  return {meta, valueHash, indexes};
+  return makeCommitData(meta, valueHash, indexes);
 }
 
 export function newSnapshotCommitDataDD31(
   basisHash: Hash | null,
   lastMutationIDs: Record<sync.ClientID, number>,
-  cookieJSON: InternalValue,
+  cookieJSON: FrozenJSONValue,
   valueHash: Hash,
   indexes: readonly IndexRecord[],
 ): CommitData<SnapshotMetaDD31> {
@@ -742,7 +755,7 @@ export function newSnapshotCommitDataDD31(
     lastMutationIDs,
     cookieJSON,
   };
-  return {meta, valueHash, indexes};
+  return makeCommitData(meta, valueHash, indexes);
 }
 
 export function newIndexChange(
@@ -757,7 +770,10 @@ export function newIndexChange(
     basisHash,
     lastMutationID,
   };
-  return commitFromCommitData(createChunk, {meta, valueHash, indexes});
+  return commitFromCommitData(
+    createChunk,
+    makeCommitData(meta, valueHash, indexes),
+  );
 }
 
 export function fromChunk(chunk: dag.Chunk<unknown>): Commit<Meta> {
@@ -799,11 +815,23 @@ export function getRefs(data: CommitData<Meta>): Hash[] {
   return refs;
 }
 
-export type CommitData<M extends Meta> = {
+export type CommitData<M extends Meta> = FrozenTag<{
   readonly meta: M;
   readonly valueHash: Hash;
   readonly indexes: readonly IndexRecord[];
-};
+}>;
+
+export function makeCommitData<M extends Meta>(
+  meta: M,
+  valueHash: Hash,
+  indexes: readonly IndexRecord[],
+): CommitData<M> {
+  return deepFreeze({
+    meta,
+    valueHash,
+    indexes,
+  }) as unknown as CommitData<M>;
+}
 
 export function assertCommitData(v: unknown): asserts v is CommitData<Meta> {
   if (skipCommitDataAsserts) {
@@ -811,6 +839,7 @@ export function assertCommitData(v: unknown): asserts v is CommitData<Meta> {
   }
 
   assertObject(v);
+  assertDeepFrozen(v);
   assertMeta(v.meta);
   assertString(v.valueHash);
   assertIndexRecords(v.indexes);

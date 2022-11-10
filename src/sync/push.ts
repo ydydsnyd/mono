@@ -5,12 +5,11 @@ import {assertHTTPRequestInfo, HTTPRequestInfo} from '../http-request-info.js';
 import {Pusher, PushError} from '../pusher.js';
 import {callJSRequest} from './js-request.js';
 import {toError} from '../to-error.js';
-import type {InternalValue} from '../internal-value.js';
 import {commitIsLocalDD31, commitIsLocalSDD} from '../db/commit.js';
 import {assert} from '../asserts.js';
 import type {ClientGroupID} from './client-group-id.js';
 import type {ClientID} from './ids.js';
-import type {ReadonlyJSONValue} from '../json.js';
+import type {FrozenJSONValue, ReadonlyJSONValue} from '../json.js';
 
 export const PUSH_VERSION_SDD = 0;
 export const PUSH_VERSION_DD31 = 1;
@@ -54,7 +53,7 @@ export type Mutation = {
 };
 
 export type MutationSDD = Omit<Mutation, 'args'> & {
-  readonly args: InternalValue;
+  readonly args: FrozenJSONValue;
 };
 
 /**

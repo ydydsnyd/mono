@@ -1,7 +1,7 @@
 import {assertHash, Hash} from '../hash.js';
 import type * as sync from '../sync/mod.js';
 import type * as dag from '../dag/mod.js';
-import type {ReadonlyJSONValue} from '../json.js';
+import {FrozenJSONValue, deepFreeze} from '../json.js';
 import {
   assert,
   assertArray,
@@ -107,7 +107,7 @@ function chunkDataToClientGroupMap(chunkData: unknown): ClientGroupMap {
 function clientGroupMapToChunkData(
   clientGroups: ClientGroupMap,
   dagWrite: dag.Write,
-): ReadonlyJSONValue {
+): FrozenJSONValue {
   const chunkData: {[id: sync.ClientGroupID]: ClientGroup} = {};
   for (const [clientGroupID, clientGroup] of clientGroups.entries()) {
     dagWrite.assertValidHash(clientGroup.headHash);
@@ -116,7 +116,7 @@ function clientGroupMapToChunkData(
       mutatorNames: [...clientGroup.mutatorNames.values()],
     };
   }
-  return chunkData;
+  return deepFreeze(chunkData);
 }
 
 async function getClientGroupsAtHash(

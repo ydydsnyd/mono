@@ -14,8 +14,8 @@ import {
   PUSH_VERSION_DD31,
 } from './push.js';
 import type {Pusher} from '../pusher.js';
-import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 import type {ClientGroupID} from './client-group-id.js';
+import {deepFreeze} from '../json.js';
 
 type FakePusherArgs = {
   expPush: boolean;
@@ -112,7 +112,7 @@ test('try push', async () => {
           {
             id: 2,
             name: 'mutator_name_3',
-            args: toInternalValue([3], ToInternalValueReason.Test),
+            args: deepFreeze([3]),
             timestamp: 42,
           },
         ],
@@ -138,13 +138,13 @@ test('try push', async () => {
           {
             id: 2,
             name: 'mutator_name_3',
-            args: toInternalValue([3], ToInternalValueReason.Test),
+            args: deepFreeze([3]),
             timestamp: 42,
           },
           {
             id: 3,
             name: 'mutator_name_5',
-            args: toInternalValue([5], ToInternalValueReason.Test),
+            args: deepFreeze([5]),
             timestamp: 42,
           },
         ],
@@ -170,13 +170,13 @@ test('try push', async () => {
           {
             id: 2,
             name: 'mutator_name_3',
-            args: toInternalValue([3], ToInternalValueReason.Test),
+            args: deepFreeze([3]),
             timestamp: 42,
           },
           {
             id: 3,
             name: 'mutator_name_5',
-            args: toInternalValue([5], ToInternalValueReason.Test),
+            args: deepFreeze([5]),
             timestamp: 42,
           },
         ],
@@ -323,7 +323,7 @@ test('try push DD31', async () => {
             clientID,
             id: 2,
             name: 'mutator_name_2',
-            args: toInternalValue([2], ToInternalValueReason.Test),
+            args: deepFreeze([2]),
             timestamp: 42,
           },
         ],
@@ -351,14 +351,14 @@ test('try push DD31', async () => {
             clientID,
             id: 2,
             name: 'mutator_name_2',
-            args: toInternalValue([2], ToInternalValueReason.Test),
+            args: deepFreeze([2]),
             timestamp: 42,
           },
           {
             clientID,
             id: 3,
             name: 'mutator_name_3',
-            args: toInternalValue([3], ToInternalValueReason.Test),
+            args: deepFreeze([3]),
             timestamp: 42,
           },
         ],
@@ -386,14 +386,14 @@ test('try push DD31', async () => {
             clientID,
             id: 2,
             name: 'mutator_name_2',
-            args: toInternalValue([2], ToInternalValueReason.Test),
+            args: deepFreeze([2]),
             timestamp: 42,
           },
           {
             clientID,
             id: 3,
             name: 'mutator_name_3',
-            args: toInternalValue([3], ToInternalValueReason.Test),
+            args: deepFreeze([3]),
             timestamp: 42,
           },
         ],

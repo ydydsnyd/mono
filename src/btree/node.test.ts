@@ -1,7 +1,12 @@
 import {expect, assert} from '@esm-bundle/chai';
 import * as dag from '../dag/mod.js';
 import {emptyHash, Hash, makeNewFakeHashFunction} from '../hash.js';
-import {getSizeOfValue, ReadonlyJSONValue} from '../json.js';
+import {
+  FrozenJSONValue,
+  getSizeOfValue,
+  ReadonlyJSONValue,
+  deepFreeze,
+} from '../json.js';
 import {
   DataNode,
   findLeaf,
@@ -13,43 +18,30 @@ import {
   Diff,
   internalizeBTreeNode,
   EntryWithOptionalSize,
+  makeNodeChunkData,
 } from './node.js';
 import {BTreeWrite} from './write.js';
 import {BTreeRead, NODE_HEADER_SIZE} from './read.js';
-import {
-  InternalValue,
-  toInternalValue,
-  ToInternalValueReason,
-} from '../internal-value.js';
 
 test('findLeaf', async () => {
   const dagStore = new dag.TestStore();
 
-  const leaf0: DataNode = [
-    0,
-    [
-      ['a', 0],
-      ['b', 1],
-      ['c', 2],
-    ],
-  ];
+  const leaf0 = makeNodeChunkData(0, [
+    ['a', 0],
+    ['b', 1],
+    ['c', 2],
+  ]);
 
-  const leaf1: DataNode = [
-    0,
-    [
-      ['d', 3],
-      ['e', 4],
-      ['f', 5],
-    ],
-  ];
-  const leaf2: DataNode = [
-    0,
-    [
-      ['g', 6],
-      ['h', 7],
-      ['i', 8],
-    ],
-  ];
+  const leaf1 = makeNodeChunkData(0, [
+    ['d', 3],
+    ['e', 4],
+    ['f', 5],
+  ]);
+  const leaf2: DataNode = makeNodeChunkData(0, [
+    ['g', 6],
+    ['h', 7],
+    ['i', 8],
+  ]);
 
   let h0: Hash, h1: Hash, h2: Hash;
 
@@ -65,14 +57,11 @@ test('findLeaf', async () => {
     h1 = c1.hash;
     h2 = c2.hash;
 
-    root = [
-      1,
-      [
-        ['c', h0],
-        ['f', h1],
-        ['i', h2],
-      ],
-    ];
+    root = makeNodeChunkData(1, [
+      ['c', h0],
+      ['f', h1],
+      ['i', h2],
+    ]);
 
     const rootChunk = dagWrite.createChunk(root, [h0, h1, h2]);
     rootHash = rootChunk.hash;
@@ -140,13 +129,10 @@ function makeTree(node: TreeData, dagStore: dag.Store): Promise<Hash> {
       node,
     ).filter(e => e[0] !== '$level');
     if (node.$level === 0) {
-      const dataNode: DataNode = [
+      const dataNode = makeNodeChunkData(
         0,
-        entries.map(entry => [
-          entry[0],
-          toInternalValue(entry[1], ToInternalValueReason.Test),
-        ]),
-      ];
+        entries.map(entry => [entry[0], entry[1]]),
+      );
       const chunk = dagWrite.createChunk(dataNode, []);
       await dagWrite.putChunk(chunk);
       return [chunk.hash, 0];
@@ -160,7 +146,7 @@ function makeTree(node: TreeData, dagStore: dag.Store): Promise<Hash> {
     });
     const entries2 = await Promise.all(ps);
 
-    const internalNode: InternalNode = [level + 1, entries2];
+    const internalNode = makeNodeChunkData(level + 1, entries2);
     const refs = entries2.map(pair => pair[1]);
     const chunk = dagWrite.createChunk(internalNode, refs);
     await dagWrite.putChunk(chunk);
@@ -552,7 +538,7 @@ test('put', async () => {
         chunkHeaderSize,
       );
       for (const [k, v] of Object.entries(data)) {
-        await w.put(k, toInternalValue(v, ToInternalValueReason.Test));
+        await w.put(k, deepFreeze(v));
         expect(await w.get(k)).to.equal(v);
         expect(await w.has(k)).to.equal(true);
       }
@@ -1219,12 +1205,12 @@ test('scan', async () => {
 
     rootHash = await doWrite(rootHash, dagStore, async w => {
       for (const [k, v] of entries) {
-        await w.put(k, toInternalValue(v, ToInternalValueReason.Test));
+        await w.put(k, deepFreeze(v));
       }
     });
 
     await doRead(rootHash, dagStore, async r => {
-      const res: EntryWithOptionalSize<InternalValue>[] = [];
+      const res: EntryWithOptionalSize<FrozenJSONValue>[] = [];
       const scanResult = r.scan(fromKey);
       for await (const e of scanResult) {
         res.push(e);
@@ -1320,10 +1306,7 @@ test('diff', async () => {
         chunkHeaderSize,
       );
       for (const entry of oldEntries) {
-        await oldTree.put(
-          entry[0],
-          toInternalValue(entry[1], ToInternalValueReason.Test),
-        );
+        await oldTree.put(entry[0], deepFreeze(entry[1]));
       }
 
       const newTree = new BTreeWrite(
@@ -1335,10 +1318,7 @@ test('diff', async () => {
         chunkHeaderSize,
       );
       for (const entry of newEntries) {
-        await newTree.put(
-          entry[0],
-          toInternalValue(entry[1], ToInternalValueReason.Test),
-        );
+        await newTree.put(entry[0], deepFreeze(entry[1]));
       }
 
       const oldHash = await oldTree.flush();
@@ -1531,7 +1511,7 @@ test('diff', async () => {
 
 test('chunk header size', () => {
   // This just ensures that the constant is correct.
-  const chunkData: DataNode = [0, []];
+  const chunkData = makeNodeChunkData(0, []);
   const entriesSize = getSizeOfValue(chunkData[NODE_ENTRIES]);
   const chunkSize = getSizeOfValue(chunkData);
   expect(chunkSize - entriesSize).to.equal(NODE_HEADER_SIZE);

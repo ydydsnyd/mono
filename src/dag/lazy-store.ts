@@ -45,7 +45,7 @@ import {promiseVoid} from '../resolved-promises.js';
  *    this store that these chunks are no longer memory-only by calling
  *    {@link chunksPersisted}, which move these chunks
  *    to this store's LRU cache of source chunks (making them eligible for
- *    evicition).
+ *    eviction).
  *
  * @param sourceStore Store to lazy load and cache values from.
  * @param sourceCacheSizeLimit Size limit in bytes for cache of chunks loaded

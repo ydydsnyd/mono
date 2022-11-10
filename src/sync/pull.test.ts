@@ -6,7 +6,7 @@ import * as dag from '../dag/mod.js';
 import * as db from '../db/mod.js';
 import {Commit, DEFAULT_HEAD_NAME} from '../db/mod.js';
 import {ChainBuilder} from '../db/test-helpers.js';
-import type {ReadonlyJSONValue} from '../json.js';
+import {FrozenJSONValue, ReadonlyJSONValue, deepFreeze} from '../json.js';
 import type {
   PatchOperation,
   Puller,
@@ -43,13 +43,6 @@ import {
   commitIsLocal,
   SnapshotMetaSDD,
 } from '../db/commit.js';
-import {
-  toInternalValue,
-  fromInternalValue,
-  FromInternalValueReason,
-  InternalValue,
-  ToInternalValueReason,
-} from '../internal-value.js';
 import type {DiffsMap} from './diff.js';
 import {testSubscriptionsManagerOptions} from '../test-util.js';
 import {BTreeRead} from '../btree/read.js';
@@ -74,7 +67,7 @@ test('begin try pull SDD', async () => {
   );
 
   const baseLastMutationID = parts[0];
-  const baseCookie = fromInternalValue(parts[1], FromInternalValueReason.Test);
+  const baseCookie = deepFreeze(parts[1]);
   const baseValueMap = new Map([['foo', '"bar"']]);
 
   const requestID = 'requestID';
@@ -593,7 +586,7 @@ test('begin try pull DD31', async () => {
   );
 
   const baseLastMutationID = parts[0];
-  const baseCookie = fromInternalValue(parts[1], FromInternalValueReason.Test);
+  const baseCookie = deepFreeze(parts[1]);
   const baseValueMap = new Map([['foo', '"bar"']]);
 
   const requestID = 'requestID';
@@ -1229,7 +1222,7 @@ test('maybe end try pull', async () => {
       const chainIndex = i + 1; // chain[0] is genesis
       const original = b.chain[chainIndex];
       let mutatorName: string;
-      let mutatorArgs: InternalValue;
+      let mutatorArgs: FrozenJSONValue;
       if (commitIsLocal(original)) {
         const lm = original.meta;
         mutatorName = lm.mutatorName;
@@ -1458,10 +1451,7 @@ test('changed keys', async () => {
       clientID,
     );
     const baseLastMutationID = parts[0];
-    const baseCookie = fromInternalValue(
-      parts[1],
-      FromInternalValueReason.Test,
-    );
+    const baseCookie = deepFreeze(parts[1]);
 
     const requestID = 'request_id';
     const profileID = 'test_profile_id';
@@ -1659,10 +1649,7 @@ test('changed keys', async () => {
           {
             op: 'add',
             key: 'a2',
-            newValue: toInternalValue(
-              {id: 'a-2', x: 2},
-              ToInternalValueReason.Test,
-            ),
+            newValue: deepFreeze({id: 'a-2', x: 2}),
           },
         ],
       ],
@@ -1672,10 +1659,7 @@ test('changed keys', async () => {
           {
             op: 'add',
             key: '\u{0}a-2\u{0}a2',
-            newValue: toInternalValue(
-              {id: 'a-2', x: 2},
-              ToInternalValueReason.Test,
-            ),
+            newValue: deepFreeze({id: 'a-2', x: 2}),
           },
         ],
       ],
@@ -1700,18 +1684,12 @@ test('changed keys', async () => {
           {
             op: 'add',
             key: 'a1',
-            newValue: toInternalValue(
-              {id: 'a-1', x: 1},
-              ToInternalValueReason.Test,
-            ),
+            newValue: deepFreeze({id: 'a-1', x: 1}),
           },
           {
             op: 'add',
             key: 'a2',
-            newValue: toInternalValue(
-              {id: 'a-2', x: 2},
-              ToInternalValueReason.Test,
-            ),
+            newValue: deepFreeze({id: 'a-2', x: 2}),
           },
         ],
       ],
@@ -1721,18 +1699,12 @@ test('changed keys', async () => {
           {
             op: 'add',
             key: '\u{0}a-1\u{0}a1',
-            newValue: toInternalValue(
-              {id: 'a-1', x: 1},
-              ToInternalValueReason.Test,
-            ),
+            newValue: deepFreeze({id: 'a-1', x: 1}),
           },
           {
             op: 'add',
             key: '\u{0}a-2\u{0}a2',
-            newValue: toInternalValue(
-              {id: 'a-2', x: 2},
-              ToInternalValueReason.Test,
-            ),
+            newValue: deepFreeze({id: 'a-2', x: 2}),
           },
         ],
       ],
@@ -1754,10 +1726,7 @@ test('changed keys', async () => {
           {
             op: 'add',
             key: 'a2',
-            newValue: toInternalValue(
-              {id: 'a-2', x: 2},
-              ToInternalValueReason.Test,
-            ),
+            newValue: deepFreeze({id: 'a-2', x: 2}),
           },
         ],
       ],
@@ -1767,10 +1736,7 @@ test('changed keys', async () => {
           {
             op: 'add',
             key: '\u{0}a-2\u{0}a2',
-            newValue: toInternalValue(
-              {id: 'a-2', x: 2},
-              ToInternalValueReason.Test,
-            ),
+            newValue: deepFreeze({id: 'a-2', x: 2}),
           },
         ],
       ],
@@ -2092,10 +2058,7 @@ suite('handlePullResponseDD31', () => {
     await b.addGenesis(clientID1);
     await setupChain?.(b);
 
-    const expectedBaseCookie: InternalValue = toInternalValue(
-      expectedBaseCookieJSON,
-      ToInternalValueReason.Test,
-    );
+    const expectedBaseCookie = deepFreeze(expectedBaseCookieJSON);
     const response: PullResponseOKDD31 = {
       cookie: responseCookie,
       lastMutationIDChanges: responseLastMutationIDChanges,

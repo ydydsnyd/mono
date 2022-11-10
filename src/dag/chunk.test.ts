@@ -2,12 +2,12 @@ import {expect} from '@esm-bundle/chai';
 import {Hash, fakeHash, parse, makeNewFakeHashFunction} from '../hash.js';
 import {createChunk, createChunkWithHash} from './chunk.js';
 import type {Chunk} from './chunk.js';
-import type {ReadonlyJSONValue} from '../json.js';
+import {ReadonlyJSONValue, deepFreeze} from '../json.js';
 
 test('round trip', () => {
   const chunkHasher = makeNewFakeHashFunction();
   const t = (hash: Hash, data: ReadonlyJSONValue, refs: Hash[]) => {
-    const c = createChunk(data, refs, chunkHasher);
+    const c = createChunk(deepFreeze(data), refs, chunkHasher);
     expect(c.hash).to.equal(hash);
     expect(c.data).to.deep.equal(data);
     expect(c.meta).to.deep.equal(refs);
@@ -46,6 +46,7 @@ test('equals', () => {
   const newChunk = (data: ReadonlyJSONValue, refs: Hash[]) => {
     // Cache chunks based on the data.
     // TODO(arv): This is not very useful any more... Remove?
+    deepFreeze(data);
     const s = JSON.stringify(data);
     let hash = hashMapper.get(s);
     if (!hash) {

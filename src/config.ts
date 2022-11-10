@@ -6,13 +6,14 @@ export const skipAssertJSONValue = isProd;
 
 export const skipBTreeNodeAsserts = isProd;
 
-// Used to disable asserts ensuring internal values are not leaked.
-// Temporarily disabled due to https://github.com/rocicorp/replicache-internal/issues/194.
-export const skipInternalValueAsserts = true; // isProd;
+/**
+ * In debug mode we assert that chunks and BTree data is deeply frozen. In
+ * release mode we skip these asserts.
+ */
+export const skipFrozenAsserts = isProd;
 
-// Used to disable costly deepClone of the return values in ReadTransaction.
-export const skipCloneReadTransactionReturnValue = isProd;
-
-// Used to disable cloning of some input values (like the patch coming from the
-// network).
-export const skipCloneInputValues = isProd;
+/**
+ * In debug mode we deeply freeze the values we read out of the IDB store and we
+ * deeply freeze the values we put into the stores.
+ */
+export const skipFreeze = isProd;

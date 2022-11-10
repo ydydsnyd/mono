@@ -14,7 +14,6 @@ import type {Entry} from './btree/node.js';
 import {encodeIndexScanKey, IndexKey} from './db/index.js';
 import {EntryForOptions, fromKeyForNonIndexScan} from './transactions.js';
 import type {IterableUnion} from './iterable-union.js';
-import {fromInternalValue, FromInternalValueReason} from './internal-value.js';
 
 type ScanKey = string | IndexKey;
 
@@ -22,28 +21,24 @@ type ToValue<Options extends ScanOptions, Value> = (
   entry: EntryForOptions<Options>,
 ) => Value;
 
-type ShouldDeepClone = {shouldDeepClone: boolean};
-
 /**
  * This class is used for the results of {@link ReadTransaction.scan | scan}. It
  * implements `AsyncIterable<JSONValue>` which allows you to use it in a `for
  * await` loop. There are also methods to iterate over the {@link keys},
  * {@link entries} or {@link values}.
  */
-export class ScanResultImpl<
-  Options extends ScanOptions,
-  Value extends ReadonlyJSONValue,
-> implements ScanResult<KeyTypeForScanOptions<Options>, Value>
+export class ScanResultImpl<Options extends ScanOptions>
+  implements ScanResult<KeyTypeForScanOptions<Options>>
 {
   private readonly _iter: AsyncIterable<EntryForOptions<Options>>;
   private readonly _options: Options;
-  private readonly _dbDelegateOptions: Closed & ShouldDeepClone;
+  private readonly _dbDelegateOptions: Closed;
   private readonly _onLimitKey: (inclusiveLimitKey: string) => void;
 
   constructor(
     iter: AsyncIterable<EntryForOptions<Options>>,
     options: Options,
-    dbDelegateOptions: Closed & ShouldDeepClone,
+    dbDelegateOptions: Closed,
     onLimitKey: (inclusiveLimitKey: string) => void,
   ) {
     this._iter = iter;
@@ -53,25 +48,14 @@ export class ScanResultImpl<
   }
 
   /** The default AsyncIterable. This is the same as {@link values}. */
-  [Symbol.asyncIterator](): AsyncIterableIteratorToArray<Value> {
+  [Symbol.asyncIterator](): AsyncIterableIteratorToArray<ReadonlyJSONValue> {
     return this.values();
   }
 
   /** Async iterator over the values of the {@link ReadTransaction.scan | scan} call. */
-  values(): AsyncIterableIteratorToArray<Value> {
-    const toValue = this._dbDelegateOptions.shouldDeepClone
-      ? (e: EntryForOptions<Options>): Value =>
-          fromInternalValue(
-            e[1],
-            FromInternalValueReason.WriteTransactionScan,
-          ) as Value
-      : (e: EntryForOptions<Options>): Value =>
-          fromInternalValue(
-            e[1],
-            FromInternalValueReason.ReadTransactionScan,
-          ) as Value;
+  values(): AsyncIterableIteratorToArray<ReadonlyJSONValue> {
     return new AsyncIterableIteratorToArrayWrapperImpl(
-      this._newIterator(toValue),
+      this._newIterator(e => e[1]),
     );
   }
 
@@ -82,9 +66,8 @@ export class ScanResultImpl<
    */
   keys(): AsyncIterableIteratorToArray<KeyTypeForScanOptions<Options>> {
     type K = KeyTypeForScanOptions<Options>;
-    const toValue: ToValue<Options, K> = e => e[0] as K;
     return new AsyncIterableIteratorToArrayWrapperImpl<K>(
-      this._newIterator<K>(toValue),
+      this._newIterator<K>(e => e[0] as K),
     );
   }
 
@@ -95,32 +78,17 @@ export class ScanResultImpl<
    * `[secondaryKey: string, primaryKey]`
    */
   entries(): AsyncIterableIteratorToArray<
-    readonly [KeyTypeForScanOptions<Options>, Value]
+    readonly [KeyTypeForScanOptions<Options>, ReadonlyJSONValue]
   > {
     type Key = KeyTypeForScanOptions<Options>;
-    type Entry = readonly [Key, Value];
-    const toValue = this._dbDelegateOptions.shouldDeepClone
-      ? (e: EntryForOptions<Options>): Entry => [
-          e[0] as Key,
-          fromInternalValue(
-            e[1],
-            FromInternalValueReason.WriteTransactionScan,
-          ) as Value,
-        ]
-      : (e: EntryForOptions<Options>): Entry => [
-          e[0] as Key,
-          fromInternalValue(
-            e[1],
-            FromInternalValueReason.ReadTransactionScan,
-          ) as Value,
-        ];
+    type Entry = readonly [Key, ReadonlyJSONValue];
     return new AsyncIterableIteratorToArrayWrapperImpl(
-      this._newIterator<Entry>(toValue),
+      this._newIterator<Entry>(e => [e[0] as Key, e[1]]),
     );
   }
 
   /** Returns all the values as an array. Same as `values().toArray()` */
-  toArray(): Promise<Value[]> {
+  toArray(): Promise<ReadonlyJSONValue[]> {
     return this.values().toArray();
   }
 
@@ -137,13 +105,13 @@ export class ScanResultImpl<
   }
 }
 
-export interface ScanResult<K extends ScanKey, V extends ReadonlyJSONValue>
-  extends AsyncIterable<V> {
+export interface ScanResult<K extends ScanKey>
+  extends AsyncIterable<ReadonlyJSONValue> {
   /** The default AsyncIterable. This is the same as {@link values}. */
-  [Symbol.asyncIterator](): AsyncIterableIteratorToArray<V>;
+  [Symbol.asyncIterator](): AsyncIterableIteratorToArray<ReadonlyJSONValue>;
 
   /** Async iterator over the values of the {@link ReadTransaction.scan | scan} call. */
-  values(): AsyncIterableIteratorToArray<V>;
+  values(): AsyncIterableIteratorToArray<ReadonlyJSONValue>;
 
   /**
    * Async iterator over the keys of the {@link ReadTransaction.scan | scan}
@@ -158,10 +126,10 @@ export interface ScanResult<K extends ScanKey, V extends ReadonlyJSONValue>
    * {@link ReadTransaction.scan | scan} is over an index the key is a tuple of
    * `[secondaryKey: string, primaryKey]`
    */
-  entries(): AsyncIterableIteratorToArray<readonly [K, V]>;
+  entries(): AsyncIterableIteratorToArray<readonly [K, ReadonlyJSONValue]>;
 
   /** Returns all the values as an array. Same as `values().toArray()` */
-  toArray(): Promise<V[]>;
+  toArray(): Promise<ReadonlyJSONValue[]>;
 }
 
 /**
@@ -327,15 +295,12 @@ export type GetIndexScanIterator = (
  * );
  * ```
  */
-export function makeScanResult<
-  Options extends ScanOptions,
-  Value extends ReadonlyJSONValue,
->(
+export function makeScanResult<Options extends ScanOptions>(
   options: Options,
   getScanIterator: Options extends ScanIndexOptions
     ? GetIndexScanIterator
     : GetScanIterator,
-): ScanResult<KeyTypeForScanOptions<Options>, Value> {
+): ScanResult<KeyTypeForScanOptions<Options>> {
   type AsyncIter = AsyncIterable<EntryForOptions<Options>>;
 
   if (isScanIndexOptions(options)) {
@@ -347,7 +312,7 @@ export function makeScanResult<
         fromPrimaryKey,
       ) as AsyncIter,
       options,
-      {closed: false, shouldDeepClone: false},
+      {closed: false},
       _ => {
         // noop
       },
@@ -357,7 +322,7 @@ export function makeScanResult<
   return new ScanResultImpl(
     (getScanIterator as GetScanIterator)(fromKey) as AsyncIter,
     options,
-    {closed: false, shouldDeepClone: false},
+    {closed: false},
     _ => {
       // noop
     },

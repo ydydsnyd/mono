@@ -1,6 +1,6 @@
 import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
-import type {JSONValue} from '../json.js';
+import {JSONValue, deepFreeze} from '../json.js';
 import {stringCompare} from '../string-compare.js';
 import * as dag from '../dag/mod.js';
 import {
@@ -17,7 +17,6 @@ import {
 } from './index.js';
 import {BTreeWrite} from '../btree/mod.js';
 import {asyncIterableToArray} from '../async-iterable-to-array.js';
-import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 
 test('test index key', () => {
   const testValid = (secondary: string, primary: string) => {
@@ -125,21 +124,11 @@ test('get index keys', () => {
     expected: IndexKey[] | string | RegExp,
   ) => {
     if (Array.isArray(expected)) {
-      const keys = getIndexKeys(
-        key,
-        toInternalValue(input, ToInternalValueReason.Test),
-        jsonPointer,
-        false,
-      );
+      const keys = getIndexKeys(key, deepFreeze(input), jsonPointer, false);
       expect(keys).to.deep.equal(expected.map(k => encodeIndexKey(k)));
     } else {
       expect(() =>
-        getIndexKeys(
-          key,
-          toInternalValue(input, ToInternalValueReason.Test),
-          jsonPointer,
-          false,
-        ),
+        getIndexKeys(key, deepFreeze(input), jsonPointer, false),
       ).to.throw(expected);
     }
   };
@@ -172,28 +161,32 @@ test('get index keys', () => {
 });
 
 test('json pointer', () => {
+  const t = (v: JSONValue, p: string, res: JSONValue | undefined) => {
+    expect(evaluateJSONPointer(deepFreeze(v), p)).deep.equal(res);
+  };
+
   for (const v of [null, 42, true, false, [], {}, 'foo']) {
     expect(() => evaluateJSONPointer(null, 'x')).to.throw(
       'Invalid JSON pointer',
     );
 
-    expect(evaluateJSONPointer(v, '')).to.equal(v);
-    expect(evaluateJSONPointer(v, '/')).to.equal(undefined);
-    expect(evaluateJSONPointer(v, '/a')).to.equal(undefined);
+    t(v, '', v);
+    t(v, '/', undefined);
+    t(v, '/a', undefined);
   }
 
-  expect(evaluateJSONPointer({a: 1}, '/a')).to.equal(1);
-  expect(evaluateJSONPointer({a: {b: 2}}, '/a')).to.deep.equal({b: 2});
-  expect(evaluateJSONPointer({a: {b: 3}}, '/a/b')).to.equal(3);
-  expect(evaluateJSONPointer({a: {b: 4}}, '/a/')).to.equal(undefined);
+  t({a: 1}, '/a', 1);
+  t({a: {b: 2}}, '/a', {b: 2});
+  t({a: {b: 3}}, '/a/b', 3);
+  t({a: {b: 4}}, '/a/', undefined);
 
-  expect(evaluateJSONPointer('hi', '/length')).to.equal(undefined);
+  t('hi', '/length', undefined);
 
-  expect(evaluateJSONPointer(['a', 'b'], '/0')).to.equal('a');
-  expect(evaluateJSONPointer(['a', 'b'], '/1')).to.equal('b');
-  expect(evaluateJSONPointer(['a', 'b'], '/00')).to.equal(undefined);
-  expect(evaluateJSONPointer(['a', 'b'], '/01')).to.equal(undefined);
-  expect(evaluateJSONPointer(['a', 'b'], '/2')).to.equal(undefined);
+  t(['a', 'b'], '/0', 'a');
+  t(['a', 'b'], '/1', 'b');
+  t(['a', 'b'], '/00', undefined);
+  t(['a', 'b'], '/01', undefined);
+  t(['a', 'b'], '/2', undefined);
 });
 
 test('index value', async () => {
@@ -216,7 +209,7 @@ test('index value', async () => {
           index,
           op,
           key,
-          toInternalValue(value, ToInternalValueReason.Test),
+          deepFreeze(value),
           jsonPointer,
           false,
         );
@@ -238,7 +231,7 @@ test('index value', async () => {
             index,
             op,
             key,
-            toInternalValue(value, ToInternalValueReason.Test),
+            deepFreeze(value),
             jsonPointer,
             false,
           ),

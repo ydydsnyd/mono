@@ -1,4 +1,5 @@
 import {assert, assertNumber, assertObject, assertString} from '../asserts.js';
+import {deepFreeze} from '../json.js';
 import {IDBStore} from '../kv/idb-store.js';
 import type * as kv from '../kv/mod.js';
 import {uuid} from '../uuid.js';
@@ -127,7 +128,7 @@ export class IDBDatabasesStore {
 async function getDatabases(read: kv.Read): Promise<IndexedDBDatabaseRecord> {
   let dbRecord = await read.get(DBS_KEY);
   if (!dbRecord) {
-    dbRecord = {};
+    dbRecord = deepFreeze({});
   }
   assertIndexedDBDatabaseRecord(dbRecord);
   return dbRecord;

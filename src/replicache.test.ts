@@ -444,7 +444,11 @@ test('push', async () => {
     text: 'Test',
   });
   expect(
-    ((await rep?.query(tx => tx.get(`/todo/${id1}`))) as {text: string}).text,
+    (
+      (await rep.query(tx => tx.get(`/todo/${id1}`))) as {
+        text: string;
+      }
+    ).text,
   ).to.equal('Test');
 
   fetchMock.postOnce(pushURL, {
@@ -501,7 +505,7 @@ test('push', async () => {
     text: 'Test 2',
   });
   expect(
-    ((await rep?.query(tx => tx.get(`/todo/${id2}`))) as {text: string}).text,
+    ((await rep.query(tx => tx.get(`/todo/${id2}`))) as {text: string}).text,
   ).to.equal('Test 2');
 
   // Clean up
@@ -778,7 +782,7 @@ test('pull', async () => {
   });
   expect(createCount).to.equal(1);
   expect(
-    ((await rep?.query(tx => tx.get(`/todo/${id1}`))) as {text: string}).text,
+    ((await rep.query(tx => tx.get(`/todo/${id1}`))) as {text: string}).text,
   ).to.equal('Test');
 
   fetchMock.postOnce(
@@ -802,7 +806,7 @@ test('pull', async () => {
   });
   expect(createCount).to.equal(2);
   expect(
-    ((await rep?.query(tx => tx.get(`/todo/${id2}`))) as {text: string}).text,
+    ((await rep.query(tx => tx.get(`/todo/${id2}`))) as {text: string}).text,
   ).to.equal('Test 2');
 
   fetchMock.postOnce(pullURL, makePullResponse(clientID, 3));
@@ -1722,7 +1726,7 @@ test('isEmpty', async () => {
   const {addData: add, del, mut} = rep.mutate;
 
   async function t(expected: boolean) {
-    expect(await rep?.query(tx => tx.isEmpty())).to.equal(expected);
+    expect(await rep.query(tx => tx.isEmpty())).to.equal(expected);
   }
 
   await t(true);
@@ -2578,7 +2582,7 @@ function findPropertyValue(
   return undefined;
 }
 
-test('mutate args in mutation', async () => {
+test('mutate args in mutation throws due to frozen', async () => {
   // This tests that mutating the args in a mutation does not mutate the args we
   // store in the kv.Store.
   const store = new TestMemStore();
@@ -2592,15 +2596,19 @@ test('mutate args in mutation', async () => {
     },
   });
 
-  await rep.mutate.mutArgs({v: 1});
+  let err;
+  try {
+    await rep.mutate.mutArgs({v: 1});
+  } catch (e) {
+    err = e;
+  }
+  expect(err).instanceOf(Error);
 
   // Safari does not have requestIdleTimeout so it waits for a second.
   await clock.tickAsync(1000);
 
   const o = findPropertyValue(store.map(), 'mutatorName', 'mutArgs');
-  expect((o as {mutatorArgsJSON?: unknown}).mutatorArgsJSON).to.deep.equal({
-    v: 1,
-  });
+  expect(o).undefined;
 });
 
 test('client ID is set correctly on transactions', async () => {

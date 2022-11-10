@@ -29,17 +29,15 @@ import {lazy} from '../lazy.js';
 import {emptyHash, Hash} from '../hash.js';
 import type {InternalDiff} from '../btree/node.js';
 import {allEntriesAsDiff} from '../btree/read.js';
-import type {InternalValue} from '../internal-value.js';
 import {assert} from '../asserts.js';
 import type {IndexDefinition, IndexDefinitions} from '../index-defs.js';
 import type {DiffComputationConfig} from '../sync/diff.js';
+import type {FrozenJSONValue} from '../json.js';
 
 export class Write extends Read {
   private readonly _dagWrite: dag.Write;
   private readonly _basis: Commit<CommitMeta> | undefined;
   private readonly _meta: CommitMeta;
-
-  shouldDeepClone = true;
 
   declare map: BTreeWrite;
 
@@ -72,14 +70,22 @@ export class Write extends Read {
     }
   }
 
-  async put(lc: LogContext, key: string, val: InternalValue): Promise<void> {
+  /**
+   * The value needs to be frozen since it is kept in memory and used later for
+   * comparison as well as returned in `get`.
+   */
+  async put(
+    lc: LogContext,
+    key: string,
+    value: FrozenJSONValue,
+  ): Promise<void> {
     if (this._meta.type === MetaType.IndexChangeSDD) {
       throw new Error('Not allowed');
     }
     const oldVal = lazy(() => this.map.get(key));
-    await updateIndexes(lc, this.indexes, key, oldVal, val);
+    await updateIndexes(lc, this.indexes, key, oldVal, value);
 
-    await this.map.put(key, val);
+    await this.map.put(key, value);
   }
 
   async del(lc: LogContext, key: string): Promise<boolean> {
@@ -433,7 +439,7 @@ export class Write extends Read {
 export async function newWriteLocal(
   whence: Whence,
   mutatorName: string,
-  mutatorArgsJSON: InternalValue,
+  mutatorArgsJSON: FrozenJSONValue,
   originalHash: Hash | null,
   dagWrite: dag.Write,
   timestamp: number,
@@ -480,7 +486,7 @@ export async function newWriteLocal(
 export async function newWriteSnapshotSDD(
   whence: Whence,
   lastMutationID: number,
-  cookieJSON: InternalValue,
+  cookieJSON: FrozenJSONValue,
   dagWrite: dag.Write,
   indexes: Map<string, IndexWrite>,
   clientID: ClientID,
@@ -501,7 +507,7 @@ export async function newWriteSnapshotSDD(
 export async function newWriteSnapshotDD31(
   whence: Whence,
   lastMutationIDs: Record<ClientID, number>,
-  cookieJSON: InternalValue,
+  cookieJSON: FrozenJSONValue,
   dagWrite: dag.Write,
   indexes: Map<string, IndexWrite>,
   clientID: ClientID,
@@ -549,8 +555,8 @@ export async function updateIndexes(
   lc: LogContext,
   indexes: Map<string, IndexWrite>,
   key: string,
-  oldValGetter: () => Promise<InternalValue | undefined>,
-  newVal: InternalValue | undefined,
+  oldValGetter: () => Promise<FrozenJSONValue | undefined>,
+  newVal: FrozenJSONValue | undefined,
 ): Promise<void> {
   const ps: Promise<void>[] = [];
   for (const idx of indexes.values()) {

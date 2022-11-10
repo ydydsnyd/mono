@@ -1,10 +1,9 @@
 import type {LogContext} from '@rocicorp/logger';
-import type {ReadonlyJSONValue, ReadonlyJSONObject} from '../json.js';
+import type {FrozenJSONValue, FrozenJSONObject} from '../json.js';
 import type {IndexRecord} from './commit.js';
 import type {BTreeRead, BTreeWrite} from '../btree/mod.js';
 import type {Hash} from '../hash.js';
 import {stringCompare} from '../string-compare.js';
-import {CastReason, InternalValue, safeCastToJSON} from '../internal-value.js';
 
 export class IndexRead<BTree = BTreeRead> {
   readonly meta: IndexRecord;
@@ -34,7 +33,7 @@ export async function indexValue(
   index: BTreeWrite,
   op: IndexOperation,
   key: string,
-  val: InternalValue,
+  val: FrozenJSONValue,
   jsonPointer: string,
   allowEmpty: boolean,
 ): Promise<void> {
@@ -60,11 +59,10 @@ export async function indexValue(
 // Gets the set of index keys for a given primary key and value.
 export function getIndexKeys(
   primary: string,
-  internalValue: InternalValue,
+  value: FrozenJSONValue,
   jsonPointer: string,
   allowEmpty: boolean,
 ): string[] {
-  const value = safeCastToJSON(internalValue, CastReason.EvaluateJSONPointer);
   const target = evaluateJSONPointer(value, jsonPointer);
   if (target === undefined) {
     if (allowEmpty) {
@@ -171,9 +169,9 @@ export function decodeIndexKey(encodedIndexKey: string): IndexKey {
 }
 
 export function evaluateJSONPointer(
-  value: ReadonlyJSONValue,
+  value: FrozenJSONValue,
   pointer: string,
-): ReadonlyJSONValue | undefined {
+): FrozenJSONValue | undefined {
   function parseIndex(s: string): number | undefined {
     if (s.startsWith('+') || (s.startsWith('0') && s.length !== 1)) {
       return undefined;
@@ -205,7 +203,7 @@ export function evaluateJSONPointer(
     } else if (target === null) {
       return undefined;
     } else if (typeof target === 'object') {
-      target = target as ReadonlyJSONObject;
+      target = target as FrozenJSONObject;
       targetOpt = target[token];
     }
     if (targetOpt === undefined) {

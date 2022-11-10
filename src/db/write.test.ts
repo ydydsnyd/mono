@@ -14,11 +14,11 @@ import {newWriteIndexChange, newWriteLocal} from './write.js';
 import {encodeIndexKey} from './index.js';
 import {asyncIterableToArray} from '../async-iterable-to-array.js';
 import {BTreeRead} from '../btree/mod.js';
-import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 import {initDB} from './test-helpers.js';
 import type {IndexDefinitions} from '../index-defs.js';
 import type {Writable} from '../writable.js';
 import {commitFromHead} from './mod.js';
+import {deepFreeze} from '../json.js';
 
 test('basics w/ commit', async () => {
   const clientID = 'client-id';
@@ -342,11 +342,7 @@ test('create and drop index', async () => {
           false,
         );
         for (let i = 0; i < 3; i++) {
-          await w.put(
-            lc,
-            `k${i}`,
-            toInternalValue({s: `s${i}`}, ToInternalValueReason.Test),
-          );
+          await w.put(lc, `k${i}`, deepFreeze({s: `s${i}`}));
         }
         await w.commit(DEFAULT_HEAD_NAME);
       });
@@ -376,11 +372,7 @@ test('create and drop index', async () => {
           false,
         );
         for (let i = 0; i < 3; i++) {
-          await w.put(
-            lc,
-            `k${i}`,
-            toInternalValue({s: `s${i}`}, ToInternalValueReason.Test),
-          );
+          await w.put(lc, `k${i}`, deepFreeze({s: `s${i}`}));
         }
         await w.commit(DEFAULT_HEAD_NAME);
       });
@@ -442,17 +434,25 @@ test('legacy index definitions imply allowEmpty = false', async () => {
       clientID,
     );
     await w.createIndex(lc, indexName, '', '', false);
-    await w.commit(DEFAULT_HEAD_NAME);
-  });
 
-  await ds.withWrite(async dagWrite => {
-    const [, commit] = await readCommit(
-      whenceHead(DEFAULT_HEAD_NAME),
-      dagWrite,
-    );
-    // tweak the index def to look like an old one
-    const indexDef = commit.indexes[0].definition as {allowEmpty?: boolean};
-    indexDef.allowEmpty = undefined;
+    // Legacy index definitions don't have allowEmpty. We drill down into the
+    // indexWrite and change the definition.
+    const indexWrite = w.indexes.get(indexName);
+    assertNotUndefined(indexWrite);
+    const {definition, valueHash} = indexWrite.meta;
+    const meta2 = {
+      definition: {
+        name: definition.name,
+        keyPrefix: definition.keyPrefix,
+        jsonPointer: definition.jsonPointer,
+        // No allowEmpty.
+      },
+      valueHash,
+    };
+    // @ts-expect-error: meta is readonly
+    indexWrite.meta = meta2;
+
+    await w.commit(DEFAULT_HEAD_NAME);
   });
 
   await ds.withWrite(async dagWrite => {

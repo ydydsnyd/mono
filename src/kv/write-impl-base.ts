@@ -1,16 +1,13 @@
-import {
-  promiseFalse,
-  promiseTrue,
-  promiseUndefined,
-  promiseVoid,
-} from '../resolved-promises.js';
-import type {Read, Value} from './store.js';
+import {FrozenJSONValue, ReadonlyJSONValue, deepFreeze} from '../json.js';
+import {promiseFalse, promiseTrue, promiseVoid} from '../resolved-promises.js';
+import type {Read} from './store.js';
 
 export const deleteSentinel = Symbol();
 export type DeleteSentinel = typeof deleteSentinel;
 
 export class WriteImplBase {
-  protected readonly _pending: Map<string, Value | DeleteSentinel> = new Map();
+  protected readonly _pending: Map<string, FrozenJSONValue | DeleteSentinel> =
+    new Map();
   private readonly _read: Read;
 
   constructor(read: Read) {
@@ -28,20 +25,22 @@ export class WriteImplBase {
     }
   }
 
-  get(key: string): Promise<Value | undefined> {
+  async get(key: string): Promise<FrozenJSONValue | undefined> {
     const v = this._pending.get(key);
     switch (v) {
       case deleteSentinel:
-        return promiseUndefined;
-      case undefined:
-        return this._read.get(key);
+        return undefined;
+      case undefined: {
+        const v = await this._read.get(key);
+        return deepFreeze(v);
+      }
       default:
-        return Promise.resolve(v);
+        return v;
     }
   }
 
-  put(key: string, value: Value): Promise<void> {
-    this._pending.set(key, value);
+  put(key: string, value: ReadonlyJSONValue): Promise<void> {
+    this._pending.set(key, deepFreeze(value));
     return promiseVoid;
   }
 

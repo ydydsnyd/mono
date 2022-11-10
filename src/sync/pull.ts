@@ -1,7 +1,12 @@
 import type {LogContext} from '@rocicorp/logger';
 import type * as dag from '../dag/mod.js';
 import * as db from '../db/mod.js';
-import type {JSONValue, ReadonlyJSONValue} from '../json.js';
+import {
+  deepEqual,
+  FrozenJSONValue,
+  ReadonlyJSONValue,
+  deepFreeze,
+} from '../json.js';
 import {
   assertPullResponseSDD,
   assertPullResponseDD31,
@@ -26,14 +31,6 @@ import * as btree from '../btree/mod.js';
 import {BTreeRead} from '../btree/mod.js';
 import {updateIndexes} from '../db/write.js';
 import {emptyHash, Hash} from '../hash.js';
-import {
-  toInternalValue,
-  InternalValue,
-  ToInternalValueReason,
-  deepEqual,
-  FromInternalValueReason,
-  fromInternalValue,
-} from '../internal-value.js';
 import type {ClientGroupID, ClientID} from './ids.js';
 import {addDiffsForIndexes, DiffComputationConfig, DiffsMap} from './diff.js';
 import {assert, assertObject} from '../asserts.js';
@@ -169,13 +166,10 @@ export async function beginPullSDD(
     return [lastMutationID, baseCookie];
   });
 
-  const pullReq: PullRequestSDD<JSONValue> = {
+  const pullReq: PullRequestSDD<FrozenJSONValue> = {
     profileID,
     clientID,
-    cookie: fromInternalValue(
-      baseCookie,
-      FromInternalValueReason.PullSendCookie,
-    ),
+    cookie: baseCookie,
     lastMutationID,
     pullVersion: PULL_VERSION_SDD,
     schemaVersion,
@@ -263,10 +257,7 @@ export async function beginPullDD31(
   const pullReq: PullRequestDD31<ReadonlyJSONValue> = {
     profileID,
     clientGroupID,
-    cookie: fromInternalValue(
-      baseCookie,
-      FromInternalValueReason.PullSendCookie,
-    ),
+    cookie: baseCookie,
     pullVersion: PULL_VERSION_DD31,
     schemaVersion,
     isNewClientGroup,
@@ -324,7 +315,7 @@ export async function beginPullDD31(
 export async function handlePullResponseSDD(
   lc: LogContext,
   store: dag.Store,
-  expectedBaseCookie: InternalValue,
+  expectedBaseCookie: ReadonlyJSONValue,
   response: PullResponseOK,
   clientID: ClientID,
 ): Promise<Hash | null> {
@@ -360,10 +351,7 @@ export async function handlePullResponseSDD(
       );
     }
 
-    const internalCookie = toInternalValue(
-      response.cookie ?? null,
-      ToInternalValueReason.CookieFromResponse,
-    );
+    const frozenCookie = deepFreeze(response.cookie ?? null);
 
     // If there is no patch and the lmid and cookie don't change, it's a nop.
     // Otherwise, we will write a new commit, including for the case of just
@@ -371,7 +359,7 @@ export async function handlePullResponseSDD(
     if (
       response.patch.length === 0 &&
       response.lastMutationID === baseLastMutationID &&
-      deepEqual(internalCookie, baseCookie)
+      deepEqual(frozenCookie, baseCookie)
     ) {
       return emptyHash;
     }
@@ -412,7 +400,7 @@ export async function handlePullResponseSDD(
     const dbWrite = await db.newWriteSnapshotSDD(
       db.whenceHash(baseSnapshot.chunk.hash),
       response.lastMutationID,
-      internalCookie,
+      frozenCookie,
       dagWrite,
       db.readIndexesForWrite(lastIntegrated, dagWrite),
       clientID,
@@ -428,10 +416,8 @@ export async function handlePullResponseSDD(
         dbWrite.indexes,
         change.key,
         () =>
-          Promise.resolve(
-            (change as {oldValue: InternalValue | undefined}).oldValue,
-          ),
-        (change as {newValue: InternalValue | undefined}).newValue,
+          Promise.resolve((change as {oldValue?: FrozenJSONValue}).oldValue),
+        (change as {newValue?: FrozenJSONValue}).newValue,
       );
     }
 
@@ -442,7 +428,7 @@ export async function handlePullResponseSDD(
 export function handlePullResponse(
   lc: LogContext,
   store: dag.Store,
-  expectedBaseCookie: InternalValue,
+  expectedBaseCookie: FrozenJSONValue,
   response: PullResponseOKDD31 | PullResponseOKSDD,
   clientID: ClientID,
 ): Promise<Hash | null> {
@@ -469,7 +455,7 @@ export function handlePullResponse(
 export async function handlePullResponseDD31(
   lc: LogContext,
   store: dag.Store,
-  expectedBaseCookie: InternalValue,
+  expectedBaseCookie: FrozenJSONValue,
   response: PullResponseOKDD31,
   clientID: ClientID,
 ): Promise<Hash | null> {
@@ -507,17 +493,14 @@ export async function handlePullResponseDD31(
       }
     }
 
-    const internalCookie = toInternalValue(
-      response.cookie,
-      ToInternalValueReason.CookieFromResponse,
-    );
+    const frozenCookie = deepFreeze(response.cookie);
 
     // If there is no patch and there are no lmid changes and cookie doesn't
     // change, it's a nop. Otherwise, something changed (maybe just the cookie)
     // and we will write a new commit.
     if (
       response.patch.length === 0 &&
-      deepEqual(internalCookie, baseCookie) &&
+      deepEqual(frozenCookie, baseCookie) &&
       !anyMutationsToApply(
         response.lastMutationIDChanges,
         baseSnapshotMeta.lastMutationIDs,
@@ -529,7 +512,7 @@ export async function handlePullResponseDD31(
     const dbWrite = await db.newWriteSnapshotDD31(
       db.whenceHash(baseSnapshot.chunk.hash),
       {...baseSnapshotMeta.lastMutationIDs, ...response.lastMutationIDChanges},
-      internalCookie,
+      frozenCookie,
       dagWrite,
       db.readIndexesForWrite(baseSnapshot, dagWrite),
       clientID,

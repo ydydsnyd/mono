@@ -1,4 +1,4 @@
-import {getSizeOfValue} from '../json.js';
+import {deepEqual, FrozenJSONValue, getSizeOfValue} from '../json.js';
 import type * as dag from '../dag/mod.js';
 import {Hash, emptyHash} from '../hash.js';
 import {
@@ -25,7 +25,6 @@ import {
   SPLICE_FROM,
   SPLICE_REMOVED,
 } from './splice.js';
-import {deepEqual, InternalValue} from '../internal-value.js';
 
 /**
  * The size of the header of a node. (If we had compile time
@@ -36,7 +35,7 @@ import {deepEqual, InternalValue} from '../internal-value.js';
 export const NODE_HEADER_SIZE = 11;
 
 export class BTreeRead
-  implements AsyncIterable<EntryWithOptionalSize<InternalValue>>
+  implements AsyncIterable<EntryWithOptionalSize<FrozenJSONValue>>
 {
   rootHash: Hash;
   protected readonly _dagRead: dag.Read;
@@ -72,7 +71,7 @@ export class BTreeRead
     internalizeBTreeNode(data);
     const impl = newNodeImpl(
       this._chunkEntriesToTreeEntries(
-        data[NODE_ENTRIES] as readonly Entry<InternalValue>[],
+        data[NODE_ENTRIES] as readonly Entry<FrozenJSONValue>[],
       ),
       hash,
       data[NODE_LEVEL],
@@ -89,7 +88,7 @@ export class BTreeRead
     return entries as unknown as EntryWithOptionalSize<V>[];
   }
 
-  async get(key: string): Promise<InternalValue | undefined> {
+  async get(key: string): Promise<FrozenJSONValue | undefined> {
     const leaf = await findLeaf(key, this.rootHash, this, this.rootHash);
     const index = binarySearch(key, leaf.entries);
     if (!binarySearchFound(index, leaf.entries, key)) {
@@ -120,7 +119,7 @@ export class BTreeRead
   // caller has to deal with encoding and decoding the keys for the index map.
   scan(
     fromKey: string,
-  ): AsyncIterableIterator<EntryWithOptionalSize<InternalValue>> {
+  ): AsyncIterableIterator<EntryWithOptionalSize<FrozenJSONValue>> {
     return scanForHash(
       this.rootHash,
       () => this.rootHash,
@@ -147,14 +146,14 @@ export class BTreeRead
   }
 
   async *entries(): AsyncIterableIterator<
-    EntryWithOptionalSize<InternalValue>
+    EntryWithOptionalSize<FrozenJSONValue>
   > {
     const node = await this.getNode(this.rootHash);
     yield* node.entriesIter(this);
   }
 
   [Symbol.asyncIterator](): AsyncIterableIterator<
-    EntryWithOptionalSize<InternalValue>
+    EntryWithOptionalSize<FrozenJSONValue>
   > {
     return this.entries();
   }
@@ -232,8 +231,8 @@ async function* diffNodes(
 }
 
 function* diffEntries(
-  lastEntries: readonly EntryWithOptionalSize<InternalValue>[],
-  currentEntries: readonly EntryWithOptionalSize<InternalValue>[],
+  lastEntries: readonly EntryWithOptionalSize<FrozenJSONValue>[],
+  currentEntries: readonly EntryWithOptionalSize<FrozenJSONValue>[],
 ): IterableIterator<InternalDiffOperation> {
   const lastLength = lastEntries.length;
   const currentLength = currentEntries.length;
@@ -289,7 +288,7 @@ function* diffEntries(
 type ReadNodeResult = readonly [
   level: number,
   data:
-    | readonly EntryWithOptionalSize<InternalValue>[]
+    | readonly EntryWithOptionalSize<FrozenJSONValue>[]
     | readonly EntryWithOptionalSize<Hash>[],
 ];
 
@@ -301,7 +300,7 @@ export async function* scanForHash(
   hash: Hash,
   fromKey: string,
   readNode: ReadNode,
-): AsyncIterableIterator<EntryWithOptionalSize<InternalValue>> {
+): AsyncIterableIterator<EntryWithOptionalSize<FrozenJSONValue>> {
   if (hash === emptyHash) {
     return;
   }
@@ -337,7 +336,7 @@ export async function* scanForHash(
         );
         return;
       }
-      yield entries[i] as EntryWithOptionalSize<InternalValue>;
+      yield entries[i] as EntryWithOptionalSize<FrozenJSONValue>;
     }
   }
 }
@@ -348,7 +347,7 @@ export async function allEntriesAsDiff(
 ): Promise<InternalDiff> {
   const diff: InternalDiffOperation[] = [];
   const make: (
-    entry: EntryWithOptionalSize<InternalValue>,
+    entry: EntryWithOptionalSize<FrozenJSONValue>,
   ) => InternalDiffOperation =
     op === 'add'
       ? entry => {

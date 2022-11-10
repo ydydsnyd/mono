@@ -6,8 +6,7 @@ import * as db from '../db/mod.js';
 import * as btree from '../btree/mod.js';
 import {ChainBuilder} from '../db/test-helpers.js';
 import {assertHash, Hash, makeNewFakeHashFunction} from '../hash.js';
-import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
-import type {JSONValue, ReadonlyJSONValue} from '../json.js';
+import {JSONValue, ReadonlyJSONValue, deepFreeze} from '../json.js';
 import {
   ClientGroupMap,
   setClientGroup,
@@ -425,7 +424,7 @@ suite('refresh', () => {
           dagWrite.createChunk,
           basisHash,
           lastMutationIDs,
-          toInternalValue(cookieJSON, ToInternalValueReason.Test),
+          deepFreeze(cookieJSON),
           valueHash,
           indexes,
         );
@@ -468,7 +467,7 @@ suite('refresh', () => {
       return await store.withWrite(async dagWrite => {
         const m = new btree.BTreeWrite(dagWrite, valueHash);
         for (const [k, v] of entries) {
-          await m.put(k, toInternalValue(v, ToInternalValueReason.Test));
+          await m.put(k, deepFreeze(v));
         }
         const newValueHash = await m.flush();
 
@@ -477,7 +476,7 @@ suite('refresh', () => {
           basisHash,
           mutationID,
           mutatorName,
-          toInternalValue(mutatorArgsJSON, ToInternalValueReason.Test),
+          deepFreeze(mutatorArgsJSON),
           originalHash,
           newValueHash,
           indexes,

@@ -18,7 +18,6 @@ import {
 import type {QueryInternal} from './replicache.js';
 import type {LogContext} from '@rocicorp/logger';
 import {binarySearch} from './binary-search.js';
-import {fromInternalValue, FromInternalValueReason} from './internal-value.js';
 import type {DiffComputationConfig} from './sync/diff.js';
 
 const enum InvokeKind {
@@ -312,32 +311,20 @@ function convertDiffValues<Key>(
         return {
           op: 'add',
           key,
-          newValue: fromInternalValue(
-            op.newValue,
-            FromInternalValueReason.WatchDiff,
-          ),
+          newValue: op.newValue,
         };
       case 'change':
         return {
           op: 'change',
           key,
-          oldValue: fromInternalValue(
-            op.oldValue,
-            FromInternalValueReason.WatchDiff,
-          ),
-          newValue: fromInternalValue(
-            op.newValue,
-            FromInternalValueReason.WatchDiff,
-          ),
+          oldValue: op.oldValue,
+          newValue: op.newValue,
         };
       case 'del':
         return {
           op: 'del',
           key,
-          oldValue: fromInternalValue(
-            op.oldValue,
-            FromInternalValueReason.WatchDiff,
-          ),
+          oldValue: op.oldValue,
         };
     }
   });

@@ -38,6 +38,7 @@ import type {ClientID} from '../sync/client-id.js';
 import {ClientGroup, getClientGroup, setClientGroup} from './client-groups.js';
 import type {ClientGroupID} from '../sync/ids.js';
 import type {IndexDefinitions} from '../index-defs.js';
+import {deepFreeze} from '../json.js';
 
 let clock: SinonFakeTimers;
 setup(() => {
@@ -317,10 +318,10 @@ test('updateClients throws errors if chunk pointed to by clients head does not c
   await dagStore.withWrite(async (write: dag.Write) => {
     const headHash = headClient1Hash;
     const chunk = write.createChunk(
-      {
+      deepFreeze({
         heartbeatTimestampMs: 'this should be a number',
         headHash,
-      },
+      }),
       [headHash],
     );
 

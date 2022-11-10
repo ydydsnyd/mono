@@ -1,8 +1,9 @@
 import {deleteSentinel, WriteImplBase} from './write-impl-base.js';
-import type {Read, Store, Value, Write} from './store.js';
+import type {Read, Store, Write} from './store.js';
 import {resolver} from '@rocicorp/resolver';
 import {assertNotNull} from '../asserts.js';
 import {wrap} from './idb-util.js';
+import {FrozenJSONValue, deepFreeze} from '../json.js';
 
 const RELAXED = {durability: 'relaxed'};
 const OBJECT_STORE = 'chunks';
@@ -101,8 +102,9 @@ class ReadImpl implements Read {
     return (await wrap(objectStore(this._tx).count(key))) > 0;
   }
 
-  get(key: string): Promise<Value | undefined> {
-    return wrap(objectStore(this._tx).get(key));
+  async get(key: string): Promise<FrozenJSONValue | undefined> {
+    const v = await wrap(objectStore(this._tx).get(key));
+    return deepFreeze(v);
   }
 
   release(): void {

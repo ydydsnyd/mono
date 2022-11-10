@@ -29,7 +29,6 @@ import sinon from 'sinon';
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
 import {initClientWithClientID} from './persist/clients-test-helpers.js';
-import {fromInternalValue, FromInternalValueReason} from './internal-value.js';
 import {PUSH_VERSION_SDD} from './sync/push.js';
 import {assertClientSDD} from './persist/clients.js';
 
@@ -106,10 +105,7 @@ export function createPushBodySDD(
     mutations: localMetas.map(localMeta => ({
       id: localMeta.mutationID,
       name: localMeta.mutatorName,
-      args: fromInternalValue(
-        localMeta.mutatorArgsJSON,
-        FromInternalValueReason.Test,
-      ),
+      args: localMeta.mutatorArgsJSON,
       timestamp: localMeta.timestamp,
     })),
     pushVersion: PUSH_VERSION_SDD,

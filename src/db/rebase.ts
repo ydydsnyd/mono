@@ -2,7 +2,6 @@ import type * as dag from '../dag/mod.js';
 import type {Hash} from '../hash.js';
 import type {MutatorDefs} from '../replicache.js';
 import {WriteTransactionImpl} from '../transactions.js';
-import {fromInternalValue, FromInternalValueReason} from '../internal-value.js';
 import type {LogContext} from '@rocicorp/logger';
 import type {ClientID} from '../sync/mod.js';
 import {assert} from '../asserts.js';
@@ -54,10 +53,6 @@ async function rebaseMutation(
     });
 
   const args = localMeta.mutatorArgsJSON;
-  const jsonArgs = fromInternalValue(
-    args,
-    FromInternalValueReason.WriteTransactionMutateArgs,
-  );
 
   const basisCommit = await fromHash(basis, dagWrite);
   const nextMutationID = await basisCommit.getNextMutationID(
@@ -82,7 +77,7 @@ async function rebaseMutation(
   );
 
   const tx = new WriteTransactionImpl(mutationClientID, dbWrite, lc);
-  await mutatorImpl(tx, jsonArgs);
+  await mutatorImpl(tx, args);
   return dbWrite;
 }
 

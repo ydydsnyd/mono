@@ -1,6 +1,6 @@
 import {assert, assertString} from '../asserts.js';
 import {Hash, newUUIDHash} from '../hash.js';
-import type {ReadonlyJSONValue} from '../json.js';
+import {assertDeepFrozen, FrozenJSONValue} from '../json.js';
 
 type Refs = readonly Hash[];
 
@@ -14,12 +14,13 @@ export interface Chunk<V = unknown> {
   readonly meta: Refs;
 }
 
-class ChunkImpl<V = ReadonlyJSONValue> implements Chunk<V> {
+class ChunkImpl<V = FrozenJSONValue> implements Chunk<V> {
   readonly hash: Hash;
   readonly data: V;
   readonly meta: Refs;
 
   constructor(hash: Hash, data: V, meta: Refs) {
+    assertDeepFrozen(data);
     this.hash = hash;
     this.data = data;
     this.meta = meta;

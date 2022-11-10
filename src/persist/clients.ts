@@ -4,7 +4,7 @@ import * as btree from '../btree/mod.js';
 import * as dag from '../dag/mod.js';
 import * as db from '../db/mod.js';
 import type * as sync from '../sync/mod.js';
-import type {ReadonlyJSONValue} from '../json.js';
+import {FrozenJSONValue, deepFreeze} from '../json.js';
 import {assert, assertNumber, assertObject, assertString} from '../asserts.js';
 import {hasOwn} from '../has-own.js';
 import {uuid as makeUuid} from '../uuid.js';
@@ -27,7 +27,6 @@ import {
   setClientGroup,
 } from './client-groups.js';
 import {IndexDefinitions, indexDefinitionsEqual} from '../index-defs.js';
-import {CastReason, InternalValue, safeCastToJSON} from '../internal-value.js';
 import {createIndexBTree} from '../db/write.js';
 
 export type ClientMap = ReadonlyMap<sync.ClientID, ClientSDD | ClientDD31>;
@@ -166,14 +165,14 @@ function chunkDataToClientMap(chunkData: unknown): ClientMap {
 function clientMapToChunkData(
   clients: ClientMap,
   dagWrite: dag.Write,
-): ReadonlyJSONValue {
+): FrozenJSONValue {
   for (const client of clients.values()) {
     dagWrite.assertValidHash(client.headHash);
     if (isClientDD31(client) && client.tempRefreshHash) {
       dagWrite.assertValidHash(client.tempRefreshHash);
     }
   }
-  return Object.fromEntries(clients);
+  return deepFreeze(Object.fromEntries(clients));
 }
 
 export async function getClients(dagRead: dag.Read): Promise<ClientMap> {
@@ -331,7 +330,7 @@ export function initClientDD31(
   return perdag.withWrite(async dagWrite => {
     async function setClientsAndClientGroupAndCommit(
       basisHash: Hash | null,
-      cookieJSON: InternalValue,
+      cookieJSON: FrozenJSONValue,
       valueHash: Hash,
       indexRecords: readonly db.IndexRecord[],
     ): Promise<[sync.ClientID, Client, ClientMap]> {
@@ -511,7 +510,7 @@ export async function findMatchingClient(
   mutatorNames: string[],
   indexes: IndexDefinitions,
 ): Promise<FindMatchingClientResult> {
-  let newestCookie: ReadonlyJSONValue | undefined;
+  let newestCookie: FrozenJSONValue | undefined;
   let bestSnapshot: db.Commit<db.SnapshotMetaDD31> | undefined;
   const mutatorNamesSet = new Set(mutatorNames);
 
@@ -535,10 +534,7 @@ export async function findMatchingClient(
     );
     assertSnapshotCommitDD31(clientGroupSnapshotCommit);
 
-    const cookieJSON = safeCastToJSON(
-      clientGroupSnapshotCommit.meta.cookieJSON,
-      CastReason.CompareCookies,
-    );
+    const {cookieJSON} = clientGroupSnapshotCommit.meta;
     if (
       newestCookie === undefined ||
       compareCookies(cookieJSON, newestCookie) > 0

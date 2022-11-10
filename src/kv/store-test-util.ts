@@ -1,5 +1,6 @@
 import {expect} from '@esm-bundle/chai';
-import type {Read, Store, Value, Write} from './store.js';
+import type {FrozenJSONValue, ReadonlyJSONValue} from '../json.js';
+import type {Read, Store, Write} from './store.js';
 
 export class TestStore implements Store {
   private readonly _store: Store;
@@ -42,7 +43,7 @@ export class TestStore implements Store {
     }
   }
 
-  async put(key: string, value: Value): Promise<void> {
+  async put(key: string, value: FrozenJSONValue): Promise<void> {
     await this.withWrite(async write => {
       await write.put(key, value);
       await write.commit();
@@ -60,7 +61,7 @@ export class TestStore implements Store {
     return this.withRead(read => read.has(key));
   }
 
-  get(key: string): Promise<Value | undefined> {
+  get(key: string): Promise<ReadonlyJSONValue | undefined> {
     return this.withRead(read => read.get(key));
   }
 }
