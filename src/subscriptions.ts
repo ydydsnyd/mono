@@ -1,7 +1,7 @@
 import {compareUTF8, greaterThan, lessThan, lessThanEq} from 'compare-utf8';
-import * as db from './db/mod';
-import type * as sync from './sync/mod';
-import {assert} from './asserts';
+import * as db from './db/mod.js';
+import type * as sync from './sync/mod.js';
+import {assert} from './asserts.js';
 import type {
   Diff,
   InternalDiffOperation,
@@ -9,14 +9,17 @@ import type {
   IndexDiff,
   InternalDiff,
   NoIndexDiff,
-} from './btree/node';
-import {deepEqual, ReadonlyJSONValue} from './json';
-import {ReadTransaction, SubscriptionTransactionWrapper} from './transactions';
-import type {QueryInternal} from './replicache';
+} from './btree/node.js';
+import {deepEqual, ReadonlyJSONValue} from './json.js';
+import {
+  ReadTransaction,
+  SubscriptionTransactionWrapper,
+} from './transactions.js';
+import type {QueryInternal} from './replicache.js';
 import type {LogContext} from '@rocicorp/logger';
-import {binarySearch} from './binary-search';
+import {binarySearch} from './binary-search.js';
 import {fromInternalValue, FromInternalValueReason} from './internal-value.js';
-import type {DiffComputationConfig} from './sync/diff';
+import type {DiffComputationConfig} from './sync/diff.js';
 
 const enum InvokeKind {
   InitialRun,

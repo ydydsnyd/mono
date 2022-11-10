@@ -1,13 +1,13 @@
 import {expect} from '@esm-bundle/chai';
-import type {PullResponse} from './puller';
-import type {Poke} from './replicache';
+import type {PullResponse} from './puller.js';
+import type {Poke} from './replicache.js';
 import {
   addData,
   initReplicacheTesting,
   makePullResponse,
   replicacheForTesting,
-} from './test-util';
-import type {WriteTransaction} from './transactions';
+} from './test-util.js';
+import type {WriteTransaction} from './transactions.js';
 
 initReplicacheTesting();
 

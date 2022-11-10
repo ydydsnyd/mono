@@ -1,4 +1,4 @@
-import type {BenchmarkResult} from './perf';
+import type {BenchmarkResult} from './perf.js';
 
 export function formatAsReplicache(results: BenchmarkResult): string {
   const {name, runTimesStatistics: stats, sortedRunTimesMs: runs} = results;

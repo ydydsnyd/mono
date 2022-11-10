@@ -28,7 +28,7 @@ jobs:
       - name: Run benchmark
         run: |
           node perf/runner.js --format=json | tee perf-temp-output.json
-          node tool/split-perf.mjs perf-temp-output.json perf-v2-output.json perf-v2-p95-output.json
+          node tool/split-perf.js perf-temp-output.json perf-v2-output.json perf-v2-p95-output.json
         shell: bash
 
       # Run `github-action-benchmark` action

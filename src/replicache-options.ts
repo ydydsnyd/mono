@@ -1,9 +1,9 @@
 import type {LogLevel, LogSink} from '@rocicorp/logger';
-import type {Pusher} from './pusher';
-import type {Puller} from './puller';
-import type {MutatorDefs, RequestOptions} from './replicache';
-import type * as kv from './kv/mod';
-import type {IndexDefinitions} from './index-defs';
+import type {Pusher} from './pusher.js';
+import type {Puller} from './puller.js';
+import type {MutatorDefs, RequestOptions} from './replicache.js';
+import type * as kv from './kv/mod.js';
+import type {IndexDefinitions} from './index-defs.js';
 
 /**
  * The options passed to {@link Replicache}.

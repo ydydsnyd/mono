@@ -7,23 +7,23 @@ import {
   replicacheForTestingNoDefaultURLs,
   dbsToDrop,
   closeablesToClose,
-} from './test-util';
+} from './test-util.js';
 import {
   makeIDBNameForTesting,
   REPLICACHE_FORMAT_VERSION_DD31,
   REPLICACHE_FORMAT_VERSION_SDD,
-} from './replicache';
-import {ChainBuilder} from './db/test-helpers';
-import type * as db from './db/mod';
-import * as dag from './dag/mod';
-import * as persist from './persist/mod';
-import * as kv from './kv/mod';
-import type * as sync from './sync/mod';
-import {assertHash} from './hash';
-import {assertNotUndefined} from './asserts';
+} from './replicache.js';
+import {ChainBuilder} from './db/test-helpers.js';
+import type * as db from './db/mod.js';
+import * as dag from './dag/mod.js';
+import * as persist from './persist/mod.js';
+import * as kv from './kv/mod.js';
+import type * as sync from './sync/mod.js';
+import {assertHash} from './hash.js';
+import {assertNotUndefined} from './asserts.js';
 import {expect} from '@esm-bundle/chai';
-import {uuid} from './uuid';
-import {assertJSONObject, JSONObject, ReadonlyJSONObject} from './json';
+import {uuid} from './uuid.js';
+import {assertJSONObject, JSONObject, ReadonlyJSONObject} from './json.js';
 import sinon from 'sinon';
 
 // fetch-mock has invalid d.ts file so we removed that on npm install.

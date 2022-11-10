@@ -1,8 +1,8 @@
 import type {LogContext} from '@rocicorp/logger';
-import type * as dag from '../dag/mod';
-import * as btree from '../btree/mod';
-import * as sync from '../sync/mod';
-import type {ClientID} from '../sync/mod';
+import type * as dag from '../dag/mod.js';
+import * as btree from '../btree/mod.js';
+import * as sync from '../sync/mod.js';
+import type {ClientID} from '../sync/mod.js';
 import {
   Commit,
   Meta as CommitMeta,
@@ -16,23 +16,23 @@ import {
   toChunkIndexDefinition,
   ChunkIndexDefinition,
   chunkIndexDefinitionEqualIgnoreName,
-} from './commit';
+} from './commit.js';
 import {
   Read,
   readCommitForBTreeWrite,
   readIndexesForRead,
   Whence,
-} from './read';
-import {IndexWrite, IndexOperation, indexValue, IndexRead} from './index';
-import {BTreeRead, BTreeWrite} from '../btree/mod';
-import {lazy} from '../lazy';
-import {emptyHash, Hash} from '../hash';
-import type {InternalDiff} from '../btree/node';
-import {allEntriesAsDiff} from '../btree/read';
-import type {InternalValue} from '../internal-value';
-import {assert} from '../asserts';
-import type {IndexDefinition, IndexDefinitions} from '../index-defs';
-import type {DiffComputationConfig} from '../sync/diff';
+} from './read.js';
+import {IndexWrite, IndexOperation, indexValue, IndexRead} from './index.js';
+import {BTreeRead, BTreeWrite} from '../btree/mod.js';
+import {lazy} from '../lazy.js';
+import {emptyHash, Hash} from '../hash.js';
+import type {InternalDiff} from '../btree/node.js';
+import {allEntriesAsDiff} from '../btree/read.js';
+import type {InternalValue} from '../internal-value.js';
+import {assert} from '../asserts.js';
+import type {IndexDefinition, IndexDefinitions} from '../index-defs.js';
+import type {DiffComputationConfig} from '../sync/diff.js';
 
 export class Write extends Read {
   private readonly _dagWrite: dag.Write;

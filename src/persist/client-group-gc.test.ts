@@ -1,16 +1,16 @@
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
-import {assertNotUndefined} from '../asserts';
-import {getLatestGCUpdate, initClientGroupGC} from './client-group-gc';
+import {assertNotUndefined} from '../asserts.js';
+import {getLatestGCUpdate, initClientGroupGC} from './client-group-gc.js';
 import {
   ClientGroup,
   ClientGroupMap,
   getClientGroups,
   setClientGroup,
   setClientGroups,
-} from './client-groups';
-import * as dag from '../dag/mod';
-import {fakeHash} from '../hash';
-import {makeClient, setClientsForTesting} from './clients-test-helpers';
+} from './client-groups.js';
+import * as dag from '../dag/mod.js';
+import {fakeHash} from '../hash.js';
+import {makeClient, setClientsForTesting} from './clients-test-helpers.js';
 import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
 

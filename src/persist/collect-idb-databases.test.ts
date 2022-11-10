@@ -1,17 +1,17 @@
 import {expect} from '@esm-bundle/chai';
 import {fakeHash} from '../hash.js';
-import {TestMemStore} from '../kv/test-mem-store';
-import {makeClientMap, setClientsForTesting} from './clients-test-helpers';
+import {TestMemStore} from '../kv/test-mem-store.js';
+import {makeClientMap, setClientsForTesting} from './clients-test-helpers.js';
 import {
   IDBDatabasesStore,
   IndexedDBDatabase,
   IndexedDBName,
-} from './idb-databases-store';
+} from './idb-databases-store.js';
 import {
   collectIDBDatabases,
   deleteAllReplicacheData,
-} from './collect-idb-databases';
-import * as dag from '../dag/mod';
+} from './collect-idb-databases.js';
+import * as dag from '../dag/mod.js';
 import type {ClientMap} from './clients.js';
 import {assertNotUndefined} from '../asserts.js';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';

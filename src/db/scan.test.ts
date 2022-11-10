@@ -1,7 +1,7 @@
 import {expect} from '@esm-bundle/chai';
-import type {ScanItem} from './scan';
-import * as dag from '../dag/mod';
-import {BTreeWrite} from '../btree/mod';
+import type {ScanItem} from './scan.js';
+import * as dag from '../dag/mod.js';
+import {BTreeWrite} from '../btree/mod.js';
 import {decodeIndexKey} from './index.js';
 import {fromKeyForIndexScanInternal} from '../scan-iterator.js';
 

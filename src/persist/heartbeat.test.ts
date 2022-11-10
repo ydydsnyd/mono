@@ -2,16 +2,16 @@ import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
 import * as sinon from 'sinon';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
-import * as dag from '../dag/mod';
+import * as dag from '../dag/mod.js';
 import {
   latestHeartbeatUpdate,
   startHeartbeats,
   writeHeartbeat,
-} from './heartbeat';
-import {ClientMap, ClientStateNotFoundError, getClients} from './clients';
-import {fakeHash} from '../hash';
-import {makeClient, setClientsForTesting} from './clients-test-helpers';
-import {assertNotUndefined} from '../asserts';
+} from './heartbeat.js';
+import {ClientMap, ClientStateNotFoundError, getClients} from './clients.js';
+import {fakeHash} from '../hash.js';
+import {makeClient, setClientsForTesting} from './clients-test-helpers.js';
+import {assertNotUndefined} from '../asserts.js';
 
 let clock: SinonFakeTimers;
 const START_TIME = 100000;

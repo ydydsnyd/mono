@@ -1,5 +1,5 @@
 import {expect} from '@esm-bundle/chai';
-import * as dag from '../dag/mod';
+import * as dag from '../dag/mod.js';
 import {
   Commit,
   CommitData,
@@ -18,10 +18,10 @@ import {
   localMutationsGreaterThan,
   chunkIndexDefinitionEqualIgnoreName,
   ChunkIndexDefinition,
-} from './commit';
-import {ChainBuilder} from './test-helpers';
-import {Hash, fakeHash, makeNewFakeHashFunction} from '../hash';
-import {toInternalValue, ToInternalValueReason} from '../internal-value';
+} from './commit.js';
+import {ChainBuilder} from './test-helpers.js';
+import {Hash, fakeHash, makeNewFakeHashFunction} from '../hash.js';
+import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 
 test('base snapshot', async () => {
   const clientID = 'client-id';

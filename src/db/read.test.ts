@@ -1,9 +1,9 @@
 import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
-import * as dag from '../dag/mod';
-import {DEFAULT_HEAD_NAME} from './commit';
-import {fromWhence, whenceHead} from './read';
-import {newWriteLocal} from './write';
+import * as dag from '../dag/mod.js';
+import {DEFAULT_HEAD_NAME} from './commit.js';
+import {fromWhence, whenceHead} from './read.js';
+import {newWriteLocal} from './write.js';
 import {initDB} from './test-helpers.js';
 
 test('basics', async () => {

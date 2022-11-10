@@ -1,9 +1,9 @@
 import {expect} from '@esm-bundle/chai';
-import * as dag from '../dag/mod';
-import {assertHash, makeNewFakeHashFunction} from '../hash';
+import * as dag from '../dag/mod.js';
+import {assertHash, makeNewFakeHashFunction} from '../hash.js';
 import {ChainBuilder} from '../db/test-helpers.js';
-import {GatherNotCachedVisitor} from './gather-not-cached-visitor';
-import {MetaType} from '../db/commit';
+import {GatherNotCachedVisitor} from './gather-not-cached-visitor.js';
+import {MetaType} from '../db/commit.js';
 
 suite('GatherNotCachedVisitor', () => {
   if (!DD31) {

@@ -1,7 +1,7 @@
 import {expect} from '@esm-bundle/chai';
 import {asyncIterableToArray} from './async-iterable-to-array.js';
-import {filterAsyncIterable} from './filter-async-iterable';
-import {makeAsyncIterable} from './merge-async-iterables.test';
+import {filterAsyncIterable} from './filter-async-iterable.js';
+import {makeAsyncIterable} from './merge-async-iterables.test.js';
 
 test('filterAsyncIterable', async () => {
   const t = async <V>(

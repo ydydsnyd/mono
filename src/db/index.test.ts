@@ -1,8 +1,8 @@
 import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
-import type {JSONValue} from '../json';
-import {stringCompare} from '../string-compare';
-import * as dag from '../dag/mod';
+import type {JSONValue} from '../json.js';
+import {stringCompare} from '../string-compare.js';
+import * as dag from '../dag/mod.js';
 import {
   decodeIndexKey,
   encodeIndexKey,
@@ -14,9 +14,9 @@ import {
   indexValue,
   KEY_SEPARATOR,
   KEY_VERSION_0,
-} from './index';
-import {BTreeWrite} from '../btree/mod';
-import {asyncIterableToArray} from '../async-iterable-to-array';
+} from './index.js';
+import {BTreeWrite} from '../btree/mod.js';
+import {asyncIterableToArray} from '../async-iterable-to-array.js';
 import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 
 test('test index key', () => {

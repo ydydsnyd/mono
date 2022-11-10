@@ -1,7 +1,12 @@
-import {assertArray, assertNumber, assertObject, assertString} from './asserts';
-import {httpRequest} from './http-request';
-import {assertJSONValue, JSONValue, ReadonlyJSONValue} from './json';
-import type {HTTPRequestInfo} from './http-request-info';
+import {
+  assertArray,
+  assertNumber,
+  assertObject,
+  assertString,
+} from './asserts.js';
+import {httpRequest} from './http-request.js';
+import {assertJSONValue, JSONValue, ReadonlyJSONValue} from './json.js';
+import type {HTTPRequestInfo} from './http-request-info.js';
 import type {ClientID} from './sync/ids.js';
 
 export type PullerResult = {

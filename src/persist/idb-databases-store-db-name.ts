@@ -1,5 +1,5 @@
 import {dropStore as dropIDBStore} from '../kv/idb-util.js';
-import {uuid} from '../uuid';
+import {uuid} from '../uuid.js';
 
 const IDB_DATABASES_VERSION = 0;
 const IDB_DATABASES_DB_NAME = 'replicache-dbs-v' + IDB_DATABASES_VERSION;

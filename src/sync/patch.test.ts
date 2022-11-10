@@ -1,11 +1,11 @@
 import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
-import * as dag from '../dag/mod';
-import * as db from '../db/mod';
-import type {JSONValue} from '../json';
-import {ChainBuilder} from '../db/test-helpers';
-import {apply} from './patch';
-import {assertPatchOperations} from '../puller';
+import * as dag from '../dag/mod.js';
+import * as db from '../db/mod.js';
+import type {JSONValue} from '../json.js';
+import {ChainBuilder} from '../db/test-helpers.js';
+import {apply} from './patch.js';
+import {assertPatchOperations} from '../puller.js';
 
 test('patch', async () => {
   const clientID = 'client-id';

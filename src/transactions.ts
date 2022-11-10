@@ -1,28 +1,28 @@
 import type {LogContext} from '@rocicorp/logger';
 import {greaterThan} from 'compare-utf8';
-import type {JSONValue, ReadonlyJSONValue} from './json';
+import type {JSONValue, ReadonlyJSONValue} from './json.js';
 import {
   isScanIndexOptions,
   KeyTypeForScanOptions,
   ScanIndexOptions,
   ScanOptions,
   toDbScanOptions,
-} from './scan-options';
-import {fromKeyForIndexScanInternal, ScanResultImpl} from './scan-iterator';
-import type {ScanResult} from './scan-iterator';
-import {throwIfClosed} from './transaction-closed-error';
-import type * as db from './db/mod';
-import type {ScanSubscriptionInfo} from './subscriptions';
-import type {ClientID, ScanNoIndexOptions} from './mod';
-import {decodeIndexKey, IndexKey} from './db/index';
+} from './scan-options.js';
+import {fromKeyForIndexScanInternal, ScanResultImpl} from './scan-iterator.js';
+import type {ScanResult} from './scan-iterator.js';
+import {throwIfClosed} from './transaction-closed-error.js';
+import type * as db from './db/mod.js';
+import type {ScanSubscriptionInfo} from './subscriptions.js';
+import type {ClientID, ScanNoIndexOptions} from './mod.js';
+import {decodeIndexKey, IndexKey} from './db/index.js';
 import {
   toInternalValue,
   InternalValue,
   ToInternalValueReason,
   fromInternalValue,
   FromInternalValueReason,
-} from './internal-value';
-import type {IndexDefinition, IndexDefinitions} from './index-defs';
+} from './internal-value.js';
+import type {IndexDefinition, IndexDefinitions} from './index-defs.js';
 
 /**
  * ReadTransactions are used with {@link Replicache.query} and

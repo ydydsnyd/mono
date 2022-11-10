@@ -8,7 +8,7 @@ import {
   fakeHash,
   STRING_LENGTH,
   Hash,
-} from './hash';
+} from './hash.js';
 
 const emptyUUID = '00000000-0000-4000-8000-000000000000';
 

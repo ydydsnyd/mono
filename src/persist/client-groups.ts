@@ -1,19 +1,19 @@
-import {assertHash, Hash} from '../hash';
-import type * as sync from '../sync/mod';
-import type * as dag from '../dag/mod';
-import type {ReadonlyJSONValue} from '../json';
+import {assertHash, Hash} from '../hash.js';
+import type * as sync from '../sync/mod.js';
+import type * as dag from '../dag/mod.js';
+import type {ReadonlyJSONValue} from '../json.js';
 import {
   assert,
   assertArray,
   assertNumber,
   assertObject,
   assertString,
-} from '../asserts';
+} from '../asserts.js';
 import {
   assertIndexDefinitions,
   IndexDefinitions,
   indexDefinitionsEqual,
-} from '../index-defs';
+} from '../index-defs.js';
 
 export type ClientGroupMap = ReadonlyMap<sync.ClientGroupID, ClientGroup>;
 

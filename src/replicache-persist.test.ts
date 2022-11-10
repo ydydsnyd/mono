@@ -6,7 +6,7 @@ import {
   replicacheForTesting,
   ReplicacheTest,
   tickAFewTimes,
-} from './test-util';
+} from './test-util.js';
 import {expect} from '@esm-bundle/chai';
 import * as sinon from 'sinon';
 
@@ -14,15 +14,15 @@ import * as sinon from 'sinon';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
-import * as kv from './kv/mod';
-import * as dag from './dag/mod';
-import * as persist from './persist/mod';
-import {assert, assertNotUndefined} from './asserts';
-import {deleteClientForTesting} from './persist/clients-test-helpers';
-import {assertClientDD31} from './persist/clients';
-import type {MutatorDefs, WriteTransaction} from './mod';
-import {deleteClientGroup} from './persist/client-groups';
-import {assertHash} from './hash';
+import * as kv from './kv/mod.js';
+import * as dag from './dag/mod.js';
+import * as persist from './persist/mod.js';
+import {assert, assertNotUndefined} from './asserts.js';
+import {deleteClientForTesting} from './persist/clients-test-helpers.js';
+import {assertClientDD31} from './persist/clients.js';
+import type {MutatorDefs, WriteTransaction} from './mod.js';
+import {deleteClientGroup} from './persist/client-groups.js';
+import {assertHash} from './hash.js';
 
 initReplicacheTesting();
 

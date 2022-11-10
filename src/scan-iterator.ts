@@ -1,6 +1,6 @@
 import {greaterThan} from 'compare-utf8';
-import type {ReadonlyJSONValue} from './json';
-import {Closed, throwIfClosed} from './transaction-closed-error';
+import type {ReadonlyJSONValue} from './json.js';
+import {Closed, throwIfClosed} from './transaction-closed-error.js';
 import {
   isScanIndexOptions,
   KeyTypeForScanOptions,
@@ -8,9 +8,9 @@ import {
   ScanIndexOptions,
   ScanOptionIndexedStartKey,
   ScanOptions,
-} from './scan-options';
-import {asyncIterableToArray} from './async-iterable-to-array';
-import type {Entry} from './btree/node';
+} from './scan-options.js';
+import {asyncIterableToArray} from './async-iterable-to-array.js';
+import type {Entry} from './btree/node.js';
 import {encodeIndexScanKey, IndexKey} from './db/index.js';
 import {EntryForOptions, fromKeyForNonIndexScan} from './transactions.js';
 import type {IterableUnion} from './iterable-union.js';

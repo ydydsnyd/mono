@@ -1,6 +1,6 @@
-import type {Benchmark} from './perf';
+import type {Benchmark} from './perf.js';
 
-import * as m from '../src/uuid';
+import * as m from '../src/uuid.js';
 
 export function benchmarks(): Array<Benchmark> {
   return [uuidNative(), uuidNoNative()];

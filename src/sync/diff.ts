@@ -1,11 +1,11 @@
-import type {Hash} from '../hash';
-import type * as dag from '../dag/mod';
-import {Commit, fromHash, Meta} from '../db/commit';
-import * as btree from '../btree/mod';
-import {allEntriesAsDiff, BTreeRead} from '../btree/read';
-import {readIndexesForRead} from '../db/read';
-import {assert} from '../asserts';
-import type {InternalDiff} from '../btree/node';
+import type {Hash} from '../hash.js';
+import type * as dag from '../dag/mod.js';
+import {Commit, fromHash, Meta} from '../db/commit.js';
+import * as btree from '../btree/mod.js';
+import {allEntriesAsDiff, BTreeRead} from '../btree/read.js';
+import {readIndexesForRead} from '../db/read.js';
+import {assert} from '../asserts.js';
+import type {InternalDiff} from '../btree/node.js';
 
 /**
  * Interface allowing different diff functions to skip costly diff computations.

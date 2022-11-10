@@ -1,18 +1,18 @@
 import {expect} from '@esm-bundle/chai';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
-import {assert} from '../asserts';
-import * as sync from '../sync/mod';
-import * as dag from '../dag/mod';
-import * as db from '../db/mod';
-import {ChainBuilder, getChunkSnapshot} from '../db/test-helpers';
-import {assertHash, Hash, makeNewFakeHashFunction} from '../hash';
+import {assert} from '../asserts.js';
+import * as sync from '../sync/mod.js';
+import * as dag from '../dag/mod.js';
+import * as db from '../db/mod.js';
+import {ChainBuilder, getChunkSnapshot} from '../db/test-helpers.js';
+import {assertHash, Hash, makeNewFakeHashFunction} from '../hash.js';
 import {
   getClient,
   ClientStateNotFoundError,
   assertClientSDD,
   CLIENTS_HEAD_NAME,
-} from './clients';
-import {persist} from './persist';
+} from './clients.js';
+import {persist} from './persist.js';
 import {gcClients} from './client-gc.js';
 import {initClientWithClientID} from './clients-test-helpers.js';
 import {assertSnapshotMetaSDD} from '../db/commit.js';

@@ -1,6 +1,6 @@
 import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
-import type * as dag from '../dag/mod';
+import type * as dag from '../dag/mod.js';
 import {
   assertIndexChangeCommit,
   assertLocalCommitDD31,
@@ -18,8 +18,8 @@ import {
   SnapshotMetaDD31,
   SnapshotMetaSDD,
   LocalMeta,
-} from './commit';
-import {readCommit, whenceHead} from './read';
+} from './commit.js';
+import {readCommit, whenceHead} from './read.js';
 import {
   Write,
   readIndexesForWrite,
@@ -28,8 +28,8 @@ import {
   newWriteLocal,
   newWriteIndexChange,
   createIndexBTree,
-} from './write';
-import type {JSONValue} from '../json';
+} from './write.js';
+import type {JSONValue} from '../json.js';
 import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 import type {ClientID} from '../sync/client-id.js';
 import {emptyHash, Hash} from '../hash.js';
@@ -37,9 +37,9 @@ import {BTreeRead, BTreeWrite, Node} from '../btree/mod.js';
 import * as btree from '../btree/mod.js';
 import type {IndexDefinition, IndexDefinitions} from '../index-defs.js';
 import {IndexWrite} from './index.js';
-import {Visitor} from './visitor';
-import {assert, assertNotUndefined} from '../asserts';
-import {addSyncSnapshot} from '../sync/test-helpers';
+import {Visitor} from './visitor.js';
+import {assert, assertNotUndefined} from '../asserts.js';
+import {addSyncSnapshot} from '../sync/test-helpers.js';
 
 export type Chain = Commit<Meta>[];
 

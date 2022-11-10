@@ -6,19 +6,19 @@ import {
   PullResponseDD31,
   PullResponseOK,
   PullResponseSDD,
-} from './puller';
-import * as dag from './dag/mod';
-import * as db from './db/mod';
-import * as persist from './persist/mod';
-import * as sync from './sync/mod';
-import {assertHash} from './hash';
-import {assert, assertNotUndefined} from './asserts';
-import type {HTTPRequestInfo} from './http-request-info';
+} from './puller.js';
+import * as dag from './dag/mod.js';
+import * as db from './db/mod.js';
+import * as persist from './persist/mod.js';
+import * as sync from './sync/mod.js';
+import {assertHash} from './hash.js';
+import {assert, assertNotUndefined} from './asserts.js';
+import type {HTTPRequestInfo} from './http-request-info.js';
 import {
   MaybePromise,
   REPLICACHE_FORMAT_VERSION_DD31,
   REPLICACHE_FORMAT_VERSION_SDD,
-} from './replicache';
+} from './replicache.js';
 import {IDBStore} from './kv/idb-store.js';
 import {assertClientSDD, setClients} from './persist/clients.js';
 import type {ClientID} from './sync/client-id.js';

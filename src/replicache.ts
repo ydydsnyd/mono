@@ -1,8 +1,8 @@
 import {consoleLogSink, LogContext, TeeLogSink} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
-import type {ReadonlyJSONValue} from './json';
-import type {JSONValue} from './json';
-import {Pusher, PushError} from './pusher';
+import type {ReadonlyJSONValue} from './json.js';
+import type {JSONValue} from './json.js';
+import {Pusher, PushError} from './pusher.js';
 import {
   assertPullResponseDD31,
   assertPullResponseSDD,
@@ -11,22 +11,22 @@ import {
   PullError,
   PullResponse,
   PullResponseDD31,
-} from './puller';
+} from './puller.js';
 import {
   CreateIndexDefinition,
   IndexTransactionImpl,
   ReadTransactionImpl,
   WriteTransactionImpl,
-} from './transactions';
-import type {ReadTransaction, WriteTransaction} from './transactions';
-import {ConnectionLoop, MAX_DELAY_MS, MIN_DELAY_MS} from './connection-loop';
-import {defaultPuller} from './puller';
-import {defaultPusher} from './pusher';
+} from './transactions.js';
+import type {ReadTransaction, WriteTransaction} from './transactions.js';
+import {ConnectionLoop, MAX_DELAY_MS, MIN_DELAY_MS} from './connection-loop.js';
+import {defaultPuller} from './puller.js';
+import {defaultPusher} from './pusher.js';
 import type {
   ReplicacheInternalOptions,
   ReplicacheOptions,
-} from './replicache-options';
-import {PullDelegate, PushDelegate} from './connection-loop-delegates';
+} from './replicache-options.js';
+import {PullDelegate, PushDelegate} from './connection-loop-delegates.js';
 import {
   WatchNoIndexCallback,
   SubscribeOptions,
@@ -34,15 +34,15 @@ import {
   WatchOptions,
   WatchCallbackForOptions,
   WatchCallback,
-} from './subscriptions';
-import {IDBStore} from './kv/mod';
-import * as dag from './dag/mod';
-import * as db from './db/mod';
-import * as sync from './sync/mod';
-import {assertHash, emptyHash, Hash} from './hash';
-import * as persist from './persist/mod';
-import type {HTTPRequestInfo} from './http-request-info';
-import {assert} from './asserts';
+} from './subscriptions.js';
+import {IDBStore} from './kv/mod.js';
+import * as dag from './dag/mod.js';
+import * as db from './db/mod.js';
+import * as sync from './sync/mod.js';
+import {assertHash, emptyHash, Hash} from './hash.js';
+import * as persist from './persist/mod.js';
+import type {HTTPRequestInfo} from './http-request-info.js';
+import {assert} from './asserts.js';
 import {
   getLicenseStatus,
   licenseActive,
@@ -51,28 +51,28 @@ import {
   TEST_LICENSE_KEY,
   SimpleFetch,
 } from '@rocicorp/licensing/src/client';
-import {mustSimpleFetch} from './simple-fetch';
-import {initBgIntervalProcess} from './bg-interval';
-import {setIntervalWithSignal} from './set-interval-with-signal';
-import {MutationRecovery} from './mutation-recovery';
+import {mustSimpleFetch} from './simple-fetch.js';
+import {initBgIntervalProcess} from './bg-interval.js';
+import {setIntervalWithSignal} from './set-interval-with-signal.js';
+import {MutationRecovery} from './mutation-recovery.js';
 import {
   fromInternalValue,
   FromInternalValueReason,
   toInternalValue,
   ToInternalValueReason,
 } from './internal-value.js';
-import type {IndexDefinitions} from './index-defs';
+import type {IndexDefinitions} from './index-defs.js';
 import {assertClientDD31} from './persist/clients.js';
 import {throwIfClosed} from './transaction-closed-error.js';
-import {version} from './version';
+import {version} from './version.js';
 import {PUSH_VERSION_DD31, PUSH_VERSION_SDD} from './sync/push.js';
 import {
   initOnPersistChannel,
   OnPersist,
   PersistInfo,
-} from './on-persist-channel';
-import {ProcessScheduler} from './process-scheduler';
-import {AbortError} from './abort-error';
+} from './on-persist-channel.js';
+import {ProcessScheduler} from './process-scheduler.js';
+import {AbortError} from './abort-error.js';
 
 export type BeginPullResult = {
   requestID: string;

@@ -1,24 +1,24 @@
 import {expect} from '@esm-bundle/chai';
 import {LogContext} from '@rocicorp/logger';
-import type * as sync from '../sync/mod';
-import * as dag from '../dag/mod';
-import * as db from '../db/mod';
-import * as btree from '../btree/mod';
-import {ChainBuilder} from '../db/test-helpers';
-import {assertHash, Hash, makeNewFakeHashFunction} from '../hash';
-import {toInternalValue, ToInternalValueReason} from '../internal-value';
-import type {JSONValue, ReadonlyJSONValue} from '../json';
+import type * as sync from '../sync/mod.js';
+import * as dag from '../dag/mod.js';
+import * as db from '../db/mod.js';
+import * as btree from '../btree/mod.js';
+import {ChainBuilder} from '../db/test-helpers.js';
+import {assertHash, Hash, makeNewFakeHashFunction} from '../hash.js';
+import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
+import type {JSONValue, ReadonlyJSONValue} from '../json.js';
 import {
   ClientGroupMap,
   setClientGroup,
   setClientGroups,
-} from '../persist/client-groups';
-import {ClientDD31, setClient} from '../persist/clients';
-import {addData, testSubscriptionsManagerOptions} from '../test-util';
-import {refresh} from './refresh';
-import {assert, assertNotUndefined} from '../asserts';
-import type {MutatorDefs} from '../replicache';
-import type {WriteTransaction} from '../transactions';
+} from '../persist/client-groups.js';
+import {ClientDD31, setClient} from '../persist/clients.js';
+import {addData, testSubscriptionsManagerOptions} from '../test-util.js';
+import {refresh} from './refresh.js';
+import {assert, assertNotUndefined} from '../asserts.js';
+import type {MutatorDefs} from '../replicache.js';
+import type {WriteTransaction} from '../transactions.js';
 
 async function makeChain(
   store: dag.Store,

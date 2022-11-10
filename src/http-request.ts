@@ -1,4 +1,4 @@
-import type {HTTPRequestInfo} from './http-request-info';
+import type {HTTPRequestInfo} from './http-request-info.js';
 
 /**
  * This is used by the defaultPuller and defaultPusher to reduce code

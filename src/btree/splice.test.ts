@@ -1,6 +1,6 @@
 import {expect} from '@esm-bundle/chai';
-import {computeSplices, Splice} from './splice';
-import type {Entry} from './node';
+import {computeSplices, Splice} from './splice.js';
+import type {Entry} from './node.js';
 import type {ReadonlyJSONValue} from '../json.js';
 
 test('splice', () => {

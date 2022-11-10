@@ -1,7 +1,7 @@
 // @ts-check
 
 import * as esbuild from 'esbuild';
-import {makeDefine} from './make-define.mjs';
+import {makeDefine} from './make-define.js';
 
 const forBundleSizeDashboard = process.argv.includes('--bundle-sizes');
 const perf = process.argv.includes('--perf');
@@ -49,11 +49,11 @@ async function buildReplicache(options) {
   });
 }
 
-async function buildMJS({minify = true, ext = 'mjs', sourcemap = true} = {}) {
+async function buildMJS({minify = true, ext = 'js', sourcemap = true} = {}) {
   await buildReplicache({format: 'esm', minify, ext, sourcemap});
 }
 
-async function buildCJS({minify = true, ext = 'js', sourcemap = true} = {}) {
+async function buildCJS({minify = true, ext = 'cjs', sourcemap = true} = {}) {
   await buildReplicache({format: 'cjs', minify, ext, sourcemap});
 }
 
@@ -71,6 +71,7 @@ async function buildCLI() {
 if (perf) {
   await buildMJS();
 } else if (forBundleSizeDashboard) {
+  // We keep cjs as js and mjs as mjs so the dashboard does not get reset
   await Promise.all([
     buildMJS({minify: false, ext: 'mjs'}),
     buildMJS({minify: true, ext: 'min.mjs'}),

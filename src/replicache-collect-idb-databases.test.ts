@@ -1,6 +1,10 @@
 import {expect} from '@esm-bundle/chai';
 import {sleep} from './sleep.js';
-import {clock, initReplicacheTesting, replicacheForTesting} from './test-util';
+import {
+  clock,
+  initReplicacheTesting,
+  replicacheForTesting,
+} from './test-util.js';
 
 initReplicacheTesting();
 

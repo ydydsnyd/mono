@@ -1,8 +1,8 @@
 import {expect} from '@esm-bundle/chai';
-import * as dag from '../dag/mod';
-import {fakeHash, Hash} from '../hash';
-import {DEFAULT_HEAD_NAME} from './commit';
-import {getRoot} from './root';
+import * as dag from '../dag/mod.js';
+import {fakeHash, Hash} from '../hash.js';
+import {DEFAULT_HEAD_NAME} from './commit.js';
+import {getRoot} from './root.js';
 
 test('getRoot', async () => {
   const t = async (headHash: Hash | undefined, expected: Hash | Error) => {

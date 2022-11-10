@@ -1,8 +1,8 @@
 import {expect} from '@esm-bundle/chai';
-import * as dag from '../dag/mod';
-import * as db from '../db/mod';
-import {assertHash, makeNewFakeHashFunction} from '../hash';
-import {GatherMemoryOnlyVisitor} from './gather-mem-only-visitor';
+import * as dag from '../dag/mod.js';
+import * as db from '../db/mod.js';
+import {assertHash, makeNewFakeHashFunction} from '../hash.js';
+import {GatherMemoryOnlyVisitor} from './gather-mem-only-visitor.js';
 import {ChainBuilder} from '../db/test-helpers.js';
 import {MetaType} from '../db/commit.js';
 

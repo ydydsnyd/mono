@@ -1,7 +1,7 @@
 import {expect} from '@esm-bundle/chai';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
-import {sleep} from './sleep';
-import {AbortError} from './abort-error';
+import {sleep} from './sleep.js';
+import {AbortError} from './abort-error.js';
 
 let clock: SinonFakeTimers;
 setup(() => {

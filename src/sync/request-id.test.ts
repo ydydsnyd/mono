@@ -1,5 +1,5 @@
 import {expect} from '@esm-bundle/chai';
-import {newRequestID} from './request-id';
+import {newRequestID} from './request-id.js';
 
 test('newRequestID()', () => {
   {

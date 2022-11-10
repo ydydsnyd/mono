@@ -1,21 +1,21 @@
-import type * as dag from '../dag/mod';
-import * as db from '../db/mod';
-import * as sync from '../sync/mod';
+import type * as dag from '../dag/mod.js';
+import * as db from '../db/mod.js';
+import * as sync from '../sync/mod.js';
 import {
   assertClientDD31,
   ClientStateNotFoundError,
   getClient,
   getMainClientGroup,
   setClient,
-} from './clients';
-import type {MutatorDefs} from '../replicache';
-import type {Hash} from '../hash';
+} from './clients.js';
+import type {MutatorDefs} from '../replicache.js';
+import type {Hash} from '../hash.js';
 import type {LogContext} from '@rocicorp/logger';
-import {assertSnapshotCommitDD31} from '../db/commit';
+import {assertSnapshotCommitDD31} from '../db/commit.js';
 import {
   ChunkWithSize,
   GatherNotCachedVisitor,
-} from './gather-not-cached-visitor';
+} from './gather-not-cached-visitor.js';
 
 const GATHER_SIZE_LIMIT = 5 * 2 ** 20; // 5 MB
 

@@ -5,17 +5,17 @@ import {
   replicacheForTesting,
   tickAFewTimes,
   tickUntil,
-} from './test-util';
-import type {JSONValue, ReadonlyJSONValue} from './json';
+} from './test-util.js';
+import type {JSONValue, ReadonlyJSONValue} from './json.js';
 import {expect} from '@esm-bundle/chai';
-import {sleep} from './sleep';
-import type * as dag from './dag/mod';
+import {sleep} from './sleep.js';
+import type * as dag from './dag/mod.js';
 import * as sinon from 'sinon';
-import type {IndexDefinitions} from './index-defs';
-import type {ReadTransaction, WriteTransaction} from './transactions';
-import type {PatchOperation} from './puller';
-import type {ScanOptions} from './scan-options';
-import type {IndexKey} from './db/index';
+import type {IndexDefinitions} from './index-defs.js';
+import type {ReadTransaction, WriteTransaction} from './transactions.js';
+import type {PatchOperation} from './puller.js';
+import type {ScanOptions} from './scan-options.js';
+import type {IndexKey} from './db/index.js';
 
 // fetch-mock has invalid d.ts file so we removed that on npm install.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment

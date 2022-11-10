@@ -1,4 +1,4 @@
-import type {Benchmark} from './perf';
+import type {Benchmark} from './perf.js';
 
 export function benchmarks(): Array<Benchmark> {
   return [forLoop(), forEach()];

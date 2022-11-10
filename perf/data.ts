@@ -1,4 +1,4 @@
-import {getSizeOfValue} from '../src/json';
+import {getSizeOfValue} from '../src/json.js';
 
 export type RandomDataType = 'string' | 'object' | 'arraybuffer' | 'blob';
 export type RandomDatum = string | Record<string, string> | ArrayBuffer | Blob;

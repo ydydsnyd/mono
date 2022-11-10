@@ -1,13 +1,13 @@
 import type {LogContext} from '@rocicorp/logger';
-import {assertHash, Hash, newUUIDHash} from '../hash';
-import * as btree from '../btree/mod';
-import * as dag from '../dag/mod';
-import * as db from '../db/mod';
-import type * as sync from '../sync/mod';
-import type {ReadonlyJSONValue} from '../json';
-import {assert, assertNumber, assertObject, assertString} from '../asserts';
-import {hasOwn} from '../has-own';
-import {uuid as makeUuid} from '../uuid';
+import {assertHash, Hash, newUUIDHash} from '../hash.js';
+import * as btree from '../btree/mod.js';
+import * as dag from '../dag/mod.js';
+import * as db from '../db/mod.js';
+import type * as sync from '../sync/mod.js';
+import type {ReadonlyJSONValue} from '../json.js';
+import {assert, assertNumber, assertObject, assertString} from '../asserts.js';
+import {hasOwn} from '../has-own.js';
+import {uuid as makeUuid} from '../uuid.js';
 import {
   assertSnapshotCommitDD31,
   compareCookies,
@@ -17,18 +17,18 @@ import {
   newSnapshotCommitDataDD31,
   ChunkIndexDefinition,
   chunkIndexDefinitionEqualIgnoreName,
-} from '../db/commit';
-import type {ClientID} from '../sync/ids';
+} from '../db/commit.js';
+import type {ClientID} from '../sync/ids.js';
 import {
   ClientGroup,
   getClientGroup,
   getClientGroups,
   mutatorNamesEqual,
   setClientGroup,
-} from './client-groups';
-import {IndexDefinitions, indexDefinitionsEqual} from '../index-defs';
-import {CastReason, InternalValue, safeCastToJSON} from '../internal-value';
-import {createIndexBTree} from '../db/write';
+} from './client-groups.js';
+import {IndexDefinitions, indexDefinitionsEqual} from '../index-defs.js';
+import {CastReason, InternalValue, safeCastToJSON} from '../internal-value.js';
+import {createIndexBTree} from '../db/write.js';
 
 export type ClientMap = ReadonlyMap<sync.ClientID, ClientSDD | ClientDD31>;
 

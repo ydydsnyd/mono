@@ -1,12 +1,12 @@
 import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
-import {assert, assertNotUndefined} from '../asserts';
-import {assertObject, assertString} from '../asserts';
-import * as dag from '../dag/mod';
-import * as db from '../db/mod';
-import {Commit, DEFAULT_HEAD_NAME} from '../db/mod';
-import {ChainBuilder} from '../db/test-helpers';
-import type {ReadonlyJSONValue} from '../json';
+import {assert, assertNotUndefined} from '../asserts.js';
+import {assertObject, assertString} from '../asserts.js';
+import * as dag from '../dag/mod.js';
+import * as db from '../db/mod.js';
+import {Commit, DEFAULT_HEAD_NAME} from '../db/mod.js';
+import {ChainBuilder} from '../db/test-helpers.js';
+import type {ReadonlyJSONValue} from '../json.js';
 import type {
   PatchOperation,
   Puller,
@@ -16,9 +16,9 @@ import type {
   PullResponse,
   PullResponseDD31,
   PullResponseOKDD31,
-} from '../puller';
-import type {HTTPRequestInfo} from '../http-request-info';
-import {SYNC_HEAD_NAME} from './sync-head-name';
+} from '../puller.js';
+import type {HTTPRequestInfo} from '../http-request-info.js';
+import {SYNC_HEAD_NAME} from './sync-head-name.js';
 import {
   beginPull,
   beginPullDD31,
@@ -34,25 +34,25 @@ import {
   PullRequestDD31,
   PULL_VERSION_DD31,
   PULL_VERSION_SDD,
-} from './pull';
-import {assertHash, emptyHash, Hash, parse as parseHash} from '../hash';
-import {stringCompare} from '../string-compare';
-import {asyncIterableToArray} from '../async-iterable-to-array';
+} from './pull.js';
+import {assertHash, emptyHash, Hash, parse as parseHash} from '../hash.js';
+import {stringCompare} from '../string-compare.js';
+import {asyncIterableToArray} from '../async-iterable-to-array.js';
 import {
   assertSnapshotCommitDD31,
   commitIsLocal,
   SnapshotMetaSDD,
-} from '../db/commit';
+} from '../db/commit.js';
 import {
   toInternalValue,
   fromInternalValue,
   FromInternalValueReason,
   InternalValue,
   ToInternalValueReason,
-} from '../internal-value';
-import type {DiffsMap} from './diff';
-import {testSubscriptionsManagerOptions} from '../test-util';
-import {BTreeRead} from '../btree/read';
+} from '../internal-value.js';
+import type {DiffsMap} from './diff.js';
+import {testSubscriptionsManagerOptions} from '../test-util.js';
+import {BTreeRead} from '../btree/read.js';
 
 test('begin try pull SDD', async () => {
   if (DD31) {

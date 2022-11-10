@@ -1,24 +1,24 @@
 import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
-import {assertNotUndefined} from '../asserts';
-import * as dag from '../dag/mod';
-import {DEFAULT_HEAD_NAME, IndexRecord} from './commit';
+import {assertNotUndefined} from '../asserts.js';
+import * as dag from '../dag/mod.js';
+import {DEFAULT_HEAD_NAME, IndexRecord} from './commit.js';
 import {
   readCommit,
   readCommitForBTreeRead,
   readIndexesForRead,
   whenceHash,
   whenceHead,
-} from './read';
-import {newWriteIndexChange, newWriteLocal} from './write';
-import {encodeIndexKey} from './index';
-import {asyncIterableToArray} from '../async-iterable-to-array';
-import {BTreeRead} from '../btree/mod';
-import {toInternalValue, ToInternalValueReason} from '../internal-value';
-import {initDB} from './test-helpers';
-import type {IndexDefinitions} from '../index-defs';
-import type {Writable} from '../writable';
-import {commitFromHead} from './mod';
+} from './read.js';
+import {newWriteIndexChange, newWriteLocal} from './write.js';
+import {encodeIndexKey} from './index.js';
+import {asyncIterableToArray} from '../async-iterable-to-array.js';
+import {BTreeRead} from '../btree/mod.js';
+import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
+import {initDB} from './test-helpers.js';
+import type {IndexDefinitions} from '../index-defs.js';
+import type {Writable} from '../writable.js';
+import {commitFromHead} from './mod.js';
 
 test('basics w/ commit', async () => {
   const clientID = 'client-id';

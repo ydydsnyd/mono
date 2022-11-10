@@ -4,7 +4,7 @@ import {
   promiseUndefined,
   promiseVoid,
 } from '../resolved-promises.js';
-import type {Read, Value} from './store';
+import type {Read, Value} from './store.js';
 
 export const deleteSentinel = Symbol();
 export type DeleteSentinel = typeof deleteSentinel;

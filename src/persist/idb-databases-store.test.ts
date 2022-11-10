@@ -1,6 +1,6 @@
 import {expect} from '@esm-bundle/chai';
-import {TestMemStore} from '../kv/test-mem-store';
-import {IDBDatabasesStore, IndexedDBDatabase} from './idb-databases-store';
+import {TestMemStore} from '../kv/test-mem-store.js';
+import {IDBDatabasesStore, IndexedDBDatabase} from './idb-databases-store.js';
 import * as sinon from 'sinon';
 
 teardown(() => {

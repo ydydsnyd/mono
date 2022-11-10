@@ -1,19 +1,19 @@
 import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
-import * as dag from '../dag/mod';
-import {DEFAULT_HEAD_NAME} from '../db/commit';
-import {fromWhence, whenceHead} from '../db/read';
-import {ChainBuilder} from '../db/test-helpers';
-import type {HTTPRequestInfo} from '../http-request-info';
-import {SYNC_HEAD_NAME} from './sync-head-name';
+import * as dag from '../dag/mod.js';
+import {DEFAULT_HEAD_NAME} from '../db/commit.js';
+import {fromWhence, whenceHead} from '../db/read.js';
+import {ChainBuilder} from '../db/test-helpers.js';
+import type {HTTPRequestInfo} from '../http-request-info.js';
+import {SYNC_HEAD_NAME} from './sync-head-name.js';
 import {
   push,
   PushRequestSDD,
   PushRequestDD31,
   PUSH_VERSION_SDD,
   PUSH_VERSION_DD31,
-} from './push';
-import type {Pusher} from '../pusher';
+} from './push.js';
+import type {Pusher} from '../pusher.js';
 import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
 import type {ClientGroupID} from './client-group-id.js';
 

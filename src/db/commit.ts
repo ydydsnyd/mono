@@ -1,6 +1,6 @@
-import type * as dag from '../dag/mod';
-import type * as sync from '../sync/mod';
-import {assertJSONValue, ReadonlyJSONValue} from '../json';
+import type * as dag from '../dag/mod.js';
+import type * as sync from '../sync/mod.js';
+import {assertJSONValue, ReadonlyJSONValue} from '../json.js';
 import {
   assert,
   assertArray,
@@ -9,12 +9,12 @@ import {
   assertObject,
   assertString,
   unreachable,
-} from '../asserts';
-import {assertHash, Hash} from '../hash';
-import {skipCommitDataAsserts} from '../config';
-import {CastReason, InternalValue, safeCastToJSON} from '../internal-value';
-import type {MustGetChunk} from '../dag/store';
-import type {IndexDefinition} from '../index-defs';
+} from '../asserts.js';
+import {assertHash, Hash} from '../hash.js';
+import {skipCommitDataAsserts} from '../config.js';
+import {CastReason, InternalValue, safeCastToJSON} from '../internal-value.js';
+import type {MustGetChunk} from '../dag/store.js';
+import type {IndexDefinition} from '../index-defs.js';
 
 export const DEFAULT_HEAD_NAME = 'main';
 

@@ -1,5 +1,5 @@
-import type * as dag from '../dag/mod';
-import type {Hash} from '../hash';
+import type * as dag from '../dag/mod.js';
+import type {Hash} from '../hash.js';
 
 export function getRoot(store: dag.Store, headName: string): Promise<Hash> {
   return store.withRead(async read => {

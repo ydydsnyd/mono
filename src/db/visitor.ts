@@ -7,16 +7,16 @@ import {
   MetaType,
   LocalMeta,
   SnapshotMeta,
-} from './commit';
-import type * as dag from '../dag/mod';
-import {emptyHash, Hash} from '../hash';
+} from './commit.js';
+import type * as dag from '../dag/mod.js';
+import {emptyHash, Hash} from '../hash.js';
 import {
   internalizeBTreeNode,
   InternalNode,
   isInternalNode,
   Node,
-} from '../btree/node';
-import {HashRefType} from './hash-ref-type';
+} from '../btree/node.js';
+import {HashRefType} from './hash-ref-type.js';
 import {ChunkNotFoundError} from '../dag/store.js';
 
 export class Visitor {

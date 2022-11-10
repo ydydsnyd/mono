@@ -1,9 +1,9 @@
 import {expect} from '@esm-bundle/chai';
-import type {Chain} from '../db/test-helpers';
-import type * as dag from '../dag/mod';
-import * as db from '../db/mod';
-import * as sync from '../sync/mod';
-import {commitIsSnapshot} from '../db/commit';
+import type {Chain} from '../db/test-helpers.js';
+import type * as dag from '../dag/mod.js';
+import * as db from '../db/mod.js';
+import * as sync from '../sync/mod.js';
+import {commitIsSnapshot} from '../db/commit.js';
 
 // See db.test_helpers for addLocal, addSnapshot, etc. We can't put addLocalRebase
 // there because sync depends on db, and addLocalRebase depends on sync.

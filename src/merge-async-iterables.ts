@@ -1,4 +1,4 @@
-import {getIterator, IterableUnion} from './iterable-union';
+import {getIterator, IterableUnion} from './iterable-union.js';
 
 /**
  * Merges an iterable on to another iterable.

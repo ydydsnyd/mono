@@ -1,8 +1,8 @@
 import {Lock} from '@rocicorp/lock';
-import type {ReadonlyJSONValue} from '../json';
-import type * as dag from '../dag/mod';
-import {Hash, emptyHash, newUUIDHash} from '../hash';
-import {BTreeRead} from './read';
+import type {ReadonlyJSONValue} from '../json.js';
+import type * as dag from '../dag/mod.js';
+import {Hash, emptyHash, newUUIDHash} from '../hash.js';
+import {BTreeRead} from './read.js';
 import {
   DataNodeImpl,
   InternalNodeImpl,
@@ -13,9 +13,9 @@ import {
   EntryWithOptionalSize,
   createNewInternalEntryForNode,
   Entry,
-} from './node';
-import type {CreateChunk} from '../dag/chunk';
-import {assert} from '../asserts';
+} from './node.js';
+import type {CreateChunk} from '../dag/chunk.js';
+import {assert} from '../asserts.js';
 import type {InternalValue} from '../internal-value.js';
 
 export class BTreeWrite extends BTreeRead {

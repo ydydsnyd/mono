@@ -1,5 +1,5 @@
 import {expect} from '@esm-bundle/chai';
-import {fakeHash} from '../hash';
+import {fakeHash} from '../hash.js';
 import {
   chunkDataKey,
   chunkMetaKey,
@@ -8,7 +8,7 @@ import {
   Key,
   KeyType,
   parse,
-} from './key';
+} from './key.js';
 
 test('toString', () => {
   const hashEmptyString = fakeHash('');

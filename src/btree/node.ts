@@ -1,13 +1,13 @@
 import {compareUTF8} from 'compare-utf8';
-import {assertJSONValue, JSONValue, ReadonlyJSONValue} from '../json';
-import {assert, assertArray, assertNumber, assertString} from '../asserts';
-import {Hash, emptyHash, newUUIDHash} from '../hash';
-import type {BTreeRead} from './read';
-import type {BTreeWrite} from './write';
-import {skipBTreeNodeAsserts, skipInternalValueAsserts} from '../config';
-import {binarySearch as binarySearchWithFunc} from '../binary-search';
-import type {IndexKey} from '../mod';
-import {InternalValue, markValueAsInternal} from '../internal-value';
+import {assertJSONValue, JSONValue, ReadonlyJSONValue} from '../json.js';
+import {assert, assertArray, assertNumber, assertString} from '../asserts.js';
+import {Hash, emptyHash, newUUIDHash} from '../hash.js';
+import type {BTreeRead} from './read.js';
+import type {BTreeWrite} from './write.js';
+import {skipBTreeNodeAsserts, skipInternalValueAsserts} from '../config.js';
+import {binarySearch as binarySearchWithFunc} from '../binary-search.js';
+import type {IndexKey} from '../mod.js';
+import {InternalValue, markValueAsInternal} from '../internal-value.js';
 
 export type Entry<V> = readonly [key: string, value: V];
 

@@ -1,7 +1,7 @@
 import {RWLock} from '@rocicorp/lock';
 import {promiseVoid} from '../resolved-promises.js';
-import type {Read, Store, Value, Write} from './store';
-import {deleteSentinel, WriteImplBase} from './write-impl-base';
+import type {Read, Store, Value, Write} from './store.js';
+import {deleteSentinel, WriteImplBase} from './write-impl-base.js';
 
 export class MemStore implements Store {
   // protected to allow test sub class to use it.

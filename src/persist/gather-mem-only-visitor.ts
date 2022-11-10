@@ -1,9 +1,9 @@
-import * as db from '../db/mod';
-import type {Hash} from '../hash';
-import type * as dag from '../dag/mod';
-import type * as btree from '../btree/mod';
-import type {HashRefType} from '../db/hash-ref-type';
-import type {Meta} from '../db/commit';
+import * as db from '../db/mod.js';
+import type {Hash} from '../hash.js';
+import type * as dag from '../dag/mod.js';
+import type * as btree from '../btree/mod.js';
+import type {HashRefType} from '../db/hash-ref-type.js';
+import type {Meta} from '../db/commit.js';
 import {promiseVoid} from '../resolved-promises.js';
 
 export class GatherMemoryOnlyVisitor extends db.Visitor {

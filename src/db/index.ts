@@ -1,8 +1,8 @@
 import type {LogContext} from '@rocicorp/logger';
-import type {ReadonlyJSONValue, ReadonlyJSONObject} from '../json';
-import type {IndexRecord} from './commit';
-import type {BTreeRead, BTreeWrite} from '../btree/mod';
-import type {Hash} from '../hash';
+import type {ReadonlyJSONValue, ReadonlyJSONObject} from '../json.js';
+import type {IndexRecord} from './commit.js';
+import type {BTreeRead, BTreeWrite} from '../btree/mod.js';
+import type {Hash} from '../hash.js';
 import {stringCompare} from '../string-compare.js';
 import {CastReason, InternalValue, safeCastToJSON} from '../internal-value.js';
 

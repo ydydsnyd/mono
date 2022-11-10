@@ -1,14 +1,14 @@
 import type {LogContext} from '@rocicorp/logger';
-import type {ClientID} from '../sync/client-id';
-import type * as dag from '../dag/mod';
+import type {ClientID} from '../sync/client-id.js';
+import type * as dag from '../dag/mod.js';
 import {
   ClientMap,
   ClientStateNotFoundError,
   getClients,
   isClientSDD,
   setClients,
-} from './clients';
-import {initBgIntervalProcess} from '../bg-interval';
+} from './clients.js';
+import {initBgIntervalProcess} from '../bg-interval.js';
 
 const HEARTBEAT_INTERVAL_MS = 60 * 1000;
 

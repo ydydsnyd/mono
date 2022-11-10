@@ -1,8 +1,8 @@
 import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
-import {assert, assertNotUndefined} from '../asserts';
-import {BTreeRead} from '../btree/read';
-import * as dag from '../dag/mod';
+import {assert, assertNotUndefined} from '../asserts.js';
+import {BTreeRead} from '../btree/read.js';
+import * as dag from '../dag/mod.js';
 import {
   Commit,
   fromChunk,
@@ -10,8 +10,8 @@ import {
   SnapshotMetaSDD,
   SnapshotMetaDD31,
   commitIsSnapshot,
-} from '../db/commit';
-import {assertHash, fakeHash, newUUIDHash} from '../hash';
+} from '../db/commit.js';
+import {assertHash, fakeHash, newUUIDHash} from '../hash.js';
 import {
   assertClientDD31,
   Client,
@@ -30,10 +30,10 @@ import {
   initClientDD31,
   isClientSDD,
   setClient,
-} from './clients';
+} from './clients.js';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
-import {ChainBuilder} from '../db/test-helpers';
-import {makeClient, setClientsForTesting} from './clients-test-helpers';
+import {ChainBuilder} from '../db/test-helpers.js';
+import {makeClient, setClientsForTesting} from './clients-test-helpers.js';
 import type {ClientID} from '../sync/client-id.js';
 import {ClientGroup, getClientGroup, setClientGroup} from './client-groups.js';
 import type {ClientGroupID} from '../sync/ids.js';

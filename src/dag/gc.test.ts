@@ -1,6 +1,6 @@
 import {expect} from '@esm-bundle/chai';
-import {fakeHash, Hash} from '../hash';
-import {computeRefCountUpdates, GarbageCollectionDelegate} from './gc';
+import {fakeHash, Hash} from '../hash.js';
+import {computeRefCountUpdates, GarbageCollectionDelegate} from './gc.js';
 
 function createGraph(args: {
   graph: Record<string, string[]>;

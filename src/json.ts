@@ -1,6 +1,6 @@
-import {assertObject, throwInvalidType} from './asserts';
-import {skipAssertJSONValue} from './config';
-import {hasOwn} from './has-own';
+import {assertObject, throwInvalidType} from './asserts.js';
+import {skipAssertJSONValue} from './config.js';
+import {hasOwn} from './has-own.js';
 
 /** The values that can be represented in JSON */
 export type JSONValue =

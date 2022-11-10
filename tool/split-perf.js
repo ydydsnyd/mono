@@ -3,7 +3,7 @@ import {argv} from 'process';
 
 if (argv.length !== 5) {
   console.error(
-    'Usage: node split-perf.mjs <input-file> <perf-file> <p95-file>',
+    'Usage: node split-perf.js <input-file> <perf-file> <p95-file>',
   );
   process.exit(1);
 }

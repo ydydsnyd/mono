@@ -1,5 +1,5 @@
 import {expect} from '@esm-bundle/chai';
-import {uuid, uuidFromNumbers} from './uuid';
+import {uuid, uuidFromNumbers} from './uuid.js';
 
 test('uuid', () => {
   const arr = new Uint8Array(36);

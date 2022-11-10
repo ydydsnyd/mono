@@ -2,9 +2,9 @@ import {
   initReplicacheTesting,
   replicacheForTesting,
   tickAFewTimes,
-} from './test-util';
-import type {WriteTransaction} from './mod';
-import type {JSONValue} from './json';
+} from './test-util.js';
+import type {WriteTransaction} from './mod.js';
+import type {JSONValue} from './json.js';
 import {expect} from '@esm-bundle/chai';
 import * as sinon from 'sinon';
 

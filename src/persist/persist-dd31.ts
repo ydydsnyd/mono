@@ -1,14 +1,14 @@
-import {assert} from '../asserts';
-import type * as dag from '../dag/mod';
-import * as db from '../db/mod';
-import type * as sync from '../sync/mod';
-import {assertHasClientState, getMainClientGroupID} from './clients';
-import {GatherMemoryOnlyVisitor} from './gather-mem-only-visitor';
-import type {MutatorDefs} from '../replicache';
-import type {Hash} from '../hash';
+import {assert} from '../asserts.js';
+import type * as dag from '../dag/mod.js';
+import * as db from '../db/mod.js';
+import type * as sync from '../sync/mod.js';
+import {assertHasClientState, getMainClientGroupID} from './clients.js';
+import {GatherMemoryOnlyVisitor} from './gather-mem-only-visitor.js';
+import type {MutatorDefs} from '../replicache.js';
+import type {Hash} from '../hash.js';
 import type {LogContext} from '@rocicorp/logger';
-import {assertSnapshotCommitDD31} from '../db/commit';
-import {ClientGroup, getClientGroup, setClientGroup} from './client-groups';
+import {assertSnapshotCommitDD31} from '../db/commit.js';
+import {ClientGroup, getClientGroup, setClientGroup} from './client-groups.js';
 
 /**
  * Persists the client's memdag state to the client's perdag client group.

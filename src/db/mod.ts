@@ -5,7 +5,7 @@ export {
   newWriteLocal,
   newWriteSnapshotSDD,
   newWriteSnapshotDD31,
-} from './write';
+} from './write.js';
 export {
   Read,
   readIndexesForRead,
@@ -16,7 +16,7 @@ export {
   whenceHash,
   fromWhence,
   readFromDefaultHead,
-} from './read';
+} from './read.js';
 export {
   DEFAULT_HEAD_NAME,
   Commit,
@@ -40,13 +40,13 @@ export {
   baseSnapshotFromCommit,
   compareCookiesForSnapshots,
   chain as commitChain,
-} from './commit';
-export {getRoot} from './root';
-export {decodeIndexKey, encodeIndexKey} from './index';
-export type {IndexKey} from './index';
-export {Visitor} from './visitor';
-export {rebaseMutationAndCommit, rebaseMutationAndPutCommit} from './rebase';
-export type {HashRefType} from './hash-ref-type';
+} from './commit.js';
+export {getRoot} from './root.js';
+export {decodeIndexKey, encodeIndexKey} from './index.js';
+export type {IndexKey} from './index.js';
+export {Visitor} from './visitor.js';
+export {rebaseMutationAndCommit, rebaseMutationAndPutCommit} from './rebase.js';
+export type {HashRefType} from './hash-ref-type.js';
 
 export type {
   SnapshotMeta,
@@ -59,6 +59,6 @@ export type {
   IndexRecord,
   CommitData,
   Meta,
-} from './commit';
-export type {ScanOptions} from './scan';
-export type {Whence} from './read';
+} from './commit.js';
+export type {ScanOptions} from './scan.js';
+export type {Whence} from './read.js';

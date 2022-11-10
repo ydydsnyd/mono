@@ -1,5 +1,5 @@
-import {assert, assertObject, assertString} from './asserts';
-import type {ClientGroupID, ClientID} from './sync/ids';
+import {assert, assertObject, assertString} from './asserts.js';
+import type {ClientGroupID, ClientID} from './sync/ids.js';
 
 function makeChannelName(replicacheName: string): string {
   return `replicache-on-persist:${replicacheName}`;

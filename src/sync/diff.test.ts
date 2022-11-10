@@ -1,8 +1,8 @@
 import {expect} from '@esm-bundle/chai';
 import type {InternalDiff} from '../btree/node.js';
-import * as dag from '../dag/mod';
+import * as dag from '../dag/mod.js';
 import {diff} from './diff.js';
-import {ChainBuilder} from '../db/test-helpers';
+import {ChainBuilder} from '../db/test-helpers.js';
 import {testSubscriptionsManagerOptions} from '../test-util.js';
 
 type DiffsRecord = Record<string, InternalDiff>;

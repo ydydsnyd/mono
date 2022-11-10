@@ -1,14 +1,14 @@
 import {expect} from '@esm-bundle/chai';
-import {assert, assertNotNull, assertNotUndefined} from '../asserts';
-import * as dag from '../dag/mod';
-import * as db from '../db/mod';
-import type * as sync from '../sync/mod';
+import {assert, assertNotNull, assertNotUndefined} from '../asserts.js';
+import * as dag from '../dag/mod.js';
+import * as db from '../db/mod.js';
+import type * as sync from '../sync/mod.js';
 import {
   ChainBuilder,
   createMutatorName,
   getChunkSnapshot,
-} from '../db/test-helpers';
-import {assertHash, Hash, makeNewFakeHashFunction} from '../hash';
+} from '../db/test-helpers.js';
+import {assertHash, Hash, makeNewFakeHashFunction} from '../hash.js';
 import {
   initClient,
   assertClientDD31,
@@ -17,7 +17,7 @@ import {
   getClients,
   ClientStateNotFoundError,
   ClientDD31,
-} from './clients';
+} from './clients.js';
 import {assertLocalMetaDD31, assertSnapshotCommitDD31} from '../db/commit.js';
 import {LogContext} from '@rocicorp/logger';
 import {
@@ -25,11 +25,11 @@ import {
   CLIENT_GROUPS_HEAD_NAME,
   getClientGroup,
   setClientGroup,
-} from './client-groups';
-import {persistDD31} from './persist-dd31';
-import type {WriteTransaction} from '../transactions';
-import type {JSONValue} from '../json';
-import type {MutatorDefs} from '../mod';
+} from './client-groups.js';
+import {persistDD31} from './persist-dd31.js';
+import type {WriteTransaction} from '../transactions.js';
+import type {JSONValue} from '../json.js';
+import type {MutatorDefs} from '../mod.js';
 import sinon from 'sinon';
 import {promiseVoid} from '../resolved-promises.js';
 

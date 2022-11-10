@@ -1,18 +1,18 @@
-export {persist, persistSDD} from './persist';
-export {persistDD31} from './persist-dd31';
-export {refresh} from './refresh';
-export {startHeartbeats} from './heartbeat';
+export {persist, persistSDD} from './persist.js';
+export {persistDD31} from './persist-dd31.js';
+export {refresh} from './refresh.js';
+export {startHeartbeats} from './heartbeat.js';
 export {
   getClientGroup,
   getClientGroups,
   setClientGroup,
   setClientGroups,
-} from './client-groups';
-export type {ClientGroup, ClientGroupMap} from './client-groups';
+} from './client-groups.js';
+export type {ClientGroup, ClientGroupMap} from './client-groups.js';
 export {
   initClientGroupGC as initClientGroupGC,
   gcClientGroups,
-} from './client-group-gc';
+} from './client-group-gc.js';
 export {
   initClient,
   getClient,
@@ -20,16 +20,16 @@ export {
   hasClientState,
   assertHasClientState,
   ClientStateNotFoundError,
-} from './clients';
-export {initClientGC} from './client-gc';
-export {IDBDatabasesStore} from './idb-databases-store';
+} from './clients.js';
+export {initClientGC} from './client-gc.js';
+export {IDBDatabasesStore} from './idb-databases-store.js';
 
-export type {Client, ClientMap} from './clients';
+export type {Client, ClientMap} from './clients.js';
 export type {
   IndexedDBDatabase,
   IndexedDBDatabaseRecord,
-} from './idb-databases-store';
+} from './idb-databases-store.js';
 export {
   initCollectIDBDatabases,
   deleteAllReplicacheData,
-} from './collect-idb-databases';
+} from './collect-idb-databases.js';

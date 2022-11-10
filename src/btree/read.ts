@@ -1,6 +1,6 @@
-import {getSizeOfValue} from '../json';
-import type * as dag from '../dag/mod';
-import {Hash, emptyHash} from '../hash';
+import {getSizeOfValue} from '../json.js';
+import type * as dag from '../dag/mod.js';
+import {Hash, emptyHash} from '../hash.js';
 import {
   DataNodeImpl,
   InternalNodeImpl,
@@ -17,14 +17,14 @@ import {
   isDataNodeImpl,
   EntryWithOptionalSize,
   Entry,
-} from './node';
+} from './node.js';
 import {
   computeSplices,
   SPLICE_ADDED,
   SPLICE_AT,
   SPLICE_FROM,
   SPLICE_REMOVED,
-} from './splice';
+} from './splice.js';
 import {deepEqual, InternalValue} from '../internal-value.js';
 
 /**

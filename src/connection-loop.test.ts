@@ -6,9 +6,9 @@ import {
   DEBOUNCE_DELAY_MS,
   MAX_DELAY_MS,
   MIN_DELAY_MS,
-} from './connection-loop';
+} from './connection-loop.js';
 import {promiseTrue} from './resolved-promises.js';
-import {sleep} from './sleep';
+import {sleep} from './sleep.js';
 
 let clock: SinonFakeTimers;
 setup(() => {

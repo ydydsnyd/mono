@@ -1,8 +1,8 @@
-import {deleteSentinel, WriteImplBase} from './write-impl-base';
-import type {Read, Store, Value, Write} from './store';
+import {deleteSentinel, WriteImplBase} from './write-impl-base.js';
+import type {Read, Store, Value, Write} from './store.js';
 import {resolver} from '@rocicorp/resolver';
-import {assertNotNull} from '../asserts';
-import {wrap} from './idb-util';
+import {assertNotNull} from '../asserts.js';
+import {wrap} from './idb-util.js';
 
 const RELAXED = {durability: 'relaxed'};
 const OBJECT_STORE = 'chunks';

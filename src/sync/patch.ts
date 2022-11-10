@@ -1,7 +1,7 @@
 import type {LogContext} from '@rocicorp/logger';
-import type * as db from '../db/mod';
+import type * as db from '../db/mod.js';
 import {toInternalValue, ToInternalValueReason} from '../internal-value.js';
-import type {PatchOperation} from '../puller';
+import type {PatchOperation} from '../puller.js';
 
 export async function apply(
   lc: LogContext,

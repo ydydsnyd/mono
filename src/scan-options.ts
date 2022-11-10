@@ -1,5 +1,5 @@
-import type {IndexKey} from './db/mod';
-import type * as db from './db/mod';
+import type {IndexKey} from './db/mod.js';
+import type * as db from './db/mod.js';
 
 /**
  * Options for {@link ReadTransaction.scan | scan}

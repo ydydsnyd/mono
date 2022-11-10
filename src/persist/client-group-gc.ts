@@ -1,14 +1,14 @@
 import type {LogContext} from '@rocicorp/logger';
-import {assert} from '../asserts';
-import type * as dag from '../dag/mod';
-import {initBgIntervalProcess} from '../bg-interval';
+import {assert} from '../asserts.js';
+import type * as dag from '../dag/mod.js';
+import {initBgIntervalProcess} from '../bg-interval.js';
 import {
   ClientGroupMap,
   getClientGroups,
   setClientGroups,
   clientGroupHasPendingMutations,
-} from './client-groups';
-import {assertClientDD31, getClients} from './clients';
+} from './client-groups.js';
+import {assertClientDD31, getClients} from './clients.js';
 
 const GC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 

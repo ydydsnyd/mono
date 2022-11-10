@@ -1,5 +1,5 @@
-import {assertNumber} from '../asserts';
-import type {Hash} from '../hash';
+import {assertNumber} from '../asserts.js';
+import type {Hash} from '../hash.js';
 import type {MaybePromise} from '../replicache.js';
 
 export type HeadChange = {

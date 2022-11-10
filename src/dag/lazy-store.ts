@@ -1,14 +1,14 @@
 import {RWLock} from '@rocicorp/lock';
-import type {Hash} from '../hash';
-import {Chunk, ChunkHasher, createChunk} from './chunk';
-import {Store, Read, Write, mustGetChunk} from './store';
-import {getSizeOfValue} from '../json';
+import type {Hash} from '../hash.js';
+import {Chunk, ChunkHasher, createChunk} from './chunk.js';
+import {Store, Read, Write, mustGetChunk} from './store.js';
+import {getSizeOfValue} from '../json.js';
 import {
   computeRefCountUpdates,
   GarbageCollectionDelegate,
   HeadChange,
-} from './gc';
-import {assert, assertNotUndefined} from '../asserts';
+} from './gc.js';
+import {assert, assertNotUndefined} from '../asserts.js';
 import {promiseVoid} from '../resolved-promises.js';
 
 /**

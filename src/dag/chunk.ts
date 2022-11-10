@@ -1,5 +1,5 @@
-import {assert, assertString} from '../asserts';
-import {Hash, newUUIDHash} from '../hash';
+import {assert, assertString} from '../asserts.js';
+import {Hash, newUUIDHash} from '../hash.js';
 import type {ReadonlyJSONValue} from '../json.js';
 
 type Refs = readonly Hash[];

@@ -1,5 +1,5 @@
 import {deepEqual, ReadonlyJSONValue} from '../json.js';
-import type {EntryWithOptionalSize} from './node';
+import type {EntryWithOptionalSize} from './node.js';
 
 export type Splice = [at: number, removed: number, added: number, from: number];
 

@@ -1,8 +1,8 @@
-import * as db from '../db/mod';
-import type {Hash} from '../hash';
-import type * as dag from '../dag/mod';
-import type * as btree from '../btree/mod';
-import {getSizeOfValue} from '../json';
+import * as db from '../db/mod.js';
+import type {Hash} from '../hash.js';
+import type * as dag from '../dag/mod.js';
+import type * as btree from '../btree/mod.js';
+import {getSizeOfValue} from '../json.js';
 import {promiseVoid} from '../resolved-promises.js';
 
 export type ChunkWithSize = {chunk: dag.Chunk<unknown>; size: number};

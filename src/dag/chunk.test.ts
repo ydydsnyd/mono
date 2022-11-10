@@ -1,8 +1,8 @@
 import {expect} from '@esm-bundle/chai';
-import {Hash, fakeHash, parse, makeNewFakeHashFunction} from '../hash';
-import {createChunk, createChunkWithHash} from './chunk';
-import type {Chunk} from './chunk';
-import type {ReadonlyJSONValue} from '../json';
+import {Hash, fakeHash, parse, makeNewFakeHashFunction} from '../hash.js';
+import {createChunk, createChunkWithHash} from './chunk.js';
+import type {Chunk} from './chunk.js';
+import type {ReadonlyJSONValue} from '../json.js';
 
 test('round trip', () => {
   const chunkHasher = makeNewFakeHashFunction();

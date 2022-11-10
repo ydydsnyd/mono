@@ -1,4 +1,4 @@
-import {httpStatusUnauthorized} from './replicache';
+import {httpStatusUnauthorized} from './replicache.js';
 import {
   addData,
   clock,
@@ -12,26 +12,26 @@ import {
   replicacheForTestingNoDefaultURLs,
   tickAFewTimes,
   tickUntil,
-} from './test-util';
+} from './test-util.js';
 import {
   ClientID,
   PatchOperation,
   Poke,
   Replicache,
   TransactionClosedError,
-} from './mod';
-import type {ReadTransaction, WriteTransaction} from './mod';
-import type {JSONValue} from './json';
+} from './mod.js';
+import type {ReadTransaction, WriteTransaction} from './mod.js';
+import type {JSONValue} from './json.js';
 import {assert, expect} from '@esm-bundle/chai';
 import * as sinon from 'sinon';
-import type {ScanOptions} from './scan-options';
-import {asyncIterableToArray} from './async-iterable-to-array';
-import {sleep} from './sleep';
-import * as db from './db/mod';
-import {TestMemStore} from './kv/test-mem-store';
-import {emptyHash, Hash} from './hash';
-import {defaultPuller, PullResponse} from './puller';
-import {defaultPusher} from './pusher';
+import type {ScanOptions} from './scan-options.js';
+import {asyncIterableToArray} from './async-iterable-to-array.js';
+import {sleep} from './sleep.js';
+import * as db from './db/mod.js';
+import {TestMemStore} from './kv/test-mem-store.js';
+import {emptyHash, Hash} from './hash.js';
+import {defaultPuller, PullResponse} from './puller.js';
+import {defaultPusher} from './pusher.js';
 import {
   PROD_LICENSE_SERVER_URL,
   TEST_LICENSE_KEY,
@@ -42,14 +42,14 @@ import {
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
-import type {MutationSDD} from './sync/push';
-import type {ReplicacheOptions} from './replicache-options';
+import type {MutationSDD} from './sync/push.js';
+import type {ReplicacheOptions} from './replicache-options.js';
 import {deleteClientForTesting} from './persist/clients-test-helpers.js';
 import type {LogLevel} from '@rocicorp/logger';
 import {
   LICENSE_ACTIVE_PATH,
   LICENSE_STATUS_PATH,
-} from '@rocicorp/licensing/src/server/api-types';
+} from '@rocicorp/licensing/src/server/api-types.js';
 
 const {fail} = assert;
 

@@ -1,5 +1,5 @@
-import type {Chunk} from './chunk';
-import type {Hash} from '../hash';
+import type {Chunk} from './chunk.js';
+import type {Hash} from '../hash.js';
 
 export interface Store {
   read(): Promise<Read>;

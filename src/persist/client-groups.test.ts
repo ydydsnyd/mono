@@ -1,7 +1,7 @@
 import {expect} from '@esm-bundle/chai';
-import * as dag from '../dag/mod';
-import type * as sync from '../sync/mod';
-import {assertHash, fakeHash, Hash} from '../hash';
+import * as dag from '../dag/mod.js';
+import type * as sync from '../sync/mod.js';
+import {assertHash, fakeHash, Hash} from '../hash.js';
 import {
   assertHasClientGroupState,
   ClientGroup,
@@ -15,7 +15,7 @@ import {
   mutatorNamesEqual,
   setClientGroup,
   setClientGroups,
-} from './client-groups';
+} from './client-groups.js';
 
 const headClientGroup1Hash = fakeHash('b1');
 const headClientGroup2Hash = fakeHash('b2');

@@ -1,6 +1,6 @@
 import {expect} from '@esm-bundle/chai';
 import {resolver} from '@rocicorp/resolver';
-import {initOnPersistChannel, PersistInfo} from './on-persist-channel';
+import {initOnPersistChannel, PersistInfo} from './on-persist-channel.js';
 
 suite('initOnPersistChannel', () => {
   let channel: BroadcastChannel | undefined;

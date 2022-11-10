@@ -7,9 +7,9 @@ import {
   getClients,
   initClientDD31,
   initClientSDD,
-} from './clients';
-import type * as dag from '../dag/mod';
-import type * as sync from '../sync/mod';
+} from './clients.js';
+import type * as dag from '../dag/mod.js';
+import type * as sync from '../sync/mod.js';
 import {LogContext} from '@rocicorp/logger';
 import type {IndexDefinitions} from '../index-defs.js';
 

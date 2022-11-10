@@ -5,6 +5,6 @@ tool
 bin
 *_generated.ts
 src/*/generated/
-web-test-runner.config.mjs
+web-test-runner.config.js
 rollup.config.js
 perf/index.js

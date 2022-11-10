@@ -10,7 +10,7 @@ import getPort from 'get-port';
 import * as os from 'os';
 import * as path from 'path';
 import {promises as fs} from 'fs';
-import {makeDefine} from '../tool/make-define.mjs';
+import {makeDefine} from '../tool/make-define.js';
 
 /** @typedef {'chromium' | 'firefox' | 'webkit'} Browser */
 

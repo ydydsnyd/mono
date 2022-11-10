@@ -1,10 +1,10 @@
-import {deepClone, JSONValue, ReadonlyJSONValue} from './json';
-import * as json from './json';
+import {deepClone, JSONValue, ReadonlyJSONValue} from './json.js';
+import * as json from './json.js';
 import {
   skipCloneReadTransactionReturnValue,
   skipInternalValueAsserts,
   skipCloneInputValues,
-} from './config';
+} from './config.js';
 
 // By using declare we tell the type system that there is a unique symbol.
 // However, there is no such symbol but the type system does not care.

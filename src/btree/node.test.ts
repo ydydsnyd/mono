@@ -1,7 +1,7 @@
 import {expect, assert} from '@esm-bundle/chai';
-import * as dag from '../dag/mod';
-import {emptyHash, Hash, makeNewFakeHashFunction} from '../hash';
-import {getSizeOfValue, ReadonlyJSONValue} from '../json';
+import * as dag from '../dag/mod.js';
+import {emptyHash, Hash, makeNewFakeHashFunction} from '../hash.js';
+import {getSizeOfValue, ReadonlyJSONValue} from '../json.js';
 import {
   DataNode,
   findLeaf,
@@ -13,9 +13,9 @@ import {
   Diff,
   internalizeBTreeNode,
   EntryWithOptionalSize,
-} from './node';
-import {BTreeWrite} from './write';
-import {BTreeRead, NODE_HEADER_SIZE} from './read';
+} from './node.js';
+import {BTreeWrite} from './write.js';
+import {BTreeRead, NODE_HEADER_SIZE} from './read.js';
 import {
   InternalValue,
   toInternalValue,

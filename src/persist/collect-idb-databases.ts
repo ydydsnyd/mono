@@ -1,15 +1,15 @@
-import * as kv from '../kv/mod';
-import * as dag from '../dag/mod';
-import {ClientMap, getClients} from './clients';
-import {dropStore} from '../kv/idb-util';
-import {IDBDatabasesStore} from './idb-databases-store';
-import type {IndexedDBDatabase} from './idb-databases-store';
-import {initBgIntervalProcess} from '../bg-interval';
+import * as kv from '../kv/mod.js';
+import * as dag from '../dag/mod.js';
+import {ClientMap, getClients} from './clients.js';
+import {dropStore} from '../kv/idb-util.js';
+import {IDBDatabasesStore} from './idb-databases-store.js';
+import type {IndexedDBDatabase} from './idb-databases-store.js';
+import {initBgIntervalProcess} from '../bg-interval.js';
 import type {LogContext} from '@rocicorp/logger';
-import {sleep} from '../sleep';
-import {AbortError} from '../abort-error';
+import {sleep} from '../sleep.js';
+import {AbortError} from '../abort-error.js';
 import {REPLICACHE_FORMAT_VERSION} from '../replicache.js';
-import {assertHash} from '../hash';
+import {assertHash} from '../hash.js';
 
 // How frequently to try to collect
 const COLLECT_INTERVAL_MS = 12 * 60 * 60 * 1000; // 12 hours

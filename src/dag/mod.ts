@@ -1,13 +1,13 @@
-export type {Chunk, CreateChunk} from './chunk';
+export type {Chunk, CreateChunk} from './chunk.js';
 export {
   createChunk,
   createChunkWithHash,
   throwChunkHasher,
   uuidChunkHasher,
-} from './chunk';
-export {ChunkNotFoundError} from './store';
-export type {Store, Read, Write, MustGetChunk} from './store';
-export {StoreImpl} from './store-impl';
-export {LazyStore, LazyRead} from './lazy-store';
-export {TestStore} from './test-store';
-export * from './key';
+} from './chunk.js';
+export {ChunkNotFoundError} from './store.js';
+export type {Store, Read, Write, MustGetChunk} from './store.js';
+export {StoreImpl} from './store-impl.js';
+export {LazyStore, LazyRead} from './lazy-store.js';
+export {TestStore} from './test-store.js';
+export * from './key.js';

@@ -1,8 +1,8 @@
 import {expect} from '@esm-bundle/chai';
-import {assertHash, fakeHash, Hash, makeNewFakeHashFunction} from '../hash';
-import type {Chunk} from './chunk';
-import {LazyStore} from './lazy-store';
-import {TestStore} from './test-store';
+import {assertHash, fakeHash, Hash, makeNewFakeHashFunction} from '../hash.js';
+import type {Chunk} from './chunk.js';
+import {LazyStore} from './lazy-store.js';
+import {TestStore} from './test-store.js';
 
 const DEFAULT_VALUE_SIZE = 100;
 function getSizeOfChunkForTest(chunk: Chunk): number {

@@ -1,9 +1,9 @@
 import {expect} from '@esm-bundle/chai';
 import {resolver, Resolver} from '@rocicorp/resolver';
-import {ProcessScheduler} from './process-scheduler';
+import {ProcessScheduler} from './process-scheduler.js';
 import sinon, {SinonFakeTimers, useFakeTimers} from 'sinon';
-import {expectPromiseToReject} from './test-util';
-import {AbortError} from './abort-error';
+import {expectPromiseToReject} from './test-util.js';
+import {AbortError} from './abort-error.js';
 
 suite('ProcessScheduler', () => {
   let clock: SinonFakeTimers;

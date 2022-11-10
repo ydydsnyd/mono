@@ -1,11 +1,11 @@
 import {expect} from '@esm-bundle/chai';
-import * as dag from '../dag/mod';
-import {ChainBuilder} from './test-helpers';
-import {fakeHash, Hash} from '../hash';
-import type {Entry, Node} from '../btree/node';
-import type {ReadonlyJSONValue} from '../json';
-import {Visitor} from './visitor';
-import {Commit, Meta, newLocal} from './commit';
+import * as dag from '../dag/mod.js';
+import {ChainBuilder} from './test-helpers.js';
+import {fakeHash, Hash} from '../hash.js';
+import type {Entry, Node} from '../btree/node.js';
+import type {ReadonlyJSONValue} from '../json.js';
+import {Visitor} from './visitor.js';
+import {Commit, Meta, newLocal} from './commit.js';
 import {
   toInternalValue,
   InternalValue,

@@ -1,4 +1,4 @@
-import {AbortError} from './abort-error';
+import {AbortError} from './abort-error.js';
 
 /**
  * Creates a promise that resolves after `ms` milliseconds. Note that if you

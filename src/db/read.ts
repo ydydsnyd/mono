@@ -1,13 +1,13 @@
-import {IndexRead} from './index';
-import type * as dag from '../dag/mod';
+import {IndexRead} from './index.js';
+import type * as dag from '../dag/mod.js';
 import {
   Commit,
   DEFAULT_HEAD_NAME,
   fromHash as commitFromHash,
   Meta,
-} from './commit';
-import {BTreeRead, BTreeWrite} from '../btree/mod';
-import type {Hash} from '../hash';
+} from './commit.js';
+import {BTreeRead, BTreeWrite} from '../btree/mod.js';
+import type {Hash} from '../hash.js';
 import type {InternalValue} from '../internal-value.js';
 
 export class Read {

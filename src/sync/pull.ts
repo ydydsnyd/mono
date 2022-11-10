@@ -1,7 +1,7 @@
 import type {LogContext} from '@rocicorp/logger';
-import type * as dag from '../dag/mod';
-import * as db from '../db/mod';
-import type {JSONValue, ReadonlyJSONValue} from '../json';
+import type * as dag from '../dag/mod.js';
+import * as db from '../db/mod.js';
+import type {JSONValue, ReadonlyJSONValue} from '../json.js';
 import {
   assertPullResponseSDD,
   assertPullResponseDD31,
@@ -16,16 +16,16 @@ import {
   PullResponseOK,
   PullResponseOKDD31,
   PullResponseOKSDD,
-} from '../puller';
-import {assertHTTPRequestInfo, HTTPRequestInfo} from '../http-request-info';
-import {callJSRequest} from './js-request';
-import {SYNC_HEAD_NAME} from './sync-head-name';
-import * as patch from './patch';
-import {toError} from '../to-error';
-import * as btree from '../btree/mod';
-import {BTreeRead} from '../btree/mod';
-import {updateIndexes} from '../db/write';
-import {emptyHash, Hash} from '../hash';
+} from '../puller.js';
+import {assertHTTPRequestInfo, HTTPRequestInfo} from '../http-request-info.js';
+import {callJSRequest} from './js-request.js';
+import {SYNC_HEAD_NAME} from './sync-head-name.js';
+import * as patch from './patch.js';
+import {toError} from '../to-error.js';
+import * as btree from '../btree/mod.js';
+import {BTreeRead} from '../btree/mod.js';
+import {updateIndexes} from '../db/write.js';
+import {emptyHash, Hash} from '../hash.js';
 import {
   toInternalValue,
   InternalValue,
@@ -33,9 +33,9 @@ import {
   deepEqual,
   FromInternalValueReason,
   fromInternalValue,
-} from '../internal-value';
-import type {ClientGroupID, ClientID} from './ids';
-import {addDiffsForIndexes, DiffComputationConfig, DiffsMap} from './diff';
+} from '../internal-value.js';
+import type {ClientGroupID, ClientID} from './ids.js';
+import {addDiffsForIndexes, DiffComputationConfig, DiffsMap} from './diff.js';
 import {assert, assertObject} from '../asserts.js';
 import {assertSnapshotMetaDD31, commitIsLocalDD31} from '../db/commit.js';
 

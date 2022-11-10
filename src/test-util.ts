@@ -1,31 +1,31 @@
 import {expect} from '@esm-bundle/chai';
-import {MutatorDefs, Replicache, BeginPullResult} from './replicache';
+import {MutatorDefs, Replicache, BeginPullResult} from './replicache.js';
 import type {
   ReplicacheOptions,
   ReplicacheInternalOptions,
   ReplicacheInternalAPI,
-} from './replicache-options';
-import * as kv from './kv/mod';
+} from './replicache-options.js';
+import * as kv from './kv/mod.js';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import * as sinon from 'sinon';
-import type {JSONValue, ReadonlyJSONValue} from './json';
+import type {JSONValue, ReadonlyJSONValue} from './json.js';
 
 // fetch-mock has invalid d.ts file so we removed that on npm install.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
-import {uuid} from './uuid';
+import {uuid} from './uuid.js';
 import type {WriteTransaction} from './transactions.js';
 import {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
 import type {DiffComputationConfig} from './sync/diff.js';
 import type {ClientGroupID} from './sync/ids.js';
 import type {ClientID} from './sync/ids.js';
 import type {PatchOperation} from './puller.js';
-import type {Hash} from './hash';
+import type {Hash} from './hash.js';
 import {
   setupForTest as setupIDBDatabasesStoreForTest,
   teardownForTest as teardownIDBDatabasesStoreForTest,
-} from './persist/idb-databases-store-db-name';
+} from './persist/idb-databases-store-db-name.js';
 
 export class ReplicacheTest<
   // eslint-disable-next-line @typescript-eslint/ban-types

@@ -1,6 +1,6 @@
 import {resolver} from '@rocicorp/resolver';
-import {deepEqual} from '../src/json';
-import {assert} from '../src/asserts';
+import {deepEqual} from '../src/json.js';
+import {assert} from '../src/asserts.js';
 import {
   MutatorDefs,
   PatchOperation,
@@ -10,18 +10,18 @@ import {
   WriteTransaction,
   IndexDefinitions,
   JSONValue,
-} from '../out/replicache';
+} from '../out/replicache.js';
 import {
   jsonArrayTestData,
   TestDataObject,
   jsonObjectTestData,
   getTmcwData,
-} from './data';
-import type {Bencher, Benchmark} from './perf';
-import {dropStore as dropIDBStore} from '../src/kv/idb-util';
-import {uuid} from '../src/uuid';
+} from './data.js';
+import type {Bencher, Benchmark} from './perf.js';
+import {dropStore as dropIDBStore} from '../src/kv/idb-util.js';
+import {uuid} from '../src/uuid.js';
 import {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
-import type {ReplicacheInternalAPI} from '../src/replicache-options';
+import type {ReplicacheInternalAPI} from '../src/replicache-options.js';
 
 const valSize = 1024;
 

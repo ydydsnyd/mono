@@ -1,7 +1,7 @@
 import {openDB, deleteDB, IDBPDatabase} from 'idb/with-async-ittr';
 import xbytes from 'xbytes';
-import {randomData, RandomDataType} from './data';
-import type {Bencher, Benchmark} from './perf';
+import {randomData, RandomDataType} from './data.js';
+import type {Bencher, Benchmark} from './perf.js';
 
 export function benchmarkIDBRead(opts: {
   dataType: RandomDataType;

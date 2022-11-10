@@ -1,7 +1,7 @@
 /* eslint-disable require-await */
 
-import {Replicache} from './replicache';
-import type {WriteTransaction} from './transactions';
+import {Replicache} from './replicache.js';
+import type {WriteTransaction} from './transactions.js';
 import {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
 import type {IndexKey} from './db/index.js';
 

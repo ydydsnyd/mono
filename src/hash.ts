@@ -1,4 +1,4 @@
-import {assert} from './asserts';
+import {assert} from './asserts.js';
 import {uuid} from './uuid.js';
 
 export const STRING_LENGTH = 44;

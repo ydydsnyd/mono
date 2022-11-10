@@ -1,14 +1,14 @@
 import {expect} from '@esm-bundle/chai';
-import {MemStore} from '../kv/mod';
-import {createChunk, createChunkWithHash} from './chunk';
-import {StoreImpl, ReadImpl, WriteImpl} from './store-impl';
-import {chunkDataKey, chunkMetaKey, chunkRefCountKey, headKey} from './key';
-import type * as kv from '../kv/mod';
-import {assertHash, fakeHash, Hash, makeNewFakeHashFunction} from '../hash';
-import {assert} from '../asserts';
-import {TestStore} from './test-store';
-import {ChunkNotFoundError} from './store';
-import type {ReadonlyJSONValue} from '../json';
+import {MemStore} from '../kv/mod.js';
+import {createChunk, createChunkWithHash} from './chunk.js';
+import {StoreImpl, ReadImpl, WriteImpl} from './store-impl.js';
+import {chunkDataKey, chunkMetaKey, chunkRefCountKey, headKey} from './key.js';
+import type * as kv from '../kv/mod.js';
+import {assertHash, fakeHash, Hash, makeNewFakeHashFunction} from '../hash.js';
+import {assert} from '../asserts.js';
+import {TestStore} from './test-store.js';
+import {ChunkNotFoundError} from './store.js';
+import type {ReadonlyJSONValue} from '../json.js';
 
 suite('read', () => {
   test('has chunk', async () => {

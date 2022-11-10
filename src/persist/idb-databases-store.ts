@@ -1,8 +1,8 @@
-import {assert, assertNumber, assertObject, assertString} from '../asserts';
+import {assert, assertNumber, assertObject, assertString} from '../asserts.js';
 import {IDBStore} from '../kv/idb-store.js';
-import type * as kv from '../kv/mod';
-import {uuid} from '../uuid';
-import {getIDBDatabasesDBName} from './idb-databases-store-db-name';
+import type * as kv from '../kv/mod.js';
+import {uuid} from '../uuid.js';
+import {getIDBDatabasesDBName} from './idb-databases-store-db-name.js';
 
 const DBS_KEY = 'dbs';
 const PROFILE_ID_KEY = 'profileId';

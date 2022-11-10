@@ -1,8 +1,8 @@
 import {RWLock} from '@rocicorp/lock';
 import {promiseVoid} from '../resolved-promises.js';
-import {stringCompare} from '../string-compare';
-import type {Read, Store, Value, Write} from './store';
-import {deleteSentinel, WriteImplBase} from './write-impl-base';
+import {stringCompare} from '../string-compare.js';
+import type {Read, Store, Value, Write} from './store.js';
+import {deleteSentinel, WriteImplBase} from './write-impl-base.js';
 
 export class TestMemStore implements Store {
   private readonly _map: Map<string, Value> = new Map();

@@ -1,5 +1,5 @@
 import {expect} from '@esm-bundle/chai';
-import {scanInfoMatchesKey} from './subscriptions';
+import {scanInfoMatchesKey} from './subscriptions.js';
 
 test('scanInfoMatchesKey', () => {
   expect(scanInfoMatchesKey({options: {}}, '', 'a')).to.be.true;

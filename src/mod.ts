@@ -1,5 +1,5 @@
-export {Replicache, makeIDBName} from './replicache';
-export {TransactionClosedError} from './transaction-closed-error';
+export {Replicache, makeIDBName} from './replicache.js';
+export {TransactionClosedError} from './transaction-closed-error.js';
 export {consoleLogSink} from '@rocicorp/logger';
 
 export type {
@@ -9,37 +9,37 @@ export type {
   RequestOptions,
   ClientStateNotFoundReason,
   PendingMutation,
-} from './replicache';
-export type {ReplicacheOptions} from './replicache-options';
-export type {IndexDefinition, IndexDefinitions} from './index-defs';
+} from './replicache.js';
+export type {ReplicacheOptions} from './replicache-options.js';
+export type {IndexDefinition, IndexDefinitions} from './index-defs.js';
 export type {
   ReadTransaction,
   WriteTransaction,
   CreateIndexDefinition,
-} from './transactions';
+} from './transactions.js';
 export type {
   GetScanIterator,
   GetIndexScanIterator,
   ScanResult,
   AsyncIterableIteratorToArray,
-} from './scan-iterator';
-export {makeScanResult} from './scan-iterator';
+} from './scan-iterator.js';
+export {makeScanResult} from './scan-iterator.js';
 export type {LogSink, LogLevel} from '@rocicorp/logger';
 export type {
   JSONObject,
   JSONValue,
   ReadonlyJSONValue,
   ReadonlyJSONObject,
-} from './json';
+} from './json.js';
 export type {
   KeyTypeForScanOptions,
   ScanIndexOptions,
   ScanNoIndexOptions,
   ScanOptionIndexedStartKey,
   ScanOptions,
-} from './scan-options';
-export {isScanIndexOptions} from './scan-options';
-export type {HTTPRequestInfo} from './http-request-info';
+} from './scan-options.js';
+export {isScanIndexOptions} from './scan-options.js';
+export type {HTTPRequestInfo} from './http-request-info.js';
 export type {
   PatchOperation,
   Puller,
@@ -48,22 +48,22 @@ export type {
   ClientStateNotFoundResponse,
   PullerResult,
   PullError,
-} from './puller';
-export type {Pusher, PushError} from './pusher';
+} from './puller.js';
+export type {Pusher, PushError} from './pusher.js';
 
 export type {
   Store as ExperimentalKVStore,
   Read as ExperimentalKVRead,
   Write as ExperimentalKVWrite,
-} from './kv/store';
+} from './kv/store.js';
 
-export type {PullRequest} from './sync/pull';
-export type {PushRequest, Mutation} from './sync/push';
-export type {ClientID} from './sync/ids';
+export type {PullRequest} from './sync/pull.js';
+export type {PushRequest, Mutation} from './sync/push.js';
+export type {ClientID} from './sync/ids.js';
 
 export {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
 
-export type {IndexKey} from './db/index';
+export type {IndexKey} from './db/index.js';
 
 export type {
   Diff as ExperimentalDiff,
@@ -73,7 +73,7 @@ export type {
   DiffOperationChange as ExperimentalDiffOperationChange,
   IndexDiff as ExperimentalIndexDiff,
   NoIndexDiff as ExperimentalNoIndexDiff,
-} from './btree/node';
+} from './btree/node.js';
 export type {
   WatchNoIndexCallback as ExperimentalWatchNoIndexCallback,
   WatchOptions as ExperimentalWatchOptions,
@@ -82,11 +82,11 @@ export type {
   WatchCallbackForOptions as ExperimentalWatchCallbackForOptions,
   WatchIndexCallback as ExperimentalWatchIndexCallback,
   SubscribeOptions,
-} from './subscriptions';
+} from './subscriptions.js';
 
-export {mergeAsyncIterables} from './merge-async-iterables';
-export {filterAsyncIterable} from './filter-async-iterable';
-export {deleteAllReplicacheData} from './persist/mod';
-export type {IterableUnion} from './iterable-union';
+export {mergeAsyncIterables} from './merge-async-iterables.js';
+export {filterAsyncIterable} from './filter-async-iterable.js';
+export {deleteAllReplicacheData} from './persist/mod.js';
+export type {IterableUnion} from './iterable-union.js';
 
-export {version} from './version';
+export {version} from './version.js';

@@ -1,5 +1,5 @@
 import {expect} from '@esm-bundle/chai';
-import type {Read, Store, Value, Write} from './store';
+import type {Read, Store, Value, Write} from './store.js';
 
 export class TestStore implements Store {
   private readonly _store: Store;

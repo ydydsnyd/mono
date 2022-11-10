@@ -1,4 +1,4 @@
-import {assertNumber, assertObject, assertString} from './asserts';
+import {assertNumber, assertObject, assertString} from './asserts.js';
 
 export function assertHTTPRequestInfo(
   v: unknown,
