@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1667971508888,
+  "lastUpdate": 1668095118554,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -29561,6 +29561,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23700,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7ed85137b5ee1c65e65979de6943c09993f8e4c1",
+          "message": "chore: Use moduleResolution Node16 (#377)\n\nThis is so TSC uses the exports field in package.json to resolve modules.\r\n\r\nThis requires us to use the .js extension in imports.\r\n\r\nWe also flip the naming conventions. CJS uses .cjs and ESM uses .js",
+          "timestamp": "2022-11-10T16:44:13+01:00",
+          "tree_id": "c5d410590702aad7f0a99235a393f88819fbfcfd",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/7ed85137b5ee1c65e65979de6943c09993f8e4c1"
+        },
+        "date": 1668095112685,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 194126,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34574,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 192980,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34257,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81763,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23701,
             "unit": "bytes"
           }
         ]
