@@ -4,7 +4,12 @@ import { LogSink, LogContext, LogLevel } from "@rocicorp/logger";
 import { version } from "../util/version.js";
 import { AuthHandler, UserData, USER_DATA_HEADER_NAME } from "./auth.js";
 import { dispatch, paths } from "./dispatch.js";
-import { createRoom, objectIDForRoom } from "./rooms.js";
+import {
+  createRoom,
+  objectIDByRoomID,
+  roomRecordByRoomID,
+  RoomStatus,
+} from "./rooms.js";
 import { RWLock } from "@rocicorp/lock";
 import {
   ConnectionsResponse,
@@ -16,8 +21,13 @@ import {
 import * as s from "superstruct";
 import { createAuthAPIHeaders } from "./auth-api-headers.js";
 import { DurableStorage } from "../storage/durable-storage.js";
+import type { JSONValue } from "replicache";
+import { addRoutes } from "./auth-do-routes.js";
+import type { IttyRequest, IttyRouter } from "./middleware.js";
+import { Router } from "itty-router";
 
 export interface AuthDOOptions {
+  router?: IttyRouter;
   roomDO: DurableObjectNamespace;
   state: DurableObjectState;
   authHandler: AuthHandler;
@@ -35,6 +45,7 @@ export type ConnectionRecord = {
 };
 
 export class BaseAuthDO implements DurableObject {
+  private readonly _router: IttyRouter;
   private readonly _roomDO: DurableObjectNamespace;
   private readonly _state: DurableObjectState;
   // _durableStorage is a type-aware wrapper around _state.storage. It
@@ -48,8 +59,16 @@ export class BaseAuthDO implements DurableObject {
   private readonly _lock: RWLock;
 
   constructor(options: AuthDOOptions) {
-    const { roomDO, state, authHandler, authApiKey, logSink, logLevel } =
-      options;
+    const {
+      router,
+      roomDO,
+      state,
+      authHandler,
+      authApiKey,
+      logSink,
+      logLevel,
+    } = options;
+    this._router = router || Router();
     this._roomDO = roomDO;
     this._state = state;
     this._durableStorage = new DurableStorage(
@@ -62,6 +81,7 @@ export class BaseAuthDO implements DurableObject {
       .addContext("AuthDO")
       .addContext("doID", state.id.toString());
     this._lock = new RWLock();
+    addRoutes(this._router, this, this._authApiKey);
     this._lc.info?.("Starting server");
     this._lc.info?.("Version:", version);
   }
@@ -71,7 +91,12 @@ export class BaseAuthDO implements DurableObject {
     const lc = this._lc.addContext("req", randomID());
     lc.debug?.("Handling request:", request.url);
     try {
-      const resp = await dispatch(request, lc, this._authApiKey, this);
+      // Try newfangled routes first.
+      let resp = await this._router.handle(request);
+      // If not handled, use dispatch routes.
+      if (resp === undefined) {
+        resp = await dispatch(request, lc, this._authApiKey, this);
+      }
       lc.debug?.(`Returning response: ${resp.status} ${resp.statusText}`);
       return resp;
     } catch (e) {
@@ -83,6 +108,18 @@ export class BaseAuthDO implements DurableObject {
         }
       );
     }
+  }
+
+  async roomStatusByRoomID(request: IttyRequest) {
+    const roomID = request.params?.roomID;
+    if (roomID === undefined) {
+      return new Response("Missing roomID", { status: 400 });
+    }
+    const roomRecord = await roomRecordByRoomID(this._durableStorage, roomID);
+    if (roomRecord === undefined) {
+      return newJSONResponse({ status: RoomStatus.Unknown });
+    }
+    return newJSONResponse({ status: roomRecord.status });
   }
 
   async createRoom(
@@ -154,7 +191,7 @@ export class BaseAuthDO implements DurableObject {
 
       // Find the room's objectID so we can connect to it. Do this BEFORE
       // writing the connection record, in case it doesn't exist.
-      const roomObjectID = await objectIDForRoom(
+      const roomObjectID = await objectIDByRoomID(
         this._durableStorage,
         this._roomDO,
         roomID
@@ -238,7 +275,7 @@ export class BaseAuthDO implements DurableObject {
       lc.debug?.(`Sending authInvalidateForRoom request to ${roomID}`);
       // The request to the Room DO must be completed inside the write lock
       // to avoid races with connect requests for this room.
-      const roomObjectID = await objectIDForRoom(
+      const roomObjectID = await objectIDByRoomID(
         this._durableStorage,
         this._roomDO,
         roomID
@@ -318,7 +355,7 @@ export class BaseAuthDO implements DurableObject {
       lc.debug?.(`revalidating connections for ${roomID} waiting for lock.`);
       await this._lock.withWrite(async () => {
         lc.debug?.("got lock.");
-        const roomObjectID = await objectIDForRoom(
+        const roomObjectID = await objectIDByRoomID(
           this._durableStorage,
           this._roomDO,
           roomID
@@ -398,7 +435,7 @@ export class BaseAuthDO implements DurableObject {
     );
     // Send requests to room DOs in parallel
     for (const roomID of roomIDs) {
-      const roomObjectID = await objectIDForRoom(
+      const roomObjectID = await objectIDByRoomID(
         this._durableStorage,
         this._roomDO,
         roomID
@@ -433,6 +470,10 @@ export class BaseAuthDO implements DurableObject {
     }
     return errorResponses[0];
   }
+}
+
+function newJSONResponse(obj: JSONValue) {
+  return new Response(JSON.stringify(obj));
 }
 
 const CONNECTION_KEY_PREFIX = "connection/";

@@ -4,6 +4,16 @@ import { RWLock } from "@rocicorp/lock";
 import type { DurableStorage } from "../storage/durable-storage.js";
 import * as s from "superstruct";
 
+// TODO(fritz) rough GDRP TODO list:
+// - add room close() and delete()
+// - make a decision about auth api key
+// - make a decision about api paths (eg, do we want to scope
+//   /api/v1/room/id/:roomID/status a litte better?)
+// - add CLI to inspect and validate rooms
+// - Enforce that roomIDs are A-Za-z0-9_-
+// - get aaron to review APIs (don't worry too much about this
+//   right now, we can fix it up later without too much work)
+
 // RoomRecord keeps information about the room, for example the Durable
 // Object ID of the DO instance that has the room.
 export type RoomRecord = {
@@ -22,7 +32,16 @@ export type RoomRecord = {
   // need to keep track of them eg when we receive connect() we need to
   // look the objectID up by roomID.
   objectIDString: string;
+
+  status: RoomStatus;
 };
+
+export enum RoomStatus {
+  // An open room can be used by users. We will accept connect()s to it.
+  // We'll add closed and deleted statuses in the near future.
+  Open = "open",
+  Unknown = "unknown",
+}
 
 // The DruableStorage interface adds type-awareness to the DO Storage API. It
 // requires a superstruct schema for values, which we define here. I've chosen
@@ -30,9 +49,11 @@ export type RoomRecord = {
 // instead of inferring the type from a schema, because frankly I like reading
 // type definitions in the type definition language (ts) and want to keep goop
 // (superstruct) from polluting the main ideas.
+const roomStatusSchema = s.enums([RoomStatus.Open, RoomStatus.Unknown]);
 const roomRecordSchema = s.object({
   roomID: s.string(),
   objectIDString: s.string(),
+  status: roomStatusSchema,
 });
 // This assignment ensures that RoomRecord and roomRecordSchema stay in sync.
 const RoomRecord: s.Describe<RoomRecord> = roomRecordSchema;
@@ -53,7 +74,7 @@ export async function createRoom(
 
   return roomLock.withWrite(async () => {
     // Check if the room already exists.
-    if ((await getRoomRecordByRoomIDLocked(storage, roomID)) !== undefined) {
+    if ((await roomRecordByRoomIDLocked(storage, roomID)) !== undefined) {
       return new Response("room already exists", {
         status: 400,
       });
@@ -78,6 +99,7 @@ export async function createRoom(
     const roomRecord: RoomRecord = {
       roomID,
       objectIDString: objectID.toString(),
+      status: RoomStatus.Open,
     };
     const roomRecordKey = roomKeyToString(roomRecord);
     await storage.put(roomRecordKey, roomRecord);
@@ -87,28 +109,28 @@ export async function createRoom(
   });
 }
 
-export async function objectIDForRoom(
+export async function objectIDByRoomID(
   storage: DurableStorage,
   roomDO: DurableObjectNamespace,
   roomID: string
 ) {
-  const roomRecord = await getRoomRecordByRoomID(storage, roomID);
+  const roomRecord = await roomRecordByRoomID(storage, roomID);
   if (roomRecord === undefined) {
     return undefined;
   }
   return roomDO.idFromString(roomRecord.objectIDString);
 }
 
-export async function getRoomRecordByRoomID(
+export async function roomRecordByRoomID(
   storage: DurableStorage,
   roomID: string
 ) {
   return roomLock.withRead(async () => {
-    return getRoomRecordByRoomIDLocked(storage, roomID);
+    return roomRecordByRoomIDLocked(storage, roomID);
   });
 }
 
-async function getRoomRecordByRoomIDLocked(
+async function roomRecordByRoomIDLocked(
   storage: DurableStorage,
   roomID: string
 ) {
@@ -116,7 +138,7 @@ async function getRoomRecordByRoomIDLocked(
   return await storage.get(roomRecordKey, roomRecordSchema);
 }
 
-export async function getRoomRecordByObjectID(
+export async function roomRecordByObjectID(
   storage: DurableStorage,
   objectID: DurableObjectId
 ) {

@@ -2,6 +2,7 @@ import { test, expect } from "@jest/globals";
 import type { LogLevel } from "@rocicorp/logger";
 import { Mocket, TestLogSink } from "../util/test-utils.js";
 import { createAuthAPIHeaders } from "./auth-api-headers.js";
+import { roomStatusByRoomIDPath } from "./auth-do-routes.js";
 import {
   createTestDurableObjectNamespace,
   TestDurableObjectId,
@@ -55,7 +56,8 @@ function createTestFixture(
 
 async function testForwardedToAuthDO(
   testRequest: Request,
-  testResponse = new Response("success", { status: 200 })
+  testResponse = new Response("success", { status: 200 }),
+  expectAuthDOCalled = true
 ) {
   const { testEnv, authDORequests } = createTestFixture(() => testResponse);
   const worker = createWorker({
@@ -70,9 +72,13 @@ async function testForwardedToAuthDO(
     testEnv,
     new TestExecutionContext()
   );
-  expect(authDORequests.length).toEqual(1);
-  expect(authDORequests[0].req).toBe(testRequest);
-  expect(authDORequests[0].resp).toBe(response);
+  if (expectAuthDOCalled) {
+    expect(authDORequests.length).toEqual(1);
+    expect(authDORequests[0].req).toBe(testRequest);
+    expect(authDORequests[0].resp).toBe(response);
+  } else {
+    expect(authDORequests.length).toEqual(0);
+  }
 }
 
 test("worker forwards connect requests to authDO", async () => {
@@ -94,6 +100,15 @@ test("worker forwards auth api requests to authDO", async () => {
     })
   );
   await testForwardedToAuthDO(
+    new Request("https://test.roci.dev/api/auth/v0/invalidateForUser", {
+      method: "post",
+      // No auth header.
+      body: JSON.stringify({ userID: "userID1" }),
+    }),
+    new Response("", { status: 200 }),
+    false // Expect authDO not called.
+  );
+  await testForwardedToAuthDO(
     new Request("https://test.roci.dev/api/auth/v0/invalidateForRoom", {
       method: "post",
       headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
@@ -101,10 +116,48 @@ test("worker forwards auth api requests to authDO", async () => {
     })
   );
   await testForwardedToAuthDO(
+    new Request("https://test.roci.dev/api/auth/v0/invalidateForRoom", {
+      method: "post",
+      // No auth header.
+      body: JSON.stringify({ roomID: "roomID1" }),
+    }),
+    new Response("", { status: 200 }),
+    false // Expect authDO not called.
+  );
+  await testForwardedToAuthDO(
     new Request("https://test.roci.dev/api/auth/v0/invalidateAll", {
       method: "post",
       headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
     })
+  );
+  await testForwardedToAuthDO(
+    new Request("https://test.roci.dev/api/auth/v0/invalidateAll", {
+      method: "post",
+      // No auth header.
+    }),
+    new Response("", { status: 200 }),
+    false // Expect authDO not called.
+  );
+});
+
+test("worker forwards authDO api requests to authDO", async () => {
+  let path = roomStatusByRoomIDPath;
+  path = path.replace(":roomID", "ae4565");
+  await testForwardedToAuthDO(
+    new Request(`https://test.roci.dev${path}`, {
+      method: "get",
+      headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
+    })
+  );
+  await testForwardedToAuthDO(
+    new Request(`https://test.roci.dev${path}`, {
+      method: "get",
+      // Note: no auth header.
+    }),
+    new Response(null, {
+      status: 200,
+    }),
+    false // Expect authDO not called.
   );
 });
 

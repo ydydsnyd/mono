@@ -18,18 +18,23 @@ export type Handler<T = undefined> = (
 
 // TODO This definition and dispatch() itself are used by *both* the
 // authDO and the roomDO to route requests. This forces both DOs to
-// implement exactly the same handlers and routes. It'd be better if each
-// DO implemented its own dispatch, that way they could implement handlers
-// that make sense for each. If we wanted to share dispatch implementation
-// between DOs there'd be nothing stopping us from doing so, but we
-// wouldn't be *forced* to have exact parity.
+// implement exactly the same handlers and routes.
 //
-// TODO Also, we should probably use a routing library. Lots of this code
-// can go away and what remains can become more DRY if we did. Two options
-// that come to mind are itty router or express (itty more minimalist).
+// We are moving to a model where each of {worker, authDO, roomDO} implements
+// its own dispatch using itty-router. This enables each component to
+// implement whatever routes it needs and reduces boilerplate. We still
+// achieve the duplication-reduction goal of the approach here by sharing
+// routes, see how worker.ts uses authDO routes.
+//
+// Don't add new routes to this list. Instead, add them to Router in the
+// appropriate place (eg, worker or authDO).
+//
+// We should move these over to Router when we get a chance. Having two
+// ways of doing something is bad.
 export interface Handlers {
   createRoom: Handler<CreateRoomRequest>;
   connect: Handler;
+
   authInvalidateForUser: Handler<InvalidateForUserRequest>;
   authInvalidateForRoom: Handler<InvalidateForRoomRequest>;
   authInvalidateAll: Handler;
@@ -118,10 +123,6 @@ export function dispatch(
         handlers.createRoom,
         "authApiKey"
       );
-    // TOOD(fritz) make a decision about auth key for createRoom
-    // TODO(fritz) closeRoom. Must be authenticated.
-    // TODO(fritz) deleteRoom. Must be authenticated.
-    // TODO(fritz) migrate. Must be authenticated.
     case paths.connect:
       return validateAndDispatch("get", noOpValidateBody, handlers.connect);
     case paths.authInvalidateForUser:

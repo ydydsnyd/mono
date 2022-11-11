@@ -1,7 +1,10 @@
 import { LogContext, LogSink, LogLevel } from "@rocicorp/logger";
+import { Router } from "itty-router";
 import { randomID } from "../util/rand";
 import { createAuthAPIHeaders } from "./auth-api-headers";
 import { dispatch, paths } from "./dispatch";
+import { paths as authDOPaths } from "./auth-do-routes";
+import { IttyRequest, requireAuthAPIKeyMatchesEnv } from "./middleware";
 
 export interface WorkerOptions<Env extends BaseWorkerEnv> {
   getLogSink: (env: Env) => LogSink;
@@ -12,6 +15,13 @@ export interface BaseWorkerEnv {
   authDO: DurableObjectNamespace;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   REFLECT_AUTH_API_KEY?: string;
+}
+
+// Set up routes for authDO API calls that are not handled by
+// dispatch.
+const router = Router();
+for (const path of authDOPaths()) {
+  router.all(path, requireAuthAPIKeyMatchesEnv, sendToAuthDO);
 }
 
 export function createWorker<Env extends BaseWorkerEnv>(
@@ -55,14 +65,14 @@ async function scheduled(env: BaseWorkerEnv, lc: LogContext): Promise<void> {
   }
   lc.info?.(`Sending ${paths.authRevalidateConnections} request to AuthDO`);
   const resp = await sendToAuthDO(
-    env,
     new Request(
       `https://unused-reflect-auth-do.dev${paths.authRevalidateConnections}`,
       {
         headers: createAuthAPIHeaders(env.REFLECT_AUTH_API_KEY),
         method: "POST",
       }
-    )
+    ),
+    env
   );
   lc.info?.(`Response: ${resp.status} ${resp.statusText}`);
 }
@@ -73,7 +83,11 @@ async function fetch(request: Request, env: BaseWorkerEnv, lc: LogContext) {
   lc = lc.addContext("req", randomID());
   lc.debug?.("Handling request:", request.url);
   try {
-    const resp = await handleRequest(request, lc, env);
+    // Try newfangled routing first.
+    let resp = await router.handle(request, env);
+    if (resp === undefined) {
+      resp = await handleRequest(request, lc, env);
+    }
     lc.debug?.(`Returning response: ${resp.status} ${resp.statusText}`);
     return resp;
   } catch (e) {
@@ -90,7 +104,7 @@ async function handleRequest(
   env: BaseWorkerEnv
 ): Promise<Response> {
   const forwardToAuthDO = (_lc: LogContext, request: Request) =>
-    sendToAuthDO(env, request);
+    sendToAuthDO(request, env);
   return dispatch(request, lc, env.REFLECT_AUTH_API_KEY, {
     createRoom: forwardToAuthDO,
     connect: forwardToAuthDO,
@@ -118,9 +132,12 @@ async function withLogContext<Env extends BaseWorkerEnv, R>(
   }
 }
 
-function sendToAuthDO(env: BaseWorkerEnv, request: Request): Promise<Response> {
+function sendToAuthDO(
+  request: IttyRequest,
+  env: BaseWorkerEnv
+): Promise<Response> {
   const { authDO } = env;
   const id = authDO.idFromName("auth");
   const stub = authDO.get(id);
-  return stub.fetch(request);
+  return stub.fetch(request as Request);
 }
