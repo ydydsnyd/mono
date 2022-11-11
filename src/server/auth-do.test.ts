@@ -19,6 +19,7 @@ import {
 } from "./rooms.js";
 import { DurableStorage } from "../storage/durable-storage.js";
 import { roomRecordsPath, roomStatusByRoomIDPath } from "./auth-do-routes.js";
+import { newCreateRoomRequest, newRoomStatusRequest } from "../client/room.js";
 
 const TEST_AUTH_API_KEY = "TEST_REFLECT_AUTH_API_KEY_TEST";
 const { authDO } = getMiniflareBindings();
@@ -37,20 +38,14 @@ function isAuthRequest(request: Request) {
   return request.url.indexOf("/api/auth/") !== -1;
 }
 
-function newCreateRoomRequest(roomID: string) {
-  return new Request(`https://test.roci.dev/createRoom`, {
-    method: "post",
-    headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
-    body: JSON.stringify({
-      roomID,
-    }),
-  });
-}
-
 async function createCreateRoomTestFixture() {
   const testRoomID = "testRoomID1";
 
-  const testRequest = newCreateRoomRequest(testRoomID);
+  const testRequest = newCreateRoomRequest(
+    "https://test.roci.dev",
+    TEST_AUTH_API_KEY,
+    testRoomID
+  );
 
   const storage = await getMiniflareDurableObjectStorage(authDOID);
   const state = new TestDurableObjectState(authDOID, storage);
@@ -191,14 +186,6 @@ test("createRoom returns 500 if roomDO createRoom fails", async () => {
   expect(rr).toBeUndefined();
 });
 
-function newRoomStatusByRoomIDRequest(roomID: string) {
-  const path = roomStatusByRoomIDPath.replace(":roomID", roomID);
-  return new Request(`https://test.roci.dev${path}`, {
-    method: "get",
-    headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
-  });
-}
-
 test("roomStatusByRoomID returns status for a room that exists", async () => {
   const { testRoomID, testRequest, testRoomDO, state } =
     await createCreateRoomTestFixture();
@@ -217,7 +204,11 @@ test("roomStatusByRoomID returns status for a room that exists", async () => {
   const response = await authDO.fetch(testRequest);
   expect(response.status).toEqual(200);
 
-  const statusRequest = newRoomStatusByRoomIDRequest(testRoomID);
+  const statusRequest = newRoomStatusRequest(
+    "https://test.roci.dev",
+    TEST_AUTH_API_KEY,
+    testRoomID
+  );
   const statusResponse = await authDO.fetch(statusRequest);
   expect(statusResponse.status).toEqual(200);
   expect(await statusResponse.json()).toMatchObject({
@@ -239,7 +230,11 @@ test("roomStatusByRoomID returns unknown for a room that does not exist", async 
     logLevel: "debug",
   });
 
-  const statusRequest = newRoomStatusByRoomIDRequest("no-such-room");
+  const statusRequest = newRoomStatusRequest(
+    "https://test.roci.dev",
+    TEST_AUTH_API_KEY,
+    "no-such-room"
+  );
   const statusResponse = await authDO.fetch(statusRequest);
   expect(statusResponse.status).toEqual(200);
   expect(await statusResponse.json()).toMatchObject({
@@ -907,7 +902,11 @@ test("authInvalidateForRoom when request to roomDO is successful", async () => {
 });
 
 async function createRoom(authDO: BaseAuthDO, roomID: string) {
-  const createRoomRequest = newCreateRoomRequest(roomID);
+  const createRoomRequest = newCreateRoomRequest(
+    "https://test.roci.dev/",
+    TEST_AUTH_API_KEY,
+    roomID
+  );
   const resp = await authDO.fetch(createRoomRequest);
   expect(resp.status).toEqual(200);
 }

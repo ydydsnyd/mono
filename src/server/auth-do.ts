@@ -15,7 +15,6 @@ import { RWLock } from "@rocicorp/lock";
 import {
   ConnectionsResponse,
   connectionsResponseSchema,
-  CreateRoomRequest,
   InvalidateForRoomRequest,
   InvalidateForUserRequest,
 } from "../protocol/api/auth.js";
@@ -26,6 +25,7 @@ import type { JSONValue } from "replicache";
 import { addRoutes } from "./auth-do-routes.js";
 import type { IttyRequest, IttyRouter } from "./middleware.js";
 import { Router } from "itty-router";
+import type { CreateRoomRequest } from "src/protocol/api/room.js";
 
 export interface AuthDOOptions {
   router?: IttyRouter;

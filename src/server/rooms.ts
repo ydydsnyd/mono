@@ -1,19 +1,17 @@
 import type { LogContext } from "@rocicorp/logger";
-import type { CreateRoomRequest } from "../protocol/api/auth.js";
+import type { CreateRoomRequest } from "../protocol/api/room.js";
 import { RWLock } from "@rocicorp/lock";
 import type { DurableStorage } from "../storage/durable-storage.js";
 import * as s from "superstruct";
 
 // TODO(fritz) rough GDRP TODO list:
 // - add room close() and delete()
-// - add calls to put reflect into and out of maintenance mode
 // - make a decision about auth api key
-// - make a decision about api paths (eg, do we want to scope
-//   /api/v1/room/id/:roomID/status a litte better?)
-// - add CLI to inspect and validate rooms
 // - Enforce that roomIDs are A-Za-z0-9_-
 // - get aaron to review APIs (don't worry too much about this
 //   right now, we can fix it up later without too much work)
+// - store roomID in RoomDO
+// - actually take the jurisdiction bit in the CreateRoomRequest
 
 // RoomRecord keeps information about the room, for example the Durable
 // Object ID of the DO instance that has the room.

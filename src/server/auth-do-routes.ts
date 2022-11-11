@@ -32,7 +32,7 @@ export function addRoutes(
 // Note: we define the path and the handler in the same place like this
 // so it's easy to understand what each route does.
 
-export const roomStatusByRoomIDPath = "/api/v1/room/id/:roomID/status";
+export const roomStatusByRoomIDPath = "/api/room/v0/room/id/:roomID/status";
 routes.push({
   path: roomStatusByRoomIDPath,
   add: (
@@ -50,7 +50,7 @@ routes.push({
   },
 });
 
-export const roomRecordsPath = "/api/v1/rooms";
+export const roomRecordsPath = "/api/room/v0/rooms";
 routes.push({
   path: roomRecordsPath,
   add: (

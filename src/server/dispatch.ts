@@ -1,6 +1,4 @@
 import {
-  CreateRoomRequest,
-  createRoomRequestSchema,
   InvalidateForRoomRequest,
   invalidateForRoomRequestSchema,
   InvalidateForUserRequest,
@@ -8,6 +6,10 @@ import {
 } from "../protocol/api/auth";
 import { Struct, validate } from "superstruct";
 import type { LogContext } from "@rocicorp/logger";
+import {
+  CreateRoomRequest,
+  createRoomRequestSchema,
+} from "../protocol/api/room";
 
 export type Handler<T = undefined> = (
   this: Handlers,
