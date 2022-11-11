@@ -18,7 +18,7 @@ import {
   RoomStatus,
 } from "./rooms.js";
 import { DurableStorage } from "../storage/durable-storage.js";
-import { roomStatusByRoomIDPath } from "./auth-do-routes.js";
+import { roomRecordsPath, roomStatusByRoomIDPath } from "./auth-do-routes.js";
 
 const TEST_AUTH_API_KEY = "TEST_REFLECT_AUTH_API_KEY_TEST";
 const { authDO } = getMiniflareBindings();
@@ -269,6 +269,88 @@ test("roomStatusByRoomID requires authApiKey", async () => {
 
   const statusResponse = await authDO.fetch(statusRequest);
   expect(statusResponse.status).toEqual(401);
+});
+
+function newRoomRecordsRequest() {
+  return new Request(`https://test.roci.dev${roomRecordsPath}`, {
+    method: "get",
+    headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
+  });
+}
+
+test("roomRecords returns empty array if no rooms exist", async () => {
+  const { testRoomDO, state } = await createCreateRoomTestFixture();
+
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async () => {
+      throw "should not be called";
+    },
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
+
+  const roomRecordsRequest = newRoomRecordsRequest();
+  const roomRecordsResponse = await authDO.fetch(roomRecordsRequest);
+  expect(roomRecordsResponse.status).toEqual(200);
+  const gotRecords = await roomRecordsResponse.json();
+  expect(gotRecords).toEqual([]);
+});
+
+test("roomRecords returns rooms that exists", async () => {
+  const { testRoomDO, state } = await createCreateRoomTestFixture();
+
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async () => {
+      throw "should not be called";
+    },
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
+  await createRoom(authDO, "1");
+  await createRoom(authDO, "2");
+  await createRoom(authDO, "3");
+
+  const roomRecordsRequest = newRoomRecordsRequest();
+  const roomRecordsResponse = await authDO.fetch(roomRecordsRequest);
+  expect(roomRecordsResponse.status).toEqual(200);
+  const gotRecords = await roomRecordsResponse.json();
+  expect(gotRecords).toMatchObject([
+    { roomID: "1" },
+    { roomID: "2" },
+    { roomID: "3" },
+  ]);
+});
+
+test("roomRecords requires authApiKey", async () => {
+  const { testRoomDO, state } = await createCreateRoomTestFixture();
+
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async () => {
+      throw "should not be called";
+    },
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
+  await createRoom(authDO, "1");
+
+  const roomRecordsRequest = new Request(
+    `https://test.roci.dev${roomRecordsPath}`,
+    {
+      method: "get",
+      // No auth header.
+    }
+  );
+  const roomRecordsResponse = await authDO.fetch(roomRecordsRequest);
+  expect(roomRecordsResponse.status).toEqual(401);
 });
 
 function createConnectTestFixture(

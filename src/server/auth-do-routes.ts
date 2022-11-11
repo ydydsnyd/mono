@@ -49,3 +49,21 @@ routes.push({
     );
   },
 });
+
+export const roomRecordsPath = "/api/v1/rooms";
+routes.push({
+  path: roomRecordsPath,
+  add: (
+    router: IttyRouter,
+    authDO: BaseAuthDO,
+    authApiKey: string | undefined
+  ) => {
+    router.get(
+      roomRecordsPath,
+      requireAuthAPIKeyMatches(authApiKey),
+      async (request: IttyRequest) => {
+        return authDO.allRoomRecords(request);
+      }
+    );
+  },
+});

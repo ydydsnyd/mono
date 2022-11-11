@@ -8,6 +8,7 @@ import {
   createRoom,
   objectIDByRoomID,
   roomRecordByRoomID,
+  roomRecords,
   RoomStatus,
 } from "./rooms.js";
 import { RWLock } from "@rocicorp/lock";
@@ -120,6 +121,12 @@ export class BaseAuthDO implements DurableObject {
       return newJSONResponse({ status: RoomStatus.Unknown });
     }
     return newJSONResponse({ status: roomRecord.status });
+  }
+
+  async allRoomRecords(_: IttyRequest) {
+    const roomIDToRecords = await roomRecords(this._durableStorage);
+    const records = Array.from(roomIDToRecords.values());
+    return newJSONResponse(records);
   }
 
   async createRoom(

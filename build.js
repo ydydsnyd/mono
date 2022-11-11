@@ -24,6 +24,14 @@ function buildExample() {
   });
 }
 
+function buildCLI() {
+  return buildInternal({
+    format: "esm",
+    entryPoints: [path.join(__dirname, "tool", "cli.ts")],
+    outfile: path.join(__dirname, "out", "cli.js"),
+  });
+}
+
 /**
  * @param {Partial<import("esbuild").BuildOptions>} options
  */
@@ -38,7 +46,7 @@ function buildInternal(options) {
 
 try {
   // @ts-ignore
-  await Promise.all([buildESM(), buildExample()]);
+  await Promise.all([buildESM(), buildExample(), buildCLI()]);
 } catch {
   process.exitCode = 1;
 }

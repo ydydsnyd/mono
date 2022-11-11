@@ -6,6 +6,7 @@ import * as s from "superstruct";
 
 // TODO(fritz) rough GDRP TODO list:
 // - add room close() and delete()
+// - add calls to put reflect into and out of maintenance mode
 // - make a decision about auth api key
 // - make a decision about api paths (eg, do we want to scope
 //   /api/v1/room/id/:roomID/status a litte better?)
@@ -154,6 +155,10 @@ export async function roomRecordByObjectID(
     }
   }
   return undefined;
+}
+
+export async function roomRecords(storage: DurableStorage) {
+  return storage.list({ prefix: ROOM_KEY_PREFIX }, roomRecordSchema);
 }
 
 // Storage key types are intentionally not exported so that other modules

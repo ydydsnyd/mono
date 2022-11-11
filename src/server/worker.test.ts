@@ -2,7 +2,7 @@ import { test, expect } from "@jest/globals";
 import type { LogLevel } from "@rocicorp/logger";
 import { Mocket, TestLogSink } from "../util/test-utils.js";
 import { createAuthAPIHeaders } from "./auth-api-headers.js";
-import { roomStatusByRoomIDPath } from "./auth-do-routes.js";
+import { roomRecordsPath, roomStatusByRoomIDPath } from "./auth-do-routes.js";
 import {
   createTestDurableObjectNamespace,
   TestDurableObjectId,
@@ -141,24 +141,33 @@ test("worker forwards auth api requests to authDO", async () => {
 });
 
 test("worker forwards authDO api requests to authDO", async () => {
-  let path = roomStatusByRoomIDPath;
-  path = path.replace(":roomID", "ae4565");
-  await testForwardedToAuthDO(
-    new Request(`https://test.roci.dev${path}`, {
-      method: "get",
-      headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
-    })
+  const roomStatusByRoomIDPathWithRoomID = roomStatusByRoomIDPath.replace(
+    ":roomID",
+    "ae4565"
   );
-  await testForwardedToAuthDO(
-    new Request(`https://test.roci.dev${path}`, {
-      method: "get",
-      // Note: no auth header.
-    }),
-    new Response(null, {
-      status: 200,
-    }),
-    false // Expect authDO not called.
-  );
+  const paths = [roomStatusByRoomIDPathWithRoomID, roomRecordsPath];
+  for (const path of paths) {
+    await testForwarding(path);
+  }
+
+  async function testForwarding(path: string) {
+    await testForwardedToAuthDO(
+      new Request(`https://test.roci.dev${path}`, {
+        method: "get",
+        headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
+      })
+    );
+    await testForwardedToAuthDO(
+      new Request(`https://test.roci.dev${path}`, {
+        method: "get",
+        // Note: no auth header.
+      }),
+      new Response(null, {
+        status: 200,
+      }),
+      false // Expect authDO not called.
+    );
+  }
 });
 
 test("on scheduled event sends api/auth/v0/revalidateConnections to AuthDO when REFLECT_AUTH_API_KEY is defined", async () => {
