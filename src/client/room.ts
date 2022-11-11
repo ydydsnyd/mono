@@ -12,14 +12,17 @@ import type { CreateRoomRequest } from "src/protocol/api/room";
  *   "https://reflect.example.workers.dev".
  * @param {string} authApiKey - The auth API key for the reflect server.
  * @param {string} roomID - The ID of the room to create.
+ * @param {boolean} [requireEUStorage=false] - Whether the room should be created in the EU.
+ *   Do not set this to true unless you are sure you need it.
  */
 export async function createRoom(
   reflectServerURL: string,
   authApiKey: string,
-  roomID: string
+  roomID: string,
+  requireEUStorage = false
 ): Promise<void> {
   const resp = await fetch(
-    newCreateRoomRequest(reflectServerURL, authApiKey, roomID)
+    newCreateRoomRequest(reflectServerURL, authApiKey, roomID, requireEUStorage)
   );
   if (!resp.ok) {
     throw new Error(`Failed to create room: ${resp.status} ${resp.statusText}`);
@@ -35,6 +38,7 @@ export async function createRoom(
  *   "https://reflect.example.workers.dev".
  * @param {string} authApiKey - The auth API key for the reflect server.
  * @param {string} roomID - The ID of the room to return status of.
+ *
  * @returns {Promise<RoomStatus>} - The status of the room.
  */
 export async function roomStatus(
@@ -84,17 +88,20 @@ export function newRoomStatusRequest(
  *   "https://reflect.example.workers.dev".
  * @param {string} authApiKey - The auth API key for the reflect server.
  * @param {string} roomID - The ID of the room to create.
+ * @param {boolean} [requireEUStorage=false] - Whether the room should be created in the EU.
+ *   Do not set this to true unless you are sure you need it.
  * @returns {Request} - The Request to create the room.
  */
 export function newCreateRoomRequest(
   reflectServerURL: string,
   authApiKey: string,
-  roomID: string
+  roomID: string,
+  requireEUStorage = false
 ) {
   if (reflectServerURL[reflectServerURL.length - 1] === "/") {
     reflectServerURL = reflectServerURL.slice(0, -1);
   }
-  const req: CreateRoomRequest = { roomID };
+  const req: CreateRoomRequest = { roomID, requireEUStorage };
   return new Request(`${reflectServerURL}/createRoom`, {
     method: "post",
     headers: createAuthAPIHeaders(authApiKey),

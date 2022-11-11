@@ -1,8 +1,36 @@
 import { test, expect } from "@jest/globals";
+import { newCreateRoomRequest } from "../client/room.js";
 import { TestLogSink } from "../util/test-utils.js";
 import { version } from "../util/version.js";
 import { TestDurableObjectId } from "./do-test-utils.js";
 import { BaseRoomDO } from "./room-do.js";
+
+test("sets roomID in createRoom", async () => {
+  const testLogSink = new TestLogSink();
+  const doID = new TestDurableObjectId("test-do-id");
+  const storage = await getMiniflareDurableObjectStorage(doID);
+  const roomDO = new BaseRoomDO({
+    mutators: {},
+    disconnectHandler: () => Promise.resolve(),
+    state: {
+      id: doID,
+      storage,
+    } as unknown as DurableObjectState,
+    authApiKey: "API KEY",
+    logSink: testLogSink,
+    logLevel: "info",
+    allowUnconfirmedWrites: true,
+  });
+  const createRoomRequest = newCreateRoomRequest(
+    "http://example.com/",
+    "API KEY",
+    "testRoomID"
+  );
+  const response = await roomDO.fetch(createRoomRequest);
+  expect(response.status).toBe(200);
+  const roomID = await roomDO.roomID();
+  expect(roomID).toBe("testRoomID");
+});
 
 test("Logs version during construction", async () => {
   const testLogSink = new TestLogSink();

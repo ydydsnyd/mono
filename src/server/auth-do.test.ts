@@ -186,6 +186,44 @@ test("createRoom returns 500 if roomDO createRoom fails", async () => {
   expect(rr).toBeUndefined();
 });
 
+test("createRoom sets jurisdiction if requested", async () => {
+  const { testRoomID, testRoomDO, state } = await createCreateRoomTestFixture();
+
+  const testRequest = newCreateRoomRequest(
+    "https://test.roci.dev",
+    TEST_AUTH_API_KEY,
+    testRoomID,
+    true
+  );
+
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async () => {
+      throw "should not be called";
+    },
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
+
+  let gotJurisdiction = false;
+  testRoomDO.newUniqueId = (
+    options: DurableObjectNamespaceNewUniqueIdOptions
+  ) => {
+    if (options?.jurisdiction === "eu") {
+      gotJurisdiction = true;
+    }
+    return new TestDurableObjectId("unique-room-do-0");
+  };
+
+  const response = await authDO.fetch(testRequest);
+  expect(response.status).toEqual(200);
+  expect(gotJurisdiction).toEqual(true);
+  const rr = await getRoomRecord(state.storage, testRoomID);
+  expect(rr?.requireEUStorage).toEqual(true);
+});
+
 test("roomStatusByRoomID returns status for a room that exists", async () => {
   const { testRoomID, testRequest, testRoomDO, state } =
     await createCreateRoomTestFixture();

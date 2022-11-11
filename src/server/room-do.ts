@@ -20,6 +20,10 @@ import { closeConnections, getConnections } from "./connections.js";
 import type { DisconnectHandler } from "./disconnect.js";
 import { DurableStorage } from "../storage/durable-storage.js";
 import { getConnectedClients } from "../types/connected-clients.js";
+import * as s from "superstruct";
+import type { CreateRoomRequest } from "src/protocol/api/room.js";
+
+const roomIDKey = "/system/roomID";
 
 export interface RoomDOOptions<MD extends MutatorDefs> {
   mutators: MD;
@@ -70,16 +74,8 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
   async fetch(request: Request): Promise<Response> {
     try {
-      // TODO(fritz) Yay we can get rid of this. We can set the
-      // roomID in roomDO.createRoom and just use it here.
-
-      // This is ugly, but there is no way to get
-      // the DO name (as opposed to the DO id), so instead
-      // we get it from the first request carrying a roomID
-      // param (the roomID is the DO name).
       if (!this._lcHasRoomIdContext) {
-        const url = new URL(request.url);
-        const roomID = url.searchParams.get("roomID");
+        const roomID = await this.roomID();
         if (roomID) {
           this._lc = this._lc.addContext("roomID", roomID);
           this._lcHasRoomIdContext = true;
@@ -102,11 +98,35 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     }
   }
 
+  private async _setRoomID(roomID: string) {
+    return this._storage.put(roomIDKey, roomID);
+  }
+
+  async roomID(): Promise<string> {
+    let roomID = "unknown";
+    try {
+      const maybeRoomID = await this._storage.get(roomIDKey, s.string());
+      if (maybeRoomID !== undefined) {
+        roomID = maybeRoomID;
+      }
+    } catch (e) {
+      this._lc.error?.(e);
+    }
+    if (roomID === "unknown") {
+      this._lc.error?.("roomID is unknown");
+    }
+    return Promise.resolve(roomID);
+  }
+
   // A more appropriate name might be init(), but this is easy since authDO and
   // roomDO share dispatch and handlers.
-  async createRoom() {
-    // TODO(fritz) get the roomID out of the request and store it in storage
-    // for use in the log context.
+  async createRoom(
+    _lc: LogContext,
+    _request: Request,
+    createRoomRequest: CreateRoomRequest
+  ) {
+    const { roomID } = createRoomRequest;
+    await this._setRoomID(roomID);
     return new Response("ok");
   }
 

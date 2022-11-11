@@ -10,8 +10,6 @@ import * as s from "superstruct";
 // - Enforce that roomIDs are A-Za-z0-9_-
 // - get aaron to review APIs (don't worry too much about this
 //   right now, we can fix it up later without too much work)
-// - store roomID in RoomDO
-// - actually take the jurisdiction bit in the CreateRoomRequest
 
 // RoomRecord keeps information about the room, for example the Durable
 // Object ID of the DO instance that has the room.
@@ -31,6 +29,9 @@ export type RoomRecord = {
   // need to keep track of them eg when we receive connect() we need to
   // look the objectID up by roomID.
   objectIDString: string;
+
+  // Indicates whether the room is pinned in the EU.
+  requireEUStorage: boolean;
 
   status: RoomStatus;
 };
@@ -52,6 +53,7 @@ const roomStatusSchema = s.enums([RoomStatus.Open, RoomStatus.Unknown]);
 const roomRecordSchema = s.object({
   roomID: s.string(),
   objectIDString: s.string(),
+  requireEUStorage: s.boolean(),
   status: roomStatusSchema,
 });
 // This assignment ensures that RoomRecord and roomRecordSchema stay in sync.
@@ -79,9 +81,14 @@ export async function createRoom(
       });
     }
 
+    const options: DurableObjectNamespaceNewUniqueIdOptions = {};
+    if (validatedBody.requireEUStorage) {
+      options["jurisdiction"] = "eu";
+    }
+
     // Instantiate it so it will be listed in the namespace by the CF API,
     // and also so that it can do whatever it needs to initialize itself.
-    const objectID = await roomDO.newUniqueId();
+    const objectID = await roomDO.newUniqueId(options);
     const newRoomDOStub = roomDO.get(objectID);
     const response = await newRoomDOStub.fetch(request);
     if (!response.ok) {
@@ -98,6 +105,7 @@ export async function createRoom(
     const roomRecord: RoomRecord = {
       roomID,
       objectIDString: objectID.toString(),
+      requireEUStorage: validatedBody.requireEUStorage,
       status: RoomStatus.Open,
     };
     const roomRecordKey = roomKeyToString(roomRecord);
