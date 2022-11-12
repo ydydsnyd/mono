@@ -14,7 +14,7 @@ import { createAuthAPIHeaders } from "./auth-api-headers.js";
 import {
   type RoomRecord,
   roomRecordByRoomID as getRoomRecordOriginal,
-  roomRecordByObjectID as getRoomRecordByObjectIDOriginal,
+  roomRecordByObjectIDForTest as getRoomRecordByObjectIDOriginal,
   RoomStatus,
 } from "./rooms.js";
 import { DurableStorage } from "../storage/durable-storage.js";

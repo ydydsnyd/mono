@@ -48,7 +48,7 @@ export enum RoomStatus {
   Unknown = "unknown",
 }
 
-// The DruableStorage interface adds type-awareness to the DO Storage API. It
+// The DurableStorage interface adds type-awareness to the DO Storage API. It
 // requires a superstruct schema for values, which we define here. I've chosen
 // the slightly non-DRY path of having a separate ts type definition and schema,
 // instead of inferring the type from a schema, because frankly I like reading
@@ -180,9 +180,12 @@ export async function deleteRoom(
     return new Response("Missing roomID", { status: 400 });
   }
 
-  // Note no lock spanning this code. It doesn't seem necessary, and
-  // we don't want to hold a lock across calling delete in the roomDO
-  // anwyay because it could take a while.
+  // The locking here is iffy. We generally lock when updating a
+  // room record, but here we don't want to lock the room while
+  // calling out to the roomDO to delete its data. So its possible
+  // something else could update the room record while we're deleting.
+  // We re-read the room record after deleting the room data in case.
+  // But still this is kinda smelly.
   const roomRecord = await roomRecordByRoomID(storage, roomID);
   if (roomRecord === undefined) {
     return new Response("no such room", {
@@ -212,10 +215,16 @@ export async function deleteRoom(
   }
 
   return roomLock.withWrite(async () => {
-    roomRecord.status = RoomStatus.Deleted;
-    const roomRecordKey = roomKeyToString(roomRecord);
-    await storage.put(roomRecordKey, roomRecord);
-    lc.debug?.(`deleted room ${JSON.stringify(roomRecord)}`);
+    const freshRoomRecord = await roomRecordByRoomIDLocked(storage, roomID);
+    if (freshRoomRecord === undefined) {
+      return new Response(`room record for ${roomID} disappeared?`, {
+        status: 500,
+      });
+    }
+    freshRoomRecord.status = RoomStatus.Deleted;
+    const roomRecordKey = roomKeyToString(freshRoomRecord);
+    await storage.put(roomRecordKey, freshRoomRecord);
+    lc.debug?.(`deleted room ${JSON.stringify(freshRoomRecord)}`);
     return new Response("success");
   });
 }
@@ -249,7 +258,7 @@ async function roomRecordByRoomIDLocked(
   return await storage.get(roomRecordKey, roomRecordSchema);
 }
 
-export async function roomRecordByObjectID(
+export async function roomRecordByObjectIDForTest(
   storage: DurableStorage,
   objectID: DurableObjectId
 ) {

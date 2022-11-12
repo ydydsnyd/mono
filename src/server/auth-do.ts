@@ -52,7 +52,8 @@ export class BaseAuthDO implements DurableObject {
   private readonly _roomDO: DurableObjectNamespace;
   private readonly _state: DurableObjectState;
   // _durableStorage is a type-aware wrapper around _state.storage. It
-  // disables the input gate. Anything that needs to read *values* out of
+  // always disables the input gate. The output gate is configured in the
+  // constructor below. Anything that needs to read *values* out of
   // storage should probably use _durableStorage, and not _state.storage
   // directly.
   private readonly _durableStorage: DurableStorage;
@@ -455,6 +456,7 @@ export class BaseAuthDO implements DurableObject {
       `Sending ${invalidateRequestName} requests to ${roomIDs.length} rooms`
     );
     // Send requests to room DOs in parallel
+    const errorResponses = [];
     for (const roomID of roomIDs) {
       const roomObjectID = await objectIDByRoomID(
         this._durableStorage,
@@ -462,22 +464,20 @@ export class BaseAuthDO implements DurableObject {
         roomID
       );
       if (roomObjectID === undefined) {
-        // Note this stops the iteration if this room is not found, should we try to
-        // continue instead?
-        return new Response("room not found", {
-          status: 404,
-        });
+        const msg = `No objectID for ${roomID}, skipping`;
+        lc.error?.(msg);
+        errorResponses.push(new Response(msg, { status: 500 }));
+        continue;
       }
 
       const stub = this._roomDO.get(roomObjectID);
       responsePromises.push(stub.fetch(request));
     }
-    const errorResponses = [];
     for (let i = 0; i < responsePromises.length; i++) {
       const response = await responsePromises[i];
       if (!response.ok) {
         errorResponses.push(response);
-        lc.debug?.(
+        lc.error?.(
           `Received error response from ${roomIDs[i]}. ${
             response.status
           } ${await response.text}`
