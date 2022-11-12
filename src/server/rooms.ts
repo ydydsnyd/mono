@@ -6,7 +6,6 @@ import * as s from "superstruct";
 import type { IttyRequest } from "./middleware.js";
 
 // TODO(fritz) rough GDRP TODO list:
-// - Enforce that roomIDs are A-Za-z0-9_-
 // - get aaron to review APIs (don't worry too much about this
 //   right now, we can fix it up later without too much work)
 // - do we need to make changes to the client to support the
@@ -83,6 +82,12 @@ export async function createRoom(
   // Note: this call was authenticated by dispatch, so no need to check for
   // authApiKey here.
   const { roomID } = validatedBody;
+
+  if (!roomID.match(/^[A-Za-z0-9_-]+$/)) {
+    return new Response("Invalid roomID (must match [A-Za-z0-9_-]+)", {
+      status: 400,
+    });
+  }
 
   return roomLock.withWrite(async () => {
     // Check if the room already exists.

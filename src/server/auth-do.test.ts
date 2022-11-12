@@ -128,6 +128,32 @@ test("createRoom creates a room and doesn't allow it to be re-created", async ()
   expect(roomDOcreateRoomCounts.size).toEqual(1);
 });
 
+test("createRoom requires roomIDs to not contain weird characters", async () => {
+  const { testRoomID, testRoomDO, state } = await createCreateRoomTestFixture();
+
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async () => {
+      throw "should not be called";
+    },
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
+
+  const roomIDs = ["", " ", "foo/", testRoomID + "!", "$", " foo ", "🤷"];
+  for (const roomID of roomIDs) {
+    const testRequest = newCreateRoomRequest(
+      "https://test.roci.dev",
+      TEST_AUTH_API_KEY,
+      roomID
+    );
+    const response = await authDO.fetch(testRequest);
+    expect(response.status).toEqual(400);
+  }
+});
+
 // Tiny wrappers that hide the conversion from raw DO storage to DurableStorage.
 async function getRoomRecord(storage: DurableObjectStorage, roomID: string) {
   return getRoomRecordOriginal(new DurableStorage(storage, false), roomID);
@@ -806,7 +832,7 @@ test("connect percent escapes components of the connection key", async () => {
     encodedTestAuth,
   } = createConnectTestFixture({
     testUserID: "/testUserID/?",
-    testRoomID: "/testRoomID/=",
+    testRoomID: "testRoomID",
     testClientID: "/testClientID/&",
   });
 
@@ -837,7 +863,7 @@ test("connect percent escapes components of the connection key", async () => {
   );
   expect((await storage.list({ prefix: "connection/" })).size).toEqual(1);
   const connectionRecord = (await storage.get(
-    "connection/%2FtestUserID%2F%3F/%2FtestRoomID%2F%3D/%2FtestClientID%2F/"
+    "connection/%2FtestUserID%2F%3F/testRoomID/%2FtestClientID%2F/"
   )) as ConnectionRecord;
   expect(connectionRecord).toBeDefined();
   expect(connectionRecord.connectTimestamp).toEqual(testTime);
@@ -995,19 +1021,19 @@ test("authInvalidateForUser when connection ids have chars that need to be perce
   const storage = await getMiniflareDurableObjectStorage(authDOID);
   const state = new TestDurableObjectState(authDOID, storage);
   await storage.put(
-    "connection/%2FtestUserID%2F%3F/%2FtestRoomID1%2F%3D/%2FtestClientID%2F/",
+    "connection/%2FtestUserID%2F%3F/testRoomID1/%2FtestClientID%2F/",
     {
       connectTimestamp: 1000,
     }
   );
   await storage.put(
-    "connection/%2FtestUserID%2F%3F/%2FtestRoomID1%2F%3D/%2FtestClientID2%2F/",
+    "connection/%2FtestUserID%2F%3F/testRoomID1/%2FtestClientID2%2F/",
     {
       connectTimestamp: 1000,
     }
   );
   await storage.put(
-    "connection/%2FtestUserID%2F%3F/%2FtestRoomID2%2F%3D/%2FtestClientID%2F/",
+    "connection/%2FtestUserID%2F%3F/testRoomID2/%2FtestClientID%2F/",
     {
       connectTimestamp: 1000,
     }
@@ -1049,14 +1075,14 @@ test("authInvalidateForUser when connection ids have chars that need to be perce
     logSink,
     logLevel: "debug",
   });
-  await createRoom(authDO, "/testRoomID1/=");
-  await createRoom(authDO, "/testRoomID2/=");
+  await createRoom(authDO, "testRoomID1");
+  await createRoom(authDO, "testRoomID2");
 
   const response = await authDO.fetch(testRequest);
 
   expect(roomDORequestCountsByRoomID.size).toEqual(2);
-  expect(roomDORequestCountsByRoomID.get("/testRoomID1/=")).toEqual(1);
-  expect(roomDORequestCountsByRoomID.get("/testRoomID2/=")).toEqual(1);
+  expect(roomDORequestCountsByRoomID.get("testRoomID1")).toEqual(1);
+  expect(roomDORequestCountsByRoomID.get("testRoomID2")).toEqual(1);
   expect(response.status).toEqual(200);
 });
 
@@ -1293,7 +1319,7 @@ test("authInvalidateAll when requests to roomDOs are successful", async () => {
     connectTimestamp: 1000,
   });
   await storage.put(
-    "connection/%2FtestUserID%2F%3F/%2FtestRoomID%2F%3D/%2FtestClientID%2F/",
+    "connection/%2FtestUserID%2F%3F/testRoomID/%2FtestClientID%2F/",
     {
       connectTimestamp: 1000,
     }
@@ -1333,16 +1359,16 @@ test("authInvalidateAll when requests to roomDOs are successful", async () => {
   await createRoom(authDO, "testRoomID1");
   await createRoom(authDO, "testRoomID2");
   await createRoom(authDO, "testRoomID3");
-  await createRoom(authDO, "/testRoomID/=");
+  await createRoom(authDO, "testRoomID");
 
   const response = await authDO.fetch(testRequest);
+  expect(response.status).toEqual(200);
 
   expect(roomDORequestCountsByRoomID.size).toEqual(4);
   expect(roomDORequestCountsByRoomID.get("testRoomID1")).toEqual(1);
   expect(roomDORequestCountsByRoomID.get("testRoomID2")).toEqual(1);
   expect(roomDORequestCountsByRoomID.get("testRoomID3")).toEqual(1);
-  expect(roomDORequestCountsByRoomID.get("/testRoomID/=")).toEqual(1);
-  expect(response.status).toEqual(200);
+  expect(roomDORequestCountsByRoomID.get("testRoomID")).toEqual(1);
 });
 
 test("authInvalidateAll when any request to roomDOs returns error response", async () => {
@@ -1372,7 +1398,7 @@ test("authInvalidateAll when any request to roomDOs returns error response", asy
     connectTimestamp: 1000,
   });
   await storage.put(
-    "connection/%2FtestUserID%2F%3F/%2FtestRoomID%2F%3D/%2FtestClientID%2F/",
+    "connection/%2FtestUserID%2F%3F/testRoomID/%2FtestClientID%2F/",
     {
       connectTimestamp: 1000,
     }
@@ -1417,16 +1443,16 @@ test("authInvalidateAll when any request to roomDOs returns error response", asy
   await createRoom(authDO, "testRoomID1");
   await createRoom(authDO, "testRoomID2");
   await createRoom(authDO, "testRoomID3");
-  await createRoom(authDO, "/testRoomID/=");
+  await createRoom(authDO, "testRoomID");
 
   const response = await authDO.fetch(testRequest);
+  expect(response.status).toEqual(500);
 
   expect(roomDORequestCountsByRoomID.size).toEqual(4);
   expect(roomDORequestCountsByRoomID.get("testRoomID1")).toEqual(1);
   expect(roomDORequestCountsByRoomID.get("testRoomID2")).toEqual(1);
   expect(roomDORequestCountsByRoomID.get("testRoomID3")).toEqual(1);
-  expect(roomDORequestCountsByRoomID.get("/testRoomID/=")).toEqual(1);
-  expect(response.status).toEqual(500);
+  expect(roomDORequestCountsByRoomID.get("testRoomID")).toEqual(1);
   expect(await response.text()).toEqual(
     "Test authInvalidateAll Internal Server Error Msg"
   );
