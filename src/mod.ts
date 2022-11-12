@@ -20,6 +20,8 @@ export {
   newCreateRoomRequest,
   roomStatus,
   newRoomStatusRequest,
+  closeRoom,
+  newCloseRoomRequest,
 } from "./client/room.js";
 
 // TODO(arv): Only export the types that are actually used.

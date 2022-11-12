@@ -18,8 +18,17 @@ import {
   RoomStatus,
 } from "./rooms.js";
 import { DurableStorage } from "../storage/durable-storage.js";
-import { roomRecordsPath, roomStatusByRoomIDPath } from "./auth-do-routes.js";
-import { newCreateRoomRequest, newRoomStatusRequest } from "../client/room.js";
+import {
+  deleteRoomPath,
+  roomRecordsPath,
+  roomStatusByRoomIDPath,
+} from "./auth-do-routes.js";
+import {
+  newCloseRoomRequest,
+  newCreateRoomRequest,
+  newDeleteRoomRequest,
+  newRoomStatusRequest,
+} from "../client/room.js";
 
 const TEST_AUTH_API_KEY = "TEST_REFLECT_AUTH_API_KEY_TEST";
 const { authDO } = getMiniflareBindings();
@@ -222,6 +231,221 @@ test("createRoom sets jurisdiction if requested", async () => {
   expect(gotJurisdiction).toEqual(true);
   const rr = await getRoomRecord(state.storage, testRoomID);
   expect(rr?.requireEUStorage).toEqual(true);
+});
+
+test("closeRoom closes an open room", async () => {
+  const { testRoomID, testRoomDO, state } = await createCreateRoomTestFixture();
+
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async () => {
+      throw "should not be called";
+    },
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
+  await createRoom(authDO, testRoomID);
+
+  const closeRoomRequest = newCloseRoomRequest(
+    "https://test.roci.dev",
+    TEST_AUTH_API_KEY,
+    testRoomID
+  );
+  const closeRoomResponse = await authDO.fetch(closeRoomRequest);
+  expect(closeRoomResponse.status).toEqual(200);
+
+  const statusRequest = newRoomStatusRequest(
+    "https://test.roci.dev",
+    TEST_AUTH_API_KEY,
+    testRoomID
+  );
+  const statusResponse = await authDO.fetch(statusRequest);
+  expect(statusResponse.status).toEqual(200);
+  expect(await statusResponse.json()).toMatchObject({
+    status: RoomStatus.Closed,
+  });
+});
+
+test("closeRoom 404s on non-existent room", async () => {
+  const { testRoomID, testRoomDO, state } = await createCreateRoomTestFixture();
+
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async () => {
+      throw "should not be called";
+    },
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
+  // Note: no createRoom.
+
+  const closeRoomRequest = newCloseRoomRequest(
+    "https://test.roci.dev",
+    TEST_AUTH_API_KEY,
+    testRoomID
+  );
+  const closeRoomResponse = await authDO.fetch(closeRoomRequest);
+  expect(closeRoomResponse.status).toEqual(404);
+});
+
+test("calling closeRoom on closed room is ok", async () => {
+  const { testRoomID, testRoomDO, state } = await createCreateRoomTestFixture();
+
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async () => {
+      throw "should not be called";
+    },
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
+  await createRoom(authDO, testRoomID);
+
+  const closeRoomRequest = newCloseRoomRequest(
+    "https://test.roci.dev",
+    TEST_AUTH_API_KEY,
+    testRoomID
+  );
+  const closeRoomResponse = await authDO.fetch(closeRoomRequest);
+  expect(closeRoomResponse.status).toEqual(200);
+
+  const closeRoomRequest2 = await authDO.fetch(closeRoomRequest);
+  expect(closeRoomRequest2.status).toEqual(200);
+});
+
+test("deleteRoom calls into roomDO and marks room deleted", async () => {
+  const { testRoomID, testRoomDO, state } = await createCreateRoomTestFixture();
+
+  const delteRoomPathWithRoomID = deleteRoomPath.replace(":roomID", testRoomID);
+
+  let gotDeleteForOjbectIDString;
+  testRoomDO.get = (id: DurableObjectId) => {
+    return new TestDurableObjectStub(id, async (request: Request) => {
+      const url = new URL(request.url);
+      if (url.pathname === delteRoomPathWithRoomID) {
+        gotDeleteForOjbectIDString = id.toString();
+        return new Response();
+      }
+      return new Response("", { status: 200 });
+    });
+  };
+
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async () => {
+      throw "should not be called";
+    },
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
+  await createRoom(authDO, testRoomID);
+
+  const closeRoomRequest = newCloseRoomRequest(
+    "https://test.roci.dev",
+    TEST_AUTH_API_KEY,
+    testRoomID
+  );
+  const closeRoomResponse = await authDO.fetch(closeRoomRequest);
+  expect(closeRoomResponse.status).toEqual(200);
+
+  const deleteRoomRequest = newDeleteRoomRequest(
+    "https://test.roci.dev",
+    TEST_AUTH_API_KEY,
+    testRoomID
+  );
+  const deleteRoomResponse = await authDO.fetch(deleteRoomRequest);
+  expect(deleteRoomResponse.status).toEqual(200);
+  expect(gotDeleteForOjbectIDString).not.toBeUndefined();
+  expect(gotDeleteForOjbectIDString).toEqual("unique-room-do-0");
+
+  const statusRequest = newRoomStatusRequest(
+    "https://test.roci.dev",
+    TEST_AUTH_API_KEY,
+    testRoomID
+  );
+  const statusResponse = await authDO.fetch(statusRequest);
+  expect(statusResponse.status).toEqual(200);
+  expect(await statusResponse.json()).toMatchObject({
+    status: RoomStatus.Deleted,
+  });
+});
+
+test("deleteRoom requires room to be closed", async () => {
+  const { testRoomID, testRoomDO, state } = await createCreateRoomTestFixture();
+
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async () => {
+      throw "should not be called";
+    },
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
+  await createRoom(authDO, testRoomID);
+
+  const deleteRoomRequest = newDeleteRoomRequest(
+    "https://test.roci.dev",
+    TEST_AUTH_API_KEY,
+    testRoomID
+  );
+  const deleteRoomResponse = await authDO.fetch(deleteRoomRequest);
+  expect(deleteRoomResponse.status).toEqual(400);
+
+  const statusRequest = newRoomStatusRequest(
+    "https://test.roci.dev",
+    TEST_AUTH_API_KEY,
+    testRoomID
+  );
+  const statusResponse = await authDO.fetch(statusRequest);
+  expect(statusResponse.status).toEqual(200);
+  expect(await statusResponse.json()).toMatchObject({
+    status: RoomStatus.Open,
+  });
+});
+
+test("deleteRoom 401s if auth api key not correct", async () => {
+  const { testRoomID, testRoomDO, state } = await createCreateRoomTestFixture();
+
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async () => {
+      throw "should not be called";
+    },
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
+  await createRoom(authDO, testRoomID);
+
+  const deleteRoomRequest = newDeleteRoomRequest(
+    "https://test.roci.dev",
+    "SOME OTHER AUTH KEY",
+    testRoomID
+  );
+  const deleteRoomResponse = await authDO.fetch(deleteRoomRequest);
+  expect(deleteRoomResponse.status).toEqual(401);
+
+  const statusRequest = newRoomStatusRequest(
+    "https://test.roci.dev",
+    TEST_AUTH_API_KEY,
+    testRoomID
+  );
+  const statusResponse = await authDO.fetch(statusRequest);
+  expect(statusResponse.status).toEqual(200);
+  expect(await statusResponse.json()).toMatchObject({
+    status: RoomStatus.Open,
+  });
 });
 
 test("roomStatusByRoomID returns status for a room that exists", async () => {
@@ -535,6 +759,40 @@ test("connect calls authHandler and sends resolved UserData in header to Room DO
   )) as ConnectionRecord;
   expect(connectionRecord).toBeDefined();
   expect(connectionRecord.connectTimestamp).toEqual(testTime);
+});
+
+test("connect wont connect to a room that is closed", async () => {
+  const { testUserID, testRoomID, testRequest, testRoomDO } =
+    createConnectTestFixture();
+
+  const storage = await getMiniflareDurableObjectStorage(authDOID);
+  const state = new TestDurableObjectState(authDOID, storage);
+  const logSink = new TestLogSink();
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async () => {
+      return { userID: testUserID };
+    },
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink,
+    logLevel: "debug",
+  });
+  await createRoom(authDO, testRoomID);
+
+  const closeRoomRequest = newCloseRoomRequest(
+    "https://test.roci.dev",
+    TEST_AUTH_API_KEY,
+    testRoomID
+  );
+  const closeRoomResponse = await authDO.fetch(closeRoomRequest);
+  expect(closeRoomResponse.status).toEqual(200);
+
+  const testTime = 1010101;
+  jest.setSystemTime(testTime);
+  const response = await authDO.fetch(testRequest);
+
+  expect(response.status).toEqual(410);
 });
 
 test("connect percent escapes components of the connection key", async () => {

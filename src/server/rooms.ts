@@ -3,13 +3,14 @@ import type { CreateRoomRequest } from "../protocol/api/room.js";
 import { RWLock } from "@rocicorp/lock";
 import type { DurableStorage } from "../storage/durable-storage.js";
 import * as s from "superstruct";
+import type { IttyRequest } from "./middleware.js";
 
 // TODO(fritz) rough GDRP TODO list:
-// - add room close() and delete()
-// - make a decision about auth api key
 // - Enforce that roomIDs are A-Za-z0-9_-
 // - get aaron to review APIs (don't worry too much about this
 //   right now, we can fix it up later without too much work)
+// - do we need to make changes to the client to support the
+//   additional http codes returned by connect (404, 410)?
 
 // RoomRecord keeps information about the room, for example the Durable
 // Object ID of the DO instance that has the room.
@@ -37,9 +38,14 @@ export type RoomRecord = {
 };
 
 export enum RoomStatus {
-  // An open room can be used by users. We will accept connect()s to it.
-  // We'll add closed and deleted statuses in the near future.
+  // An Open room can be used by users. We will accept connect()s to it.
   Open = "open",
+  // A Closed room cannot be used by users. We will reject connect()s to it.
+  // Once closed, a room cannot be opened again.
+  Closed = "closed",
+  // A Deleted room is a Closed room that has had all its data deleted.
+  Deleted = "deleted",
+
   Unknown = "unknown",
 }
 
@@ -49,7 +55,12 @@ export enum RoomStatus {
 // instead of inferring the type from a schema, because frankly I like reading
 // type definitions in the type definition language (ts) and want to keep goop
 // (superstruct) from polluting the main ideas.
-const roomStatusSchema = s.enums([RoomStatus.Open, RoomStatus.Unknown]);
+const roomStatusSchema = s.enums([
+  RoomStatus.Open,
+  RoomStatus.Closed,
+  RoomStatus.Deleted,
+  RoomStatus.Unknown,
+]);
 const roomRecordSchema = s.object({
   roomID: s.string(),
   objectIDString: s.string(),
@@ -112,7 +123,95 @@ export async function createRoom(
     await storage.put(roomRecordKey, roomRecord);
     lc.debug?.(`created room ${JSON.stringify(roomRecord)}`);
 
-    return new Response("ok");
+    return new Response("success");
+  });
+}
+
+// Note that closeRoom closes the room but does NOT log users out of it.
+// The call to closeRoom should be followed by a call to authInvalidateForRoom.
+export async function closeRoom(
+  lc: LogContext,
+  storage: DurableStorage,
+  request: IttyRequest
+): Promise<Response> {
+  const roomID = request.params?.roomID;
+  if (roomID === undefined) {
+    return new Response("Missing roomID", { status: 400 });
+  }
+
+  return roomLock.withWrite(async () => {
+    const roomRecord = await roomRecordByRoomIDLocked(storage, roomID);
+    if (roomRecord === undefined) {
+      return new Response("no such room", {
+        status: 404,
+      });
+    }
+
+    if (roomRecord.status === RoomStatus.Closed) {
+      return new Response("success (room already closed)");
+    } else if (roomRecord.status !== RoomStatus.Open) {
+      return new Response("room is not open", {
+        status: 400,
+      });
+    }
+
+    roomRecord.status = RoomStatus.Closed;
+    const roomRecordKey = roomKeyToString(roomRecord);
+    await storage.put(roomRecordKey, roomRecord);
+    lc.debug?.(`closed room ${JSON.stringify(roomRecord)}`);
+
+    return new Response("success");
+  });
+}
+
+export async function deleteRoom(
+  lc: LogContext,
+  roomDO: DurableObjectNamespace,
+  storage: DurableStorage,
+  request: IttyRequest
+): Promise<Response> {
+  const roomID = request.params?.roomID;
+  if (roomID === undefined) {
+    return new Response("Missing roomID", { status: 400 });
+  }
+
+  // Note no lock spanning this code. It doesn't seem necessary, and
+  // we don't want to hold a lock across calling delete in the roomDO
+  // anwyay because it could take a while.
+  const roomRecord = await roomRecordByRoomID(storage, roomID);
+  if (roomRecord === undefined) {
+    return new Response("no such room", {
+      status: 404,
+    });
+  }
+
+  if (roomRecord.status === RoomStatus.Deleted) {
+    return new Response("success (room already deleted)");
+  } else if (roomRecord.status !== RoomStatus.Closed) {
+    return new Response("room must first be closed", {
+      status: 400,
+    });
+  }
+
+  const objectID = roomDO.idFromString(roomRecord.objectIDString);
+  const roomDOStub = roomDO.get(objectID);
+  // TODO(fritz) OK to use "as" here?
+  const response = await roomDOStub.fetch(request as Request);
+  if (!response.ok) {
+    lc.debug?.(
+      `Received error response from ${roomID}. ${
+        response.status
+      } ${await response.clone().text()}`
+    );
+    return response;
+  }
+
+  return roomLock.withWrite(async () => {
+    roomRecord.status = RoomStatus.Deleted;
+    const roomRecordKey = roomKeyToString(roomRecord);
+    await storage.put(roomRecordKey, roomRecord);
+    lc.debug?.(`deleted room ${JSON.stringify(roomRecord)}`);
+    return new Response("success");
   });
 }
 

@@ -22,6 +22,9 @@ import { DurableStorage } from "../storage/durable-storage.js";
 import { getConnectedClients } from "../types/connected-clients.js";
 import * as s from "superstruct";
 import type { CreateRoomRequest } from "src/protocol/api/room.js";
+import { Router } from "itty-router";
+import type { IttyRouter } from "./middleware.js";
+import { addRoutes } from "./room-do-routes.js";
 
 const roomIDKey = "/system/roomID";
 
@@ -45,6 +48,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   private readonly _authApiKey: string | undefined;
   private _turnTimerID: ReturnType<typeof setInterval> | 0 = 0;
   private readonly _turnDuration: number;
+  private _router: IttyRouter;
 
   constructor(options: RoomDOOptions<MD>) {
     const {
@@ -63,6 +67,8 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       options.allowUnconfirmedWrites
     );
 
+    this._router = Router();
+    addRoutes(this._router, this, authApiKey);
     this._turnDuration = 1000 / (options.allowUnconfirmedWrites ? 60 : 15);
     this._authApiKey = authApiKey;
     this._lc = new LogContext(logLevel, logSink)
@@ -80,6 +86,10 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
           this._lc = this._lc.addContext("roomID", roomID);
           this._lcHasRoomIdContext = true;
         }
+      }
+      const response = await this._router.handle(request);
+      if (response !== undefined) {
+        return response;
       }
       return await dispatch(
         request,
@@ -127,6 +137,14 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   ) {
     const { roomID } = createRoomRequest;
     await this._setRoomID(roomID);
+    return new Response("ok");
+  }
+
+  async deleteAllData() {
+    // Maybe we should validate that the roomID in the request matches?
+    this._lc.info?.("delete all data");
+    await this._storage.deleteAll();
+    this._lc.info?.("done deleting all data");
     return new Response("ok");
   }
 

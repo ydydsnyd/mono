@@ -32,7 +32,7 @@ export function addRoutes(
 // Note: we define the path and the handler in the same place like this
 // so it's easy to understand what each route does.
 
-export const roomStatusByRoomIDPath = "/api/room/v0/room/id/:roomID/status";
+export const roomStatusByRoomIDPath = "/api/room/v0/room/:roomID/status";
 routes.push({
   path: roomStatusByRoomIDPath,
   add: (
@@ -63,6 +63,47 @@ routes.push({
       requireAuthAPIKeyMatches(authApiKey),
       async (request: IttyRequest) => {
         return authDO.allRoomRecords(request);
+      }
+    );
+  },
+});
+
+// A call to closeRoom should be followed by a call to
+// authInvalidateForRoom to ensure users are logged out.
+export const closeRoomPath = "/api/room/v0/room/:roomID/close";
+routes.push({
+  path: closeRoomPath,
+  add: (
+    router: IttyRouter,
+    authDO: BaseAuthDO,
+    authApiKey: string | undefined
+  ) => {
+    router.post(
+      closeRoomPath,
+      requireAuthAPIKeyMatches(authApiKey),
+      async (request: IttyRequest) => {
+        // TODO should plumb a LogContext through here.
+        return authDO.closeRoom(request);
+      }
+    );
+  },
+});
+
+// A room must first be closed before it can be deleted.
+export const deleteRoomPath = "/api/room/v0/room/:roomID/delete";
+routes.push({
+  path: deleteRoomPath,
+  add: (
+    router: IttyRouter,
+    authDO: BaseAuthDO,
+    authApiKey: string | undefined
+  ) => {
+    router.post(
+      deleteRoomPath,
+      requireAuthAPIKeyMatches(authApiKey),
+      async (request: IttyRequest) => {
+        // TODO should plumb a LogContext through here.
+        return authDO.deleteRoom(request);
       }
     );
   },

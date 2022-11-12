@@ -1,5 +1,5 @@
 import { test, expect } from "@jest/globals";
-import { newCreateRoomRequest } from "../client/room.js";
+import { newCreateRoomRequest, newDeleteRoomRequest } from "../client/room.js";
 import { TestLogSink } from "../util/test-utils.js";
 import { version } from "../util/version.js";
 import { TestDurableObjectId } from "./do-test-utils.js";
@@ -30,6 +30,43 @@ test("sets roomID in createRoom", async () => {
   expect(response.status).toBe(200);
   const roomID = await roomDO.roomID();
   expect(roomID).toBe("testRoomID");
+});
+
+test("deleteAllData deletes all data", async () => {
+  const testLogSink = new TestLogSink();
+  const doID = new TestDurableObjectId("test-do-id");
+  const storage = await getMiniflareDurableObjectStorage(doID);
+  await storage.put("foo", "bar");
+  expect(await (await storage.list()).size).toBeGreaterThan(0);
+
+  const roomDO = new BaseRoomDO({
+    mutators: {},
+    disconnectHandler: () => Promise.resolve(),
+    state: {
+      id: doID,
+      storage,
+    } as unknown as DurableObjectState,
+    authApiKey: "API KEY",
+    logSink: testLogSink,
+    logLevel: "info",
+    allowUnconfirmedWrites: true,
+  });
+  const createRoomRequest = newCreateRoomRequest(
+    "http://example.com/",
+    "API KEY",
+    "testRoomID"
+  );
+  const createResponse = await roomDO.fetch(createRoomRequest);
+  expect(createResponse.status).toBe(200);
+
+  const deleteRequest = newDeleteRoomRequest(
+    "http://example.com/",
+    "API KEY",
+    "testRoomID"
+  );
+  const response = await roomDO.fetch(deleteRequest);
+  expect(response.status).toBe(200);
+  expect(await (await storage.list()).size).toEqual(0);
 });
 
 test("Logs version during construction", async () => {

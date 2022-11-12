@@ -53,6 +53,10 @@ export class DurableStorage implements Storage {
     const doOptions = doListOptions(options);
     return await listEntries(this._durable, schema, doOptions);
   }
+
+  async deleteAll(): Promise<void> {
+    return this._durable.deleteAll();
+  }
 }
 
 function doListOptions(opts: ListOptions): DurableObjectListOptions {

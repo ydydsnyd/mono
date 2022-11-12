@@ -5,7 +5,9 @@ import { version } from "../util/version.js";
 import { AuthHandler, UserData, USER_DATA_HEADER_NAME } from "./auth.js";
 import { dispatch, paths } from "./dispatch.js";
 import {
+  closeRoom,
   createRoom,
+  deleteRoom,
   objectIDByRoomID,
   roomRecordByRoomID,
   roomRecords,
@@ -143,6 +145,14 @@ export class BaseAuthDO implements DurableObject {
     );
   }
 
+  async closeRoom(request: IttyRequest) {
+    return closeRoom(this._lc, this._durableStorage, request);
+  }
+
+  async deleteRoom(request: IttyRequest) {
+    return deleteRoom(this._lc, this._roomDO, this._durableStorage, request);
+  }
+
   async connect(lc: LogContext, request: Request): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname !== "/connect") {
@@ -197,17 +207,21 @@ export class BaseAuthDO implements DurableObject {
       }
 
       // Find the room's objectID so we can connect to it. Do this BEFORE
-      // writing the connection record, in case it doesn't exist.
-      const roomObjectID = await objectIDByRoomID(
-        this._durableStorage,
-        this._roomDO,
-        roomID
-      );
-      if (roomObjectID === undefined) {
+      // writing the connection record, in case it doesn't exist or is
+      // closed/deleted.
+      const roomRecord = await roomRecordByRoomID(this._durableStorage, roomID);
+      if (roomRecord === undefined) {
         return new Response("room not found", {
           status: 404,
         });
       }
+      if (roomRecord.status !== RoomStatus.Open) {
+        return new Response("room has been closed", {
+          // TODO(fritz) or 403?
+          status: 410 /* Gone */,
+        });
+      }
+      const roomObjectID = this._roomDO.idFromString(roomRecord.objectIDString);
 
       // Record the connection in DO storage
       const connectionKey = connectionKeyToString({

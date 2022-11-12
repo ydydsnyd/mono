@@ -1,4 +1,8 @@
-import { roomStatusByRoomIDPath } from "../server/auth-do-routes";
+import {
+  closeRoomPath,
+  deleteRoomPath,
+  roomStatusByRoomIDPath,
+} from "../server/auth-do-routes";
 import { createAuthAPIHeaders } from "../server/auth-api-headers";
 import type { RoomStatus } from "../server/rooms";
 import type { CreateRoomRequest } from "src/protocol/api/room";
@@ -26,6 +30,34 @@ export async function createRoom(
   );
   if (!resp.ok) {
     throw new Error(`Failed to create room: ${resp.status} ${resp.statusText}`);
+  }
+  return Promise.resolve(void 0);
+}
+
+export async function closeRoom(
+  reflectServerURL: string,
+  authApiKey: string,
+  roomID: string
+): Promise<void> {
+  const resp = await fetch(
+    newCloseRoomRequest(reflectServerURL, authApiKey, roomID)
+  );
+  if (!resp.ok) {
+    throw new Error(`Failed to close room: ${resp.status} ${resp.statusText}`);
+  }
+  return Promise.resolve(void 0);
+}
+
+export async function deleteRoom(
+  reflectServerURL: string,
+  authApiKey: string,
+  roomID: string
+): Promise<void> {
+  const resp = await fetch(
+    newDeleteRoomRequest(reflectServerURL, authApiKey, roomID)
+  );
+  if (!resp.ok) {
+    throw new Error(`Failed to delete room: ${resp.status} ${resp.statusText}`);
   }
   return Promise.resolve(void 0);
 }
@@ -106,5 +138,35 @@ export function newCreateRoomRequest(
     method: "post",
     headers: createAuthAPIHeaders(authApiKey),
     body: JSON.stringify(req),
+  });
+}
+
+export function newCloseRoomRequest(
+  reflectServerURL: string,
+  authApiKey: string,
+  roomID: string
+) {
+  if (reflectServerURL[reflectServerURL.length - 1] === "/") {
+    reflectServerURL = reflectServerURL.slice(0, -1);
+  }
+  const path = closeRoomPath.replace(":roomID", roomID);
+  return new Request(`${reflectServerURL}${path}`, {
+    method: "post",
+    headers: createAuthAPIHeaders(authApiKey),
+  });
+}
+
+export function newDeleteRoomRequest(
+  reflectServerURL: string,
+  authApiKey: string,
+  roomID: string
+) {
+  if (reflectServerURL[reflectServerURL.length - 1] === "/") {
+    reflectServerURL = reflectServerURL.slice(0, -1);
+  }
+  const path = deleteRoomPath.replace(":roomID", roomID);
+  return new Request(`${reflectServerURL}${path}`, {
+    method: "post",
+    headers: createAuthAPIHeaders(authApiKey),
   });
 }

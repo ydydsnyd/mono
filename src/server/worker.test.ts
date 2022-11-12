@@ -2,7 +2,11 @@ import { test, expect } from "@jest/globals";
 import type { LogLevel } from "@rocicorp/logger";
 import { Mocket, TestLogSink } from "../util/test-utils.js";
 import { createAuthAPIHeaders } from "./auth-api-headers.js";
-import { roomRecordsPath, roomStatusByRoomIDPath } from "./auth-do-routes.js";
+import {
+  closeRoomPath,
+  roomRecordsPath,
+  roomStatusByRoomIDPath,
+} from "./auth-do-routes.js";
 import {
   createTestDurableObjectNamespace,
   TestDurableObjectId,
@@ -145,7 +149,14 @@ test("worker forwards authDO api requests to authDO", async () => {
     ":roomID",
     "ae4565"
   );
-  const paths = [roomStatusByRoomIDPathWithRoomID, roomRecordsPath];
+  const closeRoomPathWithRoomID = closeRoomPath.replace(":roomID", "ae4565");
+  const deleteRoomPathWithRoomID = roomRecordsPath.replace(":roomID", "ae4565");
+  const paths = [
+    roomStatusByRoomIDPathWithRoomID,
+    roomRecordsPath,
+    closeRoomPathWithRoomID,
+    deleteRoomPathWithRoomID,
+  ];
   for (const path of paths) {
     await testForwarding(path);
   }
