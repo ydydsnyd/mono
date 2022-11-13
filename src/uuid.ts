@@ -5,7 +5,9 @@ export const uuid: () => string =
 
 export function uuidNoNative(): string {
   const numbers = new Uint8Array(36);
-  crypto.getRandomValues(numbers);
+  for (let i = 0; i < numbers.length; i++) {
+    numbers[i] = Math.floor(Math.random() * 8);
+  }
   return uuidFromNumbers(numbers);
 }
 
