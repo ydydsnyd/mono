@@ -819,6 +819,9 @@ test('subscription coalescing', async () => {
   const rep = await replicacheForTesting('experiment-kv-store', {
     mutators: {addData},
     logLevel: 'debug',
+    enableScheduledPersist: false,
+    enableMutationRecovery: false,
+    enableRefresh: false,
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

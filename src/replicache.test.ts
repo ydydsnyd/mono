@@ -724,6 +724,9 @@ test('pull', async () => {
       },
     },
     logLevel: 'debug',
+    enableScheduledPersist: false,
+    enableMutationRecovery: false,
+    enableRefresh: false,
   });
 
   let createCount = 0;
