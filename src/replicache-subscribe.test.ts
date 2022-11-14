@@ -818,6 +818,7 @@ test('subscribe pull and index update', async () => {
 test('subscription coalescing', async () => {
   const rep = await replicacheForTesting('experiment-kv-store', {
     mutators: {addData},
+    logLevel: 'debug',
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

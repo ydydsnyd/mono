@@ -723,6 +723,7 @@ test('pull', async () => {
         await tx.del(`/todo/${args.id}`);
       },
     },
+    logLevel: 'debug',
   });
 
   let createCount = 0;
