@@ -29,15 +29,22 @@ function sharedOptions(minify) {
 }
 
 /**
- * @param {{
- *   format: "esm" | "cjs";
- *   minify: boolean;
- *   ext: string;
- *   sourcemap: boolean;
- * }} options
+ * @typedef {'unknown'|'debug'|'release'} BuildMode
+ */
+
+/**
+ * @typedef {{
+ *   minify: boolean,
+ *   ext: string,
+ *   mode: BuildMode
+ * }} BuildOptions
+ */
+
+/**
+ * @param {esbuild.BuildOptions & BuildOptions} options
  */
 async function buildReplicache(options) {
-  const {ext, ...restOfOptions} = options;
+  const {ext, mode, ...restOfOptions} = options;
   await esbuild.build({
     ...sharedOptions(options.minify),
     ...restOfOptions,
@@ -45,16 +52,22 @@ async function buildReplicache(options) {
     platform: 'neutral',
     outfile: 'out/replicache.' + ext,
     entryPoints: ['src/mod.ts'],
-    define: await makeDefine('release', dd31),
+    define: await makeDefine(mode, dd31),
   });
 }
 
-async function buildMJS({minify = true, ext = 'js', sourcemap = true} = {}) {
-  await buildReplicache({format: 'esm', minify, ext, sourcemap});
+/**
+ * @param {Partial<BuildOptions>} options
+ */
+async function buildMJS({minify = true, ext = 'js', mode = 'unknown'} = {}) {
+  await buildReplicache({format: 'esm', minify, ext, mode});
 }
 
-async function buildCJS({minify = true, ext = 'cjs', sourcemap = true} = {}) {
-  await buildReplicache({format: 'cjs', minify, ext, sourcemap});
+/**
+ * @param {Partial<BuildOptions>} options
+ */
+async function buildCJS({minify = true, ext = 'cjs', mode = 'unknown'} = {}) {
+  await buildReplicache({format: 'cjs', minify, ext, mode});
 }
 
 async function buildCLI() {
@@ -69,7 +82,7 @@ async function buildCLI() {
 }
 
 if (perf) {
-  await buildMJS();
+  await buildMJS({mode: 'release'});
 } else if (forBundleSizeDashboard) {
   // We keep cjs as js and mjs as mjs so the dashboard does not get reset
   await Promise.all([
