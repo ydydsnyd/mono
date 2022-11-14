@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1668326700120,
+  "lastUpdate": 1668425076405,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -29831,6 +29831,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23718,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ef29023734ac318beb6c3c9ee0f4adbbb57d0d7f",
+          "message": "fix: We were building release by default (#383)\n\nBy default we should build 'unknown' which keeps `process.env.NODE_ENV`\r\nin the output bundle.\r\n\r\nThis regressed in 6c8d5bee412fda01d6c0fb92fd27d0ce34905b35",
+          "timestamp": "2022-11-14T12:23:36+01:00",
+          "tree_id": "06a3929813214aafca7a5a5e762c7a016c63cf76",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/ef29023734ac318beb6c3c9ee0f4adbbb57d0d7f"
+        },
+        "date": 1668425070403,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 194182,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34580,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 193035,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34278,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81834,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23747,
             "unit": "bytes"
           }
         ]
