@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1668437764129,
+  "lastUpdate": 1668478316677,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -29963,6 +29963,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/3b386963a22726f0ab05aeda629c583e944aafe6"
         },
         "date": 1668437756654,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 194251,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34601,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 193104,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34265,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81864,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23739,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "18dd503cf10d926021b9c625afc8c97e9c41bad3",
+          "message": "refactor: improve how replicacheForTesting does unique names (#386)\n\n`replicacheForTesting` currently appends a uuid to a partial name, and then stores this in a map so the \r\nsame partial name gets the same namespaced name each time.\r\n\r\nAlso the `replicacheForTestingNoDefaultURLs` variant did not uniquify the name passed in.\r\n\r\nImprove this by getting rid of the hidden global state in `partialNamesToReplicacheNames`, and merging\r\n`replicacheForTesting` and `replicacheForTestingNoDefaultURLs` into one function.  \r\n\r\nTests that want to create two replicaches with the same name should do so like this:\r\n\r\n```\r\nconst rep1 = replicacheForTesting('partial-test-name', options);\r\nconst rep2 = replicacheForTesting(rep1.name, options, {useUniqueName: false});\r\n```",
+          "timestamp": "2022-11-14T19:10:53-07:00",
+          "tree_id": "77f443bea2cf7c3b7f7cbb718dba47304657e261",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/18dd503cf10d926021b9c625afc8c97e9c41bad3"
+        },
+        "date": 1668478310416,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
