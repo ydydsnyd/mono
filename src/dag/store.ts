@@ -26,7 +26,7 @@ export interface Read extends GetChunk, MustGetChunk {
 
 export interface Write extends Read {
   createChunk<V>(data: V, refs: readonly Hash[]): Chunk<V>;
-  putChunk(c: Chunk): Promise<void>;
+  putChunk<V>(c: Chunk<V>): Promise<void>;
   setHead(name: string, hash: Hash): Promise<void>;
   removeHead(name: string): Promise<void>;
   assertValidHash(hash: Hash): void;

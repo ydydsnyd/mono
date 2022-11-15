@@ -776,7 +776,7 @@ export function newIndexChange(
   );
 }
 
-export function fromChunk(chunk: dag.Chunk<unknown>): Commit<Meta> {
+export function fromChunk(chunk: dag.Chunk): Commit<Meta> {
   validateChunk(chunk);
   return new Commit(chunk);
 }
@@ -846,7 +846,7 @@ export function assertCommitData(v: unknown): asserts v is CommitData<Meta> {
 }
 
 function validateChunk(
-  chunk: dag.Chunk<unknown>,
+  chunk: dag.Chunk,
 ): asserts chunk is dag.Chunk<CommitData<Meta>> {
   const {data} = chunk;
   assertCommitData(data);

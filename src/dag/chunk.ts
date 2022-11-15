@@ -1,25 +1,21 @@
 import {assert, assertString} from '../asserts.js';
 import {Hash, newUUIDHash} from '../hash.js';
-import {assertDeepFrozen, FrozenJSONValue} from '../json.js';
+import {assertDeepFrozen} from '../json.js';
 
 type Refs = readonly Hash[];
 
-export interface Chunk<V = unknown> {
+export class Chunk<V = unknown> {
   readonly hash: Hash;
   readonly data: V;
+
   /**
    * Meta is an array of refs. If there are no refs we do not write a meta
    * chunk.
    */
   readonly meta: Refs;
-}
-
-class ChunkImpl<V = FrozenJSONValue> implements Chunk<V> {
-  readonly hash: Hash;
-  readonly data: V;
-  readonly meta: Refs;
 
   constructor(hash: Hash, data: V, meta: Refs) {
+    assert(!meta.includes(hash), 'Chunk cannot reference itself');
     assertDeepFrozen(data);
     this.hash = hash;
     this.data = data;
@@ -42,16 +38,7 @@ export function createChunk<V>(
   chunkHasher: ChunkHasher,
 ): Chunk<V> {
   const hash = chunkHasher();
-  return createChunkWithHash(hash, data, refs);
-}
-
-export function createChunkWithHash<V>(
-  hash: Hash,
-  data: V,
-  refs: Refs,
-): Chunk<V> {
-  assert(!refs.includes(hash), 'Chunk cannot reference itself');
-  return new ChunkImpl(hash, data, refs);
+  return new Chunk(hash, data, refs);
 }
 
 export type CreateChunk = <V>(data: V, refs: Refs) => Chunk<V>;

@@ -1,12 +1,6 @@
 import type * as kv from '../kv/mod.js';
 import {Store, Read, Write, mustGetChunk} from './store.js';
-import {
-  assertMeta,
-  Chunk,
-  createChunkWithHash,
-  createChunk,
-  ChunkHasher,
-} from './chunk.js';
+import {assertMeta, Chunk, createChunk, ChunkHasher} from './chunk.js';
 import {chunkDataKey, chunkMetaKey, headKey, chunkRefCountKey} from './key.js';
 import {assertHash, Hash} from '../hash.js';
 import {assertNumber} from '../asserts.js';
@@ -84,7 +78,7 @@ export class ReadImpl implements Read {
     } else {
       refs = [];
     }
-    return createChunkWithHash(hash, data, refs);
+    return new Chunk(hash, data, refs);
   }
 
   mustGetChunk(hash: Hash): Promise<Chunk> {

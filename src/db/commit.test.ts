@@ -219,7 +219,7 @@ test('chain', async () => {
 
 test('load roundtrip', () => {
   const clientID = 'client-id';
-  const t = (chunk: dag.Chunk<unknown>, expected: Commit<Meta> | Error) => {
+  const t = (chunk: dag.Chunk, expected: Commit<Meta> | Error) => {
     {
       if (expected instanceof Error) {
         expect(() => fromChunk(chunk)).to.throw(
@@ -752,7 +752,7 @@ function createChunk<V>(data: V, refs: readonly Hash[]): dag.Chunk<V> {
     hashMapper.set(s, hash);
   }
 
-  return dag.createChunkWithHash(hash, data, refs);
+  return new dag.Chunk(hash, data, refs);
 }
 
 function makeCommit<M extends Meta>(

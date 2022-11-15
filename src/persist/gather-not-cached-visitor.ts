@@ -5,7 +5,7 @@ import type * as btree from '../btree/mod.js';
 import {getSizeOfValue} from '../json.js';
 import {promiseVoid} from '../resolved-promises.js';
 
-export type ChunkWithSize = {chunk: dag.Chunk<unknown>; size: number};
+export type ChunkWithSize = {chunk: dag.Chunk; size: number};
 
 export class GatherNotCachedVisitor extends db.Visitor {
   private readonly _gatheredChunks: Map<Hash, ChunkWithSize> = new Map();

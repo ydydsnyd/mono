@@ -260,7 +260,7 @@ export function initClientSDD(
     }
 
     let newClientCommitData: db.CommitData<db.SnapshotMetaSDD>;
-    const chunksToPut = [];
+    const chunksToPut: dag.Chunk[] = [];
     if (bootstrapClient) {
       const constBootstrapClient = bootstrapClient;
       const bootstrapCommit = await db.baseSnapshotFromHash(
@@ -280,7 +280,7 @@ export function initClientSDD(
       );
     } else {
       // No existing snapshot to bootstrap from. Create empty snapshot.
-      const emptyBTreeChunk = dag.createChunkWithHash(
+      const emptyBTreeChunk = new dag.Chunk(
         newUUIDHash(),
         btree.emptyDataNode,
         [],
@@ -295,7 +295,7 @@ export function initClientSDD(
       );
     }
 
-    const newClientCommitChunk = dag.createChunkWithHash(
+    const newClientCommitChunk = new dag.Chunk(
       newUUIDHash(),
       newClientCommitData,
       getRefs(newClientCommitData),

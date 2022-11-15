@@ -4,7 +4,7 @@ import {
   makeNewFakeHashFunction,
   parse as parseHash,
 } from '../hash.js';
-import {Chunk, ChunkHasher, createChunkWithHash} from './chunk.js';
+import {Chunk, ChunkHasher} from './chunk.js';
 import type {Hash} from '../hash.js';
 import {chunkMetaKey, parse as parseKey} from './key.js';
 import {KeyType} from './key.js';
@@ -30,7 +30,7 @@ export class TestStore extends StoreImpl {
       const pk = parseKey(key);
       if (pk.type === KeyType.ChunkData) {
         const refsValue = this.kvStore.map().get(chunkMetaKey(pk.hash));
-        rv.push(createChunkWithHash(pk.hash, value, toRefs(refsValue)));
+        rv.push(new Chunk(pk.hash, value, toRefs(refsValue)));
       }
     }
     return sortByHash(rv);

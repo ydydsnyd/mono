@@ -7,7 +7,7 @@ import type {Meta} from '../db/commit.js';
 import {promiseVoid} from '../resolved-promises.js';
 
 export class GatherMemoryOnlyVisitor extends db.Visitor {
-  private readonly _gatheredChunks: Map<Hash, dag.Chunk<unknown>> = new Map();
+  private readonly _gatheredChunks: Map<Hash, dag.Chunk> = new Map();
   private readonly _lazyRead: dag.LazyRead;
 
   constructor(dagRead: dag.LazyRead) {
@@ -15,7 +15,7 @@ export class GatherMemoryOnlyVisitor extends db.Visitor {
     this._lazyRead = dagRead;
   }
 
-  get gatheredChunks(): ReadonlyMap<Hash, dag.Chunk<unknown>> {
+  get gatheredChunks(): ReadonlyMap<Hash, dag.Chunk> {
     return this._gatheredChunks;
   }
 

@@ -16,6 +16,7 @@ import {
   toChunkIndexDefinition,
   ChunkIndexDefinition,
   chunkIndexDefinitionEqualIgnoreName,
+  Meta,
 } from './commit.js';
 import {
   Read,
@@ -253,7 +254,7 @@ export class Write extends Read {
       indexRecords.push(indexRecord);
     }
 
-    let commit;
+    let commit: Commit<Meta>;
     const meta = this._meta;
     switch (meta.type) {
       case MetaType.LocalSDD: {

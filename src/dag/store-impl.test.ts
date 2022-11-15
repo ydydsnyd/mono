@@ -1,6 +1,6 @@
 import {expect} from '@esm-bundle/chai';
 import {MemStore} from '../kv/mod.js';
-import {createChunk, createChunkWithHash} from './chunk.js';
+import {createChunk, Chunk} from './chunk.js';
 import {StoreImpl, ReadImpl, WriteImpl} from './store-impl.js';
 import {chunkDataKey, chunkMetaKey, chunkRefCountKey, headKey} from './key.js';
 import type * as kv from '../kv/mod.js';
@@ -277,7 +277,7 @@ suite('write', () => {
     const t = async (name: string, data: ReadonlyJSONValue, refs: Hash[]) => {
       const kv = new MemStore();
       const hash = chunkHasher();
-      const c = createChunkWithHash(hash, deepFreeze(data), refs);
+      const c = new Chunk(hash, deepFreeze(data), refs);
       await kv.withWrite(async kvw => {
         const w = new WriteImpl(kvw, chunkHasher, assertHash);
         await w.putChunk(c);
@@ -373,11 +373,11 @@ suite('write', () => {
     //    |
     //    D
 
-    const d = createChunkWithHash(fakeHash('d'), 'd', []);
-    const c = createChunkWithHash(fakeHash('c'), 'c', [d.hash]);
-    const a = createChunkWithHash(fakeHash('a'), 'a', [c.hash]);
-    const b = createChunkWithHash(fakeHash('b'), 'b', [c.hash]);
-    const r = createChunkWithHash(fakeHash('000'), 'r', [a.hash, b.hash]);
+    const d = new Chunk(fakeHash('d'), 'd', []);
+    const c = new Chunk(fakeHash('c'), 'c', [d.hash]);
+    const a = new Chunk(fakeHash('a'), 'a', [c.hash]);
+    const b = new Chunk(fakeHash('b'), 'b', [c.hash]);
+    const r = new Chunk(fakeHash('000'), 'r', [a.hash, b.hash]);
     await dagStore.withWrite(async dagWrite => {
       await Promise.all([
         dagWrite.setHead('test', r.hash),
@@ -402,7 +402,7 @@ suite('write', () => {
     // |
     // D
 
-    const e = createChunkWithHash(fakeHash('e'), 'e', [d.hash]);
+    const e = new Chunk(fakeHash('e'), 'e', [d.hash]);
     await dagStore.withWrite(async dagWrite => {
       await Promise.all([
         dagWrite.setHead('test', e.hash),

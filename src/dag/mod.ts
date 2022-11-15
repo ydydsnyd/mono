@@ -1,7 +1,7 @@
-export type {Chunk, CreateChunk} from './chunk.js';
+export type {CreateChunk} from './chunk.js';
 export {
+  Chunk,
   createChunk,
-  createChunkWithHash,
   throwChunkHasher,
   uuidChunkHasher,
 } from './chunk.js';
