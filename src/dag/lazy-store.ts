@@ -30,7 +30,7 @@ import {promiseVoid} from '../resolved-promises.js';
  *
  * Writes only manipulate the in memory state of this store and do not alter the
  * source store.  Thus values must be written to the source store through a
- * separate process (see {@linkcode persist}).
+ * separate process (see {@link persist}).
  *
  * Intended use:
  * 1. source store is the 'perdag', a slower persistent store (i.e.
