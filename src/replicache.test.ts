@@ -2515,6 +2515,9 @@ test('experiment KV Store', async () => {
   const rep = await replicacheForTesting('experiment-kv-store', {
     experimentalKVStore: store,
     mutators: {addData},
+    enableMutationRecovery: false,
+    enableRefresh: false,
+    enableScheduledPersist: false,
   });
 
   // Safari does not have requestIdleTimeout so it delays 1 second for persist
@@ -2531,7 +2534,7 @@ test('experiment KV Store', async () => {
   expect(b).to.be.false;
   // When DD31 refresh has pulled enough data into the lazy store
   // to not have to read from the experiment-kv-store
-  expect(store.readCount).to.equal(DD31 ? 0 : 1, 'readCount');
+  expect(store.readCount).to.equal(1, 'readCount');
   expect(store.writeCount).to.equal(0, 'writeCount');
   expect(store.closeCount).to.equal(0, 'closeCount');
   store.resetCounters();
