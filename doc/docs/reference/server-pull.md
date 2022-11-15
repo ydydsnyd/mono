@@ -188,11 +188,9 @@ A `cookie` is returned in the `PullResponse` and passed in the next pull as part
 
 In the simplest case, the server could not bother with `cookie`s or sending a patch, and instead just return the full Client View to the client on each pull. This is fine for tiny amounts of data or in development, but with Client Views of any significant size, this is massively inefficient and can noticably slow sync. Typically only small amounts of data in the Client View are changing at any time, so it's usually the case that the server implements a `cookie` / patching strategy so that it only returns what's changed since the last pull.
 
-A complete discussion of strategies for efficiently computing patches is outside the scope of this document, but here are a couple of the most common strategies:
+### Global Version Number Strategy
 
-### Global Version Number
-
-In this strategy a monotonically increasing global version number is used to track when an entity in your datastore has changed. On push, in a single serialized transaction, the next version number is acquired and updates to datastore entities are marked with this version. For example, you might have a `Version` column on a database table and set it to the current version when a row is inserted or modified. The pull handler returns the current version number in the `cookie` in pull. To compute the patch from a client's state to the current state of the server, select all the entities in the datastore with a version number greater than that passed in the client's `PullRequest`. This strategy requires using soft deletes.
+The easiest way to generate patches uses a monotonically increasing global version number to track when entities in your datastore change. On push, in a single serialized transaction, the next version number is acquired and updates to datastore entities are marked with this version. For example, you might have a `Version` column on a database table and set it to the current version when a row is inserted or modified. The pull handler returns the current version number in the `cookie` in pull. To compute the patch from a client's state to the current state of the server, select all the entities in the datastore with a version number greater than that passed in the client's `PullRequest`. This strategy requires using soft deletes.
 
 :::caution
 
@@ -216,17 +214,9 @@ The [example Todo app](https://github.com/rocicorp/replicache-todo/) uses this s
 
 This simple strategy is the one we recommend starting with, and what you get by default if you start your project with the example Todo app as a base.
 
-### Row Versioning
-
-In this strategy you associate an independent `Version` with each entity in the your datastore and update it whenever that entity is changed. For example, you could have a `Version` column and a trigger to increment the `Version` on a row when it is updated. Note this is different than the global version strategy: in that strategy there is a single incrementing global version; in this strategy each entity has its own, _independent_ version.
-
-This strategy keeps in look-aside storage a record of which entity versions a client has. This storage could be ephemeral, for example kept in memcache or redis, as it is easy to rebuild if necessary (if a record is lost, return the entire client view and create a new record). Each record needs a unique identifier which is returned as the `cookie`, a simple integer suffices. On pull, select any entities that are not present in the client's record: these have been added since the last pull. Also select entities that are present in the record but that have larger version numbers in the datastore: these have changed since the last pull. And finally, find those entities that are present in the record but not present in the datastore: these have been deleted since last pull.
-
-This strategy has much better performance characteristics than global versioning, so we recommend it if global versioning becomes a performance problem. It is, however, more work to set up.
-
 ### Additional options
 
-Tere are a variety of other strategies you could use to compute the patch, and we plan to document the space of possibilities better in the future. Until then, please [contact us](https://replicache.dev/#contact) if you'd like to discuss options and tradeoffs.
+Tere are other strategies you could use to compute the patch, and we plan to document the space of possibilities better in the future. Until then, please [contact us](https://replicache.dev/#contact) if you'd like to discuss options and tradeoffs.
 
 ## Pull Launch Checklist
 
