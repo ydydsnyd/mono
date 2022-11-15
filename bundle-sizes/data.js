@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1668509205586,
+  "lastUpdate": 1668510810542,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -30209,6 +30209,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23580,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6d7652c6c7b04eb374406a38fabdf759425ce77d",
+          "message": "fix: uuidNoNative (#391)\n\nThe non native code was using 0-7 but the native code uses 0-255\r\n\r\nFollow up to 533a22a67922c9bee9db4382a382d3bd30c47b52",
+          "timestamp": "2022-11-15T11:12:29Z",
+          "tree_id": "88dbeb2e3ffa189bff51f174bb52bc9daa7af116",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/6d7652c6c7b04eb374406a38fabdf759425ce77d"
+        },
+        "date": 1668510804328,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 192421,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34188,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 191274,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33869,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81216,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23577,
             "unit": "bytes"
           }
         ]
