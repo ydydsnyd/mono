@@ -75,6 +75,7 @@ type Mutation = {
   id: number;
   name: string;
   args: ReadonlyJSONValue;
+  timestamp: number;
 };
 ```
 
@@ -85,11 +86,12 @@ instance.
 
 ### `mutations`
 
-An array of mutations to be applied to the server. The `id` is a sequential
-per-client unsigned integer. Each mutation will have an ID exactly one greater
-than the previous one in the list. The `name` is the name of the mutator that
-was invoked (e.g., from [Replicache.mutate](api/classes/Replicache#mutate)). The
-`args` are the arguments that were passed to the mutator.
+An array of mutations to be applied to the server, each having:
+
+- `id`: A sequential per-client unsigned integer. Each mutation will have an ID exactly one greater than the previous one in the list.
+- `name`: The name of the mutator that was invoked (e.g., from [Replicache.mutate](api/classes/Replicache#mutate)).
+- `args`: The arguments that were passed to the mutator.
+- `timestamp`: The [`DOMHighResTimeStamp`](https://developer.mozilla.org/en-US/docs/Web/API/DOMHighResTimeStamp) from the source client when the mutation was initially run. This field is not currently used by the protocol.
 
 ### `profileID`
 
