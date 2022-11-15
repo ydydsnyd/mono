@@ -143,18 +143,6 @@ export async function deleteAllDatabases(): Promise<void> {
   dbsToDrop.clear();
 }
 
-const partialNamesToReplicacheNames: Map<string, string> = new Map();
-/** Namespace replicache names to isolate tests' IndexedDB state. */
-export function createReplicacheNameForTest(partialName: string): string {
-  let replicacheName = partialNamesToReplicacheNames.get(partialName);
-  if (!replicacheName) {
-    const namespaceForTest = uuid();
-    replicacheName = `${namespaceForTest}:${partialName}`;
-    partialNamesToReplicacheNames.set(partialName, replicacheName);
-  }
-  return replicacheName;
-}
-
 type ReplicacheTestOptions<MD extends MutatorDefs> = Omit<
   ReplicacheOptions<MD>,
   'name' | 'licenseKey'
@@ -163,49 +151,43 @@ type ReplicacheTestOptions<MD extends MutatorDefs> = Omit<
   licenseKey?: string;
 } & ReplicacheInternalOptions;
 
-export function replicacheForTesting<
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  MD extends MutatorDefs = {},
->(
-  partialName: string,
-  options: ReplicacheTestOptions<MD> = {},
-): Promise<ReplicacheTest<MD>> {
-  const pullURL = 'https://pull.com/?name=' + partialName;
-  const pushURL = 'https://push.com/?name=' + partialName;
-  return replicacheForTestingNoDefaultURLs(
-    createReplicacheNameForTest(partialName),
-    {
-      pullURL,
-      pushURL,
-      licenseKey: options.licenseKey ?? TEST_LICENSE_KEY,
-      ...options,
-    },
-  );
-}
-
-export async function replicacheForTestingNoDefaultURLs<
+export async function replicacheForTesting<
   // eslint-disable-next-line @typescript-eslint/ban-types
   MD extends MutatorDefs = {},
 >(
   name: string,
-  {
+  options: ReplicacheTestOptions<MD> = {},
+  testOptions: {
+    useDefaultURLs?: boolean; // default true
+    useUniqueName?: boolean; // default true
+  } = {},
+): Promise<ReplicacheTest<MD>> {
+  const defaultURLs = {
+    pullURL: 'https://pull.com/?name=' + name,
+    pushURL: 'https://push.com/?name=' + name,
+  };
+  const {useDefaultURLs = true, useUniqueName = true} = testOptions;
+  const {
     pullURL,
     pushDelay = 60_000, // Large to prevent interfering
     pushURL,
+    licenseKey,
     onClientStateNotFound = () => {
       throw new Error(
         'Unexpected call to onClientStateNotFound. Did you forget to pass it as an option?',
       );
     },
     ...rest
-  }: ReplicacheTestOptions<MD> = {},
-): Promise<ReplicacheTest<MD>> {
+  }: ReplicacheTestOptions<MD> = useDefaultURLs
+    ? {...defaultURLs, ...options}
+    : options;
+
   const rep = new ReplicacheTest<MD>({
     pullURL,
     pushDelay,
     pushURL,
-    name,
-    licenseKey: TEST_LICENSE_KEY,
+    name: useUniqueName ? `${uuid()}:${name}` : name,
+    licenseKey: licenseKey ?? TEST_LICENSE_KEY,
     ...rest,
   });
   dbsToDrop.add(rep.idbName);
@@ -235,7 +217,6 @@ export function initReplicacheTesting(): void {
     clock.restore();
     fetchMock.restore();
     sinon.restore();
-    partialNamesToReplicacheNames.clear();
     await closeAllReps();
     await closeAllCloseables();
     await deleteAllDatabases();

@@ -93,9 +93,9 @@ test('basic persist & load', async () => {
       assertClientDD31(clientBeforePull);
       assertNotUndefined(clientGroupBeforePull);
       const clientGroup: persist.ClientGroup | undefined =
-        await perdag.withRead(read =>
-          persist.getClientGroup(clientBeforePull.clientGroupID, read),
-        );
+        await perdag.withRead(read => {
+          return persist.getClientGroup(clientBeforePull.clientGroupID, read);
+        });
       assertNotUndefined(clientGroup);
       if (clientGroupBeforePull.headHash !== clientGroup.headHash) {
         // persist has completed
@@ -119,9 +119,13 @@ test('basic persist & load', async () => {
   });
 
   // If we create another instance it will lazy load the data from IDB
-  const rep2 = await replicacheForTesting('persist-test', {
-    pullURL,
-  });
+  const rep2 = await replicacheForTesting(
+    rep.name,
+    {
+      pullURL,
+    },
+    {useUniqueName: false},
+  );
   await rep2.query(async tx => {
     expect(await tx.get('a')).to.equal(1);
     expect(await tx.get('b')).to.equal(2);
@@ -182,9 +186,13 @@ suite('onClientStateNotFound', () => {
     await deleteClientForTesting(clientID, rep.perdag);
     await rep.close();
 
-    const rep2 = await replicacheForTesting(name, {
-      mutators,
-    });
+    const rep2 = await replicacheForTesting(
+      rep.name,
+      {
+        mutators,
+      },
+      {useUniqueName: false},
+    );
 
     const clientID2 = await rep2.clientID;
 
@@ -237,9 +245,13 @@ suite('onClientStateNotFound', () => {
     await deleteClientForTesting(clientID, rep.perdag);
     await rep.close();
 
-    const rep2 = await replicacheForTesting(name, {
-      mutators,
-    });
+    const rep2 = await replicacheForTesting(
+      rep.name,
+      {
+        mutators,
+      },
+      {useUniqueName: false},
+    );
 
     const clientID2 = await rep2.clientID;
     await deleteClientForTesting(clientID2, rep2.perdag);

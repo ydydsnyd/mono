@@ -3,8 +3,6 @@ import {
   replicacheForTesting,
   tickAFewTimes,
   clock,
-  createReplicacheNameForTest,
-  replicacheForTestingNoDefaultURLs,
   dbsToDrop,
   closeablesToClose,
 } from './test-util.js';
@@ -315,8 +313,7 @@ test('recovering mutations with pull disabled', async () => {
 test('client does not attempt to recover mutations from IndexedDB with different replicache name', async () => {
   const clientWPendingMutationsID = 'client1';
   const schemaVersion = 'testSchema';
-  const replicachePartialNameOfClientWPendingMutations =
-    'diffName-pendingClient';
+  const replicacheNameOfClientWPendingMutations = `${uuid()}:diffName-pendingClient`;
   const replicachePartialNameOfClientRecoveringMutations =
     'diffName-recoveringClient';
 
@@ -336,9 +333,7 @@ test('client does not attempt to recover mutations from IndexedDB with different
   await tickAFewTimes();
 
   const testPerdag = await createPerdag({
-    replicacheName: createReplicacheNameForTest(
-      replicachePartialNameOfClientWPendingMutations,
-    ),
+    replicacheName: replicacheNameOfClientWPendingMutations,
     schemaVersion,
     replicacheFormatVersion: REPLICACHE_FORMAT_VERSION_SDD,
   });
@@ -1140,11 +1135,12 @@ test('mutation recovery is invoked at startup', async () => {
 });
 
 test('mutation recovery returns early without running if push is disabled', async () => {
-  const rep = await replicacheForTestingNoDefaultURLs(
+  const rep = await replicacheForTesting(
     'mutation-recovery-startup',
     {
       pullURL: 'https://diff.com/pull',
     },
+    {useDefaultURLs: false},
   );
   expect(rep.recoverMutationsSpy.callCount).to.equal(1);
   expect(await rep.recoverMutationsSpy.firstCall.returnValue).to.equal(false);
@@ -1152,12 +1148,13 @@ test('mutation recovery returns early without running if push is disabled', asyn
 });
 
 test('mutation recovery returns early when internal option enableMutationRecovery is false', async () => {
-  const rep = await replicacheForTestingNoDefaultURLs(
+  const rep = await replicacheForTesting(
     'mutation-recovery-startup',
     {
       pullURL: 'https://diff.com/pull',
       enableMutationRecovery: false,
     },
+    {useDefaultURLs: false},
   );
   expect(rep.recoverMutationsSpy.callCount).to.equal(1);
   expect(await rep.recoverMutationsSpy.firstCall.returnValue).to.equal(false);

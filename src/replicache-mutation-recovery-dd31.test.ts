@@ -3,8 +3,6 @@ import {
   replicacheForTesting,
   tickAFewTimes,
   clock,
-  createReplicacheNameForTest,
-  replicacheForTestingNoDefaultURLs,
 } from './test-util.js';
 import {
   MutatorDefs,
@@ -374,8 +372,7 @@ suite('DD31', () => {
   test('client does not attempt to recover mutations from IndexedDB with different replicache name', async () => {
     const clientWPendingMutationsID = 'client1';
     const schemaVersion = 'testSchema';
-    const replicachePartialNameOfClientWPendingMutations =
-      'diffName-pendingClient';
+    const replicacheNameOfClientWPendingMutations = `${uuid}:diffName-pendingClient`;
     const replicachePartialNameOfClientRecoveringMutations =
       'diffName-recoveringClient';
 
@@ -400,9 +397,7 @@ suite('DD31', () => {
     await tickAFewTimes();
 
     const testPerdag = await createPerdag({
-      replicacheName: createReplicacheNameForTest(
-        replicachePartialNameOfClientWPendingMutations,
-      ),
+      replicacheName: replicacheNameOfClientWPendingMutations,
       schemaVersion,
       replicacheFormatVersion: REPLICACHE_FORMAT_VERSION_DD31,
     });
@@ -1400,10 +1395,13 @@ suite('DD31', () => {
   });
 
   test('mutation recovery returns early without running if push is disabled', async () => {
-    const rep = await replicacheForTestingNoDefaultURLs(
+    const rep = await replicacheForTesting(
       'mutation-recovery-startup',
       {
         pullURL: 'https://diff.com/pull',
+      },
+      {
+        useDefaultURLs: false,
       },
     );
     expect(rep.recoverMutationsSpy.callCount).to.equal(1);
@@ -1412,13 +1410,10 @@ suite('DD31', () => {
   });
 
   test('mutation recovery returns early when internal option enableMutationRecovery is false', async () => {
-    const rep = await replicacheForTestingNoDefaultURLs(
-      'mutation-recovery-startup',
-      {
-        pullURL: 'https://diff.com/pull',
-        enableMutationRecovery: false,
-      },
-    );
+    const rep = await replicacheForTesting('mutation-recovery-startup', {
+      pullURL: 'https://diff.com/pull',
+      enableMutationRecovery: false,
+    });
     expect(rep.recoverMutationsSpy.callCount).to.equal(1);
     expect(await rep.recoverMutationsSpy.firstCall.returnValue).to.equal(false);
     expect(await rep.recoverMutations()).to.equal(false);

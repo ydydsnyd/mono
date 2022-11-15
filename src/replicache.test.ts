@@ -9,7 +9,6 @@ import {
   makePullResponse,
   MemStoreWithCounters,
   replicacheForTesting,
-  replicacheForTestingNoDefaultURLs,
   tickAFewTimes,
   tickUntil,
 } from './test-util.js';
@@ -623,19 +622,23 @@ test('push delay', async () => {
 });
 
 test('push request is only sent when pushURL or non-default pusher are set', async () => {
-  const rep = await replicacheForTestingNoDefaultURLs('no push requests', {
-    auth: '1',
-    pullURL: 'https://diff.com/pull',
-    pushDelay: 1,
-    mutators: {
-      createTodo: async <A extends {id: number}>(
-        tx: WriteTransaction,
-        args: A,
-      ) => {
-        await tx.put(`/todo/${args.id}`, args);
+  const rep = await replicacheForTesting(
+    'no push requests',
+    {
+      auth: '1',
+      pullURL: 'https://diff.com/pull',
+      pushDelay: 1,
+      mutators: {
+        createTodo: async <A extends {id: number}>(
+          tx: WriteTransaction,
+          args: A,
+        ) => {
+          await tx.put(`/todo/${args.id}`, args);
+        },
       },
     },
-  });
+    {useDefaultURLs: false},
+  );
 
   const {createTodo} = rep.mutate;
 
@@ -889,10 +892,14 @@ test('reauth pull', async () => {
 });
 
 test('pull request is only sent when pullURL or non-default puller are set', async () => {
-  const rep = await replicacheForTestingNoDefaultURLs('no push requests', {
-    auth: '1',
-    pushURL: 'https://diff.com/push',
-  });
+  const rep = await replicacheForTesting(
+    'no push requests',
+    {
+      auth: '1',
+      pushURL: 'https://diff.com/push',
+    },
+    {useDefaultURLs: false},
+  );
 
   await tickAFewTimes();
   fetchMock.reset();
@@ -1295,56 +1302,57 @@ test('allow redefinition of indexes', async () => {
     // TODO(DD31): Without persist we cannot test this.
     return;
   }
-  {
-    const pullURL = 'https://diff.com/pull';
-    const rep = await replicacheForTesting('index-redefinition', {
-      pullURL,
-      indexes: {
-        aIndex: {jsonPointer: '/a'},
-      },
-    });
 
-    fetchMock.postOnce(pullURL, {
-      cookie: '',
-      lastMutationID: 2,
-      patch: [
-        {op: 'put', key: 'a/0', value: {a: '0'}},
-        {op: 'put', key: 'a/1', value: {a: '1'}},
-        {op: 'put', key: 'b/2', value: {a: '2'}},
-        {op: 'put', key: 'b/3', value: {a: '3'}},
-      ],
-    });
+  const pullURL = 'https://diff.com/pull';
+  const rep = await replicacheForTesting('index-redefinition', {
+    pullURL,
+    indexes: {
+      aIndex: {jsonPointer: '/a'},
+    },
+  });
 
-    rep.pull();
+  fetchMock.postOnce(pullURL, {
+    cookie: '',
+    lastMutationID: 2,
+    patch: [
+      {op: 'put', key: 'a/0', value: {a: '0'}},
+      {op: 'put', key: 'a/1', value: {a: '1'}},
+      {op: 'put', key: 'b/2', value: {a: '2'}},
+      {op: 'put', key: 'b/3', value: {a: '3'}},
+    ],
+  });
 
-    // Allow pull to finish (larger than PERSIST_TIMEOUT)
-    // await clock.tickAsync(2 * 1000);
-    await tickAFewTimes(20, 100);
+  rep.pull();
 
-    await testScanResult(rep, {indexName: 'aIndex'}, [
-      [['0', 'a/0'], {a: '0'}],
-      [['1', 'a/1'], {a: '1'}],
-      [['2', 'b/2'], {a: '2'}],
-      [['3', 'b/3'], {a: '3'}],
-    ]);
+  // Allow pull to finish (larger than PERSIST_TIMEOUT)
+  // await clock.tickAsync(2 * 1000);
+  await tickAFewTimes(20, 100);
 
-    await rep.close();
-  }
+  await testScanResult(rep, {indexName: 'aIndex'}, [
+    [['0', 'a/0'], {a: '0'}],
+    [['1', 'a/1'], {a: '1'}],
+    [['2', 'b/2'], {a: '2'}],
+    [['3', 'b/3'], {a: '3'}],
+  ]);
 
-  {
-    const rep = await replicacheForTesting('index-redefinition', {
+  await rep.close();
+
+  const rep2 = await replicacheForTesting(
+    rep.name,
+    {
       indexes: {
         aIndex: {jsonPointer: '/a', prefix: 'b'},
       },
-    });
+    },
+    {useUniqueName: false},
+  );
 
-    await testScanResult(rep, {indexName: 'aIndex'}, [
-      [['2', 'b/2'], {a: '2'}],
-      [['3', 'b/3'], {a: '3'}],
-    ]);
+  await testScanResult(rep2, {indexName: 'aIndex'}, [
+    [['2', 'b/2'], {a: '2'}],
+    [['3', 'b/3'], {a: '3'}],
+  ]);
 
-    await rep.close();
-  }
+  await rep2.close();
 });
 
 test('index array', async () => {
