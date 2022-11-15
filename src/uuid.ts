@@ -4,11 +4,9 @@ export const uuid: () => string =
     : uuidNoNative;
 
 export function uuidNoNative(): string {
-  const numbers = new Uint8Array(36);
-  for (let i = 0; i < numbers.length; i++) {
-    numbers[i] = Math.floor(Math.random() * 8);
-  }
-  return uuidFromNumbers(numbers);
+  return uuidFromNumbers(
+    Uint8Array.from({length: 36}, () => Math.random() * 256),
+  );
 }
 
 export function uuidNative(): string {
