@@ -12,7 +12,7 @@ import { createWorker } from "./worker";
 import type { DisconnectHandler } from "./disconnect";
 import { createNoAuthDOWorker } from "./no-auth-do-worker";
 import { Router } from "itty-router";
-import type { IttyRouter } from "./middleware";
+import type { RociRouter } from "./middleware.js";
 
 export interface ReflectServerOptions<
   Env extends ReflectServerBaseEnv,
@@ -68,7 +68,7 @@ export function createReflectServer<
   // eslint-disable-next-line @typescript-eslint/naming-convention
   AuthDO: DurableObjectCtor<Env>;
 } {
-  const router = Router() as IttyRouter;
+  const router: RociRouter = Router();
   const optionsWithDefaults = getOptionsWithDefaults(options);
   const roomDOClass = createRoomDOClass(optionsWithDefaults);
   const { authHandler, getLogSinks, getLogLevel } = optionsWithDefaults;

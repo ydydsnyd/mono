@@ -228,7 +228,7 @@ test("createRoom sets jurisdiction if requested", async () => {
     "https://test.roci.dev",
     TEST_AUTH_API_KEY,
     testRoomID,
-    true
+    "eu"
   );
 
   const authDO = new BaseAuthDO({
@@ -256,7 +256,7 @@ test("createRoom sets jurisdiction if requested", async () => {
   expect(response.status).toEqual(200);
   expect(gotJurisdiction).toEqual(true);
   const rr = await getRoomRecord(state.storage, testRoomID);
-  expect(rr?.requireEUStorage).toEqual(true);
+  expect(rr?.jurisdiction).toEqual("eu");
 });
 
 test("closeRoom closes an open room", async () => {

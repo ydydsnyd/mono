@@ -1,14 +1,14 @@
 import type { BaseAuthDO } from "./auth-do";
 import {
-  IttyRequest,
-  IttyRouter,
+  RociRequest,
+  RociRouter,
   requireAuthAPIKeyMatches,
 } from "./middleware";
 
 type Route = {
   path: string;
   add: (
-    router: IttyRouter,
+    router: RociRouter,
     authDO: BaseAuthDO,
     authApiKey: string | undefined
   ) => void;
@@ -22,7 +22,7 @@ export function paths() {
 
 // Called by the authDO to set up its routes.
 export function addRoutes(
-  router: IttyRouter,
+  router: RociRouter,
   authDO: BaseAuthDO,
   authApiKey: string | undefined
 ) {
@@ -36,14 +36,14 @@ export const roomStatusByRoomIDPath = "/api/room/v0/room/:roomID/status";
 routes.push({
   path: roomStatusByRoomIDPath,
   add: (
-    router: IttyRouter,
+    router: RociRouter,
     authDO: BaseAuthDO,
     authApiKey: string | undefined
   ) => {
     router.get(
       roomStatusByRoomIDPath,
       requireAuthAPIKeyMatches(authApiKey),
-      async (request: IttyRequest) => {
+      async (request: RociRequest) => {
         return authDO.roomStatusByRoomID(request);
       }
     );
@@ -54,14 +54,14 @@ export const roomRecordsPath = "/api/room/v0/rooms";
 routes.push({
   path: roomRecordsPath,
   add: (
-    router: IttyRouter,
+    router: RociRouter,
     authDO: BaseAuthDO,
     authApiKey: string | undefined
   ) => {
     router.get(
       roomRecordsPath,
       requireAuthAPIKeyMatches(authApiKey),
-      async (request: IttyRequest) => {
+      async (request: RociRequest) => {
         return authDO.allRoomRecords(request);
       }
     );
@@ -74,14 +74,14 @@ export const closeRoomPath = "/api/room/v0/room/:roomID/close";
 routes.push({
   path: closeRoomPath,
   add: (
-    router: IttyRouter,
+    router: RociRouter,
     authDO: BaseAuthDO,
     authApiKey: string | undefined
   ) => {
     router.post(
       closeRoomPath,
       requireAuthAPIKeyMatches(authApiKey),
-      async (request: IttyRequest) => {
+      async (request: RociRequest) => {
         // TODO should plumb a LogContext through here.
         return authDO.closeRoom(request);
       }
@@ -94,14 +94,14 @@ export const deleteRoomPath = "/api/room/v0/room/:roomID/delete";
 routes.push({
   path: deleteRoomPath,
   add: (
-    router: IttyRouter,
+    router: RociRouter,
     authDO: BaseAuthDO,
     authApiKey: string | undefined
   ) => {
     router.post(
       deleteRoomPath,
       requireAuthAPIKeyMatches(authApiKey),
-      async (request: IttyRequest) => {
+      async (request: RociRequest) => {
         // TODO should plumb a LogContext through here.
         return authDO.deleteRoom(request);
       }

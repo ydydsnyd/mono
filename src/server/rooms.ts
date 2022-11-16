@@ -1,9 +1,9 @@
 import type { LogContext } from "@rocicorp/logger";
 import type { CreateRoomRequest } from "../protocol/api/room.js";
-import { RWLock } from "@rocicorp/lock";
+import { Lock } from "@rocicorp/lock";
 import type { DurableStorage } from "../storage/durable-storage.js";
 import * as s from "superstruct";
-import type { IttyRequest } from "./middleware.js";
+import type { RociRequest } from "./middleware.js";
 
 // TODO(fritz) rough GDRP TODO list:
 // - get aaron to review APIs (don't worry too much about this
@@ -31,7 +31,7 @@ export type RoomRecord = {
   objectIDString: string;
 
   // Indicates whether the room is pinned in the EU.
-  requireEUStorage: boolean;
+  jurisdiction: "" | "eu";
 
   status: RoomStatus;
 };
@@ -60,17 +60,41 @@ const roomStatusSchema = s.enums([
   RoomStatus.Deleted,
   RoomStatus.Unknown,
 ]);
+// Note setting jurisdictionSchmea to = s.union([s.literal(""), s.literal("eu")]);
+// doesn't work for some reason.
+const jurisdictionSchema = s.enums(["", "eu"]);
 const roomRecordSchema = s.object({
   roomID: s.string(),
   objectIDString: s.string(),
-  requireEUStorage: s.boolean(),
+  jurisdiction: jurisdictionSchema,
   status: roomStatusSchema,
 });
 // This assignment ensures that RoomRecord and roomRecordSchema stay in sync.
 const RoomRecord: s.Describe<RoomRecord> = roomRecordSchema;
 
-// We need a lock to prevent concurrent changes to a room.
-const roomLock = new RWLock();
+// We need a lock to prevent concurrent creation of the same room.
+//
+// TODO the fact that we're not locking updates to the RoomRecord or
+// operations *on* the room like delete or invalidateAuth is suspect.
+// It means we could have at least two kinds of problems:
+//   1. Lost updates to RoomRecords. Eg, two concurrent operations O1 and O2
+//      with a sequence like:
+//        O1 reads a RoomRecord
+//        O2 reads a RoomRecord
+//        O1 updates the RoomRecord and writes it
+//        O2 updates the RoomRecord and writes it
+//      The result is that O1's update is lost. If the input gate is on then
+//      this is not a problem.
+//
+//   2. Bad interactions between concurrent operations on the roomDO itself.
+//      Eg, O1 is delete()ing the room while O2 is updating some state in it.
+//      It's an accident of how auth is implemented that we don't have this
+//      problem right now, but we should rationalize the model, like anything
+//      that updates roomDO storage should be serialized at some point. Maybe
+//      the solution is simply "enable input and output gates on the roomDO"
+//      but if that's the solution we need to articulate it somewhere and
+//      enforce that it is true.
+const createRoomLock = new Lock();
 
 export async function createRoom(
   lc: LogContext,
@@ -89,16 +113,16 @@ export async function createRoom(
     });
   }
 
-  return roomLock.withWrite(async () => {
+  return createRoomLock.withLock(async () => {
     // Check if the room already exists.
-    if ((await roomRecordByRoomIDLocked(storage, roomID)) !== undefined) {
+    if ((await roomRecordByRoomID(storage, roomID)) !== undefined) {
       return new Response("room already exists", {
         status: 400,
       });
     }
 
     const options: DurableObjectNamespaceNewUniqueIdOptions = {};
-    if (validatedBody.requireEUStorage) {
+    if (validatedBody.jurisdiction === "eu") {
       options["jurisdiction"] = "eu";
     }
 
@@ -121,7 +145,7 @@ export async function createRoom(
     const roomRecord: RoomRecord = {
       roomID,
       objectIDString: objectID.toString(),
-      requireEUStorage: validatedBody.requireEUStorage,
+      jurisdiction: validatedBody.jurisdiction ?? "",
       status: RoomStatus.Open,
     };
     const roomRecordKey = roomKeyToString(roomRecord);
@@ -137,55 +161,46 @@ export async function createRoom(
 export async function closeRoom(
   lc: LogContext,
   storage: DurableStorage,
-  request: IttyRequest
+  request: RociRequest
 ): Promise<Response> {
   const roomID = request.params?.roomID;
   if (roomID === undefined) {
     return new Response("Missing roomID", { status: 400 });
   }
 
-  return roomLock.withWrite(async () => {
-    const roomRecord = await roomRecordByRoomIDLocked(storage, roomID);
-    if (roomRecord === undefined) {
-      return new Response("no such room", {
-        status: 404,
-      });
-    }
+  const roomRecord = await roomRecordByRoomID(storage, roomID);
+  if (roomRecord === undefined) {
+    return new Response("no such room", {
+      status: 404,
+    });
+  }
 
-    if (roomRecord.status === RoomStatus.Closed) {
-      return new Response("success (room already closed)");
-    } else if (roomRecord.status !== RoomStatus.Open) {
-      return new Response("room is not open", {
-        status: 400,
-      });
-    }
+  if (roomRecord.status === RoomStatus.Closed) {
+    return new Response("success (room already closed)");
+  } else if (roomRecord.status !== RoomStatus.Open) {
+    return new Response("room is not open", {
+      status: 400,
+    });
+  }
 
-    roomRecord.status = RoomStatus.Closed;
-    const roomRecordKey = roomKeyToString(roomRecord);
-    await storage.put(roomRecordKey, roomRecord);
-    lc.debug?.(`closed room ${JSON.stringify(roomRecord)}`);
+  roomRecord.status = RoomStatus.Closed;
+  const roomRecordKey = roomKeyToString(roomRecord);
+  await storage.put(roomRecordKey, roomRecord);
+  lc.debug?.(`closed room ${JSON.stringify(roomRecord)}`);
 
-    return new Response("success");
-  });
+  return new Response("success");
 }
 
 export async function deleteRoom(
   lc: LogContext,
   roomDO: DurableObjectNamespace,
   storage: DurableStorage,
-  request: IttyRequest
+  request: RociRequest
 ): Promise<Response> {
   const roomID = request.params?.roomID;
   if (roomID === undefined) {
     return new Response("Missing roomID", { status: 400 });
   }
-
-  // The locking here is iffy. We generally lock when updating a
-  // room record, but here we don't want to lock the room while
-  // calling out to the roomDO to delete its data. So its possible
-  // something else could update the room record while we're deleting.
-  // We re-read the room record after deleting the room data in case.
-  // But still this is kinda smelly.
   const roomRecord = await roomRecordByRoomID(storage, roomID);
   if (roomRecord === undefined) {
     return new Response("no such room", {
@@ -203,8 +218,7 @@ export async function deleteRoom(
 
   const objectID = roomDO.idFromString(roomRecord.objectIDString);
   const roomDOStub = roomDO.get(objectID);
-  // TODO(fritz) OK to use "as" here?
-  const response = await roomDOStub.fetch(request as Request);
+  const response = await roomDOStub.fetch(request);
   if (!response.ok) {
     lc.debug?.(
       `Received error response from ${roomID}. ${
@@ -214,19 +228,11 @@ export async function deleteRoom(
     return response;
   }
 
-  return roomLock.withWrite(async () => {
-    const freshRoomRecord = await roomRecordByRoomIDLocked(storage, roomID);
-    if (freshRoomRecord === undefined) {
-      return new Response(`room record for ${roomID} disappeared?`, {
-        status: 500,
-      });
-    }
-    freshRoomRecord.status = RoomStatus.Deleted;
-    const roomRecordKey = roomKeyToString(freshRoomRecord);
-    await storage.put(roomRecordKey, freshRoomRecord);
-    lc.debug?.(`deleted room ${JSON.stringify(freshRoomRecord)}`);
-    return new Response("success");
-  });
+  roomRecord.status = RoomStatus.Deleted;
+  const roomRecordKey = roomKeyToString(roomRecord);
+  await storage.put(roomRecordKey, roomRecord);
+  lc.debug?.(`deleted room ${JSON.stringify(roomRecord)}`);
+  return new Response("success");
 }
 
 export async function objectIDByRoomID(
@@ -242,15 +248,6 @@ export async function objectIDByRoomID(
 }
 
 export async function roomRecordByRoomID(
-  storage: DurableStorage,
-  roomID: string
-) {
-  return roomLock.withRead(async () => {
-    return roomRecordByRoomIDLocked(storage, roomID);
-  });
-}
-
-async function roomRecordByRoomIDLocked(
   storage: DurableStorage,
   roomID: string
 ) {

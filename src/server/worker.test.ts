@@ -95,83 +95,75 @@ test("worker forwards connect requests to authDO", async () => {
   );
 });
 
-test("worker forwards auth api requests to authDO", async () => {
-  await testForwardedToAuthDO(
-    new Request("https://test.roci.dev/api/auth/v0/invalidateForUser", {
-      method: "post",
-      headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
-      body: JSON.stringify({ userID: "userID1" }),
-    })
-  );
-  await testForwardedToAuthDO(
-    new Request("https://test.roci.dev/api/auth/v0/invalidateForUser", {
-      method: "post",
-      // No auth header.
-      body: JSON.stringify({ userID: "userID1" }),
-    }),
-    new Response("", { status: 200 }),
-    false // Expect authDO not called.
-  );
-  await testForwardedToAuthDO(
-    new Request("https://test.roci.dev/api/auth/v0/invalidateForRoom", {
-      method: "post",
-      headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
-      body: JSON.stringify({ roomID: "roomID1" }),
-    })
-  );
-  await testForwardedToAuthDO(
-    new Request("https://test.roci.dev/api/auth/v0/invalidateForRoom", {
-      method: "post",
-      // No auth header.
-      body: JSON.stringify({ roomID: "roomID1" }),
-    }),
-    new Response("", { status: 200 }),
-    false // Expect authDO not called.
-  );
-  await testForwardedToAuthDO(
-    new Request("https://test.roci.dev/api/auth/v0/invalidateAll", {
-      method: "post",
-      headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
-    })
-  );
-  await testForwardedToAuthDO(
-    new Request("https://test.roci.dev/api/auth/v0/invalidateAll", {
-      method: "post",
-      // No auth header.
-    }),
-    new Response("", { status: 200 }),
-    false // Expect authDO not called.
-  );
-});
-
 test("worker forwards authDO api requests to authDO", async () => {
   const roomStatusByRoomIDPathWithRoomID = roomStatusByRoomIDPath.replace(
     ":roomID",
     "ae4565"
   );
+  type TestCase = {
+    path: string;
+    method: string;
+    body: undefined | Record<string, unknown>;
+  };
   const closeRoomPathWithRoomID = closeRoomPath.replace(":roomID", "ae4565");
   const deleteRoomPathWithRoomID = roomRecordsPath.replace(":roomID", "ae4565");
-  const paths = [
-    roomStatusByRoomIDPathWithRoomID,
-    roomRecordsPath,
-    closeRoomPathWithRoomID,
-    deleteRoomPathWithRoomID,
+  const testCases: TestCase[] = [
+    // Auth API calls.
+    {
+      path: "https://test.roci.dev/api/auth/v0/invalidateForUser",
+      method: "post",
+      body: { userID: "userID1" },
+    },
+    {
+      path: "https://test.roci.dev/api/auth/v0/invalidateForRoom",
+      method: "post",
+      body: { roomID: "roomID1" },
+    },
+    {
+      path: "https://test.roci.dev/api/auth/v0/invalidateAll",
+      method: "post",
+      body: undefined,
+    },
+
+    // Room API calls.
+    {
+      path: `https://test.roci.dev${roomStatusByRoomIDPathWithRoomID}`,
+      method: "get",
+      body: undefined,
+    },
+    {
+      path: `https://test.roci.dev${roomRecordsPath}`,
+      method: "get",
+      body: undefined,
+    },
+    {
+      path: `https://test.roci.dev${closeRoomPathWithRoomID}`,
+      method: "post",
+      body: undefined,
+    },
+    {
+      path: `https://test.roci.dev${deleteRoomPathWithRoomID}`,
+      method: "post",
+      body: undefined,
+    },
   ];
-  for (const path of paths) {
-    await testForwarding(path);
+  for (const tc of testCases) {
+    await testForwarding(tc);
   }
 
-  async function testForwarding(path: string) {
+  async function testForwarding(tc: TestCase) {
     await testForwardedToAuthDO(
-      new Request(`https://test.roci.dev${path}`, {
-        method: "get",
+      new Request(tc.path, {
+        method: tc.method,
         headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
+        body: tc.body ? JSON.stringify(tc.body) : undefined,
       })
     );
     await testForwardedToAuthDO(
-      new Request(`https://test.roci.dev${path}`, {
-        method: "get",
+      new Request(tc.path, {
+        method: tc.path,
         // Note: no auth header.
+        body: tc.body ? JSON.stringify(tc.body) : undefined,
       }),
       new Response(null, {
         status: 200,

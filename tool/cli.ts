@@ -15,7 +15,7 @@ if (process.argv.length < 3) {
   console.error(
     "Commands:\n" +
       "  list-do-namespaces [--class=<CLASS> [--script=<SCRIPT>]]\n" +
-      "  list-do-instances --namespace-id=<NAMESPACE ID>" +
+      "  list-do-instances --namespace-id=<NAMESPACE ID>\n" +
       "  validate-rooms --script=<SCRIPT>"
   );
   process.exit(1);

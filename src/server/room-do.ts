@@ -21,9 +21,9 @@ import type { DisconnectHandler } from "./disconnect.js";
 import { DurableStorage } from "../storage/durable-storage.js";
 import { getConnectedClients } from "../types/connected-clients.js";
 import * as s from "superstruct";
-import type { CreateRoomRequest } from "src/protocol/api/room.js";
+import type { CreateRoomRequest } from "../protocol/api/room.js";
 import { Router } from "itty-router";
-import type { IttyRouter } from "./middleware.js";
+import type { RociRequest, RociRouter } from "./middleware.js";
 import { addRoutes } from "./room-do-routes.js";
 
 const roomIDKey = "/system/roomID";
@@ -48,7 +48,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   private readonly _authApiKey: string | undefined;
   private _turnTimerID: ReturnType<typeof setInterval> | 0 = 0;
   private readonly _turnDuration: number;
-  private _router: IttyRouter;
+  private _router: RociRouter;
 
   constructor(options: RoomDOOptions<MD>) {
     const {
@@ -81,7 +81,28 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   async fetch(request: Request): Promise<Response> {
     try {
       if (!this._lcHasRoomIdContext) {
-        const roomID = await this.roomID();
+        const roomID = await this.maybeRoomID();
+        const url = new URL(request.url);
+        const urlRoomID = url.searchParams.get("roomID");
+        if (
+          // roomID is not going to be set on the createRoom request, or after
+          // the room has been deleted.
+          roomID !== undefined &&
+          // roomID is not going to be set for all calls, eg to delete the room.
+          urlRoomID !== null &&
+          urlRoomID !== roomID
+        ) {
+          console.log("roomID mismatch", roomID, urlRoomID);
+          this._lc.error?.(
+            "roomID mismatch",
+            "urlRoomID",
+            urlRoomID,
+            "roomID",
+            roomID
+          );
+          return new Response("Unexpected roomID", { status: 400 });
+        }
+
         if (roomID) {
           this._lc = this._lc.addContext("roomID", roomID);
           this._lcHasRoomIdContext = true;
@@ -112,20 +133,20 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     return this._storage.put(roomIDKey, roomID);
   }
 
+  async maybeRoomID(): Promise<string | undefined> {
+    return this._storage.get(roomIDKey, s.string());
+  }
+
+  // roomID errors and returns "unknown" if the roomID is not set. Prefer
+  // roomID() to maybeRoomID() in cases where the roomID is expected to be set,
+  // which is most cases.
   async roomID(): Promise<string> {
-    let roomID = "unknown";
-    try {
-      const maybeRoomID = await this._storage.get(roomIDKey, s.string());
-      if (maybeRoomID !== undefined) {
-        roomID = maybeRoomID;
-      }
-    } catch (e) {
-      this._lc.error?.(e);
+    const roomID = await this.maybeRoomID();
+    if (roomID !== undefined) {
+      return roomID;
     }
-    if (roomID === "unknown") {
-      this._lc.error?.("roomID is unknown");
-    }
-    return Promise.resolve(roomID);
+    this._lc.error?.("roomID is not set");
+    return Promise.resolve("unknown");
   }
 
   // A more appropriate name might be init(), but this is easy since authDO and
@@ -140,6 +161,12 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     return new Response("ok");
   }
 
+  // There's a bit of a question here about whether we really want to detele *all* the
+  // data when a room is deleted. This deletes everything, including values kept by the
+  // system e.g. the roomID. If we store more system keys in the future we might want to have
+  // delete room only delete the room user data and not the system keys, because once
+  // system keys are deleted who knows what behavior the room will have when its apis are
+  // called. Maybe it's fine if they error out, dunno.
   async deleteAllData() {
     // Maybe we should validate that the roomID in the request matches?
     this._lc.info?.("delete all data");
@@ -176,7 +203,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
   async authInvalidateForUser(
     lc: LogContext,
-    _request: Request,
+    _request: RociRequest,
     { userID }: InvalidateForUserRequest
   ): Promise<Response> {
     lc.debug?.(

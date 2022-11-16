@@ -25,12 +25,12 @@ import { createAuthAPIHeaders } from "./auth-api-headers.js";
 import { DurableStorage } from "../storage/durable-storage.js";
 import type { JSONValue } from "replicache";
 import { addRoutes } from "./auth-do-routes.js";
-import type { IttyRequest, IttyRouter } from "./middleware.js";
+import type { RociRequest, RociRouter } from "./middleware.js";
 import { Router } from "itty-router";
 import type { CreateRoomRequest } from "src/protocol/api/room.js";
 
 export interface AuthDOOptions {
-  router?: IttyRouter;
+  router?: RociRouter;
   roomDO: DurableObjectNamespace;
   state: DurableObjectState;
   authHandler: AuthHandler;
@@ -48,7 +48,7 @@ export type ConnectionRecord = {
 };
 
 export class BaseAuthDO implements DurableObject {
-  private readonly _router: IttyRouter;
+  private readonly _router: RociRouter;
   private readonly _roomDO: DurableObjectNamespace;
   private readonly _state: DurableObjectState;
   // _durableStorage is a type-aware wrapper around _state.storage. It
@@ -114,7 +114,7 @@ export class BaseAuthDO implements DurableObject {
     }
   }
 
-  async roomStatusByRoomID(request: IttyRequest) {
+  async roomStatusByRoomID(request: RociRequest) {
     const roomID = request.params?.roomID;
     if (roomID === undefined) {
       return new Response("Missing roomID", { status: 400 });
@@ -126,7 +126,7 @@ export class BaseAuthDO implements DurableObject {
     return newJSONResponse({ status: roomRecord.status });
   }
 
-  async allRoomRecords(_: IttyRequest) {
+  async allRoomRecords(_: RociRequest) {
     const roomIDToRecords = await roomRecords(this._durableStorage);
     const records = Array.from(roomIDToRecords.values());
     return newJSONResponse(records);
@@ -134,7 +134,7 @@ export class BaseAuthDO implements DurableObject {
 
   async createRoom(
     lc: LogContext,
-    request: Request,
+    request: RociRequest,
     validatedBody: CreateRoomRequest
   ) {
     return createRoom(
@@ -146,15 +146,15 @@ export class BaseAuthDO implements DurableObject {
     );
   }
 
-  async closeRoom(request: IttyRequest) {
+  async closeRoom(request: RociRequest) {
     return closeRoom(this._lc, this._durableStorage, request);
   }
 
-  async deleteRoom(request: IttyRequest) {
+  async deleteRoom(request: RociRequest) {
     return deleteRoom(this._lc, this._roomDO, this._durableStorage, request);
   }
 
-  async connect(lc: LogContext, request: Request): Promise<Response> {
+  async connect(lc: LogContext, request: RociRequest): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname !== "/connect") {
       return new Response("unknown route", {
@@ -264,7 +264,7 @@ export class BaseAuthDO implements DurableObject {
 
   async authInvalidateForUser(
     lc: LogContext,
-    request: Request,
+    request: RociRequest,
     { userID }: InvalidateForUserRequest
   ): Promise<Response> {
     lc.debug?.(`authInvalidateForUser ${userID} waiting for lock.`);
@@ -288,7 +288,7 @@ export class BaseAuthDO implements DurableObject {
 
   async authInvalidateForRoom(
     lc: LogContext,
-    request: Request,
+    request: RociRequest,
     { roomID }: InvalidateForRoomRequest
   ): Promise<Response> {
     lc.debug?.(`authInvalidateForRoom ${roomID} waiting for lock.`);
@@ -320,7 +320,10 @@ export class BaseAuthDO implements DurableObject {
     });
   }
 
-  async authInvalidateAll(lc: LogContext, request: Request): Promise<Response> {
+  async authInvalidateAll(
+    lc: LogContext,
+    request: RociRequest
+  ): Promise<Response> {
     lc.debug?.(`authInvalidateAll waiting for lock.`);
     return this._lock.withWrite(async () => {
       lc.debug?.("got lock.");
@@ -433,7 +436,7 @@ export class BaseAuthDO implements DurableObject {
   private async _forwardInvalidateRequest(
     lc: LogContext,
     invalidateRequestName: string,
-    request: Request,
+    request: RociRequest,
     connectionKeyStrings: string[]
   ): Promise<Response> {
     const connectionKeys = connectionKeyStrings.map((keyString) => {

@@ -16,17 +16,18 @@ import type { CreateRoomRequest } from "src/protocol/api/room";
  *   "https://reflect.example.workers.dev".
  * @param {string} authApiKey - The auth API key for the reflect server.
  * @param {string} roomID - The ID of the room to create.
- * @param {boolean} [requireEUStorage=false] - Whether the room should be created in the EU.
+ * @param {string} [jurisdiction] - If 'eu', then the room should be created in the EU.
+ *
  *   Do not set this to true unless you are sure you need it.
  */
 export async function createRoom(
   reflectServerURL: string,
   authApiKey: string,
   roomID: string,
-  requireEUStorage = false
+  jurisdiction?: "eu"
 ): Promise<void> {
   const resp = await fetch(
-    newCreateRoomRequest(reflectServerURL, authApiKey, roomID, requireEUStorage)
+    newCreateRoomRequest(reflectServerURL, authApiKey, roomID, jurisdiction)
   );
   if (!resp.ok) {
     throw new Error(`Failed to create room: ${resp.status} ${resp.statusText}`);
@@ -103,11 +104,9 @@ export function newRoomStatusRequest(
   authApiKey: string,
   roomID: string
 ) {
-  if (reflectServerURL[reflectServerURL.length - 1] === "/") {
-    reflectServerURL = reflectServerURL.slice(0, -1);
-  }
   const path = roomStatusByRoomIDPath.replace(":roomID", roomID);
-  return new Request(`${reflectServerURL}${path}`, {
+  const url = new URL(path, reflectServerURL);
+  return new Request(url.toString(), {
     method: "get",
     headers: createAuthAPIHeaders(authApiKey),
   });
@@ -120,21 +119,19 @@ export function newRoomStatusRequest(
  *   "https://reflect.example.workers.dev".
  * @param {string} authApiKey - The auth API key for the reflect server.
  * @param {string} roomID - The ID of the room to create.
- * @param {boolean} [requireEUStorage=false] - Whether the room should be created in the EU.
- *   Do not set this to true unless you are sure you need it.
+ * @param {string} [jurisdiction] - If 'eu' then the room should be created
+ *   in the EU. Do not set this unless you are sure you need it.
  * @returns {Request} - The Request to create the room.
  */
 export function newCreateRoomRequest(
   reflectServerURL: string,
   authApiKey: string,
   roomID: string,
-  requireEUStorage = false
+  jurisdiction?: "eu"
 ) {
-  if (reflectServerURL[reflectServerURL.length - 1] === "/") {
-    reflectServerURL = reflectServerURL.slice(0, -1);
-  }
-  const req: CreateRoomRequest = { roomID, requireEUStorage };
-  return new Request(`${reflectServerURL}/createRoom`, {
+  const url = new URL("/createRoom", reflectServerURL);
+  const req: CreateRoomRequest = { roomID, jurisdiction };
+  return new Request(url.toString(), {
     method: "post",
     headers: createAuthAPIHeaders(authApiKey),
     body: JSON.stringify(req),
@@ -146,11 +143,9 @@ export function newCloseRoomRequest(
   authApiKey: string,
   roomID: string
 ) {
-  if (reflectServerURL[reflectServerURL.length - 1] === "/") {
-    reflectServerURL = reflectServerURL.slice(0, -1);
-  }
   const path = closeRoomPath.replace(":roomID", roomID);
-  return new Request(`${reflectServerURL}${path}`, {
+  const url = new URL(path, reflectServerURL);
+  return new Request(url.toString(), {
     method: "post",
     headers: createAuthAPIHeaders(authApiKey),
   });
@@ -161,11 +156,9 @@ export function newDeleteRoomRequest(
   authApiKey: string,
   roomID: string
 ) {
-  if (reflectServerURL[reflectServerURL.length - 1] === "/") {
-    reflectServerURL = reflectServerURL.slice(0, -1);
-  }
   const path = deleteRoomPath.replace(":roomID", roomID);
-  return new Request(`${reflectServerURL}${path}`, {
+  const url = new URL(path, reflectServerURL);
+  return new Request(url.toString(), {
     method: "post",
     headers: createAuthAPIHeaders(authApiKey),
   });

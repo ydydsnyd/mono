@@ -1,17 +1,16 @@
 import type { BaseRoomDO } from "./room-do";
 import {
-  IttyRequest,
-  IttyRouter,
+  RociRequest,
+  RociRouter,
   requireAuthAPIKeyMatches,
 } from "./middleware";
+import type { MutatorDefs } from "replicache";
 
 type Route = {
   path: string;
   add: (
-    router: IttyRouter,
-    // TODO(fritz) what parameter should we use here?
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    roomDO: BaseRoomDO<any>,
+    router: RociRouter,
+    roomDO: BaseRoomDO<MutatorDefs>,
     authApiKey: string | undefined
   ) => void;
 };
@@ -24,9 +23,8 @@ export function paths() {
 
 // Called by the roomDO to set up its routes.
 export function addRoutes(
-  router: IttyRouter,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  roomDO: BaseRoomDO<any>,
+  router: RociRouter,
+  roomDO: BaseRoomDO<MutatorDefs>,
   authApiKey: string | undefined
 ) {
   routes.forEach((route) => route.add(router, roomDO, authApiKey));
@@ -37,15 +35,14 @@ export const deletePath = "/api/room/v0/room/:roomID/delete";
 routes.push({
   path: deletePath,
   add: (
-    router: IttyRouter,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    roomDO: BaseRoomDO<any>,
+    router: RociRouter,
+    roomDO: BaseRoomDO<MutatorDefs>,
     authApiKey: string | undefined
   ) => {
     router.post(
       deletePath,
       requireAuthAPIKeyMatches(authApiKey),
-      async (_: IttyRequest) => {
+      async (_: RociRequest) => {
         // TODO should plumb a LogContext in here.
         return roomDO.deleteAllData();
       }

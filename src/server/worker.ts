@@ -4,7 +4,7 @@ import { randomID } from "../util/rand";
 import { createAuthAPIHeaders } from "./auth-api-headers";
 import { dispatch, paths } from "./dispatch";
 import { paths as authDOPaths } from "./auth-do-routes";
-import { IttyRequest, requireAuthAPIKeyMatchesEnv } from "./middleware";
+import { RociRequest, requireAuthAPIKeyMatchesEnv } from "./middleware";
 
 export interface WorkerOptions<Env extends BaseWorkerEnv> {
   getLogSink: (env: Env) => LogSink;
@@ -133,11 +133,11 @@ async function withLogContext<Env extends BaseWorkerEnv, R>(
 }
 
 function sendToAuthDO(
-  request: IttyRequest,
+  request: RociRequest,
   env: BaseWorkerEnv
 ): Promise<Response> {
   const { authDO } = env;
   const id = authDO.idFromName("auth");
   const stub = authDO.get(id);
-  return stub.fetch(request as Request);
+  return stub.fetch(request);
 }
