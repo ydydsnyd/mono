@@ -1,6 +1,5 @@
 import type { LogContext } from "@rocicorp/logger";
 import type { CreateRoomRequest } from "../protocol/api/room.js";
-import { Lock } from "@rocicorp/lock";
 import type { DurableStorage } from "../storage/durable-storage.js";
 import * as s from "superstruct";
 import type { RociRequest } from "./middleware.js";
@@ -72,30 +71,8 @@ const roomRecordSchema = s.object({
 // This assignment ensures that RoomRecord and roomRecordSchema stay in sync.
 const RoomRecord: s.Describe<RoomRecord> = roomRecordSchema;
 
-// We need a lock to prevent concurrent creation of the same room.
-//
-// TODO the fact that we're not locking updates to the RoomRecord or
-// operations *on* the room like delete or invalidateAuth is suspect.
-// It means we could have at least two kinds of problems:
-//   1. Lost updates to RoomRecords. Eg, two concurrent operations O1 and O2
-//      with a sequence like:
-//        O1 reads a RoomRecord
-//        O2 reads a RoomRecord
-//        O1 updates the RoomRecord and writes it
-//        O2 updates the RoomRecord and writes it
-//      The result is that O1's update is lost. If the input gate is on then
-//      this is not a problem.
-//
-//   2. Bad interactions between concurrent operations on the roomDO itself.
-//      Eg, O1 is delete()ing the room while O2 is updating some state in it.
-//      It's an accident of how auth is implemented that we don't have this
-//      problem right now, but we should rationalize the model, like anything
-//      that updates roomDO storage should be serialized at some point. Maybe
-//      the solution is simply "enable input and output gates on the roomDO"
-//      but if that's the solution we need to articulate it somewhere and
-//      enforce that it is true.
-const createRoomLock = new Lock();
-
+// Note: caller must enforce no other concurrent calls to this and other
+// functions that create or modify the room record.
 export async function createRoom(
   lc: LogContext,
   roomDO: DurableObjectNamespace,
@@ -113,49 +90,50 @@ export async function createRoom(
     });
   }
 
-  return createRoomLock.withLock(async () => {
-    // Check if the room already exists.
-    if ((await roomRecordByRoomID(storage, roomID)) !== undefined) {
-      return new Response("room already exists", {
-        status: 400,
-      });
-    }
+  // Check if the room already exists.
+  if ((await roomRecordByRoomID(storage, roomID)) !== undefined) {
+    return new Response("room already exists", {
+      status: 400,
+    });
+  }
 
-    const options: DurableObjectNamespaceNewUniqueIdOptions = {};
-    if (validatedBody.jurisdiction === "eu") {
-      options["jurisdiction"] = "eu";
-    }
+  const options: DurableObjectNamespaceNewUniqueIdOptions = {};
+  if (validatedBody.jurisdiction === "eu") {
+    options["jurisdiction"] = "eu";
+  }
 
-    // Instantiate it so it will be listed in the namespace by the CF API,
-    // and also so that it can do whatever it needs to initialize itself.
-    const objectID = await roomDO.newUniqueId(options);
-    const newRoomDOStub = roomDO.get(objectID);
-    const response = await newRoomDOStub.fetch(request);
-    if (!response.ok) {
-      lc.debug?.(
-        `Received error response from ${roomID}. ${
-          response.status
-        } ${await response.clone().text()}`
-      );
-      return response;
-    }
+  // Instantiate it so it will be listed in the namespace by the CF API,
+  // and also so that it can do whatever it needs to initialize itself.
+  const objectID = await roomDO.newUniqueId(options);
+  const newRoomDOStub = roomDO.get(objectID);
+  const response = await newRoomDOStub.fetch(request);
+  if (!response.ok) {
+    lc.debug?.(
+      `Received error response from ${roomID}. ${
+        response.status
+      } ${await response.clone().text()}`
+    );
+    return response;
+  }
 
-    // Write the record for the room only after it has been successfully
-    // instantiated and initialized.
-    const roomRecord: RoomRecord = {
-      roomID,
-      objectIDString: objectID.toString(),
-      jurisdiction: validatedBody.jurisdiction ?? "",
-      status: RoomStatus.Open,
-    };
-    const roomRecordKey = roomKeyToString(roomRecord);
-    await storage.put(roomRecordKey, roomRecord);
-    lc.debug?.(`created room ${JSON.stringify(roomRecord)}`);
+  // Write the record for the room only after it has been successfully
+  // instantiated and initialized.
+  const roomRecord: RoomRecord = {
+    roomID,
+    objectIDString: objectID.toString(),
+    jurisdiction: validatedBody.jurisdiction ?? "",
+    status: RoomStatus.Open,
+  };
+  const roomRecordKey = roomKeyToString(roomRecord);
+  await storage.put(roomRecordKey, roomRecord);
+  lc.debug?.(`created room ${JSON.stringify(roomRecord)}`);
 
-    return new Response("success");
-  });
+  return new Response("success");
 }
 
+// Caller must enforce no other concurrent calls to this and other
+// functions that create or modify the room record.
+//
 // Note that closeRoom closes the room but does NOT log users out of it.
 // The call to closeRoom should be followed by a call to authInvalidateForRoom.
 export async function closeRoom(
@@ -191,6 +169,8 @@ export async function closeRoom(
   return new Response("success");
 }
 
+// Caller must enforce no other concurrent calls to this and other
+// functions that create or modify the room record.
 export async function deleteRoom(
   lc: LogContext,
   roomDO: DurableObjectNamespace,
@@ -235,6 +215,8 @@ export async function deleteRoom(
   return new Response("success");
 }
 
+// Caller must enforce no other concurrent calls to
+// functions that create or modify the room record.
 export async function objectIDByRoomID(
   storage: DurableStorage,
   roomDO: DurableObjectNamespace,
@@ -247,6 +229,8 @@ export async function objectIDByRoomID(
   return roomDO.idFromString(roomRecord.objectIDString);
 }
 
+// Caller must enforce no other concurrent calls to
+// functions that create or modify the room record.
 export async function roomRecordByRoomID(
   storage: DurableStorage,
   roomID: string
