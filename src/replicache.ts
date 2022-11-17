@@ -154,7 +154,8 @@ const noop = () => {
   // noop
 };
 
-export type MutatorReturn = MaybePromise<JSONValue | void>;
+export type MutatorReturn<T extends ReadonlyJSONValue = ReadonlyJSONValue> =
+  MaybePromise<T | void>;
 /**
  * The type used to describe the mutator definitions passed into [Replicache](classes/Replicache)
  * constructor as part of the {@link ReplicacheOptions}.
@@ -172,7 +173,10 @@ export type MutatorDefs = {
 };
 
 type MakeMutator<
-  F extends (tx: WriteTransaction, ...args: [] | [JSONValue]) => MutatorReturn,
+  F extends (
+    tx: WriteTransaction,
+    ...args: [] | [ReadonlyJSONValue]
+  ) => MutatorReturn,
 > = F extends (tx: WriteTransaction, ...args: infer Args) => infer Ret
   ? (...args: Args) => ToPromise<Ret>
   : never;
@@ -1470,7 +1474,10 @@ export class Replicache<MD extends MutatorDefs = {}> {
     });
   };
 
-  private _register<Return extends JSONValue | void, Args extends JSONValue>(
+  private _register<
+    Return extends ReadonlyJSONValue | void,
+    Args extends JSONValue,
+  >(
     name: string,
     mutatorImpl: (tx: WriteTransaction, args?: Args) => MaybePromise<Return>,
   ): (args?: Args) => Promise<Return> {
@@ -1485,7 +1492,10 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
   private _registerMutators<
     M extends {
-      [key: string]: (tx: WriteTransaction, args?: JSONValue) => MutatorReturn;
+      [key: string]: (
+        tx: WriteTransaction,
+        args?: ReadonlyJSONValue,
+      ) => MutatorReturn;
     },
   >(regs: M): MakeMutators<M> {
     type Mut = MakeMutators<M>;
@@ -1496,7 +1506,10 @@ export class Replicache<MD extends MutatorDefs = {}> {
     return rv as Mut;
   }
 
-  private async _mutate<R extends JSONValue | void, A extends JSONValue>(
+  private async _mutate<
+    R extends ReadonlyJSONValue | void,
+    A extends ReadonlyJSONValue,
+  >(
     name: string,
     mutatorImpl: (tx: WriteTransaction, args?: A) => MaybePromise<R>,
     args: A | undefined,

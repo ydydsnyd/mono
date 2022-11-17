@@ -382,3 +382,31 @@ test.skip('scan without index [type checking only]', async () => {
     (await tx.scan({}).keys().toArray()) as IndexKey[];
   });
 });
+
+// Only used for type checking
+test.skip('mutator return read only [type checking only]', async () => {
+  const rep = new Replicache({
+    licenseKey: TEST_LICENSE_KEY,
+    name: 'test-types',
+    mutators: {
+      mut: async (tx: WriteTransaction, x: {y: number}) => {
+        use(tx);
+        return x as {readonly y: number};
+      },
+      mut2: async (tx: WriteTransaction, x: {readonly y: number}) => {
+        use(tx);
+        return x as {y: number};
+      },
+      mut3: (tx: WriteTransaction, x: Array<number>) => {
+        use(tx);
+        return x as ReadonlyArray<number>;
+      },
+      mut4: (tx: WriteTransaction, x: ReadonlyArray<number>) => {
+        use(tx);
+        return x as Array<number>;
+      },
+    },
+  });
+
+  use(rep);
+});
