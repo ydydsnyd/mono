@@ -7,9 +7,10 @@ There are a number of ways to implement Replicache backends. The Replicache clie
 
 However, in practice almost all Replicache backends end up using a similar pattern internally. Most need to track three kinds of persistent state:
 
-- **Clients:** All clients that have connected to the server, and the last mutationID processed from each. This is used during push to ensure mutations are processed only once, and in the order they happened on the client.
-- **Spaces:** Collections of data that are synced via the Replicache protocol. Each space has a _version_ that increments when the space is modified by a push.
+- **Spaces:** Collections of data that are synced via the Replicache protocol. Each space has a _version_ that increments when the space is modified by a push. Your application's data is partioned into these spaces.
+- **Clients:** Clients that have connected to the server, and the last mutationID processed from each. This is used during push to ensure mutations are processed only once, and in the order they happened on the client.
 - **Domain Data:** The user data the application stores to do its job. Each stored item has a few extra Replicache-specific attributes:
+  - `spaceID`: The `space` the domain object is part of.
   - `lastUpdatedVersion`: The `version` of the containing space that this item was last updated at. Used to calculate a diff during pull.
   - `deleted`: A [soft delete](https://en.wiktionary.org/wiki/soft_deletion) used to communicate to clients during pull that a item was logically deleted.
 
@@ -24,7 +25,7 @@ Spaces can be any size, subject to a few constraints:
 
 ## Define the Schema
 
-And another new file at `pages/api/init.js`:
+Let's define a Postgres schema for the data model described above. And another new file at `pages/api/init.js`:
 
 ```js
 import {tx} from '../../db.js';
