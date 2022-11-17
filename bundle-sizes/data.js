@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1668690321993,
+  "lastUpdate": 1668702616485,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -30533,6 +30533,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23566,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "530a9bc80d9bbdab11c2e3d07653dd3c515f07ea",
+          "message": "fix: Enable exactOptionalPropertyTypes (#400)\n\nWhich makes us have to be a bit more explicit when we allow undefined or\r\nnot which is a good thing.",
+          "timestamp": "2022-11-17T16:29:17Z",
+          "tree_id": "1be8d595a8883541324dce6967bb2c8a399afbe1",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/530a9bc80d9bbdab11c2e3d07653dd3c515f07ea"
+        },
+        "date": 1668702609723,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 192331,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34242,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 191184,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33891,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81185,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23600,
             "unit": "bytes"
           }
         ]
