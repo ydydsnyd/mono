@@ -37,9 +37,10 @@ async function handlePush(req, res) {
     // Run the entire push in one transaction.
     await tx(async t => {
       // Get the previous version for the affected space and calculate the next
-      // one.
+      // one. Eagerly lock the space row with "for upate" to serialize write
+      // access to the space.
       const {version: prevVersion} = await t.one(
-        'select version from space where key = $1',
+        'select version from space where key = $1 for update',
         defaultSpaceID,
       );
       const nextVersion = prevVersion + 1;

@@ -28,6 +28,11 @@ async function handlePull(req, res) {
   try {
     // Read all data in a single transaction so it's consistent.
     await tx(async t => {
+      // Get current version for space.
+      const version = (
+        await t.one('select version from space where key = $1', defaultSpaceID)
+      ).version;
+
       // Get lmid for requesting client.
       const isExistingClient = pull.lastMutationID > 0;
       const lastMutationID = await getLastMutationID(
@@ -41,11 +46,6 @@ async function handlePull(req, res) {
         'select id, sender, content, ord from message where version > $1',
         parseInt(pull.cookie ?? 0),
       );
-
-      // Get current version for space.
-      const version = (
-        await t.one('select version from space where key = $1', defaultSpaceID)
-      ).version;
 
       // Build and return response.
       const patch = [];
