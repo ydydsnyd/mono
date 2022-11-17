@@ -12,28 +12,26 @@ To create a subscription, use the `useSubscribe()` React hook. You can do multip
 Let's use a subscription to implement our chat UI. Replace `index.js` with the below.
 
 ```js
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useRef} from 'react';
 import {Replicache, TEST_LICENSE_KEY} from 'replicache';
 import {useSubscribe} from 'replicache-react';
 import {nanoid} from 'nanoid';
 
-export default function Home() {
-  const [rep, setRep] = useState(null);
-
-  // We have to do this in a useEffect() to prevent Next.js from trying to run
-  // Replicache server-side :-/.
-  useEffect(() => {
-    const rep = new Replicache({
+const rep = process.browser
+  ? new Replicache({
       name: 'chat-user-id',
       licenseKey: TEST_LICENSE_KEY,
       pushURL: '/api/replicache-push',
       pullURL: '/api/replicache-pull',
-    });
-    listen(rep);
-    setRep(rep);
-  }, []);
+    })
+  : null;
 
-  return rep && <Chat rep={rep} />;
+if (rep) {
+  listen(rep);
+}
+
+export default function Home() {
+  return <Chat rep={rep} />;
 }
 
 function Chat({rep}) {

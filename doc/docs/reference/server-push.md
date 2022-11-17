@@ -129,6 +129,18 @@ The response body to the push endpoint is ignored.
 
 ## Semantics
 
+### Unknown Client IDs
+
+The first time a client pushes or pulls, it will have no client record on the server.
+
+These client records could be created in either the push or pull handlers (or both), but we recommend the push handler for a few reasons:
+
+- The pull handler can be read-only which enables useful optimizations and safety measures in many databases.
+- The push handler is called less frequently so it makes sense to put the write lock there.
+- Having all the writes in the push handler makes reasoning about the system easier.
+
+See [Remote Mutations](../byob/remote-mutations) for an example implementation.
+
 ### Mutation Status
 
 The server marks indicates that mutation was applied by returning a

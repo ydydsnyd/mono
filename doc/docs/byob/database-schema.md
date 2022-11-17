@@ -33,7 +33,7 @@ import {tx} from '../../db.js';
 // should partition your data into spaces as makes sense for your application.
 export const defaultSpaceID = 'default';
 
-export default async (_, res) => {
+export default async function init(_, res) {
   await tx(async t => {
     await t.none('drop table if exists replicache_client');
     await t.none('drop table if exists message');
@@ -66,7 +66,7 @@ export default async (_, res) => {
       last_mutation_id bigint not null)`);
   });
   res.send('ok');
-};
+}
 ```
 
 Start up your server again and navigate to [http://localhost:3000/api/init](http://localhost:3000/api/init). You should see the text "OK" after a few moments. Then if you go to your Supabase UI, you should see the new tables.

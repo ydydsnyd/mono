@@ -16,6 +16,7 @@ Replace the contents of `pages/api/replicache-pull.js` with this code:
 ```js
 import {tx} from '../../db.js';
 import {defaultSpaceID} from './init.js';
+import {getLastMutationID} from './replicache-push.js';
 
 export default handlePull;
 
@@ -27,14 +28,12 @@ async function handlePull(req, res) {
   try {
     // Read all data in a single transaction so it's consistent.
     await tx(async t => {
-      // Get the last processed mutationID for requesting client.
-      const lastMutationID = parseInt(
-        (
-          await t.oneOrNone(
-            'select last_mutation_id from replicache_client where id = $1',
-            pull.clientID,
-          )
-        )?.last_mutation_id ?? '0',
+      // Get lmid for requesting client.
+      const isExistingClient = pull.lastMutationID > 0;
+      const lastMutationID = await getLastMutationID(
+        t,
+        pull.clientID,
+        isExistingClient,
       );
 
       // Get changed domain objects since requested version.
@@ -47,7 +46,6 @@ async function handlePull(req, res) {
       const version = (
         await t.one('select version from space where key = $1', defaultSpaceID)
       ).version;
-      console.log({version, lastMutationID, changed});
 
       // Build and return response.
       const patch = [];

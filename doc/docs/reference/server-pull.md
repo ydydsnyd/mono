@@ -83,8 +83,7 @@ The cookie that was received last time a pull was done. `null` if this is the fi
 ### `lastMutationID`
 
 The `lastMutationID` the client received in the last [pull
-response](#http-response). This value can be useful in cases where a server receives a
-pull request from a client it doesn't know about. In that case one thing one might do is to re-establish the record of the client on the server side with the `lastMutationID` it is expecting, which is this value.
+response](#http-response).
 
 ### `profileID`
 
@@ -119,7 +118,9 @@ Replicache will exponentially back off sending pushes in the case of both networ
 The response body is a JSON object of the [`PullResponse`](api#PullResponse) type:
 
 ```ts
-export type PullResponse = PullResponseOK | ClientStateNotFoundResponse;
+export type PullResponse =
+  | PullResponseOK
+  | DeprecatedClientStateNotFoundResponse;
 
 export type PullResponseOK = {
   cookie?: ReadonlyJSONValue;
@@ -127,12 +128,12 @@ export type PullResponseOK = {
   patch: PatchOperation[];
 };
 
-export type ClientStateNotFoundResponse = {
+// This response is no longer recommended. See "Handling Unknown Clients" below.
+// If returned, it causes the [onClientStateNotFound](https://doc.replicache.dev/api/classes/Replicache#onclientstatenotfound) method on the client to be called.
+export type DeprecatedClientStateNotFoundResponse = {
   error: 'ClientStateNotFound';
 };
 ```
-
-The `ClientStateNotFound` response MAY be sent by the server when `lastMutationID` is greater than zero and the specified `clientID` is not known. This causes Replicache's [onClientStateNotFound](https://doc.replicache.dev/api/classes/Replicache#onclientstatenotfound) method to be called. The default implementation of `onClientStateNotFound` refreshes the page, assigning a new `clientID`.
 
 ### `cookie`
 
@@ -217,6 +218,17 @@ This simple strategy is the one we recommend starting with, and what you get by 
 ### Additional options
 
 Tere are other strategies you could use to compute the patch, and we plan to document the space of possibilities better in the future. Until then, please [contact us](https://replicache.dev/#contact) if you'd like to discuss options and tradeoffs.
+
+### Handling Unknown Clients
+
+Replicache does not currently support [deleting client records from the server](https://github.com/rocicorp/replicache/issues/1033).
+
+As such there is only one valid way a requesting clientID could be unknown to the server: the client is new and the record hasn't been created yet. For these new clients, our recommendation is:
+
+1. Validate the requesting client is in fact new (`lastMutationID === 0`). If the client isn't new, then data must have been deleted from the server which is not allowed. The server should abort and return a 500.
+2. Compute a patch and cookie as normal, and return `lastMutationID: 0`. The push handler [should create the client record](./server-push#unknown-client-ids) on first push.
+
+See [Dynamic Pull](../byob/dynamic-pull) for an example implementation.
 
 ## Pull Launch Checklist
 

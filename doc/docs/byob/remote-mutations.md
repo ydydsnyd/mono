@@ -5,14 +5,15 @@ slug: /byob/remote-mutations
 
 Replicache will periodically invoke push sending a list of mutations that need to be applied.
 
-For each received mutation, the push handler must do four things:
+For each received mutation, the push handler must do several things:
 
+1. Create a client record for the requesting client if the client is new.
 1. Validate that the received mutation is the next expected one. If the received mutation has already been processed (by a previous push), skip it. If the received mutation is not expected, then error.
-2. Increment the stored `version` for the affected space.
-3. Run the received mutation by making the requested changes to the backend database. For any modified domain data objects, update their `version` to the new version for the space.
-4. Update the stored `lastMutationID` for the pushing client, so that `pull` can later report the last-processed mutationID.
+1. Increment the stored `version` for the affected space.
+1. Run the received mutation by making the requested changes to the backend database. For any modified domain data objects, update their `version` to the new version for the space.
+1. Update the stored `lastMutationID` for the pushing client, so that `pull` can later report the last-processed mutationID.
 
-At minimum all four of these changes **must** happen atomically in a serialized transaction for each mutation in a push. However it's more common for entire pushes to be processed in a single transaction since it's often faster.
+At minimum, all of these changes **must** happen atomically in a serialized transaction for each mutation in a push. However, putting multiple mutations together in a single wider transaction is also acceptable.
 
 ## Implement Push
 
@@ -43,9 +44,7 @@ async function handlePush(req, res) {
       );
       const nextVersion = prevVersion + 1;
 
-      // Get the lastMutationID for the sending client, so we can know what the
-      // expected next mutationID is.
-      let lastMutationID = await getLastMutationID(t, push.clientID);
+      let lastMutationID = await getLastMutationID(t, push.clientID, false);
 
       console.log(
         'nextVersion',
@@ -116,10 +115,7 @@ async function handlePush(req, res) {
       );
 
       // Update lastMutationID for requesting client.
-      await t.none(
-        'update replicache_client set last_mutation_id = $2 where id = $1',
-        [push.clientID, lastMutationID],
-      );
+      await setLastMutationID(t, push.clientID, lastMutationID);
 
       // Update version for space.
       await t.none('update space set version = $1 where key = $2', [
@@ -141,21 +137,34 @@ async function handlePush(req, res) {
   }
 }
 
-async function getLastMutationID(t, clientID) {
+export async function getLastMutationID(t, clientID, required) {
   const clientRow = await t.oneOrNone(
     'select last_mutation_id from replicache_client where id = $1',
     clientID,
   );
-  if (clientRow) {
-    return parseInt(clientRow.last_mutation_id);
+  if (!clientRow) {
+    // If the client is unknown ensure the request is from a new client. If it
+    // isn't, data has been deleted from the server, which isn't supported:
+    // https://github.com/rocicorp/replicache/issues/1033.
+    if (required) {
+      throw new Error(`client not found: ${clientID}`);
+    }
+    return 0;
   }
+  return parseInt(clientRow.last_mutation_id);
+}
 
-  console.log('Creating new client', clientID);
-  await t.none(
-    'insert into replicache_client (id, last_mutation_id) values ($1, 0)',
-    clientID,
+async function setLastMutationID(t, clientID, mutationID) {
+  const result = await t.result(
+    'update replicache_client set last_mutation_id = $2 where id = $1',
+    [clientID, mutationID],
   );
-  return 0;
+  if (result.rowCount === 0) {
+    await t.none(
+      'insert into replicache_client (id, last_mutation_id) values ($1, $2)',
+      [clientID, mutationID],
+    );
+  }
 }
 
 async function createMessage(t, {id, from, content, order}, spaceID, version) {

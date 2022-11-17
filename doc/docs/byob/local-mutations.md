@@ -14,7 +14,7 @@ The two implementations need not match exactly. Replicache replaces the result o
 First, let's register a _mutator_ that speculatively creates a message. In `index.js`, expand the options passed to the `Replicache` constructor with:
 
 ```js
-const rep = new Replicache({
+new Replicache({
   //...
   mutators: {
     async createMessage(tx, {id, from, content, order}) {
