@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1668548966288,
+  "lastUpdate": 1668648435490,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -30317,6 +30317,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23577,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cesar@roci.dev",
+            "name": "Cesar Alaestante",
+            "username": "cesara"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5a2c3c54e390ca1726aa5d6ba66455caaba13a70",
+          "message": "feat: bg-interval delayMs (#395)\n\n* fix: update bg-interval to accept delayMs function\r\n* remove sleepFiveAndCollect\r\n* added test for delayMs function",
+          "timestamp": "2022-11-16T18:26:05-07:00",
+          "tree_id": "4e3e457bad9e5d6a04c1b4b53a0e9b70ea60bde6",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/5a2c3c54e390ca1726aa5d6ba66455caaba13a70"
+        },
+        "date": 1668648428442,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 192215,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34190,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 191068,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33867,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81131,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23566,
             "unit": "bytes"
           }
         ]
