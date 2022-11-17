@@ -166,14 +166,10 @@ async function runValidateRooms(argv: string[]) {
     `CF has ${instancesResult.length} DO room instances. Validating...`
   );
 
-  const roomRecords = (await jsonFetch(
+  const roomRecords = (await jsonFetchWithAuthApiKey(
     `${reflectURL}${roomRecordsPath}`,
     reflectAuthApiToken
   )) as Array<RoomRecord>;
-  if (roomRecords.length === 0) {
-    console.error("No room records found");
-    process.exit(1);
-  }
   const roomRecordsByOjbectID = new Map(
     roomRecords.map((rr) => [rr.objectIDString, rr])
   );
@@ -204,7 +200,7 @@ async function runValidateRooms(argv: string[]) {
 
 // Note: brittle!
 function parseNextFlag(arg: string, flag: string): string | undefined {
-  const match = arg.match(new RegExp(`^--${flag}=(\\w+)$`));
+  const match = arg.match(new RegExp(`^--${flag}=([a-zA-Z0-9_-]+)$`));
   if (match === null) {
     console.error(`Error parsing: ${arg}`);
     process.exit(1);
@@ -212,11 +208,11 @@ function parseNextFlag(arg: string, flag: string): string | undefined {
   return match[1];
 }
 
-async function jsonFetch(url: string, apiToken: string) {
+async function jsonFetchWithAuthApiKey(url: string, apiToken: string) {
   const resp = await fetch(url, {
     headers: {
       // eslint-disable-next-line @typescript-eslint/naming-convention
-      Authorization: `${apiToken}`,
+      "x-reflect-auth-api-key": `${apiToken}`,
     },
   });
   if (!resp.ok) {
