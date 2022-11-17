@@ -34,48 +34,46 @@ async function handlePush(req, res) {
 
   const t0 = Date.now();
   try {
-    // Run the entire push in one transaction.
-    await tx(async t => {
-      // Get the previous version for the affected space and calculate the next
-      // one. Eagerly lock the space row with "for upate" to serialize write
-      // access to the space.
-      const {version: prevVersion} = await t.one(
-        'select version from space where key = $1 for update',
-        defaultSpaceID,
-      );
-      const nextVersion = prevVersion + 1;
+    // Iterate each mutation in the push.
+    for (const mutation of push.mutations) {
+      const t1 = Date.now();
 
-      let lastMutationID = await getLastMutationID(t, push.clientID, false);
+      await tx(async t => {
+        // Get the previous version for the affected space and calculate the next
+        // one. Eagerly lock the space row with "for update" to serialize write
+        // access to the space.
+        const {version: prevVersion} = await t.one(
+          'select version from space where key = $1 for update',
+          defaultSpaceID,
+        );
+        const nextVersion = prevVersion + 1;
 
-      console.log(
-        'nextVersion',
-        nextVersion,
-        'lastMutationID:',
-        lastMutationID,
-      );
+        const lastMutationID = await getLastMutationID(t, push.clientID, false);
+        const nextMutationID = lastMutationID + 1;
 
-      // Iterate each mutation in the push.
-      for (const mutation of push.mutations) {
-        const t1 = Date.now();
-
-        // Calculate the expected next mutationID.
-        const expectedMutationID = lastMutationID + 1;
+        console.log(
+          'nextVersion',
+          nextVersion,
+          'nextMutationID',
+          nextMutationID,
+        );
 
         // It's common due to connectivity issues for clients to send a
         // mutation which has already been processed. Skip these.
-        if (mutation.id < expectedMutationID) {
+        if (mutation.id < nextMutationID) {
           console.log(
             `Mutation ${mutation.id} has already been processed - skipping`,
           );
-          continue;
+          return;
         }
 
         // If the Replicache client is working correctly, this can never
         // happen. If it does there is nothing to do but return an error to
         // client and report a bug to Replicache.
-        if (mutation.id > expectedMutationID) {
-          console.warn(`Mutation ${mutation.id} is from the future - aborting`);
-          break;
+        if (mutation.id > nextMutationID) {
+          throw new Error(
+            `Mutation ${mutation.id} is from the future - aborting`,
+          );
         }
 
         console.log('Processing mutation:', JSON.stringify(mutation));
@@ -104,28 +102,26 @@ async function handlePush(req, res) {
           console.error('Error processing mutation - skipping', e);
         }
 
-        lastMutationID = expectedMutationID;
-        console.log('Processed mutation in', Date.now() - t1);
-      }
+        console.log(
+          'setting',
+          push.clientID,
+          'last_mutation_id to',
+          nextMutationID,
+        );
+        // Update lastMutationID for requesting client.
+        await setLastMutationID(t, push.clientID, nextMutationID);
 
-      console.log(
-        'setting',
-        push.clientID,
-        'last_mutation_id to',
-        lastMutationID,
-      );
+        // Update version for space.
+        await t.none('update space set version = $1 where key = $2', [
+          nextVersion,
+          defaultSpaceID,
+        ]);
+      });
 
-      // Update lastMutationID for requesting client.
-      await setLastMutationID(t, push.clientID, lastMutationID);
+      console.log('Processed mutation in', Date.now() - t1);
+    }
 
-      // Update version for space.
-      await t.none('update space set version = $1 where key = $2', [
-        nextVersion,
-        defaultSpaceID,
-      ]);
-
-      res.send('{}');
-    });
+    res.send('{}');
 
     // We need to await here otherwise, Next.js will frequently kill the request
     // and the poke won't get sent.
