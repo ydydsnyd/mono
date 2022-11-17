@@ -29,7 +29,7 @@ export function initClientGroupGC(
       latestGCUpdate = gcClientGroups(dagStore);
       return latestGCUpdate;
     },
-    GC_INTERVAL_MS,
+    () => GC_INTERVAL_MS,
     lc,
     signal,
   );

@@ -6,8 +6,6 @@ import {IDBDatabasesStore} from './idb-databases-store.js';
 import type {IndexedDBDatabase} from './idb-databases-store.js';
 import {initBgIntervalProcess} from '../bg-interval.js';
 import type {LogContext} from '@rocicorp/logger';
-import {sleep} from '../sleep.js';
-import {AbortError} from '../abort-error.js';
 import {REPLICACHE_FORMAT_VERSION} from '../replicache.js';
 import {assertHash} from '../hash.js';
 
@@ -25,33 +23,22 @@ export function initCollectIDBDatabases(
   lc: LogContext,
   signal: AbortSignal,
 ): void {
-  void sleepFiveAndCollect(idbDatabasesStore, signal);
-
+  let initial = true;
   initBgIntervalProcess(
     'CollectIDBDatabases',
     async () => {
       await collectIDBDatabases(idbDatabasesStore, signal, Date.now(), MAX_AGE);
     },
-    COLLECT_INTERVAL_MS,
+    () => {
+      if (initial) {
+        initial = false;
+        return COLLECT_DELAY;
+      }
+      return COLLECT_INTERVAL_MS;
+    },
     lc,
     signal,
   );
-}
-
-async function sleepFiveAndCollect(
-  idbDatabasesStore: IDBDatabasesStore,
-  signal: AbortSignal,
-) {
-  try {
-    await sleep(COLLECT_DELAY, signal);
-
-    await collectIDBDatabases(idbDatabasesStore, signal, Date.now(), MAX_AGE);
-  } catch (e) {
-    if (e instanceof AbortError) {
-      return;
-    }
-    throw e;
-  }
 }
 
 export async function collectIDBDatabases(

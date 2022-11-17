@@ -14,7 +14,7 @@ teardown(() => {
   sinon.restore();
 });
 
-test('initBgIntervalProcess starts interval that executes process with intervalMs between each execution', async () => {
+test('initBgIntervalProcess starts interval that executes process with delayMs between each execution', async () => {
   let processCallCount = 0;
   const process = async () => {
     processCallCount++;
@@ -24,7 +24,7 @@ test('initBgIntervalProcess starts interval that executes process with intervalM
   initBgIntervalProcess(
     'testProcess',
     process,
-    100,
+    () => 100,
     new LogContext(),
     controller.signal,
   );
@@ -41,6 +41,43 @@ test('initBgIntervalProcess starts interval that executes process with intervalM
   expect(processCallCount).to.equal(6);
 });
 
+test('initBgIntervalProcess starts interval that executes process with delayMs at 100 on even process call count and 50 on odd process call count', async () => {
+  let processCallCount = 0;
+  const process = async () => {
+    processCallCount++;
+    await clock.tickAsync(50);
+  };
+  const controller = new AbortController();
+  initBgIntervalProcess(
+    'testProcess',
+    process,
+    () => {
+      if (processCallCount % 2 === 0) {
+        return 100;
+      }
+      return 50;
+    },
+    new LogContext(),
+    controller.signal,
+  );
+
+  expect(processCallCount).to.equal(0);
+  await clock.tickAsync(100);
+  expect(processCallCount).to.equal(1);
+  await clock.tickAsync(50);
+  expect(processCallCount).to.equal(2);
+  await clock.tickAsync(100);
+  expect(processCallCount).to.equal(3);
+  await clock.tickAsync(50);
+  expect(processCallCount).to.equal(4);
+  await clock.tickAsync(50);
+  expect(processCallCount).to.equal(4);
+  await clock.tickAsync(50);
+  expect(processCallCount).to.equal(5);
+  await clock.tickAsync(100);
+  expect(processCallCount).to.equal(6);
+});
+
 test('calling function returned by initBgIntervalProcess, stops interval', async () => {
   let processCallCount = 0;
   const process = () => {
@@ -51,7 +88,7 @@ test('calling function returned by initBgIntervalProcess, stops interval', async
   initBgIntervalProcess(
     'testProcess',
     process,
-    100,
+    () => 100,
     new LogContext(),
     controller.signal,
   );
@@ -73,7 +110,13 @@ test('error thrown during process (before stop is called) is logged to error', a
     return Promise.reject('TestErrorBeforeStop');
   };
   const controller = new AbortController();
-  initBgIntervalProcess('testProcess', process, 100, lc, controller.signal);
+  initBgIntervalProcess(
+    'testProcess',
+    process,
+    () => 100,
+    lc,
+    controller.signal,
+  );
   await clock.tickAsync(100);
   sinon.assert.calledOnceWithExactly(
     errorStub,
@@ -95,7 +138,13 @@ test('error thrown during process (after stop is called) is logged to debug', as
     return processResolver.promise;
   };
   const controller = new AbortController();
-  initBgIntervalProcess('testProcess', process, 100, lc, controller.signal);
+  initBgIntervalProcess(
+    'testProcess',
+    process,
+    () => 100,
+    lc,
+    controller.signal,
+  );
   expect(processCallCount).to.equal(0);
   await clock.tickAsync(100);
   expect(processCallCount).to.equal(1);

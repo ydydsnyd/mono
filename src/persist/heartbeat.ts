@@ -35,7 +35,7 @@ export function startHeartbeats(
         throw e;
       }
     },
-    HEARTBEAT_INTERVAL_MS,
+    () => HEARTBEAT_INTERVAL_MS,
     lc,
     signal,
   );

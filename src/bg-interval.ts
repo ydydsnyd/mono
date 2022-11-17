@@ -5,17 +5,17 @@ import {sleep} from './sleep.js';
 export function initBgIntervalProcess(
   processName: string,
   process: () => Promise<unknown>,
-  intervalMs: number,
+  delayMs: () => number,
   lc: LogContext,
   signal: AbortSignal,
 ): void {
-  void runBgIntervalProcess(processName, process, intervalMs, lc, signal);
+  void runBgIntervalProcess(processName, process, delayMs, lc, signal);
 }
 
 async function runBgIntervalProcess(
   processName: string,
   process: () => Promise<unknown>,
-  intervalMs: number,
+  delayMs: () => number,
   lc: LogContext,
   signal: AbortSignal,
 ): Promise<void> {
@@ -26,7 +26,7 @@ async function runBgIntervalProcess(
   lc.debug?.('Starting');
   while (!signal.aborted) {
     try {
-      await sleep(intervalMs, signal);
+      await sleep(delayMs(), signal);
     } catch (e) {
       if (!(e instanceof AbortError)) {
         throw e;

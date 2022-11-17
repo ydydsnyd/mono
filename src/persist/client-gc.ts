@@ -24,7 +24,7 @@ export function initClientGC(
       latestGCUpdate = gcClients(clientID, dagStore);
       return latestGCUpdate;
     },
-    GC_INTERVAL_MS,
+    () => GC_INTERVAL_MS,
     lc,
     signal,
   );
