@@ -31,7 +31,6 @@ import type { CreateRoomRequest } from "../protocol/api/room.js";
 import { newWebSocketPair, sendError } from "../util/socket.js";
 
 export interface AuthDOOptions {
-  router?: RociRouter;
   roomDO: DurableObjectNamespace;
   state: DurableObjectState;
   authHandler: AuthHandler;
@@ -68,16 +67,9 @@ export class BaseAuthDO implements DurableObject {
   private readonly _newWebSocketPair: typeof newWebSocketPair;
 
   constructor(options: AuthDOOptions) {
-    const {
-      router,
-      roomDO,
-      state,
-      authHandler,
-      authApiKey,
-      logSink,
-      logLevel,
-    } = options;
-    this._router = router || Router();
+    const { roomDO, state, authHandler, authApiKey, logSink, logLevel } =
+      options;
+    this._router = Router();
     this._newWebSocketPair = options.newWebSocketPair || newWebSocketPair;
     this._roomDO = roomDO;
     this._state = state;

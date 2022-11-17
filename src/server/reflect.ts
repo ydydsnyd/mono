@@ -11,8 +11,6 @@ import { BaseRoomDO } from "./room-do";
 import { createWorker } from "./worker";
 import type { DisconnectHandler } from "./disconnect";
 import { createNoAuthDOWorker } from "./no-auth-do-worker";
-import { Router } from "itty-router";
-import type { RociRouter } from "./middleware.js";
 
 export interface ReflectServerOptions<
   Env extends ReflectServerBaseEnv,
@@ -68,14 +66,12 @@ export function createReflectServer<
   // eslint-disable-next-line @typescript-eslint/naming-convention
   AuthDO: DurableObjectCtor<Env>;
 } {
-  const router: RociRouter = Router();
   const optionsWithDefaults = getOptionsWithDefaults(options);
   const roomDOClass = createRoomDOClass(optionsWithDefaults);
   const { authHandler, getLogSinks, getLogLevel } = optionsWithDefaults;
   const authDOClass = class extends BaseAuthDO {
     constructor(state: DurableObjectState, env: Env) {
       super({
-        router,
         roomDO: env.roomDO,
         state,
         authHandler,
