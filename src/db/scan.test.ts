@@ -53,7 +53,7 @@ test('scan index startKey', async () => {
       startPrimaryKey,
     }: {
       startSecondaryKey: string;
-      startPrimaryKey?: string;
+      startPrimaryKey?: string | undefined;
     },
     expected: ScanItem[],
   ) => {

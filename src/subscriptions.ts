@@ -342,12 +342,12 @@ export interface SubscribeOptions<R extends ReadonlyJSONValue | undefined> {
   /**
    * If present, called when an error occurs.
    */
-  onError?: (error: unknown) => void;
+  onError?: ((error: unknown) => void) | undefined;
 
   /**
    * If present, called when the subscription is removed/done.
    */
-  onDone?: () => void;
+  onDone?: (() => void) | undefined;
 }
 
 type UnknownSubscription = Subscription<unknown>;
@@ -480,7 +480,7 @@ export class SubscriptionsManager implements DiffComputationConfig {
 
 export type ScanSubscriptionInfo = {
   options: db.ScanOptions;
-  inclusiveLimitKey?: string;
+  inclusiveLimitKey?: string | undefined;
 };
 
 function diffMatchesSubscription(

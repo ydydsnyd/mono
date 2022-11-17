@@ -12,18 +12,20 @@ export type ScanOptions = ScanIndexOptions | ScanNoIndexOptions;
  */
 export type ScanNoIndexOptions = {
   /** Only include keys starting with `prefix`. */
-  prefix?: string;
+  prefix?: string | undefined;
 
   /** Only include up to `limit` results. */
-  limit?: number;
+  limit?: number | undefined;
 
   /** When provided the scan starts at this key. */
-  start?: {
-    key: string;
+  start?:
+    | {
+        key: string;
 
-    /** Whether the `key` is exclusive or inclusive. */
-    exclusive?: boolean;
-  };
+        /** Whether the `key` is exclusive or inclusive. */
+        exclusive?: boolean | undefined;
+      }
+    | undefined;
 };
 
 /**
@@ -33,10 +35,10 @@ export type ScanNoIndexOptions = {
  */
 export type ScanIndexOptions = {
   /** Only include results starting with the *secondary* keys starting with `prefix`. */
-  prefix?: string;
+  prefix?: string | undefined;
 
   /** Only include up to `limit` results. */
-  limit?: number;
+  limit?: number | undefined;
 
   /** Do a {@link ReadTransaction.scan | scan} over a named index. The `indexName` is
    * the name of an index defined when creating the {@link Replicache} instance using
@@ -44,12 +46,14 @@ export type ScanIndexOptions = {
   indexName: string;
 
   /** When provided the scan starts at this key. */
-  start?: {
-    key: ScanOptionIndexedStartKey;
+  start?:
+    | {
+        key: ScanOptionIndexedStartKey;
 
-    /** Whether the `key` is exclusive or inclusive. */
-    exclusive?: boolean;
-  };
+        /** Whether the `key` is exclusive or inclusive. */
+        exclusive?: boolean | undefined;
+      }
+    | undefined;
 };
 
 /**
@@ -80,12 +84,12 @@ export type KeyTypeForScanOptions<O extends ScanOptions> =
  * scanning at, and `primary` (if any) is the primary key to start scanning at.
  */
 export type ScanOptionIndexedStartKey =
-  | readonly [secondary: string, primary?: string]
+  | readonly [secondary: string, primary?: string | undefined]
   | string;
 
 export function normalizeScanOptionIndexedStartKey(
-  startKey: string | readonly [secondary: string, primary?: string],
-): readonly [secondary: string, primary?: string] {
+  startKey: string | readonly [secondary: string, primary?: string | undefined],
+): readonly [secondary: string, primary?: string | undefined] {
   if (typeof startKey === 'string') {
     return [startKey];
   }

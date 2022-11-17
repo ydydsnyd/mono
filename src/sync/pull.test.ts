@@ -1125,7 +1125,7 @@ test('maybe end try pull', async () => {
     numNeedingReplay: number;
     interveningSync: boolean;
     expReplayIDs: number[];
-    expErr?: string;
+    expErr?: string | undefined;
     // The expected diffs as reported by the maybe end pull.
     expDiffs: DiffsMap;
   };
@@ -1306,8 +1306,8 @@ type FakePullerArgsSDD = {
   expPullURL: string;
   expPullAuth: string;
   expRequestID: string;
-  resp?: PullResponse;
-  err?: string;
+  resp?: PullResponse | undefined;
+  err?: string | undefined;
 };
 
 function makeFakePuller(
@@ -1392,8 +1392,8 @@ type FakePullerArgsDD31 = {
   expPullURL: string;
   expPullAuth: string;
   expRequestID: string;
-  resp?: PullResponseDD31;
-  err?: string;
+  resp?: PullResponseDD31 | undefined;
+  err?: string | undefined;
 };
 
 test('changed keys', async () => {

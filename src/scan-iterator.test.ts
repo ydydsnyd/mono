@@ -650,7 +650,7 @@ test('makeScanResult with index', async () => {
 test('fromKeyForIndexScan', () => {
   const t = (
     options: Omit<ScanIndexOptions, 'indexName'>,
-    expected: [secondary: string, primary?: string],
+    expected: [secondary: string, primary?: string | undefined],
   ) => {
     const indexOptions = {indexName: 'i', ...options};
     expect(fromKeyForIndexScan(indexOptions)).to.deep.equal(expected);

@@ -15,10 +15,10 @@ test('patch', async () => {
   type Case = {
     name: string;
     patch: JSONValue;
-    expErr?: string;
+    expErr?: string | undefined;
     // Note: the test inserts "key" => "value" into the map prior to
     // calling apply() so we can check if top-level removes work.
-    expMap?: Map<string, string>;
+    expMap?: Map<string, string> | undefined;
   };
   const cases: Case[] = [
     {

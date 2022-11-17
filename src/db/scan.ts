@@ -31,12 +31,12 @@ import type {ReadonlyJSONValue} from '../json.js';
 // NOTE that in above for index scans if you provide Some start_key, the
 // secondary_index_key is treated as an exact match.
 export type ScanOptions = {
-  prefix?: string;
-  startSecondaryKey?: string;
-  startKey?: string;
-  startExclusive?: boolean;
-  limit?: number;
-  indexName?: string;
+  prefix?: string | undefined;
+  startSecondaryKey?: string | undefined;
+  startKey?: string | undefined;
+  startExclusive?: boolean | undefined;
+  limit?: number | undefined;
+  indexName?: string | undefined;
 };
 
 export type ScanItem = {

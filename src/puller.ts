@@ -10,7 +10,7 @@ import type {HTTPRequestInfo} from './http-request-info.js';
 import type {ClientID} from './sync/ids.js';
 
 export type PullerResult = {
-  response?: PullResponse;
+  response?: PullResponse | undefined;
   httpRequestInfo: HTTPRequestInfo;
 };
 
@@ -18,7 +18,7 @@ export type PullerResult = {
 // really the response status code and error message!
 
 export type PullerResultDD31 = {
-  response?: PullResponseDD31;
+  response?: PullResponseDD31 | undefined;
   httpRequestInfo: HTTPRequestInfo;
 };
 
@@ -38,7 +38,7 @@ export type PullerDD31 = (request: Request) => Promise<PullerResultDD31>;
  * The shape of a pull response under normal circumstances.
  */
 export type PullResponseOK = {
-  cookie?: ReadonlyJSONValue;
+  cookie?: ReadonlyJSONValue | undefined;
   lastMutationID: number;
   patch: PatchOperation[];
 };
@@ -202,7 +202,7 @@ export class PullError extends Error {
   // JavaScript language standard for this purpose (see
   // https://github.com/tc39/proposal-error-cause) current browser behavior is
   // inconsistent.
-  causedBy?: Error;
+  causedBy?: Error | undefined;
   constructor(causedBy?: Error) {
     super('Failed to pull');
     this.causedBy = causedBy;

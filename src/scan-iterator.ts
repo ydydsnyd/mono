@@ -331,9 +331,9 @@ export function makeScanResult<Options extends ScanOptions>(
 
 export function fromKeyForIndexScan(
   options: ScanIndexOptions,
-): readonly [secondary: string, primary?: string] {
+): readonly [secondary: string, primary?: string | undefined] {
   const {prefix, start} = options;
-  const prefixNormalized: [secondary: string, primary?: string] = [
+  const prefixNormalized: [secondary: string, primary?: string | undefined] = [
     prefix ?? '',
     undefined,
   ];

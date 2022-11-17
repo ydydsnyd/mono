@@ -19,11 +19,11 @@ import {deepFreeze} from '../json.js';
 
 type FakePusherArgs = {
   expPush: boolean;
-  expPushReq?: PushRequestSDD | PushRequestDD31;
+  expPushReq?: PushRequestSDD | PushRequestDD31 | undefined;
   expPushURL: string;
   expAuth: string;
   expRequestID: string;
-  err?: string;
+  err?: string | undefined;
 };
 
 function makeFakePusher(options: FakePusherArgs): Pusher {

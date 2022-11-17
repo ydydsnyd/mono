@@ -15,12 +15,12 @@ import type {RandomDataType} from './data.js';
 export type Benchmark = {
   name: string;
   group: string;
-  byteSize?: number;
-  skip?: () => Promise<boolean> | boolean;
-  setup?: () => Promise<void> | void;
-  setupEach?: () => Promise<void> | void;
-  teardown?: () => Promise<void> | void;
-  teardownEach?: () => Promise<void> | void;
+  byteSize?: number | undefined;
+  skip?: (() => Promise<boolean> | boolean) | undefined;
+  setup?: (() => Promise<void> | void) | undefined;
+  setupEach?: (() => Promise<void> | void) | undefined;
+  teardown?: (() => Promise<void> | void) | undefined;
+  teardownEach?: (() => Promise<void> | void) | undefined;
   run: (b: Bencher, i: number) => Promise<void> | void;
 };
 
@@ -33,7 +33,7 @@ export type Bencher = {
 export type BenchmarkResult = {
   name: string;
   group: string;
-  byteSize?: number;
+  byteSize?: number | undefined;
   sortedRunTimesMs: number[];
   runTimesStatistics: {
     meanMs: number;

@@ -20,7 +20,7 @@ export class PushError extends Error {
   // JavaScript language standard for this purpose (see
   // https://github.com/tc39/proposal-error-cause) current browser behavior is
   // inconsistent.
-  causedBy?: Error;
+  causedBy?: Error | undefined;
   constructor(causedBy?: Error) {
     super('Failed to push');
     this.causedBy = causedBy;

@@ -147,8 +147,8 @@ type ReplicacheTestOptions<MD extends MutatorDefs> = Omit<
   ReplicacheOptions<MD>,
   'name' | 'licenseKey'
 > & {
-  onClientStateNotFound?: (() => void) | null;
-  licenseKey?: string;
+  onClientStateNotFound?: (() => void) | null | undefined;
+  licenseKey?: string | undefined;
 } & ReplicacheInternalOptions;
 
 export async function replicacheForTesting<
@@ -158,8 +158,8 @@ export async function replicacheForTesting<
   name: string,
   options: ReplicacheTestOptions<MD> = {},
   testOptions: {
-    useDefaultURLs?: boolean; // default true
-    useUniqueName?: boolean; // default true
+    useDefaultURLs?: boolean | undefined; // default true
+    useUniqueName?: boolean | undefined; // default true
   } = {},
 ): Promise<ReplicacheTest<MD>> {
   const defaultURLs = {

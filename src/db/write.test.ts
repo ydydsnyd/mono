@@ -707,7 +707,7 @@ function indexRecordsToIndexDefinitions(
     defs[index.definition.name] = {
       prefix: index.definition.keyPrefix,
       jsonPointer: index.definition.jsonPointer,
-      allowEmpty: index.definition.allowEmpty,
+      allowEmpty: index.definition.allowEmpty ?? false,
     };
   }
   return defs;

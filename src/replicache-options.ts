@@ -18,14 +18,14 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
    * If not provided, push requests will not be made unless a custom
    * {@link ReplicacheOptions.pusher} is provided.
    */
-  pushURL?: string;
+  pushURL?: string | undefined;
 
   /**
    * This is the authorization token used when doing a
    * [pull](https://doc.replicache.dev/reference/server-pull#authorization) and
    * [push](https://doc.replicache.dev/reference/server-push#authorization).
    */
-  auth?: string;
+  auth?: string | undefined;
 
   /**
    * This is the URL to the server endpoint dealing with pull. See [Pull
@@ -35,7 +35,7 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
    * If not provided, pull requests will not be made unless a custom
    * {@link ReplicacheOptions.puller} is provided.
    */
-  pullURL?: string;
+  pullURL?: string | undefined;
 
   /**
    * The name of the Replicache database.
@@ -63,19 +63,19 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
    * versioning of mutators (in the push direction) and the client view (in the
    * pull direction).
    */
-  schemaVersion?: string;
+  schemaVersion?: string | undefined;
 
   /**
    * The duration between each {@link pull} in milliseconds. Set this to `null` to
    * prevent pulling in the background.  Defaults to 60 seconds.
    */
-  pullInterval?: number | null;
+  pullInterval?: number | null | undefined;
 
   /**
    * The delay between when a change is made to Replicache and when Replicache
    * attempts to push that change.
    */
-  pushDelay?: number;
+  pushDelay?: number | undefined;
 
   /**
    * Determines how much logging to do. When this is set to `'debug'`,
@@ -84,7 +84,7 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
    * `'error'` we only log `'error'` messages.
    * Default is `'info'`.
    */
-  logLevel?: LogLevel;
+  logLevel?: LogLevel | undefined;
 
   /**
    * Enables custom handling of logs.
@@ -100,7 +100,7 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
    * logSinks: [consoleLogSink, myCloudLogSink],
    * ```
    */
-  logSinks?: LogSink[];
+  logSinks?: LogSink[] | undefined;
 
   /**
    * An object used as a map to define the *mutators*. These gets registered at
@@ -168,12 +168,12 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
    * As with {@link query} and {@link subscribe} all reads will see a consistent view of
    * the cache while they run.
    */
-  mutators?: MD;
+  mutators?: MD | undefined;
 
   /**
    * Options to use when doing pull and push requests.
    */
-  requestOptions?: RequestOptions;
+  requestOptions?: RequestOptions | undefined;
 
   /**
    * Allows passing in a custom implementation of a {@link Puller} function. This
@@ -183,7 +183,7 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
    * Normally, this is just a POST to a URL with a JSON body but you can provide
    * your own function if you need to do things differently.
    */
-  puller?: Puller;
+  puller?: Puller | undefined;
 
   /**
    * Allows passing in a custom implementation of a {@link Pusher} function. This
@@ -193,7 +193,7 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
    * Normally, this is just a POST to a URL with a JSON body but you can provide
    * your own function if you need to do things differently.
    */
-  pusher?: Pusher;
+  pusher?: Pusher | undefined;
 
   /**
    * The license key for Replicache. This parameter is required for Replicache to
@@ -213,29 +213,29 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
    * @experimental This option is experimental and might be removed or changed
    * in the future without following semver versioning. Please be cautious.
    */
-  experimentalKVStore?: kv.Store;
+  experimentalKVStore?: kv.Store | undefined;
 
   /**
    * Defines the indexes, if any, to use on the data.
    */
-  readonly indexes?: IndexDefinitions;
+  readonly indexes?: IndexDefinitions | undefined;
 }
 
 export type ReplicacheInternalOptions = {
   /**
    * Defaults to true.
    */
-  enableLicensing?: boolean;
+  enableLicensing?: boolean | undefined;
 
   /**
    * Defaults to true.
    */
-  enableMutationRecovery?: boolean;
+  enableMutationRecovery?: boolean | undefined;
 
   /**
    * Defaults to true.
    */
-  enableScheduledPersist?: boolean;
+  enableScheduledPersist?: boolean | undefined;
 
   /**
    * Defaults to true.
