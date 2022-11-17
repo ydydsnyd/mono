@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1668688764548,
+  "lastUpdate": 1668690215411,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -30395,6 +30395,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/160dd171e6b0f4b1ea4e86e96e95b949aa2ec454"
         },
         "date": 1668688759002,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 192215,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34190,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 191068,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33867,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81131,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23566,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "distinct": true,
+          "id": "07f1ac82ef6bc4e864e55aef723a36f563ea6102",
+          "message": "fix: Fix types of mutators slightly\n\nWhen it says `extends JSONValue` it means that `ReadonlyJSONValue` does\nnot work because readonly do not have setters. We want to allow passing\nin and returning readonly values from mutators.",
+          "timestamp": "2022-11-17T14:02:37+01:00",
+          "tree_id": "eff957fe4fed10c64dc373fd2784e94a1b6707dd",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/07f1ac82ef6bc4e864e55aef723a36f563ea6102"
+        },
+        "date": 1668690209621,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
