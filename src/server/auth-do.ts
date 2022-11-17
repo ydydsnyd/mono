@@ -27,7 +27,8 @@ import type { JSONValue } from "replicache";
 import { addRoutes } from "./auth-do-routes.js";
 import type { RociRequest, RociRouter } from "./middleware.js";
 import { Router } from "itty-router";
-import type { CreateRoomRequest } from "src/protocol/api/room.js";
+import type { CreateRoomRequest } from "../protocol/api/room.js";
+import { newWebSocketPair, sendError } from "../util/socket.js";
 
 export interface AuthDOOptions {
   router?: RociRouter;
@@ -37,6 +38,9 @@ export interface AuthDOOptions {
   authApiKey: string | undefined;
   logSink: LogSink;
   logLevel: LogLevel;
+  // newWebSocketPair is a seam we use for testing. I cannot figure out
+  // how to get jest to mock a module.
+  newWebSocketPair?: typeof newWebSocketPair;
 }
 export type ConnectionKey = {
   userID: string;
@@ -61,6 +65,7 @@ export class BaseAuthDO implements DurableObject {
   private readonly _authApiKey?: string;
   private readonly _lc: LogContext;
   private readonly _lock: RWLock;
+  private readonly _newWebSocketPair: typeof newWebSocketPair;
 
   constructor(options: AuthDOOptions) {
     const {
@@ -73,6 +78,7 @@ export class BaseAuthDO implements DurableObject {
       logLevel,
     } = options;
     this._router = router || Router();
+    this._newWebSocketPair = options.newWebSocketPair || newWebSocketPair;
     this._roomDO = roomDO;
     this._state = state;
     this._durableStorage = new DurableStorage(
@@ -211,17 +217,43 @@ export class BaseAuthDO implements DurableObject {
       // writing the connection record, in case it doesn't exist or is
       // closed/deleted.
       const roomRecord = await roomRecordByRoomID(this._durableStorage, roomID);
-      if (roomRecord === undefined) {
-        return new Response("room not found", {
-          status: 404,
+
+      // If the room doesn't exist, or is closed, we need to give the client some
+      // visibility into this. If we just return a 404 here without accepting the
+      // connection the client doesn't have any access to the return code or body.
+      // So we accept the connection and send an error message to the client, then
+      // close the connection. We trust it will be logged by onSocketError in the
+      // client.
+      if (roomRecord === undefined || roomRecord.status !== RoomStatus.Open) {
+        const errorMsg = roomRecord ? "room is not open" : "room not found";
+        if (request.headers.get("Upgrade") !== "websocket") {
+          return new Response("expected websocket", { status: 400 });
+        }
+        const pair = this._newWebSocketPair();
+        const ws = pair[1];
+        const url = new URL(request.url);
+        lc.info?.("accepting connection ", url.toString());
+        ws.accept();
+
+        // MDN tells me that the message will be delivered even if we call close
+        // immediately after send:
+        //   https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/close
+        // However the relevant section of the RFC says this behavior is non-normative?
+        //   https://www.rfc-editor.org/rfc/rfc6455.html#section-1.4
+        // In any case, it seems to work just fine to send the message and
+        // close before even returning the response.
+        sendError(ws, errorMsg);
+        ws.close();
+
+        const responseHeaders = new Headers();
+        responseHeaders.set("Sec-WebSocket-Protocol", encodedAuth);
+        return new Response(null, {
+          status: 101,
+          headers: responseHeaders,
+          webSocket: pair[0],
         });
       }
-      if (roomRecord.status !== RoomStatus.Open) {
-        return new Response("room has been closed", {
-          // TODO(fritz) or 403?
-          status: 410 /* Gone */,
-        });
-      }
+
       const roomObjectID = this._roomDO.idFromString(roomRecord.objectIDString);
 
       // Record the connection in DO storage

@@ -653,6 +653,7 @@ function createConnectTestFixture(
 
   const headers = new Headers();
   headers.set("Sec-WebSocket-Protocol", encodedTestAuth);
+  headers.set("Upgrade", "websocket");
   const testRequest = new Request(
     `ws://test.roci.dev/connect?roomID=${testRoomID}&clientID=${testClientID}`,
     {
@@ -714,12 +715,15 @@ function createRoomDOThatThrowsIfFetchIsCalled(): DurableObjectNamespace {
 }
 
 test("connect won't connect to a room that doesn't exist", async () => {
+  jest.useRealTimers();
   const { testAuth, testUserID, testRoomID, testRequest, testRoomDO } =
     createConnectTestFixture();
 
   const storage = await getMiniflareDurableObjectStorage(authDOID);
   const state = new TestDurableObjectState(authDOID, storage);
   const logSink = new TestLogSink();
+  const clientWs = new Mocket();
+  const serverWs = new Mocket();
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
@@ -731,14 +735,19 @@ test("connect won't connect to a room that doesn't exist", async () => {
     authApiKey: TEST_AUTH_API_KEY,
     logSink,
     logLevel: "debug",
+    newWebSocketPair: () => {
+      return [clientWs, serverWs];
+    },
   });
   // Note: no room created.
 
-  const testTime = 1010101;
-  jest.setSystemTime(testTime);
   const response = await authDO.fetch(testRequest);
 
-  expect(response.status).toEqual(404);
+  expect(response.status).toEqual(101);
+  expect(serverWs.log).toEqual([
+    ["send", '["error","room not found"]'],
+    ["close"],
+  ]);
   expect((await storage.list({ prefix: "connection/" })).size).toEqual(0);
 });
 
@@ -788,12 +797,15 @@ test("connect calls authHandler and sends resolved UserData in header to Room DO
 });
 
 test("connect wont connect to a room that is closed", async () => {
+  jest.useRealTimers();
   const { testUserID, testRoomID, testRequest, testRoomDO } =
     createConnectTestFixture();
 
   const storage = await getMiniflareDurableObjectStorage(authDOID);
   const state = new TestDurableObjectState(authDOID, storage);
   const logSink = new TestLogSink();
+  const clientWs = new Mocket();
+  const serverWs = new Mocket();
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
@@ -803,6 +815,9 @@ test("connect wont connect to a room that is closed", async () => {
     authApiKey: TEST_AUTH_API_KEY,
     logSink,
     logLevel: "debug",
+    newWebSocketPair: () => {
+      return [clientWs, serverWs];
+    },
   });
   await createRoom(authDO, testRoomID);
 
@@ -814,11 +829,13 @@ test("connect wont connect to a room that is closed", async () => {
   const closeRoomResponse = await authDO.fetch(closeRoomRequest);
   expect(closeRoomResponse.status).toEqual(200);
 
-  const testTime = 1010101;
-  jest.setSystemTime(testTime);
   const response = await authDO.fetch(testRequest);
 
-  expect(response.status).toEqual(410);
+  expect(response.status).toEqual(101);
+  expect(serverWs.log).toEqual([
+    ["send", '["error","room is not open"]'],
+    ["close"],
+  ]);
 });
 
 test("connect percent escapes components of the connection key", async () => {
