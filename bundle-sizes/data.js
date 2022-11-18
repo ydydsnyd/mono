@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1668791777494,
+  "lastUpdate": 1668812175850,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -30827,6 +30827,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/ea9255fd2479096aa5ce3da1b9c9d6cd50afcf5e"
         },
         "date": 1668791771017,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 192338,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34231,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 191191,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33919,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81192,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23614,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "12dad8505902b401938e28c79f8b6ca6b2a50eae",
+          "message": "refactor: Update Hash type to be assignable to string (#404)\n\nThis will allows us to store Hash in Record and JSONValue.\r\n\r\nRecord has better testing DX, since chai's comparison code for Map does not print useful error messages.",
+          "timestamp": "2022-11-18T15:55:00-07:00",
+          "tree_id": "3ce944d683e896997e0118db1781190f948168c6",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/12dad8505902b401938e28c79f8b6ca6b2a50eae"
+        },
+        "date": 1668812168674,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
