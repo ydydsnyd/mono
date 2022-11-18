@@ -27,6 +27,7 @@ import type { RociRequest, RociRouter } from "./middleware.js";
 import { addRoutes } from "./room-do-routes.js";
 
 const roomIDKey = "/system/roomID";
+const deletedKey = "/system/deleted";
 
 export interface RoomDOOptions<MD extends MutatorDefs> {
   mutators: MD;
@@ -80,6 +81,9 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
   async fetch(request: Request): Promise<Response> {
     try {
+      if (await this.deleted()) {
+        return new Response("deleted", { status: 410 /* Gone */ });
+      }
       if (!this._lcHasRoomIdContext) {
         const roomID = await this.maybeRoomID();
         const url = new URL(request.url);
@@ -137,6 +141,14 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     return this._storage.get(roomIDKey, s.string());
   }
 
+  private async _setDeleted() {
+    return this._storage.put(deletedKey, true);
+  }
+
+  async deleted(): Promise<boolean> {
+    return (await this._storage.get(deletedKey, s.boolean())) === true;
+  }
+
   // roomID errors and returns "unknown" if the roomID is not set. Prefer
   // roomID() to maybeRoomID() in cases where the roomID is expected to be set,
   // which is most cases.
@@ -172,6 +184,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     this._lc.info?.("delete all data");
     await this._storage.deleteAll();
     this._lc.info?.("done deleting all data");
+    await this._setDeleted();
     return new Response("ok");
   }
 

@@ -36,7 +36,8 @@ test("deleteAllData deletes all data", async () => {
   const testLogSink = new TestLogSink();
   const doID = new TestDurableObjectId("test-do-id");
   const storage = await getMiniflareDurableObjectStorage(doID);
-  await storage.put("foo", "bar");
+  const someKey = "foo";
+  await storage.put(someKey, "bar");
   expect(await (await storage.list()).size).toBeGreaterThan(0);
 
   const roomDO = new BaseRoomDO({
@@ -66,7 +67,76 @@ test("deleteAllData deletes all data", async () => {
   );
   const response = await roomDO.fetch(deleteRequest);
   expect(response.status).toBe(200);
-  expect(await (await storage.list()).size).toEqual(0);
+  const gotValue = await storage.get(someKey);
+  expect(gotValue).toBeUndefined();
+  expect(await (await storage.list()).size).toEqual(1 /* deleted record */);
+});
+
+test("after deleteAllData the roomDO just 410s", async () => {
+  const testLogSink = new TestLogSink();
+  const doID = new TestDurableObjectId("test-do-id");
+  const storage = await getMiniflareDurableObjectStorage(doID);
+
+  const roomDO = new BaseRoomDO({
+    mutators: {},
+    disconnectHandler: () => Promise.resolve(),
+    state: {
+      id: doID,
+      storage,
+    } as unknown as DurableObjectState,
+    authApiKey: "API KEY",
+    logSink: testLogSink,
+    logLevel: "info",
+    allowUnconfirmedWrites: true,
+  });
+  const createRoomRequest = newCreateRoomRequest(
+    "http://example.com/",
+    "API KEY",
+    "testRoomID"
+  );
+  const createResponse = await roomDO.fetch(createRoomRequest);
+  expect(createResponse.status).toBe(200);
+
+  const deleteRequest = newDeleteRoomRequest(
+    "http://example.com/",
+    "API KEY",
+    "testRoomID"
+  );
+  const response = await roomDO.fetch(deleteRequest);
+  expect(response.status).toBe(200);
+
+  const response2 = await roomDO.fetch(createRoomRequest);
+  expect(response2.status).toBe(410);
+  const response3 = await roomDO.fetch(deleteRequest);
+  expect(response3.status).toBe(410);
+  const response4 = await roomDO.fetch(new Request("http://example.com/"));
+  expect(response4.status).toBe(410);
+});
+
+test("deleteAllData 401s if wrong auth api key", async () => {
+  const testLogSink = new TestLogSink();
+  const doID = new TestDurableObjectId("test-do-id");
+  const storage = await getMiniflareDurableObjectStorage(doID);
+
+  const roomDO = new BaseRoomDO({
+    mutators: {},
+    disconnectHandler: () => Promise.resolve(),
+    state: {
+      id: doID,
+      storage,
+    } as unknown as DurableObjectState,
+    authApiKey: "API KEY",
+    logSink: testLogSink,
+    logLevel: "info",
+    allowUnconfirmedWrites: true,
+  });
+  const deleteRequest = newDeleteRoomRequest(
+    "http://example.com/",
+    "WRONG KEY",
+    "testRoomID"
+  );
+  const response = await roomDO.fetch(deleteRequest);
+  expect(response.status).toBe(401);
 });
 
 test("Logs version during construction", async () => {

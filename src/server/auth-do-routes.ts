@@ -89,7 +89,8 @@ routes.push({
   },
 });
 
-// A room must first be closed before it can be deleted.
+// A room must first be closed before it can be deleted. Once deleted,
+// a room will return 410 Gone for all requests.
 export const deleteRoomPath = "/api/room/v0/room/:roomID/delete";
 routes.push({
   path: deleteRoomPath,
