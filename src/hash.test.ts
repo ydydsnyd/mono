@@ -47,7 +47,7 @@ test('parse', () => {
 test.skip('type checking only', () => {
   {
     const h = newUUIDHash();
-    // @ts-expect-error Should be an error
+    // should not be an error
     const s: string = h;
     console.log(s);
 
