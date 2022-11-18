@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1668702616485,
+  "lastUpdate": 1668739589096,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -30557,6 +30557,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/530a9bc80d9bbdab11c2e3d07653dd3c515f07ea"
         },
         "date": 1668702609723,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 192331,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34242,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 191184,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33891,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81185,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23600,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "committer": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "distinct": true,
+          "id": "67bde48dcacd8e7a5bf04a46255ab4745a40ace0",
+          "message": "doc: Correctly handle SQL exceptions inside mutations.\n\nAs pointed out in a discord thread, when a SQL exceptions happens,\nthe containing transaction is toast and cannot do any more work.\nSo the way we were trying to skip mutation errors didn't work if the\nexception originated in SQL.\n\nFix this issue by allowing any exception from inside a mutation to\nrollback the tx, then starting a new tx to explicitly set the\nlastMutationID.\n\nUpdate comments to match.\n\n[1] https://discord.com/channels/830183651022471199/1042343134786502676",
+          "timestamp": "2022-11-17T16:45:31-10:00",
+          "tree_id": "4e35ef52a1b0934511cf8ab9afcd400b9863036c",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/67bde48dcacd8e7a5bf04a46255ab4745a40ace0"
+        },
+        "date": 1668739582749,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
