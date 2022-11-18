@@ -5,7 +5,7 @@ import {
   assertString,
 } from './asserts.js';
 import {httpRequest} from './http-request.js';
-import {assertJSONValue, JSONValue, ReadonlyJSONValue} from './json.js';
+import {assertJSONValue, ReadonlyJSONValue} from './json.js';
 import type {HTTPRequestInfo} from './http-request-info.js';
 import type {ClientID} from './sync/ids.js';
 
@@ -138,12 +138,17 @@ function assertLastMutationIDChanges(
  */
 export type PatchOperation =
   | {
-      op: 'put';
-      key: string;
-      value: JSONValue;
+      readonly op: 'put';
+      readonly key: string;
+      readonly value: ReadonlyJSONValue;
     }
-  | {op: 'del'; key: string}
-  | {op: 'clear'};
+  | {
+      readonly op: 'del';
+      readonly key: string;
+    }
+  | {
+      readonly op: 'clear';
+    };
 
 const defaultPullerShared = async (request: Request) => {
   const {httpRequestInfo, response} = await httpRequest(request);

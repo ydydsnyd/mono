@@ -6,7 +6,7 @@ import type {PatchOperation} from '../puller.js';
 export async function apply(
   lc: LogContext,
   dbWrite: db.Write,
-  patch: PatchOperation[],
+  patch: readonly PatchOperation[],
 ): Promise<void> {
   for (const p of patch) {
     switch (p.op) {
