@@ -269,7 +269,7 @@ export async function createRoomRecordForLegacyRoom(
     });
   }
 
-  const objectID = await roomDO.idFromString(roomID);
+  const objectID = await roomDO.idFromName(roomID);
 
   const roomRecord: RoomRecord = {
     roomID,

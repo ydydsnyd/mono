@@ -264,7 +264,10 @@ test("createRoom sets jurisdiction if requested", async () => {
 test("migrate room creates a room record", async () => {
   const { testRoomID, testRoomDO, state } = await createCreateRoomTestFixture();
 
-  const expectedObjectIDString = testRoomDO.idFromString(testRoomID).toString();
+  testRoomDO.idFromName = (name: string) => {
+    return new TestDurableObjectId(`id-${name}`);
+  };
+  const expectedObjectIDString = testRoomDO.idFromName(testRoomID).toString();
 
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
