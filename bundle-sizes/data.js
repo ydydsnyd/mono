@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1668779224803,
+  "lastUpdate": 1668791777494,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -30773,6 +30773,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/1744a6f380c9a1df06d29eba5015cef44e67b9d9"
         },
         "date": 1668779217143,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 192338,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34231,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 191191,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33919,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81192,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23614,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cesar@roci.dev",
+            "name": "Cesar Alaestante",
+            "username": "cesara"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ea9255fd2479096aa5ce3da1b9c9d6cd50afcf5e",
+          "message": "doc: update to tutorial_license_key phrasing (#402)\n\n* doc: update to tutorial_license_key phrasing",
+          "timestamp": "2022-11-18T10:15:13-07:00",
+          "tree_id": "008f1ee1ba0fe03c13153860d4c3d8df7f16e85e",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/ea9255fd2479096aa5ce3da1b9c9d6cd50afcf5e"
+        },
+        "date": 1668791771017,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
