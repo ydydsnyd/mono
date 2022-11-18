@@ -5,6 +5,7 @@ import { createAuthAPIHeaders } from "./auth-api-headers.js";
 import {
   closeRoomPath,
   forgetRoomPath,
+  migrateRoomPath,
   roomRecordsPath,
   roomStatusByRoomIDPath,
 } from "./auth-do-routes.js";
@@ -109,6 +110,10 @@ test("worker forwards authDO api requests to authDO", async () => {
   const closeRoomPathWithRoomID = closeRoomPath.replace(":roomID", "ae4565");
   const deleteRoomPathWithRoomID = roomRecordsPath.replace(":roomID", "ae4565");
   const forgetRoomPathWithRoomID = forgetRoomPath.replace(":roomID", "ae4565");
+  const migrateRoomPathWithRoomID = migrateRoomPath.replace(
+    ":roomID",
+    "ae4565"
+  );
   const testCases: TestCase[] = [
     // Auth API calls.
     {
@@ -150,6 +155,11 @@ test("worker forwards authDO api requests to authDO", async () => {
     },
     {
       path: `https://test.roci.dev${forgetRoomPathWithRoomID}`,
+      method: "post",
+      body: undefined,
+    },
+    {
+      path: `https://test.roci.dev${migrateRoomPathWithRoomID}`,
       method: "post",
       body: undefined,
     },

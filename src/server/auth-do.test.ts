@@ -28,6 +28,7 @@ import {
   newCreateRoomRequest,
   newDeleteRoomRequest,
   newForgetRoomRequest,
+  newMigrateRoomRequest,
   newRoomStatusRequest,
 } from "../client/room.js";
 
@@ -258,6 +259,82 @@ test("createRoom sets jurisdiction if requested", async () => {
   expect(gotJurisdiction).toEqual(true);
   const rr = await getRoomRecord(state.storage, testRoomID);
   expect(rr?.jurisdiction).toEqual("eu");
+});
+
+test("migrate room creates a room record", async () => {
+  const { testRoomID, testRoomDO, state } = await createCreateRoomTestFixture();
+
+  const expectedObjectIDString = testRoomDO.idFromString(testRoomID).toString();
+
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async () => {
+      throw "should not be called";
+    },
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
+
+  const migrateRoomRequest = newMigrateRoomRequest(
+    "https://test.roci.dev",
+    TEST_AUTH_API_KEY,
+    testRoomID
+  );
+  const response = await authDO.fetch(migrateRoomRequest);
+  expect(response.status).toEqual(200);
+
+  const rr = await getRoomRecord(state.storage, testRoomID);
+  expect(rr).not.toBeUndefined();
+  const roomRecord = rr as RoomRecord;
+  expect(roomRecord.objectIDString).toEqual(expectedObjectIDString);
+});
+
+test("migrate room enforces roomID format", async () => {
+  const { testRoomDO, state } = await createCreateRoomTestFixture();
+
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async () => {
+      throw "should not be called";
+    },
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
+
+  const migrateRoomRequest = newMigrateRoomRequest(
+    "https://test.roci.dev",
+    TEST_AUTH_API_KEY,
+    "not allowed! "
+  );
+  const response = await authDO.fetch(migrateRoomRequest);
+  expect(response.status).toEqual(400);
+});
+
+test("migrate room 401s is auth api key is wrong", async () => {
+  const { testRoomID, testRoomDO, state } = await createCreateRoomTestFixture();
+
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async () => {
+      throw "should not be called";
+    },
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
+
+  const migrateRoomRequest = newMigrateRoomRequest(
+    "https://test.roci.dev",
+    "WRONG KEY",
+    testRoomID
+  );
+  const response = await authDO.fetch(migrateRoomRequest);
+  expect(response.status).toEqual(401);
 });
 
 test("closeRoom closes an open room", async () => {
@@ -532,6 +609,30 @@ test("foget room 404s on non-existent room", async () => {
   );
   const forgetRoomResponse = await authDO.fetch(forgetRoomRequest);
   expect(forgetRoomResponse.status).toEqual(404);
+});
+
+test("forget room 401s if the auth key is wrong", async () => {
+  const { testRoomID, testRoomDO, state } = await createCreateRoomTestFixture();
+
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async () => {
+      throw "should not be called";
+    },
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
+  await createRoom(authDO, testRoomID);
+
+  const forgetRoomRequest = newForgetRoomRequest(
+    "https://test.roci.dev",
+    "WRONG AUTH KEY",
+    testRoomID
+  );
+  const forgetRoomResponse = await authDO.fetch(forgetRoomRequest);
+  expect(forgetRoomResponse.status).toEqual(401);
 });
 
 test("roomStatusByRoomID returns status for a room that exists", async () => {

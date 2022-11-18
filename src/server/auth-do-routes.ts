@@ -109,6 +109,28 @@ routes.push({
   },
 });
 
+// This call creates a RoomRecord for a room that was created via the
+// old mechanism of deriving room objectID from the roomID via idFromString().
+// It overwrites any existing RoomRecord for the room. It does not check
+// that the room actually exists.
+export const migrateRoomPath = "/api/room/v0/room/:roomID/migrate/1";
+routes.push({
+  path: migrateRoomPath,
+  add: (
+    router: RociRouter,
+    authDO: BaseAuthDO,
+    authApiKey: string | undefined
+  ) => {
+    router.post(
+      migrateRoomPath,
+      requireAuthAPIKeyMatches(authApiKey),
+      async (request: RociRequest) => {
+        return authDO.migrateRoom(request);
+      }
+    );
+  },
+});
+
 // This is a DANGEROUS call: it removes the RoomRecord for the given
 // room, potentially orphaning the roomDO. It doesn't log users out
 // or delete the room's data, it just forgets about the room.

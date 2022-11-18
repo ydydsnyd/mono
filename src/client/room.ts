@@ -2,6 +2,7 @@ import {
   closeRoomPath,
   deleteRoomPath,
   forgetRoomPath,
+  migrateRoomPath,
   roomStatusByRoomIDPath,
 } from "../server/auth-do-routes";
 import { createAuthAPIHeaders } from "../server/auth-api-headers";
@@ -171,6 +172,19 @@ export function newForgetRoomRequest(
   roomID: string
 ) {
   const path = forgetRoomPath.replace(":roomID", roomID);
+  const url = new URL(path, reflectServerURL);
+  return new Request(url.toString(), {
+    method: "post",
+    headers: createAuthAPIHeaders(authApiKey),
+  });
+}
+
+export function newMigrateRoomRequest(
+  reflectServerURL: string,
+  authApiKey: string,
+  roomID: string
+) {
+  const path = migrateRoomPath.replace(":roomID", roomID);
   const url = new URL(path, reflectServerURL);
   return new Request(url.toString(), {
     method: "post",

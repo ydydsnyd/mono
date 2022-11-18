@@ -7,6 +7,7 @@ import { dispatch, paths } from "./dispatch.js";
 import {
   closeRoom,
   createRoom,
+  createRoomRecordForLegacyRoom,
   deleteRoom,
   deleteRoomRecord,
   objectIDByRoomID,
@@ -175,6 +176,17 @@ export class BaseAuthDO implements DurableObject {
   async forgetRoom(request: RociRequest) {
     return this._roomRecordLock.withWrite(async () => {
       return deleteRoomRecord(this._lc, this._durableStorage, request);
+    });
+  }
+
+  async migrateRoom(request: RociRequest) {
+    return this._roomRecordLock.withWrite(async () => {
+      return createRoomRecordForLegacyRoom(
+        this._lc,
+        this._roomDO,
+        this._durableStorage,
+        request
+      );
     });
   }
 

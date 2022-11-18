@@ -77,14 +77,14 @@ export async function createRoom(
   lc: LogContext,
   roomDO: DurableObjectNamespace,
   storage: DurableStorage,
-  request: Request,
+  request: RociRequest,
   validatedBody: CreateRoomRequest
 ): Promise<Response> {
   // Note: this call was authenticated by dispatch, so no need to check for
   // authApiKey here.
   const { roomID } = validatedBody;
 
-  if (!roomID.match(/^[A-Za-z0-9_-]+$/)) {
+  if (!validRoomID(roomID)) {
     return new Response("Invalid roomID (must match [A-Za-z0-9_-]+)", {
       status: 400,
     });
@@ -244,6 +244,50 @@ export async function deleteRoomRecord(
   lc.debug?.(`deleted RoomRecord ${JSON.stringify(roomRecord)}`);
 
   return new Response("success");
+}
+
+// Creates a RoomRecord for a roomID that already exists whose objectID
+// was derived from the roomID. It overwrites any record that already
+// exists for the roomID.
+//
+// Caller must enforce no other concurrent calls to this and other
+// room-modifying functions.
+export async function createRoomRecordForLegacyRoom(
+  lc: LogContext,
+  roomDO: DurableObjectNamespace,
+  storage: DurableStorage,
+  request: RociRequest
+): Promise<Response> {
+  const roomID = request.params?.roomID;
+  if (roomID === undefined) {
+    return new Response("Missing roomID", { status: 400 });
+  }
+
+  if (!validRoomID(roomID)) {
+    return new Response("Invalid roomID (must match [A-Za-z0-9_-]+)", {
+      status: 400,
+    });
+  }
+
+  const objectID = await roomDO.idFromString(roomID);
+
+  const roomRecord: RoomRecord = {
+    roomID,
+    objectIDString: objectID.toString(),
+    jurisdiction: "",
+    status: RoomStatus.Open,
+  };
+  const roomRecordKey = roomKeyToString(roomRecord);
+  await storage.put(roomRecordKey, roomRecord);
+  lc.debug?.(
+    `migrated created roomID ${roomID}; record: ${JSON.stringify(roomRecord)}`
+  );
+
+  return new Response("success");
+}
+
+function validRoomID(roomID: string): boolean {
+  return roomID.match(/^[A-Za-z0-9_-]+$/) !== null;
 }
 
 // Caller must enforce no other concurrent calls to
