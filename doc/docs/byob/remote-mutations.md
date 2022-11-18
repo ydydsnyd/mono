@@ -38,85 +38,22 @@ async function handlePush(req, res) {
     for (const mutation of push.mutations) {
       const t1 = Date.now();
 
-      await tx(async t => {
-        // Get the previous version for the affected space and calculate the next
-        // one. Eagerly lock the space row with "for update" to serialize write
-        // access to the space.
-        const {version: prevVersion} = await t.one(
-          'select version from space where key = $1 for update',
-          defaultSpaceID,
+      try {
+        await tx(t =>
+          processMutation(t, push.clientID, defaultSpaceID, mutation),
         );
-        const nextVersion = prevVersion + 1;
-
-        const lastMutationID = await getLastMutationID(t, push.clientID, false);
-        const nextMutationID = lastMutationID + 1;
-
-        console.log(
-          'nextVersion',
-          nextVersion,
-          'nextMutationID',
-          nextMutationID,
-        );
-
-        // It's common due to connectivity issues for clients to send a
-        // mutation which has already been processed. Skip these.
-        if (mutation.id < nextMutationID) {
-          console.log(
-            `Mutation ${mutation.id} has already been processed - skipping`,
-          );
-          return;
-        }
-
-        // If the Replicache client is working correctly, this can never
-        // happen. If it does there is nothing to do but return an error to
-        // client and report a bug to Replicache.
-        if (mutation.id > nextMutationID) {
-          throw new Error(
-            `Mutation ${mutation.id} is from the future - aborting`,
-          );
-        }
-
-        console.log('Processing mutation:', JSON.stringify(mutation));
-
-        // For each possible mutation, run the server-side logic to apply the
-        // mutation.
-        try {
-          switch (mutation.name) {
-            case 'createMessage':
-              await createMessage(
-                t,
-                mutation.args,
-                defaultSpaceID,
-                nextVersion,
-              );
-              break;
-            default:
-              throw new Error(`Unknown mutation: ${mutation.name}`);
-          }
-        } catch (e) {
-          // Unhandled errors from mutations are discouraged. It is hard to
-          // know whether the error is temporary (and would be resolved if we
-          // retry the mutation later) or permanent (and would thus block that
-          // client forever). We recommend to bias toward skipping such
-          // mutations and avoiding blocking the client from progressing.
-          console.error('Error processing mutation - skipping', e);
-        }
-
-        console.log(
-          'setting',
-          push.clientID,
-          'last_mutation_id to',
-          nextMutationID,
-        );
-        // Update lastMutationID for requesting client.
-        await setLastMutationID(t, push.clientID, nextMutationID);
-
-        // Update version for space.
-        await t.none('update space set version = $1 where key = $2', [
-          nextVersion,
-          defaultSpaceID,
-        ]);
-      });
+      } catch (e) {
+        // Skip mutations that experience any error. This is a better dx early
+        // on when you are likely to have bugs in your server-side logic,
+        // schemas, etc. However it does mean user data loss can happen when
+        // a mutation is skipped. As you get closer to production you should
+        // consider which errors to retry.
+        // See: https://trunk.doc.replicache.dev/reference/server-push#error-handling
+        console.error('Skipping mutation', mutation, 'due to error: ', e);
+        await tx(t => {
+          return setLastMutationID(t, push.clientID, mutation.id);
+        });
+      }
 
       console.log('Processed mutation in', Date.now() - t1);
     }
@@ -132,6 +69,59 @@ async function handlePush(req, res) {
   } finally {
     console.log('Processed push in', Date.now() - t0);
   }
+}
+
+async function processMutation(t, clientID, spaceID, mutation) {
+  // Get the previous version for the affected space and calculate the next
+  // one.
+  const {version: prevVersion} = await t.one(
+    'select version from space where key = $1 for update',
+    spaceID,
+  );
+  const nextVersion = prevVersion + 1;
+
+  const lastMutationID = await getLastMutationID(t, clientID, false);
+  const nextMutationID = lastMutationID + 1;
+
+  console.log('nextVersion', nextVersion, 'nextMutationID', nextMutationID);
+
+  // It's common due to connectivity issues for clients to send a
+  // mutation which has already been processed. Skip these.
+  if (mutation.id < nextMutationID) {
+    console.log(
+      `Mutation ${mutation.id} has already been processed - skipping`,
+    );
+    return;
+  }
+
+  // If the Replicache client is working correctly, this can never
+  // happen. If it does there is nothing to do but return an error to
+  // client and report a bug to Replicache.
+  if (mutation.id > nextMutationID) {
+    throw new Error(`Mutation ${mutation.id} is from the future - aborting`);
+  }
+
+  console.log('Processing mutation:', JSON.stringify(mutation));
+
+  // For each possible mutation, run the server-side logic to apply the
+  // mutation.
+  switch (mutation.name) {
+    case 'createMessage':
+      await createMessage(t, mutation.args, spaceID, nextVersion);
+      break;
+    default:
+      throw new Error(`Unknown mutation: ${mutation.name}`);
+  }
+
+  console.log('setting', clientID, 'last_mutation_id to', nextMutationID);
+  // Update lastMutationID for requesting client.
+  await setLastMutationID(t, clientID, nextMutationID);
+
+  // Update version for space.
+  await t.none('update space set version = $1 where key = $2', [
+    nextVersion,
+    spaceID,
+  ]);
 }
 
 export async function getLastMutationID(t, clientID, required) {
