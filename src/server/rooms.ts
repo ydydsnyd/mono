@@ -215,6 +215,37 @@ export async function deleteRoom(
   return new Response("success");
 }
 
+// Deletes the RoomRecord without any concern for the room's status.
+// Customers probably won't want/need to call this but it is useful for
+// developing.
+//
+// Caller must enforce no other concurrent calls to this and other
+// functions that create or modify the room record.
+export async function deleteRoomRecord(
+  lc: LogContext,
+  storage: DurableStorage,
+  request: RociRequest
+): Promise<Response> {
+  const roomID = request.params?.roomID;
+  if (roomID === undefined) {
+    return new Response("Missing roomID", { status: 400 });
+  }
+
+  const roomRecord = await roomRecordByRoomID(storage, roomID);
+  if (roomRecord === undefined) {
+    return new Response("no such room", {
+      status: 404,
+    });
+  }
+
+  lc.debug?.(`DANGER: deleting room record ${JSON.stringify(roomRecord)}`);
+  const roomRecordKey = roomKeyToString(roomRecord);
+  await storage.del(roomRecordKey);
+  lc.debug?.(`deleted RoomRecord ${JSON.stringify(roomRecord)}`);
+
+  return new Response("success");
+}
+
 // Caller must enforce no other concurrent calls to
 // functions that create or modify the room record.
 export async function objectIDByRoomID(

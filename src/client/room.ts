@@ -1,6 +1,7 @@
 import {
   closeRoomPath,
   deleteRoomPath,
+  forgetRoomPath,
   roomStatusByRoomIDPath,
 } from "../server/auth-do-routes";
 import { createAuthAPIHeaders } from "../server/auth-api-headers";
@@ -157,6 +158,19 @@ export function newDeleteRoomRequest(
   roomID: string
 ) {
   const path = deleteRoomPath.replace(":roomID", roomID);
+  const url = new URL(path, reflectServerURL);
+  return new Request(url.toString(), {
+    method: "post",
+    headers: createAuthAPIHeaders(authApiKey),
+  });
+}
+
+export function newForgetRoomRequest(
+  reflectServerURL: string,
+  authApiKey: string,
+  roomID: string
+) {
+  const path = forgetRoomPath.replace(":roomID", roomID);
   const url = new URL(path, reflectServerURL);
   return new Request(url.toString(), {
     method: "post",

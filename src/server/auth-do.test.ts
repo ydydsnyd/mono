@@ -27,6 +27,7 @@ import {
   newCloseRoomRequest,
   newCreateRoomRequest,
   newDeleteRoomRequest,
+  newForgetRoomRequest,
   newRoomStatusRequest,
 } from "../client/room.js";
 
@@ -472,6 +473,65 @@ test("deleteRoom 401s if auth api key not correct", async () => {
   expect(await statusResponse.json()).toMatchObject({
     status: RoomStatus.Open,
   });
+});
+
+test("forget room forgets an existing room", async () => {
+  const { testRoomID, testRoomDO, state } = await createCreateRoomTestFixture();
+
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async () => {
+      throw "should not be called";
+    },
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
+  await createRoom(authDO, testRoomID);
+
+  const forgetRoomRequest = newForgetRoomRequest(
+    "https://test.roci.dev",
+    TEST_AUTH_API_KEY,
+    testRoomID
+  );
+  const forgetRoomResponse = await authDO.fetch(forgetRoomRequest);
+  expect(forgetRoomResponse.status).toEqual(200);
+
+  const statusRequest = newRoomStatusRequest(
+    "https://test.roci.dev",
+    TEST_AUTH_API_KEY,
+    testRoomID
+  );
+  const statusResponse = await authDO.fetch(statusRequest);
+  expect(statusResponse.status).toEqual(200);
+  expect(await statusResponse.json()).toMatchObject({
+    status: RoomStatus.Unknown,
+  });
+});
+
+test("foget room 404s on non-existent room", async () => {
+  const { testRoomID, testRoomDO, state } = await createCreateRoomTestFixture();
+
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: async () => {
+      throw "should not be called";
+    },
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: "debug",
+  });
+  // Note: no createRoom.
+
+  const forgetRoomRequest = newForgetRoomRequest(
+    "https://test.roci.dev",
+    TEST_AUTH_API_KEY,
+    testRoomID
+  );
+  const forgetRoomResponse = await authDO.fetch(forgetRoomRequest);
+  expect(forgetRoomResponse.status).toEqual(404);
 });
 
 test("roomStatusByRoomID returns status for a room that exists", async () => {

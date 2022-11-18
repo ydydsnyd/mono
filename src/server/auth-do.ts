@@ -8,6 +8,7 @@ import {
   closeRoom,
   createRoom,
   deleteRoom,
+  deleteRoomRecord,
   objectIDByRoomID,
   roomRecordByRoomID,
   roomRecords,
@@ -168,6 +169,12 @@ export class BaseAuthDO implements DurableObject {
   async deleteRoom(request: RociRequest) {
     return this._roomRecordLock.withWrite(async () => {
       return deleteRoom(this._lc, this._roomDO, this._durableStorage, request);
+    });
+  }
+
+  async forgetRoom(request: RociRequest) {
+    return this._roomRecordLock.withWrite(async () => {
+      return deleteRoomRecord(this._lc, this._durableStorage, request);
     });
   }
 

@@ -108,3 +108,26 @@ routes.push({
     );
   },
 });
+
+// This is a DANGEROUS call: it removes the RoomRecord for the given
+// room, potentially orphaning the roomDO. It doesn't log users out
+// or delete the room's data, it just forgets about the room.
+// It is useful if you are testing migration, or if you are developing
+// in reflect-server.
+export const forgetRoomPath = "/api/room/v0/room/:roomID/DANGER/forget";
+routes.push({
+  path: forgetRoomPath,
+  add: (
+    router: RociRouter,
+    authDO: BaseAuthDO,
+    authApiKey: string | undefined
+  ) => {
+    router.post(
+      forgetRoomPath,
+      requireAuthAPIKeyMatches(authApiKey),
+      async (request: RociRequest) => {
+        return authDO.forgetRoom(request);
+      }
+    );
+  },
+});
