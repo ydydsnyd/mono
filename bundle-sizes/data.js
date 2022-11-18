@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1668768328252,
+  "lastUpdate": 1668779224803,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -30719,6 +30719,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/2443b0fa419e253712331c4fe43331ade0ad683d"
         },
         "date": 1668768322456,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 192338,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34231,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 191191,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33919,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81192,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23614,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "distinct": true,
+          "id": "1744a6f380c9a1df06d29eba5015cef44e67b9d9",
+          "message": "fix: PatchOperation should be readonly\n\npatch apply does not need to be able to mutate the JSON value so we do\nnot require a mutable JSON value. Making PatchOperation readonly allows\npassing in a readonly JSON value as well as a non readonly JSON value.",
+          "timestamp": "2022-11-18T14:45:54+01:00",
+          "tree_id": "deac2a83086d5bda8004e5682f58b7d2e3a58e4f",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/1744a6f380c9a1df06d29eba5015cef44e67b9d9"
+        },
+        "date": 1668779217143,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
