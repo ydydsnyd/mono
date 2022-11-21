@@ -818,7 +818,6 @@ test('subscribe pull and index update', async () => {
 test('subscription coalescing', async () => {
   const rep = await replicacheForTesting('subscription-coalescing', {
     mutators: {addData},
-    logLevel: 'debug',
     enableScheduledPersist: false,
     enableMutationRecovery: false,
     enableRefresh: false,

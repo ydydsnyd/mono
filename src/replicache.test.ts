@@ -730,7 +730,6 @@ test('pull', async () => {
         await tx.del(`/todo/${args.id}`);
       },
     },
-    logLevel: 'debug',
     enableScheduledPersist: false,
     enableMutationRecovery: false,
     enableRefresh: false,
