@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1668812175850,
+  "lastUpdate": 1669025897429,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -30881,6 +30881,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/12dad8505902b401938e28c79f8b6ca6b2a50eae"
         },
         "date": 1668812168674,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 192338,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34231,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 191191,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 33919,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 81192,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23614,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "distinct": true,
+          "id": "6d2dc4eb2c4454bf531a4b7c0ddf5d4494cd3a65",
+          "message": "chore: Silence loggers\n\nI turned on logging for 2 flaky tests for Firefox. These are no longer\nflaky after some fixes to not reuse the db names as well as turning off\nbackground processes for these tests.\n\nCloses #375\nCloses #374",
+          "timestamp": "2022-11-21T11:17:12+01:00",
+          "tree_id": "a3972db291b4de71344b002b288f429b45c69c32",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/6d2dc4eb2c4454bf531a4b7c0ddf5d4494cd3a65"
+        },
+        "date": 1669025890722,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
