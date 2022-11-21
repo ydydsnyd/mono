@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1669026700047,
+  "lastUpdate": 1669071835627,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Benchmark": [
@@ -28419,6 +28419,198 @@ window.BENCHMARK_DATA = {
             "unit": "p95 ms",
             "range": "±13.5%",
             "extra": "persist tmcw 50/75/90/95%=451.90/463.00/465.40/465.40 ms avg=580.47 ms (7 runs sampled)"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4378df2f13176e9065e10021fbd110c97411e25d",
+          "message": "fix: Fix ref counting and cascading evictions in lazy store (#405)\n\nProblem\r\n======\r\n1. Ref counting in the lazy store is buggy resulting in incorrect and even negative ref counts.  The main problem is that the refs of cached chunks (lazily loaded or put) in a Write that were already \"reachable\" (already had a positive ref count) are not counted.  This is because `computeRefCountUpdates` assumes that the refs of all \"reachable\" chunks are already counted (i.e. new refs can only come from new heads), it does not have logic for handling the lazy discovery of refs via chunk lazy loading.  \r\n2. Current eviction logic in the lazy store kind of mixes the ideas of eviction and deletion.  When a chunk is evicted, the ref counts of all of the chunks its ref's are decremented.  If any go to zero they are evicted, and so on recursively.  This can lead to very large cascading evictions.  In particular if we are traversing a DAG that exceeds the cache limit, at the time the limit is exceeded the least recently accessed node is the root.  Evicting the root can cascade and cause everything cached so far to be evicted. \r\n\r\nSolution\r\n======\r\nCache refs separately from chunks.  Clearly distinguish eviction vs deletion of chunks.  \r\n\r\n- Eviction \r\n  When evicting a chunk do not modify its ref count or delete its cached refs, only remove the chunk from the cache.  \r\n- Deletion \r\n  When deleting a chunk (because its ref count has gone to 0), delete its ref count entry, cached refs and the chunk itself.\r\n\r\nAdd logic to `computeRefCountUpdates` for handling lazily discovered refs.  \r\n\r\nImprove documentation and tests.\r\n\r\n\r\nPerformance\r\n==========\r\n\r\nPerformance impact looks neutral.\r\n\r\nPerf comparisons made on my mac laptop\r\n  Model Name: MacBook Pro\r\n  Model Identifier: MacBookPro18,4\r\n  Chip: Apple M1 Max\r\n  Total Number of Cores: 10 (8 performance and 2 efficiency)\r\n  Memory: 64 GB\r\n  Physical Drive:\r\n    Device Name: APPLE SSD AP1024R\r\n    Media Name: AppleAPFSMedia\r\n    Medium Type: SSD\r\n    Capacity: 994.66 GB (994,662,584,320 bytes)\r\n\r\n***main***\r\n[greg replicache-internal [main]$ npm run perf -- --format replicache\r\n\r\n> replicache@12.0.0-beta.0 perf\r\n> npm run build-perf && node perf/runner.js \"--format\" \"replicache\"\r\n\r\n\r\n> replicache@12.0.0-beta.0 build-perf\r\n> node tool/build.js --perf\r\n\r\nRunning 24 benchmarks on Chromium...\r\nwriteSubRead 1MB total, 64 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=1.30/1.50/1.60/2.00 ms avg=1.31 ms (19 runs sampled)\r\nwriteSubRead 4MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=0.90/1.00/1.10/1.40 ms avg=1.02 ms (19 runs sampled)\r\nwriteSubRead 16MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=1.20/1.30/1.40/2.30 ms avg=1.33 ms (16 runs sampled)\r\nwriteSubRead 64MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=1.50/2.40/3.80/3.80 ms avg=2.14 ms (7 runs sampled)\r\npopulate 1024x1000 (clean, indexes: 0) 50/75/90/95%=7.70/9.00/12.60/16.60 ms avg=9.03 ms (19 runs sampled)\r\npopulate 1024x1000 (clean, indexes: 1) 50/75/90/95%=16.30/18.90/20.90/23.20 ms avg=18.31 ms (19 runs sampled)\r\npopulate 1024x1000 (clean, indexes: 2) 50/75/90/95%=22.70/24.50/26.50/29.20 ms avg=23.78 ms (19 runs sampled)\r\npopulate 1024x10000 (clean, indexes: 0) 50/75/90/95%=42.10/45.10/67.70/67.70 ms avg=53.04 ms (10 runs sampled)\r\npopulate 1024x10000 (clean, indexes: 1) 50/75/90/95%=94.30/96.70/114.00/114.00 ms avg=122.79 ms (7 runs sampled)\r\npopulate 1024x10000 (clean, indexes: 2) 50/75/90/95%=141.60/167.60/172.70/172.70 ms avg=188.91 ms (7 runs sampled)\r\nscan 1024x1000 50/75/90/95%=0.90/1.20/1.40/1.80 ms avg=0.96 ms (19 runs sampled)\r\nscan 1024x10000 50/75/90/95%=6.30/6.30/8.20/9.20 ms avg=7.13 ms (19 runs sampled)\r\ncreate index with definition 1024x5000 50/75/90/95%=109.20/112.80/119.80/119.80 ms avg=138.80 ms (7 runs sampled)\r\ncreate index 1024x5000 50/75/90/95%=23.10/24.20/27.80/30.10 ms avg=26.30 ms (19 runs sampled)\r\nstartup read 1024x100 from 1024x100000 stored 50/75/90/95%=56.00/71.70/89.00/89.00 ms avg=72.20 ms (7 runs sampled)\r\nstartup scan 1024x100 from 1024x100000 stored 50/75/90/95%=16.50/27.80/59.70/60.70 ms avg=22.79 ms (19 runs sampled)\r\npersist 1024x1000 (indexes: 0) 50/75/90/95%=138.60/163.70/441.20/441.20 ms avg=181.53 ms (7 runs sampled)\r\npersist 1024x1000 (indexes: 1) 50/75/90/95%=176.50/177.60/177.60/177.60 ms avg=210.80 ms (7 runs sampled)\r\npersist 1024x1000 (indexes: 2) 50/75/90/95%=220.90/223.50/238.30/238.30 ms avg=272.47 ms (7 runs sampled)\r\npersist 1024x10000 (indexes: 0) 50/75/90/95%=553.30/561.70/646.00/646.00 ms avg=709.26 ms (7 runs sampled)\r\npersist 1024x10000 (indexes: 1) 50/75/90/95%=2765.30/2819.80/2894.20/2894.20 ms avg=3496.86 ms (7 runs sampled)\r\npersist 1024x10000 (indexes: 2) 50/75/90/95%=4254.80/4311.80/4349.60/4349.60 ms avg=5438.34 ms (7 runs sampled)\r\npopulate tmcw 50/75/90/95%=57.30/63.20/82.20/82.20 ms avg=75.66 ms (7 runs sampled)\r\npersist tmcw 50/75/90/95%=318.00/318.80/328.30/328.30 ms avg=402.17 ms (7 runs sampled)\r\nDone!\r\n\r\n***this change***\r\ngreg replicache-internal [grgbkr/lazy-store-gc-evicition-fixes]$ npm run perf -- --format replicache\r\n\r\n> replicache@12.0.0-beta.0 perf\r\n> npm run build-perf && node perf/runner.js \"--format\" \"replicache\"\r\n\r\n\r\n> replicache@12.0.0-beta.0 build-perf\r\n> node tool/build.js --perf\r\n\r\nRunning 24 benchmarks on Chromium...\r\nwriteSubRead 1MB total, 64 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=1.00/1.10/1.20/1.70 ms avg=1.03 ms (19 runs sampled)\r\nwriteSubRead 4MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=1.00/1.10/1.20/1.30 ms avg=1.09 ms (19 runs sampled)\r\nwriteSubRead 16MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=1.10/1.30/1.60/2.30 ms avg=1.26 ms (16 runs sampled)\r\nwriteSubRead 64MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=1.30/1.60/2.40/2.40 ms avg=1.74 ms (7 runs sampled)\r\npopulate 1024x1000 (clean, indexes: 0) 50/75/90/95%=7.50/9.10/11.40/15.40 ms avg=9.05 ms (19 runs sampled)\r\npopulate 1024x1000 (clean, indexes: 1) 50/75/90/95%=14.20/16.80/19.20/21.20 ms avg=16.41 ms (19 runs sampled)\r\npopulate 1024x1000 (clean, indexes: 2) 50/75/90/95%=18.80/21.10/25.20/29.40 ms avg=21.88 ms (19 runs sampled)\r\npopulate 1024x10000 (clean, indexes: 0) 50/75/90/95%=43.20/54.60/70.60/70.60 ms avg=58.29 ms (9 runs sampled)\r\npopulate 1024x10000 (clean, indexes: 1) 50/75/90/95%=95.90/97.70/116.40/116.40 ms avg=124.99 ms (7 runs sampled)\r\npopulate 1024x10000 (clean, indexes: 2) 50/75/90/95%=141.80/167.90/173.00/173.00 ms avg=191.01 ms (7 runs sampled)\r\nscan 1024x1000 50/75/90/95%=0.90/1.00/1.50/1.60 ms avg=0.92 ms (19 runs sampled)\r\nscan 1024x10000 50/75/90/95%=6.20/6.30/8.20/8.90 ms avg=7.07 ms (19 runs sampled)\r\ncreate index with definition 1024x5000 50/75/90/95%=106.10/111.20/113.60/113.60 ms avg=135.33 ms (7 runs sampled)\r\ncreate index 1024x5000 50/75/90/95%=24.00/24.80/27.10/31.70 ms avg=26.95 ms (19 runs sampled)\r\nstartup read 1024x100 from 1024x100000 stored 50/75/90/95%=55.40/70.70/71.70/71.70 ms avg=63.96 ms (8 runs sampled)\r\nstartup scan 1024x100 from 1024x100000 stored 50/75/90/95%=14.30/29.60/59.40/60.90 ms avg=20.55 ms (19 runs sampled)\r\npersist 1024x1000 (indexes: 0) 50/75/90/95%=184.80/282.80/329.70/329.70 ms avg=237.26 ms (7 runs sampled)\r\npersist 1024x1000 (indexes: 1) 50/75/90/95%=171.60/172.80/176.00/176.00 ms avg=197.54 ms (7 runs sampled)\r\npersist 1024x1000 (indexes: 2) 50/75/90/95%=224.80/227.20/231.60/231.60 ms avg=275.53 ms (7 runs sampled)\r\npersist 1024x10000 (indexes: 0) 50/75/90/95%=539.20/545.10/558.50/558.50 ms avg=678.00 ms (7 runs sampled)\r\npersist 1024x10000 (indexes: 1) 50/75/90/95%=2312.30/2403.00/2428.90/2428.90 ms avg=2843.89 ms (7 runs sampled)\r\npersist 1024x10000 (indexes: 2) 50/75/90/95%=3606.60/3656.50/3665.10/3665.10 ms avg=4601.70 ms (7 runs sampled)\r\npopulate tmcw 50/75/90/95%=50.60/53.90/80.60/80.60 ms avg=64.89 ms (8 runs sampled)\r\npersist tmcw 50/75/90/95%=313.10/314.70/339.90/339.90 ms avg=396.77 ms (7 runs sampled)\r\nDone!",
+          "timestamp": "2022-11-21T16:00:50-07:00",
+          "tree_id": "d87114d0fc90b9e284ec06bf94d55fd448aca990",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/4378df2f13176e9065e10021fbd110c97411e25d"
+        },
+        "date": 1669071834993,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "writeSubRead 1MB total, 64 subs total, 5 subs dirty, 16kb read per sub p95",
+            "value": 5.19999885559082,
+            "unit": "p95 ms",
+            "range": "±3.9%",
+            "extra": "writeSubRead 1MB total, 64 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=1.30/1.80/2.60/5.20 ms avg=1.69 ms (19 runs sampled)"
+          },
+          {
+            "name": "writeSubRead 4MB total, 128 subs total, 5 subs dirty, 16kb read per sub p95",
+            "value": 3.6999988555908203,
+            "unit": "p95 ms",
+            "range": "±1.8%",
+            "extra": "writeSubRead 4MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=1.90/2.00/2.90/3.70 ms avg=2.07 ms (19 runs sampled)"
+          },
+          {
+            "name": "writeSubRead 16MB total, 128 subs total, 5 subs dirty, 16kb read per sub p95",
+            "value": 8.399999618530273,
+            "unit": "p95 ms",
+            "range": "±5.8%",
+            "extra": "writeSubRead 16MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=2.60/6.20/8.40/8.40 ms avg=4.26 ms (8 runs sampled)"
+          },
+          {
+            "name": "writeSubRead 64MB total, 128 subs total, 5 subs dirty, 16kb read per sub p95",
+            "value": 7.5,
+            "unit": "p95 ms",
+            "range": "±4.6%",
+            "extra": "writeSubRead 64MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=2.90/4.40/7.50/7.50 ms avg=4.53 ms (7 runs sampled)"
+          },
+          {
+            "name": "populate 1024x1000 (clean, indexes: 0) p95",
+            "value": 57.39999961853027,
+            "unit": "p95 ms",
+            "range": "±46.0%",
+            "extra": "populate 1024x1000 (clean, indexes: 0) 50/75/90/95%=11.40/15.80/19.70/57.40 ms avg=15.48 ms (19 runs sampled)"
+          },
+          {
+            "name": "populate 1024x1000 (clean, indexes: 1) p95",
+            "value": 57.39999961853027,
+            "unit": "p95 ms",
+            "range": "±31.6%",
+            "extra": "populate 1024x1000 (clean, indexes: 1) 50/75/90/95%=25.80/33.90/45.50/57.40 ms avg=32.32 ms (16 runs sampled)"
+          },
+          {
+            "name": "populate 1024x1000 (clean, indexes: 2) p95",
+            "value": 73.29999923706055,
+            "unit": "p95 ms",
+            "range": "±37.1%",
+            "extra": "populate 1024x1000 (clean, indexes: 2) 50/75/90/95%=36.20/45.30/56.00/73.30 ms avg=47.83 ms (11 runs sampled)"
+          },
+          {
+            "name": "populate 1024x10000 (clean, indexes: 0) p95",
+            "value": 156.39999961853027,
+            "unit": "p95 ms",
+            "range": "±41.9%",
+            "extra": "populate 1024x10000 (clean, indexes: 0) 50/75/90/95%=114.50/146.60/156.40/156.40 ms avg=152.86 ms (7 runs sampled)"
+          },
+          {
+            "name": "populate 1024x10000 (clean, indexes: 1) p95",
+            "value": 360.8000011444092,
+            "unit": "p95 ms",
+            "range": "±79.8%",
+            "extra": "populate 1024x10000 (clean, indexes: 1) 50/75/90/95%=281.00/294.50/360.80/360.80 ms avg=372.49 ms (7 runs sampled)"
+          },
+          {
+            "name": "populate 1024x10000 (clean, indexes: 2) p95",
+            "value": 510,
+            "unit": "p95 ms",
+            "range": "±86.2%",
+            "extra": "populate 1024x10000 (clean, indexes: 2) 50/75/90/95%=423.80/445.10/510.00/510.00 ms avg=558.73 ms (7 runs sampled)"
+          },
+          {
+            "name": "scan 1024x1000 p95",
+            "value": 4.5,
+            "unit": "p95 ms",
+            "range": "±2.2%",
+            "extra": "scan 1024x1000 50/75/90/95%=2.30/2.50/3.50/4.50 ms avg=2.36 ms (19 runs sampled)"
+          },
+          {
+            "name": "scan 1024x10000 p95",
+            "value": 26.30000114440918,
+            "unit": "p95 ms",
+            "range": "±10.6%",
+            "extra": "scan 1024x10000 50/75/90/95%=15.70/16.40/21.60/26.30 ms avg=18.30 ms (19 runs sampled)"
+          },
+          {
+            "name": "create index with definition 1024x5000 p95",
+            "value": 554.8000011444092,
+            "unit": "p95 ms",
+            "range": "±24.1%",
+            "extra": "create index with definition 1024x5000 50/75/90/95%=530.70/551.20/554.80/554.80 ms avg=678.56 ms (7 runs sampled)"
+          },
+          {
+            "name": "create index 1024x5000 p95",
+            "value": 92.60000038146973,
+            "unit": "p95 ms",
+            "range": "±21.5%",
+            "extra": "create index 1024x5000 50/75/90/95%=71.10/78.80/92.60/92.60 ms avg=93.49 ms (7 runs sampled)"
+          },
+          {
+            "name": "startup read 1024x100 from 1024x100000 stored p95",
+            "value": 243.69999885559082,
+            "unit": "p95 ms",
+            "range": "±103.6%",
+            "extra": "startup read 1024x100 from 1024x100000 stored 50/75/90/95%=140.10/144.60/243.70/243.70 ms avg=193.13 ms (7 runs sampled)"
+          },
+          {
+            "name": "startup scan 1024x100 from 1024x100000 stored p95",
+            "value": 115.79999923706055,
+            "unit": "p95 ms",
+            "range": "±83.4%",
+            "extra": "startup scan 1024x100 from 1024x100000 stored 50/75/90/95%=32.40/34.70/35.10/115.80 ms avg=42.59 ms (12 runs sampled)"
+          },
+          {
+            "name": "persist 1024x1000 (indexes: 0) p95",
+            "value": 89.69999885559082,
+            "unit": "p95 ms",
+            "range": "±17.7%",
+            "extra": "persist 1024x1000 (indexes: 0) 50/75/90/95%=72.00/84.50/89.70/89.70 ms avg=93.19 ms (7 runs sampled)"
+          },
+          {
+            "name": "persist 1024x1000 (indexes: 1) p95",
+            "value": 131.20000076293945,
+            "unit": "p95 ms",
+            "range": "±8.5%",
+            "extra": "persist 1024x1000 (indexes: 1) 50/75/90/95%=122.70/127.50/131.20/131.20 ms avg=155.87 ms (7 runs sampled)"
+          },
+          {
+            "name": "persist 1024x1000 (indexes: 2) p95",
+            "value": 171.60000038146973,
+            "unit": "p95 ms",
+            "range": "±4.9%",
+            "extra": "persist 1024x1000 (indexes: 2) 50/75/90/95%=166.70/171.50/171.60/171.60 ms avg=213.34 ms (7 runs sampled)"
+          },
+          {
+            "name": "persist 1024x10000 (indexes: 0) p95",
+            "value": 580.5,
+            "unit": "p95 ms",
+            "range": "±34.5%",
+            "extra": "persist 1024x10000 (indexes: 0) 50/75/90/95%=546.00/562.40/580.50/580.50 ms avg=702.57 ms (7 runs sampled)"
+          },
+          {
+            "name": "persist 1024x10000 (indexes: 1) p95",
+            "value": 1174.2000007629395,
+            "unit": "p95 ms",
+            "range": "±20.5%",
+            "extra": "persist 1024x10000 (indexes: 1) 50/75/90/95%=1156.40/1173.60/1174.20/1174.20 ms avg=1482.03 ms (7 runs sampled)"
+          },
+          {
+            "name": "persist 1024x10000 (indexes: 2) p95",
+            "value": 1861.5,
+            "unit": "p95 ms",
+            "range": "±35.6%",
+            "extra": "persist 1024x10000 (indexes: 2) 50/75/90/95%=1825.90/1859.20/1861.50/1861.50 ms avg=2337.21 ms (7 runs sampled)"
+          },
+          {
+            "name": "populate tmcw p95",
+            "value": 143.4000015258789,
+            "unit": "p95 ms",
+            "range": "±45.3%",
+            "extra": "populate tmcw 50/75/90/95%=98.10/104.30/143.40/143.40 ms avg=130.43 ms (7 runs sampled)"
+          },
+          {
+            "name": "persist tmcw p95",
+            "value": 487.3999996185303,
+            "unit": "p95 ms",
+            "range": "±24.1%",
+            "extra": "persist tmcw 50/75/90/95%=463.30/468.50/487.40/487.40 ms avg=593.71 ms (7 runs sampled)"
           }
         ]
       }
