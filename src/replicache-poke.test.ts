@@ -101,6 +101,9 @@ test('overlapped pokes not supported', async () => {
     mutators: {
       addData,
     },
+    enableMutationRecovery: false,
+    enableScheduledPersist: false,
+    enableRefresh: false,
   });
 
   const clientID = await rep.clientID;
