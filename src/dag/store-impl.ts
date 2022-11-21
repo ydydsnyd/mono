@@ -5,7 +5,7 @@ import {chunkDataKey, chunkMetaKey, headKey, chunkRefCountKey} from './key.js';
 import {assertHash, Hash} from '../hash.js';
 import {assertNumber} from '../asserts.js';
 import type {ReadonlyJSONValue} from '../json.js';
-import {computeRefCountUpdates} from './gc.js';
+import {computeRefCountUpdates, RefCountUpdatesDelegate} from './gc.js';
 
 export class StoreImpl implements Store {
   private readonly _kv: kv.Store;
@@ -108,7 +108,10 @@ type HeadChange = {
   old: Hash | undefined;
 };
 
-export class WriteImpl extends ReadImpl implements Write {
+export class WriteImpl
+  extends ReadImpl
+  implements Write, RefCountUpdatesDelegate
+{
   protected declare readonly _tx: kv.Write;
   private readonly _chunkHasher: ChunkHasher;
 
@@ -204,11 +207,12 @@ export class WriteImpl extends ReadImpl implements Write {
     return value;
   }
 
-  async getRefs(hash: Hash): Promise<readonly Hash[] | undefined> {
+  async getRefs(hash: Hash): Promise<readonly Hash[]> {
     const meta = await this._tx.get(chunkMetaKey(hash));
-    if (meta !== undefined) {
-      assertMeta(meta);
+    if (meta === undefined) {
+      return [];
     }
+    assertMeta(meta);
     return meta;
   }
 

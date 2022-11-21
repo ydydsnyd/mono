@@ -4,6 +4,7 @@ export {
   isProd as skipCommitDataAsserts,
   isProd as skipAssertJSONValue,
   isProd as skipBTreeNodeAsserts,
+  isProd as skipGCAsserts,
 
   /**
    * In debug mode we assert that chunks and BTree data is deeply frozen. In

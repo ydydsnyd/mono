@@ -47,7 +47,7 @@ test('parse', () => {
 test.skip('type checking only', () => {
   {
     const h = newUUIDHash();
-    // should not be an error
+    // Should not be an error
     const s: string = h;
     console.log(s);
 
