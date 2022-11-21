@@ -393,6 +393,9 @@ test('watch with index and initial callback with no data', async () => {
   const rep = await replicacheForTesting('watch-with-index-initial-no-data', {
     mutators: {addData, del: (tx, key) => tx.del(key)},
     indexes: {id1: {jsonPointer: '/id'}},
+    enableMutationRecovery: false,
+    enableRefresh: false,
+    enableScheduledPersist: false,
   });
 
   const spy = sinon.spy();
