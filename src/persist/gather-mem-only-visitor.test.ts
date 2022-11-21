@@ -5,12 +5,13 @@ import {assertHash, makeNewFakeHashFunction} from '../hash.js';
 import {GatherMemoryOnlyVisitor} from './gather-mem-only-visitor.js';
 import {ChainBuilder} from '../db/test-helpers.js';
 import {MetaType} from '../db/commit.js';
+import {TestLazyStore} from '../dag/test-lazy-store.js';
 
 test('dag with no memory-only hashes gathers nothing', async () => {
   const clientID = 'client-id';
   const hashFunction = makeNewFakeHashFunction();
   const perdag = new dag.TestStore(undefined, hashFunction);
-  const memdag = new dag.LazyStore(
+  const memdag = new TestLazyStore(
     perdag,
     100 * 2 ** 20, // 100 MB,
     hashFunction,
@@ -46,7 +47,7 @@ test('dag with only memory-only hashes gathers everything', async () => {
   const clientID = 'client-id';
   const hashFunction = makeNewFakeHashFunction();
   const perdag = new dag.TestStore(undefined, hashFunction);
-  const memdag = new dag.LazyStore(
+  const memdag = new TestLazyStore(
     perdag,
     100 * 2 ** 20, // 100 MB,
     hashFunction,
@@ -60,7 +61,7 @@ test('dag with only memory-only hashes gathers everything', async () => {
       const visitor = new GatherMemoryOnlyVisitor(dagRead);
       await visitor.visitCommit(mb.headHash);
       expect(memdag.getMemOnlyChunksSnapshot()).to.deep.equal(
-        visitor.gatheredChunks,
+        Object.fromEntries(visitor.gatheredChunks),
       );
     });
   };

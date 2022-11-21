@@ -5,11 +5,11 @@ import {Store, Read, Write, mustGetChunk} from './store.js';
 import {getSizeOfValue} from '../json.js';
 import {
   computeRefCountUpdates,
-  GarbageCollectionDelegate,
   HeadChange,
+  RefCountUpdatesDelegate,
 } from './gc.js';
-import {assert, assertNotUndefined} from '../asserts.js';
 import {promiseVoid} from '../resolved-promises.js';
+import {joinIterables} from '../iterables.js';
 
 /**
  * Dag Store which lazily loads values from a source store and then caches
@@ -71,43 +71,74 @@ export class LazyStore implements Store {
    * - read `_sourceStore`
    * - read and write `_sourceChunksCache`
    * - read and write `_refCounts`
+   * - read and write `_refs`
    * and must have a write lock to
    * - write `_heads`
    * - write `_memOnlyChunks`
    */
   private readonly _rwLock = new RWLock();
   private readonly _heads = new Map<string, Hash>();
-  private readonly _memOnlyChunks = new Map<Hash, Chunk>();
-  private readonly _sourceChunksCache: ChunksCache;
   private readonly _sourceStore: Store;
-  /**
-   * These ref counts are independent from `this._sourceStore`'s ref counts.
-   * These ref counts are based on reachability from `this._heads`.
-   * The ref count for a hash is the number of unique heads or chunks in
-   * `this._memOnlyChunks` or `this._sourceChunksCache` that reference this
-   * hash.  That is, a chunk with a positive ref count is reachable from a head
-   * via traversing chunk refs of chunks in `this._memOnlyChunks` or
-   * `this._sourceChunksCache` .
-   *
-   * Invariant: all chunks in `this._memOnlyChunks` or `this._sourceChunksCache`
-   * have a positive ref count in `this._refCounts`.
-   *
-   * A hash's ref count can be changed in two ways:
-   * 1. A write commit updates a head (which can result in increasing or
-   * decreasing ref count) or puts a chunk that references this hash (increasing
-   * ref count).
-   * 2. A chunk which references the hash is added to (increasing ref count) or
-   * evicted from (decreasing ref count) this `this._sourceChunksCache`.
-   *
-   * Note: A chunk's hash may have an entry in `this._refCounts` without that
-   * chunk being in `this._memOnlyChunks` or `this._sourceChunksCache`.  This is
-   * the case when a head or chunk in `this._memOnlyChunks` or
-   * `this._sourceChunksCache` references a chunk which is not currently cached
-   * (either because it has not been read, or because it has been evicted).
-   */
-  private readonly _refCounts = new Map<Hash, number>();
   private readonly _chunkHasher: ChunkHasher;
   private readonly _assertValidHash: (hash: Hash) => void;
+
+  /** The following are protected so testing subclass can access. */
+  protected readonly _memOnlyChunks = new Map<Hash, Chunk>();
+  protected readonly _sourceChunksCache: ChunksCache;
+  /**
+   * Ref counts are maintained so that chunks which are unreachable
+   * from this stores heads can be eagerly and deterministically deleted from
+   * `this._memOnlyChunks` and `this._sourceChunksCache`.
+   *
+   * These ref counts are independent from `this._sourceStore`'s ref counts.
+   * These ref counts are based on reachability from `this._heads`.
+   * A chunk is deleted from `this._memOnlyChunks` or
+   * `this._sourceChunksCache` (which ever it is in) when its ref count becomes
+   * zero.
+   * These ref counts count the refs in `this._heads` and `this._refs`.
+   *
+   * Not all reachable chunk's refs are included in `this._refs`, because this
+   * would require loading all chunks reachable in the source store in a
+   * non-lazy manner. `this._refs` contains the refs of all currently reachable
+   * chunks that were ever in `this._memOnlyChunks` or
+   * `this._sourceChunksCache` (even if they have been evicted).  A
+   * chunk's ref information is lazily discovered and stored in `this._refs` and
+   * counted in `this._refCounts`. A chunk's entries in `this._refs` and
+   * `this._refCounts` are only deleted when a chunk is deleted due to it
+   * becoming unreachable (it is not deleted if the chunk is evicted from the
+   * source-store cache).
+   *
+   * The major implication of this lazy discovery of source store refs, is that
+   * a reachable source store chunk may not be cached when loaded, because it is
+   * not known to be reachable because some of the pertinent refs have not been
+   * discovered.  However, in practice chunks are read by traversing the graph
+   * starting from a head, and all pertinent refs are discovered as part of the
+   * traversal.
+   *
+   * These ref counts can be changed in two ways:
+   * 1. A LazyRead has a cache miss and loads a chunk from the source store that
+   * is reachable from this._heads.  If this chunk's refs are not currently
+   * counted, it will not have an entry in `this._refs`.  In this case, the
+   * chunks refs will be put in `this._refs` and `this._refCounts` will be
+   * updated to count them.
+   * 2. A LazyWrite commit updates a head (which can result in increasing or
+   * decreasing ref count) or puts a reachable chunk (either a `memory-only` or
+   * `source` chunk) that references this hash (increasing ref count).  The
+   * computation of these ref count changes is delegated to the
+   * `computeRefCountUpdates` shared with dag.StoreImpl.  In order to
+   * delegate determining reachability to `computeRefCountUpdates` and defer
+   * this determination until commit time, LazyWrite treats cache misses
+   * as a 'put' of the lazily-loaded chunk.
+   *
+   * A chunk's hash may have an entry in `this._refCounts` without that
+   * chunk have ever been in `this._memOnlyChunks` or `this._sourceChunksCache`.
+   * This is the case when a head or a reachable chunk that was ever in
+   * `this._memOnlyChunks` or `this._sourceChunksCache` references a chunk
+   * which is not currently cached (either because it has not been read, or
+   * because it has been evicted).
+   */
+  protected readonly _refCounts = new Map<Hash, number>();
+  protected readonly _refs = new Map<Hash, readonly Hash[]>();
 
   constructor(
     sourceStore: Store,
@@ -120,6 +151,7 @@ export class LazyStore implements Store {
       sourceCacheSizeLimit,
       getSizeOfChunk,
       this._refCounts,
+      this._refs,
     );
     this._sourceStore = sourceStore;
     this._chunkHasher = chunkHasher;
@@ -155,6 +187,7 @@ export class LazyStore implements Store {
       this._sourceChunksCache,
       this._sourceStore,
       this._refCounts,
+      this._refs,
       release,
       this._chunkHasher,
       this._assertValidHash,
@@ -174,14 +207,6 @@ export class LazyStore implements Store {
     return promiseVoid;
   }
 
-  getRefCountsSnapshot(): ReadonlyMap<Hash, number> {
-    return new Map(this._refCounts);
-  }
-
-  getMemOnlyChunksSnapshot(): ReadonlyMap<Hash, Chunk> {
-    return new Map(this._memOnlyChunks);
-  }
-
   /**
    * Does not acquire any lock on the store.
    */
@@ -194,15 +219,17 @@ export class LazyStore implements Store {
   /**
    * Acquires a write lock on the store.
    */
-  async chunksPersisted(chunkHashes: Iterable<Hash>): Promise<void> {
-    await this.withWrite(() => {
+  chunksPersisted(chunkHashes: Iterable<Hash>): Promise<void> {
+    return this.withWrite(() => {
+      const chunksToCache = [];
       for (const chunkHash of chunkHashes) {
         const chunk = this._memOnlyChunks.get(chunkHash);
         if (chunk) {
           this._memOnlyChunks.delete(chunkHash);
-          this._sourceChunksCache.put(chunk);
+          chunksToCache.push(chunk);
         }
       }
+      this._sourceChunksCache.persisted(chunksToCache);
     });
   }
 }
@@ -291,9 +318,10 @@ export class LazyRead implements Read {
 
 export class LazyWrite
   extends LazyRead
-  implements Write, GarbageCollectionDelegate
+  implements Write, RefCountUpdatesDelegate
 {
   private readonly _refCounts: Map<Hash, number>;
+  private readonly _refs: Map<Hash, readonly Hash[]>;
   private readonly _chunkHasher: ChunkHasher;
   protected readonly _pendingHeadChanges = new Map<string, HeadChange>();
   protected readonly _pendingMemOnlyChunks = new Map<Hash, Chunk>();
@@ -309,6 +337,7 @@ export class LazyWrite
     sourceChunksCache: ChunksCache,
     sourceStore: Store,
     refCounts: Map<Hash, number>,
+    refs: Map<Hash, readonly Hash[]>,
     release: () => void,
     chunkHasher: ChunkHasher,
     assertValidHash: (hash: Hash) => void,
@@ -322,6 +351,7 @@ export class LazyWrite
       assertValidHash,
     );
     this._refCounts = refCounts;
+    this._refs = refs;
     this._chunkHasher = chunkHasher;
   }
 
@@ -381,6 +411,9 @@ export class LazyWrite
     if (memOnlyChunk !== undefined) {
       return memOnlyChunk;
     }
+    // In order to delegate determining reachability to `computeRefCountUpdates`
+    // and defer this determination until commit time, treat cache misses
+    // as a 'put' of the lazily-loaded chunk.
     const pendingCachedChunk = this._pendingCachedChunks.get(hash);
     if (pendingCachedChunk !== undefined) {
       return pendingCachedChunk.chunk;
@@ -404,31 +437,40 @@ export class LazyWrite
   }
 
   async commit(): Promise<void> {
+    const pendingChunks = new Set(
+      joinIterables(
+        this._pendingMemOnlyChunks.keys(),
+        this._pendingCachedChunks.keys(),
+      ),
+    );
     const refCountUpdates = await computeRefCountUpdates(
       this._pendingHeadChanges.values(),
-      new Set([
-        ...this._pendingMemOnlyChunks.keys(),
-        ...this._pendingCachedChunks.keys(),
-      ]),
+      pendingChunks,
       this,
     );
 
-    const cacheHashesToDelete: Array<Hash> = [];
     for (const [hash, count] of refCountUpdates) {
-      if (count === 0) {
-        this._refCounts.delete(hash);
-        this._pendingMemOnlyChunks.delete(hash);
-        this._pendingCachedChunks.delete(hash);
-        this._memOnlyChunks.delete(hash);
-        cacheHashesToDelete.push(hash);
-      } else {
-        this._refCounts.set(hash, count);
+      if (this.isMemOnlyChunkHash(hash)) {
+        if (count === 0) {
+          this._refCounts.delete(hash);
+          this._memOnlyChunks.delete(hash);
+          this._refs.delete(hash);
+        } else {
+          this._refCounts.set(hash, count);
+          const chunk = this._pendingMemOnlyChunks.get(hash);
+          if (chunk) {
+            this._refs.set(hash, chunk.meta);
+            this._memOnlyChunks.set(hash, chunk);
+          }
+        }
+        refCountUpdates.delete(hash);
       }
     }
 
-    for (const [hash, chunk] of this._pendingMemOnlyChunks) {
-      this._memOnlyChunks.set(hash, chunk);
-    }
+    this._sourceChunksCache.updateForCommit(
+      this._pendingCachedChunks,
+      refCountUpdates,
+    );
 
     for (const [name, headChange] of this._pendingHeadChanges) {
       if (headChange.new) {
@@ -438,11 +480,8 @@ export class LazyWrite
       }
     }
 
-    this._sourceChunksCache.updateForCommit(
-      this._pendingCachedChunks.values(),
-      cacheHashesToDelete,
-    );
     this._pendingMemOnlyChunks.clear();
+    this._pendingCachedChunks.clear();
     this._pendingHeadChanges.clear();
     this.close();
   }
@@ -464,7 +503,11 @@ export class LazyWrite
     if (pendingCachedChunk !== undefined) {
       return pendingCachedChunk.chunk.meta;
     }
-    return this._sourceChunksCache.getWithoutUpdatingLRU(hash)?.meta;
+    return this._refs.get(hash);
+  }
+
+  areRefsCounted(hash: Hash): boolean {
+    return this._refs.has(hash);
   }
 }
 
@@ -477,44 +520,50 @@ class ChunksCache {
   private readonly _cacheSizeLimit: number;
   private readonly _getSizeOfChunk: (chunk: Chunk) => number;
   private readonly _refCounts: Map<Hash, number>;
+  private readonly _refs: Map<Hash, readonly Hash[]>;
+  private _size = 0;
+
   /**
    * Iteration order is from least to most recently used.
+   *
+   * Public so that testing subclass can access.
    */
-  private readonly _cacheEntries = new Map<Hash, CacheEntry>();
-  private _size = 0;
+  readonly cacheEntries = new Map<Hash, CacheEntry>();
 
   constructor(
     cacheSizeLimit: number,
     getSizeOfChunk: (v: Chunk) => number,
     refCounts: Map<Hash, number>,
+    refs: Map<Hash, readonly Hash[]>,
   ) {
     this._cacheSizeLimit = cacheSizeLimit;
     this._getSizeOfChunk = getSizeOfChunk;
     this._refCounts = refCounts;
+    this._refs = refs;
   }
 
   get(hash: Hash): Chunk | undefined {
-    const cacheEntry = this._cacheEntries.get(hash);
+    const cacheEntry = this.cacheEntries.get(hash);
     if (cacheEntry) {
       // Update order in map for LRU tracking.
-      this._cacheEntries.delete(hash);
-      this._cacheEntries.set(hash, cacheEntry);
+      this.cacheEntries.delete(hash);
+      this.cacheEntries.set(hash, cacheEntry);
     }
     return cacheEntry?.chunk;
   }
 
   getWithoutUpdatingLRU(hash: Hash): Chunk | undefined {
-    return this._cacheEntries.get(hash)?.chunk;
+    return this.cacheEntries.get(hash)?.chunk;
   }
 
   put(chunk: Chunk): void {
     const {hash} = chunk;
     // If there is an existing cache entry then the cached value must be
     // equivalent.  Update order in map for LRU tracking and early return.
-    const oldCacheEntry = this._cacheEntries.get(hash);
+    const oldCacheEntry = this.cacheEntries.get(hash);
     if (oldCacheEntry) {
-      this._cacheEntries.delete(hash);
-      this._cacheEntries.set(hash, oldCacheEntry);
+      this.cacheEntries.delete(hash);
+      this.cacheEntries.set(hash, oldCacheEntry);
       return;
     }
 
@@ -523,106 +572,85 @@ class ChunksCache {
     if (refCount === undefined || refCount < 1) {
       return;
     }
-    const valueSize = this._getSizeOfChunk(chunk);
-    if (valueSize > this._cacheSizeLimit) {
-      // This value cannot be cached due to its size exceeding the
-      // cache size limit, don't evict other entries to try to make
-      // room for it.
+    if (!this._cacheChunk(chunk)) {
       return;
     }
-    this._size += valueSize;
-    this._cacheEntries.set(hash, {chunk, size: valueSize});
-    for (const refHash of chunk.meta) {
-      this._refCounts.set(refHash, (this._refCounts.get(refHash) || 0) + 1);
+    if (!this._refs.has(hash)) {
+      for (const refHash of chunk.meta) {
+        this._refCounts.set(refHash, (this._refCounts.get(refHash) || 0) + 1);
+      }
+      this._refs.set(hash, chunk.meta);
     }
 
     this._ensureCacheSizeLimit();
   }
 
   private _ensureCacheSizeLimit() {
-    if (this._size <= this._cacheSizeLimit) {
-      return;
-    }
-    for (const entry of this._cacheEntries) {
+    for (const cacheEntry of this.cacheEntries.values()) {
       if (this._size <= this._cacheSizeLimit) {
         break;
       }
-      this.delete(entry[1]);
+      this._size -= cacheEntry.size;
+      this.cacheEntries.delete(cacheEntry.chunk.hash);
     }
   }
 
-  delete(cacheEntry: CacheEntry): void {
-    const {hash} = cacheEntry.chunk;
-    this._size -= cacheEntry.size;
-    this._cacheEntries.delete(hash);
-    for (const refHash of cacheEntry.chunk.meta) {
-      const oldCount = this._refCounts.get(refHash);
-      assertNotUndefined(oldCount);
-      assert(oldCount > 0);
-      const newCount = oldCount - 1;
-      if (newCount === 0) {
-        this._refCounts.delete(refHash);
-        const refCacheEntry = this._cacheEntries.get(refHash);
-        if (refCacheEntry) {
-          assert(
-            cacheEntry.chunk.hash !== refHash,
-            'Found a chunk that references itself',
-          );
-          this.delete(refCacheEntry);
-        }
-      } else {
-        this._refCounts.set(refHash, newCount);
-      }
+  private _cacheChunk(chunk: Chunk, size?: number): boolean {
+    const chunkSize = size ?? this._getSizeOfChunk(chunk);
+    if (chunkSize > this._cacheSizeLimit) {
+      // This value cannot be cached due to its size exceeding the
+      // cache size limit, don't evict other entries to try to make
+      // room for it.
+      return false;
+    }
+    this._size += chunkSize;
+    this.cacheEntries.set(chunk.hash, {chunk, size: chunkSize});
+    return true;
+  }
+
+  private _delete(hash: Hash): void {
+    const cacheEntry = this.cacheEntries.get(hash);
+    this._refCounts.delete(hash);
+    this._refs.delete(hash);
+    if (cacheEntry) {
+      this.cacheEntries.delete(hash);
+      this._size -= cacheEntry.size;
     }
   }
 
   updateForCommit(
-    chunksToPut: Iterable<{chunk: Chunk; size: number}>,
-    hashesToDelete: Iterable<Hash>,
+    chunksToPut: Map<Hash, {chunk: Chunk; size: number}>,
+    refCountUpdates: Map<Hash, number>,
   ): void {
-    // Commit has already updated this._refCounts to reflect these puts and
-    // deletes.  First we do all the puts and deletes to bring this._refCounts
-    // and this._cacheEntries into a consistent state. Then we ensure that the
-    // cache is below its size limit, using this.delete and
-    // this._ensureCacheSizeLimit, both of which require this._refCounts and
-    // this._cacheEntries to be in a consistent state to work correctly.
-    const cacheEntriesLargerThanLimit = [];
-    for (const {chunk, size} of chunksToPut) {
-      const {hash} = chunk;
-      const oldCacheEntry = this._cacheEntries.get(hash);
-      if (oldCacheEntry) {
-        // If there is an existing cache entry then the cached value must be
-        // equivalent.  Update order in map for LRU tracking but avoid
-        // recomputing size and creating a new cache entry.
-        this._cacheEntries.delete(hash);
-        this._cacheEntries.set(hash, oldCacheEntry);
+    for (const [hash, count] of refCountUpdates) {
+      if (count === 0) {
+        this._delete(hash);
       } else {
-        const valueSize = size !== -1 ? size : this._getSizeOfChunk(chunk);
-        this._size += valueSize;
-        const cacheEntry = {chunk, size: valueSize};
-        this._cacheEntries.set(hash, cacheEntry);
-        if (valueSize > this._cacheSizeLimit) {
-          cacheEntriesLargerThanLimit.push(cacheEntry);
+        this._refCounts.set(hash, count);
+        const chunkAndSize = chunksToPut.get(hash);
+        if (chunkAndSize) {
+          const {chunk, size} = chunkAndSize;
+          const oldCacheEntry = this.cacheEntries.get(hash);
+          if (oldCacheEntry) {
+            // If there is an existing cache entry then the cached value must be
+            // equivalent.  Update order in map for LRU tracking but avoid
+            // recomputing size and creating a new cache entry.
+            this.cacheEntries.delete(hash);
+            this.cacheEntries.set(hash, oldCacheEntry);
+          } else {
+            this._cacheChunk(chunk, size !== -1 ? size : undefined);
+            this._refs.set(hash, chunk.meta);
+          }
         }
       }
     }
+    this._ensureCacheSizeLimit();
+  }
 
-    for (const hash of hashesToDelete) {
-      const cacheEntryToDelete = this._cacheEntries.get(hash);
-      if (cacheEntryToDelete) {
-        this._size -= cacheEntryToDelete.size;
-        this._cacheEntries.delete(hash);
-      }
+  persisted(chunks: Iterable<Chunk>) {
+    for (const chunk of chunks) {
+      this._cacheChunk(chunk);
     }
-
-    // First delete any put value that cannot be cached due to its size
-    // exceeding the cache size limit.  This avoids this._ensureCacheSizeLimit
-    // evicting entries trying to make room for these values which should not be
-    // cached.
-    for (const cacheEntry of cacheEntriesLargerThanLimit) {
-      this.delete(cacheEntry);
-    }
-
     this._ensureCacheSizeLimit();
   }
 }

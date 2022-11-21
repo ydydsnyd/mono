@@ -1,12 +1,12 @@
-import type * as kv from '../kv/mod.js';
-import {Store, Read, Write, mustGetChunk} from './store.js';
-import {assertMeta, Chunk, createChunk, ChunkHasher} from './chunk.js';
-import {chunkDataKey, chunkMetaKey, headKey, chunkRefCountKey} from './key.js';
-import {assertHash, Hash} from '../hash.js';
 import {assertNumber} from '../asserts.js';
+import {Hash, assertHash} from '../hash.js';
 import type {ReadonlyJSONValue} from '../json.js';
-import {computeRefCountUpdates} from './gc.js';
+import type * as kv from '../kv/mod.js';
 import {withRead, withWrite} from '../kv/mod.js';
+import {Chunk, ChunkHasher, assertMeta, createChunk} from './chunk.js';
+import {RefCountUpdatesDelegate, computeRefCountUpdates} from './gc.js';
+import {chunkDataKey, chunkMetaKey, chunkRefCountKey, headKey} from './key.js';
+import {Read, Store, Write, mustGetChunk} from './store.js';
 
 export class StoreImpl implements Store {
   private readonly _kv: kv.Store;
@@ -109,7 +109,10 @@ type HeadChange = {
   old: Hash | undefined;
 };
 
-export class WriteImpl extends ReadImpl implements Write {
+export class WriteImpl
+  extends ReadImpl
+  implements Write, RefCountUpdatesDelegate
+{
   protected declare readonly _tx: kv.Write;
   private readonly _chunkHasher: ChunkHasher;
 
@@ -205,11 +208,12 @@ export class WriteImpl extends ReadImpl implements Write {
     return value;
   }
 
-  async getRefs(hash: Hash): Promise<readonly Hash[] | undefined> {
+  async getRefs(hash: Hash): Promise<readonly Hash[]> {
     const meta = await this._tx.get(chunkMetaKey(hash));
-    if (meta !== undefined) {
-      assertMeta(meta);
+    if (meta === undefined) {
+      return [];
     }
+    assertMeta(meta);
     return meta;
   }
 

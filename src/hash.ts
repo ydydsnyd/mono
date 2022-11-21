@@ -21,7 +21,7 @@ declare const hashTag: unique symbol;
  * Opaque type representing a hash. The only way to create one is using `parse`
  * or `hashOf` (except for static unsafe cast of course).
  */
-export type Hash = {[hashTag]: true};
+export type Hash = string & {[hashTag]: true};
 
 // We are no longer using hashes but due to legacy reason we still refer to
 // them as hashes. We use UUID and counters instead.

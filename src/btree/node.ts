@@ -15,6 +15,7 @@ import type {BTreeWrite} from './write.js';
 import {skipBTreeNodeAsserts} from '../config.js';
 import {binarySearch as binarySearchWithFunc} from '../binary-search.js';
 import type {IndexKey} from '../mod.js';
+import {joinIterables} from '../iterables.js';
 
 export type Entry<V> = readonly [key: string, value: V];
 
@@ -362,12 +363,6 @@ function readonlySplice<T>(
     arr.push(array[i]);
   }
   return arr;
-}
-
-function* joinIterables<T>(...iters: Iterable<T>[]) {
-  for (const iter of iters) {
-    yield* iter;
-  }
 }
 
 export class InternalNodeImpl extends NodeImpl<Hash> {
