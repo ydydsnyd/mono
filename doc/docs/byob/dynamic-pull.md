@@ -42,30 +42,34 @@ async function handlePull(req, res) {
       );
 
       // Get changed domain objects since requested version.
+      const fromVersion = pull.cookie ?? 0;
       const changed = await t.manyOrNone(
-        'select id, sender, content, ord from message where version > $1',
-        parseInt(pull.cookie ?? 0),
+        'select id, sender, content, ord, deleted from message where version > $1',
+        fromVersion,
       );
 
       // Build and return response.
       const patch = [];
-      if (pull.cookie === null) {
-        patch.push({
-          op: 'clear',
-        });
+      for (const row of changed) {
+        if (row.deleted) {
+          if (fromVersion > 0) {
+            patch.push({
+              op: 'del',
+              key: `message/${row.id}`,
+            });
+          }
+        } else {
+          patch.push({
+            op: 'put',
+            key: `message/${row.id}`,
+            value: {
+              from: row.sender,
+              content: row.content,
+              order: parseInt(row.ord),
+            },
+          });
+        }
       }
-
-      patch.push(
-        ...changed.map(row => ({
-          op: 'put',
-          key: `message/${row.id}`,
-          value: {
-            from: row.sender,
-            content: row.content,
-            order: parseInt(row.ord),
-          },
-        })),
-      );
 
       res.json({
         lastMutationID,

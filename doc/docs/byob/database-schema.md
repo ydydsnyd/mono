@@ -59,6 +59,7 @@ export default async function init(_, res) {
       sender varchar(255) not null,
       content text not null,
       ord bigint not null,
+      deleted boolean not null,
       version bigint not null)`);
 
     // Stores last mutationID processed for each Replicache client.

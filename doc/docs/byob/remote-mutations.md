@@ -58,7 +58,7 @@ async function handlePush(req, res) {
         //
         // https://postgres.ai/blog/20210831-postgresql-subtransactions-considered-harmful
         //
-        // So instead, we implement skipping of failed mutations by *re-runing*
+        // Instead we implement skipping of failed mutations by *re-runing*
         // them, but passing a flag that causes the mutator logic to be skipped.
         //
         // This ensures that the lmid and version bookkeeping works exactly the
@@ -187,8 +187,8 @@ async function setLastMutationID(t, clientID, mutationID) {
 async function createMessage(t, {id, from, content, order}, spaceID, version) {
   await t.none(
     `insert into message (
-    id, space_id, sender, content, ord, version) values
-    ($1, $2, $3, $4, $5, $6)`,
+    id, space_id, sender, content, ord, deleted, version) values
+    ($1, $2, $3, $4, $5, false, $6)`,
     [id, spaceID, from, content, order, version],
   );
 }
