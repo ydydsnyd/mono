@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1669105098196,
+  "lastUpdate": 1669135903533,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -31181,6 +31181,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23754,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dff9c8d8e0c222b3051e7080333f87f3b376211b",
+          "message": "refactor: Suspend cache evicts and deletes during refresh (#413)\n\nSuspend eviction and deletion of chunks cached by the lazy store to prevent cache misses during refresh.\r\n\r\nCache misses can still happen during refresh, but only if the gather step hits its size limit.",
+          "timestamp": "2022-11-22T09:50:34-07:00",
+          "tree_id": "82598c0740db2b617d1f9eb9131441968c1299f4",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/dff9c8d8e0c222b3051e7080333f87f3b376211b"
+        },
+        "date": 1669135895965,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 193933,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34482,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 192786,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34145,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 82182,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23833,
             "unit": "bytes"
           }
         ]
