@@ -43,16 +43,36 @@ async function handlePush(req, res) {
           processMutation(t, push.clientID, defaultSpaceID, mutation),
         );
       } catch (e) {
-        // Skip mutations that experience any error. This is a better dx early
-        // on when you are likely to have bugs in your server-side logic,
-        // schemas, etc. However it does mean user data loss can happen when
-        // a mutation is skipped. As you get closer to production you should
-        // consider which errors to retry.
-        // See: https://trunk.doc.replicache.dev/reference/server-push#error-handling
-        console.error('Skipping mutation', mutation, 'due to error: ', e);
-        await tx(t => {
-          return setLastMutationID(t, push.clientID, mutation.id);
-        });
+        console.error('Caught error from mutation', mutation, e);
+
+        // Handle errors inside mutations by skipping and moving on. This is
+        // convenient in development but you may want to reconsider as your app
+        // gets close to production:
+        //
+        // https://doc.replicache.dev/server-push#error-handling
+        //
+        // Ideally we would run the mutator itself in a nested transaction, and
+        // if that fails, rollback just the mutator and allow the lmid and
+        // version updates to commit. However, nested transaction support in
+        // Postgres is not great:
+        //
+        // https://postgres.ai/blog/20210831-postgresql-subtransactions-considered-harmful
+        //
+        // So instead, we implement skipping of failed mutations by *re-runing*
+        // them, but passing a flag that causes the mutator logic to be skipped.
+        //
+        // This ensures that the lmid and version bookkeeping works exactly the
+        // same way as in the happy path. A way to look at this is that for the
+        // error-case we replay the mutation but it just does something
+        // different the second time.
+        //
+        // This is allowed in Replicache because mutators don't have to be
+        // deterministic!:
+        //
+        // https://doc.replicache.dev/how-it-works#speculative-execution-and-confirmation
+        await tx(t =>
+          processMutation(t, push.clientID, defaultSpaceID, mutation, e),
+        );
       }
 
       console.log('Processed mutation in', Date.now() - t1);
@@ -71,7 +91,7 @@ async function handlePush(req, res) {
   }
 }
 
-async function processMutation(t, clientID, spaceID, mutation) {
+async function processMutation(t, clientID, spaceID, mutation, error) {
   // Get the previous version for the affected space and calculate the next
   // one.
   const {version: prevVersion} = await t.one(
@@ -101,16 +121,26 @@ async function processMutation(t, clientID, spaceID, mutation) {
     throw new Error(`Mutation ${mutation.id} is from the future - aborting`);
   }
 
-  console.log('Processing mutation:', JSON.stringify(mutation));
+  if (error === undefined) {
+    console.log('Processing mutation:', JSON.stringify(mutation));
 
-  // For each possible mutation, run the server-side logic to apply the
-  // mutation.
-  switch (mutation.name) {
-    case 'createMessage':
-      await createMessage(t, mutation.args, spaceID, nextVersion);
-      break;
-    default:
-      throw new Error(`Unknown mutation: ${mutation.name}`);
+    // For each possible mutation, run the server-side logic to apply the
+    // mutation.
+    switch (mutation.name) {
+      case 'createMessage':
+        await createMessage(t, mutation.args, spaceID, nextVersion);
+        break;
+      default:
+        throw new Error(`Unknown mutation: ${mutation.name}`);
+    }
+  } else {
+    // TODO: You can store state here in the database to return to clients to
+    // provide additional info about errors.
+    console.log(
+      'Handling error from mutation',
+      JSON.stringify(mutation),
+      error,
+    );
   }
 
   console.log('setting', clientID, 'last_mutation_id to', nextMutationID);
