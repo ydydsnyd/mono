@@ -116,7 +116,12 @@ test('dag with some persisted hashes and some memory-only hashes on top', async 
       timestamp: 42,
     };
     const meta = DD31
-      ? {type: MetaType.LocalDD31, ...metaBase, clientID}
+      ? {
+          type: MetaType.LocalDD31,
+          ...metaBase,
+          baseSnapshotHash: 'face0000000040008000000000000000' + '000000000001',
+          clientID,
+        }
       : {type: MetaType.LocalSDD, ...metaBase};
     expect(Object.fromEntries(visitor.gatheredChunks)).to.deep.equal({
       ['face0000000040008000000000000000' + '000000000004']: {
@@ -195,6 +200,8 @@ test('dag with some permanent hashes and some memory-only hashes on top w index'
                 meta: {
                   type: MetaType.LocalDD31,
                   basisHash:
+                    'face0000000040008000000000000000' + '000000000005',
+                  baseSnapshotHash:
                     'face0000000040008000000000000000' + '000000000005',
                   mutationID: 2,
                   mutatorName: 'mutator_name_2',

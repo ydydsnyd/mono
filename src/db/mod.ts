@@ -22,7 +22,6 @@ export {
   Commit,
   fromChunk,
   newIndexChange,
-  newLocal,
   newLocalSDD,
   newLocalDD31,
   newSnapshotSDD,
@@ -38,6 +37,7 @@ export {
   baseSnapshotFromHead,
   baseSnapshotFromHash,
   baseSnapshotFromCommit,
+  baseSnapshotHashFromHash,
   compareCookiesForSnapshots,
   chain as commitChain,
 } from './commit.js';

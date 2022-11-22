@@ -117,6 +117,8 @@ suite('GatherNotCachedVisitor', () => {
               meta: {
                 type: MetaType.LocalDD31,
                 basisHash: 'face0000000040008000000000000000000000000011',
+                baseSnapshotHash:
+                  'face0000000040008000000000000000000000000005',
                 clientID: 'client-id',
                 mutationID: 4,
                 mutatorName: 'mutator_name_4',
@@ -225,6 +227,7 @@ const allChunksInVisitOrder = {
         meta: {
           type: MetaType.LocalDD31,
           basisHash: 'face0000000040008000000000000000000000000008',
+          baseSnapshotHash: 'face0000000040008000000000000000000000000005',
           clientID: 'client-id',
           mutationID: 3,
           mutatorName: 'mutator_name_3',
@@ -292,6 +295,7 @@ const allChunksInVisitOrder = {
         meta: {
           type: MetaType.LocalDD31,
           basisHash: 'face0000000040008000000000000000000000000005',
+          baseSnapshotHash: 'face0000000040008000000000000000000000000005',
           clientID: 'client-id',
           mutationID: 2,
           mutatorName: 'mutator_name_2',

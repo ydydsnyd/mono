@@ -209,6 +209,13 @@ export async function baseSnapshotFromHead(
   return baseSnapshotFromHash(hash, dagRead);
 }
 
+export async function baseSnapshotHashFromHash(
+  hash: Hash,
+  dagRead: dag.Read,
+): Promise<Hash> {
+  return (await baseSnapshotFromHash(hash, dagRead)).chunk.hash;
+}
+
 export async function baseSnapshotFromHash(
   hash: Hash,
   dagRead: dag.Read,
@@ -223,11 +230,15 @@ export async function baseSnapshotFromCommit(
 ): Promise<Commit<SnapshotMetaSDD | SnapshotMetaDD31>> {
   while (!commitIsSnapshot(commit)) {
     const {meta} = commit;
-    const {basisHash} = meta;
-    if (basisHash === null) {
-      throw new Error(`Commit ${commit.chunk.hash} has no basis`);
+    if (isLocalMetaDD31(meta)) {
+      commit = await fromHash(meta.baseSnapshotHash, dagRead);
+    } else {
+      const {basisHash} = meta;
+      if (basisHash === null) {
+        throw new Error(`Commit ${commit.chunk.hash} has no basis`);
+      }
+      commit = await fromHash(basisHash, dagRead);
     }
-    commit = await fromHash(basisHash, dagRead);
   }
   return commit;
 }
@@ -358,6 +369,7 @@ export type LocalMetaSDD = {
 export type LocalMetaDD31 = Omit<LocalMetaSDD, 'type'> & {
   readonly type: MetaType.LocalDD31;
   readonly clientID: sync.ClientID;
+  readonly baseSnapshotHash: Hash;
 };
 
 export type LocalMeta = LocalMetaSDD | LocalMetaDD31;
@@ -590,45 +602,6 @@ function assertIndexRecords(v: unknown): asserts v is IndexRecord[] {
   }
 }
 
-export function newLocal(
-  createChunk: dag.CreateChunk,
-  basisHash: Hash,
-  mutationID: number,
-  mutatorName: string,
-  mutatorArgsJSON: FrozenJSONValue,
-  originalHash: Hash | null,
-  valueHash: Hash,
-  indexes: readonly IndexRecord[],
-  timestamp: number,
-  clientID: sync.ClientID,
-) {
-  if (DD31) {
-    return newLocalDD31(
-      createChunk,
-      basisHash,
-      mutationID,
-      mutatorName,
-      mutatorArgsJSON,
-      originalHash,
-      valueHash,
-      indexes,
-      timestamp,
-      clientID,
-    );
-  }
-  return newLocalSDD(
-    createChunk,
-    basisHash,
-    mutationID,
-    mutatorName,
-    mutatorArgsJSON,
-    originalHash,
-    valueHash,
-    indexes,
-    timestamp,
-  );
-}
-
 export function newLocalSDD(
   createChunk: dag.CreateChunk,
   basisHash: Hash,
@@ -658,6 +631,7 @@ export function newLocalSDD(
 export function newLocalDD31(
   createChunk: dag.CreateChunk,
   basisHash: Hash,
+  baseSnapshotHash: Hash,
   mutationID: number,
   mutatorName: string,
   mutatorArgsJSON: FrozenJSONValue,
@@ -671,6 +645,7 @@ export function newLocalDD31(
   const meta: LocalMetaDD31 = {
     type: MetaType.LocalDD31,
     basisHash,
+    baseSnapshotHash,
     mutationID,
     mutatorName,
     mutatorArgsJSON,

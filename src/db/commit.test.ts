@@ -236,6 +236,7 @@ test('load roundtrip', () => {
   const valueHash = fakeHash('face2');
   const emptyStringHash = fakeHash('000');
   const hashHash = fakeHash('face3');
+  const baseSnapshotHash = fakeHash('face4');
   const timestamp = 42;
 
   for (const basisHash of [emptyStringHash, hashHash]) {
@@ -271,6 +272,7 @@ test('load roundtrip', () => {
           {
             type: MetaType.LocalDD31,
             basisHash,
+            baseSnapshotHash,
             mutationID: 0,
             mutatorName: 'mutator-name',
             mutatorArgsJSON: 42,
@@ -284,6 +286,7 @@ test('load roundtrip', () => {
         commitNewLocalDD31(
           createChunk,
           basisHash,
+          baseSnapshotHash,
           0,
           'mutator-name',
           42,
@@ -318,6 +321,7 @@ test('load roundtrip', () => {
         {
           type: MetaType.LocalDD31,
           basisHash: fakeHash('ba515'),
+          baseSnapshotHash: fakeHash('ba516'),
           mutationID: 0,
           mutatorName: '',
           mutatorArgsJSON: 43,
@@ -401,6 +405,7 @@ test('load roundtrip', () => {
           {
             type: MetaType.LocalDD31,
             basisHash,
+            baseSnapshotHash,
             mutationID: 0,
             mutatorName: 'mutator-name',
             mutatorArgsJSON: 44,
@@ -416,6 +421,7 @@ test('load roundtrip', () => {
         commitNewLocalDD31(
           createChunk,
           basisHash,
+          baseSnapshotHash,
           0,
           'mutator-name',
           44,
@@ -451,6 +457,7 @@ test('load roundtrip', () => {
         {
           type: MetaType.LocalDD31,
           basisHash: emptyStringHash,
+          baseSnapshotHash,
           mutationID: 0,
           mutatorName: 'mutator-name',
           mutatorArgsJSON: 45,
@@ -652,6 +659,7 @@ test('accessors DD31', async () => {
 
   const originalHash = fakeHash('face7');
   const basisHash = fakeHash('face8');
+  const baseSnapshotHash = fakeHash('face9');
   const valueHash = fakeHash('face4');
   const timestamp = 42;
   const local = fromChunk(
@@ -659,6 +667,7 @@ test('accessors DD31', async () => {
       {
         type: MetaType.LocalDD31,
         basisHash,
+        baseSnapshotHash,
         mutationID: 1,
         mutatorName: 'foo_mutator',
         mutatorArgsJSON: 42,

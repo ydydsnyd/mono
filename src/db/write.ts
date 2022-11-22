@@ -17,6 +17,7 @@ import {
   ChunkIndexDefinition,
   chunkIndexDefinitionEqualIgnoreName,
   Meta,
+  baseSnapshotHashFromHash,
 } from './commit.js';
 import {
   Read,
@@ -293,6 +294,7 @@ export class Write extends Read {
         commit = commitNewLocalDD31(
           this._dagWrite.createChunk,
           basisHash,
+          await baseSnapshotHashFromHash(basisHash, this._dagWrite),
           mutationID,
           mutatorName,
           mutatorArgsJSON,
@@ -462,6 +464,7 @@ export async function newWriteLocal(
       ? {
           type: MetaType.LocalDD31,
           basisHash,
+          baseSnapshotHash: await baseSnapshotHashFromHash(basisHash, dagWrite),
           mutatorName,
           mutatorArgsJSON,
           mutationID,

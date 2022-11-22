@@ -474,6 +474,7 @@ suite('refresh', () => {
         const c = db.newLocalDD31(
           dagWrite.createChunk,
           basisHash,
+          await db.baseSnapshotHashFromHash(basisHash, dagWrite),
           mutationID,
           mutatorName,
           deepFreeze(mutatorArgsJSON),

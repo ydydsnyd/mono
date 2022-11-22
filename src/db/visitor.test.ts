@@ -1,12 +1,61 @@
 import {expect} from '@esm-bundle/chai';
 import * as dag from '../dag/mod.js';
+import type * as sync from '../sync/mod.js';
 import {ChainBuilder} from './test-helpers.js';
 import {fakeHash, Hash} from '../hash.js';
 import type {Entry, Node} from '../btree/node.js';
 import {FrozenJSONValue, ReadonlyJSONValue, deepFreeze} from '../json.js';
 import {Visitor} from './visitor.js';
-import {Commit, Meta, newLocal} from './commit.js';
+import {
+  baseSnapshotHashFromHash,
+  Commit,
+  IndexRecord,
+  Meta,
+  newLocalDD31,
+  newLocalSDD,
+} from './commit.js';
 import {promiseVoid} from '../resolved-promises.js';
+
+function newLocal(
+  createChunk: dag.CreateChunk,
+  basisHash: Hash,
+  baseSnapshotHash: Hash,
+  mutationID: number,
+  mutatorName: string,
+  mutatorArgsJSON: FrozenJSONValue,
+  originalHash: Hash | null,
+  valueHash: Hash,
+  indexes: readonly IndexRecord[],
+  timestamp: number,
+  clientID: sync.ClientID,
+) {
+  if (DD31) {
+    return newLocalDD31(
+      createChunk,
+      basisHash,
+      baseSnapshotHash,
+      mutationID,
+      mutatorName,
+      mutatorArgsJSON,
+      originalHash,
+      valueHash,
+      indexes,
+      timestamp,
+      clientID,
+    );
+  }
+  return newLocalSDD(
+    createChunk,
+    basisHash,
+    mutationID,
+    mutatorName,
+    mutatorArgsJSON,
+    originalHash,
+    valueHash,
+    indexes,
+    timestamp,
+  );
+}
 
 test('test that we get to the data nodes', async () => {
   const clientID = 'client-id';
@@ -88,9 +137,14 @@ test('test that we get to the data nodes', async () => {
 
   const localCommit = await dagStore.withWrite(async dagWrite => {
     const prevCommit = b.chain[b.chain.length - 1];
+    const baseSnapshotHash = await baseSnapshotHashFromHash(
+      prevCommit.chunk.hash,
+      dagWrite,
+    );
     const localCommit = newLocal(
       dagWrite.createChunk,
       prevCommit.chunk.hash,
+      baseSnapshotHash,
       42,
       'mutator-name',
       deepFreeze([]),
@@ -120,9 +174,14 @@ test('test that we get to the data nodes', async () => {
 
   const localCommit2 = await dagStore.withWrite(async dagWrite => {
     const prevCommit = b.chain[b.chain.length - 1];
+    const baseSnapshotHash = await baseSnapshotHashFromHash(
+      prevCommit.chunk.hash,
+      dagWrite,
+    );
     const localCommit2 = newLocal(
       dagWrite.createChunk,
       prevCommit.chunk.hash,
+      baseSnapshotHash,
       42,
       'mutator-name',
       deepFreeze([]),
