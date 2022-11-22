@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1669135903533,
+  "lastUpdate": 1669139876700,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -31235,6 +31235,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23833,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cfd5af8cfc1e8eaf6506904e8d3ff57ae5ddc05d",
+          "message": "refactor: Add a baseSnapshotHash to LocalMetaDD31 (#417)\n\nProblem\r\n=======\r\nRefresh needs the BaseSnapshot commit of the client group in the perdag so it can compare its cookie with\r\nthe memdag's main branch's cookie.  Retrieving the BaseSnapshot commit currently requires walking the\r\nfull chain of local commits (retrieving them from idb).  While offline the chain of local commits continually grows\r\nand so this can become problematically slow.\r\n\r\nSolution\r\n=======\r\nAdd a baseSnapshotHash to LocalMetaDD31 to allow for quick retrieval of the base snapshot commit.",
+          "timestamp": "2022-11-22T10:56:55-07:00",
+          "tree_id": "00f97c7353a3f71870fc78519d670e2de827eaa8",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/cfd5af8cfc1e8eaf6506904e8d3ff57ae5ddc05d"
+        },
+        "date": 1669139869859,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 194356,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 34541,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 193209,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34226,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 82358,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 23930,
             "unit": "bytes"
           }
         ]
