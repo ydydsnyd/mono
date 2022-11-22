@@ -24,8 +24,8 @@ import {
   FIND_MATCHING_CLIENT_TYPE_NEW,
   getClient,
   getClients,
-  getMainClientGroup,
-  getMainClientGroupID,
+  getClientGroupForClient,
+  getClientGroupIDForClient,
   initClient,
   initClientDD31,
   isClientSDD,
@@ -503,7 +503,7 @@ test('setClient', async () => {
   });
 });
 
-test('getMainClientGroupID', async () => {
+test('getClientGroupID', async () => {
   if (!DD31) {
     return;
   }
@@ -525,12 +525,12 @@ test('getMainClientGroupID', async () => {
     });
 
     const actualClientGroupID = await dagStore.withRead(read =>
-      getMainClientGroupID(clientID, read),
+      getClientGroupIDForClient(clientID, read),
     );
     expect(actualClientGroupID).to.equal(expectedClientGroupID);
 
     const actualClientGroup = await dagStore.withRead(read =>
-      getMainClientGroup(clientID, read),
+      getClientGroupForClient(clientID, read),
     );
     expect(actualClientGroup).to.deep.equal(expectedClientGroup);
   };
@@ -587,12 +587,12 @@ test('getMainClientGroupID', async () => {
   }
 
   const actualClientGroupID2 = await dagStore.withRead(read =>
-    getMainClientGroupID(clientID, read),
+    getClientGroupIDForClient(clientID, read),
   );
   expect(actualClientGroupID2).to.equal('client-group-id-wrong');
 
   const actualClientGroup2 = await dagStore.withRead(read =>
-    getMainClientGroup(clientID, read),
+    getClientGroupForClient(clientID, read),
   );
   expect(actualClientGroup2).to.be.undefined;
 });

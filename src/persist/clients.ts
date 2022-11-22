@@ -565,19 +565,19 @@ function getRefsForClients(clients: ClientMap): Hash[] {
   return refs;
 }
 
-export async function getMainClientGroup(
+export async function getClientGroupForClient(
   clientID: ClientID,
   read: dag.Read,
 ): Promise<ClientGroup | undefined> {
   assert(DD31);
-  const clientGroupID = await getMainClientGroupID(clientID, read);
+  const clientGroupID = await getClientGroupIDForClient(clientID, read);
   if (!clientGroupID) {
     return undefined;
   }
   return await getClientGroup(clientGroupID, read);
 }
 
-export async function getMainClientGroupID(
+export async function getClientGroupIDForClient(
   clientID: ClientID,
   read: dag.Read,
 ): Promise<sync.ClientGroupID | undefined> {

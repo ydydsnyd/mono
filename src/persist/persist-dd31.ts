@@ -2,7 +2,7 @@ import {assert} from '../asserts.js';
 import type * as dag from '../dag/mod.js';
 import * as db from '../db/mod.js';
 import type * as sync from '../sync/mod.js';
-import {assertHasClientState, getMainClientGroupID} from './clients.js';
+import {assertHasClientState, getClientGroupIDForClient} from './clients.js';
 import {GatherMemoryOnlyVisitor} from './gather-mem-only-visitor.js';
 import type {MutatorDefs} from '../replicache.js';
 import type {Hash} from '../hash.js';
@@ -44,7 +44,7 @@ export async function persistDD31(
   const [perdagLMID, perdagBaseSnapshot, mainClientGroupID] =
     await perdag.withRead(async perdagRead => {
       await assertHasClientState(clientID, perdagRead);
-      const mainClientGroupID = await getMainClientGroupID(
+      const mainClientGroupID = await getClientGroupIDForClient(
         clientID,
         perdagRead,
       );
@@ -52,7 +52,7 @@ export async function persistDD31(
         mainClientGroupID,
         `No main client group for clientID: ${clientID}`,
       );
-      const [, perdagMainClientGroupHeadCommit] = await getMainClientGroupInfo(
+      const [, perdagMainClientGroupHeadCommit] = await getClientGroupInfo(
         perdagRead,
         mainClientGroupID,
       );
@@ -110,7 +110,7 @@ export async function persistDD31(
     await perdag.withWrite(async perdagWrite => {
       // check if memdag snapshot still newer than perdag snapshot
       const [mainClientGroup, latestPerdagMainClientGroupHeadCommit] =
-        await getMainClientGroupInfo(perdagWrite, mainClientGroupID);
+        await getClientGroupInfo(perdagWrite, mainClientGroupID);
       let mutationIDs;
       let {lastServerAckdMutationIDs} = mainClientGroup;
       const latestPerdagBaseSnapshot = await db.baseSnapshotFromCommit(
@@ -192,7 +192,7 @@ export async function persistDD31(
     // no need to persist snapshot, persist new memdag mutations
     await perdag.withWrite(async perdagWrite => {
       const [mainClientGroup, latestPerdagMainClientGroupHeadCommit] =
-        await getMainClientGroupInfo(perdagWrite, mainClientGroupID);
+        await getClientGroupInfo(perdagWrite, mainClientGroupID);
       const mutationIDs = {...mainClientGroup.mutationIDs};
       const newMainClientGroupHeadHash = await rebase(
         newMemdagMutations,
@@ -216,18 +216,15 @@ export async function persistDD31(
   }
 }
 
-async function getMainClientGroupInfo(
+async function getClientGroupInfo(
   perdagRead: dag.Read,
   clientGroupID: sync.ClientGroupID,
 ): Promise<[ClientGroup, db.Commit<db.Meta>]> {
-  const mainClientGroup = await getClientGroup(clientGroupID, perdagRead);
-  assert(
-    mainClientGroup,
-    `No main client group for clientGroupID: ${clientGroupID}`,
-  );
+  const clientGroup = await getClientGroup(clientGroupID, perdagRead);
+  assert(clientGroup, `No client group for clientGroupID: ${clientGroupID}`);
   return [
-    mainClientGroup,
-    await db.commitFromHash(mainClientGroup.headHash, perdagRead),
+    clientGroup,
+    await db.commitFromHash(clientGroup.headHash, perdagRead),
   ];
 }
 

@@ -10,6 +10,7 @@ import {
 } from './gc.js';
 import {promiseVoid} from '../resolved-promises.js';
 import {joinIterables} from '../iterables.js';
+import type {MaybePromise} from '../replicache.js';
 
 /**
  * Dag Store which lazily loads values from a source store and then caches
@@ -231,6 +232,12 @@ export class LazyStore implements Store {
       }
       this._sourceChunksCache.persisted(chunksToCache);
     });
+  }
+
+  withSuspendedSourceCacheEvictsAndDeletes<T>(
+    fn: () => MaybePromise<T>,
+  ): Promise<T> {
+    return this._sourceChunksCache.withSuspendedEvictsAndDeletes(fn);
   }
 }
 
@@ -522,6 +529,8 @@ class ChunksCache {
   private readonly _refCounts: Map<Hash, number>;
   private readonly _refs: Map<Hash, readonly Hash[]>;
   private _size = 0;
+  private _evictsAndDeletesSuspended = false;
+  private readonly _suspendedDeletes: Hash[] = [];
 
   /**
    * Iteration order is from least to most recently used.
@@ -586,12 +595,14 @@ class ChunksCache {
   }
 
   private _ensureCacheSizeLimit() {
-    for (const cacheEntry of this.cacheEntries.values()) {
+    if (this._evictsAndDeletesSuspended) {
+      return;
+    }
+    for (const entry of this.cacheEntries.values()) {
       if (this._size <= this._cacheSizeLimit) {
         break;
       }
-      this._size -= cacheEntry.size;
-      this.cacheEntries.delete(cacheEntry.chunk.hash);
+      this._evict(entry);
     }
   }
 
@@ -608,13 +619,19 @@ class ChunksCache {
     return true;
   }
 
+  private _evict(cacheEntry: CacheEntry): void {
+    const {hash} = cacheEntry.chunk;
+    this._size -= cacheEntry.size;
+    this.cacheEntries.delete(hash);
+  }
+
   private _delete(hash: Hash): void {
-    const cacheEntry = this.cacheEntries.get(hash);
     this._refCounts.delete(hash);
     this._refs.delete(hash);
+    const cacheEntry = this.cacheEntries.get(hash);
     if (cacheEntry) {
-      this.cacheEntries.delete(hash);
       this._size -= cacheEntry.size;
+      this.cacheEntries.delete(hash);
     }
   }
 
@@ -624,7 +641,12 @@ class ChunksCache {
   ): void {
     for (const [hash, count] of refCountUpdates) {
       if (count === 0) {
-        this._delete(hash);
+        if (!this._evictsAndDeletesSuspended) {
+          this._delete(hash);
+        } else {
+          this._refCounts.set(hash, 0);
+          this._suspendedDeletes.push(hash);
+        }
       } else {
         this._refCounts.set(hash, count);
         const chunkAndSize = chunksToPut.get(hash);
@@ -652,5 +674,22 @@ class ChunksCache {
       this._cacheChunk(chunk);
     }
     this._ensureCacheSizeLimit();
+  }
+
+  async withSuspendedEvictsAndDeletes<T>(
+    fn: () => MaybePromise<T>,
+  ): Promise<T> {
+    this._evictsAndDeletesSuspended = true;
+    try {
+      return await fn();
+    } finally {
+      this._evictsAndDeletesSuspended = false;
+      for (const hash of this._suspendedDeletes) {
+        if (this._refCounts.get(hash) === 0) {
+          this._delete(hash);
+        }
+      }
+      this._ensureCacheSizeLimit();
+    }
   }
 }
