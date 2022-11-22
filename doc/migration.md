@@ -10,7 +10,7 @@ In order to use `0.19.0` you need to make two changes:
 
 1. Creation of a new room must happen explicitly by calling [createRoom](server-api.md#create-room) from your server before having clients connect to it. Previously, rooms were created implicitly when a client `connect`ed to a non-existent room. You can call the new [Get room status endpoint](server-api.md#get-room-status) to check if a room exists before calling `createRoom`. A client attempting to connect to a room not created with `createRoom` either explicitly or via migration (see below) will result in an error.
 2. Perform a one-time migration of rooms created prior to `0.19.0` so that they have the required room records. Reflect Server previously did not keep a list of extant rooms, so we cannot migrate the rooms automatically. For each `roomID` that you have, you will need to invoke the [Migrate room endpoint](server-api.md#migrate-room).
-   - Note: you can skip this step if you are OK with effectively abandoning all your pre-existing rooms. 
+   - Note: you can skip this step if you are OK with effectively abandoning all your pre-existing rooms.
 
 ## Why this is happening
 
