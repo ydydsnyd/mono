@@ -4,12 +4,6 @@ import type { DurableStorage } from "../storage/durable-storage.js";
 import * as s from "superstruct";
 import type { RociRequest } from "./middleware.js";
 
-// TODO(fritz) rough GDRP TODO list:
-// - get aaron to review APIs (don't worry too much about this
-//   right now, we can fix it up later without too much work)
-// - do we need to make changes to the client to support the
-//   additional http codes returned by connect (404, 410)?
-
 // RoomRecord keeps information about the room, for example the Durable
 // Object ID of the DO instance that has the room.
 export type RoomRecord = {
@@ -93,7 +87,7 @@ export async function createRoom(
   // Check if the room already exists.
   if ((await roomRecordByRoomID(storage, roomID)) !== undefined) {
     return new Response("room already exists", {
-      status: 400,
+      status: 409 /* Conflict */,
     });
   }
 
@@ -128,7 +122,7 @@ export async function createRoom(
   await storage.put(roomRecordKey, roomRecord);
   lc.debug?.(`created room ${JSON.stringify(roomRecord)}`);
 
-  return new Response("success");
+  return new Response("ok");
 }
 
 // Caller must enforce no other concurrent calls to this and other
@@ -154,10 +148,10 @@ export async function closeRoom(
   }
 
   if (roomRecord.status === RoomStatus.Closed) {
-    return new Response("success (room already closed)");
+    return new Response("ok (room already closed)");
   } else if (roomRecord.status !== RoomStatus.Open) {
     return new Response("room is not open", {
-      status: 400,
+      status: 409 /* Conflict */,
     });
   }
 
@@ -166,7 +160,7 @@ export async function closeRoom(
   await storage.put(roomRecordKey, roomRecord);
   lc.debug?.(`closed room ${JSON.stringify(roomRecord)}`);
 
-  return new Response("success");
+  return new Response("ok");
 }
 
 // Caller must enforce no other concurrent calls to this and other
@@ -189,10 +183,10 @@ export async function deleteRoom(
   }
 
   if (roomRecord.status === RoomStatus.Deleted) {
-    return new Response("success (room already deleted)");
+    return new Response("ok (room already deleted)");
   } else if (roomRecord.status !== RoomStatus.Closed) {
     return new Response("room must first be closed", {
-      status: 400,
+      status: 409 /* Conflict */,
     });
   }
 
@@ -212,7 +206,7 @@ export async function deleteRoom(
   const roomRecordKey = roomKeyToString(roomRecord);
   await storage.put(roomRecordKey, roomRecord);
   lc.debug?.(`deleted room ${JSON.stringify(roomRecord)}`);
-  return new Response("success");
+  return new Response("ok");
 }
 
 // Deletes the RoomRecord without any concern for the room's status.
@@ -243,7 +237,7 @@ export async function deleteRoomRecord(
   await storage.del(roomRecordKey);
   lc.debug?.(`deleted RoomRecord ${JSON.stringify(roomRecord)}`);
 
-  return new Response("success");
+  return new Response("ok");
 }
 
 // Creates a RoomRecord for a roomID that already exists whose objectID
@@ -283,7 +277,7 @@ export async function createRoomRecordForLegacyRoom(
     `migrated created roomID ${roomID}; record: ${JSON.stringify(roomRecord)}`
   );
 
-  return new Response("success");
+  return new Response("ok");
 }
 
 function validRoomID(roomID: string): boolean {

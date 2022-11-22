@@ -126,7 +126,7 @@ test("createRoom creates a room and doesn't allow it to be re-created", async ()
 
   // Attempt to create the room again.
   const response2 = await authDO.fetch(testRequest);
-  expect(response2.status).toEqual(400);
+  expect(response2.status).toEqual(409);
   expect(roomDOcreateRoomCounts.size).toEqual(1);
 });
 
@@ -506,7 +506,7 @@ test("deleteRoom requires room to be closed", async () => {
     testRoomID
   );
   const deleteRoomResponse = await authDO.fetch(deleteRoomRequest);
-  expect(deleteRoomResponse.status).toEqual(400);
+  expect(deleteRoomResponse.status).toEqual(409);
 
   const statusRequest = newRoomStatusRequest(
     "https://test.roci.dev",
