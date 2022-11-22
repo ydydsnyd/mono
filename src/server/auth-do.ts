@@ -520,25 +520,21 @@ export class BaseAuthDO implements DurableObject {
     );
     // Send requests to room DOs in parallel
     const errorResponses = [];
-    // Dunno if this lock is better here or inside the loop.
-    await this._roomRecordLock.withRead(async () => {
-      for (const roomID of roomIDs) {
-        const roomObjectID = await objectIDByRoomID(
-          this._durableStorage,
-          this._roomDO,
-          roomID
-        );
-        if (roomObjectID === undefined) {
-          const msg = `No objectID for ${roomID}, skipping`;
-          lc.error?.(msg);
-          errorResponses.push(new Response(msg, { status: 500 }));
-          continue;
-        }
+    for (const roomID of roomIDs) {
+      const roomObjectID = await this._roomRecordLock.withRead(async () => {
+        return objectIDByRoomID(this._durableStorage, this._roomDO, roomID);
+      });
 
-        const stub = this._roomDO.get(roomObjectID);
-        responsePromises.push(stub.fetch(request));
+      if (roomObjectID === undefined) {
+        const msg = `No objectID for ${roomID}, skipping`;
+        lc.error?.(msg);
+        errorResponses.push(new Response(msg, { status: 500 }));
+        continue;
       }
-    });
+
+      const stub = this._roomDO.get(roomObjectID);
+      responsePromises.push(stub.fetch(request));
+    }
     for (let i = 0; i < responsePromises.length; i++) {
       const response = await responsePromises[i];
       if (!response.ok) {
