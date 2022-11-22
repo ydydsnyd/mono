@@ -3,15 +3,12 @@ import * as dag from '../dag/mod.js';
 import type * as sync from '../sync/mod.js';
 import {assertHash, fakeHash, Hash} from '../hash.js';
 import {
-  assertHasClientGroupState,
   ClientGroup,
   clientGroupHasPendingMutations,
   ClientGroupMap,
-  ClientGroupStateNotFoundError,
   deleteClientGroup,
   getClientGroup,
   getClientGroups,
-  hasClientGroupState,
   mutatorNamesEqual,
   setClientGroup,
   setClientGroups,
@@ -888,53 +885,6 @@ test('getClientGroup', async () => {
   await dagStore.withRead(async (read: dag.Read) => {
     const readClientGroup1 = await getClientGroup('client-group-1', read);
     expect(readClientGroup1).to.deep.equal(clientGroup1);
-  });
-});
-
-test('hasClientGroupState', async () => {
-  const dagStore = new dag.TestStore();
-  await dagStore.withRead(async (read: dag.Read) => {
-    expect(await hasClientGroupState('client-group-1', read)).to.be.false;
-    expect(await hasClientGroupState('client-group-2', read)).to.be.false;
-  });
-
-  await dagStore.withWrite(async (write: dag.Write) => {
-    await setClientGroups(
-      makeClientGroupMap({
-        'client-group-1': {headHash: headClientGroup1Hash},
-      }),
-      write,
-    );
-    await write.commit();
-  });
-
-  await dagStore.withRead(async (read: dag.Read) => {
-    expect(await hasClientGroupState('client-group-1', read)).to.be.true;
-    expect(await hasClientGroupState('client-group-2', read)).to.be.false;
-  });
-});
-
-test('assertHasClientGroupState', async () => {
-  const dagStore = new dag.TestStore();
-  await dagStore.withWrite(async (write: dag.Write) => {
-    await setClientGroups(
-      makeClientGroupMap({
-        'client-group-1': {headHash: headClientGroup1Hash},
-      }),
-      write,
-    );
-    await write.commit();
-  });
-
-  await dagStore.withRead(async (read: dag.Read) => {
-    await assertHasClientGroupState('client-group-1', read);
-    let expectedE;
-    try {
-      await assertHasClientGroupState('client-group-2', read);
-    } catch (e) {
-      expectedE = e;
-    }
-    expect(expectedE).instanceOf(ClientGroupStateNotFoundError);
   });
 });
 

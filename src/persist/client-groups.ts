@@ -234,38 +234,6 @@ export async function getClientGroup(
   return clientGroups.get(id);
 }
 
-/**
- * Used to signal that a client group does not exist. Maybe it was garbage
- * collected?
- */
-export class ClientGroupStateNotFoundError extends Error {
-  name = 'ClientGroupStateNotFoundError';
-  readonly id: string;
-  constructor(id: sync.ClientGroupID) {
-    super(`Client group state not found, id: ${id}`);
-    this.id = id;
-  }
-}
-
-/**
- * Throws a `ClientGroupStateNotFoundError` if the client group does not exist.
- */
-export async function assertHasClientGroupState(
-  id: sync.ClientGroupID,
-  dagRead: dag.Read,
-): Promise<void> {
-  if (!(await hasClientGroupState(id, dagRead))) {
-    throw new ClientGroupStateNotFoundError(id);
-  }
-}
-
-export async function hasClientGroupState(
-  id: sync.ClientGroupID,
-  dagRead: dag.Read,
-): Promise<boolean> {
-  return !!(await getClientGroup(id, dagRead));
-}
-
 export function clientGroupHasPendingMutations(clientGroup: ClientGroup) {
   for (const [clientID, mutationID] of Object.entries(
     clientGroup.mutationIDs,
