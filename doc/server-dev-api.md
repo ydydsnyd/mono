@@ -1,6 +1,6 @@
 # Reflect Server Development API
 
-These are some additional APIs supported by reflect server that shouldn't be needed in the normal course of operation. They might be useful if you are developing reflect server or to understand or recover from something that went wrong with migration to `0.19.0`.
+These are some additional APIs supported by Reflect Server that shouldn't be needed in the normal course of operation. They might be useful if you are developing Reflect Server or to understand or recover from something that went wrong with migration to `0.19.0`.
 
 **These calls require that the custom HTTP header `x-reflect-auth-api-key` contains the auth API key.**
 
@@ -26,10 +26,10 @@ Removes the room record for the given room. Without a room record, users will no
 
 ### Get room records: `GET /api/room/v0/rooms`
 
-Returns the set of all room records reflect server knows about.
+Returns the set of all room records Reflect Server knows about.
 
 - Response body
-  - `[{...}, ...]` an array of internal-to-reflect-server room records, one per room, that reflect server knows about
+  - `[{...}, ...]` an array of internal-to-reflect-server room records, one per room, that Reflect Server knows about
 - Example
 
 ```

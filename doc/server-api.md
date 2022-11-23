@@ -2,13 +2,13 @@
 
 This doc captures the set of service management APIs that reflect-server provides. These APIs are called by your server or you yourself (e.g., via scripting). This doc does not describe the reflect client API called by the your app.
 
-## Reflect-server is beta software
+## Reflect Server is beta software
 
 These APIs might change at any time.
 
 ## Authentication
 
-Reflect server expects a service management auth token to be provided via the `REFLECT_AUTH_API_KEY` env var. This token authorizes privileged administrative operations. It is a shared secret between your server and reflect-server, and must not be shared with end users (via app source code, reflect client, or any other means). If the env var is not set (is undefined), these APIs are disabled.
+Reflect Server expects a service management auth token to be provided via the `REFLECT_AUTH_API_KEY` env var. This token authorizes privileged administrative operations. It is a shared secret between your server and reflect-server, and must not be shared with end users (via app source code, reflect client, or any other means). If the env var is not set (is undefined), these APIs are disabled.
 
 **Each of the following calls requires the auth api key to be passed via the custom `x-reflect-auth-api-key` HTTP header.** Failure to pass the correct key results in a `401` (Unauthorized).
 
@@ -19,8 +19,8 @@ Reflect server expects a service management auth token to be provided via the `R
 Starting in `0.19.0`, a room must be _created_ before users can connect to it. (Previously, room creation was implicit in `connect`.)
 
 - Request body:
-  - `roomID`: unique id of room to create; must match `[a-zA-Z0-9_-]+`
-  - `jurisdiction`: optional string equal to `'eu'` if room data must be kept in the EU. Do not set this field unless you are sure you need it as it restricts underlying storage options.
+  - `roomID`: string representing the unique id of room to create; must match `[a-zA-Z0-9_-]+`
+  - `jurisdiction`: optional string equal to `'eu'` if room data must be kept in the EU. Do not set this field unless you are sure you need it, as it restricts underlying storage options.
 - Noteworthy responses:
   - `200` indicating the room has been created
   - `409` (Conflict) indicates the room already exists
@@ -40,7 +40,7 @@ Starting in `0.19.0`, a room must be _created_ before users can connect to it. (
 - URL path parameters:
   - `roomID`: id of the room to return the status of, eg `unj3Ap`
 - Noteworthy responses:
-  - `200` with JSON body contain a `status` field that is one of:
+  - `200` with JSON body containing a `status` field that is one of:
     - `"open"`: the room is accepting connections from users.
     - `"closed"`: the room is not accepting connections from users.
     - `"deleted"`: the room is not accepting connections from users _and_ all its content has been deleted.
@@ -98,15 +98,17 @@ A room is _deleted_ if it no longer accepts connections from users and all its d
 
 You only need to use this call in order to migrate rooms created in versions prior to `0.19.0`. Rooms created via `createRoom` in `0.19.0` do not need to be migrated.
 
-Reflect server version `0.19.0` keeps a record for each room, eg holding its status (open, closed, etc). Versions prior to `0.19.0` do not keep these records, and roomIDs used prior to `0.19.0` are not enumerable by reflect server, so you must call this API once for each roomID in order to migrate your rooms to be compatible with `0.19.0`.
+Reflect Server version `0.19.0` keeps a record for each room, eg holding its status (open, closed, etc). Versions prior to `0.19.0` do not keep these records, and roomIDs used prior to `0.19.0` are not enumerable by Reflect Server, so you must call this API once for each `roomID` in order to migrate your rooms to be compatible with `0.19.0`.
 
-This operation is idempotent. You can verify that a room was successfully migrated by getting the room status after migration; it should be `"open"`.
+You can verify that a room was successfully migrated by getting the room status after migration; it should be `"open"`.
+
+This operation is idempotent.
 
 - URL path parameters:
   - `roomID`: id of the room to migrate, eg `unj3Ap`
 - Noteworthy responses:
   - `200` if room has been successfully migrated
-  - `400` (Bad request) with message `Invalid roomID...` if the `roomID` doesn't match `[a-ZA-Z0-9_-]+`
+  - `400` (Bad request) with message `Invalid roomID...` if the `roomID` doesn't match `[a-zA-Z0-9_-]+`
 - Example
 
 ```
