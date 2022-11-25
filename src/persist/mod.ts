@@ -7,6 +7,7 @@ export {
   getClientGroups,
   setClientGroup,
   setClientGroups,
+  disableClientGroup,
 } from './client-groups.js';
 export type {ClientGroup, ClientGroupMap} from './client-groups.js';
 export {

@@ -49,7 +49,7 @@ export type {
   PullerResult,
   PullError,
 } from './puller.js';
-export type {Pusher, PushError} from './pusher.js';
+export type {Pusher, PushError, PusherResult, PushResponse} from './pusher.js';
 
 export type {
   Store as ExperimentalKVStore,

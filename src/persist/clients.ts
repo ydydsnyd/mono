@@ -363,6 +363,7 @@ export function initClientDD31(
         indexes,
         mutationIDs: {},
         lastServerAckdMutationIDs: {},
+        disabled: false,
       };
 
       await Promise.all([
@@ -517,6 +518,7 @@ export async function findMatchingClient(
   const clientGroups = await getClientGroups(dagRead);
   for (const [clientGroupID, clientGroup] of clientGroups) {
     if (
+      !clientGroup.disabled &&
       mutatorNamesEqual(mutatorNamesSet, clientGroup.mutatorNames) &&
       indexDefinitionsEqual(indexes, clientGroup.indexes)
     ) {

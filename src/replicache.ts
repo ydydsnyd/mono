@@ -6,11 +6,13 @@ import {Pusher, PushError} from './pusher.js';
 import {
   assertPullResponseDD31,
   assertPullResponseSDD,
+  isClientGroupUnknownResponse,
   isClientStateNotFoundResponse,
   Puller,
   PullError,
   PullResponse,
   PullResponseDD31,
+  PullResponseOK,
 } from './puller.js';
 import {
   CreateIndexDefinition,
@@ -245,6 +247,12 @@ export class Replicache<MD extends MutatorDefs = {}> {
   private readonly _mutationRecovery: MutationRecovery;
 
   /**
+   * Client groups gets disabled when the server does not know about it.
+   * A disabled client group prevents the client from pushing and pulling.
+   */
+  private _isClientGroupDisabled = false;
+
+  /**
    * This is the name Replicache uses for the IndexedDB database where data is
    * stored.
    */
@@ -372,10 +380,8 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
   /**
    * `onClientStateNotFound` is called when the persistent client has been
-   * garbage collected. This can happen if the client has not been used for over
-   * a week.
-   *
-   * It can also happen if the server no longer knows about this client.
+   * garbage collected. This can happen if the client has no pending mutations
+   * and has not been used for a while.
    *
    * The default behavior is to reload the page (using `location.reload()`). Set
    * this to `null` or provide your own function to prevent the page from
@@ -999,7 +1005,10 @@ export class Replicache<MD extends MutatorDefs = {}> {
   }
 
   private _isPullDisabled() {
-    return this.pullURL === '' && this.puller === defaultPuller;
+    return (
+      (DD31 && this._isClientGroupDisabled) ||
+      (this.pullURL === '' && this.puller === defaultPuller)
+    );
   }
 
   private async _wrapInOnlineCheck(
@@ -1026,6 +1035,8 @@ export class Replicache<MD extends MutatorDefs = {}> {
       if (e instanceof PushError || e instanceof PullError) {
         online = false;
         this._lc.info?.(`${name} threw:\n`, e, '\nwith cause:\n', e.causedBy);
+      } else if (e instanceof ReportError) {
+        this._lc.error?.(e);
       } else {
         this._lc.info?.(`${name} threw:\n`, e);
       }
@@ -1119,7 +1130,10 @@ export class Replicache<MD extends MutatorDefs = {}> {
   }
 
   private _isPushDisabled() {
-    return this.pushURL === '' && this.pusher === defaultPusher;
+    return (
+      (DD31 && this._isClientGroupDisabled) ||
+      (this.pushURL === '' && this.pusher === defaultPusher)
+    );
   }
 
   protected async _invokePush(): Promise<boolean> {
@@ -1132,11 +1146,11 @@ export class Replicache<MD extends MutatorDefs = {}> {
     const clientID = await this._clientIDPromise;
     const clientGroupID = await this._clientGroupIDPromise;
     return this._wrapInOnlineCheck(async () => {
-      const {result: pushResponse} = await this._wrapInReauthRetries(
+      const {result: pusherResult} = await this._wrapInReauthRetries(
         async (requestID: string, requestLc: LogContext) => {
           try {
             this._changeSyncCounters(1, 0);
-            const pushResponse = await sync.push(
+            const pusherResult = await sync.push(
               requestID,
               this._memdag,
               requestLc,
@@ -1149,7 +1163,10 @@ export class Replicache<MD extends MutatorDefs = {}> {
               this.schemaVersion,
               DD31 ? PUSH_VERSION_DD31 : PUSH_VERSION_SDD,
             );
-            return {result: pushResponse, httpRequestInfo: pushResponse};
+            return {
+              result: pusherResult,
+              httpRequestInfo: pusherResult?.httpRequestInfo,
+            };
           } finally {
             this._changeSyncCounters(-1, 0);
           }
@@ -1158,9 +1175,21 @@ export class Replicache<MD extends MutatorDefs = {}> {
         this.pushURL,
         this._lc,
       );
+
+      if (pusherResult === undefined) {
+        // No pending mutations.
+        return true;
+      }
+
+      const {response, httpRequestInfo} = pusherResult;
+
+      if (isClientGroupUnknownResponse(response)) {
+        await this._disableClientGroupAndThrow();
+      }
+
       // No pushResponse means we didn't do a push because there were no
       // pending mutations.
-      return pushResponse === undefined || pushResponse.httpStatusCode === 200;
+      return httpRequestInfo.httpStatusCode === 200;
     }, 'Push');
   }
 
@@ -1211,16 +1240,26 @@ export class Replicache<MD extends MutatorDefs = {}> {
       .addContext('handlePullResponse')
       .addContext('request_id', requestID);
 
-    if (isClientStateNotFoundResponse(internalPoke.pullResponse)) {
+    const {pullResponse} = internalPoke;
+
+    if (DD31 && isClientGroupUnknownResponse(pullResponse)) {
+      await this._disableClientGroupAndThrow();
+    }
+
+    if (isClientStateNotFoundResponse(pullResponse)) {
       this._fireOnClientStateNotFound(clientID, reasonServer);
       return;
     }
+
+    // TODO(DD31): We know that pullResponse is a PullResponseOK here but the
+    // DD31 in the first if statement above breaks the type inference.
+    const pullResponseOK = pullResponse as PullResponseOK;
 
     const syncHead = await sync.handlePullResponse(
       lc,
       this._memdag,
       deepFreeze(internalPoke.baseCookie),
-      internalPoke.pullResponse,
+      pullResponseOK,
       clientID,
     );
 
@@ -1231,6 +1270,17 @@ export class Replicache<MD extends MutatorDefs = {}> {
     }
 
     await this._maybeEndPull(syncHead, requestID);
+  }
+
+  private async _disableClientGroupAndThrow(): Promise<never> {
+    assert(DD31);
+    const clientGroupID = await this._clientGroupIDPromise;
+    assert(clientGroupID);
+    this._isClientGroupDisabled = true;
+    await this._perdag.withWrite(dagWrite =>
+      persist.disableClientGroup(clientGroupID, dagWrite),
+    );
+    throw new ReportError(`Client group ${clientGroupID} is unknown on server`);
   }
 
   protected async _beginPull(): Promise<BeginPullResult> {
@@ -1272,6 +1322,10 @@ export class Replicache<MD extends MutatorDefs = {}> {
     if (isClientStateNotFoundResponse(beginPullResponse.pullResponse)) {
       const clientID = await this._clientIDPromise;
       this._fireOnClientStateNotFound(clientID, reasonServer);
+    }
+
+    if (isClientGroupUnknownResponse(beginPullResponse.pullResponse)) {
+      await this._disableClientGroupAndThrow();
     }
 
     const {syncHead, httpRequestInfo} = beginPullResponse;
@@ -1635,3 +1689,8 @@ function reload(): void {
     location.reload();
   }
 }
+
+/**
+ * Wrapper error class that should be reported as error (logger.error)
+ */
+class ReportError extends Error {}

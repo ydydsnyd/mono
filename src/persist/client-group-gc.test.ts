@@ -52,6 +52,7 @@ test('initClientGroupGC starts 5 min interval that collects client groups that a
     indexes: {},
     mutationIDs: {client1: 10},
     lastServerAckdMutationIDs: {},
+    disabled: false,
   };
   const clientGroup2 = {
     headHash: fakeHash('eadbac2'),
@@ -59,6 +60,7 @@ test('initClientGroupGC starts 5 min interval that collects client groups that a
     indexes: {},
     mutationIDs: {client2: 2, client3: 3},
     lastServerAckdMutationIDs: {client2: 2, client3: 3},
+    disabled: false,
   };
   const clientGroup3 = {
     headHash: fakeHash('eadbac3'),
@@ -66,6 +68,7 @@ test('initClientGroupGC starts 5 min interval that collects client groups that a
     indexes: {},
     mutationIDs: {},
     lastServerAckdMutationIDs: {},
+    disabled: false,
   };
   const clientGroupMap = await dagStore.withWrite(async write => {
     const clientGroupMap = new Map(

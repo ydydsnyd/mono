@@ -544,6 +544,7 @@ test('getClientGroupID', async () => {
     mutationIDs: {[clientID]: 0},
     indexes: {},
     mutatorNames: [],
+    disabled: false,
   };
   {
     const client = {
@@ -617,6 +618,7 @@ suite('findMatchingClient', () => {
     initialIndexes: IndexDefinitions,
     newMutatorNames: string[],
     newIndexes: IndexDefinitions,
+    initialDisabled = false,
   ) {
     const perdag = new dag.TestStore();
     const clientID = 'client-id';
@@ -640,6 +642,7 @@ suite('findMatchingClient', () => {
         mutationIDs: {[clientID]: 1},
         indexes: initialIndexes,
         mutatorNames: initialMutatorNames,
+        disabled: initialDisabled,
       };
       await setClientGroup(clientGroupID, clientGroup, write);
 
@@ -688,6 +691,20 @@ suite('findMatchingClient', () => {
     );
   });
 
+  test('fork because client group disabled', async () => {
+    const t = (mutatorNames: string[], indexes: IndexDefinitions) =>
+      testFindMatchingClientFork(
+        mutatorNames,
+        indexes,
+        mutatorNames,
+        indexes,
+        true,
+      );
+    await t([], {});
+    await t(['x'], {});
+    await t(['z'], {i: {jsonPointer: '/foo'}});
+  });
+
   async function testFindMatchingClientHead(
     initialMutatorNames: string[],
     initialIndexes: IndexDefinitions,
@@ -709,6 +726,7 @@ suite('findMatchingClient', () => {
       mutationIDs: {[clientID]: 1},
       indexes: initialIndexes,
       mutatorNames: initialMutatorNames,
+      disabled: false,
     };
     await perdag.withWrite(async write => {
       await setClientGroup(clientGroupID, clientGroup, write);
@@ -796,6 +814,7 @@ suite('initClientDD31', () => {
       mutationIDs: {[clientID1]: 1},
       indexes,
       mutatorNames,
+      disabled: false,
     };
 
     await perdag.withWrite(async write => {
@@ -861,6 +880,7 @@ suite('initClientDD31', () => {
       mutationIDs: {[clientID1]: 1},
       indexes: initialIndexes,
       mutatorNames: initialMutatorNames,
+      disabled: false,
     };
 
     await perdag.withWrite(async write => {
@@ -897,6 +917,7 @@ suite('initClientDD31', () => {
       mutatorNames: newMutatorNames,
       lastServerAckdMutationIDs: {},
       mutationIDs: {},
+      disabled: false,
     });
   });
 
@@ -946,6 +967,7 @@ suite('initClientDD31', () => {
       mutationIDs: {[clientID1]: 1},
       indexes: initialIndexes,
       mutatorNames: initialMutatorNames,
+      disabled: false,
     };
 
     await perdag.withWrite(async write => {
@@ -982,6 +1004,7 @@ suite('initClientDD31', () => {
       mutatorNames: newMutatorNames,
       lastServerAckdMutationIDs: {},
       mutationIDs: {},
+      disabled: false,
     });
 
     await perdag.withRead(async read => {

@@ -1,6 +1,6 @@
 import {expect} from '@esm-bundle/chai';
 import type {PullResponse} from './puller.js';
-import type {Poke} from './replicache.js';
+import type {Poke, PokeDD31} from './replicache.js';
 import {
   addData,
   initReplicacheTesting,
@@ -154,4 +154,34 @@ test('overlapped pokes not supported', async () => {
   expect(error).contains('unexpected base cookie for poke');
 
   expect(await rep.query(tx => tx.get('a'))).equal(1);
+});
+
+test('Client group unknown on server', async () => {
+  if (!DD31) {
+    return;
+  }
+
+  const rep = await replicacheForTesting('client-group-unknown', {});
+
+  expect(rep.isClientGroupDisabled).false;
+
+  const poke: PokeDD31 = {
+    baseCookie: 123,
+    pullResponse: {
+      error: 'ClientGroupUnknown',
+    },
+  };
+  let err;
+  try {
+    await rep.poke(poke as Poke);
+  } catch (e) {
+    err = e;
+  }
+
+  expect(err).instanceof(Error);
+  expect((err as Error).message).matches(
+    /Client group (\S)+ is unknown on server/,
+  );
+
+  expect(rep.isClientGroupDisabled).true;
 });

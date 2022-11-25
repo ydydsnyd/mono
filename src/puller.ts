@@ -1,4 +1,5 @@
 import {
+  assert,
   assertArray,
   assertNumber,
   assertObject,
@@ -65,6 +66,10 @@ export type ClientStateNotFoundResponse = {
   error: 'ClientStateNotFound';
 };
 
+export type ClientGroupUnknownResponse = {
+  error: 'ClientGroupUnknown';
+};
+
 /**
  * PullResponse defines the shape and type of the response of a pull. This is
  * the JSON you should return from your pull server endpoint.
@@ -77,17 +82,41 @@ export type {PullResponse as PullResponseSDD};
  * PullResponse defines the shape and type of the response of a pull. This is
  * the JSON you should return from your pull server endpoint.
  */
-export type PullResponseDD31 = PullResponseOKDD31 | ClientStateNotFoundResponse;
+export type PullResponseDD31 =
+  | PullResponseOKDD31
+  | ClientStateNotFoundResponse
+  | ClientGroupUnknownResponse;
+
+function isError(obj: unknown, type: string): boolean {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    (obj as {error: unknown}).error === type
+  );
+}
+
+type ErrorResponse = {error: string};
+
+export function isErrorResponse(obj: object): obj is ErrorResponse {
+  return typeof (obj as {error: unknown}).error === 'string';
+}
 
 export function isClientStateNotFoundResponse(
-  result: unknown,
-): result is ClientStateNotFoundResponse {
-  return (
-    typeof result === 'object' &&
-    result !== null &&
-    (result as Partial<ClientStateNotFoundResponse>).error ===
-      'ClientStateNotFound'
-  );
+  v: unknown,
+): v is ClientStateNotFoundResponse {
+  return isError(v, 'ClientStateNotFound');
+}
+
+export function isClientGroupUnknownResponse(
+  v: unknown,
+): v is ClientGroupUnknownResponse {
+  return DD31 && isError(v, 'ClientGroupUnknown');
+}
+
+export function assertClientGroupUnknownResponse(
+  v: unknown,
+): asserts v is ClientGroupUnknownResponse {
+  assert(isClientGroupUnknownResponse(v));
 }
 
 export function assertPullResponseSDD(v: unknown): asserts v is PullResponse {
@@ -111,7 +140,7 @@ export function assertPullResponseDD31(
   if (typeof v !== 'object' || v === null) {
     throw new Error('PullResponseDD31 must be an object');
   }
-  if (isClientStateNotFoundResponse(v)) {
+  if (isErrorResponse(v)) {
     return;
   }
   const v2 = v as Partial<PullResponseOKDD31>;

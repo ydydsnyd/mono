@@ -26,6 +26,7 @@ import {
   setupForTest as setupIDBDatabasesStoreForTest,
   teardownForTest as teardownIDBDatabasesStoreForTest,
 } from './persist/idb-databases-store-db-name.js';
+import {resolver} from '@rocicorp/resolver';
 
 export class ReplicacheTest<
   // eslint-disable-next-line @typescript-eslint/ban-types
@@ -107,6 +108,11 @@ export class ReplicacheTest<
   get clientGroupID(): Promise<ClientGroupID | undefined> {
     // @ts-expect-error Property '_clientGroupIDPromise' is private
     return this._clientGroupIDPromise;
+  }
+
+  get isClientGroupDisabled(): boolean {
+    // @ts-expect-error Property '_isClientGroupDisabled' is private
+    return this._isClientGroupDisabled;
   }
 }
 
@@ -342,4 +348,38 @@ export function makePullResponse(
     lastMutationID,
     patch,
   };
+}
+
+export function expectConsoleLogContextStub(
+  name: string,
+  call: sinon.SinonSpyCall,
+  expectedMessage: string,
+  additionalContexts: (string | RegExp)[] = [],
+) {
+  const {args} = call;
+  expect(args).to.have.length(2 + additionalContexts.length);
+  expect(args[0]).to.equal(`name=${name}`);
+  let i = 1;
+  for (const context of additionalContexts) {
+    if (typeof context === 'string') {
+      expect(args[i++]).to.equal(context);
+    } else {
+      expect(args[i++]).to.match(context);
+    }
+  }
+  expect(args[i]).to.equal(expectedMessage);
+}
+
+export const requestIDLogContextRegex = /^request_id=[a-z,0-9,-]*$/;
+
+export function waitForSync(rep: {
+  onSync?: ((syncing: boolean) => void) | null | undefined;
+}) {
+  const {promise, resolve} = resolver();
+  rep.onSync = syncing => {
+    if (!syncing) {
+      resolve();
+    }
+  };
+  return promise;
 }

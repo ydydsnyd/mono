@@ -75,6 +75,7 @@ async function setClientsAndClientGroups(
         // Not used
         lastServerAckdMutationIDs: {[clientID]: -1},
         mutatorNames: [],
+        disabled: false,
       },
     ],
   ]);
@@ -552,6 +553,7 @@ suite('refresh', () => {
           mutationIDs: {[clientID1]: 4, [clientID2]: 3},
           lastServerAckdMutationIDs: {[clientID1]: 0, [clientID2]: 0},
           mutatorNames: ['addData'],
+          disabled: false,
         },
         dagWrite,
       );

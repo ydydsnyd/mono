@@ -62,6 +62,13 @@ export type ClientGroup = {
    * graph.
    */
   readonly lastServerAckdMutationIDs: Record<sync.ClientID, number>;
+
+  /**
+   * If the server deletes this client group it can signal that the client group
+   * was deleted. If that happens we mark this client group as disabled so that
+   * we do not use it again when creating new clients.
+   */
+  readonly disabled: boolean;
 };
 
 export const CLIENT_GROUPS_HEAD_NAME = 'client-groups';
@@ -248,4 +255,27 @@ export function clientGroupHasPendingMutations(clientGroup: ClientGroup) {
     }
   }
   return false;
+}
+
+/**
+ * Marks a client group as disabled. This can happen if the server deletes the
+ * client group (servers should not delete clients or client groups but it often
+ * happens in practice when developing).
+ *
+ * A disabled client group prevents pulls and pushes from happening.
+ */
+export async function disableClientGroup(
+  clientGroupID: string,
+  dagWrite: dag.Write,
+): Promise<void> {
+  const clientGroup = await getClientGroup(clientGroupID, dagWrite);
+  if (!clientGroup) {
+    // No client group matching in the database, so nothing to do.
+    return;
+  }
+  const disabledClientGroup = {
+    ...clientGroup,
+    disabled: true,
+  };
+  await setClientGroup(clientGroupID, disabledClientGroup, dagWrite);
 }

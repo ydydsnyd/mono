@@ -1,5 +1,6 @@
 import type {LogContext} from '@rocicorp/logger';
 import {
+  isClientGroupUnknownResponse,
   isClientStateNotFoundResponse,
   Puller,
   PullerDD31,
@@ -214,10 +215,10 @@ async function recoverMutationsOfClientSDD(
 
     const pushDescription = 'recoveringMutationsPush';
     const pushSucceeded = await wrapInOnlineCheck(async () => {
-      const {result: pushResponse} = await wrapInReauthRetries(
+      const {result: pusherResult} = await wrapInReauthRetries(
         async (requestID: string, requestLc: LogContext) => {
           assertNotUndefined(dagForOtherClient);
-          const pushResponse = await sync.push(
+          const pusherResult = await sync.push(
             requestID,
             dagForOtherClient,
             requestLc,
@@ -230,13 +231,19 @@ async function recoverMutationsOfClientSDD(
             database.schemaVersion,
             PUSH_VERSION_SDD,
           );
-          return {result: pushResponse, httpRequestInfo: pushResponse};
+          return {
+            result: pusherResult,
+            httpRequestInfo: pusherResult?.httpRequestInfo,
+          };
         },
         pushDescription,
         delegate.pushURL,
         lc,
       );
-      return !!pushResponse && pushResponse.httpStatusCode === 200;
+
+      return (
+        !!pusherResult && pusherResult.httpRequestInfo.httpStatusCode === 200
+      );
     }, pushDescription);
     if (!pushSucceeded) {
       lc.debug?.(
@@ -556,11 +563,11 @@ async function recoverMutationsOfClientGroupDD31(
 
     const pushDescription = 'recoveringMutationsPush';
     const pushSucceeded = await wrapInOnlineCheck(async () => {
-      const {result: pushResponse} = await wrapInReauthRetries(
+      const {result: pusherResult} = await wrapInReauthRetries(
         async (requestID: string, requestLc: LogContext) => {
           assert(clientID);
           assert(dagForOtherClientGroup);
-          const pushResponse = await sync.push(
+          const pusherResult = await sync.push(
             requestID,
             dagForOtherClientGroup,
             requestLc,
@@ -574,13 +581,31 @@ async function recoverMutationsOfClientGroupDD31(
             database.schemaVersion,
             PUSH_VERSION_DD31,
           );
-          return {result: pushResponse, httpRequestInfo: pushResponse};
+          return {
+            result: pusherResult,
+            httpRequestInfo: pusherResult?.httpRequestInfo,
+          };
         },
         pushDescription,
         delegate.pushURL,
         lc,
       );
-      return !!pushResponse && pushResponse.httpStatusCode === 200;
+
+      if (!pusherResult) {
+        return false;
+      }
+
+      if (isClientGroupUnknownResponse(pusherResult.response)) {
+        lc.debug?.(
+          `Client group ${clientGroupID} is unknown on the server. Marking it as disabled.`,
+        );
+        await dagForOtherClientGroup.withWrite(write =>
+          persist.disableClientGroup(clientGroupID, write),
+        );
+        return false;
+      }
+
+      return pusherResult.httpRequestInfo.httpStatusCode === 200;
     }, pushDescription);
     if (!pushSucceeded) {
       lc.debug?.(
@@ -653,6 +678,10 @@ async function recoverMutationsOfClientGroupDD31(
         lc.debug?.(
           `Client group ${selfClientGroupID} cannot recover mutations for client group ${clientGroupID}. The client group no longer exists on the server.`,
         );
+      } else if (isClientGroupUnknownResponse(pullResponse)) {
+        lc.debug?.(
+          `Client group ${selfClientGroupID} cannot recover mutations for client group ${clientGroupID}. The client group us unknown on the server.`,
+        );
       } else {
         lc.debug?.(
           `Client group ${selfClientGroupID} recovered mutations for client group ${clientGroupID}.  Details`,
@@ -683,6 +712,18 @@ async function recoverMutationsOfClientGroupDD31(
       if (isClientStateNotFoundResponse(pullResponse)) {
         const newClientGroups = new Map(clientGroups);
         newClientGroups.delete(clientGroupID);
+        return await setNewClientGroups(newClientGroups);
+      }
+
+      if (isClientGroupUnknownResponse(pullResponse)) {
+        // The client group is not the main client group so we do not need the
+        // Replicache instance to update its internal _isClientGroupDisabled
+        // property.
+        const newClientGroups = new Map(clientGroups);
+        newClientGroups.set(clientGroupID, {
+          ...clientGroupToUpdate,
+          disabled: true,
+        });
         return await setNewClientGroups(newClientGroups);
       }
 

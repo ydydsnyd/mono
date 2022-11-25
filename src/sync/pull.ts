@@ -11,6 +11,7 @@ import {
   assertPullResponseSDD,
   assertPullResponseDD31,
   isClientStateNotFoundResponse,
+  isClientGroupUnknownResponse,
   Puller,
   PullerDD31,
   PullerResult,
@@ -286,7 +287,11 @@ export async function beginPullDD31(
     };
   }
 
-  if (!createSyncBranch || isClientStateNotFoundResponse(response)) {
+  if (
+    !createSyncBranch ||
+    isClientStateNotFoundResponse(response) ||
+    isClientGroupUnknownResponse(response)
+  ) {
     return {
       httpRequestInfo,
       pullResponse: response,
@@ -725,9 +730,6 @@ type ResultDD31 = {
 };
 
 function assertResultBase(v: unknown): asserts v is Record<string, unknown> {
-  if (typeof v !== 'object' || v === null) {
-    throw new Error('Expected result to be an object');
-  }
   assertObject(v);
   assertHTTPRequestInfo(v.httpRequestInfo);
 }

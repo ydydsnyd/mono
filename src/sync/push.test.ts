@@ -13,7 +13,7 @@ import {
   PUSH_VERSION_SDD,
   PUSH_VERSION_DD31,
 } from './push.js';
-import type {Pusher} from '../pusher.js';
+import type {Pusher, PusherResult} from '../pusher.js';
 import type {ClientGroupID} from './client-group-id.js';
 import {deepFreeze} from '../json.js';
 
@@ -23,11 +23,11 @@ type FakePusherArgs = {
   expPushURL: string;
   expAuth: string;
   expRequestID: string;
-  err?: string | undefined;
+  error?: string | undefined;
 };
 
 function makeFakePusher(options: FakePusherArgs): Pusher {
-  return async (req: Request): Promise<HTTPRequestInfo> => {
+  return async (req: Request): Promise<HTTPRequestInfo | PusherResult> => {
     expect(options.expPush).to.be.true;
 
     const pushReq = await req.json();
@@ -43,11 +43,30 @@ function makeFakePusher(options: FakePusherArgs): Pusher {
       );
     }
 
-    if (options.err) {
-      if (options.err === 'FetchNotOk(500)') {
+    if (options.error) {
+      if (options.error === 'ClientGroupUnknown') {
+        return {
+          response: {error: 'ClientGroupUnknown'},
+          httpRequestInfo: {
+            httpStatusCode: 200,
+            errorMessage: '',
+          },
+        };
+      }
+      if (options.error === 'FetchNotOk(500)') {
+        // In SDD we return a HTTPRequestInfo
         return {
           httpStatusCode: 500,
           errorMessage: 'Fetch not OK',
+        };
+      }
+      if (options.error === 'FetchNotOkDD31(500)') {
+        // In DD31 we return a PusherResult or a HTTPRequestInfo
+        return {
+          httpRequestInfo: {
+            httpStatusCode: 500,
+            errorMessage: 'Fetch not OK',
+          },
         };
       }
       throw new Error('not implemented');
@@ -60,7 +79,7 @@ function makeFakePusher(options: FakePusherArgs): Pusher {
   };
 }
 
-test('try push', async () => {
+test('try push [SDD]', async () => {
   if (DD31) {
     return;
   }
@@ -92,7 +111,7 @@ test('try push', async () => {
     numPendingMutations: number;
     expPushReq: PushRequestSDD | undefined;
     pushResult: undefined | 'ok' | {error: string};
-    expBatchPushInfo: HTTPRequestInfo | undefined;
+    expPusherResult: PusherResult | undefined;
   };
   const cases: Case[] = [
     {
@@ -100,7 +119,7 @@ test('try push', async () => {
       numPendingMutations: 0,
       expPushReq: undefined,
       pushResult: undefined,
-      expBatchPushInfo: undefined,
+      expPusherResult: undefined,
     },
     {
       name: '1 pending',
@@ -120,9 +139,11 @@ test('try push', async () => {
         schemaVersion: pushSchemaVersion,
       },
       pushResult: 'ok',
-      expBatchPushInfo: {
-        httpStatusCode: 200,
-        errorMessage: '',
+      expPusherResult: {
+        httpRequestInfo: {
+          httpStatusCode: 200,
+          errorMessage: '',
+        },
       },
     },
     {
@@ -152,9 +173,11 @@ test('try push', async () => {
         schemaVersion: pushSchemaVersion,
       },
       pushResult: 'ok',
-      expBatchPushInfo: {
-        httpStatusCode: 200,
-        errorMessage: '',
+      expPusherResult: {
+        httpRequestInfo: {
+          httpStatusCode: 200,
+          errorMessage: '',
+        },
       },
     },
     {
@@ -184,9 +207,11 @@ test('try push', async () => {
         schemaVersion: pushSchemaVersion,
       },
       pushResult: {error: 'FetchNotOk(500)'},
-      expBatchPushInfo: {
-        httpStatusCode: 500,
-        errorMessage: 'Fetch not OK',
+      expPusherResult: {
+        httpRequestInfo: {
+          httpStatusCode: 500,
+          errorMessage: 'Fetch not OK',
+        },
       },
     },
   ];
@@ -247,10 +272,10 @@ test('try push', async () => {
       expPushURL: pushURL,
       expAuth: auth,
       expRequestID: requestID,
-      err: pushErr,
+      error: pushErr,
     });
 
-    const batchPushInfo = await push(
+    const pusherResult = await push(
       requestID,
       store,
       lc,
@@ -264,11 +289,11 @@ test('try push', async () => {
       DD31 ? PUSH_VERSION_DD31 : PUSH_VERSION_SDD,
     );
 
-    expect(batchPushInfo).to.deep.equal(c.expBatchPushInfo, `name: ${c.name}`);
+    expect(pusherResult).to.deep.equal(c.expPusherResult, `name: ${c.name}`);
   }
 });
 
-test('try push DD31', async () => {
+test('try push [DD31]', async () => {
   if (!DD31) {
     return;
   }
@@ -301,7 +326,7 @@ test('try push DD31', async () => {
     numPendingMutations: number;
     expPushReq: PushRequestDD31 | undefined;
     pushResult: undefined | 'ok' | {error: string};
-    expBatchPushInfo: HTTPRequestInfo | undefined;
+    expPusherResult: PusherResult | undefined;
   };
   const cases: Case[] = [
     {
@@ -309,7 +334,7 @@ test('try push DD31', async () => {
       numPendingMutations: 0,
       expPushReq: undefined,
       pushResult: undefined,
-      expBatchPushInfo: undefined,
+      expPusherResult: undefined,
     },
     {
       name: '1 pending',
@@ -331,9 +356,11 @@ test('try push DD31', async () => {
         schemaVersion: pushSchemaVersion,
       },
       pushResult: 'ok',
-      expBatchPushInfo: {
-        httpStatusCode: 200,
-        errorMessage: '',
+      expPusherResult: {
+        httpRequestInfo: {
+          httpStatusCode: 200,
+          errorMessage: '',
+        },
       },
     },
     {
@@ -366,9 +393,11 @@ test('try push DD31', async () => {
         schemaVersion: pushSchemaVersion,
       },
       pushResult: 'ok',
-      expBatchPushInfo: {
-        httpStatusCode: 200,
-        errorMessage: '',
+      expPusherResult: {
+        httpRequestInfo: {
+          httpStatusCode: 200,
+          errorMessage: '',
+        },
       },
     },
     {
@@ -401,9 +430,49 @@ test('try push DD31', async () => {
         schemaVersion: pushSchemaVersion,
       },
       pushResult: {error: 'FetchNotOk(500)'},
-      expBatchPushInfo: {
-        httpStatusCode: 500,
-        errorMessage: 'Fetch not OK',
+      expPusherResult: {
+        httpRequestInfo: {
+          httpStatusCode: 500,
+          errorMessage: 'Fetch not OK',
+        },
+      },
+    },
+
+    {
+      name: '2 mutations to push, push errors',
+      numPendingMutations: 2,
+      expPushReq: {
+        profileID,
+        clientGroupID: clientGroupID as ClientGroupID,
+        clientID,
+        mutations: [
+          // These mutations aren't actually added to the chain until the test
+          // case runs, but we happen to know how they are created by the db
+          // test helpers so we use that knowledge here.
+          {
+            clientID,
+            id: 2,
+            name: 'mutator_name_2',
+            args: deepFreeze([2]),
+            timestamp: 42,
+          },
+          {
+            clientID,
+            id: 3,
+            name: 'mutator_name_3',
+            args: deepFreeze([3]),
+            timestamp: 42,
+          },
+        ],
+        pushVersion: PUSH_VERSION_DD31,
+        schemaVersion: pushSchemaVersion,
+      },
+      pushResult: {error: 'FetchNotOkDD31(500)'},
+      expPusherResult: {
+        httpRequestInfo: {
+          httpStatusCode: 500,
+          errorMessage: 'Fetch not OK',
+        },
       },
     },
   ];
@@ -463,10 +532,10 @@ test('try push DD31', async () => {
       expPushURL: pushURL,
       expAuth: auth,
       expRequestID: requestID,
-      err: pushErr,
+      error: pushErr,
     });
 
-    const batchPushInfo = await push(
+    const pusherResult = await push(
       requestID,
       store,
       lc,
@@ -480,6 +549,6 @@ test('try push DD31', async () => {
       DD31 ? PUSH_VERSION_DD31 : PUSH_VERSION_SDD,
     );
 
-    expect(batchPushInfo).to.deep.equal(c.expBatchPushInfo, `name: ${c.name}`);
+    expect(pusherResult).to.deep.equal(c.expPusherResult, `name: ${c.name}`);
   }
 });

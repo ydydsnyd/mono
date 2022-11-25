@@ -7,6 +7,7 @@ import {
   clientGroupHasPendingMutations,
   ClientGroupMap,
   deleteClientGroup,
+  disableClientGroup,
   getClientGroup,
   getClientGroups,
   mutatorNamesEqual,
@@ -40,6 +41,7 @@ export function makeClientGroup(
     indexes: {},
     mutationIDs: {},
     lastServerAckdMutationIDs: {},
+    disabled: false,
     ...partialClientGroup,
   };
 }
@@ -965,4 +967,41 @@ test('clientGroupHasPendingMutations', () => {
       }),
     ),
   ).to.be.false;
+});
+
+test('Disable Client Group', async () => {
+  const dagStore = new dag.TestStore();
+  const clientGroup2 = makeClientGroup({
+    headHash: headClientGroup2Hash,
+  });
+  const clientGroupMap1 = makeClientGroupMap({
+    'client-group-1': {
+      headHash: headClientGroup1Hash,
+    },
+    'client-group-2': clientGroup2,
+  });
+
+  await dagStore.withWrite(async (write: dag.Write) => {
+    await setClientGroups(clientGroupMap1, write);
+    await write.commit();
+  });
+
+  async function testDisabledState(tx: dag.Read) {
+    const readClientGroup1 = await getClientGroup('client-group-1', tx);
+    expect(readClientGroup1?.disabled).true;
+    const readClientGroup2 = await getClientGroup('client-group-2', tx);
+    expect(readClientGroup2?.disabled).false;
+
+    const readClientGroupMap = await getClientGroups(tx);
+    expect(readClientGroupMap.get('client-group-1')?.disabled).true;
+    expect(readClientGroupMap.get('client-group-2')?.disabled).false;
+  }
+
+  await dagStore.withWrite(async (write: dag.Write) => {
+    await disableClientGroup('client-group-1', write);
+    await testDisabledState(write);
+    await write.commit();
+  });
+
+  await dagStore.withRead(testDisabledState);
 });

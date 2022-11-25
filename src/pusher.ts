@@ -1,14 +1,75 @@
 import {httpRequest} from './http-request.js';
-import type {HTTPRequestInfo} from './http-request-info.js';
+import {assertHTTPRequestInfo, HTTPRequestInfo} from './http-request-info.js';
+import {assertObject} from './asserts.js';
+import {
+  assertClientGroupUnknownResponse,
+  ClientGroupUnknownResponse,
+  isClientGroupUnknownResponse,
+} from './puller.js';
+
+export type PusherResult = {
+  response?: PushResponse | undefined;
+  httpRequestInfo: HTTPRequestInfo;
+};
+
+/**
+ * The response from a push can contain information about error conditions.
+ */
+export type PushResponse = ClientGroupUnknownResponse;
+
+export function assertPusherResult(v: unknown): asserts v is PusherResult {
+  assertObject(v);
+  assertHTTPRequestInfo(v.httpRequestInfo);
+  if (v.response !== undefined) {
+    assertPushResponse(v.response);
+  }
+}
+
+function assertPushResponse(v: unknown): asserts v is PushResponse {
+  assertClientGroupUnknownResponse(v);
+}
+
+function isPushResponse(v: unknown): v is PushResponse {
+  return isClientGroupUnknownResponse(v);
+}
 
 /**
  * Pusher is the function type used to do the fetch part of a push. The request
  * is a POST request where the body is JSON with the type {@link PushRequest}.
+ *
+ * The return value should either be a {@link HTTPRequestInfo} or a
+ * {@link PusherResult}. The reason for the two different return types is that
+ * we didn't use to care about the response body of the push request. The
+ * default pusher implementation checks if the response body is JSON and if it
+ * matches the type {@link PusherResponse}. If it does, it is included in the
+ * return value.
  */
-export type Pusher = (request: Request) => Promise<HTTPRequestInfo>;
+export type Pusher = (
+  request: Request,
+) => Promise<HTTPRequestInfo | PusherResult>;
 
 export const defaultPusher: Pusher = async request => {
-  return (await httpRequest(request)).httpRequestInfo;
+  const {response, httpRequestInfo} = await httpRequest(request);
+  if (DD31) {
+    if (httpRequestInfo.httpStatusCode === 200) {
+      // In case we get an error response, we have already consumed the response body.
+      let json;
+      try {
+        json = await response.json();
+      } catch {
+        // Ignore JSON parse errors. It is valid to return a non-JSON response.
+        return httpRequestInfo;
+      }
+
+      if (isPushResponse(json)) {
+        return {
+          response: json,
+          httpRequestInfo,
+        };
+      }
+    }
+  }
+  return httpRequestInfo;
 };
 
 /**
