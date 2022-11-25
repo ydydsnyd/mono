@@ -1,6 +1,5 @@
 import type {LogContext} from '@rocicorp/logger';
 import {
-  isClientGroupUnknownResponse,
   isClientStateNotFoundResponse,
   Puller,
   PullerDD31,
@@ -595,7 +594,7 @@ async function recoverMutationsOfClientGroupDD31(
         return false;
       }
 
-      if (isClientGroupUnknownResponse(pusherResult.response)) {
+      if (isClientStateNotFoundResponse(pusherResult.response)) {
         lc.debug?.(
           `Client group ${clientGroupID} is unknown on the server. Marking it as disabled.`,
         );
@@ -676,10 +675,6 @@ async function recoverMutationsOfClientGroupDD31(
     if (lc.debug) {
       if (isClientStateNotFoundResponse(pullResponse)) {
         lc.debug?.(
-          `Client group ${selfClientGroupID} cannot recover mutations for client group ${clientGroupID}. The client group no longer exists on the server.`,
-        );
-      } else if (isClientGroupUnknownResponse(pullResponse)) {
-        lc.debug?.(
           `Client group ${selfClientGroupID} cannot recover mutations for client group ${clientGroupID}. The client group us unknown on the server.`,
         );
       } else {
@@ -710,12 +705,6 @@ async function recoverMutationsOfClientGroupDD31(
       };
 
       if (isClientStateNotFoundResponse(pullResponse)) {
-        const newClientGroups = new Map(clientGroups);
-        newClientGroups.delete(clientGroupID);
-        return await setNewClientGroups(newClientGroups);
-      }
-
-      if (isClientGroupUnknownResponse(pullResponse)) {
         // The client group is not the main client group so we do not need the
         // Replicache instance to update its internal _isClientGroupDisabled
         // property.

@@ -2,9 +2,9 @@ import {httpRequest} from './http-request.js';
 import {assertHTTPRequestInfo, HTTPRequestInfo} from './http-request-info.js';
 import {assertObject} from './asserts.js';
 import {
-  assertClientGroupUnknownResponse,
-  ClientGroupUnknownResponse,
-  isClientGroupUnknownResponse,
+  assertClientStateNotFoundResponse,
+  ClientStateNotFoundResponse,
+  isClientStateNotFoundResponse,
 } from './puller.js';
 
 export type PusherResult = {
@@ -15,7 +15,7 @@ export type PusherResult = {
 /**
  * The response from a push can contain information about error conditions.
  */
-export type PushResponse = ClientGroupUnknownResponse;
+export type PushResponse = ClientStateNotFoundResponse;
 
 export function assertPusherResult(v: unknown): asserts v is PusherResult {
   assertObject(v);
@@ -26,11 +26,11 @@ export function assertPusherResult(v: unknown): asserts v is PusherResult {
 }
 
 function assertPushResponse(v: unknown): asserts v is PushResponse {
-  assertClientGroupUnknownResponse(v);
+  assertClientStateNotFoundResponse(v);
 }
 
 function isPushResponse(v: unknown): v is PushResponse {
-  return isClientGroupUnknownResponse(v);
+  return isClientStateNotFoundResponse(v);
 }
 
 /**

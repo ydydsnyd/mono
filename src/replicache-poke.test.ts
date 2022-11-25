@@ -168,7 +168,7 @@ test('Client group unknown on server', async () => {
   const poke: PokeDD31 = {
     baseCookie: 123,
     pullResponse: {
-      error: 'ClientGroupUnknown',
+      error: 'ClientStateNotFound',
     },
   };
   let err;

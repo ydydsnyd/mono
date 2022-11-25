@@ -117,6 +117,10 @@ Replicache will exponentially back off sending pushes in the case of both networ
 
 The response body is a JSON object of the [`PullResponse`](api#PullResponse) type:
 
+<!-- TODO(DD31): In DD31 we use ClientStateNotFoundResponse for when the client group
+ cannot be found. That should only happen when you are developing the server or the
+ server is using an ephemeral storage -->
+
 ```ts
 export type PullResponse =
   | PullResponseOK

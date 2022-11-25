@@ -44,9 +44,9 @@ function makeFakePusher(options: FakePusherArgs): Pusher {
     }
 
     if (options.error) {
-      if (options.error === 'ClientGroupUnknown') {
+      if (options.error === 'ClientStateNotFound') {
         return {
-          response: {error: 'ClientGroupUnknown'},
+          response: {error: 'ClientStateNotFound'},
           httpRequestInfo: {
             httpStatusCode: 200,
             errorMessage: '',

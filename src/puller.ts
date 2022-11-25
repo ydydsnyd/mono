@@ -60,14 +60,11 @@ export type PullResponseOKDD31 = {
 
 /**
  * In certain scenarios the server can signal that it does not know about the
- * client. For example, the server might have deleted the client.
+ * client. For example, the server might have lost all of its state (this might
+ * happen during the development of the server).
  */
 export type ClientStateNotFoundResponse = {
   error: 'ClientStateNotFound';
-};
-
-export type ClientGroupUnknownResponse = {
-  error: 'ClientGroupUnknown';
 };
 
 /**
@@ -82,10 +79,7 @@ export type {PullResponse as PullResponseSDD};
  * PullResponse defines the shape and type of the response of a pull. This is
  * the JSON you should return from your pull server endpoint.
  */
-export type PullResponseDD31 =
-  | PullResponseOKDD31
-  | ClientStateNotFoundResponse
-  | ClientGroupUnknownResponse;
+export type PullResponseDD31 = PullResponseOKDD31 | ClientStateNotFoundResponse;
 
 function isError(obj: unknown, type: string): boolean {
   return (
@@ -107,16 +101,10 @@ export function isClientStateNotFoundResponse(
   return isError(v, 'ClientStateNotFound');
 }
 
-export function isClientGroupUnknownResponse(
+export function assertClientStateNotFoundResponse(
   v: unknown,
-): v is ClientGroupUnknownResponse {
-  return DD31 && isError(v, 'ClientGroupUnknown');
-}
-
-export function assertClientGroupUnknownResponse(
-  v: unknown,
-): asserts v is ClientGroupUnknownResponse {
-  assert(isClientGroupUnknownResponse(v));
+): asserts v is ClientStateNotFoundResponse {
+  assert(isClientStateNotFoundResponse(v));
 }
 
 export function assertPullResponseSDD(v: unknown): asserts v is PullResponse {

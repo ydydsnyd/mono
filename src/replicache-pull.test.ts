@@ -289,7 +289,7 @@ test('Client Group not found on server', async () => {
   // eslint-disable-next-line require-await
   const puller: PullerDD31 = async () => {
     return {
-      response: {error: 'ClientGroupUnknown'},
+      response: {error: 'ClientStateNotFound'},
       httpRequestInfo: {
         httpStatusCode: 200,
         errorMessage: '',

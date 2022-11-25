@@ -11,7 +11,6 @@ import {
   assertPullResponseSDD,
   assertPullResponseDD31,
   isClientStateNotFoundResponse,
-  isClientGroupUnknownResponse,
   Puller,
   PullerDD31,
   PullerResult,
@@ -287,11 +286,7 @@ export async function beginPullDD31(
     };
   }
 
-  if (
-    !createSyncBranch ||
-    isClientStateNotFoundResponse(response) ||
-    isClientGroupUnknownResponse(response)
-  ) {
+  if (!createSyncBranch || isClientStateNotFoundResponse(response)) {
     return {
       httpRequestInfo,
       pullResponse: response,

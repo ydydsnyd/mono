@@ -6,7 +6,6 @@ import {Pusher, PushError} from './pusher.js';
 import {
   assertPullResponseDD31,
   assertPullResponseSDD,
-  isClientGroupUnknownResponse,
   isClientStateNotFoundResponse,
   Puller,
   PullError,
@@ -1183,8 +1182,13 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
       const {response, httpRequestInfo} = pusherResult;
 
-      if (isClientGroupUnknownResponse(response)) {
-        await this._disableClientGroupAndThrow();
+      if (isClientStateNotFoundResponse(response)) {
+        if (DD31) {
+          await this._disableClientGroupAndThrow();
+          // unreachable
+        }
+        const clientID = await this._clientIDPromise;
+        this._fireOnClientStateNotFound(clientID, reasonServer);
       }
 
       // No pushResponse means we didn't do a push because there were no
@@ -1242,11 +1246,11 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
     const {pullResponse} = internalPoke;
 
-    if (DD31 && isClientGroupUnknownResponse(pullResponse)) {
-      await this._disableClientGroupAndThrow();
-    }
-
     if (isClientStateNotFoundResponse(pullResponse)) {
+      if (DD31) {
+        await this._disableClientGroupAndThrow();
+        // unreachable
+      }
       this._fireOnClientStateNotFound(clientID, reasonServer);
       return;
     }
@@ -1320,12 +1324,12 @@ export class Replicache<MD extends MutatorDefs = {}> {
     );
 
     if (isClientStateNotFoundResponse(beginPullResponse.pullResponse)) {
+      if (DD31) {
+        await this._disableClientGroupAndThrow();
+        // unreachable
+      }
       const clientID = await this._clientIDPromise;
       this._fireOnClientStateNotFound(clientID, reasonServer);
-    }
-
-    if (isClientGroupUnknownResponse(beginPullResponse.pullResponse)) {
-      await this._disableClientGroupAndThrow();
     }
 
     const {syncHead, httpRequestInfo} = beginPullResponse;
