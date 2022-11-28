@@ -26,7 +26,7 @@ We use this feature here so that each visitor to this demo sees only their own c
 
 :::
 
-To support realtime updates, most Replicache server support an optional _poke channel_. Replicache _pokes_ are zero-length messages that serve as a hint from server to clients that a space has changed and that the clients should pull again soon. This sample server implements a poke channel using [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events).
+To support realtime updates, most Replicache server support an optional _poke channel_. Replicache _pokes_ are zero-length messages that serve as a hint from server to clients that a space has changed and that the clients should pull again soon. This sample server implements a poke channel using [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events). For a deeper understanding of how poke works please refer to our [poke](/byob/poke) documentation.
 
 <h2>Challenge</h2>
 
