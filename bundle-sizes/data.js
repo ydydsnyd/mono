@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1669629777803,
+  "lastUpdate": 1669652533897,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -31451,6 +31451,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 24570,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "68b5673114c247d5463d45886e2c6b16f5a4e746",
+          "message": "fix(dd31): Correct pull cookie checks for DD31 (#420)\n\nFor DD31\r\n- Throw an error if pull response cookie is < cookie sent in pull request.\r\n- For normal pull do not error if base snapshot cookie is not the expected cookie (i.e. it has changed while waiting on the pull response).  This can happen due to refresh.  In this case the pull is a no-op.\r\n- For poke throw an error if base snapshot cookie is not the expected cookie.  \r\n\r\nToward #165",
+          "timestamp": "2022-11-28T09:21:13-07:00",
+          "tree_id": "e16d6c66410de78ce4d2818f28c5180942b2f5c9",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/68b5673114c247d5463d45886e2c6b16f5a4e746"
+        },
+        "date": 1669652527469,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 202976,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 35750,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 201829,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 35412,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 85463,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 24688,
             "unit": "bytes"
           }
         ]
