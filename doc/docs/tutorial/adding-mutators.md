@@ -14,7 +14,7 @@ _Mutators_ are how you change data in Replicache.
 
 Mutators are arbitrary functions that run once on the client immediately (aka “optimistically”), **and then run again later on the server** (”authoritatively”) during sync.
 
-Replicache queues mutations locally until the server acknowledges them during sync. Once the authoritative server result is known, Replicache reverts the optimistic version completely.
+Replicache queues mutations locally until the server acknowledges them during sync. Once the authoritative server result is known, Replicache reverts the optimistic version completely. For a deeper understanding of how the authoritative server works please read about [synchronization](/concepts/how-it-works#sync-details).
 
 :::tip Mutators are fast
 
