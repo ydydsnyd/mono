@@ -235,7 +235,14 @@ export function initClient(
   perdag: dag.Store,
   mutatorNames: string[],
   indexes: IndexDefinitions,
-): Promise<[sync.ClientID, Client, ClientMap]> {
+): Promise<
+  [
+    clientID: sync.ClientID,
+    client: Client,
+    clientMap: ClientMap,
+    newClientGroup: boolean,
+  ]
+> {
   if (DD31) {
     return initClientDD31(lc, perdag, mutatorNames, indexes);
   }
@@ -244,7 +251,14 @@ export function initClient(
 
 export function initClientSDD(
   perdag: dag.Store,
-): Promise<[sync.ClientID, Client, ClientMap]> {
+): Promise<
+  [
+    clientID: sync.ClientID,
+    client: Client,
+    clientMap: ClientMap,
+    newClientGroup: boolean,
+  ]
+> {
   return perdag.withWrite(async dagWrite => {
     const newClientID = makeUuid();
     const clients = await getClients(dagWrite);
@@ -315,7 +329,7 @@ export function initClientSDD(
 
     await dagWrite.commit();
 
-    return [newClientID, newClient, updatedClients];
+    return [newClientID, newClient, updatedClients, false];
   });
 }
 
@@ -324,7 +338,14 @@ export function initClientDD31(
   perdag: dag.Store,
   mutatorNames: string[],
   indexes: IndexDefinitions,
-): Promise<[sync.ClientID, Client, ClientMap]> {
+): Promise<
+  [
+    clientID: sync.ClientID,
+    client: Client,
+    clientMap: ClientMap,
+    newClientGroup: boolean,
+  ]
+> {
   assert(DD31);
 
   return perdag.withWrite(async dagWrite => {
@@ -333,7 +354,7 @@ export function initClientDD31(
       cookieJSON: FrozenJSONValue,
       valueHash: Hash,
       indexRecords: readonly db.IndexRecord[],
-    ): Promise<[sync.ClientID, Client, ClientMap]> {
+    ): Promise<[sync.ClientID, Client, ClientMap, boolean]> {
       const newSnapshotData = newSnapshotCommitDataDD31(
         basisHash,
         {},
@@ -374,7 +395,7 @@ export function initClientDD31(
 
       await dagWrite.commit();
 
-      return [newClientID, newClient, newClients];
+      return [newClientID, newClient, newClients, true];
     }
 
     const newClientID = makeUuid();
@@ -396,7 +417,7 @@ export function initClientDD31(
       await setClients(newClients, dagWrite);
 
       await dagWrite.commit();
-      return [newClientID, newClient, newClients];
+      return [newClientID, newClient, newClients, false];
     }
 
     if (res.type === FIND_MATCHING_CLIENT_TYPE_NEW) {

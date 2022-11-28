@@ -68,6 +68,7 @@ import {
 } from './on-persist-channel.js';
 import {ProcessScheduler} from './process-scheduler.js';
 import {AbortError} from './abort-error.js';
+import {initNewClientChannel} from './new-client-channel.js';
 
 export type BeginPullResult = {
   requestID: string;
@@ -216,6 +217,26 @@ const reasonServer = {
 
 const reasonClient = {
   type: 'NotFoundOnClient',
+} as const;
+
+/**
+ * The reason [[onUpdateNeeded]] was called.
+ */
+export type UpdateNeededReason =
+  | {
+      // There is a new client group due to a new tab loading new code with
+      // different mutators, indexes, schema version, or format version.
+      // This tab cannot sync locally with this new tab until it updates to
+      // the new code.
+      type: 'NewClientGroup';
+    }
+  | {
+      type: 'VersionNotSupported';
+      versionType: 'push' | 'pull' | 'schema';
+    };
+
+const updateNeededReasonNewClientGroup: UpdateNeededReason = {
+  type: 'NewClientGroup',
 } as const;
 
 export type QueryInternal = <R>(
@@ -390,6 +411,27 @@ export class Replicache<MD extends MutatorDefs = {}> {
     reload;
 
   /**
+   * `onUpdateNeeded` is called when a code update is needed.
+   *
+   * A code update can be needed because:
+   * - the server no longer supports the {@link pushVersion},
+   *   {@link pullVersion} or {@link schemaVersion} of the current code.
+   * - a new Replicache client has created a new client group, because its code
+   *   has different mutators, indexes, schema version and/or format version
+   *   from this Replicache client. This is likely due to the new client having
+   *   newer code. A code update is needed to be able to locally sync with this
+   *   new Replicache client (i.e. to sync while offline, the clients can can
+   *   still sync with each other via the server).
+   *
+   * The default behavior is to reload the page (using `location.reload()`). Set
+   * this to `null` or provide your own function to prevent the page from
+   * reloading automatically. You may want to provide your own function to
+   * display a toast to inform the end user there is a new version of your app
+   * available and prompting them to refresh.
+   */
+  onUpdateNeeded: ((reason: UpdateNeededReason) => void) | null = reload;
+
+  /**
    * This gets called when we get an HTTP unauthorized (401) response from the
    * push or pull endpoint. Set this to a function that will ask your user to
    * reauthenticate.
@@ -559,12 +601,13 @@ export class Replicache<MD extends MutatorDefs = {}> {
     await closingInstances.get(this.name);
     await this._idbDatabases.getProfileID().then(profileIDResolver);
     await this._idbDatabases.putDatabase(this._idbDatabase);
-    const [clientID, client, clients] = await persist.initClient(
-      this._lc,
-      this._perdag,
-      Object.keys(this._mutatorRegistry),
-      indexes,
-    );
+    const [clientID, client, clients, isNewClientGroup] =
+      await persist.initClient(
+        this._lc,
+        this._perdag,
+        Object.keys(this._mutatorRegistry),
+        indexes,
+      );
     if (DD31) {
       assertClientDD31(client);
       resolveClientGroupID(client.clientGroupID);
@@ -608,6 +651,16 @@ export class Replicache<MD extends MutatorDefs = {}> {
     persist.initCollectIDBDatabases(this._idbDatabases, this._lc, signal);
     if (DD31) {
       persist.initClientGroupGC(this._perdag, this._lc, signal);
+      assertClientDD31(client);
+      initNewClientChannel(
+        this.name,
+        signal,
+        client.clientGroupID,
+        isNewClientGroup,
+        () => {
+          this._fireOnUpdateNeeded(updateNeededReasonNewClientGroup);
+        },
+      );
     }
 
     setIntervalWithSignal(
@@ -1413,6 +1466,11 @@ export class Replicache<MD extends MutatorDefs = {}> {
   ) {
     this._lc.error?.(`Client state not found, clientID: ${clientID}`);
     this.onClientStateNotFound?.(reason);
+  }
+
+  private _fireOnUpdateNeeded(reason: UpdateNeededReason) {
+    this._lc.debug?.(`Update needed, reason: ${reason}`);
+    this.onUpdateNeeded?.(reason);
   }
 
   private async _schedulePersist(): Promise<void> {
