@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1669383782184,
+  "lastUpdate": 1669628915668,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -31343,6 +31343,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 23896,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "distinct": true,
+          "id": "fb9bf11623d4fbe17696f50a6930b67d1d32a89b",
+          "message": "chore: ClientStateNotFoundResponse for missing client group\n\nNo need to have both `ClientStateNotFound` and `ClientGroupNotFound`.\n\nIn DD31 this error logs an error. In SDD it continues to call\n`onClientStateNotFound` for `pull` and `poke`. For SDD we did not call\nthe callback for `push` so we continue to not do that.\n\nTowards #165",
+          "timestamp": "2022-11-28T10:47:30+01:00",
+          "tree_id": "3af021db6414bb84165eef6cd7758ff34e17e843",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/fb9bf11623d4fbe17696f50a6930b67d1d32a89b"
+        },
+        "date": 1669628909058,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 201448,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 35478,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 200301,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 35161,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 85012,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 24537,
             "unit": "bytes"
           }
         ]
