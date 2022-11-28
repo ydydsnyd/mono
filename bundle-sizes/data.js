@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1669628915668,
+  "lastUpdate": 1669629777803,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -31397,6 +31397,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 24537,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4d547422778f1f160a78ccd93d4777129fef4c76",
+          "message": "feat: Notify clients about new client groups (#415)\n\nWhen a new client group is created we notify all the other Replicache\r\nclients with the same name. These then \"fire\" onUpdateNeeded which\r\nby default reloads the page.\r\n\r\nA new client group is created when there isn't a compatible client group\r\nin the perdag (indexeddb). When this happens the clients in different\r\nclient groups cannot sync when offline. They can only sync through the\r\nserver.\r\n\r\nSee:\r\nhttps://www.notion.so/replicache/DD-3-1-e42489fc2e6b4340a01c7fa0de353a30#1b0ff4c4034846febda91af009dfd84a\r\nand\r\nhttps://www.notion.so/replicache/Version-incompatibilities-528f68f02f9c43f2904cdfef1e35e9c3\r\n\r\nBased on #285\r\n\r\nTowards #165",
+          "timestamp": "2022-11-28T11:02:01+01:00",
+          "tree_id": "555e9f6d3e25a271fa121bf5598a15f7ede0152e",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/4d547422778f1f160a78ccd93d4777129fef4c76"
+        },
+        "date": 1669629771955,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 201942,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 35567,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 200795,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 35239,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 85174,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 24570,
             "unit": "bytes"
           }
         ]
