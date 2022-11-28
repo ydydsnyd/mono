@@ -91,8 +91,8 @@ test('poke', async () => {
   } catch (e: unknown) {
     error = String(e);
   }
-  expect(error).contains(
-    'Received lastMutationID 0 is < than last snapshot lastMutationID 1; ignoring client view',
+  expect(error).matches(
+    /Received ([0-9a-f-]* )?lastMutationID 0 is < than last snapshot ([0-9a-f-]* )?lastMutationID 1; ignoring client view/,
   );
 });
 

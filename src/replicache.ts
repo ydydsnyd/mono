@@ -69,6 +69,7 @@ import {
 import {ProcessScheduler} from './process-scheduler.js';
 import {AbortError} from './abort-error.js';
 import {initNewClientChannel} from './new-client-channel.js';
+import {HandlePullResponseResultType} from './sync/pull.js';
 
 export type BeginPullResult = {
   requestID: string;
@@ -1312,7 +1313,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     // DD31 in the first if statement above breaks the type inference.
     const pullResponseOK = pullResponse as PullResponseOK;
 
-    const syncHead = await sync.handlePullResponse(
+    const result = await sync.handlePullResponse(
       lc,
       this._memdag,
       deepFreeze(internalPoke.baseCookie),
@@ -1320,13 +1321,18 @@ export class Replicache<MD extends MutatorDefs = {}> {
       clientID,
     );
 
-    if (syncHead === null) {
-      throw new Error(
-        'unexpected base cookie for poke: ' + JSON.stringify(internalPoke),
-      );
+    switch (result.type) {
+      case HandlePullResponseResultType.Applied:
+        await this._maybeEndPull(result.syncHead, requestID);
+        break;
+      case HandlePullResponseResultType.CookieMismatch:
+        throw new Error(
+          'unexpected base cookie for poke: ' + JSON.stringify(internalPoke),
+        );
+        break;
+      case HandlePullResponseResultType.NoOp:
+        break;
     }
-
-    await this._maybeEndPull(syncHead, requestID);
   }
 
   private async _disableClientGroupAndThrow(): Promise<never> {

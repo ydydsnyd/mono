@@ -34,7 +34,11 @@ import {emptyHash, Hash} from '../hash.js';
 import type {ClientGroupID, ClientID} from './ids.js';
 import {addDiffsForIndexes, DiffComputationConfig, DiffsMap} from './diff.js';
 import {assert, assertObject} from '../asserts.js';
-import {assertSnapshotMetaDD31, commitIsLocalDD31} from '../db/commit.js';
+import {
+  assertSnapshotMetaDD31,
+  commitIsLocalDD31,
+  compareCookies,
+} from '../db/commit.js';
 
 export const PULL_VERSION_SDD = 0;
 export const PULL_VERSION_DD31 = 1;
@@ -207,20 +211,23 @@ export async function beginPullSDD(
     };
   }
 
-  const syncHead = await handlePullResponseSDD(
+  const result = await handlePullResponseSDD(
     lc,
     store,
     baseCookie,
     response,
     clientID,
   );
-  if (syncHead === null) {
+  if (result.type === HandlePullResponseResultType.CookieMismatch) {
     throw new Error('Overlapping sync');
   }
   return {
     httpRequestInfo,
     pullResponse: response,
-    syncHead,
+    syncHead:
+      result.type === HandlePullResponseResultType.Applied
+        ? result.syncHead
+        : emptyHash,
   };
 }
 
@@ -294,20 +301,21 @@ export async function beginPullDD31(
     };
   }
 
-  const syncHead = await handlePullResponseDD31(
+  const result = await handlePullResponseDD31(
     lc,
     store,
     baseCookie,
     response,
     clientID,
   );
-  if (syncHead === null) {
-    throw new Error('Overlapping sync');
-  }
+
   return {
     httpRequestInfo,
     pullResponse: response,
-    syncHead,
+    syncHead:
+      result.type === HandlePullResponseResultType.Applied
+        ? result.syncHead
+        : emptyHash,
   };
 }
 
@@ -318,7 +326,7 @@ export async function handlePullResponseSDD(
   expectedBaseCookie: ReadonlyJSONValue,
   response: PullResponseOK,
   clientID: ClientID,
-): Promise<Hash | null> {
+): Promise<HandlePullResponseResult> {
   // It is possible that another sync completed while we were pulling. Ensure
   // that is not the case by re-checking the base snapshot.
   return await store.withWrite(async dagWrite => {
@@ -339,7 +347,9 @@ export async function handlePullResponseSDD(
     // is quite right. We need to firm up under what conditions we will/not accept an
     // update from the server: https://github.com/rocicorp/replicache/issues/713.
     if (!deepEqual(expectedBaseCookie, baseCookie)) {
-      return null;
+      return {
+        type: HandlePullResponseResultType.CookieMismatch,
+      };
     }
 
     // If other entities (eg, other clients) are modifying the client view
@@ -347,7 +357,11 @@ export async function handlePullResponseSDD(
     // So be careful here to reject only a lesser lastMutationID.
     if (response.lastMutationID < baseLastMutationID) {
       throw new Error(
-        `Received lastMutationID ${response.lastMutationID} is < than last snapshot lastMutationID ${baseLastMutationID}; ignoring client view`,
+        badOrderMessage(
+          `lastMutationID`,
+          response.lastMutationID,
+          baseLastMutationID,
+        ),
       );
     }
 
@@ -361,7 +375,9 @@ export async function handlePullResponseSDD(
       response.lastMutationID === baseLastMutationID &&
       deepEqual(frozenCookie, baseCookie)
     ) {
-      return emptyHash;
+      return {
+        type: HandlePullResponseResultType.NoOp,
+      };
     }
 
     // We are going to need to adjust the indexes. Imagine we have just pulled:
@@ -421,9 +437,29 @@ export async function handlePullResponseSDD(
       );
     }
 
-    return await dbWrite.commit(SYNC_HEAD_NAME);
+    return {
+      type: HandlePullResponseResultType.Applied,
+      syncHead: await dbWrite.commit(SYNC_HEAD_NAME),
+    };
   });
 }
+
+export enum HandlePullResponseResultType {
+  Applied,
+  NoOp,
+  CookieMismatch,
+}
+
+export type HandlePullResponseResult =
+  | {
+      type: HandlePullResponseResultType.Applied;
+      syncHead: Hash;
+    }
+  | {
+      type:
+        | HandlePullResponseResultType.NoOp
+        | HandlePullResponseResultType.CookieMismatch;
+    };
 
 export function handlePullResponse(
   lc: LogContext,
@@ -431,7 +467,7 @@ export function handlePullResponse(
   expectedBaseCookie: FrozenJSONValue,
   response: PullResponseOKDD31 | PullResponseOKSDD,
   clientID: ClientID,
-): Promise<Hash | null> {
+): Promise<HandlePullResponseResult> {
   if (DD31) {
     assertPullResponseDD31(response);
     return handlePullResponseDD31(
@@ -452,13 +488,21 @@ export function handlePullResponse(
   );
 }
 
+function badOrderMessage(
+  name: string,
+  receivedValue: unknown,
+  lastSnapshotValue: unknown,
+) {
+  return `Received ${name} ${receivedValue} is < than last snapshot ${name} ${lastSnapshotValue}; ignoring client view`;
+}
+
 export async function handlePullResponseDD31(
   lc: LogContext,
   store: dag.Store,
   expectedBaseCookie: FrozenJSONValue,
   response: PullResponseOKDD31,
   clientID: ClientID,
-): Promise<Hash | null> {
+): Promise<HandlePullResponseResult> {
   // It is possible that another sync completed while we were pulling. Ensure
   // that is not the case by re-checking the base snapshot.
   return await store.withWrite(async dagWrite => {
@@ -472,13 +516,18 @@ export async function handlePullResponseDD31(
     assertSnapshotMetaDD31(baseSnapshotMeta);
     const baseCookie = baseSnapshotMeta.cookieJSON;
 
-    // TODO(MP) Here we are using whether the cookie has changes as a proxy for whether
+    // TODO(MP) Here we are using whether the cookie has changed as a proxy for whether
     // the base snapshot changed, which is the check we used to do. I don't think this
     // is quite right. We need to firm up under what conditions we will/not accept an
     // update from the server: https://github.com/rocicorp/replicache/issues/713.
+    // In DD31 this is expected to happen if a refresh occurs during a pull.
     if (!deepEqual(expectedBaseCookie, baseCookie)) {
-      lc.debug?.('handlePullResponse: cookie mismatch');
-      return null;
+      lc.debug?.(
+        'handlePullResponse: cookie mismatch, pull response is not applicable',
+      );
+      return {
+        type: HandlePullResponseResultType.CookieMismatch,
+      };
     }
 
     // Check that the lastMutationIDs are not going backwards.
@@ -488,31 +537,42 @@ export async function handlePullResponseDD31(
       const lastMutationID = baseSnapshotMeta.lastMutationIDs[clientID];
       if (lastMutationID !== undefined && lmidChange < lastMutationID) {
         throw new Error(
-          `Received lastMutationID ${lmidChange} is < than last snapshot lastMutationID ${lastMutationID}; ignoring client view`,
+          badOrderMessage(
+            `${clientID} lastMutationID`,
+            lmidChange,
+            lastMutationID,
+          ),
         );
       }
     }
 
-    const frozenCookie = deepFreeze(response.cookie);
+    const frozenResponseCookie = deepFreeze(response.cookie);
+    if (compareCookies(frozenResponseCookie, baseCookie) < 0) {
+      throw new Error(
+        badOrderMessage('cookie', frozenResponseCookie, baseCookie),
+      );
+    }
 
-    // If there is no patch and there are no lmid changes and cookie doesn't
-    // change, it's a nop. Otherwise, something changed (maybe just the cookie)
-    // and we will write a new commit.
     if (
       response.patch.length === 0 &&
-      deepEqual(frozenCookie, baseCookie) &&
+      deepEqual(frozenResponseCookie, baseCookie) &&
       !anyMutationsToApply(
         response.lastMutationIDChanges,
         baseSnapshotMeta.lastMutationIDs,
       )
     ) {
-      return emptyHash;
+      // If there is no patch and there are no lmid changes and cookie doesn't
+      // change, it's a nop. Otherwise, something changed (maybe just the cookie)
+      // and we will write a new commit.
+      return {
+        type: HandlePullResponseResultType.NoOp,
+      };
     }
 
     const dbWrite = await db.newWriteSnapshotDD31(
       db.whenceHash(baseSnapshot.chunk.hash),
       {...baseSnapshotMeta.lastMutationIDs, ...response.lastMutationIDChanges},
-      frozenCookie,
+      frozenResponseCookie,
       dagWrite,
       db.readIndexesForWrite(baseSnapshot, dagWrite),
       clientID,
@@ -520,7 +580,10 @@ export async function handlePullResponseDD31(
 
     await patch.apply(lc, dbWrite, response.patch);
 
-    return await dbWrite.commit(SYNC_HEAD_NAME);
+    return {
+      type: HandlePullResponseResultType.Applied,
+      syncHead: await dbWrite.commit(SYNC_HEAD_NAME),
+    };
   });
 }
 

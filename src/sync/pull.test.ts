@@ -34,8 +34,9 @@ import {
   PullRequestDD31,
   PULL_VERSION_DD31,
   PULL_VERSION_SDD,
+  HandlePullResponseResultType,
 } from './pull.js';
-import {assertHash, emptyHash, Hash, parse as parseHash} from '../hash.js';
+import {assertHash, emptyHash} from '../hash.js';
 import {stringCompare} from '../string-compare.js';
 import {asyncIterableToArray} from '../async-iterable-to-array.js';
 import {
@@ -570,10 +571,11 @@ test('begin try pull DD31', async () => {
 
   const clientID = 'test_client_id';
   const clientGroupID = 'test_client_group_id';
+  const baseCookie = 'cookie_1';
   const store = new dag.TestStore();
   const b = new ChainBuilder(store);
   await b.addGenesis(clientID);
-  await b.addSnapshot([['foo', '"bar"']], clientID, undefined, undefined, {
+  await b.addSnapshot([['foo', '"bar"']], clientID, baseCookie, undefined, {
     '2': {prefix: 'local', jsonPointer: '', allowEmpty: false},
   });
   // chain[2] is an index change
@@ -586,7 +588,6 @@ test('begin try pull DD31', async () => {
   );
 
   const baseLastMutationID = parts[0];
-  const baseCookie = deepFreeze(parts[1]);
   const baseValueMap = new Map([['foo', '"bar"']]);
 
   const requestID = 'requestID';
@@ -603,7 +604,7 @@ test('begin try pull DD31', async () => {
   // lastMutationID. Tests can clone it and override those
   // fields they wish to change. This minimizes test changes required
   // when PullResponse changes.
-  const newCookie = 'newCookie';
+  const newCookie = 'cookie_2';
   const goodPullResp: PullResponseDD31 = {
     cookie: newCookie,
     lastMutationIDChanges: {[clientID]: 10},
@@ -898,23 +899,29 @@ test('begin try pull DD31', async () => {
       },
       expNewSyncHead: undefined,
       expBeginPullResult:
-        'Received lastMutationID 0 is < than last snapshot lastMutationID 1; ignoring client view',
+        'Received test_client_id lastMutationID 0 is < than last snapshot test_client_id lastMutationID 1; ignoring client view',
+    },
+    {
+      name: 'pulls new state w/lesser cookie -> beginPull errors',
+      numPendingMutations: 0,
+      pullResult: {
+        ...goodPullResp,
+        cookie: 'cookie_0',
+      },
+      expNewSyncHead: undefined,
+      expBeginPullResult:
+        'Received cookie cookie_0 is < than last snapshot cookie cookie_1; ignoring client view',
     },
     {
       name: 'pulls new state with identical client-lmid-changes in response (identical cookie and no patch)',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
-        cookie: 'cookie-x',
+        cookie: 'cookie_1',
         patch: [],
         lastMutationIDChanges: {[clientID]: 1},
       },
-      expNewSyncHead: {
-        cookie: 'cookie-x',
-        lastMutationID: 1,
-        valueMap: baseValueMap,
-        indexes: ['2'],
-      },
+      expNewSyncHead: undefined,
       expBeginPullResult: {
         httpRequestInfo: goodHttpRequestInfo,
         syncHead: emptyHash,
@@ -925,16 +932,11 @@ test('begin try pull DD31', async () => {
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
-        cookie: 'cookie-x',
+        cookie: 'cookie_1',
         patch: [],
         lastMutationIDChanges: {},
       },
-      expNewSyncHead: {
-        cookie: 'cookie-x',
-        lastMutationID: 1,
-        valueMap: baseValueMap,
-        indexes: ['2'],
-      },
+      expNewSyncHead: undefined,
       expBeginPullResult: {
         httpRequestInfo: goodHttpRequestInfo,
         syncHead: emptyHash,
@@ -2033,7 +2035,7 @@ suite('handlePullResponseDD31', () => {
   async function t({
     expectedBaseCookieJSON,
     responseCookie,
-    expectedResult,
+    expectedResultType,
     setupChain,
     responseLastMutationIDChanges = {},
     responsePatch = [],
@@ -2043,7 +2045,7 @@ suite('handlePullResponseDD31', () => {
   }: {
     expectedBaseCookieJSON: ReadonlyJSONValue;
     responseCookie: ReadonlyJSONValue;
-    expectedResult: Hash | null;
+    expectedResultType: HandlePullResponseResultType;
     setupChain?: (b: ChainBuilder) => Promise<unknown>;
     responseLastMutationIDChanges?: {[clientID: string]: number};
     responsePatch?: PatchOperation[];
@@ -2073,13 +2075,12 @@ suite('handlePullResponseDD31', () => {
       clientID1,
     );
 
-    if (expectedResult === null || expectedResult === emptyHash) {
-      expect(result).equal(expectedResult);
-    } else {
-      assertHash(result);
+    expect(result.type).to.equal(expectedResultType);
+    if (result.type === HandlePullResponseResultType.Applied) {
+      assertHash(result.syncHead);
 
       await store.withRead(async dagRead => {
-        const head = await db.commitFromHash(result, dagRead);
+        const head = await db.commitFromHash(result.syncHead, dagRead);
         assertSnapshotCommitDD31(head);
         expect(head.chunk.data.meta.lastMutationIDs).to.deep.equal(
           expectedLastMutationIDs,
@@ -2103,11 +2104,11 @@ suite('handlePullResponseDD31', () => {
     }
   }
 
-  test('If base cookie does not match we get null', async () => {
+  test('If base cookie does not match we get emptyHash', async () => {
     await t({
       expectedBaseCookieJSON: 1,
       responseCookie: 2,
-      expectedResult: null,
+      expectedResultType: HandlePullResponseResultType.CookieMismatch,
     });
   });
 
@@ -2115,7 +2116,7 @@ suite('handlePullResponseDD31', () => {
     await t({
       expectedBaseCookieJSON: 1,
       responseCookie: 1,
-      expectedResult: emptyHash,
+      expectedResultType: HandlePullResponseResultType.NoOp,
       setupChain: b => b.addSnapshot([], clientID1, 1, {}),
     });
   });
@@ -2124,19 +2125,19 @@ suite('handlePullResponseDD31', () => {
     await t({
       expectedBaseCookieJSON: 1,
       responseCookie: 1,
-      expectedResult: emptyHash,
+      expectedResultType: HandlePullResponseResultType.NoOp,
       setupChain: b => b.addSnapshot([], clientID1, 1, {[clientID1]: 10}),
     });
     await t({
       expectedBaseCookieJSON: 1,
       responseCookie: 1,
-      expectedResult: emptyHash,
+      expectedResultType: HandlePullResponseResultType.NoOp,
       setupChain: b => b.addSnapshot([], clientID1, 1, {[clientID2]: 20}),
     });
     await t({
       expectedBaseCookieJSON: 1,
       responseCookie: 1,
-      expectedResult: emptyHash,
+      expectedResultType: HandlePullResponseResultType.NoOp,
       setupChain: b =>
         b.addSnapshot([], clientID1, 1, {
           [clientID1]: 10,
@@ -2146,25 +2147,24 @@ suite('handlePullResponseDD31', () => {
   });
 
   test('change in cookie', async () => {
-    const expectedNewHash = parseHash('face0000-0000-4000-8000-000000000003');
     await t({
       expectedBaseCookieJSON: 1,
       responseCookie: 2,
-      expectedResult: expectedNewHash,
+      expectedResultType: HandlePullResponseResultType.Applied,
       setupChain: b => b.addSnapshot([], clientID1, 1, {[clientID1]: 10}),
       responseLastMutationIDChanges: {[clientID1]: 10},
     });
     await t({
       expectedBaseCookieJSON: 1,
       responseCookie: 2,
-      expectedResult: expectedNewHash,
+      expectedResultType: HandlePullResponseResultType.Applied,
       setupChain: b => b.addSnapshot([], clientID1, 1, {[clientID2]: 20}),
       responseLastMutationIDChanges: {[clientID2]: 20},
     });
     await t({
       expectedBaseCookieJSON: 1,
       responseCookie: 2,
-      expectedResult: expectedNewHash,
+      expectedResultType: HandlePullResponseResultType.Applied,
       setupChain: b =>
         b.addSnapshot([], clientID1, 1, {
           [clientID1]: 10,
@@ -2177,7 +2177,7 @@ suite('handlePullResponseDD31', () => {
     await t({
       expectedBaseCookieJSON: 1,
       responseCookie: 2,
-      expectedResult: expectedNewHash,
+      expectedResultType: HandlePullResponseResultType.Applied,
       setupChain: b =>
         b.addSnapshot([], clientID1, 1, {
           [clientID1]: 10,
@@ -2190,7 +2190,7 @@ suite('handlePullResponseDD31', () => {
     await t({
       expectedBaseCookieJSON: 1,
       responseCookie: 2,
-      expectedResult: expectedNewHash,
+      expectedResultType: HandlePullResponseResultType.Applied,
       setupChain: b =>
         b.addSnapshot([], clientID1, 1, {
           [clientID1]: 10,
@@ -2203,7 +2203,7 @@ suite('handlePullResponseDD31', () => {
     await t({
       expectedBaseCookieJSON: 1,
       responseCookie: 2,
-      expectedResult: expectedNewHash,
+      expectedResultType: HandlePullResponseResultType.Applied,
       setupChain: b =>
         b.addSnapshot([], clientID1, 1, {
           [clientID1]: 10,
@@ -2215,7 +2215,7 @@ suite('handlePullResponseDD31', () => {
     await t({
       expectedBaseCookieJSON: 1,
       responseCookie: 2,
-      expectedResult: expectedNewHash,
+      expectedResultType: HandlePullResponseResultType.Applied,
       setupChain: async b => {
         await b.addSnapshot([], clientID1, 1, {
           [clientID1]: 10,
@@ -2229,11 +2229,10 @@ suite('handlePullResponseDD31', () => {
   });
 
   test('apply patch', async () => {
-    const expectedNewHash = parseHash('face0000-0000-4000-8000-000000000003');
     await t({
       expectedBaseCookieJSON: 1,
       responseCookie: 2,
-      expectedResult: expectedNewHash,
+      expectedResultType: HandlePullResponseResultType.Applied,
       setupChain: b => b.addSnapshot([], clientID1, 1, {[clientID1]: 10}),
       responseLastMutationIDChanges: {[clientID1]: 10},
       responsePatch: [
@@ -2249,7 +2248,7 @@ suite('handlePullResponseDD31', () => {
     await t({
       expectedBaseCookieJSON: 1,
       responseCookie: 2,
-      expectedResult: expectedNewHash,
+      expectedResultType: HandlePullResponseResultType.Applied,
       setupChain: async b => {
         await b.addSnapshot([], clientID1, 1, {[clientID1]: 10});
         await b.addLocal(clientID1, [['b', 1]]);
@@ -2267,11 +2266,10 @@ suite('handlePullResponseDD31', () => {
   });
 
   test('indexes do not include local commits', async () => {
-    const expectedNewHash = parseHash('face0000-0000-4000-8000-000000000003');
     await t({
       expectedBaseCookieJSON: 1,
       responseCookie: 2,
-      expectedResult: expectedNewHash,
+      expectedResultType: HandlePullResponseResultType.Applied,
       setupChain: b =>
         b.addSnapshot(
           [],
@@ -2303,7 +2301,7 @@ suite('handlePullResponseDD31', () => {
     await t({
       expectedBaseCookieJSON: 1,
       responseCookie: 2,
-      expectedResult: expectedNewHash,
+      expectedResultType: HandlePullResponseResultType.Applied,
       setupChain: async b => {
         await b.addSnapshot(
           [],
