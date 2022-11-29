@@ -6,7 +6,6 @@ import {Pusher, PushError} from './pusher.js';
 import {
   assertPullResponseDD31,
   assertPullResponseSDD,
-  isClientStateNotFoundResponse,
   Puller,
   PullError,
   PullResponse,
@@ -70,6 +69,11 @@ import {ProcessScheduler} from './process-scheduler.js';
 import {AbortError} from './abort-error.js';
 import {initNewClientChannel} from './new-client-channel.js';
 import {HandlePullResponseResultType} from './sync/pull.js';
+import {
+  isClientStateNotFoundResponse,
+  isVersionNotSupportedResponse,
+  VersionNotSupportedResponse,
+} from './error-responses.js';
 
 export type BeginPullResult = {
   requestID: string;
@@ -233,7 +237,7 @@ export type UpdateNeededReason =
     }
   | {
       type: 'VersionNotSupported';
-      versionType: 'push' | 'pull' | 'schema';
+      versionType?: 'push' | 'pull' | 'schema' | undefined;
     };
 
 const updateNeededReasonNewClientGroup: UpdateNeededReason = {
@@ -1236,7 +1240,9 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
       const {response, httpRequestInfo} = pusherResult;
 
-      if (isClientStateNotFoundResponse(response)) {
+      if (isVersionNotSupportedResponse(response)) {
+        this._handleVersionNotSupportedResponse(response);
+      } else if (isClientStateNotFoundResponse(response)) {
         if (DD31) {
           await this._disableClientGroupAndThrow();
           // unreachable
@@ -1249,6 +1255,18 @@ export class Replicache<MD extends MutatorDefs = {}> {
       // pending mutations.
       return httpRequestInfo.httpStatusCode === 200;
     }, 'Push');
+  }
+
+  private _handleVersionNotSupportedResponse(
+    response: VersionNotSupportedResponse,
+  ) {
+    const reason: UpdateNeededReason = {
+      type: response.error,
+    };
+    if (response.versionType) {
+      reason.versionType = response.versionType;
+    }
+    this._fireOnUpdateNeeded(reason);
   }
 
   /**
@@ -1299,6 +1317,11 @@ export class Replicache<MD extends MutatorDefs = {}> {
       .addContext('request_id', requestID);
 
     const {pullResponse} = internalPoke;
+
+    if (isVersionNotSupportedResponse(pullResponse)) {
+      this._handleVersionNotSupportedResponse(pullResponse);
+      return;
+    }
 
     if (isClientStateNotFoundResponse(pullResponse)) {
       if (DD31) {
@@ -1382,7 +1405,10 @@ export class Replicache<MD extends MutatorDefs = {}> {
       () => this._changeSyncCounters(0, 1),
     );
 
-    if (isClientStateNotFoundResponse(beginPullResponse.pullResponse)) {
+    const {pullResponse} = beginPullResponse;
+    if (isVersionNotSupportedResponse(pullResponse)) {
+      this._handleVersionNotSupportedResponse(pullResponse);
+    } else if (isClientStateNotFoundResponse(beginPullResponse.pullResponse)) {
       if (DD31) {
         await this._disableClientGroupAndThrow();
         // unreachable

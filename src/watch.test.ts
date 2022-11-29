@@ -1,4 +1,5 @@
 import {
+  disableAllBackgroundProcesses,
   initReplicacheTesting,
   replicacheForTesting,
   tickAFewTimes,
@@ -146,8 +147,9 @@ test('watch with prefix', async () => {
 });
 
 test('watch and initial callback with no data', async () => {
-  const rep = await replicacheForTesting('watch', {
+  const rep = await replicacheForTesting('watch-no-data', {
     mutators: {addData, del: (tx, key) => tx.del(key)},
+    ...disableAllBackgroundProcesses,
   });
 
   const spy = sinon.spy();
@@ -161,8 +163,9 @@ test('watch and initial callback with no data', async () => {
 });
 
 test('watch and initial callback with data', async () => {
-  const rep = await replicacheForTesting('watch', {
+  const rep = await replicacheForTesting('watch-with-data', {
     mutators: {addData, del: (tx, key) => tx.del(key)},
+    ...disableAllBackgroundProcesses,
   });
 
   await rep.mutate.addData({a: 1, b: 2});
@@ -393,9 +396,7 @@ test('watch with index and initial callback with no data', async () => {
   const rep = await replicacheForTesting('watch-with-index-initial-no-data', {
     mutators: {addData, del: (tx, key) => tx.del(key)},
     indexes: {id1: {jsonPointer: '/id'}},
-    enableMutationRecovery: false,
-    enableRefresh: false,
-    enableScheduledPersist: false,
+    ...disableAllBackgroundProcesses,
   });
 
   const spy = sinon.spy();

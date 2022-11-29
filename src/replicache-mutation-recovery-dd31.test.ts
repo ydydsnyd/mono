@@ -3,6 +3,7 @@ import {
   replicacheForTesting,
   tickAFewTimes,
   clock,
+  disableAllBackgroundProcesses,
 } from './test-util.js';
 import {
   MutatorDefs,
@@ -47,6 +48,7 @@ import {
   createPerdag,
 } from './replicache-mutation-recovery.test.js';
 import {stringCompare} from './string-compare.js';
+import type {PushResponse} from './pusher.js';
 
 async function createAndPersistClientWithPendingLocalDD31(
   clientID: sync.ClientID,
@@ -127,6 +129,8 @@ suite('DD31', () => {
     schemaVersionOfClientWPendingMutations: string;
     schemaVersionOfClientRecoveringMutations: string;
     numMutationsNotAcknowledgedByPull?: number;
+    pullResponse?: PullResponseDD31 | undefined;
+    pushResponse?: PushResponse | undefined;
   }) {
     sinon.stub(console, 'error');
 
@@ -134,6 +138,8 @@ suite('DD31', () => {
       schemaVersionOfClientWPendingMutations,
       schemaVersionOfClientRecoveringMutations,
       numMutationsNotAcknowledgedByPull = 0,
+      pullResponse: pullResponseArg,
+      pushResponse,
     } = args;
     const client1ID = 'client1';
     const auth = '1';
@@ -181,10 +187,10 @@ suite('DD31', () => {
     assert(clientGroup1);
 
     fetchMock.reset();
-    fetchMock.post(pushURL, 'ok');
+    fetchMock.post(pushURL, pushResponse ?? 'ok');
     const pullLastMutationID =
       clientGroup1.mutationIDs[client1ID] - numMutationsNotAcknowledgedByPull;
-    const pullResponse: PullResponseDD31 = {
+    const pullResponse: PullResponseDD31 = pullResponseArg ?? {
       cookie: 'pull_cookie_1',
       lastMutationIDChanges: {
         [client1ID]: pullLastMutationID,
@@ -223,16 +229,21 @@ suite('DD31', () => {
     });
 
     const pullCalls = fetchMock.calls(pullURL);
-    expect(pullCalls.length).to.equal(1);
-    const pullReq: PullRequestDD31 = {
-      profileID,
-      clientGroupID: client1.clientGroupID,
-      cookie: 1,
-      isNewClientGroup: false,
-      pullVersion: PULL_VERSION_DD31,
-      schemaVersion: schemaVersionOfClientWPendingMutations,
-    };
-    expect(await pullCalls[0].request.json()).to.deep.equal(pullReq);
+
+    if (pushResponse && pushResponse.error) {
+      expect(pullCalls.length).to.equal(0);
+    } else {
+      expect(pullCalls.length).to.equal(1);
+      const pullReq: PullRequestDD31 = {
+        profileID,
+        clientGroupID: client1.clientGroupID,
+        cookie: 1,
+        isNewClientGroup: false,
+        pullVersion: PULL_VERSION_DD31,
+        schemaVersion: schemaVersionOfClientWPendingMutations,
+      };
+      expect(await pullCalls[0].request.json()).to.deep.equal(pullReq);
+    }
 
     const updatedClient1 = await testPerdag.withRead(read =>
       persist.getClient(client1ID, read),
@@ -247,9 +258,15 @@ suite('DD31', () => {
     );
 
     assert(updatedClientGroup1);
-    expect(updatedClientGroup1.lastServerAckdMutationIDs).to.deep.equal({
-      [client1ID]: pullLastMutationID,
-    });
+    if ('error' in pullResponse || (pushResponse && 'error' in pushResponse)) {
+      expect(updatedClientGroup1.lastServerAckdMutationIDs).to.deep.equal({
+        [client1ID]: 1, // not acknowledged because pull failed
+      });
+    } else {
+      expect(updatedClientGroup1.lastServerAckdMutationIDs).to.deep.equal({
+        [client1ID]: pullLastMutationID,
+      });
+    }
     expect(updatedClientGroup1.mutationIDs).to.deep.equal({
       [client1ID]: clientGroup1.mutationIDs[client1ID],
     });
@@ -274,6 +291,42 @@ suite('DD31', () => {
       schemaVersionOfClientWPendingMutations: 'testSchema1',
       schemaVersionOfClientRecoveringMutations: 'testSchema1',
       numMutationsNotAcknowledgedByPull: 1,
+    });
+  });
+
+  test('Pull returns VersionNotSupported', async () => {
+    await testRecoveringMutationsOfClientDD31({
+      schemaVersionOfClientWPendingMutations: 'testSchema1',
+      schemaVersionOfClientRecoveringMutations: 'testSchema1',
+      numMutationsNotAcknowledgedByPull: 1,
+      pullResponse: {error: 'VersionNotSupported', versionType: 'pull'},
+    });
+  });
+
+  test('Pull returns ClientStateNotFound', async () => {
+    await testRecoveringMutationsOfClientDD31({
+      schemaVersionOfClientWPendingMutations: 'testSchema1',
+      schemaVersionOfClientRecoveringMutations: 'testSchema1',
+      numMutationsNotAcknowledgedByPull: 1,
+      pullResponse: {error: 'ClientStateNotFound'},
+    });
+  });
+
+  test('Push returns VersionNotSupported', async () => {
+    await testRecoveringMutationsOfClientDD31({
+      schemaVersionOfClientWPendingMutations: 'testSchema1',
+      schemaVersionOfClientRecoveringMutations: 'testSchema1',
+      numMutationsNotAcknowledgedByPull: 1,
+      pushResponse: {error: 'VersionNotSupported', versionType: 'pull'},
+    });
+  });
+
+  test('Push returns ClientStateNotFound', async () => {
+    await testRecoveringMutationsOfClientDD31({
+      schemaVersionOfClientWPendingMutations: 'testSchema1',
+      schemaVersionOfClientRecoveringMutations: 'testSchema1',
+      numMutationsNotAcknowledgedByPull: 1,
+      pushResponse: {error: 'ClientStateNotFound'},
     });
   });
 
@@ -1408,7 +1461,7 @@ suite('DD31', () => {
   test('mutation recovery returns early when internal option enableMutationRecovery is false', async () => {
     const rep = await replicacheForTesting('mutation-recovery-startup', {
       pullURL: 'https://diff.com/pull',
-      enableMutationRecovery: false,
+      ...disableAllBackgroundProcesses,
     });
     expect(rep.recoverMutationsSpy.callCount).to.equal(1);
     expect(await rep.recoverMutationsSpy.firstCall.returnValue).to.equal(false);

@@ -1,5 +1,4 @@
 import {
-  assert,
   assertArray,
   assertNumber,
   assertObject,
@@ -9,6 +8,12 @@ import {httpRequest} from './http-request.js';
 import {assertJSONValue, ReadonlyJSONValue} from './json.js';
 import type {HTTPRequestInfo} from './http-request-info.js';
 import type {ClientID} from './sync/ids.js';
+import {
+  ClientStateNotFoundResponse,
+  isClientStateNotFoundResponse,
+  isVersionNotSupportedResponse,
+  VersionNotSupportedResponse,
+} from './error-responses.js';
 
 export type PullerResult = {
   response?: PullResponse | undefined;
@@ -59,19 +64,13 @@ export type PullResponseOKDD31 = {
 };
 
 /**
- * In certain scenarios the server can signal that it does not know about the
- * client. For example, the server might have lost all of its state (this might
- * happen during the development of the server).
- */
-export type ClientStateNotFoundResponse = {
-  error: 'ClientStateNotFound';
-};
-
-/**
  * PullResponse defines the shape and type of the response of a pull. This is
  * the JSON you should return from your pull server endpoint.
  */
-export type PullResponse = PullResponseOK | ClientStateNotFoundResponse;
+export type PullResponse =
+  | PullResponseOK
+  | ClientStateNotFoundResponse
+  | VersionNotSupportedResponse;
 
 export type {PullResponse as PullResponseSDD};
 
@@ -79,39 +78,16 @@ export type {PullResponse as PullResponseSDD};
  * PullResponse defines the shape and type of the response of a pull. This is
  * the JSON you should return from your pull server endpoint.
  */
-export type PullResponseDD31 = PullResponseOKDD31 | ClientStateNotFoundResponse;
-
-function isError(obj: unknown, type: string): boolean {
-  return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    (obj as {error: unknown}).error === type
-  );
-}
-
-type ErrorResponse = {error: string};
-
-export function isErrorResponse(obj: object): obj is ErrorResponse {
-  return typeof (obj as {error: unknown}).error === 'string';
-}
-
-export function isClientStateNotFoundResponse(
-  v: unknown,
-): v is ClientStateNotFoundResponse {
-  return isError(v, 'ClientStateNotFound');
-}
-
-export function assertClientStateNotFoundResponse(
-  v: unknown,
-): asserts v is ClientStateNotFoundResponse {
-  assert(isClientStateNotFoundResponse(v));
-}
+export type PullResponseDD31 =
+  | PullResponseOKDD31
+  | ClientStateNotFoundResponse
+  | VersionNotSupportedResponse;
 
 export function assertPullResponseSDD(v: unknown): asserts v is PullResponse {
   if (typeof v !== 'object' || v === null) {
     throw new Error('PullResponse must be an object');
   }
-  if (isClientStateNotFoundResponse(v)) {
+  if (isClientStateNotFoundResponse(v) || isVersionNotSupportedResponse(v)) {
     return;
   }
   const v2 = v as Partial<PullResponseOK>;
@@ -128,7 +104,7 @@ export function assertPullResponseDD31(
   if (typeof v !== 'object' || v === null) {
     throw new Error('PullResponseDD31 must be an object');
   }
-  if (isErrorResponse(v)) {
+  if (isClientStateNotFoundResponse(v) || isVersionNotSupportedResponse(v)) {
     return;
   }
   const v2 = v as Partial<PullResponseOKDD31>;

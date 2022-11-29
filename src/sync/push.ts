@@ -1,10 +1,7 @@
 import type {LogContext} from '@rocicorp/logger';
 import * as db from '../db/mod.js';
 import type * as dag from '../dag/mod.js';
-import {
-  assertHTTPRequestInfo,
-  isHTTPRequestInfo,
-} from '../http-request-info.js';
+import {isHTTPRequestInfo} from '../http-request-info.js';
 import {
   assertPusherResult,
   Pusher,
@@ -14,7 +11,7 @@ import {
 import {callJSRequest} from './js-request.js';
 import {toError} from '../to-error.js';
 import {commitIsLocalDD31, commitIsLocalSDD} from '../db/commit.js';
-import {assert, unreachable} from '../asserts.js';
+import {assert} from '../asserts.js';
 import type {ClientGroupID} from './client-group-id.js';
 import type {ClientID} from './ids.js';
 import type {FrozenJSONValue, ReadonlyJSONValue} from '../json.js';
@@ -169,7 +166,6 @@ export async function push(
     pushReq,
     auth,
     requestID,
-    pushVersion,
   );
   lc.debug?.('...Push complete in ', Date.now() - pushStart, 'ms');
   return pusherResult;
@@ -181,23 +177,14 @@ async function callPusher(
   body: PushRequestSDD | PushRequestDD31,
   auth: string,
   requestID: string,
-  pushVersion: typeof PUSH_VERSION_SDD | typeof PUSH_VERSION_DD31,
 ): Promise<PusherResult> {
   try {
     const res = await callJSRequest(pusher, url, body, auth, requestID);
-
+    // For SDD we only supported returning a HTTPRequestInfo but with DD31 we
+    // support PushResult | HTTPRequestInfo.
     if (isHTTPRequestInfo(res)) {
       return {httpRequestInfo: res};
     }
-
-    if (pushVersion === PUSH_VERSION_SDD) {
-      // For SDD we only accepted HTTPRequestInfo so we are going to fail here.
-      assertHTTPRequestInfo(res);
-      unreachable();
-    }
-
-    // For DD31 pusher can either return an HTTPRequestInfo or a PusherResult so
-    // this must now be a PusherResult.
     assertPusherResult(res);
     return res;
   } catch (e) {

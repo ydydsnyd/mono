@@ -45,11 +45,14 @@ export type {
   Puller,
   PullResponse,
   PullResponseOK,
-  ClientStateNotFoundResponse,
   PullerResult,
   PullError,
 } from './puller.js';
 export type {Pusher, PushError, PusherResult, PushResponse} from './pusher.js';
+export type {
+  ClientStateNotFoundResponse,
+  VersionNotSupportedResponse,
+} from './error-responses.js';
 
 export type {
   Store as ExperimentalKVStore,

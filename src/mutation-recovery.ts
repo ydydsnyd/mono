@@ -1,6 +1,5 @@
 import type {LogContext} from '@rocicorp/logger';
-import {
-  isClientStateNotFoundResponse,
+import type {
   Puller,
   PullerDD31,
   PullResponseDD31,
@@ -25,6 +24,10 @@ import type {ClientID} from './sync/client-id.js';
 import type {Pusher} from './pusher.js';
 import type {ClientGroupID} from './sync/client-group-id.js';
 import {PUSH_VERSION_DD31, PUSH_VERSION_SDD} from './sync/push.js';
+import {
+  isClientStateNotFoundResponse,
+  isVersionNotSupportedResponse,
+} from './error-responses.js';
 
 const MUTATION_RECOVERY_LAZY_STORE_SOURCE_CHUNK_CACHE_SIZE_LIMIT = 10 * 2 ** 20; // 10 MB
 
@@ -309,6 +312,10 @@ async function recoverMutationsOfClientSDD(
           `Client ${selfClientID} cannot recover mutations for client ` +
             `${clientID}. The client no longer exists on the server.`,
         );
+      } else if (isVersionNotSupportedResponse(pullResponse)) {
+        lc.debug?.(
+          `Version is not supported on the server. versionType: ${pullResponse.versionType}. Cannot recover mutations for client ${clientID}.`,
+        );
       } else {
         lc.debug?.(
           `Client ${selfClientID} recovered mutations for client ` +
@@ -337,7 +344,13 @@ async function recoverMutationsOfClientSDD(
         return newClients;
       };
 
-      if (isClientStateNotFoundResponse(pullResponse)) {
+      if (
+        isClientStateNotFoundResponse(pullResponse) ||
+        // Even though SDD did not have VersionNotSupported we can still get
+        // this if the server was upgraded to handle this. It seems better to
+        // delete the client at this point.
+        isVersionNotSupportedResponse(pullResponse)
+      ) {
         const newClients = new Map(clients);
         newClients.delete(clientID);
         return await setNewClients(newClients);
@@ -594,10 +607,19 @@ async function recoverMutationsOfClientGroupDD31(
         return false;
       }
 
-      if (isClientStateNotFoundResponse(pusherResult.response)) {
-        lc.debug?.(
-          `Client group ${clientGroupID} is unknown on the server. Marking it as disabled.`,
-        );
+      if (
+        isClientStateNotFoundResponse(pusherResult.response) ||
+        isVersionNotSupportedResponse(pusherResult.response)
+      ) {
+        if (isClientStateNotFoundResponse(pusherResult.response)) {
+          lc.debug?.(
+            `Client group ${clientGroupID} is unknown on the server. Marking it as disabled.`,
+          );
+        } else {
+          lc.debug?.(
+            `Push does not support the pushVersion/schemaVersion of group ${clientGroupID}. Marking it as disabled.`,
+          );
+        }
         await dagForOtherClientGroup.withWrite(write =>
           persist.disableClientGroup(clientGroupID, write),
         );
@@ -677,6 +699,10 @@ async function recoverMutationsOfClientGroupDD31(
         lc.debug?.(
           `Client group ${selfClientGroupID} cannot recover mutations for client group ${clientGroupID}. The client group us unknown on the server.`,
         );
+      } else if (isVersionNotSupportedResponse(pullResponse)) {
+        lc.debug?.(
+          `Version is not supported on the server. versionType: ${pullResponse.versionType}. Cannot recover mutations for client group ${clientGroupID}.`,
+        );
       } else {
         lc.debug?.(
           `Client group ${selfClientGroupID} recovered mutations for client group ${clientGroupID}.  Details`,
@@ -704,7 +730,10 @@ async function recoverMutationsOfClientGroupDD31(
         return newClientGroups;
       };
 
-      if (isClientStateNotFoundResponse(pullResponse)) {
+      if (
+        isClientStateNotFoundResponse(pullResponse) ||
+        isVersionNotSupportedResponse(pullResponse)
+      ) {
         // The client group is not the main client group so we do not need the
         // Replicache instance to update its internal _isClientGroupDisabled
         // property.

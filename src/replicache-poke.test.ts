@@ -1,13 +1,16 @@
 import {expect} from '@esm-bundle/chai';
+import type {VersionNotSupportedResponse} from './error-responses.js';
 import type {PullResponse} from './puller.js';
-import type {Poke, PokeDD31} from './replicache.js';
+import type {Poke, PokeDD31, UpdateNeededReason} from './replicache.js';
 import {
   addData,
+  disableAllBackgroundProcesses,
   initReplicacheTesting,
   makePullResponse,
   replicacheForTesting,
 } from './test-util.js';
 import type {WriteTransaction} from './transactions.js';
+import * as sinon from 'sinon';
 
 initReplicacheTesting();
 
@@ -101,9 +104,7 @@ test('overlapped pokes not supported', async () => {
     mutators: {
       addData,
     },
-    enableMutationRecovery: false,
-    enableScheduledPersist: false,
-    enableRefresh: false,
+    ...disableAllBackgroundProcesses,
   });
 
   const clientID = await rep.clientID;
@@ -184,4 +185,37 @@ test('Client group unknown on server', async () => {
   );
 
   expect(rep.isClientGroupDisabled).true;
+});
+
+test('Version not supported on server', async () => {
+  const t = async (
+    response: VersionNotSupportedResponse,
+    reason: UpdateNeededReason,
+  ) => {
+    const rep = await replicacheForTesting('version-not-supported-poke', {
+      ...disableAllBackgroundProcesses,
+    });
+
+    const onUpdateNeededStub = (rep.onUpdateNeeded = sinon.stub());
+
+    const poke: PokeDD31 = {
+      baseCookie: 123,
+      pullResponse: response,
+    };
+
+    await rep.poke(poke as Poke);
+
+    expect(onUpdateNeededStub.callCount).to.equal(1);
+    expect(onUpdateNeededStub.lastCall.args).deep.equal([reason]);
+  };
+
+  await t({error: 'VersionNotSupported'}, {type: 'VersionNotSupported'});
+  await t(
+    {error: 'VersionNotSupported', versionType: 'pull'},
+    {type: 'VersionNotSupported', versionType: 'pull'},
+  );
+  await t(
+    {error: 'VersionNotSupported', versionType: 'schema'},
+    {type: 'VersionNotSupported', versionType: 'schema'},
+  );
 });

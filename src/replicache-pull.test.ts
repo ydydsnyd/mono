@@ -1,4 +1,5 @@
 import {
+  disableAllBackgroundProcesses,
   expectConsoleLogContextStub,
   initReplicacheTesting,
   makePullResponse,
@@ -7,7 +8,7 @@ import {
   tickAFewTimes,
   waitForSync,
 } from './test-util.js';
-import type {WriteTransaction} from './mod.js';
+import type {VersionNotSupportedResponse, WriteTransaction} from './mod.js';
 import {expect} from '@esm-bundle/chai';
 import {emptyHash, Hash} from './hash.js';
 import * as sinon from 'sinon';
@@ -16,7 +17,7 @@ import * as sinon from 'sinon';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
-import {httpStatusUnauthorized} from './replicache.js';
+import {httpStatusUnauthorized, UpdateNeededReason} from './replicache.js';
 import {defaultPuller, Puller, PullerDD31} from './puller.js';
 
 initReplicacheTesting();
@@ -43,9 +44,7 @@ test('pull', async () => {
         await tx.del(`/todo/${args.id}`);
       },
     },
-    enableScheduledPersist: false,
-    enableMutationRecovery: false,
-    enableRefresh: false,
+    ...disableAllBackgroundProcesses,
   });
 
   let createCount = 0;
@@ -280,10 +279,7 @@ test('Client Group not found on server', async () => {
   const consoleErrorStub = sinon.stub(console, 'error');
 
   const rep = await replicacheForTesting('client-group-not-found-pull', {
-    enableLicensing: false,
-    enableMutationRecovery: false,
-    enableRefresh: false,
-    enableScheduledPersist: false,
+    ...disableAllBackgroundProcesses,
   });
 
   // eslint-disable-next-line require-await
@@ -311,4 +307,46 @@ test('Client Group not found on server', async () => {
   const err = consoleErrorStub.lastCall.args[1];
   expect(err).to.be.an.instanceOf(Error);
   expect(err.message).to.match(/Client group (\S)+ is unknown on server/);
+});
+
+test('Version not supported on server', async () => {
+  const t = async (
+    response: VersionNotSupportedResponse,
+    reason: UpdateNeededReason,
+  ) => {
+    const rep = await replicacheForTesting('version-not-supported-pull', {
+      ...disableAllBackgroundProcesses,
+    });
+
+    const onUpdateNeededStub = (rep.onUpdateNeeded = sinon.stub());
+
+    // eslint-disable-next-line require-await
+    const puller: PullerDD31 = async () => {
+      return {
+        response,
+        httpRequestInfo: {
+          httpStatusCode: 200,
+          errorMessage: '',
+        },
+      };
+    };
+
+    rep.puller = puller as Puller;
+    rep.pull();
+
+    await waitForSync(rep);
+
+    expect(onUpdateNeededStub.callCount).to.equal(1);
+    expect(onUpdateNeededStub.lastCall.args).deep.equal([reason]);
+  };
+
+  await t({error: 'VersionNotSupported'}, {type: 'VersionNotSupported'});
+  await t(
+    {error: 'VersionNotSupported', versionType: 'pull'},
+    {type: 'VersionNotSupported', versionType: 'pull'},
+  );
+  await t(
+    {error: 'VersionNotSupported', versionType: 'schema'},
+    {type: 'VersionNotSupported', versionType: 'schema'},
+  );
 });

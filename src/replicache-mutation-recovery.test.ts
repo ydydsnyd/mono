@@ -5,6 +5,7 @@ import {
   clock,
   dbsToDrop,
   closeablesToClose,
+  disableAllBackgroundProcesses,
 } from './test-util.js';
 import {
   makeIDBNameForTesting,
@@ -1148,7 +1149,7 @@ test('mutation recovery returns early when internal option enableMutationRecover
     'mutation-recovery-startup',
     {
       pullURL: 'https://diff.com/pull',
-      enableMutationRecovery: false,
+      ...disableAllBackgroundProcesses,
     },
     {useDefaultURLs: false},
   );

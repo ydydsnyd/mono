@@ -2,10 +2,12 @@ import {httpRequest} from './http-request.js';
 import {assertHTTPRequestInfo, HTTPRequestInfo} from './http-request-info.js';
 import {assertObject} from './asserts.js';
 import {
-  assertClientStateNotFoundResponse,
+  assertVersionNotSupportedResponse,
   ClientStateNotFoundResponse,
   isClientStateNotFoundResponse,
-} from './puller.js';
+  isVersionNotSupportedResponse,
+  VersionNotSupportedResponse,
+} from './error-responses.js';
 
 export type PusherResult = {
   response?: PushResponse | undefined;
@@ -15,7 +17,9 @@ export type PusherResult = {
 /**
  * The response from a push can contain information about error conditions.
  */
-export type PushResponse = ClientStateNotFoundResponse;
+export type PushResponse =
+  | ClientStateNotFoundResponse
+  | VersionNotSupportedResponse;
 
 export function assertPusherResult(v: unknown): asserts v is PusherResult {
   assertObject(v);
@@ -26,11 +30,14 @@ export function assertPusherResult(v: unknown): asserts v is PusherResult {
 }
 
 function assertPushResponse(v: unknown): asserts v is PushResponse {
-  assertClientStateNotFoundResponse(v);
+  if (isClientStateNotFoundResponse(v)) {
+    return;
+  }
+  assertVersionNotSupportedResponse(v);
 }
 
 function isPushResponse(v: unknown): v is PushResponse {
-  return isClientStateNotFoundResponse(v);
+  return isClientStateNotFoundResponse(v) || isVersionNotSupportedResponse(v);
 }
 
 /**
@@ -50,23 +57,21 @@ export type Pusher = (
 
 export const defaultPusher: Pusher = async request => {
   const {response, httpRequestInfo} = await httpRequest(request);
-  if (DD31) {
-    if (httpRequestInfo.httpStatusCode === 200) {
-      // In case we get an error response, we have already consumed the response body.
-      let json;
-      try {
-        json = await response.json();
-      } catch {
-        // Ignore JSON parse errors. It is valid to return a non-JSON response.
-        return httpRequestInfo;
-      }
+  if (httpRequestInfo.httpStatusCode === 200) {
+    // In case we get an error response, we have already consumed the response body.
+    let json;
+    try {
+      json = await response.json();
+    } catch {
+      // Ignore JSON parse errors. It is valid to return a non-JSON response.
+      return httpRequestInfo;
+    }
 
-      if (isPushResponse(json)) {
-        return {
-          response: json,
-          httpRequestInfo,
-        };
-      }
+    if (isPushResponse(json)) {
+      return {
+        response: json,
+        httpRequestInfo,
+      };
     }
   }
   return httpRequestInfo;

@@ -1,5 +1,6 @@
 import {
   clock,
+  disableAllBackgroundProcesses,
   initReplicacheTesting,
   makePullResponse,
   replicacheForTesting,
@@ -652,6 +653,7 @@ test('subscribe pull and index update', async () => {
     pullURL,
     mutators: {addData},
     indexes: {[indexName]: {jsonPointer: '/id'}},
+    ...disableAllBackgroundProcesses,
   });
 
   const log: ReadonlyJSONValue[] = [];
@@ -818,9 +820,7 @@ test('subscribe pull and index update', async () => {
 test('subscription coalescing', async () => {
   const rep = await replicacheForTesting('subscription-coalescing', {
     mutators: {addData},
-    enableScheduledPersist: false,
-    enableMutationRecovery: false,
-    enableRefresh: false,
+    ...disableAllBackgroundProcesses,
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

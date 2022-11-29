@@ -10,7 +10,6 @@ import {
 import {
   assertPullResponseSDD,
   assertPullResponseDD31,
-  isClientStateNotFoundResponse,
   Puller,
   PullerDD31,
   PullerResult,
@@ -39,6 +38,7 @@ import {
   commitIsLocalDD31,
   compareCookies,
 } from '../db/commit.js';
+import {isErrorResponse} from '../error-responses.js';
 
 export const PULL_VERSION_SDD = 0;
 export const PULL_VERSION_DD31 = 1;
@@ -203,7 +203,7 @@ export async function beginPullSDD(
     };
   }
 
-  if (!createSyncBranch || isClientStateNotFoundResponse(response)) {
+  if (!createSyncBranch || isErrorResponse(response)) {
     return {
       httpRequestInfo,
       pullResponse: response,
@@ -293,7 +293,7 @@ export async function beginPullDD31(
     };
   }
 
-  if (!createSyncBranch || isClientStateNotFoundResponse(response)) {
+  if (!createSyncBranch || isErrorResponse(response)) {
     return {
       httpRequestInfo,
       pullResponse: response,

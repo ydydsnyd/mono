@@ -383,3 +383,10 @@ export function waitForSync(rep: {
   };
   return promise;
 }
+
+export const disableAllBackgroundProcesses = {
+  enableLicensing: false,
+  enableMutationRecovery: false,
+  enableRefresh: false,
+  enableScheduledPersist: false,
+};
