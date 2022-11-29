@@ -25,9 +25,7 @@ export type Hash = string & {[hashTag]: true};
 
 // We are no longer using hashes but due to legacy reason we still refer to
 // them as hashes. We use UUID and counters instead.
-const oldHashRe = /^[0-9a-v]{32}$/;
-const oldUUIDRe = /^[0-9a-f-]{36}$/;
-const uuidRe = /^[0-9a-f]{44}$/;
+const hashRe = /^[0-9a-v-]+$/;
 
 export function parse(s: string): Hash {
   assertHash(s);
@@ -90,10 +88,7 @@ export function fakeHash(word: string): Hash {
 }
 
 export function isHash(v: unknown): v is Hash {
-  return (
-    typeof v === 'string' &&
-    (uuidRe.test(v) || oldUUIDRe.test(v) || oldHashRe.test(v))
-  );
+  return typeof v === 'string' && hashRe.test(v);
 }
 
 export function assertHash(v: unknown): asserts v is Hash {
