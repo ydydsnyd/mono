@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1669706620527,
+  "lastUpdate": 1669734537833,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -31613,6 +31613,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 24688,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4964c4a5f9f85aebc3b2f380d62abe11a0006973",
+          "message": "feat: Allow server to return VersionNotSupported (#422)\n\nThe pull and push endpoints can now return VersionNotSupportedResponse\r\nwhich has the type:\r\n\r\n```ts\r\ntype VersionNotSupportedResponse = {\r\n  error: 'VersionNotSupported';\r\n  versionType?: 'pull' | 'push' | 'schema' | undefined;\r\n};\r\n```\r\n\r\nThe `versionType` is optional for now to allow more adhoc responses.\r\n\r\nWhen the server returns this we call onUpdateNeeded which will reload by\r\ndefault.\r\n\r\nWe allow these responses in both DD31 and SDD. The reason to also\r\nsupport them in SDD is to allow dealing with these in mutation recovery. For\r\nSDD we end up deleting the client if its version is no longer supported.\r\n\r\nIf we get an error response recovering a DD31 client group we disable the\r\nclient group.\r\n\r\nTowards #165",
+          "timestamp": "2022-11-29T15:07:43Z",
+          "tree_id": "52c58c6a7465c7b9ba70f4116e48848e23fa7c5f",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/4964c4a5f9f85aebc3b2f380d62abe11a0006973"
+        },
+        "date": 1669734529910,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 204328,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 35932,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 203181,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 35601,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 86104,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 24824,
             "unit": "bytes"
           }
         ]
