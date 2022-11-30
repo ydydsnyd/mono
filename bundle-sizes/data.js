@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1669806250896,
+  "lastUpdate": 1669808021560,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -31775,6 +31775,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 24819,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3111736c9755eaeba0f19bc8cbf50d4fcecfec8b",
+          "message": "feat: Identify missing IDB (#424)\n\nReport errors when the indexed db has been removed.\r\n\r\nThis is different than client group not being found on the client.\r\n\r\nIDB not found is used for when someone deletes the IDB using DevTools or\r\nIDB API. That is an exceptional case and it happens during development\r\nor if the browser deletes the IDB (which is very unlikely if we are\r\nusing the app at the moment).\r\n\r\nClient group not found happens when the client group got garbage\r\ncollected on the client.\r\n\r\nTowards #165",
+          "timestamp": "2022-11-30T12:32:27+01:00",
+          "tree_id": "a0a83c70f6cf5579d8e43967afe06f4c7fbba9cd",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/3111736c9755eaeba0f19bc8cbf50d4fcecfec8b"
+        },
+        "date": 1669808014614,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 199554,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 35271,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 198407,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34947,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 84158,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 24398,
             "unit": "bytes"
           }
         ]
