@@ -16,6 +16,8 @@ suite('onClientStateNotFound', () => {
   if (DD31) {
     // In DD31 the response {error: 'ClientStateNotFound'} is used to disable
     // the client group and no callback is called.
+    //
+    // This is tested in replicache-{poke,pull,push}.test.ts
     return;
   }
 

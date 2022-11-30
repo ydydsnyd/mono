@@ -355,3 +355,42 @@ test('Version not supported on server', async () => {
     {type: 'VersionNotSupported', versionType: 'schema'},
   );
 });
+
+test('ClientStateNotFound on server', async () => {
+  const consoleErrorStub = sinon.stub(console, 'error');
+  const rep = await replicacheForTesting('client-state-not-found-push', {
+    mutators: {
+      noop: () => undefined,
+    },
+    ...disableAllBackgroundProcesses,
+  });
+
+  const onUpdateNeededStub = (rep.onUpdateNeeded = sinon.stub());
+
+  // eslint-disable-next-line require-await
+  const pusher: Pusher = async () => {
+    return {
+      response: {error: 'ClientStateNotFound'},
+      httpRequestInfo: {
+        httpStatusCode: 200,
+        errorMessage: '',
+      },
+    };
+  };
+
+  rep.pusher = pusher as Pusher;
+
+  await rep.mutate.noop();
+  await rep.invokePush();
+
+  expect(onUpdateNeededStub.callCount).to.equal(0);
+
+  if (DD31) {
+    expect(rep.isClientGroupDisabled).to.equal(true);
+
+    expect(consoleErrorStub.callCount).to.equal(1);
+    expect(consoleErrorStub.lastCall.args[1].message).match(
+      /Client group \S+ is unknown on server/,
+    );
+  }
+});
