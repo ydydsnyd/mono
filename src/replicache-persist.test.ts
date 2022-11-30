@@ -20,9 +20,11 @@ import * as persist from './persist/mod.js';
 import {assert, assertNotUndefined} from './asserts.js';
 import {deleteClientForTesting} from './persist/clients-test-helpers.js';
 import {assertClientDD31} from './persist/clients.js';
-import type {MutatorDefs, WriteTransaction} from './mod.js';
 import {deleteClientGroup} from './persist/client-groups.js';
 import {assertHash} from './hash.js';
+import {IDBNotFoundError} from './kv/idb-store.js';
+import type {WriteTransaction} from './transactions.js';
+import type {MutatorDefs} from './replicache.js';
 
 initReplicacheTesting();
 
@@ -30,6 +32,18 @@ let perdag: dag.Store | undefined;
 teardown(async () => {
   await perdag?.close();
 });
+
+async function deleteClientGroupForTesting<
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  MD extends MutatorDefs = {},
+>(rep: ReplicacheTest<MD>) {
+  const clientGroupID = await rep.clientGroupID;
+  assert(clientGroupID);
+  await rep.perdag.withWrite(async tx => {
+    await deleteClientGroup(clientGroupID, tx);
+    await tx.commit();
+  });
+}
 
 test('basic persist & load', async () => {
   const pullURL = 'https://diff.com/pull';
@@ -137,9 +151,6 @@ test('basic persist & load', async () => {
 });
 
 suite('onClientStateNotFound', () => {
-  teardown(() => {
-    sinon.restore();
-  });
   test('Called in persist if collected', async () => {
     const consoleErrorStub = sinon.stub(console, 'error');
 
@@ -284,14 +295,32 @@ suite('onClientStateNotFound', () => {
   });
 });
 
-async function deleteClientGroupForTesting<
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  MD extends MutatorDefs = {},
->(rep: ReplicacheTest<MD>) {
-  const clientGroupID = await rep.clientGroupID;
-  assert(clientGroupID);
-  await rep.perdag.withWrite(async tx => {
-    await deleteClientGroup(clientGroupID, tx);
-    await tx.commit();
-  });
-}
+test('Persist throws if idb dropped', async () => {
+  const rep = await replicacheForTesting(
+    'called-in-persist-dropped',
+    {
+      mutators: {addData},
+      enableLicensing: false,
+      enableMutationRecovery: false,
+      enableRefresh: false,
+      enableScheduledPersist: false,
+    },
+    {useUniqueName: false},
+  );
+
+  await rep.mutate.addData({foo: 'bar'});
+
+  await kv.dropIDBStore(rep.idbName);
+
+  const onClientStateNotFound = sinon.fake();
+  rep.onClientStateNotFound = onClientStateNotFound;
+  let err;
+  try {
+    await rep.persist();
+  } catch (e) {
+    err = e;
+  }
+  expect(err).to.be.instanceOf(IDBNotFoundError);
+
+  await rep.close();
+});

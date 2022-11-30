@@ -46,8 +46,8 @@ export class StoreImpl implements Store {
     );
   }
 
-  async close(): Promise<void> {
-    await this._kv.close();
+  close(): Promise<void> {
+    return this._kv.close();
   }
 }
 

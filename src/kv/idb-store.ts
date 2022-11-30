@@ -17,6 +17,7 @@ const enum WriteState {
 export class IDBStore implements Store {
   private _db: Promise<IDBDatabase>;
   private _closed = false;
+  private _idbDeleted = false;
 
   constructor(name: string) {
     this._db = openDatabase(name);
@@ -49,7 +50,10 @@ export class IDBStore implements Store {
   }
 
   async close(): Promise<void> {
-    (await this._db).close();
+    if (!this._idbDeleted) {
+      const db = await this._db;
+      db.close();
+    }
     this._closed = true;
   }
 
@@ -58,6 +62,28 @@ export class IDBStore implements Store {
   }
 
   private async _withReopen<R>(fn: (db: IDBDatabase) => R): Promise<R> {
+    // Tries to reopen an IndexedDB, and rejects if the database needs
+    // upgrading (is missing for whatever reason).
+    const reopenExistingDB = async (name: string): Promise<IDBDatabase> => {
+      const {promise, resolve, reject} = resolver<IDBDatabase>();
+      const req = indexedDB.open(name);
+
+      req.onupgradeneeded = () => {
+        const tx = req.transaction;
+        assertNotNull(tx);
+        tx.abort();
+        this._idbDeleted = true;
+        reject(new IDBNotFoundError(`Replicache IndexedDB not found: ${name}`));
+      };
+
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+
+      const db = await promise;
+      db.onversionchange = () => db.close();
+      return db;
+    };
+
     // We abstract on `readImpl` to work around an issue in Safari. Safari does
     // not allow any microtask between a transaction is created until it is
     // first used. We used to use `await read()` here instead of `await
@@ -72,16 +98,17 @@ export class IDBStore implements Store {
     } catch (e: unknown) {
       if (!this._closed && e instanceof DOMException) {
         if (e.name === 'InvalidStateError') {
-          this._db = reopenExistingDb(db.name);
+          this._db = reopenExistingDB(db.name);
           const reopened = await this._db;
           return fn(reopened);
         } else if (e.name === 'NotFoundError') {
           // This edge-case can happen if the db has been deleted and the
           // user/developer has DevTools open in certain browsers.
           // See discussion at https://github.com/rocicorp/replicache-internal/pull/216
+          this._idbDeleted = true;
           indexedDB.deleteDatabase(db.name);
-          throw new Error(
-            `Replicache IndexedDB ${db.name} missing object store.  Deleting db.`,
+          throw new IDBNotFoundError(
+            `Replicache IndexedDB ${db.name} missing object store. Deleting db.`,
           );
         }
       }
@@ -184,42 +211,26 @@ function readImpl(db: IDBDatabase) {
   return new ReadImpl(tx);
 }
 
-// Tries to reopen an IndexedDB, and rejects if the database needs
-// upgrading (is missing for whatever reason).
-function reopenExistingDb(name: string): Promise<IDBDatabase> {
-  const {promise, resolve, reject} = resolver<IDBDatabase>();
-  const req = indexedDB.open(name);
-
-  req.onupgradeneeded = () => {
-    const tx = req.transaction;
-    assertNotNull(tx);
-    tx.abort();
-    reject(new Error(`Replicache IndexedDB not found: ${name}`));
-  };
-
-  req.onsuccess = () => resolve(req.result);
-  req.onerror = () => reject(req.error);
-
-  return promise.then(db => {
-    db.onversionchange = () => db.close();
-    return db;
-  });
-}
-
 function objectStore(tx: IDBTransaction): IDBObjectStore {
   return tx.objectStore(OBJECT_STORE);
 }
 
-function openDatabase(name: string): Promise<IDBDatabase> {
+async function openDatabase(name: string): Promise<IDBDatabase> {
   const req = indexedDB.open(name);
   req.onupgradeneeded = () => {
-    const db = req.result;
-    db.createObjectStore(OBJECT_STORE);
+    req.result.createObjectStore(OBJECT_STORE);
   };
-  const wrapped = wrap(req);
-  return wrapped.then(db => {
-    // Another tab/process wants to modify the db, so release it.
-    db.onversionchange = () => db.close();
-    return db;
-  });
+  const db = await wrap(req);
+  // Another tab/process wants to modify the db, so release it.
+  db.onversionchange = () => db.close();
+  return db;
+}
+
+/**
+ * This {@link Error} is thrown when we detect that the IndexedDB has been
+ * removed. This does not normally happen but can happen during development if
+ * the user has DevTools open and deletes the IndexedDB from there.
+ */
+export class IDBNotFoundError extends Error {
+  name = 'IDBNotFoundError';
 }

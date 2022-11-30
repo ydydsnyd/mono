@@ -9,9 +9,12 @@ import {
   writeHeartbeat,
 } from './heartbeat.js';
 import {ClientMap, ClientStateNotFoundError, getClients} from './clients.js';
-import {fakeHash} from '../hash.js';
+import {assertHash, fakeHash} from '../hash.js';
 import {makeClient, setClientsForTesting} from './clients-test-helpers.js';
 import {assertNotUndefined} from '../asserts.js';
+import {IDBNotFoundError, IDBStore} from '../kv/idb-store.js';
+import {dropIDBStore} from '../kv/mod.js';
+import {sleep} from '../sleep.js';
 
 let clock: SinonFakeTimers;
 const START_TIME = 100000;
@@ -21,6 +24,7 @@ setup(() => {
 });
 
 teardown(() => {
+  sinon.restore();
   clock.restore();
 });
 
@@ -248,5 +252,42 @@ test('heartbeat with missing client calls callback', async () => {
   );
   await clock.tickAsync(ONE_MIN_IN_MS);
   expect(onClientStateNotFound.callCount).to.equal(1);
+  controller.abort();
+});
+
+test('heartbeat with dropped idb throws', async () => {
+  const consoleErrorStub = sinon.stub(console, 'error');
+  const name = `heartbeat-test`;
+  const ibdStore = new IDBStore(name);
+  const dagStore = new dag.StoreImpl(ibdStore, dag.uuidChunkHasher, assertHash);
+  const onClientStateNotFound = sinon.fake();
+  const controller = new AbortController();
+
+  startHeartbeats(
+    'client1',
+    dagStore,
+    onClientStateNotFound,
+    new LogContext(),
+    controller.signal,
+  );
+
+  await clock.tickAsync(ONE_MIN_IN_MS / 2);
+
+  await dropIDBStore(name);
+
+  await clock.tickAsync(ONE_MIN_IN_MS / 2);
+
+  expect(onClientStateNotFound.callCount).to.equal(0);
+
+  // Firefox uses a task (not microtask) to throw the error, so we need to wait
+  clock.restore();
+  await sleep(10);
+
+  expect(consoleErrorStub.callCount).to.equal(1);
+  expect(consoleErrorStub.args[0][2]).to.be.instanceOf(IDBNotFoundError);
+  expect(consoleErrorStub.args[0][2].message).equal(
+    `Replicache IndexedDB not found: ${name}`,
+  );
+
   controller.abort();
 });

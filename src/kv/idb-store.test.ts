@@ -1,5 +1,5 @@
 import {runAll, TestStore} from './store-test-util.js';
-import {IDBStore} from './idb-store.js';
+import {IDBNotFoundError, IDBStore} from './idb-store.js';
 import {dropStore} from './idb-util.js';
 import {expect} from '@esm-bundle/chai';
 
@@ -152,4 +152,23 @@ suite('reopening IDB', () => {
     await promise;
     expect(newlyCreated).to.be.true;
   });
+});
+
+test('Throws if IDB dropped while open', async () => {
+  const name = `drop-store-${Math.random()}`;
+
+  const idb = new IDBStore(name);
+
+  await dropStore(name);
+
+  let err;
+  try {
+    await idb.withRead(async tx => {
+      await tx.has('foo');
+    });
+  } catch (e) {
+    err = e;
+  }
+  expect(err).instanceOf(IDBNotFoundError);
+  expect((err as Error).message).to.match(/Replicache IndexedDB/);
 });

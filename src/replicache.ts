@@ -647,7 +647,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       clientID,
       this._perdag,
       () => {
-        this._fireOnClientStateNotFound(clientID, reasonClient);
+        this._clientStateNotFoundOnClient(clientID);
       },
       this._lc,
       signal,
@@ -708,7 +708,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       persist.hasClientState(clientID, read),
     );
     if (!hasClientState) {
-      this._fireOnClientStateNotFound(clientID, reasonClient);
+      this._clientStateNotFoundOnClient(clientID);
     }
     return !hasClientState;
   }
@@ -1243,12 +1243,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       if (isVersionNotSupportedResponse(response)) {
         this._handleVersionNotSupportedResponse(response);
       } else if (isClientStateNotFoundResponse(response)) {
-        if (DD31) {
-          await this._disableClientGroupAndThrow();
-          // unreachable
-        }
-        const clientID = await this._clientIDPromise;
-        this._fireOnClientStateNotFound(clientID, reasonServer);
+        await this._clientStateNotFoundOnServer();
       }
 
       // No pushResponse means we didn't do a push because there were no
@@ -1324,11 +1319,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     }
 
     if (isClientStateNotFoundResponse(pullResponse)) {
-      if (DD31) {
-        await this._disableClientGroupAndThrow();
-        // unreachable
-      }
-      this._fireOnClientStateNotFound(clientID, reasonServer);
+      await this._clientStateNotFoundOnServer();
       return;
     }
 
@@ -1356,17 +1347,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
       case HandlePullResponseResultType.NoOp:
         break;
     }
-  }
-
-  private async _disableClientGroupAndThrow(): Promise<never> {
-    assert(DD31);
-    const clientGroupID = await this._clientGroupIDPromise;
-    assert(clientGroupID);
-    this._isClientGroupDisabled = true;
-    await this._perdag.withWrite(dagWrite =>
-      persist.disableClientGroup(clientGroupID, dagWrite),
-    );
-    throw new ReportError(`Client group ${clientGroupID} is unknown on server`);
   }
 
   protected async _beginPull(): Promise<BeginPullResult> {
@@ -1409,12 +1389,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     if (isVersionNotSupportedResponse(pullResponse)) {
       this._handleVersionNotSupportedResponse(pullResponse);
     } else if (isClientStateNotFoundResponse(beginPullResponse.pullResponse)) {
-      if (DD31) {
-        await this._disableClientGroupAndThrow();
-        // unreachable
-      }
-      const clientID = await this._clientIDPromise;
-      this._fireOnClientStateNotFound(clientID, reasonServer);
+      await this._clientStateNotFoundOnServer();
     }
 
     const {syncHead, httpRequestInfo} = beginPullResponse;
@@ -1441,7 +1416,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         );
       } catch (e) {
         if (e instanceof persist.ClientStateNotFoundError) {
-          this._fireOnClientStateNotFound(clientID, reasonClient);
+          this._clientStateNotFoundOnClient(clientID);
         } else if (this._closed) {
           this._lc.debug?.('Exception persisting during close', e);
         } else {
@@ -1479,7 +1454,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         );
       } catch (e) {
         if (e instanceof persist.ClientStateNotFoundError) {
-          this._fireOnClientStateNotFound(clientID, reasonClient);
+          this._clientStateNotFoundOnClient(clientID);
         } else if (this._closed) {
           this._lc.debug?.('Exception refreshing during close', e);
         } else {
@@ -1498,6 +1473,28 @@ export class Replicache<MD extends MutatorDefs = {}> {
   ) {
     this._lc.error?.(`Client state not found, clientID: ${clientID}`);
     this.onClientStateNotFound?.(reason);
+  }
+
+  private _clientStateNotFoundOnClient(clientID: sync.ClientID) {
+    this._lc.error?.(`Client state not found, clientID: ${clientID}`);
+    this._fireOnClientStateNotFound(clientID, reasonClient);
+  }
+
+  private async _clientStateNotFoundOnServer() {
+    if (DD31) {
+      const clientGroupID = await this._clientGroupIDPromise;
+      assert(clientGroupID);
+      this._isClientGroupDisabled = true;
+      await this._perdag.withWrite(dagWrite =>
+        persist.disableClientGroup(clientGroupID, dagWrite),
+      );
+      throw new ReportError(
+        `Client group ${clientGroupID} is unknown on server`,
+      );
+    }
+
+    const clientID = await this._clientIDPromise;
+    this._fireOnClientStateNotFound(clientID, reasonServer);
   }
 
   private _fireOnUpdateNeeded(reason: UpdateNeededReason) {
