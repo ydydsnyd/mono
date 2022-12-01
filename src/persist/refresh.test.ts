@@ -24,11 +24,14 @@ async function makeChain(
   clientID: sync.ClientID,
   cookie: number,
   headName: string,
+  withLocal = true,
 ): Promise<{headHash: Hash; chainBuilder: ChainBuilder}> {
   const chainBuilder: ChainBuilder = new ChainBuilder(store, headName);
   await chainBuilder.addGenesis(clientID);
   await chainBuilder.addSnapshot([], clientID, cookie);
-  await chainBuilder.addLocal(clientID, []);
+  if (withLocal) {
+    await chainBuilder.addLocal(clientID, []);
+  }
   const headHash = chainBuilder.chain.at(-1)?.chunk.hash;
   assertNotUndefined(headHash);
   return {headHash, chainBuilder};
@@ -47,12 +50,14 @@ async function makePerdagChainAndSetClientsAndClientGroup(
   perdag: dag.Store,
   clientID: sync.ClientID,
   cookie: number,
+  withLocal = true,
 ): Promise<{headHash: Hash; chainBuilder: ChainBuilder}> {
   const {headHash, chainBuilder} = await makeChain(
     perdag,
     clientID,
     cookie,
     PERDAG_TEST_SETUP_HEAD_NAME,
+    withLocal,
   );
   await setClientsAndClientGroups(headHash, clientID, perdag);
   return {headHash, chainBuilder};
@@ -206,6 +211,34 @@ suite('refresh', () => {
     );
     // Memdag has one more LM than perdag.
     await memdagChainBuilder.addLocal(clientID, []);
+
+    const diffs = await refresh(
+      new LogContext(),
+      memdag,
+      perdag,
+      clientID,
+      mutators,
+      testSubscriptionsManagerOptions,
+      () => false,
+    );
+    expect(diffs).undefined;
+  });
+
+  test('cookies are equal and perdag has no LM', async () => {
+    const {perdag, memdag} = makeStores();
+    const clientID = 'client-id-1';
+    const mutators: MutatorDefs = mutatorsProxy();
+
+    await makePerdagChainAndSetClientsAndClientGroup(
+      perdag,
+      clientID,
+      1,
+      false,
+    );
+
+    // Memdag has same cookie as perdag, and perdag has no
+    // LM so we abort the refresh
+    await makeMemdagChain(memdag, clientID, 1);
 
     const diffs = await refresh(
       new LogContext(),

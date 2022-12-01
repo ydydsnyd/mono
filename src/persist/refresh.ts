@@ -98,10 +98,11 @@ export async function refresh(
         );
         assertSnapshotCommitDD31(perdagClientGroupBaseSnapshot);
         if (
-          db.compareCookiesForSnapshots(
+          shouldAbortRefresh(
             memdagBaseSnapshot,
             perdagClientGroupBaseSnapshot,
-          ) > 0
+            perdagClientGroupHeadHash,
+          )
         ) {
           return undefined;
         }
@@ -150,10 +151,11 @@ export async function refresh(
           memdagWrite,
         );
         if (
-          db.compareCookiesForSnapshots(
+          shouldAbortRefresh(
             memdagBaseSnapshot,
             perdagClientGroupBaseSnapshot,
-          ) > 0
+            perdagClientGroupHeadHash,
+          )
         ) {
           return undefined;
         }
@@ -218,4 +220,27 @@ export async function refresh(
   });
 
   return result && [result[0], result[1]];
+}
+
+function shouldAbortRefresh(
+  memdagBaseSnapshot: db.Commit<db.SnapshotMeta | db.SnapshotMetaDD31>,
+  perdagClientGroupBaseSnapshot: db.Commit<
+    db.SnapshotMeta | db.SnapshotMetaDD31
+  >,
+  perdagClientGroupHeadHash: Hash,
+): boolean {
+  const baseSnapshotCookieCompareResult = db.compareCookiesForSnapshots(
+    memdagBaseSnapshot,
+    perdagClientGroupBaseSnapshot,
+  );
+  console.log(
+    baseSnapshotCookieCompareResult,
+    perdagClientGroupHeadHash,
+    perdagClientGroupBaseSnapshot.chunk.hash,
+  );
+  return (
+    baseSnapshotCookieCompareResult > 0 ||
+    (baseSnapshotCookieCompareResult === 0 &&
+      perdagClientGroupHeadHash === perdagClientGroupBaseSnapshot.chunk.hash)
+  );
 }
