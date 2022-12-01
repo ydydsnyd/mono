@@ -4,6 +4,7 @@ import {assert} from '../src/asserts.js';
 import {
   MutatorDefs,
   PatchOperation,
+  Puller,
   ReadTransaction,
   Replicache,
   ReplicacheOptions,
@@ -146,10 +147,11 @@ async function setupPersistedData(
       name: replicacheName,
       pullInterval: null,
       // eslint-disable-next-line require-await
-      puller: async (_: Request) => {
+      puller: (async (_: Request) => {
         return {
           response: {
-            lastMutationID: 0,
+            cookie: 1,
+            lastMutationIDChanges: {},
             patch,
           },
           httpRequestInfo: {
@@ -157,7 +159,7 @@ async function setupPersistedData(
             errorMessage: '',
           },
         };
-      },
+      }) as unknown as Puller,
     }));
     const initialPullResolver = resolver<void>();
     rep.subscribe(tx => tx.get('key0'), {
@@ -375,32 +377,6 @@ export function benchmarkCreateIndex(opts: {numKeys: number}): Benchmark {
 
       bencher.stop();
       bencher.subtract(t1 - t0);
-    },
-  };
-}
-
-export function benchmarkCreateIndexDeprecated(opts: {
-  numKeys: number;
-}): Benchmark {
-  let repToClose: Replicache | undefined;
-  return {
-    name: `create index ${valSize}x${opts.numKeys}`,
-    group: 'replicache',
-    async teardownEach() {
-      await closeAndCleanupRep(repToClose);
-    },
-    async run(bencher: Bencher) {
-      const rep = (repToClose = makeRepWithPopulate());
-      await rep.mutate.populate({
-        numKeys: opts.numKeys,
-        randomValues: jsonArrayTestData(opts.numKeys, valSize),
-      });
-      bencher.reset();
-      await rep.createIndex({
-        name: `idx`,
-        jsonPointer: '/ascii',
-      });
-      bencher.stop();
     },
   };
 }
@@ -658,7 +634,6 @@ export function benchmarks(): Benchmark[] {
     benchmarkScan({numKeys: 1000}),
     benchmarkScan({numKeys: 10_000}),
     benchmarkCreateIndex({numKeys: 5000}),
-    benchmarkCreateIndexDeprecated({numKeys: 5000}),
     benchmarkStartupUsingBasicReadsFromPersistedData({
       numKeysPersisted: 100000,
       numKeysToRead: 100,
