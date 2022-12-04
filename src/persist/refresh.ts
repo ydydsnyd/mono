@@ -233,11 +233,6 @@ function shouldAbortRefresh(
     memdagBaseSnapshot,
     perdagClientGroupBaseSnapshot,
   );
-  console.log(
-    baseSnapshotCookieCompareResult,
-    perdagClientGroupHeadHash,
-    perdagClientGroupBaseSnapshot.chunk.hash,
-  );
   return (
     baseSnapshotCookieCompareResult > 0 ||
     (baseSnapshotCookieCompareResult === 0 &&
