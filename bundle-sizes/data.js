@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1670168193048,
+  "lastUpdate": 1670237026444,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -32015,6 +32015,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/367a08074a06425d64439aaafcbf67fe71adff1f"
         },
         "date": 1670168185638,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 199547,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 35260,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 198400,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34924,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 84151,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 24363,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f0756acaf3010771f0857fd86a88bff0f51a5325",
+          "message": "chore: Use README-external.md for npm (#442)\n\nNPM includes a README.md in the npm package. But, we do not want to show\r\nthem the readme we use for the github repo. So, we have a\r\nREADME-external.md that is used for the npm package.\r\n\r\nUse prepack and postpack to rename readme files.",
+          "timestamp": "2022-12-05T11:42:46+01:00",
+          "tree_id": "d820b4d70e551cc0d76fb0cd85e77fbd77ff9f7e",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/f0756acaf3010771f0857fd86a88bff0f51a5325"
+        },
+        "date": 1670237020101,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
