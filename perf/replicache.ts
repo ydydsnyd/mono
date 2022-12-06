@@ -357,21 +357,27 @@ export function benchmarkCreateIndex(opts: {numKeys: number}): Benchmark {
     },
     async run(bencher: Bencher) {
       const t0 = performance.now();
-      const repNoIndex = makeRep({
-        name: repName,
-      });
+      const repNoIndex = makeRep(
+        {
+          name: repName,
+        },
+        true,
+      );
       // Wait for opening being done.
       await repNoIndex.query(() => undefined);
       const t1 = performance.now();
       await repNoIndex.close();
 
       bencher.reset();
-      rep = makeRep({
-        name: repName,
-        indexes: {
-          idx: {jsonPointer: '/ascii'},
+      rep = makeRep(
+        {
+          name: repName,
+          indexes: {
+            idx: {jsonPointer: '/ascii'},
+          },
         },
-      });
+        true,
+      );
       // Wait for opening being done.
       await rep.query(() => undefined);
 
@@ -546,9 +552,19 @@ function makeRep<MD extends MutatorDefs>(
   options: Omit<ReplicacheOptions<MD>, 'name' | 'licenseKey'> & {
     name?: string;
   } = {},
+  disableAllBackgroundProcesses = false,
 ) {
   const name = makeRepName();
+  const base = disableAllBackgroundProcesses
+    ? {
+        enableLicensing: false,
+        enableMutationRecovery: false,
+        enableScheduledPersist: false,
+        enableRefresh: false,
+      }
+    : {};
   return new ReplicacheWithPersist<MD>({
+    ...base,
     licenseKey: TEST_LICENSE_KEY,
     name,
     pullInterval: null,
