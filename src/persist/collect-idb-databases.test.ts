@@ -17,8 +17,11 @@ import {assertNotUndefined} from '../asserts.js';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import {
   REPLICACHE_FORMAT_VERSION,
+  REPLICACHE_FORMAT_VERSION_DD31,
   REPLICACHE_FORMAT_VERSION_SDD,
 } from '../replicache.js';
+import {ClientGroupMap, setClientGroups} from './client-groups.js';
+import {makeClientGroupMap} from './client-groups.test.js';
 
 suite('collectIDBDatabases', () => {
   let clock: SinonFakeTimers;
@@ -31,15 +34,21 @@ suite('collectIDBDatabases', () => {
     clock.restore();
   });
 
-  type Entries = [IndexedDBDatabase, ClientMap][];
+  type Entries = [IndexedDBDatabase, ClientMap, ClientGroupMap?][];
 
-  const makeIndexedDBDatabase = (
-    name: string,
+  const makeIndexedDBDatabase = ({
+    name,
     lastOpenedTimestampMS = Date.now(),
     replicacheFormatVersion = REPLICACHE_FORMAT_VERSION,
     schemaVersion = 'schemaVersion-' + name,
     replicacheName = 'replicacheName-' + name,
-  ): IndexedDBDatabase => ({
+  }: {
+    name: string;
+    lastOpenedTimestampMS?: number;
+    replicacheFormatVersion?: number;
+    schemaVersion?: string;
+    replicacheName?: string;
+  }): IndexedDBDatabase => ({
     name,
     replicacheFormatVersion,
     schemaVersion,
@@ -47,17 +56,21 @@ suite('collectIDBDatabases', () => {
     lastOpenedTimestampMS,
   });
 
+  const NO_LEGACY = [false];
+  const INCLUDE_LEGACY = [false, true];
+
   const t = (
     name: string,
     entries: Entries,
     now: number,
     expectedDatabases: string[],
+    legacyValues = INCLUDE_LEGACY,
   ) => {
-    for (const legacy of [false, true]) {
+    for (const legacy of legacyValues) {
       test(name + ' > time ' + now + (legacy ? ' > legacy' : ''), async () => {
         const store = new IDBDatabasesStore(_ => new TestMemStore());
         const clientDagStores = new Map<IndexedDBName, dag.Store>();
-        for (const [db, clients] of entries) {
+        for (const [db, clients, clientGroups] of entries) {
           const dagStore = new dag.TestStore();
           clientDagStores.set(db.name, dagStore);
           if (legacy) {
@@ -69,6 +82,12 @@ suite('collectIDBDatabases', () => {
           }
 
           await setClientsForTesting(clients, dagStore);
+          if (clientGroups) {
+            await dagStore.withWrite(async tx => {
+              await setClientGroups(clientGroups, tx);
+              await tx.commit();
+            });
+          }
         }
 
         const newDagStore = (name: string) => {
@@ -85,6 +104,7 @@ suite('collectIDBDatabases', () => {
           controller.signal,
           now,
           maxAge,
+          maxAge,
           newDagStore,
         );
 
@@ -100,7 +120,7 @@ suite('collectIDBDatabases', () => {
   {
     const entries: Entries = [
       [
-        makeIndexedDBDatabase('a', 0),
+        makeIndexedDBDatabase({name: 'a', lastOpenedTimestampMS: 0}),
         makeClientMap({
           clientA1: {
             headHash: fakeHash('a1'),
@@ -109,6 +129,7 @@ suite('collectIDBDatabases', () => {
         }),
       ],
     ];
+
     t('one idb, one client', entries, 0, ['a']);
     t('one idb, one client', entries, 1000, []);
     t('one idb, one client', entries, 2000, []);
@@ -117,7 +138,7 @@ suite('collectIDBDatabases', () => {
   {
     const entries: Entries = [
       [
-        makeIndexedDBDatabase('a', 0),
+        makeIndexedDBDatabase({name: 'a', lastOpenedTimestampMS: 0}),
         makeClientMap({
           clientA1: {
             headHash: fakeHash('a1'),
@@ -126,7 +147,7 @@ suite('collectIDBDatabases', () => {
         }),
       ],
       [
-        makeIndexedDBDatabase('b', 1000),
+        makeIndexedDBDatabase({name: 'b', lastOpenedTimestampMS: 1000}),
         makeClientMap({
           clientB1: {
             headHash: fakeHash('b1'),
@@ -143,7 +164,7 @@ suite('collectIDBDatabases', () => {
   {
     const entries: Entries = [
       [
-        makeIndexedDBDatabase('a', 2000),
+        makeIndexedDBDatabase({name: 'a', lastOpenedTimestampMS: 2000}),
         makeClientMap({
           clientA1: {
             headHash: fakeHash('a1'),
@@ -156,7 +177,7 @@ suite('collectIDBDatabases', () => {
         }),
       ],
       [
-        makeIndexedDBDatabase('b', 1000),
+        makeIndexedDBDatabase({name: 'b', lastOpenedTimestampMS: 1000}),
         makeClientMap({
           clientB1: {
             headHash: fakeHash('b1'),
@@ -174,7 +195,7 @@ suite('collectIDBDatabases', () => {
   {
     const entries: Entries = [
       [
-        makeIndexedDBDatabase('a', 3000),
+        makeIndexedDBDatabase({name: 'a', lastOpenedTimestampMS: 3000}),
         makeClientMap({
           clientA1: {
             headHash: fakeHash('a1'),
@@ -187,7 +208,7 @@ suite('collectIDBDatabases', () => {
         }),
       ],
       [
-        makeIndexedDBDatabase('b', 4000),
+        makeIndexedDBDatabase({name: 'b', lastOpenedTimestampMS: 4000}),
         makeClientMap({
           clientB1: {
             headHash: fakeHash('b1'),
@@ -210,7 +231,11 @@ suite('collectIDBDatabases', () => {
   {
     const entries: Entries = [
       [
-        makeIndexedDBDatabase('a', 0, REPLICACHE_FORMAT_VERSION + 1),
+        makeIndexedDBDatabase({
+          name: 'a',
+          lastOpenedTimestampMS: 0,
+          replicacheFormatVersion: REPLICACHE_FORMAT_VERSION + 1,
+        }),
         makeClientMap({
           clientA1: {
             headHash: fakeHash('a1'),
@@ -227,7 +252,11 @@ suite('collectIDBDatabases', () => {
   {
     const entries: Entries = [
       [
-        makeIndexedDBDatabase('a', 0, REPLICACHE_FORMAT_VERSION_SDD - 1),
+        makeIndexedDBDatabase({
+          name: 'a',
+          lastOpenedTimestampMS: 0,
+          replicacheFormatVersion: REPLICACHE_FORMAT_VERSION_SDD - 1,
+        }),
         makeClientMap({
           clientA1: {
             headHash: fakeHash('a1'),
@@ -238,6 +267,64 @@ suite('collectIDBDatabases', () => {
     ];
     t('one idb, one client, old format version', entries, 0, ['a']);
     t('one idb, one client, old format version', entries, 1000, []);
+  }
+
+  {
+    const entries: Entries = [
+      [
+        makeIndexedDBDatabase({
+          name: 'a',
+          lastOpenedTimestampMS: 0,
+          replicacheFormatVersion: REPLICACHE_FORMAT_VERSION_DD31,
+        }),
+        makeClientMap({
+          clientA1: {
+            headHash: fakeHash('a1'),
+            heartbeatTimestampMs: 0,
+            clientGroupID: 'clientGroupA1',
+          },
+        }),
+        makeClientGroupMap({
+          clientGroupA1: {
+            headHash: fakeHash('a1'),
+            mutationIDs: {
+              clientA1: 2,
+            },
+            lastServerAckdMutationIDs: {
+              clientA1: 1,
+            },
+          },
+        }),
+      ],
+    ];
+    t(
+      'one idb, one client, with pending mutations',
+      entries,
+      0,
+      ['a'],
+      NO_LEGACY,
+    );
+    t(
+      'one idb, one client, with pending mutations',
+      entries,
+      1000,
+      ['a'],
+      NO_LEGACY,
+    );
+    t(
+      'one idb, one client, with pending mutations',
+      entries,
+      2000,
+      ['a'],
+      NO_LEGACY,
+    );
+    t(
+      'one idb, one client, with pending mutations',
+      entries,
+      5000,
+      ['a'],
+      NO_LEGACY,
+    );
   }
 });
 

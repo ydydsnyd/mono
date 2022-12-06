@@ -6,14 +6,26 @@ import {IDBDatabasesStore} from './idb-databases-store.js';
 import type {IndexedDBDatabase} from './idb-databases-store.js';
 import {initBgIntervalProcess} from '../bg-interval.js';
 import type {LogContext} from '@rocicorp/logger';
-import {REPLICACHE_FORMAT_VERSION} from '../replicache.js';
+import {
+  REPLICACHE_FORMAT_VERSION,
+  REPLICACHE_FORMAT_VERSION_DD31,
+} from '../replicache.js';
 import {assertHash} from '../hash.js';
+import {
+  clientGroupHasPendingMutations,
+  getClientGroups,
+} from './client-groups.js';
+import {assert} from '../asserts.js';
 
 // How frequently to try to collect
 const COLLECT_INTERVAL_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 // If an IDB database is older than MAX_AGE, then it can be collected.
 const MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 1 month
+
+// If an IDB database is older than DD31_MAX_AGE **and** has no pending
+// mutations, then it can be collected.
+const DD31_MAX_AGE = 14 * 24 * 60 * 60 * 1000; // 2 weeks
 
 // We delay the initial collection to prevent doing it at startup.
 const COLLECT_DELAY = 5 * 60 * 1000; // 5 minutes
@@ -27,7 +39,13 @@ export function initCollectIDBDatabases(
   initBgIntervalProcess(
     'CollectIDBDatabases',
     async () => {
-      await collectIDBDatabases(idbDatabasesStore, signal, Date.now(), MAX_AGE);
+      await collectIDBDatabases(
+        idbDatabasesStore,
+        signal,
+        Date.now(),
+        MAX_AGE,
+        DD31_MAX_AGE,
+      );
     },
     () => {
       if (initial) {
@@ -46,6 +64,7 @@ export async function collectIDBDatabases(
   signal: AbortSignal,
   now: number,
   maxAge: number,
+  dd31MaxAge: number,
   newDagStore = defaultNewDagStore,
 ): Promise<void> {
   const databases = await idbDatabasesStore.getDatabases();
@@ -56,7 +75,7 @@ export async function collectIDBDatabases(
       async db =>
         [
           db.name,
-          await canCollectDatabase(db, now, maxAge, newDagStore),
+          await canCollectDatabase(db, now, maxAge, dd31MaxAge, newDagStore),
         ] as const,
     ),
   );
@@ -117,6 +136,7 @@ async function canCollectDatabase(
   db: IndexedDBDatabase,
   now: number,
   maxAge: number,
+  dd31MaxAge: number,
   newDagStore: typeof defaultNewDagStore,
 ): Promise<boolean> {
   if (db.replicacheFormatVersion > REPLICACHE_FORMAT_VERSION) {
@@ -125,7 +145,24 @@ async function canCollectDatabase(
 
   // 0 is used in testing
   if (db.lastOpenedTimestampMS !== undefined) {
-    return now - db.lastOpenedTimestampMS >= maxAge;
+    const isDd31 =
+      DD31 && db.replicacheFormatVersion >= REPLICACHE_FORMAT_VERSION_DD31;
+
+    // - For SDD we can delete the database if it is older than maxAge.
+    // - For DD31 we can delete the database if it is older than dd31MaxAge and
+    //   there are no pending mutations.
+    if (now - db.lastOpenedTimestampMS < (isDd31 ? dd31MaxAge : maxAge)) {
+      return false;
+    }
+
+    if (!isDd31) {
+      return true;
+    }
+
+    // If increase the format version we need to decide how to deal with this
+    // logic.
+    assert(db.replicacheFormatVersion === REPLICACHE_FORMAT_VERSION_DD31);
+    return !(await anyPendingMutationsInClientGroups(newDagStore(db.name)));
   }
 
   // For legacy databases we do not have a lastOpenedTimestampMS so we check the
@@ -171,4 +208,16 @@ export async function deleteAllReplicacheData(): Promise<{
   }
 
   return result;
+}
+
+async function anyPendingMutationsInClientGroups(
+  perdag: dag.Store,
+): Promise<boolean> {
+  const clientGroups = await perdag.withRead(getClientGroups);
+  for (const clientGroup of clientGroups.values()) {
+    if (clientGroupHasPendingMutations(clientGroup)) {
+      return true;
+    }
+  }
+  return false;
 }
