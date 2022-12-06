@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1670362028963,
+  "lastUpdate": 1670370898312,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Benchmark": [
@@ -33722,6 +33722,261 @@ window.BENCHMARK_DATA = {
             "unit": "p95 ms",
             "range": "±11.0%",
             "extra": "persist tmcw 50/75/90/95%=490.10/492.90/501.10/501.10 ms avg=626.46 ms (7 runs sampled)"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cesar@roci.dev",
+            "name": "Cesar Alaestante",
+            "username": "cesara"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "818594ed814e835209cf093542efd38048a4e2b2",
+          "message": "doc: update todo example and source url (#452)",
+          "timestamp": "2022-12-06T16:47:10-07:00",
+          "tree_id": "a02dc5f265ffe3deb26a0fd7f88f06d4a8922b5b",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/818594ed814e835209cf093542efd38048a4e2b2"
+        },
+        "date": 1670370897690,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "writeSubRead 1MB total, 64 subs total, 5 subs dirty, 16kb read per sub p95",
+            "value": 5,
+            "unit": "p95 ms",
+            "range": "±3.7%",
+            "extra": "writeSubRead 1MB total, 64 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=1.30/1.50/2.40/5.00 ms avg=1.57 ms (19 runs sampled)"
+          },
+          {
+            "name": "writeSubRead 4MB total, 128 subs total, 5 subs dirty, 16kb read per sub p95",
+            "value": 3.1000003814697266,
+            "unit": "p95 ms",
+            "range": "±1.2%",
+            "extra": "writeSubRead 4MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=1.90/2.10/2.70/3.10 ms avg=2.13 ms (19 runs sampled)"
+          },
+          {
+            "name": "writeSubRead 16MB total, 128 subs total, 5 subs dirty, 16kb read per sub p95",
+            "value": 9.30000114440918,
+            "unit": "p95 ms",
+            "range": "±6.4%",
+            "extra": "writeSubRead 16MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=2.90/7.20/9.30/9.30 ms avg=4.66 ms (8 runs sampled)"
+          },
+          {
+            "name": "writeSubRead 64MB total, 128 subs total, 5 subs dirty, 16kb read per sub p95",
+            "value": 7.5,
+            "unit": "p95 ms",
+            "range": "±4.5%",
+            "extra": "writeSubRead 64MB total, 128 subs total, 5 subs dirty, 16kb read per sub 50/75/90/95%=3.00/5.40/7.50/7.50 ms avg=4.61 ms (7 runs sampled)"
+          },
+          {
+            "name": "populate 1024x1000 (clean, indexes: 0) p95",
+            "value": 49.20000076293945,
+            "unit": "p95 ms",
+            "range": "±39.2%",
+            "extra": "populate 1024x1000 (clean, indexes: 0) 50/75/90/95%=10.00/14.90/17.60/49.20 ms avg=14.05 ms (19 runs sampled)"
+          },
+          {
+            "name": "populate 1024x1000 (clean, indexes: 1) p95",
+            "value": 55.29999923706055,
+            "unit": "p95 ms",
+            "range": "±32.7%",
+            "extra": "populate 1024x1000 (clean, indexes: 1) 50/75/90/95%=22.60/26.90/37.80/55.30 ms avg=28.36 ms (18 runs sampled)"
+          },
+          {
+            "name": "populate 1024x1000 (clean, indexes: 2) p95",
+            "value": 72.60000038146973,
+            "unit": "p95 ms",
+            "range": "±36.9%",
+            "extra": "populate 1024x1000 (clean, indexes: 2) 50/75/90/95%=35.70/44.50/46.80/72.60 ms avg=45.51 ms (11 runs sampled)"
+          },
+          {
+            "name": "populate 1024x10000 (clean, indexes: 0) p95",
+            "value": 153,
+            "unit": "p95 ms",
+            "range": "±44.2%",
+            "extra": "populate 1024x10000 (clean, indexes: 0) 50/75/90/95%=108.80/144.70/153.00/153.00 ms avg=147.97 ms (7 runs sampled)"
+          },
+          {
+            "name": "populate 1024x10000 (clean, indexes: 1) p95",
+            "value": 348.6000003814697,
+            "unit": "p95 ms",
+            "range": "±73.8%",
+            "extra": "populate 1024x10000 (clean, indexes: 1) 50/75/90/95%=274.80/282.50/348.60/348.60 ms avg=361.04 ms (7 runs sampled)"
+          },
+          {
+            "name": "populate 1024x10000 (clean, indexes: 2) p95",
+            "value": 484,
+            "unit": "p95 ms",
+            "range": "±71.8%",
+            "extra": "populate 1024x10000 (clean, indexes: 2) 50/75/90/95%=412.20/421.80/484.00/484.00 ms avg=532.67 ms (7 runs sampled)"
+          },
+          {
+            "name": "scan 1024x1000 p95",
+            "value": 4.400001525878906,
+            "unit": "p95 ms",
+            "range": "±2.3%",
+            "extra": "scan 1024x1000 50/75/90/95%=2.10/2.30/4.00/4.40 ms avg=2.29 ms (19 runs sampled)"
+          },
+          {
+            "name": "scan 1024x10000 p95",
+            "value": 22.600000381469727,
+            "unit": "p95 ms",
+            "range": "±7.3%",
+            "extra": "scan 1024x10000 50/75/90/95%=15.30/15.70/21.50/22.60 ms avg=17.56 ms (19 runs sampled)"
+          },
+          {
+            "name": "create index with definition 1024x5000 p95",
+            "value": 789.2999992370605,
+            "unit": "p95 ms",
+            "range": "±23.4%",
+            "extra": "create index with definition 1024x5000 50/75/90/95%=768.40/773.60/789.30/789.30 ms avg=975.34 ms (7 runs sampled)"
+          },
+          {
+            "name": "startup read 1024x100 from 1024x100000 stored p95",
+            "value": 255.60000038146973,
+            "unit": "p95 ms",
+            "range": "±120.0%",
+            "extra": "startup read 1024x100 from 1024x100000 stored 50/75/90/95%=135.60/143.80/255.60/255.60 ms avg=190.34 ms (7 runs sampled)"
+          },
+          {
+            "name": "startup scan 1024x100 from 1024x100000 stored p95",
+            "value": 120.20000076293945,
+            "unit": "p95 ms",
+            "range": "±90.1%",
+            "extra": "startup scan 1024x100 from 1024x100000 stored 50/75/90/95%=30.10/30.40/32.70/120.20 ms avg=39.99 ms (13 runs sampled)"
+          },
+          {
+            "name": "persist 1024x1000 (indexes: 0) p95",
+            "value": 93.70000076293945,
+            "unit": "p95 ms",
+            "range": "±11.6%",
+            "extra": "persist 1024x1000 (indexes: 0) 50/75/90/95%=82.10/93.60/93.70/93.70 ms avg=103.24 ms (7 runs sampled)"
+          },
+          {
+            "name": "persist 1024x1000 (indexes: 1) p95",
+            "value": 156.19999885559082,
+            "unit": "p95 ms",
+            "range": "±11.5%",
+            "extra": "persist 1024x1000 (indexes: 1) 50/75/90/95%=144.70/153.30/156.20/156.20 ms avg=184.09 ms (7 runs sampled)"
+          },
+          {
+            "name": "persist 1024x1000 (indexes: 2) p95",
+            "value": 215.70000076293945,
+            "unit": "p95 ms",
+            "range": "±16.2%",
+            "extra": "persist 1024x1000 (indexes: 2) 50/75/90/95%=206.90/214.40/215.70/215.70 ms avg=257.73 ms (7 runs sampled)"
+          },
+          {
+            "name": "persist 1024x10000 (indexes: 0) p95",
+            "value": 622.6000003814697,
+            "unit": "p95 ms",
+            "range": "±30.4%",
+            "extra": "persist 1024x10000 (indexes: 0) 50/75/90/95%=592.20/611.00/622.60/622.60 ms avg=765.34 ms (7 runs sampled)"
+          },
+          {
+            "name": "persist 1024x10000 (indexes: 1) p95",
+            "value": 1424.8999996185303,
+            "unit": "p95 ms",
+            "range": "±73.5%",
+            "extra": "persist 1024x10000 (indexes: 1) 50/75/90/95%=1351.40/1383.60/1424.90/1424.90 ms avg=1735.23 ms (7 runs sampled)"
+          },
+          {
+            "name": "persist 1024x10000 (indexes: 2) p95",
+            "value": 2168.5,
+            "unit": "p95 ms",
+            "range": "±49.5%",
+            "extra": "persist 1024x10000 (indexes: 2) 50/75/90/95%=2119.00/2126.20/2168.50/2168.50 ms avg=2712.71 ms (7 runs sampled)"
+          },
+          {
+            "name": "refresh simple 1024x1000 (indexes: 0) p95",
+            "value": 53.70000076293945,
+            "unit": "p95 ms",
+            "range": "±15.2%",
+            "extra": "refresh simple 1024x1000 (indexes: 0) 50/75/90/95%=38.50/40.90/45.40/53.70 ms avg=47.01 ms (11 runs sampled)"
+          },
+          {
+            "name": "refresh simple 1024x1000 (indexes: 1) p95",
+            "value": 85,
+            "unit": "p95 ms",
+            "range": "±13.5%",
+            "extra": "refresh simple 1024x1000 (indexes: 1) 50/75/90/95%=71.50/81.90/85.00/85.00 ms avg=94.34 ms (7 runs sampled)"
+          },
+          {
+            "name": "refresh simple 1024x1000 (indexes: 2) p95",
+            "value": 126.0999984741211,
+            "unit": "p95 ms",
+            "range": "±19.7%",
+            "extra": "refresh simple 1024x1000 (indexes: 2) 50/75/90/95%=106.40/119.60/126.10/126.10 ms avg=141.27 ms (7 runs sampled)"
+          },
+          {
+            "name": "refresh simple 1024x10000 (indexes: 0) p95",
+            "value": 345.1000003814697,
+            "unit": "p95 ms",
+            "range": "±33.3%",
+            "extra": "refresh simple 1024x10000 (indexes: 0) 50/75/90/95%=311.80/337.20/345.10/345.10 ms avg=400.47 ms (7 runs sampled)"
+          },
+          {
+            "name": "refresh simple 1024x10000 (indexes: 1) p95",
+            "value": 340,
+            "unit": "p95 ms",
+            "range": "±12.4%",
+            "extra": "refresh simple 1024x10000 (indexes: 1) 50/75/90/95%=327.60/337.20/340.00/340.00 ms avg=417.83 ms (7 runs sampled)"
+          },
+          {
+            "name": "refresh simple 1024x10000 (indexes: 2) p95",
+            "value": 339.79999923706055,
+            "unit": "p95 ms",
+            "range": "±30.4%",
+            "extra": "refresh simple 1024x10000 (indexes: 2) 50/75/90/95%=322.60/337.00/339.80/339.80 ms avg=402.80 ms (7 runs sampled)"
+          },
+          {
+            "name": "refresh, 1024x1000 (indexes: 0) existing, refreshing 10 mutations, rebasing 10 mutations, with 1024x10 per mutation p95",
+            "value": 190.39999961853027,
+            "unit": "p95 ms",
+            "range": "±65.8%",
+            "extra": "refresh, 1024x1000 (indexes: 0) existing, refreshing 10 mutations, rebasing 10 mutations, with 1024x10 per mutation 50/75/90/95%=124.60/147.70/190.40/190.40 ms avg=172.43 ms (7 runs sampled)"
+          },
+          {
+            "name": "refresh, 1024x1000 (indexes: 1) existing, refreshing 10 mutations, rebasing 10 mutations, with 1024x10 per mutation p95",
+            "value": 752.8000011444092,
+            "unit": "p95 ms",
+            "range": "±69.3%",
+            "extra": "refresh, 1024x1000 (indexes: 1) existing, refreshing 10 mutations, rebasing 10 mutations, with 1024x10 per mutation 50/75/90/95%=683.50/741.00/752.80/752.80 ms avg=859.61 ms (7 runs sampled)"
+          },
+          {
+            "name": "refresh, 1024x1000 (indexes: 0) existing, refreshing 100 mutations, rebasing 100 mutations, with 1024x10 per mutation p95",
+            "value": 662.6000003814697,
+            "unit": "p95 ms",
+            "range": "±191.6%",
+            "extra": "refresh, 1024x1000 (indexes: 0) existing, refreshing 100 mutations, rebasing 100 mutations, with 1024x10 per mutation 50/75/90/95%=471.00/529.30/662.60/662.60 ms avg=634.23 ms (7 runs sampled)"
+          },
+          {
+            "name": "refresh, 1024x1000 (indexes: 1) existing, refreshing 100 mutations, rebasing 100 mutations, with 1024x10 per mutation p95",
+            "value": 1771.6000003814697,
+            "unit": "p95 ms",
+            "range": "±282.8%",
+            "extra": "refresh, 1024x1000 (indexes: 1) existing, refreshing 100 mutations, rebasing 100 mutations, with 1024x10 per mutation 50/75/90/95%=1488.80/1713.40/1771.60/1771.60 ms avg=1956.14 ms (7 runs sampled)"
+          },
+          {
+            "name": "populate tmcw p95",
+            "value": 162.79999923706055,
+            "unit": "p95 ms",
+            "range": "±62.5%",
+            "extra": "populate tmcw 50/75/90/95%=100.30/114.00/162.80/162.80 ms avg=139.40 ms (7 runs sampled)"
+          },
+          {
+            "name": "persist tmcw p95",
+            "value": 510.8999996185303,
+            "unit": "p95 ms",
+            "range": "±18.8%",
+            "extra": "persist tmcw 50/75/90/95%=492.10/493.90/510.90/510.90 ms avg=630.01 ms (7 runs sampled)"
           }
         ]
       }
