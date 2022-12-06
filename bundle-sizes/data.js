@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1670306815497,
+  "lastUpdate": 1670339092164,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -32285,6 +32285,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/54d7fcabc5f1a9a74d16ede86f1c380ea0e066ec"
         },
         "date": 1670306808655,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 199547,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 35257,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 198400,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 34936,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 84151,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 24374,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d0e56bd6d2a9d0fffcf605ea30c29ee6a1c364f5",
+          "message": "chore: Disable bg processes in index perf test (#448)\n\nDisable all background processes in the index perf test.\r\n\r\nThis is done based on a hunch that maybe we are hitting the time\r\nthreshold to trigger one of these on the bots.",
+          "timestamp": "2022-12-06T15:03:30Z",
+          "tree_id": "2428055994d9968ecbd672a2cf68a1be1b5bdfc5",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/d0e56bd6d2a9d0fffcf605ea30c29ee6a1c364f5"
+        },
+        "date": 1670339084835,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
