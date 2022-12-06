@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1670343552469,
+  "lastUpdate": 1670344457050,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -32477,6 +32477,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 28137,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ea9d6dfc23b6f6c4b1a624c93ef809c90ff37a65",
+          "message": "fix(dd31): Remove isNewClientGroup from PullRequestDD31 (#435)\n\nProblem\r\n=======\r\n`isNewClientGroup` was to be used in support of deleting client groups (see https://www.notion.so/replicache/DD-3-1-e42489fc2e6b4340a01c7fa0de353a30#67fba6e269ad41879ae6b9e7f338e128).  \r\n\r\nHowever, due to races analogous to those describe here (https://www.notion.so/replicache/Deleting-Client-entries-from-backend-database-bdc4592792f94e7489507bba693c8359) for deleting clients, it is not safe to delete client groups.  \r\n\r\nSolution\r\n=======\r\n\r\nGet rid of `isNewClientGroup` from the PullRequest api.\r\n\r\nBackends should:\r\n- Never delete clients/client groups unless they also delete the corresponding space.\r\n- Create clients and client groups in push if not found.\r\n  - If not found and lmids don't start at 1 return ClientStateNotFoundResponse, this should only happen in development. \r\n- In pull, default response lmid changes and patch to empty and return same cookie if client / client group entry not found.",
+          "timestamp": "2022-12-06T09:33:15-07:00",
+          "tree_id": "c916e5aa23f113132e243ae8c30f56526785b554",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/ea9d6dfc23b6f6c4b1a624c93ef809c90ff37a65"
+        },
+        "date": 1670344450222,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 241814,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 39961,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 240667,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 39619,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 100813,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 28053,
             "unit": "bytes"
           }
         ]
