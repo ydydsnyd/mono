@@ -187,39 +187,6 @@ export class BTreeWrite extends BTreeRead {
   }
 
   flush(): Promise<Hash> {
-    const walk = (
-      hash: Hash,
-      newChunks: dag.Chunk[],
-      createChunk: CreateChunk,
-    ): Hash => {
-      const node = this._modified.get(hash);
-      if (node === undefined) {
-        // Not modified, use the original.
-        return hash;
-      }
-      if (isDataNodeImpl(node)) {
-        const chunk = createChunk(node.toChunkData() as ReadonlyJSONValue, []);
-        newChunks.push(chunk);
-        return chunk.hash;
-      }
-      const refs: Hash[] = [];
-
-      const {entries} = node;
-      for (let i = 0; i < entries.length; i++) {
-        const entry = entries[i];
-        const childHash = entry[1];
-        const newChildHash = walk(childHash, newChunks, createChunk);
-        if (newChildHash !== childHash) {
-          // MUTATES the entries!
-          entries[i] = [entry[0], newChildHash];
-        }
-        refs.push(newChildHash);
-      }
-      const chunk = createChunk(node.toChunkData(), refs);
-      newChunks.push(chunk);
-      return chunk.hash;
-    };
-
     return this._lock.withLock(async () => {
       const dagWrite = this._dagRead;
 
@@ -231,11 +198,56 @@ export class BTreeWrite extends BTreeRead {
       }
 
       const newChunks: dag.Chunk[] = [];
-      const newRoot = walk(this.rootHash, newChunks, dagWrite.createChunk);
+      const newRoot = gatherNewChunks(
+        this.rootHash,
+        newChunks,
+        dagWrite.createChunk,
+        this._modified,
+      );
       await Promise.all(newChunks.map(chunk => dagWrite.putChunk(chunk)));
       this._modified.clear();
       this.rootHash = newRoot;
       return newRoot;
     });
   }
+}
+
+function gatherNewChunks(
+  hash: Hash,
+  newChunks: dag.Chunk[],
+  createChunk: CreateChunk,
+  modified: Map<Hash, DataNodeImpl | InternalNodeImpl>,
+): Hash {
+  const node = modified.get(hash);
+  if (node === undefined) {
+    // Not modified, use the original.
+    return hash;
+  }
+
+  if (isDataNodeImpl(node)) {
+    const chunk = createChunk(node.toChunkData(), []);
+    newChunks.push(chunk);
+    return chunk.hash;
+  }
+
+  const refs: Hash[] = [];
+  const {entries} = node;
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    const childHash = entry[1];
+    const newChildHash = gatherNewChunks(
+      childHash,
+      newChunks,
+      createChunk,
+      modified,
+    );
+    if (newChildHash !== childHash) {
+      // MUTATES the entries!
+      entries[i] = [entry[0], newChildHash];
+    }
+    refs.push(newChildHash);
+  }
+  const chunk = createChunk(node.toChunkData(), refs);
+  newChunks.push(chunk);
+  return chunk.hash;
 }
