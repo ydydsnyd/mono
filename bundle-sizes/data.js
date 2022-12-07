@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1670420345430,
+  "lastUpdate": 1670421741337,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -33095,6 +33095,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/e98dbb3eaca675ff68e4147aaee237e41a2f655f"
         },
         "date": 1670420337676,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 242580,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40060,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 241433,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 39735,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 101087,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 28118,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ae51b855cd3cd5ae724bb8ffbaa3fd21b7f5bb5d",
+          "message": "chore: Remove ability to run SDD test etc (#461)\n\nThe define is still there but DD31 is always true.\r\n\r\nTowards #165",
+          "timestamp": "2022-12-07T15:01:16+01:00",
+          "tree_id": "41550e1cc7bb8ce45e8802a11baa4e7fe9da8b84",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/ae51b855cd3cd5ae724bb8ffbaa3fd21b7f5bb5d"
+        },
+        "date": 1670421733484,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
