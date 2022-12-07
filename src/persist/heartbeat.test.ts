@@ -257,7 +257,7 @@ test('heartbeat with missing client calls callback', async () => {
 
 test('heartbeat with dropped idb throws', async () => {
   const consoleErrorStub = sinon.stub(console, 'error');
-  const name = `heartbeat-test`;
+  const name = `heartbeat-test-dropped-idb-${Math.random()}`;
   const ibdStore = new IDBStore(name);
   const dagStore = new dag.StoreImpl(ibdStore, dag.uuidChunkHasher, assertHash);
   const onClientStateNotFound = sinon.fake();
