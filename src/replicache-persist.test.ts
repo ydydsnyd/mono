@@ -1,5 +1,6 @@
 import {
   addData,
+  clock,
   disableAllBackgroundProcesses,
   expectLogContext,
   initReplicacheTesting,
@@ -26,6 +27,7 @@ import {assertHash} from './hash.js';
 import {IDBNotFoundError} from './kv/idb-store.js';
 import type {WriteTransaction} from './transactions.js';
 import type {MutatorDefs} from './replicache.js';
+import {sleep} from './sleep.js';
 
 initReplicacheTesting();
 
@@ -190,18 +192,25 @@ suite('onClientStateNotFound', () => {
     };
     const rep = await replicacheForTesting(name, {
       mutators,
+      ...disableAllBackgroundProcesses,
     });
 
     await rep.mutate.addData({foo: 'bar'});
     await rep.persist();
     const clientID = await rep.clientID;
     await deleteClientForTesting(clientID, rep.perdag);
+
+    // Need a real timeout here.
+    clock.restore();
+    await sleep(10);
+
     await rep.close();
 
     const rep2 = await replicacheForTesting(
       rep.name,
       {
         mutators,
+        ...disableAllBackgroundProcesses,
       },
       {useUniqueName: false},
     );
@@ -249,6 +258,7 @@ suite('onClientStateNotFound', () => {
 
     const rep = await replicacheForTesting(name, {
       mutators,
+      ...disableAllBackgroundProcesses,
     });
 
     await rep.mutate.addData({foo: 'bar'});
@@ -261,6 +271,7 @@ suite('onClientStateNotFound', () => {
       rep.name,
       {
         mutators,
+        ...disableAllBackgroundProcesses,
       },
       {useUniqueName: false},
     );
