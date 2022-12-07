@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1670410965695,
+  "lastUpdate": 1670418662875,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -32825,6 +32825,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/205713aaa1241e895b9b591ed7dccc87a7b1d67f"
         },
         "date": 1670410957167,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 242621,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40087,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 241474,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 39732,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 101077,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 28132,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f28206df2cd5ba9335165d5fd695a330b7f632d4",
+          "message": "chore(deps): bump express from 4.17.2 to 4.18.2 (#451)\n\nBumps [express](https://github.com/expressjs/express) from 4.17.2 to 4.18.2.\r\n- [Release notes](https://github.com/expressjs/express/releases)\r\n- [Changelog](https://github.com/expressjs/express/blob/master/History.md)\r\n- [Commits](https://github.com/expressjs/express/compare/4.17.2...4.18.2)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: express\r\n  dependency-type: indirect\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>\r\nCo-authored-by: Erik Arvidsson <erik.arvidsson@gmail.com>",
+          "timestamp": "2022-12-07T14:09:57+01:00",
+          "tree_id": "f1388a41441508c904805e2c13df54c0be3da70c",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/f28206df2cd5ba9335165d5fd695a330b7f632d4"
+        },
+        "date": 1670418653640,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
