@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1670420020566,
+  "lastUpdate": 1670420044509,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -32987,6 +32987,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/a11a51795b03c42bbb55d323180f92fd82fb6db7"
         },
         "date": 1670420012211,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 242621,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40087,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 241474,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 39732,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 101077,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 28132,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b4eddc232c55868c7bfe6b109c86623a8a518093",
+          "message": "chore(deps): bump qs and express (#450)\n\nBumps [qs](https://github.com/ljharb/qs) and [express](https://github.com/expressjs/express). These dependencies needed to be updated together.\r\n\r\nUpdates `qs` from 6.10.1 to 6.11.0\r\n- [Release notes](https://github.com/ljharb/qs/releases)\r\n- [Changelog](https://github.com/ljharb/qs/blob/main/CHANGELOG.md)\r\n- [Commits](https://github.com/ljharb/qs/compare/v6.10.1...v6.11.0)\r\n\r\nUpdates `express` from 4.17.2 to 4.18.2\r\n- [Release notes](https://github.com/expressjs/express/releases)\r\n- [Changelog](https://github.com/expressjs/express/blob/master/History.md)\r\n- [Commits](https://github.com/expressjs/express/compare/4.17.2...4.18.2)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: qs\r\n  dependency-type: indirect\r\n- dependency-name: express\r\n  dependency-type: indirect\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>\r\nCo-authored-by: Erik Arvidsson <erik.arvidsson@gmail.com>",
+          "timestamp": "2022-12-07T14:32:57+01:00",
+          "tree_id": "0be4b4b36b23553bdafa9e1cfd2d3485c52be057",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/b4eddc232c55868c7bfe6b109c86623a8a518093"
+        },
+        "date": 1670420036526,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
