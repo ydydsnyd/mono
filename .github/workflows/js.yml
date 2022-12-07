@@ -61,5 +61,4 @@ jobs:
       - name: Install Playwright Deps
         run: npx playwright install --with-deps
 
-      - run: DD31=false npm test
       - run: npm test

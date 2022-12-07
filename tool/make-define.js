@@ -2,14 +2,13 @@ import {readFile} from 'fs/promises';
 
 /**
  * @param {'debug'|'release'|'unknown'} mode
- * @param {boolean} dd31
  * @return {Promise<Record<string, string>>}
  */
 
-export async function makeDefine(mode, dd31) {
+export async function makeDefine(mode) {
   const define = {
     REPLICACHE_VERSION: JSON.stringify((await readPackageJSON()).version),
-    DD31: JSON.stringify(dd31),
+    DD31: 'true',
   };
   if (mode === 'unknown') {
     return define;

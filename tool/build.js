@@ -6,7 +6,6 @@ import {makeDefine} from './make-define.js';
 const forBundleSizeDashboard = process.argv.includes('--bundle-sizes');
 const perf = process.argv.includes('--perf');
 const debug = process.argv.includes('--debug');
-const dd31 = !process.argv.includes('--no-dd31');
 
 /**
  * @param {boolean} minify
@@ -52,7 +51,7 @@ async function buildReplicache(options) {
     platform: 'neutral',
     outfile: 'out/replicache.' + ext,
     entryPoints: ['src/mod.ts'],
-    define: await makeDefine(mode, dd31),
+    define: await makeDefine(mode),
   });
 }
 
