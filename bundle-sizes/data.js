@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1670469433373,
+  "lastUpdate": 1670535190902,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -33233,6 +33233,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 28082,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "99040be139282bd3777d3bd1d77268f94b175384",
+          "message": "fix: Upgrade playwright and deal with new webkit (#466)\n\nThe version of playwright we were using was no longer working on GitHub\r\nactions.\r\n\r\nUpgrade playwright\r\n\r\nThis introduced a few new flaky test in webkit related to mostly\r\ntimings of things.\r\n\r\nTry to fix the flakiness by adding promises and relaxing tests a bit.",
+          "timestamp": "2022-12-08T21:32:13Z",
+          "tree_id": "4a4e88046dd2880e4038e1b9c9ca5a6d8e877595",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/99040be139282bd3777d3bd1d77268f94b175384"
+        },
+        "date": 1670535182763,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 253304,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 41521,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 252143,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 41202,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 101228,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 28145,
             "unit": "bytes"
           }
         ]
