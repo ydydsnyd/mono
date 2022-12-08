@@ -14,7 +14,7 @@ import {makeClient, setClientsForTesting} from './clients-test-helpers.js';
 import {assertNotUndefined} from '../asserts.js';
 import {IDBNotFoundError, IDBStore} from '../kv/idb-store.js';
 import {dropIDBStore} from '../kv/mod.js';
-import {sleep} from '../sleep.js';
+import {resolver} from '@rocicorp/resolver';
 
 let clock: SinonFakeTimers;
 const START_TIME = 100000;
@@ -256,7 +256,10 @@ test('heartbeat with missing client calls callback', async () => {
 });
 
 test('heartbeat with dropped idb throws', async () => {
-  const consoleErrorStub = sinon.stub(console, 'error');
+  const {resolve, promise} = resolver();
+  const consoleErrorStub = sinon.stub(console, 'error').callsFake(() => {
+    resolve();
+  });
   const name = `heartbeat-test-dropped-idb-${Math.random()}`;
   const ibdStore = new IDBStore(name);
   const dagStore = new dag.StoreImpl(ibdStore, dag.uuidChunkHasher, assertHash);
@@ -279,9 +282,7 @@ test('heartbeat with dropped idb throws', async () => {
 
   expect(onClientStateNotFound.callCount).to.equal(0);
 
-  // Firefox uses a task (not microtask) to throw the error, so we need to wait
-  clock.restore();
-  await sleep(10);
+  await promise;
 
   expect(consoleErrorStub.callCount).to.equal(1);
   expect(consoleErrorStub.args[0][2]).to.be.instanceOf(IDBNotFoundError);

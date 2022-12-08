@@ -49,6 +49,7 @@ import {
 } from './replicache-mutation-recovery.test.js';
 import {stringCompare} from './string-compare.js';
 import type {PushResponse} from './pusher.js';
+import {enableLicensingSymbol} from './replicache-options.js';
 
 async function createAndPersistClientWithPendingLocalDD31(
   clientID: sync.ClientID,
@@ -1495,7 +1496,7 @@ suite('DD31', () => {
 
   test('mutation recovery is invoked on 5 minute interval', async () => {
     const rep = await replicacheForTesting('mutation-recovery-startup-dd31-4', {
-      enableLicensing: false,
+      [enableLicensingSymbol]: false,
     });
     expect(rep.recoverMutationsSpy.callCount).to.equal(1);
     await clock.tickAsync(5 * 60 * 1000);

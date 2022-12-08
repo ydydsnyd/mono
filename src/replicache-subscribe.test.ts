@@ -22,6 +22,8 @@ import type {IndexKey} from './db/index.js';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
+import {resolver} from '@rocicorp/resolver';
+import {enablePullAndPushInOpenSymbol} from './replicache-options.js';
 
 initReplicacheTesting();
 
@@ -821,6 +823,7 @@ test('subscription coalescing', async () => {
   const rep = await replicacheForTesting('subscription-coalescing', {
     mutators: {addData},
     ...disableAllBackgroundProcesses,
+    [enablePullAndPushInOpenSymbol]: false,
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -836,24 +839,32 @@ test('subscription coalescing', async () => {
   expect(store.close.callCount).to.equal(0);
   resetCounters();
 
+  const resolverA = resolver<void>();
+  const resolverB = resolver<void>();
+  const resolverC = resolver<void>();
+
   const log: string[] = [];
   const ca = rep.subscribe(tx => tx.has('a'), {
     onData() {
       log.push('a');
+      resolverA.resolve();
     },
   });
   const cb = rep.subscribe(tx => tx.has('b'), {
     onData() {
       log.push('b');
+      resolverB.resolve();
     },
   });
   const cc = rep.subscribe(tx => tx.has('c'), {
     onData() {
       log.push('c');
+      resolverC.resolve();
     },
   });
 
-  await tickUntil(() => log.length === 3);
+  await Promise.all([resolverA.promise, resolverB.promise, resolverC.promise]);
+
   expect(log).to.deep.equal(['a', 'b', 'c']);
 
   expect(store.read.callCount).to.equal(1);

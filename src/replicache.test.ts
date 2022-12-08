@@ -43,7 +43,11 @@ import {
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
 import type {MutationSDD} from './sync/push.js';
-import type {ReplicacheOptions} from './replicache-options.js';
+import {
+  enableLicensingSymbol,
+  enablePullAndPushInOpenSymbol,
+  ReplicacheOptions,
+} from './replicache-options.js';
 import {deleteClientForTesting} from './persist/clients-test-helpers.js';
 import type {LogLevel} from '@rocicorp/logger';
 import {
@@ -1198,6 +1202,7 @@ test('onSync', async () => {
     pushURL,
     pushDelay: 5,
     mutators: {addData},
+    [enablePullAndPushInOpenSymbol]: false,
   });
   const add = rep.mutate.addData;
 
@@ -1331,6 +1336,7 @@ test('push and pull concurrently', async () => {
     pushURL,
     pushDelay: 10,
     mutators: {addData},
+    [enablePullAndPushInOpenSymbol]: false,
   });
 
   const beginPullSpy = sinon.spy(rep, 'beginPull');
@@ -1578,6 +1584,9 @@ test('pull mutate options', async () => {
   const pullURL = 'https://diff.com/pull';
   const rep = await replicacheForTesting('pull-mutate-options', {
     pullURL,
+    pushURL: '',
+    ...disableAllBackgroundProcesses,
+    [enablePullAndPushInOpenSymbol]: false,
   });
   const clientID = await rep.clientID;
   const log: number[] = [];
@@ -1608,9 +1617,12 @@ test('pull mutate options', async () => {
     await clock.tickAsync(5);
   }
 
-  expect(log).to.deep.equal([
-    1000, 1030, 1060, 1090, 1120, 1150, 1180, 1680, 2180, 2205, 2230, 2255,
-    2280, 2305, 2330, 2355, 2380, 2405, 2430, 2455, 2480,
+  // the first one is often off by a few ms
+  expect(log[0]).to.be.within(1000, 1030);
+  expect(log.slice(1)).to.deep.equal([
+    // 1000, checked above
+    1030, 1060, 1090, 1120, 1150, 1180, 1680, 2180, 2205, 2230, 2255, 2280,
+    2305, 2330, 2355, 2380, 2405, 2430, 2455, 2480,
   ]);
 });
 
@@ -1647,7 +1659,7 @@ test('online', async () => {
 
   consoleInfoStub.resetHistory();
 
-  fetchMock.post(pushURL, {});
+  fetchMock.post(pushURL, 'ok');
   await rep.mutate.addData({a: 1});
 
   await tickAFewTimes(20);
@@ -1690,7 +1702,7 @@ async function licenseKeyCheckTest(tc: LicenseKeyCheckTestCase) {
     tc.enableLicensing !== undefined
       ? {
           licenseKey: tc.licenseKey,
-          enableLicensing: tc.enableLicensing,
+          [enableLicensingSymbol]: tc.enableLicensing,
         }
       : {licenseKey: tc.licenseKey},
   );
@@ -1848,7 +1860,7 @@ async function licenseActiveTest(tc: LicenseActiveTestCase) {
     tc.enableLicensing !== undefined
       ? {
           licenseKey: tc.licenseKey,
-          enableLicensing: tc.enableLicensing,
+          [enableLicensingSymbol]: tc.enableLicensing,
         }
       : {licenseKey: tc.licenseKey},
   );
@@ -2194,6 +2206,9 @@ suite('check for client not found in visibilitychange', () => {
       document.dispatchEvent(new Event('visibilitychange'));
 
       await tickAFewTimes();
+
+      clock.restore();
+      await sleep(10);
 
       expect(onClientStateNotFound.called).to.equal(called);
       if (called) {

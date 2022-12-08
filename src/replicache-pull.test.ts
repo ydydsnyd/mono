@@ -19,6 +19,8 @@ import * as sinon from 'sinon';
 import fetchMock from 'fetch-mock/esm/client';
 import {httpStatusUnauthorized, UpdateNeededReason} from './replicache.js';
 import {defaultPuller, Puller, PullerDD31} from './puller.js';
+import {resolver} from '@rocicorp/resolver';
+import {enablePullAndPushInOpenSymbol} from './replicache-options.js';
 
 initReplicacheTesting();
 
@@ -45,6 +47,7 @@ test('pull', async () => {
       },
     },
     ...disableAllBackgroundProcesses,
+    [enablePullAndPushInOpenSymbol]: false,
   });
 
   let createCount = 0;
@@ -149,23 +152,31 @@ test('reauth pull', async () => {
   const rep = await replicacheForTesting('reauth', {
     pullURL,
     auth: 'wrong',
+    ...disableAllBackgroundProcesses,
+    [enablePullAndPushInOpenSymbol]: false,
   });
 
   fetchMock.post(pullURL, {body: 'xxx', status: httpStatusUnauthorized});
 
   const consoleErrorStub = sinon.stub(console, 'error');
 
+  const {promise, resolve} = resolver();
   const getAuthFake = sinon.fake.returns(null);
-  rep.getAuth = getAuthFake;
+  rep.getAuth = () => {
+    resolve();
+    return getAuthFake();
+  };
 
   await rep.beginPull();
+
+  await promise;
 
   expect(getAuthFake.callCount).to.equal(1);
   expect(consoleErrorStub.callCount).to.equal(1);
   expectConsoleLogContextStub(
     rep.name,
     consoleErrorStub.lastCall,
-    'Got error response from server (https://diff.com/pull) doing pull: 401: xxx',
+    `Got error response from server (${pullURL}) doing pull: 401: xxx`,
     ['pull', requestIDLogContextRegex],
   );
   {
@@ -280,6 +291,7 @@ test('Client Group not found on server', async () => {
 
   const rep = await replicacheForTesting('client-group-not-found-pull', {
     ...disableAllBackgroundProcesses,
+    [enablePullAndPushInOpenSymbol]: false,
   });
 
   // eslint-disable-next-line require-await
@@ -318,7 +330,12 @@ test('Version not supported on server', async () => {
       ...disableAllBackgroundProcesses,
     });
 
-    const onUpdateNeededStub = (rep.onUpdateNeeded = sinon.stub());
+    const {resolve, promise} = resolver();
+    const onUpdateNeededStub = (rep.onUpdateNeeded = sinon
+      .stub()
+      .callsFake(() => {
+        resolve();
+      }));
 
     // eslint-disable-next-line require-await
     const puller: PullerDD31 = async () => {
@@ -334,7 +351,7 @@ test('Version not supported on server', async () => {
     rep.puller = puller as Puller;
     rep.pull();
 
-    await waitForSync(rep);
+    await promise;
 
     expect(onUpdateNeededStub.callCount).to.equal(1);
     expect(onUpdateNeededStub.lastCall.args).deep.equal([reason]);

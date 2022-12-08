@@ -22,7 +22,12 @@ import type {ReadTransaction, WriteTransaction} from './transactions.js';
 import {ConnectionLoop, MAX_DELAY_MS, MIN_DELAY_MS} from './connection-loop.js';
 import {defaultPuller} from './puller.js';
 import {defaultPusher} from './pusher.js';
-import type {
+import {
+  enableLicensingSymbol,
+  enableMutationRecoverySymbol,
+  enablePullAndPushInOpenSymbol,
+  enableScheduledPersistSymbol,
+  enableScheduledRefreshSymbol,
   ReplicacheInternalOptions,
   ReplicacheOptions,
 } from './replicache-options.js';
@@ -363,6 +368,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   private _persistIsRunning = false;
   private readonly _enableScheduledPersist: boolean;
   private readonly _enableScheduledRefresh: boolean;
+  private readonly _enablePullAndPushInOpen: boolean;
   private _persistScheduler = new ProcessScheduler(
     () => this._persist(),
     PERSIST_IDLE_TIMEOUT_MS,
@@ -476,15 +482,15 @@ export class Replicache<MD extends MutatorDefs = {}> {
     this.pusher = pusher;
 
     const internalOptions = options as ReplicacheInternalOptions;
-    const {
-      enableLicensing = true,
-      enableMutationRecovery = true,
-      enableScheduledPersist = true,
-      enableScheduledRefresh = true,
-    } = internalOptions;
-    this._enableLicensing = enableLicensing;
-    this._enableScheduledPersist = enableScheduledPersist;
-    this._enableScheduledRefresh = enableScheduledRefresh;
+    const enableMutationRecovery =
+      internalOptions[enableMutationRecoverySymbol] ?? true;
+    this._enableLicensing = internalOptions[enableLicensingSymbol] ?? true;
+    this._enableScheduledPersist =
+      internalOptions[enableScheduledPersistSymbol] ?? true;
+    this._enableScheduledRefresh =
+      internalOptions[enableScheduledRefreshSymbol] ?? true;
+    this._enablePullAndPushInOpen =
+      internalOptions[enablePullAndPushInOpenSymbol] ?? true;
 
     if (internalOptions.exposeInternalAPI) {
       internalOptions.exposeInternalAPI({
@@ -638,8 +644,10 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
     await this._licenseCheck(resolveLicenseCheck);
 
-    this.pull();
-    this._push();
+    if (this._enablePullAndPushInOpen) {
+      this.pull();
+      this._push();
+    }
 
     const {signal} = this._closeAbortController;
 
