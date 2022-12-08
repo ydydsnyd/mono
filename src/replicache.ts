@@ -858,6 +858,20 @@ export class Replicache<MD extends MutatorDefs = {}> {
   }
 
   /**
+   * The client group ID for this instance of Replicache. Instances of
+   * Replicache will have the same client group ID if and only if they have
+   * the same name, mutators, indexes, schema version, format version, and
+   * browser profile.
+   */
+  get clientGroupID(): Promise<string> {
+    assert(DD31);
+    return this._clientGroupIDPromise.then(clientGroupID => {
+      assert(clientGroupID);
+      return clientGroupID;
+    });
+  }
+
+  /**
    * `onOnlineChange` is called when the {@link online} property changes. See
    * {@link online} for more details.
    */

@@ -18,7 +18,6 @@ import {uuid} from './uuid.js';
 import type {WriteTransaction} from './transactions.js';
 import {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
 import type {DiffComputationConfig} from './sync/diff.js';
-import type {ClientGroupID} from './sync/ids.js';
 import type {ClientID} from './sync/ids.js';
 import type {PatchOperation} from './puller.js';
 import type {Hash} from './hash.js';
@@ -103,11 +102,6 @@ export class ReplicacheTest<
   get persistIsScheduled() {
     // @ts-expect-error Property '_persistIsScheduled' is private
     return this._persistIsScheduled;
-  }
-
-  get clientGroupID(): Promise<ClientGroupID | undefined> {
-    // @ts-expect-error Property '_clientGroupIDPromise' is private
-    return this._clientGroupIDPromise;
   }
 
   get isClientGroupDisabled(): boolean {
