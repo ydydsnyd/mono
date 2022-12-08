@@ -51,61 +51,83 @@ export async function handleConnection(
   };
 
   const req = getConnectRequest(url, headers);
-  const { result } = req;
-  if (result === null) {
+  const { result: parsedConnectRequest } = req;
+  if (parsedConnectRequest === null) {
     const { error } = req;
     sendError(error);
     return;
   }
 
-  lc = lc.addContext("client", result.clientID);
-  lc.info?.("parsed request", { ...result, userData: "redacted" });
+  lc = lc.addContext("client", parsedConnectRequest.clientID);
+  lc.info?.("parsed request", {
+    ...parsedConnectRequest,
+    userData: "redacted",
+  });
 
-  const { clientID, baseCookie } = result;
-  const existingRecord = await getClientRecord(clientID, storage);
+  const { clientID: requestClientID, baseCookie: requestBaseCookie } =
+    parsedConnectRequest;
+  const existingRecord = await getClientRecord(requestClientID, storage);
   lc.debug?.("Existing client record", existingRecord);
-  const lastMutationID = existingRecord?.lastMutationID ?? 0;
+  const existingLastMutationID = existingRecord?.lastMutationID ?? 0;
 
-  if (result.lmid > lastMutationID) {
+  // These checks catch a large class of dev mistakes where the room is
+  // re-created without clearing browser state. This can happen in a
+  // variety of ways, e.g. it can happen when re-using the same roomID
+  // across runs of `wrangler dev`.
+  if (parsedConnectRequest.lmid > existingLastMutationID) {
     lc.info?.(
-      "Unexepted lmid when connecting. Got",
-      result.lmid,
-      "old lastMutationID",
-      lastMutationID
+      "Unexpected lmid when connecting. Got",
+      parsedConnectRequest.lmid,
+      "expected lastMutationID",
+      existingLastMutationID
     );
-    sendError("Unexpected lmid");
+    sendError(`Unexpected lmid. ${maybeOldClientStateMessage}`);
+    return;
+  }
+  if (
+    requestBaseCookie !== null &&
+    (existingRecord === undefined ||
+      requestBaseCookie > (existingRecord.baseCookie ?? 0))
+  ) {
+    lc.info?.(
+      "Unexpected baseCookie when connecting. Got",
+      requestBaseCookie,
+      "current ClientRecord is",
+      existingRecord
+    );
+    sendError(`Unexpected baseCookie. ${maybeOldClientStateMessage}`);
     return;
   }
 
   const record: ClientRecord = {
-    baseCookie,
-    lastMutationID,
+    baseCookie: requestBaseCookie,
+    lastMutationID: existingLastMutationID,
   };
-  await putClientRecord(clientID, record, storage);
+  await putClientRecord(requestClientID, record, storage);
   lc.debug?.("Put client record", record);
-  await addConnectedClient(clientID, storage);
+  await addConnectedClient(requestClientID, storage);
 
-  const existing = clients.get(clientID);
+  const existing = clients.get(requestClientID);
   if (existing) {
     lc.debug?.("Closing old socket");
     existing.socket.close();
   }
 
   ws.addEventListener("message", (event) =>
-    onMessage(clientID, event.data.toString(), ws)
+    onMessage(requestClientID, event.data.toString(), ws)
   );
   ws.addEventListener("close", (e) => {
-    lc.info?.("WebSocket CloseEvent for client", clientID, {
+    lc.info?.("WebSocket CloseEvent for client", requestClientID, {
       reason: e.reason,
       code: e.code,
       wasClean: e.wasClean,
     });
-    onClose(clientID, ws);
+    onClose(requestClientID, ws);
   });
   ws.addEventListener("error", (e) => {
     lc.error?.(
       "WebSocket ErrorEvent for client",
-      clientID,
+      requestClientID,
       {
         filename: e.filename,
         message: e.message,
@@ -118,16 +140,19 @@ export async function handleConnection(
 
   const client: ClientState = {
     socket: ws,
-    userData: result.userData,
+    userData: parsedConnectRequest.userData,
     clockBehindByMs: undefined,
     pending: [],
   };
-  lc.debug?.("Setting client map entry", clientID, client);
-  clients.set(clientID, client);
+  lc.debug?.("Setting client map entry", requestClientID, client);
+  clients.set(requestClientID, client);
 
   const connectedMessage: ConnectedMessage = ["connected", {}];
   ws.send(JSON.stringify(connectedMessage));
 }
+
+export const maybeOldClientStateMessage =
+  "Possibly the room was re-created without also clearing browser state? Try clearing browser state and trying again.";
 
 export function getConnectRequest(url: URL, headers: Headers) {
   const getParam = (name: string, required: boolean) => {
