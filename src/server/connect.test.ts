@@ -12,7 +12,10 @@ import {
   createSilentLogContext,
   Mocket,
 } from "../util/test-utils.js";
-import { handleConnection } from "../../src/server/connect.js";
+import {
+  handleConnection,
+  maybeOldClientStateMessage,
+} from "../../src/server/connect.js";
 import { USER_DATA_HEADER_NAME } from "./auth.js";
 import { encodeHeaderValue } from "../util/headers.js";
 import { DurableStorage } from "../storage/durable-storage.js";
@@ -118,11 +121,11 @@ test("handleConnection", async () => {
     },
     {
       name: "no existing clients",
-      url: "http://google.com/?clientID=c1&baseCookie=1&ts=42&lmid=0",
+      url: "http://google.com/?clientID=c1&baseCookie=1&ts=42&lmid=0", // baseCookie === 1 => room was re-created
       headers: createHeadersWithValidUserData("u1"),
+      expectErrorResponse: `Unexpected baseCookie. ${maybeOldClientStateMessage}`,
       existingClients: new Map(),
-      expectedClients: (socket) => new Map([freshClient("c1", "u1", socket)]),
-      expectedRecord: clientRecord(1, 0),
+      expectedClients: () => new Map(),
     },
     {
       name: "baseCookie: null",
@@ -133,13 +136,13 @@ test("handleConnection", async () => {
       expectedRecord: clientRecord(null, 0),
     },
     {
-      name: "existing clients",
-      url: "http://google.com/?clientID=c1&baseCookie=1&ts=42&lmid=0",
+      name: "baseCookie: null w/existing clients",
+      url: "http://google.com/?clientID=c1&baseCookie=&ts=42&lmid=0",
       headers: createHeadersWithValidUserData("u1"),
       existingClients: new Map([c2]),
       expectedClients: (socket) =>
         new Map([freshClient("c1", "u1", socket), c2]),
-      expectedRecord: clientRecord(1, 0),
+      expectedRecord: clientRecord(null, 0),
     },
     {
       name: "existing record",
@@ -147,8 +150,26 @@ test("handleConnection", async () => {
       headers: createHeadersWithValidUserData("u1"),
       existingClients: new Map(),
       expectedClients: (socket) => new Map([freshClient("c1", "u1", socket)]),
-      existingRecord: clientRecord(1, 42),
-      expectedRecord: clientRecord(7, 42),
+      existingRecord: clientRecord(7, 0),
+      expectedRecord: clientRecord(7, 0),
+    },
+    {
+      name: "existing record w/too large baseCookie is an error",
+      url: "http://google.com/?clientID=c1&baseCookie=50&ts=42&lmid=0", // baseCookie === 50 => room was re-created
+      headers: createHeadersWithValidUserData("u1"),
+      existingClients: new Map(),
+      expectedClients: (socket) => new Map([freshClient("c1", "u1", socket)]),
+      existingRecord: clientRecord(1, 0),
+      expectErrorResponse: `Unexpected baseCookie. ${maybeOldClientStateMessage}`,
+    },
+    {
+      name: "existing record w/too small baseCookie is ok",
+      url: "http://google.com/?clientID=c1&baseCookie=5&ts=42&lmid=0",
+      headers: createHeadersWithValidUserData("u1"),
+      existingClients: new Map(),
+      expectedClients: (socket) => new Map([freshClient("c1", "u1", socket)]),
+      existingRecord: clientRecord(7, 0),
+      expectedRecord: clientRecord(5, 0),
     },
     {
       name: "missing user data",
@@ -188,7 +209,8 @@ test("handleConnection", async () => {
       existingClients: new Map(),
       expectedClients: (socket) => new Map([freshClient("c1", "u1", socket)]),
       headers: createHeadersWithValidUserData("u1"),
-      expectErrorResponse: "Unexpected lmid",
+      existingRecord: clientRecord(7, 0),
+      expectErrorResponse: `Unexpected lmid. ${maybeOldClientStateMessage}`,
     },
   ];
 
@@ -223,17 +245,21 @@ test("handleConnection", async () => {
       ]);
       continue;
     }
-    expect(mocket.log).toEqual([["send", JSON.stringify(["connected", {}])]]);
+    try {
+      expect(mocket.log).toEqual([["send", JSON.stringify(["connected", {}])]]);
+      const expectedClients = c.expectedClients(mocket);
+      expect(clients).toEqual(expectedClients);
 
-    const expectedClients = c.expectedClients(mocket);
-    expect(clients).toEqual(expectedClients);
-
-    const actualRecord = await getEntry(
-      durable,
-      clientRecordKey("c1"),
-      clientRecordSchema,
-      {}
-    );
-    expect(actualRecord).toEqual(c.expectedRecord);
+      const actualRecord = await getEntry(
+        durable,
+        clientRecordKey("c1"),
+        clientRecordSchema,
+        {}
+      );
+      expect(actualRecord).toEqual(c.expectedRecord);
+    } catch (e) {
+      console.log("c.name failed:", c.name);
+      throw e;
+    }
   }
 });
