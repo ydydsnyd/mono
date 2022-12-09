@@ -6,9 +6,6 @@ import type {Hash} from '../hash.js';
 import {assertHasClientState, setClient} from './clients.js';
 import {GatherMemoryOnlyVisitor} from './gather-mem-only-visitor.js';
 import {assertSnapshotMetaSDD} from '../db/commit.js';
-import {persistDD31} from './persist-dd31.js';
-import type {LogContext} from '@rocicorp/logger';
-import type {MutatorDefs} from '../replicache.js';
 
 /**
  * Persists the client's 'main' head memdag state to the perdag.
@@ -16,24 +13,10 @@ import type {MutatorDefs} from '../replicache.js';
  * @param clientID
  * @param memdag Dag to gather memory-only chunks from.
  * @param perdag Dag to write gathered memory-only chunks to.
+ * @param closed A function that returns true if the store has been closed.
  * @returns A promise that is fulfilled when persist completes successfully,
  * or is rejected if the persist fails.
  */
-export function persist(
-  lc: LogContext,
-  clientID: sync.ClientID,
-  memdag: dag.LazyStore,
-  perdag: dag.Store,
-  mutators: MutatorDefs,
-  closed: () => boolean,
-): Promise<void> {
-  if (DD31) {
-    return persistDD31(lc, clientID, memdag, perdag, mutators, closed);
-  }
-
-  return persistSDD(clientID, memdag, perdag, closed);
-}
-
 export async function persistSDD(
   clientID: sync.ClientID,
   memdag: dag.LazyStore,

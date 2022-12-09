@@ -1355,7 +1355,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         return;
       }
       try {
-        await persist.persist(
+        await persist.persistDD31(
           this._lc,
           clientID,
           this._memdag,
