@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1670573421825,
+  "lastUpdate": 1670581189106,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -33395,6 +33395,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 28145,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e0c0cd5825fcb2a9e2d395559ab86e3e2ccb2458",
+          "message": "feat!: Remove createIndex and dropIndex (#464)\n\n* fix!: Remove createIndex and dropIndex\r\n\r\nBREAKING CHANGE: This removes the createIndex and dropIndex methods from\r\nReplicache\r\n\r\nThis also removes the same methods from db.Write\r\n\r\nThere is some fallout in this PR where I started renaming types. Sorry.\r\nThe rule for now is that we should name things as FooDD31 and FooSDD and\r\nwe should export the DD31 version in src/mod.ts. We should remove the\r\ndoSomething methods that just delegate to the DD31 and SDD version based\r\non the compile time constant. This is so that we are explicit about things.\r\n\r\nI deleted some dead code but I stopped since it was not related to this\r\nPR. Must not clean things up!\r\n\r\nTowards #165",
+          "timestamp": "2022-12-09T10:18:46Z",
+          "tree_id": "1ff3683cfc16ddf35b763575dfa9172220d50260",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/e0c0cd5825fcb2a9e2d395559ab86e3e2ccb2458"
+        },
+        "date": 1670581181172,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 249410,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 41121,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 248249,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 40779,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 99782,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27857,
             "unit": "bytes"
           }
         ]
