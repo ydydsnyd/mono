@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1670597558687,
+  "lastUpdate": 1670598565478,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -33989,6 +33989,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27438,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "39bbab993da340505f3f647372fd93807c70a58f",
+          "message": "chore: Remove 'NotFoundOnServer' onClientStateNotFound (#477)\n\nTHIS IS A BREAKING CHANGE!\r\n\r\nRemove the arg to onClientStateNotFound and the type\r\nClientStateNotFoundReason.\r\n\r\nCloses #437",
+          "timestamp": "2022-12-09T15:08:28Z",
+          "tree_id": "eea8c8a712aea1790e9eb759e9a5c72d0379bb0a",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/39bbab993da340505f3f647372fd93807c70a58f"
+        },
+        "date": 1670598558705,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 243913,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40437,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 242752,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 40070,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 98156,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27422,
             "unit": "bytes"
           }
         ]
