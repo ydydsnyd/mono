@@ -183,21 +183,6 @@ export interface RequestOptions {
 }
 
 /**
- * The reason {@link onClientStateNotFound} was called.
- */
-export type ClientStateNotFoundReason =
-  | {type: 'NotFoundOnServer'}
-  | {type: 'NotFoundOnClient'};
-
-const reasonServer = {
-  type: 'NotFoundOnServer',
-} as const;
-
-const reasonClient = {
-  type: 'NotFoundOnClient',
-} as const;
-
-/**
  * The reason [[onUpdateNeeded]] was called.
  */
 export type UpdateNeededReason =
@@ -386,8 +371,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
    * this to `null` or provide your own function to prevent the page from
    * reloading automatically.
    */
-  onClientStateNotFound: ((reason: ClientStateNotFoundReason) => void) | null =
-    reload;
+  onClientStateNotFound: (() => void) | null = reload;
 
   /**
    * `onUpdateNeeded` is called when a code update is needed.
@@ -1338,75 +1322,62 @@ export class Replicache<MD extends MutatorDefs = {}> {
     } finally {
       this._persistIsRunning = false;
     }
-    if (DD31) {
-      const clientID = await this.clientID;
-      const clientGroupID = await this._clientGroupIDPromise;
-      assert(clientGroupID);
-      this._onPersist({clientID, clientGroupID});
-    }
+
+    const clientID = await this.clientID;
+    const clientGroupID = await this._clientGroupIDPromise;
+    assert(clientGroupID);
+    this._onPersist({clientID, clientGroupID});
   }
 
   private async _refresh(): Promise<void> {
-    if (DD31) {
-      await this._ready;
-      const clientID = await this.clientID;
-      if (this._closed) {
-        return;
+    await this._ready;
+    const clientID = await this.clientID;
+    if (this._closed) {
+      return;
+    }
+    let result;
+    try {
+      result = await persist.refresh(
+        this._lc,
+        this._memdag,
+        this._perdag,
+        clientID,
+        this._mutatorRegistry,
+        this._subscriptions,
+        () => this.closed,
+      );
+    } catch (e) {
+      if (e instanceof persist.ClientStateNotFoundError) {
+        this._clientStateNotFoundOnClient(clientID);
+      } else if (this._closed) {
+        this._lc.debug?.('Exception refreshing during close', e);
+      } else {
+        throw e;
       }
-      let result;
-      try {
-        result = await persist.refresh(
-          this._lc,
-          this._memdag,
-          this._perdag,
-          clientID,
-          this._mutatorRegistry,
-          this._subscriptions,
-          () => this.closed,
-        );
-      } catch (e) {
-        if (e instanceof persist.ClientStateNotFoundError) {
-          this._clientStateNotFoundOnClient(clientID);
-        } else if (this._closed) {
-          this._lc.debug?.('Exception refreshing during close', e);
-        } else {
-          throw e;
-        }
-      }
-      if (result !== undefined) {
-        await this._checkChange(result[0], result[1]);
-      }
+    }
+    if (result !== undefined) {
+      await this._checkChange(result[0], result[1]);
     }
   }
 
-  private _fireOnClientStateNotFound(
-    clientID: sync.ClientID,
-    reason: ClientStateNotFoundReason,
-  ) {
+  private _fireOnClientStateNotFound(clientID: sync.ClientID) {
     this._lc.error?.(`Client state not found, clientID: ${clientID}`);
-    this.onClientStateNotFound?.(reason);
+    this.onClientStateNotFound?.();
   }
 
   private _clientStateNotFoundOnClient(clientID: sync.ClientID) {
     this._lc.error?.(`Client state not found, clientID: ${clientID}`);
-    this._fireOnClientStateNotFound(clientID, reasonClient);
+    this._fireOnClientStateNotFound(clientID);
   }
 
   private async _clientStateNotFoundOnServer() {
-    if (DD31) {
-      const clientGroupID = await this._clientGroupIDPromise;
-      assert(clientGroupID);
-      this._isClientGroupDisabled = true;
-      await this._perdag.withWrite(dagWrite =>
-        persist.disableClientGroup(clientGroupID, dagWrite),
-      );
-      throw new ReportError(
-        `Client group ${clientGroupID} is unknown on server`,
-      );
-    }
-
-    const clientID = await this._clientIDPromise;
-    this._fireOnClientStateNotFound(clientID, reasonServer);
+    const clientGroupID = await this._clientGroupIDPromise;
+    assert(clientGroupID);
+    this._isClientGroupDisabled = true;
+    await this._perdag.withWrite(dagWrite =>
+      persist.disableClientGroup(clientGroupID, dagWrite),
+    );
+    throw new ReportError(`Client group ${clientGroupID} is unknown on server`);
   }
 
   private _fireOnUpdateNeeded(reason: UpdateNeededReason) {

@@ -172,9 +172,7 @@ suite('onClientStateNotFound', () => {
     await rep.persist();
 
     expect(onClientStateNotFound.callCount).to.equal(1);
-    expect(onClientStateNotFound.lastCall.args).to.deep.equal([
-      {type: 'NotFoundOnClient'},
-    ]);
+    expect(onClientStateNotFound.lastCall.args).to.deep.equal([]);
     expectLogContext(
       consoleErrorStub,
       0,
@@ -241,9 +239,7 @@ suite('onClientStateNotFound', () => {
       rep2,
       `Client state not found, clientID: ${clientID2}`,
     );
-    expect(onClientStateNotFound.lastCall.args).to.deep.equal([
-      {type: 'NotFoundOnClient'},
-    ]);
+    expect(onClientStateNotFound.lastCall.args).to.deep.equal([]);
   });
 
   test('Called in mutate if collected', async () => {
@@ -301,9 +297,7 @@ suite('onClientStateNotFound', () => {
       rep2,
       `Client state not found, clientID: ${clientID2}`,
     );
-    expect(onClientStateNotFound.lastCall.args).to.deep.equal([
-      {type: 'NotFoundOnClient'},
-    ]);
+    expect(onClientStateNotFound.lastCall.args).to.deep.equal([]);
   });
 });
 

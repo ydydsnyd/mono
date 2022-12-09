@@ -121,7 +121,7 @@ export async function push(
 
   let pushReq: PushRequestSDD | PushRequestDD31;
 
-  if (DD31 && pushVersion === PUSH_VERSION_DD31) {
+  if (pushVersion === PUSH_VERSION_DD31) {
     const pushMutations: MutationDD31[] = [];
     for (const commit of pending) {
       if (commitIsLocalDD31(commit)) {

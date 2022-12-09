@@ -474,7 +474,7 @@ function getRefsForClients(clients: ClientMap): Hash[] {
   const refs: Hash[] = [];
   for (const client of clients.values()) {
     refs.push(client.headHash);
-    if (DD31 && isClientDD31(client) && client.tempRefreshHash) {
+    if (isClientDD31(client) && client.tempRefreshHash) {
       refs.push(client.tempRefreshHash);
     }
   }

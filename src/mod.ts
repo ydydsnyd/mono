@@ -7,7 +7,6 @@ export type {
   MutatorDefs,
   PokeDD31,
   RequestOptions,
-  ClientStateNotFoundReason,
   UpdateNeededReason,
   PendingMutation,
 } from './replicache.js';
