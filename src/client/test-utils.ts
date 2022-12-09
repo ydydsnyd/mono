@@ -69,6 +69,16 @@ export class TestReflect<MD extends MutatorDefs> extends Reflect<MD> {
     // @ts-expect-error Property '_pusher' is private
     return this._pusher;
   }
+
+  async waitForSocket(clock: SinonFakeTimers): Promise<WebSocket> {
+    for (let i = 0; i < 100; i++) {
+      if (this._socket) {
+        return this._socket;
+      }
+      await tickAFewTimes(clock);
+    }
+    throw new Error('Could not get socket');
+  }
 }
 
 export const reflectForTest = <MD extends MutatorDefs>(

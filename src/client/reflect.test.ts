@@ -30,6 +30,8 @@ test('onOnlineChange callback', async () => {
     },
   });
 
+  await r.waitForSocket(clock);
+
   expect(r.connectionState).to.equal(ConnectionState.Connecting);
   expect(onlineCount).to.equal(0);
   expect(offlineCount).to.equal(0);
