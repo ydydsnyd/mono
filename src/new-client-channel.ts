@@ -23,7 +23,6 @@ export function initNewClientChannel(
   isNewClientGroup: boolean,
   onUpdateNeeded: () => void,
 ) {
-  assert(DD31);
   if (signal.aborted) {
     return;
   }

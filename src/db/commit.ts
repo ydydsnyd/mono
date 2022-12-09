@@ -103,14 +103,12 @@ export class Commit<M extends Meta> {
         return meta.lastMutationID;
 
       case MetaType.SnapshotDD31:
-        assert(DD31);
         return meta.lastMutationIDs[clientID] ?? 0;
 
       case MetaType.LocalSDD:
         return meta.mutationID;
 
       case MetaType.LocalDD31: {
-        assert(DD31);
         if (meta.clientID === clientID) {
           return meta.mutationID;
         }
@@ -172,32 +170,27 @@ export async function localMutationsGreaterThan(
   mutationIDLimits: Record<sync.ClientID, number>,
   dagRead: dag.Read,
 ): Promise<Commit<LocalMetaDD31>[]> {
-  if (DD31) {
-    const commits: Commit<LocalMetaDD31>[] = [];
-    const remainingMutationIDLimits = new Map(Object.entries(mutationIDLimits));
-    while (!commitIsSnapshot(commit) && remainingMutationIDLimits.size > 0) {
-      if (commitIsLocalDD31(commit)) {
-        const {meta} = commit;
-        const mutationIDLowerLimit = remainingMutationIDLimits.get(
-          meta.clientID,
-        );
-        if (mutationIDLowerLimit !== undefined) {
-          if (meta.mutationID <= mutationIDLowerLimit) {
-            remainingMutationIDLimits.delete(meta.clientID);
-          } else {
-            commits.push(commit as Commit<LocalMetaDD31>);
-          }
+  const commits: Commit<LocalMetaDD31>[] = [];
+  const remainingMutationIDLimits = new Map(Object.entries(mutationIDLimits));
+  while (!commitIsSnapshot(commit) && remainingMutationIDLimits.size > 0) {
+    if (commitIsLocalDD31(commit)) {
+      const {meta} = commit;
+      const mutationIDLowerLimit = remainingMutationIDLimits.get(meta.clientID);
+      if (mutationIDLowerLimit !== undefined) {
+        if (meta.mutationID <= mutationIDLowerLimit) {
+          remainingMutationIDLimits.delete(meta.clientID);
+        } else {
+          commits.push(commit as Commit<LocalMetaDD31>);
         }
       }
-      const {basisHash} = commit.meta;
-      if (basisHash === null) {
-        throw new Error(`Commit ${commit.chunk.hash} has no basis`);
-      }
-      commit = await fromHash(basisHash, dagRead);
     }
-    return commits;
+    const {basisHash} = commit.meta;
+    if (basisHash === null) {
+      throw new Error(`Commit ${commit.chunk.hash} has no basis`);
+    }
+    commit = await fromHash(basisHash, dagRead);
   }
-  unreachable();
+  return commits;
 }
 
 export async function baseSnapshotFromHead(
@@ -389,7 +382,6 @@ function assertLocalMetaSDD(
 export function assertLocalMetaDD31(
   v: Record<string, unknown>,
 ): asserts v is LocalMetaDD31 {
-  assert(DD31);
   // type already asserted
   assertString(v.clientID);
   assertLocalMetaSDD(v);
@@ -449,7 +441,6 @@ export function assertSnapshotMetaSDD(
 export function assertSnapshotMetaDD31(
   v: Record<string, unknown>,
 ): asserts v is SnapshotMetaDD31 {
-  assert(DD31);
   assertSnapshotMetaBase(v);
   assertLastMutationIDs(v.lastMutationIDs);
 }
@@ -637,7 +628,6 @@ export function newLocalDD31(
   timestamp: number,
   clientID: sync.ClientID,
 ): Commit<LocalMetaDD31> {
-  assert(DD31);
   const meta: LocalMetaDD31 = {
     type: MetaType.LocalDD31,
     basisHash,
@@ -683,7 +673,6 @@ export function newSnapshotDD31(
   valueHash: Hash,
   indexes: readonly IndexRecord[],
 ): Commit<SnapshotMetaDD31> {
-  assert(DD31);
   return commitFromCommitData(
     createChunk,
     newSnapshotCommitDataDD31(
@@ -719,7 +708,6 @@ export function newSnapshotCommitDataDD31(
   valueHash: Hash,
   indexes: readonly IndexRecord[],
 ): CommitData<SnapshotMetaDD31> {
-  assert(DD31);
   const meta: SnapshotMetaDD31 = {
     type: MetaType.SnapshotDD31,
     basisHash,

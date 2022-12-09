@@ -1,4 +1,4 @@
-import {assert, assertObject, assertString} from './asserts.js';
+import {assertObject, assertString} from './asserts.js';
 import type {ClientGroupID, ClientID} from './sync/ids.js';
 
 function makeChannelName(replicacheName: string): string {
@@ -24,7 +24,6 @@ export function initOnPersistChannel(
   signal: AbortSignal,
   handlePersist: HandlePersist,
 ): OnPersist {
-  assert(DD31);
   if (signal.aborted) {
     return () => undefined;
   }

@@ -138,7 +138,6 @@ export function assertClientSDD(value: unknown): asserts value is ClientSDD {
 }
 
 export function assertClientDD31(value: unknown): asserts value is ClientDD31 {
-  assert(DD31);
   assertClientBase(value);
   const {tempRefreshHash} = value;
   if (tempRefreshHash) {
@@ -346,8 +345,6 @@ export function initClientDD31(
     newClientGroup: boolean,
   ]
 > {
-  assert(DD31);
-
   return perdag.withWrite(async dagWrite => {
     async function setClientsAndClientGroupAndCommit(
       basisHash: Hash | null,
@@ -592,7 +589,6 @@ export async function getClientGroupForClient(
   clientID: ClientID,
   read: dag.Read,
 ): Promise<ClientGroup | undefined> {
-  assert(DD31);
   const clientGroupID = await getClientGroupIDForClient(clientID, read);
   if (!clientGroupID) {
     return undefined;
@@ -604,7 +600,6 @@ export async function getClientGroupIDForClient(
   clientID: ClientID,
   read: dag.Read,
 ): Promise<sync.ClientGroupID | undefined> {
-  assert(DD31);
   const client = await getClient(clientID, read);
   if (!client || !isClientDD31(client)) {
     return undefined;

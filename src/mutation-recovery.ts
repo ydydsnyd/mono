@@ -512,7 +512,6 @@ async function recoverMutationsOfClientGroupDD31(
   database: persist.IndexedDBDatabase,
   options: MutationRecoveryOptions,
 ): Promise<persist.ClientGroupMap | undefined> {
-  assert(DD31);
   assert(database.replicacheFormatVersion === REPLICACHE_FORMAT_VERSION_DD31);
 
   const {

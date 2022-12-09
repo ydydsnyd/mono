@@ -1,5 +1,4 @@
 import type {LogContext} from '@rocicorp/logger';
-import {assert} from '../asserts.js';
 import type * as dag from '../dag/mod.js';
 import {initBgIntervalProcess} from '../bg-interval.js';
 import {
@@ -22,7 +21,6 @@ export function initClientGroupGC(
   lc: LogContext,
   signal: AbortSignal,
 ): void {
-  assert(DD31);
   initBgIntervalProcess(
     'ClientGroupGC',
     () => {

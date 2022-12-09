@@ -1,6 +1,6 @@
 import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
-import {assert, assertNotUndefined} from '../asserts.js';
+import {assertNotUndefined} from '../asserts.js';
 import {assertObject, assertString} from '../asserts.js';
 import * as dag from '../dag/mod.js';
 import * as db from '../db/mod.js';
@@ -1332,7 +1332,6 @@ function makeFakePullerSDD(options: FakePullerArgsSDD): PullerSDD {
 }
 
 function makeFakePullerDD31(options: FakePullerArgsDD31): PullerDD31 {
-  assert(DD31);
   return async (req: Request): Promise<PullerResultDD31> => {
     const pullReq: PullRequestDD31 = await req.json();
     expect(options.expPullReq).to.deep.equal(pullReq);

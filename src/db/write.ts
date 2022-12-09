@@ -449,7 +449,6 @@ export async function newWriteSnapshotDD31(
   indexes: Map<string, IndexWrite>,
   clientID: ClientID,
 ): Promise<Write> {
-  assert(DD31);
   const [basisHash, basis, bTreeWrite] = await readCommitForBTreeWrite(
     whence,
     dagWrite,

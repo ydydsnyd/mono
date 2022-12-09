@@ -31,7 +31,7 @@ import {updateIndexes} from '../db/write.js';
 import {emptyHash, Hash} from '../hash.js';
 import type {ClientGroupID, ClientID} from './ids.js';
 import {addDiffsForIndexes, DiffComputationConfig, DiffsMap} from './diff.js';
-import {assert, assertObject} from '../asserts.js';
+import {assertObject} from '../asserts.js';
 import {
   assertSnapshotMetaDD31,
   commitIsLocalDD31,
@@ -200,8 +200,6 @@ export async function beginPullDD31(
   lc: LogContext,
   createSyncBranch = true,
 ): Promise<BeginPullResponseDD31> {
-  assert(DD31);
-  assert(clientGroupID);
   const {pullURL, pullAuth, schemaVersion} = beginPullReq;
 
   const baseCookie = await store.withRead(async dagRead => {
