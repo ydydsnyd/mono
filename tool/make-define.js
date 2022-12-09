@@ -8,7 +8,6 @@ import {readFile} from 'fs/promises';
 export async function makeDefine(mode) {
   const define = {
     REPLICACHE_VERSION: JSON.stringify((await readPackageJSON()).version),
-    DD31: 'true',
   };
   if (mode === 'unknown') {
     return define;
