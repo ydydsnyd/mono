@@ -385,12 +385,10 @@ test('ClientStateNotFound on server', async () => {
 
   expect(onUpdateNeededStub.callCount).to.equal(0);
 
-  if (DD31) {
-    expect(rep.isClientGroupDisabled).to.equal(true);
+  expect(rep.isClientGroupDisabled).to.equal(true);
 
-    expect(consoleErrorStub.callCount).to.equal(1);
-    expect(consoleErrorStub.lastCall.args[1].message).match(
-      /Client group \S+ is unknown on server/,
-    );
-  }
+  expect(consoleErrorStub.callCount).to.equal(1);
+  expect(consoleErrorStub.lastCall.args[1].message).match(
+    /Client group \S+ is unknown on server/,
+  );
 });

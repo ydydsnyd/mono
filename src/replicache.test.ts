@@ -667,23 +667,15 @@ test('allow redefinition of indexes', async () => {
   );
   const clientID = await rep.clientID;
   fetchMock.postOnce(pullURL, () => {
-    const patch: PatchOperation[] = [
-      {op: 'put', key: 'a/0', value: {a: '0'}},
-      {op: 'put', key: 'a/1', value: {a: '1'}},
-      {op: 'put', key: 'b/2', value: {a: '2'}},
-      {op: 'put', key: 'b/3', value: {a: '3'}},
-    ];
-    if (DD31) {
-      return {
-        cookie: '',
-        lastMutationIDChanges: {[clientID]: 2},
-        patch,
-      };
-    }
     return {
       cookie: '',
-      lastMutationID: 2,
-      patch,
+      lastMutationIDChanges: {[clientID]: 2},
+      patch: [
+        {op: 'put', key: 'a/0', value: {a: '0'}},
+        {op: 'put', key: 'a/1', value: {a: '1'}},
+        {op: 'put', key: 'b/2', value: {a: '2'}},
+        {op: 'put', key: 'b/3', value: {a: '3'}},
+      ],
     };
   });
 

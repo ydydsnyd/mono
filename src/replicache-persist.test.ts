@@ -66,14 +66,11 @@ test('basic persist & load', async () => {
   );
   assertNotUndefined(clientBeforePull);
 
-  let clientGroupBeforePull: persist.ClientGroup | undefined;
-  if (DD31) {
-    assertClientDD31(clientBeforePull);
-    clientGroupBeforePull = await perdag.withRead(read =>
-      persist.getClientGroup(clientBeforePull.clientGroupID, read),
-    );
-    assertNotUndefined(clientGroupBeforePull);
-  }
+  assertClientDD31(clientBeforePull);
+  const clientGroupBeforePull = await perdag.withRead(read =>
+    persist.getClientGroup(clientBeforePull.clientGroupID, read),
+  );
+  assertNotUndefined(clientGroupBeforePull);
 
   fetchMock.postOnce(
     pullURL,
@@ -106,27 +103,17 @@ test('basic persist & load', async () => {
       );
     }
     await tickAFewTimes(waitMs);
-    if (DD31) {
-      assertClientDD31(clientBeforePull);
-      assertNotUndefined(clientGroupBeforePull);
-      const clientGroup: persist.ClientGroup | undefined =
-        await perdag.withRead(read => {
-          return persist.getClientGroup(clientBeforePull.clientGroupID, read);
-        });
-      assertNotUndefined(clientGroup);
-      if (clientGroupBeforePull.headHash !== clientGroup.headHash) {
-        // persist has completed
-        break;
-      }
-    } else {
-      const client: persist.Client | undefined = await perdag.withRead(read =>
-        persist.getClient(clientID, read),
-      );
-      assertNotUndefined(client);
-      if (clientBeforePull.headHash !== client.headHash) {
-        // persist has completed
-        break;
-      }
+    assertClientDD31(clientBeforePull);
+    assertNotUndefined(clientGroupBeforePull);
+    const clientGroup: persist.ClientGroup | undefined = await perdag.withRead(
+      read => {
+        return persist.getClientGroup(clientBeforePull.clientGroupID, read);
+      },
+    );
+    assertNotUndefined(clientGroup);
+    if (clientGroupBeforePull.headHash !== clientGroup.headHash) {
+      // persist has completed
+      break;
     }
   }
 
@@ -216,10 +203,9 @@ suite('onClientStateNotFound', () => {
     const clientID2 = await rep2.clientID;
 
     await deleteClientForTesting(clientID2, rep2.perdag);
-    if (DD31) {
-      // Cannot simply gcClientGroups because the client group has pending mutations.
-      await deleteClientGroupForTesting(rep2);
-    }
+
+    // Cannot simply gcClientGroups because the client group has pending mutations.
+    await deleteClientGroupForTesting(rep2);
 
     const onClientStateNotFound = sinon.fake();
     rep2.onClientStateNotFound = onClientStateNotFound;
@@ -274,10 +260,9 @@ suite('onClientStateNotFound', () => {
 
     const clientID2 = await rep2.clientID;
     await deleteClientForTesting(clientID2, rep2.perdag);
-    if (DD31) {
-      // Cannot simply gcClientGroups because the client group has pending mutations.
-      await deleteClientGroupForTesting(rep2);
-    }
+
+    // Cannot simply gcClientGroups because the client group has pending mutations.
+    await deleteClientGroupForTesting(rep2);
 
     const onClientStateNotFound = sinon.fake();
     rep2.onClientStateNotFound = onClientStateNotFound;
