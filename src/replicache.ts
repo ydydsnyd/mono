@@ -75,6 +75,7 @@ import {
   isVersionNotSupportedResponse,
   VersionNotSupportedResponse,
 } from './error-responses.js';
+import {assertLocalCommitDD31} from './db/commit.js';
 
 export type BeginPullResult = {
   requestID: string;
@@ -251,6 +252,7 @@ export type PendingMutation = {
   readonly name: string;
   readonly id: number;
   readonly args: ReadonlyJSONValue;
+  readonly clientID: sync.ClientID;
 };
 
 // eslint-disable-next-line @typescript-eslint/ban-types
@@ -1705,15 +1707,16 @@ export class Replicache<MD extends MutatorDefs = {}> {
       if (mainHeadHash === undefined) {
         throw new Error('Missing main head');
       }
-      // TODO(arv, DD31): Should we rename localMutations?
       const pending = await db.localMutations(mainHeadHash, dagRead);
       const clientID = await this._clientIDPromise;
       return Promise.all(
         pending.map(async p => {
+          assertLocalCommitDD31(p);
           return {
             id: await p.getMutationID(clientID, dagRead),
             name: p.meta.mutatorName,
             args: p.meta.mutatorArgsJSON,
+            clientID: p.meta.clientID,
           };
         }),
       );

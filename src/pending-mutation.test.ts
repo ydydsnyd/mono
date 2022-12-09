@@ -25,33 +25,36 @@ test('pending mutation', async () => {
     mutators: {addData, del: (tx, key) => tx.del(key)},
   });
 
-  const pendingMutations0 = await rep.experimentalPendingMutations();
-  expect(pendingMutations0).to.deep.equal([]);
+  const clientID = await rep.clientID;
+
+  expect(await rep.experimentalPendingMutations()).to.deep.equal([]);
 
   await rep.mutate.addData({a: 1, b: 2});
-  const addABMutation = {id: 1, name: 'addData', args: {a: 1, b: 2}};
-  const pendingMutations1 = await rep.experimentalPendingMutations();
-  expect(pendingMutations1).to.deep.equal([addABMutation]);
+  const addABMutation = {id: 1, name: 'addData', args: {a: 1, b: 2}, clientID};
+  expect(await rep.experimentalPendingMutations()).to.deep.equal([
+    addABMutation,
+  ]);
 
-  const delBMutation = {id: 2, name: 'del', args: 'b'};
+  const delBMutation = {id: 2, name: 'del', args: 'b', clientID};
   await rep.mutate.del('b');
-  const pendingMutations2 = await rep.experimentalPendingMutations();
-  expect(pendingMutations2).to.deep.equal([delBMutation, addABMutation]);
+  expect(await rep.experimentalPendingMutations()).to.deep.equal([
+    delBMutation,
+    addABMutation,
+  ]);
 
   rep.pullURL = 'https://diff.com/pull';
-  const clientID = await rep.clientID;
   fetchMock.post(rep.pullURL, makePullResponseDD31(clientID, 2));
   rep.pull();
   await tickAFewTimes(100);
   await rep.mutate.addData({a: 3});
-  const addAMutation = {id: 3, name: 'addData', args: {a: 3}};
-  const pendingMutations3 = await rep.experimentalPendingMutations();
-  expect(pendingMutations3).to.deep.equal([addAMutation]);
+  const addAMutation = {id: 3, name: 'addData', args: {a: 3}, clientID};
+  expect(await rep.experimentalPendingMutations()).to.deep.equal([
+    addAMutation,
+  ]);
 
   fetchMock.reset();
   fetchMock.post(rep.pullURL, makePullResponseDD31(clientID, 3));
   rep.pull();
   await tickAFewTimes(100);
-  const pendingMutations4 = await rep.experimentalPendingMutations();
-  expect(pendingMutations4).to.deep.equal([]);
+  expect(await rep.experimentalPendingMutations()).to.deep.equal([]);
 });
