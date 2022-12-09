@@ -1180,20 +1180,11 @@ test('mutation recovery is invoked on change from offline to online', async () =
 
   const clientID = await rep.clientID;
   fetchMock.reset();
-  fetchMock.post(
-    pullURL,
-    DD31
-      ? {
-          cookie: 'test_cookie',
-          lastMutationIDChanges: {[clientID]: 2},
-          patch: [],
-        }
-      : {
-          cookie: 'test_cookie',
-          lastMutationID: 2,
-          patch: [],
-        },
-  );
+  fetchMock.post(pullURL, {
+    cookie: 'test_cookie',
+    lastMutationIDChanges: {[clientID]: 2},
+    patch: [],
+  });
 
   rep.pull();
   expect(rep.recoverMutationsSpy.callCount).to.equal(1);

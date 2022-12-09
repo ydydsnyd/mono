@@ -1105,188 +1105,193 @@ test('begin try pull DD31', async () => {
   }
 });
 
-test('maybe end try pull', async () => {
-  const clientID = 'client-id';
-  type Case = {
-    name: string;
-    numPending: number;
-    numNeedingReplay: number;
-    interveningSync: boolean;
-    expReplayIDs: number[];
-    expErr?: string | undefined;
-    // The expected diffs as reported by the maybe end pull.
-    expDiffs: DiffsMap;
-  };
-  const cases: Case[] = [
-    {
-      name: 'nothing pending',
-      numPending: 0,
-      numNeedingReplay: 0,
-      interveningSync: false,
-      expReplayIDs: [],
-      expErr: undefined,
-      expDiffs: new Map([['', [{op: 'add', key: 'key/0', newValue: '0'}]]]),
-    },
-    {
-      name: '2 pending but nothing to replay',
-      numPending: 2,
-      numNeedingReplay: 0,
-      interveningSync: false,
-      expReplayIDs: [],
-      expErr: undefined,
-      expDiffs: new Map([
-        [
-          '',
+suite('maybe end try pull', () => {
+  const t = async (dd31: boolean) => {
+    const clientID = 'client-id';
+    type Case = {
+      name: string;
+      numPending: number;
+      numNeedingReplay: number;
+      interveningSync: boolean;
+      expReplayIDs: number[];
+      expErr?: string | undefined;
+      // The expected diffs as reported by the maybe end pull.
+      expDiffs: DiffsMap;
+    };
+    const cases: Case[] = [
+      {
+        name: 'nothing pending',
+        numPending: 0,
+        numNeedingReplay: 0,
+        interveningSync: false,
+        expReplayIDs: [],
+        expErr: undefined,
+        expDiffs: new Map([['', [{op: 'add', key: 'key/0', newValue: '0'}]]]),
+      },
+      {
+        name: '2 pending but nothing to replay',
+        numPending: 2,
+        numNeedingReplay: 0,
+        interveningSync: false,
+        expReplayIDs: [],
+        expErr: undefined,
+        expDiffs: new Map([
           [
-            {op: 'add', key: 'key/1', newValue: '1'},
-            {op: 'del', key: 'local', oldValue: '2'},
+            '',
+            [
+              {op: 'add', key: 'key/1', newValue: '1'},
+              {op: 'del', key: 'local', oldValue: '2'},
+            ],
           ],
-        ],
-      ]),
-    },
-    {
-      name: '3 pending, 2 to replay',
-      numPending: 3,
-      numNeedingReplay: 2,
-      interveningSync: false,
-      expReplayIDs: [2, 3],
-      expErr: undefined,
-      // The changed keys are not reported when further replay is needed.
-      expDiffs: new Map(),
-    },
-    {
-      name: 'another sync landed during replay',
-      numPending: 0,
-      numNeedingReplay: 0,
-      interveningSync: true,
-      expReplayIDs: [],
-      expErr: 'Overlapping syncs',
-      expDiffs: new Map(),
-    },
-  ];
+        ]),
+      },
+      {
+        name: '3 pending, 2 to replay',
+        numPending: 3,
+        numNeedingReplay: 2,
+        interveningSync: false,
+        expReplayIDs: [2, 3],
+        expErr: undefined,
+        // The changed keys are not reported when further replay is needed.
+        expDiffs: new Map(),
+      },
+      {
+        name: 'another sync landed during replay',
+        numPending: 0,
+        numNeedingReplay: 0,
+        interveningSync: true,
+        expReplayIDs: [],
+        expErr: 'Overlapping syncs',
+        expDiffs: new Map(),
+      },
+    ];
 
-  for (const [i, c] of cases.entries()) {
-    const store = new dag.TestStore();
-    const lc = new LogContext();
-    const b = new ChainBuilder(store);
-    await b.addGenesis(clientID);
-    // Add pending commits to the main chain.
-    for (let j = 0; j < c.numPending; j++) {
-      await b.addLocal(clientID);
-    }
-    let basisHash = await store.withWrite(async dagWrite => {
-      await dagWrite.setHead(
-        db.DEFAULT_HEAD_NAME,
-        b.chain[b.chain.length - 1].chunk.hash,
-      );
-
-      // Add snapshot and replayed commits to the sync chain.
-      const w = DD31
-        ? await db.newWriteSnapshotDD31(
-            db.whenceHash(b.chain[0].chunk.hash),
-            {[clientID]: 0},
-            'sync_cookie',
-            dagWrite,
-            db.readIndexesForWrite(b.chain[0], dagWrite),
-            clientID,
-          )
-        : await db.newWriteSnapshotSDD(
-            db.whenceHash(b.chain[0].chunk.hash),
-            0,
-            'sync_cookie',
-            dagWrite,
-            db.readIndexesForWrite(b.chain[0], dagWrite),
-            clientID,
-          );
-      await w.put(lc, `key/${i}`, `${i}`);
-      return await w.commit(SYNC_HEAD_NAME);
-    });
-
-    if (c.interveningSync) {
-      await b.addSnapshot(undefined, clientID);
-    }
-
-    for (let i = 0; i < c.numPending - c.numNeedingReplay; i++) {
-      const chainIndex = i + 1; // chain[0] is genesis
-      const original = b.chain[chainIndex];
-      let mutatorName: string;
-      let mutatorArgs: FrozenJSONValue;
-      if (commitIsLocal(original)) {
-        const lm = original.meta;
-        mutatorName = lm.mutatorName;
-        mutatorArgs = lm.mutatorArgsJSON;
-      } else {
-        throw new Error('impossible');
+    for (const [i, c] of cases.entries()) {
+      const store = new dag.TestStore();
+      const lc = new LogContext();
+      const b = new ChainBuilder(store);
+      await b.addGenesis(clientID);
+      // Add pending commits to the main chain.
+      for (let j = 0; j < c.numPending; j++) {
+        await b.addLocal(clientID);
       }
-      basisHash = await store.withWrite(async dagWrite => {
-        const w = await db.newWriteLocal(
-          db.whenceHash(basisHash),
-          mutatorName,
-          mutatorArgs,
-          original.chunk.hash,
-          dagWrite,
-          original.meta.timestamp,
-          clientID,
-          DD31,
+      let basisHash = await store.withWrite(async dagWrite => {
+        await dagWrite.setHead(
+          db.DEFAULT_HEAD_NAME,
+          b.chain[b.chain.length - 1].chunk.hash,
         );
+
+        // Add snapshot and replayed commits to the sync chain.
+        const w = dd31
+          ? await db.newWriteSnapshotDD31(
+              db.whenceHash(b.chain[0].chunk.hash),
+              {[clientID]: 0},
+              'sync_cookie',
+              dagWrite,
+              db.readIndexesForWrite(b.chain[0], dagWrite),
+              clientID,
+            )
+          : await db.newWriteSnapshotSDD(
+              db.whenceHash(b.chain[0].chunk.hash),
+              0,
+              'sync_cookie',
+              dagWrite,
+              db.readIndexesForWrite(b.chain[0], dagWrite),
+              clientID,
+            );
+        await w.put(lc, `key/${i}`, `${i}`);
         return await w.commit(SYNC_HEAD_NAME);
       });
-    }
-    const syncHead = basisHash;
 
-    let result: MaybeEndPullResultSDD | string;
-    try {
-      result = await maybeEndPull(
-        store,
-        lc,
-        syncHead,
-        clientID,
-        testSubscriptionsManagerOptions,
-      );
-    } catch (e) {
-      result = (e as Error).message;
-    }
-
-    if (c.expErr !== undefined) {
-      const e = c.expErr;
-      expect(result).to.equal(e);
-    } else {
-      assertObject(result);
-      const resp = result;
-      expect(syncHead).to.equal(resp.syncHead);
-      expect(c.expReplayIDs.length).to.equal(
-        resp.replayMutations?.length,
-        `${c.name}: expected ${c.expReplayIDs}, got ${resp.replayMutations}`,
-      );
-      expect(Object.fromEntries(resp.diffs), c.name).to.deep.equal(
-        Object.fromEntries(c.expDiffs),
-      );
-
-      for (let i = 0; i < c.expReplayIDs.length; i++) {
-        const chainIdx = b.chain.length - c.numNeedingReplay + i;
-        expect(c.expReplayIDs[i]).to.equal(
-          resp.replayMutations?.[i].meta.mutationID,
-        );
-        const commit = b.chain[chainIdx];
-        if (commitIsLocal(commit)) {
-          expect(resp.replayMutations?.[i]).to.deep.equal(commit);
-        } else {
-          throw new Error('inconceivable');
-        }
+      if (c.interveningSync) {
+        await b.addSnapshot(undefined, clientID);
       }
 
-      // Check if we set the main head like we should have.
-      if (c.expReplayIDs.length === 0) {
-        await store.withRead(async read => {
-          expect(syncHead).to.equal(
-            await read.getHead(db.DEFAULT_HEAD_NAME),
-            c.name,
+      for (let i = 0; i < c.numPending - c.numNeedingReplay; i++) {
+        const chainIndex = i + 1; // chain[0] is genesis
+        const original = b.chain[chainIndex];
+        let mutatorName: string;
+        let mutatorArgs: FrozenJSONValue;
+        if (commitIsLocal(original)) {
+          const lm = original.meta;
+          mutatorName = lm.mutatorName;
+          mutatorArgs = lm.mutatorArgsJSON;
+        } else {
+          throw new Error('impossible');
+        }
+        basisHash = await store.withWrite(async dagWrite => {
+          const w = await db.newWriteLocal(
+            db.whenceHash(basisHash),
+            mutatorName,
+            mutatorArgs,
+            original.chunk.hash,
+            dagWrite,
+            original.meta.timestamp,
+            clientID,
+            dd31,
           );
-          expect(await read.getHead(SYNC_HEAD_NAME)).to.be.undefined;
+          return await w.commit(SYNC_HEAD_NAME);
         });
       }
+      const syncHead = basisHash;
+
+      let result: MaybeEndPullResultSDD | string;
+      try {
+        result = await maybeEndPull(
+          store,
+          lc,
+          syncHead,
+          clientID,
+          testSubscriptionsManagerOptions,
+        );
+      } catch (e) {
+        result = (e as Error).message;
+      }
+
+      if (c.expErr !== undefined) {
+        const e = c.expErr;
+        expect(result).to.equal(e);
+      } else {
+        assertObject(result);
+        const resp = result;
+        expect(syncHead).to.equal(resp.syncHead);
+        expect(c.expReplayIDs.length).to.equal(
+          resp.replayMutations?.length,
+          `${c.name}: expected ${c.expReplayIDs}, got ${resp.replayMutations}`,
+        );
+        expect(Object.fromEntries(resp.diffs), c.name).to.deep.equal(
+          Object.fromEntries(c.expDiffs),
+        );
+
+        for (let i = 0; i < c.expReplayIDs.length; i++) {
+          const chainIdx = b.chain.length - c.numNeedingReplay + i;
+          expect(c.expReplayIDs[i]).to.equal(
+            resp.replayMutations?.[i].meta.mutationID,
+          );
+          const commit = b.chain[chainIdx];
+          if (commitIsLocal(commit)) {
+            expect(resp.replayMutations?.[i]).to.deep.equal(commit);
+          } else {
+            throw new Error('inconceivable');
+          }
+        }
+
+        // Check if we set the main head like we should have.
+        if (c.expReplayIDs.length === 0) {
+          await store.withRead(async read => {
+            expect(syncHead).to.equal(
+              await read.getHead(db.DEFAULT_HEAD_NAME),
+              c.name,
+            );
+            expect(await read.getHead(SYNC_HEAD_NAME)).to.be.undefined;
+          });
+        }
+      }
     }
-  }
+  };
+
+  test('dd31', () => t(true));
+  test('sdd', () => t(false));
 });
 
 type FakePullerArgsSDD = {

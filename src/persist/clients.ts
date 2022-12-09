@@ -97,11 +97,11 @@ export type ClientDD31 = {
 export type Client = ClientSDD | ClientDD31;
 
 export function isClientDD31(client: Client): client is ClientDD31 {
-  return DD31 && (client as ClientDD31).clientGroupID !== undefined;
+  return (client as ClientDD31).clientGroupID !== undefined;
 }
 
 export function isClientSDD(client: Client): client is ClientSDD {
-  return !DD31 || (client as ClientSDD).lastServerAckdMutationID !== undefined;
+  return (client as ClientSDD).lastServerAckdMutationID !== undefined;
 }
 
 export const CLIENTS_HEAD_NAME = 'clients';

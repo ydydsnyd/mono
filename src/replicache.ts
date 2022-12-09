@@ -50,7 +50,7 @@ import {MutationRecovery} from './mutation-recovery.js';
 import type {IndexDefinitions} from './index-defs.js';
 import {throwIfClosed} from './transaction-closed-error.js';
 import {version} from './version.js';
-import {PUSH_VERSION_DD31, PUSH_VERSION_SDD} from './sync/push.js';
+import {PUSH_VERSION_DD31} from './sync/push.js';
 import {
   initOnPersistChannel,
   OnPersist,
@@ -83,9 +83,7 @@ export const httpStatusUnauthorized = 401;
 export const REPLICACHE_FORMAT_VERSION_SDD = 4;
 export const REPLICACHE_FORMAT_VERSION_DD31 = 5;
 
-export const REPLICACHE_FORMAT_VERSION = DD31
-  ? REPLICACHE_FORMAT_VERSION_DD31
-  : REPLICACHE_FORMAT_VERSION_SDD;
+export const REPLICACHE_FORMAT_VERSION = REPLICACHE_FORMAT_VERSION_DD31;
 
 const LAZY_STORE_SOURCE_CHUNK_CACHE_SIZE_LIMIT = 100 * 2 ** 20; // 100 MB
 
@@ -528,15 +526,13 @@ export class Replicache<MD extends MutatorDefs = {}> {
       clientGroupIDPromise: this._clientGroupIDPromise,
     });
 
-    this._onPersist = DD31
-      ? initOnPersistChannel(
-          this.name,
-          this._closeAbortController.signal,
-          persistInfo => {
-            void this._handlePersist(persistInfo);
-          },
-        )
-      : (_: PersistInfo) => undefined;
+    this._onPersist = initOnPersistChannel(
+      this.name,
+      this._closeAbortController.signal,
+      persistInfo => {
+        void this._handlePersist(persistInfo);
+      },
+    );
 
     void this._open(
       indexes,
@@ -968,7 +964,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
   private _isPullDisabled() {
     return (
-      (DD31 && this._isClientGroupDisabled) ||
+      this._isClientGroupDisabled ||
       (this.pullURL === '' && this.puller === defaultPuller)
     );
   }
@@ -1093,7 +1089,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
   private _isPushDisabled() {
     return (
-      (DD31 && this._isClientGroupDisabled) ||
+      this._isClientGroupDisabled ||
       (this.pushURL === '' && this.pusher === defaultPusher)
     );
   }
@@ -1123,7 +1119,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
               this.pushURL,
               this.auth,
               this.schemaVersion,
-              DD31 ? PUSH_VERSION_DD31 : PUSH_VERSION_SDD,
+              PUSH_VERSION_DD31,
             );
             return {
               result: pusherResult,
@@ -1568,7 +1564,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         dagWrite,
         timestamp,
         clientID,
-        DD31,
+        true,
       );
 
       const tx = new WriteTransactionImpl(clientID, dbWrite, this._lc);

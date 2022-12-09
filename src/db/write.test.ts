@@ -13,164 +13,173 @@ import {newWriteLocal} from './write.js';
 import {asyncIterableToArray} from '../async-iterable-to-array.js';
 import {initDB} from './test-helpers.js';
 
-test('basics w/ commit', async () => {
-  const clientID = 'client-id';
-  const ds = new dag.TestStore();
-  const lc = new LogContext();
-  await initDB(await ds.write(), DEFAULT_HEAD_NAME, clientID, {}, DD31);
+suite('basics w/ commit', () => {
+  const t = async (dd31: boolean) => {
+    const clientID = 'client-id';
+    const ds = new dag.TestStore();
+    const lc = new LogContext();
+    await initDB(await ds.write(), DEFAULT_HEAD_NAME, clientID, {}, dd31);
 
-  // Put.
-  await ds.withWrite(async dagWrite => {
-    const w = await newWriteLocal(
-      whenceHead(DEFAULT_HEAD_NAME),
-      'mutator_name',
-      JSON.stringify([]),
-      null,
-      dagWrite,
-      42,
-      clientID,
-      DD31,
-    );
-    await w.put(lc, 'foo', 'bar');
-    // Assert we can read the same value from within this transaction.;
-    const val = await w.get('foo');
-    expect(val).to.deep.equal('bar');
-    await w.commit(DEFAULT_HEAD_NAME);
-  });
+    // Put.
+    await ds.withWrite(async dagWrite => {
+      const w = await newWriteLocal(
+        whenceHead(DEFAULT_HEAD_NAME),
+        'mutator_name',
+        JSON.stringify([]),
+        null,
+        dagWrite,
+        42,
+        clientID,
+        dd31,
+      );
+      await w.put(lc, 'foo', 'bar');
+      // Assert we can read the same value from within this transaction.;
+      const val = await w.get('foo');
+      expect(val).to.deep.equal('bar');
+      await w.commit(DEFAULT_HEAD_NAME);
+    });
 
-  // As well as after it has committed.
-  await ds.withWrite(async dagWrite => {
-    const w = await newWriteLocal(
-      whenceHead(DEFAULT_HEAD_NAME),
-      'mutator_name',
-      JSON.stringify(null),
-      null,
-      dagWrite,
-      42,
-      clientID,
-      DD31,
-    );
-    const val = await w.get('foo');
-    expect(val).to.deep.equal('bar');
-  });
+    // As well as after it has committed.
+    await ds.withWrite(async dagWrite => {
+      const w = await newWriteLocal(
+        whenceHead(DEFAULT_HEAD_NAME),
+        'mutator_name',
+        JSON.stringify(null),
+        null,
+        dagWrite,
+        42,
+        clientID,
+        dd31,
+      );
+      const val = await w.get('foo');
+      expect(val).to.deep.equal('bar');
+    });
 
-  // Del.
-  await ds.withWrite(async dagWrite => {
-    const w = await newWriteLocal(
-      whenceHead(DEFAULT_HEAD_NAME),
-      'mutator_name',
-      JSON.stringify([]),
-      null,
-      dagWrite,
-      42,
-      clientID,
-      DD31,
-    );
-    await w.del(lc, 'foo');
-    // Assert it is gone while still within this transaction.
-    const val = await w.get('foo');
-    expect(val).to.be.undefined;
-    await w.commit(DEFAULT_HEAD_NAME);
-  });
+    // Del.
+    await ds.withWrite(async dagWrite => {
+      const w = await newWriteLocal(
+        whenceHead(DEFAULT_HEAD_NAME),
+        'mutator_name',
+        JSON.stringify([]),
+        null,
+        dagWrite,
+        42,
+        clientID,
+        dd31,
+      );
+      await w.del(lc, 'foo');
+      // Assert it is gone while still within this transaction.
+      const val = await w.get('foo');
+      expect(val).to.be.undefined;
+      await w.commit(DEFAULT_HEAD_NAME);
+    });
 
-  // As well as after it has committed.
-  await ds.withWrite(async dagWrite => {
-    const w = await newWriteLocal(
-      whenceHead(DEFAULT_HEAD_NAME),
-      'mutator_name',
-      JSON.stringify(null),
-      null,
-      dagWrite,
-      42,
-      clientID,
-      DD31,
-    );
-    const val = await w.get(`foo`);
-    expect(val).to.be.undefined;
-  });
+    // As well as after it has committed.
+    await ds.withWrite(async dagWrite => {
+      const w = await newWriteLocal(
+        whenceHead(DEFAULT_HEAD_NAME),
+        'mutator_name',
+        JSON.stringify(null),
+        null,
+        dagWrite,
+        42,
+        clientID,
+        dd31,
+      );
+      const val = await w.get(`foo`);
+      expect(val).to.be.undefined;
+    });
+  };
+
+  test('dd31', () => t(true));
+  test('sdd', () => t(false));
 });
 
-test('basics w/ putCommit', async () => {
-  const clientID = 'client-id';
-  const ds = new dag.TestStore();
-  const lc = new LogContext();
-  await initDB(await ds.write(), DEFAULT_HEAD_NAME, clientID, {}, DD31);
+suite('basics w/ putCommit', () => {
+  const t = async (dd31: boolean) => {
+    const clientID = 'client-id';
+    const ds = new dag.TestStore();
+    const lc = new LogContext();
+    await initDB(await ds.write(), DEFAULT_HEAD_NAME, clientID, {}, dd31);
 
-  // Put.
-  const commit1 = await ds.withWrite(async dagWrite => {
-    const w = await newWriteLocal(
-      whenceHead(DEFAULT_HEAD_NAME),
-      'mutator_name',
-      JSON.stringify([]),
-      null,
-      dagWrite,
-      42,
-      clientID,
-      DD31,
-    );
-    await w.put(lc, 'foo', 'bar');
-    // Assert we can read the same value from within this transaction.;
-    const val = await w.get('foo');
-    expect(val).to.deep.equal('bar');
-    const commit = await w.putCommit();
-    await dagWrite.setHead('test', commit.chunk.hash);
-    await dagWrite.commit();
-    return commit;
-  });
+    // Put.
+    const commit1 = await ds.withWrite(async dagWrite => {
+      const w = await newWriteLocal(
+        whenceHead(DEFAULT_HEAD_NAME),
+        'mutator_name',
+        JSON.stringify([]),
+        null,
+        dagWrite,
+        42,
+        clientID,
+        dd31,
+      );
+      await w.put(lc, 'foo', 'bar');
+      // Assert we can read the same value from within this transaction.;
+      const val = await w.get('foo');
+      expect(val).to.deep.equal('bar');
+      const commit = await w.putCommit();
+      await dagWrite.setHead('test', commit.chunk.hash);
+      await dagWrite.commit();
+      return commit;
+    });
 
-  // As well as from the Commit that was put.
-  await ds.withWrite(async dagWrite => {
-    const w = await newWriteLocal(
-      whenceHash(commit1.chunk.hash),
-      'mutator_name',
-      JSON.stringify(null),
-      null,
-      dagWrite,
-      42,
-      clientID,
-      DD31,
-    );
-    const val = await w.get('foo');
-    expect(val).to.deep.equal('bar');
-  });
+    // As well as from the Commit that was put.
+    await ds.withWrite(async dagWrite => {
+      const w = await newWriteLocal(
+        whenceHash(commit1.chunk.hash),
+        'mutator_name',
+        JSON.stringify(null),
+        null,
+        dagWrite,
+        42,
+        clientID,
+        dd31,
+      );
+      const val = await w.get('foo');
+      expect(val).to.deep.equal('bar');
+    });
 
-  // Del.
-  const commit2 = await ds.withWrite(async dagWrite => {
-    const w = await newWriteLocal(
-      whenceHash(commit1.chunk.hash),
-      'mutator_name',
-      JSON.stringify([]),
-      null,
-      dagWrite,
-      42,
-      clientID,
-      DD31,
-    );
-    await w.del(lc, 'foo');
-    // Assert it is gone while still within this transaction.
-    const val = await w.get('foo');
-    expect(val).to.be.undefined;
-    const commit = await w.putCommit();
-    await dagWrite.setHead('test', commit.chunk.hash);
-    await dagWrite.commit();
-    return commit;
-  });
+    // Del.
+    const commit2 = await ds.withWrite(async dagWrite => {
+      const w = await newWriteLocal(
+        whenceHash(commit1.chunk.hash),
+        'mutator_name',
+        JSON.stringify([]),
+        null,
+        dagWrite,
+        42,
+        clientID,
+        dd31,
+      );
+      await w.del(lc, 'foo');
+      // Assert it is gone while still within this transaction.
+      const val = await w.get('foo');
+      expect(val).to.be.undefined;
+      const commit = await w.putCommit();
+      await dagWrite.setHead('test', commit.chunk.hash);
+      await dagWrite.commit();
+      return commit;
+    });
 
-  // As well as from the commit after it was put.
-  await ds.withWrite(async dagWrite => {
-    const w = await newWriteLocal(
-      whenceHash(commit2.chunk.hash),
-      'mutator_name',
-      JSON.stringify(null),
-      null,
-      dagWrite,
-      42,
-      clientID,
-      DD31,
-    );
-    const val = await w.get(`foo`);
-    expect(val).to.be.undefined;
-  });
+    // As well as from the commit after it was put.
+    await ds.withWrite(async dagWrite => {
+      const w = await newWriteLocal(
+        whenceHash(commit2.chunk.hash),
+        'mutator_name',
+        JSON.stringify(null),
+        null,
+        dagWrite,
+        42,
+        clientID,
+        dd31,
+      );
+      const val = await w.get(`foo`);
+      expect(val).to.be.undefined;
+    });
+  };
+  test('dd31', () => t(true));
+  test('sdd', () => t(false));
 });
 
 test('clear', async () => {
@@ -182,12 +191,11 @@ test('clear', async () => {
       dagWrite,
       DEFAULT_HEAD_NAME,
       clientID,
-      DD31
-        ? {
-            idx: {prefix: '', jsonPointer: '', allowEmpty: false},
-          }
-        : {},
-      DD31,
+
+      {
+        idx: {prefix: '', jsonPointer: '', allowEmpty: false},
+      },
+      true,
     ),
   );
   await ds.withWrite(async dagWrite => {
@@ -199,7 +207,7 @@ test('clear', async () => {
       dagWrite,
       42,
       clientID,
-      DD31,
+      true,
     );
     await w.put(lc, 'foo', 'bar');
     await w.commit(DEFAULT_HEAD_NAME);
@@ -214,7 +222,7 @@ test('clear', async () => {
       dagWrite,
       42,
       clientID,
-      DD31,
+      true,
     );
     await w.put(lc, 'hot', 'dog');
 

@@ -270,7 +270,11 @@ suite('rebaseMutationAndCommit', () => {
   });
 
   test("throws error if DD31 and mutationClientID does not match mutation's clientID", async () => {
-    await testThrowsErrorOnClientIDMismatch('commit');
+    await testThrowsErrorOnClientIDMismatch('commit', true);
+  });
+
+  test("throws error if SDD and mutationClientID does not match mutation's clientID", async () => {
+    await testThrowsErrorOnClientIDMismatch('commit', false);
   });
 
   test("throws error if next mutation id for mutationClientID does not match mutation's mutationID", async () => {
@@ -381,7 +385,11 @@ suite('rebaseMutationAndPutCommit', () => {
   });
 
   test("throws error if DD31 and mutationClientID does not match mutation's clientID", async () => {
-    await testThrowsErrorOnClientIDMismatch('putCommit');
+    await testThrowsErrorOnClientIDMismatch('putCommit', true);
+  });
+
+  test("throws error if SDD and mutationClientID does not match mutation's clientID", async () => {
+    await testThrowsErrorOnClientIDMismatch('putCommit', false);
   });
 
   test("throws error if next mutation id for mutationClientID does not match mutation's mutationID", async () => {
@@ -391,10 +399,11 @@ suite('rebaseMutationAndPutCommit', () => {
 
 async function testThrowsErrorOnClientIDMismatch(
   variant: 'commit' | 'putCommit',
+  dd31: boolean,
 ) {
   const clientID = 'test_client_id';
   const store = new dag.TestStore();
-  const b = new ChainBuilder(store);
+  const b = new ChainBuilder(store, undefined, dd31);
   await b.addGenesis(clientID);
   await b.addSnapshot([['foo', 'bar']], clientID);
   await b.addLocal(clientID);
@@ -433,12 +442,12 @@ async function testThrowsErrorOnClientIDMismatch(
             'wrong_client_id',
           );
     } catch (expected) {
-      expect(DD31).to.be.true;
+      expect(dd31).to.be.true;
       return;
     }
-    expect(DD31).to.be.false;
+    expect(dd31).to.be.false;
   });
-  expect(testMutatorCallCount).to.equal(DD31 ? 0 : 1);
+  expect(testMutatorCallCount).to.equal(dd31 ? 0 : 1);
 }
 
 async function testThrowsErrorOnMutationIDMismatch(

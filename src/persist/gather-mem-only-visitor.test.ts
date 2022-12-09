@@ -90,70 +90,78 @@ suite('dag with only memory-only hashes gathers everything', () => {
   test('sdd', () => t(false));
 });
 
-test('dag with some persisted hashes and some memory-only hashes on top', async () => {
-  const clientID = 'client-id';
-  const hashFunction = makeNewFakeHashFunction();
-  const perdag = new dag.TestStore(undefined, hashFunction);
-  const memdag = new dag.LazyStore(
-    perdag,
-    100 * 2 ** 20, // 100 MB,
-    hashFunction,
-    assertHash,
-  );
+suite(
+  'dag with some persisted hashes and some memory-only hashes on top',
+  () => {
+    const t = async (dd31: boolean) => {
+      const clientID = 'client-id';
+      const hashFunction = makeNewFakeHashFunction();
+      const perdag = new dag.TestStore(undefined, hashFunction);
+      const memdag = new dag.LazyStore(
+        perdag,
+        100 * 2 ** 20, // 100 MB,
+        hashFunction,
+        assertHash,
+      );
 
-  const pb = new ChainBuilder(perdag);
-  const mb = new ChainBuilder(memdag);
+      const pb = new ChainBuilder(perdag, undefined, dd31);
+      const mb = new ChainBuilder(memdag, undefined, dd31);
 
-  await pb.addGenesis(clientID);
-  await pb.addLocal(clientID);
+      await pb.addGenesis(clientID);
+      await pb.addLocal(clientID);
 
-  await memdag.withWrite(async memdagWrite => {
-    await memdagWrite.setHead(db.DEFAULT_HEAD_NAME, pb.headHash);
-    await memdagWrite.commit();
-  });
-  mb.chain = pb.chain.slice();
-  await mb.addLocal(clientID);
+      await memdag.withWrite(async memdagWrite => {
+        await memdagWrite.setHead(db.DEFAULT_HEAD_NAME, pb.headHash);
+        await memdagWrite.commit();
+      });
+      mb.chain = pb.chain.slice();
+      await mb.addLocal(clientID);
 
-  await memdag.withRead(async dagRead => {
-    const visitor = new GatherMemoryOnlyVisitor(dagRead);
-    await visitor.visitCommit(mb.headHash);
-    const metaBase = {
-      basisHash: 'face0000000040008000000000000000' + '000000000003',
-      mutationID: 2,
-      mutatorArgsJSON: [2],
-      mutatorName: 'mutator_name_2',
-      originalHash: null,
-      timestamp: 42,
+      await memdag.withRead(async dagRead => {
+        const visitor = new GatherMemoryOnlyVisitor(dagRead);
+        await visitor.visitCommit(mb.headHash);
+        const metaBase = {
+          basisHash: 'face0000000040008000000000000000' + '000000000003',
+          mutationID: 2,
+          mutatorArgsJSON: [2],
+          mutatorName: 'mutator_name_2',
+          originalHash: null,
+          timestamp: 42,
+        };
+        const meta = dd31
+          ? {
+              type: MetaType.LocalDD31,
+              ...metaBase,
+              baseSnapshotHash:
+                'face0000000040008000000000000000' + '000000000001',
+              clientID,
+            }
+          : {type: MetaType.LocalSDD, ...metaBase};
+        expect(Object.fromEntries(visitor.gatheredChunks)).to.deep.equal({
+          ['face0000000040008000000000000000' + '000000000004']: {
+            data: [0, [['local', '2']]],
+            hash: 'face0000000040008000000000000000' + '000000000004',
+            meta: [],
+          },
+          ['face0000000040008000000000000000' + '000000000005']: {
+            data: {
+              indexes: [],
+              meta,
+              valueHash: 'face0000000040008000000000000000' + '000000000004',
+            },
+            hash: 'face0000000040008000000000000000' + '000000000005',
+            meta: [
+              'face0000000040008000000000000000' + '000000000004',
+              'face0000000040008000000000000000' + '000000000003',
+            ],
+          },
+        });
+      });
     };
-    const meta = DD31
-      ? {
-          type: MetaType.LocalDD31,
-          ...metaBase,
-          baseSnapshotHash: 'face0000000040008000000000000000' + '000000000001',
-          clientID,
-        }
-      : {type: MetaType.LocalSDD, ...metaBase};
-    expect(Object.fromEntries(visitor.gatheredChunks)).to.deep.equal({
-      ['face0000000040008000000000000000' + '000000000004']: {
-        data: [0, [['local', '2']]],
-        hash: 'face0000000040008000000000000000' + '000000000004',
-        meta: [],
-      },
-      ['face0000000040008000000000000000' + '000000000005']: {
-        data: {
-          indexes: [],
-          meta,
-          valueHash: 'face0000000040008000000000000000' + '000000000004',
-        },
-        hash: 'face0000000040008000000000000000' + '000000000005',
-        meta: [
-          'face0000000040008000000000000000' + '000000000004',
-          'face0000000040008000000000000000' + '000000000003',
-        ],
-      },
-    });
-  });
-});
+    test('dd31', () => t(true));
+    test('sdd', () => t(false));
+  },
+);
 
 suite(
   'dag with some permanent hashes and some memory-only hashes on top w index',

@@ -57,29 +57,22 @@ test('push', async () => {
   await tickAFewTimes();
   const {mutations} = await fetchMock.lastCall().request.json();
   const clientID = await rep.clientID;
-  expect(mutations).to.deep.equal(
-    DD31
-      ? [
-          {
-            clientID,
-            id: 1,
-            name: 'deleteTodo',
-            args: {id: id1},
-            timestamp: 100,
-          },
-          {
-            clientID,
-            id: 2,
-            name: 'deleteTodo',
-            args: {id: id2},
-            timestamp: 100,
-          },
-        ]
-      : [
-          {id: 1, name: 'deleteTodo', args: {id: id1}, timestamp: 100},
-          {id: 2, name: 'deleteTodo', args: {id: id2}, timestamp: 100},
-        ],
-  );
+  expect(mutations).to.deep.equal([
+    {
+      clientID,
+      id: 1,
+      name: 'deleteTodo',
+      args: {id: id1},
+      timestamp: 100,
+    },
+    {
+      clientID,
+      id: 2,
+      name: 'deleteTodo',
+      args: {id: id2},
+      timestamp: 100,
+    },
+  ]);
 
   await createTodo({
     id: id1,
@@ -99,47 +92,29 @@ test('push', async () => {
   await tickAFewTimes();
   {
     const {mutations} = await fetchMock.lastCall().request.json();
-    expect(mutations).to.deep.equal(
-      DD31
-        ? [
-            {
-              clientID,
-              id: 1,
-              name: 'deleteTodo',
-              args: {id: id1},
-              timestamp: 100,
-            },
-            {
-              clientID,
-              id: 2,
-              name: 'deleteTodo',
-              args: {id: id2},
-              timestamp: 100,
-            },
-            {
-              clientID,
-              id: 3,
-              name: 'createTodo',
-              args: {id: id1, text: 'Test'},
-              timestamp: 200,
-            },
-          ]
-        : [
-            {id: 1, name: 'deleteTodo', args: {id: id1}, timestamp: 100},
-            {
-              id: 2,
-              name: 'deleteTodo',
-              args: {id: id2},
-              timestamp: 100,
-            },
-            {
-              id: 3,
-              name: 'createTodo',
-              args: {id: id1, text: 'Test'},
-              timestamp: 200,
-            },
-          ],
-    );
+    expect(mutations).to.deep.equal([
+      {
+        clientID,
+        id: 1,
+        name: 'deleteTodo',
+        args: {id: id1},
+        timestamp: 100,
+      },
+      {
+        clientID,
+        id: 2,
+        name: 'deleteTodo',
+        args: {id: id2},
+        timestamp: 100,
+      },
+      {
+        clientID,
+        id: 3,
+        name: 'createTodo',
+        args: {id: id1, text: 'Test'},
+        timestamp: 200,
+      },
+    ]);
   }
 
   await createTodo({
@@ -160,71 +135,50 @@ test('push', async () => {
   await tickAFewTimes();
   {
     const {mutations} = await fetchMock.lastCall().request.json();
-    expect(mutations).to.deep.equal(
-      DD31
-        ? [
-            {
-              clientID,
-              id: 1,
-              name: 'deleteTodo',
-              args: {id: id1},
-              timestamp: 100,
-            },
-            {
-              clientID,
-              id: 2,
-              name: 'deleteTodo',
-              args: {id: id2},
-              timestamp: 100,
-            },
-            {
-              clientID,
-              id: 3,
-              name: 'createTodo',
-              args: {id: id1, text: 'Test'},
-              timestamp: 200,
-            },
-            {
-              clientID,
-              id: 4,
-              name: 'createTodo',
-              args: {id: id2, text: 'Test 2'},
-              timestamp: 300,
-            },
-            {
-              clientID,
-              id: 5,
-              name: 'deleteTodo',
-              args: {id: id1},
-              timestamp: 300,
-            },
-            {
-              clientID,
-              id: 6,
-              name: 'deleteTodo',
-              args: {id: id2},
-              timestamp: 300,
-            },
-          ]
-        : [
-            {id: 1, name: 'deleteTodo', args: {id: id1}, timestamp: 100},
-            {id: 2, name: 'deleteTodo', args: {id: id2}, timestamp: 100},
-            {
-              id: 3,
-              name: 'createTodo',
-              args: {id: id1, text: 'Test'},
-              timestamp: 200,
-            },
-            {
-              id: 4,
-              name: 'createTodo',
-              args: {id: id2, text: 'Test 2'},
-              timestamp: 300,
-            },
-            {id: 5, name: 'deleteTodo', args: {id: id1}, timestamp: 300},
-            {id: 6, name: 'deleteTodo', args: {id: id2}, timestamp: 300},
-          ],
-    );
+    expect(mutations).to.deep.equal([
+      {
+        clientID,
+        id: 1,
+        name: 'deleteTodo',
+        args: {id: id1},
+        timestamp: 100,
+      },
+      {
+        clientID,
+        id: 2,
+        name: 'deleteTodo',
+        args: {id: id2},
+        timestamp: 100,
+      },
+      {
+        clientID,
+        id: 3,
+        name: 'createTodo',
+        args: {id: id1, text: 'Test'},
+        timestamp: 200,
+      },
+      {
+        clientID,
+        id: 4,
+        name: 'createTodo',
+        args: {id: id2, text: 'Test 2'},
+        timestamp: 300,
+      },
+      {
+        clientID,
+        id: 5,
+        name: 'deleteTodo',
+        args: {id: id1},
+        timestamp: 300,
+      },
+      {
+        clientID,
+        id: 6,
+        name: 'deleteTodo',
+        args: {id: id2},
+        timestamp: 300,
+      },
+    ]);
   }
 });
 

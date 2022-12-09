@@ -145,8 +145,7 @@ async function canCollectDatabase(
 
   // 0 is used in testing
   if (db.lastOpenedTimestampMS !== undefined) {
-    const isDd31 =
-      DD31 && db.replicacheFormatVersion >= REPLICACHE_FORMAT_VERSION_DD31;
+    const isDd31 = db.replicacheFormatVersion >= REPLICACHE_FORMAT_VERSION_DD31;
 
     // - For SDD we can delete the database if it is older than maxAge.
     // - For DD31 we can delete the database if it is older than dd31MaxAge and

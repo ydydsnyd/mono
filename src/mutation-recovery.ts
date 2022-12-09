@@ -402,10 +402,7 @@ function recoverMutationsFromPerdag(
   perdag: dag.Store,
   preReadClientMap: persist.ClientMap | undefined,
 ): Promise<void> {
-  if (
-    DD31 &&
-    database.replicacheFormatVersion === REPLICACHE_FORMAT_VERSION_DD31
-  ) {
+  if (database.replicacheFormatVersion === REPLICACHE_FORMAT_VERSION_DD31) {
     return recoverMutationsFromPerdagDD31(database, options, perdag);
   }
   return recoverMutationsFromPerdagSDD(

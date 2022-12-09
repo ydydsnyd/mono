@@ -388,7 +388,7 @@ export function assertLocalMetaDD31(
 }
 
 export function isLocalMetaDD31(meta: Meta): meta is LocalMetaDD31 {
-  return DD31 && meta.type === MetaType.LocalDD31;
+  return meta.type === MetaType.LocalDD31;
 }
 
 export function isLocalMetaSDD(meta: Meta): meta is LocalMetaSDD {
@@ -474,7 +474,7 @@ export function assertSnapshotCommitDD31(
 }
 
 export function isSnapshotMetaDD31(meta: Meta): meta is SnapshotMetaDD31 {
-  return DD31 && meta.type === MetaType.SnapshotDD31;
+  return meta.type === MetaType.SnapshotDD31;
 }
 export function isSnapshotMetaSDD(meta: Meta): meta is SnapshotMetaSDD {
   return meta.type === MetaType.SnapshotSDD;

@@ -40,7 +40,7 @@ import {
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
-import type {MutationSDD} from './sync/push.js';
+import type {MutationDD31} from './sync/push.js';
 import {
   enableLicensingSymbol,
   enablePullAndPushInOpenSymbol,
@@ -1997,7 +1997,7 @@ test('client ID is set correctly on transactions', async () => {
 });
 
 test('mutation timestamps are immutable', async () => {
-  let pending: MutationSDD[] = [];
+  let pending: MutationDD31[] = [];
   const rep = await replicacheForTesting('mutation-timestamps-are-immutable', {
     mutators: {
       foo: async (tx, _: JSONValue) => {
@@ -2006,7 +2006,7 @@ test('mutation timestamps are immutable', async () => {
     },
     pusher: async (req: Request) => {
       const parsed = await req.json();
-      pending = parsed.mutations as MutationSDD[];
+      pending = parsed.mutations as MutationDD31[];
       return {
         errorMessage: '',
         httpStatusCode: 200,
@@ -2017,26 +2017,15 @@ test('mutation timestamps are immutable', async () => {
   // Create a mutation and verify it has been assigned current time.
   await rep.mutate.foo(null);
   await rep.invokePush();
-  expect(pending).deep.equal(
-    DD31
-      ? [
-          {
-            clientID: await rep.clientID,
-            id: 1,
-            name: 'foo',
-            args: null,
-            timestamp: 100,
-          },
-        ]
-      : [
-          {
-            id: 1,
-            name: 'foo',
-            args: null,
-            timestamp: 100,
-          },
-        ],
-  );
+  expect(pending).deep.equal([
+    {
+      clientID: await rep.clientID,
+      id: 1,
+      name: 'foo',
+      args: null,
+      timestamp: 100,
+    },
+  ]);
 
   // Move clock forward, then cause a rebase, the pending mutation will
   // replay internally.
@@ -2067,26 +2056,15 @@ test('mutation timestamps are immutable', async () => {
 
   // Check that mutation timestamp did not change
   await rep.invokePush();
-  expect(pending).deep.equal(
-    DD31
-      ? [
-          {
-            clientID: await rep.clientID,
-            id: 1,
-            name: 'foo',
-            args: null,
-            timestamp: 100,
-          },
-        ]
-      : [
-          {
-            id: 1,
-            name: 'foo',
-            args: null,
-            timestamp: 100,
-          },
-        ],
-  );
+  expect(pending).deep.equal([
+    {
+      clientID: await rep.clientID,
+      id: 1,
+      name: 'foo',
+      args: null,
+      timestamp: 100,
+    },
+  ]);
 });
 
 // Define this here to prevent issues with building docs

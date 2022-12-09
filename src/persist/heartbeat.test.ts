@@ -145,16 +145,11 @@ test('calling function returned by startHeartbeats, stops heartbeats', async () 
   await dagStore.withRead(async (read: dag.Read) => {
     const readClientMap = await getClients(read);
     expect(Object.fromEntries(readClientMap)).to.deep.equal({
-      client1: DD31
-        ? {
-            ...client1,
-            heartbeatTimestampMs: START_TIME + ONE_MIN_IN_MS,
-            tempRefreshHash: null,
-          }
-        : {
-            ...client1,
-            heartbeatTimestampMs: START_TIME + ONE_MIN_IN_MS,
-          },
+      client1: {
+        ...client1,
+        heartbeatTimestampMs: START_TIME + ONE_MIN_IN_MS,
+        tempRefreshHash: null,
+      },
       client2,
     });
   });
@@ -166,18 +161,12 @@ test('calling function returned by startHeartbeats, stops heartbeats', async () 
   await dagStore.withRead(async (read: dag.Read) => {
     const readClientMap = await getClients(read);
     expect(Object.fromEntries(readClientMap)).to.deep.equal({
-      client1: DD31
-        ? {
-            ...client1,
-            // Heartbeat *NOT* updated to START_TIME + ONE_MIN_IN_MS + ONE_MIN_IN_MS
-            heartbeatTimestampMs: START_TIME + ONE_MIN_IN_MS,
-            tempRefreshHash: null,
-          }
-        : {
-            ...client1,
-            // Heartbeat *NOT* updated to START_TIME + ONE_MIN_IN_MS + ONE_MIN_IN_MS
-            heartbeatTimestampMs: START_TIME + ONE_MIN_IN_MS,
-          },
+      client1: {
+        ...client1,
+        // Heartbeat *NOT* updated to START_TIME + ONE_MIN_IN_MS + ONE_MIN_IN_MS
+        heartbeatTimestampMs: START_TIME + ONE_MIN_IN_MS,
+        tempRefreshHash: null,
+      },
       client2,
     });
   });

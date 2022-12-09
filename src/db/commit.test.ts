@@ -277,37 +277,37 @@ test('load roundtrip', () => {
         timestamp,
       ),
     );
-    DD31 &&
-      t(
-        makeCommit(
-          {
-            type: MetaType.LocalDD31,
-            basisHash,
-            baseSnapshotHash,
-            mutationID: 0,
-            mutatorName: 'mutator-name',
-            mutatorArgsJSON: 42,
-            originalHash: original,
-            timestamp,
-            clientID,
-          },
-          valueHash,
-          basisHash === null ? [valueHash] : [valueHash, basisHash],
-        ),
-        commitNewLocalDD31(
-          createChunk,
+
+    t(
+      makeCommit(
+        {
+          type: MetaType.LocalDD31,
           basisHash,
           baseSnapshotHash,
-          0,
-          'mutator-name',
-          42,
-          original,
-          valueHash,
-          [],
+          mutationID: 0,
+          mutatorName: 'mutator-name',
+          mutatorArgsJSON: 42,
+          originalHash: original,
           timestamp,
           clientID,
-        ),
-      );
+        },
+        valueHash,
+        basisHash === null ? [valueHash] : [valueHash, basisHash],
+      ),
+      commitNewLocalDD31(
+        createChunk,
+        basisHash,
+        baseSnapshotHash,
+        0,
+        'mutator-name',
+        42,
+        original,
+        valueHash,
+        [],
+        timestamp,
+        clientID,
+      ),
+    );
   }
 
   t(
@@ -326,25 +326,25 @@ test('load roundtrip', () => {
     ),
     new Error('Missing mutator name'),
   );
-  DD31 &&
-    t(
-      makeCommit(
-        {
-          type: MetaType.LocalDD31,
-          basisHash: fakeHash('ba515'),
-          baseSnapshotHash: fakeHash('ba516'),
-          mutationID: 0,
-          mutatorName: '',
-          mutatorArgsJSON: 43,
-          originalHash: emptyStringHash,
-          timestamp,
-          clientID,
-        },
-        fakeHash('face4'),
-        [fakeHash('000'), fakeHash('000')],
-      ),
-      new Error('Missing mutator name'),
-    );
+
+  t(
+    makeCommit(
+      {
+        type: MetaType.LocalDD31,
+        basisHash: fakeHash('ba515'),
+        baseSnapshotHash: fakeHash('ba516'),
+        mutationID: 0,
+        mutatorName: '',
+        mutatorArgsJSON: 43,
+        originalHash: emptyStringHash,
+        timestamp,
+        clientID,
+      },
+      fakeHash('face4'),
+      [fakeHash('000'), fakeHash('000')],
+    ),
+    new Error('Missing mutator name'),
+  );
 
   t(
     makeCommit(
@@ -362,24 +362,24 @@ test('load roundtrip', () => {
     ),
     new Error('Invalid type: null, expected string'),
   );
-  DD31 &&
-    t(
-      makeCommit(
-        {
-          type: MetaType.LocalDD31,
-          basisHash: emptyStringHash,
-          mutationID: 0,
-          // @ts-expect-error We are testing invalid types
-          mutatorName: null,
-          mutatorArgsJSON: 43,
-          originalHash: emptyStringHash,
-          clientID,
-        },
-        fakeHash('face4'),
-        ['', ''],
-      ),
-      new Error('Invalid type: null, expected string'),
-    );
+
+  t(
+    makeCommit(
+      {
+        type: MetaType.LocalDD31,
+        basisHash: emptyStringHash,
+        mutationID: 0,
+        // @ts-expect-error We are testing invalid types
+        mutatorName: null,
+        mutatorArgsJSON: 43,
+        originalHash: emptyStringHash,
+        clientID,
+      },
+      fakeHash('face4'),
+      ['', ''],
+    ),
+    new Error('Invalid type: null, expected string'),
+  );
 
   for (const basisHash of [fakeHash('000'), fakeHash('face3')]) {
     t(
@@ -410,39 +410,39 @@ test('load roundtrip', () => {
         timestamp,
       ),
     );
-    DD31 &&
-      t(
-        makeCommit(
-          {
-            type: MetaType.LocalDD31,
-            basisHash,
-            baseSnapshotHash,
-            mutationID: 0,
-            mutatorName: 'mutator-name',
-            mutatorArgsJSON: 44,
-            originalHash: null,
-            timestamp,
-            clientID,
-          },
-          fakeHash('face6'),
-          basisHash === null
-            ? [fakeHash('face6')]
-            : [fakeHash('face6'), basisHash],
-        ),
-        commitNewLocalDD31(
-          createChunk,
+
+    t(
+      makeCommit(
+        {
+          type: MetaType.LocalDD31,
           basisHash,
           baseSnapshotHash,
-          0,
-          'mutator-name',
-          44,
-          null,
-          fakeHash('face6'),
-          [],
+          mutationID: 0,
+          mutatorName: 'mutator-name',
+          mutatorArgsJSON: 44,
+          originalHash: null,
           timestamp,
           clientID,
-        ),
-      );
+        },
+        fakeHash('face6'),
+        basisHash === null
+          ? [fakeHash('face6')]
+          : [fakeHash('face6'), basisHash],
+      ),
+      commitNewLocalDD31(
+        createChunk,
+        basisHash,
+        baseSnapshotHash,
+        0,
+        'mutator-name',
+        44,
+        null,
+        fakeHash('face6'),
+        [],
+        timestamp,
+        clientID,
+      ),
+    );
   }
 
   t(
@@ -462,26 +462,26 @@ test('load roundtrip', () => {
     ),
     new Error('Invalid type: null, expected string'),
   );
-  DD31 &&
-    t(
-      makeCommit(
-        {
-          type: MetaType.LocalDD31,
-          basisHash: emptyStringHash,
-          baseSnapshotHash,
-          mutationID: 0,
-          mutatorName: 'mutator-name',
-          mutatorArgsJSON: 45,
-          originalHash: emptyStringHash,
-          timestamp,
-          clientID,
-        },
-        //@ts-expect-error we are testing invalid types
-        null,
-        ['', ''],
-      ),
-      new Error('Invalid type: null, expected string'),
-    );
+
+  t(
+    makeCommit(
+      {
+        type: MetaType.LocalDD31,
+        basisHash: emptyStringHash,
+        baseSnapshotHash,
+        mutationID: 0,
+        mutatorName: 'mutator-name',
+        mutatorArgsJSON: 45,
+        originalHash: emptyStringHash,
+        timestamp,
+        clientID,
+      },
+      //@ts-expect-error we are testing invalid types
+      null,
+      ['', ''],
+    ),
+    new Error('Invalid type: null, expected string'),
+  );
 
   const cookie = deepFreeze({foo: 'bar'});
   for (const basisHash of [null, fakeHash('000'), fakeHash('face3')]) {
@@ -505,27 +505,27 @@ test('load roundtrip', () => {
         [],
       ),
     );
-    DD31 &&
-      t(
-        makeCommit(
-          {
-            type: MetaType.SnapshotDD31,
-            basisHash,
-            lastMutationIDs: {[clientID]: 0},
-            cookieJSON: cookie,
-          },
-          fakeHash('face6'),
-          [fakeHash('face6')],
-        ),
-        commitNewSnapshotDD31(
-          createChunk,
+
+    t(
+      makeCommit(
+        {
+          type: MetaType.SnapshotDD31,
           basisHash,
-          {[clientID]: 0},
-          cookie,
-          fakeHash('face6'),
-          [],
-        ),
-      );
+          lastMutationIDs: {[clientID]: 0},
+          cookieJSON: cookie,
+        },
+        fakeHash('face6'),
+        [fakeHash('face6')],
+      ),
+      commitNewSnapshotDD31(
+        createChunk,
+        basisHash,
+        {[clientID]: 0},
+        cookie,
+        fakeHash('face6'),
+        [],
+      ),
+    );
   }
 
   t(
@@ -542,21 +542,21 @@ test('load roundtrip', () => {
     ),
     new Error('Invalid type: undefined, expected JSON value'),
   );
-  DD31 &&
-    t(
-      makeCommit(
-        // @ts-expect-error we are testing invalid types
-        {
-          type: MetaType.SnapshotDD31,
-          basisHash: emptyStringHash,
-          lastMutationIDs: {[clientID]: 0},
-          // missing cookieJSON
-        },
-        fakeHash('face6'),
-        [fakeHash('face6'), fakeHash('000')],
-      ),
-      new Error('Invalid type: undefined, expected JSON value'),
-    );
+
+  t(
+    makeCommit(
+      // @ts-expect-error we are testing invalid types
+      {
+        type: MetaType.SnapshotDD31,
+        basisHash: emptyStringHash,
+        lastMutationIDs: {[clientID]: 0},
+        // missing cookieJSON
+      },
+      fakeHash('face6'),
+      [fakeHash('face6'), fakeHash('000')],
+    ),
+    new Error('Invalid type: undefined, expected JSON value'),
+  );
 
   for (const basisHash of [fakeHash('000'), fakeHash('face3')]) {
     t(

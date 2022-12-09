@@ -301,7 +301,7 @@ export class ChainBuilder {
   chain: Chain;
   readonly dd31: boolean;
 
-  constructor(store: dag.Store, headName = DEFAULT_HEAD_NAME, dd31 = DD31) {
+  constructor(store: dag.Store, headName = DEFAULT_HEAD_NAME, dd31 = true) {
     this.store = store;
     this.headName = headName;
     this.chain = [];
