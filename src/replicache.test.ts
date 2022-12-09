@@ -661,6 +661,7 @@ test('allow redefinition of indexes', async () => {
       indexes: {
         aIndex: {jsonPointer: '/a'},
       },
+      ...disableAllBackgroundProcesses,
     },
     {useDefaultURLs: false},
   );
