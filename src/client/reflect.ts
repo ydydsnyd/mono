@@ -53,7 +53,6 @@ export class Reflect<MD extends MutatorDefs> {
    * changes.
    */
   onOnlineChange: ((online: boolean) => void) | null = null;
-  onSocketError: ((msg: string) => void) | null = null;
 
   private _connectResolver = resolver<WebSocket>();
   private _lastMutationIDReceived = 0;
@@ -277,7 +276,7 @@ export class Reflect<MD extends MutatorDefs> {
     }
 
     if (downMessage[0] === 'error') {
-      this.onSocketError?.(downMessage[1]);
+      l.error?.(`Socket error: ${downMessage[1]}`);
       throw new Error(downMessage[1]);
     }
 
