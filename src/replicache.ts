@@ -851,11 +851,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
    * browser profile.
    */
   get clientGroupID(): Promise<string> {
-    assert(DD31);
-    return this._clientGroupIDPromise.then(clientGroupID => {
-      assert(clientGroupID);
-      return clientGroupID;
-    });
+    return this._clientGroupIDPromise;
   }
 
   /**
