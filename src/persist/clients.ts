@@ -1,7 +1,7 @@
 import type {LogContext} from '@rocicorp/logger';
-import {assertHash, Hash, newUUIDHash} from '../hash.js';
+import {assertHash, Hash} from '../hash.js';
 import * as btree from '../btree/mod.js';
-import * as dag from '../dag/mod.js';
+import type * as dag from '../dag/mod.js';
 import * as db from '../db/mod.js';
 import type * as sync from '../sync/mod.js';
 import {FrozenJSONValue, deepFreeze} from '../json.js';
@@ -13,7 +13,6 @@ import {
   compareCookies,
   getRefs,
   toChunkIndexDefinition,
-  newSnapshotCommitDataSDD,
   newSnapshotCommitDataDD31,
   ChunkIndexDefinition,
   chunkIndexDefinitionEqualIgnoreName,
@@ -229,109 +228,6 @@ export async function getClient(
   return clients.get(id);
 }
 
-export function initClient(
-  lc: LogContext,
-  perdag: dag.Store,
-  mutatorNames: string[],
-  indexes: IndexDefinitions,
-): Promise<
-  [
-    clientID: sync.ClientID,
-    client: Client,
-    clientMap: ClientMap,
-    newClientGroup: boolean,
-  ]
-> {
-  if (DD31) {
-    return initClientDD31(lc, perdag, mutatorNames, indexes);
-  }
-  return initClientSDD(perdag);
-}
-
-export function initClientSDD(
-  perdag: dag.Store,
-): Promise<
-  [
-    clientID: sync.ClientID,
-    client: Client,
-    clientMap: ClientMap,
-    newClientGroup: boolean,
-  ]
-> {
-  return perdag.withWrite(async dagWrite => {
-    const newClientID = makeUuid();
-    const clients = await getClients(dagWrite);
-
-    let bootstrapClient: Client | undefined;
-    for (const client of clients.values()) {
-      if (
-        !bootstrapClient ||
-        bootstrapClient.heartbeatTimestampMs < client.heartbeatTimestampMs
-      ) {
-        bootstrapClient = client;
-      }
-    }
-
-    let newClientCommitData: db.CommitData<db.SnapshotMetaSDD>;
-    const chunksToPut: dag.Chunk[] = [];
-    if (bootstrapClient) {
-      const constBootstrapClient = bootstrapClient;
-      const bootstrapCommit = await db.baseSnapshotFromHash(
-        constBootstrapClient.headHash,
-        dagWrite,
-      );
-      // Copy the snapshot with one change: set last mutation id to 0.  Replicache
-      // server implementations expect new client ids to start with last mutation id 0.
-      // If a server sees a new client id with a non-0 last mutation id, it may conclude
-      // this is a very old client whose state has been garbage collected on the server.
-      newClientCommitData = newSnapshotCommitDataSDD(
-        bootstrapCommit.meta.basisHash,
-        0 /* lastMutationID */,
-        bootstrapCommit.meta.cookieJSON,
-        bootstrapCommit.valueHash,
-        bootstrapCommit.indexes,
-      );
-    } else {
-      // No existing snapshot to bootstrap from. Create empty snapshot.
-      const emptyBTreeChunk = new dag.Chunk(
-        newUUIDHash(),
-        btree.emptyDataNode,
-        [],
-      );
-      chunksToPut.push(emptyBTreeChunk);
-      newClientCommitData = newSnapshotCommitDataSDD(
-        null /* basisHash */,
-        0 /* lastMutationID */,
-        null /* cookie */,
-        emptyBTreeChunk.hash,
-        [] /* indexes */,
-      );
-    }
-
-    const newClientCommitChunk = new dag.Chunk(
-      newUUIDHash(),
-      newClientCommitData,
-      getRefs(newClientCommitData),
-    );
-    chunksToPut.push(newClientCommitChunk);
-
-    const newClient: Client = {
-      heartbeatTimestampMs: Date.now(),
-      headHash: newClientCommitChunk.hash,
-      mutationID: 0,
-      lastServerAckdMutationID: 0,
-    };
-    const updatedClients = new Map(clients).set(newClientID, newClient);
-    await setClients(updatedClients, dagWrite);
-
-    await Promise.all(chunksToPut.map(c => dagWrite.putChunk(c)));
-
-    await dagWrite.commit();
-
-    return [newClientID, newClient, updatedClients, false];
-  });
-}
-
 export function initClientDD31(
   lc: LogContext,
   perdag: dag.Store,
@@ -340,7 +236,7 @@ export function initClientDD31(
 ): Promise<
   [
     clientID: sync.ClientID,
-    client: Client,
+    client: ClientDD31,
     clientMap: ClientMap,
     newClientGroup: boolean,
   ]
@@ -351,7 +247,7 @@ export function initClientDD31(
       cookieJSON: FrozenJSONValue,
       valueHash: Hash,
       indexRecords: readonly db.IndexRecord[],
-    ): Promise<[sync.ClientID, Client, ClientMap, boolean]> {
+    ): Promise<[sync.ClientID, ClientDD31, ClientMap, boolean]> {
       const newSnapshotData = newSnapshotCommitDataDD31(
         basisHash,
         {},

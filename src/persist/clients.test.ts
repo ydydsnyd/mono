@@ -14,7 +14,6 @@ import {
 import {assertHash, fakeHash, newUUIDHash} from '../hash.js';
 import {
   assertClientDD31,
-  Client,
   ClientDD31,
   CLIENTS_HEAD_NAME,
   findMatchingClient,
@@ -26,9 +25,7 @@ import {
   getClients,
   getClientGroupForClient,
   getClientGroupIDForClient,
-  initClient,
   initClientDD31,
-  isClientSDD,
   setClient,
 } from './clients.js';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
@@ -86,10 +83,6 @@ test('updateClients and getClients', async () => {
 });
 
 test('updateClients and getClients for DD31', async () => {
-  if (!DD31) {
-    return;
-  }
-
   const dagStore = new dag.TestStore();
   const clientMap = new Map(
     Object.entries({
@@ -345,7 +338,7 @@ test('updateClients throws errors if chunk pointed to by clients head does not c
 test('initClient creates new empty snapshot when no existing snapshot to bootstrap from', async () => {
   const dagStore = new dag.TestStore();
   clock.tick(4000);
-  const [clientID, client, clients] = await initClient(
+  const [clientID, client, clients] = await initClientDD31(
     new LogContext(),
     dagStore,
     [],
@@ -364,13 +357,12 @@ test('initClient creates new empty snapshot when no existing snapshot to bootstr
     // New client was added to the client map.
     expect(await getClient(clientID, dagRead)).to.deep.equal(client);
     expect(client.heartbeatTimestampMs).to.equal(clock.now);
-    if (isClientSDD(client)) {
-      expect(client.mutationID).to.equal(0);
-      expect(client.lastServerAckdMutationID).to.equal(0);
-    } else {
-      // TODO(DD31): Implement
-      // expect(client.clientGroupID).to.equal('TODO DD31');
-    }
+
+    const {clientGroupID} = client;
+    const clientGroup = await getClientGroup(clientGroupID, dagRead);
+    assert(clientGroup);
+    expect(clientGroup.mutationIDs).to.deep.equal({});
+    expect(clientGroup.lastServerAckdMutationIDs).to.deep.equal({});
 
     // New client's head hash points to an empty snapshot with an empty btree.
     const headChunk = await dagRead.getChunk(client.headHash);
@@ -422,7 +414,7 @@ test('initClient bootstraps from base snapshot of client with highest heartbeat'
   await setClientsForTesting(clientMap, dagStore);
 
   clock.tick(4000);
-  const [clientID2, client, clients] = await initClient(
+  const [clientID2, client, clients] = await initClientDD31(
     new LogContext(),
     dagStore,
     [],
@@ -435,12 +427,12 @@ test('initClient bootstraps from base snapshot of client with highest heartbeat'
     // New client was added to the client map.
     expect(await getClient(clientID2, dagRead)).to.deep.equal(client);
     expect(client.heartbeatTimestampMs).to.equal(clock.now);
-    if (isClientSDD(client)) {
-      expect(client.mutationID).to.equal(0);
-      expect(client.lastServerAckdMutationID).to.equal(0);
-    } else {
-      // TODO(DD31): Implement
-    }
+
+    const {clientGroupID} = client;
+    const clientGroup = await getClientGroup(clientGroupID, dagRead);
+    assert(clientGroup);
+    expect(clientGroup.mutationIDs).to.deep.equal({});
+    expect(clientGroup.lastServerAckdMutationIDs).to.deep.equal({});
 
     // New client's head hash points to a commit that matches
     // client2BaseSnapshotCommit but with a local mutation id of 0.
@@ -504,15 +496,11 @@ test('setClient', async () => {
 });
 
 test('getClientGroupID', async () => {
-  if (!DD31) {
-    return;
-  }
-
   const dagStore = new dag.TestStore();
 
   const t = async (
     clientID: ClientID,
-    client: Client,
+    client: ClientDD31,
     clientGroupID: ClientGroupID,
     clientGroup: ClientGroup,
     expectedClientGroupID: ClientGroupID | undefined,
@@ -599,10 +587,6 @@ test('getClientGroupID', async () => {
 });
 
 suite('findMatchingClient', () => {
-  if (!DD31) {
-    return;
-  }
-
   test('new (empty perdag)', async () => {
     const perdag = new dag.TestStore();
     await perdag.withRead(async read => {
@@ -755,10 +739,6 @@ suite('findMatchingClient', () => {
 });
 
 suite('initClientDD31', () => {
-  if (!DD31) {
-    return;
-  }
-
   let clock: SinonFakeTimers;
   setup(() => {
     clock = useFakeTimers(0);

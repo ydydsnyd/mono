@@ -57,7 +57,6 @@ import {initBgIntervalProcess} from './bg-interval.js';
 import {setIntervalWithSignal} from './set-interval-with-signal.js';
 import {MutationRecovery} from './mutation-recovery.js';
 import type {IndexDefinitions} from './index-defs.js';
-import {assertClientDD31} from './persist/clients.js';
 import {throwIfClosed} from './transaction-closed-error.js';
 import {version} from './version.js';
 import {PUSH_VERSION_DD31, PUSH_VERSION_SDD} from './sync/push.js';
@@ -607,14 +606,13 @@ export class Replicache<MD extends MutatorDefs = {}> {
     await this._idbDatabases.getProfileID().then(profileIDResolver);
     await this._idbDatabases.putDatabase(this._idbDatabase);
     const [clientID, client, clients, isNewClientGroup] =
-      await persist.initClient(
+      await persist.initClientDD31(
         this._lc,
         this._perdag,
         Object.keys(this._mutatorRegistry),
         indexes,
       );
 
-    assertClientDD31(client);
     resolveClientGroupID(client.clientGroupID);
     resolveClientID(clientID);
     await this._memdag.withWrite(async write => {
@@ -648,19 +646,16 @@ export class Replicache<MD extends MutatorDefs = {}> {
     );
     persist.initClientGC(clientID, this._perdag, this._lc, signal);
     persist.initCollectIDBDatabases(this._idbDatabases, this._lc, signal);
-    if (DD31) {
-      persist.initClientGroupGC(this._perdag, this._lc, signal);
-      assertClientDD31(client);
-      initNewClientChannel(
-        this.name,
-        signal,
-        client.clientGroupID,
-        isNewClientGroup,
-        () => {
-          this._fireOnUpdateNeeded(updateNeededReasonNewClientGroup);
-        },
-      );
-    }
+    persist.initClientGroupGC(this._perdag, this._lc, signal);
+    initNewClientChannel(
+      this.name,
+      signal,
+      client.clientGroupID,
+      isNewClientGroup,
+      () => {
+        this._fireOnUpdateNeeded(updateNeededReasonNewClientGroup);
+      },
+    );
 
     setIntervalWithSignal(
       () => this._recoverMutations(),

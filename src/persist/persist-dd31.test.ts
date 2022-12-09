@@ -10,13 +10,12 @@ import {
 } from '../db/test-helpers.js';
 import {assertHash, Hash, makeNewFakeHashFunction} from '../hash.js';
 import {
-  initClient,
-  assertClientDD31,
-  Client,
   setClients,
   getClients,
   ClientStateNotFoundError,
   ClientDD31,
+  initClientDD31,
+  Client,
 } from './clients.js';
 import {assertLocalMetaDD31, assertSnapshotCommitDD31} from '../db/commit.js';
 import {LogContext} from '@rocicorp/logger';
@@ -43,9 +42,6 @@ enum PersistedExpectation {
 }
 
 suite('persistDD31', () => {
-  if (!DD31) {
-    return;
-  }
   let memdag: dag.LazyStore,
     perdag: dag.TestStore,
     memdagChainBuilder: ChainBuilder,
@@ -842,13 +838,12 @@ async function setupPersistTest() {
 
   let clientGroupID: undefined | sync.ClientGroupID;
   const createClient = async () => {
-    const [cID, c] = await initClient(
+    const [cID, c] = await initClientDD31(
       new LogContext(),
       perdag,
       mutatorNames,
       {},
     );
-    assertClientDD31(c);
     assert(clientGroupID === undefined || c.clientGroupID === clientGroupID);
     clientGroupID = c.clientGroupID;
     return {

@@ -15,7 +15,7 @@ export {
   gcClientGroups,
 } from './client-group-gc.js';
 export {
-  initClient,
+  initClientDD31,
   getClient,
   getClients,
   hasClientState,
