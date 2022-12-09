@@ -4,7 +4,6 @@ import {assert} from '../src/asserts.js';
 import {
   MutatorDefs,
   PatchOperation,
-  Puller,
   ReadTransaction,
   Replicache,
   ReplicacheOptions,
@@ -268,7 +267,7 @@ async function setupPersistedData(
       indexes,
       pullInterval: null,
       // eslint-disable-next-line require-await
-      puller: (async (_: Request) => {
+      puller: async (_: Request) => {
         return {
           response: {
             cookie: 1,
@@ -280,7 +279,7 @@ async function setupPersistedData(
             errorMessage: '',
           },
         };
-      }) as unknown as Puller,
+      },
     }));
     const initialPullResolver = resolver<void>();
     rep.subscribe(tx => tx.get('key0'), {

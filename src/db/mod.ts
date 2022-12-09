@@ -1,7 +1,6 @@
 export {
   Write,
   readIndexesForWrite,
-  newWriteIndexChange,
   newWriteLocal,
   newWriteSnapshotSDD,
   newWriteSnapshotDD31,

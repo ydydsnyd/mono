@@ -1,12 +1,11 @@
 import {expect} from '@esm-bundle/chai';
 import type {VersionNotSupportedResponse} from './error-responses.js';
-import type {PullResponse} from './puller.js';
-import type {Poke, PokeDD31, UpdateNeededReason} from './replicache.js';
+import type {PokeDD31, UpdateNeededReason} from './replicache.js';
 import {
   addData,
   disableAllBackgroundProcesses,
   initReplicacheTesting,
-  makePullResponse,
+  makePullResponseDD31,
   replicacheForTesting,
 } from './test-util.js';
 import type {WriteTransaction} from './transactions.js';
@@ -44,14 +43,9 @@ test('poke', async () => {
   expect(await rep.query(tx => tx.has(key))).true;
 
   // cookie *does* apply
-  const poke: Poke = {
+  const poke: PokeDD31 = {
     baseCookie: null,
-    pullResponse: makePullResponse(
-      clientID,
-      1,
-      [{op: 'del', key}],
-      'c1',
-    ) as PullResponse,
+    pullResponse: makePullResponseDD31(clientID, 1, [{op: 'del', key}], 'c1'),
   };
 
   await rep.poke(poke);
@@ -61,14 +55,9 @@ test('poke', async () => {
   await setTodo({id, text});
   let error = null;
   try {
-    const poke: Poke = {
+    const poke: PokeDD31 = {
       baseCookie: null,
-      pullResponse: makePullResponse(
-        clientID,
-        1,
-        [{op: 'del', key}],
-        'c1',
-      ) as PullResponse,
+      pullResponse: makePullResponseDD31(clientID, 1, [{op: 'del', key}], 'c1'),
     };
     await rep.poke(poke);
   } catch (e) {
@@ -82,14 +71,9 @@ test('poke', async () => {
   error = null;
   try {
     // blech could not figure out how to use chai-as-promised.
-    const poke: Poke = {
+    const poke: PokeDD31 = {
       baseCookie: 'c1',
-      pullResponse: makePullResponse(
-        clientID,
-        0,
-        [{op: 'del', key}],
-        'c2',
-      ) as PullResponse,
+      pullResponse: makePullResponseDD31(clientID, 0, [{op: 'del', key}], 'c2'),
     };
     await rep.poke(poke);
   } catch (e: unknown) {
@@ -110,9 +94,9 @@ test('overlapped pokes not supported', async () => {
   });
 
   const clientID = await rep.clientID;
-  const poke: Poke = {
+  const poke: PokeDD31 = {
     baseCookie: null,
-    pullResponse: makePullResponse(
+    pullResponse: makePullResponseDD31(
       clientID,
       1,
       [
@@ -123,14 +107,14 @@ test('overlapped pokes not supported', async () => {
         },
       ],
       'c2',
-    ) as PullResponse,
+    ),
   };
 
   const p1 = rep.poke(poke);
 
-  const poke2: Poke = {
+  const poke2: PokeDD31 = {
     baseCookie: 'c2',
-    pullResponse: makePullResponse(
+    pullResponse: makePullResponseDD31(
       clientID,
       2,
       [
@@ -141,7 +125,7 @@ test('overlapped pokes not supported', async () => {
         },
       ],
       'c3',
-    ) as PullResponse,
+    ),
   };
 
   const p2 = rep.poke(poke2);
@@ -176,7 +160,7 @@ test('Client group unknown on server', async () => {
   };
   let err;
   try {
-    await rep.poke(poke as Poke);
+    await rep.poke(poke);
   } catch (e) {
     err = e;
   }
@@ -205,7 +189,7 @@ test('Version not supported on server', async () => {
       pullResponse: response,
     };
 
-    await rep.poke(poke as Poke);
+    await rep.poke(poke);
 
     expect(onUpdateNeededStub.callCount).to.equal(1);
     expect(onUpdateNeededStub.lastCall.args).deep.equal([reason]);

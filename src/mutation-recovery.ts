@@ -1,9 +1,8 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {
-  Puller,
   PullerDD31,
+  PullerSDD,
   PullResponseDD31,
-  PullResponseOK,
   PullResponseSDD,
 } from './puller.js';
 import * as dag from './dag/mod.js';
@@ -39,7 +38,7 @@ interface ReplicacheDelegate {
   name: string;
   online: boolean;
   profileID: Promise<string>;
-  puller: Puller;
+  puller: PullerDD31;
   pullURL: string;
   pusher: Pusher;
   pushURL: string;
@@ -278,7 +277,7 @@ async function recoverMutationsOfClientSDD(
             await delegate.profileID,
             clientID,
             beginPullRequest,
-            beginPullRequest.puller,
+            beginPullRequest.puller as PullerSDD,
             requestID,
             dagForOtherClient,
             requestLc,
@@ -365,8 +364,7 @@ async function recoverMutationsOfClientSDD(
 
       const newClients = new Map(clients).set(clientID, {
         ...clientToUpdate,
-        lastServerAckdMutationID: (pullResponse as PullResponseOK)
-          .lastMutationID,
+        lastServerAckdMutationID: pullResponse.lastMutationID,
       });
       return await setNewClients(newClients);
     });

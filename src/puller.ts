@@ -15,8 +15,8 @@ import {
   VersionNotSupportedResponse,
 } from './error-responses.js';
 
-export type PullerResult = {
-  response?: PullResponse | undefined;
+export type PullerResultSDD = {
+  response?: PullResponseSDD | undefined;
   httpRequestInfo: HTTPRequestInfo;
 };
 
@@ -32,7 +32,7 @@ export type PullerResultDD31 = {
  * Puller is the function type used to do the fetch part of a pull. The request
  * is a POST request where the body is JSON with the type {@link PullRequest}.
  */
-export type Puller = (request: Request) => Promise<PullerResult>;
+export type PullerSDD = (request: Request) => Promise<PullerResultSDD>;
 
 /**
  * Puller is the function type used to do the fetch part of a pull. The request
@@ -43,13 +43,11 @@ export type PullerDD31 = (request: Request) => Promise<PullerResultDD31>;
 /**
  * The shape of a pull response under normal circumstances.
  */
-export type PullResponseOK = {
+export type PullResponseOKSDD = {
   cookie?: ReadonlyJSONValue | undefined;
   lastMutationID: number;
   patch: PatchOperation[];
 };
-
-export type {PullResponseOK as PullResponseOKSDD};
 
 /**
  * The shape of a pull response under normal circumstances.
@@ -67,12 +65,10 @@ export type PullResponseOKDD31 = {
  * PullResponse defines the shape and type of the response of a pull. This is
  * the JSON you should return from your pull server endpoint.
  */
-export type PullResponse =
-  | PullResponseOK
+export type PullResponseSDD =
+  | PullResponseOKSDD
   | ClientStateNotFoundResponse
   | VersionNotSupportedResponse;
-
-export type {PullResponse as PullResponseSDD};
 
 /**
  * PullResponse defines the shape and type of the response of a pull. This is
@@ -83,14 +79,16 @@ export type PullResponseDD31 =
   | ClientStateNotFoundResponse
   | VersionNotSupportedResponse;
 
-export function assertPullResponseSDD(v: unknown): asserts v is PullResponse {
+export function assertPullResponseSDD(
+  v: unknown,
+): asserts v is PullResponseSDD {
   if (typeof v !== 'object' || v === null) {
     throw new Error('PullResponse must be an object');
   }
   if (isClientStateNotFoundResponse(v) || isVersionNotSupportedResponse(v)) {
     return;
   }
-  const v2 = v as Partial<PullResponseOK>;
+  const v2 = v as Partial<PullResponseOKSDD>;
   if (v2.cookie !== undefined) {
     assertJSONValue(v2.cookie);
   }
@@ -143,7 +141,7 @@ export type PatchOperation =
       readonly op: 'clear';
     };
 
-const defaultPullerShared = async (request: Request) => {
+export const defaultPuller: PullerDD31 = async (request: Request) => {
   const {httpRequestInfo, response} = await httpRequest(request);
   if (httpRequestInfo.httpStatusCode !== 200) {
     return {
@@ -158,10 +156,6 @@ const defaultPullerShared = async (request: Request) => {
     httpRequestInfo,
   };
 };
-
-export const defaultPuller: Puller = defaultPullerShared;
-
-export const defaultPullerDD31: PullerDD31 = defaultPullerShared;
 
 export function assertPatchOperations(
   p: unknown,

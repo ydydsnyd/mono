@@ -23,7 +23,7 @@ import type {WriteTransaction} from './transactions.js';
 import {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
 import type {DiffComputationConfig} from './sync/diff.js';
 import type {ClientID} from './sync/ids.js';
-import type {PatchOperation} from './puller.js';
+import type {PatchOperation, PullResponseDD31} from './puller.js';
 import type {Hash} from './hash.js';
 import {
   setupForTest as setupIDBDatabasesStoreForTest,
@@ -201,7 +201,7 @@ export async function replicacheForTesting<
 
   // Wait for open to be done.
   const clientID = await rep.clientID;
-  fetchMock.post(pullURL, makePullResponse(clientID, 0, [], null));
+  fetchMock.post(pullURL, makePullResponseDD31(clientID, 0, [], null));
   fetchMock.post(pushURL, 'ok');
   await tickAFewTimes();
   return rep;
@@ -328,22 +328,15 @@ export const testSubscriptionsManagerOptions: DiffComputationConfig = {
   shouldComputeDiffsForIndex: () => true,
 };
 
-export function makePullResponse(
+export function makePullResponseDD31(
   clientID: ClientID,
   lastMutationID: number,
   patch: PatchOperation[] = [],
   cookie: ReadonlyJSONValue = '',
-) {
-  if (DD31) {
-    return {
-      cookie,
-      lastMutationIDChanges: {[clientID]: lastMutationID},
-      patch,
-    };
-  }
+): PullResponseDD31 {
   return {
     cookie,
-    lastMutationID,
+    lastMutationIDChanges: {[clientID]: lastMutationID},
     patch,
   };
 }

@@ -14,7 +14,6 @@ import {
   newSnapshotDD31 as commitNewSnapshotDD31,
   MetaType,
   toChunkIndexDefinition,
-  ChunkIndexDefinition,
   chunkIndexDefinitionEqualIgnoreName,
   Meta,
   baseSnapshotHashFromHash,
@@ -114,72 +113,6 @@ export class Write extends Read {
       ps.push(idx.clear());
     }
     await Promise.all(ps);
-  }
-
-  async createIndex(
-    lc: LogContext,
-    name: string,
-    prefix: string,
-    jsonPointer: string,
-    allowEmpty: boolean,
-  ): Promise<void> {
-    assert(!DD31);
-
-    if (this._meta.type === MetaType.LocalSDD) {
-      throw new Error('Not allowed');
-    }
-
-    const chunkIndexDefinition: ChunkIndexDefinition = {
-      name,
-      keyPrefix: prefix,
-      jsonPointer,
-      allowEmpty,
-    };
-
-    // Check to see if the index already exists.
-    const index = this.indexes.get(name);
-    if (index) {
-      if (
-        // Name already checked
-        !chunkIndexDefinitionEqualIgnoreName(
-          chunkIndexDefinition,
-          index.meta.definition,
-        )
-      ) {
-        throw new Error('Index exists with different definition');
-      }
-    }
-
-    const indexMap = await createIndexBTree(
-      lc,
-      this._dagWrite,
-      this.map,
-      prefix,
-      jsonPointer,
-      allowEmpty,
-    );
-
-    this.indexes.set(
-      name,
-      new IndexWrite(
-        {
-          definition: chunkIndexDefinition,
-          valueHash: emptyHash,
-        },
-        indexMap,
-      ),
-    );
-  }
-
-  dropIndex(name: string): void {
-    assert(!DD31);
-    if (this._meta.type === MetaType.LocalSDD) {
-      throw new Error('Not allowed');
-    }
-
-    if (!this.indexes.delete(name)) {
-      throw new Error(`No such index: ${name}`);
-    }
   }
 
   private _maybeReuseExistingIndex(
@@ -529,29 +462,6 @@ export async function newWriteSnapshotDD31(
     indexes,
     clientID,
     true,
-  );
-}
-
-export async function newWriteIndexChange(
-  whence: Whence,
-  dagWrite: dag.Write,
-  clientID: ClientID,
-): Promise<Write> {
-  assert(!DD31);
-  const [basisHash, basis, bTreeWrite] = await readCommitForBTreeWrite(
-    whence,
-    dagWrite,
-  );
-  const lastMutationID = await basis.getMutationID(clientID, dagWrite);
-  const indexes = readIndexesForWrite(basis, dagWrite);
-  return new Write(
-    dagWrite,
-    bTreeWrite,
-    basis,
-    {basisHash, type: MetaType.IndexChangeSDD, lastMutationID},
-    indexes,
-    clientID,
-    false,
   );
 }
 

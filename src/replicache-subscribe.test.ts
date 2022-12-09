@@ -2,7 +2,7 @@ import {
   clock,
   disableAllBackgroundProcesses,
   initReplicacheTesting,
-  makePullResponse,
+  makePullResponseDD31,
   replicacheForTesting,
   tickAFewTimes,
   tickUntil,
@@ -689,7 +689,7 @@ test('subscribe pull and index update', async () => {
     const clientID = await rep.clientID;
     fetchMock.post(
       pullURL,
-      makePullResponse(clientID, lastMutationID++, opt.patch),
+      makePullResponseDD31(clientID, lastMutationID++, opt.patch),
     );
 
     rep.pull();

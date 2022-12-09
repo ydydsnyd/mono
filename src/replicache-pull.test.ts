@@ -2,7 +2,7 @@ import {
   disableAllBackgroundProcesses,
   expectConsoleLogContextStub,
   initReplicacheTesting,
-  makePullResponse,
+  makePullResponseDD31,
   replicacheForTesting,
   requestIDLogContextRegex,
   tickAFewTimes,
@@ -18,7 +18,7 @@ import * as sinon from 'sinon';
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
 import {httpStatusUnauthorized, UpdateNeededReason} from './replicache.js';
-import {defaultPuller, Puller, PullerDD31} from './puller.js';
+import {defaultPuller, PullerDD31} from './puller.js';
 import {resolver} from '@rocicorp/resolver';
 import {enablePullAndPushInOpenSymbol} from './replicache-options.js';
 
@@ -71,7 +71,7 @@ test('pull', async () => {
   const clientID = await rep.clientID;
   fetchMock.postOnce(
     pullURL,
-    makePullResponse(clientID, 2, [
+    makePullResponseDD31(clientID, 2, [
       {op: 'del', key: ''},
       {
         op: 'put',
@@ -84,7 +84,7 @@ test('pull', async () => {
   await tickAFewTimes();
   expect(deleteCount).to.equal(2);
 
-  fetchMock.postOnce(pullURL, makePullResponse(clientID, 2));
+  fetchMock.postOnce(pullURL, makePullResponseDD31(clientID, 2));
   beginPullResult = await rep.beginPull();
   ({syncHead} = beginPullResult);
   expect(syncHead).to.equal(emptyHash);
@@ -101,7 +101,7 @@ test('pull', async () => {
 
   fetchMock.postOnce(
     pullURL,
-    makePullResponse(clientID, 3, [
+    makePullResponseDD31(clientID, 3, [
       {
         op: 'put',
         key: '/todo/14323534',
@@ -123,7 +123,7 @@ test('pull', async () => {
     ((await rep.query(tx => tx.get(`/todo/${id2}`))) as {text: string}).text,
   ).to.equal('Test 2');
 
-  fetchMock.postOnce(pullURL, makePullResponse(clientID, 3));
+  fetchMock.postOnce(pullURL, makePullResponseDD31(clientID, 3));
   await rep.maybeEndPull(syncHead, beginPullResult.requestID);
 
   expect(createCount).to.equal(3);
@@ -137,7 +137,7 @@ test('pull', async () => {
 
   fetchMock.postOnce(
     pullURL,
-    makePullResponse(clientID, 6, [{op: 'del', key: '/todo/14323534'}], ''),
+    makePullResponseDD31(clientID, 6, [{op: 'del', key: '/todo/14323534'}], ''),
   );
   rep.pull();
   await tickAFewTimes();
@@ -307,7 +307,7 @@ test('Client Group not found on server', async () => {
 
   expect(rep.isClientGroupDisabled).false;
 
-  rep.puller = puller as Puller;
+  rep.puller = puller;
   rep.pull();
 
   await waitForSync(rep);
@@ -348,7 +348,7 @@ test('Version not supported on server', async () => {
       };
     };
 
-    rep.puller = puller as Puller;
+    rep.puller = puller;
     rep.pull();
 
     await promise;

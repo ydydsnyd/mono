@@ -9,22 +9,19 @@ import {ChainBuilder} from '../db/test-helpers.js';
 import {FrozenJSONValue, ReadonlyJSONValue, deepFreeze} from '../json.js';
 import type {
   PatchOperation,
-  Puller,
   PullerDD31,
-  PullerResult,
   PullerResultDD31,
-  PullResponse,
+  PullerResultSDD,
+  PullerSDD,
   PullResponseDD31,
   PullResponseOKDD31,
+  PullResponseSDD,
 } from '../puller.js';
 import type {HTTPRequestInfo} from '../http-request-info.js';
 import {SYNC_HEAD_NAME} from './sync-head-name.js';
 import {
-  beginPull,
   beginPullDD31,
-  BeginPullRequest,
   BeginPullRequestDD31,
-  BeginPullResponse,
   BeginPullResponseDD31,
   beginPullSDD,
   handlePullResponseDD31,
@@ -35,6 +32,8 @@ import {
   PULL_VERSION_DD31,
   PULL_VERSION_SDD,
   HandlePullResponseResultType,
+  BeginPullResponseSDD,
+  BeginPullRequestSDD,
 } from './pull.js';
 import {assertHash, emptyHash} from '../hash.js';
 import {stringCompare} from '../string-compare.js';
@@ -86,7 +85,7 @@ test('begin try pull SDD', async () => {
   // fields they wish to change. This minimizes test changes required
   // when PullResponse changes.
   const newCookie = 'newCookie';
-  const goodPullResp: PullResponse = {
+  const goodPullResp: PullResponseSDD = {
     cookie: newCookie,
     lastMutationID: 10,
     patch: [
@@ -111,10 +110,10 @@ test('begin try pull SDD', async () => {
     name: string;
     createSyncBranch?: boolean;
     numPendingMutations: number;
-    pullResult: PullResponse | string;
+    pullResult: PullResponseSDD | string;
     // BeginPull expectations.
     expNewSyncHead: ExpCommit | undefined;
-    expBeginPullResult: BeginPullResponse | string;
+    expBeginPullResult: BeginPullResponseSDD | string;
   };
 
   const expPullReq: PullRequestSDD = {
@@ -454,13 +453,13 @@ test('begin try pull SDD', async () => {
       err: pullErr,
     });
 
-    const beginPullReq: BeginPullRequest = {
+    const beginPullReq: BeginPullRequestSDD = {
       pullURL,
       pullAuth,
       schemaVersion,
     };
 
-    let result: BeginPullResponse | string;
+    let result: BeginPullResponseSDD | string;
     try {
       result = await beginPullSDD(
         profileID,
@@ -1306,22 +1305,12 @@ type FakePullerArgsSDD = {
   expPullURL: string;
   expPullAuth: string;
   expRequestID: string;
-  resp?: PullResponse | undefined;
+  resp?: PullResponseSDD | undefined;
   err?: string | undefined;
 };
 
-function makeFakePuller(
-  options: FakePullerArgsSDD | FakePullerArgsDD31,
-): Puller | PullerDD31 {
-  if (DD31) {
-    return makeFakePullerDD31(options as FakePullerArgsDD31);
-  }
-  return makeFakePullerSDD(options as FakePullerArgsSDD);
-}
-
-function makeFakePullerSDD(options: FakePullerArgsSDD): Puller {
-  assert(!DD31);
-  return async (req: Request): Promise<PullerResult> => {
+function makeFakePullerSDD(options: FakePullerArgsSDD): PullerSDD {
+  return async (req: Request): Promise<PullerResultSDD> => {
     const pullReq: PullRequestSDD = await req.json();
     expect(options.expPullReq).to.deep.equal(pullReq);
 
@@ -1479,19 +1468,13 @@ test('changed keys', async () => {
           schemaVersion,
         };
 
-    const pullResp: PullResponse | PullResponseDD31 = DD31
-      ? {
-          cookie: newCookie,
-          lastMutationIDChanges: {[clientID]: baseLastMutationID},
-          patch,
-        }
-      : {
-          cookie: newCookie,
-          lastMutationID: baseLastMutationID,
-          patch,
-        };
+    const pullResp: PullResponseDD31 = {
+      cookie: newCookie,
+      lastMutationIDChanges: {[clientID]: baseLastMutationID},
+      patch,
+    };
 
-    const fakePuller = makeFakePuller({
+    const fakePuller = makeFakePullerDD31({
       expPullReq,
       expPullURL: pullURL,
       expPullAuth: pullAuth,
@@ -1510,7 +1493,7 @@ test('changed keys', async () => {
       },
     };
 
-    const pullResult = await beginPull(
+    const pullResult = await beginPullDD31(
       profileID,
       clientID,
       clientGroupID,

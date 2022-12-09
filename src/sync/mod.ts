@@ -1,7 +1,6 @@
 export type {ClientID, ClientGroupID} from './ids.js';
 export {
   maybeEndPull,
-  beginPull,
   beginPullDD31,
   beginPullSDD,
   handlePullResponse,

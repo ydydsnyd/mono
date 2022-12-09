@@ -15,7 +15,7 @@ import type * as db from './db/mod.js';
 import type {ScanSubscriptionInfo} from './subscriptions.js';
 import type {ClientID, ScanNoIndexOptions} from './mod.js';
 import {decodeIndexKey, IndexKey} from './db/index.js';
-import type {IndexDefinition, IndexDefinitions} from './index-defs.js';
+import type {IndexDefinition} from './index-defs.js';
 
 /**
  * ReadTransactions are used with {@link Replicache.query} and
@@ -254,59 +254,6 @@ export class WriteTransactionImpl
 }
 
 export type CreateIndexDefinition = IndexDefinition & {name: string};
-
-interface IndexTransaction extends ReadTransaction {
-  /**
-   * Creates a persistent secondary index in Replicache which can be used with
-   * scan.
-   *
-   * If the named index already exists with the same definition this returns
-   * success immediately. If the named index already exists, but with a
-   * different definition an error is thrown.
-   */
-  createIndex(def: CreateIndexDefinition): Promise<void>;
-
-  /**
-   * Drops an index previously created with {@link createIndex}.
-   */
-  dropIndex(name: string): Promise<void>;
-
-  /**
-   * Adds and removes indexes so that the index definitions are the same as the
-   * one provided.
-   */
-  syncIndexes(indexes: IndexDefinitions): Promise<void>;
-}
-
-export class IndexTransactionImpl
-  extends WriteTransactionImpl
-  implements IndexTransaction
-{
-  constructor(clientID: ClientID, dbWrite: db.Write, lc: LogContext) {
-    super(clientID, dbWrite, lc, 'openIndexTransaction');
-  }
-
-  async createIndex(options: CreateIndexDefinition): Promise<void> {
-    throwIfClosed(this.dbtx);
-    await this.dbtx.createIndex(
-      this._lc,
-      options.name,
-      options.prefix ?? '',
-      options.jsonPointer,
-      options.allowEmpty ?? false,
-    );
-  }
-
-  async dropIndex(name: string): Promise<void> {
-    throwIfClosed(this.dbtx);
-    await this.dbtx.dropIndex(name);
-  }
-
-  async syncIndexes(indexes: IndexDefinitions): Promise<void> {
-    throwIfClosed(this.dbtx);
-    await this.dbtx.syncIndexes(this._lc, indexes);
-  }
-}
 
 type Entry<Key, Value> = readonly [key: Key, value: Value];
 

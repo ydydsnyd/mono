@@ -4,7 +4,7 @@ import {
   disableAllBackgroundProcesses,
   expectLogContext,
   initReplicacheTesting,
-  makePullResponse,
+  makePullResponseDD31,
   replicacheForTesting,
   ReplicacheTest,
   tickAFewTimes,
@@ -77,7 +77,7 @@ test('basic persist & load', async () => {
 
   fetchMock.postOnce(
     pullURL,
-    makePullResponse(clientID, 2, [
+    makePullResponseDD31(clientID, 2, [
       {
         op: 'put',
         key: 'a',

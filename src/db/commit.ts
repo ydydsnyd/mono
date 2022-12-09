@@ -248,14 +248,10 @@ export function snapshotMetaParts(
   clientID: sync.ClientID,
 ): [lastMutationID: number, cookie: FrozenJSONValue] {
   const m = c.meta;
-  let lmid;
-  if (DD31) {
-    assertSnapshotMetaDD31(m);
-    lmid = m.lastMutationIDs[clientID] ?? 0;
+  if (isSnapshotMetaDD31(m)) {
+    const lmid = m.lastMutationIDs[clientID] ?? 0;
     return [lmid, m.cookieJSON];
   }
-
-  assertSnapshotMetaSDD(m);
   return [m.lastMutationID, m.cookieJSON];
 }
 

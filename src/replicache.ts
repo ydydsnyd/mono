@@ -6,18 +6,14 @@ import {Pusher, PushError} from './pusher.js';
 import {
   assertPullResponseDD31,
   assertPullResponseSDD,
-  Puller,
+  PullerDD31,
   PullError,
-  PullResponse,
   PullResponseDD31,
-  PullResponseOK,
+  PullResponseOKDD31,
+  PullResponseOKSDD,
+  PullResponseSDD,
 } from './puller.js';
-import {
-  CreateIndexDefinition,
-  IndexTransactionImpl,
-  ReadTransactionImpl,
-  WriteTransactionImpl,
-} from './transactions.js';
+import {ReadTransactionImpl, WriteTransactionImpl} from './transactions.js';
 import type {ReadTransaction, WriteTransaction} from './transactions.js';
 import {ConnectionLoop, MAX_DELAY_MS, MIN_DELAY_MS} from './connection-loop.js';
 import {defaultPuller} from './puller.js';
@@ -86,12 +82,10 @@ export type BeginPullResult = {
   ok: boolean;
 };
 
-export type Poke = {
+export type PokeSDD = {
   baseCookie: ReadonlyJSONValue;
-  pullResponse: PullResponse;
+  pullResponse: PullResponseSDD;
 };
-
-export type PokeSDD = Poke;
 
 export type PokeDD31 = {
   baseCookie: ReadonlyJSONValue;
@@ -306,7 +300,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   private readonly _ready: Promise<void>;
   private readonly _profileIDPromise: Promise<string>;
   private readonly _clientIDPromise: Promise<string>;
-  private readonly _clientGroupIDPromise: Promise<string | undefined>;
+  private readonly _clientGroupIDPromise: Promise<string>;
   protected readonly _licenseCheckPromise: Promise<boolean>;
 
   /* The license is active if we have sent at least one license active ping
@@ -348,7 +342,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   /**
    * The function to use to pull data from the server.
    */
-  puller: Puller;
+  puller: PullerDD31;
 
   /**
    * The function to use to push data to the server.
@@ -559,7 +553,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
     const profileIDResolver = resolver<string>();
     this._profileIDPromise = profileIDResolver.promise;
-    const clientGroupIDResolver = resolver<string | undefined>();
+    const clientGroupIDResolver = resolver<string>();
     this._clientGroupIDPromise = clientGroupIDResolver.promise;
     const clientIDResolver = resolver<string>();
     this._clientIDPromise = clientIDResolver.promise;
@@ -599,9 +593,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   private async _open(
     indexes: IndexDefinitions,
     profileIDResolver: (profileID: string) => void,
-    resolveClientGroupID: (
-      clientGroupID: sync.ClientGroupID | undefined,
-    ) => void,
+    resolveClientGroupID: (clientGroupID: sync.ClientGroupID) => void,
     resolveClientID: (clientID: sync.ClientID) => void,
     resolveReady: () => void,
     resolveLicenseCheck: (valid: boolean) => void,
@@ -619,22 +611,14 @@ export class Replicache<MD extends MutatorDefs = {}> {
         Object.keys(this._mutatorRegistry),
         indexes,
       );
-    if (DD31) {
-      assertClientDD31(client);
-      resolveClientGroupID(client.clientGroupID);
-    } else {
-      resolveClientGroupID(undefined);
-    }
+
+    assertClientDD31(client);
+    resolveClientGroupID(client.clientGroupID);
     resolveClientID(clientID);
     await this._memdag.withWrite(async write => {
       await write.setHead(db.DEFAULT_HEAD_NAME, client.headHash);
       await write.commit();
     });
-
-    if (!DD31) {
-      // DD31 syncs the indexes as part of initClient
-      await this._syncIndexes(indexes);
-    }
 
     // Now we have a profileID, a clientID, a clientGroupID and DB!
     resolveReady();
@@ -689,13 +673,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
     );
 
     await this._startLicenseActive(resolveLicenseActive, this._lc, signal);
-  }
-
-  private async _syncIndexes(indexes: IndexDefinitions): Promise<void> {
-    assert(!DD31);
-    // Do not wait for _ready here since this needs to be done before we
-    // consider the database ready.
-    await this._indexOp(tx => tx.syncIndexes(indexes));
   }
 
   private _onVisibilityChange = async () => {
@@ -960,52 +937,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
       this._root = Promise.resolve(root);
       await this._subscriptions.fire(diffs);
     }
-  }
-
-  /**
-   * Creates a persistent secondary index in Replicache which can be used with scan.
-   *
-   * If the named index already exists with the same definition this returns success
-   * immediately. If the named index already exists, but with a different definition
-   * an error is thrown.
-   * @deprecated Use {@link ReplicacheOptions.indexes} instead.
-   */
-  async createIndex(def: CreateIndexDefinition): Promise<void> {
-    await this._ready;
-    await this._indexOp(tx => tx.createIndex(def));
-  }
-
-  /**
-   * Drops an index previously created with {@link createIndex}.
-   * @deprecated Use {@link ReplicacheOptions.indexes} instead.
-   */
-  async dropIndex(name: string): Promise<void> {
-    await this._ready;
-    await this._indexOp(tx => tx.dropIndex(name));
-  }
-
-  private async _indexOp(
-    f: (tx: IndexTransactionImpl) => Promise<void>,
-  ): Promise<void> {
-    // TODO(arv): Remove generateDiffs when the deprecated callers have been removed.
-    const clientID = await this._clientIDPromise;
-    await this._memdag.withWrite(async dagWrite => {
-      const dbWrite = await db.newWriteIndexChange(
-        db.whenceHead(db.DEFAULT_HEAD_NAME),
-        dagWrite,
-        clientID,
-      );
-      const tx = new IndexTransactionImpl(clientID, dbWrite, this._lc);
-      await f(tx);
-      throwIfClosed(dbWrite);
-      const [ref, diffs] = await dbWrite.commitWithDiffs(
-        db.DEFAULT_HEAD_NAME,
-        this._subscriptions,
-      );
-      // Changing an index should not affect the primary map.
-      assert(!diffs.has(''));
-      await this._checkChange(ref, diffs);
-    });
   }
 
   protected async _maybeEndPull(
@@ -1315,7 +1246,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
    *
    * @experimental This method is under development and its semantics will change.
    */
-  async poke(poke: Poke): Promise<void> {
+  async poke(poke: PokeDD31): Promise<void> {
     // TODO(DD31): We keep the type of poke for now and cast to allow main to not
     // introduce API changes until DD31 is on by default.
     // poke is really PokeSDD | PokeDD31
@@ -1348,7 +1279,9 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
     // TODO(DD31): We know that pullResponse is a PullResponseOK here but the
     // DD31 in the first if statement above breaks the type inference.
-    const pullResponseOK = pullResponse as PullResponseOK;
+    const pullResponseOK = pullResponse as
+      | PullResponseOKDD31
+      | PullResponseOKSDD;
 
     const result = await sync.handlePullResponse(
       lc,
@@ -1386,7 +1319,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
           pullURL: this.pullURL,
           schemaVersion: this.schemaVersion,
         };
-        const beginPullResponse = await sync.beginPull(
+        const beginPullResponse = await sync.beginPullDD31(
           profileID,
           clientID,
           clientGroupID,

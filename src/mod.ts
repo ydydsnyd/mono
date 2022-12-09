@@ -5,7 +5,7 @@ export {consoleLogSink} from '@rocicorp/logger';
 export type {
   MaybePromise,
   MutatorDefs,
-  Poke,
+  PokeDD31,
   RequestOptions,
   ClientStateNotFoundReason,
   UpdateNeededReason,
@@ -43,10 +43,10 @@ export {isScanIndexOptions} from './scan-options.js';
 export type {HTTPRequestInfo} from './http-request-info.js';
 export type {
   PatchOperation,
-  Puller,
-  PullResponse,
-  PullResponseOK,
-  PullerResult,
+  PullerDD31,
+  PullResponseDD31,
+  PullResponseOKDD31,
+  PullerResultDD31,
   PullError,
 } from './puller.js';
 export type {Pusher, PushError, PusherResult, PushResponse} from './pusher.js';

@@ -6,9 +6,8 @@ import {
   expectAsyncFuncToThrow,
   expectConsoleLogContextStub,
   expectLogContext,
-  expectPromiseToReject,
   initReplicacheTesting,
-  makePullResponse,
+  makePullResponseDD31,
   MemStoreWithCounters,
   replicacheForTesting,
   requestIDLogContextRegex,
@@ -18,7 +17,7 @@ import {
 import {
   ClientID,
   PatchOperation,
-  Poke,
+  PokeDD31,
   Replicache,
   TransactionClosedError,
 } from './mod.js';
@@ -31,7 +30,6 @@ import {asyncIterableToArray} from './async-iterable-to-array.js';
 import {sleep} from './sleep.js';
 import * as db from './db/mod.js';
 import {TestMemStore} from './kv/test-mem-store.js';
-import type {PullResponse} from './puller.js';
 import {
   PROD_LICENSE_SERVER_URL,
   TEST_LICENSE_KEY,
@@ -485,7 +483,7 @@ test('HTTP status pull', async () => {
         return {body: 'not found', status: 404};
       default: {
         okCalled = true;
-        return {body: makePullResponse(clientID, 0), status: 200};
+        return {body: makePullResponseDD31(clientID, 0), status: 200};
       }
     }
   });
@@ -595,90 +593,6 @@ test('pullInterval in constructor', async () => {
   });
   expect(rep.pullInterval).to.equal(12.34);
   await rep.close();
-});
-
-test('index (deprecated methods)', async () => {
-  if (DD31) {
-    return;
-  }
-
-  const rep = await replicacheForTesting('test-index-legacy', {
-    mutators: {addData},
-  });
-
-  const add = rep.mutate.addData;
-  await add({
-    'a/0': {a: '0'},
-    'a/1': {a: '1'},
-    'a/2': {a: '2'},
-    'a/3': {a: '3'},
-    'a/4': {a: '4'},
-    'b/0': {bc: '5'},
-    'b/1': {bc: '6'},
-    'b/2': {bc: '7'},
-    'c/0': {bc: '8'},
-    'd/0': {d: {e: {f: '9'}}},
-  });
-  await rep.createIndex({name: 'aIndex', jsonPointer: '/a'});
-
-  await testScanResult(rep, {indexName: 'aIndex'}, [
-    [['0', 'a/0'], {a: '0'}],
-    [['1', 'a/1'], {a: '1'}],
-    [['2', 'a/2'], {a: '2'}],
-    [['3', 'a/3'], {a: '3'}],
-    [['4', 'a/4'], {a: '4'}],
-  ]);
-  await rep.dropIndex('aIndex');
-  await rep.query(async tx => {
-    const x = tx.scan({indexName: 'aIndex'});
-    (await expectPromiseToReject(x.values().next())).to.be
-      .instanceOf(Error)
-      .with.property('message', 'Unknown index name: aIndex');
-    return x;
-  });
-
-  await rep.createIndex({name: 'aIndex', jsonPointer: '/a'});
-  await testScanResult(rep, {indexName: 'aIndex'}, [
-    [['0', 'a/0'], {a: '0'}],
-    [['1', 'a/1'], {a: '1'}],
-    [['2', 'a/2'], {a: '2'}],
-    [['3', 'a/3'], {a: '3'}],
-    [['4', 'a/4'], {a: '4'}],
-  ]);
-  await rep.dropIndex('aIndex');
-  (
-    await expectPromiseToReject(
-      rep.query(tx => tx.scan({indexName: 'aIndex'}).toArray()),
-    )
-  ).to.be
-    .instanceOf(Error)
-    .with.property('message', 'Unknown index name: aIndex');
-
-  await rep.createIndex({name: 'bc', prefix: 'c/', jsonPointer: '/bc'});
-  await testScanResult(rep, {indexName: 'bc'}, [[['8', 'c/0'], {bc: '8'}]]);
-  await add({
-    'c/1': {bc: '88'},
-  });
-  await testScanResult(rep, {indexName: 'bc'}, [
-    [['8', 'c/0'], {bc: '8'}],
-    [['88', 'c/1'], {bc: '88'}],
-  ]);
-  await rep.dropIndex('bc');
-
-  await rep.createIndex({name: 'dIndex', jsonPointer: '/d/e/f'});
-  await testScanResult(rep, {indexName: 'dIndex'}, [
-    [['9', 'd/0'], {d: {e: {f: '9'}}}],
-  ]);
-  await rep.dropIndex('dIndex');
-
-  await add({
-    'e/0': {'': ''},
-  });
-  await rep.createIndex({name: 'emptyKeyIndex', jsonPointer: '/'});
-  await testScanResult(rep, {indexName: 'emptyKeyIndex'}, [
-    [['', 'e/0'], {'': ''}],
-  ]);
-  await rep.dropIndex('emptyKeyIndex');
 });
 
 test('index in options', async () => {
@@ -1212,7 +1126,7 @@ test('onSync', async () => {
   expect(onSync.callCount).to.equal(0);
 
   const clientID = await rep.clientID;
-  fetchMock.postOnce(pullURL, makePullResponse(clientID, 2));
+  fetchMock.postOnce(pullURL, makePullResponseDD31(clientID, 2));
   rep.pull();
   await tickAFewTimes(15);
 
@@ -1370,7 +1284,7 @@ test('push and pull concurrently', async () => {
   });
   fetchMock.post(pullURL, () => {
     requests.push(pullURL);
-    return makePullResponse(clientID, 0, [], null);
+    return makePullResponseDD31(clientID, 0, [], null);
   });
 
   await add({a: 0});
@@ -1507,7 +1421,7 @@ test('pull and index update', async () => {
     let pullDone = false;
     fetchMock.post(pullURL, () => {
       pullDone = true;
-      return makePullResponse(clientID, lastMutationID++, opt.patch);
+      return makePullResponseDD31(clientID, lastMutationID++, opt.patch);
     });
 
     rep.pull();
@@ -1593,7 +1507,7 @@ test('pull mutate options', async () => {
 
   fetchMock.post(pullURL, () => {
     log.push(Date.now());
-    return makePullResponse(clientID, 0, [], '');
+    return makePullResponseDD31(clientID, 0, [], '');
   });
 
   await tickUntilTimeIs(1000);
@@ -2137,9 +2051,9 @@ test('mutation timestamps are immutable', async () => {
   await tickAFewTimes();
 
   const clientID = await rep.clientID;
-  const poke: Poke = {
+  const poke: PokeDD31 = {
     baseCookie: null,
-    pullResponse: makePullResponse(
+    pullResponse: makePullResponseDD31(
       clientID,
       0,
       [
@@ -2150,7 +2064,7 @@ test('mutation timestamps are immutable', async () => {
         },
       ],
       '',
-    ) as PullResponse,
+    ),
   };
   await rep.poke(poke);
 

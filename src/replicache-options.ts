@@ -1,6 +1,6 @@
 import type {LogLevel, LogSink} from '@rocicorp/logger';
 import type {Pusher} from './pusher.js';
-import type {Puller} from './puller.js';
+import type {PullerDD31} from './puller.js';
 import type {MutatorDefs, RequestOptions} from './replicache.js';
 import type * as kv from './kv/mod.js';
 import type {IndexDefinitions} from './index-defs.js';
@@ -183,7 +183,7 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
    * Normally, this is just a POST to a URL with a JSON body but you can provide
    * your own function if you need to do things differently.
    */
-  puller?: Puller | undefined;
+  puller?: PullerDD31 | undefined;
 
   /**
    * Allows passing in a custom implementation of a {@link Pusher} function. This

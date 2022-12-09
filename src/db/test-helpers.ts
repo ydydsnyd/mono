@@ -2,7 +2,6 @@ import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
 import type * as dag from '../dag/mod.js';
 import {
-  assertIndexChangeCommit,
   assertLocalCommitDD31,
   assertLocalCommitSDD,
   assertSnapshotCommitDD31,
@@ -18,15 +17,22 @@ import {
   SnapshotMetaDD31,
   SnapshotMetaSDD,
   LocalMeta,
+  assertIndexChangeCommit,
+  ChunkIndexDefinition,
+  chunkIndexDefinitionEqualIgnoreName,
 } from './commit.js';
-import {readCommit, whenceHead} from './read.js';
+import {
+  readCommit,
+  readCommitForBTreeWrite,
+  Whence,
+  whenceHead,
+} from './read.js';
 import {
   Write,
   readIndexesForWrite,
   newWriteSnapshotSDD,
   newWriteSnapshotDD31,
   newWriteLocal,
-  newWriteIndexChange,
   createIndexBTree,
 } from './write.js';
 import {JSONValue, deepFreeze} from '../json.js';
@@ -174,7 +180,6 @@ async function createIndex(
   allowEmpty: boolean,
   headName: string,
 ): Promise<Commit<Meta>> {
-  assert(!DD31);
   const lc = new LogContext();
   await store.withWrite(async dagWrite => {
     const w = await newWriteIndexChange(
@@ -182,7 +187,16 @@ async function createIndex(
       dagWrite,
       clientID,
     );
-    await w.createIndex(lc, name, prefix, jsonPointer, allowEmpty);
+    await createIndexForTesting(
+      lc,
+      name,
+      prefix,
+      jsonPointer,
+      allowEmpty,
+      w.indexes,
+      dagWrite,
+      w.map,
+    );
     await w.commit(headName);
   });
   return store.withRead(async dagRead => {
@@ -371,6 +385,7 @@ export class ChainBuilder {
     indexName?: string,
     indexDefinition?: IndexDefinition,
   ): Promise<Commit<Meta>> {
+    assert(!this.dd31);
     await addIndexChange(
       this.chain,
       this.store,
@@ -486,4 +501,78 @@ export function getChunkSnapshot(
     await v.visitCommit(hash);
     return v.snapshot;
   });
+}
+
+async function newWriteIndexChange(
+  whence: Whence,
+  dagWrite: dag.Write,
+  clientID: ClientID,
+): Promise<Write> {
+  const [basisHash, basis, bTreeWrite] = await readCommitForBTreeWrite(
+    whence,
+    dagWrite,
+  );
+  const lastMutationID = await basis.getMutationID(clientID, dagWrite);
+  const indexes = readIndexesForWrite(basis, dagWrite);
+  return new Write(
+    dagWrite,
+    bTreeWrite,
+    basis,
+    {basisHash, type: MetaType.IndexChangeSDD, lastMutationID},
+    indexes,
+    clientID,
+    false,
+  );
+}
+
+async function createIndexForTesting(
+  lc: LogContext,
+  name: string,
+  prefix: string,
+  jsonPointer: string,
+  allowEmpty: boolean,
+  indexes: Map<string, IndexWrite>,
+  dagWrite: dag.Write,
+  map: btree.BTreeRead,
+): Promise<void> {
+  const chunkIndexDefinition: ChunkIndexDefinition = {
+    name,
+    keyPrefix: prefix,
+    jsonPointer,
+    allowEmpty,
+  };
+
+  // Check to see if the index already exists.
+  const index = indexes.get(name);
+  if (index) {
+    if (
+      // Name already checked
+      !chunkIndexDefinitionEqualIgnoreName(
+        chunkIndexDefinition,
+        index.meta.definition,
+      )
+    ) {
+      throw new Error('Index exists with different definition');
+    }
+  }
+
+  const indexMap = await createIndexBTree(
+    lc,
+    dagWrite,
+    map,
+    prefix,
+    jsonPointer,
+    allowEmpty,
+  );
+
+  indexes.set(
+    name,
+    new IndexWrite(
+      {
+        definition: chunkIndexDefinition,
+        valueHash: emptyHash,
+      },
+      indexMap,
+    ),
+  );
 }

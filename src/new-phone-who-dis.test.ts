@@ -1,8 +1,8 @@
 import {expect} from '@esm-bundle/chai';
 import * as sinon from 'sinon';
-import type {Puller} from './puller.js';
+import type {PullerDD31} from './puller.js';
 import type {Pusher} from './pusher.js';
-import type {Poke} from './replicache.js';
+import type {PokeDD31} from './replicache.js';
 import {
   expectLogContext,
   initReplicacheTesting,
@@ -23,7 +23,7 @@ suite('onClientStateNotFound', () => {
 
   test('pull returning ClientStateNotFoundResponse should call onClientStateNotFound', async () => {
     // eslint-disable-next-line require-await
-    const puller: Puller = async _req => {
+    const puller: PullerDD31 = async _req => {
       return {
         httpRequestInfo: {httpStatusCode: 200, errorMessage: ''},
         response: {
@@ -77,7 +77,7 @@ suite('onClientStateNotFound', () => {
       onClientStateNotFound,
     });
 
-    const pokeBody: Poke = {
+    const pokeBody: PokeDD31 = {
       baseCookie: null,
       pullResponse: {error: 'ClientStateNotFound'},
     };

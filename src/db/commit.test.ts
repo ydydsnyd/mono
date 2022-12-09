@@ -24,88 +24,97 @@ import {ChainBuilder} from './test-helpers.js';
 import {Hash, fakeHash, makeNewFakeHashFunction} from '../hash.js';
 import {deepFreeze} from '../json.js';
 
-test('base snapshot', async () => {
-  const clientID = 'client-id';
-  const store = new dag.TestStore();
-  const b = new ChainBuilder(store);
-  await b.addGenesis(clientID);
-  let genesisHash = b.chain[0].chunk.hash;
-  await store.withRead(async dagRead => {
-    expect(
-      (await baseSnapshotFromHash(genesisHash, dagRead)).chunk.hash,
-    ).to.equal(genesisHash);
-  });
+suite('base snapshot', () => {
+  const t = async (dd31: boolean) => {
+    const clientID = 'client-id';
+    const store = new dag.TestStore();
+    const b = new ChainBuilder(store, undefined, dd31);
+    await b.addGenesis(clientID);
+    let genesisHash = b.chain[0].chunk.hash;
+    await store.withRead(async dagRead => {
+      expect(
+        (await baseSnapshotFromHash(genesisHash, dagRead)).chunk.hash,
+      ).to.equal(genesisHash);
+    });
 
-  await b.addLocal(clientID);
-  if (!DD31) {
-    await b.addIndexChange(clientID);
-  }
-  await b.addLocal(clientID);
-  genesisHash = b.chain[0].chunk.hash;
-  await store.withRead(async dagRead => {
-    expect(
-      (
-        await baseSnapshotFromHash(
-          b.chain[b.chain.length - 1].chunk.hash,
-          dagRead,
-        )
-      ).chunk.hash,
-    ).to.equal(genesisHash);
-  });
+    await b.addLocal(clientID);
+    if (!dd31) {
+      await b.addIndexChange(clientID);
+    }
+    await b.addLocal(clientID);
+    genesisHash = b.chain[0].chunk.hash;
+    await store.withRead(async dagRead => {
+      expect(
+        (
+          await baseSnapshotFromHash(
+            b.chain[b.chain.length - 1].chunk.hash,
+            dagRead,
+          )
+        ).chunk.hash,
+      ).to.equal(genesisHash);
+    });
 
-  await b.addSnapshot(undefined, clientID);
-  const baseHash = await store.withRead(async dagRead => {
-    const baseHash = await dagRead.getHead('main');
-    expect(
-      (
-        await baseSnapshotFromHash(
-          b.chain[b.chain.length - 1].chunk.hash,
-          dagRead,
-        )
-      ).chunk.hash,
-    ).to.equal(baseHash);
-    return baseHash;
-  });
+    await b.addSnapshot(undefined, clientID);
+    const baseHash = await store.withRead(async dagRead => {
+      const baseHash = await dagRead.getHead('main');
+      expect(
+        (
+          await baseSnapshotFromHash(
+            b.chain[b.chain.length - 1].chunk.hash,
+            dagRead,
+          )
+        ).chunk.hash,
+      ).to.equal(baseHash);
+      return baseHash;
+    });
 
-  await b.addLocal(clientID);
-  await b.addLocal(clientID);
-  await store.withRead(async dagRead => {
-    expect(
-      (
-        await baseSnapshotFromHash(
-          b.chain[b.chain.length - 1].chunk.hash,
-          dagRead,
-        )
-      ).chunk.hash,
-    ).to.equal(baseHash);
-  });
+    await b.addLocal(clientID);
+    await b.addLocal(clientID);
+    await store.withRead(async dagRead => {
+      expect(
+        (
+          await baseSnapshotFromHash(
+            b.chain[b.chain.length - 1].chunk.hash,
+            dagRead,
+          )
+        ).chunk.hash,
+      ).to.equal(baseHash);
+    });
+  };
+
+  test('DD31', () => t(true));
+  test('SDD', () => t(false));
 });
 
-test('local mutations', async () => {
-  const clientID = 'client-id';
-  const store = new dag.TestStore();
-  const b = new ChainBuilder(store);
-  await b.addGenesis(clientID);
-  const genesisHash = b.chain[0].chunk.hash;
-  await store.withRead(async dagRead => {
-    expect(await localMutations(genesisHash, dagRead)).to.have.lengthOf(0);
-  });
+suite('local mutations', () => {
+  const t = async (dd31: boolean) => {
+    const clientID = 'client-id';
+    const store = new dag.TestStore();
+    const b = new ChainBuilder(store, undefined, dd31);
+    await b.addGenesis(clientID);
+    const genesisHash = b.chain[0].chunk.hash;
+    await store.withRead(async dagRead => {
+      expect(await localMutations(genesisHash, dagRead)).to.have.lengthOf(0);
+    });
 
-  await b.addLocal(clientID);
-  if (!DD31) {
-    await b.addIndexChange(clientID);
-  }
-  await b.addLocal(clientID);
-  if (!DD31) {
-    await b.addIndexChange(clientID);
-  }
-  const headHash = b.chain[b.chain.length - 1].chunk.hash;
-  const commits = await store.withRead(dagRead =>
-    localMutations(headHash, dagRead),
-  );
-  expect(commits).to.deep.equal([b.chain[DD31 ? 2 : 3], b.chain[1]]);
+    await b.addLocal(clientID);
+    if (!dd31) {
+      await b.addIndexChange(clientID);
+    }
+    await b.addLocal(clientID);
+    if (!dd31) {
+      await b.addIndexChange(clientID);
+    }
+    const headHash = b.chain[b.chain.length - 1].chunk.hash;
+    const commits = await store.withRead(dagRead =>
+      localMutations(headHash, dagRead),
+    );
+    expect(commits).to.deep.equal([b.chain[dd31 ? 2 : 3], b.chain[1]]);
+  };
+
+  test('DD31', () => t(true));
+  test('SDD', () => t(false));
 });
-
 test('local mutations greater than', async () => {
   if (!DD31) {
     return;
@@ -189,32 +198,37 @@ test('local mutations greater than', async () => {
   ).to.deep.equal([]);
 });
 
-test('chain', async () => {
-  const clientID = 'client-id';
-  const store = new dag.TestStore();
-  const b = new ChainBuilder(store);
-  await b.addGenesis(clientID);
+suite('chain', () => {
+  const t = async (dd31: boolean) => {
+    const clientID = 'client-id';
+    const store = new dag.TestStore();
+    const b = new ChainBuilder(store, undefined, dd31);
+    await b.addGenesis(clientID);
 
-  let got = await store.withRead(dagRead =>
-    commitChain(b.chain[b.chain.length - 1].chunk.hash, dagRead),
-  );
+    let got = await store.withRead(dagRead =>
+      commitChain(b.chain[b.chain.length - 1].chunk.hash, dagRead),
+    );
 
-  expect(got).to.have.lengthOf(1);
-  expect(got[0]).to.deep.equal(b.chain[0]);
+    expect(got).to.have.lengthOf(1);
+    expect(got[0]).to.deep.equal(b.chain[0]);
 
-  await b.addSnapshot(undefined, clientID);
-  await b.addLocal(clientID);
-  if (!DD31) {
-    await b.addIndexChange(clientID);
-  } else {
+    await b.addSnapshot(undefined, clientID);
     await b.addLocal(clientID);
-  }
-  const headHash = b.chain[b.chain.length - 1].chunk.hash;
-  got = await store.withRead(dagRead => commitChain(headHash, dagRead));
-  expect(got).to.have.lengthOf(3);
-  expect(got[0]).to.deep.equal(b.chain[3]);
-  expect(got[1]).to.deep.equal(b.chain[2]);
-  expect(got[2]).to.deep.equal(b.chain[1]);
+    if (!dd31) {
+      await b.addIndexChange(clientID);
+    } else {
+      await b.addLocal(clientID);
+    }
+    const headHash = b.chain[b.chain.length - 1].chunk.hash;
+    got = await store.withRead(dagRead => commitChain(headHash, dagRead));
+    expect(got).to.have.lengthOf(3);
+    expect(got[0]).to.deep.equal(b.chain[3]);
+    expect(got[1]).to.deep.equal(b.chain[2]);
+    expect(got[2]).to.deep.equal(b.chain[1]);
+  };
+
+  test('dd31', () => t(true));
+  test('sdd', () => t(false));
 });
 
 test('load roundtrip', () => {

@@ -10,16 +10,15 @@ import {
 import {
   assertPullResponseSDD,
   assertPullResponseDD31,
-  Puller,
   PullerDD31,
-  PullerResult,
   PullerResultDD31,
   PullError,
-  PullResponse,
   PullResponseDD31,
-  PullResponseOK,
   PullResponseOKDD31,
   PullResponseOKSDD,
+  PullResponseSDD,
+  PullerSDD,
+  PullerResultSDD,
 } from '../puller.js';
 import {assertHTTPRequestInfo, HTTPRequestInfo} from '../http-request-info.js';
 import {callJSRequest} from './js-request.js';
@@ -82,23 +81,14 @@ export type PullRequestDD31<Cookie = ReadonlyJSONValue> = {
   schemaVersion: string;
 };
 
-export type BeginPullRequest = {
+type BeginPullRequest = {
   pullURL: string;
   pullAuth: string;
   schemaVersion: string;
 };
 
-export type BeginPullRequestDD31 = {
-  pullURL: string;
-  pullAuth: string;
-  schemaVersion: string;
-};
-
-export type BeginPullResponse = {
-  httpRequestInfo: HTTPRequestInfo;
-  pullResponse?: PullResponse;
-  syncHead: Hash;
-};
+export type BeginPullRequestDD31 = BeginPullRequest;
+export type BeginPullRequestSDD = BeginPullRequest;
 
 export type BeginPullResponseDD31 = {
   httpRequestInfo: HTTPRequestInfo;
@@ -106,53 +96,22 @@ export type BeginPullResponseDD31 = {
   syncHead: Hash;
 };
 
-export function beginPull(
-  profileID: string,
-  clientID: ClientID,
-  clientGroupID: ClientGroupID | undefined,
-  beginPullReq: BeginPullRequest | BeginPullRequestDD31,
-  puller: Puller | PullerDD31,
-  requestID: string,
-  store: dag.Store,
-  lc: LogContext,
-  createSyncBranch = true,
-): Promise<BeginPullResponse | BeginPullResponseDD31> {
-  if (DD31) {
-    assert(clientGroupID);
-    return beginPullDD31(
-      profileID,
-      clientID,
-      clientGroupID,
-      beginPullReq as BeginPullRequestDD31,
-      puller as PullerDD31,
-      requestID,
-      store,
-      lc,
-      createSyncBranch,
-    );
-  }
-  return beginPullSDD(
-    profileID,
-    clientID,
-    beginPullReq as BeginPullRequest,
-    puller as Puller,
-    requestID,
-    store,
-    lc,
-    createSyncBranch,
-  );
-}
+export type BeginPullResponseSDD = {
+  httpRequestInfo: HTTPRequestInfo;
+  pullResponse?: PullResponseSDD;
+  syncHead: Hash;
+};
 
 export async function beginPullSDD(
   profileID: string,
   clientID: ClientID,
   beginPullReq: BeginPullRequest,
-  puller: Puller,
+  puller: PullerSDD,
   requestID: string,
   store: dag.Store,
   lc: LogContext,
   createSyncBranch = true,
-): Promise<BeginPullResponse> {
+): Promise<BeginPullResponseSDD> {
   // Don't assert !DD31 here because we get here when pulling during a mutation
   // recovery and we recover SDD mutations even when we are in DD31.
   const {pullURL, pullAuth, schemaVersion} = beginPullReq;
@@ -179,7 +138,7 @@ export async function beginPullSDD(
   };
   lc.debug?.('Starting pull...');
   const pullStart = Date.now();
-  const {response, httpRequestInfo} = await callPuller(
+  const {response, httpRequestInfo} = await callPullerSDD(
     puller,
     pullURL,
     pullReq,
@@ -320,7 +279,7 @@ export async function handlePullResponseSDD(
   lc: LogContext,
   store: dag.Store,
   expectedBaseCookie: ReadonlyJSONValue,
-  response: PullResponseOK,
+  response: PullResponseOKSDD,
   clientID: ClientID,
 ): Promise<HandlePullResponseResult> {
   // It is possible that another sync completed while we were pulling. Ensure
@@ -741,16 +700,16 @@ export async function maybeEndPull<M extends db.LocalMeta>(
   });
 }
 
-async function callPuller(
-  puller: Puller,
+async function callPullerSDD(
+  puller: PullerSDD,
   url: string,
   body: PullRequestSDD<ReadonlyJSONValue>,
   auth: string,
   requestID: string,
-): Promise<PullerResult> {
+): Promise<PullerResultSDD> {
   try {
     const res = await callJSRequest(puller, url, body, auth, requestID);
-    assertResult(res);
+    assertResultSDD(res);
     return res;
   } catch (e) {
     throw new PullError(toError(e));
@@ -773,8 +732,8 @@ async function callPullerDD31(
   }
 }
 
-type Result = {
-  response?: PullResponse;
+type ResultSDD = {
+  response?: PullResponseSDD;
   httpRequestInfo: HTTPRequestInfo;
 };
 
@@ -788,7 +747,7 @@ function assertResultBase(v: unknown): asserts v is Record<string, unknown> {
   assertHTTPRequestInfo(v.httpRequestInfo);
 }
 
-function assertResult(v: unknown): asserts v is Result {
+function assertResultSDD(v: unknown): asserts v is ResultSDD {
   assertResultBase(v);
   if (v.response !== undefined) {
     assertPullResponseSDD(v.response);
