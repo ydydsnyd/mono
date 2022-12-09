@@ -46,6 +46,7 @@ test("processFrame", async () => {
     expectedClientRecords: Map<string, ClientRecord>;
     expectedVersion: Version;
     expectedDisconnectedClients: ClientID[];
+    disconnectHandlerThrows: boolean;
   };
 
   const mutators = new Map(
@@ -73,6 +74,7 @@ test("processFrame", async () => {
       expectedClientRecords: records,
       expectedVersion: startVersion,
       expectedDisconnectedClients: [],
+      disconnectHandlerThrows: false,
     },
     {
       name: "no mutations, one client",
@@ -84,6 +86,7 @@ test("processFrame", async () => {
       expectedClientRecords: records,
       expectedVersion: startVersion,
       expectedDisconnectedClients: [],
+      disconnectHandlerThrows: false,
     },
     {
       name: "one mutation, one client",
@@ -117,6 +120,7 @@ test("processFrame", async () => {
       ]),
       expectedVersion: endVersion,
       expectedDisconnectedClients: [],
+      disconnectHandlerThrows: false,
     },
     {
       name: "one mutation, two clients",
@@ -167,6 +171,7 @@ test("processFrame", async () => {
       ]),
       expectedVersion: endVersion,
       expectedDisconnectedClients: [],
+      disconnectHandlerThrows: false,
     },
     {
       name: "two mutations, one client, one key",
@@ -203,6 +208,7 @@ test("processFrame", async () => {
       ]),
       expectedVersion: endVersion,
       expectedDisconnectedClients: [],
+      disconnectHandlerThrows: false,
     },
     {
       name: "no mutations, no clients, 1 client disconnects",
@@ -219,6 +225,21 @@ test("processFrame", async () => {
       expectedClientRecords: records,
       expectedVersion: endVersion,
       expectedDisconnectedClients: ["c1"],
+      disconnectHandlerThrows: false,
+    },
+    {
+      name: "no mutations, no clients, 1 client disconnects, disconnect handler throws",
+      mutations: [],
+      clients: [],
+      connectedClients: ["c1"],
+      // No user values or pokes because only write was in disconnect handler which threw
+      expectedPokes: [],
+      expectedUserValues: new Map(),
+      expectedClientRecords: records,
+      // version not incremented for same reason
+      expectedVersion: startVersion,
+      expectedDisconnectedClients: ["c1"],
+      disconnectHandlerThrows: true,
     },
     {
       name: "no mutations, 1 client, 1 client disconnected",
@@ -255,6 +276,24 @@ test("processFrame", async () => {
       ]),
       expectedVersion: endVersion,
       expectedDisconnectedClients: ["c1"],
+      disconnectHandlerThrows: false,
+    },
+    {
+      name: "no mutations, 1 client, 1 client disconnected, disconnect handler throws",
+      mutations: [],
+      clients: ["c2"],
+      connectedClients: ["c1", "c2"],
+      // No user values or pokes because only write was in disconnect handler which threw
+      expectedPokes: [],
+      expectedUserValues: new Map(),
+      // version stays at startVersion for same reason
+      expectedClientRecords: new Map([
+        ...records,
+        [clientRecordKey("c2"), clientRecord(startVersion, 7)],
+      ]),
+      expectedVersion: startVersion,
+      expectedDisconnectedClients: ["c1"],
+      disconnectHandlerThrows: true,
     },
     {
       name: "no mutations, 1 client, 2 clients disconnected",
@@ -300,6 +339,7 @@ test("processFrame", async () => {
       ]),
       expectedVersion: endVersion,
       expectedDisconnectedClients: ["c1", "c3"],
+      disconnectHandlerThrows: false,
     },
     {
       name: "one mutation, 2 clients, 1 client disconnects",
@@ -364,6 +404,60 @@ test("processFrame", async () => {
       ]),
       expectedVersion: endVersion,
       expectedDisconnectedClients: ["c3"],
+      disconnectHandlerThrows: false,
+    },
+    {
+      name: "one mutation, 2 clients, 1 client disconnects, disconnect handler throws",
+      mutations: [clientMutation("c1", 2, "put", { key: "foo", value: "bar" })],
+      clients: ["c1", "c2"],
+      connectedClients: ["c1", "c2", "c3"],
+      // No patch for writes from disconnect handler because it threw
+      expectedPokes: [
+        {
+          clientID: "c1",
+          poke: {
+            baseCookie: startVersion,
+            cookie: endVersion,
+            lastMutationID: 2,
+            patch: [
+              {
+                op: "put",
+                key: "foo",
+                value: "bar",
+              },
+            ],
+            timestamp: startTime,
+          },
+        },
+        {
+          clientID: "c2",
+          poke: {
+            baseCookie: startVersion,
+            cookie: endVersion,
+            lastMutationID: 7,
+            patch: [
+              {
+                op: "put",
+                key: "foo",
+                value: "bar",
+              },
+            ],
+            timestamp: startTime,
+          },
+        },
+      ],
+      // writes from disconnect handler not present because it threw
+      expectedUserValues: new Map([
+        [userValueKey("foo"), userValue("bar", endVersion)],
+      ]),
+      expectedClientRecords: new Map([
+        ...records,
+        [clientRecordKey("c1"), clientRecord(endVersion, 2)],
+        [clientRecordKey("c2"), clientRecord(endVersion, 7)],
+      ]),
+      expectedVersion: endVersion,
+      expectedDisconnectedClients: ["c3"],
+      disconnectHandlerThrows: true,
     },
   ];
 
@@ -387,6 +481,11 @@ test("processFrame", async () => {
       async (write) => {
         await write.put(disconnectHandlerWriteKey(write.clientID), true);
         disconnectCallClients.push(write.clientID);
+
+        // Throw after writes to confirm they are not saved.
+        if (c.disconnectHandlerThrows) {
+          throw new Error("disconnectHandler threw");
+        }
       },
       c.clients,
       storage,

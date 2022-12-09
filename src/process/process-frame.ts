@@ -11,9 +11,6 @@ import { getVersion } from "../types/version.js";
 import { must } from "../util/must.js";
 import { processDisconnects } from "./process-disconnects.js";
 import { MutatorMap, processMutation } from "./process-mutation.js";
-//import { GapTracker } from "../util/gap-tracker.js";
-
-//const tracker = new GapTracker("processFrame", new LogContext("debug"));
 
 // Processes zero or more mutations as a single "frame", returning pokes.
 // Pokes are returned if the version changes, even if there is no patch,
@@ -42,32 +39,31 @@ export async function processFrame(
 
   await processDisconnects(lc, disconnectHandler, clients, cache, nextVersion);
 
-  if (must(await getVersion(cache)) === prevVersion) {
-    lc.debug?.("no change in frame, skipping poke");
-    return [];
-  }
-
-  //tracker.push(startTime);
-  const patch = unwrapPatch(cache.pending());
-
   const ret: ClientPokeBody[] = [];
-  for (const clientID of clients) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const clientRecord = (await getClientRecord(clientID, cache))!;
-    clientRecord.baseCookie = nextVersion;
-    await putClientRecord(clientID, clientRecord, cache);
 
-    const poke: ClientPokeBody = {
-      clientID,
-      poke: {
-        baseCookie: prevVersion,
-        cookie: nextVersion,
-        lastMutationID: clientRecord.lastMutationID,
-        patch,
-        timestamp,
-      },
-    };
-    ret.push(poke);
+  // If version has not changed, then there should not be any patch or pokes to
+  // send. But processDisconnects still makes other changes to cache that need
+  // to be flushed.
+  if (must(await getVersion(cache)) !== prevVersion) {
+    const patch = unwrapPatch(cache.pending());
+    for (const clientID of clients) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const clientRecord = (await getClientRecord(clientID, cache))!;
+      clientRecord.baseCookie = nextVersion;
+      await putClientRecord(clientID, clientRecord, cache);
+
+      const poke: ClientPokeBody = {
+        clientID,
+        poke: {
+          baseCookie: prevVersion,
+          cookie: nextVersion,
+          lastMutationID: clientRecord.lastMutationID,
+          patch,
+          timestamp,
+        },
+      };
+      ret.push(poke);
+    }
   }
 
   await cache.flush();
