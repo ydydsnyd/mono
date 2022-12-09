@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1670600006263,
+  "lastUpdate": 1670600976314,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -34097,6 +34097,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27422,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1eba4ee94fb1cb8faa01639b0e2f8a3c416191f8",
+          "message": "chore: makeClient -> makeClientDD31 (#479)\n\nThe tests should be explicit about which version of the client they\r\nwant.",
+          "timestamp": "2022-12-09T15:48:36Z",
+          "tree_id": "0b24ef058af775f1f2f663810ef54f0111ba175b",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/1eba4ee94fb1cb8faa01639b0e2f8a3c416191f8"
+        },
+        "date": 1670600968621,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 243913,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40437,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 242752,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 40070,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 98156,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27380,
             "unit": "bytes"
           }
         ]
