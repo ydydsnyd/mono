@@ -1016,19 +1016,23 @@ test('connect percent escapes components of the connection key', async () => {
   expect(connectionRecord.connectTimestamp).toEqual(testTime);
 });
 
-test('connect returns a 401 without calling Room DO if authHandler rejects', async () => {
+test('connect pipes 401 over ws without calling Room DO if authHandler rejects', async () => {
   const testRoomID = 'testRoomID1';
   const testClientID = 'testClientID1';
   const testAuth = 'testAuthTokenValue';
 
   const headers = new Headers();
   headers.set('Sec-WebSocket-Protocol', testAuth);
+  headers.set('Upgrade', 'websocket');
+
   const testRequest = new Request(
     `ws://test.roci.dev/connect?roomID=${testRoomID}&clientID=${testClientID}`,
     {
       headers,
     },
   );
+  const clientWs = new Mocket();
+  const serverWs = new Mocket();
   const authDO = new BaseAuthDO({
     roomDO: createRoomDOThatThrowsIfFetchIsCalled(),
     state: {id: authDOID} as DurableObjectState,
@@ -1041,26 +1045,34 @@ test('connect returns a 401 without calling Room DO if authHandler rejects', asy
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
+    newWebSocketPair: () => {
+      return [clientWs, serverWs];
+    },
   });
 
   const response = await authDO.fetch(testRequest);
 
-  expect(response.status).toEqual(401);
-  expect(response.webSocket).toBeUndefined();
+  expect(response.status).toEqual(101);
+  expect(response.headers.get('Sec-WebSocket-Protocol')).toEqual(testAuth);
+  expect(response.webSocket).toBe(clientWs);
+  expect(serverWs.log).toEqual([
+    ['send', '["error","401: authHandler rejected"]'],
+    ['close'],
+  ]);
 });
 
-test('connect returns a 401 without calling Room DO if Sec-WebSocket-Protocol header is not present', async () => {
+test('connect pipes 401 over ws without calling Room DO if Sec-WebSocket-Protocol header is not present', async () => {
   const testRoomID = 'testRoomID1';
   const testClientID = 'testClientID1';
 
   const headers = new Headers();
+  headers.set('Upgrade', 'websocket');
   const testRequest = new Request(
     `ws://test.roci.dev/connect?roomID=${testRoomID}&clientID=${testClientID}`,
     {
       headers,
     },
   );
-
   const authDO = new BaseAuthDO({
     roomDO: createRoomDOThatThrowsIfFetchIsCalled(),
     state: {id: authDOID} as DurableObjectState,

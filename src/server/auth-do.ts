@@ -65,6 +65,7 @@ export class BaseAuthDO implements DurableObject {
   private readonly _authHandler: AuthHandler;
   private readonly _authApiKey?: string;
   private readonly _lc: LogContext;
+
   // _authLock ensures that at most one auth api call is processed at a time.
   // For safety, if something requires both the auth lock and the room record
   // lock, the auth lock MUST be acquired first.
@@ -198,33 +199,74 @@ export class BaseAuthDO implements DurableObject {
       });
     }
 
-    const roomID = url.searchParams.get('roomID');
-    if (roomID === null || roomID === '') {
-      return new Response('roomID parameter required', {
-        status: 400,
-      });
+    if (request.headers.get('Upgrade') !== 'websocket') {
+      return new Response('expected websocket', {status: 400});
     }
-
-    const clientID = url.searchParams.get('clientID');
-    if (!clientID) {
-      return new Response('clientID parameter required', {
-        status: 400,
-      });
-    }
-
-    lc = lc.addContext('client', clientID).addContext('room', roomID);
 
     const encodedAuth = request.headers.get('Sec-WebSocket-Protocol');
     if (!encodedAuth) {
       lc.info?.('auth not found in Sec-WebSocket-Protocol header.');
       return createUnauthorizedResponse('auth required');
     }
+
+    // From this point forward we want to return errors over the
+    // websocket so the client can see them. This is a bit dodgy
+    // since adversaries who send unauthorized or bad requests
+    // cause us to allocate websockets. But we don't have an
+    // alternative to piping errors down to the client at the
+    // moment.
+    //
+    // TODO consider using socket close codes in the 4xxx range
+    //   for the signaling instead of messages.
+    // TODO should probably unify the way this works with how
+    //   roomDO connect() does it.
+
+    const closeWithError = (error: string) => {
+      const pair = this._newWebSocketPair();
+      const ws = pair[1];
+      lc.info?.('accepting connection to send error', url.toString());
+      ws.accept();
+
+      lc.info?.('invalid connection request', error);
+      sendError(ws, error);
+      ws.close();
+
+      // MDN tells me that the message will be delivered even if we call close
+      // immediately after send:
+      //   https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/close
+      // However the relevant section of the RFC says this behavior is non-normative?
+      //   https://www.rfc-editor.org/rfc/rfc6455.html#section-1.4
+      // In any case, it seems to work just fine to send the message and
+      // close before even returning the response.
+
+      const responseHeaders = new Headers();
+      responseHeaders.set('Sec-WebSocket-Protocol', encodedAuth);
+      return new Response(null, {
+        status: 101,
+        headers: responseHeaders,
+        webSocket: pair[0],
+      });
+    };
+
+    // TODO apparently many of these checks are not tested :(
+    const clientID = url.searchParams.get('clientID');
+    if (!clientID) {
+      return closeWithError('400: clientID parameter required');
+    }
+
+    const roomID = url.searchParams.get('roomID');
+    if (roomID === null || roomID === '') {
+      return closeWithError('400: roomID parameter required');
+    }
+
+    lc = lc.addContext('client', clientID).addContext('room', roomID);
+
     let decodedAuth: string | undefined;
     try {
       decodedAuth = decodeURIComponent(encodedAuth);
     } catch (e) {
       lc.info?.('error decoding auth found in Sec-WebSocket-Protocol header.');
-      return createUnauthorizedResponse('invalid auth');
+      return closeWithError('400: malformed auth');
     }
     const auth = decodedAuth;
     return this._authLock.withRead(async () => {
@@ -232,7 +274,7 @@ export class BaseAuthDO implements DurableObject {
       try {
         userData = await this._authHandler(auth, roomID);
       } catch (e) {
-        return createUnauthorizedResponse();
+        return closeWithError('401: authHandler rejected');
       }
       if (!userData || !userData.userID) {
         if (!userData) {
@@ -240,7 +282,7 @@ export class BaseAuthDO implements DurableObject {
         } else if (!userData.userID) {
           lc.info?.('userData returned by authHandler has no userID.');
         }
-        return createUnauthorizedResponse();
+        return closeWithError('401: no userData');
       }
 
       // Find the room's objectID so we can connect to it. Do this BEFORE
