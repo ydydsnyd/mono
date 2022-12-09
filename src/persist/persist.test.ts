@@ -25,7 +25,7 @@ import {
   getClientGroup,
   setClientGroup,
 } from './client-groups.js';
-import {persistDD31} from './persist-dd31.js';
+import {persistDD31} from './persist.js';
 import type {WriteTransaction} from '../transactions.js';
 import type {JSONValue} from '../json.js';
 import type {MutatorDefs} from '../mod.js';

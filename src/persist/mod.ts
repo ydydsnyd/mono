@@ -1,5 +1,4 @@
-export {persistSDD} from './persist.js';
-export {persistDD31} from './persist-dd31.js';
+export {persistDD31} from './persist.js';
 export {refresh} from './refresh.js';
 export {startHeartbeats} from './heartbeat.js';
 export {

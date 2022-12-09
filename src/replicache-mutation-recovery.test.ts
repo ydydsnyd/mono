@@ -33,6 +33,7 @@ import {initClientWithClientID} from './persist/clients-test-helpers.js';
 import {PUSH_VERSION_SDD} from './sync/push.js';
 import {assertClientSDD} from './persist/clients.js';
 import {enableLicensingSymbol} from './replicache-options.js';
+import {persistSDD} from './persist/persist-test-helpers.js';
 
 initReplicacheTesting();
 
@@ -91,7 +92,7 @@ export async function createAndPersistClientWithPendingLocalSDD(
     localMetas.push(b.chain[b.chain.length - 1].meta as db.LocalMetaSDD);
   }
 
-  await persist.persistSDD(clientID, testMemdag, perdag, () => false);
+  await persistSDD(clientID, testMemdag, perdag, () => false);
   return localMetas;
 }
 
