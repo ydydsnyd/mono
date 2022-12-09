@@ -144,10 +144,6 @@ test('overlapped pokes not supported', async () => {
 });
 
 test('Client group unknown on server', async () => {
-  if (!DD31) {
-    return;
-  }
-
   const rep = await replicacheForTesting('client-group-unknown', {});
 
   expect(rep.isClientGroupDisabled).false;

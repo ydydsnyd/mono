@@ -6,9 +6,6 @@ import {GatherNotCachedVisitor} from './gather-not-cached-visitor.js';
 import {MetaType} from '../db/commit.js';
 
 suite('GatherNotCachedVisitor', () => {
-  if (!DD31) {
-    return;
-  }
   test('when gatherSizeLimit not exceeded, if none cached gathers all, if all cached gathers none', async () => {
     const {perdag, memdag, pb, getSize, allChunksInVisitOrder} = await setup();
 

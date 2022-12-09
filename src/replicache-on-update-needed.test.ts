@@ -4,10 +4,6 @@ import {initReplicacheTesting, replicacheForTesting} from './test-util.js';
 initReplicacheTesting();
 
 suite('onUpdateNeeded', () => {
-  if (!DD31) {
-    return;
-  }
-
   test('Called if there is a new client group in same idb', async () => {
     const rep1 = await replicacheForTesting(
       'called-when-new-branch',

@@ -283,10 +283,6 @@ test('pull request is only sent when pullURL or non-default puller are set', asy
 });
 
 test('Client Group not found on server', async () => {
-  if (!DD31) {
-    return;
-  }
-
   const consoleErrorStub = sinon.stub(console, 'error');
 
   const rep = await replicacheForTesting('client-group-not-found-pull', {

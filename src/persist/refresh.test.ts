@@ -128,10 +128,6 @@ function mutatorsProxy(): MutatorDefs {
 }
 
 suite('refresh', () => {
-  if (!DD31) {
-    return;
-  }
-
   test('identical dags', async () => {
     // If the dags are the same then refresh is a no op.
     const {perdag, memdag} = makeStores();
@@ -427,10 +423,6 @@ suite('refresh', () => {
     //
     // medag:main -> LM {clientID: 1 id: 5 } -> LM {clientID: 1 id: 4 } -> LM
     // {clientID: 2 id: 3 } -> Snapshot { lmids: { 1: 3, 2: 2} }
-
-    if (!DD31) {
-      return;
-    }
 
     const {perdag, memdag} = makeStores();
 

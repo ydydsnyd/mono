@@ -18,10 +18,6 @@ function getChannelMessagePromise(replicacheName: string) {
 }
 
 suite('initNewClientChannel', () => {
-  if (!DD31) {
-    return;
-  }
-
   test('sends client group ID to channel', async () => {
     const replicacheName = 'test-name';
     const channelMessagePromise = getChannelMessagePromise(replicacheName);

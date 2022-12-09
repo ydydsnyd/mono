@@ -97,10 +97,6 @@ async function createAndPersistClientWithPendingLocalDD31(
 }
 
 suite('DD31', () => {
-  if (!DD31) {
-    return;
-  }
-
   initReplicacheTesting();
 
   function createPushBodyDD31(
@@ -1506,10 +1502,6 @@ suite('DD31', () => {
   });
 
   suite('Recover mutations across replicache format versions', () => {
-    if (!DD31) {
-      return;
-    }
-
     test('DD31 client with one old SDD format client should be recovered', async () => {
       const client1ID = 'client1';
       const auth = '1';

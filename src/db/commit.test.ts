@@ -116,9 +116,6 @@ suite('local mutations', () => {
   test('SDD', () => t(false));
 });
 test('local mutations greater than', async () => {
-  if (!DD31) {
-    return;
-  }
   const clientID1 = 'client-id-1';
   const clientID2 = 'client-id-2';
   const store = new dag.TestStore();
@@ -657,18 +654,9 @@ test('accessors', async () => {
   }
   expect(indexChange.meta.basisHash).to.equal(fakeHash('face11'));
   expect(indexChange.valueHash).to.equal(fakeHash('face12'));
-  if (!DD31) {
-    // In DD31 IndexChange commits do not have mutationID(s).
-    // See: 'getMutationID with IndexChange commits' test below
-    expect(await indexChange.getMutationID(clientID, fakeRead)).to.equal(3);
-  }
 });
 
 test('accessors DD31', async () => {
-  if (!DD31) {
-    return;
-  }
-
   const clientID = 'client-id';
 
   const originalHash = fakeHash('face7');
@@ -756,11 +744,6 @@ test('accessors DD31', async () => {
   }
   expect(indexChange.meta.basisHash).to.equal(fakeHash('face11'));
   expect(indexChange.valueHash).to.equal(fakeHash('face12'));
-  if (!DD31) {
-    // In DD31 IndexChange commits do not have mutationID(s).
-    // See: 'getMutationID with IndexChange commits' test below
-    expect(await indexChange.getMutationID(clientID, fakeRead)).to.equal(3);
-  }
 });
 
 const chunkHasher = makeNewFakeHashFunction('face55');
@@ -800,9 +783,6 @@ function makeIndexChangeMeta(
 
 test('getMutationID across commits with different clients', async () => {
   // In DD31 the commits can be from different clients.
-  if (!DD31) {
-    return;
-  }
 
   const clientID = 'client-id';
   const clientID2 = 'client-id-2';

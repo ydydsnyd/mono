@@ -42,9 +42,6 @@ async function expectClientGroups(
 }
 
 test('initClientGroupGC starts 5 min interval that collects client groups that are not referred to by any clients and have no pending mutations', async () => {
-  if (!DD31) {
-    return;
-  }
   const dagStore = new dag.TestStore();
   const clientGroup1 = {
     headHash: fakeHash('eadbac1'),

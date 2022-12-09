@@ -4,9 +4,6 @@ import {initOnPersistChannel, PersistInfo} from './on-persist-channel.js';
 
 suite('initOnPersistChannel', () => {
   let channel: BroadcastChannel | undefined;
-  if (!DD31) {
-    return;
-  }
 
   teardown(() => {
     if (channel) {
