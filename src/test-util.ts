@@ -71,7 +71,6 @@ export class ReplicacheTest<
 
   persist() {
     return this._internalAPI.persist();
-    // return this[persistSymbol]();
   }
 
   schedulePersist() {

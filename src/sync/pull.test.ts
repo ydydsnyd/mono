@@ -4,7 +4,7 @@ import {assert, assertNotUndefined} from '../asserts.js';
 import {assertObject, assertString} from '../asserts.js';
 import * as dag from '../dag/mod.js';
 import * as db from '../db/mod.js';
-import {Commit, DEFAULT_HEAD_NAME} from '../db/mod.js';
+import {DEFAULT_HEAD_NAME} from '../db/mod.js';
 import {ChainBuilder} from '../db/test-helpers.js';
 import {FrozenJSONValue, ReadonlyJSONValue, deepFreeze} from '../json.js';
 import type {
@@ -40,31 +40,22 @@ import {stringCompare} from '../string-compare.js';
 import {asyncIterableToArray} from '../async-iterable-to-array.js';
 import {
   assertSnapshotCommitDD31,
+  assertSnapshotCommitSDD,
   commitIsLocal,
-  SnapshotMetaSDD,
 } from '../db/commit.js';
 import type {DiffsMap} from './diff.js';
 import {testSubscriptionsManagerOptions} from '../test-util.js';
 import {BTreeRead} from '../btree/read.js';
 
 test('begin try pull SDD', async () => {
-  if (DD31) {
-    return;
-  }
-
   const clientID = 'test_client_id';
   const store = new dag.TestStore();
-  const b = new ChainBuilder(store);
+  const b = new ChainBuilder(store, undefined, false);
   await b.addGenesis(clientID);
-  await b.addSnapshot([['foo', '"bar"']], clientID);
-  // chain[2] is an index change
+  const baseSnapshot = await b.addSnapshot([['foo', '"bar"']], clientID);
   await b.addIndexChange(clientID);
   const startingNumCommits = b.chain.length;
-  const baseSnapshot = b.chain[1];
-  const parts = db.snapshotMetaParts(
-    baseSnapshot as Commit<SnapshotMetaSDD>,
-    clientID,
-  );
+  const parts = db.snapshotMetaParts(baseSnapshot, clientID);
 
   const baseLastMutationID = parts[0];
   const baseCookie = deepFreeze(parts[1]);
@@ -484,8 +475,9 @@ test('begin try pull SDD', async () => {
         const chunk = await read.getChunk(syncHeadHash);
         assertNotUndefined(chunk);
         const syncHead = db.fromChunk(chunk);
+        assertSnapshotCommitSDD(syncHead);
         const [gotLastMutationID, gotCookie] = db.snapshotMetaParts(
-          syncHead as Commit<SnapshotMetaSDD>,
+          syncHead,
           clientID,
         );
         expect(expSyncHead.lastMutationID).to.equal(gotLastMutationID);
@@ -564,27 +556,23 @@ test('begin try pull SDD', async () => {
 });
 
 test('begin try pull DD31', async () => {
-  if (!DD31) {
-    return;
-  }
-
   const clientID = 'test_client_id';
   const clientGroupID = 'test_client_group_id';
   const baseCookie = 'cookie_1';
   const store = new dag.TestStore();
   const b = new ChainBuilder(store);
   await b.addGenesis(clientID);
-  await b.addSnapshot([['foo', '"bar"']], clientID, baseCookie, undefined, {
-    '2': {prefix: 'local', jsonPointer: '', allowEmpty: false},
-  });
-  // chain[2] is an index change
-  // await b.addIndexChange(clientID);
-  const startingNumCommits = b.chain.length;
-  const baseSnapshot = b.chain[1];
-  const parts = db.snapshotMetaParts(
-    baseSnapshot as Commit<SnapshotMetaSDD>,
+  const baseSnapshot = await b.addSnapshot(
+    [['foo', '"bar"']],
     clientID,
+    baseCookie,
+    undefined,
+    {
+      '2': {prefix: 'local', jsonPointer: '', allowEmpty: false},
+    },
   );
+  const startingNumCommits = b.chain.length;
+  const parts = db.snapshotMetaParts(baseSnapshot, clientID);
 
   const baseLastMutationID = parts[0];
   const baseValueMap = new Map([['foo', '"bar"']]);
@@ -1043,8 +1031,9 @@ test('begin try pull DD31', async () => {
         const chunk = await read.getChunk(syncHeadHash);
         assertNotUndefined(chunk);
         const syncHead = db.fromChunk(chunk);
+        assertSnapshotCommitDD31(syncHead);
         const [gotLastMutationID, gotCookie] = db.snapshotMetaParts(
-          syncHead as Commit<SnapshotMetaSDD>,
+          syncHead,
           clientID,
         );
         expect(expSyncHead.lastMutationID).to.equal(gotLastMutationID);
@@ -1385,352 +1374,372 @@ type FakePullerArgsDD31 = {
   err?: string | undefined;
 };
 
-test('changed keys', async () => {
-  type IndexDef = {
-    name: string;
-    prefix: string;
-    jsonPointer: string;
-  };
-  const t = async (
-    baseMap: Map<string, string>,
-    indexDef: IndexDef | undefined,
-    patch: PatchOperation[],
-    expectedDiffsMap: DiffsMap,
-  ) => {
-    const clientID = 'test_client_id';
-    const clientGroupID = 'test_client_group__id';
-    const store = new dag.TestStore();
-    const lc = new LogContext();
-    const b = new ChainBuilder(store);
-    await b.addGenesis(clientID);
+suite('changed keys', () => {
+  const t = async (dd31: boolean) => {
+    type IndexDef = {
+      name: string;
+      prefix: string;
+      jsonPointer: string;
+    };
+    const t = async (
+      baseMap: Map<string, string>,
+      indexDef: IndexDef | undefined,
+      patch: PatchOperation[],
+      expectedDiffsMap: DiffsMap,
+    ) => {
+      const clientID = 'test_client_id';
+      const clientGroupID = 'test_client_group__id';
+      const store = new dag.TestStore();
+      const lc = new LogContext();
+      const b = new ChainBuilder(store, undefined, dd31);
+      await b.addGenesis(clientID);
 
-    if (indexDef) {
-      const {name, prefix, jsonPointer} = indexDef;
-      if (DD31) {
-        const indexDefinitions = {
-          [name]: {
-            jsonPointer,
+      if (indexDef) {
+        const {name, prefix, jsonPointer} = indexDef;
+        if (dd31) {
+          const indexDefinitions = {
+            [name]: {
+              jsonPointer,
+              prefix,
+              allowEmpty: false,
+            },
+          };
+
+          await b.addSnapshot(
+            [],
+            clientID,
+            undefined,
+            undefined,
+            indexDefinitions,
+          );
+        } else {
+          await b.addIndexChange(clientID, name, {
             prefix,
+            jsonPointer,
             allowEmpty: false,
-          },
-        };
-
-        await b.addSnapshot(
-          [],
-          clientID,
-          undefined,
-          undefined,
-          indexDefinitions,
-        );
-      } else {
-        await b.addIndexChange(clientID, name, {
-          prefix,
-          jsonPointer,
-          allowEmpty: false,
-        });
-      }
-    }
-
-    const entries = [...baseMap];
-    await b.addSnapshot(entries, clientID);
-
-    const baseSnapshot = b.chain[b.chain.length - 1];
-    const parts = db.snapshotMetaParts(
-      baseSnapshot as Commit<SnapshotMetaSDD>,
-      clientID,
-    );
-    const baseLastMutationID = parts[0];
-    const baseCookie = deepFreeze(parts[1]);
-
-    const requestID = 'request_id';
-    const profileID = 'test_profile_id';
-    const pullAuth = 'pull_auth';
-    const pullURL = 'pull_url';
-    const schemaVersion = 'schema_version';
-
-    const newCookie = 'new_cookie';
-
-    const expPullReq: PullRequestSDD | PullRequestDD31 = DD31
-      ? {
-          profileID,
-          clientGroupID,
-          cookie: baseCookie,
-          // lastMutationID: baseLastMutationID,
-          pullVersion: PULL_VERSION_DD31,
-          schemaVersion,
+          });
         }
-      : {
-          profileID,
-          clientID,
-          cookie: baseCookie,
-          lastMutationID: baseLastMutationID,
-          pullVersion: PULL_VERSION_SDD,
-          schemaVersion,
-        };
+      }
 
-    const pullResp: PullResponseDD31 = {
-      cookie: newCookie,
-      lastMutationIDChanges: {[clientID]: baseLastMutationID},
-      patch,
+      const entries = [...baseMap];
+      const baseSnapshot = await b.addSnapshot(entries, clientID);
+      const parts = db.snapshotMetaParts(baseSnapshot, clientID);
+      const baseLastMutationID = parts[0];
+      const baseCookie = deepFreeze(parts[1]);
+
+      const requestID = 'request_id';
+      const profileID = 'test_profile_id';
+      const pullAuth = 'pull_auth';
+      const pullURL = 'pull_url';
+      const schemaVersion = 'schema_version';
+
+      const newCookie = 'new_cookie';
+
+      const expPullReq: PullRequestSDD | PullRequestDD31 = dd31
+        ? {
+            profileID,
+            clientGroupID,
+            cookie: baseCookie,
+            pullVersion: PULL_VERSION_DD31,
+            schemaVersion,
+          }
+        : {
+            profileID,
+            clientID,
+            cookie: baseCookie,
+            lastMutationID: baseLastMutationID,
+            pullVersion: PULL_VERSION_SDD,
+            schemaVersion,
+          };
+
+      const pullResp: PullResponseDD31 | PullResponseSDD = dd31
+        ? {
+            cookie: newCookie,
+            lastMutationIDChanges: {[clientID]: baseLastMutationID},
+            patch,
+          }
+        : {
+            cookie: newCookie,
+            lastMutationID: baseLastMutationID,
+            patch,
+          };
+
+      const fakePuller: PullerDD31 | PullerSDD = dd31
+        ? makeFakePullerDD31({
+            expPullReq: expPullReq as PullRequestDD31<ReadonlyJSONValue>,
+            expPullURL: pullURL,
+            expPullAuth: pullAuth,
+            expRequestID: requestID,
+            resp: pullResp as PullResponseDD31,
+            err: undefined,
+          })
+        : makeFakePullerSDD({
+            expPullReq: expPullReq as PullRequestSDD<ReadonlyJSONValue>,
+            expPullURL: pullURL,
+            expPullAuth: pullAuth,
+            expRequestID: requestID,
+            resp: pullResp as PullResponseSDD,
+            err: undefined,
+          });
+
+      const beginPullReq = {
+        pullURL,
+        pullAuth,
+        schemaVersion,
+        puller: () => {
+          // not used with fake puller
+          throw new Error('unreachable');
+        },
+      };
+
+      const pullResult = dd31
+        ? await beginPullDD31(
+            profileID,
+            clientID,
+            clientGroupID,
+            beginPullReq,
+            fakePuller as PullerDD31,
+            requestID,
+            store,
+            new LogContext(),
+          )
+        : await beginPullSDD(
+            profileID,
+            clientID,
+            beginPullReq,
+            fakePuller as PullerSDD,
+            requestID,
+            store,
+            new LogContext(),
+          );
+
+      const result = await maybeEndPull(
+        store,
+        lc,
+        pullResult.syncHead,
+        clientID,
+        testSubscriptionsManagerOptions,
+      );
+      expect(Object.fromEntries(result.diffs)).to.deep.equal(
+        Object.fromEntries(expectedDiffsMap),
+      );
     };
 
-    const fakePuller = makeFakePullerDD31({
-      expPullReq,
-      expPullURL: pullURL,
-      expPullAuth: pullAuth,
-      expRequestID: requestID,
-      resp: pullResp,
-      err: undefined,
-    } as FakePullerArgsDD31 | FakePullerArgsDD31);
+    await t(
+      new Map(),
+      undefined,
+      [{op: 'put', key: 'key', value: 'value'}],
+      new Map([
+        [
+          '',
+          [
+            {
+              key: 'key',
+              newValue: 'value',
+              op: 'add',
+            },
+          ],
+        ],
+      ]),
+    );
 
-    const beginPullReq = {
-      pullURL,
-      pullAuth,
-      schemaVersion,
-      puller: () => {
-        // not used with fake puller
-        throw new Error('unreachable');
+    await t(
+      new Map([['foo', 'val']]),
+      undefined,
+      [{op: 'put', key: 'foo', value: 'new val'}],
+      new Map([
+        [
+          '',
+          [
+            {
+              op: 'change',
+              key: 'foo',
+              newValue: 'new val',
+              oldValue: 'val',
+            },
+          ],
+        ],
+      ]),
+    );
+
+    await t(
+      new Map([['a', '1']]),
+      undefined,
+      [{op: 'put', key: 'b', value: '2'}],
+      new Map([['', [{op: 'add', key: 'b', newValue: '2'}]]]),
+    );
+
+    await t(
+      new Map([['a', '1']]),
+      undefined,
+      [
+        {op: 'put', key: 'b', value: '3'},
+        {op: 'put', key: 'a', value: '2'},
+      ],
+      new Map([
+        [
+          '',
+          [
+            {op: 'change', key: 'a', oldValue: '1', newValue: '2'},
+            {op: 'add', key: 'b', newValue: '3'},
+          ],
+        ],
+      ]),
+    );
+
+    await t(
+      new Map([
+        ['a', '1'],
+        ['b', '2'],
+      ]),
+      undefined,
+      [{op: 'del', key: 'b'}],
+      new Map([['', [{op: 'del', key: 'b', oldValue: '2'}]]]),
+    );
+
+    await t(
+      new Map([
+        ['a', '1'],
+        ['b', '2'],
+      ]),
+      undefined,
+      [{op: 'del', key: 'c'}],
+      new Map(),
+    );
+
+    await t(
+      new Map([
+        ['a', '1'],
+        ['b', '2'],
+      ]),
+      undefined,
+      [{op: 'clear'}],
+      new Map([
+        [
+          '',
+          [
+            {op: 'del', key: 'a', oldValue: '1'},
+            {op: 'del', key: 'b', oldValue: '2'},
+          ],
+        ],
+      ]),
+    );
+
+    await t(
+      new Map([['a1', `{"id": "a-1", "x": 1}`]]),
+      {
+        name: 'i1',
+        prefix: '',
+        jsonPointer: '/id',
       },
-    };
-
-    const pullResult = await beginPullDD31(
-      profileID,
-      clientID,
-      clientGroupID,
-      beginPullReq,
-      fakePuller,
-      requestID,
-      store,
-      new LogContext(),
+      [{op: 'put', key: 'a2', value: {id: 'a-2', x: 2}}],
+      new Map([
+        [
+          '',
+          [
+            {
+              op: 'add',
+              key: 'a2',
+              newValue: deepFreeze({id: 'a-2', x: 2}),
+            },
+          ],
+        ],
+        [
+          'i1',
+          [
+            {
+              op: 'add',
+              key: '\u{0}a-2\u{0}a2',
+              newValue: deepFreeze({id: 'a-2', x: 2}),
+            },
+          ],
+        ],
+      ]),
     );
 
-    const result = await maybeEndPull(
-      store,
-      lc,
-      pullResult.syncHead,
-      clientID,
-      testSubscriptionsManagerOptions,
+    await t(
+      new Map(),
+      {
+        name: 'i1',
+        prefix: '',
+        jsonPointer: '/id',
+      },
+      [
+        {op: 'put', key: 'a1', value: {id: 'a-1', x: 1}},
+        {op: 'put', key: 'a2', value: {id: 'a-2', x: 2}},
+      ],
+      new Map([
+        [
+          '',
+          [
+            {
+              op: 'add',
+              key: 'a1',
+              newValue: deepFreeze({id: 'a-1', x: 1}),
+            },
+            {
+              op: 'add',
+              key: 'a2',
+              newValue: deepFreeze({id: 'a-2', x: 2}),
+            },
+          ],
+        ],
+        [
+          'i1',
+          [
+            {
+              op: 'add',
+              key: '\u{0}a-1\u{0}a1',
+              newValue: deepFreeze({id: 'a-1', x: 1}),
+            },
+            {
+              op: 'add',
+              key: '\u{0}a-2\u{0}a2',
+              newValue: deepFreeze({id: 'a-2', x: 2}),
+            },
+          ],
+        ],
+      ]),
     );
-    expect(Object.fromEntries(result.diffs)).to.deep.equal(
-      Object.fromEntries(expectedDiffsMap),
+
+    await t(
+      new Map([['a1', `{"id": "a-1", "x": 1}`]]),
+      {
+        name: 'i1',
+        prefix: '',
+        jsonPointer: '/id',
+      },
+      [{op: 'put', key: 'a2', value: {id: 'a-2', x: 2}}],
+      new Map([
+        [
+          '',
+          [
+            {
+              op: 'add',
+              key: 'a2',
+              newValue: deepFreeze({id: 'a-2', x: 2}),
+            },
+          ],
+        ],
+        [
+          'i1',
+          [
+            {
+              op: 'add',
+              key: '\u{0}a-2\u{0}a2',
+              newValue: deepFreeze({id: 'a-2', x: 2}),
+            },
+          ],
+        ],
+      ]),
     );
   };
 
-  await t(
-    new Map(),
-    undefined,
-    [{op: 'put', key: 'key', value: 'value'}],
-    new Map([
-      [
-        '',
-        [
-          {
-            key: 'key',
-            newValue: 'value',
-            op: 'add',
-          },
-        ],
-      ],
-    ]),
-  );
-
-  await t(
-    new Map([['foo', 'val']]),
-    undefined,
-    [{op: 'put', key: 'foo', value: 'new val'}],
-    new Map([
-      [
-        '',
-        [
-          {
-            op: 'change',
-            key: 'foo',
-            newValue: 'new val',
-            oldValue: 'val',
-          },
-        ],
-      ],
-    ]),
-  );
-
-  await t(
-    new Map([['a', '1']]),
-    undefined,
-    [{op: 'put', key: 'b', value: '2'}],
-    new Map([['', [{op: 'add', key: 'b', newValue: '2'}]]]),
-  );
-
-  await t(
-    new Map([['a', '1']]),
-    undefined,
-    [
-      {op: 'put', key: 'b', value: '3'},
-      {op: 'put', key: 'a', value: '2'},
-    ],
-    new Map([
-      [
-        '',
-        [
-          {op: 'change', key: 'a', oldValue: '1', newValue: '2'},
-          {op: 'add', key: 'b', newValue: '3'},
-        ],
-      ],
-    ]),
-  );
-
-  await t(
-    new Map([
-      ['a', '1'],
-      ['b', '2'],
-    ]),
-    undefined,
-    [{op: 'del', key: 'b'}],
-    new Map([['', [{op: 'del', key: 'b', oldValue: '2'}]]]),
-  );
-
-  await t(
-    new Map([
-      ['a', '1'],
-      ['b', '2'],
-    ]),
-    undefined,
-    [{op: 'del', key: 'c'}],
-    new Map(),
-  );
-
-  await t(
-    new Map([
-      ['a', '1'],
-      ['b', '2'],
-    ]),
-    undefined,
-    [{op: 'clear'}],
-    new Map([
-      [
-        '',
-        [
-          {op: 'del', key: 'a', oldValue: '1'},
-          {op: 'del', key: 'b', oldValue: '2'},
-        ],
-      ],
-    ]),
-  );
-
-  await t(
-    new Map([['a1', `{"id": "a-1", "x": 1}`]]),
-    {
-      name: 'i1',
-      prefix: '',
-      jsonPointer: '/id',
-    },
-    [{op: 'put', key: 'a2', value: {id: 'a-2', x: 2}}],
-    new Map([
-      [
-        '',
-        [
-          {
-            op: 'add',
-            key: 'a2',
-            newValue: deepFreeze({id: 'a-2', x: 2}),
-          },
-        ],
-      ],
-      [
-        'i1',
-        [
-          {
-            op: 'add',
-            key: '\u{0}a-2\u{0}a2',
-            newValue: deepFreeze({id: 'a-2', x: 2}),
-          },
-        ],
-      ],
-    ]),
-  );
-
-  await t(
-    new Map(),
-    {
-      name: 'i1',
-      prefix: '',
-      jsonPointer: '/id',
-    },
-    [
-      {op: 'put', key: 'a1', value: {id: 'a-1', x: 1}},
-      {op: 'put', key: 'a2', value: {id: 'a-2', x: 2}},
-    ],
-    new Map([
-      [
-        '',
-        [
-          {
-            op: 'add',
-            key: 'a1',
-            newValue: deepFreeze({id: 'a-1', x: 1}),
-          },
-          {
-            op: 'add',
-            key: 'a2',
-            newValue: deepFreeze({id: 'a-2', x: 2}),
-          },
-        ],
-      ],
-      [
-        'i1',
-        [
-          {
-            op: 'add',
-            key: '\u{0}a-1\u{0}a1',
-            newValue: deepFreeze({id: 'a-1', x: 1}),
-          },
-          {
-            op: 'add',
-            key: '\u{0}a-2\u{0}a2',
-            newValue: deepFreeze({id: 'a-2', x: 2}),
-          },
-        ],
-      ],
-    ]),
-  );
-
-  await t(
-    new Map([['a1', `{"id": "a-1", "x": 1}`]]),
-    {
-      name: 'i1',
-      prefix: '',
-      jsonPointer: '/id',
-    },
-    [{op: 'put', key: 'a2', value: {id: 'a-2', x: 2}}],
-    new Map([
-      [
-        '',
-        [
-          {
-            op: 'add',
-            key: 'a2',
-            newValue: deepFreeze({id: 'a-2', x: 2}),
-          },
-        ],
-      ],
-      [
-        'i1',
-        [
-          {
-            op: 'add',
-            key: '\u{0}a-2\u{0}a2',
-            newValue: deepFreeze({id: 'a-2', x: 2}),
-          },
-        ],
-      ],
-    ]),
-  );
+  test('dd31', () => t(true));
+  test('sdd', () => t(false));
 });
 
 test('pull for client group with multiple client local changes', async () => {
-  if (!DD31) {
-    return;
-  }
-
   const profileID = 'test-profile-id';
   const requestID = 'test-request-id';
   const clientID1 = 'test-client-id-1';
@@ -1804,10 +1813,6 @@ test('pull for client group with multiple client local changes', async () => {
 });
 
 suite('beginPull DD31', () => {
-  if (!DD31) {
-    return;
-  }
-
   const profileID = 'test-profile-id';
   const clientID1 = 'test-client-id-1';
   const clientGroupID1 = 'test-client-group-id-1';
@@ -1863,10 +1868,6 @@ suite('beginPull DD31', () => {
 });
 
 suite('handlePullResponseDD31', () => {
-  if (!DD31) {
-    return;
-  }
-
   const clientID1 = 'test-client-id-1';
   const clientID2 = 'test-client-id-2';
 
