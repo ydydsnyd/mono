@@ -1533,7 +1533,7 @@ test('pull mutate options', async () => {
   }
 
   // the first one is often off by a few ms
-  expect(log[0]).to.be.within(1000, 1030);
+  expect(log[0]).to.be.within(1000, 1060);
   expect(log.slice(1)).to.deep.equal([
     // 1000, checked above
     1030, 1060, 1090, 1120, 1150, 1180, 1680, 2180, 2205, 2230, 2255, 2280,
