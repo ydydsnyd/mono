@@ -80,15 +80,11 @@ function makeFakePusher(options: FakePusherArgs): Pusher {
 }
 
 test('try push [SDD]', async () => {
-  if (DD31) {
-    return;
-  }
-
   const clientGroupID = undefined;
   const clientID = 'test_client_id';
   const store = new dag.TestStore();
   const lc = new LogContext();
-  const b = new ChainBuilder(store);
+  const b = new ChainBuilder(store, undefined, false);
   await b.addGenesis(clientID);
   await b.addSnapshot([['foo', 'bar']], clientID);
   // chain[2] is an index change
@@ -286,7 +282,7 @@ test('try push [SDD]', async () => {
       pushURL,
       auth,
       pushSchemaVersion,
-      DD31 ? PUSH_VERSION_DD31 : PUSH_VERSION_SDD,
+      PUSH_VERSION_SDD,
     );
 
     expect(pusherResult).to.deep.equal(c.expPusherResult, `name: ${c.name}`);
@@ -294,10 +290,6 @@ test('try push [SDD]', async () => {
 });
 
 test('try push [DD31]', async () => {
-  if (!DD31) {
-    return;
-  }
-
   const clientGroupID = 'test_client_group_id';
   const clientID = 'test_client_id';
   const store = new dag.TestStore();
@@ -546,7 +538,7 @@ test('try push [DD31]', async () => {
       pushURL,
       auth,
       pushSchemaVersion,
-      DD31 ? PUSH_VERSION_DD31 : PUSH_VERSION_SDD,
+      PUSH_VERSION_DD31,
     );
 
     expect(pusherResult).to.deep.equal(c.expPusherResult, `name: ${c.name}`);
