@@ -1,7 +1,10 @@
 import {expect} from '@esm-bundle/chai';
 import {fakeHash} from '../hash.js';
 import {TestMemStore} from '../kv/test-mem-store.js';
-import {makeClientMap, setClientsForTesting} from './clients-test-helpers.js';
+import {
+  makeClientMapDD31,
+  setClientsForTesting,
+} from './clients-test-helpers.js';
 import {
   IDBDatabasesStore,
   IndexedDBDatabase,
@@ -121,7 +124,7 @@ suite('collectIDBDatabases', () => {
     const entries: Entries = [
       [
         makeIndexedDBDatabase({name: 'a', lastOpenedTimestampMS: 0}),
-        makeClientMap({
+        makeClientMapDD31({
           clientA1: {
             headHash: fakeHash('a1'),
             heartbeatTimestampMs: 0,
@@ -139,7 +142,7 @@ suite('collectIDBDatabases', () => {
     const entries: Entries = [
       [
         makeIndexedDBDatabase({name: 'a', lastOpenedTimestampMS: 0}),
-        makeClientMap({
+        makeClientMapDD31({
           clientA1: {
             headHash: fakeHash('a1'),
             heartbeatTimestampMs: 0,
@@ -148,7 +151,7 @@ suite('collectIDBDatabases', () => {
       ],
       [
         makeIndexedDBDatabase({name: 'b', lastOpenedTimestampMS: 1000}),
-        makeClientMap({
+        makeClientMapDD31({
           clientB1: {
             headHash: fakeHash('b1'),
             heartbeatTimestampMs: 1000,
@@ -165,7 +168,7 @@ suite('collectIDBDatabases', () => {
     const entries: Entries = [
       [
         makeIndexedDBDatabase({name: 'a', lastOpenedTimestampMS: 2000}),
-        makeClientMap({
+        makeClientMapDD31({
           clientA1: {
             headHash: fakeHash('a1'),
             heartbeatTimestampMs: 0,
@@ -178,7 +181,7 @@ suite('collectIDBDatabases', () => {
       ],
       [
         makeIndexedDBDatabase({name: 'b', lastOpenedTimestampMS: 1000}),
-        makeClientMap({
+        makeClientMapDD31({
           clientB1: {
             headHash: fakeHash('b1'),
             heartbeatTimestampMs: 1000,
@@ -196,7 +199,7 @@ suite('collectIDBDatabases', () => {
     const entries: Entries = [
       [
         makeIndexedDBDatabase({name: 'a', lastOpenedTimestampMS: 3000}),
-        makeClientMap({
+        makeClientMapDD31({
           clientA1: {
             headHash: fakeHash('a1'),
             heartbeatTimestampMs: 1000,
@@ -209,7 +212,7 @@ suite('collectIDBDatabases', () => {
       ],
       [
         makeIndexedDBDatabase({name: 'b', lastOpenedTimestampMS: 4000}),
-        makeClientMap({
+        makeClientMapDD31({
           clientB1: {
             headHash: fakeHash('b1'),
             heartbeatTimestampMs: 2000,
@@ -236,7 +239,7 @@ suite('collectIDBDatabases', () => {
           lastOpenedTimestampMS: 0,
           replicacheFormatVersion: REPLICACHE_FORMAT_VERSION + 1,
         }),
-        makeClientMap({
+        makeClientMapDD31({
           clientA1: {
             headHash: fakeHash('a1'),
             heartbeatTimestampMs: 0,
@@ -257,7 +260,7 @@ suite('collectIDBDatabases', () => {
           lastOpenedTimestampMS: 0,
           replicacheFormatVersion: REPLICACHE_FORMAT_VERSION_SDD - 1,
         }),
-        makeClientMap({
+        makeClientMapDD31({
           clientA1: {
             headHash: fakeHash('a1'),
             heartbeatTimestampMs: 0,
@@ -277,7 +280,7 @@ suite('collectIDBDatabases', () => {
           lastOpenedTimestampMS: 0,
           replicacheFormatVersion: REPLICACHE_FORMAT_VERSION_DD31,
         }),
-        makeClientMap({
+        makeClientMapDD31({
           clientA1: {
             headHash: fakeHash('a1'),
             heartbeatTimestampMs: 0,

@@ -6,6 +6,7 @@ import {
   getClients,
   initClientDD31,
   Client,
+  ClientMapDD31,
 } from './clients.js';
 import * as dag from '../dag/mod.js';
 import type * as sync from '../sync/mod.js';
@@ -28,50 +29,22 @@ export function setClientsForTesting(
   });
 }
 
-type PartialClient = Partial<Client> &
-  Pick<Client, 'heartbeatTimestampMs' | 'headHash'>;
-
 type PartialClientSDD = Partial<ClientSDD> &
   Pick<ClientSDD, 'heartbeatTimestampMs' | 'headHash'>;
 
 type PartialClientDD31 = Partial<ClientDD31> &
   Pick<ClientDD31, 'heartbeatTimestampMs' | 'headHash'>;
 
-export function makeClient(partialClient: PartialClient): Client {
-  const p31 = partialClient as PartialClientDD31;
-  if (typeof p31.clientGroupID === 'string') {
-    // Forced DD31 path
-    return {
-      clientGroupID: p31.clientGroupID,
-      headHash: p31.headHash,
-      heartbeatTimestampMs: p31.heartbeatTimestampMs,
-      tempRefreshHash: p31.tempRefreshHash ?? null,
-    };
-  }
+export function makeClientDD31(partialClient: PartialClientDD31): ClientDD31 {
+  return {
+    clientGroupID: partialClient.clientGroupID ?? 'make-client-group-id',
+    headHash: partialClient.headHash,
+    heartbeatTimestampMs: partialClient.heartbeatTimestampMs,
+    tempRefreshHash: partialClient.tempRefreshHash ?? null,
+  };
+}
 
-  const pSDD = partialClient as PartialClientSDD;
-  if (
-    typeof pSDD.mutationID === 'number' ||
-    typeof pSDD.lastServerAckdMutationID === 'number'
-  ) {
-    // Forced SDD path
-    return {
-      mutationID: 0,
-      lastServerAckdMutationID: 0,
-      ...partialClient,
-    };
-  }
-
-  if (DD31) {
-    return {
-      clientGroupID: 'make-client-group-id',
-      headHash: partialClient.headHash,
-      heartbeatTimestampMs: partialClient.heartbeatTimestampMs,
-      tempRefreshHash: null,
-    };
-  }
-
-  // SDD
+export function makeClientSDD(partialClient: PartialClientSDD): ClientSDD {
   return {
     mutationID: 0,
     lastServerAckdMutationID: 0,
@@ -79,12 +52,12 @@ export function makeClient(partialClient: PartialClient): Client {
   };
 }
 
-export function makeClientMap(
-  obj: Record<sync.ClientID, PartialClient>,
-): ClientMap {
+export function makeClientMapDD31(
+  obj: Record<sync.ClientID, PartialClientDD31>,
+): ClientMapDD31 {
   return new Map(
     Object.entries(obj).map(
-      ([id, client]) => [id, makeClient(client)] as const,
+      ([id, client]) => [id, makeClientDD31(client)] as const,
     ),
   );
 }

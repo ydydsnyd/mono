@@ -30,7 +30,7 @@ import {
 } from './clients.js';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import {ChainBuilder} from '../db/test-helpers.js';
-import {makeClient, setClientsForTesting} from './clients-test-helpers.js';
+import {makeClientDD31, setClientsForTesting} from './clients-test-helpers.js';
 import type {ClientID} from '../sync/client-id.js';
 import {ClientGroup, getClientGroup, setClientGroup} from './client-groups.js';
 import type {ClientGroupID} from '../sync/ids.js';
@@ -64,11 +64,11 @@ test('updateClients and getClients', async () => {
   const dagStore = new dag.TestStore();
   const clientMap = new Map(
     Object.entries({
-      client1: makeClient({
+      client1: makeClientDD31({
         heartbeatTimestampMs: 1000,
         headHash: headClient1Hash,
       }),
-      client2: makeClient({
+      client2: makeClientDD31({
         heartbeatTimestampMs: 3000,
         headHash: headClient2Hash,
       }),
@@ -86,12 +86,12 @@ test('updateClients and getClients for DD31', async () => {
   const dagStore = new dag.TestStore();
   const clientMap = new Map(
     Object.entries({
-      client1: makeClient({
+      client1: {
         heartbeatTimestampMs: 1000,
         headHash: headClient1Hash,
         clientGroupID: 'client-group-id-1',
         tempRefreshHash: refresh1Hash,
-      }),
+      },
       client2: {
         heartbeatTimestampMs: 3000,
         headHash: headClient2Hash,
@@ -125,11 +125,11 @@ test('updateClients and getClients sequence', async () => {
   const dagStore = new dag.TestStore();
   const clientMap1 = new Map(
     Object.entries({
-      client1: makeClient({
+      client1: makeClientDD31({
         heartbeatTimestampMs: 1000,
         headHash: headClient1Hash,
       }),
-      client2: makeClient({
+      client2: makeClientDD31({
         heartbeatTimestampMs: 3000,
         headHash: headClient2Hash,
       }),
@@ -138,7 +138,7 @@ test('updateClients and getClients sequence', async () => {
 
   const clientMap2 = new Map(
     Object.entries({
-      client3: makeClient({
+      client3: makeClientDD31({
         heartbeatTimestampMs: 4000,
         headHash: headClient3Hash,
       }),
@@ -166,11 +166,11 @@ test('updateClients properly manages refs to client heads when clients are remov
 
   const clientMap1 = new Map(
     Object.entries({
-      client1: makeClient({
+      client1: makeClientDD31({
         heartbeatTimestampMs: 1000,
         headHash: client1HeadHash,
       }),
-      client2: makeClient({
+      client2: makeClientDD31({
         heartbeatTimestampMs: 3000,
         headHash: client2HeadHash,
       }),
@@ -180,7 +180,7 @@ test('updateClients properly manages refs to client heads when clients are remov
   const client3HeadHash = headClient3Hash;
   const clientMap2 = new Map(
     Object.entries({
-      client3: makeClient({
+      client3: makeClientDD31({
         heartbeatTimestampMs: 4000,
         headHash: client3HeadHash,
       }),
@@ -213,15 +213,15 @@ test("updateClients properly manages refs to client heads when a client's head c
   const client1V2HeadHash = fakeHash('c12');
   const client2HeadHash = fakeHash('c2');
 
-  const client1V1 = makeClient({
+  const client1V1 = makeClientDD31({
     heartbeatTimestampMs: 1000,
     headHash: client1V1HeadHash,
   });
-  const client1V2 = makeClient({
+  const client1V2 = makeClientDD31({
     heartbeatTimestampMs: 2000,
     headHash: client1V2HeadHash,
   });
-  const client2 = makeClient({
+  const client2 = makeClientDD31({
     heartbeatTimestampMs: 3000,
     headHash: client2HeadHash,
   });
@@ -268,14 +268,14 @@ test("updateClients properly manages refs to client heads when a client's head c
 
 test('getClient', async () => {
   const dagStore = new dag.TestStore();
-  const client1 = makeClient({
+  const client1 = makeClientDD31({
     heartbeatTimestampMs: 1000,
     headHash: headClient1Hash,
   });
   const clientMap = new Map(
     Object.entries({
       client1,
-      client2: makeClient({
+      client2: makeClientDD31({
         heartbeatTimestampMs: 3000,
         headHash: headClient2Hash,
       }),

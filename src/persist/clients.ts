@@ -29,6 +29,8 @@ import {IndexDefinitions, indexDefinitionsEqual} from '../index-defs.js';
 import {createIndexBTree} from '../db/write.js';
 
 export type ClientMap = ReadonlyMap<sync.ClientID, ClientSDD | ClientDD31>;
+export type ClientMapDD31 = ReadonlyMap<sync.ClientID, ClientDD31>;
+export type ClientMapSDD = ReadonlyMap<sync.ClientID, ClientSDD>;
 
 export type ClientSDD = {
   /**

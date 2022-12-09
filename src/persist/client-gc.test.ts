@@ -5,7 +5,7 @@ import * as dag from '../dag/mod.js';
 import {ClientMap, getClients, setClient} from './clients.js';
 import {newUUIDHash} from '../hash.js';
 import {initClientGC, getLatestGCUpdate} from './client-gc.js';
-import {makeClient, setClientsForTesting} from './clients-test-helpers.js';
+import {makeClientSDD, setClientsForTesting} from './clients-test-helpers.js';
 import {assertNotUndefined} from '../asserts.js';
 
 let clock: SinonFakeTimers;
@@ -28,21 +28,21 @@ function awaitLatestGCUpdate(): Promise<ClientMap> {
 
 test('initClientGC starts 5 min interval that collects clients that have been inactive for > 7 days', async () => {
   const dagStore = new dag.TestStore();
-  const client1 = makeClient({
+  const client1 = makeClientSDD({
     heartbeatTimestampMs: START_TIME,
     headHash: newUUIDHash(),
     mutationID: 100,
     lastServerAckdMutationID: 90,
   });
-  const client2 = makeClient({
+  const client2 = makeClientSDD({
     heartbeatTimestampMs: START_TIME,
     headHash: newUUIDHash(),
   });
-  const client3 = makeClient({
+  const client3 = makeClientSDD({
     heartbeatTimestampMs: START_TIME + 6 * 60 * 1000,
     headHash: newUUIDHash(),
   });
-  const client4 = makeClient({
+  const client4 = makeClientSDD({
     heartbeatTimestampMs: START_TIME + 6 * 60 * 1000,
     headHash: newUUIDHash(),
   });

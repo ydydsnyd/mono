@@ -10,7 +10,7 @@ import {
 } from './heartbeat.js';
 import {ClientMap, ClientStateNotFoundError, getClients} from './clients.js';
 import {assertHash, fakeHash} from '../hash.js';
-import {makeClient, setClientsForTesting} from './clients-test-helpers.js';
+import {makeClientDD31, setClientsForTesting} from './clients-test-helpers.js';
 import {assertNotUndefined} from '../asserts.js';
 import {IDBNotFoundError, IDBStore} from '../kv/idb-store.js';
 import {dropIDBStore} from '../kv/mod.js';
@@ -109,11 +109,11 @@ test('startHeartbeats starts interval that writes heartbeat each minute', async 
 
 test('calling function returned by startHeartbeats, stops heartbeats', async () => {
   const dagStore = new dag.TestStore();
-  const client1 = makeClient({
+  const client1 = makeClientDD31({
     heartbeatTimestampMs: 1000,
     headHash: fakeHash('eadc1e1'),
   });
-  const client2 = makeClient({
+  const client2 = makeClientDD31({
     heartbeatTimestampMs: 3000,
     headHash: fakeHash('eadc1e2'),
   });
