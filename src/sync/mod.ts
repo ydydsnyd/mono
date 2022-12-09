@@ -3,7 +3,8 @@ export {
   maybeEndPull,
   beginPullDD31,
   beginPullSDD,
-  handlePullResponse,
+  handlePullResponseDD31,
+  handlePullResponseSDD,
 } from './pull.js';
 export {push} from './push.js';
 export {newRequestID} from './request-id.js';

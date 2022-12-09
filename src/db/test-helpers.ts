@@ -401,7 +401,13 @@ export class ChainBuilder {
   }
 
   addSyncSnapshot(takeIndexesFrom: number, clientID: ClientID) {
-    return addSyncSnapshot(this.chain, this.store, takeIndexesFrom, clientID);
+    return addSyncSnapshot(
+      this.chain,
+      this.store,
+      takeIndexesFrom,
+      clientID,
+      this.dd31,
+    );
   }
 
   async removeHead(): Promise<void> {

@@ -414,33 +414,6 @@ export type HandlePullResponseResult =
         | HandlePullResponseResultType.CookieMismatch;
     };
 
-export function handlePullResponse(
-  lc: LogContext,
-  store: dag.Store,
-  expectedBaseCookie: FrozenJSONValue,
-  response: PullResponseOKDD31 | PullResponseOKSDD,
-  clientID: ClientID,
-): Promise<HandlePullResponseResult> {
-  if (DD31) {
-    assertPullResponseDD31(response);
-    return handlePullResponseDD31(
-      lc,
-      store,
-      expectedBaseCookie,
-      response,
-      clientID,
-    );
-  }
-  assertPullResponseSDD(response);
-  return handlePullResponseSDD(
-    lc,
-    store,
-    expectedBaseCookie,
-    response,
-    clientID,
-  );
-}
-
 function badOrderMessage(
   name: string,
   receivedValue: unknown,

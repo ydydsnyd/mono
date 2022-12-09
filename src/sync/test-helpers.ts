@@ -18,6 +18,7 @@ export async function addSyncSnapshot(
   store: dag.Store,
   takeIndexesFrom: number,
   clientID: sync.ClientID,
+  dd31: boolean,
 ): Promise<Chain> {
   expect(chain.length >= 2).to.be.true;
 
@@ -39,7 +40,7 @@ export async function addSyncSnapshot(
   const cookie = `sync_cookie_${chain.length}`;
   await store.withWrite(async dagWrite => {
     const indexes = db.readIndexesForWrite(chain[takeIndexesFrom], dagWrite);
-    if (DD31) {
+    if (dd31) {
       const w = await db.newWriteSnapshotDD31(
         db.whenceHash(baseSnapshot.chunk.hash),
         {[clientID]: await baseSnapshot.getMutationID(clientID, dagWrite)},

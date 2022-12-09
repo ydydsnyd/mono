@@ -3,16 +3,7 @@ import {resolver} from '@rocicorp/resolver';
 import {ReadonlyJSONValue, deepFreeze} from './json.js';
 import type {JSONValue} from './json.js';
 import {Pusher, PushError} from './pusher.js';
-import {
-  assertPullResponseDD31,
-  assertPullResponseSDD,
-  PullerDD31,
-  PullError,
-  PullResponseDD31,
-  PullResponseOKDD31,
-  PullResponseOKSDD,
-  PullResponseSDD,
-} from './puller.js';
+import {PullerDD31, PullError, PullResponseDD31} from './puller.js';
 import {ReadTransactionImpl, WriteTransactionImpl} from './transactions.js';
 import type {ReadTransaction, WriteTransaction} from './transactions.js';
 import {ConnectionLoop, MAX_DELAY_MS, MIN_DELAY_MS} from './connection-loop.js';
@@ -82,27 +73,10 @@ export type BeginPullResult = {
   ok: boolean;
 };
 
-export type PokeSDD = {
-  baseCookie: ReadonlyJSONValue;
-  pullResponse: PullResponseSDD;
-};
-
 export type PokeDD31 = {
   baseCookie: ReadonlyJSONValue;
   pullResponse: PullResponseDD31;
 };
-
-export function assertPokeDD31(
-  poke: PokeSDD | PokeDD31,
-): asserts poke is PokeDD31 {
-  assertPullResponseDD31(poke.pullResponse);
-}
-
-export function assertPokeSDD(
-  poke: PokeSDD | PokeDD31,
-): asserts poke is PokeSDD {
-  assertPullResponseSDD(poke.pullResponse);
-}
 
 export const httpStatusUnauthorized = 401;
 
@@ -1240,11 +1214,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
    * @experimental This method is under development and its semantics will change.
    */
   async poke(poke: PokeDD31): Promise<void> {
-    // TODO(DD31): We keep the type of poke for now and cast to allow main to not
-    // introduce API changes until DD31 is on by default.
-    // poke is really PokeSDD | PokeDD31
-    const internalPoke = poke as PokeDD31 | PokeSDD;
-
     await this._ready;
     // TODO(MP) Previously we created a request ID here and included it with the
     // PullRequest to the server so we could tie events across client and server
@@ -1258,7 +1227,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       .addContext('handlePullResponse')
       .addContext('request_id', requestID);
 
-    const {pullResponse} = internalPoke;
+    const {pullResponse} = poke;
 
     if (isVersionNotSupportedResponse(pullResponse)) {
       this._handleVersionNotSupportedResponse(pullResponse);
@@ -1270,17 +1239,11 @@ export class Replicache<MD extends MutatorDefs = {}> {
       return;
     }
 
-    // TODO(DD31): We know that pullResponse is a PullResponseOK here but the
-    // DD31 in the first if statement above breaks the type inference.
-    const pullResponseOK = pullResponse as
-      | PullResponseOKDD31
-      | PullResponseOKSDD;
-
-    const result = await sync.handlePullResponse(
+    const result = await sync.handlePullResponseDD31(
       lc,
       this._memdag,
-      deepFreeze(internalPoke.baseCookie),
-      pullResponseOK,
+      deepFreeze(poke.baseCookie),
+      pullResponse,
       clientID,
     );
 
@@ -1290,7 +1253,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         break;
       case HandlePullResponseResultType.CookieMismatch:
         throw new Error(
-          'unexpected base cookie for poke: ' + JSON.stringify(internalPoke),
+          'unexpected base cookie for poke: ' + JSON.stringify(poke),
         );
         break;
       case HandlePullResponseResultType.NoOp:
