@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1670853821038,
+  "lastUpdate": 1670857119104,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -34421,6 +34421,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27441,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2d5a446d42807662a19b70dd908175c21a25ac06",
+          "message": "feat: Define PushRequest as V0 | V1 (#486)\n\nRemove `clientID` from `PushRequestV1`. It was only there for debugging purpose and it is more likely going to cause confusion than being helpful.\r\n\r\nTowards #165\r\nTowards #85",
+          "timestamp": "2022-12-12T14:57:19Z",
+          "tree_id": "eac7ff24f90644785f031a23b43d11ac885c3509",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/2d5a446d42807662a19b70dd908175c21a25ac06"
+        },
+        "date": 1670857108647,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 244213,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40486,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 243052,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 40153,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 98321,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27413,
             "unit": "bytes"
           }
         ]
