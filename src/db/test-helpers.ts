@@ -45,6 +45,7 @@ import {IndexWrite} from './index.js';
 import {Visitor} from './visitor.js';
 import {assert, assertNotUndefined} from '../asserts.js';
 import {addSyncSnapshot} from '../sync/test-helpers.js';
+import type {Cookie} from '../cookies.js';
 
 export type Chain = Commit<Meta>[];
 
@@ -214,7 +215,7 @@ async function addSnapshot(
   store: dag.Store,
   map: [string, JSONValue][] | undefined,
   clientID: ClientID,
-  cookie: JSONValue = `cookie_${chain.length}`,
+  cookie: Cookie = `cookie_${chain.length}`,
   lastMutationIDs: Record<ClientID, number> | undefined,
   indexDefinitions: IndexDefinitions | undefined,
   headName: string,
@@ -355,7 +356,7 @@ export class ChainBuilder {
   async addSnapshot(
     map: [string, JSONValue][] | undefined,
     clientID: ClientID,
-    cookie: JSONValue = `cookie_${this.chain.length}`,
+    cookie: Cookie = `cookie_${this.chain.length}`,
     lastMutationIDs?: Record<ClientID, number>,
     indexDefinitions?: IndexDefinitions,
   ): Promise<Commit<SnapshotMetaSDD | SnapshotMetaDD31>> {

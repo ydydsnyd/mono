@@ -32,11 +32,8 @@ import {emptyHash, Hash} from '../hash.js';
 import type {ClientGroupID, ClientID} from './ids.js';
 import {addDiffsForIndexes, DiffComputationConfig, DiffsMap} from './diff.js';
 import {assertObject} from '../asserts.js';
-import {
-  assertSnapshotMetaDD31,
-  commitIsLocalDD31,
-  compareCookies,
-} from '../db/commit.js';
+import {assertSnapshotMetaDD31, commitIsLocalDD31} from '../db/commit.js';
+import {compareCookies} from '../cookies.js';
 import {isErrorResponse} from '../error-responses.js';
 
 export const PULL_VERSION_SDD = 0;

@@ -14,6 +14,7 @@ import {
   isVersionNotSupportedResponse,
   VersionNotSupportedResponse,
 } from './error-responses.js';
+import type {Cookie} from './cookies.js';
 
 export type PullerResultSDD = {
   response?: PullResponseSDD | undefined;
@@ -44,7 +45,7 @@ export type PullerDD31 = (request: Request) => Promise<PullerResultDD31>;
  * The shape of a pull response under normal circumstances.
  */
 export type PullResponseOKSDD = {
-  cookie?: ReadonlyJSONValue | undefined;
+  cookie?: Cookie | undefined;
   lastMutationID: number;
   patch: PatchOperation[];
 };
@@ -53,8 +54,7 @@ export type PullResponseOKSDD = {
  * The shape of a pull response under normal circumstances.
  */
 export type PullResponseOKDD31 = {
-  // TODO(DD31): Use more specific types for cookie
-  cookie: ReadonlyJSONValue;
+  cookie: Cookie;
   // All last mutation IDs from clients in clientGroupID that changed
   // between PullRequest.cookie and PullResponseOK.cookie.
   lastMutationIDChanges: Record<ClientID, number>;

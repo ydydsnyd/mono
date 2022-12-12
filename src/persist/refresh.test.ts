@@ -18,6 +18,7 @@ import {refresh} from './refresh.js';
 import {assert, assertNotUndefined} from '../asserts.js';
 import type {MutatorDefs} from '../replicache.js';
 import type {WriteTransaction} from '../transactions.js';
+import type {Cookie} from '../cookies.js';
 
 async function makeChain(
   store: dag.Store,
@@ -437,7 +438,7 @@ suite('refresh', () => {
       store: dag.Store;
       basisHash?: Hash | null;
       lastMutationIDs: Record<sync.ClientID, number>;
-      cookieJSON: JSONValue;
+      cookieJSON: Cookie;
       valueHash?: Hash;
       indexes?: db.IndexRecord[];
     }): Promise<db.Commit<db.SnapshotMetaDD31>> {

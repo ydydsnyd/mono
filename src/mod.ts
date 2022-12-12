@@ -93,3 +93,4 @@ export {deleteAllReplicacheData} from './persist/mod.js';
 export type {IterableUnion} from './iterable-union.js';
 
 export {version} from './version.js';
+export type {Cookie} from './cookies.js';

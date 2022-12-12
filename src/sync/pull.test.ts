@@ -46,6 +46,7 @@ import {
 import type {DiffsMap} from './diff.js';
 import {testSubscriptionsManagerOptions} from '../test-util.js';
 import {BTreeRead} from '../btree/read.js';
+import type {Cookie} from '../cookies.js';
 
 test('begin try pull SDD', async () => {
   const clientID = 'test_client_id';
@@ -1887,7 +1888,7 @@ suite('handlePullResponseDD31', () => {
     expectedLastMutationIDs = responseLastMutationIDChanges,
   }: {
     expectedBaseCookieJSON: ReadonlyJSONValue;
-    responseCookie: ReadonlyJSONValue;
+    responseCookie: Cookie;
     expectedResultType: HandlePullResponseResultType;
     setupChain?: (b: ChainBuilder) => Promise<unknown>;
     responseLastMutationIDChanges?: {[clientID: string]: number};

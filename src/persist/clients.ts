@@ -10,13 +10,13 @@ import {hasOwn} from '../has-own.js';
 import {uuid as makeUuid} from '../uuid.js';
 import {
   assertSnapshotCommitDD31,
-  compareCookies,
   getRefs,
   toChunkIndexDefinition,
   newSnapshotCommitDataDD31,
   ChunkIndexDefinition,
   chunkIndexDefinitionEqualIgnoreName,
 } from '../db/commit.js';
+import {compareCookies, FrozenCookie} from '../cookies.js';
 import type {ClientID} from '../sync/ids.js';
 import {
   ClientGroup,
@@ -246,7 +246,7 @@ export function initClientDD31(
   return perdag.withWrite(async dagWrite => {
     async function setClientsAndClientGroupAndCommit(
       basisHash: Hash | null,
-      cookieJSON: FrozenJSONValue,
+      cookieJSON: FrozenCookie,
       valueHash: Hash,
       indexRecords: readonly db.IndexRecord[],
     ): Promise<[sync.ClientID, ClientDD31, ClientMap, boolean]> {
@@ -427,7 +427,7 @@ export async function findMatchingClient(
   mutatorNames: string[],
   indexes: IndexDefinitions,
 ): Promise<FindMatchingClientResult> {
-  let newestCookie: FrozenJSONValue | undefined;
+  let newestCookie: FrozenCookie | undefined;
   let bestSnapshot: db.Commit<db.SnapshotMetaDD31> | undefined;
   const mutatorNamesSet = new Set(mutatorNames);
 

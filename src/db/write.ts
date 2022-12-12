@@ -34,6 +34,7 @@ import {assert} from '../asserts.js';
 import type {IndexDefinition, IndexDefinitions} from '../index-defs.js';
 import type {DiffComputationConfig} from '../sync/diff.js';
 import type {FrozenJSONValue} from '../json.js';
+import type {FrozenCookie} from '../cookies.js';
 
 export class Write extends Read {
   private readonly _dagWrite: dag.Write;
@@ -423,7 +424,7 @@ export async function newWriteLocal(
 export async function newWriteSnapshotSDD(
   whence: Whence,
   lastMutationID: number,
-  cookieJSON: FrozenJSONValue,
+  cookieJSON: FrozenCookie,
   dagWrite: dag.Write,
   indexes: Map<string, IndexWrite>,
   clientID: ClientID,
@@ -444,7 +445,7 @@ export async function newWriteSnapshotSDD(
 export async function newWriteSnapshotDD31(
   whence: Whence,
   lastMutationIDs: Record<ClientID, number>,
-  cookieJSON: FrozenJSONValue,
+  cookieJSON: FrozenCookie,
   dagWrite: dag.Write,
   indexes: Map<string, IndexWrite>,
   clientID: ClientID,

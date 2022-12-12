@@ -1,5 +1,6 @@
 import {assertObject, throwInvalidType} from './asserts.js';
 import {skipAssertJSONValue, skipFreeze, skipFrozenAsserts} from './config.js';
+import type {FrozenCookie, Cookie} from './cookies.js';
 import {hasOwn} from './has-own.js';
 
 /** The values that can be represented in JSON */
@@ -260,6 +261,7 @@ const deepFrozenObjects = new WeakSet<object>();
  * This is controlled by `skipFreeze` which is true in release mode.
  */
 export function deepFreeze(v: undefined): undefined;
+export function deepFreeze(v: Cookie): FrozenCookie;
 export function deepFreeze(v: ReadonlyJSONValue): FrozenJSONValue;
 export function deepFreeze(
   v: ReadonlyJSONValue | undefined,

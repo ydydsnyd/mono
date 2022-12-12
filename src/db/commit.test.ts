@@ -483,7 +483,7 @@ test('load roundtrip', () => {
     new Error('Invalid type: null, expected string'),
   );
 
-  const cookie = deepFreeze({foo: 'bar'});
+  const cookie = deepFreeze({foo: 'bar', order: 1});
   for (const basisHash of [null, fakeHash('000'), fakeHash('face3')]) {
     t(
       makeCommit(

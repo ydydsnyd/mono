@@ -12,7 +12,7 @@ import {
 import * as kv from './kv/mod.js';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import * as sinon from 'sinon';
-import type {JSONValue, ReadonlyJSONValue} from './json.js';
+import type {JSONValue} from './json.js';
 
 // fetch-mock has invalid d.ts file so we removed that on npm install.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -30,6 +30,7 @@ import {
   teardownForTest as teardownIDBDatabasesStoreForTest,
 } from './persist/idb-databases-store-db-name.js';
 import {resolver} from '@rocicorp/resolver';
+import type {Cookie} from './cookies.js';
 
 export class ReplicacheTest<
   // eslint-disable-next-line @typescript-eslint/ban-types
@@ -331,7 +332,7 @@ export function makePullResponseDD31(
   clientID: ClientID,
   lastMutationID: number,
   patch: PatchOperation[] = [],
-  cookie: ReadonlyJSONValue = '',
+  cookie: Cookie = '',
 ): PullResponseDD31 {
   return {
     cookie,
