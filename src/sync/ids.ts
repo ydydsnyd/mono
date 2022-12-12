@@ -2,7 +2,7 @@
 
 /**
  * The ID describing a group of clients. All clients in the same group share a
- * perdag.
+ * persistent storage (IDB).
  */
 export type ClientGroupID = string;
 

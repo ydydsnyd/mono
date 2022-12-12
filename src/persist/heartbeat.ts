@@ -1,5 +1,5 @@
 import type {LogContext} from '@rocicorp/logger';
-import type {ClientID} from '../sync/client-id.js';
+import type {ClientID} from '../sync/ids.js';
 import type * as dag from '../dag/mod.js';
 import {
   ClientMap,

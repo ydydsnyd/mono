@@ -36,7 +36,7 @@ import {
   createIndexBTree,
 } from './write.js';
 import {JSONValue, deepFreeze} from '../json.js';
-import type {ClientID} from '../sync/client-id.js';
+import type {ClientID} from '../sync/ids.js';
 import {emptyHash, Hash} from '../hash.js';
 import {BTreeRead, BTreeWrite, Node} from '../btree/mod.js';
 import * as btree from '../btree/mod.js';

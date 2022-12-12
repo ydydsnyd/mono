@@ -31,7 +31,7 @@ import {
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import {ChainBuilder} from '../db/test-helpers.js';
 import {makeClientDD31, setClientsForTesting} from './clients-test-helpers.js';
-import type {ClientID} from '../sync/client-id.js';
+import type {ClientID} from '../sync/ids.js';
 import {ClientGroup, getClientGroup, setClientGroup} from './client-groups.js';
 import type {ClientGroupID} from '../sync/ids.js';
 import type {IndexDefinitions} from '../index-defs.js';

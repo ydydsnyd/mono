@@ -14,7 +14,7 @@ import {
   PUSH_VERSION_DD31,
 } from './push.js';
 import type {Pusher, PusherResult} from '../pusher.js';
-import type {ClientGroupID} from './client-group-id.js';
+import type {ClientGroupID} from './ids.js';
 import {deepFreeze} from '../json.js';
 
 type FakePusherArgs = {

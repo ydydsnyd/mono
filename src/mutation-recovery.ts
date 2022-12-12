@@ -19,9 +19,8 @@ import {
 } from './replicache.js';
 import {IDBStore} from './kv/idb-store.js';
 import {assertClientSDD, setClients} from './persist/clients.js';
-import type {ClientID} from './sync/client-id.js';
+import type {ClientID, ClientGroupID} from './sync/ids.js';
 import type {Pusher} from './pusher.js';
-import type {ClientGroupID} from './sync/client-group-id.js';
 import {PUSH_VERSION_DD31, PUSH_VERSION_SDD} from './sync/push.js';
 import {
   isClientStateNotFoundResponse,

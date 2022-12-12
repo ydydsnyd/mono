@@ -66,7 +66,7 @@ export type {
   PullRequestDD31 as PullRequestV1,
 } from './sync/pull.js';
 export type {PushRequest, Mutation} from './sync/push.js';
-export type {ClientID} from './sync/ids.js';
+export type {ClientID, ClientGroupID} from './sync/ids.js';
 
 export {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
 

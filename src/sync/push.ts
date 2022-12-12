@@ -12,8 +12,7 @@ import {callJSRequest} from './js-request.js';
 import {toError} from '../to-error.js';
 import {commitIsLocalDD31, commitIsLocalSDD} from '../db/commit.js';
 import {assert} from '../asserts.js';
-import type {ClientGroupID} from './client-group-id.js';
-import type {ClientID} from './ids.js';
+import type {ClientID, ClientGroupID} from './ids.js';
 import type {FrozenJSONValue, ReadonlyJSONValue} from '../json.js';
 
 export const PUSH_VERSION_SDD = 0;
