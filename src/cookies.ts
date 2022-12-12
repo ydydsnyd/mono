@@ -3,8 +3,8 @@ import {stringCompare} from './string-compare.js';
 
 /**
  * A cookie is a value that is used to determine the order of snapshots. It
- * needs to be comparable. This can be a string, number or if if you want to use
- * a more complex value, you can use an object with a `order` property. The
+ * needs to be comparable. This can be a `string`, `number` or if you want to
+ * use a more complex value, you can use an object with an `order` property. The
  * value `null` is considered to be less than any other cookie and it is used
  * for the first pull when no cookie has been set.
  */
