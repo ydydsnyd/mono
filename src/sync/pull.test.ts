@@ -1471,7 +1471,7 @@ suite('changed keys', () => {
 
       const fakePuller: PullerDD31 | PullerSDD = dd31
         ? makeFakePullerDD31({
-            expPullReq: expPullReq as PullRequestDD31<ReadonlyJSONValue>,
+            expPullReq: expPullReq as PullRequestDD31,
             expPullURL: pullURL,
             expPullAuth: pullAuth,
             expRequestID: requestID,
@@ -1479,7 +1479,7 @@ suite('changed keys', () => {
             err: undefined,
           })
         : makeFakePullerSDD({
-            expPullReq: expPullReq as PullRequestSDD<ReadonlyJSONValue>,
+            expPullReq: expPullReq as PullRequestSDD,
             expPullURL: pullURL,
             expPullAuth: pullAuth,
             expRequestID: requestID,

@@ -33,7 +33,7 @@ import type {ClientGroupID, ClientID} from './ids.js';
 import {addDiffsForIndexes, DiffComputationConfig, DiffsMap} from './diff.js';
 import {assertObject} from '../asserts.js';
 import {assertSnapshotMetaDD31, commitIsLocalDD31} from '../db/commit.js';
-import {compareCookies} from '../cookies.js';
+import {compareCookies, Cookie} from '../cookies.js';
 import {isErrorResponse} from '../error-responses.js';
 
 export const PULL_VERSION_SDD = 0;
@@ -43,39 +43,40 @@ export const PULL_VERSION_DD31 = 1;
  * The JSON value used as the body when doing a POST to the [pull
  * endpoint](/reference/server-pull).
  */
-export type PullRequest = {
-  profileID: string;
-  clientID: ClientID;
-  cookie: ReadonlyJSONValue;
-  lastMutationID: number;
-  pullVersion: number;
+export type PullRequest = PullRequestDD31 | PullRequestSDD;
+
+/**
+ * The JSON value used as the body when doing a POST to the [pull
+ * endpoint](/reference/server-pull). This is the legacy version (V0) and it is
+ * still used when recovering mutations from old clients.
+ */
+export type PullRequestSDD = {
+  pullVersion: 0;
   // schemaVersion can optionally be used by the customer's app
   // to indicate to the data layer what format of Client View the
   // app understands.
   schemaVersion: string;
-};
-
-export type PullRequestSDD<Cookie = ReadonlyJSONValue> = Omit<
-  PullRequest,
-  'cookie' | 'pullVersion'
-> & {
+  profileID: string;
   cookie: Cookie;
-  pullVersion: typeof PULL_VERSION_SDD;
+
+  clientID: ClientID;
+  lastMutationID: number;
 };
 
 /**
  * The JSON value used as the body when doing a POST to the [pull
  * endpoint](/reference/server-pull).
  */
-export type PullRequestDD31<Cookie = ReadonlyJSONValue> = {
-  profileID: string;
-  clientGroupID: ClientGroupID;
-  cookie: Cookie;
-  pullVersion: typeof PULL_VERSION_DD31;
+export type PullRequestDD31 = {
+  pullVersion: 1;
   // schemaVersion can optionally be used by the customer's app
   // to indicate to the data layer what format of Client View the
   // app understands.
   schemaVersion: string;
+  profileID: string;
+  cookie: Cookie;
+
+  clientGroupID: ClientGroupID;
 };
 
 type BeginPullRequest = {
@@ -125,7 +126,7 @@ export async function beginPullSDD(
     return [lastMutationID, baseCookie];
   });
 
-  const pullReq: PullRequestSDD<FrozenJSONValue> = {
+  const pullReq: PullRequestSDD = {
     profileID,
     clientID,
     cookie: baseCookie,
@@ -212,7 +213,7 @@ export async function beginPullDD31(
     return baseCookie;
   });
 
-  const pullReq: PullRequestDD31<ReadonlyJSONValue> = {
+  const pullReq: PullRequestDD31 = {
     profileID,
     clientGroupID,
     cookie: baseCookie,
@@ -671,7 +672,7 @@ export async function maybeEndPull<M extends db.LocalMeta>(
 async function callPullerSDD(
   puller: PullerSDD,
   url: string,
-  body: PullRequestSDD<ReadonlyJSONValue>,
+  body: PullRequestSDD,
   auth: string,
   requestID: string,
 ): Promise<PullerResultSDD> {
@@ -687,7 +688,7 @@ async function callPullerSDD(
 async function callPullerDD31(
   puller: PullerDD31,
   url: string,
-  body: PullRequestDD31<ReadonlyJSONValue>,
+  body: PullRequestDD31,
   auth: string,
   requestID: string,
 ): Promise<PullerResultDD31> {

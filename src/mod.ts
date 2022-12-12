@@ -60,7 +60,11 @@ export type {
   Write as ExperimentalKVWrite,
 } from './kv/store.js';
 
-export type {PullRequest} from './sync/pull.js';
+export type {
+  PullRequest,
+  PullRequestSDD as PullRequestV0,
+  PullRequestDD31 as PullRequestV1,
+} from './sync/pull.js';
 export type {PushRequest, Mutation} from './sync/push.js';
 export type {ClientID} from './sync/ids.js';
 
