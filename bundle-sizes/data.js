@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1670620474951,
+  "lastUpdate": 1670849467311,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -34313,6 +34313,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27372,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c83d6f2c9a039d977dd6a65cfee6a5d4c4c764d6",
+          "message": "feat: Introduce a cookie type (#484)\n\nWith DD31 we need cookies to be ordered. A cookie is either a string or\r\na number or an object with an `order` property. For the genesis commit\r\nthe value `null` is used for the cookie.\r\n\r\nWhen comparing cookies where one cookies is a string and the other is a\r\nnumber we compare the string representation of the number.\r\n\r\nCloses #474\r\nTowards #165",
+          "timestamp": "2022-12-12T13:50:03+01:00",
+          "tree_id": "1f8aac8bcb15090d058ad8e651d2ce6b9ece1aec",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/c83d6f2c9a039d977dd6a65cfee6a5d4c4c764d6"
+        },
+        "date": 1670849459716,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 244229,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40485,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 243068,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 40136,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 98332,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27409,
             "unit": "bytes"
           }
         ]
