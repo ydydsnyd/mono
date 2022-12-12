@@ -923,6 +923,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         if (this._subscriptions.hasPendingSubscriptionRuns) {
           await Promise.resolve();
         }
+        const {meta} = mutation;
         syncHead = await this._memdag.withWrite(dagWrite =>
           db.rebaseMutationAndCommit(
             mutation,
@@ -931,7 +932,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
             sync.SYNC_HEAD_NAME,
             this._mutatorRegistry,
             lc,
-            clientID,
+            db.isLocalMetaDD31(meta) ? meta.clientID : clientID,
           ),
         );
       }
@@ -1491,9 +1492,9 @@ export class Replicache<MD extends MutatorDefs = {}> {
     await this._ready;
     const clientID = await this._clientIDPromise;
     return this._memdag.withRead(async dagRead => {
-      const dbRead = await db.readFromDefaultHead(dagRead);
-      const tx = new ReadTransactionImpl(clientID, dbRead, this._lc);
       try {
+        const dbRead = await db.readFromDefaultHead(dagRead);
+        const tx = new ReadTransactionImpl(clientID, dbRead, this._lc);
         return await body(tx);
       } catch (ex) {
         throw await this._convertToClientStateNotFoundError(ex);
@@ -1553,22 +1554,22 @@ export class Replicache<MD extends MutatorDefs = {}> {
     await this._ready;
     const clientID = await this._clientIDPromise;
     return await this._memdag.withWrite(async dagWrite => {
-      const whence: db.Whence = db.whenceHead(db.DEFAULT_HEAD_NAME);
-      const originalHash = null;
-
-      const dbWrite = await db.newWriteLocal(
-        whence,
-        name,
-        frozenArgs,
-        originalHash,
-        dagWrite,
-        timestamp,
-        clientID,
-        true,
-      );
-
-      const tx = new WriteTransactionImpl(clientID, dbWrite, this._lc);
       try {
+        const whence: db.Whence = db.whenceHead(db.DEFAULT_HEAD_NAME);
+        const originalHash = null;
+
+        const dbWrite = await db.newWriteLocal(
+          whence,
+          name,
+          frozenArgs,
+          originalHash,
+          dagWrite,
+          timestamp,
+          clientID,
+          true,
+        );
+
+        const tx = new WriteTransactionImpl(clientID, dbWrite, this._lc);
         const result: R = await mutatorImpl(tx, args);
         throwIfClosed(dbWrite);
         const [ref, diffs] = await dbWrite.commitWithDiffs(

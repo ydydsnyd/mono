@@ -180,7 +180,7 @@ export async function refresh(
               newMemdagHeadHash,
               mutators,
               lc,
-              clientID,
+              newMemdagMutations[i].meta.clientID,
             )
           ).chunk.hash;
         }
