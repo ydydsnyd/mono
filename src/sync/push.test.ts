@@ -334,7 +334,6 @@ test('try push [DD31]', async () => {
       expPushReq: {
         profileID,
         clientGroupID,
-        clientID,
         mutations: [
           {
             clientID,
@@ -361,7 +360,6 @@ test('try push [DD31]', async () => {
       expPushReq: {
         profileID,
         clientGroupID,
-        clientID,
         mutations: [
           // These mutations aren't actually added to the chain until the test
           // case runs, but we happen to know how they are created by the db
@@ -398,7 +396,6 @@ test('try push [DD31]', async () => {
       expPushReq: {
         profileID,
         clientGroupID: clientGroupID as ClientGroupID,
-        clientID,
         mutations: [
           // These mutations aren't actually added to the chain until the test
           // case runs, but we happen to know how they are created by the db
@@ -436,7 +433,6 @@ test('try push [DD31]', async () => {
       expPushReq: {
         profileID,
         clientGroupID: clientGroupID as ClientGroupID,
-        clientID,
         mutations: [
           // These mutations aren't actually added to the chain until the test
           // case runs, but we happen to know how they are created by the db

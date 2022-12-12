@@ -28,6 +28,7 @@ import sinon from 'sinon';
 import fetchMock from 'fetch-mock/esm/client';
 import {initClientWithClientID} from './persist/clients-test-helpers.js';
 import {
+  assertPushRequestDD31,
   PushRequestDD31,
   PushRequestSDD,
   PUSH_VERSION_DD31,
@@ -99,7 +100,7 @@ async function createAndPersistClientWithPendingLocalDD31(
 suite('DD31', () => {
   initReplicacheTesting();
 
-  function createPushBodyDD31(
+  function createPushRequestBodyDD31(
     profileID: string,
     clientGroupID: sync.ClientGroupID,
     clientID: sync.ClientID,
@@ -109,7 +110,6 @@ suite('DD31', () => {
     return {
       profileID,
       clientGroupID,
-      clientID,
       mutations: localMetas.map(localMeta => ({
         clientID,
         id: localMeta.mutationID,
@@ -204,7 +204,6 @@ suite('DD31', () => {
     expect(await pushCalls[0].request.json()).to.deep.equal({
       profileID,
       clientGroupID: client1.clientGroupID,
-      clientID: client1ID,
       mutations: [
         {
           clientID: client1ID,
@@ -383,7 +382,6 @@ suite('DD31', () => {
     expect(await pushCalls[0].request.json()).to.deep.equal({
       profileID,
       clientGroupID: client1.clientGroupID,
-      clientID: client1ID,
       mutations: [
         {
           clientID: client1ID,
@@ -631,7 +629,7 @@ suite('DD31', () => {
     const pushCalls = fetchMock.calls(pushURL);
     expect(pushCalls.length).to.equal(3);
     expect(await pushCalls[0].request.json()).to.deep.equal(
-      createPushBodyDD31(
+      createPushRequestBodyDD31(
         profileID,
         client1.clientGroupID,
         client1ID,
@@ -640,7 +638,7 @@ suite('DD31', () => {
       ),
     );
     expect(await pushCalls[1].request.json()).to.deep.equal(
-      createPushBodyDD31(
+      createPushRequestBodyDD31(
         profileID,
         client3.clientGroupID,
         client3ID,
@@ -649,7 +647,7 @@ suite('DD31', () => {
       ),
     );
     expect(await pushCalls[2].request.json()).to.deep.equal(
-      createPushBodyDD31(
+      createPushRequestBodyDD31(
         profileID,
         client4.clientGroupID,
         client4ID,
@@ -832,17 +830,16 @@ suite('DD31', () => {
         };
       });
 
-    const pushRequestJsonBodies: JSONObject[] = [];
+    const pushRequestJSONBodies: PushRequestDD31[] = [];
     const pullRequestJsonBodies: JSONObject[] = [];
     fetchMock.reset();
     fetchMock.post(
       pushURL,
       async (_url: string, _options: RequestInit, request: Request) => {
-        const requestJson = await request.json();
-        assertJSONObject(requestJson);
-        pushRequestJsonBodies.push(requestJson);
-        const {clientID} = requestJson;
-        if (clientID === client2ID) {
+        const requestJSON = await request.json();
+        assertPushRequestDD31(requestJSON);
+        pushRequestJSONBodies.push(requestJSON);
+        if (requestJSON.mutations.find(m => m.clientID === client2ID)) {
           throw new Error('test error in push');
         } else {
           return 'ok';
@@ -877,9 +874,9 @@ suite('DD31', () => {
 
     await rep.recoverMutations();
 
-    expect(pushRequestJsonBodies.length).to.equal(3);
-    expect(pushRequestJsonBodies[0]).to.deep.equal(
-      createPushBodyDD31(
+    expect(pushRequestJSONBodies.length).to.equal(3);
+    expect(pushRequestJSONBodies[0]).to.deep.equal(
+      createPushRequestBodyDD31(
         profileID,
         client1.clientGroupID,
         client1ID,
@@ -887,8 +884,8 @@ suite('DD31', () => {
         schemaVersion,
       ),
     );
-    expect(pushRequestJsonBodies[1]).to.deep.equal(
-      createPushBodyDD31(
+    expect(pushRequestJSONBodies[1]).to.deep.equal(
+      createPushRequestBodyDD31(
         profileID,
         client2.clientGroupID,
         client2ID,
@@ -896,8 +893,8 @@ suite('DD31', () => {
         schemaVersion,
       ),
     );
-    expect(pushRequestJsonBodies[2]).to.deep.equal(
-      createPushBodyDD31(
+    expect(pushRequestJSONBodies[2]).to.deep.equal(
+      createPushRequestBodyDD31(
         profileID,
         client3.clientGroupID,
         client3ID,
@@ -1083,7 +1080,7 @@ suite('DD31', () => {
     const pushCalls = fetchMock.calls(pushURL);
     expect(pushCalls.length).to.equal(2);
     expect(await pushCalls[0].request.json()).to.deep.equal(
-      createPushBodyDD31(
+      createPushRequestBodyDD31(
         profileID,
         client1.clientGroupID,
         client1ID,
@@ -1092,7 +1089,7 @@ suite('DD31', () => {
       ),
     );
     expect(await pushCalls[1].request.json()).to.deep.equal(
-      createPushBodyDD31(
+      createPushRequestBodyDD31(
         profileID,
         client3.clientGroupID,
         client3ID,
@@ -1265,7 +1262,7 @@ suite('DD31', () => {
     const pushCalls = fetchMock.calls(pushURL);
     expect(pushCalls.length).to.equal(1);
     expect(await pushCalls[0].request.json()).to.deep.equal(
-      createPushBodyDD31(
+      createPushRequestBodyDD31(
         profileID,
         client2.clientGroupID,
         client2ID,
@@ -1414,7 +1411,7 @@ suite('DD31', () => {
     const pushCalls = fetchMock.calls(pushURL);
     expect(pushCalls.length).to.equal(1);
     expect(await pushCalls[0].request.json()).to.deep.equal(
-      createPushBodyDD31(
+      createPushRequestBodyDD31(
         profileID,
         client1.clientGroupID,
         client1ID,
@@ -1721,7 +1718,6 @@ suite('DD31', () => {
         schemaVersion: schemaVersion1,
       };
       const pushRequestBody2: PushRequestDD31 = {
-        clientID: client2ID,
         clientGroupID: client2.clientGroupID,
         mutations: [
           {
@@ -1970,7 +1966,6 @@ suite('DD31', () => {
     await rep.recoverMutations();
 
     const pushRequestBody1: PushRequestDD31 = {
-      clientID: client1ID,
       clientGroupID: client1.clientGroupID,
       mutations: [
         {

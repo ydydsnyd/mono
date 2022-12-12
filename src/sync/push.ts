@@ -11,9 +11,20 @@ import {
 import {callJSRequest} from './js-request.js';
 import {toError} from '../to-error.js';
 import {commitIsLocalDD31, commitIsLocalSDD} from '../db/commit.js';
-import {assert} from '../asserts.js';
 import type {ClientID, ClientGroupID} from './ids.js';
-import type {FrozenJSONValue, ReadonlyJSONValue} from '../json.js';
+import {
+  assert,
+  assertArray,
+  assertNumber,
+  assertObject,
+  assertString,
+} from '../asserts.js';
+import {
+  assertJSONValue,
+  FrozenJSONValue,
+  ReadonlyJSONObject,
+  ReadonlyJSONValue,
+} from '../json.js';
 
 export const PUSH_VERSION_SDD = 0;
 export const PUSH_VERSION_DD31 = 1;
@@ -22,52 +33,113 @@ export const PUSH_VERSION_DD31 = 1;
  * The JSON value used as the body when doing a POST to the [push
  * endpoint](/reference/server-push).
  */
-export type PushRequest = {
-  profileID: string;
-  clientID: ClientID;
-  mutations: Mutation[];
-  pushVersion: number;
+export type PushRequest = PushRequestSDD | PushRequestDD31;
+
+export type PushRequestSDD = {
+  pushVersion: 0;
   /**
    * `schemaVersion` can optionally be used to specify to the push endpoint
    * version information about the mutators the app is using (e.g., format of
    * mutator args).
    */
   schemaVersion: string;
-};
+  profileID: string;
 
-export type PushRequestSDD = Omit<PushRequest, 'mutations' | 'pushVersion'> & {
+  clientID: ClientID;
   mutations: MutationSDD[];
-  pushVersion: typeof PUSH_VERSION_SDD;
-};
-
-export type PushRequestDD31 = Omit<PushRequest, 'mutations' | 'pushVersion'> & {
-  clientGroupID: ClientGroupID;
-  mutations: MutationDD31[];
-  pushVersion: typeof PUSH_VERSION_DD31;
 };
 
 /**
- * Mutation describes a single mutation done on the client.
+ * The JSON value used as the body when doing a POST to the [push
+ * endpoint](/reference/server-push). This is the legacy version (V0) and it is
+ * still used when recovering mutations from old clients.
  */
-export type Mutation = {
+
+export type PushRequestDD31 = {
+  pushVersion: 1;
+  /**
+   * `schemaVersion` can optionally be used to specify to the push endpoint
+   * version information about the mutators the app is using (e.g., format of
+   * mutator args).
+   */
+  schemaVersion: string;
+  profileID: string;
+
+  clientGroupID: ClientGroupID;
+  mutations: MutationDD31[];
+};
+
+function assertPushRequestBase(v: unknown): asserts v is ReadonlyJSONObject {
+  assertObject(v);
+  assertString(v.schemaVersion);
+  assertString(v.profileID);
+}
+
+export function assertPushRequestDD31(
+  v: unknown,
+): asserts v is PushRequestDD31 {
+  assertPushRequestBase(v);
+  assertString(v.clientGroupID);
+  assertArray(v.mutations);
+  v.mutations.forEach(assertMutationsDD31);
+}
+
+export function assertPushRequestSDD(
+  v: ReadonlyJSONValue,
+): asserts v is PushRequestSDD {
+  assertPushRequestBase(v);
+  assertString(v.clientD);
+  assertArray(v.mutations);
+  v.mutations.forEach(assertMutationsSDD);
+}
+
+/**
+ * Mutation describes a single mutation done on the client. This is the legacy
+ * version (V0) and it is used when recovering mutations from old clients.
+ */
+export type MutationSDD = {
   readonly id: number;
   readonly name: string;
   readonly args: ReadonlyJSONValue;
   readonly timestamp: number;
 };
 
-export type MutationSDD = Omit<Mutation, 'args'> & {
+/**
+ * Mutation describes a single mutation done on the client.
+ */
+export type MutationDD31 = {
+  readonly id: number;
+  readonly name: string;
+  readonly args: ReadonlyJSONValue;
+  readonly timestamp: number;
+  readonly clientID: ClientID;
+};
+
+function assertMutationsSDD(v: unknown): asserts v is MutationSDD {
+  assertObject(v);
+  assertNumber(v.id);
+  assertString(v.name);
+  assertJSONValue(v.args);
+  assertNumber(v.timestamp);
+}
+
+function assertMutationsDD31(v: unknown): asserts v is MutationDD31 {
+  assertMutationsSDD(v);
+  assertString((v as Partial<MutationDD31>).clientID);
+}
+
+type FrozenMutationSDD = Omit<MutationSDD, 'args'> & {
   readonly args: FrozenJSONValue;
 };
 
 /**
  * Mutation describes a single mutation done on the client.
  */
-export type MutationDD31 = MutationSDD & {
+type FrozenMutationDD31 = FrozenMutationSDD & {
   readonly clientID: ClientID;
 };
 
-function convertSDD(lm: db.LocalMetaSDD): MutationSDD {
+function convertSDD(lm: db.LocalMetaSDD): FrozenMutationSDD {
   return {
     id: lm.mutationID,
     name: lm.mutatorName,
@@ -76,7 +148,7 @@ function convertSDD(lm: db.LocalMetaSDD): MutationSDD {
   };
 }
 
-function convertDD31(lm: db.LocalMetaDD31): MutationDD31 {
+function convertDD31(lm: db.LocalMetaDD31): FrozenMutationDD31 {
   return {
     id: lm.mutationID,
     name: lm.mutatorName,
@@ -121,7 +193,7 @@ export async function push(
   let pushReq: PushRequestSDD | PushRequestDD31;
 
   if (pushVersion === PUSH_VERSION_DD31) {
-    const pushMutations: MutationDD31[] = [];
+    const pushMutations: FrozenMutationDD31[] = [];
     for (const commit of pending) {
       if (commitIsLocalDD31(commit)) {
         pushMutations.push(convertDD31(commit.meta));
@@ -133,7 +205,6 @@ export async function push(
     const r: PushRequestDD31 = {
       profileID,
       clientGroupID,
-      clientID,
       mutations: pushMutations,
       pushVersion: PUSH_VERSION_DD31,
       schemaVersion,
@@ -141,7 +212,7 @@ export async function push(
     pushReq = r;
   } else {
     assert(pushVersion === PUSH_VERSION_SDD);
-    const pushMutations: MutationSDD[] = [];
+    const pushMutations: FrozenMutationSDD[] = [];
     for (const commit of pending) {
       if (commitIsLocalSDD(commit)) {
         pushMutations.push(convertSDD(commit.meta));

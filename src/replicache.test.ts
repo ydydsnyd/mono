@@ -40,7 +40,6 @@ import {
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
-import type {MutationDD31} from './sync/push.js';
 import {
   enableLicensingSymbol,
   enablePullAndPushInOpenSymbol,
@@ -1997,7 +1996,7 @@ test('client ID is set correctly on transactions', async () => {
 });
 
 test('mutation timestamps are immutable', async () => {
-  let pending: MutationDD31[] = [];
+  let pending: unknown;
   const rep = await replicacheForTesting('mutation-timestamps-are-immutable', {
     mutators: {
       foo: async (tx, _: JSONValue) => {
@@ -2006,7 +2005,7 @@ test('mutation timestamps are immutable', async () => {
     },
     pusher: async (req: Request) => {
       const parsed = await req.json();
-      pending = parsed.mutations as MutationDD31[];
+      pending = parsed.mutations;
       return {
         errorMessage: '',
         httpStatusCode: 200,
