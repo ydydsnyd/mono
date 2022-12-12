@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1670857119104,
+  "lastUpdate": 1670863205925,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -34475,6 +34475,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27413,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8bcf51cb3478972b1f6c1553fd4df2df39bd2993",
+          "message": "fix(dd31): pass correct mutationClientID to rebase in pull (#462)\n\n1. also make it clearer which mutationClientID is being passed in persist.\r\n2. this revealed some bugs in our ClientStateNotFoundError (these were being masked because this mutationClientID bug were causing pull to fail in these tests).",
+          "timestamp": "2022-12-12T09:38:42-07:00",
+          "tree_id": "bafee470444d8891888037abcd196b64bdc02522",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/8bcf51cb3478972b1f6c1553fd4df2df39bd2993"
+        },
+        "date": 1670863197447,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 244345,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40507,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 243184,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 40168,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 98367,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27442,
             "unit": "bytes"
           }
         ]
