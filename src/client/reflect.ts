@@ -127,6 +127,9 @@ export class Reflect<MD extends MutatorDefs> {
     this._updateTracker = new GapTracker('update', this._l);
     this._timestampTracker = new GapTracker('timestamp', this._l);
     void this._watchdog();
+
+    // We can't await an async function here, so we have to do this.
+    void this._addClientIDToLogContext();
   }
 
   /**
@@ -250,6 +253,11 @@ export class Reflect<MD extends MutatorDefs> {
     options?: Options,
   ): () => void {
     return this._rep.experimentalWatch(callback, options);
+  }
+
+  private async _addClientIDToLogContext() {
+    const clientID = await this.clientID;
+    this._l.addContext('clientID', clientID);
   }
 
   private _onMessage = (e: MessageEvent<string>) => {
