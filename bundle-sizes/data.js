@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1670923015139,
+  "lastUpdate": 1670943138836,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -34607,6 +34607,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/a15dea3327a626a77f688c24c14a5809ffbdf30a"
         },
         "date": 1670923007328,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 244345,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40507,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 243184,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 40168,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 98367,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27442,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2ad80e19484f8332a6ec5ccb27e0f81c3c438048",
+          "message": "doc: Update JSDoc for cookie (#493)",
+          "timestamp": "2022-12-13T14:51:07Z",
+          "tree_id": "2c6672646d41a2201b348612b7c6dd77225fdfa6",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/2ad80e19484f8332a6ec5ccb27e0f81c3c438048"
+        },
+        "date": 1670943130837,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
