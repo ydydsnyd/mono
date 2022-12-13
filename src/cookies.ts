@@ -7,6 +7,13 @@ import {stringCompare} from './string-compare.js';
  * use a more complex value, you can use an object with an `order` property. The
  * value `null` is considered to be less than any other cookie and it is used
  * for the first pull when no cookie has been set.
+ *
+ * The order is the natural order of numbers and strings. If one of the cookies
+ * is an object then the value of the `order` property is treated as the cookie
+ * when doing comparison.
+ *
+ * If one of the cookies is a string and the other is a number, the number is
+ * fist converted to a string (using `toString()`).
  */
 export type Cookie =
   | null
