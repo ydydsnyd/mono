@@ -80,20 +80,27 @@ export class BaseAuthDO implements DurableObject {
   }
 
   async connect(lc: LogContext, request: Request): Promise<Response> {
+    lc.info?.("authDO received websocket connection request:", request.url);
+
     const url = new URL(request.url);
     if (url.pathname !== "/connect") {
+      lc.error?.("authDO returning 400 bc path is not /connect:", request.url);
       return new Response("unknown route", {
         status: 400,
       });
     }
 
     if (request.headers.get("Upgrade") !== "websocket") {
+      lc.error?.(
+        "authDO returning 400 bc missing Upgrade header:",
+        request.url
+      );
       return new Response("expected websocket", { status: 400 });
     }
 
     const encodedAuth = request.headers.get("Sec-WebSocket-Protocol");
     if (!encodedAuth) {
-      lc.info?.("auth not found in Sec-WebSocket-Protocol header.");
+      lc.error?.("authDO auth not found in Sec-WebSocket-Protocol header.");
       return createUnauthorizedResponse("auth required");
     }
 
@@ -112,10 +119,10 @@ export class BaseAuthDO implements DurableObject {
     const closeWithError = (error: string) => {
       const pair = this._newWebSocketPair();
       const ws = pair[1];
-      lc.info?.("accepting connection to send error", url.toString());
+      lc.error?.("accepting connection to send error", url.toString());
       ws.accept();
 
-      lc.info?.("invalid connection request", error);
+      lc.error?.("invalid connection request", error);
       sendError(ws, error);
       ws.close();
 
@@ -153,7 +160,6 @@ export class BaseAuthDO implements DurableObject {
     try {
       decodedAuth = decodeURIComponent(encodedAuth);
     } catch (e) {
-      lc.info?.("error decoding auth found in Sec-WebSocket-Protocol header.");
       return closeWithError("400: malformed auth");
     }
     const auth = decodedAuth;

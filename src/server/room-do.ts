@@ -101,6 +101,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
   async connect(lc: LogContext, request: Request): Promise<Response> {
     if (request.headers.get("Upgrade") !== "websocket") {
+      lc.error?.("roomDO: missing Upgrade header");
       return new Response("expected websocket", { status: 400 });
     }
     const pair = new WebSocketPair();

@@ -71,7 +71,7 @@ async function fetch(request: Request, env: BaseWorkerEnv, lc: LogContext) {
   // TODO: pass request id through so request can be traced across
   // worker and DOs.
   lc = lc.addContext("req", randomID());
-  lc.debug?.("Handling request:", request.url);
+  lc.info?.("Handling request:", request.url);
   try {
     const resp = await handleRequest(request, lc, env);
     lc.debug?.(`Returning response: ${resp.status} ${resp.statusText}`);
