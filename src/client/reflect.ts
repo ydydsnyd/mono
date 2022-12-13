@@ -35,7 +35,7 @@ export class Reflect<MD extends MutatorDefs> {
   private readonly _socketOrigin: string;
   readonly userID: string;
   readonly roomID: string;
-  private readonly _l: LogContext;
+  private _l: LogContext;
 
   // Protects _handlePoke. We need pokes to be serialized, otherwise we
   // can cause out of order poke errors.
@@ -129,6 +129,9 @@ export class Reflect<MD extends MutatorDefs> {
     void this._watchdog();
 
     // We can't await an async function here, so we have to do this.
+    // Note this is racey with anything that happens immediately after
+    // construction so the clientID might not show up in a line logged
+    // immediately after construction.
     void this._addClientIDToLogContext();
   }
 
@@ -257,7 +260,7 @@ export class Reflect<MD extends MutatorDefs> {
 
   private async _addClientIDToLogContext() {
     const clientID = await this.clientID;
-    this._l.addContext('clientID', clientID);
+    this._l = this._l.addContext('clientID', clientID);
   }
 
   private _onMessage = (e: MessageEvent<string>) => {
