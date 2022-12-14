@@ -26,18 +26,6 @@ import {assertJSONValue} from './json.js';
 
 export function getDefaultPuller(rep: {pullURL: string; auth: string}): Puller {
   async function puller(
-    requestBody: PullRequestDD31,
-    requestID: string,
-  ): Promise<PullerResultDD31>;
-  async function puller(
-    requestBody: PullRequestSDD,
-    requestID: string,
-  ): Promise<PullerResultSDD>;
-  async function puller(
-    requestBody: PullRequestDD31 | PullRequestSDD,
-    requestID: string,
-  ): Promise<PullerResultDD31 | PullerResultSDD>;
-  async function puller(
     requestBody: PullRequestDD31 | PullRequestSDD,
     requestID: string,
   ): Promise<PullerResultDD31 | PullerResultSDD> {
