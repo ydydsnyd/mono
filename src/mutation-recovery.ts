@@ -206,7 +206,7 @@ async function recoverMutationsOfClientSDD(
       );
       return;
     }
-    const {pusher, pushURL} = delegate;
+    const {pusher} = delegate;
 
     const pushDescription = 'recoveringMutationsPush';
     const pushSucceeded = await wrapInOnlineCheck(async () => {
@@ -221,8 +221,6 @@ async function recoverMutationsOfClientSDD(
             undefined,
             clientID,
             pusher,
-            pushURL,
-            delegate.auth,
             database.schemaVersion,
             PUSH_VERSION_SDD,
           );
@@ -557,8 +555,7 @@ async function recoverMutationsOfClientGroupDD31(
       return;
     }
 
-    // TODO(DD31) pusher is a really a PusherDD31... Signal that somehow.
-    const {pusher, pushURL} = delegate;
+    const {pusher} = delegate;
 
     const pushDescription = 'recoveringMutationsPush';
     const pushSucceeded = await wrapInOnlineCheck(async () => {
@@ -575,8 +572,6 @@ async function recoverMutationsOfClientGroupDD31(
             // TODO(DD31): clientID is not needed in DD31. It is currently kept for debugging purpose.
             clientID,
             pusher,
-            pushURL,
-            delegate.auth,
             database.schemaVersion,
             PUSH_VERSION_DD31,
           );

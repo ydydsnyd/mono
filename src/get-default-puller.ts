@@ -2,11 +2,7 @@ import {
   isClientStateNotFoundResponse,
   isVersionNotSupportedResponse,
 } from './error-responses.js';
-import {
-  isPullRequestDD31,
-  PullRequestDD31,
-  PullRequestSDD,
-} from './sync/pull.js';
+import type {PullRequestDD31, PullRequestSDD} from './sync/pull.js';
 import type {
   Puller,
   PullerResultDD31,
@@ -19,59 +15,31 @@ import type {
 import {assertNumber, assertObject, assertString} from './asserts.js';
 import {assertPatchOperations} from './patch-operation.js';
 import {assertJSONValue} from './json.js';
+import {assertHTTPRequestInfo} from './http-request-info.js';
+import {callDefaultFetch} from './call-default-fetch.js';
 
 /**
  * This creates a default puller which uses HTTP POST to send the pull request.
  */
-
 export function getDefaultPuller(rep: {pullURL: string; auth: string}): Puller {
   async function puller(
     requestBody: PullRequestDD31 | PullRequestSDD,
     requestID: string,
   ): Promise<PullerResultDD31 | PullerResultSDD> {
-    const init = {
-      headers: {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        'Content-type': 'application/json',
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        'Authorization': rep.auth,
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        'X-Replicache-RequestID': requestID,
-      },
-      body: JSON.stringify(requestBody),
-      method: 'POST',
-    };
-    const request = new Request(rep.pullURL, init);
-    const response = await fetch(request);
-    const httpStatusCode = response.status;
-    if (httpStatusCode !== 200) {
-      return {
-        httpRequestInfo: {
-          httpStatusCode,
-          errorMessage: await response.text(),
-        },
-      };
-    }
-    const result = await response.json();
-    if (
-      isClientStateNotFoundResponse(result) ||
-      isVersionNotSupportedResponse(result)
-    ) {
-      return {
-        response: result,
-        httpRequestInfo: {httpStatusCode, errorMessage: ''},
-      };
+    const [response, httpRequestInfo] = await callDefaultFetch(
+      rep.pullURL,
+      rep.auth,
+      requestID,
+      requestBody,
+    );
+    if (!response) {
+      return {httpRequestInfo};
     }
 
-    if (isPullRequestDD31(requestBody)) {
-      assertPullResponseDD31(result);
-    } else {
-      assertPullResponseSDD(result);
-    }
     return {
-      response: result,
-      httpRequestInfo: {httpStatusCode, errorMessage: ''},
-    } as PullerResultDD31 | PullerResultSDD;
+      response: await response.json(),
+      httpRequestInfo,
+    };
   }
 
   defaultPullers.add(puller);
@@ -125,5 +93,25 @@ function assertLastMutationIDChanges(
   for (const [key, value] of Object.entries(lastMutationIDChanges)) {
     assertString(key);
     assertNumber(value);
+  }
+}
+
+export function assertPullerResultDD31(
+  v: unknown,
+): asserts v is PullerResultDD31 {
+  assertObject(v);
+  assertHTTPRequestInfo(v.httpRequestInfo);
+  if (v.response !== undefined) {
+    assertPullResponseDD31(v.response);
+  }
+}
+
+export function assertPullerResultSDD(
+  v: unknown,
+): asserts v is PullerResultSDD {
+  assertObject(v);
+  assertHTTPRequestInfo(v.httpRequestInfo);
+  if (v.response !== undefined) {
+    assertPullResponseSDD(v.response);
   }
 }

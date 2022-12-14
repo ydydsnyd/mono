@@ -4,7 +4,6 @@ import * as dag from '../dag/mod.js';
 import {DEFAULT_HEAD_NAME} from '../db/commit.js';
 import {fromWhence, whenceHead} from '../db/read.js';
 import {ChainBuilder} from '../db/test-helpers.js';
-import type {HTTPRequestInfo} from '../http-request-info.js';
 import {SYNC_HEAD_NAME} from './sync-head-name.js';
 import {
   push,
@@ -20,27 +19,18 @@ import {deepFreeze} from '../json.js';
 type FakePusherArgs = {
   expPush: boolean;
   expPushReq?: PushRequestSDD | PushRequestDD31 | undefined;
-  expPushURL: string;
-  expAuth: string;
   expRequestID: string;
   error?: string | undefined;
 };
 
 function makeFakePusher(options: FakePusherArgs): Pusher {
-  return async (req: Request): Promise<HTTPRequestInfo | PusherResult> => {
+  // eslint-disable-next-line require-await
+  return async (pushReq, requestID): Promise<PusherResult> => {
     expect(options.expPush).to.be.true;
-
-    const pushReq = await req.json();
 
     if (options.expPushReq) {
       expect(options.expPushReq).to.deep.equal(pushReq);
-      expect(new URL(options.expPushURL, location.href).toString()).to.equal(
-        req.url,
-      );
-      expect(options.expAuth).to.equal(req.headers.get('Authorization'));
-      expect(options.expRequestID).to.equal(
-        req.headers.get('X-Replicache-RequestID'),
-      );
+      expect(options.expRequestID).to.equal(requestID);
     }
 
     if (options.error) {
@@ -54,14 +44,6 @@ function makeFakePusher(options: FakePusherArgs): Pusher {
         };
       }
       if (options.error === 'FetchNotOk(500)') {
-        // In SDD we return a HTTPRequestInfo
-        return {
-          httpStatusCode: 500,
-          errorMessage: 'Fetch not OK',
-        };
-      }
-      if (options.error === 'FetchNotOkDD31(500)') {
-        // In DD31 we return a PusherResult or a HTTPRequestInfo
         return {
           httpRequestInfo: {
             httpStatusCode: 500,
@@ -73,8 +55,10 @@ function makeFakePusher(options: FakePusherArgs): Pusher {
     }
 
     return {
-      httpStatusCode: 200,
-      errorMessage: '',
+      httpRequestInfo: {
+        httpStatusCode: 200,
+        errorMessage: '',
+      },
     };
   };
 }
@@ -94,10 +78,7 @@ test('try push [SDD]', async () => {
   const requestID = 'request_id';
   const profileID = 'test_profile_id';
 
-  const auth = 'auth';
-
   // Push
-  const pushURL = 'push_url';
   const pushSchemaVersion = 'pushSchemaVersion';
 
   type Case = {
@@ -265,8 +246,6 @@ test('try push [SDD]', async () => {
     const pusher = makeFakePusher({
       expPush,
       expPushReq: c.expPushReq,
-      expPushURL: pushURL,
-      expAuth: auth,
       expRequestID: requestID,
       error: pushErr,
     });
@@ -279,8 +258,6 @@ test('try push [SDD]', async () => {
       clientGroupID,
       clientID,
       pusher,
-      pushURL,
-      auth,
       pushSchemaVersion,
       PUSH_VERSION_SDD,
     );
@@ -305,10 +282,7 @@ test('try push [DD31]', async () => {
   const requestID = 'request_id';
   const profileID = 'test_profile_id';
 
-  const auth = 'auth';
-
   // Push
-  const pushURL = 'push_url';
   const pushSchemaVersion = 'pushSchemaVersion';
 
   type Case = {
@@ -455,7 +429,7 @@ test('try push [DD31]', async () => {
         pushVersion: PUSH_VERSION_DD31,
         schemaVersion: pushSchemaVersion,
       },
-      pushResult: {error: 'FetchNotOkDD31(500)'},
+      pushResult: {error: 'FetchNotOk(500)'},
       expPusherResult: {
         httpRequestInfo: {
           httpStatusCode: 500,
@@ -517,8 +491,6 @@ test('try push [DD31]', async () => {
     const pusher = makeFakePusher({
       expPush,
       expPushReq: c.expPushReq,
-      expPushURL: pushURL,
-      expAuth: auth,
       expRequestID: requestID,
       error: pushErr,
     });
@@ -531,8 +503,6 @@ test('try push [DD31]', async () => {
       clientGroupID,
       clientID,
       pusher,
-      pushURL,
-      auth,
       pushSchemaVersion,
       PUSH_VERSION_DD31,
     );

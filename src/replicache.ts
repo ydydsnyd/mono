@@ -9,7 +9,6 @@ import {getDefaultPuller, isDefaultPuller} from './get-default-puller.js';
 import {ReadTransactionImpl, WriteTransactionImpl} from './transactions.js';
 import type {ReadTransaction, WriteTransaction} from './transactions.js';
 import {ConnectionLoop, MAX_DELAY_MS, MIN_DELAY_MS} from './connection-loop.js';
-import {defaultPusher} from './pusher.js';
 import {
   enableLicensingSymbol,
   enableMutationRecoverySymbol,
@@ -67,6 +66,7 @@ import {
   VersionNotSupportedResponse,
 } from './error-responses.js';
 import {assertLocalCommitDD31} from './db/commit.js';
+import {getDefaultPusher, isDefaultPusher} from './get-default-pusher.js';
 
 export type BeginPullResult = {
   requestID: string;
@@ -415,7 +415,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       mutators = {} as MD,
       requestOptions = {},
       puller,
-      pusher = defaultPusher,
+      pusher,
       licenseKey,
       experimentalKVStore,
       indexes = {},
@@ -431,7 +431,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     this.pullInterval = pullInterval;
     this.pushDelay = pushDelay;
     this.puller = puller ?? getDefaultPuller(this);
-    this.pusher = pusher;
+    this.pusher = pusher ?? getDefaultPusher(this);
 
     const internalOptions = options as ReplicacheInternalOptions;
     const enableMutationRecovery =
@@ -1092,7 +1092,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   private _isPushDisabled() {
     return (
       this._isClientGroupDisabled ||
-      (this.pushURL === '' && this.pusher === defaultPusher)
+      (this.pushURL === '' && isDefaultPusher(this.pusher))
     );
   }
 
@@ -1118,8 +1118,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
               clientGroupID,
               clientID,
               this.pusher,
-              this.pushURL,
-              this.auth,
               this.schemaVersion,
               PUSH_VERSION_DD31,
             );

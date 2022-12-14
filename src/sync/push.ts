@@ -1,14 +1,12 @@
 import type {LogContext} from '@rocicorp/logger';
 import * as db from '../db/mod.js';
 import type * as dag from '../dag/mod.js';
-import {isHTTPRequestInfo} from '../http-request-info.js';
 import {
   assertPusherResult,
   Pusher,
   PusherResult,
   PushError,
 } from '../pusher.js';
-import {callJSRequest} from './js-request.js';
 import {toError} from '../to-error.js';
 import {commitIsLocalDD31, commitIsLocalSDD} from '../db/commit.js';
 import type {ClientID, ClientGroupID} from './ids.js';
@@ -31,10 +29,9 @@ export const PUSH_VERSION_DD31 = 1;
 
 /**
  * The JSON value used as the body when doing a POST to the [push
- * endpoint](/reference/server-push).
+ * endpoint](/reference/server-push). This is the legacy version (V0) and it is
+ * still used when recovering mutations from old clients.
  */
-export type PushRequest = PushRequestSDD | PushRequestDD31;
-
 export type PushRequestSDD = {
   pushVersion: 0;
   /**
@@ -51,10 +48,8 @@ export type PushRequestSDD = {
 
 /**
  * The JSON value used as the body when doing a POST to the [push
- * endpoint](/reference/server-push). This is the legacy version (V0) and it is
- * still used when recovering mutations from old clients.
+ * endpoint](/reference/server-push).
  */
-
 export type PushRequestDD31 = {
   pushVersion: 1;
   /**
@@ -166,8 +161,6 @@ export async function push(
   clientGroupID: ClientGroupID | undefined,
   clientID: ClientID,
   pusher: Pusher,
-  pushURL: string,
-  auth: string,
   schemaVersion: string,
   pushVersion: typeof PUSH_VERSION_SDD | typeof PUSH_VERSION_DD31,
 ): Promise<PusherResult | undefined> {
@@ -230,33 +223,20 @@ export async function push(
   }
   lc.debug?.('Starting push...');
   const pushStart = Date.now();
-  const pusherResult = await callPusher(
-    pusher,
-    pushURL,
-    pushReq,
-    auth,
-    requestID,
-  );
+  const pusherResult = await callPusher(pusher, pushReq, requestID);
   lc.debug?.('...Push complete in ', Date.now() - pushStart, 'ms');
   return pusherResult;
 }
 
 async function callPusher(
   pusher: Pusher,
-  url: string,
   body: PushRequestSDD | PushRequestDD31,
-  auth: string,
   requestID: string,
 ): Promise<PusherResult> {
   try {
-    const res = await callJSRequest(pusher, url, body, auth, requestID);
-    // For SDD we only supported returning a HTTPRequestInfo but with DD31 we
-    // support PushResult | HTTPRequestInfo.
-    if (isHTTPRequestInfo(res)) {
-      return {httpRequestInfo: res};
-    }
-    assertPusherResult(res);
-    return res;
+    const pusherResult = await pusher(body, requestID);
+    assertPusherResult(pusherResult);
+    return pusherResult;
   } catch (e) {
     throw new PushError(toError(e));
   }

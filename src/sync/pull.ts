@@ -30,6 +30,10 @@ import {assertSnapshotMetaDD31, commitIsLocalDD31} from '../db/commit.js';
 import {compareCookies, Cookie} from '../cookies.js';
 import {isErrorResponse} from '../error-responses.js';
 import {toError} from '../to-error.js';
+import {
+  assertPullerResultDD31,
+  assertPullerResultSDD,
+} from '../get-default-puller.js';
 
 export const PULL_VERSION_SDD = 0;
 export const PULL_VERSION_DD31 = 1;
@@ -262,19 +266,24 @@ async function callPuller(
 ): Promise<PullerResultDD31 | PullerResultSDD> {
   lc.debug?.('Starting pull...');
   const pullStart = Date.now();
-  let pullerResult;
   try {
-    pullerResult = await puller(pullReq, requestID);
+    const pullerResult = await puller(pullReq, requestID);
+    lc.debug?.(
+      `...Pull ${pullerResult.response ? 'complete' : 'failed'} in `,
+      Date.now() - pullStart,
+      'ms',
+    );
+
+    if (isPullRequestDD31(pullReq)) {
+      assertPullerResultDD31(pullerResult);
+    } else {
+      assertPullerResultSDD(pullerResult);
+    }
+
+    return pullerResult;
   } catch (e) {
     throw new PullError(toError(e));
   }
-  lc.debug?.(
-    `...Pull ${pullerResult.response ? 'complete' : 'failed'} in `,
-    Date.now() - pullStart,
-    'ms',
-  );
-
-  return pullerResult;
 }
 
 // Returns new sync head, or null if response did not apply due to mismatched cookie.

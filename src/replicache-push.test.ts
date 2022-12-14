@@ -6,7 +6,7 @@ import {
 } from './test-util.js';
 import type {VersionNotSupportedResponse, WriteTransaction} from './mod.js';
 import {expect} from '@esm-bundle/chai';
-import {defaultPusher, Pusher} from './pusher.js';
+import type {Pusher} from './pusher.js';
 import * as sinon from 'sinon';
 
 // fetch-mock has invalid d.ts file so we removed that on npm install.
@@ -14,6 +14,7 @@ import * as sinon from 'sinon';
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
 import type {UpdateNeededReason} from './replicache.js';
+import {getDefaultPusher} from './get-default-pusher.js';
 
 initReplicacheTesting();
 
@@ -237,12 +238,15 @@ test('push request is only sent when pushURL or non-default pusher are set', asy
   fetchMock.postAny({});
   let pusherCallCount = 0;
 
-  rep.pusher = () => {
+  // eslint-disable-next-line require-await
+  rep.pusher = async () => {
     pusherCallCount++;
-    return Promise.resolve({
-      httpStatusCode: 200,
-      errorMessage: '',
-    });
+    return {
+      httpRequestInfo: {
+        httpStatusCode: 200,
+        errorMessage: '',
+      },
+    };
   };
 
   await createTodo({id: 'id4'});
@@ -256,7 +260,7 @@ test('push request is only sent when pushURL or non-default pusher are set', asy
   fetchMock.postAny({});
   pusherCallCount = 0;
 
-  rep.pusher = defaultPusher;
+  rep.pusher = getDefaultPusher(rep);
 
   await createTodo({id: 'id5'});
   await tickAFewTimes();

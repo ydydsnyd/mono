@@ -1,13 +1,12 @@
-import {httpRequest} from './http-request.js';
 import {assertHTTPRequestInfo, HTTPRequestInfo} from './http-request-info.js';
 import {assertObject} from './asserts.js';
 import {
   assertVersionNotSupportedResponse,
   ClientStateNotFoundResponse,
   isClientStateNotFoundResponse,
-  isVersionNotSupportedResponse,
   VersionNotSupportedResponse,
 } from './error-responses.js';
+import type {PushRequestDD31, PushRequestSDD} from './sync/push.js';
 
 export type PusherResult = {
   response?: PushResponse | undefined;
@@ -36,10 +35,6 @@ function assertPushResponse(v: unknown): asserts v is PushResponse {
   assertVersionNotSupportedResponse(v);
 }
 
-function isPushResponse(v: unknown): v is PushResponse {
-  return isClientStateNotFoundResponse(v) || isVersionNotSupportedResponse(v);
-}
-
 /**
  * Pusher is the function type used to do the fetch part of a push. The request
  * is a POST request where the body is JSON with the type {@link PushRequest}.
@@ -52,30 +47,9 @@ function isPushResponse(v: unknown): v is PushResponse {
  * return value.
  */
 export type Pusher = (
-  request: Request,
-) => Promise<HTTPRequestInfo | PusherResult>;
-
-export const defaultPusher: Pusher = async request => {
-  const {response, httpRequestInfo} = await httpRequest(request);
-  if (httpRequestInfo.httpStatusCode === 200) {
-    // In case we get an error response, we have already consumed the response body.
-    let json;
-    try {
-      json = await response.json();
-    } catch {
-      // Ignore JSON parse errors. It is valid to return a non-JSON response.
-      return httpRequestInfo;
-    }
-
-    if (isPushResponse(json)) {
-      return {
-        response: json,
-        httpRequestInfo,
-      };
-    }
-  }
-  return httpRequestInfo;
-};
+  requestBody: PushRequestDD31 | PushRequestSDD,
+  requestID: string,
+) => Promise<PusherResult | PusherResult>;
 
 /**
  * This error is thrown when the pusher fails for any reason.

@@ -73,7 +73,6 @@ export type {
 export type {ClientID, ClientGroupID} from './sync/ids.js';
 
 export type {
-  PushRequest,
   PushRequestDD31 as PushRequestV1,
   PushRequestSDD as PushRequestV0,
   MutationSDD as MutationV0,

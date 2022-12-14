@@ -2003,12 +2003,14 @@ test('mutation timestamps are immutable', async () => {
         await tx.put('foo', 'bar');
       },
     },
-    pusher: async (req: Request) => {
-      const parsed = await req.json();
-      pending = parsed.mutations;
+    // eslint-disable-next-line require-await
+    pusher: async req => {
+      pending = req.mutations;
       return {
-        errorMessage: '',
-        httpStatusCode: 200,
+        httpRequestInfo: {
+          errorMessage: '',
+          httpStatusCode: 200,
+        },
       };
     },
   });
