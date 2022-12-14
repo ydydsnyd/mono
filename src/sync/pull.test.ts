@@ -72,7 +72,6 @@ test('begin try pull SDD', async () => {
 
   const requestID = 'requestID';
   const profileID = 'test_profile_id';
-  const pullAuth = 'pull_auth';
   const schemaVersion = 'schema_version';
 
   const goodHttpRequestInfo = {
@@ -451,7 +450,6 @@ test('begin try pull SDD', async () => {
     });
 
     const beginPullReq: BeginPullRequestSDD = {
-      pullAuth,
       schemaVersion,
     };
 
@@ -584,7 +582,6 @@ test('begin try pull DD31', async () => {
 
   const requestID = 'requestID';
   const profileID = 'test_profile_id';
-  const pullAuth = 'pull_auth';
   const schemaVersion = 'schema_version';
 
   const goodHttpRequestInfo = {
@@ -1003,7 +1000,6 @@ test('begin try pull DD31', async () => {
     });
 
     const beginPullReq: BeginPullRequestDD31 = {
-      pullAuth,
       schemaVersion,
     };
 
@@ -1717,7 +1713,6 @@ test('pull for client group with multiple client local changes', async () => {
   const clientID1 = 'test-client-id-1';
   const clientID2 = 'test-client-id-2';
   const clientGroupID = 'test-client-group-id';
-  const pullAuth = 'test-pull-auth';
   const schemaVersion = 'test-schema-version';
 
   const store = new dag.TestStore();
@@ -1745,7 +1740,6 @@ test('pull for client group with multiple client local changes', async () => {
   });
 
   const beginPullRequest: BeginPullRequestDD31 = {
-    pullAuth,
     schemaVersion,
   };
 
@@ -1795,7 +1789,6 @@ suite('beginPull DD31', () => {
     await b.addGenesis(clientID1);
 
     const beginPullRequest: BeginPullRequestDD31 = {
-      pullAuth: 'test-pull-auth',
       schemaVersion: 'test-schema-version',
     };
 

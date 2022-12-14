@@ -25,7 +25,6 @@ import {
 const MUTATION_RECOVERY_LAZY_STORE_SOURCE_CHUNK_CACHE_SIZE_LIMIT = 10 * 2 ** 20; // 10 MB
 
 interface ReplicacheDelegate {
-  auth: string;
   clientID: Promise<ClientID>;
   closed: boolean;
   idbName: string;
@@ -256,7 +255,6 @@ async function recoverMutationsOfClientSDD(
       const {result: beginPullResponse} = await wrapInReauthRetries(
         async (requestID: string, requestLc: LogContext) => {
           const beginPullRequest = {
-            pullAuth: delegate.auth,
             schemaVersion: database.schemaVersion,
           };
           const beginPullResponse = await sync.beginPullSDD(
@@ -625,7 +623,6 @@ async function recoverMutationsOfClientGroupDD31(
       const {result: beginPullResponse} = await wrapInReauthRetries(
         async (requestID: string, requestLc: LogContext) => {
           const beginPullRequest = {
-            pullAuth: delegate.auth,
             schemaVersion: database.schemaVersion,
           };
           assert(clientID);
