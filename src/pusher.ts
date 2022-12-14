@@ -49,7 +49,7 @@ function assertPushResponse(v: unknown): asserts v is PushResponse {
 export type Pusher = (
   requestBody: PushRequestDD31 | PushRequestSDD,
   requestID: string,
-) => Promise<PusherResult | PusherResult>;
+) => Promise<PusherResult>;
 
 /**
  * This error is thrown when the pusher fails for any reason.
