@@ -60,14 +60,12 @@ export async function persistDD31(
         clientID,
         perdagRead,
       );
-      return [
-        perdagLMID,
-        await db.baseSnapshotFromCommit(
-          perdagMainClientGroupHeadCommit,
-          perdagRead,
-        ),
-        mainClientGroupID,
-      ];
+      const perdagBaseSnapshot = await db.baseSnapshotFromCommit(
+        perdagMainClientGroupHeadCommit,
+        perdagRead,
+      );
+      assertSnapshotCommitDD31(perdagBaseSnapshot);
+      return [perdagLMID, perdagBaseSnapshot, mainClientGroupID];
     });
 
   if (closed()) {
@@ -84,10 +82,12 @@ export async function persistDD31(
         {[clientID]: perdagLMID || 0},
         memdagRead,
       );
-      return [
-        newMutations,
-        await db.baseSnapshotFromCommit(memdagHeadCommit, memdagRead),
-      ];
+      const memdagBaseSnapshot = await db.baseSnapshotFromCommit(
+        memdagHeadCommit,
+        memdagRead,
+      );
+      assertSnapshotCommitDD31(memdagBaseSnapshot);
+      return [newMutations, memdagBaseSnapshot];
     },
   );
 
@@ -117,6 +117,7 @@ export async function persistDD31(
         latestPerdagMainClientGroupHeadCommit,
         perdagWrite,
       );
+      assertSnapshotCommitDD31(latestPerdagBaseSnapshot);
       let newMainClientGroupHeadHash: Hash;
       // check if memdag snapshot still newer than perdag snapshot
       if (

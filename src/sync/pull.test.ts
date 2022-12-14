@@ -43,7 +43,7 @@ import {
 import type {DiffsMap} from './diff.js';
 import {testSubscriptionsManagerOptions} from '../test-util.js';
 import {BTreeRead} from '../btree/read.js';
-import type {Cookie} from '../cookies.js';
+import type {Cookie, FrozenCookie} from '../cookies.js';
 import {
   isClientStateNotFoundResponse,
   isVersionNotSupportedResponse,
@@ -1410,7 +1410,7 @@ suite('changed keys', () => {
         ? {
             profileID,
             clientGroupID,
-            cookie: baseCookie,
+            cookie: baseCookie as FrozenCookie,
             pullVersion: PULL_VERSION_DD31,
             schemaVersion,
           }

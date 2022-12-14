@@ -38,6 +38,7 @@ export async function refresh(
   const memdagBaseSnapshot = await memdag.withRead(memdagRead =>
     db.baseSnapshotFromHead(db.DEFAULT_HEAD_NAME, memdagRead),
   );
+  assertSnapshotCommitDD31(memdagBaseSnapshot);
 
   // Suspend eviction and deletion of chunks cached by the lazy store
   // to prevent cache misses.  If eviction and deletion are not suspended
@@ -150,6 +151,7 @@ export async function refresh(
           memdagHeadCommit,
           memdagWrite,
         );
+        assertSnapshotCommitDD31(memdagBaseSnapshot);
         if (
           shouldAbortRefresh(
             memdagBaseSnapshot,
@@ -223,10 +225,8 @@ export async function refresh(
 }
 
 function shouldAbortRefresh(
-  memdagBaseSnapshot: db.Commit<db.SnapshotMeta | db.SnapshotMetaDD31>,
-  perdagClientGroupBaseSnapshot: db.Commit<
-    db.SnapshotMeta | db.SnapshotMetaDD31
-  >,
+  memdagBaseSnapshot: db.Commit<db.SnapshotMetaDD31>,
+  perdagClientGroupBaseSnapshot: db.Commit<db.SnapshotMetaDD31>,
   perdagClientGroupHeadHash: Hash,
 ): boolean {
   const baseSnapshotCookieCompareResult = db.compareCookiesForSnapshots(

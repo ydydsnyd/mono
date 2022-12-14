@@ -239,7 +239,7 @@ export async function baseSnapshotFromCommit(
 export function snapshotMetaParts(
   c: Commit<SnapshotMetaSDD | SnapshotMetaDD31>,
   clientID: sync.ClientID,
-): [lastMutationID: number, cookie: FrozenCookie] {
+): [lastMutationID: number, cookie: FrozenCookie | FrozenJSONValue] {
   const m = c.meta;
   if (isSnapshotMetaDD31(m)) {
     const lmid = m.lastMutationIDs[clientID] ?? 0;
@@ -249,8 +249,8 @@ export function snapshotMetaParts(
 }
 
 export function compareCookiesForSnapshots(
-  a: Commit<SnapshotMetaSDD | SnapshotMetaDD31>,
-  b: Commit<SnapshotMetaSDD | SnapshotMetaDD31>,
+  a: Commit<SnapshotMetaDD31>,
+  b: Commit<SnapshotMetaDD31>,
 ): number {
   return compareCookies(a.meta.cookieJSON, b.meta.cookieJSON);
 }
@@ -388,7 +388,7 @@ export type SnapshotMetaSDD = {
   readonly type: MetaType.SnapshotSDD;
   readonly basisHash: Hash | null;
   readonly lastMutationID: number;
-  readonly cookieJSON: FrozenCookie;
+  readonly cookieJSON: FrozenJSONValue;
 };
 
 export type SnapshotMetaDD31 = {
@@ -626,7 +626,7 @@ export function newSnapshotSDD(
   createChunk: dag.CreateChunk,
   basisHash: Hash | null,
   lastMutationID: number,
-  cookieJSON: FrozenCookie,
+  cookieJSON: FrozenJSONValue,
   valueHash: Hash,
   indexes: readonly IndexRecord[],
 ): Commit<SnapshotMetaSDD> {
@@ -665,7 +665,7 @@ export function newSnapshotDD31(
 export function newSnapshotCommitDataSDD(
   basisHash: Hash | null,
   lastMutationID: number,
-  cookieJSON: FrozenCookie,
+  cookieJSON: FrozenJSONValue,
   valueHash: Hash,
   indexes: readonly IndexRecord[],
 ): CommitData<SnapshotMetaSDD> {

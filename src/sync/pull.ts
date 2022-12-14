@@ -56,7 +56,7 @@ export type PullRequestSDD = {
   // app understands.
   schemaVersion: string;
   profileID: string;
-  cookie: Cookie;
+  cookie: ReadonlyJSONValue;
 
   clientID: ClientID;
   lastMutationID: number;
@@ -187,10 +187,8 @@ export async function beginPullDD31(
     }
     const baseSnapshot = await db.baseSnapshotFromHash(mainHeadHash, dagRead);
     const baseSnapshotMeta = baseSnapshot.meta;
-    const baseCookie = baseSnapshotMeta.cookieJSON;
     assertSnapshotMetaDD31(baseSnapshotMeta);
-
-    return baseCookie;
+    return baseSnapshotMeta.cookieJSON;
   });
 
   const pullReq: PullRequestDD31 = {

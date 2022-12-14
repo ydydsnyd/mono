@@ -7,6 +7,7 @@ import type {
 import type {Cookie} from './cookies.js';
 import type {PullRequestDD31, PullRequestSDD} from './sync/pull.js';
 import type {PatchOperation} from './patch-operation.js';
+import type {ReadonlyJSONValue} from './json.js';
 
 export type PullerResultSDD = {
   response?: PullResponseSDD | undefined;
@@ -40,7 +41,7 @@ export type Puller = (
  * The shape of a pull response under normal circumstances.
  */
 export type PullResponseOKSDD = {
-  cookie?: Cookie | undefined;
+  cookie?: ReadonlyJSONValue | undefined;
   lastMutationID: number;
   patch: PatchOperation[];
 };

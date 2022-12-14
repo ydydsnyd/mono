@@ -424,7 +424,7 @@ export async function newWriteLocal(
 export async function newWriteSnapshotSDD(
   whence: Whence,
   lastMutationID: number,
-  cookieJSON: FrozenCookie,
+  cookieJSON: FrozenJSONValue,
   dagWrite: dag.Write,
   indexes: Map<string, IndexWrite>,
   clientID: ClientID,
