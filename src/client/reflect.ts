@@ -276,7 +276,7 @@ export class Reflect<MD extends MutatorDefs> {
     const downMessage = data as Downstream; //downstreamSchema.parse(data);
 
     if (downMessage[0] === 'connected') {
-      l.info?.('Connected');
+      l.info?.('Connected', {navigatorOnline: navigator.onLine});
 
       this._state = ConnectionState.Connected;
       this._lastMutationIDSent = -1;
@@ -315,7 +315,7 @@ export class Reflect<MD extends MutatorDefs> {
       l.debug?.('Skipping duplicate connect request');
       return;
     }
-    l.info?.('Connecting...');
+    l.info?.('Connecting...', {navigatorOnline: navigator.onLine});
 
     this._state = ConnectionState.Connecting;
 
@@ -338,7 +338,7 @@ export class Reflect<MD extends MutatorDefs> {
   }
 
   private _disconnect() {
-    this._l.info?.('disconnecting');
+    this._l.info?.('disconnecting', {navigatorOnline: navigator.onLine});
     if (this._state === ConnectionState.Connected) {
       // Only create a new resolver if the one we have was previously resolved,
       // which happens when the socket became connected.
