@@ -8,7 +8,6 @@ import type {
   PullerResultDD31,
   PullerResultSDD,
   PullResponseDD31,
-  PullResponseOKDD31,
   PullResponseOKSDD,
   PullResponseSDD,
 } from './puller.js';
@@ -17,6 +16,7 @@ import {assertPatchOperations} from './patch-operation.js';
 import {assertJSONValue} from './json.js';
 import {assertHTTPRequestInfo} from './http-request-info.js';
 import {callDefaultFetch} from './call-default-fetch.js';
+import {assertCookie} from './cookies.js';
 
 /**
  * This creates a default puller which uses HTTP POST to send the pull request.
@@ -55,9 +55,7 @@ export function isDefaultPuller(puller: Puller): boolean {
 export function assertPullResponseSDD(
   v: unknown,
 ): asserts v is PullResponseSDD {
-  if (typeof v !== 'object' || v === null) {
-    throw new Error('PullResponse must be an object');
-  }
+  assertObject(v);
   if (isClientStateNotFoundResponse(v) || isVersionNotSupportedResponse(v)) {
     return;
   }
@@ -72,15 +70,13 @@ export function assertPullResponseSDD(
 export function assertPullResponseDD31(
   v: unknown,
 ): asserts v is PullResponseDD31 {
-  if (typeof v !== 'object' || v === null) {
-    throw new Error('PullResponseDD31 must be an object');
-  }
+  assertObject(v);
   if (isClientStateNotFoundResponse(v) || isVersionNotSupportedResponse(v)) {
     return;
   }
-  const v2 = v as Partial<PullResponseOKDD31>;
+  const v2 = v as Record<string, unknown>;
   if (v2.cookie !== undefined) {
-    assertJSONValue(v2.cookie);
+    assertCookie(v2.cookie);
   }
   assertLastMutationIDChanges(v2.lastMutationIDChanges);
   assertPatchOperations(v2.patch);

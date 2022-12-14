@@ -1,4 +1,4 @@
-import type {FrozenJSONValue, ReadonlyJSONValue} from './json.js';
+import {assertJSONObject, FrozenJSONValue, ReadonlyJSONValue} from './json.js';
 import {stringCompare} from './string-compare.js';
 
 /**
@@ -60,4 +60,17 @@ function getCompareValue(cookie: NonNull<Cookie>): string | number {
     return cookie;
   }
   return cookie.order;
+}
+
+export function assertCookie(v: unknown): asserts v is Cookie {
+  if (v === null || typeof v === 'string' || typeof v === 'number') {
+    return;
+  }
+
+  assertJSONObject(v);
+  if (typeof v.order === 'string' || typeof v.order === 'number') {
+    return;
+  }
+
+  throw new Error('Invalid cookie');
 }
