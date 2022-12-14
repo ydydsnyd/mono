@@ -254,13 +254,10 @@ async function recoverMutationsOfClientSDD(
     const pullSucceeded = await wrapInOnlineCheck(async () => {
       const {result: beginPullResponse} = await wrapInReauthRetries(
         async (requestID: string, requestLc: LogContext) => {
-          const beginPullRequest = {
-            schemaVersion: database.schemaVersion,
-          };
           const beginPullResponse = await sync.beginPullSDD(
             await delegate.profileID,
             clientID,
-            beginPullRequest,
+            database.schemaVersion,
             puller,
             requestID,
             dagForOtherClient,
@@ -622,15 +619,12 @@ async function recoverMutationsOfClientGroupDD31(
     const pullSucceeded = await wrapInOnlineCheck(async () => {
       const {result: beginPullResponse} = await wrapInReauthRetries(
         async (requestID: string, requestLc: LogContext) => {
-          const beginPullRequest = {
-            schemaVersion: database.schemaVersion,
-          };
           assert(clientID);
           const beginPullResponse = await sync.beginPullDD31(
             await delegate.profileID,
             clientID,
             clientGroupID,
-            beginPullRequest,
+            database.schemaVersion,
             puller,
             requestID,
             dagForOtherClientGroup,

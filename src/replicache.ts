@@ -1248,16 +1248,11 @@ export class Replicache<MD extends MutatorDefs = {}> {
       result: {beginPullResponse, requestID},
     } = await this._wrapInReauthRetries(
       async (requestID: string, requestLc: LogContext) => {
-        const req = {
-          pullAuth: this.auth,
-          pullURL: this.pullURL,
-          schemaVersion: this.schemaVersion,
-        };
         const beginPullResponse = await sync.beginPullDD31(
           profileID,
           clientID,
           clientGroupID,
-          req,
+          this.schemaVersion,
           this.puller,
           requestID,
           this._memdag,

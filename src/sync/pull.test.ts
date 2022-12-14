@@ -19,7 +19,6 @@ import type {HTTPRequestInfo} from '../http-request-info.js';
 import {SYNC_HEAD_NAME} from './sync-head-name.js';
 import {
   beginPullDD31,
-  BeginPullRequestDD31,
   BeginPullResponseDD31,
   beginPullSDD,
   handlePullResponseDD31,
@@ -31,7 +30,6 @@ import {
   PULL_VERSION_SDD,
   HandlePullResponseResultType,
   BeginPullResponseSDD,
-  BeginPullRequestSDD,
   isPullRequestDD31,
 } from './pull.js';
 import {assertHash, emptyHash} from '../hash.js';
@@ -449,16 +447,12 @@ test('begin try pull SDD', async () => {
       err: pullErr,
     });
 
-    const beginPullReq: BeginPullRequestSDD = {
-      schemaVersion,
-    };
-
     let result: BeginPullResponseSDD | string;
     try {
       result = await beginPullSDD(
         profileID,
         clientID,
-        beginPullReq,
+        schemaVersion,
         fakePuller,
         requestID,
         store,
@@ -999,17 +993,13 @@ test('begin try pull DD31', async () => {
       err: pullErr,
     });
 
-    const beginPullReq: BeginPullRequestDD31 = {
-      schemaVersion,
-    };
-
     let result: BeginPullResponseDD31 | string;
     try {
       result = await beginPullDD31(
         profileID,
         clientID,
         clientGroupID,
-        beginPullReq,
+        schemaVersion,
         fakePuller,
         requestID,
         store,
@@ -1412,8 +1402,6 @@ suite('changed keys', () => {
 
       const requestID = 'request_id';
       const profileID = 'test_profile_id';
-      const pullAuth = 'pull_auth';
-      const pullURL = 'pull_url';
       const schemaVersion = 'schema_version';
 
       const newCookie = 'new_cookie';
@@ -1454,18 +1442,12 @@ suite('changed keys', () => {
         err: undefined,
       });
 
-      const beginPullReq = {
-        pullURL,
-        pullAuth,
-        schemaVersion,
-      };
-
       const pullResult = dd31
         ? await beginPullDD31(
             profileID,
             clientID,
             clientGroupID,
-            beginPullReq,
+            schemaVersion,
             puller,
             requestID,
             store,
@@ -1474,7 +1456,7 @@ suite('changed keys', () => {
         : await beginPullSDD(
             profileID,
             clientID,
-            beginPullReq,
+            schemaVersion,
             puller,
             requestID,
             store,
@@ -1739,10 +1721,6 @@ test('pull for client group with multiple client local changes', async () => {
     resp: pullResponse,
   });
 
-  const beginPullRequest: BeginPullRequestDD31 = {
-    schemaVersion,
-  };
-
   const b = new ChainBuilder(store);
   await b.addGenesis(clientID1);
   await b.addSnapshot([], clientID1, 1, {
@@ -1758,7 +1736,7 @@ test('pull for client group with multiple client local changes', async () => {
     profileID,
     clientID1,
     clientGroupID,
-    beginPullRequest,
+    schemaVersion,
     puller,
     requestID,
     store,
@@ -1788,9 +1766,7 @@ suite('beginPull DD31', () => {
     const b = new ChainBuilder(store);
     await b.addGenesis(clientID1);
 
-    const beginPullRequest: BeginPullRequestDD31 = {
-      schemaVersion: 'test-schema-version',
-    };
+    const schemaVersion = 'test-schema-version';
 
     const options: FakePullerArgs = {
       expPullReq: {
@@ -1809,7 +1785,7 @@ suite('beginPull DD31', () => {
       profileID,
       clientID1,
       clientGroupID1,
-      beginPullRequest,
+      schemaVersion,
       puller,
       requestID,
       store,

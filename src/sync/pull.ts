@@ -82,13 +82,6 @@ export function isPullRequestDD31(pr: PullRequest): pr is PullRequestDD31 {
   return pr.pullVersion === PULL_VERSION_DD31;
 }
 
-type BeginPullRequest = {
-  schemaVersion: string;
-};
-
-export type BeginPullRequestDD31 = BeginPullRequest;
-export type BeginPullRequestSDD = BeginPullRequest;
-
 export type BeginPullResponseDD31 = {
   httpRequestInfo: HTTPRequestInfo;
   pullResponse?: PullResponseDD31;
@@ -104,17 +97,13 @@ export type BeginPullResponseSDD = {
 export async function beginPullSDD(
   profileID: string,
   clientID: ClientID,
-  beginPullReq: BeginPullRequest,
+  schemaVersion: string,
   puller: Puller,
   requestID: string,
   store: dag.Store,
   lc: LogContext,
   createSyncBranch = true,
 ): Promise<BeginPullResponseSDD> {
-  // Don't assert !DD31 here because we get here when pulling during a mutation
-  // recovery and we recover SDD mutations even when we are in DD31.
-  const {schemaVersion} = beginPullReq;
-
   const [lastMutationID, baseCookie] = await store.withRead(async dagRead => {
     const mainHeadHash = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
     if (!mainHeadHash) {
@@ -184,15 +173,13 @@ export async function beginPullDD31(
   profileID: string,
   clientID: ClientID,
   clientGroupID: ClientGroupID,
-  beginPullReq: BeginPullRequestDD31,
+  schemaVersion: string,
   puller: Puller,
   requestID: string,
   store: dag.Store,
   lc: LogContext,
   createSyncBranch = true,
 ): Promise<BeginPullResponseDD31> {
-  const {schemaVersion} = beginPullReq;
-
   const baseCookie = await store.withRead(async dagRead => {
     const mainHeadHash = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
     if (!mainHeadHash) {
