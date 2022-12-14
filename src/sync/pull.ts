@@ -83,7 +83,6 @@ export function isPullRequestDD31(pr: PullRequest): pr is PullRequestDD31 {
 }
 
 type BeginPullRequest = {
-  pullURL: string;
   pullAuth: string;
   schemaVersion: string;
 };

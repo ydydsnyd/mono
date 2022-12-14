@@ -1021,7 +1021,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
       result: R;
     }>,
     verb: string,
-    serverURL: string,
     lc: LogContext,
     preAuth: () => MaybePromise<void> = noop,
     postAuth: () => MaybePromise<void> = noop,
@@ -1050,7 +1049,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         // TODO(arv): Maybe we should not log the server URL when the error comes
         // from a Pusher/Puller?
         requestLc.error?.(
-          `Got error response from server (${serverURL}) doing ${verb}: ${httpStatusCode}` +
+          `Got error response doing ${verb}: ${httpStatusCode}` +
             (errorMessage ? `: ${errorMessage}` : ''),
         );
       }
@@ -1130,7 +1129,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
           }
         },
         'push',
-        this.pushURL,
         this._lc,
       );
 
@@ -1271,7 +1269,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
         };
       },
       'pull',
-      this.pullURL,
       this._lc,
       () => this._changeSyncCounters(0, -1),
       () => this._changeSyncCounters(0, 1),

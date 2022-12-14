@@ -441,7 +441,7 @@ test('reauth push', async () => {
   expectConsoleLogContextStub(
     rep.name,
     consoleErrorStub.firstCall,
-    'Got error response from server (https://diff.com/push) doing push: 401: xxx',
+    'Got error response doing push: 401: xxx',
     ['push', requestIDLogContextRegex],
   );
 
@@ -497,13 +497,13 @@ test('HTTP status pull', async () => {
   expectConsoleLogContextStub(
     rep.name,
     consoleErrorStub.firstCall,
-    'Got error response from server (https://diff.com/pull) doing pull: 500: internal error',
+    'Got error response doing pull: 500: internal error',
     ['pull', requestIDLogContextRegex],
   );
   expectConsoleLogContextStub(
     rep.name,
     consoleErrorStub.lastCall,
-    'Got error response from server (https://diff.com/pull) doing pull: 404: not found',
+    'Got error response doing pull: 404: not found',
     ['pull', requestIDLogContextRegex],
   );
 
@@ -546,13 +546,13 @@ test('HTTP status push', async () => {
   expectConsoleLogContextStub(
     rep.name,
     consoleErrorStub.firstCall,
-    'Got error response from server (https://diff.com/push) doing push: 500: internal error',
+    'Got error response doing push: 500: internal error',
     ['push', requestIDLogContextRegex],
   );
   expectConsoleLogContextStub(
     rep.name,
     consoleErrorStub.lastCall,
-    'Got error response from server (https://diff.com/push) doing push: 404: not found',
+    'Got error response doing push: 404: not found',
     ['push', requestIDLogContextRegex],
   );
 
@@ -1161,7 +1161,7 @@ test('onSync', async () => {
     expectConsoleLogContextStub(
       rep.name,
       consoleErrorStub.firstCall,
-      'Got error response from server (https://push.com/push) doing push: 401: xxx',
+      'Got error response doing push: 401: xxx',
       ['push', requestIDLogContextRegex],
     );
 

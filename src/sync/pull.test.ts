@@ -73,7 +73,6 @@ test('begin try pull SDD', async () => {
   const requestID = 'requestID';
   const profileID = 'test_profile_id';
   const pullAuth = 'pull_auth';
-  const pullURL = 'pull_url';
   const schemaVersion = 'schema_version';
 
   const goodHttpRequestInfo = {
@@ -452,7 +451,6 @@ test('begin try pull SDD', async () => {
     });
 
     const beginPullReq: BeginPullRequestSDD = {
-      pullURL,
       pullAuth,
       schemaVersion,
     };
@@ -587,7 +585,6 @@ test('begin try pull DD31', async () => {
   const requestID = 'requestID';
   const profileID = 'test_profile_id';
   const pullAuth = 'pull_auth';
-  const pullURL = 'pull_url';
   const schemaVersion = 'schema_version';
 
   const goodHttpRequestInfo = {
@@ -1006,7 +1003,6 @@ test('begin try pull DD31', async () => {
     });
 
     const beginPullReq: BeginPullRequestDD31 = {
-      pullURL,
       pullAuth,
       schemaVersion,
     };
@@ -1750,7 +1746,6 @@ test('pull for client group with multiple client local changes', async () => {
 
   const beginPullRequest: BeginPullRequestDD31 = {
     pullAuth,
-    pullURL: '',
     schemaVersion,
   };
 
@@ -1801,7 +1796,6 @@ suite('beginPull DD31', () => {
 
     const beginPullRequest: BeginPullRequestDD31 = {
       pullAuth: 'test-pull-auth',
-      pullURL: 'pull-url',
       schemaVersion: 'test-schema-version',
     };
 

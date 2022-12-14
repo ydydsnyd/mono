@@ -33,9 +33,7 @@ interface ReplicacheDelegate {
   online: boolean;
   profileID: Promise<string>;
   puller: Puller;
-  pullURL: string;
   pusher: Pusher;
-  pushURL: string;
 }
 
 interface MutationRecoveryOptions {
@@ -53,7 +51,6 @@ interface MutationRecoveryOptions {
       result: R;
     }>,
     verb: string,
-    serverURL: string,
     lc: LogContext,
     preAuth?: () => MaybePromise<void>,
     postAuth?: () => MaybePromise<void>,
@@ -230,7 +227,6 @@ async function recoverMutationsOfClientSDD(
           };
         },
         pushDescription,
-        delegate.pushURL,
         lc,
       );
 
@@ -252,7 +248,7 @@ async function recoverMutationsOfClientSDD(
       );
       return;
     }
-    const {puller, pullURL} = delegate;
+    const {puller} = delegate;
 
     const pullDescription = 'recoveringMutationsPull';
     let pullResponse: PullResponseSDD | undefined;
@@ -261,7 +257,6 @@ async function recoverMutationsOfClientSDD(
         async (requestID: string, requestLc: LogContext) => {
           const beginPullRequest = {
             pullAuth: delegate.auth,
-            pullURL,
             schemaVersion: database.schemaVersion,
           };
           const beginPullResponse = await sync.beginPullSDD(
@@ -280,7 +275,6 @@ async function recoverMutationsOfClientSDD(
           };
         },
         pullDescription,
-        delegate.pullURL,
         lc,
       );
       ({pullResponse} = beginPullResponse);
@@ -581,7 +575,6 @@ async function recoverMutationsOfClientGroupDD31(
           };
         },
         pushDescription,
-        delegate.pushURL,
         lc,
       );
 
@@ -624,7 +617,7 @@ async function recoverMutationsOfClientGroupDD31(
       );
       return;
     }
-    const {puller, pullURL} = delegate;
+    const {puller} = delegate;
 
     const pullDescription = 'recoveringMutationsPull';
     let pullResponse: PullResponseDD31 | undefined;
@@ -633,7 +626,6 @@ async function recoverMutationsOfClientGroupDD31(
         async (requestID: string, requestLc: LogContext) => {
           const beginPullRequest = {
             pullAuth: delegate.auth,
-            pullURL,
             schemaVersion: database.schemaVersion,
           };
           assert(clientID);
@@ -654,7 +646,6 @@ async function recoverMutationsOfClientGroupDD31(
           };
         },
         pullDescription,
-        delegate.pullURL,
         lc,
       );
       ({pullResponse} = beginPullResponse);
