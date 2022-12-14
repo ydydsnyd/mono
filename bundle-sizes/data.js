@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1670943138836,
+  "lastUpdate": 1671011797320,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -34691,6 +34691,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27442,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7d6bf8b7e1a514bead110b8a85cbb93d9570edc0",
+          "message": "feat!: Make Puller interface lower level (#494)\n\nBREAKING CHANGE!\r\n\r\nAnd make it also deal with V1 and V0. V0 is needed to be able to handle mutation recovery correctly.\r\n\r\n```ts\r\nexport type Puller = (\r\n  requestBody: PullRequestSDD | PullRequestDD31,\r\n  requestID: string,\r\n) => Promise<PullerResultSDD | PullerResultDD31>;\r\n```\r\n\r\nTowards #85",
+          "timestamp": "2022-12-14T10:55:23+01:00",
+          "tree_id": "23dcc225fb04a4798c79252386e6ecf38e623cd4",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/7d6bf8b7e1a514bead110b8a85cbb93d9570edc0"
+        },
+        "date": 1671011788367,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 244567,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40659,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 243365,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 40331,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 98360,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27508,
             "unit": "bytes"
           }
         ]
