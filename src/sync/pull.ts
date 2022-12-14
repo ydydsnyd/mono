@@ -7,34 +7,29 @@ import {
   ReadonlyJSONValue,
   deepFreeze,
 } from '../json.js';
-import {
-  assertPullResponseSDD,
-  assertPullResponseDD31,
-  PullerDD31,
-  PullerResultDD31,
-  PullError,
+import type {
   PullResponseDD31,
   PullResponseOKDD31,
   PullResponseOKSDD,
   PullResponseSDD,
-  PullerSDD,
+  Puller,
+  PullerResultDD31,
   PullerResultSDD,
 } from '../puller.js';
-import {assertHTTPRequestInfo, HTTPRequestInfo} from '../http-request-info.js';
-import {callJSRequest} from './js-request.js';
+import {PullError} from './pull-error.js';
+import type {HTTPRequestInfo} from '../http-request-info.js';
 import {SYNC_HEAD_NAME} from './sync-head-name.js';
 import * as patch from './patch.js';
-import {toError} from '../to-error.js';
 import * as btree from '../btree/mod.js';
 import {BTreeRead} from '../btree/mod.js';
 import {updateIndexes} from '../db/write.js';
 import {emptyHash, Hash} from '../hash.js';
 import type {ClientGroupID, ClientID} from './ids.js';
 import {addDiffsForIndexes, DiffComputationConfig, DiffsMap} from './diff.js';
-import {assertObject} from '../asserts.js';
 import {assertSnapshotMetaDD31, commitIsLocalDD31} from '../db/commit.js';
 import {compareCookies, Cookie} from '../cookies.js';
 import {isErrorResponse} from '../error-responses.js';
+import {toError} from '../to-error.js';
 
 export const PULL_VERSION_SDD = 0;
 export const PULL_VERSION_DD31 = 1;
@@ -79,6 +74,10 @@ export type PullRequestDD31 = {
   clientGroupID: ClientGroupID;
 };
 
+export function isPullRequestDD31(pr: PullRequest): pr is PullRequestDD31 {
+  return pr.pullVersion === PULL_VERSION_DD31;
+}
+
 type BeginPullRequest = {
   pullURL: string;
   pullAuth: string;
@@ -104,7 +103,7 @@ export async function beginPullSDD(
   profileID: string,
   clientID: ClientID,
   beginPullReq: BeginPullRequest,
-  puller: PullerSDD,
+  puller: Puller,
   requestID: string,
   store: dag.Store,
   lc: LogContext,
@@ -112,7 +111,7 @@ export async function beginPullSDD(
 ): Promise<BeginPullResponseSDD> {
   // Don't assert !DD31 here because we get here when pulling during a mutation
   // recovery and we recover SDD mutations even when we are in DD31.
-  const {pullURL, pullAuth, schemaVersion} = beginPullReq;
+  const {schemaVersion} = beginPullReq;
 
   const [lastMutationID, baseCookie] = await store.withRead(async dagRead => {
     const mainHeadHash = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
@@ -134,21 +133,13 @@ export async function beginPullSDD(
     pullVersion: PULL_VERSION_SDD,
     schemaVersion,
   };
-  lc.debug?.('Starting pull...');
-  const pullStart = Date.now();
-  const {response, httpRequestInfo} = await callPullerSDD(
-    puller,
-    pullURL,
-    pullReq,
-    pullAuth,
-    requestID,
-  );
 
-  lc.debug?.(
-    `...Pull ${response ? 'complete' : 'failed'} in `,
-    Date.now() - pullStart,
-    'ms',
-  );
+  const {response, httpRequestInfo} = (await callPuller(
+    lc,
+    puller,
+    pullReq,
+    requestID,
+  )) as PullerResultSDD;
 
   // If Puller did not get a pull response we still want to return the HTTP
   // request info to the JS SDK.
@@ -192,13 +183,13 @@ export async function beginPullDD31(
   clientID: ClientID,
   clientGroupID: ClientGroupID,
   beginPullReq: BeginPullRequestDD31,
-  puller: PullerDD31,
+  puller: Puller,
   requestID: string,
   store: dag.Store,
   lc: LogContext,
   createSyncBranch = true,
 ): Promise<BeginPullResponseDD31> {
-  const {pullURL, pullAuth, schemaVersion} = beginPullReq;
+  const {schemaVersion} = beginPullReq;
 
   const baseCookie = await store.withRead(async dagRead => {
     const mainHeadHash = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
@@ -220,20 +211,13 @@ export async function beginPullDD31(
     pullVersion: PULL_VERSION_DD31,
     schemaVersion,
   };
-  lc.debug?.('Starting pull...');
-  const pullStart = Date.now();
-  const {response, httpRequestInfo} = await callPullerDD31(
-    puller as PullerDD31,
-    pullURL,
+
+  const {response, httpRequestInfo} = (await callPuller(
+    lc,
+    puller,
     pullReq,
-    pullAuth,
     requestID,
-  );
-  lc.debug?.(
-    `...Pull ${response ? 'complete' : 'failed'} in `,
-    Date.now() - pullStart,
-    'ms',
-  );
+  )) as PullerResultDD31;
 
   // If Puller did not get a pull response we still want to return the HTTP
   // request info.
@@ -268,6 +252,29 @@ export async function beginPullDD31(
         ? result.syncHead
         : emptyHash,
   };
+}
+
+async function callPuller(
+  lc: LogContext,
+  puller: Puller,
+  pullReq: PullRequestDD31 | PullRequestSDD,
+  requestID: string,
+): Promise<PullerResultDD31 | PullerResultSDD> {
+  lc.debug?.('Starting pull...');
+  const pullStart = Date.now();
+  let pullerResult;
+  try {
+    pullerResult = await puller(pullReq, requestID);
+  } catch (e) {
+    throw new PullError(toError(e));
+  }
+  lc.debug?.(
+    `...Pull ${pullerResult.response ? 'complete' : 'failed'} in `,
+    Date.now() - pullStart,
+    'ms',
+  );
+
+  return pullerResult;
 }
 
 // Returns new sync head, or null if response did not apply due to mismatched cookie.
@@ -667,67 +674,6 @@ export async function maybeEndPull<M extends db.LocalMeta>(
       diffs: diffsMap,
     };
   });
-}
-
-async function callPullerSDD(
-  puller: PullerSDD,
-  url: string,
-  body: PullRequestSDD,
-  auth: string,
-  requestID: string,
-): Promise<PullerResultSDD> {
-  try {
-    const res = await callJSRequest(puller, url, body, auth, requestID);
-    assertResultSDD(res);
-    return res;
-  } catch (e) {
-    throw new PullError(toError(e));
-  }
-}
-
-async function callPullerDD31(
-  puller: PullerDD31,
-  url: string,
-  body: PullRequestDD31,
-  auth: string,
-  requestID: string,
-): Promise<PullerResultDD31> {
-  try {
-    const res = await callJSRequest(puller, url, body, auth, requestID);
-    assertResultDD31(res);
-    return res;
-  } catch (e) {
-    throw new PullError(toError(e));
-  }
-}
-
-type ResultSDD = {
-  response?: PullResponseSDD;
-  httpRequestInfo: HTTPRequestInfo;
-};
-
-type ResultDD31 = {
-  response?: PullResponseDD31;
-  httpRequestInfo: HTTPRequestInfo;
-};
-
-function assertResultBase(v: unknown): asserts v is Record<string, unknown> {
-  assertObject(v);
-  assertHTTPRequestInfo(v.httpRequestInfo);
-}
-
-function assertResultSDD(v: unknown): asserts v is ResultSDD {
-  assertResultBase(v);
-  if (v.response !== undefined) {
-    assertPullResponseSDD(v.response);
-  }
-}
-
-function assertResultDD31(v: unknown): asserts v is ResultDD31 {
-  assertResultBase(v);
-  if (v.response !== undefined) {
-    assertPullResponseDD31(v.response);
-  }
 }
 
 function anyMutationsToApply(

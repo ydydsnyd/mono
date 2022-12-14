@@ -5,7 +5,7 @@ import * as db from '../db/mod.js';
 import type {JSONValue} from '../json.js';
 import {ChainBuilder} from '../db/test-helpers.js';
 import {apply} from './patch.js';
-import {assertPatchOperations} from '../puller.js';
+import {assertPatchOperations} from '../patch-operation.js';
 
 suite('patch', () => {
   const t = async (dd31: boolean) => {

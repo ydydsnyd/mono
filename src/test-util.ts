@@ -23,7 +23,7 @@ import type {WriteTransaction} from './transactions.js';
 import {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
 import type {DiffComputationConfig} from './sync/diff.js';
 import type {ClientID} from './sync/ids.js';
-import type {PatchOperation, PullResponseDD31} from './puller.js';
+import type {PullResponseDD31} from './puller.js';
 import type {Hash} from './hash.js';
 import {
   setupForTest as setupIDBDatabasesStoreForTest,
@@ -31,6 +31,7 @@ import {
 } from './persist/idb-databases-store-db-name.js';
 import {resolver} from '@rocicorp/resolver';
 import type {Cookie} from './cookies.js';
+import type {PatchOperation} from './patch-operation.js';
 
 export class ReplicacheTest<
   // eslint-disable-next-line @typescript-eslint/ban-types
@@ -361,7 +362,7 @@ export function expectConsoleLogContextStub(
   expect(args[i]).to.equal(expectedMessage);
 }
 
-export const requestIDLogContextRegex = /^request_id=[a-z,0-9,-]*$/;
+export const requestIDLogContextRegex = /^requestID=[a-z,0-9,-]*$/;
 
 export function waitForSync(rep: {
   onSync?: ((syncing: boolean) => void) | null | undefined;

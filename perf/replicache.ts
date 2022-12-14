@@ -267,7 +267,7 @@ async function setupPersistedData(
       indexes,
       pullInterval: null,
       // eslint-disable-next-line require-await
-      puller: async (_: Request) => {
+      puller: async () => {
         return {
           response: {
             cookie: 1,
@@ -281,6 +281,7 @@ async function setupPersistedData(
         };
       },
     }));
+
     const initialPullResolver = resolver<void>();
     rep.subscribe(tx => tx.get('key0'), {
       onData: r => r && initialPullResolver.resolve(),

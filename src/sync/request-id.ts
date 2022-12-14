@@ -13,10 +13,10 @@ function getSessionID() {
 const REQUEST_COUNTERS: Map<string, number> = new Map();
 
 /**
- * Returns a new request_id of the form <clientid>-<sessionid>-<request
+ * Returns a new requestID of the form <client ID>-<session ID>-<request
  * count>. The request count enables one to find the request following or
- * preceeding a given request. The sessionid scopes the request count, ensuring
- * the request_id is probabilistically unique across restarts (which is good
+ * preceding a given request. The sessionid scopes the request count, ensuring
+ * the requestID is probabilistically unique across restarts (which is good
  * enough).
  */
 export function newRequestID(clientID: ClientID): string {

@@ -1,10 +1,5 @@
 import type {LogContext} from '@rocicorp/logger';
-import type {
-  PullerDD31,
-  PullerSDD,
-  PullResponseDD31,
-  PullResponseSDD,
-} from './puller.js';
+import type {Puller, PullResponseDD31, PullResponseSDD} from './puller.js';
 import * as dag from './dag/mod.js';
 import * as db from './db/mod.js';
 import * as persist from './persist/mod.js';
@@ -37,7 +32,7 @@ interface ReplicacheDelegate {
   name: string;
   online: boolean;
   profileID: Promise<string>;
-  puller: PullerDD31;
+  puller: Puller;
   pullURL: string;
   pusher: Pusher;
   pushURL: string;
@@ -270,13 +265,12 @@ async function recoverMutationsOfClientSDD(
             pullAuth: delegate.auth,
             pullURL,
             schemaVersion: database.schemaVersion,
-            puller,
           };
           const beginPullResponse = await sync.beginPullSDD(
             await delegate.profileID,
             clientID,
             beginPullRequest,
-            beginPullRequest.puller as PullerSDD,
+            puller,
             requestID,
             dagForOtherClient,
             requestLc,
@@ -635,7 +629,6 @@ async function recoverMutationsOfClientGroupDD31(
       );
       return;
     }
-    // TODO(DD31) puller is a really a PullerDD31... Signal that somehow.
     const {puller, pullURL} = delegate;
 
     const pullDescription = 'recoveringMutationsPull';
@@ -647,7 +640,6 @@ async function recoverMutationsOfClientGroupDD31(
             pullAuth: delegate.auth,
             pullURL,
             schemaVersion: database.schemaVersion,
-            puller,
           };
           assert(clientID);
           const beginPullResponse = await sync.beginPullDD31(
@@ -655,8 +647,7 @@ async function recoverMutationsOfClientGroupDD31(
             clientID,
             clientGroupID,
             beginPullRequest,
-            // TODO(DD31): Figure this out.
-            beginPullRequest.puller as PullerDD31,
+            puller,
             requestID,
             dagForOtherClientGroup,
             requestLc,

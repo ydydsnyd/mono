@@ -3,11 +3,12 @@ import {resolver} from '@rocicorp/resolver';
 import {ReadonlyJSONValue, deepFreeze} from './json.js';
 import type {JSONValue} from './json.js';
 import {Pusher, PushError} from './pusher.js';
-import {PullerDD31, PullError, PullResponseDD31} from './puller.js';
+import type {Puller, PullResponseDD31} from './puller.js';
+import {PullError} from './sync/pull-error.js';
+import {getDefaultPuller, isDefaultPuller} from './get-default-puller.js';
 import {ReadTransactionImpl, WriteTransactionImpl} from './transactions.js';
 import type {ReadTransaction, WriteTransaction} from './transactions.js';
 import {ConnectionLoop, MAX_DELAY_MS, MIN_DELAY_MS} from './connection-loop.js';
-import {defaultPuller} from './puller.js';
 import {defaultPusher} from './pusher.js';
 import {
   enableLicensingSymbol,
@@ -300,7 +301,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   /**
    * The function to use to pull data from the server.
    */
-  puller: PullerDD31;
+  puller: Puller;
 
   /**
    * The function to use to push data to the server.
@@ -413,7 +414,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       pullInterval = 60_000,
       mutators = {} as MD,
       requestOptions = {},
-      puller = defaultPuller,
+      puller,
       pusher = defaultPusher,
       licenseKey,
       experimentalKVStore,
@@ -429,7 +430,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     this.schemaVersion = schemaVersion;
     this.pullInterval = pullInterval;
     this.pushDelay = pushDelay;
-    this.puller = puller;
+    this.puller = puller ?? getDefaultPuller(this);
     this.pusher = pusher;
 
     const internalOptions = options as ReplicacheInternalOptions;
@@ -899,7 +900,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
       const clientID = await this._clientIDPromise;
       const lc = this._lc
         .addContext('maybeEndPull')
-        .addContext('request_id', requestID);
+        .addContext('requestID', requestID);
       const {replayMutations, diffs} = await sync.maybeEndPull<db.LocalMeta>(
         this._memdag,
         lc,
@@ -966,7 +967,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   private _isPullDisabled() {
     return (
       this._isClientGroupDisabled ||
-      (this.pullURL === '' && this.puller === defaultPuller)
+      (this.pullURL === '' && isDefaultPuller(this.puller))
     );
   }
 
@@ -1034,7 +1035,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     lc = lc.addContext(verb);
     do {
       const requestID = sync.newRequestID(clientID);
-      const requestLc = lc.addContext('request_id', requestID);
+      const requestLc = lc.addContext('requestID', requestID);
       const {httpRequestInfo, result} = await f(requestID, requestLc);
       lastResult = result;
       if (!httpRequestInfo) {
@@ -1206,7 +1207,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     const requestID = sync.newRequestID(clientID);
     const lc = this._lc
       .addContext('handlePullResponse')
-      .addContext('request_id', requestID);
+      .addContext('requestID', requestID);
 
     const {pullResponse} = poke;
 

@@ -41,13 +41,17 @@ export type {
 export {isScanIndexOptions} from './scan-options.js';
 export type {HTTPRequestInfo} from './http-request-info.js';
 export type {
-  PatchOperation,
-  PullerDD31,
-  PullResponseDD31,
-  PullResponseOKDD31,
-  PullerResultDD31,
-  PullError,
+  Puller,
+  PullResponseDD31 as PullResponseV1,
+  PullResponseOKDD31 as PullResponseOKV1,
+  PullerResultDD31 as PullerResultV1,
+  PullerResultSDD as PullerResultV0,
+  PullResponseSDD as PullResponseV0,
+  PullResponseOKSDD as PullResponseOKV0,
 } from './puller.js';
+export type {PatchOperation} from './patch-operation.js';
+export {PullError} from './sync/pull-error.js';
+export {getDefaultPuller} from './get-default-puller.js';
 export type {Pusher, PushError, PusherResult, PushResponse} from './pusher.js';
 export type {
   ClientStateNotFoundResponse,

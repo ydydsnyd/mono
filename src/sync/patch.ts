@@ -1,7 +1,7 @@
 import type {LogContext} from '@rocicorp/logger';
 import type * as db from '../db/mod.js';
 import {deepFreeze} from '../json.js';
-import type {PatchOperation} from '../puller.js';
+import type {PatchOperation} from '../patch-operation.js';
 
 export async function apply(
   lc: LogContext,

@@ -8,11 +8,9 @@ import {DEFAULT_HEAD_NAME} from '../db/mod.js';
 import {ChainBuilder} from '../db/test-helpers.js';
 import {FrozenJSONValue, ReadonlyJSONValue, deepFreeze} from '../json.js';
 import type {
-  PatchOperation,
-  PullerDD31,
+  Puller,
   PullerResultDD31,
   PullerResultSDD,
-  PullerSDD,
   PullResponseDD31,
   PullResponseOKDD31,
   PullResponseSDD,
@@ -34,6 +32,7 @@ import {
   HandlePullResponseResultType,
   BeginPullResponseSDD,
   BeginPullRequestSDD,
+  isPullRequestDD31,
 } from './pull.js';
 import {assertHash, emptyHash} from '../hash.js';
 import {stringCompare} from '../string-compare.js';
@@ -47,6 +46,15 @@ import type {DiffsMap} from './diff.js';
 import {testSubscriptionsManagerOptions} from '../test-util.js';
 import {BTreeRead} from '../btree/read.js';
 import type {Cookie} from '../cookies.js';
+import {
+  isClientStateNotFoundResponse,
+  isVersionNotSupportedResponse,
+} from '../error-responses.js';
+import type {PatchOperation} from '../patch-operation.js';
+import {
+  assertPullResponseDD31,
+  assertPullResponseSDD,
+} from '../get-default-puller.js';
 
 test('begin try pull SDD', async () => {
   const clientID = 'test_client_id';
@@ -436,10 +444,8 @@ test('begin try pull SDD', async () => {
       pullResp = c.pullResult;
       pullErr = undefined;
     }
-    const fakePuller = makeFakePullerSDD({
+    const fakePuller = makeFakePuller({
       expPullReq,
-      expPullURL: pullURL,
-      expPullAuth: pullAuth,
       expRequestID: requestID,
       resp: pullResp,
       err: pullErr,
@@ -991,10 +997,9 @@ test('begin try pull DD31', async () => {
       pullResp = c.pullResult;
       pullErr = undefined;
     }
-    const fakePuller = makeFakePullerDD31({
+
+    const fakePuller = makeFakePuller({
       expPullReq,
-      expPullURL: pullURL,
-      expPullAuth: pullAuth,
       expRequestID: requestID,
       resp: pullResp,
       err: pullErr,
@@ -1295,27 +1300,21 @@ suite('maybe end try pull', () => {
   test('sdd', () => t(false));
 });
 
-type FakePullerArgsSDD = {
-  expPullReq: PullRequestSDD;
-  expPullURL: string;
-  expPullAuth: string;
+type FakePullerArgs = {
+  expPullReq: PullRequestDD31 | PullRequestSDD;
   expRequestID: string;
-  resp?: PullResponseSDD | undefined;
+  resp?: PullResponseDD31 | PullResponseSDD | undefined;
   err?: string | undefined;
 };
 
-function makeFakePullerSDD(options: FakePullerArgsSDD): PullerSDD {
-  return async (req: Request): Promise<PullerResultSDD> => {
-    const pullReq: PullRequestSDD = await req.json();
+function makeFakePuller(options: FakePullerArgs): Puller {
+  return async (
+    pullReq: PullRequestDD31 | PullRequestSDD,
+    requestID: string,
+    // eslint-disable-next-line require-await
+  ): Promise<PullerResultDD31 | PullerResultSDD> => {
     expect(options.expPullReq).to.deep.equal(pullReq);
-
-    expect(new URL(options.expPullURL, location.href).toString()).to.equal(
-      req.url,
-    );
-    expect(options.expPullAuth).to.equal(req.headers.get('Authorization'));
-    expect(options.expRequestID).to.equal(
-      req.headers.get('X-Replicache-RequestID'),
-    );
+    expect(options.expRequestID).to.equal(requestID);
 
     let httpRequestInfo: HTTPRequestInfo;
     if (options.err !== undefined) {
@@ -1333,51 +1332,38 @@ function makeFakePullerSDD(options: FakePullerArgsSDD): PullerSDD {
         errorMessage: '',
       };
     }
-    return {response: options.resp, httpRequestInfo};
-  };
-}
 
-function makeFakePullerDD31(options: FakePullerArgsDD31): PullerDD31 {
-  return async (req: Request): Promise<PullerResultDD31> => {
-    const pullReq: PullRequestDD31 = await req.json();
-    expect(options.expPullReq).to.deep.equal(pullReq);
+    const {resp} = options;
 
-    expect(new URL(options.expPullURL, location.href).toString()).to.equal(
-      req.url,
-    );
-    expect(options.expPullAuth).to.equal(req.headers.get('Authorization'));
-    expect(options.expRequestID).to.equal(
-      req.headers.get('X-Replicache-RequestID'),
-    );
+    if (resp === undefined) {
+      return {httpRequestInfo};
+    }
 
-    let httpRequestInfo: HTTPRequestInfo;
-    if (options.err !== undefined) {
-      if (options.err === 'FetchNotOk(500)') {
-        httpRequestInfo = {
-          httpStatusCode: 500,
-          errorMessage: 'Fetch not OK',
-        };
-      } else {
-        throw new Error('not implemented');
-      }
-    } else {
-      httpRequestInfo = {
-        httpStatusCode: 200,
-        errorMessage: '',
+    if (
+      isVersionNotSupportedResponse(resp) ||
+      isClientStateNotFoundResponse(resp)
+    ) {
+      return {
+        response: resp,
+        httpRequestInfo,
       };
     }
-    return {response: options.resp, httpRequestInfo};
+
+    if (isPullRequestDD31(options.expPullReq)) {
+      assertPullResponseDD31(resp);
+      return {
+        response: resp,
+        httpRequestInfo,
+      };
+    }
+
+    assertPullResponseSDD(resp);
+    return {
+      response: resp,
+      httpRequestInfo,
+    };
   };
 }
-
-type FakePullerArgsDD31 = {
-  expPullReq: PullRequestDD31;
-  expPullURL: string;
-  expPullAuth: string;
-  expRequestID: string;
-  resp?: PullResponseDD31 | undefined;
-  err?: string | undefined;
-};
 
 suite('changed keys', () => {
   const t = async (dd31: boolean) => {
@@ -1469,32 +1455,17 @@ suite('changed keys', () => {
             patch,
           };
 
-      const fakePuller: PullerDD31 | PullerSDD = dd31
-        ? makeFakePullerDD31({
-            expPullReq: expPullReq as PullRequestDD31,
-            expPullURL: pullURL,
-            expPullAuth: pullAuth,
-            expRequestID: requestID,
-            resp: pullResp as PullResponseDD31,
-            err: undefined,
-          })
-        : makeFakePullerSDD({
-            expPullReq: expPullReq as PullRequestSDD,
-            expPullURL: pullURL,
-            expPullAuth: pullAuth,
-            expRequestID: requestID,
-            resp: pullResp as PullResponseSDD,
-            err: undefined,
-          });
+      const puller = makeFakePuller({
+        expPullReq,
+        expRequestID: requestID,
+        resp: pullResp,
+        err: undefined,
+      });
 
       const beginPullReq = {
         pullURL,
         pullAuth,
         schemaVersion,
-        puller: () => {
-          // not used with fake puller
-          throw new Error('unreachable');
-        },
       };
 
       const pullResult = dd31
@@ -1503,7 +1474,7 @@ suite('changed keys', () => {
             clientID,
             clientGroupID,
             beginPullReq,
-            fakePuller as PullerDD31,
+            puller,
             requestID,
             store,
             new LogContext(),
@@ -1512,7 +1483,7 @@ suite('changed keys', () => {
             profileID,
             clientID,
             beginPullReq,
-            fakePuller as PullerSDD,
+            puller,
             requestID,
             store,
             new LogContext(),
@@ -1765,8 +1736,7 @@ test('pull for client group with multiple client local changes', async () => {
     patch: [],
   };
 
-  const puller = makeFakePullerDD31({
-    expPullAuth: pullAuth,
+  const puller = makeFakePuller({
     expPullReq: {
       clientGroupID,
       cookie: 1,
@@ -1774,7 +1744,6 @@ test('pull for client group with multiple client local changes', async () => {
       pullVersion: PULL_VERSION_DD31,
       schemaVersion,
     },
-    expPullURL: '',
     expRequestID: requestID,
     resp: pullResponse,
   });
@@ -1836,8 +1805,7 @@ suite('beginPull DD31', () => {
       schemaVersion: 'test-schema-version',
     };
 
-    const options: FakePullerArgsDD31 = {
-      expPullAuth: 'test-pull-auth',
+    const options: FakePullerArgs = {
       expPullReq: {
         clientGroupID: clientGroupID1,
         cookie: null,
@@ -1845,11 +1813,10 @@ suite('beginPull DD31', () => {
         pullVersion: PULL_VERSION_DD31,
         schemaVersion: 'test-schema-version',
       },
-      expPullURL: 'pull-url',
       expRequestID: requestID,
       resp: undefined,
     };
-    const puller: PullerDD31 = makeFakePullerDD31(options);
+    const puller = makeFakePuller(options);
 
     const response = await beginPullDD31(
       profileID,

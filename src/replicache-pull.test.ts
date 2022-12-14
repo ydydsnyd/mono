@@ -18,7 +18,8 @@ import * as sinon from 'sinon';
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
 import {httpStatusUnauthorized, UpdateNeededReason} from './replicache.js';
-import {defaultPuller, PullerDD31} from './puller.js';
+import type {Puller} from './puller.js';
+import {getDefaultPuller} from './get-default-puller.js';
 import {resolver} from '@rocicorp/resolver';
 import {enablePullAndPushInOpenSymbol} from './replicache-options.js';
 
@@ -273,7 +274,7 @@ test('pull request is only sent when pullURL or non-default puller are set', asy
   fetchMock.postAny({});
   pullerCallCount = 0;
 
-  rep.puller = defaultPuller;
+  rep.puller = getDefaultPuller(rep);
 
   rep.pull();
   await tickAFewTimes();
@@ -291,7 +292,7 @@ test('Client Group not found on server', async () => {
   });
 
   // eslint-disable-next-line require-await
-  const puller: PullerDD31 = async () => {
+  const puller: Puller = async () => {
     return {
       response: {error: 'ClientStateNotFound'},
       httpRequestInfo: {
@@ -334,7 +335,7 @@ test('Version not supported on server', async () => {
       }));
 
     // eslint-disable-next-line require-await
-    const puller: PullerDD31 = async () => {
+    const puller: Puller = async () => {
       return {
         response,
         httpRequestInfo: {

@@ -14,7 +14,6 @@ import type * as dag from './dag/mod.js';
 import * as sinon from 'sinon';
 import type {IndexDefinitions} from './index-defs.js';
 import type {ReadTransaction, WriteTransaction} from './transactions.js';
-import type {PatchOperation} from './puller.js';
 import type {ScanOptions} from './scan-options.js';
 import type {IndexKey} from './db/index.js';
 
@@ -24,6 +23,7 @@ import type {IndexKey} from './db/index.js';
 import fetchMock from 'fetch-mock/esm/client';
 import {resolver} from '@rocicorp/resolver';
 import {enablePullAndPushInOpenSymbol} from './replicache-options.js';
+import type {PatchOperation} from './patch-operation.js';
 
 initReplicacheTesting();
 
