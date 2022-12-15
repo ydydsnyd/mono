@@ -77,23 +77,79 @@ async function scheduled(env: BaseWorkerEnv, lc: LogContext): Promise<void> {
   lc.info?.(`Response: ${resp.status} ${resp.statusText}`);
 }
 
-async function fetch(request: Request, env: BaseWorkerEnv, lc: LogContext) {
+async function fetch(
+  request: Request,
+  env: BaseWorkerEnv,
+  lc: LogContext
+): Promise<Response> {
   // TODO: pass request id through so request can be traced across
   // worker and DOs.
   lc = lc.addContext("req", randomID());
-  lc.debug?.("Handling request:", request.url);
+  lc.debug?.("Handling request:", request.method, request.url);
   try {
-    // Try newfangled routing first.
-    let resp = await router.handle(request, env);
-    if (resp === undefined) {
-      resp = await handleRequest(request, lc, env);
-    }
+    const resp = await withAllowAllCORS(
+      request,
+      async (req: Request) =>
+        (await router.handle(req, env)) ?? (await handleRequest(req, lc, env))
+    );
     lc.debug?.(`Returning response: ${resp.status} ${resp.statusText}`);
     return resp;
   } catch (e) {
     lc.error?.("Unhandled exception in fetch", e);
     return new Response(e instanceof Error ? e.message : "Unexpected error.", {
       status: 500,
+    });
+  }
+}
+
+async function withAllowAllCORS(
+  request: Request,
+  handle: (request: Request) => Promise<Response>
+): Promise<Response> {
+  if (request.method === "OPTIONS") {
+    return handleOptions(request);
+  }
+  // Try newfangled routing first.
+  const resp = await handle(request);
+  // Clone so CORS headers can be set
+  const respWithAllowAllCORS = new Response(resp.body, resp);
+  respWithAllowAllCORS.headers.set("Access-Control-Allow-Origin", "*");
+  return respWithAllowAllCORS;
+}
+
+function handleOptions(request: Request): Response {
+  const { headers } = request;
+  const accessControlRequestHeaders = request.headers.get(
+    "Access-Control-Request-Headers"
+  );
+  // Check if necessary headers are present for this to be a valid pre-flight
+  // request
+  if (
+    headers.get("Origin") !== null &&
+    headers.get("Access-Control-Request-Method") !== null &&
+    accessControlRequestHeaders !== null
+  ) {
+    // Handle CORS pre-flight request.
+    const respHeaders = {
+      ["Access-Control-Allow-Origin"]: "*",
+      // TODO determine methods from route definitions, for now
+      // just return support for all methods on all paths.
+      ["Access-Control-Allow-Methods"]: "GET,HEAD,POST,OPTIONS",
+      ["Access-Control-Max-Age"]: "86400", // 24 hours
+      ["Access-Control-Allow-Headers"]: accessControlRequestHeaders,
+    };
+
+    return new Response(null, {
+      headers: respHeaders,
+    });
+  } else {
+    // Handle standard OPTIONS request.
+    // TODO implement based on route definitions, for now just return
+    // support for all methods on all paths.
+    return new Response(null, {
+      headers: {
+        ["Allow"]: "GET, HEAD, POST, OPTIONS",
+      },
     });
   }
 }

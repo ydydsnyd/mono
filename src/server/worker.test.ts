@@ -60,11 +60,32 @@ function createTestFixture(
   };
 }
 
+function sortedHeaderEntries(
+  response: Response,
+  ...additionalEntries: [string, string][]
+) {
+  return [...response.headers.entries(), ...additionalEntries].sort(
+    ([key1], [key2]) => {
+      if (key1 === key2) {
+        return 0;
+      }
+      if (key1 < key2) {
+        return -1;
+      }
+      return 1;
+    }
+  );
+}
+
 async function testForwardedToAuthDO(
   testRequest: Request,
   testResponse = new Response("success", { status: 200 }),
   expectAuthDOCalled = true
 ) {
+  // not allowed to clone response's with a websocket
+  const testResponseClone = testResponse.webSocket
+    ? undefined
+    : testResponse.clone();
   const { testEnv, authDORequests } = createTestFixture(() => testResponse);
   const worker = createWorker({
     getLogSink: (_env) => new TestLogSink(),
@@ -81,10 +102,19 @@ async function testForwardedToAuthDO(
   if (expectAuthDOCalled) {
     expect(authDORequests.length).toEqual(1);
     expect(authDORequests[0].req).toBe(testRequest);
-    expect(authDORequests[0].resp).toBe(response);
+    expect(authDORequests[0].resp).toBe(testResponse);
+    expect(response.status).toEqual(testResponse.status);
+    if (testResponseClone) {
+      expect(await response.text()).toEqual(await testResponseClone.text());
+    }
+    expect(sortedHeaderEntries(response)).toEqual(
+      sortedHeaderEntries(testResponse, ["access-control-allow-origin", "*"])
+    );
+    expect(response.webSocket).toBe(testResponse.webSocket);
   } else {
     expect(authDORequests.length).toEqual(0);
   }
+  expect(response.headers.get("Access-Control-Allow-Origin")).toEqual("*");
 }
 
 test("worker forwards connect requests to authDO", async () => {
@@ -322,3 +352,90 @@ test("scheduled logging", async () => {
     );
   });
 });
+
+test("preflight request handling allows all origins, paths, methods and headers", async () => {
+  await testPreflightRequest({
+    origin: "http://example.com",
+    url: "https://worker.com/pull",
+    accessControlRequestHeaders: "",
+    accessControlRequestMethod: "POST",
+  });
+
+  await testPreflightRequest({
+    origin: "http://example.com",
+    url: "https://worker.com/pull",
+    accessControlRequestHeaders: "",
+    accessControlRequestMethod: "GET",
+  });
+
+  await testPreflightRequest({
+    origin: "http://example.com",
+    url: "https://worker.com/pull",
+    accessControlRequestHeaders: "x-request-id, x-auth, other-header",
+    accessControlRequestMethod: "POST",
+  });
+
+  await testPreflightRequest({
+    origin: "http://example.com",
+    url: "https://worker.com/connect",
+    accessControlRequestHeaders: "Upgrade, Sec-WebSocket-Protocol",
+    accessControlRequestMethod: "POST",
+  });
+
+  await testPreflightRequest({
+    origin: "https://google.com",
+    url: "https://worker.com/anything",
+    accessControlRequestHeaders: "",
+    accessControlRequestMethod: "GET",
+  });
+
+  await testPreflightRequest({
+    origin: "https://google.com",
+    url: "https://worker.com/anything",
+    accessControlRequestHeaders: "",
+    accessControlRequestMethod: "HEAD",
+  });
+});
+
+async function testPreflightRequest({
+  origin,
+  url,
+  accessControlRequestHeaders,
+  accessControlRequestMethod,
+}: {
+  origin: string;
+  url: string;
+  accessControlRequestHeaders: string;
+  accessControlRequestMethod: string;
+}) {
+  const { testEnv, authDORequests } = createTestFixture();
+  const worker = createWorker({
+    getLogSink: (_env) => new TestLogSink(),
+    getLogLevel: (_env) => "error",
+  });
+  if (!worker.fetch) {
+    throw new Error("Expect fetch to be defined");
+  }
+  const headers = new Headers();
+  headers.set("Origin", origin);
+  headers.set("Access-Control-Request-Method", accessControlRequestMethod);
+  headers.set("Access-Control-Request-Headers", accessControlRequestHeaders);
+  const response = await worker.fetch(
+    new Request(url, {
+      method: "OPTIONS",
+      headers,
+    }),
+    testEnv,
+    new TestExecutionContext()
+  );
+  expect(authDORequests.length).toEqual(0);
+  expect(response.status).toEqual(200);
+  expect(response.headers.get("Access-Control-Allow-Origin")).toEqual("*");
+  expect(response.headers.get("Access-Control-Allow-Methods")).toEqual(
+    "GET,HEAD,POST,OPTIONS"
+  );
+  expect(response.headers.get("Access-Control-Max-Age")).toEqual("86400");
+  expect(response.headers.get("Access-Control-Allow-Headers")).toEqual(
+    accessControlRequestHeaders
+  );
+}
