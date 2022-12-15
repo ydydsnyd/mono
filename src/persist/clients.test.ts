@@ -830,11 +830,11 @@ suite('initClientDD31', () => {
     const clientID1 = 'client-id-1';
     const clientGroupID1 = 'client-group-id-1';
     const b = new ChainBuilder(perdag);
-    await b.addGenesis(clientID1);
 
     const initialIndexes: IndexDefinitions = {
       a1: {jsonPointer: '', prefix: 'a'},
     };
+    await b.addGenesis(clientID1, initialIndexes);
     const newMutatorNames = ['x'];
     const newIndexes: IndexDefinitions = {
       a2: {jsonPointer: '', prefix: 'a'},
@@ -849,7 +849,6 @@ suite('initClientDD31', () => {
       clientID1,
       1,
       {[clientID1]: 10},
-      initialIndexes,
     );
     await b.addLocal(clientID1, []);
     const headHash = b.chain[2].chunk.hash;

@@ -272,10 +272,10 @@ test('try push [DD31]', async () => {
   const store = new dag.TestStore();
   const lc = new LogContext();
   const b = new ChainBuilder(store);
-  await b.addGenesis(clientID);
-  await b.addSnapshot([['foo', 'bar']], clientID, undefined, undefined, {
+  await b.addGenesis(clientID, {
     2: {prefix: 'local', jsonPointer: ''},
   });
+  await b.addSnapshot([['foo', 'bar']], clientID);
 
   const startingNumCommits = b.chain.length;
 

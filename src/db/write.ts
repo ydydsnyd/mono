@@ -384,7 +384,6 @@ export async function newWriteSnapshotDD31(
   lastMutationIDs: Record<ClientID, number>,
   cookieJSON: FrozenCookie,
   dagWrite: dag.Write,
-  indexes: Map<string, IndexWrite>,
   clientID: ClientID,
 ): Promise<Write> {
   const [basisHash, basis, bTreeWrite] = await readCommitForBTreeWrite(
@@ -396,7 +395,7 @@ export async function newWriteSnapshotDD31(
     bTreeWrite,
     basis,
     {basisHash, type: MetaType.SnapshotDD31, lastMutationIDs, cookieJSON},
-    indexes,
+    readIndexesForWrite(basis, dagWrite),
     clientID,
     true,
   );

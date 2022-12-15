@@ -83,16 +83,30 @@ suite('test that we get to the data nodes', () => {
       });
     };
 
-    await b.addGenesis(clientID);
-    await t(b.chain[0], [[]]);
-
-    await b.addLocal(clientID);
-    await t(b.chain[1], [[['local', '1']], []]);
-
     if (dd31) {
-      await b.addSnapshot(undefined, clientID, undefined, undefined, {
+      await b.addGenesis(clientID, {
         1: {prefix: 'local', jsonPointer: '', allowEmpty: false},
       });
+      await t(b.chain[0], [[], []]);
+    } else {
+      await b.addGenesis(clientID);
+      await t(b.chain[0], [[]]);
+    }
+
+    await b.addLocal(clientID);
+    if (dd31) {
+      await t(b.chain[1], [
+        [['local', '1']],
+        [['\u00001\u0000local', '1']],
+        [],
+        [],
+      ]);
+    } else {
+      await t(b.chain[1], [[['local', '1']], []]);
+    }
+
+    if (dd31) {
+      await b.addSnapshot(undefined, clientID, undefined, undefined);
       await t(b.chain[2], [[['local', '1']], [['\u00001\u0000local', '1']]]);
     } else {
       await b.addIndexChange(clientID);
@@ -132,14 +146,24 @@ suite('test that we get to the data nodes', () => {
 
     await b.addLocal(clientID);
     const syncChain = await b.addSyncSnapshot(b.chain.length - 1, clientID);
-    await t(syncChain[0], [
-      [
-        ['k', 42],
-        ['local', '3'],
-      ],
-      [['\u00005\u0000local', '5']],
-      [['\u00003\u0000local', '3']],
-    ]);
+    if (dd31) {
+      await t(syncChain[0], [
+        [
+          ['k', 42],
+          ['local', '3'],
+        ],
+        [['\u00003\u0000local', '3']],
+      ]);
+    } else {
+      await t(syncChain[0], [
+        [
+          ['k', 42],
+          ['local', '3'],
+        ],
+        [['\u00005\u0000local', '5']],
+        [['\u00003\u0000local', '3']],
+      ]);
+    }
 
     const localCommit = await dagStore.withWrite(async dagWrite => {
       const prevCommit = b.chain[b.chain.length - 1];

@@ -497,7 +497,6 @@ export async function handlePullResponseDD31(
       {...baseSnapshotMeta.lastMutationIDs, ...response.lastMutationIDChanges},
       frozenResponseCookie,
       dagWrite,
-      db.readIndexesForWrite(baseSnapshot, dagWrite),
       clientID,
     );
 

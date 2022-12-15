@@ -53,6 +53,7 @@ import {
   assertPullResponseDD31,
   assertPullResponseSDD,
 } from '../get-default-puller.js';
+import type {IndexDefinitions} from '../index-defs.js';
 
 test('begin try pull SDD', async () => {
   const clientID = 'test_client_id';
@@ -558,15 +559,14 @@ test('begin try pull DD31', async () => {
   const baseCookie = 'cookie_1';
   const store = new dag.TestStore();
   const b = new ChainBuilder(store);
-  await b.addGenesis(clientID);
+  await b.addGenesis(clientID, {
+    '2': {prefix: 'local', jsonPointer: '', allowEmpty: false},
+  });
   const baseSnapshot = await b.addSnapshot(
     [['foo', '"bar"']],
     clientID,
     baseCookie,
     undefined,
-    {
-      '2': {prefix: 'local', jsonPointer: '', allowEmpty: false},
-    },
   );
   const startingNumCommits = b.chain.length;
   const parts = db.snapshotMetaParts(baseSnapshot, clientID);
@@ -1176,7 +1176,6 @@ suite('maybe end try pull', () => {
               {[clientID]: 0},
               'sync_cookie',
               dagWrite,
-              db.readIndexesForWrite(b.chain[0], dagWrite),
               clientID,
             )
           : await db.newWriteSnapshotSDD(
@@ -1365,33 +1364,30 @@ suite('changed keys', () => {
       const store = new dag.TestStore();
       const lc = new LogContext();
       const b = new ChainBuilder(store, undefined, dd31);
-      await b.addGenesis(clientID);
 
       if (indexDef) {
         const {name, prefix, jsonPointer} = indexDef;
-        if (dd31) {
-          const indexDefinitions = {
-            [name]: {
-              jsonPointer,
-              prefix,
-              allowEmpty: false,
-            },
-          };
+        const indexDefinitions = {
+          [name]: {
+            jsonPointer,
+            prefix,
+            allowEmpty: false,
+          },
+        };
 
-          await b.addSnapshot(
-            [],
-            clientID,
-            undefined,
-            undefined,
-            indexDefinitions,
-          );
+        if (dd31) {
+          await b.addGenesis(clientID, indexDefinitions);
+          await b.addSnapshot([], clientID, undefined, undefined);
         } else {
+          await b.addGenesis(clientID);
           await b.addIndexChange(clientID, name, {
             prefix,
             jsonPointer,
             allowEmpty: false,
           });
         }
+      } else {
+        await b.addGenesis(clientID);
       }
 
       const entries = [...baseMap];
@@ -1816,6 +1812,7 @@ suite('handlePullResponseDD31', () => {
     expectedMap,
     expectedIndex,
     expectedLastMutationIDs = responseLastMutationIDChanges,
+    indexDefinitions,
   }: {
     expectedBaseCookieJSON: ReadonlyJSONValue;
     responseCookie: Cookie;
@@ -1826,12 +1823,13 @@ suite('handlePullResponseDD31', () => {
     expectedMap?: {[key: string]: ReadonlyJSONValue};
     expectedIndex?: [name: string, map: {[key: string]: ReadonlyJSONValue}];
     expectedLastMutationIDs?: {[clientID: string]: number};
+    indexDefinitions?: IndexDefinitions | undefined;
   }) {
     const lc = new LogContext();
     const store = new dag.TestStore();
 
     const b = new ChainBuilder(store);
-    await b.addGenesis(clientID1);
+    await b.addGenesis(clientID1, indexDefinitions);
     await setupChain?.(b);
 
     const expectedBaseCookie = deepFreeze(expectedBaseCookieJSON);
@@ -2044,19 +2042,13 @@ suite('handlePullResponseDD31', () => {
       expectedBaseCookieJSON: 1,
       responseCookie: 2,
       expectedResultType: HandlePullResponseResultType.Applied,
-      setupChain: b =>
-        b.addSnapshot(
-          [],
-          clientID1,
-          1,
-          {[clientID1]: 10},
-          {
-            i1: {
-              prefix: '',
-              jsonPointer: '/id',
-            },
-          },
-        ),
+      setupChain: b => b.addSnapshot([], clientID1, 1, {[clientID1]: 10}),
+      indexDefinitions: {
+        i1: {
+          prefix: '',
+          jsonPointer: '/id',
+        },
+      },
       responseLastMutationIDChanges: {[clientID1]: 10},
       responsePatch: [
         {
@@ -2077,19 +2069,14 @@ suite('handlePullResponseDD31', () => {
       responseCookie: 2,
       expectedResultType: HandlePullResponseResultType.Applied,
       setupChain: async b => {
-        await b.addSnapshot(
-          [],
-          clientID1,
-          1,
-          {[clientID1]: 10},
-          {
-            i1: {
-              prefix: '',
-              jsonPointer: '/id',
-            },
-          },
-        );
+        await b.addSnapshot([], clientID1, 1, {[clientID1]: 10});
         await b.addLocal(clientID1, [['b', {id: 'bId', x: 2}]]);
+      },
+      indexDefinitions: {
+        i1: {
+          prefix: '',
+          jsonPointer: '/id',
+        },
       },
       responseLastMutationIDChanges: {[clientID1]: 10},
       responsePatch: [

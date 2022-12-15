@@ -167,7 +167,6 @@ suite('patch', () => {
             {[clientID]: 1},
             'cookie',
             dagWrite,
-            db.readIndexesForWrite(b.chain[0], dagWrite),
             clientID,
           );
         } else {

@@ -38,7 +38,7 @@ import {
 import {JSONValue, deepFreeze} from '../json.js';
 import type {ClientID} from '../sync/ids.js';
 import {emptyHash, Hash} from '../hash.js';
-import {BTreeRead, BTreeWrite, Node} from '../btree/mod.js';
+import {BTreeWrite, Node} from '../btree/mod.js';
 import * as btree from '../btree/mod.js';
 import type {IndexDefinition, IndexDefinitions} from '../index-defs.js';
 import {IndexWrite} from './index.js';
@@ -217,7 +217,6 @@ async function addSnapshot(
   clientID: ClientID,
   cookie: Cookie = `cookie_${chain.length}`,
   lastMutationIDs: Record<ClientID, number> | undefined,
-  indexDefinitions: IndexDefinitions | undefined,
   headName: string,
   dd31: boolean,
 ): Promise<Chain> {
@@ -225,39 +224,7 @@ async function addSnapshot(
   const lc = new LogContext();
   await store.withWrite(async dagWrite => {
     let w;
-    let indexes: Map<string, IndexWrite>;
     if (dd31) {
-      if (indexDefinitions) {
-        indexes = new Map();
-        for (const [name, indexDefinition] of Object.entries(
-          indexDefinitions,
-        )) {
-          const chunkIndexDefinition = toChunkIndexDefinition(
-            name,
-            indexDefinition,
-          );
-          const valueMap = new BTreeRead(
-            dagWrite,
-            chain[chain.length - 1].valueHash,
-          );
-          const indexMap = await createIndexBTree(
-            new LogContext(),
-            dagWrite,
-            valueMap,
-            chunkIndexDefinition.keyPrefix,
-            chunkIndexDefinition.jsonPointer,
-            chunkIndexDefinition.allowEmpty ?? false,
-          );
-          const indexMapHash = await indexMap.flush();
-          const indexRecord: IndexRecord = {
-            definition: chunkIndexDefinition,
-            valueHash: indexMapHash,
-          };
-          indexes.set(name, new IndexWrite(indexRecord, indexMap));
-        }
-      } else {
-        indexes = readIndexesForWrite(chain[chain.length - 1], dagWrite);
-      }
       w = await newWriteSnapshotDD31(
         whenceHead(headName),
         lastMutationIDs ?? {
@@ -268,7 +235,6 @@ async function addSnapshot(
         },
         deepFreeze(cookie),
         dagWrite,
-        indexes,
         clientID,
       );
     } else {
@@ -358,7 +324,6 @@ export class ChainBuilder {
     clientID: ClientID,
     cookie: Cookie = `cookie_${this.chain.length}`,
     lastMutationIDs?: Record<ClientID, number>,
-    indexDefinitions?: IndexDefinitions,
   ): Promise<Commit<SnapshotMetaSDD | SnapshotMetaDD31>> {
     await addSnapshot(
       this.chain,
@@ -367,7 +332,6 @@ export class ChainBuilder {
       clientID,
       cookie,
       lastMutationIDs,
-      indexDefinitions,
       this.headName,
       this.dd31,
     );

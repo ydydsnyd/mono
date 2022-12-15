@@ -39,18 +39,17 @@ export async function addSyncSnapshot(
   // Add sync snapshot.
   const cookie = `sync_cookie_${chain.length}`;
   await store.withWrite(async dagWrite => {
-    const indexes = db.readIndexesForWrite(chain[takeIndexesFrom], dagWrite);
     if (dd31) {
       const w = await db.newWriteSnapshotDD31(
         db.whenceHash(baseSnapshot.chunk.hash),
         {[clientID]: await baseSnapshot.getMutationID(clientID, dagWrite)},
         cookie,
         dagWrite,
-        indexes,
         clientID,
       );
       await w.commit(sync.SYNC_HEAD_NAME);
     } else {
+      const indexes = db.readIndexesForWrite(chain[takeIndexesFrom], dagWrite);
       const w = await db.newWriteSnapshotSDD(
         db.whenceHash(baseSnapshot.chunk.hash),
         await baseSnapshot.getMutationID(clientID, dagWrite),
