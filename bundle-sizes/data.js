@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1671035919507,
+  "lastUpdate": 1671104251659,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -35015,6 +35015,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27374,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c5c1ac9f5aee9a4b7166edd670bc89a74afc648e",
+          "message": "Arv/dead code files (#500)\n\nThis was discovered using `knip` with the following config:\r\n\r\n```json{\r\n  \"entryFiles\": [\"src/mod.ts\", \"src/**/*.test.ts\", \"src/worker-test.ts\"],\r\n  \"projectFiles\": [\"src/**/*.ts\"]\r\n}\r\n```",
+          "timestamp": "2022-12-15T12:36:31+01:00",
+          "tree_id": "feb5510f8e70a7129f7adc588b8125403d037d5c",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/c5c1ac9f5aee9a4b7166edd670bc89a74afc648e"
+        },
+        "date": 1671104243401,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 242412,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40289,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 241210,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 39955,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 97361,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27287,
             "unit": "bytes"
           }
         ]
