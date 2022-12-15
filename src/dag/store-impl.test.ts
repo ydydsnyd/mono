@@ -1,5 +1,5 @@
 import {expect} from '@esm-bundle/chai';
-import {MemStore} from '../kv/mod.js';
+import {TestMemStore} from '../kv/mod.js';
 import {createChunk, Chunk} from './chunk.js';
 import {StoreImpl, ReadImpl, WriteImpl} from './store-impl.js';
 import {chunkDataKey, chunkMetaKey, chunkRefCountKey, headKey} from './key.js';
@@ -14,7 +14,7 @@ suite('read', () => {
   test('has chunk', async () => {
     const t = async (hash: Hash, expectHas: boolean) => {
       const h = fakeHash('e5e');
-      const kv = new MemStore();
+      const kv = new TestMemStore();
       await kv.withWrite(async kvw => {
         await kvw.put(chunkDataKey(h), [0, 1]);
         await kvw.commit();
@@ -37,7 +37,7 @@ suite('read', () => {
       refs: Hash[],
       getSameChunk: boolean,
     ) => {
-      const kv = new MemStore();
+      const kv = new TestMemStore();
       const chunk = createChunk(data, refs, chunkHasher);
       await kv.withWrite(async kvw => {
         await kvw.put(chunkDataKey(chunk.hash), chunk.data);
@@ -80,7 +80,7 @@ suite('write', () => {
   test('put chunk', async () => {
     const chunkHasher = makeNewFakeHashFunction();
     const t = async (data: ReadonlyJSONValue, refs: Hash[]) => {
-      const kv = new MemStore();
+      const kv = new TestMemStore();
       await kv.withWrite(async kvw => {
         const w = new WriteImpl(kvw, chunkHasher, assertHash);
         const c = w.createChunk(deepFreeze(data), refs);
@@ -141,7 +141,7 @@ suite('write', () => {
       });
     };
 
-    const kv = new MemStore();
+    const kv = new TestMemStore();
 
     const h0 = fakeHash('0');
     await t(kv, '', h0);
@@ -190,7 +190,7 @@ suite('write', () => {
     const chunkHasher = makeNewFakeHashFunction();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const t = async (v: any, expectError?: string) => {
-      const kv = new MemStore();
+      const kv = new TestMemStore();
       const h = fakeHash('face1');
       await kv.withWrite(async kvw => {
         await kvw.put(chunkRefCountKey(h), v);
@@ -241,7 +241,7 @@ suite('write', () => {
     const chunkHasher = makeNewFakeHashFunction();
     const t = async (commit: boolean, setHead: boolean) => {
       let key: string;
-      const kv = new MemStore();
+      const kv = new TestMemStore();
       await kv.withWrite(async kvw => {
         const w = new WriteImpl(kvw, chunkHasher, assertHash);
         const c = w.createChunk(deepFreeze([0, 1]), []);
@@ -275,7 +275,7 @@ suite('write', () => {
   test('roundtrip', async () => {
     const chunkHasher = makeNewFakeHashFunction();
     const t = async (name: string, data: ReadonlyJSONValue, refs: Hash[]) => {
-      const kv = new MemStore();
+      const kv = new TestMemStore();
       const hash = chunkHasher();
       const c = new Chunk(hash, deepFreeze(data), refs);
       await kv.withWrite(async kvw => {
@@ -321,7 +321,11 @@ suite('write', () => {
       chunkHasher: () => Hash,
       assertValidHash: (h: Hash) => void,
     ) => {
-      const store = new StoreImpl(new MemStore(), chunkHasher, assertValidHash);
+      const store = new StoreImpl(
+        new TestMemStore(),
+        chunkHasher,
+        assertValidHash,
+      );
 
       const data = deepFreeze([true, 42]);
 
@@ -430,7 +434,7 @@ suite('write', () => {
 
 async function testChunkNotFoundError(methodName: 'withRead' | 'withWrite') {
   const chunkHasher = makeNewFakeHashFunction();
-  const store = new StoreImpl(new MemStore(), chunkHasher, assertHash);
+  const store = new StoreImpl(new TestMemStore(), chunkHasher, assertHash);
 
   const data = 42;
 

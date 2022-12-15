@@ -238,7 +238,7 @@ export async function tickUntil(f: () => boolean, msPerTest = 10) {
 }
 
 export class MemStoreWithCounters implements kv.Store {
-  readonly store = new kv.MemStore();
+  readonly store = new kv.TestMemStore();
   readCount = 0;
   writeCount = 0;
   closeCount = 0;
