@@ -276,7 +276,10 @@ export class Reflect<MD extends MutatorDefs> {
     const downMessage = data as Downstream; //downstreamSchema.parse(data);
 
     if (downMessage[0] === 'connected') {
-      l.info?.('Connected', {navigatorOnline: navigator.onLine});
+      l.info?.(
+        'Connected',
+        JSON.stringify({navigatorOnline: navigator.onLine}),
+      );
 
       this._state = ConnectionState.Connected;
       this._lastMutationIDSent = -1;
@@ -306,7 +309,11 @@ export class Reflect<MD extends MutatorDefs> {
 
   private _onClose = (e: CloseEvent) => {
     const l = this._l;
-    l.info?.('got socket close event', e);
+    const {code, reason, wasClean} = e;
+    l.info?.(
+      'got socket close event',
+      JSON.stringify({code, reason, wasClean}),
+    );
     this._disconnect();
   };
 
@@ -315,7 +322,10 @@ export class Reflect<MD extends MutatorDefs> {
       l.debug?.('Skipping duplicate connect request');
       return;
     }
-    l.info?.('Connecting...', {navigatorOnline: navigator.onLine});
+    l.info?.(
+      'Connecting...',
+      JSON.stringify({navigatorOnline: navigator.onLine}),
+    );
 
     this._state = ConnectionState.Connecting;
 
@@ -338,7 +348,10 @@ export class Reflect<MD extends MutatorDefs> {
   }
 
   private _disconnect() {
-    this._l.info?.('disconnecting', {navigatorOnline: navigator.onLine});
+    this._l.info?.(
+      'disconnecting',
+      JSON.stringify({navigatorOnline: navigator.onLine}),
+    );
     if (this._state === ConnectionState.Connected) {
       // Only create a new resolver if the one we have was previously resolved,
       // which happens when the socket became connected.
@@ -355,7 +368,7 @@ export class Reflect<MD extends MutatorDefs> {
 
   private async _handlePoke(l: LogContext, pokeBody: PokeBody) {
     await this._pokeLock.withLock(async () => {
-      l.debug?.('Applying poke', pokeBody);
+      l.debug?.('Applying poke', JSON.stringify(pokeBody));
 
       this._updateTracker.push(performance.now());
       this._timestampTracker.push(pokeBody.timestamp);
