@@ -79,15 +79,6 @@ export function assertPushRequestDD31(
   v.mutations.forEach(assertMutationsDD31);
 }
 
-export function assertPushRequestSDD(
-  v: ReadonlyJSONValue,
-): asserts v is PushRequestSDD {
-  assertPushRequestBase(v);
-  assertString(v.clientD);
-  assertArray(v.mutations);
-  v.mutations.forEach(assertMutationsSDD);
-}
-
 /**
  * Mutation describes a single mutation done on the client. This is the legacy
  * version (V0) and it is used when recovering mutations from old clients.

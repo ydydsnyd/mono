@@ -323,10 +323,7 @@ export class LazyRead implements Read {
   }
 }
 
-export class LazyWrite
-  extends LazyRead
-  implements Write, RefCountUpdatesDelegate
-{
+class LazyWrite extends LazyRead implements Write, RefCountUpdatesDelegate {
   private readonly _refCounts: Map<Hash, number>;
   private readonly _refs: Map<Hash, readonly Hash[]>;
   private readonly _chunkHasher: ChunkHasher;

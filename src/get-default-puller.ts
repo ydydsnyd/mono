@@ -46,7 +46,7 @@ export function getDefaultPuller(rep: {pullURL: string; auth: string}): Puller {
   return puller;
 }
 
-export const defaultPullers = new WeakSet();
+const defaultPullers = new WeakSet();
 
 export function isDefaultPuller(puller: Puller): boolean {
   return defaultPullers.has(puller);

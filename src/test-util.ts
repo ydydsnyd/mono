@@ -75,11 +75,6 @@ export class ReplicacheTest<
     return this._internalAPI.persist();
   }
 
-  schedulePersist() {
-    // @ts-expect-error Property '_schedulePersist' is private
-    return super._schedulePersist();
-  }
-
   recoverMutationsSpy = sinon.spy(this, 'recoverMutations');
 
   recoverMutations(): Promise<boolean> {
@@ -133,7 +128,8 @@ export async function closeAllReps(): Promise<void> {
  */
 export const closeablesToClose: Set<{close: () => Promise<unknown>}> =
   new Set();
-export async function closeAllCloseables(): Promise<void> {
+
+async function closeAllCloseables(): Promise<void> {
   for (const closeable of closeablesToClose) {
     await closeable.close();
   }

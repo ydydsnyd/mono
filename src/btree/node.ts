@@ -19,7 +19,7 @@ import {joinIterables} from '../iterables.js';
 
 export type Entry<V> = readonly [key: string, value: V];
 
-export type EntryWithSize<V> = readonly [key: string, value: V, size: number];
+type EntryWithSize<V> = readonly [key: string, value: V, size: number];
 
 export type EntryWithOptionalSize<V> = readonly [
   key: string,
@@ -216,10 +216,6 @@ function assertBTreeNodeShape(
 
 export function isInternalNode(node: Node): node is InternalNode {
   return node[NODE_LEVEL] > 0;
-}
-
-export function isDataNode(node: Node): node is DataNode {
-  return !isInternalNode(node);
 }
 
 abstract class NodeImpl<Value> {
@@ -600,18 +596,6 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
     }
     return new DataNodeImpl(entries, newUUIDHash(), true);
   }
-}
-
-export function isInternalNodeImpl(
-  v: InternalNodeImpl | DataNodeImpl,
-): v is InternalNodeImpl {
-  return !isDataNodeImpl(v);
-}
-
-export function assertInternalNodeImpl(
-  v: InternalNodeImpl | DataNodeImpl,
-): asserts v is InternalNodeImpl {
-  assert(isInternalNodeImpl(v));
 }
 
 export function newNodeImpl(

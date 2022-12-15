@@ -50,7 +50,7 @@ export function getDefaultPusher(rep: {pushURL: string; auth: string}): Pusher {
   return pusher;
 }
 
-export const defaultPushers = new WeakSet();
+const defaultPushers = new WeakSet();
 
 export function isDefaultPusher(pusher: Pusher): boolean {
   return defaultPushers.has(pusher);

@@ -3,7 +3,7 @@ import {promiseFalse, promiseTrue, promiseVoid} from '../resolved-promises.js';
 import type {Read} from './store.js';
 
 export const deleteSentinel = Symbol();
-export type DeleteSentinel = typeof deleteSentinel;
+type DeleteSentinel = typeof deleteSentinel;
 
 export class WriteImplBase {
   protected readonly _pending: Map<string, FrozenJSONValue | DeleteSentinel> =

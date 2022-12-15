@@ -294,7 +294,7 @@ type ReadNodeResult = readonly [
 
 type ReadNode = (hash: Hash) => Promise<ReadNodeResult>;
 
-export async function* scanForHash(
+async function* scanForHash(
   expectedRootHash: Hash,
   getRootHash: () => Hash,
   hash: Hash,

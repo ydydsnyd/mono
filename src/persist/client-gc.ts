@@ -30,7 +30,7 @@ export function initClientGC(
   );
 }
 
-export function gcClients(
+function gcClients(
   clientID: ClientID,
   dagStore: dag.Store,
 ): Promise<ClientMap> {

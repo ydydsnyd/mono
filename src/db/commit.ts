@@ -56,13 +56,13 @@ export function commitIsLocal(
   return commitIsLocalDD31(commit) || commitIsLocalSDD(commit);
 }
 
-export function commitIsSnapshotDD31(
+function commitIsSnapshotDD31(
   commit: Commit<Meta>,
 ): commit is Commit<SnapshotMetaDD31> {
   return isSnapshotMetaDD31(commit.meta);
 }
 
-export function commitIsSnapshotSDD(
+function commitIsSnapshotSDD(
   commit: Commit<Meta>,
 ): commit is Commit<SnapshotMetaSDD> {
   return isSnapshotMetaSDD(commit.meta);
@@ -368,7 +368,7 @@ export function isLocalMetaDD31(meta: Meta): meta is LocalMetaDD31 {
   return meta.type === MetaType.LocalDD31;
 }
 
-export function isLocalMetaSDD(meta: Meta): meta is LocalMetaSDD {
+function isLocalMetaSDD(meta: Meta): meta is LocalMetaSDD {
   return meta.type === MetaType.LocalSDD;
 }
 
@@ -450,14 +450,15 @@ export function assertSnapshotCommitDD31(
   assertSnapshotMetaDD31(c.meta);
 }
 
-export function isSnapshotMetaDD31(meta: Meta): meta is SnapshotMetaDD31 {
+function isSnapshotMetaDD31(meta: Meta): meta is SnapshotMetaDD31 {
   return meta.type === MetaType.SnapshotDD31;
 }
-export function isSnapshotMetaSDD(meta: Meta): meta is SnapshotMetaSDD {
+
+function isSnapshotMetaSDD(meta: Meta): meta is SnapshotMetaSDD {
   return meta.type === MetaType.SnapshotSDD;
 }
 
-export function isIndexChangeSDD(meta: Meta): meta is IndexChangeMetaSDD {
+function isIndexChangeSDD(meta: Meta): meta is IndexChangeMetaSDD {
   return meta.type === MetaType.IndexChangeSDD;
 }
 
@@ -502,13 +503,6 @@ export type ChunkIndexDefinition = {
   // Used to not exist
   readonly allowEmpty?: boolean;
 };
-
-export function chunkIndexDefinitionEqual(
-  a: ChunkIndexDefinition,
-  b: ChunkIndexDefinition,
-): boolean {
-  return a.name === b.name && chunkIndexDefinitionEqualIgnoreName(a, b);
-}
 
 export function chunkIndexDefinitionEqualIgnoreName(
   a: ChunkIndexDefinition,

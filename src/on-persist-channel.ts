@@ -11,7 +11,8 @@ export type PersistInfo = {
 };
 
 export type OnPersist = (persistInfo: PersistInfo) => void;
-export type HandlePersist = OnPersist;
+
+type HandlePersist = OnPersist;
 
 function assertPersistInfo(value: unknown): asserts value is PersistInfo {
   assertObject(value);

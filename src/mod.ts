@@ -5,6 +5,7 @@ export {consoleLogSink} from '@rocicorp/logger';
 export type {
   MaybePromise,
   MutatorDefs,
+  MutatorReturn,
   PokeDD31,
   RequestOptions,
   UpdateNeededReason,

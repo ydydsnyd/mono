@@ -400,7 +400,7 @@ export enum HandlePullResponseResultType {
   CookieMismatch,
 }
 
-export type HandlePullResponseResult =
+type HandlePullResponseResult =
   | {
       type: HandlePullResponseResultType.Applied;
       syncHead: Hash;
@@ -517,8 +517,6 @@ type MaybeEndPullResultBase<M extends db.Meta> = {
 };
 
 export type MaybeEndPullResultSDD = MaybeEndPullResultBase<db.LocalMetaSDD>;
-
-export type MaybeEndPullResultDD31 = MaybeEndPullResultBase<db.LocalMetaDD31>;
 
 export async function maybeEndPull<M extends db.LocalMeta>(
   store: dag.Store,

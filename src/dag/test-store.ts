@@ -52,7 +52,7 @@ export class TestStore extends StoreImpl {
   }
 }
 
-export function sortByHash(arr: Iterable<Chunk>): Chunk[] {
+function sortByHash(arr: Iterable<Chunk>): Chunk[] {
   return [...arr].sort((a, b) => stringCompare(String(a.hash), String(b.hash)));
 }
 

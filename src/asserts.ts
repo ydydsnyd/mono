@@ -40,7 +40,7 @@ export function assertArray(v: unknown): asserts v is unknown[] {
   }
 }
 
-export function invalidType(v: unknown, t: string): string {
+function invalidType(v: unknown, t: string): string {
   let s = 'Invalid type: ';
   if (v === null || v === undefined) {
     s += v;

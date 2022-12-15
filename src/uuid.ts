@@ -13,7 +13,7 @@ export function uuidNative(): string {
   return crypto.randomUUID();
 }
 
-export const enum UUIDElements {
+const enum UUIDElements {
   Random09AF,
   Random89AB,
   Hyphen,

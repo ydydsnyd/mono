@@ -3,7 +3,6 @@ import type {FrozenJSONValue, FrozenJSONObject} from '../json.js';
 import type {IndexRecord} from './commit.js';
 import type {BTreeRead, BTreeWrite} from '../btree/mod.js';
 import type {Hash} from '../hash.js';
-import {stringCompare} from '../string-compare.js';
 
 export class IndexRead<BTree = BTreeRead> {
   readonly meta: IndexRecord;
@@ -217,12 +216,4 @@ export function evaluateJSONPointer(
 export const enum IndexOperation {
   Add,
   Remove,
-}
-
-export function indexKeyCompare(a: IndexKey, b: IndexKey): number {
-  const secondaryCompare = stringCompare(a[0], b[0]);
-  if (secondaryCompare === 0) {
-    return stringCompare(a[1], b[1]);
-  }
-  return secondaryCompare;
 }

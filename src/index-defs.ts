@@ -58,7 +58,7 @@ export function indexDefinitionsEqual(
   return true;
 }
 
-export function assertIndexDefinition(
+function assertIndexDefinition(
   value: unknown,
 ): asserts value is IndexDefinition {
   const indexDef = value as IndexDefinition;

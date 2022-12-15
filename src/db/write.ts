@@ -13,8 +13,6 @@ import {
   newSnapshotSDD as commitNewSnapshotSDD,
   newSnapshotDD31 as commitNewSnapshotDD31,
   MetaType,
-  toChunkIndexDefinition,
-  chunkIndexDefinitionEqualIgnoreName,
   Meta,
   baseSnapshotHashFromHash,
 } from './commit.js';
@@ -31,7 +29,6 @@ import {emptyHash, Hash} from '../hash.js';
 import type {InternalDiff} from '../btree/node.js';
 import {allEntriesAsDiff} from '../btree/read.js';
 import {assert} from '../asserts.js';
-import type {IndexDefinition, IndexDefinitions} from '../index-defs.js';
 import type {DiffComputationConfig} from '../sync/diff.js';
 import type {FrozenJSONValue} from '../json.js';
 import type {FrozenCookie} from '../cookies.js';
@@ -114,66 +111,6 @@ export class Write extends Read {
       ps.push(idx.clear());
     }
     await Promise.all(ps);
-  }
-
-  private _maybeReuseExistingIndex(
-    name: string,
-    definition: IndexDefinition,
-  ): IndexWrite | null {
-    for (const [oldName, oldIndexWrite] of this.indexes) {
-      const newChunkIndexDefinition = toChunkIndexDefinition(name, definition);
-      if (
-        chunkIndexDefinitionEqualIgnoreName(
-          newChunkIndexDefinition,
-          oldIndexWrite.meta.definition,
-        )
-      ) {
-        if (name === oldName) {
-          // "renamed" to same name, noop
-          return oldIndexWrite;
-        }
-
-        // Create a new def that looks the same. Change the name and keep the
-        // map.
-        return new IndexWrite(
-          {
-            definition: newChunkIndexDefinition,
-            valueHash: emptyHash,
-          },
-          oldIndexWrite.map,
-        );
-      }
-    }
-    return null;
-  }
-
-  async syncIndexes(lc: LogContext, indexes: IndexDefinitions): Promise<void> {
-    const newIndexes = new Map<string, IndexWrite>();
-    for (const [name, definition] of Object.entries(indexes)) {
-      let indexWrite = this._maybeReuseExistingIndex(name, definition);
-      if (!indexWrite) {
-        const indexMap = await createIndexBTree(
-          lc,
-          this._dagWrite,
-          this.map,
-          definition.prefix ?? '',
-          definition.jsonPointer,
-          definition.allowEmpty ?? false,
-        );
-        indexWrite = new IndexWrite(
-          {
-            definition: toChunkIndexDefinition(name, definition),
-            valueHash: emptyHash,
-          },
-          indexMap,
-        );
-      }
-      newIndexes.set(name, indexWrite);
-    }
-    this.indexes.clear();
-    for (const [name, indexWrite] of newIndexes) {
-      this.indexes.set(name, indexWrite);
-    }
   }
 
   async putCommit(): Promise<Commit<CommitMeta>> {

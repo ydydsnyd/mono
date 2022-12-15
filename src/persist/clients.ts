@@ -30,7 +30,6 @@ import {createIndexBTree} from '../db/write.js';
 
 export type ClientMap = ReadonlyMap<sync.ClientID, ClientSDD | ClientDD31>;
 export type ClientMapDD31 = ReadonlyMap<sync.ClientID, ClientDD31>;
-export type ClientMapSDD = ReadonlyMap<sync.ClientID, ClientSDD>;
 
 export type ClientSDD = {
   /**
@@ -96,7 +95,7 @@ export type ClientDD31 = {
 
 export type Client = ClientSDD | ClientDD31;
 
-export function isClientDD31(client: Client): client is ClientDD31 {
+function isClientDD31(client: Client): client is ClientDD31 {
   return (client as ClientDD31).clientGroupID !== undefined;
 }
 

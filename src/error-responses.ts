@@ -29,12 +29,6 @@ export function isClientStateNotFoundResponse(
   return isError(v, 'ClientStateNotFound');
 }
 
-export function assertClientStateNotFoundResponse(
-  v: unknown,
-): asserts v is ClientStateNotFoundResponse {
-  assert(isClientStateNotFoundResponse(v));
-}
-
 /**
  * The server endpoint may respond with a `VersionNotSupported` error if it does
  * not know how to handle the {@link pullVersion}, {@link pushVersion} or the

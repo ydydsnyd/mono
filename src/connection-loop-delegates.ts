@@ -2,7 +2,7 @@ import type {ConnectionLoopDelegate} from './connection-loop.js';
 import type {OptionalLogger} from '@rocicorp/logger';
 import type {Replicache} from './replicache.js';
 
-export class ConnectionLoopDelegateImpl implements OptionalLogger {
+class ConnectionLoopDelegateImpl implements OptionalLogger {
   readonly rep: Replicache;
   readonly invokeSend: () => Promise<boolean>;
   readonly logger: OptionalLogger;

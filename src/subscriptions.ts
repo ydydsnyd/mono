@@ -137,11 +137,6 @@ export type WatchCallbackForOptions<Options extends WatchOptions> =
  */
 export type WatchIndexCallback = (diff: IndexDiff) => void;
 
-export type CallbackEntry = {
-  cb: WatchIndexCallback | WatchNoIndexCallback;
-  prefix: string;
-};
-
 /**
  * Options for {@link Replicache.experimentalWatch}.
  *
@@ -506,7 +501,7 @@ function diffMatchesSubscription(
   return false;
 }
 
-export function scanInfoMatchesDiff(
+function scanInfoMatchesDiff(
   scanInfo: ScanSubscriptionInfo,
   changeIndexName: string,
   diff: InternalDiff,

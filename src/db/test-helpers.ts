@@ -485,7 +485,7 @@ async function createEmptyIndexMaps(
   return indexes;
 }
 
-export class ChunkSnapshotVisitor extends Visitor {
+class ChunkSnapshotVisitor extends Visitor {
   snapshot: Record<string, unknown> = {};
 
   override visitCommitChunk(chunk: dag.Chunk<CommitData<Meta>>): Promise<void> {

@@ -32,7 +32,7 @@ export interface Store {
  * @experimental This interface is experimental and might be removed or changed
  * in the future without following semver versioning. Please be cautious.
  */
-export interface Release {
+interface Release {
   release(): void;
 }
 
