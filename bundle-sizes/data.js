@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1671169912104,
+  "lastUpdate": 1671173490753,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -35285,6 +35285,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27261,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8e83d2bcf375ebe89feb77231acde8afb0c91814",
+          "message": "fix: make uuid creation for hashing lazy to avoid cf error (#505)\n\nThis needs to be lazy because the cloudflare worker environment will\r\nthrow an error if crypto.randomUUID is used statically.  Specifically:\r\n```\r\nError: Some functionality, such as asynchronous I/O, timeouts, and\r\ngenerating random values, can only be performed while handling a\r\nrequest.\r\n```\r\n\r\nAlso delete tar package that was accidentally checked in.",
+          "timestamp": "2022-12-15T23:50:30-07:00",
+          "tree_id": "c38c921bfd211b90394ca98b30fdf03ecaa9cf14",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/8e83d2bcf375ebe89feb77231acde8afb0c91814"
+        },
+        "date": 1671173482812,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 242470,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40286,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 241268,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 39961,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 97391,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27284,
             "unit": "bytes"
           }
         ]
