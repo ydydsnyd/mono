@@ -21,3 +21,22 @@ export async function getVersion(
 ): Promise<Version | undefined> {
   return await storage.get(versionKey, versionSchema);
 }
+
+export function compareVersions(
+  v1: NullableVersion,
+  v2: NullableVersion
+): number {
+  if (v1 === v2) {
+    return 0;
+  }
+  if (v1 === null) {
+    return -1;
+  }
+  if (v2 === null) {
+    return 1;
+  }
+  if (v1 < v2) {
+    return -1;
+  }
+  return 1;
+}

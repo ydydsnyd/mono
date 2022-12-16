@@ -19,6 +19,7 @@ import {
 import { USER_DATA_HEADER_NAME } from "./auth.js";
 import { encodeHeaderValue } from "../util/headers.js";
 import { DurableStorage } from "../storage/durable-storage.js";
+import { NullableVersion, putVersion } from "../../src/types/version.js";
 
 const { roomDO } = getMiniflareBindings();
 const id = roomDO.newUniqueId();
@@ -74,8 +75,10 @@ test("handleConnection", async () => {
     existingClients: ClientMap;
     expectedClients: (socket: Socket) => ClientMap;
     socket?: Socket;
+    version: NullableVersion;
   };
   const c2 = client("c2", "u2");
+
   const cases: Case[] = [
     {
       name: "invalid clientid",
@@ -84,6 +87,7 @@ test("handleConnection", async () => {
       expectErrorResponse: "Error: invalid querystring - missing clientID",
       existingClients: new Map(),
       expectedClients: () => new Map(),
+      version: 1,
     },
     {
       name: "invalid timestamp",
@@ -92,6 +96,7 @@ test("handleConnection", async () => {
       expectErrorResponse: "Error: invalid querystring - missing ts",
       existingClients: new Map(),
       expectedClients: () => new Map(),
+      version: 1,
     },
     {
       name: "invalid (non-numeric) timestamp",
@@ -101,6 +106,7 @@ test("handleConnection", async () => {
         "Error: invalid querystring parameter ts, url: http://google.com/?clientID=c1&baseCookie=1&ts=xx&lmid=0, got: xx",
       existingClients: new Map(),
       expectedClients: () => new Map(),
+      version: 1,
     },
     {
       name: "missing lmid",
@@ -109,6 +115,7 @@ test("handleConnection", async () => {
       expectErrorResponse: "Error: invalid querystring - missing lmid",
       existingClients: new Map(),
       expectedClients: () => new Map(),
+      version: 1,
     },
     {
       name: "inmvalid (non-numeric) lmid",
@@ -118,22 +125,45 @@ test("handleConnection", async () => {
         "Error: invalid querystring parameter lmid, url: http://google.com/?clientID=c1&baseCookie=1&ts=123&lmid=xx, got: xx",
       existingClients: new Map(),
       expectedClients: () => new Map(),
+      version: 1,
     },
     {
-      name: "no existing clients",
-      url: "http://google.com/?clientID=c1&baseCookie=1&ts=42&lmid=0", // baseCookie === 1 => room was re-created
-      headers: createHeadersWithValidUserData("u1"),
-      expectErrorResponse: `Unexpected baseCookie. ${maybeOldClientStateMessage}`,
-      existingClients: new Map(),
-      expectedClients: () => new Map(),
-    },
-    {
-      name: "baseCookie: null",
+      name: "baseCookie: null and version: null",
       url: "http://google.com/?clientID=c1&baseCookie=&ts=42&lmid=0",
       headers: createHeadersWithValidUserData("u1"),
       existingClients: new Map(),
       expectedClients: (socket) => new Map([freshClient("c1", "u1", socket)]),
+      existingRecord: clientRecord(null, 0),
       expectedRecord: clientRecord(null, 0),
+      version: null,
+    },
+    {
+      name: "baseCookie: 1 and version null",
+      url: "http://google.com/?clientID=c1&baseCookie=1&ts=42&lmid=0",
+      headers: createHeadersWithValidUserData("u1"),
+      expectErrorResponse: `Unexpected baseCookie. ${maybeOldClientStateMessage}`,
+      existingClients: new Map(),
+      expectedClients: () => new Map(),
+      version: null,
+    },
+    {
+      name: "baseCookie: 2 and version: 1",
+      url: "http://google.com/?clientID=c1&baseCookie=2&ts=42&lmid=0",
+      headers: createHeadersWithValidUserData("u1"),
+      expectErrorResponse: `Unexpected baseCookie. ${maybeOldClientStateMessage}`,
+      existingClients: new Map(),
+      expectedClients: () => new Map(),
+      version: null,
+    },
+    {
+      name: "baseCookie: 1 and version: 2",
+      url: "http://google.com/?clientID=c1&baseCookie=1&ts=42&lmid=0",
+      headers: createHeadersWithValidUserData("u1"),
+      existingClients: new Map(),
+      expectedClients: (socket) => new Map([freshClient("c1", "u1", socket)]),
+      existingRecord: clientRecord(2, 0),
+      expectedRecord: clientRecord(1, 0),
+      version: 2,
     },
     {
       name: "baseCookie: null w/existing clients",
@@ -143,6 +173,7 @@ test("handleConnection", async () => {
       expectedClients: (socket) =>
         new Map([freshClient("c1", "u1", socket), c2]),
       expectedRecord: clientRecord(null, 0),
+      version: 1,
     },
     {
       name: "existing record",
@@ -150,26 +181,9 @@ test("handleConnection", async () => {
       headers: createHeadersWithValidUserData("u1"),
       existingClients: new Map(),
       expectedClients: (socket) => new Map([freshClient("c1", "u1", socket)]),
-      existingRecord: clientRecord(7, 0),
+      existingRecord: clientRecord(4, 0),
       expectedRecord: clientRecord(7, 0),
-    },
-    {
-      name: "existing record w/too large baseCookie is an error",
-      url: "http://google.com/?clientID=c1&baseCookie=50&ts=42&lmid=0", // baseCookie === 50 => room was re-created
-      headers: createHeadersWithValidUserData("u1"),
-      existingClients: new Map(),
-      expectedClients: (socket) => new Map([freshClient("c1", "u1", socket)]),
-      existingRecord: clientRecord(1, 0),
-      expectErrorResponse: `Unexpected baseCookie. ${maybeOldClientStateMessage}`,
-    },
-    {
-      name: "existing record w/too small baseCookie is ok",
-      url: "http://google.com/?clientID=c1&baseCookie=5&ts=42&lmid=0",
-      headers: createHeadersWithValidUserData("u1"),
-      existingClients: new Map(),
-      expectedClients: (socket) => new Map([freshClient("c1", "u1", socket)]),
-      existingRecord: clientRecord(7, 0),
-      expectedRecord: clientRecord(5, 0),
+      version: 7,
     },
     {
       name: "missing user data",
@@ -178,6 +192,7 @@ test("handleConnection", async () => {
       expectErrorResponse: "Error: missing user-data",
       existingClients: new Map(),
       expectedClients: () => new Map(),
+      version: 10,
     },
     {
       name: "invalid user data",
@@ -186,6 +201,7 @@ test("handleConnection", async () => {
       expectErrorResponse: "Error: invalid user-data - failed to decode/parse",
       existingClients: new Map(),
       expectedClients: () => new Map(),
+      version: 7,
     },
     {
       name: "user data missing userID",
@@ -194,6 +210,7 @@ test("handleConnection", async () => {
       expectErrorResponse: "Error: invalid user-data - missing userID",
       existingClients: new Map(),
       expectedClients: () => new Map(),
+      version: 7,
     },
     {
       name: "user data with empty userID",
@@ -202,6 +219,7 @@ test("handleConnection", async () => {
       expectErrorResponse: "Error: invalid user-data - missing userID",
       existingClients: new Map(),
       expectedClients: () => new Map(),
+      version: 7,
     },
     {
       name: "Invalid lastMutationID",
@@ -211,6 +229,7 @@ test("handleConnection", async () => {
       headers: createHeadersWithValidUserData("u1"),
       existingRecord: clientRecord(7, 0),
       expectErrorResponse: `Unexpected lmid. ${maybeOldClientStateMessage}`,
+      version: 7,
     },
   ];
 
@@ -218,8 +237,13 @@ test("handleConnection", async () => {
   const storage = new DurableStorage(durable);
 
   for (const c of cases) {
+    await durable.deleteAll();
     if (c.existingRecord) {
       await putEntry(durable, clientRecordKey("c1"), c.existingRecord, {});
+    }
+
+    if (c.version !== null) {
+      await putVersion(c.version, storage);
     }
 
     const onMessage = () => undefined;

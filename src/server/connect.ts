@@ -16,6 +16,7 @@ import { USER_DATA_HEADER_NAME } from "./auth.js";
 import { decodeHeaderValue } from "../util/headers.js";
 import { addConnectedClient } from "../types/connected-clients.js";
 import type { DurableStorage } from "../storage/durable-storage.js";
+import { compareVersions, getVersion } from "../types/version.js";
 
 export type MessageHandler = (
   clientID: ClientID,
@@ -84,16 +85,14 @@ export async function handleConnection(
     sendError(`Unexpected lmid. ${maybeOldClientStateMessage}`);
     return;
   }
-  if (
-    requestBaseCookie !== null &&
-    (existingRecord === undefined ||
-      requestBaseCookie > (existingRecord.baseCookie ?? 0))
-  ) {
+
+  const version = (await getVersion(storage)) ?? null;
+  if (compareVersions(requestBaseCookie, version) > 0) {
     lc.info?.(
       "Unexpected baseCookie when connecting. Got",
       requestBaseCookie,
-      "current ClientRecord is",
-      existingRecord
+      "current version is",
+      version
     );
     sendError(`Unexpected baseCookie. ${maybeOldClientStateMessage}`);
     return;
