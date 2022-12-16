@@ -38,7 +38,7 @@ export const emptyHash = emptyUUID as unknown as Hash;
 /**
  * Creates a new "Hash" that is a UUID.
  */
-export const newUUIDHash = makeNewUUIDHashFunctionInternal('', uuid());
+export const newUUIDHash = makeNewUUIDHashFunctionInternal('', uuid);
 
 /**
  * Creates a function that generates UUID hashes for tests.
@@ -48,7 +48,7 @@ export function makeNewFakeHashFunction(hashPrefix = 'face'): () => Hash {
     /^[0-9a-f]{0,8}$/.test(hashPrefix),
     `Invalid hash prefix: ${hashPrefix}`,
   );
-  return makeNewUUIDHashFunctionInternal(hashPrefix, emptyUUID);
+  return makeNewUUIDHashFunctionInternal(hashPrefix, () => emptyUUID);
 }
 
 /**
@@ -58,11 +58,19 @@ export function makeNewFakeHashFunction(hashPrefix = 'face'): () => Hash {
  */
 function makeNewUUIDHashFunctionInternal(
   hashPrefix: string,
-  uuid: string,
+  makeUUID: () => string,
 ): () => Hash {
-  const base = makeBase(hashPrefix, uuid);
+  let base: string | undefined;
   let tempHashCounter = 0;
   return () => {
+    if (!base) {
+      // This needs to be lazy because the cloudflare worker environment will
+      // throw an error if crypto.randomUUID is used statically.  Specifically:
+      // Error: Some functionality, such as asynchronous I/O, timeouts, and
+      // generating random values, can only be performed while handling a
+      // request.
+      base = makeBase(hashPrefix, makeUUID());
+    }
     const tail = String(tempHashCounter++);
     return makeHash(base, tail);
   };
