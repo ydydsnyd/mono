@@ -32,7 +32,6 @@ import fetchMock from 'fetch-mock/esm/client';
 import {initClientWithClientID} from './persist/clients-test-helpers.js';
 import {PUSH_VERSION_SDD} from './sync/push.js';
 import {assertClientSDD} from './persist/clients.js';
-import {enableLicensingSymbol} from './replicache-options.js';
 import {persistSDD} from './persist/persist-test-helpers.js';
 
 initReplicacheTesting();
@@ -1196,7 +1195,7 @@ test('mutation recovery is invoked on change from offline to online', async () =
 
 test('mutation recovery is invoked on 5 minute interval', async () => {
   const rep = await replicacheForTesting('mutation-recovery-startup', {
-    [enableLicensingSymbol]: false,
+    enableLicensing: false,
   });
   expect(rep.recoverMutationsSpy.callCount).to.equal(1);
   await clock.tickAsync(5 * 60 * 1000);

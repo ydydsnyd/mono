@@ -41,7 +41,6 @@ import {
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
 import {
-  enableLicensingSymbol,
   enablePullAndPushInOpenSymbol,
   ReplicacheOptions,
 } from './replicache-options.js';
@@ -1608,7 +1607,7 @@ async function licenseKeyCheckTest(tc: LicenseKeyCheckTestCase) {
     tc.enableLicensing !== undefined
       ? {
           licenseKey: tc.licenseKey,
-          [enableLicensingSymbol]: tc.enableLicensing,
+          enableLicensing: tc.enableLicensing,
         }
       : {licenseKey: tc.licenseKey},
   );
@@ -1766,7 +1765,7 @@ async function licenseActiveTest(tc: LicenseActiveTestCase) {
     tc.enableLicensing !== undefined
       ? {
           licenseKey: tc.licenseKey,
-          [enableLicensingSymbol]: tc.enableLicensing,
+          enableLicensing: tc.enableLicensing,
         }
       : {licenseKey: tc.licenseKey},
   );

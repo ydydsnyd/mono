@@ -10,7 +10,6 @@ import {ReadTransactionImpl, WriteTransactionImpl} from './transactions.js';
 import type {ReadTransaction, WriteTransaction} from './transactions.js';
 import {ConnectionLoop, MAX_DELAY_MS, MIN_DELAY_MS} from './connection-loop.js';
 import {
-  enableLicensingSymbol,
   enableMutationRecoverySymbol,
   enablePullAndPushInOpenSymbol,
   enableScheduledPersistSymbol,
@@ -433,10 +432,10 @@ export class Replicache<MD extends MutatorDefs = {}> {
     this.puller = puller ?? getDefaultPuller(this);
     this.pusher = pusher ?? getDefaultPusher(this);
 
-    const internalOptions = options as ReplicacheInternalOptions;
+    const internalOptions = options as unknown as ReplicacheInternalOptions;
     const enableMutationRecovery =
       internalOptions[enableMutationRecoverySymbol] ?? true;
-    this._enableLicensing = internalOptions[enableLicensingSymbol] ?? true;
+    this._enableLicensing = internalOptions.enableLicensing ?? true;
     this._enableScheduledPersist =
       internalOptions[enableScheduledPersistSymbol] ?? true;
     this._enableScheduledRefresh =

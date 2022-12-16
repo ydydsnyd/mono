@@ -222,7 +222,6 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
 }
 
 export const enablePullAndPushInOpenSymbol = Symbol();
-export const enableLicensingSymbol = Symbol();
 export const enableMutationRecoverySymbol = Symbol();
 export const enableScheduledPersistSymbol = Symbol();
 export const enableScheduledRefreshSymbol = Symbol();
@@ -230,8 +229,9 @@ export const enableScheduledRefreshSymbol = Symbol();
 export type ReplicacheInternalOptions = {
   /**
    * Defaults to true.
+   * Does not use a symbol because it is used by reflect.
    */
-  [enableLicensingSymbol]?: boolean | undefined;
+  enableLicensing?: boolean | undefined;
 
   /**
    * Defaults to true.

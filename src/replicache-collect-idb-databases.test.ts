@@ -1,5 +1,4 @@
 import {expect} from '@esm-bundle/chai';
-import {enableLicensingSymbol} from './replicache-options.js';
 import {sleep} from './sleep.js';
 import {
   clock,
@@ -39,7 +38,7 @@ test('collect IDB databases', async () => {
 
   // Open one more database and keep it open long enough to trigger the collection.
   const rep3 = await replicacheForTesting('collect-idb-databases-3', {
-    [enableLicensingSymbol]: false,
+    enableLicensing: false,
   });
   await clock.tickAsync(FIVE_MINUTES);
   await rep3.close();

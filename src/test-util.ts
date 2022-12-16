@@ -4,7 +4,6 @@ import {
   ReplicacheOptions,
   ReplicacheInternalOptions,
   ReplicacheInternalAPI,
-  enableLicensingSymbol,
   enableMutationRecoverySymbol,
   enableScheduledRefreshSymbol,
   enableScheduledPersistSymbol,
@@ -373,7 +372,7 @@ export function waitForSync(rep: {
 }
 
 export const disableAllBackgroundProcesses = {
-  [enableLicensingSymbol]: false,
+  enableLicensing: false,
   [enableMutationRecoverySymbol]: false,
   [enableScheduledRefreshSymbol]: false,
   [enableScheduledPersistSymbol]: false,
