@@ -22,7 +22,7 @@ const pokeBodySchema = z.object({
   // able to send a base cookie with value `null` to match that state.
   baseCookie: nullableVersionSchema,
   cookie: versionSchema,
-  lastMutationID: z.number(),
+  lastMutationIDChanges: z.record(z.string(), z.number()),
   patch: patchSchema,
   timestamp: z.number(),
 });

@@ -2,8 +2,6 @@ import {consoleLogSink, LogContext, TeeLogSink} from '@rocicorp/logger';
 import {nanoid} from 'nanoid';
 import {
   MutatorDefs,
-  Poke,
-  PullerResult,
   ReadonlyJSONValue,
   ReadTransaction,
   Replicache,
@@ -11,16 +9,25 @@ import {
   ExperimentalWatchNoIndexCallback,
   ExperimentalWatchOptions,
   ExperimentalWatchCallbackForOptions,
+  PushRequestV0,
+  PushRequestV1,
+  PusherResult,
+  PullRequestV0,
+  PullRequestV1,
+  PullerResultV0,
+  PullerResultV1,
+  PokeDD31,
 } from 'replicache';
 import type {Downstream} from '../protocol/down.js';
+import type {JSONType} from '../protocol/json.js';
 import type {PingMessage} from '../protocol/ping.js';
 import type {PokeBody} from '../protocol/poke.js';
-import type {PushBody, PushMessage} from '../protocol/push.js';
+import type {PushMessage} from '../protocol/push.js';
 import {NullableVersion, nullableVersionSchema} from '../types/version.js';
 import {assert} from '../util/asserts.js';
 import {GapTracker} from '../util/gap-tracker.js';
 import {Lock} from '../util/lock.js';
-import {resolver} from '../util/resolver.js';
+import {Resolver, resolver} from '../util/resolver.js';
 import {sleep} from '../util/sleep.js';
 import type {ReflectOptions} from './options.js';
 
@@ -29,6 +36,8 @@ export const enum ConnectionState {
   Connecting,
   Connected,
 }
+
+const NULL_LAST_MUTATION_ID_SENT = {clientID: '', id: -1};
 
 export class Reflect<MD extends MutatorDefs> {
   private readonly _rep: Replicache<MD>;
@@ -45,7 +54,8 @@ export class Reflect<MD extends MutatorDefs> {
   private readonly _updateTracker: GapTracker;
   private readonly _timestampTracker: GapTracker;
 
-  private _lastMutationIDSent = -1;
+  private _lastMutationIDSent: {clientID: string; id: number} =
+    NULL_LAST_MUTATION_ID_SENT;
   private _onPong: () => void = () => undefined;
 
   /**
@@ -54,6 +64,7 @@ export class Reflect<MD extends MutatorDefs> {
    */
   onOnlineChange: ((online: boolean) => void) | null = null;
 
+  private _baseCookieResolver: Resolver<NullableVersion> | null = null;
   private _connectResolver = resolver<WebSocket>();
   private _lastMutationIDReceived = 0;
 
@@ -69,15 +80,13 @@ export class Reflect<MD extends MutatorDefs> {
       throw new Error('ReflectOptions.userID must not be empty.');
     }
     const {socketOrigin} = options;
-    if (socketOrigin) {
-      if (
-        !socketOrigin.startsWith('ws://') &&
-        !socketOrigin.startsWith('wss://')
-      ) {
-        throw new Error(
-          "ReflectOptions.socketOrigin must use the 'ws' or 'wss' scheme.",
-        );
-      }
+    if (
+      !socketOrigin.startsWith('ws://') &&
+      !socketOrigin.startsWith('wss://')
+    ) {
+      throw new Error(
+        "ReflectOptions.socketOrigin must use the 'ws' or 'wss' scheme.",
+      );
     }
 
     if (options.onOnlineChange) {
@@ -91,7 +100,8 @@ export class Reflect<MD extends MutatorDefs> {
       logSinks: options.logSinks,
       mutators: options.mutators,
       name: `reflect-${options.userID}-${options.roomID}`,
-      pusher: (req: Request) => this._pusher(req),
+      pusher: (req) => this._pusher(req),
+      puller: (req) => this._puller(req),
       // TODO: Do we need these?
       // TODO: figure out backoff?
       pushDelay: 0,
@@ -103,7 +113,6 @@ export class Reflect<MD extends MutatorDefs> {
     };
     const replicacheInternalOptions = {
       enableLicensing: false,
-      enableMutationRecovery: false,
     };
 
     this._rep = new Replicache({
@@ -111,6 +120,7 @@ export class Reflect<MD extends MutatorDefs> {
       ...replicacheInternalOptions,
     });
     this._rep.getAuth = options.getAuth;
+    this._rep.onUpdateNeeded = null;
     this._socketOrigin = options.socketOrigin;
     this.roomID = options.roomID;
     this.userID = options.userID;
@@ -159,6 +169,10 @@ export class Reflect<MD extends MutatorDefs> {
     return this._rep.clientID;
   }
 
+  get clientGroupID(): Promise<string> {
+    return this._rep.clientGroupID;
+  }
+
   /**
    * The authorization token used when opening a WebSocket connection to
    * the Reflect server.
@@ -205,7 +219,7 @@ export class Reflect<MD extends MutatorDefs> {
    * If an error occurs in the `body` the `onError` function is called if
    * present. Otherwise, the error is thrown.
    */
-  subscribe<R extends ReadonlyJSONValue | undefined, E>(
+  subscribe<R extends ReadonlyJSONValue | undefined>(
     body: (tx: ReadTransaction) => Promise<R>,
     {
       onData,
@@ -213,7 +227,7 @@ export class Reflect<MD extends MutatorDefs> {
       onDone,
     }: {
       onData: (result: R) => void;
-      onError?: (error: E) => void;
+      onError?: (error: unknown) => void;
       onDone?: () => void;
     },
   ): () => void {
@@ -282,7 +296,7 @@ export class Reflect<MD extends MutatorDefs> {
       );
 
       this._state = ConnectionState.Connected;
-      this._lastMutationIDSent = -1;
+      this._lastMutationIDSent = NULL_LAST_MUTATION_ID_SENT;
       assert(this._socket);
       this._connectResolver.resolve(this._socket);
       this.onOnlineChange?.(true);
@@ -329,13 +343,14 @@ export class Reflect<MD extends MutatorDefs> {
 
     this._state = ConnectionState.Connecting;
 
-    const baseCookie = await getBaseCookie(this._rep);
+    const baseCookie = await this.getBaseCookie();
     // TODO if connection fails with 401 use this._rep.getAuth to
     // try to refresh this._rep.auth and then retry connection
     const ws = createSocket(
       this._socketOrigin,
       baseCookie,
-      await this._rep.clientID,
+      await this.clientID,
+      await this.clientGroupID,
       this.roomID,
       this._rep.auth,
       this._lastMutationIDReceived,
@@ -363,7 +378,7 @@ export class Reflect<MD extends MutatorDefs> {
     this._socket?.removeEventListener('close', this._onClose);
     this._socket?.close();
     this._socket = undefined;
-    this._lastMutationIDSent = -1;
+    this._lastMutationIDSent = NULL_LAST_MUTATION_ID_SENT;
   }
 
   private async _handlePoke(l: LogContext, pokeBody: PokeBody) {
@@ -373,12 +388,16 @@ export class Reflect<MD extends MutatorDefs> {
       this._updateTracker.push(performance.now());
       this._timestampTracker.push(pokeBody.timestamp);
 
-      const {lastMutationID, baseCookie, patch, cookie} = pokeBody;
-      this._lastMutationIDReceived = lastMutationID;
-      const p: Poke = {
+      const {lastMutationIDChanges, baseCookie, patch, cookie} = pokeBody;
+      const lastMutationIDChangeForSelf =
+        lastMutationIDChanges[await this.clientID];
+      if (lastMutationIDChangeForSelf !== undefined) {
+        this._lastMutationIDReceived = lastMutationIDChangeForSelf;
+      }
+      const p: PokeDD31 = {
         baseCookie,
         pullResponse: {
-          lastMutationID,
+          lastMutationIDChanges,
           patch,
           cookie,
         },
@@ -397,33 +416,142 @@ export class Reflect<MD extends MutatorDefs> {
     });
   }
 
-  private async _pusher(req: Request) {
+  private async _pusher(
+    req: PushRequestV0 | PushRequestV1,
+  ): Promise<PusherResult> {
+    this._l.debug?.('Push', req);
+    // If pushVersion is 0 this is a mutation recovery push for a pre dd31
+    // client.  Reflect didn't support mutation recovery pre dd31, so don't
+    // try to recover these, just return no-op response.
+    if (req.pushVersion === 0) {
+      return {
+        httpRequestInfo: {
+          errorMessage: '',
+          httpStatusCode: 200,
+        },
+      };
+    }
+
     if (!this._socket) {
       void this._connect(this._l);
     }
 
     const socket = await this._connectResolver.promise;
 
-    const pushBody = (await req.json()) as PushBody;
-
-    for (const m of pushBody.mutations) {
-      if (m.id > this._lastMutationIDSent) {
-        this._lastMutationIDSent = m.id;
-
-        const msg: PushMessage = [
-          'push',
-          {...pushBody, mutations: [m], timestamp: performance.now()},
-        ];
-
+    const isMutationRecoveryPush =
+      req.clientGroupID !== (await this.clientGroupID);
+    const start = isMutationRecoveryPush
+      ? 0
+      : req.mutations.findIndex(
+          (m) =>
+            m.clientID === this._lastMutationIDSent.clientID &&
+            m.id === this._lastMutationIDSent.id,
+        ) + 1;
+    this._l.debug?.(
+      isMutationRecoveryPush ? 'pushing for recovery' : 'pushing',
+      req.mutations.length - start,
+      'mutations of',
+      req.mutations.length,
+      'mutations.',
+    );
+    for (let i = start; i < req.mutations.length; i++) {
+      const m = req.mutations[i];
+      const msg: PushMessage = [
+        'push',
+        {
+          timestamp: performance.now(),
+          clientGroupID: req.clientGroupID,
+          mutations: [
+            {
+              timestamp: m.timestamp,
+              id: m.id,
+              clientID: m.clientID,
+              name: m.name,
+              args: m.args as JSONType,
+            },
+          ],
+          pushVersion: req.pushVersion,
+          schemaVersion: req.schemaVersion,
+        },
+      ];
+      socket.send(JSON.stringify(msg));
+      if (!isMutationRecoveryPush) {
+        this._lastMutationIDSent = {clientID: m.clientID, id: m.id};
         this._pushTracker.push(performance.now());
-        socket.send(JSON.stringify(msg));
       }
     }
-
     return {
-      errorMessage: '',
-      httpStatusCode: 200,
+      httpRequestInfo: {
+        errorMessage: '',
+        httpStatusCode: 200,
+      },
     };
+  }
+
+  private async _puller(
+    req: PullRequestV0 | PullRequestV1,
+  ): Promise<PullerResultV0 | PullerResultV1> {
+    this._l.debug?.('Pull', req);
+    // If pushVersion === 0 this is a mutation recovery pull for a pre dd31
+    // client.  Reflect didn't support mutation recovery pre dd31, so don't
+    // try to recover these, just return no-op response.
+    if (req.pullVersion === 0) {
+      return {
+        httpRequestInfo: {
+          errorMessage: '',
+          httpStatusCode: 200,
+        },
+      };
+    }
+    // Pull request for this instance's client group.  The base cookie is
+    // intercepted here (in a complete hack), and a no-op response is returned
+    // as pulls for this client group are handled via poke over the socket.
+    if (req.clientGroupID === (await this.clientGroupID)) {
+      const parsed = nullableVersionSchema.parse(req.cookie);
+      const resolver = this._baseCookieResolver;
+      this._baseCookieResolver = null;
+      resolver?.resolve(parsed);
+      return {
+        httpRequestInfo: {
+          errorMessage: '',
+          httpStatusCode: 200,
+        },
+      };
+    }
+
+    // Mutation recovery pull.
+    this._l.debug?.('Pull is for mutation recovery');
+    const pullURL = new URL(this._socketOrigin);
+    pullURL.protocol = pullURL.protocol === 'ws:' ? 'http' : 'https';
+    pullURL.pathname = '/pull';
+    pullURL.searchParams.set('roomID', this.roomID);
+    const headers = new Headers();
+    headers.set('Authorization', this.auth);
+    const response = await fetch(
+      new Request(pullURL.toString(), {
+        headers,
+        body: JSON.stringify(req),
+        method: 'POST',
+      }),
+    );
+    this._l.debug?.('Pull response', response);
+    const httpStatusCode = response.status;
+    if (httpStatusCode === 200) {
+      return {
+        response: await response.json(),
+        httpRequestInfo: {
+          errorMessage: '',
+          httpStatusCode,
+        },
+      };
+    } else {
+      return {
+        httpRequestInfo: {
+          errorMessage: await response.text(),
+          httpStatusCode,
+        },
+      };
+    }
   }
 
   private async _watchdog() {
@@ -462,30 +590,22 @@ export class Reflect<MD extends MutatorDefs> {
       this._disconnect();
     }
   }
-}
 
-// Total hack to get base cookie
-async function getBaseCookie(rep: Replicache) {
-  const {promise, resolve} = resolver<NullableVersion>();
-  rep.puller = async (req): Promise<PullerResult> => {
-    const val = await req.json();
-    const parsed = nullableVersionSchema.parse(val.cookie);
-    resolve(parsed);
-    return {
-      httpRequestInfo: {
-        errorMessage: '',
-        httpStatusCode: 200,
-      },
-    };
-  };
-  rep.pull();
-  return await promise;
+  // Total hack to get base cookie, see puller_ for how the promise is resolved.
+  async getBaseCookie(): Promise<NullableVersion> {
+    if (!this._baseCookieResolver) {
+      this._baseCookieResolver = resolver<NullableVersion>();
+    }
+    this._rep.pull();
+    return this._baseCookieResolver.promise;
+  }
 }
 
 export function createSocket(
   socketOrigin: string,
   baseCookie: NullableVersion,
   clientID: string,
+  clientGroupID: string,
   roomID: string,
   auth: string,
   lmid: number,
@@ -495,6 +615,7 @@ export function createSocket(
   url.pathname = '/connect';
   const {searchParams} = url;
   searchParams.set('clientID', clientID);
+  searchParams.set('clientGroupID', clientGroupID);
   searchParams.set('roomID', roomID);
   searchParams.set('baseCookie', baseCookie === null ? '' : String(baseCookie));
   searchParams.set('ts', String(performance.now()));
