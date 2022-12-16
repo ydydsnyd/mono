@@ -111,7 +111,11 @@ async function withAllowAllCORS(
   }
   // Try newfangled routing first.
   const resp = await handle(request);
-  // Clone so CORS headers can be set
+  // Clone so CORS headers can be set.  Clone using constructor copy
+  // rather than clone method because CloudFlare's Response
+  // class will throw
+  // "TypeError: Cannot clone a response to a WebSocket handshake."
+  // if the response has a defined webSocket property.
   const respWithAllowAllCORS = new Response(resp.body, resp);
   respWithAllowAllCORS.headers.set("Access-Control-Allow-Origin", "*");
   return respWithAllowAllCORS;
@@ -119,39 +123,40 @@ async function withAllowAllCORS(
 
 function handleOptions(request: Request): Response {
   const { headers } = request;
-  const accessControlRequestHeaders = request.headers.get(
-    "Access-Control-Request-Headers"
-  );
   // Check if necessary headers are present for this to be a valid pre-flight
   // request
   if (
-    headers.get("Origin") !== null &&
-    headers.get("Access-Control-Request-Method") !== null &&
-    accessControlRequestHeaders !== null
+    headers.has("Origin") &&
+    headers.has("Access-Control-Request-Method") &&
+    headers.has("Access-Control-Request-Headers")
   ) {
     // Handle CORS pre-flight request.
     const respHeaders = {
-      ["Access-Control-Allow-Origin"]: "*",
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      "Access-Control-Allow-Origin": "*",
       // TODO determine methods from route definitions, for now
       // just return support for all methods on all paths.
-      ["Access-Control-Allow-Methods"]: "GET,HEAD,POST,OPTIONS",
-      ["Access-Control-Max-Age"]: "86400", // 24 hours
-      ["Access-Control-Allow-Headers"]: accessControlRequestHeaders,
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      "Access-Control-Allow-Methods": "GET,HEAD,POST,OPTIONS",
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      "Access-Control-Max-Age": "86400", // 24 hours
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      "Access-Control-Allow-Headers":
+        headers.get("Access-Control-Request-Headers") ?? "",
     };
 
     return new Response(null, {
       headers: respHeaders,
     });
-  } else {
-    // Handle standard OPTIONS request.
-    // TODO implement based on route definitions, for now just return
-    // support for all methods on all paths.
-    return new Response(null, {
-      headers: {
-        ["Allow"]: "GET, HEAD, POST, OPTIONS",
-      },
-    });
   }
+  // Handle standard OPTIONS request.
+  // TODO implement based on route definitions, for now just return
+  // support for all methods on all paths.
+  return new Response(null, {
+    headers: {
+      ["Allow"]: "GET, HEAD, POST, OPTIONS",
+    },
+  });
 }
 
 async function handleRequest(

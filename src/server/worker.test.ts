@@ -60,29 +60,14 @@ function createTestFixture(
   };
 }
 
-function sortedHeaderEntries(
-  response: Response,
-  ...additionalEntries: [string, string][]
-) {
-  return [...response.headers.entries(), ...additionalEntries].sort(
-    ([key1], [key2]) => {
-      if (key1 === key2) {
-        return 0;
-      }
-      if (key1 < key2) {
-        return -1;
-      }
-      return 1;
-    }
-  );
-}
-
 async function testForwardedToAuthDO(
   testRequest: Request,
   testResponse = new Response("success", { status: 200 }),
   expectAuthDOCalled = true
 ) {
-  // not allowed to clone response's with a websocket
+  // Don't clone response if it has a websocket, otherwise CloudFlare's Response
+  // class will throw
+  // "TypeError: Cannot clone a response to a WebSocket handshake."
   const testResponseClone = testResponse.webSocket
     ? undefined
     : testResponse.clone();
@@ -107,8 +92,14 @@ async function testForwardedToAuthDO(
     if (testResponseClone) {
       expect(await response.text()).toEqual(await testResponseClone.text());
     }
-    expect(sortedHeaderEntries(response)).toEqual(
-      sortedHeaderEntries(testResponse, ["access-control-allow-origin", "*"])
+    const responseHeaders = [...response.headers.entries()];
+    const expectedResponseHeaders = [
+      ...testResponse.headers.entries(),
+      ["access-control-allow-origin", "*"],
+    ];
+    expect(responseHeaders.length).toEqual(expectedResponseHeaders.length);
+    expect(responseHeaders).toEqual(
+      expect.arrayContaining(expectedResponseHeaders)
     );
     expect(response.webSocket).toBe(testResponse.webSocket);
   } else {
