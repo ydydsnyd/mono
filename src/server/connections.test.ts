@@ -5,10 +5,10 @@ import { closeConnections, getConnections } from "./connections";
 
 test("closeConnections", () => {
   const clients = new Map([
-    client("client1_1", "user1", new Mocket()),
-    client("client2_1", "user2", new Mocket()),
-    client("client1_2", "user1", new Mocket()),
-    client("client3_1", "user3", new Mocket()),
+    client("client1_1", "user1", "clientgroup_1", new Mocket()),
+    client("client2_1", "user2", "clientgroup_1", new Mocket()),
+    client("client1_2", "user1", "clientgroup_2", new Mocket()),
+    client("client3_1", "user3", "clientgroup_2", new Mocket()),
   ]);
   const predicate = (clientState: ClientState) => {
     return clientState.userData.userID === "user1";
@@ -22,10 +22,10 @@ test("closeConnections", () => {
 
 test("getConnections", () => {
   const clients = new Map([
-    client("client1_1", "user1", new Mocket()),
-    client("client2_1", "user2", new Mocket()),
-    client("client1_2", "user1", new Mocket()),
-    client("client3_1", "user3", new Mocket()),
+    client("client1_1", "user1", "clientgroup_1", new Mocket()),
+    client("client2_1", "user2", "clientgroup_1", new Mocket()),
+    client("client1_2", "user1", "clientgroup_2", new Mocket()),
+    client("client3_1", "user3", "clientgroup_2", new Mocket()),
   ]);
   const connections = getConnections(clients);
   expect(connections.length).toEqual(4);

@@ -164,6 +164,7 @@ async function handleRequest(
   return dispatch(request, lc, env.REFLECT_AUTH_API_KEY, {
     createRoom: forwardToAuthDO,
     connect: forwardToAuthDO,
+    pull: forwardToAuthDO,
     authInvalidateForUser: forwardToAuthDO,
     authInvalidateForRoom: forwardToAuthDO,
     authInvalidateAll: forwardToAuthDO,

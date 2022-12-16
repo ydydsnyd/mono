@@ -3,7 +3,7 @@ import type { WriteTransaction } from "replicache";
 import { DurableStorage } from "../../src/storage/durable-storage.js";
 import type { ClientPokeBody } from "../../src/types/client-poke-body.js";
 import {
-  ClientRecord,
+  ClientRecordMap,
   getClientRecord,
   putClientRecord,
 } from "../../src/types/client-record.js";
@@ -12,12 +12,13 @@ import { getUserValue, UserValue } from "../../src/types/user-value.js";
 import { getVersion, Version, versionKey } from "../../src/types/version.js";
 import {
   client,
+  mutation,
   clientRecord,
   createSilentLogContext,
   fail,
-  mutation,
 } from "../util/test-utils.js";
 import { processRoom } from "../../src/process/process-room.js";
+import type { PendingMutationMap } from "../types/mutation.js";
 
 const { roomDO } = getMiniflareBindings();
 const id = roomDO.newUniqueId();
@@ -25,13 +26,14 @@ const id = roomDO.newUniqueId();
 test("processRoom", async () => {
   type Case = {
     name: string;
-    clientRecords: Map<string, ClientRecord>;
+    clientRecords: ClientRecordMap;
     headVersion: Version;
     clients: ClientMap;
+    pendingMutations: PendingMutationMap;
     expectedError?: string;
     expectedPokes?: ClientPokeBody[];
     expectedUserValues?: Map<string, UserValue>;
-    expectedClientRecords?: Map<string, ClientRecord>;
+    expectedClientRecords?: ClientRecordMap;
     expectedVersion: Version;
   };
 
@@ -41,8 +43,9 @@ test("processRoom", async () => {
     {
       name: "no client record",
       clientRecords: new Map(),
+      pendingMutations: new Map(),
       headVersion: 42,
-      clients: new Map([client("c1", "u1")]),
+      clients: new Map([client("c1", "u1", "cg1")]),
       expectedUserValues: new Map(),
       expectedError: "Error: Client record not found: c1",
       expectedVersion: 42,
@@ -50,18 +53,24 @@ test("processRoom", async () => {
     {
       name: "no mutations, clients out of date",
       clientRecords: new Map([
-        ["c1", clientRecord()],
-        ["c2", clientRecord()],
+        ["c1", clientRecord("cg1")],
+        ["c2", clientRecord("cg1")],
+        ["c3", clientRecord("cg2")],
       ]),
-      headVersion: 1,
-      clients: new Map([client("c1", "u1"), client("c2", "u2")]),
+      headVersion: 2,
+      clients: new Map([
+        client("c1", "u1", "cg1"),
+        client("c2", "u2", "cg1"),
+        client("c3", "u3", "cg2"),
+      ]),
+      pendingMutations: new Map(),
       expectedPokes: [
         {
           clientID: "c1",
           poke: {
             baseCookie: null,
-            cookie: 1,
-            lastMutationID: 1,
+            cookie: 2,
+            lastMutationIDChanges: { c1: 1, c2: 1 },
             patch: [],
             timestamp: 100,
           },
@@ -70,53 +79,72 @@ test("processRoom", async () => {
           clientID: "c2",
           poke: {
             baseCookie: null,
-            cookie: 1,
-            lastMutationID: 1,
+            cookie: 2,
+            lastMutationIDChanges: { c1: 1, c2: 1 },
+            patch: [],
+            timestamp: 100,
+          },
+        },
+        {
+          clientID: "c3",
+          poke: {
+            baseCookie: null,
+            cookie: 2,
+            lastMutationIDChanges: { c3: 1 },
             patch: [],
             timestamp: 100,
           },
         },
       ],
       expectedClientRecords: new Map([
-        ["c1", clientRecord(1)],
-        ["c2", clientRecord(1)],
+        ["c1", clientRecord("cg1", 2)],
+        ["c2", clientRecord("cg1", 2)],
+        ["c3", clientRecord("cg2", 2)],
       ]),
       expectedUserValues: new Map(),
-      expectedVersion: 1,
+      expectedVersion: 2,
     },
     {
       name: "no mutations, one client out of date",
       clientRecords: new Map([
-        ["c1", clientRecord(1)],
-        ["c2", clientRecord()],
+        ["c1", clientRecord("cg1", 2)],
+        ["c2", clientRecord("cg1")],
+        ["c3", clientRecord("cg2", 2)],
       ]),
-      headVersion: 1,
-      clients: new Map([client("c1", "u1"), client("c2", "u2")]),
+      headVersion: 2,
+      clients: new Map([
+        client("c1", "u1", "cg1"),
+        client("c2", "u2", "cg1"),
+        client("c3", "u3", "cg2"),
+      ]),
+      pendingMutations: new Map(),
       expectedPokes: [
         {
           clientID: "c2",
           poke: {
             baseCookie: null,
-            cookie: 1,
-            lastMutationID: 1,
+            cookie: 2,
+            lastMutationIDChanges: { c1: 1, c2: 1 },
             patch: [],
             timestamp: 100,
           },
         },
       ],
       expectedClientRecords: new Map([
-        ["c1", clientRecord(1)],
-        ["c2", clientRecord(1)],
+        ["c1", clientRecord("cg1", 2)],
+        ["c2", clientRecord("cg1", 2)],
+        ["c3", clientRecord("cg2", 2)],
       ]),
       expectedUserValues: new Map(),
-      expectedVersion: 1,
+      expectedVersion: 2,
     },
     {
       name: "one mutation",
-      clientRecords: new Map([["c1", clientRecord(1)]]),
+      clientRecords: new Map([["c1", clientRecord("cg1", 1)]]),
       headVersion: 1,
-      clients: new Map([
-        client("c1", "u1", undefined, 0, mutation(2, "inc", null, 300)),
+      clients: new Map([client("c1", "u1", "cg1")]),
+      pendingMutations: new Map([
+        ["cg1", [mutation("c1", 2, "inc", null, 300)]],
       ]),
       expectedPokes: [
         {
@@ -124,7 +152,7 @@ test("processRoom", async () => {
           poke: {
             baseCookie: 1,
             cookie: 2,
-            lastMutationID: 2,
+            lastMutationIDChanges: { c1: 2 },
             patch: [
               {
                 key: "count",
@@ -136,23 +164,23 @@ test("processRoom", async () => {
           },
         },
       ],
-      expectedClientRecords: new Map([["c1", clientRecord(2, 2)]]),
+      expectedClientRecords: new Map([["c1", clientRecord("cg1", 2, 2, 2)]]),
       expectedUserValues: new Map(),
       expectedVersion: 2,
     },
     {
       name: "mutations before range are included",
-      clientRecords: new Map([["c1", clientRecord(1)]]),
+      clientRecords: new Map([["c1", clientRecord("cg1", 1)]]),
       headVersion: 1,
-      clients: new Map([
-        client(
-          "c1",
-          "u1",
-          undefined,
-          0,
-          mutation(2, "inc", null, 50),
-          mutation(3, "inc", null, 100)
-        ),
+      clients: new Map([client("c1", "u1", "cg1")]),
+      pendingMutations: new Map([
+        [
+          "cg1",
+          [
+            mutation("c1", 2, "inc", null, 50),
+            mutation("c1", 3, "inc", null, 100),
+          ],
+        ],
       ]),
       expectedPokes: [
         {
@@ -162,7 +190,7 @@ test("processRoom", async () => {
             // even though two mutations play we only bump version at most once per frame
             cookie: 2,
             // two mutations played
-            lastMutationID: 3,
+            lastMutationIDChanges: { c1: 3 },
             patch: [
               // two count mutations played, leaving value at 2
               {
@@ -175,12 +203,250 @@ test("processRoom", async () => {
           },
         },
       ],
-      expectedClientRecords: new Map([["c1", clientRecord(2, 3)]]),
+      expectedClientRecords: new Map([["c1", clientRecord("cg1", 2, 3, 2)]]),
+      expectedUserValues: new Map(),
+      expectedVersion: 2,
+    },
+    {
+      name: "mutations in different client groups",
+      clientRecords: new Map([
+        ["c1", clientRecord("cg1", 1)],
+        ["c2", clientRecord("cg1", 1)],
+        ["c3", clientRecord("cg2", 1, 4, 1)],
+        ["c4", clientRecord("cg3", 1)],
+      ]),
+      headVersion: 1,
+      clients: new Map([
+        client("c1", "u1", "cg1"),
+        client("c2", "u2", "cg1"),
+        client("c3", "u3", "cg2"),
+        client("c4", "u4", "cg3"),
+      ]),
+      pendingMutations: new Map([
+        [
+          "cg1",
+          [
+            mutation("c1", 2, "inc", null, 50),
+            mutation("c1", 3, "inc", null, 100),
+            mutation("c2", 2, "inc", null, 10),
+          ],
+        ],
+        ["cg2", [mutation("c3", 5, "inc", null, 50)]],
+      ]),
+      expectedPokes: [
+        {
+          clientID: "c1",
+          poke: {
+            baseCookie: 1,
+            cookie: 2,
+            lastMutationIDChanges: { c1: 3, c2: 2 },
+            patch: [
+              // four inc mutations played, leaving value at 4
+              {
+                op: "put",
+                key: "count",
+                value: 4,
+              },
+            ],
+            timestamp: 100,
+          },
+        },
+        {
+          clientID: "c2",
+          poke: {
+            baseCookie: 1,
+            cookie: 2,
+            lastMutationIDChanges: { c1: 3, c2: 2 },
+            patch: [
+              // four inc mutations played, leaving value at 4
+              {
+                op: "put",
+                key: "count",
+                value: 4,
+              },
+            ],
+            timestamp: 100,
+          },
+        },
+        {
+          clientID: "c3",
+          poke: {
+            baseCookie: 1,
+            cookie: 2,
+            lastMutationIDChanges: { c3: 5 },
+            patch: [
+              // four inc mutations played, leaving value at 4
+              {
+                op: "put",
+                key: "count",
+                value: 4,
+              },
+            ],
+            timestamp: 100,
+          },
+        },
+        {
+          clientID: "c4",
+          poke: {
+            baseCookie: 1,
+            cookie: 2,
+            // no mutation id changes in cg3
+            lastMutationIDChanges: {},
+            patch: [
+              // four inc mutations played, leaving value at 4
+              {
+                op: "put",
+                key: "count",
+                value: 4,
+              },
+            ],
+            timestamp: 100,
+          },
+        },
+      ],
+      expectedClientRecords: new Map([
+        ["c1", clientRecord("cg1", 2, 3, 2)],
+        ["c2", clientRecord("cg1", 2, 2, 2)],
+        ["c3", clientRecord("cg2", 2, 5, 2)],
+        ["c4", clientRecord("cg3", 2)],
+      ]),
+      expectedUserValues: new Map(),
+      expectedVersion: 2,
+    },
+    {
+      name: "2 clients need to be fast forwarded, and mutations in different client groups",
+      clientRecords: new Map([
+        ["c1", clientRecord("cg1", null)],
+        ["c2", clientRecord("cg1", 1)],
+        ["c3", clientRecord("cg2", null, 4, 1)],
+        ["c4", clientRecord("cg3", 1)],
+      ]),
+      headVersion: 1,
+      clients: new Map([
+        client("c1", "u1", "cg1"),
+        client("c2", "u2", "cg1"),
+        client("c3", "u3", "cg2"),
+        client("c4", "u4", "cg3"),
+      ]),
+      pendingMutations: new Map([
+        [
+          "cg1",
+          [
+            mutation("c1", 2, "inc", null, 50),
+            mutation("c1", 3, "inc", null, 100),
+            mutation("c2", 2, "inc", null, 10),
+          ],
+        ],
+        ["cg2", [mutation("c3", 5, "inc", null, 50)]],
+      ]),
+      expectedPokes: [
+        // fast forward pokes
+        {
+          clientID: "c1",
+          poke: {
+            baseCookie: null,
+            cookie: 1,
+            lastMutationIDChanges: {
+              c1: 1,
+              c2: 1,
+            },
+            patch: [],
+            timestamp: 100,
+          },
+        },
+        {
+          clientID: "c3",
+          poke: {
+            baseCookie: null,
+            cookie: 1,
+            lastMutationIDChanges: {
+              c3: 4,
+            },
+            patch: [],
+            timestamp: 100,
+          },
+        },
+        // process mutations pokes
+        {
+          clientID: "c1",
+          poke: {
+            baseCookie: 1,
+            cookie: 2,
+            lastMutationIDChanges: { c1: 3, c2: 2 },
+            patch: [
+              // four inc mutations played, leaving value at 4
+              {
+                op: "put",
+                key: "count",
+                value: 4,
+              },
+            ],
+            timestamp: 100,
+          },
+        },
+        {
+          clientID: "c2",
+          poke: {
+            baseCookie: 1,
+            cookie: 2,
+            lastMutationIDChanges: { c1: 3, c2: 2 },
+            patch: [
+              // four inc mutations played, leaving value at 4
+              {
+                op: "put",
+                key: "count",
+                value: 4,
+              },
+            ],
+            timestamp: 100,
+          },
+        },
+        {
+          clientID: "c3",
+          poke: {
+            baseCookie: 1,
+            cookie: 2,
+            lastMutationIDChanges: { c3: 5 },
+            patch: [
+              // four inc mutations played, leaving value at 4
+              {
+                op: "put",
+                key: "count",
+                value: 4,
+              },
+            ],
+            timestamp: 100,
+          },
+        },
+        {
+          clientID: "c4",
+          poke: {
+            baseCookie: 1,
+            cookie: 2,
+            // no mutation id changes in cg3
+            lastMutationIDChanges: {},
+            patch: [
+              // four inc mutations played, leaving value at 4
+              {
+                op: "put",
+                key: "count",
+                value: 4,
+              },
+            ],
+            timestamp: 100,
+          },
+        },
+      ],
+      expectedClientRecords: new Map([
+        ["c1", clientRecord("cg1", 2, 3, 2)],
+        ["c2", clientRecord("cg1", 2, 2, 2)],
+        ["c3", clientRecord("cg2", 2, 5, 2)],
+        ["c4", clientRecord("cg3", 2)],
+      ]),
       expectedUserValues: new Map(),
       expectedVersion: 2,
     },
   ];
-
   const durable = await getMiniflareDurableObjectStorage(id);
 
   const mutators = new Map(
@@ -204,6 +470,7 @@ test("processRoom", async () => {
     const p = processRoom(
       createSilentLogContext(),
       c.clients,
+      c.pendingMutations,
       mutators,
       () => Promise.resolve(),
       storage,

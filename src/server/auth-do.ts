@@ -326,6 +326,61 @@ export class BaseAuthDO implements DurableObject {
     });
   }
 
+  async pull(lc: LogContext, request: RociRequest): Promise<Response> {
+    const url = new URL(request.url);
+    const roomID = url.searchParams.get("roomID");
+    if (roomID === null || roomID === "") {
+      return new Response("roomID parameter required", {
+        status: 400,
+      });
+    }
+    lc = lc.addContext("room", roomID);
+
+    const auth = request.headers.get("Authorization");
+    if (!auth) {
+      lc.info?.("auth not found in Authorization header.");
+      return createUnauthorizedResponse("auth required");
+    }
+    return this._authLock.withRead(async () => {
+      let userData: UserData | undefined;
+      try {
+        userData = await this._authHandler(auth, roomID);
+      } catch (e) {
+        return createUnauthorizedResponse();
+      }
+      if (!userData || !userData.userID) {
+        if (!userData) {
+          lc.info?.("userData returned by authHandler is falsey.");
+        } else if (!userData.userID) {
+          lc.info?.("userData returned by authHandler has no userID.");
+        }
+        return createUnauthorizedResponse();
+      }
+
+      // Find the room's objectID so we can route the request to it.
+      const roomRecord = await this._roomRecordLock.withRead(async () => {
+        return roomRecordByRoomID(this._durableStorage, roomID);
+      });
+      if (roomRecord === undefined || roomRecord.status !== RoomStatus.Open) {
+        const errorMsg = roomRecord ? "room is not open" : "room not found";
+        return new Response(errorMsg, {
+          status: 404,
+        });
+      }
+
+      const roomObjectID = this._roomDO.idFromString(roomRecord.objectIDString);
+      // Forward the request to the Room Durable Object...
+      const stub = this._roomDO.get(roomObjectID);
+      const requestToDO = new Request(request);
+      requestToDO.headers.set(
+        USER_DATA_HEADER_NAME,
+        encodeHeaderValue(JSON.stringify(userData))
+      );
+      const responseFromDO = await stub.fetch(requestToDO);
+      return responseFromDO;
+    });
+  }
+
   async authInvalidateForUser(
     lc: LogContext,
     request: RociRequest,

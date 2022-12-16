@@ -8,6 +8,7 @@ import {
   mutation,
 } from "../util/test-utils.js";
 import { handleMessage } from "../../src/server/message.js";
+import { DurableStorage } from "../storage/durable-storage.js";
 
 test("handleMessage", async () => {
   type Case = {
@@ -36,16 +37,16 @@ test("handleMessage", async () => {
       data: JSON.stringify([
         "push",
         {
-          clientID: "c1",
-          mutations: [mutation(1), mutation(2)],
+          clientGroupID: "cg1",
+          mutations: [mutation("c1", 1), mutation("c1", 2)],
           pushVersion: 1,
           schemaVersion: "",
           timestamp: 42,
         },
       ]),
       expectedPush: {
-        clientID: "c1",
-        mutations: [mutation(1), mutation(2)],
+        clientGroupID: "cg1",
+        mutations: [mutation("c1", 1), mutation("c1", 2)],
         pushVersion: 1,
         schemaVersion: "",
         timestamp: 42,
@@ -56,8 +57,8 @@ test("handleMessage", async () => {
       data: JSON.stringify([
         "push",
         {
-          clientID: "c1",
-          mutations: [mutation(1), mutation(2)],
+          clientGroupID: "cg1",
+          mutations: [mutation("c1", 1), mutation("c1", 2)],
           pushVersion: 1,
           schemaVersion: "",
           timestamp: 42,
@@ -82,7 +83,7 @@ test("handleMessage", async () => {
     const s1 = new Mocket();
     const clientID = c.clientID !== undefined ? c.clientID : "c1";
     const clients: ClientMap =
-      c.clients || new Map([client(clientID, "u1", s1)]);
+      c.clients || new Map([client(clientID, "u1", "cg1", s1)]);
     // let called = false;
 
     // const handlePush = (
@@ -96,9 +97,16 @@ test("handleMessage", async () => {
     //   expect(pWS).toEqual(s1);
     //   called = true;
     // };
-    handleMessage(
+
+    const { roomDO } = getMiniflareBindings();
+    const storage = new DurableStorage(
+      await getMiniflareDurableObjectStorage(roomDO.newUniqueId())
+    );
+    await handleMessage(
       createSilentLogContext(),
+      storage,
       clients,
+      new Map(),
       clientID,
       c.data,
       s1,

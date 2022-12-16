@@ -5,14 +5,18 @@ import { sendError } from "../util/socket.js";
 import { handlePush, type ProcessUntilDone } from "./push.js";
 import { handlePing } from "./ping.js";
 import { superstructAssert } from "../util/superstruct.js";
+import type { DurableStorage } from "../storage/durable-storage.js";
+import type { PendingMutationMap } from "../types/mutation.js";
 
 /**
  * Handles an upstream message coming into the server by dispatching to the
  * appropriate handler.
  */
-export function handleMessage(
+export async function handleMessage(
   lc: LogContext,
-  clientMap: ClientMap,
+  storage: DurableStorage,
+  clients: ClientMap,
+  pendingMutations: PendingMutationMap,
   clientID: ClientID,
   data: string,
   ws: Socket,
@@ -27,7 +31,7 @@ export function handleMessage(
     return;
   }
 
-  const client = clientMap.get(clientID);
+  const client = clients.get(clientID);
   if (!client) {
     lc.error?.("client not found, closing socket");
     sendError(ws, `no such client: ${clientID}`);
@@ -43,7 +47,16 @@ export function handleMessage(
       handlePing(lc, ws);
       break;
     case "push":
-      handlePush(lc, client, message[1], () => Date.now(), processUntilDone);
+      await handlePush(
+        lc,
+        storage,
+        client,
+        clients,
+        pendingMutations,
+        message[1],
+        () => Date.now(),
+        processUntilDone
+      );
       break;
     default:
       throw new Error(`Unknown message type: ${message[0]}`);
