@@ -16,8 +16,10 @@ import {
   ChunkWithSize,
   GatherNotCachedVisitor,
 } from './gather-not-cached-visitor.js';
+import {sleep} from '../sleep.js';
 
 const GATHER_SIZE_LIMIT = 5 * 2 ** 20; // 5 MB
+const DELAY_MS = 300;
 
 /**
  * This returns the diff between the state of the btree before and after
@@ -133,6 +135,17 @@ export async function refresh(
       });
 
       if (closed() || !perdagWriteResult) {
+        return;
+      }
+      // pull/poke and refresh are racing to see who gets to update
+      // the memdag (the one with the newer basesnapshot cookie wins)
+      // pull/poke updates are preferable so delay refresh slightly to
+      // make pull/poke the winner except when pull/pokes are slow.
+      // This is especially important for pokes, as refresh winning
+      // will result in the next poke's cookie not matching necessitating
+      // a disconnect/reconnect.
+      await sleep(DELAY_MS);
+      if (closed()) {
         return;
       }
 
