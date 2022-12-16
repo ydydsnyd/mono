@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1671139404656,
+  "lastUpdate": 1671165591163,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -35177,6 +35177,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27243,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6fc164174e3ddcc7befaf8c37a843309d1d197c6",
+          "message": "feat(DD31,reflect): Add a delay in refresh to favor pull/poke winning (#503)\n\nPull/poke and refresh are racing to see who gets to update the memdag\r\n(the one with the newer basesnapshot cookie wins). pull/poke updates are\r\npreferable to refresh udpates, so delay refresh slightly to make pull/poke\r\nthe winner except when pull/pokes are slow. This is especially important\r\nfor pokes, as refresh winning will result in the next poke's cookie not\r\nmatching necessitating a disconnect/reconnect.\r\n\r\nThis artificially inflates the refresh benchmarks, but by a fixed ammount.",
+          "timestamp": "2022-12-15T21:38:51-07:00",
+          "tree_id": "cfbe48dc1f96f2d9d21769a2dad95a56446a8622",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/6fc164174e3ddcc7befaf8c37a843309d1d197c6"
+        },
+        "date": 1671165583829,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 242476,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40335,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 241274,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 39964,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 97384,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27271,
             "unit": "bytes"
           }
         ]
