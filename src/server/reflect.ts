@@ -68,20 +68,9 @@ export function createReflectServer<
 } {
   const optionsWithDefaults = getOptionsWithDefaults(options);
   const roomDOClass = createRoomDOClass(optionsWithDefaults);
-  const { authHandler, getLogSinks, getLogLevel } = optionsWithDefaults;
-  const authDOClass = class extends BaseAuthDO {
-    constructor(state: DurableObjectState, env: Env) {
-      super({
-        roomDO: env.roomDO,
-        state,
-        authHandler,
-        authApiKey: env.REFLECT_AUTH_API_KEY,
-        logSink: combineLogSinks(getLogSinks(env)),
-        logLevel: getLogLevel(env),
-      });
-    }
-  };
+  const authDOClass = createAuthDOClass(optionsWithDefaults);
 
+  const { getLogSinks, getLogLevel } = optionsWithDefaults;
   const worker = createWorker<Env>({
     getLogSink: (env) => combineLogSinks(getLogSinks(env)),
     getLogLevel,
@@ -156,6 +145,25 @@ function createRoomDOClass<
         logSink: combineLogSinks(getLogSinks(env)),
         logLevel: getLogLevel(env),
         allowUnconfirmedWrites,
+      });
+    }
+  };
+}
+
+function createAuthDOClass<
+  Env extends ReflectServerBaseEnv,
+  MD extends MutatorDefs
+>(optionsWithDefaults: Required<ReflectServerOptions<Env, MD>>) {
+  const { authHandler, getLogSinks, getLogLevel } = optionsWithDefaults;
+  return class extends BaseAuthDO {
+    constructor(state: DurableObjectState, env: Env) {
+      super({
+        roomDO: env.roomDO,
+        state,
+        authHandler,
+        authApiKey: env.REFLECT_AUTH_API_KEY,
+        logSink: combineLogSinks(getLogSinks(env)),
+        logLevel: getLogLevel(env),
       });
     }
   };
