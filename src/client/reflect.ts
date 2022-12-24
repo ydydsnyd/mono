@@ -25,7 +25,6 @@ import type {PokeBody} from '../protocol/poke.js';
 import type {PushMessage} from '../protocol/push.js';
 import {NullableVersion, nullableVersionSchema} from '../types/version.js';
 import {assert} from '../util/asserts.js';
-import {GapTracker} from '../util/gap-tracker.js';
 import {Lock} from '../util/lock.js';
 import {Resolver, resolver} from '../util/resolver.js';
 import {sleep} from '../util/sleep.js';
@@ -44,18 +43,15 @@ export class Reflect<MD extends MutatorDefs> {
   private readonly _socketOrigin: string;
   readonly userID: string;
   readonly roomID: string;
-  private _l: LogContext;
+  private _l: Promise<LogContext>;
 
   // Protects _handlePoke. We need pokes to be serialized, otherwise we
   // can cause out of order poke errors.
   private readonly _pokeLock = new Lock();
 
-  private readonly _pushTracker: GapTracker;
-  private readonly _updateTracker: GapTracker;
-  private readonly _timestampTracker: GapTracker;
-
   private _lastMutationIDSent: {clientID: string; id: number} =
     NULL_LAST_MUTATION_ID_SENT;
+
   private _onPong: () => void = () => undefined;
 
   /**
@@ -128,21 +124,13 @@ export class Reflect<MD extends MutatorDefs> {
     const {logSinks = [consoleLogSink]} = options;
     const logSink =
       logSinks.length === 1 ? logSinks[0] : new TeeLogSink(logSinks);
-    this._l = new LogContext(options.logLevel, logSink).addContext(
-      'roomID',
-      options.roomID,
-    );
+    this._l = (async (rep: Replicache<MutatorDefs>) => {
+      return new LogContext(options.logLevel, logSink)
+        .addContext('roomID', options.roomID)
+        .addContext('clientID', await rep.clientID);
+    })(this._rep);
 
-    this._pushTracker = new GapTracker('push', this._l);
-    this._updateTracker = new GapTracker('update', this._l);
-    this._timestampTracker = new GapTracker('timestamp', this._l);
     void this._watchdog();
-
-    // We can't await an async function here, so we have to do this.
-    // Note this is racey with anything that happens immediately after
-    // construction so the clientID might not show up in a line logged
-    // immediately after construction.
-    void this._addClientIDToLogContext();
   }
 
   /**
@@ -204,7 +192,8 @@ export class Reflect<MD extends MutatorDefs> {
    * When closed all subscriptions end and no more read or writes are allowed.
    */
   async close(): Promise<void> {
-    this._disconnect();
+    const l = await this._getRequestLogger();
+    this._disconnect(l);
     return this._rep.close();
   }
 
@@ -272,14 +261,10 @@ export class Reflect<MD extends MutatorDefs> {
     return this._rep.experimentalWatch(callback, options);
   }
 
-  private async _addClientIDToLogContext() {
-    const clientID = await this.clientID;
-    this._l = this._l.addContext('clientID', clientID);
-  }
-
-  private _onMessage = (e: MessageEvent<string>) => {
-    const l = this._l;
-    l.addContext('req', nanoid());
+  private _onMessage = async (e: MessageEvent<string>) => {
+    // TODO: The req context should really come from the poke so that we can
+    // tie receive-side changes to the server and even to the source client.
+    const l = await this._getRequestLogger();
     l.debug?.('received message', e.data);
     if (this.closed) {
       l.debug?.('ignoring message because already closed');
@@ -321,14 +306,14 @@ export class Reflect<MD extends MutatorDefs> {
     void this._handlePoke(l, pokeBody);
   };
 
-  private _onClose = (e: CloseEvent) => {
-    const l = this._l;
+  private _onClose = async (e: CloseEvent) => {
+    const l = await this._getRequestLogger();
     const {code, reason, wasClean} = e;
     l.info?.(
       'got socket close event',
       JSON.stringify({code, reason, wasClean}),
     );
-    this._disconnect();
+    this._disconnect(l);
   };
 
   private async _connect(l: LogContext) {
@@ -362,8 +347,8 @@ export class Reflect<MD extends MutatorDefs> {
     this._socket = ws;
   }
 
-  private _disconnect() {
-    this._l.info?.(
+  private _disconnect(l: LogContext) {
+    l.info?.(
       'disconnecting',
       JSON.stringify({navigatorOnline: navigator.onLine}),
     );
@@ -385,9 +370,6 @@ export class Reflect<MD extends MutatorDefs> {
     await this._pokeLock.withLock(async () => {
       l.debug?.('Applying poke', JSON.stringify(pokeBody));
 
-      this._updateTracker.push(performance.now());
-      this._timestampTracker.push(pokeBody.timestamp);
-
       const {lastMutationIDChanges, baseCookie, patch, cookie} = pokeBody;
       const lastMutationIDChangeForSelf =
         lastMutationIDChanges[await this.clientID];
@@ -407,8 +389,8 @@ export class Reflect<MD extends MutatorDefs> {
         await this._rep.poke(p);
       } catch (e) {
         if (String(e).indexOf('unexpected base cookie for poke') > -1) {
-          this._l.info?.('out of order poke, disconnecting');
-          this._disconnect();
+          l.info?.('out of order poke, disconnecting');
+          this._disconnect(l);
           return;
         }
         throw e;
@@ -419,7 +401,11 @@ export class Reflect<MD extends MutatorDefs> {
   private async _pusher(
     req: PushRequestV0 | PushRequestV1,
   ): Promise<PusherResult> {
-    this._l.debug?.('Push', req);
+    // TODO: The req ID should come from Replicache, since it is ultimately a
+    // timer or some mutation that causes this push.
+    const l = await this._getRequestLogger();
+    l.debug?.(`pushing ${req.mutations.length} mutations`);
+
     // If pushVersion is 0 this is a mutation recovery push for a pre dd31
     // client.  Reflect didn't support mutation recovery pre dd31, so don't
     // try to recover these, just return no-op response.
@@ -433,7 +419,7 @@ export class Reflect<MD extends MutatorDefs> {
     }
 
     if (!this._socket) {
-      void this._connect(this._l);
+      void this._connect(l);
     }
 
     const socket = await this._connectResolver.promise;
@@ -447,7 +433,7 @@ export class Reflect<MD extends MutatorDefs> {
             m.clientID === this._lastMutationIDSent.clientID &&
             m.id === this._lastMutationIDSent.id,
         ) + 1;
-    this._l.debug?.(
+    l.debug?.(
       isMutationRecoveryPush ? 'pushing for recovery' : 'pushing',
       req.mutations.length - start,
       'mutations of',
@@ -477,7 +463,6 @@ export class Reflect<MD extends MutatorDefs> {
       socket.send(JSON.stringify(msg));
       if (!isMutationRecoveryPush) {
         this._lastMutationIDSent = {clientID: m.clientID, id: m.id};
-        this._pushTracker.push(performance.now());
       }
     }
     return {
@@ -491,8 +476,9 @@ export class Reflect<MD extends MutatorDefs> {
   private async _puller(
     req: PullRequestV0 | PullRequestV1,
   ): Promise<PullerResultV0 | PullerResultV1> {
-    this._l.debug?.('Pull', req);
-    // If pushVersion === 0 this is a mutation recovery pull for a pre dd31
+    const l = await this._getRequestLogger();
+    l.debug?.('Pull', req);
+    // If pullVersion === 0 this is a mutation recovery pull for a pre dd31
     // client.  Reflect didn't support mutation recovery pre dd31, so don't
     // try to recover these, just return no-op response.
     if (req.pullVersion === 0) {
@@ -520,7 +506,7 @@ export class Reflect<MD extends MutatorDefs> {
     }
 
     // Mutation recovery pull.
-    this._l.debug?.('Pull is for mutation recovery');
+    l.debug?.('Pull is for mutation recovery');
     const pullURL = new URL(this._socketOrigin);
     pullURL.protocol = pullURL.protocol === 'ws:' ? 'http' : 'https';
     pullURL.pathname = '/pull';
@@ -534,7 +520,7 @@ export class Reflect<MD extends MutatorDefs> {
         method: 'POST',
       }),
     );
-    this._l.debug?.('Pull response', response);
+    l.debug?.('Pull response', response);
     const httpStatusCode = response.status;
     if (httpStatusCode === 200) {
       return {
@@ -556,7 +542,7 @@ export class Reflect<MD extends MutatorDefs> {
 
   private async _watchdog() {
     while (!this.closed) {
-      const l = this._l.addContext('req', nanoid());
+      const l = await this._getRequestLogger();
       l.debug?.('watchdog fired');
       if (this._state === ConnectionState.Connected) {
         await this._ping(l);
@@ -587,8 +573,13 @@ export class Reflect<MD extends MutatorDefs> {
       l.debug?.('ping succeeded in', delta, 'ms');
     } else {
       l.info?.('ping failed in', delta, 'ms - disconnecting');
-      this._disconnect();
+      this._disconnect(l);
     }
+  }
+
+  private async _getRequestLogger() {
+    const l = await this._l;
+    return l.addContext('req', nanoid());
   }
 
   // Total hack to get base cookie, see puller_ for how the promise is resolved.

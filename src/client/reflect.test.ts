@@ -48,12 +48,14 @@ test('onOnlineChange callback', async () => {
 
   await tickAFewTimes(clock);
   r.triggerConnected();
+  await tickAFewTimes(clock);
   expect(r.connectionState).to.equal(ConnectionState.Connected);
   expect(onlineCount).to.equal(1);
   expect(offlineCount).to.equal(0);
 
   await tickAFewTimes(clock);
   r.triggerClose();
+  await tickAFewTimes(clock);
   expect(r.connectionState).to.equal(ConnectionState.Disconnected);
   expect(onlineCount).to.equal(1);
   expect(offlineCount).to.equal(1);
@@ -61,6 +63,7 @@ test('onOnlineChange callback', async () => {
   // let the watchdog timer fire
   await tickAFewTimes(clock, 5000);
   r.triggerConnected();
+  await tickAFewTimes(clock);
   expect(r.connectionState).to.equal(ConnectionState.Connected);
   expect(onlineCount).to.equal(2);
   expect(offlineCount).to.equal(1);
@@ -68,6 +71,7 @@ test('onOnlineChange callback', async () => {
   r.onOnlineChange = null;
   await tickAFewTimes(clock);
   r.triggerClose();
+  await tickAFewTimes(clock);
   expect(r.connectionState).to.equal(ConnectionState.Disconnected);
   expect(onlineCount).to.equal(2);
   expect(offlineCount).to.equal(1);
@@ -95,14 +99,17 @@ test('disconnects if ping fails', async () => {
   expect(r.connectionState).to.equal(ConnectionState.Connecting);
 
   r.triggerConnected();
+  await tickAFewTimes(clock);
   expect(r.connectionState).to.equal(ConnectionState.Connected);
 
   await tickAFewTimes(clock, watchdogInterval);
   r.triggerPong();
+  await tickAFewTimes(clock);
   expect(r.connectionState).to.equal(ConnectionState.Connected);
 
   await tickAFewTimes(clock, watchdogInterval);
   r.triggerPong();
+  await tickAFewTimes(clock);
   expect(r.connectionState).to.equal(ConnectionState.Connected);
 
   await tickAFewTimes(clock, watchdogInterval);
