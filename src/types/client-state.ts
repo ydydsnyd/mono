@@ -1,4 +1,4 @@
-import type { UserData } from "../server/auth.js";
+import type {UserData} from '../server/auth.js';
 
 export type ClientID = string;
 export type ClientGroupID = string;

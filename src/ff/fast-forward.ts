@@ -1,11 +1,11 @@
-import { listClientRecords } from "../types/client-record.js";
-import type { ClientGroupID, ClientID } from "../types/client-state.js";
-import { compareVersions, NullableVersion, Version } from "../types/version.js";
-import type { ClientPokeBody } from "../types/client-poke-body.js";
-import { getPatch } from "./get-patch.js";
-import type { Patch, PokeBody } from "../protocol/poke.js";
-import { must } from "../util/must.js";
-import type { DurableStorage } from "../storage/durable-storage.js";
+import {listClientRecords} from '../types/client-record.js';
+import type {ClientGroupID, ClientID} from '../types/client-state.js';
+import {compareVersions, NullableVersion, Version} from '../types/version.js';
+import type {ClientPokeBody} from '../types/client-poke-body.js';
+import {getPatch} from './get-patch.js';
+import type {Patch, PokeBody} from '../protocol/poke.js';
+import {must} from '../util/must.js';
+import type {DurableStorage} from '../storage/durable-storage.js';
 
 /**
  * Returns zero or more pokes necessary to fast forward any clients in a room
@@ -20,7 +20,7 @@ export async function fastForwardRoom(
   clients: ClientID[],
   currentVersion: Version,
   storage: DurableStorage,
-  timestamp: number
+  timestamp: number,
 ): Promise<ClientPokeBody[]> {
   const clientRecords = await listClientRecords(storage);
   // Get all of the distinct base cookies. Typically almost all active clients
@@ -29,7 +29,7 @@ export async function fastForwardRoom(
   for (const clientID of clients) {
     const record = must(
       clientRecords.get(clientID),
-      `Client record not found: ${clientID}`
+      `Client record not found: ${clientID}`,
     );
     distinctBaseCookies.add(record.baseCookie);
   }
@@ -40,10 +40,10 @@ export async function fastForwardRoom(
   const getPatchEntry = async (baseCookie: NullableVersion) =>
     [baseCookie, await getPatch(storage, baseCookie ?? 0)] as [
       NullableVersion,
-      Patch
+      Patch,
     ];
   const distinctPatches = new Map(
-    await Promise.all([...distinctBaseCookies].map(getPatchEntry))
+    await Promise.all([...distinctBaseCookies].map(getPatchEntry)),
   );
 
   // Calculate the last mutation id changes for each
@@ -54,14 +54,14 @@ export async function fastForwardRoom(
   > = new Map();
   for (const [clientID, record] of clientRecords) {
     if (record.lastMutationIDVersion !== null) {
-      const { clientGroupID } = record;
+      const {clientGroupID} = record;
       let changesByBaseCookie =
         lastMutationIDChangesByBaseCookieByClientGroupID.get(clientGroupID);
       if (changesByBaseCookie === undefined) {
         changesByBaseCookie = new Map();
         lastMutationIDChangesByBaseCookieByClientGroupID.set(
           clientGroupID,
-          changesByBaseCookie
+          changesByBaseCookie,
         );
       }
       for (const baseCookie of distinctBaseCookies) {
@@ -84,7 +84,7 @@ export async function fastForwardRoom(
       continue;
     }
     const patch = must(distinctPatches.get(record.baseCookie));
-    const { clientGroupID } = record;
+    const {clientGroupID} = record;
     const pokeBodyDD31: PokeBody = {
       baseCookie: record.baseCookie,
       cookie: currentVersion,

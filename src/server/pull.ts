@@ -1,14 +1,14 @@
-import { compareVersions, getVersion } from "../types/version";
-import type { PullRequest, PullResponse } from "../protocol/pull";
-import { listClientRecords } from "../types/client-record";
-import type { DurableStorage } from "../storage/durable-storage";
-import type { ClientID } from "../types/client-state";
+import {compareVersions, getVersion} from '../types/version';
+import type {PullRequest, PullResponse} from '../protocol/pull';
+import {listClientRecords} from '../types/client-record';
+import type {DurableStorage} from '../storage/durable-storage';
+import type {ClientID} from '../types/client-state';
 
 export async function handlePull(
   storage: DurableStorage,
-  pullRequest: PullRequest
+  pullRequest: PullRequest,
 ): Promise<PullResponse> {
-  const { clientGroupID, cookie } = pullRequest;
+  const {clientGroupID, cookie} = pullRequest;
   const records = await listClientRecords(storage);
   const lastMutationIDChanges: Record<ClientID, number> = {};
   for (const [clientID, record] of records) {

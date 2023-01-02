@@ -1,7 +1,7 @@
-import { test, expect } from "@jest/globals";
-import { compareVersions } from "./version";
+import {test, expect} from '@jest/globals';
+import {compareVersions} from './version';
 
-test("compareVersion", () => {
+test('compareVersion', () => {
   expect(compareVersions(null, null)).toBe(0);
   expect(compareVersions(1, null)).toBe(1);
   expect(compareVersions(null, 1)).toBe(-1);

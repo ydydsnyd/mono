@@ -1,4 +1,4 @@
-import type { Obj, Router } from "itty-router";
+import type {Obj, Router} from 'itty-router';
 
 // This type satisfies the itty-router Request type and the CF Request type.
 // The CF Request is a class so it's not easy to intersect with itty's Request
@@ -52,9 +52,9 @@ export function requireAuthAPIKeyMatches(authApiKey: string | undefined) {
 // worker, which gets the key directly from the env.
 export function requireAuthAPIKeyMatchesEnv(
   request: RociRequest,
-  env: Env
+  env: Env,
 ): Response | undefined {
-  const authHeader = request.headers.get("x-reflect-auth-api-key");
+  const authHeader = request.headers.get('x-reflect-auth-api-key');
   if (authHeader === undefined || env.REFLECT_AUTH_API_KEY === undefined) {
     return newUnauthorizedResponse();
   }
@@ -66,7 +66,7 @@ export function requireAuthAPIKeyMatchesEnv(
   return undefined;
 }
 
-function newUnauthorizedResponse(msg = "Unauthorized") {
+function newUnauthorizedResponse(msg = 'Unauthorized') {
   return new Response(msg, {
     status: 401,
   });

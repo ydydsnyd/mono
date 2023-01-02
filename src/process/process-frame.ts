@@ -1,17 +1,17 @@
-import type { LogContext } from "@rocicorp/logger";
-import type { PokeBody } from "../protocol/poke.js";
-import type { Mutation } from "../protocol/push.js";
-import type { DisconnectHandler } from "../server/disconnect.js";
-import { EntryCache } from "../storage/entry-cache.js";
-import { unwrapPatch } from "../storage/replicache-transaction.js";
-import type { Storage } from "../storage/storage.js";
-import type { ClientPokeBody } from "../types/client-poke-body.js";
-import { getClientRecord, putClientRecord } from "../types/client-record.js";
-import type { ClientGroupID, ClientID } from "../types/client-state.js";
-import { getVersion } from "../types/version.js";
-import { must } from "../util/must.js";
-import { processDisconnects } from "./process-disconnects.js";
-import { MutatorMap, processMutation } from "./process-mutation.js";
+import type {LogContext} from '@rocicorp/logger';
+import type {PokeBody} from '../protocol/poke.js';
+import type {Mutation} from '../protocol/push.js';
+import type {DisconnectHandler} from '../server/disconnect.js';
+import {EntryCache} from '../storage/entry-cache.js';
+import {unwrapPatch} from '../storage/replicache-transaction.js';
+import type {Storage} from '../storage/storage.js';
+import type {ClientPokeBody} from '../types/client-poke-body.js';
+import {getClientRecord, putClientRecord} from '../types/client-record.js';
+import type {ClientGroupID, ClientID} from '../types/client-state.js';
+import {getVersion} from '../types/version.js';
+import {must} from '../util/must.js';
+import {processDisconnects} from './process-disconnects.js';
+import {MutatorMap, processMutation} from './process-mutation.js';
 
 // Processes zero or more mutations as a single "frame", returning pokes.
 // Pokes are returned if the version changes, even if there is no patch,
@@ -24,15 +24,15 @@ export async function processFrame(
   disconnectHandler: DisconnectHandler,
   clients: ClientID[],
   storage: Storage,
-  timestamp: number
+  timestamp: number,
 ): Promise<ClientPokeBody[]> {
-  lc.debug?.("processing frame - clients", clients);
+  lc.debug?.('processing frame - clients', clients);
 
   const cache = new EntryCache(storage);
   const prevVersion = must(await getVersion(cache));
   const nextVersion = (prevVersion ?? 0) + 1;
 
-  lc.debug?.("prevVersion", prevVersion, "nextVersion", nextVersion);
+  lc.debug?.('prevVersion', prevVersion, 'nextVersion', nextVersion);
 
   const lastMutationIDChangesByClientGroupID: Map<
     ClientGroupID,
@@ -46,15 +46,15 @@ export async function processFrame(
       mutation,
       mutators,
       cache,
-      nextVersion
+      nextVersion,
     );
     if (newLastMutationID !== undefined) {
-      const { clientID } = mutation;
+      const {clientID} = mutation;
       const clientRecord = must(
         await getClientRecord(clientID, cache),
-        `Client record not found: ${clientID}`
+        `Client record not found: ${clientID}`,
       );
-      const { clientGroupID } = clientRecord;
+      const {clientGroupID} = clientRecord;
       let changes = lastMutationIDChangesByClientGroupID.get(clientGroupID);
       if (changes === undefined) {
         changes = {};
@@ -81,11 +81,11 @@ export async function processFrame(
   for (const clientID of clients) {
     const clientRecord = must(
       await getClientRecord(clientID, cache),
-      `Client record not found: ${clientID}`
+      `Client record not found: ${clientID}`,
     );
     clientRecord.baseCookie = nextVersion;
     await putClientRecord(clientID, clientRecord, cache);
-    const { clientGroupID } = clientRecord;
+    const {clientGroupID} = clientRecord;
     const pokeBodyDD31: PokeBody = {
       baseCookie: prevVersion,
       cookie: nextVersion,
@@ -100,7 +100,7 @@ export async function processFrame(
     };
     ret.push(poke);
   }
-  lc.debug?.("built poke bodies", ret.length);
+  lc.debug?.('built poke bodies', ret.length);
   await cache.flush();
   return ret;
 }

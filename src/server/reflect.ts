@@ -1,20 +1,15 @@
-import type { MutatorDefs } from "replicache";
-import {
-  consoleLogSink,
-  LogSink,
-  LogLevel,
-  TeeLogSink,
-} from "@rocicorp/logger";
-import type { AuthHandler } from "./auth";
-import { BaseAuthDO } from "./auth-do";
-import { BaseRoomDO } from "./room-do";
-import { createWorker } from "./worker";
-import type { DisconnectHandler } from "./disconnect";
-import { createNoAuthDOWorker } from "./no-auth-do-worker";
+import type {MutatorDefs} from 'replicache';
+import {consoleLogSink, LogSink, LogLevel, TeeLogSink} from '@rocicorp/logger';
+import type {AuthHandler} from './auth';
+import {BaseAuthDO} from './auth-do';
+import {BaseRoomDO} from './room-do';
+import {createWorker} from './worker';
+import type {DisconnectHandler} from './disconnect';
+import {createNoAuthDOWorker} from './no-auth-do-worker';
 
 export interface ReflectServerOptions<
   Env extends ReflectServerBaseEnv,
-  MD extends MutatorDefs
+  MD extends MutatorDefs,
 > {
   mutators: MD;
   authHandler: AuthHandler;
@@ -51,14 +46,14 @@ export interface ReflectServerBaseEnv {
 
 export type DurableObjectCtor<Env> = new (
   state: DurableObjectState,
-  env: Env
+  env: Env,
 ) => DurableObject;
 
 export function createReflectServer<
   Env extends ReflectServerBaseEnv,
-  MD extends MutatorDefs
+  MD extends MutatorDefs,
 >(
-  options: ReflectServerOptions<Env, MD>
+  options: ReflectServerOptions<Env, MD>,
 ): {
   worker: ExportedHandler<Env>;
   // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -70,21 +65,21 @@ export function createReflectServer<
   const roomDOClass = createRoomDOClass(optionsWithDefaults);
   const authDOClass = createAuthDOClass(optionsWithDefaults);
 
-  const { getLogSinks, getLogLevel } = optionsWithDefaults;
+  const {getLogSinks, getLogLevel} = optionsWithDefaults;
   const worker = createWorker<Env>({
-    getLogSink: (env) => combineLogSinks(getLogSinks(env)),
+    getLogSink: env => combineLogSinks(getLogSinks(env)),
     getLogLevel,
   });
 
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  return { worker, RoomDO: roomDOClass, AuthDO: authDOClass };
+  return {worker, RoomDO: roomDOClass, AuthDO: authDOClass};
 }
 
 export function createReflectServerWithoutAuthDO<
   Env extends ReflectServerBaseEnv,
-  MD extends MutatorDefs
+  MD extends MutatorDefs,
 >(
-  options: ReflectServerOptions<Env, MD>
+  options: ReflectServerOptions<Env, MD>,
 ): {
   worker: ExportedHandler<Env>;
   // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -92,27 +87,27 @@ export function createReflectServerWithoutAuthDO<
 } {
   const optionsWithDefaults = getOptionsWithDefaults(options);
   const roomDOClass = createRoomDOClass(optionsWithDefaults);
-  const { authHandler, getLogSinks, getLogLevel } = optionsWithDefaults;
+  const {authHandler, getLogSinks, getLogLevel} = optionsWithDefaults;
   const worker = createNoAuthDOWorker<Env>({
-    getLogSink: (env) => combineLogSinks(getLogSinks(env)),
+    getLogSink: env => combineLogSinks(getLogSinks(env)),
     getLogLevel,
     authHandler,
   });
 
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  return { worker, RoomDO: roomDOClass };
+  return {worker, RoomDO: roomDOClass};
 }
 
 function getOptionsWithDefaults<
   Env extends ReflectServerBaseEnv,
-  MD extends MutatorDefs
+  MD extends MutatorDefs,
 >(
-  options: ReflectServerOptions<Env, MD>
+  options: ReflectServerOptions<Env, MD>,
 ): Required<ReflectServerOptions<Env, MD>> {
   const {
     disconnectHandler = () => Promise.resolve(),
-    getLogSinks = (_env) => [consoleLogSink],
-    getLogLevel = (_env) => "debug",
+    getLogSinks = _env => [consoleLogSink],
+    getLogLevel = _env => 'debug',
     allowUnconfirmedWrites = false,
   } = options;
   return {
@@ -126,7 +121,7 @@ function getOptionsWithDefaults<
 
 function createRoomDOClass<
   Env extends ReflectServerBaseEnv,
-  MD extends MutatorDefs
+  MD extends MutatorDefs,
 >(optionsWithDefaults: Required<ReflectServerOptions<Env, MD>>) {
   const {
     mutators,
@@ -152,9 +147,9 @@ function createRoomDOClass<
 
 function createAuthDOClass<
   Env extends ReflectServerBaseEnv,
-  MD extends MutatorDefs
+  MD extends MutatorDefs,
 >(optionsWithDefaults: Required<ReflectServerOptions<Env, MD>>) {
-  const { authHandler, getLogSinks, getLogLevel } = optionsWithDefaults;
+  const {authHandler, getLogSinks, getLogLevel} = optionsWithDefaults;
   return class extends BaseAuthDO {
     constructor(state: DurableObjectState, env: Env) {
       super({

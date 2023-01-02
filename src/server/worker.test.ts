@@ -1,22 +1,22 @@
-import { test, expect } from "@jest/globals";
-import type { LogLevel } from "@rocicorp/logger";
-import { Mocket, TestLogSink } from "../util/test-utils.js";
-import { createAuthAPIHeaders } from "./auth-api-headers.js";
+import {test, expect} from '@jest/globals';
+import type {LogLevel} from '@rocicorp/logger';
+import {Mocket, TestLogSink} from '../util/test-utils.js';
+import {createAuthAPIHeaders} from './auth-api-headers.js';
 import {
   closeRoomPath,
   forgetRoomPath,
   migrateRoomPath,
   roomRecordsPath,
   roomStatusByRoomIDPath,
-} from "./auth-do-routes.js";
+} from './auth-do-routes.js';
 import {
   createTestDurableObjectNamespace,
   TestDurableObjectId,
   TestDurableObjectStub,
-} from "./do-test-utils.js";
-import { BaseWorkerEnv, createWorker } from "./worker";
+} from './do-test-utils.js';
+import {BaseWorkerEnv, createWorker} from './worker';
 
-const TEST_AUTH_API_KEY = "TEST_REFLECT_AUTH_API_KEY_TEST";
+const TEST_AUTH_API_KEY = 'TEST_REFLECT_AUTH_API_KEY_TEST';
 
 class TestExecutionContext implements ExecutionContext {
   waitUntil(_promise: Promise<unknown>): void {
@@ -29,23 +29,23 @@ class TestExecutionContext implements ExecutionContext {
 
 function createTestFixture(
   createTestResponse: (req: Request) => Response = () =>
-    new Response("success", { status: 200 }),
-  authApiKeyDefined = true
+    new Response('success', {status: 200}),
+  authApiKeyDefined = true,
 ) {
-  const authDORequests: { req: Request; resp: Response }[] = [];
+  const authDORequests: {req: Request; resp: Response}[] = [];
 
   const testEnv: BaseWorkerEnv = {
     authDO: {
       ...createTestDurableObjectNamespace(),
       idFromName: (name: string) => {
-        expect(name).toEqual("auth");
-        return new TestDurableObjectId("test-auth-do-id", "test-auth-do-id");
+        expect(name).toEqual('auth');
+        return new TestDurableObjectId('test-auth-do-id', 'test-auth-do-id');
       },
       get: (id: DurableObjectId) => {
-        expect(id.name).toEqual("test-auth-do-id");
+        expect(id.name).toEqual('test-auth-do-id');
         return new TestDurableObjectStub(id, async (request: Request) => {
           const testResponse = createTestResponse(request);
-          authDORequests.push({ req: request, resp: testResponse });
+          authDORequests.push({req: request, resp: testResponse});
           return testResponse;
         });
       },
@@ -62,8 +62,8 @@ function createTestFixture(
 
 async function testForwardedToAuthDO(
   testRequest: Request,
-  testResponse = new Response("success", { status: 200 }),
-  expectAuthDOCalled = true
+  testResponse = new Response('success', {status: 200}),
+  expectAuthDOCalled = true,
 ) {
   // Don't clone response if it has a websocket, otherwise CloudFlare's Response
   // class will throw
@@ -71,18 +71,18 @@ async function testForwardedToAuthDO(
   const testResponseClone = testResponse.webSocket
     ? undefined
     : testResponse.clone();
-  const { testEnv, authDORequests } = createTestFixture(() => testResponse);
+  const {testEnv, authDORequests} = createTestFixture(() => testResponse);
   const worker = createWorker({
-    getLogSink: (_env) => new TestLogSink(),
-    getLogLevel: (_env) => "error",
+    getLogSink: _env => new TestLogSink(),
+    getLogLevel: _env => 'error',
   });
   if (!worker.fetch) {
-    throw new Error("Expect fetch to be defined");
+    throw new Error('Expect fetch to be defined');
   }
   const response = await worker.fetch(
     testRequest,
     testEnv,
-    new TestExecutionContext()
+    new TestExecutionContext(),
   );
   if (expectAuthDOCalled) {
     expect(authDORequests.length).toEqual(1);
@@ -95,111 +95,111 @@ async function testForwardedToAuthDO(
     const responseHeaders = [...response.headers.entries()];
     const expectedResponseHeaders = [
       ...testResponse.headers.entries(),
-      ["access-control-allow-origin", "*"],
+      ['access-control-allow-origin', '*'],
     ];
     expect(responseHeaders.length).toEqual(expectedResponseHeaders.length);
     expect(responseHeaders).toEqual(
-      expect.arrayContaining(expectedResponseHeaders)
+      expect.arrayContaining(expectedResponseHeaders),
     );
     expect(response.webSocket).toBe(testResponse.webSocket);
   } else {
     expect(authDORequests.length).toEqual(0);
   }
-  expect(response.headers.get("Access-Control-Allow-Origin")).toEqual("*");
+  expect(response.headers.get('Access-Control-Allow-Origin')).toEqual('*');
 }
 
-test("worker forwards connect requests to authDO", async () => {
+test('worker forwards connect requests to authDO', async () => {
   await testForwardedToAuthDO(
-    new Request("ws://test.roci.dev/connect"),
+    new Request('ws://test.roci.dev/connect'),
     new Response(null, {
       status: 101,
       webSocket: new Mocket(),
-    })
+    }),
   );
 });
 
-test("worker forwards pull requests to authDO", async () => {
+test('worker forwards pull requests to authDO', async () => {
   await testForwardedToAuthDO(
-    new Request("https://test.roci.dev/pull", {
-      method: "post",
+    new Request('https://test.roci.dev/pull', {
+      method: 'post',
       body: JSON.stringify({
-        profileID: "test-pID",
-        clientGroupID: "test-cgID",
+        profileID: 'test-pID',
+        clientGroupID: 'test-cgID',
         cookie: 1,
         pullVersion: 1,
-        schemaVersion: "1",
+        schemaVersion: '1',
       }),
     }),
     new Response(null, {
       status: 200,
-    })
+    }),
   );
 });
 
-test("worker forwards authDO api requests to authDO", async () => {
+test('worker forwards authDO api requests to authDO', async () => {
   const roomStatusByRoomIDPathWithRoomID = roomStatusByRoomIDPath.replace(
-    ":roomID",
-    "ae4565"
+    ':roomID',
+    'ae4565',
   );
   type TestCase = {
     path: string;
     method: string;
     body: undefined | Record<string, unknown>;
   };
-  const closeRoomPathWithRoomID = closeRoomPath.replace(":roomID", "ae4565");
-  const deleteRoomPathWithRoomID = roomRecordsPath.replace(":roomID", "ae4565");
-  const forgetRoomPathWithRoomID = forgetRoomPath.replace(":roomID", "ae4565");
+  const closeRoomPathWithRoomID = closeRoomPath.replace(':roomID', 'ae4565');
+  const deleteRoomPathWithRoomID = roomRecordsPath.replace(':roomID', 'ae4565');
+  const forgetRoomPathWithRoomID = forgetRoomPath.replace(':roomID', 'ae4565');
   const migrateRoomPathWithRoomID = migrateRoomPath.replace(
-    ":roomID",
-    "ae4565"
+    ':roomID',
+    'ae4565',
   );
   const testCases: TestCase[] = [
     // Auth API calls.
     {
-      path: "https://test.roci.dev/api/auth/v0/invalidateForUser",
-      method: "post",
-      body: { userID: "userID1" },
+      path: 'https://test.roci.dev/api/auth/v0/invalidateForUser',
+      method: 'post',
+      body: {userID: 'userID1'},
     },
     {
-      path: "https://test.roci.dev/api/auth/v0/invalidateForRoom",
-      method: "post",
-      body: { roomID: "roomID1" },
+      path: 'https://test.roci.dev/api/auth/v0/invalidateForRoom',
+      method: 'post',
+      body: {roomID: 'roomID1'},
     },
     {
-      path: "https://test.roci.dev/api/auth/v0/invalidateAll",
-      method: "post",
+      path: 'https://test.roci.dev/api/auth/v0/invalidateAll',
+      method: 'post',
       body: undefined,
     },
 
     // Room API calls.
     {
       path: `https://test.roci.dev${roomStatusByRoomIDPathWithRoomID}`,
-      method: "get",
+      method: 'get',
       body: undefined,
     },
     {
       path: `https://test.roci.dev${roomRecordsPath}`,
-      method: "get",
+      method: 'get',
       body: undefined,
     },
     {
       path: `https://test.roci.dev${closeRoomPathWithRoomID}`,
-      method: "post",
+      method: 'post',
       body: undefined,
     },
     {
       path: `https://test.roci.dev${deleteRoomPathWithRoomID}`,
-      method: "post",
+      method: 'post',
       body: undefined,
     },
     {
       path: `https://test.roci.dev${forgetRoomPathWithRoomID}`,
-      method: "post",
+      method: 'post',
       body: undefined,
     },
     {
       path: `https://test.roci.dev${migrateRoomPathWithRoomID}`,
-      method: "post",
+      method: 'post',
       body: undefined,
     },
   ];
@@ -213,7 +213,7 @@ test("worker forwards authDO api requests to authDO", async () => {
         method: tc.method,
         headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
         body: tc.body ? JSON.stringify(tc.body) : undefined,
-      })
+      }),
     );
     await testForwardedToAuthDO(
       new Request(tc.path, {
@@ -224,51 +224,51 @@ test("worker forwards authDO api requests to authDO", async () => {
       new Response(null, {
         status: 200,
       }),
-      false // Expect authDO not called.
+      false, // Expect authDO not called.
     );
   }
 });
 
-test("on scheduled event sends api/auth/v0/revalidateConnections to AuthDO when REFLECT_AUTH_API_KEY is defined", async () => {
+test('on scheduled event sends api/auth/v0/revalidateConnections to AuthDO when REFLECT_AUTH_API_KEY is defined', async () => {
   const worker = createWorker({
-    getLogSink: (_env) => new TestLogSink(),
-    getLogLevel: (_env) => "error",
+    getLogSink: _env => new TestLogSink(),
+    getLogLevel: _env => 'error',
   });
 
-  const { testEnv, authDORequests } = createTestFixture();
+  const {testEnv, authDORequests} = createTestFixture();
 
   if (!worker.scheduled) {
-    throw new Error("Expect scheduled to be defined");
+    throw new Error('Expect scheduled to be defined');
   }
   await worker.scheduled(
-    { scheduledTime: 100, cron: "", noRetry: () => undefined },
+    {scheduledTime: 100, cron: '', noRetry: () => undefined},
     testEnv,
-    new TestExecutionContext()
+    new TestExecutionContext(),
   );
   expect(authDORequests.length).toEqual(1);
-  const { req } = authDORequests[0];
-  expect(req.method).toEqual("POST");
+  const {req} = authDORequests[0];
+  expect(req.method).toEqual('POST');
   expect(req.url).toEqual(
-    "https://unused-reflect-auth-do.dev/api/auth/v0/revalidateConnections"
+    'https://unused-reflect-auth-do.dev/api/auth/v0/revalidateConnections',
   );
-  expect(req.headers.get("x-reflect-auth-api-key")).toEqual(TEST_AUTH_API_KEY);
+  expect(req.headers.get('x-reflect-auth-api-key')).toEqual(TEST_AUTH_API_KEY);
 });
 
-test("on scheduled event does not send api/auth/v0/revalidateConnections to AuthDO when REFLECT_AUTH_API_KEY is undefined", async () => {
+test('on scheduled event does not send api/auth/v0/revalidateConnections to AuthDO when REFLECT_AUTH_API_KEY is undefined', async () => {
   const worker = createWorker({
-    getLogSink: (_env) => new TestLogSink(),
-    getLogLevel: (_env) => "error",
+    getLogSink: _env => new TestLogSink(),
+    getLogLevel: _env => 'error',
   });
 
-  const { testEnv, authDORequests } = createTestFixture(undefined, false);
+  const {testEnv, authDORequests} = createTestFixture(undefined, false);
 
   if (!worker.scheduled) {
-    throw new Error("Expect scheduled to be defined");
+    throw new Error('Expect scheduled to be defined');
   }
   await worker.scheduled(
-    { scheduledTime: 100, cron: "", noRetry: () => undefined },
+    {scheduledTime: 100, cron: '', noRetry: () => undefined},
     testEnv,
-    new TestExecutionContext()
+    new TestExecutionContext(),
   );
   expect(authDORequests.length).toEqual(0);
 });
@@ -277,10 +277,10 @@ async function testLogging(
   fn: (
     worker: ExportedHandler<BaseWorkerEnv>,
     testEnv: BaseWorkerEnv,
-    testExecutionContext: ExecutionContext
-  ) => Promise<unknown>
+    testExecutionContext: ExecutionContext,
+  ) => Promise<unknown>,
 ) {
-  const { testEnv } = createTestFixture();
+  const {testEnv} = createTestFixture();
 
   const waitUntilCalls: Promise<unknown>[] = [];
   const testExecutionContext = {
@@ -298,7 +298,7 @@ async function testLogging(
   let logCallCount = 0;
   const logFlushPromise = Promise.resolve();
   const worker = createWorker({
-    getLogSink: (env) => {
+    getLogSink: env => {
       getLogSinkCallCount++;
       expect(env).toBe(testEnv);
       return {
@@ -310,10 +310,10 @@ async function testLogging(
         },
       };
     },
-    getLogLevel: (env) => {
+    getLogLevel: env => {
       getLogLevelCallCount++;
       expect(env).toBe(testEnv);
-      return "debug";
+      return 'debug';
     },
   });
 
@@ -339,70 +339,70 @@ async function testLogging(
   expect(waitUntilCalls[1]).toBe(logFlushPromise);
 }
 
-test("fetch logging", async () => {
+test('fetch logging', async () => {
   await testLogging(async (worker, testEnv, testExecutionContext) => {
-    const testRequest = new Request("ws://test.roci.dev/connect");
+    const testRequest = new Request('ws://test.roci.dev/connect');
     if (!worker.fetch) {
-      throw new Error("Expected fetch to be defined");
+      throw new Error('Expected fetch to be defined');
     }
     return worker.fetch(testRequest, testEnv, testExecutionContext);
   });
 });
 
-test("scheduled logging", async () => {
+test('scheduled logging', async () => {
   await testLogging(async (worker, testEnv, testExecutionContext) => {
     if (!worker.scheduled) {
-      throw new Error("Expected scheduled to be defined");
+      throw new Error('Expected scheduled to be defined');
     }
     return worker.scheduled(
-      { scheduledTime: 100, cron: "", noRetry: () => undefined },
+      {scheduledTime: 100, cron: '', noRetry: () => undefined},
       testEnv,
-      testExecutionContext
+      testExecutionContext,
     );
   });
 });
 
-test("preflight request handling allows all origins, paths, methods and headers", async () => {
+test('preflight request handling allows all origins, paths, methods and headers', async () => {
   await testPreflightRequest({
-    origin: "http://example.com",
-    url: "https://worker.com/pull",
-    accessControlRequestHeaders: "",
-    accessControlRequestMethod: "POST",
+    origin: 'http://example.com',
+    url: 'https://worker.com/pull',
+    accessControlRequestHeaders: '',
+    accessControlRequestMethod: 'POST',
   });
 
   await testPreflightRequest({
-    origin: "http://example.com",
-    url: "https://worker.com/pull",
-    accessControlRequestHeaders: "",
-    accessControlRequestMethod: "GET",
+    origin: 'http://example.com',
+    url: 'https://worker.com/pull',
+    accessControlRequestHeaders: '',
+    accessControlRequestMethod: 'GET',
   });
 
   await testPreflightRequest({
-    origin: "http://example.com",
-    url: "https://worker.com/pull",
-    accessControlRequestHeaders: "x-request-id, x-auth, other-header",
-    accessControlRequestMethod: "POST",
+    origin: 'http://example.com',
+    url: 'https://worker.com/pull',
+    accessControlRequestHeaders: 'x-request-id, x-auth, other-header',
+    accessControlRequestMethod: 'POST',
   });
 
   await testPreflightRequest({
-    origin: "http://example.com",
-    url: "https://worker.com/connect",
-    accessControlRequestHeaders: "Upgrade, Sec-WebSocket-Protocol",
-    accessControlRequestMethod: "POST",
+    origin: 'http://example.com',
+    url: 'https://worker.com/connect',
+    accessControlRequestHeaders: 'Upgrade, Sec-WebSocket-Protocol',
+    accessControlRequestMethod: 'POST',
   });
 
   await testPreflightRequest({
-    origin: "https://google.com",
-    url: "https://worker.com/anything",
-    accessControlRequestHeaders: "",
-    accessControlRequestMethod: "GET",
+    origin: 'https://google.com',
+    url: 'https://worker.com/anything',
+    accessControlRequestHeaders: '',
+    accessControlRequestMethod: 'GET',
   });
 
   await testPreflightRequest({
-    origin: "https://google.com",
-    url: "https://worker.com/anything",
-    accessControlRequestHeaders: "",
-    accessControlRequestMethod: "HEAD",
+    origin: 'https://google.com',
+    url: 'https://worker.com/anything',
+    accessControlRequestHeaders: '',
+    accessControlRequestMethod: 'HEAD',
   });
 });
 
@@ -417,34 +417,34 @@ async function testPreflightRequest({
   accessControlRequestHeaders: string;
   accessControlRequestMethod: string;
 }) {
-  const { testEnv, authDORequests } = createTestFixture();
+  const {testEnv, authDORequests} = createTestFixture();
   const worker = createWorker({
-    getLogSink: (_env) => new TestLogSink(),
-    getLogLevel: (_env) => "error",
+    getLogSink: _env => new TestLogSink(),
+    getLogLevel: _env => 'error',
   });
   if (!worker.fetch) {
-    throw new Error("Expect fetch to be defined");
+    throw new Error('Expect fetch to be defined');
   }
   const headers = new Headers();
-  headers.set("Origin", origin);
-  headers.set("Access-Control-Request-Method", accessControlRequestMethod);
-  headers.set("Access-Control-Request-Headers", accessControlRequestHeaders);
+  headers.set('Origin', origin);
+  headers.set('Access-Control-Request-Method', accessControlRequestMethod);
+  headers.set('Access-Control-Request-Headers', accessControlRequestHeaders);
   const response = await worker.fetch(
     new Request(url, {
-      method: "OPTIONS",
+      method: 'OPTIONS',
       headers,
     }),
     testEnv,
-    new TestExecutionContext()
+    new TestExecutionContext(),
   );
   expect(authDORequests.length).toEqual(0);
   expect(response.status).toEqual(200);
-  expect(response.headers.get("Access-Control-Allow-Origin")).toEqual("*");
-  expect(response.headers.get("Access-Control-Allow-Methods")).toEqual(
-    "GET,HEAD,POST,OPTIONS"
+  expect(response.headers.get('Access-Control-Allow-Origin')).toEqual('*');
+  expect(response.headers.get('Access-Control-Allow-Methods')).toEqual(
+    'GET,HEAD,POST,OPTIONS',
   );
-  expect(response.headers.get("Access-Control-Max-Age")).toEqual("86400");
-  expect(response.headers.get("Access-Control-Allow-Headers")).toEqual(
-    accessControlRequestHeaders
+  expect(response.headers.get('Access-Control-Max-Age')).toEqual('86400');
+  expect(response.headers.get('Access-Control-Allow-Headers')).toEqual(
+    accessControlRequestHeaders,
   );
 }

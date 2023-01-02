@@ -1,14 +1,14 @@
-import { LogContext, LogLevel, LogSink } from "@rocicorp/logger";
-import type { ClientRecord } from "src/types/client-record.js";
-import type { JSONType } from "../../src/protocol/json.js";
-import type { Mutation } from "../../src/protocol/push.js";
+import {LogContext, LogLevel, LogSink} from '@rocicorp/logger';
+import type {ClientRecord} from 'src/types/client-record.js';
+import type {JSONType} from '../../src/protocol/json.js';
+import type {Mutation} from '../../src/protocol/push.js';
 import type {
   ClientGroupID,
   ClientID,
   ClientState,
   Socket,
-} from "../../src/types/client-state.js";
-import type { NullableVersion } from "../../src/types/version.js";
+} from '../../src/types/client-state.js';
+import type {NullableVersion} from '../../src/types/version.js';
 
 export function pendingMutationsEntry(
   id: ClientGroupID,
@@ -22,13 +22,13 @@ export function client(
   userID: string,
   clientGroupID: ClientGroupID,
   socket: Socket = new Mocket(),
-  clockBehindByMs = 1
+  clockBehindByMs = 1,
 ): [ClientID, ClientState] {
   return [
     id,
     {
       socket,
-      userData: { userID },
+      userData: {userID},
       clientGroupID,
       clockBehindByMs,
     },
@@ -38,9 +38,9 @@ export function client(
 export function mutation(
   clientID: ClientID,
   id: number,
-  name = "foo",
+  name = 'foo',
   args: JSONType = [],
-  timestamp = 1
+  timestamp = 1,
 ): Mutation {
   return {
     clientID,
@@ -66,11 +66,11 @@ export class Mocket extends EventTarget implements Socket {
   }
 
   send(data: string): void {
-    this.log.push(["send", data]);
+    this.log.push(['send', data]);
   }
 
   close(): void {
-    this.log.push(["close"]);
+    this.log.push(['close']);
   }
 }
 
@@ -78,7 +78,7 @@ export function clientRecord(
   clientGroupID: ClientGroupID,
   baseCookie: NullableVersion = null,
   lastMutationID = 1,
-  lastMutationIDVersion: NullableVersion = 1
+  lastMutationIDVersion: NullableVersion = 1,
 ): ClientRecord {
   return {
     clientGroupID,
@@ -115,5 +115,5 @@ export class SilentLogSink implements LogSink {
 }
 
 export function createSilentLogContext() {
-  return new LogContext("error", new SilentLogSink());
+  return new LogContext('error', new SilentLogSink());
 }

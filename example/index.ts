@@ -1,8 +1,8 @@
-import type { JSONValue, WriteTransaction } from "../src/mod.js";
-import { createReflectServer } from "../src/mod.js";
+import type {JSONValue, WriteTransaction} from '../src/mod.js';
+import {createReflectServer} from '../src/mod.js';
 
 const mutators = {
-  async addData(tx: WriteTransaction, object: { [key: string]: JSONValue }) {
+  async addData(tx: WriteTransaction, object: {[key: string]: JSONValue}) {
     for (const [key, value] of Object.entries(object)) {
       await tx.put(key, value);
     }
@@ -22,11 +22,11 @@ const authHandler = async (auth: string, _roomID: string) => {
       userID: auth,
     };
   }
-  throw Error("Unauthorized");
+  throw Error('Unauthorized');
 };
 
-const { worker, RoomDO, AuthDO } = createReflectServer({
+const {worker, RoomDO, AuthDO} = createReflectServer({
   mutators,
   authHandler,
 });
-export { worker as default, RoomDO, AuthDO };
+export {worker as default, RoomDO, AuthDO};

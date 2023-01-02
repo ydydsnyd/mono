@@ -1,9 +1,9 @@
-import { encodeHeaderValue } from "../util/headers.js";
-import { randomID } from "../util/rand.js";
-import { LogSink, LogContext, LogLevel } from "@rocicorp/logger";
-import { version } from "../util/version.js";
-import { AuthHandler, UserData, USER_DATA_HEADER_NAME } from "./auth.js";
-import { dispatch, paths } from "./dispatch.js";
+import {encodeHeaderValue} from '../util/headers.js';
+import {randomID} from '../util/rand.js';
+import {LogSink, LogContext, LogLevel} from '@rocicorp/logger';
+import {version} from '../util/version.js';
+import {AuthHandler, UserData, USER_DATA_HEADER_NAME} from './auth.js';
+import {dispatch, paths} from './dispatch.js';
 import {
   closeRoom,
   createRoom,
@@ -14,23 +14,23 @@ import {
   roomRecordByRoomID,
   roomRecords,
   RoomStatus,
-} from "./rooms.js";
-import { RWLock } from "@rocicorp/lock";
+} from './rooms.js';
+import {RWLock} from '@rocicorp/lock';
 import {
   ConnectionsResponse,
   connectionsResponseSchema,
   InvalidateForRoomRequest,
   InvalidateForUserRequest,
-} from "../protocol/api/auth.js";
-import * as s from "superstruct";
-import { createAuthAPIHeaders } from "./auth-api-headers.js";
-import { DurableStorage } from "../storage/durable-storage.js";
-import type { JSONValue } from "replicache";
-import { addRoutes } from "./auth-do-routes.js";
-import type { RociRequest, RociRouter } from "./middleware.js";
-import { Router } from "itty-router";
-import type { CreateRoomRequest } from "../protocol/api/room.js";
-import { newWebSocketPair, sendError } from "../util/socket.js";
+} from '../protocol/api/auth.js';
+import * as s from 'superstruct';
+import {createAuthAPIHeaders} from './auth-api-headers.js';
+import {DurableStorage} from '../storage/durable-storage.js';
+import type {JSONValue} from 'replicache';
+import {addRoutes} from './auth-do-routes.js';
+import type {RociRequest, RociRouter} from './middleware.js';
+import {Router} from 'itty-router';
+import type {CreateRoomRequest} from '../protocol/api/room.js';
+import {newWebSocketPair, sendError} from '../util/socket.js';
 
 export interface AuthDOOptions {
   roomDO: DurableObjectNamespace;
@@ -77,32 +77,31 @@ export class BaseAuthDO implements DurableObject {
   private readonly _newWebSocketPair: typeof newWebSocketPair;
 
   constructor(options: AuthDOOptions) {
-    const { roomDO, state, authHandler, authApiKey, logSink, logLevel } =
-      options;
+    const {roomDO, state, authHandler, authApiKey, logSink, logLevel} = options;
     this._router = Router();
     this._newWebSocketPair = options.newWebSocketPair || newWebSocketPair;
     this._roomDO = roomDO;
     this._state = state;
     this._durableStorage = new DurableStorage(
       state.storage,
-      false /* don't allow uncomfirmed */
+      false /* don't allow uncomfirmed */,
     );
     this._authHandler = authHandler;
     this._authApiKey = authApiKey;
     this._lc = new LogContext(logLevel, logSink)
-      .addContext("AuthDO")
-      .addContext("doID", state.id.toString());
+      .addContext('AuthDO')
+      .addContext('doID', state.id.toString());
     this._authLock = new RWLock();
     this._roomRecordLock = new RWLock();
     addRoutes(this._router, this, this._authApiKey);
-    this._lc.info?.("Starting server");
-    this._lc.info?.("Version:", version);
+    this._lc.info?.('Starting server');
+    this._lc.info?.('Version:', version);
   }
 
   async fetch(request: Request): Promise<Response> {
     // Match route against pattern /:name/*action
-    const lc = this._lc.addContext("req", randomID());
-    lc.debug?.("Handling request:", request.url);
+    const lc = this._lc.addContext('req', randomID());
+    lc.debug?.('Handling request:', request.url);
     try {
       // Try newfangled routes first.
       let resp = await this._router.handle(request);
@@ -113,12 +112,12 @@ export class BaseAuthDO implements DurableObject {
       lc.debug?.(`Returning response: ${resp.status} ${resp.statusText}`);
       return resp;
     } catch (e) {
-      lc.error?.("Unhandled exception in fetch", e);
+      lc.error?.('Unhandled exception in fetch', e);
       return new Response(
-        e instanceof Error ? e.message : "Unexpected error.",
+        e instanceof Error ? e.message : 'Unexpected error.',
         {
           status: 500,
-        }
+        },
       );
     }
   }
@@ -126,15 +125,15 @@ export class BaseAuthDO implements DurableObject {
   async roomStatusByRoomID(request: RociRequest) {
     const roomID = request.params?.roomID;
     if (roomID === undefined) {
-      return new Response("Missing roomID", { status: 400 });
+      return new Response('Missing roomID', {status: 400});
     }
     const roomRecord = await this._roomRecordLock.withRead(async () => {
       return roomRecordByRoomID(this._durableStorage, roomID);
     });
     if (roomRecord === undefined) {
-      return newJSONResponse({ status: RoomStatus.Unknown });
+      return newJSONResponse({status: RoomStatus.Unknown});
     }
-    return newJSONResponse({ status: roomRecord.status });
+    return newJSONResponse({status: roomRecord.status});
   }
 
   async allRoomRecords(_: RociRequest) {
@@ -148,7 +147,7 @@ export class BaseAuthDO implements DurableObject {
   async createRoom(
     lc: LogContext,
     request: RociRequest,
-    validatedBody: CreateRoomRequest
+    validatedBody: CreateRoomRequest,
   ) {
     return this._roomRecordLock.withWrite(async () => {
       return createRoom(
@@ -156,7 +155,7 @@ export class BaseAuthDO implements DurableObject {
         this._roomDO,
         this._durableStorage,
         request,
-        validatedBody
+        validatedBody,
       );
     });
   }
@@ -185,46 +184,46 @@ export class BaseAuthDO implements DurableObject {
         this._lc,
         this._roomDO,
         this._durableStorage,
-        request
+        request,
       );
     });
   }
 
   async connect(lc: LogContext, request: RociRequest): Promise<Response> {
     const url = new URL(request.url);
-    if (url.pathname !== "/connect") {
-      return new Response("unknown route", {
+    if (url.pathname !== '/connect') {
+      return new Response('unknown route', {
         status: 400,
       });
     }
 
-    const roomID = url.searchParams.get("roomID");
-    if (roomID === null || roomID === "") {
-      return new Response("roomID parameter required", {
+    const roomID = url.searchParams.get('roomID');
+    if (roomID === null || roomID === '') {
+      return new Response('roomID parameter required', {
         status: 400,
       });
     }
 
-    const clientID = url.searchParams.get("clientID");
+    const clientID = url.searchParams.get('clientID');
     if (!clientID) {
-      return new Response("clientID parameter required", {
+      return new Response('clientID parameter required', {
         status: 400,
       });
     }
 
-    lc = lc.addContext("client", clientID).addContext("room", roomID);
+    lc = lc.addContext('client', clientID).addContext('room', roomID);
 
-    const encodedAuth = request.headers.get("Sec-WebSocket-Protocol");
+    const encodedAuth = request.headers.get('Sec-WebSocket-Protocol');
     if (!encodedAuth) {
-      lc.info?.("auth not found in Sec-WebSocket-Protocol header.");
-      return createUnauthorizedResponse("auth required");
+      lc.info?.('auth not found in Sec-WebSocket-Protocol header.');
+      return createUnauthorizedResponse('auth required');
     }
     let decodedAuth: string | undefined;
     try {
       decodedAuth = decodeURIComponent(encodedAuth);
     } catch (e) {
-      lc.info?.("error decoding auth found in Sec-WebSocket-Protocol header.");
-      return createUnauthorizedResponse("invalid auth");
+      lc.info?.('error decoding auth found in Sec-WebSocket-Protocol header.');
+      return createUnauthorizedResponse('invalid auth');
     }
     const auth = decodedAuth;
     return this._authLock.withRead(async () => {
@@ -236,9 +235,9 @@ export class BaseAuthDO implements DurableObject {
       }
       if (!userData || !userData.userID) {
         if (!userData) {
-          lc.info?.("userData returned by authHandler is falsey.");
+          lc.info?.('userData returned by authHandler is falsey.');
         } else if (!userData.userID) {
-          lc.info?.("userData returned by authHandler has no userID.");
+          lc.info?.('userData returned by authHandler has no userID.');
         }
         return createUnauthorizedResponse();
       }
@@ -257,14 +256,14 @@ export class BaseAuthDO implements DurableObject {
       // close the connection. We trust it will be logged by onSocketError in the
       // client.
       if (roomRecord === undefined || roomRecord.status !== RoomStatus.Open) {
-        const errorMsg = roomRecord ? "room is not open" : "room not found";
-        if (request.headers.get("Upgrade") !== "websocket") {
-          return new Response("expected websocket", { status: 400 });
+        const errorMsg = roomRecord ? 'room is not open' : 'room not found';
+        if (request.headers.get('Upgrade') !== 'websocket') {
+          return new Response('expected websocket', {status: 400});
         }
         const pair = this._newWebSocketPair();
         const ws = pair[1];
         const url = new URL(request.url);
-        lc.info?.("accepting connection ", url.toString());
+        lc.info?.('accepting connection ', url.toString());
         ws.accept();
 
         // MDN tells me that the message will be delivered even if we call close
@@ -278,7 +277,7 @@ export class BaseAuthDO implements DurableObject {
         ws.close();
 
         const responseHeaders = new Headers();
-        responseHeaders.set("Sec-WebSocket-Protocol", encodedAuth);
+        responseHeaders.set('Sec-WebSocket-Protocol', encodedAuth);
         return new Response(null, {
           status: 101,
           headers: responseHeaders,
@@ -304,7 +303,7 @@ export class BaseAuthDO implements DurableObject {
       const requestToDO = new Request(request);
       requestToDO.headers.set(
         USER_DATA_HEADER_NAME,
-        encodeHeaderValue(JSON.stringify(userData))
+        encodeHeaderValue(JSON.stringify(userData)),
       );
       const responseFromDO = await stub.fetch(requestToDO);
       const responseHeaders = new Headers(responseFromDO.headers);
@@ -314,7 +313,7 @@ export class BaseAuthDO implements DurableObject {
       // Send a Sec-WebSocket-Protocol response header with a value
       // matching the Sec-WebSocket-Protocol request header, to indicate
       // support for the protocol, otherwise the client will close the connection.
-      responseHeaders.set("Sec-WebSocket-Protocol", encodedAuth);
+      responseHeaders.set('Sec-WebSocket-Protocol', encodedAuth);
 
       const response = new Response(responseFromDO.body, {
         status: responseFromDO.status,
@@ -328,18 +327,18 @@ export class BaseAuthDO implements DurableObject {
 
   async pull(lc: LogContext, request: RociRequest): Promise<Response> {
     const url = new URL(request.url);
-    const roomID = url.searchParams.get("roomID");
-    if (roomID === null || roomID === "") {
-      return new Response("roomID parameter required", {
+    const roomID = url.searchParams.get('roomID');
+    if (roomID === null || roomID === '') {
+      return new Response('roomID parameter required', {
         status: 400,
       });
     }
-    lc = lc.addContext("room", roomID);
+    lc = lc.addContext('room', roomID);
 
-    const auth = request.headers.get("Authorization");
+    const auth = request.headers.get('Authorization');
     if (!auth) {
-      lc.info?.("auth not found in Authorization header.");
-      return createUnauthorizedResponse("auth required");
+      lc.info?.('auth not found in Authorization header.');
+      return createUnauthorizedResponse('auth required');
     }
     return this._authLock.withRead(async () => {
       let userData: UserData | undefined;
@@ -350,9 +349,9 @@ export class BaseAuthDO implements DurableObject {
       }
       if (!userData || !userData.userID) {
         if (!userData) {
-          lc.info?.("userData returned by authHandler is falsey.");
+          lc.info?.('userData returned by authHandler is falsey.');
         } else if (!userData.userID) {
-          lc.info?.("userData returned by authHandler has no userID.");
+          lc.info?.('userData returned by authHandler has no userID.');
         }
         return createUnauthorizedResponse();
       }
@@ -362,7 +361,7 @@ export class BaseAuthDO implements DurableObject {
         return roomRecordByRoomID(this._durableStorage, roomID);
       });
       if (roomRecord === undefined || roomRecord.status !== RoomStatus.Open) {
-        const errorMsg = roomRecord ? "room is not open" : "room not found";
+        const errorMsg = roomRecord ? 'room is not open' : 'room not found';
         return new Response(errorMsg, {
           status: 404,
         });
@@ -374,7 +373,7 @@ export class BaseAuthDO implements DurableObject {
       const requestToDO = new Request(request);
       requestToDO.headers.set(
         USER_DATA_HEADER_NAME,
-        encodeHeaderValue(JSON.stringify(userData))
+        encodeHeaderValue(JSON.stringify(userData)),
       );
       const responseFromDO = await stub.fetch(requestToDO);
       return responseFromDO;
@@ -384,11 +383,11 @@ export class BaseAuthDO implements DurableObject {
   async authInvalidateForUser(
     lc: LogContext,
     request: RociRequest,
-    { userID }: InvalidateForUserRequest
+    {userID}: InvalidateForUserRequest,
   ): Promise<Response> {
     lc.debug?.(`authInvalidateForUser ${userID} waiting for lock.`);
     return this._authLock.withWrite(async () => {
-      lc.debug?.("got lock.");
+      lc.debug?.('got lock.');
       const connectionKeys = (
         await this._state.storage.list({
           prefix: getConnectionKeyStringUserPrefix(userID),
@@ -398,9 +397,9 @@ export class BaseAuthDO implements DurableObject {
       // to avoid races with new connect requests for this user.
       return this._forwardInvalidateRequest(
         lc,
-        "authInvalidateForUser",
+        'authInvalidateForUser',
         request,
-        [...connectionKeys]
+        [...connectionKeys],
       );
     });
   }
@@ -408,11 +407,11 @@ export class BaseAuthDO implements DurableObject {
   async authInvalidateForRoom(
     lc: LogContext,
     request: RociRequest,
-    { roomID }: InvalidateForRoomRequest
+    {roomID}: InvalidateForRoomRequest,
   ): Promise<Response> {
     lc.debug?.(`authInvalidateForRoom ${roomID} waiting for lock.`);
     return this._authLock.withWrite(async () => {
-      lc.debug?.("got lock.");
+      lc.debug?.('got lock.');
       lc.debug?.(`Sending authInvalidateForRoom request to ${roomID}`);
       // The request to the Room DO must be completed inside the write lock
       // to avoid races with connect requests for this room.
@@ -420,7 +419,7 @@ export class BaseAuthDO implements DurableObject {
         return objectIDByRoomID(this._durableStorage, this._roomDO, roomID);
       });
       if (roomObjectID === undefined) {
-        return new Response("room not found", {
+        return new Response('room not found', {
           status: 404,
         });
       }
@@ -430,7 +429,7 @@ export class BaseAuthDO implements DurableObject {
         lc.debug?.(
           `Received error response from ${roomID}. ${
             response.status
-          } ${await response.clone().text()}`
+          } ${await response.clone().text()}`,
         );
       }
       return response;
@@ -439,11 +438,11 @@ export class BaseAuthDO implements DurableObject {
 
   async authInvalidateAll(
     lc: LogContext,
-    request: RociRequest
+    request: RociRequest,
   ): Promise<Response> {
     lc.debug?.(`authInvalidateAll waiting for lock.`);
     return this._authLock.withWrite(async () => {
-      lc.debug?.("got lock.");
+      lc.debug?.('got lock.');
       const connectionKeys = (
         await this._state.storage.list({
           prefix: CONNECTION_KEY_PREFIX,
@@ -451,7 +450,7 @@ export class BaseAuthDO implements DurableObject {
       ).keys();
       // The request to the Room DOs must be completed inside the write lock
       // to avoid races with connect requests.
-      return this._forwardInvalidateRequest(lc, "authInvalidateAll", request, [
+      return this._forwardInvalidateRequest(lc, 'authInvalidateAll', request, [
         ...connectionKeys,
       ]);
     });
@@ -462,9 +461,9 @@ export class BaseAuthDO implements DurableObject {
     const authApiKey = this._authApiKey;
     if (authApiKey === undefined) {
       lc.info?.(
-        "Returning Unauthorized because REFLECT_AUTH_API_KEY is not defined in env."
+        'Returning Unauthorized because REFLECT_AUTH_API_KEY is not defined in env.',
       );
-      return new Response("Unauthorized", {
+      return new Response('Unauthorized', {
         status: 401,
       });
     }
@@ -475,10 +474,10 @@ export class BaseAuthDO implements DurableObject {
     for (const keyString of connectionRecords.keys()) {
       const connectionKey = connectionKeyFromString(keyString);
       if (!connectionKey) {
-        lc.error?.("Failed to parse connection key", keyString);
+        lc.error?.('Failed to parse connection key', keyString);
         continue;
       }
-      const { roomID } = connectionKey;
+      const {roomID} = connectionKey;
       let keyStringSet = connectionKeyStringsByRoomID.get(roomID);
       if (!keyStringSet) {
         keyStringSet = new Set();
@@ -487,7 +486,7 @@ export class BaseAuthDO implements DurableObject {
       keyStringSet.add(keyString);
     }
     lc.info?.(
-      `Revalidating ${connectionRecords.size} ConnectionRecords across ${connectionKeyStringsByRoomID.size} rooms.`
+      `Revalidating ${connectionRecords.size} ConnectionRecords across ${connectionKeyStringsByRoomID.size} rooms.`,
     );
     let deleteCount = 0;
     for (const [
@@ -496,7 +495,7 @@ export class BaseAuthDO implements DurableObject {
     ] of connectionKeyStringsByRoomID) {
       lc.debug?.(`revalidating connections for ${roomID} waiting for lock.`);
       await this._authLock.withWrite(async () => {
-        lc.debug?.("got lock.");
+        lc.debug?.('got lock.');
         const roomObjectID = await this._roomRecordLock.withRead(async () => {
           return objectIDByRoomID(this._durableStorage, this._roomDO, roomID);
         });
@@ -510,8 +509,8 @@ export class BaseAuthDO implements DurableObject {
             `https://unused-reflect-room-do.dev${paths.authConnections}`,
             {
               headers: createAuthAPIHeaders(authApiKey),
-            }
-          )
+            },
+          ),
         );
         let connectionsResponse: ConnectionsResponse | undefined;
         try {
@@ -523,41 +522,41 @@ export class BaseAuthDO implements DurableObject {
         }
         if (connectionsResponse) {
           const openConnectionKeyStrings = new Set(
-            connectionsResponse.map(({ userID, clientID }) =>
+            connectionsResponse.map(({userID, clientID}) =>
               connectionKeyToString({
                 roomID,
                 userID,
                 clientID,
-              })
-            )
+              }),
+            ),
           );
           const keysToDelete: string[] = [
             ...connectionKeyStringsForRoomID,
-          ].filter((keyString) => !openConnectionKeyStrings.has(keyString));
+          ].filter(keyString => !openConnectionKeyStrings.has(keyString));
           try {
             deleteCount += await this._state.storage.delete(keysToDelete);
           } catch (e) {
-            lc.info?.("Failed to delete connections for roomID", roomID);
+            lc.info?.('Failed to delete connections for roomID', roomID);
           }
         }
       });
     }
     lc.info?.(
-      `Revalidated ${connectionRecords.size} ConnectionRecords, deleted ${deleteCount} ConnectionRecords.`
+      `Revalidated ${connectionRecords.size} ConnectionRecords, deleted ${deleteCount} ConnectionRecords.`,
     );
-    return new Response("Complete", { status: 200 });
+    return new Response('Complete', {status: 200});
   }
 
   private async _forwardInvalidateRequest(
     lc: LogContext,
     invalidateRequestName: string,
     request: RociRequest,
-    connectionKeyStrings: string[]
+    connectionKeyStrings: string[],
   ): Promise<Response> {
-    const connectionKeys = connectionKeyStrings.map((keyString) => {
+    const connectionKeys = connectionKeyStrings.map(keyString => {
       const connectionKey = connectionKeyFromString(keyString);
       if (!connectionKey) {
-        lc.error?.("Failed to parse connection key", keyString);
+        lc.error?.('Failed to parse connection key', keyString);
       }
       return connectionKey;
     });
@@ -571,7 +570,7 @@ export class BaseAuthDO implements DurableObject {
     const roomIDs = [...roomIDSet];
     const responsePromises: Promise<Response>[] = [];
     lc.debug?.(
-      `Sending ${invalidateRequestName} requests to ${roomIDs.length} rooms`
+      `Sending ${invalidateRequestName} requests to ${roomIDs.length} rooms`,
     );
     // Send requests to room DOs in parallel
     const errorResponses = [];
@@ -583,7 +582,7 @@ export class BaseAuthDO implements DurableObject {
       if (roomObjectID === undefined) {
         const msg = `No objectID for ${roomID}, skipping`;
         lc.error?.(msg);
-        errorResponses.push(new Response(msg, { status: 500 }));
+        errorResponses.push(new Response(msg, {status: 500}));
         continue;
       }
 
@@ -597,12 +596,12 @@ export class BaseAuthDO implements DurableObject {
         lc.error?.(
           `Received error response from ${roomIDs[i]}. ${
             response.status
-          } ${await response.text}`
+          } ${await response.text}`,
         );
       }
     }
     if (errorResponses.length === 0) {
-      return new Response("Success", {
+      return new Response('Success', {
         status: 200,
       });
     }
@@ -614,11 +613,11 @@ function newJSONResponse(obj: JSONValue) {
   return new Response(JSON.stringify(obj));
 }
 
-const CONNECTION_KEY_PREFIX = "connection/";
+const CONNECTION_KEY_PREFIX = 'connection/';
 
 function connectionKeyToString(key: ConnectionKey): string {
   return `${CONNECTION_KEY_PREFIX}${encodeURIComponent(
-    key.userID
+    key.userID,
   )}/${encodeURIComponent(key.roomID)}/${encodeURIComponent(key.clientID)}/`;
 }
 
@@ -627,13 +626,13 @@ function getConnectionKeyStringUserPrefix(userID: string): string {
 }
 
 export function connectionKeyFromString(
-  key: string
+  key: string,
 ): ConnectionKey | undefined {
   if (!key.startsWith(CONNECTION_KEY_PREFIX)) {
     return undefined;
   }
-  const parts = key.split("/");
-  if (parts.length !== 5 || parts[4] !== "") {
+  const parts = key.split('/');
+  if (parts.length !== 5 || parts[4] !== '') {
     return undefined;
   }
   return {
@@ -643,7 +642,7 @@ export function connectionKeyFromString(
   };
 }
 
-function createUnauthorizedResponse(message = "Unauthorized"): Response {
+function createUnauthorizedResponse(message = 'Unauthorized'): Response {
   return new Response(message, {
     status: 401,
   });

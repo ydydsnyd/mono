@@ -1,5 +1,5 @@
-import { Lock } from "@rocicorp/lock";
-import type { LogLevel, LogSink } from "@rocicorp/logger";
+import {Lock} from '@rocicorp/lock';
+import type {LogLevel, LogSink} from '@rocicorp/logger';
 
 export interface DatadogLoggerOptions {
   apiKey: string;
@@ -9,7 +9,7 @@ export interface DatadogLoggerOptions {
   signal?: AbortSignal;
 }
 
-const DD_URL = "https://http-intake.logs.datadoghq.com/api/v2/logs";
+const DD_URL = 'https://http-intake.logs.datadoghq.com/api/v2/logs';
 
 export class DatadogLogSink implements LogSink {
   private _messages: Message[] = [];
@@ -22,7 +22,7 @@ export class DatadogLogSink implements LogSink {
   private readonly _signal: AbortSignal | undefined = undefined;
 
   constructor(options: DatadogLoggerOptions) {
-    const { apiKey, service, host, interval = 10_000, signal } = options;
+    const {apiKey, service, host, interval = 10_000, signal} = options;
 
     this._apiKey = apiKey;
     this._service = service;
@@ -32,7 +32,7 @@ export class DatadogLogSink implements LogSink {
 
     if (signal) {
       // CF types declarations are not correct.
-      (signal as unknown as EventTarget).addEventListener("abort", () => {
+      (signal as unknown as EventTarget).addEventListener('abort', () => {
         if (this._timerID) {
           clearTimeout(this._timerID);
         }
@@ -46,7 +46,7 @@ export class DatadogLogSink implements LogSink {
     }
 
     this._messages.push(makeMessage(args, level));
-    if (level === "error") {
+    if (level === 'error') {
       // Do not await. Later calls to flush will await as needed.
       void this.flush();
     } else {
@@ -75,7 +75,7 @@ export class DatadogLogSink implements LogSink {
         return;
       }
 
-      const { length } = this._messages;
+      const {length} = this._messages;
       if (length === 0) {
         return;
       }
@@ -83,21 +83,21 @@ export class DatadogLogSink implements LogSink {
       const messages = this._messages;
       this._messages = [];
 
-      const body = messages.map((m) => JSON.stringify(m)).join("\n");
+      const body = messages.map(m => JSON.stringify(m)).join('\n');
 
       const url = new URL(DD_URL);
-      url.searchParams.set("ddsource", "worker");
-      this._service && url.searchParams.set("service", this._service);
-      this._host && url.searchParams.set("host", this._host);
+      url.searchParams.set('ddsource', 'worker');
+      this._service && url.searchParams.set('service', this._service);
+      this._host && url.searchParams.set('host', this._host);
 
       let ok = false;
       try {
         const response = await fetch(url.toString(), {
           headers: {
             // eslint-disable-next-line @typescript-eslint/naming-convention
-            "DD-API-KEY": this._apiKey,
+            'DD-API-KEY': this._apiKey,
           },
-          method: "POST",
+          method: 'POST',
           body,
           signal: this._signal,
         });
@@ -124,7 +124,7 @@ type Message = {
   status: LogLevel;
   date: number;
   message: unknown;
-  error?: { origin: "logger" };
+  error?: {origin: 'logger'};
 };
 
 function flattenMessage(message: unknown): unknown {
@@ -170,8 +170,8 @@ function makeMessage(message: unknown, logLevel: LogLevel): Message {
     message: convertErrors(flattenMessage(message)),
     status: logLevel,
   };
-  if (logLevel === "error") {
-    msg.error = { origin: "logger" };
+  if (logLevel === 'error') {
+    msg.error = {origin: 'logger'};
   }
   return msg;
 }

@@ -1,4 +1,4 @@
-import type { ReadonlyJSONObject } from "replicache";
+import type {ReadonlyJSONObject} from 'replicache';
 
 /**
  * An `AuthHandler` should validate that the user authenticated by `auth` is
@@ -18,10 +18,10 @@ export type AuthHandler = (auth: string, roomID: string) => Promise<UserData>;
  * be passed through to mutators which could use it to supplement
  * mutator args and to validate the mutation.
  */
-export type UserData = ReadonlyJSONObject & { userID: string };
+export type UserData = ReadonlyJSONObject & {userID: string};
 
 /**
  * Value should be a `UserData` value JSON stringified and encoded
  * with `encodeUrlComponent`.
  */
-export const USER_DATA_HEADER_NAME = "x-reflect-user-data";
+export const USER_DATA_HEADER_NAME = 'x-reflect-user-data';

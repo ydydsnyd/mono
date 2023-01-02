@@ -1,9 +1,9 @@
 // Generates the total merged ordering of mutation from the pending lists in
 // [[clients]] and [[clientGroups]].
 
-import type { PendingMutationMap } from "../types/mutation.js";
-import type { Mutation } from "../protocol/push.js";
-import { PeekIterator } from "../util/peek-iterator.js";
+import type {PendingMutationMap} from '../types/mutation.js';
+import type {Mutation} from '../protocol/push.js';
+import {PeekIterator} from '../util/peek-iterator.js';
 
 // - we merge sort those lists, but the merge function is the server timestamp
 export function* generateMergedMutations(pendingMutations: PendingMutationMap) {
@@ -11,13 +11,13 @@ export function* generateMergedMutations(pendingMutations: PendingMutationMap) {
   const iterators: PeekIterator<Mutation>[] = [];
 
   const insertIterator = (ins: PeekIterator<Mutation>) => {
-    const { value, done } = ins.peek();
+    const {value, done} = ins.peek();
     if (done) {
       return;
     }
     const pos = iterators.findIndex(
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      (it) => it.peek().value!.timestamp > value!.timestamp
+      it => it.peek().value!.timestamp > value!.timestamp,
     );
     iterators.splice(pos === -1 ? iterators.length : pos, 0, ins);
   };
@@ -41,9 +41,9 @@ export function* generateMergedMutations(pendingMutations: PendingMutationMap) {
     if (!next) {
       break;
     }
-    const { value, done } = next.peek();
+    const {value, done} = next.peek();
     if (done) {
-      throw new Error("unexpected state");
+      throw new Error('unexpected state');
     }
     yield value;
     next.next();

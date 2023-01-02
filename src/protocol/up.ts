@@ -1,6 +1,6 @@
-import * as s from "superstruct";
-import { pingMessageSchema } from "./ping";
-import { pushMessageSchema } from "./push";
+import * as s from 'superstruct';
+import {pingMessageSchema} from './ping';
+import {pushMessageSchema} from './push';
 
 export const upstreamSchema = s.union([pushMessageSchema, pingMessageSchema]);
 

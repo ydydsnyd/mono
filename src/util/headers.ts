@@ -7,7 +7,7 @@ export function encodeHeaderValue(value: string): string {
   // percent decoding done by encodeURIComponent.
   return encodeURIComponent(value).replace(
     /%(3A|3B|2C|2F|22|3F|7B|7D|5B|5D|40|3C|3E|3D|2B|23|24|26|60|7C|5E|20)/g,
-    (_, hex) => String.fromCharCode(parseInt(hex, 16))
+    (_, hex) => String.fromCharCode(parseInt(hex, 16)),
   );
 }
 

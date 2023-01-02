@@ -3,20 +3,17 @@ import {
   invalidateForRoomRequestSchema,
   InvalidateForUserRequest,
   invalidateForUserRequestSchema,
-} from "../protocol/api/auth";
-import { Struct, validate } from "superstruct";
-import type { LogContext } from "@rocicorp/logger";
-import {
-  CreateRoomRequest,
-  createRoomRequestSchema,
-} from "../protocol/api/room";
-import { PullRequest, pullRequestSchema } from "../protocol/pull";
+} from '../protocol/api/auth';
+import {Struct, validate} from 'superstruct';
+import type {LogContext} from '@rocicorp/logger';
+import {CreateRoomRequest, createRoomRequestSchema} from '../protocol/api/room';
+import {PullRequest, pullRequestSchema} from '../protocol/pull';
 
 export type Handler<T = undefined> = (
   this: Handlers,
   lc: LogContext,
   request: Request,
-  body: T
+  body: T,
 ) => Promise<Response>;
 
 // TODO This definition and dispatch() itself are used by *both* the
@@ -46,23 +43,23 @@ export interface Handlers {
 }
 
 export const paths: Readonly<Record<keyof Handlers, string>> = {
-  createRoom: "/createRoom",
-  connect: "/connect",
-  pull: "/pull",
-  authInvalidateForUser: "/api/auth/v0/invalidateForUser",
-  authInvalidateForRoom: "/api/auth/v0/invalidateForRoom",
-  authInvalidateAll: "/api/auth/v0/invalidateAll",
-  authRevalidateConnections: "/api/auth/v0/revalidateConnections",
-  authConnections: "/api/auth/v0/connections",
+  createRoom: '/createRoom',
+  connect: '/connect',
+  pull: '/pull',
+  authInvalidateForUser: '/api/auth/v0/invalidateForUser',
+  authInvalidateForRoom: '/api/auth/v0/invalidateForRoom',
+  authInvalidateAll: '/api/auth/v0/invalidateAll',
+  authRevalidateConnections: '/api/auth/v0/revalidateConnections',
+  authConnections: '/api/auth/v0/connections',
 };
 
-function createUnauthorizedResponse(message = "Unauthorized"): Response {
+function createUnauthorizedResponse(message = 'Unauthorized'): Response {
   return new Response(message, {
     status: 401,
   });
 }
 
-function createBadRequestResponse(message = "Bad Request"): Response {
+function createBadRequestResponse(message = 'Bad Request'): Response {
   return new Response(message, {
     status: 400,
   });
@@ -73,10 +70,10 @@ export function dispatch(
   lc: LogContext,
   // If authApiKey is not provided, then the auth api is disabled.
   authApiKey: string | undefined,
-  handlers: Handlers
+  handlers: Handlers,
 ): Promise<Response> {
   const url = new URL(request.url);
-  lc.debug?.("Dispatching path", url.pathname);
+  lc.debug?.('Dispatching path', url.pathname);
 
   async function validateAndDispatch<T>(
     method: string,
@@ -86,18 +83,18 @@ export function dispatch(
     // checks that the auth api key has been passed in Authorization. The idea is
     // that we could have multiple api keys, and this string would select which
     // to require.
-    apiKey?: "authApiKey"
+    apiKey?: 'authApiKey',
   ): Promise<Response> {
     if (!handler) {
-      return createBadRequestResponse("Unsupported path.");
+      return createBadRequestResponse('Unsupported path.');
     }
-    if (apiKey === "authApiKey") {
+    if (apiKey === 'authApiKey') {
       // Auth API is disabled so everything is unauthorized.
       if (authApiKey === undefined) {
         return createUnauthorizedResponse();
       }
       const authApiKeyHeaderValue = request.headers.get(
-        "x-reflect-auth-api-key"
+        'x-reflect-auth-api-key',
       );
       if (authApiKeyHeaderValue !== authApiKey) {
         return createUnauthorizedResponse();
@@ -108,83 +105,83 @@ export function dispatch(
       return Promise.resolve(
         new Response(`Method not allowed. Use "${method}".`, {
           status: 405,
-        })
+        }),
       );
     }
     const validateResult = await validateBody(request);
     if (validateResult.errorResponse) {
       return validateResult.errorResponse;
     }
-    lc.debug?.("Calling handler");
+    lc.debug?.('Calling handler');
     return handler.call(handlers, lc, request, validateResult.value);
   }
 
   switch (url.pathname) {
     case paths.createRoom:
       return validateAndDispatch(
-        "post",
-        (request) => validateBody(request, createRoomRequestSchema),
+        'post',
+        request => validateBody(request, createRoomRequestSchema),
         handlers.createRoom,
-        "authApiKey"
+        'authApiKey',
       );
     case paths.connect:
-      return validateAndDispatch("get", noOpValidateBody, handlers.connect);
+      return validateAndDispatch('get', noOpValidateBody, handlers.connect);
     case paths.pull:
       return validateAndDispatch(
-        "post",
-        (request) => validateBody(request, pullRequestSchema),
-        handlers.pull
+        'post',
+        request => validateBody(request, pullRequestSchema),
+        handlers.pull,
       );
     case paths.authInvalidateForUser:
       return validateAndDispatch(
-        "post",
-        (request) => validateBody(request, invalidateForUserRequestSchema),
+        'post',
+        request => validateBody(request, invalidateForUserRequestSchema),
         handlers.authInvalidateForUser,
-        "authApiKey"
+        'authApiKey',
       );
     case paths.authInvalidateForRoom:
       return validateAndDispatch(
-        "post",
-        (request) => validateBody(request, invalidateForRoomRequestSchema),
+        'post',
+        request => validateBody(request, invalidateForRoomRequestSchema),
         handlers.authInvalidateForRoom,
-        "authApiKey"
+        'authApiKey',
       );
     case paths.authInvalidateAll:
       return validateAndDispatch(
-        "post",
+        'post',
         noOpValidateBody,
         handlers.authInvalidateAll,
-        "authApiKey"
+        'authApiKey',
       );
     case paths.authRevalidateConnections:
       return validateAndDispatch(
-        "post",
+        'post',
         noOpValidateBody,
         handlers.authRevalidateConnections,
-        "authApiKey"
+        'authApiKey',
       );
     case paths.authConnections:
       return validateAndDispatch(
-        "get",
+        'get',
         noOpValidateBody,
         handlers.authConnections,
-        "authApiKey"
+        'authApiKey',
       );
     default:
-      return Promise.resolve(createBadRequestResponse("Unsupported path."));
+      return Promise.resolve(createBadRequestResponse('Unsupported path.'));
   }
 }
 
 const noOpValidateBody = () =>
-  Promise.resolve({ value: undefined, errorResponse: undefined });
+  Promise.resolve({value: undefined, errorResponse: undefined});
 
 type ValidateResult<T> =
-  | { value: T; errorResponse: undefined }
-  | { value: undefined; errorResponse: Response };
+  | {value: T; errorResponse: undefined}
+  | {value: undefined; errorResponse: Response};
 
 async function validateBody<T>(
   request: Request,
-  struct: Struct<T>
+  struct: Struct<T>,
 ): Promise<ValidateResult<T>> {
   let json;
   try {
@@ -197,7 +194,7 @@ async function validateBody<T>(
     json = await request.clone().json();
   } catch (e) {
     return {
-      errorResponse: new Response("Body must be valid json.", { status: 400 }),
+      errorResponse: new Response('Body must be valid json.', {status: 400}),
       value: undefined,
     };
   }
@@ -205,7 +202,7 @@ async function validateBody<T>(
   if (validateResult[0]) {
     return {
       errorResponse: createBadRequestResponse(
-        "Body schema error. " + validateResult[0].message
+        'Body schema error. ' + validateResult[0].message,
       ),
       value: undefined,
     };

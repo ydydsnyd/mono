@@ -1,16 +1,13 @@
-import type { Patch } from "../protocol/poke.js";
-import { userValuePrefix, userValueSchema } from "../types/user-value.js";
-import type { Version } from "../types/version.js";
-import type { DurableStorage } from "../storage/durable-storage.js";
+import type {Patch} from '../protocol/poke.js';
+import {userValuePrefix, userValueSchema} from '../types/user-value.js';
+import type {Version} from '../types/version.js';
+import type {DurableStorage} from '../storage/durable-storage.js';
 
 export async function getPatch(
   storage: DurableStorage,
-  fromCookie: Version
+  fromCookie: Version,
 ): Promise<Patch> {
-  const result = await storage.list(
-    { prefix: userValuePrefix },
-    userValueSchema
-  );
+  const result = await storage.list({prefix: userValuePrefix}, userValueSchema);
 
   const patch: Patch = [];
   for (const [key, value] of result) {
@@ -25,12 +22,12 @@ export async function getPatch(
     const unwrappedValue = validValue.value;
     if (validValue.deleted) {
       patch.push({
-        op: "del",
+        op: 'del',
         key: unwrappedKey,
       });
     } else {
       patch.push({
-        op: "put",
+        op: 'put',
         key: unwrappedKey,
         value: unwrappedValue,
       });

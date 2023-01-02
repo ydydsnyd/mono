@@ -2,34 +2,34 @@ import {
   ClientRecord,
   getClientRecord,
   putClientRecord,
-} from "../types/client-record.js";
+} from '../types/client-record.js';
 import type {
   ClientID,
   ClientMap,
   ClientState,
   Socket,
-} from "../types/client-state.js";
-import type { LogContext } from "@rocicorp/logger";
-import type { ConnectedMessage } from "../protocol/connected.js";
-import type { UserData } from "./auth.js";
-import { USER_DATA_HEADER_NAME } from "./auth.js";
-import { decodeHeaderValue } from "../util/headers.js";
-import { addConnectedClient } from "../types/connected-clients.js";
-import type { DurableStorage } from "../storage/durable-storage.js";
+} from '../types/client-state.js';
+import type {LogContext} from '@rocicorp/logger';
+import type {ConnectedMessage} from '../protocol/connected.js';
+import type {UserData} from './auth.js';
+import {USER_DATA_HEADER_NAME} from './auth.js';
+import {decodeHeaderValue} from '../util/headers.js';
+import {addConnectedClient} from '../types/connected-clients.js';
+import type {DurableStorage} from '../storage/durable-storage.js';
 import {
   NullableVersion,
   Version,
   compareVersions,
   getVersion,
-} from "../types/version.js";
+} from '../types/version.js';
 
 export const maybeOldClientStateMessage =
-  "Possibly the room was re-created without also clearing browser state? Try clearing browser state and trying again.";
+  'Possibly the room was re-created without also clearing browser state? Try clearing browser state and trying again.';
 
 export type MessageHandler = (
   clientID: ClientID,
   data: string,
-  ws: Socket
+  ws: Socket,
 ) => void;
 
 export type CloseHandler = (clientID: ClientID, ws: Socket) => void;
@@ -51,26 +51,26 @@ export async function handleConnection(
   headers: Headers,
   clients: ClientMap,
   onMessage: MessageHandler,
-  onClose: CloseHandler
+  onClose: CloseHandler,
 ) {
   const sendError = (error: string) => {
-    lc.info?.("invalid connection request", error);
-    ws.send(JSON.stringify(["error", error]));
+    lc.info?.('invalid connection request', error);
+    ws.send(JSON.stringify(['error', error]));
     ws.close();
   };
 
   const req = getConnectRequest(url, headers);
-  const { result: parsedConnectRequest } = req;
+  const {result: parsedConnectRequest} = req;
   if (parsedConnectRequest === null) {
-    const { error } = req;
+    const {error} = req;
     sendError(error);
     return;
   }
 
-  lc = lc.addContext("client", parsedConnectRequest.clientID);
-  lc.info?.("parsed request", {
+  lc = lc.addContext('client', parsedConnectRequest.clientID);
+  lc.info?.('parsed request', {
     ...parsedConnectRequest,
-    userData: "redacted",
+    userData: 'redacted',
   });
 
   const {
@@ -79,19 +79,19 @@ export async function handleConnection(
     clientGroupID: requestClientGroupID,
   } = parsedConnectRequest;
   const existingRecord = await getClientRecord(requestClientID, storage);
-  lc.debug?.("Existing client record", existingRecord);
+  lc.debug?.('Existing client record', existingRecord);
 
   if (existingRecord) {
     if (requestClientGroupID !== existingRecord.clientGroupID) {
       lc.info?.(
-        "Unexpected client group id ",
+        'Unexpected client group id ',
         requestClientGroupID,
-        " received when connecting with a client id ",
+        ' received when connecting with a client id ',
         requestClientID,
-        " with existing client group id ",
-        existingRecord.clientGroupID
+        ' with existing client group id ',
+        existingRecord.clientGroupID,
       );
-      sendError("Unexpected clientGroupID.");
+      sendError('Unexpected clientGroupID.');
       return;
     }
   }
@@ -103,10 +103,10 @@ export async function handleConnection(
   // across runs of `wrangler dev`.
   if (parsedConnectRequest.lmid > existingLastMutationID) {
     lc.info?.(
-      "Unexpected lmid when connecting. Got",
+      'Unexpected lmid when connecting. Got',
       parsedConnectRequest.lmid,
-      "expected lastMutationID",
-      existingLastMutationID
+      'expected lastMutationID',
+      existingLastMutationID,
     );
     sendError(`Unexpected lmid. ${maybeOldClientStateMessage}`);
     return;
@@ -115,10 +115,10 @@ export async function handleConnection(
   const version = (await getVersion(storage)) ?? null;
   if (compareVersions(requestBaseCookie, version) > 0) {
     lc.info?.(
-      "Unexpected baseCookie when connecting. Got",
+      'Unexpected baseCookie when connecting. Got',
       requestBaseCookie,
-      "current version is",
-      version
+      'current version is',
+      version,
     );
     sendError(`Unexpected baseCookie. ${maybeOldClientStateMessage}`);
     return;
@@ -134,29 +134,29 @@ export async function handleConnection(
     lastMutationIDVersion: existingRecordLastMutationIDVersion,
   };
   await putClientRecord(requestClientID, record, storage);
-  lc.debug?.("Put client record", record);
+  lc.debug?.('Put client record', record);
   await addConnectedClient(requestClientID, storage);
 
   const existing = clients.get(requestClientID);
   if (existing) {
-    lc.debug?.("Closing old socket");
+    lc.debug?.('Closing old socket');
     existing.socket.close();
   }
 
-  ws.addEventListener("message", (event) =>
-    onMessage(requestClientID, event.data.toString(), ws)
+  ws.addEventListener('message', event =>
+    onMessage(requestClientID, event.data.toString(), ws),
   );
-  ws.addEventListener("close", (e) => {
-    lc.info?.("WebSocket CloseEvent for client", requestClientID, {
+  ws.addEventListener('close', e => {
+    lc.info?.('WebSocket CloseEvent for client', requestClientID, {
       reason: e.reason,
       code: e.code,
       wasClean: e.wasClean,
     });
     onClose(requestClientID, ws);
   });
-  ws.addEventListener("error", (e) => {
+  ws.addEventListener('error', e => {
     lc.error?.(
-      "WebSocket ErrorEvent for client",
+      'WebSocket ErrorEvent for client',
       requestClientID,
       {
         filename: e.filename,
@@ -164,7 +164,7 @@ export async function handleConnection(
         lineno: e.lineno,
         colno: e.colno,
       },
-      e.error
+      e.error,
     );
   });
 
@@ -174,15 +174,15 @@ export async function handleConnection(
     clockBehindByMs: undefined,
     clientGroupID: requestClientGroupID,
   };
-  lc.debug?.("Setting client map entry", requestClientID, client);
+  lc.debug?.('Setting client map entry', requestClientID, client);
   clients.set(requestClientID, client);
-  const connectedMessage: ConnectedMessage = ["connected", {}];
+  const connectedMessage: ConnectedMessage = ['connected', {}];
   ws.send(JSON.stringify(connectedMessage));
 }
 
 export function getConnectRequest(
   url: URL,
-  headers: Headers
+  headers: Headers,
 ):
   | {
       result: {
@@ -201,7 +201,7 @@ export function getConnectRequest(
     } {
   const getParam = (name: string, required: boolean) => {
     const value = url.searchParams.get(name);
-    if (value === "" || value === null) {
+    if (value === '' || value === null) {
       if (required) {
         throw new Error(`invalid querystring - missing ${name}`);
       }
@@ -217,7 +217,7 @@ export function getConnectRequest(
     const int = parseInt(value);
     if (isNaN(int)) {
       throw new Error(
-        `invalid querystring parameter ${name}, url: ${url}, got: ${value}`
+        `invalid querystring parameter ${name}, url: ${url}, got: ${value}`,
       );
     }
     return int;
@@ -226,30 +226,30 @@ export function getConnectRequest(
   const getUserData = (headers: Headers): UserData => {
     const encodedValue = headers.get(USER_DATA_HEADER_NAME);
     if (!encodedValue) {
-      throw new Error("missing user-data");
+      throw new Error('missing user-data');
     }
     let jsonValue;
     try {
       jsonValue = JSON.parse(decodeHeaderValue(encodedValue));
     } catch (e) {
-      throw new Error("invalid user-data - failed to decode/parse");
+      throw new Error('invalid user-data - failed to decode/parse');
     }
     if (!jsonValue.userID) {
-      throw new Error("invalid user-data - missing userID");
+      throw new Error('invalid user-data - missing userID');
     }
     return jsonValue;
   };
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const clientID = getParam("clientID", true)!;
+    const clientID = getParam('clientID', true)!;
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const clientGroupID = getParam("clientGroupID", true)!;
-    const baseCookie = getIntegerParam("baseCookie", false);
+    const clientGroupID = getParam('clientGroupID', true)!;
+    const baseCookie = getIntegerParam('baseCookie', false);
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const timestamp = getIntegerParam("ts", true)!;
+    const timestamp = getIntegerParam('ts', true)!;
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const lmid = getIntegerParam("lmid", true)!;
+    const lmid = getIntegerParam('lmid', true)!;
 
     const userData = getUserData(headers);
     return {

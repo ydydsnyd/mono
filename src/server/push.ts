@@ -1,19 +1,15 @@
-import type {
-  ClientID,
-  ClientMap,
-  ClientState,
-} from "../types/client-state.js";
-import type { PushBody } from "../protocol/push.js";
-import type { LogContext } from "@rocicorp/logger";
+import type {ClientID, ClientMap, ClientState} from '../types/client-state.js';
+import type {PushBody} from '../protocol/push.js';
+import type {LogContext} from '@rocicorp/logger';
 import {
   ClientRecord,
   getClientRecord,
   putClientRecord,
-} from "../types/client-record.js";
-import type { DurableStorage } from "../storage/durable-storage.js";
-import type { PendingMutationMap } from "../types/mutation.js";
-import { sendError } from "../util/socket.js";
-import { must } from "../util/must.js";
+} from '../types/client-record.js';
+import type {DurableStorage} from '../storage/durable-storage.js';
+import type {PendingMutationMap} from '../types/mutation.js';
+import {sendError} from '../util/socket.js';
+import {must} from '../util/must.js';
 
 export type Now = () => number;
 export type ProcessUntilDone = () => void;
@@ -24,10 +20,10 @@ export type ProcessUntilDone = () => void;
 function sendErrorAndClose(
   lc: LogContext,
   client: ClientState,
-  errorMsg: string
+  errorMsg: string,
 ) {
-  lc.error?.("Sending error and closing socket.  Error:", errorMsg);
-  const { socket } = client;
+  lc.error?.('Sending error and closing socket.  Error:', errorMsg);
+  const {socket} = client;
   sendError(socket, errorMsg);
   socket.close();
 }
@@ -44,33 +40,33 @@ export async function handlePush(
   pendingMutations: PendingMutationMap,
   body: PushBody,
   now: Now,
-  processUntilDone: ProcessUntilDone
+  processUntilDone: ProcessUntilDone,
 ) {
-  lc.addContext("push");
-  lc.info?.("handling push", JSON.stringify(body));
+  lc.addContext('push');
+  lc.info?.('handling push', JSON.stringify(body));
 
   // TODO(greg): not sure of best handling of clockBehindByMs in
   // a client group model (push contains mutations from multiple clients)
   if (client.clockBehindByMs === undefined) {
     client.clockBehindByMs = now() - body.timestamp;
     lc.debug?.(
-      "initializing clock offset: clock behind by",
-      client.clockBehindByMs
+      'initializing clock offset: clock behind by',
+      client.clockBehindByMs,
     );
   }
-  const { clientGroupID } = body;
+  const {clientGroupID} = body;
   const pending = [...(pendingMutations.get(clientGroupID) ?? [])];
-  const mutationClientIDs = new Set(body.mutations.map((m) => m.clientID));
+  const mutationClientIDs = new Set(body.mutations.map(m => m.clientID));
   const clientRecords = new Map(
     await Promise.all(
       [...mutationClientIDs].map(
-        async (mClientID) =>
+        async mClientID =>
           [mClientID, await getClientRecord(mClientID, storage)] as [
             ClientID,
-            ClientRecord | undefined
-          ]
-      )
-    )
+            ClientRecord | undefined,
+          ],
+      ),
+    ),
   );
 
   const expectedMutationIDByClientID = new Map();
@@ -79,14 +75,14 @@ export async function handlePush(
     const clientRecord = clientRecords.get(mClientID);
     expectedMutationIDByClientID.set(
       mClientID,
-      (clientRecord?.lastMutationID ?? 0) + 1
+      (clientRecord?.lastMutationID ?? 0) + 1,
     );
     if (clientRecord) {
       if (clientRecord.clientGroupID !== clientGroupID) {
         sendErrorAndClose(
           lc,
           client,
-          `Push with clientGroupID ${clientGroupID} contains mutation for client ${mClientID} which belongs to clientGroupID ${clientRecord.clientGroupID}.`
+          `Push with clientGroupID ${clientGroupID} contains mutation for client ${mClientID} which belongs to clientGroupID ${clientRecord.clientGroupID}.`,
         );
       }
     } else {
@@ -96,23 +92,23 @@ export async function handlePush(
   for (const alreadyPending of pending) {
     expectedMutationIDByClientID.set(
       alreadyPending.clientID,
-      alreadyPending.id + 1
+      alreadyPending.id + 1,
     );
   }
 
   for (const m of body.mutations) {
     const expectedMutationID = must(
-      expectedMutationIDByClientID.get(m.clientID)
+      expectedMutationIDByClientID.get(m.clientID),
     );
     if (expectedMutationID > m.id) {
-      lc.debug?.("mutation already applied", m.id);
+      lc.debug?.('mutation already applied', m.id);
       continue;
     }
     if (expectedMutationID < m.id) {
       sendErrorAndClose(
         lc,
         client,
-        `Push contains unexpected mutation id ${m.id} for client ${m.clientID}. Expected mutation id ${expectedMutationID}.`
+        `Push contains unexpected mutation id ${m.id} for client ${m.clientID}. Expected mutation id ${expectedMutationID}.`,
       );
       return;
     }
@@ -122,14 +118,14 @@ export async function handlePush(
   }
 
   lc.debug?.(
-    "inserted mutations, client group id",
+    'inserted mutations, client group id',
     clientGroupID,
-    "now has",
+    'now has',
     pending.length,
-    "pending mutations."
+    'pending mutations.',
   );
   await Promise.all(
-    newClientIDs.map((clientID) =>
+    newClientIDs.map(clientID =>
       putClientRecord(
         clientID,
         {
@@ -138,9 +134,9 @@ export async function handlePush(
           lastMutationID: 0,
           lastMutationIDVersion: null,
         },
-        storage
-      )
-    )
+        storage,
+      ),
+    ),
   );
   pendingMutations.set(clientGroupID, pending);
   processUntilDone();

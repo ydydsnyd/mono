@@ -1,16 +1,16 @@
-import { test, expect } from "@jest/globals";
-import type { PushBody } from "../../src/protocol/push.js";
-import type { ClientID, ClientMap } from "../../src/types/client-state.js";
+import {test, expect} from '@jest/globals';
+import type {PushBody} from '../../src/protocol/push.js';
+import type {ClientID, ClientMap} from '../../src/types/client-state.js';
 import {
   client,
   createSilentLogContext,
   Mocket,
   mutation,
-} from "../util/test-utils.js";
-import { handleMessage } from "../../src/server/message.js";
-import { DurableStorage } from "../storage/durable-storage.js";
+} from '../util/test-utils.js';
+import {handleMessage} from '../../src/server/message.js';
+import {DurableStorage} from '../storage/durable-storage.js';
 
-test("handleMessage", async () => {
+test('handleMessage', async () => {
   type Case = {
     name: string;
     data: string;
@@ -23,9 +23,9 @@ test("handleMessage", async () => {
 
   const cases: Case[] = [
     {
-      name: "empty",
-      data: "",
-      expectedError: "SyntaxError: Unexpected end of JSON input",
+      name: 'empty',
+      data: '',
+      expectedError: 'SyntaxError: Unexpected end of JSON input',
     },
     // {
     //   name: "invalid push",
@@ -33,57 +33,57 @@ test("handleMessage", async () => {
     //   expectedError: "Should have at least 2 items",
     // },
     {
-      name: "valid push",
+      name: 'valid push',
       data: JSON.stringify([
-        "push",
+        'push',
         {
-          clientGroupID: "cg1",
-          mutations: [mutation("c1", 1), mutation("c1", 2)],
+          clientGroupID: 'cg1',
+          mutations: [mutation('c1', 1), mutation('c1', 2)],
           pushVersion: 1,
-          schemaVersion: "",
+          schemaVersion: '',
           timestamp: 42,
         },
       ]),
       expectedPush: {
-        clientGroupID: "cg1",
-        mutations: [mutation("c1", 1), mutation("c1", 2)],
+        clientGroupID: 'cg1',
+        mutations: [mutation('c1', 1), mutation('c1', 2)],
         pushVersion: 1,
-        schemaVersion: "",
+        schemaVersion: '',
         timestamp: 42,
       },
     },
     {
-      name: "missing client push",
+      name: 'missing client push',
       data: JSON.stringify([
-        "push",
+        'push',
         {
-          clientGroupID: "cg1",
-          mutations: [mutation("c1", 1), mutation("c1", 2)],
+          clientGroupID: 'cg1',
+          mutations: [mutation('c1', 1), mutation('c1', 2)],
           pushVersion: 1,
-          schemaVersion: "",
+          schemaVersion: '',
           timestamp: 42,
         },
       ]),
       clients: new Map(),
-      clientID: "c1",
-      expectedError: "no such client: c1",
+      clientID: 'c1',
+      expectedError: 'no such client: c1',
       expectSocketClosed: true,
     },
     {
-      name: "missing client ping",
-      data: JSON.stringify(["ping", {}]),
+      name: 'missing client ping',
+      data: JSON.stringify(['ping', {}]),
       clients: new Map(),
-      clientID: "c1",
-      expectedError: "no such client: c1",
+      clientID: 'c1',
+      expectedError: 'no such client: c1',
       expectSocketClosed: true,
     },
   ];
 
   for (const c of cases) {
     const s1 = new Mocket();
-    const clientID = c.clientID !== undefined ? c.clientID : "c1";
+    const clientID = c.clientID !== undefined ? c.clientID : 'c1';
     const clients: ClientMap =
-      c.clients || new Map([client(clientID, "u1", "cg1", s1)]);
+      c.clients || new Map([client(clientID, 'u1', 'cg1', s1)]);
     // let called = false;
 
     // const handlePush = (
@@ -98,9 +98,9 @@ test("handleMessage", async () => {
     //   called = true;
     // };
 
-    const { roomDO } = getMiniflareBindings();
+    const {roomDO} = getMiniflareBindings();
     const storage = new DurableStorage(
-      await getMiniflareDurableObjectStorage(roomDO.newUniqueId())
+      await getMiniflareDurableObjectStorage(roomDO.newUniqueId()),
     );
     await handleMessage(
       createSilentLogContext(),
@@ -110,19 +110,19 @@ test("handleMessage", async () => {
       clientID,
       c.data,
       s1,
-      () => undefined
+      () => undefined,
     );
     if (c.expectedError) {
       expect(s1.log.length).toEqual(c.expectSocketClosed ? 2 : 1);
       const [type, message] = s1.log[0];
-      expect(type).toEqual("send");
+      expect(type).toEqual('send');
       expect(message).toContain(c.expectedError);
     } else {
       // expect(called);
     }
     if (c.expectSocketClosed) {
       expect(s1.log.length).toBeGreaterThan(0);
-      expect(s1.log[s1.log.length - 1][0]).toEqual("close");
+      expect(s1.log[s1.log.length - 1][0]).toEqual('close');
       0;
     }
   }

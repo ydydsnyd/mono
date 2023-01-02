@@ -1,13 +1,13 @@
-import { test, expect } from "@jest/globals";
-import { newCreateRoomRequest, newDeleteRoomRequest } from "../client/room.js";
-import { TestLogSink } from "../util/test-utils.js";
-import { version } from "../util/version.js";
-import { TestDurableObjectId } from "./do-test-utils.js";
-import { BaseRoomDO } from "./room-do.js";
+import {test, expect} from '@jest/globals';
+import {newCreateRoomRequest, newDeleteRoomRequest} from '../client/room.js';
+import {TestLogSink} from '../util/test-utils.js';
+import {version} from '../util/version.js';
+import {TestDurableObjectId} from './do-test-utils.js';
+import {BaseRoomDO} from './room-do.js';
 
-test("sets roomID in createRoom", async () => {
+test('sets roomID in createRoom', async () => {
   const testLogSink = new TestLogSink();
-  const doID = new TestDurableObjectId("test-do-id");
+  const doID = new TestDurableObjectId('test-do-id');
   const storage = await getMiniflareDurableObjectStorage(doID);
   const roomDO = new BaseRoomDO({
     mutators: {},
@@ -16,28 +16,28 @@ test("sets roomID in createRoom", async () => {
       id: doID,
       storage,
     } as unknown as DurableObjectState,
-    authApiKey: "API KEY",
+    authApiKey: 'API KEY',
     logSink: testLogSink,
-    logLevel: "info",
+    logLevel: 'info',
     allowUnconfirmedWrites: true,
   });
   const createRoomRequest = newCreateRoomRequest(
-    "http://example.com/",
-    "API KEY",
-    "testRoomID"
+    'http://example.com/',
+    'API KEY',
+    'testRoomID',
   );
   const response = await roomDO.fetch(createRoomRequest);
   expect(response.status).toBe(200);
   const roomID = await roomDO.roomID();
-  expect(roomID).toBe("testRoomID");
+  expect(roomID).toBe('testRoomID');
 });
 
-test("deleteAllData deletes all data", async () => {
+test('deleteAllData deletes all data', async () => {
   const testLogSink = new TestLogSink();
-  const doID = new TestDurableObjectId("test-do-id");
+  const doID = new TestDurableObjectId('test-do-id');
   const storage = await getMiniflareDurableObjectStorage(doID);
-  const someKey = "foo";
-  await storage.put(someKey, "bar");
+  const someKey = 'foo';
+  await storage.put(someKey, 'bar');
   expect(await (await storage.list()).size).toBeGreaterThan(0);
 
   const roomDO = new BaseRoomDO({
@@ -47,23 +47,23 @@ test("deleteAllData deletes all data", async () => {
       id: doID,
       storage,
     } as unknown as DurableObjectState,
-    authApiKey: "API KEY",
+    authApiKey: 'API KEY',
     logSink: testLogSink,
-    logLevel: "info",
+    logLevel: 'info',
     allowUnconfirmedWrites: true,
   });
   const createRoomRequest = newCreateRoomRequest(
-    "http://example.com/",
-    "API KEY",
-    "testRoomID"
+    'http://example.com/',
+    'API KEY',
+    'testRoomID',
   );
   const createResponse = await roomDO.fetch(createRoomRequest);
   expect(createResponse.status).toBe(200);
 
   const deleteRequest = newDeleteRoomRequest(
-    "http://example.com/",
-    "API KEY",
-    "testRoomID"
+    'http://example.com/',
+    'API KEY',
+    'testRoomID',
   );
   const response = await roomDO.fetch(deleteRequest);
   expect(response.status).toBe(200);
@@ -72,9 +72,9 @@ test("deleteAllData deletes all data", async () => {
   expect(await (await storage.list()).size).toEqual(1 /* deleted record */);
 });
 
-test("after deleteAllData the roomDO just 410s", async () => {
+test('after deleteAllData the roomDO just 410s', async () => {
   const testLogSink = new TestLogSink();
-  const doID = new TestDurableObjectId("test-do-id");
+  const doID = new TestDurableObjectId('test-do-id');
   const storage = await getMiniflareDurableObjectStorage(doID);
 
   const roomDO = new BaseRoomDO({
@@ -84,23 +84,23 @@ test("after deleteAllData the roomDO just 410s", async () => {
       id: doID,
       storage,
     } as unknown as DurableObjectState,
-    authApiKey: "API KEY",
+    authApiKey: 'API KEY',
     logSink: testLogSink,
-    logLevel: "info",
+    logLevel: 'info',
     allowUnconfirmedWrites: true,
   });
   const createRoomRequest = newCreateRoomRequest(
-    "http://example.com/",
-    "API KEY",
-    "testRoomID"
+    'http://example.com/',
+    'API KEY',
+    'testRoomID',
   );
   const createResponse = await roomDO.fetch(createRoomRequest);
   expect(createResponse.status).toBe(200);
 
   const deleteRequest = newDeleteRoomRequest(
-    "http://example.com/",
-    "API KEY",
-    "testRoomID"
+    'http://example.com/',
+    'API KEY',
+    'testRoomID',
   );
   const response = await roomDO.fetch(deleteRequest);
   expect(response.status).toBe(200);
@@ -109,13 +109,13 @@ test("after deleteAllData the roomDO just 410s", async () => {
   expect(response2.status).toBe(410);
   const response3 = await roomDO.fetch(deleteRequest);
   expect(response3.status).toBe(410);
-  const response4 = await roomDO.fetch(new Request("http://example.com/"));
+  const response4 = await roomDO.fetch(new Request('http://example.com/'));
   expect(response4.status).toBe(410);
 });
 
-test("deleteAllData 401s if wrong auth api key", async () => {
+test('deleteAllData 401s if wrong auth api key', async () => {
   const testLogSink = new TestLogSink();
-  const doID = new TestDurableObjectId("test-do-id");
+  const doID = new TestDurableObjectId('test-do-id');
   const storage = await getMiniflareDurableObjectStorage(doID);
 
   const roomDO = new BaseRoomDO({
@@ -125,57 +125,57 @@ test("deleteAllData 401s if wrong auth api key", async () => {
       id: doID,
       storage,
     } as unknown as DurableObjectState,
-    authApiKey: "API KEY",
+    authApiKey: 'API KEY',
     logSink: testLogSink,
-    logLevel: "info",
+    logLevel: 'info',
     allowUnconfirmedWrites: true,
   });
   const deleteRequest = newDeleteRoomRequest(
-    "http://example.com/",
-    "WRONG KEY",
-    "testRoomID"
+    'http://example.com/',
+    'WRONG KEY',
+    'testRoomID',
   );
   const response = await roomDO.fetch(deleteRequest);
   expect(response.status).toBe(401);
 });
 
-test("Logs version during construction", async () => {
+test('Logs version during construction', async () => {
   const testLogSink = new TestLogSink();
   new BaseRoomDO({
     mutators: {},
     disconnectHandler: () => Promise.resolve(),
     state: {
-      id: new TestDurableObjectId("test-do-id"),
+      id: new TestDurableObjectId('test-do-id'),
     } as unknown as DurableObjectState,
     authApiKey: undefined,
     logSink: testLogSink,
-    logLevel: "info",
+    logLevel: 'info',
     allowUnconfirmedWrites: true,
   });
   expect(testLogSink.messages).toEqual([
-    ["info", "RoomDO", "doID=test-do-id", "Starting server"],
-    ["info", "RoomDO", "doID=test-do-id", "Version:", version],
+    ['info', 'RoomDO', 'doID=test-do-id', 'Starting server'],
+    ['info', 'RoomDO', 'doID=test-do-id', 'Version:', version],
   ]);
   expect(testLogSink.messages[1][4]).toMatch(/^\d+\.\d+\.\d+/);
 });
 
-test("Sets turn duration based on allowUnconfirmedWrites flag", async () => {
-  const cases: { allowUnconfirmed: boolean; turnDuration: number }[] = [
-    { allowUnconfirmed: true, turnDuration: 1000 / 60 },
-    { allowUnconfirmed: false, turnDuration: 1000 / 15 },
+test('Sets turn duration based on allowUnconfirmedWrites flag', async () => {
+  const cases: {allowUnconfirmed: boolean; turnDuration: number}[] = [
+    {allowUnconfirmed: true, turnDuration: 1000 / 60},
+    {allowUnconfirmed: false, turnDuration: 1000 / 15},
   ];
-  for (const { allowUnconfirmed, turnDuration } of cases) {
+  for (const {allowUnconfirmed, turnDuration} of cases) {
     const testLogSink = new TestLogSink();
 
     const room = new BaseRoomDO({
       mutators: {},
       disconnectHandler: () => Promise.resolve(),
       state: {
-        id: new TestDurableObjectId("test-do-id"),
+        id: new TestDurableObjectId('test-do-id'),
       } as unknown as DurableObjectState,
       authApiKey: undefined,
       logSink: testLogSink,
-      logLevel: "info",
+      logLevel: 'info',
       allowUnconfirmedWrites: allowUnconfirmed,
     });
 

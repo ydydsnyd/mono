@@ -2,7 +2,7 @@
 declare global {
   function getMiniflareBindings(): Bindings;
   function getMiniflareDurableObjectStorage(
-    id: DurableObjectId
+    id: DurableObjectId,
   ): Promise<DurableObjectStorage>;
 
   const MINIFLARE: boolean | undefined;

@@ -1,8 +1,8 @@
-import type { LogContext } from "@rocicorp/logger";
-import type { CreateRoomRequest } from "../protocol/api/room.js";
-import type { DurableStorage } from "../storage/durable-storage.js";
-import * as s from "superstruct";
-import type { RociRequest } from "./middleware.js";
+import type {LogContext} from '@rocicorp/logger';
+import type {CreateRoomRequest} from '../protocol/api/room.js';
+import type {DurableStorage} from '../storage/durable-storage.js';
+import * as s from 'superstruct';
+import type {RociRequest} from './middleware.js';
 
 // RoomRecord keeps information about the room, for example the Durable
 // Object ID of the DO instance that has the room.
@@ -24,21 +24,21 @@ export type RoomRecord = {
   objectIDString: string;
 
   // Indicates whether the room is pinned in the EU.
-  jurisdiction: "" | "eu";
+  jurisdiction: '' | 'eu';
 
   status: RoomStatus;
 };
 
 export enum RoomStatus {
   // An Open room can be used by users. We will accept connect()s to it.
-  Open = "open",
+  Open = 'open',
   // A Closed room cannot be used by users. We will reject connect()s to it.
   // Once closed, a room cannot be opened again.
-  Closed = "closed",
+  Closed = 'closed',
   // A Deleted room is a Closed room that has had all its data deleted.
-  Deleted = "deleted",
+  Deleted = 'deleted',
 
-  Unknown = "unknown",
+  Unknown = 'unknown',
 }
 
 // The DurableStorage interface adds type-awareness to the DO Storage API. It
@@ -55,7 +55,7 @@ const roomStatusSchema = s.enums([
 ]);
 // Note setting jurisdictionSchmea to = s.union([s.literal(""), s.literal("eu")]);
 // doesn't work for some reason.
-const jurisdictionSchema = s.enums(["", "eu"]);
+const jurisdictionSchema = s.enums(['', 'eu']);
 const roomRecordSchema = s.object({
   roomID: s.string(),
   objectIDString: s.string(),
@@ -72,28 +72,28 @@ export async function createRoom(
   roomDO: DurableObjectNamespace,
   storage: DurableStorage,
   request: RociRequest,
-  validatedBody: CreateRoomRequest
+  validatedBody: CreateRoomRequest,
 ): Promise<Response> {
   // Note: this call was authenticated by dispatch, so no need to check for
   // authApiKey here.
-  const { roomID } = validatedBody;
+  const {roomID} = validatedBody;
 
   if (!validRoomID(roomID)) {
-    return new Response("Invalid roomID (must match [A-Za-z0-9_-]+)", {
+    return new Response('Invalid roomID (must match [A-Za-z0-9_-]+)', {
       status: 400,
     });
   }
 
   // Check if the room already exists.
   if ((await roomRecordByRoomID(storage, roomID)) !== undefined) {
-    return new Response("room already exists", {
+    return new Response('room already exists', {
       status: 409 /* Conflict */,
     });
   }
 
   const options: DurableObjectNamespaceNewUniqueIdOptions = {};
-  if (validatedBody.jurisdiction === "eu") {
-    options["jurisdiction"] = "eu";
+  if (validatedBody.jurisdiction === 'eu') {
+    options['jurisdiction'] = 'eu';
   }
 
   // Instantiate it so it will be listed in the namespace by the CF API,
@@ -105,7 +105,7 @@ export async function createRoom(
     lc.debug?.(
       `Received error response from ${roomID}. ${
         response.status
-      } ${await response.clone().text()}`
+      } ${await response.clone().text()}`,
     );
     return response;
   }
@@ -115,14 +115,14 @@ export async function createRoom(
   const roomRecord: RoomRecord = {
     roomID,
     objectIDString: objectID.toString(),
-    jurisdiction: validatedBody.jurisdiction ?? "",
+    jurisdiction: validatedBody.jurisdiction ?? '',
     status: RoomStatus.Open,
   };
   const roomRecordKey = roomKeyToString(roomRecord);
   await storage.put(roomRecordKey, roomRecord);
   lc.debug?.(`created room ${JSON.stringify(roomRecord)}`);
 
-  return new Response("ok");
+  return new Response('ok');
 }
 
 // Caller must enforce no other concurrent calls to this and other
@@ -133,24 +133,24 @@ export async function createRoom(
 export async function closeRoom(
   lc: LogContext,
   storage: DurableStorage,
-  request: RociRequest
+  request: RociRequest,
 ): Promise<Response> {
   const roomID = request.params?.roomID;
   if (roomID === undefined) {
-    return new Response("Missing roomID", { status: 400 });
+    return new Response('Missing roomID', {status: 400});
   }
 
   const roomRecord = await roomRecordByRoomID(storage, roomID);
   if (roomRecord === undefined) {
-    return new Response("no such room", {
+    return new Response('no such room', {
       status: 404,
     });
   }
 
   if (roomRecord.status === RoomStatus.Closed) {
-    return new Response("ok (room already closed)");
+    return new Response('ok (room already closed)');
   } else if (roomRecord.status !== RoomStatus.Open) {
-    return new Response("room is not open", {
+    return new Response('room is not open', {
       status: 409 /* Conflict */,
     });
   }
@@ -160,7 +160,7 @@ export async function closeRoom(
   await storage.put(roomRecordKey, roomRecord);
   lc.debug?.(`closed room ${JSON.stringify(roomRecord)}`);
 
-  return new Response("ok");
+  return new Response('ok');
 }
 
 // Caller must enforce no other concurrent calls to this and other
@@ -169,23 +169,23 @@ export async function deleteRoom(
   lc: LogContext,
   roomDO: DurableObjectNamespace,
   storage: DurableStorage,
-  request: RociRequest
+  request: RociRequest,
 ): Promise<Response> {
   const roomID = request.params?.roomID;
   if (roomID === undefined) {
-    return new Response("Missing roomID", { status: 400 });
+    return new Response('Missing roomID', {status: 400});
   }
   const roomRecord = await roomRecordByRoomID(storage, roomID);
   if (roomRecord === undefined) {
-    return new Response("no such room", {
+    return new Response('no such room', {
       status: 404,
     });
   }
 
   if (roomRecord.status === RoomStatus.Deleted) {
-    return new Response("ok (room already deleted)");
+    return new Response('ok (room already deleted)');
   } else if (roomRecord.status !== RoomStatus.Closed) {
-    return new Response("room must first be closed", {
+    return new Response('room must first be closed', {
       status: 409 /* Conflict */,
     });
   }
@@ -197,7 +197,7 @@ export async function deleteRoom(
     lc.debug?.(
       `Received error response from ${roomID}. ${
         response.status
-      } ${await response.clone().text()}`
+      } ${await response.clone().text()}`,
     );
     return response;
   }
@@ -206,7 +206,7 @@ export async function deleteRoom(
   const roomRecordKey = roomKeyToString(roomRecord);
   await storage.put(roomRecordKey, roomRecord);
   lc.debug?.(`deleted room ${JSON.stringify(roomRecord)}`);
-  return new Response("ok");
+  return new Response('ok');
 }
 
 // Deletes the RoomRecord without any concern for the room's status.
@@ -218,16 +218,16 @@ export async function deleteRoom(
 export async function deleteRoomRecord(
   lc: LogContext,
   storage: DurableStorage,
-  request: RociRequest
+  request: RociRequest,
 ): Promise<Response> {
   const roomID = request.params?.roomID;
   if (roomID === undefined) {
-    return new Response("Missing roomID", { status: 400 });
+    return new Response('Missing roomID', {status: 400});
   }
 
   const roomRecord = await roomRecordByRoomID(storage, roomID);
   if (roomRecord === undefined) {
-    return new Response("no such room", {
+    return new Response('no such room', {
       status: 404,
     });
   }
@@ -237,7 +237,7 @@ export async function deleteRoomRecord(
   await storage.del(roomRecordKey);
   lc.debug?.(`deleted RoomRecord ${JSON.stringify(roomRecord)}`);
 
-  return new Response("ok");
+  return new Response('ok');
 }
 
 // Creates a RoomRecord for a roomID that already exists whose objectID
@@ -250,15 +250,15 @@ export async function createRoomRecordForLegacyRoom(
   lc: LogContext,
   roomDO: DurableObjectNamespace,
   storage: DurableStorage,
-  request: RociRequest
+  request: RociRequest,
 ): Promise<Response> {
   const roomID = request.params?.roomID;
   if (roomID === undefined) {
-    return new Response("Missing roomID", { status: 400 });
+    return new Response('Missing roomID', {status: 400});
   }
 
   if (!validRoomID(roomID)) {
-    return new Response("Invalid roomID (must match [A-Za-z0-9_-]+)", {
+    return new Response('Invalid roomID (must match [A-Za-z0-9_-]+)', {
       status: 400,
     });
   }
@@ -268,16 +268,16 @@ export async function createRoomRecordForLegacyRoom(
   const roomRecord: RoomRecord = {
     roomID,
     objectIDString: objectID.toString(),
-    jurisdiction: "",
+    jurisdiction: '',
     status: RoomStatus.Open,
   };
   const roomRecordKey = roomKeyToString(roomRecord);
   await storage.put(roomRecordKey, roomRecord);
   lc.debug?.(
-    `migrated created roomID ${roomID}; record: ${JSON.stringify(roomRecord)}`
+    `migrated created roomID ${roomID}; record: ${JSON.stringify(roomRecord)}`,
   );
 
-  return new Response("ok");
+  return new Response('ok');
 }
 
 function validRoomID(roomID: string): boolean {
@@ -289,7 +289,7 @@ function validRoomID(roomID: string): boolean {
 export async function objectIDByRoomID(
   storage: DurableStorage,
   roomDO: DurableObjectNamespace,
-  roomID: string
+  roomID: string,
 ) {
   const roomRecord = await roomRecordByRoomID(storage, roomID);
   if (roomRecord === undefined) {
@@ -302,20 +302,20 @@ export async function objectIDByRoomID(
 // functions that create or modify the room record.
 export async function roomRecordByRoomID(
   storage: DurableStorage,
-  roomID: string
+  roomID: string,
 ) {
-  const roomRecordKey = roomKeyToString({ roomID });
+  const roomRecordKey = roomKeyToString({roomID});
   return await storage.get(roomRecordKey, roomRecordSchema);
 }
 
 export async function roomRecordByObjectIDForTest(
   storage: DurableStorage,
-  objectID: DurableObjectId
+  objectID: DurableObjectId,
 ) {
   // Sure, inefficient, but it works just fine for now.
   const roomRecords = await storage.list(
-    { prefix: ROOM_KEY_PREFIX },
-    roomRecordSchema
+    {prefix: ROOM_KEY_PREFIX},
+    roomRecordSchema,
   );
   const needle = objectID.toString();
   for (const roomRecord of roomRecords.values()) {
@@ -327,13 +327,13 @@ export async function roomRecordByObjectIDForTest(
 }
 
 export async function roomRecords(storage: DurableStorage) {
-  return storage.list({ prefix: ROOM_KEY_PREFIX }, roomRecordSchema);
+  return storage.list({prefix: ROOM_KEY_PREFIX}, roomRecordSchema);
 }
 
 // Storage key types are intentionally not exported so that other modules
 // don't know too much about the innards of the storage. They should use
 // the exported functions to access the storage.
-const ROOM_KEY_PREFIX = "room/";
+const ROOM_KEY_PREFIX = 'room/';
 
 type RoomKey = {
   roomID: string;

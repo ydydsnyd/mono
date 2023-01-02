@@ -17,12 +17,12 @@ export class TestDurableObjectId implements DurableObjectId {
 export class TestDurableObjectStub implements DurableObjectStub {
   readonly id: DurableObjectId;
   readonly objectIDString?: string;
-  readonly fetch: InstanceType<typeof Fetcher>["fetch"];
+  readonly fetch: InstanceType<typeof Fetcher>['fetch'];
   constructor(
     id: DurableObjectId,
-    fetch: InstanceType<typeof Fetcher>["fetch"] = () => {
+    fetch: InstanceType<typeof Fetcher>['fetch'] = () => {
       return Promise.resolve(new Response());
-    }
+    },
   ) {
     this.id = id;
     this.objectIDString = id.toString();
@@ -31,7 +31,7 @@ export class TestDurableObjectStub implements DurableObjectStub {
 }
 
 export async function createTestDurableObjectState(
-  objectIDString: string
+  objectIDString: string,
 ): Promise<TestDurableObjectState> {
   const id = new TestDurableObjectId(objectIDString);
   const storage = await getMiniflareDurableObjectStorage(id);
@@ -59,7 +59,7 @@ export function createTestDurableObjectNamespace(): DurableObjectNamespace {
   return {
     newUniqueId: (_options?: DurableObjectNamespaceNewUniqueIdOptions) => {
       // TODO(fritz) support options
-      return new TestDurableObjectId("unique-id-" + objectIDCounter++);
+      return new TestDurableObjectId('unique-id-' + objectIDCounter++);
     },
     // Note: uses the given name for both the object ID and the name.
     idFromName: (name: string) => {

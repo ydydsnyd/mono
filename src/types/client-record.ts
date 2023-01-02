@@ -1,7 +1,7 @@
-import * as s from "superstruct";
-import { nullableVersionSchema } from "./version.js";
-import type { ClientID } from "./client-state.js";
-import type { Storage } from "../storage/storage.js";
+import * as s from 'superstruct';
+import {nullableVersionSchema} from './version.js';
+import type {ClientID} from './client-state.js';
+import type {Storage} from '../storage/storage.js';
 
 export const clientRecordSchema = s.type({
   clientGroupID: s.string(),
@@ -18,7 +18,7 @@ export type ClientRecordMap = Map<ClientID, ClientRecord>;
 
 // Note: old (pre-dd31, conceptually V0) client records were stored with key
 // prefix "client/""
-export const clientRecordPrefix = "clientV1/";
+export const clientRecordPrefix = 'clientV1/';
 
 export function clientRecordKey(clientID: ClientID): string {
   return `${clientRecordPrefix}${clientID}`;
@@ -26,17 +26,17 @@ export function clientRecordKey(clientID: ClientID): string {
 
 export async function getClientRecord(
   clientID: ClientID,
-  storage: Storage
+  storage: Storage,
 ): Promise<ClientRecord | undefined> {
   return await storage.get(clientRecordKey(clientID), clientRecordSchema);
 }
 
 export async function listClientRecords(
-  storage: Storage
+  storage: Storage,
 ): Promise<ClientRecordMap> {
   const withPrefix = await storage.list(
-    { prefix: clientRecordPrefix },
-    clientRecordSchema
+    {prefix: clientRecordPrefix},
+    clientRecordSchema,
   );
   const clientRecords = new Map();
   for (const [key, record] of withPrefix) {
@@ -48,7 +48,7 @@ export async function listClientRecords(
 export async function putClientRecord(
   clientID: ClientID,
   record: ClientRecord,
-  storage: Storage
+  storage: Storage,
 ): Promise<void> {
   return await storage.put(clientRecordKey(clientID), record);
 }

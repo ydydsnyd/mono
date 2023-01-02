@@ -1,10 +1,10 @@
-import type { JSONValue } from "replicache";
+import type {JSONValue} from 'replicache';
 
 // https://api.cloudflare.com/#durable-objects-namespace-list-namespaces
 export async function listDONamespaces(accountID: string, apiToken: string) {
   return jsonFetchCFAPI(
     `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/durable_objects/namespaces`,
-    apiToken
+    apiToken,
   );
 }
 
@@ -29,11 +29,11 @@ export type DONamespaces = Array<DONamespace>;
 export async function listDOInstances(
   accountID: string,
   apiToken: string,
-  namespaceID: string
+  namespaceID: string,
 ) {
   return jsonFetchCFAPI(
     `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/durable_objects/namespaces/${namespaceID}/objects?limit=10000`,
-    apiToken
+    apiToken,
   );
 }
 

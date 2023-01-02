@@ -1,7 +1,7 @@
-import type { JSONValue } from "replicache";
-import type * as z from "superstruct";
-import { delEntry, getEntry, putEntry, listEntries } from "../db/data.js";
-import type { ListOptions, Storage } from "./storage.js";
+import type {JSONValue} from 'replicache';
+import type * as z from 'superstruct';
+import {delEntry, getEntry, putEntry, listEntries} from '../db/data.js';
+import type {ListOptions, Storage} from './storage.js';
 
 // DurableObjects has a lot of clever optimisations we can take advantage of,
 // but they require some thought as to whether they fit with what we are doing.
@@ -41,14 +41,14 @@ export class DurableStorage implements Storage {
 
   get<T extends JSONValue>(
     key: string,
-    schema: z.Struct<T>
+    schema: z.Struct<T>,
   ): Promise<T | undefined> {
     return getEntry(this._durable, key, schema, baseOptions);
   }
 
   async list<T extends JSONValue>(
     options: ListOptions,
-    schema: z.Struct<T>
+    schema: z.Struct<T>,
   ): Promise<Map<string, T>> {
     const doOptions = doListOptions(options);
     return await listEntries(this._durable, schema, doOptions);
@@ -60,13 +60,13 @@ export class DurableStorage implements Storage {
 }
 
 function doListOptions(opts: ListOptions): DurableObjectListOptions {
-  const doOpts: DurableObjectListOptions = { ...baseOptions };
+  const doOpts: DurableObjectListOptions = {...baseOptions};
 
   doOpts.prefix = opts.prefix;
   doOpts.limit = opts.limit;
 
   if (opts.start) {
-    const { key, exclusive } = opts.start;
+    const {key, exclusive} = opts.start;
     if (exclusive) {
       doOpts.startAfter = key;
     } else {

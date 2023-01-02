@@ -1,10 +1,10 @@
-import { test, expect } from "@jest/globals";
-import { DurableStorage } from "./durable-storage";
-import { EntryCache } from "./entry-cache";
-import * as s from "superstruct";
-import type { ListOptions } from "./storage";
+import {test, expect} from '@jest/globals';
+import {DurableStorage} from './durable-storage';
+import {EntryCache} from './entry-cache';
+import * as s from 'superstruct';
+import type {ListOptions} from './storage';
 
-test("list", async () => {
+test('list', async () => {
   type Case = {
     name: string;
     pendingKeys: string[];
@@ -13,216 +13,216 @@ test("list", async () => {
     opts?: ListOptions;
   };
 
-  const durableEntryKeys: string[] = ["foo-1", "bar-1", "baz-1"];
+  const durableEntryKeys: string[] = ['foo-1', 'bar-1', 'baz-1'];
 
   const cases: Case[] = [
     {
-      name: "all entries",
+      name: 'all entries',
       pendingKeys: [],
       deletedKeys: [],
       expected: [
-        ["bar-1", "bar-1"],
-        ["baz-1", "baz-1"],
-        ["foo-1", "foo-1"],
+        ['bar-1', 'bar-1'],
+        ['baz-1', 'baz-1'],
+        ['foo-1', 'foo-1'],
       ],
     },
     {
-      name: "prefix",
+      name: 'prefix',
       pendingKeys: [],
       deletedKeys: [],
-      opts: { prefix: "foo" },
-      expected: [["foo-1", "foo-1"]],
+      opts: {prefix: 'foo'},
+      expected: [['foo-1', 'foo-1']],
     },
     {
-      name: "limit",
+      name: 'limit',
       pendingKeys: [],
       deletedKeys: [],
-      opts: { limit: 2 },
+      opts: {limit: 2},
       expected: [
-        ["bar-1", "bar-1"],
-        ["baz-1", "baz-1"],
+        ['bar-1', 'bar-1'],
+        ['baz-1', 'baz-1'],
       ],
     },
     {
-      name: "prefix, limit",
+      name: 'prefix, limit',
       pendingKeys: [],
       deletedKeys: [],
-      opts: { prefix: "foo", limit: 2 },
-      expected: [["foo-1", "foo-1"]],
+      opts: {prefix: 'foo', limit: 2},
+      expected: [['foo-1', 'foo-1']],
     },
     {
-      name: "start",
+      name: 'start',
       pendingKeys: [],
       deletedKeys: [],
-      opts: { start: { key: "baz-1" } },
+      opts: {start: {key: 'baz-1'}},
       expected: [
-        ["baz-1", "baz-1"],
-        ["foo-1", "foo-1"],
+        ['baz-1', 'baz-1'],
+        ['foo-1', 'foo-1'],
       ],
     },
     {
-      name: "start, exclusive",
+      name: 'start, exclusive',
       pendingKeys: [],
       deletedKeys: [],
-      opts: { start: { key: "baz-1", exclusive: true } },
-      expected: [["foo-1", "foo-1"]],
+      opts: {start: {key: 'baz-1', exclusive: true}},
+      expected: [['foo-1', 'foo-1']],
     },
     {
-      name: "prefix, limit, start, exclusive",
+      name: 'prefix, limit, start, exclusive',
       pendingKeys: [],
       deletedKeys: [],
-      opts: { prefix: "b", limit: 1, start: { key: "bar-1", exclusive: true } },
-      expected: [["baz-1", "baz-1"]],
+      opts: {prefix: 'b', limit: 1, start: {key: 'bar-1', exclusive: true}},
+      expected: [['baz-1', 'baz-1']],
     },
 
     {
-      name: "all entries (with pending puts)",
-      pendingKeys: ["baz-2"],
+      name: 'all entries (with pending puts)',
+      pendingKeys: ['baz-2'],
       deletedKeys: [],
       expected: [
-        ["bar-1", "bar-1"],
-        ["baz-1", "baz-1"],
-        ["baz-2", "baz-2"],
-        ["foo-1", "foo-1"],
+        ['bar-1', 'bar-1'],
+        ['baz-1', 'baz-1'],
+        ['baz-2', 'baz-2'],
+        ['foo-1', 'foo-1'],
       ],
     },
     {
-      name: "prefix (with pending puts)",
-      pendingKeys: ["baz-2"],
+      name: 'prefix (with pending puts)',
+      pendingKeys: ['baz-2'],
       deletedKeys: [],
-      opts: { prefix: "ba" },
+      opts: {prefix: 'ba'},
       expected: [
-        ["bar-1", "bar-1"],
-        ["baz-1", "baz-1"],
-        ["baz-2", "baz-2"],
+        ['bar-1', 'bar-1'],
+        ['baz-1', 'baz-1'],
+        ['baz-2', 'baz-2'],
       ],
     },
     {
-      name: "limit (with pending puts)",
-      pendingKeys: ["baz-2"],
+      name: 'limit (with pending puts)',
+      pendingKeys: ['baz-2'],
       deletedKeys: [],
-      opts: { limit: 3 },
+      opts: {limit: 3},
       expected: [
-        ["bar-1", "bar-1"],
-        ["baz-1", "baz-1"],
-        ["baz-2", "baz-2"],
+        ['bar-1', 'bar-1'],
+        ['baz-1', 'baz-1'],
+        ['baz-2', 'baz-2'],
       ],
     },
     {
-      name: "prefix, limit (with pending puts)",
-      pendingKeys: ["baz-2"],
+      name: 'prefix, limit (with pending puts)',
+      pendingKeys: ['baz-2'],
       deletedKeys: [],
-      opts: { prefix: "baz", limit: 2 },
+      opts: {prefix: 'baz', limit: 2},
       expected: [
-        ["baz-1", "baz-1"],
-        ["baz-2", "baz-2"],
+        ['baz-1', 'baz-1'],
+        ['baz-2', 'baz-2'],
       ],
     },
     {
-      name: "start (with pending puts)",
-      pendingKeys: ["baz-2"],
+      name: 'start (with pending puts)',
+      pendingKeys: ['baz-2'],
       deletedKeys: [],
-      opts: { start: { key: "baz-1" } },
+      opts: {start: {key: 'baz-1'}},
       expected: [
-        ["baz-1", "baz-1"],
-        ["baz-2", "baz-2"],
-        ["foo-1", "foo-1"],
+        ['baz-1', 'baz-1'],
+        ['baz-2', 'baz-2'],
+        ['foo-1', 'foo-1'],
       ],
     },
     {
-      name: "start, exclusive (with pending puts)",
-      pendingKeys: ["baz-2"],
+      name: 'start, exclusive (with pending puts)',
+      pendingKeys: ['baz-2'],
       deletedKeys: [],
-      opts: { start: { key: "baz-1", exclusive: true } },
+      opts: {start: {key: 'baz-1', exclusive: true}},
       expected: [
-        ["baz-2", "baz-2"],
-        ["foo-1", "foo-1"],
+        ['baz-2', 'baz-2'],
+        ['foo-1', 'foo-1'],
       ],
     },
     {
-      name: "prefix, limit, start, exclusive (with pending puts)",
-      pendingKeys: ["baz-2"],
+      name: 'prefix, limit, start, exclusive (with pending puts)',
+      pendingKeys: ['baz-2'],
       deletedKeys: [],
-      opts: { prefix: "b", limit: 2, start: { key: "bar-1", exclusive: true } },
+      opts: {prefix: 'b', limit: 2, start: {key: 'bar-1', exclusive: true}},
       expected: [
-        ["baz-1", "baz-1"],
-        ["baz-2", "baz-2"],
+        ['baz-1', 'baz-1'],
+        ['baz-2', 'baz-2'],
       ],
     },
 
     {
-      name: "all entries (with pending puts and dels)",
-      pendingKeys: ["baz-2", "baz-3"],
-      deletedKeys: ["baz-1", "baz-2"],
+      name: 'all entries (with pending puts and dels)',
+      pendingKeys: ['baz-2', 'baz-3'],
+      deletedKeys: ['baz-1', 'baz-2'],
       expected: [
-        ["bar-1", "bar-1"],
-        ["baz-3", "baz-3"],
-        ["foo-1", "foo-1"],
+        ['bar-1', 'bar-1'],
+        ['baz-3', 'baz-3'],
+        ['foo-1', 'foo-1'],
       ],
     },
     {
-      name: "prefix (with pending puts and dels)",
-      pendingKeys: ["baz-2", "baz-3"],
-      deletedKeys: ["baz-1", "baz-2"],
-      opts: { prefix: "ba" },
+      name: 'prefix (with pending puts and dels)',
+      pendingKeys: ['baz-2', 'baz-3'],
+      deletedKeys: ['baz-1', 'baz-2'],
+      opts: {prefix: 'ba'},
       expected: [
-        ["bar-1", "bar-1"],
-        ["baz-3", "baz-3"],
+        ['bar-1', 'bar-1'],
+        ['baz-3', 'baz-3'],
       ],
     },
     {
-      name: "limit (with pending puts and dels)",
-      pendingKeys: ["baz-2", "baz-3"],
-      deletedKeys: ["baz-1", "baz-2"],
-      opts: { limit: 2 },
+      name: 'limit (with pending puts and dels)',
+      pendingKeys: ['baz-2', 'baz-3'],
+      deletedKeys: ['baz-1', 'baz-2'],
+      opts: {limit: 2},
       expected: [
-        ["bar-1", "bar-1"],
-        ["baz-3", "baz-3"],
+        ['bar-1', 'bar-1'],
+        ['baz-3', 'baz-3'],
       ],
     },
     {
-      name: "prefix, limit (with pending puts and dels)",
-      pendingKeys: ["baz-2", "baz-3", "baz-4"],
-      deletedKeys: ["baz-1", "baz-2"],
-      opts: { prefix: "baz", limit: 2 },
+      name: 'prefix, limit (with pending puts and dels)',
+      pendingKeys: ['baz-2', 'baz-3', 'baz-4'],
+      deletedKeys: ['baz-1', 'baz-2'],
+      opts: {prefix: 'baz', limit: 2},
       expected: [
-        ["baz-3", "baz-3"],
-        ["baz-4", "baz-4"],
+        ['baz-3', 'baz-3'],
+        ['baz-4', 'baz-4'],
       ],
     },
     {
-      name: "start (with pending puts and dels)",
-      pendingKeys: ["baz-2", "baz-3"],
-      deletedKeys: ["baz-1", "baz-2"],
-      opts: { start: { key: "baz-3" } },
+      name: 'start (with pending puts and dels)',
+      pendingKeys: ['baz-2', 'baz-3'],
+      deletedKeys: ['baz-1', 'baz-2'],
+      opts: {start: {key: 'baz-3'}},
       expected: [
-        ["baz-3", "baz-3"],
-        ["foo-1", "foo-1"],
+        ['baz-3', 'baz-3'],
+        ['foo-1', 'foo-1'],
       ],
     },
     {
-      name: "start, exclusive (with pending puts and dels)",
-      pendingKeys: ["baz-2", "baz-3"],
-      deletedKeys: ["baz-1", "baz-2"],
-      opts: { start: { key: "baz-3", exclusive: true } },
-      expected: [["foo-1", "foo-1"]],
+      name: 'start, exclusive (with pending puts and dels)',
+      pendingKeys: ['baz-2', 'baz-3'],
+      deletedKeys: ['baz-1', 'baz-2'],
+      opts: {start: {key: 'baz-3', exclusive: true}},
+      expected: [['foo-1', 'foo-1']],
     },
     {
-      name: "prefix, limit, start, exclusive (with pending puts and dels)",
-      pendingKeys: ["baz-2", "baz-3", "baz-4"],
-      deletedKeys: ["baz-1", "baz-2"],
-      opts: { prefix: "b", limit: 2, start: { key: "bar-1", exclusive: true } },
+      name: 'prefix, limit, start, exclusive (with pending puts and dels)',
+      pendingKeys: ['baz-2', 'baz-3', 'baz-4'],
+      deletedKeys: ['baz-1', 'baz-2'],
+      opts: {prefix: 'b', limit: 2, start: {key: 'bar-1', exclusive: true}},
       expected: [
-        ["baz-3", "baz-3"],
-        ["baz-4", "baz-4"],
+        ['baz-3', 'baz-3'],
+        ['baz-4', 'baz-4'],
       ],
     },
   ];
 
-  const { roomDO } = getMiniflareBindings();
+  const {roomDO} = getMiniflareBindings();
   const id = roomDO.newUniqueId();
   const durable = new DurableStorage(
-    await getMiniflareDurableObjectStorage(id)
+    await getMiniflareDurableObjectStorage(id),
   );
 
   for (const k of durableEntryKeys) {

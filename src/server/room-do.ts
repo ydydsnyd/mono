@@ -1,36 +1,36 @@
-import type { MutatorDefs } from "replicache";
-import { processPending } from "../process/process-pending.js";
-import type { MutatorMap } from "../process/process-mutation.js";
+import type {MutatorDefs} from 'replicache';
+import {processPending} from '../process/process-pending.js';
+import type {MutatorMap} from '../process/process-mutation.js';
 import type {
   ClientID,
   ClientMap,
   ClientState,
   Socket,
-} from "../types/client-state.js";
-import { Lock } from "@rocicorp/lock";
-import { LogSink, LogContext, LogLevel } from "@rocicorp/logger";
-import { handleClose } from "./close.js";
-import { handleConnection } from "./connect.js";
-import { handleMessage } from "./message.js";
-import { randomID } from "../util/rand.js";
-import { version } from "../util/version.js";
-import { dispatch } from "./dispatch.js";
-import type { InvalidateForUserRequest } from "../protocol/api/auth.js";
-import { closeConnections, getConnections } from "./connections.js";
-import type { DisconnectHandler } from "./disconnect.js";
-import { DurableStorage } from "../storage/durable-storage.js";
-import { getConnectedClients } from "../types/connected-clients.js";
-import * as s from "superstruct";
-import type { CreateRoomRequest } from "../protocol/api/room.js";
-import { Router } from "itty-router";
-import type { RociRequest, RociRouter } from "./middleware.js";
-import { addRoutes } from "./room-do-routes.js";
-import type { PullRequest, PullResponse } from "../protocol/pull.js";
-import type { PendingMutationMap } from "../types/mutation.js";
-import { handlePull } from "./pull.js";
+} from '../types/client-state.js';
+import {Lock} from '@rocicorp/lock';
+import {LogSink, LogContext, LogLevel} from '@rocicorp/logger';
+import {handleClose} from './close.js';
+import {handleConnection} from './connect.js';
+import {handleMessage} from './message.js';
+import {randomID} from '../util/rand.js';
+import {version} from '../util/version.js';
+import {dispatch} from './dispatch.js';
+import type {InvalidateForUserRequest} from '../protocol/api/auth.js';
+import {closeConnections, getConnections} from './connections.js';
+import type {DisconnectHandler} from './disconnect.js';
+import {DurableStorage} from '../storage/durable-storage.js';
+import {getConnectedClients} from '../types/connected-clients.js';
+import * as s from 'superstruct';
+import type {CreateRoomRequest} from '../protocol/api/room.js';
+import {Router} from 'itty-router';
+import type {RociRequest, RociRouter} from './middleware.js';
+import {addRoutes} from './room-do-routes.js';
+import type {PullRequest, PullResponse} from '../protocol/pull.js';
+import type {PendingMutationMap} from '../types/mutation.js';
+import {handlePull} from './pull.js';
 
-const roomIDKey = "/system/roomID";
-const deletedKey = "/system/deleted";
+const roomIDKey = '/system/roomID';
+const deletedKey = '/system/deleted';
 
 export interface RoomDOOptions<MD extends MutatorDefs> {
   mutators: MD;
@@ -56,20 +56,14 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   private _router: RociRouter;
 
   constructor(options: RoomDOOptions<MD>) {
-    const {
-      mutators,
-      disconnectHandler,
-      state,
-      authApiKey,
-      logSink,
-      logLevel,
-    } = options;
+    const {mutators, disconnectHandler, state, authApiKey, logSink, logLevel} =
+      options;
 
     this._mutators = new Map([...Object.entries(mutators)]) as MutatorMap;
     this._disconnectHandler = disconnectHandler;
     this._storage = new DurableStorage(
       state.storage,
-      options.allowUnconfirmedWrites
+      options.allowUnconfirmedWrites,
     );
 
     this._router = Router();
@@ -77,21 +71,21 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     this._turnDuration = 1000 / (options.allowUnconfirmedWrites ? 60 : 15);
     this._authApiKey = authApiKey;
     this._lc = new LogContext(logLevel, logSink)
-      .addContext("RoomDO")
-      .addContext("doID", state.id.toString());
-    this._lc.info?.("Starting server");
-    this._lc.info?.("Version:", version);
+      .addContext('RoomDO')
+      .addContext('doID', state.id.toString());
+    this._lc.info?.('Starting server');
+    this._lc.info?.('Version:', version);
   }
 
   async fetch(request: Request): Promise<Response> {
     try {
       if (await this.deleted()) {
-        return new Response("deleted", { status: 410 /* Gone */ });
+        return new Response('deleted', {status: 410 /* Gone */});
       }
       if (!this._lcHasRoomIdContext) {
         const roomID = await this.maybeRoomID();
         const url = new URL(request.url);
-        const urlRoomID = url.searchParams.get("roomID");
+        const urlRoomID = url.searchParams.get('roomID');
         if (
           // roomID is not going to be set on the createRoom request, or after
           // the room has been deleted.
@@ -101,17 +95,17 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
           urlRoomID !== roomID
         ) {
           this._lc.error?.(
-            "roomID mismatch",
-            "urlRoomID",
+            'roomID mismatch',
+            'urlRoomID',
             urlRoomID,
-            "roomID",
-            roomID
+            'roomID',
+            roomID,
           );
-          return new Response("Unexpected roomID", { status: 400 });
+          return new Response('Unexpected roomID', {status: 400});
         }
 
         if (roomID) {
-          this._lc = this._lc.addContext("roomID", roomID);
+          this._lc = this._lc.addContext('roomID', roomID);
           this._lcHasRoomIdContext = true;
         }
       }
@@ -121,17 +115,17 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       }
       return await dispatch(
         request,
-        this._lc.addContext("req", randomID()),
+        this._lc.addContext('req', randomID()),
         this._authApiKey,
-        this
+        this,
       );
     } catch (e) {
-      this._lc.error?.("Unhandled exception in fetch", e);
+      this._lc.error?.('Unhandled exception in fetch', e);
       return new Response(
-        e instanceof Error ? e.message : "Unexpected error.",
+        e instanceof Error ? e.message : 'Unexpected error.',
         {
           status: 500,
-        }
+        },
       );
     }
   }
@@ -160,8 +154,8 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     if (roomID !== undefined) {
       return roomID;
     }
-    this._lc.error?.("roomID is not set");
-    return Promise.resolve("unknown");
+    this._lc.error?.('roomID is not set');
+    return Promise.resolve('unknown');
   }
 
   // A more appropriate name might be init(), but this is easy since authDO and
@@ -169,11 +163,11 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   async createRoom(
     _lc: LogContext,
     _request: Request,
-    createRoomRequest: CreateRoomRequest
+    createRoomRequest: CreateRoomRequest,
   ) {
-    const { roomID } = createRoomRequest;
+    const {roomID} = createRoomRequest;
     await this._setRoomID(roomID);
-    return new Response("ok");
+    return new Response('ok');
   }
 
   // There's a bit of a question here about whether we really want to detele *all* the
@@ -184,25 +178,25 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   // called. Maybe it's fine if they error out, dunno.
   async deleteAllData() {
     // Maybe we should validate that the roomID in the request matches?
-    this._lc.info?.("delete all data");
+    this._lc.info?.('delete all data');
     await this._storage.deleteAll();
-    this._lc.info?.("done deleting all data");
+    this._lc.info?.('done deleting all data');
     await this._setDeleted();
-    return new Response("ok");
+    return new Response('ok');
   }
 
   async connect(lc: LogContext, request: Request): Promise<Response> {
-    if (request.headers.get("Upgrade") !== "websocket") {
-      return new Response("expected websocket", { status: 400 });
+    if (request.headers.get('Upgrade') !== 'websocket') {
+      return new Response('expected websocket', {status: 400});
     }
     const pair = new WebSocketPair();
     const ws = pair[1];
     const url = new URL(request.url);
-    lc.debug?.("connection request", url.toString(), "waiting for lock");
+    lc.debug?.('connection request', url.toString(), 'waiting for lock');
     ws.accept();
 
     void this._lock.withLock(async () => {
-      lc.debug?.("received lock");
+      lc.debug?.('received lock');
       await handleConnection(
         lc,
         ws,
@@ -211,59 +205,59 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
         request.headers,
         this._clients,
         this._handleMessage,
-        this._handleClose
+        this._handleClose,
       );
     });
-    return new Response(null, { status: 101, webSocket: pair[0] });
+    return new Response(null, {status: 101, webSocket: pair[0]});
   }
 
   async pull(
     lc: LogContext,
     _request: Request,
-    pullRequest: PullRequest
+    pullRequest: PullRequest,
   ): Promise<Response> {
-    lc.debug?.("handling mutation recovery pull", JSON.stringify(pullRequest));
+    lc.debug?.('handling mutation recovery pull', JSON.stringify(pullRequest));
     const pullResponse: PullResponse = await this._lock.withLock(async () => {
       return handlePull(this._storage, pullRequest);
     });
     const pullResponseJSONString = JSON.stringify(pullResponse);
-    lc.debug?.("pull response", pullResponseJSONString);
-    return new Response(pullResponseJSONString, { status: 200 });
+    lc.debug?.('pull response', pullResponseJSONString);
+    return new Response(pullResponseJSONString, {status: 200});
   }
 
   async authInvalidateForUser(
     lc: LogContext,
     _request: RociRequest,
-    { userID }: InvalidateForUserRequest
+    {userID}: InvalidateForUserRequest,
   ): Promise<Response> {
     lc.debug?.(
-      `Closing user ${userID}'s connections fulfilling auth api invalidateForUser request.`
+      `Closing user ${userID}'s connections fulfilling auth api invalidateForUser request.`,
     );
     await this._closeConnections(
-      (clientState) => clientState.userData.userID === userID
+      clientState => clientState.userData.userID === userID,
     );
-    return new Response("Success", { status: 200 });
+    return new Response('Success', {status: 200});
   }
 
   async authInvalidateForRoom(
-    lc: LogContext
+    lc: LogContext,
     // Ideally we'd ensure body.roomID matches this DO's roomID but we
     // don't know this DO's roomID...
     // { roomID }: InvalidateForRoom
   ): Promise<Response> {
     lc.info?.(
-      "Closing all connections fulfilling auth api invalidateForRoom request."
+      'Closing all connections fulfilling auth api invalidateForRoom request.',
     );
-    await this._closeConnections((_) => true);
-    return new Response("Success", { status: 200 });
+    await this._closeConnections(_ => true);
+    return new Response('Success', {status: 200});
   }
 
   async authInvalidateAll(lc: LogContext): Promise<Response> {
     lc.info?.(
-      "Closing all connections fulfilling auth api invalidateAll request."
+      'Closing all connections fulfilling auth api invalidateAll request.',
     );
-    await this._closeConnections((_) => true);
-    return new Response("Success", { status: 200 });
+    await this._closeConnections(_ => true);
+    return new Response('Success', {status: 200});
   }
 
   async authConnections(): Promise<Response> {
@@ -273,26 +267,26 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   }
 
   private _closeConnections(
-    predicate: (clientState: ClientState) => boolean
+    predicate: (clientState: ClientState) => boolean,
   ): Promise<void> {
     return this._lock.withLock(() =>
-      closeConnections(this._clients, predicate)
+      closeConnections(this._clients, predicate),
     );
   }
 
   private _handleMessage = async (
     clientID: ClientID,
     data: string,
-    ws: Socket
+    ws: Socket,
   ): Promise<void> => {
     const lc = this._lc
-      .addContext("msg", randomID())
-      .addContext("client", clientID);
-    lc.debug?.("handling message", data, "waiting for lock");
+      .addContext('msg', randomID())
+      .addContext('client', clientID);
+    lc.debug?.('handling message', data, 'waiting for lock');
 
     try {
       await this._lock.withLock(async () => {
-        lc.debug?.("received lock");
+        lc.debug?.('received lock');
         await handleMessage(
           lc,
           this._storage,
@@ -301,19 +295,19 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
           clientID,
           data,
           ws,
-          () => this._processUntilDone()
+          () => this._processUntilDone(),
         );
       });
     } catch (e) {
-      this._lc.error?.("Unhandled exception in _handleMessage", e);
+      this._lc.error?.('Unhandled exception in _handleMessage', e);
     }
   };
 
   private async _processUntilDone() {
-    const lc = this._lc.addContext("req", randomID());
-    lc.debug?.("handling processUntilDone");
+    const lc = this._lc.addContext('req', randomID());
+    lc.debug?.('handling processUntilDone');
     if (this._turnTimerID) {
-      lc.debug?.("already processing, nothing to do");
+      lc.debug?.('already processing, nothing to do');
       return;
     }
     this._turnTimerID = setInterval(() => {
@@ -323,7 +317,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
   private async _processNext(lc: LogContext) {
     lc.debug?.(
-      `processNext - starting turn at ${Date.now()} - waiting for lock`
+      `processNext - starting turn at ${Date.now()} - waiting for lock`,
     );
     await this._lock.withLock(async () => {
       lc.debug?.(`received lock at ${Date.now()}`);
@@ -340,7 +334,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
         !hasPendingMutations(this._pendingMutations) &&
         !hasDisconnectsToProcess
       ) {
-        lc.debug?.("No pending mutations or disconnects to process, exiting");
+        lc.debug?.('No pending mutations or disconnects to process, exiting');
         if (this._turnTimerID) {
           clearInterval(this._turnTimerID);
           this._turnTimerID = 0;
@@ -355,21 +349,21 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
         this._pendingMutations,
         this._mutators,
         this._disconnectHandler,
-        Date.now()
+        Date.now(),
       );
     });
   }
 
   private _handleClose = async (
     clientID: ClientID,
-    ws: Socket
+    ws: Socket,
   ): Promise<void> => {
     const lc = this._lc
-      .addContext("req", randomID())
-      .addContext("client", clientID);
-    lc.debug?.("handling close - waiting for lock");
+      .addContext('req', randomID())
+      .addContext('client', clientID);
+    lc.debug?.('handling close - waiting for lock');
     await this._lock.withLock(async () => {
-      lc.debug?.("received lock");
+      lc.debug?.('received lock');
       handleClose(lc, this._clients, clientID, ws);
       await this._processUntilDone();
     });

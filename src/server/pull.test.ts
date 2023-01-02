@@ -1,15 +1,15 @@
-import { test, expect } from "@jest/globals";
-import { ClientRecordMap, putClientRecord } from "../types/client-record";
-import { DurableStorage } from "../storage/durable-storage";
-import { NullableVersion, putVersion } from "../types/version";
-import { handlePull } from "./pull";
-import type { PullRequest, PullResponse } from "../protocol/pull";
-import { clientRecord } from "../util/test-utils";
+import {test, expect} from '@jest/globals';
+import {ClientRecordMap, putClientRecord} from '../types/client-record';
+import {DurableStorage} from '../storage/durable-storage';
+import {NullableVersion, putVersion} from '../types/version';
+import {handlePull} from './pull';
+import type {PullRequest, PullResponse} from '../protocol/pull';
+import {clientRecord} from '../util/test-utils';
 
-const { roomDO } = getMiniflareBindings();
+const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();
 
-test("pull", async () => {
+test('pull', async () => {
   type Case = {
     name: string;
     clientRecords: ClientRecordMap;
@@ -20,15 +20,15 @@ test("pull", async () => {
 
   const cases: Case[] = [
     {
-      name: "empty server state",
+      name: 'empty server state',
       clientRecords: new Map(),
       version: null,
       pullRequest: {
-        profileID: "p1",
-        clientGroupID: "cg1",
+        profileID: 'p1',
+        clientGroupID: 'cg1',
         cookie: 1,
         pullVersion: 1,
-        schemaVersion: "",
+        schemaVersion: '',
       },
       expectedPullResponse: {
         cookie: 0,
@@ -37,60 +37,60 @@ test("pull", async () => {
       },
     },
     {
-      name: "pull returns mutation id changes for specified clientGroupID and no others",
+      name: 'pull returns mutation id changes for specified clientGroupID and no others',
       clientRecords: new Map([
-        ["c1", clientRecord("cg1", 1, 1, 2)],
-        ["c2", clientRecord("cg1", 1, 7, 2)],
-        ["c4", clientRecord("cg2", 1, 7, 2)],
+        ['c1', clientRecord('cg1', 1, 1, 2)],
+        ['c2', clientRecord('cg1', 1, 7, 2)],
+        ['c4', clientRecord('cg2', 1, 7, 2)],
       ]),
       version: 3,
       pullRequest: {
-        profileID: "p1",
-        clientGroupID: "cg1",
+        profileID: 'p1',
+        clientGroupID: 'cg1',
         cookie: 1,
         pullVersion: 1,
-        schemaVersion: "",
+        schemaVersion: '',
       },
       expectedPullResponse: {
         cookie: 3,
-        lastMutationIDChanges: { c1: 1, c2: 7 },
+        lastMutationIDChanges: {c1: 1, c2: 7},
         patch: [],
       },
     },
     {
-      name: "pull only returns lastMutationID if it has changed since cookie, one change",
+      name: 'pull only returns lastMutationID if it has changed since cookie, one change',
       clientRecords: new Map([
-        ["c1", clientRecord("cg1", 1, 1, 2)],
-        ["c2", clientRecord("cg1", 1, 7, 4)],
+        ['c1', clientRecord('cg1', 1, 1, 2)],
+        ['c2', clientRecord('cg1', 1, 7, 4)],
       ]),
       version: 5,
       pullRequest: {
-        profileID: "p1",
-        clientGroupID: "cg1",
+        profileID: 'p1',
+        clientGroupID: 'cg1',
         cookie: 3,
         pullVersion: 1,
-        schemaVersion: "",
+        schemaVersion: '',
       },
       expectedPullResponse: {
         cookie: 5,
-        lastMutationIDChanges: { c2: 7 },
+        lastMutationIDChanges: {c2: 7},
         patch: [],
       },
     },
 
     {
-      name: "pull only returns lastMutationID if it has changed since cookie, no changes",
+      name: 'pull only returns lastMutationID if it has changed since cookie, no changes',
       clientRecords: new Map([
-        ["c1", clientRecord("cg1", 1, 1, 2)],
-        ["c2", clientRecord("cg1", 1, 7, 4)],
+        ['c1', clientRecord('cg1', 1, 1, 2)],
+        ['c2', clientRecord('cg1', 1, 7, 4)],
       ]),
       version: 5,
       pullRequest: {
-        profileID: "p1",
-        clientGroupID: "cg1",
+        profileID: 'p1',
+        clientGroupID: 'cg1',
         cookie: 4,
         pullVersion: 1,
-        schemaVersion: "",
+        schemaVersion: '',
       },
       expectedPullResponse: {
         cookie: 5,

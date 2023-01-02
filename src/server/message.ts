@@ -1,12 +1,12 @@
-import { Upstream, upstreamSchema } from "../protocol/up.js";
-import type { ClientID, ClientMap, Socket } from "../types/client-state.js";
-import type { LogContext } from "@rocicorp/logger";
-import { sendError } from "../util/socket.js";
-import { handlePush, type ProcessUntilDone } from "./push.js";
-import { handlePing } from "./ping.js";
-import { superstructAssert } from "../util/superstruct.js";
-import type { DurableStorage } from "../storage/durable-storage.js";
-import type { PendingMutationMap } from "../types/mutation.js";
+import {Upstream, upstreamSchema} from '../protocol/up.js';
+import type {ClientID, ClientMap, Socket} from '../types/client-state.js';
+import type {LogContext} from '@rocicorp/logger';
+import {sendError} from '../util/socket.js';
+import {handlePush, type ProcessUntilDone} from './push.js';
+import {handlePing} from './ping.js';
+import {superstructAssert} from '../util/superstruct.js';
+import type {DurableStorage} from '../storage/durable-storage.js';
+import type {PendingMutationMap} from '../types/mutation.js';
 
 /**
  * Handles an upstream message coming into the server by dispatching to the
@@ -20,20 +20,20 @@ export async function handleMessage(
   clientID: ClientID,
   data: string,
   ws: Socket,
-  processUntilDone: ProcessUntilDone
+  processUntilDone: ProcessUntilDone,
 ) {
   let message;
   try {
     message = getMessage(data);
   } catch (e) {
-    lc.info?.("invalid message", e);
+    lc.info?.('invalid message', e);
     sendError(ws, String(e));
     return;
   }
 
   const client = clients.get(clientID);
   if (!client) {
-    lc.error?.("client not found, closing socket");
+    lc.error?.('client not found, closing socket');
     sendError(ws, `no such client: ${clientID}`);
     // This is not expected to ever occur.  However if it does no pushes will
     // ever succeed over this connection since it is missing an entry in
@@ -43,10 +43,10 @@ export async function handleMessage(
   }
 
   switch (message[0]) {
-    case "ping":
+    case 'ping':
       handlePing(lc, ws);
       break;
-    case "push":
+    case 'push':
       await handlePush(
         lc,
         storage,
@@ -55,7 +55,7 @@ export async function handleMessage(
         pendingMutations,
         message[1],
         () => Date.now(),
-        processUntilDone
+        processUntilDone,
       );
       break;
     default:

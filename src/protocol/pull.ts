@@ -1,5 +1,5 @@
-import { nullableVersionSchema, versionSchema } from "../types/version";
-import * as s from "superstruct";
+import {nullableVersionSchema, versionSchema} from '../types/version';
+import * as s from 'superstruct';
 
 export const pullRequestSchema = s.type({
   profileID: s.string(),

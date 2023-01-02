@@ -1,15 +1,15 @@
-import { nullableVersionSchema, versionSchema } from "../types/version";
-import * as s from "superstruct";
-import { jsonSchema } from "./json";
+import {nullableVersionSchema, versionSchema} from '../types/version';
+import * as s from 'superstruct';
+import {jsonSchema} from './json';
 
 export const putOpSchema = s.type({
-  op: s.literal("put"),
+  op: s.literal('put'),
   key: s.string(),
   value: jsonSchema,
 });
 
 export const delOpSchema = s.type({
-  op: s.literal("del"),
+  op: s.literal('del'),
   key: s.string(),
 });
 
@@ -27,7 +27,7 @@ export const pokeBodySchema = s.type({
   timestamp: s.number(),
 });
 
-export const pokeMessageSchema = s.tuple([s.literal("poke"), pokeBodySchema]);
+export const pokeMessageSchema = s.tuple([s.literal('poke'), pokeBodySchema]);
 
 export type PutOp = s.Infer<typeof putOpSchema>;
 export type DelOp = s.Infer<typeof delOpSchema>;

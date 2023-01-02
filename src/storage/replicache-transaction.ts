@@ -5,18 +5,18 @@ import {
   ScanNoIndexOptions,
   ScanOptions,
   WriteTransaction,
-} from "replicache";
-import type { JSONType } from "../protocol/json.js";
-import type { Patch } from "../protocol/poke.js";
-import type { ClientID } from "../types/client-state.js";
+} from 'replicache';
+import type {JSONType} from '../protocol/json.js';
+import type {Patch} from '../protocol/poke.js';
+import type {ClientID} from '../types/client-state.js';
 import {
   UserValue,
   userValueKey,
   userValuePrefix,
   userValueSchema,
-} from "../types/user-value.js";
-import type { Version } from "../types/version.js";
-import type { Storage } from "./storage.js";
+} from '../types/user-value.js';
+import type {Version} from '../types/version.js';
+import type {Storage} from './storage.js';
 
 /**
  * Implements Replicache's WriteTransaction in terms of EntryCache.
@@ -76,30 +76,30 @@ export class ReplicacheTransaction implements WriteTransaction {
 
   async isEmpty(): Promise<boolean> {
     const sr = this.scan();
-    const { done } = await sr.keys().next();
+    const {done} = await sr.keys().next();
     return !!done;
   }
 
   scan(options: ScanOptions = {}) {
     if (isScanIndexOptions(options)) {
-      throw new Error("not implemented");
+      throw new Error('not implemented');
     }
 
     return makeScanResult<ScanNoIndexOptions>(options, () =>
-      this._list(options)
+      this._list(options),
     );
   }
 
   private async *_list(options: ScanNoIndexOptions) {
-    const { prefix, start } = options;
+    const {prefix, start} = options;
 
     const optsInternal = {
       ...options,
       // We cannot use the limit option because we soft-delete entries,
       // so we grab all entries and let makeScanResult() implement the limit.
       limit: undefined,
-      prefix: userValueKey(prefix || ""),
-      start: start && { key: userValueKey(start.key) }, // remove exclusive option, as makeScanResult will take care of it
+      prefix: userValueKey(prefix || ''),
+      start: start && {key: userValueKey(start.key)}, // remove exclusive option, as makeScanResult will take care of it
     };
 
     const entriesMap = await this._storage.list(optsInternal, userValueSchema);
@@ -119,20 +119,20 @@ function stripPrefix(key: string) {
 
 export function unwrapPatch(inner: Patch): Patch {
   return inner
-    .filter((p) => p.key.startsWith(userValuePrefix))
-    .map((p) => {
-      const { key, op } = p;
+    .filter(p => p.key.startsWith(userValuePrefix))
+    .map(p => {
+      const {key, op} = p;
       const unwrappedKey = stripPrefix(key);
-      if (op === "put") {
+      if (op === 'put') {
         const userValue = p.value as UserValue;
         if (userValue.deleted) {
           return {
-            op: "del",
+            op: 'del',
             key: unwrappedKey,
           };
         } else {
           return {
-            op: "put",
+            op: 'put',
             key: unwrappedKey,
             value: userValue.value,
           };

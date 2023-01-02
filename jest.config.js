@@ -1,13 +1,13 @@
 export default {
-  preset: "ts-jest/presets/default-esm",
+  preset: 'ts-jest/presets/default-esm',
   globals: {
-    "ts-jest": {
-      tsconfig: "tsconfig.json",
+    'ts-jest': {
+      tsconfig: 'tsconfig.json',
       useESM: true,
     },
   },
   moduleNameMapper: {
-    "^(\\.{1,2}/.*)\\.js$": "$1",
+    '^(\\.{1,2}/.*)\\.js$': '$1',
   },
-  testEnvironment: "miniflare",
+  testEnvironment: 'miniflare',
 };

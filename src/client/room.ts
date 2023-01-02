@@ -4,10 +4,10 @@ import {
   forgetRoomPath,
   migrateRoomPath,
   roomStatusByRoomIDPath,
-} from "../server/auth-do-routes";
-import { createAuthAPIHeaders } from "../server/auth-api-headers";
-import type { RoomStatus } from "../server/rooms";
-import type { CreateRoomRequest } from "src/protocol/api/room";
+} from '../server/auth-do-routes';
+import {createAuthAPIHeaders} from '../server/auth-api-headers';
+import type {RoomStatus} from '../server/rooms';
+import type {CreateRoomRequest} from 'src/protocol/api/room';
 
 /**
  * createRoom creates a new room with the given roomID. If the room already
@@ -26,10 +26,10 @@ export async function createRoom(
   reflectServerURL: string,
   authApiKey: string,
   roomID: string,
-  jurisdiction?: "eu"
+  jurisdiction?: 'eu',
 ): Promise<void> {
   const resp = await fetch(
-    newCreateRoomRequest(reflectServerURL, authApiKey, roomID, jurisdiction)
+    newCreateRoomRequest(reflectServerURL, authApiKey, roomID, jurisdiction),
   );
   if (!resp.ok) {
     throw new Error(`Failed to create room: ${resp.status} ${resp.statusText}`);
@@ -40,10 +40,10 @@ export async function createRoom(
 export async function closeRoom(
   reflectServerURL: string,
   authApiKey: string,
-  roomID: string
+  roomID: string,
 ): Promise<void> {
   const resp = await fetch(
-    newCloseRoomRequest(reflectServerURL, authApiKey, roomID)
+    newCloseRoomRequest(reflectServerURL, authApiKey, roomID),
   );
   if (!resp.ok) {
     throw new Error(`Failed to close room: ${resp.status} ${resp.statusText}`);
@@ -54,10 +54,10 @@ export async function closeRoom(
 export async function deleteRoom(
   reflectServerURL: string,
   authApiKey: string,
-  roomID: string
+  roomID: string,
 ): Promise<void> {
   const resp = await fetch(
-    newDeleteRoomRequest(reflectServerURL, authApiKey, roomID)
+    newDeleteRoomRequest(reflectServerURL, authApiKey, roomID),
   );
   if (!resp.ok) {
     throw new Error(`Failed to delete room: ${resp.status} ${resp.statusText}`);
@@ -79,14 +79,14 @@ export async function deleteRoom(
 export async function roomStatus(
   reflectServerURL: string,
   authApiKey: string,
-  roomID: string
+  roomID: string,
 ): Promise<RoomStatus> {
   const resp = await fetch(
-    newRoomStatusRequest(reflectServerURL, authApiKey, roomID)
+    newRoomStatusRequest(reflectServerURL, authApiKey, roomID),
   );
   if (!resp.ok) {
     throw new Error(
-      `Failed to get room status: ${resp.status} ${resp.statusText}`
+      `Failed to get room status: ${resp.status} ${resp.statusText}`,
     );
   }
   return resp.json();
@@ -104,12 +104,12 @@ export async function roomStatus(
 export function newRoomStatusRequest(
   reflectServerURL: string,
   authApiKey: string,
-  roomID: string
+  roomID: string,
 ) {
-  const path = roomStatusByRoomIDPath.replace(":roomID", roomID);
+  const path = roomStatusByRoomIDPath.replace(':roomID', roomID);
   const url = new URL(path, reflectServerURL);
   return new Request(url.toString(), {
-    method: "get",
+    method: 'get',
     headers: createAuthAPIHeaders(authApiKey),
   });
 }
@@ -129,12 +129,12 @@ export function newCreateRoomRequest(
   reflectServerURL: string,
   authApiKey: string,
   roomID: string,
-  jurisdiction?: "eu"
+  jurisdiction?: 'eu',
 ) {
-  const url = new URL("/createRoom", reflectServerURL);
-  const req: CreateRoomRequest = { roomID, jurisdiction };
+  const url = new URL('/createRoom', reflectServerURL);
+  const req: CreateRoomRequest = {roomID, jurisdiction};
   return new Request(url.toString(), {
-    method: "post",
+    method: 'post',
     headers: createAuthAPIHeaders(authApiKey),
     body: JSON.stringify(req),
   });
@@ -143,12 +143,12 @@ export function newCreateRoomRequest(
 export function newCloseRoomRequest(
   reflectServerURL: string,
   authApiKey: string,
-  roomID: string
+  roomID: string,
 ) {
-  const path = closeRoomPath.replace(":roomID", roomID);
+  const path = closeRoomPath.replace(':roomID', roomID);
   const url = new URL(path, reflectServerURL);
   return new Request(url.toString(), {
-    method: "post",
+    method: 'post',
     headers: createAuthAPIHeaders(authApiKey),
   });
 }
@@ -156,12 +156,12 @@ export function newCloseRoomRequest(
 export function newDeleteRoomRequest(
   reflectServerURL: string,
   authApiKey: string,
-  roomID: string
+  roomID: string,
 ) {
-  const path = deleteRoomPath.replace(":roomID", roomID);
+  const path = deleteRoomPath.replace(':roomID', roomID);
   const url = new URL(path, reflectServerURL);
   return new Request(url.toString(), {
-    method: "post",
+    method: 'post',
     headers: createAuthAPIHeaders(authApiKey),
   });
 }
@@ -169,12 +169,12 @@ export function newDeleteRoomRequest(
 export function newForgetRoomRequest(
   reflectServerURL: string,
   authApiKey: string,
-  roomID: string
+  roomID: string,
 ) {
-  const path = forgetRoomPath.replace(":roomID", roomID);
+  const path = forgetRoomPath.replace(':roomID', roomID);
   const url = new URL(path, reflectServerURL);
   return new Request(url.toString(), {
-    method: "post",
+    method: 'post',
     headers: createAuthAPIHeaders(authApiKey),
   });
 }
@@ -182,12 +182,12 @@ export function newForgetRoomRequest(
 export function newMigrateRoomRequest(
   reflectServerURL: string,
   authApiKey: string,
-  roomID: string
+  roomID: string,
 ) {
-  const path = migrateRoomPath.replace(":roomID", roomID);
+  const path = migrateRoomPath.replace(':roomID', roomID);
   const url = new URL(path, reflectServerURL);
   return new Request(url.toString(), {
-    method: "post",
+    method: 'post',
     headers: createAuthAPIHeaders(authApiKey),
   });
 }

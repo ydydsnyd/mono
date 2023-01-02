@@ -1,5 +1,5 @@
-import * as s from "superstruct";
-import { jsonSchema } from "./json";
+import * as s from 'superstruct';
+import {jsonSchema} from './json';
 
 export const mutationSchema = s.type({
   id: s.number(),
@@ -17,7 +17,7 @@ export const pushBodySchema = s.type({
   timestamp: s.number(),
 });
 
-export const pushMessageSchema = s.tuple([s.literal("push"), pushBodySchema]);
+export const pushMessageSchema = s.tuple([s.literal('push'), pushBodySchema]);
 
 export type Mutation = s.Infer<typeof mutationSchema>;
 export type PushBody = s.Infer<typeof pushBodySchema>;
