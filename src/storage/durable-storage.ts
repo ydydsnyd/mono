@@ -54,7 +54,7 @@ export class DurableStorage implements Storage {
     return await listEntries(this._durable, schema, doOptions);
   }
 
-  async deleteAll(): Promise<void> {
+  deleteAll(): Promise<void> {
     return this._durable.deleteAll();
   }
 }

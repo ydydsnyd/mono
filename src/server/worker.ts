@@ -29,28 +29,18 @@ export function createWorker<Env extends BaseWorkerEnv>(
 ): ExportedHandler<Env> {
   const {getLogSink, getLogLevel} = options;
   return {
-    fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
-      return withLogContext(
-        env,
-        ctx,
-        getLogSink,
-        getLogLevel,
-        (lc: LogContext) => fetch(request, env, lc),
-      );
-    },
-    scheduled: async (
+    fetch: (request: Request, env: Env, ctx: ExecutionContext) =>
+      withLogContext(env, ctx, getLogSink, getLogLevel, (lc: LogContext) =>
+        fetch(request, env, lc),
+      ),
+    scheduled: (
       _controller: ScheduledController,
       env: Env,
       ctx: ExecutionContext,
-    ) => {
-      return withLogContext(
-        env,
-        ctx,
-        getLogSink,
-        getLogLevel,
-        (lc: LogContext) => scheduled(env, lc),
-      );
-    },
+    ) =>
+      withLogContext(env, ctx, getLogSink, getLogLevel, (lc: LogContext) =>
+        scheduled(env, lc),
+      ),
   };
 }
 
@@ -159,7 +149,7 @@ function handleOptions(request: Request): Response {
   });
 }
 
-async function handleRequest(
+function handleRequest(
   request: Request,
   lc: LogContext,
   env: BaseWorkerEnv,

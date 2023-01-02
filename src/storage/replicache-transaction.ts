@@ -130,16 +130,14 @@ export function unwrapPatch(inner: Patch): Patch {
             op: 'del',
             key: unwrappedKey,
           };
-        } else {
-          return {
-            op: 'put',
-            key: unwrappedKey,
-            value: userValue.value,
-          };
         }
-      } else {
-        // We don't use del or clear at this layer
-        throw new Error(`unexpected op: ${op}`);
+        return {
+          op: 'put',
+          key: unwrappedKey,
+          value: userValue.value,
+        };
       }
+      // We don't use del or clear at this layer
+      throw new Error(`unexpected op: ${op}`);
     });
 }

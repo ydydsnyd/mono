@@ -127,9 +127,9 @@ export class BaseAuthDO implements DurableObject {
     if (roomID === undefined) {
       return new Response('Missing roomID', {status: 400});
     }
-    const roomRecord = await this._roomRecordLock.withRead(async () => {
-      return roomRecordByRoomID(this._durableStorage, roomID);
-    });
+    const roomRecord = await this._roomRecordLock.withRead(() =>
+      roomRecordByRoomID(this._durableStorage, roomID),
+    );
     if (roomRecord === undefined) {
       return newJSONResponse({status: RoomStatus.Unknown});
     }
@@ -137,58 +137,59 @@ export class BaseAuthDO implements DurableObject {
   }
 
   async allRoomRecords(_: RociRequest) {
-    const roomIDToRecords = await this._roomRecordLock.withRead(async () => {
-      return roomRecords(this._durableStorage);
-    });
+    const roomIDToRecords = await this._roomRecordLock.withRead(() =>
+      roomRecords(this._durableStorage),
+    );
     const records = Array.from(roomIDToRecords.values());
     return newJSONResponse(records);
   }
 
-  async createRoom(
+  createRoom(
     lc: LogContext,
     request: RociRequest,
     validatedBody: CreateRoomRequest,
   ) {
-    return this._roomRecordLock.withWrite(async () => {
-      return createRoom(
+    return this._roomRecordLock.withWrite(() =>
+      createRoom(
         lc,
         this._roomDO,
         this._durableStorage,
         request,
         validatedBody,
-      );
-    });
+      ),
+    );
   }
 
-  async closeRoom(request: RociRequest) {
-    return this._roomRecordLock.withWrite(async () => {
-      return closeRoom(this._lc, this._durableStorage, request);
-    });
+  closeRoom(request: RociRequest) {
+    return this._roomRecordLock.withWrite(() =>
+      closeRoom(this._lc, this._durableStorage, request),
+    );
   }
 
-  async deleteRoom(request: RociRequest) {
-    return this._roomRecordLock.withWrite(async () => {
-      return deleteRoom(this._lc, this._roomDO, this._durableStorage, request);
-    });
+  deleteRoom(request: RociRequest) {
+    return this._roomRecordLock.withWrite(() =>
+      deleteRoom(this._lc, this._roomDO, this._durableStorage, request),
+    );
   }
 
-  async forgetRoom(request: RociRequest) {
-    return this._roomRecordLock.withWrite(async () => {
-      return deleteRoomRecord(this._lc, this._durableStorage, request);
-    });
+  forgetRoom(request: RociRequest) {
+    return this._roomRecordLock.withWrite(() =>
+      deleteRoomRecord(this._lc, this._durableStorage, request),
+    );
   }
 
-  async migrateRoom(request: RociRequest) {
-    return this._roomRecordLock.withWrite(async () => {
-      return createRoomRecordForLegacyRoom(
+  migrateRoom(request: RociRequest) {
+    return this._roomRecordLock.withWrite(() =>
+      createRoomRecordForLegacyRoom(
         this._lc,
         this._roomDO,
         this._durableStorage,
         request,
-      );
-    });
+      ),
+    );
   }
 
+  // eslint-disable-next-line require-await
   async connect(lc: LogContext, request: RociRequest): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname !== '/connect') {
@@ -245,9 +246,9 @@ export class BaseAuthDO implements DurableObject {
       // Find the room's objectID so we can connect to it. Do this BEFORE
       // writing the connection record, in case it doesn't exist or is
       // closed/deleted.
-      const roomRecord = await this._roomRecordLock.withRead(async () => {
-        return roomRecordByRoomID(this._durableStorage, roomID);
-      });
+      const roomRecord = await this._roomRecordLock.withRead(() =>
+        roomRecordByRoomID(this._durableStorage, roomID),
+      );
 
       // If the room doesn't exist, or is closed, we need to give the client some
       // visibility into this. If we just return a 404 here without accepting the
@@ -325,6 +326,7 @@ export class BaseAuthDO implements DurableObject {
     });
   }
 
+  // eslint-disable-next-line require-await
   async pull(lc: LogContext, request: RociRequest): Promise<Response> {
     const url = new URL(request.url);
     const roomID = url.searchParams.get('roomID');
@@ -357,9 +359,9 @@ export class BaseAuthDO implements DurableObject {
       }
 
       // Find the room's objectID so we can route the request to it.
-      const roomRecord = await this._roomRecordLock.withRead(async () => {
-        return roomRecordByRoomID(this._durableStorage, roomID);
-      });
+      const roomRecord = await this._roomRecordLock.withRead(() =>
+        roomRecordByRoomID(this._durableStorage, roomID),
+      );
       if (roomRecord === undefined || roomRecord.status !== RoomStatus.Open) {
         const errorMsg = roomRecord ? 'room is not open' : 'room not found';
         return new Response(errorMsg, {
@@ -380,7 +382,7 @@ export class BaseAuthDO implements DurableObject {
     });
   }
 
-  async authInvalidateForUser(
+  authInvalidateForUser(
     lc: LogContext,
     request: RociRequest,
     {userID}: InvalidateForUserRequest,
@@ -404,7 +406,7 @@ export class BaseAuthDO implements DurableObject {
     });
   }
 
-  async authInvalidateForRoom(
+  authInvalidateForRoom(
     lc: LogContext,
     request: RociRequest,
     {roomID}: InvalidateForRoomRequest,
@@ -415,9 +417,9 @@ export class BaseAuthDO implements DurableObject {
       lc.debug?.(`Sending authInvalidateForRoom request to ${roomID}`);
       // The request to the Room DO must be completed inside the write lock
       // to avoid races with connect requests for this room.
-      const roomObjectID = await this._roomRecordLock.withRead(async () => {
-        return objectIDByRoomID(this._durableStorage, this._roomDO, roomID);
-      });
+      const roomObjectID = await this._roomRecordLock.withRead(() =>
+        objectIDByRoomID(this._durableStorage, this._roomDO, roomID),
+      );
       if (roomObjectID === undefined) {
         return new Response('room not found', {
           status: 404,
@@ -436,10 +438,7 @@ export class BaseAuthDO implements DurableObject {
     });
   }
 
-  async authInvalidateAll(
-    lc: LogContext,
-    request: RociRequest,
-  ): Promise<Response> {
+  authInvalidateAll(lc: LogContext, request: RociRequest): Promise<Response> {
     lc.debug?.(`authInvalidateAll waiting for lock.`);
     return this._authLock.withWrite(async () => {
       lc.debug?.('got lock.');
@@ -496,9 +495,9 @@ export class BaseAuthDO implements DurableObject {
       lc.debug?.(`revalidating connections for ${roomID} waiting for lock.`);
       await this._authLock.withWrite(async () => {
         lc.debug?.('got lock.');
-        const roomObjectID = await this._roomRecordLock.withRead(async () => {
-          return objectIDByRoomID(this._durableStorage, this._roomDO, roomID);
-        });
+        const roomObjectID = await this._roomRecordLock.withRead(() =>
+          objectIDByRoomID(this._durableStorage, this._roomDO, roomID),
+        );
         if (roomObjectID === undefined) {
           lc.error?.(`Can't find room ${roomID}, skipping`);
           return;
@@ -575,9 +574,9 @@ export class BaseAuthDO implements DurableObject {
     // Send requests to room DOs in parallel
     const errorResponses = [];
     for (const roomID of roomIDs) {
-      const roomObjectID = await this._roomRecordLock.withRead(async () => {
-        return objectIDByRoomID(this._durableStorage, this._roomDO, roomID);
-      });
+      const roomObjectID = await this._roomRecordLock.withRead(() =>
+        objectIDByRoomID(this._durableStorage, this._roomDO, roomID),
+      );
 
       if (roomObjectID === undefined) {
         const msg = `No objectID for ${roomID}, skipping`;
@@ -594,9 +593,10 @@ export class BaseAuthDO implements DurableObject {
       if (!response.ok) {
         errorResponses.push(response);
         lc.error?.(
-          `Received error response from ${roomIDs[i]}. ${
-            response.status
-          } ${await response.text}`,
+          `Received error response from ${roomIDs[i]}. ${response.status} ${
+            // TODO(arv): This should be `text()` and not `text`
+            await response.text
+          }`,
         );
       }
     }

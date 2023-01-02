@@ -39,9 +39,7 @@ routes.push({
     router.get(
       roomStatusByRoomIDPath,
       requireAuthAPIKeyMatches(authApiKey),
-      async (request: RociRequest) => {
-        return authDO.roomStatusByRoomID(request);
-      },
+      (request: RociRequest) => authDO.roomStatusByRoomID(request),
     );
   },
 });
@@ -57,9 +55,7 @@ routes.push({
     router.get(
       roomRecordsPath,
       requireAuthAPIKeyMatches(authApiKey),
-      async (request: RociRequest) => {
-        return authDO.allRoomRecords(request);
-      },
+      (request: RociRequest) => authDO.allRoomRecords(request),
     );
   },
 });
@@ -77,10 +73,9 @@ routes.push({
     router.post(
       closeRoomPath,
       requireAuthAPIKeyMatches(authApiKey),
-      async (request: RociRequest) => {
+      (request: RociRequest) =>
         // TODO should plumb a LogContext through here.
-        return authDO.closeRoom(request);
-      },
+        authDO.closeRoom(request),
     );
   },
 });
@@ -98,10 +93,9 @@ routes.push({
     router.post(
       deleteRoomPath,
       requireAuthAPIKeyMatches(authApiKey),
-      async (request: RociRequest) => {
+      (request: RociRequest) =>
         // TODO should plumb a LogContext through here.
-        return authDO.deleteRoom(request);
-      },
+        authDO.deleteRoom(request),
     );
   },
 });
@@ -121,9 +115,7 @@ routes.push({
     router.post(
       migrateRoomPath,
       requireAuthAPIKeyMatches(authApiKey),
-      async (request: RociRequest) => {
-        return authDO.migrateRoom(request);
-      },
+      (request: RociRequest) => authDO.migrateRoom(request),
     );
   },
 });
@@ -144,9 +136,7 @@ routes.push({
     router.post(
       forgetRoomPath,
       requireAuthAPIKeyMatches(authApiKey),
-      async (request: RociRequest) => {
-        return authDO.forgetRoom(request);
-      },
+      (request: RociRequest) => authDO.forgetRoom(request),
     );
   },
 });

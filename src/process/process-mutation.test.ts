@@ -93,6 +93,7 @@ test('processMutation', async () => {
     ],
     [
       'throws',
+      // eslint-disable-next-line require-await
       async () => {
         throw new Error('bonk');
       },

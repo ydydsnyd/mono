@@ -130,15 +130,15 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     }
   }
 
-  private async _setRoomID(roomID: string) {
+  private _setRoomID(roomID: string) {
     return this._storage.put(roomIDKey, roomID);
   }
 
-  async maybeRoomID(): Promise<string | undefined> {
+  maybeRoomID(): Promise<string | undefined> {
     return this._storage.get(roomIDKey, s.string());
   }
 
-  private async _setDeleted() {
+  private _setDeleted() {
     return this._storage.put(deletedKey, true);
   }
 
@@ -185,6 +185,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     return new Response('ok');
   }
 
+  // eslint-disable-next-line require-await
   async connect(lc: LogContext, request: Request): Promise<Response> {
     if (request.headers.get('Upgrade') !== 'websocket') {
       return new Response('expected websocket', {status: 400});
@@ -217,9 +218,9 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     pullRequest: PullRequest,
   ): Promise<Response> {
     lc.debug?.('handling mutation recovery pull', JSON.stringify(pullRequest));
-    const pullResponse: PullResponse = await this._lock.withLock(async () => {
-      return handlePull(this._storage, pullRequest);
-    });
+    const pullResponse: PullResponse = await this._lock.withLock(() =>
+      handlePull(this._storage, pullRequest),
+    );
     const pullResponseJSONString = JSON.stringify(pullResponse);
     lc.debug?.('pull response', pullResponseJSONString);
     return new Response(pullResponseJSONString, {status: 200});
@@ -260,6 +261,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     return new Response('Success', {status: 200});
   }
 
+  // eslint-disable-next-line require-await
   async authConnections(): Promise<Response> {
     // Note this intentionally does not acquire this._lock, as it is
     // unnecessary and can add latency.
@@ -303,7 +305,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     }
   };
 
-  private async _processUntilDone() {
+  private _processUntilDone() {
     const lc = this._lc.addContext('req', randomID());
     lc.debug?.('handling processUntilDone');
     if (this._turnTimerID) {
@@ -362,10 +364,10 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       .addContext('req', randomID())
       .addContext('client', clientID);
     lc.debug?.('handling close - waiting for lock');
-    await this._lock.withLock(async () => {
+    await this._lock.withLock(() => {
       lc.debug?.('received lock');
       handleClose(lc, this._clients, clientID, ws);
-      await this._processUntilDone();
+      this._processUntilDone();
     });
   };
 }

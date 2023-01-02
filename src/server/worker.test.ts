@@ -43,6 +43,7 @@ function createTestFixture(
       },
       get: (id: DurableObjectId) => {
         expect(id.name).toEqual('test-auth-do-id');
+        // eslint-disable-next-line require-await
         return new TestDurableObjectStub(id, async (request: Request) => {
           const testResponse = createTestResponse(request);
           authDORequests.push({req: request, resp: testResponse});
@@ -340,6 +341,7 @@ async function testLogging(
 }
 
 test('fetch logging', async () => {
+  // eslint-disable-next-line require-await
   await testLogging(async (worker, testEnv, testExecutionContext) => {
     const testRequest = new Request('ws://test.roci.dev/connect');
     if (!worker.fetch) {
@@ -350,6 +352,7 @@ test('fetch logging', async () => {
 });
 
 test('scheduled logging', async () => {
+  // eslint-disable-next-line require-await
   await testLogging(async (worker, testEnv, testExecutionContext) => {
     if (!worker.scheduled) {
       throw new Error('Expected scheduled to be defined');

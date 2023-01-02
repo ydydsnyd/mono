@@ -23,9 +23,11 @@ export class EntryCache implements Storage {
     this._storage = storage;
   }
 
+  // eslint-disable-next-line require-await
   async put<T extends JSONValue>(key: string, value: T): Promise<void> {
     this._cache.set(key, {value, dirty: true});
   }
+  // eslint-disable-next-line require-await
   async del(key: string): Promise<void> {
     this._cache.set(key, {value: undefined, dirty: true});
   }
@@ -67,9 +69,8 @@ export class EntryCache implements Storage {
         .map(([k, {value}]) => {
           if (value === undefined) {
             return this._storage.del(k);
-          } else {
-            return this._storage.put(k, value);
           }
+          return this._storage.put(k, value);
         }),
     );
   }

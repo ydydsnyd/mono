@@ -1,7 +1,7 @@
 import type {JSONValue} from 'replicache';
 
 // https://api.cloudflare.com/#durable-objects-namespace-list-namespaces
-export async function listDONamespaces(accountID: string, apiToken: string) {
+export function listDONamespaces(accountID: string, apiToken: string) {
   return jsonFetchCFAPI(
     `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/durable_objects/namespaces`,
     apiToken,
@@ -26,7 +26,7 @@ export type DONamespaces = Array<DONamespace>;
 // https://api.cloudflare.com/#durable-objects-namespace-list-namespaces
 // Note: Does not handle cursor pagination. Sets limit to 10,000.
 // Note: This can take a while.
-export async function listDOInstances(
+export function listDOInstances(
   accountID: string,
   apiToken: string,
   namespaceID: string,

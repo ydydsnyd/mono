@@ -21,13 +21,13 @@ function stringifyMany(...messages: ReadonlyJSONObject[]): string {
   return messages.map(m => JSON.stringify(m)).join('\n');
 }
 
-test('calling error also calls flush', async () => {
+test('calling error also calls flush', () => {
   const l = new DatadogLogSink({
     apiKey: 'apiKey',
   });
   const flushSpy = jest
     .spyOn(l, 'flush')
-    .mockImplementation(async () => void 0);
+    .mockImplementation(() => Promise.resolve(undefined));
   l.log('error', 'aaa');
   expect(flushSpy).toHaveBeenCalledTimes(1);
 });

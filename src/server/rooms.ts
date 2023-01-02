@@ -53,7 +53,7 @@ const roomStatusSchema = s.enums([
   RoomStatus.Deleted,
   RoomStatus.Unknown,
 ]);
-// Note setting jurisdictionSchmea to = s.union([s.literal(""), s.literal("eu")]);
+// Note setting jurisdictionSchema to = s.union([s.literal(""), s.literal("eu")]);
 // doesn't work for some reason.
 const jurisdictionSchema = s.enums(['', 'eu']);
 const roomRecordSchema = s.object({
@@ -326,7 +326,7 @@ export async function roomRecordByObjectIDForTest(
   return undefined;
 }
 
-export async function roomRecords(storage: DurableStorage) {
+export function roomRecords(storage: DurableStorage) {
   return storage.list({prefix: ROOM_KEY_PREFIX}, roomRecordSchema);
 }
 

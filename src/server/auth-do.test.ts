@@ -77,6 +77,7 @@ async function createCreateRoomTestFixture() {
     get: (id: DurableObjectId) => {
       const objectIDString = id.toString();
 
+      // eslint-disable-next-line require-await
       return new TestDurableObjectStub(id, async (request: Request) => {
         const url = new URL(request.url);
         if (url.pathname === '/createRoom') {
@@ -105,9 +106,7 @@ test("createRoom creates a room and doesn't allow it to be re-created", async ()
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -136,9 +135,7 @@ test('createRoom requires roomIDs to not contain weird characters', async () => 
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -157,11 +154,11 @@ test('createRoom requires roomIDs to not contain weird characters', async () => 
 });
 
 // Tiny wrappers that hide the conversion from raw DO storage to DurableStorage.
-async function getRoomRecord(storage: DurableObjectStorage, roomID: string) {
+function getRoomRecord(storage: DurableObjectStorage, roomID: string) {
   return getRoomRecordOriginal(new DurableStorage(storage, false), roomID);
 }
 
-async function getRoomRecordByObjectID(
+function getRoomRecordByObjectID(
   storage: DurableObjectStorage,
   objectID: DurableObjectId,
 ) {
@@ -178,9 +175,7 @@ test('createRoom returns 401 if authApiKey is wrong', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: 'SOME OTHER API KEY',
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -201,9 +196,7 @@ test('createRoom returns 500 if roomDO createRoom fails', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -211,6 +204,7 @@ test('createRoom returns 500 if roomDO createRoom fails', async () => {
 
   // Override the roomDO to return a 500.
   testRoomDO.get = (id: DurableObjectId) => {
+    // eslint-disable-next-line require-await
     return new TestDurableObjectStub(id, async () => {
       return new Response('', {status: 500});
     });
@@ -236,9 +230,7 @@ test('createRoom sets jurisdiction if requested', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -272,9 +264,7 @@ test('migrate room creates a room record', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -300,9 +290,7 @@ test('migrate room enforces roomID format', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -323,9 +311,7 @@ test('migrate room 401s is auth api key is wrong', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -346,9 +332,7 @@ test('closeRoom closes an open room', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -381,9 +365,7 @@ test('closeRoom 404s on non-existent room', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -405,9 +387,7 @@ test('calling closeRoom on closed room is ok', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -429,14 +409,18 @@ test('calling closeRoom on closed room is ok', async () => {
 test('deleteRoom calls into roomDO and marks room deleted', async () => {
   const {testRoomID, testRoomDO, state} = await createCreateRoomTestFixture();
 
-  const delteRoomPathWithRoomID = deleteRoomPath.replace(':roomID', testRoomID);
+  const deleteRoomPathWithRoomID = deleteRoomPath.replace(
+    ':roomID',
+    testRoomID,
+  );
 
-  let gotDeleteForOjbectIDString;
+  let gotDeleteForObjectIDString;
   testRoomDO.get = (id: DurableObjectId) => {
+    // eslint-disable-next-line require-await
     return new TestDurableObjectStub(id, async (request: Request) => {
       const url = new URL(request.url);
-      if (url.pathname === delteRoomPathWithRoomID) {
-        gotDeleteForOjbectIDString = id.toString();
+      if (url.pathname === deleteRoomPathWithRoomID) {
+        gotDeleteForObjectIDString = id.toString();
         return new Response();
       }
       return new Response('', {status: 200});
@@ -446,9 +430,7 @@ test('deleteRoom calls into roomDO and marks room deleted', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -470,8 +452,8 @@ test('deleteRoom calls into roomDO and marks room deleted', async () => {
   );
   const deleteRoomResponse = await authDO.fetch(deleteRoomRequest);
   expect(deleteRoomResponse.status).toEqual(200);
-  expect(gotDeleteForOjbectIDString).not.toBeUndefined();
-  expect(gotDeleteForOjbectIDString).toEqual('unique-room-do-0');
+  expect(gotDeleteForObjectIDString).not.toBeUndefined();
+  expect(gotDeleteForObjectIDString).toEqual('unique-room-do-0');
 
   const statusRequest = newRoomStatusRequest(
     'https://test.roci.dev',
@@ -491,9 +473,7 @@ test('deleteRoom requires room to be closed', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -526,9 +506,7 @@ test('deleteRoom 401s if auth api key not correct', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -561,9 +539,7 @@ test('forget room forgets an existing room', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -596,9 +572,7 @@ test('foget room 404s on non-existent room', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -620,9 +594,7 @@ test('forget room 401s if the auth key is wrong', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -645,9 +617,7 @@ test('roomStatusByRoomID returns status for a room that exists', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -674,9 +644,7 @@ test('roomStatusByRoomID returns unknown for a room that does not exist', async 
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -700,9 +668,7 @@ test('roomStatusByRoomID requires authApiKey', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -731,9 +697,7 @@ test('roomRecords returns empty array if no rooms exist', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -752,9 +716,7 @@ test('roomRecords returns rooms that exists', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -780,9 +742,7 @@ test('roomRecords requires authApiKey', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async () => {
-      throw 'should not be called';
-    },
+    authHandler: () => Promise.reject('should not be called'),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -838,6 +798,7 @@ function createConnectTestFixture(
     },
     get: (id: DurableObjectId) => {
       expect(id.toString()).toEqual('room-do-0');
+      // eslint-disable-next-line require-await
       return new TestDurableObjectStub(id, async (request: Request) => {
         const url = new URL(request.url);
         if (url.pathname === '/createRoom') {
@@ -871,6 +832,7 @@ function createRoomDOThatThrowsIfFetchIsCalled(): DurableObjectNamespace {
   return {
     ...createTestDurableObjectNamespace(),
     get: (id: DurableObjectId) => {
+      // eslint-disable-next-line require-await
       return new TestDurableObjectStub(id, async (request: Request) => {
         throw new Error('Unexpected call to Room DO fetch ' + request.url);
       });
@@ -891,6 +853,7 @@ test("connect won't connect to a room that doesn't exist", async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
+    // eslint-disable-next-line require-await
     authHandler: async (auth, roomID) => {
       expect(auth).toEqual(testAuth);
       expect(roomID).toEqual(testRoomID);
@@ -932,6 +895,7 @@ test('connect calls authHandler and sends resolved UserData in header to Room DO
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
+    // eslint-disable-next-line require-await
     authHandler: async (auth, roomID) => {
       expect(auth).toEqual(testAuth);
       expect(roomID).toEqual(testRoomID);
@@ -973,6 +937,7 @@ test('connect wont connect to a room that is closed', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
+    // eslint-disable-next-line require-await
     authHandler: async () => {
       return {userID: testUserID};
     },
@@ -1022,6 +987,7 @@ test('connect percent escapes components of the connection key', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
+    // eslint-disable-next-line require-await
     authHandler: async (auth, roomID) => {
       expect(auth).toEqual(testAuth);
       expect(roomID).toEqual(testRoomID);
@@ -1066,6 +1032,7 @@ test('connect returns a 401 without calling Room DO if authHandler rejects', asy
   const authDO = new BaseAuthDO({
     roomDO: createRoomDOThatThrowsIfFetchIsCalled(),
     state: {id: authDOID} as DurableObjectState,
+    // eslint-disable-next-line require-await
     authHandler: async (auth, roomID) => {
       expect(auth).toEqual(testAuth);
       expect(roomID).toEqual(testRoomID);
@@ -1097,9 +1064,9 @@ test('connect returns a 401 without calling Room DO if Sec-WebSocket-Protocol he
   const authDO = new BaseAuthDO({
     roomDO: createRoomDOThatThrowsIfFetchIsCalled(),
     state: {id: authDOID} as DurableObjectState,
-    authHandler: async (_auth, _roomID) => {
-      throw new Error('Unexpected call to authHandler');
-    },
+    // eslint-disable-next-line require-await
+    authHandler: () =>
+      Promise.reject(new Error('Unexpected call to authHandler')),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -1138,9 +1105,9 @@ test('pull returns 400 if roomID param not present', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async (_auth, _roomID) => {
-      throw new Error('Unexpected call to authHandler');
-    },
+    // eslint-disable-next-line require-await
+    authHandler: () =>
+      Promise.reject(new Error('Unexpected call to authHandler')),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -1183,6 +1150,7 @@ test("pull returns 404 if room doesn't exist", async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
+    // eslint-disable-next-line require-await
     authHandler: async (auth, roomID) => {
       expect(auth).toEqual(testAuth);
       expect(roomID).toEqual(testRoomID);
@@ -1249,6 +1217,7 @@ test('pull calls authHandler and sends resolved UserData in header to Room DO', 
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
+    // eslint-disable-next-line require-await
     authHandler: async (auth, roomID) => {
       expect(auth).toEqual(testAuth);
       expect(roomID).toEqual(testRoomID);
@@ -1300,6 +1269,7 @@ test('pull wont forward pull to a room that is closed', async () => {
     },
     get: (id: DurableObjectId) => {
       expect(id.toString()).toEqual('room-do-0');
+      // eslint-disable-next-line require-await
       return new TestDurableObjectStub(id, async (request: Request) => {
         const url = new URL(request.url);
         if (url.pathname === '/createRoom') {
@@ -1313,6 +1283,7 @@ test('pull wont forward pull to a room that is closed', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
+    // eslint-disable-next-line require-await
     authHandler: async (auth, roomID) => {
       expect(auth).toEqual(testAuth);
       expect(roomID).toEqual(testRoomID);
@@ -1370,6 +1341,7 @@ test('pull returns a 401 without calling Room DO if authHandler rejects', async 
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
+    // eslint-disable-next-line require-await
     authHandler: async (auth, roomID) => {
       expect(auth).toEqual(testAuth);
       expect(roomID).toEqual(testRoomID);
@@ -1412,9 +1384,9 @@ test('pull returns a 401 without calling Room DO if Authorization header is not 
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async (_auth, _roomID) => {
-      throw new Error('Unexpected call to authHandler');
-    },
+    // eslint-disable-next-line require-await
+    authHandler: () =>
+      Promise.reject(new Error('Unexpected call to authHandler')),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -1482,9 +1454,8 @@ test('authInvalidateForUser when requests to roomDOs are successful', async () =
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async (_auth, _roomID) => {
-      throw new Error('Unexpected call to authHandler');
-    },
+    authHandler: () =>
+      Promise.reject(new Error('Unexpected call to authHandler')),
     authApiKey: TEST_AUTH_API_KEY,
     logSink,
     logLevel: 'debug',
@@ -1563,9 +1534,9 @@ test('authInvalidateForUser when connection ids have chars that need to be perce
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async (_auth, _roomID) => {
-      throw new Error('Unexpected call to authHandler');
-    },
+    // eslint-disable-next-line require-await
+    authHandler: () =>
+      Promise.reject(new Error('Unexpected call to authHandler')),
     authApiKey: TEST_AUTH_API_KEY,
     logSink,
     logLevel: 'debug',
@@ -1641,9 +1612,8 @@ test('authInvalidateForUser when any request to roomDOs returns error response',
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async (_auth, _roomID) => {
-      throw new Error('Unexpected call to authHandler');
-    },
+    authHandler: () =>
+      Promise.reject(new Error('Unexpected call to authHandler')),
     authApiKey: TEST_AUTH_API_KEY,
     logSink,
     logLevel: 'debug',
@@ -1686,6 +1656,7 @@ test('authInvalidateForRoom when request to roomDO is successful', async () => {
     ...createTestDurableObjectNamespace(),
     get: (id: DurableObjectId) => {
       gotObjectId = id;
+      // eslint-disable-next-line require-await
       return new TestDurableObjectStub(id, async (request: Request) => {
         if (isAuthRequest(request)) {
           roomDORequestCount++;
@@ -1698,9 +1669,8 @@ test('authInvalidateForRoom when request to roomDO is successful', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async (_auth, _roomID) => {
-      throw new Error('Unexpected call to authHandler');
-    },
+    authHandler: () =>
+      Promise.reject(new Error('Unexpected call to authHandler')),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -1750,6 +1720,7 @@ test('authInvalidateForRoom when request to roomDO returns error response', asyn
     ...createTestDurableObjectNamespace(),
     get: (id: DurableObjectId) => {
       gotObjectId = id;
+      // eslint-disable-next-line require-await
       return new TestDurableObjectStub(id, async (request: Request) => {
         if (isAuthRequest(request)) {
           roomDORequestCount++;
@@ -1767,9 +1738,8 @@ test('authInvalidateForRoom when request to roomDO returns error response', asyn
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async (_auth, _roomID) => {
-      throw new Error('Unexpected call to authHandler');
-    },
+    authHandler: () =>
+      Promise.reject(new Error('Unexpected call to authHandler')),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -1844,9 +1814,8 @@ test('authInvalidateAll when requests to roomDOs are successful', async () => {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async (_auth, _roomID) => {
-      throw new Error('Unexpected call to authHandler');
-    },
+    authHandler: () =>
+      Promise.reject(new Error('Unexpected call to authHandler')),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -1928,9 +1897,8 @@ test('authInvalidateAll when any request to roomDOs returns error response', asy
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async (_auth, _roomID) => {
-      throw new Error('Unexpected call to authHandler');
-    },
+    authHandler: () =>
+      Promise.reject(new Error('Unexpected call to authHandler')),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -2028,9 +1996,8 @@ async function createRevalidateConnectionsTestFixture() {
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async (_auth, _roomID) => {
-      throw new Error('Unexpected call to authHandler');
-    },
+    authHandler: () =>
+      Promise.reject(new Error('Unexpected call to authHandler')),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
@@ -2155,9 +2122,8 @@ test('revalidateConnections continues if one roomDO returns an error', async () 
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
-    authHandler: async (_auth, _roomID) => {
-      throw new Error('Unexpected call to authHandler');
-    },
+    authHandler: () =>
+      Promise.reject(new Error('Unexpected call to authHandler')),
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',

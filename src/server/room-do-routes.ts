@@ -38,10 +38,9 @@ routes.push({
     router.post(
       deletePath,
       requireAuthAPIKeyMatches(authApiKey),
-      async (_: RociRequest) => {
-        // TODO should plumb a LogContext in here.
-        return roomDO.deleteAllData();
-      },
+      (_: RociRequest) =>
+        // TODO: should plumb a LogContext in here.
+        roomDO.deleteAllData(),
     );
   },
 });

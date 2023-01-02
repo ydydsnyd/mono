@@ -139,7 +139,7 @@ test('deleteAllData 401s if wrong auth api key', async () => {
   expect(response.status).toBe(401);
 });
 
-test('Logs version during construction', async () => {
+test('Logs version during construction', () => {
   const testLogSink = new TestLogSink();
   new BaseRoomDO({
     mutators: {},
@@ -159,7 +159,7 @@ test('Logs version during construction', async () => {
   expect(testLogSink.messages[1][4]).toMatch(/^\d+\.\d+\.\d+/);
 });
 
-test('Sets turn duration based on allowUnconfirmedWrites flag', async () => {
+test('Sets turn duration based on allowUnconfirmedWrites flag', () => {
   const cases: {allowUnconfirmed: boolean; turnDuration: number}[] = [
     {allowUnconfirmed: true, turnDuration: 1000 / 60},
     {allowUnconfirmed: false, turnDuration: 1000 / 15},

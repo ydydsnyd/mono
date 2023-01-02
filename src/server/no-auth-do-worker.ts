@@ -18,38 +18,24 @@ export function createNoAuthDOWorker<Env extends BaseNoAuthDOWorkerEnv>(
 ): ExportedHandler<Env> {
   const {getLogSink, getLogLevel, authHandler} = options;
   return {
-    fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
-      return withLogContext(
-        env,
-        ctx,
-        getLogSink,
-        getLogLevel,
-        (lc: LogContext) => fetch(request, lc, env.roomDO, authHandler),
-      );
-    },
-    scheduled: async (
+    fetch: (request: Request, env: Env, ctx: ExecutionContext) =>
+      withLogContext(env, ctx, getLogSink, getLogLevel, (lc: LogContext) =>
+        fetch(request, lc, env.roomDO, authHandler),
+      ),
+    scheduled: (
       _controller: ScheduledController,
       env: Env,
       ctx: ExecutionContext,
-    ) => {
-      return withLogContext(
-        env,
-        ctx,
-        getLogSink,
-        getLogLevel,
-        (lc: LogContext) => scheduled(env, lc),
-      );
-    },
+    ) =>
+      withLogContext(env, ctx, getLogSink, getLogLevel, (lc: LogContext) =>
+        scheduled(env, lc),
+      ),
   };
 }
 
-async function scheduled(
-  _env: BaseNoAuthDOWorkerEnv,
-  lc: LogContext,
-): Promise<void> {
+function scheduled(_env: BaseNoAuthDOWorkerEnv, lc: LogContext): void {
   lc = lc.addContext('scheduled', randomID());
   lc.info?.('Ignoring scheduled event because not configured with AuthDO');
-  return;
 }
 
 async function fetch(
@@ -160,7 +146,7 @@ async function withLogContext<Env extends BaseNoAuthDOWorkerEnv, R>(
   ctx: ExecutionContext,
   getLogSink: (env: Env) => LogSink,
   getLogLevel: (env: Env) => LogLevel,
-  fn: (lc: LogContext) => Promise<R>,
+  fn: (lc: LogContext) => Promise<R> | R,
 ): Promise<R> {
   const logSink = getLogSink(env);
   const lc = new LogContext(getLogLevel(env), logSink).addContext('Worker');
