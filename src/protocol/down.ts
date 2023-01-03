@@ -1,8 +1,8 @@
 import * as s from 'superstruct';
-import {connectedMessageSchema} from './connected';
-import {errorMessageSchema} from './error';
-import {pokeMessageSchema} from './poke';
-import {pongMessageSchema} from './pong';
+import {connectedMessageSchema} from './connected.js';
+import {errorMessageSchema} from './error.js';
+import {pokeMessageSchema} from './poke.js';
+import {pongMessageSchema} from './pong.js';
 
 export const downstreamSchema = s.union([
   connectedMessageSchema,

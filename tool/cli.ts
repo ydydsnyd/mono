@@ -5,9 +5,9 @@ import {
   DONamespaces,
   listDOInstances,
   listDONamespaces,
-} from 'src/cloudflare/api';
-import {roomRecordsPath} from 'src/server/auth-do-routes';
-import type {RoomRecord} from 'src/server/rooms';
+} from 'src/cloudflare/api.js';
+import {roomRecordsPath} from 'src/server/auth-do-routes.js';
+import type {RoomRecord} from 'src/server/rooms.js';
 
 // FYI argv[0] is node.
 if (process.argv.length < 3) {

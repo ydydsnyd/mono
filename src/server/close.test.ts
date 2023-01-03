@@ -1,6 +1,6 @@
 import {test, expect} from '@jest/globals';
-import {createSilentLogContext, Mocket} from '../util/test-utils';
-import {handleClose} from './close';
+import {createSilentLogContext, Mocket} from '../util/test-utils.js';
+import {handleClose} from './close.js';
 
 test('handleClose deletes client map entry for client id if socket matches', () => {
   const lc = createSilentLogContext();

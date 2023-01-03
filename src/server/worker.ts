@@ -1,10 +1,10 @@
 import {LogContext, LogSink, LogLevel} from '@rocicorp/logger';
 import {Router} from 'itty-router';
-import {randomID} from '../util/rand';
-import {createAuthAPIHeaders} from './auth-api-headers';
-import {dispatch, paths} from './dispatch';
-import {paths as authDOPaths} from './auth-do-routes';
-import {RociRequest, requireAuthAPIKeyMatchesEnv} from './middleware';
+import {randomID} from '../util/rand.js';
+import {createAuthAPIHeaders} from './auth-api-headers.js';
+import {dispatch, paths} from './dispatch.js';
+import {paths as authDOPaths} from './auth-do-routes.js';
+import {RociRequest, requireAuthAPIKeyMatchesEnv} from './middleware.js';
 
 export interface WorkerOptions<Env extends BaseWorkerEnv> {
   getLogSink: (env: Env) => LogSink;

@@ -1,4 +1,5 @@
-import * as s from 'superstruct';
+import type * as s from 'superstruct';
+import {assert} from 'superstruct';
 
 export function superstructAssert<T, S>(
   value: unknown,
@@ -7,7 +8,7 @@ export function superstructAssert<T, S>(
   if (typeof MINIFLARE !== 'undefined') {
     // TODO(greg): figure out how to detect when running
     // on `wrangler dev` and assert there as well.
-    s.assert(value, struct);
+    assert(value, struct);
   }
 }
 

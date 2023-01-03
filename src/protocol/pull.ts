@@ -1,4 +1,4 @@
-import {nullableVersionSchema, versionSchema} from '../types/version';
+import {nullableVersionSchema, versionSchema} from '../types/version.js';
 import * as s from 'superstruct';
 
 export const pullRequestSchema = s.type({

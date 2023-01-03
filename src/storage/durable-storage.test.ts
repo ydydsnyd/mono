@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {expect, test} from '@jest/globals';
 import * as s from 'superstruct';
-import {DurableStorage} from './durable-storage';
-import type {ListOptions} from './storage';
+import {DurableStorage} from './durable-storage.js';
+import type {ListOptions} from './storage.js';
 
 test('list', async () => {
   type Case = {

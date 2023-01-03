@@ -1,10 +1,10 @@
 import {test, expect} from '@jest/globals';
-import {ClientRecordMap, putClientRecord} from '../types/client-record';
-import {DurableStorage} from '../storage/durable-storage';
-import {NullableVersion, putVersion} from '../types/version';
-import {handlePull} from './pull';
-import type {PullRequest, PullResponse} from '../protocol/pull';
-import {clientRecord} from '../util/test-utils';
+import {ClientRecordMap, putClientRecord} from '../types/client-record.js';
+import {DurableStorage} from '../storage/durable-storage.js';
+import {NullableVersion, putVersion} from '../types/version.js';
+import {handlePull} from './pull.js';
+import type {PullRequest, PullResponse} from '../protocol/pull.js';
+import {clientRecord} from '../util/test-utils.js';
 
 const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();

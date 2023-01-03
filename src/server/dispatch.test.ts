@@ -2,12 +2,12 @@ import {test, expect} from '@jest/globals';
 import type {
   InvalidateForRoomRequest,
   InvalidateForUserRequest,
-} from '../protocol/api/auth';
+} from '../protocol/api/auth.js';
 import type {LogContext} from '@rocicorp/logger';
-import {createAuthAPIHeaders} from './auth-api-headers';
-import {dispatch, Handlers} from './dispatch';
-import {createSilentLogContext} from '../util/test-utils';
-import type {PullRequest} from '../protocol/pull';
+import {createAuthAPIHeaders} from './auth-api-headers.js';
+import {dispatch, Handlers} from './dispatch.js';
+import {createSilentLogContext} from '../util/test-utils.js';
+import type {PullRequest} from '../protocol/pull.js';
 
 const testAuthApiKey = 'TEST_REFLECT_AUTH_API_KEY_TEST';
 

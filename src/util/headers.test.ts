@@ -1,5 +1,5 @@
 import {test, expect} from '@jest/globals';
-import {decodeHeaderValue, encodeHeaderValue} from './headers';
+import {decodeHeaderValue, encodeHeaderValue} from './headers.js';
 
 function testEncodeDecodeHeaderValue(value: string, expected: string): void {
   const encoded = encodeHeaderValue(value);

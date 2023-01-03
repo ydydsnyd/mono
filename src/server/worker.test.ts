@@ -14,7 +14,7 @@ import {
   TestDurableObjectId,
   TestDurableObjectStub,
 } from './do-test-utils.js';
-import {BaseWorkerEnv, createWorker} from './worker';
+import {BaseWorkerEnv, createWorker} from './worker.js';
 
 const TEST_AUTH_API_KEY = 'TEST_REFLECT_AUTH_API_KEY_TEST';
 

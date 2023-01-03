@@ -1,5 +1,5 @@
 import * as s from 'superstruct';
-import {jsonSchema} from './json';
+import {jsonSchema} from './json.js';
 
 export const mutationSchema = s.type({
   id: s.number(),

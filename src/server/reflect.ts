@@ -1,11 +1,11 @@
 import type {MutatorDefs} from 'replicache';
 import {consoleLogSink, LogSink, LogLevel, TeeLogSink} from '@rocicorp/logger';
-import type {AuthHandler} from './auth';
-import {BaseAuthDO} from './auth-do';
-import {BaseRoomDO} from './room-do';
-import {createWorker} from './worker';
-import type {DisconnectHandler} from './disconnect';
-import {createNoAuthDOWorker} from './no-auth-do-worker';
+import type {AuthHandler} from './auth.js';
+import {BaseAuthDO} from './auth-do.js';
+import {BaseRoomDO} from './room-do.js';
+import {createWorker} from './worker.js';
+import type {DisconnectHandler} from './disconnect.js';
+import {createNoAuthDOWorker} from './no-auth-do-worker.js';
 
 export interface ReflectServerOptions<
   Env extends ReflectServerBaseEnv,

@@ -1,5 +1,5 @@
-import type {ClientMap, ClientState} from '../types/client-state';
-import type {ConnectionsResponse} from '../protocol/api/auth';
+import type {ClientMap, ClientState} from '../types/client-state.js';
+import type {ConnectionsResponse} from '../protocol/api/auth.js';
 
 export function getConnections(clients: ClientMap): ConnectionsResponse {
   const connections: ConnectionsResponse = [];

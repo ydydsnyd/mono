@@ -1,6 +1,6 @@
 import {test, expect} from '@jest/globals';
-import type {JSONType} from '../../src/protocol/json';
-import {deepClone} from '../../src/util/deep-clone';
+import type {JSONType} from '../../src/protocol/json.js';
+import {deepClone} from '../../src/util/deep-clone.js';
 
 test('deepClone', () => {
   const t = (v: JSONType) => {

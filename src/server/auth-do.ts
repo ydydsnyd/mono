@@ -22,7 +22,7 @@ import {
   InvalidateForRoomRequest,
   InvalidateForUserRequest,
 } from '../protocol/api/auth.js';
-import * as s from 'superstruct';
+import {assert} from 'superstruct';
 import {createAuthAPIHeaders} from './auth-api-headers.js';
 import {DurableStorage} from '../storage/durable-storage.js';
 import type {JSONValue} from 'replicache';
@@ -514,7 +514,7 @@ export class BaseAuthDO implements DurableObject {
         let connectionsResponse: ConnectionsResponse | undefined;
         try {
           const responseJSON = await response.json();
-          s.assert(responseJSON, connectionsResponseSchema);
+          assert(responseJSON, connectionsResponseSchema);
           connectionsResponse = responseJSON;
         } catch (e) {
           lc.error?.(`Bad ${paths.authConnections} response from roomDO`, e);

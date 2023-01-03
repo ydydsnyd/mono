@@ -4,10 +4,10 @@ import {
   forgetRoomPath,
   migrateRoomPath,
   roomStatusByRoomIDPath,
-} from '../server/auth-do-routes';
-import {createAuthAPIHeaders} from '../server/auth-api-headers';
-import type {RoomStatus} from '../server/rooms';
-import type {CreateRoomRequest} from 'src/protocol/api/room';
+} from '../server/auth-do-routes.js';
+import {createAuthAPIHeaders} from '../server/auth-api-headers.js';
+import type {RoomStatus} from '../server/rooms.js';
+import type {CreateRoomRequest} from 'src/protocol/api/room.js';
 
 /**
  * createRoom creates a new room with the given roomID. If the room already

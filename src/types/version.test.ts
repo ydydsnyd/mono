@@ -1,5 +1,5 @@
 import {test, expect} from '@jest/globals';
-import {compareVersions} from './version';
+import {compareVersions} from './version.js';
 
 test('compareVersion', () => {
   expect(compareVersions(null, null)).toBe(0);

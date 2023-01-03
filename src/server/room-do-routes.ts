@@ -1,5 +1,9 @@
-import type {BaseRoomDO} from './room-do';
-import {RociRequest, RociRouter, requireAuthAPIKeyMatches} from './middleware';
+import type {BaseRoomDO} from './room-do.js';
+import {
+  RociRequest,
+  RociRouter,
+  requireAuthAPIKeyMatches,
+} from './middleware.js';
 import type {MutatorDefs} from 'replicache';
 
 type Route = {

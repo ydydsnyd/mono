@@ -1,5 +1,9 @@
-import type {BaseAuthDO} from './auth-do';
-import {RociRequest, RociRouter, requireAuthAPIKeyMatches} from './middleware';
+import type {BaseAuthDO} from './auth-do.js';
+import {
+  RociRequest,
+  RociRouter,
+  requireAuthAPIKeyMatches,
+} from './middleware.js';
 
 type Route = {
   path: string;

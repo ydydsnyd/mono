@@ -6,9 +6,9 @@ import type {LogContext} from '@rocicorp/logger';
 import {
   getConnectedClients,
   putConnectedClients,
-} from '../types/connected-clients';
+} from '../types/connected-clients.js';
 import type {DisconnectHandler} from '../server/disconnect.js';
-import type {ClientID} from '../types/client-state';
+import type {ClientID} from '../types/client-state.js';
 
 export async function processDisconnects(
   lc: LogContext,

@@ -1,8 +1,8 @@
 import {test, expect} from '@jest/globals';
-import {DurableStorage} from './durable-storage';
-import {EntryCache} from './entry-cache';
+import {DurableStorage} from './durable-storage.js';
+import {EntryCache} from './entry-cache.js';
 import * as s from 'superstruct';
-import type {ListOptions} from './storage';
+import type {ListOptions} from './storage.js';
 
 test('list', async () => {
   type Case = {

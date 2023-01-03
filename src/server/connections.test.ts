@@ -1,7 +1,7 @@
 import {test, expect} from '@jest/globals';
-import type {ClientState} from '../types/client-state';
-import {client, Mocket} from '../util/test-utils';
-import {closeConnections, getConnections} from './connections';
+import type {ClientState} from '../types/client-state.js';
+import {client, Mocket} from '../util/test-utils.js';
+import {closeConnections, getConnections} from './connections.js';
 
 test('closeConnections', () => {
   const clients = new Map([

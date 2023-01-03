@@ -3,11 +3,14 @@ import {
   invalidateForRoomRequestSchema,
   InvalidateForUserRequest,
   invalidateForUserRequestSchema,
-} from '../protocol/api/auth';
+} from '../protocol/api/auth.js';
 import {Struct, validate} from 'superstruct';
 import type {LogContext} from '@rocicorp/logger';
-import {CreateRoomRequest, createRoomRequestSchema} from '../protocol/api/room';
-import {PullRequest, pullRequestSchema} from '../protocol/pull';
+import {
+  CreateRoomRequest,
+  createRoomRequestSchema,
+} from '../protocol/api/room.js';
+import {PullRequest, pullRequestSchema} from '../protocol/pull.js';
 
 export type Handler<T = undefined> = (
   this: Handlers,

@@ -4,7 +4,7 @@ import type * as s from 'superstruct';
 import {
   superstructAssert,
   superstructAssertMapValues,
-} from '../util/superstruct';
+} from '../util/superstruct.js';
 
 export async function getEntry<T extends JSONValue>(
   durable: DurableObjectStorage,

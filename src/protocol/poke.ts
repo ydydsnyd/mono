@@ -1,6 +1,6 @@
-import {nullableVersionSchema, versionSchema} from '../types/version';
+import {nullableVersionSchema, versionSchema} from '../types/version.js';
 import * as s from 'superstruct';
-import {jsonSchema} from './json';
+import {jsonSchema} from './json.js';
 
 export const putOpSchema = s.type({
   op: s.literal('put'),

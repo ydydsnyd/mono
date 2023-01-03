@@ -1,8 +1,8 @@
-import {compareVersions, getVersion} from '../types/version';
-import type {PullRequest, PullResponse} from '../protocol/pull';
-import {listClientRecords} from '../types/client-record';
-import type {DurableStorage} from '../storage/durable-storage';
-import type {ClientID} from '../types/client-state';
+import {compareVersions, getVersion} from '../types/version.js';
+import type {PullRequest, PullResponse} from '../protocol/pull.js';
+import {listClientRecords} from '../types/client-record.js';
+import type {DurableStorage} from '../storage/durable-storage.js';
+import type {ClientID} from '../types/client-state.js';
 
 export async function handlePull(
   storage: DurableStorage,

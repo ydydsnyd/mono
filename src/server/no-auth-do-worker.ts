@@ -1,7 +1,7 @@
 import {LogContext, LogSink, LogLevel} from '@rocicorp/logger';
-import {encodeHeaderValue} from '../util/headers';
-import {randomID} from '../util/rand';
-import {AuthHandler, UserData, USER_DATA_HEADER_NAME} from './auth';
+import {encodeHeaderValue} from '../util/headers.js';
+import {randomID} from '../util/rand.js';
+import {AuthHandler, UserData, USER_DATA_HEADER_NAME} from './auth.js';
 
 export interface NoAuthDOWorkerOptions<Env extends BaseNoAuthDOWorkerEnv> {
   getLogSink: (env: Env) => LogSink;
