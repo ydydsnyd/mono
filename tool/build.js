@@ -2,10 +2,14 @@
 
 import * as esbuild from 'esbuild';
 import {makeDefine} from './make-define.js';
+import {writeFile} from 'fs/promises';
 
 const forBundleSizeDashboard = process.argv.includes('--bundle-sizes');
 const perf = process.argv.includes('--perf');
 const debug = process.argv.includes('--debug');
+
+// You can then visualize the metafile at https://esbuild.github.io/analyze/
+const metafile = process.argv.includes('--metafile');
 
 /**
  * @param {boolean} minify
@@ -44,7 +48,7 @@ function sharedOptions(minify) {
  */
 async function buildReplicache(options) {
   const {ext, mode, ...restOfOptions} = options;
-  await esbuild.build({
+  const result = await esbuild.build({
     ...sharedOptions(options.minify),
     ...restOfOptions,
     // Use neutral to remove the automatic define for process.env.NODE_ENV
@@ -52,7 +56,14 @@ async function buildReplicache(options) {
     outfile: 'out/replicache.' + ext,
     entryPoints: ['src/mod.ts'],
     define: await makeDefine(mode),
+    metafile,
   });
+  if (metafile) {
+    await writeFile(
+      'out/replicache.' + ext + '.meta.json',
+      JSON.stringify(result.metafile),
+    );
+  }
 }
 
 /**
