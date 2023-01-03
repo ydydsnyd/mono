@@ -1,4 +1,4 @@
-import {readFile} from 'fs/promises';
+import {readPackageJSON} from './read-package-json.js';
 
 /**
  * @param {'debug'|'release'|'unknown'} mode
@@ -16,10 +16,4 @@ export async function makeDefine(mode) {
     ...define,
     'process.env.NODE_ENV': mode === 'debug' ? '"development"' : '"production"',
   };
-}
-
-async function readPackageJSON() {
-  const url = new URL('../package.json', import.meta.url);
-  const s = await readFile(url, 'utf-8');
-  return JSON.parse(s);
 }

@@ -1,13 +1,13 @@
 // @ts-check
 
 import * as esbuild from 'esbuild';
-import {makeDefine} from './make-define.js';
 import {writeFile} from 'fs/promises';
+import {makeDefine} from './make-define.js';
+import {readPackageJSON} from './read-package-json.js';
 
 const forBundleSizeDashboard = process.argv.includes('--bundle-sizes');
 const perf = process.argv.includes('--perf');
 const debug = process.argv.includes('--debug');
-
 // You can then visualize the metafile at https://esbuild.github.io/analyze/
 const metafile = process.argv.includes('--metafile');
 
@@ -105,8 +105,13 @@ if (perf) {
   ]);
 } else {
   let opts = {};
-  if (debug) {
+  if (debug || (await isPrivateRocicorpPackage())) {
     opts = {minify: false};
   }
   await Promise.all([buildMJS(opts), buildCJS(opts), buildCLI()]);
+}
+
+async function isPrivateRocicorpPackage() {
+  const packageJSON = await readPackageJSON();
+  return !!packageJSON.private && packageJSON.name.startsWith('@rocicorp/');
 }
