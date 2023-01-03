@@ -57,6 +57,7 @@ async function buildReplicache(options) {
     entryPoints: ['src/mod.ts'],
     define: await makeDefine(mode),
     metafile,
+    sourcemap: true,
   });
   if (metafile) {
     await writeFile(
