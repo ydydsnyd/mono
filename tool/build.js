@@ -105,13 +105,13 @@ if (perf) {
   ]);
 } else {
   let opts = {};
-  if (debug || (await isPrivateRocicorpPackage())) {
+  if (debug || (await isRocicorpPackage())) {
     opts = {minify: false};
   }
   await Promise.all([buildMJS(opts), buildCJS(opts), buildCLI()]);
 }
 
-async function isPrivateRocicorpPackage() {
+async function isRocicorpPackage() {
   const packageJSON = await readPackageJSON();
-  return !!packageJSON.private && packageJSON.name.startsWith('@rocicorp/');
+  return packageJSON.name.startsWith('@rocicorp/');
 }

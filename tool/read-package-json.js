@@ -7,7 +7,6 @@ import {readFile} from 'fs/promises';
  *   [key: string]: any;
  *   name: string;
  *   version: string;
- *   private?: boolean;
  * }} PackageJSON
  */
 
