@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1672741909179,
+  "lastUpdate": 1672742666536,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -35417,6 +35417,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/e1bff628c2c06395733addc2e8fc66d08fd7b602"
         },
         "date": 1672741900648,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 242509,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40337,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 241308,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 39996,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 97427,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27319,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "65c8ef66c06eb3a02f4d6e36e68601ca274461c5",
+          "message": "chore: Add support for building private package (#511)\n\nThe idea is to use a branch for a `@rocicorp/replicache` package. This\r\nbranch has a different npm name and the npm package is marked as\r\nprivate. When build runs it checks the package.json to determine if it\r\nshould minimize the output files.\r\n\r\nTowards #325",
+          "timestamp": "2023-01-03T10:43:21Z",
+          "tree_id": "67f10d83f17ba6c9ead1a09f7793c1229451b45a",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/65c8ef66c06eb3a02f4d6e36e68601ca274461c5"
+        },
+        "date": 1672742658466,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
