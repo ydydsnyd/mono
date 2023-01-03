@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1672739687317,
+  "lastUpdate": 1672741909179,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -35393,6 +35393,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27258,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e1bff628c2c06395733addc2e8fc66d08fd7b602",
+          "message": "chore: Build sourcemaps again (#510)\n\nThe building of sourcemaps was accidentally removed in\r\nef29023734ac318beb6c3c9ee0f4adbbb57d0d7f\r\n\r\nWe should always build sourcemaps but we only include them in the\r\nprivate `@rocicorp/replicache` npm package.\r\n\r\nTowards #325",
+          "timestamp": "2023-01-03T10:30:44Z",
+          "tree_id": "7adac1e20d5adaefebe7241d25c94ddb7a3daeb8",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/e1bff628c2c06395733addc2e8fc66d08fd7b602"
+        },
+        "date": 1672741900648,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 242509,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40337,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 241308,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 39996,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 97427,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27319,
             "unit": "bytes"
           }
         ]
