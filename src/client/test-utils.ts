@@ -70,11 +70,6 @@ export class TestReflect<MD extends MutatorDefs> extends Reflect<MD> {
     return this._pusher;
   }
 
-  get puller() {
-    // @ts-expect-error Property '_puller' is private
-    return this._puller;
-  }
-
   async waitForSocket(clock: SinonFakeTimers): Promise<WebSocket> {
     for (let i = 0; i < 100; i++) {
       if (this._socket) {
