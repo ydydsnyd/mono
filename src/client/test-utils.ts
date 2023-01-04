@@ -1,8 +1,8 @@
 import type {MutatorDefs} from 'replicache';
 import type {SinonFakeTimers} from 'sinon';
-import type {ConnectedMessage} from '../protocol/connected';
-import type {PongMessage} from '../protocol/pong';
-import type {ReflectOptions} from './options';
+import type {ConnectedMessage} from '../protocol/connected.js';
+import type {PongMessage} from '../protocol/pong.js';
+import type {ReflectOptions} from './options.js';
 import {Reflect} from './reflect.js';
 
 export async function tickAFewTimes(clock: SinonFakeTimers, duration = 100) {

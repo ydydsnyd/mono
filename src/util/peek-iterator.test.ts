@@ -1,4 +1,4 @@
-import {PeekIterator} from '../../src/util/peek-iterator';
+import {PeekIterator} from '../../src/util/peek-iterator.js';
 import {expect} from '@esm-bundle/chai';
 
 test('PeekIterator', () => {
