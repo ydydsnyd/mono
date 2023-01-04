@@ -193,7 +193,7 @@ export class Reflect<MD extends MutatorDefs> {
    * If an error occurs in the `body` the `onError` function is called if
    * present. Otherwise, the error is thrown.
    */
-  subscribe<R extends ReadonlyJSONValue | undefined, E>(
+  subscribe<R extends ReadonlyJSONValue | undefined>(
     body: (tx: ReadTransaction) => Promise<R>,
     {
       onData,
@@ -201,7 +201,7 @@ export class Reflect<MD extends MutatorDefs> {
       onDone,
     }: {
       onData: (result: R) => void;
-      onError?: (error: E) => void;
+      onError?: (error: unknown) => void;
       onDone?: () => void;
     },
   ): () => void {
