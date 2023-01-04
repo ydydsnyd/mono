@@ -25,7 +25,7 @@ export function internalDeepClone(
       }
       seen.push(value);
       if (Array.isArray(value)) {
-        const rv = value.map((v) => internalDeepClone(v, seen));
+        const rv = value.map(v => internalDeepClone(v, seen));
         seen.pop();
         return rv;
       }

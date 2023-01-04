@@ -21,7 +21,7 @@ test('onOnlineChange callback', async () => {
   let offlineCount = 0;
 
   const r = reflectForTest({
-    onOnlineChange: (online) => {
+    onOnlineChange: online => {
       if (online) {
         onlineCount++;
       } else {

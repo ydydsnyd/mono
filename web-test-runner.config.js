@@ -30,7 +30,7 @@ const config = {
   },
   files: ['src/**/*.test.ts'],
   browsers: [firefox, chromium, webkit],
-  testRunnerHtml: (testFramework) =>
+  testRunnerHtml: testFramework =>
     `<!doctype html>
       <html>
       <body>
