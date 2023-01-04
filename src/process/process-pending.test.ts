@@ -3,23 +3,22 @@ import type {WriteTransaction} from 'replicache';
 import type {PokeBody} from '../../src/protocol/poke.js';
 import {DurableStorage} from '../../src/storage/durable-storage.js';
 import {
-  ClientRecordMap,
+  ClientRecord,
   getClientRecord,
   putClientRecord,
 } from '../../src/types/client-record.js';
-import type {ClientMap} from '../../src/types/client-state.js';
+import type {ClientID, ClientMap} from '../../src/types/client-state.js';
 import {getUserValue, UserValue} from '../../src/types/user-value.js';
 import {getVersion, putVersion, Version} from '../../src/types/version.js';
 import {
   client,
-  mutation,
   clientRecord,
   createSilentLogContext,
   fail,
   Mocket,
+  mutation,
 } from '../util/test-utils.js';
 import {processPending} from '../../src/process/process-pending.js';
-import type {PendingMutationMap} from 'src/types/mutation.js';
 
 const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();
@@ -28,43 +27,39 @@ test('processPending', async () => {
   type Case = {
     name: string;
     version: Version;
-    clientRecords: ClientRecordMap;
+    clientRecords: Map<ClientID, ClientRecord>;
     clients: ClientMap;
-    pendingMutations: PendingMutationMap;
     expectedError?: string;
     expectedClients: ClientMap;
     expectedVersion: Version;
     expectedPokes?: Map<Mocket, PokeBody[]>;
     expectedUserValues?: Map<string, UserValue>;
-    expectedClientRecords?: ClientRecordMap;
+    expectedClientRecords?: Map<ClientID, ClientRecord>;
   };
 
   const s1 = new Mocket();
   const s2 = new Mocket();
-  const s3 = new Mocket();
 
   const cases: Case[] = [
     {
       name: 'none pending',
       version: 1,
-      clientRecords: new Map([['c1', clientRecord('cg1', 1)]]),
+      clientRecords: new Map([['c1', clientRecord(1)]]),
       clients: new Map(),
-      pendingMutations: new Map(),
       expectedClients: new Map(),
       expectedVersion: 1,
       expectedPokes: new Map(),
       expectedUserValues: new Map(),
-      expectedClientRecords: new Map([['c1', clientRecord('cg1', 1)]]),
+      expectedClientRecords: new Map([['c1', clientRecord(1)]]),
     },
     {
       name: 'one client, one mutation',
       version: 1,
-      clientRecords: new Map([['c1', clientRecord('cg1', 1)]]),
-      clients: new Map([client('c1', 'u1', 'cg1', s1, 0)]),
-      pendingMutations: new Map([
-        ['cg1', [mutation('c1', 2, 'inc', null, 100)]],
+      clientRecords: new Map([['c1', clientRecord(1)]]),
+      clients: new Map([
+        client('c1', 'u1', s1, 0, mutation(2, 'inc', null, 100)),
       ]),
-      expectedClients: new Map([client('c1', 'u1', 'cg1', s1, 0)]),
+      expectedClients: new Map([client('c1', 'u1', s1, 0)]),
       expectedVersion: 2,
       expectedPokes: new Map([
         [
@@ -73,7 +68,7 @@ test('processPending', async () => {
             {
               baseCookie: 1,
               cookie: 2,
-              lastMutationIDChanges: {c1: 2},
+              lastMutationID: 2,
               patch: [
                 {
                   op: 'put',
@@ -89,35 +84,22 @@ test('processPending', async () => {
       expectedUserValues: new Map([
         ['count', {value: 1, version: 2, deleted: false}],
       ]),
-      expectedClientRecords: new Map([['c1', clientRecord('cg1', 2, 2, 2)]]),
+      expectedClientRecords: new Map([['c1', clientRecord(2, 2)]]),
     },
     {
-      name: 'three clients, two client groups, three mutations',
+      name: 'two clients, two mutations',
       version: 1,
       clientRecords: new Map([
-        ['c1', clientRecord('cg1', 1)],
-        ['c2', clientRecord('cg1', 1)],
-        ['c3', clientRecord('cg2', 1)],
+        ['c1', clientRecord(1)],
+        ['c2', clientRecord(1)],
       ]),
       clients: new Map([
-        client('c1', 'u1', 'cg1', s1, 0),
-        client('c2', 'u2', 'cg1', s2, 0),
-        client('c3', 'u3', 'cg2', s3, 0),
-      ]),
-      pendingMutations: new Map([
-        [
-          'cg1',
-          [
-            mutation('c1', 2, 'inc', null, 100),
-            mutation('c2', 2, 'inc', null, 120),
-          ],
-        ],
-        ['cg2', [mutation('c3', 2, 'inc', null, 140)]],
+        client('c1', 'u1', s1, 0, mutation(2, 'inc', null, 100)),
+        client('c2', 'u2', s2, 0, mutation(2, 'inc', null, 120)),
       ]),
       expectedClients: new Map([
-        client('c1', 'u1', 'cg1', s1, 0),
-        client('c2', 'u2', 'cg1', s2, 0),
-        client('c3', 'u3', 'cg2', s3, 0),
+        client('c1', 'u1', s1, 0),
+        client('c2', 'u2', s2, 0),
       ]),
       expectedVersion: 2,
       expectedPokes: new Map([
@@ -127,12 +109,12 @@ test('processPending', async () => {
             {
               baseCookie: 1,
               cookie: 2,
-              lastMutationIDChanges: {c1: 2, c2: 2},
+              lastMutationID: 2,
               patch: [
                 {
                   op: 'put',
                   key: 'count',
-                  value: 3,
+                  value: 2,
                 },
               ],
               timestamp: 100,
@@ -145,30 +127,12 @@ test('processPending', async () => {
             {
               baseCookie: 1,
               cookie: 2,
-              lastMutationIDChanges: {c1: 2, c2: 2},
+              lastMutationID: 2,
               patch: [
                 {
                   op: 'put',
                   key: 'count',
-                  value: 3,
-                },
-              ],
-              timestamp: 100,
-            },
-          ],
-        ],
-        [
-          s3,
-          [
-            {
-              baseCookie: 1,
-              cookie: 2,
-              lastMutationIDChanges: {c3: 2},
-              patch: [
-                {
-                  op: 'put',
-                  key: 'count',
-                  value: 3,
+                  value: 2,
                 },
               ],
               timestamp: 100,
@@ -177,12 +141,73 @@ test('processPending', async () => {
         ],
       ]),
       expectedUserValues: new Map([
-        ['count', {value: 3, version: 2, deleted: false}],
+        ['count', {value: 2, version: 2, deleted: false}],
       ]),
       expectedClientRecords: new Map([
-        ['c1', clientRecord('cg1', 2, 2, 2)],
-        ['c2', clientRecord('cg1', 2, 2, 2)],
-        ['c3', clientRecord('cg2', 2, 2, 2)],
+        ['c1', clientRecord(2, 2)],
+        ['c2', clientRecord(2, 2)],
+      ]),
+    },
+    {
+      name: 'two clients, two mutations, one not ready',
+      version: 1,
+      clientRecords: new Map([
+        ['c1', clientRecord(1)],
+        ['c2', clientRecord(1)],
+      ]),
+      clients: new Map([
+        client('c1', 'u1', s1, 0, mutation(2, 'inc', null, 100)),
+        client('c2', 'u2', s2, 0, mutation(2, 'inc', null, 300)),
+      ]),
+      expectedClients: new Map([
+        client('c1', 'u1', s1, 0),
+        client('c2', 'u2', s2, 0),
+      ]),
+      expectedVersion: 2,
+      expectedPokes: new Map([
+        [
+          s1,
+          [
+            {
+              baseCookie: 1,
+              cookie: 2,
+              lastMutationID: 2,
+              patch: [
+                {
+                  op: 'put',
+                  key: 'count',
+                  value: 2,
+                },
+              ],
+              timestamp: 100,
+            },
+          ],
+        ],
+        [
+          s2,
+          [
+            {
+              baseCookie: 1,
+              cookie: 2,
+              lastMutationID: 2,
+              patch: [
+                {
+                  op: 'put',
+                  key: 'count',
+                  value: 2,
+                },
+              ],
+              timestamp: 100,
+            },
+          ],
+        ],
+      ]),
+      expectedUserValues: new Map([
+        ['count', {value: 2, version: 2, deleted: false}],
+      ]),
+      expectedClientRecords: new Map([
+        ['c1', clientRecord(2, 2)],
+        ['c2', clientRecord(2, 2)],
       ]),
     },
   ];
@@ -214,7 +239,6 @@ test('processPending', async () => {
       createSilentLogContext(),
       storage,
       c.clients,
-      c.pendingMutations,
       mutators,
       () => Promise.resolve(),
       startTime,
@@ -231,7 +255,6 @@ test('processPending', async () => {
 
     await p;
     expect(c.clients).toEqual(c.expectedClients);
-    expect(c.pendingMutations.size).toEqual(0);
 
     expect(c.expectedError).toBeUndefined;
     expect(await getVersion(storage)).toEqual(c.expectedVersion);

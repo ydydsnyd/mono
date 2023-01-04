@@ -7,7 +7,6 @@ import type {LogContext} from '@rocicorp/logger';
 import {createAuthAPIHeaders} from './auth-api-headers.js';
 import {dispatch, Handlers} from './dispatch.js';
 import {createSilentLogContext} from '../util/test-utils.js';
-import type {PullRequest} from '../protocol/pull.js';
 
 const testAuthApiKey = 'TEST_REFLECT_AUTH_API_KEY_TEST';
 
@@ -18,9 +17,6 @@ function createThrowingHandlers() {
     },
     connect: () => {
       throw new Error('unexpect call to connect handler');
-    },
-    pull: () => {
-      throw new Error('unexpect call to pull handler');
     },
     authInvalidateForUser: () => {
       throw new Error('unexpect call to authInvalidateForUser handler');
@@ -136,72 +132,10 @@ test('connect good request', async () => {
 
 test('connect request with validation errors', async () => {
   await testMethodNotAllowedValidationError(
-    new Request('wss://test.roci.dev/connect', {
+    new Request('ws://test.roci.dev/connect', {
       method: 'post',
     }),
     'get',
-  );
-});
-
-test('pull good request', async () => {
-  const requestBody = {
-    profileID: 'test-pID',
-    clientGroupID: 'test-cgID',
-    cookie: 1,
-    pullVersion: 1,
-    schemaVersion: '1',
-  };
-  const testRequest = new Request('https://test.roci.dev/pull', {
-    method: 'post',
-    body: JSON.stringify(requestBody),
-  });
-  const testResponse = new Response('');
-  const response = await dispatch(
-    testRequest,
-    createSilentLogContext(),
-    undefined,
-    {
-      ...createThrowingHandlers(),
-      pull: (_lc: LogContext, request: Request, body: PullRequest) => {
-        expect(request).toBe(testRequest);
-        expect(body).toEqual(requestBody);
-        return Promise.resolve(testResponse);
-      },
-    },
-  );
-  expect(response).toBe(testResponse);
-});
-
-test('pull request with validation errors', async () => {
-  await testMethodNotAllowedValidationError(
-    new Request('https://test.roci.dev/pull', {
-      method: 'put',
-      body: JSON.stringify({
-        profileID: 'test-pID',
-        clientGroupID: 'test-cgID',
-        cookie: 1,
-        pullVersion: 1,
-        schemaVersion: 1,
-      }),
-    }),
-    'post',
-  );
-
-  const testRequestBadBody = new Request('https://test.roci.dev/pull', {
-    method: 'post',
-    body: JSON.stringify({
-      clientGroupID: 'test-cgID',
-    }),
-  });
-  const responseForBadBody = await dispatch(
-    testRequestBadBody,
-    createSilentLogContext(),
-    testAuthApiKey,
-    createThrowingHandlers(),
-  );
-  expect(responseForBadBody.status).toEqual(400);
-  expect(await responseForBadBody.text()).toEqual(
-    'Body schema error. At path: profileID -- Expected a string, but received: undefined',
   );
 });
 

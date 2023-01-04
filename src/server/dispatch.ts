@@ -10,7 +10,6 @@ import {
   CreateRoomRequest,
   createRoomRequestSchema,
 } from '../protocol/api/room.js';
-import {PullRequest, pullRequestSchema} from '../protocol/pull.js';
 
 export type Handler<T = undefined> = (
   this: Handlers,
@@ -37,7 +36,7 @@ export type Handler<T = undefined> = (
 export interface Handlers {
   createRoom: Handler<CreateRoomRequest>;
   connect: Handler;
-  pull: Handler<PullRequest>;
+
   authInvalidateForUser: Handler<InvalidateForUserRequest>;
   authInvalidateForRoom: Handler<InvalidateForRoomRequest>;
   authInvalidateAll: Handler;
@@ -48,7 +47,6 @@ export interface Handlers {
 export const paths: Readonly<Record<keyof Handlers, string>> = {
   createRoom: '/createRoom',
   connect: '/connect',
-  pull: '/pull',
   authInvalidateForUser: '/api/auth/v0/invalidateForUser',
   authInvalidateForRoom: '/api/auth/v0/invalidateForRoom',
   authInvalidateAll: '/api/auth/v0/invalidateAll',
@@ -129,12 +127,6 @@ export function dispatch(
       );
     case paths.connect:
       return validateAndDispatch('get', noOpValidateBody, handlers.connect);
-    case paths.pull:
-      return validateAndDispatch(
-        'post',
-        request => validateBody(request, pullRequestSchema),
-        handlers.pull,
-      );
     case paths.authInvalidateForUser:
       return validateAndDispatch(
         'post',

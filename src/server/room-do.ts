@@ -25,9 +25,6 @@ import type {CreateRoomRequest} from '../protocol/api/room.js';
 import {Router} from 'itty-router';
 import type {RociRequest, RociRouter} from './middleware.js';
 import {addRoutes} from './room-do-routes.js';
-import type {PullRequest, PullResponse} from '../protocol/pull.js';
-import type {PendingMutationMap} from '../types/mutation.js';
-import {handlePull} from './pull.js';
 
 const roomIDKey = '/system/roomID';
 const deletedKey = '/system/deleted';
@@ -43,7 +40,6 @@ export interface RoomDOOptions<MD extends MutatorDefs> {
 }
 export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   private readonly _clients: ClientMap = new Map();
-  private readonly _pendingMutations: PendingMutationMap = new Map();
   private readonly _lock = new Lock();
   private readonly _mutators: MutatorMap;
   private readonly _disconnectHandler: DisconnectHandler;
@@ -94,6 +90,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
           urlRoomID !== null &&
           urlRoomID !== roomID
         ) {
+          console.log('roomID mismatch', roomID, urlRoomID);
           this._lc.error?.(
             'roomID mismatch',
             'urlRoomID',
@@ -212,20 +209,6 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     return new Response(null, {status: 101, webSocket: pair[0]});
   }
 
-  async pull(
-    lc: LogContext,
-    _request: Request,
-    pullRequest: PullRequest,
-  ): Promise<Response> {
-    lc.debug?.('handling mutation recovery pull', JSON.stringify(pullRequest));
-    const pullResponse: PullResponse = await this._lock.withLock(() =>
-      handlePull(this._storage, pullRequest),
-    );
-    const pullResponseJSONString = JSON.stringify(pullResponse);
-    lc.debug?.('pull response', pullResponseJSONString);
-    return new Response(pullResponseJSONString, {status: 200});
-  }
-
   async authInvalidateForUser(
     lc: LogContext,
     _request: RociRequest,
@@ -287,17 +270,10 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     lc.debug?.('handling message', data, 'waiting for lock');
 
     try {
-      await this._lock.withLock(async () => {
+      await this._lock.withLock(() => {
         lc.debug?.('received lock');
-        await handleMessage(
-          lc,
-          this._storage,
-          this._clients,
-          this._pendingMutations,
-          clientID,
-          data,
-          ws,
-          () => this._processUntilDone(),
+        handleMessage(lc, this._clients, clientID, data, ws, () =>
+          this._processUntilDone(),
         );
       });
     } catch (e) {
@@ -332,10 +308,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
           break;
         }
       }
-      if (
-        !hasPendingMutations(this._pendingMutations) &&
-        !hasDisconnectsToProcess
-      ) {
+      if (!hasPendingMutations(this._clients) && !hasDisconnectsToProcess) {
         lc.debug?.('No pending mutations or disconnects to process, exiting');
         if (this._turnTimerID) {
           clearInterval(this._turnTimerID);
@@ -348,7 +321,6 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
         lc,
         this._storage,
         this._clients,
-        this._pendingMutations,
         this._mutators,
         this._disconnectHandler,
         Date.now(),
@@ -372,9 +344,9 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   };
 }
 
-function hasPendingMutations(pendingMutations: PendingMutationMap) {
-  for (const mutations of pendingMutations.values()) {
-    if (mutations.length > 0) {
+function hasPendingMutations(clients: ClientMap) {
+  for (const clientState of clients.values()) {
+    if (clientState.pending.length > 0) {
       return true;
     }
   }

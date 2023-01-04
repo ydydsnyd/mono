@@ -10,7 +10,6 @@ import type {MutatorMap} from './process-mutation.js';
 import {processRoom} from './process-room.js';
 import type {DisconnectHandler} from '../server/disconnect.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
-import type {PendingMutationMap} from 'src/types/mutation.js';
 
 /**
  * Processes all mutations in all rooms for a time range, and send relevant pokes.
@@ -21,7 +20,6 @@ export async function processPending(
   lc: LogContext,
   storage: DurableStorage,
   clients: ClientMap,
-  pendingMutations: PendingMutationMap,
   mutators: MutatorMap,
   disconnectHandler: DisconnectHandler,
   timestamp: number,
@@ -33,15 +31,14 @@ export async function processPending(
     const pokes = await processRoom(
       lc,
       clients,
-      pendingMutations,
       mutators,
       disconnectHandler,
       storage,
       timestamp,
     );
+
     sendPokes(lc, pokes, clients);
-    lc.debug?.('clearing pending mutations');
-    pendingMutations.clear();
+    clearPendingMutations(lc, pokes, clients);
   } finally {
     lc.debug?.(`processPending took ${Date.now() - t0} ms`);
   }
@@ -55,12 +52,22 @@ function sendPokes(
   for (const pokeBody of pokes) {
     const client = must(clients.get(pokeBody.clientID));
     const poke: PokeMessage = ['poke', pokeBody.poke];
-    lc.debug?.(
-      'sending client ',
-      pokeBody.clientID,
-      'poke ',
-      JSON.stringify(pokeBody.poke),
-    );
+    lc.debug?.('sending client', pokeBody.clientID, 'poke', pokeBody.poke);
     client.socket.send(JSON.stringify(poke));
+  }
+}
+
+function clearPendingMutations(
+  lc: LogContext,
+  pokes: ClientPokeBody[],
+  clients: ClientMap,
+) {
+  lc.debug?.('clearing pending mutations');
+  for (const pokeBody of pokes) {
+    const client = must(clients.get(pokeBody.clientID));
+    const idx = client.pending.findIndex(
+      mutation => mutation.id > pokeBody.poke.lastMutationID,
+    );
+    client.pending.splice(0, idx > -1 ? idx : client.pending.length);
   }
 }

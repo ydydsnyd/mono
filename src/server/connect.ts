@@ -16,15 +16,7 @@ import {USER_DATA_HEADER_NAME} from './auth.js';
 import {decodeHeaderValue} from '../util/headers.js';
 import {addConnectedClient} from '../types/connected-clients.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
-import {
-  NullableVersion,
-  Version,
-  compareVersions,
-  getVersion,
-} from '../types/version.js';
-
-export const maybeOldClientStateMessage =
-  'Possibly the room was re-created without also clearing browser state? Try clearing browser state and trying again.';
+import {compareVersions, getVersion} from '../types/version.js';
 
 export type MessageHandler = (
   clientID: ClientID,
@@ -73,30 +65,12 @@ export async function handleConnection(
     userData: 'redacted',
   });
 
-  const {
-    clientID: requestClientID,
-    baseCookie: requestBaseCookie,
-    clientGroupID: requestClientGroupID,
-  } = parsedConnectRequest;
+  const {clientID: requestClientID, baseCookie: requestBaseCookie} =
+    parsedConnectRequest;
   const existingRecord = await getClientRecord(requestClientID, storage);
   lc.debug?.('Existing client record', existingRecord);
-
-  if (existingRecord) {
-    if (requestClientGroupID !== existingRecord.clientGroupID) {
-      lc.info?.(
-        'Unexpected client group id ',
-        requestClientGroupID,
-        ' received when connecting with a client id ',
-        requestClientID,
-        ' with existing client group id ',
-        existingRecord.clientGroupID,
-      );
-      sendError('Unexpected clientGroupID.');
-      return;
-    }
-  }
-
   const existingLastMutationID = existingRecord?.lastMutationID ?? 0;
+
   // These checks catch a large class of dev mistakes where the room is
   // re-created without clearing browser state. This can happen in a
   // variety of ways, e.g. it can happen when re-using the same roomID
@@ -124,14 +98,9 @@ export async function handleConnection(
     return;
   }
 
-  const existingRecordLastMutationIDVersion: Version | null =
-    existingRecord?.lastMutationIDVersion ?? null;
-
   const record: ClientRecord = {
-    clientGroupID: requestClientGroupID,
     baseCookie: requestBaseCookie,
     lastMutationID: existingLastMutationID,
-    lastMutationIDVersion: existingRecordLastMutationIDVersion,
   };
   await putClientRecord(requestClientID, record, storage);
   lc.debug?.('Put client record', record);
@@ -172,33 +141,19 @@ export async function handleConnection(
     socket: ws,
     userData: parsedConnectRequest.userData,
     clockBehindByMs: undefined,
-    clientGroupID: requestClientGroupID,
+    pending: [],
   };
   lc.debug?.('Setting client map entry', requestClientID, client);
   clients.set(requestClientID, client);
+
   const connectedMessage: ConnectedMessage = ['connected', {}];
   ws.send(JSON.stringify(connectedMessage));
 }
 
-export function getConnectRequest(
-  url: URL,
-  headers: Headers,
-):
-  | {
-      result: {
-        clientID: string;
-        clientGroupID: string;
-        userData: UserData;
-        baseCookie: NullableVersion;
-        timestamp: number;
-        lmid: number;
-      };
-      error: null;
-    }
-  | {
-      result: null;
-      error: string;
-    } {
+export const maybeOldClientStateMessage =
+  'Possibly the room was re-created without also clearing browser state? Try clearing browser state and trying again.';
+
+export function getConnectRequest(url: URL, headers: Headers) {
   const getParam = (name: string, required: boolean) => {
     const value = url.searchParams.get(name);
     if (value === '' || value === null) {
@@ -243,8 +198,6 @@ export function getConnectRequest(
   try {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const clientID = getParam('clientID', true)!;
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const clientGroupID = getParam('clientGroupID', true)!;
     const baseCookie = getIntegerParam('baseCookie', false);
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const timestamp = getIntegerParam('ts', true)!;
@@ -255,7 +208,6 @@ export function getConnectRequest(
     return {
       result: {
         clientID,
-        clientGroupID,
         userData,
         baseCookie,
         timestamp,
