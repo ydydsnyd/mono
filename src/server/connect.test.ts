@@ -13,6 +13,7 @@ import {
   Mocket,
 } from '../util/test-utils.js';
 import {
+  getConnectRequest,
   handleConnection,
   maybeOldClientStateMessage,
 } from '../../src/server/connect.js';
@@ -285,4 +286,94 @@ test('handleConnection', async () => {
       throw e;
     }
   }
+});
+
+test('getConnectRequest', () => {
+  const testError = (
+    url: string,
+    expectedError: string,
+    headers: Headers = new Headers(),
+  ) => {
+    expect(getConnectRequest(new URL(url), headers)).toEqual({
+      error: expectedError,
+      result: null,
+    });
+  };
+
+  const testResult = (
+    url: string,
+    headers: Headers,
+    expectedResult: unknown,
+  ) => {
+    expect(getConnectRequest(new URL(url), headers)).toEqual({
+      error: null,
+      result: expectedResult,
+    });
+  };
+
+  testError(
+    'https://www.example.com',
+    'Error: invalid querystring - missing clientID',
+  );
+  testError(
+    'https://www.example.com/?clientID=123',
+    'Error: invalid querystring - missing ts',
+  );
+
+  let url = 'https://www.example.com/?clientID=123&ts=abc';
+  testError(
+    url,
+    `Error: invalid querystring parameter ts, url: ${url}, got: abc`,
+  );
+  testError(
+    'https://www.example.com/?clientID=123&ts=123',
+    'Error: invalid querystring - missing lmid',
+  );
+  testError(
+    'https://www.example.com/?clientID=123&ts=123&lmid=456',
+    'Error: missing user-data',
+  );
+  url = 'https://www.example.com/?clientID=123&ts=123&lmid=456&baseCookie=abc';
+  testError(
+    url,
+    `Error: invalid querystring parameter baseCookie, url: ${url}, got: abc`,
+  );
+  testError(
+    'https://www.example.com/?clientID=123&ts=123&lmid=456',
+    'Error: invalid user-data - failed to decode/parse',
+    new Headers([[USER_DATA_HEADER_NAME, 'abc']]),
+  );
+  testError(
+    'https://www.example.com/?clientID=123&ts=123&lmid=456',
+    'Error: invalid user-data - missing userID',
+    new Headers([[USER_DATA_HEADER_NAME, '42']]),
+  );
+  testError(
+    'https://www.example.com/?clientID=123&ts=123&lmid=456',
+    'Error: invalid user-data - missing userID',
+    new Headers([[USER_DATA_HEADER_NAME, '{"userID":null}']]),
+  );
+
+  testResult(
+    'https://www.example.com/?clientID=cid1&ts=123&lmid=456',
+    new Headers([[USER_DATA_HEADER_NAME, '{"userID":"u1","more":"data"}']]),
+    {
+      clientID: 'cid1',
+      userData: {userID: 'u1', more: 'data'},
+      timestamp: 123,
+      lmid: 456,
+      baseCookie: null,
+    },
+  );
+  testResult(
+    'https://www.example.com/?clientID=cid1&ts=123&lmid=456&baseCookie=789',
+    new Headers([[USER_DATA_HEADER_NAME, '{"userID":"u1","more":"data"}']]),
+    {
+      clientID: 'cid1',
+      userData: {userID: 'u1', more: 'data'},
+      timestamp: 123,
+      lmid: 456,
+      baseCookie: 789,
+    },
+  );
 });

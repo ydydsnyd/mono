@@ -30,7 +30,11 @@ import {addRoutes} from './auth-do-routes.js';
 import type {RociRequest, RociRouter} from './middleware.js';
 import {Router} from 'itty-router';
 import type {CreateRoomRequest} from '../protocol/api/room.js';
-import {newWebSocketPair, sendError} from '../util/socket.js';
+import {
+  newWebSocketPair as defaultNewWebSocketPair,
+  sendError,
+  NewWebSocketPair,
+} from '../util/socket.js';
 
 export interface AuthDOOptions {
   roomDO: DurableObjectNamespace;
@@ -41,7 +45,7 @@ export interface AuthDOOptions {
   logLevel: LogLevel;
   // newWebSocketPair is a seam we use for testing. I cannot figure out
   // how to get jest to mock a module.
-  newWebSocketPair?: typeof newWebSocketPair;
+  newWebSocketPair?: NewWebSocketPair | undefined;
 }
 export type ConnectionKey = {
   userID: string;
@@ -75,17 +79,25 @@ export class BaseAuthDO implements DurableObject {
   // both the auth lock and the room record lock, the auth lock MUST be
   // acquired first.
   private readonly _roomRecordLock: RWLock;
-  private readonly _newWebSocketPair: typeof newWebSocketPair;
+  private readonly _newWebSocketPair: NewWebSocketPair;
 
   constructor(options: AuthDOOptions) {
-    const {roomDO, state, authHandler, authApiKey, logSink, logLevel} = options;
+    const {
+      roomDO,
+      state,
+      authHandler,
+      authApiKey,
+      logSink,
+      logLevel,
+      newWebSocketPair = defaultNewWebSocketPair,
+    } = options;
     this._router = Router();
-    this._newWebSocketPair = options.newWebSocketPair || newWebSocketPair;
+    this._newWebSocketPair = newWebSocketPair;
     this._roomDO = roomDO;
     this._state = state;
     this._durableStorage = new DurableStorage(
       state.storage,
-      false /* don't allow uncomfirmed */,
+      false, // don't allow unconfirmed
     );
     this._authHandler = authHandler;
     this._authApiKey = authApiKey;

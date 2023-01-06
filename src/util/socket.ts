@@ -11,3 +11,5 @@ export function sendError(ws: Socket, body: string) {
 export function newWebSocketPair() {
   return new WebSocketPair();
 }
+
+export type NewWebSocketPair = () => InstanceType<typeof WebSocketPair>;

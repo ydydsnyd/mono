@@ -5,11 +5,11 @@ import type {Obj, Router} from 'itty-router';
 // which is an interface. In consultation with typescript nerds we concluded that
 // this is a good way of defining the type. The primary alternative would be to
 // do a dynamic thing that pulls properties and methods out of the CF Request
-// class and crates a new type dynamically.
+// class and creates a new type dynamically.
 export type RociRequest = {
   // From itty-router Request.
-  params?: Obj;
-  query?: Obj;
+  params?: Obj | undefined;
+  query?: Obj | undefined;
 
   // From CF Request.
   // NOTE that clone() returns a CF Request, not a RociRequest.
@@ -20,7 +20,7 @@ export type RociRequest = {
   readonly redirect: string;
   readonly fetcher: Fetcher | null;
   readonly signal: AbortSignal;
-  readonly cf?: IncomingRequestCfProperties;
+  readonly cf?: IncomingRequestCfProperties | undefined;
   readonly body: ReadableStream | null;
   readonly bodyUsed: boolean;
   arrayBuffer(): Promise<ArrayBuffer>;
@@ -34,12 +34,14 @@ export type RociRouter = Router<RociRequest>;
 
 type Env = {
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  REFLECT_AUTH_API_KEY?: string;
+  REFLECT_AUTH_API_KEY?: string | undefined;
 };
 
 // Middleware that requires the auth API key to match an argument. This is
 // used in the authDO which does not have access to the env.
-export function requireAuthAPIKeyMatches(authApiKey: string | undefined) {
+export function requireAuthAPIKeyMatches(
+  authApiKey: string | undefined,
+): (request: RociRequest) => Response | undefined {
   return (request: RociRequest) => {
     return requireAuthAPIKeyMatchesEnv(request, {
       // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -48,7 +50,7 @@ export function requireAuthAPIKeyMatches(authApiKey: string | undefined) {
   };
 }
 
-// Middlware that requires the auth API key in the env. This is used in the
+// Middleware that requires the auth API key in the env. This is used in the
 // worker, which gets the key directly from the env.
 export function requireAuthAPIKeyMatchesEnv(
   request: RociRequest,

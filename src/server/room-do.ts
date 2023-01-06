@@ -194,9 +194,9 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     lc.debug?.('connection request', url.toString(), 'waiting for lock');
     ws.accept();
 
-    void this._lock.withLock(async () => {
+    void this._lock.withLock(() => {
       lc.debug?.('received lock');
-      await handleConnection(
+      return handleConnection(
         lc,
         ws,
         this._storage,

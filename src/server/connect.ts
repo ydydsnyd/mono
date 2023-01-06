@@ -155,7 +155,9 @@ export const maybeOldClientStateMessage =
   'Possibly the room was re-created without also clearing browser state? Try clearing browser state and trying again.';
 
 export function getConnectRequest(url: URL, headers: Headers) {
-  const getParam = (name: string, required: boolean) => {
+  function getParam(name: string, required: true): string;
+  function getParam(name: string, required: boolean): string | null;
+  function getParam(name: string, required: boolean) {
     const value = url.searchParams.get(name);
     if (value === '' || value === null) {
       if (required) {
@@ -164,8 +166,11 @@ export function getConnectRequest(url: URL, headers: Headers) {
       return null;
     }
     return value;
-  };
-  const getIntegerParam = (name: string, required: boolean) => {
+  }
+
+  function getIntegerParam(name: string, required: true): number;
+  function getIntegerParam(name: string, required: boolean): number | null;
+  function getIntegerParam(name: string, required: boolean) {
     const value = getParam(name, required);
     if (value === null) {
       return null;
@@ -177,7 +182,7 @@ export function getConnectRequest(url: URL, headers: Headers) {
       );
     }
     return int;
-  };
+  }
 
   const getUserData = (headers: Headers): UserData => {
     const encodedValue = headers.get(USER_DATA_HEADER_NAME);
@@ -190,20 +195,21 @@ export function getConnectRequest(url: URL, headers: Headers) {
     } catch (e) {
       throw new Error('invalid user-data - failed to decode/parse');
     }
-    if (!jsonValue.userID) {
+    if (
+      !jsonValue ||
+      typeof jsonValue.userID !== 'string' ||
+      jsonValue.userID === ''
+    ) {
       throw new Error('invalid user-data - missing userID');
     }
     return jsonValue;
   };
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const clientID = getParam('clientID', true)!;
+    const clientID = getParam('clientID', true);
     const baseCookie = getIntegerParam('baseCookie', false);
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const timestamp = getIntegerParam('ts', true)!;
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const lmid = getIntegerParam('lmid', true)!;
+    const timestamp = getIntegerParam('ts', true);
+    const lmid = getIntegerParam('lmid', true);
 
     const userData = getUserData(headers);
     return {

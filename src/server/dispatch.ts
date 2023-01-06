@@ -103,11 +103,9 @@ export function dispatch(
     }
     if (request.method.toLowerCase() !== method.toLowerCase()) {
       lc.error?.(`Unsupported method ${request.method.toLowerCase()}`);
-      return Promise.resolve(
-        new Response(`Method not allowed. Use "${method}".`, {
-          status: 405,
-        }),
-      );
+      return new Response(`Method not allowed. Use "${method}".`, {
+        status: 405,
+      });
     }
     const validateResult = await validateBody(request);
     if (validateResult.errorResponse) {
