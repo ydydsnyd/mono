@@ -239,6 +239,20 @@ test('processFrame', async () => {
       disconnectHandlerThrows: true,
     },
     {
+      name: 'no mutations, no clients, 1 client disconnects, disconnect handler throws',
+      mutations: [],
+      clients: [],
+      connectedClients: ['c1'],
+      // No user values or pokes because only write was in disconnect handler which threw
+      expectedPokes: [],
+      expectedUserValues: new Map(),
+      expectedClientRecords: records,
+      // version not incremented for same reason
+      expectedVersion: startVersion,
+      expectedDisconnectedClients: ['c1'],
+      disconnectHandlerThrows: true,
+    },
+    {
       name: 'no mutations, 1 client, 1 client disconnected',
       mutations: [],
       clients: ['c2'],
@@ -274,6 +288,23 @@ test('processFrame', async () => {
       expectedVersion: endVersion,
       expectedDisconnectedClients: ['c1'],
       disconnectHandlerThrows: false,
+    },
+    {
+      name: 'no mutations, 1 client, 1 client disconnected, disconnect handler throws',
+      mutations: [],
+      clients: ['c2'],
+      connectedClients: ['c1', 'c2'],
+      // No user values or pokes because only write was in disconnect handler which threw
+      expectedPokes: [],
+      expectedUserValues: new Map(),
+      // version stays at startVersion for same reason
+      expectedClientRecords: new Map([
+        ...records,
+        [clientRecordKey('c2'), clientRecord(startVersion, 7)],
+      ]),
+      expectedVersion: startVersion,
+      expectedDisconnectedClients: ['c1'],
+      disconnectHandlerThrows: true,
     },
     {
       name: 'no mutations, 1 client, 1 client disconnected, disconnect handler throws',
