@@ -57,6 +57,7 @@ async function createAndPersistClientWithPendingLocalDD31(
   numLocal: number,
   mutatorNames: string[],
   cookie: string | number,
+  snapshotLastMutationIDs?: Record<sync.ClientID, number> | undefined,
 ): Promise<db.LocalMetaDD31[]> {
   const testMemdag = new dag.LazyStore(
     perdag,
@@ -68,7 +69,12 @@ async function createAndPersistClientWithPendingLocalDD31(
   const b = new ChainBuilder(testMemdag, undefined, true);
 
   await b.addGenesis(clientID);
-  await b.addSnapshot([['unique', uuid()]], clientID, cookie);
+  await b.addSnapshot(
+    [['unique', uuid()]],
+    clientID,
+    cookie,
+    snapshotLastMutationIDs,
+  );
 
   await initClientWithClientID(clientID, perdag, mutatorNames, {}, true);
 
@@ -94,6 +100,44 @@ async function createAndPersistClientWithPendingLocalDD31(
   );
 
   return localMetas;
+}
+
+async function persistSnapshotDD31(
+  clientID: sync.ClientID,
+  perdag: dag.Store,
+  cookie: string | number,
+  mutatorNames: string[],
+  snapshotLastMutationIDs: Record<sync.ClientID, number>,
+): Promise<void> {
+  const testMemdag = new dag.LazyStore(
+    perdag,
+    100 * 2 ** 20, // 100 MB,
+    dag.uuidChunkHasher,
+    assertHash,
+  );
+
+  const b = new ChainBuilder(testMemdag, undefined, true);
+
+  await b.addGenesis(clientID);
+  await b.addSnapshot(
+    [['unique', uuid()]],
+    clientID,
+    cookie,
+    snapshotLastMutationIDs,
+  );
+
+  const mutators: MutatorDefs = Object.fromEntries(
+    mutatorNames.map(n => [n, () => Promise.resolve()]),
+  );
+
+  await persist.persistDD31(
+    new LogContext(),
+    clientID,
+    testMemdag,
+    perdag,
+    mutators,
+    () => false,
+  );
 }
 
 suite('DD31', () => {
@@ -124,20 +168,36 @@ suite('DD31', () => {
   async function testRecoveringMutationsOfClientDD31(args: {
     schemaVersionOfClientWPendingMutations: string;
     schemaVersionOfClientRecoveringMutations: string;
-    numMutationsNotAcknowledgedByPull?: number;
+    snapshotLastMutationIDs?: Record<sync.ClientID, number> | undefined;
+    snapshotLastMutationIDsAfterPull?:
+      | Record<sync.ClientID, number>
+      | undefined;
+    pullLastMutationIDChanges?: Record<sync.ClientID, number> | undefined;
+    expectedLastServerAckdMutationIDs?:
+      | Record<sync.ClientID, number>
+      | undefined;
     pullResponse?: PullResponseDD31 | undefined;
     pushResponse?: PushResponse | undefined;
   }) {
     sinon.stub(console, 'error');
 
+    const client1ID = 'client1';
+    const client2ID = 'client2';
+
     const {
       schemaVersionOfClientWPendingMutations,
       schemaVersionOfClientRecoveringMutations,
-      numMutationsNotAcknowledgedByPull = 0,
+      pullLastMutationIDChanges = {[client1ID]: 3, [client2ID]: 3},
+      expectedLastServerAckdMutationIDs = {[client1ID]: 3, [client2ID]: 3},
+      snapshotLastMutationIDsAfterPull,
       pullResponse: pullResponseArg,
       pushResponse,
+      snapshotLastMutationIDs = {
+        [client1ID]: 1,
+        [client2ID]: 1,
+      },
     } = args;
-    const client1ID = 'client1';
+
     const auth = '1';
     const pushURL = 'https://test.replicache.dev/push';
     const pullURL = 'https://test.replicache.dev/pull';
@@ -165,36 +225,64 @@ suite('DD31', () => {
       replicacheFormatVersion: REPLICACHE_FORMAT_VERSION_DD31,
     });
 
+    const mutatorNames = ['mutator_name_2', 'mutator_name_3'];
     const client1PendingLocalMetas =
       await createAndPersistClientWithPendingLocalDD31(
         client1ID,
         testPerdag,
         2,
-        ['client1', 'mutator_name_2', 'mutator_name_3'],
-        1,
+        mutatorNames,
+        'cookie_0',
+        snapshotLastMutationIDs,
       );
+
+    const client2PendingLocalMetas =
+      await createAndPersistClientWithPendingLocalDD31(
+        client2ID,
+        testPerdag,
+        2,
+        mutatorNames,
+        'cookie_0',
+        snapshotLastMutationIDs,
+      );
+
     const client1 = await testPerdag.withRead(read =>
       persist.getClient(client1ID, read),
     );
     assertClientDD31(client1);
-    const clientGroup1 = await testPerdag.withRead(read =>
+
+    const client2 = await testPerdag.withRead(read =>
+      persist.getClient(client2ID, read),
+    );
+    assertClientDD31(client2);
+
+    expect(client1.clientGroupID).to.equal(client2.clientGroupID);
+
+    const clientGroup = await testPerdag.withRead(read =>
       persist.getClientGroup(client1.clientGroupID, read),
     );
-    assert(clientGroup1);
+    assert(clientGroup);
 
     fetchMock.reset();
     fetchMock.post(pushURL, pushResponse ?? 'ok');
-    const pullLastMutationID =
-      clientGroup1.mutationIDs[client1ID] - numMutationsNotAcknowledgedByPull;
     const pullResponse: PullResponseDD31 = pullResponseArg ?? {
-      cookie: 'pull_cookie_1',
-      lastMutationIDChanges: {
-        [client1ID]: pullLastMutationID,
-      },
+      cookie: 'cookie_2',
+      lastMutationIDChanges: pullLastMutationIDChanges,
       patch: [],
     };
 
-    fetchMock.post(pullURL, pullResponse);
+    fetchMock.post(pullURL, async () => {
+      if (snapshotLastMutationIDsAfterPull !== undefined) {
+        await persistSnapshotDD31(
+          client1ID,
+          testPerdag,
+          'cookie_1',
+          mutatorNames,
+          snapshotLastMutationIDsAfterPull,
+        );
+      }
+      return pullResponse;
+    });
 
     await rep.recoverMutations();
 
@@ -218,6 +306,20 @@ suite('DD31', () => {
           args: client1PendingLocalMetas[1].mutatorArgsJSON,
           timestamp: client1PendingLocalMetas[1].timestamp,
         },
+        {
+          clientID: client2ID,
+          id: client2PendingLocalMetas[0].mutationID,
+          name: client2PendingLocalMetas[0].mutatorName,
+          args: client2PendingLocalMetas[0].mutatorArgsJSON,
+          timestamp: client2PendingLocalMetas[0].timestamp,
+        },
+        {
+          clientID: client2ID,
+          id: client2PendingLocalMetas[1].mutationID,
+          name: client2PendingLocalMetas[1].mutatorName,
+          args: client2PendingLocalMetas[1].mutatorArgsJSON,
+          timestamp: client2PendingLocalMetas[1].timestamp,
+        },
       ],
       pushVersion: PUSH_VERSION_DD31,
       schemaVersion: schemaVersionOfClientWPendingMutations,
@@ -232,7 +334,7 @@ suite('DD31', () => {
       const pullReq: PullRequestDD31 = {
         profileID,
         clientGroupID: client1.clientGroupID,
-        cookie: 1,
+        cookie: 'cookie_0',
         pullVersion: PULL_VERSION_DD31,
         schemaVersion: schemaVersionOfClientWPendingMutations,
       };
@@ -247,29 +349,96 @@ suite('DD31', () => {
     expect(updatedClient1.clientGroupID).to.deep.equal(client1.clientGroupID);
     expect(updatedClient1.headHash).to.equal(client1.headHash);
 
-    const updatedClientGroup1 = await testPerdag.withRead(read =>
+    const updatedClientGroup = await testPerdag.withRead(read =>
       persist.getClientGroup(client1.clientGroupID, read),
     );
 
-    assert(updatedClientGroup1);
+    assert(updatedClientGroup);
+
+    const updatedClient2 = await testPerdag.withRead(read =>
+      persist.getClient(client2ID, read),
+    );
+    assertClientDD31(updatedClient2);
+
+    expect(updatedClient2.clientGroupID).to.deep.equal(client2.clientGroupID);
+    expect(updatedClient2.headHash).to.equal(client2.headHash);
+
     if ('error' in pullResponse || (pushResponse && 'error' in pushResponse)) {
-      expect(updatedClientGroup1.lastServerAckdMutationIDs).to.deep.equal({
-        [client1ID]: 1, // not acknowledged because pull failed
-      });
+      expect(updatedClientGroup.lastServerAckdMutationIDs).to.deep.equal(
+        clientGroup.lastServerAckdMutationIDs,
+      );
     } else {
-      expect(updatedClientGroup1.lastServerAckdMutationIDs).to.deep.equal({
-        [client1ID]: pullLastMutationID,
-      });
+      expect(updatedClientGroup.lastServerAckdMutationIDs).to.deep.equal(
+        expectedLastServerAckdMutationIDs,
+      );
     }
-    expect(updatedClientGroup1.mutationIDs).to.deep.equal({
-      [client1ID]: clientGroup1.mutationIDs[client1ID],
-    });
+    expect(updatedClientGroup.mutationIDs).to.deep.equal(
+      clientGroup.mutationIDs,
+    );
   }
 
   test('successfully recovering mutations of client with same schema version and replicache format version', async () => {
     await testRecoveringMutationsOfClientDD31({
       schemaVersionOfClientWPendingMutations: 'testSchema1',
       schemaVersionOfClientRecoveringMutations: 'testSchema1',
+    });
+  });
+
+  test('successfully recovering mutations of client with empty lastServerAckdMutationIDs', async () => {
+    await testRecoveringMutationsOfClientDD31({
+      schemaVersionOfClientWPendingMutations: 'testSchema1',
+      schemaVersionOfClientRecoveringMutations: 'testSchema1',
+      snapshotLastMutationIDs: {},
+    });
+  });
+
+  test('successfully recovering mutations of client with empty lastMutationIDChanges', async () => {
+    await testRecoveringMutationsOfClientDD31({
+      schemaVersionOfClientWPendingMutations: 'testSchema1',
+      schemaVersionOfClientRecoveringMutations: 'testSchema1',
+      pullLastMutationIDChanges: {},
+      expectedLastServerAckdMutationIDs: {
+        client1: 1,
+        client2: 1,
+      },
+    });
+  });
+
+  test('successfully recovering mutations some lastMutationIDChanges not applied to client groups lastServerAckdMutationIDs due to being smaller', async () => {
+    await testRecoveringMutationsOfClientDD31({
+      schemaVersionOfClientWPendingMutations: 'testSchema1',
+      schemaVersionOfClientRecoveringMutations: 'testSchema1',
+      pullLastMutationIDChanges: {
+        client1: 1,
+        client2: 1,
+      },
+      snapshotLastMutationIDsAfterPull: {
+        client1: 3,
+        client2: 2,
+      },
+      expectedLastServerAckdMutationIDs: {
+        client1: 3,
+        client2: 2,
+      },
+    });
+  });
+
+  test('successfully recovering mutations no lastMutationIDChanges applied to client groups lastServerAckdMutationIDs due to being smaller', async () => {
+    await testRecoveringMutationsOfClientDD31({
+      schemaVersionOfClientWPendingMutations: 'testSchema1',
+      schemaVersionOfClientRecoveringMutations: 'testSchema1',
+      pullLastMutationIDChanges: {
+        client1: 2,
+        client2: 1,
+      },
+      snapshotLastMutationIDsAfterPull: {
+        client1: 1,
+        client2: 2,
+      },
+      expectedLastServerAckdMutationIDs: {
+        client1: 2,
+        client2: 2,
+      },
     });
   });
 
@@ -284,7 +453,14 @@ suite('DD31', () => {
     await testRecoveringMutationsOfClientDD31({
       schemaVersionOfClientWPendingMutations: 'testSchema1',
       schemaVersionOfClientRecoveringMutations: 'testSchema1',
-      numMutationsNotAcknowledgedByPull: 1,
+      pullLastMutationIDChanges: {
+        client1: 2,
+        client2: 2,
+      },
+      expectedLastServerAckdMutationIDs: {
+        client1: 2,
+        client2: 2,
+      },
     });
   });
 
@@ -292,7 +468,6 @@ suite('DD31', () => {
     await testRecoveringMutationsOfClientDD31({
       schemaVersionOfClientWPendingMutations: 'testSchema1',
       schemaVersionOfClientRecoveringMutations: 'testSchema1',
-      numMutationsNotAcknowledgedByPull: 1,
       pullResponse: {error: 'VersionNotSupported', versionType: 'pull'},
     });
   });
@@ -301,7 +476,6 @@ suite('DD31', () => {
     await testRecoveringMutationsOfClientDD31({
       schemaVersionOfClientWPendingMutations: 'testSchema1',
       schemaVersionOfClientRecoveringMutations: 'testSchema1',
-      numMutationsNotAcknowledgedByPull: 1,
       pullResponse: {error: 'ClientStateNotFound'},
     });
   });
@@ -310,7 +484,6 @@ suite('DD31', () => {
     await testRecoveringMutationsOfClientDD31({
       schemaVersionOfClientWPendingMutations: 'testSchema1',
       schemaVersionOfClientRecoveringMutations: 'testSchema1',
-      numMutationsNotAcknowledgedByPull: 1,
       pushResponse: {error: 'VersionNotSupported', versionType: 'pull'},
     });
   });
@@ -319,7 +492,6 @@ suite('DD31', () => {
     await testRecoveringMutationsOfClientDD31({
       schemaVersionOfClientWPendingMutations: 'testSchema1',
       schemaVersionOfClientRecoveringMutations: 'testSchema1',
-      numMutationsNotAcknowledgedByPull: 1,
       pushResponse: {error: 'ClientStateNotFound'},
     });
   });

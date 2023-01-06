@@ -61,7 +61,7 @@ async function rebaseMutation(
   );
   if (nextMutationID !== localMeta.mutationID) {
     throw new Error(
-      `Inconsistent mutation ID: original: ${localMeta.mutationID}, next: ${nextMutationID}`,
+      `Inconsistent mutation ID: original: ${localMeta.mutationID}, next: ${nextMutationID} - mutationClientID: ${mutationClientID} mutatorName: ${name}`,
     );
   }
 

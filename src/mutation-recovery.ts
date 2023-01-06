@@ -713,7 +713,7 @@ async function recoverMutationsOfClientGroupDD31(
         pullResponse.lastMutationIDChanges,
       )) {
         if (
-          clientGroupToUpdate.lastServerAckdMutationIDs[clientID] <
+          (clientGroupToUpdate.lastServerAckdMutationIDs[clientID] ?? 0) <
           lastMutationIDChange
         ) {
           lastServerAckdMutationIDsUpdates[clientID] = lastMutationIDChange;
