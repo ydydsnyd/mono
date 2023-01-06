@@ -45,8 +45,9 @@ export async function handleConnection(
   onMessage: MessageHandler,
   onClose: CloseHandler,
 ) {
+  lc.info?.('roomDO: handling connect', url.toString());
   const sendError = (error: string) => {
-    lc.info?.('invalid connection request', error);
+    lc.error?.('roomDO: invalid connection request', error);
     ws.send(JSON.stringify(['error', error]));
     ws.close();
   };
@@ -108,7 +109,7 @@ export async function handleConnection(
 
   const existing = clients.get(requestClientID);
   if (existing) {
-    lc.debug?.('Closing old socket');
+    lc.info?.('Closing old socket');
     existing.socket.close();
   }
 

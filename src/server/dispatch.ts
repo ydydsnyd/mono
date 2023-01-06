@@ -102,7 +102,7 @@ export function dispatch(
       }
     }
     if (request.method.toLowerCase() !== method.toLowerCase()) {
-      lc.debug?.(`Unsupported method ${request.method.toLowerCase()}`);
+      lc.error?.(`Unsupported method ${request.method.toLowerCase()}`);
       return Promise.resolve(
         new Response(`Method not allowed. Use "${method}".`, {
           status: 405,
