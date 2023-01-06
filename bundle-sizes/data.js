@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1672752751106,
+  "lastUpdate": 1673039147328,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -35609,6 +35609,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27319,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cesar@roci.dev",
+            "name": "Cesar Alaestante",
+            "username": "cesara"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ec0066f6ce2907307ab9196bbcd3838c3bb7fc1f",
+          "message": "fix: lastServerAckdMutationIDs undefined (#506)\n\nIssue:\r\nWhen a client's lastServerAckdMutationIDs is undefined mutation recovery does not update it correctly due to a bad comparison of undefined to a number. lastServerAckdMutationIDs are updated by persist and mutation recovery, persist updates it to match the last mutation ids of the base snapshot being persisted so a client's lastServerAckdMutationIDs entry will be undefined until a snapshot containing a lastMutationId for the client is persisted.\r\n\r\nFix:\r\nUpdate mutation recovery logic to treat undefined lastServerAckdMutationIDs values as zero so that they are updated correctly.",
+          "timestamp": "2023-01-06T14:04:37-07:00",
+          "tree_id": "98ef7b1b989b1da102f42ee8d7ec45cd79b892db",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/ec0066f6ce2907307ab9196bbcd3838c3bb7fc1f"
+        },
+        "date": 1673039139306,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 242613,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40352,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 241412,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 40039,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 97495,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27336,
             "unit": "bytes"
           }
         ]
