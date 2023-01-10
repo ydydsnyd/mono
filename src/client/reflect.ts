@@ -480,10 +480,7 @@ export function createSocket(
   // invalid `protocol`, and will result in an exception, so pass undefined
   // instead.  encodeURIComponent to ensure it only contains chars allowed
   // for a `protocol`.
-  return new wsClass(
-    url.toString(),
-    auth === '' ? undefined : encodeURIComponent(auth),
-  );
+  return new wsClass(url, auth === '' ? undefined : encodeURIComponent(auth));
 }
 
 async function getLogContext<MD extends MutatorDefs>(

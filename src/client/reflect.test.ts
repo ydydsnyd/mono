@@ -134,7 +134,8 @@ test('createSocket', () => {
       // @ts-expect-error MockSocket is not compatible with WebSocket
       MockSocket,
     ) as unknown as MockSocket;
-    expect(mockSocket.args).to.deep.equal([expectedURL, expectedProtocol]);
+    expect('' + mockSocket.args[0]).equal('' + expectedURL);
+    expect(mockSocket.args[1]).equal(expectedProtocol);
   };
 
   t(
