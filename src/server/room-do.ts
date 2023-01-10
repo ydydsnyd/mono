@@ -22,7 +22,13 @@ import {DurableStorage} from '../storage/durable-storage.js';
 import {getConnectedClients} from '../types/connected-clients.js';
 import * as s from 'superstruct';
 import type {CreateRoomRequest} from '../protocol/api/room.js';
-import {post, requireAuthAPIKey, Routed, Router, Handler} from './router.js';
+import {
+  post,
+  requireAuthAPIKey,
+  Router,
+  Handler,
+  BaseContext,
+} from './router.js';
 
 const roomIDKey = '/system/roomID';
 const deletedKey = '/system/deleted';
@@ -115,7 +121,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
           this._lcHasRoomIdContext = true;
         }
       }
-      const response = await this._router.dispatch(request, this._lc);
+      const response = await this._router.dispatch(request, {lc: this._lc});
       if (response !== undefined) {
         return response;
       }
@@ -176,8 +182,8 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     return new Response('ok');
   }
 
-  private _requireAPIKey = <Req extends Routed, Resp>(
-    next: Handler<Req, Resp>,
+  private _requireAPIKey = <Context extends BaseContext, Resp>(
+    next: Handler<Context, Resp>,
   ) => requireAuthAPIKey(() => this._authApiKey, next);
 
   // There's a bit of a question here about whether we really want to detele *all* the
@@ -187,11 +193,12 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   // system keys are deleted who knows what behavior the room will have when its apis are
   // called. Maybe it's fine if they error out, dunno.
   private _deleteAllData = post(
-    this._requireAPIKey(async req => {
+    this._requireAPIKey(async (_, ctx) => {
+      const {lc} = ctx;
       // Maybe we should validate that the roomID in the request matches?
-      req.lc.info?.('delete all data');
+      lc.info?.('delete all data');
       await this._storage.deleteAll();
-      req.lc.info?.('done deleting all data');
+      lc.info?.('done deleting all data');
       await this._setDeleted();
       return new Response('ok');
     }),

@@ -1,5 +1,11 @@
 import {LogContext, LogSink, LogLevel} from '@rocicorp/logger';
-import {checkAuthAPIKey, Handler, Routed, Router} from './router';
+import {
+  BaseContext,
+  checkAuthAPIKey,
+  Handler,
+  Router,
+  WithLogContext,
+} from './router';
 import {randomID} from '../util/rand';
 import {createAuthAPIHeaders} from './auth-api-headers';
 import {dispatch, paths} from './dispatch';
@@ -20,33 +26,25 @@ type WithEnv = {
   env: BaseWorkerEnv;
 };
 
-function makeWithEnv<O extends object>(
-  thing: O,
-  env: BaseWorkerEnv,
-): asserts thing is O & WithEnv {
-  (thing as WithEnv).env = env;
-}
-
-type WorkerRequest = Request & WithEnv;
+type WorkerContext = BaseContext & WithEnv;
 
 // Set up routes for authDO API calls that are not handled by
 // dispatch.
-const router = new Router();
+const router = new Router<WithLogContext & WithEnv>();
 for (const pattern of Object.values(AUTH_ROUTES)) {
   router.register(
     pattern,
-    requireAPIKeyMatchesEnv(req => sendToAuthDO(req, req.lc)),
+    requireAPIKeyMatchesEnv((req, ctx) => sendToAuthDO(req, ctx)),
   );
 }
 
-function requireAPIKeyMatchesEnv(next: Handler<Routed & WithEnv, Response>) {
-  return (req: Routed) => {
-    const withEnv = req as Routed & WithEnv;
-    const resp = checkAuthAPIKey(withEnv.env.REFLECT_AUTH_API_KEY, req);
+function requireAPIKeyMatchesEnv(next: Handler<WorkerContext, Response>) {
+  return (req: Request, ctx: WorkerContext) => {
+    const resp = checkAuthAPIKey(ctx.env.REFLECT_AUTH_API_KEY, req);
     if (resp) {
       return resp;
     }
-    return next(withEnv);
+    return next(req, ctx);
   };
 }
 
@@ -87,8 +85,7 @@ async function scheduled(env: BaseWorkerEnv, lc: LogContext): Promise<void> {
       method: 'POST',
     },
   );
-  makeWithEnv(req, env);
-  const resp = await sendToAuthDO(req, lc);
+  const resp = await sendToAuthDO(req, {lc, env});
   lc.info?.(`Response: ${resp.status} ${resp.statusText}`);
 }
 
@@ -102,12 +99,12 @@ async function fetch(
   lc = lc.addContext('req', randomID());
   lc.debug?.('Handling request:', request.method, request.url);
   try {
-    const resp = await withAllowAllCORS(request, async (request: Request) => {
-      makeWithEnv(request, env);
-      return (
-        (await router.dispatch(request, lc)) ?? handleRequest(request, lc, env)
-      );
-    });
+    const resp = await withAllowAllCORS(
+      request,
+      async (request: Request) =>
+        (await router.dispatch(request, {lc, env})) ??
+        handleRequest(request, lc, env),
+    );
     lc.debug?.(`Returning response: ${resp.status} ${resp.statusText}`);
     return resp;
   } catch (e) {
@@ -180,10 +177,8 @@ function handleRequest(
   lc: LogContext,
   env: BaseWorkerEnv,
 ): Promise<Response> {
-  const forwardToAuthDO = (lc: LogContext, request: Request) => {
-    makeWithEnv(request, env);
-    return sendToAuthDO(request, lc);
-  };
+  const forwardToAuthDO = (lc: LogContext, request: Request) =>
+    sendToAuthDO(request, {lc, env});
   return dispatch(request, lc, env.REFLECT_AUTH_API_KEY, {
     createRoom: forwardToAuthDO,
     connect: forwardToAuthDO,
@@ -213,10 +208,10 @@ async function withLogContext<Env extends BaseWorkerEnv, R>(
 
 // eslint-disable-next-line require-await
 async function sendToAuthDO(
-  request: WorkerRequest,
-  lc: LogContext,
+  request: Request,
+  ctx: WithLogContext & WithEnv,
 ): Promise<Response> {
-  const {env} = request;
+  const {lc, env} = ctx;
   const {authDO} = env;
 
   lc.debug?.(`Sending request ${request.url} to authDO`);

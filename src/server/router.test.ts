@@ -1,16 +1,14 @@
 import {test, expect} from '@jest/globals';
-import {LogContext} from '@rocicorp/logger';
 import type {ReadonlyJSONValue} from 'replicache';
 import {createSilentLogContext} from '../util/test-utils.js';
 import {
   asJSON,
+  BaseContext,
   checkAuthAPIKey,
   get,
   Handler,
-  makeRouted,
   post,
   requireAuthAPIKey,
-  Routed,
   Router,
   withRoomID,
 } from './router.js';
@@ -19,15 +17,15 @@ test('Router', async () => {
   const router = new Router();
   router.register(
     '/foo/:id',
-    req =>
-      new Response(`foo:${req.parsedURL.pathname.groups.id}`, {
+    (_, ctx) =>
+      new Response(`foo:${ctx.parsedURL.pathname.groups.id}`, {
         status: 200,
       }),
   );
   router.register(
     '/bar/:id',
-    req =>
-      new Response(`bar:${req.parsedURL.pathname.groups.id}`, {
+    (_, ctx) =>
+      new Response(`bar:${ctx.parsedURL.pathname.groups.id}`, {
         status: 400,
       }),
   );
@@ -78,7 +76,7 @@ test('Router', async () => {
     try {
       resp = await router.dispatch(
         new Request(`https://test.roci.dev${c.path}`),
-        createSilentLogContext(),
+        {lc: createSilentLogContext()},
       );
     } catch (e) {
       error = e;
@@ -105,7 +103,7 @@ test('requireMethod', async () => {
   const parsedURL = pattern.exec(url)!;
 
   type Case = {
-    handler: Handler<Routed, Response>;
+    handler: Handler<BaseContext, Response>;
     method: string;
     expectedStatus: number;
     expectedText: string;
@@ -145,9 +143,8 @@ test('requireMethod', async () => {
       method: c.method,
       body: c.method === 'POST' ? 'ok' : undefined,
     });
-    makeRouted(req, parsedURL, lc);
 
-    const resp = await c.handler(req);
+    const resp = await c.handler(req, {lc, parsedURL});
     expect(resp.status).toBe(c.expectedStatus);
     expect(await resp.text()).toBe(c.expectedText);
   }
@@ -306,10 +303,13 @@ test('requireAuthAPIKey', async () => {
       body: 'ok',
       headers,
     });
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    makeRouted(req, new URLPattern().exec()!, new LogContext('debug'));
+    const ctx = {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      parsedURL: new URLPattern().exec()!,
+      lc: createSilentLogContext(),
+    };
     try {
-      const response = await handler(req);
+      const response = await handler(req, ctx);
       if (response === undefined) {
         result = response;
       } else {
@@ -351,17 +351,20 @@ test('withRoomID', async () => {
   ];
 
   const handler = withRoomID(
-    req => new Response(`roomID:${req.roomID}`, {status: 200}),
+    (_, ctx) => new Response(`roomID:${ctx.roomID}`, {status: 200}),
   );
 
   for (const c of cases) {
     const url = `https://roci.dev/`;
     const request = new Request(url);
-    makeRouted(request, c.parsedURL, createSilentLogContext());
+    const ctx = {
+      parsedURL: c.parsedURL,
+      lc: createSilentLogContext(),
+    };
 
     let result: Case['expected'] | undefined = undefined;
     try {
-      const response = await handler(request);
+      const response = await handler(request, ctx);
       result = {result: {status: response.status, text: await response.text()}};
     } catch (e) {
       result = {error: String(e)};
@@ -400,13 +403,12 @@ test('asJSON', async () => {
       method: 'POST',
       body: c.input,
     });
-    makeRouted(
-      request,
+    const ctx = {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      new URLPattern().exec('https://roci.dev/')!,
-      createSilentLogContext(),
-    );
-    const response = await handler(request);
+      parsedURL: new URLPattern().exec('https://roci.dev/')!,
+      lc: createSilentLogContext(),
+    };
+    const response = await handler(request, ctx);
     expect(await response.json()).toEqual(c.expected);
   }
 });

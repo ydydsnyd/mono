@@ -1,27 +1,34 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {MaybePromise, ReadonlyJSONValue} from 'replicache';
 
-export type Handler<Req, Resp> = (request: Req) => MaybePromise<Resp>;
+/**
+ * Handles a request dispatched by router. Handlers are meant to be nested
+ * in a chain, implementing the concept of "middleware" that validate and/or
+ * compute additional parameters used by downstream handlers.
+ *
+ * Request is passed through the handler chain as-is, unmolested. Each
+ * handler however can create a new, different `context` and pass this to
+ * the next handler. This is how things like body validation are implemented.
+ */
+export type Handler<Context, Resp> = (
+  request: Request,
+  context: Context,
+) => MaybePromise<Resp>;
 
-export type Routed = Request & {
-  parsedURL: URLPatternURLPatternResult;
+export type WithLogContext = {
   lc: LogContext;
 };
 
-type Route = {
-  pattern: URLPattern;
-  handler: Handler<Routed, Response>;
+export type WithParsedURL = {
+  parsedURL: URLPatternURLPatternResult;
 };
 
-export function makeRouted(
-  req: Request,
-  parsedURL: URLPatternURLPatternResult,
-  lc: LogContext,
-): asserts req is Routed {
-  const routed = req as Routed;
-  routed.parsedURL = parsedURL;
-  routed.lc = lc;
-}
+export type BaseContext = WithLogContext & WithParsedURL;
+
+type Route<Context> = {
+  pattern: URLPattern;
+  handler: Handler<Context, Response>;
+};
 
 /**
  * Routes requests to a handler for processing and returns the response.
@@ -32,10 +39,13 @@ export function makeRouted(
  * "middleware", but that's convention. See below in this file for examples of
  * such middleware.
  */
-export class Router {
-  private _routes: Route[] = [];
+export class Router<InitialContext extends WithLogContext = WithLogContext> {
+  private _routes: Route<InitialContext & WithParsedURL>[] = [];
 
-  register(path: string, handler: Handler<Routed, Response>) {
+  register(
+    path: string,
+    handler: Handler<InitialContext & WithParsedURL, Response>,
+  ) {
     this._routes.push({
       pattern: new URLPattern({pathname: path}),
       handler,
@@ -44,8 +54,9 @@ export class Router {
 
   dispatch(
     request: Request,
-    lc: LogContext,
+    context: InitialContext,
   ): MaybePromise<Response | undefined> {
+    const {lc} = context;
     const matches = this._routes
       .map(route => {
         const {pattern} = route;
@@ -64,53 +75,48 @@ export class Router {
     const {handler} = route;
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    makeRouted(request, result!, lc);
-
-    return handler(request);
+    return handler(request, {...context, parsedURL: result!});
   }
 }
 
-function requireMethod<Req extends Routed, Resp extends Response>(
+function requireMethod<Context extends BaseContext, Resp extends Response>(
   method: string,
-  next: Handler<Req, Resp>,
+  next: Handler<Context, Resp>,
 ) {
-  return (request: Req) => {
+  return (request: Request, context: Context) => {
     if (request.method !== method) {
       return new Response('unsupported method', {status: 405});
     }
-    return next(request);
+    return next(request, context);
   };
 }
 
-export function get<Req extends Routed, Resp extends Response>(
-  next: Handler<Req, Resp>,
+export function get<Context extends BaseContext, Resp extends Response>(
+  next: Handler<Context, Resp>,
 ) {
   return requireMethod('GET', next);
 }
 
-export function post<Req extends Routed, Resp extends Response>(
-  next: Handler<Req, Resp>,
+export function post<Context extends BaseContext, Resp extends Response>(
+  next: Handler<Context, Resp>,
 ) {
   return requireMethod('POST', next);
 }
 
-export function requireAuthAPIKey<Req extends Routed, Resp>(
+export function requireAuthAPIKey<Context extends BaseContext, Resp>(
   required: () => string,
-  next: Handler<Req, Resp>,
+  next: Handler<Context, Resp>,
 ) {
-  return (req: Req) => {
+  return (req: Request, context: Context) => {
     const resp = checkAuthAPIKey(required(), req);
     if (resp) {
       return resp;
     }
-    return next(req);
+    return next(req, context);
   };
 }
 
-export function checkAuthAPIKey<Req extends Request>(
-  required: string | undefined,
-  req: Req,
-) {
+export function checkAuthAPIKey(required: string | undefined, req: Request) {
   if (!required) {
     throw new Error('Internal error: expected auth api key cannot be empty');
   }
@@ -123,23 +129,22 @@ export function checkAuthAPIKey<Req extends Request>(
   return undefined;
 }
 
-export type WithRoomID = Routed & {roomID: string};
-export function withRoomID<Req extends Routed, Resp>(
-  next: Handler<WithRoomID, Resp>,
+export type WithRoomID = {roomID: string};
+export function withRoomID<Context extends BaseContext, Resp>(
+  next: Handler<Context & WithRoomID, Resp>,
 ) {
-  return (req: Req) => {
-    const {roomID} = req.parsedURL.pathname.groups;
+  return (req: Request, ctx: Context) => {
+    const {roomID} = ctx.parsedURL.pathname.groups;
     if (roomID === undefined) {
       throw new Error('Internal error: roomID not found by withRoomID');
     }
-    const typed = req as unknown as WithRoomID;
-    typed.roomID = roomID;
-    return next(typed);
+    return next(req, {...ctx, roomID});
   };
 }
 
-export function asJSON<Req extends Routed>(
-  next: Handler<Req, ReadonlyJSONValue>,
+export function asJSON<Context extends BaseContext>(
+  next: Handler<Context, ReadonlyJSONValue>,
 ) {
-  return async (req: Req) => new Response(JSON.stringify(await next(req)));
+  return async (req: Request, ctx: Context) =>
+    new Response(JSON.stringify(await next(req, ctx)));
 }

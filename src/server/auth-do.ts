@@ -39,7 +39,8 @@ import {
   withRoomID,
   get,
   post,
-  Routed,
+  BaseContext,
+  WithRoomID,
 } from './router.js';
 
 export interface AuthDOOptions {
@@ -132,7 +133,7 @@ export class BaseAuthDO implements DurableObject {
     lc.debug?.('Handling request:', request.url);
     try {
       // Try newfangled routes first.
-      let resp = await this._router.dispatch(request, lc);
+      let resp = await this._router.dispatch(request, {lc});
       // If not handled, use dispatch routes.
       // TODO: change dispatch to return 404 in this case once everything is converted.
       if (resp === undefined) {
@@ -151,16 +152,16 @@ export class BaseAuthDO implements DurableObject {
     }
   }
 
-  private _requireAPIKey = <Req extends Routed, Resp>(
-    next: Handler<Req, Resp>,
+  private _requireAPIKey = <Context extends BaseContext, Resp>(
+    next: Handler<Context, Resp>,
   ) => requireAuthAPIKey(() => this._authApiKey, next);
 
   private _roomStatusByRoomID = get(
     this._requireAPIKey(
       withRoomID(
-        asJSON(async req => {
+        asJSON(async (_, ctx: BaseContext & WithRoomID) => {
           const roomRecord = await this._roomRecordLock.withRead(() =>
-            roomRecordByRoomID(this._durableStorage, req.roomID),
+            roomRecordByRoomID(this._durableStorage, ctx.roomID),
           );
           if (roomRecord === undefined) {
             return {status: RoomStatus.Unknown};
@@ -202,9 +203,9 @@ export class BaseAuthDO implements DurableObject {
   // to ensure users are logged out.
   private _closeRoom = post(
     this._requireAPIKey(
-      withRoomID(req =>
+      withRoomID((_, ctx) =>
         this._roomRecordLock.withWrite(() =>
-          closeRoom(this._lc, this._durableStorage, req.roomID),
+          closeRoom(ctx.lc, this._durableStorage, ctx.roomID),
         ),
       ),
     ),
@@ -214,13 +215,13 @@ export class BaseAuthDO implements DurableObject {
   // will return 410 Gone for all requests.
   private _deleteRoom = post(
     this._requireAPIKey(
-      withRoomID(req =>
+      withRoomID((req, ctx) =>
         this._roomRecordLock.withWrite(() =>
           deleteRoom(
-            this._lc,
+            ctx.lc,
             this._roomDO,
             this._durableStorage,
-            req.roomID,
+            ctx.roomID,
             req,
           ),
         ),
@@ -235,9 +236,9 @@ export class BaseAuthDO implements DurableObject {
   // in reflect-server.
   private _forgetRoom = post(
     this._requireAPIKey(
-      withRoomID(req =>
+      withRoomID((_, ctx) =>
         this._roomRecordLock.withWrite(() =>
-          deleteRoomRecord(this._lc, this._durableStorage, req.roomID),
+          deleteRoomRecord(ctx.lc, this._durableStorage, ctx.roomID),
         ),
       ),
     ),
@@ -249,13 +250,13 @@ export class BaseAuthDO implements DurableObject {
   // does not check that the room actually exists.
   private _migrateRoom = post(
     this._requireAPIKey(
-      withRoomID(req =>
+      withRoomID((_, ctx) =>
         this._roomRecordLock.withWrite(() =>
           createRoomRecordForLegacyRoom(
-            this._lc,
+            ctx.lc,
             this._roomDO,
             this._durableStorage,
-            req.roomID,
+            ctx.roomID,
           ),
         ),
       ),
