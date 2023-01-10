@@ -111,6 +111,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
         if (roomID) {
           this._lc = this._lc.addContext('roomID', roomID);
+          this._lc.info?.('initializing room');
           this._lcHasRoomIdContext = true;
         }
       }
