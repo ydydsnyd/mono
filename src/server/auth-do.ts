@@ -307,17 +307,20 @@ export class BaseAuthDO implements DurableObject {
       return createUnauthorizedResponse('auth required');
     }
 
-    // From this point forward we want to return errors over the
-    // websocket so the client can see them. This is a bit dodgy
-    // since adversaries who send unauthorized or bad requests
-    // cause us to allocate websockets. But we don't have an
-    // alternative to piping errors down to the client at the
-    // moment.
+    // From this point forward we want to return errors over the websocket so
+    // the client can see them.
     //
-    // TODO consider using socket close codes in the 4xxx range
-    //   for the signaling instead of messages.
-    // TODO should probably unify the way this works with how
-    //   roomDO connect() does it.
+    // To report an error in the HTTP upgrade request we accept the upgrade
+    // request and send the error over the websocket. This is because the
+    // status code and body are not visible to the client in the HTTP upgrade.
+
+    // This is a bit dodgy since adversaries who send unauthorized or bad
+    // requests cause us to allocate websockets. But we don't have an
+    // alternative to piping errors down to the client at the moment.
+    //
+    // TODO consider using socket close codes in the 4xxx range for the
+    //   signaling instead of messages. TODO should probably unify the way this
+    //   works with how roomDO connect() does it.
 
     const closeWithError = (error: string) => {
       const pair = this._newWebSocketPair();
