@@ -178,9 +178,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
   private _requireAPIKey = <Req extends Routed, Resp>(
     next: Handler<Req, Resp>,
-  ) => {
-    return requireAuthAPIKey(() => this._authApiKey, next);
-  };
+  ) => requireAuthAPIKey(() => this._authApiKey, next);
 
   // There's a bit of a question here about whether we really want to detele *all* the
   // data when a room is deleted. This deletes everything, including values kept by the

@@ -46,12 +46,12 @@ export class DurableStorage implements Storage {
     return getEntry(this._durable, key, schema, baseOptions);
   }
 
-  async list<T extends JSONValue>(
+  list<T extends JSONValue>(
     options: ListOptions,
     schema: z.Struct<T>,
   ): Promise<Map<string, T>> {
     const doOptions = doListOptions(options);
-    return await listEntries(this._durable, schema, doOptions);
+    return listEntries(this._durable, schema, doOptions);
   }
 
   deleteAll(): Promise<void> {

@@ -35,9 +35,10 @@ const router = new Router();
 for (const pattern of Object.values(AUTH_ROUTES)) {
   router.register(
     pattern,
-    requireAPIKeyMatchesEnv(req => {
-      return sendToAuthDO(req, req.lc);
-    }) as Handler<Request, Response>,
+    requireAPIKeyMatchesEnv(req => sendToAuthDO(req, req.lc)) as Handler<
+      Request,
+      Response
+    >,
   );
 }
 
@@ -111,8 +112,7 @@ async function fetch(
     const resp = await withAllowAllCORS(request, async (request: Request) => {
       makeWithEnv(request, env);
       return (
-        (await router.dispatch(request, lc)) ??
-        (await handleRequest(request, lc, env))
+        (await router.dispatch(request, lc)) ?? handleRequest(request, lc, env)
       );
     });
     lc.debug?.(`Returning response: ${resp.status} ${resp.statusText}`);
@@ -218,6 +218,7 @@ async function withLogContext<Env extends BaseWorkerEnv, R>(
   }
 }
 
+// eslint-disable-next-line require-await
 async function sendToAuthDO(
   request: WorkerRequest,
   lc: LogContext,
@@ -229,5 +230,5 @@ async function sendToAuthDO(
 
   const id = authDO.idFromName('auth');
   const stub = authDO.get(id);
-  return await stub.fetch(request);
+  return stub.fetch(request);
 }

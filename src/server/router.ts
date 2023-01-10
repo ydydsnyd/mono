@@ -42,10 +42,10 @@ export class Router {
     });
   }
 
-  async dispatch(
+  dispatch(
     request: Request,
     lc: LogContext,
-  ): Promise<Response | undefined> {
+  ): MaybePromise<Response | undefined> {
     const matches = this._routes
       .map(route => {
         const {pattern} = route;
@@ -66,7 +66,7 @@ export class Router {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     makeRouted(request, result!, lc);
 
-    return await handler(request);
+    return handler(request);
   }
 }
 
@@ -74,11 +74,11 @@ function requireMethod<Req extends Routed, Resp extends Response>(
   method: string,
   next: Handler<Req, Resp>,
 ) {
-  return async (request: Req) => {
+  return (request: Req) => {
     if (request.method !== method) {
       return new Response('unsupported method', {status: 405});
     }
-    return await next(request);
+    return next(request);
   };
 }
 
@@ -98,12 +98,12 @@ export function requireAuthAPIKey<Req extends Routed, Resp>(
   required: () => string,
   next: Handler<Req, Resp>,
 ) {
-  return async (req: Req) => {
+  return (req: Req) => {
     const resp = checkAuthAPIKey(required(), req);
     if (resp) {
       return resp;
     }
-    return await next(req);
+    return next(req);
   };
 }
 
@@ -141,7 +141,5 @@ export function withRoomID<Req extends Routed, Resp>(
 export function asJSON<Req extends Routed>(
   next: Handler<Req, ReadonlyJSONValue>,
 ) {
-  return async (req: Req) => {
-    return new Response(JSON.stringify(await next(req)));
-  };
+  return async (req: Req) => new Response(JSON.stringify(await next(req)));
 }

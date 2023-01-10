@@ -17,17 +17,17 @@ export function userValueKey(key: string): string {
   return `${userValuePrefix}${key}`;
 }
 
-export async function getUserValue(
+export function getUserValue(
   key: string,
   storage: Storage,
 ): Promise<UserValue | undefined> {
-  return await storage.get(userValueKey(key), userValueSchema);
+  return storage.get(userValueKey(key), userValueSchema);
 }
 
-export async function putUserValue(
+export function putUserValue(
   key: string,
   value: UserValue,
   storage: Storage,
 ): Promise<void> {
-  return await storage.put(userValueKey(key), value);
+  return storage.put(userValueKey(key), value);
 }

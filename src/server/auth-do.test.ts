@@ -66,9 +66,7 @@ async function createCreateRoomTestFixture() {
     idFromName: () => {
       throw 'should not be called';
     },
-    newUniqueId: () => {
-      return new TestDurableObjectId('unique-room-do-' + roomNum++);
-    },
+    newUniqueId: () => new TestDurableObjectId('unique-room-do-' + roomNum++),
     get: (id: DurableObjectId) => {
       const objectIDString = id.toString();
 
@@ -198,12 +196,9 @@ test('createRoom returns 500 if roomDO createRoom fails', async () => {
   });
 
   // Override the roomDO to return a 500.
-  testRoomDO.get = (id: DurableObjectId) => {
+  testRoomDO.get = (id: DurableObjectId) =>
     // eslint-disable-next-line require-await
-    return new TestDurableObjectStub(id, async () => {
-      return new Response('', {status: 500});
-    });
-  };
+    new TestDurableObjectStub(id, async () => new Response('', {status: 500}));
 
   const response = await authDO.fetch(testRequest);
 
@@ -251,9 +246,8 @@ test('createRoom sets jurisdiction if requested', async () => {
 test('migrate room creates a room record', async () => {
   const {testRoomID, testRoomDO, state} = await createCreateRoomTestFixture();
 
-  testRoomDO.idFromName = (name: string) => {
-    return new TestDurableObjectId(`id-${name}`);
-  };
+  testRoomDO.idFromName = (name: string) =>
+    new TestDurableObjectId(`id-${name}`);
   const expectedObjectIDString = testRoomDO.idFromName(testRoomID).toString();
 
   const authDO = new BaseAuthDO({
@@ -410,9 +404,9 @@ test('deleteRoom calls into roomDO and marks room deleted', async () => {
   );
 
   let gotDeleteForObjectIDString;
-  testRoomDO.get = (id: DurableObjectId) => {
+  testRoomDO.get = (id: DurableObjectId) =>
     // eslint-disable-next-line require-await
-    return new TestDurableObjectStub(id, async (request: Request) => {
+    new TestDurableObjectStub(id, async (request: Request) => {
       const url = new URL(request.url);
       if (url.pathname === deleteRoomPathWithRoomID) {
         gotDeleteForObjectIDString = id.toString();
@@ -420,7 +414,6 @@ test('deleteRoom calls into roomDO and marks room deleted', async () => {
       }
       return new Response('', {status: 200});
     });
-  };
 
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
@@ -788,9 +781,7 @@ function createConnectTestFixture(
     idFromName: () => {
       throw 'should not be called';
     },
-    newUniqueId: () => {
-      return new TestDurableObjectId('room-do-' + numRooms++);
-    },
+    newUniqueId: () => new TestDurableObjectId('room-do-' + numRooms++),
     get: (id: DurableObjectId) => {
       expect(id.toString()).toEqual('room-do-0');
       // eslint-disable-next-line require-await
@@ -826,12 +817,11 @@ function createConnectTestFixture(
 function createRoomDOThatThrowsIfFetchIsCalled(): DurableObjectNamespace {
   return {
     ...createTestDurableObjectNamespace(),
-    get: (id: DurableObjectId) => {
+    get: (id: DurableObjectId) =>
       // eslint-disable-next-line require-await
-      return new TestDurableObjectStub(id, async (request: Request) => {
+      new TestDurableObjectStub(id, async (request: Request) => {
         throw new Error('Unexpected call to Room DO fetch ' + request.url);
-      });
-    },
+      }),
   };
 }
 
@@ -857,9 +847,7 @@ test("connect won't connect to a room that doesn't exist", async () => {
     authApiKey: TEST_AUTH_API_KEY,
     logSink,
     logLevel: 'debug',
-    newWebSocketPair: () => {
-      return [clientWs, serverWs];
-    },
+    newWebSocketPair: () => [clientWs, serverWs],
   });
   // Note: no room created.
 
@@ -933,15 +921,11 @@ test('connect wont connect to a room that is closed', async () => {
     roomDO: testRoomDO,
     state,
     // eslint-disable-next-line require-await
-    authHandler: async () => {
-      return {userID: testUserID};
-    },
+    authHandler: async () => ({userID: testUserID}),
     authApiKey: TEST_AUTH_API_KEY,
     logSink,
     logLevel: 'debug',
-    newWebSocketPair: () => {
-      return [clientWs, serverWs];
-    },
+    newWebSocketPair: () => [clientWs, serverWs],
   });
   await createRoom(authDO, testRoomID);
 
@@ -1040,9 +1024,7 @@ test('connect pipes 401 over ws without calling Room DO if authHandler rejects',
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
-    newWebSocketPair: () => {
-      return [clientWs, serverWs];
-    },
+    newWebSocketPair: () => [clientWs, serverWs],
   });
 
   const response = await authDO.fetch(testRequest);
@@ -1116,8 +1098,8 @@ test('authInvalidateForUser when requests to roomDOs are successful', async () =
   const roomDORequestCountsByRoomID = new Map();
   const testRoomDO: DurableObjectNamespace = {
     ...createTestDurableObjectNamespace(),
-    get: (id: DurableObjectId) => {
-      return new TestDurableObjectStub(id, async (request: Request) => {
+    get: (id: DurableObjectId) =>
+      new TestDurableObjectStub(id, async (request: Request) => {
         // We are only interested in auth requests. Plus, we can't get the RoomRecord
         // during the /createRoom call because it hasn't been written yet when /createRoom
         // is called!
@@ -1134,8 +1116,7 @@ test('authInvalidateForUser when requests to roomDOs are successful', async () =
           expect(request).toBe(testRequest);
         }
         return new Response('Test Success', {status: 200});
-      });
-    },
+      }),
   };
 
   const logSink = new TestLogSink();
@@ -1199,8 +1180,8 @@ test('authInvalidateForUser when connection ids have chars that need to be perce
   const roomDORequestCountsByRoomID = new Map();
   const testRoomDO: DurableObjectNamespace = {
     ...createTestDurableObjectNamespace(),
-    get: (id: DurableObjectId) => {
-      return new TestDurableObjectStub(id, async (request: Request) => {
+    get: (id: DurableObjectId) =>
+      new TestDurableObjectStub(id, async (request: Request) => {
         // We are only interested in auth requests.
         if (isAuthRequest(request)) {
           const {roomID} = (await getRoomRecordByObjectID(
@@ -1214,8 +1195,7 @@ test('authInvalidateForUser when connection ids have chars that need to be perce
           expect(request).toBe(testRequest);
         }
         return new Response('Test Success', {status: 200});
-      });
-    },
+      }),
   };
 
   const logSink = new TestLogSink();
@@ -1271,8 +1251,8 @@ test('authInvalidateForUser when any request to roomDOs returns error response',
   const roomDORequestCountsByRoomID = new Map();
   const testRoomDO: DurableObjectNamespace = {
     ...createTestDurableObjectNamespace(),
-    get: (id: DurableObjectId) => {
-      return new TestDurableObjectStub(id, async (request: Request) => {
+    get: (id: DurableObjectId) =>
+      new TestDurableObjectStub(id, async (request: Request) => {
         // We are only interested in auth requests.
         if (isAuthRequest(request)) {
           const {roomID} = (await getRoomRecordByObjectID(
@@ -1292,8 +1272,7 @@ test('authInvalidateForUser when any request to roomDOs returns error response',
             : new Response('Test Success', {status: 200});
         }
         return new Response('ok', {status: 200});
-      });
-    },
+      }),
   };
 
   const logSink = new TestLogSink();
@@ -1481,8 +1460,8 @@ test('authInvalidateAll when requests to roomDOs are successful', async () => {
   const roomDORequestCountsByRoomID = new Map();
   const testRoomDO: DurableObjectNamespace = {
     ...createTestDurableObjectNamespace(),
-    get: (id: DurableObjectId) => {
-      return new TestDurableObjectStub(id, async (request: Request) => {
+    get: (id: DurableObjectId) =>
+      new TestDurableObjectStub(id, async (request: Request) => {
         if (isAuthRequest(request)) {
           const {roomID} = (await getRoomRecordByObjectID(
             storage,
@@ -1495,8 +1474,7 @@ test('authInvalidateAll when requests to roomDOs are successful', async () => {
           expect(request).toBe(testRequest);
         }
         return new Response('Test Success', {status: 200});
-      });
-    },
+      }),
   };
 
   const authDO = new BaseAuthDO({
@@ -1559,8 +1537,8 @@ test('authInvalidateAll when any request to roomDOs returns error response', asy
   const roomDORequestCountsByRoomID = new Map();
   const testRoomDO: DurableObjectNamespace = {
     ...createTestDurableObjectNamespace(),
-    get: (id: DurableObjectId) => {
-      return new TestDurableObjectStub(id, async (request: Request) => {
+    get: (id: DurableObjectId) =>
+      new TestDurableObjectStub(id, async (request: Request) => {
         if (isAuthRequest(request)) {
           const {roomID} = (await getRoomRecordByObjectID(
             storage,
@@ -1578,8 +1556,7 @@ test('authInvalidateAll when any request to roomDOs returns error response', asy
             : new Response('Test Success', {status: 200});
         }
         return new Response('ok', {status: 200});
-      });
-    },
+      }),
   };
 
   const authDO = new BaseAuthDO({
@@ -1642,8 +1619,8 @@ async function createRevalidateConnectionsTestFixture() {
   const roomDORequestCountsByRoomID = new Map();
   const testRoomDO: DurableObjectNamespace = {
     ...createTestDurableObjectNamespace(),
-    get: (id: DurableObjectId) => {
-      return new TestDurableObjectStub(id, async (request: Request) => {
+    get: (id: DurableObjectId) =>
+      new TestDurableObjectStub(id, async (request: Request) => {
         if (isAuthRequest(request)) {
           const {roomID} = (await getRoomRecordByObjectID(
             storage,
@@ -1677,8 +1654,7 @@ async function createRevalidateConnectionsTestFixture() {
           }
         }
         return new Response('ok', {status: 200});
-      });
-    },
+      }),
   };
 
   const authDO = new BaseAuthDO({
@@ -1768,8 +1744,8 @@ test('revalidateConnections continues if one roomDO returns an error', async () 
   const roomDORequestCountsByRoomID = new Map();
   const testRoomDO: DurableObjectNamespace = {
     ...createTestDurableObjectNamespace(),
-    get: (id: DurableObjectId) => {
-      return new TestDurableObjectStub(id, async (request: Request) => {
+    get: (id: DurableObjectId) =>
+      new TestDurableObjectStub(id, async (request: Request) => {
         if (isAuthRequest(request)) {
           const {roomID} = (await getRoomRecordByObjectID(
             storage,
@@ -1803,8 +1779,7 @@ test('revalidateConnections continues if one roomDO returns an error', async () 
           }
         }
         return new Response('ok', {status: 200});
-      });
-    },
+      }),
   };
 
   const authDO = new BaseAuthDO({

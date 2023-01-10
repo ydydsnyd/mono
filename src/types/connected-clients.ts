@@ -15,11 +15,11 @@ export async function getConnectedClients(
   return new Set(connectedClients);
 }
 
-export async function putConnectedClients(
+export function putConnectedClients(
   clients: ReadonlySet<ClientID>,
   storage: Storage,
 ): Promise<void> {
-  return await storage.put(connectedClientsKey, [...clients.values()]);
+  return storage.put(connectedClientsKey, [...clients.values()]);
 }
 
 export async function addConnectedClient(

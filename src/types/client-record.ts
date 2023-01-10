@@ -16,17 +16,17 @@ export function clientRecordKey(clientID: ClientID): string {
   return `${clientRecordPrefix}${clientID}`;
 }
 
-export async function getClientRecord(
+export function getClientRecord(
   clientID: ClientID,
   storage: Storage,
 ): Promise<ClientRecord | undefined> {
-  return await storage.get(clientRecordKey(clientID), clientRecordSchema);
+  return storage.get(clientRecordKey(clientID), clientRecordSchema);
 }
 
-export async function putClientRecord(
+export function putClientRecord(
   clientID: ClientID,
   record: ClientRecord,
   storage: Storage,
 ): Promise<void> {
-  return await storage.put(clientRecordKey(clientID), record);
+  return storage.put(clientRecordKey(clientID), record);
 }

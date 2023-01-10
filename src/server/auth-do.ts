@@ -153,17 +153,15 @@ export class BaseAuthDO implements DurableObject {
 
   private _requireAPIKey = <Req extends Routed, Resp>(
     next: Handler<Req, Resp>,
-  ) => {
-    return requireAuthAPIKey(() => this._authApiKey, next);
-  };
+  ) => requireAuthAPIKey(() => this._authApiKey, next);
 
   private _roomStatusByRoomID = get(
     this._requireAPIKey(
       withRoomID(
         asJSON(async req => {
-          const roomRecord = await this._roomRecordLock.withRead(async () => {
-            return await roomRecordByRoomID(this._durableStorage, req.roomID);
-          });
+          const roomRecord = await this._roomRecordLock.withRead(() =>
+            roomRecordByRoomID(this._durableStorage, req.roomID),
+          );
           if (roomRecord === undefined) {
             return {status: RoomStatus.Unknown};
           }
@@ -176,10 +174,8 @@ export class BaseAuthDO implements DurableObject {
   private _allRoomRecords = get(
     this._requireAPIKey(
       asJSON(async () => {
-        const roomIDToRecords = await this._roomRecordLock.withRead(
-          async () => {
-            return await roomRecords(this._durableStorage);
-          },
+        const roomIDToRecords = await this._roomRecordLock.withRead(() =>
+          roomRecords(this._durableStorage),
         );
         return Array.from(roomIDToRecords.values());
       }),
@@ -206,11 +202,11 @@ export class BaseAuthDO implements DurableObject {
   // to ensure users are logged out.
   private _closeRoom = post(
     this._requireAPIKey(
-      withRoomID(async req => {
-        return await this._roomRecordLock.withWrite(async () => {
-          return await closeRoom(this._lc, this._durableStorage, req.roomID);
-        });
-      }),
+      withRoomID(req =>
+        this._roomRecordLock.withWrite(() =>
+          closeRoom(this._lc, this._durableStorage, req.roomID),
+        ),
+      ),
     ),
   );
 
@@ -218,17 +214,17 @@ export class BaseAuthDO implements DurableObject {
   // will return 410 Gone for all requests.
   private _deleteRoom = post(
     this._requireAPIKey(
-      withRoomID(async req => {
-        return await this._roomRecordLock.withWrite(async () => {
-          return await deleteRoom(
+      withRoomID(req =>
+        this._roomRecordLock.withWrite(() =>
+          deleteRoom(
             this._lc,
             this._roomDO,
             this._durableStorage,
             req.roomID,
             req,
-          );
-        });
-      }),
+          ),
+        ),
+      ),
     ),
   );
 
@@ -239,15 +235,11 @@ export class BaseAuthDO implements DurableObject {
   // in reflect-server.
   private _forgetRoom = post(
     this._requireAPIKey(
-      withRoomID(async req => {
-        return await this._roomRecordLock.withWrite(async () => {
-          return await deleteRoomRecord(
-            this._lc,
-            this._durableStorage,
-            req.roomID,
-          );
-        });
-      }),
+      withRoomID(req =>
+        this._roomRecordLock.withWrite(() =>
+          deleteRoomRecord(this._lc, this._durableStorage, req.roomID),
+        ),
+      ),
     ),
   );
 
@@ -257,16 +249,16 @@ export class BaseAuthDO implements DurableObject {
   // does not check that the room actually exists.
   private _migrateRoom = post(
     this._requireAPIKey(
-      withRoomID(async req => {
-        return await this._roomRecordLock.withWrite(async () => {
-          return await createRoomRecordForLegacyRoom(
+      withRoomID(req =>
+        this._roomRecordLock.withWrite(() =>
+          createRoomRecordForLegacyRoom(
             this._lc,
             this._roomDO,
             this._durableStorage,
             req.roomID,
-          );
-        });
-      }),
+          ),
+        ),
+      ),
     ),
   );
 

@@ -17,21 +17,27 @@ import {
 
 test('Router', async () => {
   const router = new Router();
-  router.register('/foo/:id', req => {
-    return new Response(`foo:${req.parsedURL.pathname.groups.id}`, {
-      status: 200,
-    });
-  });
-  router.register('/bar/:id', req => {
-    return new Response(`bar:${req.parsedURL.pathname.groups.id}`, {
-      status: 400,
-    });
-  });
-  router.register('/bar', () => {
-    return new Response(`bar`, {
-      status: 500,
-    });
-  });
+  router.register(
+    '/foo/:id',
+    req =>
+      new Response(`foo:${req.parsedURL.pathname.groups.id}`, {
+        status: 200,
+      }),
+  );
+  router.register(
+    '/bar/:id',
+    req =>
+      new Response(`bar:${req.parsedURL.pathname.groups.id}`, {
+        status: 400,
+      }),
+  );
+  router.register(
+    '/bar',
+    () =>
+      new Response(`bar`, {
+        status: 500,
+      }),
+  );
 
   type Case = {
     path: string;
@@ -88,12 +94,10 @@ test('Router', async () => {
 });
 
 test('requireMethod', async () => {
-  const getHandler = get(req => {
-    return new Response(`${req.url}`, {status: 300});
-  });
-  const postHandler = post(async req => {
-    return new Response(`${req.url}:${await req.text()}`, {status: 301});
-  });
+  const getHandler = get(req => new Response(`${req.url}`, {status: 300}));
+  const postHandler = post(
+    async req => new Response(`${req.url}:${await req.text()}`, {status: 301}),
+  );
 
   const pattern = new URLPattern();
   const url = 'https://test.roci.dev/';

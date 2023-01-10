@@ -16,10 +16,8 @@ export async function putVersion(
   await storage.put(versionKey, version);
 }
 
-export async function getVersion(
-  storage: Storage,
-): Promise<Version | undefined> {
-  return await storage.get(versionKey, versionSchema);
+export function getVersion(storage: Storage): Promise<Version | undefined> {
+  return storage.get(versionKey, versionSchema);
 }
 
 export function compareVersions(

@@ -20,9 +20,8 @@ export class TestDurableObjectStub implements DurableObjectStub {
   readonly fetch: InstanceType<typeof Fetcher>['fetch'];
   constructor(
     id: DurableObjectId,
-    fetch: InstanceType<typeof Fetcher>['fetch'] = () => {
-      return Promise.resolve(new Response());
-    },
+    fetch: InstanceType<typeof Fetcher>['fetch'] = () =>
+      Promise.resolve(new Response()),
   ) {
     this.id = id;
     this.objectIDString = id.toString();
@@ -57,20 +56,14 @@ let objectIDCounter = 0;
 
 export function createTestDurableObjectNamespace(): DurableObjectNamespace {
   return {
-    newUniqueId: (_options?: DurableObjectNamespaceNewUniqueIdOptions) => {
+    newUniqueId: (_options?: DurableObjectNamespaceNewUniqueIdOptions) =>
       // TODO(fritz) support options
-      return new TestDurableObjectId('unique-id-' + objectIDCounter++);
-    },
+      new TestDurableObjectId('unique-id-' + objectIDCounter++),
     // Note: uses the given name for both the object ID and the name.
-    idFromName: (name: string) => {
-      return new TestDurableObjectId(name, name);
-    },
-    idFromString: (objectIDString: string) => {
+    idFromName: (name: string) => new TestDurableObjectId(name, name),
+    idFromString: (objectIDString: string) =>
       // Note: doesn't support names.
-      return new TestDurableObjectId(objectIDString);
-    },
-    get: (id: DurableObjectId) => {
-      return new TestDurableObjectStub(id);
-    },
+      new TestDurableObjectId(objectIDString),
+    get: (id: DurableObjectId) => new TestDurableObjectStub(id),
   };
 }

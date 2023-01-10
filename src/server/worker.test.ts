@@ -272,9 +272,7 @@ async function testLogging(
       waitUntilCalls.push(promise);
       return;
     },
-    passThroughOnException: (): void => {
-      return;
-    },
+    passThroughOnException: () => undefined,
   };
 
   let getLogSinkCallCount = 0;
@@ -289,9 +287,7 @@ async function testLogging(
         log: (_level: LogLevel, ..._args: unknown[]): void => {
           logCallCount++;
         },
-        flush: (): Promise<void> => {
-          return logFlushPromise;
-        },
+        flush: (): Promise<void> => logFlushPromise,
       };
     },
     getLogLevel: env => {

@@ -192,9 +192,8 @@ test('fastForward', async () => {
       await putUserValue(key, value, storage);
     }
 
-    const gcr = async (clientID: ClientID) => {
-      return must(await getClientRecord(clientID, storage));
-    };
+    const gcr = async (clientID: ClientID) =>
+      must(await getClientRecord(clientID, storage));
 
     const pokes = await fastForwardRoom(
       c.clients,

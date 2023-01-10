@@ -281,12 +281,9 @@ export async function objectIDByRoomID(
 
 // Caller must enforce no other concurrent calls to
 // functions that create or modify the room record.
-export async function roomRecordByRoomID(
-  storage: DurableStorage,
-  roomID: string,
-) {
+export function roomRecordByRoomID(storage: DurableStorage, roomID: string) {
   const roomRecordKey = roomKeyToString({roomID});
-  return await storage.get(roomRecordKey, roomRecordSchema);
+  return storage.get(roomRecordKey, roomRecordSchema);
 }
 
 export async function roomRecordByObjectIDForTest(

@@ -10,9 +10,8 @@ test('closeConnections', () => {
     client('client1_2', 'user1', new Mocket()),
     client('client3_1', 'user3', new Mocket()),
   ]);
-  const predicate = (clientState: ClientState) => {
-    return clientState.userData.userID === 'user1';
-  };
+  const predicate = (clientState: ClientState) =>
+    clientState.userData.userID === 'user1';
   closeConnections(clients, predicate);
   expect((clients.get('client1_1')?.socket as Mocket).log).toEqual([['close']]);
   expect((clients.get('client2_1')?.socket as Mocket).log).toEqual([]);
