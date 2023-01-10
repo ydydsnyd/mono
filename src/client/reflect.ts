@@ -207,7 +207,7 @@ export class Reflect<MD extends MutatorDefs> {
   /**
    * Transactionally read Reflect data.
    */
-  async query<R>(body: (tx: ReadTransaction) => Promise<R> | R): Promise<R> {
+  query<R>(body: (tx: ReadTransaction) => Promise<R> | R): Promise<R> {
     return this._rep.query(body);
   }
 
