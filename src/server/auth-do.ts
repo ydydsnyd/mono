@@ -27,8 +27,7 @@ import {createAuthAPIHeaders} from './auth-api-headers.js';
 import {DurableStorage} from '../storage/durable-storage.js';
 import type {JSONValue} from 'replicache';
 import {addRoutes} from './auth-do-routes.js';
-import type {RociRequest, RociRouter} from './middleware.js';
-import {Router} from 'itty-router';
+import {IRequest, Router, RouterType} from 'itty-router';
 import type {CreateRoomRequest} from '../protocol/api/room.js';
 import {
   newWebSocketPair as defaultNewWebSocketPair,
@@ -57,7 +56,7 @@ export type ConnectionRecord = {
 };
 
 export class BaseAuthDO implements DurableObject {
-  private readonly _router: RociRouter;
+  private readonly _router: RouterType;
   private readonly _roomDO: DurableObjectNamespace;
   private readonly _state: DurableObjectState;
   // _durableStorage is a type-aware wrapper around _state.storage. It
@@ -135,7 +134,7 @@ export class BaseAuthDO implements DurableObject {
     }
   }
 
-  async roomStatusByRoomID(request: RociRequest) {
+  async roomStatusByRoomID(request: IRequest) {
     const roomID = request.params?.roomID;
     if (roomID === undefined) {
       return new Response('Missing roomID', {status: 400});
@@ -149,7 +148,7 @@ export class BaseAuthDO implements DurableObject {
     return newJSONResponse({status: roomRecord.status});
   }
 
-  async allRoomRecords(_: RociRequest) {
+  async allRoomRecords(_: IRequest) {
     const roomIDToRecords = await this._roomRecordLock.withRead(() =>
       roomRecords(this._durableStorage),
     );
@@ -159,7 +158,7 @@ export class BaseAuthDO implements DurableObject {
 
   createRoom(
     lc: LogContext,
-    request: RociRequest,
+    request: Request,
     validatedBody: CreateRoomRequest,
   ) {
     return this._roomRecordLock.withWrite(() =>
@@ -173,25 +172,25 @@ export class BaseAuthDO implements DurableObject {
     );
   }
 
-  closeRoom(request: RociRequest) {
+  closeRoom(request: IRequest) {
     return this._roomRecordLock.withWrite(() =>
       closeRoom(this._lc, this._durableStorage, request),
     );
   }
 
-  deleteRoom(request: RociRequest) {
+  deleteRoom(request: IRequest) {
     return this._roomRecordLock.withWrite(() =>
       deleteRoom(this._lc, this._roomDO, this._durableStorage, request),
     );
   }
 
-  forgetRoom(request: RociRequest) {
+  forgetRoom(request: IRequest) {
     return this._roomRecordLock.withWrite(() =>
       deleteRoomRecord(this._lc, this._durableStorage, request),
     );
   }
 
-  migrateRoom(request: RociRequest) {
+  migrateRoom(request: IRequest) {
     return this._roomRecordLock.withWrite(() =>
       createRoomRecordForLegacyRoom(
         this._lc,
@@ -203,7 +202,7 @@ export class BaseAuthDO implements DurableObject {
   }
 
   // eslint-disable-next-line require-await
-  async connect(lc: LogContext, request: RociRequest): Promise<Response> {
+  async connect(lc: LogContext, request: Request): Promise<Response> {
     lc.info?.('authDO received websocket connection request:', request.url);
 
     const url = new URL(request.url);
@@ -388,7 +387,7 @@ export class BaseAuthDO implements DurableObject {
 
   authInvalidateForUser(
     lc: LogContext,
-    request: RociRequest,
+    request: Request,
     {userID}: InvalidateForUserRequest,
   ): Promise<Response> {
     lc.debug?.(`authInvalidateForUser ${userID} waiting for lock.`);
@@ -412,7 +411,7 @@ export class BaseAuthDO implements DurableObject {
 
   authInvalidateForRoom(
     lc: LogContext,
-    request: RociRequest,
+    request: Request,
     {roomID}: InvalidateForRoomRequest,
   ): Promise<Response> {
     lc.debug?.(`authInvalidateForRoom ${roomID} waiting for lock.`);
@@ -442,7 +441,7 @@ export class BaseAuthDO implements DurableObject {
     });
   }
 
-  authInvalidateAll(lc: LogContext, request: RociRequest): Promise<Response> {
+  authInvalidateAll(lc: LogContext, request: Request): Promise<Response> {
     lc.debug?.(`authInvalidateAll waiting for lock.`);
     return this._authLock.withWrite(async () => {
       lc.debug?.('got lock.');
@@ -553,7 +552,7 @@ export class BaseAuthDO implements DurableObject {
   private async _forwardInvalidateRequest(
     lc: LogContext,
     invalidateRequestName: string,
-    request: RociRequest,
+    request: Request,
     connectionKeyStrings: string[],
   ): Promise<Response> {
     const connectionKeys = connectionKeyStrings.map(keyString => {

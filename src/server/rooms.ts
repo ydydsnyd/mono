@@ -2,7 +2,7 @@ import type {LogContext} from '@rocicorp/logger';
 import type {CreateRoomRequest} from '../protocol/api/room.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
 import * as s from 'superstruct';
-import type {RociRequest} from './middleware.js';
+import type {IRequest} from 'itty-router';
 
 // RoomRecord keeps information about the room, for example the Durable
 // Object ID of the DO instance that has the room.
@@ -71,7 +71,7 @@ export async function createRoom(
   lc: LogContext,
   roomDO: DurableObjectNamespace,
   storage: DurableStorage,
-  request: RociRequest,
+  request: Request,
   validatedBody: CreateRoomRequest,
 ): Promise<Response> {
   // Note: this call was authenticated by dispatch, so no need to check for
@@ -133,7 +133,7 @@ export async function createRoom(
 export async function closeRoom(
   lc: LogContext,
   storage: DurableStorage,
-  request: RociRequest,
+  request: IRequest,
 ): Promise<Response> {
   const roomID = request.params?.roomID;
   if (roomID === undefined) {
@@ -169,7 +169,7 @@ export async function deleteRoom(
   lc: LogContext,
   roomDO: DurableObjectNamespace,
   storage: DurableStorage,
-  request: RociRequest,
+  request: IRequest,
 ): Promise<Response> {
   const roomID = request.params?.roomID;
   if (roomID === undefined) {
@@ -192,7 +192,7 @@ export async function deleteRoom(
 
   const objectID = roomDO.idFromString(roomRecord.objectIDString);
   const roomDOStub = roomDO.get(objectID);
-  const response = await roomDOStub.fetch(request);
+  const response = await roomDOStub.fetch(request as unknown as Request);
   if (!response.ok) {
     lc.debug?.(
       `Received error response from ${roomID}. ${
@@ -218,7 +218,7 @@ export async function deleteRoom(
 export async function deleteRoomRecord(
   lc: LogContext,
   storage: DurableStorage,
-  request: RociRequest,
+  request: IRequest,
 ): Promise<Response> {
   const roomID = request.params?.roomID;
   if (roomID === undefined) {
@@ -250,7 +250,7 @@ export async function createRoomRecordForLegacyRoom(
   lc: LogContext,
   roomDO: DurableObjectNamespace,
   storage: DurableStorage,
-  request: RociRequest,
+  request: IRequest,
 ): Promise<Response> {
   const roomID = request.params?.roomID;
   if (roomID === undefined) {

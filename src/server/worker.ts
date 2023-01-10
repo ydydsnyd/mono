@@ -1,10 +1,10 @@
 import {LogContext, LogSink, LogLevel} from '@rocicorp/logger';
-import {Router} from 'itty-router';
+import {Router, IRequest} from 'itty-router';
 import {randomID} from '../util/rand.js';
 import {createAuthAPIHeaders} from './auth-api-headers.js';
 import {dispatch, paths} from './dispatch.js';
 import {paths as authDOPaths} from './auth-do-routes.js';
-import {RociRequest, requireAuthAPIKeyMatchesEnv} from './middleware.js';
+import {requireAuthAPIKeyMatchesEnv} from './middleware.js';
 
 export interface WorkerOptions<Env extends BaseWorkerEnv> {
   getLogSink: (env: Env) => LogSink;
@@ -21,7 +21,12 @@ export interface BaseWorkerEnv {
 // dispatch.
 const router = Router();
 for (const path of authDOPaths()) {
-  router.all(path, requireAuthAPIKeyMatchesEnv, sendToAuthDO);
+  router.all(
+    path,
+    requireAuthAPIKeyMatchesEnv,
+    (request: IRequest, env: BaseWorkerEnv) =>
+      sendToAuthDO(request as unknown as Request, env),
+  );
 }
 
 export function createWorker<Env extends BaseWorkerEnv>(
@@ -183,10 +188,7 @@ async function withLogContext<Env extends BaseWorkerEnv, R>(
   }
 }
 
-function sendToAuthDO(
-  request: RociRequest,
-  env: BaseWorkerEnv,
-): Promise<Response> {
+function sendToAuthDO(request: Request, env: BaseWorkerEnv): Promise<Response> {
   const {authDO} = env;
   const id = authDO.idFromName('auth');
   const stub = authDO.get(id);

@@ -1,14 +1,11 @@
+import type {IRequest, RouterType} from 'itty-router';
 import type {BaseAuthDO} from './auth-do.js';
-import {
-  RociRequest,
-  RociRouter,
-  requireAuthAPIKeyMatches,
-} from './middleware.js';
+import {requireAuthAPIKeyMatches} from './middleware.js';
 
 type Route = {
   path: string;
   add: (
-    router: RociRouter,
+    router: RouterType,
     authDO: BaseAuthDO,
     authApiKey: string | undefined,
   ) => void;
@@ -22,7 +19,7 @@ export function paths() {
 
 // Called by the authDO to set up its routes.
 export function addRoutes(
-  router: RociRouter,
+  router: RouterType,
   authDO: BaseAuthDO,
   authApiKey: string | undefined,
 ) {
@@ -36,14 +33,14 @@ export const roomStatusByRoomIDPath = '/api/room/v0/room/:roomID/status';
 routes.push({
   path: roomStatusByRoomIDPath,
   add: (
-    router: RociRouter,
+    router: RouterType,
     authDO: BaseAuthDO,
     authApiKey: string | undefined,
   ) => {
     router.get(
       roomStatusByRoomIDPath,
       requireAuthAPIKeyMatches(authApiKey),
-      (request: RociRequest) => authDO.roomStatusByRoomID(request),
+      (request: IRequest) => authDO.roomStatusByRoomID(request),
     );
   },
 });
@@ -52,14 +49,14 @@ export const roomRecordsPath = '/api/room/v0/rooms';
 routes.push({
   path: roomRecordsPath,
   add: (
-    router: RociRouter,
+    router: RouterType,
     authDO: BaseAuthDO,
     authApiKey: string | undefined,
   ) => {
     router.get(
       roomRecordsPath,
       requireAuthAPIKeyMatches(authApiKey),
-      (request: RociRequest) => authDO.allRoomRecords(request),
+      (request: IRequest) => authDO.allRoomRecords(request),
     );
   },
 });
@@ -70,14 +67,14 @@ export const closeRoomPath = '/api/room/v0/room/:roomID/close';
 routes.push({
   path: closeRoomPath,
   add: (
-    router: RociRouter,
+    router: RouterType,
     authDO: BaseAuthDO,
     authApiKey: string | undefined,
   ) => {
     router.post(
       closeRoomPath,
       requireAuthAPIKeyMatches(authApiKey),
-      (request: RociRequest) =>
+      (request: IRequest) =>
         // TODO should plumb a LogContext through here.
         authDO.closeRoom(request),
     );
@@ -90,14 +87,14 @@ export const deleteRoomPath = '/api/room/v0/room/:roomID/delete';
 routes.push({
   path: deleteRoomPath,
   add: (
-    router: RociRouter,
+    router: RouterType,
     authDO: BaseAuthDO,
     authApiKey: string | undefined,
   ) => {
     router.post(
       deleteRoomPath,
       requireAuthAPIKeyMatches(authApiKey),
-      (request: RociRequest) =>
+      (request: IRequest) =>
         // TODO should plumb a LogContext through here.
         authDO.deleteRoom(request),
     );
@@ -112,14 +109,14 @@ export const migrateRoomPath = '/api/room/v0/room/:roomID/migrate/1';
 routes.push({
   path: migrateRoomPath,
   add: (
-    router: RociRouter,
+    router: RouterType,
     authDO: BaseAuthDO,
     authApiKey: string | undefined,
   ) => {
     router.post(
       migrateRoomPath,
       requireAuthAPIKeyMatches(authApiKey),
-      (request: RociRequest) => authDO.migrateRoom(request),
+      (request: IRequest) => authDO.migrateRoom(request),
     );
   },
 });
@@ -133,14 +130,14 @@ export const forgetRoomPath = '/api/room/v0/room/:roomID/DANGER/forget';
 routes.push({
   path: forgetRoomPath,
   add: (
-    router: RociRouter,
+    router: RouterType,
     authDO: BaseAuthDO,
     authApiKey: string | undefined,
   ) => {
     router.post(
       forgetRoomPath,
       requireAuthAPIKeyMatches(authApiKey),
-      (request: RociRequest) => authDO.forgetRoom(request),
+      (request: IRequest) => authDO.forgetRoom(request),
     );
   },
 });

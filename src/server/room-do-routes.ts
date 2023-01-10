@@ -1,15 +1,12 @@
 import type {BaseRoomDO} from './room-do.js';
-import {
-  RociRequest,
-  RociRouter,
-  requireAuthAPIKeyMatches,
-} from './middleware.js';
+import {requireAuthAPIKeyMatches} from './middleware.js';
 import type {MutatorDefs} from 'replicache';
+import type {IRequest, RouterType} from 'itty-router';
 
 type Route = {
   path: string;
   add: (
-    router: RociRouter,
+    router: RouterType,
     roomDO: BaseRoomDO<MutatorDefs>,
     authApiKey: string | undefined,
   ) => void;
@@ -23,7 +20,7 @@ export function paths() {
 
 // Called by the roomDO to set up its routes.
 export function addRoutes(
-  router: RociRouter,
+  router: RouterType,
   roomDO: BaseRoomDO<MutatorDefs>,
   authApiKey: string | undefined,
 ) {
@@ -35,14 +32,14 @@ export const deletePath = '/api/room/v0/room/:roomID/delete';
 routes.push({
   path: deletePath,
   add: (
-    router: RociRouter,
+    router: RouterType,
     roomDO: BaseRoomDO<MutatorDefs>,
     authApiKey: string | undefined,
   ) => {
     router.post(
       deletePath,
       requireAuthAPIKeyMatches(authApiKey),
-      (_: RociRequest) =>
+      (_: IRequest) =>
         // TODO: should plumb a LogContext in here.
         roomDO.deleteAllData(),
     );

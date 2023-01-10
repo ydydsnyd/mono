@@ -22,8 +22,7 @@ import {DurableStorage} from '../storage/durable-storage.js';
 import {getConnectedClients} from '../types/connected-clients.js';
 import * as s from 'superstruct';
 import type {CreateRoomRequest} from '../protocol/api/room.js';
-import {Router} from 'itty-router';
-import type {RociRequest, RociRouter} from './middleware.js';
+import {Router, RouterType} from 'itty-router';
 import {addRoutes} from './room-do-routes.js';
 
 const roomIDKey = '/system/roomID';
@@ -49,7 +48,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   private readonly _authApiKey: string | undefined;
   private _turnTimerID: ReturnType<typeof setInterval> | 0 = 0;
   private readonly _turnDuration: number;
-  private _router: RociRouter;
+  private _router: RouterType;
 
   constructor(options: RoomDOOptions<MD>) {
     const {mutators, disconnectHandler, state, authApiKey, logSink, logLevel} =
@@ -212,7 +211,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
   async authInvalidateForUser(
     lc: LogContext,
-    _request: RociRequest,
+    _request: Request,
     {userID}: InvalidateForUserRequest,
   ): Promise<Response> {
     lc.debug?.(
@@ -271,9 +270,9 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     lc.debug?.('handling message', data, 'waiting for lock');
 
     try {
-      await this._lock.withLock(() => {
+      await this._lock.withLock(async () => {
         lc.debug?.('received lock');
-        handleMessage(lc, this._clients, clientID, data, ws, () =>
+        await handleMessage(lc, this._clients, clientID, data, ws, () =>
           this._processUntilDone(),
         );
       });
