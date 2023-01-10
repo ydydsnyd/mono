@@ -2,13 +2,7 @@ import {test, expect} from '@jest/globals';
 import type {LogLevel} from '@rocicorp/logger';
 import {Mocket, TestLogSink} from '../util/test-utils.js';
 import {createAuthAPIHeaders} from './auth-api-headers.js';
-import {
-  closeRoomPath,
-  forgetRoomPath,
-  migrateRoomPath,
-  roomRecordsPath,
-  roomStatusByRoomIDPath,
-} from './auth-do-routes.js';
+import {AUTH_ROUTES} from './auth-do.js';
 import {
   createTestDurableObjectNamespace,
   TestDurableObjectId,
@@ -120,19 +114,26 @@ test('worker forwards connect requests to authDO', async () => {
 });
 
 test('worker forwards authDO api requests to authDO', async () => {
-  const roomStatusByRoomIDPathWithRoomID = roomStatusByRoomIDPath.replace(
-    ':roomID',
-    'ae4565',
-  );
+  const roomStatusByRoomIDPathWithRoomID =
+    AUTH_ROUTES.roomStatusByRoomID.replace(':roomID', 'ae4565');
   type TestCase = {
     path: string;
     method: string;
     body: undefined | Record<string, unknown>;
   };
-  const closeRoomPathWithRoomID = closeRoomPath.replace(':roomID', 'ae4565');
-  const deleteRoomPathWithRoomID = roomRecordsPath.replace(':roomID', 'ae4565');
-  const forgetRoomPathWithRoomID = forgetRoomPath.replace(':roomID', 'ae4565');
-  const migrateRoomPathWithRoomID = migrateRoomPath.replace(
+  const closeRoomPathWithRoomID = AUTH_ROUTES.closeRoom.replace(
+    ':roomID',
+    'ae4565',
+  );
+  const deleteRoomPathWithRoomID = AUTH_ROUTES.roomRecords.replace(
+    ':roomID',
+    'ae4565',
+  );
+  const forgetRoomPathWithRoomID = AUTH_ROUTES.forgetRoom.replace(
+    ':roomID',
+    'ae4565',
+  );
+  const migrateRoomPathWithRoomID = AUTH_ROUTES.migrateRoom.replace(
     ':roomID',
     'ae4565',
   );
@@ -161,7 +162,7 @@ test('worker forwards authDO api requests to authDO', async () => {
       body: undefined,
     },
     {
-      path: `https://test.roci.dev${roomRecordsPath}`,
+      path: `https://test.roci.dev${AUTH_ROUTES.roomRecords}`,
       method: 'get',
       body: undefined,
     },

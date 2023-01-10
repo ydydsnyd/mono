@@ -22,8 +22,7 @@ import {DurableStorage} from '../storage/durable-storage.js';
 import {getConnectedClients} from '../types/connected-clients.js';
 import * as s from 'superstruct';
 import type {CreateRoomRequest} from '../protocol/api/room.js';
-import {Router, RouterType} from 'itty-router';
-import {addRoutes} from './room-do-routes.js';
+import {post, requireAuthAPIKey, Routed, Router, Handler} from './router.js';
 
 const roomIDKey = '/system/roomID';
 const deletedKey = '/system/deleted';
@@ -31,12 +30,17 @@ const deletedKey = '/system/deleted';
 export interface RoomDOOptions<MD extends MutatorDefs> {
   mutators: MD;
   state: DurableObjectState;
-  authApiKey: string | undefined;
+  authApiKey: string;
   disconnectHandler: DisconnectHandler;
   logSink: LogSink;
   logLevel: LogLevel;
   allowUnconfirmedWrites: boolean;
 }
+
+export const ROOM_ROUTES = {
+  deletePath: '/api/room/v0/room/:roomID/delete',
+};
+
 export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   private readonly _clients: ClientMap = new Map();
   private readonly _lock = new Lock();
@@ -45,10 +49,10 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   private _lcHasRoomIdContext = false;
   private _lc: LogContext;
   private readonly _storage: DurableStorage;
-  private readonly _authApiKey: string | undefined;
+  private readonly _authApiKey: string;
   private _turnTimerID: ReturnType<typeof setInterval> | 0 = 0;
   private readonly _turnDuration: number;
-  private _router: RouterType;
+  private _router: Router;
 
   constructor(options: RoomDOOptions<MD>) {
     const {mutators, disconnectHandler, state, authApiKey, logSink, logLevel} =
@@ -61,8 +65,9 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       options.allowUnconfirmedWrites,
     );
 
-    this._router = Router();
-    addRoutes(this._router, this, authApiKey);
+    this._router = new Router();
+    this._initRoutes();
+
     this._turnDuration = 1000 / (options.allowUnconfirmedWrites ? 60 : 15);
     this._authApiKey = authApiKey;
     this._lc = new LogContext(logLevel, logSink)
@@ -70,6 +75,10 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       .addContext('doID', state.id.toString());
     this._lc.info?.('Starting server');
     this._lc.info?.('Version:', version);
+  }
+
+  private _initRoutes() {
+    this._router.register(ROOM_ROUTES.deletePath, this._deleteAllData);
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -105,7 +114,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
           this._lcHasRoomIdContext = true;
         }
       }
-      const response = await this._router.handle(request);
+      const response = await this._router.dispatch(request, this._lc);
       if (response !== undefined) {
         return response;
       }
@@ -166,20 +175,28 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     return new Response('ok');
   }
 
+  private _requireAPIKey = <Req extends Routed, Resp>(
+    next: Handler<Req, Resp>,
+  ) => {
+    return requireAuthAPIKey(() => this._authApiKey, next);
+  };
+
   // There's a bit of a question here about whether we really want to detele *all* the
   // data when a room is deleted. This deletes everything, including values kept by the
   // system e.g. the roomID. If we store more system keys in the future we might want to have
   // delete room only delete the room user data and not the system keys, because once
   // system keys are deleted who knows what behavior the room will have when its apis are
   // called. Maybe it's fine if they error out, dunno.
-  async deleteAllData() {
-    // Maybe we should validate that the roomID in the request matches?
-    this._lc.info?.('delete all data');
-    await this._storage.deleteAll();
-    this._lc.info?.('done deleting all data');
-    await this._setDeleted();
-    return new Response('ok');
-  }
+  private _deleteAllData = post(
+    this._requireAPIKey(async req => {
+      // Maybe we should validate that the roomID in the request matches?
+      req.lc.info?.('delete all data');
+      await this._storage.deleteAll();
+      req.lc.info?.('done deleting all data');
+      await this._setDeleted();
+      return new Response('ok');
+    }),
+  );
 
   // eslint-disable-next-line require-await
   async connect(lc: LogContext, request: Request): Promise<Response> {

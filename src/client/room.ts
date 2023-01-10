@@ -1,10 +1,4 @@
-import {
-  closeRoomPath,
-  deleteRoomPath,
-  forgetRoomPath,
-  migrateRoomPath,
-  roomStatusByRoomIDPath,
-} from '../server/auth-do-routes.js';
+import {AUTH_ROUTES} from '../server/auth-do.js';
 import {createAuthAPIHeaders} from '../server/auth-api-headers.js';
 import type {RoomStatus} from '../server/rooms.js';
 import type {CreateRoomRequest} from 'src/protocol/api/room.js';
@@ -106,7 +100,7 @@ export function newRoomStatusRequest(
   authApiKey: string,
   roomID: string,
 ) {
-  const path = roomStatusByRoomIDPath.replace(':roomID', roomID);
+  const path = AUTH_ROUTES.roomStatusByRoomID.replace(':roomID', roomID);
   const url = new URL(path, reflectServerURL);
   return new Request(url.toString(), {
     method: 'get',
@@ -145,7 +139,7 @@ export function newCloseRoomRequest(
   authApiKey: string,
   roomID: string,
 ) {
-  const path = closeRoomPath.replace(':roomID', roomID);
+  const path = AUTH_ROUTES.closeRoom.replace(':roomID', roomID);
   const url = new URL(path, reflectServerURL);
   return new Request(url.toString(), {
     method: 'post',
@@ -158,7 +152,7 @@ export function newDeleteRoomRequest(
   authApiKey: string,
   roomID: string,
 ) {
-  const path = deleteRoomPath.replace(':roomID', roomID);
+  const path = AUTH_ROUTES.deleteRoom.replace(':roomID', roomID);
   const url = new URL(path, reflectServerURL);
   return new Request(url.toString(), {
     method: 'post',
@@ -171,7 +165,7 @@ export function newForgetRoomRequest(
   authApiKey: string,
   roomID: string,
 ) {
-  const path = forgetRoomPath.replace(':roomID', roomID);
+  const path = AUTH_ROUTES.forgetRoom.replace(':roomID', roomID);
   const url = new URL(path, reflectServerURL);
   return new Request(url.toString(), {
     method: 'post',
@@ -184,7 +178,7 @@ export function newMigrateRoomRequest(
   authApiKey: string,
   roomID: string,
 ) {
-  const path = migrateRoomPath.replace(':roomID', roomID);
+  const path = AUTH_ROUTES.migrateRoom.replace(':roomID', roomID);
   const url = new URL(path, reflectServerURL);
   return new Request(url.toString(), {
     method: 'post',

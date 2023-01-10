@@ -5,9 +5,9 @@ import {
   DONamespaces,
   listDOInstances,
   listDONamespaces,
-} from 'src/cloudflare/api.js';
-import {roomRecordsPath} from 'src/server/auth-do-routes.js';
-import type {RoomRecord} from 'src/server/rooms.js';
+} from 'src/cloudflare/api';
+import {AUTH_ROUTES} from 'src/server/auth-do';
+import type {RoomRecord} from 'src/server/rooms';
 
 // FYI argv[0] is node.
 if (process.argv.length < 3) {
@@ -167,7 +167,7 @@ async function runValidateRooms(argv: string[]) {
   );
 
   const roomRecords = (await jsonFetchWithAuthApiKey(
-    `${reflectURL}${roomRecordsPath}`,
+    `${reflectURL}${AUTH_ROUTES.roomRecords}`,
     reflectAuthApiToken,
   )) as Array<RoomRecord>;
   const roomRecordsByOjbectID = new Map(

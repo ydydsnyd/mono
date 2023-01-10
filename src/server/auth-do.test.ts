@@ -9,7 +9,7 @@ import {
   TestDurableObjectState,
   TestDurableObjectStub,
 } from './do-test-utils.js';
-import {BaseAuthDO, ConnectionRecord} from './auth-do.js';
+import {BaseAuthDO, AUTH_ROUTES, ConnectionRecord} from './auth-do.js';
 import {createAuthAPIHeaders} from './auth-api-headers.js';
 import {
   type RoomRecord,
@@ -18,11 +18,6 @@ import {
   RoomStatus,
 } from './rooms.js';
 import {DurableStorage} from '../storage/durable-storage.js';
-import {
-  deleteRoomPath,
-  roomRecordsPath,
-  roomStatusByRoomIDPath,
-} from './auth-do-routes.js';
 import {
   newCloseRoomRequest,
   newCreateRoomRequest,
@@ -409,7 +404,7 @@ test('calling closeRoom on closed room is ok', async () => {
 test('deleteRoom calls into roomDO and marks room deleted', async () => {
   const {testRoomID, testRoomDO, state} = await createCreateRoomTestFixture();
 
-  const deleteRoomPathWithRoomID = deleteRoomPath.replace(
+  const deleteRoomPathWithRoomID = AUTH_ROUTES.deleteRoom.replace(
     ':roomID',
     testRoomID,
   );
@@ -674,7 +669,7 @@ test('roomStatusByRoomID requires authApiKey', async () => {
     logLevel: 'debug',
   });
 
-  const path = roomStatusByRoomIDPath.replace(':roomID', 'abc123');
+  const path = AUTH_ROUTES.roomStatusByRoomID.replace(':roomID', 'abc123');
   const statusRequest = new Request(`https://test.roci.dev${path}`, {
     method: 'get',
     // No auth header.
@@ -685,7 +680,7 @@ test('roomStatusByRoomID requires authApiKey', async () => {
 });
 
 function newRoomRecordsRequest() {
-  return new Request(`https://test.roci.dev${roomRecordsPath}`, {
+  return new Request(`https://test.roci.dev${AUTH_ROUTES.roomRecords}`, {
     method: 'get',
     headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
   });
@@ -750,7 +745,7 @@ test('roomRecords requires authApiKey', async () => {
   await createRoom(authDO, '1');
 
   const roomRecordsRequest = new Request(
-    `https://test.roci.dev${roomRecordsPath}`,
+    `https://test.roci.dev${AUTH_ROUTES.roomRecords}`,
     {
       method: 'get',
       // No auth header.

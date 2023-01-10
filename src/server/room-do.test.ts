@@ -147,7 +147,7 @@ test('Logs version during construction', () => {
     state: {
       id: new TestDurableObjectId('test-do-id'),
     } as unknown as DurableObjectState,
-    authApiKey: undefined,
+    authApiKey: 'foo',
     logSink: testLogSink,
     logLevel: 'info',
     allowUnconfirmedWrites: true,
@@ -173,7 +173,7 @@ test('Sets turn duration based on allowUnconfirmedWrites flag', () => {
       state: {
         id: new TestDurableObjectId('test-do-id'),
       } as unknown as DurableObjectState,
-      authApiKey: undefined,
+      authApiKey: 'foo',
       logSink: testLogSink,
       logLevel: 'info',
       allowUnconfirmedWrites: allowUnconfirmed,

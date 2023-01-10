@@ -2,7 +2,6 @@ import type {LogContext} from '@rocicorp/logger';
 import type {CreateRoomRequest} from '../protocol/api/room.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
 import * as s from 'superstruct';
-import type {IRequest} from 'itty-router';
 
 // RoomRecord keeps information about the room, for example the Durable
 // Object ID of the DO instance that has the room.
@@ -133,13 +132,8 @@ export async function createRoom(
 export async function closeRoom(
   lc: LogContext,
   storage: DurableStorage,
-  request: IRequest,
+  roomID: string,
 ): Promise<Response> {
-  const roomID = request.params?.roomID;
-  if (roomID === undefined) {
-    return new Response('Missing roomID', {status: 400});
-  }
-
   const roomRecord = await roomRecordByRoomID(storage, roomID);
   if (roomRecord === undefined) {
     return new Response('no such room', {
@@ -169,12 +163,9 @@ export async function deleteRoom(
   lc: LogContext,
   roomDO: DurableObjectNamespace,
   storage: DurableStorage,
-  request: IRequest,
+  roomID: string,
+  request: Request,
 ): Promise<Response> {
-  const roomID = request.params?.roomID;
-  if (roomID === undefined) {
-    return new Response('Missing roomID', {status: 400});
-  }
   const roomRecord = await roomRecordByRoomID(storage, roomID);
   if (roomRecord === undefined) {
     return new Response('no such room', {
@@ -218,13 +209,8 @@ export async function deleteRoom(
 export async function deleteRoomRecord(
   lc: LogContext,
   storage: DurableStorage,
-  request: IRequest,
+  roomID: string,
 ): Promise<Response> {
-  const roomID = request.params?.roomID;
-  if (roomID === undefined) {
-    return new Response('Missing roomID', {status: 400});
-  }
-
   const roomRecord = await roomRecordByRoomID(storage, roomID);
   if (roomRecord === undefined) {
     return new Response('no such room', {
@@ -250,13 +236,8 @@ export async function createRoomRecordForLegacyRoom(
   lc: LogContext,
   roomDO: DurableObjectNamespace,
   storage: DurableStorage,
-  request: IRequest,
+  roomID: string,
 ): Promise<Response> {
-  const roomID = request.params?.roomID;
-  if (roomID === undefined) {
-    return new Response('Missing roomID', {status: 400});
-  }
-
   if (!validRoomID(roomID)) {
     return new Response('Invalid roomID (must match [A-Za-z0-9_-]+)', {
       status: 400,

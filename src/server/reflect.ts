@@ -136,7 +136,7 @@ function createRoomDOClass<
         mutators,
         state,
         disconnectHandler,
-        authApiKey: env.REFLECT_AUTH_API_KEY,
+        authApiKey: getAPIKey(env),
         logSink: combineLogSinks(getLogSinks(env)),
         logLevel: getLogLevel(env),
         allowUnconfirmedWrites,
@@ -156,10 +156,18 @@ function createAuthDOClass<
         roomDO: env.roomDO,
         state,
         authHandler,
-        authApiKey: env.REFLECT_AUTH_API_KEY,
+        authApiKey: getAPIKey(env),
         logSink: combineLogSinks(getLogSinks(env)),
         logLevel: getLogLevel(env),
       });
     }
   };
+}
+
+function getAPIKey(env: ReflectServerBaseEnv) {
+  const val = env.REFLECT_AUTH_API_KEY;
+  if (!val) {
+    throw new Error('REFLECT_AUTH_API_KEY environment var is required');
+  }
+  return val;
 }

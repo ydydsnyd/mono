@@ -1,10 +1,9 @@
 import {LogContext, LogSink, LogLevel} from '@rocicorp/logger';
-import {Router, IRequest} from 'itty-router';
-import {randomID} from '../util/rand.js';
-import {createAuthAPIHeaders} from './auth-api-headers.js';
-import {dispatch, paths} from './dispatch.js';
-import {paths as authDOPaths} from './auth-do-routes.js';
-import {requireAuthAPIKeyMatchesEnv} from './middleware.js';
+import {checkAuthAPIKey, Handler, Routed, Router} from './router';
+import {randomID} from '../util/rand';
+import {createAuthAPIHeaders} from './auth-api-headers';
+import {dispatch, paths} from './dispatch';
+import {AUTH_ROUTES} from './auth-do';
 
 export interface WorkerOptions<Env extends BaseWorkerEnv> {
   getLogSink: (env: Env) => LogSink;
@@ -17,16 +16,44 @@ export interface BaseWorkerEnv {
   REFLECT_AUTH_API_KEY?: string;
 }
 
+type WithEnv = {
+  env: BaseWorkerEnv;
+};
+
+function makeWithEnv(
+  thing: object,
+  env: BaseWorkerEnv,
+): asserts thing is WithEnv {
+  (thing as WithEnv).env = env;
+}
+
+type WorkerRequest = Request & WithEnv;
+
 // Set up routes for authDO API calls that are not handled by
 // dispatch.
-const router = Router();
-for (const path of authDOPaths()) {
-  router.all(
-    path,
-    requireAuthAPIKeyMatchesEnv,
-    (request: IRequest, env: BaseWorkerEnv) =>
-      sendToAuthDO(request as unknown as Request, env),
+const router = new Router();
+for (const pattern of Object.values(AUTH_ROUTES)) {
+  router.register(
+    pattern,
+    requireAPIKeyMatchesEnv(req => {
+      return sendToAuthDO(req, req.lc);
+    }) as Handler<Request, Response>,
   );
+}
+
+function requireAPIKeyMatchesEnv(next: Handler<Routed & WithEnv, Response>) {
+  return (req: Routed) => {
+    const withEnv = req as Routed & WithEnv;
+    const resp = checkAuthAPIKey(
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      withEnv.env.REFLECT_AUTH_API_KEY!,
+      req,
+    );
+    if (resp) {
+      return resp;
+    }
+    return next(withEnv);
+  };
 }
 
 export function createWorker<Env extends BaseWorkerEnv>(
@@ -59,16 +86,15 @@ async function scheduled(env: BaseWorkerEnv, lc: LogContext): Promise<void> {
     return;
   }
   lc.info?.(`Sending ${paths.authRevalidateConnections} request to AuthDO`);
-  const resp = await sendToAuthDO(
-    new Request(
-      `https://unused-reflect-auth-do.dev${paths.authRevalidateConnections}`,
-      {
-        headers: createAuthAPIHeaders(env.REFLECT_AUTH_API_KEY),
-        method: 'POST',
-      },
-    ),
-    env,
+  const req = new Request(
+    `https://unused-reflect-auth-do.dev${paths.authRevalidateConnections}`,
+    {
+      headers: createAuthAPIHeaders(env.REFLECT_AUTH_API_KEY),
+      method: 'POST',
+    },
   );
+  makeWithEnv(req, env);
+  const resp = await sendToAuthDO(req, lc);
   lc.info?.(`Response: ${resp.status} ${resp.statusText}`);
 }
 
@@ -82,11 +108,13 @@ async function fetch(
   lc = lc.addContext('req', randomID());
   lc.debug?.('Handling request:', request.method, request.url);
   try {
-    const resp = await withAllowAllCORS(
-      request,
-      async (req: Request) =>
-        (await router.handle(req, env)) ?? (await handleRequest(req, lc, env)),
-    );
+    const resp = await withAllowAllCORS(request, async (request: Request) => {
+      makeWithEnv(request, env);
+      return (
+        (await router.dispatch(request, lc)) ??
+        (await handleRequest(request, lc, env))
+      );
+    });
     lc.debug?.(`Returning response: ${resp.status} ${resp.statusText}`);
     return resp;
   } catch (e) {
@@ -159,8 +187,10 @@ function handleRequest(
   lc: LogContext,
   env: BaseWorkerEnv,
 ): Promise<Response> {
-  const forwardToAuthDO = (_lc: LogContext, request: Request) =>
-    sendToAuthDO(request, env);
+  const forwardToAuthDO = (lc: LogContext, request: Request) => {
+    makeWithEnv(request, env);
+    return sendToAuthDO(request, lc);
+  };
   return dispatch(request, lc, env.REFLECT_AUTH_API_KEY, {
     createRoom: forwardToAuthDO,
     connect: forwardToAuthDO,
@@ -188,9 +218,16 @@ async function withLogContext<Env extends BaseWorkerEnv, R>(
   }
 }
 
-function sendToAuthDO(request: Request, env: BaseWorkerEnv): Promise<Response> {
+async function sendToAuthDO(
+  request: WorkerRequest,
+  lc: LogContext,
+): Promise<Response> {
+  const {env} = request;
   const {authDO} = env;
+
+  lc.debug?.(`Sending request ${request.url} to authDO`);
+
   const id = authDO.idFromName('auth');
   const stub = authDO.get(id);
-  return stub.fetch(request);
+  return await stub.fetch(request);
 }

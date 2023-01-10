@@ -25,21 +25,28 @@ import {
 import {assert} from 'superstruct';
 import {createAuthAPIHeaders} from './auth-api-headers.js';
 import {DurableStorage} from '../storage/durable-storage.js';
-import type {JSONValue} from 'replicache';
-import {addRoutes} from './auth-do-routes.js';
-import {IRequest, Router, RouterType} from 'itty-router';
 import type {CreateRoomRequest} from '../protocol/api/room.js';
 import {
   newWebSocketPair as defaultNewWebSocketPair,
   sendError,
   NewWebSocketPair,
 } from '../util/socket.js';
+import {
+  requireAuthAPIKey,
+  Handler,
+  Router,
+  asJSON,
+  withRoomID,
+  get,
+  post,
+  Routed,
+} from './router.js';
 
 export interface AuthDOOptions {
   roomDO: DurableObjectNamespace;
   state: DurableObjectState;
   authHandler: AuthHandler;
-  authApiKey: string | undefined;
+  authApiKey: string;
   logSink: LogSink;
   logLevel: LogLevel;
   // newWebSocketPair is a seam we use for testing. I cannot figure out
@@ -55,8 +62,17 @@ export type ConnectionRecord = {
   connectTimestamp: number;
 };
 
+export const AUTH_ROUTES = {
+  roomStatusByRoomID: '/api/room/v0/room/:roomID/status',
+  roomRecords: '/api/room/v0/rooms',
+  closeRoom: '/api/room/v0/room/:roomID/close',
+  deleteRoom: '/api/room/v0/room/:roomID/delete',
+  migrateRoom: '/api/room/v0/room/:roomID/migrate/1',
+  forgetRoom: '/api/room/v0/room/:roomID/DANGER/forget',
+};
+
 export class BaseAuthDO implements DurableObject {
-  private readonly _router: RouterType;
+  private readonly _router: Router;
   private readonly _roomDO: DurableObjectNamespace;
   private readonly _state: DurableObjectState;
   // _durableStorage is a type-aware wrapper around _state.storage. It
@@ -66,7 +82,7 @@ export class BaseAuthDO implements DurableObject {
   // directly.
   private readonly _durableStorage: DurableStorage;
   private readonly _authHandler: AuthHandler;
-  private readonly _authApiKey?: string;
+  private readonly _authApiKey: string;
   private readonly _lc: LogContext;
 
   // _authLock ensures that at most one auth api call is processed at a time.
@@ -90,8 +106,8 @@ export class BaseAuthDO implements DurableObject {
       logLevel,
       newWebSocketPair = defaultNewWebSocketPair,
     } = options;
-    this._router = Router();
-    this._newWebSocketPair = newWebSocketPair;
+    this._router = new Router();
+    this._newWebSocketPair = options.newWebSocketPair || newWebSocketPair;
     this._roomDO = roomDO;
     this._state = state;
     this._durableStorage = new DurableStorage(
@@ -105,7 +121,7 @@ export class BaseAuthDO implements DurableObject {
       .addContext('doID', state.id.toString());
     this._authLock = new RWLock();
     this._roomRecordLock = new RWLock();
-    addRoutes(this._router, this, this._authApiKey);
+    this._initRoutes();
     this._lc.info?.('Starting server');
     this._lc.info?.('Version:', version);
   }
@@ -116,8 +132,9 @@ export class BaseAuthDO implements DurableObject {
     lc.debug?.('Handling request:', request.url);
     try {
       // Try newfangled routes first.
-      let resp = await this._router.handle(request);
+      let resp = await this._router.dispatch(request, lc);
       // If not handled, use dispatch routes.
+      // TODO: change dispatch to return 404 in this case once everything is converted.
       if (resp === undefined) {
         resp = await dispatch(request, lc, this._authApiKey, this);
       }
@@ -134,27 +151,40 @@ export class BaseAuthDO implements DurableObject {
     }
   }
 
-  async roomStatusByRoomID(request: IRequest) {
-    const roomID = request.params?.roomID;
-    if (roomID === undefined) {
-      return new Response('Missing roomID', {status: 400});
-    }
-    const roomRecord = await this._roomRecordLock.withRead(() =>
-      roomRecordByRoomID(this._durableStorage, roomID),
-    );
-    if (roomRecord === undefined) {
-      return newJSONResponse({status: RoomStatus.Unknown});
-    }
-    return newJSONResponse({status: roomRecord.status});
-  }
+  private _requireAPIKey = <Req extends Routed, Resp>(
+    next: Handler<Req, Resp>,
+  ) => {
+    return requireAuthAPIKey(() => this._authApiKey, next);
+  };
 
-  async allRoomRecords(_: IRequest) {
-    const roomIDToRecords = await this._roomRecordLock.withRead(() =>
-      roomRecords(this._durableStorage),
-    );
-    const records = Array.from(roomIDToRecords.values());
-    return newJSONResponse(records);
-  }
+  private _roomStatusByRoomID = get(
+    this._requireAPIKey(
+      withRoomID(
+        asJSON(async req => {
+          const roomRecord = await this._roomRecordLock.withRead(async () => {
+            return await roomRecordByRoomID(this._durableStorage, req.roomID);
+          });
+          if (roomRecord === undefined) {
+            return {status: RoomStatus.Unknown};
+          }
+          return {status: roomRecord.status};
+        }),
+      ),
+    ),
+  );
+
+  private _allRoomRecords = get(
+    this._requireAPIKey(
+      asJSON(async () => {
+        const roomIDToRecords = await this._roomRecordLock.withRead(
+          async () => {
+            return await roomRecords(this._durableStorage);
+          },
+        );
+        return Array.from(roomIDToRecords.values());
+      }),
+    ),
+  );
 
   createRoom(
     lc: LogContext,
@@ -172,39 +202,89 @@ export class BaseAuthDO implements DurableObject {
     );
   }
 
-  closeRoom(request: IRequest) {
-    return this._roomRecordLock.withWrite(() =>
-      closeRoom(this._lc, this._durableStorage, request),
-    );
-  }
+  // A call to closeRoom should be followed by a call to authInvalidateForRoom
+  // to ensure users are logged out.
+  private _closeRoom = post(
+    this._requireAPIKey(
+      withRoomID(async req => {
+        return await this._roomRecordLock.withWrite(async () => {
+          return await closeRoom(this._lc, this._durableStorage, req.roomID);
+        });
+      }),
+    ),
+  );
 
-  deleteRoom(request: IRequest) {
-    return this._roomRecordLock.withWrite(() =>
-      deleteRoom(this._lc, this._roomDO, this._durableStorage, request),
-    );
-  }
+  // A room must first be closed before it can be deleted. Once deleted, a room
+  // will return 410 Gone for all requests.
+  private _deleteRoom = post(
+    this._requireAPIKey(
+      withRoomID(async req => {
+        return await this._roomRecordLock.withWrite(async () => {
+          return await deleteRoom(
+            this._lc,
+            this._roomDO,
+            this._durableStorage,
+            req.roomID,
+            req,
+          );
+        });
+      }),
+    ),
+  );
 
-  forgetRoom(request: IRequest) {
-    return this._roomRecordLock.withWrite(() =>
-      deleteRoomRecord(this._lc, this._durableStorage, request),
-    );
-  }
+  // This is a DANGEROUS call: it removes the RoomRecord for the given
+  // room, potentially orphaning the roomDO. It doesn't log users out
+  // or delete the room's data, it just forgets about the room.
+  // It is useful if you are testing migration, or if you are developing
+  // in reflect-server.
+  private _forgetRoom = post(
+    this._requireAPIKey(
+      withRoomID(async req => {
+        return await this._roomRecordLock.withWrite(async () => {
+          return await deleteRoomRecord(
+            this._lc,
+            this._durableStorage,
+            req.roomID,
+          );
+        });
+      }),
+    ),
+  );
 
-  migrateRoom(request: IRequest) {
-    return this._roomRecordLock.withWrite(() =>
-      createRoomRecordForLegacyRoom(
-        this._lc,
-        this._roomDO,
-        this._durableStorage,
-        request,
-      ),
+  // This call creates a RoomRecord for a room that was created via the
+  // old mechanism of deriving room objectID from the roomID via
+  // idFromString(). It overwrites any existing RoomRecord for the room. It
+  // does not check that the room actually exists.
+  private _migrateRoom = post(
+    this._requireAPIKey(
+      withRoomID(async req => {
+        return await this._roomRecordLock.withWrite(async () => {
+          return await createRoomRecordForLegacyRoom(
+            this._lc,
+            this._roomDO,
+            this._durableStorage,
+            req.roomID,
+          );
+        });
+      }),
+    ),
+  );
+
+  private _initRoutes() {
+    this._router.register(
+      AUTH_ROUTES.roomStatusByRoomID,
+      this._roomStatusByRoomID,
     );
+    this._router.register(AUTH_ROUTES.roomRecords, this._allRoomRecords);
+    this._router.register(AUTH_ROUTES.closeRoom, this._closeRoom);
+    this._router.register(AUTH_ROUTES.deleteRoom, this._deleteRoom);
+    this._router.register(AUTH_ROUTES.migrateRoom, this._migrateRoom);
+    this._router.register(AUTH_ROUTES.forgetRoom, this._forgetRoom);
   }
 
   // eslint-disable-next-line require-await
   async connect(lc: LogContext, request: Request): Promise<Response> {
     lc.info?.('authDO received websocket connection request:', request.url);
-
     const url = new URL(request.url);
     if (url.pathname !== '/connect') {
       lc.error?.('authDO returning 400 bc path is not /connect:', request.url);
@@ -610,10 +690,6 @@ export class BaseAuthDO implements DurableObject {
     }
     return errorResponses[0];
   }
-}
-
-function newJSONResponse(obj: JSONValue) {
-  return new Response(JSON.stringify(obj));
 }
 
 const CONNECTION_KEY_PREFIX = 'connection/';
