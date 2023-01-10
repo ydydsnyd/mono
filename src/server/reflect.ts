@@ -13,9 +13,19 @@ export interface ReflectServerOptions<
 > {
   mutators: MD;
   authHandler: AuthHandler;
-  disconnectHandler?: DisconnectHandler;
-  getLogSinks?: (env: Env) => LogSink[];
-  getLogLevel?: (env: Env) => LogLevel;
+
+  disconnectHandler?: DisconnectHandler | undefined;
+
+  /**
+   * Get the log sink(s). This takes an `Env` so that the log sink can depend on the environment.
+   */
+  getLogSinks?: ((env: Env) => LogSink[]) | undefined;
+
+  /**
+   * Get the log level. This takes an `Env` so that the log level can depend on the environment.
+   */
+  getLogLevel?: ((env: Env) => LogLevel) | undefined;
+
   /**
    * If true, outgoing network messages are sent before the writes
    * they reflect are confirmed to be durable. This enables
@@ -24,7 +34,7 @@ export interface ReflectServerOptions<
    *
    * Default is false.
    */
-  allowUnconfirmedWrites?: boolean;
+  allowUnconfirmedWrites?: boolean | undefined;
 }
 
 function combineLogSinks(sinks: LogSink[]): LogSink {
