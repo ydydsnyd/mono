@@ -108,10 +108,10 @@ export function requireAuthAPIKey<Req extends Routed, Resp>(
 }
 
 export function checkAuthAPIKey<Req extends Request>(
-  required: string,
+  required: string | undefined,
   req: Req,
 ) {
-  if (required === '') {
+  if (!required) {
     throw new Error('Internal error: expected auth api key cannot be empty');
   }
   const authHeader = req.headers.get('x-reflect-auth-api-key');

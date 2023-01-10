@@ -107,7 +107,7 @@ export class BaseAuthDO implements DurableObject {
       newWebSocketPair = defaultNewWebSocketPair,
     } = options;
     this._router = new Router();
-    this._newWebSocketPair = options.newWebSocketPair || newWebSocketPair;
+    this._newWebSocketPair = newWebSocketPair;
     this._roomDO = roomDO;
     this._state = state;
     this._durableStorage = new DurableStorage(

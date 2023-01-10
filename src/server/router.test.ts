@@ -357,7 +357,6 @@ test('withRoomID', async () => {
   for (const c of cases) {
     const url = `https://roci.dev/`;
     const request = new Request(url);
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     makeRouted(request, c.parsedURL, createSilentLogContext());
 
     let result: Case['expected'] | undefined = undefined;

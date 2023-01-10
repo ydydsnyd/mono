@@ -20,10 +20,10 @@ type WithEnv = {
   env: BaseWorkerEnv;
 };
 
-function makeWithEnv(
-  thing: object,
+function makeWithEnv<O extends object>(
+  thing: O,
   env: BaseWorkerEnv,
-): asserts thing is WithEnv {
+): asserts thing is O & WithEnv {
   (thing as WithEnv).env = env;
 }
 
@@ -35,21 +35,14 @@ const router = new Router();
 for (const pattern of Object.values(AUTH_ROUTES)) {
   router.register(
     pattern,
-    requireAPIKeyMatchesEnv(req => sendToAuthDO(req, req.lc)) as Handler<
-      Request,
-      Response
-    >,
+    requireAPIKeyMatchesEnv(req => sendToAuthDO(req, req.lc)),
   );
 }
 
 function requireAPIKeyMatchesEnv(next: Handler<Routed & WithEnv, Response>) {
   return (req: Routed) => {
     const withEnv = req as Routed & WithEnv;
-    const resp = checkAuthAPIKey(
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      withEnv.env.REFLECT_AUTH_API_KEY!,
-      req,
-    );
+    const resp = checkAuthAPIKey(withEnv.env.REFLECT_AUTH_API_KEY, req);
     if (resp) {
       return resp;
     }
