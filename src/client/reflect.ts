@@ -34,7 +34,7 @@ export class Reflect<MD extends MutatorDefs> {
   private readonly _socketOrigin: string;
   readonly userID: string;
   readonly roomID: string;
-  private _l: Promise<LogContext>;
+  private readonly _l: Promise<LogContext>;
 
   // Protects _handlePoke. We need pokes to be serialized, otherwise we
   // can cause out of order poke errors.
@@ -109,15 +109,7 @@ export class Reflect<MD extends MutatorDefs> {
     this._socketOrigin = options.socketOrigin;
     this.roomID = options.roomID;
     this.userID = options.userID;
-
-    const {logSinks = [consoleLogSink]} = options;
-    const logSink =
-      logSinks.length === 1 ? logSinks[0] : new TeeLogSink(logSinks);
-    this._l = (async (rep: Replicache<MutatorDefs>) => {
-      return new LogContext(options.logLevel, logSink)
-        .addContext('roomID', options.roomID)
-        .addContext('clientID', await rep.clientID);
-    })(this._rep);
+    this._l = getLogContext(options, this._rep);
 
     void this._watchdog();
   }
@@ -444,13 +436,12 @@ export class Reflect<MD extends MutatorDefs> {
   }
 
   private async _getRequestLogger() {
-    const l = await this._l;
-    return l.addContext('req', nanoid());
+    return (await this._l).addContext('req', nanoid());
   }
 }
 
 // Total hack to get base cookie
-async function getBaseCookie(rep: Replicache) {
+function getBaseCookie(rep: Replicache) {
   const {promise, resolve} = resolver<NullableVersion>();
   rep.puller = async (req): Promise<PullerResult> => {
     const val = await req.json();
@@ -464,7 +455,7 @@ async function getBaseCookie(rep: Replicache) {
     };
   };
   rep.pull();
-  return await promise;
+  return promise;
 }
 
 export function createSocket(
@@ -493,4 +484,16 @@ export function createSocket(
     url.toString(),
     auth === '' ? undefined : encodeURIComponent(auth),
   );
+}
+
+async function getLogContext<MD extends MutatorDefs>(
+  options: ReflectOptions<MD>,
+  rep: Replicache<MD>,
+) {
+  const {logSinks = [consoleLogSink]} = options;
+  const logSink =
+    logSinks.length === 1 ? logSinks[0] : new TeeLogSink(logSinks);
+  return new LogContext(options.logLevel, logSink)
+    .addContext('roomID', options.roomID)
+    .addContext('clientID', await rep.clientID);
 }
