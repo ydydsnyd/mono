@@ -312,8 +312,10 @@ export class BaseAuthDO implements DurableObject {
     // alternative to piping errors down to the client at the moment.
     //
     // TODO consider using socket close codes in the 4xxx range for the
-    //   signaling instead of messages. TODO should probably unify the way this
-    //   works with how roomDO connect() does it.
+    //   signaling instead of messages.
+    //
+    // TODO should probably unify the way this works with how roomDO connect()
+    //   does it.
 
     const closeWithError = (error: string) => {
       const pair = this._newWebSocketPair();
