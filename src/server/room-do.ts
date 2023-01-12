@@ -123,7 +123,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
         }
       }
 
-      const lc = addIPToLogContext(
+      const lc = addClientIPToLogContext(
         addRequestIDToLogContext(this._lc, request),
         request,
       );
@@ -135,7 +135,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
       return await dispatch(request, lc, this._authApiKey, this);
     } catch (e) {
-      const lc = addIPToLogContext(
+      const lc = addClientIPToLogContext(
         addRequestIDToLogContext(this._lc, request),
         request,
       );
@@ -405,7 +405,7 @@ function hasPendingMutations(clients: ClientMap) {
  *
  * If the header is not present, the LogContext is returned unchanged.
  */
-function addIPToLogContext(lc: LogContext, request: Request): LogContext {
+function addClientIPToLogContext(lc: LogContext, request: Request): LogContext {
   const ip = request.headers.get('CF-Connecting-IP');
-  return ip ? lc.addContext('ip', ip) : lc;
+  return ip ? lc.addContext('clientIP', ip) : lc;
 }
