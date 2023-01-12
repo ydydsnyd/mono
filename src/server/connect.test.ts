@@ -83,7 +83,7 @@ test('handleConnection', async () => {
   const cases: Case[] = [
     {
       name: 'invalid clientid',
-      url: 'http://google.com/?baseCookie=1&timestamp=t1&lmid=0',
+      url: 'http://google.com/?baseCookie=1&timestamp=t1&lmid=0&requestID=rid',
       headers: createHeadersWithValidUserData('u1'),
       expectErrorResponse: 'Error: invalid querystring - missing clientID',
       existingClients: new Map(),
@@ -92,7 +92,7 @@ test('handleConnection', async () => {
     },
     {
       name: 'invalid timestamp',
-      url: 'http://google.com/?clientID=c1&baseCookie=1&lmid=0',
+      url: 'http://google.com/?clientID=c1&baseCookie=1&lmid=0&requestID=rid',
       headers: createHeadersWithValidUserData('u1'),
       expectErrorResponse: 'Error: invalid querystring - missing ts',
       existingClients: new Map(),
@@ -101,10 +101,10 @@ test('handleConnection', async () => {
     },
     {
       name: 'invalid (non-numeric) timestamp',
-      url: 'http://google.com/?clientID=c1&baseCookie=1&ts=xx&lmid=0',
+      url: 'http://google.com/?clientID=c1&baseCookie=1&ts=xx&lmid=0&requestID=rid',
       headers: createHeadersWithValidUserData('u1'),
       expectErrorResponse:
-        'Error: invalid querystring parameter ts, url: http://google.com/?clientID=c1&baseCookie=1&ts=xx&lmid=0, got: xx',
+        'Error: invalid querystring parameter ts, url: http://google.com/?clientID=c1&baseCookie=1&ts=xx&lmid=0&requestID=rid, got: xx',
       existingClients: new Map(),
       expectedClients: () => new Map(),
       version: 1,
@@ -119,7 +119,7 @@ test('handleConnection', async () => {
       version: 1,
     },
     {
-      name: 'inmvalid (non-numeric) lmid',
+      name: 'invalid (non-numeric) lmid',
       url: 'http://google.com/?clientID=c1&baseCookie=1&ts=123&lmid=xx',
       headers: createHeadersWithValidUserData('u1'),
       expectErrorResponse:
@@ -129,8 +129,17 @@ test('handleConnection', async () => {
       version: 1,
     },
     {
+      name: 'missing requestID',
+      url: 'http://google.com/?clientID=c1&baseCookie=1&ts=123&lmid=12',
+      headers: createHeadersWithValidUserData('u1'),
+      expectErrorResponse: 'Error: invalid querystring - missing requestID',
+      existingClients: new Map(),
+      expectedClients: () => new Map(),
+      version: 1,
+    },
+    {
       name: 'baseCookie: null and version: null',
-      url: 'http://google.com/?clientID=c1&baseCookie=&ts=42&lmid=0',
+      url: 'http://google.com/?clientID=c1&baseCookie=&ts=42&lmid=0&requestID=rid',
       headers: createHeadersWithValidUserData('u1'),
       existingClients: new Map(),
       expectedClients: socket => new Map([freshClient('c1', 'u1', socket)]),
@@ -140,7 +149,7 @@ test('handleConnection', async () => {
     },
     {
       name: 'baseCookie: 1 and version null',
-      url: 'http://google.com/?clientID=c1&baseCookie=1&ts=42&lmid=0',
+      url: 'http://google.com/?clientID=c1&baseCookie=1&ts=42&lmid=0&requestID=rid',
       headers: createHeadersWithValidUserData('u1'),
       expectErrorResponse: `Unexpected baseCookie. ${maybeOldClientStateMessage}`,
       existingClients: new Map(),
@@ -149,7 +158,7 @@ test('handleConnection', async () => {
     },
     {
       name: 'baseCookie: 2 and version: 1',
-      url: 'http://google.com/?clientID=c1&baseCookie=2&ts=42&lmid=0',
+      url: 'http://google.com/?clientID=c1&baseCookie=2&ts=42&lmid=0&requestID=rid',
       headers: createHeadersWithValidUserData('u1'),
       expectErrorResponse: `Unexpected baseCookie. ${maybeOldClientStateMessage}`,
       existingClients: new Map(),
@@ -158,7 +167,7 @@ test('handleConnection', async () => {
     },
     {
       name: 'baseCookie: 1 and version: 2',
-      url: 'http://google.com/?clientID=c1&baseCookie=1&ts=42&lmid=0',
+      url: 'http://google.com/?clientID=c1&baseCookie=1&ts=42&lmid=0&requestID=rid',
       headers: createHeadersWithValidUserData('u1'),
       existingClients: new Map(),
       expectedClients: socket => new Map([freshClient('c1', 'u1', socket)]),
@@ -168,7 +177,7 @@ test('handleConnection', async () => {
     },
     {
       name: 'baseCookie: null w/existing clients',
-      url: 'http://google.com/?clientID=c1&baseCookie=&ts=42&lmid=0',
+      url: 'http://google.com/?clientID=c1&baseCookie=&ts=42&lmid=0&requestID=rid',
       headers: createHeadersWithValidUserData('u1'),
       existingClients: new Map([c2]),
       expectedClients: socket => new Map([freshClient('c1', 'u1', socket), c2]),
@@ -177,7 +186,7 @@ test('handleConnection', async () => {
     },
     {
       name: 'existing record',
-      url: 'http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0',
+      url: 'http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0&requestID=rid',
       headers: createHeadersWithValidUserData('u1'),
       existingClients: new Map(),
       expectedClients: socket => new Map([freshClient('c1', 'u1', socket)]),
@@ -187,7 +196,7 @@ test('handleConnection', async () => {
     },
     {
       name: 'missing user data',
-      url: 'http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0',
+      url: 'http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0&requestID=rid',
       headers: new Headers(),
       expectErrorResponse: 'Error: missing user-data',
       existingClients: new Map(),
@@ -196,7 +205,7 @@ test('handleConnection', async () => {
     },
     {
       name: 'invalid user data',
-      url: 'http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0',
+      url: 'http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0&requestID=rid',
       headers: createHeadersWithInvalidUserData(),
       expectErrorResponse: 'Error: invalid user-data - failed to decode/parse',
       existingClients: new Map(),
@@ -205,7 +214,7 @@ test('handleConnection', async () => {
     },
     {
       name: 'user data missing userID',
-      url: 'http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0',
+      url: 'http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0&requestID=rid',
       headers: createHeadersWithUserDataMissingUserID(),
       expectErrorResponse: 'Error: invalid user-data - missing userID',
       existingClients: new Map(),
@@ -214,7 +223,7 @@ test('handleConnection', async () => {
     },
     {
       name: 'user data with empty userID',
-      url: 'http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0',
+      url: 'http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0&requestID=rid',
       headers: createHeadersWithUserDataWithEmptyUserID(),
       expectErrorResponse: 'Error: invalid user-data - missing userID',
       existingClients: new Map(),
@@ -223,7 +232,7 @@ test('handleConnection', async () => {
     },
     {
       name: 'Invalid lastMutationID',
-      url: 'http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=100',
+      url: 'http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=100&requestID=rid',
       existingClients: new Map(),
       expectedClients: socket => new Map([freshClient('c1', 'u1', socket)]),
       headers: createHeadersWithValidUserData('u1'),
@@ -270,7 +279,9 @@ test('handleConnection', async () => {
       continue;
     }
     try {
-      expect(mocket.log).toEqual([['send', JSON.stringify(['connected', {}])]]);
+      expect(mocket.log).toEqual([
+        ['send', JSON.stringify(['connected', {requestID: 'rid'}])],
+      ]);
       const expectedClients = c.expectedClients(mocket);
       expect(clients).toEqual(expectedClients);
 
@@ -331,6 +342,10 @@ test('getConnectRequest', () => {
   );
   testError(
     'https://www.example.com/?clientID=123&ts=123&lmid=456',
+    'Error: invalid querystring - missing requestID',
+  );
+  testError(
+    'https://www.example.com/?clientID=123&ts=123&lmid=456&requestID=rid',
     'Error: missing user-data',
   );
   url = 'https://www.example.com/?clientID=123&ts=123&lmid=456&baseCookie=abc';
@@ -339,23 +354,28 @@ test('getConnectRequest', () => {
     `Error: invalid querystring parameter baseCookie, url: ${url}, got: abc`,
   );
   testError(
-    'https://www.example.com/?clientID=123&ts=123&lmid=456',
+    'https://www.example.com/?clientID=123&ts=123&lmid=456&requestID=rid',
     'Error: invalid user-data - failed to decode/parse',
     new Headers([[USER_DATA_HEADER_NAME, 'abc']]),
   );
   testError(
-    'https://www.example.com/?clientID=123&ts=123&lmid=456',
+    'https://www.example.com/?clientID=123&ts=123&lmid=456&requestID=rid',
     'Error: invalid user-data - missing userID',
     new Headers([[USER_DATA_HEADER_NAME, '42']]),
   );
   testError(
-    'https://www.example.com/?clientID=123&ts=123&lmid=456',
+    'https://www.example.com/?clientID=123&ts=123&lmid=456&requestID=rid',
     'Error: invalid user-data - missing userID',
     new Headers([[USER_DATA_HEADER_NAME, '{"userID":null}']]),
   );
+  testError(
+    'https://www.example.com/?clientID=123&ts=123&lmid=456&requestID=rid',
+    'Error: invalid user-data - failed to decode/parse',
+    new Headers([[USER_DATA_HEADER_NAME, '{"userID":"u1}']]),
+  );
 
   testResult(
-    'https://www.example.com/?clientID=cid1&ts=123&lmid=456',
+    'https://www.example.com/?clientID=cid1&ts=123&lmid=456&requestID=rid1',
     new Headers([[USER_DATA_HEADER_NAME, '{"userID":"u1","more":"data"}']]),
     {
       clientID: 'cid1',
@@ -363,10 +383,11 @@ test('getConnectRequest', () => {
       timestamp: 123,
       lmid: 456,
       baseCookie: null,
+      requestID: 'rid1',
     },
   );
   testResult(
-    'https://www.example.com/?clientID=cid1&ts=123&lmid=456&baseCookie=789',
+    'https://www.example.com/?clientID=cid1&ts=123&lmid=456&baseCookie=789&requestID=rid2',
     new Headers([[USER_DATA_HEADER_NAME, '{"userID":"u1","more":"data"}']]),
     {
       clientID: 'cid1',
@@ -374,6 +395,7 @@ test('getConnectRequest', () => {
       timestamp: 123,
       lmid: 456,
       baseCookie: 789,
+      requestID: 'rid2',
     },
   );
 });

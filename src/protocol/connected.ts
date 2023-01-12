@@ -1,6 +1,8 @@
 import * as s from 'superstruct';
 
-export const connectedBodySchema = s.type({});
+export const connectedBodySchema = s.type({
+  requestID: s.string(),
+});
 
 export const connectedMessageSchema = s.tuple([
   s.literal('connected'),

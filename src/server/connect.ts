@@ -52,23 +52,20 @@ export async function handleConnection(
     ws.close();
   };
 
-  const req = getConnectRequest(url, headers);
-  const {result: parsedConnectRequest} = req;
-  if (parsedConnectRequest === null) {
-    const {error} = req;
+  const {result, error} = getConnectRequest(url, headers);
+  if (error !== null) {
     sendError(error);
     return;
   }
 
-  lc = lc.addContext('client', parsedConnectRequest.clientID);
+  const {clientID, baseCookie, lmid, requestID, userData} = result;
+  lc = lc.addContext('client', clientID);
   lc.info?.('parsed request', {
-    ...parsedConnectRequest,
+    ...result,
     userData: 'redacted',
   });
 
-  const {clientID: requestClientID, baseCookie: requestBaseCookie} =
-    parsedConnectRequest;
-  const existingRecord = await getClientRecord(requestClientID, storage);
+  const existingRecord = await getClientRecord(clientID, storage);
   lc.debug?.('Existing client record', existingRecord);
   const existingLastMutationID = existingRecord?.lastMutationID ?? 0;
 
@@ -76,10 +73,10 @@ export async function handleConnection(
   // re-created without clearing browser state. This can happen in a
   // variety of ways, e.g. it can happen when re-using the same roomID
   // across runs of `wrangler dev`.
-  if (parsedConnectRequest.lmid > existingLastMutationID) {
+  if (lmid > existingLastMutationID) {
     lc.info?.(
       'Unexpected lmid when connecting. Got',
-      parsedConnectRequest.lmid,
+      lmid,
       'expected lastMutationID',
       existingLastMutationID,
     );
@@ -88,10 +85,10 @@ export async function handleConnection(
   }
 
   const version = (await getVersion(storage)) ?? null;
-  if (compareVersions(requestBaseCookie, version) > 0) {
+  if (compareVersions(baseCookie, version) > 0) {
     lc.info?.(
       'Unexpected baseCookie when connecting. Got',
-      requestBaseCookie,
+      baseCookie,
       'current version is',
       version,
     );
@@ -100,34 +97,34 @@ export async function handleConnection(
   }
 
   const record: ClientRecord = {
-    baseCookie: requestBaseCookie,
+    baseCookie,
     lastMutationID: existingLastMutationID,
   };
-  await putClientRecord(requestClientID, record, storage);
+  await putClientRecord(clientID, record, storage);
   lc.debug?.('Put client record', record);
-  await addConnectedClient(requestClientID, storage);
+  await addConnectedClient(clientID, storage);
 
-  const existing = clients.get(requestClientID);
+  const existing = clients.get(clientID);
   if (existing) {
     lc.info?.('Closing old socket');
     existing.socket.close();
   }
 
   ws.addEventListener('message', event =>
-    onMessage(requestClientID, event.data.toString(), ws),
+    onMessage(clientID, event.data.toString(), ws),
   );
   ws.addEventListener('close', e => {
-    lc.info?.('WebSocket CloseEvent for client', requestClientID, {
+    lc.info?.('WebSocket CloseEvent for client', clientID, {
       reason: e.reason,
       code: e.code,
       wasClean: e.wasClean,
     });
-    onClose(requestClientID, ws);
+    onClose(clientID, ws);
   });
   ws.addEventListener('error', e => {
     lc.error?.(
       'WebSocket ErrorEvent for client',
-      requestClientID,
+      clientID,
       {
         filename: e.filename,
         message: e.message,
@@ -140,14 +137,14 @@ export async function handleConnection(
 
   const client: ClientState = {
     socket: ws,
-    userData: parsedConnectRequest.userData,
+    userData,
     clockBehindByMs: undefined,
     pending: [],
   };
-  lc.debug?.('Setting client map entry', requestClientID, client);
-  clients.set(requestClientID, client);
+  lc.debug?.('Setting client map entry', clientID, client);
+  clients.set(clientID, client);
 
-  const connectedMessage: ConnectedMessage = ['connected', {}];
+  const connectedMessage: ConnectedMessage = ['connected', {requestID}];
   ws.send(JSON.stringify(connectedMessage));
 }
 
@@ -210,6 +207,7 @@ export function getConnectRequest(url: URL, headers: Headers) {
     const baseCookie = getIntegerParam('baseCookie', false);
     const timestamp = getIntegerParam('ts', true);
     const lmid = getIntegerParam('lmid', true);
+    const requestID = getParam('requestID', true);
 
     const userData = getUserData(headers);
     return {
@@ -219,6 +217,7 @@ export function getConnectRequest(url: URL, headers: Headers) {
         baseCookie,
         timestamp,
         lmid,
+        requestID,
       },
       error: null,
     };

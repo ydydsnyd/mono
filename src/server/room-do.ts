@@ -92,6 +92,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       if (await this.deleted()) {
         return new Response('deleted', {status: 410 /* Gone */});
       }
+
       if (!this._lcHasRoomIdContext) {
         const roomID = await this.maybeRoomID();
         const url = new URL(request.url);
@@ -121,18 +122,18 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
           this._lcHasRoomIdContext = true;
         }
       }
+
+      const lc = addRequestIDToLogContext(request, this._lc);
+
       const response = await this._router.dispatch(request, {lc: this._lc});
       if (response !== undefined) {
         return response;
       }
-      return await dispatch(
-        request,
-        this._lc.addContext('req', randomID()),
-        this._authApiKey,
-        this,
-      );
+
+      return await dispatch(request, lc, this._authApiKey, this);
     } catch (e) {
-      this._lc.error?.('Unhandled exception in fetch', e);
+      const lc = addRequestIDToLogContext(request, this._lc);
+      lc.error?.('Unhandled exception in fetch', e);
       return new Response(
         e instanceof Error ? e.message : 'Unexpected error.',
         {
@@ -186,7 +187,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     next: Handler<Context, Resp>,
   ) => requireAuthAPIKey(() => this._authApiKey, next);
 
-  // There's a bit of a question here about whether we really want to detele *all* the
+  // There's a bit of a question here about whether we really want to delete *all* the
   // data when a room is deleted. This deletes everything, including values kept by the
   // system e.g. the roomID. If we store more system keys in the future we might want to have
   // delete room only delete the room user data and not the system keys, because once
@@ -210,17 +211,16 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       lc.error?.('roomDO: missing Upgrade header');
       return new Response('expected websocket', {status: 400});
     }
-    const pair = new WebSocketPair();
-    const ws = pair[1];
+    const {0: clientWS, 1: serverWS} = new WebSocketPair();
     const url = new URL(request.url);
     lc.debug?.('connection request', url.toString(), 'waiting for lock');
-    ws.accept();
+    serverWS.accept();
 
     void this._lock.withLock(() => {
       lc.debug?.('received lock');
       return handleConnection(
         lc,
-        ws,
+        serverWS,
         this._storage,
         url,
         request.headers,
@@ -229,7 +229,8 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
         this._handleClose,
       );
     });
-    return new Response(null, {status: 101, webSocket: pair[0]});
+
+    return new Response(null, {status: 101, webSocket: clientWS});
   }
 
   async authInvalidateForUser(
@@ -365,6 +366,20 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       this._processUntilDone();
     });
   };
+}
+
+/**
+ * Adds the requestID query parameter to the log context. If the URL does not
+ * have a requestID we use a randomID instead.
+ */
+function addRequestIDToLogContext(
+  {url}: {url: string},
+  lc: LogContext,
+): LogContext {
+  return lc.addContext(
+    'req',
+    new URL(url).searchParams.get('requestID') ?? randomID(),
+  );
 }
 
 function hasPendingMutations(clients: ClientMap) {
