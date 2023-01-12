@@ -123,7 +123,10 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
         }
       }
 
-      const lc = addRequestIDToLogContext(request, this._lc);
+      const lc = addIPToLogContext(
+        addRequestIDToLogContext(this._lc, request),
+        request,
+      );
 
       const response = await this._router.dispatch(request, {lc: this._lc});
       if (response !== undefined) {
@@ -132,7 +135,11 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
       return await dispatch(request, lc, this._authApiKey, this);
     } catch (e) {
-      const lc = addRequestIDToLogContext(request, this._lc);
+      const lc = addIPToLogContext(
+        addRequestIDToLogContext(this._lc, request),
+        request,
+      );
+
       lc.error?.('Unhandled exception in fetch', e);
       return new Response(
         e instanceof Error ? e.message : 'Unexpected error.',
@@ -373,8 +380,8 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
  * have a requestID we use a randomID instead.
  */
 function addRequestIDToLogContext(
-  {url}: {url: string},
   lc: LogContext,
+  {url}: {url: string},
 ): LogContext {
   return lc.addContext(
     'req',
@@ -389,4 +396,16 @@ function hasPendingMutations(clients: ClientMap) {
     }
   }
   return false;
+}
+
+/**
+ * Adds the "client IP address connecting to Cloudflare to the origin web
+ * server" to the LogContext.
+ * https://developers.cloudflare.com/fundamentals/get-started/reference/http-request-headers/#cf-connecting-ip
+ *
+ * If the header is not present, the LogContext is returned unchanged.
+ */
+function addIPToLogContext(lc: LogContext, request: Request): LogContext {
+  const ip = request.headers.get('CF-Connecting-IP');
+  return ip ? lc.addContext('ip', ip) : lc;
 }
