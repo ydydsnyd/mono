@@ -169,8 +169,11 @@ export class Reflect<MD extends MutatorDefs> {
    * When closed all subscriptions end and no more read or writes are allowed.
    */
   async close(): Promise<void> {
-    const l = await this._getRequestLogger();
-    this._disconnect(l);
+    const lc = await this._l;
+    const lc2 = this._socket
+      ? addRequestIDFromSocketToLogContext(this._socket, lc)
+      : lc;
+    this._disconnect(lc2);
     return this._rep.close();
   }
 
@@ -239,9 +242,7 @@ export class Reflect<MD extends MutatorDefs> {
   }
 
   private _onMessage = async (e: MessageEvent<string>) => {
-    // TODO: The req context should really come from the poke so that we can
-    // tie receive-side changes to the server and even to the source client.
-    const l = await this._getRequestLogger();
+    const l = await this._l;
     l.debug?.('received message', e.data);
     if (this.closed) {
       l.debug?.('ignoring message because already closed');
@@ -252,9 +253,12 @@ export class Reflect<MD extends MutatorDefs> {
     const downMessage = data as Downstream; //downstreamSchema.parse(data);
 
     if (downMessage[0] === 'connected') {
-      l.info?.(
+      const lc = addRequestIDToLogContext(downMessage[1].requestID, l);
+      lc.info?.(
         'Connected',
-        JSON.stringify({navigatorOnline: navigator.onLine}),
+        JSON.stringify({
+          navigatorOnline: navigator.onLine,
+        }),
       );
 
       this._state = ConnectionState.Connected;
@@ -284,7 +288,10 @@ export class Reflect<MD extends MutatorDefs> {
   };
 
   private _onClose = async (e: CloseEvent) => {
-    const l = await this._getRequestLogger();
+    const l = addRequestIDFromSocketToLogContext(
+      e.target as WebSocket,
+      await this._l,
+    );
     const {code, reason, wasClean} = e;
     l.info?.(
       'got socket close event',
@@ -298,6 +305,9 @@ export class Reflect<MD extends MutatorDefs> {
       l.debug?.('Skipping duplicate connect request');
       return;
     }
+
+    const requestID = nanoid();
+    l = addRequestIDToLogContext(requestID, l);
     l.info?.(
       'Connecting...',
       JSON.stringify({navigatorOnline: navigator.onLine}),
@@ -306,6 +316,7 @@ export class Reflect<MD extends MutatorDefs> {
     this._state = ConnectionState.Connecting;
 
     const baseCookie = await getBaseCookie(this._rep);
+
     // TODO if connection fails with 401 use this._rep.getAuth to
     // try to refresh this._rep.auth and then retry connection
     const ws = createSocket(
@@ -315,6 +326,7 @@ export class Reflect<MD extends MutatorDefs> {
       this.roomID,
       this._rep.auth,
       this._lastMutationIDReceived,
+      requestID,
       this._WSClass,
     );
 
@@ -400,12 +412,15 @@ export class Reflect<MD extends MutatorDefs> {
 
   private async _watchdog() {
     while (!this.closed) {
-      const l = await this._getRequestLogger();
-      l.debug?.('watchdog fired');
+      const lc = await this._l;
+      const lc2 = this._socket
+        ? addRequestIDFromSocketToLogContext(this._socket, lc)
+        : lc;
+      lc2.debug?.('watchdog fired');
       if (this._state === ConnectionState.Connected) {
-        await this._ping(l);
+        await this._ping(lc2);
       } else {
-        void this._connect(l);
+        void this._connect(lc2);
       }
       await sleep(5000);
     }
@@ -434,10 +449,6 @@ export class Reflect<MD extends MutatorDefs> {
       this._disconnect(l);
     }
   }
-
-  private async _getRequestLogger() {
-    return (await this._l).addContext('req', nanoid());
-  }
 }
 
 // Total hack to get base cookie
@@ -465,6 +476,7 @@ export function createSocket(
   roomID: string,
   auth: string,
   lmid: number,
+  requestID: string,
   wsClass: typeof WebSocket,
 ): WebSocket {
   const url = new URL(socketOrigin);
@@ -475,6 +487,7 @@ export function createSocket(
   searchParams.set('baseCookie', baseCookie === null ? '' : String(baseCookie));
   searchParams.set('ts', String(performance.now()));
   searchParams.set('lmid', String(lmid));
+  searchParams.set('requestID', requestID);
   // Pass auth to the server via the `Sec-WebSocket-Protocol` header by passing
   // it as a `protocol` to the `WebSocket` constructor.  The empty string is an
   // invalid `protocol`, and will result in an exception, so pass undefined
@@ -493,4 +506,23 @@ async function getLogContext<MD extends MutatorDefs>(
   return new LogContext(options.logLevel, logSink)
     .addContext('roomID', options.roomID)
     .addContext('clientID', await rep.clientID);
+}
+
+/**
+ * Adds the requestID query parameter to the log context. If the URL does not
+ * have a requestID we use a randomID instead.
+ */
+function addRequestIDFromSocketToLogContext(
+  {url}: {url: string},
+  lc: LogContext,
+): LogContext {
+  const requestID = new URL(url).searchParams.get('requestID') ?? nanoid();
+  return addRequestIDToLogContext(requestID, lc);
+}
+
+function addRequestIDToLogContext(
+  requestID: string,
+  lc: LogContext,
+): LogContext {
+  return lc.addContext('req', requestID);
 }

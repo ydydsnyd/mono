@@ -14,12 +14,14 @@ export async function tickAFewTimes(clock: SinonFakeTimers, duration = 100) {
 }
 
 export class MockSocket extends EventTarget {
+  readonly url: string | URL;
   args: unknown[] = [];
   messages: string[] = [];
   closed = false;
 
-  constructor(...args: unknown[]) {
+  constructor(url: string | URL, ...args: unknown[]) {
     super();
+    this.url = url;
     this.args = args;
   }
 
@@ -48,7 +50,7 @@ export class TestReflect<MD extends MutatorDefs> extends Reflect<MD> {
   }
 
   triggerConnected() {
-    const msg: ConnectedMessage = ['connected', {}];
+    const msg: ConnectedMessage = ['connected', {requestID: 'rid'}];
     this._socket?.dispatchEvent(
       new MessageEvent('message', {data: JSON.stringify(msg)}),
     );
