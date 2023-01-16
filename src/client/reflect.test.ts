@@ -131,7 +131,7 @@ test('createSocket', () => {
       roomID,
       auth,
       lmid,
-      'request-id',
+      'wsidx',
       // @ts-expect-error MockSocket is not compatible with WebSocket
       MockSocket,
     ) as unknown as MockSocket;
@@ -146,7 +146,7 @@ test('createSocket', () => {
     'roomID',
     '',
     0,
-    'ws://example.com/connect?clientID=clientID&roomID=roomID&baseCookie=&ts=0&lmid=0&requestID=request-id',
+    'ws://example.com/connect?clientID=clientID&roomID=roomID&baseCookie=&ts=0&lmid=0&wsid=wsidx',
   );
 
   t(
@@ -156,7 +156,7 @@ test('createSocket', () => {
     'roomID',
     '',
     0,
-    'ws://example.com/connect?clientID=clientID&roomID=roomID&baseCookie=1234&ts=0&lmid=0&requestID=request-id',
+    'ws://example.com/connect?clientID=clientID&roomID=roomID&baseCookie=1234&ts=0&lmid=0&wsid=wsidx',
   );
 
   t(
@@ -166,7 +166,7 @@ test('createSocket', () => {
     'roomID',
     '',
     123,
-    'ws://example.com/connect?clientID=clientID&roomID=roomID&baseCookie=&ts=0&lmid=123&requestID=request-id',
+    'ws://example.com/connect?clientID=clientID&roomID=roomID&baseCookie=&ts=0&lmid=123&wsid=wsidx',
   );
 
   t(
@@ -176,7 +176,7 @@ test('createSocket', () => {
     'roomID',
     'auth with []',
     0,
-    'ws://example.com/connect?clientID=clientID&roomID=roomID&baseCookie=&ts=0&lmid=0&requestID=request-id',
+    'ws://example.com/connect?clientID=clientID&roomID=roomID&baseCookie=&ts=0&lmid=0&wsid=wsidx',
     'auth%20with%20%5B%5D',
   );
 
@@ -188,7 +188,7 @@ test('createSocket', () => {
     'roomID',
     '',
     0,
-    'ws://example.com/connect?clientID=clientID&roomID=roomID&baseCookie=&ts=456&lmid=0&requestID=request-id',
+    'ws://example.com/connect?clientID=clientID&roomID=roomID&baseCookie=&ts=456&lmid=0&wsid=wsidx',
   );
 });
 

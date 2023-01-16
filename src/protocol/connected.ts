@@ -1,7 +1,7 @@
 import {z} from 'zod';
 
 export const connectedBodySchema = z.object({
-  requestID: z.string(),
+  wsid: z.string(),
 });
 
 export const connectedMessageSchema = z.tuple([

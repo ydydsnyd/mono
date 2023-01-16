@@ -50,7 +50,7 @@ export class TestReflect<MD extends MutatorDefs> extends Reflect<MD> {
   }
 
   triggerConnected() {
-    const msg: ConnectedMessage = ['connected', {requestID: 'rid'}];
+    const msg: ConnectedMessage = ['connected', {wsid: 'wsidx'}];
     this._socket?.dispatchEvent(
       new MessageEvent('message', {data: JSON.stringify(msg)}),
     );

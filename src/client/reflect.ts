@@ -171,7 +171,7 @@ export class Reflect<MD extends MutatorDefs> {
   async close(): Promise<void> {
     const lc = await this._l;
     const lc2 = this._socket
-      ? addRequestIDFromSocketToLogContext(this._socket, lc)
+      ? addWebSocketIDFromSocketToLogContext(this._socket, lc)
       : lc;
     this._disconnect(lc2);
     return this._rep.close();
@@ -253,7 +253,7 @@ export class Reflect<MD extends MutatorDefs> {
     const downMessage = data as Downstream; //downstreamSchema.parse(data);
 
     if (downMessage[0] === 'connected') {
-      const lc = addRequestIDToLogContext(downMessage[1].requestID, l);
+      const lc = addWebSocketIDToLogContext(downMessage[1].wsid, l);
       lc.info?.(
         'Connected',
         JSON.stringify({
@@ -288,7 +288,7 @@ export class Reflect<MD extends MutatorDefs> {
   };
 
   private _onClose = async (e: CloseEvent) => {
-    const l = addRequestIDFromSocketToLogContext(
+    const l = addWebSocketIDFromSocketToLogContext(
       e.target as WebSocket,
       await this._l,
     );
@@ -306,8 +306,8 @@ export class Reflect<MD extends MutatorDefs> {
       return;
     }
 
-    const requestID = nanoid();
-    l = addRequestIDToLogContext(requestID, l);
+    const wsid = nanoid();
+    l = addWebSocketIDToLogContext(wsid, l);
     l.info?.(
       'Connecting...',
       JSON.stringify({navigatorOnline: navigator.onLine}),
@@ -326,7 +326,7 @@ export class Reflect<MD extends MutatorDefs> {
       this.roomID,
       this._rep.auth,
       this._lastMutationIDReceived,
-      requestID,
+      wsid,
       this._WSClass,
     );
 
@@ -414,7 +414,7 @@ export class Reflect<MD extends MutatorDefs> {
     while (!this.closed) {
       const lc = await this._l;
       const lc2 = this._socket
-        ? addRequestIDFromSocketToLogContext(this._socket, lc)
+        ? addWebSocketIDFromSocketToLogContext(this._socket, lc)
         : lc;
       lc2.debug?.('watchdog fired');
       if (this._state === ConnectionState.Connected) {
@@ -476,7 +476,7 @@ export function createSocket(
   roomID: string,
   auth: string,
   lmid: number,
-  requestID: string,
+  wsid: string,
   wsClass: typeof WebSocket,
 ): WebSocket {
   const url = new URL(socketOrigin);
@@ -487,7 +487,7 @@ export function createSocket(
   searchParams.set('baseCookie', baseCookie === null ? '' : String(baseCookie));
   searchParams.set('ts', String(performance.now()));
   searchParams.set('lmid', String(lmid));
-  searchParams.set('requestID', requestID);
+  searchParams.set('wsid', wsid);
   // Pass auth to the server via the `Sec-WebSocket-Protocol` header by passing
   // it as a `protocol` to the `WebSocket` constructor.  The empty string is an
   // invalid `protocol`, and will result in an exception, so pass undefined
@@ -509,20 +509,17 @@ async function getLogContext<MD extends MutatorDefs>(
 }
 
 /**
- * Adds the requestID query parameter to the log context. If the URL does not
- * have a requestID we use a randomID instead.
+ * Adds the wsid query parameter to the log context. If the URL does not
+ * have a wsid we use a randomID instead.
  */
-function addRequestIDFromSocketToLogContext(
+function addWebSocketIDFromSocketToLogContext(
   {url}: {url: string},
   lc: LogContext,
 ): LogContext {
-  const requestID = new URL(url).searchParams.get('requestID') ?? nanoid();
-  return addRequestIDToLogContext(requestID, lc);
+  const wsid = new URL(url).searchParams.get('wsid') ?? nanoid();
+  return addWebSocketIDToLogContext(wsid, lc);
 }
 
-function addRequestIDToLogContext(
-  requestID: string,
-  lc: LogContext,
-): LogContext {
-  return lc.addContext('req', requestID);
+function addWebSocketIDToLogContext(wsid: string, lc: LogContext): LogContext {
+  return lc.addContext('wsid', wsid);
 }
