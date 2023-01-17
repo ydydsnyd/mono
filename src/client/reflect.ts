@@ -354,9 +354,10 @@ export class Reflect<MD extends MutatorDefs> {
     this._lastMutationIDSent = -1;
   }
 
-  private async _handlePoke(l: LogContext, pokeBody: PokeBody) {
+  private async _handlePoke(lc: LogContext, pokeBody: PokeBody) {
     await this._pokeLock.withLock(async () => {
-      l.debug?.('Applying poke', JSON.stringify(pokeBody));
+      lc = lc.addContext('requestID', pokeBody.requestID);
+      lc.debug?.('Applying poke', JSON.stringify(pokeBody));
 
       const {lastMutationID, baseCookie, patch, cookie} = pokeBody;
       this._lastMutationIDReceived = lastMutationID;
@@ -373,8 +374,8 @@ export class Reflect<MD extends MutatorDefs> {
         await this._rep.poke(p);
       } catch (e) {
         if (String(e).indexOf('unexpected base cookie for poke') > -1) {
-          l.info?.('out of order poke, disconnecting');
-          this._disconnect(l);
+          lc.info?.('out of order poke, disconnecting');
+          this._disconnect(lc);
           return;
         }
         throw e;

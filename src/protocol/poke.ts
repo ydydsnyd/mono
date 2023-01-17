@@ -25,6 +25,10 @@ const pokeBodySchema = z.object({
   lastMutationID: z.number(),
   patch: patchSchema,
   timestamp: z.number(),
+
+  // When we change to multiple pokes per WS message we should only have one
+  // requestID per message.
+  requestID: z.string(),
 });
 
 export const pokeMessageSchema = z.tuple([z.literal('poke'), pokeBodySchema]);

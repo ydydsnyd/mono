@@ -1,10 +1,16 @@
 import {expect} from '@esm-bundle/chai';
-import type {JSONValue, WriteTransaction} from 'replicache';
+import type {JSONValue, LogLevel, WriteTransaction} from 'replicache';
 import * as sinon from 'sinon';
 import {Mutation, pushMessageSchema, PushBody} from '../protocol/push.js';
 import type {NullableVersion} from '../types/version.js';
+import {resolver} from '../util/resolver.js';
 import {ConnectionState, createSocket} from './reflect.js';
-import {MockSocket, reflectForTest, tickAFewTimes} from './test-utils.js';
+import {
+  MockSocket,
+  reflectForTest,
+  TestReflect,
+  tickAFewTimes,
+} from './test-utils.js';
 
 let clock: sinon.SinonFakeTimers;
 
@@ -320,4 +326,46 @@ test('watchSmokeTest', async () => {
   spy.resetHistory();
   await rep.mutate.addData({c: 6});
   expect(spy.callCount).to.equal(0);
+});
+
+test('poke log context includes requestID', async () => {
+  const url = 'ws://example.com/';
+  const log: unknown[][] = [];
+
+  const {promise: foundRequestIDFromLogPromise, resolve} = resolver<string>();
+  const logSink = {
+    log(_level: LogLevel, ...args: unknown[]) {
+      for (const arg of args) {
+        if (typeof arg === 'string' && arg.startsWith('requestID=')) {
+          const foundRequestID = arg.slice('requestID='.length);
+          resolve(foundRequestID);
+        }
+      }
+    },
+  };
+
+  const reflect = new TestReflect({
+    socketOrigin: url,
+    auth: '',
+    userID: 'user-id',
+    roomID: 'room-id',
+    logSinks: [logSink],
+    logLevel: 'debug',
+  });
+
+  await reflect.waitForSocket(clock);
+
+  log.length = 0;
+
+  reflect.triggerPoke({
+    baseCookie: null,
+    cookie: 1,
+    lastMutationID: 1,
+    patch: [],
+    timestamp: 123456,
+    requestID: 'request-id-x',
+  });
+
+  const foundRequestID = await foundRequestIDFromLogPromise;
+  expect(foundRequestID).to.equal('request-id-x');
 });

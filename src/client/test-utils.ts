@@ -1,7 +1,9 @@
-import type {MutatorDefs} from 'replicache';
+import type {MutatorDefs, ReadonlyJSONValue} from 'replicache';
 import type {SinonFakeTimers} from 'sinon';
 import type {ConnectedMessage} from '../protocol/connected.js';
+import type {PokeBody, PokeMessage} from '../protocol/poke.js';
 import type {PongMessage} from '../protocol/pong.js';
+import {assert} from '../util/asserts.js';
 import type {ReflectOptions} from './options.js';
 import {Reflect} from './reflect.js';
 
@@ -49,22 +51,31 @@ export class TestReflect<MD extends MutatorDefs> extends Reflect<MD> {
     return this._socket;
   }
 
+  triggerMessage(data: ReadonlyJSONValue) {
+    assert(this._socket);
+    this._socket.dispatchEvent(
+      new MessageEvent('message', {data: JSON.stringify(data)}),
+    );
+  }
+
   triggerConnected() {
     const msg: ConnectedMessage = ['connected', {wsid: 'wsidx'}];
-    this._socket?.dispatchEvent(
-      new MessageEvent('message', {data: JSON.stringify(msg)}),
-    );
+    this.triggerMessage(msg);
   }
 
   triggerPong() {
     const msg: PongMessage = ['pong', {}];
-    this._socket?.dispatchEvent(
-      new MessageEvent('message', {data: JSON.stringify(msg)}),
-    );
+    this.triggerMessage(msg);
+  }
+
+  triggerPoke(pokeBody: PokeBody) {
+    const msg: PokeMessage = ['poke', pokeBody];
+    this.triggerMessage(msg);
   }
 
   triggerClose() {
-    this._socket?.dispatchEvent(new CloseEvent('close'));
+    assert(this._socket);
+    this._socket.dispatchEvent(new CloseEvent('close'));
   }
 
   get pusher() {
