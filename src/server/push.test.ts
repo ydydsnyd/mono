@@ -1,13 +1,11 @@
 import {test, expect, beforeEach} from '@jest/globals';
+import {LogContext} from '@rocicorp/logger';
 import type {Mutation} from '../protocol/push.js';
-import {
-  client as clientUtil,
-  createSilentLogContext,
-  Mocket,
-  mutation,
-} from '../util/test-utils.js';
+import {client as clientUtil, Mocket, mutation} from '../util/test-utils.js';
 import {handlePush} from '../server/push.js';
 import type {ClientState} from '../types/client-state.js';
+import {resolver} from '../util/resolver.js';
+import {randomID} from '../util/rand.js';
 
 let s1: Mocket;
 beforeEach(() => {
@@ -25,7 +23,7 @@ function clientWTimestampAdjust(
   return clientUtil('c1', 'u1', s1, clockBehindByMs, ...mutations)[1];
 }
 
-test('handlePush', () => {
+test('handlePush', async () => {
   type Case = {
     name: string;
     client: ClientState;
@@ -114,18 +112,34 @@ test('handlePush', () => {
     },
   ];
 
+  // Special LC that waits for a requestID to be added to the context.
+  class TestLogContext extends LogContext {
+    resolver = resolver<unknown>();
+
+    addContext(key: string, value?: unknown): LogContext {
+      if (key === 'requestID') {
+        this.resolver.resolve(value);
+      }
+      return super.addContext(key, value);
+    }
+  }
+
   for (const c of cases) {
     s1.log.length = 0;
 
+    const requestID = randomID();
     const push = {
       clientID: 'c1',
       mutations: c.mutations,
       pushVersion: 0,
       schemaVersion: '',
       timestamp: 42,
+      requestID,
     };
+
+    const lc = new TestLogContext();
     handlePush(
-      createSilentLogContext(),
+      lc,
       c.client,
       push,
       () => 42,
@@ -133,5 +147,7 @@ test('handlePush', () => {
     );
     expect(s1.log).toEqual([]);
     expect(c.client).toEqual(c.expectedClient);
+
+    expect(await lc.resolver.promise).toEqual(requestID);
   }
 });

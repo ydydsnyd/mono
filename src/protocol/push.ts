@@ -14,6 +14,7 @@ export const pushBodySchema = s.type({
   pushVersion: s.number(),
   schemaVersion: s.string(),
   timestamp: s.number(),
+  requestID: s.string(),
 });
 
 export const pushMessageSchema = s.tuple([s.literal('push'), pushBodySchema]);

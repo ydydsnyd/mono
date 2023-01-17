@@ -16,6 +16,7 @@ export function handlePush(
   now: Now,
   processUntilDone: ProcessUntilDone,
 ) {
+  lc = lc.addContext('requestID', body.requestID);
   lc.debug?.('handling push', JSON.stringify(body));
 
   if (client.clockBehindByMs === undefined) {

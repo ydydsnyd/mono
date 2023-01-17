@@ -1,5 +1,5 @@
 import {test, expect} from '@jest/globals';
-import type {PushBody} from '../../src/protocol/push.js';
+import type {Mutation} from '../../src/protocol/push.js';
 import type {ClientID, ClientMap} from '../../src/types/client-state.js';
 import {
   client,
@@ -8,6 +8,8 @@ import {
   mutation,
 } from '../util/test-utils.js';
 import {handleMessage} from '../../src/server/message.js';
+import {assert} from '../util/asserts.js';
+import {randomID} from '../util/rand.js';
 
 test('handleMessage', () => {
   type Case = {
@@ -16,7 +18,7 @@ test('handleMessage', () => {
     clients?: ClientMap;
     clientID?: ClientID;
     expectedError?: string;
-    expectedPush?: PushBody;
+    expectedPendingMutations?: Mutation[];
     expectSocketClosed?: boolean;
   };
 
@@ -26,11 +28,11 @@ test('handleMessage', () => {
       data: '',
       expectedError: 'SyntaxError: Unexpected end of JSON input',
     },
-    // {
-    //   name: "invalid push",
-    //   data: "[]",
-    //   expectedError: "Should have at least 2 items",
-    // },
+    {
+      name: 'invalid push',
+      data: '[]',
+      expectedError: 'StructError',
+    },
     {
       name: 'valid push',
       data: JSON.stringify([
@@ -41,15 +43,28 @@ test('handleMessage', () => {
           pushVersion: 1,
           schemaVersion: '',
           timestamp: 42,
+          requestID: randomID(),
         },
       ]),
-      expectedPush: {
-        clientID: 'c1',
-        mutations: [mutation(1), mutation(2)],
-        pushVersion: 1,
-        schemaVersion: '',
-        timestamp: 42,
-      },
+      expectedPendingMutations: [
+        mutation(1, undefined, undefined, 2),
+        mutation(2, undefined, undefined, 2),
+      ],
+    },
+    {
+      name: 'push missing requestID',
+      data: JSON.stringify([
+        'push',
+        {
+          clientID: 'c1',
+          mutations: [mutation(1), mutation(2)],
+          pushVersion: 1,
+          schemaVersion: '',
+          timestamp: 42,
+        },
+      ]),
+      // This error message is not great
+      expectedError: 'StructError',
     },
     {
       name: 'missing client push',
@@ -61,6 +76,7 @@ test('handleMessage', () => {
           pushVersion: 1,
           schemaVersion: '',
           timestamp: 42,
+          requestID: randomID(),
         },
       ]),
       clients: new Map(),
@@ -83,19 +99,7 @@ test('handleMessage', () => {
     const clientID = c.clientID !== undefined ? c.clientID : 'c1';
     const clients: ClientMap =
       c.clients || new Map([client(clientID, 'u1', s1)]);
-    // let called = false;
 
-    // const handlePush = (
-    //   // pClients: ClientMap,
-    //   pClientID: ClientID,
-    //   pBody: PushBody,
-    //   pWS: Socket
-    // ) => {
-    //   expect(pClientID).toEqual(clientID);
-    //   expect(pBody).toEqual(c.expectedPush);
-    //   expect(pWS).toEqual(s1);
-    //   called = true;
-    // };
     handleMessage(
       createSilentLogContext(),
       clients,
@@ -104,18 +108,23 @@ test('handleMessage', () => {
       s1,
       () => undefined,
     );
+
     if (c.expectedError) {
       expect(s1.log.length).toEqual(c.expectSocketClosed ? 2 : 1);
       const [type, message] = s1.log[0];
       expect(type).toEqual('send');
       expect(message).toContain(c.expectedError);
-    } else {
-      // expect(called);
     }
+
     if (c.expectSocketClosed) {
       expect(s1.log.length).toBeGreaterThan(0);
       expect(s1.log[s1.log.length - 1][0]).toEqual('close');
-      0;
+    }
+
+    if (c.expectedPendingMutations) {
+      const client = clients.get(clientID);
+      assert(client);
+      expect(client.pending).toEqual(c.expectedPendingMutations);
     }
   }
 });
