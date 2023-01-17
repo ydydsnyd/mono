@@ -390,6 +390,10 @@ export class Reflect<MD extends MutatorDefs> {
 
     const socket = await this._connectResolver.promise;
 
+    // TODO(arv): With DD31 the Pusher type gets the requestID as an argument.
+    const requestID = req.headers.get('X-Replicache-RequestID');
+    assert(requestID);
+
     const pushBody = (await req.json()) as PushBody;
 
     for (const m of pushBody.mutations) {
@@ -398,7 +402,12 @@ export class Reflect<MD extends MutatorDefs> {
 
         const msg: PushMessage = [
           'push',
-          {...pushBody, mutations: [m], timestamp: performance.now()},
+          {
+            ...pushBody,
+            mutations: [m],
+            timestamp: performance.now(),
+            requestID,
+          },
         ];
 
         socket.send(JSON.stringify(msg));

@@ -13,6 +13,7 @@ export const pushBodySchema = z.object({
   pushVersion: z.number(),
   schemaVersion: z.string(),
   timestamp: z.number(),
+  requestID: z.string(),
 });
 
 export const pushMessageSchema = z.tuple([z.literal('push'), pushBodySchema]);

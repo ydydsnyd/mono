@@ -1,7 +1,12 @@
 import {expect} from '@esm-bundle/chai';
-import type {JSONValue, LogLevel, WriteTransaction} from 'replicache';
+import type {
+  JSONValue,
+  LogLevel,
+  PushRequest,
+  WriteTransaction,
+} from 'replicache';
 import * as sinon from 'sinon';
-import {Mutation, pushMessageSchema, PushBody} from '../protocol/push.js';
+import {Mutation, pushMessageSchema} from '../protocol/push.js';
 import type {NullableVersion} from '../types/version.js';
 import {resolver} from '../util/resolver.js';
 import {ConnectionState, createSocket} from './reflect.js';
@@ -199,24 +204,28 @@ test('createSocket', () => {
 });
 
 test('pusher sends one mutation per push message', async () => {
-  const t = async (mutations: Mutation[], expectedMessages: number) => {
+  const t = async (
+    mutations: Mutation[],
+    expectedMessages: number,
+    requestID = 'request-id',
+  ) => {
     const r = reflectForTest();
-    await tickAFewTimes(clock);
+    await r.waitForSocket(clock);
     r.triggerConnected();
     const mockSocket = r.socket as unknown as MockSocket;
 
-    const overwrittenAndNotUsedLol = 42;
-
-    const pushBody: PushBody = {
+    const pushBody: PushRequest = {
+      profileID: 'profile-id',
+      clientID: 'client-id',
       pushVersion: 0,
       schemaVersion: '1',
       mutations,
-      timestamp: overwrittenAndNotUsedLol,
     };
 
     const req = new Request('http://example.com/push', {
       body: JSON.stringify(pushBody),
       method: 'POST',
+      headers: {'X-Replicache-RequestID': requestID},
     });
 
     await r.pusher(req);
@@ -226,10 +235,10 @@ test('pusher sends one mutation per push message', async () => {
     for (const raw of mockSocket.messages) {
       const msg = pushMessageSchema.parse(JSON.parse(raw));
       expect(msg[1].mutations).to.have.lengthOf(1);
+      expect(msg[1].requestID).to.equal(requestID);
     }
 
     await r.close();
-    await tickAFewTimes(clock);
   };
 
   await t([], 0);
