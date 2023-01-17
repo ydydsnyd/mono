@@ -16,12 +16,15 @@ import {
   createSilentLogContext,
   fail,
   Mocket,
+  mockMathRandom,
   mutation,
 } from '../util/test-utils.js';
 import {processPending} from '../../src/process/process-pending.js';
 
 const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();
+
+mockMathRandom();
 
 test('processPending', async () => {
   type Case = {
@@ -77,6 +80,7 @@ test('processPending', async () => {
                 },
               ],
               timestamp: 100,
+              requestID: '4fxcm49g2j9',
             },
           ],
         ],
@@ -118,6 +122,7 @@ test('processPending', async () => {
                 },
               ],
               timestamp: 100,
+              requestID: '4fxcm49g2j9',
             },
           ],
         ],
@@ -136,6 +141,7 @@ test('processPending', async () => {
                 },
               ],
               timestamp: 100,
+              requestID: '4fxcm49g2j9',
             },
           ],
         ],
@@ -180,6 +186,7 @@ test('processPending', async () => {
                 },
               ],
               timestamp: 100,
+              requestID: '4fxcm49g2j9',
             },
           ],
         ],
@@ -198,6 +205,7 @@ test('processPending', async () => {
                 },
               ],
               timestamp: 100,
+              requestID: '4fxcm49g2j9',
             },
           ],
         ],

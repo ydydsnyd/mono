@@ -1,26 +1,29 @@
 import {test, expect} from '@jest/globals';
 import type {WriteTransaction} from 'replicache';
-import {DurableStorage} from '../../src/storage/durable-storage.js';
-import type {ClientPokeBody} from '../../src/types/client-poke-body.js';
+import {DurableStorage} from '../storage/durable-storage.js';
+import type {ClientPokeBody} from '../types/client-poke-body.js';
 import {
   ClientRecord,
   getClientRecord,
   putClientRecord,
-} from '../../src/types/client-record.js';
-import type {ClientMap} from '../../src/types/client-state.js';
-import {getUserValue, UserValue} from '../../src/types/user-value.js';
-import {getVersion, Version, versionKey} from '../../src/types/version.js';
+} from '../types/client-record.js';
+import type {ClientMap} from '../types/client-state.js';
+import {getUserValue, UserValue} from '../types/user-value.js';
+import {getVersion, Version, versionKey} from '../types/version.js';
 import {
   client,
   clientRecord,
   createSilentLogContext,
   fail,
+  mockMathRandom,
   mutation,
 } from '../util/test-utils.js';
-import {processRoom} from '../../src/process/process-room.js';
+import {processRoom} from '../process/process-room.js';
 
 const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();
+
+mockMathRandom();
 
 test('processRoom', async () => {
   type Case = {
@@ -64,6 +67,7 @@ test('processRoom', async () => {
             lastMutationID: 1,
             patch: [],
             timestamp: 100,
+            requestID: '4fxcm49g2j9',
           },
         },
         {
@@ -74,6 +78,7 @@ test('processRoom', async () => {
             lastMutationID: 1,
             patch: [],
             timestamp: 100,
+            requestID: '4fxcm49g2j9',
           },
         },
       ],
@@ -101,6 +106,7 @@ test('processRoom', async () => {
             lastMutationID: 1,
             patch: [],
             timestamp: 100,
+            requestID: '4fxcm49g2j9',
           },
         },
       ],
@@ -133,6 +139,7 @@ test('processRoom', async () => {
               },
             ],
             timestamp: 100,
+            requestID: '4fxcm49g2j9',
           },
         },
       ],
@@ -172,6 +179,7 @@ test('processRoom', async () => {
               },
             ],
             timestamp: 100,
+            requestID: '4fxcm49g2j9',
           },
         },
       ],

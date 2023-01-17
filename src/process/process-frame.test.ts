@@ -13,6 +13,7 @@ import {
   clientMutation,
   clientRecord,
   createSilentLogContext,
+  mockMathRandom,
   userValue,
 } from '../util/test-utils.js';
 import {processFrame} from '../../src/process/process-frame.js';
@@ -20,6 +21,8 @@ import {connectedClientsKey} from '../types/connected-clients.js';
 
 const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();
+
+mockMathRandom();
 
 test('processFrame', async () => {
   const records = new Map([
@@ -105,6 +108,7 @@ test('processFrame', async () => {
               },
             ],
             timestamp: startTime,
+            requestID: '4fxcm49g2j9',
           },
         },
       ],
@@ -139,6 +143,7 @@ test('processFrame', async () => {
               },
             ],
             timestamp: startTime,
+            requestID: '4fxcm49g2j9',
           },
         },
         {
@@ -155,6 +160,7 @@ test('processFrame', async () => {
               },
             ],
             timestamp: startTime,
+            requestID: '4fxcm49g2j9',
           },
         },
       ],
@@ -193,6 +199,7 @@ test('processFrame', async () => {
               },
             ],
             timestamp: startTime,
+            requestID: '4fxcm49g2j9',
           },
         },
       ],
@@ -272,6 +279,7 @@ test('processFrame', async () => {
               },
             ],
             timestamp: 100,
+            requestID: '4fxcm49g2j9',
           },
         },
       ],
@@ -348,6 +356,7 @@ test('processFrame', async () => {
               },
             ],
             timestamp: 100,
+            requestID: '4fxcm49g2j9',
           },
         },
       ],
@@ -394,6 +403,7 @@ test('processFrame', async () => {
               },
             ],
             timestamp: startTime,
+            requestID: '4fxcm49g2j9',
           },
         },
         {
@@ -415,6 +425,7 @@ test('processFrame', async () => {
               },
             ],
             timestamp: startTime,
+            requestID: '4fxcm49g2j9',
           },
         },
       ],
@@ -455,6 +466,7 @@ test('processFrame', async () => {
               },
             ],
             timestamp: startTime,
+            requestID: '4fxcm49g2j9',
           },
         },
         {
@@ -471,6 +483,7 @@ test('processFrame', async () => {
               },
             ],
             timestamp: startTime,
+            requestID: '4fxcm49g2j9',
           },
         },
       ],

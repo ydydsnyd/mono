@@ -1,3 +1,4 @@
+import {beforeEach, afterEach} from '@jest/globals';
 import {LogContext, LogLevel, LogSink} from '@rocicorp/logger';
 import type {JSONType} from '../../src/protocol/json.js';
 import type {Mutation} from '../../src/protocol/push.js';
@@ -115,4 +116,17 @@ export class SilentLogSink implements LogSink {
 
 export function createSilentLogContext() {
   return new LogContext('error', new SilentLogSink());
+}
+
+export function mockMathRandom() {
+  const {random} = Math;
+
+  beforeEach(() => {
+    // If we need more entropy use a PRNG.
+    Math.random = () => 0.1234;
+  });
+
+  afterEach(() => {
+    Math.random = random;
+  });
 }

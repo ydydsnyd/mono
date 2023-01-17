@@ -1,4 +1,5 @@
 import type {LogContext} from '@rocicorp/logger';
+import {randomID} from '../util/rand.js';
 import type {DisconnectHandler} from '../server/disconnect.js';
 import {EntryCache} from '../storage/entry-cache.js';
 import {unwrapPatch} from '../storage/replicache-transaction.js';
@@ -60,6 +61,7 @@ export async function processFrame(
           lastMutationID: clientRecord.lastMutationID,
           patch,
           timestamp,
+          requestID: randomID(),
         },
       };
       ret.push(poke);

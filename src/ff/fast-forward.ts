@@ -6,6 +6,7 @@ import {getPatch} from './get-patch.js';
 import type {Patch} from '../protocol/poke.js';
 import {must} from '../util/must.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
+import {randomID} from '../util/rand.js';
 
 export type GetClientRecord = (clientID: ClientID) => Promise<ClientRecord>;
 
@@ -64,6 +65,7 @@ export async function fastForwardRoom(
         lastMutationID: record.lastMutationID,
         timestamp,
         patch,
+        requestID: randomID(),
       },
     };
     ret.push(poke);
