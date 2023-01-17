@@ -5,11 +5,11 @@ import {
   Handler,
   Router,
   WithLogContext,
-} from './router';
-import {randomID} from '../util/rand';
-import {createAuthAPIHeaders} from './auth-api-headers';
-import {dispatch, paths} from './dispatch';
-import {AUTH_ROUTES} from './auth-do';
+} from './router.js';
+import {randomID} from '../util/rand.js';
+import {createAuthAPIHeaders} from './auth-api-headers.js';
+import {dispatch, paths} from './dispatch.js';
+import {AUTH_ROUTES} from './auth-do.js';
 
 export interface WorkerOptions<Env extends BaseWorkerEnv> {
   getLogSink: (env: Env) => LogSink;
