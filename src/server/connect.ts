@@ -58,8 +58,8 @@ export async function handleConnection(
     return;
   }
 
-  const {clientID, baseCookie, lmid, requestID, userData} = result;
-  lc = lc.addContext('client', clientID);
+  const {clientID, baseCookie, lmid, wsid, userData} = result;
+  lc = lc.addContext('client', clientID).addContext('wsid', wsid);
   lc.info?.('parsed request', {
     ...result,
     userData: 'redacted',
@@ -144,7 +144,7 @@ export async function handleConnection(
   lc.debug?.('Setting client map entry', clientID, client);
   clients.set(clientID, client);
 
-  const connectedMessage: ConnectedMessage = ['connected', {requestID}];
+  const connectedMessage: ConnectedMessage = ['connected', {wsid}];
   ws.send(JSON.stringify(connectedMessage));
 }
 
@@ -207,7 +207,7 @@ export function getConnectRequest(url: URL, headers: Headers) {
     const baseCookie = getIntegerParam('baseCookie', false);
     const timestamp = getIntegerParam('ts', true);
     const lmid = getIntegerParam('lmid', true);
-    const requestID = getParam('requestID', true);
+    const wsid = getParam('wsid', true);
 
     const userData = getUserData(headers);
     return {
@@ -217,7 +217,7 @@ export function getConnectRequest(url: URL, headers: Headers) {
         baseCookie,
         timestamp,
         lmid,
-        requestID,
+        wsid,
       },
       error: null,
     };

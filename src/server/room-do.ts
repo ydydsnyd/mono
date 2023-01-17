@@ -124,7 +124,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       }
 
       const lc = addClientIPToLogContext(
-        addRequestIDToLogContext(this._lc, request),
+        addWebSocketIDToLogContext(this._lc, request),
         request,
       );
 
@@ -136,7 +136,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       return await dispatch(request, lc, this._authApiKey, this);
     } catch (e) {
       const lc = addClientIPToLogContext(
-        addRequestIDToLogContext(this._lc, request),
+        addWebSocketIDToLogContext(this._lc, request),
         request,
       );
 
@@ -376,16 +376,16 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 }
 
 /**
- * Adds the requestID query parameter to the log context. If the URL does not
- * have a requestID we use a randomID instead.
+ * Adds the wsid query parameter to the log context. If the URL does not
+ * have a wsid we use a randomID instead.
  */
-function addRequestIDToLogContext(
+function addWebSocketIDToLogContext(
   lc: LogContext,
   {url}: {url: string},
 ): LogContext {
   return lc.addContext(
-    'req',
-    new URL(url).searchParams.get('requestID') ?? randomID(),
+    'wsid',
+    new URL(url).searchParams.get('wsid') ?? randomID(),
   );
 }
 
