@@ -85,7 +85,7 @@ export class ReplicacheTransaction implements WriteTransaction {
       throw new Error('not implemented');
     }
 
-    return makeScanResult<ScanNoIndexOptions, JSONValue>(options, () =>
+    return makeScanResult<ScanNoIndexOptions>(options, () =>
       this._list(options),
     );
   }
