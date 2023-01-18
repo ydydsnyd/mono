@@ -2,6 +2,7 @@ import {LogContext, LogSink, LogLevel} from '@rocicorp/logger';
 import {encodeHeaderValue} from '../util/headers.js';
 import {randomID} from '../util/rand.js';
 import {AuthHandler, UserData, USER_DATA_HEADER_NAME} from './auth.js';
+import {createUnauthorizedResponse} from './create-unauthorized-response.js';
 
 export interface NoAuthDOWorkerOptions<Env extends BaseNoAuthDOWorkerEnv> {
   getLogSink: (env: Env) => LogSink;
@@ -72,6 +73,7 @@ async function handleRequest(
       status: 400,
     });
   }
+
   const roomID = url.searchParams.get('roomID');
   if (roomID === null || roomID === '') {
     return new Response('roomID parameter required', {
@@ -91,6 +93,7 @@ async function handleRequest(
     lc.info?.('auth not found in Sec-WebSocket-Protocol header.');
     return createUnauthorizedResponse('auth required');
   }
+
   let decodedAuth: string | undefined;
   try {
     decodedAuth = decodeURIComponent(encodedAuth);
@@ -114,6 +117,7 @@ async function handleRequest(
     }
     return createUnauthorizedResponse();
   }
+
   // Forward the request to the Room Durable Object for roomID...
   const id = roomDO.idFromName(roomID);
   const stub = roomDO.get(id);
@@ -157,10 +161,4 @@ async function withLogContext<Env extends BaseNoAuthDOWorkerEnv, R>(
       ctx.waitUntil(logSink.flush());
     }
   }
-}
-
-function createUnauthorizedResponse(message = 'Unauthorized'): Response {
-  return new Response(message, {
-    status: 401,
-  });
 }

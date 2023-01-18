@@ -1,5 +1,4 @@
 import {encodeHeaderValue} from '../util/headers.js';
-import {randomID} from '../util/rand.js';
 import {LogSink, LogContext, LogLevel} from '@rocicorp/logger';
 import {version} from '../util/version.js';
 import {AuthHandler, UserData, USER_DATA_HEADER_NAME} from './auth.js';
@@ -42,6 +41,8 @@ import {
   BaseContext,
   WithRoomID,
 } from './router.js';
+import {addRequestIDFromHeadersOrRandomID} from './request-id.js';
+import {createUnauthorizedResponse} from './create-unauthorized-response.js';
 
 export interface AuthDOOptions {
   roomDO: DurableObjectNamespace;
@@ -129,7 +130,7 @@ export class BaseAuthDO implements DurableObject {
 
   async fetch(request: Request): Promise<Response> {
     // Match route against pattern /:name/*action
-    const lc = this._lc.addContext('req', randomID());
+    const lc = addRequestIDFromHeadersOrRandomID(this._lc, request);
     lc.debug?.('Handling request:', request.url);
     try {
       // Try newfangled routes first.
@@ -145,9 +146,7 @@ export class BaseAuthDO implements DurableObject {
       lc.error?.('Unhandled exception in fetch', e);
       return new Response(
         e instanceof Error ? e.message : 'Unexpected error.',
-        {
-          status: 500,
-        },
+        {status: 500},
       );
     }
   }
@@ -281,9 +280,7 @@ export class BaseAuthDO implements DurableObject {
     const url = new URL(request.url);
     if (url.pathname !== '/connect') {
       lc.error?.('authDO returning 400 bc path is not /connect:', request.url);
-      return new Response('unknown route', {
-        status: 400,
-      });
+      return new Response('unknown route', {status: 400});
     }
 
     if (request.headers.get('Upgrade') !== 'websocket') {
@@ -334,7 +331,6 @@ export class BaseAuthDO implements DurableObject {
       //   https://www.rfc-editor.org/rfc/rfc6455.html#section-1.4
       // In any case, it seems to work just fine to send the message and
       // close before even returning the response.
-
       const responseHeaders = new Headers();
       responseHeaders.set('Sec-WebSocket-Protocol', encodedAuth);
       return new Response(null, {
@@ -395,6 +391,7 @@ export class BaseAuthDO implements DurableObject {
       // client.
       if (roomRecord === undefined || roomRecord.status !== RoomStatus.Open) {
         const errorMsg = roomRecord ? 'room is not open' : 'room not found';
+
         const pair = this._newWebSocketPair();
         const ws = pair[1];
         lc.info?.('accepting connection ', request.url);
@@ -448,7 +445,6 @@ export class BaseAuthDO implements DurableObject {
       // matching the Sec-WebSocket-Protocol request header, to indicate
       // support for the protocol, otherwise the client will close the connection.
       responseHeaders.set('Sec-WebSocket-Protocol', encodedAuth);
-
       const response = new Response(responseFromDO.body, {
         status: responseFromDO.status,
         statusText: responseFromDO.statusText,
@@ -498,9 +494,7 @@ export class BaseAuthDO implements DurableObject {
         objectIDByRoomID(this._durableStorage, this._roomDO, roomID),
       );
       if (roomObjectID === undefined) {
-        return new Response('room not found', {
-          status: 404,
-        });
+        return new Response('room not found', {status: 404});
       }
       const stub = this._roomDO.get(roomObjectID);
       const response = await stub.fetch(request);
@@ -539,9 +533,7 @@ export class BaseAuthDO implements DurableObject {
       lc.info?.(
         'Returning Unauthorized because REFLECT_AUTH_API_KEY is not defined in env.',
       );
-      return new Response('Unauthorized', {
-        status: 401,
-      });
+      return createUnauthorizedResponse();
     }
     const connectionRecords = await this._state.storage.list({
       prefix: CONNECTION_KEY_PREFIX,
@@ -678,9 +670,7 @@ export class BaseAuthDO implements DurableObject {
       }
     }
     if (errorResponses.length === 0) {
-      return new Response('Success', {
-        status: 200,
-      });
+      return new Response('Success', {status: 200});
     }
     return errorResponses[0];
   }
@@ -713,10 +703,4 @@ export function connectionKeyFromString(
     roomID: decodeURIComponent(parts[2]),
     clientID: decodeURIComponent(parts[3]),
   };
-}
-
-function createUnauthorizedResponse(message = 'Unauthorized'): Response {
-  return new Response(message, {
-    status: 401,
-  });
 }

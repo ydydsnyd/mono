@@ -10,6 +10,7 @@ import {
   CreateRoomRequest,
   createRoomRequestSchema,
 } from '../protocol/api/room.js';
+import {createUnauthorizedResponse} from './create-unauthorized-response.js';
 
 export type Handler<T = undefined> = (
   this: Handlers,
@@ -53,12 +54,6 @@ export const paths: Readonly<Record<keyof Handlers, string>> = {
   authRevalidateConnections: '/api/auth/v0/revalidateConnections',
   authConnections: '/api/auth/v0/connections',
 };
-
-function createUnauthorizedResponse(message = 'Unauthorized'): Response {
-  return new Response(message, {
-    status: 401,
-  });
-}
 
 function createBadRequestResponse(message = 'Bad Request'): Response {
   return new Response(message, {

@@ -29,6 +29,7 @@ import {
   Handler,
   BaseContext,
 } from './router.js';
+import {addRequestIDFromHeadersOrRandomID} from './request-id.js';
 
 const roomIDKey = '/system/roomID';
 const deletedKey = '/system/deleted';
@@ -90,7 +91,9 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   async fetch(request: Request): Promise<Response> {
     try {
       if (await this.deleted()) {
-        return new Response('deleted', {status: 410 /* Gone */});
+        return new Response('deleted', {
+          status: 410, // Gone
+        });
       }
 
       if (!this._lcHasRoomIdContext) {
@@ -124,7 +127,10 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       }
 
       const lc = addClientIPToLogContext(
-        addWebSocketIDToLogContext(this._lc, request),
+        addWebSocketIDToLogContext(
+          addRequestIDFromHeadersOrRandomID(this._lc, request),
+          request,
+        ),
         request,
       );
 
@@ -143,9 +149,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       lc.error?.('Unhandled exception in fetch', e);
       return new Response(
         e instanceof Error ? e.message : 'Unexpected error.',
-        {
-          status: 500,
-        },
+        {status: 500},
       );
     }
   }
@@ -201,7 +205,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   // system keys are deleted who knows what behavior the room will have when its apis are
   // called. Maybe it's fine if they error out, dunno.
   private _deleteAllData = post(
-    this._requireAPIKey(async (_, ctx) => {
+    this._requireAPIKey(async (_request, ctx) => {
       const {lc} = ctx;
       // Maybe we should validate that the roomID in the request matches?
       lc.info?.('delete all data');
@@ -218,6 +222,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       lc.error?.('roomDO: missing Upgrade header');
       return new Response('expected websocket', {status: 400});
     }
+
     const {0: clientWS, 1: serverWS} = new WebSocketPair();
     const url = new URL(request.url);
     lc.debug?.('connection request', url.toString(), 'waiting for lock');
@@ -295,15 +300,16 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     data: string,
     ws: Socket,
   ): Promise<void> => {
+    // TODO(arv): Get LogContext from caller so we can include requestID
     const lc = this._lc
       .addContext('msg', randomID())
       .addContext('client', clientID);
     lc.debug?.('handling message', data, 'waiting for lock');
 
     try {
-      await this._lock.withLock(async () => {
+      await this._lock.withLock(() => {
         lc.debug?.('received lock');
-        await handleMessage(lc, this._clients, clientID, data, ws, () =>
+        handleMessage(lc, this._clients, clientID, data, ws, () =>
           this._processUntilDone(),
         );
       });
@@ -363,6 +369,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     clientID: ClientID,
     ws: Socket,
   ): Promise<void> => {
+    // TODO(arv): Get LogContext from caller so we can include requestID
     const lc = this._lc
       .addContext('req', randomID())
       .addContext('client', clientID);
