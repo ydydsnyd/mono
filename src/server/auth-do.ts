@@ -395,13 +395,9 @@ export class BaseAuthDO implements DurableObject {
       // client.
       if (roomRecord === undefined || roomRecord.status !== RoomStatus.Open) {
         const errorMsg = roomRecord ? 'room is not open' : 'room not found';
-        if (request.headers.get('Upgrade') !== 'websocket') {
-          return new Response('expected websocket', {status: 400});
-        }
         const pair = this._newWebSocketPair();
         const ws = pair[1];
-        const url = new URL(request.url);
-        lc.info?.('accepting connection ', url.toString());
+        lc.info?.('accepting connection ', request.url);
         ws.accept();
 
         // MDN tells me that the message will be delivered even if we call close
