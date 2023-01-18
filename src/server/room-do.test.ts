@@ -1,6 +1,6 @@
 import {test, expect} from '@jest/globals';
 import {newCreateRoomRequest, newDeleteRoomRequest} from '../client/room.js';
-import {TestLogSink} from '../util/test-utils.js';
+import {createSilentLogContext, TestLogSink} from '../util/test-utils.js';
 import {version} from '../util/version.js';
 import {TestDurableObjectId} from './do-test-utils.js';
 import {BaseRoomDO} from './room-do.js';
@@ -28,7 +28,8 @@ test('sets roomID in createRoom', async () => {
   );
   const response = await roomDO.fetch(createRoomRequest);
   expect(response.status).toBe(200);
-  const roomID = await roomDO.roomID();
+  const lc = createSilentLogContext();
+  const roomID = await roomDO.roomID(lc);
   expect(roomID).toBe('testRoomID');
 });
 

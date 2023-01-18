@@ -74,7 +74,7 @@ export const AUTH_ROUTES = {
 };
 
 export class BaseAuthDO implements DurableObject {
-  private readonly _router: Router;
+  private readonly _router = new Router();
   private readonly _roomDO: DurableObjectNamespace;
   private readonly _state: DurableObjectState;
   // _durableStorage is a type-aware wrapper around _state.storage. It
@@ -90,12 +90,12 @@ export class BaseAuthDO implements DurableObject {
   // _authLock ensures that at most one auth api call is processed at a time.
   // For safety, if something requires both the auth lock and the room record
   // lock, the auth lock MUST be acquired first.
-  private readonly _authLock: RWLock;
+  private readonly _authLock = new RWLock();
   // _roomRecordLock ensure that at most one write operation is in
   // progress on a RoomRecord at a time. For safety, if something requires
   // both the auth lock and the room record lock, the auth lock MUST be
   // acquired first.
-  private readonly _roomRecordLock: RWLock;
+  private readonly _roomRecordLock = new RWLock();
   private readonly _newWebSocketPair: NewWebSocketPair;
 
   constructor(options: AuthDOOptions) {
@@ -108,7 +108,6 @@ export class BaseAuthDO implements DurableObject {
       logLevel,
       newWebSocketPair = defaultNewWebSocketPair,
     } = options;
-    this._router = new Router();
     this._newWebSocketPair = newWebSocketPair;
     this._roomDO = roomDO;
     this._state = state;
@@ -121,8 +120,7 @@ export class BaseAuthDO implements DurableObject {
     this._lc = new LogContext(logLevel, logSink)
       .addContext('AuthDO')
       .addContext('doID', state.id.toString());
-    this._authLock = new RWLock();
-    this._roomRecordLock = new RWLock();
+
     this._initRoutes();
     this._lc.info?.('Starting server');
     this._lc.info?.('Version:', version);
@@ -132,6 +130,7 @@ export class BaseAuthDO implements DurableObject {
     // Match route against pattern /:name/*action
     const lc = addRequestIDFromHeadersOrRandomID(this._lc, request);
     lc.debug?.('Handling request:', request.url);
+
     try {
       // Try newfangled routes first.
       let resp = await this._router.dispatch(request, {lc});

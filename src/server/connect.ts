@@ -19,12 +19,17 @@ import type {DurableStorage} from '../storage/durable-storage.js';
 import {compareVersions, getVersion} from '../types/version.js';
 
 export type MessageHandler = (
+  lc: LogContext,
   clientID: ClientID,
   data: string,
   ws: Socket,
 ) => void;
 
-export type CloseHandler = (clientID: ClientID, ws: Socket) => void;
+export type CloseHandler = (
+  lc: LogContext,
+  clientID: ClientID,
+  ws: Socket,
+) => void;
 
 /**
  * Handles the connect message from a client, registering the client state in memory and updating the persistent client-record.
@@ -111,7 +116,7 @@ export async function handleConnection(
   }
 
   ws.addEventListener('message', event =>
-    onMessage(clientID, event.data.toString(), ws),
+    onMessage(lc, clientID, event.data.toString(), ws),
   );
   ws.addEventListener('close', e => {
     lc.info?.('WebSocket CloseEvent for client', clientID, {
@@ -119,7 +124,7 @@ export async function handleConnection(
       code: e.code,
       wasClean: e.wasClean,
     });
-    onClose(clientID, ws);
+    onClose(lc, clientID, ws);
   });
   ws.addEventListener('error', e => {
     lc.error?.(
