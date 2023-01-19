@@ -27,8 +27,8 @@ import {DurableStorage} from '../storage/durable-storage.js';
 import type {CreateRoomRequest} from '../protocol/api/room.js';
 import {
   newWebSocketPair as defaultNewWebSocketPair,
-  sendError,
   NewWebSocketPair,
+  sendError,
 } from '../util/socket.js';
 import {
   requireAuthAPIKey,
@@ -43,6 +43,7 @@ import {
 } from './router.js';
 import {addRequestIDFromHeadersOrRandomID} from './request-id.js';
 import {createUnauthorizedResponse} from './create-unauthorized-response.js';
+import type {ErrorKind} from '../protocol/error.js';
 
 export interface AuthDOOptions {
   roomDO: DurableObjectNamespace;
@@ -313,14 +314,14 @@ export class BaseAuthDO implements DurableObject {
     // TODO should probably unify the way this works with how roomDO connect()
     //   does it.
 
-    const closeWithError = (error: string) => {
+    const closeWithError = (errorKind: ErrorKind, msg: string) => {
       const pair = this._newWebSocketPair();
       const ws = pair[1];
       lc.error?.('accepting connection to send error', url.toString());
       ws.accept();
 
-      lc.error?.('invalid connection request', error);
-      sendError(ws, error);
+      lc.error?.('invalid connection request', msg);
+      sendError(ws, errorKind, msg);
       ws.close();
 
       // MDN tells me that the message will be delivered even if we call close
@@ -342,12 +343,18 @@ export class BaseAuthDO implements DurableObject {
     // TODO apparently many of these checks are not tested :(
     const clientID = url.searchParams.get('clientID');
     if (!clientID) {
-      return closeWithError('400: clientID parameter required');
+      return closeWithError(
+        'InvalidConnectionRequest',
+        'clientID parameter required',
+      );
     }
 
     const roomID = url.searchParams.get('roomID');
     if (roomID === null || roomID === '') {
-      return closeWithError('400: roomID parameter required');
+      return closeWithError(
+        'InvalidConnectionRequest',
+        'roomID parameter required',
+      );
     }
 
     lc = lc.addContext('client', clientID).addContext('room', roomID);
@@ -356,7 +363,7 @@ export class BaseAuthDO implements DurableObject {
     try {
       decodedAuth = decodeURIComponent(encodedAuth);
     } catch (e) {
-      return closeWithError('400: malformed auth');
+      return closeWithError('InvalidConnectionRequest', 'malformed auth');
     }
     const auth = decodedAuth;
     return this._authLock.withRead(async () => {
@@ -364,15 +371,15 @@ export class BaseAuthDO implements DurableObject {
       try {
         userData = await this._authHandler(auth, roomID);
       } catch (e) {
-        return closeWithError('401: authHandler rejected');
+        return closeWithError('Unauthorized', 'authHandler rejected');
       }
       if (!userData || !userData.userID) {
         if (!userData) {
-          lc.info?.('userData returned by authHandler is falsey.');
+          lc.info?.('userData returned by authHandler is not an object.');
         } else if (!userData.userID) {
           lc.info?.('userData returned by authHandler has no userID.');
         }
-        return closeWithError('401: no userData');
+        return closeWithError('Unauthorized', 'no userData');
       }
 
       // Find the room's objectID so we can connect to it. Do this BEFORE
@@ -389,8 +396,6 @@ export class BaseAuthDO implements DurableObject {
       // close the connection. We trust it will be logged by onSocketError in the
       // client.
       if (roomRecord === undefined || roomRecord.status !== RoomStatus.Open) {
-        const errorMsg = roomRecord ? 'room is not open' : 'room not found';
-
         const pair = this._newWebSocketPair();
         const ws = pair[1];
         lc.info?.('accepting connection ', request.url);
@@ -403,7 +408,14 @@ export class BaseAuthDO implements DurableObject {
         //   https://www.rfc-editor.org/rfc/rfc6455.html#section-1.4
         // In any case, it seems to work just fine to send the message and
         // close before even returning the response.
-        sendError(ws, errorMsg);
+
+        sendError(
+          ws,
+          roomRecord ? 'RoomClosed' : 'RoomNotFound',
+          roomRecord
+            ? `room is closed: ${roomID}`
+            : `room not found: ${roomID}`,
+        );
         ws.close();
 
         const responseHeaders = new Headers();

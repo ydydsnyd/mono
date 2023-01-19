@@ -273,7 +273,14 @@ test('handleConnection', async () => {
 
     if (c.expectErrorResponse) {
       expect(mocket.log).toEqual([
-        ['send', JSON.stringify(['error', c.expectErrorResponse])],
+        [
+          'send',
+          JSON.stringify([
+            'error',
+            'InvalidConnectionRequest',
+            c.expectErrorResponse,
+          ]),
+        ],
         ['close'],
       ]);
       continue;

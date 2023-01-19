@@ -23,14 +23,14 @@ export function handleMessage(
     message = getMessage(data);
   } catch (e) {
     lc.info?.('invalid message', e);
-    sendError(ws, String(e));
+    sendError(ws, 'InvalidMessage', String(e));
     return;
   }
 
   const client = clientMap.get(clientID);
   if (!client) {
     lc.error?.('client not found, closing socket');
-    sendError(ws, `no such client: ${clientID}`);
+    sendError(ws, 'ClientNotFound', `no such client: ${clientID}`);
     // This is not expected to ever occur.  However if it does no pushes will
     // ever succeed over this connection since it is missing an entry in
     // ClientMap.  Close connection so client can try to reconnect and recover.

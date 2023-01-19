@@ -17,6 +17,7 @@ import {decodeHeaderValue} from '../util/headers.js';
 import {addConnectedClient} from '../types/connected-clients.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
 import {compareVersions, getVersion} from '../types/version.js';
+import {send, sendError} from '../util/socket.js';
 
 export type MessageHandler = (
   lc: LogContext,
@@ -51,15 +52,15 @@ export async function handleConnection(
   onClose: CloseHandler,
 ) {
   lc.info?.('roomDO: handling connect', url.toString());
-  const sendError = (error: string) => {
-    lc.error?.('roomDO: invalid connection request', error);
-    ws.send(JSON.stringify(['error', error]));
+  const sendErrorAndClose = (msg: string) => {
+    lc.error?.('roomDO: invalid connection request', msg);
+    sendError(ws, 'InvalidConnectionRequest', msg);
     ws.close();
   };
 
   const {result, error} = getConnectRequest(url, headers);
   if (error !== null) {
-    sendError(error);
+    sendErrorAndClose(error);
     return;
   }
 
@@ -85,7 +86,7 @@ export async function handleConnection(
       'expected lastMutationID',
       existingLastMutationID,
     );
-    sendError(`Unexpected lmid. ${maybeOldClientStateMessage}`);
+    sendErrorAndClose(`Unexpected lmid. ${maybeOldClientStateMessage}`);
     return;
   }
 
@@ -97,7 +98,7 @@ export async function handleConnection(
       'current version is',
       version,
     );
-    sendError(`Unexpected baseCookie. ${maybeOldClientStateMessage}`);
+    sendErrorAndClose(`Unexpected baseCookie. ${maybeOldClientStateMessage}`);
     return;
   }
 
@@ -150,7 +151,7 @@ export async function handleConnection(
   clients.set(clientID, client);
 
   const connectedMessage: ConnectedMessage = ['connected', {wsid}];
-  ws.send(JSON.stringify(connectedMessage));
+  send(ws, connectedMessage);
 }
 
 export const maybeOldClientStateMessage =

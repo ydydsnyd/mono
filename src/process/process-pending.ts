@@ -10,6 +10,7 @@ import type {MutatorMap} from './process-mutation.js';
 import {processRoom} from './process-room.js';
 import type {DisconnectHandler} from '../server/disconnect.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
+import {send} from '../util/socket.js';
 
 /**
  * Processes all mutations in all rooms for a time range, and send relevant pokes.
@@ -53,7 +54,7 @@ function sendPokes(
     const client = must(clients.get(pokeBody.clientID));
     const poke: PokeMessage = ['poke', pokeBody.poke];
     lc.debug?.('sending client', pokeBody.clientID, 'poke', pokeBody.poke);
-    client.socket.send(JSON.stringify(poke));
+    send(client.socket, poke);
   }
 }
 

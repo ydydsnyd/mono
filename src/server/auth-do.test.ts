@@ -855,7 +855,7 @@ test("connect won't connect to a room that doesn't exist", async () => {
 
   expect(response.status).toEqual(101);
   expect(serverWs.log).toEqual([
-    ['send', '["error","room not found"]'],
+    ['send', '["error","RoomNotFound","room not found: testRoomID1"]'],
     ['close'],
   ]);
   expect((await storage.list({prefix: 'connection/'})).size).toEqual(0);
@@ -941,7 +941,7 @@ test('connect wont connect to a room that is closed', async () => {
 
   expect(response.status).toEqual(101);
   expect(serverWs.log).toEqual([
-    ['send', '["error","room is not open"]'],
+    ['send', '["error","RoomClosed","room is closed: testRoomID1"]'],
     ['close'],
   ]);
 });
@@ -1033,7 +1033,7 @@ test('connect pipes 401 over ws without calling Room DO if authHandler rejects',
   expect(response.headers.get('Sec-WebSocket-Protocol')).toEqual(testAuth);
   expect(response.webSocket).toBe(clientWs);
   expect(serverWs.log).toEqual([
-    ['send', '["error","401: authHandler rejected"]'],
+    ['send', '["error","Unauthorized","authHandler rejected"]'],
     ['close'],
   ]);
 });
