@@ -9,13 +9,23 @@ import * as sinon from 'sinon';
 import {Mutation, pushMessageSchema} from '../protocol/push.js';
 import type {NullableVersion} from '../types/version.js';
 import {resolver} from '../util/resolver.js';
-import {ConnectionState, createSocket} from './reflect.js';
+import {
+  ConnectionState,
+  createSocket,
+  WATCHDOG_INTERVAL_MS,
+} from './reflect.js';
 import {
   MockSocket,
   reflectForTest,
   TestReflect,
   tickAFewTimes,
 } from './test-utils.js';
+// Why use fakes when we can use the real thing!
+import {Metrics, gaugeValue, Gauge} from '@rocicorp/datadog-util';
+import {
+  DID_NOT_CONNECT_VALUE,
+  TIME_TO_CONNECT_METRIC,
+} from '../types/metrics.js';
 
 let clock: sinon.SinonFakeTimers;
 
@@ -62,7 +72,7 @@ test('onOnlineChange callback', async () => {
   expect(offlineCount).to.equal(1);
 
   // let the watchdog timer fire
-  await tickAFewTimes(clock, 5000);
+  await tickAFewTimes(clock, WATCHDOG_INTERVAL_MS);
   r.triggerConnected();
   await tickAFewTimes(clock);
   expect(r.connectionState).to.equal(ConnectionState.Connected);
@@ -92,9 +102,15 @@ test('onOnlineChange reflection on Reflect class', async () => {
 });
 
 test('disconnects if ping fails', async () => {
-  const watchdogInterval = 5000;
+  const url = 'ws://example.com';
+  const watchdogInterval = WATCHDOG_INTERVAL_MS;
   const pingTimeout = 2000;
-  const r = reflectForTest();
+  const r = reflectForTest({
+    socketOrigin: url,
+    auth: '',
+    userID: 'user-id',
+    roomID: 'room-id',
+  });
 
   await tickAFewTimes(clock);
   expect(r.connectionState).to.equal(ConnectionState.Connecting);
@@ -378,3 +394,85 @@ test('poke log context includes requestID', async () => {
   const foundRequestID = await foundRequestIDFromLogPromise;
   expect(foundRequestID).to.equal('request-id-x');
 });
+
+test('timeToConnect updated when connected', async () => {
+  const url = 'ws://example.com/';
+  const m = new Metrics();
+  const g = m.gauge(TIME_TO_CONNECT_METRIC);
+  clock.setSystemTime(1000 * 1000);
+  const r = reflectForTest({
+    socketOrigin: url,
+    auth: '',
+    userID: 'user-id',
+    roomID: 'room-id',
+    experimentalMetrics: m,
+  });
+  expect(val(g)).to.equal(DID_NOT_CONNECT_VALUE);
+
+  await tickAFewTimes(clock);
+  expect(r.connectionState).to.equal(ConnectionState.Connecting);
+  const start = asNumber(r.connectingStart);
+
+  clock.setSystemTime(start + 42 * 1000);
+  r.triggerConnected();
+  await tickAFewTimes(clock);
+  // Gauge value is in seconds.
+  expect(val(g)).to.equal(42);
+
+  // Ensure it gets set when we reconnect.
+  r.triggerClose();
+  await tickAFewTimes(clock);
+  expect(r.connectionState).to.equal(ConnectionState.Disconnected);
+  await tickAFewTimes(clock, WATCHDOG_INTERVAL_MS);
+  expect(r.connectionState).to.equal(ConnectionState.Connecting);
+
+  const restart = asNumber(r.connectingStart);
+  clock.setSystemTime(restart + 666 * 1000);
+  r.triggerConnected();
+  await tickAFewTimes(clock);
+  // Gauge value is in seconds.
+  expect(val(g)).to.equal(666);
+});
+
+function val(g: Gauge) {
+  const v = gaugeValue(g.flush());
+  if (v === undefined) {
+    return v;
+  }
+  return v.value;
+}
+
+test('timeToConnect updated to DID_NOT_CONNECT when connect fails', async () => {
+  const url = 'ws://example.com/';
+  const m = new Metrics();
+  const g = m.gauge(TIME_TO_CONNECT_METRIC);
+  clock.setSystemTime(1000 * 1000);
+  const r = reflectForTest({
+    socketOrigin: url,
+    auth: '',
+    userID: 'user-id',
+    roomID: 'room-id',
+    experimentalMetrics: m,
+  });
+
+  await tickAFewTimes(clock);
+  r.triggerConnected();
+  await tickAFewTimes(clock);
+  expect(val(g)).to.not.equal(DID_NOT_CONNECT_VALUE);
+
+  r.triggerClose();
+  await tickAFewTimes(clock, WATCHDOG_INTERVAL_MS);
+  expect(r.connectionState).to.equal(ConnectionState.Connecting);
+  const start = asNumber(r.connectingStart);
+  clock.setSystemTime(start + 42 * 1000);
+  r.triggerClose();
+  await tickAFewTimes(clock);
+  expect(val(g)).to.equal(DID_NOT_CONNECT_VALUE);
+});
+
+function asNumber(v: unknown): number {
+  if (typeof v !== 'number') {
+    throw new Error('not a number');
+  }
+  return v;
+}

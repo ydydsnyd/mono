@@ -22,6 +22,12 @@ import {Lock} from '../util/lock.js';
 import {resolver} from '../util/resolver.js';
 import {sleep} from '../util/sleep.js';
 import type {ReflectOptions} from './options.js';
+import {
+  Gauge,
+  DID_NOT_CONNECT_VALUE,
+  NopMetrics,
+  TIME_TO_CONNECT_METRIC,
+} from '../types/metrics.js';
 
 export const enum ConnectionState {
   Disconnected,
@@ -29,12 +35,17 @@ export const enum ConnectionState {
   Connected,
 }
 
+export const WATCHDOG_INTERVAL_MS = 5000;
+
 export class Reflect<MD extends MutatorDefs> {
   private readonly _rep: Replicache<MD>;
   private readonly _socketOrigin: string;
   readonly userID: string;
   readonly roomID: string;
   private readonly _l: Promise<LogContext>;
+  private readonly _metrics: {
+    timeToConnectSec: Gauge;
+  };
 
   // Protects _handlePoke. We need pokes to be serialized, otherwise we
   // can cause out of order poke errors.
@@ -54,7 +65,9 @@ export class Reflect<MD extends MutatorDefs> {
 
   protected _WSClass = WebSocket;
   protected _socket: WebSocket | undefined = undefined;
-  protected _state: ConnectionState = ConnectionState.Disconnected;
+  protected _connectionState: ConnectionState = ConnectionState.Disconnected;
+  // See comment on _metrics.timeToConnectSec for how _connectingStart is used.
+  protected _connectingStart: number | undefined = undefined;
 
   /**
    * Constructs a new Reflect client.
@@ -78,6 +91,31 @@ export class Reflect<MD extends MutatorDefs> {
     if (options.onOnlineChange) {
       this.onOnlineChange = options.onOnlineChange;
     }
+
+    const metrics = options.experimentalMetrics ?? new NopMetrics();
+    this._metrics = {
+      // timeToConnectSec measures the time from the call to connect() to receiving
+      // the 'connected' ws message. We record the DID_NOT_CONNECT_VALUE if the previous
+      // connection attempt failed for any reason.
+      //
+      // We set the gauage using _connectingStart as follows:
+      // - _connectingStart is undefined if we are disconnected or connected; it is
+      //   defined only in the Connecting state, as a number representing the timestamp
+      //   at which we started connecting.
+      // - _connectingStart is set to the current time when connect() is called.
+      // - When we receive the 'connected' message we record the time to connect and
+      //   set _connectingStart to undefined.
+      // - If disconnect() is called with a defined _connectingStart then we record
+      //   DID_NOT_CONNECT_VALUE and set _connectingStart to undefined.
+      //
+      // TODO It's clear after playing with the connection code we should encapsulate
+      // the ConnectionState along with its state transitions and possibly behavior.
+      // In that world the metric gauge(s) and bookkeeping like _connectingStart would
+      // be encapsulated with the ConnectionState. This will probably happen as part
+      // of https://github.com/rocicorp/reflect-server/issues/255.
+      timeToConnectSec: metrics.gauge(TIME_TO_CONNECT_METRIC),
+    };
+    this._metrics.timeToConnectSec.set(DID_NOT_CONNECT_VALUE);
 
     const replicacheOptions: ReplicacheOptions<MD> = {
       auth: options.auth,
@@ -261,7 +299,18 @@ export class Reflect<MD extends MutatorDefs> {
         }),
       );
 
-      this._state = ConnectionState.Connected;
+      this._connectionState = ConnectionState.Connected;
+      if (this._connectingStart === undefined) {
+        lc.error?.(
+          'Got connected message but connect start time is undefined. This should not happen.',
+        );
+      } else {
+        this._metrics.timeToConnectSec.set(
+          (Date.now() - this._connectingStart) / 1000,
+        );
+        this._connectingStart = undefined;
+      }
+
       this._lastMutationIDSent = -1;
       assert(this._socket);
       this._connectResolver.resolve(this._socket);
@@ -301,7 +350,13 @@ export class Reflect<MD extends MutatorDefs> {
   };
 
   private async _connect(l: LogContext) {
-    if (this._state === ConnectionState.Connecting) {
+    // TODO seems like we should also skip if this._connectionState === ConnectionState.Connected?
+    // Or in other words, return if this._connectionState !== ConnectionState.Disconnected?
+    // Seems like we should log an error if _connect() is called when already connected because
+    // presumably anything calling connect() should check the connect state beforehand? Or perhaps
+    // that check should be here in _connect(), in which case the call sites should stop
+    // checking.
+    if (this._connectionState === ConnectionState.Connecting) {
       l.debug?.('Skipping duplicate connect request');
       return;
     }
@@ -313,7 +368,13 @@ export class Reflect<MD extends MutatorDefs> {
       JSON.stringify({navigatorOnline: navigator.onLine}),
     );
 
-    this._state = ConnectionState.Connecting;
+    this._connectionState = ConnectionState.Connecting;
+    if (this._connectingStart !== undefined) {
+      l.error?.(
+        'connect() called but connect start time is defined. This should not happen.',
+      );
+    }
+    this._connectingStart = Date.now();
 
     const baseCookie = await getBaseCookie(this._rep);
 
@@ -340,13 +401,31 @@ export class Reflect<MD extends MutatorDefs> {
       'disconnecting',
       JSON.stringify({navigatorOnline: navigator.onLine}),
     );
-    if (this._state === ConnectionState.Connected) {
+    if (this._connectionState === ConnectionState.Connected) {
+      if (this._connectingStart !== undefined) {
+        l.error?.(
+          'disconnect() called while connected but connect start time is defined. This should not happen.',
+        );
+        // this._connectingStart reset below.
+      }
+
       // Only create a new resolver if the one we have was previously resolved,
       // which happens when the socket became connected.
       this._connectResolver = resolver();
       this.onOnlineChange?.(false);
+    } else if (this._connectionState === ConnectionState.Connecting) {
+      if (this._connectingStart === undefined) {
+        l.error?.(
+          'disconnect() called while connecting but connect start time is undefined. This should not happen.',
+        );
+      } else {
+        this._metrics.timeToConnectSec.set(DID_NOT_CONNECT_VALUE);
+        // this._connectingStart reset below.
+      }
     }
-    this._state = ConnectionState.Disconnected;
+
+    this._connectionState = ConnectionState.Disconnected;
+    this._connectingStart = undefined;
     this._socket?.removeEventListener('message', this._onMessage);
     this._socket?.removeEventListener('close', this._onClose);
     this._socket?.close();
@@ -384,6 +463,15 @@ export class Reflect<MD extends MutatorDefs> {
   }
 
   private async _pusher(req: Request) {
+    // TODO seems like it would be more canonical to check
+    // this._connectionState !== ConnectionState.Connected
+    // instead of this._socket? There is actually a race here:
+    // in _connect() we set this._connectionState, then await something,
+    // and only *then* set this._socket. So it could be the case that
+    // when we check this._socket here a _connect() is already in
+    // progress (awaiting, having not yet set _socket) and we will end up
+    // with two overlapping calls to _connect(). Dunno how that plays
+    // out in practice but it's a bad smell.
     if (!this._socket) {
       void this._connect(await this._l);
     }
@@ -427,12 +515,13 @@ export class Reflect<MD extends MutatorDefs> {
         ? addWebSocketIDFromSocketToLogContext(this._socket, lc)
         : lc;
       lc2.debug?.('watchdog fired');
-      if (this._state === ConnectionState.Connected) {
+      if (this._connectionState === ConnectionState.Connected) {
         await this._ping(lc2);
+        // TODO do we really want to call _connect if we are already connecting?
       } else {
         void this._connect(lc2);
       }
-      await sleep(5000);
+      await sleep(WATCHDOG_INTERVAL_MS);
     }
   }
 
@@ -448,7 +537,7 @@ export class Reflect<MD extends MutatorDefs> {
       promise.then(() => true),
       sleep(2000).then(() => false),
     ]);
-    if (this._state !== ConnectionState.Connected) {
+    if (this._connectionState !== ConnectionState.Connected) {
       return;
     }
     const delta = performance.now() - t0;

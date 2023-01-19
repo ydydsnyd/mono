@@ -1,4 +1,5 @@
 import type {LogLevel, LogSink, MutatorDefs} from 'replicache';
+import type {Metrics} from '../types/metrics.js';
 
 /**
  * Configuration for [[Reflect]].
@@ -164,4 +165,28 @@ export interface ReflectOptions<MD extends MutatorDefs> {
    * `onOnlineChange` is called when the Reflect instance's online status changes
    */
   onOnlineChange?: (online: boolean) => void;
+
+  /**
+   * experimentalMetrics is the interface by which Reflect instantiates metrics
+   * to record important events.  This is experimental and may change.
+   *
+   * It is expected that the caller has arranged for the Metrics to be periodically
+   * reported to a server. You can use https://github.com/rocicorp/datadog-util
+   * as the concrete implementation to record metrics and report them to Datadog:
+   *
+   * ```ts
+   * const metrics = new Metrics();
+   * const reporter = new Reporter({
+   *   metrics,
+   *   datadogApiKey: '<your-datadog-api-key>',
+   * });
+   * const reflect = new Reflect({
+   *   ...
+   *   experimentalMetrics: metrics,
+   * });
+   * ```
+   *
+   * If experimentalMetrics is undefined, the default implementation is a no-op.
+   */
+  experimentalMetrics?: Metrics;
 }

@@ -44,7 +44,11 @@ export class TestReflect<MD extends MutatorDefs> extends Reflect<MD> {
   }
 
   get connectionState() {
-    return this._state;
+    return this._connectionState;
+  }
+
+  get connectingStart() {
+    return this._connectingStart;
   }
 
   get socket() {
