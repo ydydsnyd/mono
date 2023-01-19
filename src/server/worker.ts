@@ -184,7 +184,6 @@ function handleRequest(
     connect: forwardToAuthDO,
     authInvalidateForUser: forwardToAuthDO,
     authInvalidateForRoom: forwardToAuthDO,
-    authInvalidateAll: forwardToAuthDO,
   });
 }
 

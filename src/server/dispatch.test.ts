@@ -24,14 +24,11 @@ function createThrowingHandlers() {
     authInvalidateForRoom: () => {
       throw new Error('unexpect call to authInvalidateForRoom handler');
     },
-    authInvalidateAll: () => {
-      throw new Error('unexpect call to authInvalidateAll handler');
-    },
     authConnections: () => {
-      throw new Error('unexpect call to authInvalidateAll handler');
+      throw new Error('unexpect call to authConnections handler');
     },
     authRevalidateConnections: () => {
-      throw new Error('unexpect call to authInvalidateAll handler');
+      throw new Error('unexpect call to authRevalidateConnections handler');
     },
   };
 }
@@ -297,51 +294,6 @@ test('authInvalidateForRoom request with validation errors', async () => {
   );
 });
 
-test('authInvalidateAll good request', async () => {
-  const testRequest = new Request(
-    `https://test.roci.dev/api/auth/v0/invalidateAll`,
-    {
-      headers: createAuthAPIHeaders(testAuthApiKey),
-      method: 'post',
-    },
-  );
-  const testResponse = new Response('');
-  const response = await dispatch(
-    testRequest,
-    createSilentLogContext(),
-    testAuthApiKey,
-    {
-      ...createThrowingHandlers(),
-      authInvalidateAll: (
-        _lc: LogContext,
-        request: Request,
-        body: undefined,
-      ) => {
-        expect(request).toBe(testRequest);
-        expect(body).toBeUndefined();
-        return Promise.resolve(testResponse);
-      },
-    },
-  );
-  expect(response).toBe(testResponse);
-});
-
-test('authInvalidateAll request with validation errors', async () => {
-  await testMethodNotAllowedValidationError(
-    new Request(`https://test.roci.dev/api/auth/v0/invalidateAll`, {
-      headers: createAuthAPIHeaders(testAuthApiKey),
-      method: 'put',
-    }),
-    'post',
-  );
-
-  await testApiKeyValidationErrors(
-    new Request(`https://test.roci.dev/api/auth/v0/invalidateAll`, {
-      method: 'post',
-    }),
-  );
-});
-
 test('authRevalidateConnections good request', async () => {
   const testRequest = new Request(
     `https://test.roci.dev/api/auth/v0/revalidateConnections`,
@@ -454,12 +406,6 @@ test('auth api returns 401 for all requests when authApiKey is undefined', async
       body: JSON.stringify({
         roomID: 'testRoomID1',
       }),
-    }),
-  );
-  await testUnauthorizedWhenAuthApiKeyIsUndefined(
-    new Request(`https://test.roci.dev/api/auth/v0/invalidateAll`, {
-      method: 'post',
-      headers: createAuthAPIHeaders(testAuthApiKey),
     }),
   );
   await testUnauthorizedWhenAuthApiKeyIsUndefined(

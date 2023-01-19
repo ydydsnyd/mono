@@ -2,6 +2,7 @@ import {AUTH_ROUTES} from '../server/auth-do.js';
 import {createAuthAPIHeaders} from '../server/auth-api-headers.js';
 import type {RoomStatus} from '../server/rooms.js';
 import type {CreateRoomRequest} from '../protocol/api/room.js';
+import type {JSONType} from '../protocol/json.js';
 
 /**
  * createRoom creates a new room with the given roomID. If the room already
@@ -127,11 +128,7 @@ export function newCreateRoomRequest(
 ) {
   const url = new URL('/createRoom', reflectServerURL);
   const req: CreateRoomRequest = {roomID, jurisdiction};
-  return new Request(url.toString(), {
-    method: 'post',
-    headers: createAuthAPIHeaders(authApiKey),
-    body: JSON.stringify(req),
-  });
+  return newAuthedPostRequest(url, authApiKey, req);
 }
 
 export function newCloseRoomRequest(
@@ -141,10 +138,7 @@ export function newCloseRoomRequest(
 ) {
   const path = AUTH_ROUTES.closeRoom.replace(':roomID', roomID);
   const url = new URL(path, reflectServerURL);
-  return new Request(url.toString(), {
-    method: 'post',
-    headers: createAuthAPIHeaders(authApiKey),
-  });
+  return newAuthedPostRequest(url, authApiKey);
 }
 
 export function newDeleteRoomRequest(
@@ -154,10 +148,16 @@ export function newDeleteRoomRequest(
 ) {
   const path = AUTH_ROUTES.deleteRoom.replace(':roomID', roomID);
   const url = new URL(path, reflectServerURL);
-  return new Request(url.toString(), {
-    method: 'post',
-    headers: createAuthAPIHeaders(authApiKey),
-  });
+  return newAuthedPostRequest(url, authApiKey);
+}
+
+export function newInvalidateAllAuthRequest(
+  reflectServerURL: string,
+  authApiKey: string,
+) {
+  const path = AUTH_ROUTES.authInvalidateAll;
+  const url = new URL(path, reflectServerURL);
+  return newAuthedPostRequest(url, authApiKey);
 }
 
 export function newForgetRoomRequest(
@@ -167,10 +167,7 @@ export function newForgetRoomRequest(
 ) {
   const path = AUTH_ROUTES.forgetRoom.replace(':roomID', roomID);
   const url = new URL(path, reflectServerURL);
-  return new Request(url.toString(), {
-    method: 'post',
-    headers: createAuthAPIHeaders(authApiKey),
-  });
+  return newAuthedPostRequest(url, authApiKey);
 }
 
 export function newMigrateRoomRequest(
@@ -180,8 +177,17 @@ export function newMigrateRoomRequest(
 ) {
   const path = AUTH_ROUTES.migrateRoom.replace(':roomID', roomID);
   const url = new URL(path, reflectServerURL);
+  return newAuthedPostRequest(url, authApiKey);
+}
+
+function newAuthedPostRequest(
+  url: URL,
+  authApiKey: string,
+  req?: JSONType | undefined,
+) {
   return new Request(url.toString(), {
     method: 'post',
     headers: createAuthAPIHeaders(authApiKey),
+    body: req ? JSON.stringify(req) : undefined,
   });
 }

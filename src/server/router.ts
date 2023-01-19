@@ -104,11 +104,11 @@ export function post<Context extends BaseContext, Resp extends Response>(
 }
 
 export function requireAuthAPIKey<Context extends BaseContext, Resp>(
-  required: () => string,
+  required: (context: Context) => string,
   next: Handler<Context, Resp>,
 ) {
   return (req: Request, context: Context) => {
-    const resp = checkAuthAPIKey(required(), req);
+    const resp = checkAuthAPIKey(required(context), req);
     if (resp) {
       return resp;
     }
@@ -122,7 +122,7 @@ export function checkAuthAPIKey(required: string | undefined, req: Request) {
   }
   const authHeader = req.headers.get('x-reflect-auth-api-key');
   if (authHeader !== required) {
-    return new Response('unauthorized', {
+    return new Response('Unauthorized', {
       status: 401,
     });
   }

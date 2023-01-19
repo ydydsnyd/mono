@@ -185,17 +185,17 @@ test('checkAuthAPIKey', async () => {
     {
       required: 'foo',
       actual: null,
-      expected: {result: {text: 'unauthorized', status: 401}},
+      expected: {result: {text: 'Unauthorized', status: 401}},
     },
     {
       required: 'foo',
       actual: '',
-      expected: {result: {text: 'unauthorized', status: 401}},
+      expected: {result: {text: 'Unauthorized', status: 401}},
     },
     {
       required: 'foo',
       actual: 'bar',
-      expected: {result: {text: 'unauthorized', status: 401}},
+      expected: {result: {text: 'Unauthorized', status: 401}},
     },
     {
       required: 'foo',
@@ -266,17 +266,17 @@ test('requireAuthAPIKey', async () => {
     {
       required: 'foo',
       actual: null,
-      expected: {result: {text: 'unauthorized', status: 401}},
+      expected: {result: {text: 'Unauthorized', status: 401}},
     },
     {
       required: 'foo',
       actual: '',
-      expected: {result: {text: 'unauthorized', status: 401}},
+      expected: {result: {text: 'Unauthorized', status: 401}},
     },
     {
       required: 'foo',
       actual: 'bar',
-      expected: {result: {text: 'unauthorized', status: 401}},
+      expected: {result: {text: 'Unauthorized', status: 401}},
     },
     {
       required: 'foo',

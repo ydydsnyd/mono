@@ -40,7 +40,6 @@ export interface Handlers {
 
   authInvalidateForUser: Handler<InvalidateForUserRequest>;
   authInvalidateForRoom: Handler<InvalidateForRoomRequest>;
-  authInvalidateAll: Handler;
   authRevalidateConnections?: Handler;
   authConnections?: Handler;
 }
@@ -50,7 +49,6 @@ export const paths: Readonly<Record<keyof Handlers, string>> = {
   connect: '/connect',
   authInvalidateForUser: '/api/auth/v0/invalidateForUser',
   authInvalidateForRoom: '/api/auth/v0/invalidateForRoom',
-  authInvalidateAll: '/api/auth/v0/invalidateAll',
   authRevalidateConnections: '/api/auth/v0/revalidateConnections',
   authConnections: '/api/auth/v0/connections',
 };
@@ -132,13 +130,6 @@ export function dispatch(
         'post',
         request => validateBody(request, invalidateForRoomRequestSchema),
         handlers.authInvalidateForRoom,
-        'authApiKey',
-      );
-    case paths.authInvalidateAll:
-      return validateAndDispatch(
-        'post',
-        noOpValidateBody,
-        handlers.authInvalidateAll,
         'authApiKey',
       );
     case paths.authRevalidateConnections:

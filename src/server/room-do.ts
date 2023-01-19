@@ -46,6 +46,7 @@ export interface RoomDOOptions<MD extends MutatorDefs> {
 
 export const ROOM_ROUTES = {
   deletePath: '/api/room/v0/room/:roomID/delete',
+  authInvalidateAll: '/api/auth/v0/invalidateAll',
 };
 
 export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
@@ -86,6 +87,10 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
   private _initRoutes() {
     this._router.register(ROOM_ROUTES.deletePath, this._deleteAllData);
+    this._router.register(
+      ROOM_ROUTES.authInvalidateAll,
+      this._authInvalidateAll,
+    );
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -268,13 +273,16 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     return new Response('Success', {status: 200});
   }
 
-  async authInvalidateAll(lc: LogContext): Promise<Response> {
-    lc.info?.(
-      'Closing all connections fulfilling auth api invalidateAll request.',
-    );
-    await this._closeConnections(_ => true);
-    return new Response('Success', {status: 200});
-  }
+  private _authInvalidateAll = post(
+    this._requireAPIKey(async (_, ctx) => {
+      const {lc} = ctx;
+      lc.info?.(
+        'Closing all connections fulfilling auth api invalidateAll request.',
+      );
+      await this._closeConnections(_ => true);
+      return new Response('Success', {status: 200});
+    }),
+  );
 
   // eslint-disable-next-line require-await
   async authConnections(): Promise<Response> {

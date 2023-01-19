@@ -72,6 +72,7 @@ export const AUTH_ROUTES = {
   deleteRoom: '/api/room/v0/room/:roomID/delete',
   migrateRoom: '/api/room/v0/room/:roomID/migrate/1',
   forgetRoom: '/api/room/v0/room/:roomID/DANGER/forget',
+  authInvalidateAll: '/api/auth/v0/invalidateAll',
 };
 
 export class BaseAuthDO implements DurableObject {
@@ -272,6 +273,10 @@ export class BaseAuthDO implements DurableObject {
     this._router.register(AUTH_ROUTES.deleteRoom, this._deleteRoom);
     this._router.register(AUTH_ROUTES.migrateRoom, this._migrateRoom);
     this._router.register(AUTH_ROUTES.forgetRoom, this._forgetRoom);
+    this._router.register(
+      AUTH_ROUTES.authInvalidateAll,
+      this._authInvalidateAll,
+    );
   }
 
   // eslint-disable-next-line require-await
@@ -520,22 +525,25 @@ export class BaseAuthDO implements DurableObject {
     });
   }
 
-  authInvalidateAll(lc: LogContext, request: Request): Promise<Response> {
-    lc.debug?.(`authInvalidateAll waiting for lock.`);
-    return this._authLock.withWrite(async () => {
-      lc.debug?.('got lock.');
-      const connectionKeys = (
-        await this._state.storage.list({
-          prefix: CONNECTION_KEY_PREFIX,
-        })
-      ).keys();
-      // The request to the Room DOs must be completed inside the write lock
-      // to avoid races with connect requests.
-      return this._forwardInvalidateRequest(lc, 'authInvalidateAll', request, [
-        ...connectionKeys,
-      ]);
-    });
-  }
+  private _authInvalidateAll = post(
+    this._requireAPIKey((req, ctx) => {
+      const {lc} = ctx;
+      lc.debug?.(`authInvalidateAll waiting for lock.`);
+      return this._authLock.withWrite(async () => {
+        lc.debug?.('got lock.');
+        const connectionKeys = (
+          await this._state.storage.list({
+            prefix: CONNECTION_KEY_PREFIX,
+          })
+        ).keys();
+        // The request to the Room DOs must be completed inside the write lock
+        // to avoid races with connect requests.
+        return this._forwardInvalidateRequest(lc, 'authInvalidateAll', req, [
+          ...connectionKeys,
+        ]);
+      });
+    }),
+  );
 
   async authRevalidateConnections(lc: LogContext): Promise<Response> {
     lc.info?.(`Starting auth revalidation.`);

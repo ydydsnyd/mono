@@ -55,18 +55,56 @@ function createTestFixture(
   };
 }
 
+async function testNotForwardedToAuthDo(
+  testRequest: Request,
+  expectedResponse: Response,
+) {
+  const {testEnv, authDORequests} = createTestFixture(() => {
+    throw new Error('Unexpected call to auth DO');
+  });
+  const worker = createWorker({
+    getLogSink: _env => new TestLogSink(),
+    getLogLevel: _env => 'error',
+  });
+  if (!worker.fetch) {
+    throw new Error('Expect fetch to be defined');
+  }
+  if (expectedResponse.webSocket) {
+    throw new Error('Expected response should not be a websocket');
+  }
+  const expectedResponseClone = expectedResponse.clone();
+  const response = await worker.fetch(
+    testRequest,
+    testEnv,
+    new TestExecutionContext(),
+  );
+
+  expect(authDORequests.length).toEqual(0);
+  expect(response.status).toEqual(expectedResponse.status);
+  expect(await response.text()).toEqual(await expectedResponseClone.text());
+
+  const responseHeaders = [...response.headers.entries()];
+  const expectedResponseHeaders = [
+    ...expectedResponse.headers.entries(),
+    ['access-control-allow-origin', '*'],
+  ];
+  expect(responseHeaders.length).toEqual(expectedResponseHeaders.length);
+  expect(responseHeaders).toEqual(
+    expect.arrayContaining(expectedResponseHeaders),
+  );
+}
+
 async function testForwardedToAuthDO(
   testRequest: Request,
-  testResponse = new Response('success', {status: 200}),
-  expectAuthDOCalled = true,
+  authDoResponse = new Response('success', {status: 200}),
 ) {
   // Don't clone response if it has a websocket, otherwise CloudFlare's Response
   // class will throw
   // "TypeError: Cannot clone a response to a WebSocket handshake."
-  const testResponseClone = testResponse.webSocket
+  const testResponseClone = authDoResponse.webSocket
     ? undefined
-    : testResponse.clone();
-  const {testEnv, authDORequests} = createTestFixture(() => testResponse);
+    : authDoResponse.clone();
+  const {testEnv, authDORequests} = createTestFixture(() => authDoResponse);
   const worker = createWorker({
     getLogSink: _env => new TestLogSink(),
     getLogLevel: _env => 'error',
@@ -79,27 +117,25 @@ async function testForwardedToAuthDO(
     testEnv,
     new TestExecutionContext(),
   );
-  if (expectAuthDOCalled) {
-    expect(authDORequests.length).toEqual(1);
-    expect(authDORequests[0].req).toBe(testRequest);
-    expect(authDORequests[0].resp).toBe(testResponse);
-    expect(response.status).toEqual(testResponse.status);
-    if (testResponseClone) {
-      expect(await response.text()).toEqual(await testResponseClone.text());
-    }
-    const responseHeaders = [...response.headers.entries()];
-    const expectedResponseHeaders = [
-      ...testResponse.headers.entries(),
-      ['access-control-allow-origin', '*'],
-    ];
-    expect(responseHeaders.length).toEqual(expectedResponseHeaders.length);
-    expect(responseHeaders).toEqual(
-      expect.arrayContaining(expectedResponseHeaders),
-    );
-    expect(response.webSocket).toBe(testResponse.webSocket);
-  } else {
-    expect(authDORequests.length).toEqual(0);
+
+  expect(authDORequests.length).toEqual(1);
+  expect(authDORequests[0].req).toBe(testRequest);
+  expect(authDORequests[0].resp).toBe(authDoResponse);
+  expect(response.status).toEqual(authDoResponse.status);
+  if (testResponseClone) {
+    expect(await response.text()).toEqual(await testResponseClone.text());
   }
+  const responseHeaders = [...response.headers.entries()];
+  const expectedResponseHeaders = [
+    ...authDoResponse.headers.entries(),
+    ['access-control-allow-origin', '*'],
+  ];
+  expect(responseHeaders.length).toEqual(expectedResponseHeaders.length);
+  expect(responseHeaders).toEqual(
+    expect.arrayContaining(expectedResponseHeaders),
+  );
+  expect(response.webSocket).toBe(authDoResponse.webSocket);
+
   expect(response.headers.get('Access-Control-Allow-Origin')).toEqual('*');
 }
 
@@ -199,16 +235,15 @@ test('worker forwards authDO api requests to authDO', async () => {
         body: tc.body ? JSON.stringify(tc.body) : undefined,
       }),
     );
-    await testForwardedToAuthDO(
+    await testNotForwardedToAuthDo(
       new Request(tc.path, {
         method: tc.path,
         // Note: no auth header.
         body: tc.body ? JSON.stringify(tc.body) : undefined,
       }),
-      new Response(null, {
-        status: 200,
+      new Response('Unauthorized', {
+        status: 401,
       }),
-      false, // Expect authDO not called.
     );
   }
 });
