@@ -28,6 +28,7 @@ import {
   NopMetrics,
   TIME_TO_CONNECT_METRIC,
 } from '../types/metrics.js';
+import {send} from '../util/socket.js';
 
 export const enum ConnectionState {
   Disconnected,
@@ -488,7 +489,7 @@ export class Reflect<MD extends MutatorDefs> {
       if (m.id > this._lastMutationIDSent) {
         this._lastMutationIDSent = m.id;
 
-        const msg: PushMessage = [
+        const pushMessage: PushMessage = [
           'push',
           {
             ...pushBody,
@@ -497,8 +498,7 @@ export class Reflect<MD extends MutatorDefs> {
             requestID,
           },
         ];
-
-        socket.send(JSON.stringify(msg));
+        send(socket, pushMessage);
       }
     }
 
@@ -531,8 +531,9 @@ export class Reflect<MD extends MutatorDefs> {
     this._onPong = resolve;
     const pingMessage: PingMessage = ['ping', {}];
     const t0 = performance.now();
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    this._socket!.send(JSON.stringify(pingMessage));
+    assert(this._socket);
+    send(this._socket, pingMessage);
+
     const connected = await Promise.race([
       promise.then(() => true),
       sleep(2000).then(() => false),
