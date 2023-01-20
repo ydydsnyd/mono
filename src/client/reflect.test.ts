@@ -8,7 +8,7 @@ import type {
 import * as sinon from 'sinon';
 import {Mutation, pushMessageSchema} from '../protocol/push.js';
 import type {NullableVersion} from '../types/version.js';
-import {resolver} from '../util/resolver.js';
+import {resolver} from '@rocicorp/resolver';
 import {
   ConnectionState,
   createSocket,

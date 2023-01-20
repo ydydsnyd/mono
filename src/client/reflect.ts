@@ -1,4 +1,6 @@
 import {consoleLogSink, LogContext, TeeLogSink} from '@rocicorp/logger';
+import {resolver} from '@rocicorp/resolver';
+import {Lock} from '@rocicorp/lock';
 import {nanoid} from 'nanoid';
 import {
   MutatorDefs,
@@ -18,8 +20,6 @@ import type {PokeBody} from '../protocol/poke.js';
 import type {PushBody, PushMessage} from '../protocol/push.js';
 import {NullableVersion, nullableVersionSchema} from '../types/version.js';
 import {assert} from '../util/asserts.js';
-import {Lock} from '../util/lock.js';
-import {resolver} from '../util/resolver.js';
 import {sleep} from '../util/sleep.js';
 import type {ReflectOptions} from './options.js';
 import {
