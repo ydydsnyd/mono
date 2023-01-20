@@ -31,6 +31,8 @@ let clock: sinon.SinonFakeTimers;
 
 setup(() => {
   clock = sinon.useFakeTimers();
+  // @ts-expect-error MockSocket is not sufficiently compatible with WebSocket
+  sinon.replace(globalThis, 'WebSocket', MockSocket);
 });
 
 teardown(() => {
@@ -159,8 +161,6 @@ test('createSocket', () => {
       auth,
       lmid,
       'wsidx',
-      // @ts-expect-error MockSocket is not compatible with WebSocket
-      MockSocket,
     ) as unknown as MockSocket;
     expect(`${mockSocket.url}`).equal(expectedURL);
     expect(mockSocket.args).deep.equal([expectedProtocol]);

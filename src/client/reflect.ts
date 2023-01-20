@@ -64,7 +64,6 @@ export class Reflect<MD extends MutatorDefs> {
   private _connectResolver = resolver<WebSocket>();
   private _lastMutationIDReceived = 0;
 
-  protected _WSClass = WebSocket;
   protected _socket: WebSocket | undefined = undefined;
   protected _connectionState: ConnectionState = ConnectionState.Disconnected;
   // See comment on _metrics.timeToConnectSec for how _connectingStart is used.
@@ -389,7 +388,6 @@ export class Reflect<MD extends MutatorDefs> {
       this._rep.auth,
       this._lastMutationIDReceived,
       wsid,
-      this._WSClass,
     );
 
     ws.addEventListener('message', this._onMessage);
@@ -577,7 +575,6 @@ export function createSocket(
   auth: string,
   lmid: number,
   wsid: string,
-  wsClass: typeof WebSocket,
 ): WebSocket {
   const url = new URL(socketOrigin);
   url.pathname = '/connect';
@@ -593,7 +590,7 @@ export function createSocket(
   // invalid `protocol`, and will result in an exception, so pass undefined
   // instead.  encodeURIComponent to ensure it only contains chars allowed
   // for a `protocol`.
-  return new wsClass(url, auth === '' ? undefined : encodeURIComponent(auth));
+  return new WebSocket(url, auth === '' ? undefined : encodeURIComponent(auth));
 }
 
 async function getLogContext<MD extends MutatorDefs>(
