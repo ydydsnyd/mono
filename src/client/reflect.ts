@@ -45,7 +45,11 @@ export class Reflect<MD extends MutatorDefs> {
   private readonly _socketOrigin: string;
   readonly userID: string;
   readonly roomID: string;
+
+  // This is a promise because it is waiting for the clientID from the
+  // Replicache instance.
   private readonly _l: Promise<LogContext>;
+
   private readonly _metrics: {
     timeToConnectSec: Gauge;
   };
@@ -524,19 +528,32 @@ export class Reflect<MD extends MutatorDefs> {
   }
 
   private async _watchdog() {
-    while (!this.closed) {
-      const lc = await this._l;
-      const lc2 = this._socket
+    const lc = await this._l;
+    const getLC = () =>
+      this._socket
         ? addWebSocketIDFromSocketToLogContext(this._socket, lc)
         : lc;
-      lc2.debug?.('watchdog fired');
-      if (this._connectionState === ConnectionState.Connected) {
-        await this._ping(lc2);
-        // TODO do we really want to call _connect if we are already connecting?
-      } else {
-        void this._connect(lc2);
+
+    while (!this.closed) {
+      try {
+        const lc = getLC();
+        lc.debug?.('watchdog fired');
+        switch (this._connectionState) {
+          case ConnectionState.Connected:
+            await this._ping(lc);
+            break;
+          case ConnectionState.Connecting:
+            break;
+          case ConnectionState.Disconnected:
+            await this._connect(lc);
+            break;
+        }
+
+        await sleep(WATCHDOG_INTERVAL_MS);
+      } catch (e) {
+        const lc = getLC();
+        lc.error?.('watchdog error', e);
       }
-      await sleep(WATCHDOG_INTERVAL_MS);
     }
   }
 
