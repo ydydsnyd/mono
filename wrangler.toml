@@ -35,3 +35,4 @@ durable_objects_persist = true
 
 #[secrets]
 #REFLECT_AUTH_API_KEY
+#REFLECT_DATADOG_API_KEY

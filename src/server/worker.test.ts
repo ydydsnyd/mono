@@ -1,6 +1,6 @@
-import {test, expect} from '@jest/globals';
+import {test, describe, expect, jest} from '@jest/globals';
 import type {LogLevel} from '@rocicorp/logger';
-import {Mocket, TestLogSink} from '../util/test-utils.js';
+import {fail, Mocket, TestLogSink} from '../util/test-utils.js';
 import {createAuthAPIHeaders} from './auth-api-headers.js';
 import {AUTH_ROUTES} from './auth-do.js';
 import {
@@ -8,7 +8,8 @@ import {
   TestDurableObjectId,
   TestDurableObjectStub,
 } from './do-test-utils.js';
-import {BaseWorkerEnv, createWorker} from './worker.js';
+import {BaseWorkerEnv, createWorker, WORKER_ROUTES} from './worker.js';
+import type {DatadogSeries} from '@rocicorp/datadog-util';
 
 const TEST_AUTH_API_KEY = 'TEST_REFLECT_AUTH_API_KEY_TEST';
 
@@ -465,3 +466,141 @@ async function testPreflightRequest({
     accessControlRequestHeaders,
   );
 }
+
+describe('reportMetrics', () => {
+  const reportMetricsPath = WORKER_ROUTES.reportMetrics.path;
+  const reportMetricsURL = new URL(reportMetricsPath, 'https://test.roci.dev/');
+  const ddKey = 'datadog-secret-key-shhhhh';
+  type TestCase = {
+    name: string;
+    method: string;
+    body: undefined | Record<string, unknown>;
+    ddKey: string | undefined;
+    expectedStatus: number;
+    expectFetch: boolean;
+  };
+
+  const series: DatadogSeries = {
+    metric: 'metric1',
+    points: [[1, [2]]],
+  };
+  const goodBody = {series: [series]};
+  const testCases: TestCase[] = [
+    {
+      name: 'good request',
+      method: 'post',
+      body: goodBody,
+      ddKey,
+      expectedStatus: 200,
+      expectFetch: true,
+    },
+    {
+      name: 'good request: empty series',
+      method: 'post',
+      body: {series: []},
+      ddKey,
+      expectedStatus: 200,
+      expectFetch: false,
+    },
+    {
+      name: 'good request but server has no datadog key',
+      method: 'post',
+      body: goodBody,
+      ddKey: undefined,
+      expectedStatus: 503,
+      expectFetch: false,
+    },
+    {
+      name: 'bad method',
+      method: 'get',
+      body: goodBody,
+      ddKey,
+      expectedStatus: 405,
+      expectFetch: false,
+    },
+    {
+      name: 'malformed body: no body',
+      method: 'post',
+      body: undefined,
+      ddKey,
+      expectedStatus: 400,
+      expectFetch: false,
+    },
+    {
+      name: 'malformed body: empty body',
+      method: 'post',
+      body: {},
+      ddKey,
+      expectedStatus: 400,
+      expectFetch: false,
+    },
+    {
+      name: 'malformed body: no series',
+      method: 'post',
+      body: {foo: 'bar'},
+      ddKey,
+      expectedStatus: 400,
+      expectFetch: false,
+    },
+  ];
+  for (const tc of testCases) {
+    testReportMetrics(tc);
+  }
+
+  function testReportMetrics(tc: TestCase) {
+    test(tc.name, async () => {
+      const fetchSpy = jest
+        .spyOn(globalThis, 'fetch')
+        .mockReturnValue(Promise.resolve(new Response('{}')));
+
+      const testEnv: BaseWorkerEnv = {
+        authDO: {
+          ...createTestDurableObjectNamespace(),
+        },
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        REFLECT_DATADOG_API_KEY: tc.ddKey,
+      };
+
+      const worker = createWorker({
+        getLogSink: _env => new TestLogSink(),
+        getLogLevel: _env => 'error',
+      });
+      const testRequest = new Request(reportMetricsURL.toString(), {
+        method: tc.method,
+        body:
+          tc.method === 'post' && tc.body ? JSON.stringify(tc.body) : undefined,
+      });
+      if (worker.fetch === undefined) {
+        throw new Error('Expect fetch to be defined');
+      }
+      const response = await worker.fetch(
+        testRequest,
+        testEnv,
+        new TestExecutionContext(),
+      );
+      if (response.status !== tc.expectedStatus) {
+        fail(
+          `Expected status ${tc.expectedStatus} but got ${response.status} ` +
+            `Response body: ${await response.text()}`,
+        );
+      }
+      if (tc.expectFetch) {
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
+        expect(fetchSpy).toHaveBeenCalledWith(
+          expect.stringMatching('https://api.datadoghq.com'),
+          {
+            body: tc.body ? JSON.stringify(tc.body) : undefined,
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            headers: {'DD-API-KEY': ddKey, 'Content-Type': 'application/json'},
+            signal: null,
+            method: 'POST',
+          },
+        );
+      } else {
+        expect(fetchSpy).not.toHaveBeenCalled();
+      }
+
+      jest.resetAllMocks();
+    });
+  }
+});

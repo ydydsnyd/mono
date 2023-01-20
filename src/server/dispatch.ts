@@ -158,7 +158,7 @@ type ValidateResult<T> =
   | {value: T; errorResponse: undefined}
   | {value: undefined; errorResponse: Response};
 
-async function validateBody<T>(
+export async function validateBody<T>(
   request: Request,
   struct: Struct<T>,
 ): Promise<ValidateResult<T>> {
