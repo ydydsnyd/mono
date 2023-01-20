@@ -29,6 +29,8 @@ import {
   TIME_TO_CONNECT_METRIC,
 } from '../types/metrics.js';
 import {send} from '../util/socket.js';
+import type {ConnectedMessage} from '../protocol/connected.js';
+import type {ErrorMessage} from '../protocol/error.js';
 
 export const enum ConnectionState {
   Disconnected,
@@ -290,50 +292,26 @@ export class Reflect<MD extends MutatorDefs> {
     const data = JSON.parse(e.data);
     const downMessage = data as Downstream; //downstreamSchema.parse(data);
 
-    if (downMessage[0] === 'connected') {
-      const lc = addWebSocketIDToLogContext(downMessage[1].wsid, l);
-      lc.info?.(
-        'Connected',
-        JSON.stringify({
-          navigatorOnline: navigator.onLine,
-        }),
-      );
+    switch (downMessage[0]) {
+      case 'connected':
+        this._handleConnectedMessage(l, downMessage);
+        return;
 
-      this._connectionState = ConnectionState.Connected;
-      if (this._connectingStart === undefined) {
-        lc.error?.(
-          'Got connected message but connect start time is undefined. This should not happen.',
-        );
-      } else {
-        this._metrics.timeToConnectSec.set(
-          (Date.now() - this._connectingStart) / 1000,
-        );
-        this._connectingStart = undefined;
-      }
+      case 'error':
+        this._handleErrorMessage(l, downMessage);
 
-      this._lastMutationIDSent = -1;
-      assert(this._socket);
-      this._connectResolver.resolve(this._socket);
-      this.onOnlineChange?.(true);
-      return;
+      // eslint does not know about return type never
+      // eslint-disable-next-line no-fallthrough
+      case 'pong':
+        this._onPong();
+        return;
+
+      case 'poke':
+        void this._handlePoke(l, downMessage[1]);
+        return;
     }
 
-    if (downMessage[0] === 'error') {
-      l.error?.(`Socket error: ${downMessage[1]}`);
-      throw new Error(downMessage[1]);
-    }
-
-    if (downMessage[0] === 'pong') {
-      this._onPong();
-      return;
-    }
-
-    if (downMessage[0] !== 'poke') {
-      throw new Error(`Unexpected message: ${downMessage}`);
-    }
-
-    const pokeBody = downMessage[1];
-    void this._handlePoke(l, pokeBody);
+    throw new Error(`Unexpected message: ${downMessage}`);
   };
 
   private _onClose = async (e: CloseEvent) => {
@@ -348,6 +326,45 @@ export class Reflect<MD extends MutatorDefs> {
     );
     this._disconnect(l);
   };
+
+  private _handleErrorMessage(
+    lc: LogContext,
+    downMessage: ErrorMessage,
+  ): never {
+    const s = `${downMessage[1]}: ${downMessage[2]}}`;
+    lc.error?.(s);
+    throw new Error(s);
+  }
+
+  private _handleConnectedMessage(
+    lc: LogContext,
+    downMessage: ConnectedMessage,
+  ) {
+    lc = addWebSocketIDToLogContext(downMessage[1].wsid, lc);
+    lc.info?.(
+      'Connected',
+      JSON.stringify({
+        navigatorOnline: navigator.onLine,
+      }),
+    );
+
+    this._connectionState = ConnectionState.Connected;
+    if (this._connectingStart === undefined) {
+      lc.error?.(
+        'Got connected message but connect start time is undefined. This should not happen.',
+      );
+    } else {
+      this._metrics.timeToConnectSec.set(
+        (Date.now() - this._connectingStart) / 1000,
+      );
+      this._connectingStart = undefined;
+    }
+
+    this._lastMutationIDSent = -1;
+    assert(this._socket);
+    this._connectResolver.resolve(this._socket);
+    this.onOnlineChange?.(true);
+  }
 
   private async _connect(l: LogContext) {
     // TODO seems like we should also skip if this._connectionState === ConnectionState.Connected?
