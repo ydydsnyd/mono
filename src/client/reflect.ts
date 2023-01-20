@@ -104,7 +104,7 @@ export class Reflect<MD extends MutatorDefs> {
       // the 'connected' ws message. We record the DID_NOT_CONNECT_VALUE if the previous
       // connection attempt failed for any reason.
       //
-      // We set the gauage using _connectingStart as follows:
+      // We set the gauge using _connectingStart as follows:
       // - _connectingStart is undefined if we are disconnected or connected; it is
       //   defined only in the Connecting state, as a number representing the timestamp
       //   at which we started connecting.
@@ -370,17 +370,14 @@ export class Reflect<MD extends MutatorDefs> {
     this.onOnlineChange?.(true);
   }
 
+  /**
+   * _connect will throw an assertion error if the _connectionState is not
+   * Disconnected. Callers MUST check the connection state before calling this
+   * method and log an error as needed.
+   */
   private async _connect(l: LogContext) {
-    // TODO seems like we should also skip if this._connectionState === ConnectionState.Connected?
-    // Or in other words, return if this._connectionState !== ConnectionState.Disconnected?
-    // Seems like we should log an error if _connect() is called when already connected because
-    // presumably anything calling connect() should check the connect state beforehand? Or perhaps
-    // that check should be here in _connect(), in which case the call sites should stop
-    // checking.
-    if (this._connectionState === ConnectionState.Connecting) {
-      l.debug?.('Skipping duplicate connect request');
-      return;
-    }
+    // All the callers check this state already.
+    assert(this._connectionState === ConnectionState.Disconnected);
 
     const wsid = nanoid();
     l = addWebSocketIDToLogContext(wsid, l);
@@ -483,18 +480,12 @@ export class Reflect<MD extends MutatorDefs> {
   }
 
   private async _pusher(req: Request) {
-    // TODO seems like it would be more canonical to check
-    // this._connectionState !== ConnectionState.Connected
-    // instead of this._socket? There is actually a race here:
-    // in _connect() we set this._connectionState, then await something,
-    // and only *then* set this._socket. So it could be the case that
-    // when we check this._socket here a _connect() is already in
-    // progress (awaiting, having not yet set _socket) and we will end up
-    // with two overlapping calls to _connect(). Dunno how that plays
-    // out in practice but it's a bad smell.
-    if (!this._socket) {
-      void this._connect(await this._l);
+    if (this._connectionState === ConnectionState.Disconnected) {
+      // Do not skip await here. We don't want errors to be swallowed.
+      await this._connect(await this._l);
     }
+
+    // If we are connecting we wait for the socket to be connected.
 
     const socket = await this._connectResolver.promise;
 
