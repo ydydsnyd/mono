@@ -1,5 +1,6 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {MaybePromise, ReadonlyJSONValue} from 'replicache';
+import {createUnauthorizedResponse} from './create-unauthorized-response.js';
 
 /**
  * Handles a request dispatched by router. Handlers are meant to be nested
@@ -122,9 +123,7 @@ export function checkAuthAPIKey(required: string | undefined, req: Request) {
   }
   const authHeader = req.headers.get('x-reflect-auth-api-key');
   if (authHeader !== required) {
-    return new Response('Unauthorized', {
-      status: 401,
-    });
+    return createUnauthorizedResponse();
   }
   return undefined;
 }
