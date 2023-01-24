@@ -1,5 +1,6 @@
 import type {LogLevel, LogSink, MutatorDefs} from 'replicache';
 import type {Metrics} from '../types/metrics.js';
+import type {OnClose} from './reflect.js';
 
 /**
  * Configuration for [[Reflect]].
@@ -32,7 +33,7 @@ export interface ReflectOptions<MD extends MutatorDefs> {
    * return a promise that resolves to the authorization token to use
    * for future WebSocket connections.
    */
-  getAuth?: () => Promise<string | null | undefined>;
+  getAuth?: () => Promise<string | null | undefined> | undefined;
 
   /**
    * A unique identifier for the user authenticated by
@@ -68,7 +69,7 @@ export interface ReflectOptions<MD extends MutatorDefs> {
    * The schema version of the data understood by this application. This enables
    * versioning of mutators and the client view.
    */
-  schemaVersion?: string;
+  schemaVersion?: string | undefined;
 
   /**
    * Determines how much logging to do. When this is set to `'debug'`,
@@ -77,7 +78,7 @@ export interface ReflectOptions<MD extends MutatorDefs> {
    * `'error'` we only log `'error'` messages.
    * Default is `'info'`.
    */
-  logLevel?: LogLevel;
+  logLevel?: LogLevel | undefined;
 
   /**
    * Enables custom handling of logs.
@@ -93,7 +94,7 @@ export interface ReflectOptions<MD extends MutatorDefs> {
    * logSinks: [consoleLogSink, myCloudLogSink],
    * ```
    */
-  logSinks?: LogSink[];
+  logSinks?: LogSink[] | undefined;
 
   /**
    * An object used as a map to define the *mutators* for this application.
@@ -159,12 +160,18 @@ export interface ReflectOptions<MD extends MutatorDefs> {
    * As with [[query]] and [[subscribe]] all reads will see a consistent view of
    * the cache while they run.
    */
-  mutators?: MD;
+  mutators?: MD | undefined;
 
   /**
    * `onOnlineChange` is called when the Reflect instance's online status changes
    */
-  onOnlineChange?: (online: boolean) => void;
+  onOnlineChange?: ((online: boolean) => void) | null | undefined;
+
+  /**
+   * `onSync` is called when the Reflect instance is closed. See
+   * {@link Reflect.onClose} for more details.
+   */
+  onClose?: OnClose | null | undefined;
 
   /**
    * experimentalMetrics is the interface by which Reflect instantiates metrics
@@ -188,5 +195,5 @@ export interface ReflectOptions<MD extends MutatorDefs> {
    *
    * If experimentalMetrics is undefined, the default implementation is a no-op.
    */
-  experimentalMetrics?: Metrics;
+  experimentalMetrics?: Metrics | undefined;
 }

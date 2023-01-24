@@ -32,6 +32,7 @@ import {send} from '../util/socket.js';
 import type {ConnectedMessage} from '../protocol/connected.js';
 import {
   castToErrorKind,
+  ErrorKind,
   errorKindToString,
   ErrorMessage,
 } from '../protocol/error.js';
@@ -43,6 +44,14 @@ export const enum ConnectionState {
 }
 
 export const WATCHDOG_INTERVAL_MS = 5000;
+
+/**
+ * `onClose` is called when the Reflect instance is closed.
+ */
+export type OnClose = {
+  (ok: true): void;
+  (ok: false, kind: string, reason: string): void;
+};
 
 export class Reflect<MD extends MutatorDefs> {
   private readonly _rep: Replicache<MD>;
@@ -69,7 +78,18 @@ export class Reflect<MD extends MutatorDefs> {
    * `onOnlineChange` is called when the Reflect instance's online status
    * changes.
    */
-  onOnlineChange: ((online: boolean) => void) | null = null;
+  onOnlineChange: ((online: boolean) => void) | null | undefined = null;
+
+  /**
+   * Called when the Reflect instance is closed. This gets called with `ok:
+   * true` when the instance is closed normally. It gets called with `ok: false`
+   * when the instance is closed due to an unrecoverable error.
+   *
+   * For example, if the server responds with an `Unauthorized` error the
+   * Reflect instance is closed and you will need to create a new one with an
+   * updated {@link ReflectOptions.auth} token.
+   */
+  onClose: OnClose | null | undefined = null;
 
   private _connectResolver = resolver<WebSocket>();
   private _lastMutationIDReceived = 0;
@@ -98,9 +118,8 @@ export class Reflect<MD extends MutatorDefs> {
       }
     }
 
-    if (options.onOnlineChange) {
-      this.onOnlineChange = options.onOnlineChange;
-    }
+    this.onOnlineChange = options.onOnlineChange;
+    this.onClose = options.onClose;
 
     const metrics = options.experimentalMetrics ?? new NopMetrics();
     this._metrics = {
@@ -221,8 +240,26 @@ export class Reflect<MD extends MutatorDefs> {
     const lc2 = this._socket
       ? addWebSocketIDFromSocketToLogContext(this._socket, lc)
       : lc;
-    this._disconnect(lc2);
-    return this._rep.close();
+    await this._close(lc2, true);
+  }
+
+  private async _close(
+    lc: LogContext,
+    ok: boolean,
+    kind?: ErrorKind,
+    reason?: string,
+  ): Promise<void> {
+    this._disconnect(lc);
+    await this._rep.close();
+    if (this.onClose) {
+      if (ok) {
+        this.onClose(true);
+      } else {
+        assert(kind !== undefined);
+        assert(reason !== undefined);
+        this.onClose(false, errorKindToString(kind), reason);
+      }
+    }
   }
 
   /**
@@ -323,22 +360,29 @@ export class Reflect<MD extends MutatorDefs> {
   };
 
   private _onClose = async (e: CloseEvent) => {
-    const l = addWebSocketIDFromSocketToLogContext(
+    const lc = addWebSocketIDFromSocketToLogContext(
       e.target as WebSocket,
       await this._l,
     );
     const {code, reason, wasClean} = e;
-    const kind = castToErrorKind(code);
-    if (kind) {
-      l.error?.('Got socket close event with error', errorKindToString(kind), {
-        code,
-        reason,
-        wasClean,
-      });
+    const errorKind = castToErrorKind(code);
+    if (errorKind) {
+      lc.error?.(
+        'Got socket close event with error',
+        errorKindToString(errorKind),
+        {
+          code,
+          reason,
+          wasClean,
+        },
+      );
+      // We close in case we got an error during the WebSocket close.
+      await this._close(lc, false, errorKind, reason);
     } else {
-      l.info?.('Got socket close event', {code, reason, wasClean});
+      lc.info?.('Got socket close event', {code, reason, wasClean});
+      // Otherwise we disconnect and rely on the watchdog to reconnect.
+      this._disconnect(lc);
     }
-    this._disconnect(l);
   };
 
   private _handleErrorMessage(
@@ -355,12 +399,9 @@ export class Reflect<MD extends MutatorDefs> {
     downMessage: ConnectedMessage,
   ) {
     lc = addWebSocketIDToLogContext(downMessage[1].wsid, lc);
-    lc.info?.(
-      'Connected',
-      JSON.stringify({
-        navigatorOnline: navigator.onLine,
-      }),
-    );
+    lc.info?.('Connected', {
+      navigatorOnline: navigator.onLine,
+    });
 
     this._connectionState = ConnectionState.Connected;
     if (this._connectingStart === undefined) {
@@ -391,10 +432,7 @@ export class Reflect<MD extends MutatorDefs> {
 
     const wsid = nanoid();
     l = addWebSocketIDToLogContext(wsid, l);
-    l.info?.(
-      'Connecting...',
-      JSON.stringify({navigatorOnline: navigator.onLine}),
-    );
+    l.info?.('Connecting...', {navigatorOnline: navigator.onLine});
 
     this._connectionState = ConnectionState.Connecting;
     if (this._connectingStart !== undefined) {
@@ -424,10 +462,7 @@ export class Reflect<MD extends MutatorDefs> {
   }
 
   private _disconnect(l: LogContext) {
-    l.info?.(
-      'disconnecting',
-      JSON.stringify({navigatorOnline: navigator.onLine}),
-    );
+    l.info?.('disconnecting', {navigatorOnline: navigator.onLine});
     if (this._connectionState === ConnectionState.Connected) {
       if (this._connectingStart !== undefined) {
         l.error?.(
@@ -463,7 +498,7 @@ export class Reflect<MD extends MutatorDefs> {
   private async _handlePoke(lc: LogContext, pokeBody: PokeBody) {
     await this._pokeLock.withLock(async () => {
       lc = lc.addContext('requestID', pokeBody.requestID);
-      lc.debug?.('Applying poke', JSON.stringify(pokeBody));
+      lc.debug?.('Applying poke', pokeBody);
 
       const {lastMutationID, baseCookie, patch, cookie} = pokeBody;
       this._lastMutationIDReceived = lastMutationID;

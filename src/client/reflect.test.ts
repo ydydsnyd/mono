@@ -26,6 +26,8 @@ import {
   DID_NOT_CONNECT_VALUE,
   TIME_TO_CONNECT_METRIC,
 } from '../types/metrics.js';
+import {assertNumber} from '../util/asserts.js';
+import {ErrorKind, errorKindToString} from '../protocol/error.js';
 
 let clock: sinon.SinonFakeTimers;
 
@@ -471,8 +473,39 @@ test('timeToConnect updated to DID_NOT_CONNECT when connect fails', async () => 
 });
 
 function asNumber(v: unknown): number {
-  if (typeof v !== 'number') {
-    throw new Error('not a number');
-  }
+  assertNumber(v);
   return v;
 }
+
+test('Close with error should close instance and call onClose', async () => {
+  const logSpy = sinon.spy();
+  const onCloseSpy = sinon.spy();
+
+  const r = reflectForTest({
+    logSinks: [{log: logSpy}],
+    logLevel: 'error',
+    onClose: onCloseSpy,
+  });
+  await r.waitForSocket(clock);
+
+  r.triggerClose({
+    code: ErrorKind.ClientNotFound,
+    reason: 'Client ~Found',
+    wasClean: false,
+  });
+  await tickAFewTimes(clock);
+
+  expect(r.closed).true;
+
+  expect(logSpy.callCount).equal(1);
+  expect(logSpy.lastCall.args).contain('roomID=test-room-id');
+  expect(logSpy.lastCall.args).contain('Got socket close event with error');
+  expect(logSpy.lastCall.args).contain('ClientNotFound');
+
+  expect(onCloseSpy.callCount).equal(1);
+  expect(onCloseSpy.lastCall.args).deep.equal([
+    false,
+    errorKindToString(ErrorKind.ClientNotFound),
+    'Client ~Found',
+  ]);
+});
