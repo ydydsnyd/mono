@@ -27,7 +27,7 @@ import {
   TIME_TO_CONNECT_METRIC,
 } from '../types/metrics.js';
 import {assertNumber} from '../util/asserts.js';
-import {ErrorKind, errorKindToString} from '../protocol/error.js';
+import {NumericErrorKind, errorKindToString} from '../protocol/error.js';
 
 let clock: sinon.SinonFakeTimers;
 
@@ -489,7 +489,7 @@ test('Close with error should close instance and call onClose', async () => {
   await r.waitForSocket(clock);
 
   r.triggerClose({
-    code: ErrorKind.ClientNotFound,
+    code: NumericErrorKind.ClientNotFound,
     reason: 'Client ~Found',
     wasClean: false,
   });
@@ -505,7 +505,7 @@ test('Close with error should close instance and call onClose', async () => {
   expect(onCloseSpy.callCount).equal(1);
   expect(onCloseSpy.lastCall.args).deep.equal([
     false,
-    errorKindToString(ErrorKind.ClientNotFound),
+    errorKindToString(NumericErrorKind.ClientNotFound),
     'Client ~Found',
   ]);
 });

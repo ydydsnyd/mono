@@ -32,7 +32,7 @@ import {send} from '../util/socket.js';
 import type {ConnectedMessage} from '../protocol/connected.js';
 import {
   castToErrorKind,
-  ErrorKind,
+  NumericErrorKind,
   errorKindToString,
   ErrorMessage,
 } from '../protocol/error.js';
@@ -246,7 +246,7 @@ export class Reflect<MD extends MutatorDefs> {
   private async _close(
     lc: LogContext,
     ok: boolean,
-    kind?: ErrorKind,
+    kind?: NumericErrorKind,
     reason?: string,
   ): Promise<void> {
     this._disconnect(lc);

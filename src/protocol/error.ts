@@ -11,7 +11,8 @@ import {z} from 'zod';
 // agreements between WebSocket applications.  The interpretation of
 // these codes is undefined by this protocol.
 
-export const enum ErrorKind {
+// Make sure we do not export this from mod.ts
+export const enum NumericErrorKind {
   AuthInvalidated = 4000,
   ClientNotFound,
   InvalidConnectionRequest,
@@ -21,49 +22,47 @@ export const enum ErrorKind {
   Unauthorized,
   UnexpectedBaseCookie,
   UnexpectedLastMutationID,
-  Unknown,
 }
 
-const errorKindSchema = z.union([
-  z.literal(ErrorKind.AuthInvalidated),
-  z.literal(ErrorKind.ClientNotFound),
-  z.literal(ErrorKind.InvalidConnectionRequest),
-  z.literal(ErrorKind.InvalidMessage),
-  z.literal(ErrorKind.RoomClosed),
-  z.literal(ErrorKind.RoomNotFound),
-  z.literal(ErrorKind.Unauthorized),
-  z.literal(ErrorKind.UnexpectedBaseCookie),
-  z.literal(ErrorKind.UnexpectedLastMutationID),
-  z.literal(ErrorKind.Unknown),
+const mapping = {
+  /* eslint-disable @typescript-eslint/naming-convention */
+  AuthInvalidated: NumericErrorKind.AuthInvalidated,
+  ClientNotFound: NumericErrorKind.ClientNotFound,
+  InvalidConnectionRequest: NumericErrorKind.InvalidConnectionRequest,
+  InvalidMessage: NumericErrorKind.InvalidMessage,
+  RoomClosed: NumericErrorKind.RoomClosed,
+  RoomNotFound: NumericErrorKind.RoomNotFound,
+  Unauthorized: NumericErrorKind.Unauthorized,
+  UnexpectedBaseCookie: NumericErrorKind.UnexpectedBaseCookie,
+  UnexpectedLastMutationID: NumericErrorKind.UnexpectedLastMutationID,
+  /* eslint-enable @typescript-eslint/naming-convention */
+} as const;
+
+export type ErrorKind = keyof typeof mapping;
+
+const reverseMapping = new Map(Object.entries(mapping).map(([k, v]) => [v, k]));
+
+export const errorKindSchema = z.union([
+  z.literal(NumericErrorKind.AuthInvalidated),
+  z.literal(NumericErrorKind.ClientNotFound),
+  z.literal(NumericErrorKind.InvalidConnectionRequest),
+  z.literal(NumericErrorKind.InvalidMessage),
+  z.literal(NumericErrorKind.RoomClosed),
+  z.literal(NumericErrorKind.RoomNotFound),
+  z.literal(NumericErrorKind.Unauthorized),
+  z.literal(NumericErrorKind.UnexpectedBaseCookie),
+  z.literal(NumericErrorKind.UnexpectedLastMutationID),
 ]);
 
-export function castToErrorKind(n: number): ErrorKind | undefined {
-  return n >= 4000 && n <= ErrorKind.Unknown ? (n as ErrorKind) : undefined;
+export function castToErrorKind(n: number): NumericErrorKind | undefined {
+  return n >= NumericErrorKind.AuthInvalidated &&
+    n <= NumericErrorKind.UnexpectedLastMutationID
+    ? (n as NumericErrorKind)
+    : undefined;
 }
 
-export function errorKindToString(kind: ErrorKind): string {
-  switch (kind) {
-    case ErrorKind.AuthInvalidated:
-      return 'AuthInvalidated';
-    case ErrorKind.ClientNotFound:
-      return 'ClientNotFound';
-    case ErrorKind.InvalidConnectionRequest:
-      return 'InvalidConnectionRequest';
-    case ErrorKind.InvalidMessage:
-      return 'InvalidMessage';
-    case ErrorKind.RoomClosed:
-      return 'RoomClosed';
-    case ErrorKind.RoomNotFound:
-      return 'RoomNotFound';
-    case ErrorKind.Unauthorized:
-      return 'Unauthorized';
-    case ErrorKind.UnexpectedBaseCookie:
-      return 'UnexpectedBaseCookie';
-    case ErrorKind.UnexpectedLastMutationID:
-      return 'UnexpectedLastMutationID';
-    case ErrorKind.Unknown:
-      return 'Unknown';
-  }
+export function errorKindToString(kind: NumericErrorKind): ErrorKind {
+  return reverseMapping.get(kind) as ErrorKind;
 }
 
 export const errorMessageSchema = z.tuple([
@@ -72,4 +71,4 @@ export const errorMessageSchema = z.tuple([
   z.string(),
 ]);
 
-export type ErrorMessage = z.infer<typeof errorMessageSchema>;
+export type ErrorMessage = ['error', NumericErrorKind, string];
