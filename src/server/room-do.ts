@@ -204,7 +204,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   // system keys are deleted who knows what behavior the room will have when its apis are
   // called. Maybe it's fine if they error out, dunno.
   private _deleteAllData = post(
-    this._requireAPIKey(async (_request, ctx) => {
+    this._requireAPIKey(async ctx => {
       const {lc} = ctx;
       // Maybe we should validate that the roomID in the request matches?
       lc.info?.('delete all data');
@@ -274,7 +274,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   }
 
   private _authInvalidateAll = post(
-    this._requireAPIKey(async (_, ctx) => {
+    this._requireAPIKey(async ctx => {
       const {lc} = ctx;
       lc.info?.(
         'Closing all connections fulfilling auth api invalidateAll request.',

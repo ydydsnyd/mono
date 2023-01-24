@@ -52,17 +52,17 @@ for (const route of Object.values(WORKER_ROUTES)) {
 for (const pattern of Object.values(AUTH_ROUTES)) {
   router.register(
     pattern,
-    requireAPIKeyMatchesEnv((req, ctx) => sendToAuthDO(req, ctx)),
+    requireAPIKeyMatchesEnv((ctx, req) => sendToAuthDO(ctx, req)),
   );
 }
 
 function requireAPIKeyMatchesEnv(next: Handler<WorkerContext, Response>) {
-  return (req: Request, ctx: WorkerContext) => {
+  return (ctx: WorkerContext, req: Request) => {
     const resp = checkAuthAPIKey(ctx.env.REFLECT_AUTH_API_KEY, req);
     if (resp) {
       return resp;
     }
-    return next(req, ctx);
+    return next(ctx, req);
   };
 }
 
@@ -103,7 +103,7 @@ async function scheduled(env: BaseWorkerEnv, lc: LogContext): Promise<void> {
       method: 'POST',
     },
   );
-  const resp = await sendToAuthDO(req, {lc, env});
+  const resp = await sendToAuthDO({lc, env}, req);
   lc.info?.(`Response: ${resp.status} ${resp.statusText}`);
 }
 
@@ -196,7 +196,7 @@ function handleRequest(
   env: BaseWorkerEnv,
 ): Promise<Response> {
   const forwardToAuthDO = (lc: LogContext, request: Request) =>
-    sendToAuthDO(request, {lc, env});
+    sendToAuthDO({lc, env}, request);
   return dispatch(request, lc, env.REFLECT_AUTH_API_KEY, {
     createRoom: forwardToAuthDO,
     connect: forwardToAuthDO,
@@ -225,8 +225,8 @@ async function withLogContext<Env extends BaseWorkerEnv, R>(
 
 // eslint-disable-next-line require-await
 async function sendToAuthDO(
-  request: Request,
   ctx: WithLogContext & WithEnv,
+  request: Request,
 ): Promise<Response> {
   const {lc, env} = ctx;
   const {authDO} = env;
@@ -248,7 +248,7 @@ async function sendToAuthDO(
 // - maybe authenticate requests (but not just utilizing the auth
 //    handler: we want to be able to report metrics for a logged
 //    out user as well)
-async function reportMetrics(request: Request, ctx: BaseContext & WithEnv) {
+async function reportMetrics(ctx: BaseContext & WithEnv, request: Request) {
   if (ctx.env.REFLECT_DATADOG_API_KEY === undefined) {
     ctx.lc.debug?.('reportMetrics: proxy metrics not enabled');
     return new Response('metrics not enabled', {

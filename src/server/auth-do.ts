@@ -143,7 +143,7 @@ export class BaseAuthDO implements DurableObject {
   private _roomStatusByRoomID = get(
     this._requireAPIKey(
       withRoomID(
-        asJSON(async (_, ctx: BaseContext & WithRoomID) => {
+        asJSON(async (ctx: BaseContext & WithRoomID) => {
           const roomRecord = await this._roomRecordLock.withRead(() =>
             roomRecordByRoomID(this._durableStorage, ctx.roomID),
           );
@@ -187,7 +187,7 @@ export class BaseAuthDO implements DurableObject {
   // to ensure users are logged out.
   private _closeRoom = post(
     this._requireAPIKey(
-      withRoomID((_, ctx) =>
+      withRoomID(ctx =>
         this._roomRecordLock.withWrite(() =>
           closeRoom(ctx.lc, this._durableStorage, ctx.roomID),
         ),
@@ -199,7 +199,7 @@ export class BaseAuthDO implements DurableObject {
   // will return 410 Gone for all requests.
   private _deleteRoom = post(
     this._requireAPIKey(
-      withRoomID((req, ctx) =>
+      withRoomID((ctx, req) =>
         this._roomRecordLock.withWrite(() =>
           deleteRoom(
             ctx.lc,
@@ -220,7 +220,7 @@ export class BaseAuthDO implements DurableObject {
   // in reflect-server.
   private _forgetRoom = post(
     this._requireAPIKey(
-      withRoomID((_, ctx) =>
+      withRoomID(ctx =>
         this._roomRecordLock.withWrite(() =>
           deleteRoomRecord(ctx.lc, this._durableStorage, ctx.roomID),
         ),
@@ -234,7 +234,7 @@ export class BaseAuthDO implements DurableObject {
   // does not check that the room actually exists.
   private _migrateRoom = post(
     this._requireAPIKey(
-      withRoomID((_, ctx) =>
+      withRoomID(ctx =>
         this._roomRecordLock.withWrite(() =>
           createRoomRecordForLegacyRoom(
             ctx.lc,
@@ -512,7 +512,7 @@ export class BaseAuthDO implements DurableObject {
   }
 
   private _authInvalidateAll = post(
-    this._requireAPIKey((req, ctx) => {
+    this._requireAPIKey((ctx, req) => {
       const {lc} = ctx;
       lc.debug?.(`authInvalidateAll waiting for lock.`);
       return this._authLock.withWrite(async () => {

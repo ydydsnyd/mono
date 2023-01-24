@@ -17,14 +17,14 @@ test('Router', async () => {
   const router = new Router();
   router.register(
     '/foo/:id',
-    (_, ctx) =>
+    ctx =>
       new Response(`foo:${ctx.parsedURL.pathname.groups.id}`, {
         status: 200,
       }),
   );
   router.register(
     '/bar/:id',
-    (_, ctx) =>
+    ctx =>
       new Response(`bar:${ctx.parsedURL.pathname.groups.id}`, {
         status: 400,
       }),
@@ -92,9 +92,10 @@ test('Router', async () => {
 });
 
 test('requireMethod', async () => {
-  const getHandler = get(req => new Response(`${req.url}`, {status: 300}));
+  const getHandler = get((_, req) => new Response(`${req.url}`, {status: 300}));
   const postHandler = post(
-    async req => new Response(`${req.url}:${await req.text()}`, {status: 301}),
+    async (_, req) =>
+      new Response(`${req.url}:${await req.text()}`, {status: 301}),
   );
 
   const pattern = new URLPattern();
@@ -144,7 +145,7 @@ test('requireMethod', async () => {
       body: c.method === 'POST' ? 'ok' : undefined,
     });
 
-    const resp = await c.handler(req, {lc, parsedURL});
+    const resp = await c.handler({lc, parsedURL}, req);
     expect(resp.status).toBe(c.expectedStatus);
     expect(await resp.text()).toBe(c.expectedText);
   }
@@ -295,7 +296,7 @@ test('requireAuthAPIKey', async () => {
 
     const handler = requireAuthAPIKey(
       () => c.required,
-      async req => new Response(await req.text(), {status: 200}),
+      async (_, req) => new Response(await req.text(), {status: 200}),
     );
 
     const req = new Request('https://roci.dev/', {
@@ -309,7 +310,7 @@ test('requireAuthAPIKey', async () => {
       lc: createSilentLogContext(),
     };
     try {
-      const response = await handler(req, ctx);
+      const response = await handler(ctx, req);
       if (response === undefined) {
         result = response;
       } else {
@@ -351,7 +352,7 @@ test('withRoomID', async () => {
   ];
 
   const handler = withRoomID(
-    (_, ctx) => new Response(`roomID:${ctx.roomID}`, {status: 200}),
+    ctx => new Response(`roomID:${ctx.roomID}`, {status: 200}),
   );
 
   for (const c of cases) {
@@ -364,7 +365,7 @@ test('withRoomID', async () => {
 
     let result: Case['expected'] | undefined = undefined;
     try {
-      const response = await handler(request, ctx);
+      const response = await handler(ctx, request);
       result = {result: {status: response.status, text: await response.text()}};
     } catch (e) {
       result = {error: String(e)};
@@ -396,7 +397,7 @@ test('asJSON', async () => {
   ];
 
   for (const c of cases) {
-    const handler = asJSON(async req => ({
+    const handler = asJSON(async (_, req) => ({
       foo: await req.text(),
     }));
     const request = new Request('http://roci.dev/', {
@@ -408,7 +409,7 @@ test('asJSON', async () => {
       parsedURL: new URLPattern().exec('https://roci.dev/')!,
       lc: createSilentLogContext(),
     };
-    const response = await handler(request, ctx);
+    const response = await handler(ctx, request);
     expect(await response.json()).toEqual(c.expected);
   }
 });

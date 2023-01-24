@@ -12,8 +12,8 @@ import {createUnauthorizedResponse} from './create-unauthorized-response.js';
  * the next handler. This is how things like body validation are implemented.
  */
 export type Handler<Context, Resp> = (
-  request: Request,
   context: Context,
+  request: Request,
 ) => MaybePromise<Resp>;
 
 export type WithLogContext = {
@@ -76,7 +76,7 @@ export class Router<InitialContext extends WithLogContext = WithLogContext> {
     const {handler} = route;
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return handler(request, {...context, parsedURL: result!});
+    return handler({...context, parsedURL: result!}, request);
   }
 }
 
@@ -84,11 +84,11 @@ function requireMethod<Context extends BaseContext, Resp extends Response>(
   method: string,
   next: Handler<Context, Resp>,
 ) {
-  return (request: Request, context: Context) => {
+  return (context: Context, request: Request) => {
     if (request.method !== method) {
       return new Response('unsupported method', {status: 405});
     }
-    return next(request, context);
+    return next(context, request);
   };
 }
 
@@ -108,12 +108,12 @@ export function requireAuthAPIKey<Context extends BaseContext, Resp>(
   required: (context: Context) => string,
   next: Handler<Context, Resp>,
 ) {
-  return (req: Request, context: Context) => {
+  return (context: Context, req: Request) => {
     const resp = checkAuthAPIKey(required(context), req);
     if (resp) {
       return resp;
     }
-    return next(req, context);
+    return next(context, req);
   };
 }
 
@@ -132,18 +132,18 @@ export type WithRoomID = {roomID: string};
 export function withRoomID<Context extends BaseContext, Resp>(
   next: Handler<Context & WithRoomID, Resp>,
 ) {
-  return (req: Request, ctx: Context) => {
+  return (ctx: Context, req: Request) => {
     const {roomID} = ctx.parsedURL.pathname.groups;
     if (roomID === undefined) {
       throw new Error('Internal error: roomID not found by withRoomID');
     }
-    return next(req, {...ctx, roomID});
+    return next({...ctx, roomID}, req);
   };
 }
 
 export function asJSON<Context extends BaseContext>(
   next: Handler<Context, ReadonlyJSONValue>,
 ) {
-  return async (req: Request, ctx: Context) =>
-    new Response(JSON.stringify(await next(req, ctx)));
+  return async (ctx: Context, req: Request) =>
+    new Response(JSON.stringify(await next(ctx, req)));
 }
