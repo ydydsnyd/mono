@@ -13,15 +13,15 @@ import * as s from 'superstruct';
 
 export const enum ErrorKind {
   AuthInvalidated = 4000,
-  ClientNotFound = 4001,
-  InvalidConnectionRequest = 4002,
-  InvalidMessage = 4003,
-  RoomClosed = 4004,
-  RoomNotFound = 4005,
-  Unauthorized = 4006,
-  UnexpectedBaseCookie = 4007,
-  UnexpectedLastMutationID = 4008,
-  Unknown = 4009,
+  ClientNotFound,
+  InvalidConnectionRequest,
+  InvalidMessage,
+  RoomClosed,
+  RoomNotFound,
+  Unauthorized,
+  UnexpectedBaseCookie,
+  UnexpectedLastMutationID,
+  Unknown,
 }
 
 const errorKindSchema = s.union([
