@@ -1,4 +1,4 @@
-import {beforeEach, afterEach} from '@jest/globals';
+import {jest, beforeEach, afterEach} from '@jest/globals';
 import {LogContext, LogLevel, LogSink} from '@rocicorp/logger';
 import type {JSONType} from '../../src/protocol/json.js';
 import type {Mutation} from '../../src/protocol/push.js';
@@ -129,4 +129,19 @@ export function mockMathRandom() {
   afterEach(() => {
     Math.random = random;
   });
+}
+
+export function mockWebSocketPair(): [Mocket, Mocket] {
+  const client = new Mocket();
+  const server = new Mocket();
+  jest
+    .spyOn(
+      globalThis,
+      // @ts-expect-error TS does not know about WebSocketPair
+      'WebSocketPair',
+    )
+    // @ts-expect-error TS does not know about WebSocketPair
+    .mockReturnValue({0: client, 1: server});
+
+  return [client, server];
 }

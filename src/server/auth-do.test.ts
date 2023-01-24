@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import {jest, afterEach, beforeEach, test, expect} from '@jest/globals';
 import {encodeHeaderValue} from '../util/headers.js';
-import {Mocket, TestLogSink} from '../util/test-utils.js';
+import {Mocket, mockWebSocketPair, TestLogSink} from '../util/test-utils.js';
 import {USER_DATA_HEADER_NAME} from './auth.js';
 import {
   createTestDurableObjectNamespace,
@@ -840,8 +840,7 @@ test("connect won't connect to a room that doesn't exist", async () => {
   const storage = await getMiniflareDurableObjectStorage(authDOID);
   const state = new TestDurableObjectState(authDOID, storage);
   const logSink = new TestLogSink();
-  const clientWs = new Mocket();
-  const serverWs = new Mocket();
+  const [, serverWS] = mockWebSocketPair();
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
@@ -854,14 +853,13 @@ test("connect won't connect to a room that doesn't exist", async () => {
     authApiKey: TEST_AUTH_API_KEY,
     logSink,
     logLevel: 'debug',
-    newWebSocketPair: () => [clientWs, serverWs],
   });
   // Note: no room created.
 
   const response = await authDO.fetch(testRequest);
 
   expect(response.status).toEqual(101);
-  expect(serverWs.log).toEqual([
+  expect(serverWS.log).toEqual([
     ['close', ErrorKind.RoomNotFound, 'testRoomID1'],
   ]);
   expect((await storage.list({prefix: 'connection/'})).size).toEqual(0);
@@ -921,8 +919,7 @@ test('connect wont connect to a room that is closed', async () => {
   const storage = await getMiniflareDurableObjectStorage(authDOID);
   const state = new TestDurableObjectState(authDOID, storage);
   const logSink = new TestLogSink();
-  const clientWs = new Mocket();
-  const serverWs = new Mocket();
+  const [, serverWS] = mockWebSocketPair();
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
@@ -931,7 +928,6 @@ test('connect wont connect to a room that is closed', async () => {
     authApiKey: TEST_AUTH_API_KEY,
     logSink,
     logLevel: 'debug',
-    newWebSocketPair: () => [clientWs, serverWs],
   });
   await createRoom(authDO, testRoomID);
 
@@ -946,7 +942,7 @@ test('connect wont connect to a room that is closed', async () => {
   const response = await authDO.fetch(testRequest);
 
   expect(response.status).toEqual(101);
-  expect(serverWs.log).toEqual([
+  expect(serverWS.log).toEqual([
     ['close', ErrorKind.RoomClosed, 'testRoomID1'],
   ]);
 });
@@ -1015,8 +1011,7 @@ test('connect pipes 401 over ws without calling Room DO if authHandler rejects',
       headers,
     },
   );
-  const clientWs = new Mocket();
-  const serverWs = new Mocket();
+  const [clientWS, serverWS] = mockWebSocketPair();
   const authDO = new BaseAuthDO({
     roomDO: createRoomDOThatThrowsIfFetchIsCalled(),
     state: {id: authDOID} as DurableObjectState,
@@ -1029,15 +1024,14 @@ test('connect pipes 401 over ws without calling Room DO if authHandler rejects',
     authApiKey: TEST_AUTH_API_KEY,
     logSink: new TestLogSink(),
     logLevel: 'debug',
-    newWebSocketPair: () => [clientWs, serverWs],
   });
 
   const response = await authDO.fetch(testRequest);
 
   expect(response.status).toEqual(101);
   expect(response.headers.get('Sec-WebSocket-Protocol')).toEqual(testAuth);
-  expect(response.webSocket).toBe(clientWs);
-  expect(serverWs.log).toEqual([
+  expect(response.webSocket).toBe(clientWS);
+  expect(serverWS.log).toEqual([
     ['close', ErrorKind.Unauthorized, 'authHandler rejected'],
   ]);
 });

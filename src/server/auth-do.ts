@@ -25,11 +25,7 @@ import {assert} from 'superstruct';
 import {createAuthAPIHeaders} from './auth-api-headers.js';
 import {DurableStorage} from '../storage/durable-storage.js';
 import type {CreateRoomRequest} from '../protocol/api/room.js';
-import {
-  closeWithError,
-  newWebSocketPair as defaultNewWebSocketPair,
-  NewWebSocketPair,
-} from '../util/socket.js';
+import {closeWithError} from '../util/socket.js';
 import {
   requireAuthAPIKey,
   Handler,
@@ -52,9 +48,6 @@ export interface AuthDOOptions {
   authApiKey: string;
   logSink: LogSink;
   logLevel: LogLevel;
-  // newWebSocketPair is a seam we use for testing. I cannot figure out
-  // how to get jest to mock a module.
-  newWebSocketPair?: NewWebSocketPair | undefined;
 }
 export type ConnectionKey = {
   userID: string;
@@ -98,19 +91,10 @@ export class BaseAuthDO implements DurableObject {
   // both the auth lock and the room record lock, the auth lock MUST be
   // acquired first.
   private readonly _roomRecordLock = new RWLock();
-  private readonly _newWebSocketPair: NewWebSocketPair;
+  // private readonly _newWebSocketPair: NewWebSocketPair;
 
   constructor(options: AuthDOOptions) {
-    const {
-      roomDO,
-      state,
-      authHandler,
-      authApiKey,
-      logSink,
-      logLevel,
-      newWebSocketPair = defaultNewWebSocketPair,
-    } = options;
-    this._newWebSocketPair = newWebSocketPair;
+    const {roomDO, state, authHandler, authApiKey, logSink, logLevel} = options;
     this._roomDO = roomDO;
     this._state = state;
     this._durableStorage = new DurableStorage(
@@ -320,7 +304,7 @@ export class BaseAuthDO implements DurableObject {
     //   does it.
 
     const closeWithErrorLocal = (errorKind: ErrorKind, msg: string) => {
-      const pair = this._newWebSocketPair();
+      const pair = new WebSocketPair();
       const ws = pair[1];
       lc.error?.('accepting connection to send error', url.toString());
       ws.accept();
@@ -405,7 +389,7 @@ export class BaseAuthDO implements DurableObject {
       // close the connection. We trust it will be logged by onSocketError in the
       // client.
       if (roomRecord === undefined || roomRecord.status !== RoomStatus.Open) {
-        const pair = this._newWebSocketPair();
+        const pair = new WebSocketPair();
         const ws = pair[1];
         lc.info?.('accepting connection ', request.url);
         ws.accept();
