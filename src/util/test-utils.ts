@@ -56,7 +56,7 @@ export function clientMutation(
 }
 
 export class Mocket extends EventTarget implements Socket {
-  log: string[][] = [];
+  log: unknown[][] = [];
   readyState = 1;
   onclose = undefined;
   onmessage = undefined;
@@ -73,8 +73,8 @@ export class Mocket extends EventTarget implements Socket {
     this.log.push(['send', data]);
   }
 
-  close(): void {
-    this.log.push(['close']);
+  close(code?: number, reason?: string): void {
+    this.log.push(['close', code, reason]);
   }
 }
 

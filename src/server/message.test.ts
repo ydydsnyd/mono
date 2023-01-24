@@ -1,4 +1,4 @@
-import {test, expect} from '@jest/globals';
+import {test, describe, expect} from '@jest/globals';
 import type {Mutation} from '../../src/protocol/push.js';
 import type {ClientID, ClientMap} from '../../src/types/client-state.js';
 import {
@@ -10,14 +10,16 @@ import {
 import {handleMessage} from '../../src/server/message.js';
 import {assert} from '../util/asserts.js';
 import {randomID} from '../util/rand.js';
+import {ErrorKind} from '../protocol/error.js';
 
-test('handleMessage', () => {
+describe('handleMessage', () => {
   type Case = {
     name: string;
     data: string;
     clients?: ClientMap;
     clientID?: ClientID;
-    expectedError?: string;
+    expectedErrorKind?: ErrorKind;
+    expectedErrorMessage?: string;
     expectedPendingMutations?: Mutation[];
     expectSocketClosed?: boolean;
   };
@@ -26,12 +28,20 @@ test('handleMessage', () => {
     {
       name: 'empty',
       data: '',
-      expectedError: 'SyntaxError: Unexpected end of JSON input',
+      expectedErrorMessage: JSON.stringify([
+        'error',
+        ErrorKind.InvalidMessage,
+        'SyntaxError: Unexpected end of JSON input',
+      ]),
     },
     {
       name: 'invalid push',
       data: '[]',
-      expectedError: 'StructError',
+      expectedErrorMessage: JSON.stringify([
+        'error',
+        ErrorKind.InvalidMessage,
+        'StructError: Expected the value to satisfy a union of `tuple | tuple`, but received: ',
+      ]),
     },
     {
       name: 'valid push',
@@ -64,7 +74,11 @@ test('handleMessage', () => {
         },
       ]),
       // This error message is not great
-      expectedError: 'StructError',
+      expectedErrorMessage: JSON.stringify([
+        'error',
+        ErrorKind.InvalidMessage,
+        'StructError: Expected the value to satisfy a union of `tuple | tuple`, but received: push,[object Object]',
+      ]),
     },
     {
       name: 'missing client push',
@@ -81,7 +95,8 @@ test('handleMessage', () => {
       ]),
       clients: new Map(),
       clientID: 'c1',
-      expectedError: 'no such client: c1',
+      expectedErrorKind: ErrorKind.ClientNotFound,
+      expectedErrorMessage: 'c1',
       expectSocketClosed: true,
     },
     {
@@ -89,42 +104,53 @@ test('handleMessage', () => {
       data: JSON.stringify(['ping', {}]),
       clients: new Map(),
       clientID: 'c1',
-      expectedError: 'no such client: c1',
+      expectedErrorKind: ErrorKind.ClientNotFound,
+      expectedErrorMessage: 'c1',
       expectSocketClosed: true,
     },
   ];
 
   for (const c of cases) {
-    const s1 = new Mocket();
-    const clientID = c.clientID !== undefined ? c.clientID : 'c1';
-    const clients: ClientMap =
-      c.clients || new Map([client(clientID, 'u1', s1)]);
+    test(c.name, () => {
+      const s1 = new Mocket();
+      const clientID = c.clientID !== undefined ? c.clientID : 'c1';
+      const clients: ClientMap =
+        c.clients || new Map([client(clientID, 'u1', s1)]);
 
-    handleMessage(
-      createSilentLogContext(),
-      clients,
-      clientID,
-      c.data,
-      s1,
-      () => undefined,
-    );
+      handleMessage(
+        createSilentLogContext(),
+        clients,
+        clientID,
+        c.data,
+        s1,
+        () => undefined,
+      );
 
-    if (c.expectedError) {
-      expect(s1.log.length).toEqual(c.expectSocketClosed ? 2 : 1);
-      const [type, message] = s1.log[0];
-      expect(type).toEqual('send');
-      expect(message).toContain(c.expectedError);
-    }
+      if (c.expectSocketClosed) {
+        expect(s1.log.length).toBeGreaterThan(0);
+        expect(s1.log[s1.log.length - 1][0]).toEqual('close');
+      }
 
-    if (c.expectSocketClosed) {
-      expect(s1.log.length).toBeGreaterThan(0);
-      expect(s1.log[s1.log.length - 1][0]).toEqual('close');
-    }
+      if (c.expectedErrorMessage !== undefined) {
+        expect(s1.log.length).toEqual(1);
 
-    if (c.expectedPendingMutations) {
-      const client = clients.get(clientID);
-      assert(client);
-      expect(client.pending).toEqual(c.expectedPendingMutations);
-    }
+        if (c.expectSocketClosed) {
+          const [type, code, message] = s1.log[0];
+          expect(type).toEqual('close');
+          expect(code).toEqual(c.expectedErrorKind);
+          expect(message).toEqual(c.expectedErrorMessage);
+        } else {
+          const [type, message] = s1.log[0];
+          expect(type).toEqual('send');
+          expect(message).toEqual(c.expectedErrorMessage);
+        }
+      }
+
+      if (c.expectedPendingMutations) {
+        const client = clients.get(clientID);
+        assert(client);
+        expect(client.pending).toEqual(c.expectedPendingMutations);
+      }
+    });
   }
 });

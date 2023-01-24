@@ -1,4 +1,5 @@
 import {test, expect} from '@jest/globals';
+import {ErrorKind} from '../protocol/error.js';
 import {client, createSilentLogContext, Mocket} from '../util/test-utils.js';
 import {handleAuthInvalidate} from './auth-invalidate.js';
 
@@ -14,26 +15,20 @@ function createClientMap() {
 
 test('without userId closes all connections and sends each an error message', () => {
   const clients = createClientMap();
-  handleAuthInvalidate(clients, createSilentLogContext());
+  handleAuthInvalidate(createSilentLogContext(), clients);
   for (const client of clients.values()) {
     const mocket = client.socket as Mocket;
-    expect(mocket.log).toEqual([
-      ['send', JSON.stringify(['error', 'AuthInvalidated', ''])],
-      ['close'],
-    ]);
+    expect(mocket.log).toEqual([['close', ErrorKind.AuthInvalidated, '']]);
   }
 });
 
 test('with userId closes all connections for that userID and sends each an error message', () => {
   const clients = createClientMap();
-  handleAuthInvalidate(clients, createSilentLogContext(), 'testUserID2');
+  handleAuthInvalidate(createSilentLogContext(), clients, 'testUserID2');
   for (const client of clients.values()) {
     const mocket = client.socket as Mocket;
     if (client.userData.userID === 'testUserID2') {
-      expect(mocket.log).toEqual([
-        ['send', JSON.stringify(['error', 'AuthInvalidated', ''])],
-        ['close'],
-      ]);
+      expect(mocket.log).toEqual([['close', ErrorKind.AuthInvalidated, '']]);
     } else {
       expect(mocket.log).toEqual([]);
     }

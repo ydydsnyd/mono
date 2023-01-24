@@ -17,7 +17,9 @@ import {decodeHeaderValue} from '../util/headers.js';
 import {addConnectedClient} from '../types/connected-clients.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
 import {compareVersions, getVersion} from '../types/version.js';
-import {send, sendError} from '../util/socket.js';
+import {send, closeWithError} from '../util/socket.js';
+import {assert} from '../util/asserts.js';
+import {ErrorKind} from '../protocol/error.js';
 
 export type MessageHandler = (
   lc: LogContext,
@@ -52,15 +54,13 @@ export async function handleConnection(
   onClose: CloseHandler,
 ) {
   lc.info?.('roomDO: handling connect', url.toString());
-  const sendErrorAndClose = (msg: string) => {
-    lc.error?.('roomDO: invalid connection request', msg);
-    sendError(ws, 'InvalidConnectionRequest', msg);
-    ws.close();
+  const closeWithErrorLocal = (msg: string) => {
+    closeWithError(lc, ws, ErrorKind.InvalidConnectionRequest, msg);
   };
 
   const {result, error} = getConnectRequest(url, headers);
   if (error !== null) {
-    sendErrorAndClose(error);
+    closeWithErrorLocal(error);
     return;
   }
 
@@ -86,7 +86,7 @@ export async function handleConnection(
       'expected lastMutationID',
       existingLastMutationID,
     );
-    sendErrorAndClose(`Unexpected lmid. ${maybeOldClientStateMessage}`);
+    closeWithErrorLocal(`Unexpected lmid`);
     return;
   }
 
@@ -98,7 +98,7 @@ export async function handleConnection(
       'current version is',
       version,
     );
-    sendErrorAndClose(`Unexpected baseCookie. ${maybeOldClientStateMessage}`);
+    closeWithErrorLocal(`Unexpected baseCookie`);
     return;
   }
 
@@ -154,9 +154,6 @@ export async function handleConnection(
   send(ws, connectedMessage);
 }
 
-export const maybeOldClientStateMessage =
-  'Possibly the room was re-created without also clearing browser state? Try clearing browser state and trying again.';
-
 export function getConnectRequest(url: URL, headers: Headers) {
   function getParam(name: string, required: true): string;
   function getParam(name: string, required: boolean): string | null;
@@ -181,7 +178,7 @@ export function getConnectRequest(url: URL, headers: Headers) {
     const int = parseInt(value);
     if (isNaN(int)) {
       throw new Error(
-        `invalid querystring parameter ${name}, url: ${url}, got: ${value}`,
+        `invalid querystring parameter ${name}, got: ${value}, url: ${url}`,
       );
     }
     return int;
@@ -228,9 +225,11 @@ export function getConnectRequest(url: URL, headers: Headers) {
       error: null,
     };
   } catch (e) {
+    assert(e instanceof Error);
+
     return {
       result: null,
-      error: String(e),
+      error: e.message,
     };
   }
 }

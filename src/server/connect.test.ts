@@ -1,4 +1,4 @@
-import {test, expect} from '@jest/globals';
+import {test, describe, expect} from '@jest/globals';
 import {
   ClientRecord,
   clientRecordKey,
@@ -12,15 +12,12 @@ import {
   createSilentLogContext,
   Mocket,
 } from '../util/test-utils.js';
-import {
-  getConnectRequest,
-  handleConnection,
-  maybeOldClientStateMessage,
-} from '../../src/server/connect.js';
+import {getConnectRequest, handleConnection} from '../../src/server/connect.js';
 import {USER_DATA_HEADER_NAME} from './auth.js';
 import {encodeHeaderValue} from '../util/headers.js';
 import {DurableStorage} from '../storage/durable-storage.js';
 import {NullableVersion, putVersion} from '../../src/types/version.js';
+import {ErrorKind} from '../protocol/error.js';
 
 const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();
@@ -65,12 +62,13 @@ function createHeadersWithUserDataWithEmptyUserID() {
   return headers;
 }
 
-test('handleConnection', async () => {
+describe('handleConnection', () => {
   type Case = {
     name: string;
     url: string;
     headers: Headers;
-    expectErrorResponse?: string;
+    expectErrorKind?: ErrorKind;
+    expectErrorMessage?: string;
     existingRecord?: ClientRecord;
     expectedRecord?: ClientRecord;
     existingClients: ClientMap;
@@ -85,7 +83,8 @@ test('handleConnection', async () => {
       name: 'invalid clientid',
       url: 'http://google.com/?baseCookie=1&timestamp=t1&lmid=0&wsid=wsidx',
       headers: createHeadersWithValidUserData('u1'),
-      expectErrorResponse: 'Error: invalid querystring - missing clientID',
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
+      expectErrorMessage: 'invalid querystring - missing clientID',
       existingClients: new Map(),
       expectedClients: () => new Map(),
       version: 1,
@@ -94,7 +93,8 @@ test('handleConnection', async () => {
       name: 'invalid timestamp',
       url: 'http://google.com/?clientID=c1&baseCookie=1&lmid=0&wsid=wsidx',
       headers: createHeadersWithValidUserData('u1'),
-      expectErrorResponse: 'Error: invalid querystring - missing ts',
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
+      expectErrorMessage: 'invalid querystring - missing ts',
       existingClients: new Map(),
       expectedClients: () => new Map(),
       version: 1,
@@ -103,8 +103,9 @@ test('handleConnection', async () => {
       name: 'invalid (non-numeric) timestamp',
       url: 'http://google.com/?clientID=c1&baseCookie=1&ts=xx&lmid=0&wsid=wsidx',
       headers: createHeadersWithValidUserData('u1'),
-      expectErrorResponse:
-        'Error: invalid querystring parameter ts, url: http://google.com/?clientID=c1&baseCookie=1&ts=xx&lmid=0&wsid=wsidx, got: xx',
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
+      expectErrorMessage:
+        'invalid querystring parameter ts, got: xx, url: http://google.com/?clientID=c1&baseCookie=1&ts=xx&lmid=0&wsid=wsidx',
       existingClients: new Map(),
       expectedClients: () => new Map(),
       version: 1,
@@ -113,7 +114,8 @@ test('handleConnection', async () => {
       name: 'missing lmid',
       url: 'http://google.com/?clientID=c1&baseCookie=1&ts=123',
       headers: createHeadersWithValidUserData('u1'),
-      expectErrorResponse: 'Error: invalid querystring - missing lmid',
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
+      expectErrorMessage: 'invalid querystring - missing lmid',
       existingClients: new Map(),
       expectedClients: () => new Map(),
       version: 1,
@@ -122,8 +124,9 @@ test('handleConnection', async () => {
       name: 'invalid (non-numeric) lmid',
       url: 'http://google.com/?clientID=c1&baseCookie=1&ts=123&lmid=xx',
       headers: createHeadersWithValidUserData('u1'),
-      expectErrorResponse:
-        'Error: invalid querystring parameter lmid, url: http://google.com/?clientID=c1&baseCookie=1&ts=123&lmid=xx, got: xx',
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
+      expectErrorMessage:
+        'invalid querystring parameter lmid, got: xx, url: http://google.com/?clientID=c1&baseCookie=1&ts=123&lmid=xx',
       existingClients: new Map(),
       expectedClients: () => new Map(),
       version: 1,
@@ -132,7 +135,8 @@ test('handleConnection', async () => {
       name: 'missing wsid',
       url: 'http://google.com/?clientID=c1&baseCookie=1&ts=123&lmid=12',
       headers: createHeadersWithValidUserData('u1'),
-      expectErrorResponse: 'Error: invalid querystring - missing wsid',
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
+      expectErrorMessage: 'invalid querystring - missing wsid',
       existingClients: new Map(),
       expectedClients: () => new Map(),
       version: 1,
@@ -151,7 +155,8 @@ test('handleConnection', async () => {
       name: 'baseCookie: 1 and version null',
       url: 'http://google.com/?clientID=c1&baseCookie=1&ts=42&lmid=0&wsid=wsidx',
       headers: createHeadersWithValidUserData('u1'),
-      expectErrorResponse: `Unexpected baseCookie. ${maybeOldClientStateMessage}`,
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
+      expectErrorMessage: `Unexpected baseCookie`,
       existingClients: new Map(),
       expectedClients: () => new Map(),
       version: null,
@@ -160,7 +165,8 @@ test('handleConnection', async () => {
       name: 'baseCookie: 2 and version: 1',
       url: 'http://google.com/?clientID=c1&baseCookie=2&ts=42&lmid=0&wsid=wsidx',
       headers: createHeadersWithValidUserData('u1'),
-      expectErrorResponse: `Unexpected baseCookie. ${maybeOldClientStateMessage}`,
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
+      expectErrorMessage: `Unexpected baseCookie`,
       existingClients: new Map(),
       expectedClients: () => new Map(),
       version: null,
@@ -198,7 +204,8 @@ test('handleConnection', async () => {
       name: 'missing user data',
       url: 'http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0&wsid=wsidx',
       headers: new Headers(),
-      expectErrorResponse: 'Error: missing user-data',
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
+      expectErrorMessage: 'missing user-data',
       existingClients: new Map(),
       expectedClients: () => new Map(),
       version: 10,
@@ -207,7 +214,8 @@ test('handleConnection', async () => {
       name: 'invalid user data',
       url: 'http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0&wsid=wsidx',
       headers: createHeadersWithInvalidUserData(),
-      expectErrorResponse: 'Error: invalid user-data - failed to decode/parse',
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
+      expectErrorMessage: 'invalid user-data - failed to decode/parse',
       existingClients: new Map(),
       expectedClients: () => new Map(),
       version: 7,
@@ -216,7 +224,8 @@ test('handleConnection', async () => {
       name: 'user data missing userID',
       url: 'http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0&wsid=wsidx',
       headers: createHeadersWithUserDataMissingUserID(),
-      expectErrorResponse: 'Error: invalid user-data - missing userID',
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
+      expectErrorMessage: 'invalid user-data - missing userID',
       existingClients: new Map(),
       expectedClients: () => new Map(),
       version: 7,
@@ -225,7 +234,8 @@ test('handleConnection', async () => {
       name: 'user data with empty userID',
       url: 'http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0&wsid=wsidx',
       headers: createHeadersWithUserDataWithEmptyUserID(),
-      expectErrorResponse: 'Error: invalid user-data - missing userID',
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
+      expectErrorMessage: 'invalid user-data - missing userID',
       existingClients: new Map(),
       expectedClients: () => new Map(),
       version: 7,
@@ -237,72 +247,68 @@ test('handleConnection', async () => {
       expectedClients: socket => new Map([freshClient('c1', 'u1', socket)]),
       headers: createHeadersWithValidUserData('u1'),
       existingRecord: clientRecord(7, 0),
-      expectErrorResponse: `Unexpected lmid. ${maybeOldClientStateMessage}`,
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
+      expectErrorMessage: `Unexpected lmid`,
       version: 7,
     },
   ];
 
-  const durable = await getMiniflareDurableObjectStorage(id);
-  const storage = new DurableStorage(durable);
-
   for (const c of cases) {
-    await durable.deleteAll();
-    if (c.existingRecord) {
-      await putEntry(durable, clientRecordKey('c1'), c.existingRecord, {});
-    }
+    test(c.name, async () => {
+      const durable = await getMiniflareDurableObjectStorage(id);
+      const storage = new DurableStorage(durable);
 
-    if (c.version !== null) {
-      await putVersion(c.version, storage);
-    }
+      await durable.deleteAll();
+      if (c.existingRecord) {
+        await putEntry(durable, clientRecordKey('c1'), c.existingRecord, {});
+      }
 
-    const onMessage = () => undefined;
-    const onClose = () => undefined;
-    const mocket = new Mocket();
-    const clients = c.existingClients;
+      if (c.version !== null) {
+        await putVersion(c.version, storage);
+      }
 
-    await handleConnection(
-      createSilentLogContext(),
-      mocket,
-      storage,
-      new URL(c.url),
-      c.headers,
-      clients,
-      onMessage,
-      onClose,
-    );
+      const onMessage = () => undefined;
+      const onClose = () => undefined;
+      const mocket = new Mocket();
+      const clients = c.existingClients;
 
-    if (c.expectErrorResponse) {
-      expect(mocket.log).toEqual([
-        [
-          'send',
-          JSON.stringify([
-            'error',
-            'InvalidConnectionRequest',
-            c.expectErrorResponse,
-          ]),
-        ],
-        ['close'],
-      ]);
-      continue;
-    }
-    try {
-      expect(mocket.log).toEqual([
-        ['send', JSON.stringify(['connected', {wsid: 'wsidx'}])],
-      ]);
-      const expectedClients = c.expectedClients(mocket);
-      expect(clients).toEqual(expectedClients);
-
-      const actualRecord = await getEntry(
-        durable,
-        clientRecordKey('c1'),
-        clientRecordSchema,
-        {},
+      await handleConnection(
+        createSilentLogContext(),
+        mocket,
+        storage,
+        new URL(c.url),
+        c.headers,
+        clients,
+        onMessage,
+        onClose,
       );
-      expect(actualRecord).toEqual(c.expectedRecord);
-    } catch (e) {
-      console.log('c.name failed:', c.name);
-      throw e;
-    }
+
+      if (c.expectErrorMessage) {
+        expect(mocket.log).toEqual([
+          ['close', c.expectErrorKind, c.expectErrorMessage],
+        ]);
+        return;
+      }
+
+      try {
+        expect(mocket.log).toEqual([
+          ['send', JSON.stringify(['connected', {wsid: 'wsidx'}])],
+        ]);
+        const expectedClients = c.expectedClients(mocket);
+        expect(clients).toEqual(expectedClients);
+
+        const actualRecord = await getEntry(
+          durable,
+          clientRecordKey('c1'),
+          clientRecordSchema,
+          {},
+        );
+        expect(actualRecord).toEqual(c.expectedRecord);
+      } catch (e) {
+        console.log('c.name failed:', c.name);
+        throw e;
+      }
+    });
   }
 });
 
@@ -331,53 +337,50 @@ test('getConnectRequest', () => {
 
   testError(
     'https://www.example.com',
-    'Error: invalid querystring - missing clientID',
+    'invalid querystring - missing clientID',
   );
   testError(
     'https://www.example.com/?clientID=123',
-    'Error: invalid querystring - missing ts',
+    'invalid querystring - missing ts',
   );
 
   let url = 'https://www.example.com/?clientID=123&ts=abc';
-  testError(
-    url,
-    `Error: invalid querystring parameter ts, url: ${url}, got: abc`,
-  );
+  testError(url, `invalid querystring parameter ts, got: abc, url: ${url}`);
   testError(
     'https://www.example.com/?clientID=123&ts=123',
-    'Error: invalid querystring - missing lmid',
+    'invalid querystring - missing lmid',
   );
   testError(
     'https://www.example.com/?clientID=123&ts=123&lmid=456',
-    'Error: invalid querystring - missing wsid',
+    'invalid querystring - missing wsid',
   );
   testError(
     'https://www.example.com/?clientID=123&ts=123&lmid=456&wsid=wsidx',
-    'Error: missing user-data',
+    'missing user-data',
   );
   url = 'https://www.example.com/?clientID=123&ts=123&lmid=456&baseCookie=abc';
   testError(
     url,
-    `Error: invalid querystring parameter baseCookie, url: ${url}, got: abc`,
+    `invalid querystring parameter baseCookie, got: abc, url: ${url}`,
   );
   testError(
     'https://www.example.com/?clientID=123&ts=123&lmid=456&wsid=wsidx',
-    'Error: invalid user-data - failed to decode/parse',
+    'invalid user-data - failed to decode/parse',
     new Headers([[USER_DATA_HEADER_NAME, 'abc']]),
   );
   testError(
     'https://www.example.com/?clientID=123&ts=123&lmid=456&wsid=wsidx',
-    'Error: invalid user-data - missing userID',
+    'invalid user-data - missing userID',
     new Headers([[USER_DATA_HEADER_NAME, '42']]),
   );
   testError(
     'https://www.example.com/?clientID=123&ts=123&lmid=456&wsid=wsidx',
-    'Error: invalid user-data - missing userID',
+    'invalid user-data - missing userID',
     new Headers([[USER_DATA_HEADER_NAME, '{"userID":null}']]),
   );
   testError(
     'https://www.example.com/?clientID=123&ts=123&lmid=456&wsid=wsidx',
-    'Error: invalid user-data - failed to decode/parse',
+    'invalid user-data - failed to decode/parse',
     new Headers([[USER_DATA_HEADER_NAME, '{"userID":"u1}']]),
   );
 

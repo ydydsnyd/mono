@@ -26,9 +26,9 @@ import {createAuthAPIHeaders} from './auth-api-headers.js';
 import {DurableStorage} from '../storage/durable-storage.js';
 import type {CreateRoomRequest} from '../protocol/api/room.js';
 import {
+  closeWithError,
   newWebSocketPair as defaultNewWebSocketPair,
   NewWebSocketPair,
-  sendError,
 } from '../util/socket.js';
 import {
   requireAuthAPIKey,
@@ -43,7 +43,7 @@ import {
 } from './router.js';
 import {addRequestIDFromHeadersOrRandomID} from './request-id.js';
 import {createUnauthorizedResponse} from './create-unauthorized-response.js';
-import type {ErrorKind} from '../protocol/error.js';
+import {ErrorKind} from '../protocol/error.js';
 
 export interface AuthDOOptions {
   roomDO: DurableObjectNamespace;
@@ -319,15 +319,13 @@ export class BaseAuthDO implements DurableObject {
     // TODO should probably unify the way this works with how roomDO connect()
     //   does it.
 
-    const closeWithError = (errorKind: ErrorKind, msg: string) => {
+    const closeWithErrorLocal = (errorKind: ErrorKind, msg: string) => {
       const pair = this._newWebSocketPair();
       const ws = pair[1];
       lc.error?.('accepting connection to send error', url.toString());
       ws.accept();
 
-      lc.error?.('invalid connection request', msg);
-      sendError(ws, errorKind, msg);
-      ws.close();
+      closeWithError(lc, ws, errorKind, msg);
 
       // MDN tells me that the message will be delivered even if we call close
       // immediately after send:
@@ -348,16 +346,16 @@ export class BaseAuthDO implements DurableObject {
     // TODO apparently many of these checks are not tested :(
     const clientID = url.searchParams.get('clientID');
     if (!clientID) {
-      return closeWithError(
-        'InvalidConnectionRequest',
+      return closeWithErrorLocal(
+        ErrorKind.InvalidConnectionRequest,
         'clientID parameter required',
       );
     }
 
     const roomID = url.searchParams.get('roomID');
     if (roomID === null || roomID === '') {
-      return closeWithError(
-        'InvalidConnectionRequest',
+      return closeWithErrorLocal(
+        ErrorKind.InvalidConnectionRequest,
         'roomID parameter required',
       );
     }
@@ -368,7 +366,10 @@ export class BaseAuthDO implements DurableObject {
     try {
       decodedAuth = decodeURIComponent(encodedAuth);
     } catch (e) {
-      return closeWithError('InvalidConnectionRequest', 'malformed auth');
+      return closeWithErrorLocal(
+        ErrorKind.InvalidConnectionRequest,
+        'malformed auth',
+      );
     }
     const auth = decodedAuth;
     return this._authLock.withRead(async () => {
@@ -376,7 +377,10 @@ export class BaseAuthDO implements DurableObject {
       try {
         userData = await this._authHandler(auth, roomID);
       } catch (e) {
-        return closeWithError('Unauthorized', 'authHandler rejected');
+        return closeWithErrorLocal(
+          ErrorKind.Unauthorized,
+          'authHandler rejected',
+        );
       }
       if (!userData || !userData.userID) {
         if (!userData) {
@@ -384,7 +388,7 @@ export class BaseAuthDO implements DurableObject {
         } else if (!userData.userID) {
           lc.info?.('userData returned by authHandler has no userID.');
         }
-        return closeWithError('Unauthorized', 'no userData');
+        return closeWithErrorLocal(ErrorKind.Unauthorized, 'no userData');
       }
 
       // Find the room's objectID so we can connect to it. Do this BEFORE
@@ -414,14 +418,12 @@ export class BaseAuthDO implements DurableObject {
         // In any case, it seems to work just fine to send the message and
         // close before even returning the response.
 
-        sendError(
+        closeWithError(
+          lc,
           ws,
-          roomRecord ? 'RoomClosed' : 'RoomNotFound',
-          roomRecord
-            ? `room is closed: ${roomID}`
-            : `room not found: ${roomID}`,
+          roomRecord ? ErrorKind.RoomClosed : ErrorKind.RoomNotFound,
+          roomID,
         );
-        ws.close();
 
         const responseHeaders = new Headers();
         responseHeaders.set('Sec-WebSocket-Protocol', encodedAuth);
