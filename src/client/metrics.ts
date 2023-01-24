@@ -19,14 +19,17 @@ export class NopMetrics implements Metrics {
   }
 }
 
-export class NopGauge implements Gauge {
+export const nopGauge: Gauge = {
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  set(_value: number): void {}
+  set(_value: number): void {},
+};
+
+export enum Metric {
+  TimeToConnect = 'time_to_connect_ms',
 }
 
-const nopGauge = new NopGauge();
-
-export const TIME_TO_CONNECT_METRIC = 'time_to_connect_sec';
 // This value is used to indicate that the client's last connection attempt
-// failed.
-export const DID_NOT_CONNECT_VALUE = 100;
+// failed. We don't make this -1 becuase we want to stack this never connected
+// state in a graph on top of actual connection times, so it should be greater
+// than any other value.
+export const DID_NOT_CONNECT_VALUE = 100 * 1000;

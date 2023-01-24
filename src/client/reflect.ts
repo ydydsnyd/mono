@@ -22,12 +22,7 @@ import {NullableVersion, nullableVersionSchema} from '../types/version.js';
 import {assert} from '../util/asserts.js';
 import {sleep} from '../util/sleep.js';
 import type {ReflectOptions} from './options.js';
-import {
-  Gauge,
-  DID_NOT_CONNECT_VALUE,
-  NopMetrics,
-  TIME_TO_CONNECT_METRIC,
-} from '../types/metrics.js';
+import {Gauge, DID_NOT_CONNECT_VALUE, NopMetrics, Metric} from './metrics.js';
 import {send} from '../util/socket.js';
 import type {ConnectedMessage} from '../protocol/connected.js';
 import {
@@ -64,7 +59,7 @@ export class Reflect<MD extends MutatorDefs> {
   private readonly _l: Promise<LogContext>;
 
   private readonly _metrics: {
-    timeToConnectSec: Gauge;
+    timeToConnectMs: Gauge;
   };
 
   // Protects _handlePoke. We need pokes to be serialized, otherwise we
@@ -96,7 +91,7 @@ export class Reflect<MD extends MutatorDefs> {
 
   protected _socket: WebSocket | undefined = undefined;
   protected _connectionState: ConnectionState = ConnectionState.Disconnected;
-  // See comment on _metrics.timeToConnectSec for how _connectingStart is used.
+  // See comment on _metrics.timeToConnectMs for how _connectingStart is used.
   protected _connectingStart: number | undefined = undefined;
 
   /**
@@ -121,9 +116,9 @@ export class Reflect<MD extends MutatorDefs> {
     this.onOnlineChange = options.onOnlineChange;
     this.onClose = options.onClose;
 
-    const metrics = options.experimentalMetrics ?? new NopMetrics();
+    const metrics = options.metrics ?? new NopMetrics();
     this._metrics = {
-      // timeToConnectSec measures the time from the call to connect() to receiving
+      // timeToConnectMs measures the time from the call to connect() to receiving
       // the 'connected' ws message. We record the DID_NOT_CONNECT_VALUE if the previous
       // connection attempt failed for any reason.
       //
@@ -142,9 +137,9 @@ export class Reflect<MD extends MutatorDefs> {
       // In that world the metric gauge(s) and bookkeeping like _connectingStart would
       // be encapsulated with the ConnectionState. This will probably happen as part
       // of https://github.com/rocicorp/reflect-server/issues/255.
-      timeToConnectSec: metrics.gauge(TIME_TO_CONNECT_METRIC),
+      timeToConnectMs: metrics.gauge(Metric.TimeToConnect),
     };
-    this._metrics.timeToConnectSec.set(DID_NOT_CONNECT_VALUE);
+    this._metrics.timeToConnectMs.set(DID_NOT_CONNECT_VALUE);
 
     const replicacheOptions: ReplicacheOptions<MD> = {
       auth: options.auth,
@@ -409,9 +404,7 @@ export class Reflect<MD extends MutatorDefs> {
         'Got connected message but connect start time is undefined. This should not happen.',
       );
     } else {
-      this._metrics.timeToConnectSec.set(
-        (Date.now() - this._connectingStart) / 1000,
-      );
+      this._metrics.timeToConnectMs.set(Date.now() - this._connectingStart);
       this._connectingStart = undefined;
     }
 
@@ -463,26 +456,34 @@ export class Reflect<MD extends MutatorDefs> {
 
   private _disconnect(l: LogContext) {
     l.info?.('disconnecting', {navigatorOnline: navigator.onLine});
-    if (this._connectionState === ConnectionState.Connected) {
-      if (this._connectingStart !== undefined) {
-        l.error?.(
-          'disconnect() called while connected but connect start time is defined. This should not happen.',
-        );
-        // this._connectingStart reset below.
-      }
+    switch (this._connectionState) {
+      case ConnectionState.Connected: {
+        if (this._connectingStart !== undefined) {
+          l.error?.(
+            'disconnect() called while connected but connect start time is defined. This should not happen.',
+          );
+          // this._connectingStart reset below.
+        }
 
-      // Only create a new resolver if the one we have was previously resolved,
-      // which happens when the socket became connected.
-      this._connectResolver = resolver();
-      this.onOnlineChange?.(false);
-    } else if (this._connectionState === ConnectionState.Connecting) {
-      if (this._connectingStart === undefined) {
-        l.error?.(
-          'disconnect() called while connecting but connect start time is undefined. This should not happen.',
-        );
-      } else {
-        this._metrics.timeToConnectSec.set(DID_NOT_CONNECT_VALUE);
-        // this._connectingStart reset below.
+        // Only create a new resolver if the one we have was previously resolved,
+        // which happens when the socket became connected.
+        this._connectResolver = resolver();
+        this.onOnlineChange?.(false);
+        break;
+      }
+      case ConnectionState.Connecting: {
+        if (this._connectingStart === undefined) {
+          l.error?.(
+            'disconnect() called while connecting but connect start time is undefined. This should not happen.',
+          );
+        } else {
+          this._metrics.timeToConnectMs.set(DID_NOT_CONNECT_VALUE);
+          // this._connectingStart reset below.
+        }
+        break;
+      }
+      case ConnectionState.Disconnected: {
+        l.error?.('disconnect() called while disconnected');
       }
     }
 

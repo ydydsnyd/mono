@@ -1,5 +1,5 @@
 import type {LogLevel, LogSink, MutatorDefs} from 'replicache';
-import type {Metrics} from '../types/metrics.js';
+import type {Metrics} from './metrics.js';
 import type {OnClose} from './reflect.js';
 
 /**
@@ -174,8 +174,8 @@ export interface ReflectOptions<MD extends MutatorDefs> {
   onClose?: OnClose | null | undefined;
 
   /**
-   * experimentalMetrics is the interface by which Reflect instantiates metrics
-   * to record important events.  This is experimental and may change.
+   * metrics is the interface by which Reflect instantiates metrics
+   * to record important events.
    *
    * It is expected that the caller has arranged for the Metrics to be periodically
    * reported to a server. You can use https://github.com/rocicorp/datadog-util
@@ -195,5 +195,5 @@ export interface ReflectOptions<MD extends MutatorDefs> {
    *
    * If experimentalMetrics is undefined, the default implementation is a no-op.
    */
-  experimentalMetrics?: Metrics | undefined;
+  metrics?: Metrics | undefined;
 }

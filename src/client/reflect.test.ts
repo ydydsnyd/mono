@@ -22,10 +22,7 @@ import {
 } from './test-utils.js';
 // Why use fakes when we can use the real thing!
 import {Metrics, gaugeValue, Gauge} from '@rocicorp/datadog-util';
-import {
-  DID_NOT_CONNECT_VALUE,
-  TIME_TO_CONNECT_METRIC,
-} from '../types/metrics.js';
+import {DID_NOT_CONNECT_VALUE, Metric} from './metrics.js';
 import {assertNumber} from '../util/asserts.js';
 import {NumericErrorKind, errorKindToString} from '../protocol/error.js';
 
@@ -400,14 +397,14 @@ test('poke log context includes requestID', async () => {
 test('timeToConnect updated when connected', async () => {
   const url = 'ws://example.com/';
   const m = new Metrics();
-  const g = m.gauge(TIME_TO_CONNECT_METRIC);
+  const g = m.gauge(Metric.TimeToConnect);
   clock.setSystemTime(1000 * 1000);
   const r = reflectForTest({
     socketOrigin: url,
     auth: '',
     userID: 'user-id',
     roomID: 'room-id',
-    experimentalMetrics: m,
+    metrics: m,
   });
   expect(val(g)).to.equal(DID_NOT_CONNECT_VALUE);
 
@@ -418,8 +415,7 @@ test('timeToConnect updated when connected', async () => {
   clock.setSystemTime(start + 42 * 1000);
   r.triggerConnected();
   await tickAFewTimes(clock);
-  // Gauge value is in seconds.
-  expect(val(g)).to.equal(42);
+  expect(val(g)).to.equal(42 * 1000);
 
   // Ensure it gets set when we reconnect.
   r.triggerClose();
@@ -433,7 +429,7 @@ test('timeToConnect updated when connected', async () => {
   r.triggerConnected();
   await tickAFewTimes(clock);
   // Gauge value is in seconds.
-  expect(val(g)).to.equal(666);
+  expect(val(g)).to.equal(666 * 1000);
 });
 
 function val(g: Gauge) {
@@ -447,14 +443,14 @@ function val(g: Gauge) {
 test('timeToConnect updated to DID_NOT_CONNECT when connect fails', async () => {
   const url = 'ws://example.com/';
   const m = new Metrics();
-  const g = m.gauge(TIME_TO_CONNECT_METRIC);
+  const g = m.gauge(Metric.TimeToConnect);
   clock.setSystemTime(1000 * 1000);
   const r = reflectForTest({
     socketOrigin: url,
     auth: '',
     userID: 'user-id',
     roomID: 'room-id',
-    experimentalMetrics: m,
+    metrics: m,
   });
 
   await tickAFewTimes(clock);
