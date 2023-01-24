@@ -10,7 +10,7 @@ import {
 import {handleMessage} from '../../src/server/message.js';
 import {assert} from '../util/asserts.js';
 import {randomID} from '../util/rand.js';
-import {ErrorKind} from '../protocol/error.js';
+import {NumericErrorKind} from '../protocol/error.js';
 
 describe('handleMessage', () => {
   type Case = {
@@ -18,7 +18,7 @@ describe('handleMessage', () => {
     data: string;
     clients?: ClientMap;
     clientID?: ClientID;
-    expectedErrorKind?: ErrorKind;
+    expectedErrorKind?: NumericErrorKind;
     expectedErrorMessage?: string;
     expectedPendingMutations?: Mutation[];
     expectSocketClosed?: boolean;
@@ -30,7 +30,7 @@ describe('handleMessage', () => {
       data: '',
       expectedErrorMessage: JSON.stringify([
         'error',
-        ErrorKind.InvalidMessage,
+        NumericErrorKind.InvalidMessage,
         'SyntaxError: Unexpected end of JSON input',
       ]),
     },
@@ -39,7 +39,7 @@ describe('handleMessage', () => {
       data: '[]',
       expectedErrorMessage: JSON.stringify([
         'error',
-        ErrorKind.InvalidMessage,
+        NumericErrorKind.InvalidMessage,
         'StructError: Expected the value to satisfy a union of `tuple | tuple`, but received: ',
       ]),
     },
@@ -76,7 +76,7 @@ describe('handleMessage', () => {
       // This error message is not great
       expectedErrorMessage: JSON.stringify([
         'error',
-        ErrorKind.InvalidMessage,
+        NumericErrorKind.InvalidMessage,
         'StructError: Expected the value to satisfy a union of `tuple | tuple`, but received: push,[object Object]',
       ]),
     },
@@ -95,7 +95,7 @@ describe('handleMessage', () => {
       ]),
       clients: new Map(),
       clientID: 'c1',
-      expectedErrorKind: ErrorKind.ClientNotFound,
+      expectedErrorKind: NumericErrorKind.ClientNotFound,
       expectedErrorMessage: 'c1',
       expectSocketClosed: true,
     },
@@ -104,7 +104,7 @@ describe('handleMessage', () => {
       data: JSON.stringify(['ping', {}]),
       clients: new Map(),
       clientID: 'c1',
-      expectedErrorKind: ErrorKind.ClientNotFound,
+      expectedErrorKind: NumericErrorKind.ClientNotFound,
       expectedErrorMessage: 'c1',
       expectSocketClosed: true,
     },

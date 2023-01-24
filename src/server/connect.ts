@@ -19,7 +19,7 @@ import type {DurableStorage} from '../storage/durable-storage.js';
 import {compareVersions, getVersion} from '../types/version.js';
 import {send, closeWithError} from '../util/socket.js';
 import {assert} from '../util/asserts.js';
-import {ErrorKind} from '../protocol/error.js';
+import {NumericErrorKind} from '../protocol/error.js';
 
 export type MessageHandler = (
   lc: LogContext,
@@ -55,7 +55,7 @@ export async function handleConnection(
 ) {
   lc.info?.('roomDO: handling connect', url.toString());
   const closeWithErrorLocal = (msg: string) => {
-    closeWithError(lc, ws, ErrorKind.InvalidConnectionRequest, msg);
+    closeWithError(lc, ws, NumericErrorKind.InvalidConnectionRequest, msg);
   };
 
   const {result, error} = getConnectRequest(url, headers);

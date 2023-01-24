@@ -1,12 +1,16 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {Downstream} from '../protocol/down.js';
-import {ErrorKind, errorKindToString, ErrorMessage} from '../protocol/error.js';
+import {
+  NumericErrorKind,
+  errorKindToString,
+  ErrorMessage,
+} from '../protocol/error.js';
 import type {Socket} from '../types/client-state.js';
 
 export function sendError(
   lc: LogContext,
   ws: Socket,
-  kind: ErrorKind,
+  kind: NumericErrorKind,
   message = '',
 ) {
   const data: ErrorMessage = ['error', kind, message];
@@ -23,7 +27,7 @@ export function sendError(
 export function closeWithError(
   lc: LogContext,
   ws: Socket,
-  kind: ErrorKind,
+  kind: NumericErrorKind,
   message = '',
 ) {
   // One problem here is that we cannot send arbitrary data on close. If we need that

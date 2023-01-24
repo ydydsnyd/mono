@@ -1,5 +1,5 @@
 import {test, expect} from '@jest/globals';
-import {ErrorKind} from '../protocol/error.js';
+import {NumericErrorKind} from '../protocol/error.js';
 import {client, createSilentLogContext, Mocket} from '../util/test-utils.js';
 import {handleAuthInvalidate} from './auth-invalidate.js';
 
@@ -18,7 +18,9 @@ test('without userId closes all connections and sends each an error message', ()
   handleAuthInvalidate(createSilentLogContext(), clients);
   for (const client of clients.values()) {
     const mocket = client.socket as Mocket;
-    expect(mocket.log).toEqual([['close', ErrorKind.AuthInvalidated, '']]);
+    expect(mocket.log).toEqual([
+      ['close', NumericErrorKind.AuthInvalidated, ''],
+    ]);
   }
 });
 
@@ -28,7 +30,9 @@ test('with userId closes all connections for that userID and sends each an error
   for (const client of clients.values()) {
     const mocket = client.socket as Mocket;
     if (client.userData.userID === 'testUserID2') {
-      expect(mocket.log).toEqual([['close', ErrorKind.AuthInvalidated, '']]);
+      expect(mocket.log).toEqual([
+        ['close', NumericErrorKind.AuthInvalidated, ''],
+      ]);
     } else {
       expect(mocket.log).toEqual([]);
     }

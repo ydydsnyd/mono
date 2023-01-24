@@ -27,7 +27,7 @@ import {
   newMigrateRoomRequest,
   newRoomStatusRequest,
 } from '../client/room.js';
-import {ErrorKind} from '../protocol/error.js';
+import {NumericErrorKind} from '../protocol/error.js';
 
 const TEST_AUTH_API_KEY = 'TEST_REFLECT_AUTH_API_KEY_TEST';
 const {authDO} = getMiniflareBindings();
@@ -860,7 +860,7 @@ test("connect won't connect to a room that doesn't exist", async () => {
 
   expect(response.status).toEqual(101);
   expect(serverWS.log).toEqual([
-    ['close', ErrorKind.RoomNotFound, 'testRoomID1'],
+    ['close', NumericErrorKind.RoomNotFound, 'testRoomID1'],
   ]);
   expect((await storage.list({prefix: 'connection/'})).size).toEqual(0);
 });
@@ -943,7 +943,7 @@ test('connect wont connect to a room that is closed', async () => {
 
   expect(response.status).toEqual(101);
   expect(serverWS.log).toEqual([
-    ['close', ErrorKind.RoomClosed, 'testRoomID1'],
+    ['close', NumericErrorKind.RoomClosed, 'testRoomID1'],
   ]);
 });
 
@@ -1032,7 +1032,7 @@ test('connect pipes 401 over ws without calling Room DO if authHandler rejects',
   expect(response.headers.get('Sec-WebSocket-Protocol')).toEqual(testAuth);
   expect(response.webSocket).toBe(clientWS);
   expect(serverWS.log).toEqual([
-    ['close', ErrorKind.Unauthorized, 'authHandler rejected'],
+    ['close', NumericErrorKind.Unauthorized, 'authHandler rejected'],
   ]);
 });
 
