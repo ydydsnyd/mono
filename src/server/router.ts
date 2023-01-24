@@ -1,5 +1,6 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {MaybePromise, ReadonlyJSONValue} from 'replicache';
+import {Struct, validate} from 'superstruct';
 import {createUnauthorizedResponse} from './create-unauthorized-response.js';
 
 /**
@@ -146,4 +147,53 @@ export function asJSON<Context extends BaseContext>(
 ) {
   return async (ctx: Context, req: Request) =>
     new Response(JSON.stringify(await next(ctx, req)));
+}
+
+export function withBody<T, Context extends BaseContext, Resp>(
+  struct: Struct<T>,
+  next: Handler<Context & {body: T}, Resp>,
+) {
+  return async (req: Request, ctx: Context) => {
+    const {value, errorResponse} = await validateBody(req, struct);
+    if (errorResponse) {
+      return errorResponse;
+    }
+    return next({...ctx, body: value}, req);
+  };
+}
+
+type ValidateResult<T> =
+  | {value: T; errorResponse: undefined}
+  | {value: undefined; errorResponse: Response};
+
+async function validateBody<T>(
+  request: Request,
+  struct: Struct<T>,
+): Promise<ValidateResult<T>> {
+  let json;
+  try {
+    json = await request.json();
+  } catch (e) {
+    console.log('error parsing body as json', e);
+    return {
+      errorResponse: new Response('Body must be valid json.', {status: 400}),
+      value: undefined,
+    };
+  }
+  const validateResult = validate(json, struct);
+  if (validateResult[0]) {
+    return {
+      errorResponse: new Response(
+        'Body schema error. ' + validateResult[0].message,
+        {
+          status: 400,
+        },
+      ),
+      value: undefined,
+    };
+  }
+  return {
+    value: validateResult[1],
+    errorResponse: undefined,
+  };
 }

@@ -1,5 +1,5 @@
 import {test, expect} from '@jest/globals';
-import type {ReadonlyJSONValue} from 'replicache';
+import type {JSONObject, ReadonlyJSONValue} from 'replicache';
 import {createSilentLogContext} from '../util/test-utils.js';
 import {
   asJSON,
@@ -10,8 +10,10 @@ import {
   post,
   requireAuthAPIKey,
   Router,
+  withBody,
   withRoomID,
 } from './router.js';
+import * as s from 'superstruct';
 
 test('Router', async () => {
   const router = new Router();
@@ -367,6 +369,71 @@ test('withRoomID', async () => {
     try {
       const response = await handler(ctx, request);
       result = {result: {status: response.status, text: await response.text()}};
+    } catch (e) {
+      result = {error: String(e)};
+    }
+
+    expect(result).toEqual(c.expected);
+  }
+});
+
+test('withBody', async () => {
+  type Case = {
+    body: JSONObject | undefined | string;
+    expected: {text: string; status: number} | {error: string};
+  };
+
+  const cases: Case[] = [
+    {
+      body: {userID: 'foo'},
+      expected: {text: 'userID:foo', status: 200},
+    },
+    {
+      body: {badUserId: 'bar'},
+      expected: {
+        status: 400,
+        text: 'Body schema error. At path: userID -- Expected a string, but received: undefined',
+      },
+    },
+    {
+      body: undefined,
+      expected: {
+        status: 400,
+        text: 'Body must be valid json.',
+      },
+    },
+    {
+      body: 'foo',
+      expected: {
+        status: 400,
+        text: 'Body schema error. Expected an object, but received: "foo"',
+      },
+    },
+  ];
+
+  const userIdStruct = s.type({userID: s.string()});
+  const handler = withBody(userIdStruct, ctx => {
+    const {body} = ctx;
+    const {userID} = body;
+    return new Response(`userID:${userID}`, {status: 200});
+  });
+
+  for (const c of cases) {
+    const url = `https://roci.dev/`;
+    const request = new Request(url, {
+      method: 'post',
+      body: JSON.stringify(c.body),
+    });
+    const ctx = {
+      lc: createSilentLogContext(),
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      parsedURL: new URLPattern().exec()!,
+    };
+
+    let result: Case['expected'] | undefined = undefined;
+    try {
+      const response = await handler(request, ctx);
+      result = {status: response.status, text: await response.text()};
     } catch (e) {
       result = {error: String(e)};
     }
