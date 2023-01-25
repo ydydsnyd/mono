@@ -1,16 +1,12 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {Downstream} from '../protocol/down.js';
-import {
-  NumericErrorKind,
-  errorKindToString,
-  ErrorMessage,
-} from '../protocol/error.js';
+import type {ErrorKind, ErrorMessage} from '../protocol/error.js';
 import type {Socket} from '../types/client-state.js';
 
 export function sendError(
   lc: LogContext,
   ws: Socket,
-  kind: NumericErrorKind,
+  kind: ErrorKind,
   message = '',
 ) {
   sendErrorInternal(lc, 'Sending error on socket', ws, kind, message);
@@ -22,7 +18,7 @@ export function sendError(
 export function closeWithError(
   lc: LogContext,
   ws: Socket,
-  kind: NumericErrorKind,
+  kind: ErrorKind,
   message = '',
 ) {
   sendErrorInternal(lc, 'Closing socket with error', ws, kind, message);
@@ -33,12 +29,12 @@ function sendErrorInternal(
   lc: LogContext,
   logMessage: string,
   ws: Socket,
-  kind: NumericErrorKind,
+  kind: ErrorKind,
   message = '',
 ) {
   const data: ErrorMessage = ['error', kind, message];
   lc.debug?.(logMessage, {
-    kind: errorKindToString(kind),
+    kind,
     message,
   });
   send(ws, data);

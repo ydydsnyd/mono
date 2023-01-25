@@ -39,7 +39,7 @@ import {
 } from './router.js';
 import {addRequestIDFromHeadersOrRandomID} from './request-id.js';
 import {createUnauthorizedResponse} from './create-unauthorized-response.js';
-import {NumericErrorKind} from '../protocol/error.js';
+import {ErrorKind} from '../protocol/error.js';
 
 export interface AuthDOOptions {
   roomDO: DurableObjectNamespace;
@@ -303,7 +303,7 @@ export class BaseAuthDO implements DurableObject {
     // TODO should probably unify the way this works with how roomDO connect()
     //   does it.
 
-    const closeWithErrorLocal = (errorKind: NumericErrorKind, msg: string) => {
+    const closeWithErrorLocal = (errorKind: ErrorKind, msg: string) => {
       const pair = new WebSocketPair();
       const ws = pair[1];
       lc.error?.('accepting connection to send error', url.toString());
@@ -331,7 +331,7 @@ export class BaseAuthDO implements DurableObject {
     const clientID = url.searchParams.get('clientID');
     if (!clientID) {
       return closeWithErrorLocal(
-        NumericErrorKind.InvalidConnectionRequest,
+        ErrorKind.InvalidConnectionRequest,
         'clientID parameter required',
       );
     }
@@ -339,7 +339,7 @@ export class BaseAuthDO implements DurableObject {
     const roomID = url.searchParams.get('roomID');
     if (roomID === null || roomID === '') {
       return closeWithErrorLocal(
-        NumericErrorKind.InvalidConnectionRequest,
+        ErrorKind.InvalidConnectionRequest,
         'roomID parameter required',
       );
     }
@@ -351,7 +351,7 @@ export class BaseAuthDO implements DurableObject {
       decodedAuth = decodeURIComponent(encodedAuth);
     } catch (e) {
       return closeWithErrorLocal(
-        NumericErrorKind.InvalidConnectionRequest,
+        ErrorKind.InvalidConnectionRequest,
         'malformed auth',
       );
     }
@@ -362,7 +362,7 @@ export class BaseAuthDO implements DurableObject {
         userData = await this._authHandler(auth, roomID);
       } catch (e) {
         return closeWithErrorLocal(
-          NumericErrorKind.Unauthorized,
+          ErrorKind.Unauthorized,
           'authHandler rejected',
         );
       }
@@ -372,10 +372,7 @@ export class BaseAuthDO implements DurableObject {
         } else if (!userData.userID) {
           lc.info?.('userData returned by authHandler has no userID.');
         }
-        return closeWithErrorLocal(
-          NumericErrorKind.Unauthorized,
-          'no userData',
-        );
+        return closeWithErrorLocal(ErrorKind.Unauthorized, 'no userData');
       }
 
       // Find the room's objectID so we can connect to it. Do this BEFORE
@@ -408,9 +405,7 @@ export class BaseAuthDO implements DurableObject {
         closeWithError(
           lc,
           ws,
-          roomRecord
-            ? NumericErrorKind.RoomClosed
-            : NumericErrorKind.RoomNotFound,
+          roomRecord ? ErrorKind.RoomClosed : ErrorKind.RoomNotFound,
           roomID,
         );
 

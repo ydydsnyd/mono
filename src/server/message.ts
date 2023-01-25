@@ -5,7 +5,7 @@ import {sendError, closeWithError} from '../util/socket.js';
 import {handlePush, type ProcessUntilDone} from './push.js';
 import {handlePing} from './ping.js';
 import {superstructAssert} from '../util/superstruct.js';
-import {NumericErrorKind} from '../protocol/error.js';
+import {ErrorKind} from '../protocol/error.js';
 
 /**
  * Handles an upstream message coming into the server by dispatching to the
@@ -23,7 +23,7 @@ export function handleMessage(
   try {
     message = getMessage(data);
   } catch (e) {
-    sendError(lc, ws, NumericErrorKind.InvalidMessage, String(e));
+    sendError(lc, ws, ErrorKind.InvalidMessage, String(e));
     return;
   }
 
@@ -32,7 +32,7 @@ export function handleMessage(
     // This is not expected to ever occur.  However if it does no pushes will
     // ever succeed over this connection since it is missing an entry in
     // ClientMap.  Close connection so client can try to reconnect and recover.
-    closeWithError(lc, ws, NumericErrorKind.ClientNotFound, clientID);
+    closeWithError(lc, ws, ErrorKind.ClientNotFound, clientID);
     return;
   }
 

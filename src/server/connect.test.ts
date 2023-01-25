@@ -17,7 +17,7 @@ import {USER_DATA_HEADER_NAME} from './auth.js';
 import {encodeHeaderValue} from '../util/headers.js';
 import {DurableStorage} from '../storage/durable-storage.js';
 import {NullableVersion, putVersion} from '../../src/types/version.js';
-import {NumericErrorKind} from '../protocol/error.js';
+import {ErrorKind} from '../protocol/error.js';
 
 const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();
@@ -67,7 +67,7 @@ describe('handleConnection', () => {
     name: string;
     url: string;
     headers: Headers;
-    expectErrorKind?: NumericErrorKind;
+    expectErrorKind?: ErrorKind;
     expectErrorMessage?: string;
     existingRecord?: ClientRecord;
     expectedRecord?: ClientRecord;
@@ -83,7 +83,7 @@ describe('handleConnection', () => {
       name: 'invalid clientid',
       url: 'http://google.com/?baseCookie=1&timestamp=t1&lmid=0&wsid=wsidx',
       headers: createHeadersWithValidUserData('u1'),
-      expectErrorKind: NumericErrorKind.InvalidConnectionRequest,
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
       expectErrorMessage: 'invalid querystring - missing clientID',
       existingClients: new Map(),
       expectedClients: () => new Map(),
@@ -93,7 +93,7 @@ describe('handleConnection', () => {
       name: 'invalid timestamp',
       url: 'http://google.com/?clientID=c1&baseCookie=1&lmid=0&wsid=wsidx',
       headers: createHeadersWithValidUserData('u1'),
-      expectErrorKind: NumericErrorKind.InvalidConnectionRequest,
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
       expectErrorMessage: 'invalid querystring - missing ts',
       existingClients: new Map(),
       expectedClients: () => new Map(),
@@ -103,7 +103,7 @@ describe('handleConnection', () => {
       name: 'invalid (non-numeric) timestamp',
       url: 'http://google.com/?clientID=c1&baseCookie=1&ts=xx&lmid=0&wsid=wsidx',
       headers: createHeadersWithValidUserData('u1'),
-      expectErrorKind: NumericErrorKind.InvalidConnectionRequest,
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
       expectErrorMessage:
         'invalid querystring parameter ts, got: xx, url: http://google.com/?clientID=c1&baseCookie=1&ts=xx&lmid=0&wsid=wsidx',
       existingClients: new Map(),
@@ -114,7 +114,7 @@ describe('handleConnection', () => {
       name: 'missing lmid',
       url: 'http://google.com/?clientID=c1&baseCookie=1&ts=123',
       headers: createHeadersWithValidUserData('u1'),
-      expectErrorKind: NumericErrorKind.InvalidConnectionRequest,
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
       expectErrorMessage: 'invalid querystring - missing lmid',
       existingClients: new Map(),
       expectedClients: () => new Map(),
@@ -124,7 +124,7 @@ describe('handleConnection', () => {
       name: 'invalid (non-numeric) lmid',
       url: 'http://google.com/?clientID=c1&baseCookie=1&ts=123&lmid=xx',
       headers: createHeadersWithValidUserData('u1'),
-      expectErrorKind: NumericErrorKind.InvalidConnectionRequest,
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
       expectErrorMessage:
         'invalid querystring parameter lmid, got: xx, url: http://google.com/?clientID=c1&baseCookie=1&ts=123&lmid=xx',
       existingClients: new Map(),
@@ -135,7 +135,7 @@ describe('handleConnection', () => {
       name: 'missing wsid',
       url: 'http://google.com/?clientID=c1&baseCookie=1&ts=123&lmid=12',
       headers: createHeadersWithValidUserData('u1'),
-      expectErrorKind: NumericErrorKind.InvalidConnectionRequest,
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
       expectErrorMessage: 'invalid querystring - missing wsid',
       existingClients: new Map(),
       expectedClients: () => new Map(),
@@ -155,7 +155,7 @@ describe('handleConnection', () => {
       name: 'baseCookie: 1 and version null',
       url: 'http://google.com/?clientID=c1&baseCookie=1&ts=42&lmid=0&wsid=wsidx',
       headers: createHeadersWithValidUserData('u1'),
-      expectErrorKind: NumericErrorKind.InvalidConnectionRequest,
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
       expectErrorMessage: `Unexpected baseCookie`,
       existingClients: new Map(),
       expectedClients: () => new Map(),
@@ -165,7 +165,7 @@ describe('handleConnection', () => {
       name: 'baseCookie: 2 and version: 1',
       url: 'http://google.com/?clientID=c1&baseCookie=2&ts=42&lmid=0&wsid=wsidx',
       headers: createHeadersWithValidUserData('u1'),
-      expectErrorKind: NumericErrorKind.InvalidConnectionRequest,
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
       expectErrorMessage: `Unexpected baseCookie`,
       existingClients: new Map(),
       expectedClients: () => new Map(),
@@ -204,7 +204,7 @@ describe('handleConnection', () => {
       name: 'missing user data',
       url: 'http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0&wsid=wsidx',
       headers: new Headers(),
-      expectErrorKind: NumericErrorKind.InvalidConnectionRequest,
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
       expectErrorMessage: 'missing user-data',
       existingClients: new Map(),
       expectedClients: () => new Map(),
@@ -214,7 +214,7 @@ describe('handleConnection', () => {
       name: 'invalid user data',
       url: 'http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0&wsid=wsidx',
       headers: createHeadersWithInvalidUserData(),
-      expectErrorKind: NumericErrorKind.InvalidConnectionRequest,
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
       expectErrorMessage: 'invalid user-data - failed to decode/parse',
       existingClients: new Map(),
       expectedClients: () => new Map(),
@@ -224,7 +224,7 @@ describe('handleConnection', () => {
       name: 'user data missing userID',
       url: 'http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0&wsid=wsidx',
       headers: createHeadersWithUserDataMissingUserID(),
-      expectErrorKind: NumericErrorKind.InvalidConnectionRequest,
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
       expectErrorMessage: 'invalid user-data - missing userID',
       existingClients: new Map(),
       expectedClients: () => new Map(),
@@ -234,7 +234,7 @@ describe('handleConnection', () => {
       name: 'user data with empty userID',
       url: 'http://google.com/?clientID=c1&baseCookie=7&ts=42&lmid=0&wsid=wsidx',
       headers: createHeadersWithUserDataWithEmptyUserID(),
-      expectErrorKind: NumericErrorKind.InvalidConnectionRequest,
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
       expectErrorMessage: 'invalid user-data - missing userID',
       existingClients: new Map(),
       expectedClients: () => new Map(),
@@ -247,7 +247,7 @@ describe('handleConnection', () => {
       expectedClients: socket => new Map([freshClient('c1', 'u1', socket)]),
       headers: createHeadersWithValidUserData('u1'),
       existingRecord: clientRecord(7, 0),
-      expectErrorKind: NumericErrorKind.InvalidConnectionRequest,
+      expectErrorKind: ErrorKind.InvalidConnectionRequest,
       expectErrorMessage: `Unexpected lmid`,
       version: 7,
     },
