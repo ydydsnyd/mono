@@ -1,6 +1,5 @@
 import type {LogLevel, LogSink, MutatorDefs} from 'replicache';
 import type {Metrics} from './metrics.js';
-import type {OnClose} from './reflect.js';
 
 /**
  * Configuration for [[Reflect]].
@@ -165,13 +164,7 @@ export interface ReflectOptions<MD extends MutatorDefs> {
   /**
    * `onOnlineChange` is called when the Reflect instance's online status changes
    */
-  onOnlineChange?: ((online: boolean) => void) | null | undefined;
-
-  /**
-   * `onSync` is called when the Reflect instance is closed. See
-   * {@link Reflect.onClose} for more details.
-   */
-  onClose?: OnClose | null | undefined;
+  onOnlineChange?: ((online: boolean) => void) | undefined;
 
   /**
    * metrics is the interface by which Reflect instantiates metrics

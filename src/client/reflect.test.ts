@@ -23,8 +23,6 @@ import {
 // Why use fakes when we can use the real thing!
 import {Metrics, gaugeValue, Gauge} from '@rocicorp/datadog-util';
 import {DID_NOT_CONNECT_VALUE, Metric} from './metrics.js';
-import {assertNumber} from '../util/asserts.js';
-import {NumericErrorKind, errorKindToString} from '../protocol/error.js';
 
 let clock: sinon.SinonFakeTimers;
 
@@ -469,39 +467,8 @@ test('timeToConnect updated to DID_NOT_CONNECT when connect fails', async () => 
 });
 
 function asNumber(v: unknown): number {
-  assertNumber(v);
+  if (typeof v !== 'number') {
+    throw new Error('not a number');
+  }
   return v;
 }
-
-test('Close with error should close instance and call onClose', async () => {
-  const logSpy = sinon.spy();
-  const onCloseSpy = sinon.spy();
-
-  const r = reflectForTest({
-    logSinks: [{log: logSpy}],
-    logLevel: 'error',
-    onClose: onCloseSpy,
-  });
-  await r.waitForSocket(clock);
-
-  r.triggerClose({
-    code: NumericErrorKind.ClientNotFound,
-    reason: 'Client ~Found',
-    wasClean: false,
-  });
-  await tickAFewTimes(clock);
-
-  expect(r.closed).true;
-
-  expect(logSpy.callCount).equal(1);
-  expect(logSpy.lastCall.args).contain('roomID=test-room-id');
-  expect(logSpy.lastCall.args).contain('Got socket close event with error');
-  expect(logSpy.lastCall.args).contain('ClientNotFound');
-
-  expect(onCloseSpy.callCount).equal(1);
-  expect(onCloseSpy.lastCall.args).deep.equal([
-    false,
-    errorKindToString(NumericErrorKind.ClientNotFound),
-    'Client ~Found',
-  ]);
-});

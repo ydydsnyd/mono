@@ -77,9 +77,9 @@ export class TestReflect<MD extends MutatorDefs> extends Reflect<MD> {
     this.triggerMessage(msg);
   }
 
-  triggerClose(options?: CloseEventInit) {
+  triggerClose() {
     assert(this._socket);
-    this._socket.dispatchEvent(new CloseEvent('close', options));
+    this._socket.dispatchEvent(new CloseEvent('close'));
   }
 
   get pusher() {
