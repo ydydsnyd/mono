@@ -584,18 +584,19 @@ describe('reportMetrics', () => {
             `Response body: ${await response.text()}`,
         );
       }
+
       if (tc.expectFetch) {
         expect(fetchSpy).toHaveBeenCalledTimes(1);
-        expect(fetchSpy).toHaveBeenCalledWith(
-          expect.stringMatching('https://api.datadoghq.com'),
-          {
-            body: tc.body ? JSON.stringify(tc.body) : undefined,
-            // eslint-disable-next-line @typescript-eslint/naming-convention
-            headers: {'DD-API-KEY': ddKey, 'Content-Type': 'application/json'},
-            signal: null,
-            method: 'POST',
-          },
-        );
+        const gotURL = fetchSpy.mock.calls[0][0];
+        expect(gotURL.toString()).toContain('api.datadoghq.com');
+        const gotOptions = fetchSpy.mock.calls[0][1];
+        expect(gotOptions).toEqual({
+          body: tc.body ? JSON.stringify(tc.body) : undefined,
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          headers: {'DD-API-KEY': ddKey, 'Content-Type': 'application/json'},
+          signal: null,
+          method: 'POST',
+        });
       } else {
         expect(fetchSpy).not.toHaveBeenCalled();
       }

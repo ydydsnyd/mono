@@ -12,7 +12,11 @@ import {createAuthAPIHeaders} from './auth-api-headers.js';
 import {dispatch, paths, validateBody} from './dispatch.js';
 import {AUTH_ROUTES} from './auth-do.js';
 import {ReportMetrics, reportMetricsSchema} from '../types/report-metrics.js';
-import {report} from '@rocicorp/datadog-util';
+import {
+  DD_AUTH_HEADER_NAME,
+  DD_DISTRIBUTION_METRIC_URL,
+  report,
+} from '@rocicorp/datadog-util';
 
 export const WORKER_ROUTES = {
   reportMetrics: {
@@ -268,8 +272,18 @@ async function reportMetrics(ctx: BaseContext & WithEnv, request: Request) {
     return new Response('ok');
   }
 
-  const resp = await report(ctx.env.REFLECT_DATADOG_API_KEY, body.series);
-  if (!resp.ok) {
+  const resp = await report(
+    DD_DISTRIBUTION_METRIC_URL,
+    {
+      [DD_AUTH_HEADER_NAME]: ctx.env.REFLECT_DATADOG_API_KEY,
+    },
+    body.series,
+  );
+  if (resp.ok) {
+    ctx.lc.debug?.(
+      `Successfully proxied metrics report to Datadog: ${resp.status} ${resp.statusText}.`,
+    );
+  } else {
     ctx.lc.info?.(
       `Failed to report metrics to Datadog: ${resp.status} ${resp.statusText}.`,
       'Dropping metrics on the floor.',

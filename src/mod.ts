@@ -1,3 +1,5 @@
+import {WORKER_ROUTES} from './server/worker.js';
+
 export {
   createReflectServer,
   createReflectServerWithoutAuthDO,
@@ -14,6 +16,9 @@ export {
 } from '@rocicorp/logger';
 export {DatadogLogSink} from './util/datadog-log-sink.js';
 export {version} from './util/version.js';
+export const ROUTES = {
+  reportMetrics: WORKER_ROUTES.reportMetrics.path,
+};
 
 // TODO(arv): Only export the types that are actually used.
 // https://github.com/rocicorp/reflect-server/issues/117
