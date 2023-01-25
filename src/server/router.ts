@@ -172,9 +172,14 @@ async function validateBody<T>(
 ): Promise<ValidateResult<T>> {
   let json;
   try {
-    json = await request.json();
+    // Note: if the original request body is not consumed after this clone
+    // then CF complains in the console, "Your worker called response.clone(),
+    // but did not read the body of both clones. <snip>". To eliminate that
+    // log line we could consume the original request body here and then
+    // both create and pass the validated request as well as the body
+    // in case something downstream wants it.
+    json = await request.clone().json();
   } catch (e) {
-    console.log('error parsing body as json', e);
     return {
       errorResponse: new Response('Body must be valid json.', {status: 400}),
       value: undefined,
