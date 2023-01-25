@@ -432,7 +432,7 @@ test('withBody', async () => {
 
     let result: Case['expected'] | undefined = undefined;
     try {
-      const response = await handler(request, ctx);
+      const response = await handler(ctx, request);
       result = {status: response.status, text: await response.text()};
     } catch (e) {
       result = {error: String(e)};

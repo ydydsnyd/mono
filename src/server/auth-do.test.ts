@@ -343,6 +343,49 @@ test('401s if wrong auth api key', async () => {
   }
 });
 
+test('400 bad body requests', async () => {
+  const {testRoomDO, state} = await createCreateRoomTestFixture();
+  const path = AUTH_ROUTES.authInvalidateForUser;
+  const undefinedInvalidateForUserRequest = createBadBodyRequest(
+    path,
+    undefined,
+  );
+  const badInvalidateForUserRequest = createBadBodyRequest(
+    path,
+    JSON.stringify({badUserID: 'foo'}),
+  );
+
+  const requests = [
+    undefinedInvalidateForUserRequest,
+    badInvalidateForUserRequest,
+  ];
+
+  for (const request of requests) {
+    const authDO = new BaseAuthDO({
+      roomDO: testRoomDO,
+      state,
+      authHandler: () => Promise.reject('should not be called'),
+      authApiKey: TEST_AUTH_API_KEY,
+      logSink: new TestLogSink(),
+      logLevel: 'debug',
+    });
+    const response = await authDO.fetch(request);
+    expect(response.status).toEqual(400);
+  }
+});
+
+function createBadBodyRequest(
+  path: string,
+  body: BodyInit | undefined,
+): Request {
+  const url = new URL(path, 'https://roci.dev');
+  return new Request(url.toString(), {
+    method: 'post',
+    headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
+    body,
+  });
+}
+
 test('closeRoom closes an open room', async () => {
   const {testRoomID, testRoomDO, state} = await createCreateRoomTestFixture();
 

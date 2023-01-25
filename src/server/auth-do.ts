@@ -20,6 +20,7 @@ import {
   connectionsResponseSchema,
   InvalidateForRoomRequest,
   InvalidateForUserRequest,
+  invalidateForUserRequestSchema,
 } from '../protocol/api/auth.js';
 import {assert} from 'superstruct';
 import {createAuthAPIHeaders} from './auth-api-headers.js';
@@ -36,6 +37,7 @@ import {
   post,
   BaseContext,
   WithRoomID,
+  withBody,
 } from './router.js';
 import {addRequestIDFromHeadersOrRandomID} from './request-id.js';
 import {createUnauthorizedResponse} from './create-unauthorized-response.js';
@@ -66,6 +68,7 @@ export const AUTH_ROUTES = {
   migrateRoom: '/api/room/v0/room/:roomID/migrate/1',
   forgetRoom: '/api/room/v0/room/:roomID/DANGER/forget',
   authInvalidateAll: '/api/auth/v0/invalidateAll',
+  authInvalidateForUser: '/api/auth/v0/invalidateForUser',
 };
 
 export class BaseAuthDO implements DurableObject {
@@ -260,6 +263,10 @@ export class BaseAuthDO implements DurableObject {
     this._router.register(
       AUTH_ROUTES.authInvalidateAll,
       this._authInvalidateAll,
+    );
+    this._router.register(
+      AUTH_ROUTES.authInvalidateForUser,
+      this._authInvalidateForUser,
     );
   }
 
@@ -510,6 +517,31 @@ export class BaseAuthDO implements DurableObject {
       return response;
     });
   }
+
+  private _authInvalidateForUser = post(
+    this._requireAPIKey(
+      withBody(invalidateForUserRequestSchema, (ctx, req) => {
+        const {lc} = ctx;
+        lc.debug?.(`_authInvalidateForUser waiting for lock.`);
+        return this._authLock.withWrite(async () => {
+          lc.debug?.('got lock.');
+          const connectionKeys = (
+            await this._state.storage.list({
+              prefix: CONNECTION_KEY_PREFIX,
+            })
+          ).keys();
+          // The request to the Room DOs must be completed inside the write lock
+          // to avoid races with connect requests.
+          return this._forwardInvalidateRequest(
+            lc,
+            'authInvalidateForUser',
+            req,
+            [...connectionKeys],
+          );
+        });
+      }),
+    ),
+  );
 
   private _authInvalidateAll = post(
     this._requireAPIKey((ctx, req) => {

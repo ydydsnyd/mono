@@ -3,6 +3,7 @@ import {
   newCreateRoomRequest,
   newDeleteRoomRequest,
   newInvalidateAllAuthRequest,
+  newInvalidateForUserAuthRequest,
 } from '../client/room.js';
 import {createSilentLogContext, TestLogSink} from '../util/test-utils.js';
 import {version} from '../util/version.js';
@@ -131,7 +132,17 @@ test('401s if wrong auth api key', async () => {
     wrongApiKey,
   );
 
-  const testRequests = [deleteRequest, invalidateAllRequest];
+  const invalidateForUserRequest = newInvalidateForUserAuthRequest(
+    'http://example.com/',
+    wrongApiKey,
+    'testUserID',
+  );
+
+  const testRequests = [
+    deleteRequest,
+    invalidateAllRequest,
+    invalidateForUserRequest,
+  ];
 
   for (const testRequest of testRequests) {
     const testLogSink = new TestLogSink();

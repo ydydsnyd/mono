@@ -1,8 +1,6 @@
 import {
   InvalidateForRoomRequest,
   invalidateForRoomRequestSchema,
-  InvalidateForUserRequest,
-  invalidateForUserRequestSchema,
 } from '../protocol/api/auth.js';
 import {Struct, validate} from 'superstruct';
 import type {LogContext} from '@rocicorp/logger';
@@ -37,8 +35,6 @@ export type Handler<T = undefined> = (
 export interface Handlers {
   createRoom: Handler<CreateRoomRequest>;
   connect: Handler;
-
-  authInvalidateForUser: Handler<InvalidateForUserRequest>;
   authInvalidateForRoom: Handler<InvalidateForRoomRequest>;
   authRevalidateConnections?: Handler;
   authConnections?: Handler;
@@ -47,7 +43,6 @@ export interface Handlers {
 export const paths: Readonly<Record<keyof Handlers, string>> = {
   createRoom: '/createRoom',
   connect: '/connect',
-  authInvalidateForUser: '/api/auth/v0/invalidateForUser',
   authInvalidateForRoom: '/api/auth/v0/invalidateForRoom',
   authRevalidateConnections: '/api/auth/v0/revalidateConnections',
   authConnections: '/api/auth/v0/connections',
@@ -118,13 +113,6 @@ export function dispatch(
       );
     case paths.connect:
       return validateAndDispatch('get', noOpValidateBody, handlers.connect);
-    case paths.authInvalidateForUser:
-      return validateAndDispatch(
-        'post',
-        request => validateBody(request, invalidateForUserRequestSchema),
-        handlers.authInvalidateForUser,
-        'authApiKey',
-      );
     case paths.authInvalidateForRoom:
       return validateAndDispatch(
         'post',

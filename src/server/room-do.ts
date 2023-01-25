@@ -15,7 +15,7 @@ import {handleMessage} from './message.js';
 import {randomID} from '../util/rand.js';
 import {version} from '../util/version.js';
 import {dispatch} from './dispatch.js';
-import type {InvalidateForUserRequest} from '../protocol/api/auth.js';
+import {invalidateForUserRequestSchema} from '../protocol/api/auth.js';
 import {closeConnections, getConnections} from './connections.js';
 import type {DisconnectHandler} from './disconnect.js';
 import {DurableStorage} from '../storage/durable-storage.js';
@@ -28,6 +28,7 @@ import {
   Router,
   Handler,
   BaseContext,
+  withBody,
 } from './router.js';
 import {addRequestIDFromHeadersOrRandomID} from './request-id.js';
 
@@ -47,6 +48,7 @@ export interface RoomDOOptions<MD extends MutatorDefs> {
 export const ROOM_ROUTES = {
   deletePath: '/api/room/v0/room/:roomID/delete',
   authInvalidateAll: '/api/auth/v0/invalidateAll',
+  authInvalidateForUser: '/api/auth/v0/invalidateForUser',
 };
 
 export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
@@ -90,6 +92,10 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     this._router.register(
       ROOM_ROUTES.authInvalidateAll,
       this._authInvalidateAll,
+    );
+    this._router.register(
+      ROOM_ROUTES.authInvalidateForUser,
+      this._authInvalidateForUser,
     );
   }
 
@@ -246,19 +252,21 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     return new Response(null, {status: 101, webSocket: clientWS});
   }
 
-  async authInvalidateForUser(
-    lc: LogContext,
-    _request: Request,
-    {userID}: InvalidateForUserRequest,
-  ): Promise<Response> {
-    lc.debug?.(
-      `Closing user ${userID}'s connections fulfilling auth api invalidateForUser request.`,
-    );
-    await this._closeConnections(
-      clientState => clientState.userData.userID === userID,
-    );
-    return new Response('Success', {status: 200});
-  }
+  private _authInvalidateForUser = post(
+    this._requireAPIKey(
+      withBody(invalidateForUserRequestSchema, async ctx => {
+        const {lc, body} = ctx;
+        const {userID} = body;
+        lc.debug?.(
+          `Closing user ${userID}'s connections fulfilling auth api invalidateForUser request.`,
+        );
+        await this._closeConnections(
+          clientState => clientState.userData.userID === userID,
+        );
+        return new Response('Success', {status: 200});
+      }),
+    ),
+  );
 
   async authInvalidateForRoom(
     lc: LogContext,

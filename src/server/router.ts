@@ -153,7 +153,7 @@ export function withBody<T, Context extends BaseContext, Resp>(
   struct: Struct<T>,
   next: Handler<Context & {body: T}, Resp>,
 ) {
-  return async (req: Request, ctx: Context) => {
+  return async (ctx: Context, req: Request) => {
     const {value, errorResponse} = await validateBody(req, struct);
     if (errorResponse) {
       return errorResponse;
