@@ -25,11 +25,7 @@ import type {ReflectOptions} from './options.js';
 import {Gauge, DID_NOT_CONNECT_VALUE, NopMetrics, Metric} from './metrics.js';
 import {send} from '../util/socket.js';
 import type {ConnectedMessage} from '../protocol/connected.js';
-import {
-  castToErrorKind,
-  errorKindToString,
-  ErrorMessage,
-} from '../protocol/error.js';
+import type {ErrorMessage} from '../protocol/error.js';
 
 export const enum ConnectionState {
   Disconnected,
@@ -321,16 +317,7 @@ export class Reflect<MD extends MutatorDefs> {
       await this._l,
     );
     const {code, reason, wasClean} = e;
-    const kind = castToErrorKind(code);
-    if (kind) {
-      l.error?.('Got socket close event with error', errorKindToString(kind), {
-        code,
-        reason,
-        wasClean,
-      });
-    } else {
-      l.info?.('Got socket close event', {code, reason, wasClean});
-    }
+    l.info?.('Got socket close event', {code, reason, wasClean});
     this._disconnect(l);
   };
 
@@ -338,7 +325,7 @@ export class Reflect<MD extends MutatorDefs> {
     lc: LogContext,
     downMessage: ErrorMessage,
   ): never {
-    const s = `${errorKindToString(downMessage[1])}: ${downMessage[2]}}`;
+    const s = `${downMessage[1]}: ${downMessage[2]}}`;
     lc.error?.(s);
     throw new Error(s);
   }
