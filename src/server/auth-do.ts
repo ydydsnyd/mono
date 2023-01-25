@@ -19,7 +19,6 @@ import {
   ConnectionsResponse,
   connectionsResponseSchema,
   InvalidateForRoomRequest,
-  InvalidateForUserRequest,
   invalidateForUserRequestSchema,
 } from '../protocol/api/auth.js';
 import {assert} from 'superstruct';
@@ -464,30 +463,6 @@ export class BaseAuthDO implements DurableObject {
     });
   }
 
-  authInvalidateForUser(
-    lc: LogContext,
-    request: Request,
-    {userID}: InvalidateForUserRequest,
-  ): Promise<Response> {
-    lc.debug?.(`authInvalidateForUser ${userID} waiting for lock.`);
-    return this._authLock.withWrite(async () => {
-      lc.debug?.('got lock.');
-      const connectionKeys = (
-        await this._state.storage.list({
-          prefix: getConnectionKeyStringUserPrefix(userID),
-        })
-      ).keys();
-      // The requests to the Room DOs must be completed inside the write lock
-      // to avoid races with new connect requests for this user.
-      return this._forwardInvalidateRequest(
-        lc,
-        'authInvalidateForUser',
-        request,
-        [...connectionKeys],
-      );
-    });
-  }
-
   authInvalidateForRoom(
     lc: LogContext,
     request: Request,
@@ -521,17 +496,18 @@ export class BaseAuthDO implements DurableObject {
   private _authInvalidateForUser = post(
     this._requireAPIKey(
       withBody(invalidateForUserRequestSchema, (ctx, req) => {
-        const {lc} = ctx;
+        const {lc, body} = ctx;
+        const {userID} = body;
         lc.debug?.(`_authInvalidateForUser waiting for lock.`);
         return this._authLock.withWrite(async () => {
           lc.debug?.('got lock.');
           const connectionKeys = (
             await this._state.storage.list({
-              prefix: CONNECTION_KEY_PREFIX,
+              prefix: getConnectionKeyStringUserPrefix(userID),
             })
           ).keys();
-          // The request to the Room DOs must be completed inside the write lock
-          // to avoid races with connect requests.
+          // The requests to the Room DOs must be completed inside the write lock
+          // to avoid races with new connect requests for this user.
           return this._forwardInvalidateRequest(
             lc,
             'authInvalidateForUser',
