@@ -13,12 +13,7 @@ export function sendError(
   kind: NumericErrorKind,
   message = '',
 ) {
-  const data: ErrorMessage = ['error', kind, message];
-  lc.debug?.('Sending error on socket', {
-    kind: errorKindToString(kind),
-    message,
-  });
-  send(ws, data);
+  sendErrorInternal(lc, 'Sending error on socket', ws, kind, message);
 }
 
 /**
@@ -30,13 +25,23 @@ export function closeWithError(
   kind: NumericErrorKind,
   message = '',
 ) {
-  // One problem here is that we cannot send arbitrary data on close. If we need that
-  // we will need to send a message before the closing and hook that up on the client.
-  lc.debug?.('Closing socket with error', {
+  sendErrorInternal(lc, 'Closing socket with error', ws, kind, message);
+  ws.close();
+}
+
+function sendErrorInternal(
+  lc: LogContext,
+  logMessage: string,
+  ws: Socket,
+  kind: NumericErrorKind,
+  message = '',
+) {
+  const data: ErrorMessage = ['error', kind, message];
+  lc.debug?.(logMessage, {
     kind: errorKindToString(kind),
     message,
   });
-  ws.close(kind, encodeReason(message));
+  send(ws, data);
 }
 
 export function send(ws: Socket, data: Downstream) {

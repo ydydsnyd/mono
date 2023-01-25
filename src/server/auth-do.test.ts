@@ -860,7 +860,11 @@ test("connect won't connect to a room that doesn't exist", async () => {
 
   expect(response.status).toEqual(101);
   expect(serverWS.log).toEqual([
-    ['close', NumericErrorKind.RoomNotFound, 'testRoomID1'],
+    [
+      'send',
+      JSON.stringify(['error', NumericErrorKind.RoomNotFound, 'testRoomID1']),
+    ],
+    ['close'],
   ]);
   expect((await storage.list({prefix: 'connection/'})).size).toEqual(0);
 });
@@ -943,7 +947,11 @@ test('connect wont connect to a room that is closed', async () => {
 
   expect(response.status).toEqual(101);
   expect(serverWS.log).toEqual([
-    ['close', NumericErrorKind.RoomClosed, 'testRoomID1'],
+    [
+      'send',
+      JSON.stringify(['error', NumericErrorKind.RoomClosed, 'testRoomID1']),
+    ],
+    ['close'],
   ]);
 });
 
@@ -1032,7 +1040,15 @@ test('connect pipes 401 over ws without calling Room DO if authHandler rejects',
   expect(response.headers.get('Sec-WebSocket-Protocol')).toEqual(testAuth);
   expect(response.webSocket).toBe(clientWS);
   expect(serverWS.log).toEqual([
-    ['close', NumericErrorKind.Unauthorized, 'authHandler rejected'],
+    [
+      'send',
+      JSON.stringify([
+        'error',
+        NumericErrorKind.Unauthorized,
+        'authHandler rejected',
+      ]),
+    ],
+    ['close'],
   ]);
 });
 

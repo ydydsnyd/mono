@@ -28,20 +28,15 @@ describe('handleMessage', () => {
     {
       name: 'empty',
       data: '',
-      expectedErrorMessage: JSON.stringify([
-        'error',
-        NumericErrorKind.InvalidMessage,
-        'SyntaxError: Unexpected end of JSON input',
-      ]),
+      expectedErrorKind: NumericErrorKind.InvalidMessage,
+      expectedErrorMessage: 'SyntaxError: Unexpected end of JSON input',
     },
     {
       name: 'invalid push',
       data: '[]',
-      expectedErrorMessage: JSON.stringify([
-        'error',
-        NumericErrorKind.InvalidMessage,
+      expectedErrorKind: NumericErrorKind.InvalidMessage,
+      expectedErrorMessage:
         'StructError: Expected the value to satisfy a union of `tuple | tuple`, but received: ',
-      ]),
     },
     {
       name: 'valid push',
@@ -74,11 +69,9 @@ describe('handleMessage', () => {
         },
       ]),
       // This error message is not great
-      expectedErrorMessage: JSON.stringify([
-        'error',
-        NumericErrorKind.InvalidMessage,
+      expectedErrorKind: NumericErrorKind.InvalidMessage,
+      expectedErrorMessage:
         'StructError: Expected the value to satisfy a union of `tuple | tuple`, but received: push,[object Object]',
-      ]),
     },
     {
       name: 'missing client push',
@@ -131,18 +124,19 @@ describe('handleMessage', () => {
         expect(s1.log[s1.log.length - 1][0]).toEqual('close');
       }
 
-      if (c.expectedErrorMessage !== undefined) {
-        expect(s1.log.length).toEqual(1);
+      if (c.expectedErrorKind !== undefined) {
+        expect(s1.log.length).toEqual(c.expectSocketClosed ? 2 : 1);
 
+        expect(s1.log[0]).toEqual([
+          'send',
+          JSON.stringify([
+            'error',
+            c.expectedErrorKind,
+            c.expectedErrorMessage,
+          ]),
+        ]);
         if (c.expectSocketClosed) {
-          const [type, code, message] = s1.log[0];
-          expect(type).toEqual('close');
-          expect(code).toEqual(c.expectedErrorKind);
-          expect(message).toEqual(c.expectedErrorMessage);
-        } else {
-          const [type, message] = s1.log[0];
-          expect(type).toEqual('send');
-          expect(message).toEqual(c.expectedErrorMessage);
+          expect(s1.log[1]).toEqual(['close']);
         }
       }
 

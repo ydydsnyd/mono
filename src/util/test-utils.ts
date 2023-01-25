@@ -73,8 +73,9 @@ export class Mocket extends EventTarget implements Socket {
     this.log.push(['send', data]);
   }
 
-  close(code?: number, reason?: string): void {
-    this.log.push(['close', code, reason]);
+  close(code?: number, reason?: string): void;
+  close(...args: unknown[]): void {
+    this.log.push(['close', ...args]);
   }
 }
 

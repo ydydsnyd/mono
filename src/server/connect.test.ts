@@ -285,7 +285,11 @@ describe('handleConnection', () => {
 
       if (c.expectErrorMessage) {
         expect(mocket.log).toEqual([
-          ['close', c.expectErrorKind, c.expectErrorMessage],
+          [
+            'send',
+            JSON.stringify(['error', c.expectErrorKind, c.expectErrorMessage]),
+          ],
+          ['close'],
         ]);
         return;
       }
