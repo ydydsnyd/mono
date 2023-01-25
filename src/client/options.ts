@@ -171,22 +171,26 @@ export interface ReflectOptions<MD extends MutatorDefs> {
    * to record important events.
    *
    * It is expected that the caller has arranged for the Metrics to be periodically
-   * reported to a server. You can use https://github.com/rocicorp/datadog-util
-   * as the concrete implementation to record metrics and report them to Datadog:
+   * reported to a server. Reflect server offers an endpoint to recieve metrics from
+   * the client and report them to Datadog (datadog does not support CORS so metrics
+   * cannot be directly submitted). You can use
+   *  https://github.com/rocicorp/datadog-util
+   * as the concrete implementation to record metrics and report them.
    *
    * ```ts
    * const metrics = new Metrics();
    * const reporter = new Reporter({
    *   metrics,
-   *   datadogApiKey: '<your-datadog-api-key>',
+   *   url: '<reflect server url>/api/metrics/v0/report',
+   *   headers: { [DD_AUTH_HEADER_NAME]: '<your-datadog-api-key>'},
    * });
    * const reflect = new Reflect({
    *   ...
-   *   experimentalMetrics: metrics,
+   *   metrics,
    * });
    * ```
    *
-   * If experimentalMetrics is undefined, the default implementation is a no-op.
+   * If metrics is undefined, the default implementation is a no-op.
    */
   metrics?: Metrics | undefined;
 }
