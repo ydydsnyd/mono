@@ -116,7 +116,6 @@ export class BaseAuthDO implements DurableObject {
   }
 
   async fetch(request: Request): Promise<Response> {
-    // Match route against pattern /:name/*action
     const lc = addRequestIDFromHeadersOrRandomID(this._lc, request);
     lc.debug?.('Handling request:', request.url);
 
