@@ -2,11 +2,7 @@ import {AUTH_ROUTES} from '../server/auth-do.js';
 import {createAuthAPIHeaders} from '../server/auth-api-headers.js';
 import type {RoomStatus} from '../server/rooms.js';
 import type {CreateRoomRequest} from '../protocol/api/room.js';
-import type {JSONType} from '../protocol/json.js';
-import type {
-  InvalidateForRoomRequest,
-  InvalidateForUserRequest,
-} from '../protocol/api/auth.js';
+import {newAuthedPostRequest} from './authedpost.js';
 
 /**
  * createRoom creates a new room with the given roomID. If the room already
@@ -154,38 +150,6 @@ export function newDeleteRoomRequest(
   const url = new URL(path, reflectServerURL);
   return newAuthedPostRequest(url, authApiKey);
 }
-
-export function newInvalidateAllAuthRequest(
-  reflectServerURL: string,
-  authApiKey: string,
-) {
-  const path = AUTH_ROUTES.authInvalidateAll;
-  const url = new URL(path, reflectServerURL);
-  return newAuthedPostRequest(url, authApiKey);
-}
-
-export function newInvalidateForUserAuthRequest(
-  reflectServerURL: string,
-  authApiKey: string,
-  userID: string,
-) {
-  const path = AUTH_ROUTES.authInvalidateForUser;
-  const url = new URL(path, reflectServerURL);
-  const req: InvalidateForUserRequest = {userID};
-  return newAuthedPostRequest(url, authApiKey, req);
-}
-
-export function newInvalidateForRoomAuthRequest(
-  reflectServerURL: string,
-  authApiKey: string,
-  roomID: string,
-) {
-  const path = AUTH_ROUTES.authInvalidateForRoom;
-  const url = new URL(path, reflectServerURL);
-  const req: InvalidateForRoomRequest = {roomID};
-  return newAuthedPostRequest(url, authApiKey, req);
-}
-
 export function newForgetRoomRequest(
   reflectServerURL: string,
   authApiKey: string,
@@ -204,16 +168,4 @@ export function newMigrateRoomRequest(
   const path = AUTH_ROUTES.migrateRoom.replace(':roomID', roomID);
   const url = new URL(path, reflectServerURL);
   return newAuthedPostRequest(url, authApiKey);
-}
-
-function newAuthedPostRequest(
-  url: URL,
-  authApiKey: string,
-  req?: JSONType | undefined,
-) {
-  return new Request(url.toString(), {
-    method: 'post',
-    headers: createAuthAPIHeaders(authApiKey),
-    body: req ? JSON.stringify(req) : undefined,
-  });
 }

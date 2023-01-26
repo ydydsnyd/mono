@@ -2,7 +2,7 @@ import {encodeHeaderValue} from '../util/headers.js';
 import {LogSink, LogContext, LogLevel} from '@rocicorp/logger';
 import {version} from '../util/version.js';
 import {AuthHandler, UserData, USER_DATA_HEADER_NAME} from './auth.js';
-import {dispatch, paths} from './dispatch.js';
+import {dispatch} from './dispatch.js';
 import {
   closeRoom,
   createRoom,
@@ -41,6 +41,7 @@ import {
 import {addRequestIDFromHeadersOrRandomID} from './request-id.js';
 import {createUnauthorizedResponse} from './create-unauthorized-response.js';
 import {ErrorKind} from '../protocol/error.js';
+import {ROOM_ROUTES} from './room-do.js';
 
 export interface AuthDOOptions {
   roomDO: DurableObjectNamespace;
@@ -69,6 +70,7 @@ export const AUTH_ROUTES = {
   authInvalidateAll: '/api/auth/v0/invalidateAll',
   authInvalidateForUser: '/api/auth/v0/invalidateForUser',
   authInvalidateForRoom: '/api/auth/v0/invalidateForRoom',
+  authRevalidateConnections: '/api/auth/v0/revalidateConnections',
 } as const;
 
 export class BaseAuthDO implements DurableObject {
@@ -269,6 +271,10 @@ export class BaseAuthDO implements DurableObject {
     this._router.register(
       AUTH_ROUTES.authInvalidateForRoom,
       this._authInvalidateForRoom,
+    );
+    this._router.register(
+      AUTH_ROUTES.authRevalidateConnections,
+      this._authRevalidateConnections,
     );
   }
 
@@ -544,94 +550,92 @@ export class BaseAuthDO implements DurableObject {
     }),
   );
 
-  async authRevalidateConnections(lc: LogContext): Promise<Response> {
-    lc.info?.(`Starting auth revalidation.`);
-    const authApiKey = this._authApiKey;
-    if (authApiKey === undefined) {
+  private _authRevalidateConnections = post(
+    this._requireAPIKey(async ctx => {
+      const {lc} = ctx;
+      const connectionRecords = await this._state.storage.list({
+        prefix: CONNECTION_KEY_PREFIX,
+      });
+      const connectionKeyStringsByRoomID = new Map<string, Set<string>>();
+      for (const keyString of connectionRecords.keys()) {
+        const connectionKey = connectionKeyFromString(keyString);
+        if (!connectionKey) {
+          lc.error?.('Failed to parse connection key', keyString);
+          continue;
+        }
+        const {roomID} = connectionKey;
+        let keyStringSet = connectionKeyStringsByRoomID.get(roomID);
+        if (!keyStringSet) {
+          keyStringSet = new Set();
+          connectionKeyStringsByRoomID.set(roomID, keyStringSet);
+        }
+        keyStringSet.add(keyString);
+      }
       lc.info?.(
-        'Returning Unauthorized because REFLECT_AUTH_API_KEY is not defined in env.',
+        `Revalidating ${connectionRecords.size} ConnectionRecords across ${connectionKeyStringsByRoomID.size} rooms.`,
       );
-      return createUnauthorizedResponse();
-    }
-    const connectionRecords = await this._state.storage.list({
-      prefix: CONNECTION_KEY_PREFIX,
-    });
-    const connectionKeyStringsByRoomID = new Map<string, Set<string>>();
-    for (const keyString of connectionRecords.keys()) {
-      const connectionKey = connectionKeyFromString(keyString);
-      if (!connectionKey) {
-        lc.error?.('Failed to parse connection key', keyString);
-        continue;
-      }
-      const {roomID} = connectionKey;
-      let keyStringSet = connectionKeyStringsByRoomID.get(roomID);
-      if (!keyStringSet) {
-        keyStringSet = new Set();
-        connectionKeyStringsByRoomID.set(roomID, keyStringSet);
-      }
-      keyStringSet.add(keyString);
-    }
-    lc.info?.(
-      `Revalidating ${connectionRecords.size} ConnectionRecords across ${connectionKeyStringsByRoomID.size} rooms.`,
-    );
-    let deleteCount = 0;
-    for (const [
-      roomID,
-      connectionKeyStringsForRoomID,
-    ] of connectionKeyStringsByRoomID) {
-      lc.debug?.(`revalidating connections for ${roomID} waiting for lock.`);
-      await this._authLock.withWrite(async () => {
-        lc.debug?.('got lock.');
-        const roomObjectID = await this._roomRecordLock.withRead(() =>
-          objectIDByRoomID(this._durableStorage, this._roomDO, roomID),
-        );
-        if (roomObjectID === undefined) {
-          lc.error?.(`Can't find room ${roomID}, skipping`);
-          return;
-        }
-        const stub = this._roomDO.get(roomObjectID);
-        const response = await stub.fetch(
-          new Request(
-            `https://unused-reflect-room-do.dev${paths.authConnections}`,
-            {
-              headers: createAuthAPIHeaders(authApiKey),
-            },
-          ),
-        );
-        let connectionsResponse: ConnectionsResponse | undefined;
-        try {
-          const responseJSON = await response.json();
-          assert(responseJSON, connectionsResponseSchema);
-          connectionsResponse = responseJSON;
-        } catch (e) {
-          lc.error?.(`Bad ${paths.authConnections} response from roomDO`, e);
-        }
-        if (connectionsResponse) {
-          const openConnectionKeyStrings = new Set(
-            connectionsResponse.map(({userID, clientID}) =>
-              connectionKeyToString({
-                roomID,
-                userID,
-                clientID,
-              }),
+      let deleteCount = 0;
+      for (const [
+        roomID,
+        connectionKeyStringsForRoomID,
+      ] of connectionKeyStringsByRoomID) {
+        lc.debug?.(`revalidating connections for ${roomID} waiting for lock.`);
+        await this._authLock.withWrite(async () => {
+          lc.debug?.('got lock.');
+          const roomObjectID = await this._roomRecordLock.withRead(() =>
+            objectIDByRoomID(this._durableStorage, this._roomDO, roomID),
+          );
+          if (roomObjectID === undefined) {
+            lc.error?.(`Can't find room ${roomID}, skipping`);
+            return;
+          }
+          const stub = this._roomDO.get(roomObjectID);
+          const response = await stub.fetch(
+            new Request(
+              `https://unused-reflect-room-do.dev${ROOM_ROUTES.authConnections}`,
+              {
+                headers: createAuthAPIHeaders(this._authApiKey),
+              },
             ),
           );
-          const keysToDelete: string[] = [
-            ...connectionKeyStringsForRoomID,
-          ].filter(keyString => !openConnectionKeyStrings.has(keyString));
+          let connectionsResponse: ConnectionsResponse | undefined;
           try {
-            deleteCount += await this._state.storage.delete(keysToDelete);
+            const responseJSON = await response.json();
+            assert(responseJSON, connectionsResponseSchema);
+            connectionsResponse = responseJSON;
           } catch (e) {
-            lc.info?.('Failed to delete connections for roomID', roomID);
+            lc.error?.(
+              `Bad ${ROOM_ROUTES.authConnections} response from roomDO`,
+              e,
+            );
           }
-        }
-      });
-    }
-    lc.info?.(
-      `Revalidated ${connectionRecords.size} ConnectionRecords, deleted ${deleteCount} ConnectionRecords.`,
-    );
-    return new Response('Complete', {status: 200});
-  }
+          if (connectionsResponse) {
+            const openConnectionKeyStrings = new Set(
+              connectionsResponse.map(({userID, clientID}) =>
+                connectionKeyToString({
+                  roomID,
+                  userID,
+                  clientID,
+                }),
+              ),
+            );
+            const keysToDelete: string[] = [
+              ...connectionKeyStringsForRoomID,
+            ].filter(keyString => !openConnectionKeyStrings.has(keyString));
+            try {
+              deleteCount += await this._state.storage.delete(keysToDelete);
+            } catch (e) {
+              lc.info?.('Failed to delete connections for roomID', roomID);
+            }
+          }
+        });
+      }
+      lc.info?.(
+        `Revalidated ${connectionRecords.size} ConnectionRecords, deleted ${deleteCount} ConnectionRecords.`,
+      );
+      return new Response('Complete', {status: 200});
+    }),
+  );
 
   private async _forwardInvalidateRequest(
     lc: LogContext,

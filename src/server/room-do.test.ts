@@ -1,11 +1,11 @@
 import {test, expect} from '@jest/globals';
 import {
-  newCreateRoomRequest,
-  newDeleteRoomRequest,
   newInvalidateAllAuthRequest,
   newInvalidateForRoomAuthRequest,
   newInvalidateForUserAuthRequest,
-} from '../client/room.js';
+} from '../client/auth.js';
+import {newCreateRoomRequest, newDeleteRoomRequest} from '../client/room.js';
+import {newAuthConnectionsRequest} from '../util/auth-test-util.js';
 import {createSilentLogContext, TestLogSink} from '../util/test-utils.js';
 import {version} from '../util/version.js';
 import {TestDurableObjectId} from './do-test-utils.js';
@@ -133,6 +133,11 @@ test('401s if wrong auth api key', async () => {
     wrongApiKey,
   );
 
+  const authConnectionsRequest = newAuthConnectionsRequest(
+    'http://example.com/',
+    wrongApiKey,
+  );
+
   const invalidateForUserRequest = newInvalidateForUserAuthRequest(
     'http://example.com/',
     wrongApiKey,
@@ -150,6 +155,7 @@ test('401s if wrong auth api key', async () => {
     invalidateAllRequest,
     invalidateForUserRequest,
     invalidateForRoomRequest,
+    authConnectionsRequest,
   ];
 
   for (const testRequest of testRequests) {

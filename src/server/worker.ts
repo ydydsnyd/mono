@@ -9,7 +9,7 @@ import {
 } from './router.js';
 import {randomID} from '../util/rand.js';
 import {createAuthAPIHeaders} from './auth-api-headers.js';
-import {dispatch, paths, validateBody} from './dispatch.js';
+import {dispatch, validateBody} from './dispatch.js';
 import {AUTH_ROUTES} from './auth-do.js';
 import {ReportMetrics, reportMetricsSchema} from '../types/report-metrics.js';
 import {
@@ -105,9 +105,11 @@ async function scheduled(env: BaseWorkerEnv, lc: LogContext): Promise<void> {
     );
     return;
   }
-  lc.info?.(`Sending ${paths.authRevalidateConnections} request to AuthDO`);
+  lc.info?.(
+    `Sending ${AUTH_ROUTES.authRevalidateConnections} request to AuthDO`,
+  );
   const req = new Request(
-    `https://unused-reflect-auth-do.dev${paths.authRevalidateConnections}`,
+    `https://unused-reflect-auth-do.dev${AUTH_ROUTES.authRevalidateConnections}`,
     {
       headers: createAuthAPIHeaders(env.REFLECT_AUTH_API_KEY),
       method: 'POST',

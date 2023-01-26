@@ -23,11 +23,12 @@ import {
   newCreateRoomRequest,
   newDeleteRoomRequest,
   newForgetRoomRequest,
-  newInvalidateAllAuthRequest,
   newMigrateRoomRequest,
   newRoomStatusRequest,
 } from '../client/room.js';
 import {ErrorKind} from '../protocol/error.js';
+import {newInvalidateAllAuthRequest} from '../client/auth.js';
+import {newAuthRevalidateConnections} from '../util/auth-test-util.js';
 
 const TEST_AUTH_API_KEY = 'TEST_REFLECT_AUTH_API_KEY_TEST';
 const {authDO} = getMiniflareBindings();
@@ -322,11 +323,17 @@ test('401s if wrong auth api key', async () => {
     wrongApiKey,
   );
 
+  const authRevalidateConnections = newAuthRevalidateConnections(
+    'https://test.roci.dev',
+    wrongApiKey,
+  );
+
   const requests = [
     migrateRoomRequest,
     deleteRoomRequest,
     forgetRoomRequest,
     invalidateAllRequest,
+    authRevalidateConnections,
   ];
 
   for (const request of requests) {

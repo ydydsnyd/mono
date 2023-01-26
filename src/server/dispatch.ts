@@ -31,15 +31,11 @@ export type Handler<T = undefined> = (
 export interface Handlers {
   createRoom: Handler<CreateRoomRequest>;
   connect: Handler;
-  authRevalidateConnections?: Handler;
-  authConnections?: Handler;
 }
 
 export const paths: Readonly<Record<keyof Handlers, string>> = {
   createRoom: '/createRoom',
   connect: '/connect',
-  authRevalidateConnections: '/api/auth/v0/revalidateConnections',
-  authConnections: '/api/auth/v0/connections',
 };
 
 function createBadRequestResponse(message = 'Bad Request'): Response {
@@ -107,20 +103,6 @@ export function dispatch(
       );
     case paths.connect:
       return validateAndDispatch('get', noOpValidateBody, handlers.connect);
-    case paths.authRevalidateConnections:
-      return validateAndDispatch(
-        'post',
-        noOpValidateBody,
-        handlers.authRevalidateConnections,
-        'authApiKey',
-      );
-    case paths.authConnections:
-      return validateAndDispatch(
-        'get',
-        noOpValidateBody,
-        handlers.authConnections,
-        'authApiKey',
-      );
     default:
       return Promise.resolve(createBadRequestResponse('Unsupported path.'));
   }

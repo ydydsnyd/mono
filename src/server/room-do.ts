@@ -53,6 +53,7 @@ export const ROOM_ROUTES = {
   authInvalidateAll: '/api/auth/v0/invalidateAll',
   authInvalidateForUser: '/api/auth/v0/invalidateForUser',
   authInvalidateForRoom: '/api/auth/v0/invalidateForRoom',
+  authConnections: '/api/auth/v0/connections',
 };
 
 export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
@@ -105,6 +106,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       ROOM_ROUTES.authInvalidateForRoom,
       this._authInvalidateForRoom,
     );
+    this._router.register(ROOM_ROUTES.authConnections, this._authConnections);
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -293,7 +295,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   private _authInvalidateAll = post(
     this._requireAPIKey(async ctx => {
       const {lc} = ctx;
-      lc.info?.(
+      lc.debug?.(
         'Closing all connections fulfilling auth api invalidateAll request.',
       );
       await this._closeConnections(_ => true);
@@ -301,12 +303,13 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     }),
   );
 
-  // eslint-disable-next-line require-await
-  async authConnections(): Promise<Response> {
-    // Note this intentionally does not acquire this._lock, as it is
-    // unnecessary and can add latency.
-    return new Response(JSON.stringify(getConnections(this._clients)));
-  }
+  private _authConnections = post(
+    this._requireAPIKey(ctx => {
+      const {lc} = ctx;
+      lc.debug?.('Retrieving all auth connections');
+      return new Response(JSON.stringify(getConnections(this._clients)));
+    }),
+  );
 
   private _closeConnections(
     predicate: (clientState: ClientState) => boolean,
