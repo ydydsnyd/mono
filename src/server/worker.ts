@@ -23,7 +23,7 @@ export const WORKER_ROUTES = {
     path: '/api/metrics/v0/report',
     handler: post(reportMetrics),
   },
-};
+} as const;
 
 export interface WorkerOptions<Env extends BaseWorkerEnv> {
   getLogSink: (env: Env) => LogSink;
@@ -47,17 +47,21 @@ type WithEnv = {
 
 type WorkerContext = BaseContext & WithEnv;
 
-// Set up routes for authDO API calls that are not handled by
-// dispatch.
-const router = new Router<WithLogContext & WithEnv>();
-for (const route of Object.values(WORKER_ROUTES)) {
-  router.register(route.path, route.handler);
-}
-for (const pattern of Object.values(AUTH_ROUTES)) {
-  router.register(
-    pattern,
-    requireAPIKeyMatchesEnv((ctx, req) => sendToAuthDO(ctx, req)),
-  );
+type WorkerRouter = Router<WithLogContext & WithEnv>;
+
+/**
+ * Registers routes that are not handled by dispatch.
+ */
+function registerRoutes(router: WorkerRouter) {
+  for (const route of Object.values(WORKER_ROUTES)) {
+    router.register(route.path, route.handler);
+  }
+  for (const pattern of Object.values(AUTH_ROUTES)) {
+    router.register(
+      pattern,
+      requireAPIKeyMatchesEnv((ctx, req) => sendToAuthDO(ctx, req)),
+    );
+  }
 }
 
 function requireAPIKeyMatchesEnv(next: Handler<WorkerContext, Response>) {
@@ -74,10 +78,12 @@ export function createWorker<Env extends BaseWorkerEnv>(
   options: WorkerOptions<Env>,
 ): ExportedHandler<Env> {
   const {getLogSink, getLogLevel} = options;
+  const router: WorkerRouter = new Router();
+  registerRoutes(router);
   return {
     fetch: (request: Request, env: Env, ctx: ExecutionContext) =>
       withLogContext(env, ctx, getLogSink, getLogLevel, (lc: LogContext) =>
-        fetch(request, env, lc),
+        fetch(request, env, router, lc),
       ),
     scheduled: (
       _controller: ScheduledController,
@@ -114,6 +120,7 @@ async function scheduled(env: BaseWorkerEnv, lc: LogContext): Promise<void> {
 async function fetch(
   request: Request,
   env: BaseWorkerEnv,
+  router: WorkerRouter,
   lc: LogContext,
 ): Promise<Response> {
   // TODO: pass request id through so request can be traced across

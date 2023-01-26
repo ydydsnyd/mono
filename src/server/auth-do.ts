@@ -69,7 +69,7 @@ export const AUTH_ROUTES = {
   authInvalidateAll: '/api/auth/v0/invalidateAll',
   authInvalidateForUser: '/api/auth/v0/invalidateForUser',
   authInvalidateForRoom: '/api/auth/v0/invalidateForRoom',
-};
+} as const;
 
 export class BaseAuthDO implements DurableObject {
   private readonly _router = new Router();
