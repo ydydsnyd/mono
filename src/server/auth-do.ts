@@ -94,7 +94,6 @@ export class BaseAuthDO implements DurableObject {
   // both the auth lock and the room record lock, the auth lock MUST be
   // acquired first.
   private readonly _roomRecordLock = new RWLock();
-  // private readonly _newWebSocketPair: NewWebSocketPair;
 
   constructor(options: AuthDOOptions) {
     const {roomDO, state, authHandler, authApiKey, logSink, logLevel} = options;

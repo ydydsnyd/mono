@@ -10,6 +10,10 @@ import type {
 } from '../../src/types/client-state.js';
 import type {NullableVersion} from '../../src/types/version.js';
 
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 export function client(
   id: ClientID,
   userID: string,
