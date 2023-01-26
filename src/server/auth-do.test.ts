@@ -1145,13 +1145,15 @@ test('authInvalidateForUser when requests to roomDOs are successful', async () =
   await storage.put('connection/testUserID1/testRoomID1/testClientID2/', {
     connectTimestamp: 1000,
   });
-  await storage.put('connection/testUserID1/testRoomID2/testClientID1/', {
+  await storage.put('connection/testUserID1/testRoomID2/testClientID3/', {
     connectTimestamp: 1000,
   });
-  await storage.put('connection/testUserID2/testRoomID1/testClientID1/', {
+  await storage.put('connection/testUserID2/testRoomID1/testClientID4/', {
     connectTimestamp: 1000,
   });
-
+  await storage.put('connection/testUserID2/testRoomID3/testClientID5/', {
+    connectTimestamp: 1000,
+  });
   const roomDORequestCountsByRoomID = new Map();
   const testRoomDO: DurableObjectNamespace = {
     ...createTestDurableObjectNamespace(),
@@ -1188,12 +1190,14 @@ test('authInvalidateForUser when requests to roomDOs are successful', async () =
   });
   await createRoom(authDO, 'testRoomID1');
   await createRoom(authDO, 'testRoomID2');
+  await createRoom(authDO, 'testRoomID3');
 
   const response = await authDO.fetch(testRequest);
 
   expect(roomDORequestCountsByRoomID.size).toEqual(2);
   expect(roomDORequestCountsByRoomID.get('testRoomID1')).toEqual(1);
   expect(roomDORequestCountsByRoomID.get('testRoomID2')).toEqual(1);
+  expect(roomDORequestCountsByRoomID.get('testRoomID3')).toEqual(undefined);
   expect(response.status).toEqual(200);
 });
 
