@@ -204,7 +204,6 @@ function handleRequest(
   return dispatch(request, lc, env.REFLECT_AUTH_API_KEY, {
     createRoom: forwardToAuthDO,
     connect: forwardToAuthDO,
-    authInvalidateForRoom: forwardToAuthDO,
   });
 }
 

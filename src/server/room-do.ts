@@ -15,7 +15,10 @@ import {handleMessage} from './message.js';
 import {randomID} from '../util/rand.js';
 import {version} from '../util/version.js';
 import {dispatch} from './dispatch.js';
-import {invalidateForUserRequestSchema} from '../protocol/api/auth.js';
+import {
+  invalidateForUserRequestSchema,
+  invalidateForRoomRequestSchema,
+} from '../protocol/api/auth.js';
 import {closeConnections, getConnections} from './connections.js';
 import type {DisconnectHandler} from './disconnect.js';
 import {DurableStorage} from '../storage/durable-storage.js';
@@ -49,6 +52,7 @@ export const ROOM_ROUTES = {
   deletePath: '/api/room/v0/room/:roomID/delete',
   authInvalidateAll: '/api/auth/v0/invalidateAll',
   authInvalidateForUser: '/api/auth/v0/invalidateForUser',
+  authInvalidateForRoom: '/api/auth/v0/invalidateForRoom',
 };
 
 export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
@@ -96,6 +100,10 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     this._router.register(
       ROOM_ROUTES.authInvalidateForUser,
       this._authInvalidateForUser,
+    );
+    this._router.register(
+      ROOM_ROUTES.authInvalidateForRoom,
+      this._authInvalidateForRoom,
     );
   }
 
@@ -252,6 +260,20 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     return new Response(null, {status: 101, webSocket: clientWS});
   }
 
+  private _authInvalidateForRoom = post(
+    this._requireAPIKey(
+      withBody(invalidateForRoomRequestSchema, async ctx => {
+        const {lc, body} = ctx;
+        const {roomID} = body;
+        lc.debug?.(
+          `Closing room ${roomID}'s connections fulfilling auth api invalidateForRoom request.`,
+        );
+        await this._closeConnections(_ => true);
+        return new Response('Success', {status: 200});
+      }),
+    ),
+  );
+
   private _authInvalidateForUser = post(
     this._requireAPIKey(
       withBody(invalidateForUserRequestSchema, async ctx => {
@@ -267,19 +289,6 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       }),
     ),
   );
-
-  async authInvalidateForRoom(
-    lc: LogContext,
-    // Ideally we'd ensure body.roomID matches this DO's roomID but we
-    // don't know this DO's roomID...
-    // { roomID }: InvalidateForRoom
-  ): Promise<Response> {
-    lc.info?.(
-      'Closing all connections fulfilling auth api invalidateForRoom request.',
-    );
-    await this._closeConnections(_ => true);
-    return new Response('Success', {status: 200});
-  }
 
   private _authInvalidateAll = post(
     this._requireAPIKey(async ctx => {

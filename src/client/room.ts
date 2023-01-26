@@ -3,7 +3,10 @@ import {createAuthAPIHeaders} from '../server/auth-api-headers.js';
 import type {RoomStatus} from '../server/rooms.js';
 import type {CreateRoomRequest} from '../protocol/api/room.js';
 import type {JSONType} from '../protocol/json.js';
-import type {InvalidateForUserRequest} from '../protocol/api/auth.js';
+import type {
+  InvalidateForRoomRequest,
+  InvalidateForUserRequest,
+} from '../protocol/api/auth.js';
 
 /**
  * createRoom creates a new room with the given roomID. If the room already
@@ -169,6 +172,17 @@ export function newInvalidateForUserAuthRequest(
   const path = AUTH_ROUTES.authInvalidateForUser;
   const url = new URL(path, reflectServerURL);
   const req: InvalidateForUserRequest = {userID};
+  return newAuthedPostRequest(url, authApiKey, req);
+}
+
+export function newInvalidateForRoomAuthRequest(
+  reflectServerURL: string,
+  authApiKey: string,
+  roomID: string,
+) {
+  const path = AUTH_ROUTES.authInvalidateForRoom;
+  const url = new URL(path, reflectServerURL);
+  const req: InvalidateForRoomRequest = {roomID};
   return newAuthedPostRequest(url, authApiKey, req);
 }
 

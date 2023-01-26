@@ -18,7 +18,7 @@ import {RWLock} from '@rocicorp/lock';
 import {
   ConnectionsResponse,
   connectionsResponseSchema,
-  InvalidateForRoomRequest,
+  invalidateForRoomRequestSchema,
   invalidateForUserRequestSchema,
 } from '../protocol/api/auth.js';
 import {assert} from 'superstruct';
@@ -68,6 +68,7 @@ export const AUTH_ROUTES = {
   forgetRoom: '/api/room/v0/room/:roomID/DANGER/forget',
   authInvalidateAll: '/api/auth/v0/invalidateAll',
   authInvalidateForUser: '/api/auth/v0/invalidateForUser',
+  authInvalidateForRoom: '/api/auth/v0/invalidateForRoom',
 };
 
 export class BaseAuthDO implements DurableObject {
@@ -267,6 +268,10 @@ export class BaseAuthDO implements DurableObject {
       AUTH_ROUTES.authInvalidateForUser,
       this._authInvalidateForUser,
     );
+    this._router.register(
+      AUTH_ROUTES.authInvalidateForRoom,
+      this._authInvalidateForRoom,
+    );
   }
 
   // eslint-disable-next-line require-await
@@ -463,35 +468,37 @@ export class BaseAuthDO implements DurableObject {
     });
   }
 
-  authInvalidateForRoom(
-    lc: LogContext,
-    request: Request,
-    {roomID}: InvalidateForRoomRequest,
-  ): Promise<Response> {
-    lc.debug?.(`authInvalidateForRoom ${roomID} waiting for lock.`);
-    return this._authLock.withWrite(async () => {
-      lc.debug?.('got lock.');
-      lc.debug?.(`Sending authInvalidateForRoom request to ${roomID}`);
-      // The request to the Room DO must be completed inside the write lock
-      // to avoid races with connect requests for this room.
-      const roomObjectID = await this._roomRecordLock.withRead(() =>
-        objectIDByRoomID(this._durableStorage, this._roomDO, roomID),
-      );
-      if (roomObjectID === undefined) {
-        return new Response('room not found', {status: 404});
-      }
-      const stub = this._roomDO.get(roomObjectID);
-      const response = await stub.fetch(request);
-      if (!response.ok) {
-        lc.debug?.(
-          `Received error response from ${roomID}. ${
-            response.status
-          } ${await response.clone().text()}`,
-        );
-      }
-      return response;
-    });
-  }
+  private _authInvalidateForRoom = post(
+    this._requireAPIKey(
+      withBody(invalidateForRoomRequestSchema, (ctx, req) => {
+        const {lc, body} = ctx;
+        const {roomID} = body;
+        lc.debug?.(`authInvalidateForRoom ${roomID} waiting for lock.`);
+        return this._authLock.withWrite(async () => {
+          lc.debug?.('got lock.');
+          lc.debug?.(`Sending authInvalidateForRoom request to ${roomID}`);
+          // The request to the Room DO must be completed inside the write lock
+          // to avoid races with connect requests for this room.
+          const roomObjectID = await this._roomRecordLock.withRead(() =>
+            objectIDByRoomID(this._durableStorage, this._roomDO, roomID),
+          );
+          if (roomObjectID === undefined) {
+            return new Response('room not found', {status: 404});
+          }
+          const stub = this._roomDO.get(roomObjectID);
+          const response = await stub.fetch(req);
+          if (!response.ok) {
+            lc.debug?.(
+              `Received error response from ${roomID}. ${
+                response.status
+              } ${await response.clone().text()}`,
+            );
+          }
+          return response;
+        });
+      }),
+    ),
+  );
 
   private _authInvalidateForUser = post(
     this._requireAPIKey(

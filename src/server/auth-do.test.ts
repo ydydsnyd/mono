@@ -345,19 +345,29 @@ test('401s if wrong auth api key', async () => {
 
 test('400 bad body requests', async () => {
   const {testRoomDO, state} = await createCreateRoomTestFixture();
-  const path = AUTH_ROUTES.authInvalidateForUser;
   const undefinedInvalidateForUserRequest = createBadBodyRequest(
-    path,
+    AUTH_ROUTES.authInvalidateForUser,
     undefined,
   );
   const badInvalidateForUserRequest = createBadBodyRequest(
-    path,
+    AUTH_ROUTES.authInvalidateForUser,
     JSON.stringify({badUserID: 'foo'}),
+  );
+
+  const undefinedInvalidateForRoomRequest = createBadBodyRequest(
+    AUTH_ROUTES.authInvalidateForRoom,
+    undefined,
+  );
+  const badInvalidateForRoomRequest = createBadBodyRequest(
+    AUTH_ROUTES.authInvalidateForRoom,
+    JSON.stringify({badRoomId: 'foo'}),
   );
 
   const requests = [
     undefinedInvalidateForUserRequest,
     badInvalidateForUserRequest,
+    undefinedInvalidateForRoomRequest,
+    badInvalidateForRoomRequest,
   ];
 
   for (const request of requests) {

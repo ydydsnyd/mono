@@ -1,5 +1,4 @@
 import {test, expect} from '@jest/globals';
-import type {InvalidateForRoomRequest} from '../protocol/api/auth.js';
 import type {LogContext} from '@rocicorp/logger';
 import {createAuthAPIHeaders} from './auth-api-headers.js';
 import {dispatch, Handlers} from './dispatch.js';
@@ -133,85 +132,6 @@ test('connect request with validation errors', async () => {
   );
 });
 
-test('authInvalidateForRoom good request', async () => {
-  const testRoomID = 'testRoomID1';
-  const testRequest = new Request(
-    `https://test.roci.dev/api/auth/v0/invalidateForRoom`,
-    {
-      method: 'post',
-      headers: createAuthAPIHeaders(testAuthApiKey),
-      body: JSON.stringify({
-        roomID: testRoomID,
-      }),
-    },
-  );
-  const testResponse = new Response('');
-  const response = await dispatch(
-    testRequest,
-    createSilentLogContext(),
-    testAuthApiKey,
-    {
-      ...createThrowingHandlers(),
-      authInvalidateForRoom: (
-        _lc: LogContext,
-        request: Request,
-        body: InvalidateForRoomRequest,
-      ) => {
-        expect(request).toBe(testRequest);
-        expect(body).toEqual({
-          roomID: testRoomID,
-        });
-        return Promise.resolve(testResponse);
-      },
-    },
-  );
-  expect(response).toBe(testResponse);
-});
-
-test('authInvalidateForRoom request with validation errors', async () => {
-  const testRoomID = 'testRoomID1';
-  await testMethodNotAllowedValidationError(
-    new Request(`https://test.roci.dev/api/auth/v0/invalidateForRoom`, {
-      method: 'put',
-      headers: createAuthAPIHeaders(testAuthApiKey),
-      body: JSON.stringify({
-        roomID: testRoomID,
-      }),
-    }),
-    'post',
-  );
-
-  const testRequestBadBody = new Request(
-    `https://test.roci.dev/api/auth/v0/invalidateForRoom`,
-    {
-      method: 'post',
-      headers: createAuthAPIHeaders(testAuthApiKey),
-      body: JSON.stringify({
-        userID: testRoomID,
-      }),
-    },
-  );
-  const responseForBadBody = await dispatch(
-    testRequestBadBody,
-    createSilentLogContext(),
-    testAuthApiKey,
-    createThrowingHandlers(),
-  );
-  expect(responseForBadBody.status).toEqual(400);
-  expect(await responseForBadBody.text()).toEqual(
-    'Body schema error. At path: roomID -- Expected a string, but received: undefined',
-  );
-
-  await testApiKeyValidationErrors(
-    new Request(`https://test.roci.dev/api/auth/v0/invalidateForRoom`, {
-      method: 'post',
-      body: JSON.stringify({
-        roomID: testRoomID,
-      }),
-    }),
-  );
-});
-
 test('authRevalidateConnections good request', async () => {
   const testRequest = new Request(
     `https://test.roci.dev/api/auth/v0/revalidateConnections`,
@@ -308,16 +228,6 @@ test('auth api returns 401 for all requests when authApiKey is undefined', async
     expect(response.status).toEqual(401);
     expect(await response.text()).toEqual('Unauthorized');
   }
-
-  await testUnauthorizedWhenAuthApiKeyIsUndefined(
-    new Request(`https://test.roci.dev/api/auth/v0/invalidateForRoom`, {
-      method: 'post',
-      headers: createAuthAPIHeaders(testAuthApiKey),
-      body: JSON.stringify({
-        roomID: 'testRoomID1',
-      }),
-    }),
-  );
   await testUnauthorizedWhenAuthApiKeyIsUndefined(
     new Request(`https://test.roci.dev/api/auth/v0/revalidateConnections`, {
       method: 'post',
