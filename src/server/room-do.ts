@@ -24,7 +24,7 @@ import type {DisconnectHandler} from './disconnect.js';
 import {DurableStorage} from '../storage/durable-storage.js';
 import {getConnectedClients} from '../types/connected-clients.js';
 import * as s from 'superstruct';
-import type {CreateRoomRequest} from '../protocol/api/room.js';
+import {createRoomRequestSchema} from '../protocol/api/room.js';
 import {
   post,
   requireAuthAPIKey,
@@ -54,6 +54,7 @@ export const ROOM_ROUTES = {
   authInvalidateForUser: '/api/auth/v0/invalidateForUser',
   authInvalidateForRoom: '/api/auth/v0/invalidateForRoom',
   authConnections: '/api/auth/v0/connections',
+  createRoom: '/createRoom',
 };
 
 export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
@@ -107,7 +108,12 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       this._authInvalidateForRoom,
     );
     this._router.register(ROOM_ROUTES.authConnections, this._authConnections);
+    this._router.register(ROOM_ROUTES.createRoom, this._createRoom);
   }
+
+  private _requireAPIKey = <Context extends BaseContext, Resp>(
+    next: Handler<Context, Resp>,
+  ) => requireAuthAPIKey(() => this._authApiKey, next);
 
   async fetch(request: Request): Promise<Response> {
     try {
@@ -197,21 +203,13 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     return 'unknown';
   }
 
-  // A more appropriate name might be init(), but this is easy since authDO and
-  // roomDO share dispatch and handlers.
-  async createRoom(
-    _lc: LogContext,
-    _request: Request,
-    createRoomRequest: CreateRoomRequest,
-  ) {
-    const {roomID} = createRoomRequest;
-    await this._setRoomID(roomID);
-    return new Response('ok');
-  }
-
-  private _requireAPIKey = <Context extends BaseContext, Resp>(
-    next: Handler<Context, Resp>,
-  ) => requireAuthAPIKey(() => this._authApiKey, next);
+  private _createRoom = this._requireAPIKey(
+    withBody(createRoomRequestSchema, async ctx => {
+      const {roomID} = ctx.body;
+      await this._setRoomID(roomID);
+      return new Response('ok');
+    }),
+  );
 
   // There's a bit of a question here about whether we really want to delete *all* the
   // data when a room is deleted. This deletes everything, including values kept by the

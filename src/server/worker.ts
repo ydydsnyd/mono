@@ -211,7 +211,6 @@ function handleRequest(
   const forwardToAuthDO = (lc: LogContext, request: Request) =>
     sendToAuthDO({lc, env}, request);
   return dispatch(request, lc, env.REFLECT_AUTH_API_KEY, {
-    createRoom: forwardToAuthDO,
     connect: forwardToAuthDO,
   });
 }

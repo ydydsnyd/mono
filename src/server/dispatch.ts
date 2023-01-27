@@ -1,9 +1,5 @@
 import {Struct, validate} from 'superstruct';
 import type {LogContext} from '@rocicorp/logger';
-import {
-  CreateRoomRequest,
-  createRoomRequestSchema,
-} from '../protocol/api/room.js';
 import {createUnauthorizedResponse} from './create-unauthorized-response.js';
 
 export type Handler<T = undefined> = (
@@ -29,12 +25,10 @@ export type Handler<T = undefined> = (
 // We should move these over to Router when we get a chance. Having two
 // ways of doing something is bad.
 export interface Handlers {
-  createRoom: Handler<CreateRoomRequest>;
   connect: Handler;
 }
 
 export const paths: Readonly<Record<keyof Handlers, string>> = {
-  createRoom: '/createRoom',
   connect: '/connect',
 };
 
@@ -94,13 +88,6 @@ export function dispatch(
   }
 
   switch (url.pathname) {
-    case paths.createRoom:
-      return validateAndDispatch(
-        'post',
-        request => validateBody(request, createRoomRequestSchema),
-        handlers.createRoom,
-        'authApiKey',
-      );
     case paths.connect:
       return validateAndDispatch('get', noOpValidateBody, handlers.connect);
     default:

@@ -24,7 +24,7 @@ import {
 import {assert} from 'superstruct';
 import {createAuthAPIHeaders} from './auth-api-headers.js';
 import {DurableStorage} from '../storage/durable-storage.js';
-import type {CreateRoomRequest} from '../protocol/api/room.js';
+import {createRoomRequestSchema} from '../protocol/api/room.js';
 import {closeWithError} from '../util/socket.js';
 import {
   requireAuthAPIKey,
@@ -71,6 +71,7 @@ export const AUTH_ROUTES = {
   authInvalidateForUser: '/api/auth/v0/invalidateForUser',
   authInvalidateForRoom: '/api/auth/v0/invalidateForRoom',
   authRevalidateConnections: '/api/auth/v0/revalidateConnections',
+  createRoom: '/createRoom',
 } as const;
 
 export class BaseAuthDO implements DurableObject {
@@ -170,21 +171,16 @@ export class BaseAuthDO implements DurableObject {
     ),
   );
 
-  createRoom(
-    lc: LogContext,
-    request: Request,
-    validatedBody: CreateRoomRequest,
-  ) {
-    return this._roomRecordLock.withWrite(() =>
-      createRoom(
-        lc,
-        this._roomDO,
-        this._durableStorage,
-        request,
-        validatedBody,
-      ),
-    );
-  }
+  private _createRoom = post(
+    this._requireAPIKey(
+      withBody(createRoomRequestSchema, (ctx, req) => {
+        const {lc, body} = ctx;
+        return this._roomRecordLock.withWrite(() =>
+          createRoom(lc, this._roomDO, this._durableStorage, req, body),
+        );
+      }),
+    ),
+  );
 
   // A call to closeRoom should be followed by a call to authInvalidateForRoom
   // to ensure users are logged out.
@@ -257,6 +253,7 @@ export class BaseAuthDO implements DurableObject {
     );
     this._router.register(AUTH_ROUTES.roomRecords, this._allRoomRecords);
     this._router.register(AUTH_ROUTES.closeRoom, this._closeRoom);
+    this._router.register(AUTH_ROUTES.createRoom, this._createRoom);
     this._router.register(AUTH_ROUTES.deleteRoom, this._deleteRoom);
     this._router.register(AUTH_ROUTES.migrateRoom, this._migrateRoom);
     this._router.register(AUTH_ROUTES.forgetRoom, this._forgetRoom);

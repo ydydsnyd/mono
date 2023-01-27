@@ -150,12 +150,19 @@ test('401s if wrong auth api key', async () => {
     'testRoomID',
   );
 
+  const createRoomRequest = newCreateRoomRequest(
+    'http://example.com/',
+    wrongApiKey,
+    'testRoomID',
+  );
+
   const testRequests = [
     deleteRequest,
     invalidateAllRequest,
     invalidateForUserRequest,
     invalidateForRoomRequest,
     authConnectionsRequest,
+    createRoomRequest,
   ];
 
   for (const testRequest of testRequests) {
