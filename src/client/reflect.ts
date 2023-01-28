@@ -322,6 +322,7 @@ export class Reflect<MD extends MutatorDefs> {
 
       case 'error':
         this._handleErrorMessage(l, downMessage);
+        return;
 
       // eslint does not know about return type never
       // eslint-disable-next-line no-fallthrough
