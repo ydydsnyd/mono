@@ -22,10 +22,17 @@ import {NullableVersion, nullableVersionSchema} from '../types/version.js';
 import {assert} from '../util/asserts.js';
 import {sleep} from '../util/sleep.js';
 import type {ReflectOptions} from './options.js';
-import {Gauge, DID_NOT_CONNECT_VALUE, NopMetrics, Metric} from './metrics.js';
+import {
+  Gauge,
+  State,
+  DID_NOT_CONNECT_VALUE,
+  NopMetrics,
+  Metric,
+  camelToSnake,
+} from './metrics.js';
 import {send} from '../util/socket.js';
 import type {ConnectedMessage} from '../protocol/connected.js';
-import type {ErrorMessage} from '../protocol/error.js';
+import {ErrorKind, ErrorMessage} from '../protocol/error.js';
 
 export const enum ConnectionState {
   Disconnected,
@@ -34,6 +41,15 @@ export const enum ConnectionState {
 }
 
 export const WATCHDOG_INTERVAL_MS = 5000;
+
+export const enum CloseKind {
+  AbruptClose = 'AbruptClose',
+  CleanClose = 'CleanClose',
+  ReflectClosed = 'ReflectClosed',
+  Unknown = 'Unknown',
+}
+
+export type DisconnectReason = ErrorKind | CloseKind;
 
 export class Reflect<MD extends MutatorDefs> {
   private readonly _rep: Replicache<MD>;
@@ -47,6 +63,7 @@ export class Reflect<MD extends MutatorDefs> {
 
   private readonly _metrics: {
     timeToConnectMs: Gauge;
+    lastConnectError: State;
   };
 
   // Protects _handlePoke. We need pokes to be serialized, otherwise we
@@ -112,7 +129,16 @@ export class Reflect<MD extends MutatorDefs> {
       // In that world the metric gauge(s) and bookkeeping like _connectingStart would
       // be encapsulated with the ConnectionState. This will probably happen as part
       // of https://github.com/rocicorp/reflect-server/issues/255.
-      timeToConnectMs: metrics.gauge(Metric.TimeToConnect),
+      timeToConnectMs: metrics.gauge(Metric.TimeToConnectMs),
+
+      // lastConnectError records the last error that occurred when connecting,
+      // if any. It is cleared when connecting successfully or when reported, so this
+      // state only gets reported if there was a failure during the reporting period and
+      // we are still not connected.
+      lastConnectError: metrics.state(
+        Metric.LastConnectError,
+        true, // clearOnFlush
+      ),
     };
     this._metrics.timeToConnectMs.set(DID_NOT_CONNECT_VALUE);
 
@@ -210,7 +236,7 @@ export class Reflect<MD extends MutatorDefs> {
     const lc2 = this._socket
       ? addWebSocketIDFromSocketToLogContext(this._socket, lc)
       : lc;
-    this._disconnect(lc2);
+    this._disconnect(lc2, CloseKind.ReflectClosed);
     return this._rep.close();
   }
 
@@ -318,16 +344,19 @@ export class Reflect<MD extends MutatorDefs> {
     );
     const {code, reason, wasClean} = e;
     l.info?.('Got socket close event', {code, reason, wasClean});
-    this._disconnect(l);
+    this._disconnect(
+      l,
+      wasClean ? CloseKind.CleanClose : CloseKind.AbruptClose,
+    );
   };
 
-  private _handleErrorMessage(
-    lc: LogContext,
-    downMessage: ErrorMessage,
-  ): never {
+  // An error on the connection is fatal for the connection.
+  private _handleErrorMessage(lc: LogContext, downMessage: ErrorMessage) {
     const s = `${downMessage[1]}: ${downMessage[2]}}`;
-    lc.error?.(s);
-    throw new Error(s);
+    lc.info?.(s);
+    this._disconnect(lc, downMessage[1]);
+    // We used to throw here. However these errors are expected and we would
+    // like to clean up nicely, so instead now we disconnect.
   }
 
   private _handleConnectedMessage(
@@ -343,6 +372,7 @@ export class Reflect<MD extends MutatorDefs> {
     );
 
     this._connectionState = ConnectionState.Connected;
+    this._metrics.lastConnectError.clear();
     if (this._connectingStart === undefined) {
       lc.error?.(
         'Got connected message but connect start time is undefined. This should not happen.',
@@ -401,8 +431,12 @@ export class Reflect<MD extends MutatorDefs> {
     this._socket = ws;
   }
 
-  private _disconnect(l: LogContext) {
-    l.info?.('disconnecting', {navigatorOnline: navigator.onLine});
+  private _disconnect(
+    l: LogContext,
+    reason: DisconnectReason = CloseKind.Unknown,
+  ) {
+    l.info?.('disconnecting', {navigatorOnline: navigator.onLine, reason});
+
     switch (this._connectionState) {
       case ConnectionState.Connected: {
         if (this._connectingStart !== undefined) {
@@ -418,6 +452,7 @@ export class Reflect<MD extends MutatorDefs> {
         break;
       }
       case ConnectionState.Connecting: {
+        this._metrics.lastConnectError.set(camelToSnake(reason));
         if (this._connectingStart === undefined) {
           l.error?.(
             'disconnect() called while connecting but connect start time is undefined. This should not happen.',
@@ -463,6 +498,13 @@ export class Reflect<MD extends MutatorDefs> {
       } catch (e) {
         if (String(e).indexOf('unexpected base cookie for poke') > -1) {
           lc.info?.('out of order poke, disconnecting');
+          // This technically happens *after* connection establishment, but
+          // we record it as a connect error here because it is the kind of
+          // thing that we want to hear about (and is sorta connect failure
+          // -ish).
+          this._metrics.lastConnectError.set(
+            camelToSnake(ErrorKind.UnexpectedBaseCookie),
+          );
           this._disconnect(lc);
           return;
         }
@@ -561,7 +603,7 @@ export class Reflect<MD extends MutatorDefs> {
       l.debug?.('ping succeeded in', delta, 'ms');
     } else {
       l.info?.('ping failed in', delta, 'ms - disconnecting');
-      this._disconnect(l);
+      this._disconnect(l, ErrorKind.PingTimeout);
     }
   }
 }

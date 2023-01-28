@@ -6,16 +6,25 @@
  */
 export interface Metrics {
   gauge(name: string): Gauge;
+  state(name: string, clearOnFlush?: boolean | undefined): State;
 }
 
 export interface Gauge {
   set(value: number): void;
 }
 
+export interface State {
+  set(value: string): void;
+  clear(): void;
+}
+
 /** NopMetrics are used if no Metrics are passed in the options. */
 export class NopMetrics implements Metrics {
   gauge(_name: string): Gauge {
     return nopGauge;
+  }
+  state(_name: string): State {
+    return nopState;
   }
 }
 
@@ -24,8 +33,25 @@ export const nopGauge: Gauge = {
   set(_value: number): void {},
 };
 
+export const nopState: State = {
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  set(_value: string): void {},
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  clear(): void {},
+};
+
 export enum Metric {
-  TimeToConnect = 'time_to_connect_ms',
+  TimeToConnectMs = 'time_to_connect_ms',
+  LastConnectError = 'last_connect_error',
+}
+
+// camelToSnake is used to convert a protoccol ErrorKind into a suitable
+// metric name, eg AuthInvalidated => auth_invalidated.
+export function camelToSnake(s: string): string {
+  return s
+    .split(/\.?(?=[A-Z])/)
+    .join('_')
+    .toLowerCase();
 }
 
 // This value is used to indicate that the client's last connection attempt

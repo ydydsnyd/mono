@@ -10,6 +10,7 @@ import {Mutation, pushMessageSchema} from '../protocol/push.js';
 import type {NullableVersion} from '../types/version.js';
 import {resolver} from '@rocicorp/resolver';
 import {
+  CloseKind,
   ConnectionState,
   createSocket,
   WATCHDOG_INTERVAL_MS,
@@ -21,8 +22,9 @@ import {
   tickAFewTimes,
 } from './test-utils.js';
 // Why use fakes when we can use the real thing!
-import {Metrics, gaugeValue, Gauge} from '@rocicorp/datadog-util';
-import {DID_NOT_CONNECT_VALUE, Metric} from './metrics.js';
+import {Metrics, gaugeValue, DatadogSeries} from '@rocicorp/datadog-util';
+import {camelToSnake, DID_NOT_CONNECT_VALUE, Metric} from './metrics.js';
+import {ErrorKind} from '../protocol/error.js';
 
 let clock: sinon.SinonFakeTimers;
 
@@ -392,10 +394,11 @@ test('poke log context includes requestID', async () => {
   expect(foundRequestID).to.equal('request-id-x');
 });
 
-test('timeToConnect updated when connected', async () => {
+test('metrics updated when connected', async () => {
   const url = 'ws://example.com/';
   const m = new Metrics();
-  const g = m.gauge(Metric.TimeToConnect);
+  const ttc = m.gauge(Metric.TimeToConnectMs);
+  const lce = m.state(Metric.LastConnectError);
   clock.setSystemTime(1000 * 1000);
   const r = reflectForTest({
     socketOrigin: url,
@@ -404,7 +407,8 @@ test('timeToConnect updated when connected', async () => {
     roomID: 'room-id',
     metrics: m,
   });
-  expect(val(g)).to.equal(DID_NOT_CONNECT_VALUE);
+  expect(val(ttc)?.value).to.equal(DID_NOT_CONNECT_VALUE);
+  expect(val(lce)).to.be.undefined;
 
   await tickAFewTimes(clock);
   expect(r.connectionState).to.equal(ConnectionState.Connecting);
@@ -413,9 +417,10 @@ test('timeToConnect updated when connected', async () => {
   clock.setSystemTime(start + 42 * 1000);
   r.triggerConnected();
   await tickAFewTimes(clock);
-  expect(val(g)).to.equal(42 * 1000);
+  expect(val(ttc)?.value).to.equal(42 * 1000);
+  expect(val(lce)).to.be.undefined;
 
-  // Ensure it gets set when we reconnect.
+  // Ensure TimeToConnect gets set when we reconnect.
   r.triggerClose();
   await tickAFewTimes(clock);
   expect(r.connectionState).to.equal(ConnectionState.Disconnected);
@@ -427,21 +432,29 @@ test('timeToConnect updated when connected', async () => {
   r.triggerConnected();
   await tickAFewTimes(clock);
   // Gauge value is in seconds.
-  expect(val(g)).to.equal(666 * 1000);
+  expect(val(ttc)?.value).to.equal(666 * 1000);
+  expect(val(lce)).to.be.undefined;
 });
 
-function val(g: Gauge) {
-  const v = gaugeValue(g.flush());
-  if (v === undefined) {
-    return v;
+function val(g: {flush(): DatadogSeries | undefined}):
+  | {
+      metric: string;
+      tsSec: number;
+      value: number;
+    }
+  | undefined {
+  const series = g.flush();
+  if (series === undefined) {
+    return series;
   }
-  return v.value;
+  return gaugeValue(series);
 }
 
-test('timeToConnect updated to DID_NOT_CONNECT when connect fails', async () => {
+test('metrics when connect fails', async () => {
   const url = 'ws://example.com/';
   const m = new Metrics();
-  const g = m.gauge(Metric.TimeToConnect);
+  const ttc = m.gauge(Metric.TimeToConnectMs);
+  const lce = m.state(Metric.LastConnectError);
   clock.setSystemTime(1000 * 1000);
   const r = reflectForTest({
     socketOrigin: url,
@@ -451,19 +464,42 @@ test('timeToConnect updated to DID_NOT_CONNECT when connect fails', async () => 
     metrics: m,
   });
 
+  // Trigger a close while still connecting.
   await tickAFewTimes(clock);
-  r.triggerConnected();
-  await tickAFewTimes(clock);
-  expect(val(g)).to.not.equal(DID_NOT_CONNECT_VALUE);
-
+  expect(r.connectionState).to.equal(ConnectionState.Connecting);
   r.triggerClose();
   await tickAFewTimes(clock, WATCHDOG_INTERVAL_MS);
   expect(r.connectionState).to.equal(ConnectionState.Connecting);
+  expect(val(ttc)?.value).to.equal(DID_NOT_CONNECT_VALUE);
+  let gotLceVal = val(lce);
+  expect(gotLceVal?.metric).to.equal(
+    [
+      camelToSnake(Metric.LastConnectError),
+      camelToSnake(CloseKind.AbruptClose),
+    ].join('_'),
+  );
+  expect(gotLceVal?.value).to.equal(1);
+
+  // Trigger an error while still connecting.
   const start = asNumber(r.connectingStart);
   clock.setSystemTime(start + 42 * 1000);
-  r.triggerClose();
+  r.triggerError(ErrorKind.Unauthorized, 'boom');
   await tickAFewTimes(clock);
-  expect(val(g)).to.equal(DID_NOT_CONNECT_VALUE);
+  expect(val(ttc)?.value).to.equal(DID_NOT_CONNECT_VALUE);
+  gotLceVal = val(lce);
+  expect(gotLceVal?.metric).to.equal(
+    [
+      camelToSnake(Metric.LastConnectError),
+      camelToSnake(ErrorKind.Unauthorized),
+    ].join('_'),
+  );
+
+  // Ensure LastConnectError gets cleared when we successfully reconnect.
+  await tickAFewTimes(clock, WATCHDOG_INTERVAL_MS);
+  expect(r.connectionState).to.equal(ConnectionState.Connecting);
+  r.triggerConnected();
+  await tickAFewTimes(clock);
+  expect(val(lce)).to.be.undefined;
 });
 
 function asNumber(v: unknown): number {

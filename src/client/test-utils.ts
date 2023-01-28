@@ -1,6 +1,7 @@
 import type {MutatorDefs, ReadonlyJSONValue} from 'replicache';
 import type {SinonFakeTimers} from 'sinon';
 import type {ConnectedMessage} from '../protocol/connected.js';
+import type {ErrorKind, ErrorMessage} from '../protocol/error.js';
 import type {PokeBody, PokeMessage} from '../protocol/poke.js';
 import type {PongMessage} from '../protocol/pong.js';
 import {assert} from '../util/asserts.js';
@@ -53,6 +54,11 @@ export class TestReflect<MD extends MutatorDefs> extends Reflect<MD> {
 
   get socket() {
     return this._socket;
+  }
+
+  triggerError(error: ErrorKind, message: string) {
+    const msg: ErrorMessage = ['error', error, message];
+    this.triggerMessage(msg);
   }
 
   triggerMessage(data: ReadonlyJSONValue) {

@@ -1,12 +1,17 @@
 import {z} from 'zod';
 
-// Keep this in sync with reflect client
+// Keep this in sync with reflect server.
+//
+// Also note that metric names depend on these values,
+// so if you add or change on here a corresponding dashboard
+// change will likelybe needed.
 
 export const enum ErrorKind {
   AuthInvalidated = 'AuthInvalidated',
   ClientNotFound = 'ClientNotFound',
   InvalidConnectionRequest = 'InvalidConnectionRequest',
   InvalidMessage = 'InvalidMessage',
+  PingTimeout = 'PingTimeout',
   RoomClosed = 'RoomClosed',
   RoomNotFound = 'RoomNotFound',
   Unauthorized = 'Unauthorized',
@@ -19,6 +24,7 @@ export const errorKindSchema = z.union([
   z.literal(ErrorKind.ClientNotFound),
   z.literal(ErrorKind.InvalidConnectionRequest),
   z.literal(ErrorKind.InvalidMessage),
+  z.literal(ErrorKind.PingTimeout),
   z.literal(ErrorKind.RoomClosed),
   z.literal(ErrorKind.RoomNotFound),
   z.literal(ErrorKind.Unauthorized),
