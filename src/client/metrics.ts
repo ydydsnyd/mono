@@ -29,15 +29,18 @@ export class NopMetrics implements Metrics {
 }
 
 export const nopGauge: Gauge = {
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  set(_value: number): void {},
+  set(_value: number): void {
+    // nop
+  },
 };
 
 export const nopState: State = {
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  set(_value: string): void {},
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  clear(): void {},
+  set(_value: string): void {
+    // nop
+  },
+  clear(): void {
+    // nop
+  },
 };
 
 export enum Metric {
@@ -45,8 +48,9 @@ export enum Metric {
   LastConnectError = 'last_connect_error',
 }
 
-// camelToSnake is used to convert a protoccol ErrorKind into a suitable
-// metric name, eg AuthInvalidated => auth_invalidated.
+// camelToSnake is used to convert a protocol ErrorKind into a suitable
+// metric name, eg AuthInvalidated => auth_invalidated. It converts
+// both PascalCase and camelCase to snake_case.
 export function camelToSnake(s: string): string {
   return s
     .split(/\.?(?=[A-Z])/)
