@@ -22,7 +22,7 @@ const Benefits = () => (
     {/* Automatic Persistence */}
     <div className={styles.benefitBlock}>
       <div className={styles.benefitIconContainer}>
-        <img src="/benefits/byob.svg" loading="lazy" alt="" className={styles.benefitIcon} />
+      <img src="/benefits/realtimeCollab.svg" loading="lazy" alt="" className={styles.benefitIcon} />
       </div>
       <h3 className={styles.benefitTitle}>
         Automatic Persistence
@@ -35,7 +35,7 @@ const Benefits = () => (
     {/* Replay-Based Conflict Resolution */}
     <div className={styles.benefitBlock}>
       <div className={styles.benefitIconContainer}>
-        <img src="/benefits/byob.svg" loading="lazy" alt="" className={styles.benefitIcon} />
+        <img src="/benefits/realtimeCollab.svg" loading="lazy" alt="" className={styles.benefitIcon} />
       </div>
       <h3 className={styles.benefitTitle}>
         Replay-Based Conflict Resolution
@@ -48,7 +48,7 @@ const Benefits = () => (
     {/* Optional Offline */}
     <div className={styles.benefitBlock}>
       <div className={styles.benefitIconContainer}>
-        <img src="/benefits/offline.svg" loading="lazy" alt="" className={styles.benefitIcon} />
+        <img src="/benefits/realtimeCollab.svg" loading="lazy" alt="" className={styles.benefitIcon} />
       </div>
       <h3 className={styles.benefitTitle}>
         Optional Offline
@@ -61,7 +61,7 @@ const Benefits = () => (
     {/* Works With Your Tools */}
     <div className={styles.benefitBlock}>
       <div className={styles.benefitIconContainer}>
-        <img src="/benefits/offline.svg" loading="lazy" alt="" className={styles.benefitIcon} />
+        <img src="/benefits/realtimeCollab.svg" loading="lazy" alt="" className={styles.benefitIcon} />
       </div>
       <h3 className={styles.benefitTitle}>
         Works With Your Tools
@@ -74,7 +74,7 @@ const Benefits = () => (
     {/* Fine-Grained Auth */}
     <div className={styles.benefitBlock}>
       <div className={styles.benefitIconContainer}>
-        <img src="/benefits/offline.svg" loading="lazy" alt="" className={styles.benefitIcon} />
+        <img src="/benefits/realtimeCollab.svg" loading="lazy" alt="" className={styles.benefitIcon} />
       </div>
       <h3 className={styles.benefitTitle}>
         Fine-Grained Auth
