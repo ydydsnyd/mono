@@ -1,14 +1,12 @@
 import Head from 'next/head'
 import Image from 'next/image'
-import { Inter } from '@next/font/google'
 import styles from '@/styles/Home.module.css'
+import Benefits from '@/components/Benefits/Benefits.tsx'
 import Pricing from '@/components/Pricing/Pricing.tsx'
-
-const inter = Inter({ subsets: ['latin'] })
 
 export default function Home() {
   return (
-    <>
+    <div className={styles.container}>
       <Head>
         <title>Reflect</title>
         <meta name="description" content="Reflect" />
@@ -27,6 +25,13 @@ export default function Home() {
           </p>
         </section>
 
+        <section id="benefits" className={styles.section}>
+          <h2 className={styles.subheader}>
+            Benefits
+          </h2>
+          <Benefits />
+        </section>
+
         <section id="pricing" className={styles.section}>
         <h2 className={styles.subheader}>
           Pricing
@@ -34,6 +39,6 @@ export default function Home() {
         <Pricing />
         </section>
       </main>
-    </>
+    </div>
   )
 }
