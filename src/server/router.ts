@@ -54,10 +54,7 @@ export class Router<InitialContext extends WithLogContext = WithLogContext> {
     });
   }
 
-  dispatch(
-    request: Request,
-    context: InitialContext,
-  ): MaybePromise<Response | undefined> {
+  dispatch(request: Request, context: InitialContext): MaybePromise<Response> {
     const {lc} = context;
     const matches = this._routes
       .map(route => {
@@ -69,7 +66,7 @@ export class Router<InitialContext extends WithLogContext = WithLogContext> {
 
     if (matches.length === 0) {
       lc.debug?.(`no matching route for ${request.url}`);
-      return undefined;
+      return new Response('not found', {status: 404});
     }
 
     const [match] = matches;

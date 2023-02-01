@@ -68,8 +68,8 @@ test('Router', async () => {
     {
       path: '/monkey/nuts',
       expectedError: undefined,
-      expectedResponseCode: undefined,
-      expectedResponseText: undefined,
+      expectedResponseCode: 404,
+      expectedResponseText: 'not found',
     },
   ];
   for (const c of cases) {

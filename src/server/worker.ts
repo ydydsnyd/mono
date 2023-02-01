@@ -5,25 +5,19 @@ import {
   Handler,
   post,
   Router,
+  withBody,
   WithLogContext,
 } from './router.js';
 import {randomID} from '../util/rand.js';
 import {createAuthAPIHeaders} from './auth-api-headers.js';
-import {dispatch, validateBody} from './dispatch.js';
 import {AUTH_ROUTES} from './auth-do.js';
-import {ReportMetrics, reportMetricsSchema} from '../types/report-metrics.js';
+import {reportMetricsSchema} from '../types/report-metrics.js';
 import {
   DD_AUTH_HEADER_NAME,
   DD_DISTRIBUTION_METRIC_URL,
   report,
 } from '@rocicorp/datadog-util';
-
-export const WORKER_ROUTES = {
-  reportMetrics: {
-    path: '/api/metrics/v0/report',
-    handler: post(reportMetrics),
-  },
-} as const;
+import {assert} from '../util/asserts.js';
 
 export interface WorkerOptions<Env extends BaseWorkerEnv> {
   getLogSink: (env: Env) => LogSink;
@@ -64,11 +58,65 @@ function registerRoutes(router: WorkerRouter) {
   }
 }
 
+// The datadog metrics http endpoint does not support CORS, so we
+// have to proxy metrics reports through this worker endpoint. This
+// is the most basic implementation we can imagine. This endpoint
+// should...
+// - buffer metrics reports and send them in batches, timeout,
+//    and have retry
+// - rate limit requests
+// - maybe authenticate requests (but not just utilizing the auth
+//    handler: we want to be able to report metrics for a logged
+//    out user as well)
+const reportMetrics = post(
+  requireDataDogApiEnv(
+    withBody(reportMetricsSchema, async ctx => {
+      const {body, env} = ctx;
+
+      if (body.series.length === 0) {
+        return new Response('ok');
+      }
+
+      assert(env.REFLECT_DATADOG_API_KEY);
+      const resp = await report(
+        DD_DISTRIBUTION_METRIC_URL,
+        {
+          [DD_AUTH_HEADER_NAME]: env.REFLECT_DATADOG_API_KEY,
+        },
+        body.series,
+      );
+      if (resp.ok) {
+        ctx.lc.debug?.(
+          `Successfully proxied metrics report to Datadog: ${resp.status} ${resp.statusText}.`,
+        );
+      } else {
+        ctx.lc.info?.(
+          `Failed to report metrics to Datadog: ${resp.status} ${resp.statusText}.`,
+          'Dropping metrics on the floor.',
+        );
+      }
+      return new Response('ok');
+    }),
+  ),
+);
+
 function requireAPIKeyMatchesEnv(next: Handler<WorkerContext, Response>) {
   return (ctx: WorkerContext, req: Request) => {
     const resp = checkAuthAPIKey(ctx.env.REFLECT_AUTH_API_KEY, req);
     if (resp) {
       return resp;
+    }
+    return next(ctx, req);
+  };
+}
+
+function requireDataDogApiEnv(next: Handler<WorkerContext, Response>) {
+  return (ctx: WorkerContext, req: Request) => {
+    if (ctx.env.REFLECT_DATADOG_API_KEY === undefined) {
+      ctx.lc.debug?.('reportMetrics: proxy metrics not enabled');
+      return new Response('metrics not enabled', {
+        status: 503,
+      });
     }
     return next(ctx, req);
   };
@@ -134,7 +182,9 @@ async function fetch(
       request,
       async (request: Request) =>
         (await router.dispatch(request, {lc, env})) ??
-        handleRequest(request, lc, env),
+        new Response(null, {
+          status: 404,
+        }),
     );
     lc.debug?.(`Returning response: ${resp.status} ${resp.statusText}`);
     return resp;
@@ -203,18 +253,6 @@ function handleOptions(request: Request): Response {
   });
 }
 
-function handleRequest(
-  request: Request,
-  lc: LogContext,
-  env: BaseWorkerEnv,
-): Promise<Response> {
-  const forwardToAuthDO = (lc: LogContext, request: Request) =>
-    sendToAuthDO({lc, env}, request);
-  return dispatch(request, lc, env.REFLECT_AUTH_API_KEY, {
-    connect: forwardToAuthDO,
-  });
-}
-
 async function withLogContext<Env extends BaseWorkerEnv, R>(
   env: Env,
   ctx: ExecutionContext,
@@ -248,53 +286,13 @@ async function sendToAuthDO(
   return stub.fetch(request);
 }
 
-// The datadog metrics http endpoint does not support CORS, so we
-// have to proxy metrics reports through this worker endpoint. This
-// is the most basic implementation we can imagine. This endpoint
-// should...
-// - buffer metrics reports and send them in batches, timeout,
-//    and have retry
-// - rate limit requests
-// - maybe authenticate requests (but not just utilizing the auth
-//    handler: we want to be able to report metrics for a logged
-//    out user as well)
-async function reportMetrics(ctx: BaseContext & WithEnv, request: Request) {
-  if (ctx.env.REFLECT_DATADOG_API_KEY === undefined) {
-    ctx.lc.debug?.('reportMetrics: proxy metrics not enabled');
-    return new Response('metrics not enabled', {
-      status: 503,
-    });
-  }
-  const validateResult = await validateBody(request, reportMetricsSchema);
-
-  if (validateResult.errorResponse) {
-    ctx.lc.debug?.(
-      'Invalid reportMetrics request',
-      validateResult.errorResponse,
-    );
-    return validateResult.errorResponse;
-  }
-  const body: ReportMetrics = validateResult.value;
-  if (body.series.length === 0) {
-    return new Response('ok');
-  }
-
-  const resp = await report(
-    DD_DISTRIBUTION_METRIC_URL,
-    {
-      [DD_AUTH_HEADER_NAME]: ctx.env.REFLECT_DATADOG_API_KEY,
-    },
-    body.series,
-  );
-  if (resp.ok) {
-    ctx.lc.debug?.(
-      `Successfully proxied metrics report to Datadog: ${resp.status} ${resp.statusText}.`,
-    );
-  } else {
-    ctx.lc.info?.(
-      `Failed to report metrics to Datadog: ${resp.status} ${resp.statusText}.`,
-      'Dropping metrics on the floor.',
-    );
-  }
-  return new Response('ok');
-}
+export const WORKER_ROUTES = {
+  reportMetrics: {
+    path: '/api/metrics/v0/report',
+    handler: reportMetrics,
+  },
+  connect: {
+    path: '/connect',
+    handler: sendToAuthDO,
+  },
+} as const;

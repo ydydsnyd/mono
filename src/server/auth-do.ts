@@ -2,7 +2,6 @@ import {encodeHeaderValue} from '../util/headers.js';
 import {LogSink, LogContext, LogLevel} from '@rocicorp/logger';
 import {version} from '../util/version.js';
 import {AuthHandler, UserData, USER_DATA_HEADER_NAME} from './auth.js';
-import {dispatch} from './dispatch.js';
 import {
   closeRoom,
   createRoom,
@@ -72,6 +71,7 @@ export const AUTH_ROUTES = {
   authInvalidateForRoom: '/api/auth/v0/invalidateForRoom',
   authRevalidateConnections: '/api/auth/v0/revalidateConnections',
   createRoom: '/createRoom',
+  connect: '/connect',
 } as const;
 
 export class BaseAuthDO implements DurableObject {
@@ -120,15 +120,8 @@ export class BaseAuthDO implements DurableObject {
   async fetch(request: Request): Promise<Response> {
     const lc = addRequestIDFromHeadersOrRandomID(this._lc, request);
     lc.debug?.('Handling request:', request.url);
-
     try {
-      // Try newfangled routes first.
-      let resp = await this._router.dispatch(request, {lc});
-      // If not handled, use dispatch routes.
-      // TODO: change dispatch to return 404 in this case once everything is converted.
-      if (resp === undefined) {
-        resp = await dispatch(request, lc, this._authApiKey, this);
-      }
+      const resp = await this._router.dispatch(request, {lc});
       lc.debug?.(`Returning response: ${resp.status} ${resp.statusText}`);
       return resp;
     } catch (e) {
@@ -273,17 +266,14 @@ export class BaseAuthDO implements DurableObject {
       AUTH_ROUTES.authRevalidateConnections,
       this._authRevalidateConnections,
     );
+
+    this._router.register(AUTH_ROUTES.connect, this._connect);
   }
 
-  // eslint-disable-next-line require-await
-  async connect(lc: LogContext, request: Request): Promise<Response> {
+  private _connect = get((ctx, request) => {
+    let {lc} = ctx;
     lc.info?.('authDO received websocket connection request:', request.url);
     const url = new URL(request.url);
-    if (url.pathname !== '/connect') {
-      lc.error?.('authDO returning 400 bc path is not /connect:', request.url);
-      return new Response('unknown route', {status: 400});
-    }
-
     if (request.headers.get('Upgrade') !== 'websocket') {
       lc.error?.(
         'authDO returning 400 bc missing Upgrade header:',
@@ -467,7 +457,7 @@ export class BaseAuthDO implements DurableObject {
       });
       return response;
     });
-  }
+  });
 
   private _authInvalidateForRoom = post(
     this._requireAPIKey(

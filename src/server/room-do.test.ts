@@ -233,6 +233,49 @@ test('Sets turn duration based on allowUnconfirmedWrites flag', () => {
   }
 });
 
+test('good, bad, invalid connect requests', async () => {
+  const goodRequest = new Request('ws://test.roci.dev/connect');
+  goodRequest.headers.set('Upgrade', 'websocket');
+  const goodTest = {
+    request: goodRequest,
+    expectedStatus: 101,
+    expectedText: '',
+  };
+
+  const nonWebSocketTest = {
+    request: new Request('ws://test.roci.dev/connect'),
+    expectedStatus: 400,
+    expectedText: 'expected websocket',
+  };
+
+  const badRequestTest = {
+    request: new Request('ws://test.roci.dev/connect', {method: 'POST'}),
+    expectedStatus: 405,
+    expectedText: 'unsupported method',
+  };
+
+  const testLogSink = new TestLogSink();
+  const doID = new TestDurableObjectId('test-do-id');
+  const storage = await getMiniflareDurableObjectStorage(doID);
+  const roomDO = new BaseRoomDO({
+    mutators: {},
+    disconnectHandler: () => Promise.resolve(),
+    state: {
+      id: doID,
+      storage,
+    } as unknown as DurableObjectState,
+    authApiKey: 'API KEY',
+    logSink: testLogSink,
+    logLevel: 'info',
+    allowUnconfirmedWrites: true,
+  });
+  for (const test of [goodTest, nonWebSocketTest, badRequestTest]) {
+    const response = await roomDO.fetch(test.request);
+    expect(await response.text()).toEqual(test.expectedText);
+    expect(response.status).toBe(test.expectedStatus);
+  }
+});
+
 /*
 import { ClientID, ClientMap, Socket } from "../../src/types/client-state";
 import { Mocket } from "../util/test-utils";

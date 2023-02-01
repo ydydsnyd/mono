@@ -14,7 +14,6 @@ import {handleConnection} from './connect.js';
 import {handleMessage} from './message.js';
 import {randomID} from '../util/rand.js';
 import {version} from '../util/version.js';
-import {dispatch} from './dispatch.js';
 import {
   invalidateForUserRequestSchema,
   invalidateForRoomRequestSchema,
@@ -26,6 +25,7 @@ import {getConnectedClients} from '../types/connected-clients.js';
 import * as s from 'superstruct';
 import {createRoomRequestSchema} from '../protocol/api/room.js';
 import {
+  get,
   post,
   requireAuthAPIKey,
   Router,
@@ -55,6 +55,7 @@ export const ROOM_ROUTES = {
   authInvalidateForRoom: '/api/auth/v0/invalidateForRoom',
   authConnections: '/api/auth/v0/connections',
   createRoom: '/createRoom',
+  connect: '/connect',
 };
 
 export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
@@ -109,6 +110,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     );
     this._router.register(ROOM_ROUTES.authConnections, this._authConnections);
     this._router.register(ROOM_ROUTES.createRoom, this._createRoom);
+    this._router.register(ROOM_ROUTES.connect, this._connect);
   }
 
   private _requireAPIKey = <Context extends BaseContext, Resp>(
@@ -159,11 +161,11 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       );
 
       const response = await this._router.dispatch(request, {lc});
-      if (response !== undefined) {
-        return response;
+      if (response === undefined) {
+        throw new Error('Unexpected response');
       }
 
-      return await dispatch(request, lc, this._authApiKey, this);
+      return response;
     } catch (e) {
       const lc = addClientIPToLogContext(this._lc, request);
 
@@ -230,7 +232,8 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   );
 
   // eslint-disable-next-line require-await
-  async connect(lc: LogContext, request: Request): Promise<Response> {
+  private _connect = get((ctx, request) => {
+    let {lc} = ctx;
     lc = addWebSocketIDToLogContext(lc, request.url);
 
     if (request.headers.get('Upgrade') !== 'websocket') {
@@ -258,7 +261,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     });
 
     return new Response(null, {status: 101, webSocket: clientWS});
-  }
+  });
 
   private _authInvalidateForRoom = post(
     this._requireAPIKey(
