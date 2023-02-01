@@ -664,7 +664,8 @@ export class BaseAuthDO implements DurableObject {
       }
 
       const stub = this._roomDO.get(roomObjectID);
-      responsePromises.push(stub.fetch(request));
+      const req = roomIDs.length === 1 ? request : request.clone();
+      responsePromises.push(stub.fetch(req));
     }
     for (let i = 0; i < responsePromises.length; i++) {
       const response = await responsePromises[i];

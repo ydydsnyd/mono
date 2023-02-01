@@ -10,7 +10,10 @@ import {
   TestDurableObjectStub,
 } from './do-test-utils.js';
 import {BaseAuthDO, AUTH_ROUTES, ConnectionRecord} from './auth-do.js';
-import {createAuthAPIHeaders} from './auth-api-headers.js';
+import {
+  AUTH_API_KEY_HEADER_NAME,
+  createAuthAPIHeaders,
+} from './auth-api-headers.js';
 import {
   type RoomRecord,
   roomRecordByRoomID as getRoomRecordOriginal,
@@ -1185,7 +1188,7 @@ test('authInvalidateForUser when requests to roomDOs are successful', async () =
             roomID,
             (roomDORequestCountsByRoomID.get(roomID) || 0) + 1,
           );
-          expect(request).toBe(testRequest);
+          await expectForwardedAuthInvalidateRequest(request, testRequest);
         }
         return new Response('Test Success', {status: 200});
       }),
@@ -1266,7 +1269,7 @@ test('authInvalidateForUser when connection ids have chars that need to be perce
             roomID,
             (roomDORequestCountsByRoomID.get(roomID) || 0) + 1,
           );
-          expect(request).toBe(testRequest);
+          await expectForwardedAuthInvalidateRequest(request, testRequest);
         }
         return new Response('Test Success', {status: 200});
       }),
@@ -1337,7 +1340,7 @@ test('authInvalidateForUser when any request to roomDOs returns error response',
             roomID,
             (roomDORequestCountsByRoomID.get(roomID) || 0) + 1,
           );
-          expect(request).toBe(testRequest);
+          await expectForwardedAuthInvalidateRequest(request, testRequest);
           return roomID === 'testRoomID2'
             ? new Response(
                 'Test authInvalidateForUser Internal Server Error Msg',
@@ -1504,7 +1507,11 @@ test('authInvalidateForRoom when request to roomDO returns error response', asyn
 test('authInvalidateAll when requests to roomDOs are successful', async () => {
   const testRequest = new Request(
     `https://test.roci.dev/api/auth/v0/invalidateAll`,
-    {headers: createAuthAPIHeaders(TEST_AUTH_API_KEY), method: 'post'},
+    {
+      headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
+      method: 'post',
+      body: '',
+    },
   );
 
   const storage = await getMiniflareDurableObjectStorage(authDOID);
@@ -1545,7 +1552,7 @@ test('authInvalidateAll when requests to roomDOs are successful', async () => {
             roomID,
             (roomDORequestCountsByRoomID.get(roomID) || 0) + 1,
           );
-          expect(request).toBe(testRequest);
+          await expectForwardedAuthInvalidateRequest(request, testRequest);
         }
         return new Response('Test Success', {status: 200});
       }),
@@ -1575,12 +1582,28 @@ test('authInvalidateAll when requests to roomDOs are successful', async () => {
   expect(roomDORequestCountsByRoomID.get('testRoomID')).toEqual(1);
 });
 
+async function expectForwardedAuthInvalidateRequest(
+  forwardedRequest: Request,
+  originalRequest: Request,
+) {
+  expect(forwardedRequest.url).toEqual(originalRequest.url);
+  expect(forwardedRequest.method).toEqual(originalRequest.method);
+  expect(forwardedRequest.headers.get(AUTH_API_KEY_HEADER_NAME)).toEqual(
+    originalRequest.headers.get(AUTH_API_KEY_HEADER_NAME),
+  );
+  expect(await forwardedRequest.text()).toEqual(
+    await originalRequest.clone().text(),
+  );
+  expect(forwardedRequest.bodyUsed).toBeTruthy();
+}
+
 test('authInvalidateAll when any request to roomDOs returns error response', async () => {
   const testRequest = new Request(
     `https://test.roci.dev/api/auth/v0/invalidateAll`,
     {
       headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
       method: 'post',
+      body: '',
     },
   );
 
@@ -1622,7 +1645,7 @@ test('authInvalidateAll when any request to roomDOs returns error response', asy
             roomID,
             (roomDORequestCountsByRoomID.get(roomID) || 0) + 1,
           );
-          expect(request).toBe(testRequest);
+          await expectForwardedAuthInvalidateRequest(request, testRequest);
           return roomID === 'testRoomID2'
             ? new Response('Test authInvalidateAll Internal Server Error Msg', {
                 status: 500,
