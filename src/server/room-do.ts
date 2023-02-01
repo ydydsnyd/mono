@@ -160,12 +160,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
         request,
       );
 
-      const response = await this._router.dispatch(request, {lc});
-      if (response === undefined) {
-        throw new Error('Unexpected response');
-      }
-
-      return response;
+      return await this._router.dispatch(request, {lc});
     } catch (e) {
       const lc = addClientIPToLogContext(this._lc, request);
 
