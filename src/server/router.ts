@@ -135,7 +135,8 @@ export function withRoomID<Context extends BaseContext, Resp>(
     if (roomID === undefined) {
       throw new Error('Internal error: roomID not found by withRoomID');
     }
-    return next({...ctx, roomID}, req);
+    const decoded = decodeURIComponent(roomID);
+    return next({...ctx, roomID: decoded}, req);
   };
 }
 
