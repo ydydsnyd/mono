@@ -47,8 +47,8 @@ type WorkerRouter = Router<WithLogContext & WithEnv>;
  * Registers routes that are not handled by dispatch.
  */
 function registerRoutes(router: WorkerRouter) {
-  for (const route of Object.values(WORKER_ROUTES)) {
-    router.register(route.path, route.handler);
+  for (const [path, handler] of Object.entries(WORKER_ROUTES)) {
+    router.register(path, handler);
   }
   for (const pattern of Object.values(AUTH_ROUTES)) {
     router.register(
@@ -286,13 +286,9 @@ async function sendToAuthDO(
   return stub.fetch(request);
 }
 
+export const REPORT_METRICS_PATH = '/api/metrics/v0/report';
+
 export const WORKER_ROUTES = {
-  reportMetrics: {
-    path: '/api/metrics/v0/report',
-    handler: reportMetrics,
-  },
-  connect: {
-    path: '/connect',
-    handler: sendToAuthDO,
-  },
+  [REPORT_METRICS_PATH]: reportMetrics,
+  '/connect': sendToAuthDO,
 } as const;

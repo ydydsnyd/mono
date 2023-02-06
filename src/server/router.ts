@@ -48,6 +48,8 @@ export class Router<InitialContext extends WithLogContext = WithLogContext> {
     path: string,
     handler: Handler<InitialContext & WithParsedURL, Response>,
   ) {
+    // It is OK add another route with the same path. However, the first one
+    // will always be used.
     this._routes.push({
       pattern: new URLPattern({pathname: path}),
       handler,
@@ -56,6 +58,8 @@ export class Router<InitialContext extends WithLogContext = WithLogContext> {
 
   dispatch(request: Request, context: InitialContext): MaybePromise<Response> {
     const {lc} = context;
+    // TODO(arv): This can be simpler using a for-of loop. No need to iterate
+    // over all of them to find the first match.
     const matches = this._routes
       .map(route => {
         const {pattern} = route;

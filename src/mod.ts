@@ -1,4 +1,4 @@
-import {WORKER_ROUTES} from './server/worker.js';
+import {REPORT_METRICS_PATH} from './server/worker.js';
 
 export {
   createReflectServer,
@@ -17,7 +17,7 @@ export {
 export {DatadogLogSink} from './util/datadog-log-sink.js';
 export {version} from './util/version.js';
 export const ROUTES = {
-  reportMetrics: WORKER_ROUTES.reportMetrics.path,
+  reportMetrics: REPORT_METRICS_PATH,
 };
 
 // TODO(arv): Only export the types that are actually used.

@@ -8,7 +8,7 @@ import {
   TestDurableObjectId,
   TestDurableObjectStub,
 } from './do-test-utils.js';
-import {BaseWorkerEnv, createWorker, WORKER_ROUTES} from './worker.js';
+import {BaseWorkerEnv, createWorker, REPORT_METRICS_PATH} from './worker.js';
 import type {DatadogSeries} from '@rocicorp/datadog-util';
 
 const TEST_AUTH_API_KEY = 'TEST_REFLECT_AUTH_API_KEY_TEST';
@@ -468,8 +468,10 @@ async function testPreflightRequest({
 }
 
 describe('reportMetrics', () => {
-  const reportMetricsPath = WORKER_ROUTES.reportMetrics.path;
-  const reportMetricsURL = new URL(reportMetricsPath, 'https://test.roci.dev/');
+  const reportMetricsURL = new URL(
+    REPORT_METRICS_PATH,
+    'https://test.roci.dev/',
+  );
   const ddKey = 'datadog-secret-key-shhhhh';
   type TestCase = {
     name: string;
