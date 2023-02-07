@@ -272,13 +272,10 @@ export class BaseAuthDO implements DurableObject {
 
   private _connect = get((ctx, request) => {
     let {lc} = ctx;
-    lc.info?.('authDO received websocket connection request:', request.url);
-    const url = new URL(request.url);
+    const {url} = request;
+    lc.info?.('authDO received websocket connection request:', url);
     if (request.headers.get('Upgrade') !== 'websocket') {
-      lc.error?.(
-        'authDO returning 400 bc missing Upgrade header:',
-        request.url,
-      );
+      lc.error?.('authDO returning 400 bc missing Upgrade header:', url);
       return new Response('expected websocket', {status: 400});
     }
 
@@ -305,32 +302,12 @@ export class BaseAuthDO implements DurableObject {
     // TODO should probably unify the way this works with how roomDO connect()
     //   does it.
 
-    const closeWithErrorLocal = (errorKind: ErrorKind, msg: string) => {
-      const pair = new WebSocketPair();
-      const ws = pair[1];
-      lc.error?.('accepting connection to send error', url.toString());
-      ws.accept();
+    const closeWithErrorLocal = (errorKind: ErrorKind, msg: string) =>
+      createWSAndCloseWithError(lc, url, errorKind, msg, encodedAuth);
 
-      closeWithError(lc, ws, errorKind, msg);
-
-      // MDN tells me that the message will be delivered even if we call close
-      // immediately after send:
-      //   https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/close
-      // However the relevant section of the RFC says this behavior is non-normative?
-      //   https://www.rfc-editor.org/rfc/rfc6455.html#section-1.4
-      // In any case, it seems to work just fine to send the message and
-      // close before even returning the response.
-      const responseHeaders = new Headers();
-      responseHeaders.set('Sec-WebSocket-Protocol', encodedAuth);
-      return new Response(null, {
-        status: 101,
-        headers: responseHeaders,
-        webSocket: pair[0],
-      });
-    };
-
+    const {searchParams} = new URL(url);
     // TODO apparently many of these checks are not tested :(
-    const clientID = url.searchParams.get('clientID');
+    const clientID = searchParams.get('clientID');
     if (!clientID) {
       return closeWithErrorLocal(
         ErrorKind.InvalidConnectionRequest,
@@ -338,7 +315,7 @@ export class BaseAuthDO implements DurableObject {
       );
     }
 
-    const roomID = url.searchParams.get('roomID');
+    const roomID = searchParams.get('roomID');
     if (roomID === null || roomID === '') {
       return closeWithErrorLocal(
         ErrorKind.InvalidConnectionRequest,
@@ -391,33 +368,8 @@ export class BaseAuthDO implements DurableObject {
       // close the connection. We trust it will be logged by onSocketError in the
       // client.
       if (roomRecord === undefined || roomRecord.status !== RoomStatus.Open) {
-        const pair = new WebSocketPair();
-        const ws = pair[1];
-        lc.info?.('accepting connection ', request.url);
-        ws.accept();
-
-        // MDN tells me that the message will be delivered even if we call close
-        // immediately after send:
-        //   https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/close
-        // However the relevant section of the RFC says this behavior is non-normative?
-        //   https://www.rfc-editor.org/rfc/rfc6455.html#section-1.4
-        // In any case, it seems to work just fine to send the message and
-        // close before even returning the response.
-
-        closeWithError(
-          lc,
-          ws,
-          roomRecord ? ErrorKind.RoomClosed : ErrorKind.RoomNotFound,
-          roomID,
-        );
-
-        const responseHeaders = new Headers();
-        responseHeaders.set('Sec-WebSocket-Protocol', encodedAuth);
-        return new Response(null, {
-          status: 101,
-          headers: responseHeaders,
-          webSocket: pair[0],
-        });
+        const kind = roomRecord ? ErrorKind.RoomClosed : ErrorKind.RoomNotFound;
+        return createWSAndCloseWithError(lc, url, kind, roomID, encodedAuth);
       }
 
       const roomObjectID = this._roomDO.idFromString(roomRecord.objectIDString);
@@ -687,6 +639,37 @@ export class BaseAuthDO implements DurableObject {
 }
 
 const CONNECTION_KEY_PREFIX = 'connection/';
+
+function createWSAndCloseWithError(
+  lc: LogContext,
+  url: string,
+  kind: ErrorKind,
+  msg: string,
+  encodedAuth: string,
+) {
+  const pair = new WebSocketPair();
+  const ws = pair[1];
+  lc.error?.('accepting connection to send error', url);
+  ws.accept();
+
+  // MDN tells me that the message will be delivered even if we call close
+  // immediately after send:
+  //   https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/close
+  // However the relevant section of the RFC says this behavior is non-normative?
+  //   https://www.rfc-editor.org/rfc/rfc6455.html#section-1.4
+  // In any case, it seems to work just fine to send the message and
+  // close before even returning the response.
+
+  closeWithError(lc, ws, kind, msg);
+
+  const responseHeaders = new Headers();
+  responseHeaders.set('Sec-WebSocket-Protocol', encodedAuth);
+  return new Response(null, {
+    status: 101,
+    headers: responseHeaders,
+    webSocket: pair[0],
+  });
+}
 
 function connectionKeyToString(key: ConnectionKey): string {
   return `${CONNECTION_KEY_PREFIX}${encodeURIComponent(
