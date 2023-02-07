@@ -5,6 +5,7 @@ import * as s from 'superstruct';
 export const enum ErrorKind {
   AuthInvalidated = 'AuthInvalidated',
   ClientNotFound = 'ClientNotFound',
+  ConnectTimeout = 'ConnectTimeout',
   InvalidConnectionRequest = 'InvalidConnectionRequest',
   InvalidMessage = 'InvalidMessage',
   PingTimeout = 'PingTimeout',
@@ -18,6 +19,7 @@ export const enum ErrorKind {
 export const errorKindSchema = s.union([
   s.literal(ErrorKind.AuthInvalidated),
   s.literal(ErrorKind.ClientNotFound),
+  s.literal(ErrorKind.ConnectTimeout),
   s.literal(ErrorKind.InvalidConnectionRequest),
   s.literal(ErrorKind.InvalidMessage),
   s.literal(ErrorKind.PingTimeout),
