@@ -1,12 +1,14 @@
-import type {MutatorDefs, ReadonlyJSONValue} from 'replicache';
+import {resolver} from '@rocicorp/resolver';
+import type {MutatorDefs} from 'replicache';
 import type {SinonFakeTimers} from 'sinon';
 import type {ConnectedMessage} from '../protocol/connected.js';
+import type {Downstream} from '../protocol/down.js';
 import type {ErrorKind, ErrorMessage} from '../protocol/error.js';
 import type {PokeBody, PokeMessage} from '../protocol/poke.js';
 import type {PongMessage} from '../protocol/pong.js';
 import {assert} from '../util/asserts.js';
 import type {ReflectOptions} from './options.js';
-import {Reflect} from './reflect.js';
+import {ConnectionState, Reflect} from './reflect.js';
 
 export async function tickAFewTimes(clock: SinonFakeTimers, duration = 100) {
   const n = 10;
@@ -18,14 +20,14 @@ export async function tickAFewTimes(clock: SinonFakeTimers, duration = 100) {
 
 export class MockSocket extends EventTarget {
   readonly url: string | URL;
-  args: unknown[] = [];
+  protocol: string;
   messages: string[] = [];
   closed = false;
 
-  constructor(url: string | URL, ...args: unknown[]) {
+  constructor(url: string | URL, protocol = '') {
     super();
     this.url = url;
-    this.args = args;
+    this.protocol = protocol;
   }
 
   send(message: string) {
@@ -34,86 +36,110 @@ export class MockSocket extends EventTarget {
 
   close() {
     this.closed = true;
+    this.dispatchEvent(new CloseEvent('close'));
   }
 }
 
 export class TestReflect<MD extends MutatorDefs> extends Reflect<MD> {
-  constructor(options: ReflectOptions<MD>) {
-    super(options);
-    // @ts-expect-error MockSocket is not compatible with WebSocket
-    this._WSClass = MockSocket;
-  }
+  #connectionStateResolvers: Set<{
+    state: ConnectionState;
+    resolve: (state: ConnectionState) => void;
+  }> = new Set();
 
   get connectionState() {
     return this._connectionState;
+  }
+
+  get connectionStateAsString(): string {
+    switch (this._connectionState) {
+      case ConnectionState.Disconnected:
+        return 'Disconnected';
+      case ConnectionState.Connecting:
+        return 'Connecting';
+      case ConnectionState.Connected:
+        return 'Connected';
+    }
   }
 
   get connectingStart() {
     return this._connectingStart;
   }
 
-  get socket() {
-    return this._socket;
+  protected get _connectionState(): ConnectionState {
+    return super._connectionState;
+  }
+  protected set _connectionState(newState: ConnectionState) {
+    super._connectionState = newState;
+    for (const entry of this.#connectionStateResolvers) {
+      const {state, resolve} = entry;
+      if (state === newState) {
+        this.#connectionStateResolvers.delete(entry);
+        resolve(newState);
+      }
+    }
   }
 
-  triggerError(error: ErrorKind, message: string) {
-    const msg: ErrorMessage = ['error', error, message];
-    this.triggerMessage(msg);
+  waitForConnectionState(state: ConnectionState) {
+    if (this._connectionState === state) {
+      return Promise.resolve(state);
+    }
+    const {promise, resolve} = resolver<ConnectionState>();
+    this.#connectionStateResolvers.add({state, resolve});
+    return promise;
   }
 
-  triggerMessage(data: ReadonlyJSONValue) {
-    assert(this._socket);
-    this._socket.dispatchEvent(
+  get socket(): Promise<MockSocket> {
+    return this._socketResolver
+      .promise as Promise<unknown> as Promise<MockSocket>;
+  }
+
+  async triggerMessage(data: Downstream): Promise<void> {
+    const socket = await this.socket;
+    assert(!socket.closed);
+    socket.dispatchEvent(
       new MessageEvent('message', {data: JSON.stringify(data)}),
     );
   }
 
-  triggerConnected() {
+  triggerConnected(): Promise<void> {
     const msg: ConnectedMessage = ['connected', {wsid: 'wsidx'}];
-    this.triggerMessage(msg);
+    return this.triggerMessage(msg);
   }
 
-  triggerPong() {
+  triggerPong(): Promise<void> {
     const msg: PongMessage = ['pong', {}];
-    this.triggerMessage(msg);
+    return this.triggerMessage(msg);
   }
 
-  triggerPoke(pokeBody: PokeBody) {
+  triggerPoke(pokeBody: PokeBody): Promise<void> {
     const msg: PokeMessage = ['poke', pokeBody];
-    this.triggerMessage(msg);
+    return this.triggerMessage(msg);
   }
 
-  triggerClose() {
-    assert(this._socket);
-    this._socket.dispatchEvent(new CloseEvent('close'));
+  triggerError(kind: ErrorKind, message: string): Promise<void> {
+    const msg: ErrorMessage = ['error', kind, message];
+    return this.triggerMessage(msg);
+  }
+
+  async triggerClose(): Promise<void> {
+    const socket = await this.socket;
+    socket.dispatchEvent(new CloseEvent('close'));
   }
 
   get pusher() {
     // @ts-expect-error Property '_pusher' is private
     return this._pusher;
   }
-
-  async waitForSocket(clock: SinonFakeTimers): Promise<WebSocket> {
-    for (let i = 0; i < 100; i++) {
-      if (this._socket) {
-        return this._socket;
-      }
-      await tickAFewTimes(clock);
-    }
-    throw new Error('Could not get socket');
-  }
 }
 
-export const reflectForTest = <MD extends MutatorDefs>(
+export function reflectForTest<MD extends MutatorDefs>(
   options: Partial<ReflectOptions<MD>> = {},
-): TestReflect<MD> => {
-  const r = new TestReflect({
+): TestReflect<MD> {
+  return new TestReflect({
     socketOrigin: 'wss://example.com/',
     userID: 'test-user-id',
     roomID: 'test-room-id',
     auth: 'test-auth',
     ...options,
   });
-
-  return r;
-};
+}

@@ -1,4 +1,4 @@
-import type {LogLevel, LogSink, MutatorDefs} from 'replicache';
+import type {LogLevel, LogSink, MaybePromise, MutatorDefs} from 'replicache';
 import type {Metrics} from './metrics.js';
 
 /**
@@ -32,7 +32,7 @@ export interface ReflectOptions<MD extends MutatorDefs> {
    * return a promise that resolves to the authorization token to use
    * for future WebSocket connections.
    */
-  getAuth?: () => Promise<string | null | undefined> | undefined;
+  getAuth?: () => MaybePromise<string | null | undefined> | undefined;
 
   /**
    * A unique identifier for the user authenticated by
@@ -171,7 +171,7 @@ export interface ReflectOptions<MD extends MutatorDefs> {
    * to record important events.
    *
    * It is expected that the caller has arranged for the Metrics to be periodically
-   * reported to a server. Reflect server offers an endpoint to recieve metrics from
+   * reported to a server. Reflect server offers an endpoint to receive metrics from
    * the client and report them to Datadog (datadog does not support CORS so metrics
    * cannot be directly submitted). You can use
    *  https://github.com/rocicorp/datadog-util

@@ -1,5 +1,5 @@
 import {consoleLogSink, LogContext, TeeLogSink} from '@rocicorp/logger';
-import {resolver} from '@rocicorp/resolver';
+import {Resolver, resolver} from '@rocicorp/resolver';
 import {Lock} from '@rocicorp/lock';
 import {nanoid} from 'nanoid';
 import {
@@ -13,6 +13,7 @@ import {
   ExperimentalWatchNoIndexCallback,
   ExperimentalWatchOptions,
   ExperimentalWatchCallbackForOptions,
+  MaybePromise,
 } from 'replicache';
 import type {Downstream} from '../protocol/down.js';
 import type {PingMessage} from '../protocol/ping.js';
@@ -32,7 +33,8 @@ import {
 } from './metrics.js';
 import {send} from '../util/socket.js';
 import type {ConnectedMessage} from '../protocol/connected.js';
-import {ErrorKind, ErrorMessage} from '../protocol/error.js';
+import {ErrorKind, type ErrorMessage} from '../protocol/error.js';
+import {MessageError, isAuthError} from './connection-error.js';
 
 export const enum ConnectionState {
   Disconnected,
@@ -40,7 +42,8 @@ export const enum ConnectionState {
   Connected,
 }
 
-export const WATCHDOG_INTERVAL_MS = 5000;
+export const RUN_LOOP_INTERVAL_MS = 5_000;
+export const MAX_RUN_LOOP_INTERVAL_MS = 60_000;
 
 export const enum CloseKind {
   AbruptClose = 'AbruptClose',
@@ -50,6 +53,22 @@ export const enum CloseKind {
 }
 
 export type DisconnectReason = ErrorKind | CloseKind;
+
+/**
+ * How frequently we should ping the server to keep the connection alive.
+ */
+export const PING_INTERVAL_MS = 5_000;
+
+/**
+ * The amount of time we wait for a pong before we consider the ping timed out.
+ */
+export const PING_TIMEOUT_MS = 2_000;
+
+/**
+ * The amount of time we wait for a connection to be established before we
+ * consider it timed out.
+ */
+export const CONNECT_TIMEOUT_MS = 10_000;
 
 export class Reflect<MD extends MutatorDefs> {
   private readonly _rep: Replicache<MD>;
@@ -79,11 +98,33 @@ export class Reflect<MD extends MutatorDefs> {
    */
   onOnlineChange: ((online: boolean) => void) | null | undefined = null;
 
-  private _connectResolver = resolver<WebSocket>();
+  private _connectResolver = resolver<void>();
   private _lastMutationIDReceived = 0;
 
-  protected _socket: WebSocket | undefined = undefined;
-  protected _connectionState: ConnectionState = ConnectionState.Disconnected;
+  private _socket: WebSocket | undefined = undefined;
+  protected _socketResolver = resolver<WebSocket>();
+
+  #connectionStateChangeResolver = resolver<ConnectionState>();
+
+  #nextMessageResolver: Resolver<Downstream> | undefined = undefined;
+
+  // We use a accessor pair to allow the subclass to override the setter.
+  #connectionState: ConnectionState = ConnectionState.Disconnected;
+  #clearConnectTimeout: (() => void) | undefined = undefined;
+
+  protected get _connectionState(): ConnectionState {
+    return this.#connectionState;
+  }
+  protected set _connectionState(state: ConnectionState) {
+    if (state === this.#connectionState) {
+      return;
+    }
+
+    this.#connectionState = state;
+    this.#connectionStateChangeResolver.resolve(state);
+    this.#connectionStateChangeResolver = resolver();
+  }
+
   // See comment on _metrics.timeToConnectMs for how _connectingStart is used.
   protected _connectingStart: number | undefined = undefined;
 
@@ -151,7 +192,6 @@ export class Reflect<MD extends MutatorDefs> {
       name: `reflect-${options.userID}-${options.roomID}`,
       pusher: (req: Request) => this._pusher(req),
       // TODO: Do we need these?
-      // TODO: figure out backoff?
       pushDelay: 0,
       requestOptions: {
         maxDelayMs: 0,
@@ -174,7 +214,7 @@ export class Reflect<MD extends MutatorDefs> {
     this.userID = options.userID;
     this._l = getLogContext(options, this._rep);
 
-    void this._watchdog();
+    void this._runLoop();
   }
 
   /**
@@ -208,6 +248,21 @@ export class Reflect<MD extends MutatorDefs> {
   get auth(): string {
     return this._rep.auth;
   }
+  set auth(auth: string) {
+    this._rep.auth = auth;
+  }
+
+  get getAuth():
+    | (() => MaybePromise<string | null | undefined>)
+    | null
+    | undefined {
+    return this._rep.getAuth;
+  }
+  set getAuth(
+    getAuth: (() => MaybePromise<string | null | undefined>) | null | undefined,
+  ) {
+    this._rep.getAuth = getAuth;
+  }
 
   /**
    * The registered mutators (see [[ReflectOptions.mutators]]).
@@ -232,11 +287,10 @@ export class Reflect<MD extends MutatorDefs> {
    * When closed all subscriptions end and no more read or writes are allowed.
    */
   async close(): Promise<void> {
-    const lc = await this._l;
-    const lc2 = this._socket
-      ? addWebSocketIDFromSocketToLogContext(this._socket, lc)
-      : lc;
-    this._disconnect(lc2, CloseKind.ReflectClosed);
+    if (this._connectionState !== ConnectionState.Disconnected) {
+      const lc = await this._l;
+      this._disconnect(lc, CloseKind.ReflectClosed);
+    }
     return this._rep.close();
   }
 
@@ -312,8 +366,19 @@ export class Reflect<MD extends MutatorDefs> {
       return;
     }
 
-    const data = JSON.parse(e.data);
-    const downMessage = data as Downstream; //downstreamSchema.parse(data);
+    const rejectInvalidMessage = () =>
+      this.#nextMessageResolver?.reject(
+        new MessageError(ErrorKind.InvalidMessage, `Invalid message: ${data}`),
+      );
+
+    let downMessage: Downstream;
+    const {data} = e;
+    try {
+      downMessage = JSON.parse(data) as Downstream; //downstreamSchema.parse(data);
+    } catch (e) {
+      rejectInvalidMessage();
+      return;
+    }
 
     switch (downMessage[0]) {
       case 'connected':
@@ -324,18 +389,18 @@ export class Reflect<MD extends MutatorDefs> {
         this._handleErrorMessage(l, downMessage);
         return;
 
-      // eslint does not know about return type never
-      // eslint-disable-next-line no-fallthrough
       case 'pong':
         this._onPong();
         return;
 
       case 'poke':
         void this._handlePoke(l, downMessage[1]);
+        this.#nextMessageResolver?.resolve(downMessage);
         return;
-    }
 
-    throw new Error(`Unexpected message: ${downMessage}`);
+      default:
+        rejectInvalidMessage();
+    }
   };
 
   private _onClose = async (e: CloseEvent) => {
@@ -345,32 +410,31 @@ export class Reflect<MD extends MutatorDefs> {
     );
     const {code, reason, wasClean} = e;
     l.info?.('Got socket close event', {code, reason, wasClean});
-    this._disconnect(
-      l,
-      wasClean ? CloseKind.CleanClose : CloseKind.AbruptClose,
-    );
+
+    const closeKind = wasClean ? CloseKind.CleanClose : CloseKind.AbruptClose;
+    this._connectResolver.reject(new CloseError(closeKind));
+    this._disconnect(l, closeKind);
   };
 
   // An error on the connection is fatal for the connection.
-  private _handleErrorMessage(lc: LogContext, downMessage: ErrorMessage) {
-    const s = `${downMessage[1]}: ${downMessage[2]}}`;
-    lc.info?.(s);
-    this._disconnect(lc, downMessage[1]);
-    // We used to throw here. However these errors are expected and we would
-    // like to clean up nicely, so instead now we disconnect.
+  private _handleErrorMessage(lc: LogContext, downMessage: ErrorMessage): void {
+    const [, kind, message] = downMessage;
+
+    const error = new MessageError(kind, message);
+
+    lc.info?.(`${kind}: ${message}}`);
+
+    this.#nextMessageResolver?.reject(error);
+    this._connectResolver.reject(error);
+    this._disconnect(lc, kind);
   }
 
   private _handleConnectedMessage(
     lc: LogContext,
-    downMessage: ConnectedMessage,
+    connectedMessage: ConnectedMessage,
   ) {
-    lc = addWebSocketIDToLogContext(downMessage[1].wsid, lc);
-    lc.info?.(
-      'Connected',
-      JSON.stringify({
-        navigatorOnline: navigator.onLine,
-      }),
-    );
+    lc = addWebSocketIDToLogContext(connectedMessage[1].wsid, lc);
+    lc.info?.('Connected', {navigatorOnline: navigator.onLine});
 
     this._connectionState = ConnectionState.Connected;
     this._metrics.lastConnectError.clear();
@@ -384,8 +448,8 @@ export class Reflect<MD extends MutatorDefs> {
     }
 
     this._lastMutationIDSent = -1;
-    assert(this._socket);
-    this._connectResolver.resolve(this._socket);
+    this._connectResolver.resolve();
+    this.#clearConnectTimeout?.();
     this.onOnlineChange?.(true);
   }
 
@@ -393,17 +457,18 @@ export class Reflect<MD extends MutatorDefs> {
    * _connect will throw an assertion error if the _connectionState is not
    * Disconnected. Callers MUST check the connection state before calling this
    * method and log an error as needed.
+   *
+   * The function will resolve once the socket is connected and has received a
+   * ConnectedMessage message. If the socket receives an ErrorMessage before a
+   * ConnectedMessage,then this function rejects.
    */
-  private async _connect(l: LogContext) {
+  private async _connect(l: LogContext): Promise<void> {
     // All the callers check this state already.
     assert(this._connectionState === ConnectionState.Disconnected);
 
     const wsid = nanoid();
     l = addWebSocketIDToLogContext(wsid, l);
-    l.info?.(
-      'Connecting...',
-      JSON.stringify({navigatorOnline: navigator.onLine}),
-    );
+    l.info?.('Connecting...', {navigatorOnline: navigator.onLine});
 
     this._connectionState = ConnectionState.Connecting;
     if (this._connectingStart !== undefined) {
@@ -413,10 +478,26 @@ export class Reflect<MD extends MutatorDefs> {
     }
     this._connectingStart = Date.now();
 
+    // Create a new resolver for the next connection attempt. The previous
+    // promise should have been resolved/rejected because we do not allow
+    // overlapping connect calls.
+    this._connectResolver = resolver();
+
     const baseCookie = await getBaseCookie(this._rep);
 
-    // TODO if connection fails with 401 use this._rep.getAuth to
-    // try to refresh this._rep.auth and then retry connection
+    // Reject connect after a timeout.
+    const id = setTimeout(() => {
+      this._connectResolver.reject(
+        new MessageError(ErrorKind.ConnectTimeout, 'Timed out connecting'),
+      );
+      this._disconnect(l, ErrorKind.ConnectTimeout);
+    }, CONNECT_TIMEOUT_MS);
+    this.#clearConnectTimeout = () => {
+      clearTimeout(id);
+      this.#clearConnectTimeout = undefined;
+    };
+    // We clear the timeout in _disconnect and _handleConnectedMessage.
+
     const ws = createSocket(
       this._socketOrigin,
       baseCookie,
@@ -430,12 +511,10 @@ export class Reflect<MD extends MutatorDefs> {
     ws.addEventListener('message', this._onMessage);
     ws.addEventListener('close', this._onClose);
     this._socket = ws;
+    this._socketResolver.resolve(ws);
   }
 
-  private _disconnect(
-    l: LogContext,
-    reason: DisconnectReason = CloseKind.Unknown,
-  ) {
+  private _disconnect(l: LogContext, reason: DisconnectReason): void {
     l.info?.('disconnecting', {navigatorOnline: navigator.onLine, reason});
 
     switch (this._connectionState) {
@@ -446,9 +525,7 @@ export class Reflect<MD extends MutatorDefs> {
           );
           // this._connectingStart reset below.
         }
-        // Only create a new resolver if the one we have was previously resolved,
-        // which happens when the socket became connected.
-        this._connectResolver = resolver();
+
         this.onOnlineChange?.(false);
         break;
       }
@@ -462,14 +539,20 @@ export class Reflect<MD extends MutatorDefs> {
           this._metrics.timeToConnectMs.set(DID_NOT_CONNECT_VALUE);
           // this._connectingStart reset below.
         }
+
         break;
       }
-      case ConnectionState.Disconnected: {
+      case ConnectionState.Disconnected:
         l.error?.('disconnect() called while disconnected');
-      }
+        break;
     }
 
+    this.#clearConnectTimeout?.();
+
+    this._socketResolver = resolver();
+
     this._connectionState = ConnectionState.Disconnected;
+
     this._connectingStart = undefined;
     this._socket?.removeEventListener('message', this._onMessage);
     this._socket?.removeEventListener('close', this._onClose);
@@ -481,7 +564,7 @@ export class Reflect<MD extends MutatorDefs> {
   private async _handlePoke(lc: LogContext, pokeBody: PokeBody) {
     await this._pokeLock.withLock(async () => {
       lc = lc.addContext('requestID', pokeBody.requestID);
-      lc.debug?.('Applying poke', JSON.stringify(pokeBody));
+      lc.debug?.('Applying poke', pokeBody);
 
       const {lastMutationID, baseCookie, patch, cookie} = pokeBody;
       this._lastMutationIDReceived = lastMutationID;
@@ -497,6 +580,7 @@ export class Reflect<MD extends MutatorDefs> {
       try {
         await this._rep.poke(p);
       } catch (e) {
+        // TODO(arv): Structured error for poke!
         if (String(e).indexOf('unexpected base cookie for poke') > -1) {
           lc.info?.('out of order poke, disconnecting');
           // This technically happens *after* connection establishment, but
@@ -506,7 +590,13 @@ export class Reflect<MD extends MutatorDefs> {
           this._metrics.lastConnectError.set(
             camelToSnake(ErrorKind.UnexpectedBaseCookie),
           );
-          this._disconnect(lc);
+
+          // It is theoretically possible that we get disconnected during the
+          // async poke above. Only disconnect if we are not already
+          // disconnected.
+          if (this._connectionState !== ConnectionState.Disconnected) {
+            this._disconnect(lc, ErrorKind.UnexpectedBaseCookie);
+          }
           return;
         }
         throw e;
@@ -514,15 +604,21 @@ export class Reflect<MD extends MutatorDefs> {
     });
   }
 
-  private async _pusher(req: Request) {
+  private async _ensureConnected(lc: LogContext): Promise<void> {
     if (this._connectionState === ConnectionState.Disconnected) {
       // Do not skip await here. We don't want errors to be swallowed.
-      await this._connect(await this._l);
+      await this._connect(lc);
     }
 
-    // If we are connecting we wait for the socket to be connected.
+    return this._connectResolver.promise;
+  }
 
-    const socket = await this._connectResolver.promise;
+  private async _pusher(req: Request) {
+    // If we are connecting we wait until we are connected.
+    await this._ensureConnected(await this._l);
+
+    const socket = this._socket;
+    assert(socket);
 
     // TODO(arv): With DD31 the Pusher type gets the requestID as an argument.
     const requestID = req.headers.get('X-Replicache-RequestID');
@@ -553,37 +649,134 @@ export class Reflect<MD extends MutatorDefs> {
     };
   }
 
-  private async _watchdog() {
-    const lc = await this._l;
-    const getLC = () =>
-      this._socket
-        ? addWebSocketIDFromSocketToLogContext(this._socket, lc)
-        : lc;
+  private async _updateAuthToken(lc: LogContext): Promise<boolean> {
+    if (!this.getAuth) {
+      lc.debug?.('No auth getter so we cannot update auth');
+      return false;
+    }
+    const auth = await this.getAuth();
+    if (!auth) {
+      lc.debug?.('Auth getter returned no value so not updating auth');
+      return false;
+    }
+
+    lc.debug?.('got new auth', auth);
+    this.auth = auth;
+    return true;
+  }
+
+  private async _runLoop() {
+    const bareLogContext = await this._l;
+    let lc = bareLogContext;
+    let needsReauth = false;
+    let errorCount = 0;
 
     while (!this.closed) {
       try {
-        const lc = getLC();
-        lc.debug?.('watchdog fired');
         switch (this._connectionState) {
-          case ConnectionState.Connected:
-            await this._ping(lc);
-            break;
-          case ConnectionState.Connecting:
-            break;
-          case ConnectionState.Disconnected:
+          case ConnectionState.Disconnected: {
+            // If we got an auth error we try to get a new auth token before reconnecting.
+            if (needsReauth) {
+              await this._updateAuthToken(lc);
+            }
+
             await this._connect(lc);
+
+            // Now we have a socket, update lc with wsid.
+            assert(this._socket);
+            lc = addWebSocketIDFromSocketToLogContext(
+              this._socket,
+              bareLogContext,
+            );
+
+            lc.debug?.('Waiting for connection to be acknowledged');
+            await this._connectResolver.promise;
+            lc.debug?.('Connected successfully');
+
+            errorCount = 0;
+            needsReauth = false;
             break;
+          }
+
+          case ConnectionState.Connecting:
+            // Can't get here because Disconnected waits for Connected or
+            // rejection.
+            lc.error?.('unreachable');
+            errorCount++;
+            break;
+
+          case ConnectionState.Connected: {
+            // When connected we wait for whatever happens first out of:
+            // - After PING_INTERVAL_MS we send a ping
+            // - We get disconnected
+            // - We get a message
+            const pingTimeoutPromise = sleep(PING_INTERVAL_MS);
+
+            this.#nextMessageResolver = resolver();
+
+            let pingTimerFired = false;
+            await Promise.race([
+              pingTimeoutPromise.then(() => {
+                pingTimerFired = true;
+              }),
+              this.#connectionStateChangeResolver.promise,
+              this.#nextMessageResolver.promise,
+            ]);
+
+            this.#nextMessageResolver = undefined;
+
+            if (this.closed) {
+              break;
+            }
+
+            if (pingTimerFired) {
+              await this._ping(lc);
+            }
+          }
+        }
+      } catch (ex) {
+        lc.debug?.(
+          'Got an exception in the run loop',
+          'state:',
+          this._connectionState,
+          'exception:',
+          ex,
+        );
+
+        if (isAuthError(ex)) {
+          if (!needsReauth) {
+            needsReauth = true;
+            // First auth error, try right away without backoff.
+            continue;
+          }
+          needsReauth = true;
         }
 
-        await sleep(WATCHDOG_INTERVAL_MS);
-      } catch (e) {
-        const lc = getLC();
-        lc.error?.('watchdog error', e);
+        errorCount++;
+      }
+
+      if (errorCount > 0) {
+        const duration = Math.min(
+          MAX_RUN_LOOP_INTERVAL_MS,
+          2 ** (errorCount - 1) * RUN_LOOP_INTERVAL_MS,
+        );
+        lc.debug?.(
+          'Sleeping',
+          duration,
+          'ms before reconnecting due to error count',
+          errorCount,
+          'state:',
+          this._connectionState,
+        );
+        await sleep(duration);
       }
     }
   }
 
-  private async _ping(l: LogContext) {
+  /**
+   * Returns false if the ping timed out.
+   */
+  private async _ping(l: LogContext): Promise<void> {
     l.debug?.('pinging');
     const {promise, resolve} = resolver();
     this._onPong = resolve;
@@ -594,17 +787,19 @@ export class Reflect<MD extends MutatorDefs> {
 
     const connected = await Promise.race([
       promise.then(() => true),
-      sleep(2000).then(() => false),
+      sleep(PING_TIMEOUT_MS).then(() => false),
     ]);
     if (this._connectionState !== ConnectionState.Connected) {
       return;
     }
+
     const delta = performance.now() - t0;
     if (connected) {
       l.debug?.('ping succeeded in', delta, 'ms');
     } else {
       l.info?.('ping failed in', delta, 'ms - disconnecting');
       this._disconnect(l, ErrorKind.PingTimeout);
+      throw new MessageError(ErrorKind.PingTimeout, 'Ping timed out');
     }
   }
 }
@@ -679,4 +874,12 @@ function addWebSocketIDFromSocketToLogContext(
 
 function addWebSocketIDToLogContext(wsid: string, lc: LogContext): LogContext {
   return lc.addContext('wsid', wsid);
+}
+class CloseError extends Error {
+  readonly name = 'CloseError';
+  readonly kind: CloseKind;
+  constructor(closeKind: CloseKind) {
+    super(`socket closed (${closeKind})`);
+    this.kind = closeKind;
+  }
 }

@@ -12,8 +12,12 @@ import {resolver} from '@rocicorp/resolver';
 import {
   CloseKind,
   ConnectionState,
+  CONNECT_TIMEOUT_MS,
   createSocket,
-  WATCHDOG_INTERVAL_MS,
+  MAX_RUN_LOOP_INTERVAL_MS,
+  PING_INTERVAL_MS,
+  PING_TIMEOUT_MS,
+  RUN_LOOP_INTERVAL_MS,
 } from './reflect.js';
 import {
   MockSocket,
@@ -52,38 +56,31 @@ test('onOnlineChange callback', async () => {
     },
   });
 
-  await r.waitForSocket(clock);
-
-  expect(r.connectionState).to.equal(ConnectionState.Connecting);
+  await r.waitForConnectionState(ConnectionState.Connecting);
   expect(onlineCount).to.equal(0);
   expect(offlineCount).to.equal(0);
 
-  await tickAFewTimes(clock);
-  r.triggerConnected();
-  await tickAFewTimes(clock);
+  await r.triggerConnected();
   expect(r.connectionState).to.equal(ConnectionState.Connected);
   expect(onlineCount).to.equal(1);
   expect(offlineCount).to.equal(0);
 
-  await tickAFewTimes(clock);
-  r.triggerClose();
-  await tickAFewTimes(clock);
+  await r.triggerClose();
+  await r.waitForConnectionState(ConnectionState.Disconnected);
   expect(r.connectionState).to.equal(ConnectionState.Disconnected);
   expect(onlineCount).to.equal(1);
   expect(offlineCount).to.equal(1);
 
-  // let the watchdog timer fire
-  await tickAFewTimes(clock, WATCHDOG_INTERVAL_MS);
-  r.triggerConnected();
-  await tickAFewTimes(clock);
+  await r.triggerConnected();
+  await r.waitForConnectionState(ConnectionState.Connected);
   expect(r.connectionState).to.equal(ConnectionState.Connected);
   expect(onlineCount).to.equal(2);
   expect(offlineCount).to.equal(1);
 
   r.onOnlineChange = null;
-  await tickAFewTimes(clock);
-  r.triggerClose();
-  await tickAFewTimes(clock);
+
+  await r.triggerClose();
+  await r.waitForConnectionState(ConnectionState.Disconnected);
   expect(r.connectionState).to.equal(ConnectionState.Disconnected);
   expect(onlineCount).to.equal(2);
   expect(offlineCount).to.equal(1);
@@ -104,7 +101,7 @@ test('onOnlineChange reflection on Reflect class', async () => {
 
 test('disconnects if ping fails', async () => {
   const url = 'ws://example.com';
-  const watchdogInterval = WATCHDOG_INTERVAL_MS;
+  const watchdogInterval = RUN_LOOP_INTERVAL_MS;
   const pingTimeout = 2000;
   const r = reflectForTest({
     socketOrigin: url,
@@ -113,20 +110,24 @@ test('disconnects if ping fails', async () => {
     roomID: 'room-id',
   });
 
-  await tickAFewTimes(clock);
+  await r.waitForConnectionState(ConnectionState.Connecting);
   expect(r.connectionState).to.equal(ConnectionState.Connecting);
 
-  r.triggerConnected();
+  await r.triggerConnected();
+  await r.waitForConnectionState(ConnectionState.Connected);
+  expect(r.connectionState).to.equal(ConnectionState.Connected);
+
+  // Wait PING_INTERVAL_MS which will trigger a ping
+  // Pings timeout after PING_TIMEOUT_MS so reply before that.
+  await tickAFewTimes(clock, PING_INTERVAL_MS);
+  expect((await r.socket).messages).to.deep.equal(['["ping",{}]']);
+
+  await r.triggerPong();
   await tickAFewTimes(clock);
   expect(r.connectionState).to.equal(ConnectionState.Connected);
 
   await tickAFewTimes(clock, watchdogInterval);
-  r.triggerPong();
-  await tickAFewTimes(clock);
-  expect(r.connectionState).to.equal(ConnectionState.Connected);
-
-  await tickAFewTimes(clock, watchdogInterval);
-  r.triggerPong();
+  await r.triggerPong();
   await tickAFewTimes(clock);
   expect(r.connectionState).to.equal(ConnectionState.Connected);
 
@@ -150,7 +151,7 @@ test('createSocket', () => {
     auth: string,
     lmid: number,
     expectedURL: string,
-    expectedProtocol?: string,
+    expectedProtocol = '',
   ) => {
     const mockSocket = createSocket(
       socketURL,
@@ -162,7 +163,7 @@ test('createSocket', () => {
       'wsidx',
     ) as unknown as MockSocket;
     expect(`${mockSocket.url}`).equal(expectedURL);
-    expect(mockSocket.args).deep.equal([expectedProtocol]);
+    expect(mockSocket.protocol).equal(expectedProtocol);
   };
 
   t(
@@ -225,9 +226,8 @@ test('pusher sends one mutation per push message', async () => {
     requestID = 'request-id',
   ) => {
     const r = reflectForTest();
-    await r.waitForSocket(clock);
-    r.triggerConnected();
-    const mockSocket = r.socket as unknown as MockSocket;
+    await r.triggerConnected();
+    const mockSocket = await r.socket;
 
     const pushBody: PushRequest = {
       profileID: 'profile-id',
@@ -377,11 +377,9 @@ test('poke log context includes requestID', async () => {
     logLevel: 'debug',
   });
 
-  await reflect.waitForSocket(clock);
-
   log.length = 0;
 
-  reflect.triggerPoke({
+  await reflect.triggerPoke({
     baseCookie: null,
     cookie: 1,
     lastMutationID: 1,
@@ -410,27 +408,28 @@ test('metrics updated when connected', async () => {
   expect(val(ttc)?.value).to.equal(DID_NOT_CONNECT_VALUE);
   expect(val(lce)).to.be.undefined;
 
-  await tickAFewTimes(clock);
-  expect(r.connectionState).to.equal(ConnectionState.Connecting);
+  await r.waitForConnectionState(ConnectionState.Connecting);
+
   const start = asNumber(r.connectingStart);
 
   clock.setSystemTime(start + 42 * 1000);
-  r.triggerConnected();
-  await tickAFewTimes(clock);
+  await r.triggerConnected();
+  await r.waitForConnectionState(ConnectionState.Connected);
+
   expect(val(ttc)?.value).to.equal(42 * 1000);
   expect(val(lce)).to.be.undefined;
 
   // Ensure TimeToConnect gets set when we reconnect.
-  r.triggerClose();
-  await tickAFewTimes(clock);
+  await r.triggerClose();
+  await r.waitForConnectionState(ConnectionState.Disconnected);
   expect(r.connectionState).to.equal(ConnectionState.Disconnected);
-  await tickAFewTimes(clock, WATCHDOG_INTERVAL_MS);
+  await r.waitForConnectionState(ConnectionState.Connecting);
   expect(r.connectionState).to.equal(ConnectionState.Connecting);
 
   const restart = asNumber(r.connectingStart);
   clock.setSystemTime(restart + 666 * 1000);
-  r.triggerConnected();
-  await tickAFewTimes(clock);
+  await r.triggerConnected();
+  await r.waitForConnectionState(ConnectionState.Connected);
   // Gauge value is in seconds.
   expect(val(ttc)?.value).to.equal(666 * 1000);
   expect(val(lce)).to.be.undefined;
@@ -444,10 +443,7 @@ function val(g: {flush(): DatadogSeries | undefined}):
     }
   | undefined {
   const series = g.flush();
-  if (series === undefined) {
-    return series;
-  }
-  return gaugeValue(series);
+  return series && gaugeValue(series);
 }
 
 test('metrics when connect fails', async () => {
@@ -467,8 +463,8 @@ test('metrics when connect fails', async () => {
   // Trigger a close while still connecting.
   await tickAFewTimes(clock);
   expect(r.connectionState).to.equal(ConnectionState.Connecting);
-  r.triggerClose();
-  await tickAFewTimes(clock, WATCHDOG_INTERVAL_MS);
+  await r.triggerClose();
+  await tickAFewTimes(clock, RUN_LOOP_INTERVAL_MS);
   expect(r.connectionState).to.equal(ConnectionState.Connecting);
   expect(val(ttc)?.value).to.equal(DID_NOT_CONNECT_VALUE);
   let gotLceVal = val(lce);
@@ -483,7 +479,7 @@ test('metrics when connect fails', async () => {
   // Trigger an error while still connecting.
   const start = asNumber(r.connectingStart);
   clock.setSystemTime(start + 42 * 1000);
-  r.triggerError(ErrorKind.Unauthorized, 'boom');
+  await r.triggerError(ErrorKind.Unauthorized, 'boom');
   await tickAFewTimes(clock);
   expect(val(ttc)?.value).to.equal(DID_NOT_CONNECT_VALUE);
   gotLceVal = val(lce);
@@ -495,9 +491,9 @@ test('metrics when connect fails', async () => {
   );
 
   // Ensure LastConnectError gets cleared when we successfully reconnect.
-  await tickAFewTimes(clock, WATCHDOG_INTERVAL_MS);
+  await tickAFewTimes(clock, RUN_LOOP_INTERVAL_MS);
   expect(r.connectionState).to.equal(ConnectionState.Connecting);
-  r.triggerConnected();
+  await r.triggerConnected();
   await tickAFewTimes(clock);
   expect(val(lce)).to.be.undefined;
 });
@@ -508,3 +504,226 @@ function asNumber(v: unknown): number {
   }
   return v;
 }
+
+test('Authentication', async () => {
+  const log: number[] = [];
+
+  let authCounter = 1;
+
+  // TODO(arv): Change the API to onAuth or whatever we end up with...
+  const getAuth = () => {
+    log.push(Date.now());
+    if (authCounter++ > 3) {
+      return `new-auth-token-${authCounter}`;
+    }
+    return null;
+  };
+
+  const r = reflectForTest({
+    auth: 'auth-token',
+    // logSinks: [],
+    // logLevel: 'debug',
+    getAuth,
+  });
+
+  const emulateErrorWhenConnecting = async (
+    tickMS: number,
+    expectedAuthToken: string,
+    expectedTimeOfCall: number,
+  ) => {
+    expect((await r.socket).protocol).equal(expectedAuthToken);
+    await r.triggerError(ErrorKind.Unauthorized, 'auth error ' + authCounter);
+    expect(r.connectionState).equal(ConnectionState.Disconnected);
+    await clock.tickAsync(tickMS);
+    expect(log).length(1);
+    expect(log[0]).equal(expectedTimeOfCall);
+    log.length = 0;
+  };
+
+  await emulateErrorWhenConnecting(0, 'auth-token', 0);
+  await emulateErrorWhenConnecting(5_000, 'auth-token', 5_000);
+  await emulateErrorWhenConnecting(10_000, 'auth-token', 15_000);
+  await emulateErrorWhenConnecting(20_000, 'auth-token', 35_000);
+  await emulateErrorWhenConnecting(40_000, 'new-auth-token-5', 75_000);
+  // Clamped at MAX_WATCHDOG_INTERVAL_MS.
+  await emulateErrorWhenConnecting(60_000, 'new-auth-token-6', 135_000);
+  await emulateErrorWhenConnecting(60_000, 'new-auth-token-7', 195_000);
+
+  let socket: MockSocket | undefined;
+  {
+    await r.waitForConnectionState(ConnectionState.Connecting);
+    socket = await r.socket;
+    expect(socket.protocol).equal('new-auth-token-8');
+    await r.triggerConnected();
+    await r.waitForConnectionState(ConnectionState.Connected);
+    // getAuth should not be called again.
+    expect(log).empty;
+  }
+
+  {
+    // Ping/pong should happen every 5 seconds.
+    await tickAFewTimes(clock, PING_INTERVAL_MS);
+    expect((await r.socket).messages).deep.equal([
+      JSON.stringify(['ping', {}]),
+    ]);
+    expect(r.connectionState).equal(ConnectionState.Connected);
+    await r.triggerPong();
+    expect(r.connectionState).equal(ConnectionState.Connected);
+    // getAuth should not be called again.
+    expect(log).empty;
+    // Socket is kept as long as we are connected.
+    expect(await r.socket).equal(socket);
+  }
+
+  await r.close();
+});
+
+test('AuthInvalidated', async () => {
+  // In steady state we can get an AuthInvalidated error if the tokens expire on the server.
+  // At this point we should disconnect and reconnect with a new auth token.
+
+  let authCounter = 1;
+  const getAuth = () => `auth-token-${authCounter++}`;
+
+  const r = reflectForTest({
+    get auth() {
+      return getAuth();
+    },
+    getAuth,
+  });
+
+  await r.triggerConnected();
+  expect((await r.socket).protocol).equal('auth-token-1');
+
+  await r.triggerError(ErrorKind.AuthInvalidated, 'auth error');
+  await r.waitForConnectionState(ConnectionState.Disconnected);
+
+  await r.waitForConnectionState(ConnectionState.Connecting);
+  expect((await r.socket).protocol).equal('auth-token-2');
+
+  await r.close();
+});
+
+test('Disconnect on error', async () => {
+  const r = reflectForTest({});
+  await r.triggerConnected();
+  expect(r.connectionState).to.equal(ConnectionState.Connected);
+  await r.triggerError(ErrorKind.ClientNotFound, 'client not found');
+  expect(r.connectionState).to.equal(ConnectionState.Disconnected);
+  await r.close();
+});
+
+test('Backoff on errors', async () => {
+  const r = reflectForTest();
+  await r.triggerConnected();
+  expect(r.connectionState).to.equal(ConnectionState.Connected);
+
+  const step = async (delta: number, message: string) => {
+    await r.triggerError(ErrorKind.ClientNotFound, message);
+    expect(r.connectionState).to.equal(ConnectionState.Disconnected);
+
+    await clock.tickAsync(delta - 1);
+    expect(r.connectionState).to.equal(ConnectionState.Disconnected);
+    await clock.tickAsync(1);
+    expect(r.connectionState).to.equal(ConnectionState.Connecting);
+  };
+
+  const steps = async () => {
+    await step(5_000, 'a');
+    await step(10_000, 'b');
+    await step(20_000, 'c');
+    await step(40_000, 'd');
+    expect(MAX_RUN_LOOP_INTERVAL_MS).equal(60_000);
+    await step(60_000, 'e');
+    await step(60_000, 'f');
+  };
+
+  await steps();
+
+  // success resets the backoff.
+  await r.triggerConnected();
+  expect(r.connectionState).to.equal(ConnectionState.Connected);
+
+  await steps();
+
+  await r.close();
+});
+
+test('Ping pong', async () => {
+  const r = reflectForTest();
+  await r.triggerConnected();
+  expect(r.connectionState).to.equal(ConnectionState.Connected);
+
+  await clock.tickAsync(PING_INTERVAL_MS - 1);
+  expect((await r.socket).messages).empty;
+  await clock.tickAsync(1);
+
+  expect((await r.socket).messages).deep.equal([JSON.stringify(['ping', {}])]);
+  await clock.tickAsync(PING_TIMEOUT_MS - 1);
+  expect(r.connectionState).to.equal(ConnectionState.Connected);
+  await clock.tickAsync(1);
+
+  expect(r.connectionState).to.equal(ConnectionState.Disconnected);
+
+  await r.close();
+});
+
+test('Ping timeout', async () => {
+  const r = reflectForTest();
+  await r.triggerConnected();
+  expect(r.connectionState).to.equal(ConnectionState.Connected);
+
+  await clock.tickAsync(PING_INTERVAL_MS - 1);
+  expect((await r.socket).messages).empty;
+  await clock.tickAsync(1);
+  expect((await r.socket).messages).deep.equal([JSON.stringify(['ping', {}])]);
+  await clock.tickAsync(PING_TIMEOUT_MS - 1);
+  await r.triggerPong();
+  expect(r.connectionState).to.equal(ConnectionState.Connected);
+  await clock.tickAsync(1);
+  expect(r.connectionState).to.equal(ConnectionState.Connected);
+
+  await r.close();
+});
+
+test('Connect timeout', async () => {
+  const r = reflectForTest();
+
+  await r.waitForConnectionState(ConnectionState.Connecting);
+
+  const step = async (sleepMS: number) => {
+    // Need to drain the microtask queue without changing the clock because we are
+    // using the time below to check when the connect times out.
+    for (let i = 0; i < 10; i++) {
+      await clock.tickAsync(0);
+    }
+
+    expect(r.connectionState).to.equal(ConnectionState.Connecting);
+    await clock.tickAsync(CONNECT_TIMEOUT_MS - 1);
+    expect(r.connectionState).to.equal(ConnectionState.Connecting);
+    await clock.tickAsync(1);
+    expect(r.connectionState).to.equal(ConnectionState.Disconnected);
+
+    // We got disconnected so we sleep for RUN_LOOP_INTERVAL_MS before trying again
+
+    await clock.tickAsync(sleepMS - 1);
+    expect(r.connectionState).to.equal(ConnectionState.Disconnected);
+    await clock.tickAsync(1);
+    expect(r.connectionState).to.equal(ConnectionState.Connecting);
+  };
+
+  await step(RUN_LOOP_INTERVAL_MS);
+
+  // Try again to connect
+  await step(2 * RUN_LOOP_INTERVAL_MS);
+  await step(4 * RUN_LOOP_INTERVAL_MS);
+  await step(8 * RUN_LOOP_INTERVAL_MS);
+  expect(MAX_RUN_LOOP_INTERVAL_MS).equal(60_000);
+  await step(60_000);
+
+  // And success after this...
+  await r.triggerConnected();
+  expect(r.connectionState).to.equal(ConnectionState.Connected);
+
+  await r.close();
+});

@@ -4,11 +4,12 @@ import {z} from 'zod';
 //
 // Also note that metric names depend on these values,
 // so if you add or change on here a corresponding dashboard
-// change will likelybe needed.
+// change will likely needed.
 
 export const enum ErrorKind {
   AuthInvalidated = 'AuthInvalidated',
   ClientNotFound = 'ClientNotFound',
+  ConnectTimeout = 'ConnectTimeout',
   InvalidConnectionRequest = 'InvalidConnectionRequest',
   InvalidMessage = 'InvalidMessage',
   PingTimeout = 'PingTimeout',
@@ -22,6 +23,7 @@ export const enum ErrorKind {
 export const errorKindSchema = z.union([
   z.literal(ErrorKind.AuthInvalidated),
   z.literal(ErrorKind.ClientNotFound),
+  z.literal(ErrorKind.ConnectTimeout),
   z.literal(ErrorKind.InvalidConnectionRequest),
   z.literal(ErrorKind.InvalidMessage),
   z.literal(ErrorKind.PingTimeout),
