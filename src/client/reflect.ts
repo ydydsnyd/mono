@@ -716,6 +716,10 @@ export class Reflect<MD extends MutatorDefs> {
           }
         }
       } catch (ex) {
+        if (this._connectionState !== ConnectionState.Connected) {
+          lc.error?.('Failed to connect', ex);
+        }
+
         lc.debug?.(
           'Got an exception in the run loop',
           'state:',

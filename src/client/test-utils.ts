@@ -140,6 +140,7 @@ export function reflectForTest<MD extends MutatorDefs>(
     userID: 'test-user-id',
     roomID: 'test-room-id',
     authToken: 'test-auth',
+    logSinks: [],
     ...options,
   });
 }

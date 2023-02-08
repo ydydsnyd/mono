@@ -820,3 +820,29 @@ test('Connect timeout', async () => {
 
   await r.close();
 });
+
+test('Logs errors in connect', async () => {
+  const log: [LogLevel, unknown[]][] = [];
+
+  const r = reflectForTest({
+    logSinks: [
+      {
+        log: (level, ...args) => {
+          log.push([level, args]);
+        },
+      },
+    ],
+  });
+  await r.triggerError(ErrorKind.ClientNotFound, 'client-id-a');
+  expect(r.connectionState).to.equal(ConnectionState.Disconnected);
+  await clock.tickAsync(0);
+
+  const index = log.findIndex(
+    ([level, args]) =>
+      level === 'error' && args.find(arg => /client-id-a/.test(String(arg))),
+  );
+
+  expect(index).to.not.equal(-1);
+
+  await r.close();
+});
