@@ -56,34 +56,133 @@ test('onOnlineChange callback', async () => {
     },
   });
 
-  await r.waitForConnectionState(ConnectionState.Connecting);
-  expect(onlineCount).to.equal(0);
-  expect(offlineCount).to.equal(0);
+  {
+    // Online by default.
+    await clock.tickAsync(0);
+    expect(r.online).true;
+  }
 
-  await r.triggerConnected();
-  expect(r.connectionState).to.equal(ConnectionState.Connected);
-  expect(onlineCount).to.equal(1);
-  expect(offlineCount).to.equal(0);
+  {
+    // First test a disconnect followed by a reconnect. This should not trigger
+    // the onOnlineChange callback.
+    await r.waitForConnectionState(ConnectionState.Connecting);
+    expect(r.online).true;
+    expect(onlineCount).to.equal(0);
+    expect(offlineCount).to.equal(0);
 
-  await r.triggerClose();
-  await r.waitForConnectionState(ConnectionState.Disconnected);
-  expect(r.connectionState).to.equal(ConnectionState.Disconnected);
-  expect(onlineCount).to.equal(1);
-  expect(offlineCount).to.equal(1);
+    await r.triggerConnected();
+    await r.waitForConnectionState(ConnectionState.Connected);
+    await clock.tickAsync(0);
+    expect(r.online).true;
+    expect(onlineCount).to.equal(0);
+    expect(offlineCount).to.equal(0);
 
-  await r.triggerConnected();
-  await r.waitForConnectionState(ConnectionState.Connected);
-  expect(r.connectionState).to.equal(ConnectionState.Connected);
-  expect(onlineCount).to.equal(2);
-  expect(offlineCount).to.equal(1);
+    await r.triggerClose();
+    await r.waitForConnectionState(ConnectionState.Disconnected);
+    // Still connected because we haven't yet failed to reconnect.
+    await clock.tickAsync(0);
+    expect(r.online).true;
+    expect(onlineCount).to.equal(0);
+    expect(offlineCount).to.equal(0);
 
-  r.onOnlineChange = null;
+    await r.triggerConnected();
+    await r.waitForConnectionState(ConnectionState.Connected);
+    await clock.tickAsync(0);
+    expect(r.online).true;
+    expect(onlineCount).to.equal(0);
+    expect(offlineCount).to.equal(0);
+  }
 
-  await r.triggerClose();
-  await r.waitForConnectionState(ConnectionState.Disconnected);
-  expect(r.connectionState).to.equal(ConnectionState.Disconnected);
-  expect(onlineCount).to.equal(2);
-  expect(offlineCount).to.equal(1);
+  {
+    // Now testing with an error that causes the connection to close. This should
+    // trigger the callback.
+    await r.triggerError(ErrorKind.InvalidMessage, 'aaa');
+    await r.waitForConnectionState(ConnectionState.Disconnected);
+    await clock.tickAsync(0);
+    expect(r.online).false;
+    expect(onlineCount).to.equal(0);
+    expect(offlineCount).to.equal(1);
+
+    // And followed by a reconnect.
+    expect(r.online).false;
+    await tickAFewTimes(clock, RUN_LOOP_INTERVAL_MS);
+    await r.triggerConnected();
+    await clock.tickAsync(0);
+    expect(r.online).true;
+    expect(onlineCount).to.equal(1);
+    expect(offlineCount).to.equal(1);
+  }
+
+  {
+    // Now test with an auth error. This should not trigger the callback on the first error.
+    await r.triggerError(ErrorKind.Unauthorized, 'bbb');
+    await r.waitForConnectionState(ConnectionState.Disconnected);
+    await clock.tickAsync(0);
+    expect(r.online).true;
+    expect(onlineCount).to.equal(1);
+    expect(offlineCount).to.equal(1);
+
+    // And followed by a reconnect.
+    expect(r.online).true;
+    await r.triggerConnected();
+    await clock.tickAsync(0);
+    expect(r.online).true;
+    expect(onlineCount).to.equal(1);
+    expect(offlineCount).to.equal(1);
+  }
+
+  {
+    // Now test with two auth error. This should trigger the callback on the second error.
+    await r.triggerError(ErrorKind.Unauthorized, 'ccc');
+    await r.waitForConnectionState(ConnectionState.Disconnected);
+    await clock.tickAsync(0);
+    expect(r.online).true;
+    expect(onlineCount).to.equal(1);
+    expect(offlineCount).to.equal(1);
+
+    await r.waitForConnectionState(ConnectionState.Connecting);
+    await r.triggerError(ErrorKind.Unauthorized, 'ddd');
+    await r.waitForConnectionState(ConnectionState.Disconnected);
+    await tickAFewTimes(clock, RUN_LOOP_INTERVAL_MS);
+    await clock.tickAsync(0);
+    expect(r.online).false;
+    expect(onlineCount).to.equal(1);
+    expect(offlineCount).to.equal(2);
+
+    // And followed by a reconnect.
+    await r.waitForConnectionState(ConnectionState.Connecting);
+    await r.triggerConnected();
+    await clock.tickAsync(0);
+    expect(r.online).true;
+    expect(onlineCount).to.equal(2);
+    expect(offlineCount).to.equal(2);
+  }
+
+  {
+    // Connection timed out.
+    await clock.tickAsync(CONNECT_TIMEOUT_MS);
+    expect(r.online).false;
+    expect(onlineCount).to.equal(2);
+    expect(offlineCount).to.equal(3);
+    await clock.tickAsync(RUN_LOOP_INTERVAL_MS);
+    // and back online
+    await r.triggerConnected();
+    await clock.tickAsync(0);
+    expect(r.online).true;
+    expect(onlineCount).to.equal(3);
+    expect(offlineCount).to.equal(3);
+  }
+
+  {
+    // Now clear onOnlineChange and test that it doesn't get called.
+    r.onOnlineChange = null;
+    await r.triggerError(ErrorKind.InvalidMessage, 'eee');
+    await r.waitForConnectionState(ConnectionState.Disconnected);
+    await clock.tickAsync(0);
+    expect(r.online).false;
+    expect(onlineCount).to.equal(3);
+    expect(offlineCount).to.equal(3);
+  }
 
   await r.close();
 });

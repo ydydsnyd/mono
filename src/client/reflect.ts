@@ -92,6 +92,9 @@ export class Reflect<MD extends MutatorDefs> {
   private _lastMutationIDSent = -1;
   private _onPong: () => void = () => undefined;
 
+  // Assume online when starting.
+  #online = true;
+
   /**
    * `onOnlineChange` is called when the Reflect instance's online status
    * changes.
@@ -430,7 +433,6 @@ export class Reflect<MD extends MutatorDefs> {
     this._lastMutationIDSent = -1;
     this._connectResolver.resolve();
     this.#clearConnectTimeout?.();
-    this.onOnlineChange?.(true);
   }
 
   /**
@@ -506,7 +508,6 @@ export class Reflect<MD extends MutatorDefs> {
           // this._connectingStart reset below.
         }
 
-        this.onOnlineChange?.(false);
         break;
       }
       case ConnectionState.Connecting: {
@@ -596,6 +597,7 @@ export class Reflect<MD extends MutatorDefs> {
   private async _pusher(req: Request) {
     // If we are connecting we wait until we are connected.
     await this._ensureConnected(await this._l);
+    this.#setOnline(true);
 
     const socket = this._socket;
     assert(socket);
@@ -673,6 +675,7 @@ export class Reflect<MD extends MutatorDefs> {
 
             errorCount = 0;
             needsReauth = false;
+            this.#setOnline(true);
             break;
           }
 
@@ -734,6 +737,8 @@ export class Reflect<MD extends MutatorDefs> {
       }
 
       if (errorCount > 0) {
+        this.#setOnline(false);
+
         const duration = Math.min(
           MAX_RUN_LOOP_INTERVAL_MS,
           2 ** (errorCount - 1) * RUN_LOOP_INTERVAL_MS,
@@ -749,6 +754,23 @@ export class Reflect<MD extends MutatorDefs> {
         await sleep(duration);
       }
     }
+  }
+
+  #setOnline(online: boolean): void {
+    if (this.#online === online) {
+      return;
+    }
+
+    this.#online = online;
+    this.onOnlineChange?.(online);
+  }
+
+  /**
+   * A rough heuristic for whether the client is currently online and
+   * authenticated.
+   */
+  get online(): boolean {
+    return this.#online;
   }
 
   /**
