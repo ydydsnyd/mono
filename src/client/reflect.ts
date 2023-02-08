@@ -92,8 +92,7 @@ export class Reflect<MD extends MutatorDefs> {
   private _lastMutationIDSent = -1;
   private _onPong: () => void = () => undefined;
 
-  // Assume online when starting.
-  #online = true;
+  #online = false;
 
   /**
    * `onOnlineChange` is called when the Reflect instance's online status
