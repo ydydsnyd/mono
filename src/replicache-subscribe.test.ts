@@ -432,7 +432,7 @@ test('subscribe with isEmpty and prefix', async () => {
   const rep = await replicacheForTesting('subscribe-with-is-empty', {
     mutators: {
       addData,
-      del: (tx, k: string) => tx.del(k),
+      del: (tx: WriteTransaction, k: string) => tx.del(k),
     },
   });
 
@@ -498,7 +498,7 @@ test('subscribe change keys', async () => {
   const rep = await replicacheForTesting('subscribe-change-keys', {
     mutators: {
       addData,
-      del: (tx, k: string) => tx.del(k),
+      del: (tx: WriteTransaction, k: string) => tx.del(k),
     },
   });
 

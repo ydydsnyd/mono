@@ -23,10 +23,10 @@ test.skip('mutator optional args [type checking only]', async () => {
         use(tx);
         return x;
       },
-      mut3: tx => {
+      mut3: (tx: WriteTransaction) => {
         use(tx);
       },
-      mut4: async tx => {
+      mut4: async (tx: WriteTransaction) => {
         use(tx);
       },
     },

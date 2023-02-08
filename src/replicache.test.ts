@@ -561,7 +561,7 @@ test('HTTP status push', async () => {
 test('closed tx', async () => {
   const rep = await replicacheForTesting('reauth', {
     mutators: {
-      mut: tx => {
+      mut: (tx: WriteTransaction) => {
         wtx = tx;
       },
     },
@@ -1062,7 +1062,7 @@ test('isEmpty', async () => {
     mutators: {
       addData,
       del: (tx: WriteTransaction, key: string) => tx.del(key),
-      mut: async tx => {
+      mut: async (tx: WriteTransaction) => {
         expect(await tx.isEmpty()).to.equal(false);
 
         await tx.del('c');
@@ -1951,7 +1951,7 @@ test('mutate args in mutation throws due to frozen', async () => {
   const rep = await replicacheForTesting('mutate-args-in-mutation', {
     experimentalKVStore: store,
     mutators: {
-      async mutArgs(tx, args: {v: number}) {
+      async mutArgs(tx: WriteTransaction, args: {v: number}) {
         args.v = 42;
         await tx.put('v', args.v);
       },
@@ -1978,7 +1978,7 @@ test('client ID is set correctly on transactions', async () => {
     'client-id-is-set-correctly-on-transactions',
     {
       mutators: {
-        expectClientID(tx, expectedClientID: ClientID) {
+        expectClientID(tx: WriteTransaction, expectedClientID: ClientID) {
           expect(tx.clientID).to.equal(expectedClientID);
         },
       },
@@ -1998,7 +1998,7 @@ test('mutation timestamps are immutable', async () => {
   let pending: unknown;
   const rep = await replicacheForTesting('mutation-timestamps-are-immutable', {
     mutators: {
-      foo: async (tx, _: JSONValue) => {
+      foo: async (tx: WriteTransaction, _: JSONValue) => {
         await tx.put('foo', 'bar');
       },
     },
@@ -2117,7 +2117,7 @@ test('scan in write transaction', async () => {
   let x = 0;
   const rep = await replicacheForTesting('scan-before-commit', {
     mutators: {
-      async test(tx, v: number) {
+      async test(tx: WriteTransaction, v: number) {
         await tx.put('a', v);
         expect(await tx.scan().toArray()).to.deep.equal([v]);
         x++;
@@ -2135,7 +2135,7 @@ test('scan mutate', async () => {
   const rep = await replicacheForTesting('scan-mutate', {
     mutators: {
       addData,
-      async test(tx) {
+      async test(tx: WriteTransaction) {
         for await (const entry of tx.scan().entries()) {
           log.push(entry);
           switch (entry[0]) {
@@ -2193,7 +2193,7 @@ test('index scan mutate', async () => {
   const rep = await replicacheForTesting('index-scan-mutate', {
     mutators: {
       addData,
-      async test(tx) {
+      async test(tx: WriteTransaction) {
         for await (const entry of tx.scan({indexName: 'i'}).entries()) {
           log.push(entry);
 
@@ -2251,11 +2251,11 @@ test('index scan mutate', async () => {
 test('concurrent puts and gets', async () => {
   const rep = await replicacheForTesting('concurrent-puts', {
     mutators: {
-      async insert(tx, args: Record<string, number>) {
+      async insert(tx: WriteTransaction, args: Record<string, number>) {
         const ps = Object.entries(args).map(([k, v]) => tx.put(k, v));
         await Promise.all(ps);
       },
-      async race(tx) {
+      async race(tx: WriteTransaction) {
         // Conceptually the put could finish first but in practice that does not
         // happen.
         const p1 = tx.put('a', 4);

@@ -22,7 +22,10 @@ async function addData(tx: WriteTransaction, data: {[key: string]: JSONValue}) {
 
 test('pending mutation', async () => {
   const rep = await replicacheForTesting('pending-mutation', {
-    mutators: {addData, del: (tx, key) => tx.del(key)},
+    mutators: {
+      addData,
+      del: (tx: WriteTransaction, key: string) => tx.del(key),
+    },
   });
 
   const clientID = await rep.clientID;

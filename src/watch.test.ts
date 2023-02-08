@@ -19,7 +19,10 @@ async function addData(tx: WriteTransaction, data: {[key: string]: JSONValue}) {
 
 test('watch', async () => {
   const rep = await replicacheForTesting('watch', {
-    mutators: {addData, del: (tx, key) => tx.del(key)},
+    mutators: {
+      addData,
+      del: (tx: WriteTransaction, key: string) => tx.del(key),
+    },
   });
 
   const spy = sinon.spy();
@@ -82,7 +85,10 @@ test('watch', async () => {
 
 test('watch with prefix', async () => {
   const rep = await replicacheForTesting('watch-with-prefix', {
-    mutators: {addData, del: (tx, key) => tx.del(key)},
+    mutators: {
+      addData,
+      del: (tx: WriteTransaction, key: string) => tx.del(key),
+    },
   });
 
   const spy = sinon.spy();
@@ -148,7 +154,10 @@ test('watch with prefix', async () => {
 
 test('watch and initial callback with no data', async () => {
   const rep = await replicacheForTesting('watch-no-data', {
-    mutators: {addData, del: (tx, key) => tx.del(key)},
+    mutators: {
+      addData,
+      del: (tx: WriteTransaction, key: string) => tx.del(key),
+    },
     ...disableAllBackgroundProcesses,
   });
 
@@ -164,7 +173,10 @@ test('watch and initial callback with no data', async () => {
 
 test('watch and initial callback with data', async () => {
   const rep = await replicacheForTesting('watch-with-data', {
-    mutators: {addData, del: (tx, key) => tx.del(key)},
+    mutators: {
+      addData,
+      del: (tx: WriteTransaction, key: string) => tx.del(key),
+    },
     ...disableAllBackgroundProcesses,
   });
 
@@ -196,7 +208,10 @@ test('watch and initial callback with data', async () => {
 
 test('watch with prefix and initial callback no data', async () => {
   const rep = await replicacheForTesting('watch-with-prefix', {
-    mutators: {addData, del: (tx, key) => tx.del(key)},
+    mutators: {
+      addData,
+      del: (tx: WriteTransaction, key: string) => tx.del(key),
+    },
   });
 
   const spy = sinon.spy();
@@ -230,7 +245,10 @@ test('watch with prefix and initial callback no data', async () => {
 
 test('watch with prefix and initial callback and data', async () => {
   const rep = await replicacheForTesting('watch-with-prefix', {
-    mutators: {addData, del: (tx, key) => tx.del(key)},
+    mutators: {
+      addData,
+      del: (tx: WriteTransaction, key: string) => tx.del(key),
+    },
   });
 
   await rep.mutate.addData({a: 1, b: 2});
@@ -259,7 +277,10 @@ test('watch with prefix and initial callback and data', async () => {
 
 test('watch on index', async () => {
   const rep = await replicacheForTesting('watch-on-index', {
-    mutators: {addData, del: (tx, key) => tx.del(key)},
+    mutators: {
+      addData,
+      del: (tx: WriteTransaction, key: string) => tx.del(key),
+    },
     indexes: {id1: {jsonPointer: '/id'}},
   });
 
@@ -320,7 +341,10 @@ test('watch on index', async () => {
 
 test('watch on index with prefix', async () => {
   const rep = await replicacheForTesting('watch-on-index-with-prefix', {
-    mutators: {addData, del: (tx, key) => tx.del(key)},
+    mutators: {
+      addData,
+      del: (tx: WriteTransaction, key: string) => tx.del(key),
+    },
     indexes: {id1: {jsonPointer: '/id'}},
   });
 
@@ -394,7 +418,10 @@ test('watch on index with prefix', async () => {
 
 test('watch with index and initial callback with no data', async () => {
   const rep = await replicacheForTesting('watch-with-index-initial-no-data', {
-    mutators: {addData, del: (tx, key) => tx.del(key)},
+    mutators: {
+      addData,
+      del: (tx: WriteTransaction, key: string) => tx.del(key),
+    },
     indexes: {id1: {jsonPointer: '/id'}},
     ...disableAllBackgroundProcesses,
   });
@@ -416,7 +443,10 @@ test('watch with index and initial callback with no data', async () => {
 
 test('watch and initial callback with data', async () => {
   const rep = await replicacheForTesting('watch-with-index-initial-and-data', {
-    mutators: {addData, del: (tx, key) => tx.del(key)},
+    mutators: {
+      addData,
+      del: (tx: WriteTransaction, key: string) => tx.del(key),
+    },
     indexes: {id1: {jsonPointer: '/id'}},
   });
 
@@ -449,7 +479,10 @@ test('watch and initial callback with data', async () => {
 
 test('watch with index and prefix and initial callback and data', async () => {
   const rep = await replicacheForTesting('watch-with-index-and-prefix', {
-    mutators: {addData, del: (tx, key) => tx.del(key)},
+    mutators: {
+      addData,
+      del: (tx: WriteTransaction, key: string) => tx.del(key),
+    },
     indexes: {id1: {jsonPointer: '/id'}},
   });
 
