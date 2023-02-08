@@ -105,7 +105,7 @@ test('disconnects if ping fails', async () => {
   const pingTimeout = 2000;
   const r = reflectForTest({
     socketOrigin: url,
-    auth: '',
+    authToken: '',
     userID: 'user-id',
     roomID: 'room-id',
   });
@@ -370,7 +370,7 @@ test('poke log context includes requestID', async () => {
 
   const reflect = new TestReflect({
     socketOrigin: url,
-    auth: '',
+    authToken: '',
     userID: 'user-id',
     roomID: 'room-id',
     logSinks: [logSink],
@@ -400,7 +400,7 @@ test('metrics updated when connected', async () => {
   clock.setSystemTime(1000 * 1000);
   const r = reflectForTest({
     socketOrigin: url,
-    auth: '',
+    authToken: '',
     userID: 'user-id',
     roomID: 'room-id',
     metrics: m,
@@ -454,15 +454,14 @@ test('metrics when connect fails', async () => {
   clock.setSystemTime(1000 * 1000);
   const r = reflectForTest({
     socketOrigin: url,
-    auth: '',
+    authToken: '',
     userID: 'user-id',
     roomID: 'room-id',
     metrics: m,
   });
 
   // Trigger a close while still connecting.
-  await tickAFewTimes(clock);
-  expect(r.connectionState).to.equal(ConnectionState.Connecting);
+  await r.waitForConnectionState(ConnectionState.Connecting);
   await r.triggerClose();
   await tickAFewTimes(clock, RUN_LOOP_INTERVAL_MS);
   expect(r.connectionState).to.equal(ConnectionState.Connecting);
@@ -508,22 +507,21 @@ function asNumber(v: unknown): number {
 test('Authentication', async () => {
   const log: number[] = [];
 
-  let authCounter = 1;
+  let authCounter = 0;
 
-  // TODO(arv): Change the API to onAuth or whatever we end up with...
-  const getAuth = () => {
-    log.push(Date.now());
+  const authToken = () => {
+    if (authCounter > 0) {
+      log.push(Date.now());
+    }
+
     if (authCounter++ > 3) {
       return `new-auth-token-${authCounter}`;
     }
-    return null;
+    return 'auth-token';
   };
 
   const r = reflectForTest({
-    auth: 'auth-token',
-    // logSinks: [],
-    // logLevel: 'debug',
-    getAuth,
+    authToken,
   });
 
   const emulateErrorWhenConnecting = async (
@@ -583,13 +581,9 @@ test('AuthInvalidated', async () => {
   // At this point we should disconnect and reconnect with a new auth token.
 
   let authCounter = 1;
-  const getAuth = () => `auth-token-${authCounter++}`;
 
   const r = reflectForTest({
-    get auth() {
-      return getAuth();
-    },
-    getAuth,
+    authToken: () => `auth-token-${authCounter++}`,
   });
 
   await r.triggerConnected();

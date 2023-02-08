@@ -12,27 +12,15 @@ export interface ReflectOptions<MD extends MutatorDefs> {
   socketOrigin: string;
 
   /**
-   * The authentication/authorization token to use when opening a WebSocket
-   * connection to the Reflect server.
+   * The authentication/authorization token to use when opening a connection to
+   * the Reflect server.
    *
-   * This token is used initially, but if an authentication error occurs
-   * it will be replaced by calling [[ReflectOptions.getAuth]].
-   * [[Reflect.auth]] will return the current token.
-   *
-   * The `authHandler` you provide to the Reflect server will be used
-   * to validate this token on the server.
+   * This token is used initially, and if an authentication error occurs a new
+   * auth token is needed. In that case, {@link ReflectOptions.authToken} will be
+   * used again. It is therefore useful to set this to a function that can
+   * compute (receive) the new token.
    */
-  auth: string;
-
-  /**
-   * A function used to reauthenticate when the WebSocket connection to the
-   * Reflect server fails to open, or is closed, due to an authentication error.
-   *
-   * Set this to a function that will ask your user to reauthenticate and
-   * return a promise that resolves to the authorization token to use
-   * for future WebSocket connections.
-   */
-  getAuth?: () => MaybePromise<string | null | undefined> | undefined;
+  authToken: MaybePromise<string> | (() => MaybePromise<string>);
 
   /**
    * A unique identifier for the user authenticated by

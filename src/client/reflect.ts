@@ -128,6 +128,8 @@ export class Reflect<MD extends MutatorDefs> {
   // See comment on _metrics.timeToConnectMs for how _connectingStart is used.
   protected _connectingStart: number | undefined = undefined;
 
+  readonly #options: ReflectOptions<MD>;
+
   /**
    * Constructs a new Reflect client.
    */
@@ -148,6 +150,7 @@ export class Reflect<MD extends MutatorDefs> {
     }
 
     this.onOnlineChange = options.onOnlineChange;
+    this.#options = options;
 
     const metrics = options.metrics ?? new NopMetrics();
     this._metrics = {
@@ -184,7 +187,6 @@ export class Reflect<MD extends MutatorDefs> {
     this._metrics.timeToConnectMs.set(DID_NOT_CONNECT_VALUE);
 
     const replicacheOptions: ReplicacheOptions<MD> = {
-      auth: options.auth,
       schemaVersion: options.schemaVersion,
       logLevel: options.logLevel,
       logSinks: options.logSinks,
@@ -208,7 +210,8 @@ export class Reflect<MD extends MutatorDefs> {
       ...replicacheOptions,
       ...replicacheInternalOptions,
     });
-    this._rep.getAuth = options.getAuth;
+    this._rep.getAuth = this.#getAuthToken;
+
     this._socketOrigin = options.socketOrigin;
     this.roomID = options.roomID;
     this.userID = options.userID;
@@ -239,29 +242,6 @@ export class Reflect<MD extends MutatorDefs> {
    */
   get clientID(): Promise<string> {
     return this._rep.clientID;
-  }
-
-  /**
-   * The authorization token used when opening a WebSocket connection to
-   * the Reflect server.
-   */
-  get auth(): string {
-    return this._rep.auth;
-  }
-  set auth(auth: string) {
-    this._rep.auth = auth;
-  }
-
-  get getAuth():
-    | (() => MaybePromise<string | null | undefined>)
-    | null
-    | undefined {
-    return this._rep.getAuth;
-  }
-  set getAuth(
-    getAuth: (() => MaybePromise<string | null | undefined>) | null | undefined,
-  ) {
-    this._rep.getAuth = getAuth;
   }
 
   /**
@@ -649,25 +629,23 @@ export class Reflect<MD extends MutatorDefs> {
     };
   }
 
-  private async _updateAuthToken(lc: LogContext): Promise<boolean> {
-    if (!this.getAuth) {
-      lc.debug?.('No auth getter so we cannot update auth');
-      return false;
-    }
-    const auth = await this.getAuth();
-    if (!auth) {
-      lc.debug?.('Auth getter returned no value so not updating auth');
-      return false;
-    }
+  #getAuthToken = (): MaybePromise<string> => {
+    const {authToken} = this.#options;
+    return typeof authToken === 'function' ? authToken() : authToken;
+  };
 
-    lc.debug?.('got new auth', auth);
-    this.auth = auth;
-    return true;
+  async #updateAuthToken(lc: LogContext): Promise<void> {
+    const auth = await this.#getAuthToken();
+    lc.debug?.('Got auth token');
+    this._rep.auth = auth;
   }
 
   private async _runLoop() {
     const bareLogContext = await this._l;
     let lc = bareLogContext;
+
+    await this.#updateAuthToken(lc);
+
     let needsReauth = false;
     let errorCount = 0;
 
@@ -677,7 +655,7 @@ export class Reflect<MD extends MutatorDefs> {
           case ConnectionState.Disconnected: {
             // If we got an auth error we try to get a new auth token before reconnecting.
             if (needsReauth) {
-              await this._updateAuthToken(lc);
+              await this.#updateAuthToken(lc);
             }
 
             await this._connect(lc);
