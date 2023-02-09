@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1675937255130,
+  "lastUpdate": 1675937761160,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -35741,6 +35741,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/7a89f4491ac38f838f34ee4f7efe31381e6d556c"
         },
         "date": 1675937246664,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 242613,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40352,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 241412,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 40039,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 97495,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27336,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7c61879f15afc1974631cd2e40f3b353ab906aeb",
+          "message": "chore(deps): bump eta, @docusaurus/core, @docusaurus/preset-classic and @docusaurus/theme-search-algolia (#523)\n\nBumps [eta](https://github.com/eta-dev/eta) to 2.0.0 and updates ancestor dependencies [eta](https://github.com/eta-dev/eta), [@docusaurus/core](https://github.com/facebook/docusaurus/tree/HEAD/packages/docusaurus), [@docusaurus/preset-classic](https://github.com/facebook/docusaurus/tree/HEAD/packages/docusaurus-preset-classic) and [@docusaurus/theme-search-algolia](https://github.com/facebook/docusaurus/tree/HEAD/packages/docusaurus-theme-search-algolia). These dependencies need to be updated together.\r\n\r\n\r\nUpdates `eta` from 1.12.3 to 2.0.0\r\n- [Release notes](https://github.com/eta-dev/eta/releases)\r\n- [Commits](https://github.com/eta-dev/eta/compare/v1.12.3...v2.0.0)\r\n\r\nUpdates `@docusaurus/core` from 2.1.0 to 2.3.1\r\n- [Release notes](https://github.com/facebook/docusaurus/releases)\r\n- [Changelog](https://github.com/facebook/docusaurus/blob/main/CHANGELOG.md)\r\n- [Commits](https://github.com/facebook/docusaurus/commits/v2.3.1/packages/docusaurus)\r\n\r\nUpdates `@docusaurus/preset-classic` from 2.1.0 to 2.3.1\r\n- [Release notes](https://github.com/facebook/docusaurus/releases)\r\n- [Changelog](https://github.com/facebook/docusaurus/blob/main/CHANGELOG.md)\r\n- [Commits](https://github.com/facebook/docusaurus/commits/v2.3.1/packages/docusaurus-preset-classic)\r\n\r\nUpdates `@docusaurus/theme-search-algolia` from 2.1.0 to 2.3.1\r\n- [Release notes](https://github.com/facebook/docusaurus/releases)\r\n- [Changelog](https://github.com/facebook/docusaurus/blob/main/CHANGELOG.md)\r\n- [Commits](https://github.com/facebook/docusaurus/commits/v2.3.1/packages/docusaurus-theme-search-algolia)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: eta\r\n  dependency-type: indirect\r\n- dependency-name: \"@docusaurus/core\"\r\n  dependency-type: direct:production\r\n- dependency-name: \"@docusaurus/preset-classic\"\r\n  dependency-type: direct:production\r\n- dependency-name: \"@docusaurus/theme-search-algolia\"\r\n  dependency-type: direct:production\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-02-09T10:14:57Z",
+          "tree_id": "c349885421a73c82d3b1278135311f14fb3124ac",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/7c61879f15afc1974631cd2e40f3b353ab906aeb"
+        },
+        "date": 1675937752446,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
