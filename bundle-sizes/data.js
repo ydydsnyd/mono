@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1673039147328,
+  "lastUpdate": 1675936258271,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -35633,6 +35633,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/replicache-internal/commit/ec0066f6ce2907307ab9196bbcd3838c3bb7fc1f"
         },
         "date": 1673039139306,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 242613,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40352,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 241412,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 40039,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 97495,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27336,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1459959449330540e1de084f0739674477a21fd7",
+          "message": "chore(deps): bump http-cache-semantics from 4.1.0 to 4.1.1 in /doc (#520)\n\nBumps [http-cache-semantics](https://github.com/kornelski/http-cache-semantics) from 4.1.0 to 4.1.1.\r\n- [Release notes](https://github.com/kornelski/http-cache-semantics/releases)\r\n- [Commits](https://github.com/kornelski/http-cache-semantics/compare/v4.1.0...v4.1.1)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: http-cache-semantics\r\n  dependency-type: indirect\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-02-08T21:14:45+01:00",
+          "tree_id": "088796dd663b6405a64d4fabb41bf6efa00c0937",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/1459959449330540e1de084f0739674477a21fd7"
+        },
+        "date": 1675936248899,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
