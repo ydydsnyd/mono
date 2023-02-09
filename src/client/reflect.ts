@@ -631,8 +631,8 @@ export class Reflect<MD extends MutatorDefs> {
   }
 
   #getAuthToken = (): MaybePromise<string> => {
-    const {authToken} = this.#options;
-    return typeof authToken === 'function' ? authToken() : authToken;
+    const {auth} = this.#options;
+    return typeof auth === 'function' ? auth() : auth;
   };
 
   async #updateAuthToken(lc: LogContext): Promise<void> {

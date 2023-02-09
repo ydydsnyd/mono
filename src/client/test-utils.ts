@@ -139,7 +139,7 @@ export function reflectForTest<MD extends MutatorDefs>(
     socketOrigin: 'wss://example.com/',
     userID: 'test-user-id',
     roomID: 'test-room-id',
-    authToken: 'test-auth',
+    auth: 'test-auth',
     logSinks: [],
     ...options,
   });

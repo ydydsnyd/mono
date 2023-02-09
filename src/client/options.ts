@@ -15,12 +15,12 @@ export interface ReflectOptions<MD extends MutatorDefs> {
    * The authentication/authorization token to use when opening a connection to
    * the Reflect server.
    *
-   * This token is used initially, and if an authentication error occurs a new
-   * auth token is needed. In that case, {@link ReflectOptions.authToken} will be
-   * used again. It is therefore useful to set this to a function that can
-   * compute (receive) the new token.
+   * This token is used initially when connecting to the server. If an
+   * authentication error occurs a new auth token is needed. In that case,
+   * {@link ReflectOptions.auth} will be used again. It is therefore useful to
+   * set this to a function that can compute (receive) the new token.
    */
-  authToken: MaybePromise<string> | (() => MaybePromise<string>);
+  auth: string | (() => MaybePromise<string>);
 
   /**
    * A unique identifier for the user authenticated by

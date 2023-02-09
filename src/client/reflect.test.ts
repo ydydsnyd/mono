@@ -201,15 +201,9 @@ test('onOnlineChange reflection on Reflect class', async () => {
 });
 
 test('disconnects if ping fails', async () => {
-  const url = 'ws://example.com';
   const watchdogInterval = RUN_LOOP_INTERVAL_MS;
   const pingTimeout = 2000;
-  const r = reflectForTest({
-    socketOrigin: url,
-    authToken: '',
-    userID: 'user-id',
-    roomID: 'room-id',
-  });
+  const r = reflectForTest();
 
   await r.waitForConnectionState(ConnectionState.Connecting);
   expect(r.connectionState).to.equal(ConnectionState.Connecting);
@@ -471,7 +465,7 @@ test('poke log context includes requestID', async () => {
 
   const reflect = new TestReflect({
     socketOrigin: url,
-    authToken: '',
+    auth: '',
     userID: 'user-id',
     roomID: 'room-id',
     logSinks: [logSink],
@@ -494,16 +488,11 @@ test('poke log context includes requestID', async () => {
 });
 
 test('metrics updated when connected', async () => {
-  const url = 'ws://example.com/';
   const m = new Metrics();
   const ttc = m.gauge(Metric.TimeToConnectMs);
   const lce = m.state(Metric.LastConnectError);
   clock.setSystemTime(1000 * 1000);
   const r = reflectForTest({
-    socketOrigin: url,
-    authToken: '',
-    userID: 'user-id',
-    roomID: 'room-id',
     metrics: m,
   });
   expect(val(ttc)?.value).to.equal(DID_NOT_CONNECT_VALUE);
@@ -548,16 +537,11 @@ function val(g: {flush(): DatadogSeries | undefined}):
 }
 
 test('metrics when connect fails', async () => {
-  const url = 'ws://example.com/';
   const m = new Metrics();
   const ttc = m.gauge(Metric.TimeToConnectMs);
   const lce = m.state(Metric.LastConnectError);
   clock.setSystemTime(1000 * 1000);
   const r = reflectForTest({
-    socketOrigin: url,
-    authToken: '',
-    userID: 'user-id',
-    roomID: 'room-id',
     metrics: m,
   });
 
@@ -610,7 +594,7 @@ test('Authentication', async () => {
 
   let authCounter = 0;
 
-  const authToken = () => {
+  const auth = () => {
     if (authCounter > 0) {
       log.push(Date.now());
     }
@@ -621,9 +605,7 @@ test('Authentication', async () => {
     return 'auth-token';
   };
 
-  const r = reflectForTest({
-    authToken,
-  });
+  const r = reflectForTest({auth});
 
   const emulateErrorWhenConnecting = async (
     tickMS: number,
@@ -684,7 +666,7 @@ test('AuthInvalidated', async () => {
   let authCounter = 1;
 
   const r = reflectForTest({
-    authToken: () => `auth-token-${authCounter++}`,
+    auth: () => `auth-token-${authCounter++}`,
   });
 
   await r.triggerConnected();
@@ -700,7 +682,7 @@ test('AuthInvalidated', async () => {
 });
 
 test('Disconnect on error', async () => {
-  const r = reflectForTest({});
+  const r = reflectForTest();
   await r.triggerConnected();
   expect(r.connectionState).to.equal(ConnectionState.Connected);
   await r.triggerError(ErrorKind.ClientNotFound, 'client not found');
