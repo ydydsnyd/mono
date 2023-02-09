@@ -93,11 +93,11 @@ export class DatadogLogSink implements LogSink {
       let ok = false;
       try {
         const response = await fetch(url.toString(), {
+          method: 'POST',
           headers: {
             // eslint-disable-next-line @typescript-eslint/naming-convention
             'DD-API-KEY': this._apiKey,
           },
-          method: 'POST',
           body,
           signal: this._signal,
         });

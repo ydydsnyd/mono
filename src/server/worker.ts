@@ -159,8 +159,8 @@ async function scheduled(env: BaseWorkerEnv, lc: LogContext): Promise<void> {
   const req = new Request(
     `https://unused-reflect-auth-do.dev${AUTH_ROUTES.authRevalidateConnections}`,
     {
-      headers: createAuthAPIHeaders(env.REFLECT_AUTH_API_KEY),
       method: 'POST',
+      headers: createAuthAPIHeaders(env.REFLECT_AUTH_API_KEY),
     },
   );
   const resp = await sendToAuthDO({lc, env}, req);

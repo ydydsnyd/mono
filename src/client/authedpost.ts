@@ -7,7 +7,7 @@ export function newAuthedPostRequest(
   req?: JSONType | undefined,
 ) {
   return new Request(url.toString(), {
-    method: 'post',
+    method: 'POST',
     headers: createAuthAPIHeaders(authApiKey),
     body: req ? JSON.stringify(req) : undefined,
   });

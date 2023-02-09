@@ -533,6 +533,7 @@ export class BaseAuthDO implements DurableObject {
             new Request(
               `https://unused-reflect-room-do.dev${ROOM_ROUTES.authConnections}`,
               {
+                method: 'POST',
                 headers: createAuthAPIHeaders(this._authApiKey),
               },
             ),

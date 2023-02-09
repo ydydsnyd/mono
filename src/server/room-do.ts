@@ -56,7 +56,7 @@ export const ROOM_ROUTES = {
   authConnections: '/api/auth/v0/connections',
   createRoom: '/createRoom',
   connect: '/connect',
-};
+} as const;
 
 export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   private readonly _clients: ClientMap = new Map();
