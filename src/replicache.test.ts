@@ -10,12 +10,14 @@ import {
   makePullResponseDD31,
   MemStoreWithCounters,
   replicacheForTesting,
+  ReplicacheTest,
   requestIDLogContextRegex,
   tickAFewTimes,
   tickUntil,
 } from './test-util.js';
 import {
   ClientID,
+  MutatorDefs,
   PatchOperation,
   PokeDD31,
   Replicache,
@@ -23,7 +25,7 @@ import {
 } from './mod.js';
 import type {ReadTransaction, WriteTransaction} from './mod.js';
 import type {JSONValue} from './json.js';
-import {assert, expect} from '@esm-bundle/chai';
+import {assert as chaiAssert, expect} from '@esm-bundle/chai';
 import * as sinon from 'sinon';
 import type {ScanOptions} from './scan-options.js';
 import {asyncIterableToArray} from './async-iterable-to-array.js';
@@ -50,8 +52,9 @@ import {
   LICENSE_ACTIVE_PATH,
   LICENSE_STATUS_PATH,
 } from '@rocicorp/licensing/src/server/api-types.js';
+import {assert} from './asserts.js';
 
-const {fail} = assert;
+const {fail} = chaiAssert;
 
 initReplicacheTesting();
 
@@ -1871,14 +1874,10 @@ test('overlapping open/close', async () => {
   }
 });
 
-test('experiment KV Store', async () => {
-  const store = new MemStoreWithCounters();
-  const rep = await replicacheForTesting('experiment-kv-store', {
-    experimentalKVStore: store,
-    mutators: {addData},
-    ...disableAllBackgroundProcesses,
-  });
-
+async function testMemStoreWithCounters<MD extends MutatorDefs>(
+  rep: ReplicacheTest<MD>,
+  store: MemStoreWithCounters,
+) {
   // Safari does not have requestIdleTimeout so it delays 1 second for persist
   // and 1 second for refresh. We need to wait to have all browsers have a
   // chance to run persist and the refresh triggered by persist before we continue.
@@ -1915,6 +1914,40 @@ test('experiment KV Store', async () => {
   expect(store.readCount).to.equal(0, 'readCount');
   expect(store.writeCount).to.equal(0, 'writeCount');
   expect(store.closeCount).to.equal(1, 'closeCount');
+}
+
+test('Experimental Create KV Store', async () => {
+  let store: MemStoreWithCounters | undefined;
+
+  const rep = await replicacheForTesting('experiment-kv-store', {
+    experimentalCreateKVStore: name => {
+      if (!store && name.includes('experiment-kv-store')) {
+        store = new MemStoreWithCounters(name);
+        return store;
+      }
+
+      return new MemStoreWithCounters(name);
+    },
+    mutators: {addData},
+    ...disableAllBackgroundProcesses,
+  });
+
+  expect(store).instanceOf(MemStoreWithCounters);
+  assert(store);
+
+  await testMemStoreWithCounters(rep, store);
+});
+
+test('Experimental KV Store', async () => {
+  const store = new MemStoreWithCounters('experimental-kv-store');
+
+  const rep = await replicacheForTesting('experiment-kv-store', {
+    experimentalKVStore: store,
+    mutators: {addData},
+    ...disableAllBackgroundProcesses,
+  });
+
+  await testMemStoreWithCounters(rep, store);
 });
 
 function findPropertyValue(
@@ -1949,7 +1982,7 @@ test('mutate args in mutation throws due to frozen', async () => {
   // store in the kv.Store.
   const store = new TestMemStore();
   const rep = await replicacheForTesting('mutate-args-in-mutation', {
-    experimentalKVStore: store,
+    experimentalCreateKVStore: () => store,
     mutators: {
       async mutArgs(tx: WriteTransaction, args: {v: number}) {
         args.v = 42;

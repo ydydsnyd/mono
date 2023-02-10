@@ -1,5 +1,4 @@
 import {expect} from '@esm-bundle/chai';
-import {TestMemStore} from '../kv/mod.js';
 import {createChunk, Chunk} from './chunk.js';
 import {StoreImpl, ReadImpl, WriteImpl} from './store-impl.js';
 import {chunkDataKey, chunkMetaKey, chunkRefCountKey, headKey} from './key.js';
@@ -9,6 +8,7 @@ import {assert} from '../asserts.js';
 import {TestStore} from './test-store.js';
 import {ChunkNotFoundError} from './store.js';
 import {ReadonlyJSONValue, deepFreeze} from '../json.js';
+import {TestMemStore} from '../kv/test-mem-store.js';
 
 suite('read', () => {
   test('has chunk', async () => {
