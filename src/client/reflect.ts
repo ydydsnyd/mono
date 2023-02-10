@@ -356,6 +356,8 @@ export class Reflect<MD extends MutatorDefs> {
     let downMessage: Downstream;
     const {data} = e;
     try {
+      // TODO: validate this, at least in debug mode:
+      // https://github.com/rocicorp/reflect-server/issues/225
       downMessage = JSON.parse(data) as Downstream; //downstreamSchema.parse(data);
     } catch (e) {
       rejectInvalidMessage();
