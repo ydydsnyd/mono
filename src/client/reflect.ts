@@ -110,7 +110,8 @@ export class Reflect<MD extends MutatorDefs> {
 
   #nextMessageResolver: Resolver<Downstream> | undefined = undefined;
 
-  // We use a accessor pair to allow the subclass to override the setter.
+  // We use accessors for these two to allow the subclass to override the
+  // setter.
   #connectionState: ConnectionState = ConnectionState.Disconnected;
   #clearConnectTimeout: (() => void) | undefined = undefined;
 
