@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1675937761160,
+  "lastUpdate": 1676043434013,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -35825,6 +35825,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27336,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "79824a54078282825b48f4e9d638477b86e3c90a",
+          "message": "feat: Add experimental Create KV store (#525)\n\nThis adds a new option called `experimentalCreateKVStore` which can be\r\nused to create a KV store. This is useful for testing and for creating\r\ncustom stores.\r\n\r\nThe old `experimentalKVStore` option is still available but marked as deprecated.\r\nIt is broken due to IDB being used for the database of databases even when the\r\n`experimentalKVStore` option is used.\r\n\r\nThis adds a `MemStore` class which is an in memory implementation of the\r\nKV store interface. It takes a `name` parameter which is used to share\r\nthe data between named instances. This has similar semantics to the\r\n`IDBStore`.\r\n\r\nThe `MemStore` is exported as `ExperimentalMemKVStore` for now.\r\n\r\nTowards #434\r\nTowards #483",
+          "timestamp": "2023-02-10T15:36:00Z",
+          "tree_id": "65a0ece42fe4baa0630ffd9814257a2cf0c2a942",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/79824a54078282825b48f4e9d638477b86e3c90a"
+        },
+        "date": 1676043424821,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 244983,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40694,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 243778,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 40335,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 98517,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27546,
             "unit": "bytes"
           }
         ]
