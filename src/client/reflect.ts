@@ -110,8 +110,6 @@ export class Reflect<MD extends MutatorDefs> {
 
   #nextMessageResolver: Resolver<Downstream> | undefined = undefined;
 
-  #clearConnectTimeout: (() => void) | undefined = undefined;
-
   // We use an accessor pair to allow the subclass to override the setter.
   #connectionState: ConnectionState = ConnectionState.Disconnected;
   protected get _connectionState(): ConnectionState {
@@ -433,17 +431,23 @@ export class Reflect<MD extends MutatorDefs> {
 
     this._lastMutationIDSent = -1;
     this._connectResolver.resolve();
-    this.#clearConnectTimeout?.();
   }
 
   /**
-   * _connect will throw an assertion error if the _connectionState is not
-   * Disconnected. Callers MUST check the connection state before calling this
-   * method and log an error as needed.
+   * Starts a new connection. This will create the WebSocket that does the HTTP
+   * request to the server.
    *
-   * The function will resolve once the socket is connected and has received a
-   * ConnectedMessage message. If the socket receives an ErrorMessage before a
-   * ConnectedMessage,then this function rejects.
+   * {@link _connect} will throw an assertion error if the
+   * {@link _connectionState} is not {@link ConnectionState.Disconnected}.
+   * Callers MUST check the connection state before calling this method and log
+   * an error as needed.
+   *
+   * The function will resolve once the socket is connected. If you need to know
+   * when a connection has been established, as in we have received the
+   * {@link ConnectedMessage}, you should await the {@link _connectResolver}
+   * promise. The {@link _connectResolver} promise rejects if an error message
+   * is received before the connected message is received or if the connection
+   * attempt times out.
    */
   private async _connect(l: LogContext): Promise<void> {
     // All the callers check this state already.
@@ -454,11 +458,11 @@ export class Reflect<MD extends MutatorDefs> {
     l.info?.('Connecting...', {navigatorOnline: navigator.onLine});
 
     this._connectionState = ConnectionState.Connecting;
-    if (this._connectingStart !== undefined) {
-      l.error?.(
-        'connect() called but connect start time is defined. This should not happen.',
-      );
-    }
+
+    // connect() called but connect start time is defined. This should not
+    // happen.
+    assert(this._connectingStart === undefined);
+
     this._connectingStart = Date.now();
 
     // Create a new resolver for the next connection attempt. The previous
@@ -475,10 +479,8 @@ export class Reflect<MD extends MutatorDefs> {
       );
       this._disconnect(l, ErrorKind.ConnectTimeout);
     }, CONNECT_TIMEOUT_MS);
-    this.#clearConnectTimeout = () => {
-      clearTimeout(id);
-      this.#clearConnectTimeout = undefined;
-    };
+    const clear = () => clearTimeout(id);
+    this._connectResolver.promise.then(clear, clear);
     // We clear the timeout in _disconnect and _handleConnectedMessage.
 
     const ws = createSocket(
@@ -528,8 +530,6 @@ export class Reflect<MD extends MutatorDefs> {
         l.error?.('disconnect() called while disconnected');
         break;
     }
-
-    this.#clearConnectTimeout?.();
 
     this._socketResolver = resolver();
 
@@ -586,19 +586,9 @@ export class Reflect<MD extends MutatorDefs> {
     });
   }
 
-  private async _ensureConnected(lc: LogContext): Promise<void> {
-    if (this._connectionState === ConnectionState.Disconnected) {
-      // Do not skip await here. We don't want errors to be swallowed.
-      await this._connect(lc);
-    }
-
-    return this._connectResolver.promise;
-  }
-
   private async _pusher(req: Request) {
     // If we are connecting we wait until we are connected.
-    await this._ensureConnected(await this._l);
-    this.#setOnline(true);
+    await this._connectResolver.promise;
 
     const socket = this._socket;
     assert(socket);
@@ -644,15 +634,25 @@ export class Reflect<MD extends MutatorDefs> {
   }
 
   private async _runLoop() {
+    let runLoopCounter = 0;
     const bareLogContext = await this._l;
-    let lc = bareLogContext;
+    const getLogContext = () => {
+      let lc = bareLogContext;
+      if (this._socket) {
+        lc = addWebSocketIDFromSocketToLogContext(this._socket, lc);
+      }
+      return lc.addContext('runLoopCounter', runLoopCounter);
+    };
 
-    await this.#updateAuthToken(lc);
+    await this.#updateAuthToken(bareLogContext);
 
     let needsReauth = false;
     let errorCount = 0;
 
     while (!this.closed) {
+      runLoopCounter++;
+      let lc = getLogContext();
+
       try {
         switch (this._connectionState) {
           case ConnectionState.Disconnected: {
@@ -663,12 +663,9 @@ export class Reflect<MD extends MutatorDefs> {
 
             await this._connect(lc);
 
-            // Now we have a socket, update lc with wsid.
+            // Now we have a new socket, update lc with the new wsid.
             assert(this._socket);
-            lc = addWebSocketIDFromSocketToLogContext(
-              this._socket,
-              bareLogContext,
-            );
+            lc = getLogContext();
 
             lc.debug?.('Waiting for connection to be acknowledged');
             await this._connectResolver.promise;
@@ -740,6 +737,10 @@ export class Reflect<MD extends MutatorDefs> {
 
         errorCount++;
       }
+
+      // Only authentication errors are retried immediately the first time they
+      // occur. All other errors wait a few seconds before retrying the first
+      // time. Consecutive errors use a backoff.
 
       if (errorCount > 0) {
         this.#setOnline(false);
