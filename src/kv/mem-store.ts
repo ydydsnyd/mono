@@ -1,14 +1,49 @@
 import {RWLock} from '@rocicorp/lock';
 import type {FrozenJSONValue} from '../json.js';
 import {promiseVoid} from '../resolved-promises.js';
+import {ReadImpl} from './read-impl.js';
 import type {Read, Store, Write} from './store.js';
-import {deleteSentinel, WriteImplBase} from './write-impl-base.js';
+import {WriteImpl} from './write-impl.js';
 
+type StorageMap = Map<string, FrozenJSONValue>;
+
+type Value = {readonly lock: RWLock; readonly map: StorageMap};
+
+const stores = new Map<string, Value>();
+
+export function clearAllMemStoresForTesting(): void {
+  stores.clear();
+}
+
+/**
+ * A named in-memory Store implementation.
+ *
+ * Two (or more) named memory stores with the same name will share the same
+ * underlying storage. They will also share the same read/write locks, so that
+ * only one write transaction can be running at the same time.
+ *
+ * @experimental This class is experimental and might be removed or changed
+ * in the future without following semver versioning. Please be cautious.
+ */
 export class MemStore implements Store {
-  // protected to allow test sub class to use it.
-  protected readonly _map: Map<string, FrozenJSONValue> = new Map();
-  private readonly _rwLock = new RWLock();
+  private readonly _map: StorageMap;
+  private readonly _rwLock: RWLock;
   private _closed = false;
+
+  constructor(name: string) {
+    const entry = stores.get(name);
+    let lock: RWLock;
+    let map: StorageMap;
+    if (entry) {
+      ({lock, map} = entry);
+    } else {
+      lock = new RWLock();
+      map = new Map();
+      stores.set(name, {lock, map});
+    }
+    this._rwLock = lock;
+    this._map = map;
+  }
 
   async read(): Promise<Read> {
     const release = await this._rwLock.read();
@@ -45,56 +80,5 @@ export class MemStore implements Store {
 
   get closed(): boolean {
     return this._closed;
-  }
-}
-
-class ReadImpl implements Read {
-  private readonly _map: Map<string, FrozenJSONValue>;
-  private readonly _release: () => void;
-  private _closed = false;
-
-  constructor(map: Map<string, FrozenJSONValue>, release: () => void) {
-    this._map = map;
-    this._release = release;
-  }
-
-  release() {
-    this._release();
-    this._closed = true;
-  }
-
-  get closed(): boolean {
-    return this._closed;
-  }
-
-  has(key: string): Promise<boolean> {
-    return Promise.resolve(this._map.has(key));
-  }
-
-  get(key: string): Promise<FrozenJSONValue | undefined> {
-    return Promise.resolve(this._map.get(key));
-  }
-}
-
-class WriteImpl extends WriteImplBase implements Write {
-  private readonly _map: Map<string, FrozenJSONValue>;
-
-  constructor(map: Map<string, FrozenJSONValue>, release: () => void) {
-    super(new ReadImpl(map, release));
-    this._map = map;
-  }
-
-  commit(): Promise<void> {
-    // HOT. Do not allocate entry tuple and destructure.
-    this._pending.forEach((value, key) => {
-      if (value === deleteSentinel) {
-        this._map.delete(key);
-      } else {
-        this._map.set(key, value);
-      }
-    });
-    this._pending.clear();
-    this.release();
-    return promiseVoid;
   }
 }

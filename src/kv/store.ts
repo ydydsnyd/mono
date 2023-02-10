@@ -26,6 +26,18 @@ export interface Store {
 }
 
 /**
+ * Factory function for creating {@link Store} instances.
+ *
+ * The name is used to identify the store. If the same name is used for multiple
+ * stores, they should share the same data. It is also desirable to have these
+ * stores share an {@link RWLock}.
+ *
+ * @experimental This type is experimental and might be removed or changed
+ * in the future without following semver versioning. Please be cautious.
+ */
+export type CreateStore = (name: string) => Store;
+
+/**
  * This interface is used so that we can release the lock when the transaction
  * is done.
  *
@@ -50,7 +62,8 @@ export interface Read extends Release {
 }
 
 /**
- * @experimental
+ * @experimental This interface is experimental and might be removed or changed
+ * in the future without following semver versioning. Please be cautious.
  */
 export interface Write extends Read {
   put(key: string, value: ReadonlyJSONValue): Promise<void>;

@@ -26,6 +26,7 @@ import {
   setupForTest as setupIDBDatabasesStoreForTest,
   teardownForTest as teardownIDBDatabasesStoreForTest,
 } from './persist/idb-databases-store-db-name.js';
+import {MemStore} from './kv/mem-store.js';
 
 export class ReplicacheTest<
   // eslint-disable-next-line @typescript-eslint/ban-types
@@ -237,10 +238,14 @@ export async function tickUntil(f: () => boolean, msPerTest = 10) {
 }
 
 export class MemStoreWithCounters implements kv.Store {
-  readonly store = new kv.MemStore();
+  readonly store: kv.Store;
   readCount = 0;
   writeCount = 0;
   closeCount = 0;
+
+  constructor(name: string) {
+    this.store = new MemStore(name);
+  }
 
   resetCounters() {
     this.readCount = 0;
