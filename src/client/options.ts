@@ -12,13 +12,17 @@ export interface ReflectOptions<MD extends MutatorDefs> {
   socketOrigin: string;
 
   /**
-   * The authentication/authorization token to use when opening a connection to
-   * the Reflect server.
+   * Identifies and authenticates the user.
    *
-   * This token is used initially when connecting to the server. If an
-   * authentication error occurs a new auth token is needed. In that case,
-   * {@link ReflectOptions.auth} will be used again. It is therefore useful to
-   * set this to a function that can compute (receive) the new token.
+   * This string is passed to the `authHandler` function on the server, where
+   * it can be used to authenticate the user.
+   *
+   * In the case authentication fails, the connection to the server will be
+   * closed and Reflect will retry connecting with exponential backoff.
+   *
+   * If a function is provided here, that function is invoked before each
+   * attempt. This provides the application the opportunity to calculate or
+   * fetch a fresh token.
    */
   auth: string | (() => MaybePromise<string>);
 
