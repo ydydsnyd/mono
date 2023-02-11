@@ -421,7 +421,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
       puller,
       pusher,
       licenseKey,
-      experimentalKVStore,
       experimentalCreateKVStore,
       indexes = {},
     } = options;
@@ -474,8 +473,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
     if (experimentalCreateKVStore) {
       createStore = experimentalCreateKVStore;
       perKVStore = createStore(this.idbName);
-    } else if (experimentalKVStore) {
-      perKVStore = experimentalKVStore;
     } else {
       perKVStore = createStore(this.idbName);
     }

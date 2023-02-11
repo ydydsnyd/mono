@@ -208,16 +208,6 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
   licenseKey: string;
 
   /**
-   * Allows implementing the underlying storage layer in JavaScript.
-   *
-   * @experimental This option is experimental and will be removed in the
-   * future.
-   *
-   * @deprecated Use {@link experimentalCreateKVStore} instead.
-   */
-  experimentalKVStore?: kv.Store | undefined;
-
-  /**
    * Allows providing a custom implementation of the underlying storage layer.
    *
    * @experimental This option is experimental and might be removed or changed
