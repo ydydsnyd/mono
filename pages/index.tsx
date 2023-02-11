@@ -1,8 +1,8 @@
-import Head from "next/head";
-import Image from "next/image";
-import styles from "@/styles/Home.module.css";
-import Benefits from "@/components/Benefits/Benefits.tsx";
-import Pricing from "@/components/Pricing/Pricing.tsx";
+import Head from 'next/head';
+import Image from 'next/image';
+import styles from '@/styles/Home.module.css';
+import Benefits from '@/components/Benefits/Benefits.tsx';
+import Pricing from '@/components/Pricing/Pricing.tsx';
 
 export default function Home() {
   return (
@@ -20,7 +20,7 @@ export default function Home() {
           className={`${styles.section} ${styles.introSection}`}
         >
           <h1 className={styles.title}>
-            The next web is{" "}
+            The next web is{' '}
             <span className={styles.titleEmphasized}>alive</span>.
           </h1>
 

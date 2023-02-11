@@ -1,7 +1,7 @@
 // components/Pricing/Pricing.tsx
 
-import styles from "./Pricing.module.css";
-import Link from "next/link";
+import styles from './Pricing.module.css';
+import Link from 'next/link';
 
 const Pricing = () => (
   <div className={styles.pricingContainer}>

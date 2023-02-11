@@ -1,7 +1,7 @@
 // components/Benefits/Benefits.tsx
 
-import Link from "next/link";
-import styles from "./Benefits.module.css";
+import Link from 'next/link';
+import styles from './Benefits.module.css';
 
 const Benefits = () => (
   <div className={styles.benefitsGrid}>
