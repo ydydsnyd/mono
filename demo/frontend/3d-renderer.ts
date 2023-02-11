@@ -82,6 +82,9 @@ export const renderer = async (
         }
       });
     },
+    resize3DCanvas: (_: Letter) => {
+      engine.resize();
+    },
     getTexturePosition: (letter: Letter, point: Position) => {
       return scenes[letter].getTexturePosition(point);
     },
