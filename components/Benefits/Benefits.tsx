@@ -14,6 +14,8 @@ const Benefits = () => (
           loading="lazy"
           alt=""
           className={styles.benefitIcon}
+          width={36}
+          height={54}
         />
       </div>
       <h3 className={styles.benefitTitle}>60 Updates per Second</h3>
@@ -32,6 +34,8 @@ const Benefits = () => (
           loading="lazy"
           alt=""
           className={styles.benefitIcon}
+          width={36}
+          height={54}
         />
       </div>
       <h3 className={styles.benefitTitle}>Automatic Persistence</h3>
@@ -50,6 +54,8 @@ const Benefits = () => (
           loading="lazy"
           alt=""
           className={styles.benefitIcon}
+          width={36}
+          height={54}
         />
       </div>
       <h3 className={styles.benefitTitle}>Replay-Based Conflict Resolution</h3>
@@ -69,6 +75,8 @@ const Benefits = () => (
           loading="lazy"
           alt=""
           className={styles.benefitIcon}
+          width={36}
+          height={54}
         />
       </div>
       <h3 className={styles.benefitTitle}>Optional Offline</h3>
@@ -87,6 +95,8 @@ const Benefits = () => (
           loading="lazy"
           alt=""
           className={styles.benefitIcon}
+          width={36}
+          height={54}
         />
       </div>
       <h3 className={styles.benefitTitle}>Works With Your Tools</h3>
@@ -104,6 +114,8 @@ const Benefits = () => (
           loading="lazy"
           alt=""
           className={styles.benefitIcon}
+          width={36}
+          height={54}
         />
       </div>
       <h3 className={styles.benefitTitle}>Fine-Grained Auth</h3>
@@ -121,6 +133,8 @@ const Benefits = () => (
           loading="lazy"
           alt=""
           className={styles.benefitFullIcon}
+          width={54}
+          height={54}
         />
       </div>
       <div className={styles.benefitInfoContainer}>

@@ -32,6 +32,8 @@ const Pricing = () => (
           src="/pricing/pricing-x.svg"
           className={styles.pricingGridIcon}
           alt=""
+          width={32}
+          height={32}
         />
       </div>
       <div className={styles.pricingGridData}>
@@ -39,6 +41,8 @@ const Pricing = () => (
           src="/pricing/pricing-check.svg"
           className={styles.pricingGridIcon}
           alt=""
+          width={42}
+          height={32}
         />
       </div>
       <div className={styles.pricingGridData}>
@@ -46,6 +50,8 @@ const Pricing = () => (
           src="/pricing/pricing-check.svg"
           className={styles.pricingGridIcon}
           alt=""
+          width={42}
+          height={32}
         />
       </div>
       <div className={styles.pricingGridData}>
@@ -53,6 +59,8 @@ const Pricing = () => (
           src="/pricing/pricing-check.svg"
           className={styles.pricingGridIcon}
           alt=""
+          width={42}
+          height={32}
         />
       </div>
     </div>
