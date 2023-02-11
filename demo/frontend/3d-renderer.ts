@@ -3,10 +3,12 @@ import {
   Vector3,
   SceneLoader,
   Engine,
+  EngineView,
   WebGPUEngine,
   DynamicTexture,
   Texture,
   Color3,
+  Color4,
   UniversalCamera,
   PBRMaterial,
   CubeTexture,
@@ -16,7 +18,6 @@ import {
 import '@babylonjs/loaders/glTF';
 import {Color, Letter, Position} from '../shared/types';
 import {asyncLetterMap} from '../shared/util';
-import {LETTERS} from '../shared/letters';
 import {MAX_SCALE} from '../shared/constants';
 
 const modelURL = '/alive.glb';
@@ -48,14 +49,22 @@ export const renderer = async (
   }
   engine.setHardwareScalingLevel(1 / window.devicePixelRatio / MAX_SCALE);
   // Create the scenes
+  const scenesByViewId: Record<string, Scene> = {};
   const scenes = await asyncLetterMap(async letter => {
-    const [scene, getTexturePosition, setRotation, updateTexture, setGlowing] =
-      await createScene(
-        engine,
-        letter,
-        canvases[letter],
-        textureCanvases[letter],
-      );
+    const [
+      scene,
+      view,
+      getTexturePosition,
+      setRotation,
+      updateTexture,
+      setGlowing,
+    ] = await createScene(
+      engine,
+      letter,
+      canvases[letter],
+      textureCanvases[letter],
+    );
+    scenesByViewId[view.id] = scene;
     return {
       render: () => scene.render(),
       getTexturePosition,
@@ -65,11 +74,13 @@ export const renderer = async (
     };
   });
   return {
-    render3D: () => {
-      LETTERS.forEach(letter => scenes[letter].render());
-    },
-    resize3DCanvas: (letter: Letter) => {
-      engine.resize();
+    startRendering: () => {
+      engine.runRenderLoop(() => {
+        if (engine.activeView?.id) {
+          const scene = scenesByViewId[engine.activeView?.id];
+          scene?.render();
+        }
+      });
     },
     getTexturePosition: (letter: Letter, point: Position) => {
       return scenes[letter].getTexturePosition(point);
@@ -103,6 +114,7 @@ export const createScene = async (
 ): Promise<
   [
     Scene,
+    EngineView,
     (point: Position) => Position | undefined,
     (beta: number) => void,
     () => void,
@@ -117,12 +129,14 @@ export const createScene = async (
   // Create our camera. It's in a fixed position with a very wide field of view to
   // create the illusion of flat letters to begin with.
   const camera = new UniversalCamera(
-    'Letter Camera',
+    `Camera ${letter}`,
     LETTER_CAMERA_POSITIONS[letter],
     scene,
   );
   camera.fov = 0.1;
-  engine.registerView(canvas, camera);
+  const engineView = engine.registerView(canvas, camera, true);
+
+  scene.activeCamera = camera;
 
   // Load the model
   await SceneLoader.ImportMeshAsync([letter], modelURL, undefined, scene);
@@ -144,7 +158,7 @@ export const createScene = async (
     mesh.rotation = new Vector3(Math.PI / 2, -rotation, (2 * Math.PI) / 2);
   };
 
-  const hl = new HighlightLayer('glow', scene);
+  const hl = new HighlightLayer(`${letter}-glow`, scene);
   hl.blurHorizontalSize = 2;
   hl.blurVerticalSize = 2;
 
@@ -184,7 +198,7 @@ export const createScene = async (
   scene.environmentTexture = environmentTexture;
 
   // Make clear totally transparent - by default it'll be some scene background color.
-  // scene.clearColor = new Color4(0, 0, 0, 0);
+  scene.clearColor = new Color4(0, 0, 0, 0);
 
   // Expose a method for finding the letter and position of an arbitrary point.
   const getTexturePosition = (cursor: Position): Position | undefined => {
@@ -200,5 +214,12 @@ export const createScene = async (
     return undefined;
   };
 
-  return [scene, getTexturePosition, setRotation, updateTexture, setGlowing];
+  return [
+    scene,
+    engineView,
+    getTexturePosition,
+    setRotation,
+    updateTexture,
+    setGlowing,
+  ];
 };

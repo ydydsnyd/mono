@@ -12,7 +12,8 @@
 
 #textures,
 #symbol-defs,
-#render-canvas {
+#render-canvas 
+{
   display: none;
 }
 

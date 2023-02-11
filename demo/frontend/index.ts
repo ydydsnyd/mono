@@ -564,7 +564,7 @@ export const init = async () => {
 
   // Set up 3D renderer
   const {
-    render3D,
+    startRendering,
     getTexturePosition,
     resize3DCanvas,
     set3DRotation,
@@ -675,15 +675,16 @@ export const init = async () => {
     await renderCursors();
     // Each frame, render our textures
     render(textures, points, renderPointsIndex, colors);
-    // Also render our 3D scene
+    // Update any 3D scene assets
     LETTERS.forEach(letter => update3DTexture(letter));
     LETTERS.forEach(letter => set3DRotation(letter, rotations[letter]));
-    render3D();
     // And update letter positions
     drawLetterPositions(positions, scales, scaleFactor);
     // Then perform actions
     performActions();
   }, debug);
+  // Also render our 3D scenes
+  startRendering();
 
   // Periodically cache on the client
   setInterval(() => {

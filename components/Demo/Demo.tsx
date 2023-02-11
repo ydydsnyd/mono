@@ -1,4 +1,4 @@
-import React, {useMemo} from 'react';
+import React, {useEffect} from 'react';
 import Image from 'next/image';
 import {init} from '@/demo/frontend';
 import {Letter} from '@/demo/shared/types';
@@ -15,7 +15,10 @@ const initOnce = () => {
 };
 
 const PaintFight = () => {
-  useMemo(initOnce, []);
+  // useEffect so this fires after load
+  useEffect(() => {
+    initOnce();
+  }, []);
 
   return (
     <>
