@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1676043434013,
+  "lastUpdate": 1676129412014,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -35879,6 +35879,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27546,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "852e9d4f72011934f68a6aa78e00f9287b5dec77",
+          "message": "fix: Relax isDeepFrozen check (#528)\n\nIf we expect people to be able to create custom Store implementations,\r\nwe need a way for them to be able to create deeply frozen objects.\r\n\r\nHowever, previously, we were not doing a deep recursive check for deeply\r\nfrozen objects. Instead we tagged the objects (in a WeakSet) as we were\r\ncreating them, and then checked that the WeakSet contained the object\r\nwhen we were checking if it was deeply frozen.\r\n\r\nWith this change we do the deep recursive check if the object is not in\r\nthe WeakSet, allowing us to support custom Store implementations.",
+          "timestamp": "2023-02-11T16:28:54+01:00",
+          "tree_id": "9e82ba457a58079e13dee78b554173b368a7e003",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/852e9d4f72011934f68a6aa78e00f9287b5dec77"
+        },
+        "date": 1676129402053,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 245850,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40749,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 244645,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 40410,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 98864,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27623,
             "unit": "bytes"
           }
         ]
