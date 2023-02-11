@@ -5,6 +5,7 @@ import {
   getSizeOfValue,
   ReadonlyJSONValue,
   deepFreeze,
+  isDeepFrozen,
 } from './json.js';
 import type {JSONValue} from './json.js';
 
@@ -165,4 +166,52 @@ test('toDeepFrozen', () => {
   expect(o2).frozen;
   expect(o[2]).frozen;
   expect(o[2].c).frozen;
+});
+
+test('isDeepFrozen', () => {
+  expect(isDeepFrozen(null, [])).to.be.true;
+  expect(isDeepFrozen(true, [])).to.be.true;
+  expect(isDeepFrozen(1, [])).to.be.true;
+  expect(isDeepFrozen('abc', [])).to.be.true;
+
+  expect(isDeepFrozen([], [])).to.be.false;
+  expect(isDeepFrozen([1, 2, 3], [])).to.be.false;
+  expect(isDeepFrozen({}, [])).to.be.false;
+  expect(isDeepFrozen({a: 1, b: 2}, [])).to.be.false;
+  expect(isDeepFrozen({a: 1, b: 2, c: [3, 4, 5]}, [])).to.be.false;
+
+  const o = [0, 1, {a: 2, b: 3, c: [4, 5, 6]}] as const;
+  expect(isDeepFrozen(o, [])).to.be.false;
+  expect(isDeepFrozen(o[2], [])).to.be.false;
+  expect(isDeepFrozen(o[2].c, [])).to.be.false;
+  deepFreeze(o);
+  expect(isDeepFrozen(o, [])).to.be.true;
+  expect(Object.isFrozen(o)).to.be.true;
+  expect(isDeepFrozen(o[2], [])).to.be.true;
+  expect(Object.isFrozen(o[2])).to.be.true;
+  expect(isDeepFrozen(o[2].c, [])).to.be.true;
+  expect(Object.isFrozen(o[2].c)).to.be.true;
+
+  {
+    const o = [0, 1, {a: 2, b: 3, c: [4, 5, 6]}] as const;
+    expect(isDeepFrozen(o, [])).to.be.false;
+    expect(isDeepFrozen(o[2], [])).to.be.false;
+    expect(isDeepFrozen(o[2].c, [])).to.be.false;
+    Object.freeze(o);
+    Object.freeze(o[2]);
+    expect(isDeepFrozen(o, [])).to.be.false;
+    expect(Object.isFrozen(o)).to.be.true;
+    expect(isDeepFrozen(o[2], [])).to.be.false;
+    expect(Object.isFrozen(o[2])).to.be.true;
+    expect(isDeepFrozen(o[2].c, [])).to.be.false;
+    expect(Object.isFrozen(o[2].c)).to.be.false;
+
+    Object.freeze(o[2].c);
+    expect(isDeepFrozen(o, [])).to.be.true;
+    expect(Object.isFrozen(o)).to.be.true;
+    expect(isDeepFrozen(o[2], [])).to.be.true;
+    expect(Object.isFrozen(o[2])).to.be.true;
+    expect(isDeepFrozen(o[2].c, [])).to.be.true;
+    expect(Object.isFrozen(o[2].c)).to.be.true;
+  }
 });
