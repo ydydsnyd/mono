@@ -301,6 +301,7 @@ function deepFreezeInternal(v: ReadonlyJSONValue, seen: object[]): void {
 
       seen.push(v);
 
+      Object.freeze(v);
       if (Array.isArray(v)) {
         deepFreezeArray(v, seen);
       } else {
@@ -319,14 +320,12 @@ function deepFreezeArray(
   v: ReadonlyArray<ReadonlyJSONValue>,
   seen: object[],
 ): void {
-  Object.freeze(v);
   for (const item of v) {
     deepFreezeInternal(item, seen);
   }
 }
 
 function deepFreezeObject(v: ReadonlyJSONObject, seen: object[]): void {
-  Object.freeze(v);
   for (const k in v) {
     if (hasOwn(v, k)) {
       deepFreezeInternal(v[k], seen);
@@ -350,7 +349,7 @@ export function assertFrozenJSONValue(
         return;
       }
 
-      if (deepFrozenObjects.has(v)) {
+      if (isDeepFrozen(v, [])) {
         return;
       }
   }
@@ -362,7 +361,66 @@ export function assertDeepFrozen<V>(v: V): asserts v is Readonly<V> {
     return;
   }
 
-  if (typeof v === 'object' && v !== null && !deepFrozenObjects.has(v)) {
+  if (!isDeepFrozen(v, [])) {
     throw new Error('Expected frozen object');
+  }
+}
+
+/**
+ * Recursive deep frozen check.
+ *
+ * It adds frozen objects to the {@link deepFrozenObjects} WeakSet so that we do
+ * not have to check the same object more than once.
+ */
+export function isDeepFrozen(v: unknown, seen: object[]): boolean {
+  switch (typeof v) {
+    case 'boolean':
+    case 'number':
+    case 'string':
+      return true;
+    case 'object':
+      if (v === null) {
+        return true;
+      }
+
+      if (deepFrozenObjects.has(v)) {
+        return true;
+      }
+
+      if (!Object.isFrozen(v)) {
+        return false;
+      }
+
+      if (seen.includes(v)) {
+        throwInvalidType(v, 'Cyclic JSON object');
+      }
+
+      seen.push(v);
+
+      if (Array.isArray(v)) {
+        for (const item of v) {
+          if (!isDeepFrozen(item, seen)) {
+            seen.pop();
+            return false;
+          }
+        }
+      } else {
+        for (const k in v) {
+          if (
+            hasOwn(v, k) &&
+            !isDeepFrozen((v as Record<string, unknown>)[k], seen)
+          ) {
+            seen.pop();
+            return false;
+          }
+        }
+      }
+
+      deepFrozenObjects.add(v);
+      seen.pop();
+      return true;
+
+    default:
+      throwInvalidType(v, 'JSON value');
   }
 }
