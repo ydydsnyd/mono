@@ -387,8 +387,8 @@ export const init = async () => {
                   sequence: sequences[letter],
                   group: currentGroup,
                 });
+                break;
               }
-              break;
             }
           }
           if (!isPainting) {
