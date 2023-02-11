@@ -2576,17 +2576,6 @@ test('Experimental Create KV Store', async () => {
   await testMemStoreWithCounters(rep, store);
 });
 
-test('Experimental KV Store', async () => {
-  const store = new MemStoreWithCounters('experimental-kv-store');
-
-  const rep = await replicacheForTesting('experiment-kv-store', {
-    experimentalKVStore: store,
-    mutators: {addData},
-  });
-
-  await testMemStoreWithCounters(rep, store);
-});
-
 function findPropertyValue(
   obj: unknown,
   propertyName: string,
