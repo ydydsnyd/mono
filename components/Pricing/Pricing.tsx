@@ -2,11 +2,12 @@
 
 import styles from './Pricing.module.css';
 import Link from 'next/link';
+import Image from 'next/image';
 
 const Pricing = () => (
   <div className={styles.pricingContainer}>
     <p>
-      Pricing is not final until stable release, but this is what we're
+      Pricing is not final until stable release, but this is what we&apos;re
       thinking. Questions? <Link href="#">React out</Link>.
     </p>
     <div className={styles.pricingGrid}>
@@ -27,24 +28,31 @@ const Pricing = () => (
       {/* Pricing Grid Row 3: Source license */}
       <div className={styles.pricingGridData}>Source License</div>
       <div className={styles.pricingGridData}>
-        <img src="/pricing/pricing-x.svg" className={styles.pricingGridIcon} />
-      </div>
-      <div className={styles.pricingGridData}>
-        <img
-          src="/pricing/pricing-check.svg"
+        <Image
+          src="/pricing/pricing-x.svg"
           className={styles.pricingGridIcon}
+          alt=""
         />
       </div>
       <div className={styles.pricingGridData}>
-        <img
+        <Image
           src="/pricing/pricing-check.svg"
           className={styles.pricingGridIcon}
+          alt=""
         />
       </div>
       <div className={styles.pricingGridData}>
-        <img
+        <Image
           src="/pricing/pricing-check.svg"
           className={styles.pricingGridIcon}
+          alt=""
+        />
+      </div>
+      <div className={styles.pricingGridData}>
+        <Image
+          src="/pricing/pricing-check.svg"
+          className={styles.pricingGridIcon}
+          alt=""
         />
       </div>
     </div>
