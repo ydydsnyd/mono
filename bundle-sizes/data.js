@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1676129412014,
+  "lastUpdate": 1676197294651,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -35933,6 +35933,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27623,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "committer": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "distinct": true,
+          "id": "d64717a84c816449201c27645825f1cf2b54baa1",
+          "message": "feat: Remove experimentalStore option as it has been replaced with experimentalCreateStore.\n\nBREAKING CHANGE\n\n(cherry picked from commit 3bd2f3d82421c5e42cc476eb8d6f3e23d30b87b2)",
+          "timestamp": "2023-02-12T00:20:26-10:00",
+          "tree_id": "08b72b4e574242461ba5c1eede1dda61814909d3",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/d64717a84c816449201c27645825f1cf2b54baa1"
+        },
+        "date": 1676197286801,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 245745,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40735,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 244540,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 40409,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 98832,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27614,
             "unit": "bytes"
           }
         ]
