@@ -2,6 +2,7 @@ import {runAll} from './store-test-util.js';
 import {IDBStore} from './idb-store.js';
 import {dropStore} from './idb-util.js';
 import {expect} from '@esm-bundle/chai';
+import {withRead, withWrite} from './with-transactions.js';
 
 async function newRandomIDBStore() {
   const name = `test-idbstore-${Math.random()}`;
@@ -17,13 +18,13 @@ test('dropStore', async () => {
   let store = new IDBStore(name);
 
   // Write a value.
-  await store.withWrite(async wt => {
+  await withWrite(store, async wt => {
     await wt.put('foo', 'bar');
     await wt.commit();
   });
 
   // Verify it's there.
-  await store.withRead(async rt => {
+  await withRead(store, async rt => {
     expect(await rt.get('foo')).to.deep.equal('bar');
   });
 
@@ -33,7 +34,7 @@ test('dropStore', async () => {
 
   // Reopen store, verify data is gone
   store = new IDBStore(name);
-  await store.withRead(async rt => {
+  await withRead(store, async rt => {
     expect(await rt.has('foo')).to.be.false;
   });
 });
@@ -57,7 +58,7 @@ suite('reopening IDB', () => {
 
   test('succeeds if IDB still exists', async () => {
     // Write a value.
-    await store.withWrite(async wt => {
+    await withWrite(store, async wt => {
       await wt.put('foo', 'bar');
       await wt.commit();
     });
@@ -66,12 +67,12 @@ suite('reopening IDB', () => {
     (await idb).close();
 
     // write again, without error
-    await store.withWrite(async wt => {
+    await withWrite(store, async wt => {
       await wt.put('baz', 'qux');
       await wt.commit();
     });
 
-    await store.withRead(async rt => {
+    await withRead(store, async rt => {
       expect(await rt.get('foo')).to.deep.equal('bar');
       expect(await rt.get('baz')).to.deep.equal('qux');
     });
@@ -79,7 +80,7 @@ suite('reopening IDB', () => {
 
   test('throws if IDB was deleted', async () => {
     // Write a value.
-    await store.withWrite(async wt => {
+    await withWrite(store, async wt => {
       await wt.put('foo', 'bar');
       await wt.commit();
     });
@@ -88,7 +89,7 @@ suite('reopening IDB', () => {
 
     let ex;
     try {
-      await store.withWrite(async wt => {
+      await withWrite(store, async wt => {
         await wt.put('baz', 'qux');
       });
     } catch (e) {
@@ -127,7 +128,7 @@ suite('reopening IDB', () => {
 
     let ex;
     try {
-      await store.withWrite(async wt => {
+      await withWrite(store, async wt => {
         await wt.put('baz', 'qux');
       });
     } catch (e) {

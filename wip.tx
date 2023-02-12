@@ -1,0 +1,5 @@
+- need to special case memory mode to not construct the database databases stuff.
+- can use typescript types to make this clear.
+- need to figure out how to detect private browsing and do so (firefox only) in open() before doing any db stuff
+  - _perdag is readonly. Not sure what to do about this, it is created synchronously.
+  - ideally we would delay setting it or something? Or make it a promise. No idea.

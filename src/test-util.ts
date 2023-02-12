@@ -27,6 +27,7 @@ import {
   teardownForTest as teardownIDBDatabasesStoreForTest,
 } from './persist/idb-databases-store-db-name.js';
 import {MemStore} from './kv/mem-store.js';
+import {withRead, withWrite} from './kv/mod.js';
 
 export class ReplicacheTest<
   // eslint-disable-next-line @typescript-eslint/ban-types
@@ -260,7 +261,7 @@ export class MemStoreWithCounters implements kv.Store {
 
   withRead<R>(fn: (read: kv.Read) => R | Promise<R>): Promise<R> {
     this.readCount++;
-    return this.store.withRead(fn);
+    return withRead(this.store, fn);
   }
 
   write() {
@@ -270,7 +271,7 @@ export class MemStoreWithCounters implements kv.Store {
 
   withWrite<R>(fn: (write: kv.Write) => R | Promise<R>): Promise<R> {
     this.writeCount++;
-    return this.store.withWrite(fn);
+    return withWrite(this.store, fn);
   }
 
   async close() {
