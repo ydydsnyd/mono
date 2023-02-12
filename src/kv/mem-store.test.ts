@@ -2,6 +2,7 @@ import {runAll} from './store-test-util.js';
 import {expect} from '@esm-bundle/chai';
 import {clearAllNamedMemStoresForTesting, MemStore} from './mem-store.js';
 import {resolver} from '@rocicorp/resolver';
+import {withRead, withWrite} from './with-transactions.js';
 
 runAll('NamedMemStore', () => new MemStore('test'));
 
@@ -11,33 +12,33 @@ setup(() => {
 
 test('Creating multiple with same name shares data', async () => {
   const store = new MemStore('test');
-  await store.withWrite(async wt => {
+  await withWrite(store, async wt => {
     await wt.put('foo', 'bar');
     await wt.commit();
   });
 
   const store2 = new MemStore('test');
-  await store2.withRead(async rt => {
+  await withRead(store2, async rt => {
     expect(await rt.get('foo')).equal('bar');
   });
 });
 
 test('Creating multiple with different name gets unique data', async () => {
   const store = new MemStore('test');
-  await store.withWrite(async wt => {
+  await withWrite(store, async wt => {
     await wt.put('foo', 'bar');
     await wt.commit();
   });
 
   const store2 = new MemStore('test2');
-  await store2.withRead(async rt => {
+  await withRead(store2, async rt => {
     expect(await rt.get('foo')).equal(undefined);
   });
 });
 
 test('Multiple reads at the same time', async () => {
   const store = new MemStore('test');
-  await store.withWrite(async wt => {
+  await withWrite(store, async wt => {
     await wt.put('foo', 'bar');
     await wt.commit();
   });
@@ -45,13 +46,13 @@ test('Multiple reads at the same time', async () => {
   const {promise, resolve} = resolver();
 
   let readCounter = 0;
-  const p1 = store.withRead(async rt => {
+  const p1 = withRead(store, async rt => {
     expect(await rt.get('foo')).equal('bar');
     await promise;
     expect(readCounter).equal(1);
     readCounter++;
   });
-  const p2 = store.withRead(async rt => {
+  const p2 = withRead(store, async rt => {
     expect(readCounter).equal(0);
     readCounter++;
     expect(await rt.get('foo')).equal('bar');
@@ -64,7 +65,7 @@ test('Multiple reads at the same time', async () => {
 
 test('Single write at a time', async () => {
   const store = new MemStore('test');
-  await store.withWrite(async wt => {
+  await withWrite(store, async wt => {
     await wt.put('foo', 'bar');
     await wt.commit();
   });
@@ -73,13 +74,13 @@ test('Single write at a time', async () => {
   const {promise: promise2, resolve: resolve2} = resolver();
 
   let writeCounter = 0;
-  const p1 = store.withWrite(async wt => {
+  const p1 = withWrite(store, async wt => {
     await promise1;
     expect(await wt.get('foo')).equal('bar');
     expect(writeCounter).equal(0);
     writeCounter++;
   });
-  const p2 = store.withWrite(async wt => {
+  const p2 = withWrite(store, async wt => {
     await promise2;
     expect(writeCounter).equal(1);
     expect(await wt.get('foo')).equal('bar');

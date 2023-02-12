@@ -9,6 +9,7 @@ import {TestStore} from './test-store.js';
 import {ChunkNotFoundError} from './store.js';
 import {ReadonlyJSONValue, deepFreeze} from '../json.js';
 import {TestMemStore} from '../kv/test-mem-store.js';
+import {withRead, withWrite} from '../kv/mod.js';
 
 suite('read', () => {
   test('has chunk', async () => {
@@ -20,7 +21,7 @@ suite('read', () => {
         await kvw.commit();
       });
 
-      await kv.withRead(async kvr => {
+      await withRead(kv, async kvr => {
         const r = new ReadImpl(kvr, assertHash);
         expect(await r.hasChunk(hash)).to.equal(expectHas);
       });
@@ -47,7 +48,7 @@ suite('read', () => {
         await kvw.commit();
       });
 
-      await kv.withRead(async kvr => {
+      await withRead(kv, async kvr => {
         const r = new ReadImpl(kvr, assertHash);
         let expected = undefined;
         let chunkHash: Hash;
@@ -128,7 +129,7 @@ suite('write', () => {
   test('set head', async () => {
     const chunkHasher = makeNewFakeHashFunction();
     const t = async (kv: kv.Store, name: string, hash: Hash | undefined) => {
-      await kv.withWrite(async kvw => {
+      await withWrite(kv, async kvw => {
         const w = new WriteImpl(kvw, chunkHasher, assertHash);
         await (hash === undefined ? w.removeHead(name) : w.setHead(name, hash));
         if (hash !== undefined) {
@@ -145,42 +146,42 @@ suite('write', () => {
 
     const h0 = fakeHash('0');
     await t(kv, '', h0);
-    await kv.withRead(async kvr => {
+    await withRead(kv, async kvr => {
       await assertRefCount(kvr, h0, 1);
     });
 
     const h1 = fakeHash('1');
     await t(kv, '', h1);
-    await kv.withRead(async kvr => {
+    await withRead(kv, async kvr => {
       await assertRefCount(kvr, h1, 1);
       await assertRefCount(kvr, h0, 0);
     });
 
     await t(kv, 'n1', h0);
-    await kv.withRead(async kvr => {
+    await withRead(kv, async kvr => {
       await assertRefCount(kvr, h0, 1);
     });
 
     await t(kv, 'n1', h1);
-    await kv.withRead(async kvr => {
+    await withRead(kv, async kvr => {
       await assertRefCount(kvr, h1, 2);
       await assertRefCount(kvr, h0, 0);
     });
 
     await t(kv, 'n1', h1);
-    await kv.withRead(async kvr => {
+    await withRead(kv, async kvr => {
       await assertRefCount(kvr, h1, 2);
       await assertRefCount(kvr, h0, 0);
     });
 
     await t(kv, 'n1', undefined);
-    await kv.withRead(async kvr => {
+    await withRead(kv, async kvr => {
       await assertRefCount(kvr, h1, 1);
       await assertRefCount(kvr, h0, 0);
     });
 
     await t(kv, '', undefined);
-    await kv.withRead(async kvr => {
+    await withRead(kv, async kvr => {
       await assertRefCount(kvr, h1, 0);
       await assertRefCount(kvr, h0, 0);
     });
@@ -263,7 +264,7 @@ suite('write', () => {
       });
 
       // The data should only persist if we set the head and commit.
-      await kv.withRead(async kvr => {
+      await withRead(kv, async kvr => {
         expect(setHead).to.be.equal(await kvr.has(key));
       });
     };
@@ -292,7 +293,7 @@ suite('write', () => {
       });
 
       // Read the changes outside the tx.
-      await kv.withRead(async kvr => {
+      await withRead(kv, async kvr => {
         const r = new ReadImpl(kvr, assertHash);
         const c2 = await r.getChunk(c.hash);
         const h = await r.getHead(name);

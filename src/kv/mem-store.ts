@@ -50,27 +50,9 @@ export class MemStore implements Store {
     return new ReadImpl(this._map, release);
   }
 
-  async withRead<R>(fn: (read: Read) => R | Promise<R>): Promise<R> {
-    const read = await this.read();
-    try {
-      return await fn(read);
-    } finally {
-      read.release();
-    }
-  }
-
   async write(): Promise<Write> {
     const release = await this._rwLock.write();
     return new WriteImpl(this._map, release);
-  }
-
-  async withWrite<R>(fn: (write: Write) => R | Promise<R>): Promise<R> {
-    const write = await this.write();
-    try {
-      return await fn(write);
-    } finally {
-      write.release();
-    }
   }
 
   close(): Promise<void> {

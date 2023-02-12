@@ -1,6 +1,7 @@
 import {assert, assertNumber, assertObject, assertString} from '../asserts.js';
 import {deepFreeze} from '../json.js';
 import type * as kv from '../kv/mod.js';
+import {withRead, withWrite} from '../kv/mod.js';
 import {uuid} from '../uuid.js';
 import {getIDBDatabasesDBName} from './idb-databases-store-db-name.js';
 
@@ -66,7 +67,7 @@ export class IDBDatabasesStore {
   private _putDatabase(
     db: IndexedDBDatabase,
   ): Promise<IndexedDBDatabaseRecord> {
-    return this._kvStore.withWrite(async write => {
+    return withWrite(this._kvStore, async write => {
       const oldDbRecord = await getDatabases(write);
       const dbRecord = {
         ...oldDbRecord,
@@ -79,14 +80,14 @@ export class IDBDatabasesStore {
   }
 
   clearDatabases(): Promise<void> {
-    return this._kvStore.withWrite(async write => {
+    return withWrite(this._kvStore, async write => {
       await write.del(DBS_KEY);
       await write.commit();
     });
   }
 
   deleteDatabases(names: Iterable<IndexedDBName>): Promise<void> {
-    return this._kvStore.withWrite(async write => {
+    return withWrite(this._kvStore, async write => {
       const oldDbRecord = await getDatabases(write);
       const dbRecord = {
         ...oldDbRecord,
@@ -100,7 +101,7 @@ export class IDBDatabasesStore {
   }
 
   getDatabases(): Promise<IndexedDBDatabaseRecord> {
-    return this._kvStore.withRead(getDatabases);
+    return withRead(this._kvStore, getDatabases);
   }
 
   close(): Promise<void> {
@@ -108,7 +109,7 @@ export class IDBDatabasesStore {
   }
 
   getProfileID(): Promise<string> {
-    return this._kvStore.withWrite(async write => {
+    return withWrite(this._kvStore, async write => {
       let profileId = await write.get(PROFILE_ID_KEY);
       if (profileId === undefined) {
         // Profile id is 'p' followed by the guid with no dashes.

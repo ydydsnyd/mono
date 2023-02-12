@@ -27,26 +27,8 @@ export class IDBStore implements Store {
     return await this._withReopen(readImpl);
   }
 
-  async withRead<R>(fn: (read: Read) => R | Promise<R>): Promise<R> {
-    const read = await this._withReopen(readImpl);
-    try {
-      return await fn(read);
-    } finally {
-      read.release();
-    }
-  }
-
   async write(): Promise<Write> {
     return await this._withReopen(writeImpl);
-  }
-
-  async withWrite<R>(fn: (write: Write) => R | Promise<R>): Promise<R> {
-    const write = await this._withReopen(writeImpl);
-    try {
-      return await fn(write);
-    } finally {
-      write.release();
-    }
   }
 
   async close(): Promise<void> {
