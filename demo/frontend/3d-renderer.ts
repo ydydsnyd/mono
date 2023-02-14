@@ -15,7 +15,6 @@ import {
   ArcRotateCamera,
   Camera,
 } from '@babylonjs/core';
-import '@babylonjs/gui';
 import '@babylonjs/loaders/glTF';
 import {Color, Letter, Position} from '../shared/types';
 import {letterMap} from '../shared/util';
@@ -101,11 +100,6 @@ export const createScene = async (
   resizeCanvas: () => void;
 }> => {
   const scene = new Scene(engine);
-  // await import('@babylonjs/core/Debug/debugLayer');
-  // await import('@babylonjs/inspector');
-  // scene.debugLayer.show({
-  //   enablePopup: true,
-  // });
   // Don't allow babylon to handle mouse events. This both has a mild perf
   // improvement and allows events to propagate to the cursor handling code.
   scene.detachControl();

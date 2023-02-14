@@ -1,5 +1,3 @@
-import {translateCoords} from '../shared/util';
-import {LETTERS} from '../shared/letters';
 import {Letter, Position, Rotation, Tool} from '../shared/types';
 
 export enum Control {

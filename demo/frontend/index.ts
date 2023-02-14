@@ -1,7 +1,7 @@
 import {nanoid} from 'nanoid';
 import {initialize} from './data';
 import {renderer as renderer3D} from './3d-renderer';
-import {cacheOldPoints, drawWells, render} from './texture-renderer';
+import {cacheOldPoints, render} from './texture-renderer';
 import initRenderer from '../../renderer/pkg/renderer';
 import {cursorRenderer} from './cursors';
 import {
@@ -25,30 +25,12 @@ import {
   Size,
   Tool,
 } from '../shared/types';
-import {
-  LETTERS,
-  LETTER_POSITIONS,
-  LETTER_POSITIONS_BASE_SCALE,
-} from '../shared/letters';
-import {
-  contains,
-  letterOrigin,
-  expandBox,
-  letterMap,
-  now,
-  translateCoords,
-  distance,
-  sortedLetters,
-  initContainerScale,
-  must,
-  randInt,
-} from '../shared/util';
+import {LETTERS} from '../shared/letters';
+import {letterMap, now, distance, must, randInt} from '../shared/util';
 import {addDragHandlers, Control, ControlTools} from './dragging';
 import {initTools, toolMap} from './tools';
 import {initRoom} from './init-room';
 import {getUserLocation} from './location';
-import {Botmaster} from './botmaster';
-import {off} from 'process';
 
 type LetterCanvases = Record<Letter, HTMLCanvasElement>;
 
@@ -57,85 +39,6 @@ type Debug = {
   points: number;
 };
 
-// Draw canvases larger than letters so they don't clip when we rotate them
-// const CANVAS_PADDING: Record<Letter, number> = {
-//   [Letter.A]: 0.35,
-//   [Letter.L]: 0.9,
-//   [Letter.I]: 0.9,
-//   [Letter.V]: 0.4,
-//   [Letter.E]: 0.4,
-// };
-
-// const installDebugHandlers = (
-//   roomID: string,
-//   colors: ColorPalate,
-//   colorsUpdated: () => void
-// ) => {
-//   const disableBots = document.getElementById(
-//     "disable-bots"
-//   ) as HTMLInputElement;
-//   disableBots.checked = window.location.search.includes("nobots=1");
-//   disableBots?.addEventListener("change", () => {
-//     if (disableBots.checked) {
-//       localStorage.removeItem("roomID");
-//       window.location.href = window.location.href + "?nobots=1";
-//     } else {
-//       window.location.href = window.location.href.replace(/nobots=1/, "");
-//     }
-//   });
-//   const toggleDebugButton = document.querySelector(".debug-container .toggle");
-//   toggleDebugButton?.addEventListener("click", () =>
-//     document.querySelector(".debug-container")?.classList.toggle("hidden")
-//   );
-//   const cToH = (c: number) => {
-//     let h = Math.round(c).toString(16);
-//     if (h.length == 1) {
-//       return `0${h}`;
-//     }
-//     return h;
-//   };
-//   const colorToHex = (color: Color) =>
-//     `#${cToH(color[0])}${cToH(color[1])}${cToH(color[2])}`;
-//   ["a", "b", "c", "d", "e"].forEach((color, idx) => {
-//     const changeColor = (start: boolean) => (event: Event) => {
-//       const hex = (event.target as HTMLInputElement).value;
-//       const hexVals = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)!;
-//       colors[idx][start ? 0 : 1] = [
-//         parseInt(hexVals[1], 16),
-//         parseInt(hexVals[2], 16),
-//         parseInt(hexVals[3], 16),
-//       ];
-//       colorsUpdated();
-//     };
-//     const startColorWell = document.querySelector(
-//       `[name="${color}-color-start"]`
-//     ) as HTMLInputElement;
-//     const endColorWell = document.querySelector(
-//       `[name="${color}-color-end"]`
-//     ) as HTMLInputElement;
-//     startColorWell.onchange = changeColor(true);
-//     endColorWell.onchange = changeColor(false);
-//     startColorWell.value = colorToHex(colors[idx][0]);
-//     endColorWell.value = colorToHex(colors[idx][1]);
-//   });
-// };
-
-// let _container: HTMLDivElement;
-// const getContainer = () => {
-//   if (!_container) {
-//     const c = document.getElementById('canvases') as HTMLDivElement | undefined;
-//     if (!c) {
-//       throw new Error("Can't calculate positions before load");
-//     }
-//     _container = c;
-//   }
-//   return _container;
-// };
-// const getContainerScale = () => {
-//   const bb = getContainer().getBoundingClientRect();
-//   const bs = LETTER_POSITIONS_BASE_SCALE;
-//   return bb.width / bs.width;
-// };
 const getScaleFactor = (): Size => {
   return {
     width: window.innerWidth,
@@ -159,21 +62,14 @@ export const init = async () => {
 
   // Canvases
   const canvas = document.getElementById('canvas3D') as HTMLCanvasElement;
-  const textures: LetterCanvases = letterMap(
-    letter =>
-      document.querySelector(`#textures > .${letter}`) as HTMLCanvasElement,
-  );
-  // const caches: LetterCanvases = letterMap((letter) => {
-  //   let cache = document.querySelector(
-  //     `#caches > .${letter}`
-  //   ) as HTMLCanvasElement;
-  //   resizeCanvas(canvas, bb, containerScale);
-  //   const pos = letterOrigin(letter, containerScale);
-  //   canvas.style.top = pos.y + 'px';
-  //   canvas.style.left = pos.x + 'px';
-  //   return canvas;
-  // });
-  // drawWells(wells, containerScale);
+  const textures: LetterCanvases = letterMap(letter => {
+    const tex = document.querySelector(
+      `#textures > .${letter}`,
+    ) as HTMLCanvasElement;
+    tex.width = UVMAP_SIZE;
+    tex.height = UVMAP_SIZE;
+    return tex;
+  });
 
   await initRenderer();
 
@@ -437,7 +333,6 @@ export const init = async () => {
     }
   };
 
-  // Debug handlers
   const colors: ColorPalate = [
     [COLOR_PALATE[0], COLOR_PALATE_END[0]],
     [COLOR_PALATE[1], COLOR_PALATE_END[1]],
@@ -445,9 +340,6 @@ export const init = async () => {
     [COLOR_PALATE[3], COLOR_PALATE_END[3]],
     [COLOR_PALATE[4], COLOR_PALATE_END[4]],
   ];
-  // installDebugHandlers(roomID, colors, () => {
-  //   setColors({ colors });
-  // });
 
   // Update debug info periodically
   if (window.location.search.includes('debug')) {
@@ -477,29 +369,6 @@ export const init = async () => {
           )}`;
         }).join('\n')}`;
       }
-      // // update our debug caches too
-      // LETTERS.forEach((letter) => {
-      //   const imgData = rawCaches[letter];
-      //   if (imgData) {
-      //     const image = new Image();
-      //     image.onload = () => {
-      //       let canvas = caches[letter];
-      //       const context = canvas.getContext("2d") as CanvasRenderingContext2D;
-      //       context.drawImage(
-      //         image,
-      //         0,
-      //         0,
-      //         UVMAP_SIZE,
-      //         UVMAP_SIZE,
-      //         0,
-      //         0,
-      //         canvas.width,
-      //         canvas.height
-      //       );
-      //     };
-      //     image.src = `data:image/png;charset=utf-8;base64,${imgData}`;
-      //   }
-      // });
     }, 200);
   }
 
@@ -569,37 +438,9 @@ export const init = async () => {
   //   !window.location.search.includes('bots=1'),
   // );
 
-  // Letter position & scales rendering
-  // const drawLetterPositions = (
-  //   positions: Record<Letter, Position>,
-  //   scales: Record<Letter, number>,
-  //   scaleFactor: Size,
-  // ) => {
-  //   // The topmost letter should be 1 below our tools div
-  //   const topZIndex =
-  //     parseInt(document.getElementById('tools')?.style.zIndex || '20', 10) - 1;
-  //   const indexOrder = sortedLetters(scales);
-  //   LETTERS.forEach(letter => {
-  //     let {x, y} = positions[letter];
-  //     const container = containers[letter] as HTMLDivElement;
-  //     const origin = letterOrigin(letter, containerScale);
-  //     const offset = getOffset(letter, scales[letter], CANVAS_PADDING[letter]);
-  //     let newX = x * scaleFactor.width + origin.x + offset.x;
-  //     let newY = y * scaleFactor.height + origin.y + offset.y;
-  //     container.style.left = newX + 'px';
-  //     container.style.top = newY + 'px';
-  //     const canvas = canvases[letter];
-  //     canvas.style.width = offset.scaledWidth + 'px';
-  //     canvas.style.height = offset.scaledHeight + 'px';
-  //     canvas.style.zIndex = topZIndex - indexOrder.indexOf(letter) + '';
-  //   });
-  // };
-
   // When the window is resized, recalculate letter and cursor positions
   const resizeViewport = () => {
-    // const {positions, scales} = await getState();
     const scaleFactor = getScaleFactor();
-    // drawLetterPositions(positions, scales, scaleFactor);
     canvas.height = scaleFactor.height * window.devicePixelRatio;
     canvas.width = scaleFactor.width * window.devicePixelRatio;
     canvas.style.height = scaleFactor.height + 'px';
@@ -618,8 +459,6 @@ export const init = async () => {
     // Update textures and render the 3D scene
     LETTERS.forEach(letter => updateTexture(letter));
     render3D();
-    // And update letter positions
-    // drawLetterPositions(positions, scales, scaleFactor);
     // Then perform actions
     performActions();
   }, debug);

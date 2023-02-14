@@ -73,23 +73,3 @@ export const render = async (
     ...points2RenderBatch(slicedPoints),
   );
 };
-
-export const drawWells = (
-  canvases: Record<Letter, HTMLCanvasElement>,
-  scale: number,
-) => {
-  for (const letter of LETTERS) {
-    const canvas = canvases[letter];
-    const ctx = canvas.getContext('2d')! as CanvasRenderingContext2D;
-    const path = new Path2D(LETTER_PATHS[letter]);
-    ctx.scale(scale, scale);
-    ctx.strokeStyle = 'rgb(212,212,212)';
-    ctx.beginPath();
-    ctx.lineWidth = 2;
-    ctx.stroke(path);
-    ctx.closePath();
-    ctx.globalCompositeOperation = 'destination-atop';
-    ctx.fillStyle = 'rgb(242,242,242)';
-    ctx.fill(path);
-  }
-};

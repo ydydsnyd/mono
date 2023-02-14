@@ -1,7 +1,7 @@
 import React, {useEffect} from 'react';
 import Image from 'next/image';
 import {init} from '@/demo/frontend';
-import {Letter} from '@/demo/shared/types';
+import type {Letter} from '@/demo/shared/types';
 
 let initPromise: Promise<void> | undefined;
 const initOnce = () => {
@@ -25,13 +25,6 @@ const PaintFight = () => {
       <pre id="debug"></pre>
       <div id="demo-placeholder"></div>
       <div id="demo">
-        {/* <div id="wells">
-          <canvas className="a"></canvas>
-          <canvas className="l"></canvas>
-          <canvas className="i"></canvas>
-          <canvas className="v"></canvas>
-          <canvas className="e"></canvas>
-        </div> */}
         <canvas id="canvas3D"></canvas>
       </div>
       <Textures />

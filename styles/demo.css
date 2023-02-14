@@ -20,8 +20,7 @@
 }
 
 #textures,
-#symbol-defs,
-#render-canvas 
+#symbol-defs
 {
   display: none;
 }

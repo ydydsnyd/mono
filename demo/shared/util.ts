@@ -1,15 +1,10 @@
 import {LETTERS, LETTER_POSITIONS} from '../shared/letters';
-import {CANVAS_HEIGHT_PADDING} from './constants';
-import type {BoundingBox, Color, Letter, Position} from './types';
+import type {Color, Letter, Position} from './types';
 
 export const now = () => new Date().getTime();
 
 export const colorToString = (color: Color) => {
   return `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
-};
-
-export const sortedLetters = (scales: Record<Letter, number>) => {
-  return LETTERS.slice().sort((a, b) => (scales[a] > scales[b] ? -1 : 1));
 };
 
 export const letterMap = <T>(mapFn: (letter: Letter) => T) => {
@@ -37,68 +32,6 @@ export const letterOrigin = (letter: Letter, scale: number) => {
     x: bb.x * scale,
     y: bb.y * scale,
   };
-};
-
-export const initContainerScale = (containerScale: number) => {
-  return {
-    getOffset: (letter: Letter, scale: number, expandFactor: number) => {
-      const bb = LETTER_POSITIONS[letter];
-      const initialWidth = bb.width * containerScale;
-      const scaledWidth = initialWidth * scale;
-      const initialHeight = bb.height * containerScale;
-      const scaledHeight = initialHeight * scale;
-      const box = expandBox(
-        {
-          width: scaledWidth,
-          height: scaledHeight,
-          x: initialWidth / 2 - scaledWidth / 2,
-          y: initialHeight / 2 - scaledHeight / 2,
-        },
-        expandFactor,
-      );
-      return {
-        scaledWidth: box.width,
-        scaledHeight: box.height,
-        x: box.x,
-        y: box.y,
-      };
-    },
-  };
-};
-
-export const expandBox = (
-  box: BoundingBox,
-  widthFactor: number,
-  heightFactor: number = CANVAS_HEIGHT_PADDING,
-) => {
-  const expandWidth = (box.width + box.width * widthFactor - box.width) / 2;
-  const expandHeight =
-    (box.height + box.height * heightFactor - box.height) / 2;
-  return {
-    x: box.x - expandWidth / 2,
-    y: box.y - expandHeight / 2,
-    width: box.width + expandWidth,
-    height: box.height + expandHeight,
-  };
-};
-
-export const translateCoords = (pos: Position, by: Position) => {
-  return {
-    x: pos.x - by.x,
-    y: pos.y - by.y,
-  };
-};
-
-export const contains = (box: BoundingBox, target: Position) => {
-  if (
-    target.x >= box.x &&
-    target.y >= box.y &&
-    target.y <= box.y + box.height &&
-    target.x <= box.x + box.width
-  ) {
-    return true;
-  }
-  return false;
 };
 
 export const randomWithSeed = (
