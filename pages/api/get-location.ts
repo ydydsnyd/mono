@@ -11,6 +11,7 @@ const handler = (req: VercelRequest, res: VercelResponse) => {
       city: 'Your Computer',
       country_code: '👋',
     });
+    return;
   }
 
   https

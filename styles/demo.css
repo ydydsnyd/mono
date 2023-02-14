@@ -1,8 +1,19 @@
+#demo-placeholder {
+  height: 140px;
+}
 #demo {
-  height: 149px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  position: absolute;
+  pointer-events:none;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* height: 2949px; */
+  bottom: 0;
+  z-index: -10;
+}
+#canvas3D {
+  width: 100%;
+  height: 100%;
 }
 #debug {
   position: fixed;

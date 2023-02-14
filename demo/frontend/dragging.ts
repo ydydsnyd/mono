@@ -2,7 +2,7 @@ import {translateCoords} from '../shared/util';
 import {LETTERS} from '../shared/letters';
 import {Letter, Position, Rotation, Tool} from '../shared/types';
 
-enum Control {
+export enum Control {
   None = 'not-control',
   Scale = 'scale',
   Rotate = 'rotate',
@@ -17,50 +17,44 @@ export const ControlTools = {
 };
 
 type Drag = {
-  scale: number;
-  rotation: Rotation;
+  letter: Letter | undefined;
+  scales: Record<Letter, number>;
+  rotations: Record<Letter, Rotation>;
   position: Position;
-  offset: Position;
-  letter: Letter;
   control: Control;
 };
 
 export const addDragHandlers = (
-  container: HTMLDivElement,
-  letterContainers: Record<Letter, HTMLDivElement>,
+  container: HTMLElement,
   getScales: () => Record<Letter, number>,
-  getSpinDegrees: (letter: Letter) => Rotation,
+  getRotations: () => Record<Letter, Rotation>,
+  getLetter: (position: Position) => Letter | undefined,
   onChange: (letter: Letter) => void,
 ) => {
   let drag: Drag | undefined = undefined;
 
   const beginDrag = (
-    letter: Letter,
     mousePos: Position,
     controlInfo: {control: Control; element?: HTMLElement},
   ) => {
-    const scales = getScales();
-    const bb = letterContainers[letter].getBoundingClientRect();
-    const absLetterPos = translateCoords(bb, container.getBoundingClientRect());
     const {element, control} = controlInfo;
     if (element) {
       element.classList.add('show');
     }
+    const letter = getLetter(mousePos);
     drag = {
       control,
-      scale: scales[letter],
-      rotation: getSpinDegrees(letter),
+      scales: getScales(),
+      rotations: getRotations(),
       position: {
         x: mousePos.x,
         y: mousePos.y,
       },
-      offset: {
-        x: mousePos.x - absLetterPos.x,
-        y: mousePos.y - absLetterPos.y,
-      },
       letter,
     };
-    onChange(letter);
+    if (letter) {
+      onChange(letter);
+    }
     window.addEventListener('mouseup', releaseDrag);
     window.addEventListener('touchend', releaseDrag);
     window.addEventListener('mouseleave', releaseDrag);
@@ -80,38 +74,33 @@ export const addDragHandlers = (
     window.removeEventListener('mouseleave', releaseDrag);
   };
 
-  LETTERS.forEach(letter => {
-    const canvas = letterContainers[letter];
-    const mousedownHandler = (e: MouseEvent) => {
-      beginDrag(
-        letter,
-        {
-          x: e.clientX,
-          y: e.clientY,
-        },
-        getControl(e.target),
-      );
-    };
-    canvas.addEventListener('mousedown', mousedownHandler);
-    document.querySelectorAll(`#${letter} .controls button`)?.forEach(b => {
-      (b as HTMLButtonElement).addEventListener('mousedown', mousedownHandler);
-    });
-    const touchHandler = (e: TouchEvent) => {
-      const lt = e.touches[e.touches.length - 1];
-      beginDrag(
-        letter,
-        {
-          x: lt.clientX,
-          y: lt.clientY,
-        },
-        {control: Control.None},
-      );
-    };
-    canvas.addEventListener('touchstart', touchHandler);
-    document.querySelectorAll(`#${letter} .controls button`)?.forEach(b => {
-      (b as HTMLButtonElement).addEventListener('touchstart', touchHandler);
-    });
-  });
+  const mousedownHandler = (e: MouseEvent) => {
+    beginDrag(
+      {
+        x: e.clientX,
+        y: e.clientY,
+      },
+      getControl(e.target),
+    );
+  };
+  container.addEventListener('mousedown', mousedownHandler);
+  // document.querySelectorAll(`#${letter} .controls button`)?.forEach(b => {
+  //   (b as HTMLButtonElement).addEventListener('mousedown', mousedownHandler);
+  // });
+  const touchHandler = (e: TouchEvent) => {
+    const lt = e.touches[e.touches.length - 1];
+    beginDrag(
+      {
+        x: lt.clientX,
+        y: lt.clientY,
+      },
+      {control: Control.None},
+    );
+  };
+  container.addEventListener('touchstart', touchHandler);
+  // document.querySelectorAll(`#${letter} .controls button`)?.forEach(b => {
+  //   (b as HTMLButtonElement).addEventListener('touchstart', touchHandler);
+  // });
 
   return () => drag;
 };

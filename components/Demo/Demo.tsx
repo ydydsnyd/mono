@@ -23,23 +23,17 @@ const PaintFight = () => {
   return (
     <>
       <pre id="debug"></pre>
+      <div id="demo-placeholder"></div>
       <div id="demo">
-        <div id="wells">
+        {/* <div id="wells">
           <canvas className="a"></canvas>
           <canvas className="l"></canvas>
           <canvas className="i"></canvas>
           <canvas className="v"></canvas>
           <canvas className="e"></canvas>
-        </div>
-        <div id="canvases">
-          <LetterCanvas letter={Letter.A} />
-          <LetterCanvas letter={Letter.L} />
-          <LetterCanvas letter={Letter.I} />
-          <LetterCanvas letter={Letter.V} />
-          <LetterCanvas letter={Letter.E} />
-        </div>
+        </div> */}
+        <canvas id="canvas3D"></canvas>
       </div>
-      <canvas id="render-canvas"></canvas>
       <Textures />
       <Symbols />
       <div id="tools">

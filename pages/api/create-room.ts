@@ -14,6 +14,7 @@ const handler = async (req: VercelRequest, res: VercelResponse) => {
   if (!roomID) {
     console.log(`Invalid request: ${req}`);
     res.status(406).send('Invalid request');
+    return;
   }
 
   const headers = {'x-reflect-auth-api-key': reflectApiKey};
