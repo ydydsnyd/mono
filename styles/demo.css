@@ -7,8 +7,6 @@
   top: 0;
   left: 0;
   right: 0;
-  /* height: 2949px; */
-  bottom: 0;
   z-index: -10;
 }
 #canvas3D {
@@ -129,6 +127,9 @@ body:not(.hover-device) .controls {
 body:not(.active) .controls:hover button,
 .controls.show button {
   opacity: 1;
+}
+body.active {
+  user-select: none;
 }
 
 .controls button:active {

@@ -12,13 +12,13 @@ import {
   CubeTexture,
   Mesh,
   HighlightLayer,
-  UniversalCamera,
+  ArcRotateCamera,
+  Camera,
 } from '@babylonjs/core';
 import '@babylonjs/gui';
 import '@babylonjs/loaders/glTF';
 import type {Color, Letter, Position} from '../shared/types';
 import {letterMap} from '../shared/util';
-import {MAX_SCALE} from '../shared/constants';
 import {LETTERS} from '../shared/letters';
 
 const modelURL = '/alive.glb';
@@ -29,12 +29,9 @@ export type LetterInfo = {
   letter?: Letter;
 };
 
-const LETTER_OFFSET = 20;
-// The right way to do this would be to project the pixel value of the mouse
-// through the projection matrix and determine the correct world position based
-// on translating it into the world coords. However, this is close and simpler,
-// so will work for now.
-const POSITION_FACTOR = 0.0038;
+const LETTER_OFFSET = 0;
+const ORTHO_SIZE_FACTOR = 0.03;
+const ORTHO_VERTICAL_POS = 0.135;
 
 export const renderer = async (
   canvas: HTMLCanvasElement,
@@ -54,7 +51,7 @@ export const renderer = async (
   } else {
     engine = new Engine(canvas, true, {stencil: true}, false);
   }
-  engine.setHardwareScalingLevel(1 / window.devicePixelRatio / MAX_SCALE);
+  engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
   // Create the scene
   const {
     scene,
@@ -104,17 +101,41 @@ export const createScene = async (
   // Don't allow babylon to handle mouse events. This both has a mild perf
   // improvement and allows events to propagate to the cursor handling code.
   scene.detachControl();
-  let sceneSize = engine.getRenderingCanvasClientRect()!;
+
+  const sceneScaleFactor = () => {
+    const canvasSize = engine.getRenderingCanvasClientRect()!;
+    const width = canvasSize.width * ORTHO_SIZE_FACTOR;
+    const height = canvasSize.height * ORTHO_SIZE_FACTOR;
+    return {width, height};
+  };
 
   const resizeCanvas = () => {
+    const {width, height} = sceneScaleFactor();
+    camera.orthoLeft = -(width / 2);
+    camera.orthoRight = width / 2;
+    camera.orthoTop = height * ORTHO_VERTICAL_POS;
+    camera.orthoBottom = -height * (1 - ORTHO_VERTICAL_POS);
     engine.resize();
-    sceneSize = engine.getRenderingCanvasClientRect()!;
   };
 
   // Create our camera
-  const camera = new UniversalCamera(`Camera`, new Vector3(0, 0, 0), scene);
-  camera.freezeProjectionMatrix(camera.getProjectionMatrix());
-  camera.fov = 0.5;
+  const camera = new ArcRotateCamera(
+    'Camera',
+    270 * (Math.PI / 180),
+    90 * (Math.PI / 180),
+    5,
+    new Vector3(0, 0, 0),
+    scene,
+    true,
+  );
+  camera.setTarget(Vector3.Zero());
+  camera.mode = Camera.ORTHOGRAPHIC_CAMERA;
+  // let m = 0;
+  // setInterval(() => {
+  //   const turn = ++m % 2 == 0;
+  //   camera.beta = (turn ? 120 : 90) * (Math.PI / 180);
+  //   camera.alpha = (turn ? 220 : 270) * (Math.PI / 180);
+  // }, 1000);
 
   // Load the model
   await SceneLoader.ImportMeshAsync(LETTERS, modelURL, undefined, scene);
@@ -150,17 +171,13 @@ export const createScene = async (
     console.log(letter, 'rotation', meshes[letter].rotation);
   };
   const setPosition = (letter: Letter, position: Position) => {
-    // const {width: scaleX, height: scaleY} =
-    //   engine.getRenderingCanvasClientRect()!;
+    const {width: scaleX, height: scaleY} = sceneScaleFactor();
     console.log('------');
     console.log(letter, 'position', meshes[letter].position);
-    const viewport = camera.viewport.toGlobal(
-      engine.getRenderWidth(),
-      engine.getRenderHeight(),
-    );
+    console.log(position, engine.getRenderWidth(), scaleX);
     meshes[letter].position = new Vector3(
-      -position.x * viewport.width * POSITION_FACTOR,
-      -position.y * viewport.height * POSITION_FACTOR,
+      -position.x * scaleX,
+      -position.y * scaleY,
       LETTER_OFFSET,
     );
     console.log(letter, 'position', meshes[letter].position);
@@ -184,8 +201,8 @@ export const createScene = async (
 
   const highlights = letterMap(letter => {
     const hl = new HighlightLayer(`${letter}-glow`, scene);
-    hl.blurHorizontalSize = 2;
-    hl.blurVerticalSize = 2;
+    hl.blurHorizontalSize = 1;
+    hl.blurVerticalSize = 1;
     return hl;
   });
 
@@ -237,14 +254,25 @@ export const createScene = async (
   const getTexturePosition = (
     cursor: Position,
   ): [Letter | undefined, Position | undefined] => {
+    // const ray = scene.createPickingRay(cursor.x, cursor.y, null, camera, false);
+    // const pickInfo = scene.pickWithRay(ray);
+    // const helper = RayHelper.CreateAndShow(ray, scene, new Color3(1, 0, 0.1));
+    // setTimeout(() => helper.dispose(), 1000);
+    // if (!pickInfo) {
+    //   return [undefined, undefined];
+    // }
     const pickInfo = scene.pick(cursor.x, cursor.y);
     const {x, y} = pickInfo.getTextureCoordinates() || {x: -1, y: -1};
     const letter = pickInfo.pickedMesh?.name as Letter | undefined;
     // if (pickInfo.hit) {
-    //   console.log(scenePos, letter);
-    // } else {
-    //   console.log('Miss');
+    //   console.log(cursor, letter);
     // }
+    // const helper = RayHelper.CreateAndShow(
+    //   pickInfo.ray!,
+    //   scene,
+    //   new Color3(1, 0, 0.1),
+    // );
+    // setTimeout(() => helper.dispose(), 1000);
     if (letter && LETTERS.includes(letter)) {
       return [
         letter,

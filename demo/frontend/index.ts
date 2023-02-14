@@ -139,7 +139,7 @@ type Debug = {
 const getScaleFactor = (): Size => {
   return {
     width: window.innerWidth,
-    height: window.innerHeight,
+    height: document.body.scrollHeight,
   };
 };
 
@@ -596,13 +596,19 @@ export const init = async () => {
   // };
 
   // When the window is resized, recalculate letter and cursor positions
-  window.addEventListener('resize', async () => {
+  const resizeViewport = () => {
     // const {positions, scales} = await getState();
-    // const scaleFactor = getScaleFactor();
+    const scaleFactor = getScaleFactor();
     // drawLetterPositions(positions, scales, scaleFactor);
+    canvas.height = scaleFactor.height * window.devicePixelRatio;
+    canvas.width = scaleFactor.width * window.devicePixelRatio;
+    canvas.style.height = scaleFactor.height + 'px';
+    canvas.style.width = scaleFactor.width + 'px';
     resize3DCanvas();
     renderCursors();
-  });
+  };
+  window.addEventListener('resize', resizeViewport);
+  resizeViewport();
 
   // Render our cursors and canvases at "animation speed", usually 60fps
   startRenderLoop(async () => {
