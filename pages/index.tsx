@@ -1,8 +1,8 @@
 import Head from 'next/head';
-import Image from 'next/image';
 import styles from '@/styles/Home.module.css';
-import Benefits from '@/components/Benefits/Benefits.tsx';
-import Pricing from '@/components/Pricing/Pricing.tsx';
+import Benefits from '@/components/Benefits/Benefits';
+import Pricing from '@/components/Pricing/Pricing';
+import Demo from '@/components/Demo/Demo';
 
 export default function Home() {
   return (
@@ -19,10 +19,8 @@ export default function Home() {
           id="intro"
           className={`${styles.section} ${styles.introSection}`}
         >
-          <h1 className={styles.title}>
-            The next web is{' '}
-            <span className={styles.titleEmphasized}>alive</span>.
-          </h1>
+          <h1 className={styles.title}>The next web is </h1>
+          <Demo />
 
           <p className={styles.featuredStatement}>
             Reflect is a web service and JavaScript library for building

@@ -8,7 +8,6 @@
 }
 
 .section {
-  position: relative;
   display: block;
   max-width: 960px;
   width: 100%;
@@ -140,11 +139,6 @@
   font-weight: 800;
   text-align: center;
   letter-spacing: -2px;
-}
-
-.titleEmphasized {
-  color: #fc208a;
-  text-decoration: none;
 }
 
 .title,
