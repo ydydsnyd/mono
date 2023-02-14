@@ -132,6 +132,7 @@ export const createScene = async (
   );
   camera.setTarget(Vector3.Zero());
   camera.mode = Camera.ORTHOGRAPHIC_CAMERA;
+  camera.minZ = -10;
 
   // Load the model
   await SceneLoader.ImportMeshAsync(LETTERS, modelURL, undefined, scene);
@@ -159,7 +160,7 @@ export const createScene = async (
     const rotation = beta * (Math.PI / 180);
     meshes[letter].rotation = new Vector3(
       90 * (Math.PI / 180),
-      -rotation,
+      rotation,
       180 * (Math.PI / 180),
     );
   };

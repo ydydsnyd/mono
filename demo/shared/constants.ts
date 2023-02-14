@@ -14,6 +14,7 @@ export const SPLATTER_MIN_SIZE = 0.1;
 // Scale
 export const MIN_SCALE = 0.4;
 export const MAX_SCALE = 2.5;
+export const SCALE_SPEED = 5;
 
 // Flatten points older than this
 export const POINT_AGE_MAX = PAINT_DECAY_AGE;

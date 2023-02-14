@@ -16,9 +16,10 @@ export const ControlTools = {
 
 type Drag = {
   letter: Letter | undefined;
-  scales: Record<Letter, number>;
-  rotations: Record<Letter, Rotation>;
+  scale: number;
+  rotation: Rotation;
   position: Position;
+  start: Position;
   control: Control;
 };
 
@@ -26,6 +27,7 @@ export const addDragHandlers = (
   container: HTMLElement,
   getScales: () => Record<Letter, number>,
   getRotations: () => Record<Letter, Rotation>,
+  getPositions: () => Record<Letter, Position>,
   getLetter: (position: Position) => Letter | undefined,
   onChange: (letter: Letter) => void,
 ) => {
@@ -39,12 +41,13 @@ export const addDragHandlers = (
     if (element) {
       element.classList.add('show');
     }
-    const letter = getLetter(mousePos);
+    const letter = getLetter(mousePos) as Letter;
     drag = {
       control,
-      scales: getScales(),
-      rotations: getRotations(),
-      position: {
+      scale: getScales()[letter],
+      rotation: getRotations()[letter],
+      position: getPositions()[letter],
+      start: {
         x: mousePos.x,
         y: mousePos.y,
       },

@@ -11,6 +11,7 @@ import {
   COLOR_PALATE_END,
   CLIENT_CACHE_INTERVAL,
   POINT_MAX_MS,
+  SCALE_SPEED,
 } from '../shared/constants';
 import {
   ColorPalate,
@@ -26,7 +27,14 @@ import {
   Tool,
 } from '../shared/types';
 import {LETTERS} from '../shared/letters';
-import {letterMap, now, distance, must, randInt} from '../shared/util';
+import {
+  letterMap,
+  now,
+  distance,
+  must,
+  randInt,
+  scalePosition,
+} from '../shared/util';
 import {addDragHandlers, Control, ControlTools} from './dragging';
 import {initTools, toolMap} from './tools';
 import {initRoom} from './init-room';
@@ -157,6 +165,7 @@ export const init = async () => {
     document.body,
     () => scales,
     () => rotations,
+    () => positions,
     (position: Position) => {
       const [letter] = getTexturePosition(position);
       return letter;
@@ -226,10 +235,7 @@ export const init = async () => {
       if (actor.id !== actorId /*&& !(bm.isMe && actor.isBot)*/) {
         continue;
       }
-      const position = {
-        x: cursor.x * scaleFactor.width,
-        y: cursor.y * scaleFactor.height,
-      };
+      const position = scalePosition(cursor, scaleFactor);
       const pointer = !actor.isBot ? getPointer() : undefined;
       let tool = tools[actor.id];
       const drag = getDragInfo();
@@ -290,30 +296,35 @@ export const init = async () => {
           document.body.classList.add('active');
           switch (tool) {
             case Tool.MOVE:
-              const offset = positions[drag.letter];
-              const letterX = position.x - drag.position.x - offset.x;
-              const letterY = position.y - drag.position.y - offset.y;
+              // When we start dragging, we store the original position as drag.position.
+              // The final result should be the start position plus the relative movement.
+              const start = scalePosition(drag.position, scaleFactor);
+              const relative = {
+                x: position.x - drag.start.x,
+                y: position.y - drag.start.y,
+              };
               updateLetterPosition({
                 letter: drag.letter,
-                position: {
-                  x: letterX / scaleFactor.width,
-                  y: letterY / scaleFactor.height,
-                },
+                position: downscale({
+                  x: start.x + relative.x,
+                  y: start.y + relative.y,
+                }),
               });
               break;
             case Tool.SCALE:
-              let pxdiff = distance(drag.position, position);
-              if (drag.position.x > position.x) {
+              let pxdiff = distance(drag.start, position);
+              if (drag.start.x > position.x) {
                 pxdiff = -pxdiff;
               }
-              const scale = (pxdiff / window.innerWidth) * 10;
+              const scale = (pxdiff / scaleFactor.width) * SCALE_SPEED;
+              console.log(pxdiff, drag.scale);
               updateLetterScale({
                 letter: drag.letter,
-                scale: drag.scales[drag.letter] + scale,
+                scale: drag.scale + scale,
               });
               break;
             case Tool.ROTATE:
-              const pctdiff = drag.position.x / window.innerWidth - cursor.x;
+              const pctdiff = (position.x - drag.start.x) / scaleFactor.width;
               const degrees = pctdiff * 360;
               // const spin = div.querySelector('.spin') as HTMLDivElement;
               // if (spin) {
@@ -321,7 +332,7 @@ export const init = async () => {
               // }
               updateLetterRotation({
                 letter: drag.letter,
-                rotation: (drag.rotations[drag.letter] + degrees) % 360,
+                rotation: (drag.rotation + degrees) % 360,
               });
               break;
           }

@@ -1,10 +1,17 @@
-import {LETTERS, LETTER_POSITIONS} from '../shared/letters';
-import type {Color, Letter, Position} from './types';
+import {LETTERS} from '../shared/letters';
+import type {Color, Letter, Position, Size} from './types';
 
 export const now = () => new Date().getTime();
 
 export const colorToString = (color: Color) => {
   return `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+};
+
+export const scalePosition = (position: Position, scale: Size) => {
+  return {
+    x: position.x * scale.width,
+    y: position.y * scale.height,
+  };
 };
 
 export const letterMap = <T>(mapFn: (letter: Letter) => T) => {
