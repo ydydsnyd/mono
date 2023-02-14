@@ -136,6 +136,12 @@ export const init = async () => {
     updateTexture,
     setGlowing,
   } = await renderer3D(canvas, textures);
+  // Initialize positions
+  LETTERS.forEach(letter => {
+    setRotation(letter, rotations[letter]);
+    setScale(letter, scales[letter]);
+    setPosition(letter, positions[letter]);
+  });
 
   // Set up info below demo
   const activeUserCount = document.getElementById(
