@@ -234,6 +234,9 @@ export const createScene = async (
   environmentTexture.gammaSpace = false;
   environmentTexture.rotationY = Math.PI / 2.2;
   scene.environmentTexture = environmentTexture;
+  setInterval(() => {
+    environmentTexture.rotationY += 0.01;
+  }, 30);
 
   // Make clear totally transparent - by default it'll be some scene background color.
   scene.clearColor = new Color4(0, 0, 0, 0);
