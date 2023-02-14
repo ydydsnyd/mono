@@ -87,32 +87,6 @@ const PaintFight = () => {
 
 export default PaintFight;
 
-const LetterCanvas = ({letter}: {letter: Letter}) => (
-  <div id={letter} className="letter">
-    <canvas></canvas>
-    <div className="spin">
-      <Image src="/img/rotate-circle.png" alt="" width={100} height={100} />
-    </div>
-    <div className="controls">
-      <button className="move">
-        <svg className="move-icon">
-          <use xlinkHref="#move"></use>
-        </svg>
-      </button>
-      <button className="scale">
-        <svg className="scale-icon">
-          <use xlinkHref="#scale"></use>
-        </svg>
-      </button>
-      <button className="rotate">
-        <svg className="rotate-icon">
-          <use xlinkHref="#rotate"></use>
-        </svg>
-      </button>
-    </div>
-  </div>
-);
-
 const Textures = () => (
   <div id="textures">
     <canvas className="a"></canvas>
