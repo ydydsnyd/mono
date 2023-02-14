@@ -17,7 +17,7 @@ import {
 } from '@babylonjs/core';
 import '@babylonjs/gui';
 import '@babylonjs/loaders/glTF';
-import type {Color, Letter, Position} from '../shared/types';
+import {Color, Letter, Position} from '../shared/types';
 import {letterMap} from '../shared/util';
 import {LETTERS} from '../shared/letters';
 
@@ -32,6 +32,14 @@ export type LetterInfo = {
 const LETTER_OFFSET = 0;
 const ORTHO_SIZE_FACTOR = 0.03;
 const ORTHO_VERTICAL_POS = 0.135;
+
+export const LETTER_POSITIONS: Record<Letter, Position> = {
+  [Letter.A]: {x: 5.65465, y: 1.69821},
+  [Letter.L]: {x: 2.7806, y: 2.48276},
+  [Letter.I]: {x: 0.835768, y: 2.56859},
+  [Letter.V]: {x: -2.13617, y: 2.05105},
+  [Letter.E]: {x: -6.18972, y: 1.7763},
+};
 
 export const renderer = async (
   canvas: HTMLCanvasElement,
@@ -163,9 +171,10 @@ export const createScene = async (
   };
   const setPosition = (letter: Letter, position: Position) => {
     const {width: scaleX, height: scaleY} = sceneScaleFactor();
+    const origin = LETTER_POSITIONS[letter];
     meshes[letter].position = new Vector3(
-      -position.x * scaleX,
-      -position.y * scaleY,
+      origin.x - position.x * scaleX,
+      origin.y - position.y * scaleY,
       LETTER_OFFSET,
     );
   };
