@@ -27,14 +27,7 @@ import {
   Tool,
 } from '../shared/types';
 import {LETTERS} from '../shared/letters';
-import {
-  letterMap,
-  now,
-  distance,
-  must,
-  randInt,
-  scalePosition,
-} from '../shared/util';
+import {letterMap, now, distance, must, scalePosition} from '../shared/util';
 import {addDragHandlers, Control, ControlTools} from './dragging';
 import {initTools, toolMap} from './tools';
 import {initRoom} from './init-room';
@@ -95,7 +88,7 @@ export const init = async () => {
     switchToTool,
     takeOwner,
     freeOwner,
-    reflectClient,
+    // reflectClient,
   } = await initialize(roomID, actorId);
 
   // Get our location and add it when it's ready

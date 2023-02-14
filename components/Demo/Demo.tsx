@@ -1,7 +1,6 @@
 import React, {useEffect} from 'react';
 import Image from 'next/image';
 import {init} from '@/demo/frontend';
-import type {Letter} from '@/demo/shared/types';
 
 let initPromise: Promise<void> | undefined;
 const initOnce = () => {

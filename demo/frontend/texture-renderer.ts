@@ -1,4 +1,3 @@
-import {LETTERS, LETTER_PATHS} from '../shared/letters';
 import {ColorPalate, Letter, Point} from '../shared/types';
 import {draw_buffers} from '../../renderer/pkg/renderer';
 import {closest, letterMap, now} from '../shared/util';
