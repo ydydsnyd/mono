@@ -317,7 +317,6 @@ export const init = async () => {
                 pxdiff = -pxdiff;
               }
               const scale = (pxdiff / scaleFactor.width) * SCALE_SPEED;
-              console.log(pxdiff, drag.scale);
               updateLetterScale({
                 letter: drag.letter,
                 scale: drag.scale + scale,
