@@ -130,12 +130,6 @@ export const createScene = async (
   );
   camera.setTarget(Vector3.Zero());
   camera.mode = Camera.ORTHOGRAPHIC_CAMERA;
-  // let m = 0;
-  // setInterval(() => {
-  //   const turn = ++m % 2 == 0;
-  //   camera.beta = (turn ? 120 : 90) * (Math.PI / 180);
-  //   camera.alpha = (turn ? 220 : 270) * (Math.PI / 180);
-  // }, 1000);
 
   // Load the model
   await SceneLoader.ImportMeshAsync(LETTERS, modelURL, undefined, scene);
@@ -160,38 +154,28 @@ export const createScene = async (
     textures[letter].update(true, true, true);
 
   const setRotation = (letter: Letter, beta: number) => {
-    console.log('------');
-    console.log(letter, 'rotation', meshes[letter].rotation);
     const rotation = beta * (Math.PI / 180);
     meshes[letter].rotation = new Vector3(
       90 * (Math.PI / 180),
       -rotation,
       180 * (Math.PI / 180),
     );
-    console.log(letter, 'rotation', meshes[letter].rotation);
   };
   const setPosition = (letter: Letter, position: Position) => {
     const {width: scaleX, height: scaleY} = sceneScaleFactor();
-    console.log('------');
-    console.log(letter, 'position', meshes[letter].position);
-    console.log(position, engine.getRenderWidth(), scaleX);
     meshes[letter].position = new Vector3(
       -position.x * scaleX,
       -position.y * scaleY,
       LETTER_OFFSET,
     );
-    console.log(letter, 'position', meshes[letter].position);
   };
   const scaleFactor = 1;
   const setScale = (letter: Letter, scale: number) => {
-    console.log('------');
-    console.log(letter, 'scale', meshes[letter].scaling);
     meshes[letter].scaling = new Vector3(
       scale * scaleFactor,
       scale * scaleFactor,
       scale * scaleFactor,
     );
-    console.log(letter, 'scale', meshes[letter].scaling);
   };
   LETTERS.forEach(letter => {
     setRotation(letter, 0);
@@ -254,25 +238,9 @@ export const createScene = async (
   const getTexturePosition = (
     cursor: Position,
   ): [Letter | undefined, Position | undefined] => {
-    // const ray = scene.createPickingRay(cursor.x, cursor.y, null, camera, false);
-    // const pickInfo = scene.pickWithRay(ray);
-    // const helper = RayHelper.CreateAndShow(ray, scene, new Color3(1, 0, 0.1));
-    // setTimeout(() => helper.dispose(), 1000);
-    // if (!pickInfo) {
-    //   return [undefined, undefined];
-    // }
     const pickInfo = scene.pick(cursor.x, cursor.y);
     const {x, y} = pickInfo.getTextureCoordinates() || {x: -1, y: -1};
     const letter = pickInfo.pickedMesh?.name as Letter | undefined;
-    // if (pickInfo.hit) {
-    //   console.log(cursor, letter);
-    // }
-    // const helper = RayHelper.CreateAndShow(
-    //   pickInfo.ray!,
-    //   scene,
-    //   new Color3(1, 0, 0.1),
-    // );
-    // setTimeout(() => helper.dispose(), 1000);
     if (letter && LETTERS.includes(letter)) {
       return [
         letter,
