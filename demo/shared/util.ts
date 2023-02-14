@@ -26,14 +26,6 @@ export const asyncLetterMap = async <T>(
   return map;
 };
 
-export const letterOrigin = (letter: Letter, scale: number) => {
-  const bb = LETTER_POSITIONS[letter];
-  return {
-    x: bb.x * scale,
-    y: bb.y * scale,
-  };
-};
-
 export const randomWithSeed = (
   value: number,
   seed: number,
