@@ -17,7 +17,7 @@ import {
 } from 'replicache';
 import type {Downstream} from '../protocol/down.js';
 import type {PingMessage} from '../protocol/ping.js';
-import type {PokeBody} from '../protocol/poke.js';
+import type {PokeMessage} from '../protocol/poke.js';
 import type {PushBody, PushMessage} from '../protocol/push.js';
 import {NullableVersion, nullableVersionSchema} from '../types/version.js';
 import {assert} from '../util/asserts.js';
@@ -376,8 +376,7 @@ export class Reflect<MD extends MutatorDefs> {
         return;
 
       case 'poke':
-        void this._handlePoke(l, downMessage[1]);
-        this.#nextMessageResolver?.resolve(downMessage);
+        await this._handlePoke(l, downMessage);
         return;
 
       default:
@@ -543,7 +542,9 @@ export class Reflect<MD extends MutatorDefs> {
     this._lastMutationIDSent = -1;
   }
 
-  private async _handlePoke(lc: LogContext, pokeBody: PokeBody) {
+  private async _handlePoke(lc: LogContext, pokeMessage: PokeMessage) {
+    this.#nextMessageResolver?.resolve(pokeMessage);
+    const pokeBody = pokeMessage[1];
     await this._pokeLock.withLock(async () => {
       lc = lc.addContext('requestID', pokeBody.requestID);
       lc.debug?.('Applying poke', pokeBody);
@@ -780,7 +781,7 @@ export class Reflect<MD extends MutatorDefs> {
   }
 
   /**
-   * Returns false if the ping timed out.
+   * Throws a MessageError with ErrorKind.PingTimeout if the ping times out.
    */
   private async _ping(l: LogContext): Promise<void> {
     l.debug?.('pinging');
