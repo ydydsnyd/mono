@@ -1,5 +1,9 @@
 import {REPORT_METRICS_PATH} from './server/paths.js';
 import {DatadogLogSink} from 'datadog';
+import {
+  DatadogMetricsSink,
+  DatadogMetricsSinkOptions,
+} from './server/worker.js';
 
 export {
   createReflectServer,
@@ -19,6 +23,10 @@ export {version} from './util/version.js';
 export const ROUTES = {
   reportMetrics: REPORT_METRICS_PATH,
 };
+export function createDatadogMetricsSink(opts: DatadogMetricsSinkOptions) {
+  return new DatadogMetricsSink(opts);
+}
+export {DatadogMetricsSink} from './server/worker.js';
 
 export type WorkerDatadogLogSinkOptions = {
   apiKey: string;

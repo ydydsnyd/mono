@@ -3,7 +3,7 @@ import {consoleLogSink, LogSink, LogLevel, TeeLogSink} from '@rocicorp/logger';
 import type {AuthHandler} from './auth.js';
 import {BaseAuthDO} from './auth-do.js';
 import {BaseRoomDO} from './room-do.js';
-import {createWorker} from './worker.js';
+import {createWorker, MetricsSink} from './worker.js';
 import type {DisconnectHandler} from './disconnect.js';
 import {createNoAuthDOWorker} from './no-auth-do-worker.js';
 
@@ -25,6 +25,12 @@ export interface ReflectServerOptions<
    * Get the log level. This takes an `Env` so that the log level can depend on the environment.
    */
   getLogLevel?: ((env: Env) => LogLevel) | undefined;
+
+  /**
+   * Gets the metrics sink. By default metrics are sent nowhere. A Datadog implementation
+   * exists at {@link DatadogMetricsmetricsSink}.
+   */
+  getMetricsSink?: ((env: Env) => MetricsSink | undefined) | undefined;
 
   /**
    * If true, outgoing network messages are sent before the writes
@@ -86,10 +92,11 @@ export function createReflectServer<
   const roomDOClass = createRoomDOClass(optionsWithDefaults);
   const authDOClass = createAuthDOClass(optionsWithDefaults);
 
-  const {getLogSinks, getLogLevel} = optionsWithDefaults;
+  const {getLogSinks, getLogLevel, getMetricsSink} = optionsWithDefaults;
   const worker = createWorker<Env>({
     getLogSink: env => combineLogSinks(getLogSinks(env)),
     getLogLevel,
+    getMetricsSink,
   });
 
   // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -129,6 +136,7 @@ function getOptionsWithDefaults<
     disconnectHandler = () => Promise.resolve(),
     getLogSinks = _env => [consoleLogSink],
     getLogLevel = _env => 'debug',
+    getMetricsSink = _env => undefined,
     allowUnconfirmedWrites = false,
   } = options;
   return {
@@ -136,6 +144,7 @@ function getOptionsWithDefaults<
     disconnectHandler,
     getLogSinks,
     getLogLevel,
+    getMetricsSink,
     allowUnconfirmedWrites,
   };
 }
