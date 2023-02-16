@@ -16,7 +16,12 @@ import {USER_DATA_HEADER_NAME} from './auth.js';
 import {decodeHeaderValue} from '../util/headers.js';
 import {addConnectedClient} from '../types/connected-clients.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
-import {compareVersions, getVersion} from '../types/version.js';
+import {
+  NullableVersion,
+  Version,
+  compareVersions,
+  getVersion,
+} from '../types/version.js';
 import {send, closeWithError} from '../util/socket.js';
 import {assert} from '../util/asserts.js';
 import {ErrorKind} from '../protocol/error.js';
@@ -71,10 +76,28 @@ export async function handleConnection(
     userData: 'redacted',
   });
 
-  const existingRecord = await getClientRecord(clientID, storage);
+  const {
+    clientID: requestClientID,
+    baseCookie: requestBaseCookie,
+    clientGroupID: requestClientGroupID,
+  } = result;
+  const existingRecord = await getClientRecord(requestClientID, storage);
   lc.debug?.('Existing client record', existingRecord);
-  const existingLastMutationID = existingRecord?.lastMutationID ?? 0;
 
+  if (existingRecord && requestClientGroupID !== existingRecord.clientGroupID) {
+    lc.info?.(
+      'Unexpected client group id ',
+      requestClientGroupID,
+      ' received when connecting with a client id ',
+      requestClientID,
+      ' with existing client group id ',
+      existingRecord.clientGroupID,
+    );
+    closeWithErrorLocal('Unexpected clientGroupID.');
+    return;
+  }
+
+  const existingLastMutationID = existingRecord?.lastMutationID ?? 0;
   // These checks catch a large class of dev mistakes where the room is
   // re-created without clearing browser state. This can happen in a
   // variety of ways, e.g. it can happen when re-using the same roomID
@@ -102,9 +125,14 @@ export async function handleConnection(
     return;
   }
 
+  const existingRecordLastMutationIDVersion: Version | null =
+    existingRecord?.lastMutationIDVersion ?? null;
+
   const record: ClientRecord = {
-    baseCookie,
+    clientGroupID: requestClientGroupID,
+    baseCookie: requestBaseCookie,
     lastMutationID: existingLastMutationID,
+    lastMutationIDVersion: existingRecordLastMutationIDVersion,
   };
   await putClientRecord(clientID, record, storage);
   lc.debug?.('Put client record', record);
@@ -145,7 +173,7 @@ export async function handleConnection(
     socket: ws,
     userData,
     clockBehindByMs: undefined,
-    pending: [],
+    clientGroupID: requestClientGroupID,
   };
   lc.debug?.('Setting client map entry', clientID, client);
   clients.set(clientID, client);
@@ -154,7 +182,26 @@ export async function handleConnection(
   send(ws, connectedMessage);
 }
 
-export function getConnectRequest(url: URL, headers: Headers) {
+export function getConnectRequest(
+  url: URL,
+  headers: Headers,
+):
+  | {
+      result: {
+        clientID: string;
+        clientGroupID: string;
+        userData: UserData;
+        baseCookie: NullableVersion;
+        timestamp: number;
+        lmid: number;
+        wsid: string;
+      };
+      error: null;
+    }
+  | {
+      result: null;
+      error: string;
+    } {
   function getParam(name: string, required: true): string;
   function getParam(name: string, required: boolean): string | null;
   function getParam(name: string, required: boolean) {
@@ -207,6 +254,7 @@ export function getConnectRequest(url: URL, headers: Headers) {
 
   try {
     const clientID = getParam('clientID', true);
+    const clientGroupID = getParam('clientGroupID', true);
     const baseCookie = getIntegerParam('baseCookie', false);
     const timestamp = getIntegerParam('ts', true);
     const lmid = getIntegerParam('lmid', true);
@@ -216,6 +264,7 @@ export function getConnectRequest(url: URL, headers: Headers) {
     return {
       result: {
         clientID,
+        clientGroupID,
         userData,
         baseCookie,
         timestamp,

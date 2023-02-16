@@ -22,7 +22,7 @@ export const pokeBodySchema = s.type({
   // able to send a base cookie with value `null` to match that state.
   baseCookie: nullableVersionSchema,
   cookie: versionSchema,
-  lastMutationID: s.number(),
+  lastMutationIDChanges: s.record(s.string(), s.number()),
   patch: patchSchema,
   timestamp: s.number(),
 

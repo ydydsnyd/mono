@@ -1,6 +1,10 @@
 import {test, describe, expect} from '@jest/globals';
 import type {Mutation} from '../../src/protocol/push.js';
-import type {ClientID, ClientMap} from '../../src/types/client-state.js';
+import type {
+  ClientID,
+  ClientGroupID,
+  ClientMap,
+} from '../../src/types/client-state.js';
 import {
   client,
   createSilentLogContext,
@@ -11,6 +15,7 @@ import {handleMessage} from '../../src/server/message.js';
 import {assert} from '../util/asserts.js';
 import {randomID} from '../util/rand.js';
 import {ErrorKind} from '../protocol/error.js';
+import {DurableStorage} from '../storage/durable-storage.js';
 
 describe('handleMessage', () => {
   type Case = {
@@ -18,9 +23,10 @@ describe('handleMessage', () => {
     data: string;
     clients?: ClientMap;
     clientID?: ClientID;
+    clientGroupID?: ClientGroupID;
     expectedErrorKind?: ErrorKind;
     expectedErrorMessage?: string;
-    expectedPendingMutations?: Mutation[];
+    expectedPendingMutations?: Record<ClientGroupID, Mutation[]>;
     expectSocketClosed?: boolean;
   };
 
@@ -43,18 +49,20 @@ describe('handleMessage', () => {
       data: JSON.stringify([
         'push',
         {
-          clientID: 'c1',
-          mutations: [mutation(1), mutation(2)],
+          clientGroupID: 'cg1',
+          mutations: [mutation('c1', 1), mutation('c1', 2)],
           pushVersion: 1,
           schemaVersion: '',
           timestamp: 42,
           requestID: randomID(),
         },
       ]),
-      expectedPendingMutations: [
-        mutation(1, undefined, undefined, 2),
-        mutation(2, undefined, undefined, 2),
-      ],
+      expectedPendingMutations: {
+        cg1: [
+          mutation('c1', 1, undefined, undefined, 2),
+          mutation('c1', 2, undefined, undefined, 2),
+        ],
+      },
     },
     {
       name: 'push missing requestID',
@@ -62,7 +70,7 @@ describe('handleMessage', () => {
         'push',
         {
           clientID: 'c1',
-          mutations: [mutation(1), mutation(2)],
+          mutations: [mutation('c1', 1), mutation('c1', 2)],
           pushVersion: 1,
           schemaVersion: '',
           timestamp: 42,
@@ -78,8 +86,8 @@ describe('handleMessage', () => {
       data: JSON.stringify([
         'push',
         {
-          clientID: 'c1',
-          mutations: [mutation(1), mutation(2)],
+          clientGroupID: 'cg1',
+          mutations: [mutation('c1', 1), mutation('c1', 2)],
           pushVersion: 1,
           schemaVersion: '',
           timestamp: 42,
@@ -104,15 +112,25 @@ describe('handleMessage', () => {
   ];
 
   for (const c of cases) {
-    test(c.name, () => {
+    test(c.name, async () => {
       const s1 = new Mocket();
       const clientID = c.clientID !== undefined ? c.clientID : 'c1';
+      const clientGroupID =
+        c.clientGroupID !== undefined ? c.clientGroupID : 'cg1';
       const clients: ClientMap =
-        c.clients || new Map([client(clientID, 'u1', s1)]);
+        c.clients || new Map([client(clientID, 'u1', clientGroupID, s1)]);
 
-      handleMessage(
+      const {roomDO} = getMiniflareBindings();
+      const storage = new DurableStorage(
+        await getMiniflareDurableObjectStorage(roomDO.newUniqueId()),
+      );
+
+      const pendingMutationsMap = new Map();
+      await handleMessage(
         createSilentLogContext(),
+        storage,
         clients,
+        pendingMutationsMap,
         clientID,
         c.data,
         s1,
@@ -143,7 +161,9 @@ describe('handleMessage', () => {
       if (c.expectedPendingMutations) {
         const client = clients.get(clientID);
         assert(client);
-        expect(client.pending).toEqual(c.expectedPendingMutations);
+        expect(Object.fromEntries(pendingMutationsMap.entries())).toEqual(
+          c.expectedPendingMutations,
+        );
       }
     });
   }

@@ -1,13 +1,14 @@
 import type {LogContext} from '@rocicorp/logger';
 import {randomID} from '../util/rand.js';
+import type {PokeBody} from '../protocol/poke.js';
+import type {Mutation} from '../protocol/push.js';
 import type {DisconnectHandler} from '../server/disconnect.js';
 import {EntryCache} from '../storage/entry-cache.js';
 import {unwrapPatch} from '../storage/replicache-transaction.js';
 import type {Storage} from '../storage/storage.js';
-import type {ClientMutation} from '../types/client-mutation.js';
 import type {ClientPokeBody} from '../types/client-poke-body.js';
 import {getClientRecord, putClientRecord} from '../types/client-record.js';
-import type {ClientID} from '../types/client-state.js';
+import type {ClientGroupID, ClientID} from '../types/client-state.js';
 import {getVersion} from '../types/version.js';
 import {must} from '../util/must.js';
 import {processDisconnects} from './process-disconnects.js';
@@ -19,7 +20,7 @@ import {MutatorMap, processMutation} from './process-mutation.js';
 // can continue to apply.
 export async function processFrame(
   lc: LogContext,
-  mutations: Iterable<ClientMutation>,
+  mutations: Iterable<Mutation>,
   mutators: MutatorMap,
   disconnectHandler: DisconnectHandler,
   clients: ClientID[],
@@ -34,40 +35,74 @@ export async function processFrame(
 
   lc.debug?.('prevVersion', prevVersion, 'nextVersion', nextVersion);
 
+  const lastMutationIDChangesByClientGroupID: Map<
+    ClientGroupID,
+    Record<ClientID, number>
+  > = new Map();
+  let count = 0;
   for (const mutation of mutations) {
-    await processMutation(lc, mutation, mutators, cache, nextVersion);
+    count++;
+    const newLastMutationID = await processMutation(
+      lc,
+      mutation,
+      mutators,
+      cache,
+      nextVersion,
+    );
+    if (newLastMutationID !== undefined) {
+      const {clientID} = mutation;
+      const clientRecord = must(
+        await getClientRecord(clientID, cache),
+        `Client record not found: ${clientID}`,
+      );
+      const {clientGroupID} = clientRecord;
+      let changes = lastMutationIDChangesByClientGroupID.get(clientGroupID);
+      if (changes === undefined) {
+        changes = {};
+        lastMutationIDChangesByClientGroupID.set(clientGroupID, changes);
+      }
+      changes[clientID] = newLastMutationID;
+    }
   }
 
-  await processDisconnects(lc, disconnectHandler, clients, cache, nextVersion);
+  lc.debug?.(`processed ${count} mutations`);
 
-  const ret: ClientPokeBody[] = [];
+  await processDisconnects(lc, disconnectHandler, clients, cache, nextVersion);
 
   // If version has not changed, then there should not be any patch or pokes to
   // send. But processDisconnects still makes other changes to cache that need
   // to be flushed.
-  if (must(await getVersion(cache)) !== prevVersion) {
-    const patch = unwrapPatch(cache.pending());
-    for (const clientID of clients) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const clientRecord = (await getClientRecord(clientID, cache))!;
-      clientRecord.baseCookie = nextVersion;
-      await putClientRecord(clientID, clientRecord, cache);
-
-      const poke: ClientPokeBody = {
-        clientID,
-        poke: {
-          baseCookie: prevVersion,
-          cookie: nextVersion,
-          lastMutationID: clientRecord.lastMutationID,
-          patch,
-          timestamp,
-          requestID: randomID(),
-        },
-      };
-      ret.push(poke);
-    }
+  if (must(await getVersion(cache)) === prevVersion) {
+    await cache.flush();
+    return [];
   }
 
+  const ret: ClientPokeBody[] = [];
+  const patch = unwrapPatch(cache.pending());
+  for (const clientID of clients) {
+    const clientRecord = must(
+      await getClientRecord(clientID, cache),
+      `Client record not found: ${clientID}`,
+    );
+    clientRecord.baseCookie = nextVersion;
+    await putClientRecord(clientID, clientRecord, cache);
+    const {clientGroupID} = clientRecord;
+    const pokeBody: PokeBody = {
+      baseCookie: prevVersion,
+      cookie: nextVersion,
+      lastMutationIDChanges:
+        lastMutationIDChangesByClientGroupID.get(clientGroupID) ?? {},
+      patch,
+      timestamp,
+      requestID: randomID(),
+    };
+    const poke: ClientPokeBody = {
+      clientID,
+      poke: pokeBody,
+    };
+    ret.push(poke);
+  }
+  lc.debug?.('built poke bodies', ret.length);
   await cache.flush();
   return ret;
 }

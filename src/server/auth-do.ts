@@ -41,6 +41,7 @@ import {addRequestIDFromHeadersOrRandomID} from './request-id.js';
 import {createUnauthorizedResponse} from './create-unauthorized-response.js';
 import {ErrorKind} from '../protocol/error.js';
 import {ROOM_ROUTES} from './room-do.js';
+import {pullRequestSchema} from '../protocol/pull.js';
 
 export interface AuthDOOptions {
   roomDO: DurableObjectNamespace;
@@ -59,7 +60,7 @@ export type ConnectionRecord = {
   connectTimestamp: number;
 };
 
-export const AUTH_ROUTES = {
+export const AUTH_ROUTES_AUTHED_BY_API_KEY = {
   roomStatusByRoomID: '/api/room/v0/room/:roomID/status',
   roomRecords: '/api/room/v0/rooms',
   closeRoom: '/api/room/v0/room/:roomID/close',
@@ -71,7 +72,16 @@ export const AUTH_ROUTES = {
   authInvalidateForRoom: '/api/auth/v0/invalidateForRoom',
   authRevalidateConnections: '/api/auth/v0/revalidateConnections',
   createRoom: '/createRoom',
+} as const;
+
+export const AUTH_ROUTES_AUTHED_BY_AUTH_HANDLER = {
   connect: '/connect',
+  pull: '/pull',
+} as const;
+
+export const AUTH_ROUTES = {
+  ...AUTH_ROUTES_AUTHED_BY_API_KEY,
+  ...AUTH_ROUTES_AUTHED_BY_AUTH_HANDLER,
 } as const;
 
 export class BaseAuthDO implements DurableObject {
@@ -268,6 +278,7 @@ export class BaseAuthDO implements DurableObject {
     );
 
     this._router.register(AUTH_ROUTES.connect, this._connect);
+    this._router.register(AUTH_ROUTES.pull, this._pull);
   }
 
   private _connect = get((ctx, request) => {
@@ -410,6 +421,58 @@ export class BaseAuthDO implements DurableObject {
       return response;
     });
   });
+
+  private _pull = post(
+    withBody(pullRequestSchema, async (ctx, req) => {
+      const {
+        lc,
+        body: {roomID},
+      } = ctx;
+
+      const auth = req.headers.get('Authorization');
+      if (!auth) {
+        lc.info?.('auth not found in Authorization header.');
+        return createUnauthorizedResponse('auth required');
+      }
+
+      let userData: UserData | undefined;
+      try {
+        userData = await this._authHandler(auth, roomID);
+      } catch (e) {
+        return createUnauthorizedResponse();
+      }
+      if (!userData || !userData.userID) {
+        if (!userData) {
+          lc.info?.('userData returned by authHandler is not an object.');
+        } else if (!userData.userID) {
+          lc.info?.('userData returned by authHandler has no userID.');
+        }
+        return createUnauthorizedResponse();
+      }
+
+      // Find the room's objectID so we can route the request to it.
+      const roomRecord = await this._roomRecordLock.withRead(() =>
+        roomRecordByRoomID(this._durableStorage, roomID),
+      );
+      if (roomRecord === undefined || roomRecord.status !== RoomStatus.Open) {
+        const errorMsg = roomRecord ? 'room is not open' : 'room not found';
+        return new Response(errorMsg, {
+          status: 404,
+        });
+      }
+
+      const roomObjectID = this._roomDO.idFromString(roomRecord.objectIDString);
+      // Forward the request to the Room Durable Object...
+      const stub = this._roomDO.get(roomObjectID);
+      const requestToDO = new Request(req);
+      requestToDO.headers.set(
+        USER_DATA_HEADER_NAME,
+        encodeHeaderValue(JSON.stringify(userData)),
+      );
+      const responseFromDO = await stub.fetch(requestToDO);
+      return responseFromDO;
+    }),
+  );
 
   private _authInvalidateForRoom = post(
     this._requireAPIKey(

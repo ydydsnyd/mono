@@ -5,11 +5,11 @@ import {handleAuthInvalidate} from './auth-invalidate.js';
 
 function createClientMap() {
   return new Map([
-    client('testClientID1_1', 'testUserID1', new Mocket()),
-    client('testClientID1_2', 'testUserID1', new Mocket()),
-    client('testClientID2_1', 'testUserID2', new Mocket()),
-    client('testClientID2_2', 'testUserID2', new Mocket()),
-    client('testClientID3_1', 'testUserID3', new Mocket()),
+    client('testClientID1_1', 'testUserID1', 'testClientGroup1', new Mocket()),
+    client('testClientID1_2', 'testUserID1', 'testClientGroup1', new Mocket()),
+    client('testClientID2_1', 'testUserID2', 'testClientGroup1', new Mocket()),
+    client('testClientID2_2', 'testUserID2', 'testClientGroup2', new Mocket()),
+    client('testClientID3_1', 'testUserID3', 'testClientGroup2', new Mocket()),
   ]);
 }
 

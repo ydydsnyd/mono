@@ -1,18 +1,16 @@
 // Generates the total merged ordering of mutation from the pending lists in
-// [[clients]]. I don't know how to describe this total order more succinctly
-// than:
-// - each client maintains a list of pending mutations sorted by lmid
+// [[clients]] and [[clientGroups]].
 
-import type {ClientMutation} from '../types/client-mutation.js';
-import type {ClientMap} from '../types/client-state.js';
+import type {PendingMutationMap} from '../types/mutation.js';
+import type {Mutation} from '../protocol/push.js';
 import {PeekIterator} from '../util/peek-iterator.js';
 
 // - we merge sort those lists, but the merge function is the server timestamp
-export function* generateMergedMutations(clients: ClientMap) {
+export function* generateMergedMutations(pendingMutations: PendingMutationMap) {
   // Build a list of mutation iterators sorted by next val's timestamp
-  const iterators: PeekIterator<ClientMutation>[] = [];
+  const iterators: PeekIterator<Mutation>[] = [];
 
-  const insertIterator = (ins: PeekIterator<ClientMutation>) => {
+  const insertIterator = (ins: PeekIterator<Mutation>) => {
     const {value, done} = ins.peek();
     if (done) {
       return;
@@ -24,9 +22,8 @@ export function* generateMergedMutations(clients: ClientMap) {
     iterators.splice(pos === -1 ? iterators.length : pos, 0, ins);
   };
 
-  for (const [clientID, c] of clients) {
-    const clientMutations = c.pending.map(m => ({clientID, ...m}));
-    insertIterator(new PeekIterator(clientMutations.values()));
+  for (const mutations of pendingMutations.values()) {
+    insertIterator(new PeekIterator(mutations.values()));
   }
 
   // const dumpIterators = (msg: string) => {
@@ -48,7 +45,7 @@ export function* generateMergedMutations(clients: ClientMap) {
     if (done) {
       throw new Error('unexpected state');
     }
-    yield value as ClientMutation;
+    yield value;
     next.next();
     insertIterator(next);
     //dumpIterators("after insert");

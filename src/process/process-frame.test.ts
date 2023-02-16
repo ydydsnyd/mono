@@ -3,21 +3,25 @@ import * as s from 'superstruct';
 import type {WriteTransaction} from 'replicache';
 import type {JSONType} from '../../src/protocol/json.js';
 import {DurableStorage} from '../../src/storage/durable-storage.js';
-import type {ClientMutation} from '../../src/types/client-mutation.js';
 import type {ClientPokeBody} from '../../src/types/client-poke-body.js';
-import {ClientRecord, clientRecordKey} from '../../src/types/client-record.js';
+import {
+  clientRecordKey,
+  ClientRecordMap,
+  putClientRecord,
+} from '../../src/types/client-record.js';
 import type {ClientID} from '../../src/types/client-state.js';
 import {UserValue, userValueKey} from '../../src/types/user-value.js';
 import {Version, versionKey} from '../../src/types/version.js';
 import {
-  clientMutation,
+  mutation,
   clientRecord,
   createSilentLogContext,
-  mockMathRandom,
   userValue,
+  mockMathRandom,
 } from '../util/test-utils.js';
-import {processFrame} from '../../src/process/process-frame.js';
+import {processFrame} from '../process/process-frame.js';
 import {connectedClientsKey} from '../types/connected-clients.js';
+import type {Mutation} from '../protocol/push.js';
 
 const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();
@@ -25,11 +29,6 @@ const id = roomDO.newUniqueId();
 mockMathRandom();
 
 test('processFrame', async () => {
-  const records = new Map([
-    [clientRecordKey('c1'), clientRecord(null, 1)],
-    [clientRecordKey('c2'), clientRecord(1, 7)],
-    [clientRecordKey('c3'), clientRecord(1, 7)],
-  ]);
   const startTime = 100;
   const startVersion = 1;
   const endVersion = 2;
@@ -38,12 +37,13 @@ test('processFrame', async () => {
 
   type Case = {
     name: string;
-    mutations: ClientMutation[];
+    mutations: Mutation[];
     clients: ClientID[];
+    clientRecords: ClientRecordMap;
     connectedClients: ClientID[];
     expectedPokes: ClientPokeBody[];
     expectedUserValues: Map<string, UserValue>;
-    expectedClientRecords: Map<string, ClientRecord>;
+    expectedClientRecords: ClientRecordMap;
     expectedVersion: Version;
     expectedDisconnectedClients: ClientID[];
     disconnectHandlerThrows: boolean;
@@ -63,11 +63,18 @@ test('processFrame', async () => {
     }),
   );
 
+  const records = new Map([
+    ['c1', clientRecord('cg1', null, 1, 1)],
+    ['c2', clientRecord('cg1', 1, 7, 1)],
+    ['c3', clientRecord('cg2', 1, 7, 1)],
+  ]);
+
   const cases: Case[] = [
     {
       name: 'no mutations, no clients',
       mutations: [],
       clients: [],
+      clientRecords: records,
       connectedClients: [],
       expectedPokes: [],
       expectedUserValues: new Map(),
@@ -80,6 +87,7 @@ test('processFrame', async () => {
       name: 'no mutations, one client',
       mutations: [],
       clients: ['c1'],
+      clientRecords: records,
       connectedClients: ['c1'],
       expectedPokes: [],
       expectedUserValues: new Map(),
@@ -90,8 +98,9 @@ test('processFrame', async () => {
     },
     {
       name: 'one mutation, one client',
-      mutations: [clientMutation('c1', 2, 'put', {key: 'foo', value: 'bar'})],
+      mutations: [mutation('c1', 2, 'put', {key: 'foo', value: 'bar'})],
       clients: ['c1'],
+      clientRecords: records,
       connectedClients: ['c1'],
       expectedPokes: [
         {
@@ -99,7 +108,7 @@ test('processFrame', async () => {
           poke: {
             baseCookie: startVersion,
             cookie: endVersion,
-            lastMutationID: 2,
+            lastMutationIDChanges: {c1: 2},
             patch: [
               {
                 op: 'put',
@@ -112,12 +121,10 @@ test('processFrame', async () => {
           },
         },
       ],
-      expectedUserValues: new Map([
-        [userValueKey('foo'), userValue('bar', endVersion)],
-      ]),
+      expectedUserValues: new Map([['foo', userValue('bar', endVersion)]]),
       expectedClientRecords: new Map([
         ...records,
-        [clientRecordKey('c1'), clientRecord(endVersion, 2)],
+        ['c1', clientRecord('cg1', endVersion, 2, endVersion)],
       ]),
       expectedVersion: endVersion,
       expectedDisconnectedClients: [],
@@ -125,8 +132,9 @@ test('processFrame', async () => {
     },
     {
       name: 'one mutation, two clients',
-      mutations: [clientMutation('c1', 2, 'put', {key: 'foo', value: 'bar'})],
+      mutations: [mutation('c1', 2, 'put', {key: 'foo', value: 'bar'})],
       clients: ['c1', 'c2'],
+      clientRecords: records,
       connectedClients: ['c1', 'c2'],
       expectedPokes: [
         {
@@ -134,7 +142,7 @@ test('processFrame', async () => {
           poke: {
             baseCookie: startVersion,
             cookie: endVersion,
-            lastMutationID: 2,
+            lastMutationIDChanges: {c1: 2},
             patch: [
               {
                 op: 'put',
@@ -151,7 +159,7 @@ test('processFrame', async () => {
           poke: {
             baseCookie: startVersion,
             cookie: endVersion,
-            lastMutationID: 7,
+            lastMutationIDChanges: {c1: 2},
             patch: [
               {
                 op: 'put',
@@ -164,13 +172,102 @@ test('processFrame', async () => {
           },
         },
       ],
+      expectedUserValues: new Map([['foo', userValue('bar', endVersion)]]),
+      expectedClientRecords: new Map([
+        ...records,
+        ['c1', clientRecord('cg1', endVersion, 2, endVersion)],
+        ['c2', clientRecord('cg1', endVersion, 7, 1)],
+      ]),
+      expectedVersion: endVersion,
+      expectedDisconnectedClients: [],
+      disconnectHandlerThrows: false,
+    },
+    {
+      name: 'two mutations, three clients, two client groups',
+      mutations: [
+        mutation('c1', 2, 'put', {key: 'foo', value: 'bar'}),
+        mutation('c3', 8, 'put', {key: 'fuzzy', value: 'wuzzy'}),
+      ],
+      clients: ['c1', 'c2', 'c3'],
+      clientRecords: records,
+      connectedClients: ['c1', 'c2', 'c3'],
+      expectedPokes: [
+        {
+          clientID: 'c1',
+          poke: {
+            baseCookie: startVersion,
+            cookie: endVersion,
+            lastMutationIDChanges: {c1: 2},
+            patch: [
+              {
+                op: 'put',
+                key: 'foo',
+                value: 'bar',
+              },
+              {
+                op: 'put',
+                key: 'fuzzy',
+                value: 'wuzzy',
+              },
+            ],
+            timestamp: startTime,
+            requestID: '4fxcm49g2j9',
+          },
+        },
+        {
+          clientID: 'c2',
+          poke: {
+            baseCookie: startVersion,
+            cookie: endVersion,
+            lastMutationIDChanges: {c1: 2},
+            patch: [
+              {
+                op: 'put',
+                key: 'foo',
+                value: 'bar',
+              },
+              {
+                op: 'put',
+                key: 'fuzzy',
+                value: 'wuzzy',
+              },
+            ],
+            timestamp: startTime,
+            requestID: '4fxcm49g2j9',
+          },
+        },
+        {
+          clientID: 'c3',
+          poke: {
+            baseCookie: startVersion,
+            cookie: endVersion,
+            lastMutationIDChanges: {c3: 8},
+            patch: [
+              {
+                op: 'put',
+                key: 'foo',
+                value: 'bar',
+              },
+              {
+                op: 'put',
+                key: 'fuzzy',
+                value: 'wuzzy',
+              },
+            ],
+            timestamp: startTime,
+            requestID: '4fxcm49g2j9',
+          },
+        },
+      ],
       expectedUserValues: new Map([
-        [userValueKey('foo'), userValue('bar', endVersion)],
+        ['foo', userValue('bar', endVersion)],
+        ['fuzzy', userValue('wuzzy', endVersion)],
       ]),
       expectedClientRecords: new Map([
         ...records,
-        [clientRecordKey('c1'), clientRecord(endVersion, 2)],
-        [clientRecordKey('c2'), clientRecord(endVersion, 7)],
+        ['c1', clientRecord('cg1', endVersion, 2, endVersion)],
+        ['c2', clientRecord('cg1', endVersion, 7, 1)],
+        ['c3', clientRecord('cg2', endVersion, 8, endVersion)],
       ]),
       expectedVersion: endVersion,
       expectedDisconnectedClients: [],
@@ -179,10 +276,11 @@ test('processFrame', async () => {
     {
       name: 'two mutations, one client, one key',
       mutations: [
-        clientMutation('c1', 2, 'put', {key: 'foo', value: 'bar'}),
-        clientMutation('c1', 3, 'put', {key: 'foo', value: 'baz'}),
+        mutation('c1', 2, 'put', {key: 'foo', value: 'bar'}),
+        mutation('c1', 3, 'put', {key: 'foo', value: 'baz'}),
       ],
       clients: ['c1'],
+      clientRecords: records,
       connectedClients: ['c1'],
       expectedPokes: [
         {
@@ -190,7 +288,7 @@ test('processFrame', async () => {
           poke: {
             baseCookie: startVersion,
             cookie: endVersion,
-            lastMutationID: 3,
+            lastMutationIDChanges: {c1: 3},
             patch: [
               {
                 op: 'put',
@@ -203,12 +301,10 @@ test('processFrame', async () => {
           },
         },
       ],
-      expectedUserValues: new Map([
-        [userValueKey('foo'), userValue('baz', endVersion)],
-      ]),
+      expectedUserValues: new Map([['foo', userValue('baz', endVersion)]]),
       expectedClientRecords: new Map([
         ...records,
-        [clientRecordKey('c1'), clientRecord(endVersion, 3)],
+        ['c1', clientRecord('cg1', endVersion, 3, endVersion)],
       ]),
       expectedVersion: endVersion,
       expectedDisconnectedClients: [],
@@ -218,13 +314,11 @@ test('processFrame', async () => {
       name: 'no mutations, no clients, 1 client disconnects',
       mutations: [],
       clients: [],
+      clientRecords: records,
       connectedClients: ['c1'],
       expectedPokes: [],
       expectedUserValues: new Map([
-        [
-          userValueKey(disconnectHandlerWriteKey('c1')),
-          userValue(true, endVersion),
-        ],
+        [disconnectHandlerWriteKey('c1'), userValue(true, endVersion)],
       ]),
       expectedClientRecords: records,
       expectedVersion: endVersion,
@@ -235,20 +329,7 @@ test('processFrame', async () => {
       name: 'no mutations, no clients, 1 client disconnects, disconnect handler throws',
       mutations: [],
       clients: [],
-      connectedClients: ['c1'],
-      // No user values or pokes because only write was in disconnect handler which threw
-      expectedPokes: [],
-      expectedUserValues: new Map(),
-      expectedClientRecords: records,
-      // version not incremented for same reason
-      expectedVersion: startVersion,
-      expectedDisconnectedClients: ['c1'],
-      disconnectHandlerThrows: true,
-    },
-    {
-      name: 'no mutations, no clients, 1 client disconnects, disconnect handler throws',
-      mutations: [],
-      clients: [],
+      clientRecords: records,
       connectedClients: ['c1'],
       // No user values or pokes because only write was in disconnect handler which threw
       expectedPokes: [],
@@ -263,6 +344,7 @@ test('processFrame', async () => {
       name: 'no mutations, 1 client, 1 client disconnected',
       mutations: [],
       clients: ['c2'],
+      clientRecords: records,
       connectedClients: ['c1', 'c2'],
       expectedPokes: [
         {
@@ -270,7 +352,7 @@ test('processFrame', async () => {
           poke: {
             baseCookie: startVersion,
             cookie: endVersion,
-            lastMutationID: 7,
+            lastMutationIDChanges: {},
             patch: [
               {
                 key: 'test-disconnected-c1',
@@ -284,57 +366,21 @@ test('processFrame', async () => {
         },
       ],
       expectedUserValues: new Map([
-        [
-          userValueKey(disconnectHandlerWriteKey('c1')),
-          userValue(true, endVersion),
-        ],
+        [disconnectHandlerWriteKey('c1'), userValue(true, endVersion)],
       ]),
       expectedClientRecords: new Map([
         ...records,
-        [clientRecordKey('c2'), clientRecord(endVersion, 7)],
+        ['c2', clientRecord('cg1', endVersion, 7, 1)],
       ]),
       expectedVersion: endVersion,
       expectedDisconnectedClients: ['c1'],
       disconnectHandlerThrows: false,
     },
     {
-      name: 'no mutations, 1 client, 1 client disconnected, disconnect handler throws',
-      mutations: [],
-      clients: ['c2'],
-      connectedClients: ['c1', 'c2'],
-      // No user values or pokes because only write was in disconnect handler which threw
-      expectedPokes: [],
-      expectedUserValues: new Map(),
-      // version stays at startVersion for same reason
-      expectedClientRecords: new Map([
-        ...records,
-        [clientRecordKey('c2'), clientRecord(startVersion, 7)],
-      ]),
-      expectedVersion: startVersion,
-      expectedDisconnectedClients: ['c1'],
-      disconnectHandlerThrows: true,
-    },
-    {
-      name: 'no mutations, 1 client, 1 client disconnected, disconnect handler throws',
-      mutations: [],
-      clients: ['c2'],
-      connectedClients: ['c1', 'c2'],
-      // No user values or pokes because only write was in disconnect handler which threw
-      expectedPokes: [],
-      expectedUserValues: new Map(),
-      // version stays at startVersion for same reason
-      expectedClientRecords: new Map([
-        ...records,
-        [clientRecordKey('c2'), clientRecord(startVersion, 7)],
-      ]),
-      expectedVersion: startVersion,
-      expectedDisconnectedClients: ['c1'],
-      disconnectHandlerThrows: true,
-    },
-    {
       name: 'no mutations, 1 client, 2 clients disconnected',
       mutations: [],
       clients: ['c2'],
+      clientRecords: records,
       connectedClients: ['c1', 'c2', 'c3'],
       expectedPokes: [
         {
@@ -342,7 +388,7 @@ test('processFrame', async () => {
           poke: {
             baseCookie: startVersion,
             cookie: endVersion,
-            lastMutationID: 7,
+            lastMutationIDChanges: {},
             patch: [
               {
                 key: 'test-disconnected-c1',
@@ -361,18 +407,12 @@ test('processFrame', async () => {
         },
       ],
       expectedUserValues: new Map([
-        [
-          userValueKey(disconnectHandlerWriteKey('c1')),
-          userValue(true, endVersion),
-        ],
-        [
-          userValueKey(disconnectHandlerWriteKey('c3')),
-          userValue(true, endVersion),
-        ],
+        [disconnectHandlerWriteKey('c1'), userValue(true, endVersion)],
+        [disconnectHandlerWriteKey('c3'), userValue(true, endVersion)],
       ]),
       expectedClientRecords: new Map([
         ...records,
-        [clientRecordKey('c2'), clientRecord(endVersion, 7)],
+        ['c2', clientRecord('cg1', endVersion, 7, 1)],
       ]),
       expectedVersion: endVersion,
       expectedDisconnectedClients: ['c1', 'c3'],
@@ -380,8 +420,9 @@ test('processFrame', async () => {
     },
     {
       name: 'one mutation, 2 clients, 1 client disconnects',
-      mutations: [clientMutation('c1', 2, 'put', {key: 'foo', value: 'bar'})],
+      mutations: [mutation('c1', 2, 'put', {key: 'foo', value: 'bar'})],
       clients: ['c1', 'c2'],
+      clientRecords: records,
       connectedClients: ['c1', 'c2', 'c3'],
       expectedPokes: [
         {
@@ -389,7 +430,7 @@ test('processFrame', async () => {
           poke: {
             baseCookie: startVersion,
             cookie: endVersion,
-            lastMutationID: 2,
+            lastMutationIDChanges: {c1: 2},
             patch: [
               {
                 op: 'put',
@@ -411,7 +452,7 @@ test('processFrame', async () => {
           poke: {
             baseCookie: startVersion,
             cookie: endVersion,
-            lastMutationID: 7,
+            lastMutationIDChanges: {c1: 2},
             patch: [
               {
                 op: 'put',
@@ -430,87 +471,28 @@ test('processFrame', async () => {
         },
       ],
       expectedUserValues: new Map([
-        [userValueKey('foo'), userValue('bar', endVersion)],
-        [
-          userValueKey(disconnectHandlerWriteKey('c3')),
-          userValue(true, endVersion),
-        ],
+        ['foo', userValue('bar', endVersion)],
+        [disconnectHandlerWriteKey('c3'), userValue(true, endVersion)],
       ]),
       expectedClientRecords: new Map([
         ...records,
-        [clientRecordKey('c1'), clientRecord(endVersion, 2)],
-        [clientRecordKey('c2'), clientRecord(endVersion, 7)],
+        ['c1', clientRecord('cg1', endVersion, 2, endVersion)],
+        ['c2', clientRecord('cg1', endVersion, 7, 1)],
       ]),
       expectedVersion: endVersion,
       expectedDisconnectedClients: ['c3'],
       disconnectHandlerThrows: false,
     },
-    {
-      name: 'one mutation, 2 clients, 1 client disconnects, disconnect handler throws',
-      mutations: [clientMutation('c1', 2, 'put', {key: 'foo', value: 'bar'})],
-      clients: ['c1', 'c2'],
-      connectedClients: ['c1', 'c2', 'c3'],
-      // No patch for writes from disconnect handler because it threw
-      expectedPokes: [
-        {
-          clientID: 'c1',
-          poke: {
-            baseCookie: startVersion,
-            cookie: endVersion,
-            lastMutationID: 2,
-            patch: [
-              {
-                op: 'put',
-                key: 'foo',
-                value: 'bar',
-              },
-            ],
-            timestamp: startTime,
-            requestID: '4fxcm49g2j9',
-          },
-        },
-        {
-          clientID: 'c2',
-          poke: {
-            baseCookie: startVersion,
-            cookie: endVersion,
-            lastMutationID: 7,
-            patch: [
-              {
-                op: 'put',
-                key: 'foo',
-                value: 'bar',
-              },
-            ],
-            timestamp: startTime,
-            requestID: '4fxcm49g2j9',
-          },
-        },
-      ],
-      // writes from disconnect handler not present because it threw
-      expectedUserValues: new Map([
-        [userValueKey('foo'), userValue('bar', endVersion)],
-      ]),
-      expectedClientRecords: new Map([
-        ...records,
-        [clientRecordKey('c1'), clientRecord(endVersion, 2)],
-        [clientRecordKey('c2'), clientRecord(endVersion, 7)],
-      ]),
-      expectedVersion: endVersion,
-      expectedDisconnectedClients: ['c3'],
-      disconnectHandlerThrows: true,
-    },
   ];
 
   const durable = await getMiniflareDurableObjectStorage(id);
-
   for (const c of cases) {
     await durable.deleteAll();
     const storage = new DurableStorage(durable);
 
     await storage.put(versionKey, startVersion);
-    for (const [key, value] of records) {
-      await storage.put(key, value);
+    for (const [clientID, record] of c.clientRecords) {
+      await putClientRecord(clientID, record, storage);
     }
     await storage.put(connectedClientsKey, c.connectedClients);
 
@@ -522,7 +504,6 @@ test('processFrame', async () => {
       async write => {
         await write.put(disconnectHandlerWriteKey(write.clientID), true);
         disconnectCallClients.push(write.clientID);
-
         // Throw after writes to confirm they are not saved.
         if (c.disconnectHandlerThrows) {
           throw new Error('disconnectHandler threw');
@@ -540,8 +521,18 @@ test('processFrame', async () => {
     );
 
     const expectedState = new Map([
-      ...(c.expectedUserValues as Map<string, JSONType>),
-      ...(c.expectedClientRecords as Map<string, JSONType>),
+      ...new Map<string, JSONType>(
+        [...c.expectedUserValues].map(([key, value]) => [
+          userValueKey(key),
+          value,
+        ]),
+      ),
+      ...new Map<string, JSONType>(
+        [...c.expectedClientRecords].map(([key, value]) => [
+          clientRecordKey(key),
+          value,
+        ]),
+      ),
       [versionKey, c.expectedVersion],
       [connectedClientsKey, c.clients],
     ]);

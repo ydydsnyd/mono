@@ -1,10 +1,10 @@
 import {EntryCache} from '../storage/entry-cache.js';
 import {ReplicacheTransaction} from '../storage/replicache-transaction.js';
 import type {Storage} from '../storage/storage.js';
-import type {ClientMutation} from '../types/client-mutation.js';
 import {getClientRecord, putClientRecord} from '../types/client-record.js';
 import {putVersion, Version} from '../types/version.js';
 import type {LogContext} from '@rocicorp/logger';
+import type {Mutation} from '../protocol/push.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Mutator = (tx: ReplicacheTransaction, args: any) => Promise<void>;
@@ -17,11 +17,11 @@ export type MutatorMap = Map<string, Mutator>;
 // - client record of mutating client will have been updated
 export async function processMutation(
   lc: LogContext,
-  mutation: ClientMutation,
+  mutation: Mutation,
   mutators: MutatorMap,
   storage: Storage,
   version: Version,
-): Promise<void> {
+): Promise<number | undefined> {
   const t0 = Date.now();
   try {
     lc.debug?.(
@@ -34,7 +34,7 @@ export async function processMutation(
     const cache = new EntryCache(storage);
     const record = await getClientRecord(clientID, cache);
     if (!record) {
-      lc.info?.('client not found');
+      lc.info?.('client not found', clientID);
       throw new Error(`Client ${clientID} not found`);
     }
 
@@ -62,9 +62,12 @@ export async function processMutation(
     }
 
     record.lastMutationID = expectedMutationID;
+    record.lastMutationIDVersion = version;
+
     await putClientRecord(clientID, record, cache);
     await putVersion(version, cache);
     await cache.flush();
+    return expectedMutationID;
   } finally {
     lc.debug?.(`processMutation took ${Date.now() - t0} ms`);
   }

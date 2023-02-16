@@ -150,6 +150,24 @@ test('worker forwards connect requests to authDO', async () => {
   );
 });
 
+test('worker forwards pull requests to authDO', async () => {
+  await testForwardedToAuthDO(
+    new Request('https://test.roci.dev/pull', {
+      method: 'post',
+      body: JSON.stringify({
+        profileID: 'test-pID',
+        clientGroupID: 'test-cgID',
+        cookie: 1,
+        pullVersion: 1,
+        schemaVersion: '1',
+      }),
+    }),
+    new Response(null, {
+      status: 200,
+    }),
+  );
+});
+
 test('worker forwards authDO api requests to authDO', async () => {
   const roomStatusByRoomIDPathWithRoomID =
     AUTH_ROUTES.roomStatusByRoomID.replace(':roomID', 'ae4565');

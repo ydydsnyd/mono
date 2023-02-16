@@ -201,10 +201,12 @@ test('Logs version during construction', () => {
     logLevel: 'info',
     allowUnconfirmedWrites: true,
   });
-  expect(testLogSink.messages).toEqual([
-    ['info', 'RoomDO', 'doID=test-do-id', 'Starting server'],
-    ['info', 'RoomDO', 'doID=test-do-id', 'Version:', version],
-  ]);
+  expect(testLogSink.messages).toEqual(
+    expect.arrayContaining([
+      ['info', 'RoomDO', 'doID=test-do-id', 'Starting server'],
+      ['info', 'RoomDO', 'doID=test-do-id', 'Version:', version],
+    ]),
+  );
   expect(testLogSink.messages[1][4]).toMatch(/^\d+\.\d+\.\d+/);
 });
 

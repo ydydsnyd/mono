@@ -1,7 +1,6 @@
 import {test, expect} from '@jest/globals';
 import type {WriteTransaction} from 'replicache';
 import {DurableStorage} from '../../src/storage/durable-storage.js';
-import type {ClientMutation} from '../../src/types/client-mutation.js';
 import {
   ClientRecord,
   getClientRecord,
@@ -10,7 +9,7 @@ import {
 import {getUserValue} from '../../src/types/user-value.js';
 import {getVersion} from '../../src/types/version.js';
 import {
-  clientMutation,
+  mutation,
   clientRecord,
   createSilentLogContext,
 } from '../util/test-utils.js';
@@ -18,15 +17,17 @@ import {
   MutatorMap,
   processMutation,
 } from '../../src/process/process-mutation.js';
+import type {Mutation} from '../protocol/push.js';
 
 const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();
+const version = 2;
 
 test('processMutation', async () => {
   type Case = {
     name: string;
     existingRecord?: ClientRecord;
-    mutation: ClientMutation;
+    mutation: Mutation;
     expectedError?: string;
     expectedRecord?: ClientRecord;
     expectAppWrite: boolean;
@@ -36,48 +37,48 @@ test('processMutation', async () => {
   const cases: Case[] = [
     {
       name: 'clientID not found',
-      mutation: clientMutation('c1', 1),
+      mutation: mutation('c1', 1),
       expectedError: 'Error: Client c1 not found',
       expectAppWrite: false,
       expectVersionWrite: false,
     },
     {
       name: 'duplicate mutation',
-      existingRecord: clientRecord(null, 1),
-      mutation: clientMutation('c1', 1),
-      expectedRecord: clientRecord(null, 1),
+      existingRecord: clientRecord('cg1', null, 1, 1),
+      mutation: mutation('c1', 1),
+      expectedRecord: clientRecord('cg1', null, 1, 1),
       expectAppWrite: false,
       expectVersionWrite: false,
     },
     {
       name: 'ooo mutation',
-      existingRecord: clientRecord(null, 1),
-      mutation: clientMutation('c1', 3),
-      expectedRecord: clientRecord(null, 1),
+      existingRecord: clientRecord('cg1', null, 1, 1),
+      mutation: mutation('c1', 3),
+      expectedRecord: clientRecord('cg1', null, 1, 1),
       expectAppWrite: false,
       expectVersionWrite: false,
     },
     {
       name: 'unknown mutator',
-      existingRecord: clientRecord(null, 1),
-      mutation: clientMutation('c1', 2, 'unknown'),
-      expectedRecord: clientRecord(null, 2),
+      existingRecord: clientRecord('cg1', null, 1, 1),
+      mutation: mutation('c1', 2, 'unknown'),
+      expectedRecord: clientRecord('cg1', null, 2, version),
       expectAppWrite: false,
       expectVersionWrite: true,
     },
     {
       name: 'mutator throws',
-      existingRecord: clientRecord(null, 1),
-      mutation: clientMutation('c1', 2, 'throws'),
-      expectedRecord: clientRecord(null, 2),
+      existingRecord: clientRecord('cg1', null, 1, 1),
+      mutation: mutation('c1', 2, 'throws'),
+      expectedRecord: clientRecord('cg1', null, 2, version),
       expectAppWrite: false,
       expectVersionWrite: true,
     },
     {
       name: 'success',
-      existingRecord: clientRecord(null, 1),
-      mutation: clientMutation('c1', 2, 'foo'),
-      expectedRecord: clientRecord(null, 2),
+      existingRecord: clientRecord('cg1', null, 1, 1),
+      mutation: mutation('c1', 2, 'foo'),
+      expectedRecord: clientRecord('cg1', null, 2, version),
       expectAppWrite: true,
       expectVersionWrite: true,
     },
@@ -103,7 +104,6 @@ test('processMutation', async () => {
 
   for (const c of cases) {
     const storage = new DurableStorage(durable);
-    const version = 2;
     const {clientID} = c.mutation;
 
     if (c.existingRecord) {

@@ -3,13 +3,14 @@ import {jsonSchema} from './json.js';
 
 export const mutationSchema = s.type({
   id: s.number(),
+  clientID: s.string(),
   name: s.string(),
   args: jsonSchema,
   timestamp: s.number(),
 });
 
 export const pushBodySchema = s.type({
-  clientID: s.string(),
+  clientGroupID: s.string(),
   mutations: s.array(mutationSchema),
   pushVersion: s.number(),
   schemaVersion: s.string(),

@@ -11,14 +11,14 @@ test('handleClose deletes client map entry for client id if socket matches', () 
   const clientMap = new Map(
     Object.entries({
       [client1ID]: {
+        clientGroupID: 'cg1',
         socket: client1Socket,
-        pending: [],
         userData: {userID: 'userID1'},
         clockBehindByMs: 1000,
       },
       [client2ID]: {
+        clientGroupID: 'cg1',
         socket: client2Socket,
-        pending: [],
         userData: {userID: 'userID2'},
         clockBehindByMs: 2000,
       },
@@ -28,8 +28,8 @@ test('handleClose deletes client map entry for client id if socket matches', () 
   // was deleted
   expect(clientMap.get(client1ID)).toBeUndefined();
   expect(clientMap.get(client2ID)).toEqual({
+    clientGroupID: 'cg1',
     socket: client2Socket,
-    pending: [],
     userData: {userID: 'userID2'},
     clockBehindByMs: 2000,
   });
@@ -45,14 +45,14 @@ test('handleClose does not delete client map entry for client id if socket does 
   const clientMap = new Map(
     Object.entries({
       [client1ID]: {
+        clientGroupID: 'cg1',
         socket: client1Socket2,
-        pending: [],
         userData: {userID: 'userID1'},
         clockBehindByMs: 1000,
       },
       [client2ID]: {
+        clientGroupID: 'cg1',
         socket: client2Socket,
-        pending: [],
         userData: {userID: 'userID2'},
         clockBehindByMs: 2000,
       },
@@ -60,14 +60,14 @@ test('handleClose does not delete client map entry for client id if socket does 
   );
   handleClose(lc, clientMap, client1ID, client1Socket1);
   expect(clientMap.get(client1ID)).toEqual({
+    clientGroupID: 'cg1',
     socket: client1Socket2,
-    pending: [],
     userData: {userID: 'userID1'},
     clockBehindByMs: 1000,
   });
   expect(clientMap.get(client2ID)).toEqual({
+    clientGroupID: 'cg1',
     socket: client2Socket,
-    pending: [],
     userData: {userID: 'userID2'},
     clockBehindByMs: 2000,
   });

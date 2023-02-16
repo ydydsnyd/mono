@@ -1,9 +1,10 @@
 import {jest, beforeEach, afterEach} from '@jest/globals';
 import {LogContext, LogLevel, LogSink} from '@rocicorp/logger';
+import type {ClientRecord} from '../../src/types/client-record.js';
 import type {JSONType} from '../../src/protocol/json.js';
 import type {Mutation} from '../../src/protocol/push.js';
-import type {ClientMutation} from '../../src/types/client-mutation.js';
 import type {
+  ClientGroupID,
   ClientID,
   ClientState,
   Socket,
@@ -14,48 +15,44 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
+export function pendingMutationsEntry(
+  id: ClientGroupID,
+  ...mutations: Mutation[]
+): [ClientGroupID, Mutation[]] {
+  return [id, mutations];
+}
+
 export function client(
   id: ClientID,
   userID: string,
+  clientGroupID: ClientGroupID,
   socket: Socket = new Mocket(),
   clockBehindByMs = 1,
-  ...mutations: Mutation[]
 ): [ClientID, ClientState] {
   return [
     id,
     {
-      clockBehindByMs,
-      pending: mutations,
       socket,
       userData: {userID},
+      clientGroupID,
+      clockBehindByMs,
     },
   ];
 }
 
 export function mutation(
+  clientID: ClientID,
   id: number,
   name = 'foo',
   args: JSONType = [],
   timestamp = 1,
 ): Mutation {
   return {
+    clientID,
     id,
     name,
     args,
     timestamp,
-  };
-}
-
-export function clientMutation(
-  clientID: ClientID,
-  id: number,
-  name = 'foo',
-  args: JSONType = [],
-  timestamp = 1,
-): ClientMutation {
-  return {
-    clientID,
-    ...mutation(id, name, args, timestamp),
   };
 }
 
@@ -84,12 +81,16 @@ export class Mocket extends EventTarget implements Socket {
 }
 
 export function clientRecord(
+  clientGroupID: ClientGroupID,
   baseCookie: NullableVersion = null,
   lastMutationID = 1,
-) {
+  lastMutationIDVersion: NullableVersion = 1,
+): ClientRecord {
   return {
+    clientGroupID,
     baseCookie,
     lastMutationID,
+    lastMutationIDVersion,
   };
 }
 

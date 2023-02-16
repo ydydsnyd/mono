@@ -34,6 +34,9 @@ import {
   withBody,
 } from './router.js';
 import {addRequestIDFromHeadersOrRandomID} from './request-id.js';
+import {pullRequestSchema} from '../protocol/pull.js';
+import type {PendingMutationMap} from '../types/mutation.js';
+import {handlePull} from './pull.js';
 
 const roomIDKey = '/system/roomID';
 const deletedKey = '/system/deleted';
@@ -56,10 +59,12 @@ export const ROOM_ROUTES = {
   authConnections: '/api/auth/v0/connections',
   createRoom: '/createRoom',
   connect: '/connect',
+  pull: '/pull',
 } as const;
 
 export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   private readonly _clients: ClientMap = new Map();
+  private readonly _pendingMutations: PendingMutationMap = new Map();
   private readonly _lock = new Lock();
   private readonly _mutators: MutatorMap;
   private readonly _disconnectHandler: DisconnectHandler;
@@ -111,6 +116,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     this._router.register(ROOM_ROUTES.authConnections, this._authConnections);
     this._router.register(ROOM_ROUTES.createRoom, this._createRoom);
     this._router.register(ROOM_ROUTES.connect, this._connect);
+    this._router.register(ROOM_ROUTES.pull, this._pull);
   }
 
   private _requireAPIKey = <Context extends BaseContext, Resp>(
@@ -137,7 +143,6 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
           urlRoomID !== null &&
           urlRoomID !== roomID
         ) {
-          console.log('roomID mismatch', roomID, urlRoomID);
           this._lc.error?.(
             'roomID mismatch',
             'urlRoomID',
@@ -258,6 +263,19 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     return new Response(null, {status: 101, webSocket: clientWS});
   });
 
+  private _pull = post(
+    withBody(pullRequestSchema, async ctx => {
+      const {lc, body: pullRequest} = ctx;
+      lc.debug?.('handling mutation recovery pull', pullRequest);
+      const pullResponse = await this._lock.withLock(() =>
+        handlePull(this._storage, pullRequest),
+      );
+      const pullResponseJSONString = JSON.stringify(pullResponse);
+      lc.debug?.('pull response', pullResponseJSONString);
+      return new Response(pullResponseJSONString, {status: 200});
+    }),
+  );
+
   private _authInvalidateForRoom = post(
     this._requireAPIKey(
       withBody(invalidateForRoomRequestSchema, async ctx => {
@@ -325,10 +343,17 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     lc.debug?.('handling message', data, 'waiting for lock');
 
     try {
-      await this._lock.withLock(() => {
+      await this._lock.withLock(async () => {
         lc.debug?.('received lock');
-        handleMessage(lc, this._clients, clientID, data, ws, () =>
-          this._processUntilDone(lc),
+        await handleMessage(
+          lc,
+          this._storage,
+          this._clients,
+          this._pendingMutations,
+          clientID,
+          data,
+          ws,
+          () => this._processUntilDone(lc),
         );
       });
     } catch (e) {
@@ -362,7 +387,10 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
           break;
         }
       }
-      if (!hasPendingMutations(this._clients) && !hasDisconnectsToProcess) {
+      if (
+        !hasPendingMutations(this._pendingMutations) &&
+        !hasDisconnectsToProcess
+      ) {
         lc.debug?.('No pending mutations or disconnects to process, exiting');
         if (this._turnTimerID) {
           clearInterval(this._turnTimerID);
@@ -375,6 +403,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
         lc,
         this._storage,
         this._clients,
+        this._pendingMutations,
         this._mutators,
         this._disconnectHandler,
         Date.now(),
@@ -409,9 +438,9 @@ function addWebSocketIDToLogContext(lc: LogContext, url: string): LogContext {
   );
 }
 
-function hasPendingMutations(clients: ClientMap) {
-  for (const clientState of clients.values()) {
-    if (clientState.pending.length > 0) {
+function hasPendingMutations(pendingMutations: PendingMutationMap) {
+  for (const mutations of pendingMutations.values()) {
+    if (mutations.length > 0) {
       return true;
     }
   }

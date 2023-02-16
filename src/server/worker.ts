@@ -10,7 +10,11 @@ import {
 } from './router.js';
 import {randomID} from '../util/rand.js';
 import {createAuthAPIHeaders} from './auth-api-headers.js';
-import {AUTH_ROUTES} from './auth-do.js';
+import {
+  AUTH_ROUTES,
+  AUTH_ROUTES_AUTHED_BY_API_KEY,
+  AUTH_ROUTES_AUTHED_BY_AUTH_HANDLER,
+} from './auth-do.js';
 import {reportMetricsSchema} from '../types/report-metrics.js';
 import {
   DD_AUTH_HEADER_NAME,
@@ -50,11 +54,14 @@ function registerRoutes(router: WorkerRouter) {
   for (const [path, handler] of Object.entries(WORKER_ROUTES)) {
     router.register(path, handler);
   }
-  for (const pattern of Object.values(AUTH_ROUTES)) {
+  for (const pattern of Object.values(AUTH_ROUTES_AUTHED_BY_API_KEY)) {
     router.register(
       pattern,
       requireAPIKeyMatchesEnv((ctx, req) => sendToAuthDO(ctx, req)),
     );
+  }
+  for (const pattern of Object.values(AUTH_ROUTES_AUTHED_BY_AUTH_HANDLER)) {
+    router.register(pattern, sendToAuthDO);
   }
 }
 
@@ -290,5 +297,4 @@ export const REPORT_METRICS_PATH = '/api/metrics/v0/report';
 
 export const WORKER_ROUTES = {
   [REPORT_METRICS_PATH]: reportMetrics,
-  '/connect': sendToAuthDO,
 } as const;
