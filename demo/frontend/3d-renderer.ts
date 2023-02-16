@@ -14,11 +14,19 @@ import {
   HighlightLayer,
   ArcRotateCamera,
   Camera,
+  MeshBuilder,
 } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
-import {Color, Letter, Position} from '../shared/types';
+import type {
+  Color,
+  Letter,
+  Position,
+  Quaternion,
+  Vector,
+} from '../shared/types';
 import {letterMap} from '../shared/util';
-import {LETTERS} from '../shared/letters';
+import {LETTERS, LETTER_POSITIONS, LETTER_OFFSET} from '../shared/letters';
+import type {DebugRenderBuffers} from '@dimforge/rapier3d';
 
 const modelURL = '/alive.glb';
 
@@ -28,17 +36,8 @@ export type LetterInfo = {
   letter?: Letter;
 };
 
-const LETTER_OFFSET = 0;
 const ORTHO_SIZE_FACTOR = 0.03;
 const ORTHO_VERTICAL_POS = 0.128;
-
-export const LETTER_POSITIONS: Record<Letter, Position> = {
-  [Letter.A]: {x: 5.65465, y: 1.69821},
-  [Letter.L]: {x: 2.7806, y: 2.48276},
-  [Letter.I]: {x: 0.835768, y: 2.56859},
-  [Letter.V]: {x: -2.13617, y: 2.05105},
-  [Letter.E]: {x: -6.18972, y: 1.7763},
-};
 
 export const renderer = async (
   canvas: HTMLCanvasElement,
@@ -65,10 +64,12 @@ export const renderer = async (
     getTexturePosition,
     setRotation,
     setPosition,
+    setQuaternion,
     setScale,
     updateTexture,
     setGlowing,
     resizeCanvas,
+    updateDebug,
   } = await createScene(engine, textureCanvases);
   return {
     render: () => {
@@ -78,9 +79,11 @@ export const renderer = async (
     getTexturePosition,
     setRotation,
     setPosition,
+    setQuaternion,
     setScale,
     updateTexture,
     setGlowing,
+    updateDebug,
   };
 };
 
@@ -91,13 +94,15 @@ export const createScene = async (
   scene: Scene;
   getTexturePosition: (
     point: Position,
-  ) => [Letter | undefined, Position | undefined];
+  ) => [Letter | undefined, Position | undefined, Vector | undefined];
   setRotation: (letter: Letter, beta: number) => void;
   setPosition: (letter: Letter, position: Position) => void;
+  setQuaternion: (letter: Letter, quaternion: Quaternion) => void;
   setScale: (letter: Letter, scale: number) => void;
   updateTexture: (letter: Letter) => void;
   setGlowing: (letter: Letter, glow: boolean, color?: Color) => void;
   resizeCanvas: () => void;
+  updateDebug: (debug: DebugRenderBuffers | null) => void;
 }> => {
   const scene = new Scene(engine);
   // Don't allow babylon to handle mouse events. This both has a mild perf
@@ -168,17 +173,21 @@ export const createScene = async (
     const {width: scaleX, height: scaleY} = sceneScaleFactor();
     const origin = LETTER_POSITIONS[letter];
     meshes[letter].position = new Vector3(
-      origin.x - position.x * scaleX,
+      // TODO: x value is reversed in babylon for some reason
+      -origin.x - position.x * scaleX,
       origin.y - position.y * scaleY,
       LETTER_OFFSET,
     );
   };
-  const scaleFactor = 1;
   const setScale = (letter: Letter, scale: number) => {
-    meshes[letter].scaling = new Vector3(
-      scale * scaleFactor,
-      scale * scaleFactor,
-      scale * scaleFactor,
+    meshes[letter].scaling = new Vector3(scale, scale, scale);
+  };
+  const setQuaternion = (letter: Letter, quaternion: Quaternion) => {
+    meshes[letter].rotationQuaternion?.set(
+      quaternion.x,
+      quaternion.y,
+      quaternion.z,
+      quaternion.w,
     );
   };
   LETTERS.forEach(letter => {
@@ -241,23 +250,82 @@ export const createScene = async (
   // Make clear totally transparent - by default it'll be some scene background color.
   scene.clearColor = new Color4(0, 0, 0, 0);
 
+  const letterMeshNames = new Set(LETTERS);
   // Expose a method for finding the letter and position of an arbitrary point.
   const getTexturePosition = (
     cursor: Position,
-  ): [Letter | undefined, Position | undefined] => {
-    const pickInfo = scene.pick(cursor.x, cursor.y);
+  ): [Letter | undefined, Position | undefined, Vector | undefined] => {
+    const pickInfo = scene.pick(cursor.x, cursor.y, mesh =>
+      letterMeshNames.has(mesh.name as Letter),
+    );
     const {x, y} = pickInfo.getTextureCoordinates() || {x: -1, y: -1};
     const letter = pickInfo.pickedMesh?.name as Letter | undefined;
-    if (letter && LETTERS.includes(letter)) {
+    if (letter) {
       return [
         letter,
         {
           x,
           y: 1 - y, // Y is inverted in the 3D space
         },
+        pickInfo.pickedPoint!,
       ];
     }
-    return [letter, undefined];
+    return [undefined, undefined, undefined];
+  };
+
+  let lines = MeshBuilder.CreateLines(
+    'debug-lines',
+    {
+      points: [],
+      updatable: true,
+    },
+    scene,
+  );
+  const updateDebug = (debug: DebugRenderBuffers | null) => {
+    if (!debug) {
+      lines.dispose();
+      return;
+    }
+    const points: Vector3[] = [];
+    let buf = new Vector3();
+    debug.vertices.forEach((v, idx) => {
+      const lIdx = idx % 3;
+      if (lIdx === 0) {
+        buf.x = v;
+      } else if (lIdx === 1) {
+        buf.y = v;
+      } else if (lIdx === 2) {
+        buf.z = v;
+        points.push(buf);
+        buf = new Vector3();
+      }
+    });
+    const colors: Color4[] = [];
+    let cbuf = new Color4();
+    debug.colors.forEach((v, idx) => {
+      const lIdx = idx % 4;
+      if (lIdx === 0) {
+        cbuf.r = v;
+      } else if (lIdx === 1) {
+        cbuf.g = v;
+      } else if (lIdx === 2) {
+        cbuf.b = v;
+      } else if (lIdx === 3) {
+        cbuf.a = v;
+        colors.push(cbuf);
+        cbuf = new Color4();
+      }
+    });
+    lines.dispose();
+    lines = MeshBuilder.CreateLines(
+      'debug-lines',
+      {
+        points,
+        updatable: true,
+        colors,
+      },
+      scene,
+    );
   };
 
   return {
@@ -266,8 +334,10 @@ export const createScene = async (
     setRotation,
     setScale,
     setPosition,
+    setQuaternion,
     updateTexture,
     setGlowing,
     resizeCanvas,
+    updateDebug,
   };
 };

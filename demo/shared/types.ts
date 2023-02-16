@@ -12,6 +12,8 @@ export type State = {
   positions: Record<Letter, Position>;
   sequences: Record<Letter, number>;
   owners: Record<Letter, ActorID | undefined>;
+  impulses: Record<Letter, Impulse[]>;
+  physics: Physics | undefined;
 };
 
 export type ActorID = string;
@@ -60,6 +62,24 @@ export type LetterOwner = {
   actorId: ActorID;
 };
 
+export type Letter3DPosition = {
+  position: Vector;
+  rotation: Quaternion;
+};
+
+export type Impulse = Vector & {
+  u: ActorID;
+  s: number; // step
+};
+
+export type LetterHandles = Record<Letter, number>;
+
+export type Physics = {
+  state: string; // b64 encoded
+  step: number;
+  handles: LetterHandles;
+};
+
 export enum Letter {
   A = 'a',
   L = 'l',
@@ -105,9 +125,13 @@ export type Size = {
   height: number;
 };
 
-export interface Vector extends Position {
+export type Quaternion = Vector & {
+  w: number;
+};
+
+export type Vector = Position & {
   z: number;
-}
+};
 
 // In this app, all position values are between 0 and 1, and expected to be
 // multiplied by window.innerWidth/window.innerHeight when used in rendering

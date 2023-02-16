@@ -3,12 +3,14 @@ import {letterMap} from '../shared/util';
 import {
   Actor,
   Cursor,
+  Impulse,
   Letter,
   LetterCache,
   LetterOwner,
   LetterPosition,
   LetterRotation,
   LetterScale,
+  Physics,
   Point,
   State,
   Tool,
@@ -145,9 +147,19 @@ export const initialize = async (roomID: string, userID: string) => {
           points[letter] = letterPoints;
         }),
       ]);
+      const impulses: State['impulses'] = letterMap(() => []);
+      await Promise.all([
+        ...LETTERS.map(async letter => {
+          const letterImpulses = (await tx
+            .scan({prefix: `impulse/${letter}`})
+            .toArray()) as Impulse[];
+          impulses[letter] = letterImpulses;
+        }),
+      ]);
       return {
         ...localState,
         points,
+        impulses,
       };
     });
 
@@ -178,11 +190,13 @@ const stateInitializer =
     const cursorList = (await tx
       .scan({prefix: 'cursor/'})
       .toArray()) as Cursor[];
+    const physics = (await tx.get('physics-origin')) as Physics | undefined;
     const cursors = cursorList.reduce((cursors, cursor) => {
       cursors[cursor.actorId] = cursor;
       return cursors;
     }, {} as State['cursors']);
     const points: State['points'] = letterMap(() => []);
+    const impulses: State['impulses'] = letterMap(() => []);
     const rawCaches: State['rawCaches'] = letterMap(() => '');
     const positions: State['positions'] = letterMap(() => ({
       x: 0,
@@ -200,6 +214,14 @@ const stateInitializer =
           })
           .toArray()) as Point[];
         points[letter] = letterPoints;
+      }),
+      ...LETTERS.map(async letter => {
+        const letterImpulses = (await tx
+          .scan({
+            prefix: `impulse/${letter}/`,
+          })
+          .toArray()) as Impulse[];
+        impulses[letter] = letterImpulses;
       }),
       ...LETTERS.map(async letter => {
         const cacheData = (await tx.get(`cache/${letter}`)) as
@@ -253,5 +275,7 @@ const stateInitializer =
       sequences,
       tools,
       owners,
+      impulses,
+      physics,
     };
   };

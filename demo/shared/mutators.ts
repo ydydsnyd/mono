@@ -1,8 +1,10 @@
 import type {WriteTransaction} from '@rocicorp/reflect';
+import rapier3d from '@dimforge/rapier3d';
 import {guaranteeBotmaster} from '../frontend/botmaster';
 import {
   COLOR_PALATE,
   COLOR_PALATE_END,
+  MAX_RENDERED_STEPS,
   MAX_SCALE,
   MIN_SCALE,
   POINT_AGE_MAX,
@@ -13,22 +15,27 @@ import {
   SPLATTER_MIN_SIZE,
 } from './constants';
 import {getCache, updateCache} from './renderer';
+import {Rapier3D, getPhysics, impulseId, impulsesToSteps} from './physics';
 import type {
   Actor,
   ActorID,
   Color,
   ColorPalate,
   Cursor,
+  Impulse,
   Letter,
   LetterCache,
   LetterOwner,
+  Physics,
   Point,
   Position,
   Rotation,
   Splatter,
+  Vector,
 } from './types';
 import {Tool} from './types';
-import {randomWithSeed} from './util';
+import {asyncLetterMap, randomWithSeed} from './util';
+import {encode} from './uint82b64';
 
 export type M = typeof mutators;
 
@@ -38,9 +45,17 @@ export enum Env {
 }
 let env = Env.CLIENT;
 let _initRenderer: (() => Promise<void>) | undefined;
-export const setEnv = (e: Env, initRenderer: () => Promise<void>) => {
+let getPhysicsEngine = (): Promise<Rapier3D> => Promise.resolve(rapier3d);
+export const setEnv = (
+  e: Env,
+  initRenderer: () => Promise<void>,
+  physicsEngine?: () => Promise<Rapier3D>,
+) => {
   env = e;
   _initRenderer = initRenderer;
+  if (physicsEngine) {
+    getPhysicsEngine = physicsEngine;
+  }
 };
 
 // Seeds are used for creating pseudo-random values that are stable across
@@ -206,26 +221,30 @@ export const mutators = {
       letter,
       actorId,
       colorIndex,
-      position,
+      texturePosition,
       scale,
       ts,
       sequence,
       group,
+      step,
+      hitPosition,
     }: {
       letter: Letter;
       actorId: string;
       colorIndex: number;
-      position: Position;
+      texturePosition: Position;
       scale: number;
       ts: number;
       sequence: number;
       group: number;
+      step: number;
+      hitPosition: Vector;
     },
   ) => {
     const key = `point/${letter}/${ts}/${actorId}`;
     const point: Point = {
-      x: position.x,
-      y: position.y,
+      x: texturePosition.x,
+      y: texturePosition.y,
       u: actorId,
       t: ts,
       c: colorIndex,
@@ -243,6 +262,71 @@ export const mutators = {
       if (currentSeq !== undefined && sequence !== currentSeq) {
         return;
       }
+
+      // on the server, also add an impulse for this point. We don't add impulses on
+      // the client because the client mutations are optimistic, and we will often be
+      // "in the future" according to other clients.
+
+      // To make sure that we don't add impulses that we can no longer render, we need an origin.
+      const origin = (await tx.get('physics-origin')) as unknown as
+        | Physics
+        | undefined;
+
+      // Make sure that the client isn't in too distant the past. If the step we drew
+      // on was before the origin, we don't add an impulse, since the clients only
+      // render since the origin step.
+      if (!origin || step >= origin.step) {
+        const impulse: Impulse = {
+          u: actorId,
+          s: step,
+          ...hitPosition,
+        };
+        await tx.put(`impulse/${letter}/${impulseId(impulse)}`, impulse);
+      }
+
+      // In addition, we have to keep our renderable set fairly reasonable. If we have
+      // too many steps, flatten them and reset the origin.
+      const renderedSteps = origin ? step - origin.step : step;
+      if (renderedSteps > MAX_RENDERED_STEPS || !origin) {
+        const impulses = await asyncLetterMap<Impulse[]>(async letter => {
+          const impulses = await tx.scan({
+            prefix: `impulse/${letter}/`,
+          });
+          return (await impulses.toArray()) as Impulse[];
+        });
+
+        const physicsEngine = await getPhysicsEngine();
+        const [_, world, handles] = getPhysics(
+          physicsEngine,
+          origin,
+          impulses,
+          // Render a step in the past, otherwise local physics will jerk.
+          Math.max(step - MAX_RENDERED_STEPS, 0),
+        );
+        console.log(
+          step,
+          'SNAPSHOTTING AT ',
+          Math.max(step - MAX_RENDERED_STEPS, 0),
+        );
+        const newOrigin: Physics = {
+          state: encode(world.takeSnapshot()),
+          step,
+          handles,
+        };
+        await tx.put('origin', newOrigin);
+        // Remove impulses that are integrated into the above snapshot
+        const impulseSteps = impulsesToSteps(impulses);
+        const keys = Object.keys(impulseSteps);
+        for (const k of keys) {
+          if (Number(k) >= step) {
+            break;
+          }
+          for (const i of impulseSteps[Number(k)]) {
+            await tx.del(`impulse/${i.letter}/${impulseId(i)}`);
+          }
+        }
+      }
+
       // Get our current colors
       const colors: ColorPalate = [
         [COLOR_PALATE[0], COLOR_PALATE_END[0]],

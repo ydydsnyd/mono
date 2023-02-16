@@ -1,3 +1,4 @@
+import rapier3d from '@dimforge/rapier3d';
 import {nanoid} from 'nanoid';
 import {initialize} from './data';
 import {renderer as renderer3D} from './3d-renderer';
@@ -12,6 +13,7 @@ import {
   CLIENT_CACHE_INTERVAL,
   POINT_MAX_MS,
   SCALE_SPEED,
+  STEP_RENDER_DELAY,
 } from '../shared/constants';
 import {
   ColorPalate,
@@ -32,6 +34,7 @@ import {addDragHandlers, Control, ControlTools} from './dragging';
 import {initTools, toolMap} from './tools';
 import {initRoom} from './init-room';
 import {getUserLocation} from './location';
+import {getPhysics} from '../shared/physics';
 
 type LetterCanvases = Record<Letter, HTMLCanvasElement>;
 
@@ -60,6 +63,7 @@ export const init = async () => {
 
   const debug: Debug = {fps: 60, points: 0};
   const renderPointsIndex = letterMap(_ => 0);
+  let physicsStep = -1;
 
   // Canvases
   const canvas = document.getElementById('canvas3D') as HTMLCanvasElement;
@@ -107,6 +111,8 @@ export const init = async () => {
     rotations,
     sequences,
     tools,
+    physics,
+    impulses,
   } = await getState();
 
   // Tools
@@ -125,9 +131,11 @@ export const init = async () => {
     resizeCanvas: resize3DCanvas,
     setRotation,
     setPosition,
+    setQuaternion,
     setScale,
     updateTexture,
     setGlowing,
+    updateDebug,
   } = await renderer3D(canvas, textures);
   // Initialize positions
   LETTERS.forEach(letter => {
@@ -226,12 +234,13 @@ export const init = async () => {
       rotations,
       sequences,
       tools,
+      physics,
+      impulses,
     } = await getState());
     activeUserCount.innerHTML = Object.keys(actors).length + '';
     for (const [_, cursor] of Object.entries(cursors)) {
       const actor = must(actors[cursor.actorId]);
-      // TODO: re-enable bots
-      if (actor.id !== actorId /*&& !(bm.isMe && actor.isBot)*/) {
+      if (actor.id !== actorId) {
         continue;
       }
       const position = scalePosition(cursor, scaleFactor);
@@ -258,8 +267,9 @@ export const init = async () => {
           const colorIndex = actors[actor.id]!.colorIndex;
           let isPainting = false;
           // These have to iterate in order of z-index
-          const [letter, texturePosition] = getTexturePosition(position);
-          if (letter) {
+          const [letter, texturePosition, hitPosition] =
+            getTexturePosition(position);
+          if (letter && texturePosition && hitPosition) {
             isPainting = true;
             // When we enter a new letter, update our current group. Since these groups are
             // used to organize the points, this will make sure that the last person to
@@ -271,13 +281,15 @@ export const init = async () => {
             addPoint({
               letter,
               actorId: actor.id,
-              position: texturePosition!,
+              texturePosition,
               scale: 1,
               // scale: scales[letter],
               ts: now(),
               colorIndex,
               sequence: sequences[letter],
               group: currentGroup,
+              hitPosition,
+              step: physicsStep,
             });
           }
           if (!isPainting) {
@@ -411,42 +423,6 @@ export const init = async () => {
     return pointer;
   };
 
-  // TODO: re-enable bots
-  // const bm = new Botmaster(
-  //   reflectClient,
-  //   {
-  //     getRandomPositionOnLetter(letter) {
-  //       const bb = canvases[letter].getBoundingClientRect();
-  //       let pos: Position;
-  //       while (true) {
-  //         pos = {x: randInt(0, bb.width), y: randInt(0, bb.height)};
-  //         if (getTexturePosition(letter, pos)) {
-  //           break;
-  //         }
-  //       }
-  //       pos.x += bb.x;
-  //       pos.y += bb.y;
-  //       console.log('position for', letter, pos);
-  //       return downscale(pos);
-  //     },
-  //     getBotArea() {
-  //       const container = getContainer();
-  //       const bb = container.getBoundingClientRect();
-  //       const bb2 = {
-  //         top: bb.top - 100,
-  //         left: bb.left - 100,
-  //         right: bb.right + 100,
-  //         bottom: bb.bottom + 100,
-  //       };
-  //       return {
-  //         tl: downscale({x: bb2.left, y: bb2.top}),
-  //         br: downscale({x: bb2.right, y: bb2.bottom}),
-  //       };
-  //     },
-  //   },
-  //   !window.location.search.includes('bots=1'),
-  // );
-
   // When the window is resized, recalculate letter and cursor positions
   const resizeViewport = () => {
     const scaleFactor = getScaleFactor();
@@ -460,6 +436,33 @@ export const init = async () => {
   window.addEventListener('resize', resizeViewport);
   resizeViewport();
 
+  // Set up physics rendering
+  const updateStep = (step: number) => {
+    const [positions3d, world] = getPhysics(rapier3d, physics, impulses, step);
+    LETTERS.forEach(letter => {
+      const position3d = positions3d[letter];
+      if (position3d) {
+        setQuaternion(letter, position3d.rotation);
+        setPosition(letter, position3d.position);
+      }
+    });
+    updateDebug(world.debugRender());
+  };
+
+  const renderPhysics = () => {
+    const originStep = physics?.step || 0;
+    const targetStep = Math.max(originStep - STEP_RENDER_DELAY, 0);
+    // if we're behind origin minus delay, skip steps to accelerate us there.
+    if (physicsStep < targetStep) {
+      physicsStep += targetStep - physicsStep;
+    } else if (physicsStep > originStep) {
+      physicsStep += 0.5;
+    } else {
+      physicsStep += 1;
+    }
+    updateStep(Math.floor(physicsStep));
+  };
+
   // Render our cursors and canvases at "animation speed", usually 60fps
   startRenderLoop(async () => {
     await renderCursors();
@@ -468,6 +471,7 @@ export const init = async () => {
     // Update textures and render the 3D scene
     LETTERS.forEach(letter => updateTexture(letter));
     render3D();
+    renderPhysics();
     // Then perform actions
     performActions();
   }, debug);

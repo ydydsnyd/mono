@@ -4,7 +4,7 @@ import {
   Letter as RendererLetter,
   update_cache,
 } from '../../renderer/pkg/renderer';
-import {decodePngData, encodePngData} from './png-data';
+import {encode, decode} from './uint82b64';
 import {points2Render} from './points2wasm';
 import {ColorPalate, Letter, Point} from './types';
 import {now} from './util';
@@ -44,7 +44,7 @@ export const addPointsToCache = (
 };
 
 export const updateCache = (letter: Letter, png: string) => {
-  update_cache(getRendererLetter(letter), decodePngData(png));
+  update_cache(getRendererLetter(letter), decode(png));
 };
 
 export const getCache = (
@@ -52,7 +52,7 @@ export const getCache = (
   points: Point[],
   colors: ColorPalate,
 ) => {
-  return encodePngData(
+  return encode(
     draw_buffer_png(
       getRendererLetter(letter),
       now(),

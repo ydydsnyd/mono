@@ -23,6 +23,10 @@ export const POINT_MAX_MS = 30;
 
 export const CLIENT_CACHE_INTERVAL = 1000;
 
+// Allow rewriting up to 400 frames of physics in the past
+export const MAX_RENDERED_STEPS = 400;
+export const STEP_RENDER_DELAY = 25; // 400ms @ 60fps
+
 // The only data that changes on an actor is the loction, so update them at a
 // lower frequency than cursors.
 export const ACTOR_UPDATE_INTERVAL = 1000;
