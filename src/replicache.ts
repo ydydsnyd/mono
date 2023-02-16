@@ -26,7 +26,7 @@ import {
   WatchCallbackForOptions,
   WatchCallback,
 } from './subscriptions.js';
-import {IDBStore, type CreateStore} from './kv/mod.js';
+import type {CreateStore} from './kv/mod.js';
 import * as dag from './dag/mod.js';
 import * as db from './db/mod.js';
 import * as sync from './sync/mod.js';
@@ -66,6 +66,7 @@ import {
 } from './error-responses.js';
 import {assertLocalCommitDD31} from './db/commit.js';
 import {getDefaultPusher, isDefaultPusher} from './get-default-pusher.js';
+import {newIDBStoreWithMemFallback} from './kv/idb-store-with-mem-fallback.js';
 
 export type BeginPullResult = {
   requestID: string;
@@ -468,7 +469,8 @@ export class Replicache<MD extends MutatorDefs = {}> {
       this._lc,
     );
 
-    let createStore: CreateStore = name => new IDBStore(name);
+    let createStore: CreateStore = name =>
+      newIDBStoreWithMemFallback(this._lc, name);
     let perKVStore;
     if (experimentalCreateKVStore) {
       createStore = experimentalCreateKVStore;
