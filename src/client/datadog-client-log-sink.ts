@@ -8,7 +8,7 @@ export type DatadogClientLogSinkOptions = {
 };
 
 /**
- * An implementation of [[LogSink]] that sends logs to Datadog.
+ * An implementation of {@link LogSink}} that sends logs to Datadog.
  */
 export class DatadogClientLogSink implements LogSink {
   constructor(opts: DatadogClientLogSinkOptions) {
