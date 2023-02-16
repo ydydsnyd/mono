@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1676199286119,
+  "lastUpdate": 1676534181355,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -36041,6 +36041,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27607,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a24ae1e9d1ea3a75c5eee893d5abd18da10fcbda",
+          "message": "feat: Fallback to MemStore for Firefox private browsing (#533)\n\nFirefox private browsing mode does not allow IndexedDB. This\r\nchange makes Replicache fall back to MemStore in that case.\r\n\r\nFixes https://github.com/rocicorp/replicache-internal/issues/433\r\nFixes https://github.com/rocicorp/replicache/issues/1029",
+          "timestamp": "2023-02-16T08:55:12+01:00",
+          "tree_id": "3f96999241ee3ca1debddb6ec8cd2ee1edd9ff90",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/a24ae1e9d1ea3a75c5eee893d5abd18da10fcbda"
+        },
+        "date": 1676534172813,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 246891,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 41107,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 245686,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 40730,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 99360,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27823,
             "unit": "bytes"
           }
         ]
