@@ -15,6 +15,7 @@ import {
   ArcRotateCamera,
   Camera,
   MeshBuilder,
+  Quaternion,
 } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import type {
