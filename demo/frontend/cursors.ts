@@ -13,12 +13,10 @@ export const cursorRenderer = (
   actorId: string,
   getState: () => {actors: State['actors']; cursors: State['cursors']},
   getScaleFactor: () => Size,
-  onDetectHoverDevice: (canHover: boolean) => void,
   onUpdateCursor: (localCursor: Cursor) => void,
 ) => {
   // Set up local state
   const cursorDivs: Map<ActorID, HTMLDivElement> = new Map();
-  let canHover: boolean = false;
   const getCursorDiv = async (cursor: Cursor) => {
     // Make sure we have a div
     let cursorDiv = cursorDivs.get(cursor.actorId);
@@ -61,19 +59,11 @@ export const cursorRenderer = (
   };
   // Cursor for mice
   const updateCursor = (e: MouseEvent) => {
-    if (!canHover) {
-      canHover = true;
-      onDetectHoverDevice(canHover);
-    }
     updateCursorPosition({x: e.clientX, y: e.clientY});
   };
   mouseElement.addEventListener('mousemove', updateCursor);
   // Cursor for touches
   const touchMoved = (e: TouchEvent) => {
-    if (canHover) {
-      canHover = false;
-      onDetectHoverDevice(canHover);
-    }
     updateCursorPosition({x: e.touches[0].clientX, y: e.touches[0].clientY});
   };
   mouseElement.addEventListener('touchmove', touchMoved);

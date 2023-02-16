@@ -2,7 +2,6 @@ import {createReflectServer} from '@rocicorp/reflect-server';
 import {Env, mutators, setEnv} from '../shared/mutators.js';
 import renderModule from '../../renderer/pkg/renderer_bg.wasm';
 import initRenderer from '../../renderer/pkg';
-import {clearBotmaster} from '../frontend/botmaster';
 
 setEnv(Env.SERVER, async () => {
   await initRenderer(renderModule);
@@ -32,7 +31,6 @@ const {worker, RoomDO, AuthDO} = createReflectServer({
   authHandler,
   disconnectHandler: async write => {
     await mutators.removeActor(write, write.clientID);
-    await clearBotmaster(write);
   },
   getLogLevel: () => 'info',
   allowUnconfirmedWrites: true,

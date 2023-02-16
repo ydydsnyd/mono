@@ -1,12 +1,9 @@
 import type {WriteTransaction} from '@rocicorp/reflect';
 import rapier3d from '@dimforge/rapier3d';
-import {guaranteeBotmaster} from '../frontend/botmaster';
 import {
   COLOR_PALATE,
   COLOR_PALATE_END,
   MAX_RENDERED_STEPS,
-  MAX_SCALE,
-  MIN_SCALE,
   POINT_AGE_MAX,
   POINT_CLEANUP_MIN,
   SPLATTER_COUNT_MAX,
@@ -25,15 +22,12 @@ import type {
   Impulse,
   Letter,
   LetterCache,
-  LetterOwner,
   Physics,
   Point,
   Position,
-  Rotation,
   Splatter,
   Vector,
 } from './types';
-import {Tool} from './types';
 import {asyncLetterMap, randomWithSeed} from './util';
 import {encode} from './uint82b64';
 
@@ -102,12 +96,6 @@ export const mutators = {
   updateCursor: async (tx: WriteTransaction, cursor: Cursor) => {
     await tx.put(`cursor/${cursor.actorId}`, cursor);
   },
-  switchToTool: async (
-    tx: WriteTransaction,
-    {actorId, tool}: {actorId: string; tool: Tool},
-  ) => {
-    await tx.put(`tool/${actorId}`, tool);
-  },
   removeActor: async (tx: WriteTransaction, actorId: ActorID) => {
     await tx.del(`actor/${actorId}`);
     await tx.del(`cursor/${actorId}`);
@@ -145,7 +133,6 @@ export const mutators = {
       isBot: Boolean(isBot),
     };
     await tx.put(key, actor);
-    await tx.put(`tool/${actor.id}`, Tool.PAINT);
   },
   updateActorLocation: async (
     tx: WriteTransaction,
@@ -159,61 +146,6 @@ export const mutators = {
         location,
       });
     }
-  },
-  updateLetterScale: async (
-    tx: WriteTransaction,
-    {letter, scale}: {letter: Letter; scale: number},
-  ) => {
-    scale = Math.max(Math.min(scale, MAX_SCALE), MIN_SCALE);
-    await tx.put(`scale/${letter}`, {letter, scale});
-  },
-  updateLetterRotation: async (
-    tx: WriteTransaction,
-    {letter, rotation}: {letter: Letter; rotation: Rotation},
-  ) => {
-    await tx.put(`rotation/${letter}`, {letter, rotation});
-  },
-  updateLetterPosition: async (
-    tx: WriteTransaction,
-    {letter, position}: {letter: Letter; position: Position},
-  ) => {
-    await tx.put(`position/${letter}`, {
-      letter,
-      position,
-    });
-  },
-  takeOwner: async (
-    tx: WriteTransaction,
-    {letter, actorId}: {letter: Letter; actorId: ActorID},
-  ) => {
-    const owner = (await tx.get(`owner/${letter}`)) as LetterOwner;
-    if (owner && owner.actorId !== actorId) {
-      // Already owned, reject
-      return;
-    }
-    await tx.put(`owner/${letter}`, {letter, actorId});
-  },
-  freeOwner: async (
-    tx: WriteTransaction,
-    {letter, actorId}: {letter: Letter; actorId: ActorID},
-  ) => {
-    const owner = (await tx.get(`owner/${letter}`)) as LetterOwner;
-    if (!owner || owner.actorId !== actorId) {
-      // Not owned by us or not already freed
-      return;
-    }
-    await tx.del(`owner/${letter}`);
-  },
-  Owner: async (
-    tx: WriteTransaction,
-    {letter, actorId}: {letter: Letter; actorId: ActorID},
-  ) => {
-    const currentOwner = await tx.get(`owner/${letter}`);
-    if (currentOwner && currentOwner !== actorId) {
-      // Already owned, reject
-      return;
-    }
-    await tx.put(`owner/${letter}`, actorId);
   },
   addPoint: async (
     tx: WriteTransaction,
@@ -376,12 +308,6 @@ export const mutators = {
           ),
         );
       }
-    }
-  },
-
-  guaranteeBotmaster: async (tx: WriteTransaction) => {
-    if (env === Env.SERVER) {
-      await guaranteeBotmaster(tx);
     }
   },
 

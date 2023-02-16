@@ -1,19 +1,14 @@
 import {Reflect, ReadTransaction} from '@rocicorp/reflect';
 import {letterMap} from '../shared/util';
-import {
+import type {
   Actor,
   Cursor,
   Impulse,
   Letter,
   LetterCache,
-  LetterOwner,
-  LetterPosition,
-  LetterRotation,
-  LetterScale,
   Physics,
   Point,
   State,
-  Tool,
 } from '../shared/types';
 import {mutators, M} from '../shared/mutators';
 import {LETTERS} from '../shared/letters';
@@ -76,36 +71,12 @@ export const initialize = async (roomID: string, userID: string) => {
             localState.actors[actor.id] = actor;
           }
           break;
-        case 'tool':
-          if (isChangeDiff(diff) || isAddDiff(diff)) {
-            const actorId = keyParts[1];
-            localState.tools[actorId] = getData<Tool>(diff);
-          }
-          break;
         case 'cursor':
           const cursor = getData<Cursor>(diff);
           if (isDeleteDiff(diff)) {
             delete localState.cursors[cursor.actorId];
           } else {
             localState.cursors[cursor.actorId] = cursor;
-          }
-          break;
-        case 'position':
-          if (isChangeDiff(diff) || isAddDiff(diff)) {
-            const pos = getData<LetterPosition>(diff);
-            localState.positions[pos.letter] = pos.position;
-          }
-          break;
-        case 'scale':
-          if (isChangeDiff(diff) || isAddDiff(diff)) {
-            const pos = getData<LetterScale>(diff);
-            localState.scales[pos.letter] = pos.scale;
-          }
-          break;
-        case 'rotation':
-          if (isChangeDiff(diff) || isAddDiff(diff)) {
-            const rot = getData<LetterRotation>(diff);
-            localState.rotations[rot.letter] = rot.rotation;
           }
           break;
         case 'cache':
@@ -116,15 +87,6 @@ export const initialize = async (roomID: string, userID: string) => {
             updateCache(letter, cache.cache);
           }
           break;
-        case 'owner': {
-          const letter = keyParts[1] as Letter;
-          if (isChangeDiff(diff) || isAddDiff(diff)) {
-            const data = getData<LetterOwner>(diff);
-            localState.owners[letter] = data.actorId;
-          } else if (isDeleteDiff(diff)) {
-            localState.owners[letter] = undefined;
-          }
-        }
       }
       const handlers = listeners.get(keyParts[0]);
       if (handlers) {
@@ -180,13 +142,6 @@ const stateInitializer =
       actors[actor.id] = actor;
       return actors;
     }, {} as State['actors']);
-    const tools = actorList.reduce((actors, actor) => {
-      actors[actor.id] = Tool.PAINT;
-      return actors;
-    }, {} as State['tools']);
-    // Proactively create our local tool since we won't be in the actors list yet
-    tools[userID] =
-      ((await tx.get(`tool/${userID}`)) as Tool | undefined) || Tool.PAINT;
     const cursorList = (await tx
       .scan({prefix: 'cursor/'})
       .toArray()) as Cursor[];
@@ -198,14 +153,7 @@ const stateInitializer =
     const points: State['points'] = letterMap(() => []);
     const impulses: State['impulses'] = letterMap(() => []);
     const rawCaches: State['rawCaches'] = letterMap(() => '');
-    const positions: State['positions'] = letterMap(() => ({
-      x: 0,
-      y: 0,
-    }));
-    const scales: State['scales'] = letterMap(() => 1);
-    const rotations: State['rotations'] = letterMap(() => 0);
     const sequences: State['sequences'] = letterMap(() => -1);
-    const owners: State['owners'] = letterMap(() => undefined);
     await Promise.all([
       ...LETTERS.map(async letter => {
         const letterPoints = (await tx
@@ -233,34 +181,7 @@ const stateInitializer =
         }
       }),
       ...LETTERS.map(async letter => {
-        const positionData = (await tx.get(`position/${letter}`)) as
-          | LetterPosition
-          | undefined;
-        if (positionData) {
-          positions[letter] = positionData.position;
-        }
-      }),
-      ...LETTERS.map(async letter => {
-        const positionData = (await tx.get(`rotation/${letter}`)) as
-          | LetterRotation
-          | undefined;
-        if (positionData) {
-          rotations[letter] = positionData.rotation;
-        }
-      }),
-      ...LETTERS.map(async letter => {
-        const scaleData = (await tx.get(`scale/${letter}`)) as
-          | LetterScale
-          | undefined;
-        scales[letter] = scaleData?.scale || 1;
-      }),
-      ...LETTERS.map(async letter => {
         sequences[letter] = ((await tx.get(`seq/${letter}`)) as number) || 0;
-      }),
-      ...LETTERS.map(async letter => {
-        const ownerData =
-          ((await tx.get(`owner/${letter}`)) as LetterOwner) || undefined;
-        owners[letter] = ownerData && ownerData.actorId;
       }),
     ]);
     return {
@@ -269,12 +190,7 @@ const stateInitializer =
       cursors,
       points,
       rawCaches,
-      positions,
-      scales,
-      rotations,
       sequences,
-      tools,
-      owners,
       impulses,
       physics,
     };

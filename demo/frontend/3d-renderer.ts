@@ -11,22 +11,14 @@ import {
   PBRMaterial,
   CubeTexture,
   Mesh,
-  HighlightLayer,
   ArcRotateCamera,
   Camera,
   MeshBuilder,
-  Quaternion,
 } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
-import type {
-  Color,
-  Letter,
-  Position,
-  Quaternion,
-  Vector,
-} from '../shared/types';
+import type {Letter, Letter3DPosition, Position, Vector} from '../shared/types';
 import {letterMap} from '../shared/util';
-import {LETTERS, LETTER_POSITIONS, LETTER_OFFSET} from '../shared/letters';
+import {LETTERS} from '../shared/letters';
 import type {DebugRenderBuffers} from '@dimforge/rapier3d';
 
 const modelURL = '/alive.glb';
@@ -63,12 +55,8 @@ export const renderer = async (
   const {
     scene,
     getTexturePosition,
-    setRotation,
-    setPosition,
-    setQuaternion,
-    setScale,
+    set3DPosition,
     updateTexture,
-    setGlowing,
     resizeCanvas,
     updateDebug,
   } = await createScene(engine, textureCanvases);
@@ -78,12 +66,8 @@ export const renderer = async (
     },
     resizeCanvas,
     getTexturePosition,
-    setRotation,
-    setPosition,
-    setQuaternion,
-    setScale,
+    set3DPosition,
     updateTexture,
-    setGlowing,
     updateDebug,
   };
 };
@@ -96,12 +80,8 @@ export const createScene = async (
   getTexturePosition: (
     point: Position,
   ) => [Letter | undefined, Position | undefined, Vector | undefined];
-  setRotation: (letter: Letter, beta: number) => void;
-  setPosition: (letter: Letter, position: Position) => void;
-  setQuaternion: (letter: Letter, quaternion: Quaternion) => void;
-  setScale: (letter: Letter, scale: number) => void;
+  set3DPosition: (letter: Letter, position: Letter3DPosition) => void;
   updateTexture: (letter: Letter) => void;
-  setGlowing: (letter: Letter, glow: boolean, color?: Color) => void;
   resizeCanvas: () => void;
   updateDebug: (debug: DebugRenderBuffers | null) => void;
 }> => {
@@ -162,57 +142,18 @@ export const createScene = async (
   const updateTexture = (letter: Letter) =>
     textures[letter].update(true, true, true);
 
-  const setRotation = (letter: Letter, beta: number) => {
-    const rotation = beta * (Math.PI / 180);
-    meshes[letter].rotation = new Vector3(
-      90 * (Math.PI / 180),
-      rotation,
-      180 * (Math.PI / 180),
-    );
-  };
-  const setPosition = (letter: Letter, position: Position) => {
-    const {width: scaleX, height: scaleY} = sceneScaleFactor();
-    const origin = LETTER_POSITIONS[letter];
-    meshes[letter].position = new Vector3(
-      // TODO: x value is reversed in babylon for some reason
-      -origin.x - position.x * scaleX,
-      origin.y - position.y * scaleY,
-      LETTER_OFFSET,
-    );
-  };
-  const setScale = (letter: Letter, scale: number) => {
-    meshes[letter].scaling = new Vector3(scale, scale, scale);
-  };
-  const setQuaternion = (letter: Letter, quaternion: Quaternion) => {
+  const set3DPosition = (letter: Letter, position: Letter3DPosition) => {
     meshes[letter].rotationQuaternion?.set(
-      quaternion.x,
-      quaternion.y,
-      quaternion.z,
-      quaternion.w,
+      position.rotation.x,
+      position.rotation.y,
+      position.rotation.z,
+      position.rotation.w,
     );
-  };
-  LETTERS.forEach(letter => {
-    setRotation(letter, 0);
-    setPosition(letter, {x: 0, y: 0});
-    setScale(letter, 1);
-  });
-
-  const highlights = letterMap(letter => {
-    const hl = new HighlightLayer(`${letter}-glow`, scene);
-    hl.blurHorizontalSize = 1;
-    hl.blurVerticalSize = 1;
-    return hl;
-  });
-
-  const setGlowing = (letter: Letter, glow: boolean, color?: Color) => {
-    if (glow) {
-      highlights[letter].addMesh(
-        meshes[letter],
-        new Color3(...color!.map(c => c / 255)),
-      );
-    } else {
-      highlights[letter].removeAllMeshes();
-    }
+    meshes[letter].position.set(
+      -position.position.x,
+      position.position.y,
+      position.position.x,
+    );
   };
 
   // Add the textures to the meshes
@@ -332,12 +273,8 @@ export const createScene = async (
   return {
     scene,
     getTexturePosition,
-    setRotation,
-    setScale,
-    setPosition,
-    setQuaternion,
+    set3DPosition,
     updateTexture,
-    setGlowing,
     resizeCanvas,
     updateDebug,
   };

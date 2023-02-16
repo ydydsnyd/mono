@@ -4,14 +4,9 @@ export type State = {
   actorId: ActorID;
   actors: Record<ActorID, Actor>;
   cursors: Record<ActorID, Cursor>;
-  tools: Record<ActorID, Tool>;
-  rotations: Record<Letter, Rotation>;
   points: Record<Letter, Point[]>;
   rawCaches: Record<Letter, string>;
-  scales: Record<Letter, number>;
-  positions: Record<Letter, Position>;
   sequences: Record<Letter, number>;
-  owners: Record<Letter, ActorID | undefined>;
   impulses: Record<Letter, Impulse[]>;
   physics: Physics | undefined;
 };
@@ -28,8 +23,6 @@ export type ColorPalate = [
   [Color, Color],
 ];
 
-export type Rotation = number;
-
 export type Actor = {
   id: ActorID;
   colorIndex: number;
@@ -40,26 +33,6 @@ export type Actor = {
 export type LetterCache = {
   letter: Letter;
   cache: string;
-};
-
-export type LetterPosition = {
-  letter: Letter;
-  position: Position;
-};
-
-export type LetterScale = {
-  letter: Letter;
-  scale: number;
-};
-
-export type LetterRotation = {
-  letter: Letter;
-  rotation: Rotation;
-};
-
-export type LetterOwner = {
-  letter: Letter;
-  actorId: ActorID;
 };
 
 export type Letter3DPosition = {
@@ -86,13 +59,6 @@ export enum Letter {
   I = 'i',
   V = 'v',
   E = 'e',
-}
-
-export enum Tool {
-  PAINT = 'paint',
-  MOVE = 'move',
-  ROTATE = 'rotate',
-  SCALE = 'scale',
 }
 
 // Each letter also can be painted on, by adding points.
@@ -139,9 +105,4 @@ export type Vector = Position & {
 export type Position = {
   x: number;
   y: number;
-};
-
-export type BotmasterState = {
-  clientID?: string | undefined;
-  mode: 'intro' | 'nanny';
 };
