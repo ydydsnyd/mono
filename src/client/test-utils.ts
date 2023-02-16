@@ -130,6 +130,11 @@ export class TestReflect<MD extends MutatorDefs> extends Reflect<MD> {
     // @ts-expect-error Property '_pusher' is private
     return this._pusher;
   }
+
+  get puller() {
+    // @ts-expect-error Property '_puller' is private
+    return this._puller;
+  }
 }
 
 export function reflectForTest<MD extends MutatorDefs>(

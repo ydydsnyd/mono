@@ -2,7 +2,8 @@ import {expect} from '@esm-bundle/chai';
 import type {
   JSONValue,
   LogLevel,
-  PushRequest,
+  PullRequestV1,
+  PushRequestV1,
   WriteTransaction,
 } from 'replicache';
 import * as sinon from 'sinon';
@@ -29,6 +30,10 @@ import {
 import {Metrics, gaugeValue, DatadogSeries} from '@rocicorp/datadog-util';
 import {camelToSnake, DID_NOT_CONNECT_VALUE, Metric} from './metrics.js';
 import {ErrorKind} from '../protocol/error.js';
+// fetch-mock has invalid d.ts file so we removed that on npm install.
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error
+import fetchMock from 'fetch-mock/esm/client';
 
 let clock: sinon.SinonFakeTimers;
 
@@ -40,6 +45,7 @@ setup(() => {
 
 teardown(() => {
   sinon.restore();
+  fetchMock.restore();
 });
 
 test('onOnlineChange callback', async () => {
@@ -252,6 +258,7 @@ test('createSocket', () => {
       socketURL,
       baseCookie,
       clientID,
+      'testClientGroupID',
       roomID,
       auth,
       lmid,
@@ -268,7 +275,7 @@ test('createSocket', () => {
     'roomID',
     '',
     0,
-    'ws://example.com/connect?clientID=clientID&roomID=roomID&baseCookie=&ts=0&lmid=0&wsid=wsidx',
+    'ws://example.com/connect?clientID=clientID&clientGroupID=testClientGroupID&roomID=roomID&baseCookie=&ts=0&lmid=0&wsid=wsidx',
   );
 
   t(
@@ -278,7 +285,7 @@ test('createSocket', () => {
     'roomID',
     '',
     0,
-    'ws://example.com/connect?clientID=clientID&roomID=roomID&baseCookie=1234&ts=0&lmid=0&wsid=wsidx',
+    'ws://example.com/connect?clientID=clientID&clientGroupID=testClientGroupID&roomID=roomID&baseCookie=1234&ts=0&lmid=0&wsid=wsidx',
   );
 
   t(
@@ -288,7 +295,7 @@ test('createSocket', () => {
     'roomID',
     '',
     123,
-    'ws://example.com/connect?clientID=clientID&roomID=roomID&baseCookie=&ts=0&lmid=123&wsid=wsidx',
+    'ws://example.com/connect?clientID=clientID&clientGroupID=testClientGroupID&roomID=roomID&baseCookie=&ts=0&lmid=123&wsid=wsidx',
   );
 
   t(
@@ -298,7 +305,7 @@ test('createSocket', () => {
     'roomID',
     'auth with []',
     0,
-    'ws://example.com/connect?clientID=clientID&roomID=roomID&baseCookie=&ts=0&lmid=0&wsid=wsidx',
+    'ws://example.com/connect?clientID=clientID&clientGroupID=testClientGroupID&roomID=roomID&baseCookie=&ts=0&lmid=0&wsid=wsidx',
     'auth%20with%20%5B%5D',
   );
 
@@ -310,70 +317,220 @@ test('createSocket', () => {
     'roomID',
     '',
     0,
-    'ws://example.com/connect?clientID=clientID&roomID=roomID&baseCookie=&ts=456&lmid=0&wsid=wsidx',
+    'ws://example.com/connect?clientID=clientID&clientGroupID=testClientGroupID&roomID=roomID&baseCookie=&ts=456&lmid=0&wsid=wsidx',
   );
 });
 
 test('pusher sends one mutation per push message', async () => {
   const t = async (
-    mutations: Mutation[],
-    expectedMessages: number,
-    requestID = 'request-id',
+    pushes: {
+      mutations: Mutation[];
+      expectedMessages: number;
+      clientGroupID?: string;
+      requestID?: string;
+    }[],
   ) => {
     const r = reflectForTest();
     await r.triggerConnected();
+
     const mockSocket = await r.socket;
 
-    const pushBody: PushRequest = {
-      profileID: 'profile-id',
-      clientID: 'client-id',
-      pushVersion: 0,
-      schemaVersion: '1',
-      mutations,
-    };
+    for (const push of pushes) {
+      const {
+        mutations,
+        expectedMessages,
+        clientGroupID,
+        requestID = 'test-request-id',
+      } = push;
 
-    const req = new Request('http://example.com/push', {
-      body: JSON.stringify(pushBody),
-      method: 'POST',
-      headers: {'X-Replicache-RequestID': requestID},
-    });
+      const pushReq: PushRequestV1 = {
+        profileID: 'p1',
+        clientGroupID: clientGroupID ?? (await r.clientGroupID),
+        pushVersion: 1,
+        schemaVersion: '1',
+        mutations,
+      };
 
-    await r.pusher(req);
+      mockSocket.messages.length = 0;
 
-    expect(mockSocket.messages).to.have.lengthOf(expectedMessages);
+      await r.pusher(pushReq, requestID);
 
-    for (const raw of mockSocket.messages) {
-      const msg = pushMessageSchema.parse(JSON.parse(raw));
-      expect(msg[1].mutations).to.have.lengthOf(1);
-      expect(msg[1].requestID).to.equal(requestID);
+      expect(mockSocket.messages).to.have.lengthOf(expectedMessages);
+
+      for (const raw of mockSocket.messages) {
+        const msg = pushMessageSchema.parse(JSON.parse(raw));
+        expect(msg[1].clientGroupID).to.equal(
+          clientGroupID ?? (await r.clientGroupID),
+        );
+        expect(msg[1].mutations).to.have.lengthOf(1);
+        expect(msg[1].requestID).to.equal(requestID);
+      }
     }
 
     await r.close();
   };
 
-  await t([], 0);
-  await t([{id: 1, name: 'mut1', args: {d: 1}, timestamp: 1}], 1);
-  await t(
-    [
-      {id: 1, name: 'mut1', args: {d: 1}, timestamp: 1},
-      {id: 2, name: 'mut1', args: {d: 2}, timestamp: 2},
-      {id: 3, name: 'mut1', args: {d: 3}, timestamp: 3},
-    ],
-    3,
-  );
+  await t([{mutations: [], expectedMessages: 0}]);
+  await t([
+    {
+      mutations: [
+        {clientID: 'c1', id: 1, name: 'mut1', args: {d: 1}, timestamp: 1},
+      ],
+      expectedMessages: 1,
+    },
+  ]);
+  await t([
+    {
+      mutations: [
+        {clientID: 'c1', id: 1, name: 'mut1', args: {d: 1}, timestamp: 1},
+        {clientID: 'c2', id: 1, name: 'mut1', args: {d: 2}, timestamp: 2},
+        {clientID: 'c1', id: 2, name: 'mut1', args: {d: 3}, timestamp: 3},
+      ],
+      expectedMessages: 3,
+    },
+  ]);
 
-  // skips ids already seen
-  await t(
-    [
-      {id: 1, name: 'mut1', args: {d: 1}, timestamp: 1},
-      {id: 1, name: 'mut1', args: {d: 2}, timestamp: 1},
-    ],
-    1,
+  // if for self client group skips [clientID, id] tuples already seen
+  await t([
+    {
+      mutations: [
+        {clientID: 'c1', id: 1, name: 'mut1', args: {d: 1}, timestamp: 1},
+        {clientID: 'c2', id: 1, name: 'mut1', args: {d: 2}, timestamp: 2},
+        {clientID: 'c1', id: 2, name: 'mut1', args: {d: 3}, timestamp: 3},
+      ],
+      expectedMessages: 3,
+    },
+    {
+      mutations: [
+        {clientID: 'c2', id: 1, name: 'mut1', args: {d: 2}, timestamp: 2},
+        {clientID: 'c1', id: 2, name: 'mut1', args: {d: 3}, timestamp: 3},
+        {clientID: 'c2', id: 2, name: 'mut1', args: {d: 3}, timestamp: 3},
+      ],
+      expectedMessages: 1,
+    },
+  ]);
+
+  // if not for self client group (i.e. mutation recovery) does not skip
+  // [clientID, id] tuples already seen
+  await t([
+    {
+      clientGroupID: 'c1',
+      mutations: [
+        {clientID: 'c1', id: 1, name: 'mut1', args: {d: 1}, timestamp: 1},
+        {clientID: 'c2', id: 1, name: 'mut1', args: {d: 2}, timestamp: 2},
+        {clientID: 'c1', id: 2, name: 'mut1', args: {d: 3}, timestamp: 3},
+      ],
+      expectedMessages: 3,
+    },
+    {
+      clientGroupID: 'c1',
+      mutations: [
+        {clientID: 'c2', id: 1, name: 'mut1', args: {d: 2}, timestamp: 2},
+        {clientID: 'c1', id: 2, name: 'mut1', args: {d: 3}, timestamp: 3},
+        {clientID: 'c2', id: 2, name: 'mut1', args: {d: 3}, timestamp: 3},
+      ],
+      expectedMessages: 3,
+    },
+  ]);
+});
+
+test('puller with mutation recovery pull, success response', async () => {
+  const r = reflectForTest();
+  const pullReq: PullRequestV1 = {
+    profileID: 'test-profile-id',
+    clientGroupID: 'test-client-group-id',
+    cookie: 1,
+    pullVersion: 1,
+    schemaVersion: r.schemaVersion,
+  };
+
+  const pullResponseBody = {
+    cookie: 2,
+    lastMutationIDChanges: {cid1: 1},
+    patch: [],
+  };
+  fetchMock.post(
+    'https://example.com/pull',
+    async (_url: string, _options: RequestInit, request: Request) => {
+      expect(await request.json()).to.deep.equal({
+        ...pullReq,
+        roomID: 'test-room-id',
+      });
+      expect(request.headers.get('Authorization')).to.equal('test-auth');
+      expect(request.headers.get('X-Replicache-RequestID')).to.equal(
+        'test-request-id',
+      );
+      return pullResponseBody;
+    },
   );
+  const result = await r.puller(pullReq, 'test-request-id');
+  expect(result).to.deep.equal({
+    response: pullResponseBody,
+    httpRequestInfo: {
+      errorMessage: '',
+      httpStatusCode: 200,
+    },
+  });
+});
+
+test('puller with mutation recovery pull, error response', async () => {
+  const r = reflectForTest();
+  const pullReq: PullRequestV1 = {
+    profileID: 'test-profile-id',
+    clientGroupID: 'test-client-group-id',
+    cookie: 1,
+    pullVersion: 1,
+    schemaVersion: r.schemaVersion,
+  };
+
+  const errorMessage = 'Pull error';
+  const errorStatusCode = 500;
+  fetchMock.post(
+    'https://example.com/pull',
+    async (_url: string, _options: RequestInit, request: Request) => {
+      expect(await request.json()).to.deep.equal({
+        ...pullReq,
+        roomID: 'test-room-id',
+      });
+      expect(request.headers.get('Authorization')).to.equal('test-auth');
+      expect(request.headers.get('X-Replicache-RequestID')).to.equal(
+        'test-request-id',
+      );
+      return new Response(errorMessage, {status: errorStatusCode});
+    },
+  );
+  const result = await r.puller(pullReq, 'test-request-id');
+  expect(result).to.deep.equal({
+    httpRequestInfo: {
+      errorMessage,
+      httpStatusCode: errorStatusCode,
+    },
+  });
+});
+
+test('puller with normal, non-mutation recovery, pull', async () => {
+  const r = reflectForTest();
+  const pullReq: PullRequestV1 = {
+    profileID: 'test-profile-id',
+    clientGroupID: await r.clientGroupID,
+    cookie: 1,
+    pullVersion: 1,
+    schemaVersion: r.schemaVersion,
+  };
+
+  const result = await r.puller(pullReq, 'test-request-id');
+  expect(fetchMock.called()).to.be.false;
+  expect(result).to.deep.equal({
+    httpRequestInfo: {
+      errorMessage: '',
+      httpStatusCode: 200,
+    },
+  });
 });
 
 test('watchSmokeTest', async () => {
   const rep = reflectForTest({
+    roomID: 'watchSmokeTestRoom',
     mutators: {
       addData: async (
         tx: WriteTransaction,
@@ -455,7 +612,7 @@ test('poke log context includes requestID', async () => {
   const logSink = {
     log(_level: LogLevel, ...args: unknown[]) {
       for (const arg of args) {
-        if (typeof arg === 'string' && arg.startsWith('requestID=')) {
+        if (arg === 'requestID=test-request-id-poke') {
           const foundRequestID = arg.slice('requestID='.length);
           resolve(foundRequestID);
         }
@@ -477,14 +634,14 @@ test('poke log context includes requestID', async () => {
   await reflect.triggerPoke({
     baseCookie: null,
     cookie: 1,
-    lastMutationID: 1,
+    lastMutationIDChanges: {c1: 1},
     patch: [],
     timestamp: 123456,
-    requestID: 'request-id-x',
+    requestID: 'test-request-id-poke',
   });
 
   const foundRequestID = await foundRequestIDFromLogPromise;
-  expect(foundRequestID).to.equal('request-id-x');
+  expect(foundRequestID).to.equal('test-request-id-poke');
 });
 
 test('metrics updated when connected', async () => {
