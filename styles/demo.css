@@ -1,3 +1,7 @@
+body {
+  cursor: none;
+}
+
 #demo-placeholder {
   height: 140px;
 }
@@ -22,8 +26,7 @@
   z-index: 100;
 }
 
-#textures
-{
+#textures {
   display: none;
 }
 
