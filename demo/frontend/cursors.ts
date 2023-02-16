@@ -1,5 +1,12 @@
 import {ACTOR_UPDATE_INTERVAL, COLOR_PALATE} from '../shared/constants';
-import type {Actor, ActorID, Cursor, Size, State} from '../shared/types';
+import type {
+  Actor,
+  ActorID,
+  Cursor,
+  Position,
+  Size,
+  State,
+} from '../shared/types';
 import {colorToString, now} from '../shared/util';
 
 export const cursorRenderer = (
@@ -40,20 +47,25 @@ export const cursorRenderer = (
     onPage: false,
     isDown: false,
   };
+  let lastPosition = {x: 0, y: 0};
   const mouseElement = document.body;
   let cursorNeedsUpdate = false;
+  const updateCursorPosition = (position: Position) => {
+    const scaleFactor = getScaleFactor();
+    localCursor.onPage = true;
+    lastPosition = position;
+    localCursor.x = (position.x + window.scrollX) / scaleFactor.width;
+    localCursor.y = (position.y + window.scrollY) / scaleFactor.height;
+    localCursor.ts = now();
+    cursorNeedsUpdate = true;
+  };
   // Cursor for mice
   const updateCursor = (e: MouseEvent) => {
     if (!canHover) {
       canHover = true;
       onDetectHoverDevice(canHover);
     }
-    const scaleFactor = getScaleFactor();
-    localCursor.onPage = true;
-    localCursor.x = e.clientX / scaleFactor.width;
-    localCursor.y = e.clientY / scaleFactor.height;
-    localCursor.ts = now();
-    cursorNeedsUpdate = true;
+    updateCursorPosition({x: e.clientX, y: e.clientY});
   };
   mouseElement.addEventListener('mousemove', updateCursor);
   // Cursor for touches
@@ -62,13 +74,13 @@ export const cursorRenderer = (
       canHover = false;
       onDetectHoverDevice(canHover);
     }
-    const scaleFactor = getScaleFactor();
-    localCursor.onPage = true;
-    localCursor.x = e.touches[0].clientX / scaleFactor.width;
-    localCursor.y = e.touches[0].clientY / scaleFactor.height;
-    cursorNeedsUpdate = true;
+    updateCursorPosition({x: e.touches[0].clientX, y: e.touches[0].clientY});
   };
   mouseElement.addEventListener('touchmove', touchMoved);
+  // We also need to update the cursor when the window is scrolled
+  window.addEventListener('scroll', () => {
+    requestAnimationFrame(() => updateCursorPosition(lastPosition));
+  });
   const hideCursor = (e: MouseEvent | TouchEvent) => {
     if (e.target !== mouseElement) {
       return;
