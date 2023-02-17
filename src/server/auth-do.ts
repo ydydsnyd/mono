@@ -44,7 +44,12 @@ import {createUnauthorizedResponse} from './create-unauthorized-response.js';
 import {ErrorKind} from '../protocol/error.js';
 import {ROOM_ROUTES} from './room-do.js';
 import {pullRequestSchema} from '../protocol/pull.js';
-import {CONNECT_URL_PATTERN, LEGACY_CONNECT_PATH} from './paths.js';
+import {
+  CONNECT_URL_PATTERN,
+  CREATE_ROOM_PATH,
+  LEGACY_CONNECT_PATH,
+  LEGACY_CREATE_ROOM_PATH,
+} from './paths.js';
 
 export interface AuthDOOptions {
   roomDO: DurableObjectNamespace;
@@ -74,7 +79,8 @@ export const AUTH_ROUTES_AUTHED_BY_API_KEY = {
   authInvalidateForUser: '/api/auth/v0/invalidateForUser',
   authInvalidateForRoom: '/api/auth/v0/invalidateForRoom',
   authRevalidateConnections: '/api/auth/v0/revalidateConnections',
-  createRoom: '/createRoom',
+  legacyCreateRoom: LEGACY_CREATE_ROOM_PATH,
+  createRoom: CREATE_ROOM_PATH,
 } as const;
 
 export const AUTH_ROUTES_AUTHED_BY_AUTH_HANDLER = {
@@ -260,6 +266,7 @@ export class BaseAuthDO implements DurableObject {
     );
     this._router.register(AUTH_ROUTES.roomRecords, this._allRoomRecords);
     this._router.register(AUTH_ROUTES.closeRoom, this._closeRoom);
+    this._router.register(AUTH_ROUTES.legacyCreateRoom, this._createRoom);
     this._router.register(AUTH_ROUTES.createRoom, this._createRoom);
     this._router.register(AUTH_ROUTES.deleteRoom, this._deleteRoom);
     this._router.register(AUTH_ROUTES.migrateRoom, this._migrateRoom);

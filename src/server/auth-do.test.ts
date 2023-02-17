@@ -421,12 +421,18 @@ test('400 bad body requests', async () => {
     JSON.stringify({badRoomId: 'foo'}),
   );
 
+  const badLegacyCreateRoomRequest = createBadBodyRequest(
+    AUTH_ROUTES.legacyCreateRoom,
+    JSON.stringify({badRoomId: 'legacyfoo'}),
+  );
+
   const requests = [
     undefinedInvalidateForUserRequest,
     badInvalidateForUserRequest,
     undefinedInvalidateForRoomRequest,
     badInvalidateForRoomRequest,
     badCreateRoomRequest,
+    badLegacyCreateRoomRequest,
   ];
 
   for (const request of requests) {
