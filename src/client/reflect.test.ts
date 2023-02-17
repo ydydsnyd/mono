@@ -460,7 +460,7 @@ test('puller with mutation recovery pull, success response', async () => {
     patch: [],
   };
   fetchMock.post(
-    'https://example.com/pull',
+    'https://example.com/api/sync/v0/pull',
     async (_url: string, _options: RequestInit, request: Request) => {
       expect(await request.json()).to.deep.equal({
         ...pullReq,
@@ -496,7 +496,7 @@ test('puller with mutation recovery pull, error response', async () => {
   const errorMessage = 'Pull error';
   const errorStatusCode = 500;
   fetchMock.post(
-    'https://example.com/pull',
+    'https://example.com/api/sync/v0/pull',
     async (_url: string, _options: RequestInit, request: Request) => {
       expect(await request.json()).to.deep.equal({
         ...pullReq,

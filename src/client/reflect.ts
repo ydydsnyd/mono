@@ -81,6 +81,9 @@ export const CONNECT_TIMEOUT_MS = 10_000;
 
 const NULL_LAST_MUTATION_ID_SENT = {clientID: '', id: -1} as const;
 
+// When the protocol changes (pull, push, poke,...) we need to bump this.
+const REFLECT_VERSION = 0;
+
 /**
  * The reason {@link onUpdateNeeded} was called.
  */
@@ -911,7 +914,7 @@ export class Reflect<MD extends MutatorDefs> {
     l.debug?.('Pull is for mutation recovery');
     const pullURL = new URL(this._socketOrigin);
     pullURL.protocol = pullURL.protocol === 'ws:' ? 'http:' : 'https:';
-    pullURL.pathname = '/pull';
+    pullURL.pathname = `/api/sync/v${REFLECT_VERSION}/pull`;
     const headers = new Headers();
     headers.set('Authorization', this._rep.auth);
     headers.set('X-Replicache-RequestID', requestID);
@@ -1007,8 +1010,6 @@ export class Reflect<MD extends MutatorDefs> {
   }
 }
 
-const REFLECT_PROTOCOL_VERSION = 0;
-
 export function createSocket(
   socketOrigin: string,
   baseCookie: NullableVersion,
@@ -1021,7 +1022,7 @@ export function createSocket(
 ): WebSocket {
   const url = new URL(socketOrigin);
   // Keep this in sync with the server.
-  url.pathname = `/api/sync/v${REFLECT_PROTOCOL_VERSION}/connect`;
+  url.pathname = `/api/sync/v${REFLECT_VERSION}/connect`;
   const {searchParams} = url;
   searchParams.set('clientID', clientID);
   searchParams.set('clientGroupID', clientGroupID);
