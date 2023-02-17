@@ -1,5 +1,6 @@
 import {LETTERS} from './letters';
-import type {ActorID, Letter, Splatter} from './types';
+import {ActorID, Impulse, Letter, Splatter} from './types';
+import {letterMap} from './util';
 
 // Converts our js object values into flat args so they can be passed to wasm
 // without having to convert into pointers
@@ -98,4 +99,74 @@ export const splatters2Render = (splatters: Splatter[]) => {
     args[7][index] = splatter.r;
   });
   return args;
+};
+
+type physicsArgs = [
+  Uint32Array, // a_impulse_steps: Vec<usize>,
+  Float32Array, // a_impulse_x: Vec<f32>,
+  Float32Array, // a_impulse_y: Vec<f32>,
+  Float32Array, // a_impulse_z: Vec<f32>,
+  Uint32Array, // l_impulse_steps: Vec<usize>,
+  Float32Array, // l_impulse_x: Vec<f32>,
+  Float32Array, // l_impulse_y: Vec<f32>,
+  Float32Array, // l_impulse_z: Vec<f32>,
+  Uint32Array, // i_impulse_steps: Vec<usize>,
+  Float32Array, // i_impulse_x: Vec<f32>,
+  Float32Array, // i_impulse_y: Vec<f32>,
+  Float32Array, // i_impulse_z: Vec<f32>,
+  Uint32Array, // v_impulse_steps: Vec<usize>,
+  Float32Array, // v_impulse_x: Vec<f32>,
+  Float32Array, // v_impulse_y: Vec<f32>,
+  Float32Array, // v_impulse_z: Vec<f32>,
+  Uint32Array, // v_impulse_steps: Vec<usize>,
+  Float32Array, // v_impulse_x: Vec<f32>,
+  Float32Array, // v_impulse_y: Vec<f32>,
+  Float32Array, // v_impulse_z: Vec<f32>,
+];
+
+export const impulses2Physics = (
+  impulses: Record<Letter, Impulse[]>,
+): physicsArgs => {
+  const steps = letterMap<Uint32Array>(
+    l => new Uint32Array(impulses[l].length),
+  );
+  const x_vals = letterMap<Float32Array>(
+    l => new Float32Array(impulses[l].length),
+  );
+  const y_vals = letterMap<Float32Array>(
+    l => new Float32Array(impulses[l].length),
+  );
+  const z_vals = letterMap<Float32Array>(
+    l => new Float32Array(impulses[l].length),
+  );
+  LETTERS.forEach(letter => {
+    impulses[letter].forEach((impulse, idx) => {
+      steps[letter][idx] = impulse.s;
+      x_vals[letter][idx] = impulse.x;
+      y_vals[letter][idx] = impulse.y;
+      z_vals[letter][idx] = impulse.z;
+    });
+  });
+  return [
+    steps[Letter.A],
+    x_vals[Letter.A],
+    y_vals[Letter.A],
+    z_vals[Letter.A],
+    steps[Letter.L],
+    x_vals[Letter.L],
+    y_vals[Letter.L],
+    z_vals[Letter.L],
+    steps[Letter.I],
+    x_vals[Letter.I],
+    y_vals[Letter.I],
+    z_vals[Letter.I],
+    steps[Letter.V],
+    x_vals[Letter.V],
+    y_vals[Letter.V],
+    z_vals[Letter.V],
+    steps[Letter.E],
+    x_vals[Letter.E],
+    y_vals[Letter.E],
+    z_vals[Letter.E],
+  ];
 };

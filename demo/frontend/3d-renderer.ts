@@ -13,15 +13,12 @@ import {
   Mesh,
   ArcRotateCamera,
   Camera,
-  MeshBuilder,
-  LinesMesh,
 } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import type {Letter, Letter3DPosition, Position, Vector} from '../shared/types';
 import {letterMap} from '../shared/util';
 import {LETTERS} from '../shared/letters';
-import type {DebugRenderBuffers} from '@dimforge/rapier3d';
-import {DEBUG_PHYSICS} from '../shared/constants';
+// import type {DebugRenderBuffers} from '@dimforge/rapier3d';
 
 const modelURL = '/alive.glb';
 
@@ -60,7 +57,7 @@ export const renderer = async (
     set3DPosition,
     updateTexture,
     resizeCanvas,
-    updateDebug,
+    // updateDebug,
   } = await createScene(engine, textureCanvases);
   return {
     render: () => {
@@ -70,7 +67,7 @@ export const renderer = async (
     getTexturePosition,
     set3DPosition,
     updateTexture,
-    updateDebug,
+    // updateDebug,
   };
 };
 
@@ -85,7 +82,7 @@ export const createScene = async (
   set3DPosition: (letter: Letter, position: Letter3DPosition) => void;
   updateTexture: (letter: Letter) => void;
   resizeCanvas: () => void;
-  updateDebug: (debug: DebugRenderBuffers | null) => void;
+  // updateDebug: (debug: DebugRenderBuffers | null) => void;
 }> => {
   const scene = new Scene(engine);
   // Don't allow babylon to handle mouse events. This both has a mild perf
@@ -218,63 +215,63 @@ export const createScene = async (
     return [undefined, undefined, undefined];
   };
 
-  let lines: LinesMesh;
-  if (DEBUG_PHYSICS) {
-    lines = MeshBuilder.CreateLines(
-      'debug-lines',
-      {
-        points: [],
-        updatable: true,
-      },
-      scene,
-    );
-  }
-  const updateDebug = (debug: DebugRenderBuffers | null) => {
-    if (!debug) {
-      lines.dispose();
-      return;
-    }
-    const points: Vector3[] = [];
-    let buf = new Vector3();
-    debug.vertices.forEach((v, idx) => {
-      const lIdx = idx % 3;
-      if (lIdx === 0) {
-        buf.x = v;
-      } else if (lIdx === 1) {
-        buf.y = v;
-      } else if (lIdx === 2) {
-        buf.z = v;
-        points.push(buf);
-        buf = new Vector3();
-      }
-    });
-    const colors: Color4[] = [];
-    let cbuf = new Color4();
-    debug.colors.forEach((v, idx) => {
-      const lIdx = idx % 4;
-      if (lIdx === 0) {
-        cbuf.r = v;
-      } else if (lIdx === 1) {
-        cbuf.g = v;
-      } else if (lIdx === 2) {
-        cbuf.b = v;
-      } else if (lIdx === 3) {
-        cbuf.a = v;
-        colors.push(cbuf);
-        cbuf = new Color4();
-      }
-    });
-    lines.dispose();
-    lines = MeshBuilder.CreateLines(
-      'debug-lines',
-      {
-        points,
-        updatable: true,
-        colors,
-      },
-      scene,
-    );
-  };
+  // let lines: LinesMesh;
+  // if (DEBUG_PHYSICS) {
+  //   lines = MeshBuilder.CreateLines(
+  //     'debug-lines',
+  //     {
+  //       points: [],
+  //       updatable: true,
+  //     },
+  //     scene,
+  //   );
+  // }
+  // const updateDebug = (debug: DebugRenderBuffers | null) => {
+  //   if (!debug) {
+  //     lines.dispose();
+  //     return;
+  //   }
+  //   const points: Vector3[] = [];
+  //   let buf = new Vector3();
+  //   debug.vertices.forEach((v, idx) => {
+  //     const lIdx = idx % 3;
+  //     if (lIdx === 0) {
+  //       buf.x = v;
+  //     } else if (lIdx === 1) {
+  //       buf.y = v;
+  //     } else if (lIdx === 2) {
+  //       buf.z = v;
+  //       points.push(buf);
+  //       buf = new Vector3();
+  //     }
+  //   });
+  //   const colors: Color4[] = [];
+  //   let cbuf = new Color4();
+  //   debug.colors.forEach((v, idx) => {
+  //     const lIdx = idx % 4;
+  //     if (lIdx === 0) {
+  //       cbuf.r = v;
+  //     } else if (lIdx === 1) {
+  //       cbuf.g = v;
+  //     } else if (lIdx === 2) {
+  //       cbuf.b = v;
+  //     } else if (lIdx === 3) {
+  //       cbuf.a = v;
+  //       colors.push(cbuf);
+  //       cbuf = new Color4();
+  //     }
+  //   });
+  //   lines.dispose();
+  //   lines = MeshBuilder.CreateLines(
+  //     'debug-lines',
+  //     {
+  //       points,
+  //       updatable: true,
+  //       colors,
+  //     },
+  //     scene,
+  //   );
+  // };
 
   return {
     scene,
@@ -282,6 +279,6 @@ export const createScene = async (
     set3DPosition,
     updateTexture,
     resizeCanvas,
-    updateDebug,
+    // updateDebug,
   };
 };

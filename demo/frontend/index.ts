@@ -1,4 +1,3 @@
-import rapier3d from '@dimforge/rapier3d';
 import {nanoid} from 'nanoid';
 import {initialize} from './data';
 import {renderer as renderer3D} from './3d-renderer';
@@ -13,19 +12,12 @@ import {
   STEP_RENDER_DELAY,
   DEBUG_PHYSICS,
 } from '../shared/constants';
-import type {
-  Actor,
-  ColorPalate,
-  Impulse,
-  Letter,
-  Position,
-  Size,
-} from '../shared/types';
+import type {Actor, ColorPalate, Letter, Position, Size} from '../shared/types';
 import {LETTERS} from '../shared/letters';
 import {letterMap, now} from '../shared/util';
 import {initRoom} from './init-room';
 import {getUserLocation} from './location';
-import {getPhysics} from '../shared/physics';
+import {runPhysics} from '../shared/renderer';
 
 type LetterCanvases = Record<Letter, HTMLCanvasElement>;
 
@@ -88,7 +80,7 @@ export const init = async () => {
     resizeCanvas: resize3DCanvas,
     set3DPosition,
     updateTexture,
-    updateDebug,
+    // updateDebug,
   } = await renderer3D(canvas, textures);
 
   // Set up info below demo
@@ -209,11 +201,10 @@ export const init = async () => {
     } else {
       physicsStep += 1;
     }
-    const [positions3d, world] = getPhysics(
-      rapier3d,
-      physics,
-      impulses,
+    const [positions3d, _, debugState] = runPhysics(
+      physics?.state,
       Math.round(physicsStep),
+      impulses,
     );
     LETTERS.forEach(letter => {
       const position3d = positions3d[letter];
@@ -222,7 +213,9 @@ export const init = async () => {
       }
     });
     if (DEBUG_PHYSICS) {
-      updateDebug(world.debugRender());
+      // TODO: fix this
+      // let world = World.restoreSnapshot(debugState);
+      // updateDebug(world.debugRender());
     }
   };
 

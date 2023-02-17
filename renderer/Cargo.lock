@@ -922,6 +922,7 @@ dependencies = [
  "js-sys",
  "lazy_static",
  "mut_static",
+ "nalgebra 0.32.1",
  "palette",
  "rapier3d",
  "serde",

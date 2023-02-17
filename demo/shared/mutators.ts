@@ -1,5 +1,4 @@
 import type {WriteTransaction} from '@rocicorp/reflect';
-import rapier3d from '@dimforge/rapier3d';
 import {
   COLOR_PALATE,
   COLOR_PALATE_END,
@@ -7,8 +6,7 @@ import {
   SPLATTER_ANIM_DURATION,
   SPLATTER_FLATTEN_MIN,
 } from './constants';
-import {getCache, updateCache} from './renderer';
-import {Rapier3D, getPhysics, impulseId, impulsesToSteps} from './physics';
+import {getCache, runPhysics, updateCache} from './renderer';
 import type {
   Actor,
   ActorID,
@@ -24,7 +22,8 @@ import type {
   Vector,
 } from './types';
 import {asyncLetterMap, randomWithSeed} from './util';
-import {encode} from './uint82b64';
+
+export const impulseId = (i: Impulse) => `${i.u}${i.s}${i.x + i.y + i.z}`;
 
 export type M = typeof mutators;
 
@@ -34,17 +33,9 @@ export enum Env {
 }
 let env = Env.CLIENT;
 let _initRenderer: (() => Promise<void>) | undefined;
-let getPhysicsEngine = (): Promise<Rapier3D> => Promise.resolve(rapier3d);
-export const setEnv = (
-  e: Env,
-  initRenderer: () => Promise<void>,
-  physicsEngine?: () => Promise<Rapier3D>,
-) => {
+export const setEnv = (e: Env, initRenderer: () => Promise<void>) => {
   env = e;
   _initRenderer = initRenderer;
-  if (physicsEngine) {
-    getPhysicsEngine = physicsEngine;
-  }
 };
 
 // Seeds are used for creating pseudo-random values that are stable across
@@ -196,13 +187,11 @@ const flattenPhysics = async (
       return (await impulses.toArray()) as Impulse[];
     });
 
-    const physicsEngine = await getPhysicsEngine();
-    const [_, world, handles] = getPhysics(
-      physicsEngine,
-      origin,
-      impulses,
-      // Render a step in the past, otherwise local physics will jerk.
+    await _initRenderer!();
+    const [_, state] = runPhysics(
+      origin?.state,
       Math.max(step - MAX_RENDERED_STEPS, 0),
+      impulses,
     );
     console.log(
       step,
@@ -210,22 +199,18 @@ const flattenPhysics = async (
       Math.max(step - MAX_RENDERED_STEPS, 0),
     );
     const newOrigin: Physics = {
-      state: encode(world.takeSnapshot()),
+      state: state,
       step,
-      handles,
     };
     await tx.put('origin', newOrigin);
     // Remove impulses that are integrated into the above snapshot
-    const impulseSteps = impulsesToSteps(impulses);
-    const keys = Object.keys(impulseSteps);
-    for (const k of keys) {
-      if (Number(k) >= step) {
-        break;
-      }
-      for (const i of impulseSteps[Number(k)]) {
-        await tx.del(`impulse/${i.letter}/${impulseId(i)}`);
-      }
-    }
+    await asyncLetterMap(async letter => {
+      await impulses[letter].map(async impulse => {
+        if (impulse.s >= step) {
+          await tx.del(`impulse/${letter}/${impulseId(impulse)}`);
+        }
+      });
+    });
   }
 };
 

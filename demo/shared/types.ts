@@ -50,7 +50,6 @@ export type LetterHandles = Record<Letter, number>;
 export type Physics = {
   state: string; // b64 encoded
   step: number;
-  handles: LetterHandles;
 };
 
 export enum Letter {
