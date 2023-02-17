@@ -1,5 +1,5 @@
 import type rapier3dlib from '@dimforge/rapier3d';
-import type {World} from '@dimforge/rapier3d';
+import type {World, PrismaticImpulseJoint} from '@dimforge/rapier3d';
 import type {
   Letter,
   Physics,
@@ -12,8 +12,6 @@ import {letterMap} from './util';
 import * as hulls from './hulls';
 import {decode} from './uint82b64';
 import {LETTERS, LETTER_OFFSET, LETTER_POSITIONS} from './letters';
-
-const VectorZero: Vector = {x: 0, y: 0, z: 0};
 
 export type Rapier3D = typeof rapier3dlib;
 
@@ -61,20 +59,33 @@ const setupWorld = ({
     };
     const letterBody = world.createRigidBody(RigidBodyDesc.dynamic());
     letterBody.setTranslation(letterPosition, true);
-    const jointBody = world.createRigidBody(RigidBodyDesc.fixed());
-    jointBody.setTranslation(letterPosition, true);
     hulls[letter].forEach(hull => {
       world.createCollider(
         ColliderDesc.convexHull(hull)!.setFriction(5).setMass(5),
         letterBody,
       );
     });
-    world.createImpulseJoint(
-      JointData.spherical(VectorZero, VectorZero),
+    const jointBody = world.createRigidBody(RigidBodyDesc.fixed());
+    jointBody.setTranslation(
+      {
+        ...letterPosition,
+        y: origin.y,
+      },
+      true,
+    );
+    let x = {x: 1.0, y: 0.0, z: 0.0};
+    let jointParams = JointData.revolute(
+      {x: 0.0, y: origin.y, z: 0.0},
+      {x: 0.0, y: origin.y, z: 0.0},
+      x,
+    );
+    const joint = world.createImpulseJoint(
+      jointParams,
       letterBody,
       jointBody,
       true,
-    );
+    ) as PrismaticImpulseJoint;
+    joint.configureMotorPosition(0, 250, 10);
     return letterBody.handle;
   });
   return [world, handles];
@@ -127,7 +138,7 @@ const runPhysics = (
       impulseSteps[i].forEach(impulse => {
         const letterBody = world.bodies.get(handles[impulse.letter]);
         letterBody?.applyImpulseAtPoint(
-          new Vector3(0, 0.0, 5.0),
+          new Vector3(0, 0.0, 200),
           impulse,
           true,
         );

@@ -5,8 +5,8 @@ import {
   update_cache,
 } from '../../renderer/pkg/renderer';
 import {encode, decode} from './uint82b64';
-import {points2Render} from './points2wasm';
-import {ColorPalate, Letter, Point} from './types';
+import {splatters2Render} from './wasm-args';
+import {ColorPalate, Letter, Splatter} from './types';
 import {now} from './util';
 
 export const getRendererLetter = (letter: Letter): RendererLetter => {
@@ -24,10 +24,10 @@ export const getRendererLetter = (letter: Letter): RendererLetter => {
   }
 };
 
-export const addPointsToCache = (
+export const addSplattersToCache = (
   letter: Letter,
   context: CanvasRenderingContext2D,
-  points: Point[],
+  points: Splatter[],
   colors: ColorPalate,
 ) => {
   add_points_to_cache(
@@ -39,7 +39,7 @@ export const addPointsToCache = (
     new Uint8Array(colors[2].flat()),
     new Uint8Array(colors[3].flat()),
     new Uint8Array(colors[4].flat()),
-    ...points2Render(points),
+    ...splatters2Render(points),
   );
 };
 
@@ -49,7 +49,7 @@ export const updateCache = (letter: Letter, png: string) => {
 
 export const getCache = (
   letter: Letter,
-  points: Point[],
+  splatters: Splatter[],
   colors: ColorPalate,
 ) => {
   return encode(
@@ -61,7 +61,7 @@ export const getCache = (
       new Uint8Array(colors[2].flat()),
       new Uint8Array(colors[3].flat()),
       new Uint8Array(colors[4].flat()),
-      ...points2Render(points),
+      ...splatters2Render(splatters),
     ),
   );
 };

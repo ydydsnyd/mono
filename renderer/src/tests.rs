@@ -10,9 +10,9 @@ mod tests {
         let width = 100;
         let height = 100;
         let time = 10000.0;
-        let point_count = 2;
+        let splatter_count = 2;
         let timestamps = vec![10000.0, 10001.0];
-        let point_actors = vec![0, 1];
+        let splatter_actors = vec![0, 1];
         let point_groups = vec![2, 3];
         let colors_r = vec![255, 255];
         let colors_g = vec![255, 255];
@@ -27,9 +27,9 @@ mod tests {
             width,
             height,
             time,
-            point_count,
+            splatter_count,
             timestamps,
-            point_actors,
+            splatter_actors,
             point_groups,
             colors_r,
             colors_g,
@@ -46,9 +46,9 @@ mod tests {
         let width = 100;
         let height = 100;
         let time = 10000.0;
-        let point_count = 2;
+        let splatter_count = 2;
         let timestamps = vec![10000.0, 10001.0];
-        let point_actors = vec![0, 1];
+        let splatter_actors = vec![0, 1];
         let point_groups = vec![2, 3];
         let colors_r = vec![255, 255];
         let colors_g = vec![255, 255];
@@ -64,9 +64,9 @@ mod tests {
             width,
             height,
             time,
-            point_count,
+            splatter_count,
             timestamps,
-            point_actors,
+            splatter_actors,
             point_groups,
             colors_r,
             colors_g,
@@ -83,9 +83,9 @@ mod tests {
         let width = 100;
         let height = 100;
         let time = 10000.0;
-        let point_count = 2;
+        let splatter_count = 2;
         let timestamps = vec![10000.0, 10001.0];
-        let point_actors = vec![0, 1];
+        let splatter_actors = vec![0, 1];
         let point_groups = vec![2, 3];
         let colors_r = vec![255, 255];
         let colors_g = vec![255, 255];
@@ -101,9 +101,9 @@ mod tests {
             width,
             height,
             time,
-            point_count,
+            splatter_count,
             timestamps,
-            point_actors,
+            splatter_actors,
             point_groups,
             colors_r,
             colors_g,

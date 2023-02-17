@@ -25,10 +25,6 @@ macro_rules! console_log {
 
 #[wasm_bindgen(module = "/src/constants.ts")]
 extern "C" {
-    static PAINT_DECAY_AGE: u32;
-    static PAINT_POINT_SIZE: f32;
-    static SPLATTER_DRIP_DECAY: f32;
-    static SPLATTER_DRIP_WEIGHT: f32;
     static COLOR_PALATE_RS: Vec<f32>;
     static UVMAP_SIZE: u32;
 }
@@ -117,18 +113,14 @@ pub fn draw_buffer_png(
     c_colors: Vec<u8>,
     d_colors: Vec<u8>,
     e_colors: Vec<u8>,
-    point_count: usize,
+    splatter_count: usize,
     timestamps: Vec<f64>,
-    point_actors: Vec<u32>,
-    point_groups: Vec<u32>,
-    point_scales: Vec<f32>,
+    splatter_actors: Vec<u32>,
     colors: Vec<u8>,
     x_vals: Vec<f32>,
     y_vals: Vec<f32>,
-    splatter_counts: Vec<usize>,
-    splatter_sizes: Vec<f32>,
-    splatter_x_vals: Vec<f32>,
-    splatter_y_vals: Vec<f32>,
+    splatter_animations: Vec<u8>,
+    splatter_rotations: Vec<f32>,
 ) -> Uint8Array {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     let caches = CACHES.read().unwrap();
@@ -149,18 +141,14 @@ pub fn draw_buffer_png(
         &c_colors,
         &d_colors,
         &e_colors,
-        point_count,
+        splatter_count,
         &timestamps,
-        &point_actors,
-        &point_groups,
-        &point_scales,
+        &splatter_actors,
         &colors,
         &x_vals,
         &y_vals,
-        &splatter_counts,
-        &splatter_sizes,
-        &splatter_x_vals,
-        &splatter_y_vals,
+        &splatter_animations,
+        &splatter_rotations,
     );
     let img = RgbaImage::from_vec(width, height, img.into_vec()).expect("Bad image generated");
     let mut png_data = std::io::Cursor::new(vec![]);
@@ -179,18 +167,14 @@ pub fn add_points_to_cache(
     c_colors: Vec<u8>,
     d_colors: Vec<u8>,
     e_colors: Vec<u8>,
-    point_count: usize,
+    splatter_count: usize,
     timestamps: Vec<f64>,
-    point_actors: Vec<u32>,
-    point_groups: Vec<u32>,
-    point_scales: Vec<f32>,
+    splatter_actors: Vec<u32>,
     colors: Vec<u8>,
     x_vals: Vec<f32>,
     y_vals: Vec<f32>,
-    splatter_counts: Vec<usize>,
-    splatter_sizes: Vec<f32>,
-    splatter_x_vals: Vec<f32>,
-    splatter_y_vals: Vec<f32>,
+    splatter_animations: Vec<u8>,
+    splatter_rotations: Vec<f32>,
 ) {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     let mut caches = CACHES.write().unwrap();
@@ -211,18 +195,14 @@ pub fn add_points_to_cache(
         &c_colors,
         &d_colors,
         &e_colors,
-        point_count,
+        splatter_count,
         &timestamps,
-        &point_actors,
-        &point_groups,
-        &point_scales,
+        &splatter_actors,
         &colors,
         &x_vals,
         &y_vals,
-        &splatter_counts,
-        &splatter_sizes,
-        &splatter_x_vals,
-        &splatter_y_vals,
+        &splatter_animations,
+        &splatter_rotations,
     );
     let data =
         ImageData::new_with_u8_clamped_array_and_sh(Clamped(&mut img.to_vec()), width, height)
@@ -248,25 +228,21 @@ pub fn draw_buffers(
     c_colors: Vec<u8>,
     d_colors: Vec<u8>,
     e_colors: Vec<u8>,
-    point_counts: Vec<usize>,
+    splatter_counts: Vec<usize>,
     timestamps: Vec<f64>,
-    point_actors: Vec<u32>,
-    point_groups: Vec<u32>,
-    point_scales: Vec<f32>,
+    splatter_actors: Vec<u32>,
     colors: Vec<u8>,
     x_vals: Vec<f32>,
     y_vals: Vec<f32>,
-    splatter_counts: Vec<usize>,
-    splatter_sizes: Vec<f32>,
-    splatter_x_vals: Vec<f32>,
-    splatter_y_vals: Vec<f32>,
+    splatter_animations: Vec<u8>,
+    splatter_rotations: Vec<f32>,
 ) -> () {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     let width = UVMAP_SIZE.clone();
     let height = UVMAP_SIZE.clone();
     let caches = CACHES.read().unwrap();
     for letter in LETTERS {
-        let cache = caches.get_data(&letter);
+        // let cache = caches.get_data(&letter);
         let letter_index = match letter {
             Letter::A => 0,
             Letter::L => 1,
@@ -274,19 +250,12 @@ pub fn draw_buffers(
             Letter::V => 3,
             Letter::E => 4,
         };
-        let point_count = point_counts[letter_index];
-        let mut point_range_start = 0;
-        for idx in 0..letter_index {
-            point_range_start += point_counts[idx];
-        }
-        let point_end_idx = point_range_start + point_count;
-        let point_splatter_counts = &splatter_counts[point_range_start..point_end_idx];
+        let splatter_count = splatter_counts[letter_index];
         let mut splatter_range_start = 0;
-        for idx in 0..point_range_start {
+        for idx in 0..letter_index {
             splatter_range_start += splatter_counts[idx];
         }
-        let splatter_end_idx =
-            splatter_range_start + point_splatter_counts.into_iter().fold(0, |l, c| l + c);
+        let splatter_end_idx = splatter_range_start + splatter_count;
         let mut img: RgbaImage;
         if cache.len() == 0 {
             img = RgbaImage::new(width, height);
@@ -308,18 +277,14 @@ pub fn draw_buffers(
             &c_colors,
             &d_colors,
             &e_colors,
-            point_count,
-            &timestamps[point_range_start..point_end_idx],
-            &point_actors[point_range_start..point_end_idx],
-            &point_groups[point_range_start..point_end_idx],
-            &point_scales[point_range_start..point_end_idx],
-            &colors[point_range_start..point_end_idx],
-            &x_vals[point_range_start..point_end_idx],
-            &y_vals[point_range_start..point_end_idx],
-            point_splatter_counts,
-            &splatter_sizes[splatter_range_start..splatter_end_idx],
-            &splatter_x_vals[splatter_range_start..splatter_end_idx],
-            &splatter_y_vals[splatter_range_start..splatter_end_idx],
+            splatter_count,
+            &timestamps[splatter_range_start..splatter_end_idx],
+            &splatter_actors[splatter_range_start..splatter_end_idx],
+            &colors[splatter_range_start..splatter_end_idx],
+            &x_vals[splatter_range_start..splatter_end_idx],
+            &y_vals[splatter_range_start..splatter_end_idx],
+            &splatter_animations[splatter_range_start..splatter_end_idx],
+            &&splatter_rotations[splatter_range_start..splatter_end_idx],
         );
 
         let (mut pixels, rect_height) = changed_rect.pixel_range(img.to_vec(), width as usize, 4);

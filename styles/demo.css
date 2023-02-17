@@ -1,4 +1,4 @@
-body {
+body.demo-active {
   cursor: none;
 }
 
@@ -29,6 +29,14 @@ body {
 #textures {
   display: none;
 }
+/* #textures {
+  display: block;
+  position: absolute;
+}
+#textures canvas {
+  width: 100px;
+  height: 100px;
+} */
 
 .online-dot {
   width: 14px;

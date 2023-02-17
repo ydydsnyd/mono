@@ -4,7 +4,7 @@ export type State = {
   actorId: ActorID;
   actors: Record<ActorID, Actor>;
   cursors: Record<ActorID, Cursor>;
-  points: Record<Letter, Point[]>;
+  splatters: Record<Letter, Splatter[]>;
   rawCaches: Record<Letter, string>;
   sequences: Record<Letter, number>;
   impulses: Record<Letter, Impulse[]>;
@@ -61,18 +61,13 @@ export enum Letter {
   E = 'e',
 }
 
-// Each letter also can be painted on, by adding points.
-export type Point = Position & {
+// Each letter also can be painted on, by adding splatters.
+export type Splatter = Position & {
   u: ActorID; // actor ID
   t: number; // timestamp
   c: number; // color index, from COLOR_PALATE
-  s: number; // scale that this point was drawn at
-  p: Splatter[]; // splatters
-  g: number; // group
-};
-
-export type Splatter = Position & {
-  s: number; // size
+  a: number; // splatter animation index
+  r: number; // rotation of splatter animation
 };
 
 // Each actor has a cursor. They are positioned in global space, so we also need

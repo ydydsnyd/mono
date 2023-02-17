@@ -1,21 +1,13 @@
 import type {Color} from './types';
-import {COLOR_PALATE_RS, PAINT_DECAY_AGE} from '../../renderer/src/constants';
+import {COLOR_PALATE_RS} from '../../renderer/src/constants';
 export {UVMAP_SIZE} from '../../renderer/src/constants';
 
-// How much padding each canvas should have above and below it
-export const CANVAS_HEIGHT_PADDING = 0.2;
+// Debug
+export const DEBUG_PHYSICS = false;
 
 // Splatters
-export const SPLATTER_COUNT_MAX = 5;
-export const SPLATTER_MAX_DISTANCE = 0.5;
-export const SPLATTER_MAX_SIZE = 0.5;
-export const SPLATTER_MIN_SIZE = 0.1;
-
-// Flatten points older than this
-export const POINT_AGE_MAX = PAINT_DECAY_AGE;
-export const POINT_CLEANUP_MIN = 10;
-
-export const CLIENT_CACHE_INTERVAL = 1000;
+export const SPLATTER_ANIM_DURATION = 1000;
+export const SPLATTER_FLATTEN_MIN = 10;
 
 // Allow rewriting up to 400 frames of physics in the past
 export const MAX_RENDERED_STEPS = 400;

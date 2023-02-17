@@ -13,21 +13,17 @@ export function update_cache(letter: number, png_data: Uint8Array): void;
 * @param {Uint8Array} c_colors
 * @param {Uint8Array} d_colors
 * @param {Uint8Array} e_colors
-* @param {number} point_count
+* @param {number} splatter_count
 * @param {Float64Array} timestamps
-* @param {Uint32Array} point_actors
-* @param {Uint32Array} point_groups
-* @param {Float32Array} point_scales
+* @param {Uint32Array} splatter_actors
 * @param {Uint8Array} colors
 * @param {Float32Array} x_vals
 * @param {Float32Array} y_vals
-* @param {Uint32Array} splatter_counts
-* @param {Float32Array} splatter_sizes
-* @param {Float32Array} splatter_x_vals
-* @param {Float32Array} splatter_y_vals
+* @param {Uint8Array} splatter_animations
+* @param {Float32Array} splatter_rotations
 * @returns {Uint8Array}
 */
-export function draw_buffer_png(letter: number, time: number, a_colors: Uint8Array, b_colors: Uint8Array, c_colors: Uint8Array, d_colors: Uint8Array, e_colors: Uint8Array, point_count: number, timestamps: Float64Array, point_actors: Uint32Array, point_groups: Uint32Array, point_scales: Float32Array, colors: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_counts: Uint32Array, splatter_sizes: Float32Array, splatter_x_vals: Float32Array, splatter_y_vals: Float32Array): Uint8Array;
+export function draw_buffer_png(letter: number, time: number, a_colors: Uint8Array, b_colors: Uint8Array, c_colors: Uint8Array, d_colors: Uint8Array, e_colors: Uint8Array, splatter_count: number, timestamps: Float64Array, splatter_actors: Uint32Array, colors: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_animations: Uint8Array, splatter_rotations: Float32Array): Uint8Array;
 /**
 * @param {number} letter
 * @param {CanvasRenderingContext2D} ctx
@@ -37,20 +33,16 @@ export function draw_buffer_png(letter: number, time: number, a_colors: Uint8Arr
 * @param {Uint8Array} c_colors
 * @param {Uint8Array} d_colors
 * @param {Uint8Array} e_colors
-* @param {number} point_count
+* @param {number} splatter_count
 * @param {Float64Array} timestamps
-* @param {Uint32Array} point_actors
-* @param {Uint32Array} point_groups
-* @param {Float32Array} point_scales
+* @param {Uint32Array} splatter_actors
 * @param {Uint8Array} colors
 * @param {Float32Array} x_vals
 * @param {Float32Array} y_vals
-* @param {Uint32Array} splatter_counts
-* @param {Float32Array} splatter_sizes
-* @param {Float32Array} splatter_x_vals
-* @param {Float32Array} splatter_y_vals
+* @param {Uint8Array} splatter_animations
+* @param {Float32Array} splatter_rotations
 */
-export function add_points_to_cache(letter: number, ctx: CanvasRenderingContext2D, time: number, a_colors: Uint8Array, b_colors: Uint8Array, c_colors: Uint8Array, d_colors: Uint8Array, e_colors: Uint8Array, point_count: number, timestamps: Float64Array, point_actors: Uint32Array, point_groups: Uint32Array, point_scales: Float32Array, colors: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_counts: Uint32Array, splatter_sizes: Float32Array, splatter_x_vals: Float32Array, splatter_y_vals: Float32Array): void;
+export function add_points_to_cache(letter: number, ctx: CanvasRenderingContext2D, time: number, a_colors: Uint8Array, b_colors: Uint8Array, c_colors: Uint8Array, d_colors: Uint8Array, e_colors: Uint8Array, splatter_count: number, timestamps: Float64Array, splatter_actors: Uint32Array, colors: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_animations: Uint8Array, splatter_rotations: Float32Array): void;
 /**
 * @param {CanvasRenderingContext2D} ctx_a
 * @param {CanvasRenderingContext2D} ctx_l
@@ -63,20 +55,16 @@ export function add_points_to_cache(letter: number, ctx: CanvasRenderingContext2
 * @param {Uint8Array} c_colors
 * @param {Uint8Array} d_colors
 * @param {Uint8Array} e_colors
-* @param {Uint32Array} point_counts
+* @param {Uint32Array} splatter_counts
 * @param {Float64Array} timestamps
-* @param {Uint32Array} point_actors
-* @param {Uint32Array} point_groups
-* @param {Float32Array} point_scales
+* @param {Uint32Array} splatter_actors
 * @param {Uint8Array} colors
 * @param {Float32Array} x_vals
 * @param {Float32Array} y_vals
-* @param {Uint32Array} splatter_counts
-* @param {Float32Array} splatter_sizes
-* @param {Float32Array} splatter_x_vals
-* @param {Float32Array} splatter_y_vals
+* @param {Uint8Array} splatter_animations
+* @param {Float32Array} splatter_rotations
 */
-export function draw_buffers(ctx_a: CanvasRenderingContext2D, ctx_l: CanvasRenderingContext2D, ctx_i: CanvasRenderingContext2D, ctx_v: CanvasRenderingContext2D, ctx_e: CanvasRenderingContext2D, time: number, a_colors: Uint8Array, b_colors: Uint8Array, c_colors: Uint8Array, d_colors: Uint8Array, e_colors: Uint8Array, point_counts: Uint32Array, timestamps: Float64Array, point_actors: Uint32Array, point_groups: Uint32Array, point_scales: Float32Array, colors: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_counts: Uint32Array, splatter_sizes: Float32Array, splatter_x_vals: Float32Array, splatter_y_vals: Float32Array): void;
+export function draw_buffers(ctx_a: CanvasRenderingContext2D, ctx_l: CanvasRenderingContext2D, ctx_i: CanvasRenderingContext2D, ctx_v: CanvasRenderingContext2D, ctx_e: CanvasRenderingContext2D, time: number, a_colors: Uint8Array, b_colors: Uint8Array, c_colors: Uint8Array, d_colors: Uint8Array, e_colors: Uint8Array, splatter_counts: Uint32Array, timestamps: Float64Array, splatter_actors: Uint32Array, colors: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_animations: Uint8Array, splatter_rotations: Float32Array): void;
 /**
 */
 export enum Letter {
@@ -92,9 +80,9 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly update_cache: (a: number, b: number, c: number) => void;
-  readonly draw_buffer_png: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number, w: number, x: number, y: number, z: number, a1: number, b1: number, c1: number, d1: number, e1: number, f1: number, g1: number, h1: number, i1: number) => number;
-  readonly add_points_to_cache: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number, w: number, x: number, y: number, z: number, a1: number, b1: number, c1: number, d1: number, e1: number, f1: number, g1: number, h1: number, i1: number, j1: number) => void;
-  readonly draw_buffers: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number, w: number, x: number, y: number, z: number, a1: number, b1: number, c1: number, d1: number, e1: number, f1: number, g1: number, h1: number, i1: number, j1: number, k1: number, l1: number, m1: number, n1: number) => void;
+  readonly draw_buffer_png: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number, w: number, x: number, y: number, z: number, a1: number) => number;
+  readonly add_points_to_cache: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number, w: number, x: number, y: number, z: number, a1: number, b1: number) => void;
+  readonly draw_buffers: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number, w: number, x: number, y: number, z: number, a1: number, b1: number, c1: number, d1: number, e1: number, f1: number) => void;
   readonly __wbindgen_malloc: (a: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number) => number;
   readonly __wbindgen_exn_store: (a: number) => void;

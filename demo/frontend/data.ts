@@ -7,7 +7,7 @@ import type {
   Letter,
   LetterCache,
   Physics,
-  Point,
+  Splatter,
   State,
 } from '../shared/types';
 import {mutators, M} from '../shared/mutators';
@@ -71,6 +71,14 @@ export const initialize = async (roomID: string, userID: string) => {
             localState.actors[actor.id] = actor;
           }
           break;
+        case 'physics-origin':
+          const origin = getData<Physics>(diff);
+          if (isDeleteDiff(diff)) {
+            delete localState.physics;
+          } else {
+            localState.physics = origin;
+          }
+          break;
         case 'cursor':
           const cursor = getData<Cursor>(diff);
           if (isDeleteDiff(diff)) {
@@ -100,13 +108,13 @@ export const initialize = async (roomID: string, userID: string) => {
       // Points are sometimes modified in quite large ways (e.g. we delete tons at a
       // time on the server) - to avoid having to maintain a local index, just read
       // them all from reflect on each frame.
-      const points: State['points'] = letterMap(() => []);
+      const splatters: State['splatters'] = letterMap(() => []);
       await Promise.all([
         ...LETTERS.map(async letter => {
-          const letterPoints = (await tx
-            .scan({prefix: `point/${letter}`})
-            .toArray()) as Point[];
-          points[letter] = letterPoints;
+          const letterSplatters = (await tx
+            .scan({prefix: `splatter/${letter}`})
+            .toArray()) as Splatter[];
+          splatters[letter] = letterSplatters;
         }),
       ]);
       const impulses: State['impulses'] = letterMap(() => []);
@@ -120,7 +128,7 @@ export const initialize = async (roomID: string, userID: string) => {
       ]);
       return {
         ...localState,
-        points,
+        splatters,
         impulses,
       };
     });
@@ -150,18 +158,18 @@ const stateInitializer =
       cursors[cursor.actorId] = cursor;
       return cursors;
     }, {} as State['cursors']);
-    const points: State['points'] = letterMap(() => []);
+    const splatters: State['splatters'] = letterMap(() => []);
     const impulses: State['impulses'] = letterMap(() => []);
     const rawCaches: State['rawCaches'] = letterMap(() => '');
     const sequences: State['sequences'] = letterMap(() => -1);
     await Promise.all([
       ...LETTERS.map(async letter => {
-        const letterPoints = (await tx
+        const letterSplatters = (await tx
           .scan({
-            prefix: `point/${letter}/`,
+            prefix: `splatter/${letter}/`,
           })
-          .toArray()) as Point[];
-        points[letter] = letterPoints;
+          .toArray()) as Splatter[];
+        splatters[letter] = letterSplatters;
       }),
       ...LETTERS.map(async letter => {
         const letterImpulses = (await tx
@@ -188,7 +196,7 @@ const stateInitializer =
       actorId: userID,
       actors,
       cursors,
-      points,
+      splatters,
       rawCaches,
       sequences,
       impulses,

@@ -2,7 +2,7 @@ import rapier3d from '@dimforge/rapier3d';
 import {nanoid} from 'nanoid';
 import {initialize} from './data';
 import {renderer as renderer3D} from './3d-renderer';
-import {cacheOldPoints, render} from './texture-renderer';
+import {render} from './texture-renderer';
 import initRenderer from '../../renderer/pkg/renderer';
 import {cursorRenderer} from './cursors';
 import {
@@ -10,18 +10,19 @@ import {
   FPS_LOW_PASS,
   COLOR_PALATE,
   COLOR_PALATE_END,
-  CLIENT_CACHE_INTERVAL,
   STEP_RENDER_DELAY,
+  DEBUG_PHYSICS,
 } from '../shared/constants';
 import type {
+  Actor,
   ColorPalate,
-  Cursor,
+  Impulse,
   Letter,
-  LetterCache,
+  Position,
   Size,
 } from '../shared/types';
 import {LETTERS} from '../shared/letters';
-import {letterMap} from '../shared/util';
+import {letterMap, now} from '../shared/util';
 import {initRoom} from './init-room';
 import {getUserLocation} from './location';
 import {getPhysics} from '../shared/physics';
@@ -46,8 +47,6 @@ export const init = async () => {
   localStorage.setItem('paint-fight-actor-id', actorId);
 
   const debug: Debug = {fps: 60, points: 0};
-  const renderPointsIndex = letterMap(_ => 0);
-  let physicsStep = -1;
 
   // Canvases
   const canvas = document.getElementById('canvas3D') as HTMLCanvasElement;
@@ -64,8 +63,13 @@ export const init = async () => {
 
   const roomID = await initRoom();
 
-  const {getState, addListener, updateCursor, addPoint, updateActorLocation} =
-    await initialize(roomID, actorId);
+  const {
+    getState,
+    updateCursor,
+    addSplatter,
+    addListener,
+    updateActorLocation,
+  } = await initialize(roomID, actorId);
 
   // Get our location and add it when it's ready
   getUserLocation().then(location => {
@@ -73,8 +77,9 @@ export const init = async () => {
   });
 
   // Initialize state
-  let {actors, cursors, rawCaches, points, sequences, physics, impulses} =
+  let {actors, cursors, rawCaches, splatters, sequences, physics, impulses} =
     await getState();
+  let physicsStep = physics?.step || -1;
 
   // Set up 3D renderer
   const {
@@ -84,6 +89,7 @@ export const init = async () => {
     set3DPosition,
     updateTexture,
     updateDebug,
+    addImpulse,
   } = await renderer3D(canvas, textures);
 
   // Set up info below demo
@@ -108,11 +114,15 @@ export const init = async () => {
     localStorage.removeItem('roomID');
     window.location.reload();
   });
-
-  // When we get a new cache, reset the local one.
-  addListener<LetterCache>('cache', ({letter}) => {
-    renderPointsIndex[letter] = 0;
+  // Whenever actors change, update the count
+  addListener<Actor>('actor', () => {
+    activeUserCount.innerHTML = Object.keys(actors).length + '';
   });
+
+  addListener<Impulse>('impulse', impulse => {
+    addImpulse(impulse);
+  });
+  LETTERS.forEach(letter => impulses[letter].forEach(i => addImpulse(i)));
 
   // Initialize textures
   LETTERS.forEach(letter => updateTexture(letter));
@@ -129,41 +139,55 @@ export const init = async () => {
   if (window.location.search.includes('debug')) {
     setInterval(async () => {
       const debugEl = document.getElementById('debug');
-      const pointCount = Object.keys(points).reduce(
-        (acc, k) => points[k as Letter].length + acc,
+      const splatterCount = Object.keys(splatters).reduce(
+        (acc, k) => splatters[k as Letter].length + acc,
+        0,
+      );
+      const impulseCount = Object.keys(impulses).reduce(
+        (acc, k) => impulses[k as Letter].length + acc,
         0,
       );
       if (debugEl) {
-        debugEl.innerHTML = `${
+        debugEl.innerHTML = `physics step ${physicsStep}\n${
           Object.keys(actors).length
-        } actors\n${pointCount} points\n${debug.fps.toFixed(
+        } actors\n${splatterCount} splatters\n${impulseCount} impulses\n${debug.fps.toFixed(
           1,
         )} fps\n${LETTERS.map(letter => {
           return `${letter.toUpperCase()} [seq ${
             sequences[letter]
-          }]\n  rendered points: ${
-            points[letter].length - (renderPointsIndex[letter] + 1)
-          }\n  local cache count:\n    ${
-            renderPointsIndex[letter]
+          }]\n   splatters: ${splatters[letter].length}\n   impulses: ${
+            impulses[letter].length
           }\n  cache size:\n    ${
             new Blob([rawCaches[letter] || '']).size / 1024
-          }k\n  splatters: ${points[letter].reduce(
-            (acc, p) => acc + p.p.length,
-            0,
-          )}`;
+          }k\n`;
         }).join('\n')}`;
       }
     }, 200);
   }
+
+  const addPaint = (at: Position) => {
+    const [letter, texturePosition, hitPosition] = getTexturePosition(at);
+    if (letter && texturePosition && hitPosition) {
+      addSplatter({
+        ts: now(),
+        letter,
+        actorId,
+        colorIndex: actors[actorId].colorIndex,
+        texturePosition,
+        hitPosition,
+        sequence: sequences[letter],
+        step: Math.round(physicsStep),
+      });
+    }
+  };
 
   // Set up cursor renderer
   const renderCursors = cursorRenderer(
     actorId,
     () => ({actors, cursors}),
     getScaleFactor,
-    (cursor: Cursor) => {
-      updateCursor(cursor);
-    },
+    addPaint,
+    updateCursor,
   );
 
   // When the window is resized, recalculate letter and cursor positions
@@ -180,17 +204,6 @@ export const init = async () => {
   resizeViewport();
 
   // Set up physics rendering
-  const updateStep = (step: number) => {
-    const [positions3d, world] = getPhysics(rapier3d, physics, impulses, step);
-    LETTERS.forEach(letter => {
-      const position3d = positions3d[letter];
-      if (position3d) {
-        set3DPosition(letter, position3d);
-      }
-    });
-    updateDebug(world.debugRender());
-  };
-
   const renderPhysics = () => {
     const originStep = physics?.step || 0;
     const targetStep = Math.max(originStep - STEP_RENDER_DELAY, 0);
@@ -202,32 +215,38 @@ export const init = async () => {
     } else {
       physicsStep += 1;
     }
-    updateStep(Math.floor(physicsStep));
+    const [positions3d, world] = getPhysics(
+      rapier3d,
+      physics,
+      impulses,
+      Math.round(physicsStep),
+    );
+    LETTERS.forEach(letter => {
+      const position3d = positions3d[letter];
+      if (position3d) {
+        set3DPosition(letter, position3d);
+      }
+    });
+    if (DEBUG_PHYSICS) {
+      updateDebug(world.debugRender());
+    }
   };
 
   // Render our cursors and canvases at "animation speed", usually 60fps
   startRenderLoop(async () => {
+    ({actors, cursors, rawCaches, splatters, sequences, physics, impulses} =
+      await getState());
     await renderCursors();
     // Each frame, render our textures
-    render(textures, points, renderPointsIndex, colors);
+    render(textures, splatters, colors);
     // Update textures and render the 3D scene
     LETTERS.forEach(letter => updateTexture(letter));
-    render3D();
     renderPhysics();
+    render3D();
   }, debug);
 
-  // Periodically cache on the client
-  setInterval(() => {
-    LETTERS.forEach(letter => {
-      renderPointsIndex[letter] = cacheOldPoints(
-        letter,
-        textures[letter],
-        points[letter],
-        renderPointsIndex[letter],
-        colors,
-      );
-    });
-  }, CLIENT_CACHE_INTERVAL);
+  // After we've started, flip a class on the body
+  document.body.classList.add('demo-active');
 };
 
 const startRenderLoop = (render: () => void, debug: Debug) => {

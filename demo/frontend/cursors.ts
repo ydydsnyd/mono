@@ -13,6 +13,7 @@ export const cursorRenderer = (
   actorId: string,
   getState: () => {actors: State['actors']; cursors: State['cursors']},
   getScaleFactor: () => Size,
+  onClick: (position: Position) => void,
   onUpdateCursor: (localCursor: Cursor) => void,
 ) => {
   // Set up local state
@@ -81,9 +82,10 @@ export const cursorRenderer = (
   };
   mouseElement.addEventListener('mouseout', hideCursor);
   mouseElement.addEventListener('touchend', hideCursor);
-  // Track cursor "painting"
+  // Track cursor clicks
   const setIsDown = () => {
     localCursor.isDown = true;
+    onClick(lastPosition);
     cursorNeedsUpdate = true;
   };
   mouseElement.addEventListener('mousedown', setIsDown);

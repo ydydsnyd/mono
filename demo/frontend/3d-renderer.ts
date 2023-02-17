@@ -14,12 +14,14 @@ import {
   ArcRotateCamera,
   Camera,
   MeshBuilder,
+  LinesMesh,
 } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import type {Letter, Letter3DPosition, Position, Vector} from '../shared/types';
 import {letterMap} from '../shared/util';
 import {LETTERS} from '../shared/letters';
 import type {DebugRenderBuffers} from '@dimforge/rapier3d';
+import {DEBUG_PHYSICS} from '../shared/constants';
 
 const modelURL = '/alive.glb';
 
@@ -59,6 +61,7 @@ export const renderer = async (
     updateTexture,
     resizeCanvas,
     updateDebug,
+    addImpulse,
   } = await createScene(engine, textureCanvases);
   return {
     render: () => {
@@ -69,6 +72,7 @@ export const renderer = async (
     set3DPosition,
     updateTexture,
     updateDebug,
+    addImpulse,
   };
 };
 
@@ -84,6 +88,7 @@ export const createScene = async (
   updateTexture: (letter: Letter) => void;
   resizeCanvas: () => void;
   updateDebug: (debug: DebugRenderBuffers | null) => void;
+  addImpulse: (at: Vector) => void;
 }> => {
   const scene = new Scene(engine);
   // Don't allow babylon to handle mouse events. This both has a mild perf
@@ -152,7 +157,7 @@ export const createScene = async (
     meshes[letter].position.set(
       -position.position.x,
       position.position.y,
-      position.position.x,
+      position.position.z,
     );
   };
 
@@ -200,29 +205,42 @@ export const createScene = async (
     const pickInfo = scene.pick(cursor.x, cursor.y, mesh =>
       letterMeshNames.has(mesh.name as Letter),
     );
-    const {x, y} = pickInfo.getTextureCoordinates() || {x: -1, y: -1};
+    const {x: tx, y: ty} = pickInfo.getTextureCoordinates() || {x: -1, y: -1};
     const letter = pickInfo.pickedMesh?.name as Letter | undefined;
     if (letter) {
+      const {x, y, z} = pickInfo.pickedPoint!;
       return [
         letter,
         {
-          x,
-          y: 1 - y, // Y is inverted in the 3D space
+          x: tx,
+          y: 1 - ty, // Y is inverted in the 3D space
         },
-        pickInfo.pickedPoint!,
+        {x, y, z},
       ];
     }
     return [undefined, undefined, undefined];
   };
 
-  let lines = MeshBuilder.CreateLines(
-    'debug-lines',
-    {
-      points: [],
-      updatable: true,
-    },
-    scene,
-  );
+  const addImpulse = (at: Vector) => {
+    const mesh = MeshBuilder.CreateSphere(
+      `${at.x}${at.y}${at.z}`,
+      {diameter: 0.2},
+      scene,
+    );
+    mesh.position.set(at.x, at.y, at.z);
+  };
+
+  let lines: LinesMesh;
+  if (DEBUG_PHYSICS) {
+    lines = MeshBuilder.CreateLines(
+      'debug-lines',
+      {
+        points: [],
+        updatable: true,
+      },
+      scene,
+    );
+  }
   const updateDebug = (debug: DebugRenderBuffers | null) => {
     if (!debug) {
       lines.dispose();
@@ -277,5 +295,6 @@ export const createScene = async (
     updateTexture,
     resizeCanvas,
     updateDebug,
+    addImpulse,
   };
 };
