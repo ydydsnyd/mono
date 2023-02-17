@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1676534181355,
+  "lastUpdate": 1676644755425,
   "repoUrl": "https://github.com/rocicorp/replicache-internal",
   "entries": {
     "Bundle Sizes": [
@@ -36095,6 +36095,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27823,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "34a7fa46733e78529e1fee7536c779f42003f4f5",
+          "message": "chore: Use withRead and withWrite for dag.Store (#535)\n\nThis makes withRead and withWrite generic in a way that allows us to use\r\nthem for dag.Store.\r\n\r\nMaybe in the future we can align this with:\r\nhttps://github.com/tc39/proposal-explicit-resource-management",
+          "timestamp": "2023-02-17T15:38:09+01:00",
+          "tree_id": "71705f7903205098c85b133d1cc92257e2675968",
+          "url": "https://github.com/rocicorp/replicache-internal/commit/34a7fa46733e78529e1fee7536c779f42003f4f5"
+        },
+        "date": 1676644745378,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 246459,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 40975,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 245254,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 40663,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 98803,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27781,
             "unit": "bytes"
           }
         ]
