@@ -420,6 +420,7 @@ export class Reflect<MD extends MutatorDefs> {
     lc.info?.(`${kind}: ${message}}`);
 
     this.#nextMessageResolver?.reject(error);
+    lc.debug?.('Rejecting connect resolver due to error', error);
     this._connectResolver.reject(error);
     this._disconnect(lc, kind);
   }
@@ -443,6 +444,7 @@ export class Reflect<MD extends MutatorDefs> {
     }
 
     this._lastMutationIDSent = NULL_LAST_MUTATION_ID_SENT;
+    lc.debug?.('Resolving connect resolver');
     this._connectResolver.resolve();
   }
 
@@ -478,14 +480,11 @@ export class Reflect<MD extends MutatorDefs> {
 
     this._connectingStart = Date.now();
 
-    // Create a new resolver for the next connection attempt. The previous
-    // promise should have been resolved/rejected because we do not allow
-    // overlapping connect calls.
-    this._connectResolver = resolver();
-
     const baseCookie = await this._getBaseCookie();
+
     // Reject connect after a timeout.
     const id = setTimeout(() => {
+      l.debug?.('Rejecting connect resolver due to timeout');
       this._connectResolver.reject(
         new MessageError(ErrorKind.ConnectTimeout, 'Timed out connecting'),
       );
@@ -493,7 +492,7 @@ export class Reflect<MD extends MutatorDefs> {
     }, CONNECT_TIMEOUT_MS);
     const clear = () => clearTimeout(id);
     this._connectResolver.promise.then(clear, clear);
-    // We clear the timeout in _disconnect and _handleConnectedMessage.
+
     const ws = createSocket(
       this._socketOrigin,
       baseCookie,
@@ -544,7 +543,8 @@ export class Reflect<MD extends MutatorDefs> {
     }
 
     this._socketResolver = resolver();
-
+    l.debug?.('Creating new connect resolver');
+    this._connectResolver = resolver();
     this._connectionState = ConnectionState.Disconnected;
 
     this._connectingStart = undefined;

@@ -987,3 +987,38 @@ test('Logs errors in connect', async () => {
 
   await r.close();
 });
+
+test('pusher waits for connection', async () => {
+  const r = reflectForTest();
+
+  const pushReq: PushRequestV1 = {
+    profileID: 'p1',
+    clientGroupID: await r.clientGroupID,
+    pushVersion: 1,
+    schemaVersion: '1',
+    mutations: [],
+  };
+
+  const log: ('resolved' | 'rejected')[] = [];
+
+  await r.triggerError(ErrorKind.ClientNotFound, 'client-id-a');
+  expect(r.connectionState).to.equal(ConnectionState.Disconnected);
+
+  r.pusher(pushReq, 'request-id').then(
+    () => log.push('resolved'),
+    () => log.push('rejected'),
+  );
+
+  await tickAFewTimes(clock);
+
+  // Rejections that happened in previous connect should not reject pusher.
+  expect(log).to.deep.equal([]);
+
+  // backoff
+  await clock.tickAsync(RUN_LOOP_INTERVAL_MS);
+  expect(r.connectionState).to.equal(ConnectionState.Connecting);
+
+  await r.triggerError(ErrorKind.ClientNotFound, 'client-id-a');
+  await tickAFewTimes(clock);
+  expect(log).to.deep.equal(['rejected']);
+});
