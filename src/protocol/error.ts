@@ -15,6 +15,7 @@ export const enum ErrorKind {
   Unauthorized = 'Unauthorized',
   UnexpectedBaseCookie = 'UnexpectedBaseCookie',
   UnexpectedLastMutationID = 'UnexpectedLastMutationID',
+  VersionNotSupported = 'VersionNotSupported',
 }
 
 export const errorKindSchema = s.union([
@@ -30,6 +31,7 @@ export const errorKindSchema = s.union([
   s.literal(ErrorKind.Unauthorized),
   s.literal(ErrorKind.UnexpectedBaseCookie),
   s.literal(ErrorKind.UnexpectedLastMutationID),
+  s.literal(ErrorKind.VersionNotSupported),
 ]);
 
 export const errorMessageSchema = s.tuple([

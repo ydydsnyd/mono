@@ -37,6 +37,7 @@ import {addRequestIDFromHeadersOrRandomID} from './request-id.js';
 import {pullRequestSchema} from '../protocol/pull.js';
 import type {PendingMutationMap} from '../types/mutation.js';
 import {handlePull} from './pull.js';
+import {CONNECT_URL_PATTERN, LEGACY_CONNECT_PATH} from './paths.js';
 
 const roomIDKey = '/system/roomID';
 const deletedKey = '/system/deleted';
@@ -58,7 +59,8 @@ export const ROOM_ROUTES = {
   authInvalidateForRoom: '/api/auth/v0/invalidateForRoom',
   authConnections: '/api/auth/v0/connections',
   createRoom: '/createRoom',
-  connect: '/connect',
+  legacyConnect: LEGACY_CONNECT_PATH,
+  connect: CONNECT_URL_PATTERN,
   pull: '/pull',
 } as const;
 
@@ -115,6 +117,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     );
     this._router.register(ROOM_ROUTES.authConnections, this._authConnections);
     this._router.register(ROOM_ROUTES.createRoom, this._createRoom);
+    this._router.register(ROOM_ROUTES.legacyConnect, this._connect);
     this._router.register(ROOM_ROUTES.connect, this._connect);
     this._router.register(ROOM_ROUTES.pull, this._pull);
   }
@@ -231,7 +234,6 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     }),
   );
 
-  // eslint-disable-next-line require-await
   private _connect = get((ctx, request) => {
     let {lc} = ctx;
     lc = addWebSocketIDToLogContext(lc, request.url);
@@ -246,19 +248,23 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     lc.debug?.('connection request', url.toString(), 'waiting for lock');
     serverWS.accept();
 
-    void this._lock.withLock(() => {
-      lc.debug?.('received lock');
-      return handleConnection(
-        lc,
-        serverWS,
-        this._storage,
-        url,
-        request.headers,
-        this._clients,
-        this._handleMessage,
-        this._handleClose,
-      );
-    });
+    void this._lock
+      .withLock(() => {
+        lc.debug?.('received lock');
+        return handleConnection(
+          lc,
+          serverWS,
+          this._storage,
+          url,
+          request.headers,
+          this._clients,
+          this._handleMessage,
+          this._handleClose,
+        );
+      })
+      .catch(e => {
+        lc.error?.('unhandled exception in handleConnection', e);
+      });
 
     return new Response(null, {status: 101, webSocket: clientWS});
   });

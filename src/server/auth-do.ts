@@ -20,7 +20,7 @@ import {
   invalidateForRoomRequestSchema,
   invalidateForUserRequestSchema,
 } from '../protocol/api/auth.js';
-import {assert} from 'superstruct';
+import * as superstruct from 'superstruct';
 import {createAuthAPIHeaders} from './auth-api-headers.js';
 import {DurableStorage} from '../storage/durable-storage.js';
 import {createRoomRequestSchema} from '../protocol/api/room.js';
@@ -36,12 +36,15 @@ import {
   BaseContext,
   WithRoomID,
   withBody,
+  withVersion,
+  WithVersion,
 } from './router.js';
 import {addRequestIDFromHeadersOrRandomID} from './request-id.js';
 import {createUnauthorizedResponse} from './create-unauthorized-response.js';
 import {ErrorKind} from '../protocol/error.js';
 import {ROOM_ROUTES} from './room-do.js';
 import {pullRequestSchema} from '../protocol/pull.js';
+import {CONNECT_URL_PATTERN, LEGACY_CONNECT_PATH} from './paths.js';
 
 export interface AuthDOOptions {
   roomDO: DurableObjectNamespace;
@@ -75,7 +78,8 @@ export const AUTH_ROUTES_AUTHED_BY_API_KEY = {
 } as const;
 
 export const AUTH_ROUTES_AUTHED_BY_AUTH_HANDLER = {
-  connect: '/connect',
+  legacyConnect: LEGACY_CONNECT_PATH,
+  connect: CONNECT_URL_PATTERN,
   pull: '/pull',
 } as const;
 
@@ -277,12 +281,24 @@ export class BaseAuthDO implements DurableObject {
       this._authRevalidateConnections,
     );
 
+    this._router.register(AUTH_ROUTES.legacyConnect, this._legacyConnect);
     this._router.register(AUTH_ROUTES.connect, this._connect);
     this._router.register(AUTH_ROUTES.pull, this._pull);
   }
 
-  private _connect = get((ctx, request) => {
-    let {lc} = ctx;
+  private _connect = get(
+    withVersion((ctx: BaseContext & WithVersion, request) => {
+      const {lc, version} = ctx;
+      return this._connectImpl(lc, version, request);
+    }),
+  );
+
+  private _legacyConnect = get((ctx, request) => {
+    const {lc} = ctx;
+    return this._connectImpl(lc, 0, request);
+  });
+
+  private _connectImpl(lc: LogContext, version: number, request: Request) {
     const {url} = request;
     lc.info?.('authDO received websocket connection request:', url);
     if (request.headers.get('Upgrade') !== 'websocket') {
@@ -316,6 +332,20 @@ export class BaseAuthDO implements DurableObject {
     const closeWithErrorLocal = (errorKind: ErrorKind, msg: string) =>
       createWSAndCloseWithError(lc, url, errorKind, msg, encodedAuth);
 
+    const expectedVersion = 0;
+    if (version !== expectedVersion) {
+      lc.debug?.(
+        'Version not supported. Expected',
+        expectedVersion,
+        'but got',
+        version,
+      );
+      return closeWithErrorLocal(
+        ErrorKind.VersionNotSupported,
+        'unsupported version',
+      );
+    }
+
     const {searchParams} = new URL(url);
     // TODO apparently many of these checks are not tested :(
     const clientID = searchParams.get('clientID');
@@ -327,7 +357,7 @@ export class BaseAuthDO implements DurableObject {
     }
 
     const roomID = searchParams.get('roomID');
-    if (roomID === null || roomID === '') {
+    if (!roomID) {
       return closeWithErrorLocal(
         ErrorKind.InvalidConnectionRequest,
         'roomID parameter required',
@@ -420,7 +450,7 @@ export class BaseAuthDO implements DurableObject {
       });
       return response;
     });
-  });
+  }
 
   private _pull = post(
     withBody(pullRequestSchema, async (ctx, req) => {
@@ -604,7 +634,7 @@ export class BaseAuthDO implements DurableObject {
           let connectionsResponse: ConnectionsResponse | undefined;
           try {
             const responseJSON = await response.json();
-            assert(responseJSON, connectionsResponseSchema);
+            superstruct.assert(responseJSON, connectionsResponseSchema);
             connectionsResponse = responseJSON;
           } catch (e) {
             lc.error?.(

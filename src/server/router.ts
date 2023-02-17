@@ -144,6 +144,23 @@ export function withRoomID<Context extends BaseContext, Resp>(
   };
 }
 
+export type WithVersion = {version: number};
+export function withVersion<Context extends BaseContext, Resp>(
+  next: Handler<Context & WithVersion, Resp>,
+) {
+  return (ctx: Context, req: Request) => {
+    const {version: versionString} = ctx.parsedURL.pathname.groups;
+    if (versionString === undefined) {
+      throw new Error('version not found by withVersion');
+    }
+    if (!/^v\d+$/.test(versionString)) {
+      throw new Error(`invalid version found by withVersion, ${versionString}`);
+    }
+    const version = Number(versionString.slice(1));
+    return next({...ctx, version}, req);
+  };
+}
+
 export function asJSON<Context extends BaseContext>(
   next: Handler<Context, ReadonlyJSONValue>,
 ) {

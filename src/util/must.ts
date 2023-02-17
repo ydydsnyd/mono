@@ -1,9 +1,7 @@
-export function must<T>(
-  arg: T | undefined,
-  msg = 'Unexpected undefined value',
-): T {
-  if (arg === undefined) {
-    throw new Error(msg);
+export function must<T>(value: T | undefined | null, message?: string): T {
+  // eslint-disable-next-line eqeqeq
+  if (value == null) {
+    throw new Error(message ?? `Unexpected ${value} value`);
   }
-  return arg;
+  return value;
 }

@@ -22,6 +22,7 @@ import {
   report,
 } from '@rocicorp/datadog-util';
 import {assert} from '../util/asserts.js';
+import {REPORT_METRICS_PATH} from './paths.js';
 
 export interface WorkerOptions<Env extends BaseWorkerEnv> {
   getLogSink: (env: Env) => LogSink;
@@ -292,8 +293,6 @@ async function sendToAuthDO(
   const stub = authDO.get(id);
   return stub.fetch(request);
 }
-
-export const REPORT_METRICS_PATH = '/api/metrics/v0/report';
 
 export const WORKER_ROUTES = {
   [REPORT_METRICS_PATH]: reportMetrics,

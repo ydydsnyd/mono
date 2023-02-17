@@ -1,4 +1,4 @@
-import {REPORT_METRICS_PATH} from './server/worker.js';
+import {REPORT_METRICS_PATH} from './server/paths.js';
 
 export {
   createReflectServer,

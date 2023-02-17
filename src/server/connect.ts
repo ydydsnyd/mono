@@ -40,13 +40,8 @@ export type CloseHandler = (
 ) => void;
 
 /**
- * Handles the connect message from a client, registering the client state in memory and updating the persistent client-record.
- * @param ws socket connection to requesting client
- * @param url raw URL of connect request
- * @param clients currently running clients
- * @param onMessage message handler for this connection
- * @param onClose callback for when connection closes
- * @returns
+ * Handles the connect message from a client, registering the client state in
+ * memory and updating the persistent client-record.
  */
 export async function handleConnection(
   lc: LogContext,
@@ -57,7 +52,7 @@ export async function handleConnection(
   clients: ClientMap,
   onMessage: MessageHandler,
   onClose: CloseHandler,
-) {
+): Promise<void> {
   lc.info?.('roomDO: handling connect', url.toString());
   const closeWithErrorLocal = (msg: string) => {
     closeWithError(lc, ws, ErrorKind.InvalidConnectionRequest, msg);

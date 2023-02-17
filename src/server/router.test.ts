@@ -12,8 +12,11 @@ import {
   Router,
   withBody,
   withRoomID,
+  withVersion,
 } from './router.js';
 import * as s from 'superstruct';
+import {assert} from '../util/asserts.js';
+import {must} from '../util/must.js';
 
 test('Router', async () => {
   const router = new Router();
@@ -336,24 +339,35 @@ test('withRoomID', async () => {
 
   const cases: Case[] = [
     {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      parsedURL: new URLPattern({pathname: '/room/:roomID'}).exec(
-        'https://roci.dev/room/monkey',
-      )!,
+      parsedURL: must(
+        new URLPattern({pathname: '/room/:roomID'}).exec(
+          'https://roci.dev/room/monkey',
+        ),
+      ),
       expected: {result: {text: 'roomID:monkey', status: 200}},
     },
     {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      parsedURL: new URLPattern({pathname: '/room/:roomID'}).exec(
-        'https://roci.dev/room/%24',
-      )!,
+      parsedURL: must(
+        new URLPattern({pathname: '/room/:roomID'}).exec(
+          'https://roci.dev/room/%24',
+        ),
+      ),
       expected: {result: {text: 'roomID:$', status: 200}},
     },
     {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      parsedURL: new URLPattern({pathname: '/room/:otherThing'}).exec(
-        'https://roci.dev/room/monkey',
-      )!,
+      parsedURL: must(
+        new URLPattern({pathname: '/room/:roomID/x'}).exec(
+          'https://roci.dev/room/a%2Fb/x',
+        ),
+      ),
+      expected: {result: {text: 'roomID:a/b', status: 200}},
+    },
+    {
+      parsedURL: must(
+        new URLPattern({pathname: '/room/:otherThing'}).exec(
+          'https://roci.dev/room/monkey',
+        ),
+      ),
       expected: {
         error: 'Error: Internal error: roomID not found by withRoomID',
       },
@@ -486,4 +500,54 @@ test('asJSON', async () => {
     const response = await handler(ctx, request);
     expect(await response.json()).toEqual(c.expected);
   }
+});
+
+test('withVersion', async () => {
+  const t = async (
+    path: string,
+    exp: {text: string; status: number} | {error: string},
+  ) => {
+    const url = `https://roci.dev`;
+    const request = new Request(url);
+    const parsedURL = new URLPattern({
+      pathname: '/version/:version/monkey',
+    }).exec(url + path);
+    assert(parsedURL);
+    const ctx = {
+      parsedURL,
+      lc: createSilentLogContext(),
+    };
+
+    const handler = withVersion(
+      ctx => new Response(`version:${ctx.version}`, {status: 200}),
+    );
+
+    let result: typeof exp;
+    try {
+      const response = await handler(ctx, request);
+      result = {status: response.status, text: await response.text()} as const;
+    } catch (e) {
+      result = {error: String(e)} as const;
+    }
+
+    expect(result).toEqual(exp);
+  };
+
+  await t('/version/v0/monkey', {text: 'version:0', status: 200});
+  await t('/version/v1/monkey', {text: 'version:1', status: 200});
+  await t('/version/v234/monkey', {text: 'version:234', status: 200});
+  await t('/version/v01/monkey', {text: 'version:1', status: 200});
+
+  await t('/version/1/monkey', {
+    error: 'Error: invalid version found by withVersion, 1',
+  });
+  await t('/version/123/monkey', {
+    error: 'Error: invalid version found by withVersion, 123',
+  });
+  await t('/version/123v/monkey', {
+    error: 'Error: invalid version found by withVersion, 123v',
+  });
+  await t('/version/bananas/monkey', {
+    error: 'Error: invalid version found by withVersion, bananas',
+  });
 });

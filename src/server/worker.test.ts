@@ -8,8 +8,9 @@ import {
   TestDurableObjectId,
   TestDurableObjectStub,
 } from './do-test-utils.js';
-import {BaseWorkerEnv, createWorker, REPORT_METRICS_PATH} from './worker.js';
+import {BaseWorkerEnv, createWorker} from './worker.js';
 import type {DatadogSeries} from '@rocicorp/datadog-util';
+import {REPORT_METRICS_PATH} from './paths.js';
 
 const TEST_AUTH_API_KEY = 'TEST_REFLECT_AUTH_API_KEY_TEST';
 
