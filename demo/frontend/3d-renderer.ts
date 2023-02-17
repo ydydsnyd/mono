@@ -61,7 +61,6 @@ export const renderer = async (
     updateTexture,
     resizeCanvas,
     updateDebug,
-    addImpulse,
   } = await createScene(engine, textureCanvases);
   return {
     render: () => {
@@ -72,7 +71,6 @@ export const renderer = async (
     set3DPosition,
     updateTexture,
     updateDebug,
-    addImpulse,
   };
 };
 
@@ -88,7 +86,6 @@ export const createScene = async (
   updateTexture: (letter: Letter) => void;
   resizeCanvas: () => void;
   updateDebug: (debug: DebugRenderBuffers | null) => void;
-  addImpulse: (at: Vector) => void;
 }> => {
   const scene = new Scene(engine);
   // Don't allow babylon to handle mouse events. This both has a mild perf
@@ -221,15 +218,6 @@ export const createScene = async (
     return [undefined, undefined, undefined];
   };
 
-  const addImpulse = (at: Vector) => {
-    const mesh = MeshBuilder.CreateSphere(
-      `${at.x}${at.y}${at.z}`,
-      {diameter: 0.2},
-      scene,
-    );
-    mesh.position.set(at.x, at.y, at.z);
-  };
-
   let lines: LinesMesh;
   if (DEBUG_PHYSICS) {
     lines = MeshBuilder.CreateLines(
@@ -295,6 +283,5 @@ export const createScene = async (
     updateTexture,
     resizeCanvas,
     updateDebug,
-    addImpulse,
   };
 };

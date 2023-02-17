@@ -89,7 +89,6 @@ export const init = async () => {
     set3DPosition,
     updateTexture,
     updateDebug,
-    addImpulse,
   } = await renderer3D(canvas, textures);
 
   // Set up info below demo
@@ -118,11 +117,6 @@ export const init = async () => {
   addListener<Actor>('actor', () => {
     activeUserCount.innerHTML = Object.keys(actors).length + '';
   });
-
-  addListener<Impulse>('impulse', impulse => {
-    addImpulse(impulse);
-  });
-  LETTERS.forEach(letter => impulses[letter].forEach(i => addImpulse(i)));
 
   // Initialize textures
   LETTERS.forEach(letter => updateTexture(letter));
