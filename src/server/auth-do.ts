@@ -49,6 +49,7 @@ import {
   CREATE_ROOM_PATH,
   LEGACY_CONNECT_PATH,
   LEGACY_CREATE_ROOM_PATH,
+  PULL_PATH,
 } from './paths.js';
 
 export interface AuthDOOptions {
@@ -86,7 +87,7 @@ export const AUTH_ROUTES_AUTHED_BY_API_KEY = {
 export const AUTH_ROUTES_AUTHED_BY_AUTH_HANDLER = {
   legacyConnect: LEGACY_CONNECT_PATH,
   connect: CONNECT_URL_PATTERN,
-  pull: '/pull',
+  pull: PULL_PATH,
 } as const;
 
 export const AUTH_ROUTES = {

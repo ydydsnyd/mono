@@ -1235,7 +1235,7 @@ test("pull returns 404 if room doesn't exist", async () => {
   };
   const headers = new Headers();
   headers.set('Authorization', testAuth);
-  const testRequest = new Request(`https://test.roci.dev/pull`, {
+  const testRequest = new Request(`https://test.roci.dev/api/sync/v0/pull`, {
     method: 'post',
     headers,
     body: JSON.stringify(requestBody),
@@ -1281,7 +1281,7 @@ test('pull calls authHandler and sends resolved UserData in header to Room DO', 
   };
   const headers = new Headers();
   headers.set('Authorization', testAuth);
-  const testRequest = new Request(`https://test.roci.dev/pull`, {
+  const testRequest = new Request(`https://test.roci.dev/api/sync/v0/pull`, {
     method: 'post',
     headers,
     body: JSON.stringify(requestBody),
@@ -1347,7 +1347,7 @@ test('pull wont forward pull to a room that is closed', async () => {
   };
   const headers = new Headers();
   headers.set('Authorization', testAuth);
-  const testRequest = new Request(`https://test.roci.dev/pull`, {
+  const testRequest = new Request(`https://test.roci.dev/api/sync/v0/pull`, {
     method: 'post',
     headers,
     body: JSON.stringify(requestBody),
@@ -1416,7 +1416,7 @@ test('pull returns a 401 without calling Room DO if authHandler rejects', async 
   };
   const headers = new Headers();
   headers.set('Authorization', testAuth);
-  const testRequest = new Request(`https://test.roci.dev/pull`, {
+  const testRequest = new Request(`https://test.roci.dev/api/sync/v0/pull`, {
     method: 'post',
     headers,
     body: JSON.stringify(requestBody),
@@ -1458,7 +1458,7 @@ test('pull returns a 401 without calling Room DO if Authorization header is not 
     pullVersion: 1,
     schemaVersion: '1',
   };
-  const testRequest = new Request(`https://test.roci.dev/pull`, {
+  const testRequest = new Request(`https://test.roci.dev/api/sync/v0/pull`, {
     method: 'post',
     body: JSON.stringify(requestBody),
   });

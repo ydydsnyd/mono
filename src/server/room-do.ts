@@ -42,6 +42,7 @@ import {
   CREATE_ROOM_PATH,
   LEGACY_CONNECT_PATH,
   LEGACY_CREATE_ROOM_PATH,
+  PULL_PATH,
 } from './paths.js';
 
 const roomIDKey = '/system/roomID';
@@ -67,7 +68,7 @@ export const ROOM_ROUTES = {
   createRoom: CREATE_ROOM_PATH,
   legacyConnect: LEGACY_CONNECT_PATH,
   connect: CONNECT_URL_PATTERN,
-  pull: '/pull',
+  pull: PULL_PATH,
 } as const;
 
 export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
