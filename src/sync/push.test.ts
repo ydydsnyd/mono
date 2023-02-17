@@ -15,6 +15,7 @@ import {
 import type {Pusher, PusherResult} from '../pusher.js';
 import type {ClientGroupID} from './ids.js';
 import {deepFreeze} from '../json.js';
+import {withRead, withWrite} from '../with-transactions.js';
 
 type FakePusherArgs = {
   expPush: boolean;
@@ -196,7 +197,7 @@ test('try push [SDD]', async () => {
   for (const c of cases) {
     // Reset state of the store.
     b.chain.length = startingNumCommits;
-    await store.withWrite(async w => {
+    await withWrite(store, async w => {
       await w.setHead(
         DEFAULT_HEAD_NAME,
         b.chain[b.chain.length - 1].chunk.hash,
@@ -215,7 +216,7 @@ test('try push [SDD]', async () => {
     // check that the index no longer returns values, demonstrating that it was
     // rebuilt.
     if (c.numPendingMutations > 0) {
-      await store.withRead(async dagRead => {
+      await withRead(store, async dagRead => {
         const read = await fromWhence(whenceHead(DEFAULT_HEAD_NAME), dagRead);
         let got = false;
 
@@ -442,7 +443,7 @@ test('try push [DD31]', async () => {
   for (const c of cases) {
     // Reset state of the store.
     b.chain.length = startingNumCommits;
-    await store.withWrite(async w => {
+    await withWrite(store, async w => {
       await w.setHead(
         DEFAULT_HEAD_NAME,
         b.chain[b.chain.length - 1].chunk.hash,
@@ -460,7 +461,7 @@ test('try push [DD31]', async () => {
     // check that the index no longer returns values, demonstrating that it was
     // rebuilt.
     if (c.numPendingMutations > 0) {
-      await store.withRead(async dagRead => {
+      await withRead(store, async dagRead => {
         const read = await fromWhence(whenceHead(DEFAULT_HEAD_NAME), dagRead);
         let got = false;
 

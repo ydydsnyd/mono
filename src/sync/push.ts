@@ -23,6 +23,7 @@ import {
   ReadonlyJSONObject,
   ReadonlyJSONValue,
 } from '../json.js';
+import {withRead} from '../with-transactions.js';
 
 export const PUSH_VERSION_SDD = 0;
 export const PUSH_VERSION_DD31 = 1;
@@ -157,7 +158,7 @@ export async function push(
 ): Promise<PusherResult | undefined> {
   // Find pending commits between the base snapshot and the main head and push
   // them to the data layer.
-  const pending = await store.withRead(async dagRead => {
+  const pending = await withRead(store, async dagRead => {
     const mainHeadHash = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
     if (!mainHeadHash) {
       throw new Error('Internal no main head');

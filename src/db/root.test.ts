@@ -1,6 +1,7 @@
 import {expect} from '@esm-bundle/chai';
 import * as dag from '../dag/mod.js';
 import {fakeHash, Hash} from '../hash.js';
+import {withWrite} from '../with-transactions.js';
 import {DEFAULT_HEAD_NAME} from './commit.js';
 import {getRoot} from './root.js';
 
@@ -8,7 +9,7 @@ test('getRoot', async () => {
   const t = async (headHash: Hash | undefined, expected: Hash | Error) => {
     const ds = new dag.TestStore();
     if (headHash !== undefined) {
-      await ds.withWrite(async dw => {
+      await withWrite(ds, async dw => {
         await dw.setHead(DEFAULT_HEAD_NAME, headHash);
         await dw.commit();
       });

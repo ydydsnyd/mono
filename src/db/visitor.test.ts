@@ -15,6 +15,7 @@ import {
   newLocalSDD,
 } from './commit.js';
 import {promiseVoid} from '../resolved-promises.js';
+import {withRead, withWrite} from '../with-transactions.js';
 
 function newLocal(
   createChunk: dag.CreateChunk,
@@ -76,7 +77,7 @@ suite('test that we get to the data nodes', () => {
 
     const t = async (commit: Commit<Meta>, expected: ReadonlyJSONValue[]) => {
       log.length = 0;
-      await dagStore.withRead(async dagRead => {
+      await withRead(dagStore, async dagRead => {
         const visitor = new TestVisitor(dagRead);
         await visitor.visitCommit(commit.chunk.hash);
         expect(log).to.deep.equal(expected);
@@ -165,7 +166,7 @@ suite('test that we get to the data nodes', () => {
       ]);
     }
 
-    const localCommit = await dagStore.withWrite(async dagWrite => {
+    const localCommit = await withWrite(dagStore, async dagWrite => {
       const prevCommit = b.chain[b.chain.length - 1];
       const baseSnapshotHash = await baseSnapshotHashFromHash(
         prevCommit.chunk.hash,
@@ -203,7 +204,7 @@ suite('test that we get to the data nodes', () => {
       [['\u00003\u0000local', '3']],
     ]);
 
-    const localCommit2 = await dagStore.withWrite(async dagWrite => {
+    const localCommit2 = await withWrite(dagStore, async dagWrite => {
       const prevCommit = b.chain[b.chain.length - 1];
       const baseSnapshotHash = await baseSnapshotHashFromHash(
         prevCommit.chunk.hash,

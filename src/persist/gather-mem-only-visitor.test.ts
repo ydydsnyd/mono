@@ -6,6 +6,7 @@ import {GatherMemoryOnlyVisitor} from './gather-mem-only-visitor.js';
 import {ChainBuilder} from '../db/test-helpers.js';
 import {MetaType} from '../db/commit.js';
 import {TestLazyStore} from '../dag/test-lazy-store.js';
+import {withRead, withWrite} from '../with-transactions.js';
 
 suite('dag with no memory-only hashes gathers nothing', () => {
   const t = async (dd31: boolean) => {
@@ -27,7 +28,7 @@ suite('dag with no memory-only hashes gathers nothing', () => {
     }
     await pb.addLocal(clientID);
 
-    await memdag.withRead(async dagRead => {
+    await withRead(memdag, async dagRead => {
       for (const commit of pb.chain) {
         const visitor = new GatherMemoryOnlyVisitor(dagRead);
         await visitor.visitCommit(commit.chunk.hash);
@@ -37,7 +38,7 @@ suite('dag with no memory-only hashes gathers nothing', () => {
 
     await pb.addSnapshot(undefined, clientID);
 
-    await memdag.withRead(async dagRead => {
+    await withRead(memdag, async dagRead => {
       const visitor = new GatherMemoryOnlyVisitor(dagRead);
       await visitor.visitCommit(pb.headHash);
       expect(visitor.gatheredChunks).to.be.empty;
@@ -63,7 +64,7 @@ suite('dag with only memory-only hashes gathers everything', () => {
     const mb = new ChainBuilder(memdag, undefined, dd31);
 
     const testGatheredChunks = async () => {
-      await memdag.withRead(async dagRead => {
+      await withRead(memdag, async dagRead => {
         const visitor = new GatherMemoryOnlyVisitor(dagRead);
         await visitor.visitCommit(mb.headHash);
         expect(memdag.getMemOnlyChunksSnapshot()).to.deep.equal(
@@ -110,14 +111,14 @@ suite(
       await pb.addGenesis(clientID);
       await pb.addLocal(clientID);
 
-      await memdag.withWrite(async memdagWrite => {
+      await withWrite(memdag, async memdagWrite => {
         await memdagWrite.setHead(db.DEFAULT_HEAD_NAME, pb.headHash);
         await memdagWrite.commit();
       });
       mb.chain = pb.chain.slice();
       await mb.addLocal(clientID);
 
-      await memdag.withRead(async dagRead => {
+      await withRead(memdag, async dagRead => {
         const visitor = new GatherMemoryOnlyVisitor(dagRead);
         await visitor.visitCommit(mb.headHash);
         const metaBase = {
@@ -194,7 +195,7 @@ suite(
         undefined,
         undefined,
       );
-      await memdag.withWrite(async memdagWrite => {
+      await withWrite(memdag, async memdagWrite => {
         await memdagWrite.setHead(db.DEFAULT_HEAD_NAME, pb.headHash);
         await memdagWrite.commit();
       });
@@ -209,7 +210,7 @@ suite(
       }
       await mb.addLocal(clientID, [['c', {name: 'c-name'}]]);
 
-      await memdag.withRead(async dagRead => {
+      await withRead(memdag, async dagRead => {
         const visitor = new GatherMemoryOnlyVisitor(dagRead);
         await visitor.visitCommit(mb.headHash);
         expect(Object.fromEntries(visitor.gatheredChunks)).to.deep.equal(

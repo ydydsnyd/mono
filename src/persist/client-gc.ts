@@ -3,6 +3,7 @@ import type {ClientID} from '../sync/ids.js';
 import type * as dag from '../dag/mod.js';
 import {ClientMap, getClients, setClients} from './clients.js';
 import {initBgIntervalProcess} from '../bg-interval.js';
+import {withWrite} from '../with-transactions.js';
 
 const CLIENT_MAX_INACTIVE_IN_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const GC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -34,7 +35,7 @@ function gcClients(
   clientID: ClientID,
   dagStore: dag.Store,
 ): Promise<ClientMap> {
-  return dagStore.withWrite(async dagWrite => {
+  return withWrite(dagStore, async dagWrite => {
     const now = Date.now();
     const clients = await getClients(dagWrite);
     const clientsAfterGC = Array.from(clients).filter(([id, client]) => {

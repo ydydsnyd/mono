@@ -9,6 +9,7 @@ import type {Hash} from '../hash.js';
 import type {LogContext} from '@rocicorp/logger';
 import {assertSnapshotCommitDD31} from '../db/commit.js';
 import {ClientGroup, getClientGroup, setClientGroup} from './client-groups.js';
+import {withRead, withWrite} from '../with-transactions.js';
 
 /**
  * Persists the client's memdag state to the client's perdag client group.
@@ -41,8 +42,9 @@ export async function persistDD31(
     return;
   }
 
-  const [perdagLMID, perdagBaseSnapshot, mainClientGroupID] =
-    await perdag.withRead(async perdagRead => {
+  const [perdagLMID, perdagBaseSnapshot, mainClientGroupID] = await withRead(
+    perdag,
+    async perdagRead => {
       await assertHasClientState(clientID, perdagRead);
       const mainClientGroupID = await getClientGroupIDForClient(
         clientID,
@@ -66,12 +68,14 @@ export async function persistDD31(
       );
       assertSnapshotCommitDD31(perdagBaseSnapshot);
       return [perdagLMID, perdagBaseSnapshot, mainClientGroupID];
-    });
+    },
+  );
 
   if (closed()) {
     return;
   }
-  const [newMemdagMutations, memdagBaseSnapshot] = await memdag.withRead(
+  const [newMemdagMutations, memdagBaseSnapshot] = await withRead(
+    memdag,
     async memdagRead => {
       const memdagHeadCommit = await db.commitFromHead(
         db.DEFAULT_HEAD_NAME,
@@ -107,7 +111,7 @@ export async function persistDD31(
     if (closed()) {
       return;
     }
-    await perdag.withWrite(async perdagWrite => {
+    await withWrite(perdag, async perdagWrite => {
       // check if memdag snapshot still newer than perdag snapshot
       const [mainClientGroup, latestPerdagMainClientGroupHeadCommit] =
         await getClientGroupInfo(perdagWrite, mainClientGroupID);
@@ -191,7 +195,7 @@ export async function persistDD31(
     );
 
     // no need to persist snapshot, persist new memdag mutations
-    await perdag.withWrite(async perdagWrite => {
+    await withWrite(perdag, async perdagWrite => {
       const [mainClientGroup, latestPerdagMainClientGroupHeadCommit] =
         await getClientGroupInfo(perdagWrite, mainClientGroupID);
       const mutationIDs = {...mainClientGroup.mutationIDs};
@@ -233,7 +237,7 @@ async function gatherMemOnlyChunks(
   memdag: dag.LazyStore,
   baseSnapshotHash: Hash,
 ): Promise<ReadonlyMap<Hash, dag.Chunk>> {
-  return await memdag.withRead(async dagRead => {
+  return await withRead(memdag, async dagRead => {
     const visitor = new GatherMemoryOnlyVisitor(dagRead);
     await visitor.visitCommit(baseSnapshotHash);
     return visitor.gatheredChunks;

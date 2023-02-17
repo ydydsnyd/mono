@@ -34,6 +34,7 @@ import {
   assertPullerResultDD31,
   assertPullerResultSDD,
 } from '../get-default-puller.js';
+import {withRead, withWrite} from '../with-transactions.js';
 
 export const PULL_VERSION_SDD = 0;
 export const PULL_VERSION_DD31 = 1;
@@ -104,7 +105,7 @@ export async function beginPullSDD(
   lc: LogContext,
   createSyncBranch = true,
 ): Promise<BeginPullResponseSDD> {
-  const [lastMutationID, baseCookie] = await store.withRead(async dagRead => {
+  const [lastMutationID, baseCookie] = await withRead(store, async dagRead => {
     const mainHeadHash = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
     if (!mainHeadHash) {
       throw new Error('Internal no main head found');
@@ -180,7 +181,7 @@ export async function beginPullDD31(
   lc: LogContext,
   createSyncBranch = true,
 ): Promise<BeginPullResponseDD31> {
-  const baseCookie = await store.withRead(async dagRead => {
+  const baseCookie = await withRead(store, async dagRead => {
     const mainHeadHash = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
     if (!mainHeadHash) {
       throw new Error('Internal no main head found');
@@ -279,7 +280,7 @@ export async function handlePullResponseSDD(
 ): Promise<HandlePullResponseResult> {
   // It is possible that another sync completed while we were pulling. Ensure
   // that is not the case by re-checking the base snapshot.
-  return await store.withWrite(async dagWrite => {
+  return await withWrite(store, async dagWrite => {
     const dagRead = dagWrite;
     const mainHead = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
 
@@ -428,7 +429,7 @@ export async function handlePullResponseDD31(
 ): Promise<HandlePullResponseResult> {
   // It is possible that another sync completed while we were pulling. Ensure
   // that is not the case by re-checking the base snapshot.
-  return await store.withWrite(async dagWrite => {
+  return await withWrite(store, async dagWrite => {
     const dagRead = dagWrite;
     const mainHead = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
     if (mainHead === undefined) {
@@ -528,7 +529,7 @@ export async function maybeEndPull<M extends db.LocalMeta>(
   replayMutations: db.Commit<M>[];
   diffs: DiffsMap;
 }> {
-  return await store.withWrite(async dagWrite => {
+  return await withWrite(store, async dagWrite => {
     const dagRead = dagWrite;
     // Ensure sync head is what the caller thinks it is.
     const syncHeadHash = await dagRead.getHead(SYNC_HEAD_NAME);

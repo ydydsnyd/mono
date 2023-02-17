@@ -50,7 +50,7 @@ export class Read {
   }
 
   close(): void {
-    this._dagRead.close();
+    this._dagRead.release();
   }
 }
 

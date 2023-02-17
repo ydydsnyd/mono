@@ -15,6 +15,7 @@ import {assertNotUndefined} from '../asserts.js';
 import {IDBNotFoundError, IDBStore} from '../kv/idb-store.js';
 import {dropIDBStore} from '../kv/mod.js';
 import {resolver} from '@rocicorp/resolver';
+import {withRead} from '../with-transactions.js';
 
 let clock: SinonFakeTimers;
 const START_TIME = 100000;
@@ -65,7 +66,7 @@ test('startHeartbeats starts interval that writes heartbeat each minute', async 
     controller.signal,
   );
 
-  await dagStore.withRead(async (read: dag.Read) => {
+  await withRead(dagStore, async (read: dag.Read) => {
     const readClientMap = await getClients(read);
     expect(readClientMap).to.deep.equal(clientMap);
   });
@@ -73,7 +74,7 @@ test('startHeartbeats starts interval that writes heartbeat each minute', async 
   await clock.tickAsync(ONE_MIN_IN_MS);
   await awaitLatestHeartbeatUpdate();
 
-  await dagStore.withRead(async (read: dag.Read) => {
+  await withRead(dagStore, async (read: dag.Read) => {
     const readClientMap = await getClients(read);
     expect(readClientMap).to.deep.equal(
       new Map(
@@ -91,7 +92,7 @@ test('startHeartbeats starts interval that writes heartbeat each minute', async 
   await clock.tickAsync(ONE_MIN_IN_MS);
   await awaitLatestHeartbeatUpdate();
 
-  await dagStore.withRead(async (read: dag.Read) => {
+  await withRead(dagStore, async (read: dag.Read) => {
     const readClientMap = await getClients(read);
     expect(readClientMap).to.deep.equal(
       new Map(
@@ -134,7 +135,7 @@ test('calling function returned by startHeartbeats, stops heartbeats', async () 
     controller.signal,
   );
 
-  await dagStore.withRead(async (read: dag.Read) => {
+  await withRead(dagStore, async (read: dag.Read) => {
     const readClientMap = await getClients(read);
     expect(readClientMap).to.deep.equal(clientMap);
   });
@@ -142,7 +143,7 @@ test('calling function returned by startHeartbeats, stops heartbeats', async () 
   await clock.tickAsync(ONE_MIN_IN_MS);
   await awaitLatestHeartbeatUpdate();
 
-  await dagStore.withRead(async (read: dag.Read) => {
+  await withRead(dagStore, async (read: dag.Read) => {
     const readClientMap = await getClients(read);
     expect(Object.fromEntries(readClientMap)).to.deep.equal({
       client1: {
@@ -158,7 +159,7 @@ test('calling function returned by startHeartbeats, stops heartbeats', async () 
   clock.tick(ONE_MIN_IN_MS);
   await awaitLatestHeartbeatUpdate();
 
-  await dagStore.withRead(async (read: dag.Read) => {
+  await withRead(dagStore, async (read: dag.Read) => {
     const readClientMap = await getClients(read);
     expect(Object.fromEntries(readClientMap)).to.deep.equal({
       client1: {
@@ -199,7 +200,7 @@ test('writeHeartbeat writes heartbeat', async () => {
   clock.tick(TICK_IN_MS);
 
   await writeHeartbeat('client1', dagStore);
-  await dagStore.withRead(async (read: dag.Read) => {
+  await withRead(dagStore, async (read: dag.Read) => {
     const readClientMap = await getClients(read);
     expect(readClientMap).to.deep.equal(
       new Map(

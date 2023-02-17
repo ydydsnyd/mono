@@ -17,6 +17,7 @@ import {
   GatherNotCachedVisitor,
 } from './gather-not-cached-visitor.js';
 import {sleep} from '../sleep.js';
+import {withRead, withWrite} from '../with-transactions.js';
 
 const GATHER_SIZE_LIMIT = 5 * 2 ** 20; // 5 MB
 const DELAY_MS = 300;
@@ -37,7 +38,7 @@ export async function refresh(
   if (closed()) {
     return;
   }
-  const memdagBaseSnapshot = await memdag.withRead(memdagRead =>
+  const memdagBaseSnapshot = await withRead(memdag, memdagRead =>
     db.baseSnapshotFromHead(db.DEFAULT_HEAD_NAME, memdagRead),
   );
   assertSnapshotCommitDD31(memdagBaseSnapshot);
@@ -66,7 +67,7 @@ export async function refresh(
             number,
             ReadonlyMap<Hash, ChunkWithSize>,
           ]
-        | undefined = await perdag.withWrite(async perdagWrite => {
+        | undefined = await withWrite(perdag, async perdagWrite => {
         const clientGroup = await getClientGroupForClient(
           clientID,
           perdagWrite,
@@ -155,7 +156,7 @@ export async function refresh(
         perdagLmid,
         gatheredChunks,
       ] = perdagWriteResult;
-      return await memdag.withWrite(async memdagWrite => {
+      return await withWrite(memdag, async memdagWrite => {
         const memdagHeadCommit = await db.commitFromHead(
           db.DEFAULT_HEAD_NAME,
           memdagWrite,
@@ -218,7 +219,7 @@ export async function refresh(
     return;
   }
 
-  await perdag.withWrite(async perdagWrite => {
+  await withWrite(perdag, async perdagWrite => {
     const client = await getClient(clientID, perdagWrite);
     if (!client) {
       throw new ClientStateNotFoundError(clientID);

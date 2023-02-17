@@ -32,7 +32,6 @@ import {resolver} from '@rocicorp/resolver';
 import type {Cookie} from './cookies.js';
 import type {PatchOperation} from './patch-operation.js';
 import {MemStore} from './kv/mem-store.js';
-import {withRead, withWrite} from './kv/mod.js';
 
 export class ReplicacheTest<
   // eslint-disable-next-line @typescript-eslint/ban-types
@@ -259,19 +258,9 @@ export class MemStoreWithCounters implements kv.Store {
     return this.store.read();
   }
 
-  withRead<R>(fn: (read: kv.Read) => R | Promise<R>): Promise<R> {
-    this.readCount++;
-    return withRead(this.store, fn);
-  }
-
   write() {
     this.writeCount++;
     return this.store.write();
-  }
-
-  withWrite<R>(fn: (write: kv.Write) => R | Promise<R>): Promise<R> {
-    this.writeCount++;
-    return withWrite(this.store, fn);
   }
 
   async close() {

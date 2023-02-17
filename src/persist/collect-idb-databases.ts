@@ -16,6 +16,7 @@ import {
   getClientGroups,
 } from './client-groups.js';
 import {assert} from '../asserts.js';
+import {withRead} from '../with-transactions.js';
 
 // How frequently to try to collect
 const COLLECT_INTERVAL_MS = 12 * 60 * 60 * 1000; // 12 hours
@@ -167,7 +168,7 @@ async function canCollectDatabase(
   // For legacy databases we do not have a lastOpenedTimestampMS so we check the
   // time stamps of the clients
   const perdag = newDagStore(db.name);
-  const clientMap = await perdag.withRead(getClients);
+  const clientMap = await withRead(perdag, getClients);
   await perdag.close();
 
   return allClientsOlderThan(clientMap, now, maxAge);
@@ -214,7 +215,7 @@ export async function deleteAllReplicacheData(
 async function anyPendingMutationsInClientGroups(
   perdag: dag.Store,
 ): Promise<boolean> {
-  const clientGroups = await perdag.withRead(getClientGroups);
+  const clientGroups = await withRead(perdag, getClientGroups);
   for (const clientGroup of clientGroups.values()) {
     if (clientGroupHasPendingMutations(clientGroup)) {
       return true;

@@ -4,12 +4,13 @@ import * as dag from '../dag/mod.js';
 import {BTreeWrite} from '../btree/mod.js';
 import {decodeIndexKey} from './index.js';
 import {fromKeyForIndexScanInternal} from '../scan-iterator.js';
+import {withWrite} from '../with-transactions.js';
 
 test('scan', async () => {
   const t = async (fromKey: string, expected: string[]) => {
     const dagStore = new dag.TestStore();
 
-    await dagStore.withWrite(async dagWrite => {
+    await withWrite(dagStore, async dagWrite => {
       const map = new BTreeWrite(dagWrite);
       await map.put('foo', 'foo');
       await map.put('bar', 'bar');
@@ -59,7 +60,7 @@ test('scan index startKey', async () => {
   ) => {
     const dagStore = new dag.TestStore();
 
-    await dagStore.withWrite(async dagWrite => {
+    await withWrite(dagStore, async dagWrite => {
       const map = await makeBTreeWrite(dagWrite, entries);
       await map.flush();
 

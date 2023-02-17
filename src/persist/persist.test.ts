@@ -31,6 +31,7 @@ import type {JSONValue} from '../json.js';
 import type {MutatorDefs} from '../mod.js';
 import sinon from 'sinon';
 import {promiseVoid} from '../resolved-promises.js';
+import {withRead, withWrite} from '../with-transactions.js';
 
 const PERDAG_TEST_SETUP_HEAD_NAME = 'test-setup-head';
 
@@ -210,7 +211,7 @@ suite('persistDD31', () => {
     perdagClientGroupHeadHash: Hash,
     clientGroupPartial?: Partial<ClientGroup>,
   ) {
-    await perdag.withWrite(async perdagWrite => {
+    await withWrite(perdag, async perdagWrite => {
       const clientGroup = await getClientGroup(clientGroupID, perdagWrite);
       assertNotUndefined(clientGroup);
       await setClientGroup(
@@ -227,12 +228,12 @@ suite('persistDD31', () => {
   }
 
   async function getClientGroupAndHeadHashes() {
-    const memdagHeadHash = await memdag.withRead(memdagRead => {
+    const memdagHeadHash = await withRead(memdag, memdagRead => {
       return memdagRead.getHead(db.DEFAULT_HEAD_NAME);
     });
     assertNotUndefined(memdagHeadHash);
 
-    const clientGroup = await perdag.withRead(async perdagRead => {
+    const clientGroup = await withRead(perdag, async perdagRead => {
       const clientGroup = await getClientGroup(clientGroupID, perdagRead);
       assertNotUndefined(clientGroup);
       return clientGroup;
@@ -307,7 +308,7 @@ suite('persistDD31', () => {
     ).to.deep.equal(memdagSnapshot);
     // memdagLocalCommit3Client0M2 rebased on to perdag client group rest of
     // perdag client group unchanged
-    await perdag.withRead(async perdagRead => {
+    await withRead(perdag, async perdagRead => {
       const afterPersistPerdagClientGroupLocalCommit4 = await db.commitFromHash(
         afterPersist.perdagClientGroupHeadHash,
         perdagRead,
@@ -402,7 +403,7 @@ suite('persistDD31', () => {
     ).to.deep.equal(memdagSnapshot);
     // memdagLocalCommit3Client0M2 rebased on to perdag client group rest of
     // perdag client group unchanged
-    await perdag.withRead(async perdagRead => {
+    await withRead(perdag, async perdagRead => {
       const afterPersistPerdagClientGroupLocalCommit4 = await db.commitFromHash(
         afterPersist.perdagClientGroupHeadHash,
         perdagRead,
@@ -530,7 +531,7 @@ suite('persistDD31', () => {
       await getChunkSnapshot(perdag, afterPersist.perdagClientGroupHeadHash),
     );
     // expect values from memdag snapshot are persisted to perdag client group
-    await perdag.withRead(async perdagRead => {
+    await withRead(perdag, async perdagRead => {
       const [, , btreeRead] = await db.readCommitForBTreeRead(
         db.whenceHash(afterPersist.perdagClientGroupHeadHash),
         perdagRead,
@@ -591,7 +592,8 @@ suite('persistDD31', () => {
         [clients[2].clientID]: 2,
       },
     });
-    const afterPersistPerdagBaseSnapshotHash = await perdag.withRead(
+    const afterPersistPerdagBaseSnapshotHash = await withRead(
+      perdag,
       async perdagRead => {
         const afterPersistPerdagClientGroupLocalCommit2 =
           await db.commitFromHash(
@@ -637,7 +639,8 @@ suite('persistDD31', () => {
       },
     );
 
-    const afterPersistMemdagBaseSnapshotHash = await memdag.withRead(
+    const afterPersistMemdagBaseSnapshotHash = await withRead(
+      memdag,
       async memdagRead => {
         const baseSnapshot = await db.baseSnapshotFromHash(
           afterPersist.memdagHeadHash,
@@ -746,7 +749,8 @@ suite('persistDD31', () => {
     ).to.deep.equal(memdagSnapshot);
     // memdagLocalCommit3Client0M2 rebased on to perdag client group
     // (with basis updatedPerdagClientGroupSnapshot)
-    const afterPersistPerdagClientGroupBaseSnapshotHash = await perdag.withRead(
+    const afterPersistPerdagClientGroupBaseSnapshotHash = await withRead(
+      perdag,
       async perdagRead => {
         const afterPersistPerdagClientGroupLocalCommit1 =
           await db.commitFromHash(
@@ -783,7 +787,7 @@ suite('persistDD31', () => {
   test('persist throws a ClientStateNotFoundError if client is missing', async () => {
     await setupSnapshots();
 
-    await perdag.withWrite(async perdagWrite => {
+    await withWrite(perdag, async perdagWrite => {
       const clientMap = await getClients(perdagWrite);
       const newClientMap = new Map(clientMap);
       newClientMap.delete(clients[0].clientID);
@@ -874,7 +878,7 @@ async function setupPersistTest() {
       onGatherMemOnlyChunksForTest,
     );
     const persistedChunkHashes = new Set<Hash>();
-    const clientGroupsHeadHash = await perdag.withRead(read => {
+    const clientGroupsHeadHash = await withRead(perdag, read => {
       return read.getHead(CLIENT_GROUPS_HEAD_NAME);
     });
     for (const hash of perdag.chunkHashes()) {
@@ -927,7 +931,7 @@ async function setupPersistTest() {
   };
 }
 function getClientGroupHelper(perdag: dag.TestStore, clientGroupID: string) {
-  return perdag.withRead(perdagRead => {
+  return withRead(perdag, perdagRead => {
     return getClientGroup(clientGroupID, perdagRead);
   });
 }

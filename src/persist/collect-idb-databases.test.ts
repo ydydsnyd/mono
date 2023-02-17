@@ -26,6 +26,7 @@ import {
 import {ClientGroupMap, setClientGroups} from './client-groups.js';
 import {makeClientGroupMap} from './client-groups.test.js';
 import {IDBStore} from '../kv/idb-store.js';
+import {withWrite} from '../with-transactions.js';
 
 suite('collectIDBDatabases', () => {
   let clock: SinonFakeTimers;
@@ -87,7 +88,7 @@ suite('collectIDBDatabases', () => {
 
           await setClientsForTesting(clients, dagStore);
           if (clientGroups) {
-            await dagStore.withWrite(async tx => {
+            await withWrite(dagStore, async tx => {
               await setClientGroups(clientGroups, tx);
               await tx.commit();
             });

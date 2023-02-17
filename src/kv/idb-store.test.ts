@@ -2,7 +2,7 @@ import {runAll} from './store-test-util.js';
 import {IDBNotFoundError, IDBStore} from './idb-store.js';
 import {dropStore} from './idb-util.js';
 import {expect} from '@esm-bundle/chai';
-import {withRead, withWrite} from './with-transactions.js';
+import {withRead, withWrite} from '../with-transactions.js';
 
 async function newRandomIDBStore() {
   const name = `test-idbstore-${Math.random()}`;

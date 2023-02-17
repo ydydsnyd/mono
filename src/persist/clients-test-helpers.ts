@@ -17,12 +17,13 @@ import * as btree from '../btree/mod.js';
 import * as db from '../db/mod.js';
 import {uuid as makeUuid} from '../uuid.js';
 import {getRefs, newSnapshotCommitDataSDD} from '../db/commit.js';
+import {withWrite} from '../with-transactions.js';
 
 export function setClientsForTesting(
   clients: ClientMap,
   dagStore: dag.Store,
 ): Promise<ClientMap> {
-  return dagStore.withWrite(async dagWrite => {
+  return withWrite(dagStore, async dagWrite => {
     await setClients(clients, dagWrite);
     await dagWrite.commit();
     return clients;
@@ -66,7 +67,7 @@ export async function deleteClientForTesting(
   clientID: sync.ClientID,
   dagStore: dag.Store,
 ): Promise<void> {
-  await dagStore.withWrite(async dagWrite => {
+  await withWrite(dagStore, async dagWrite => {
     const clients = new Map(await getClients(dagWrite));
     clients.delete(clientID);
     await setClients(clients, dagWrite);
@@ -109,7 +110,7 @@ function initClientSDD(
     newClientGroup: boolean,
   ]
 > {
-  return perdag.withWrite(async dagWrite => {
+  return withWrite(perdag, async dagWrite => {
     const newClientID = makeUuid();
     const clients = await getClients(dagWrite);
 

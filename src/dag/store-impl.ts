@@ -6,7 +6,6 @@ import {assertHash, Hash} from '../hash.js';
 import {assertNumber} from '../asserts.js';
 import type {ReadonlyJSONValue} from '../json.js';
 import {computeRefCountUpdates, RefCountUpdatesDelegate} from './gc.js';
-import {withRead, withWrite} from '../kv/mod.js';
 
 export class StoreImpl implements Store {
   private readonly _kv: kv.Store;
@@ -27,23 +26,11 @@ export class StoreImpl implements Store {
     return new ReadImpl(await this._kv.read(), this._assertValidHash);
   }
 
-  withRead<R>(fn: (read: Read) => R | Promise<R>): Promise<R> {
-    return withRead(this._kv, kvr =>
-      fn(new ReadImpl(kvr, this._assertValidHash)),
-    );
-  }
-
   async write(): Promise<Write> {
     return new WriteImpl(
       await this._kv.write(),
       this._chunkHasher,
       this._assertValidHash,
-    );
-  }
-
-  withWrite<R>(fn: (Write: Write) => R | Promise<R>): Promise<R> {
-    return withWrite(this._kv, kvw =>
-      fn(new WriteImpl(kvw, this._chunkHasher, this._assertValidHash)),
     );
   }
 
@@ -95,7 +82,7 @@ export class ReadImpl implements Read {
     return data;
   }
 
-  close(): void {
+  release(): void {
     this._tx.release();
   }
 
@@ -242,7 +229,7 @@ export class WriteImpl
     this._putChunks.delete(hash);
   }
 
-  close(): void {
+  release(): void {
     this._tx.release();
   }
 }

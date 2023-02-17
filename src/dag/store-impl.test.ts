@@ -9,14 +9,14 @@ import {TestStore} from './test-store.js';
 import {ChunkNotFoundError} from './store.js';
 import {ReadonlyJSONValue, deepFreeze} from '../json.js';
 import {TestMemStore} from '../kv/test-mem-store.js';
-import {withRead, withWrite} from '../kv/mod.js';
+import {using, withRead, withWrite} from '../with-transactions.js';
 
 suite('read', () => {
   test('has chunk', async () => {
     const t = async (hash: Hash, expectHas: boolean) => {
       const h = fakeHash('e5e');
       const kv = new TestMemStore();
-      await kv.withWrite(async kvw => {
+      await withWrite(kv, async kvw => {
         await kvw.put(chunkDataKey(h), [0, 1]);
         await kvw.commit();
       });
@@ -40,7 +40,7 @@ suite('read', () => {
     ) => {
       const kv = new TestMemStore();
       const chunk = createChunk(data, refs, chunkHasher);
-      await kv.withWrite(async kvw => {
+      await withWrite(kv, async kvw => {
         await kvw.put(chunkDataKey(chunk.hash), chunk.data);
         if (chunk.meta.length > 0) {
           await kvw.put(chunkMetaKey(chunk.hash), chunk.meta);
@@ -73,7 +73,7 @@ suite('read', () => {
   });
 
   test('must get chunk missing chunks', async () => {
-    await testChunkNotFoundError('withRead');
+    await testChunkNotFoundError('read');
   });
 });
 
@@ -82,7 +82,7 @@ suite('write', () => {
     const chunkHasher = makeNewFakeHashFunction();
     const t = async (data: ReadonlyJSONValue, refs: Hash[]) => {
       const kv = new TestMemStore();
-      await kv.withWrite(async kvw => {
+      await withWrite(kv, async kvw => {
         const w = new WriteImpl(kvw, chunkHasher, assertHash);
         const c = w.createChunk(deepFreeze(data), refs);
         await w.putChunk(c);
@@ -193,11 +193,11 @@ suite('write', () => {
     const t = async (v: any, expectError?: string) => {
       const kv = new TestMemStore();
       const h = fakeHash('face1');
-      await kv.withWrite(async kvw => {
+      await withWrite(kv, async kvw => {
         await kvw.put(chunkRefCountKey(h), v);
         await kvw.commit();
       });
-      await kv.withWrite(async kvw => {
+      await withWrite(kv, async kvw => {
         const w = new WriteImpl(kvw, chunkHasher, assertHash);
         let err;
         try {
@@ -243,7 +243,7 @@ suite('write', () => {
     const t = async (commit: boolean, setHead: boolean) => {
       let key: string;
       const kv = new TestMemStore();
-      await kv.withWrite(async kvw => {
+      await withWrite(kv, async kvw => {
         const w = new WriteImpl(kvw, chunkHasher, assertHash);
         const c = w.createChunk(deepFreeze([0, 1]), []);
         await w.putChunk(c);
@@ -279,7 +279,7 @@ suite('write', () => {
       const kv = new TestMemStore();
       const hash = chunkHasher();
       const c = new Chunk(hash, deepFreeze(data), refs);
-      await kv.withWrite(async kvw => {
+      await withWrite(kv, async kvw => {
         const w = new WriteImpl(kvw, chunkHasher, assertHash);
         await w.putChunk(c);
         await w.setHead(name, c.hash);
@@ -330,14 +330,14 @@ suite('write', () => {
 
       const data = deepFreeze([true, 42]);
 
-      await store.withWrite(async dagWrite => {
+      await withWrite(store, async dagWrite => {
         const c = dagWrite.createChunk(data, []);
         await dagWrite.putChunk(c);
         await dagWrite.setHead('test', c.hash);
         await dagWrite.commit();
       });
 
-      await store.withRead(async dagRead => {
+      await withRead(store, async dagRead => {
         const h = await dagRead.getHead('test');
         assert(h);
         const c = await dagRead.getChunk(h);
@@ -383,7 +383,7 @@ suite('write', () => {
     const a = new Chunk(fakeHash('a'), 'a', [c.hash]);
     const b = new Chunk(fakeHash('b'), 'b', [c.hash]);
     const r = new Chunk(fakeHash('000'), 'r', [a.hash, b.hash]);
-    await dagStore.withWrite(async dagWrite => {
+    await withWrite(dagStore, async dagWrite => {
       await Promise.all([
         dagWrite.setHead('test', r.hash),
         dagWrite.putChunk(a),
@@ -395,7 +395,7 @@ suite('write', () => {
       await dagWrite.commit();
     });
 
-    await dagStore.kvStore.withRead(async kvRead => {
+    await withRead(dagStore.kvStore, async kvRead => {
       expect(await kvRead.get(chunkRefCountKey(r.hash))).to.equal(1);
       expect(await kvRead.get(chunkRefCountKey(a.hash))).to.equal(1);
       expect(await kvRead.get(chunkRefCountKey(b.hash))).to.equal(1);
@@ -408,7 +408,7 @@ suite('write', () => {
     // D
 
     const e = new Chunk(fakeHash('e'), 'e', [d.hash]);
-    await dagStore.withWrite(async dagWrite => {
+    await withWrite(dagStore, async dagWrite => {
       await Promise.all([
         dagWrite.setHead('test', e.hash),
         dagWrite.putChunk(e),
@@ -416,7 +416,7 @@ suite('write', () => {
       await dagWrite.commit();
     });
 
-    await dagStore.kvStore.withRead(async kvRead => {
+    await withRead(dagStore.kvStore, async kvRead => {
       await expectUndefinedForAllChunkKeys(kvRead, r.hash);
       await expectUndefinedForAllChunkKeys(kvRead, a.hash);
       await expectUndefinedForAllChunkKeys(kvRead, b.hash);
@@ -429,17 +429,17 @@ suite('write', () => {
   });
 
   test('must get chunk missing chunks', async () => {
-    await testChunkNotFoundError('withWrite');
+    await testChunkNotFoundError('write');
   });
 });
 
-async function testChunkNotFoundError(methodName: 'withRead' | 'withWrite') {
+async function testChunkNotFoundError(methodName: 'read' | 'write') {
   const chunkHasher = makeNewFakeHashFunction();
   const store = new StoreImpl(new TestMemStore(), chunkHasher, assertHash);
 
   const data = 42;
 
-  const h = await store.withWrite(async dagWrite => {
+  const h = await withWrite(store, async dagWrite => {
     const c = dagWrite.createChunk(data, []);
     await dagWrite.putChunk(c);
     await dagWrite.setHead('test', c.hash);
@@ -447,7 +447,7 @@ async function testChunkNotFoundError(methodName: 'withRead' | 'withWrite') {
     return c.hash;
   });
 
-  await store[methodName](async r => {
+  await using(store[methodName](), async r => {
     const chunk = await r.mustGetChunk(h);
     expect(chunk.data).to.deep.equal(data);
 

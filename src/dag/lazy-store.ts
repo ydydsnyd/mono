@@ -11,6 +11,7 @@ import {
 import {promiseVoid} from '../resolved-promises.js';
 import {joinIterables} from '../iterables.js';
 import type {MaybePromise} from '../replicache.js';
+import {withWrite} from '../with-transactions.js';
 
 /**
  * Dag Store which lazily loads values from a source store and then caches
@@ -171,15 +172,6 @@ export class LazyStore implements Store {
     );
   }
 
-  async withRead<R>(fn: (read: LazyRead) => R | Promise<R>): Promise<R> {
-    const read = await this.read();
-    try {
-      return await fn(read);
-    } finally {
-      read.close();
-    }
-  }
-
   async write(): Promise<LazyWrite> {
     const release = await this._rwLock.write();
     return new LazyWrite(
@@ -193,15 +185,6 @@ export class LazyStore implements Store {
       this._chunkHasher,
       this._assertValidHash,
     );
-  }
-
-  async withWrite<R>(fn: (write: LazyWrite) => R | Promise<R>): Promise<R> {
-    const write = await this.write();
-    try {
-      return await fn(write);
-    } finally {
-      write.close();
-    }
   }
 
   close(): Promise<void> {
@@ -221,7 +204,7 @@ export class LazyStore implements Store {
    * Acquires a write lock on the store.
    */
   chunksPersisted(chunkHashes: Iterable<Hash>): Promise<void> {
-    return this.withWrite(() => {
+    return withWrite(this, () => {
       const chunksToCache = [];
       for (const chunkHash of chunkHashes) {
         const chunk = this._memOnlyChunks.get(chunkHash);
@@ -298,12 +281,12 @@ export class LazyRead implements Read {
     return Promise.resolve(this._heads.get(name));
   }
 
-  close(): void {
+  release(): void {
     if (!this._closed) {
       this._release();
       this._sourceRead
-        ?.then(read => read.close())
-        // If creation of the read failed there is nothing to close.
+        ?.then(read => read.release())
+        // If creation of the read failed there is nothing to release.
         // Catch to avoid `Uncaught (in promise)` errors being reported.
         // eslint-disable-next-line @typescript-eslint/no-empty-function
         .catch(_ => {});
@@ -487,7 +470,7 @@ class LazyWrite extends LazyRead implements Write, RefCountUpdatesDelegate {
     this._pendingMemOnlyChunks.clear();
     this._pendingCachedChunks.clear();
     this._pendingHeadChanges.clear();
-    this.close();
+    this.release();
   }
 
   getRefCount(hash: Hash): number | undefined {

@@ -27,6 +27,7 @@ import {
 } from './client-groups.js';
 import {IndexDefinitions, indexDefinitionsEqual} from '../index-defs.js';
 import {createIndexBTree} from '../db/write.js';
+import {withWrite} from '../with-transactions.js';
 
 export type ClientMap = ReadonlyMap<sync.ClientID, ClientSDD | ClientDD31>;
 export type ClientMapDD31 = ReadonlyMap<sync.ClientID, ClientDD31>;
@@ -242,7 +243,7 @@ export function initClientDD31(
     newClientGroup: boolean,
   ]
 > {
-  return perdag.withWrite(async dagWrite => {
+  return withWrite(perdag, async dagWrite => {
     async function setClientsAndClientGroupAndCommit(
       basisHash: Hash | null,
       cookieJSON: FrozenCookie,

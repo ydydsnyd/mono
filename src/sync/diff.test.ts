@@ -5,6 +5,7 @@ import {diff} from './diff.js';
 import {ChainBuilder} from '../db/test-helpers.js';
 import {testSubscriptionsManagerOptions} from '../test-util.js';
 import type {IndexDefinitions} from '../index-defs.js';
+import {withRead} from '../with-transactions.js';
 
 type DiffsRecord = Record<string, InternalDiff>;
 
@@ -31,7 +32,7 @@ test('db diff dd31', async () => {
     await b.addLocal(clientID, [['b', 'b1']]);
     await setupChain?.(b);
 
-    await store.withRead(async read => {
+    await withRead(store, async read => {
       const diffsMap = await diff(
         b.chain[iOld].chunk.hash,
         b.chain[iNew].chunk.hash,
@@ -221,7 +222,7 @@ test('db diff sdd', async () => {
     await b.addLocal(clientID, [['a', 'a2']]);
     await b.addLocal(clientID, [['b', 'b1']]);
     await setupChain?.(b);
-    await store.withRead(async read => {
+    await withRead(store, async read => {
       const diffsMap = await diff(
         b.chain[iOld].chunk.hash,
         b.chain[iNew].chunk.hash,

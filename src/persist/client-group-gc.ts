@@ -8,6 +8,7 @@ import {
   clientGroupHasPendingMutations,
 } from './client-groups.js';
 import {assertClientDD31, getClients} from './clients.js';
+import {withWrite} from '../with-transactions.js';
 
 const GC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -36,7 +37,7 @@ export function initClientGroupGC(
 export async function gcClientGroups(
   dagStore: dag.Store,
 ): Promise<ClientGroupMap> {
-  return await dagStore.withWrite(async tx => {
+  return await withWrite(dagStore, async tx => {
     const clients = await getClients(tx);
     const clientGroupIDs = new Set();
     for (const client of clients.values()) {

@@ -6,6 +6,7 @@ import type {Hash} from '../hash.js';
 import {assertHasClientState, setClient} from './clients.js';
 import {GatherMemoryOnlyVisitor} from './gather-mem-only-visitor.js';
 import {assertSnapshotMetaSDD} from '../db/commit.js';
+import {withRead, withWrite} from '../with-transactions.js';
 
 /**
  * Persists the client's 'main' head memdag state to the perdag.
@@ -29,7 +30,7 @@ export async function persistSDD(
   }
 
   // Start checking if client exists while we do other async work
-  const clientExistsCheckP = perdag.withRead(read =>
+  const clientExistsCheckP = withRead(perdag, read =>
     assertHasClientState(clientID, read),
   );
 
@@ -73,7 +74,7 @@ async function gatherMemOnlyChunks(
     lastMutationID: number,
   ]
 > {
-  return await memdag.withRead(async dagRead => {
+  return await withRead(memdag, async dagRead => {
     const mainHeadHash = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
     assert(mainHeadHash);
     const visitor = new GatherMemoryOnlyVisitor(dagRead);
@@ -102,7 +103,7 @@ async function writeChunks(
   mutationID: number,
   lastMutationID: number,
 ): Promise<void> {
-  await perdag.withWrite(async dagWrite => {
+  await withWrite(perdag, async dagWrite => {
     const ps: Promise<unknown>[] = [];
 
     ps.push(

@@ -29,6 +29,7 @@ import type {WriteTransaction} from './transactions.js';
 import type {MutatorDefs} from './replicache.js';
 import {sleep} from './sleep.js';
 import {enablePullAndPushInOpenSymbol} from './replicache-options.js';
+import {withRead, withWrite} from './with-transactions.js';
 
 initReplicacheTesting();
 
@@ -43,7 +44,7 @@ async function deleteClientGroupForTesting<
 >(rep: ReplicacheTest<MD>) {
   const clientGroupID = await rep.clientGroupID;
   assert(clientGroupID);
-  await rep.perdag.withWrite(async tx => {
+  await withWrite(rep.perdag, async tx => {
     await deleteClientGroup(clientGroupID, tx);
     await tx.commit();
   });
@@ -62,13 +63,13 @@ test('basic persist & load', async () => {
     assertHash,
   );
 
-  const clientBeforePull = await perdag.withRead(read =>
+  const clientBeforePull = await withRead(perdag, read =>
     persist.getClient(clientID, read),
   );
   assertNotUndefined(clientBeforePull);
 
   assertClientDD31(clientBeforePull);
-  const clientGroupBeforePull = await perdag.withRead(read =>
+  const clientGroupBeforePull = await withRead(perdag, read =>
     persist.getClientGroup(clientBeforePull.clientGroupID, read),
   );
   assertNotUndefined(clientGroupBeforePull);
@@ -106,7 +107,8 @@ test('basic persist & load', async () => {
     await tickAFewTimes(waitMs);
     assertClientDD31(clientBeforePull);
     assertNotUndefined(clientGroupBeforePull);
-    const clientGroup: persist.ClientGroup | undefined = await perdag.withRead(
+    const clientGroup: persist.ClientGroup | undefined = await withRead(
+      perdag,
       read => {
         return persist.getClientGroup(clientBeforePull.clientGroupID, read);
       },

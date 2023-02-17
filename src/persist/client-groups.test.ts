@@ -14,6 +14,7 @@ import {
   setClientGroup,
   setClientGroups,
 } from './client-groups.js';
+import {withRead, withWrite} from '../with-transactions.js';
 
 const headClientGroup1Hash = fakeHash('b1');
 const headClientGroup2Hash = fakeHash('b2');
@@ -48,7 +49,7 @@ export function makeClientGroup(
 
 test('getClientGroups with no existing ClientGroupMap in dag store', async () => {
   const dagStore = new dag.TestStore();
-  await dagStore.withRead(async (read: dag.Read) => {
+  await withRead(dagStore, async (read: dag.Read) => {
     const readClientGroupMap = await getClientGroups(read);
     expect(readClientGroupMap.size).to.equal(0);
   });
@@ -59,14 +60,14 @@ async function testSetClientGroups(
   dagStore: dag.Store,
 ) {
   const clientGroupMap = makeClientGroupMap(partialClientGroupMap);
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     const returnClientGroupMap = await setClientGroups(clientGroupMap, write);
     expect(returnClientGroupMap).to.deep.equal(clientGroupMap);
     const readClientGroupMap = await getClientGroups(write);
     expect(readClientGroupMap).to.deep.equal(clientGroupMap);
     await write.commit();
   });
-  await dagStore.withRead(async (read: dag.Read) => {
+  await withRead(dagStore, async (read: dag.Read) => {
     const readClientGroupMap = await getClientGroups(read);
     expect(readClientGroupMap).to.deep.equal(clientGroupMap);
   });
@@ -108,7 +109,7 @@ async function testSetClientGroupsSequenceThrowsError(
 ) {
   await testSetClientGroups(partialClientGroupMap1, dagStore);
   const clientGroupMap2 = makeClientGroupMap(partialClientGroupMap2);
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     let expectedE: unknown;
     try {
       await setClientGroups(clientGroupMap2, write);
@@ -322,7 +323,7 @@ async function testSetClientGroup(
   const expectedClientGroupMap = makeClientGroupMap(
     expectedPartialClientGroupMap,
   );
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     const [clientGroupID, partialClientGroup] = partialClientGroupEntryToSet;
     const returnClientGroupMap = await setClientGroup(
       clientGroupID,
@@ -335,7 +336,7 @@ async function testSetClientGroup(
     await write.commit();
   });
 
-  await dagStore.withRead(async (read: dag.Read) => {
+  await withRead(dagStore, async (read: dag.Read) => {
     const readClientGroupMap = await getClientGroups(read);
     expect(readClientGroupMap).to.deep.equal(expectedClientGroupMap);
   });
@@ -348,19 +349,19 @@ async function testSetClientGroupThrowsError(
   dagStore: dag.Store,
 ) {
   const clientGroupMap1 = makeClientGroupMap(partialClientGroupMap1);
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     const returnClientGroupMap1 = await setClientGroups(clientGroupMap1, write);
     expect(returnClientGroupMap1).to.deep.equal(clientGroupMap1);
     const readClientGroupMap1 = await getClientGroups(write);
     expect(readClientGroupMap1).to.deep.equal(clientGroupMap1);
     await write.commit();
   });
-  await dagStore.withRead(async (read: dag.Read) => {
+  await withRead(dagStore, async (read: dag.Read) => {
     const readClientGroupMap1 = await getClientGroups(read);
     expect(readClientGroupMap1).to.deep.equal(readClientGroupMap1);
   });
 
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     const [clientGroupID, partialClientGroup] = partialClientGroupEntryToSet;
     const clientGroup = makeClientGroup(partialClientGroup);
     let expectedE: unknown;
@@ -638,12 +639,12 @@ test('deleteClientGroup', async () => {
     'client-group-2': clientGroup2,
   });
 
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     await setClientGroups(clientGroupMap1, write);
     await write.commit();
   });
 
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     const returnClientGroupMap = await deleteClientGroup(
       'client-group-3',
       write,
@@ -654,7 +655,7 @@ test('deleteClientGroup', async () => {
     await write.commit();
   });
 
-  await dagStore.withRead(async (read: dag.Read) => {
+  await withRead(dagStore, async (read: dag.Read) => {
     const readClientGroupMap = await getClientGroups(read);
     expect(readClientGroupMap).to.deep.equal(clientGroupMap1);
   });
@@ -662,7 +663,7 @@ test('deleteClientGroup', async () => {
   const expectedClientGroupAfterDeletingClientGroup1 = makeClientGroupMap({
     'client-group-2': clientGroup2,
   });
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     const returnClientGroupMap = await deleteClientGroup(
       'client-group-1',
       write,
@@ -677,7 +678,7 @@ test('deleteClientGroup', async () => {
     await write.commit();
   });
 
-  await dagStore.withRead(async (read: dag.Read) => {
+  await withRead(dagStore, async (read: dag.Read) => {
     const readClientGroupMap = await getClientGroups(read);
     expect(readClientGroupMap).to.deep.equal(
       expectedClientGroupAfterDeletingClientGroup1,
@@ -686,7 +687,7 @@ test('deleteClientGroup', async () => {
 });
 
 async function expectRefs(expected: Hash[], dagStore: dag.Store) {
-  await dagStore.withRead(async (read: dag.Read) => {
+  await withRead(dagStore, async (read: dag.Read) => {
     const clientGroupsHash = await read.getHead('client-groups');
     assertHash(clientGroupsHash);
     const clientGroupsChunk = await read.getChunk(clientGroupsHash);
@@ -715,13 +716,13 @@ test('setClientGroups properly manages refs to client group heads when client gr
     },
   });
 
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     await setClientGroups(clientGroupMap1, write);
     await write.commit();
   });
   await expectRefs([clientGroup1HeadHash, clientGroup2HeadHash], dagStore);
 
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     await setClientGroups(clientGroupMap2, write);
     await write.commit();
   });
@@ -754,13 +755,13 @@ test("setClientGroup properly manages refs to client group heads when a client g
     'client-group-2': clientGroup2,
   });
 
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     await setClientGroups(clientGroupMap1, write);
     await write.commit();
   });
   await expectRefs([clientGroup1V1HeadHash, clientGroup2HeadHash], dagStore);
 
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     await setClientGroups(clientGroupMap2, write);
     await write.commit();
   });
@@ -782,13 +783,13 @@ test('setClientGroup properly manages refs to client group heads when a client g
     },
   });
 
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     await setClientGroups(clientGroupMap1, write);
     await write.commit();
   });
   await expectRefs([clientGroup1HeadHash, clientGroup2HeadHash], dagStore);
 
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     await setClientGroup(
       'client-group-3',
       makeClientGroup({
@@ -820,13 +821,13 @@ test("setClientGroup properly manages refs to client group heads when a client g
     },
   });
 
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     await setClientGroups(clientGroupMap1, write);
     await write.commit();
   });
   await expectRefs([clientGroup1V1HeadHash, clientGroup2HeadHash], dagStore);
 
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     await setClientGroup(
       'client-group-1',
       makeClientGroup({
@@ -854,13 +855,13 @@ test('deleteClientGroup properly manages refs to client group heads', async () =
     },
   });
 
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     await setClientGroups(clientGroupMap1, write);
     await write.commit();
   });
   await expectRefs([clientGroup1HeadHash, clientGroup2HeadHash], dagStore);
 
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     await deleteClientGroup('client-group-1', write);
     await write.commit();
   });
@@ -879,12 +880,12 @@ test('getClientGroup', async () => {
       headHash: headClientGroup2Hash,
     },
   });
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     await setClientGroups(clientGroupMap, write);
     await write.commit();
   });
 
-  await dagStore.withRead(async (read: dag.Read) => {
+  await withRead(dagStore, async (read: dag.Read) => {
     const readClientGroup1 = await getClientGroup('client-group-1', read);
     expect(readClientGroup1).to.deep.equal(clientGroup1);
   });
@@ -981,7 +982,7 @@ test('Disable Client Group', async () => {
     'client-group-2': clientGroup2,
   });
 
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     await setClientGroups(clientGroupMap1, write);
     await write.commit();
   });
@@ -997,11 +998,11 @@ test('Disable Client Group', async () => {
     expect(readClientGroupMap.get('client-group-2')?.disabled).false;
   }
 
-  await dagStore.withWrite(async (write: dag.Write) => {
+  await withWrite(dagStore, async (write: dag.Write) => {
     await disableClientGroup('client-group-1', write);
     await testDisabledState(write);
     await write.commit();
   });
 
-  await dagStore.withRead(testDisabledState);
+  await withRead(dagStore, testDisabledState);
 });

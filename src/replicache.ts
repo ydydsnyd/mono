@@ -67,6 +67,7 @@ import {
 import {assertLocalCommitDD31} from './db/commit.js';
 import {getDefaultPusher, isDefaultPusher} from './get-default-pusher.js';
 import {newIDBStoreWithMemFallback} from './kv/idb-store-with-mem-fallback.js';
+import {withRead, withWrite} from './with-transactions.js';
 
 export type BeginPullResult = {
   requestID: string;
@@ -586,7 +587,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
     resolveClientGroupID(client.clientGroupID);
     resolveClientID(clientID);
-    await this._memdag.withWrite(async write => {
+    await withWrite(this._memdag, async write => {
       await write.setHead(db.DEFAULT_HEAD_NAME, client.headHash);
       await write.commit();
     });
@@ -658,7 +659,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
   private async _checkForClientStateNotFoundAndCallHandler(): Promise<boolean> {
     const clientID = await this._clientIDPromise;
-    const hasClientState = await this._perdag.withRead(read =>
+    const hasClientState = await withRead(this._perdag, read =>
       persist.hasClientState(clientID, read),
     );
     if (!hasClientState) {
@@ -941,7 +942,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
           await Promise.resolve();
         }
         const {meta} = mutation;
-        syncHead = await this._memdag.withWrite(dagWrite =>
+        syncHead = await withWrite(this._memdag, dagWrite =>
           db.rebaseMutationAndCommit(
             mutation,
             dagWrite,
@@ -1378,7 +1379,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     const clientGroupID = await this._clientGroupIDPromise;
     assert(clientGroupID);
     this._isClientGroupDisabled = true;
-    await this._perdag.withWrite(dagWrite =>
+    await withWrite(this._perdag, dagWrite =>
       persist.disableClientGroup(clientGroupID, dagWrite),
     );
     throw new ReportError(`Client group ${clientGroupID} is unknown on server`);
@@ -1516,7 +1517,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
   private _queryInternal: QueryInternal = async body => {
     await this._ready;
     const clientID = await this._clientIDPromise;
-    return this._memdag.withRead(async dagRead => {
+    return withRead(this._memdag, async dagRead => {
       try {
         const dbRead = await db.readFromDefaultHead(dagRead);
         const tx = new ReadTransactionImpl(clientID, dbRead, this._lc);
@@ -1578,7 +1579,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
     await this._ready;
     const clientID = await this._clientIDPromise;
-    return await this._memdag.withWrite(async dagWrite => {
+    return await withWrite(this._memdag, async dagWrite => {
       try {
         const whence: db.Whence = db.whenceHead(db.DEFAULT_HEAD_NAME);
         const originalHash = null;
@@ -1650,7 +1651,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
    * @experimental This method is experimental and may change in the future.
    */
   experimentalPendingMutations(): Promise<readonly PendingMutation[]> {
-    return this._memdag.withRead(async dagRead => {
+    return withRead(this._memdag, async dagRead => {
       const mainHeadHash = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
       if (mainHeadHash === undefined) {
         throw new Error('Missing main head');

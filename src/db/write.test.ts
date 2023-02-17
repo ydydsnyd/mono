@@ -12,6 +12,7 @@ import {
 import {newWriteLocal} from './write.js';
 import {asyncIterableToArray} from '../async-iterable-to-array.js';
 import {initDB} from './test-helpers.js';
+import {withRead, withWrite} from '../with-transactions.js';
 
 suite('basics w/ commit', () => {
   const t = async (dd31: boolean) => {
@@ -21,7 +22,7 @@ suite('basics w/ commit', () => {
     await initDB(await ds.write(), DEFAULT_HEAD_NAME, clientID, {}, dd31);
 
     // Put.
-    await ds.withWrite(async dagWrite => {
+    await withWrite(ds, async dagWrite => {
       const w = await newWriteLocal(
         whenceHead(DEFAULT_HEAD_NAME),
         'mutator_name',
@@ -40,7 +41,7 @@ suite('basics w/ commit', () => {
     });
 
     // As well as after it has committed.
-    await ds.withWrite(async dagWrite => {
+    await withWrite(ds, async dagWrite => {
       const w = await newWriteLocal(
         whenceHead(DEFAULT_HEAD_NAME),
         'mutator_name',
@@ -56,7 +57,7 @@ suite('basics w/ commit', () => {
     });
 
     // Del.
-    await ds.withWrite(async dagWrite => {
+    await withWrite(ds, async dagWrite => {
       const w = await newWriteLocal(
         whenceHead(DEFAULT_HEAD_NAME),
         'mutator_name',
@@ -75,7 +76,7 @@ suite('basics w/ commit', () => {
     });
 
     // As well as after it has committed.
-    await ds.withWrite(async dagWrite => {
+    await withWrite(ds, async dagWrite => {
       const w = await newWriteLocal(
         whenceHead(DEFAULT_HEAD_NAME),
         'mutator_name',
@@ -103,7 +104,7 @@ suite('basics w/ putCommit', () => {
     await initDB(await ds.write(), DEFAULT_HEAD_NAME, clientID, {}, dd31);
 
     // Put.
-    const commit1 = await ds.withWrite(async dagWrite => {
+    const commit1 = await withWrite(ds, async dagWrite => {
       const w = await newWriteLocal(
         whenceHead(DEFAULT_HEAD_NAME),
         'mutator_name',
@@ -125,7 +126,7 @@ suite('basics w/ putCommit', () => {
     });
 
     // As well as from the Commit that was put.
-    await ds.withWrite(async dagWrite => {
+    await withWrite(ds, async dagWrite => {
       const w = await newWriteLocal(
         whenceHash(commit1.chunk.hash),
         'mutator_name',
@@ -141,7 +142,7 @@ suite('basics w/ putCommit', () => {
     });
 
     // Del.
-    const commit2 = await ds.withWrite(async dagWrite => {
+    const commit2 = await withWrite(ds, async dagWrite => {
       const w = await newWriteLocal(
         whenceHash(commit1.chunk.hash),
         'mutator_name',
@@ -163,7 +164,7 @@ suite('basics w/ putCommit', () => {
     });
 
     // As well as from the commit after it was put.
-    await ds.withWrite(async dagWrite => {
+    await withWrite(ds, async dagWrite => {
       const w = await newWriteLocal(
         whenceHash(commit2.chunk.hash),
         'mutator_name',
@@ -186,7 +187,7 @@ test('clear', async () => {
   const clientID = 'client-id';
   const ds = new dag.TestStore();
   const lc = new LogContext();
-  await ds.withWrite(dagWrite =>
+  await withWrite(ds, dagWrite =>
     initDB(
       dagWrite,
       DEFAULT_HEAD_NAME,
@@ -198,7 +199,7 @@ test('clear', async () => {
       true,
     ),
   );
-  await ds.withWrite(async dagWrite => {
+  await withWrite(ds, async dagWrite => {
     const w = await newWriteLocal(
       whenceHead(DEFAULT_HEAD_NAME),
       'mutator_name',
@@ -213,7 +214,7 @@ test('clear', async () => {
     await w.commit(DEFAULT_HEAD_NAME);
   });
 
-  await ds.withWrite(async dagWrite => {
+  await withWrite(ds, async dagWrite => {
     const w = await newWriteLocal(
       whenceHead(DEFAULT_HEAD_NAME),
       'mutator_name',
@@ -248,7 +249,7 @@ test('clear', async () => {
     await w.commit(DEFAULT_HEAD_NAME);
   });
 
-  await ds.withRead(async dagRead => {
+  await withRead(ds, async dagRead => {
     const [, c, r] = await readCommitForBTreeRead(
       whenceHead(DEFAULT_HEAD_NAME),
       dagRead,

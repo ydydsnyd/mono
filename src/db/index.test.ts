@@ -17,6 +17,7 @@ import {
 } from './index.js';
 import {BTreeWrite} from '../btree/mod.js';
 import {asyncIterableToArray} from '../async-iterable-to-array.js';
+import {withWrite} from '../with-transactions.js';
 
 test('test index key', () => {
   const testValid = (secondary: string, primary: string) => {
@@ -198,7 +199,7 @@ test('index value', async () => {
     expected: number[] | string,
   ) => {
     const dagStore = new dag.TestStore();
-    await dagStore.withWrite(async dagWrite => {
+    await withWrite(dagStore, async dagWrite => {
       const index = new BTreeWrite(dagWrite);
       await index.put(encodeIndexKey(['s1', '1']), 'v1');
       await index.put(encodeIndexKey(['s2', '2']), 'v2');

@@ -4,6 +4,7 @@ import type * as dag from '../dag/mod.js';
 import * as db from '../db/mod.js';
 import * as sync from '../sync/mod.js';
 import {commitIsSnapshot} from '../db/commit.js';
+import {withRead, withWrite} from '../with-transactions.js';
 
 // See db.test_helpers for addLocal, addSnapshot, etc. We can't put addLocalRebase
 // there because sync depends on db, and addLocalRebase depends on sync.
@@ -38,7 +39,7 @@ export async function addSyncSnapshot(
 
   // Add sync snapshot.
   const cookie = `sync_cookie_${chain.length}`;
-  await store.withWrite(async dagWrite => {
+  await withWrite(store, async dagWrite => {
     if (dd31) {
       const w = await db.newWriteSnapshotDD31(
         db.whenceHash(baseSnapshot.chunk.hash),
@@ -61,7 +62,7 @@ export async function addSyncSnapshot(
       await w.commit(sync.SYNC_HEAD_NAME);
     }
   });
-  const [, commit] = await store.withRead(async dagRead => {
+  const [, commit] = await withRead(store, async dagRead => {
     return await db.readCommit(db.whenceHead(sync.SYNC_HEAD_NAME), dagRead);
   });
   syncChain.push(commit);

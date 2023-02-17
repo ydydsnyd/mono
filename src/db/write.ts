@@ -306,7 +306,7 @@ export class Write extends Read {
   }
 
   close(): void {
-    this._dagWrite.close();
+    this._dagWrite.release();
   }
 }
 

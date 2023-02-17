@@ -9,6 +9,7 @@ import {
   setClients,
 } from './clients.js';
 import {initBgIntervalProcess} from '../bg-interval.js';
+import {withWrite} from '../with-transactions.js';
 
 const HEARTBEAT_INTERVAL_MS = 60 * 1000;
 
@@ -45,7 +46,7 @@ export function writeHeartbeat(
   clientID: ClientID,
   dagStore: dag.Store,
 ): Promise<ClientMap> {
-  return dagStore.withWrite(async dagWrite => {
+  return withWrite(dagStore, async dagWrite => {
     const clients = await getClients(dagWrite);
     const client = clients.get(clientID);
     if (!client) {

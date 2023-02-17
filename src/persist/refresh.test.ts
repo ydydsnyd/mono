@@ -19,6 +19,7 @@ import {assert, assertNotUndefined} from '../asserts.js';
 import type {MutatorDefs} from '../replicache.js';
 import type {WriteTransaction} from '../transactions.js';
 import type {Cookie} from '../cookies.js';
+import {withRead, withWrite} from '../with-transactions.js';
 
 async function makeChain(
   store: dag.Store,
@@ -94,7 +95,7 @@ async function setClientsAndClientGroups(
     tempRefreshHash: null,
   };
 
-  await perdag.withWrite(async perdagWrite => {
+  await withWrite(perdag, async perdagWrite => {
     await setClientGroups(clientGroups, perdagWrite);
     await setClient(clientID, client, perdagWrite);
     await perdagWrite.removeHead(PERDAG_TEST_SETUP_HEAD_NAME);
@@ -149,7 +150,7 @@ suite('refresh', () => {
     );
     assert(result);
     expect(result[0]).to.deep.equal(
-      await memdag.withRead(read => read.getHead(db.DEFAULT_HEAD_NAME)),
+      await withRead(memdag, read => read.getHead(db.DEFAULT_HEAD_NAME)),
     );
     expect(Object.fromEntries(result[1])).to.deep.equal({});
   });
@@ -180,7 +181,7 @@ suite('refresh', () => {
     );
     assert(result);
     expect(result[0]).to.deep.equal(
-      await memdag.withRead(read => read.getHead(db.DEFAULT_HEAD_NAME)),
+      await withRead(memdag, read => read.getHead(db.DEFAULT_HEAD_NAME)),
     );
     expect(Object.fromEntries(result[1])).to.deep.equal({
       '': [
@@ -276,7 +277,7 @@ suite('refresh', () => {
     );
     assert(result);
     expect(result[0]).to.deep.equal(
-      await memdag.withRead(read => read.getHead(db.DEFAULT_HEAD_NAME)),
+      await withRead(memdag, read => read.getHead(db.DEFAULT_HEAD_NAME)),
     );
     expect(Object.fromEntries(result[1])).to.deep.equal({
       '': [
@@ -338,7 +339,7 @@ suite('refresh', () => {
     );
     assert(result);
     expect(result[0]).to.deep.equal(
-      await memdag.withRead(read => read.getHead(db.DEFAULT_HEAD_NAME)),
+      await withRead(memdag, read => read.getHead(db.DEFAULT_HEAD_NAME)),
     );
     expect(Object.fromEntries(result[1])).to.deep.equal({
       '': [
@@ -368,15 +369,14 @@ suite('refresh', () => {
 
     // Here we use a brittle way to inject a snapshot in the middle of the refresh
     // algorithm.
-    let withWriteCalls = 0;
-    const {withWrite} = perdag;
-    // @ts-expect-error Don't care that TS is complaining about the type of the RHS.
-    perdag.withWrite = async fn => {
-      if (withWriteCalls++ === 0) {
+    let writeCalls = 0;
+    const {write} = perdag;
+    perdag.write = async () => {
+      if (writeCalls++ === 0) {
         await memdagChainBuilder.addSnapshot([], clientID, 3);
         await memdagChainBuilder.addLocal(clientID, []);
       }
-      return withWrite.call(perdag, fn);
+      return write.call(perdag);
     };
 
     const diffs = await refresh(
@@ -442,7 +442,7 @@ suite('refresh', () => {
       valueHash?: Hash;
       indexes?: db.IndexRecord[];
     }): Promise<db.Commit<db.SnapshotMetaDD31>> {
-      return await store.withWrite(async dagWrite => {
+      return await withWrite(store, async dagWrite => {
         if (!valueHash) {
           const map = new btree.BTreeWrite(dagWrite);
           valueHash = await map.flush();
@@ -491,7 +491,7 @@ suite('refresh', () => {
       timestamp?: number;
       entries?: readonly btree.Entry<ReadonlyJSONValue>[];
     }): Promise<db.Commit<db.LocalMetaDD31>> {
-      return await store.withWrite(async dagWrite => {
+      return await withWrite(store, async dagWrite => {
         const m = new btree.BTreeWrite(dagWrite, valueHash);
         for (const [k, v] of entries) {
           await m.put(k, deepFreeze(v));
@@ -550,7 +550,7 @@ suite('refresh', () => {
       // entries: [['b', 2]],
     });
 
-    await perdag.withWrite(async dagWrite => {
+    await withWrite(perdag, async dagWrite => {
       await setClient(
         clientID1,
         {
@@ -614,7 +614,7 @@ suite('refresh', () => {
         valueHash: l1.chunk.data.valueHash,
       });
 
-      await memdag.withWrite(async dagWrite => {
+      await withWrite(memdag, async dagWrite => {
         await dagWrite.setHead(db.DEFAULT_HEAD_NAME, l2.chunk.hash);
         await dagWrite.removeHead('test');
         await dagWrite.commit();
@@ -634,7 +634,7 @@ suite('refresh', () => {
     );
     assert(result);
     expect(result[0]).to.deep.equal(
-      await memdag.withRead(read => read.getHead(db.DEFAULT_HEAD_NAME)),
+      await withRead(memdag, read => read.getHead(db.DEFAULT_HEAD_NAME)),
     );
     expect(Object.fromEntries(result[1])).to.deep.equal({
       '': [{key: 'c', newValue: 3, op: 'add'}],

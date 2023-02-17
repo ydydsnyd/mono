@@ -7,7 +7,7 @@ import {
   IDBStoreWithMemFallback,
   newIDBStoreWithMemFallback,
 } from './idb-store-with-mem-fallback.js';
-import {withRead, withWrite} from './with-transactions.js';
+import {withRead, withWrite} from '../with-transactions.js';
 
 teardown(() => {
   sinon.restore();

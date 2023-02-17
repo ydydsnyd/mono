@@ -1,11 +1,10 @@
 import type {Chunk} from './chunk.js';
 import type {Hash} from '../hash.js';
+import type {Release} from '../with-transactions.js';
 
 export interface Store {
   read(): Promise<Read>;
-  withRead<R>(fn: (read: Read) => R | Promise<R>): Promise<R>;
   write(): Promise<Write>;
-  withWrite<R>(fn: (Write: Write) => R | Promise<R>): Promise<R>;
   close(): Promise<void>;
 }
 
@@ -17,10 +16,9 @@ export interface MustGetChunk {
   mustGetChunk(hash: Hash): Promise<Chunk>;
 }
 
-export interface Read extends GetChunk, MustGetChunk {
+export interface Read extends GetChunk, MustGetChunk, Release {
   hasChunk(hash: Hash): Promise<boolean>;
   getHead(name: string): Promise<Hash | undefined>;
-  close(): void;
   get closed(): boolean;
 }
 

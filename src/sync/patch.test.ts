@@ -6,6 +6,7 @@ import type {JSONValue} from '../json.js';
 import {ChainBuilder} from '../db/test-helpers.js';
 import {apply} from './patch.js';
 import {assertPatchOperations} from '../patch-operation.js';
+import {withWrite} from '../with-transactions.js';
 
 suite('patch', () => {
   const t = async (dd31: boolean) => {
@@ -159,7 +160,7 @@ suite('patch', () => {
     for (const c of cases) {
       const b = new ChainBuilder(store, undefined, dd31);
       await b.addGenesis(clientID);
-      await store.withWrite(async dagWrite => {
+      await withWrite(store, async dagWrite => {
         let dbWrite;
         if (dd31) {
           dbWrite = await db.newWriteSnapshotDD31(

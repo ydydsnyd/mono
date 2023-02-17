@@ -22,6 +22,7 @@ import {
 } from './node.js';
 import {BTreeWrite} from './write.js';
 import {BTreeRead, NODE_HEADER_SIZE} from './read.js';
+import {withRead, withWrite} from '../with-transactions.js';
 
 test('findLeaf', async () => {
   const dagStore = new dag.TestStore();
@@ -48,7 +49,7 @@ test('findLeaf', async () => {
   let root: InternalNode;
   let rootHash: Hash;
 
-  await dagStore.withWrite(async dagWrite => {
+  await withWrite(dagStore, async dagWrite => {
     const c0 = dagWrite.createChunk(leaf0, []);
     const c1 = dagWrite.createChunk(leaf1, []);
     const c2 = dagWrite.createChunk(leaf2, []);
@@ -74,7 +75,7 @@ test('findLeaf', async () => {
     await dagWrite.commit();
   });
 
-  await dagStore.withRead(async dagRead => {
+  await withRead(dagStore, async dagRead => {
     const source = new BTreeRead(
       dagRead,
       rootHash,
@@ -114,7 +115,7 @@ type TreeData = {
 };
 
 function makeTree(node: TreeData, dagStore: dag.Store): Promise<Hash> {
-  return dagStore.withWrite(async dagWrite => {
+  return withWrite(dagStore, async dagWrite => {
     const [h] = await makeTreeInner(node, dagWrite);
     await dagWrite.setHead('test', h);
     await dagWrite.commit();
@@ -192,7 +193,7 @@ async function expectTree(
   dagStore: dag.Store,
   expected: TreeData,
 ) {
-  await dagStore.withRead(async dagRead => {
+  await withRead(dagStore, async dagRead => {
     expect(await readTreeData(rootHash, dagRead)).to.deep.equal(expected);
   });
 }
@@ -214,7 +215,7 @@ function doRead<R>(
   dagStore: dag.Store,
   fn: (r: BTreeRead) => R | Promise<R>,
 ): Promise<R> {
-  return dagStore.withRead(async dagWrite => {
+  return withRead(dagStore, async dagWrite => {
     const r = new BTreeRead(dagWrite, rootHash, getEntrySize, chunkHeaderSize);
     return await fn(r);
   });
@@ -225,7 +226,7 @@ function doWrite(
   dagStore: dag.Store,
   fn: (w: BTreeWrite) => void | Promise<void>,
 ): Promise<Hash> {
-  return dagStore.withWrite(async dagWrite => {
+  return withWrite(dagStore, async dagWrite => {
     const w = new BTreeWrite(
       dagWrite,
       rootHash,
@@ -252,7 +253,7 @@ async function asyncIterToArray<T>(iter: AsyncIterable<T>): Promise<T[]> {
 
 test('empty read tree', async () => {
   const dagStore = new dag.TestStore();
-  await dagStore.withRead(async dagRead => {
+  await withRead(dagStore, async dagRead => {
     const r = new BTreeRead(dagRead);
     expect(await r.get('a')).to.be.undefined;
     expect(await r.has('b')).to.be.false;
@@ -266,7 +267,7 @@ test('empty write tree', async () => {
 
   const emptyTreeHash = chunkHasher();
 
-  await dagStore.withWrite(async dagWrite => {
+  await withWrite(dagStore, async dagWrite => {
     const w = new BTreeWrite(
       dagWrite,
       undefined,
@@ -282,7 +283,7 @@ test('empty write tree', async () => {
     const h = await w.flush();
     expect(h).to.equal('face0000000040008000000000000000' + '000000000001');
   });
-  let rootHash = await dagStore.withWrite(async dagWrite => {
+  let rootHash = await withWrite(dagStore, async dagWrite => {
     const w = new BTreeWrite(
       dagWrite,
       undefined,
@@ -338,7 +339,7 @@ test('get', async () => {
 
   const rootHash = await makeTree(tree, dagStore);
 
-  await dagStore.withRead(async dagRead => {
+  await withRead(dagStore, async dagRead => {
     const source = new BTreeRead(
       dagRead,
       rootHash,
@@ -396,7 +397,7 @@ test('has', async () => {
 
   const rootHash = await makeTree(tree, dagStore);
 
-  await dagStore.withRead(async dagRead => {
+  await withRead(dagStore, async dagRead => {
     const source = new BTreeRead(
       dagRead,
       rootHash,
@@ -528,7 +529,7 @@ test('put', async () => {
   });
 
   async function write(data: Record<string, ReadonlyJSONValue>) {
-    rootHash = await dagStore.withWrite(async dagWrite => {
+    rootHash = await withWrite(dagStore, async dagWrite => {
       const w = new BTreeWrite(
         dagWrite,
         rootHash,
@@ -1296,7 +1297,7 @@ test('diff', async () => {
   ) => {
     const dagStore = new dag.TestStore();
 
-    const [oldHash, newHash] = await dagStore.withWrite(async dagWrite => {
+    const [oldHash, newHash] = await withWrite(dagStore, async dagWrite => {
       const oldTree = new BTreeWrite(
         dagWrite,
         undefined,
@@ -1331,7 +1332,7 @@ test('diff', async () => {
       return [oldHash, newHash];
     });
 
-    await dagStore.withRead(async dagRead => {
+    await withRead(dagStore, async dagRead => {
       const oldTree = new BTreeRead(
         dagRead,
         oldHash,

@@ -4,12 +4,13 @@ import {assertHash, makeNewFakeHashFunction} from '../hash.js';
 import {ChainBuilder} from '../db/test-helpers.js';
 import {GatherNotCachedVisitor} from './gather-not-cached-visitor.js';
 import {MetaType} from '../db/commit.js';
+import {withRead, withWrite} from '../with-transactions.js';
 
 suite('GatherNotCachedVisitor', () => {
   test('when gatherSizeLimit not exceeded, if none cached gathers all, if all cached gathers none', async () => {
     const {perdag, memdag, pb, getSize, allChunksInVisitOrder} = await setup();
 
-    const gatheredChunks = await perdag.withRead(async dagRead => {
+    const gatheredChunks = await withRead(perdag, async dagRead => {
       const visitor = new GatherNotCachedVisitor(
         dagRead,
         memdag,
@@ -23,7 +24,7 @@ suite('GatherNotCachedVisitor', () => {
       return visitor.gatheredChunks;
     });
 
-    await memdag.withWrite(async dagWrite => {
+    await withWrite(memdag, async dagWrite => {
       for (const {chunk, size} of gatheredChunks.values()) {
         await dagWrite.putChunk(chunk, size);
         await dagWrite.setHead('test', pb.headHash);
@@ -31,7 +32,7 @@ suite('GatherNotCachedVisitor', () => {
       await dagWrite.commit();
     });
 
-    await perdag.withRead(async dagRead => {
+    await withRead(perdag, async dagRead => {
       const visitor = new GatherNotCachedVisitor(
         dagRead,
         memdag,
@@ -46,7 +47,7 @@ suite('GatherNotCachedVisitor', () => {
   test('gathers till gatherSizeLimit is exceeded with visit order: history order, values before indexes', async () => {
     const {perdag, memdag, pb, getSize, allChunksInVisitOrder} = await setup();
 
-    await perdag.withRead(async dagRead => {
+    await withRead(perdag, async dagRead => {
       const visitor = new GatherNotCachedVisitor(
         dagRead,
         memdag,
@@ -72,7 +73,7 @@ suite('GatherNotCachedVisitor', () => {
     const {clientID, perdag, memdag, pb, getSize, allChunksInVisitOrder} =
       await setup();
 
-    const gatheredChunks = await perdag.withRead(async dagRead => {
+    const gatheredChunks = await withRead(perdag, async dagRead => {
       const visitor = new GatherNotCachedVisitor(
         dagRead,
         memdag,
@@ -86,7 +87,7 @@ suite('GatherNotCachedVisitor', () => {
       return visitor.gatheredChunks;
     });
 
-    await memdag.withWrite(async dagWrite => {
+    await withWrite(memdag, async dagWrite => {
       for (const {chunk, size} of gatheredChunks.values()) {
         await dagWrite.putChunk(chunk, size);
         await dagWrite.setHead('test', pb.headHash);
@@ -96,7 +97,7 @@ suite('GatherNotCachedVisitor', () => {
 
     await pb.addLocal(clientID, [['localThree', {id: 'local3'}]]);
 
-    await perdag.withRead(async dagRead => {
+    await withRead(perdag, async dagRead => {
       const visitor = new GatherNotCachedVisitor(
         dagRead,
         memdag,

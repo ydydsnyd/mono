@@ -1,8 +1,8 @@
 import {assert, assertNumber, assertObject, assertString} from '../asserts.js';
 import {deepFreeze} from '../json.js';
 import type * as kv from '../kv/mod.js';
-import {withRead, withWrite} from '../kv/mod.js';
 import {uuid} from '../uuid.js';
+import {withRead, withWrite} from '../with-transactions.js';
 import {getIDBDatabasesDBName} from './idb-databases-store-db-name.js';
 
 const DBS_KEY = 'dbs';

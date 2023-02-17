@@ -50,6 +50,7 @@ import {
 } from './replicache-mutation-recovery.test.js';
 import {stringCompare} from './string-compare.js';
 import type {PushResponse} from './pusher.js';
+import {withRead} from './with-transactions.js';
 
 async function createAndPersistClientWithPendingLocalDD31(
   clientID: sync.ClientID,
@@ -246,19 +247,19 @@ suite('DD31', () => {
         snapshotLastMutationIDs,
       );
 
-    const client1 = await testPerdag.withRead(read =>
+    const client1 = await withRead(testPerdag, read =>
       persist.getClient(client1ID, read),
     );
     assertClientDD31(client1);
 
-    const client2 = await testPerdag.withRead(read =>
+    const client2 = await withRead(testPerdag, read =>
       persist.getClient(client2ID, read),
     );
     assertClientDD31(client2);
 
     expect(client1.clientGroupID).to.equal(client2.clientGroupID);
 
-    const clientGroup = await testPerdag.withRead(read =>
+    const clientGroup = await withRead(testPerdag, read =>
       persist.getClientGroup(client1.clientGroupID, read),
     );
     assert(clientGroup);
@@ -341,7 +342,7 @@ suite('DD31', () => {
       expect(await pullCalls[0].request.json()).to.deep.equal(pullReq);
     }
 
-    const updatedClient1 = await testPerdag.withRead(read =>
+    const updatedClient1 = await withRead(testPerdag, read =>
       persist.getClient(client1ID, read),
     );
     assertClientDD31(updatedClient1);
@@ -349,13 +350,13 @@ suite('DD31', () => {
     expect(updatedClient1.clientGroupID).to.deep.equal(client1.clientGroupID);
     expect(updatedClient1.headHash).to.equal(client1.headHash);
 
-    const updatedClientGroup = await testPerdag.withRead(read =>
+    const updatedClientGroup = await withRead(testPerdag, read =>
       persist.getClientGroup(client1.clientGroupID, read),
     );
 
     assert(updatedClientGroup);
 
-    const updatedClient2 = await testPerdag.withRead(read =>
+    const updatedClient2 = await withRead(testPerdag, read =>
       persist.getClient(client2ID, read),
     );
     assertClientDD31(updatedClient2);
@@ -535,7 +536,7 @@ suite('DD31', () => {
         ['client1', 'mutator_name_2', 'mutator_name_3'],
         1,
       );
-    const client1 = await testPerdag.withRead(read =>
+    const client1 = await withRead(testPerdag, read =>
       persist.getClient(client1ID, read),
     );
     assertClientDD31(client1);
@@ -576,7 +577,7 @@ suite('DD31', () => {
     // Expect no unmatched fetches (only a push request should be sent, no pull)
     expect(fetchMock.calls('unmatched').length).to.equal(0);
 
-    const updatedClient1 = await testPerdag.withRead(read =>
+    const updatedClient1 = await withRead(testPerdag, read =>
       persist.getClient(client1ID, read),
     );
     // unchanged
@@ -623,7 +624,7 @@ suite('DD31', () => {
       ['client1', 'mutator_name_2', 'mutator_name_3'],
       1,
     );
-    const clientWPendingMutations = await testPerdag.withRead(read =>
+    const clientWPendingMutations = await withRead(testPerdag, read =>
       persist.getClient(clientWPendingMutationsID, read),
     );
     assertClientDD31(clientWPendingMutations);
@@ -722,7 +723,7 @@ suite('DD31', () => {
         4,
       );
 
-    const clients1Thru3 = await testPerdagForClients1Thru3.withRead(read =>
+    const clients1Thru3 = await withRead(testPerdagForClients1Thru3, read =>
       persist.getClients(read),
     );
     const client1 = clients1Thru3.get(client1ID);
@@ -731,8 +732,9 @@ suite('DD31', () => {
     assertClientDD31(client2);
     const client3 = clients1Thru3.get(client3ID);
     assertClientDD31(client3);
-    const {clientGroup1, clientGroup2, clientGroup3} =
-      await testPerdagForClients1Thru3.withRead(async read => {
+    const {clientGroup1, clientGroup2, clientGroup3} = await withRead(
+      testPerdagForClients1Thru3,
+      async read => {
         const clientGroup1 = await persist.getClientGroup(
           client1.clientGroupID,
           read,
@@ -749,13 +751,14 @@ suite('DD31', () => {
         );
         assert(clientGroup3);
         return {clientGroup1, clientGroup2, clientGroup3};
-      });
+      },
+    );
 
-    const client4 = await testPerdagForClient4.withRead(read =>
+    const client4 = await withRead(testPerdagForClient4, read =>
       persist.getClient(client4ID, read),
     );
     assertClientDD31(client4);
-    const clientGroup4 = await testPerdagForClient4.withRead(read =>
+    const clientGroup4 = await withRead(testPerdagForClient4, read =>
       persist.getClientGroup(client4.clientGroupID, read),
     );
     assert(clientGroup4);
@@ -850,7 +853,8 @@ suite('DD31', () => {
       pullVersion: 1,
     });
 
-    const updateClients1Thru3 = await testPerdagForClients1Thru3.withRead(
+    const updateClients1Thru3 = await withRead(
+      testPerdagForClients1Thru3,
       read => persist.getClients(read),
     );
     const updatedClient1 = updateClients1Thru3.get(client1ID);
@@ -860,7 +864,8 @@ suite('DD31', () => {
     const updatedClient3 = updateClients1Thru3.get(client3ID);
     assertClientDD31(updatedClient3);
 
-    const updatedClientGroups = await testPerdagForClients1Thru3.withRead(
+    const updatedClientGroups = await withRead(
+      testPerdagForClients1Thru3,
       read => persist.getClientGroups(read),
     );
     const updatedClientGroup1 = updatedClientGroups.get(client1.clientGroupID);
@@ -870,11 +875,11 @@ suite('DD31', () => {
     const updatedClientGroup3 = updatedClientGroups.get(client3.clientGroupID);
     assert(updatedClientGroup3);
 
-    const updatedClient4 = await testPerdagForClient4.withRead(read =>
+    const updatedClient4 = await withRead(testPerdagForClient4, read =>
       persist.getClient(client4ID, read),
     );
     assertClientDD31(updatedClient4);
-    const updatedClientGroup4 = await testPerdagForClient4.withRead(read =>
+    const updatedClientGroup4 = await withRead(testPerdagForClient4, read =>
       persist.getClientGroup(client4.clientGroupID, read),
     );
     assert(updatedClientGroup4);
@@ -969,7 +974,9 @@ suite('DD31', () => {
         3,
       );
 
-    const clients = await testPerdag.withRead(read => persist.getClients(read));
+    const clients = await withRead(testPerdag, read =>
+      persist.getClients(read),
+    );
     const client1 = clients.get(client1ID);
     assertClientDD31(client1);
     const client2 = clients.get(client2ID);
@@ -977,8 +984,9 @@ suite('DD31', () => {
     const client3 = clients.get(client3ID);
     assertClientDD31(client3);
 
-    const {clientGroup1, clientGroup2, clientGroup3} =
-      await testPerdag.withRead(async read => {
+    const {clientGroup1, clientGroup2, clientGroup3} = await withRead(
+      testPerdag,
+      async read => {
         const clientGroup1 = await persist.getClientGroup(
           client1.clientGroupID,
           read,
@@ -999,7 +1007,8 @@ suite('DD31', () => {
           clientGroup2,
           clientGroup3,
         };
-      });
+      },
+    );
 
     const pushRequestJSONBodies: PushRequestDD31[] = [];
     const pullRequestJsonBodies: JSONObject[] = [];
@@ -1090,7 +1099,7 @@ suite('DD31', () => {
       pullVersion: 1,
     });
 
-    const updateClients = await testPerdag.withRead(read =>
+    const updateClients = await withRead(testPerdag, read =>
       persist.getClients(read),
     );
     const updatedClient1 = updateClients.get(client1ID);
@@ -1100,7 +1109,7 @@ suite('DD31', () => {
     const updatedClient3 = updateClients.get(client3ID);
     assertClientDD31(updatedClient3);
 
-    const updatedClientGroups = await testPerdag.withRead(read =>
+    const updatedClientGroups = await withRead(testPerdag, read =>
       persist.getClientGroups(read),
     );
     const updatedClientGroup1 = updatedClientGroups.get(client1.clientGroupID);
@@ -1172,7 +1181,9 @@ suite('DD31', () => {
         3,
       );
 
-    const clients = await testPerdag.withRead(read => persist.getClients(read));
+    const clients = await withRead(testPerdag, read =>
+      persist.getClients(read),
+    );
     const client1 = clients.get(client1ID);
     assertClientDD31(client1);
     const client2 = clients.get(client2ID);
@@ -1180,8 +1191,9 @@ suite('DD31', () => {
     const client3 = clients.get(client3ID);
     assertClientDD31(client3);
 
-    const {clientGroup1, clientGroup2, clientGroup3} =
-      await testPerdag.withRead(async read => {
+    const {clientGroup1, clientGroup2, clientGroup3} = await withRead(
+      testPerdag,
+      async read => {
         const clientGroup1 = await persist.getClientGroup(
           client1.clientGroupID,
           read,
@@ -1202,7 +1214,8 @@ suite('DD31', () => {
           clientGroup2,
           clientGroup3,
         };
-      });
+      },
+    );
 
     const pullRequestJsonBodies: JSONObject[] = [];
     fetchMock.reset();
@@ -1233,10 +1246,7 @@ suite('DD31', () => {
       },
     );
 
-    const lazyDagWithWriteStub = sinon.stub(
-      dag.LazyStore.prototype,
-      'withWrite',
-    );
+    const lazyDagWithWriteStub = sinon.stub(dag.LazyStore.prototype, 'write');
     const testErrorMsg = 'Test dag.LazyStore.withWrite error';
     lazyDagWithWriteStub.onSecondCall().throws(testErrorMsg);
     lazyDagWithWriteStub.callThrough();
@@ -1285,7 +1295,7 @@ suite('DD31', () => {
       pullVersion: 1,
     });
 
-    const updateClients = await testPerdag.withRead(read =>
+    const updateClients = await withRead(testPerdag, read =>
       persist.getClients(read),
     );
     const updatedClient1 = updateClients.get(client1ID);
@@ -1295,7 +1305,7 @@ suite('DD31', () => {
     const updatedClient3 = updateClients.get(client3ID);
     assertClientDD31(updatedClient3);
 
-    const updatedClientGroups = await testPerdag.withRead(read =>
+    const updatedClientGroups = await withRead(testPerdag, read =>
       persist.getClientGroups(read),
     );
     const updatedClientGroup1 = updatedClientGroups.get(client1.clientGroupID);
@@ -1367,22 +1377,22 @@ suite('DD31', () => {
         2,
       );
 
-    const client1 = await testPerdagForClient1.withRead(read =>
+    const client1 = await withRead(testPerdagForClient1, read =>
       persist.getClient(client1ID, read),
     );
     assertClientDD31(client1);
 
-    const client2 = await testPerdagForClient2.withRead(read =>
+    const client2 = await withRead(testPerdagForClient2, read =>
       persist.getClient(client2ID, read),
     );
     assertClientDD31(client2);
 
-    const clientGroup1 = await testPerdagForClient1.withRead(read =>
+    const clientGroup1 = await withRead(testPerdagForClient1, read =>
       persist.getClientGroup(client1.clientGroupID, read),
     );
     assert(clientGroup1);
 
-    const clientGroup2 = await testPerdagForClient2.withRead(read =>
+    const clientGroup2 = await withRead(testPerdagForClient2, read =>
       persist.getClientGroup(client2.clientGroupID, read),
     );
     assert(clientGroup2);
@@ -1415,11 +1425,8 @@ suite('DD31', () => {
       },
     );
 
-    const dagStoreWithReadStub = sinon.stub(
-      dag.StoreImpl.prototype,
-      'withRead',
-    );
-    const testErrorMsg = 'Test dag.StoreImpl.withRead error';
+    const dagStoreWithReadStub = sinon.stub(dag.StoreImpl.prototype, 'read');
+    const testErrorMsg = 'Test dag.StoreImpl.read error';
     dagStoreWithReadStub.onSecondCall().throws(testErrorMsg);
     dagStoreWithReadStub.callThrough();
 
@@ -1451,21 +1458,21 @@ suite('DD31', () => {
       pullVersion: PULL_VERSION_DD31,
     });
 
-    const updatedClient1 = await testPerdagForClient1.withRead(read =>
+    const updatedClient1 = await withRead(testPerdagForClient1, read =>
       persist.getClient(client1ID, read),
     );
     assertClientDD31(updatedClient1);
 
-    const updatedClient2 = await testPerdagForClient2.withRead(read =>
+    const updatedClient2 = await withRead(testPerdagForClient2, read =>
       persist.getClient(client2ID, read),
     );
     assertClientDD31(updatedClient2);
 
-    const updatedClientGroup1 = await testPerdagForClient1.withRead(read =>
+    const updatedClientGroup1 = await withRead(testPerdagForClient1, read =>
       persist.getClientGroup(updatedClient1.clientGroupID, read),
     );
     assert(updatedClientGroup1);
-    const updatedClientGroup2 = await testPerdagForClient2.withRead(read =>
+    const updatedClientGroup2 = await withRead(testPerdagForClient2, read =>
       persist.getClientGroup(updatedClient2.clientGroupID, read),
     );
     assert(updatedClientGroup2);
@@ -1538,7 +1545,9 @@ suite('DD31', () => {
       2,
     );
 
-    const clients = await testPerdag.withRead(read => persist.getClients(read));
+    const clients = await withRead(testPerdag, read =>
+      persist.getClients(read),
+    );
     const client1 = clients.get(client1ID);
     assertClientDD31(client1);
     const client2 = clients.get(client2ID);
@@ -1697,7 +1706,7 @@ suite('DD31', () => {
           1,
         );
 
-      const client1 = await testPerdagSDD.withRead(read =>
+      const client1 = await withRead(testPerdagSDD, read =>
         persist.getClient(client1ID, read),
       );
       assertClientSDD(client1);
@@ -1760,7 +1769,7 @@ suite('DD31', () => {
       };
       expect(pullRequestJSONBodies).to.deep.equal([pullRequestBody]);
 
-      const updatedClient1 = await testPerdagSDD.withRead(read =>
+      const updatedClient1 = await withRead(testPerdagSDD, read =>
         persist.getClient(client1ID, read),
       );
       expect(updatedClient1).to.deep.equal({
@@ -1818,17 +1827,17 @@ suite('DD31', () => {
           'c2',
         );
 
-      const client1 = await testPerdagSDD.withRead(read =>
+      const client1 = await withRead(testPerdagSDD, read =>
         persist.getClient(client1ID, read),
       );
       assertClientSDD(client1);
       expect(client1.mutationID).to.equal(2);
 
-      const client2 = await testPerdagDD31.withRead(read =>
+      const client2 = await withRead(testPerdagDD31, read =>
         persist.getClient(client2ID, read),
       );
       assertClientDD31(client2);
-      const clientGroup2 = await testPerdagDD31.withRead(read =>
+      const clientGroup2 = await withRead(testPerdagDD31, read =>
         persist.getClientGroup(client2.clientGroupID, read),
       );
       assert(clientGroup2);
@@ -1941,7 +1950,7 @@ suite('DD31', () => {
         pullRequestBody1,
       ]);
 
-      const updatedClient1 = await testPerdagSDD.withRead(read =>
+      const updatedClient1 = await withRead(testPerdagSDD, read =>
         persist.getClient(client1ID, read),
       );
       assertClientSDD(updatedClient1);
@@ -1951,13 +1960,13 @@ suite('DD31', () => {
         lastServerAckdMutationID: client1.mutationID,
       });
 
-      const updatedClient2 = await testPerdagDD31.withRead(read =>
+      const updatedClient2 = await withRead(testPerdagDD31, read =>
         persist.getClient(client2ID, read),
       );
       assertClientDD31(updatedClient2);
       expect(updatedClient2).to.deep.equal(client2);
 
-      const updatedClientGroup2 = await testPerdagDD31.withRead(read =>
+      const updatedClientGroup2 = await withRead(testPerdagDD31, read =>
         persist.getClientGroup(client2.clientGroupID, read),
       );
       expect(updatedClientGroup2).to.deep.equal({
@@ -2014,11 +2023,11 @@ suite('DD31', () => {
       'c1',
     );
 
-    const client1 = await testPerdagDD31.withRead(read =>
+    const client1 = await withRead(testPerdagDD31, read =>
       persist.getClient(client1ID, read),
     );
     assertClientDD31(client1);
-    const clientGroup1 = await testPerdagDD31.withRead(read =>
+    const clientGroup1 = await withRead(testPerdagDD31, read =>
       persist.getClientGroup(client1.clientGroupID, read),
     );
     assert(clientGroup1);
@@ -2051,13 +2060,13 @@ suite('DD31', () => {
     expect(pushRequestJSONBodies).to.deep.equal([]);
     expect(pullRequestJSONBodies).to.deep.equal([]);
 
-    const updatedClient1 = await testPerdagDD31.withRead(read =>
+    const updatedClient1 = await withRead(testPerdagDD31, read =>
       persist.getClient(client1ID, read),
     );
     assertClientDD31(updatedClient1);
     expect(updatedClient1).to.deep.equal(client1);
 
-    const updatedClientGroup1 = await testPerdagDD31.withRead(read =>
+    const updatedClientGroup1 = await withRead(testPerdagDD31, read =>
       persist.getClientGroup(client1.clientGroupID, read),
     );
     expect(updatedClientGroup1).to.deep.equal(clientGroup1);
@@ -2102,11 +2111,11 @@ suite('DD31', () => {
         'c2',
       );
 
-    const client1 = await testPerdagDD31.withRead(read =>
+    const client1 = await withRead(testPerdagDD31, read =>
       persist.getClient(client1ID, read),
     );
     assertClientDD31(client1);
-    const clientGroup1 = await testPerdagDD31.withRead(read =>
+    const clientGroup1 = await withRead(testPerdagDD31, read =>
       persist.getClientGroup(client1.clientGroupID, read),
     );
     assert(clientGroup1);
@@ -2155,13 +2164,13 @@ suite('DD31', () => {
 
     expect(pullRequestJSONBodies).to.deep.equal([]);
 
-    const updatedClient1 = await testPerdagDD31.withRead(read =>
+    const updatedClient1 = await withRead(testPerdagDD31, read =>
       persist.getClient(client1ID, read),
     );
     assertClientDD31(updatedClient1);
     expect(updatedClient1).to.deep.equal(client1);
 
-    const updatedClientGroup1 = await testPerdagDD31.withRead(read =>
+    const updatedClientGroup1 = await withRead(testPerdagDD31, read =>
       persist.getClientGroup(client1.clientGroupID, read),
     );
     // This did not get updated because pull was disabled!

@@ -46,6 +46,7 @@ import {Visitor} from './visitor.js';
 import {assert, assertNotUndefined} from '../asserts.js';
 import {addSyncSnapshot} from '../sync/test-helpers.js';
 import type {Cookie} from '../cookies.js';
+import {withRead, withWrite} from '../with-transactions.js';
 
 export type Chain = Commit<Meta>[];
 
@@ -76,10 +77,10 @@ async function createGenesis(
   indexDefinitions: IndexDefinitions,
   dd31: boolean,
 ): Promise<Commit<Meta>> {
-  await store.withWrite(async w => {
+  await withWrite(store, async w => {
     await initDB(w, headName, clientID, indexDefinitions, dd31);
   });
-  return await store.withRead(async read => {
+  return await withRead(store, async read => {
     const [, commit] = await readCommit(whenceHead(headName), read);
     return commit;
   });
@@ -119,7 +120,7 @@ async function createLocal(
   dd31: boolean,
 ): Promise<Commit<Meta>> {
   const lc = new LogContext();
-  await store.withWrite(async dagWrite => {
+  await withWrite(store, async dagWrite => {
     const w = await newWriteLocal(
       whenceHead(headName),
       createMutatorName(i),
@@ -135,7 +136,7 @@ async function createLocal(
     }
     await w.commit(headName);
   });
-  return store.withRead(dagRead => fromHead(headName, dagRead));
+  return withRead(store, dagRead => fromHead(headName, dagRead));
 }
 
 export function createMutatorName(chainIndex: number): string {
@@ -182,7 +183,7 @@ async function createIndex(
   headName: string,
 ): Promise<Commit<Meta>> {
   const lc = new LogContext();
-  await store.withWrite(async dagWrite => {
+  await withWrite(store, async dagWrite => {
     const w = await newWriteIndexChange(
       whenceHead(headName),
       dagWrite,
@@ -200,7 +201,7 @@ async function createIndex(
     );
     await w.commit(headName);
   });
-  return store.withRead(async dagRead => {
+  return withRead(store, async dagRead => {
     const [, commit] = await readCommit(whenceHead(headName), dagRead);
     return commit;
   });
@@ -222,7 +223,7 @@ async function addSnapshot(
 ): Promise<Chain> {
   expect(chain).to.have.length.greaterThan(0);
   const lc = new LogContext();
-  await store.withWrite(async dagWrite => {
+  await withWrite(store, async dagWrite => {
     let w;
     if (dd31) {
       w = await newWriteSnapshotDD31(
@@ -255,7 +256,7 @@ async function addSnapshot(
     }
     await w.commit(headName);
   });
-  return store.withRead(async dagRead => {
+  return withRead(store, async dagRead => {
     const [, commit] = await readCommit(whenceHead(headName), dagRead);
     chain.push(commit);
     return chain;
@@ -376,7 +377,7 @@ export class ChainBuilder {
   }
 
   async removeHead(): Promise<void> {
-    await this.store.withWrite(async write => {
+    await withWrite(this.store, async write => {
       await write.removeHead(this.headName);
       await write.commit();
     });
@@ -467,7 +468,7 @@ export function getChunkSnapshot(
   dagStore: dag.Store,
   hash: Hash,
 ): Promise<Record<string, unknown>> {
-  return dagStore.withRead(async dagRead => {
+  return withRead(dagStore, async dagRead => {
     const v = new ChunkSnapshotVisitor(dagRead);
     await v.visitCommit(hash);
     return v.snapshot;

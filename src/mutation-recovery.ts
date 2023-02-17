@@ -21,6 +21,7 @@ import {
   isVersionNotSupportedResponse,
 } from './error-responses.js';
 import type {CreateStore} from './kv/store.js';
+import {withRead, withWrite} from './with-transactions.js';
 
 const MUTATION_RECOVERY_LAZY_STORE_SOURCE_CHUNK_CACHE_SIZE_LIMIT = 10 * 2 ** 20; // 10 MB
 
@@ -193,7 +194,7 @@ async function recoverMutationsOfClientSDD(
     assertHash,
   );
   try {
-    await dagForOtherClient.withWrite(async write => {
+    await withWrite(dagForOtherClient, async write => {
       await write.setHead(db.DEFAULT_HEAD_NAME, client.headHash);
       await write.commit();
     });
@@ -310,7 +311,7 @@ async function recoverMutationsOfClientSDD(
       }
     }
 
-    return await perdag.withWrite(async dagWrite => {
+    return await withWrite(perdag, async dagWrite => {
       const clients = await persist.getClients(dagWrite);
       const clientToUpdate = clients.get(clientID);
       if (!clientToUpdate) {
@@ -408,7 +409,7 @@ async function recoverMutationsFromPerdagSDD(
   try {
     let clientMap: persist.ClientMap | undefined =
       preReadClientMap ||
-      (await perdag.withRead(read => persist.getClients(read)));
+      (await withRead(perdag, read => persist.getClients(read)));
     const clientIDsVisited = new Set<sync.ClientID>();
     while (clientMap) {
       let newClientMap: persist.ClientMap | undefined;
@@ -448,8 +449,10 @@ async function recoverMutationsFromPerdagDD31(
   const stepDescription = `Recovering mutations from db ${database.name}.`;
   lc.debug?.('Start:', stepDescription);
   try {
-    let clientGroups: persist.ClientGroupMap | undefined =
-      await perdag.withRead(read => persist.getClientGroups(read));
+    let clientGroups: persist.ClientGroupMap | undefined = await withRead(
+      perdag,
+      read => persist.getClientGroups(read),
+    );
     const clientGroupIDsVisited = new Set<sync.ClientGroupID>();
     while (clientGroups) {
       let newClientGroups: persist.ClientGroupMap | undefined;
@@ -535,7 +538,7 @@ async function recoverMutationsOfClientGroupDD31(
     assertHash,
   );
   try {
-    await dagForOtherClientGroup.withWrite(async write => {
+    await withWrite(dagForOtherClientGroup, async write => {
       await write.setHead(db.DEFAULT_HEAD_NAME, clientGroup.headHash);
       await write.commit();
     });
@@ -593,7 +596,7 @@ async function recoverMutationsOfClientGroupDD31(
             `Push does not support the pushVersion/schemaVersion of group ${clientGroupID}. Marking it as disabled.`,
           );
         }
-        await dagForOtherClientGroup.withWrite(write =>
+        await withWrite(dagForOtherClientGroup, write =>
           persist.disableClientGroup(clientGroupID, write),
         );
         return false;
@@ -679,7 +682,7 @@ async function recoverMutationsOfClientGroupDD31(
       }
     }
 
-    return await perdag.withWrite(async dagWrite => {
+    return await withWrite(perdag, async dagWrite => {
       const clientGroups = await persist.getClientGroups(dagWrite);
       const clientGroupToUpdate = clientGroups.get(clientGroupID);
       if (!clientGroupToUpdate) {

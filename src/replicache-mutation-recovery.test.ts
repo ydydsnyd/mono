@@ -33,6 +33,7 @@ import {initClientWithClientID} from './persist/clients-test-helpers.js';
 import {PUSH_VERSION_SDD} from './sync/push.js';
 import {assertClientSDD} from './persist/clients.js';
 import {persistSDD} from './persist/persist-test-helpers.js';
+import {withRead} from './with-transactions.js';
 
 initReplicacheTesting();
 
@@ -153,7 +154,7 @@ async function testRecoveringMutationsOfClientSDD(args: {
 
   const client1PendingLocalMetas =
     await createAndPersistClientWithPendingLocalSDD(client1ID, testPerdag, 2);
-  const client1 = await testPerdag.withRead(read =>
+  const client1 = await withRead(testPerdag, read =>
     persist.getClient(client1ID, read),
   );
   assertClientSDD(client1);
@@ -204,7 +205,7 @@ async function testRecoveringMutationsOfClientSDD(args: {
     pullVersion: 0,
   });
 
-  const updatedClient1 = await testPerdag.withRead(read =>
+  const updatedClient1 = await withRead(testPerdag, read =>
     persist.getClient(client1ID, read),
   );
   assertClientSDD(updatedClient1);
@@ -263,7 +264,7 @@ test('recovering mutations with pull disabled', async () => {
 
   const client1PendingLocalMetas =
     await createAndPersistClientWithPendingLocalSDD(client1ID, testPerdag, 2);
-  const client1 = await testPerdag.withRead(read =>
+  const client1 = await withRead(testPerdag, read =>
     persist.getClient(client1ID, read),
   );
   assertNotUndefined(client1);
@@ -302,7 +303,7 @@ test('recovering mutations with pull disabled', async () => {
   // Expect no unmatched fetches (only a push request should be sent, no pull)
   expect(fetchMock.calls('unmatched').length).to.equal(0);
 
-  const updatedClient1 = await testPerdag.withRead(read =>
+  const updatedClient1 = await withRead(testPerdag, read =>
     persist.getClient(client1ID, read),
   );
   // unchanged
@@ -342,7 +343,7 @@ test('client does not attempt to recover mutations from IndexedDB with different
     testPerdag,
     2,
   );
-  const clientWPendingMutations = await testPerdag.withRead(read =>
+  const clientWPendingMutations = await withRead(testPerdag, read =>
     persist.getClient(clientWPendingMutationsID, read),
   );
   assertClientSDD(clientWPendingMutations);
@@ -426,7 +427,7 @@ test('successfully recovering mutations of multiple clients with mix of schema v
       2,
     );
 
-  const clients1Thru3 = await testPerdagForClients1Thru3.withRead(read =>
+  const clients1Thru3 = await withRead(testPerdagForClients1Thru3, read =>
     persist.getClients(read),
   );
   const client1 = clients1Thru3.get(client1ID);
@@ -436,7 +437,7 @@ test('successfully recovering mutations of multiple clients with mix of schema v
   const client3 = clients1Thru3.get(client3ID);
   assertClientSDD(client3);
 
-  const client4 = await testPerdagForClient4.withRead(read =>
+  const client4 = await withRead(testPerdagForClient4, read =>
     persist.getClient(client4ID, read),
   );
   assertClientSDD(client4);
@@ -531,7 +532,7 @@ test('successfully recovering mutations of multiple clients with mix of schema v
     pullVersion: 0,
   });
 
-  const updateClients1Thru3 = await testPerdagForClients1Thru3.withRead(read =>
+  const updateClients1Thru3 = await withRead(testPerdagForClients1Thru3, read =>
     persist.getClients(read),
   );
   const updatedClient1 = updateClients1Thru3.get(client1ID);
@@ -541,7 +542,7 @@ test('successfully recovering mutations of multiple clients with mix of schema v
   const updatedClient3 = updateClients1Thru3.get(client3ID);
   assertClientSDD(updatedClient3);
 
-  const updatedClient4 = await testPerdagForClient4.withRead(read =>
+  const updatedClient4 = await withRead(testPerdagForClient4, read =>
     persist.getClient(client4ID, read),
   );
   assertClientSDD(updatedClient4);
@@ -606,7 +607,7 @@ test('if a push error occurs, continues to try to recover other clients', async 
   const client3PendingLocalMetas =
     await createAndPersistClientWithPendingLocalSDD(client3ID, testPerdag, 1);
 
-  const clients = await testPerdag.withRead(read => persist.getClients(read));
+  const clients = await withRead(testPerdag, read => persist.getClients(read));
   const client1 = clients.get(client1ID);
   assertClientSDD(client1);
   const client2 = clients.get(client2ID);
@@ -703,7 +704,7 @@ test('if a push error occurs, continues to try to recover other clients', async 
     pullVersion: 0,
   });
 
-  const updateClients = await testPerdag.withRead(read =>
+  const updateClients = await withRead(testPerdag, read =>
     persist.getClients(read),
   );
   const updatedClient1 = updateClients.get(client1ID);
@@ -767,7 +768,7 @@ test('if an error occurs recovering one client, continues to try to recover othe
   const client3PendingLocalMetas =
     await createAndPersistClientWithPendingLocalSDD(client3ID, testPerdag, 1);
 
-  const clients = await testPerdag.withRead(read => persist.getClients(read));
+  const clients = await withRead(testPerdag, read => persist.getClients(read));
   const client1 = clients.get(client1ID);
   assertClientSDD(client1);
   const client2 = clients.get(client2ID);
@@ -804,8 +805,8 @@ test('if an error occurs recovering one client, continues to try to recover othe
     },
   );
 
-  const lazyDagWithWriteStub = sinon.stub(dag.LazyStore.prototype, 'withWrite');
-  const testErrorMsg = 'Test dag.LazyStore.withWrite error';
+  const lazyDagWithWriteStub = sinon.stub(dag.LazyStore.prototype, 'write');
+  const testErrorMsg = 'Test dag.LazyStore.write error';
   lazyDagWithWriteStub.onSecondCall().throws(testErrorMsg);
   lazyDagWithWriteStub.callThrough();
 
@@ -853,7 +854,7 @@ test('if an error occurs recovering one client, continues to try to recover othe
     pullVersion: 0,
   });
 
-  const updateClients = await testPerdag.withRead(read =>
+  const updateClients = await withRead(testPerdag, read =>
     persist.getClients(read),
   );
   const updatedClient1 = updateClients.get(client1ID);
@@ -926,12 +927,12 @@ test('if an error occurs recovering one db, continues to try to recover clients 
       1,
     );
 
-  const client1 = await testPerdagForClient1.withRead(read =>
+  const client1 = await withRead(testPerdagForClient1, read =>
     persist.getClient(client1ID, read),
   );
   assertClientSDD(client1);
 
-  const client2 = await testPerdagForClient2.withRead(read =>
+  const client2 = await withRead(testPerdagForClient2, read =>
     persist.getClient(client2ID, read),
   );
   assertClientSDD(client2);
@@ -959,8 +960,8 @@ test('if an error occurs recovering one db, continues to try to recover clients 
     },
   );
 
-  const dagStoreWithReadStub = sinon.stub(dag.StoreImpl.prototype, 'withRead');
-  const testErrorMsg = 'Test dag.StoreImpl.withRead error';
+  const dagStoreWithReadStub = sinon.stub(dag.StoreImpl.prototype, 'read');
+  const testErrorMsg = 'Test dag.StoreImpl.read error';
   dagStoreWithReadStub.onSecondCall().throws(testErrorMsg);
   dagStoreWithReadStub.callThrough();
 
@@ -992,12 +993,12 @@ test('if an error occurs recovering one db, continues to try to recover clients 
     pullVersion: 0,
   });
 
-  const updatedClient1 = await testPerdagForClient1.withRead(read =>
+  const updatedClient1 = await withRead(testPerdagForClient1, read =>
     persist.getClient(client1ID, read),
   );
   assertClientSDD(updatedClient1);
 
-  const updatedClient2 = await testPerdagForClient2.withRead(read =>
+  const updatedClient2 = await withRead(testPerdagForClient2, read =>
     persist.getClient(client2ID, read),
   );
   assertClientSDD(updatedClient2);
@@ -1045,7 +1046,7 @@ test('mutation recovery exits early if Replicache is closed', async () => {
     await createAndPersistClientWithPendingLocalSDD(client1ID, testPerdag, 1);
   await createAndPersistClientWithPendingLocalSDD(client2ID, testPerdag, 1);
 
-  const clients = await testPerdag.withRead(read => persist.getClients(read));
+  const clients = await withRead(testPerdag, read => persist.getClients(read));
   const client1 = clients.get(client1ID);
   assertClientSDD(client1);
   const client2 = clients.get(client2ID);
@@ -1104,7 +1105,7 @@ test('mutation recovery exits early if Replicache is closed', async () => {
     pullVersion: 0,
   });
 
-  const updateClients = await testPerdag.withRead(read =>
+  const updateClients = await withRead(testPerdag, read =>
     persist.getClients(read),
   );
   const updatedClient1 = updateClients.get(client1ID);

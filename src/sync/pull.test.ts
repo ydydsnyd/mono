@@ -54,6 +54,7 @@ import {
   assertPullResponseSDD,
 } from '../get-default-puller.js';
 import type {IndexDefinitions} from '../index-defs.js';
+import {withRead, withWrite} from '../with-transactions.js';
 
 test('begin try pull SDD', async () => {
   const clientID = 'test_client_id';
@@ -395,7 +396,7 @@ test('begin try pull SDD', async () => {
   for (const c of cases) {
     // Reset state of the store.
     b.chain.length = startingNumCommits;
-    await store.withWrite(async w => {
+    await withWrite(store, async w => {
       await w.setHead(
         DEFAULT_HEAD_NAME,
         b.chain[b.chain.length - 1].chunk.hash,
@@ -413,7 +414,7 @@ test('begin try pull SDD', async () => {
     // indexes created. We do this because after calling beginPull we check that
     // the index no longer returns values, demonstrating that it was rebuilt.
     if (c.numPendingMutations > 0) {
-      await store.withRead(async dagRead => {
+      await withRead(store, async dagRead => {
         const read = await db.fromWhence(
           db.whenceHead(DEFAULT_HEAD_NAME),
           dagRead,
@@ -465,7 +466,7 @@ test('begin try pull SDD', async () => {
       assertString(result);
     }
 
-    await store.withRead(async read => {
+    await withRead(store, async read => {
       if (c.expNewSyncHead !== undefined) {
         const expSyncHead = c.expNewSyncHead;
         const syncHeadHash = await read.getHead(SYNC_HEAD_NAME);
@@ -507,7 +508,7 @@ test('begin try pull SDD', async () => {
         // the snapshot's index is not what we want; we want the first index
         // change's index ("2").
         if (expSyncHead.indexes.length > 1) {
-          await store.withRead(async dagRead => {
+          await withRead(store, async dagRead => {
             const read = await db.fromWhence(
               db.whenceHead(SYNC_HEAD_NAME),
               dagRead,
@@ -940,7 +941,7 @@ test('begin try pull DD31', async () => {
   for (const c of cases) {
     // Reset state of the store.
     b.chain.length = startingNumCommits;
-    await store.withWrite(async w => {
+    await withWrite(store, async w => {
       await w.setHead(
         DEFAULT_HEAD_NAME,
         b.chain[b.chain.length - 1].chunk.hash,
@@ -957,7 +958,7 @@ test('begin try pull DD31', async () => {
     // indexes created. We do this because after calling beginPull we check that
     // the index no longer returns values, demonstrating that it was rebuilt.
     if (c.numPendingMutations > 0) {
-      await store.withRead(async dagRead => {
+      await withRead(store, async dagRead => {
         const read = await db.fromWhence(
           db.whenceHead(DEFAULT_HEAD_NAME),
           dagRead,
@@ -1011,7 +1012,7 @@ test('begin try pull DD31', async () => {
       assertString(result);
     }
 
-    await store.withRead(async read => {
+    await withRead(store, async read => {
       if (c.expNewSyncHead !== undefined) {
         const expSyncHead = c.expNewSyncHead;
         const syncHeadHash = await read.getHead(SYNC_HEAD_NAME);
@@ -1047,7 +1048,7 @@ test('begin try pull DD31', async () => {
         // the snapshot's index is not what we want; we want the first index
         // change's index ("2").
         if (expSyncHead.indexes.length > 1) {
-          await store.withRead(async dagRead => {
+          await withRead(store, async dagRead => {
             const read = await db.fromWhence(
               db.whenceHead(SYNC_HEAD_NAME),
               dagRead,
@@ -1163,7 +1164,7 @@ suite('maybe end try pull', () => {
       for (let j = 0; j < c.numPending; j++) {
         await b.addLocal(clientID);
       }
-      let basisHash = await store.withWrite(async dagWrite => {
+      let basisHash = await withWrite(store, async dagWrite => {
         await dagWrite.setHead(
           db.DEFAULT_HEAD_NAME,
           b.chain[b.chain.length - 1].chunk.hash,
@@ -1206,7 +1207,7 @@ suite('maybe end try pull', () => {
         } else {
           throw new Error('impossible');
         }
-        basisHash = await store.withWrite(async dagWrite => {
+        basisHash = await withWrite(store, async dagWrite => {
           const w = await db.newWriteLocal(
             db.whenceHash(basisHash),
             mutatorName,
@@ -1265,7 +1266,7 @@ suite('maybe end try pull', () => {
 
         // Check if we set the main head like we should have.
         if (c.expReplayIDs.length === 0) {
-          await store.withRead(async read => {
+          await withRead(store, async read => {
             expect(syncHead).to.equal(
               await read.getHead(db.DEFAULT_HEAD_NAME),
               c.name,
@@ -1851,7 +1852,7 @@ suite('handlePullResponseDD31', () => {
     if (result.type === HandlePullResponseResultType.Applied) {
       assertHash(result.syncHead);
 
-      await store.withRead(async dagRead => {
+      await withRead(store, async dagRead => {
         const head = await db.commitFromHash(result.syncHead, dagRead);
         assertSnapshotCommitDD31(head);
         expect(head.chunk.data.meta.lastMutationIDs).to.deep.equal(
