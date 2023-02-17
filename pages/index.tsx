@@ -1,5 +1,6 @@
 import Head from 'next/head';
 import styles from '@/styles/Home.module.css';
+import Nav from '../components/Nav/Nav';
 import Benefits from '@/components/Benefits/Benefits';
 import Pricing from '@/components/Pricing/Pricing';
 import Demo from '@/components/Demo/Demo';
@@ -13,6 +14,8 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
+
+      <Nav />
 
       <main className={styles.main}>
         <section

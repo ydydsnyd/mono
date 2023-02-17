@@ -4,18 +4,25 @@ import Image from 'next/image';
 import Link from 'next/link';
 import styles from './Benefits.module.css';
 
+// static images
+import realtimeCollab from '@/public/benefits/realtimeCollab.svg';
+import persistence from '@/public/benefits/persistence.svg';
+import conflictResolution from '@/public/benefits/conflict-resolution.svg';
+import offline from '@/public/benefits/offline.svg';
+import tools from '@/public/benefits/tools.svg';
+import auth from '@/public/benefits/auth.svg';
+import productivity from '@/public/benefits/productivity.svg';
+
 const Benefits = () => (
   <div className={styles.benefitsGrid}>
     {/* 60 Updates per Second */}
     <div className={styles.benefitBlock}>
       <div className={styles.benefitIconContainer}>
         <Image
-          src="/benefits/realtimeCollab.svg"
+          src={realtimeCollab}
           loading="lazy"
           alt=""
           className={styles.benefitIcon}
-          width={36}
-          height={54}
         />
       </div>
       <h3 className={styles.benefitTitle}>60 Updates per Second</h3>
@@ -30,12 +37,10 @@ const Benefits = () => (
     <div className={styles.benefitBlock}>
       <div className={styles.benefitIconContainer}>
         <Image
-          src="/benefits/realtimeCollab.svg"
+          src={persistence}
           loading="lazy"
-          alt=""
+          alt="Persistence"
           className={styles.benefitIcon}
-          width={36}
-          height={54}
         />
       </div>
       <h3 className={styles.benefitTitle}>Automatic Persistence</h3>
@@ -46,16 +51,14 @@ const Benefits = () => (
       </p>
     </div>
 
-    {/* Replay-Based Conflict Resolution */}
+    {/* Transactional Conflict Resolution */}
     <div className={styles.benefitBlock}>
       <div className={styles.benefitIconContainer}>
         <Image
-          src="/benefits/realtimeCollab.svg"
+          src={conflictResolution}
           loading="lazy"
-          alt=""
+          alt="Conflict resolution"
           className={styles.benefitIcon}
-          width={36}
-          height={54}
         />
       </div>
       <h3 className={styles.benefitTitle}>Replay-Based Conflict Resolution</h3>
@@ -71,12 +74,10 @@ const Benefits = () => (
     <div className={styles.benefitBlock}>
       <div className={styles.benefitIconContainer}>
         <Image
-          src="/benefits/realtimeCollab.svg"
+          src={offline}
           loading="lazy"
-          alt=""
+          alt="Offline"
           className={styles.benefitIcon}
-          width={36}
-          height={54}
         />
       </div>
       <h3 className={styles.benefitTitle}>Optional Offline</h3>
@@ -91,12 +92,10 @@ const Benefits = () => (
     <div className={styles.benefitBlock}>
       <div className={styles.benefitIconContainer}>
         <Image
-          src="/benefits/realtimeCollab.svg"
+          src={tools}
           loading="lazy"
-          alt=""
+          alt="Tools"
           className={styles.benefitIcon}
-          width={36}
-          height={54}
         />
       </div>
       <h3 className={styles.benefitTitle}>Works With Your Tools</h3>
@@ -110,12 +109,10 @@ const Benefits = () => (
     <div className={styles.benefitBlock}>
       <div className={styles.benefitIconContainer}>
         <Image
-          src="/benefits/realtimeCollab.svg"
+          src={auth}
           loading="lazy"
-          alt=""
+          alt="Authorization"
           className={styles.benefitIcon}
-          width={36}
-          height={54}
         />
       </div>
       <h3 className={styles.benefitTitle}>Fine-Grained Auth</h3>
@@ -129,12 +126,10 @@ const Benefits = () => (
     <div className={styles.benefitBlockFull}>
       <div className={styles.benefitFullIconContainer}>
         <Image
-          src="/benefits/itworks-white.svg"
+          src={productivity}
           loading="lazy"
-          alt=""
+          alt="Productivity"
           className={styles.benefitFullIcon}
-          width={54}
-          height={54}
         />
       </div>
       <div className={styles.benefitInfoContainer}>

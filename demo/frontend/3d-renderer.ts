@@ -30,7 +30,7 @@ export type LetterInfo = {
 
 const LETTER_OFFSET = 0;
 const ORTHO_SIZE_FACTOR = 0.03;
-const ORTHO_VERTICAL_POS = 0.135;
+const ORTHO_VERTICAL_POS = 0.160;
 
 export const LETTER_POSITIONS: Record<Letter, Position> = {
   [Letter.A]: {x: 5.65465, y: 1.69821},
