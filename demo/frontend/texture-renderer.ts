@@ -14,7 +14,6 @@ export const render = async (
   );
   const ts = now();
   // TODO: remove any splatters that are done animating and break early if there's none
-  console.log(splatters['a']);
   draw_buffers(
     contexts[Letter.A],
     contexts[Letter.L],
