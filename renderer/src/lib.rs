@@ -3,10 +3,12 @@ extern crate lazy_static;
 extern crate console_error_panic_hook;
 
 mod drawing;
+mod physics;
 
 use image::{ImageFormat, RgbaImage};
 use js_sys::Uint8Array;
 use mut_static::MutStatic;
+use rapier3d::prelude::RigidBodyHandle;
 use std::panic;
 use wasm_bindgen::{prelude::*, Clamped};
 use web_sys::{CanvasRenderingContext2d, ImageData};
@@ -242,7 +244,7 @@ pub fn draw_buffers(
     let height = UVMAP_SIZE.clone();
     let caches = CACHES.read().unwrap();
     for letter in LETTERS {
-        // let cache = caches.get_data(&letter);
+        let cache = caches.get_data(&letter);
         let letter_index = match letter {
             Letter::A => 0,
             Letter::L => 1,
@@ -310,4 +312,35 @@ pub fn draw_buffers(
                 .expect("Writing to canvas failed");
         }
     }
+}
+
+// Physics API
+
+#[wasm_bindgen]
+pub fn get_physics(
+    serialized_physics: Vec<u8>,
+    a_handle_id: u32,
+    a_handle_gen: u32,
+    l_handle_id: u32,
+    l_handle_gen: u32,
+    i_handle_id: u32,
+    i_handle_gen: u32,
+    v_handle_id: u32,
+    v_handle_gen: u32,
+    e_handle_id: u32,
+    e_handle_gen: u32,
+    step: usize,
+) -> Vec<u8> {
+    panic::set_hook(Box::new(console_error_panic_hook::hook));
+    let deserialized =
+        bincode::deserialize(&serialized_physics).expect("Receieved bad physics data");
+    let handles = physics::Handles {
+        a: RigidBodyHandle::from_raw_parts(a_handle_id, a_handle_gen),
+        l: RigidBodyHandle::from_raw_parts(l_handle_id, l_handle_gen),
+        i: RigidBodyHandle::from_raw_parts(i_handle_id, i_handle_gen),
+        v: RigidBodyHandle::from_raw_parts(v_handle_id, v_handle_gen),
+        e: RigidBodyHandle::from_raw_parts(e_handle_id, e_handle_gen),
+    };
+    let new_physics = physics::run_physics(deserialized, handles, step);
+    bincode::serialize(&new_physics).expect("Generated bad physics data")
 }
