@@ -19,6 +19,7 @@ export const enum ErrorKind {
   Unauthorized = 'Unauthorized',
   UnexpectedBaseCookie = 'UnexpectedBaseCookie',
   UnexpectedLastMutationID = 'UnexpectedLastMutationID',
+  VersionNotSupported = 'VersionNotSupported',
 }
 
 export const errorKindSchema = z.union([
@@ -34,6 +35,7 @@ export const errorKindSchema = z.union([
   z.literal(ErrorKind.Unauthorized),
   z.literal(ErrorKind.UnexpectedBaseCookie),
   z.literal(ErrorKind.UnexpectedLastMutationID),
+  z.literal(ErrorKind.VersionNotSupported),
 ]);
 
 export const errorMessageSchema = z.tuple([

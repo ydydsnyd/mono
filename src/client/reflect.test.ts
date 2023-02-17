@@ -275,7 +275,7 @@ test('createSocket', () => {
     'roomID',
     '',
     0,
-    'ws://example.com/connect?clientID=clientID&clientGroupID=testClientGroupID&roomID=roomID&baseCookie=&ts=0&lmid=0&wsid=wsidx',
+    'ws://example.com/api/sync/v0/connect?clientID=clientID&clientGroupID=testClientGroupID&roomID=roomID&baseCookie=&ts=0&lmid=0&wsid=wsidx',
   );
 
   t(
@@ -285,7 +285,17 @@ test('createSocket', () => {
     'roomID',
     '',
     0,
-    'ws://example.com/connect?clientID=clientID&clientGroupID=testClientGroupID&roomID=roomID&baseCookie=1234&ts=0&lmid=0&wsid=wsidx',
+    'ws://example.com/api/sync/v0/connect?clientID=clientID&clientGroupID=testClientGroupID&roomID=roomID&baseCookie=1234&ts=0&lmid=0&wsid=wsidx',
+  );
+
+  t(
+    'ws://example.com/',
+    1234,
+    'clientID',
+    'a/b',
+    '',
+    0,
+    'ws://example.com/api/sync/v0/connect?clientID=clientID&clientGroupID=testClientGroupID&roomID=a%2Fb&baseCookie=1234&ts=0&lmid=0&wsid=wsidx',
   );
 
   t(
@@ -295,7 +305,7 @@ test('createSocket', () => {
     'roomID',
     '',
     123,
-    'ws://example.com/connect?clientID=clientID&clientGroupID=testClientGroupID&roomID=roomID&baseCookie=&ts=0&lmid=123&wsid=wsidx',
+    'ws://example.com/api/sync/v0/connect?clientID=clientID&clientGroupID=testClientGroupID&roomID=roomID&baseCookie=&ts=0&lmid=123&wsid=wsidx',
   );
 
   t(
@@ -305,7 +315,7 @@ test('createSocket', () => {
     'roomID',
     'auth with []',
     0,
-    'ws://example.com/connect?clientID=clientID&clientGroupID=testClientGroupID&roomID=roomID&baseCookie=&ts=0&lmid=0&wsid=wsidx',
+    'ws://example.com/api/sync/v0/connect?clientID=clientID&clientGroupID=testClientGroupID&roomID=roomID&baseCookie=&ts=0&lmid=0&wsid=wsidx',
     'auth%20with%20%5B%5D',
   );
 
@@ -317,7 +327,7 @@ test('createSocket', () => {
     'roomID',
     '',
     0,
-    'ws://example.com/connect?clientID=clientID&clientGroupID=testClientGroupID&roomID=roomID&baseCookie=&ts=456&lmid=0&wsid=wsidx',
+    'ws://example.com/api/sync/v0/connect?clientID=clientID&clientGroupID=testClientGroupID&roomID=roomID&baseCookie=&ts=456&lmid=0&wsid=wsidx',
   );
 });
 
@@ -1021,4 +1031,23 @@ test('pusher waits for connection', async () => {
   await r.triggerError(ErrorKind.ClientNotFound, 'client-id-a');
   await tickAFewTimes(clock);
   expect(log).to.deep.equal(['rejected']);
+});
+
+test('Protocol mismatch', async () => {
+  const fake = sinon.fake();
+  const r = reflectForTest();
+  r.onUpdateNeeded = fake;
+
+  await r.triggerError(ErrorKind.VersionNotSupported, 'prot mismatch');
+  expect(r.connectionState).to.equal(ConnectionState.Disconnected);
+
+  expect(fake.calledOnce).true;
+  expect(fake.firstCall.args).deep.equal([{type: 'VersionNotSupported'}]);
+
+  fake.resetHistory();
+  r.onUpdateNeeded = null;
+  expect(r.connectionState).to.equal(ConnectionState.Disconnected);
+  expect(fake.called).false;
+
+  await r.close();
 });

@@ -20,6 +20,7 @@ import {
   PullerResultV0,
   PullerResultV1,
   PokeDD31,
+  UpdateNeededReason as ReplicacheUpdateNeededReason,
 } from 'replicache';
 import type {Downstream} from '../protocol/down.js';
 import type {JSONType} from '../protocol/json.js';
@@ -80,6 +81,25 @@ export const CONNECT_TIMEOUT_MS = 10_000;
 
 const NULL_LAST_MUTATION_ID_SENT = {clientID: '', id: -1} as const;
 
+/**
+ * The reason {@link onUpdateNeeded} was called.
+ */
+export type UpdateNeededReason =
+  // There is a new client group due to a new tab loading new code with
+  // different mutators, indexes, schema version, or format version.
+  // This tab cannot sync locally with this new tab until it updates to
+  // the new code.
+  | {type: 'NewClientGroup'}
+  // This is used When reflect tries to connect with a version that the server
+  // does not support
+  | {type: 'VersionNotSupported'};
+
+function convertOnUpdateNeededReason(
+  reason: ReplicacheUpdateNeededReason,
+): UpdateNeededReason {
+  return {type: reason.type};
+}
+
 export class Reflect<MD extends MutatorDefs> {
   private readonly _rep: Replicache<MD>;
   private readonly _socketOrigin: string;
@@ -111,6 +131,38 @@ export class Reflect<MD extends MutatorDefs> {
    * changes.
    */
   onOnlineChange: ((online: boolean) => void) | null | undefined = null;
+
+  private _onUpdateNeeded: ((reason: UpdateNeededReason) => void) | null;
+
+  /**
+   * `onUpdateNeeded` is called when a code update is needed.
+   *
+   * A code update can be needed because:
+   * - the server no longer supports the protocol version of the current code,
+   * - a new Reflect client has created a new client group, because its code
+   *   has different mutators, indexes, schema version and/or format version
+   *   from this Reflect client. This is likely due to the new client having
+   *   newer code. A code update is needed to be able to locally sync with this
+   *   new Reflect client (i.e. to sync while offline, the clients can can
+   *   still sync with each other via the server).
+   *
+   * The default behavior is to reload the page (using `location.reload()`). Set
+   * this to `null` or provide your own function to prevent the page from
+   * reloading automatically. You may want to provide your own function to
+   * display a toast to inform the end user there is a new version of your app
+   * available and prompting them to refresh.
+   */
+  get onUpdateNeeded(): ((reason: UpdateNeededReason) => void) | null {
+    return this._onUpdateNeeded;
+  }
+  set onUpdateNeeded(callback: ((reason: UpdateNeededReason) => void) | null) {
+    this._onUpdateNeeded = callback;
+    this._rep.onUpdateNeeded =
+      callback &&
+      (reason => {
+        callback(convertOnUpdateNeededReason(reason));
+      });
+  }
 
   private _connectResolver = resolver<void>();
   private _baseCookieResolver: Resolver<NullableVersion> | null = null;
@@ -222,6 +274,7 @@ export class Reflect<MD extends MutatorDefs> {
       ...replicacheInternalOptions,
     });
     this._rep.getAuth = this.#getAuthToken;
+    this._onUpdateNeeded = this._rep.onUpdateNeeded; // defaults to reload.
     this._socketOrigin = options.socketOrigin;
     this.roomID = options.roomID;
     this.userID = options.userID;
@@ -414,6 +467,10 @@ export class Reflect<MD extends MutatorDefs> {
   // An error on the connection is fatal for the connection.
   private _handleErrorMessage(lc: LogContext, downMessage: ErrorMessage): void {
     const [, kind, message] = downMessage;
+
+    if (kind === ErrorKind.VersionNotSupported) {
+      this.onUpdateNeeded?.({type: kind});
+    }
 
     const error = new MessageError(kind, message);
 
@@ -950,6 +1007,8 @@ export class Reflect<MD extends MutatorDefs> {
   }
 }
 
+const REFLECT_PROTOCOL_VERSION = 0;
+
 export function createSocket(
   socketOrigin: string,
   baseCookie: NullableVersion,
@@ -961,7 +1020,8 @@ export function createSocket(
   wsid: string,
 ): WebSocket {
   const url = new URL(socketOrigin);
-  url.pathname = '/connect';
+  // Keep this in sync with the server.
+  url.pathname = `/api/sync/v${REFLECT_PROTOCOL_VERSION}/connect`;
   const {searchParams} = url;
   searchParams.set('clientID', clientID);
   searchParams.set('clientGroupID', clientGroupID);
