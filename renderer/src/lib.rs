@@ -9,7 +9,7 @@ use image::{ImageFormat, RgbaImage};
 use js_sys::Uint8Array;
 use mut_static::MutStatic;
 use nalgebra::point;
-use physics::{get_position, init_state, Impulse, PhysicsState};
+use physics::{get_position, Impulse, PhysicsState};
 use std::{collections::HashMap, panic};
 use wasm_bindgen::{prelude::*, Clamped};
 use web_sys::{CanvasRenderingContext2d, ImageData};
@@ -33,7 +33,7 @@ extern "C" {
 }
 
 #[wasm_bindgen]
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub enum Letter {
     A,
     L,
@@ -86,10 +86,34 @@ impl Caches {
     }
 }
 
+pub struct Physics {
+    pub state: PhysicsState,
+    pub step: usize,
+}
+
+impl Physics {
+    pub fn new() -> Physics {
+        Physics {
+            state: PhysicsState::new(),
+            step: 0,
+        }
+    }
+
+    pub fn copy(&self) -> Physics {
+        // TODO: is there a cheaper way to do this?
+        let serialized = bincode::serialize(&self.state).unwrap();
+        Physics {
+            state: bincode::deserialize(&serialized).unwrap(),
+            step: self.step,
+        }
+    }
+}
+
 // Persistence - this is where we actually allocate the structs
 
 lazy_static! {
     pub static ref CACHES: MutStatic<Caches> = MutStatic::from(Caches::new());
+    pub static ref PHYSICS: MutStatic<Physics> = MutStatic::from(Physics::new());
 }
 
 // API - this is our "public" JS API:
@@ -318,9 +342,10 @@ pub fn draw_buffers(
 // Physics API
 
 #[wasm_bindgen]
-pub fn get_physics(
+pub fn update_state(
     serialized_physics: Option<Vec<u8>>,
-    step: usize,
+    start_step: usize,
+    num_steps: usize,
     a_impulse_steps: Vec<usize>,
     a_impulse_x: Vec<f32>,
     a_impulse_y: Vec<f32>,
@@ -343,15 +368,148 @@ pub fn get_physics(
     e_impulse_z: Vec<f32>,
 ) -> Vec<u8> {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
-    let state: PhysicsState;
-    if let Some(physics) = serialized_physics {
-        state = bincode::deserialize(&physics).expect("Receieved bad physics data");
-    } else {
-        state = init_state();
+    if let Some(physics_state) = serialized_physics {
+        _set_physics_state(physics_state, start_step);
     }
+    let mut physics = PHYSICS.write().unwrap();
+    _advance_physics(
+        &mut physics,
+        num_steps,
+        a_impulse_steps,
+        a_impulse_x,
+        a_impulse_y,
+        a_impulse_z,
+        l_impulse_steps,
+        l_impulse_x,
+        l_impulse_y,
+        l_impulse_z,
+        i_impulse_steps,
+        i_impulse_x,
+        i_impulse_y,
+        i_impulse_z,
+        v_impulse_steps,
+        v_impulse_x,
+        v_impulse_y,
+        v_impulse_z,
+        e_impulse_steps,
+        e_impulse_x,
+        e_impulse_y,
+        e_impulse_z,
+    );
+    bincode::serialize(&physics.state).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn set_physics_state(serialized_physics: Vec<u8>, step: usize) {
+    panic::set_hook(Box::new(console_error_panic_hook::hook));
+    _set_physics_state(serialized_physics, step)
+}
+
+fn _set_physics_state(serialized_physics: Vec<u8>, step: usize) {
+    let mut physics = PHYSICS.write().unwrap();
+    physics.state = bincode::deserialize(&serialized_physics).expect("Receieved bad physics data");
+    physics.step = step;
+}
+
+#[wasm_bindgen]
+pub fn positions_for_step(
+    num_steps: usize,
+    a_impulse_steps: Vec<usize>,
+    a_impulse_x: Vec<f32>,
+    a_impulse_y: Vec<f32>,
+    a_impulse_z: Vec<f32>,
+    l_impulse_steps: Vec<usize>,
+    l_impulse_x: Vec<f32>,
+    l_impulse_y: Vec<f32>,
+    l_impulse_z: Vec<f32>,
+    i_impulse_steps: Vec<usize>,
+    i_impulse_x: Vec<f32>,
+    i_impulse_y: Vec<f32>,
+    i_impulse_z: Vec<f32>,
+    v_impulse_steps: Vec<usize>,
+    v_impulse_x: Vec<f32>,
+    v_impulse_y: Vec<f32>,
+    v_impulse_z: Vec<f32>,
+    e_impulse_steps: Vec<usize>,
+    e_impulse_x: Vec<f32>,
+    e_impulse_y: Vec<f32>,
+    e_impulse_z: Vec<f32>,
+) -> Vec<f32> {
+    panic::set_hook(Box::new(console_error_panic_hook::hook));
+    let physics_cache = PHYSICS.read().unwrap();
+    let mut physics = physics_cache.copy();
+    _advance_physics(
+        &mut physics,
+        num_steps,
+        a_impulse_steps,
+        a_impulse_x,
+        a_impulse_y,
+        a_impulse_z,
+        l_impulse_steps,
+        l_impulse_x,
+        l_impulse_y,
+        l_impulse_z,
+        i_impulse_steps,
+        i_impulse_x,
+        i_impulse_y,
+        i_impulse_z,
+        v_impulse_steps,
+        v_impulse_x,
+        v_impulse_y,
+        v_impulse_z,
+        e_impulse_steps,
+        e_impulse_x,
+        e_impulse_y,
+        e_impulse_z,
+    );
+    let mut serialized_data: Vec<f32> = vec![];
+    add_data_for_letter(&physics.state, Letter::A, &mut serialized_data);
+    add_data_for_letter(&physics.state, Letter::L, &mut serialized_data);
+    add_data_for_letter(&physics.state, Letter::I, &mut serialized_data);
+    add_data_for_letter(&physics.state, Letter::V, &mut serialized_data);
+    add_data_for_letter(&physics.state, Letter::E, &mut serialized_data);
+    serialized_data
+}
+
+fn add_data_for_letter(state: &PhysicsState, letter: Letter, data: &mut Vec<f32>) {
+    let (translation, rotation) = get_position(&state, letter);
+    data.append(&mut vec![translation[0], translation[1], translation[2]]);
+    data.append(&mut vec![
+        rotation[0],
+        rotation[1],
+        rotation[2],
+        rotation[3],
+    ]);
+}
+
+fn _advance_physics(
+    physics: &mut Physics,
+    num_steps: usize,
+    a_impulse_steps: Vec<usize>,
+    a_impulse_x: Vec<f32>,
+    a_impulse_y: Vec<f32>,
+    a_impulse_z: Vec<f32>,
+    l_impulse_steps: Vec<usize>,
+    l_impulse_x: Vec<f32>,
+    l_impulse_y: Vec<f32>,
+    l_impulse_z: Vec<f32>,
+    i_impulse_steps: Vec<usize>,
+    i_impulse_x: Vec<f32>,
+    i_impulse_y: Vec<f32>,
+    i_impulse_z: Vec<f32>,
+    v_impulse_steps: Vec<usize>,
+    v_impulse_x: Vec<f32>,
+    v_impulse_y: Vec<f32>,
+    v_impulse_z: Vec<f32>,
+    e_impulse_steps: Vec<usize>,
+    e_impulse_x: Vec<f32>,
+    e_impulse_y: Vec<f32>,
+    e_impulse_z: Vec<f32>,
+) {
     let mut impulses = HashMap::new();
     add_impulses(
         &mut impulses,
+        Letter::A,
         &a_impulse_steps,
         &a_impulse_x,
         &a_impulse_y,
@@ -359,6 +517,7 @@ pub fn get_physics(
     );
     add_impulses(
         &mut impulses,
+        Letter::L,
         &l_impulse_steps,
         &l_impulse_x,
         &l_impulse_y,
@@ -366,6 +525,7 @@ pub fn get_physics(
     );
     add_impulses(
         &mut impulses,
+        Letter::I,
         &i_impulse_steps,
         &i_impulse_x,
         &i_impulse_y,
@@ -373,6 +533,7 @@ pub fn get_physics(
     );
     add_impulses(
         &mut impulses,
+        Letter::V,
         &v_impulse_steps,
         &v_impulse_x,
         &v_impulse_y,
@@ -380,17 +541,20 @@ pub fn get_physics(
     );
     add_impulses(
         &mut impulses,
+        Letter::E,
         &e_impulse_steps,
         &e_impulse_x,
         &e_impulse_y,
         &e_impulse_z,
     );
-    let new_physics = physics::run_physics(state, impulses, step);
-    bincode::serialize(&new_physics).expect("Generated bad physics data")
+    let current_step = physics.step;
+    physics::advance_physics(&mut physics.state, current_step, num_steps, impulses);
+    physics.step = current_step + num_steps;
 }
 
 fn add_impulses(
     impulses: &mut HashMap<usize, Vec<Impulse>>,
+    letter: Letter,
     steps: &Vec<usize>,
     x_vals: &Vec<f32>,
     y_vals: &Vec<f32>,
@@ -405,32 +569,8 @@ fn add_impulses(
             }
         };
         step_impulses.push(Impulse {
-            letter: Letter::A,
+            letter,
             point: point![x_vals[num], y_vals[num], z_vals[num]],
         })
     }
-}
-
-#[wasm_bindgen]
-pub fn get_positions(serialized_physics: Vec<u8>) -> Vec<f32> {
-    panic::set_hook(Box::new(console_error_panic_hook::hook));
-    let state = bincode::deserialize(&serialized_physics).expect("Receieved bad physics data");
-    let mut serialized_data: Vec<f32> = vec![];
-    add_data_for_letter(&state, Letter::A, &mut serialized_data);
-    add_data_for_letter(&state, Letter::L, &mut serialized_data);
-    add_data_for_letter(&state, Letter::I, &mut serialized_data);
-    add_data_for_letter(&state, Letter::V, &mut serialized_data);
-    add_data_for_letter(&state, Letter::E, &mut serialized_data);
-    serialized_data
-}
-
-fn add_data_for_letter(state: &PhysicsState, letter: Letter, data: &mut Vec<f32>) {
-    let (translation, rotation) = get_position(&state, letter);
-    data.append(&mut vec![translation[0], translation[1], translation[2]]);
-    data.append(&mut vec![
-        rotation[0],
-        rotation[1],
-        rotation[2],
-        rotation[3],
-    ]);
 }

@@ -17,7 +17,7 @@ import {LETTERS} from '../shared/letters';
 import {letterMap, now} from '../shared/util';
 import {initRoom} from './init-room';
 import {getUserLocation} from './location';
-import {runPhysics} from '../shared/renderer';
+import {get3DPositions} from '../shared/renderer';
 
 type LetterCanvases = Record<Letter, HTMLCanvasElement>;
 
@@ -134,7 +134,9 @@ export const init = async () => {
         0,
       );
       if (debugEl) {
-        debugEl.innerHTML = `physics step ${physicsStep}\n${
+        debugEl.innerHTML = `server physics step ${
+          physics?.step || '(unset)'
+        }\nrendered physics step ${physicsStep.toFixed(1)}\n${
           Object.keys(actors).length
         } actors\n${splatterCount} splatters\n${impulseCount} impulses\n${debug.fps.toFixed(
           1,
@@ -193,17 +195,23 @@ export const init = async () => {
   const renderPhysics = () => {
     const originStep = physics?.step || 0;
     const targetStep = Math.max(originStep - STEP_RENDER_DELAY, 0);
-    // if we're behind origin minus delay, skip steps to accelerate us there.
+    // Ideally, we should always be rendering STEP_RENDER_DELAY steps behind the
+    // origin. This is so that if we add impulses in our "past", we won't see them
+    // jerkily reconcile.
+    // If we render too quickly or too slowly, adjust our steps so that it will
+    // converge on the target step.
     if (physicsStep < targetStep) {
+      // If we're behind, catch up half the distance
       physicsStep += targetStep - physicsStep;
     } else if (physicsStep > originStep) {
+      // If we're ahead, render at .5 speed
       physicsStep += 0.5;
     } else {
       physicsStep += 1;
     }
-    const [positions3d, _, debugState] = runPhysics(
-      physics?.state,
-      Math.round(physicsStep),
+    // positions3d
+    const positions3d = get3DPositions(
+      Math.floor(physicsStep) - originStep,
       impulses,
     );
     LETTERS.forEach(letter => {

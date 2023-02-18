@@ -1,3 +1,4 @@
+import {update_state} from '@/renderer/pkg/renderer';
 import type {WriteTransaction} from '@rocicorp/reflect';
 import {
   COLOR_PALATE,
@@ -6,7 +7,7 @@ import {
   SPLATTER_ANIM_DURATION,
   SPLATTER_FLATTEN_MIN,
 } from './constants';
-import {getCache, runPhysics, updateCache} from './renderer';
+import {getCache, updateCache} from './renderer';
 import type {
   Actor,
   ActorID,
@@ -21,7 +22,9 @@ import type {
   Splatter,
   Vector,
 } from './types';
-import {asyncLetterMap, randomWithSeed} from './util';
+import {decode, encode} from './uint82b64';
+import {asyncLetterMap, now, randomWithSeed} from './util';
+import {impulses2Physics} from './wasm-args';
 
 export const impulseId = (i: Impulse) => `${i.u}${i.s}${i.x + i.y + i.z}`;
 
@@ -122,6 +125,7 @@ export const mutators = {
       hitPosition: Vector;
     },
   ) => {
+    const startMs = now();
     const key = `splatter/${letter}/${ts}/${actorId}`;
     const splatter: Splatter = {
       x: texturePosition.x,
@@ -164,7 +168,8 @@ export const mutators = {
       await tx.put(`seq/${letter}`, (currentSeq || 0) + 1);
       // Perform operations
       await flattenPhysics(tx, origin, step);
-      // await flattenTexture(tx, letter, ts);
+      await flattenTexture(tx, letter, ts);
+      console.log('SERVER COMMIT SUCCESS', now() - startMs);
     }
   },
 
@@ -188,21 +193,22 @@ const flattenPhysics = async (
     });
 
     await _initRenderer!();
-    const [_, state] = runPhysics(
-      origin?.state,
-      Math.max(step - MAX_RENDERED_STEPS, 0),
-      impulses,
+    const newStep = Math.max(step - MAX_RENDERED_STEPS, 0);
+    const newState = update_state(
+      origin ? decode(origin.state) : undefined,
+      origin?.step || 0,
+      newStep,
+      ...impulses2Physics(impulses),
     );
     console.log(
       step,
       'SNAPSHOTTING AT ',
       Math.max(step - MAX_RENDERED_STEPS, 0),
     );
-    const newOrigin: Physics = {
-      state: state,
-      step,
-    };
-    await tx.put('origin', newOrigin);
+    await tx.put('origin', {
+      state: encode(newState),
+      step: newStep,
+    });
     // Remove impulses that are integrated into the above snapshot
     await asyncLetterMap(async letter => {
       await impulses[letter].map(async impulse => {

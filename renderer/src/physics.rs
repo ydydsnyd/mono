@@ -4,7 +4,7 @@ use nalgebra::Point3;
 use rapier3d::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::Letter;
+use crate::{console_log, Letter};
 mod hulls;
 
 #[derive(Serialize, Deserialize)]
@@ -19,6 +19,186 @@ pub struct PhysicsState {
     pub query_pipeline: Option<QueryPipeline>,
     pub integration_parameters: IntegrationParameters,
     pub gravity: Vector<f32>,
+}
+
+impl PhysicsState {
+    pub fn new() -> PhysicsState {
+        let gravity = vector![0.0, -9.81, 0.0];
+        let integration_parameters = IntegrationParameters::default();
+        let islands = IslandManager::new();
+        let broad_phase = BroadPhase::new();
+        let narrow_phase = NarrowPhase::new();
+        let mut joints = ImpulseJointSet::new();
+        let ccd_solver = CCDSolver::new();
+        let mut bodies = RigidBodySet::new();
+        let mut colliders = ColliderSet::new();
+
+        // Bodies
+        let a_body = RigidBodyBuilder::dynamic()
+            .translation(vector![hulls::A_POS.x, hulls::A_POS.y, 0.0])
+            .user_data(handle_ids::A)
+            .build();
+        let a_body_handle = bodies.insert(a_body);
+        let l_body = RigidBodyBuilder::dynamic()
+            .translation(vector![hulls::L_POS.x, hulls::L_POS.y, 0.0])
+            .user_data(handle_ids::L)
+            .build();
+        let l_body_handle = bodies.insert(l_body);
+        let i_body = RigidBodyBuilder::dynamic()
+            .translation(vector![hulls::I_POS.x, hulls::I_POS.y, 0.0])
+            .user_data(handle_ids::I)
+            .build();
+        let i_body_handle = bodies.insert(i_body);
+        let v_body = RigidBodyBuilder::dynamic()
+            .translation(vector![hulls::V_POS.x, hulls::V_POS.y, 0.0])
+            .user_data(handle_ids::V)
+            .build();
+        let v_body_handle = bodies.insert(v_body);
+        let e_body = RigidBodyBuilder::dynamic()
+            .translation(vector![hulls::E_POS.x, hulls::E_POS.y, 0.0])
+            .user_data(handle_ids::E)
+            .build();
+        let e_body_handle = bodies.insert(e_body);
+
+        // Joints
+        let a_joint_anchor = RigidBodyBuilder::fixed()
+            .translation(vector![hulls::A_POS.x, hulls::A_POS.y, 0.0])
+            .build();
+        let a_joint_handle = bodies.insert(a_joint_anchor);
+        joints.insert(a_body_handle, a_joint_handle, get_joint(), false);
+
+        let l_joint_anchor = RigidBodyBuilder::fixed()
+            .translation(vector![hulls::L_POS.x, hulls::L_POS.y, 0.0])
+            .build();
+        let l_joint_handle = bodies.insert(l_joint_anchor);
+        joints.insert(l_body_handle, l_joint_handle, get_joint(), false);
+
+        let i_joint_anchor = RigidBodyBuilder::fixed()
+            .translation(vector![hulls::I_POS.x, hulls::I_POS.y, 0.0])
+            .build();
+        let i_joint_handle = bodies.insert(i_joint_anchor);
+        joints.insert(i_body_handle, i_joint_handle, get_joint(), false);
+
+        let v_joint_anchor = RigidBodyBuilder::fixed()
+            .translation(vector![hulls::V_POS.x, hulls::V_POS.y, 0.0])
+            .build();
+        let v_joint_handle = bodies.insert(v_joint_anchor);
+        joints.insert(v_body_handle, v_joint_handle, get_joint(), false);
+
+        let e_joint_anchor = RigidBodyBuilder::fixed()
+            .translation(vector![hulls::E_POS.x, hulls::E_POS.y, 0.0])
+            .build();
+        let e_joint_handle = bodies.insert(e_joint_anchor);
+        joints.insert(e_body_handle, e_joint_handle, get_joint(), false);
+
+        // A Hulls
+        colliders.insert_with_parent(
+            ColliderBuilder::convex_hull(&hulls::A_HULL_0).expect("Invalid hull"),
+            a_body_handle,
+            &mut bodies,
+        );
+        colliders.insert_with_parent(
+            ColliderBuilder::convex_hull(&hulls::A_HULL_1).expect("Invalid hull"),
+            a_body_handle,
+            &mut bodies,
+        );
+        colliders.insert_with_parent(
+            ColliderBuilder::convex_hull(&hulls::A_HULL_2).expect("Invalid hull"),
+            a_body_handle,
+            &mut bodies,
+        );
+        colliders.insert_with_parent(
+            ColliderBuilder::convex_hull(&hulls::A_HULL_3).expect("Invalid hull"),
+            a_body_handle,
+            &mut bodies,
+        );
+        colliders.insert_with_parent(
+            ColliderBuilder::convex_hull(&hulls::A_HULL_4).expect("Invalid hull"),
+            a_body_handle,
+            &mut bodies,
+        );
+        colliders.insert_with_parent(
+            ColliderBuilder::convex_hull(&hulls::A_HULL_5).expect("Invalid hull"),
+            a_body_handle,
+            &mut bodies,
+        );
+        colliders.insert_with_parent(
+            ColliderBuilder::convex_hull(&hulls::A_HULL_6).expect("Invalid hull"),
+            a_body_handle,
+            &mut bodies,
+        );
+
+        // L Hulls
+        colliders.insert_with_parent(
+            ColliderBuilder::convex_hull(&hulls::L_HULL_0).expect("Invalid hull"),
+            l_body_handle,
+            &mut bodies,
+        );
+
+        // I Hulls
+        colliders.insert_with_parent(
+            ColliderBuilder::convex_hull(&hulls::I_HULL_0).expect("Invalid hull"),
+            i_body_handle,
+            &mut bodies,
+        );
+        colliders.insert_with_parent(
+            ColliderBuilder::convex_hull(&hulls::I_HULL_1).expect("Invalid hull"),
+            i_body_handle,
+            &mut bodies,
+        );
+
+        // V Hulls
+        colliders.insert_with_parent(
+            ColliderBuilder::convex_hull(&hulls::V_HULL_0).expect("Invalid hull"),
+            v_body_handle,
+            &mut bodies,
+        );
+        colliders.insert_with_parent(
+            ColliderBuilder::convex_hull(&hulls::V_HULL_1).expect("Invalid hull"),
+            v_body_handle,
+            &mut bodies,
+        );
+
+        // E Hulls
+        colliders.insert_with_parent(
+            ColliderBuilder::convex_hull(&hulls::E_HULL_0).expect("Invalid hull"),
+            e_body_handle,
+            &mut bodies,
+        );
+        colliders.insert_with_parent(
+            ColliderBuilder::convex_hull(&hulls::E_HULL_1).expect("Invalid hull"),
+            e_body_handle,
+            &mut bodies,
+        );
+        colliders.insert_with_parent(
+            ColliderBuilder::convex_hull(&hulls::E_HULL_2).expect("Invalid hull"),
+            e_body_handle,
+            &mut bodies,
+        );
+        colliders.insert_with_parent(
+            ColliderBuilder::convex_hull(&hulls::E_HULL_3).expect("Invalid hull"),
+            e_body_handle,
+            &mut bodies,
+        );
+        colliders.insert_with_parent(
+            ColliderBuilder::convex_hull(&hulls::E_HULL_4).expect("Invalid hull"),
+            e_body_handle,
+            &mut bodies,
+        );
+
+        PhysicsState {
+            gravity,
+            integration_parameters,
+            islands,
+            broad_phase,
+            narrow_phase,
+            joints,
+            colliders,
+            ccd_solver,
+            bodies,
+            query_pipeline: None,
+        }
+    }
 }
 
 pub struct Impulse {
@@ -83,18 +263,19 @@ pub fn get_position(state: &PhysicsState, letter: Letter) -> (Vector<f32>, Rotat
     return (body.translation().to_owned(), body.rotation().to_owned());
 }
 
-pub fn run_physics(
-    mut state: PhysicsState,
+pub fn advance_physics(
+    state: &mut PhysicsState,
+    current_step: usize,
+    num_steps: usize,
     impulses: HashMap<usize, Vec<Impulse>>,
-    steps: usize,
-) -> PhysicsState {
+) {
     let mut physics_pipeline = PhysicsPipeline::new();
     let mut multibody_joint_set = MultibodyJointSet::new();
     let physics_hooks = ();
     let event_handler = ();
     let handles = Handles::from_state(&state);
 
-    for step in 0..steps {
+    for step in current_step..current_step + num_steps {
         if impulses.contains_key(&step) {
             for impulse in &impulses[&step][..] {
                 let handle = handles.handle(&impulse.letter);
@@ -102,7 +283,7 @@ pub fn run_physics(
                     .bodies
                     .get_mut(handle)
                     .expect("Missing body for physics");
-                body.apply_impulse_at_point(vector![0.0, 0.0, 200.0], impulse.point, true);
+                body.apply_impulse_at_point(vector![0.0, 0.0, 50.0], impulse.point, true);
             }
         }
 
@@ -123,205 +304,12 @@ pub fn run_physics(
             &event_handler,
         );
     }
-    state
 }
 
-pub fn init_state() -> PhysicsState {
-    let gravity = vector![0.0, -9.81, 0.0];
-    let integration_parameters = IntegrationParameters::default();
-    let islands = IslandManager::new();
-    let broad_phase = BroadPhase::new();
-    let narrow_phase = NarrowPhase::new();
-    let mut joints = ImpulseJointSet::new();
-    let ccd_solver = CCDSolver::new();
-    let mut bodies = RigidBodySet::new();
-    let mut colliders = ColliderSet::new();
-
-    // Bodies
-    let a_body = RigidBodyBuilder::dynamic()
-        .translation(vector![hulls::A_POS.x, hulls::A_POS.y, 0.0])
-        .user_data(handle_ids::A)
-        .build();
-    let a_body_handle = bodies.insert(a_body);
-    let l_body = RigidBodyBuilder::dynamic()
-        .translation(vector![hulls::L_POS.x, hulls::L_POS.y, 0.0])
-        .user_data(handle_ids::L)
-        .build();
-    let l_body_handle = bodies.insert(l_body);
-    let i_body = RigidBodyBuilder::dynamic()
-        .translation(vector![hulls::I_POS.x, hulls::I_POS.y, 0.0])
-        .user_data(handle_ids::I)
-        .build();
-    let i_body_handle = bodies.insert(i_body);
-    let v_body = RigidBodyBuilder::dynamic()
-        .translation(vector![hulls::V_POS.x, hulls::V_POS.y, 0.0])
-        .user_data(handle_ids::V)
-        .build();
-    let v_body_handle = bodies.insert(v_body);
-    let e_body = RigidBodyBuilder::dynamic()
-        .translation(vector![hulls::E_POS.x, hulls::E_POS.y, 0.0])
-        .user_data(handle_ids::E)
-        .build();
-    let e_body_handle = bodies.insert(e_body);
-
-    // Joints
-    let joint_y = hulls::L_POS.y;
-
-    let a_joint_anchor = RigidBodyBuilder::fixed()
-        .translation(vector![hulls::A_POS.x, joint_y, 0.0])
-        .build();
-    let a_joint_handle = bodies.insert(a_joint_anchor);
-    let a_joint = SphericalJointBuilder::new()
-        .local_anchor1(point![0.0, joint_y, 0.0])
-        .local_anchor2(point![0.0, joint_y, 0.0])
-        .motor_position(JointAxis::X, 0.0, 250.0, 10.0);
-    joints.insert(a_body_handle, a_joint_handle, a_joint, true);
-
-    let l_joint_anchor = RigidBodyBuilder::fixed()
-        .translation(vector![hulls::L_POS.x, joint_y, 0.0])
-        .build();
-    let l_joint_handle = bodies.insert(l_joint_anchor);
-    let l_joint = SphericalJointBuilder::new()
-        .local_anchor1(point![0.0, joint_y, 0.0])
-        .local_anchor2(point![0.0, joint_y, 0.0])
-        .motor_position(JointAxis::X, 0.0, 250.0, 10.0);
-    joints.insert(l_body_handle, l_joint_handle, l_joint, true);
-
-    let i_joint_anchor = RigidBodyBuilder::fixed()
-        .translation(vector![hulls::I_POS.x, joint_y, 0.0])
-        .build();
-    let i_joint_handle = bodies.insert(i_joint_anchor);
-    let i_joint = SphericalJointBuilder::new()
-        .local_anchor1(point![0.0, joint_y, 0.0])
-        .local_anchor2(point![0.0, joint_y, 0.0])
-        .motor_position(JointAxis::X, 0.0, 250.0, 10.0);
-    joints.insert(i_body_handle, i_joint_handle, i_joint, true);
-
-    let v_joint_anchor = RigidBodyBuilder::fixed()
-        .translation(vector![hulls::V_POS.x, joint_y, 0.0])
-        .build();
-    let v_joint_handle = bodies.insert(v_joint_anchor);
-    let v_joint = SphericalJointBuilder::new()
-        .local_anchor1(point![0.0, joint_y, 0.0])
-        .local_anchor2(point![0.0, joint_y, 0.0])
-        .motor_position(JointAxis::X, 0.0, 250.0, 10.0);
-    joints.insert(v_body_handle, v_joint_handle, v_joint, true);
-
-    let e_joint_anchor = RigidBodyBuilder::fixed()
-        .translation(vector![hulls::E_POS.x, joint_y, 0.0])
-        .build();
-    let e_joint_handle = bodies.insert(e_joint_anchor);
-    let e_joint = SphericalJointBuilder::new()
-        .local_anchor1(point![0.0, joint_y, 0.0])
-        .local_anchor2(point![0.0, joint_y, 0.0])
-        .motor_position(JointAxis::X, 0.0, 250.0, 10.0);
-    joints.insert(e_body_handle, e_joint_handle, e_joint, true);
-
-    // A Hulls
-    colliders.insert_with_parent(
-        ColliderBuilder::convex_hull(&hulls::A_HULL_0).expect("Invalid hull"),
-        a_body_handle,
-        &mut bodies,
-    );
-    colliders.insert_with_parent(
-        ColliderBuilder::convex_hull(&hulls::A_HULL_1).expect("Invalid hull"),
-        a_body_handle,
-        &mut bodies,
-    );
-    colliders.insert_with_parent(
-        ColliderBuilder::convex_hull(&hulls::A_HULL_2).expect("Invalid hull"),
-        a_body_handle,
-        &mut bodies,
-    );
-    colliders.insert_with_parent(
-        ColliderBuilder::convex_hull(&hulls::A_HULL_3).expect("Invalid hull"),
-        a_body_handle,
-        &mut bodies,
-    );
-    colliders.insert_with_parent(
-        ColliderBuilder::convex_hull(&hulls::A_HULL_4).expect("Invalid hull"),
-        a_body_handle,
-        &mut bodies,
-    );
-    colliders.insert_with_parent(
-        ColliderBuilder::convex_hull(&hulls::A_HULL_5).expect("Invalid hull"),
-        a_body_handle,
-        &mut bodies,
-    );
-    colliders.insert_with_parent(
-        ColliderBuilder::convex_hull(&hulls::A_HULL_6).expect("Invalid hull"),
-        a_body_handle,
-        &mut bodies,
-    );
-
-    // L Hulls
-    colliders.insert_with_parent(
-        ColliderBuilder::convex_hull(&hulls::L_HULL_0).expect("Invalid hull"),
-        l_body_handle,
-        &mut bodies,
-    );
-
-    // I Hulls
-    colliders.insert_with_parent(
-        ColliderBuilder::convex_hull(&hulls::I_HULL_0).expect("Invalid hull"),
-        i_body_handle,
-        &mut bodies,
-    );
-    colliders.insert_with_parent(
-        ColliderBuilder::convex_hull(&hulls::I_HULL_1).expect("Invalid hull"),
-        i_body_handle,
-        &mut bodies,
-    );
-
-    // V Hulls
-    colliders.insert_with_parent(
-        ColliderBuilder::convex_hull(&hulls::V_HULL_0).expect("Invalid hull"),
-        v_body_handle,
-        &mut bodies,
-    );
-    colliders.insert_with_parent(
-        ColliderBuilder::convex_hull(&hulls::V_HULL_1).expect("Invalid hull"),
-        v_body_handle,
-        &mut bodies,
-    );
-
-    // E Hulls
-    colliders.insert_with_parent(
-        ColliderBuilder::convex_hull(&hulls::E_HULL_0).expect("Invalid hull"),
-        e_body_handle,
-        &mut bodies,
-    );
-    colliders.insert_with_parent(
-        ColliderBuilder::convex_hull(&hulls::E_HULL_1).expect("Invalid hull"),
-        e_body_handle,
-        &mut bodies,
-    );
-    colliders.insert_with_parent(
-        ColliderBuilder::convex_hull(&hulls::E_HULL_2).expect("Invalid hull"),
-        e_body_handle,
-        &mut bodies,
-    );
-    colliders.insert_with_parent(
-        ColliderBuilder::convex_hull(&hulls::E_HULL_3).expect("Invalid hull"),
-        e_body_handle,
-        &mut bodies,
-    );
-    colliders.insert_with_parent(
-        ColliderBuilder::convex_hull(&hulls::E_HULL_4).expect("Invalid hull"),
-        e_body_handle,
-        &mut bodies,
-    );
-
-    PhysicsState {
-        gravity,
-        integration_parameters,
-        islands,
-        broad_phase,
-        narrow_phase,
-        joints,
-        colliders,
-        ccd_solver,
-        bodies,
-        query_pipeline: None,
-    }
+fn get_joint() -> RevoluteJointBuilder {
+    let x_axis = Vector::x_axis();
+    RevoluteJointBuilder::new(x_axis)
+        .local_anchor1(point![0.0, 0.0, 0.0])
+        .local_anchor2(point![0.0, 0.0, 0.0])
+        .motor_position(0.0, 50.0, 15.0)
 }

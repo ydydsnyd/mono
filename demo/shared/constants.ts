@@ -9,9 +9,11 @@ export const DEBUG_PHYSICS = false;
 export const SPLATTER_ANIM_DURATION = 1000;
 export const SPLATTER_FLATTEN_MIN = 10;
 
-// Allow rewriting up to 400 frames of physics in the past
-export const MAX_RENDERED_STEPS = 400;
-export const STEP_RENDER_DELAY = 25; // 400ms @ 60fps
+// Render a window of steps, so changes from the past can be reflected locally
+export const MAX_RENDERED_STEPS = 10;
+// Render a step older than our global step so that things can change in our
+// "past" without jerkiness.
+export const STEP_RENDER_DELAY = 0;
 
 // The only data that changes on an actor is the loction, so update them at a
 // lower frequency than cursors.
