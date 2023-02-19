@@ -50,6 +50,14 @@ export const init = async () => {
     tex.height = UVMAP_SIZE;
     return tex;
   });
+  const buffers: LetterCanvases = letterMap(letter => {
+    const tex = document.querySelector(
+      `#buffers > .${letter}`,
+    ) as HTMLCanvasElement;
+    tex.width = UVMAP_SIZE;
+    tex.height = UVMAP_SIZE;
+    return tex;
+  });
 
   await initRenderer();
 
@@ -233,7 +241,7 @@ export const init = async () => {
       await getState());
     await renderCursors();
     // Each frame, render our textures
-    render(textures, splatters, colors);
+    render(buffers, textures, splatters, colors);
     // Update textures and render the 3D scene
     LETTERS.forEach(letter => updateTexture(letter));
     renderPhysics();

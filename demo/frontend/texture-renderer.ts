@@ -7,16 +7,17 @@ import {MAX_SPLATTER_RENDER_AGE} from '../shared/constants';
 let splatterIndexes = letterMap(_ => 0);
 
 export const render = async (
+  buffers: Record<Letter, HTMLCanvasElement>,
   canvases: Record<Letter, HTMLCanvasElement>,
   splatters: Record<Letter, Splatter[]>,
   colors: ColorPalate,
 ) => {
   // Render new splatters
   const contexts = letterMap(
-    letter => canvases[letter].getContext('2d') as CanvasRenderingContext2D,
+    letter => buffers[letter].getContext('2d') as CanvasRenderingContext2D,
   );
   const ts = now();
-  let needsRender = false;
+  let needsRender = new Set<Letter>();
   const renderSplatters = letterMap(letter => {
     const currentIndex = splatterIndexes[letter];
     const renderIndex = closest(
@@ -29,14 +30,13 @@ export const render = async (
     splatterIndexes[letter] = currentIndex + renderIndex + 1;
     const rendered = splatters[letter].slice(splatterIndexes[letter]);
     if (rendered.length > 0) {
-      needsRender = true;
+      needsRender.add(letter);
     }
     return rendered;
   });
-  if (!needsRender) {
+  if (!needsRender.size) {
     return;
   }
-  console.log(renderSplatters);
   draw_buffers(
     contexts[Letter.A],
     contexts[Letter.L],
@@ -51,4 +51,8 @@ export const render = async (
     new Uint8Array(colors[4].flat()),
     ...splatters2RenderBatch(renderSplatters),
   );
+  needsRender.forEach(letter => {
+    const ctx = canvases[letter].getContext('2d') as CanvasRenderingContext2D;
+    ctx.drawImage(buffers[letter], 0, 0);
+  });
 };

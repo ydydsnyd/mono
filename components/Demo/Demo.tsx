@@ -26,7 +26,8 @@ const PaintFight = () => {
       <div id="demo">
         <canvas id="canvas3D"></canvas>
       </div>
-      <Textures />
+      <Canvases id="textures" />
+      <Canvases id="buffers" />
       <div id="info">
         <div className="active-user-info">
           <div className="online-dot"></div>
@@ -63,8 +64,8 @@ const PaintFight = () => {
 
 export default PaintFight;
 
-const Textures = () => (
-  <div id="textures">
+const Canvases = ({id}: {id: string}) => (
+  <div id={id}>
     <canvas className="a"></canvas>
     <canvas className="l"></canvas>
     <canvas className="i"></canvas>

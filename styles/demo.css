@@ -26,17 +26,17 @@ body.demo-active {
   z-index: 100;
 }
 
-#textures {
+#textures, #buffers {
   display: none;
 }
-/* #textures {
+#textures, #buffers {
   display: block;
   position: absolute;
 }
-#textures canvas {
+#textures canvas, #buffers canvas {
   width: 100px;
   height: 100px;
-} */
+}
 
 .online-dot {
   width: 14px;
