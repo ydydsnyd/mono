@@ -1,6 +1,7 @@
-use image::{Rgba, RgbaImage};
-use imageproc::drawing::draw_filled_circle_mut;
+use image::{imageops, Rgba, RgbaImage};
 use palette::{LinSrgb, Mix, Srgb};
+
+mod splatters;
 
 #[allow(unused_imports)]
 use crate::console_log;
@@ -158,11 +159,23 @@ pub fn draw(
         let x = x_vals[idx] * width;
         let y = y_vals[idx] * height;
 
-        draw_filled_circle_mut(image, (x as i32, y as i32), 40, pixel);
+        // draw_filled_circle_mut(image, (x as i32, y as i32), 40, pixel);
 
-        changed_rects.push(Rectangle::from_circle(x, y, 40.0, width, height));
+        let anim_index = splatter_animations[idx] as usize;
+        let anim_frame = ((time - timestamp) / 16.66).floor() as usize;
+        let (splatter_image, (sx, sy)) = splatters::for_index(anim_index, anim_frame, x, y);
+        console_log!("x {}, y {}", sx, sy);
+        imageops::overlay(image, splatter_image, sx, sy);
+
+        // changed_rects.push(Rectangle::from_circle(x, y, 40.0, width, height));
     }
-    let changed_rect = Rectangle::containing(&changed_rects);
+    let changed_rect = Rectangle {
+        x0: 0,
+        y0: 0,
+        x1: width as u32,
+        y1: height as u32,
+    };
+    // let changed_rect = Rectangle::containing(&changed_rects);
 
     // let tx = changed_rect.x0 as f32;
     // let ty = changed_rect.y0 as f32;
