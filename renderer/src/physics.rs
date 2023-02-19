@@ -5,6 +5,8 @@ use rapier3d::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{console_log, Letter};
+
+use self::hulls::Position;
 mod hulls;
 
 #[derive(Serialize, Deserialize)]
@@ -61,6 +63,13 @@ impl PhysicsState {
         let e_body_handle = bodies.insert(e_body);
 
         // Joints
+        // TODO: Get this working
+        // let (a_rev_body, a_rev_joint, a_pris_body, a_pris_joint) = create_joints(&hulls::A_POS);
+        // let a_rev_handle = bodies.insert(a_rev_body);
+        // let a_pris_handle = bodies.insert(a_pris_body);
+        // joints.insert(a_pris_handle, a_body_handle, a_pris_joint, false);
+        // joints.insert(a_body_handle, a_rev_handle, a_rev_joint, false);
+
         let a_joint_anchor = RigidBodyBuilder::fixed()
             .translation(vector![hulls::A_POS.x, hulls::A_POS.y, 0.0])
             .build();
@@ -304,6 +313,34 @@ pub fn advance_physics(
             &event_handler,
         );
     }
+}
+
+fn create_joints(
+    pos: &Position,
+) -> (
+    RigidBody,
+    RevoluteJointBuilder,
+    RigidBody,
+    PrismaticJointBuilder,
+) {
+    let x_axis = Vector::x_axis();
+    let z_axis = Vector::z_axis();
+    (
+        RigidBodyBuilder::fixed()
+            .translation(vector![pos.x, pos.y, 0.0])
+            .build(),
+        RevoluteJointBuilder::new(x_axis)
+            .local_anchor1(point![0.0, 0.0, 0.0])
+            .local_anchor2(point![0.0, 0.0, 0.0])
+            .motor_position(0.0, 80.0, 8.0),
+        RigidBodyBuilder::dynamic()
+            .translation(vector![pos.x, pos.y, 5.0])
+            .build(),
+        PrismaticJointBuilder::new(z_axis)
+            .local_anchor1(point![0.0, 0.0, 0.0])
+            .local_anchor2(point![0.0, 0.0, -5.0])
+            .motor_position(0.0, 1.0, 1.0),
+    )
 }
 
 fn get_joint() -> RevoluteJointBuilder {
