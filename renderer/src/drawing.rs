@@ -1,4 +1,4 @@
-use image::{imageops, Rgba, RgbaImage};
+use image::{imageops, GenericImageView, Rgba, RgbaImage};
 use palette::{LinSrgb, Mix, Srgb};
 
 mod splatters;
@@ -162,10 +162,35 @@ pub fn draw(
         // draw_filled_circle_mut(image, (x as i32, y as i32), 40, pixel);
 
         let anim_index = splatter_animations[idx] as usize;
-        let anim_frame = ((time - timestamp) / 16.66).floor() as usize;
-        let (splatter_image, (sx, sy)) = splatters::for_index(anim_index, anim_frame, x, y);
-        console_log!("x {}, y {}", sx, sy);
-        imageops::overlay(image, splatter_image, sx, sy);
+        // Frames animate at ~30fps
+        let anim_frame = ((time - timestamp) / 33.32).floor() as usize;
+        if anim_frame < 5 {
+            console_log!("draw frame {}", anim_frame);
+        }
+        let (splatter_image, (sx, sy), size) = splatters::for_index(anim_index, anim_frame, x, y);
+        let crop_x = if sx < 0 { sx.abs() } else { 0 } as u32;
+        let crop_y = if sy < 0 { sy.abs() } else { 0 } as u32;
+        let crop_w = if sx < 0 {
+            size + sx
+        } else if size + sx > width as i64 {
+            let extra = size + sx - (width as i64);
+            (size - extra).max(0)
+        } else {
+            size
+        } as u32;
+        let crop_h = if sy < 0 {
+            size + sy
+        } else if size + sy > height as i64 {
+            let extra = size + sy - (height as i64);
+            (size - extra).max(0)
+        } else {
+            size
+        } as u32;
+        if crop_w == 0 && crop_h == 0 {
+            return Rectangle::zero();
+        }
+        let cropped_image = splatter_image.view(crop_x, crop_y, crop_w, crop_h);
+        imageops::overlay(image, &cropped_image.to_image(), sx, sy);
 
         // changed_rects.push(Rectangle::from_circle(x, y, 40.0, width, height));
     }

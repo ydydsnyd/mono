@@ -1,7 +1,10 @@
 import {ColorPalate, Letter, Splatter} from '../shared/types';
 import {draw_buffers} from '../../renderer/pkg/renderer';
-import {letterMap, now} from '../shared/util';
+import {closest, letterMap, now} from '../shared/util';
 import {splatters2RenderBatch} from '../shared/wasm-args';
+import {MAX_SPLATTER_RENDER_AGE} from '../shared/constants';
+
+let splatterIndexes = letterMap(_ => 0);
 
 export const render = async (
   canvases: Record<Letter, HTMLCanvasElement>,
@@ -13,7 +16,27 @@ export const render = async (
     letter => canvases[letter].getContext('2d') as CanvasRenderingContext2D,
   );
   const ts = now();
-  // TODO: remove any splatters that are done animating and break early if there's none
+  let needsRender = false;
+  const renderSplatters = letterMap(letter => {
+    const currentIndex = splatterIndexes[letter];
+    const renderIndex = closest(
+      now() - MAX_SPLATTER_RENDER_AGE,
+      splatters[letter].slice(currentIndex),
+      s => s.t,
+    );
+    // closest returns the closest index without going over - therefore, we always
+    // add one to get a slice that includes that index.
+    splatterIndexes[letter] = currentIndex + renderIndex + 1;
+    const rendered = splatters[letter].slice(splatterIndexes[letter]);
+    if (rendered.length > 0) {
+      needsRender = true;
+    }
+    return rendered;
+  });
+  if (!needsRender) {
+    return;
+  }
+  console.log(renderSplatters);
   draw_buffers(
     contexts[Letter.A],
     contexts[Letter.L],
@@ -26,6 +49,6 @@ export const render = async (
     new Uint8Array(colors[2].flat()),
     new Uint8Array(colors[3].flat()),
     new Uint8Array(colors[4].flat()),
-    ...splatters2RenderBatch(splatters),
+    ...splatters2RenderBatch(renderSplatters),
   );
 };

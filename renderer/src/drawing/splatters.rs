@@ -16,12 +16,12 @@ impl Splatter {
                 image_from_str(&strings[2]),
                 image_from_str(&strings[3]),
             ],
-            size: 280.0,
+            size: 240.0,
         }
     }
     pub fn at(&self, x: f32, y: f32) -> (i64, i64) {
         let half = self.size / 2.0;
-        ((x - half).min(0.0) as i64, (y - half).min(0.0) as i64)
+        ((x - half).floor() as i64, (y - half).floor() as i64)
     }
 }
 
@@ -35,12 +35,20 @@ pub fn for_index(
     frame: usize,
     x: f32,
     y: f32,
-) -> (&'static DynamicImage, (i64, i64)) {
-    match index {
-        _ => match frame {
-            _ => (&SPLATTER_0.frames.last().unwrap(), SPLATTER_0.at(x, y)),
+) -> (&'static DynamicImage, (i64, i64), i64) {
+    (
+        match index {
+            _ => {
+                if let Some(img) = SPLATTER_0.frames.get(frame) {
+                    &img
+                } else {
+                    &SPLATTER_0.frames.last().unwrap()
+                }
+            }
         },
-    }
+        SPLATTER_0.at(x, y),
+        SPLATTER_0.size as i64,
+    )
 }
 
 lazy_static! {

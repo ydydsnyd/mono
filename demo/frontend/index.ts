@@ -3,6 +3,7 @@ import {initialize} from './data';
 import {renderer as renderer3D} from './3d-renderer';
 import {render} from './texture-renderer';
 import initRenderer from '../../renderer/pkg/renderer';
+import {get3DPositions} from '../shared/renderer';
 import {cursorRenderer} from './cursors';
 import {
   UVMAP_SIZE,
@@ -17,7 +18,6 @@ import {LETTERS} from '../shared/letters';
 import {letterMap, now} from '../shared/util';
 import {initRoom} from './init-room';
 import {getUserLocation} from './location';
-import {get3DPositions} from '../shared/renderer';
 
 type LetterCanvases = Record<Letter, HTMLCanvasElement>;
 
