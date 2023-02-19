@@ -164,9 +164,6 @@ pub fn draw(
         let anim_index = splatter_animations[idx] as usize;
         // Frames animate at ~30fps
         let anim_frame = ((time - timestamp) / 33.32).floor() as usize;
-        if anim_frame < 5 {
-            console_log!("draw frame {}", anim_frame);
-        }
         let (splatter_image, (sx, sy), size) = splatters::for_index(anim_index, anim_frame, x, y);
         let crop_x = if sx < 0 { sx.abs() } else { 0 } as u32;
         let crop_y = if sy < 0 { sy.abs() } else { 0 } as u32;
