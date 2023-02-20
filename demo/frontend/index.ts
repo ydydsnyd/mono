@@ -23,7 +23,6 @@ type LetterCanvases = Record<Letter, HTMLCanvasElement>;
 
 type Debug = {
   fps: number;
-  points: number;
 };
 
 const getScaleFactor = (): Size => {
@@ -38,7 +37,7 @@ export const init = async () => {
   const actorId = localStorage.getItem('paint-fight-actor-id') || nanoid();
   localStorage.setItem('paint-fight-actor-id', actorId);
 
-  const debug: Debug = {fps: 60, points: 0};
+  const debug: Debug = {fps: 60};
 
   // Canvases
   const canvas = document.getElementById('canvas3D') as HTMLCanvasElement;

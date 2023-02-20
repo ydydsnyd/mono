@@ -12,10 +12,6 @@ export const COLOR_PALATE_RS: number[] = [
   0.82745098, 0.49803922, 0,
 ];
 
-// Splatters have 4 frames rendered at 30fps, so nothing needs to be rendered if
-// it is this many ms old.
-export const MAX_SPLATTER_RENDER_AGE = 4 * 32.2;
-
 /**
 
 Blue:

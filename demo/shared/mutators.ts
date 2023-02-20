@@ -27,6 +27,7 @@ import {asyncLetterMap, now, randomWithSeed} from './util';
 import {impulses2Physics} from './wasm-args';
 
 export const impulseId = (i: Impulse) => `${i.u}${i.s}${i.x + i.y + i.z}`;
+export const splatterId = (s: Splatter) => `${s.u}${s.t}`;
 
 export type M = typeof mutators;
 
