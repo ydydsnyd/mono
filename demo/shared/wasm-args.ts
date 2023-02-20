@@ -12,7 +12,7 @@ type renderBatchArgs = [
   Float32Array, // x_vals: Vec<f32>,
   Float32Array, // y_vals: Vec<f32>,
   Uint8Array, // splatter_animations: Vec<u8>,
-  Float32Array, // splatter_rotations: Vec<f32>,
+  Uint8Array, // splatter_rotations: Vec<u8>,
 ];
 export const splatters2RenderBatch = (
   splatters: Record<Letter, Splatter[]>,
@@ -37,7 +37,7 @@ export const splatters2RenderBatch = (
     new Float32Array(totalSplatters),
     new Float32Array(totalSplatters),
     new Uint8Array(totalSplatters),
-    new Float32Array(totalSplatters),
+    new Uint8Array(totalSplatters),
   ];
 
   let baseIdx = 0;
@@ -66,7 +66,7 @@ type renderArgs = [
   Float32Array, // x_vals: Vec<f32>,
   Float32Array, // y_vals: Vec<f32>,
   Uint8Array, // splatter_animations: Vec<u8>,
-  Float32Array, // splatter_rotations: Vec<f32>,
+  Uint8Array, // splatter_rotations: Vec<u8>,
 ];
 
 export const splatters2Render = (splatters: Splatter[]) => {
@@ -87,7 +87,7 @@ export const splatters2Render = (splatters: Splatter[]) => {
     new Float32Array(splatters.length),
     new Float32Array(splatters.length),
     new Uint8Array(splatters.length),
-    new Float32Array(splatters.length),
+    new Uint8Array(splatters.length),
   ];
   splatters.forEach((splatter, index) => {
     args[1][index] = splatter.t;

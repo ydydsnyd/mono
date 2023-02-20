@@ -29,14 +29,14 @@ body.demo-active {
 #textures, #buffers {
   display: none;
 }
-#textures, #buffers {
+/* #textures, #buffers {
   display: block;
   position: absolute;
 }
 #textures canvas, #buffers canvas {
   width: 100px;
   height: 100px;
-}
+} */
 
 .online-dot {
   width: 14px;

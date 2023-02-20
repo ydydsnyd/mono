@@ -147,7 +147,7 @@ pub fn draw_buffer_png(
     x_vals: Vec<f32>,
     y_vals: Vec<f32>,
     splatter_animations: Vec<u8>,
-    splatter_rotations: Vec<f32>,
+    splatter_rotations: Vec<u8>,
 ) -> Uint8Array {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     let caches = CACHES.read().unwrap();
@@ -201,7 +201,7 @@ pub fn add_points_to_cache(
     x_vals: Vec<f32>,
     y_vals: Vec<f32>,
     splatter_animations: Vec<u8>,
-    splatter_rotations: Vec<f32>,
+    splatter_rotations: Vec<u8>,
 ) {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     let mut caches = CACHES.write().unwrap();
@@ -262,7 +262,7 @@ pub fn draw_buffers(
     x_vals: Vec<f32>,
     y_vals: Vec<f32>,
     splatter_animations: Vec<u8>,
-    splatter_rotations: Vec<f32>,
+    splatter_rotations: Vec<u8>,
 ) -> () {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     let width = UVMAP_SIZE.clone();
@@ -311,7 +311,7 @@ pub fn draw_buffers(
             &x_vals[splatter_range_start..splatter_end_idx],
             &y_vals[splatter_range_start..splatter_end_idx],
             &splatter_animations[splatter_range_start..splatter_end_idx],
-            &&splatter_rotations[splatter_range_start..splatter_end_idx],
+            &splatter_rotations[splatter_range_start..splatter_end_idx],
         );
 
         let (mut pixels, rect_height) = changed_rect.pixel_range(img.to_vec(), width as usize, 4);

@@ -133,9 +133,8 @@ export const mutators = {
       u: actorId,
       t: ts,
       c: colorIndex,
-      // TODO: should be the number of available animations
-      a: Math.floor(randomWithSeed(ts, Seeds.splatterAnimation, 0)),
-      r: randomWithSeed(ts, Seeds.splatterRotation, Math.PI * 2),
+      a: Math.floor(randomWithSeed(ts, Seeds.splatterAnimation, 5)),
+      r: Math.floor(randomWithSeed(ts, Seeds.splatterRotation, 4)),
     };
     await tx.put(key, splatter);
 

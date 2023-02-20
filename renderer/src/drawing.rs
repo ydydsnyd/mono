@@ -1,6 +1,9 @@
-use image::{imageops, GenericImageView, Rgba, RgbaImage};
-use palette::{LinSrgb, Mix, Srgb};
+use image::{
+    imageops::{self, rotate180, rotate270, rotate90},
+    GenericImageView, Pixel, Rgb, RgbaImage,
+};
 
+mod data;
 mod splatters;
 
 #[allow(unused_imports)]
@@ -125,7 +128,7 @@ pub fn draw(
     x_vals: &[f32],
     y_vals: &[f32],
     splatter_animations: &[u8],
-    splatter_rotations: &[f32],
+    splatter_rotations: &[u8],
 ) -> Rectangle {
     assert_eq!(splatter_count, timestamps.len());
     assert_eq!(splatter_count, splatter_actors.len());
@@ -144,18 +147,6 @@ pub fn draw(
     // Draw our splatters
     for idx in 0..splatter_count {
         let timestamp = timestamps[idx];
-        let (start_color, end_color) = colors_at_idx(
-            colors[idx],
-            &a_colors,
-            &b_colors,
-            &c_colors,
-            &d_colors,
-            &e_colors,
-        );
-        let (r, g, b): (u8, u8, u8) = Srgb::from_linear(start_color.mix(&end_color, 1.0))
-            .into_format()
-            .into_components();
-        let pixel = Rgba::from([r, g, b, 255]);
         let x = x_vals[idx] * width;
         let y = y_vals[idx] * height;
 
@@ -186,8 +177,33 @@ pub fn draw(
         if crop_w == 0 && crop_h == 0 {
             return Rectangle::zero();
         }
-        let cropped_image = splatter_image.view(crop_x, crop_y, crop_w, crop_h);
-        imageops::overlay(image, &cropped_image.to_image(), sx, sy);
+        let mut cropped_image = splatter_image
+            .view(crop_x, crop_y, crop_w, crop_h)
+            .to_image();
+        if splatter_rotations[idx] == 1 {
+            rotate90(&cropped_image);
+        } else if splatter_rotations[idx] == 2 {
+            rotate180(&cropped_image);
+        } else if splatter_rotations[idx] == 2 {
+            rotate270(&cropped_image);
+        }
+        let color = color_at_idx(
+            colors[idx],
+            &a_colors,
+            &b_colors,
+            &c_colors,
+            &d_colors,
+            &e_colors,
+        );
+        for pixel in cropped_image.pixels_mut() {
+            let alpha = pixel[3];
+            if alpha > 0 {
+                pixel[0] = color[0];
+                pixel[1] = color[1];
+                pixel[2] = color[2];
+            }
+        }
+        imageops::overlay(image, &cropped_image, sx, sy);
 
         // changed_rects.push(Rectangle::from_circle(x, y, 40.0, width, height));
     }
@@ -212,18 +228,14 @@ pub fn draw(
     changed_rect
 }
 
-fn u8_to_pct(color: u8) -> f32 {
-    color as f32 / 255.0
-}
-
-fn colors_at_idx(
+fn color_at_idx(
     idx: u8,
     a_colors: &[u8],
     b_colors: &[u8],
     c_colors: &[u8],
     d_colors: &[u8],
     e_colors: &[u8],
-) -> (LinSrgb, LinSrgb) {
+) -> Rgb<u8> {
     let colors = match idx {
         0 => a_colors,
         1 => b_colors,
@@ -232,35 +244,7 @@ fn colors_at_idx(
         4 => e_colors,
         _ => a_colors,
     };
-    (
-        Srgb::new(
-            u8_to_pct(colors[0]),
-            u8_to_pct(colors[1]),
-            u8_to_pct(colors[2]),
-        )
-        .into_linear(),
-        Srgb::new(
-            u8_to_pct(colors[3]),
-            u8_to_pct(colors[4]),
-            u8_to_pct(colors[5]),
-        )
-        .into_linear(),
-    )
-    // let start_idx = idx as usize * 6;
-    // (
-    //     Srgb::new(
-    //         COLOR_PALATE_RS[start_idx],
-    //         COLOR_PALATE_RS[start_idx + 1],
-    //         COLOR_PALATE_RS[start_idx + 2],
-    //     )
-    //     .into_linear(),
-    //     Srgb::new(
-    //         COLOR_PALATE_RS[start_idx + 3],
-    //         COLOR_PALATE_RS[start_idx + 4],
-    //         COLOR_PALATE_RS[start_idx + 5],
-    //     )
-    //     .into_linear(),
-    // )
+    return Rgb([colors[0], colors[1], colors[2]]);
 }
 
 #[cfg(test)]
