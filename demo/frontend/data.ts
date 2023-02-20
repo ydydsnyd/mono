@@ -13,7 +13,7 @@ import type {
 import {mutators, M} from '../shared/mutators';
 import {LETTERS} from '../shared/letters';
 import {getData, isAddDiff, isChangeDiff, isDeleteDiff} from './data-util';
-import {updateCache} from '../shared/renderer';
+import {setPhysics, updateCache} from '../shared/renderer';
 import {getWorkerHost} from '../shared/urls';
 
 export const initialize = async (roomID: string, userID: string) => {
@@ -72,11 +72,10 @@ export const initialize = async (roomID: string, userID: string) => {
           }
           break;
         case 'physics-origin':
-          const origin = getData<Physics>(diff);
-          if (isDeleteDiff(diff)) {
-            delete localState.physics;
-          } else {
+          if (isChangeDiff(diff) || isAddDiff(diff)) {
+            const origin = getData<Physics>(diff);
             localState.physics = origin;
+            setPhysics(origin);
           }
           break;
         case 'cursor':

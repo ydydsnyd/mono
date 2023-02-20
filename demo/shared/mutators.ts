@@ -138,52 +138,71 @@ export const mutators = {
       r: Math.floor(randomWithSeed(ts, Seeds.splatterRotation, 4)),
     };
     await tx.put(key, splatter);
+    // Every time we add a splatter, also add an "impulse". This is what we use to
+    // compute the physics of the letters.
+    const impulse: Impulse = {
+      u: actorId,
+      s: step,
+      ...hitPosition,
+    };
+    await tx.put(`impulse/${letter}/${impulseId(impulse)}`, impulse);
 
-    // On the server, add impulses and flatten textures.
-    // We don't add impulses on the client because the client mutations are
-    // optimistic, and we will often be "in the future" according to other clients.
+    // On the server, do some "flattening". This is equivalent to a "rollback
+    // netcode" in game dev. The general idea is:
+    // 1. We periodically compute state as a function of many inputs. In the case of
+    // splatters, this state is a texture image. In the case of impulses, this state
+    // is a serialized physics state.
+    // 2. We then delete any of the inputs we used for the computation, and store
+    // the "step" that the state was computed at. A "step" is just a relative frame
+    // count, and can be used to sync clients.
+    // 3. The computed states are then synced to the client via reflect. When a
+    // client receives a new origin, it can just start computing its local
+    // physics/textures from that origin instead of the prior one (or from zero).
+    // This means that the client only stores a "window" of data, which is
+    // everything that happened since the server last sent an origin. This window
+    // contains real time data as well, so for the most part will work regardless of
+    // rollback. However, the rollback is necessary for 2 reasons - 1, to prevent
+    // the number of impulses and splatters from growing infinitely, and 2, to
+    // deterministically order events so that the result is identical on all
+    // clients.
+    // NOTE that during the client window, things could become desynced - e.g. a
+    // splatter may appear on top when the server will put it behind another
+    // splatter, or the physics could be differently positioned. As such, clients
+    // may need to compensate for sudden changes in the origin. The larger the
+    // window, the less expensive the server computation will be (because it is less
+    // frequent), but the larger the potential desync will be.
     if (env == Env.SERVER) {
-      // To make sure that we don't add impulses that we can no longer render, we need an origin.
-      const origin = (await tx.get('physics-origin')) as unknown as
-        | Physics
-        | undefined;
-
-      // Make sure that the client isn't in too distant the past. If the step we drew
-      // on was before the origin, we don't add an impulse, since the clients only
-      // render since the origin step.
-      if (!origin || step >= origin.step) {
-        const impulse: Impulse = {
-          u: actorId,
-          s: step,
-          ...hitPosition,
-        };
-        await tx.put(`impulse/${letter}/${impulseId(impulse)}`, impulse);
-      }
-      // Perform any flattening necessary (if we're not in the past)
+      // Update our sequence # to effectively take a lock on flattening. We don't want
+      // two mutators to flatten at the same time because it's relatively expensive.
       const currentSeq = await tx.get(`seq/${letter}`);
       if (currentSeq !== undefined && sequence !== currentSeq) {
         return;
       }
-      // Update our sequence # to effectively take a lock on this operation.
       await tx.put(`seq/${letter}`, (currentSeq || 0) + 1);
-      // Perform operations
-      await flattenPhysics(tx, origin, step);
-      await flattenTexture(tx, letter, ts);
-      console.log('SERVER COMMIT SUCCESS', now() - startMs);
+      // Our flattening operations both use our wasm renderer, so make sure it's available.
+      try {
+        await _initRenderer!();
+        // Perform operations
+        await flattenPhysics(tx, step);
+        await flattenTexture(tx, letter, ts);
+        console.log('SERVER COMMIT SUCCESS', now() - startMs);
+      } catch (e) {
+        console.log(`Flattening failed with error ${(e as Error).message}`);
+      }
     }
   },
 
   nop: async (_: WriteTransaction) => {},
 };
 
-const flattenPhysics = async (
-  tx: WriteTransaction,
-  origin: Physics | undefined,
-  step: number,
-) => {
-  // In addition, we have to keep our renderable set fairly reasonable. If we have
-  // too many steps, flatten them and reset the origin.
+const flattenPhysics = async (tx: WriteTransaction, step: number) => {
+  const origin = (await tx.get('physics-origin')) as unknown as
+    | Physics
+    | undefined;
   const renderedSteps = origin ? step - origin.step : step;
+  console.log(
+    `Server origin step: ${origin?.step}. Rendered: ${renderedSteps}`,
+  );
   if (renderedSteps > MAX_RENDERED_STEPS || !origin) {
     const impulses = await asyncLetterMap<Impulse[]>(async letter => {
       const impulses = await tx.scan({
@@ -200,12 +219,8 @@ const flattenPhysics = async (
       newStep,
       ...impulses2Physics(impulses),
     );
-    console.log(
-      step,
-      'SNAPSHOTTING AT ',
-      Math.max(step - MAX_RENDERED_STEPS, 0),
-    );
-    await tx.put('origin', {
+    console.log(step, 'SNAPSHOTTING AT ', newStep);
+    await tx.put('physics-origin', {
       state: encode(newState),
       step: newStep,
     });
@@ -262,7 +277,6 @@ const flattenTexture = async (
   // Now if we have enough cacheable splatters, draw them and move our last cached key
   if (oldSplatters.length > SPLATTER_FLATTEN_MIN) {
     console.log(`${letter}: flatten ${oldSplatters.length} splatters`);
-    await _initRenderer!();
     // Draw them on top of the last cached image
     const cache = (await tx.get(`cache/${letter}`)) as LetterCache;
     if (cache && cache.cache) {
