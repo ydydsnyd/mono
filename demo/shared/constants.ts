@@ -8,6 +8,8 @@ export const DEBUG_PHYSICS = false;
 // Splatters
 export const SPLATTER_ANIM_DURATION = 1000;
 export const SPLATTER_FLATTEN_MIN = 10;
+// ms between splatters
+export const SPLATTER_MS = 200;
 
 // Render a window of steps, so changes from the past can be reflected locally
 export const MAX_RENDERED_STEPS = 10;

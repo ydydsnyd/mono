@@ -12,6 +12,7 @@ import {
   COLOR_PALATE_END,
   STEP_RENDER_DELAY,
   DEBUG_PHYSICS,
+  SPLATTER_MS,
 } from '../shared/constants';
 import type {Actor, ColorPalate, Letter, Position, Size} from '../shared/types';
 import {LETTERS} from '../shared/letters';
@@ -160,28 +161,11 @@ export const init = async () => {
     }, 200);
   }
 
-  const addPaint = (at: Position) => {
-    const [letter, texturePosition, hitPosition] = getTexturePosition(at);
-    if (letter && texturePosition && hitPosition) {
-      addSplatter({
-        ts: now(),
-        letter,
-        actorId,
-        colorIndex: actors[actorId].colorIndex,
-        texturePosition,
-        hitPosition,
-        sequence: sequences[letter],
-        step: Math.round(physicsStep),
-      });
-    }
-  };
-
   // Set up cursor renderer
-  const renderCursors = cursorRenderer(
+  const [localCursor, renderCursors] = cursorRenderer(
     actorId,
     () => ({actors, cursors}),
     getScaleFactor,
-    addPaint,
     updateCursor,
   );
 
@@ -234,17 +218,43 @@ export const init = async () => {
     }
   };
 
+  const addPaint = (at: Position) => {
+    const [letter, texturePosition, hitPosition] = getTexturePosition(at);
+    if (letter && texturePosition && hitPosition) {
+      addSplatter({
+        ts: now(),
+        letter,
+        actorId,
+        colorIndex: actors[actorId].colorIndex,
+        texturePosition,
+        hitPosition,
+        sequence: sequences[letter],
+        step: Math.round(physicsStep),
+      });
+    }
+  };
+
   // Render our cursors and canvases at "animation speed", usually 60fps
+  let lastSplatter = 0;
   startRenderLoop(async () => {
     ({actors, cursors, rawCaches, splatters, sequences, physics, impulses} =
       await getState());
+    // Update cursors
     await renderCursors();
-    // Each frame, render our textures
+    // Render our textures
     render(buffers, textures, splatters, colors);
     // Update textures and render the 3D scene
     LETTERS.forEach(letter => updateTexture(letter));
     renderPhysics();
     render3D();
+    // Splatter if needed
+    const {isDown, position} = localCursor();
+    if (isDown && now() > lastSplatter + SPLATTER_MS) {
+      lastSplatter = now();
+      addPaint(position);
+    } else if (!isDown) {
+      lastSplatter = 0;
+    }
   }, debug);
 
   // After we've started, flip a class on the body

@@ -13,9 +13,8 @@ export const cursorRenderer = (
   actorId: string,
   getState: () => {actors: State['actors']; cursors: State['cursors']},
   getScaleFactor: () => Size,
-  onClick: (position: Position) => void,
   onUpdateCursor: (localCursor: Cursor) => void,
-) => {
+): [() => {isDown: boolean; position: Position}, () => Promise<void>] => {
   // Set up local state
   const cursorDivs: Map<ActorID, HTMLDivElement> = new Map();
   const getCursorDiv = async (cursor: Cursor) => {
@@ -85,7 +84,6 @@ export const cursorRenderer = (
   // Track cursor clicks
   const setIsDown = () => {
     localCursor.isDown = true;
-    onClick(lastPosition);
     cursorNeedsUpdate = true;
   };
   mouseElement.addEventListener('mousedown', setIsDown);
@@ -96,59 +94,62 @@ export const cursorRenderer = (
   });
 
   let lastActorUpdate = -1;
-  return async () => {
-    if (cursorNeedsUpdate) {
-      cursorNeedsUpdate = false;
-      onUpdateCursor(localCursor);
-    }
-    const scaleFactor = getScaleFactor();
-    const {actors, cursors} = getState();
-    // Move cursors
-    Object.values(cursors).forEach(async cursor => {
-      const {x, y} = cursor;
-      const cursorDiv = await getCursorDiv(cursor);
-      if (cursorDiv) {
-        cursorDiv.style.transform = `translate3d(${x * scaleFactor.width}px, ${
-          y * scaleFactor.height
-        }px, 0)`;
-        cursorDiv.style.opacity = cursor.onPage ? '1' : '0';
-        const color = colorToString(
-          COLOR_PALATE[actors[cursor.actorId].colorIndex],
-        );
-        if (cursorDiv.dataset['color'] !== color) {
-          const pointer = cursorDiv.querySelector(
-            '#pointer-fill',
-          ) as SVGPathElement;
-          const locationDiv = cursorDiv.querySelector(
-            '.location',
-          ) as HTMLDivElement;
-          pointer.style.fill = color;
-          locationDiv.style.background = color;
-        }
-        cursorDiv.dataset['color'] = color;
+  return [
+    () => ({isDown: localCursor.isDown, position: lastPosition}),
+    async () => {
+      if (cursorNeedsUpdate) {
+        cursorNeedsUpdate = false;
+        onUpdateCursor(localCursor);
       }
-    });
-    // Remove cursor divs that represent actors that are no longer here
-    for (const actorId of cursorDivs.keys()) {
-      if (!cursors[actorId]) {
-        for (const existing of document.getElementsByClassName(actorId)) {
-          existing.parentElement?.removeChild(existing);
-        }
-        cursorDivs.delete(actorId);
-      }
-    }
-    // At a lower frequency, update actor information (it only changes once per
-    // actor, when we first get the location).
-    if (now() - lastActorUpdate > ACTOR_UPDATE_INTERVAL) {
-      lastActorUpdate = now();
-      Object.values(actors).forEach(actor => {
-        const cursorDiv = cursorDivs.get(actor.id);
-        if (cursorDiv && actor.location) {
-          cursorDiv.querySelector('.location')!.innerHTML = actor.location;
+      const scaleFactor = getScaleFactor();
+      const {actors, cursors} = getState();
+      // Move cursors
+      Object.values(cursors).forEach(async cursor => {
+        const {x, y} = cursor;
+        const cursorDiv = await getCursorDiv(cursor);
+        if (cursorDiv) {
+          cursorDiv.style.transform = `translate3d(${
+            x * scaleFactor.width
+          }px, ${y * scaleFactor.height}px, 0)`;
+          cursorDiv.style.opacity = cursor.onPage ? '1' : '0';
+          const color = colorToString(
+            COLOR_PALATE[actors[cursor.actorId].colorIndex],
+          );
+          if (cursorDiv.dataset['color'] !== color) {
+            const pointer = cursorDiv.querySelector(
+              '#pointer-fill',
+            ) as SVGPathElement;
+            const locationDiv = cursorDiv.querySelector(
+              '.location',
+            ) as HTMLDivElement;
+            pointer.style.fill = color;
+            locationDiv.style.background = color;
+          }
+          cursorDiv.dataset['color'] = color;
         }
       });
-    }
-  };
+      // Remove cursor divs that represent actors that are no longer here
+      for (const actorId of cursorDivs.keys()) {
+        if (!cursors[actorId]) {
+          for (const existing of document.getElementsByClassName(actorId)) {
+            existing.parentElement?.removeChild(existing);
+          }
+          cursorDivs.delete(actorId);
+        }
+      }
+      // At a lower frequency, update actor information (it only changes once per
+      // actor, when we first get the location).
+      if (now() - lastActorUpdate > ACTOR_UPDATE_INTERVAL) {
+        lastActorUpdate = now();
+        Object.values(actors).forEach(actor => {
+          const cursorDiv = cursorDivs.get(actor.id);
+          if (cursorDiv && actor.location) {
+            cursorDiv.querySelector('.location')!.innerHTML = actor.location;
+          }
+        });
+      }
+    },
+  ];
 };
 
 const createCursor = (actor: Actor) => {
