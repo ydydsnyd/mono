@@ -9,6 +9,16 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "allowJs": true,
-    "types": ["node"]
+    "types": ["node"],
+    "exactOptionalPropertyTypes": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "importsNotUsedAsValues": "error",
+    "outDir": "out",
+    "lib": ["esnext"],
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
   }
 }
