@@ -147,9 +147,7 @@ export const init = async () => {
         0,
       );
       if (debugEl) {
-        debugEl.innerHTML = `server physics step ${
-          physics?.step || '(unset)'
-        }\nrendered physics step ${physicsStep.toFixed(1)}\n${
+        let debugOutput = `${
           Object.keys(actors).length
         } actors\n${splatterCount} splatters\n${impulseCount} impulses\n${debug.fps.toFixed(
           1,
@@ -162,6 +160,15 @@ export const init = async () => {
             new Blob([rawCaches[letter] || '']).size / 1024
           }k\n`;
         }).join('\n')}`;
+        if (physics) {
+          const drift = physicsStep - STEP_RENDER_DELAY - physics.step;
+          debugOutput += `physics origin diff: ${
+            drift > 0 ? '+' : '-'
+          }${drift.toFixed(1)}`;
+        } else {
+          debugOutput += 'No server physics';
+        }
+        debugEl.innerHTML = debugOutput;
       }
     }, 200);
   }
