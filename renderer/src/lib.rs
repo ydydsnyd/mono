@@ -5,12 +5,17 @@ extern crate console_error_panic_hook;
 mod drawing;
 mod physics;
 
+use flate2::{bufread::DeflateDecoder, write::DeflateEncoder, Compression};
 use image::{ImageFormat, RgbaImage};
 use js_sys::Uint8Array;
 use mut_static::MutStatic;
 use nalgebra::point;
 use physics::{get_position, Impulse, PhysicsState};
-use std::{collections::HashMap, panic};
+use std::{
+    collections::HashMap,
+    io::{Read, Write},
+    panic,
+};
 use wasm_bindgen::{prelude::*, Clamped};
 use web_sys::{CanvasRenderingContext2d, ImageData};
 
@@ -181,7 +186,7 @@ pub fn draw_buffer_png(
     let mut png_data = std::io::Cursor::new(vec![]);
     img.write_to(&mut png_data, ImageFormat::Png)
         .expect("Failed writing png data");
-    unsafe { Uint8Array::view(png_data.get_ref()) }
+    unsafe { Uint8Array::view(&png_data.get_ref()) }
 }
 
 #[wasm_bindgen]
@@ -396,7 +401,8 @@ pub fn update_state(
         e_impulse_y,
         e_impulse_z,
     );
-    bincode::serialize(&physics.state).unwrap()
+    let data = bincode::serialize(&physics.state).unwrap();
+    compress(data)
 }
 
 #[wasm_bindgen]
@@ -407,7 +413,8 @@ pub fn set_physics_state(serialized_physics: Vec<u8>, step: usize) {
 
 fn _set_physics_state(serialized_physics: Vec<u8>, step: usize) {
     let mut physics = PHYSICS.write().unwrap();
-    physics.state = bincode::deserialize(&serialized_physics).expect("Receieved bad physics data");
+    physics.state =
+        bincode::deserialize(&decompress(serialized_physics)).expect("Receieved bad physics data");
     physics.step = step;
 }
 
@@ -573,4 +580,16 @@ fn add_impulses(
             point: point![x_vals[num], y_vals[num], z_vals[num]],
         })
     }
+}
+
+fn compress(data: Vec<u8>) -> Vec<u8> {
+    let mut encoder = DeflateEncoder::new(Vec::new(), Compression::best());
+    encoder.write_all(&data).expect("Writing failed");
+    encoder.finish().expect("Encoding failed")
+}
+fn decompress(data: Vec<u8>) -> Vec<u8> {
+    let mut decoder = DeflateDecoder::new(&data[..]);
+    let mut out = vec![];
+    decoder.read_to_end(&mut out).expect("Decoding failed");
+    out
 }

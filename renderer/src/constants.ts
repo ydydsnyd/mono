@@ -1,5 +1,5 @@
 // This is the base UV map size, which is useful for scaling pixel counts.
-export const UVMAP_SIZE = 800;
+export const UVMAP_SIZE = 600;
 
 // This is stored as a flat array so that it can be imported into rust without
 // messing with types or implementing serialization.

@@ -658,6 +658,7 @@ dependencies = [
  "base64",
  "bincode",
  "console_error_panic_hook",
+ "flate2",
  "image",
  "js-sys",
  "lazy_static",
