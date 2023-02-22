@@ -4,7 +4,10 @@ use nalgebra::Point3;
 use rapier3d::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::{console_log, Letter};
+#[allow(unused_imports)]
+use crate::console_log;
+
+use crate::Letter;
 
 use self::hulls::Position;
 mod hulls;

@@ -1,22 +1,49 @@
 use super::data;
 use base64::prelude::*;
-use image::{DynamicImage, ImageFormat};
+use image::{
+    imageops::{rotate180, rotate270, rotate90},
+    DynamicImage, ImageFormat,
+};
 extern crate lazy_static;
 
+pub fn precompute() {
+    _ = SPLATTER_0;
+    _ = SPLATTER_1;
+    _ = SPLATTER_2;
+    _ = SPLATTER_3;
+    _ = SPLATTER_4;
+}
+
 pub struct Splatter {
-    pub frames: [DynamicImage; 4],
+    pub frames_0: [DynamicImage; 4],
+    pub frames_90: [DynamicImage; 4],
+    pub frames_180: [DynamicImage; 4],
+    pub frames_270: [DynamicImage; 4],
     pub size: f32,
+}
+
+fn get_frames(strings: [&'static str; 4], rotation: u8) -> [DynamicImage; 4] {
+    [
+        image_from_str(&strings[0]),
+        image_from_str(&strings[1]),
+        image_from_str(&strings[2]),
+        image_from_str(&strings[3]),
+    ]
+    .map(|f| match rotation {
+        1 => DynamicImage::ImageRgba8(rotate90(&f)),
+        2 => DynamicImage::ImageRgba8(rotate180(&f)),
+        3 => DynamicImage::ImageRgba8(rotate270(&f)),
+        _ => f,
+    })
 }
 
 impl Splatter {
     pub fn from(strings: [&'static str; 4]) -> Splatter {
         Splatter {
-            frames: [
-                image_from_str(&strings[0]),
-                image_from_str(&strings[1]),
-                image_from_str(&strings[2]),
-                image_from_str(&strings[3]),
-            ],
+            frames_0: get_frames(strings, 0),
+            frames_90: get_frames(strings, 1),
+            frames_180: get_frames(strings, 2),
+            frames_270: get_frames(strings, 3),
             size: 240.0,
         }
     }
@@ -24,11 +51,17 @@ impl Splatter {
         let half = self.size / 2.0;
         ((x - half).floor() as i64, (y - half).floor() as i64)
     }
-    pub fn frame(&self, frame: usize) -> &DynamicImage {
-        if let Some(img) = self.frames.get(frame) {
+    pub fn frame(&self, frame: usize, rotation: u8) -> &DynamicImage {
+        let frames = match rotation {
+            1 => &self.frames_90,
+            2 => &self.frames_180,
+            3 => &self.frames_270,
+            _ => &self.frames_0,
+        };
+        if let Some(img) = frames.get(frame) {
             img
         } else {
-            self.frames.last().unwrap()
+            frames.last().unwrap()
         }
     }
 }
@@ -43,32 +76,33 @@ fn image_from_str(string: &str) -> DynamicImage {
 pub fn for_index(
     index: usize,
     frame: usize,
+    rotation: u8,
     x: f32,
     y: f32,
 ) -> (&'static DynamicImage, (i64, i64), i64) {
     match index {
         1 => (
-            SPLATTER_1.frame(frame),
+            SPLATTER_1.frame(frame, rotation),
             SPLATTER_1.at(x, y),
             SPLATTER_1.size as i64,
         ),
         2 => (
-            SPLATTER_2.frame(frame),
+            SPLATTER_2.frame(frame, rotation),
             SPLATTER_2.at(x, y),
             SPLATTER_2.size as i64,
         ),
         3 => (
-            SPLATTER_3.frame(frame),
+            SPLATTER_3.frame(frame, rotation),
             SPLATTER_3.at(x, y),
             SPLATTER_3.size as i64,
         ),
         4 => (
-            SPLATTER_4.frame(frame),
+            SPLATTER_4.frame(frame, rotation),
             SPLATTER_4.at(x, y),
             SPLATTER_4.size as i64,
         ),
         _ => (
-            SPLATTER_0.frame(frame),
+            SPLATTER_0.frame(frame, rotation),
             SPLATTER_0.at(x, y),
             SPLATTER_0.size as i64,
         ),

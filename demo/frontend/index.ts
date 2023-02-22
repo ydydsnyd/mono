@@ -2,7 +2,7 @@ import {nanoid} from 'nanoid';
 import {initialize} from './data';
 import {renderer as renderer3D} from './3d-renderer';
 import {render} from './texture-renderer';
-import initRenderer from '../../renderer/pkg/renderer';
+import initRenderer, {precompute} from '../../renderer/pkg/renderer';
 import {get3DPositions} from '../shared/renderer';
 import {cursorRenderer} from './cursors';
 import {
@@ -59,7 +59,12 @@ export const init = async () => {
     return tex;
   });
 
+  const renderInitTime = performance.now();
   await initRenderer();
+  await precompute();
+  console.log(
+    `renderer initialized in ${performance.now() - renderInitTime}ms`,
+  );
 
   const roomID = await initRoom();
 

@@ -125,6 +125,11 @@ lazy_static! {
 // API - this is our "public" JS API:
 
 #[wasm_bindgen]
+pub fn precompute() {
+    drawing::precompute();
+}
+
+#[wasm_bindgen]
 pub fn update_cache(letter: Letter, png_data: Vec<u8>) {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     let img = image::load_from_memory(&png_data).expect("Invalid image data");
@@ -302,7 +307,7 @@ pub fn draw_buffers(
             Letter::V => ctx_v,
             Letter::E => ctx_e,
         };
-        let changed_rect = drawing::draw(
+        drawing::draw(
             &mut img,
             time,
             &a_colors,
@@ -320,28 +325,11 @@ pub fn draw_buffers(
             &splatter_rotations[splatter_range_start..splatter_end_idx],
         );
 
-        let (mut pixels, rect_height) = changed_rect.pixel_range(img.to_vec(), width as usize, 4);
-        if pixels.len() > 0 {
-            // if letter == Letter::I {
-            //     console_log!(
-            //         "source: {}x{}, pixels: {}, width: {}, height, {} rect: {:?}",
-            //         width,
-            //         height,
-            //         pixels.len(),
-            //         changed_rect.width(),
-            //         rect_height,
-            //         changed_rect,
-            //     );
-            // }
-            let data = ImageData::new_with_u8_clamped_array_and_sh(
-                Clamped(&mut pixels[..]),
-                changed_rect.width(),
-                rect_height,
-            )
-            .expect("Bad image data");
-            ctx.put_image_data(&data, changed_rect.x0 as f64, changed_rect.y0 as f64)
-                .expect("Writing to canvas failed");
-        }
+        let data =
+            ImageData::new_with_u8_clamped_array_and_sh(Clamped(&mut img.to_vec()), height, width)
+                .expect("Bad image data");
+        ctx.put_image_data(&data, 0.0, 0.0)
+            .expect("Writing to canvas failed");
     }
 }
 
