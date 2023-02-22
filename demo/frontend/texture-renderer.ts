@@ -4,12 +4,13 @@ import {letterMap, now} from '../shared/util';
 import {splatters2RenderBatch} from '../shared/wasm-args';
 import {LETTERS} from '../shared/letters';
 import {splatterId} from '../shared/mutators';
+import {SPLATTER_ANIM_FRAMES} from '../shared/constants';
 
 let renderedSplatters = new Set<string>();
 
-// Splatters have 4 frames rendered at 30fps, so this is the length of time we
+// Splatters have N frames rendered at 30fps, so this is the length of time we
 // need to re-render splatters every frame before skipping them
-export const SPLATTER_RENDER_DURATION = 4 * 32.2;
+export const SPLATTER_RENDER_DURATION = SPLATTER_ANIM_FRAMES * 32.2;
 
 export const render = async (
   buffers: Record<Letter, HTMLCanvasElement>,

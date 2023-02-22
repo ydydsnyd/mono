@@ -35,6 +35,7 @@ macro_rules! console_log {
 extern "C" {
     static COLOR_PALATE_RS: Vec<f32>;
     static UVMAP_SIZE: u32;
+    static SPLATTER_ANIM_FRAMES: u8;
 }
 
 #[wasm_bindgen]

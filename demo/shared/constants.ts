@@ -1,6 +1,6 @@
 import type {Color} from './types';
 import {COLOR_PALATE_RS} from '../../renderer/src/constants';
-export {UVMAP_SIZE} from '../../renderer/src/constants';
+export {UVMAP_SIZE, SPLATTER_ANIM_FRAMES} from '../../renderer/src/constants';
 
 // Debug
 export const DEBUG_PHYSICS = false;

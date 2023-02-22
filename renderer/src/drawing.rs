@@ -8,6 +8,7 @@ mod splatters;
 
 #[allow(unused_imports)]
 use crate::console_log;
+use crate::SPLATTER_ANIM_FRAMES;
 
 #[derive(Clone, Debug)]
 pub struct Rectangle {
@@ -143,6 +144,7 @@ pub fn draw(
     }
     let width = image.width() as f32;
     let height = image.height() as f32;
+    let total_frames = SPLATTER_ANIM_FRAMES.clone();
 
     // Draw our splatters
     for idx in 0..splatter_count {
@@ -155,6 +157,9 @@ pub fn draw(
         let anim_index = splatter_animations[idx] as usize;
         // Frames animate at ~30fps
         let anim_frame = ((time - timestamp) / 33.32).floor() as usize;
+        if anim_frame > total_frames as usize {
+            continue;
+        }
         let (splatter_image, (sx, sy), size) = splatters::for_index(anim_index, anim_frame, x, y);
         let crop_x = if sx < 0 { sx.abs() } else { 0 } as u32;
         let crop_y = if sy < 0 { sy.abs() } else { 0 } as u32;
@@ -175,19 +180,19 @@ pub fn draw(
             size
         } as u32;
         if crop_w == 0 && crop_h == 0 {
-            return Rectangle::zero();
+            continue;
         }
         let mut cropped_image = splatter_image
             .view(crop_x, crop_y, crop_w, crop_h)
             .to_image();
         if splatter_rotations[idx] == 1 {
-            rotate90(&cropped_image);
+            cropped_image = rotate90(&cropped_image);
         } else if splatter_rotations[idx] == 2 {
-            rotate180(&cropped_image);
-        } else if splatter_rotations[idx] == 2 {
-            rotate270(&cropped_image);
+            cropped_image = rotate180(&cropped_image);
+        } else if splatter_rotations[idx] == 3 {
+            cropped_image = rotate270(&cropped_image);
         }
-        let color = color_at_idx(
+        let (end_color, start_color) = colors_at_idx(
             colors[idx],
             &a_colors,
             &b_colors,
@@ -195,6 +200,10 @@ pub fn draw(
             &d_colors,
             &e_colors,
         );
+        let mut end_color_alpha = end_color.to_rgba();
+        end_color_alpha[3] = ((anim_frame as f32 / total_frames as f32) * 255.0).floor() as u8;
+        let mut color = start_color.to_rgba();
+        color.blend(&end_color_alpha);
         for pixel in cropped_image.pixels_mut() {
             let alpha = pixel[3];
             if alpha > 0 {
@@ -228,14 +237,14 @@ pub fn draw(
     changed_rect
 }
 
-fn color_at_idx(
+fn colors_at_idx(
     idx: u8,
     a_colors: &[u8],
     b_colors: &[u8],
     c_colors: &[u8],
     d_colors: &[u8],
     e_colors: &[u8],
-) -> Rgb<u8> {
+) -> (Rgb<u8>, Rgb<u8>) {
     let colors = match idx {
         0 => a_colors,
         1 => b_colors,
@@ -244,7 +253,10 @@ fn color_at_idx(
         4 => e_colors,
         _ => a_colors,
     };
-    return Rgb([colors[0], colors[1], colors[2]]);
+    return (
+        Rgb([colors[0], colors[1], colors[2]]),
+        Rgb([colors[3], colors[4], colors[5]]),
+    );
 }
 
 #[cfg(test)]

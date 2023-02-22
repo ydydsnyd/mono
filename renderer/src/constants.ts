@@ -1,6 +1,8 @@
 // This is the base UV map size, which is useful for scaling pixel counts.
 export const UVMAP_SIZE = 600;
 
+export const SPLATTER_ANIM_FRAMES = 8;
+
 // This is stored as a flat array so that it can be imported into rust without
 // messing with types or implementing serialization.
 // For each color, there are 6 consecutive bits. The first 3 are the r,g,b of
