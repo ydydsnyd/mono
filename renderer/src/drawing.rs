@@ -13,14 +13,14 @@ pub fn precompute() {
 
 pub fn draw(
     image: &mut RgbaImage,
-    time: f64,
+    step: usize,
     a_colors: &[u8],
     b_colors: &[u8],
     c_colors: &[u8],
     d_colors: &[u8],
     e_colors: &[u8],
     splatter_count: usize,
-    timestamps: &[f64],
+    steps: &[usize],
     splatter_actors: &[u32],
     colors: &[u8],
     x_vals: &[f32],
@@ -28,7 +28,7 @@ pub fn draw(
     splatter_animations: &[u8],
     splatter_rotations: &[u8],
 ) {
-    assert_eq!(splatter_count, timestamps.len());
+    assert_eq!(splatter_count, steps.len());
     assert_eq!(splatter_count, splatter_actors.len());
     assert_eq!(splatter_count, colors.len());
     assert_eq!(splatter_count, x_vals.len());
@@ -44,16 +44,17 @@ pub fn draw(
 
     // Draw our splatters
     for idx in 0..splatter_count {
-        let timestamp = timestamps[idx];
+        let splatter_step = steps[idx];
+        if step < splatter_step {
+            // splatter hasn't happened yet
+            continue;
+        }
         let x = x_vals[idx] * width;
         let y = y_vals[idx] * height;
 
         let anim_index = splatter_animations[idx] as usize;
-        // Frames animate at ~30fps
-        let anim_frame = ((time - timestamp) / 33.32).floor() as usize;
-        if anim_frame > total_frames as usize {
-            continue;
-        }
+        // Frames animate at ~30fps, steps are assumed to be ~60fps
+        let anim_frame = (step - splatter_step) / 2;
         let (splatter_image, (sx, sy)) =
             splatters::for_index(anim_index, anim_frame, splatter_rotations[idx], x, y);
         let mut img = splatter_image.to_rgba8();

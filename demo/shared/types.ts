@@ -63,7 +63,7 @@ export enum Letter {
 // Each letter also can be painted on, by adding splatters.
 export type Splatter = Position & {
   u: ActorID; // actor ID
-  t: number; // timestamp
+  s: number; // step
   c: number; // color index, from COLOR_PALATE
   a: number; // splatter animation index
   r: number; // rotation of splatter animation

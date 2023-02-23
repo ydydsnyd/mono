@@ -6,7 +6,7 @@ import {letterMap} from './util';
 // without having to convert into pointers
 type renderBatchArgs = [
   Uint32Array, // splatter_counts: Vec<usize>,
-  Float64Array, // timestamps: Vec<f64>,
+  Uint32Array, // steps: Vec<f64>,
   Uint32Array, // splatter_actors: Vec<u32>,
   Uint8Array, // colors: Vec<u8>,
   Float32Array, // x_vals: Vec<f32>,
@@ -31,7 +31,7 @@ export const splatters2RenderBatch = (
   }, 0);
   const args: renderBatchArgs = [
     new Uint32Array(LETTERS.length),
-    new Float64Array(totalSplatters),
+    new Uint32Array(totalSplatters),
     new Uint32Array(totalSplatters),
     new Uint8Array(totalSplatters),
     new Float32Array(totalSplatters),
@@ -45,7 +45,7 @@ export const splatters2RenderBatch = (
     args[0][letterIdx] = splatters[letter].length;
     splatters[letter].forEach((splatter, idx) => {
       const index = baseIdx + idx;
-      args[1][index] = splatter.t;
+      args[1][index] = splatter.s;
       args[2][index] = actorNums[splatter.u];
       args[3][index] = splatter.c;
       args[4][index] = splatter.x;
@@ -60,7 +60,7 @@ export const splatters2RenderBatch = (
 
 type renderArgs = [
   number, // splatter_count: usize,
-  Float64Array, // timestamps: Vec<f64>,
+  Uint32Array, // steps: Vec<usize>,
   Uint32Array, // point_actors: Vec<u32>,
   Uint8Array, // colors: Vec<u8>,
   Float32Array, // x_vals: Vec<f32>,
@@ -81,7 +81,7 @@ export const splatters2Render = (splatters: Splatter[]) => {
   });
   const args: renderArgs = [
     splatters.length,
-    new Float64Array(splatters.length),
+    new Uint32Array(splatters.length),
     new Uint32Array(splatters.length),
     new Uint8Array(splatters.length),
     new Float32Array(splatters.length),
@@ -90,7 +90,7 @@ export const splatters2Render = (splatters: Splatter[]) => {
     new Uint8Array(splatters.length),
   ];
   splatters.forEach((splatter, index) => {
-    args[1][index] = splatter.t;
+    args[1][index] = splatter.s;
     args[2][index] = actorNums[splatter.u];
     args[3][index] = splatter.c;
     args[4][index] = splatter.x;

@@ -236,7 +236,6 @@ export const init = async () => {
     const [letter, texturePosition, hitPosition] = getTexturePosition(at);
     if (letter && texturePosition && hitPosition) {
       addSplatter({
-        ts: now(),
         letter,
         actorId,
         colorIndex: actors[actorId].colorIndex,
@@ -256,7 +255,7 @@ export const init = async () => {
     // Update cursors
     await renderCursors();
     // Render our textures
-    render(buffers, textures, splatters, colors);
+    render(physicsStep, buffers, textures, splatters, colors);
     // Update textures and render the 3D scene
     LETTERS.forEach(letter => updateTexture(letter));
     renderPhysics();

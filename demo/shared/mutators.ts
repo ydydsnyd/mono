@@ -1,12 +1,12 @@
-import {update_state} from '@/renderer/pkg/renderer';
 import type {WriteTransaction} from '@rocicorp/reflect';
 import {
   COLOR_PALATE,
   COLOR_PALATE_END,
   MAX_RENDERED_STEPS,
-  SPLATTER_ANIM_DURATION,
+  SPLATTER_ANIM_FRAMES,
   SPLATTER_FLATTEN_MIN,
 } from './constants';
+import {update_state} from '../../renderer/pkg/renderer';
 import {getCache, updateCache} from './renderer';
 import type {
   Actor,
@@ -23,11 +23,22 @@ import type {
   Vector,
 } from './types';
 import {decode, encode} from './uint82b64';
-import {asyncLetterMap, now, randomWithSeed} from './util';
+import {asyncLetterMap, randomWithSeed} from './util';
 import {impulses2Physics} from './wasm-args';
 
 export const impulseId = (i: Impulse) => `${i.u}${i.s}${i.x + i.y + i.z}`;
-export const splatterId = (s: Splatter) => `${s.u}${s.t}`;
+export const splatterId = (s: Splatter) => `${s.u}${s.s}${s.x + s.y}}`;
+
+const splatterKey = (
+  letter: Letter,
+  step: number,
+  actorId: ActorID,
+  x: number,
+  y: number,
+) =>
+  // This mod is here just to keep us from having massive keys due to large
+  // numbers. Collision is unlikely anyway.
+  `splatter/${letter}/${x + y + (step % 1000)}/${actorId}`;
 
 export type M = typeof mutators;
 
@@ -111,7 +122,6 @@ export const mutators = {
       actorId,
       colorIndex,
       texturePosition,
-      ts,
       sequence,
       step,
       hitPosition,
@@ -120,24 +130,22 @@ export const mutators = {
       actorId: string;
       colorIndex: number;
       texturePosition: Position;
-      ts: number;
       sequence: number;
       step: number;
       hitPosition: Vector;
     },
   ) => {
-    const startMs = now();
-    const key = `splatter/${letter}/${ts}/${actorId}`;
+    const {x, y} = texturePosition;
     const splatter: Splatter = {
-      x: texturePosition.x,
-      y: texturePosition.y,
+      x,
+      y,
       u: actorId,
-      t: ts,
+      s: step,
       c: colorIndex,
-      a: Math.floor(randomWithSeed(ts, Seeds.splatterAnimation, 5)),
-      r: Math.floor(randomWithSeed(ts, Seeds.splatterRotation, 4)),
+      a: Math.floor(randomWithSeed(step, Seeds.splatterAnimation, 5)),
+      r: Math.floor(randomWithSeed(step, Seeds.splatterRotation, 4)),
     };
-    await tx.put(key, splatter);
+    await tx.put(splatterKey(letter, step, actorId, x, y), splatter);
     // Every time we add a splatter, also add an "impulse". This is what we use to
     // compute the physics of the letters.
     const impulse: Impulse = {
@@ -184,8 +192,7 @@ export const mutators = {
         await _initRenderer!();
         // Perform operations
         await flattenPhysics(tx, step);
-        await flattenTexture(tx, letter, ts);
-        console.log('SERVER COMMIT SUCCESS', now() - startMs);
+        await flattenTexture(tx, letter, step);
       } catch (e) {
         console.log(`Flattening failed with error ${(e as Error).message}`);
       }
@@ -196,9 +203,7 @@ export const mutators = {
 };
 
 const flattenPhysics = async (tx: WriteTransaction, step: number) => {
-  const origin = (await tx.get('physics-origin')) as unknown as
-    | Physics
-    | undefined;
+  const origin = (await tx.get('physics')) as unknown as Physics | undefined;
   const renderedSteps = origin ? step - origin.step : step;
   console.log(
     `Server origin step: ${origin?.step}. Rendered: ${renderedSteps}`,
@@ -220,7 +225,7 @@ const flattenPhysics = async (tx: WriteTransaction, step: number) => {
       ...impulses2Physics(impulses),
     );
     console.log(step, 'SNAPSHOTTING AT ', newStep);
-    await tx.put('physics-origin', {
+    await tx.put('physics', {
       state: encode(newState),
       step: newStep,
     });
@@ -238,7 +243,7 @@ const flattenPhysics = async (tx: WriteTransaction, step: number) => {
 const flattenTexture = async (
   tx: WriteTransaction,
   letter: Letter,
-  ts: number,
+  step: number,
 ) => {
   // To prevent infinite growth of the list of splatters, we need to periodically
   // "flatten" our textures to a pixel map. This is a fast operation, but
@@ -272,7 +277,7 @@ const flattenTexture = async (
   ).toArray()) as Splatter[];
   // And find any splatters whose animations are finished
   const oldSplatters: Splatter[] = points.filter(
-    p => ts - p.t >= SPLATTER_ANIM_DURATION,
+    p => step - p.s >= SPLATTER_ANIM_FRAMES,
   );
   // Now if we have enough cacheable splatters, draw them and move our last cached key
   if (oldSplatters.length > SPLATTER_FLATTEN_MIN) {
@@ -285,10 +290,10 @@ const flattenTexture = async (
     const newCache = getCache(letter, oldSplatters, colors);
     // And write it back to the cache
     await tx.put(`cache/${letter}`, {letter, cache: newCache});
-    // Then delete any old points we just drew
+    // Then delete any old splatters we just drew
     await Promise.all(
       oldSplatters.map(
-        async p => await tx.del(`splatter/${letter}/${p.t}/${p.u}`),
+        async s => await tx.del(splatterKey(letter, s.s, s.u, s.x, s.y)),
       ),
     );
   }

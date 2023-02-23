@@ -1,6 +1,6 @@
 import {ColorPalate, Letter, Splatter} from '../shared/types';
 import {draw_buffers} from '../../renderer/pkg/renderer';
-import {letterMap, now} from '../shared/util';
+import {letterMap} from '../shared/util';
 import {splatters2RenderBatch} from '../shared/wasm-args';
 import {LETTERS} from '../shared/letters';
 import {splatterId} from '../shared/mutators';
@@ -8,11 +8,8 @@ import {SPLATTER_ANIM_FRAMES} from '../shared/constants';
 
 let renderedSplatters = new Set<string>();
 
-// Splatters have N frames rendered at 30fps, so this is the length of time we
-// need to re-render splatters every frame before skipping them
-export const SPLATTER_RENDER_DURATION = SPLATTER_ANIM_FRAMES * 32.2;
-
 export const render = async (
+  step: number,
   buffers: Record<Letter, HTMLCanvasElement>,
   canvases: Record<Letter, HTMLCanvasElement>,
   splatters: Record<Letter, Splatter[]>,
@@ -22,7 +19,6 @@ export const render = async (
   const contexts = letterMap(
     letter => buffers[letter].getContext('2d') as CanvasRenderingContext2D,
   );
-  const ts = now();
   let needsRender = new Set<Letter>();
   const renderSplatters = letterMap<Splatter[]>(_ => []);
   LETTERS.forEach(letter => {
@@ -33,7 +29,10 @@ export const render = async (
       }
       renderSplatters[letter].push(splatter);
       needsRender.add(letter);
-      if (splatter.t - now() > SPLATTER_RENDER_DURATION) {
+      // Continue to render these splatters until have rendered their step + the
+      // number of frames. After this point, add them to renderedSplatters so we will
+      // stop re-rendering them.
+      if (step > splatter.s + SPLATTER_ANIM_FRAMES) {
         renderedSplatters.add(id);
       }
     }
@@ -47,7 +46,7 @@ export const render = async (
     contexts[Letter.I],
     contexts[Letter.V],
     contexts[Letter.E],
-    ts,
+    step,
     new Uint8Array(colors[0].flat()),
     new Uint8Array(colors[1].flat()),
     new Uint8Array(colors[2].flat()),

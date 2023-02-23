@@ -24,12 +24,11 @@ const sliceVal = <T extends TypedArray>(val: T, fn: (slice: T) => number) => {
 
 describe('splatters2render', () => {
   it('correctly indexes things', () => {
-    const ts = new Date().getTime();
     const splatters = letterMap<Splatter[]>(_ => {
       return [
         {
           u: 'aNab513kIcd39j4Sc11-y',
-          t: ts,
+          s: 13,
           c: 0,
           x: 0.1,
           y: 0.1,
@@ -38,7 +37,7 @@ describe('splatters2render', () => {
         },
         {
           u: 'mjJzpZ0Gxmdanf7e4iO_N',
-          t: ts,
+          s: 15,
           c: 1,
           x: 0.2,
           y: 0.2,
@@ -53,10 +52,10 @@ describe('splatters2render', () => {
     LETTERS.forEach((letter, idx) => {
       assert.equal(args[0][idx], 2, `correct splatter count for ${letter}`);
     });
-    assert.equal(args[1].length, 10, 'correct ts count');
+    assert.equal(args[1].length, 10, 'correct step count');
     sliceVal(args[1], arr => {
-      assert.equal(arr[0], ts, 'correct ts 1');
-      assert.equal(arr[1], ts, 'correct ts 2');
+      assert.equal(arr[0], 13, 'correct step 1');
+      assert.equal(arr[1], 15, 'correct step 2');
       return 2;
     });
     sliceVal(args[2], arr => {

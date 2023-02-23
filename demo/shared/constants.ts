@@ -6,10 +6,10 @@ export {UVMAP_SIZE, SPLATTER_ANIM_FRAMES} from '../../renderer/src/constants';
 export const DEBUG_PHYSICS = false;
 
 // Splatters
-export const SPLATTER_ANIM_DURATION = 1000;
 export const SPLATTER_FLATTEN_MIN = 10;
-// ms between splatters
-export const SPLATTER_MS = 200;
+// ms between splatters. Apparently machine guns are like 12fps, so about once
+// every 84ms. Seems reasonable to copy to feel intuitive.
+export const SPLATTER_MS = 84;
 
 // Render a window of steps, so changes from the past can be reflected locally
 export const MAX_RENDERED_STEPS = 10;

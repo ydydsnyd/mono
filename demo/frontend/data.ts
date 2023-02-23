@@ -71,11 +71,11 @@ export const initialize = async (roomID: string, userID: string) => {
             localState.actors[actor.id] = actor;
           }
           break;
-        case 'physics-origin':
+        case 'physics':
           if (isChangeDiff(diff) || isAddDiff(diff)) {
-            const origin = getData<Physics>(diff);
-            localState.physics = origin;
-            setPhysics(origin);
+            const physics = getData<Physics>(diff);
+            localState.physics = physics;
+            setPhysics(physics);
           }
           break;
         case 'cursor':
@@ -152,7 +152,7 @@ const stateInitializer =
     const cursorList = (await tx
       .scan({prefix: 'cursor/'})
       .toArray()) as Cursor[];
-    const physics = (await tx.get('physics-origin')) as Physics | undefined;
+    const physics = (await tx.get('physics')) as Physics | undefined;
     const cursors = cursorList.reduce((cursors, cursor) => {
       cursors[cursor.actorId] = cursor;
       return cursors;

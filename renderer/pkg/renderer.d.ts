@@ -10,14 +10,14 @@ export function precompute(): void;
 export function update_cache(letter: number, png_data: Uint8Array): void;
 /**
 * @param {number} letter
-* @param {number} time
+* @param {number} step
 * @param {Uint8Array} a_colors
 * @param {Uint8Array} b_colors
 * @param {Uint8Array} c_colors
 * @param {Uint8Array} d_colors
 * @param {Uint8Array} e_colors
 * @param {number} splatter_count
-* @param {Float64Array} timestamps
+* @param {Uint32Array} steps
 * @param {Uint32Array} splatter_actors
 * @param {Uint8Array} colors
 * @param {Float32Array} x_vals
@@ -26,18 +26,18 @@ export function update_cache(letter: number, png_data: Uint8Array): void;
 * @param {Uint8Array} splatter_rotations
 * @returns {Uint8Array}
 */
-export function draw_buffer_png(letter: number, time: number, a_colors: Uint8Array, b_colors: Uint8Array, c_colors: Uint8Array, d_colors: Uint8Array, e_colors: Uint8Array, splatter_count: number, timestamps: Float64Array, splatter_actors: Uint32Array, colors: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_animations: Uint8Array, splatter_rotations: Uint8Array): Uint8Array;
+export function draw_buffer_png(letter: number, step: number, a_colors: Uint8Array, b_colors: Uint8Array, c_colors: Uint8Array, d_colors: Uint8Array, e_colors: Uint8Array, splatter_count: number, steps: Uint32Array, splatter_actors: Uint32Array, colors: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_animations: Uint8Array, splatter_rotations: Uint8Array): Uint8Array;
 /**
 * @param {number} letter
 * @param {CanvasRenderingContext2D} ctx
-* @param {number} time
+* @param {number} step
 * @param {Uint8Array} a_colors
 * @param {Uint8Array} b_colors
 * @param {Uint8Array} c_colors
 * @param {Uint8Array} d_colors
 * @param {Uint8Array} e_colors
 * @param {number} splatter_count
-* @param {Float64Array} timestamps
+* @param {Uint32Array} steps
 * @param {Uint32Array} splatter_actors
 * @param {Uint8Array} colors
 * @param {Float32Array} x_vals
@@ -45,21 +45,21 @@ export function draw_buffer_png(letter: number, time: number, a_colors: Uint8Arr
 * @param {Uint8Array} splatter_animations
 * @param {Uint8Array} splatter_rotations
 */
-export function add_points_to_cache(letter: number, ctx: CanvasRenderingContext2D, time: number, a_colors: Uint8Array, b_colors: Uint8Array, c_colors: Uint8Array, d_colors: Uint8Array, e_colors: Uint8Array, splatter_count: number, timestamps: Float64Array, splatter_actors: Uint32Array, colors: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_animations: Uint8Array, splatter_rotations: Uint8Array): void;
+export function add_points_to_cache(letter: number, ctx: CanvasRenderingContext2D, step: number, a_colors: Uint8Array, b_colors: Uint8Array, c_colors: Uint8Array, d_colors: Uint8Array, e_colors: Uint8Array, splatter_count: number, steps: Uint32Array, splatter_actors: Uint32Array, colors: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_animations: Uint8Array, splatter_rotations: Uint8Array): void;
 /**
 * @param {CanvasRenderingContext2D} ctx_a
 * @param {CanvasRenderingContext2D} ctx_l
 * @param {CanvasRenderingContext2D} ctx_i
 * @param {CanvasRenderingContext2D} ctx_v
 * @param {CanvasRenderingContext2D} ctx_e
-* @param {number} time
+* @param {number} step
 * @param {Uint8Array} a_colors
 * @param {Uint8Array} b_colors
 * @param {Uint8Array} c_colors
 * @param {Uint8Array} d_colors
 * @param {Uint8Array} e_colors
 * @param {Uint32Array} splatter_counts
-* @param {Float64Array} timestamps
+* @param {Uint32Array} steps
 * @param {Uint32Array} splatter_actors
 * @param {Uint8Array} colors
 * @param {Float32Array} x_vals
@@ -67,7 +67,7 @@ export function add_points_to_cache(letter: number, ctx: CanvasRenderingContext2
 * @param {Uint8Array} splatter_animations
 * @param {Uint8Array} splatter_rotations
 */
-export function draw_buffers(ctx_a: CanvasRenderingContext2D, ctx_l: CanvasRenderingContext2D, ctx_i: CanvasRenderingContext2D, ctx_v: CanvasRenderingContext2D, ctx_e: CanvasRenderingContext2D, time: number, a_colors: Uint8Array, b_colors: Uint8Array, c_colors: Uint8Array, d_colors: Uint8Array, e_colors: Uint8Array, splatter_counts: Uint32Array, timestamps: Float64Array, splatter_actors: Uint32Array, colors: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_animations: Uint8Array, splatter_rotations: Uint8Array): void;
+export function draw_buffers(ctx_a: CanvasRenderingContext2D, ctx_l: CanvasRenderingContext2D, ctx_i: CanvasRenderingContext2D, ctx_v: CanvasRenderingContext2D, ctx_e: CanvasRenderingContext2D, step: number, a_colors: Uint8Array, b_colors: Uint8Array, c_colors: Uint8Array, d_colors: Uint8Array, e_colors: Uint8Array, splatter_counts: Uint32Array, steps: Uint32Array, splatter_actors: Uint32Array, colors: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_animations: Uint8Array, splatter_rotations: Uint8Array): void;
 /**
 * @param {Uint8Array | undefined} serialized_physics
 * @param {number} start_step

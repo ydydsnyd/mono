@@ -46,7 +46,8 @@ impl Splatter {
         }
     }
     pub fn at(&self, x: f32, y: f32) -> (i64, i64) {
-        let half = self.size / 2.0;
+        // NOTE: all splatters are 240 px, if this changes then remove the hardcode.
+        let half = 120.0;
         ((x - half).floor() as i64, (y - half).floor() as i64)
     }
     pub fn frame(&self, frame: usize, rotation: u8) -> &DynamicImage {
