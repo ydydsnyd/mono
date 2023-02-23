@@ -650,9 +650,6 @@ function getImports() {
         const ret = SPLATTER_ANIM_FRAMES;
         return ret;
     };
-    imports.wbg.__wbg_log_94ec9f9334743f04 = function(arg0, arg1) {
-        console.log(getStringFromWasm0(arg0, arg1));
-    };
     imports.wbg.__wbg_newwithu8clampedarrayandsh_f7ef3a8f3fd04c8a = function() { return handleError(function (arg0, arg1, arg2, arg3) {
         const ret = new ImageData(getClampedArrayU8FromWasm0(arg0, arg1), arg2 >>> 0, arg3 >>> 0);
         return addHeapObject(ret);
