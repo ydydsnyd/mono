@@ -132,7 +132,14 @@ pub fn precompute() {
 #[wasm_bindgen]
 pub fn update_cache(letter: Letter, png_data: Vec<u8>) {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
-    let img = image::load_from_memory(&png_data).expect("Invalid image data");
+    let img =
+        image::load_from_memory_with_format(&png_data, ImageFormat::Png).unwrap_or_else(|e| {
+            // console_log!("data: {:?}", png_data);
+            panic!(
+                "Image cache appears to be corrupted. Error: {}",
+                e.to_string()
+            );
+        });
     let pixels = img.as_rgba8().unwrap().to_vec();
     let mut caches = CACHES.write().unwrap();
     caches.set_data(&letter, pixels);
