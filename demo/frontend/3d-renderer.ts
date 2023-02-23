@@ -18,6 +18,7 @@ import '@babylonjs/loaders/glTF';
 import type {Letter, Letter3DPosition, Position, Vector} from '../shared/types';
 import {letterMap} from '../shared/util';
 import {LETTERS} from '../shared/letters';
+import {ENVIRONMENT_CYCLE_STEPS} from '../shared/constants';
 // import type {DebugRenderBuffers} from '@dimforge/rapier3d';
 
 const modelURL = '/alive.glb';
@@ -57,6 +58,7 @@ export const renderer = async (
     set3DPosition,
     updateTexture,
     resizeCanvas,
+    updateCurrentStep,
     // updateDebug,
   } = await createScene(engine, textureCanvases);
   return {
@@ -67,6 +69,7 @@ export const renderer = async (
     getTexturePosition,
     set3DPosition,
     updateTexture,
+    updateCurrentStep,
     // updateDebug,
   };
 };
@@ -82,6 +85,7 @@ export const createScene = async (
   set3DPosition: (letter: Letter, position: Letter3DPosition) => void;
   updateTexture: (letter: Letter) => void;
   resizeCanvas: () => void;
+  updateCurrentStep: (step: number) => void;
   // updateDebug: (debug: DebugRenderBuffers | null) => void;
 }> => {
   const scene = new Scene(engine);
@@ -182,11 +186,12 @@ export const createScene = async (
   );
   environmentTexture.name = 'env';
   environmentTexture.gammaSpace = false;
-  environmentTexture.rotationY = Math.PI / 2.2;
   scene.environmentTexture = environmentTexture;
-  setInterval(() => {
-    environmentTexture.rotationY += 0.01;
-  }, 30);
+  const updateCurrentStep = (step: number) => {
+    // We want to spin the environment relative to the step.
+    let spinAmount = (step % ENVIRONMENT_CYCLE_STEPS) / ENVIRONMENT_CYCLE_STEPS;
+    environmentTexture.rotationY = spinAmount * (Math.PI * 2);
+  };
 
   // Make clear totally transparent - by default it'll be some scene background color.
   scene.clearColor = new Color4(0, 0, 0, 0);
@@ -279,6 +284,7 @@ export const createScene = async (
     set3DPosition,
     updateTexture,
     resizeCanvas,
+    updateCurrentStep,
     // updateDebug,
   };
 };

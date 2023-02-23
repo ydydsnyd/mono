@@ -93,6 +93,7 @@ export const init = async () => {
     resizeCanvas: resize3DCanvas,
     set3DPosition,
     updateTexture,
+    updateCurrentStep,
     // updateDebug,
   } = await renderer3D(canvas, textures);
 
@@ -212,6 +213,7 @@ export const init = async () => {
     } else {
       physicsStep += 1;
     }
+    updateCurrentStep(physicsStep);
     // positions3d
     const positions3d = get3DPositions(
       Math.floor(physicsStep) - originStep,

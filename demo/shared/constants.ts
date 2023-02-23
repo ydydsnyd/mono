@@ -17,6 +17,10 @@ export const MAX_RENDERED_STEPS = 10;
 // "past" without jerkiness.
 export const STEP_RENDER_DELAY = 0;
 
+// 3D
+// How many steps it takes for our environment to spin in a circle
+export const ENVIRONMENT_CYCLE_STEPS = 1000;
+
 // The only data that changes on an actor is the loction, so update them at a
 // lower frequency than cursors.
 export const ACTOR_UPDATE_INTERVAL = 1000;
