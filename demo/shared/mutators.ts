@@ -224,7 +224,6 @@ const flattenPhysics = async (tx: WriteTransaction, step: number) => {
       newStep,
       ...impulses2Physics(impulses),
     );
-    console.log(step, 'SNAPSHOTTING AT ', newStep);
     await tx.put('physics', {
       state: encode(newState),
       step: newStep,
