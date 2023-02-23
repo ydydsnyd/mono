@@ -167,15 +167,6 @@ cachedTextDecoder.decode();
 function getStringFromWasm0(ptr, len) {
     return cachedTextDecoder.decode(getUint8Memory0().subarray(ptr, ptr + len));
 }
-
-function addHeapObject(obj) {
-    if (heap_next === heap.length) heap.push(heap.length + 1);
-    const idx = heap_next;
-    heap_next = heap[idx];
-
-    heap[idx] = obj;
-    return idx;
-}
 /**
 */
 export function precompute() {
@@ -229,6 +220,10 @@ function passArrayF32ToWasm0(arg, malloc) {
     WASM_VECTOR_LEN = arg.length;
     return ptr;
 }
+
+function getArrayU8FromWasm0(ptr, len) {
+    return getUint8Memory0().subarray(ptr / 1, ptr / 1 + len);
+}
 /**
 * @param {number} letter
 * @param {number} step
@@ -248,32 +243,41 @@ function passArrayF32ToWasm0(arg, malloc) {
 * @returns {Uint8Array}
 */
 export function draw_buffer_png(letter, step, a_colors, b_colors, c_colors, d_colors, e_colors, splatter_count, steps, splatter_actors, colors, x_vals, y_vals, splatter_animations, splatter_rotations) {
-    const ptr0 = passArray8ToWasm0(a_colors, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passArray8ToWasm0(b_colors, wasm.__wbindgen_malloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ptr2 = passArray8ToWasm0(c_colors, wasm.__wbindgen_malloc);
-    const len2 = WASM_VECTOR_LEN;
-    const ptr3 = passArray8ToWasm0(d_colors, wasm.__wbindgen_malloc);
-    const len3 = WASM_VECTOR_LEN;
-    const ptr4 = passArray8ToWasm0(e_colors, wasm.__wbindgen_malloc);
-    const len4 = WASM_VECTOR_LEN;
-    const ptr5 = passArray32ToWasm0(steps, wasm.__wbindgen_malloc);
-    const len5 = WASM_VECTOR_LEN;
-    const ptr6 = passArray32ToWasm0(splatter_actors, wasm.__wbindgen_malloc);
-    const len6 = WASM_VECTOR_LEN;
-    const ptr7 = passArray8ToWasm0(colors, wasm.__wbindgen_malloc);
-    const len7 = WASM_VECTOR_LEN;
-    const ptr8 = passArrayF32ToWasm0(x_vals, wasm.__wbindgen_malloc);
-    const len8 = WASM_VECTOR_LEN;
-    const ptr9 = passArrayF32ToWasm0(y_vals, wasm.__wbindgen_malloc);
-    const len9 = WASM_VECTOR_LEN;
-    const ptr10 = passArray8ToWasm0(splatter_animations, wasm.__wbindgen_malloc);
-    const len10 = WASM_VECTOR_LEN;
-    const ptr11 = passArray8ToWasm0(splatter_rotations, wasm.__wbindgen_malloc);
-    const len11 = WASM_VECTOR_LEN;
-    const ret = wasm.draw_buffer_png(letter, step, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, splatter_count, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11);
-    return takeObject(ret);
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passArray8ToWasm0(a_colors, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArray8ToWasm0(b_colors, wasm.__wbindgen_malloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passArray8ToWasm0(c_colors, wasm.__wbindgen_malloc);
+        const len2 = WASM_VECTOR_LEN;
+        const ptr3 = passArray8ToWasm0(d_colors, wasm.__wbindgen_malloc);
+        const len3 = WASM_VECTOR_LEN;
+        const ptr4 = passArray8ToWasm0(e_colors, wasm.__wbindgen_malloc);
+        const len4 = WASM_VECTOR_LEN;
+        const ptr5 = passArray32ToWasm0(steps, wasm.__wbindgen_malloc);
+        const len5 = WASM_VECTOR_LEN;
+        const ptr6 = passArray32ToWasm0(splatter_actors, wasm.__wbindgen_malloc);
+        const len6 = WASM_VECTOR_LEN;
+        const ptr7 = passArray8ToWasm0(colors, wasm.__wbindgen_malloc);
+        const len7 = WASM_VECTOR_LEN;
+        const ptr8 = passArrayF32ToWasm0(x_vals, wasm.__wbindgen_malloc);
+        const len8 = WASM_VECTOR_LEN;
+        const ptr9 = passArrayF32ToWasm0(y_vals, wasm.__wbindgen_malloc);
+        const len9 = WASM_VECTOR_LEN;
+        const ptr10 = passArray8ToWasm0(splatter_animations, wasm.__wbindgen_malloc);
+        const len10 = WASM_VECTOR_LEN;
+        const ptr11 = passArray8ToWasm0(splatter_rotations, wasm.__wbindgen_malloc);
+        const len11 = WASM_VECTOR_LEN;
+        wasm.draw_buffer_png(retptr, letter, step, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, splatter_count, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11);
+        var r0 = getInt32Memory0()[retptr / 4 + 0];
+        var r1 = getInt32Memory0()[retptr / 4 + 1];
+        var v12 = getArrayU8FromWasm0(r0, r1).slice();
+        wasm.__wbindgen_free(r0, r1 * 1);
+        return v12;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
 }
 
 let stack_pointer = 32;
@@ -301,7 +305,7 @@ function addBorrowedObject(obj) {
 * @param {Uint8Array} splatter_animations
 * @param {Uint8Array} splatter_rotations
 */
-export function add_points_to_cache(letter, ctx, step, a_colors, b_colors, c_colors, d_colors, e_colors, splatter_count, steps, splatter_actors, colors, x_vals, y_vals, splatter_animations, splatter_rotations) {
+export function add_splatters_to_cache(letter, ctx, step, a_colors, b_colors, c_colors, d_colors, e_colors, splatter_count, steps, splatter_actors, colors, x_vals, y_vals, splatter_animations, splatter_rotations) {
     try {
         const ptr0 = passArray8ToWasm0(a_colors, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
@@ -327,7 +331,7 @@ export function add_points_to_cache(letter, ctx, step, a_colors, b_colors, c_col
         const len10 = WASM_VECTOR_LEN;
         const ptr11 = passArray8ToWasm0(splatter_rotations, wasm.__wbindgen_malloc);
         const len11 = WASM_VECTOR_LEN;
-        wasm.add_points_to_cache(letter, addBorrowedObject(ctx), step, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, splatter_count, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11);
+        wasm.add_splatters_to_cache(letter, addBorrowedObject(ctx), step, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, splatter_count, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11);
     } finally {
         heap[stack_pointer++] = undefined;
     }
@@ -394,10 +398,6 @@ export function draw_buffers(ctx_a, ctx_l, ctx_i, ctx_v, ctx_e, step, a_colors, 
 
 function isLikeNone(x) {
     return x === undefined || x === null;
-}
-
-function getArrayU8FromWasm0(ptr, len) {
-    return getUint8Memory0().subarray(ptr / 1, ptr / 1 + len);
 }
 /**
 * @param {Uint8Array | undefined} serialized_physics
@@ -585,6 +585,15 @@ function getClampedArrayU8FromWasm0(ptr, len) {
     return getUint8ClampedMemory0().subarray(ptr / 1, ptr / 1 + len);
 }
 
+function addHeapObject(obj) {
+    if (heap_next === heap.length) heap.push(heap.length + 1);
+    const idx = heap_next;
+    heap_next = heap[idx];
+
+    heap[idx] = obj;
+    return idx;
+}
+
 function handleError(f, args) {
     try {
         return f.apply(this, args);
@@ -641,6 +650,9 @@ function getImports() {
         const ret = SPLATTER_ANIM_FRAMES;
         return ret;
     };
+    imports.wbg.__wbg_log_94ec9f9334743f04 = function(arg0, arg1) {
+        console.log(getStringFromWasm0(arg0, arg1));
+    };
     imports.wbg.__wbg_newwithu8clampedarrayandsh_f7ef3a8f3fd04c8a = function() { return handleError(function (arg0, arg1, arg2, arg3) {
         const ret = new ImageData(getClampedArrayU8FromWasm0(arg0, arg1), arg2 >>> 0, arg3 >>> 0);
         return addHeapObject(ret);
@@ -648,14 +660,6 @@ function getImports() {
     imports.wbg.__wbg_putImageData_23e0cc41d4fabcde = function() { return handleError(function (arg0, arg1, arg2, arg3) {
         getObject(arg0).putImageData(getObject(arg1), arg2, arg3);
     }, arguments) };
-    imports.wbg.__wbg_buffer_3f3d764d4747d564 = function(arg0) {
-        const ret = getObject(arg0).buffer;
-        return addHeapObject(ret);
-    };
-    imports.wbg.__wbg_newwithbyteoffsetandlength_d9aa266703cb98be = function(arg0, arg1, arg2) {
-        const ret = new Uint8Array(getObject(arg0), arg1 >>> 0, arg2 >>> 0);
-        return addHeapObject(ret);
-    };
     imports.wbg.__wbg_new_abda76e883ba8a5f = function() {
         const ret = new Error();
         return addHeapObject(ret);
@@ -683,10 +687,6 @@ function getImports() {
     };
     imports.wbg.__wbindgen_throw = function(arg0, arg1) {
         throw new Error(getStringFromWasm0(arg0, arg1));
-    };
-    imports.wbg.__wbindgen_memory = function() {
-        const ret = wasm.memory;
-        return addHeapObject(ret);
     };
 
     return imports;

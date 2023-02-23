@@ -13,7 +13,7 @@ use nalgebra::point;
 use physics::{get_position, Impulse, PhysicsState};
 use std::{
     collections::HashMap,
-    io::{Read, Write},
+    io::{Cursor, Read, Write},
     panic,
 };
 use wasm_bindgen::{prelude::*, Clamped};
@@ -166,7 +166,7 @@ pub fn draw_buffer_png(
     y_vals: Vec<f32>,
     splatter_animations: Vec<u8>,
     splatter_rotations: Vec<u8>,
-) -> Uint8Array {
+) -> Vec<u8> {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     let caches = CACHES.read().unwrap();
     let cache = caches.get_data(&letter);
@@ -195,15 +195,14 @@ pub fn draw_buffer_png(
         &splatter_animations,
         &splatter_rotations,
     );
-    let img = RgbaImage::from_vec(width, height, img.into_vec()).expect("Bad image generated");
-    let mut png_data = std::io::Cursor::new(vec![]);
-    img.write_to(&mut png_data, ImageFormat::Png)
+    let mut png_data = Vec::new();
+    img.write_to(&mut Cursor::new(&mut png_data), ImageFormat::Png)
         .expect("Failed writing png data");
-    unsafe { Uint8Array::view(&png_data.get_ref()) }
+    png_data
 }
 
 #[wasm_bindgen]
-pub fn add_points_to_cache(
+pub fn add_splatters_to_cache(
     letter: Letter,
     ctx: &CanvasRenderingContext2d,
     step: usize,

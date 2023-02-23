@@ -1,5 +1,5 @@
 import {
-  add_points_to_cache,
+  add_splatters_to_cache,
   draw_buffer_png,
   set_physics_state,
   Letter as RendererLetter,
@@ -40,7 +40,7 @@ export const addSplattersToCache = (
   points: Splatter[],
   colors: ColorPalate,
 ) => {
-  add_points_to_cache(
+  add_splatters_to_cache(
     getRendererLetter(letter),
     context,
     now(),

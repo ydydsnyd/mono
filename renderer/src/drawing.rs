@@ -57,7 +57,7 @@ pub fn draw(
         let anim_frame = (step - splatter_step) / 2;
         let (splatter_image, (sx, sy)) =
             splatters::for_index(anim_index, anim_frame, splatter_rotations[idx], x, y);
-        let mut img = splatter_image.to_rgba8();
+        let mut splatter_colored = splatter_image.to_rgba8();
         let (end_color, start_color) = colors_at_idx(
             colors[idx],
             &a_colors,
@@ -70,7 +70,7 @@ pub fn draw(
         end_color_alpha[3] = ((anim_frame as f32 / total_frames as f32) * 255.0).floor() as u8;
         let mut color = start_color.to_rgba();
         color.blend(&end_color_alpha);
-        for pixel in img.pixels_mut() {
+        for pixel in splatter_colored.pixels_mut() {
             let alpha = pixel[3];
             if alpha > 0 {
                 pixel[0] = color[0];
@@ -78,7 +78,7 @@ pub fn draw(
                 pixel[2] = color[2];
             }
         }
-        imageops::overlay(image, &img, sx, sy);
+        imageops::overlay(image, &splatter_colored, sx, sy);
     }
 }
 
