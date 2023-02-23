@@ -1,7 +1,8 @@
 import Head from 'next/head';
 import styles from '@/styles/Home.module.css';
-import Nav from '../components/Nav/Nav';
+import Nav from '@/components/Nav/Nav';
 import Benefits from '@/components/Benefits/Benefits';
+import GetStarted from '@/components/GetStarted/GetStarted';
 import Pricing from '@/components/Pricing/Pricing';
 import Demo from '@/components/Demo/Demo';
 
@@ -34,6 +35,11 @@ export default function Home() {
         <section id="benefits" className={styles.section}>
           <h2 className={styles.subheader}>Benefits</h2>
           <Benefits />
+        </section>
+
+        <section id="get-started" className={styles.section}>
+          <h2 className={styles.subheader}>Join the Waitlist</h2>
+          <GetStarted />
         </section>
 
         <section id="pricing" className={styles.section}>
