@@ -19,7 +19,6 @@ pub struct Splatter {
     pub frames_90: [DynamicImage; 4],
     pub frames_180: [DynamicImage; 4],
     pub frames_270: [DynamicImage; 4],
-    pub size: f32,
 }
 
 fn get_frames(strings: [&'static str; 4], rotation: u8) -> [DynamicImage; 4] {
@@ -44,7 +43,6 @@ impl Splatter {
             frames_90: get_frames(strings, 1),
             frames_180: get_frames(strings, 2),
             frames_270: get_frames(strings, 3),
-            size: 240.0,
         }
     }
     pub fn at(&self, x: f32, y: f32) -> (i64, i64) {
@@ -79,33 +77,13 @@ pub fn for_index(
     rotation: u8,
     x: f32,
     y: f32,
-) -> (&'static DynamicImage, (i64, i64), i64) {
+) -> (&'static DynamicImage, (i64, i64)) {
     match index {
-        1 => (
-            SPLATTER_1.frame(frame, rotation),
-            SPLATTER_1.at(x, y),
-            SPLATTER_1.size as i64,
-        ),
-        2 => (
-            SPLATTER_2.frame(frame, rotation),
-            SPLATTER_2.at(x, y),
-            SPLATTER_2.size as i64,
-        ),
-        3 => (
-            SPLATTER_3.frame(frame, rotation),
-            SPLATTER_3.at(x, y),
-            SPLATTER_3.size as i64,
-        ),
-        4 => (
-            SPLATTER_4.frame(frame, rotation),
-            SPLATTER_4.at(x, y),
-            SPLATTER_4.size as i64,
-        ),
-        _ => (
-            SPLATTER_0.frame(frame, rotation),
-            SPLATTER_0.at(x, y),
-            SPLATTER_0.size as i64,
-        ),
+        1 => (SPLATTER_1.frame(frame, rotation), SPLATTER_1.at(x, y)),
+        2 => (SPLATTER_2.frame(frame, rotation), SPLATTER_2.at(x, y)),
+        3 => (SPLATTER_3.frame(frame, rotation), SPLATTER_3.at(x, y)),
+        4 => (SPLATTER_4.frame(frame, rotation), SPLATTER_4.at(x, y)),
+        _ => (SPLATTER_0.frame(frame, rotation), SPLATTER_0.at(x, y)),
     }
 }
 

@@ -1,4 +1,4 @@
-use image::{imageops, GenericImageView, Pixel, Rgb, RgbaImage};
+use image::{imageops, Pixel, Rgb, RgbaImage};
 
 mod data;
 mod splatters;
@@ -48,40 +48,15 @@ pub fn draw(
         let x = x_vals[idx] * width;
         let y = y_vals[idx] * height;
 
-        // draw_filled_circle_mut(image, (x as i32, y as i32), 40, pixel);
-
         let anim_index = splatter_animations[idx] as usize;
         // Frames animate at ~30fps
         let anim_frame = ((time - timestamp) / 33.32).floor() as usize;
         if anim_frame > total_frames as usize {
             continue;
         }
-        let (splatter_image, (sx, sy), size) =
+        let (splatter_image, (sx, sy)) =
             splatters::for_index(anim_index, anim_frame, splatter_rotations[idx], x, y);
-        let crop_x = if sx < 0 { sx.abs() } else { 0 } as u32;
-        let crop_y = if sy < 0 { sy.abs() } else { 0 } as u32;
-        let crop_w = if sx < 0 {
-            size + sx
-        } else if size + sx > width as i64 {
-            let extra = size + sx - (width as i64);
-            (size - extra).max(0)
-        } else {
-            size
-        } as u32;
-        let crop_h = if sy < 0 {
-            size + sy
-        } else if size + sy > height as i64 {
-            let extra = size + sy - (height as i64);
-            (size - extra).max(0)
-        } else {
-            size
-        } as u32;
-        if crop_w == 0 && crop_h == 0 {
-            continue;
-        }
-        let mut cropped_image = splatter_image
-            .view(crop_x, crop_y, crop_w, crop_h)
-            .to_image();
+        let mut img = splatter_image.to_rgba8();
         let (end_color, start_color) = colors_at_idx(
             colors[idx],
             &a_colors,
@@ -94,7 +69,7 @@ pub fn draw(
         end_color_alpha[3] = ((anim_frame as f32 / total_frames as f32) * 255.0).floor() as u8;
         let mut color = start_color.to_rgba();
         color.blend(&end_color_alpha);
-        for pixel in cropped_image.pixels_mut() {
+        for pixel in img.pixels_mut() {
             let alpha = pixel[3];
             if alpha > 0 {
                 pixel[0] = color[0];
@@ -102,7 +77,7 @@ pub fn draw(
                 pixel[2] = color[2];
             }
         }
-        imageops::overlay(image, &cropped_image, sx, sy);
+        imageops::overlay(image, &img, sx, sy);
     }
 }
 
