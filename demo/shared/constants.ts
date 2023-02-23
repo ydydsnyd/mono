@@ -2,6 +2,9 @@ import type {Color} from './types';
 import {COLOR_PALATE_RS} from '../../renderer/src/constants';
 export {UVMAP_SIZE, SPLATTER_ANIM_FRAMES} from '../../renderer/src/constants';
 
+// Demo position
+export const DEMO_OFFSET_BOTTOM = 500;
+
 // Debug
 export const DEBUG_PHYSICS = false;
 

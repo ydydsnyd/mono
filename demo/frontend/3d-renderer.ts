@@ -18,7 +18,7 @@ import '@babylonjs/loaders/glTF';
 import type {Letter, Letter3DPosition, Position, Vector} from '../shared/types';
 import {letterMap} from '../shared/util';
 import {LETTERS} from '../shared/letters';
-import {ENVIRONMENT_CYCLE_STEPS} from '../shared/constants';
+import {DEMO_OFFSET_BOTTOM, ENVIRONMENT_CYCLE_STEPS} from '../shared/constants';
 // import type {DebugRenderBuffers} from '@dimforge/rapier3d';
 
 const modelURL = '/alive.glb';
@@ -30,7 +30,6 @@ export type LetterInfo = {
 };
 
 const ORTHO_SIZE_FACTOR = 0.03;
-const ORTHO_VERTICAL_POS = 0.128;
 
 export const renderer = async (
   canvas: HTMLCanvasElement,
@@ -102,10 +101,11 @@ export const createScene = async (
 
   const resizeCanvas = () => {
     const {width, height} = sceneScaleFactor();
+    const demoBottom = DEMO_OFFSET_BOTTOM * ORTHO_SIZE_FACTOR;
     camera.orthoLeft = -(width / 2);
     camera.orthoRight = width / 2;
-    camera.orthoTop = height * ORTHO_VERTICAL_POS;
-    camera.orthoBottom = -height * (1 - ORTHO_VERTICAL_POS);
+    camera.orthoTop = demoBottom;
+    camera.orthoBottom = -height + camera.orthoTop;
     engine.resize();
   };
 

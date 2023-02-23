@@ -32,7 +32,7 @@ export const render = async (
       // Continue to render these splatters until have rendered their step + the
       // number of frames. After this point, add them to renderedSplatters so we will
       // stop re-rendering them.
-      if (step > splatter.s + SPLATTER_ANIM_FRAMES) {
+      if (step >= splatter.s + SPLATTER_ANIM_FRAMES) {
         renderedSplatters.add(id);
       }
     }

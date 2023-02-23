@@ -19,7 +19,9 @@ const handler = async (req: VercelRequest, res: VercelResponse) => {
 
   const headers = {'x-reflect-auth-api-key': reflectApiKey};
 
-  console.log('Creating room...');
+  console.log(
+    `Creating room via ${`${getServiceHost(process.env)}/createRoom`}...`,
+  );
 
   try {
     const body = await post<string>(
