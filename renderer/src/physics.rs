@@ -295,7 +295,7 @@ pub fn advance_physics(
                     .bodies
                     .get_mut(handle)
                     .expect("Missing body for physics");
-                body.apply_impulse_at_point(vector![0.0, 0.0, 20.0], impulse.point, true);
+                body.apply_impulse_at_point(vector![0.0, 0.0, 10.0], impulse.point, true);
             }
         }
 
