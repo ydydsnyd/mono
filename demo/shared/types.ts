@@ -1,6 +1,7 @@
 // Per-frame application state. We query reflect directly for this data every
 // time we draw.
 export type State = {
+  step: number;
   actorId: ActorID;
   actors: Record<ActorID, Actor>;
   cursors: Record<ActorID, Cursor>;

@@ -62,6 +62,9 @@ export const initialize = async (roomID: string, userID: string) => {
           const seq = getData<number>(diff);
           localState.sequences[letter] = seq;
           break;
+        case 'step':
+          localState.step = getData<number>(diff);
+          break;
         case 'actor':
           const actor = getData<Actor>(diff);
           if (isDeleteDiff(diff)) {
@@ -152,6 +155,7 @@ const stateInitializer =
       .scan({prefix: 'cursor/'})
       .toArray()) as Cursor[];
     const physics = (await tx.get('physics')) as Physics | undefined;
+    const step = ((await tx.get('step')) as number) || -1;
     const cursors = cursorList.reduce((cursors, cursor) => {
       cursors[cursor.actorId] = cursor;
       return cursors;
@@ -191,6 +195,7 @@ const stateInitializer =
       }),
     ]);
     return {
+      step,
       actorId: userID,
       actors,
       cursors,

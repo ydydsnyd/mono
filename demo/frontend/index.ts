@@ -14,6 +14,7 @@ import {
   DEBUG_PHYSICS,
   SPLATTER_MS,
   DEMO_OFFSET_BOTTOM,
+  STEP_UPDATE_INTERVAL,
 } from '../shared/constants';
 import type {Actor, ColorPalate, Letter, Position, Size} from '../shared/types';
 import {LETTERS} from '../shared/letters';
@@ -71,6 +72,7 @@ export const init = async () => {
 
   const {
     getState,
+    sendStep,
     updateCursor,
     addSplatter,
     addListener,
@@ -83,9 +85,17 @@ export const init = async () => {
   });
 
   // Initialize state
-  let {actors, cursors, rawCaches, splatters, sequences, physics, impulses} =
-    await getState();
-  let physicsStep = physics?.step || -1;
+  let {
+    step,
+    actors,
+    physics,
+    cursors,
+    rawCaches,
+    splatters,
+    sequences,
+    impulses,
+  } = await getState();
+  let localStep = step;
 
   // Set up 3D renderer
   const {
@@ -149,6 +159,7 @@ export const init = async () => {
         0,
       );
       if (debugEl) {
+        const drift = localStep - STEP_RENDER_DELAY - step;
         let debugOutput = `${
           Object.keys(actors).length
         } actors\n${splatterCount} splatters\n${impulseCount} impulses\n${debug.fps.toFixed(
@@ -161,15 +172,9 @@ export const init = async () => {
           }\n  cache size:\n    ${
             new Blob([rawCaches[letter] || '']).size / 1024
           }k\n`;
-        }).join('\n')}`;
-        if (physics) {
-          const drift = physicsStep - STEP_RENDER_DELAY - physics.step;
-          debugOutput += `physics origin diff: ${
-            drift > 0 ? '+' : '-'
-          }${drift.toFixed(1)}`;
-        } else {
-          debugOutput += 'No server physics';
-        }
+        }).join('\n')}\nstep drift: ${drift > 0 ? '+' : '-'}${drift.toFixed(
+          1,
+        )}`;
         debugEl.innerHTML = debugOutput;
       }
     }, 200);
@@ -201,28 +206,31 @@ export const init = async () => {
   window.addEventListener('resize', resizeViewport);
   resizeViewport();
 
-  // Set up physics rendering
-  const renderPhysics = () => {
-    const originStep = physics?.step || 0;
-    const targetStep = Math.max(originStep - STEP_RENDER_DELAY, 0);
+  // Step management
+  const updateStep = () => {
+    const targetStep = Math.max(step - STEP_RENDER_DELAY, 0);
     // Ideally, we should always be rendering STEP_RENDER_DELAY steps behind the
     // origin. This is so that if we add impulses in our "past", we won't see them
     // jerkily reconcile.
     // If we render too quickly or too slowly, adjust our steps so that it will
     // converge on the target step.
-    if (physicsStep < targetStep) {
+    if (localStep < targetStep) {
       // If we're behind, catch up half the distance
-      physicsStep += targetStep - physicsStep;
-    } else if (physicsStep > originStep) {
-      // If we're ahead, render at .5 speed
-      physicsStep += 0.5;
+      localStep += targetStep - localStep;
+    } else if (localStep > step) {
+      // If we're ahead of the server, render at .5 speed
+      localStep += 0.5;
     } else {
-      physicsStep += 1;
+      localStep += 1;
     }
-    updateCurrentStep(physicsStep);
+  };
+
+  // Set up physics rendering
+  const renderPhysics = () => {
+    updateCurrentStep(localStep);
     // positions3d
     const positions3d = get3DPositions(
-      Math.floor(physicsStep) - originStep,
+      localStep - (physics?.step || 0),
       impulses,
     );
     LETTERS.forEach(letter => {
@@ -248,20 +256,31 @@ export const init = async () => {
         texturePosition,
         hitPosition,
         sequence: sequences[letter],
-        step: Math.round(physicsStep),
+        step: Math.round(localStep),
       });
     }
   };
 
   // Render our cursors and canvases at "animation speed", usually 60fps
   let lastSplatter = 0;
+  let sentStepLast = now();
   startRenderLoop(async () => {
-    ({actors, cursors, rawCaches, splatters, sequences, physics, impulses} =
-      await getState());
+    ({
+      actors,
+      step,
+      physics,
+      cursors,
+      rawCaches,
+      splatters,
+      sequences,
+      impulses,
+    } = await getState());
+    // Increment our step
+    updateStep();
     // Update cursors
     await renderCursors();
     // Render our textures
-    render(physicsStep, buffers, textures, splatters, colors);
+    render(localStep, buffers, textures, splatters, colors);
     // Update textures and render the 3D scene
     LETTERS.forEach(letter => updateTexture(letter));
     renderPhysics();
@@ -273,6 +292,10 @@ export const init = async () => {
       addPaint(position);
     } else if (!isDown) {
       lastSplatter = 0;
+    }
+    if (now() > sentStepLast + STEP_UPDATE_INTERVAL) {
+      sentStepLast = now();
+      sendStep(localStep);
     }
   }, debug);
 

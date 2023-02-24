@@ -75,6 +75,12 @@ export const mutators = {
       await tx.put(`colors/${color}/end`, colors[color][1].join('/'));
     }
   },
+  sendStep: async (tx: WriteTransaction, step: number) => {
+    const serverStep = (await tx.get('step')) as number | undefined;
+    if (!serverStep || step > serverStep) {
+      await tx.put('step', step);
+    }
+  },
   guaranteeActor: async (
     tx: WriteTransaction,
     {actorId, isBot}: {actorId: string; isBot?: boolean | undefined},
@@ -89,8 +95,8 @@ export const mutators = {
     // Keep a counter of how many actors we've created rather than counting current ones.
     // If we count current ones, we can get duplicate colors if people join and leave around
     // same time.
-    const actorNum = ((await tx.get('actorCount')) as number) ?? 0;
-    await tx.put('actorCount', actorNum + 1);
+    const actorNum = ((await tx.get('actor-count')) as number) ?? 0;
+    await tx.put('actor-count', actorNum + 1);
 
     // NOTE: we just cycle through colors, so if we don't cap the room size we'll get duplicates.
     const colorIndex = actorNum % COLOR_PALATE.length;

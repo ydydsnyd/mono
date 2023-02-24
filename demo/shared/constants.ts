@@ -19,6 +19,9 @@ export const MAX_RENDERED_STEPS = 10;
 // Render a step older than our global step so that things can change in our
 // "past" without jerkiness.
 export const STEP_RENDER_DELAY = 0;
+// Once every 100 steps, tell the server what step we have. This will make sure
+// clients don't desync more than about this many steps.
+export const STEP_UPDATE_INTERVAL = 100;
 
 // 3D
 // How many steps it takes for our environment to spin in a circle
