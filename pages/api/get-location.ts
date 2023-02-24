@@ -8,7 +8,7 @@ const handler = (req: VercelRequest, res: VercelResponse) => {
   let location = req.headers['x-nf-client-connection-ip'] as string | undefined;
   if (isInvalidLocation(location)) {
     res.json({
-      city: 'Your Computer',
+      city: 'You',
       country_code: '👋',
     });
     return;
