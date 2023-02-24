@@ -15,10 +15,11 @@ export const SPLATTER_FLATTEN_MIN = 10;
 export const SPLATTER_MS = 42;
 
 // Render a window of steps, so changes from the past can be reflected locally
-export const MAX_RENDERED_STEPS = 10;
+export const MAX_RENDERED_STEPS = 60;
 // Render a step older than our global step so that things can change in our
-// "past" without jerkiness.
-export const STEP_RENDER_DELAY = 0;
+// "past" without jerkiness or without us seeing jitter due to missing spring
+// apexes.
+export const STEP_RENDER_DELAY = 10;
 // Once every 100 steps, tell the server what step we have. This will make sure
 // clients don't desync more than about this many steps.
 export const STEP_UPDATE_INTERVAL = 100;

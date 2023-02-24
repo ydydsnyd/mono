@@ -159,7 +159,7 @@ export const init = async () => {
         0,
       );
       if (debugEl) {
-        const drift = localStep - STEP_RENDER_DELAY - step;
+        const drift = localStep - step;
         let debugOutput = `${
           Object.keys(actors).length
         } actors\n${splatterCount} splatters\n${impulseCount} impulses\n${debug.fps.toFixed(
@@ -208,15 +208,11 @@ export const init = async () => {
 
   // Step management
   const updateStep = () => {
-    const targetStep = Math.max(step - STEP_RENDER_DELAY, 0);
-    // Ideally, we should always be rendering STEP_RENDER_DELAY steps behind the
-    // origin. This is so that if we add impulses in our "past", we won't see them
-    // jerkily reconcile.
     // If we render too quickly or too slowly, adjust our steps so that it will
     // converge on the target step.
-    if (localStep < targetStep) {
+    if (localStep < step) {
       // If we're behind, catch up half the distance
-      localStep += targetStep - localStep;
+      localStep += step - localStep;
     } else if (localStep > step) {
       // If we're ahead of the server, render at .5 speed
       localStep += 0.5;
@@ -230,7 +226,7 @@ export const init = async () => {
     updateCurrentStep(localStep);
     // positions3d
     const positions3d = get3DPositions(
-      localStep - (physics?.step || 0),
+      Math.max(localStep - (physics?.step || 0) - STEP_RENDER_DELAY, 0),
       impulses,
     );
     LETTERS.forEach(letter => {
