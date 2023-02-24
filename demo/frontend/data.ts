@@ -14,15 +14,14 @@ import {mutators, M} from '../shared/mutators';
 import {LETTERS} from '../shared/letters';
 import {getData, isAddDiff, isChangeDiff, isDeleteDiff} from './data-util';
 import {setPhysics, updateCache} from '../shared/renderer';
-import {getWorkerHost} from '../shared/urls';
+import {WORKER_HOST} from '../shared/urls';
 
 export const initialize = async (roomID: string, userID: string) => {
   // Set up our connection to reflect
-  const workerHost = getWorkerHost(process.env as Record<string, string>);
-  console.log(`Connecting to worker at ${workerHost}`);
+  console.log(`Connecting to worker at ${WORKER_HOST}`);
   // Create a reflect client
   const reflectClient = new Reflect<M>({
-    socketOrigin: workerHost,
+    socketOrigin: WORKER_HOST,
     onOnlineChange: online => {
       console.log(`online: ${online}`);
     },

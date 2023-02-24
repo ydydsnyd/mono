@@ -1,6 +1,6 @@
 import type {VercelRequest, VercelResponse} from '@vercel/node';
 import {post} from './lib/request';
-import {getServiceHost} from '@/demo/shared/urls';
+import {SERVICE_HOST} from '@/demo/shared/urls';
 
 const reflectApiKey = process.env.REFLECT_AUTH_API_KEY || '';
 
@@ -19,13 +19,11 @@ const handler = async (req: VercelRequest, res: VercelResponse) => {
 
   const headers = {'x-reflect-auth-api-key': reflectApiKey};
 
-  console.log(
-    `Creating room via ${`${getServiceHost(process.env)}/createRoom`}...`,
-  );
+  console.log(`Creating room via ${`${SERVICE_HOST}/createRoom`}...`);
 
   try {
     const body = await post<string>(
-      `${getServiceHost(process.env)}/createRoom`,
+      `${SERVICE_HOST}/createRoom`,
       JSON.stringify({roomID}),
       headers,
       true,
