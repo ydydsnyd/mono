@@ -13,6 +13,7 @@ import {
   STEP_RENDER_DELAY,
   DEBUG_PHYSICS,
   SPLATTER_MS,
+  DEMO_OFFSET_BOTTOM,
 } from '../shared/constants';
 import type {Actor, ColorPalate, Letter, Position, Size} from '../shared/types';
 import {LETTERS} from '../shared/letters';
@@ -178,7 +179,12 @@ export const init = async () => {
   const [localCursor, renderCursors] = cursorRenderer(
     actorId,
     () => ({actors, cursors}),
-    getScaleFactor,
+    () => ({
+      x: window.innerWidth / 2 - 300,
+      y: DEMO_OFFSET_BOTTOM - 200,
+      width: 600,
+      height: 200,
+    }),
     updateCursor,
   );
 
