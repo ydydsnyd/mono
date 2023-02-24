@@ -15,7 +15,7 @@ export const SPLATTER_FLATTEN_MIN = 10;
 export const SPLATTER_MS = 42;
 
 // Render a window of steps, so changes from the past can be reflected locally
-export const MAX_RENDERED_STEPS = 60;
+export const MAX_RENDERED_STEPS = 30;
 // Render a step older than our global step so that things can change in our
 // "past" without jerkiness or without us seeing jitter due to missing spring
 // apexes.
