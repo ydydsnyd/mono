@@ -12,7 +12,7 @@ See also https://github.com/rocicorp/replidraw-do, a fancier drawing demo.
 
 # Demo
 
-Running live at https://reflect-todo.vercel.app/.
+Running live at https://reflect-template-example.vercel.app/.
 
 ## Hacking Locally
 

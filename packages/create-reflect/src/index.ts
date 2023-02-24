@@ -12,11 +12,11 @@ const templateDir = path.resolve(
 
 async function main() {
   console.clear();
-  intro(`${color.bgCyan(color.black('Reflect: create-reflect-app'))}`);
+  intro(`${color.bgCyan(color.black('Reflect: create-reflect'))}`);
 
   const targetDir = await text({
-    message: 'Where should we create your project?',
-    placeholder: './my-reflect-app',
+    message: 'What should we name your app?',
+    placeholder: 'my-reflect-app',
     validate: isValidPackageName,
   });
 

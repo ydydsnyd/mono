@@ -1,5 +1,5 @@
 import { createReflectServer } from "@rocicorp/reflect-server";
-import { mutators } from "../src/mutators";
+import { mutators } from "../shared/mutators";
 
 const authHandler = async (auth: string) => {
   return {

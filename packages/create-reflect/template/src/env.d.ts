@@ -1,7 +1,8 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_REPLICACHE_LICENSE_KEY: string;
+  readonly VITE_WORKER_URL: string;
+  readonly VITE_ROOM_ID: string;
   // more env variables...
 }
 

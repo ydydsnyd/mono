@@ -1,5 +1,5 @@
-name = "reflect-todo"
-main = "worker/index.ts"
+name = "reflect-template-example"
+main = "src/worker/index.ts"
 compatibility_date = "2022-06-03"
 
 
