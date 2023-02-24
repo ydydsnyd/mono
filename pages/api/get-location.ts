@@ -1,34 +1,33 @@
 import type {VercelRequest, VercelResponse} from '@vercel/node';
-import https from 'https';
 
-const isInvalidLocation = (location: string | undefined) =>
-  !location || location?.length < 6;
+const getFlagEmoji = (country: string) => {
+  const codePoints = country
+    .toUpperCase()
+    .split('')
+    .map(char => 127397 + char.charCodeAt(0));
+  return String.fromCodePoint(...codePoints);
+};
 
 const handler = (req: VercelRequest, res: VercelResponse) => {
-  let location = req.headers['x-nf-client-connection-ip'] as string | undefined;
-  if (isInvalidLocation(location)) {
+  const country = req.headers['x-vercel-ip-country'];
+  const city = req.headers['x-vercel-ip-city'];
+  const region = req.headers['x-vercel-ip-country-region'];
+
+  if (!country) {
     res.json({
       city: 'You',
-      country_code: '👋',
+      country: '??',
+      flag: '👋',
+      region: -1,
     });
     return;
   }
-
-  https
-    .request(
-      `https://ipgeolocation.abstractapi.com/v1/?api_key=${process.env.ABSTRACT_API_KEY}&ip_address=${location}`,
-      childRes => {
-        childRes.setEncoding('utf8');
-        let responseStr = '';
-        childRes.on('data', (chunk: Buffer) => {
-          responseStr += chunk.toString();
-        });
-        childRes.on('end', () => {
-          res.status(res.statusCode || 500).send(responseStr);
-        });
-      },
-    )
-    .end();
+  return res.json({
+    city,
+    country,
+    region,
+    flag: getFlagEmoji(country),
+  });
 };
 
 export default handler;
