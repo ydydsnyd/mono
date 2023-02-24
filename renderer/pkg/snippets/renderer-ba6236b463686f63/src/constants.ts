@@ -1,15 +1,7 @@
-// Paint variables
-// Paint size, relative to canvas size
-export const PAINT_POINT_SIZE = 0.05;
-// How long it takes for paint to "dry", as in it will no longer fade.
-export const PAINT_DECAY_AGE = 5000;
-// Lower is slower - this defines the curve at which drips slow down
-export const SPLATTER_DRIP_DECAY = 0.2;
-// Bigger splatters drip more, but this sets a baseline "weight"
-export const SPLATTER_DRIP_WEIGHT = 5;
-
 // This is the base UV map size, which is useful for scaling pixel counts.
-export const UVMAP_SIZE = 800;
+export const UVMAP_SIZE = 600;
+
+export const SPLATTER_ANIM_FRAMES = 8;
 
 // This is stored as a flat array so that it can be imported into rust without
 // messing with types or implementing serialization.

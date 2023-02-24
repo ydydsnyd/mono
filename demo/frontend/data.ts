@@ -1,22 +1,19 @@
 import {Reflect, ReadTransaction} from '@rocicorp/reflect';
 import {letterMap} from '../shared/util';
-import {
+import type {
   Actor,
   Cursor,
+  Impulse,
   Letter,
   LetterCache,
-  LetterOwner,
-  LetterPosition,
-  LetterRotation,
-  LetterScale,
-  Point,
+  Physics,
+  Splatter,
   State,
-  Tool,
 } from '../shared/types';
 import {mutators, M} from '../shared/mutators';
 import {LETTERS} from '../shared/letters';
 import {getData, isAddDiff, isChangeDiff, isDeleteDiff} from './data-util';
-import {updateCache} from '../shared/renderer';
+import {setPhysics, updateCache} from '../shared/renderer';
 import {getWorkerHost} from '../shared/urls';
 
 export const initialize = async (roomID: string, userID: string) => {
@@ -74,10 +71,11 @@ export const initialize = async (roomID: string, userID: string) => {
             localState.actors[actor.id] = actor;
           }
           break;
-        case 'tool':
+        case 'physics':
           if (isChangeDiff(diff) || isAddDiff(diff)) {
-            const actorId = keyParts[1];
-            localState.tools[actorId] = getData<Tool>(diff);
+            const physics = getData<Physics>(diff);
+            localState.physics = physics;
+            setPhysics(physics);
           }
           break;
         case 'cursor':
@@ -88,24 +86,6 @@ export const initialize = async (roomID: string, userID: string) => {
             localState.cursors[cursor.actorId] = cursor;
           }
           break;
-        case 'position':
-          if (isChangeDiff(diff) || isAddDiff(diff)) {
-            const pos = getData<LetterPosition>(diff);
-            localState.positions[pos.letter] = pos.position;
-          }
-          break;
-        case 'scale':
-          if (isChangeDiff(diff) || isAddDiff(diff)) {
-            const pos = getData<LetterScale>(diff);
-            localState.scales[pos.letter] = pos.scale;
-          }
-          break;
-        case 'rotation':
-          if (isChangeDiff(diff) || isAddDiff(diff)) {
-            const rot = getData<LetterRotation>(diff);
-            localState.rotations[rot.letter] = rot.rotation;
-          }
-          break;
         case 'cache':
           if (isChangeDiff(diff) || isAddDiff(diff)) {
             const letter = keyParts[1] as Letter;
@@ -114,15 +94,6 @@ export const initialize = async (roomID: string, userID: string) => {
             updateCache(letter, cache.cache);
           }
           break;
-        case 'owner': {
-          const letter = keyParts[1] as Letter;
-          if (isChangeDiff(diff) || isAddDiff(diff)) {
-            const data = getData<LetterOwner>(diff);
-            localState.owners[letter] = data.actorId;
-          } else if (isDeleteDiff(diff)) {
-            localState.owners[letter] = undefined;
-          }
-        }
       }
       const handlers = listeners.get(keyParts[0]);
       if (handlers) {
@@ -136,18 +107,28 @@ export const initialize = async (roomID: string, userID: string) => {
       // Points are sometimes modified in quite large ways (e.g. we delete tons at a
       // time on the server) - to avoid having to maintain a local index, just read
       // them all from reflect on each frame.
-      const points: State['points'] = letterMap(() => []);
+      const splatters: State['splatters'] = letterMap(() => []);
       await Promise.all([
         ...LETTERS.map(async letter => {
-          const letterPoints = (await tx
-            .scan({prefix: `point/${letter}`})
-            .toArray()) as Point[];
-          points[letter] = letterPoints;
+          const letterSplatters = (await tx
+            .scan({prefix: `splatter/${letter}`})
+            .toArray()) as Splatter[];
+          splatters[letter] = letterSplatters;
+        }),
+      ]);
+      const impulses: State['impulses'] = letterMap(() => []);
+      await Promise.all([
+        ...LETTERS.map(async letter => {
+          const letterImpulses = (await tx
+            .scan({prefix: `impulse/${letter}`})
+            .toArray()) as Impulse[];
+          impulses[letter] = letterImpulses;
         }),
       ]);
       return {
         ...localState,
-        points,
+        splatters,
+        impulses,
       };
     });
 
@@ -168,38 +149,34 @@ const stateInitializer =
       actors[actor.id] = actor;
       return actors;
     }, {} as State['actors']);
-    const tools = actorList.reduce((actors, actor) => {
-      actors[actor.id] = Tool.PAINT;
-      return actors;
-    }, {} as State['tools']);
-    // Proactively create our local tool since we won't be in the actors list yet
-    tools[userID] =
-      ((await tx.get(`tool/${userID}`)) as Tool | undefined) || Tool.PAINT;
     const cursorList = (await tx
       .scan({prefix: 'cursor/'})
       .toArray()) as Cursor[];
+    const physics = (await tx.get('physics')) as Physics | undefined;
     const cursors = cursorList.reduce((cursors, cursor) => {
       cursors[cursor.actorId] = cursor;
       return cursors;
     }, {} as State['cursors']);
-    const points: State['points'] = letterMap(() => []);
+    const splatters: State['splatters'] = letterMap(() => []);
+    const impulses: State['impulses'] = letterMap(() => []);
     const rawCaches: State['rawCaches'] = letterMap(() => '');
-    const positions: State['positions'] = letterMap(() => ({
-      x: 0,
-      y: 0,
-    }));
-    const scales: State['scales'] = letterMap(() => 1);
-    const rotations: State['rotations'] = letterMap(() => 0);
     const sequences: State['sequences'] = letterMap(() => -1);
-    const owners: State['owners'] = letterMap(() => undefined);
     await Promise.all([
       ...LETTERS.map(async letter => {
-        const letterPoints = (await tx
+        const letterSplatters = (await tx
           .scan({
-            prefix: `point/${letter}/`,
+            prefix: `splatter/${letter}/`,
           })
-          .toArray()) as Point[];
-        points[letter] = letterPoints;
+          .toArray()) as Splatter[];
+        splatters[letter] = letterSplatters;
+      }),
+      ...LETTERS.map(async letter => {
+        const letterImpulses = (await tx
+          .scan({
+            prefix: `impulse/${letter}/`,
+          })
+          .toArray()) as Impulse[];
+        impulses[letter] = letterImpulses;
       }),
       ...LETTERS.map(async letter => {
         const cacheData = (await tx.get(`cache/${letter}`)) as
@@ -211,47 +188,17 @@ const stateInitializer =
         }
       }),
       ...LETTERS.map(async letter => {
-        const positionData = (await tx.get(`position/${letter}`)) as
-          | LetterPosition
-          | undefined;
-        if (positionData) {
-          positions[letter] = positionData.position;
-        }
-      }),
-      ...LETTERS.map(async letter => {
-        const positionData = (await tx.get(`rotation/${letter}`)) as
-          | LetterRotation
-          | undefined;
-        if (positionData) {
-          rotations[letter] = positionData.rotation;
-        }
-      }),
-      ...LETTERS.map(async letter => {
-        const scaleData = (await tx.get(`scale/${letter}`)) as
-          | LetterScale
-          | undefined;
-        scales[letter] = scaleData?.scale || 1;
-      }),
-      ...LETTERS.map(async letter => {
         sequences[letter] = ((await tx.get(`seq/${letter}`)) as number) || 0;
-      }),
-      ...LETTERS.map(async letter => {
-        const ownerData =
-          ((await tx.get(`owner/${letter}`)) as LetterOwner) || undefined;
-        owners[letter] = ownerData && ownerData.actorId;
       }),
     ]);
     return {
       actorId: userID,
       actors,
       cursors,
-      points,
+      splatters,
       rawCaches,
-      positions,
-      scales,
-      rotations,
       sequences,
-      tools,
-      owners,
+      impulses,
+      physics,
     };
   };

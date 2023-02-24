@@ -1,7 +1,6 @@
-name = "paint-fight2"
+name = "paint-fight"
 main = "demo/worker/index.ts"
 compatibility_date = "2022-11-30"
-account_id = "a7b611beb3272f9d63b8fbe82f4b9d24"
 
 [build]
 # don't watch all resources because whenever the server restarts we have to

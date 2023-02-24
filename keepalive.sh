@@ -18,6 +18,8 @@ trap bail SIGINT
 
 while [[ $stop == 0 ]]
 do
-  eval "$@"
-  osascript -e "display notification \"Process crashed, restarting\" with title \"Reflect Dev\" subtitle \"$@\""
+  eval "$@";
+  if [[ "$?" != 0 ]]; then
+    osascript -e "display notification \"Process crashed, restarting\" with title \"Reflect Dev\" subtitle \"$@\"";
+  fi
 done

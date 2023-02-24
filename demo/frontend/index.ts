@@ -1,35 +1,23 @@
 import {nanoid} from 'nanoid';
 import {initialize} from './data';
 import {renderer as renderer3D} from './3d-renderer';
-import {cacheOldPoints, render} from './texture-renderer';
-import initRenderer from '../../renderer/pkg/renderer';
+import {render} from './texture-renderer';
+import initRenderer, {precompute} from '../../renderer/pkg/renderer';
+import {get3DPositions} from '../shared/renderer';
 import {cursorRenderer} from './cursors';
 import {
   UVMAP_SIZE,
   FPS_LOW_PASS,
   COLOR_PALATE,
   COLOR_PALATE_END,
-  CLIENT_CACHE_INTERVAL,
-  POINT_MAX_MS,
-  SCALE_SPEED,
+  STEP_RENDER_DELAY,
+  DEBUG_PHYSICS,
+  SPLATTER_MS,
+  DEMO_OFFSET_BOTTOM,
 } from '../shared/constants';
-import {
-  ColorPalate,
-  Cursor,
-  Letter,
-  LetterCache,
-  LetterOwner,
-  LetterPosition,
-  LetterRotation,
-  LetterScale,
-  Position,
-  Size,
-  Tool,
-} from '../shared/types';
+import type {Actor, ColorPalate, Letter, Position, Size} from '../shared/types';
 import {LETTERS} from '../shared/letters';
-import {letterMap, now, distance, must, scalePosition} from '../shared/util';
-import {addDragHandlers, Control, ControlTools} from './dragging';
-import {initTools, toolMap} from './tools';
+import {letterMap, now} from '../shared/util';
 import {initRoom} from './init-room';
 import {getUserLocation} from './location';
 
@@ -37,7 +25,6 @@ type LetterCanvases = Record<Letter, HTMLCanvasElement>;
 
 type Debug = {
   fps: number;
-  points: number;
 };
 
 const getScaleFactor = (): Size => {
@@ -47,19 +34,12 @@ const getScaleFactor = (): Size => {
   };
 };
 
-// TODO: DRY uses of getScaleFactor with downscale() and corresponding upscale().
-const downscale = (p: Position) => {
-  const sf = getScaleFactor();
-  return {x: p.x / sf.width, y: p.y / sf.height};
-};
-
 export const init = async () => {
   // Generate an actor ID, which is just used for "auth" (which we don't really have)
   const actorId = localStorage.getItem('paint-fight-actor-id') || nanoid();
   localStorage.setItem('paint-fight-actor-id', actorId);
 
-  const debug: Debug = {fps: 60, points: 0};
-  const renderPointsIndex = letterMap(_ => 0);
+  const debug: Debug = {fps: 60};
 
   // Canvases
   const canvas = document.getElementById('canvas3D') as HTMLCanvasElement;
@@ -71,24 +51,30 @@ export const init = async () => {
     tex.height = UVMAP_SIZE;
     return tex;
   });
+  const buffers: LetterCanvases = letterMap(letter => {
+    const tex = document.querySelector(
+      `#buffers > .${letter}`,
+    ) as HTMLCanvasElement;
+    tex.width = UVMAP_SIZE;
+    tex.height = UVMAP_SIZE;
+    return tex;
+  });
 
+  const renderInitTime = performance.now();
   await initRenderer();
+  await precompute();
+  console.log(
+    `renderer initialized in ${performance.now() - renderInitTime}ms`,
+  );
 
   const roomID = await initRoom();
 
   const {
     getState,
-    addListener,
     updateCursor,
-    addPoint,
+    addSplatter,
+    addListener,
     updateActorLocation,
-    updateLetterScale,
-    updateLetterPosition,
-    updateLetterRotation,
-    switchToTool,
-    takeOwner,
-    freeOwner,
-    // reflectClient,
   } = await initialize(roomID, actorId);
 
   // Get our location and add it when it's ready
@@ -97,44 +83,20 @@ export const init = async () => {
   });
 
   // Initialize state
-  let {
-    actors,
-    cursors,
-    rawCaches,
-    points,
-    positions,
-    scales,
-    rotations,
-    sequences,
-    tools,
-  } = await getState();
-
-  // Tools
-  initTools(
-    toolMap(
-      tool => document.getElementById(`${tool}-tool`) as HTMLButtonElement,
-    ),
-    () => tools[actorId],
-    tool => switchToTool({actorId, tool}),
-  );
+  let {actors, cursors, rawCaches, splatters, sequences, physics, impulses} =
+    await getState();
+  let physicsStep = physics?.step || -1;
 
   // Set up 3D renderer
   const {
     render: render3D,
     getTexturePosition,
     resizeCanvas: resize3DCanvas,
-    setRotation,
-    setPosition,
-    setScale,
+    set3DPosition,
     updateTexture,
-    setGlowing,
+    updateCurrentStep,
+    // updateDebug,
   } = await renderer3D(canvas, textures);
-  // Initialize positions
-  LETTERS.forEach(letter => {
-    setRotation(letter, rotations[letter]);
-    setScale(letter, scales[letter]);
-    setPosition(letter, positions[letter]);
-  });
 
   // Set up info below demo
   const activeUserCount = document.getElementById(
@@ -158,189 +120,13 @@ export const init = async () => {
     localStorage.removeItem('roomID');
     window.location.reload();
   });
-
-  // Add handlers for dragging
-  const getDragInfo = addDragHandlers(
-    document.body,
-    () => scales,
-    () => rotations,
-    () => positions,
-    (position: Position) => {
-      const [letter] = getTexturePosition(position);
-      return letter;
-    },
-    (letter: Letter) => {
-      if (getDragInfo()) {
-        takeOwner({letter, actorId});
-      } else {
-        freeOwner({letter, actorId});
-      }
-    },
-  );
-
-  // Because reflect changes data at 60fps, we can just tell our renderer to
-  // change values when our data changes and things will be smooth
-  addListener<LetterRotation>('rotation', ({letter, rotation}) => {
-    setRotation(letter, rotation);
-  });
-  addListener<LetterScale>('scale', ({letter, scale}) => {
-    setScale(letter, scale);
-  });
-  addListener<LetterPosition>('position', ({letter, position}) => {
-    setPosition(letter, position);
-  });
-  // When owner changes, update glow
-  addListener<LetterOwner>('owner', (owner, deleted) => {
-    if (!deleted) {
-      const actor = must(actors[owner.actorId]);
-      const colorIndex = actor.colorIndex;
-      setGlowing(owner.letter, true, colors[colorIndex][0]);
-    } else {
-      setGlowing(owner.letter, false);
-    }
-  });
-  // When we get a new cache, reset the local one.
-  addListener<LetterCache>('cache', ({letter}) => {
-    renderPointsIndex[letter] = 0;
+  // Whenever actors change, update the count
+  addListener<Actor>('actor', () => {
+    activeUserCount.innerHTML = Object.keys(actors).length + '';
   });
 
   // Initialize textures
   LETTERS.forEach(letter => updateTexture(letter));
-
-  // performActions should be periodically called - it will take the current
-  // state, the current mouse position and drag info, and perform any mutations
-  // necessary to update the state.
-  let lastLetter: Letter | undefined = undefined;
-  let currentGroup = -1;
-  let inlineControls = false;
-  let lastPoint = 0;
-  const performActions = async () => {
-    const scaleFactor = getScaleFactor();
-    ({
-      actors,
-      rawCaches,
-      cursors,
-      points,
-      positions,
-      scales,
-      rotations,
-      sequences,
-      tools,
-    } = await getState());
-    activeUserCount.innerHTML = Object.keys(actors).length + '';
-    for (const [_, cursor] of Object.entries(cursors)) {
-      const actor = must(actors[cursor.actorId]);
-      // TODO: re-enable bots
-      if (actor.id !== actorId /*&& !(bm.isMe && actor.isBot)*/) {
-        continue;
-      }
-      const position = scalePosition(cursor, scaleFactor);
-      const pointer = !actor.isBot ? getPointer() : undefined;
-      let tool = tools[actor.id];
-      const drag = getDragInfo();
-      if (
-        actor.id == actorId &&
-        drag &&
-        drag.control !== Control.None &&
-        inlineControls
-      ) {
-        tool = ControlTools[drag.control];
-      }
-      if (tool === Tool.PAINT) {
-        if (pointer) {
-          pointer.style.opacity = '1';
-        }
-        document.body.classList.remove('moving');
-        document.body.classList.add('painting');
-        if (performance.now() > lastPoint + POINT_MAX_MS) {
-          lastPoint = performance.now();
-          // If we're painting, add a point for our current cursor
-          const colorIndex = actors[actor.id]!.colorIndex;
-          let isPainting = false;
-          // These have to iterate in order of z-index
-          const [letter, texturePosition] = getTexturePosition(position);
-          if (letter) {
-            isPainting = true;
-            // When we enter a new letter, update our current group. Since these groups are
-            // used to organize the points, this will make sure that the last person to
-            // enter the letter is always on top.
-            if (letter !== lastLetter) {
-              currentGroup = now();
-            }
-            lastLetter = letter;
-            addPoint({
-              letter,
-              actorId: actor.id,
-              position: texturePosition!,
-              scale: 1,
-              // scale: scales[letter],
-              ts: now(),
-              colorIndex,
-              sequence: sequences[letter],
-              group: currentGroup,
-            });
-          }
-          if (!isPainting) {
-            lastLetter = undefined;
-          }
-        }
-      } else {
-        if (pointer) {
-          pointer.style.opacity = '0';
-        }
-        document.body.classList.add('moving');
-        document.body.classList.remove('painting');
-        // Otherwise, if we're dragging, move, scale, or rotate the letter
-        if (drag && drag.letter) {
-          document.body.classList.add('active');
-          switch (tool) {
-            case Tool.MOVE:
-              // When we start dragging, we store the original position as drag.position.
-              // The final result should be the start position plus the relative movement.
-              const start = scalePosition(drag.position, scaleFactor);
-              const relative = {
-                x: position.x - drag.start.x,
-                y: position.y - drag.start.y,
-              };
-              updateLetterPosition({
-                letter: drag.letter,
-                position: downscale({
-                  x: start.x + relative.x,
-                  y: start.y + relative.y,
-                }),
-              });
-              break;
-            case Tool.SCALE:
-              let pxdiff = distance(drag.start, position);
-              if (drag.start.x > position.x) {
-                pxdiff = -pxdiff;
-              }
-              const scale = (pxdiff / scaleFactor.width) * SCALE_SPEED;
-              updateLetterScale({
-                letter: drag.letter,
-                scale: drag.scale + scale,
-              });
-              break;
-            case Tool.ROTATE:
-              const pctdiff = (position.x - drag.start.x) / scaleFactor.width;
-              const degrees = pctdiff * 360;
-              // const spin = div.querySelector('.spin') as HTMLDivElement;
-              // if (spin) {
-              //   spin.style.transform = `rotate3d(1, 0, 0, 80deg) rotate(${degrees}deg)`;
-              // }
-              updateLetterRotation({
-                letter: drag.letter,
-                rotation: (drag.rotation + degrees) % 360,
-              });
-              break;
-          }
-        }
-      }
-      if (!drag) {
-        document.body.classList.remove('active');
-      }
-    }
-  };
 
   const colors: ColorPalate = [
     [COLOR_PALATE[0], COLOR_PALATE_END[0]],
@@ -354,98 +140,53 @@ export const init = async () => {
   if (window.location.search.includes('debug')) {
     setInterval(async () => {
       const debugEl = document.getElementById('debug');
-      const pointCount = Object.keys(points).reduce(
-        (acc, k) => points[k as Letter].length + acc,
+      const splatterCount = Object.keys(splatters).reduce(
+        (acc, k) => splatters[k as Letter].length + acc,
+        0,
+      );
+      const impulseCount = Object.keys(impulses).reduce(
+        (acc, k) => impulses[k as Letter].length + acc,
         0,
       );
       if (debugEl) {
-        debugEl.innerHTML = `${
+        let debugOutput = `${
           Object.keys(actors).length
-        } actors\n${pointCount} points\n${debug.fps.toFixed(
+        } actors\n${splatterCount} splatters\n${impulseCount} impulses\n${debug.fps.toFixed(
           1,
         )} fps\n${LETTERS.map(letter => {
           return `${letter.toUpperCase()} [seq ${
             sequences[letter]
-          }]\n  rendered points: ${
-            points[letter].length - (renderPointsIndex[letter] + 1)
-          }\n  local cache count:\n    ${
-            renderPointsIndex[letter]
+          }]\n   splatters: ${splatters[letter].length}\n   impulses: ${
+            impulses[letter].length
           }\n  cache size:\n    ${
             new Blob([rawCaches[letter] || '']).size / 1024
-          }k\n  splatters: ${points[letter].reduce(
-            (acc, p) => acc + p.p.length,
-            0,
-          )}`;
+          }k\n`;
         }).join('\n')}`;
+        if (physics) {
+          const drift = physicsStep - STEP_RENDER_DELAY - physics.step;
+          debugOutput += `physics origin diff: ${
+            drift > 0 ? '+' : '-'
+          }${drift.toFixed(1)}`;
+        } else {
+          debugOutput += 'No server physics';
+        }
+        debugEl.innerHTML = debugOutput;
       }
     }, 200);
   }
 
   // Set up cursor renderer
-  const renderCursors = cursorRenderer(
+  const [localCursor, renderCursors] = cursorRenderer(
     actorId,
     () => ({actors, cursors}),
-    getScaleFactor,
-    (canHover: boolean) => {
-      inlineControls = canHover;
-      const classes = document.querySelector('body')?.classList;
-      if (classes) {
-        if (canHover) {
-          // classes.add('hover-device');
-        } else {
-          // classes.remove('hover-device');
-        }
-      }
-    },
-    (cursor: Cursor) => {
-      updateCursor(cursor);
-    },
+    () => ({
+      x: window.innerWidth / 2 - 300,
+      y: DEMO_OFFSET_BOTTOM - 200,
+      width: 600,
+      height: 200,
+    }),
+    updateCursor,
   );
-  let pointer: HTMLDivElement | undefined;
-  const getPointer = () => {
-    if (!pointer) {
-      pointer = document.querySelector(`[data-actor="${actorId}"] .pointer`) as
-        | HTMLDivElement
-        | undefined;
-    }
-    return pointer;
-  };
-
-  // TODO: re-enable bots
-  // const bm = new Botmaster(
-  //   reflectClient,
-  //   {
-  //     getRandomPositionOnLetter(letter) {
-  //       const bb = canvases[letter].getBoundingClientRect();
-  //       let pos: Position;
-  //       while (true) {
-  //         pos = {x: randInt(0, bb.width), y: randInt(0, bb.height)};
-  //         if (getTexturePosition(letter, pos)) {
-  //           break;
-  //         }
-  //       }
-  //       pos.x += bb.x;
-  //       pos.y += bb.y;
-  //       console.log('position for', letter, pos);
-  //       return downscale(pos);
-  //     },
-  //     getBotArea() {
-  //       const container = getContainer();
-  //       const bb = container.getBoundingClientRect();
-  //       const bb2 = {
-  //         top: bb.top - 100,
-  //         left: bb.left - 100,
-  //         right: bb.right + 100,
-  //         bottom: bb.bottom + 100,
-  //       };
-  //       return {
-  //         tl: downscale({x: bb2.left, y: bb2.top}),
-  //         br: downscale({x: bb2.right, y: bb2.bottom}),
-  //       };
-  //     },
-  //   },
-  //   !window.location.search.includes('bots=1'),
-  // );
 
   // When the window is resized, recalculate letter and cursor positions
   const resizeViewport = () => {
@@ -460,30 +201,83 @@ export const init = async () => {
   window.addEventListener('resize', resizeViewport);
   resizeViewport();
 
+  // Set up physics rendering
+  const renderPhysics = () => {
+    const originStep = physics?.step || 0;
+    const targetStep = Math.max(originStep - STEP_RENDER_DELAY, 0);
+    // Ideally, we should always be rendering STEP_RENDER_DELAY steps behind the
+    // origin. This is so that if we add impulses in our "past", we won't see them
+    // jerkily reconcile.
+    // If we render too quickly or too slowly, adjust our steps so that it will
+    // converge on the target step.
+    if (physicsStep < targetStep) {
+      // If we're behind, catch up half the distance
+      physicsStep += targetStep - physicsStep;
+    } else if (physicsStep > originStep) {
+      // If we're ahead, render at .5 speed
+      physicsStep += 0.5;
+    } else {
+      physicsStep += 1;
+    }
+    updateCurrentStep(physicsStep);
+    // positions3d
+    const positions3d = get3DPositions(
+      Math.floor(physicsStep) - originStep,
+      impulses,
+    );
+    LETTERS.forEach(letter => {
+      const position3d = positions3d[letter];
+      if (position3d) {
+        set3DPosition(letter, position3d);
+      }
+    });
+    if (DEBUG_PHYSICS) {
+      // TODO: fix this
+      // let world = World.restoreSnapshot(debugState);
+      // updateDebug(world.debugRender());
+    }
+  };
+
+  const addPaint = (at: Position) => {
+    const [letter, texturePosition, hitPosition] = getTexturePosition(at);
+    if (letter && texturePosition && hitPosition) {
+      addSplatter({
+        letter,
+        actorId,
+        colorIndex: actors[actorId].colorIndex,
+        texturePosition,
+        hitPosition,
+        sequence: sequences[letter],
+        step: Math.round(physicsStep),
+      });
+    }
+  };
+
   // Render our cursors and canvases at "animation speed", usually 60fps
+  let lastSplatter = 0;
   startRenderLoop(async () => {
+    ({actors, cursors, rawCaches, splatters, sequences, physics, impulses} =
+      await getState());
+    // Update cursors
     await renderCursors();
-    // Each frame, render our textures
-    render(textures, points, renderPointsIndex, colors);
+    // Render our textures
+    render(physicsStep, buffers, textures, splatters, colors);
     // Update textures and render the 3D scene
     LETTERS.forEach(letter => updateTexture(letter));
+    renderPhysics();
     render3D();
-    // Then perform actions
-    performActions();
+    // Splatter if needed
+    const {isDown, position} = localCursor();
+    if (isDown && now() > lastSplatter + SPLATTER_MS) {
+      lastSplatter = now();
+      addPaint(position);
+    } else if (!isDown) {
+      lastSplatter = 0;
+    }
   }, debug);
 
-  // Periodically cache on the client
-  setInterval(() => {
-    LETTERS.forEach(letter => {
-      renderPointsIndex[letter] = cacheOldPoints(
-        letter,
-        textures[letter],
-        points[letter],
-        renderPointsIndex[letter],
-        colors,
-      );
-    });
-  }, CLIENT_CACHE_INTERVAL);
+  // After we've started, flip a class on the body
+  document.body.classList.add('demo-active');
 };
 
 const startRenderLoop = (render: () => void, debug: Debug) => {

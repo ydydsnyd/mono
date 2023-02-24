@@ -2,9 +2,9 @@ import {ACTOR_UPDATE_INTERVAL, COLOR_PALATE} from '../shared/constants';
 import type {
   Actor,
   ActorID,
+  BoundingBox,
   Cursor,
   Position,
-  Size,
   State,
 } from '../shared/types';
 import {colorToString, now} from '../shared/util';
@@ -12,13 +12,11 @@ import {colorToString, now} from '../shared/util';
 export const cursorRenderer = (
   actorId: string,
   getState: () => {actors: State['actors']; cursors: State['cursors']},
-  getScaleFactor: () => Size,
-  onDetectHoverDevice: (canHover: boolean) => void,
+  getDemoBoundingBox: () => BoundingBox,
   onUpdateCursor: (localCursor: Cursor) => void,
-) => {
+): [() => {isDown: boolean; position: Position}, () => Promise<void>] => {
   // Set up local state
   const cursorDivs: Map<ActorID, HTMLDivElement> = new Map();
-  let canHover: boolean = false;
   const getCursorDiv = async (cursor: Cursor) => {
     // Make sure we have a div
     let cursorDiv = cursorDivs.get(cursor.actorId);
@@ -51,29 +49,21 @@ export const cursorRenderer = (
   const mouseElement = document.body;
   let cursorNeedsUpdate = false;
   const updateCursorPosition = (position: Position) => {
-    const scaleFactor = getScaleFactor();
+    const demoBB = getDemoBoundingBox();
     localCursor.onPage = true;
     lastPosition = position;
-    localCursor.x = (position.x + window.scrollX) / scaleFactor.width;
-    localCursor.y = (position.y + window.scrollY) / scaleFactor.height;
+    localCursor.x = (position.x - demoBB.x + window.scrollX) / demoBB.width;
+    localCursor.y = (position.y - demoBB.y + window.scrollY) / demoBB.height;
     localCursor.ts = now();
     cursorNeedsUpdate = true;
   };
   // Cursor for mice
   const updateCursor = (e: MouseEvent) => {
-    if (!canHover) {
-      canHover = true;
-      onDetectHoverDevice(canHover);
-    }
     updateCursorPosition({x: e.clientX, y: e.clientY});
   };
   mouseElement.addEventListener('mousemove', updateCursor);
   // Cursor for touches
   const touchMoved = (e: TouchEvent) => {
-    if (canHover) {
-      canHover = false;
-      onDetectHoverDevice(canHover);
-    }
     updateCursorPosition({x: e.touches[0].clientX, y: e.touches[0].clientY});
   };
   mouseElement.addEventListener('touchmove', touchMoved);
@@ -91,7 +81,7 @@ export const cursorRenderer = (
   };
   mouseElement.addEventListener('mouseout', hideCursor);
   mouseElement.addEventListener('touchend', hideCursor);
-  // Track cursor "painting"
+  // Track cursor clicks
   const setIsDown = () => {
     localCursor.isDown = true;
     cursorNeedsUpdate = true;
@@ -104,59 +94,62 @@ export const cursorRenderer = (
   });
 
   let lastActorUpdate = -1;
-  return async () => {
-    if (cursorNeedsUpdate) {
-      cursorNeedsUpdate = false;
-      onUpdateCursor(localCursor);
-    }
-    const scaleFactor = getScaleFactor();
-    const {actors, cursors} = getState();
-    // Move cursors
-    Object.values(cursors).forEach(async cursor => {
-      const {x, y} = cursor;
-      const cursorDiv = await getCursorDiv(cursor);
-      if (cursorDiv) {
-        cursorDiv.style.transform = `translate3d(${x * scaleFactor.width}px, ${
-          y * scaleFactor.height
-        }px, 0)`;
-        cursorDiv.style.opacity = cursor.onPage ? '1' : '0';
-        const color = colorToString(
-          COLOR_PALATE[actors[cursor.actorId].colorIndex],
-        );
-        if (cursorDiv.dataset['color'] !== color) {
-          const pointer = cursorDiv.querySelector(
-            '#pointer-fill',
-          ) as SVGPathElement;
-          const locationDiv = cursorDiv.querySelector(
-            '.location',
-          ) as HTMLDivElement;
-          pointer.style.fill = color;
-          locationDiv.style.background = color;
-        }
-        cursorDiv.dataset['color'] = color;
+  return [
+    () => ({isDown: localCursor.isDown, position: lastPosition}),
+    async () => {
+      if (cursorNeedsUpdate) {
+        cursorNeedsUpdate = false;
+        onUpdateCursor(localCursor);
       }
-    });
-    // Remove cursor divs that represent actors that are no longer here
-    for (const actorId of cursorDivs.keys()) {
-      if (!cursors[actorId]) {
-        for (const existing of document.getElementsByClassName(actorId)) {
-          existing.parentElement?.removeChild(existing);
-        }
-        cursorDivs.delete(actorId);
-      }
-    }
-    // At a lower frequency, update actor information (it only changes once per
-    // actor, when we first get the location).
-    if (now() - lastActorUpdate > ACTOR_UPDATE_INTERVAL) {
-      lastActorUpdate = now();
-      Object.values(actors).forEach(actor => {
-        const cursorDiv = cursorDivs.get(actor.id);
-        if (cursorDiv && actor.location) {
-          cursorDiv.querySelector('.location')!.innerHTML = actor.location;
+      const demoBB = getDemoBoundingBox();
+      const {actors, cursors} = getState();
+      // Move cursors
+      Object.values(cursors).forEach(async cursor => {
+        const {x, y} = cursor;
+        const cursorDiv = await getCursorDiv(cursor);
+        if (cursorDiv) {
+          cursorDiv.style.transform = `translate3d(${
+            x * demoBB.width + demoBB.x
+          }px, ${y * demoBB.height + demoBB.y}px, 0)`;
+          cursorDiv.style.opacity = cursor.onPage ? '1' : '0';
+          const color = colorToString(
+            COLOR_PALATE[actors[cursor.actorId].colorIndex],
+          );
+          if (cursorDiv.dataset['color'] !== color) {
+            const pointer = cursorDiv.querySelector(
+              '#pointer-fill',
+            ) as SVGPathElement;
+            const locationDiv = cursorDiv.querySelector(
+              '.location',
+            ) as HTMLDivElement;
+            pointer.style.fill = color;
+            locationDiv.style.background = color;
+          }
+          cursorDiv.dataset['color'] = color;
         }
       });
-    }
-  };
+      // Remove cursor divs that represent actors that are no longer here
+      for (const actorId of cursorDivs.keys()) {
+        if (!cursors[actorId]) {
+          for (const existing of document.getElementsByClassName(actorId)) {
+            existing.parentElement?.removeChild(existing);
+          }
+          cursorDivs.delete(actorId);
+        }
+      }
+      // At a lower frequency, update actor information (it only changes once per
+      // actor, when we first get the location).
+      if (now() - lastActorUpdate > ACTOR_UPDATE_INTERVAL) {
+        lastActorUpdate = now();
+        Object.values(actors).forEach(actor => {
+          const cursorDiv = cursorDivs.get(actor.id);
+          if (cursorDiv && actor.location) {
+            cursorDiv.querySelector('.location')!.innerHTML = actor.location;
+          }
+        });
+      }
+    },
+  ];
 };
 
 const createCursor = (actor: Actor) => {

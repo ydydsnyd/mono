@@ -1,4 +1,4 @@
-import { PAINT_DECAY_AGE, PAINT_POINT_SIZE, SPLATTER_DRIP_DECAY, SPLATTER_DRIP_WEIGHT, UVMAP_SIZE } from './snippets/renderer-ba6236b463686f63/src/constants.ts';
+import { UVMAP_SIZE, SPLATTER_ANIM_FRAMES } from './snippets/renderer-ba6236b463686f63/src/constants.ts';
 
 let wasm;
 
@@ -167,14 +167,10 @@ cachedTextDecoder.decode();
 function getStringFromWasm0(ptr, len) {
     return cachedTextDecoder.decode(getUint8Memory0().subarray(ptr, ptr + len));
 }
-
-function addHeapObject(obj) {
-    if (heap_next === heap.length) heap.push(heap.length + 1);
-    const idx = heap_next;
-    heap_next = heap[idx];
-
-    heap[idx] = obj;
-    return idx;
+/**
+*/
+export function precompute() {
+    wasm.precompute();
 }
 
 function passArray8ToWasm0(arg, malloc) {
@@ -191,22 +187,6 @@ export function update_cache(letter, png_data) {
     const ptr0 = passArray8ToWasm0(png_data, wasm.__wbindgen_malloc);
     const len0 = WASM_VECTOR_LEN;
     wasm.update_cache(letter, ptr0, len0);
-}
-
-let cachedFloat64Memory0 = new Float64Array();
-
-function getFloat64Memory0() {
-    if (cachedFloat64Memory0.byteLength === 0) {
-        cachedFloat64Memory0 = new Float64Array(wasm.memory.buffer);
-    }
-    return cachedFloat64Memory0;
-}
-
-function passArrayF64ToWasm0(arg, malloc) {
-    const ptr = malloc(arg.length * 8);
-    getFloat64Memory0().set(arg, ptr / 8);
-    WASM_VECTOR_LEN = arg.length;
-    return ptr;
 }
 
 let cachedUint32Memory0 = new Uint32Array();
@@ -240,63 +220,64 @@ function passArrayF32ToWasm0(arg, malloc) {
     WASM_VECTOR_LEN = arg.length;
     return ptr;
 }
+
+function getArrayU8FromWasm0(ptr, len) {
+    return getUint8Memory0().subarray(ptr / 1, ptr / 1 + len);
+}
 /**
 * @param {number} letter
-* @param {number} time
+* @param {number} step
 * @param {Uint8Array} a_colors
 * @param {Uint8Array} b_colors
 * @param {Uint8Array} c_colors
 * @param {Uint8Array} d_colors
 * @param {Uint8Array} e_colors
-* @param {number} point_count
-* @param {Float64Array} timestamps
-* @param {Uint32Array} point_actors
-* @param {Uint32Array} point_groups
-* @param {Float32Array} point_scales
+* @param {number} splatter_count
+* @param {Uint32Array} steps
+* @param {Uint32Array} splatter_actors
 * @param {Uint8Array} colors
 * @param {Float32Array} x_vals
 * @param {Float32Array} y_vals
-* @param {Uint32Array} splatter_counts
-* @param {Float32Array} splatter_sizes
-* @param {Float32Array} splatter_x_vals
-* @param {Float32Array} splatter_y_vals
+* @param {Uint8Array} splatter_animations
+* @param {Uint8Array} splatter_rotations
 * @returns {Uint8Array}
 */
-export function draw_buffer_png(letter, time, a_colors, b_colors, c_colors, d_colors, e_colors, point_count, timestamps, point_actors, point_groups, point_scales, colors, x_vals, y_vals, splatter_counts, splatter_sizes, splatter_x_vals, splatter_y_vals) {
-    const ptr0 = passArray8ToWasm0(a_colors, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passArray8ToWasm0(b_colors, wasm.__wbindgen_malloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ptr2 = passArray8ToWasm0(c_colors, wasm.__wbindgen_malloc);
-    const len2 = WASM_VECTOR_LEN;
-    const ptr3 = passArray8ToWasm0(d_colors, wasm.__wbindgen_malloc);
-    const len3 = WASM_VECTOR_LEN;
-    const ptr4 = passArray8ToWasm0(e_colors, wasm.__wbindgen_malloc);
-    const len4 = WASM_VECTOR_LEN;
-    const ptr5 = passArrayF64ToWasm0(timestamps, wasm.__wbindgen_malloc);
-    const len5 = WASM_VECTOR_LEN;
-    const ptr6 = passArray32ToWasm0(point_actors, wasm.__wbindgen_malloc);
-    const len6 = WASM_VECTOR_LEN;
-    const ptr7 = passArray32ToWasm0(point_groups, wasm.__wbindgen_malloc);
-    const len7 = WASM_VECTOR_LEN;
-    const ptr8 = passArrayF32ToWasm0(point_scales, wasm.__wbindgen_malloc);
-    const len8 = WASM_VECTOR_LEN;
-    const ptr9 = passArray8ToWasm0(colors, wasm.__wbindgen_malloc);
-    const len9 = WASM_VECTOR_LEN;
-    const ptr10 = passArrayF32ToWasm0(x_vals, wasm.__wbindgen_malloc);
-    const len10 = WASM_VECTOR_LEN;
-    const ptr11 = passArrayF32ToWasm0(y_vals, wasm.__wbindgen_malloc);
-    const len11 = WASM_VECTOR_LEN;
-    const ptr12 = passArray32ToWasm0(splatter_counts, wasm.__wbindgen_malloc);
-    const len12 = WASM_VECTOR_LEN;
-    const ptr13 = passArrayF32ToWasm0(splatter_sizes, wasm.__wbindgen_malloc);
-    const len13 = WASM_VECTOR_LEN;
-    const ptr14 = passArrayF32ToWasm0(splatter_x_vals, wasm.__wbindgen_malloc);
-    const len14 = WASM_VECTOR_LEN;
-    const ptr15 = passArrayF32ToWasm0(splatter_y_vals, wasm.__wbindgen_malloc);
-    const len15 = WASM_VECTOR_LEN;
-    const ret = wasm.draw_buffer_png(letter, time, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, point_count, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11, ptr12, len12, ptr13, len13, ptr14, len14, ptr15, len15);
-    return takeObject(ret);
+export function draw_buffer_png(letter, step, a_colors, b_colors, c_colors, d_colors, e_colors, splatter_count, steps, splatter_actors, colors, x_vals, y_vals, splatter_animations, splatter_rotations) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passArray8ToWasm0(a_colors, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArray8ToWasm0(b_colors, wasm.__wbindgen_malloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passArray8ToWasm0(c_colors, wasm.__wbindgen_malloc);
+        const len2 = WASM_VECTOR_LEN;
+        const ptr3 = passArray8ToWasm0(d_colors, wasm.__wbindgen_malloc);
+        const len3 = WASM_VECTOR_LEN;
+        const ptr4 = passArray8ToWasm0(e_colors, wasm.__wbindgen_malloc);
+        const len4 = WASM_VECTOR_LEN;
+        const ptr5 = passArray32ToWasm0(steps, wasm.__wbindgen_malloc);
+        const len5 = WASM_VECTOR_LEN;
+        const ptr6 = passArray32ToWasm0(splatter_actors, wasm.__wbindgen_malloc);
+        const len6 = WASM_VECTOR_LEN;
+        const ptr7 = passArray8ToWasm0(colors, wasm.__wbindgen_malloc);
+        const len7 = WASM_VECTOR_LEN;
+        const ptr8 = passArrayF32ToWasm0(x_vals, wasm.__wbindgen_malloc);
+        const len8 = WASM_VECTOR_LEN;
+        const ptr9 = passArrayF32ToWasm0(y_vals, wasm.__wbindgen_malloc);
+        const len9 = WASM_VECTOR_LEN;
+        const ptr10 = passArray8ToWasm0(splatter_animations, wasm.__wbindgen_malloc);
+        const len10 = WASM_VECTOR_LEN;
+        const ptr11 = passArray8ToWasm0(splatter_rotations, wasm.__wbindgen_malloc);
+        const len11 = WASM_VECTOR_LEN;
+        wasm.draw_buffer_png(retptr, letter, step, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, splatter_count, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11);
+        var r0 = getInt32Memory0()[retptr / 4 + 0];
+        var r1 = getInt32Memory0()[retptr / 4 + 1];
+        var v12 = getArrayU8FromWasm0(r0, r1).slice();
+        wasm.__wbindgen_free(r0, r1 * 1);
+        return v12;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
 }
 
 let stack_pointer = 32;
@@ -309,26 +290,22 @@ function addBorrowedObject(obj) {
 /**
 * @param {number} letter
 * @param {CanvasRenderingContext2D} ctx
-* @param {number} time
+* @param {number} step
 * @param {Uint8Array} a_colors
 * @param {Uint8Array} b_colors
 * @param {Uint8Array} c_colors
 * @param {Uint8Array} d_colors
 * @param {Uint8Array} e_colors
-* @param {number} point_count
-* @param {Float64Array} timestamps
-* @param {Uint32Array} point_actors
-* @param {Uint32Array} point_groups
-* @param {Float32Array} point_scales
+* @param {number} splatter_count
+* @param {Uint32Array} steps
+* @param {Uint32Array} splatter_actors
 * @param {Uint8Array} colors
 * @param {Float32Array} x_vals
 * @param {Float32Array} y_vals
-* @param {Uint32Array} splatter_counts
-* @param {Float32Array} splatter_sizes
-* @param {Float32Array} splatter_x_vals
-* @param {Float32Array} splatter_y_vals
+* @param {Uint8Array} splatter_animations
+* @param {Uint8Array} splatter_rotations
 */
-export function add_points_to_cache(letter, ctx, time, a_colors, b_colors, c_colors, d_colors, e_colors, point_count, timestamps, point_actors, point_groups, point_scales, colors, x_vals, y_vals, splatter_counts, splatter_sizes, splatter_x_vals, splatter_y_vals) {
+export function add_splatters_to_cache(letter, ctx, step, a_colors, b_colors, c_colors, d_colors, e_colors, splatter_count, steps, splatter_actors, colors, x_vals, y_vals, splatter_animations, splatter_rotations) {
     try {
         const ptr0 = passArray8ToWasm0(a_colors, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
@@ -340,29 +317,21 @@ export function add_points_to_cache(letter, ctx, time, a_colors, b_colors, c_col
         const len3 = WASM_VECTOR_LEN;
         const ptr4 = passArray8ToWasm0(e_colors, wasm.__wbindgen_malloc);
         const len4 = WASM_VECTOR_LEN;
-        const ptr5 = passArrayF64ToWasm0(timestamps, wasm.__wbindgen_malloc);
+        const ptr5 = passArray32ToWasm0(steps, wasm.__wbindgen_malloc);
         const len5 = WASM_VECTOR_LEN;
-        const ptr6 = passArray32ToWasm0(point_actors, wasm.__wbindgen_malloc);
+        const ptr6 = passArray32ToWasm0(splatter_actors, wasm.__wbindgen_malloc);
         const len6 = WASM_VECTOR_LEN;
-        const ptr7 = passArray32ToWasm0(point_groups, wasm.__wbindgen_malloc);
+        const ptr7 = passArray8ToWasm0(colors, wasm.__wbindgen_malloc);
         const len7 = WASM_VECTOR_LEN;
-        const ptr8 = passArrayF32ToWasm0(point_scales, wasm.__wbindgen_malloc);
+        const ptr8 = passArrayF32ToWasm0(x_vals, wasm.__wbindgen_malloc);
         const len8 = WASM_VECTOR_LEN;
-        const ptr9 = passArray8ToWasm0(colors, wasm.__wbindgen_malloc);
+        const ptr9 = passArrayF32ToWasm0(y_vals, wasm.__wbindgen_malloc);
         const len9 = WASM_VECTOR_LEN;
-        const ptr10 = passArrayF32ToWasm0(x_vals, wasm.__wbindgen_malloc);
+        const ptr10 = passArray8ToWasm0(splatter_animations, wasm.__wbindgen_malloc);
         const len10 = WASM_VECTOR_LEN;
-        const ptr11 = passArrayF32ToWasm0(y_vals, wasm.__wbindgen_malloc);
+        const ptr11 = passArray8ToWasm0(splatter_rotations, wasm.__wbindgen_malloc);
         const len11 = WASM_VECTOR_LEN;
-        const ptr12 = passArray32ToWasm0(splatter_counts, wasm.__wbindgen_malloc);
-        const len12 = WASM_VECTOR_LEN;
-        const ptr13 = passArrayF32ToWasm0(splatter_sizes, wasm.__wbindgen_malloc);
-        const len13 = WASM_VECTOR_LEN;
-        const ptr14 = passArrayF32ToWasm0(splatter_x_vals, wasm.__wbindgen_malloc);
-        const len14 = WASM_VECTOR_LEN;
-        const ptr15 = passArrayF32ToWasm0(splatter_y_vals, wasm.__wbindgen_malloc);
-        const len15 = WASM_VECTOR_LEN;
-        wasm.add_points_to_cache(letter, addBorrowedObject(ctx), time, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, point_count, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11, ptr12, len12, ptr13, len13, ptr14, len14, ptr15, len15);
+        wasm.add_splatters_to_cache(letter, addBorrowedObject(ctx), step, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, splatter_count, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11);
     } finally {
         heap[stack_pointer++] = undefined;
     }
@@ -374,26 +343,22 @@ export function add_points_to_cache(letter, ctx, time, a_colors, b_colors, c_col
 * @param {CanvasRenderingContext2D} ctx_i
 * @param {CanvasRenderingContext2D} ctx_v
 * @param {CanvasRenderingContext2D} ctx_e
-* @param {number} time
+* @param {number} step
 * @param {Uint8Array} a_colors
 * @param {Uint8Array} b_colors
 * @param {Uint8Array} c_colors
 * @param {Uint8Array} d_colors
 * @param {Uint8Array} e_colors
-* @param {Uint32Array} point_counts
-* @param {Float64Array} timestamps
-* @param {Uint32Array} point_actors
-* @param {Uint32Array} point_groups
-* @param {Float32Array} point_scales
+* @param {Uint32Array} splatter_counts
+* @param {Uint32Array} steps
+* @param {Uint32Array} splatter_actors
 * @param {Uint8Array} colors
 * @param {Float32Array} x_vals
 * @param {Float32Array} y_vals
-* @param {Uint32Array} splatter_counts
-* @param {Float32Array} splatter_sizes
-* @param {Float32Array} splatter_x_vals
-* @param {Float32Array} splatter_y_vals
+* @param {Uint8Array} splatter_animations
+* @param {Uint8Array} splatter_rotations
 */
-export function draw_buffers(ctx_a, ctx_l, ctx_i, ctx_v, ctx_e, time, a_colors, b_colors, c_colors, d_colors, e_colors, point_counts, timestamps, point_actors, point_groups, point_scales, colors, x_vals, y_vals, splatter_counts, splatter_sizes, splatter_x_vals, splatter_y_vals) {
+export function draw_buffers(ctx_a, ctx_l, ctx_i, ctx_v, ctx_e, step, a_colors, b_colors, c_colors, d_colors, e_colors, splatter_counts, steps, splatter_actors, colors, x_vals, y_vals, splatter_animations, splatter_rotations) {
     try {
         const ptr0 = passArray8ToWasm0(a_colors, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
@@ -405,31 +370,23 @@ export function draw_buffers(ctx_a, ctx_l, ctx_i, ctx_v, ctx_e, time, a_colors, 
         const len3 = WASM_VECTOR_LEN;
         const ptr4 = passArray8ToWasm0(e_colors, wasm.__wbindgen_malloc);
         const len4 = WASM_VECTOR_LEN;
-        const ptr5 = passArray32ToWasm0(point_counts, wasm.__wbindgen_malloc);
+        const ptr5 = passArray32ToWasm0(splatter_counts, wasm.__wbindgen_malloc);
         const len5 = WASM_VECTOR_LEN;
-        const ptr6 = passArrayF64ToWasm0(timestamps, wasm.__wbindgen_malloc);
+        const ptr6 = passArray32ToWasm0(steps, wasm.__wbindgen_malloc);
         const len6 = WASM_VECTOR_LEN;
-        const ptr7 = passArray32ToWasm0(point_actors, wasm.__wbindgen_malloc);
+        const ptr7 = passArray32ToWasm0(splatter_actors, wasm.__wbindgen_malloc);
         const len7 = WASM_VECTOR_LEN;
-        const ptr8 = passArray32ToWasm0(point_groups, wasm.__wbindgen_malloc);
+        const ptr8 = passArray8ToWasm0(colors, wasm.__wbindgen_malloc);
         const len8 = WASM_VECTOR_LEN;
-        const ptr9 = passArrayF32ToWasm0(point_scales, wasm.__wbindgen_malloc);
+        const ptr9 = passArrayF32ToWasm0(x_vals, wasm.__wbindgen_malloc);
         const len9 = WASM_VECTOR_LEN;
-        const ptr10 = passArray8ToWasm0(colors, wasm.__wbindgen_malloc);
+        const ptr10 = passArrayF32ToWasm0(y_vals, wasm.__wbindgen_malloc);
         const len10 = WASM_VECTOR_LEN;
-        const ptr11 = passArrayF32ToWasm0(x_vals, wasm.__wbindgen_malloc);
+        const ptr11 = passArray8ToWasm0(splatter_animations, wasm.__wbindgen_malloc);
         const len11 = WASM_VECTOR_LEN;
-        const ptr12 = passArrayF32ToWasm0(y_vals, wasm.__wbindgen_malloc);
+        const ptr12 = passArray8ToWasm0(splatter_rotations, wasm.__wbindgen_malloc);
         const len12 = WASM_VECTOR_LEN;
-        const ptr13 = passArray32ToWasm0(splatter_counts, wasm.__wbindgen_malloc);
-        const len13 = WASM_VECTOR_LEN;
-        const ptr14 = passArrayF32ToWasm0(splatter_sizes, wasm.__wbindgen_malloc);
-        const len14 = WASM_VECTOR_LEN;
-        const ptr15 = passArrayF32ToWasm0(splatter_x_vals, wasm.__wbindgen_malloc);
-        const len15 = WASM_VECTOR_LEN;
-        const ptr16 = passArrayF32ToWasm0(splatter_y_vals, wasm.__wbindgen_malloc);
-        const len16 = WASM_VECTOR_LEN;
-        wasm.draw_buffers(addBorrowedObject(ctx_a), addBorrowedObject(ctx_l), addBorrowedObject(ctx_i), addBorrowedObject(ctx_v), addBorrowedObject(ctx_e), time, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11, ptr12, len12, ptr13, len13, ptr14, len14, ptr15, len15, ptr16, len16);
+        wasm.draw_buffers(addBorrowedObject(ctx_a), addBorrowedObject(ctx_l), addBorrowedObject(ctx_i), addBorrowedObject(ctx_v), addBorrowedObject(ctx_e), step, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11, ptr12, len12);
     } finally {
         heap[stack_pointer++] = undefined;
         heap[stack_pointer++] = undefined;
@@ -439,11 +396,179 @@ export function draw_buffers(ctx_a, ctx_l, ctx_i, ctx_v, ctx_e, time, a_colors, 
     }
 }
 
-function handleError(f, args) {
+function isLikeNone(x) {
+    return x === undefined || x === null;
+}
+/**
+* @param {Uint8Array | undefined} serialized_physics
+* @param {number} start_step
+* @param {number} num_steps
+* @param {Uint32Array} a_impulse_steps
+* @param {Float32Array} a_impulse_x
+* @param {Float32Array} a_impulse_y
+* @param {Float32Array} a_impulse_z
+* @param {Uint32Array} l_impulse_steps
+* @param {Float32Array} l_impulse_x
+* @param {Float32Array} l_impulse_y
+* @param {Float32Array} l_impulse_z
+* @param {Uint32Array} i_impulse_steps
+* @param {Float32Array} i_impulse_x
+* @param {Float32Array} i_impulse_y
+* @param {Float32Array} i_impulse_z
+* @param {Uint32Array} v_impulse_steps
+* @param {Float32Array} v_impulse_x
+* @param {Float32Array} v_impulse_y
+* @param {Float32Array} v_impulse_z
+* @param {Uint32Array} e_impulse_steps
+* @param {Float32Array} e_impulse_x
+* @param {Float32Array} e_impulse_y
+* @param {Float32Array} e_impulse_z
+* @returns {Uint8Array}
+*/
+export function update_state(serialized_physics, start_step, num_steps, a_impulse_steps, a_impulse_x, a_impulse_y, a_impulse_z, l_impulse_steps, l_impulse_x, l_impulse_y, l_impulse_z, i_impulse_steps, i_impulse_x, i_impulse_y, i_impulse_z, v_impulse_steps, v_impulse_x, v_impulse_y, v_impulse_z, e_impulse_steps, e_impulse_x, e_impulse_y, e_impulse_z) {
     try {
-        return f.apply(this, args);
-    } catch (e) {
-        wasm.__wbindgen_exn_store(addHeapObject(e));
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        var ptr0 = isLikeNone(serialized_physics) ? 0 : passArray8ToWasm0(serialized_physics, wasm.__wbindgen_malloc);
+        var len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArray32ToWasm0(a_impulse_steps, wasm.__wbindgen_malloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passArrayF32ToWasm0(a_impulse_x, wasm.__wbindgen_malloc);
+        const len2 = WASM_VECTOR_LEN;
+        const ptr3 = passArrayF32ToWasm0(a_impulse_y, wasm.__wbindgen_malloc);
+        const len3 = WASM_VECTOR_LEN;
+        const ptr4 = passArrayF32ToWasm0(a_impulse_z, wasm.__wbindgen_malloc);
+        const len4 = WASM_VECTOR_LEN;
+        const ptr5 = passArray32ToWasm0(l_impulse_steps, wasm.__wbindgen_malloc);
+        const len5 = WASM_VECTOR_LEN;
+        const ptr6 = passArrayF32ToWasm0(l_impulse_x, wasm.__wbindgen_malloc);
+        const len6 = WASM_VECTOR_LEN;
+        const ptr7 = passArrayF32ToWasm0(l_impulse_y, wasm.__wbindgen_malloc);
+        const len7 = WASM_VECTOR_LEN;
+        const ptr8 = passArrayF32ToWasm0(l_impulse_z, wasm.__wbindgen_malloc);
+        const len8 = WASM_VECTOR_LEN;
+        const ptr9 = passArray32ToWasm0(i_impulse_steps, wasm.__wbindgen_malloc);
+        const len9 = WASM_VECTOR_LEN;
+        const ptr10 = passArrayF32ToWasm0(i_impulse_x, wasm.__wbindgen_malloc);
+        const len10 = WASM_VECTOR_LEN;
+        const ptr11 = passArrayF32ToWasm0(i_impulse_y, wasm.__wbindgen_malloc);
+        const len11 = WASM_VECTOR_LEN;
+        const ptr12 = passArrayF32ToWasm0(i_impulse_z, wasm.__wbindgen_malloc);
+        const len12 = WASM_VECTOR_LEN;
+        const ptr13 = passArray32ToWasm0(v_impulse_steps, wasm.__wbindgen_malloc);
+        const len13 = WASM_VECTOR_LEN;
+        const ptr14 = passArrayF32ToWasm0(v_impulse_x, wasm.__wbindgen_malloc);
+        const len14 = WASM_VECTOR_LEN;
+        const ptr15 = passArrayF32ToWasm0(v_impulse_y, wasm.__wbindgen_malloc);
+        const len15 = WASM_VECTOR_LEN;
+        const ptr16 = passArrayF32ToWasm0(v_impulse_z, wasm.__wbindgen_malloc);
+        const len16 = WASM_VECTOR_LEN;
+        const ptr17 = passArray32ToWasm0(e_impulse_steps, wasm.__wbindgen_malloc);
+        const len17 = WASM_VECTOR_LEN;
+        const ptr18 = passArrayF32ToWasm0(e_impulse_x, wasm.__wbindgen_malloc);
+        const len18 = WASM_VECTOR_LEN;
+        const ptr19 = passArrayF32ToWasm0(e_impulse_y, wasm.__wbindgen_malloc);
+        const len19 = WASM_VECTOR_LEN;
+        const ptr20 = passArrayF32ToWasm0(e_impulse_z, wasm.__wbindgen_malloc);
+        const len20 = WASM_VECTOR_LEN;
+        wasm.update_state(retptr, ptr0, len0, start_step, num_steps, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11, ptr12, len12, ptr13, len13, ptr14, len14, ptr15, len15, ptr16, len16, ptr17, len17, ptr18, len18, ptr19, len19, ptr20, len20);
+        var r0 = getInt32Memory0()[retptr / 4 + 0];
+        var r1 = getInt32Memory0()[retptr / 4 + 1];
+        var v21 = getArrayU8FromWasm0(r0, r1).slice();
+        wasm.__wbindgen_free(r0, r1 * 1);
+        return v21;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+* @param {Uint8Array} serialized_physics
+* @param {number} step
+*/
+export function set_physics_state(serialized_physics, step) {
+    const ptr0 = passArray8ToWasm0(serialized_physics, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    wasm.set_physics_state(ptr0, len0, step);
+}
+
+function getArrayF32FromWasm0(ptr, len) {
+    return getFloat32Memory0().subarray(ptr / 4, ptr / 4 + len);
+}
+/**
+* @param {number} num_steps
+* @param {Uint32Array} a_impulse_steps
+* @param {Float32Array} a_impulse_x
+* @param {Float32Array} a_impulse_y
+* @param {Float32Array} a_impulse_z
+* @param {Uint32Array} l_impulse_steps
+* @param {Float32Array} l_impulse_x
+* @param {Float32Array} l_impulse_y
+* @param {Float32Array} l_impulse_z
+* @param {Uint32Array} i_impulse_steps
+* @param {Float32Array} i_impulse_x
+* @param {Float32Array} i_impulse_y
+* @param {Float32Array} i_impulse_z
+* @param {Uint32Array} v_impulse_steps
+* @param {Float32Array} v_impulse_x
+* @param {Float32Array} v_impulse_y
+* @param {Float32Array} v_impulse_z
+* @param {Uint32Array} e_impulse_steps
+* @param {Float32Array} e_impulse_x
+* @param {Float32Array} e_impulse_y
+* @param {Float32Array} e_impulse_z
+* @returns {Float32Array}
+*/
+export function positions_for_step(num_steps, a_impulse_steps, a_impulse_x, a_impulse_y, a_impulse_z, l_impulse_steps, l_impulse_x, l_impulse_y, l_impulse_z, i_impulse_steps, i_impulse_x, i_impulse_y, i_impulse_z, v_impulse_steps, v_impulse_x, v_impulse_y, v_impulse_z, e_impulse_steps, e_impulse_x, e_impulse_y, e_impulse_z) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passArray32ToWasm0(a_impulse_steps, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArrayF32ToWasm0(a_impulse_x, wasm.__wbindgen_malloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passArrayF32ToWasm0(a_impulse_y, wasm.__wbindgen_malloc);
+        const len2 = WASM_VECTOR_LEN;
+        const ptr3 = passArrayF32ToWasm0(a_impulse_z, wasm.__wbindgen_malloc);
+        const len3 = WASM_VECTOR_LEN;
+        const ptr4 = passArray32ToWasm0(l_impulse_steps, wasm.__wbindgen_malloc);
+        const len4 = WASM_VECTOR_LEN;
+        const ptr5 = passArrayF32ToWasm0(l_impulse_x, wasm.__wbindgen_malloc);
+        const len5 = WASM_VECTOR_LEN;
+        const ptr6 = passArrayF32ToWasm0(l_impulse_y, wasm.__wbindgen_malloc);
+        const len6 = WASM_VECTOR_LEN;
+        const ptr7 = passArrayF32ToWasm0(l_impulse_z, wasm.__wbindgen_malloc);
+        const len7 = WASM_VECTOR_LEN;
+        const ptr8 = passArray32ToWasm0(i_impulse_steps, wasm.__wbindgen_malloc);
+        const len8 = WASM_VECTOR_LEN;
+        const ptr9 = passArrayF32ToWasm0(i_impulse_x, wasm.__wbindgen_malloc);
+        const len9 = WASM_VECTOR_LEN;
+        const ptr10 = passArrayF32ToWasm0(i_impulse_y, wasm.__wbindgen_malloc);
+        const len10 = WASM_VECTOR_LEN;
+        const ptr11 = passArrayF32ToWasm0(i_impulse_z, wasm.__wbindgen_malloc);
+        const len11 = WASM_VECTOR_LEN;
+        const ptr12 = passArray32ToWasm0(v_impulse_steps, wasm.__wbindgen_malloc);
+        const len12 = WASM_VECTOR_LEN;
+        const ptr13 = passArrayF32ToWasm0(v_impulse_x, wasm.__wbindgen_malloc);
+        const len13 = WASM_VECTOR_LEN;
+        const ptr14 = passArrayF32ToWasm0(v_impulse_y, wasm.__wbindgen_malloc);
+        const len14 = WASM_VECTOR_LEN;
+        const ptr15 = passArrayF32ToWasm0(v_impulse_z, wasm.__wbindgen_malloc);
+        const len15 = WASM_VECTOR_LEN;
+        const ptr16 = passArray32ToWasm0(e_impulse_steps, wasm.__wbindgen_malloc);
+        const len16 = WASM_VECTOR_LEN;
+        const ptr17 = passArrayF32ToWasm0(e_impulse_x, wasm.__wbindgen_malloc);
+        const len17 = WASM_VECTOR_LEN;
+        const ptr18 = passArrayF32ToWasm0(e_impulse_y, wasm.__wbindgen_malloc);
+        const len18 = WASM_VECTOR_LEN;
+        const ptr19 = passArrayF32ToWasm0(e_impulse_z, wasm.__wbindgen_malloc);
+        const len19 = WASM_VECTOR_LEN;
+        wasm.positions_for_step(retptr, num_steps, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11, ptr12, len12, ptr13, len13, ptr14, len14, ptr15, len15, ptr16, len16, ptr17, len17, ptr18, len18, ptr19, len19);
+        var r0 = getInt32Memory0()[retptr / 4 + 0];
+        var r1 = getInt32Memory0()[retptr / 4 + 1];
+        var v20 = getArrayF32FromWasm0(r0, r1).slice();
+        wasm.__wbindgen_free(r0, r1 * 4);
+        return v20;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
     }
 }
 
@@ -458,6 +583,23 @@ function getUint8ClampedMemory0() {
 
 function getClampedArrayU8FromWasm0(ptr, len) {
     return getUint8ClampedMemory0().subarray(ptr / 1, ptr / 1 + len);
+}
+
+function addHeapObject(obj) {
+    if (heap_next === heap.length) heap.push(heap.length + 1);
+    const idx = heap_next;
+    heap_next = heap[idx];
+
+    heap[idx] = obj;
+    return idx;
+}
+
+function handleError(f, args) {
+    try {
+        return f.apply(this, args);
+    } catch (e) {
+        wasm.__wbindgen_exn_store(addHeapObject(e));
+    }
 }
 /**
 */
@@ -500,41 +642,21 @@ function getImports() {
     imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
         takeObject(arg0);
     };
-    imports.wbg.__wbg_static_accessor_PAINT_DECAY_AGE_34e900181b2dab36 = function() {
-        const ret = PAINT_DECAY_AGE;
-        return ret;
-    };
-    imports.wbg.__wbg_static_accessor_PAINT_POINT_SIZE_0103a0089ee4a1ee = function() {
-        const ret = PAINT_POINT_SIZE;
-        return ret;
-    };
-    imports.wbg.__wbg_static_accessor_SPLATTER_DRIP_DECAY_52a5bea4c794b8de = function() {
-        const ret = SPLATTER_DRIP_DECAY;
-        return ret;
-    };
-    imports.wbg.__wbg_static_accessor_SPLATTER_DRIP_WEIGHT_b1f992fa90ddde89 = function() {
-        const ret = SPLATTER_DRIP_WEIGHT;
-        return ret;
-    };
     imports.wbg.__wbg_static_accessor_UVMAP_SIZE_a2041fefcbe5a985 = function() {
         const ret = UVMAP_SIZE;
         return ret;
     };
-    imports.wbg.__wbg_putImageData_23e0cc41d4fabcde = function() { return handleError(function (arg0, arg1, arg2, arg3) {
-        getObject(arg0).putImageData(getObject(arg1), arg2, arg3);
-    }, arguments) };
+    imports.wbg.__wbg_static_accessor_SPLATTER_ANIM_FRAMES_659fe1818af3aa5a = function() {
+        const ret = SPLATTER_ANIM_FRAMES;
+        return ret;
+    };
     imports.wbg.__wbg_newwithu8clampedarrayandsh_f7ef3a8f3fd04c8a = function() { return handleError(function (arg0, arg1, arg2, arg3) {
         const ret = new ImageData(getClampedArrayU8FromWasm0(arg0, arg1), arg2 >>> 0, arg3 >>> 0);
         return addHeapObject(ret);
     }, arguments) };
-    imports.wbg.__wbg_buffer_3f3d764d4747d564 = function(arg0) {
-        const ret = getObject(arg0).buffer;
-        return addHeapObject(ret);
-    };
-    imports.wbg.__wbg_newwithbyteoffsetandlength_d9aa266703cb98be = function(arg0, arg1, arg2) {
-        const ret = new Uint8Array(getObject(arg0), arg1 >>> 0, arg2 >>> 0);
-        return addHeapObject(ret);
-    };
+    imports.wbg.__wbg_putImageData_23e0cc41d4fabcde = function() { return handleError(function (arg0, arg1, arg2, arg3) {
+        getObject(arg0).putImageData(getObject(arg1), arg2, arg3);
+    }, arguments) };
     imports.wbg.__wbg_new_abda76e883ba8a5f = function() {
         const ret = new Error();
         return addHeapObject(ret);
@@ -563,10 +685,6 @@ function getImports() {
     imports.wbg.__wbindgen_throw = function(arg0, arg1) {
         throw new Error(getStringFromWasm0(arg0, arg1));
     };
-    imports.wbg.__wbindgen_memory = function() {
-        const ret = wasm.memory;
-        return addHeapObject(ret);
-    };
 
     return imports;
 }
@@ -579,7 +697,6 @@ function finalizeInit(instance, module) {
     wasm = instance.exports;
     init.__wbindgen_wasm_module = module;
     cachedFloat32Memory0 = new Float32Array();
-    cachedFloat64Memory0 = new Float64Array();
     cachedInt32Memory0 = new Int32Array();
     cachedUint32Memory0 = new Uint32Array();
     cachedUint8Memory0 = new Uint8Array();

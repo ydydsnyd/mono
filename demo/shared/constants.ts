@@ -1,27 +1,28 @@
 import type {Color} from './types';
-import {COLOR_PALATE_RS, PAINT_DECAY_AGE} from '../../renderer/src/constants';
-export {UVMAP_SIZE} from '../../renderer/src/constants';
+import {COLOR_PALATE_RS} from '../../renderer/src/constants';
+export {UVMAP_SIZE, SPLATTER_ANIM_FRAMES} from '../../renderer/src/constants';
 
-// How much padding each canvas should have above and below it
-export const CANVAS_HEIGHT_PADDING = 0.2;
+// Demo position
+export const DEMO_OFFSET_BOTTOM = 480;
+
+// Debug
+export const DEBUG_PHYSICS = false;
 
 // Splatters
-export const SPLATTER_COUNT_MAX = 5;
-export const SPLATTER_MAX_DISTANCE = 0.5;
-export const SPLATTER_MAX_SIZE = 0.5;
-export const SPLATTER_MIN_SIZE = 0.1;
+export const SPLATTER_FLATTEN_MIN = 10;
+// ms between splatters. Apparently machine guns are like 12fps, so about once
+// every 84ms. Seems reasonable to do about half that.
+export const SPLATTER_MS = 42;
 
-// Scale
-export const MIN_SCALE = 0.4;
-export const MAX_SCALE = 2.5;
-export const SCALE_SPEED = 5;
+// Render a window of steps, so changes from the past can be reflected locally
+export const MAX_RENDERED_STEPS = 10;
+// Render a step older than our global step so that things can change in our
+// "past" without jerkiness.
+export const STEP_RENDER_DELAY = 0;
 
-// Flatten points older than this
-export const POINT_AGE_MAX = PAINT_DECAY_AGE;
-export const POINT_CLEANUP_MIN = 10;
-export const POINT_MAX_MS = 30;
-
-export const CLIENT_CACHE_INTERVAL = 1000;
+// 3D
+// How many steps it takes for our environment to spin in a circle
+export const ENVIRONMENT_CYCLE_STEPS = 1000;
 
 // The only data that changes on an actor is the loction, so update them at a
 // lower frequency than cursors.

@@ -4,14 +4,11 @@ export type State = {
   actorId: ActorID;
   actors: Record<ActorID, Actor>;
   cursors: Record<ActorID, Cursor>;
-  tools: Record<ActorID, Tool>;
-  rotations: Record<Letter, Rotation>;
-  points: Record<Letter, Point[]>;
+  splatters: Record<Letter, Splatter[]>;
   rawCaches: Record<Letter, string>;
-  scales: Record<Letter, number>;
-  positions: Record<Letter, Position>;
   sequences: Record<Letter, number>;
-  owners: Record<Letter, ActorID | undefined>;
+  impulses: Record<Letter, Impulse[]>;
+  physics: Physics | undefined;
 };
 
 export type ActorID = string;
@@ -26,8 +23,6 @@ export type ColorPalate = [
   [Color, Color],
 ];
 
-export type Rotation = number;
-
 export type Actor = {
   id: ActorID;
   colorIndex: number;
@@ -40,24 +35,21 @@ export type LetterCache = {
   cache: string;
 };
 
-export type LetterPosition = {
-  letter: Letter;
-  position: Position;
+export type Letter3DPosition = {
+  position: Vector;
+  rotation: Quaternion;
 };
 
-export type LetterScale = {
-  letter: Letter;
-  scale: number;
+export type Impulse = Vector & {
+  u: ActorID;
+  s: number; // step
 };
 
-export type LetterRotation = {
-  letter: Letter;
-  rotation: Rotation;
-};
+export type LetterHandles = Record<Letter, number>;
 
-export type LetterOwner = {
-  letter: Letter;
-  actorId: ActorID;
+export type Physics = {
+  state: string; // b64 encoded
+  step: number;
 };
 
 export enum Letter {
@@ -68,25 +60,13 @@ export enum Letter {
   E = 'e',
 }
 
-export enum Tool {
-  PAINT = 'paint',
-  MOVE = 'move',
-  ROTATE = 'rotate',
-  SCALE = 'scale',
-}
-
-// Each letter also can be painted on, by adding points.
-export type Point = Position & {
-  u: ActorID; // actor ID
-  t: number; // timestamp
-  c: number; // color index, from COLOR_PALATE
-  s: number; // scale that this point was drawn at
-  p: Splatter[]; // splatters
-  g: number; // group
-};
-
+// Each letter also can be painted on, by adding splatters.
 export type Splatter = Position & {
-  s: number; // size
+  u: ActorID; // actor ID
+  s: number; // step
+  c: number; // color index, from COLOR_PALATE
+  a: number; // splatter animation index
+  r: number; // rotation of splatter animation
 };
 
 // Each actor has a cursor. They are positioned in global space, so we also need
@@ -105,9 +85,13 @@ export type Size = {
   height: number;
 };
 
-export interface Vector extends Position {
+export type Quaternion = Vector & {
+  w: number;
+};
+
+export type Vector = Position & {
   z: number;
-}
+};
 
 // In this app, all position values are between 0 and 1, and expected to be
 // multiplied by window.innerWidth/window.innerHeight when used in rendering
@@ -115,9 +99,4 @@ export interface Vector extends Position {
 export type Position = {
   x: number;
   y: number;
-};
-
-export type BotmasterState = {
-  clientID?: string | undefined;
-  mode: 'intro' | 'nanny';
 };
