@@ -9,9 +9,9 @@ const getFlagEmoji = (country: string) => {
 };
 
 const handler = (req: VercelRequest, res: VercelResponse) => {
-  const country = req.headers['x-vercel-ip-country'];
-  const city = req.headers['x-vercel-ip-city'];
-  const region = req.headers['x-vercel-ip-country-region'];
+  const country = req.headers['x-vercel-ip-country'] as string;
+  const city = req.headers['x-vercel-ip-city'] as string;
+  const region = req.headers['x-vercel-ip-country-region'] as string;
 
   if (!country) {
     res.json({
