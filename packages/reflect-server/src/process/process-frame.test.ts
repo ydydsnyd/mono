@@ -1,7 +1,7 @@
-import {test, expect} from '@jest/globals';
-import * as s from 'superstruct';
+import {expect, test} from '@jest/globals';
+import type {JSONType, Mutation, Version} from 'reflect-protocol';
 import type {WriteTransaction} from 'replicache';
-import type {JSONType} from '../../src/protocol/json.js';
+import * as s from 'superstruct';
 import {DurableStorage} from '../../src/storage/durable-storage.js';
 import type {ClientPokeBody} from '../../src/types/client-poke-body.js';
 import {
@@ -11,17 +11,16 @@ import {
 } from '../../src/types/client-record.js';
 import type {ClientID} from '../../src/types/client-state.js';
 import {UserValue, userValueKey} from '../../src/types/user-value.js';
-import {Version, versionKey} from '../../src/types/version.js';
-import {
-  mutation,
-  clientRecord,
-  createSilentLogContext,
-  userValue,
-  mockMathRandom,
-} from '../util/test-utils.js';
+import {versionKey} from '../../src/types/version.js';
 import {processFrame} from '../process/process-frame.js';
 import {connectedClientsKey} from '../types/connected-clients.js';
-import type {Mutation} from '../protocol/push.js';
+import {
+  clientRecord,
+  createSilentLogContext,
+  mockMathRandom,
+  mutation,
+  userValue,
+} from '../util/test-utils.js';
 
 const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();

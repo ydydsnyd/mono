@@ -1,9 +1,9 @@
-import {test, expect} from '@jest/globals';
+import {expect, test} from '@jest/globals';
+import type {Version} from 'reflect-protocol';
 import type {PatchOperation} from 'replicache';
 import {getPatch} from '../../src/ff/get-patch.js';
-import type {Version} from '../../src/types/version.js';
-import {ReplicacheTransaction} from '../../src/storage/replicache-transaction.js';
 import {DurableStorage} from '../../src/storage/durable-storage.js';
+import {ReplicacheTransaction} from '../../src/storage/replicache-transaction.js';
 
 const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();
