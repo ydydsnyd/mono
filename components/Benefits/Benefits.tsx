@@ -21,7 +21,7 @@ const Benefits = () => (
         <Image
           src={realtimeCollab}
           loading="lazy"
-          alt=""
+          alt="60 FPS cursor"
           className={styles.benefitIcon}
         />
       </div>
