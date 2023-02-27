@@ -1,6 +1,10 @@
 import type {Color} from './types';
 import {COLOR_PALATE_RS} from '../../renderer/src/constants';
-export {UVMAP_SIZE, SPLATTER_ANIM_FRAMES} from '../../renderer/src/constants';
+export {
+  UVMAP_SIZE,
+  SPLATTER_ANIM_FRAMES,
+  MAX_RENDERED_PHYSICS_STEPS,
+} from '../../renderer/src/constants';
 
 // Demo position
 export const DEMO_OFFSET_BOTTOM = 480;
@@ -14,8 +18,6 @@ export const SPLATTER_FLATTEN_MIN = 10;
 // every 84ms. Seems reasonable to do about half that.
 export const SPLATTER_MS = 42;
 
-// Render a window of steps, so changes from the past can be reflected locally
-export const MAX_RENDERED_STEPS = 30;
 // Render a step older than our global step so that things can change in our
 // "past" without jerkiness or without us seeing jitter due to missing spring
 // apexes.

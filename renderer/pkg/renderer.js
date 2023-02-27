@@ -1,4 +1,4 @@
-import { UVMAP_SIZE, SPLATTER_ANIM_FRAMES } from './snippets/renderer-ba6236b463686f63/src/constants.ts';
+import { UVMAP_SIZE, SPLATTER_ANIM_FRAMES, MAX_RENDERED_PHYSICS_STEPS } from './snippets/renderer-ba6236b463686f63/src/constants.ts';
 
 let wasm;
 
@@ -639,16 +639,20 @@ async function load(module, imports) {
 function getImports() {
     const imports = {};
     imports.wbg = {};
-    imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
-        takeObject(arg0);
-    };
-    imports.wbg.__wbg_static_accessor_UVMAP_SIZE_a2041fefcbe5a985 = function() {
-        const ret = UVMAP_SIZE;
+    imports.wbg.__wbg_static_accessor_MAX_RENDERED_PHYSICS_STEPS_1227ae48b3a9f731 = function() {
+        const ret = MAX_RENDERED_PHYSICS_STEPS;
         return ret;
     };
     imports.wbg.__wbg_static_accessor_SPLATTER_ANIM_FRAMES_659fe1818af3aa5a = function() {
         const ret = SPLATTER_ANIM_FRAMES;
         return ret;
+    };
+    imports.wbg.__wbg_static_accessor_UVMAP_SIZE_a2041fefcbe5a985 = function() {
+        const ret = UVMAP_SIZE;
+        return ret;
+    };
+    imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
+        takeObject(arg0);
     };
     imports.wbg.__wbg_newwithu8clampedarrayandsh_f7ef3a8f3fd04c8a = function() { return handleError(function (arg0, arg1, arg2, arg3) {
         const ret = new ImageData(getClampedArrayU8FromWasm0(arg0, arg1), arg2 >>> 0, arg3 >>> 0);

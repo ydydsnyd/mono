@@ -7,7 +7,6 @@ mod physics;
 
 use flate2::{bufread::DeflateDecoder, write::DeflateEncoder, Compression};
 use image::{ImageFormat, RgbaImage};
-use js_sys::Uint8Array;
 use mut_static::MutStatic;
 use nalgebra::point;
 use physics::{get_position, Impulse, PhysicsState};
@@ -36,6 +35,7 @@ extern "C" {
     static COLOR_PALATE_RS: Vec<f32>;
     static UVMAP_SIZE: u32;
     static SPLATTER_ANIM_FRAMES: u8;
+    static MAX_RENDERED_PHYSICS_STEPS: usize;
 }
 
 #[wasm_bindgen]
@@ -369,32 +369,32 @@ pub fn update_state(
 ) -> Vec<u8> {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     if let Some(physics_state) = serialized_physics {
-        _set_physics_state(physics_state, start_step);
+        set_physics_state_impl(physics_state, start_step);
     }
     let mut physics = PHYSICS.write().unwrap();
-    _advance_physics(
+    advance_physics(
         &mut physics,
         num_steps,
-        a_impulse_steps,
-        a_impulse_x,
-        a_impulse_y,
-        a_impulse_z,
-        l_impulse_steps,
-        l_impulse_x,
-        l_impulse_y,
-        l_impulse_z,
-        i_impulse_steps,
-        i_impulse_x,
-        i_impulse_y,
-        i_impulse_z,
-        v_impulse_steps,
-        v_impulse_x,
-        v_impulse_y,
-        v_impulse_z,
-        e_impulse_steps,
-        e_impulse_x,
-        e_impulse_y,
-        e_impulse_z,
+        &a_impulse_steps[..],
+        &a_impulse_x[..],
+        &a_impulse_y[..],
+        &a_impulse_z[..],
+        &l_impulse_steps[..],
+        &l_impulse_x[..],
+        &l_impulse_y[..],
+        &l_impulse_z[..],
+        &i_impulse_steps[..],
+        &i_impulse_x[..],
+        &i_impulse_y[..],
+        &i_impulse_z[..],
+        &v_impulse_steps[..],
+        &v_impulse_x[..],
+        &v_impulse_y[..],
+        &v_impulse_z[..],
+        &e_impulse_steps[..],
+        &e_impulse_x[..],
+        &e_impulse_y[..],
+        &e_impulse_z[..],
     );
     let data = bincode::serialize(&physics.state).unwrap();
     compress(data)
@@ -403,10 +403,10 @@ pub fn update_state(
 #[wasm_bindgen]
 pub fn set_physics_state(serialized_physics: Vec<u8>, step: usize) {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
-    _set_physics_state(serialized_physics, step)
+    set_physics_state_impl(serialized_physics, step)
 }
 
-fn _set_physics_state(serialized_physics: Vec<u8>, step: usize) {
+fn set_physics_state_impl(serialized_physics: Vec<u8>, step: usize) {
     let mut physics = PHYSICS.write().unwrap();
     physics.state =
         bincode::deserialize(&decompress(serialized_physics)).expect("Receieved bad physics data");
@@ -438,38 +438,70 @@ pub fn positions_for_step(
     e_impulse_z: Vec<f32>,
 ) -> Vec<f32> {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
-    let physics_cache = PHYSICS.read().unwrap();
-    let mut physics = physics_cache.copy();
-    _advance_physics(
-        &mut physics,
-        num_steps,
-        a_impulse_steps,
-        a_impulse_x,
-        a_impulse_y,
-        a_impulse_z,
-        l_impulse_steps,
-        l_impulse_x,
-        l_impulse_y,
-        l_impulse_z,
-        i_impulse_steps,
-        i_impulse_x,
-        i_impulse_y,
-        i_impulse_z,
-        v_impulse_steps,
-        v_impulse_x,
-        v_impulse_y,
-        v_impulse_z,
-        e_impulse_steps,
-        e_impulse_x,
-        e_impulse_y,
-        e_impulse_z,
-    );
-    let mut serialized_data: Vec<f32> = vec![];
-    add_data_for_letter(&physics.state, Letter::A, &mut serialized_data);
-    add_data_for_letter(&physics.state, Letter::L, &mut serialized_data);
-    add_data_for_letter(&physics.state, Letter::I, &mut serialized_data);
-    add_data_for_letter(&physics.state, Letter::V, &mut serialized_data);
-    add_data_for_letter(&physics.state, Letter::E, &mut serialized_data);
+    let mut physics_cache = PHYSICS.write().unwrap();
+    let max_steps = MAX_RENDERED_PHYSICS_STEPS.clone();
+    let mut bake_step = 0;
+    if num_steps > max_steps {
+        bake_step = num_steps - max_steps - 1;
+        advance_physics(
+            &mut physics_cache,
+            bake_step,
+            slice_until(&a_impulse_steps, bake_step),
+            slice_until(&a_impulse_x, bake_step),
+            slice_until(&a_impulse_y, bake_step),
+            slice_until(&a_impulse_z, bake_step),
+            slice_until(&l_impulse_steps, bake_step),
+            slice_until(&l_impulse_x, bake_step),
+            slice_until(&l_impulse_y, bake_step),
+            slice_until(&l_impulse_z, bake_step),
+            slice_until(&i_impulse_steps, bake_step),
+            slice_until(&i_impulse_x, bake_step),
+            slice_until(&i_impulse_y, bake_step),
+            slice_until(&i_impulse_z, bake_step),
+            slice_until(&v_impulse_steps, bake_step),
+            slice_until(&v_impulse_x, bake_step),
+            slice_until(&v_impulse_y, bake_step),
+            slice_until(&v_impulse_z, bake_step),
+            slice_until(&e_impulse_steps, bake_step),
+            slice_until(&e_impulse_x, bake_step),
+            slice_until(&e_impulse_y, bake_step),
+            slice_until(&e_impulse_z, bake_step),
+        );
+        physics_cache.step += bake_step;
+    }
+    let mut windowed_physics = physics_cache.copy();
+    if bake_step < num_steps {
+        advance_physics(
+            &mut windowed_physics,
+            num_steps - bake_step,
+            slice_from(&a_impulse_steps, bake_step),
+            slice_from(&a_impulse_x, bake_step),
+            slice_from(&a_impulse_y, bake_step),
+            slice_from(&a_impulse_z, bake_step),
+            slice_from(&l_impulse_steps, bake_step),
+            slice_from(&l_impulse_x, bake_step),
+            slice_from(&l_impulse_y, bake_step),
+            slice_from(&l_impulse_z, bake_step),
+            slice_from(&i_impulse_steps, bake_step),
+            slice_from(&i_impulse_x, bake_step),
+            slice_from(&i_impulse_y, bake_step),
+            slice_from(&i_impulse_z, bake_step),
+            slice_from(&v_impulse_steps, bake_step),
+            slice_from(&v_impulse_x, bake_step),
+            slice_from(&v_impulse_y, bake_step),
+            slice_from(&v_impulse_z, bake_step),
+            slice_from(&e_impulse_steps, bake_step),
+            slice_from(&e_impulse_x, bake_step),
+            slice_from(&e_impulse_y, bake_step),
+            slice_from(&e_impulse_z, bake_step),
+        );
+    }
+    let mut serialized_data: Vec<f32> = vec![physics_cache.step as f32];
+    add_data_for_letter(&windowed_physics.state, Letter::A, &mut serialized_data);
+    add_data_for_letter(&windowed_physics.state, Letter::L, &mut serialized_data);
+    add_data_for_letter(&windowed_physics.state, Letter::I, &mut serialized_data);
+    add_data_for_letter(&windowed_physics.state, Letter::V, &mut serialized_data);
+    add_data_for_letter(&windowed_physics.state, Letter::E, &mut serialized_data);
     serialized_data
 }
 
@@ -484,70 +516,70 @@ fn add_data_for_letter(state: &PhysicsState, letter: Letter, data: &mut Vec<f32>
     ]);
 }
 
-fn _advance_physics(
+fn advance_physics(
     physics: &mut Physics,
     num_steps: usize,
-    a_impulse_steps: Vec<usize>,
-    a_impulse_x: Vec<f32>,
-    a_impulse_y: Vec<f32>,
-    a_impulse_z: Vec<f32>,
-    l_impulse_steps: Vec<usize>,
-    l_impulse_x: Vec<f32>,
-    l_impulse_y: Vec<f32>,
-    l_impulse_z: Vec<f32>,
-    i_impulse_steps: Vec<usize>,
-    i_impulse_x: Vec<f32>,
-    i_impulse_y: Vec<f32>,
-    i_impulse_z: Vec<f32>,
-    v_impulse_steps: Vec<usize>,
-    v_impulse_x: Vec<f32>,
-    v_impulse_y: Vec<f32>,
-    v_impulse_z: Vec<f32>,
-    e_impulse_steps: Vec<usize>,
-    e_impulse_x: Vec<f32>,
-    e_impulse_y: Vec<f32>,
-    e_impulse_z: Vec<f32>,
+    a_impulse_steps: &[usize],
+    a_impulse_x: &[f32],
+    a_impulse_y: &[f32],
+    a_impulse_z: &[f32],
+    l_impulse_steps: &[usize],
+    l_impulse_x: &[f32],
+    l_impulse_y: &[f32],
+    l_impulse_z: &[f32],
+    i_impulse_steps: &[usize],
+    i_impulse_x: &[f32],
+    i_impulse_y: &[f32],
+    i_impulse_z: &[f32],
+    v_impulse_steps: &[usize],
+    v_impulse_x: &[f32],
+    v_impulse_y: &[f32],
+    v_impulse_z: &[f32],
+    e_impulse_steps: &[usize],
+    e_impulse_x: &[f32],
+    e_impulse_y: &[f32],
+    e_impulse_z: &[f32],
 ) {
     let mut impulses = HashMap::new();
     add_impulses(
         &mut impulses,
         Letter::A,
-        &a_impulse_steps,
-        &a_impulse_x,
-        &a_impulse_y,
-        &a_impulse_z,
+        a_impulse_steps,
+        a_impulse_x,
+        a_impulse_y,
+        a_impulse_z,
     );
     add_impulses(
         &mut impulses,
         Letter::L,
-        &l_impulse_steps,
-        &l_impulse_x,
-        &l_impulse_y,
-        &l_impulse_z,
+        l_impulse_steps,
+        l_impulse_x,
+        l_impulse_y,
+        l_impulse_z,
     );
     add_impulses(
         &mut impulses,
         Letter::I,
-        &i_impulse_steps,
-        &i_impulse_x,
-        &i_impulse_y,
-        &i_impulse_z,
+        i_impulse_steps,
+        i_impulse_x,
+        i_impulse_y,
+        i_impulse_z,
     );
     add_impulses(
         &mut impulses,
         Letter::V,
-        &v_impulse_steps,
-        &v_impulse_x,
-        &v_impulse_y,
-        &v_impulse_z,
+        v_impulse_steps,
+        v_impulse_x,
+        v_impulse_y,
+        v_impulse_z,
     );
     add_impulses(
         &mut impulses,
         Letter::E,
-        &e_impulse_steps,
-        &e_impulse_x,
-        &e_impulse_y,
-        &e_impulse_z,
+        e_impulse_steps,
+        e_impulse_x,
+        e_impulse_y,
+        e_impulse_z,
     );
     let current_step = physics.step;
     physics::advance_physics(&mut physics.state, current_step, num_steps, impulses);
@@ -557,10 +589,10 @@ fn _advance_physics(
 fn add_impulses(
     impulses: &mut HashMap<usize, Vec<Impulse>>,
     letter: Letter,
-    steps: &Vec<usize>,
-    x_vals: &Vec<f32>,
-    y_vals: &Vec<f32>,
-    z_vals: &Vec<f32>,
+    steps: &[usize],
+    x_vals: &[f32],
+    y_vals: &[f32],
+    z_vals: &[f32],
 ) {
     for (num, step) in steps.iter().enumerate() {
         let step_impulses = match impulses.get_mut(step) {
@@ -587,4 +619,17 @@ fn decompress(data: Vec<u8>) -> Vec<u8> {
     let mut out = vec![];
     decoder.read_to_end(&mut out).expect("Decoding failed");
     out
+}
+
+fn slice_until<T>(vec: &Vec<T>, index: usize) -> &[T] {
+    if index < vec.len() {
+        return &vec[..index];
+    }
+    return &vec[..];
+}
+fn slice_from<T>(vec: &Vec<T>, index: usize) -> &[T] {
+    if index < vec.len() {
+        return &vec[index..];
+    }
+    return &vec[0..0];
 }

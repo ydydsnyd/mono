@@ -2,7 +2,7 @@ import type {WriteTransaction} from '@rocicorp/reflect';
 import {
   COLOR_PALATE,
   COLOR_PALATE_END,
-  MAX_RENDERED_STEPS,
+  MAX_RENDERED_PHYSICS_STEPS,
   SPLATTER_ANIM_FRAMES,
   SPLATTER_FLATTEN_MIN,
 } from './constants';
@@ -214,7 +214,7 @@ const flattenPhysics = async (tx: WriteTransaction, step: number) => {
   console.log(
     `Server origin step: ${origin?.step}. Rendered: ${renderedSteps}`,
   );
-  if (renderedSteps > MAX_RENDERED_STEPS || !origin) {
+  if (renderedSteps > MAX_RENDERED_PHYSICS_STEPS) {
     const impulses = await asyncLetterMap<Impulse[]>(async letter => {
       const impulses = await tx.scan({
         prefix: `impulse/${letter}/`,
@@ -223,7 +223,7 @@ const flattenPhysics = async (tx: WriteTransaction, step: number) => {
     });
 
     await _initRenderer!();
-    const newStep = Math.max(step - MAX_RENDERED_STEPS, 0);
+    const newStep = Math.max(step - MAX_RENDERED_PHYSICS_STEPS, 0);
     const newState = update_state(
       origin ? decode(origin.state) : undefined,
       origin?.step || 0,

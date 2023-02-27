@@ -16,7 +16,14 @@ import {
   DEMO_OFFSET_BOTTOM,
   STEP_UPDATE_INTERVAL,
 } from '../shared/constants';
-import type {Actor, ColorPalate, Letter, Position, Size} from '../shared/types';
+import type {
+  Actor,
+  ColorPalate,
+  Letter,
+  Physics,
+  Position,
+  Size,
+} from '../shared/types';
 import {LETTERS} from '../shared/letters';
 import {letterMap, now} from '../shared/util';
 import {initRoom} from './init-room';
@@ -222,13 +229,20 @@ export const init = async () => {
   };
 
   // Set up physics rendering
+  let physicsStep = physics?.step || 0;
+  addListener<Physics>('physics', ({step}, deleted) => {
+    if (!deleted) {
+      physicsStep = step;
+    }
+  });
   const renderPhysics = () => {
     updateCurrentStep(localStep);
     // positions3d
-    const positions3d = get3DPositions(
-      Math.max(localStep - (physics?.step || 0) - STEP_RENDER_DELAY, 0),
+    const [newStep, positions3d] = get3DPositions(
+      Math.max(localStep - physicsStep - STEP_RENDER_DELAY, 0),
       impulses,
     );
+    physicsStep = newStep;
     LETTERS.forEach(letter => {
       const position3d = positions3d[letter];
       if (position3d) {

@@ -660,7 +660,6 @@ dependencies = [
  "console_error_panic_hook",
  "flate2",
  "image",
- "js-sys",
  "lazy_static",
  "mut_static",
  "nalgebra",
