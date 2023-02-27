@@ -31,6 +31,7 @@ export const initialize = async (roomID: string, userID: string) => {
       userID,
       roomID: roomID,
     }),
+    logLevel: 'error',
     mutators,
   });
 

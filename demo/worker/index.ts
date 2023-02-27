@@ -32,7 +32,7 @@ const {worker, RoomDO, AuthDO} = createReflectServer({
   disconnectHandler: async write => {
     await mutators.removeActor(write, write.clientID);
   },
-  getLogLevel: () => 'info',
+  getLogLevel: () => 'error',
   allowUnconfirmedWrites: true,
 });
 
