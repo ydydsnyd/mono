@@ -3,10 +3,8 @@ import styles from '@/styles/Home.module.css';
 import Nav from '@/components/Nav/Nav';
 import Benefits from '@/components/Benefits/Benefits';
 import GetStarted from '@/components/GetStarted/GetStarted';
-import Testimonials from '@/components/Testimonials/Testimonials';
 import Pricing from '@/components/Pricing/Pricing';
 import Demo from '@/components/Demo/Demo';
-import Footer from '@/components/Footer/Footer';
 
 export default function Home() {
   return (
@@ -44,19 +42,11 @@ export default function Home() {
           <GetStarted />
         </section>
 
-        <section id="customers" className={styles.section}>
-          <h2 className={styles.subheader}>Who&rsquo;s using Reflect?</h2>
-          <Testimonials />
-        </section>
-
         <section id="pricing" className={styles.section}>
           <h2 className={styles.subheader}>Pricing</h2>
           <Pricing />
         </section>
-
       </main>
-
-      <Footer />
     </div>
   );
 }
