@@ -39,6 +39,14 @@ export const request = (
   });
 };
 
+export class RequestError extends Error {
+  code: number;
+  constructor(code: number, message: string) {
+    super(message);
+    this.code = code;
+  }
+}
+
 export const post = async <T>(
   url: string,
   data: string,
@@ -52,7 +60,7 @@ export const post = async <T>(
     }
     return JSON.parse(r.body) as unknown as T;
   } else {
-    throw new Error(`Request to ${url} failed: (${r.statusCode}) ${r.body}`);
+    throw new RequestError(r.statusCode, `Request to ${url} failed: ${r.body}`);
   }
 };
 
@@ -64,6 +72,6 @@ export const get = async <T>(
   if (r.statusCode === 200) {
     return JSON.parse(r.body) as unknown as T;
   } else {
-    throw new Error(`Request to ${url} failed: (${r.statusCode}) ${r.body}`);
+    throw new RequestError(r.statusCode, `Request to ${url} failed: ${r.body}`);
   }
 };

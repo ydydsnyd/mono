@@ -11,13 +11,20 @@ export const initRoom = async () => {
   // If we still don't have a roomID, allocate a new one.
   if (!roomID) {
     roomID = nanoid();
-    await fetch('/api/create-room', {
-      method: 'post',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({roomID}),
-    });
+  }
+
+  // Make sure room exists
+  const res = await fetch('/api/create-room', {
+    method: 'post',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({roomID}),
+  });
+  // 409 is ok, that just means we already have this room.
+  if (!res.ok && res.status !== 409) {
+    const message = await res.text();
+    throw new Error(`Failed to acquire room:\n(${res.status}: ${message})`);
   }
 
   localStorage.setItem('roomID', roomID);

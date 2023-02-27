@@ -1,5 +1,5 @@
 import type {VercelRequest, VercelResponse} from '@vercel/node';
-import {post} from './lib/request';
+import {post, RequestError} from './lib/request';
 import {SERVICE_HOST} from '@/demo/shared/urls';
 
 const reflectApiKey = process.env.REFLECT_AUTH_API_KEY || '';
@@ -29,9 +29,10 @@ const handler = async (req: VercelRequest, res: VercelResponse) => {
       true,
     );
     res.json(body);
-  } catch (e) {
+  } catch (err) {
+    const e = err as RequestError;
     console.error(e);
-    res.status(500).send(`error: ${String(e)}`);
+    res.status(e.code).send(`${String(e)}`);
   }
 };
 
