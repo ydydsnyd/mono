@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, {useEffect, useState} from 'react';
 import Image from 'next/image';
 import {init} from '@/demo/frontend';
 
@@ -7,21 +7,21 @@ const initOnce = () => {
   if (initPromise) {
     return initPromise;
   }
-  initPromise = init().catch(e => {
-    console.error(e);
-  });
+  initPromise = init();
   return initPromise;
 };
 
 const PaintFight = () => {
+  const [initError, setInitError] = useState<Error | undefined>(undefined);
   // useEffect so this fires after load
   useEffect(() => {
-    initOnce();
+    initOnce().catch(setInitError);
   }, []);
 
   return (
     <>
       <pre id="debug"></pre>
+      {initError ? `${initError?.message}` : null}
       <div id="demo-placeholder"></div>
       <div id="demo">
         <canvas id="canvas3D"></canvas>
