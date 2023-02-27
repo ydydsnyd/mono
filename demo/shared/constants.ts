@@ -18,6 +18,10 @@ export const SPLATTER_FLATTEN_MIN = 10;
 // every 84ms. Seems reasonable to do about half that.
 export const SPLATTER_MS = 42;
 
+// Some browsers are capable of rendering > 60fps, but we don't expect/want that
+// since we assume each step is about 16ms.
+export const MIN_STEP_MS = 16;
+
 // Render a step older than our global step so that things can change in our
 // "past" without jerkiness or without us seeing jitter due to missing spring
 // apexes.

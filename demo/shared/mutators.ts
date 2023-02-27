@@ -161,8 +161,7 @@ export const mutators = {
     };
     await tx.put(`impulse/${letter}/${impulseId(impulse)}`, impulse);
 
-    // On the server, do some "flattening". This is equivalent to a "rollback
-    // netcode" in game dev. The general idea is:
+    // On the server, do some "flattening".
     // 1. We periodically compute state as a function of many inputs. In the case of
     // splatters, this state is a texture image. In the case of impulses, this state
     // is a serialized physics state.

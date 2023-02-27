@@ -15,6 +15,7 @@ import {
   SPLATTER_MS,
   DEMO_OFFSET_BOTTOM,
   STEP_UPDATE_INTERVAL,
+  MIN_STEP_MS,
 } from '../shared/constants';
 import type {
   Actor,
@@ -319,9 +320,11 @@ const startRenderLoop = (render: () => void, debug: Debug) => {
   let lastLoop = performance.now();
   let thisLoop = performance.now();
   const _redraw = async () => {
-    await render();
     // Track a low-pass filtered fps
     thisLoop = performance.now();
+    if (thisLoop - lastLoop >= MIN_STEP_MS) {
+      await render();
+    }
     let thisFrameTime = thisLoop - lastLoop;
     frameTime += (thisFrameTime - frameTime) / FPS_LOW_PASS;
     lastLoop = thisLoop;
