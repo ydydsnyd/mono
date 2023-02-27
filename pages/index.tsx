@@ -5,6 +5,7 @@ import Benefits from '@/components/Benefits/Benefits';
 import GetStarted from '@/components/GetStarted/GetStarted';
 import Testimonials from '@/components/Testimonials/Testimonials';
 import Pricing from '@/components/Pricing/Pricing';
+import Contact from '@/components/Contact/Contact';
 import Demo from '@/components/Demo/Demo';
 import Footer from '@/components/Footer/Footer';
 
@@ -52,6 +53,11 @@ export default function Home() {
         <section id="pricing" className={styles.section}>
           <h2 className={styles.subheader}>Pricing</h2>
           <Pricing />
+        </section>
+
+        <section id="contact" className={styles.section}>
+          <h2 className={styles.subheader}>Contact us</h2>
+          <Contact />
         </section>
 
       </main>
