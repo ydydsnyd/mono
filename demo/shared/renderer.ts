@@ -1,6 +1,6 @@
 import {
   add_splatters_to_cache,
-  draw_buffer_png,
+  draw_buffer_webp,
   set_physics_state,
   Letter as RendererLetter,
   update_cache,
@@ -53,8 +53,8 @@ export const addSplattersToCache = (
   );
 };
 
-export const updateCache = (letter: Letter, png: string) => {
-  update_cache(getRendererLetter(letter), decode(png));
+export const updateCache = (letter: Letter, webp: string) => {
+  update_cache(getRendererLetter(letter), decode(webp));
 };
 
 export const getCache = (
@@ -63,7 +63,7 @@ export const getCache = (
   colors: ColorPalate,
 ) => {
   return encode(
-    draw_buffer_png(
+    draw_buffer_webp(
       getRendererLetter(letter),
       now(),
       new Uint8Array(colors[0].flat()),

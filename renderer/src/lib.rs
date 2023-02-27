@@ -130,11 +130,10 @@ pub fn precompute() {
 }
 
 #[wasm_bindgen]
-pub fn update_cache(letter: Letter, png_data: Vec<u8>) {
+pub fn update_cache(letter: Letter, webp_data: Vec<u8>) {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     let img =
-        image::load_from_memory_with_format(&png_data, ImageFormat::Png).unwrap_or_else(|e| {
-            // console_log!("data: {:?}", png_data);
+        image::load_from_memory_with_format(&webp_data, ImageFormat::WebP).unwrap_or_else(|e| {
             panic!(
                 "Image cache appears to be corrupted. Error: {}",
                 e.to_string()
@@ -145,12 +144,12 @@ pub fn update_cache(letter: Letter, png_data: Vec<u8>) {
     caches.set_data(&letter, pixels);
 }
 
-// Render a pixel map to a png, for use on the server side when creating
+// Render a pixel map to a webp image, for use on the server side when creating
 // compressed "base" images. This isn't efficient enough to use in client-side
 // wasm code, but produces a much smaller output than the client code, which is
 // appropriate for storing.
 #[wasm_bindgen]
-pub fn draw_buffer_png(
+pub fn draw_buffer_webp(
     letter: Letter,
     step: usize,
     a_colors: Vec<u8>,
@@ -195,10 +194,10 @@ pub fn draw_buffer_png(
         &splatter_animations,
         &splatter_rotations,
     );
-    let mut png_data = Vec::new();
-    img.write_to(&mut Cursor::new(&mut png_data), ImageFormat::Png)
-        .expect("Failed writing png data");
-    png_data
+    let mut webp_data = Vec::new();
+    img.write_to(&mut Cursor::new(&mut webp_data), ImageFormat::WebP)
+        .expect("Failed writing webp data");
+    webp_data
 }
 
 #[wasm_bindgen]
