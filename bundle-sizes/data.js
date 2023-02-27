@@ -1,6 +1,6 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1676644755425,
-  "repoUrl": "https://github.com/rocicorp/replicache-internal",
+  "lastUpdate": 1677493208024,
+  "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
       {
@@ -36149,6 +36149,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27781,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0e94bc3dd30174f3a0aed75f771e46d3780d529e",
+          "message": "chore: Re-enable Replicache Bundle Size Action (#335)\n\nThis is triggered on pushes to main that changes anything in\r\npackages/replicache.\r\n\r\nWhen done it pushes to gh-pages",
+          "timestamp": "2023-02-27T10:18:54Z",
+          "tree_id": "e2cb092c8752a56f89051e21046f22f6256834b5",
+          "url": "https://github.com/rocicorp/mono/commit/0e94bc3dd30174f3a0aed75f771e46d3780d529e"
+        },
+        "date": 1677493200094,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 262905,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45868,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 261700,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45546,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 98795,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27804,
             "unit": "bytes"
           }
         ]
