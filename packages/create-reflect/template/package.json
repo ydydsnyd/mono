@@ -1,5 +1,5 @@
 {
-  "name": "replicache-example",
+  "name": "reflect-template-example",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -12,25 +12,19 @@
     "format": "prettier --write './src/*/*.{js,jsx,json,ts,tsx,html,css,md}' '*.{cjs,js,jsx,json,ts,tsx,html,css,md}'"
   },
   "devDependencies": {
-    "@rocicorp/prettier-config": "^0.1.1",
     "@rocicorp/eslint-config": "^0.1.2",
-    "@rocicorp/rails": "^0.2.2",
+    "@rocicorp/prettier-config": "^0.1.1",
     "@rocicorp/reflect": "^0.12.1",
     "@rocicorp/reflect-server": "^0.21.1",
     "@types/react": "^18.0.17",
     "@types/react-dom": "^18.0.6",
     "@vitejs/plugin-react": "^2.0.1",
-    "classnames": "^2.3.1",
     "nanoid": "^4.0.0",
-    "prettier": "^2.2.1",
-    "qs": "^6.11.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "replicache-react": "^2.10.0",
-    "todomvc-app-css": "^2.4.2",
     "typescript": "^4.7.4",
-    "vite": "^3.0.7",
-    "zod": "^3.19.1"
+    "vite": "^3.0.7"
   },
   "eslintConfig": {
     "extends": "@rocicorp/eslint-config"

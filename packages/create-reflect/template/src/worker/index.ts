@@ -1,5 +1,5 @@
-import { createReflectServer } from "@rocicorp/reflect-server";
-import { mutators } from "../shared/mutators";
+import {createReflectServer} from '@rocicorp/reflect-server';
+import {mutators} from '../shared/mutators';
 
 const authHandler = async (auth: string) => {
   return {
@@ -7,9 +7,9 @@ const authHandler = async (auth: string) => {
   };
 };
 
-const { worker, RoomDO, AuthDO } = createReflectServer({
+const {worker, RoomDO, AuthDO} = createReflectServer({
   mutators,
   authHandler,
-  getLogLevel: () => "debug",
+  getLogLevel: () => 'debug',
 });
-export { worker as default, RoomDO, AuthDO };
+export {worker as default, RoomDO, AuthDO};

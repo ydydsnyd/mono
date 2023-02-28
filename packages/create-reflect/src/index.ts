@@ -3,6 +3,7 @@ import color from 'picocolors';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import validateProjectName from 'validate-npm-package-name';
 
 const templateDir = path.resolve(
   fileURLToPath(import.meta.url),
@@ -28,19 +29,28 @@ async function main() {
   const copySpinner = spinner();
   copySpinner.start('Copying files');
   copyDir(templateDir, targetDir);
+  updateProjectName(targetDir);
   copySpinner.stop('Copied files');
 
   outro(`${color.underline(color.cyan('https://reflect.net/contact'))}`);
 }
 
-function isValidPackageName(projectName: string): string | void {
-  if (
-    !/^(?:@[a-z\d\-*~][a-z\d\-*._~]*\/)?[a-z\d\-~][a-z\d\-._~]*$/.test(
-      projectName,
-    )
-  ) {
-    return 'Invalid project name.';
-  }
+function updateProjectName(targetDir: string) {
+  const packageJsonPath = path.resolve(targetDir, 'package.json');
+  const wranglerTomlPath = path.resolve(targetDir, 'wrangler.toml');
+
+  editFile(packageJsonPath, content => {
+    return content.replace(
+      /"name": "reflect-template-example"/,
+      `"name": "${targetDir}"`,
+    );
+  });
+  editFile(wranglerTomlPath, content => {
+    return content.replace(
+      /name = "reflect-template-example"/,
+      `name = "${targetDir}"`,
+    );
+  });
 }
 
 function copy(src: string, dest: string) {
@@ -58,6 +68,21 @@ function copyDir(srcDir: string, destDir: string) {
     const srcFile = path.resolve(srcDir, file);
     const destFile = path.resolve(destDir, file);
     copy(srcFile, destFile);
+  }
+}
+
+function editFile(file: string, callback: (content: string) => string) {
+  const content = fs.readFileSync(file, 'utf-8');
+  fs.writeFileSync(file, callback(content), 'utf-8');
+}
+
+function isValidPackageName(projectName: string): string | void {
+  const nameValidation = validateProjectName(projectName);
+  if (!nameValidation.validForNewPackages) {
+    return [
+      ...(nameValidation.errors || []),
+      ...(nameValidation.warnings || []),
+    ].join('\n');
   }
 }
 

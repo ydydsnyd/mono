@@ -1,6 +1,4 @@
-# reflect-todo
-
-This is a demo of Reflect: an upcoming Replicache-as-a-service product we are building.
+# reflect-template-example
 
 The idea of Reflect is that you can get all the benefits of [Replicache](https://replicache.dev/) without having to build your own backend. Think of it like Firebase, but with multiplayer and offline support that works 😂.
 
@@ -9,10 +7,6 @@ Currently the way you run this demo is "on-prem": you get yourself a Cloudflare 
 You don't have to know much/anything about how the backend works. It's a black box. And in the future, you won't have to run a backend at all, we will do that as a service that you manage via a CLI. Running it yourself just a temporary thing.
 
 See also https://github.com/rocicorp/replidraw-do, a fancier drawing demo.
-
-# Demo
-
-Running live at https://reflect-template-example.vercel.app/.
 
 ## Hacking Locally
 
@@ -118,7 +112,7 @@ export type AuthHandler = (auth: string, roomID: string) => Promise<UserData>;
  * be passed through to mutators which could use it to supplement
  * mutator args and to validate the mutation.
  */
-export type UserData = ReadonlyJSONObject & { userID: string };
+export type UserData = ReadonlyJSONObject & {userID: string};
 ```
 
 ### Auth Revalidation
