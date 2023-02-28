@@ -132,9 +132,7 @@
 }
 
 .title {
-  margin-top: 0px;
-  margin-right: auto;
-  margin-bottom: 4rem;
+  margin: 0 auto 1.5rem;
   padding-right: 0px;
   padding-left: 0px;
   font-size: 96px;

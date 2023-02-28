@@ -31,9 +31,7 @@ export default function MobileNav() {
                 className={styles.navLink}
                 activeClass={styles.navLinkActive}
                 to="benefits"
-                spy={true}
                 offset={100}
-                hashSpy={true}
                 smooth={true}
                 duration={250}
                 onClick={toggleNav}
@@ -45,9 +43,7 @@ export default function MobileNav() {
                 className={styles.navLink}
                 activeClass={styles.navLinkActive}
                 to="how"
-                spy={true}
                 offset={100}
-                hashSpy={true}
                 smooth={true}
                 duration={250}
                 onClick={toggleNav}
@@ -59,9 +55,7 @@ export default function MobileNav() {
                 className={styles.navLink}
                 activeClass={styles.navLinkActive}
                 to="customers"
-                spy={true}
                 offset={100}
-                hashSpy={true}
                 smooth={true}
                 duration={250}
                 onClick={toggleNav}
@@ -73,9 +67,7 @@ export default function MobileNav() {
                 className={styles.navLink}
                 activeClass={styles.navLinkActive}
                 to="pricing"
-                spy={true}
                 offset={100}
-                hashSpy={true}
                 smooth={true}
                 duration={250}
                 onClick={toggleNav}
@@ -87,9 +79,7 @@ export default function MobileNav() {
                 className={styles.navLink}
                 activeClass={styles.navLinkActive}
                 to="contact"
-                spy={true}
                 offset={100}
-                hashSpy={true}
                 smooth={true}
                 duration={250}
                 onClick={toggleNav}
@@ -101,9 +91,7 @@ export default function MobileNav() {
                 className={styles.navLink}
                 activeClass={styles.navLinkActive}
                 to="about"
-                spy={true}
                 offset={100}
-                hashSpy={true}
                 smooth={true}
                 duration={250}
                 onClick={toggleNav}
@@ -116,7 +104,6 @@ export default function MobileNav() {
                 to="get-started"
                 smooth={true}
                 offset={100}
-                hashSpy={true}
                 duration={250}
                 onClick={toggleNav}
               >Get started</Link>

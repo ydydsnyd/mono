@@ -8,7 +8,7 @@ const Pricing = () => (
   <div className={styles.pricingContainer}>
     <p>
       Pricing is not final until stable release, but this is what we&apos;re
-      thinking. Questions? <Link href="#">React out</Link>.
+      thinking. Questions? <Link href="#contact">Reach out</Link>.
     </p>
     <div className={styles.pricingGrid}>
       {/* Pricing Grid Header */}

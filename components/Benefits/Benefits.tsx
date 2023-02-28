@@ -25,7 +25,7 @@ const Benefits = () => (
           className={styles.benefitIcon}
         />
       </div>
-      <h3 className={styles.benefitTitle}>60 Updates per Second</h3>
+      <h3 className={styles.benefitTitle}>Sync @ 60FPS</h3>
       <p className={styles.benefitDescription}>
         Buttery smooth cursors and dragging automatically, with no interpolation
         required. Every change, from every user, for the entire document,
@@ -61,7 +61,7 @@ const Benefits = () => (
           className={styles.benefitIcon}
         />
       </div>
-      <h3 className={styles.benefitTitle}>Replay-Based Conflict Resolution</h3>
+      <h3 className={styles.benefitTitle}>Transactional Conflict Resolution</h3>
       <p className={styles.benefitDescription}>
         CRDTs converge, but to what? App-specific validation isn&apos;t
         possible. Reflect uses <Link href="#">server reconciliation</Link>{' '}
@@ -117,7 +117,7 @@ const Benefits = () => (
       </div>
       <h3 className={styles.benefitTitle}>Fine-Grained Auth</h3>
       <p className={styles.benefitDescription}>
-        Implement arbitrary access rules in JavaScript for either reading or
+        Implement arbitrary access rules in JavaScript for reading or
         writing, down to individual data items.
       </p>
     </div>
