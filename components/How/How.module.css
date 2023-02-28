@@ -1,0 +1,161 @@
+.howStep {
+    margin-bottom: 12rem;
+}
+
+.howHeader {
+    animation: color-change 20s infinite;
+    margin-bottom: 2rem;
+}
+
+@keyframes color-change {
+    0% { color: rgb(78, 201, 176); }
+    25% { color: rgb(10, 122, 255); }
+    50% { color: rgb(252, 32, 138); }
+    75% { color: rgb(10, 122, 255); }
+    100% { color: rgb(78, 201, 176); }
+}
+
+.howGridLayout1 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: 1fr, 21rem;
+    grid-column-gap: 16px;
+    grid-row-gap: 16px;
+}
+
+.howGridLayout2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: 1fr, 10rem, 26rem;
+    grid-column-gap: 16px;
+    grid-row-gap: 16px;
+    margin-bottom: 4rem;
+}
+
+.deployTerminal {
+    background: #24283B
+}
+
+.codeBlock,
+.serverConsole,
+.client {
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+}
+
+.client {
+    height: 21rem;
+    position: relative;
+}
+
+.codeBlock,
+.serverConsole,
+.deployTerminal {
+    background: #24283B;
+}
+
+.howGridLayout1 .codeBlock {
+    grid-area: 1 / 1 / 2 / 4;
+}
+
+.howGridLayout2 .codeBlock {
+    grid-area: 1 / 1 / 2 / 3;
+}
+
+.howGridLayout2 .serverConsole {
+    height: 10rem;
+    grid-area: 2 / 1 / 3 / 3;
+}
+
+.client {
+    background: #F3F3F3;
+    height: 26rem;
+}
+
+.codeBlock code {
+    font-size: 1rem !important;
+}
+
+.deployTerminal {
+    border-radius: 0.5rem;
+    padding: 1rem 2.5rem 1.75rem;
+    position: relative;
+}
+
+.deployTerminal .menuControls {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    opacity: 0.15;
+}
+
+.deployTerminal .terminalHeader {
+    color: rgba(255, 255, 255, 0.3);
+    font-weight: 500;
+    font-size: 0.75rem;
+    margin: 0 0 2.5rem;
+}
+
+.deployTerminal .prompt {
+    font-family: 'Inconsolata', monospace;
+    opacity: 0.65;
+    font-weight: bold;
+    color: rgb(78, 201, 176);
+    display: inline-block;
+}
+
+.deployTerminal .terminalLine {
+    font-size: 0.8125rem;
+    font-family: Menlo, Monaco, Consolas, "Andale Mono", "Ubuntu Mono", "Courier New", monospace;
+    font-weight: 400;
+    color: #F1F1F1;
+    margin: 0 0 0.25rem;
+}
+
+.deployTerminal .terminalLine:last-child {
+    margin: 0;
+}
+
+.deployTerminal .terminalLink {
+    text-decoration: underline;
+}
+
+.codeBlockToggle {
+    display: block;
+    text-align: left;
+}
+
+.codeBlockToggle button {
+    font-family: 'Muoto 205tf', -apple-system, BlinkMacSystemFont, Segoe UI,
+    Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue,
+    sans-serif;
+    background-color: transparent;
+    padding: 12px 14px;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1em;
+    border-radius: 6px;
+    text-align: left;
+}
+
+.codeBlockToggle button:hover {
+    color: #FFF;
+    cursor: pointer;
+}
+
+.codeBlockToggle button.codeToggleActive {
+    background-color: #FC208A !important;
+    color: #FFF;
+}
+
+.panelLabel {
+    color: rgba(36, 40, 59, 0.5);
+    font-weight: 500;
+    margin: 0;
+    text-align: left;
+    padding: 12px 14px;
+}
+
+.serverConsole .panelLabel {
+    color: rgba(255, 255, 255, 0.5);
+}
