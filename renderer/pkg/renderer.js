@@ -181,10 +181,10 @@ function passArray8ToWasm0(arg, malloc) {
 }
 /**
 * @param {number} letter
-* @param {Uint8Array} webp_data
+* @param {Uint8Array} png_data
 */
-export function update_cache(letter, webp_data) {
-    const ptr0 = passArray8ToWasm0(webp_data, wasm.__wbindgen_malloc);
+export function update_cache(letter, png_data) {
+    const ptr0 = passArray8ToWasm0(png_data, wasm.__wbindgen_malloc);
     const len0 = WASM_VECTOR_LEN;
     wasm.update_cache(letter, ptr0, len0);
 }
@@ -242,7 +242,7 @@ function getArrayU8FromWasm0(ptr, len) {
 * @param {Uint8Array} splatter_rotations
 * @returns {Uint8Array}
 */
-export function draw_buffer_webp(letter, step, a_colors, b_colors, c_colors, d_colors, e_colors, splatter_count, steps, splatter_actors, colors, x_vals, y_vals, splatter_animations, splatter_rotations) {
+export function draw_buffer_png(letter, step, a_colors, b_colors, c_colors, d_colors, e_colors, splatter_count, steps, splatter_actors, colors, x_vals, y_vals, splatter_animations, splatter_rotations) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
         const ptr0 = passArray8ToWasm0(a_colors, wasm.__wbindgen_malloc);
@@ -269,7 +269,7 @@ export function draw_buffer_webp(letter, step, a_colors, b_colors, c_colors, d_c
         const len10 = WASM_VECTOR_LEN;
         const ptr11 = passArray8ToWasm0(splatter_rotations, wasm.__wbindgen_malloc);
         const len11 = WASM_VECTOR_LEN;
-        wasm.draw_buffer_webp(retptr, letter, step, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, splatter_count, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11);
+        wasm.draw_buffer_png(retptr, letter, step, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, splatter_count, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11);
         var r0 = getInt32Memory0()[retptr / 4 + 0];
         var r1 = getInt32Memory0()[retptr / 4 + 1];
         var v12 = getArrayU8FromWasm0(r0, r1).slice();

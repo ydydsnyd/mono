@@ -5,9 +5,9 @@
 export function precompute(): void;
 /**
 * @param {number} letter
-* @param {Uint8Array} webp_data
+* @param {Uint8Array} png_data
 */
-export function update_cache(letter: number, webp_data: Uint8Array): void;
+export function update_cache(letter: number, png_data: Uint8Array): void;
 /**
 * @param {number} letter
 * @param {number} step
@@ -26,7 +26,7 @@ export function update_cache(letter: number, webp_data: Uint8Array): void;
 * @param {Uint8Array} splatter_rotations
 * @returns {Uint8Array}
 */
-export function draw_buffer_webp(letter: number, step: number, a_colors: Uint8Array, b_colors: Uint8Array, c_colors: Uint8Array, d_colors: Uint8Array, e_colors: Uint8Array, splatter_count: number, steps: Uint32Array, splatter_actors: Uint32Array, colors: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_animations: Uint8Array, splatter_rotations: Uint8Array): Uint8Array;
+export function draw_buffer_png(letter: number, step: number, a_colors: Uint8Array, b_colors: Uint8Array, c_colors: Uint8Array, d_colors: Uint8Array, e_colors: Uint8Array, splatter_count: number, steps: Uint32Array, splatter_actors: Uint32Array, colors: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_animations: Uint8Array, splatter_rotations: Uint8Array): Uint8Array;
 /**
 * @param {number} letter
 * @param {CanvasRenderingContext2D} ctx
@@ -141,7 +141,7 @@ export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly precompute: () => void;
   readonly update_cache: (a: number, b: number, c: number) => void;
-  readonly draw_buffer_webp: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number, w: number, x: number, y: number, z: number, a1: number, b1: number) => void;
+  readonly draw_buffer_png: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number, w: number, x: number, y: number, z: number, a1: number, b1: number) => void;
   readonly add_splatters_to_cache: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number, w: number, x: number, y: number, z: number, a1: number, b1: number) => void;
   readonly draw_buffers: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number, w: number, x: number, y: number, z: number, a1: number, b1: number, c1: number, d1: number, e1: number, f1: number) => void;
   readonly update_state: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number, w: number, x: number, y: number, z: number, a1: number, b1: number, c1: number, d1: number, e1: number, f1: number, g1: number, h1: number, i1: number, j1: number, k1: number, l1: number, m1: number, n1: number, o1: number, p1: number, q1: number, r1: number, s1: number) => void;
