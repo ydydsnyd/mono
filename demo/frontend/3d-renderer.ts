@@ -18,7 +18,11 @@ import '@babylonjs/loaders/glTF';
 import type {Letter, Letter3DPosition, Position, Vector} from '../shared/types';
 import {letterMap} from '../shared/util';
 import {LETTERS} from '../shared/letters';
-import {DEMO_OFFSET_BOTTOM, ENVIRONMENT_CYCLE_STEPS} from '../shared/constants';
+import {
+  DEMO_OFFSET_BOTTOM,
+  ENVIRONMENT_CYCLE_STEPS,
+  ENVIRONMENT_TEXTURE_LEVEL,
+} from '../shared/constants';
 // import type {DebugRenderBuffers} from '@dimforge/rapier3d';
 
 const modelURL = '/alive.glb';
@@ -186,6 +190,7 @@ export const createScene = async (
   );
   environmentTexture.name = 'env';
   environmentTexture.gammaSpace = false;
+  environmentTexture.level = ENVIRONMENT_TEXTURE_LEVEL;
   scene.environmentTexture = environmentTexture;
   const updateCurrentStep = (step: number) => {
     // We want to spin the environment relative to the step.
