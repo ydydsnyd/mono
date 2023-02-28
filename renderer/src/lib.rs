@@ -145,6 +145,37 @@ pub fn update_cache(letter: Letter, png_data: Vec<u8>) {
     caches.set_data(&letter, pixels);
 }
 
+// Only used for debugging - draw caches to canvases
+#[wasm_bindgen]
+pub fn draw_caches(
+    ctx_a: &CanvasRenderingContext2d,
+    ctx_l: &CanvasRenderingContext2d,
+    ctx_i: &CanvasRenderingContext2d,
+    ctx_v: &CanvasRenderingContext2d,
+    ctx_e: &CanvasRenderingContext2d,
+) {
+    panic::set_hook(Box::new(console_error_panic_hook::hook));
+    draw_letter(Letter::A, ctx_a);
+    draw_letter(Letter::L, ctx_l);
+    draw_letter(Letter::I, ctx_i);
+    draw_letter(Letter::V, ctx_v);
+    draw_letter(Letter::E, ctx_e);
+}
+fn draw_letter(letter: Letter, context: &CanvasRenderingContext2d) {
+    let caches = CACHES.read().unwrap();
+    let cache = caches.get_data(&letter);
+    let width = UVMAP_SIZE.clone();
+    let height = UVMAP_SIZE.clone();
+    if cache.len() == 0 {
+        return;
+    }
+    let data = ImageData::new_with_u8_clamped_array_and_sh(Clamped(&mut &cache), height, width)
+        .expect("Bad image data");
+    context
+        .put_image_data(&data, 0.0, 0.0)
+        .expect("Writing to canvas failed");
+}
+
 // Render a pixel map to a png, for use on the server side when creating
 // compressed "base" images. This isn't efficient enough to use in client-side
 // wasm code, but produces a much smaller output than the client code, which is

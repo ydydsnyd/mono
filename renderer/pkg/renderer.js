@@ -189,6 +189,32 @@ export function update_cache(letter, png_data) {
     wasm.update_cache(letter, ptr0, len0);
 }
 
+let stack_pointer = 32;
+
+function addBorrowedObject(obj) {
+    if (stack_pointer == 1) throw new Error('out of js stack');
+    heap[--stack_pointer] = obj;
+    return stack_pointer;
+}
+/**
+* @param {CanvasRenderingContext2D} ctx_a
+* @param {CanvasRenderingContext2D} ctx_l
+* @param {CanvasRenderingContext2D} ctx_i
+* @param {CanvasRenderingContext2D} ctx_v
+* @param {CanvasRenderingContext2D} ctx_e
+*/
+export function draw_caches(ctx_a, ctx_l, ctx_i, ctx_v, ctx_e) {
+    try {
+        wasm.draw_caches(addBorrowedObject(ctx_a), addBorrowedObject(ctx_l), addBorrowedObject(ctx_i), addBorrowedObject(ctx_v), addBorrowedObject(ctx_e));
+    } finally {
+        heap[stack_pointer++] = undefined;
+        heap[stack_pointer++] = undefined;
+        heap[stack_pointer++] = undefined;
+        heap[stack_pointer++] = undefined;
+        heap[stack_pointer++] = undefined;
+    }
+}
+
 let cachedUint32Memory0 = new Uint32Array();
 
 function getUint32Memory0() {
@@ -280,13 +306,6 @@ export function draw_buffer_png(letter, step, a_colors, b_colors, c_colors, d_co
     }
 }
 
-let stack_pointer = 32;
-
-function addBorrowedObject(obj) {
-    if (stack_pointer == 1) throw new Error('out of js stack');
-    heap[--stack_pointer] = obj;
-    return stack_pointer;
-}
 /**
 * @param {CanvasRenderingContext2D} ctx_a
 * @param {CanvasRenderingContext2D} ctx_l
@@ -589,20 +608,20 @@ async function load(module, imports) {
 function getImports() {
     const imports = {};
     imports.wbg = {};
-    imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
-        takeObject(arg0);
-    };
-    imports.wbg.__wbg_static_accessor_UVMAP_SIZE_a2041fefcbe5a985 = function() {
-        const ret = UVMAP_SIZE;
+    imports.wbg.__wbg_static_accessor_MAX_RENDERED_PHYSICS_STEPS_1227ae48b3a9f731 = function() {
+        const ret = MAX_RENDERED_PHYSICS_STEPS;
         return ret;
     };
     imports.wbg.__wbg_static_accessor_SPLATTER_ANIM_FRAMES_659fe1818af3aa5a = function() {
         const ret = SPLATTER_ANIM_FRAMES;
         return ret;
     };
-    imports.wbg.__wbg_static_accessor_MAX_RENDERED_PHYSICS_STEPS_1227ae48b3a9f731 = function() {
-        const ret = MAX_RENDERED_PHYSICS_STEPS;
+    imports.wbg.__wbg_static_accessor_UVMAP_SIZE_a2041fefcbe5a985 = function() {
+        const ret = UVMAP_SIZE;
         return ret;
+    };
+    imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
+        takeObject(arg0);
     };
     imports.wbg.__wbg_newwithu8clampedarrayandsh_f7ef3a8f3fd04c8a = function() { return handleError(function (arg0, arg1, arg2, arg3) {
         const ret = new ImageData(getClampedArrayU8FromWasm0(arg0, arg1), arg2 >>> 0, arg3 >>> 0);

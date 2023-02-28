@@ -2,7 +2,10 @@ import {nanoid} from 'nanoid';
 import {initialize} from './data';
 import {renderer as renderer3D} from './3d-renderer';
 import {render} from './texture-renderer';
-import initRenderer, {precompute} from '../../renderer/pkg/renderer';
+import initRenderer, {
+  draw_caches,
+  precompute,
+} from '../../renderer/pkg/renderer';
 import {get3DPositions} from '../shared/renderer';
 import {cursorRenderer} from './cursors';
 import {
@@ -15,6 +18,7 @@ import {
   SPLATTER_MS,
   STEP_UPDATE_INTERVAL,
   MIN_STEP_MS,
+  DEBUG_TEXTURES,
 } from '../shared/constants';
 import type {
   Actor,
@@ -40,6 +44,13 @@ export const init = async () => {
   localStorage.setItem('paint-fight-actor-id', actorId);
 
   const debug: Debug = {fps: 60};
+  type DebugCanvases = [
+    CanvasRenderingContext2D,
+    CanvasRenderingContext2D,
+    CanvasRenderingContext2D,
+    CanvasRenderingContext2D,
+    CanvasRenderingContext2D,
+  ];
 
   // Canvases
   const canvas = document.getElementById('canvas3D') as HTMLCanvasElement;
@@ -59,6 +70,17 @@ export const init = async () => {
     tex.height = UVMAP_SIZE;
     return tex;
   });
+  let caches: DebugCanvases;
+  if (DEBUG_TEXTURES) {
+    caches = LETTERS.map(letter => {
+      const tex = document.querySelector(
+        `#caches > .${letter}`,
+      ) as HTMLCanvasElement;
+      tex.width = UVMAP_SIZE;
+      tex.height = UVMAP_SIZE;
+      return tex.getContext('2d') as CanvasRenderingContext2D;
+    }) as DebugCanvases;
+  }
   const demoContainer = document.getElementById('demo') as HTMLDivElement;
 
   const renderInitTime = performance.now();
@@ -176,6 +198,9 @@ export const init = async () => {
           1,
         )}`;
         debugEl.innerHTML = debugOutput;
+      }
+      if (caches) {
+        draw_caches(...caches);
       }
     }, 200);
   }

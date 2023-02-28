@@ -19,18 +19,26 @@ body.demo-active {
   padding-right: 1em;
   z-index: 100;
 }
+#caches {
+  background-color: rgba(125, 130, 184, 0.5);
+}
+#buffers {
+  background-color: rgba(183, 227, 204, 0.5);
+}
+#textures {
+  background-color: rgba(243, 227, 124, 0.5);
+}
 
 #textures, #buffers {
   display: none;
 }
-/* #textures, #buffers {
+.debug #textures, .debug #buffers, #caches {
   display: block;
-  position: absolute;
 }
-#textures canvas, #buffers canvas {
-  width: 100px;
-  height: 100px;
-} */
+.debug #textures canvas, .debug #buffers canvas, #caches canvas {
+  width: 150px;
+  height: 150px;
+}
 
 .online-dot {
   width: 14px;

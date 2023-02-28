@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import Image from 'next/image';
 import {init} from '@/demo/frontend';
+import {DEBUG_TEXTURES} from '@/demo/shared/constants';
 
 let initPromise: Promise<void> | undefined;
 const initOnce = () => {
@@ -25,8 +26,11 @@ const PaintFight = () => {
       <div id="demo">
         <canvas id="canvas3D"></canvas>
       </div>
-      <Canvases id="textures" />
-      <Canvases id="buffers" />
+      <div className={`canvases ${DEBUG_TEXTURES ? ' debug' : ''}`}>
+        {DEBUG_TEXTURES ? <Canvases id="caches" /> : null}
+        <Canvases id="buffers" />
+        <Canvases id="textures" />
+      </div>
       <div id="info">
         <div className="active-user-info">
           <div className="online-dot"></div>
