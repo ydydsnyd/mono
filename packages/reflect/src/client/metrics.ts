@@ -22,70 +22,123 @@ export function camelToSnake(s: string): string {
 // than any other value.
 export const DID_NOT_CONNECT_VALUE = 100 * 1000;
 
-const REPORT_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
+export const REPORT_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
 
-type MetricsReporter = (metrics: Series[]) => MaybePromise<void>;
+export const REPORT_DESTINATION_PATH = '/api/metrics/v0/report';
+
+export type Fetch = (
+  url: string,
+  init: {method: string; body: string; keepalive: boolean},
+) => Promise<{
+  ok: boolean;
+  status: number;
+  statusText: string;
+  text: () => Promise<string>;
+}>;
+
+export type Clock = {
+  getTime: () => number;
+  setInterval: (callback: () => void, ms: number) => number;
+  clearInterval: (id: number) => void;
+};
+
+export type MetricManagerOptions = {
+  destinationOrigin: URL;
+  fetch: Fetch;
+  clock: Clock;
+  lc: MaybePromise<LogContext>;
+  tags?: Map<string, string> | undefined;
+};
 
 /**
- * Metrics keeps track of the set of metrics in use and flushes them
- * to a format suitable for reporting.
+ * MetricsManager tracks the set of metrics in use and periodically flushes to
+ * a reporter.
  */
 export class MetricManager {
-  constructor(
-    private readonly _reporter: MetricsReporter,
-    private readonly _lc: Promise<LogContext> | undefined,
-  ) {
-    setInterval(() => {
+  constructor(opts: MetricManagerOptions) {
+    this._destinationOrigin = opts.destinationOrigin;
+    this._fetch = opts.fetch;
+    this._clock = opts.clock;
+    this._lc = opts.lc;
+    this._tags = opts.tags ?? new Map();
+
+    this._timerID = this._clock.setInterval(() => {
       void this.flush();
     }, REPORT_INTERVAL_MS);
   }
 
-  private _metrics: Map<string, Flushable> = new Map();
+  private _destinationOrigin: URL;
+  private _fetch: Fetch;
+  private _clock: Clock;
+  private _lc: MaybePromise<LogContext>;
+  private _tags: Map<string, string>;
+  private _timerID: number | null;
+  private _metrics: Metric[] | null = [];
 
-  // gauge returns a gauge with the given name. If a gauge with that name
-  // already exists, it is returned.
-  public gauge(name: string) {
-    const m = new Gauge(name);
-    this._stashMetric(name, m);
-    return m;
-  }
-
-  // state returns a state with the given name. If a state with that name
-  // already exists, it is returned.
-  public state(name: string, clearOnFlush = false) {
-    const m = new State(name, clearOnFlush);
-    this._stashMetric(name, m);
-    return m;
+  add<T extends Metric>(metric: T) {
+    if (this._metrics === null) {
+      throw new Error("Can't add metrics after close");
+    }
+    if (this._metrics.find(m => m.name === metric.name)) {
+      throw new Error(`Cannot create duplicate metric: ${metric.name}`);
+    }
+    this._metrics.push(metric);
+    return metric;
   }
 
   // Flushes all metrics to an array of time series (plural), one Series
   // per metric.
-  public async flush() {
+  // TODO: Since this is not needed by anything but the unit test it should
+  // become private and the test should test via the actual interface
+  // (timers).
+  async flush() {
+    if (this._metrics === null) {
+      throw new Error('Unexpected flush after close');
+    }
     const allSeries: Series[] = [];
-    for (const metric of this._metrics.values()) {
-      const series = metric.flush();
+    for (const metric of this._metrics) {
+      const series = metric.flush(this._clock.getTime());
       if (series !== undefined) {
+        if (this._tags.size > 0) {
+          series.tags = [...this._tags.entries()].map(([k, v]) => `${k}:${v}`);
+        }
         allSeries.push(series);
       }
     }
     const lc = await this._lc;
     if (allSeries.length === 0) {
-      lc?.debug?.('No metrics to report');
+      lc.debug?.('No metrics to report');
       return;
     }
     try {
-      await this._reporter(allSeries);
+      await this._report(allSeries);
     } catch (e) {
-      lc?.error?.(`Error reporting metrics: ${e}`);
+      lc.error?.(`Error reporting metrics: ${e}`);
     }
   }
 
-  private _stashMetric(name: string, metric: Flushable) {
-    if (this._metrics.has(name)) {
-      throw new Error(`Cannot create duplicate metric: ${name}`);
+  stopReporting() {
+    if (this._timerID !== null) {
+      this._clock.clearInterval(this._timerID);
+      this._timerID = null;
     }
-    this._metrics.set(name, metric);
-    return metric;
+    this._metrics = null;
+  }
+
+  private async _report(allSeries: Series[]) {
+    const body = JSON.stringify({series: allSeries});
+    const url = new URL(REPORT_DESTINATION_PATH, this._destinationOrigin);
+    const res = await this._fetch(url.toString(), {
+      method: 'POST',
+      body,
+      keepalive: true,
+    });
+    if (!res.ok) {
+      const maybeBody = await res.text();
+      throw new Error(
+        `unexpected response: ${res.status} ${res.statusText} body: ${maybeBody}`,
+      );
+    }
   }
 }
 
@@ -95,7 +148,7 @@ export class MetricManager {
 
 /** Series is a time series of points for a single metric. */
 export type Series = {
-  metric: string; // We call this 'name' bc 'metric' is overloaded in code.
+  metric: string;
   points: Point[];
   tags?: string[];
 };
@@ -111,9 +164,10 @@ function makePoint(ts: number, value: number): Point {
   return [ts, [value]];
 }
 
-type Flushable = {
-  flush(): Series | undefined;
-};
+interface Metric {
+  readonly name: string;
+  flush(now: number): Series | undefined;
+}
 
 /**
  * Gauge is a metric type that represents a single value that can go up and
@@ -130,23 +184,20 @@ type Flushable = {
  * period.
  */
 export class Gauge {
-  private readonly _name: string;
   private _value: number | undefined = undefined;
 
-  constructor(name: string) {
-    this._name = name;
-  }
+  constructor(readonly name: string) {}
 
   public set(value: number) {
     this._value = value;
   }
 
-  public flush(): Series {
+  public flush(now: number): Series {
     // Gauge reports the timestamp at flush time, not at the point the value was
     // recorded.
     const points =
-      this._value === undefined ? [] : [makePoint(t(), this._value)];
-    return {metric: this._name, points};
+      this._value === undefined ? [] : [makePoint(now, this._value)];
+    return {metric: this.name, points};
   }
 }
 
@@ -167,15 +218,11 @@ export function gaugeValue(series: Series):
   };
 }
 
-function t() {
-  return Math.round(Date.now() / 1000);
-}
-
 /**
  * State is a metric type that represents a specific state that the system is
  * in, for example the state of a connection which may be 'open' or 'closed'.
- * The state is given a name/prefix at construction time (eg 'connection') and
- * then can be set to a specific state (eg 'open'). The prefix is prepended to
+ * The state is given a name at construction time (eg 'connection') and
+ * then can be set to a specific state (eg 'open'). The name is prepended to
  * the set state (eg, 'connection_open') and a value of 1 is reported.
  * Unset/cleared states are not reported.
  *
@@ -185,12 +232,11 @@ function t() {
  *   s.flush(); // returns {metric: 'connection_open', points: [[now(), [1]]]}
  */
 export class State {
-  private readonly _prefix: string;
   private readonly _clearOnFlush: boolean;
   private _current: string | undefined = undefined;
 
-  constructor(prefix: string, clearOnFlush = false) {
-    this._prefix = prefix;
+  constructor(readonly name: string, clearOnFlush = false) {
+    console.info('constructing', name);
     this._clearOnFlush = clearOnFlush;
   }
 
@@ -202,13 +248,13 @@ export class State {
     this._current = undefined;
   }
 
-  public flush(): Series | undefined {
+  public flush(now: number): Series | undefined {
     if (this._current === undefined) {
       return undefined;
     }
-    const gauge = new Gauge([this._prefix, this._current].join('_'));
+    const gauge = new Gauge([this.name, this._current].join('_'));
     gauge.set(1);
-    const series = gauge.flush();
+    const series = gauge.flush(now);
     if (this._clearOnFlush) {
       this.clear();
     }

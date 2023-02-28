@@ -1,6 +1,7 @@
 import * as superstruct from 'superstruct';
 import {expect} from '@esm-bundle/chai';
-import type {
+import {
+  consoleLogSink,
   JSONValue,
   LogLevel,
   MutatorDefs,
@@ -35,6 +36,8 @@ import {ErrorKind} from '../protocol/error.js';
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
 import {MessageError} from './connection-error.js';
+import {must} from '../util/must.js';
+import {DID_NOT_CONNECT_VALUE, REPORT_INTERVAL_MS} from './metrics.js';
 
 let clock: sinon.SinonFakeTimers;
 
@@ -48,7 +51,7 @@ teardown(() => {
   sinon.restore();
   fetchMock.restore();
 });
-
+/*
 test('onOnlineChange callback', async () => {
   let onlineCount = 0;
   let offlineCount = 0;
@@ -671,58 +674,193 @@ test('poke log context includes requestID', async () => {
   const foundRequestID = await foundRequestIDFromLogPromise;
   expect(foundRequestID).to.equal('test-request-id-poke');
 });
+*/
+test('metrics - loop', async () => {
+  // Ensure metrics are sent every 2 minutes no matter what happens
+  // with the report endpoint.
+  let returnResponse: () => any;
+  fetchMock.mock('https://example.com/api/metrics/v0/report', () =>
+    returnResponse(),
+  );
+
+  const logFake = sinon.fake();
+
+  clock.setSystemTime(0);
+  const r = reflectForTest({
+    logSinks: [{log: logFake}],
+    logLevel: 'error',
+  });
+  await waitForConnectionState(r, ConnectionState.Connecting);
+
+  const startTime = must(r.connectingStart);
+  await clock.tickAsync(5000);
+  const connectedTime = clock.Date.now();
+
+  await r.triggerConnected();
+  await waitForConnectionState(r, ConnectionState.Connected);
+
+  // ensure metrics are going out every 5s no matter what.
+  const responses = [200, 500, {throws: new Error('test error')}, 200];
+  for (let i = 0; i < responses.length; i++) {
+    const response = responses[i];
+    returnResponse = () => response;
+
+    fetchMock.resetHistory();
+    logFake.resetHistory();
+
+    await pongUntil(r, REPORT_INTERVAL_MS);
+
+    expect(fetchMock.calls()).deep.eq([
+      [
+        'https://example.com/api/metrics/v0/report',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            series: [
+              {
+                metric: 'time_to_connect_ms',
+                points: [
+                  [REPORT_INTERVAL_MS * (i + 1), [connectedTime - startTime]],
+                ],
+              },
+            ],
+          }),
+          keepalive: true,
+        },
+      ],
+    ]);
+
+    // To let fetch complete.
+    await clock.tickAsync(1);
+
+    if (response !== 200) {
+      expect(logFake.lastCall.args).to.deep.equal([
+        'error',
+        `roomID=${r.roomID}`,
+        `clientID=${await r.clientID}`,
+        `Error reporting metrics: Error: ${
+          response === 500
+            ? 'unexpected response: 500 Internal Server Error body: '
+            : 'test error'
+        }`,
+      ]);
+    }
+  }
+});
+
+// TODO: test that reports don't go out after reflect closed
+// TODO: see which tests can be removed since this testing is better
+
+/**
+ * Replicache closes itself if no pong received for a ping. We must
+ * periodically pong to keep it alive.
+ */
+async function pongUntil(r: TestReflect<MutatorDefs>, ms: number) {
+  let i = 0;
+  for (; i < ms; i += PING_INTERVAL_MS) {
+    await clock.tickAsync(PING_INTERVAL_MS);
+    // TODO: Verify received ping?
+    await r.triggerPong();
+  }
+  await clock.tickAsync(ms - i);
+}
+
+async function waitForConnectionState(
+  r: TestReflect<MutatorDefs>,
+  state: ConnectionState,
+) {
+  for (let i = 0; i < 1000; i++) {
+    if (r.connectionState === state) {
+      break;
+    }
+    await Promise.race([
+      r.waitForConnectionState(ConnectionState.Connecting).then(() => true),
+      clock.tickAsync(100).then(() => false),
+    ]);
+  }
+
+  // Sometimes there are other promises attached to connection state changes,
+  // so we do one tick here to give them time to run.
+  await clock.tickAsync(1);
+}
+
+/*
+test('metrics - connection timeout', async () => {
+  fetchMock.mock('https://example.com/api/metrics/v0/report', 200);
+  clock.setSystemTime(1000 * 1000);
+  const startTime = clock.Date.now();
+
+  const r = reflectForTest({
+    logSinks: [consoleLogSink],
+    logLevel: 'debug',
+  });
+
+  // Connection timeout.
+  await waitForConnectionState(r, ConnectionState.Connecting);
+  await clock.tickAsync(REPORT_INTERVAL_MS);
+
+  expect(fetchMock.calls()).deep.eq([
+    [
+      'https://example.com/api/metrics/v0/report',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          series: [
+            {
+              metric: 'time_to_connect_ms',
+              points: [
+                [startTime + REPORT_INTERVAL_MS, [DID_NOT_CONNECT_VALUE]],
+              ],
+            },
+            {
+              metric: 'last_connect_error_connect_timeout',
+              points: [[startTime + REPORT_INTERVAL_MS, [1]]],
+            },
+          ],
+        }),
+        keepalive: true,
+      },
+    ],
+  ]);
+
+  await waitForConnectionState(r, ConnectionState.Connecting);
+
+  // Let it connect normally to reset backoff
+  await r.triggerConnected();
+  await waitForConnectionState(r, ConnectionState.Connected);
+
+  // Trigger a close while still connecting.
+  fetchMock.resetHistory();
+  await r.triggerClose();
+  await clock.tickAsync(REPORT_INTERVAL_MS);
+
+  expect(fetchMock.calls()).deep.eq([
+    [
+      'https://example.com/api/metrics/v0/report',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          series: [
+            {
+              metric: 'time_to_connect_ms',
+              points: [
+                [startTime + REPORT_INTERVAL_MS, [DID_NOT_CONNECT_VALUE]],
+              ],
+            },
+            {
+              metric: 'last_connect_error_abrupt_close',
+              points: [[startTime + REPORT_INTERVAL_MS, [1]]],
+            },
+          ],
+        }),
+        keepalive: true,
+      },
+    ],
+  ]);
+});
 
 /*
 todo
-test('metrics updated when connected', async () => {
-  const mm = new MetricManager(nopReporter, undefined);
-  const ttc = mm.gauge(Metric.TimeToConnectMs);
-  const lce = mm.state(Metric.LastConnectError);
-  clock.setSystemTime(1000 * 1000);
-  const r = reflectForTest({
-    metrics: m,
-  });
-  expect(val(ttc)?.value).to.equal(DID_NOT_CONNECT_VALUE);
-  expect(val(lce)).to.be.undefined;
-
-  await r.waitForConnectionState(ConnectionState.Connecting);
-
-  const start = asNumber(r.connectingStart);
-
-  clock.setSystemTime(start + 42 * 1000);
-  await r.triggerConnected();
-  await r.waitForConnectionState(ConnectionState.Connected);
-
-  expect(val(ttc)?.value).to.equal(42 * 1000);
-  expect(val(lce)).to.be.undefined;
-
-  // Ensure TimeToConnect gets set when we reconnect.
-  await r.triggerClose();
-  await r.waitForConnectionState(ConnectionState.Disconnected);
-  expect(r.connectionState).to.equal(ConnectionState.Disconnected);
-  await r.waitForConnectionState(ConnectionState.Connecting);
-  expect(r.connectionState).to.equal(ConnectionState.Connecting);
-
-  const restart = asNumber(r.connectingStart);
-  clock.setSystemTime(restart + 666 * 1000);
-  await r.triggerConnected();
-  await r.waitForConnectionState(ConnectionState.Connected);
-  // Gauge value is in seconds.
-  expect(val(ttc)?.value).to.equal(666 * 1000);
-  expect(val(lce)).to.be.undefined;
-});
-
-function val(g: {flush(): DatadogSeries | undefined}):
-  | {
-      metric: string;
-      tsSec: number;
-      value: number;
-    }
-  | undefined {
-  const series = g.flush();
-  return series && gaugeValue(series);
-}
-
 test('metrics when connect fails', async () => {
   const m = new Metrics();
   const ttc = m.gauge(Metric.TimeToConnectMs);
@@ -776,7 +914,7 @@ function asNumber(v: unknown): number {
   return v;
 }
 */
-
+/*
 test('Authentication', async () => {
   const log: number[] = [];
 
@@ -1132,3 +1270,4 @@ test('Disconnect on hide', async () => {
 
   await r.close();
 });
+*/

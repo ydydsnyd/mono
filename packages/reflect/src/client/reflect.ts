@@ -39,7 +39,6 @@ import {
   MetricManager,
   MetricName,
   camelToSnake,
-  Series,
 } from './metrics.js';
 import {send} from '../util/socket.js';
 import type {ConnectedMessage} from '../protocol/connected.js';
@@ -131,6 +130,11 @@ export class Reflect<MD extends MutatorDefs> {
   // Replicache instance.
   private readonly _l: Promise<LogContext>;
 
+  // TODO: These can really be combined into the same class. Reflect has no
+  // need of the abstraction between them. Once we have metrics in other
+  // places we can pull out a base class into a shared package, but still
+  // there'd only be one field here.
+  private readonly _metricManager: MetricManager;
   private readonly _metrics: {
     timeToConnectMs: Gauge;
     lastConnectError: State;
@@ -277,10 +281,19 @@ export class Reflect<MD extends MutatorDefs> {
     this.userID = options.userID;
     this._l = getLogContext(options, this._rep);
 
-    const metricManager = new MetricManager(
-      allSeries => this._reportMetrics(allSeries),
-      this._l,
-    );
+    const destinationOrigin = new URL(socketOrigin);
+    destinationOrigin.protocol =
+      destinationOrigin.protocol === 'wss:' ? 'https:' : 'http:';
+    this._metricManager = new MetricManager({
+      destinationOrigin,
+      fetch,
+      clock: {
+        getTime: () => Date.now(),
+        setInterval,
+        clearInterval,
+      },
+      lc: this._l,
+    });
     this._metrics = {
       // timeToConnectMs measures the time from the call to connect() to receiving
       // the 'connected' ws message. We record the DID_NOT_CONNECT_VALUE if the previous
@@ -301,15 +314,22 @@ export class Reflect<MD extends MutatorDefs> {
       // In that world the metric gauge(s) and bookkeeping like _connectingStart would
       // be encapsulated with the ConnectionState. This will probably happen as part
       // of https://github.com/rocicorp/reflect-server/issues/255.
-      timeToConnectMs: metricManager.gauge(MetricName.TimeToConnectMs),
+      timeToConnectMs: this._metricManager.add(
+        new Gauge(MetricName.TimeToConnectMs),
+      ),
 
       // lastConnectError records the last error that occurred when connecting,
       // if any. It is cleared when connecting successfully or when reported, so this
       // state only gets reported if there was a failure during the reporting period and
       // we are still not connected.
-      lastConnectError: metricManager.state(
-        MetricName.LastConnectError,
-        true, // clearOnFlush
+      // TODO: It seems like the choice to clear on flush means we could lose some error
+      // information, which is most likely to happen when connectivity is bad. Should this
+      // be not clear on flush instead?
+      lastConnectError: this._metricManager.add(
+        new State(
+          MetricName.LastConnectError,
+          true, // clearOnFlush
+        ),
       ),
     };
     this._metrics.timeToConnectMs.set(DID_NOT_CONNECT_VALUE);
@@ -373,6 +393,7 @@ export class Reflect<MD extends MutatorDefs> {
       this._disconnect(lc, CloseKind.ReflectClosed);
     }
     this.#closeAbortController.abort();
+    this._metricManager.stopReporting();
     return this._rep.close();
   }
 
@@ -1078,25 +1099,6 @@ export class Reflect<MD extends MutatorDefs> {
       l.info?.('ping failed in', delta, 'ms - disconnecting');
       this._disconnect(l, ErrorKind.PingTimeout);
       throw new MessageError(ErrorKind.PingTimeout, 'Ping timed out');
-    }
-  }
-
-  // Sends a set of metrics to the server. Throws unless the server
-  // returns 200.
-  private async _reportMetrics(allSeries: Series[]) {
-    const body = JSON.stringify({series: allSeries});
-    const url = new URL('/api/metrics/v0/report', this._socketOrigin);
-    url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:';
-    const res = await fetch(url.toString(), {
-      method: 'POST',
-      body,
-      keepalive: true,
-    });
-    if (!res.ok) {
-      const maybeBody = await res.text();
-      throw new Error(
-        `unexpected response: ${res.status} ${res.statusText} body: ${maybeBody}`,
-      );
     }
   }
 
