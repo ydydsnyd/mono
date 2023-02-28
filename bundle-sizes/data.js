@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1677500805453,
+  "lastUpdate": 1677613782396,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -36365,6 +36365,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27804,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c9f4956f436769f7931f405f1099b3e9622e2ad2",
+          "message": "chore: Fix perf runner (#344)\n\nIf a performance benchmark throws we now exit with a non-zero exit code.\r\n\r\nFix refresh benchmark by undoing the change to use symbols for the\r\n\"internal\" testing API.",
+          "timestamp": "2023-02-28T20:48:36+01:00",
+          "tree_id": "3403ac9edebbbeca9f20f59c92720d27f187faf0",
+          "url": "https://github.com/rocicorp/mono/commit/c9f4956f436769f7931f405f1099b3e9622e2ad2"
+        },
+        "date": 1677613774645,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 262666,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45859,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 261461,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45507,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 98820,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27764,
             "unit": "bytes"
           }
         ]
