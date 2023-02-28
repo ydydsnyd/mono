@@ -333,9 +333,9 @@ const startRenderLoop = (render: () => void, debug: Debug) => {
   let thisLoop = performance.now();
   const _redraw = async () => {
     // Track a low-pass filtered fps
-    thisLoop = performance.now();
-    if (thisLoop - lastLoop >= MIN_STEP_MS) {
+    if (performance.now() - lastLoop >= MIN_STEP_MS) {
       await render();
+      thisLoop = performance.now();
     }
     let thisFrameTime = thisLoop - lastLoop;
     frameTime += (thisFrameTime - frameTime) / FPS_LOW_PASS;
