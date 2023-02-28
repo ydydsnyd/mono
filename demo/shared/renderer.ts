@@ -1,5 +1,4 @@
 import {
-  add_splatters_to_cache,
   draw_buffer_png,
   set_physics_state,
   Letter as RendererLetter,
@@ -32,25 +31,6 @@ export const getRendererLetter = (letter: Letter): RendererLetter => {
     case Letter.E:
       return RendererLetter.E;
   }
-};
-
-export const addSplattersToCache = (
-  letter: Letter,
-  context: CanvasRenderingContext2D,
-  points: Splatter[],
-  colors: ColorPalate,
-) => {
-  add_splatters_to_cache(
-    getRendererLetter(letter),
-    context,
-    now(),
-    new Uint8Array(colors[0].flat()),
-    new Uint8Array(colors[1].flat()),
-    new Uint8Array(colors[2].flat()),
-    new Uint8Array(colors[3].flat()),
-    new Uint8Array(colors[4].flat()),
-    ...splatters2Render(points),
-  );
 };
 
 export const updateCache = (letter: Letter, png: string) => {

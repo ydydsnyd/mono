@@ -201,61 +201,6 @@ pub fn draw_buffer_png(
     png_data
 }
 
-#[wasm_bindgen]
-pub fn add_splatters_to_cache(
-    letter: Letter,
-    ctx: &CanvasRenderingContext2d,
-    step: usize,
-    a_colors: Vec<u8>,
-    b_colors: Vec<u8>,
-    c_colors: Vec<u8>,
-    d_colors: Vec<u8>,
-    e_colors: Vec<u8>,
-    splatter_count: usize,
-    steps: Vec<usize>,
-    splatter_actors: Vec<u32>,
-    colors: Vec<u8>,
-    x_vals: Vec<f32>,
-    y_vals: Vec<f32>,
-    splatter_animations: Vec<u8>,
-    splatter_rotations: Vec<u8>,
-) {
-    panic::set_hook(Box::new(console_error_panic_hook::hook));
-    let mut caches = CACHES.write().unwrap();
-    let cache = caches.get_data(&letter);
-    let width = UVMAP_SIZE.clone();
-    let height = UVMAP_SIZE.clone();
-    let mut img: RgbaImage;
-    if cache.len() == 0 {
-        img = RgbaImage::new(width, height);
-    } else {
-        img = RgbaImage::from_vec(width, height, cache.to_vec()).expect("Bad image in buffers");
-    }
-    drawing::draw(
-        &mut img,
-        step,
-        &a_colors,
-        &b_colors,
-        &c_colors,
-        &d_colors,
-        &e_colors,
-        splatter_count,
-        &steps,
-        &splatter_actors,
-        &colors,
-        &x_vals,
-        &y_vals,
-        &splatter_animations,
-        &splatter_rotations,
-    );
-    let data =
-        ImageData::new_with_u8_clamped_array_and_sh(Clamped(&mut img.to_vec()), width, height)
-            .expect("Bad image data");
-    ctx.put_image_data(&data, 0 as f64, 0 as f64)
-        .expect("Writing to canvas failed");
-    caches.set_data(&letter, img.to_vec());
-}
-
 // Per-frame API: when we get new data, draw a buffer which combines our current cache with the provided data.
 
 const LETTERS: [Letter; 5] = [Letter::A, Letter::L, Letter::I, Letter::V, Letter::E];

@@ -288,56 +288,6 @@ function addBorrowedObject(obj) {
     return stack_pointer;
 }
 /**
-* @param {number} letter
-* @param {CanvasRenderingContext2D} ctx
-* @param {number} step
-* @param {Uint8Array} a_colors
-* @param {Uint8Array} b_colors
-* @param {Uint8Array} c_colors
-* @param {Uint8Array} d_colors
-* @param {Uint8Array} e_colors
-* @param {number} splatter_count
-* @param {Uint32Array} steps
-* @param {Uint32Array} splatter_actors
-* @param {Uint8Array} colors
-* @param {Float32Array} x_vals
-* @param {Float32Array} y_vals
-* @param {Uint8Array} splatter_animations
-* @param {Uint8Array} splatter_rotations
-*/
-export function add_splatters_to_cache(letter, ctx, step, a_colors, b_colors, c_colors, d_colors, e_colors, splatter_count, steps, splatter_actors, colors, x_vals, y_vals, splatter_animations, splatter_rotations) {
-    try {
-        const ptr0 = passArray8ToWasm0(a_colors, wasm.__wbindgen_malloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passArray8ToWasm0(b_colors, wasm.__wbindgen_malloc);
-        const len1 = WASM_VECTOR_LEN;
-        const ptr2 = passArray8ToWasm0(c_colors, wasm.__wbindgen_malloc);
-        const len2 = WASM_VECTOR_LEN;
-        const ptr3 = passArray8ToWasm0(d_colors, wasm.__wbindgen_malloc);
-        const len3 = WASM_VECTOR_LEN;
-        const ptr4 = passArray8ToWasm0(e_colors, wasm.__wbindgen_malloc);
-        const len4 = WASM_VECTOR_LEN;
-        const ptr5 = passArray32ToWasm0(steps, wasm.__wbindgen_malloc);
-        const len5 = WASM_VECTOR_LEN;
-        const ptr6 = passArray32ToWasm0(splatter_actors, wasm.__wbindgen_malloc);
-        const len6 = WASM_VECTOR_LEN;
-        const ptr7 = passArray8ToWasm0(colors, wasm.__wbindgen_malloc);
-        const len7 = WASM_VECTOR_LEN;
-        const ptr8 = passArrayF32ToWasm0(x_vals, wasm.__wbindgen_malloc);
-        const len8 = WASM_VECTOR_LEN;
-        const ptr9 = passArrayF32ToWasm0(y_vals, wasm.__wbindgen_malloc);
-        const len9 = WASM_VECTOR_LEN;
-        const ptr10 = passArray8ToWasm0(splatter_animations, wasm.__wbindgen_malloc);
-        const len10 = WASM_VECTOR_LEN;
-        const ptr11 = passArray8ToWasm0(splatter_rotations, wasm.__wbindgen_malloc);
-        const len11 = WASM_VECTOR_LEN;
-        wasm.add_splatters_to_cache(letter, addBorrowedObject(ctx), step, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, splatter_count, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11);
-    } finally {
-        heap[stack_pointer++] = undefined;
-    }
-}
-
-/**
 * @param {CanvasRenderingContext2D} ctx_a
 * @param {CanvasRenderingContext2D} ctx_l
 * @param {CanvasRenderingContext2D} ctx_i
@@ -639,20 +589,20 @@ async function load(module, imports) {
 function getImports() {
     const imports = {};
     imports.wbg = {};
-    imports.wbg.__wbg_static_accessor_MAX_RENDERED_PHYSICS_STEPS_1227ae48b3a9f731 = function() {
-        const ret = MAX_RENDERED_PHYSICS_STEPS;
+    imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
+        takeObject(arg0);
+    };
+    imports.wbg.__wbg_static_accessor_UVMAP_SIZE_a2041fefcbe5a985 = function() {
+        const ret = UVMAP_SIZE;
         return ret;
     };
     imports.wbg.__wbg_static_accessor_SPLATTER_ANIM_FRAMES_659fe1818af3aa5a = function() {
         const ret = SPLATTER_ANIM_FRAMES;
         return ret;
     };
-    imports.wbg.__wbg_static_accessor_UVMAP_SIZE_a2041fefcbe5a985 = function() {
-        const ret = UVMAP_SIZE;
+    imports.wbg.__wbg_static_accessor_MAX_RENDERED_PHYSICS_STEPS_1227ae48b3a9f731 = function() {
+        const ret = MAX_RENDERED_PHYSICS_STEPS;
         return ret;
-    };
-    imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
-        takeObject(arg0);
     };
     imports.wbg.__wbg_newwithu8clampedarrayandsh_f7ef3a8f3fd04c8a = function() { return handleError(function (arg0, arg1, arg2, arg3) {
         const ret = new ImageData(getClampedArrayU8FromWasm0(arg0, arg1), arg2 >>> 0, arg3 >>> 0);
