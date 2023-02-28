@@ -53,8 +53,7 @@ pub fn draw(
         let y = y_vals[idx] * height;
 
         let anim_index = splatter_animations[idx] as usize;
-        // Frames animate at ~30fps, steps are assumed to be ~60fps
-        let anim_frame = (step - splatter_step) / 2;
+        let anim_frame = step - splatter_step;
         let (splatter_image, (sx, sy)) =
             splatters::for_index(anim_index, anim_frame, splatter_rotations[idx], x, y);
         let mut splatter_colored = splatter_image.to_rgba8();
