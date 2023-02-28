@@ -6,7 +6,7 @@ const reflectApiKey = process.env.REFLECT_AUTH_API_KEY || '';
 
 const ROOM_STATUS_URL = (roomID: string) =>
   `${SERVICE_HOST}/api/room/v0/room/${roomID}/status`;
-const CREATE_ROOM_URL = () => `${SERVICE_HOST}/api/room/v0/room/create`;
+const CREATE_ROOM_URL = () => `${SERVICE_HOST}/createRoom`; // TODO: move to `${SERVICE_HOST}/api/room/v0/room/create` when upgrading reflect-server;
 
 const handler = async (req: VercelRequest, res: VercelResponse) => {
   if (req.method !== 'POST') {
