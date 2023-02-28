@@ -7,7 +7,7 @@ export {
 } from '../../renderer/src/constants';
 
 // Demo position
-export const DEMO_OFFSET_BOTTOM = 480;
+export const DEMO_OFFSET_BOTTOM = 180;
 
 // Debug
 export const DEBUG_PHYSICS = false;

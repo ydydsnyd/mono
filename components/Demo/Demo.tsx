@@ -22,7 +22,6 @@ const PaintFight = () => {
     <>
       <pre id="debug"></pre>
       {initError ? `${initError?.message}` : null}
-      <div id="demo-placeholder"></div>
       <div id="demo">
         <canvas id="canvas3D"></canvas>
       </div>

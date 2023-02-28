@@ -51,7 +51,10 @@ export const cursorRenderer = (
   const updateCursorPosition = (position: Position) => {
     const demoBB = getDemoBoundingBox();
     localCursor.onPage = true;
-    lastPosition = position;
+    lastPosition = {
+      x: position.x - demoBB.x,
+      y: position.y - demoBB.y,
+    };
     localCursor.x = (position.x - demoBB.x + window.scrollX) / demoBB.width;
     localCursor.y = (position.y - demoBB.y + window.scrollY) / demoBB.height;
     localCursor.ts = now();

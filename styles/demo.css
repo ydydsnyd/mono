@@ -2,16 +2,10 @@ body.demo-active {
   cursor: none;
 }
 
-#demo-placeholder {
-  height: 140px;
-}
 #demo {
-  position: absolute;
   pointer-events:none;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: -10;
+  width: 600px;
+  height: 200px;
 }
 #canvas3D {
   width: 100%;

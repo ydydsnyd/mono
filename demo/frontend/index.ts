@@ -23,7 +23,6 @@ import type {
   Letter,
   Physics,
   Position,
-  Size,
 } from '../shared/types';
 import {LETTERS} from '../shared/letters';
 import {letterMap, now} from '../shared/util';
@@ -34,13 +33,6 @@ type LetterCanvases = Record<Letter, HTMLCanvasElement>;
 
 type Debug = {
   fps: number;
-};
-
-const getScaleFactor = (): Size => {
-  return {
-    width: window.innerWidth,
-    height: document.body.scrollHeight,
-  };
 };
 
 export const init = async () => {
@@ -68,6 +60,7 @@ export const init = async () => {
     tex.height = UVMAP_SIZE;
     return tex;
   });
+  const demoContainer = document.getElementById('demo') as HTMLDivElement;
 
   const renderInitTime = performance.now();
   await initRenderer();
@@ -192,22 +185,17 @@ export const init = async () => {
   const [localCursor, renderCursors] = cursorRenderer(
     actorId,
     () => ({actors, cursors}),
-    () => ({
-      x: window.innerWidth / 2 - 300,
-      y: DEMO_OFFSET_BOTTOM - 200,
-      width: 600,
-      height: 200,
-    }),
+    () => demoContainer.getBoundingClientRect(),
     updateCursor,
   );
 
   // When the window is resized, recalculate letter and cursor positions
   const resizeViewport = () => {
-    const scaleFactor = getScaleFactor();
-    canvas.height = scaleFactor.height * window.devicePixelRatio;
-    canvas.width = scaleFactor.width * window.devicePixelRatio;
-    canvas.style.height = scaleFactor.height + 'px';
-    canvas.style.width = scaleFactor.width + 'px';
+    const {width, height} = demoContainer.getBoundingClientRect();
+    canvas.height = height * window.devicePixelRatio;
+    canvas.width = width * window.devicePixelRatio;
+    canvas.style.height = height + 'px';
+    canvas.style.width = width + 'px';
     resize3DCanvas();
     renderCursors();
   };
