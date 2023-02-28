@@ -620,6 +620,9 @@ function getImports() {
         const ret = UVMAP_SIZE;
         return ret;
     };
+    imports.wbg.__wbg_log_94ec9f9334743f04 = function(arg0, arg1) {
+        console.log(getStringFromWasm0(arg0, arg1));
+    };
     imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
         takeObject(arg0);
     };

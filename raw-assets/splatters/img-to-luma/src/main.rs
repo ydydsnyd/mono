@@ -1,19 +1,50 @@
 use base64::prelude::*;
-use std::{env, fs};
+use std::{
+    env,
+    fs::{self, write},
+};
 
 use image::{io::Reader, ImageFormat};
 
 fn main() {
     // file path provided by user
-    let input = env::args().nth(1).unwrap();
+    let mut input = env::args().nth(1);
+    let to_file: String = if input == None {
+        env::current_dir()
+            .unwrap()
+            .join("../../../renderer/src/drawing/data.rs")
+            .to_str()
+            .unwrap()
+            .to_owned()
+    } else {
+        "STDOUT".to_string()
+    };
+    if input == None {
+        input = Some(format!(
+            "{}",
+            env::current_dir()
+                .unwrap()
+                .join("../splatters")
+                .to_string_lossy()
+        ));
+    }
+    let writing_to_stdout = to_file == "STDOUT";
 
-    let paths = fs::read_dir(input).expect("invalid input");
+    let mut paths: Vec<_> = fs::read_dir(input.unwrap())
+        .expect("invalid dir")
+        .map(|f| f.unwrap())
+        .collect();
+    paths.sort_by_key(|f| f.path());
     let mut anim_no = 0;
     let mut b64_output: String = "".to_string();
     // let mut raw_output: String = "".to_string();
     // let mut images = (vec![], vec![], vec![], vec![]);
-    for (idx, path) in paths.enumerate() {
-        let image = Reader::open(path.unwrap().path())
+    for (idx, entry) in paths.iter().enumerate() {
+        let path = entry.path();
+        if !writing_to_stdout {
+            println!("encoding {}-{} from file {:?}", anim_no, idx % 4, &path);
+        }
+        let image = Reader::open(path)
             .expect("Bad image")
             .decode()
             .expect("Invalid image data");
@@ -50,5 +81,10 @@ fn main() {
         //     );
         // }
     }
-    print!("{}", b64_output);
+    if writing_to_stdout {
+        print!("{}", b64_output);
+    } else {
+        println!("Writing to {}", to_file);
+        write(to_file, b64_output).expect("Failed writing");
+    }
 }

@@ -1,7 +1,7 @@
 use image::{imageops, Pixel, Rgb, RgbaImage};
 
 mod data;
-mod splatters;
+pub mod splatters;
 
 #[allow(unused_imports)]
 use crate::console_log;
