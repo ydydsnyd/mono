@@ -13,7 +13,6 @@ import {
   STEP_RENDER_DELAY,
   DEBUG_PHYSICS,
   SPLATTER_MS,
-  DEMO_OFFSET_BOTTOM,
   STEP_UPDATE_INTERVAL,
   MIN_STEP_MS,
 } from '../shared/constants';
