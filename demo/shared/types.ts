@@ -31,11 +31,6 @@ export type Actor = {
   isBot: boolean;
 };
 
-export type LetterCache = {
-  letter: Letter;
-  cache: string;
-};
-
 export type Letter3DPosition = {
   position: Vector;
   rotation: Quaternion;

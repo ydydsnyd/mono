@@ -16,7 +16,6 @@ import type {
   Cursor,
   Impulse,
   Letter,
-  LetterCache,
   Physics,
   Position,
   Splatter,
@@ -25,6 +24,7 @@ import type {
 import {decode, encode} from './uint82b64';
 import {asyncLetterMap, randomWithSeed} from './util';
 import {impulses2Physics} from './wasm-args';
+import {chunk, unchunk} from './chunks';
 
 export const impulseId = (i: Impulse) => `${i.u}${i.s}${i.x + i.y + i.z}`;
 export const splatterId = (s: Splatter) => `${s.u}${s.s}${s.x + s.y}}`;
@@ -199,6 +199,7 @@ export const mutators = {
         await flattenPhysics(tx, step);
         await flattenTexture(tx, letter, step);
       } catch (e) {
+        console.error((e as Error).stack);
         console.log(`Flattening failed with error ${(e as Error).message}`);
       }
     }
@@ -229,10 +230,8 @@ const flattenPhysics = async (tx: WriteTransaction, step: number) => {
       newStep,
       ...impulses2Physics(impulses),
     );
-    await tx.put('physics', {
-      state: encode(newState),
-      step: newStep,
-    });
+    await chunk(tx, 'physics/state', encode(newState));
+    await tx.put('physics/step', newStep);
     // Remove impulses that are integrated into the above snapshot
     await asyncLetterMap(async letter => {
       await impulses[letter].map(async impulse => {
@@ -287,13 +286,13 @@ const flattenTexture = async (
   if (oldSplatters.length > SPLATTER_FLATTEN_MIN) {
     console.log(`${letter}: flatten ${oldSplatters.length} splatters`);
     // Draw them on top of the last cached image
-    const cache = (await tx.get(`cache/${letter}`)) as LetterCache;
-    if (cache && cache.cache) {
-      updateCache(letter, cache.cache);
+    const cache = await unchunk(tx, `cache/${letter}`);
+    if (cache) {
+      updateCache(letter, cache);
     }
     const newCache = getCache(letter, oldSplatters, colors);
     // And write it back to the cache
-    await tx.put(`cache/${letter}`, {letter, cache: newCache});
+    await chunk(tx, `cache/${letter}`, newCache);
     // Then delete any old splatters we just drew
     await Promise.all(
       oldSplatters.map(

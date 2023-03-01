@@ -5,7 +5,6 @@ import type {
   Cursor,
   Impulse,
   Letter,
-  LetterCache,
   Physics,
   Splatter,
   State,
@@ -15,6 +14,7 @@ import {LETTERS} from '../shared/letters';
 import {getData, isAddDiff, isChangeDiff, isDeleteDiff} from './data-util';
 import {setPhysics, updateCache} from '../shared/renderer';
 import {WORKER_HOST} from '../shared/urls';
+import {unchunk} from '../shared/chunks';
 
 export const initialize = async (roomID: string, userID: string) => {
   // Set up our connection to reflect
@@ -55,7 +55,7 @@ export const initialize = async (roomID: string, userID: string) => {
   const localState: State = await reflectClient.query(stateInitializer(userID));
 
   reflectClient.experimentalWatch(diffs => {
-    diffs.forEach(diff => {
+    diffs.forEach(async diff => {
       const keyParts = diff.key.split('/');
       switch (keyParts[0]) {
         case 'seq':
@@ -75,10 +75,22 @@ export const initialize = async (roomID: string, userID: string) => {
           }
           break;
         case 'physics':
-          if (isChangeDiff(diff) || isAddDiff(diff)) {
-            const physics = getData<Physics>(diff);
-            localState.physics = physics;
-            setPhysics(physics);
+          if (keyParts[1] === 'step') {
+            if (isChangeDiff(diff) || isAddDiff(diff)) {
+              const step = getData<number>(diff);
+              const state = await reflectClient.query(
+                async tx => await unchunk(tx, `physics/state`),
+              );
+              if (state) {
+                const physics = {step, state};
+                localState.physics = physics;
+                setPhysics(physics);
+              } else {
+                console.error(
+                  'Received step update with invalid physics state',
+                );
+              }
+            }
           }
           break;
         case 'cursor':
@@ -92,9 +104,15 @@ export const initialize = async (roomID: string, userID: string) => {
         case 'cache':
           if (isChangeDiff(diff) || isAddDiff(diff)) {
             const letter = keyParts[1] as Letter;
-            const cache = getData<LetterCache>(diff);
-            localState.rawCaches[letter] = cache.cache;
-            updateCache(letter, cache.cache);
+            const cache = await reflectClient.query(
+              async tx => await unchunk(tx, `cache/${letter}`),
+            );
+            if (cache) {
+              localState.rawCaches[letter] = cache;
+              updateCache(letter, cache);
+            } else {
+              console.error('Received invalid cache update');
+            }
           }
           break;
       }
@@ -183,12 +201,10 @@ const stateInitializer =
         impulses[letter] = letterImpulses;
       }),
       ...LETTERS.map(async letter => {
-        const cacheData = (await tx.get(`cache/${letter}`)) as
-          | LetterCache
-          | undefined;
-        if (cacheData?.cache) {
-          rawCaches[letter] = cacheData.cache;
-          updateCache(letter, cacheData.cache);
+        const cache = await unchunk(tx, `cache/${letter}`);
+        if (cache) {
+          rawCaches[letter] = cache;
+          updateCache(letter, cache);
         }
       }),
       ...LETTERS.map(async letter => {
