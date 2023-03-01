@@ -33,6 +33,13 @@ fn main() {
     let mut paths: Vec<_> = fs::read_dir(input.unwrap())
         .expect("invalid dir")
         .map(|f| f.unwrap())
+        .filter(|f| {
+            if let Some(ext) = f.path().extension() {
+                ext == "png"
+            } else {
+                false
+            }
+        })
         .collect();
     paths.sort_by_key(|f| f.path());
     let mut anim_no = 0;

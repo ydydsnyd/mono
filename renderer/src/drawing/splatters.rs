@@ -11,7 +11,6 @@ pub fn precompute() {
     _ = SPLATTER_1;
     _ = SPLATTER_2;
     _ = SPLATTER_3;
-    _ = SPLATTER_4;
 }
 
 pub struct Splatter {
@@ -83,7 +82,6 @@ pub fn for_index(
         1 => (SPLATTER_1.frame(frame, rotation), SPLATTER_1.at(x, y)),
         2 => (SPLATTER_2.frame(frame, rotation), SPLATTER_2.at(x, y)),
         3 => (SPLATTER_3.frame(frame, rotation), SPLATTER_3.at(x, y)),
-        4 => (SPLATTER_4.frame(frame, rotation), SPLATTER_4.at(x, y)),
         _ => (SPLATTER_0.frame(frame, rotation), SPLATTER_0.at(x, y)),
     }
 }
@@ -93,5 +91,4 @@ lazy_static! {
     pub static ref SPLATTER_1: Splatter = Splatter::from(data::SPLATTER_1_DATA);
     pub static ref SPLATTER_2: Splatter = Splatter::from(data::SPLATTER_2_DATA);
     pub static ref SPLATTER_3: Splatter = Splatter::from(data::SPLATTER_3_DATA);
-    pub static ref SPLATTER_4: Splatter = Splatter::from(data::SPLATTER_4_DATA);
 }
