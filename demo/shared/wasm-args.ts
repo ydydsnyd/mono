@@ -23,7 +23,7 @@ export const splatters2RenderBatch = (
   const actorNums: Record<ActorID, number> = {};
   const totalSplatters = LETTERS.reduce((splatterCount, letter) => {
     splatters[letter].forEach(s => {
-      if (!actorNums[s.u]) {
+      if (actorNums[s.u] === undefined) {
         actorNums[s.u] = actorNum++;
       }
     });
@@ -61,7 +61,7 @@ export const splatters2RenderBatch = (
 type renderArgs = [
   number, // splatter_count: usize,
   Uint32Array, // steps: Vec<usize>,
-  Uint32Array, // point_actors: Vec<u32>,
+  Uint32Array, // splatter_actors: Vec<u32>,
   Uint8Array, // colors: Vec<u8>,
   Float32Array, // x_vals: Vec<f32>,
   Float32Array, // y_vals: Vec<f32>,

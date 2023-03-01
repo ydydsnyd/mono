@@ -22,7 +22,7 @@ const sliceVal = <T extends TypedArray>(val: T, fn: (slice: T) => number) => {
   }
 };
 
-describe('splatters2render', () => {
+describe('splatters2renderBatch', () => {
   it('correctly indexes things', () => {
     const splatters = letterMap<Splatter[]>(_ => {
       return [
@@ -47,7 +47,7 @@ describe('splatters2render', () => {
       ];
     });
     const args = splatters2RenderBatch(splatters);
-    console.log(args);
+    // console.log(args);
     assert.equal(args[0].length, 5, 'one splatter count per letter');
     LETTERS.forEach((letter, idx) => {
       assert.equal(args[0][idx], 2, `correct splatter count for ${letter}`);
@@ -65,16 +65,16 @@ describe('splatters2render', () => {
     });
     assert.equal(args[3][0], 0, 'correct color 1');
     assert.equal(args[3][1], 1, 'correct color 2');
-    assert.equal(args[4].length, 2, 'correct x count');
+    assert.equal(args[4].length, 10, 'correct x count');
     cmpFloat(args[4][0], 0.1, 'correct x 1');
     cmpFloat(args[4][1], 0.2, 'correct x 2');
-    cmpFloat(args[5].length, 2, 'correct y count');
+    cmpFloat(args[5].length, 10, 'correct y count');
     cmpFloat(args[5][0], 0.1, 'correct y 1');
     cmpFloat(args[5][1], 0.2, 'correct y 2');
-    assert.equal(args[6].length, 2, 'correct splatter animation count');
-    assert.equal(args[6][0], 1, 'correct splatter animation 1');
+    assert.equal(args[6].length, 10, 'correct splatter animation count');
+    assert.equal(args[6][0], 0, 'correct splatter animation 1');
     assert.equal(args[6][1], 1, 'correct splatter animation 2');
-    assert.equal(args[7].length, 2, 'correct splatter rotation count');
+    assert.equal(args[7].length, 10, 'correct splatter rotation count');
     assert.equal(args[7][0], 0, 'correct splatter rotation 1');
     assert.equal(args[7][1], 1, 'correct splatter rotation 2');
   });
