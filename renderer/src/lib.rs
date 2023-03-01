@@ -260,7 +260,7 @@ pub fn draw_buffers(
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     let width = UVMAP_SIZE.clone();
     let height = UVMAP_SIZE.clone();
-    let caches = CACHES.read().unwrap();
+    let mut caches = CACHES.write().unwrap();
     for letter in LETTERS {
         let cache = caches.get_data(&letter);
         let letter_index = match letter {
@@ -321,7 +321,6 @@ pub fn draw_buffers(
         // If we don't write to the cache here, we'd need to render every splatter in
         // reflect on every frame, which could get expensive (especially offline, where
         // the list will grow forever)
-        let mut caches = CACHES.write().unwrap();
         caches.set_data(&letter, img.to_vec());
     }
 }

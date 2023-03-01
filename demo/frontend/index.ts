@@ -284,56 +284,69 @@ export const init = async () => {
   // Render our cursors and canvases at "animation speed", usually 60fps
   let lastSplatter = 0;
   let sentStepLast = now();
-  startRenderLoop(async () => {
-    ({
-      actors,
-      step,
-      physics,
-      cursors,
-      rawCaches,
-      splatters,
-      sequences,
-      impulses,
-    } = await getState());
-    // Increment our step
-    updateStep();
-    // Update cursors
-    await renderCursors();
-    // Render our textures
-    render(localStep, buffers, textures, splatters, colors);
-    // Update textures and render the 3D scene
-    LETTERS.forEach(letter => updateTexture(letter));
-    renderPhysics();
-    render3D();
-    // Splatter if needed
-    const {isDown, position} = localCursor();
-    if (isDown && now() > lastSplatter + SPLATTER_MS) {
-      lastSplatter = now();
-      addPaint(position);
-    } else if (!isDown) {
-      lastSplatter = 0;
-    }
-    if (now() > sentStepLast + STEP_UPDATE_INTERVAL) {
-      sentStepLast = now();
-      sendStep(localStep);
-    }
-  }, debug);
+  startRenderLoop(
+    async () => {
+      ({
+        actors,
+        step,
+        physics,
+        cursors,
+        rawCaches,
+        splatters,
+        sequences,
+        impulses,
+      } = await getState());
+      // Increment our step
+      updateStep();
+      // Render our textures
+      render(localStep, buffers, textures, splatters, colors);
+      // Update textures and render the 3D scene
+      LETTERS.forEach(letter => updateTexture(letter));
+      renderPhysics();
+      render3D();
+      // Splatter if needed
+      const {isDown, position} = localCursor();
+      if (isDown && now() > lastSplatter + SPLATTER_MS) {
+        lastSplatter = now();
+        addPaint(position);
+      } else if (!isDown) {
+        lastSplatter = 0;
+      }
+      if (now() > sentStepLast + STEP_UPDATE_INTERVAL) {
+        sentStepLast = now();
+        sendStep(localStep);
+      }
+    },
+    async () => {
+      // Our cursors should update every animation frame.
+      await renderCursors();
+    },
+    debug,
+  );
 
   // After we've started, flip a class on the body
   document.body.classList.add('demo-active');
 };
 
-const startRenderLoop = (render: () => void, debug: Debug) => {
+const startRenderLoop = (
+  render: () => Promise<void>,
+  renderUngated: () => Promise<void>,
+  debug: Debug,
+) => {
   // Render loop - run render on every frame
   let frameTime = 0;
   let lastLoop = performance.now();
   let thisLoop = performance.now();
   const _redraw = async () => {
-    // Track a low-pass filtered fps
+    // Call the renderUngated method on all animation frames (sometimes up to 120fps
+    // in some browsers/gpus)
+    await renderUngated();
+    // Call the render method at ~60fps
     if (performance.now() - lastLoop >= MIN_STEP_MS) {
       await render();
       thisLoop = performance.now();
     }
+    // Track a low-pass filtered fps
     let thisFrameTime = thisLoop - lastLoop;
     frameTime += (thisFrameTime - frameTime) / FPS_LOW_PASS;
     lastLoop = thisLoop;
