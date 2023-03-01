@@ -2,9 +2,8 @@
 extern crate lazy_static;
 use std::{env, fs::create_dir, path::Path};
 
-pub static SPLATTER_ANIM_FRAMES: u8 = 8;
-
 mod drawing;
+pub static SPLATTER_ANIM_FRAMES: u8 = 8;
 
 #[macro_export]
 macro_rules! console_log {
