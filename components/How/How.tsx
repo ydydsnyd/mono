@@ -5,6 +5,9 @@ import Demo1a from './Demos/Demo1a';
 import Demo1b from './Demos/Demo1b';
 import Demo2a from './Demos/Demo2a';
 import Demo2b from './Demos/Demo2b';
+import ServerConsole from './ServerConsole';
+import ClientConsole from './ClientConsole';
+import DemoButton from './DemoButton';
 import Slider from './Slider';
 
 export default function How () {
@@ -43,13 +46,15 @@ export default function How () {
                     <div className={styles.client}>
                         <h4 className={styles.panelLabel}>Client 1</h4>
                         <Slider />
+                        <DemoButton />
+                        <ClientConsole />
                     </div>
-                    <div className={styles.serverConsole}>
-                        <h4 className={styles.panelLabel}>Server</h4>
-                    </div>
+                    <ServerConsole />
                     <div className={styles.client}>
                         <h4 className={styles.panelLabel}>Client 2</h4>
                         <Slider />
+                        <DemoButton />
+                        <ClientConsole />
                     </div>
                 </div>
 
@@ -86,13 +91,13 @@ export default function How () {
                     <div className={styles.client}>
                         <h4 className={styles.panelLabel}>Client 1</h4>
                         <Slider />
+                        <ClientConsole />
                     </div>
-                    <div className={styles.serverConsole}>
-                        <h4 className={styles.panelLabel}>Server</h4>
-                    </div>
+                    <ServerConsole />
                     <div className={styles.client}>
                         <h4 className={styles.panelLabel}>Client 2</h4>
                         <Slider />
+                        <ClientConsole />
                     </div>
                 </div>
 
@@ -113,9 +118,14 @@ export default function How () {
                         Shell
                     </h4>
                     <p className={styles.terminalLine}>
-                        <span className={styles.prompt}>&gt;</span> reflect publish
+                        <span className={styles.prompt}>&gt;</span>
+                        <span className={styles.userInputContainer}>
+                            <span className={styles.userInput}>
+                                reflect publish
+                            </span>
+                        </span>
                     </p>
-                    <p className={styles.terminalLine}>
+                    <p className={`${styles.terminalLine} ${styles.terminalOutput}`}>
                         &#127881; Published! Running at <span className={styles.terminalLink}>https://myapp.reflect.net/</span>.
                     </p>
                 </div>

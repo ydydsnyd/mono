@@ -1,0 +1,32 @@
+.demoContainer {
+    height: 11.55rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.demoContainer .demoButton {
+    display: inline-block;
+    outline: none;
+    border: 0;
+    text-decoration: none;
+    cursor: pointer;
+    padding: 1rem 1.6rem;
+    border: 1px solid #FC208A;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 2px 6px -2px rgb(0 0 0 / 37%);
+    transition: transform 200ms cubic-bezier(.645, .045, .355, 1);
+    color: #FC208A;
+    font-size: 1rem;
+    line-height: 1.2;
+    font-weight: 600;
+    position: relative;
+}
+
+
+.demoContainer .demoButton:active {
+    box-shadow: none;
+    transform: scale(0.99);
+}
