@@ -6,12 +6,28 @@ export {
   MAX_RENDERED_PHYSICS_STEPS,
 } from '../../renderer/src/constants';
 
+// We share this file with the worker environment which is not node.js and has
+// no process global.
+const env = (() => {
+  const hasProcess = typeof process !== 'undefined';
+  if (hasProcess) {
+    return {
+      NEXT_PUBLIC_DEBUG_PHYSICS: process.env.NEXT_PUBLIC_DEBUG_PHYSICS,
+      NEXT_PUBLIC_DEBUG_TEXTURES: process.env.NEXT_PUBLIC_DEBUG_TEXTURES,
+    };
+  }
+  return {
+    NEXT_PUBLIC_DEBUG_PHYSICS: undefined,
+    NEXT_PUBLIC_DEBUG_TEXTURES: undefined,
+  };
+})();
+
 // Demo position
 export const DEMO_OFFSET_BOTTOM = 180;
 
 // Debug
-export const DEBUG_PHYSICS = false;
-export const DEBUG_TEXTURES = true;
+export const DEBUG_PHYSICS = env.NEXT_PUBLIC_DEBUG_PHYSICS === 'true';
+export const DEBUG_TEXTURES = env.NEXT_PUBLIC_DEBUG_TEXTURES === 'true';
 
 // Splatters
 export const SPLATTER_FLATTEN_MIN = 10;
