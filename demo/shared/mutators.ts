@@ -16,7 +16,6 @@ import type {
   Cursor,
   Impulse,
   Letter,
-  Physics,
   Position,
   Splatter,
   Vector,
@@ -209,11 +208,10 @@ export const mutators = {
 };
 
 const flattenPhysics = async (tx: WriteTransaction, step: number) => {
-  const origin = (await tx.get('physics')) as unknown as Physics | undefined;
-  const renderedSteps = origin ? step - origin.step : step;
-  console.log(
-    `Server origin step: ${origin?.step}. Rendered: ${renderedSteps}`,
-  );
+  const state = (await unchunk(tx, 'physics/state')) as string;
+  const originStep = (await tx.get('physics/step')) as number;
+  const renderedSteps = originStep ? step - originStep : step;
+  console.log(`Server origin step: ${originStep}. Rendered: ${renderedSteps}`);
   if (renderedSteps > MAX_RENDERED_PHYSICS_STEPS) {
     const impulses = await asyncLetterMap<Impulse[]>(async letter => {
       const impulses = await tx.scan({
@@ -225,8 +223,8 @@ const flattenPhysics = async (tx: WriteTransaction, step: number) => {
     await _initRenderer!();
     const newStep = Math.max(step - MAX_RENDERED_PHYSICS_STEPS, 0);
     const newState = update_state(
-      origin ? decode(origin.state) : undefined,
-      origin?.step || 0,
+      state ? decode(state) : undefined,
+      originStep || 0,
       newStep,
       ...impulses2Physics(impulses),
     );
