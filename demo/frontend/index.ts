@@ -206,7 +206,7 @@ export const init = async () => {
   const [localCursor, renderCursors] = cursorRenderer(
     actorId,
     () => ({actors, cursors}),
-    () => demoContainer.getBoundingClientRect(),
+    () => demoContainer,
     updateCursor,
   );
 

@@ -114,7 +114,7 @@ body.active {
 }
 
 .cursor {
-  position: absolute;
+  position: fixed;
   transition: opacity 1s ease-out;
   pointer-events: none;
   top: 0px;

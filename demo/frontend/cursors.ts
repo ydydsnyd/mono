@@ -1,18 +1,11 @@
 import {ACTOR_UPDATE_INTERVAL, COLOR_PALATE} from '../shared/constants';
-import type {
-  Actor,
-  ActorID,
-  BoundingBox,
-  Cursor,
-  Position,
-  State,
-} from '../shared/types';
+import type {Actor, ActorID, Cursor, Position, State} from '../shared/types';
 import {colorToString, now} from '../shared/util';
 
 export const cursorRenderer = (
   actorId: string,
   getState: () => {actors: State['actors']; cursors: State['cursors']},
-  getDemoBoundingBox: () => BoundingBox,
+  getDemoContainer: () => HTMLDivElement,
   onUpdateCursor: (localCursor: Cursor) => void,
 ): [() => {isDown: boolean; position: Position}, () => Promise<void>] => {
   // Set up local state
@@ -48,15 +41,17 @@ export const cursorRenderer = (
   let lastPosition = {x: 0, y: 0};
   const mouseElement = document.body;
   let cursorNeedsUpdate = false;
-  const updateCursorPosition = (position: Position) => {
-    const demoBB = getDemoBoundingBox();
+  const updateCursorPosition = (position?: Position) => {
+    const demoBB = getDemoContainer().getBoundingClientRect();
+    if (position) {
+      lastPosition = {
+        x: position.x,
+        y: position.y,
+      };
+    }
     localCursor.onPage = true;
-    lastPosition = {
-      x: position.x - demoBB.x,
-      y: position.y - demoBB.y,
-    };
-    localCursor.x = (position.x - demoBB.x + window.scrollX) / demoBB.width;
-    localCursor.y = (position.y - demoBB.y + window.scrollY) / demoBB.height;
+    localCursor.x = (lastPosition.x - demoBB.x) / demoBB.width;
+    localCursor.y = (lastPosition.y - demoBB.y) / demoBB.height;
     localCursor.ts = now();
     cursorNeedsUpdate = true;
   };
@@ -72,7 +67,7 @@ export const cursorRenderer = (
   mouseElement.addEventListener('touchmove', touchMoved);
   // We also need to update the cursor when the window is scrolled
   window.addEventListener('scroll', () => {
-    requestAnimationFrame(() => updateCursorPosition(lastPosition));
+    updateCursorPosition();
   });
   const hideCursor = (e: MouseEvent | TouchEvent) => {
     if (e.target !== mouseElement) {
@@ -98,22 +93,31 @@ export const cursorRenderer = (
 
   let lastActorUpdate = -1;
   return [
-    () => ({isDown: localCursor.isDown, position: lastPosition}),
+    () => {
+      const demoBB = getDemoContainer().getBoundingClientRect();
+      return {
+        isDown: localCursor.isDown,
+        position: {
+          x: lastPosition.x - demoBB.x,
+          y: lastPosition.y - demoBB.y,
+        },
+      };
+    },
     async () => {
       if (cursorNeedsUpdate) {
         cursorNeedsUpdate = false;
         onUpdateCursor(localCursor);
       }
-      const demoBB = getDemoBoundingBox();
+      const demoBB = getDemoContainer().getBoundingClientRect();
       const {actors, cursors} = getState();
       // Move cursors
       Object.values(cursors).forEach(async cursor => {
         const {x, y} = cursor;
         const cursorDiv = await getCursorDiv(cursor);
         if (cursorDiv) {
-          cursorDiv.style.transform = `translate3d(${
-            x * demoBB.width + demoBB.x
-          }px, ${y * demoBB.height + demoBB.y}px, 0)`;
+          const cursorX = x * demoBB.width + demoBB.x;
+          const cursorY = y * demoBB.height + demoBB.y;
+          cursorDiv.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0)`;
           cursorDiv.style.opacity = cursor.onPage ? '1' : '0';
           const color = colorToString(
             COLOR_PALATE[actors[cursor.actorId].colorIndex],
