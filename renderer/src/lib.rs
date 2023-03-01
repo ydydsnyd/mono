@@ -311,6 +311,18 @@ pub fn draw_buffers(
                 .expect("Bad image data");
         ctx.put_image_data(&data, 0.0, 0.0)
             .expect("Writing to canvas failed");
+        // When we update a buffer, also write back to the cache. This is ok because:
+        // 1. Every animation builds on the frame before, e.g. a pixel will never be un-drawn if it has been added to a buffer.
+        // 2. When we receive a new cache from the server (which could change the order of splatters), it will overwrite our local cache anyway.
+        // Note that if we instead drew all splatters since the last server flattening,
+        // our cache would always be perfect - but it would be slower. The tradeoff here
+        // is that we'll accept a potential sudden re-ordering of splatters in the
+        // server cache if it means we will always have very fast renders.
+        // If we don't write to the cache here, we'd need to render every splatter in
+        // reflect on every frame, which could get expensive (especially offline, where
+        // the list will grow forever)
+        let mut caches = CACHES.write().unwrap();
+        caches.set_data(&letter, img.to_vec());
     }
 }
 
