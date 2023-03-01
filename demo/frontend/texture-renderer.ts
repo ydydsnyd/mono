@@ -1,5 +1,5 @@
 import {ColorPalate, Letter, Splatter} from '../shared/types';
-import {draw_buffers} from '../../renderer/pkg/renderer';
+import {draw_buffers} from '../../vendor/renderer';
 import {letterMap} from '../shared/util';
 import {splatters2RenderBatch} from '../shared/wasm-args';
 import {LETTERS} from '../shared/letters';

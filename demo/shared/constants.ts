@@ -11,7 +11,7 @@ export const DEMO_OFFSET_BOTTOM = 180;
 
 // Debug
 export const DEBUG_PHYSICS = false;
-export const DEBUG_TEXTURES = false;
+export const DEBUG_TEXTURES = true;
 
 // Splatters
 export const SPLATTER_FLATTEN_MIN = 10;

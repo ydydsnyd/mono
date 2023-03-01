@@ -4,7 +4,7 @@ import {
   Letter as RendererLetter,
   update_cache,
   positions_for_step,
-} from '../../renderer/pkg/renderer';
+} from '../../vendor/renderer';
 import {encode, decode} from './uint82b64';
 import {impulses2Physics, splatters2Render} from './wasm-args';
 import {

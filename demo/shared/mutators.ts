@@ -6,7 +6,7 @@ import {
   SPLATTER_ANIM_FRAMES,
   SPLATTER_FLATTEN_MIN,
 } from './constants';
-import {update_state} from '../../renderer/pkg/renderer';
+import {update_state} from '../../vendor/renderer';
 import {getCache, updateCache} from './renderer';
 import type {
   Actor,

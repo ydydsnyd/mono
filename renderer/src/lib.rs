@@ -306,7 +306,6 @@ pub fn draw_buffers(
             &splatter_animations[splatter_range_start..splatter_end_idx],
             &splatter_rotations[splatter_range_start..splatter_end_idx],
         );
-
         let data =
             ImageData::new_with_u8_clamped_array_and_sh(Clamped(&mut img.to_vec()), height, width)
                 .expect("Bad image data");

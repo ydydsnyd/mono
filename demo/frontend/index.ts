@@ -2,10 +2,7 @@ import {nanoid} from 'nanoid';
 import {initialize} from './data';
 import {renderer as renderer3D} from './3d-renderer';
 import {render} from './texture-renderer';
-import initRenderer, {
-  draw_caches,
-  precompute,
-} from '../../renderer/pkg/renderer';
+import initRenderer, {draw_caches, precompute} from '../../vendor/renderer';
 import {get3DPositions} from '../shared/renderer';
 import {cursorRenderer} from './cursors';
 import {

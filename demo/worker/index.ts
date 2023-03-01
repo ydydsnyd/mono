@@ -1,7 +1,7 @@
 import {createReflectServer} from '@rocicorp/reflect-server';
 import {Env, mutators, setEnv} from '../shared/mutators.js';
-import renderModule from '../../renderer/pkg/renderer_bg.wasm';
-import initRenderer from '../../renderer/pkg';
+import renderModule from '../../vendor/renderer/renderer_bg.wasm';
+import initRenderer from '../../vendor/renderer';
 
 setEnv(Env.SERVER, async () => {
   await initRenderer(renderModule);
