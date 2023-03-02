@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1677613782396,
+  "lastUpdate": 1677765852650,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -36419,6 +36419,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27764,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "19a52a22fe83017a6d431c81e2ef4b5703103106",
+          "message": "fix: deleteAllReplicacheData should default to IDB (#358)\n\nv12.2.0 introduced a bug where deleteAllReplicacheData got a required\r\nargument for the createStore parameter. This is a breaking change and we\r\nshould not have done it. This change makes the argument optional and\r\ndefaults to IDB.\r\n\r\nFixes #357",
+          "timestamp": "2023-03-02T14:02:59Z",
+          "tree_id": "9dbc7e4913d2b5071ad79ea5cedc52cb69f5a970",
+          "url": "https://github.com/rocicorp/mono/commit/19a52a22fe83017a6d431c81e2ef4b5703103106"
+        },
+        "date": 1677765842683,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 262729,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45836,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 261524,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45499,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 98836,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27778,
             "unit": "bytes"
           }
         ]
