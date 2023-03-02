@@ -400,6 +400,13 @@ fn set_physics_state_impl(serialized_physics: Vec<u8>, step: usize) {
 }
 
 #[wasm_bindgen]
+pub fn get_physics_cache_step() -> usize {
+    panic::set_hook(Box::new(console_error_panic_hook::hook));
+    let physics = PHYSICS.read().unwrap();
+    physics.step
+}
+
+#[wasm_bindgen]
 pub fn positions_for_step(
     target_step: usize,
     a_impulse_steps: Vec<usize>,

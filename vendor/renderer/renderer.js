@@ -460,6 +460,14 @@ export function set_physics_state(serialized_physics, step) {
     wasm.set_physics_state(ptr0, len0, step);
 }
 
+/**
+* @returns {number}
+*/
+export function get_physics_cache_step() {
+    const ret = wasm.get_physics_cache_step();
+    return ret >>> 0;
+}
+
 function getArrayF32FromWasm0(ptr, len) {
     return getFloat32Memory0().subarray(ptr / 4, ptr / 4 + len);
 }
@@ -485,7 +493,7 @@ function getArrayF32FromWasm0(ptr, len) {
 * @param {Float32Array} e_impulse_x
 * @param {Float32Array} e_impulse_y
 * @param {Float32Array} e_impulse_z
-* @returns {Float32Array}
+* @returns {Float32Array | undefined}
 */
 export function positions_for_step(target_step, a_impulse_steps, a_impulse_x, a_impulse_y, a_impulse_z, l_impulse_steps, l_impulse_x, l_impulse_y, l_impulse_z, i_impulse_steps, i_impulse_x, i_impulse_y, i_impulse_z, v_impulse_steps, v_impulse_x, v_impulse_y, v_impulse_z, e_impulse_steps, e_impulse_x, e_impulse_y, e_impulse_z) {
     try {
@@ -533,8 +541,11 @@ export function positions_for_step(target_step, a_impulse_steps, a_impulse_x, a_
         wasm.positions_for_step(retptr, target_step, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11, ptr12, len12, ptr13, len13, ptr14, len14, ptr15, len15, ptr16, len16, ptr17, len17, ptr18, len18, ptr19, len19);
         var r0 = getInt32Memory0()[retptr / 4 + 0];
         var r1 = getInt32Memory0()[retptr / 4 + 1];
-        var v20 = getArrayF32FromWasm0(r0, r1).slice();
-        wasm.__wbindgen_free(r0, r1 * 4);
+        let v20;
+        if (r0 !== 0) {
+            v20 = getArrayF32FromWasm0(r0, r1).slice();
+            wasm.__wbindgen_free(r0, r1 * 4);
+        }
         return v20;
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
@@ -608,20 +619,23 @@ async function load(module, imports) {
 function getImports() {
     const imports = {};
     imports.wbg = {};
-    imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
-        takeObject(arg0);
-    };
-    imports.wbg.__wbg_static_accessor_UVMAP_SIZE_a2041fefcbe5a985 = function() {
-        const ret = UVMAP_SIZE;
+    imports.wbg.__wbg_static_accessor_MAX_RENDERED_PHYSICS_STEPS_1227ae48b3a9f731 = function() {
+        const ret = MAX_RENDERED_PHYSICS_STEPS;
         return ret;
     };
     imports.wbg.__wbg_static_accessor_SPLATTER_ANIM_FRAMES_659fe1818af3aa5a = function() {
         const ret = SPLATTER_ANIM_FRAMES;
         return ret;
     };
-    imports.wbg.__wbg_static_accessor_MAX_RENDERED_PHYSICS_STEPS_1227ae48b3a9f731 = function() {
-        const ret = MAX_RENDERED_PHYSICS_STEPS;
+    imports.wbg.__wbg_static_accessor_UVMAP_SIZE_a2041fefcbe5a985 = function() {
+        const ret = UVMAP_SIZE;
         return ret;
+    };
+    imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
+        takeObject(arg0);
+    };
+    imports.wbg.__wbg_log_94ec9f9334743f04 = function(arg0, arg1) {
+        console.log(getStringFromWasm0(arg0, arg1));
     };
     imports.wbg.__wbg_newwithu8clampedarrayandsh_f7ef3a8f3fd04c8a = function() { return handleError(function (arg0, arg1, arg2, arg3) {
         const ret = new ImageData(getClampedArrayU8FromWasm0(arg0, arg1), arg2 >>> 0, arg3 >>> 0);

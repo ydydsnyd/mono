@@ -2,7 +2,11 @@ import {nanoid} from 'nanoid';
 import {initialize} from './data';
 import {renderer as renderer3D} from './3d-renderer';
 import {render} from './texture-renderer';
-import initRenderer, {draw_caches, precompute} from '../../vendor/renderer';
+import initRenderer, {
+  draw_caches,
+  precompute,
+  get_physics_cache_step,
+} from '../../vendor/renderer';
 import {get3DPositions} from '../shared/renderer';
 import {cursorRenderer} from './cursors';
 import {
@@ -197,6 +201,7 @@ export const init = async () => {
         0,
       );
       if (debugEl) {
+        let physicsCacheStep = get_physics_cache_step();
         const drift = localStep - step;
         let debugOutput = `${
           Object.keys(actors).length
@@ -210,11 +215,15 @@ export const init = async () => {
           }\n  cache size:\n    ${
             new Blob([rawCaches[letter] || '']).size / 1024
           }k\n`;
-        }).join('\n')}\n\nphysics step:${physicsStep}\nlocal step: ${Math.floor(
+        }).join('\n')}\n\nlocal step: ${Math.floor(
           localStep,
-        )}\norigin step step:${Math.floor(step)}\nstep drift: ${
+        )}\nserver step:${Math.floor(step)}\nstep drift: ${
           drift > 0 ? '+' : '-'
-        }${drift.toFixed(1)}`;
+        }${drift.toFixed(
+          1,
+        )}\n\nserver physics step: ${physicsStep}\ncached physics step: ${physicsCacheStep}\nphysics window size: ${
+          localStep - physicsCacheStep
+        }`;
         debugEl.innerHTML = debugOutput;
       }
       if (caches) {
