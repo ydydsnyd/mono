@@ -662,11 +662,15 @@ test('poke log context includes requestID', async () => {
   log.length = 0;
 
   await reflect.triggerPoke({
-    baseCookie: null,
-    cookie: 1,
-    lastMutationIDChanges: {c1: 1},
-    patch: [],
-    timestamp: 123456,
+    pokes: [
+      {
+        baseCookie: null,
+        cookie: 1,
+        lastMutationIDChanges: {c1: 1},
+        patch: [],
+        timestamp: 123456,
+      },
+    ],
     requestID: 'test-request-id-poke',
   });
 
