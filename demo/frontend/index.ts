@@ -276,12 +276,14 @@ export const init = async () => {
       Math.max(localStep - STEP_RENDER_DELAY, 0),
       impulses,
     );
-    LETTERS.forEach(letter => {
-      const position3d = positions3d[letter];
-      if (position3d) {
-        set3DPosition(letter, position3d);
-      }
-    });
+    if (positions3d) {
+      LETTERS.forEach(letter => {
+        const position3d = positions3d[letter];
+        if (position3d) {
+          set3DPosition(letter, position3d);
+        }
+      });
+    }
     if (DEBUG_PHYSICS) {
       // TODO: fix this
       // let world = World.restoreSnapshot(debugState);

@@ -429,68 +429,83 @@ pub fn positions_for_step(
     e_impulse_x: Vec<f32>,
     e_impulse_y: Vec<f32>,
     e_impulse_z: Vec<f32>,
-) -> Vec<f32> {
+) -> Option<Vec<f32>> {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     let mut physics_cache = PHYSICS.write().unwrap();
+    if target_step <= physics_cache.step {
+        console_log!(
+            "Attempted to run physics to target {} but cache is already at {}",
+            target_step,
+            physics_cache.step
+        );
+        return None;
+    }
+    let steps_to_target = target_step - physics_cache.step;
     let max_steps = MAX_RENDERED_PHYSICS_STEPS.clone();
-    let steps_to_target = (target_step - physics_cache.step).max(0);
-    let advance_cache_by = 0;
-    // let advance_cache_by = (steps_to_target - max_steps).max(0);
+    let advance_cache_by = if steps_to_target > max_steps {
+        steps_to_target - max_steps
+    } else {
+        0
+    };
     let advance_window_by = steps_to_target - advance_cache_by;
-    // TODO
-    // if advance_cache_by > 0 {
-    //     advance_physics(
-    //         &mut physics_cache,
-    //         advance_cache_by,
-    //         slice_until(&a_impulse_steps, bake_step),
-    //         slice_until(&a_impulse_x, bake_step),
-    //         slice_until(&a_impulse_y, bake_step),
-    //         slice_until(&a_impulse_z, bake_step),
-    //         slice_until(&l_impulse_steps, bake_step),
-    //         slice_until(&l_impulse_x, bake_step),
-    //         slice_until(&l_impulse_y, bake_step),
-    //         slice_until(&l_impulse_z, bake_step),
-    //         slice_until(&i_impulse_steps, bake_step),
-    //         slice_until(&i_impulse_x, bake_step),
-    //         slice_until(&i_impulse_y, bake_step),
-    //         slice_until(&i_impulse_z, bake_step),
-    //         slice_until(&v_impulse_steps, bake_step),
-    //         slice_until(&v_impulse_x, bake_step),
-    //         slice_until(&v_impulse_y, bake_step),
-    //         slice_until(&v_impulse_z, bake_step),
-    //         slice_until(&e_impulse_steps, bake_step),
-    //         slice_until(&e_impulse_x, bake_step),
-    //         slice_until(&e_impulse_y, bake_step),
-    //         slice_until(&e_impulse_z, bake_step),
-    //     );
-    //     physics_cache.step += bake_step;
-    // }
+    console_log!(
+        "physics +{} (window +{}, cache +{})",
+        target_step - physics_cache.step,
+        advance_window_by,
+        advance_cache_by
+    );
+    if advance_cache_by > 0 {
+        advance_physics(
+            &mut physics_cache,
+            advance_cache_by,
+            slice_until(&a_impulse_steps, advance_cache_by),
+            slice_until(&a_impulse_x, advance_cache_by),
+            slice_until(&a_impulse_y, advance_cache_by),
+            slice_until(&a_impulse_z, advance_cache_by),
+            slice_until(&l_impulse_steps, advance_cache_by),
+            slice_until(&l_impulse_x, advance_cache_by),
+            slice_until(&l_impulse_y, advance_cache_by),
+            slice_until(&l_impulse_z, advance_cache_by),
+            slice_until(&i_impulse_steps, advance_cache_by),
+            slice_until(&i_impulse_x, advance_cache_by),
+            slice_until(&i_impulse_y, advance_cache_by),
+            slice_until(&i_impulse_z, advance_cache_by),
+            slice_until(&v_impulse_steps, advance_cache_by),
+            slice_until(&v_impulse_x, advance_cache_by),
+            slice_until(&v_impulse_y, advance_cache_by),
+            slice_until(&v_impulse_z, advance_cache_by),
+            slice_until(&e_impulse_steps, advance_cache_by),
+            slice_until(&e_impulse_x, advance_cache_by),
+            slice_until(&e_impulse_y, advance_cache_by),
+            slice_until(&e_impulse_z, advance_cache_by),
+        );
+        physics_cache.step += advance_cache_by;
+    }
     let mut windowed_physics = physics_cache.copy();
     if advance_window_by > 0 {
-        let bake_step = 0;
         advance_physics(
             &mut windowed_physics,
             advance_window_by,
-            slice_from(&a_impulse_steps, bake_step),
-            slice_from(&a_impulse_x, bake_step),
-            slice_from(&a_impulse_y, bake_step),
-            slice_from(&a_impulse_z, bake_step),
-            slice_from(&l_impulse_steps, bake_step),
-            slice_from(&l_impulse_x, bake_step),
-            slice_from(&l_impulse_y, bake_step),
-            slice_from(&l_impulse_z, bake_step),
-            slice_from(&i_impulse_steps, bake_step),
-            slice_from(&i_impulse_x, bake_step),
-            slice_from(&i_impulse_y, bake_step),
-            slice_from(&i_impulse_z, bake_step),
-            slice_from(&v_impulse_steps, bake_step),
-            slice_from(&v_impulse_x, bake_step),
-            slice_from(&v_impulse_y, bake_step),
-            slice_from(&v_impulse_z, bake_step),
-            slice_from(&e_impulse_steps, bake_step),
-            slice_from(&e_impulse_x, bake_step),
-            slice_from(&e_impulse_y, bake_step),
-            slice_from(&e_impulse_z, bake_step),
+            slice_from(&a_impulse_steps, advance_window_by),
+            slice_from(&a_impulse_x, advance_window_by),
+            slice_from(&a_impulse_y, advance_window_by),
+            slice_from(&a_impulse_z, advance_window_by),
+            slice_from(&l_impulse_steps, advance_window_by),
+            slice_from(&l_impulse_x, advance_window_by),
+            slice_from(&l_impulse_y, advance_window_by),
+            slice_from(&l_impulse_z, advance_window_by),
+            slice_from(&i_impulse_steps, advance_window_by),
+            slice_from(&i_impulse_x, advance_window_by),
+            slice_from(&i_impulse_y, advance_window_by),
+            slice_from(&i_impulse_z, advance_window_by),
+            slice_from(&v_impulse_steps, advance_window_by),
+            slice_from(&v_impulse_x, advance_window_by),
+            slice_from(&v_impulse_y, advance_window_by),
+            slice_from(&v_impulse_z, advance_window_by),
+            slice_from(&e_impulse_steps, advance_window_by),
+            slice_from(&e_impulse_x, advance_window_by),
+            slice_from(&e_impulse_y, advance_window_by),
+            slice_from(&e_impulse_z, advance_window_by),
         );
     }
     let mut serialized_data: Vec<f32> = vec![];
@@ -499,7 +514,7 @@ pub fn positions_for_step(
     add_data_for_letter(&windowed_physics.state, Letter::I, &mut serialized_data);
     add_data_for_letter(&windowed_physics.state, Letter::V, &mut serialized_data);
     add_data_for_letter(&windowed_physics.state, Letter::E, &mut serialized_data);
-    serialized_data
+    Some(serialized_data)
 }
 
 fn add_data_for_letter(state: &PhysicsState, letter: Letter, data: &mut Vec<f32>) {

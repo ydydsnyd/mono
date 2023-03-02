@@ -64,11 +64,14 @@ export const setPhysics = (state: string, step: number) => {
 export const get3DPositions = (
   targetStep: number,
   impulses: Record<Letter, Impulse[]>,
-): Record<Letter, Letter3DPosition> => {
+): Record<Letter, Letter3DPosition> | undefined => {
   const flatPositions = positions_for_step(
     targetStep,
     ...impulses2Physics(impulses),
   );
+  if (!flatPositions) {
+    return;
+  }
   const positions = letterMap<Letter3DPosition>(_ => ({
     position: {x: -1, y: -1, z: -1},
     rotation: {x: -1, y: -1, z: -1, w: -1},
