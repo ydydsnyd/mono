@@ -197,9 +197,13 @@ export const createScene = async (
   environmentTexture.gammaSpace = false;
   environmentTexture.level = ENVIRONMENT_TEXTURE_LEVEL;
   scene.environmentTexture = environmentTexture;
+  // Magic number so the initial lighting is cool
+  const environmentStartingStep = 200;
   const updateCurrentStep = (step: number) => {
     // We want to spin the environment relative to the step.
-    let spinAmount = (step % ENVIRONMENT_CYCLE_STEPS) / ENVIRONMENT_CYCLE_STEPS;
+    let spinAmount =
+      (environmentStartingStep + (step % ENVIRONMENT_CYCLE_STEPS)) /
+      ENVIRONMENT_CYCLE_STEPS;
     environmentTexture.rotationY = spinAmount * (Math.PI * 2);
   };
 
