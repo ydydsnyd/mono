@@ -33,7 +33,7 @@ const handler = async (req: VercelRequest, res: VercelResponse) => {
       headers,
     );
     if (status === 'open') {
-      res.status(204).send('ok');
+      res.status(204).end();
       return;
     }
   } catch (err) {
