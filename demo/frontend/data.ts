@@ -60,6 +60,15 @@ export const initialize = async (roomID: string, userID: string) => {
   // Set up a local state - this is used to cache values that we don't want to
   // read every frame (and that will be updated via subscription instead)
   const localState: State = await reflectClient.query(stateInitializer(userID));
+  if (localState.physicsState) {
+    setPhysics(localState.physicsState, localState.physicsStep);
+  }
+  LETTERS.forEach(letter => {
+    const cache = localState.rawCaches[letter];
+    if (cache) {
+      updateCache(letter, cache);
+    }
+  });
 
   reflectClient.experimentalWatch(diffs => {
     diffs.forEach(async diff => {
@@ -93,8 +102,8 @@ export const initialize = async (roomID: string, userID: string) => {
                 localState.physicsState = state;
                 setPhysics(state, step);
               } else {
-                console.error(
-                  'Received step update with invalid physics state',
+                console.warn(
+                  `Physics step changed to ${step} but state was undefined.`,
                 );
               }
             }
@@ -118,7 +127,9 @@ export const initialize = async (roomID: string, userID: string) => {
               localState.rawCaches[letter] = cache;
               updateCache(letter, cache);
             } else {
-              console.error('Received invalid cache update');
+              console.warn(
+                `Cache for letter ${letter} updated but cache was undefined when unchunked.`,
+              );
             }
           }
           break;
