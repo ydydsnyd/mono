@@ -448,12 +448,6 @@ pub fn positions_for_step(
         0
     };
     let advance_window_by = steps_to_target - advance_cache_by;
-    console_log!(
-        "physics +{} (window +{}, cache +{})",
-        target_step - physics_cache.step,
-        advance_window_by,
-        advance_cache_by
-    );
     if advance_cache_by > 0 {
         advance_physics(
             &mut physics_cache,
