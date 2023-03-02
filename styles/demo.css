@@ -1,9 +1,6 @@
 body.demo-active * {
   cursor: none;
 }
-body.demo-active *:active {
-  cursor: none;
-}
 #intro * {
   user-select: none;
 }
@@ -24,6 +21,7 @@ body.demo-active *:active {
   text-align: end;
   padding-right: 1em;
   z-index: 100;
+  user-select: none;
 }
 #caches {
   background-color: rgba(125, 130, 184, 0.5);
@@ -138,10 +136,13 @@ body.active {
 }
 
 .location {
+  position: relative;
   padding: 4px;
   font-weight: 700;
   font-size: 0.8em;
   color: white;
   border-radius: 4px;
   white-space: nowrap;
+  left: 12px;
+  top: -12px;
 }
