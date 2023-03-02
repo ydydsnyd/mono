@@ -80,12 +80,13 @@ export const cursorRenderer = (
   mouseElement.addEventListener('mouseout', hideCursor);
   mouseElement.addEventListener('touchend', hideCursor);
   // Track cursor clicks
-  const setIsDown = () => {
+  const setIsDown = (e: MouseEvent | TouchEvent) => {
+    e.preventDefault();
     localCursor.isDown = true;
     cursorNeedsUpdate = true;
   };
   mouseElement.addEventListener('mousedown', setIsDown);
-  mouseElement.addEventListener('touchStart', setIsDown);
+  mouseElement.addEventListener('touchstart', setIsDown);
   mouseElement.addEventListener('mouseup', () => {
     localCursor.isDown = false;
     cursorNeedsUpdate = true;
