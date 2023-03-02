@@ -328,7 +328,7 @@ pub fn draw_buffers(
 // Physics API
 
 #[wasm_bindgen]
-pub fn update_state(
+pub fn update_physics_state(
     serialized_physics: Option<Vec<u8>>,
     start_step: usize,
     num_steps: usize,
@@ -401,7 +401,7 @@ fn set_physics_state_impl(serialized_physics: Vec<u8>, step: usize) {
 
 #[wasm_bindgen]
 pub fn positions_for_step(
-    num_steps: usize,
+    target_step: usize,
     a_impulse_steps: Vec<usize>,
     a_impulse_x: Vec<f32>,
     a_impulse_y: Vec<f32>,
@@ -426,40 +426,44 @@ pub fn positions_for_step(
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     let mut physics_cache = PHYSICS.write().unwrap();
     let max_steps = MAX_RENDERED_PHYSICS_STEPS.clone();
-    let mut bake_step = 0;
-    if num_steps > max_steps {
-        bake_step = num_steps - max_steps - 1;
-        advance_physics(
-            &mut physics_cache,
-            bake_step,
-            slice_until(&a_impulse_steps, bake_step),
-            slice_until(&a_impulse_x, bake_step),
-            slice_until(&a_impulse_y, bake_step),
-            slice_until(&a_impulse_z, bake_step),
-            slice_until(&l_impulse_steps, bake_step),
-            slice_until(&l_impulse_x, bake_step),
-            slice_until(&l_impulse_y, bake_step),
-            slice_until(&l_impulse_z, bake_step),
-            slice_until(&i_impulse_steps, bake_step),
-            slice_until(&i_impulse_x, bake_step),
-            slice_until(&i_impulse_y, bake_step),
-            slice_until(&i_impulse_z, bake_step),
-            slice_until(&v_impulse_steps, bake_step),
-            slice_until(&v_impulse_x, bake_step),
-            slice_until(&v_impulse_y, bake_step),
-            slice_until(&v_impulse_z, bake_step),
-            slice_until(&e_impulse_steps, bake_step),
-            slice_until(&e_impulse_x, bake_step),
-            slice_until(&e_impulse_y, bake_step),
-            slice_until(&e_impulse_z, bake_step),
-        );
-        physics_cache.step += bake_step;
-    }
+    let steps_to_target = (target_step - physics_cache.step).max(0);
+    let advance_cache_by = 0;
+    // let advance_cache_by = (steps_to_target - max_steps).max(0);
+    let advance_window_by = steps_to_target - advance_cache_by;
+    // TODO
+    // if advance_cache_by > 0 {
+    //     advance_physics(
+    //         &mut physics_cache,
+    //         advance_cache_by,
+    //         slice_until(&a_impulse_steps, bake_step),
+    //         slice_until(&a_impulse_x, bake_step),
+    //         slice_until(&a_impulse_y, bake_step),
+    //         slice_until(&a_impulse_z, bake_step),
+    //         slice_until(&l_impulse_steps, bake_step),
+    //         slice_until(&l_impulse_x, bake_step),
+    //         slice_until(&l_impulse_y, bake_step),
+    //         slice_until(&l_impulse_z, bake_step),
+    //         slice_until(&i_impulse_steps, bake_step),
+    //         slice_until(&i_impulse_x, bake_step),
+    //         slice_until(&i_impulse_y, bake_step),
+    //         slice_until(&i_impulse_z, bake_step),
+    //         slice_until(&v_impulse_steps, bake_step),
+    //         slice_until(&v_impulse_x, bake_step),
+    //         slice_until(&v_impulse_y, bake_step),
+    //         slice_until(&v_impulse_z, bake_step),
+    //         slice_until(&e_impulse_steps, bake_step),
+    //         slice_until(&e_impulse_x, bake_step),
+    //         slice_until(&e_impulse_y, bake_step),
+    //         slice_until(&e_impulse_z, bake_step),
+    //     );
+    //     physics_cache.step += bake_step;
+    // }
     let mut windowed_physics = physics_cache.copy();
-    if bake_step < num_steps {
+    if advance_window_by > 0 {
+        let bake_step = 0;
         advance_physics(
             &mut windowed_physics,
-            num_steps - bake_step,
+            advance_window_by,
             slice_from(&a_impulse_steps, bake_step),
             slice_from(&a_impulse_x, bake_step),
             slice_from(&a_impulse_y, bake_step),
@@ -482,7 +486,7 @@ pub fn positions_for_step(
             slice_from(&e_impulse_z, bake_step),
         );
     }
-    let mut serialized_data: Vec<f32> = vec![physics_cache.step as f32];
+    let mut serialized_data: Vec<f32> = vec![];
     add_data_for_letter(&windowed_physics.state, Letter::A, &mut serialized_data);
     add_data_for_letter(&windowed_physics.state, Letter::L, &mut serialized_data);
     add_data_for_letter(&windowed_physics.state, Letter::I, &mut serialized_data);

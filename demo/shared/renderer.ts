@@ -12,7 +12,6 @@ import {
   Impulse,
   Letter,
   Letter3DPosition,
-  Physics,
   Splatter,
 } from './types';
 import {letterMap, now} from './util';
@@ -56,18 +55,18 @@ export const getCache = (
   );
 };
 
-export const setPhysics = (physics: Physics) => {
-  set_physics_state(decode(physics.state), physics.step);
+export const setPhysics = (state: string, step: number) => {
+  set_physics_state(decode(state), step);
 };
 
 // This function gets whatever the current state of the physics is (held in wasm
 // memory) and finds the positions of lettters when advanced N steps forward.
 export const get3DPositions = (
-  numSteps: number,
+  targetStep: number,
   impulses: Record<Letter, Impulse[]>,
-): [number, Record<Letter, Letter3DPosition>] => {
+): Record<Letter, Letter3DPosition> => {
   const flatPositions = positions_for_step(
-    numSteps,
+    targetStep,
     ...impulses2Physics(impulses),
   );
   const positions = letterMap<Letter3DPosition>(_ => ({
@@ -75,7 +74,7 @@ export const get3DPositions = (
     rotation: {x: -1, y: -1, z: -1, w: -1},
   }));
   LETTERS.forEach((letter, idx) => {
-    let startIdx = 1 + idx * 7;
+    let startIdx = idx * 7;
     positions[letter].position.x = flatPositions[startIdx + 0];
     positions[letter].position.y = flatPositions[startIdx + 1];
     positions[letter].position.z = flatPositions[startIdx + 2];
@@ -84,5 +83,5 @@ export const get3DPositions = (
     positions[letter].rotation.z = flatPositions[startIdx + 5];
     positions[letter].rotation.w = flatPositions[startIdx + 6];
   });
-  return [flatPositions[0], positions];
+  return positions;
 };

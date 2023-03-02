@@ -9,7 +9,8 @@ export type State = {
   rawCaches: Record<Letter, string>;
   sequences: Record<Letter, number>;
   impulses: Record<Letter, Impulse[]>;
-  physics: Physics | undefined;
+  physicsStep: number;
+  physicsState: string | undefined; // b64 encoded state
 };
 
 export type ActorID = string;
@@ -42,11 +43,6 @@ export type Impulse = Vector & {
 };
 
 export type LetterHandles = Record<Letter, number>;
-
-export type Physics = {
-  state: string; // b64 encoded
-  step: number;
-};
 
 export enum Letter {
   A = 'a',

@@ -17,13 +17,7 @@ import {
   MIN_STEP_MS,
   DEBUG_TEXTURES,
 } from '../shared/constants';
-import type {
-  Actor,
-  ColorPalate,
-  Letter,
-  Physics,
-  Position,
-} from '../shared/types';
+import type {Actor, ColorPalate, Letter, Position} from '../shared/types';
 import {LETTERS} from '../shared/letters';
 import {letterMap, now} from '../shared/util';
 import {initRoom} from './init-room';
@@ -107,7 +101,7 @@ export const init = async () => {
   let {
     step,
     actors,
-    physics,
+    physicsStep,
     cursors,
     rawCaches,
     splatters,
@@ -191,9 +185,11 @@ export const init = async () => {
           }\n  cache size:\n    ${
             new Blob([rawCaches[letter] || '']).size / 1024
           }k\n`;
-        }).join('\n')}\nstep drift: ${drift > 0 ? '+' : '-'}${drift.toFixed(
-          1,
-        )}`;
+        }).join('\n')}\n\nphysics step:${physicsStep}\nlocal step: ${Math.floor(
+          localStep,
+        )}\norigin step step:${Math.floor(step)}\nstep drift: ${
+          drift > 0 ? '+' : '-'
+        }${drift.toFixed(1)}`;
         debugEl.innerHTML = debugOutput;
       }
       if (caches) {
@@ -239,20 +235,13 @@ export const init = async () => {
   };
 
   // Set up physics rendering
-  let physicsStep = physics?.step || 0;
-  addListener<Physics>('physics', ({step}, deleted) => {
-    if (!deleted) {
-      physicsStep = step;
-    }
-  });
   const renderPhysics = () => {
     updateCurrentStep(localStep);
     // positions3d
-    const [newStep, positions3d] = get3DPositions(
-      Math.max(localStep - physicsStep - STEP_RENDER_DELAY, 0),
+    const positions3d = get3DPositions(
+      Math.max(localStep - STEP_RENDER_DELAY, 0),
       impulses,
     );
-    physicsStep = newStep;
     LETTERS.forEach(letter => {
       const position3d = positions3d[letter];
       if (position3d) {
@@ -289,7 +278,7 @@ export const init = async () => {
       ({
         actors,
         step,
-        physics,
+        physicsStep,
         cursors,
         rawCaches,
         splatters,

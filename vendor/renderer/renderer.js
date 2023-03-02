@@ -394,7 +394,7 @@ function isLikeNone(x) {
 * @param {Float32Array} e_impulse_z
 * @returns {Uint8Array}
 */
-export function update_state(serialized_physics, start_step, num_steps, a_impulse_steps, a_impulse_x, a_impulse_y, a_impulse_z, l_impulse_steps, l_impulse_x, l_impulse_y, l_impulse_z, i_impulse_steps, i_impulse_x, i_impulse_y, i_impulse_z, v_impulse_steps, v_impulse_x, v_impulse_y, v_impulse_z, e_impulse_steps, e_impulse_x, e_impulse_y, e_impulse_z) {
+export function update_physics_state(serialized_physics, start_step, num_steps, a_impulse_steps, a_impulse_x, a_impulse_y, a_impulse_z, l_impulse_steps, l_impulse_x, l_impulse_y, l_impulse_z, i_impulse_steps, i_impulse_x, i_impulse_y, i_impulse_z, v_impulse_steps, v_impulse_x, v_impulse_y, v_impulse_z, e_impulse_steps, e_impulse_x, e_impulse_y, e_impulse_z) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
         var ptr0 = isLikeNone(serialized_physics) ? 0 : passArray8ToWasm0(serialized_physics, wasm.__wbindgen_malloc);
@@ -439,7 +439,7 @@ export function update_state(serialized_physics, start_step, num_steps, a_impuls
         const len19 = WASM_VECTOR_LEN;
         const ptr20 = passArrayF32ToWasm0(e_impulse_z, wasm.__wbindgen_malloc);
         const len20 = WASM_VECTOR_LEN;
-        wasm.update_state(retptr, ptr0, len0, start_step, num_steps, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11, ptr12, len12, ptr13, len13, ptr14, len14, ptr15, len15, ptr16, len16, ptr17, len17, ptr18, len18, ptr19, len19, ptr20, len20);
+        wasm.update_physics_state(retptr, ptr0, len0, start_step, num_steps, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11, ptr12, len12, ptr13, len13, ptr14, len14, ptr15, len15, ptr16, len16, ptr17, len17, ptr18, len18, ptr19, len19, ptr20, len20);
         var r0 = getInt32Memory0()[retptr / 4 + 0];
         var r1 = getInt32Memory0()[retptr / 4 + 1];
         var v21 = getArrayU8FromWasm0(r0, r1).slice();
@@ -464,7 +464,7 @@ function getArrayF32FromWasm0(ptr, len) {
     return getFloat32Memory0().subarray(ptr / 4, ptr / 4 + len);
 }
 /**
-* @param {number} num_steps
+* @param {number} target_step
 * @param {Uint32Array} a_impulse_steps
 * @param {Float32Array} a_impulse_x
 * @param {Float32Array} a_impulse_y
@@ -487,7 +487,7 @@ function getArrayF32FromWasm0(ptr, len) {
 * @param {Float32Array} e_impulse_z
 * @returns {Float32Array}
 */
-export function positions_for_step(num_steps, a_impulse_steps, a_impulse_x, a_impulse_y, a_impulse_z, l_impulse_steps, l_impulse_x, l_impulse_y, l_impulse_z, i_impulse_steps, i_impulse_x, i_impulse_y, i_impulse_z, v_impulse_steps, v_impulse_x, v_impulse_y, v_impulse_z, e_impulse_steps, e_impulse_x, e_impulse_y, e_impulse_z) {
+export function positions_for_step(target_step, a_impulse_steps, a_impulse_x, a_impulse_y, a_impulse_z, l_impulse_steps, l_impulse_x, l_impulse_y, l_impulse_z, i_impulse_steps, i_impulse_x, i_impulse_y, i_impulse_z, v_impulse_steps, v_impulse_x, v_impulse_y, v_impulse_z, e_impulse_steps, e_impulse_x, e_impulse_y, e_impulse_z) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
         const ptr0 = passArray32ToWasm0(a_impulse_steps, wasm.__wbindgen_malloc);
@@ -530,7 +530,7 @@ export function positions_for_step(num_steps, a_impulse_steps, a_impulse_x, a_im
         const len18 = WASM_VECTOR_LEN;
         const ptr19 = passArrayF32ToWasm0(e_impulse_z, wasm.__wbindgen_malloc);
         const len19 = WASM_VECTOR_LEN;
-        wasm.positions_for_step(retptr, num_steps, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11, ptr12, len12, ptr13, len13, ptr14, len14, ptr15, len15, ptr16, len16, ptr17, len17, ptr18, len18, ptr19, len19);
+        wasm.positions_for_step(retptr, target_step, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11, ptr12, len12, ptr13, len13, ptr14, len14, ptr15, len15, ptr16, len16, ptr17, len17, ptr18, len18, ptr19, len19);
         var r0 = getInt32Memory0()[retptr / 4 + 0];
         var r1 = getInt32Memory0()[retptr / 4 + 1];
         var v20 = getArrayF32FromWasm0(r0, r1).slice();
@@ -608,9 +608,8 @@ async function load(module, imports) {
 function getImports() {
     const imports = {};
     imports.wbg = {};
-    imports.wbg.__wbg_static_accessor_MAX_RENDERED_PHYSICS_STEPS_1227ae48b3a9f731 = function() {
-        const ret = MAX_RENDERED_PHYSICS_STEPS;
-        return ret;
+    imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
+        takeObject(arg0);
     };
     imports.wbg.__wbg_static_accessor_SPLATTER_ANIM_FRAMES_659fe1818af3aa5a = function() {
         const ret = SPLATTER_ANIM_FRAMES;
@@ -620,8 +619,12 @@ function getImports() {
         const ret = UVMAP_SIZE;
         return ret;
     };
-    imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
-        takeObject(arg0);
+    imports.wbg.__wbg_static_accessor_MAX_RENDERED_PHYSICS_STEPS_1227ae48b3a9f731 = function() {
+        const ret = MAX_RENDERED_PHYSICS_STEPS;
+        return ret;
+    };
+    imports.wbg.__wbg_log_94ec9f9334743f04 = function(arg0, arg1) {
+        console.log(getStringFromWasm0(arg0, arg1));
     };
     imports.wbg.__wbg_newwithu8clampedarrayandsh_f7ef3a8f3fd04c8a = function() { return handleError(function (arg0, arg1, arg2, arg3) {
         const ret = new ImageData(getClampedArrayU8FromWasm0(arg0, arg1), arg2 >>> 0, arg3 >>> 0);

@@ -42,7 +42,7 @@ export const MIN_STEP_MS = 16;
 // Render a step older than our global step so that things can change in our
 // "past" without jerkiness or without us seeing jitter due to missing spring
 // apexes.
-export const STEP_RENDER_DELAY = 10;
+export const STEP_RENDER_DELAY = 5;
 // Once every 100 steps, tell the server what step we have. This will make sure
 // clients don't desync more than about this many steps.
 export const STEP_UPDATE_INTERVAL = 100;

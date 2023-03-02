@@ -5,7 +5,6 @@ import type {
   Cursor,
   Impulse,
   Letter,
-  Physics,
   Splatter,
   State,
 } from '../shared/types';
@@ -78,13 +77,13 @@ export const initialize = async (roomID: string, userID: string) => {
           if (keyParts[1] === 'step') {
             if (isChangeDiff(diff) || isAddDiff(diff)) {
               const step = getData<number>(diff);
+              localState.physicsStep = step;
               const state = await reflectClient.query(
                 async tx => await unchunk(tx, `physics/state`),
               );
               if (state) {
-                const physics = {step, state};
-                localState.physics = physics;
-                setPhysics(physics);
+                localState.physicsState = state;
+                setPhysics(state, step);
               } else {
                 console.error(
                   'Received step update with invalid physics state',
@@ -173,7 +172,8 @@ const stateInitializer =
     const cursorList = (await tx
       .scan({prefix: 'cursor/'})
       .toArray()) as Cursor[];
-    const physics = (await tx.get('physics')) as Physics | undefined;
+    const physicsStep = (await tx.get('physics/step')) as number;
+    const physicsState = (await tx.get('physics/state')) as string | undefined;
     const step = ((await tx.get('step')) as number) || -1;
     const cursors = cursorList.reduce((cursors, cursor) => {
       cursors[cursor.actorId] = cursor;
@@ -220,6 +220,7 @@ const stateInitializer =
       rawCaches,
       sequences,
       impulses,
-      physics,
+      physicsState,
+      physicsStep,
     };
   };

@@ -6,7 +6,7 @@ import {
   SPLATTER_ANIM_FRAMES,
   SPLATTER_FLATTEN_MIN,
 } from './constants';
-import {update_state} from '../../vendor/renderer';
+import {update_physics_state} from '../../vendor/renderer';
 import {getCache, updateCache} from './renderer';
 import type {
   Actor,
@@ -211,7 +211,6 @@ const flattenPhysics = async (tx: WriteTransaction, step: number) => {
   const state = (await unchunk(tx, 'physics/state')) as string;
   const originStep = (await tx.get('physics/step')) as number;
   const renderedSteps = originStep ? step - originStep : step;
-  console.log(`Server origin step: ${originStep}. Rendered: ${renderedSteps}`);
   if (renderedSteps > MAX_RENDERED_PHYSICS_STEPS) {
     const impulses = await asyncLetterMap<Impulse[]>(async letter => {
       const impulses = await tx.scan({
@@ -222,7 +221,8 @@ const flattenPhysics = async (tx: WriteTransaction, step: number) => {
 
     await _initRenderer!();
     const newStep = Math.max(step - MAX_RENDERED_PHYSICS_STEPS, 0);
-    const newState = update_state(
+    console.log(`Flattening physics until step ${newStep}`);
+    const newState = update_physics_state(
       state ? decode(state) : undefined,
       originStep || 0,
       newStep,
