@@ -85,10 +85,10 @@ export function draw_buffers(ctx_a: CanvasRenderingContext2D, ctx_l: CanvasRende
 */
 export function update_physics_state(serialized_physics: Uint8Array | undefined, start_step: number, num_steps: number, a_impulse_steps: Uint32Array, a_impulse_x: Float32Array, a_impulse_y: Float32Array, a_impulse_z: Float32Array, l_impulse_steps: Uint32Array, l_impulse_x: Float32Array, l_impulse_y: Float32Array, l_impulse_z: Float32Array, i_impulse_steps: Uint32Array, i_impulse_x: Float32Array, i_impulse_y: Float32Array, i_impulse_z: Float32Array, v_impulse_steps: Uint32Array, v_impulse_x: Float32Array, v_impulse_y: Float32Array, v_impulse_z: Float32Array, e_impulse_steps: Uint32Array, e_impulse_x: Float32Array, e_impulse_y: Float32Array, e_impulse_z: Float32Array): Uint8Array;
 /**
-* @param {Uint8Array} serialized_physics
+* @param {Uint8Array | undefined} serialized_physics
 * @param {number} step
 */
-export function set_physics_state(serialized_physics: Uint8Array, step: number): void;
+export function set_physics_state(serialized_physics: Uint8Array | undefined, step: number): void;
 /**
 * @returns {number}
 */

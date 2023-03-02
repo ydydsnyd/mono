@@ -387,9 +387,14 @@ pub fn update_physics_state(
 }
 
 #[wasm_bindgen]
-pub fn set_physics_state(serialized_physics: Vec<u8>, step: usize) {
+pub fn set_physics_state(serialized_physics: Option<Vec<u8>>, step: usize) {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
-    set_physics_state_impl(serialized_physics, step)
+    if let Some(state) = serialized_physics {
+        set_physics_state_impl(state, step);
+    } else {
+        let mut physics = PHYSICS.write().unwrap();
+        physics.step = step;
+    }
 }
 
 fn set_physics_state_impl(serialized_physics: Vec<u8>, step: usize) {
@@ -447,7 +452,6 @@ pub fn positions_for_step(
     } else {
         0
     };
-    let advance_window_by = steps_to_target - advance_cache_by;
     if advance_cache_by > 0 {
         advance_physics(
             &mut physics_cache,
@@ -473,36 +477,44 @@ pub fn positions_for_step(
             slice_until(&e_impulse_y, advance_cache_by),
             slice_until(&e_impulse_z, advance_cache_by),
         );
-        physics_cache.step += advance_cache_by;
     }
-    let mut windowed_physics = physics_cache.copy();
-    if advance_window_by > 0 {
-        advance_physics(
-            &mut windowed_physics,
-            advance_window_by,
-            slice_from(&a_impulse_steps, advance_window_by),
-            slice_from(&a_impulse_x, advance_window_by),
-            slice_from(&a_impulse_y, advance_window_by),
-            slice_from(&a_impulse_z, advance_window_by),
-            slice_from(&l_impulse_steps, advance_window_by),
-            slice_from(&l_impulse_x, advance_window_by),
-            slice_from(&l_impulse_y, advance_window_by),
-            slice_from(&l_impulse_z, advance_window_by),
-            slice_from(&i_impulse_steps, advance_window_by),
-            slice_from(&i_impulse_x, advance_window_by),
-            slice_from(&i_impulse_y, advance_window_by),
-            slice_from(&i_impulse_z, advance_window_by),
-            slice_from(&v_impulse_steps, advance_window_by),
-            slice_from(&v_impulse_x, advance_window_by),
-            slice_from(&v_impulse_y, advance_window_by),
-            slice_from(&v_impulse_z, advance_window_by),
-            slice_from(&e_impulse_steps, advance_window_by),
-            slice_from(&e_impulse_x, advance_window_by),
-            slice_from(&e_impulse_y, advance_window_by),
-            slice_from(&e_impulse_z, advance_window_by),
-        );
-    }
+    let advance_window_by = steps_to_target - advance_cache_by;
+    // console_log!(
+    //     "PH: {} (behind {}) (cache +{}, render {}, cache: {}). A: {}, {}",
+    //     target_step,
+    //     steps_to_target,
+    //     advance_cache_by,
+    //     advance_window_by,
+    //     physics_cache.step,
+    //     slice_until(&a_impulse_steps, advance_cache_by).len(),
+    //     slice_from(&a_impulse_steps, advance_cache_by).len()
+    // );
     let mut serialized_data: Vec<f32> = vec![];
+    let mut windowed_physics = physics_cache.copy();
+    advance_physics(
+        &mut windowed_physics,
+        advance_window_by,
+        slice_from(&a_impulse_steps, advance_cache_by),
+        slice_from(&a_impulse_x, advance_cache_by),
+        slice_from(&a_impulse_y, advance_cache_by),
+        slice_from(&a_impulse_z, advance_cache_by),
+        slice_from(&l_impulse_steps, advance_cache_by),
+        slice_from(&l_impulse_x, advance_cache_by),
+        slice_from(&l_impulse_y, advance_cache_by),
+        slice_from(&l_impulse_z, advance_cache_by),
+        slice_from(&i_impulse_steps, advance_cache_by),
+        slice_from(&i_impulse_x, advance_cache_by),
+        slice_from(&i_impulse_y, advance_cache_by),
+        slice_from(&i_impulse_z, advance_cache_by),
+        slice_from(&v_impulse_steps, advance_cache_by),
+        slice_from(&v_impulse_x, advance_cache_by),
+        slice_from(&v_impulse_y, advance_cache_by),
+        slice_from(&v_impulse_z, advance_cache_by),
+        slice_from(&e_impulse_steps, advance_cache_by),
+        slice_from(&e_impulse_x, advance_cache_by),
+        slice_from(&e_impulse_y, advance_cache_by),
+        slice_from(&e_impulse_z, advance_cache_by),
+    );
     add_data_for_letter(&windowed_physics.state, Letter::A, &mut serialized_data);
     add_data_for_letter(&windowed_physics.state, Letter::L, &mut serialized_data);
     add_data_for_letter(&windowed_physics.state, Letter::I, &mut serialized_data);

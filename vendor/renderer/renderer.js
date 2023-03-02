@@ -451,12 +451,12 @@ export function update_physics_state(serialized_physics, start_step, num_steps, 
 }
 
 /**
-* @param {Uint8Array} serialized_physics
+* @param {Uint8Array | undefined} serialized_physics
 * @param {number} step
 */
 export function set_physics_state(serialized_physics, step) {
-    const ptr0 = passArray8ToWasm0(serialized_physics, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
+    var ptr0 = isLikeNone(serialized_physics) ? 0 : passArray8ToWasm0(serialized_physics, wasm.__wbindgen_malloc);
+    var len0 = WASM_VECTOR_LEN;
     wasm.set_physics_state(ptr0, len0, step);
 }
 

@@ -60,9 +60,7 @@ export const initialize = async (roomID: string, userID: string) => {
   // Set up a local state - this is used to cache values that we don't want to
   // read every frame (and that will be updated via subscription instead)
   const localState: State = await reflectClient.query(stateInitializer(userID));
-  if (localState.physicsState) {
-    setPhysics(localState.physicsState, localState.physicsStep);
-  }
+  setPhysics(localState.physicsStep, localState.physicsState);
   LETTERS.forEach(letter => {
     const cache = localState.rawCaches[letter];
     if (cache) {
@@ -98,14 +96,8 @@ export const initialize = async (roomID: string, userID: string) => {
               const state = await reflectClient.query(
                 async tx => await unchunk(tx, `physics/state`),
               );
-              if (state) {
-                localState.physicsState = state;
-                setPhysics(state, step);
-              } else {
-                console.warn(
-                  `Physics step changed to ${step} but state was undefined.`,
-                );
-              }
+              localState.physicsState = state;
+              setPhysics(step, state);
             }
           }
           break;
@@ -191,7 +183,7 @@ const stateInitializer =
     const cursorList = (await tx
       .scan({prefix: 'cursor/'})
       .toArray()) as Cursor[];
-    const physicsStep = (await tx.get('physics/step')) as number;
+    const physicsStep = ((await tx.get('physics/step')) as number) || 0;
     const physicsState = (await tx.get('physics/state')) as string | undefined;
     const step = ((await tx.get('step')) as number) || -1;
     const cursors = cursorList.reduce((cursors, cursor) => {

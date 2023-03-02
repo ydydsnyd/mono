@@ -269,13 +269,17 @@ export const init = async () => {
   };
 
   // Set up physics rendering
+  let lastRenderedPhysicsStep = physicsStep;
   const renderPhysics = () => {
     updateCurrentStep(localStep);
+    const targetStep = Math.max(Math.floor(localStep) - STEP_RENDER_DELAY, 0);
+    if (targetStep === lastRenderedPhysicsStep) {
+      // Skip no-ops
+      return;
+    }
     // positions3d
-    const positions3d = get3DPositions(
-      Math.max(localStep - STEP_RENDER_DELAY, 0),
-      impulses,
-    );
+    const positions3d = get3DPositions(targetStep, impulses);
+    lastRenderedPhysicsStep = targetStep;
     if (positions3d) {
       LETTERS.forEach(letter => {
         const position3d = positions3d[letter];

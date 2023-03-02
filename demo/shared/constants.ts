@@ -42,7 +42,7 @@ export const MIN_STEP_MS = 16;
 // Render a step older than our global step so that things can change in our
 // "past" without jerkiness or without us seeing jitter due to missing spring
 // apexes.
-export const STEP_RENDER_DELAY = 5;
+export const STEP_RENDER_DELAY = 0;
 // Once every 100 steps, tell the server what step we have. This will make sure
 // clients don't desync more than about this many steps.
 export const STEP_UPDATE_INTERVAL = 100;
@@ -56,14 +56,6 @@ export const ENVIRONMENT_TEXTURE_LEVEL = 0.6;
 // The only data that changes on an actor is the loction, so update them at a
 // lower frequency than cursors.
 export const ACTOR_UPDATE_INTERVAL = 1000;
-
-// Sample fps at this low pass. Higher means a longer sample time, resulting in
-// averaging over a longer period of time.
-export const FPS_LOW_PASS = 10;
-
-// Hide inactive cursors when idle for some amount of time, so we don't have a
-// bunch of zombies around the screen if people AFK or whatever
-export const HIDE_CURSOR_DELAY = 5000;
 
 // Cycle through these colors for users.
 export const COLOR_PALATE: Color[] = [
@@ -122,7 +114,19 @@ export const COLOR_PALATE_END: Color[] = [
   ],
 ];
 
+// Debug
+
+// Sample fps at this low pass. Higher means a longer sample time, resulting in
+// averaging over a longer period of time.
+export const FPS_LOW_PASS = 10;
+
 // Mutators/etc
+
+// We don't want flattening to happen too often (or too infrequently), as it is
+// slower than normal mutations (but delaying it too much will make it too
+// expensive to run without a noticeable hang)
+export const MIN_PHYSICS_FLATTENING_STEPS = 400;
+
 // Can't put more than 131072 bytes in a DO, so use a number under half that
 // since these will refer to strings
 export const CACHE_CHUNK_STRING_SIZE = 65535;

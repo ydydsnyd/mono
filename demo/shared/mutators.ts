@@ -3,6 +3,7 @@ import {
   COLOR_PALATE,
   COLOR_PALATE_END,
   MAX_RENDERED_PHYSICS_STEPS,
+  MIN_PHYSICS_FLATTENING_STEPS,
   SPLATTER_ANIM_FRAMES,
   SPLATTER_FLATTEN_MIN,
 } from './constants';
@@ -211,7 +212,7 @@ const flattenPhysics = async (tx: WriteTransaction, step: number) => {
   const state = (await unchunk(tx, 'physics/state')) as string;
   const originStep = (await tx.get('physics/step')) as number;
   const renderedSteps = originStep ? step - originStep : step;
-  if (renderedSteps > MAX_RENDERED_PHYSICS_STEPS) {
+  if (renderedSteps > MIN_PHYSICS_FLATTENING_STEPS) {
     const impulses = await asyncLetterMap<Impulse[]>(async letter => {
       const impulses = await tx.scan({
         prefix: `impulse/${letter}/`,

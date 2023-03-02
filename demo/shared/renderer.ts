@@ -55,8 +55,8 @@ export const getCache = (
   );
 };
 
-export const setPhysics = (state: string, step: number) => {
-  set_physics_state(decode(state), step);
+export const setPhysics = (step: number, state?: string) => {
+  set_physics_state(state ? decode(state) : undefined, step);
 };
 
 // This function gets whatever the current state of the physics is (held in wasm
