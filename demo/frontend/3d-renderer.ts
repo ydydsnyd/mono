@@ -15,7 +15,7 @@ import {
   Camera,
 } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
-import type {Letter, Letter3DPosition, Position, Vector} from '../shared/types';
+import {Letter, Letter3DPosition, Position, Vector} from '../shared/types';
 import {letterMap} from '../shared/util';
 import {LETTERS} from '../shared/letters';
 import {
@@ -133,6 +133,11 @@ export const createScene = async (
     const mesh = scene.getMeshByName(letter) as Mesh;
     return mesh;
   });
+  meshes[Letter.A].position.set(-A_POS.x, A_POS.y, 0);
+  meshes[Letter.L].position.set(-L_POS.x, L_POS.y, 0);
+  meshes[Letter.I].position.set(-I_POS.x, I_POS.y, 0);
+  meshes[Letter.V].position.set(-V_POS.x, V_POS.y, 0);
+  meshes[Letter.E].position.set(-E_POS.x, E_POS.y, 0);
 
   // Create a texture from our canvas
   const textures = letterMap(
@@ -292,4 +297,25 @@ export const createScene = async (
     updateCurrentStep,
     // updateDebug,
   };
+};
+
+const A_POS: Position = {
+  x: -5.65465,
+  y: 1.69821,
+};
+const L_POS: Position = {
+  x: -2.7806,
+  y: 2.48276,
+};
+const I_POS: Position = {
+  x: -0.835768,
+  y: 2.56859,
+};
+const V_POS: Position = {
+  x: 2.13617,
+  y: 2.05105,
+};
+const E_POS: Position = {
+  x: 6.18972,
+  y: 1.7763,
 };
