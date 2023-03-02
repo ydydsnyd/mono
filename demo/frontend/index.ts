@@ -30,6 +30,26 @@ type Debug = {
 };
 
 export const init = async () => {
+  const initTiming = timing(
+    (message, timing, color) => {
+      if (timing === -1) {
+        return console.log(`%cStart ${message}`, 'color: #9bb3af');
+      }
+      console.log(
+        `%cFinished ${message} in %c${timing.toFixed(0)}ms`,
+        'color: #9bb3af',
+        `color: ${color}`,
+      );
+    },
+    open => {
+      if (open) {
+        console.group('Demo Load Timing');
+      } else {
+        console.groupEnd();
+      }
+    },
+  );
+  const ready = initTiming('loading demo', 1500);
   // Generate an actor ID, which is just used for "auth" (which we don't really have)
   const actorId = localStorage.getItem('paint-fight-actor-id') || nanoid();
   localStorage.setItem('paint-fight-actor-id', actorId);
@@ -74,43 +94,8 @@ export const init = async () => {
   }
   const demoContainer = document.getElementById('demo') as HTMLDivElement;
 
-  const renderInitTime = performance.now();
-  await initRenderer();
-  await precompute();
-  console.log(
-    `renderer initialized in ${performance.now() - renderInitTime}ms`,
-  );
-
-  const roomID = await initRoom();
-
-  const {
-    getState,
-    sendStep,
-    updateCursor,
-    addSplatter,
-    addListener,
-    updateActorLocation,
-  } = await initialize(roomID, actorId);
-
-  // Get our location and add it when it's ready
-  getUserLocation().then(location => {
-    updateActorLocation({actorId, location});
-  });
-
-  // Initialize state
-  let {
-    step,
-    actors,
-    physicsStep,
-    cursors,
-    rawCaches,
-    splatters,
-    sequences,
-    impulses,
-  } = await getState();
-  let localStep = step;
-
   // Set up 3D renderer
+  const init3dDone = initTiming('setting up 3D engine', 1000);
   const {
     render: render3D,
     getTexturePosition,
@@ -120,6 +105,11 @@ export const init = async () => {
     updateCurrentStep,
     // updateDebug,
   } = await renderer3D(canvas, textures);
+  init3dDone();
+
+  const roomInitDone = initTiming('initializing room', 100);
+  const roomID = await initRoom();
+  roomInitDone();
 
   // Set up info below demo
   const activeUserCount = document.getElementById(
@@ -143,6 +133,41 @@ export const init = async () => {
     localStorage.removeItem('roomID');
     window.location.reload();
   });
+
+  const initRendererDone = initTiming('initializing renderer module', 100);
+  await initRenderer();
+  await precompute();
+  initRendererDone();
+
+  const initReflectClientDone = initTiming('initializing reflect client', 20);
+  const {
+    getState,
+    sendStep,
+    updateCursor,
+    addSplatter,
+    addListener,
+    updateActorLocation,
+  } = await initialize(roomID, actorId);
+  initReflectClientDone();
+
+  // Get our location and add it when it's ready
+  getUserLocation().then(location => {
+    updateActorLocation({actorId, location});
+  });
+
+  // Initialize state
+  let {
+    step,
+    actors,
+    physicsStep,
+    cursors,
+    rawCaches,
+    splatters,
+    sequences,
+    impulses,
+  } = await getState();
+  let localStep = step;
+
   // Whenever actors change, update the count
   addListener<Actor>('actor', () => {
     activeUserCount.innerHTML = Object.keys(actors).length + '';
@@ -315,6 +340,7 @@ export const init = async () => {
 
   // After we've started, flip a class on the body
   document.body.classList.add('demo-active');
+  ready(true);
 };
 
 const startRenderLoop = (
@@ -343,4 +369,29 @@ const startRenderLoop = (
     requestAnimationFrame(_redraw);
   };
   _redraw();
+};
+
+export const timing = (
+  emit: (message: string, duration: number, color?: string) => void,
+  group: (start: boolean) => void,
+) => {
+  let inGroup = false;
+  return (message: string, good: number) => {
+    const taskStart = performance.now();
+    if (!inGroup) {
+      group(true);
+      inGroup = true;
+    }
+    emit(message, -1);
+    return (done?: true) => {
+      const time = performance.now() - taskStart;
+      const color =
+        time <= good ? '#00d0aa' : time < good * 2 ? '#f0e498' : '#ff6d91';
+      emit(message, time, color);
+      if (done) {
+        group(false);
+        inGroup = false;
+      }
+    };
+  };
 };

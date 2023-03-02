@@ -33,7 +33,7 @@ const PaintFight = () => {
       </div>
       <div id="info">
         <div className="active-user-info">
-          <div className="online-dot"></div>
+          <div className="online-dot offline"></div>
           &nbsp;Active users:&nbsp;
           <span id="active-user-count">1</span>
         </div>

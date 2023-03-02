@@ -23,6 +23,14 @@ export const initialize = async (roomID: string, userID: string) => {
     socketOrigin: WORKER_HOST,
     onOnlineChange: online => {
       console.log(`online: ${online}`);
+      const dot = document.querySelector('.online-dot');
+      if (dot) {
+        if (online) {
+          dot.classList.remove('offline');
+        } else {
+          dot.classList.add('offline');
+        }
+      }
     },
     userID,
     roomID: roomID,

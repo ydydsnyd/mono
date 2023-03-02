@@ -1,5 +1,11 @@
-body.demo-active {
+body.demo-active * {
   cursor: none;
+}
+body.demo-active *:active {
+  cursor: none;
+}
+#intro * {
+  user-select: none;
 }
 
 #demo {
@@ -48,15 +54,23 @@ body.demo-active {
   background-color: #5fc68b;
   border-radius: 50%;
 }
+.online-dot.offline {
+  background-color: #c65f64;
+}
 
 #info {
   display: flex;
   margin: 2em;
   align-items: center;
   justify-content: center;
+  transition: opacity 1s;
+  opacity: 0;
 }
 #info > *:not(:first-child) {
   margin-left: 2em;
+}
+.demo-active #info {
+  opacity: 1;
 }
 
 .active-user-info {
