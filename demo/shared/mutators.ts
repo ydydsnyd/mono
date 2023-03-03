@@ -26,8 +26,10 @@ import {asyncLetterMap, randomWithSeed} from './util';
 import {impulses2Physics} from './wasm-args';
 import {chunk, unchunk} from './chunks';
 
-export const impulseId = (i: Impulse) => `${i.u}${i.s}${i.x + i.y + i.z}`;
-export const splatterId = (s: Splatter) => `${s.u}${s.s}${s.x + s.y}}`;
+export const impulseId = (i: Impulse) =>
+  `${i.u}${i.s}${i.x.toFixed(1) + i.y.toFixed(1) + i.z.toFixed(1)}`;
+export const splatterId = (s: Splatter) =>
+  `${s.u}${s.s}${s.x.toFixed(1) + s.y.toFixed(1)}}`;
 
 const splatterKey = (
   letter: Letter,
@@ -38,7 +40,9 @@ const splatterKey = (
 ) =>
   // This mod is here just to keep us from having massive keys due to large
   // numbers. Collision is unlikely anyway.
-  `splatter/${letter}/${x + y + (step % 1000)}/${actorId}`;
+  `splatter/${letter}/${
+    x.toFixed(1) + y.toFixed(1) + (step % 1000)
+  }/${actorId}`;
 
 export type M = typeof mutators;
 
