@@ -123,7 +123,7 @@ export const FPS_LOW_PASS = 10;
 // We don't want flattening to happen too often (or too infrequently), as it is
 // slower than normal mutations (but delaying it too much will make it too
 // expensive to run without a noticeable hang)
-export const MIN_PHYSICS_FLATTENING_STEPS = 400;
+export const MIN_PHYSICS_FLATTENING_STEPS = 100;
 
 // Can't put more than 131072 bytes in a DO, so use a number under half that
 // since these will refer to strings
