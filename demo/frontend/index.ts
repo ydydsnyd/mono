@@ -109,6 +109,9 @@ export const init = async () => {
     updateCurrentStep,
     // updateDebug,
   } = await renderer3D(canvas, textures);
+  // Kick our 3D scene as soon as it loads so we'll see the letters while we wait
+  // for a room
+  render3D();
   init3dDone();
 
   const roomInitDone = initTiming('initializing room', 100);

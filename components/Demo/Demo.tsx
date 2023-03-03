@@ -16,7 +16,10 @@ const PaintFight = () => {
   const [initError, setInitError] = useState<Error | undefined>(undefined);
   // useEffect so this fires after load
   useEffect(() => {
-    initOnce().catch(setInitError);
+    initOnce().catch(error => {
+      setInitError(error);
+      console.error(error);
+    });
   }, []);
 
   return (
