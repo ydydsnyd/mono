@@ -64,8 +64,22 @@ export const renderer = async (
     updateCurrentStep,
     // updateDebug,
   } = await createScene(engine, textureCanvases);
+
+  // When our app comes online, it will take over the render loop. However, we
+  // still want to render it until then - so we just run our own slow loop until
+  // render is called by the main frontend.
+  let frontendLoaded = false;
+  const localRenderLoop = () => {
+    scene.render(true, true);
+    if (!frontendLoaded) {
+      requestAnimationFrame(localRenderLoop);
+    }
+  };
+  localRenderLoop();
+
   return {
     render: () => {
+      frontendLoaded = true;
       scene.render();
     },
     resizeCanvas,
@@ -291,6 +305,11 @@ export const createScene = async (
   //     scene,
   //   );
   // };
+
+  // Set some initial values for things
+  LETTERS.forEach(letter => updateTexture(letter));
+  updateCurrentStep(0);
+  resizeCanvas();
 
   return {
     scene,
