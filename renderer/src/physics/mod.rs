@@ -351,5 +351,5 @@ fn get_joint() -> RevoluteJointBuilder {
     RevoluteJointBuilder::new(x_axis)
         .local_anchor1(point![0.0, 0.0, 0.0])
         .local_anchor2(point![0.0, 0.0, 0.0])
-        .motor_position(0.0, 50.0, 4.0)
+        .motor_position(0.0, 100.0, 2.0)
 }
