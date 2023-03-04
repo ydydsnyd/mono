@@ -34,25 +34,7 @@ type Debug = {
 };
 
 export const init = async () => {
-  const initTiming = timing(
-    (message, timing, color) => {
-      if (timing === -1) {
-        return console.log(`%cStart ${message}`, 'color: #9bb3af');
-      }
-      console.log(
-        `%cFinished ${message} in %c${timing.toFixed(0)}ms`,
-        'color: #9bb3af',
-        `color: ${color}`,
-      );
-    },
-    open => {
-      if (open) {
-        console.group('Demo Load Timing');
-      } else {
-        console.groupEnd();
-      }
-    },
-  );
+  const initTiming = timing('Demo Load Timing');
   const ready = initTiming('loading demo', 1500);
   // Generate an actor ID, which is just used for "auth" (which we don't really have)
   const actorId = localStorage.getItem('paint-fight-actor-id') || nanoid();
@@ -255,6 +237,7 @@ export const init = async () => {
 
   // Step management
   const updateStep = () => {
+    // Don't increment our step more than once per MIN_STEP_MS, which is about 60 times per second.
     // If we render too quickly or too slowly, adjust our steps so that it will
     // converge on the target step.
     if (localStep < step) {
@@ -386,15 +369,22 @@ const startRenderLoop = (
   _redraw();
 };
 
-export const timing = (
-  emit: (message: string, duration: number, color?: string) => void,
-  group: (start: boolean) => void,
-) => {
+export const timing = (name: string) => {
+  const emit = (message: string, duration: number, color?: string) => {
+    if (duration === -1) {
+      return console.log(`%cStart ${message}`, 'color: #9bb3af');
+    }
+    console.log(
+      `%cFinished ${message} in %c${duration.toFixed(0)}ms`,
+      'color: #9bb3af',
+      `color: ${color}`,
+    );
+  };
   let inGroup = false;
   return (message: string, good: number) => {
     const taskStart = performance.now();
     if (!inGroup) {
-      group(true);
+      console.group(name);
       inGroup = true;
     }
     emit(message, -1);
@@ -404,7 +394,7 @@ export const timing = (
         time <= good ? '#00d0aa' : time < good * 2 ? '#f0e498' : '#ff6d91';
       emit(message, time, color);
       if (done) {
-        group(false);
+        console.groupEnd();
         inGroup = false;
       }
     };
