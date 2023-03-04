@@ -31,9 +31,10 @@ export const DEBUG_TEXTURES = env.NEXT_PUBLIC_DEBUG_TEXTURES === 'true';
 
 // Splatters
 export const SPLATTER_FLATTEN_MIN = 10;
-// ms between splatters. Apparently machine guns are like 12fps, so about once
-// every 84ms. Seems reasonable to do about half that.
-export const SPLATTER_MS = 42;
+// ms between splatters. This is a minimum, so any number below about 16 will
+// just splatter every frame (or more accurately, this will fall back to
+// MIN_STEP_MS)
+export const SPLATTER_MS = 0;
 
 // Some browsers are capable of rendering > 60fps, but we don't expect/want that
 // since we assume each step is about 16ms.
