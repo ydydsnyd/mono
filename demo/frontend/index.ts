@@ -14,10 +14,8 @@ import {
   FPS_LOW_PASS,
   COLOR_PALATE,
   COLOR_PALATE_END,
-  STEP_RENDER_DELAY,
   DEBUG_PHYSICS,
   SPLATTER_MS,
-  STEP_UPDATE_INTERVAL,
   MIN_STEP_MS,
   DEBUG_TEXTURES,
 } from '../shared/constants';
@@ -128,7 +126,6 @@ export const init = async () => {
   const initReflectClientDone = initTiming('initializing reflect client', 20);
   const {
     getState,
-    sendStep,
     updateCursor,
     addSplatter,
     addListener,
@@ -143,7 +140,6 @@ export const init = async () => {
 
   // Initialize state
   let {
-    step,
     actors,
     physicsStep,
     cursors,
@@ -152,7 +148,7 @@ export const init = async () => {
     sequences,
     impulses,
   } = await getState();
-  let localStep = step;
+  let localStep = physicsStep;
 
   // Whenever actors change, update the count
   addListener<Actor>('actor', () => {
@@ -184,7 +180,6 @@ export const init = async () => {
       );
       if (debugEl) {
         let physicsCacheStep = get_physics_cache_step();
-        const drift = localStep - step;
         let debugOutput = `${
           Object.keys(actors).length
         } actors\n${splatterCount} splatters\n${impulseCount} impulses\n${debug.fps.toFixed(
@@ -199,10 +194,6 @@ export const init = async () => {
           }k\n`;
         }).join('\n')}\n\nlocal step: ${Math.floor(
           localStep,
-        )}\nserver step:${Math.floor(step)}\nstep drift: ${
-          drift > 0 ? '+' : '-'
-        }${drift.toFixed(
-          1,
         )}\n\nserver physics step: ${physicsStep}\ncached physics step: ${physicsCacheStep}\nphysics window size: ${
           localStep - physicsCacheStep
         }`;
@@ -237,15 +228,9 @@ export const init = async () => {
 
   // Step management
   const updateStep = () => {
-    // Don't increment our step more than once per MIN_STEP_MS, which is about 60 times per second.
-    // If we render too quickly or too slowly, adjust our steps so that it will
-    // converge on the target step.
-    if (localStep < step) {
-      // If we're behind, catch up half the distance
-      localStep += step - localStep;
-    } else if (localStep > step) {
-      // If we're ahead of the server, render at .5 speed
-      localStep += 0.5;
+    if (localStep < physicsStep) {
+      // If we're behind, run at 1.5x speed until we do
+      localStep += 2;
     } else {
       localStep += 1;
     }
@@ -255,7 +240,7 @@ export const init = async () => {
   let lastRenderedPhysicsStep = physicsStep;
   const renderPhysics = () => {
     updateCurrentStep(localStep);
-    const targetStep = Math.max(Math.floor(localStep) - STEP_RENDER_DELAY, 0);
+    const targetStep = Math.round(localStep);
     if (targetStep === lastRenderedPhysicsStep) {
       // Skip no-ops
       return;
@@ -295,12 +280,10 @@ export const init = async () => {
 
   // Render our cursors and canvases at "animation speed", usually 60fps
   let lastSplatter = 0;
-  let sentStepLast = now();
   startRenderLoop(
     async () => {
       ({
         actors,
-        step,
         physicsStep,
         cursors,
         rawCaches,
@@ -323,10 +306,6 @@ export const init = async () => {
         addPaint(position);
       } else if (!isDown) {
         lastSplatter = 0;
-      }
-      if (now() > sentStepLast + STEP_UPDATE_INTERVAL) {
-        sentStepLast = now();
-        sendStep(localStep);
       }
     },
     async () => {

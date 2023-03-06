@@ -1,33 +1,12 @@
 import type {Color} from './types';
-import {COLOR_PALATE_RS} from '../../renderer/src/constants';
-export {
-  UVMAP_SIZE,
-  SPLATTER_ANIM_FRAMES,
-  MAX_RENDERED_PHYSICS_STEPS,
+import {
+  COLOR_PALATE_RS,
+  RENDERED_PHYSICS_STEP_WINDOW_SIZE,
 } from '../../renderer/src/constants';
-
-// We share this file with the worker environment which is not node.js and has
-// no process global.
-const env = (() => {
-  const hasProcess = typeof process !== 'undefined';
-  if (hasProcess) {
-    return {
-      NEXT_PUBLIC_DEBUG_PHYSICS: process.env.NEXT_PUBLIC_DEBUG_PHYSICS,
-      NEXT_PUBLIC_DEBUG_TEXTURES: process.env.NEXT_PUBLIC_DEBUG_TEXTURES,
-    };
-  }
-  return {
-    NEXT_PUBLIC_DEBUG_PHYSICS: undefined,
-    NEXT_PUBLIC_DEBUG_TEXTURES: undefined,
-  };
-})();
+export {UVMAP_SIZE, SPLATTER_ANIM_FRAMES} from '../../renderer/src/constants';
 
 // Demo position
 export const DEMO_OFFSET_BOTTOM = 180;
-
-// Debug
-export const DEBUG_PHYSICS = env.NEXT_PUBLIC_DEBUG_PHYSICS === 'true';
-export const DEBUG_TEXTURES = env.NEXT_PUBLIC_DEBUG_TEXTURES === 'true';
 
 // Splatters
 export const SPLATTER_FLATTEN_MIN = 10;
@@ -39,12 +18,6 @@ export const SPLATTER_MS = 0;
 // Some browsers are capable of rendering > 60fps, but we don't expect/want that
 // since we assume each step is about 16ms.
 export const MIN_STEP_MS = 16;
-
-// TODO: properly document the reason why we need this
-export const STEP_RENDER_DELAY = 1;
-// Once every 100 steps, tell the server what step we have. This will make sure
-// clients don't desync more than about this many steps.
-export const STEP_UPDATE_INTERVAL = 100;
 
 // 3D
 // How many steps it takes for our environment to spin in a circle
@@ -115,9 +88,27 @@ export const COLOR_PALATE_END: Color[] = [
 
 // Debug
 
+// We share this file with the worker environment which is not node.js and has
+// no process global.
+const env = (() => {
+  const hasProcess = typeof process !== 'undefined';
+  if (hasProcess) {
+    return {
+      NEXT_PUBLIC_DEBUG_PHYSICS: process.env.NEXT_PUBLIC_DEBUG_PHYSICS,
+      NEXT_PUBLIC_DEBUG_TEXTURES: process.env.NEXT_PUBLIC_DEBUG_TEXTURES,
+    };
+  }
+  return {
+    NEXT_PUBLIC_DEBUG_PHYSICS: undefined,
+    NEXT_PUBLIC_DEBUG_TEXTURES: undefined,
+  };
+})();
+
 // Sample fps at this low pass. Higher means a longer sample time, resulting in
 // averaging over a longer period of time.
 export const FPS_LOW_PASS = 10;
+export const DEBUG_PHYSICS = env.NEXT_PUBLIC_DEBUG_PHYSICS === 'true';
+export const DEBUG_TEXTURES = env.NEXT_PUBLIC_DEBUG_TEXTURES === 'true';
 
 // Mutators/etc
 
@@ -125,6 +116,8 @@ export const FPS_LOW_PASS = 10;
 // slower than normal mutations (but delaying it too much will make it too
 // expensive to run without a noticeable hang)
 export const MIN_PHYSICS_FLATTENING_STEPS = 100;
+export const MAX_PHYSICS_FLATTENING_STEPS =
+  RENDERED_PHYSICS_STEP_WINDOW_SIZE + MIN_PHYSICS_FLATTENING_STEPS;
 
 // Can't put more than 131072 bytes in a DO, so use a number under half that
 // since these will refer to strings

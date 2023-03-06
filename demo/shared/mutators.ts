@@ -2,7 +2,7 @@ import type {WriteTransaction} from '@rocicorp/reflect';
 import {
   COLOR_PALATE,
   COLOR_PALATE_END,
-  MAX_RENDERED_PHYSICS_STEPS,
+  MAX_PHYSICS_FLATTENING_STEPS,
   MIN_PHYSICS_FLATTENING_STEPS,
   SPLATTER_ANIM_FRAMES,
   SPLATTER_FLATTEN_MIN,
@@ -77,12 +77,6 @@ export const mutators = {
     for (const color in colors) {
       await tx.put(`colors/${color}/start`, colors[color][0].join('/'));
       await tx.put(`colors/${color}/end`, colors[color][1].join('/'));
-    }
-  },
-  sendStep: async (tx: WriteTransaction, step: number) => {
-    const serverStep = (await tx.get('step')) as number | undefined;
-    if (!serverStep || step > serverStep) {
-      await tx.put('step', step);
     }
   },
   guaranteeActor: async (
@@ -225,7 +219,7 @@ const flattenPhysics = async (tx: WriteTransaction, step: number) => {
     });
 
     await _initRenderer!();
-    const newStep = Math.max(step - MAX_RENDERED_PHYSICS_STEPS, 0);
+    const newStep = Math.max(step - MAX_PHYSICS_FLATTENING_STEPS, 0);
     console.log(`Flattening physics until step ${newStep}`);
     const newState = update_physics_state(
       state ? decode(state) : undefined,

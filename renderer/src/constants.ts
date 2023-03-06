@@ -3,8 +3,8 @@ export const UVMAP_SIZE = 600;
 
 export const SPLATTER_ANIM_FRAMES = 8;
 
-// Render a window of steps, so changes from the past can be reflected in our model
-export const MAX_RENDERED_PHYSICS_STEPS = 180;
+// Render a window of steps, so changes from the past can be reflected in our physics model
+export const RENDERED_PHYSICS_STEP_WINDOW_SIZE = 100;
 
 // This is stored as a flat array so that it can be imported into rust without
 // messing with types or implementing serialization.
