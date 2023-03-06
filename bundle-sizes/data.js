@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1677765852650,
+  "lastUpdate": 1678099749854,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -36443,6 +36443,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/19a52a22fe83017a6d431c81e2ef4b5703103106"
         },
         "date": 1677765842683,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 262729,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45836,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 261524,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45499,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 98836,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27778,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f124d766627c975cf986fb01ee047d1ce5c84157",
+          "message": "chore: Fix tests (#371)\n\nProblem 1\r\n----\r\n\r\nWe were reusing userID and roomID by default, leading to all the tests\r\nusing the same IDB instance. This was causing us to call\r\n`onUpdateNeeded` which triggers `location.reload`.\r\n\r\nSolution 1\r\n----\r\n\r\n- Add a counter to the userID by default. This will cause us to create a\r\nnew IDB instance for each test.\r\n- Make the tests fail if we call `onUpdateNeeded`. This will prevent\r\nunintentional calls to `onUpdateNeeded` in the tests.\r\n\r\nProblem 2\r\n----\r\n\r\nWe were not closing Reflect instances in the tests.\r\n\r\nSolution 2\r\n----\r\n\r\nKeep track of `reflectForTest` instances and close them in `teardown`.",
+          "timestamp": "2023-03-06T11:48:01+01:00",
+          "tree_id": "b336f54a24e794956584e74643981650254c38ac",
+          "url": "https://github.com/rocicorp/mono/commit/f124d766627c975cf986fb01ee047d1ce5c84157"
+        },
+        "date": 1678099741140,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
