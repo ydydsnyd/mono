@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1678143049607,
+  "lastUpdate": 1678185879094,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -36605,6 +36605,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/bb6737865bf0a9bc0ee952bb05a5602df8ff1a12"
         },
         "date": 1678143041032,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 262926,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45887,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 261721,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45533,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 98941,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27832,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a9d573c5952499dbba1c8b5395fa9767ce27e6c3",
+          "message": "feat: Keep process.env in reflect output (#376)\n\nGoal: We want to keep `process.env.NODE_ENV` in the npm package for\r\n`@rocicorp/reflect` so that customers can decide if they want the extra\r\nchecks at runtime when in development mode.\r\n\r\nFixes #167",
+          "timestamp": "2023-03-07T11:43:31+01:00",
+          "tree_id": "df50b2674c1d192f107d11f1f308123832cd4d91",
+          "url": "https://github.com/rocicorp/mono/commit/a9d573c5952499dbba1c8b5395fa9767ce27e6c3"
+        },
+        "date": 1678185871210,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
