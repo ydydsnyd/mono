@@ -10,6 +10,17 @@ const fakeTx = (): WriteTransaction => {
     del: async (k: string) => delete data[k],
     has: async (k: string) => !!data[k],
     get: async (k: string) => data[k],
+    scan: ({prefix}: {prefix: string}) => ({
+      keys: () => ({
+        async *[Symbol.asyncIterator]() {
+          for (const d in data) {
+            if (d.startsWith(prefix)) {
+              yield d;
+            }
+          }
+        },
+      }),
+    }),
   };
   return tx as unknown as WriteTransaction;
 };
@@ -26,8 +37,6 @@ describe('chunks', () => {
   it('stores a single value properly', async () => {
     const tx = fakeTx();
     await chunk(tx, 'test', 'testing');
-    const count = await tx.get('test/count');
-    assert.equal(1, count);
     const val = await tx.get('test/0');
     assert.equal('testing', val);
   });
@@ -35,23 +44,19 @@ describe('chunks', () => {
     const tx = fakeTx();
     const val = chunkable(2);
     await chunk(tx, 'chunked', val);
-    const count = await tx.get('chunked/count');
-    assert.equal(2, count);
     assert.ok(await tx.has('chunked/0'));
     assert.ok(await tx.has('chunked/1'));
     const sval = await unchunk(tx, 'chunked');
+    assert.ok(sval);
+    assert.equal(val.length, sval?.length);
     assert.equal(val, sval);
   });
   it('cleans up old values', async () => {
     const tx = fakeTx();
     await chunk(tx, 'chunked', chunkable(20));
-    const count = await tx.get('chunked/count');
-    assert.equal(20, count);
     assert.ok(await tx.has('chunked/19'));
     const nval = chunkable(2);
     await chunk(tx, 'chunked', nval);
-    const ncount = await tx.get('chunked/count');
-    assert.equal(2, ncount);
     assert.equal(await tx.has('chunked/19'), false);
     const fval = await tx.get('chunked/1');
     assert.ok(fval);
