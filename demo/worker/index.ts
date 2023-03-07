@@ -1,5 +1,6 @@
 import {createReflectServer} from '@rocicorp/reflect-server';
-import {Env, mutators, setEnv} from '../shared/mutators.js';
+import {Env, mutators, setEnv} from '../shared/mutators';
+import {orchestratorMutators} from '../shared/orchestrator-mutators';
 import renderModule from '../../vendor/renderer/renderer_bg.wasm';
 import initRenderer from '../../vendor/renderer';
 
@@ -20,17 +21,26 @@ const authHandler = async (auth: string, roomID: string) => {
   if (!authJson.userID || typeof authJson.userID !== 'string') {
     throw new Error('Missing userID');
   }
-
   return {
     userID: authJson.userID,
   };
 };
 
+const allMutators = {...mutators, ...orchestratorMutators};
+const mCount = (o: object) => Object.keys(o).length;
+if (mCount(mutators) + mCount(orchestratorMutators) !== mCount(allMutators)) {
+  throw new Error(
+    'Invalid mutators - all mutator names must be unique across frontend and orchestrator clients',
+  );
+}
+
 const {worker, RoomDO, AuthDO} = createReflectServer({
-  mutators,
+  mutators: allMutators,
   authHandler,
   disconnectHandler: async write => {
+    console.log(`${write.clientID} disconnected. Cleaning up...`);
     await mutators.removeActor(write, write.clientID);
+    await orchestratorMutators.removeOchestratorActor(write, write.clientID);
   },
   getLogLevel: () => 'error',
   allowUnconfirmedWrites: true,

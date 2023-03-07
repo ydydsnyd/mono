@@ -21,11 +21,14 @@ export type ColorPalate = [
   [Color, Color],
 ];
 
-export type Actor = {
+export type Actor = OrchestratorActor & {
+  location: string;
+};
+
+export type OrchestratorActor = {
   id: ActorID;
   colorIndex: number;
-  location: string;
-  isBot: boolean;
+  room: string;
 };
 
 export type Letter3DPosition = {

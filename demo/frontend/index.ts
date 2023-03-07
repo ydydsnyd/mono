@@ -27,8 +27,8 @@ import type {
 } from '../shared/types';
 import {LETTERS} from '../shared/letters';
 import {letterMap, now} from '../shared/util';
-import {initRoom} from './init-room';
 import {getUserLocation} from './location';
+import {initRoom} from './orchestrator';
 
 type LetterCanvases = Record<Letter, HTMLCanvasElement>;
 
@@ -129,7 +129,7 @@ export const init = async () => {
     updateActorLocation,
     clearTextures,
     initialSplatters,
-  } = await initialize(roomID, actorId);
+  } = await initialize(actor);
   initReflectClientDone();
 
   // Get our location and add it when it's ready

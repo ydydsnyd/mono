@@ -20,6 +20,7 @@ import type {
 } from './types';
 import {randomWithSeed} from './util';
 import {chunk, unchunk} from './chunks';
+import type {OrchestratorActor} from '../shared/types';
 
 export const impulseId = (i: Impulse) =>
   `${i.u}${i.s}${i.x.toFixed(1) + i.y.toFixed(1) + i.z.toFixed(1)}`;
@@ -74,31 +75,13 @@ export const mutators = {
       await tx.put(`colors/${color}/end`, colors[color][1].join('/'));
     }
   },
-  guaranteeActor: async (
-    tx: WriteTransaction,
-    {actorId, isBot}: {actorId: string; isBot?: boolean | undefined},
-  ) => {
-    const key = `actor/${actorId}`;
+  guaranteeActor: async (tx: WriteTransaction, actor: OrchestratorActor) => {
+    const key = `actor/${actor.id}`;
     const hasActor = await tx.has(key);
     if (hasActor) {
       // already exists
       return;
     }
-
-    // Keep a counter of how many actors we've created rather than counting current ones.
-    // If we count current ones, we can get duplicate colors if people join and leave around
-    // same time.
-    const actorNum = ((await tx.get('actor-count')) as number) ?? 0;
-    await tx.put('actor-count', actorNum + 1);
-
-    // NOTE: we just cycle through colors, so if we don't cap the room size we'll get duplicates.
-    const colorIndex = actorNum % COLOR_PALATE.length;
-    const actor: Actor = {
-      id: actorId,
-      colorIndex,
-      location: 'Unknown Location',
-      isBot: Boolean(isBot),
-    };
     await tx.put(key, actor);
   },
   updateActorLocation: async (

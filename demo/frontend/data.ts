@@ -14,8 +14,9 @@ import {getData, isAddDiff, isChangeDiff, isDeleteDiff} from './data-util';
 import {setPhysics, updateCache} from '../shared/renderer';
 import {WORKER_HOST} from '../shared/urls';
 import {unchunk} from '../shared/chunks';
+import type {OrchestratorActor} from '../shared/types';
 
-export const initialize = async (roomID: string, userID: string) => {
+export const initialize = async (actor: OrchestratorActor) => {
   // Set up our connection to reflect
   console.log(`Connecting to worker at ${WORKER_HOST}`);
   // Create a reflect client
@@ -32,11 +33,11 @@ export const initialize = async (roomID: string, userID: string) => {
         }
       }
     },
-    userID,
-    roomID: roomID,
+    userID: actor.id,
+    roomID: actor.room,
     auth: JSON.stringify({
-      userID,
-      roomID: roomID,
+      userID: actor.id,
+      roomID: actor.room,
     }),
     logLevel: 'error',
     mutators,
@@ -59,7 +60,9 @@ export const initialize = async (roomID: string, userID: string) => {
 
   // Set up a local state - this is used to cache values that we don't want to
   // read every frame (and that will be updated via subscription instead)
-  const localState: State = await reflectClient.query(stateInitializer(userID));
+  const localState: State = await reflectClient.query(
+    stateInitializer(actor.id),
+  );
   setPhysics(localState.physicsStep, localState.physicsState);
 
   reflectClient.experimentalWatch(diffs => {
@@ -127,7 +130,7 @@ export const initialize = async (roomID: string, userID: string) => {
 
   // Before allowing clients to perform mutations, make sure that we've written
   // our local actor to reflect.
-  await mutations.guaranteeActor({actorId: userID});
+  await mutations.guaranteeActor(actor);
 
   const initialSplatters: Record<Letter, Splatter[]> = letterMap(() => []);
   await reflectClient.query(async tx => {
