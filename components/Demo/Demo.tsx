@@ -61,7 +61,7 @@ const PaintFight = () => {
             &nbsp;Link copied
           </div>
         </button>
-        <button id="new-room-button">Reset Demo</button>
+        <button id="reset-button">Reset Demo</button>
       </div>
     </>
   );

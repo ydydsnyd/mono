@@ -11,7 +11,7 @@ const chunkCount = async (tx: ReadTransaction, prefix: string) => {
   return count;
 };
 
-const cleanup = async (tx: WriteTransaction, prefix: string) => {
+export const deleteChunked = async (tx: WriteTransaction, prefix: string) => {
   const count = await chunkCount(tx, prefix);
   if (!count) {
     return;
@@ -28,7 +28,7 @@ export const chunk = async (
   prefix: string,
   value: string,
 ) => {
-  await cleanup(tx, prefix);
+  await deleteChunked(tx, prefix);
   let lastIndex = 0;
   let chunkIdx = 0;
   const promises: Promise<void>[] = [];

@@ -73,7 +73,7 @@ body.demo-active * {
 }
 
 #copy-room-button,
-#new-room-button {
+#reset-button {
   border: none;
   background-color: transparent;
   font: inherit;

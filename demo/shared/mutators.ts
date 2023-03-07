@@ -18,8 +18,8 @@ import type {
   Splatter,
   Vector,
 } from './types';
-import {randomWithSeed} from './util';
-import {chunk, unchunk} from './chunks';
+import {asyncLetterMap, randomWithSeed} from './util';
+import {chunk, deleteChunked, unchunk} from './chunks';
 
 export const impulseId = (i: Impulse) =>
   `${i.u}${i.s}${i.x.toFixed(1) + i.y.toFixed(1) + i.z.toFixed(1)}`;
@@ -113,6 +113,21 @@ export const mutators = {
         location,
       });
     }
+  },
+  clearTextures: async (tx: WriteTransaction, time: number) => {
+    await asyncLetterMap(
+      async letter => await deleteChunked(tx, `cache/${letter}`),
+    );
+    const splatters = (await tx
+      .scan({prefix: 'splatter/'})
+      .keys()
+      .toArray()) as string[];
+    await Promise.all(splatters.map(async k => await tx.del(k)));
+    // To provide a synced animation and to deal with the case where some clients
+    // may only have local cached splatters which we can't clean up individually
+    // (because they are already rendered), we also add a "cleared" timnestamp which
+    // will let us run an animation on all the clients when they receive it.
+    await tx.put('cleared', time);
   },
   addSplatter: async (
     tx: WriteTransaction,

@@ -3,6 +3,7 @@ import {initialize} from './data';
 import {renderer as renderer3D} from './3d-renderer';
 import {
   drawSplatter,
+  loadClearAnimationFrames,
   renderFrame,
   renderInitialFrame,
 } from './texture-renderer';
@@ -106,15 +107,9 @@ export const init = async () => {
       copyRoomButton.classList.remove('copied');
     }, 1000);
   });
-  const newRoomButton = document.getElementById('new-room-button');
-  newRoomButton?.addEventListener('click', () => {
-    localStorage.removeItem('roomID');
-    window.location.reload();
-  });
 
   const initRendererDone = initTiming('initializing renderer module', 100);
   await initRenderer();
-  await precompute();
   initRendererDone();
 
   const colors: ColorPalate = [
@@ -132,6 +127,7 @@ export const init = async () => {
     addSplatter,
     addListener,
     updateActorLocation,
+    clearTextures,
     initialSplatters,
   } = await initialize(roomID, actorId);
   initReflectClientDone();
@@ -157,6 +153,19 @@ export const init = async () => {
   // that happened between the last cache and when we started listening for new
   // splatters.
   renderInitialFrame(textures, initialSplatters, colors);
+
+  // Handlers for data resetting
+  const newRoomButton = document.getElementById('reset-button');
+  newRoomButton?.addEventListener('click', async () => {
+    await clearTextures(now());
+  });
+  let lastClear: number | undefined;
+  addListener<never>('cleared', async () => {
+    // Set lastClear to now, so that the animation will play all the way through on
+    // all clients whenever they happen to receive the clear. TODO: does this
+    // interleave properly with additions when latent/offline?
+    lastClear = now();
+  });
 
   // Initialize state
   let {actors, physicsStep, cursors} = await getState();
@@ -263,7 +272,9 @@ export const init = async () => {
       // Increment our step
       updateStep();
       // Render our textures, and if they changed, send to the 3D scene.
-      renderFrame(now(), textures, colors, letter => updateTexture(letter));
+      renderFrame(now(), textures, colors, lastClear, letter =>
+        updateTexture(letter),
+      );
       // renderPhysics();
       render3D();
       // Splatter if needed
@@ -285,6 +296,26 @@ export const init = async () => {
   // After we've started, flip a class on the body
   document.body.classList.add('demo-active');
   ready(true);
+
+  // Lazy-load any assets that aren't essential to interactivity.
+  // Note that all of these assets are gated behind their loaded-ness when they
+  // are accessed, but will likely result in dropped frames if we attempt to use
+  // them before we preload them.
+  const assetLoadTiming = timing('Preload Assets');
+  const doneLoadingAssets = assetLoadTiming('loading assets', 1000);
+  const precomputeSplattersDone = assetLoadTiming(
+    'precomputing splatters',
+    500,
+  );
+  await precompute();
+  precomputeSplattersDone();
+  const preloadClearFrames = assetLoadTiming(
+    'loading clear animation frames',
+    500,
+  );
+  await loadClearAnimationFrames();
+  preloadClearFrames();
+  doneLoadingAssets(true);
 };
 
 const startRenderLoop = (

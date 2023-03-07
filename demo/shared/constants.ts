@@ -17,8 +17,12 @@ export const SPLATTER_FLATTEN_MIN = 10; // count
 // just splatter every frame (or more accurately, this will fall back to
 // MIN_STEP_MS)
 export const SPLATTER_MS = 42;
-// Splatter animations play at 60fps
-export const SPLATTER_ANIMATION_FRAME_DURATION = 30; // 16.667;
+// Splatter animation speed
+export const SPLATTER_ANIMATION_FRAME_DURATION = 30; // ~33fps
+
+// Clear animation
+export const CLEAR_STEP_ANIM_FRAMES = 8;
+export const CLEAR_ANIMATION_FRAME_DURATION = 35;
 
 // Some browsers are capable of rendering > 60fps, but we don't expect/want that
 // since we assume each step is about 16ms.

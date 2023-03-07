@@ -15,6 +15,14 @@ export function update_cache(letter: number, png_data: Uint8Array): void;
 * @param {CanvasRenderingContext2D} ctx_v
 * @param {CanvasRenderingContext2D} ctx_e
 */
+export function overwrite_caches(ctx_a: CanvasRenderingContext2D, ctx_l: CanvasRenderingContext2D, ctx_i: CanvasRenderingContext2D, ctx_v: CanvasRenderingContext2D, ctx_e: CanvasRenderingContext2D): void;
+/**
+* @param {CanvasRenderingContext2D} ctx_a
+* @param {CanvasRenderingContext2D} ctx_l
+* @param {CanvasRenderingContext2D} ctx_i
+* @param {CanvasRenderingContext2D} ctx_v
+* @param {CanvasRenderingContext2D} ctx_e
+*/
 export function draw_caches(ctx_a: CanvasRenderingContext2D, ctx_l: CanvasRenderingContext2D, ctx_i: CanvasRenderingContext2D, ctx_v: CanvasRenderingContext2D, ctx_e: CanvasRenderingContext2D): void;
 /**
 * @param {number} letter
@@ -127,7 +135,9 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
+  readonly precompute: () => void;
   readonly update_cache: (a: number, b: number, c: number) => void;
+  readonly overwrite_caches: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly draw_caches: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly draw_buffer_png: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number, w: number, x: number, y: number, z: number, a1: number) => void;
   readonly draw_buffer: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number, w: number, x: number, y: number, z: number, a1: number) => void;
@@ -135,7 +145,6 @@ export interface InitOutput {
   readonly set_physics_state: (a: number, b: number, c: number) => void;
   readonly get_physics_cache_step: () => number;
   readonly positions_for_step: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number, w: number, x: number, y: number, z: number, a1: number, b1: number, c1: number, d1: number, e1: number, f1: number, g1: number, h1: number, i1: number, j1: number, k1: number, l1: number, m1: number, n1: number, o1: number, p1: number) => void;
-  readonly precompute: () => void;
   readonly __wbindgen_malloc: (a: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number) => number;
   readonly __wbindgen_add_to_stack_pointer: (a: number) => number;

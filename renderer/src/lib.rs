@@ -124,17 +124,19 @@ lazy_static! {
 
 // API - this is our "public" JS API:
 
+// Some animations are lazily computed. This just makes them eagerly evaluate so
+// we don't have random cost during animations.
 #[wasm_bindgen]
 pub fn precompute() {
     drawing::precompute();
 }
 
+// Write a png to the cache for a given letter
 #[wasm_bindgen]
 pub fn update_cache(letter: Letter, png_data: Vec<u8>) {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     let img =
         image::load_from_memory_with_format(&png_data, ImageFormat::Png).unwrap_or_else(|e| {
-            // console_log!("data: {:?}", png_data);
             panic!(
                 "Image cache appears to be corrupted. Error: {}",
                 e.to_string()
@@ -145,7 +147,33 @@ pub fn update_cache(letter: Letter, png_data: Vec<u8>) {
     caches.set_data(&letter, pixels);
 }
 
-// Only used for debugging - draw caches to canvases
+// Update caches by copying from a client context
+#[wasm_bindgen]
+pub fn overwrite_caches(
+    ctx_a: &CanvasRenderingContext2d,
+    ctx_l: &CanvasRenderingContext2d,
+    ctx_i: &CanvasRenderingContext2d,
+    ctx_v: &CanvasRenderingContext2d,
+    ctx_e: &CanvasRenderingContext2d,
+) {
+    panic::set_hook(Box::new(console_error_panic_hook::hook));
+    overwrite_cache(Letter::A, ctx_a);
+    overwrite_cache(Letter::L, ctx_l);
+    overwrite_cache(Letter::I, ctx_i);
+    overwrite_cache(Letter::V, ctx_v);
+    overwrite_cache(Letter::E, ctx_e);
+}
+fn overwrite_cache(letter: Letter, ctx: &CanvasRenderingContext2d) {
+    let width = UVMAP_SIZE.clone() as f64;
+    let height = UVMAP_SIZE.clone() as f64;
+    let img_data = ctx
+        .get_image_data(0.0, 0.0, width, height)
+        .expect("Failed reading image data when overwriting cache");
+    let mut caches = CACHES.write().unwrap();
+    caches.set_data(&letter, img_data.data().to_vec());
+}
+
+// Draw our current caches to the given contexts
 #[wasm_bindgen]
 pub fn draw_caches(
     ctx_a: &CanvasRenderingContext2d,
@@ -171,6 +199,7 @@ fn draw_letter(letter: Letter, context: &CanvasRenderingContext2d) {
     }
     let data = ImageData::new_with_u8_clamped_array_and_sh(Clamped(&mut &cache), height, width)
         .expect("Bad image data");
+    context.clear_rect(0.0, 0.0, width as f64, height as f64);
     context
         .put_image_data(&data, 0.0, 0.0)
         .expect("Writing to canvas failed");
