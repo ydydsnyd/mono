@@ -41,5 +41,8 @@ export const unchunk = async (
   for await (const k of chunkKeys) {
     chunks.push((await tx.get(k)) as string);
   }
-  return chunks.join('');
+  if (chunks.length) {
+    return chunks.join('');
+  }
+  return undefined;
 };
