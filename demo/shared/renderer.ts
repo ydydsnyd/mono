@@ -34,15 +34,7 @@ export const getRendererLetter = (letter: Letter): RendererLetter => {
 };
 
 export const updateCache = (letter: Letter, png: string) => {
-  let cache: Uint8Array | undefined;
-  try {
-    cache = decode(png);
-  } catch (e) {
-    console.error('invalid cache:', cache);
-  }
-  if (cache) {
-    update_cache(getRendererLetter(letter), cache);
-  }
+  update_cache(getRendererLetter(letter), decode(png));
 };
 
 export const getCache = (

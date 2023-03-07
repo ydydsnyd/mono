@@ -10,7 +10,13 @@ export const encode = (data: Uint8Array) => {
 };
 
 export const decode = (b64: string) => {
-  const raw = base64.decode(b64);
+  let raw: string | undefined;
+  try {
+    raw = base64.decode(b64);
+  } catch (e) {
+    console.error('attempted to decode invalid base64 string:', b64);
+    return new Uint8Array();
+  }
   let data = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i++) {
     data[i] = raw[i].charCodeAt(0);
