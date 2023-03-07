@@ -34,7 +34,10 @@ export const getRendererLetter = (letter: Letter): RendererLetter => {
 };
 
 export const updateCache = (letter: Letter, png: string) => {
-  update_cache(getRendererLetter(letter), decode(png));
+  const decoded = decode(png);
+  if (decoded) {
+    update_cache(getRendererLetter(letter), decoded);
+  }
 };
 
 export const getCache = (

@@ -15,7 +15,7 @@ export const decode = (b64: string) => {
     raw = base64.decode(b64);
   } catch (e) {
     console.error('attempted to decode invalid base64 string:', b64);
-    return new Uint8Array();
+    return;
   }
   let data = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i++) {
