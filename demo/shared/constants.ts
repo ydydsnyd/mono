@@ -9,11 +9,16 @@ export {UVMAP_SIZE, SPLATTER_ANIM_FRAMES} from '../../renderer/src/constants';
 export const DEMO_OFFSET_BOTTOM = 180;
 
 // Splatters
-export const SPLATTER_FLATTEN_MIN = 10;
+// To avoid our data growing infinitely, "flatten" splatters to an image in
+// batches if they are sufficiently old.
+export const SPLATTER_MAX_AGE = 2000; // ms
+export const SPLATTER_FLATTEN_MIN = 10; // count
 // ms between splatters. This is a minimum, so any number below about 16 will
 // just splatter every frame (or more accurately, this will fall back to
 // MIN_STEP_MS)
-export const SPLATTER_MS = 0;
+export const SPLATTER_MS = 42;
+// Splatter animations play at 60fps
+export const SPLATTER_ANIMATION_FRAME_DURATION = 30; // 16.667;
 
 // Some browsers are capable of rendering > 60fps, but we don't expect/want that
 // since we assume each step is about 16ms.

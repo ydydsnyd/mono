@@ -61,22 +61,11 @@ export const initialize = async (roomID: string, userID: string) => {
   // read every frame (and that will be updated via subscription instead)
   const localState: State = await reflectClient.query(stateInitializer(userID));
   setPhysics(localState.physicsStep, localState.physicsState);
-  LETTERS.forEach(letter => {
-    const cache = localState.rawCaches[letter];
-    if (cache) {
-      updateCache(letter, cache);
-    }
-  });
 
   reflectClient.experimentalWatch(diffs => {
     diffs.forEach(async diff => {
       const keyParts = diff.key.split('/');
       switch (keyParts[0]) {
-        case 'seq':
-          const letter = keyParts[1] as Letter;
-          const seq = getData<number>(diff);
-          localState.sequences[letter] = seq;
-          break;
         case 'actor':
           const actor = getData<Actor>(diff);
           if (isDeleteDiff(diff)) {
@@ -106,22 +95,6 @@ export const initialize = async (roomID: string, userID: string) => {
             localState.cursors[cursor.actorId] = cursor;
           }
           break;
-        case 'cache':
-          if (isChangeDiff(diff) || isAddDiff(diff)) {
-            const letter = keyParts[1] as Letter;
-            const cache = await reflectClient.query(
-              async tx => await unchunk(tx, `cache/${letter}`),
-            );
-            if (cache) {
-              localState.rawCaches[letter] = cache;
-              updateCache(letter, cache);
-            } else {
-              console.warn(
-                `Cache for letter ${letter} updated but cache was undefined when unchunked.`,
-              );
-            }
-          }
-          break;
       }
       const handlers = listeners.get(keyParts[0]);
       if (handlers) {
@@ -132,18 +105,9 @@ export const initialize = async (roomID: string, userID: string) => {
 
   const getState = (): Promise<State> =>
     reflectClient.query(async (tx: ReadTransaction) => {
-      // Points are sometimes modified in quite large ways (e.g. we delete tons at a
+      // Impulses are sometimes modified in quite large ways (e.g. we delete tons at a
       // time on the server) - to avoid having to maintain a local index, just read
       // them all from reflect on each frame.
-      const splatters: State['splatters'] = letterMap(() => []);
-      await Promise.all([
-        ...LETTERS.map(async letter => {
-          const letterSplatters = (await tx
-            .scan({prefix: `splatter/${letter}`})
-            .toArray()) as Splatter[];
-          splatters[letter] = letterSplatters;
-        }),
-      ]);
       const impulses: State['impulses'] = letterMap(() => []);
       await Promise.all([
         ...LETTERS.map(async letter => {
@@ -155,7 +119,6 @@ export const initialize = async (roomID: string, userID: string) => {
       ]);
       return {
         ...localState,
-        splatters,
         impulses,
       };
     });
@@ -166,7 +129,19 @@ export const initialize = async (roomID: string, userID: string) => {
   // our local actor to reflect.
   await mutations.guaranteeActor({actorId: userID});
 
-  return {...mutations, getState, addListener, reflectClient};
+  const initialSplatters: Record<Letter, Splatter[]> = letterMap(() => []);
+  await reflectClient.query(async tx => {
+    await Promise.all([
+      ...LETTERS.map(async letter => {
+        const splatters = (await tx
+          .scan({prefix: `splatter/${letter}`})
+          .toArray()) as Splatter[];
+        initialSplatters[letter] = splatters;
+      }),
+    ]);
+  });
+
+  return {...mutations, getState, addListener, reflectClient, initialSplatters};
 };
 
 const stateInitializer =
@@ -186,19 +161,8 @@ const stateInitializer =
       cursors[cursor.actorId] = cursor;
       return cursors;
     }, {} as State['cursors']);
-    const splatters: State['splatters'] = letterMap(() => []);
     const impulses: State['impulses'] = letterMap(() => []);
-    const rawCaches: State['rawCaches'] = letterMap(() => '');
-    const sequences: State['sequences'] = letterMap(() => -1);
     await Promise.all([
-      ...LETTERS.map(async letter => {
-        const letterSplatters = (await tx
-          .scan({
-            prefix: `splatter/${letter}/`,
-          })
-          .toArray()) as Splatter[];
-        splatters[letter] = letterSplatters;
-      }),
       ...LETTERS.map(async letter => {
         const letterImpulses = (await tx
           .scan({
@@ -210,21 +174,14 @@ const stateInitializer =
       ...LETTERS.map(async letter => {
         const cache = await unchunk(tx, `cache/${letter}`);
         if (cache) {
-          rawCaches[letter] = cache;
           updateCache(letter, cache);
         }
-      }),
-      ...LETTERS.map(async letter => {
-        sequences[letter] = ((await tx.get(`seq/${letter}`)) as number) || 0;
       }),
     ]);
     return {
       actorId: userID,
       actors,
       cursors,
-      splatters,
-      rawCaches,
-      sequences,
       impulses,
       physicsState,
       physicsStep,

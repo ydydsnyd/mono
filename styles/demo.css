@@ -26,20 +26,17 @@ body.demo-active * {
 #caches {
   background-color: rgba(125, 130, 184, 0.5);
 }
-#buffers {
-  background-color: rgba(183, 227, 204, 0.5);
-}
 #textures {
   background-color: rgba(243, 227, 124, 0.5);
 }
 
-#textures, #buffers {
+#textures {
   display: none;
 }
-.debug #textures, .debug #buffers, #caches {
+.debug #textures, #caches {
   display: block;
 }
-.debug #textures canvas, .debug #buffers canvas, #caches canvas {
+.debug #textures canvas, #caches canvas {
   width: 150px;
   height: 150px;
 }

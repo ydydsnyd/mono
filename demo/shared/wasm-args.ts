@@ -2,65 +2,9 @@ import {LETTERS} from './letters';
 import {ActorID, Impulse, Letter, Splatter} from './types';
 import {letterMap} from './util';
 
-// Converts our js object values into flat args so they can be passed to wasm
-// without having to convert into pointers
-type renderBatchArgs = [
-  Uint32Array, // splatter_counts: Vec<usize>,
-  Uint32Array, // steps: Vec<f64>,
-  Uint32Array, // splatter_actors: Vec<u32>,
-  Uint8Array, // colors: Vec<u8>,
-  Float32Array, // x_vals: Vec<f32>,
-  Float32Array, // y_vals: Vec<f32>,
-  Uint8Array, // splatter_animations: Vec<u8>,
-  Uint8Array, // splatter_rotations: Vec<u8>,
-];
-export const splatters2RenderBatch = (
-  splatters: Record<Letter, Splatter[]>,
-) => {
-  // Instead of sending big unicode strings into wasm, just assign each unique
-  // actor in this set an integer value, and send that instead of the id.
-  let actorNum = 0;
-  const actorNums: Record<ActorID, number> = {};
-  const totalSplatters = LETTERS.reduce((splatterCount, letter) => {
-    splatters[letter].forEach(s => {
-      if (actorNums[s.u] === undefined) {
-        actorNums[s.u] = actorNum++;
-      }
-    });
-    return splatterCount + splatters[letter].length;
-  }, 0);
-  const args: renderBatchArgs = [
-    new Uint32Array(LETTERS.length),
-    new Uint32Array(totalSplatters),
-    new Uint32Array(totalSplatters),
-    new Uint8Array(totalSplatters),
-    new Float32Array(totalSplatters),
-    new Float32Array(totalSplatters),
-    new Uint8Array(totalSplatters),
-    new Uint8Array(totalSplatters),
-  ];
-
-  let baseIdx = 0;
-  LETTERS.forEach((letter, letterIdx) => {
-    args[0][letterIdx] = splatters[letter].length;
-    splatters[letter].forEach((splatter, idx) => {
-      const index = baseIdx + idx;
-      args[1][index] = splatter.s;
-      args[2][index] = actorNums[splatter.u];
-      args[3][index] = splatter.c;
-      args[4][index] = splatter.x;
-      args[5][index] = splatter.y;
-      args[6][index] = splatter.a;
-      args[7][index] = splatter.r;
-    });
-    baseIdx += splatters[letter].length;
-  });
-  return args;
-};
-
 type renderArgs = [
   number, // splatter_count: usize,
-  Uint32Array, // steps: Vec<usize>,
+  Uint32Array, // splatter_frames: Vec<usize>,
   Uint32Array, // splatter_actors: Vec<u32>,
   Uint8Array, // colors: Vec<u8>,
   Float32Array, // x_vals: Vec<f32>,
@@ -69,7 +13,7 @@ type renderArgs = [
   Uint8Array, // splatter_rotations: Vec<u8>,
 ];
 
-export const splatters2Render = (splatters: Splatter[]) => {
+export const splatters2Render = (splatters: Splatter[], frames: number[]) => {
   // Instead of sending big unicode strings into wasm, just assign each unique
   // actor in this set an integer value, and send that instead of the id.
   let actorNum = 0;
@@ -90,7 +34,7 @@ export const splatters2Render = (splatters: Splatter[]) => {
     new Uint8Array(splatters.length),
   ];
   splatters.forEach((splatter, index) => {
-    args[1][index] = splatter.s;
+    args[1][index] = frames[index];
     args[2][index] = actorNums[splatter.u];
     args[3][index] = splatter.c;
     args[4][index] = splatter.x;

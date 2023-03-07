@@ -61,7 +61,6 @@ export const renderer = async (
     set3DPosition,
     updateTexture,
     resizeCanvas,
-    updateCurrentStep,
     // updateDebug,
   } = await createScene(engine, textureCanvases);
 
@@ -86,7 +85,6 @@ export const renderer = async (
     getTexturePosition,
     set3DPosition,
     updateTexture,
-    updateCurrentStep,
     // updateDebug,
   };
 };
@@ -102,7 +100,6 @@ export const createScene = async (
   set3DPosition: (letter: Letter, position: Letter3DPosition) => void;
   updateTexture: (letter: Letter) => void;
   resizeCanvas: () => void;
-  updateCurrentStep: (step: number) => void;
   // updateDebug: (debug: DebugRenderBuffers | null) => void;
 }> => {
   const scene = new Scene(engine);
@@ -212,14 +209,12 @@ export const createScene = async (
   environmentTexture.level = ENVIRONMENT_TEXTURE_LEVEL;
   scene.environmentTexture = environmentTexture;
   // Magic number so the initial lighting is cool
-  const environmentStartingStep = 200;
-  const updateCurrentStep = (step: number) => {
-    // We want to spin the environment relative to the step.
-    let spinAmount =
-      (environmentStartingStep + (step % ENVIRONMENT_CYCLE_STEPS)) /
-      ENVIRONMENT_CYCLE_STEPS;
+  let environmentStep = 200;
+  setInterval(() => {
+    const spinAmount =
+      (++environmentStep % ENVIRONMENT_CYCLE_STEPS) / ENVIRONMENT_CYCLE_STEPS;
     environmentTexture.rotationY = spinAmount * (Math.PI * 2);
-  };
+  }, 17);
 
   // Make clear totally transparent - by default it'll be some scene background color.
   scene.clearColor = new Color4(0, 0, 0, 0);
@@ -308,7 +303,6 @@ export const createScene = async (
 
   // Set some initial values for things
   LETTERS.forEach(letter => updateTexture(letter));
-  updateCurrentStep(0);
   resizeCanvas();
 
   return {
@@ -317,7 +311,6 @@ export const createScene = async (
     set3DPosition,
     updateTexture,
     resizeCanvas,
-    updateCurrentStep,
     // updateDebug,
   };
 };

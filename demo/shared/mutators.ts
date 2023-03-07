@@ -2,12 +2,9 @@ import type {WriteTransaction} from '@rocicorp/reflect';
 import {
   COLOR_PALATE,
   COLOR_PALATE_END,
-  MAX_PHYSICS_FLATTENING_STEPS,
-  MIN_PHYSICS_FLATTENING_STEPS,
-  SPLATTER_ANIM_FRAMES,
+  SPLATTER_MAX_AGE,
   SPLATTER_FLATTEN_MIN,
 } from './constants';
-import {update_physics_state} from '../../vendor/renderer';
 import {getCache, updateCache} from './renderer';
 import type {
   Actor,
@@ -21,15 +18,13 @@ import type {
   Splatter,
   Vector,
 } from './types';
-import {decode, encode} from './uint82b64';
-import {asyncLetterMap, randomWithSeed} from './util';
-import {impulses2Physics} from './wasm-args';
+import {randomWithSeed} from './util';
 import {chunk, unchunk} from './chunks';
 
 export const impulseId = (i: Impulse) =>
   `${i.u}${i.s}${i.x.toFixed(1) + i.y.toFixed(1) + i.z.toFixed(1)}`;
 export const splatterId = (s: Splatter) =>
-  `${s.u}${s.s}${s.x.toFixed(1) + s.y.toFixed(1)}}`;
+  `${s.u}${s.t}${s.x.toFixed(1) + s.y.toFixed(1)}}`;
 
 const splatterKey = (
   letter: Letter,
@@ -126,15 +121,13 @@ export const mutators = {
       actorId,
       colorIndex,
       texturePosition,
-      sequence,
-      step,
-      hitPosition,
+      timestamp,
     }: {
       letter: Letter;
       actorId: string;
       colorIndex: number;
       texturePosition: Position;
-      sequence: number;
+      timestamp: number;
       step: number;
       hitPosition: Vector;
     },
@@ -144,20 +137,20 @@ export const mutators = {
       x,
       y,
       u: actorId,
-      s: step,
       c: colorIndex,
-      a: Math.floor(randomWithSeed(step, Seeds.splatterAnimation, 5)),
-      r: Math.floor(randomWithSeed(step, Seeds.splatterRotation, 4)),
+      t: timestamp,
+      a: Math.floor(randomWithSeed(timestamp, Seeds.splatterAnimation, 5)),
+      r: Math.floor(randomWithSeed(timestamp, Seeds.splatterRotation, 4)),
     };
-    await tx.put(splatterKey(letter, step, actorId, x, y), splatter);
+    await tx.put(splatterKey(letter, timestamp, actorId, x, y), splatter);
     // Every time we add a splatter, also add an "impulse". This is what we use to
     // compute the physics of the letters.
-    const impulse: Impulse = {
-      u: actorId,
-      s: step,
-      ...hitPosition,
-    };
-    await tx.put(`impulse/${letter}/${impulseId(impulse)}`, impulse);
+    // const impulse: Impulse = {
+    //   u: actorId,
+    //   s: step,
+    //   ...hitPosition,
+    // };
+    // await tx.put(`impulse/${letter}/${impulseId(impulse)}`, impulse);
 
     // On the server, do some "flattening".
     // 1. We periodically compute state as a function of many inputs. In the case of
@@ -183,19 +176,12 @@ export const mutators = {
     // window, the less expensive the server computation will be (because it is less
     // frequent), but the larger the potential desync will be.
     if (env == Env.SERVER) {
-      // Update our sequence # to effectively take a lock on flattening. We don't want
-      // two mutators to flatten at the same time because it's relatively expensive.
-      const currentSeq = await tx.get(`seq/${letter}`);
-      if (currentSeq !== undefined && sequence !== currentSeq) {
-        return;
-      }
-      await tx.put(`seq/${letter}`, (currentSeq || 0) + 1);
       // Our flattening operations both use our wasm renderer, so make sure it's available.
       try {
         await _initRenderer!();
         // Perform operations
-        await flattenPhysics(tx, step);
-        await flattenTexture(tx, letter, step);
+        // await flattenPhysics(tx, step);
+        await flattenTexture(tx, letter, timestamp);
       } catch (e) {
         console.error((e as Error).stack);
         console.log(`Flattening failed with error ${(e as Error).message}`);
@@ -206,44 +192,44 @@ export const mutators = {
   nop: async (_: WriteTransaction) => {},
 };
 
-const flattenPhysics = async (tx: WriteTransaction, step: number) => {
-  const state = (await unchunk(tx, 'physics/state')) as string;
-  const originStep = (await tx.get('physics/step')) as number;
-  const renderedSteps = originStep ? step - originStep : step;
-  if (renderedSteps > MIN_PHYSICS_FLATTENING_STEPS) {
-    const impulses = await asyncLetterMap<Impulse[]>(async letter => {
-      const impulses = await tx.scan({
-        prefix: `impulse/${letter}/`,
-      });
-      return (await impulses.toArray()) as Impulse[];
-    });
+// const flattenPhysics = async (tx: WriteTransaction, step: number) => {
+//   const state = (await unchunk(tx, 'physics/state')) as string;
+//   const originStep = (await tx.get('physics/step')) as number;
+//   const renderedSteps = originStep ? step - originStep : step;
+//   if (renderedSteps > MIN_PHYSICS_FLATTENING_STEPS) {
+//     const impulses = await asyncLetterMap<Impulse[]>(async letter => {
+//       const impulses = await tx.scan({
+//         prefix: `impulse/${letter}/`,
+//       });
+//       return (await impulses.toArray()) as Impulse[];
+//     });
 
-    await _initRenderer!();
-    const newStep = Math.max(step - MAX_PHYSICS_FLATTENING_STEPS, 0);
-    console.log(`Flattening physics until step ${newStep}`);
-    const newState = update_physics_state(
-      state ? decode(state) : undefined,
-      originStep || 0,
-      newStep,
-      ...impulses2Physics(impulses),
-    );
-    await chunk(tx, 'physics/state', encode(newState));
-    await tx.put('physics/step', newStep);
-    // Remove impulses that are integrated into the above snapshot
-    await asyncLetterMap(async letter => {
-      await impulses[letter].map(async impulse => {
-        if (impulse.s >= step) {
-          await tx.del(`impulse/${letter}/${impulseId(impulse)}`);
-        }
-      });
-    });
-  }
-};
+//     await _initRenderer!();
+//     const newStep = Math.max(step - MAX_PHYSICS_FLATTENING_STEPS, 0);
+//     console.log(`Flattening physics until step ${newStep}`);
+//     const newState = update_physics_state(
+//       state ? decode(state) : undefined,
+//       originStep || 0,
+//       newStep,
+//       ...impulses2Physics(impulses),
+//     );
+//     await chunk(tx, 'physics/state', encode(newState));
+//     await tx.put('physics/step', newStep);
+//     // Remove impulses that are integrated into the above snapshot
+//     await asyncLetterMap(async letter => {
+//       await impulses[letter].map(async impulse => {
+//         if (impulse.s >= step) {
+//           await tx.del(`impulse/${letter}/${impulseId(impulse)}`);
+//         }
+//       });
+//     });
+//   }
+// };
 
 const flattenTexture = async (
   tx: WriteTransaction,
   letter: Letter,
-  step: number,
+  timestamp: number,
 ) => {
   // To prevent infinite growth of the list of splatters, we need to periodically
   // "flatten" our textures to a pixel map. This is a fast operation, but
@@ -275,9 +261,9 @@ const flattenTexture = async (
   const points = (await (
     await tx.scan({prefix: `splatter/${letter}`})
   ).toArray()) as Splatter[];
-  // And find any splatters whose animations are finished
+  // And find any splatters which are "old"
   const oldSplatters: Splatter[] = points.filter(
-    p => step - p.s >= SPLATTER_ANIM_FRAMES,
+    p => timestamp - p.t >= SPLATTER_MAX_AGE,
   );
   // Now if we have enough cacheable splatters, draw them and move our last cached key
   if (oldSplatters.length > SPLATTER_FLATTEN_MIN) {
@@ -293,7 +279,7 @@ const flattenTexture = async (
     // Then delete any old splatters we just drew
     await Promise.all(
       oldSplatters.map(
-        async s => await tx.del(splatterKey(letter, s.s, s.u, s.x, s.y)),
+        async s => await tx.del(splatterKey(letter, s.t, s.u, s.x, s.y)),
       ),
     );
   }

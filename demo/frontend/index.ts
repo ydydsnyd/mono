@@ -1,25 +1,29 @@
 import {nanoid} from 'nanoid';
 import {initialize} from './data';
 import {renderer as renderer3D} from './3d-renderer';
-import {render} from './texture-renderer';
-import initRenderer, {
-  draw_caches,
-  precompute,
-  get_physics_cache_step,
-} from '../../vendor/renderer';
-import {get3DPositions} from '../shared/renderer';
+import {
+  drawSplatter,
+  renderFrame,
+  renderInitialFrame,
+} from './texture-renderer';
+import initRenderer, {draw_caches, precompute} from '../../vendor/renderer';
 import {cursorRenderer} from './cursors';
 import {
   UVMAP_SIZE,
   FPS_LOW_PASS,
   COLOR_PALATE,
   COLOR_PALATE_END,
-  DEBUG_PHYSICS,
   SPLATTER_MS,
   MIN_STEP_MS,
   DEBUG_TEXTURES,
 } from '../shared/constants';
-import type {Actor, ColorPalate, Letter, Position} from '../shared/types';
+import type {
+  Actor,
+  ColorPalate,
+  Letter,
+  Position,
+  Splatter,
+} from '../shared/types';
 import {LETTERS} from '../shared/letters';
 import {letterMap, now} from '../shared/util';
 import {initRoom} from './init-room';
@@ -57,14 +61,6 @@ export const init = async () => {
     tex.height = UVMAP_SIZE;
     return tex;
   });
-  const buffers: LetterCanvases = letterMap(letter => {
-    const tex = document.querySelector(
-      `#buffers > .${letter}`,
-    ) as HTMLCanvasElement;
-    tex.width = UVMAP_SIZE;
-    tex.height = UVMAP_SIZE;
-    return tex;
-  });
   let caches: DebugCanvases;
   if (DEBUG_TEXTURES) {
     caches = LETTERS.map(letter => {
@@ -79,17 +75,15 @@ export const init = async () => {
   const demoContainer = document.getElementById('demo') as HTMLDivElement;
 
   // Set up 3D renderer
-  const init3dDone = initTiming('setting up 3D engine', 1000);
+  const init3DDone = initTiming('setting up 3D engine', 1000);
   const {
     render: render3D,
     getTexturePosition,
     resizeCanvas: resize3DCanvas,
-    set3DPosition,
     updateTexture,
-    updateCurrentStep,
     // updateDebug,
   } = await renderer3D(canvas, textures);
-  init3dDone();
+  init3DDone();
 
   const roomInitDone = initTiming('initializing room', 100);
   const roomID = await initRoom();
@@ -123,41 +117,6 @@ export const init = async () => {
   await precompute();
   initRendererDone();
 
-  const initReflectClientDone = initTiming('initializing reflect client', 20);
-  const {
-    getState,
-    updateCursor,
-    addSplatter,
-    addListener,
-    updateActorLocation,
-  } = await initialize(roomID, actorId);
-  initReflectClientDone();
-
-  // Get our location and add it when it's ready
-  getUserLocation().then(location => {
-    updateActorLocation({actorId, location});
-  });
-
-  // Initialize state
-  let {
-    actors,
-    physicsStep,
-    cursors,
-    rawCaches,
-    splatters,
-    sequences,
-    impulses,
-  } = await getState();
-  let localStep = physicsStep;
-
-  // Whenever actors change, update the count
-  addListener<Actor>('actor', () => {
-    activeUserCount.innerHTML = Object.keys(actors).length + '';
-  });
-
-  // Initialize textures
-  LETTERS.forEach(letter => updateTexture(letter));
-
   const colors: ColorPalate = [
     [COLOR_PALATE[0], COLOR_PALATE_END[0]],
     [COLOR_PALATE[1], COLOR_PALATE_END[1]],
@@ -166,37 +125,55 @@ export const init = async () => {
     [COLOR_PALATE[4], COLOR_PALATE_END[4]],
   ];
 
+  const initReflectClientDone = initTiming('initializing reflect client', 20);
+  const {
+    getState,
+    updateCursor,
+    addSplatter,
+    addListener,
+    updateActorLocation,
+    initialSplatters,
+  } = await initialize(roomID, actorId);
+  initReflectClientDone();
+
+  // Get our location and add it when it's ready
+  getUserLocation().then(location => {
+    updateActorLocation({actorId, location});
+  });
+
+  // Whenever actors change, update the count
+  addListener<Actor>('actor', () => {
+    activeUserCount.innerHTML = Object.keys(actors).length + '';
+  });
+
+  // Draw splatters as we get them
+  addListener<Splatter>('splatter', (splatter, deleted, keyParts) => {
+    if (!deleted) {
+      const letter = keyParts[1] as Letter;
+      drawSplatter(now(), letter, splatter);
+    }
+  });
+  // Draw an initial frame to make sure we have caches and that we have splatters
+  // that happened between the last cache and when we started listening for new
+  // splatters.
+  renderInitialFrame(textures, initialSplatters, colors);
+
+  // Initialize state
+  let {actors, physicsStep, cursors} = await getState();
+  let localStep = physicsStep;
+
+  // Initialize textures
+  LETTERS.forEach(letter => updateTexture(letter));
+
   // Update debug info periodically
   if (window.location.search.includes('debug')) {
     setInterval(async () => {
       const debugEl = document.getElementById('debug');
-      const splatterCount = Object.keys(splatters).reduce(
-        (acc, k) => splatters[k as Letter].length + acc,
-        0,
-      );
-      const impulseCount = Object.keys(impulses).reduce(
-        (acc, k) => impulses[k as Letter].length + acc,
-        0,
-      );
       if (debugEl) {
-        let physicsCacheStep = get_physics_cache_step();
         let debugOutput = `${
           Object.keys(actors).length
-        } actors\n${splatterCount} splatters\n${impulseCount} impulses\n${debug.fps.toFixed(
-          1,
-        )} fps\n${LETTERS.map(letter => {
-          return `${letter.toUpperCase()} [seq ${
-            sequences[letter]
-          }]\n   splatters: ${splatters[letter].length}\n   impulses: ${
-            impulses[letter].length
-          }\n  cache size:\n    ${
-            new Blob([rawCaches[letter] || '']).size / 1024
-          }k\n`;
-        }).join('\n')}\n\nlocal step: ${Math.floor(
-          localStep,
-        )}\n\nserver physics step: ${physicsStep}\ncached physics step: ${physicsCacheStep}\nphysics window size: ${
-          localStep - physicsCacheStep
-        }`;
+        } actors\n${debug.fps.toFixed(1)} fps\n`;
+
         debugEl.innerHTML = debugOutput;
       }
       if (caches) {
@@ -237,31 +214,31 @@ export const init = async () => {
   };
 
   // Set up physics rendering
-  let lastRenderedPhysicsStep = physicsStep;
-  const renderPhysics = () => {
-    updateCurrentStep(localStep);
-    const targetStep = Math.round(localStep);
-    if (targetStep === lastRenderedPhysicsStep) {
-      // Skip no-ops
-      return;
-    }
-    // positions3d
-    const positions3d = get3DPositions(targetStep, impulses);
-    lastRenderedPhysicsStep = targetStep;
-    if (positions3d) {
-      LETTERS.forEach(letter => {
-        const position3d = positions3d[letter];
-        if (position3d) {
-          set3DPosition(letter, position3d);
-        }
-      });
-    }
-    if (DEBUG_PHYSICS) {
-      // TODO: fix this
-      // let world = World.restoreSnapshot(debugState);
-      // updateDebug(world.debugRender());
-    }
-  };
+  // let lastRenderedPhysicsStep = physicsStep;
+  // const renderPhysics = () => {
+  //   updateCurrentStep(localStep);
+  //   const targetStep = Math.round(localStep);
+  //   if (targetStep === lastRenderedPhysicsStep) {
+  //     // Skip no-ops
+  //     return;
+  //   }
+  //   // positions3d
+  //   const positions3d = get3DPositions(targetStep, impulses);
+  //   lastRenderedPhysicsStep = targetStep;
+  //   if (positions3d) {
+  //     LETTERS.forEach(letter => {
+  //       const position3d = positions3d[letter];
+  //       if (position3d) {
+  //         set3DPosition(letter, position3d);
+  //       }
+  //     });
+  //   }
+  //   if (DEBUG_PHYSICS) {
+  //     // TODO: fix this
+  //     // let world = World.restoreSnapshot(debugState);
+  //     // updateDebug(world.debugRender());
+  //   }
+  // };
 
   const addPaint = (at: Position) => {
     const [letter, texturePosition, hitPosition] = getTexturePosition(at);
@@ -272,7 +249,7 @@ export const init = async () => {
         colorIndex: actors[actorId].colorIndex,
         texturePosition,
         hitPosition,
-        sequence: sequences[letter],
+        timestamp: now(),
         step: Math.round(localStep),
       });
     }
@@ -282,26 +259,16 @@ export const init = async () => {
   let lastSplatter = 0;
   startRenderLoop(
     async () => {
-      ({
-        actors,
-        physicsStep,
-        cursors,
-        rawCaches,
-        splatters,
-        sequences,
-        impulses,
-      } = await getState());
+      ({actors, physicsStep, cursors} = await getState());
       // Increment our step
       updateStep();
-      // Render our textures
-      render(localStep, buffers, textures, splatters, colors);
-      // Update textures and render the 3D scene
-      LETTERS.forEach(letter => updateTexture(letter));
-      renderPhysics();
+      // Render our textures, and if they changed, send to the 3D scene.
+      renderFrame(now(), textures, colors, letter => updateTexture(letter));
+      // renderPhysics();
       render3D();
       // Splatter if needed
       const {isDown, position} = localCursor();
-      if (isDown && now() > lastSplatter + SPLATTER_MS) {
+      if (isDown && now() - lastSplatter >= SPLATTER_MS) {
         lastSplatter = now();
         addPaint(position);
       } else if (!isDown) {

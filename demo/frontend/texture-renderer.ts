@@ -1,61 +1,101 @@
-import {ColorPalate, Letter, Splatter} from '../shared/types';
-import {draw_buffers} from '../../vendor/renderer';
+import type {ColorPalate, Letter, Splatter} from '../shared/types';
+import {draw_buffer} from '../../vendor/renderer';
 import {letterMap} from '../shared/util';
-import {splatters2RenderBatch} from '../shared/wasm-args';
+import {splatters2Render} from '../shared/wasm-args';
 import {LETTERS} from '../shared/letters';
+import {getRendererLetter} from '../shared/renderer';
+import {
+  SPLATTER_ANIMATION_FRAME_DURATION,
+  SPLATTER_ANIM_FRAMES,
+} from '../shared/constants';
 import {splatterId} from '../shared/mutators';
-import {SPLATTER_ANIM_FRAMES} from '../shared/constants';
 
-let renderedSplatters = new Set<string>();
+type Animation = Splatter & {added: number};
 
-export const render = async (
-  step: number,
-  buffers: Record<Letter, HTMLCanvasElement>,
+const animatingSplatters: Record<Letter, Animation[]> = letterMap(() => []);
+
+const animFrame = (time: number, animation: Animation): number => {
+  const msElapsed = time - animation.added;
+  return Math.round(msElapsed / SPLATTER_ANIMATION_FRAME_DURATION);
+};
+
+export const drawSplatter = (
+  time: number,
+  letter: Letter,
+  splatter: Splatter,
+) => {
+  animatingSplatters[letter].push({...splatter, added: time});
+};
+
+export const renderInitialFrame = (
   canvases: Record<Letter, HTMLCanvasElement>,
   splatters: Record<Letter, Splatter[]>,
   colors: ColorPalate,
 ) => {
-  // Render new splatters
-  const contexts = letterMap(
-    letter => buffers[letter].getContext('2d') as CanvasRenderingContext2D,
-  );
-  let needsRender = new Set<Letter>();
-  const renderSplatters = letterMap<Splatter[]>(_ => []);
   LETTERS.forEach(letter => {
-    for (const splatter of splatters[letter]) {
-      const id = splatterId(splatter);
-      if (renderedSplatters.has(id)) {
-        continue;
-      }
-      renderSplatters[letter].push(splatter);
-      needsRender.add(letter);
-      // Continue to render these splatters until have rendered their step + the
-      // number of frames. After this point, add them to renderedSplatters so we will
-      // stop re-rendering them.
-      if (step >= splatter.s + SPLATTER_ANIM_FRAMES) {
-        renderedSplatters.add(id);
-      }
-    }
-  });
-  if (!needsRender.size) {
-    return;
-  }
-  draw_buffers(
-    contexts[Letter.A],
-    contexts[Letter.L],
-    contexts[Letter.I],
-    contexts[Letter.V],
-    contexts[Letter.E],
-    step,
-    new Uint8Array(colors[0].flat()),
-    new Uint8Array(colors[1].flat()),
-    new Uint8Array(colors[2].flat()),
-    new Uint8Array(colors[3].flat()),
-    new Uint8Array(colors[4].flat()),
-    ...splatters2RenderBatch(renderSplatters),
-  );
-  needsRender.forEach(letter => {
     const ctx = canvases[letter].getContext('2d') as CanvasRenderingContext2D;
-    ctx.drawImage(buffers[letter], 0, 0);
+    draw_buffer(
+      getRendererLetter(letter),
+      ctx,
+      new Uint8Array(colors[0].flat()),
+      new Uint8Array(colors[1].flat()),
+      new Uint8Array(colors[2].flat()),
+      new Uint8Array(colors[3].flat()),
+      new Uint8Array(colors[4].flat()),
+      ...splatters2Render(
+        splatters[letter],
+        // When we draw a cache, we just want the "finished" state of all the
+        // animations, as they're presumed to be complete and immutable.
+        splatters[letter].map(() => SPLATTER_ANIM_FRAMES),
+      ),
+    );
+  });
+};
+
+const addedSplatters = new Set<string>();
+
+export const renderFrame = (
+  time: number,
+  canvases: Record<Letter, HTMLCanvasElement>,
+  colors: ColorPalate,
+  updated: false | ((letter: Letter) => void),
+) => {
+  LETTERS.forEach(letter => {
+    const ctx = canvases[letter].getContext('2d') as CanvasRenderingContext2D;
+    0;
+    const frames: number[] = [];
+    animatingSplatters[letter] = animatingSplatters[letter].filter(anim => {
+      const frame = animFrame(time, anim);
+      if (frame <= SPLATTER_ANIM_FRAMES) {
+        frames.push(frame);
+        return true;
+      } else if (!addedSplatters.has(splatterId(anim))) {
+        // If we don't know if this splatter has been rendered but it's old, it may be
+        // old but added after initialization. To make sure we don't draw partial
+        // splatters, draw this at its last frame, then add it to a list so we don't
+        // render it ever again.
+        frames.push(SPLATTER_ANIM_FRAMES);
+        addedSplatters.add(splatterId(anim));
+        return true;
+      } else {
+        return false;
+      }
+    });
+    if (updated && animatingSplatters[letter].length === 0) {
+      return;
+    }
+    draw_buffer(
+      getRendererLetter(letter),
+      ctx,
+      new Uint8Array(colors[0].flat()),
+      new Uint8Array(colors[1].flat()),
+      new Uint8Array(colors[2].flat()),
+      new Uint8Array(colors[3].flat()),
+      new Uint8Array(colors[4].flat()),
+      ...splatters2Render(animatingSplatters[letter], frames),
+    );
+    if (updated) {
+      updated(letter);
+    }
   });
 };

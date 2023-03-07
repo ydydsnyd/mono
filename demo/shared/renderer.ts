@@ -14,8 +14,9 @@ import {
   Letter3DPosition,
   Splatter,
 } from './types';
-import {letterMap, now} from './util';
+import {letterMap} from './util';
 import {LETTERS} from './letters';
+import {SPLATTER_ANIM_FRAMES} from './constants';
 
 export const getRendererLetter = (letter: Letter): RendererLetter => {
   switch (letter) {
@@ -44,13 +45,17 @@ export const getCache = (
   return encode(
     draw_buffer_png(
       getRendererLetter(letter),
-      now(),
       new Uint8Array(colors[0].flat()),
       new Uint8Array(colors[1].flat()),
       new Uint8Array(colors[2].flat()),
       new Uint8Array(colors[3].flat()),
       new Uint8Array(colors[4].flat()),
-      ...splatters2Render(splatters),
+      ...splatters2Render(
+        splatters,
+        // When we draw a cache, we just want the "finished" state of all the
+        // animations, as they're presumed to be complete and immutable.
+        splatters.map(() => SPLATTER_ANIM_FRAMES),
+      ),
     ),
   );
 };

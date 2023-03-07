@@ -1,4 +1,4 @@
-import { UVMAP_SIZE, SPLATTER_ANIM_FRAMES, MAX_RENDERED_PHYSICS_STEPS } from './snippets/renderer-ba6236b463686f63/src/constants.ts';
+import { UVMAP_SIZE, SPLATTER_ANIM_FRAMES, RENDERED_PHYSICS_STEP_WINDOW_SIZE } from './snippets/renderer-ba6236b463686f63/src/constants.ts';
 
 let wasm;
 
@@ -252,14 +252,13 @@ function getArrayU8FromWasm0(ptr, len) {
 }
 /**
 * @param {number} letter
-* @param {number} step
 * @param {Uint8Array} a_colors
 * @param {Uint8Array} b_colors
 * @param {Uint8Array} c_colors
 * @param {Uint8Array} d_colors
 * @param {Uint8Array} e_colors
 * @param {number} splatter_count
-* @param {Uint32Array} steps
+* @param {Uint32Array} splatter_frames
 * @param {Uint32Array} splatter_actors
 * @param {Uint8Array} colors
 * @param {Float32Array} x_vals
@@ -268,7 +267,7 @@ function getArrayU8FromWasm0(ptr, len) {
 * @param {Uint8Array} splatter_rotations
 * @returns {Uint8Array}
 */
-export function draw_buffer_png(letter, step, a_colors, b_colors, c_colors, d_colors, e_colors, splatter_count, steps, splatter_actors, colors, x_vals, y_vals, splatter_animations, splatter_rotations) {
+export function draw_buffer_png(letter, a_colors, b_colors, c_colors, d_colors, e_colors, splatter_count, splatter_frames, splatter_actors, colors, x_vals, y_vals, splatter_animations, splatter_rotations) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
         const ptr0 = passArray8ToWasm0(a_colors, wasm.__wbindgen_malloc);
@@ -281,7 +280,7 @@ export function draw_buffer_png(letter, step, a_colors, b_colors, c_colors, d_co
         const len3 = WASM_VECTOR_LEN;
         const ptr4 = passArray8ToWasm0(e_colors, wasm.__wbindgen_malloc);
         const len4 = WASM_VECTOR_LEN;
-        const ptr5 = passArray32ToWasm0(steps, wasm.__wbindgen_malloc);
+        const ptr5 = passArray32ToWasm0(splatter_frames, wasm.__wbindgen_malloc);
         const len5 = WASM_VECTOR_LEN;
         const ptr6 = passArray32ToWasm0(splatter_actors, wasm.__wbindgen_malloc);
         const len6 = WASM_VECTOR_LEN;
@@ -295,7 +294,7 @@ export function draw_buffer_png(letter, step, a_colors, b_colors, c_colors, d_co
         const len10 = WASM_VECTOR_LEN;
         const ptr11 = passArray8ToWasm0(splatter_rotations, wasm.__wbindgen_malloc);
         const len11 = WASM_VECTOR_LEN;
-        wasm.draw_buffer_png(retptr, letter, step, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, splatter_count, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11);
+        wasm.draw_buffer_png(retptr, letter, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, splatter_count, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11);
         var r0 = getInt32Memory0()[retptr / 4 + 0];
         var r1 = getInt32Memory0()[retptr / 4 + 1];
         var v12 = getArrayU8FromWasm0(r0, r1).slice();
@@ -307,19 +306,15 @@ export function draw_buffer_png(letter, step, a_colors, b_colors, c_colors, d_co
 }
 
 /**
-* @param {CanvasRenderingContext2D} ctx_a
-* @param {CanvasRenderingContext2D} ctx_l
-* @param {CanvasRenderingContext2D} ctx_i
-* @param {CanvasRenderingContext2D} ctx_v
-* @param {CanvasRenderingContext2D} ctx_e
-* @param {number} step
+* @param {number} letter
+* @param {CanvasRenderingContext2D} ctx
 * @param {Uint8Array} a_colors
 * @param {Uint8Array} b_colors
 * @param {Uint8Array} c_colors
 * @param {Uint8Array} d_colors
 * @param {Uint8Array} e_colors
-* @param {Uint32Array} splatter_counts
-* @param {Uint32Array} steps
+* @param {number} splatter_count
+* @param {Uint32Array} splatter_frames
 * @param {Uint32Array} splatter_actors
 * @param {Uint8Array} colors
 * @param {Float32Array} x_vals
@@ -327,7 +322,7 @@ export function draw_buffer_png(letter, step, a_colors, b_colors, c_colors, d_co
 * @param {Uint8Array} splatter_animations
 * @param {Uint8Array} splatter_rotations
 */
-export function draw_buffers(ctx_a, ctx_l, ctx_i, ctx_v, ctx_e, step, a_colors, b_colors, c_colors, d_colors, e_colors, splatter_counts, steps, splatter_actors, colors, x_vals, y_vals, splatter_animations, splatter_rotations) {
+export function draw_buffer(letter, ctx, a_colors, b_colors, c_colors, d_colors, e_colors, splatter_count, splatter_frames, splatter_actors, colors, x_vals, y_vals, splatter_animations, splatter_rotations) {
     try {
         const ptr0 = passArray8ToWasm0(a_colors, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
@@ -339,28 +334,22 @@ export function draw_buffers(ctx_a, ctx_l, ctx_i, ctx_v, ctx_e, step, a_colors, 
         const len3 = WASM_VECTOR_LEN;
         const ptr4 = passArray8ToWasm0(e_colors, wasm.__wbindgen_malloc);
         const len4 = WASM_VECTOR_LEN;
-        const ptr5 = passArray32ToWasm0(splatter_counts, wasm.__wbindgen_malloc);
+        const ptr5 = passArray32ToWasm0(splatter_frames, wasm.__wbindgen_malloc);
         const len5 = WASM_VECTOR_LEN;
-        const ptr6 = passArray32ToWasm0(steps, wasm.__wbindgen_malloc);
+        const ptr6 = passArray32ToWasm0(splatter_actors, wasm.__wbindgen_malloc);
         const len6 = WASM_VECTOR_LEN;
-        const ptr7 = passArray32ToWasm0(splatter_actors, wasm.__wbindgen_malloc);
+        const ptr7 = passArray8ToWasm0(colors, wasm.__wbindgen_malloc);
         const len7 = WASM_VECTOR_LEN;
-        const ptr8 = passArray8ToWasm0(colors, wasm.__wbindgen_malloc);
+        const ptr8 = passArrayF32ToWasm0(x_vals, wasm.__wbindgen_malloc);
         const len8 = WASM_VECTOR_LEN;
-        const ptr9 = passArrayF32ToWasm0(x_vals, wasm.__wbindgen_malloc);
+        const ptr9 = passArrayF32ToWasm0(y_vals, wasm.__wbindgen_malloc);
         const len9 = WASM_VECTOR_LEN;
-        const ptr10 = passArrayF32ToWasm0(y_vals, wasm.__wbindgen_malloc);
+        const ptr10 = passArray8ToWasm0(splatter_animations, wasm.__wbindgen_malloc);
         const len10 = WASM_VECTOR_LEN;
-        const ptr11 = passArray8ToWasm0(splatter_animations, wasm.__wbindgen_malloc);
+        const ptr11 = passArray8ToWasm0(splatter_rotations, wasm.__wbindgen_malloc);
         const len11 = WASM_VECTOR_LEN;
-        const ptr12 = passArray8ToWasm0(splatter_rotations, wasm.__wbindgen_malloc);
-        const len12 = WASM_VECTOR_LEN;
-        wasm.draw_buffers(addBorrowedObject(ctx_a), addBorrowedObject(ctx_l), addBorrowedObject(ctx_i), addBorrowedObject(ctx_v), addBorrowedObject(ctx_e), step, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11, ptr12, len12);
+        wasm.draw_buffer(letter, addBorrowedObject(ctx), ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, splatter_count, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8, ptr9, len9, ptr10, len10, ptr11, len11);
     } finally {
-        heap[stack_pointer++] = undefined;
-        heap[stack_pointer++] = undefined;
-        heap[stack_pointer++] = undefined;
-        heap[stack_pointer++] = undefined;
         heap[stack_pointer++] = undefined;
     }
 }
@@ -619,20 +608,20 @@ async function load(module, imports) {
 function getImports() {
     const imports = {};
     imports.wbg = {};
-    imports.wbg.__wbg_static_accessor_MAX_RENDERED_PHYSICS_STEPS_1227ae48b3a9f731 = function() {
-        const ret = MAX_RENDERED_PHYSICS_STEPS;
+    imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
+        takeObject(arg0);
+    };
+    imports.wbg.__wbg_static_accessor_UVMAP_SIZE_a2041fefcbe5a985 = function() {
+        const ret = UVMAP_SIZE;
         return ret;
     };
     imports.wbg.__wbg_static_accessor_SPLATTER_ANIM_FRAMES_659fe1818af3aa5a = function() {
         const ret = SPLATTER_ANIM_FRAMES;
         return ret;
     };
-    imports.wbg.__wbg_static_accessor_UVMAP_SIZE_a2041fefcbe5a985 = function() {
-        const ret = UVMAP_SIZE;
+    imports.wbg.__wbg_static_accessor_RENDERED_PHYSICS_STEP_WINDOW_SIZE_f7625b3307638e23 = function() {
+        const ret = RENDERED_PHYSICS_STEP_WINDOW_SIZE;
         return ret;
-    };
-    imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
-        takeObject(arg0);
     };
     imports.wbg.__wbg_log_94ec9f9334743f04 = function(arg0, arg1) {
         console.log(getStringFromWasm0(arg0, arg1));

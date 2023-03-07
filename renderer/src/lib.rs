@@ -35,7 +35,7 @@ extern "C" {
     static COLOR_PALATE_RS: Vec<f32>;
     static UVMAP_SIZE: u32;
     static SPLATTER_ANIM_FRAMES: u8;
-    static MAX_RENDERED_PHYSICS_STEPS: usize;
+    static RENDERED_PHYSICS_STEP_WINDOW_SIZE: usize;
 }
 
 #[wasm_bindgen]
@@ -183,14 +183,13 @@ fn draw_letter(letter: Letter, context: &CanvasRenderingContext2d) {
 #[wasm_bindgen]
 pub fn draw_buffer_png(
     letter: Letter,
-    step: usize,
     a_colors: Vec<u8>,
     b_colors: Vec<u8>,
     c_colors: Vec<u8>,
     d_colors: Vec<u8>,
     e_colors: Vec<u8>,
     splatter_count: usize,
-    steps: Vec<usize>,
+    splatter_frames: Vec<usize>,
     splatter_actors: Vec<u32>,
     colors: Vec<u8>,
     x_vals: Vec<f32>,
@@ -211,14 +210,13 @@ pub fn draw_buffer_png(
     }
     drawing::draw(
         &mut img,
-        step,
         &a_colors,
         &b_colors,
         &c_colors,
         &d_colors,
         &e_colors,
         splatter_count,
-        &steps,
+        &splatter_frames,
         &splatter_actors,
         &colors,
         &x_vals,
@@ -233,96 +231,67 @@ pub fn draw_buffer_png(
 }
 
 // Per-frame API: when we get new data, draw a buffer which combines our current cache with the provided data.
-
-const LETTERS: [Letter; 5] = [Letter::A, Letter::L, Letter::I, Letter::V, Letter::E];
 #[wasm_bindgen]
-pub fn draw_buffers(
-    ctx_a: &CanvasRenderingContext2d,
-    ctx_l: &CanvasRenderingContext2d,
-    ctx_i: &CanvasRenderingContext2d,
-    ctx_v: &CanvasRenderingContext2d,
-    ctx_e: &CanvasRenderingContext2d,
-    step: usize,
+pub fn draw_buffer(
+    letter: Letter,
+    ctx: &CanvasRenderingContext2d,
     a_colors: Vec<u8>,
     b_colors: Vec<u8>,
     c_colors: Vec<u8>,
     d_colors: Vec<u8>,
     e_colors: Vec<u8>,
-    splatter_counts: Vec<usize>,
-    steps: Vec<usize>,
+    splatter_count: usize,
+    splatter_frames: Vec<usize>,
     splatter_actors: Vec<u32>,
     colors: Vec<u8>,
     x_vals: Vec<f32>,
     y_vals: Vec<f32>,
     splatter_animations: Vec<u8>,
     splatter_rotations: Vec<u8>,
-) -> () {
+) {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     let width = UVMAP_SIZE.clone();
     let height = UVMAP_SIZE.clone();
     let mut caches = CACHES.write().unwrap();
-    for letter in LETTERS {
-        let cache = caches.get_data(&letter);
-        let letter_index = match letter {
-            Letter::A => 0,
-            Letter::L => 1,
-            Letter::I => 2,
-            Letter::V => 3,
-            Letter::E => 4,
-        };
-        let splatter_count = splatter_counts[letter_index];
-        let mut splatter_range_start = 0;
-        for idx in 0..letter_index {
-            splatter_range_start += splatter_counts[idx];
-        }
-        let splatter_end_idx = splatter_range_start + splatter_count;
-        let mut img: RgbaImage;
-        if cache.len() == 0 {
-            img = RgbaImage::new(width, height);
-        } else {
-            img = RgbaImage::from_vec(width, height, cache.to_vec()).expect("Bad image in caches");
-        }
-        let ctx = match letter {
-            Letter::A => ctx_a,
-            Letter::L => ctx_l,
-            Letter::I => ctx_i,
-            Letter::V => ctx_v,
-            Letter::E => ctx_e,
-        };
-        drawing::draw(
-            &mut img,
-            step,
-            &a_colors,
-            &b_colors,
-            &c_colors,
-            &d_colors,
-            &e_colors,
-            splatter_count,
-            &steps[splatter_range_start..splatter_end_idx],
-            &splatter_actors[splatter_range_start..splatter_end_idx],
-            &colors[splatter_range_start..splatter_end_idx],
-            &x_vals[splatter_range_start..splatter_end_idx],
-            &y_vals[splatter_range_start..splatter_end_idx],
-            &splatter_animations[splatter_range_start..splatter_end_idx],
-            &splatter_rotations[splatter_range_start..splatter_end_idx],
-        );
-        let data =
-            ImageData::new_with_u8_clamped_array_and_sh(Clamped(&mut img.to_vec()), height, width)
-                .expect("Bad image data");
-        ctx.put_image_data(&data, 0.0, 0.0)
-            .expect("Writing to canvas failed");
-        // When we update a buffer, also write back to the cache. This is ok because:
-        // 1. Every animation builds on the frame before, e.g. a pixel will never be un-drawn if it has been added to a buffer.
-        // 2. When we receive a new cache from the server (which could change the order of splatters), it will overwrite our local cache anyway.
-        // Note that if we instead drew all splatters since the last server flattening,
-        // our cache would always be perfect - but it would be slower. The tradeoff here
-        // is that we'll accept a potential sudden re-ordering of splatters in the
-        // server cache if it means we will always have very fast renders.
-        // If we don't write to the cache here, we'd need to render every splatter in
-        // reflect on every frame, which could get expensive (especially offline, where
-        // the list will grow forever)
-        caches.set_data(&letter, img.to_vec());
+    let cache = caches.get_data(&letter);
+    let mut img: RgbaImage;
+    if cache.len() == 0 {
+        img = RgbaImage::new(width, height);
+    } else {
+        img = RgbaImage::from_vec(width, height, cache.to_vec()).expect("Bad image in caches");
     }
+    drawing::draw(
+        &mut img,
+        &a_colors,
+        &b_colors,
+        &c_colors,
+        &d_colors,
+        &e_colors,
+        splatter_count,
+        &splatter_frames,
+        &splatter_actors,
+        &colors,
+        &x_vals,
+        &y_vals,
+        &splatter_animations,
+        &splatter_rotations,
+    );
+    let data =
+        ImageData::new_with_u8_clamped_array_and_sh(Clamped(&mut img.to_vec()), height, width)
+            .expect("Bad image data");
+    ctx.put_image_data(&data, 0.0, 0.0)
+        .expect("Writing to canvas failed");
+    // When we update a buffer, also write back to the cache. This is ok because:
+    // 1. Every animation builds on the frame before, e.g. a pixel will never be un-drawn if it has been added to a buffer.
+    // 2. When we receive a new cache from the server (which could change the order of splatters), it will overwrite our local cache anyway.
+    // Note that if we instead drew all splatters since the last server flattening,
+    // our cache would always be perfect - but it would be slower. The tradeoff here
+    // is that we'll accept a potential sudden re-ordering of splatters in the
+    // server cache if it means we will always have very fast renders.
+    // If we don't write to the cache here, we'd need to render every splatter in
+    // reflect on every frame, which could get expensive (especially offline, where
+    // the list will grow forever)
+    caches.set_data(&letter, img.to_vec());
 }
 
 // Physics API
@@ -446,7 +415,7 @@ pub fn positions_for_step(
         return None;
     }
     let steps_to_target = target_step - physics_cache.step;
-    let max_steps = MAX_RENDERED_PHYSICS_STEPS.clone();
+    let max_steps = RENDERED_PHYSICS_STEP_WINDOW_SIZE.clone();
     let advance_cache_by = if steps_to_target > max_steps {
         steps_to_target - max_steps
     } else {
