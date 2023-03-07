@@ -37,9 +37,7 @@ export const loadClearAnimationFrames = async () => {
             canvas.height = UVMAP_SIZE;
             const image = new Image();
             image.onload = () => {
-              const ctx = canvas.getContext('2d', {
-                willReadFrequently: true,
-              }) as CanvasRenderingContext2D;
+              const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
               ctx.save();
               // Axes are inverted in babylon, so we need to flip the canvas inside out before drawing.
               ctx.translate(0, UVMAP_SIZE);
@@ -134,7 +132,9 @@ export const renderFrame = async (
     clearing = await renderClearFrame(time, lastClear, canvases);
   }
   LETTERS.forEach(letter => {
-    const ctx = canvases[letter].getContext('2d') as CanvasRenderingContext2D;
+    const ctx = canvases[letter].getContext('2d', {
+      willReadFrequently: true,
+    }) as CanvasRenderingContext2D;
     0;
     const frames: number[] = [];
     animatingSplatters[letter] = animatingSplatters[letter].filter(anim => {
