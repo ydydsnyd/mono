@@ -18,8 +18,8 @@ import type {
   Splatter,
   Vector,
 } from './types';
-import {asyncLetterMap, randomWithSeed} from './util';
-import {chunk, deleteChunked, unchunk} from './chunks';
+import {randomWithSeed} from './util';
+import {chunk, unchunk} from './chunks';
 
 export const impulseId = (i: Impulse) =>
   `${i.u}${i.s}${i.x.toFixed(1) + i.y.toFixed(1) + i.z.toFixed(1)}`;
@@ -115,9 +115,10 @@ export const mutators = {
     }
   },
   clearTextures: async (tx: WriteTransaction, time: number) => {
-    await asyncLetterMap(
-      async letter => await deleteChunked(tx, `cache/${letter}`),
-    );
+    const cacheKeys = await tx.scan({prefix: `cache/`}).keys();
+    for await (const k of cacheKeys) {
+      await tx.del(k);
+    }
     const splatters = (await tx
       .scan({prefix: 'splatter/'})
       .keys()

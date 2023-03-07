@@ -3,7 +3,7 @@
 import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
 import {CACHE_CHUNK_STRING_SIZE} from './constants';
 
-export const deleteChunked = async (tx: WriteTransaction, prefix: string) => {
+const cleanup = async (tx: WriteTransaction, prefix: string) => {
   const chunkKeys = await tx.scan({prefix: `${prefix}/`}).keys();
   for await (const k of chunkKeys) {
     await tx.del(k);
@@ -15,7 +15,7 @@ export const chunk = async (
   prefix: string,
   value: string,
 ) => {
-  await deleteChunked(tx, prefix);
+  await cleanup(tx, prefix);
   let lastIndex = 0;
   let chunkIdx = 0;
   const promises: Promise<void>[] = [];
