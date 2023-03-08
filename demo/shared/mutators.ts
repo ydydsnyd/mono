@@ -61,10 +61,12 @@ export const mutators = {
   updateCursor: async (tx: WriteTransaction, cursor: Cursor) => {
     await tx.put(`cursor/${cursor.actorId}`, cursor);
   },
-  removeActor: async (tx: WriteTransaction, actorId: ActorID) => {
-    await tx.del(`actor/${actorId}`);
-    await tx.del(`cursor/${actorId}`);
-    await tx.del(`tool/${actorId}`);
+  removeActor: async (tx: WriteTransaction, clientID: string) => {
+    const actorId = await tx.get(`client-actor/${clientID}`);
+    if (actorId) {
+      await tx.del(`actor/${actorId}`);
+      await tx.del(`cursor/${actorId}`);
+    }
   },
   setColors: async (tx: WriteTransaction, {colors}: {colors: ColorPalate}) => {
     for (const color in colors) {

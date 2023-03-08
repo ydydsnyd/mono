@@ -43,7 +43,6 @@ const {worker, RoomDO, AuthDO} = createReflectServer({
   mutators: allMutators,
   authHandler,
   disconnectHandler: async write => {
-    console.log(`${write.clientID} disconnected. Cleaning up...`);
     await mutators.removeActor(write, write.clientID);
     await orchestratorMutators.removeOchestratorActor(write, write.clientID);
   },

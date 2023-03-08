@@ -12,8 +12,8 @@ export const setEnv = (e: Env) => {
 };
 
 export const orchestratorMutators = {
-  removeOchestratorActor: async (tx: WriteTransaction, actorId: string) => {
-    const key = `actor/${actorId}`;
+  removeOchestratorActor: async (tx: WriteTransaction, clientID: string) => {
+    const key = `actor/${clientID}`;
     const actor = (await tx.get(key)) as OrchestratorActor;
     // Dunno who that is
     if (!actor) {
