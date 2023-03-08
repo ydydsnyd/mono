@@ -2,6 +2,7 @@ import React, {useEffect, useState} from 'react';
 import Image from 'next/image';
 import {init} from '@/demo/frontend';
 import {DEBUG_TEXTURES} from '@/demo/frontend/constants';
+import Preload from './Preload';
 
 let initPromise: Promise<void> | undefined;
 const initOnce = () => {
@@ -12,14 +13,34 @@ const initOnce = () => {
   return initPromise;
 };
 
+const animationDuration = 500;
+
 const PaintFight = () => {
   const [initError, setInitError] = useState<Error | undefined>(undefined);
+  const [initialized, setInitialized] = useState<boolean>(false);
   // useEffect so this fires after load
   useEffect(() => {
-    initOnce().catch(error => {
-      setInitError(error);
-      console.error(error);
-    });
+    let durationElapsed = false;
+    let wasInitialized = false;
+    initOnce()
+      .catch(error => {
+        setInitError(error);
+        console.error(error);
+      })
+      .then(() => {
+        if (durationElapsed) {
+          setInitialized(true);
+        } else {
+          wasInitialized = true;
+        }
+      });
+    setTimeout(() => {
+      if (wasInitialized) {
+        setInitialized(true);
+      } else {
+        durationElapsed = true;
+      }
+    }, animationDuration);
   }, []);
 
   return (
@@ -27,7 +48,11 @@ const PaintFight = () => {
       <pre id="debug"></pre>
       {initError ? `${initError?.message}` : null}
       <div id="demo">
-        <canvas id="canvas3D"></canvas>
+        <Preload
+          animationDuration={animationDuration}
+          className={initialized ? 'loaded' : ''}
+        />
+        <canvas id="canvas3D" className={initialized ? 'loaded' : ''}></canvas>
       </div>
       <div className={`canvases ${DEBUG_TEXTURES ? ' debug' : ''}`}>
         {DEBUG_TEXTURES ? <Canvases id="caches" /> : null}
