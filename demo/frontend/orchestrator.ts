@@ -7,6 +7,22 @@ import {orchestratorMutators} from '../shared/orchestrator-mutators';
 export const initRoom = async (userID: string) => {
   // Set up our connection to reflect
   console.log(`Orchestrator connecting to worker at ${WORKER_HOST}`);
+
+  // Make sure we have the orchestrator room
+  const res = await fetch('/api/create-room', {
+    method: 'post',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({roomID: ORCHESTRATOR_ROOM_ID}),
+  });
+  if (!res.ok) {
+    const message = await res.text();
+    throw new Error(
+      `Failed to connect to room ${ORCHESTRATOR_ROOM_ID}\n(${res.status}: ${message})`,
+    );
+  }
+
   // Create a reflect client
   const orchestratorClient = new Reflect<typeof orchestratorMutators>({
     socketOrigin: WORKER_HOST,
