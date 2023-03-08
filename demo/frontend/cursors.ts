@@ -82,6 +82,10 @@ export const cursorRenderer = (
   // Track cursor clicks
   const isInIntro = getHasParent(document.getElementById('intro')!);
   const setIsDown = (e: MouseEvent | TouchEvent) => {
+    // Ignore right-clicks
+    if (isMouseEvent(e) && e.button !== 0) {
+      return;
+    }
     if (e.target && isHTMLElement(e.target) && isInIntro(e.target)) {
       e.preventDefault();
     }
@@ -116,6 +120,9 @@ export const cursorRenderer = (
       const {actors, cursors} = getState();
       // Move cursors
       Object.values(cursors).forEach(async cursor => {
+        if (!actors[cursor.actorId]) {
+          return;
+        }
         const {x, y} = cursor;
         const cursorDiv = await getCursorDiv(cursor);
         if (cursorDiv) {
@@ -215,6 +222,9 @@ const createCursor = (actor: Actor) => {
   cursorDiv.appendChild(locationDiv);
   return cursorDiv;
 };
+
+const isMouseEvent = (e: MouseEvent | TouchEvent): e is MouseEvent =>
+  !(e as TouchEvent).touches;
 
 const isHTMLElement = (t: EventTarget | null): t is HTMLElement =>
   !!(t as HTMLElement).localName;
