@@ -80,8 +80,11 @@ export const cursorRenderer = (
   mouseElement.addEventListener('mouseout', hideCursor);
   mouseElement.addEventListener('touchend', hideCursor);
   // Track cursor clicks
+  const isInIntro = getHasParent(document.getElementById('intro')!);
   const setIsDown = (e: MouseEvent | TouchEvent) => {
-    e.preventDefault();
+    if (e.target && isHTMLElement(e.target) && isInIntro(e.target)) {
+      e.preventDefault();
+    }
     localCursor.isDown = true;
     cursorNeedsUpdate = true;
   };
@@ -211,4 +214,19 @@ const createCursor = (actor: Actor) => {
   }
   cursorDiv.appendChild(locationDiv);
   return cursorDiv;
+};
+
+const isHTMLElement = (t: EventTarget | null): t is HTMLElement =>
+  !!(t as HTMLElement).localName;
+
+const getHasParent = (element: HTMLElement) => {
+  return (item: HTMLElement | ParentNode) => {
+    while (item.parentNode) {
+      if (item.parentNode === element) {
+        return true;
+      }
+      item = item.parentNode;
+    }
+    return false;
+  };
 };
