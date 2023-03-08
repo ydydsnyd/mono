@@ -137,9 +137,13 @@ export const init = async () => {
   renderInitialFrame(textures, initialSplatters, colors);
 
   // Handlers for data resetting
-  const newRoomButton = document.getElementById('reset-button');
-  newRoomButton?.addEventListener('click', async () => {
+  const resetButton = document.getElementById('reset-button');
+  resetButton?.addEventListener('click', async () => {
     await clearTextures(now());
+    resetButton.classList.add('cleared');
+    setTimeout(() => {
+      resetButton.classList.remove('cleared');
+    }, 1000);
   });
   let lastClear: number | undefined;
   addListener<never>('cleared', async () => {

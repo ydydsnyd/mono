@@ -72,7 +72,6 @@ body.demo-active * {
   display: flex;
 }
 
-#copy-room-button,
 #reset-button {
   border: none;
   background-color: transparent;
@@ -83,32 +82,32 @@ body.demo-active * {
   height: 1.2em;
   cursor: none;
 }
-#copy-room-button.copied {
+#reset-button.cleared {
   transform: rotateX(90deg);
 }
-#copy-room-button > div {
+#reset-button > div {
   display: flex;
   align-items: center;
 }
 
-#copy-room-button .copy {
+#reset-button .copy {
   transform: translateZ(0.7em);
 }
 
-#copy-room-button .success {
+#reset-button .success {
   color: #5fc68b;
   transform: rotateX(-90deg) translateZ(0.7em);
 }
 
-#copy-room-button .success .icon {
+#reset-button .success .icon {
   transition: transform 600ms cubic-bezier(0.8, 0.1, 0.2, 2);
   transform: rotateY(-90deg) translateX(-1em) scale(0.5);
 }
-#copy-room-button.copied .success .icon {
+#reset-button.cleared .success .icon {
   transform: rotateY(0deg) scale(1.5);
 }
 
-#copy-room-button .icon {
+#reset-button .icon {
   margin-right: 8px;
 }
 

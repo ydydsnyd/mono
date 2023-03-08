@@ -39,29 +39,28 @@ const PaintFight = () => {
           &nbsp;Active users:&nbsp;
           <span id="active-user-count">1</span>
         </div>
-        <button id="copy-room-button">
+        <button id="reset-button">
           <div className="copy">
             <Image
-              src="/img/copy-link.svg"
+              src="/img/clear.svg"
               className="icon"
               alt=""
               width={16}
               height={16}
             />
-            &nbsp;Copy demo link
+            &nbsp;Clear Paint
           </div>
           <div className="success">
             <Image
-              src="/img/copied.svg"
+              src="/img/success.svg"
               className="icon"
               alt=""
               width={16}
               height={16}
             />
-            &nbsp;Link copied
+            &nbsp;Cleared
           </div>
         </button>
-        <button id="reset-button">Reset Demo</button>
       </div>
     </>
   );
