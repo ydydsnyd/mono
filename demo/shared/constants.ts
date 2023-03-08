@@ -99,30 +99,6 @@ export const COLOR_PALATE_END: Color[] = [
   ],
 ];
 
-// Debug
-
-// We share this file with the worker environment which is not node.js and has
-// no process global.
-const env = (() => {
-  const hasProcess = typeof process !== 'undefined';
-  if (hasProcess) {
-    return {
-      NEXT_PUBLIC_DEBUG_PHYSICS: process.env.NEXT_PUBLIC_DEBUG_PHYSICS,
-      NEXT_PUBLIC_DEBUG_TEXTURES: process.env.NEXT_PUBLIC_DEBUG_TEXTURES,
-    };
-  }
-  return {
-    NEXT_PUBLIC_DEBUG_PHYSICS: undefined,
-    NEXT_PUBLIC_DEBUG_TEXTURES: undefined,
-  };
-})();
-
-// Sample fps at this low pass. Higher means a longer sample time, resulting in
-// averaging over a longer period of time.
-export const FPS_LOW_PASS = 10;
-export const DEBUG_PHYSICS = env.NEXT_PUBLIC_DEBUG_PHYSICS === 'true';
-export const DEBUG_TEXTURES = env.NEXT_PUBLIC_DEBUG_TEXTURES === 'true';
-
 // Mutators/etc
 
 // We don't want flattening to happen too often (or too infrequently), as it is

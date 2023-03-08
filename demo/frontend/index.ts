@@ -11,12 +11,10 @@ import initRenderer, {draw_caches, precompute} from '../../vendor/renderer';
 import {cursorRenderer} from './cursors';
 import {
   UVMAP_SIZE,
-  FPS_LOW_PASS,
   COLOR_PALATE,
   COLOR_PALATE_END,
   SPLATTER_MS,
   MIN_STEP_MS,
-  DEBUG_TEXTURES,
 } from '../shared/constants';
 import type {
   Actor,
@@ -29,6 +27,7 @@ import {LETTERS} from '../shared/letters';
 import {letterMap, now} from '../shared/util';
 import {getUserLocation} from './location';
 import {initRoom} from './orchestrator';
+import {DEBUG_TEXTURES, FPS_LOW_PASS} from './constants';
 
 type LetterCanvases = Record<Letter, HTMLCanvasElement>;
 

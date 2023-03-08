@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import Image from 'next/image';
 import {init} from '@/demo/frontend';
-import {DEBUG_TEXTURES} from '@/demo/shared/constants';
+import {DEBUG_TEXTURES} from '@/demo/frontend/constants';
 
 let initPromise: Promise<void> | undefined;
 const initOnce = () => {
