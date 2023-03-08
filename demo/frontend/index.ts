@@ -236,23 +236,36 @@ export const init = async () => {
   //   }
   // };
 
-  const addPaint = (at: Position) => {
+  // We want to add a paint splatter if we're over a letter, and if _either_ we're
+  // "rapid firing" on a single letter, or if we're encountering a new letter.
+  // This gets us a best of both worlds, in that we won't fire too much on a
+  // single letter (which looks bad), but we also will always fire as soon as
+  // we're over a letter, even if that would cause our firing rate to be faster
+  // than SPLATTER_MS
+  let lastSplatter = 0;
+  let lastLetter: Letter | undefined;
+  const maybeAddPaint = (at: Position) => {
     const [letter, texturePosition, hitPosition] = getTexturePosition(at);
     if (letter && texturePosition && hitPosition) {
-      addSplatter({
-        letter,
-        actorId: actor.id,
-        colorIndex: actor.colorIndex,
-        texturePosition,
-        hitPosition,
-        timestamp: now(),
-        step: Math.round(localStep),
-      });
+      const newLetter = letter !== lastLetter;
+      const rapidFireOk = !newLetter && now() - lastSplatter >= SPLATTER_MS;
+      if (newLetter || rapidFireOk) {
+        lastLetter = letter;
+        lastSplatter = now();
+        addSplatter({
+          letter,
+          actorId: actor.id,
+          colorIndex: actor.colorIndex,
+          texturePosition,
+          hitPosition,
+          timestamp: now(),
+          step: Math.round(localStep),
+        });
+      }
     }
   };
 
   // Render our cursors and canvases at "animation speed", usually 60fps
-  let lastSplatter = 0;
   startRenderLoop(
     async () => {
       ({actors, physicsStep, cursors} = await getState());
@@ -266,11 +279,8 @@ export const init = async () => {
       render3D();
       // Splatter if needed
       const {isDown, position} = localCursor();
-      if (isDown && now() - lastSplatter >= SPLATTER_MS) {
-        lastSplatter = now();
-        addPaint(position);
-      } else if (!isDown) {
-        lastSplatter = 0;
+      if (isDown) {
+        maybeAddPaint(position);
       }
     },
     async () => {
