@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1678185879094,
+  "lastUpdate": 1678287281236,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -36659,6 +36659,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/a9d573c5952499dbba1c8b5395fa9767ce27e6c3"
         },
         "date": 1678185871210,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 262926,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45887,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 261721,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45533,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 98941,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27832,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ce0360bdb7a0e0abde544edb9d30acab493e5edd",
+          "message": "chore: Add rebase perf test for Replicache (#374)\n\nThe strategy is to disable automatic pull/push. Do N mutations and then\r\ndo a manual pull which gets fulfilled using a puller implementation.\r\n\r\nTo measure the time we use subscribe and wait for the change coming in\r\nthe pull.\r\n\r\nTowards #124",
+          "timestamp": "2023-03-08T14:53:35Z",
+          "tree_id": "d0757e59772b8d548e1cb23ea4e0b98633b1190c",
+          "url": "https://github.com/rocicorp/mono/commit/ce0360bdb7a0e0abde544edb9d30acab493e5edd"
+        },
+        "date": 1678287272127,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
