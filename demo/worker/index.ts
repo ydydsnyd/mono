@@ -1,12 +1,17 @@
 import {createReflectServer} from '@rocicorp/reflect-server';
-import {Env, mutators, setEnv} from '../shared/mutators';
-import {orchestratorMutators} from '../shared/orchestrator-mutators';
+import {mutators, setEnv} from '../shared/mutators';
+import {
+  orchestratorMutators,
+  setEnv as setOrchestratorEnv,
+} from '../shared/orchestrator-mutators';
 import renderModule from '../../vendor/renderer/renderer_bg.wasm';
 import initRenderer from '../../vendor/renderer';
+import {Env} from '../shared/types';
 
 setEnv(Env.SERVER, async () => {
   await initRenderer(renderModule);
 });
+setOrchestratorEnv(Env.SERVER);
 
 const authHandler = async (auth: string, roomID: string) => {
   // Note a real implementation should use signed and encrypted auth tokens,

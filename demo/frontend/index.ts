@@ -1,4 +1,3 @@
-import {nanoid} from 'nanoid';
 import {initialize} from './data';
 import {renderer as renderer3D} from './3d-renderer';
 import {
@@ -38,9 +37,6 @@ type Debug = {
 export const init = async () => {
   const initTiming = timing('Demo Load Timing');
   const ready = initTiming('loading demo', 1500);
-  // Generate an actor ID, which is just used for "auth" (which we don't really have)
-  const actorId = localStorage.getItem('paint-fight-actor-id') || nanoid();
-  localStorage.setItem('paint-fight-actor-id', actorId);
 
   const debug: Debug = {fps: 60};
   type DebugCanvases = [
@@ -85,27 +81,14 @@ export const init = async () => {
   } = await renderer3D(canvas, textures);
   init3DDone();
 
-  const roomInitDone = initTiming('initializing room', 100);
-  const roomID = await initRoom();
+  const roomInitDone = initTiming('finding room', 100);
+  const {actor, getDebug: getOrchestratorDebug} = await initRoom();
   roomInitDone();
 
   // Set up info below demo
   const activeUserCount = document.getElementById(
     'active-user-count',
   ) as HTMLDivElement;
-  const roomHref = `${window.location.href}#${roomID}`;
-  const copyRoomButton = document.getElementById('copy-room-button');
-  copyRoomButton?.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(roomHref);
-      copyRoomButton.classList.add('copied');
-    } catch (e) {
-      alert('Copying link failed.');
-    }
-    setTimeout(() => {
-      copyRoomButton.classList.remove('copied');
-    }, 1000);
-  });
 
   const initRendererDone = initTiming('initializing renderer module', 100);
   await initRenderer();
@@ -133,7 +116,7 @@ export const init = async () => {
 
   // Get our location and add it when it's ready
   getUserLocation().then(location => {
-    updateActorLocation({actorId, location});
+    updateActorLocation({actorId: actor.id, location});
   });
 
   // Whenever actors change, update the count
@@ -178,10 +161,11 @@ export const init = async () => {
     setInterval(async () => {
       const debugEl = document.getElementById('debug');
       if (debugEl) {
-        let debugOutput = `${
+        let debugOutput = `actor id: ${actor.id}\n${
           Object.keys(actors).length
-        } actors\n${debug.fps.toFixed(1)} fps\n`;
-
+        } local actors\n${debug.fps.toFixed(1)} fps\n`;
+        const orchestratorInfo = await getOrchestratorDebug();
+        debugOutput += `current room: ${orchestratorInfo.currentRoom}\nlocal room:${actor.room}\nroom participants:${orchestratorInfo.currentRoomCount}`;
         debugEl.innerHTML = debugOutput;
       }
       if (caches) {
@@ -192,7 +176,7 @@ export const init = async () => {
 
   // Set up cursor renderer
   const [localCursor, renderCursors] = cursorRenderer(
-    actorId,
+    actor.id,
     () => ({actors, cursors}),
     () => demoContainer,
     updateCursor,
@@ -253,8 +237,8 @@ export const init = async () => {
     if (letter && texturePosition && hitPosition) {
       addSplatter({
         letter,
-        actorId,
-        colorIndex: actors[actorId].colorIndex,
+        actorId: actor.id,
+        colorIndex: actor.colorIndex,
         texturePosition,
         hitPosition,
         timestamp: now(),

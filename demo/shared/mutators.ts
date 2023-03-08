@@ -6,12 +6,13 @@ import {
   SPLATTER_FLATTEN_MIN,
 } from './constants';
 import {getCache, updateCache} from './renderer';
-import type {
+import {
   Actor,
   ActorID,
   Color,
   ColorPalate,
   Cursor,
+  Env,
   Impulse,
   Letter,
   Position,
@@ -42,10 +43,6 @@ const splatterKey = (
 
 export type M = typeof mutators;
 
-export enum Env {
-  CLIENT,
-  SERVER,
-}
 let env = Env.CLIENT;
 let _initRenderer: (() => Promise<void>) | undefined;
 export const setEnv = (e: Env, initRenderer: () => Promise<void>) => {
@@ -82,6 +79,13 @@ export const mutators = {
       // already exists
       return;
     }
+    // Make sure there's only one actor per client
+    const existingActor = await tx.get(`client-actor/${tx.clientID}`);
+    if (existingActor) {
+      await tx.del(`actor/${actor.id}`);
+      await tx.del(`cursor/${actor.id}`);
+    }
+    await tx.put(`client-actor/${tx.clientID}`, actor.id);
     await tx.put(key, actor);
   },
   updateActorLocation: async (
