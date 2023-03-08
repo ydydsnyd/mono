@@ -8,20 +8,8 @@ import {
 } from './texture-renderer';
 import initRenderer, {draw_caches, precompute} from '../../vendor/renderer';
 import {cursorRenderer} from './cursors';
-import {
-  UVMAP_SIZE,
-  COLOR_PALATE,
-  COLOR_PALATE_END,
-  SPLATTER_MS,
-  MIN_STEP_MS,
-} from '../shared/constants';
-import type {
-  Actor,
-  ColorPalate,
-  Letter,
-  Position,
-  Splatter,
-} from '../shared/types';
+import {UVMAP_SIZE, SPLATTER_MS, MIN_STEP_MS} from '../shared/constants';
+import type {Actor, Letter, Position, Splatter} from '../shared/types';
 import {LETTERS} from '../shared/letters';
 import {letterMap, now} from '../shared/util';
 import {getUserLocation} from './location';
@@ -94,14 +82,6 @@ export const init = async () => {
   await initRenderer();
   initRendererDone();
 
-  const colors: ColorPalate = [
-    [COLOR_PALATE[0], COLOR_PALATE_END[0]],
-    [COLOR_PALATE[1], COLOR_PALATE_END[1]],
-    [COLOR_PALATE[2], COLOR_PALATE_END[2]],
-    [COLOR_PALATE[3], COLOR_PALATE_END[3]],
-    [COLOR_PALATE[4], COLOR_PALATE_END[4]],
-  ];
-
   const initReflectClientDone = initTiming('initializing reflect client', 20);
   const {
     getState,
@@ -134,7 +114,7 @@ export const init = async () => {
   // Draw an initial frame to make sure we have caches and that we have splatters
   // that happened between the last cache and when we started listening for new
   // splatters.
-  renderInitialFrame(textures, initialSplatters, colors);
+  renderInitialFrame(textures, initialSplatters);
 
   // Handlers for data resetting
   const resetButton = document.getElementById('reset-button');
@@ -272,9 +252,7 @@ export const init = async () => {
       // Increment our step
       updateStep();
       // Render our textures, and if they changed, send to the 3D scene.
-      renderFrame(now(), textures, colors, lastClear, letter =>
-        updateTexture(letter),
-      );
+      renderFrame(now(), textures, lastClear, letter => updateTexture(letter));
       // renderPhysics();
       render3D();
       // Splatter if needed

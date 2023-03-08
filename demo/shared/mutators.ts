@@ -1,16 +1,9 @@
 import type {WriteTransaction} from '@rocicorp/reflect';
-import {
-  COLOR_PALATE,
-  COLOR_PALATE_END,
-  SPLATTER_MAX_AGE,
-  SPLATTER_FLATTEN_MIN,
-} from './constants';
+import {SPLATTER_MAX_AGE, SPLATTER_FLATTEN_MIN} from './constants';
 import {getCache, updateCache} from './renderer';
 import {
   Actor,
   ActorID,
-  Color,
-  ColorPalate,
   Cursor,
   Env,
   Impulse,
@@ -66,12 +59,6 @@ export const mutators = {
     if (actorId) {
       await tx.del(`actor/${actorId}`);
       await tx.del(`cursor/${actorId}`);
-    }
-  },
-  setColors: async (tx: WriteTransaction, {colors}: {colors: ColorPalate}) => {
-    for (const color in colors) {
-      await tx.put(`colors/${color}/start`, colors[color][0].join('/'));
-      await tx.put(`colors/${color}/end`, colors[color][1].join('/'));
     }
   },
   guaranteeActor: async (tx: WriteTransaction, actor: OrchestratorActor) => {
@@ -242,26 +229,6 @@ const flattenTexture = async (
   // perform it when we've hit a certain threshold, and we use a sequence number
   // to make sure that we don't perform the operation on old data.
 
-  // Get our current colors
-  const colors: ColorPalate = [
-    [COLOR_PALATE[0], COLOR_PALATE_END[0]],
-    [COLOR_PALATE[1], COLOR_PALATE_END[1]],
-    [COLOR_PALATE[2], COLOR_PALATE_END[2]],
-    [COLOR_PALATE[3], COLOR_PALATE_END[3]],
-    [COLOR_PALATE[4], COLOR_PALATE_END[4]],
-  ];
-  for (let idx in colors) {
-    const start = (await tx.get(`colors/${letter}/start`)) as
-      | string
-      | undefined;
-    const end = (await tx.get(`colors/${letter}/end`)) as string | undefined;
-    if (start) {
-      colors[idx][0] = start.split('/').map(c => parseInt(c, 10)) as Color;
-    }
-    if (end) {
-      colors[idx][0] = end.split('/').map(c => parseInt(c, 10)) as Color;
-    }
-  }
   // Get all the splatters for this letter
   const points = (await (
     await tx.scan({prefix: `splatter/${letter}`})
@@ -278,7 +245,7 @@ const flattenTexture = async (
     if (cache) {
       updateCache(letter, cache);
     }
-    const newCache = getCache(letter, oldSplatters, colors);
+    const newCache = getCache(letter, oldSplatters);
     // And write it back to the cache
     await chunk(tx, `cache/${letter}`, newCache);
     // Then delete any old splatters we just drew

@@ -13,14 +13,6 @@ export type ActorID = string;
 
 export type Color = [number, number, number]; // rgb
 
-export type ColorPalate = [
-  [Color, Color],
-  [Color, Color],
-  [Color, Color],
-  [Color, Color],
-  [Color, Color],
-];
-
 export type Actor = OrchestratorActor & {
   location: string;
 };

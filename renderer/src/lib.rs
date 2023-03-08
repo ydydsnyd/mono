@@ -32,7 +32,7 @@ macro_rules! console_log {
 
 #[wasm_bindgen(module = "/src/constants.ts")]
 extern "C" {
-    static COLOR_PALATE_RS: Vec<f32>;
+    static COLOR_PALATE_RS: Vec<u8>;
     static UVMAP_SIZE: u32;
     static SPLATTER_ANIM_FRAMES: u8;
     static RENDERED_PHYSICS_STEP_WINDOW_SIZE: usize;
@@ -212,11 +212,6 @@ fn draw_letter(letter: Letter, context: &CanvasRenderingContext2d) {
 #[wasm_bindgen]
 pub fn draw_buffer_png(
     letter: Letter,
-    a_colors: Vec<u8>,
-    b_colors: Vec<u8>,
-    c_colors: Vec<u8>,
-    d_colors: Vec<u8>,
-    e_colors: Vec<u8>,
     splatter_count: usize,
     splatter_frames: Vec<usize>,
     splatter_actors: Vec<u32>,
@@ -239,11 +234,6 @@ pub fn draw_buffer_png(
     }
     drawing::draw(
         &mut img,
-        &a_colors,
-        &b_colors,
-        &c_colors,
-        &d_colors,
-        &e_colors,
         splatter_count,
         &splatter_frames,
         &splatter_actors,
@@ -264,11 +254,6 @@ pub fn draw_buffer_png(
 pub fn draw_buffer(
     letter: Letter,
     ctx: &CanvasRenderingContext2d,
-    a_colors: Vec<u8>,
-    b_colors: Vec<u8>,
-    c_colors: Vec<u8>,
-    d_colors: Vec<u8>,
-    e_colors: Vec<u8>,
     splatter_count: usize,
     splatter_frames: Vec<usize>,
     splatter_actors: Vec<u32>,
@@ -291,11 +276,6 @@ pub fn draw_buffer(
     }
     drawing::draw(
         &mut img,
-        &a_colors,
-        &b_colors,
-        &c_colors,
-        &d_colors,
-        &e_colors,
         splatter_count,
         &splatter_frames,
         &splatter_actors,

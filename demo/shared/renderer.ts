@@ -7,13 +7,7 @@ import {
 } from '../../vendor/renderer';
 import {encode, decode} from './uint82b64';
 import {impulses2Physics, splatters2Render} from './wasm-args';
-import {
-  ColorPalate,
-  Impulse,
-  Letter,
-  Letter3DPosition,
-  Splatter,
-} from './types';
+import {Impulse, Letter, Letter3DPosition, Splatter} from './types';
 import {letterMap} from './util';
 import {LETTERS} from './letters';
 import {SPLATTER_ANIM_FRAMES} from './constants';
@@ -40,19 +34,10 @@ export const updateCache = (letter: Letter, png: string) => {
   }
 };
 
-export const getCache = (
-  letter: Letter,
-  splatters: Splatter[],
-  colors: ColorPalate,
-) => {
+export const getCache = (letter: Letter, splatters: Splatter[]) => {
   return encode(
     draw_buffer_png(
       getRendererLetter(letter),
-      new Uint8Array(colors[0].flat()),
-      new Uint8Array(colors[1].flat()),
-      new Uint8Array(colors[2].flat()),
-      new Uint8Array(colors[3].flat()),
-      new Uint8Array(colors[4].flat()),
       ...splatters2Render(
         splatters,
         // When we draw a cache, we just want the "finished" state of all the

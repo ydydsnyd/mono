@@ -1,4 +1,4 @@
-import {ColorPalate, Letter, Splatter} from '../shared/types';
+import {Letter, Splatter} from '../shared/types';
 import {
   draw_buffer,
   draw_caches,
@@ -96,18 +96,12 @@ export const drawSplatter = (
 export const renderInitialFrame = (
   canvases: Record<Letter, HTMLCanvasElement>,
   splatters: Record<Letter, Splatter[]>,
-  colors: ColorPalate,
 ) => {
   LETTERS.forEach(letter => {
     const ctx = canvases[letter].getContext('2d') as CanvasRenderingContext2D;
     draw_buffer(
       getRendererLetter(letter),
       ctx,
-      new Uint8Array(colors[0].flat()),
-      new Uint8Array(colors[1].flat()),
-      new Uint8Array(colors[2].flat()),
-      new Uint8Array(colors[3].flat()),
-      new Uint8Array(colors[4].flat()),
       ...splatters2Render(
         splatters[letter],
         // When we draw a cache, we just want the "finished" state of all the
@@ -123,7 +117,6 @@ const addedSplatters = new Set<string>();
 export const renderFrame = async (
   time: number,
   canvases: Record<Letter, HTMLCanvasElement>,
-  colors: ColorPalate,
   lastClear: number | undefined,
   updated: false | ((letter: Letter) => void),
 ) => {
@@ -164,11 +157,6 @@ export const renderFrame = async (
     draw_buffer(
       getRendererLetter(letter),
       ctx,
-      new Uint8Array(colors[0].flat()),
-      new Uint8Array(colors[1].flat()),
-      new Uint8Array(colors[2].flat()),
-      new Uint8Array(colors[3].flat()),
-      new Uint8Array(colors[4].flat()),
       ...splatters2Render(animatingSplatters[letter], frames),
     );
     if (updated) {

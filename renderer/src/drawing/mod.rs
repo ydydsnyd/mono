@@ -5,6 +5,7 @@ pub mod splatters;
 
 #[allow(unused_imports)]
 use crate::console_log;
+use crate::COLOR_PALATE_RS;
 use crate::SPLATTER_ANIM_FRAMES;
 
 pub fn precompute() {
@@ -13,11 +14,6 @@ pub fn precompute() {
 
 pub fn draw(
     image: &mut RgbaImage,
-    a_colors: &[u8],
-    b_colors: &[u8],
-    c_colors: &[u8],
-    d_colors: &[u8],
-    e_colors: &[u8],
     splatter_count: usize,
     splatter_frames: &[usize],
     splatter_actors: &[u32],
@@ -28,7 +24,6 @@ pub fn draw(
     splatter_rotations: &[u8],
 ) {
     assert_eq!(splatter_count, splatter_actors.len());
-    assert_eq!(splatter_count, colors.len());
     assert_eq!(splatter_count, x_vals.len());
     assert_eq!(splatter_count, y_vals.len());
     assert_eq!(splatter_count, splatter_animations.len());
@@ -50,14 +45,7 @@ pub fn draw(
         let (splatter_image, (sx, sy)) =
             splatters::for_index(anim_index, anim_frame, splatter_rotations[idx], x, y);
         let mut splatter_colored = splatter_image.to_rgba8();
-        let (end_color, start_color) = colors_at_idx(
-            colors[idx],
-            &a_colors,
-            &b_colors,
-            &c_colors,
-            &d_colors,
-            &e_colors,
-        );
+        let (end_color, start_color) = colors_at_idx(colors[idx]);
         let mut end_color_alpha = end_color.to_rgba();
         end_color_alpha[3] = ((anim_frame as f32 / total_frames as f32) * 255.0).floor() as u8;
         let mut color = start_color.to_rgba();
@@ -74,22 +62,9 @@ pub fn draw(
     }
 }
 
-fn colors_at_idx(
-    idx: u8,
-    a_colors: &[u8],
-    b_colors: &[u8],
-    c_colors: &[u8],
-    d_colors: &[u8],
-    e_colors: &[u8],
-) -> (Rgb<u8>, Rgb<u8>) {
-    let colors = match idx {
-        0 => a_colors,
-        1 => b_colors,
-        2 => c_colors,
-        3 => d_colors,
-        4 => e_colors,
-        _ => a_colors,
-    };
+fn colors_at_idx(idx: u8) -> (Rgb<u8>, Rgb<u8>) {
+    let start_idx = idx as usize * 6;
+    let colors: &[u8] = &COLOR_PALATE_RS[start_idx..start_idx + 6];
     return (
         Rgb([colors[0], colors[1], colors[2]]),
         Rgb([colors[3], colors[4], colors[5]]),
