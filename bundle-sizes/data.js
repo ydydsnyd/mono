@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1678291091141,
+  "lastUpdate": 1678305186678,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -36821,6 +36821,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/d769a53b27228ebba1061685397a3d2449a33212"
         },
         "date": 1678291081088,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 262926,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45887,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 261721,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45533,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 98941,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27832,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "35f9e9807d33370b2b9c8ef51884dc9a77cedd91",
+          "message": "chore: Make check-types pass (#383)\n\npackages/replicache/tool/cli.ts was picking up the conflicting types\r\nfrom the root tsconfig.json. This was causing the check-types job to\r\nfail.\r\n\r\nAlso, setup GHA for check-types. reflect-server did run the check-types\r\nas part of `npm run test` but replicache and reflect did not.",
+          "timestamp": "2023-03-08T20:51:38+01:00",
+          "tree_id": "9732e91f0f5630a5158aadb07fe33a5d1ed36edb",
+          "url": "https://github.com/rocicorp/mono/commit/35f9e9807d33370b2b9c8ef51884dc9a77cedd91"
+        },
+        "date": 1678305175381,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
