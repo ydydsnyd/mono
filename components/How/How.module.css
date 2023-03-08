@@ -2,6 +2,10 @@
     margin-bottom: 12rem;
 }
 
+.howStep:last-child {
+    margin-bottom: 0;
+}
+
 .howHeader {
     animation: color-change 20s infinite;
     margin-bottom: 2rem;
@@ -199,4 +203,13 @@
     margin: 0;
     text-align: left;
     padding: 12px 14px;
+}
+
+@media (max-width: 600px) {
+    .panelLabel {
+        font-size: 0.75rem;
+        text-align: center;
+        margin: 0 0 2rem;
+        padding: 0;
+    }
 }

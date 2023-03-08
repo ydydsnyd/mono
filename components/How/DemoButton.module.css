@@ -30,3 +30,9 @@
     box-shadow: none;
     transform: scale(0.99);
 }
+
+@media (max-width: 600px) {
+    .demoContainer {
+        height: 7.4rem;
+    }
+}

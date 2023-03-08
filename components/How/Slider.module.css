@@ -22,3 +22,21 @@
     font-weight: 500;
     color: #0A7AFF;
 }
+
+@media (max-width: 600px) {
+    .latencySlider {
+        position: static;
+        margin: 0 auto;
+        width: 8rem;
+        display: block !important;
+    }
+
+    .latencyValue {
+        font-size: 0.75rem;
+        position: static;
+        margin: 0 auto;
+        display: block;
+        text-align: center;
+        width: auto;
+    }
+}
