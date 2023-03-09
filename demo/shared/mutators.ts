@@ -52,7 +52,9 @@ const Seeds = {
 
 export const mutators = {
   updateCursor: async (tx: WriteTransaction, cursor: Cursor) => {
-    await tx.put(`cursor/${cursor.actorId}`, cursor);
+    if (await tx.has(`actor/${cursor.actorId}`)) {
+      await tx.put(`cursor/${cursor.actorId}`, cursor);
+    }
   },
   removeActor: async (
     tx: WriteTransaction,
