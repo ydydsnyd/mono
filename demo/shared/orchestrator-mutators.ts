@@ -8,11 +8,7 @@ const ROOM_COUNT_KEY = 'current-room-count';
 const COLOR_INDEX_KEY = 'color-index';
 
 let env = Env.CLIENT;
-// Sha-256 encrypted version of "new-room"
-let newRoomSecret = new Uint8Array([
-  35, 64, 233, 103, 251, 191, 48, 83, 27, 128, 32, 123, 19, 178, 29, 119, 35, 5,
-  246, 57, 198, 52, 251, 43, 171, 239, 195, 195, 249, 175, 153, 1,
-]);
+let newRoomSecret: Uint8Array | undefined;
 export const setEnv = (e: Env, secret?: Uint8Array) => {
   env = e;
   if (secret) {
@@ -77,7 +73,9 @@ export const orchestratorMutators = {
         forceNewRoom = true;
       } else {
         console.warn(
-          `Attempted to reset room with invalid secret ${forceNewRoomWithSecret}.`,
+          newRoomSecret
+            ? `Attempted to reset room with invalid secret ${forceNewRoomWithSecret}.`
+            : 'Attempted to reset room but secret is unset.',
         );
       }
     }
@@ -113,6 +111,9 @@ export const orchestratorMutators = {
 };
 
 const isResetRoomSecret = async (secret: string) => {
+  if (!newRoomSecret) {
+    return false;
+  }
   const buffer = await crypto.subtle.digest(
     'SHA-256',
     string2Uint8Array(secret),
