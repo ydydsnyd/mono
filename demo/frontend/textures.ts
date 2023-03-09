@@ -2,24 +2,34 @@ import {CLEAR_STEP_ANIM_FRAMES, UVMAP_SIZE} from '../shared/constants';
 import type {Letter} from '../shared/types';
 import {asyncLetterMap, letterMap} from '../shared/util';
 
-const textures: Record<Letter, HTMLCanvasElement> = letterMap(() => {
-  const canvas = document.createElement('canvas') as HTMLCanvasElement;
-  canvas.width = UVMAP_SIZE;
-  canvas.height = UVMAP_SIZE;
-  return canvas;
-});
-const contexts: Record<Letter, CanvasRenderingContext2D> = letterMap(letter => {
-  return textures[letter].getContext('2d', {
-    willReadFrequently: true,
-  }) as CanvasRenderingContext2D;
-});
+let textures: Record<Letter, HTMLCanvasElement>;
+let contexts: Record<Letter, CanvasRenderingContext2D>;
 
-export const getCanvas = (letter: Letter) => textures[letter];
+export const getCanvas = (letter: Letter) => {
+  if (!textures) {
+    textures = letterMap(() => {
+      const canvas = document.createElement('canvas') as HTMLCanvasElement;
+      canvas.width = UVMAP_SIZE;
+      canvas.height = UVMAP_SIZE;
+      return canvas;
+    });
+  }
+  return textures[letter];
+};
 
-export const getContext = (letter: Letter) => contexts[letter];
+export const getContext = (letter: Letter) => {
+  if (!contexts) {
+    contexts = letterMap(letter => {
+      return getCanvas(letter).getContext('2d', {
+        willReadFrequently: true,
+      }) as CanvasRenderingContext2D;
+    });
+  }
+  return contexts[letter];
+};
 
 export const getSize = (letter: Letter) => {
-  const canvas = textures[letter];
+  const canvas = getCanvas(letter);
   return {width: canvas.width, height: canvas.height};
 };
 
@@ -44,7 +54,9 @@ export const loadClearAnimationFrames = async () => {
           canvas.height = UVMAP_SIZE;
           const image = new Image();
           image.onload = () => {
-            const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+            const ctx = canvas.getContext('2d', {
+              willReadFrequently: true,
+            }) as CanvasRenderingContext2D;
             ctx.save();
             // Axes are inverted in babylon, so we need to flip the canvas inside out before drawing.
             ctx.translate(0, UVMAP_SIZE);
