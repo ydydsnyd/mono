@@ -89,11 +89,6 @@ export const init = async () => {
     updateActorLocation({actorId: actor.id, location});
   });
 
-  // Whenever actors change, update the count
-  addListener<Actor>('actor', () => {
-    activeUserCount.innerHTML = Object.keys(actors).length + '';
-  });
-
   // Draw splatters as we get them
   addListener<Splatter>('splatter', (splatter, deleted, keyParts) => {
     if (!deleted) {
@@ -126,6 +121,11 @@ export const init = async () => {
   // Initialize state
   let {actors, physicsStep, cursors} = await getState();
   let localStep = physicsStep;
+
+  // Whenever actors change, update the count
+  addListener<Actor>('actor', () => {
+    activeUserCount.innerHTML = Object.keys(actors).length + '';
+  });
 
   // Initialize textures
   LETTERS.forEach(letter => updateTexture(letter));
