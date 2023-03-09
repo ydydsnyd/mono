@@ -140,18 +140,6 @@ export default class Nav extends Component {
             <li>
               <Link
                 href="#"
-                className={styles.navLink}
-                activeClass={styles.navLinkActive}
-                to="about"
-                spy={true}
-                smooth={true}
-                duration={250}
-                offset={-86}
-              >About</Link>
-            </li>
-            <li>
-              <Link
-                href="#"
                 className={styles.buttonPrimary}
                 to="get-started"
                 smooth={true}

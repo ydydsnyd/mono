@@ -88,18 +88,6 @@ export default function MobileNav() {
             <li>
               <Link
                 href="#"
-                className={styles.navLink}
-                activeClass={styles.navLinkActive}
-                to="about"
-                offset={100}
-                smooth={true}
-                duration={250}
-                onClick={toggleNav}
-              >About</Link>
-            </li>
-            <li>
-              <Link
-                href="#"
                 className={styles.buttonPrimary}
                 to="get-started"
                 smooth={true}
