@@ -11,11 +11,16 @@ body.demo-active * {
   height: 200px;
   position: relative;
 }
-#canvas3D, #preload {
+#canvas3D {
   transition: opacity 500ms;
   opacity: 0;
 }
 #preload {
+  /*
+ * This animation should be slower so that we don't see a "shimmer" as the two
+ * animations cross each other
+ */
+  transition: opacity 1000ms;
   opacity: 1;
 }
 #canvas3D.loaded {
@@ -30,6 +35,14 @@ body.demo-active * {
   height: 100%;
   top: 0;
   left: 0;
+}
+.preload-1, .preload-2 {
+  stroke: #000;
+  stroke-miterlimit: 10;
+  stroke-width: 3px;
+}
+.preload-2 {
+  fill-rule: evenodd;
 }
 #debug {
   position: fixed;
