@@ -36,7 +36,7 @@ export const MIN_STEP_MS = 16;
 // How many steps it takes for our environment to spin in a circle
 export const ENVIRONMENT_CYCLE_STEPS = 1000;
 // Brightness of environmental lighting
-export const ENVIRONMENT_TEXTURE_LEVEL = 0.6;
+export const ENVIRONMENT_TEXTURE_LEVEL = 0.3;
 
 // The only data that changes on an actor is the loction, so update them at a
 // lower frequency than cursors.
