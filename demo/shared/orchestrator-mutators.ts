@@ -1,5 +1,5 @@
 import type {WriteTransaction} from '@rocicorp/reflect';
-import {COLOR_PALATE, ROOM_MAX_ACTORS} from './constants';
+import {COLOR_PALATE, ORCHESTRATOR_ROOM_ID, ROOM_MAX_ACTORS} from './constants';
 import {Env, OrchestratorActor} from './types';
 import {string2Uint8Array} from './uint82b64';
 
@@ -28,6 +28,7 @@ export const orchestratorMutators = {
     if (!actor) {
       return;
     }
+    console.log(`Removing ${actor.id} from ${ORCHESTRATOR_ROOM_ID}`);
     // Delete the actor
     await tx.del(key);
     const currentRoom = (await tx.get(ROOM_ID_KEY)) as string;
