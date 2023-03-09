@@ -78,6 +78,10 @@ export const initRoom = async (): Promise<{
     );
     // Create our actor, which also will assign us a room. We have to wait for this
     // to complete (in the subscription above) before we can connect
-    mutations.createOrchestratorActor(nanoid());
+    const params = new URLSearchParams(window.location.search);
+    mutations.createOrchestratorActor({
+      fallbackId: nanoid(),
+      forceNewRoomWithSecret: params.get('reset'),
+    });
   });
 };

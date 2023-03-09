@@ -1,14 +1,23 @@
 import type {WriteTransaction} from '@rocicorp/reflect';
 import {COLOR_PALATE, ROOM_MAX_ACTORS} from './constants';
 import {Env, OrchestratorActor} from './types';
+import {string2Uint8Array} from './uint82b64';
 
 const ROOM_ID_KEY = 'current-room-id';
 const ROOM_COUNT_KEY = 'current-room-count';
 const COLOR_INDEX_KEY = 'color-index';
 
 let env = Env.CLIENT;
-export const setEnv = (e: Env) => {
+// Sha-256 encrypted version of "new-room"
+let newRoomSecret = new Uint8Array([
+  35, 64, 233, 103, 251, 191, 48, 83, 27, 128, 32, 123, 19, 178, 29, 119, 35, 5,
+  246, 57, 198, 52, 251, 43, 171, 239, 195, 195, 249, 175, 153, 1,
+]);
+export const setEnv = (e: Env, secret?: Uint8Array) => {
   env = e;
+  if (secret) {
+    newRoomSecret = secret;
+  }
 };
 
 export const orchestratorMutators = {
@@ -34,7 +43,16 @@ export const orchestratorMutators = {
     }
     await tx.put(ROOM_COUNT_KEY, roomCount - 1);
   },
-  createOrchestratorActor: async (tx: WriteTransaction, fallbackId: string) => {
+  createOrchestratorActor: async (
+    tx: WriteTransaction,
+    {
+      fallbackId,
+      forceNewRoomWithSecret,
+    }: {
+      fallbackId: string;
+      forceNewRoomWithSecret: string | null | undefined;
+    },
+  ) => {
     // We can't create actors/rooms on the client, because otherwise we'll get a
     // local room ID which we'll create, then the server will tell us a different
     // one that we'll need to connect to instead.
@@ -52,7 +70,18 @@ export const orchestratorMutators = {
     const existingRoom = (await tx.get(ROOM_ID_KEY)) as string | undefined;
     let selectedRoomId: string;
     let roomActorNum: number;
+    let forceNewRoom = false;
+    if (forceNewRoomWithSecret) {
+      if (await isResetRoomSecret(forceNewRoomWithSecret)) {
+        forceNewRoom = true;
+      } else {
+        console.warn(
+          `Attempted to reset room with invalid secret ${forceNewRoomWithSecret}.`,
+        );
+      }
+    }
     if (
+      forceNewRoom ||
       existingRoom === undefined ||
       (roomCount && roomCount >= ROOM_MAX_ACTORS)
     ) {
@@ -80,4 +109,21 @@ export const orchestratorMutators = {
     };
     await tx.put(key, actor);
   },
+};
+
+const isResetRoomSecret = async (secret: string) => {
+  const buffer = await crypto.subtle.digest(
+    'SHA-256',
+    string2Uint8Array(secret),
+  );
+  if (buffer.byteLength !== newRoomSecret.byteLength) {
+    return false;
+  }
+  const view = new Uint8Array(buffer);
+  for (const idx in newRoomSecret) {
+    if (view[idx] !== newRoomSecret[idx]) {
+      return false;
+    }
+  }
+  return true;
 };

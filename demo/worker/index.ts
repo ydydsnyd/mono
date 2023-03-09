@@ -1,4 +1,7 @@
-import {createReflectServer} from '@rocicorp/reflect-server';
+import {
+  createReflectServer,
+  ReflectServerBaseEnv,
+} from '@rocicorp/reflect-server';
 import {mutators, setEnv} from '../shared/mutators';
 import {
   orchestratorMutators,
@@ -11,6 +14,7 @@ import {Env} from '../shared/types';
 setEnv(Env.SERVER, async () => {
   await initRenderer(renderModule);
 });
+
 setOrchestratorEnv(Env.SERVER);
 
 const authHandler = async (auth: string, roomID: string) => {
@@ -50,4 +54,23 @@ const {worker, RoomDO, AuthDO} = createReflectServer({
   allowUnconfirmedWrites: true,
 });
 
-export {worker as default, RoomDO, AuthDO};
+export {RoomDO, AuthDO};
+
+const exports = {
+  async fetch(
+    request: Request,
+    env: {NEW_ROOM_SECRET?: string} & ReflectServerBaseEnv,
+    ctx: any,
+  ) {
+    if (env.NEW_ROOM_SECRET) {
+      setOrchestratorEnv(
+        Env.SERVER,
+        new Uint8Array(
+          env.NEW_ROOM_SECRET.split(',').map(n => parseInt(n, 10)),
+        ),
+      );
+    }
+    return worker.fetch!(request, env, ctx);
+  },
+};
+export default exports;
