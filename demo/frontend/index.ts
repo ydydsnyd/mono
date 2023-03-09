@@ -2,7 +2,6 @@ import {initialize} from './data';
 import {renderer as renderer3D} from './3d-renderer';
 import {
   drawSplatter,
-  loadClearAnimationFrames,
   renderFrame,
   renderInitialFrame,
 } from './texture-renderer';
@@ -11,12 +10,11 @@ import {cursorRenderer} from './cursors';
 import {UVMAP_SIZE, SPLATTER_MS, MIN_STEP_MS} from '../shared/constants';
 import type {Actor, Letter, Position, Splatter} from '../shared/types';
 import {LETTERS} from '../shared/letters';
-import {letterMap, now} from '../shared/util';
+import {now} from '../shared/util';
 import {getUserLocation} from './location';
 import {initRoom} from './orchestrator';
 import {DEBUG_TEXTURES, FPS_LOW_PASS} from './constants';
-
-type LetterCanvases = Record<Letter, HTMLCanvasElement>;
+import {loadClearAnimationFrames} from './textures';
 
 type Debug = {
   fps: number;
@@ -37,14 +35,6 @@ export const init = async () => {
 
   // Canvases
   const canvas = document.getElementById('canvas3D') as HTMLCanvasElement;
-  const textures: LetterCanvases = letterMap(letter => {
-    const tex = document.querySelector(
-      `#textures > .${letter}`,
-    ) as HTMLCanvasElement;
-    tex.width = UVMAP_SIZE;
-    tex.height = UVMAP_SIZE;
-    return tex;
-  });
   let caches: DebugCanvases;
   if (DEBUG_TEXTURES) {
     caches = LETTERS.map(letter => {
@@ -66,7 +56,7 @@ export const init = async () => {
     resizeCanvas: resize3DCanvas,
     updateTexture,
     // updateDebug,
-  } = await renderer3D(canvas, textures);
+  } = await renderer3D(canvas);
   init3DDone();
 
   const roomInitDone = initTiming('finding room', 100);
@@ -114,7 +104,7 @@ export const init = async () => {
   // Draw an initial frame to make sure we have caches and that we have splatters
   // that happened between the last cache and when we started listening for new
   // splatters.
-  renderInitialFrame(textures, initialSplatters);
+  renderInitialFrame(initialSplatters);
 
   // Handlers for data resetting
   const resetButton = document.getElementById('reset-button');
@@ -252,7 +242,7 @@ export const init = async () => {
       // Increment our step
       updateStep();
       // Render our textures, and if they changed, send to the 3D scene.
-      renderFrame(now(), textures, lastClear, letter => updateTexture(letter));
+      renderFrame(now(), lastClear, letter => updateTexture(letter));
       // renderPhysics();
       render3D();
       // Splatter if needed

@@ -23,6 +23,7 @@ import {
   ENVIRONMENT_CYCLE_STEPS,
   ENVIRONMENT_TEXTURE_LEVEL,
 } from '../shared/constants';
+import {getCanvas} from './textures';
 // import type {DebugRenderBuffers} from '@dimforge/rapier3d';
 
 const modelURL = '/alive.glb';
@@ -35,10 +36,7 @@ export type LetterInfo = {
 
 const ORTHO_SIZE_FACTOR = 0.03;
 
-export const renderer = async (
-  canvas: HTMLCanvasElement,
-  textureCanvases: Record<Letter, HTMLCanvasElement>,
-) => {
+export const renderer = async (canvas: HTMLCanvasElement) => {
   // Create an engine
   let engine: Engine;
   const webGPUSupported = await WebGPUEngine.IsSupportedAsync;
@@ -62,7 +60,7 @@ export const renderer = async (
     updateTexture,
     resizeCanvas,
     // updateDebug,
-  } = await createScene(engine, textureCanvases);
+  } = await createScene(engine);
 
   // When our app comes online, it will take over the render loop. However, we
   // still want to render it until then - so we just run our own slow loop until
@@ -91,7 +89,6 @@ export const renderer = async (
 
 export const createScene = async (
   engine: Engine,
-  textureCanvases: Record<Letter, HTMLCanvasElement>,
 ): Promise<{
   scene: Scene;
   getTexturePosition: (
@@ -155,7 +152,7 @@ export const createScene = async (
     letter =>
       new DynamicTexture(
         letter,
-        textureCanvases[letter],
+        getCanvas(letter),
         scene,
         false,
         Texture.BILINEAR_SAMPLINGMODE,

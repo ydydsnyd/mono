@@ -13,64 +13,9 @@ import {
   CLEAR_STEP_ANIM_FRAMES,
   SPLATTER_ANIMATION_FRAME_DURATION,
   SPLATTER_ANIM_FRAMES,
-  UVMAP_SIZE,
 } from '../shared/constants';
 import {splatterId} from '../shared/mutators';
-
-const clearAnimationFrames: Record<Letter, HTMLCanvasElement[]> = letterMap(
-  _ => [],
-);
-// Just loads all the animation frames in parallel.
-let animationFramesPromise: Promise<any> | undefined = undefined;
-export const loadClearAnimationFrames = async () => {
-  animationFramesPromise = Promise.all(
-    LETTERS.map(async letter => {
-      const frames = [];
-      for (let i = 0; i < CLEAR_STEP_ANIM_FRAMES - 1; i++) {
-        frames.push(`/clear-frames/${letter}${i + 1}.png`);
-      }
-      const canvases = await Promise.all(
-        frames.map(path => {
-          return new Promise<HTMLCanvasElement>(resolve => {
-            const canvas = document.createElement('canvas');
-            canvas.width = UVMAP_SIZE;
-            canvas.height = UVMAP_SIZE;
-            const image = new Image();
-            image.onload = () => {
-              const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-              ctx.save();
-              // Axes are inverted in babylon, so we need to flip the canvas inside out before drawing.
-              ctx.translate(0, UVMAP_SIZE);
-              ctx.rotate(Math.PI);
-              ctx.scale(-1, 1);
-              ctx.drawImage(image, 0, 0);
-              ctx.restore();
-              resolve(canvas);
-            };
-            image.src = path;
-          });
-        }),
-      );
-      clearAnimationFrames[letter] = canvases;
-    }),
-  );
-  await animationFramesPromise;
-};
-
-const getClearAnimationFrame = async (
-  letter: Letter,
-  frame: number,
-): Promise<HTMLCanvasElement> => {
-  // We should NOT load this lazily, as it's in the render loop. Force consumers to preload.
-  if (!animationFramesPromise) {
-    throw new Error(
-      'You must call loadClearAnimationFrames before attempting to animate a clear.',
-    );
-  }
-  // Just in case we're not done yet, make sure the frames have loaded.
-  await animationFramesPromise;
-  return clearAnimationFrames[letter][frame]!;
-};
+import {getClearAnimationFrame, getContext, getSize} from './textures';
 
 type Animation = Splatter & {added: number};
 
@@ -93,12 +38,9 @@ export const drawSplatter = (
   animatingSplatters[letter].push({...splatter, added: time});
 };
 
-export const renderInitialFrame = (
-  canvases: Record<Letter, HTMLCanvasElement>,
-  splatters: Record<Letter, Splatter[]>,
-) => {
+export const renderInitialFrame = (splatters: Record<Letter, Splatter[]>) => {
   LETTERS.forEach(letter => {
-    const ctx = canvases[letter].getContext('2d') as CanvasRenderingContext2D;
+    const ctx = getContext(letter);
     draw_buffer(
       getRendererLetter(letter),
       ctx,
@@ -116,19 +58,15 @@ const addedSplatters = new Set<string>();
 
 export const renderFrame = async (
   time: number,
-  canvases: Record<Letter, HTMLCanvasElement>,
   lastClear: number | undefined,
   updated: false | ((letter: Letter) => void),
 ) => {
   let clearing = false;
   if (lastClear) {
-    clearing = await renderClearFrame(time, lastClear, canvases);
+    clearing = await renderClearFrame(time, lastClear);
   }
   LETTERS.forEach(letter => {
-    const ctx = canvases[letter].getContext('2d', {
-      willReadFrequently: true,
-    }) as CanvasRenderingContext2D;
-    0;
+    const ctx = getContext(letter);
     const frames: number[] = [];
     animatingSplatters[letter] = animatingSplatters[letter].filter(anim => {
       const frame = animFrame(
@@ -169,14 +107,7 @@ let lastRenderedClear = -1;
 const renderClearFrame = async (
   time: number,
   lastClear: number,
-  canvases: Record<Letter, HTMLCanvasElement>,
 ): Promise<boolean> => {
-  const contexts = letterMap(
-    letter =>
-      canvases[letter].getContext('2d', {
-        willReadFrequently: true,
-      }) as CanvasRenderingContext2D,
-  );
   const clearFrame = animFrame(time, lastClear, CLEAR_ANIMATION_FRAME_DURATION);
   const renderClear =
     clearFrame < CLEAR_STEP_ANIM_FRAMES || lastRenderedClear !== lastClear;
@@ -188,22 +119,23 @@ const renderClearFrame = async (
     if (clearFrame >= CLEAR_STEP_ANIM_FRAMES - 1) {
       // On the last frame of the animation, we don't need to copy - just clear the cache.
       LETTERS.map(async letter => {
-        const ctx = contexts[letter];
-        ctx.clearRect(0, 0, canvases[letter].width, canvases[letter].height);
+        const ctx = getContext(letter);
+        const size = getSize(letter);
+        ctx.clearRect(0, 0, size.width, size.height);
       });
     } else {
       // First, just render the in-memory caches to our buffers.
       draw_caches(
-        contexts[Letter.A],
-        contexts[Letter.L],
-        contexts[Letter.I],
-        contexts[Letter.V],
-        contexts[Letter.E],
+        getContext(Letter.A),
+        getContext(Letter.L),
+        getContext(Letter.I),
+        getContext(Letter.V),
+        getContext(Letter.E),
       );
       // Then, find the frame for this animation and subtract it from the cache
       await Promise.all(
         LETTERS.map(async letter => {
-          const ctx = contexts[letter];
+          const ctx = getContext(letter);
           const image = await getClearAnimationFrame(letter, clearFrame);
           ctx.save();
           ctx.globalCompositeOperation = 'destination-out';
@@ -215,11 +147,11 @@ const renderClearFrame = async (
     // After updating the caches, write them back so that they'll be used as the
     // base for the below renders.
     overwrite_caches(
-      contexts[Letter.A],
-      contexts[Letter.L],
-      contexts[Letter.I],
-      contexts[Letter.V],
-      contexts[Letter.E],
+      getContext(Letter.A),
+      getContext(Letter.L),
+      getContext(Letter.I),
+      getContext(Letter.V),
+      getContext(Letter.E),
     );
   }
   return renderClear;
