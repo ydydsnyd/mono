@@ -1,8 +1,9 @@
 import {Reflect, ReadTransaction} from '@rocicorp/reflect';
-import {letterMap} from '../shared/util';
+import {asyncLetterMap, letterMap} from '../shared/util';
 import type {
   Actor,
   Cursor,
+  Debug,
   Impulse,
   Letter,
   Splatter,
@@ -15,8 +16,9 @@ import {setPhysics, updateCache} from '../shared/renderer';
 import {WORKER_HOST} from '../shared/urls';
 import {unchunk} from '../shared/chunks';
 import type {OrchestratorActor} from '../shared/types';
+import {DEBUG_TEXTURES} from './constants';
 
-export const initialize = async (actor: OrchestratorActor) => {
+export const initialize = async (actor: OrchestratorActor, debug: Debug) => {
   // Set up our connection to reflect
   console.log(`Connecting to room ${actor.room} on worker at ${WORKER_HOST}`);
 
@@ -80,6 +82,14 @@ export const initialize = async (actor: OrchestratorActor) => {
     stateInitializer(actor.id),
   );
   setPhysics(localState.physicsStep, localState.physicsState);
+  if (DEBUG_TEXTURES) {
+    await asyncLetterMap(async letter => {
+      debug.serverCaches[letter] =
+        (await reflectClient.query(
+          async tx => (await unchunk(tx, `cache/${letter}`)) as string,
+        )) || '';
+    });
+  }
 
   reflectClient.experimentalWatch(diffs => {
     diffs.forEach(async diff => {
@@ -112,6 +122,15 @@ export const initialize = async (actor: OrchestratorActor) => {
             delete localState.cursors[cursor.actorId];
           } else {
             localState.cursors[cursor.actorId] = cursor;
+          }
+          break;
+        case 'cache':
+          if (DEBUG_TEXTURES) {
+            const letter = keyParts[1] as Letter;
+            const cache = await reflectClient.query(
+              async tx => await unchunk(tx, `cache/${letter}`),
+            );
+            debug.serverCaches[letter] = cache || '';
           }
           break;
       }

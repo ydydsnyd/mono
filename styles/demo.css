@@ -56,17 +56,14 @@ body.demo-active * {
 #caches {
   background-color: rgba(125, 130, 184, 0.5);
 }
-#textures {
+#server-caches {
   background-color: rgba(243, 227, 124, 0.5);
 }
 
-#textures {
-  display: none;
-}
-.debug #textures, #caches {
+#caches, #server-caches {
   display: block;
 }
-.debug #textures canvas, #caches canvas {
+#caches canvas, #server-caches canvas {
   width: 150px;
   height: 150px;
 }

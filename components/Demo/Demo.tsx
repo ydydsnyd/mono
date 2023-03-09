@@ -56,6 +56,7 @@ const PaintFight = () => {
       </div>
       <div className={`canvases ${DEBUG_TEXTURES ? ' debug' : ''}`}>
         {DEBUG_TEXTURES ? <Canvases id="caches" /> : null}
+        {DEBUG_TEXTURES ? <Canvases id="server-caches" /> : null}
       </div>
       <div id="info">
         <div className="active-user-info">

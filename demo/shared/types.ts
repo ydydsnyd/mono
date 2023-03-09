@@ -9,6 +9,11 @@ export type State = {
   physicsState: string | undefined; // b64 encoded state
 };
 
+export type Debug = {
+  fps: number;
+  serverCaches: Record<Letter, string>;
+};
+
 export type ActorID = string;
 
 export type Color = [number, number, number]; // rgb
