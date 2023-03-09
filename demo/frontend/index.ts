@@ -11,7 +11,7 @@ import {cursorRenderer} from './cursors';
 import {UVMAP_SIZE, SPLATTER_MS, MIN_STEP_MS} from '../shared/constants';
 import type {Actor, Debug, Letter, Position, Splatter} from '../shared/types';
 import {LETTERS} from '../shared/letters';
-import {now} from '../shared/util';
+import {letterMap, now} from '../shared/util';
 import {getUserLocation} from './location';
 import {initRoom} from './orchestrator';
 import {DEBUG_TEXTURES, FPS_LOW_PASS} from './constants';
@@ -32,7 +32,7 @@ export const init = async () => {
   // Canvases
   const canvas = document.getElementById('canvas3D') as HTMLCanvasElement;
   let caches: DebugCanvases;
-  let serverCacheContexts: Record<Letter, CanvasRenderingContext2D>;
+  let serverCacheContexts: Record<Letter, CanvasRenderingContext2D> | undefined;
   if (DEBUG_TEXTURES) {
     caches = LETTERS.map(letter => {
       const tex = document.querySelector(
@@ -42,15 +42,13 @@ export const init = async () => {
       tex.height = UVMAP_SIZE;
       return tex.getContext('2d') as CanvasRenderingContext2D;
     }) as DebugCanvases;
-    LETTERS.forEach(letter => {
+    serverCacheContexts = letterMap(letter => {
       const tex = document.querySelector(
         `#server-caches > .${letter}`,
       ) as HTMLCanvasElement;
       tex.width = UVMAP_SIZE;
       tex.height = UVMAP_SIZE;
-      serverCacheContexts[letter] = tex.getContext(
-        '2d',
-      ) as CanvasRenderingContext2D;
+      return tex.getContext('2d') as CanvasRenderingContext2D;
     });
   }
   const demoContainer = document.getElementById('demo') as HTMLDivElement;
@@ -58,11 +56,13 @@ export const init = async () => {
   const debug: Debug = {
     fps: 60,
     cacheUpdated: (letter, cache) => {
-      const img = new Image();
-      img.onload = () => {
-        serverCacheContexts[letter].drawImage(img, 0, 0);
-      };
-      img.src = `data:image/png;base64,${cache}`;
+      if (serverCacheContexts) {
+        const img = new Image();
+        img.onload = () => {
+          serverCacheContexts![letter].drawImage(img, 0, 0);
+        };
+        img.src = `data:image/png;base64,${cache}`;
+      }
     },
   };
 
