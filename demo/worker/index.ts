@@ -62,7 +62,7 @@ const {worker, RoomDO, AuthDO} = createReflectServer({
     }
   },
   getLogLevel: () => 'error',
-  allowUnconfirmedWrites: true,
+  allowUnconfirmedWrites: false,
 });
 
 export {RoomDO, AuthDO};
