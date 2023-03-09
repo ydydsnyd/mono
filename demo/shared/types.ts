@@ -59,11 +59,17 @@ export type Splatter = Position & {
 
 // Each actor has a cursor. They are positioned in global space, so we also need
 // to send the space around so we can draw them relatively.
+export enum TouchState {
+  Unknown = 0,
+  Touching = 1,
+  Clicking = 2,
+}
 export type Cursor = Position & {
   actorId: ActorID;
   onPage: boolean;
   ts: number;
   isDown: boolean;
+  touchState: TouchState;
 };
 
 export type BoundingBox = Position & Size;

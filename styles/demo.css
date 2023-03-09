@@ -72,6 +72,7 @@ body.demo-active * {
   width: 14px;
   height: 14px;
   flex-grow: 0;
+  flex-shrink: 0;
   margin: 3px 12px 2px 0;
   background-color: #5fc68b;
   border-radius: 50%;

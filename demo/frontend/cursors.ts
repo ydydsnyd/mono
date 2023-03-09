@@ -1,11 +1,19 @@
 import {ACTOR_UPDATE_INTERVAL, COLOR_PALATE} from '../shared/constants';
-import type {Actor, ActorID, Cursor, Position, State} from '../shared/types';
+import {
+  Actor,
+  ActorID,
+  Cursor,
+  Position,
+  State,
+  TouchState,
+} from '../shared/types';
 import {colorToString, now} from '../shared/util';
 
 export const cursorRenderer = (
   actorId: string,
   getState: () => {actors: State['actors']; cursors: State['cursors']},
   getDemoContainer: () => HTMLDivElement,
+  allowTouchStart: (localCursor: Cursor) => boolean,
   onUpdateCursor: (localCursor: Cursor) => void,
 ): [() => {isDown: boolean; position: Position}, () => Promise<void>] => {
   // Set up local state
@@ -37,6 +45,7 @@ export const cursorRenderer = (
     actorId,
     onPage: false,
     isDown: false,
+    touchState: TouchState.Unknown,
   };
   let lastPosition = {x: 0, y: 0};
   const mouseElement = document.body;
@@ -73,6 +82,7 @@ export const cursorRenderer = (
     if (e.target !== mouseElement) {
       return;
     }
+    localCursor.touchState = TouchState.Unknown;
     localCursor.isDown = false;
     localCursor.onPage = false;
     cursorNeedsUpdate = true;
@@ -82,8 +92,19 @@ export const cursorRenderer = (
   // Track cursor clicks
   const isInIntro = getHasParent(document.getElementById('intro')!);
   const setIsDown = (e: MouseEvent | TouchEvent) => {
-    // Ignore right-clicks
-    if (isMouseEvent(e) && e.button !== 0) {
+    if (localCursor.touchState === TouchState.Unknown) {
+      localCursor.touchState = !isMouseEvent(e)
+        ? TouchState.Touching
+        : TouchState.Clicking;
+    }
+    if (!isMouseEvent(e)) {
+      if (!allowTouchStart(localCursor)) {
+        return;
+      }
+      // If we're consuming the event, prevent scrolling.
+      e.preventDefault();
+    } else if (isMouseEvent(e) && e.button !== 0) {
+      // Ignore right-clicks
       return;
     }
     if (e.target && isHTMLElement(e.target) && isInIntro(e.target)) {
@@ -95,6 +116,7 @@ export const cursorRenderer = (
   mouseElement.addEventListener('mousedown', setIsDown);
   mouseElement.addEventListener('touchstart', setIsDown);
   mouseElement.addEventListener('mouseup', () => {
+    localCursor.touchState = TouchState.Unknown;
     localCursor.isDown = false;
     cursorNeedsUpdate = true;
   });
@@ -121,6 +143,14 @@ export const cursorRenderer = (
       // Move cursors
       Object.values(cursors).forEach(async cursor => {
         if (!actors[cursor.actorId]) {
+          return;
+        }
+        // Don't show a cursor for ourselves locally when using touch, as it's weird &
+        // confusing
+        if (
+          cursor.actorId === localCursor.actorId &&
+          localCursor.touchState === TouchState.Touching
+        ) {
           return;
         }
         const {x, y} = cursor;

@@ -171,6 +171,12 @@ export const init = async () => {
     actor.id,
     () => ({actors, cursors}),
     () => demoContainer,
+    cursor => {
+      // On mobile, only start painting if we begin by touching a letter. Otherwise,
+      // scroll will feel janky.
+      const [letter] = getTexturePosition(cursor);
+      return !!letter;
+    },
     updateCursor,
   );
 
