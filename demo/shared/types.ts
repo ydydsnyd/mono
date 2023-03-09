@@ -11,7 +11,7 @@ export type State = {
 
 export type Debug = {
   fps: number;
-  serverCaches: Record<Letter, string>;
+  cacheUpdated: (letter: Letter, cache: string) => void;
 };
 
 export type ActorID = string;

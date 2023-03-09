@@ -4,13 +4,14 @@ import {
   drawSplatter,
   renderFrame,
   renderInitialFrame,
+  triggerSplatterRedraw,
 } from './texture-renderer';
 import initRenderer, {draw_caches, precompute} from '../../vendor/renderer';
 import {cursorRenderer} from './cursors';
 import {UVMAP_SIZE, SPLATTER_MS, MIN_STEP_MS} from '../shared/constants';
 import type {Actor, Debug, Letter, Position, Splatter} from '../shared/types';
 import {LETTERS} from '../shared/letters';
-import {letterMap, now} from '../shared/util';
+import {now} from '../shared/util';
 import {getUserLocation} from './location';
 import {initRoom} from './orchestrator';
 import {DEBUG_TEXTURES, FPS_LOW_PASS} from './constants';
@@ -20,7 +21,6 @@ export const init = async () => {
   const initTiming = timing('Demo Load Timing');
   const ready = initTiming('loading demo', 1500);
 
-  const debug: Debug = {fps: 60, serverCaches: letterMap(() => '')};
   type DebugCanvases = [
     CanvasRenderingContext2D,
     CanvasRenderingContext2D,
@@ -32,7 +32,7 @@ export const init = async () => {
   // Canvases
   const canvas = document.getElementById('canvas3D') as HTMLCanvasElement;
   let caches: DebugCanvases;
-  let serverCaches: DebugCanvases;
+  let serverCacheContexts: Record<Letter, CanvasRenderingContext2D>;
   if (DEBUG_TEXTURES) {
     caches = LETTERS.map(letter => {
       const tex = document.querySelector(
@@ -42,16 +42,29 @@ export const init = async () => {
       tex.height = UVMAP_SIZE;
       return tex.getContext('2d') as CanvasRenderingContext2D;
     }) as DebugCanvases;
-    serverCaches = LETTERS.map(letter => {
+    LETTERS.forEach(letter => {
       const tex = document.querySelector(
         `#server-caches > .${letter}`,
       ) as HTMLCanvasElement;
       tex.width = UVMAP_SIZE;
       tex.height = UVMAP_SIZE;
-      return tex.getContext('2d') as CanvasRenderingContext2D;
-    }) as DebugCanvases;
+      serverCacheContexts[letter] = tex.getContext(
+        '2d',
+      ) as CanvasRenderingContext2D;
+    });
   }
   const demoContainer = document.getElementById('demo') as HTMLDivElement;
+
+  const debug: Debug = {
+    fps: 60,
+    cacheUpdated: (letter, cache) => {
+      const img = new Image();
+      img.onload = () => {
+        serverCacheContexts[letter].drawImage(img, 0, 0);
+      };
+      img.src = `data:image/png;base64,${cache}`;
+    },
+  };
 
   // Set up 3D renderer
   const init3DDone = initTiming('setting up 3D engine', 1000);
@@ -149,15 +162,6 @@ export const init = async () => {
       }
       if (caches) {
         draw_caches(...caches);
-      }
-      if (DEBUG_TEXTURES) {
-        LETTERS.forEach((letter, idx) => {
-          const img = new Image();
-          img.onload = () => {
-            serverCaches[idx].drawImage(img, 0, 0);
-          };
-          img.src = `data:image/png;base64,${debug.serverCaches[letter]}`;
-        });
       }
     }, 200);
   }
@@ -271,6 +275,16 @@ export const init = async () => {
     },
     debug,
   );
+
+  addListener<never>('cache', async (_, deleted) => {
+    // Deleted caches are handled in the clearing code.
+    if (!deleted) {
+      // Also make sure that our splatters are re-rendered in the correct order. By
+      // resetting the cache of rendered splatters, next frame will re-draw all the
+      // splatters in their current order.
+      triggerSplatterRedraw();
+    }
+  });
 
   // After we've started, flip a class on the body
   document.body.classList.add('demo-active');

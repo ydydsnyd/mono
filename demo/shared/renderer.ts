@@ -7,7 +7,7 @@ import {
 } from '../../vendor/renderer';
 import {encode, decode} from './uint82b64';
 import {impulses2Physics, splatters2Render} from './wasm-args';
-import {Impulse, Letter, Letter3DPosition, Splatter} from './types';
+import {Debug, Impulse, Letter, Letter3DPosition, Splatter} from './types';
 import {letterMap} from './util';
 import {LETTERS} from './letters';
 import {SPLATTER_ANIM_FRAMES} from './constants';
@@ -27,10 +27,13 @@ export const getRendererLetter = (letter: Letter): RendererLetter => {
   }
 };
 
-export const updateCache = (letter: Letter, png: string) => {
+export const updateCache = (letter: Letter, png: string, debug?: Debug) => {
   const decoded = decode(png);
   if (decoded) {
     update_cache(getRendererLetter(letter), decoded);
+    if (debug) {
+      debug.cacheUpdated(letter, png);
+    }
   }
 };
 

@@ -1,5 +1,5 @@
 import {Reflect, ReadTransaction} from '@rocicorp/reflect';
-import {asyncLetterMap, letterMap} from '../shared/util';
+import {letterMap} from '../shared/util';
 import type {
   Actor,
   Cursor,
@@ -16,7 +16,6 @@ import {setPhysics, updateCache} from '../shared/renderer';
 import {WORKER_HOST} from '../shared/urls';
 import {unchunk} from '../shared/chunks';
 import type {OrchestratorActor} from '../shared/types';
-import {DEBUG_TEXTURES} from './constants';
 
 export const initialize = async (actor: OrchestratorActor, debug: Debug) => {
   // Set up our connection to reflect
@@ -76,20 +75,15 @@ export const initialize = async (actor: OrchestratorActor, debug: Debug) => {
     listeners.set(opName, existing);
   };
 
+  const getCache = async (letter: Letter) =>
+    await reflectClient.query(async tx => await unchunk(tx, `cache/${letter}`));
+
   // Set up a local state - this is used to cache values that we don't want to
   // read every frame (and that will be updated via subscription instead)
   const localState: State = await reflectClient.query(
-    stateInitializer(actor.id),
+    stateInitializer(actor.id, debug),
   );
   setPhysics(localState.physicsStep, localState.physicsState);
-  if (DEBUG_TEXTURES) {
-    await asyncLetterMap(async letter => {
-      debug.serverCaches[letter] =
-        (await reflectClient.query(
-          async tx => (await unchunk(tx, `cache/${letter}`)) as string,
-        )) || '';
-    });
-  }
 
   reflectClient.experimentalWatch(diffs => {
     diffs.forEach(async diff => {
@@ -125,12 +119,10 @@ export const initialize = async (actor: OrchestratorActor, debug: Debug) => {
           }
           break;
         case 'cache':
-          if (DEBUG_TEXTURES) {
-            const letter = keyParts[1] as Letter;
-            const cache = await reflectClient.query(
-              async tx => await unchunk(tx, `cache/${letter}`),
-            );
-            debug.serverCaches[letter] = cache || '';
+          const letter = keyParts[1] as Letter;
+          const cache = await getCache(letter);
+          if (cache) {
+            updateCache(letter, cache, debug);
           }
           break;
       }
@@ -179,11 +171,17 @@ export const initialize = async (actor: OrchestratorActor, debug: Debug) => {
     ]);
   });
 
-  return {...mutations, getState, addListener, reflectClient, initialSplatters};
+  return {
+    ...mutations,
+    getState,
+    addListener,
+    reflectClient,
+    initialSplatters,
+  };
 };
 
 const stateInitializer =
-  (userID: string) =>
+  (userID: string, debug: Debug) =>
   async (tx: ReadTransaction): Promise<State> => {
     const actorList = (await tx.scan({prefix: 'actor/'}).toArray()) as Actor[];
     const actors = actorList.reduce((actors, actor) => {
@@ -212,7 +210,7 @@ const stateInitializer =
       ...LETTERS.map(async letter => {
         const cache = await unchunk(tx, `cache/${letter}`);
         if (cache) {
-          updateCache(letter, cache);
+          updateCache(letter, cache, debug);
         }
       }),
     ]);

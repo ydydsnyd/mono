@@ -56,6 +56,8 @@ export const renderInitialFrame = (splatters: Record<Letter, Splatter[]>) => {
 
 const addedSplatters = new Set<string>();
 
+export const triggerSplatterRedraw = () => addedSplatters.clear();
+
 export const renderFrame = async (
   time: number,
   lastClear: number | undefined,
