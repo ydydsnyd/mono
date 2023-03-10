@@ -45,7 +45,7 @@ export const ACTOR_UPDATE_INTERVAL = 1000;
 export const COLOR_PALATE: Color[] = COLOR_PALATE_RS.reduce(
   (palate, val, idx) => {
     if (idx % 6 === 0) {
-      palate.push([val, COLOR_PALATE_RS[idx + 1], COLOR_PALATE_RS[+2]]);
+      palate.push([val, COLOR_PALATE_RS[idx + 1], COLOR_PALATE_RS[idx + 2]]);
     }
     return palate;
   },
