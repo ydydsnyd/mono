@@ -9,9 +9,6 @@ export {UVMAP_SIZE, SPLATTER_ANIM_FRAMES} from '../../renderer/src/constants';
 export const ORCHESTRATOR_ROOM_ID = 'orchestrator-room';
 export const ROOM_MAX_ACTORS = 100;
 
-// Demo position
-export const DEMO_OFFSET_BOTTOM = 180;
-
 // Splatters
 // To avoid our data growing infinitely, "flatten" splatters to an image in
 // batches if they are sufficiently old.

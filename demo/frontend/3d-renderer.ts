@@ -15,11 +15,10 @@ import {
   Camera,
 } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
-import {Letter, Letter3DPosition, Position, Vector} from '../shared/types';
+import type {Letter, Letter3DPosition, Position, Vector} from '../shared/types';
 import {letterMap} from '../shared/util';
 import {LETTERS} from '../shared/letters';
 import {
-  DEMO_OFFSET_BOTTOM,
   ENVIRONMENT_CYCLE_STEPS,
   ENVIRONMENT_TEXTURE_LEVEL,
 } from '../shared/constants';
@@ -34,7 +33,9 @@ export type LetterInfo = {
   letter?: Letter;
 };
 
-const ORTHO_SIZE_FACTOR = 0.03;
+const ORTHO_SIZE_FACTOR = 0.048;
+const ORTHO_OFFSET_X = 0.7;
+const ORTHO_OFFSET_Y = -0.3;
 
 export const renderer = async (canvas: HTMLCanvasElement) => {
   // Create an engine
@@ -104,20 +105,7 @@ export const createScene = async (
   // improvement and allows events to propagate to the cursor handling code.
   scene.detachControl();
 
-  const sceneScaleFactor = () => {
-    const canvasSize = engine.getRenderingCanvasClientRect()!;
-    const width = canvasSize.width * ORTHO_SIZE_FACTOR;
-    const height = canvasSize.height * ORTHO_SIZE_FACTOR;
-    return {width, height};
-  };
-
   const resizeCanvas = () => {
-    const {width, height} = sceneScaleFactor();
-    const demoBottom = DEMO_OFFSET_BOTTOM * ORTHO_SIZE_FACTOR;
-    camera.orthoLeft = -(width / 2);
-    camera.orthoRight = width / 2;
-    camera.orthoTop = demoBottom;
-    camera.orthoBottom = -height + camera.orthoTop;
     engine.resize();
   };
 
@@ -131,6 +119,12 @@ export const createScene = async (
     scene,
     true,
   );
+  const w = (320 / 2) * ORTHO_SIZE_FACTOR;
+  const h = (113 / 2) * ORTHO_SIZE_FACTOR;
+  camera.orthoLeft = -(w - ORTHO_OFFSET_X);
+  camera.orthoRight = w + ORTHO_OFFSET_X;
+  camera.orthoTop = h - ORTHO_OFFSET_Y;
+  camera.orthoBottom = -(h + ORTHO_OFFSET_Y);
   camera.setTarget(Vector3.Zero());
   camera.mode = Camera.ORTHOGRAPHIC_CAMERA;
   camera.minZ = -10;
@@ -141,11 +135,6 @@ export const createScene = async (
     const mesh = scene.getMeshByName(letter) as Mesh;
     return mesh;
   });
-  meshes[Letter.A].position.set(-A_POS.x, A_POS.y, 0);
-  meshes[Letter.L].position.set(-L_POS.x, L_POS.y, 0);
-  meshes[Letter.I].position.set(-I_POS.x, I_POS.y, 0);
-  meshes[Letter.V].position.set(-V_POS.x, V_POS.y, 0);
-  meshes[Letter.E].position.set(-E_POS.x, E_POS.y, 0);
 
   // Create a texture from our canvas
   const textures = letterMap(
@@ -310,25 +299,4 @@ export const createScene = async (
     resizeCanvas,
     // updateDebug,
   };
-};
-
-const A_POS: Position = {
-  x: -5.65465,
-  y: 1.69821,
-};
-const L_POS: Position = {
-  x: -2.7806,
-  y: 2.48276,
-};
-const I_POS: Position = {
-  x: -0.835768,
-  y: 2.56859,
-};
-const V_POS: Position = {
-  x: 2.13617,
-  y: 2.05105,
-};
-const E_POS: Position = {
-  x: 6.18972,
-  y: 1.7763,
 };

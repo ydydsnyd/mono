@@ -7,9 +7,10 @@ body.demo-active * {
 
 #demo {
   pointer-events:none;
-  width: 600px;
-  height: 200px;
   position: relative;
+  width: 100%;
+  max-width: 600px;
+  aspect-ratio: 320 / 113;
 }
 #canvas3D {
   transition: opacity 500ms;
