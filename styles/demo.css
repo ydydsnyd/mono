@@ -15,6 +15,7 @@ body.demo-active * {
 #canvas3D {
   transition: opacity 500ms;
   opacity: 0;
+  touch-action: none;
 }
 #preload {
   /*

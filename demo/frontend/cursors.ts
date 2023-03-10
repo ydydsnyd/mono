@@ -50,7 +50,18 @@ export const cursorRenderer = (
     touchState: TouchState.Unknown,
   };
   let lastPosition = {x: 0, y: 0};
+  // Tracking touches is tricky. Browsers fire a touchstart, touchend, mousedown,
+  // mouseup for every touch. If you move in between, that's fine. But for a brief
+  // touch, this will cause us to unset the Touching bit before firing mouse
+  // events. So, when we end touching, we just store a value here momentarily so
+  // that we can check it in the mousedown handler and not accidentally treat a
+  // tap as a click.
+  let touchTimer: null | number = null;
+  const startTouchTimer = () => {
+    touchTimer = window.setTimeout(() => (touchTimer = null), 50);
+  };
   const mouseElement = document.body;
+  const isInIntro = getHasParent(document.getElementById('intro')!);
   let cursorNeedsUpdate = false;
   const updateCursorPosition = (position?: Position) => {
     const demoBB = getDemoContainer().getBoundingClientRect();
@@ -66,43 +77,18 @@ export const cursorRenderer = (
     localCursor.ts = now();
     cursorNeedsUpdate = true;
   };
-  // Cursor for mice
-  const updateCursor = (e: MouseEvent) => {
-    updateCursorPosition({x: e.clientX, y: e.clientY});
-  };
-  mouseElement.addEventListener('mousemove', updateCursor);
-  // Cursor for touches
-  const touchMoved = (e: TouchEvent) => {
-    if (localCursor.isDown) {
-      e.preventDefault();
-    }
-    updateCursorPosition({x: e.touches[0].clientX, y: e.touches[0].clientY});
-  };
-  mouseElement.addEventListener('touchmove', touchMoved);
-  // We also need to update the cursor when the window is scrolled
+
+  // Update the cursor when the window is scrolled
   window.addEventListener('scroll', () => {
     updateCursorPosition();
   });
-  const hideCursor = (e: MouseEvent | TouchEvent) => {
-    if (e.target !== mouseElement) {
-      return;
-    }
-    localCursor.touchState = TouchState.Unknown;
-    localCursor.isDown = false;
-    localCursor.onPage = false;
-    cursorNeedsUpdate = true;
-  };
-  mouseElement.addEventListener('mouseout', hideCursor);
-  mouseElement.addEventListener('touchend', hideCursor);
-  // Track cursor clicks
-  const isInIntro = getHasParent(document.getElementById('intro')!);
-  const setIsDown = (e: MouseEvent | TouchEvent) => {
-    if (localCursor.touchState === TouchState.Unknown) {
-      localCursor.touchState = !isMouseEvent(e)
-        ? TouchState.Touching
-        : TouchState.Clicking;
-    }
-    if (!isMouseEvent(e)) {
+
+  // Touch Events
+  mouseElement.addEventListener(
+    'touchstart',
+    (e: TouchEvent) => {
+      updateCursorPosition({x: e.touches[0].clientX, y: e.touches[0].clientY});
+      localCursor.touchState = TouchState.Touching;
       const demoBB = getDemoContainer().getBoundingClientRect();
       if (
         !allowTouchStart({
@@ -114,7 +100,47 @@ export const cursorRenderer = (
       }
       // If we're consuming the event, prevent scrolling.
       e.preventDefault();
-    } else if (isMouseEvent(e) && e.button !== 0) {
+      localCursor.isDown = true;
+      cursorNeedsUpdate = true;
+    },
+    {passive: false},
+  );
+  mouseElement.addEventListener(
+    'touchend',
+    () => {
+      // Only end if we started with a touch
+      if (localCursor.touchState === TouchState.Touching) {
+        // Prevent the mousedown-mouseup events that happens when tapping
+        startTouchTimer();
+        localCursor.isDown = false;
+        localCursor.onPage = false;
+        cursorNeedsUpdate = true;
+      }
+    },
+    {passive: false},
+  );
+  mouseElement.addEventListener(
+    'touchmove',
+    (e: TouchEvent) => {
+      if (localCursor.isDown) {
+        e.preventDefault();
+      }
+      updateCursorPosition({x: e.touches[0].clientX, y: e.touches[0].clientY});
+    },
+    {passive: false},
+  );
+
+  // Mouse Events
+  mouseElement.addEventListener('mousedown', (e: MouseEvent) => {
+    // Mousedown events always fire after touchstart events. If we tap, we'll
+    // accidentally perform mouse-like UX (e.g. showing the cursor) incorrectly
+    // unless we track a little delay on the touch.
+    if (touchTimer) {
+      return;
+    }
+    updateCursorPosition({x: e.clientX, y: e.clientY});
+    localCursor.touchState = TouchState.Clicking;
+    if (e.button !== 0) {
       // Ignore right-clicks
       return;
     }
@@ -123,13 +149,26 @@ export const cursorRenderer = (
     }
     localCursor.isDown = true;
     cursorNeedsUpdate = true;
-  };
-  mouseElement.addEventListener('mousedown', setIsDown);
-  mouseElement.addEventListener('touchstart', setIsDown);
+  });
+  mouseElement.addEventListener('mousemove', (e: MouseEvent) => {
+    updateCursorPosition({x: e.clientX, y: e.clientY});
+  });
   mouseElement.addEventListener('mouseup', () => {
-    localCursor.touchState = TouchState.Unknown;
+    if (touchTimer) {
+      return;
+    }
     localCursor.isDown = false;
     cursorNeedsUpdate = true;
+  });
+  mouseElement.addEventListener('mouseout', (e: MouseEvent) => {
+    if (e.target !== mouseElement) {
+      return;
+    }
+    // Only end if we started with a click
+    if (localCursor.touchState === TouchState.Clicking) {
+      localCursor.isDown = false;
+      cursorNeedsUpdate = true;
+    }
   });
 
   let lastActorUpdate = -1;
@@ -162,6 +201,10 @@ export const cursorRenderer = (
           cursor.actorId === localCursor.actorId &&
           localCursor.touchState === TouchState.Touching
         ) {
+          return;
+        }
+        // Don't show cursors that aren't on the page
+        if (!cursor.onPage) {
           return;
         }
         const {x, y} = cursor;
@@ -263,9 +306,6 @@ const createCursor = (actor: Actor) => {
   cursorDiv.appendChild(locationDiv);
   return cursorDiv;
 };
-
-const isMouseEvent = (e: MouseEvent | TouchEvent): e is MouseEvent =>
-  !(e as TouchEvent).touches;
 
 const isHTMLElement = (t: EventTarget | null): t is HTMLElement =>
   !!(t as HTMLElement).localName;
