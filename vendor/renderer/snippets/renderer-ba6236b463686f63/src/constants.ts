@@ -13,12 +13,20 @@ export const RENDERED_PHYSICS_STEP_WINDOW_SIZE = 100;
 export const COLOR_PALATE_RS: number[] = [
   // Pink
   252, 73, 171, 223, 0, 122,
-  // Blue
+  // Light Blue
   95, 232, 255, 0, 197, 229,
   // Orange
   255, 153, 0, 211, 127, 0,
   // Green
   100, 255, 0, 94, 217, 15,
-  // Yellow
-  231, 255, 0, 214, 236, 0,
+  // Blue
+  57, 184, 255, 29, 157, 229,
+  // Red
+  255, 21, 21, 240, 18, 18,
+  // Turquoise
+  46, 214, 214, 39, 195, 195,
+  // Magenta
+  235, 10, 255, 213, 5, 232,
+  // Citrine
+  237, 200, 4, 219, 185, 9,
 ];

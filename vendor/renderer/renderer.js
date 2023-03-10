@@ -598,6 +598,13 @@ async function load(module, imports) {
 function getImports() {
     const imports = {};
     imports.wbg = {};
+    imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
+        takeObject(arg0);
+    };
+    imports.wbg.__wbg_static_accessor_UVMAP_SIZE_a2041fefcbe5a985 = function() {
+        const ret = UVMAP_SIZE;
+        return ret;
+    };
     imports.wbg.__wbg_static_accessor_COLOR_PALATE_RS_dc1f67e3ce655b58 = function(arg0) {
         const ret = COLOR_PALATE_RS;
         const ptr0 = passArray8ToWasm0(ret, wasm.__wbindgen_malloc);
@@ -609,16 +616,9 @@ function getImports() {
         const ret = SPLATTER_ANIM_FRAMES;
         return ret;
     };
-    imports.wbg.__wbg_static_accessor_UVMAP_SIZE_a2041fefcbe5a985 = function() {
-        const ret = UVMAP_SIZE;
-        return ret;
-    };
     imports.wbg.__wbg_static_accessor_RENDERED_PHYSICS_STEP_WINDOW_SIZE_f7625b3307638e23 = function() {
         const ret = RENDERED_PHYSICS_STEP_WINDOW_SIZE;
         return ret;
-    };
-    imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
-        takeObject(arg0);
     };
     imports.wbg.__wbg_log_94ec9f9334743f04 = function(arg0, arg1) {
         console.log(getStringFromWasm0(arg0, arg1));
