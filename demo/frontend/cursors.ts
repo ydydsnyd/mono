@@ -9,13 +9,15 @@ import {
 } from '../shared/types';
 import {colorToString, now} from '../shared/util';
 
+type PageCursor = {isDown: boolean; position: Position};
+
 export const cursorRenderer = (
   actorId: string,
   getState: () => {actors: State['actors']; cursors: State['cursors']},
   getDemoContainer: () => HTMLDivElement,
-  allowTouchStart: (localCursor: Cursor) => boolean,
+  allowTouchStart: (cursor: Position) => boolean,
   onUpdateCursor: (localCursor: Cursor) => void,
-): [() => {isDown: boolean; position: Position}, () => Promise<void>] => {
+): [() => PageCursor, () => Promise<void>] => {
   // Set up local state
   const cursorDivs: Map<ActorID, HTMLDivElement> = new Map();
   const getCursorDiv = async (cursor: Cursor) => {
@@ -71,6 +73,9 @@ export const cursorRenderer = (
   mouseElement.addEventListener('mousemove', updateCursor);
   // Cursor for touches
   const touchMoved = (e: TouchEvent) => {
+    if (localCursor.isDown) {
+      e.preventDefault();
+    }
     updateCursorPosition({x: e.touches[0].clientX, y: e.touches[0].clientY});
   };
   mouseElement.addEventListener('touchmove', touchMoved);
@@ -98,7 +103,13 @@ export const cursorRenderer = (
         : TouchState.Clicking;
     }
     if (!isMouseEvent(e)) {
-      if (!allowTouchStart(localCursor)) {
+      const demoBB = getDemoContainer().getBoundingClientRect();
+      if (
+        !allowTouchStart({
+          x: lastPosition.x - demoBB.x,
+          y: lastPosition.y - demoBB.y,
+        })
+      ) {
         return;
       }
       // If we're consuming the event, prevent scrolling.
