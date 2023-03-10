@@ -40,13 +40,17 @@ export const ENVIRONMENT_TEXTURE_LEVEL = 0.3;
 export const ACTOR_UPDATE_INTERVAL = 1000;
 
 // Cycle through these colors for users.
-export const COLOR_PALATE: Color[] = [
-  [COLOR_PALATE_RS[0], COLOR_PALATE_RS[1], COLOR_PALATE_RS[2]],
-  [COLOR_PALATE_RS[6], COLOR_PALATE_RS[7], COLOR_PALATE_RS[8]],
-  [COLOR_PALATE_RS[12], COLOR_PALATE_RS[13], COLOR_PALATE_RS[14]],
-  [COLOR_PALATE_RS[18], COLOR_PALATE_RS[19], COLOR_PALATE_RS[20]],
-  [COLOR_PALATE_RS[24], COLOR_PALATE_RS[25], COLOR_PALATE_RS[26]],
-];
+// Rust stores both start and end colors, and stores them as a flat list. Pull
+// out the first 3 of each 6-length slice.
+export const COLOR_PALATE: Color[] = COLOR_PALATE_RS.reduce(
+  (palate, val, idx) => {
+    if (idx % 6 === 0) {
+      palate.push([val, COLOR_PALATE_RS[idx + 1], COLOR_PALATE_RS[+2]]);
+    }
+    return palate;
+  },
+  [] as [number, number, number][],
+);
 
 // Mutators/etc
 
