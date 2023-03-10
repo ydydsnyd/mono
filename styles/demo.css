@@ -91,7 +91,10 @@ body.demo-active * {
   opacity: 0;
 }
 #info > *:not(:first-child) {
-  margin-left: 2em;
+  margin-left: 3em;
+}
+#info * {
+  flex-shrink: 0;
 }
 .demo-active #info {
   opacity: 1;
