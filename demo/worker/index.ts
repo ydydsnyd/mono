@@ -10,15 +10,12 @@ import {
 import renderModule from '../../vendor/renderer/renderer_bg.wasm';
 import initRenderer from '../../vendor/renderer';
 import {Env} from '../shared/types';
-import {ORCHESTRATOR_ROOM_ID} from '../shared/constants';
 
 setEnv(Env.SERVER, async () => {
   await initRenderer(renderModule);
 });
 
 setOrchestratorEnv(Env.SERVER);
-
-let globalRoomID = 'UNKNOWN';
 
 const authHandler = async (auth: string, roomID: string) => {
   // Note a real implementation should use signed and encrypted auth tokens,
@@ -33,8 +30,6 @@ const authHandler = async (auth: string, roomID: string) => {
   if (!authJson.userID || typeof authJson.userID !== 'string') {
     throw new Error('Missing userID');
   }
-  globalRoomID = roomID;
-  console.log(`user ${authJson.userID} connected to ${roomID}`);
   return {
     userID: authJson.userID,
   };
@@ -52,14 +47,8 @@ const {worker, RoomDO, AuthDO} = createReflectServer({
   mutators: allMutators,
   authHandler,
   disconnectHandler: async write => {
-    if (globalRoomID === ORCHESTRATOR_ROOM_ID) {
-      await orchestratorMutators.removeOchestratorActor(write, write.clientID);
-    } else {
-      await mutators.removeActor(write, {
-        roomID: globalRoomID,
-        clientID: write.clientID,
-      });
-    }
+    await mutators.removeActor(write, write.clientID);
+    await orchestratorMutators.removeOchestratorActor(write, write.clientID);
   },
   getLogLevel: () => 'error',
   allowUnconfirmedWrites: false,

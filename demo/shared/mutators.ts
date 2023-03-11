@@ -56,13 +56,9 @@ export const mutators = {
       await tx.put(`cursor/${cursor.actorId}`, cursor);
     }
   },
-  removeActor: async (
-    tx: WriteTransaction,
-    {clientID, roomID}: {clientID: string; roomID: string},
-  ) => {
+  removeActor: async (tx: WriteTransaction, clientID: string) => {
     const actorId = await tx.get(`client-actor/${clientID}`);
     if (actorId) {
-      console.log(`Removing ${actorId} from ${roomID}`);
       await tx.del(`actor/${actorId}`);
       await tx.del(`cursor/${actorId}`);
     }
