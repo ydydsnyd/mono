@@ -57,6 +57,7 @@ const {worker, RoomDO, AuthDO} = createReflectServer({
 export {RoomDO, AuthDO};
 
 const exports = {
+  ...worker,
   async fetch(
     request: Request,
     env: {NEW_ROOM_SECRET?: string} & ReflectServerBaseEnv,
