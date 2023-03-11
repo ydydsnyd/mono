@@ -39,6 +39,9 @@ export const ENVIRONMENT_TEXTURE_LEVEL = 0.3;
 // lower frequency than cursors.
 export const ACTOR_UPDATE_INTERVAL = 1000;
 
+// Tell the server we're still here on this interval
+export const ALIVE_UPDATE_INTERVAL = 1000;
+
 // Cycle through these colors for users.
 // Rust stores both start and end colors, and stores them as a flat list. Pull
 // out the first 3 of each 6-length slice.

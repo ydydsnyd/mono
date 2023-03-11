@@ -4,9 +4,11 @@ import {WORKER_HOST} from '../shared/urls';
 import type {OrchestratorActor} from '../shared/types';
 import {orchestratorMutators} from '../shared/orchestrator-mutators';
 import {nanoid} from 'nanoid';
+import {now} from '../shared/util';
 
 export const initRoom = async (): Promise<{
   actor: OrchestratorActor;
+  alive: () => Promise<void>;
   getDebug: () => Promise<{
     currentRoom: string;
     currentRoomCount: number;
@@ -61,6 +63,7 @@ export const initRoom = async (): Promise<{
           }
           resolve({
             actor,
+            alive: () => mutations.deadClientSwitch(now()),
             getDebug: async () => {
               return await orchestratorClient.query(async tx => {
                 const currentRoom = (await tx.get('current-room-id')) as string;
@@ -82,6 +85,7 @@ export const initRoom = async (): Promise<{
     mutations.createOrchestratorActor({
       fallbackId: nanoid(),
       forceNewRoomWithSecret: params.get('reset'),
+      currentTime: now(),
     });
   });
 };

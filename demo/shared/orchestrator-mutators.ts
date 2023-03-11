@@ -7,6 +7,9 @@ const ROOM_ID_KEY = 'current-room-id';
 const ROOM_COUNT_KEY = 'current-room-count';
 const COLOR_INDEX_KEY = 'color-index';
 
+// Remove clients after 5 minutes of inactivity
+const DEAD_CLIENT_TIME = 1000 * 60 * 5;
+
 let env = Env.CLIENT;
 let newRoomSecret: Uint8Array | undefined;
 export const setEnv = (e: Env, secret?: Uint8Array) => {
@@ -18,35 +21,21 @@ export const setEnv = (e: Env, secret?: Uint8Array) => {
 
 export const orchestratorMutators = {
   removeOchestratorActor: async (tx: WriteTransaction, clientID: string) => {
-    const key = `actor/${clientID}`;
-    const actor = (await tx.get(key)) as OrchestratorActor;
-    // Dunno who that is
-    if (!actor) {
-      return;
-    }
-    // Delete the actor
-    await tx.del(key);
-    const currentRoom = (await tx.get(ROOM_ID_KEY)) as string;
-    if (!currentRoom || actor.room !== currentRoom) {
-      // The room that the actor was in doesn't exist, no need to do any more.
-      return;
-    }
-    // Decrement the room count, so that as long as we don't hit the ceiling, we'll
-    // always use the same room.
-    const roomCount = (await tx.get(ROOM_COUNT_KEY)) as number;
-    if (!roomCount || roomCount < 0) {
-      throw new Error("Can't remove an actor from an empty room...");
-    }
-    await tx.put(ROOM_COUNT_KEY, roomCount - 1);
+    await removeActor(tx, clientID);
+  },
+  deadClientSwitch: async (tx: WriteTransaction, time: number) => {
+    await tx.put(`dead-client-switch/${tx.clientID}`, time);
   },
   createOrchestratorActor: async (
     tx: WriteTransaction,
     {
       fallbackId,
       forceNewRoomWithSecret,
+      currentTime,
     }: {
       fallbackId: string;
       forceNewRoomWithSecret: string | null | undefined;
+      currentTime: number;
     },
   ) => {
     // We can't create actors/rooms on the client, because otherwise we'll get a
@@ -55,6 +44,7 @@ export const orchestratorMutators = {
     if (env === Env.CLIENT) {
       return;
     }
+    await cleanupDeadClients(tx, currentTime);
     const key = `actor/${tx.clientID}`;
     const hasActor = await tx.has(key);
     if (hasActor) {
@@ -127,4 +117,42 @@ const isResetRoomSecret = async (secret: string) => {
     }
   }
   return true;
+};
+
+const cleanupDeadClients = async (
+  tx: WriteTransaction,
+  currentTime: number,
+) => {
+  const clients = (await tx
+    .scan({prefix: 'dead-client-switch/'})
+    .entries()) as AsyncIterable<[string, number]>;
+  for await (const [key, lastSeen] of clients) {
+    if (lastSeen > currentTime - DEAD_CLIENT_TIME) {
+      const clientId = key.split('/')[1];
+      await removeActor(tx, clientId);
+    }
+  }
+};
+
+const removeActor = async (tx: WriteTransaction, clientID: string) => {
+  const key = `actor/${clientID}`;
+  const actor = (await tx.get(key)) as OrchestratorActor;
+  // Dunno who that is
+  if (!actor) {
+    return;
+  }
+  // Delete the actor
+  await tx.del(key);
+  const currentRoom = (await tx.get(ROOM_ID_KEY)) as string;
+  if (!currentRoom || actor.room !== currentRoom) {
+    // The room that the actor was in doesn't exist, no need to do any more.
+    return;
+  }
+  // Decrement the room count, so that as long as we don't hit the ceiling, we'll
+  // always use the same room.
+  const roomCount = (await tx.get(ROOM_COUNT_KEY)) as number;
+  if (!roomCount || roomCount < 0) {
+    throw new Error("Can't remove an actor from an empty room...");
+  }
+  await tx.put(ROOM_COUNT_KEY, roomCount - 1);
 };
