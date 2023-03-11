@@ -3,9 +3,9 @@ import {COLOR_PALATE, ROOM_MAX_ACTORS} from './constants';
 import {Env, OrchestratorActor} from './types';
 import {string2Uint8Array} from './uint82b64';
 
-const ROOM_ID_KEY = 'current-room-id';
-const ROOM_COUNT_KEY = 'current-room-count';
-const COLOR_INDEX_KEY = 'color-index';
+export const ROOM_ID_KEY = 'current-room-id';
+export const ROOM_COUNT_KEY = 'current-room-count';
+export const COLOR_INDEX_KEY = 'color-index';
 
 // Remove clients after 5 minutes of inactivity
 const DEAD_CLIENT_TIME = 1000 * 60 * 5;
@@ -30,12 +30,14 @@ export const orchestratorMutators = {
     tx: WriteTransaction,
     {
       fallbackId,
-      forceNewRoomWithSecret,
       currentTime,
+      lastColorIndex,
+      forceNewRoomWithSecret,
     }: {
       fallbackId: string;
-      forceNewRoomWithSecret: string | null | undefined;
       currentTime: number;
+      lastColorIndex?: number;
+      forceNewRoomWithSecret?: string | null;
     },
   ) => {
     // We can't create actors/rooms on the client, because otherwise we'll get a
@@ -75,6 +77,7 @@ export const orchestratorMutators = {
       (roomCount && roomCount >= ROOM_MAX_ACTORS)
     ) {
       // Make a new room for this user and start adding users to it
+      console.log('creating new room');
       selectedRoomId = fallbackId;
       await tx.put(ROOM_ID_KEY, selectedRoomId);
       await tx.put(ROOM_COUNT_KEY, 1);
@@ -82,15 +85,20 @@ export const orchestratorMutators = {
     } else {
       selectedRoomId = (await tx.get(ROOM_ID_KEY)) as string;
       roomActorNum = (roomCount || 0) + 1;
+      console.log('update room count to', roomActorNum);
       await tx.put(ROOM_COUNT_KEY, roomActorNum);
     }
-    // NOTE: we just cycle through colors, so if COLOR_PALATE.length <
-    // ROOM_MAX_ACTORS, we'll see cycling duplicates.
-    // We do this independently of room count, because that way if someone enters
-    // and leaves, each new user will still have a distinct color from the last N users.
-    const nextColorNum = (((await tx.get(COLOR_INDEX_KEY)) as number) || 0) + 1;
-    const colorIndex = nextColorNum % COLOR_PALATE.length;
-    await tx.put(COLOR_INDEX_KEY, nextColorNum);
+    let colorIndex = lastColorIndex;
+    if (colorIndex === undefined) {
+      // NOTE: we just cycle through colors, so if COLOR_PALATE.length <
+      // ROOM_MAX_ACTORS, we'll see cycling duplicates.
+      // We do this independently of room count, because that way if someone enters
+      // and leaves, each new user will still have a distinct color from the last N users.
+      const nextColorNum =
+        (((await tx.get(COLOR_INDEX_KEY)) as number) || 0) + 1;
+      colorIndex = nextColorNum % COLOR_PALATE.length;
+      await tx.put(COLOR_INDEX_KEY, nextColorNum);
+    }
     const actor: OrchestratorActor = {
       id: tx.clientID,
       colorIndex,

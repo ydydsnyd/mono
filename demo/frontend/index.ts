@@ -83,7 +83,13 @@ export const init = async () => {
   init3DDone();
 
   const roomInitDone = initTiming('finding room', 100);
-  const {actor, alive, getDebug: getOrchestratorDebug} = await initRoom();
+  const {
+    actor,
+    alive,
+    clientCount,
+    rebucket,
+    getDebug: getOrchestratorDebug,
+  } = await initRoom();
   roomInitDone();
 
   // Set up info below demo
@@ -104,7 +110,7 @@ export const init = async () => {
     updateActorLocation,
     clearTextures,
     initialSplatters,
-  } = await initialize(actor, debug);
+  } = await initialize(actor, rebucket, debug);
   initReflectClientDone();
 
   // Get our location and add it when it's ready
@@ -146,8 +152,9 @@ export const init = async () => {
   let localStep = physicsStep;
 
   // Whenever actors change, update the count
-  addListener<Actor>('actor', () => {
-    activeUserCount.innerHTML = Object.keys(actors).length + '';
+  addListener<Actor>('actor', async () => {
+    const count = await clientCount();
+    activeUserCount.innerHTML = count + '';
   });
 
   // Initialize textures

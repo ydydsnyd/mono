@@ -2,13 +2,20 @@ import {Reflect} from '@rocicorp/reflect';
 import {ORCHESTRATOR_ROOM_ID} from '../shared/constants';
 import {WORKER_HOST} from '../shared/urls';
 import type {OrchestratorActor} from '../shared/types';
-import {orchestratorMutators} from '../shared/orchestrator-mutators';
+import {
+  COLOR_INDEX_KEY,
+  orchestratorMutators,
+  ROOM_COUNT_KEY,
+  ROOM_ID_KEY,
+} from '../shared/orchestrator-mutators';
 import {nanoid} from 'nanoid';
 import {now} from '../shared/util';
 
 export const initRoom = async (): Promise<{
   actor: OrchestratorActor;
   alive: () => Promise<void>;
+  clientCount: () => Promise<number>;
+  rebucket: (actor: OrchestratorActor) => Promise<void>;
   getDebug: () => Promise<{
     currentRoom: string;
     currentRoomCount: number;
@@ -52,8 +59,50 @@ export const initRoom = async (): Promise<{
 
   const mutations = orchestratorClient.mutate;
 
+  // Create our actor, which also will assign us a room. We have to wait for this
+  // to complete (in the subscription above) before we can connect
+  const params = new URLSearchParams(window.location.search);
+  mutations.createOrchestratorActor({
+    fallbackId: nanoid(),
+    forceNewRoomWithSecret: params.get('reset'),
+    currentTime: now(),
+  });
+  const actor = await waitForActor(orchestratorClient);
+  return {
+    actor,
+    alive: () => mutations.deadClientSwitch(now()),
+    clientCount: async () =>
+      await orchestratorClient.query(
+        async tx => await (await tx.scan({prefix: 'actor/'}).toArray()).length,
+      ),
+    rebucket: async actor => {
+      await mutations.createOrchestratorActor({
+        lastColorIndex: actor.colorIndex,
+        fallbackId: nanoid(),
+        forceNewRoomWithSecret: null,
+        currentTime: now(),
+      });
+      const newActor = await waitForActor(orchestratorClient);
+      // TODO: this isn't very clear - perhaps move to a more event-based API?
+      actor.id = newActor.id;
+      actor.room = newActor.room;
+    },
+    getDebug: async () => {
+      return await orchestratorClient.query(async tx => {
+        const currentRoom = (await tx.get(ROOM_ID_KEY)) as string;
+        const currentRoomCount = (await tx.get(ROOM_COUNT_KEY)) as number;
+        const currentColorIdx = (await tx.get(COLOR_INDEX_KEY)) as number;
+        return {currentRoom, currentRoomCount, currentColorIdx};
+      });
+    },
+  };
+};
+
+const waitForActor = (
+  client: Reflect<typeof orchestratorMutators>,
+): Promise<OrchestratorActor> => {
   return new Promise((resolve, reject) => {
-    orchestratorClient.subscribe<OrchestratorActor>(
+    const unsubscribe = client.subscribe<OrchestratorActor>(
       async tx => (await tx.get(`actor/${tx.clientID}`)) as OrchestratorActor,
       {
         onData: actor => {
@@ -61,31 +110,11 @@ export const initRoom = async (): Promise<{
           if (!actor) {
             return;
           }
-          resolve({
-            actor,
-            alive: () => mutations.deadClientSwitch(now()),
-            getDebug: async () => {
-              return await orchestratorClient.query(async tx => {
-                const currentRoom = (await tx.get('current-room-id')) as string;
-                const currentRoomCount = (await tx.get(
-                  'current-room-count',
-                )) as number;
-                const currentColorIdx = (await tx.get('color-index')) as number;
-                return {currentRoom, currentRoomCount, currentColorIdx};
-              });
-            },
-          });
+          unsubscribe();
+          resolve(actor);
         },
         onError: error => reject(error),
       },
     );
-    // Create our actor, which also will assign us a room. We have to wait for this
-    // to complete (in the subscription above) before we can connect
-    const params = new URLSearchParams(window.location.search);
-    mutations.createOrchestratorActor({
-      fallbackId: nanoid(),
-      forceNewRoomWithSecret: params.get('reset'),
-      currentTime: now(),
-    });
   });
 };

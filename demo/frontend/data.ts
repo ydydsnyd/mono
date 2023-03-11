@@ -17,7 +17,11 @@ import {WORKER_HOST} from '../shared/urls';
 import {unchunk} from '../shared/chunks';
 import type {OrchestratorActor} from '../shared/types';
 
-export const initialize = async (actor: OrchestratorActor, debug: Debug) => {
+export const initialize = async (
+  actor: OrchestratorActor,
+  rebucket: (actor: OrchestratorActor) => Promise<void>,
+  debug: Debug,
+) => {
   // Set up our connection to reflect
   console.log(`Connecting to room ${actor.room} on worker at ${WORKER_HOST}`);
 
@@ -37,9 +41,11 @@ export const initialize = async (actor: OrchestratorActor, debug: Debug) => {
   }
 
   // Create a reflect client
+  let isOnline = false;
+  let isInitializing = true;
   const reflectClient = new Reflect<M>({
     socketOrigin: WORKER_HOST,
-    onOnlineChange: online => {
+    onOnlineChange: async online => {
       console.log(`online: ${online}`);
       const dot = document.querySelector('.online-dot');
       if (dot) {
@@ -49,6 +55,11 @@ export const initialize = async (actor: OrchestratorActor, debug: Debug) => {
           dot.classList.add('offline');
         }
       }
+      if (!isInitializing && online && !isOnline) {
+        await rebucket(actor);
+        await mutations.guaranteeActor(actor);
+      }
+      isOnline = online;
     },
     userID: actor.id,
     roomID: actor.room,
