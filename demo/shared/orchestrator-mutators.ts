@@ -147,7 +147,7 @@ const cleanupDeadClients = async (
     .scan({prefix: 'dead-client-switch/'})
     .entries()) as AsyncIterable<[string, number]>;
   for await (const [key, lastSeen] of clients) {
-    if (lastSeen > currentTime - DEAD_CLIENT_TIME) {
+    if (lastSeen < currentTime - DEAD_CLIENT_TIME) {
       const clientId = key.split('/')[1];
       await removeActor(tx, clientId);
     }
