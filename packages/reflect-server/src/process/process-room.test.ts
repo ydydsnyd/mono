@@ -334,8 +334,6 @@ describe('processRoom', () => {
     expectedVersion: Version;
   };
 
-  const startTime = 100;
-
   const cases: Case[] = [
     {
       name: 'no client record',
@@ -369,7 +367,7 @@ describe('processRoom', () => {
             cookie: 2,
             lastMutationIDChanges: {c1: 1, c2: 1},
             patch: [],
-            timestamp: 100,
+            timestamp: undefined,
           },
         },
         {
@@ -379,7 +377,7 @@ describe('processRoom', () => {
             cookie: 2,
             lastMutationIDChanges: {c1: 1, c2: 1},
             patch: [],
-            timestamp: 100,
+            timestamp: undefined,
           },
         },
         {
@@ -389,7 +387,7 @@ describe('processRoom', () => {
             cookie: 2,
             lastMutationIDChanges: {c3: 1},
             patch: [],
-            timestamp: 100,
+            timestamp: undefined,
           },
         },
       ],
@@ -423,7 +421,7 @@ describe('processRoom', () => {
             cookie: 2,
             lastMutationIDChanges: {c1: 1, c2: 1},
             patch: [],
-            timestamp: 100,
+            timestamp: undefined,
           },
         },
       ],
@@ -584,7 +582,7 @@ describe('processRoom', () => {
               c2: 1,
             },
             patch: [],
-            timestamp: 100,
+            timestamp: undefined,
           },
         },
         {
@@ -596,7 +594,7 @@ describe('processRoom', () => {
               c3: 4,
             },
             patch: [],
-            timestamp: 100,
+            timestamp: undefined,
           },
         },
         ...expectedPokesForPendingMutations1,
@@ -639,7 +637,6 @@ describe('processRoom', () => {
         mutators,
         () => Promise.resolve(),
         storage,
-        startTime,
       );
       if (c.expectedError) {
         try {
