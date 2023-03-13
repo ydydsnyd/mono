@@ -9,12 +9,7 @@ import {
 } from './texture-renderer';
 import initRenderer, {draw_caches, precompute} from '../../vendor/renderer';
 import {cursorRenderer} from './cursors';
-import {
-  UVMAP_SIZE,
-  SPLATTER_MS,
-  MIN_STEP_MS,
-  ALIVE_UPDATE_INTERVAL,
-} from '../shared/constants';
+import {UVMAP_SIZE, SPLATTER_MS, MIN_STEP_MS} from '../shared/constants';
 import type {Actor, Debug, Letter, Position, Splatter} from '../shared/types';
 import {LETTERS} from '../shared/letters';
 import {letterMap, now} from '../shared/util';
@@ -86,7 +81,6 @@ export const init = async () => {
   const roomInitDone = initTiming('finding room', 100);
   const {
     actor,
-    alive,
     clientCount,
     rebucket,
     getDebug: getOrchestratorDebug,
@@ -308,9 +302,6 @@ export const init = async () => {
       triggerSplatterRedraw(letter);
     }
   });
-
-  // Dead Client Switch
-  setInterval(alive, ALIVE_UPDATE_INTERVAL);
 
   // After we've started, flip a class on the body
   document.body.classList.add('demo-active');

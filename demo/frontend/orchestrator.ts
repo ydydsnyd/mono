@@ -9,11 +9,9 @@ import {
   ROOM_ID_KEY,
 } from '../shared/orchestrator-mutators';
 import {nanoid} from 'nanoid';
-import {now} from '../shared/util';
 
 export const initRoom = async (): Promise<{
   actor: OrchestratorActor;
-  alive: () => Promise<void>;
   clientCount: () => Promise<number>;
   rebucket: (actor: OrchestratorActor) => Promise<void>;
   getDebug: () => Promise<{
@@ -65,12 +63,10 @@ export const initRoom = async (): Promise<{
   mutations.createOrchestratorActor({
     fallbackId: nanoid(),
     forceNewRoomWithSecret: params.get('reset'),
-    currentTime: now(),
   });
   const actor = await waitForActor(orchestratorClient);
   return {
     actor,
-    alive: () => mutations.deadClientSwitch(now()),
     clientCount: async () =>
       await orchestratorClient.query(
         async tx => await (await tx.scan({prefix: 'actor/'}).toArray()).length,
@@ -80,7 +76,6 @@ export const initRoom = async (): Promise<{
         lastColorIndex: actor.colorIndex,
         fallbackId: nanoid(),
         forceNewRoomWithSecret: null,
-        currentTime: now(),
       });
       const newActor = await waitForActor(orchestratorClient);
       // TODO: this isn't very clear - perhaps move to a more event-based API?
