@@ -50,8 +50,8 @@ const {worker, RoomDO, AuthDO} = createReflectServer({
     await mutators.removeActor(write, write.clientID);
     await orchestratorMutators.removeOchestratorActor(write, write.clientID);
   },
-  getLogLevel: () => 'info',
-  allowUnconfirmedWrites: false,
+  getLogLevel: () => 'debug',
+  allowUnconfirmedWrites: true,
 });
 
 export {RoomDO, AuthDO};
