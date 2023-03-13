@@ -25,6 +25,7 @@ const CACHE_DEBOUNCE_MS = 100;
 
 export const initialize = async (
   actor: OrchestratorActor,
+  onlineChange: (online: boolean) => void,
   rebucket: (actor: OrchestratorActor) => Promise<void>,
   debug: Debug,
 ) => {
@@ -52,20 +53,13 @@ export const initialize = async (
   const reflectClient = new Reflect<M>({
     socketOrigin: WORKER_HOST,
     onOnlineChange: async online => {
-      console.log(`online: ${online}`);
-      const dot = document.querySelector('.online-dot');
-      if (dot) {
-        if (online) {
-          dot.classList.remove('offline');
-        } else {
-          dot.classList.add('offline');
-        }
-      }
       if (!isInitializing && online && !isOnline) {
         await rebucket(actor);
         await mutations.guaranteeActor(actor);
       }
       isOnline = online;
+      isInitializing = false;
+      onlineChange(online);
     },
     userID: actor.id,
     roomID: actor.room,

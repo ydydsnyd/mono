@@ -106,7 +106,21 @@ export const init = async () => {
     updateActorLocation,
     clearTextures,
     initialSplatters,
-  } = await initialize(actor, rebucket, debug);
+  } = await initialize(
+    actor,
+    online => {
+      const dot = document.querySelector('.online-dot');
+      if (dot) {
+        if (online) {
+          dot.classList.remove('offline');
+        } else {
+          dot.classList.add('offline');
+        }
+      }
+    },
+    rebucket,
+    debug,
+  );
   initReflectClientDone();
 
   // Get our location and add it when it's ready
