@@ -43,7 +43,11 @@ if (mCount(mutators) + mCount(orchestratorMutators) !== mCount(allMutators)) {
   );
 }
 
-const {worker, RoomDO, AuthDO} = createReflectServer({
+const {
+  worker,
+  RoomDO: SuperRoomDO,
+  AuthDO,
+} = createReflectServer({
   mutators: allMutators,
   authHandler,
   disconnectHandler: async write => {
@@ -54,15 +58,12 @@ const {worker, RoomDO, AuthDO} = createReflectServer({
   allowUnconfirmedWrites: true,
 });
 
-export {RoomDO, AuthDO};
-
-const exports = {
-  ...worker,
-  async fetch(
-    request: Request,
+class RoomDO extends SuperRoomDO {
+  constructor(
+    state: any,
     env: {NEW_ROOM_SECRET?: string} & ReflectServerBaseEnv,
-    ctx: any,
   ) {
+    super(state, env);
     if (env.NEW_ROOM_SECRET) {
       setOrchestratorEnv(
         Env.SERVER,
@@ -71,7 +72,8 @@ const exports = {
         ),
       );
     }
-    return worker.fetch!(request, env, ctx);
-  },
-};
-export default exports;
+  }
+}
+
+export {RoomDO, AuthDO};
+export default worker;
