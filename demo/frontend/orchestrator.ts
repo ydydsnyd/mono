@@ -69,7 +69,10 @@ export const initRoom = async (): Promise<{
     actor,
     clientCount: async () =>
       await orchestratorClient.query(
-        async tx => await (await tx.scan({prefix: 'actor/'}).toArray()).length,
+        async tx =>
+          await (
+            await tx.scan({prefix: 'orchestrator-actor/'}).toArray()
+          ).length,
       ),
     rebucket: async actor => {
       await mutations.createOrchestratorActor({
@@ -98,7 +101,10 @@ const waitForActor = (
 ): Promise<OrchestratorActor> => {
   return new Promise((resolve, reject) => {
     const unsubscribe = client.subscribe<OrchestratorActor>(
-      async tx => (await tx.get(`actor/${tx.clientID}`)) as OrchestratorActor,
+      async tx =>
+        (await tx.get(
+          `orchestrator-actor/${tx.clientID}`,
+        )) as OrchestratorActor,
       {
         onData: actor => {
           // We have to wait until an actor exists
