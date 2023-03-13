@@ -48,16 +48,14 @@ export const initialize = async (
   }
 
   // Create a reflect client
-  let isOnline = false;
   let isInitializing = true;
   const reflectClient = new Reflect<M>({
     socketOrigin: WORKER_HOST,
     onOnlineChange: async online => {
-      if (!isInitializing && online && !isOnline) {
+      if (!isInitializing && online) {
         await rebucket(actor);
         await mutations.guaranteeActor(actor);
       }
-      isOnline = online;
       isInitializing = false;
       onlineChange(online);
     },
