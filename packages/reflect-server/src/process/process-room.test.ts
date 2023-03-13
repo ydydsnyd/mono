@@ -1,4 +1,4 @@
-import {test, expect} from '@jest/globals';
+import {describe, test, expect} from '@jest/globals';
 import type {WriteTransaction} from 'replicache';
 import {DurableStorage} from '../storage/durable-storage.js';
 import type {ClientPoke} from '../types/client-poke.js';
@@ -13,21 +13,52 @@ import {getVersion, versionKey} from '../types/version.js';
 import type {Version} from 'reflect-protocol';
 import {
   client,
-  mutation,
   clientRecord,
   createSilentLogContext,
   fail,
   mockMathRandom,
+  pendingMutation,
 } from '../util/test-utils.js';
 import {processRoom} from '../process/process-room.js';
-import type {PendingMutationMap} from '../types/mutation.js';
+import type {PendingMutation} from '../types/mutation.js';
 
 const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();
 
 mockMathRandom();
 
-const expectedPokesForPendingMutations: ClientPoke[] = [
+const pendingMutations1: PendingMutation[] = [
+  pendingMutation({
+    clientID: 'c1',
+    clientGroupID: 'cg1',
+    id: 2,
+    timestamp: 50,
+    name: 'inc',
+  }),
+  pendingMutation({
+    clientID: 'c3',
+    clientGroupID: 'cg2',
+    id: 5,
+    timestamp: 50,
+    name: 'inc',
+  }),
+  pendingMutation({
+    clientID: 'c1',
+    clientGroupID: 'cg1',
+    id: 3,
+    timestamp: 100,
+    name: 'inc',
+  }),
+  pendingMutation({
+    clientID: 'c2',
+    clientGroupID: 'cg1',
+    id: 2,
+    timestamp: 10,
+    name: 'inc',
+  }),
+];
+
+const expectedPokesForPendingMutations1: ClientPoke[] = [
   {
     clientID: 'c1',
     poke: {
@@ -289,13 +320,13 @@ const expectedPokesForPendingMutations: ClientPoke[] = [
   },
 ];
 
-test('processRoom', async () => {
+describe('processRoom', () => {
   type Case = {
     name: string;
     clientRecords: ClientRecordMap;
     headVersion: Version;
     clients: ClientMap;
-    pendingMutations: PendingMutationMap;
+    pendingMutations: PendingMutation[];
     expectedError?: string;
     expectedPokes?: ClientPoke[];
     expectedUserValues?: Map<string, UserValue>;
@@ -309,7 +340,7 @@ test('processRoom', async () => {
     {
       name: 'no client record',
       clientRecords: new Map(),
-      pendingMutations: new Map(),
+      pendingMutations: [],
       headVersion: 42,
       clients: new Map([client('c1', 'u1', 'cg1')]),
       expectedUserValues: new Map(),
@@ -329,7 +360,7 @@ test('processRoom', async () => {
         client('c2', 'u2', 'cg1'),
         client('c3', 'u3', 'cg2'),
       ]),
-      pendingMutations: new Map(),
+      pendingMutations: [],
       expectedPokes: [
         {
           clientID: 'c1',
@@ -383,7 +414,7 @@ test('processRoom', async () => {
         client('c2', 'u2', 'cg1'),
         client('c3', 'u3', 'cg2'),
       ]),
-      pendingMutations: new Map(),
+      pendingMutations: [],
       expectedPokes: [
         {
           clientID: 'c2',
@@ -409,9 +440,15 @@ test('processRoom', async () => {
       clientRecords: new Map([['c1', clientRecord('cg1', 1)]]),
       headVersion: 1,
       clients: new Map([client('c1', 'u1', 'cg1')]),
-      pendingMutations: new Map([
-        ['cg1', [mutation('c1', 2, 'inc', null, 300)]],
-      ]),
+      pendingMutations: [
+        pendingMutation({
+          clientID: 'c1',
+          clientGroupID: 'cg1',
+          id: 2,
+          timestamp: 300,
+          name: 'inc',
+        }),
+      ],
       expectedPokes: [
         {
           clientID: 'c1',
@@ -439,15 +476,22 @@ test('processRoom', async () => {
       clientRecords: new Map([['c1', clientRecord('cg1', 1)]]),
       headVersion: 1,
       clients: new Map([client('c1', 'u1', 'cg1')]),
-      pendingMutations: new Map([
-        [
-          'cg1',
-          [
-            mutation('c1', 2, 'inc', null, 50),
-            mutation('c1', 3, 'inc', null, 100),
-          ],
-        ],
-      ]),
+      pendingMutations: [
+        pendingMutation({
+          clientID: 'c1',
+          clientGroupID: 'cg1',
+          id: 2,
+          timestamp: 50,
+          name: 'inc',
+        }),
+        pendingMutation({
+          clientID: 'c1',
+          clientGroupID: 'cg1',
+          id: 3,
+          timestamp: 100,
+          name: 'inc',
+        }),
+      ],
       expectedPokes: [
         {
           clientID: 'c1',
@@ -501,18 +545,8 @@ test('processRoom', async () => {
         client('c3', 'u3', 'cg2'),
         client('c4', 'u4', 'cg3'),
       ]),
-      pendingMutations: new Map([
-        [
-          'cg1',
-          [
-            mutation('c1', 2, 'inc', null, 50),
-            mutation('c1', 3, 'inc', null, 100),
-            mutation('c2', 2, 'inc', null, 10),
-          ],
-        ],
-        ['cg2', [mutation('c3', 5, 'inc', null, 50)]],
-      ]),
-      expectedPokes: expectedPokesForPendingMutations,
+      pendingMutations: pendingMutations1,
+      expectedPokes: expectedPokesForPendingMutations1,
       expectedClientRecords: new Map([
         ['c1', clientRecord('cg1', 5, 3, 4)],
         ['c2', clientRecord('cg1', 5, 2, 5)],
@@ -537,17 +571,7 @@ test('processRoom', async () => {
         client('c3', 'u3', 'cg2'),
         client('c4', 'u4', 'cg3'),
       ]),
-      pendingMutations: new Map([
-        [
-          'cg1',
-          [
-            mutation('c1', 2, 'inc', null, 50),
-            mutation('c1', 3, 'inc', null, 100),
-            mutation('c2', 2, 'inc', null, 10),
-          ],
-        ],
-        ['cg2', [mutation('c3', 5, 'inc', null, 50)]],
-      ]),
+      pendingMutations: pendingMutations1,
       expectedPokes: [
         // fast forward pokes
         {
@@ -575,7 +599,7 @@ test('processRoom', async () => {
             timestamp: 100,
           },
         },
-        ...expectedPokesForPendingMutations,
+        ...expectedPokesForPendingMutations1,
       ],
       expectedClientRecords: new Map([
         ['c1', clientRecord('cg1', 5, 3, 4)],
@@ -587,55 +611,57 @@ test('processRoom', async () => {
       expectedVersion: 5,
     },
   ];
-  const durable = await getMiniflareDurableObjectStorage(id);
-
-  const mutators = new Map(
-    Object.entries({
-      inc: async (tx: WriteTransaction) => {
-        let count = ((await tx.get('count')) as number) ?? 0;
-        count++;
-        await tx.put('count', count);
-      },
-    }),
-  );
 
   for (const c of cases) {
-    await durable.deleteAll();
-    const storage = new DurableStorage(durable);
-    await storage.put(versionKey, c.headVersion);
-    for (const [clientID, record] of c.clientRecords) {
-      await putClientRecord(clientID, record, storage);
-    }
+    test(c.name, async () => {
+      const mutators = new Map(
+        Object.entries({
+          inc: async (tx: WriteTransaction) => {
+            let count = ((await tx.get('count')) as number) ?? 0;
+            count++;
+            await tx.put('count', count);
+          },
+        }),
+      );
 
-    const p = processRoom(
-      createSilentLogContext(),
-      c.clients,
-      c.pendingMutations,
-      mutators,
-      () => Promise.resolve(),
-      storage,
-      startTime,
-    );
-    if (c.expectedError) {
-      try {
-        await p;
-        fail('Expected error');
-      } catch (e) {
-        expect(String(e)).toEqual(c.expectedError);
+      const durable = await getMiniflareDurableObjectStorage(id);
+      await durable.deleteAll();
+      const storage = new DurableStorage(durable);
+      await storage.put(versionKey, c.headVersion);
+      for (const [clientID, record] of c.clientRecords) {
+        await putClientRecord(clientID, record, storage);
       }
-    } else {
-      const pokes = await p;
-      expect(pokes).toEqual(c.expectedPokes);
-    }
 
-    for (const [clientID, record] of c.expectedClientRecords ?? new Map()) {
-      expect(await getClientRecord(clientID, storage)).toEqual(record);
-    }
+      const p = processRoom(
+        createSilentLogContext(),
+        c.clients,
+        c.pendingMutations,
+        mutators,
+        () => Promise.resolve(),
+        storage,
+        startTime,
+      );
+      if (c.expectedError) {
+        try {
+          await p;
+          fail('Expected error');
+        } catch (e) {
+          expect(String(e)).toEqual(c.expectedError);
+        }
+      } else {
+        const pokes = await p;
+        expect(pokes).toEqual(c.expectedPokes);
+      }
 
-    for (const [key, value] of c.expectedUserValues ?? new Map()) {
-      expect(await getUserValue(key, storage)).toEqual(value);
-    }
+      for (const [clientID, record] of c.expectedClientRecords ?? new Map()) {
+        expect(await getClientRecord(clientID, storage)).toEqual(record);
+      }
 
-    expect(await getVersion(storage)).toEqual(c.expectedVersion);
+      for (const [key, value] of c.expectedUserValues ?? new Map()) {
+        expect(await getUserValue(key, storage)).toEqual(value);
+      }
+
+      expect(await getVersion(storage)).toEqual(c.expectedVersion);
+    });
   }
 });
