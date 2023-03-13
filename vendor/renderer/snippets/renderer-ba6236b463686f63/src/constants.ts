@@ -22,7 +22,7 @@ export const COLOR_PALATE_RS: number[] = [
   // Blue
   57, 184, 255, 29, 157, 229,
   // Red
-  255, 21, 21, 240, 18, 18,
+  255, 156, 156, 238, 126, 126,
   // Turquoise
   46, 214, 214, 39, 195, 195,
   // Magenta
