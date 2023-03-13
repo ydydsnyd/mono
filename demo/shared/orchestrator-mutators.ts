@@ -46,7 +46,6 @@ export const orchestratorMutators = {
     if (env === Env.CLIENT) {
       return;
     }
-    await legacy_cleanupAmbiguousClients(tx);
     await cleanupDeadClients(tx, currentTime);
     const key = `actor/${tx.clientID}`;
     const hasActor = await tx.has(key);
@@ -126,17 +125,6 @@ const isResetRoomSecret = async (secret: string) => {
     }
   }
   return true;
-};
-
-const legacy_cleanupAmbiguousClients = async (tx: WriteTransaction) => {
-  const actorKeys = await tx.scan({prefix: 'actor/'}).keys();
-  for await (const key of actorKeys) {
-    const clientId = key.split('/')[1];
-    const hasSwitch = await tx.has(`dead-client-switch/${clientId}`);
-    if (!hasSwitch) {
-      await removeActor(tx, clientId);
-    }
-  }
 };
 
 const cleanupDeadClients = async (
