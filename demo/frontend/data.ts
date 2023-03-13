@@ -1,4 +1,8 @@
-import {Reflect, ReadTransaction} from '@rocicorp/reflect';
+import {
+  Reflect,
+  ReadTransaction,
+  ExperimentalDiffOperation,
+} from '@rocicorp/reflect';
 import {letterMap} from '../shared/util';
 import type {
   Actor,
@@ -16,6 +20,8 @@ import {setPhysics, updateCache} from '../shared/renderer';
 import {WORKER_HOST} from '../shared/urls';
 import {unchunk} from '../shared/chunks';
 import type {OrchestratorActor} from '../shared/types';
+
+const CACHE_DEBOUNCE_MS = 100;
 
 export const initialize = async (
   actor: OrchestratorActor,
@@ -96,6 +102,18 @@ export const initialize = async (
   );
   setPhysics(localState.physicsStep, localState.physicsState);
 
+  let cacheTimeouts = letterMap<number | null>(() => null);
+
+  const triggerHandlers = (
+    keyParts: string[],
+    diff: ExperimentalDiffOperation<string>,
+  ) => {
+    const handlers = listeners.get(keyParts[0]);
+    if (handlers) {
+      handlers.forEach(h => h(getData(diff), isDeleteDiff(diff), keyParts));
+    }
+  };
+
   reflectClient.experimentalWatch(diffs => {
     diffs.forEach(async diff => {
       const keyParts = diff.key.split('/');
@@ -131,16 +149,24 @@ export const initialize = async (
           break;
         case 'cache':
           const letter = keyParts[1] as Letter;
-          const cache = await getCache(letter);
-          if (cache) {
-            updateCache(letter, cache, debug);
+          // Because cache is chunked, we'll get one update per key, which means we'll get
+          // a ton of partial updates. Since we trigger semi expensive operations on cache
+          // updates, we need to debounce them so that we don't draw bad caches or do a
+          // ton of unnecessary work.
+          if (cacheTimeouts[letter]) {
+            clearTimeout(cacheTimeouts[letter]!);
           }
-          break;
+          cacheTimeouts[letter] = window.setTimeout(async () => {
+            const cache = await getCache(letter);
+            if (cache) {
+              updateCache(letter, cache, debug);
+            }
+            triggerHandlers(keyParts, diff);
+          }, CACHE_DEBOUNCE_MS);
+          // Return so that we don't trigger handlers. We'll do so after the debounce.
+          return;
       }
-      const handlers = listeners.get(keyParts[0]);
-      if (handlers) {
-        handlers.forEach(h => h(getData(diff), isDeleteDiff(diff), keyParts));
-      }
+      triggerHandlers(keyParts, diff);
     });
   });
 
@@ -182,10 +208,19 @@ export const initialize = async (
     ]);
   });
 
+  const getSplatters = async (letter: Letter) => {
+    return await reflectClient.query(async tx => {
+      return (await tx
+        .scan({prefix: `splatter/${letter}`})
+        .toArray()) as Splatter[];
+    });
+  };
+
   return {
     ...mutations,
     getState,
     addListener,
+    getSplatters,
     reflectClient,
     initialSplatters,
   };

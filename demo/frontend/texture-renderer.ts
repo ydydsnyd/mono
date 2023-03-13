@@ -4,7 +4,7 @@ import {
   draw_caches,
   overwrite_caches,
 } from '../../vendor/renderer';
-import {letterMap} from '../shared/util';
+import {letterMap, now} from '../shared/util';
 import {splatters2Render} from '../shared/wasm-args';
 import {LETTERS} from '../shared/letters';
 import {getRendererLetter} from '../shared/renderer';
@@ -38,6 +38,16 @@ export const drawSplatter = (
   animatingSplatters[letter].push({...splatter, added: time});
 };
 
+const SPLATTER_ANIM_LEN =
+  SPLATTER_ANIMATION_FRAME_DURATION * SPLATTER_ANIM_FRAMES;
+
+export const setSplatters = (letter: Letter, splatters: Splatter[]) => {
+  animatingSplatters[letter] = splatters.map(s => ({
+    ...s,
+    added: now() - SPLATTER_ANIM_LEN,
+  }));
+};
+
 export const renderInitialFrame = (splatters: Record<Letter, Splatter[]>) => {
   LETTERS.forEach(letter => {
     const ctx = getContext(letter);
@@ -54,9 +64,10 @@ export const renderInitialFrame = (splatters: Record<Letter, Splatter[]>) => {
   });
 };
 
-const addedSplatters = new Set<string>();
+const addedSplatters = letterMap(() => new Set<string>());
 
-export const triggerSplatterRedraw = () => addedSplatters.clear();
+export const triggerSplatterRedraw = (letter: Letter) =>
+  addedSplatters[letter].clear();
 
 export const renderFrame = async (
   time: number,
@@ -79,13 +90,13 @@ export const renderFrame = async (
       if (frame <= SPLATTER_ANIM_FRAMES) {
         frames.push(frame);
         return true;
-      } else if (!addedSplatters.has(splatterId(anim))) {
+      } else if (!addedSplatters[letter].has(splatterId(anim))) {
         // If we don't know if this splatter has been rendered but it's old, it may be
         // old but added after initialization. To make sure we don't draw partial
         // splatters, draw this at its last frame, then add it to a list so we don't
         // render it ever again.
         frames.push(SPLATTER_ANIM_FRAMES);
-        addedSplatters.add(splatterId(anim));
+        addedSplatters[letter].add(splatterId(anim));
         return true;
       } else {
         return false;

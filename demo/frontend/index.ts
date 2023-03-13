@@ -4,6 +4,7 @@ import {
   drawSplatter,
   renderFrame,
   renderInitialFrame,
+  setSplatters,
   triggerSplatterRedraw,
 } from './texture-renderer';
 import initRenderer, {draw_caches, precompute} from '../../vendor/renderer';
@@ -104,6 +105,7 @@ export const init = async () => {
   const initReflectClientDone = initTiming('initializing reflect client', 20);
   const {
     getState,
+    getSplatters,
     updateCursor,
     addSplatter,
     addListener,
@@ -294,13 +296,16 @@ export const init = async () => {
     debug,
   );
 
-  addListener<never>('cache', async (_, deleted) => {
+  addListener<never>('cache', async (_, deleted, keyParts) => {
     // Deleted caches are handled in the clearing code.
     if (!deleted) {
+      const letter = keyParts[1] as Letter;
       // Also make sure that our splatters are re-rendered in the correct order. By
       // resetting the cache of rendered splatters, next frame will re-draw all the
       // splatters in their current order.
-      triggerSplatterRedraw();
+      const splatters = await getSplatters(letter);
+      setSplatters(letter, splatters);
+      triggerSplatterRedraw(letter);
     }
   });
 
