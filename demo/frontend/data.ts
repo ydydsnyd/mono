@@ -178,8 +178,18 @@ export const initialize = async (
     return loaded;
   };
 
+  const createActorIfMissing = async () => {
+    if (!localState.actors[actor.id]) {
+      await rebucket(actor);
+      await mutations.guaranteeActor(actor);
+      return true;
+    }
+    return false;
+  };
+
   return {
     ...mutations,
+    createActorIfMissing,
     cachesLoaded,
     getState,
     addListener,

@@ -96,11 +96,19 @@ export const init = async () => {
   await initRenderer();
   initRendererDone();
 
+  const updateLocation = () => {
+    // Get our location and add it when it's ready
+    getUserLocation().then(location => {
+      updateActorLocation({actorId: actor.id, location});
+    });
+  };
+
   const initReflectClientDone = initTiming('initializing reflect client', 20);
   const {
     getState,
     cachesLoaded,
     getSplatters,
+    createActorIfMissing,
     updateCursor,
     addSplatter,
     addListener,
@@ -118,10 +126,7 @@ export const init = async () => {
         }
       }
       if (online) {
-        // Get our location and add it when it's ready
-        getUserLocation().then(location => {
-          updateActorLocation({actorId: actor.id, location});
-        });
+        updateLocation();
       }
     },
     rebucket,
@@ -195,7 +200,12 @@ export const init = async () => {
       const [letter] = getTexturePosition(cursor);
       return !!letter;
     },
-    updateCursor,
+    async cursor => {
+      if (await createActorIfMissing()) {
+        updateLocation();
+      }
+      updateCursor(cursor);
+    },
   );
 
   // When the window is resized, recalculate letter and cursor positions
