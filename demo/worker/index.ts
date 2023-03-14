@@ -55,7 +55,7 @@ const {
     await orchestratorMutators.removeOchestratorActor(write, write.clientID);
   },
   getLogLevel: () => 'info',
-  allowUnconfirmedWrites: false,
+  allowUnconfirmedWrites: true,
 });
 
 class RoomDO extends SuperRoomDO {
