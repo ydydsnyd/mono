@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1678717109637,
+  "lastUpdate": 1678763120357,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -37013,6 +37013,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27825,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cesar@roci.dev",
+            "name": "Cesar Alaestante",
+            "username": "cesara"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "88b4b619f79833618d7436554007ecc41355c925",
+          "message": "feat: #207 add mutation id to tx (#385)",
+          "timestamp": "2023-03-13T20:04:07-07:00",
+          "tree_id": "b68e5cf9f0fef2056de8e7ddd9caed676988479f",
+          "url": "https://github.com/rocicorp/mono/commit/88b4b619f79833618d7436554007ecc41355c925"
+        },
+        "date": 1678763112324,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 263101,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45964,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 261896,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45571,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 98974,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27882,
             "unit": "bytes"
           }
         ]
