@@ -17,6 +17,10 @@ export class PokeHandler {
   private readonly _pokeBuffer: Poke[] = [];
   private _pokePlaybackLoopRunning = false;
   private _playbackOffset = -1;
+  private _timedMutationCount = 0;
+  private _missedTimedMutationCount = 0;
+  private _frameCount = 0;
+  private _framesWithMissesCount = 0;
   // Serializes calls to this._replicachePoke otherwise we can cause out of
   // order poke errors.
   private readonly _pokeLock = new Lock();
@@ -48,11 +52,11 @@ export class PokeHandler {
         const timestampOffset = now - timestamp;
         if (
           this._playbackOffset === -1 ||
-          Math.abs(timestamp - this._playbackOffset) >
+          Math.abs(timestampOffset - this._playbackOffset) >
             RESET_PLAYBACK_OFFSET_THRESHOLD_MS
         ) {
           this._playbackOffset = timestampOffset;
-          lc.debug?.('new playback offset', timestampOffset);
+          lc.info?.('new playback offset', timestampOffset);
         }
       }
       if (poke.lastMutationIDChanges[thisClientID] !== undefined) {
@@ -107,14 +111,21 @@ export class PokeHandler {
           assert(playbackOffset !== -1);
           const pokePlaybackTarget =
             timestamp + playbackOffset + PLAYBACK_BUFFER_MS;
-          const pokePlaybackOffset = now - pokePlaybackTarget;
+          const pokePlaybackOffset = Math.floor(now - pokePlaybackTarget);
+          lc.info?.('poke', headPoke, pokePlaybackOffset);
           if (pokePlaybackOffset < 0) {
             break;
           }
           // TODO consider systems that don't run at 60fps (supposedly new
           // ipads run RAF at 120fps).
+          this._timedMutationCount++;
           if (pokePlaybackOffset > 16) {
-            lc.debug?.('poke playback missed by', pokePlaybackOffset - 16);
+            lc.info?.(
+              'poke playback missed by',
+              pokePlaybackOffset - 16,
+              headPoke,
+            );
+            this._missedTimedMutationCount++;
             misses++;
           }
         }
@@ -122,19 +133,28 @@ export class PokeHandler {
         assert(poke);
         toMerge.push(poke);
       }
-      if (misses > 0) {
-        lc.debug?.('frame contains', misses, 'missed pokes');
+      const merged = mergePokes(toMerge);
+      if (merged === undefined) {
+        lc.debug?.('frame is empty');
+        return;
       }
-      lc.debug?.(
+      this._frameCount++;
+      if (misses > 0) {
+        this._framesWithMissesCount++;
+        lc.info?.(
+          'frame ',
+          this._frameCount,
+          'contains',
+          misses,
+          'missed mutations',
+        );
+      }
+      lc.info?.(
         'merging',
         toMerge.length,
         'remaining buffer length',
         this._pokeBuffer.length,
       );
-      const merged = mergePokes(toMerge);
-      if (merged === undefined) {
-        return;
-      }
       try {
         const start = performance.now();
         const {lastMutationIDChanges, baseCookie, patch, cookie} = merged;
@@ -146,15 +166,29 @@ export class PokeHandler {
             cookie,
           },
         };
-        lc.debug?.('poking replicache');
+        lc.info?.('poking replicache');
         await this._replicachePoke(pokeDD31);
-        lc.debug?.('poking replicache took', performance.now() - start);
+        lc.info?.('poking replicache took', performance.now() - start);
       } catch (e) {
         if (String(e).indexOf('unexpected base cookie for poke') > -1) {
           await this._onOutOfOrderPoke();
         }
       }
     });
+    lc.info?.(
+      'playback stats (misses / total = percent missed):\nmutations:',
+      this._missedTimedMutationCount,
+      '/',
+      this._timedMutationCount,
+      '=',
+      this._missedTimedMutationCount / this._timedMutationCount,
+      '\nframes:',
+      this._framesWithMissesCount,
+      '/',
+      this._frameCount,
+      '=',
+      this._framesWithMissesCount / this._frameCount,
+    );
   }
 
   async handleDisconnect(): Promise<void> {

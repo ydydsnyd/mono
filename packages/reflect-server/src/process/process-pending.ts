@@ -51,6 +51,7 @@ export async function processPending(
               : 0),
           0,
         );
+
   lc.debug?.(
     'processing',
     toProcess.length,

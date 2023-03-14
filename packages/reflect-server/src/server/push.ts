@@ -16,6 +16,7 @@ export type Now = () => number;
 export type ProcessUntilDone = () => void;
 
 const RESET_CLOCK_OFFSET_THRESHOLD_MS = 1000;
+const OLD_MUTATION_THRESHOLD_MS = 100;
 
 /**
  * handles the 'push' upstream message by queueing the mutations included in
@@ -177,7 +178,10 @@ export async function handlePush(
     }
 
     const normalizedTimestamp =
-      m.clientID === clientID ? m.timestamp + clockOffsetMs : undefined;
+      m.clientID === clientID &&
+      body.timestamp - m.timestamp < OLD_MUTATION_THRESHOLD_MS
+        ? m.timestamp + clockOffsetMs
+        : undefined;
 
     const mWithNormalizedTimestamp: PendingMutation = {
       ...m,
