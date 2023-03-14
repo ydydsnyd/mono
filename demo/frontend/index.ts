@@ -167,8 +167,7 @@ export const init = async () => {
   });
 
   // Initialize state
-  let {actors, physicsStep, cursors} = await getState();
-  let localStep = physicsStep;
+  let {actors, cursors} = await getState();
 
   // Whenever actors change, update the count
   addListener<Actor>('actor', async () => {
@@ -224,43 +223,6 @@ export const init = async () => {
   window.addEventListener('resize', resizeViewport);
   resizeViewport();
 
-  // Step management
-  const updateStep = () => {
-    if (localStep < physicsStep) {
-      // If we're behind, run at 1.5x speed until we do
-      localStep += 2;
-    } else {
-      localStep += 1;
-    }
-  };
-
-  // Set up physics rendering
-  // let lastRenderedPhysicsStep = physicsStep;
-  // const renderPhysics = () => {
-  //   updateCurrentStep(localStep);
-  //   const targetStep = Math.round(localStep);
-  //   if (targetStep === lastRenderedPhysicsStep) {
-  //     // Skip no-ops
-  //     return;
-  //   }
-  //   // positions3d
-  //   const positions3d = get3DPositions(targetStep, impulses);
-  //   lastRenderedPhysicsStep = targetStep;
-  //   if (positions3d) {
-  //     LETTERS.forEach(letter => {
-  //       const position3d = positions3d[letter];
-  //       if (position3d) {
-  //         set3DPosition(letter, position3d);
-  //       }
-  //     });
-  //   }
-  //   if (DEBUG_PHYSICS) {
-  //     // TODO: fix this
-  //     // let world = World.restoreSnapshot(debugState);
-  //     // updateDebug(world.debugRender());
-  //   }
-  // };
-
   // We want to add a paint splatter if we're over a letter, and if _either_ we're
   // "rapid firing" on a single letter, or if we're encountering a new letter.
   // This gets us a best of both worlds, in that we won't fire too much on a
@@ -284,7 +246,6 @@ export const init = async () => {
           texturePosition,
           hitPosition,
           timestamp: now(),
-          step: Math.round(localStep),
         });
       }
     }
@@ -337,13 +298,10 @@ export const init = async () => {
   // Render our cursors and canvases at "animation speed", usually 60fps
   startRenderLoop(
     async () => {
-      ({actors, physicsStep, cursors} = await getState());
+      ({actors, cursors} = await getState());
       // Initialization done.
-      // Increment our step
-      updateStep();
       // Render our textures, and if they changed, send to the 3D scene.
       renderFrame(now(), lastClear, letter => updateTexture(letter));
-      // renderPhysics();
       render3D();
       // Splatter if needed
       const {isDown, position} = localCursor();

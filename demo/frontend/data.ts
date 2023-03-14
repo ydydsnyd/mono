@@ -9,15 +9,14 @@ import type {
   ClientStatus,
   Cursor,
   Debug,
-  Impulse,
   Letter,
   Splatter,
   State,
 } from '../shared/types';
 import {mutators, M} from '../shared/mutators';
 import {LETTERS} from '../shared/letters';
-import {getData, isAddDiff, isChangeDiff, isDeleteDiff} from './data-util';
-import {setPhysics, updateCache} from '../shared/renderer';
+import {getData, isDeleteDiff} from './data-util';
+import {updateCache} from '../shared/renderer';
 import {WORKER_HOST} from '../shared/urls';
 import {unchunk} from '../shared/chunks';
 import type {OrchestratorActor} from '../shared/types';
@@ -91,7 +90,6 @@ export const initialize = async (
   const localState: State = await reflectClient.query(
     stateInitializer(actor.id, debug),
   );
-  setPhysics(localState.physicsStep, localState.physicsState);
 
   let cacheTimeouts = letterMap<number | null>(() => null);
 
@@ -115,19 +113,6 @@ export const initialize = async (
             delete localState.actors[actor.id];
           } else {
             localState.actors[actor.id] = actor;
-          }
-          break;
-        case 'physics':
-          if (keyParts[1] === 'step') {
-            if (isChangeDiff(diff) || isAddDiff(diff)) {
-              const step = getData<number>(diff);
-              localState.physicsStep = step;
-              const state = await reflectClient.query(
-                async tx => await unchunk(tx, `physics/state`),
-              );
-              localState.physicsState = state;
-              setPhysics(step, state);
-            }
           }
           break;
         case 'cursor':
@@ -161,25 +146,9 @@ export const initialize = async (
     });
   });
 
-  const getState = (): Promise<State> =>
-    reflectClient.query(async (tx: ReadTransaction) => {
-      // Impulses are sometimes modified in quite large ways (e.g. we delete tons at a
-      // time on the server) - to avoid having to maintain a local index, just read
-      // them all from reflect on each frame.
-      const impulses: State['impulses'] = letterMap(() => []);
-      await Promise.all([
-        ...LETTERS.map(async letter => {
-          const letterImpulses = (await tx
-            .scan({prefix: `impulse/${letter}`})
-            .toArray()) as Impulse[];
-          impulses[letter] = letterImpulses;
-        }),
-      ]);
-      return {
-        ...localState,
-        impulses,
-      };
-    });
+  const getState = async (): Promise<State> => {
+    return {...localState};
+  };
 
   const mutations = reflectClient.mutate;
 
@@ -233,22 +202,11 @@ const stateInitializer =
     const cursorList = (await tx
       .scan({prefix: 'cursor/'})
       .toArray()) as Cursor[];
-    const physicsStep = ((await tx.get('physics/step')) as number) || 0;
-    const physicsState = (await tx.get('physics/state')) as string | undefined;
     const cursors = cursorList.reduce((cursors, cursor) => {
       cursors[cursor.actorId] = cursor;
       return cursors;
     }, {} as State['cursors']);
-    const impulses: State['impulses'] = letterMap(() => []);
     await Promise.all([
-      ...LETTERS.map(async letter => {
-        const letterImpulses = (await tx
-          .scan({
-            prefix: `impulse/${letter}/`,
-          })
-          .toArray()) as Impulse[];
-        impulses[letter] = letterImpulses;
-      }),
       ...LETTERS.map(async letter => {
         const cache = await unchunk(tx, `cache/${letter}`);
         if (cache) {
@@ -260,8 +218,5 @@ const stateInitializer =
       actorId: userID,
       actors,
       cursors,
-      impulses,
-      physicsState,
-      physicsStep,
     };
   };

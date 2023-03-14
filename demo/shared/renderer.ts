@@ -1,15 +1,11 @@
 import {
   draw_buffer_png,
-  set_physics_state,
   Letter as RendererLetter,
   update_cache,
-  positions_for_step,
 } from '../../vendor/renderer';
 import {encode, decode} from './uint82b64';
-import {impulses2Physics, splatters2Render} from './wasm-args';
-import {Debug, Impulse, Letter, Letter3DPosition, Splatter} from './types';
-import {letterMap} from './util';
-import {LETTERS} from './letters';
+import {splatters2Render} from './wasm-args';
+import {Debug, Letter, Splatter} from './types';
 import {SPLATTER_ANIM_FRAMES} from './constants';
 
 export const getRendererLetter = (letter: Letter): RendererLetter => {
@@ -49,38 +45,4 @@ export const getCache = (letter: Letter, splatters: Splatter[]) => {
       ),
     ),
   );
-};
-
-export const setPhysics = (step: number, state?: string) => {
-  set_physics_state(state ? decode(state) : undefined, step);
-};
-
-// This function gets whatever the current state of the physics is (held in wasm
-// memory) and finds the positions of lettters when advanced N steps forward.
-export const get3DPositions = (
-  targetStep: number,
-  impulses: Record<Letter, Impulse[]>,
-): Record<Letter, Letter3DPosition> | undefined => {
-  const flatPositions = positions_for_step(
-    targetStep,
-    ...impulses2Physics(impulses),
-  );
-  if (!flatPositions) {
-    return;
-  }
-  const positions = letterMap<Letter3DPosition>(_ => ({
-    position: {x: -1, y: -1, z: -1},
-    rotation: {x: -1, y: -1, z: -1, w: -1},
-  }));
-  LETTERS.forEach((letter, idx) => {
-    let startIdx = idx * 7;
-    positions[letter].position.x = flatPositions[startIdx + 0];
-    positions[letter].position.y = flatPositions[startIdx + 1];
-    positions[letter].position.z = flatPositions[startIdx + 2];
-    positions[letter].rotation.x = flatPositions[startIdx + 3];
-    positions[letter].rotation.y = flatPositions[startIdx + 4];
-    positions[letter].rotation.z = flatPositions[startIdx + 5];
-    positions[letter].rotation.w = flatPositions[startIdx + 6];
-  });
-  return positions;
 };

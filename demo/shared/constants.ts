@@ -1,8 +1,5 @@
 import type {Color} from './types';
-import {
-  COLOR_PALATE_RS,
-  RENDERED_PHYSICS_STEP_WINDOW_SIZE,
-} from '../../renderer/src/constants';
+import {COLOR_PALATE_RS} from '../../renderer/src/constants';
 export {UVMAP_SIZE, SPLATTER_ANIM_FRAMES} from '../../renderer/src/constants';
 
 // Bucketing
@@ -52,13 +49,6 @@ export const COLOR_PALATE: Color[] = COLOR_PALATE_RS.reduce(
 );
 
 // Mutators/etc
-
-// We don't want flattening to happen too often (or too infrequently), as it is
-// slower than normal mutations (but delaying it too much will make it too
-// expensive to run without a noticeable hang)
-export const MIN_PHYSICS_FLATTENING_STEPS = 100;
-export const MAX_PHYSICS_FLATTENING_STEPS =
-  RENDERED_PHYSICS_STEP_WINDOW_SIZE + MIN_PHYSICS_FLATTENING_STEPS;
 
 // Can't put more than 131072 bytes in a DO, so use a number under half that
 // since these will refer to strings

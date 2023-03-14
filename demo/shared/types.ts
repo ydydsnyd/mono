@@ -4,9 +4,6 @@ export type State = {
   actorId: ActorID;
   actors: Record<ActorID, Actor>;
   cursors: Record<ActorID, Cursor>;
-  impulses: Record<Letter, Impulse[]>;
-  physicsStep: number;
-  physicsState: string | undefined; // b64 encoded state
 };
 
 export enum ClientStatus {
@@ -31,16 +28,6 @@ export type OrchestratorActor = {
   id: ActorID;
   colorIndex: number;
   room: string;
-};
-
-export type Letter3DPosition = {
-  position: Vector;
-  rotation: Quaternion;
-};
-
-export type Impulse = Vector & {
-  u: ActorID;
-  s: number; // step
 };
 
 export type LetterHandles = Record<Letter, number>;
@@ -82,10 +69,6 @@ export type BoundingBox = Position & Size;
 export type Size = {
   width: number;
   height: number;
-};
-
-export type Quaternion = Vector & {
-  w: number;
 };
 
 export type Vector = Position & {

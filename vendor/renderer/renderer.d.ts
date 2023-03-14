@@ -51,67 +51,6 @@ export function draw_buffer_png(letter: number, splatter_count: number, splatter
 */
 export function draw_buffer(letter: number, ctx: CanvasRenderingContext2D, splatter_count: number, splatter_frames: Uint32Array, splatter_actors: Uint32Array, colors: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_animations: Uint8Array, splatter_rotations: Uint8Array): void;
 /**
-* @param {Uint8Array | undefined} serialized_physics
-* @param {number} start_step
-* @param {number} num_steps
-* @param {Uint32Array} a_impulse_steps
-* @param {Float32Array} a_impulse_x
-* @param {Float32Array} a_impulse_y
-* @param {Float32Array} a_impulse_z
-* @param {Uint32Array} l_impulse_steps
-* @param {Float32Array} l_impulse_x
-* @param {Float32Array} l_impulse_y
-* @param {Float32Array} l_impulse_z
-* @param {Uint32Array} i_impulse_steps
-* @param {Float32Array} i_impulse_x
-* @param {Float32Array} i_impulse_y
-* @param {Float32Array} i_impulse_z
-* @param {Uint32Array} v_impulse_steps
-* @param {Float32Array} v_impulse_x
-* @param {Float32Array} v_impulse_y
-* @param {Float32Array} v_impulse_z
-* @param {Uint32Array} e_impulse_steps
-* @param {Float32Array} e_impulse_x
-* @param {Float32Array} e_impulse_y
-* @param {Float32Array} e_impulse_z
-* @returns {Uint8Array}
-*/
-export function update_physics_state(serialized_physics: Uint8Array | undefined, start_step: number, num_steps: number, a_impulse_steps: Uint32Array, a_impulse_x: Float32Array, a_impulse_y: Float32Array, a_impulse_z: Float32Array, l_impulse_steps: Uint32Array, l_impulse_x: Float32Array, l_impulse_y: Float32Array, l_impulse_z: Float32Array, i_impulse_steps: Uint32Array, i_impulse_x: Float32Array, i_impulse_y: Float32Array, i_impulse_z: Float32Array, v_impulse_steps: Uint32Array, v_impulse_x: Float32Array, v_impulse_y: Float32Array, v_impulse_z: Float32Array, e_impulse_steps: Uint32Array, e_impulse_x: Float32Array, e_impulse_y: Float32Array, e_impulse_z: Float32Array): Uint8Array;
-/**
-* @param {Uint8Array | undefined} serialized_physics
-* @param {number} step
-*/
-export function set_physics_state(serialized_physics: Uint8Array | undefined, step: number): void;
-/**
-* @returns {number}
-*/
-export function get_physics_cache_step(): number;
-/**
-* @param {number} target_step
-* @param {Uint32Array} a_impulse_steps
-* @param {Float32Array} a_impulse_x
-* @param {Float32Array} a_impulse_y
-* @param {Float32Array} a_impulse_z
-* @param {Uint32Array} l_impulse_steps
-* @param {Float32Array} l_impulse_x
-* @param {Float32Array} l_impulse_y
-* @param {Float32Array} l_impulse_z
-* @param {Uint32Array} i_impulse_steps
-* @param {Float32Array} i_impulse_x
-* @param {Float32Array} i_impulse_y
-* @param {Float32Array} i_impulse_z
-* @param {Uint32Array} v_impulse_steps
-* @param {Float32Array} v_impulse_x
-* @param {Float32Array} v_impulse_y
-* @param {Float32Array} v_impulse_z
-* @param {Uint32Array} e_impulse_steps
-* @param {Float32Array} e_impulse_x
-* @param {Float32Array} e_impulse_y
-* @param {Float32Array} e_impulse_z
-* @returns {Float32Array | undefined}
-*/
-export function positions_for_step(target_step: number, a_impulse_steps: Uint32Array, a_impulse_x: Float32Array, a_impulse_y: Float32Array, a_impulse_z: Float32Array, l_impulse_steps: Uint32Array, l_impulse_x: Float32Array, l_impulse_y: Float32Array, l_impulse_z: Float32Array, i_impulse_steps: Uint32Array, i_impulse_x: Float32Array, i_impulse_y: Float32Array, i_impulse_z: Float32Array, v_impulse_steps: Uint32Array, v_impulse_x: Float32Array, v_impulse_y: Float32Array, v_impulse_z: Float32Array, e_impulse_steps: Uint32Array, e_impulse_x: Float32Array, e_impulse_y: Float32Array, e_impulse_z: Float32Array): Float32Array | undefined;
-/**
 */
 export enum Letter {
   A,
@@ -131,10 +70,6 @@ export interface InitOutput {
   readonly draw_caches: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly draw_buffer_png: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number) => void;
   readonly draw_buffer: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number) => void;
-  readonly update_physics_state: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number, w: number, x: number, y: number, z: number, a1: number, b1: number, c1: number, d1: number, e1: number, f1: number, g1: number, h1: number, i1: number, j1: number, k1: number, l1: number, m1: number, n1: number, o1: number, p1: number, q1: number, r1: number, s1: number) => void;
-  readonly set_physics_state: (a: number, b: number, c: number) => void;
-  readonly get_physics_cache_step: () => number;
-  readonly positions_for_step: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number, w: number, x: number, y: number, z: number, a1: number, b1: number, c1: number, d1: number, e1: number, f1: number, g1: number, h1: number, i1: number, j1: number, k1: number, l1: number, m1: number, n1: number, o1: number, p1: number) => void;
   readonly __wbindgen_malloc: (a: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number) => number;
   readonly __wbindgen_add_to_stack_pointer: (a: number) => number;

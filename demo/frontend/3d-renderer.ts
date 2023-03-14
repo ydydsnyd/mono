@@ -15,7 +15,7 @@ import {
   Camera,
 } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
-import type {Letter, Letter3DPosition, Position, Vector} from '../shared/types';
+import type {Letter, Position, Vector} from '../shared/types';
 import {letterMap} from '../shared/util';
 import {LETTERS} from '../shared/letters';
 import {
@@ -23,7 +23,6 @@ import {
   ENVIRONMENT_TEXTURE_LEVEL,
 } from '../shared/constants';
 import {getCanvas} from './textures';
-// import type {DebugRenderBuffers} from '@dimforge/rapier3d';
 
 const modelURL = '/alive.glb';
 
@@ -54,14 +53,8 @@ export const renderer = async (canvas: HTMLCanvasElement) => {
   }
   engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
   // Create the scene
-  const {
-    scene,
-    getTexturePosition,
-    set3DPosition,
-    updateTexture,
-    resizeCanvas,
-    // updateDebug,
-  } = await createScene(engine);
+  const {scene, getTexturePosition, updateTexture, resizeCanvas} =
+    await createScene(engine);
 
   // When our app comes online, it will take over the render loop. However, we
   // still want to render it until then - so we just run our own slow loop until
@@ -82,9 +75,7 @@ export const renderer = async (canvas: HTMLCanvasElement) => {
     },
     resizeCanvas,
     getTexturePosition,
-    set3DPosition,
     updateTexture,
-    // updateDebug,
   };
 };
 
@@ -95,10 +86,8 @@ export const createScene = async (
   getTexturePosition: (
     point: Position,
   ) => [Letter | undefined, Position | undefined, Vector | undefined];
-  set3DPosition: (letter: Letter, position: Letter3DPosition) => void;
   updateTexture: (letter: Letter) => void;
   resizeCanvas: () => void;
-  // updateDebug: (debug: DebugRenderBuffers | null) => void;
 }> => {
   const scene = new Scene(engine);
   // Don't allow babylon to handle mouse events. This both has a mild perf
@@ -150,20 +139,6 @@ export const createScene = async (
 
   const updateTexture = (letter: Letter) =>
     textures[letter].update(true, true, true);
-
-  const set3DPosition = (letter: Letter, position: Letter3DPosition) => {
-    meshes[letter].rotationQuaternion?.set(
-      position.rotation.x,
-      position.rotation.y,
-      position.rotation.z,
-      position.rotation.w,
-    );
-    meshes[letter].position.set(
-      -position.position.x,
-      position.position.y,
-      position.position.z,
-    );
-  };
 
   // Add the textures to the meshes
   LETTERS.forEach(letter => {
@@ -229,64 +204,6 @@ export const createScene = async (
     return [undefined, undefined, undefined];
   };
 
-  // let lines: LinesMesh;
-  // if (DEBUG_PHYSICS) {
-  //   lines = MeshBuilder.CreateLines(
-  //     'debug-lines',
-  //     {
-  //       points: [],
-  //       updatable: true,
-  //     },
-  //     scene,
-  //   );
-  // }
-  // const updateDebug = (debug: DebugRenderBuffers | null) => {
-  //   if (!debug) {
-  //     lines.dispose();
-  //     return;
-  //   }
-  //   const points: Vector3[] = [];
-  //   let buf = new Vector3();
-  //   debug.vertices.forEach((v, idx) => {
-  //     const lIdx = idx % 3;
-  //     if (lIdx === 0) {
-  //       buf.x = v;
-  //     } else if (lIdx === 1) {
-  //       buf.y = v;
-  //     } else if (lIdx === 2) {
-  //       buf.z = v;
-  //       points.push(buf);
-  //       buf = new Vector3();
-  //     }
-  //   });
-  //   const colors: Color4[] = [];
-  //   let cbuf = new Color4();
-  //   debug.colors.forEach((v, idx) => {
-  //     const lIdx = idx % 4;
-  //     if (lIdx === 0) {
-  //       cbuf.r = v;
-  //     } else if (lIdx === 1) {
-  //       cbuf.g = v;
-  //     } else if (lIdx === 2) {
-  //       cbuf.b = v;
-  //     } else if (lIdx === 3) {
-  //       cbuf.a = v;
-  //       colors.push(cbuf);
-  //       cbuf = new Color4();
-  //     }
-  //   });
-  //   lines.dispose();
-  //   lines = MeshBuilder.CreateLines(
-  //     'debug-lines',
-  //     {
-  //       points,
-  //       updatable: true,
-  //       colors,
-  //     },
-  //     scene,
-  //   );
-  // };
-
   // Set some initial values for things
   LETTERS.forEach(letter => updateTexture(letter));
   resizeCanvas();
@@ -294,9 +211,7 @@ export const createScene = async (
   return {
     scene,
     getTexturePosition,
-    set3DPosition,
     updateTexture,
     resizeCanvas,
-    // updateDebug,
   };
 };

@@ -7,7 +7,6 @@ import {
   ClientStatus,
   Cursor,
   Env,
-  Impulse,
   Letter,
   Position,
   Splatter,
@@ -17,8 +16,6 @@ import {randomWithSeed} from './util';
 import {chunk, unchunk} from './chunks';
 import type {OrchestratorActor} from '../shared/types';
 
-export const impulseId = (i: Impulse) =>
-  `${i.u}${i.s}${i.x.toFixed(1) + i.y.toFixed(1) + i.z.toFixed(1)}`;
 export const splatterId = (s: Splatter) =>
   `${s.u}${s.t}${s.x.toFixed(1) + s.y.toFixed(1)}}`;
 
@@ -135,7 +132,6 @@ export const mutators = {
       colorIndex: number;
       texturePosition: Position;
       timestamp: number;
-      step: number;
       hitPosition: Vector;
     },
   ) => {
@@ -150,44 +146,18 @@ export const mutators = {
       r: Math.floor(randomWithSeed(timestamp, Seeds.splatterRotation, 4)),
     };
     await tx.put(splatterKey(letter, timestamp, actorId, x, y), splatter);
-    // Every time we add a splatter, also add an "impulse". This is what we use to
-    // compute the physics of the letters.
-    // const impulse: Impulse = {
-    //   u: actorId,
-    //   s: step,
-    //   ...hitPosition,
-    // };
-    // await tx.put(`impulse/${letter}/${impulseId(impulse)}`, impulse);
 
-    // On the server, do some "flattening".
-    // 1. We periodically compute state as a function of many inputs. In the case of
-    // splatters, this state is a texture image. In the case of impulses, this state
-    // is a serialized physics state.
-    // 2. We then delete any of the inputs we used for the computation, and store
-    // the "step" that the state was computed at. A "step" is just a relative frame
-    // count, and can be used to sync clients.
-    // 3. The computed states are then synced to the client via reflect. When a
-    // client receives a new origin, it can just start computing its local
-    // physics/textures from that origin instead of the prior one (or from zero).
-    // This means that the client only stores a "window" of data, which is
-    // everything that happened since the server last sent an origin. This window
-    // contains real time data as well, so for the most part will work regardless of
-    // rollback. However, the rollback is necessary for 2 reasons - 1, to prevent
-    // the number of impulses and splatters from growing infinitely, and 2, to
-    // deterministically order events so that the result is identical on all
-    // clients.
-    // NOTE that during the client window, things could become desynced - e.g. a
-    // splatter may appear on top when the server will put it behind another
-    // splatter, or the physics could be differently positioned. As such, clients
-    // may need to compensate for sudden changes in the origin. The larger the
-    // window, the less expensive the server computation will be (because it is less
-    // frequent), but the larger the potential desync will be.
+    // On the server, do some "flattening":
+    // This takes any splatters that are no longer animating and draws them directly
+    // to a png. We can then use this png as the initial state for new clients,
+    // which means they won't need to draw as many splatters, and the storage space
+    // for infinite splatters will be limited to the number of pixels in the png as
+    // opposed to infinitely growing.
     if (env == Env.SERVER) {
       // Our flattening operations both use our wasm renderer, so make sure it's available.
       try {
         await _initRenderer!();
         // Perform operations
-        // await flattenPhysics(tx, step);
         await flattenTexture(tx, letter, timestamp);
       } catch (e) {
         console.error((e as Error).stack);
@@ -198,40 +168,6 @@ export const mutators = {
 
   nop: async (_: WriteTransaction) => {},
 };
-
-// const flattenPhysics = async (tx: WriteTransaction, step: number) => {
-//   const state = (await unchunk(tx, 'physics/state')) as string;
-//   const originStep = (await tx.get('physics/step')) as number;
-//   const renderedSteps = originStep ? step - originStep : step;
-//   if (renderedSteps > MIN_PHYSICS_FLATTENING_STEPS) {
-//     const impulses = await asyncLetterMap<Impulse[]>(async letter => {
-//       const impulses = await tx.scan({
-//         prefix: `impulse/${letter}/`,
-//       });
-//       return (await impulses.toArray()) as Impulse[];
-//     });
-
-//     await _initRenderer!();
-//     const newStep = Math.max(step - MAX_PHYSICS_FLATTENING_STEPS, 0);
-//     console.log(`Flattening physics until step ${newStep}`);
-//     const newState = update_physics_state(
-//       state ? decode(state) : undefined,
-//       originStep || 0,
-//       newStep,
-//       ...impulses2Physics(impulses),
-//     );
-//     await chunk(tx, 'physics/state', encode(newState));
-//     await tx.put('physics/step', newStep);
-//     // Remove impulses that are integrated into the above snapshot
-//     await asyncLetterMap(async letter => {
-//       await impulses[letter].map(async impulse => {
-//         if (impulse.s >= step) {
-//           await tx.del(`impulse/${letter}/${impulseId(impulse)}`);
-//         }
-//       });
-//     });
-//   }
-// };
 
 const flattenTexture = async (
   tx: WriteTransaction,
