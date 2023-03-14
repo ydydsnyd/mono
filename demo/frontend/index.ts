@@ -142,23 +142,6 @@ export const init = async () => {
     }
   });
 
-  // Handlers for data resetting
-  const resetButton = document.getElementById('reset-button');
-  resetButton?.addEventListener('click', async () => {
-    await clearTextures(now());
-    resetButton.classList.add('cleared');
-    setTimeout(() => {
-      resetButton.classList.remove('cleared');
-    }, 1000);
-  });
-  let lastClear: number | undefined;
-  addListener<never>('cleared', async () => {
-    // Set lastClear to now, so that the animation will play all the way through on
-    // all clients whenever they happen to receive the clear. TODO: does this
-    // interleave properly with additions when latent/offline?
-    lastClear = now();
-  });
-
   // Initialize state
   let {actors, cursors} = await getState();
 
@@ -295,6 +278,22 @@ export const init = async () => {
       resolve();
     };
     checkReady();
+  });
+
+  // Handlers for data resetting
+  const resetButton = document.getElementById('reset-button');
+  resetButton?.addEventListener('click', async () => {
+    await clearTextures(now());
+    resetButton.classList.add('cleared');
+    setTimeout(() => {
+      resetButton.classList.remove('cleared');
+    }, 1000);
+  });
+  let lastClear: number | undefined;
+  addListener<number>('cleared', async () => {
+    // Set lastClear to now, so that the animation will play all the way through on
+    // all clients whenever they happen to receive the clear.
+    lastClear = now();
   });
 
   // Render our cursors and canvases at "animation speed", usually 60fps

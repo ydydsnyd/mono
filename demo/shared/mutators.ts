@@ -116,7 +116,7 @@ export const mutators = {
     await Promise.all(splatters.map(async k => await tx.del(k)));
     // To provide a synced animation and to deal with the case where some clients
     // may only have local cached splatters which we can't clean up individually
-    // (because they are already rendered), we also add a "cleared" timnestamp which
+    // (because they are already rendered), we also add a "cleared" timestamp which
     // will let us run an animation on all the clients when they receive it.
     await tx.put('cleared', time);
   },

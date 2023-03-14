@@ -102,51 +102,56 @@ export const initialize = async (
     }
   };
 
-  reflectClient.experimentalWatch(diffs => {
-    diffs.forEach(async diff => {
-      const keyParts = diff.key.split('/');
-      switch (keyParts[0]) {
-        case 'actor':
-          const actor = getData<Actor>(diff);
-          if (isDeleteDiff(diff)) {
-            delete localState.actors[actor.id];
-          } else {
-            localState.actors[actor.id] = actor;
-          }
-          break;
-        case 'cursor':
-          const cursor = getData<Cursor>(diff);
-          if (isDeleteDiff(diff)) {
-            delete localState.cursors[cursor.actorId];
-          } else {
-            localState.cursors[cursor.actorId] = cursor;
-          }
-          break;
-        case 'cache':
-          const letter = keyParts[1] as Letter;
-          // Because cache is chunked, we'll get one update per key, which means we'll get
-          // a ton of partial updates. Since we trigger semi expensive operations on cache
-          // updates, we need to debounce them so that we don't draw bad caches or do a
-          // ton of unnecessary work.
-          if (cacheTimeouts[letter]) {
-            clearTimeout(cacheTimeouts[letter]!);
-          }
-          cacheTimeouts[letter] = window.setTimeout(async () => {
-            const cache = await getCache(letter);
-            if (cache === UNINITIALIZED_CACHE_SENTINEL) {
-              return;
+  reflectClient.experimentalWatch(
+    diffs => {
+      diffs.forEach(async diff => {
+        const keyParts = diff.key.split('/');
+        switch (keyParts[0]) {
+          case 'actor':
+            const actor = getData<Actor>(diff);
+            if (isDeleteDiff(diff)) {
+              delete localState.actors[actor.id];
+            } else {
+              localState.actors[actor.id] = actor;
             }
-            if (cache) {
-              updateCache(letter, cache, debug);
+            break;
+          case 'cursor':
+            const cursor = getData<Cursor>(diff);
+            if (isDeleteDiff(diff)) {
+              delete localState.cursors[cursor.actorId];
+            } else {
+              localState.cursors[cursor.actorId] = cursor;
             }
-            triggerHandlers(keyParts, diff);
-          }, CACHE_DEBOUNCE_MS);
-          // Return so that we don't trigger handlers. We'll do so after the debounce.
-          return;
-      }
-      triggerHandlers(keyParts, diff);
-    });
-  });
+            break;
+          case 'cache':
+            const letter = keyParts[1] as Letter;
+            // Because cache is chunked, we'll get one update per key, which means we'll get
+            // a ton of partial updates. Since we trigger semi expensive operations on cache
+            // updates, we need to debounce them so that we don't draw bad caches or do a
+            // ton of unnecessary work.
+            if (cacheTimeouts[letter]) {
+              clearTimeout(cacheTimeouts[letter]!);
+            }
+            cacheTimeouts[letter] = window.setTimeout(async () => {
+              const cache = await getCache(letter);
+              if (cache === UNINITIALIZED_CACHE_SENTINEL) {
+                return;
+              }
+              if (cache) {
+                updateCache(letter, cache, debug);
+              }
+              triggerHandlers(keyParts, diff);
+            }, CACHE_DEBOUNCE_MS);
+            // Return so that we don't trigger handlers. We'll do so after the debounce.
+            return;
+        }
+        triggerHandlers(keyParts, diff);
+      });
+    },
+    {
+      initialValuesInFirstDiff: false,
+    },
+  );
 
   const getState = async (): Promise<State> => {
     return {...localState};
