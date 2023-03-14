@@ -6,14 +6,13 @@ import {
 import {letterMap} from '../shared/util';
 import type {
   Actor,
-  ClientStatus,
   Cursor,
   Debug,
   Letter,
   Splatter,
   State,
 } from '../shared/types';
-import {mutators, M} from '../shared/mutators';
+import {mutators, M, UNINITIALIZED_CACHE_SENTINEL} from '../shared/mutators';
 import {LETTERS} from '../shared/letters';
 import {getData, isDeleteDiff} from './data-util';
 import {updateCache} from '../shared/renderer';
@@ -134,6 +133,9 @@ export const initialize = async (
           }
           cacheTimeouts[letter] = window.setTimeout(async () => {
             const cache = await getCache(letter);
+            if (cache === UNINITIALIZED_CACHE_SENTINEL) {
+              return;
+            }
             if (cache) {
               updateCache(letter, cache, debug);
             }
@@ -174,15 +176,23 @@ export const initialize = async (
     });
   };
 
-  const getStatus = async () => {
-    return await reflectClient.query(async tx => {
-      return (await tx.get(`client-status/${tx.clientID}`)) as ClientStatus;
+  const cachesLoaded = async () => {
+    let loaded = true;
+    await reflectClient.query(async tx => {
+      for await (const letter of LETTERS) {
+        const cacheVal = await unchunk(tx, `cache/${letter}`);
+        if (cacheVal === UNINITIALIZED_CACHE_SENTINEL) {
+          loaded = false;
+          break;
+        }
+      }
     });
+    return loaded;
   };
 
   return {
     ...mutations,
-    getStatus,
+    cachesLoaded,
     getState,
     addListener,
     getSplatters,

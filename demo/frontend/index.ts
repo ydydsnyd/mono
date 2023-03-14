@@ -10,14 +10,7 @@ import {
 import initRenderer, {draw_caches, precompute} from '../../vendor/renderer';
 import {cursorRenderer} from './cursors';
 import {UVMAP_SIZE, SPLATTER_MS, MIN_STEP_MS} from '../shared/constants';
-import {
-  Actor,
-  ClientStatus,
-  Debug,
-  Letter,
-  Position,
-  Splatter,
-} from '../shared/types';
+import type {Actor, Debug, Letter, Position, Splatter} from '../shared/types';
 import {LETTERS} from '../shared/letters';
 import {letterMap, now} from '../shared/util';
 import {getUserLocation} from './location';
@@ -106,7 +99,7 @@ export const init = async () => {
   const initReflectClientDone = initTiming('initializing reflect client', 20);
   const {
     getState,
-    getStatus,
+    cachesLoaded,
     getSplatters,
     updateCursor,
     addSplatter,
@@ -282,7 +275,7 @@ export const init = async () => {
       1000,
     );
     const checkReady = async () => {
-      if ((await getStatus()) === ClientStatus.INITIALIZING) {
+      if (!(await cachesLoaded())) {
         setTimeout(checkReady, 25);
         return;
       }

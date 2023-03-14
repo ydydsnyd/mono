@@ -4,7 +4,6 @@ import {getCache, updateCache} from './renderer';
 import {
   Actor,
   ActorID,
-  ClientStatus,
   Cursor,
   Env,
   Letter,
@@ -15,6 +14,9 @@ import {
 import {randomWithSeed} from './util';
 import {chunk, unchunk} from './chunks';
 import type {OrchestratorActor} from '../shared/types';
+import {LETTERS} from './letters';
+
+export const UNINITIALIZED_CACHE_SENTINEL = 'uninitialized-cache-sentinel';
 
 export const splatterId = (s: Splatter) =>
   `${s.u}${s.t}${s.x.toFixed(1) + s.y.toFixed(1)}}`;
@@ -50,16 +52,16 @@ const Seeds = {
 
 export const mutators = {
   initialize: async (tx: WriteTransaction) => {
-    // To make sure that we've done at least one server round trip, set this value
-    // on each client when it initializes an empty local state. When the server
-    // flips it to SERVER_CONFIRMED, we know that our local state has been synced
-    // with an initial state from the server (or will be very soon).
-    tx.put(
-      `client-status/${tx.clientID}`,
-      env === Env.SERVER
-        ? ClientStatus.SERVER_CONFIRMED
-        : ClientStatus.INITIALIZING,
-    );
+    // We'd like to prevent drawing our local client until we load the server cache
+    // - so when a client initializes, write a sentinel value into all the caches,
+    // then replace it with empty data or the real cache on the server. This allows
+    // us to prevent interactivity until all the caches are non-sentinel.
+    if (env === Env.CLIENT) {
+      for await (const letter of LETTERS) {
+        await chunk(tx, `cache/${letter}`, UNINITIALIZED_CACHE_SENTINEL);
+      }
+    }
+    // Doing nothing on the server is equivalent to throwing out the sentinel value.
   },
   updateCursor: async (tx: WriteTransaction, cursor: Cursor) => {
     if (await tx.has(`actor/${cursor.actorId}`)) {
