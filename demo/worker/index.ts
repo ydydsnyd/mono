@@ -54,7 +54,7 @@ const {
     await mutators.removeActor(write, write.clientID);
     await orchestratorMutators.removeOchestratorActor(write, write.clientID);
   },
-  getLogLevel: () => 'info',
+  getLogLevel: () => 'debug',
   allowUnconfirmedWrites: true,
 });
 
