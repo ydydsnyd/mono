@@ -200,10 +200,12 @@ export const init = async () => {
       const [letter] = getTexturePosition(cursor);
       return !!letter;
     },
-    async cursor => {
-      if (await createActorIfMissing()) {
-        updateLocation();
-      }
+    cursor => {
+      createActorIfMissing().then(recreated => {
+        if (recreated) {
+          updateLocation();
+        }
+      });
       updateCursor(cursor);
     },
   );
