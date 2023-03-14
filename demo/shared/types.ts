@@ -9,6 +9,11 @@ export type State = {
   physicsState: string | undefined; // b64 encoded state
 };
 
+export enum ClientStatus {
+  INITIALIZING = 'initializing',
+  SERVER_CONFIRMED = 'server-confirmed',
+}
+
 export type Debug = {
   fps: number;
   cacheUpdated: (letter: Letter, cache: string) => void;

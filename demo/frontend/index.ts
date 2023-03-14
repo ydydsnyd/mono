@@ -10,7 +10,14 @@ import {
 import initRenderer, {draw_caches, precompute} from '../../vendor/renderer';
 import {cursorRenderer} from './cursors';
 import {UVMAP_SIZE, SPLATTER_MS, MIN_STEP_MS} from '../shared/constants';
-import type {Actor, Debug, Letter, Position, Splatter} from '../shared/types';
+import {
+  Actor,
+  ClientStatus,
+  Debug,
+  Letter,
+  Position,
+  Splatter,
+} from '../shared/types';
 import {LETTERS} from '../shared/letters';
 import {letterMap, now} from '../shared/util';
 import {getUserLocation} from './location';
@@ -99,6 +106,7 @@ export const init = async () => {
   const initReflectClientDone = initTiming('initializing reflect client', 20);
   const {
     getState,
+    getStatus,
     getSplatters,
     updateCursor,
     addSplatter,
@@ -282,10 +290,55 @@ export const init = async () => {
     }
   };
 
+  // Lazy-load any assets that aren't essential to interactivity.
+  // Note that all of these assets are gated behind their loaded-ness when they
+  // are accessed, but will likely result in dropped frames if we attempt to use
+  // them before we preload them.
+  // NOTE: If this takes more than a few ms, move to a worker or otherwise into
+  // the bg.
+  precompute();
+  loadClearAnimationFrames();
+
+  // Add a listener for our cache - when it updates, trigger a full redraw.
+  addListener<never>('cache', async (_, deleted, keyParts) => {
+    // Deleted caches are handled in the clearing code.
+    if (!deleted) {
+      const letter = keyParts[1] as Letter;
+      // Also make sure that our splatters are re-rendered in the correct order. By
+      // resetting the cache of rendered splatters, next frame will re-draw all the
+      // splatters in their current order.
+      const splatters = await getSplatters(letter);
+      setSplatters(letter, splatters);
+      triggerSplatterRedraw(letter);
+    }
+  });
+
+  // Wait for round trip confirmation from the server before starting the render
+  // loop
+  await new Promise<void>(resolve => {
+    const serverRoundTripDone = initTiming(
+      'waiting for initial server data',
+      1000,
+    );
+    const checkReady = async () => {
+      if ((await getStatus()) === ClientStatus.INITIALIZING) {
+        setTimeout(checkReady, 25);
+        return;
+      }
+      // After we've started, flip a class on the body
+      document.body.classList.add('demo-active');
+      serverRoundTripDone();
+      ready(true);
+      resolve();
+    };
+    checkReady();
+  });
+
   // Render our cursors and canvases at "animation speed", usually 60fps
   startRenderLoop(
     async () => {
       ({actors, physicsStep, cursors} = await getState());
+      // Initialization done.
       // Increment our step
       updateStep();
       // Render our textures, and if they changed, send to the 3D scene.
@@ -304,43 +357,6 @@ export const init = async () => {
     },
     debug,
   );
-
-  addListener<never>('cache', async (_, deleted, keyParts) => {
-    // Deleted caches are handled in the clearing code.
-    if (!deleted) {
-      const letter = keyParts[1] as Letter;
-      // Also make sure that our splatters are re-rendered in the correct order. By
-      // resetting the cache of rendered splatters, next frame will re-draw all the
-      // splatters in their current order.
-      const splatters = await getSplatters(letter);
-      setSplatters(letter, splatters);
-      triggerSplatterRedraw(letter);
-    }
-  });
-
-  // After we've started, flip a class on the body
-  document.body.classList.add('demo-active');
-  ready(true);
-
-  // Lazy-load any assets that aren't essential to interactivity.
-  // Note that all of these assets are gated behind their loaded-ness when they
-  // are accessed, but will likely result in dropped frames if we attempt to use
-  // them before we preload them.
-  const assetLoadTiming = timing('Preload Assets');
-  const doneLoadingAssets = assetLoadTiming('loading assets', 1000);
-  const precomputeSplattersDone = assetLoadTiming(
-    'precomputing splatters',
-    500,
-  );
-  await precompute();
-  precomputeSplattersDone();
-  const preloadClearFrames = assetLoadTiming(
-    'loading clear animation frames',
-    500,
-  );
-  await loadClearAnimationFrames();
-  preloadClearFrames();
-  doneLoadingAssets(true);
 };
 
 const startRenderLoop = (

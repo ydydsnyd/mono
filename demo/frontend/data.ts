@@ -6,6 +6,7 @@ import {
 import {letterMap} from '../shared/util';
 import type {
   Actor,
+  ClientStatus,
   Cursor,
   Debug,
   Impulse,
@@ -182,6 +183,8 @@ export const initialize = async (
 
   const mutations = reflectClient.mutate;
 
+  await mutations.initialize();
+
   const initialSplatters: Record<Letter, Splatter[]> = letterMap(() => []);
   await reflectClient.query(async tx => {
     await Promise.all([
@@ -202,8 +205,15 @@ export const initialize = async (
     });
   };
 
+  const getStatus = async () => {
+    return await reflectClient.query(async tx => {
+      return (await tx.get(`client-status/${tx.clientID}`)) as ClientStatus;
+    });
+  };
+
   return {
     ...mutations,
+    getStatus,
     getState,
     addListener,
     getSplatters,

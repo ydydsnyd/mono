@@ -4,6 +4,7 @@ import {getCache, updateCache} from './renderer';
 import {
   Actor,
   ActorID,
+  ClientStatus,
   Cursor,
   Env,
   Impulse,
@@ -51,6 +52,18 @@ const Seeds = {
 };
 
 export const mutators = {
+  initialize: async (tx: WriteTransaction) => {
+    // To make sure that we've done at least one server round trip, set this value
+    // on each client when it initializes an empty local state. When the server
+    // flips it to SERVER_CONFIRMED, we know that our local state has been synced
+    // with an initial state from the server (or will be very soon).
+    tx.put(
+      `client-status/${tx.clientID}`,
+      env === Env.SERVER
+        ? ClientStatus.SERVER_CONFIRMED
+        : ClientStatus.INITIALIZING,
+    );
+  },
   updateCursor: async (tx: WriteTransaction, cursor: Cursor) => {
     if (await tx.has(`actor/${cursor.actorId}`)) {
       await tx.put(`cursor/${cursor.actorId}`, cursor);
