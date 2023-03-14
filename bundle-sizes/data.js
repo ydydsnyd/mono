@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1678802016551,
+  "lastUpdate": 1678824743368,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -37199,6 +37199,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/dcfe4e1ea2ae5199a8c1ce13f5d96174e4073752"
         },
         "date": 1678802007942,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 260378,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 46336,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 259173,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 46008,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 96432,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27378,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c5fa8c776adffe2931b209387298b76825befb3b",
+          "message": "chore: Upgrade rollup (#401)",
+          "timestamp": "2023-03-14T20:11:04Z",
+          "tree_id": "a73d7275cd26d95382314265cd108ceadfb38f64",
+          "url": "https://github.com/rocicorp/mono/commit/c5fa8c776adffe2931b209387298b76825befb3b"
+        },
+        "date": 1678824734508,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
