@@ -264,6 +264,7 @@ export const init = async () => {
       const splatters = await getSplatters(letter);
       setSplatters(letter, splatters);
       triggerSplatterRedraw(letter);
+      updateTexture(letter);
     }
   });
 
@@ -292,7 +293,6 @@ export const init = async () => {
   startRenderLoop(
     async () => {
       ({actors, cursors} = await getState());
-      // Initialization done.
       // Render our textures, and if they changed, send to the 3D scene.
       renderFrame(now(), lastClear, letter => updateTexture(letter));
       render3D();
