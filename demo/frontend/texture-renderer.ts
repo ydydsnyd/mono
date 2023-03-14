@@ -48,26 +48,22 @@ export const setSplatters = (letter: Letter, splatters: Splatter[]) => {
   }));
 };
 
-export const renderInitialFrame = (splatters: Record<Letter, Splatter[]>) => {
-  LETTERS.forEach(letter => {
-    const ctx = getContext(letter);
-    draw_buffer(
-      getRendererLetter(letter),
-      ctx,
-      ...splatters2Render(
-        splatters[letter],
-        // When we draw a cache, we just want the "finished" state of all the
-        // animations, as they're presumed to be complete and immutable.
-        splatters[letter].map(() => SPLATTER_ANIM_FRAMES),
-      ),
-    );
-  });
-};
-
 const addedSplatters = letterMap(() => new Set<string>());
 
 export const triggerSplatterRedraw = (letter: Letter) =>
   addedSplatters[letter].clear();
+
+export const doRender = async (letter: Letter, frames?: number[]) => {
+  frames =
+    frames ||
+    animatingSplatters[letter].map(_ => SPLATTER_ANIMATION_FRAME_DURATION);
+  const ctx = getContext(letter);
+  draw_buffer(
+    getRendererLetter(letter),
+    ctx,
+    ...splatters2Render(animatingSplatters[letter], frames),
+  );
+};
 
 export const renderFrame = async (
   time: number,
@@ -79,7 +75,6 @@ export const renderFrame = async (
     clearing = await renderClearFrame(time, lastClear);
   }
   LETTERS.forEach(letter => {
-    const ctx = getContext(letter);
     const frames: number[] = [];
     animatingSplatters[letter] = animatingSplatters[letter].filter(anim => {
       const frame = animFrame(
@@ -105,11 +100,7 @@ export const renderFrame = async (
     if (!clearing && updated && animatingSplatters[letter].length === 0) {
       return;
     }
-    draw_buffer(
-      getRendererLetter(letter),
-      ctx,
-      ...splatters2Render(animatingSplatters[letter], frames),
-    );
+    doRender(letter, frames);
     if (updated) {
       updated(letter);
     }

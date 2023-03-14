@@ -156,18 +156,6 @@ export const initialize = async (
 
   await mutations.initialize();
 
-  const initialSplatters: Record<Letter, Splatter[]> = letterMap(() => []);
-  await reflectClient.query(async tx => {
-    await Promise.all([
-      ...LETTERS.map(async letter => {
-        const splatters = (await tx
-          .scan({prefix: `splatter/${letter}`})
-          .toArray()) as Splatter[];
-        initialSplatters[letter] = splatters;
-      }),
-    ]);
-  });
-
   const getSplatters = async (letter: Letter) => {
     return await reflectClient.query(async tx => {
       return (await tx
@@ -197,7 +185,6 @@ export const initialize = async (
     addListener,
     getSplatters,
     reflectClient,
-    initialSplatters,
   };
 };
 

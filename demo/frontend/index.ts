@@ -3,7 +3,7 @@ import {renderer as renderer3D} from './3d-renderer';
 import {
   drawSplatter,
   renderFrame,
-  renderInitialFrame,
+  doRender,
   setSplatters,
   triggerSplatterRedraw,
 } from './texture-renderer';
@@ -106,7 +106,6 @@ export const init = async () => {
     addListener,
     updateActorLocation,
     clearTextures,
-    initialSplatters,
   } = await initialize(
     actor,
     online => {
@@ -137,10 +136,6 @@ export const init = async () => {
       drawSplatter(now(), letter, splatter);
     }
   });
-  // Draw an initial frame to make sure we have caches and that we have splatters
-  // that happened between the last cache and when we started listening for new
-  // splatters.
-  renderInitialFrame(initialSplatters);
 
   // Handlers for data resetting
   const resetButton = document.getElementById('reset-button');
@@ -264,6 +259,7 @@ export const init = async () => {
       const splatters = await getSplatters(letter);
       setSplatters(letter, splatters);
       triggerSplatterRedraw(letter);
+      doRender(letter);
       updateTexture(letter);
     }
   });
