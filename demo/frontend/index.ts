@@ -117,16 +117,17 @@ export const init = async () => {
           dot.classList.add('offline');
         }
       }
+      if (online) {
+        // Get our location and add it when it's ready
+        getUserLocation().then(location => {
+          updateActorLocation({actorId: actor.id, location});
+        });
+      }
     },
     rebucket,
     debug,
   );
   initReflectClientDone();
-
-  // Get our location and add it when it's ready
-  getUserLocation().then(location => {
-    updateActorLocation({actorId: actor.id, location});
-  });
 
   // Draw splatters as we get them
   addListener<Splatter>('splatter', (splatter, deleted, keyParts) => {

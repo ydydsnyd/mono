@@ -1,5 +1,5 @@
 import type {WriteTransaction} from '@rocicorp/reflect';
-import {SPLATTER_MAX_AGE, SPLATTER_FLATTEN_MIN} from './constants';
+import {SPLATTER_MAX_AGE} from './constants';
 import {getCache, updateCache} from './renderer';
 import {
   Actor,
@@ -239,8 +239,8 @@ const flattenTexture = async (
   const oldSplatters: Splatter[] = points.filter(
     p => timestamp - p.t >= SPLATTER_MAX_AGE,
   );
-  // Now if we have enough cacheable splatters, draw them and move our last cached key
-  if (oldSplatters.length > SPLATTER_FLATTEN_MIN) {
+  // Now if we have any cacheable splatters, draw them and move our last cached key
+  if (oldSplatters.length > 0) {
     console.log(`${letter}: flatten ${oldSplatters.length} splatters`);
     // Draw them on top of the last cached image
     const cache = await unchunk(tx, `cache/${letter}`);

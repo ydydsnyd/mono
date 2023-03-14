@@ -48,15 +48,13 @@ export const initialize = async (
   }
 
   // Create a reflect client
-  let isInitializing = true;
   const reflectClient = new Reflect<M>({
     socketOrigin: WORKER_HOST,
     onOnlineChange: async online => {
-      if (!isInitializing && online) {
+      if (online) {
         await rebucket(actor);
         await mutations.guaranteeActor(actor);
       }
-      isInitializing = false;
       onlineChange(online);
     },
     userID: actor.id,
@@ -183,10 +181,6 @@ export const initialize = async (
     });
 
   const mutations = reflectClient.mutate;
-
-  // Before allowing clients to perform mutations, make sure that we've written
-  // our local actor to reflect.
-  await mutations.guaranteeActor(actor);
 
   const initialSplatters: Record<Letter, Splatter[]> = letterMap(() => []);
   await reflectClient.query(async tx => {
