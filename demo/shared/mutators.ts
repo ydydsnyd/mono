@@ -73,8 +73,8 @@ export const mutators = {
     // Make sure there's only one actor per client
     const existingActor = await tx.get(`client-actor/${tx.clientID}`);
     if (existingActor) {
-      await tx.del(`actor/${actor.id}`);
-      await tx.del(`cursor/${actor.id}`);
+      await tx.del(`actor/${existingActor}`);
+      await tx.del(`cursor/${existingActor}`);
     }
     await tx.put(`client-actor/${tx.clientID}`, actor.id);
     await tx.put(key, actor);

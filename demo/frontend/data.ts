@@ -53,7 +53,7 @@ export const initialize = async (
     onOnlineChange: async online => {
       if (online) {
         await rebucket(actor);
-        await mutations.guaranteeActor(actor);
+        await reflectClient.mutate.guaranteeActor(actor);
       }
       onlineChange(online);
     },
