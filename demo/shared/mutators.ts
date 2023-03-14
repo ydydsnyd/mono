@@ -52,9 +52,8 @@ const Seeds = {
 
 export const mutators = {
   updateCursor: async (tx: WriteTransaction, cursor: Cursor) => {
-    if (await tx.has(`actor/${cursor.actorId}`)) {
-      await tx.put(`cursor/${cursor.actorId}`, cursor);
-    }
+    await guaranteeActor(tx, cursor.actorId);
+    await tx.put(`cursor/${cursor.actorId}`, cursor);
   },
   removeActor: async (tx: WriteTransaction, clientID: string) => {
     const actorId = await tx.get(`client-actor/${clientID}`);
@@ -64,20 +63,7 @@ export const mutators = {
     }
   },
   guaranteeActor: async (tx: WriteTransaction, actor: OrchestratorActor) => {
-    const key = `actor/${actor.id}`;
-    const hasActor = await tx.has(key);
-    if (hasActor) {
-      // already exists
-      return;
-    }
-    // Make sure there's only one actor per client
-    const existingActor = await tx.get(`client-actor/${tx.clientID}`);
-    if (existingActor) {
-      await tx.del(`actor/${actor.id}`);
-      await tx.del(`cursor/${actor.id}`);
-    }
-    await tx.put(`client-actor/${tx.clientID}`, actor.id);
-    await tx.put(key, actor);
+    await guaranteeActor(tx, actor.id);
   },
   updateActorLocation: async (
     tx: WriteTransaction,
@@ -219,6 +205,23 @@ export const mutators = {
 //     });
 //   }
 // };
+
+const guaranteeActor = async (tx: WriteTransaction, actorId: string) => {
+  const key = `actor/${actorId}`;
+  const hasActor = await tx.has(key);
+  if (hasActor) {
+    // already exists
+    return;
+  }
+  // Make sure there's only one actor per client
+  const existingActor = await tx.get(`client-actor/${tx.clientID}`);
+  if (existingActor) {
+    await tx.del(`actor/${existingActor}`);
+    await tx.del(`cursor/${existingActor}`);
+  }
+  await tx.put(`client-actor/${tx.clientID}`, actorId);
+  await tx.put(key, actorId);
+};
 
 const flattenTexture = async (
   tx: WriteTransaction,
