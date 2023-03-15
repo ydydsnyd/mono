@@ -1,38 +1,17 @@
 import type {WriteTransaction} from '@rocicorp/reflect';
-import {SPLATTER_FLATTEN_MIN, SPLATTER_MAX_AGE} from './constants';
+import {SPLATTER_FLATTEN_FREQUENCY, SPLATTER_MAX_AGE} from './constants';
 import {getCache, updateCache} from './renderer';
-import {
-  Actor,
-  ActorID,
-  Cursor,
-  Env,
-  Letter,
-  Position,
-  Splatter,
-  Vector,
-} from './types';
+import {Actor, Cursor, Env, Letter, Position, Splatter, Vector} from './types';
 import {randomWithSeed} from './util';
 import {chunk, unchunk} from './chunks';
 import type {OrchestratorActor} from '../shared/types';
 import {LETTERS} from './letters';
 
 export const UNINITIALIZED_CACHE_SENTINEL = 'uninitialized-cache-sentinel';
+export const UNINITIALIZED_CLEARED_SENTINEL = 'uninitialized-clear-sentinel';
 
 export const splatterId = (s: Splatter) =>
   `${s.u}${s.t}${s.x.toFixed(1) + s.y.toFixed(1)}}`;
-
-const splatterKey = (
-  letter: Letter,
-  step: number,
-  actorId: ActorID,
-  x: number,
-  y: number,
-) =>
-  // This mod is here just to keep us from having massive keys due to large
-  // numbers. Collision is unlikely anyway.
-  `splatter/${letter}/${
-    x.toFixed(1) + y.toFixed(1) + (step % 1000)
-  }/${actorId}`;
 
 export type M = typeof mutators;
 
@@ -60,6 +39,7 @@ export const mutators = {
       for await (const letter of LETTERS) {
         await chunk(tx, `cache/${letter}`, UNINITIALIZED_CACHE_SENTINEL);
       }
+      await tx.put('cleared', UNINITIALIZED_CLEARED_SENTINEL);
     }
     // Doing nothing on the server is equivalent to throwing out the sentinel value.
   },
@@ -73,6 +53,7 @@ export const mutators = {
     if (actorId) {
       await tx.del(`actor/${actorId}`);
       await tx.del(`cursor/${actorId}`);
+      await tx.del(`client-actor/${clientID}`);
     }
   },
   guaranteeActor: async (tx: WriteTransaction, actor: OrchestratorActor) => {
@@ -147,7 +128,20 @@ export const mutators = {
       a: Math.floor(randomWithSeed(timestamp, Seeds.splatterAnimation, 5)),
       r: Math.floor(randomWithSeed(timestamp, Seeds.splatterRotation, 4)),
     };
-    await tx.put(splatterKey(letter, timestamp, actorId, x, y), splatter);
+    // Because data is returned in key order rather than insert order, we need to
+    // increment a global counter.
+    // Because of string ordering, we also need to limit this to 0xFFFF, since there
+    // are no characters beyond that. This also means that our keys will be out of
+    // order if we store more than 65535 splatters per letter, but that should be
+    // very unlikely due to flattening and other performance implications.
+    const splatterNum =
+      ((((await tx.get(`splatter-num`)) as number | undefined) || 0) % 0xffff) +
+      1;
+    await tx.put(
+      `splatter/${letter}/${String.fromCharCode(splatterNum)}/${actorId}`,
+      splatter,
+    );
+    await tx.put(`splatter-num`, splatterNum);
 
     // On the server, do some "flattening":
     // This takes any splatters that are no longer animating and draws them directly
@@ -156,9 +150,7 @@ export const mutators = {
     // for infinite splatters will be limited to the number of pixels in the png as
     // opposed to infinitely growing.
     if (env == Env.SERVER) {
-      // Our flattening operations both use our wasm renderer, so make sure it's available.
       try {
-        await _initRenderer!();
         // Perform operations
         await flattenTexture(tx, letter, timestamp);
       } catch (e) {
@@ -178,34 +170,44 @@ const flattenTexture = async (
 ) => {
   // To prevent infinite growth of the list of splatters, we need to periodically
   // "flatten" our textures to a pixel map. This is a fast operation, but
-  // transferring the new pixel map data to clients can be slow - so we only
-  // perform it when we've hit a certain threshold, and we use a sequence number
-  // to make sure that we don't perform the operation on old data.
+  // transferring the new pixel map data to clients can be slow - so we limit
+  // its frequency.
+  const lastFlatten = (await tx.get(`last-flatten/${letter}`)) as
+    | number
+    | undefined;
+  const now = new Date().getTime();
+  if (lastFlatten && lastFlatten >= now - SPLATTER_FLATTEN_FREQUENCY) {
+    return;
+  }
+  await tx.put(`last-flatten/${letter}`, now);
+
+  await _initRenderer!();
 
   // Get all the splatters for this letter
-  const points = (await (
-    await tx.scan({prefix: `splatter/${letter}`})
-  ).toArray()) as Splatter[];
+  const splatters = (await (await tx.scan({prefix: `splatter/${letter}`}))
+    .entries()
+    .toArray()) as [string, Splatter][];
   // And find any splatters which are "old"
-  const oldSplatters: Splatter[] = points.filter(
-    p => timestamp - p.t >= SPLATTER_MAX_AGE,
+  const oldSplatters: [string, Splatter][] = splatters.filter(
+    s => timestamp - s[1].t >= SPLATTER_MAX_AGE,
   );
-  // Now if we have enough cacheable splatters, draw them and move our last cached key
-  if (oldSplatters.length > SPLATTER_FLATTEN_MIN) {
+  // Now if we have any cacheable splatters, draw them and move our last cached key
+  if (oldSplatters.length > 0) {
     console.log(`${letter}: flatten ${oldSplatters.length} splatters`);
     // Draw them on top of the last cached image
     const cache = await unchunk(tx, `cache/${letter}`);
     if (cache) {
       updateCache(letter, cache);
     }
-    const newCache = getCache(letter, oldSplatters);
+    const newCache = getCache(
+      letter,
+      oldSplatters.map(s => s[1]),
+    );
     // And write it back to the cache
     await chunk(tx, `cache/${letter}`, newCache);
     // Then delete any old splatters we just drew
-    await Promise.all(
-      oldSplatters.map(
-        async s => await tx.del(splatterKey(letter, s.t, s.u, s.x, s.y)),
-      ),
-    );
+    for await (const s of oldSplatters) {
+      await tx.del(s[0]);
+    }
   }
 };

@@ -10,7 +10,7 @@ export const ROOM_MAX_ACTORS = 100;
 // To avoid our data growing infinitely, "flatten" splatters to an image in
 // batches if they are sufficiently old.
 export const SPLATTER_MAX_AGE = 1000; // ms
-export const SPLATTER_FLATTEN_MIN = 20; // count
+export const SPLATTER_FLATTEN_FREQUENCY = 5000; // ms
 // ms between splatters. This is a minimum, so any number below about 16 will
 // just splatter every frame (or more accurately, this will fall back to
 // MIN_STEP_MS)

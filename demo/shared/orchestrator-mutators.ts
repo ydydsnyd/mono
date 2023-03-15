@@ -35,7 +35,7 @@ export const orchestratorMutators = {
     // always use the same room.
     const roomCount = (await tx.get(ROOM_COUNT_KEY)) as number;
     if (!roomCount || roomCount < 0) {
-      throw new Error("Can't remove an actor from an empty room...");
+      console.error("Can't remove an actor from an empty room...");
     }
     await tx.put(ROOM_COUNT_KEY, roomCount - 1);
   },
