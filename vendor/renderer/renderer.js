@@ -429,6 +429,9 @@ function getImports() {
     imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
         takeObject(arg0);
     };
+    imports.wbg.__wbg_log_94ec9f9334743f04 = function(arg0, arg1) {
+        console.log(getStringFromWasm0(arg0, arg1));
+    };
     imports.wbg.__wbg_data_f13601b88960b7eb = function(arg0, arg1) {
         const ret = getObject(arg1).data;
         const ptr0 = passArray8ToWasm0(ret, wasm.__wbindgen_malloc);

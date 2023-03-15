@@ -190,6 +190,7 @@ pub fn draw_buffer_png(
     splatter_rotations: Vec<u8>,
 ) -> Vec<u8> {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
+    console_log!("START DRAW");
     let caches = CACHES.read().unwrap();
     let cache = caches.get_data(&letter);
     let width = UVMAP_SIZE.clone();
@@ -200,6 +201,7 @@ pub fn draw_buffer_png(
     } else {
         img = RgbaImage::from_vec(width, height, cache.to_vec()).expect("Bad image in buffers");
     }
+    console_log!("UNPACKED IMAGE");
     drawing::draw(
         &mut img,
         splatter_count,
@@ -211,9 +213,11 @@ pub fn draw_buffer_png(
         &splatter_animations,
         &splatter_rotations,
     );
+    console_log!("DRAW DONE");
     let mut png_data = Vec::new();
     img.write_to(&mut Cursor::new(&mut png_data), ImageFormat::Png)
         .expect("Failed writing png data");
+    console_log!("PNG_WRITE DONE");
     png_data
 }
 
