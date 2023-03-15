@@ -137,16 +137,14 @@ const renderClearFrame = async (
         getContext(Letter.E),
       );
       // Then, find the frame for this animation and subtract it from the cache
-      await Promise.all(
-        LETTERS.map(async letter => {
-          const ctx = getContext(letter);
-          const image = await getClearAnimationFrame(letter, clearFrame);
-          ctx.save();
-          ctx.globalCompositeOperation = 'destination-out';
-          ctx.drawImage(image, 0, 0);
-          ctx.restore();
-        }),
-      );
+      for await (const letter of LETTERS) {
+        const ctx = getContext(letter);
+        const image = await getClearAnimationFrame(letter, clearFrame);
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.drawImage(image, 0, 0);
+        ctx.restore();
+      }
     }
     // After updating the caches, write them back so that they'll be used as the
     // base for the below renders.

@@ -231,14 +231,12 @@ const stateInitializer =
       cursors[cursor.actorId] = cursor;
       return cursors;
     }, {} as State['cursors']);
-    await Promise.all([
-      ...LETTERS.map(async letter => {
-        const cache = await unchunk(tx, `cache/${letter}`);
-        if (cache) {
-          updateCache(letter, cache, debug);
-        }
-      }),
-    ]);
+    for await (const letter of LETTERS) {
+      const cache = await unchunk(tx, `cache/${letter}`);
+      if (cache) {
+        updateCache(letter, cache, debug);
+      }
+    }
     return {
       actorId: userID,
       actors,

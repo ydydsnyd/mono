@@ -94,7 +94,9 @@ export const mutators = {
       .scan({prefix: 'splatter/'})
       .keys()
       .toArray()) as string[];
-    await Promise.all(splatters.map(async k => await tx.del(k)));
+    for await (const k of splatters) {
+      await tx.del(k);
+    }
     // To provide a synced animation and to deal with the case where some clients
     // may only have local cached splatters which we can't clean up individually
     // (because they are already rendered), we also add a "cleared" timestamp which
