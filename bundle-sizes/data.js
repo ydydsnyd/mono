@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1678890236113,
+  "lastUpdate": 1678894986343,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -37445,6 +37445,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27299,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "81a9bcf3388802578704680c60821a93d04213b0",
+          "message": "fix!: Rename PokeDD31 to Poke (#404)\n\nBREAKING CHANGE!\r\n\r\nAlso, return some internal names from DD31 -> v1 and SDD -> v0 since\r\nthese occurred in the .d.ts.\r\n\r\nLook at the diff of .d.ts to see how the public API changes.\r\n\r\nFixes #386",
+          "timestamp": "2023-03-15T16:41:51+01:00",
+          "tree_id": "6074c5bb01a1030ea3cf662b3b85205255a08c4b",
+          "url": "https://github.com/rocicorp/mono/commit/81a9bcf3388802578704680c60821a93d04213b0"
+        },
+        "date": 1678894977535,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 259522,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 46183,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 258317,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45842,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 96183,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27291,
             "unit": "bytes"
           }
         ]
