@@ -15,6 +15,8 @@ setEnv(Env.SERVER, async () => {
   await initRenderer(renderModule);
 });
 
+const CLEAN_ROOM_KEY = 'a-clean-room-key-that-is-unlikely-to-collide';
+
 setOrchestratorEnv(Env.SERVER);
 
 const authHandler = async (auth: string, roomID: string) => {
@@ -55,15 +57,32 @@ const {
     await orchestratorMutators.removeOchestratorActor(write, write.clientID);
   },
   getLogLevel: () => 'debug',
-  allowUnconfirmedWrites: true,
+  allowUnconfirmedWrites: false,
 });
 
 class RoomDO extends SuperRoomDO {
   constructor(
     state: any,
-    env: {NEW_ROOM_SECRET?: string} & ReflectServerBaseEnv,
+    env: {
+      NEW_ROOM_SECRET?: string;
+      CLEAN_ROOM_UID?: string;
+    } & ReflectServerBaseEnv,
   ) {
     super(state, env);
+    if (env.CLEAN_ROOM_UID) {
+      state.storage.get(CLEAN_ROOM_KEY).then((value: string) => {
+        console.log(value, env.CLEAN_ROOM_UID);
+        if (value !== env.CLEAN_ROOM_UID) {
+          console.log('Clearing data...');
+          state.storage
+            .deleteAll()
+            .catch((e: Error) => console.error('Failed clearing data', e));
+          state.storage
+            .put(CLEAN_ROOM_KEY, env.CLEAN_ROOM_UID)
+            .catch((e: Error) => console.error('Failed updating clear key', e));
+        }
+      });
+    }
     if (env.NEW_ROOM_SECRET) {
       setOrchestratorEnv(
         Env.SERVER,
