@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1678894986343,
+  "lastUpdate": 1678981018708,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -37469,6 +37469,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/81a9bcf3388802578704680c60821a93d04213b0"
         },
         "date": 1678894977535,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 259522,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 46183,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 258317,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45842,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 96183,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27291,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "distinct": true,
+          "id": "14ad6e85f488d5bbd8c452df554636cae07b1cf9",
+          "message": "feat: Improve error messages for valita\n\nWe now have logic for generating error messages for valita errors. It is\nquestionable if it is really worth it.\n\nAll places now import shared/valita.js which has a slightly different\ntype for Type which does not include parse etc. This is because\nwe want to ensure we get our custom error messages.\n\nTowards #216",
+          "timestamp": "2023-03-16T16:35:48+01:00",
+          "tree_id": "afcc7335e1397ed4957cb3efbff40344ad429269",
+          "url": "https://github.com/rocicorp/mono/commit/14ad6e85f488d5bbd8c452df554636cae07b1cf9"
+        },
+        "date": 1678981009842,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
