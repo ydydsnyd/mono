@@ -1,11 +1,17 @@
 import type {WriteTransaction} from '@rocicorp/reflect';
-import {SPLATTER_FLATTEN_FREQUENCY, SPLATTER_MAX_AGE} from './constants';
-import {getCache, updateCache} from './renderer';
+import {
+  SPLATTER_ANIM_FRAMES,
+  SPLATTER_FLATTEN_FREQUENCY,
+  SPLATTER_MAX_AGE,
+} from './constants';
 import {Actor, Cursor, Env, Letter, Position, Splatter, Vector} from './types';
 import {randomWithSeed} from './util';
 import {chunk, unchunk} from './chunks';
 import type {OrchestratorActor} from '../shared/types';
 import {LETTERS} from './letters';
+import {draw_cache_png} from '../../vendor/renderer';
+import {splatters2Render} from './wasm-args';
+import {decode, encode} from './uint82b64';
 
 export const UNINITIALIZED_CACHE_SENTINEL = 'uninitialized-cache-sentinel';
 export const UNINITIALIZED_CLEARED_SENTINEL = 'uninitialized-clear-sentinel';
@@ -16,10 +22,8 @@ export const splatterId = (s: Splatter) =>
 export type M = typeof mutators;
 
 let env = Env.CLIENT;
-let _initRenderer: (() => Promise<void>) | undefined;
-export const setEnv = (e: Env, initRenderer: () => Promise<void>) => {
+export const setEnv = (e: Env) => {
   env = e;
-  _initRenderer = initRenderer;
 };
 
 // Seeds are used for creating pseudo-random values that are stable across
@@ -145,15 +149,16 @@ export const mutators = {
     );
     await tx.put(`splatter-num`, splatterNum);
 
-    // On the server, do some "flattening":
+    // Periodically do some "flattening":
     // This takes any splatters that are no longer animating and draws them directly
     // to a png. We can then use this png as the initial state for new clients,
     // which means they won't need to draw as many splatters, and the storage space
     // for infinite splatters will be limited to the number of pixels in the png as
     // opposed to infinitely growing.
-    if (env == Env.SERVER) {
+    // We only do this on the client because it's too slow on to do on the server -
+    // server-side mutators need to be really fast and small.
+    if (env === Env.CLIENT) {
       try {
-        // Perform operations
         await flattenTexture(tx, letter, timestamp);
       } catch (e) {
         console.error((e as Error).stack);
@@ -183,8 +188,6 @@ const flattenTexture = async (
   }
   await tx.put(`last-flatten/${letter}`, now);
 
-  await _initRenderer!();
-
   // Get all the splatters for this letter
   const splatters = (await (await tx.scan({prefix: `splatter/${letter}`}))
     .entries()
@@ -197,16 +200,19 @@ const flattenTexture = async (
   if (oldSplatters.length > 0) {
     console.log(`${letter}: flatten ${oldSplatters.length} splatters`);
     // Draw them on top of the last cached image
-    const cache = await unchunk(tx, `cache/${letter}`);
-    if (cache) {
-      updateCache(letter, cache);
-    }
-    const newCache = getCache(
-      letter,
-      oldSplatters.map(s => s[1]),
+    const png = await unchunk(tx, `cache/${letter}`);
+    const decoded = png ? decode(png) : undefined;
+    const newCache = draw_cache_png(
+      decoded,
+      ...splatters2Render(
+        oldSplatters.map(s => s[1]),
+        // When we draw a cache, we just want the "finished" state of all the
+        // animations, as they're presumed to be complete and immutable.
+        oldSplatters.map(() => SPLATTER_ANIM_FRAMES),
+      ),
     );
     // And write it back to the cache
-    await chunk(tx, `cache/${letter}`, newCache);
+    await chunk(tx, `cache/${letter}`, encode(newCache));
     // Then delete any old splatters we just drew
     for await (const s of oldSplatters) {
       await tx.del(s[0]);

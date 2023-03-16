@@ -178,8 +178,8 @@ fn draw_letter(letter: Letter, context: &CanvasRenderingContext2d) {
 // wasm code, but produces a much smaller output than the client code, which is
 // appropriate for storing.
 #[wasm_bindgen]
-pub fn draw_buffer_png(
-    letter: Letter,
+pub fn draw_cache_png(
+    png_data: Option<Vec<u8>>,
     splatter_count: usize,
     splatter_frames: Vec<usize>,
     splatter_actors: Vec<u32>,
@@ -191,15 +191,20 @@ pub fn draw_buffer_png(
 ) -> Vec<u8> {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     console_log!("START DRAW");
-    let caches = CACHES.read().unwrap();
-    let cache = caches.get_data(&letter);
     let width = UVMAP_SIZE.clone();
     let height = UVMAP_SIZE.clone();
     let mut img: RgbaImage;
-    if cache.len() == 0 {
-        img = RgbaImage::new(width, height);
+    if let Some(data) = png_data {
+        img = image::load_from_memory_with_format(&data, ImageFormat::Png)
+            .unwrap_or_else(|e| {
+                panic!(
+                    "draw_cache_png received bad image data. Error: {}",
+                    e.to_string()
+                );
+            })
+            .to_rgba8();
     } else {
-        img = RgbaImage::from_vec(width, height, cache.to_vec()).expect("Bad image in buffers");
+        img = RgbaImage::new(width, height);
     }
     console_log!("UNPACKED IMAGE");
     drawing::draw(

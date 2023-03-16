@@ -25,7 +25,7 @@ export function overwrite_caches(ctx_a: CanvasRenderingContext2D, ctx_l: CanvasR
 */
 export function draw_caches(ctx_a: CanvasRenderingContext2D, ctx_l: CanvasRenderingContext2D, ctx_i: CanvasRenderingContext2D, ctx_v: CanvasRenderingContext2D, ctx_e: CanvasRenderingContext2D): void;
 /**
-* @param {number} letter
+* @param {Uint8Array | undefined} png_data
 * @param {number} splatter_count
 * @param {Uint32Array} splatter_frames
 * @param {Uint32Array} splatter_actors
@@ -36,7 +36,7 @@ export function draw_caches(ctx_a: CanvasRenderingContext2D, ctx_l: CanvasRender
 * @param {Uint8Array} splatter_rotations
 * @returns {Uint8Array}
 */
-export function draw_buffer_png(letter: number, splatter_count: number, splatter_frames: Uint32Array, splatter_actors: Uint32Array, colors: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_animations: Uint8Array, splatter_rotations: Uint8Array): Uint8Array;
+export function draw_cache_png(png_data: Uint8Array | undefined, splatter_count: number, splatter_frames: Uint32Array, splatter_actors: Uint32Array, colors: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_animations: Uint8Array, splatter_rotations: Uint8Array): Uint8Array;
 /**
 * @param {number} letter
 * @param {CanvasRenderingContext2D} ctx
@@ -68,7 +68,7 @@ export interface InitOutput {
   readonly update_cache: (a: number, b: number, c: number) => void;
   readonly overwrite_caches: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly draw_caches: (a: number, b: number, c: number, d: number, e: number) => void;
-  readonly draw_buffer_png: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number) => void;
+  readonly draw_cache_png: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number) => void;
   readonly draw_buffer: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number) => void;
   readonly __wbindgen_malloc: (a: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number) => number;

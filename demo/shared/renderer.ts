@@ -1,12 +1,6 @@
-import {
-  draw_buffer_png,
-  Letter as RendererLetter,
-  update_cache,
-} from '../../vendor/renderer';
-import {encode, decode} from './uint82b64';
-import {splatters2Render} from './wasm-args';
-import {Debug, Letter, Splatter} from './types';
-import {SPLATTER_ANIM_FRAMES} from './constants';
+import {Letter as RendererLetter, update_cache} from '../../vendor/renderer';
+import {decode} from './uint82b64';
+import {Debug, Letter} from './types';
 
 export const getRendererLetter = (letter: Letter): RendererLetter => {
   switch (letter) {
@@ -31,18 +25,4 @@ export const updateCache = (letter: Letter, png: string, debug?: Debug) => {
       debug.cacheUpdated(letter, png);
     }
   }
-};
-
-export const getCache = (letter: Letter, splatters: Splatter[]) => {
-  return encode(
-    draw_buffer_png(
-      getRendererLetter(letter),
-      ...splatters2Render(
-        splatters,
-        // When we draw a cache, we just want the "finished" state of all the
-        // animations, as they're presumed to be complete and immutable.
-        splatters.map(() => SPLATTER_ANIM_FRAMES),
-      ),
-    ),
-  );
 };
