@@ -2,8 +2,6 @@ import type {VercelRequest, VercelResponse} from '@vercel/node';
 import {get, post, RequestError} from './lib/request';
 import {SERVICE_HOST} from '@/demo/shared/urls';
 
-const reflectApiKey = process.env.REFLECT_AUTH_API_KEY || '';
-
 const ROOM_STATUS_URL = (roomID: string) =>
   `${SERVICE_HOST}/api/room/v0/room/${roomID}/status`;
 const CREATE_ROOM_URL = () => `${SERVICE_HOST}/createRoom`; // TODO: move to `${SERVICE_HOST}/api/room/v0/room/create` when upgrading reflect-server;
@@ -18,6 +16,11 @@ const handler = async (req: VercelRequest, res: VercelResponse) => {
   if (!roomID) {
     console.log(`Invalid request: ${req}`);
     res.status(406).send('Invalid request');
+    return;
+  }
+  const reflectApiKey = process.env.REFLECT_AUTH_API_KEY;
+  if (!reflectApiKey) {
+    res.status(401).send('REFLECT_AUTH_API_KEY not set.');
     return;
   }
 
