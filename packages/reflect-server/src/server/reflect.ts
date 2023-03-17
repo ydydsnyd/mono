@@ -5,14 +5,13 @@ import {BaseAuthDO} from './auth-do.js';
 import {BaseRoomDO} from './room-do.js';
 import {createWorker} from './worker.js';
 import type {DisconnectHandler} from './disconnect.js';
-import {createNoAuthDOWorker} from './no-auth-do-worker.js';
 
 export interface ReflectServerOptions<
   Env extends ReflectServerBaseEnv,
   MD extends MutatorDefs,
 > {
   mutators: MD;
-  authHandler: AuthHandler;
+  authHandler?: AuthHandler | undefined;
 
   disconnectHandler?: DisconnectHandler | undefined;
 
@@ -37,16 +36,14 @@ export interface ReflectServerOptions<
   allowUnconfirmedWrites?: boolean | undefined;
 }
 
-type Required<T> = {
-  [P in keyof T]-?: Exclude<T[P], undefined>;
-};
+type RequiredOmit<T, K extends keyof T> = {
+  [P in keyof T as Exclude<P, K>]-?: Exclude<T[P], undefined>;
+} & Pick<T, K>;
 
 type ReflectServerOptionsWithDefaults<
   Env extends ReflectServerBaseEnv,
   MD extends MutatorDefs,
-> = Required<Omit<ReflectServerOptions<Env, MD>, 'mutators'>> & {
-  mutators: MD;
-};
+> = RequiredOmit<ReflectServerOptions<Env, MD>, 'mutators' | 'authHandler'>;
 
 function combineLogSinks(sinks: LogSink[]): LogSink {
   if (sinks.length === 1) {
@@ -94,29 +91,6 @@ export function createReflectServer<
 
   // eslint-disable-next-line @typescript-eslint/naming-convention
   return {worker, RoomDO: roomDOClass, AuthDO: authDOClass};
-}
-
-export function createReflectServerWithoutAuthDO<
-  Env extends ReflectServerBaseEnv,
-  MD extends MutatorDefs,
->(
-  options: ReflectServerOptions<Env, MD>,
-): {
-  worker: ExportedHandler<Env>;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  RoomDO: DurableObjectCtor<Env>;
-} {
-  const optionsWithDefaults = getOptionsWithDefaults(options);
-  const roomDOClass = createRoomDOClass(optionsWithDefaults);
-  const {authHandler, getLogSinks, getLogLevel} = optionsWithDefaults;
-  const worker = createNoAuthDOWorker<Env>({
-    getLogSink: env => combineLogSinks(getLogSinks(env)),
-    getLogLevel,
-    authHandler,
-  });
-
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  return {worker, RoomDO: roomDOClass};
 }
 
 function getOptionsWithDefaults<
