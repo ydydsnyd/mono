@@ -39,9 +39,9 @@ body.demo-active * {
   left: 0;
 }
 .preload-1, .preload-2 {
-  stroke: #000;
+  stroke: #2A2C2E;
   stroke-miterlimit: 10;
-  stroke-width: 3px;
+  stroke-width: 1px;
 }
 .preload-2 {
   fill-rule: evenodd;
