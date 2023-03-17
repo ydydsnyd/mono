@@ -190,7 +190,6 @@ pub fn draw_cache_png(
     splatter_rotations: Vec<u8>,
 ) -> Vec<u8> {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
-    console_log!("START DRAW");
     let width = UVMAP_SIZE.clone();
     let height = UVMAP_SIZE.clone();
     let mut img: RgbaImage;
@@ -206,7 +205,6 @@ pub fn draw_cache_png(
     } else {
         img = RgbaImage::new(width, height);
     }
-    console_log!("UNPACKED IMAGE");
     drawing::draw(
         &mut img,
         splatter_count,
@@ -218,11 +216,9 @@ pub fn draw_cache_png(
         &splatter_animations,
         &splatter_rotations,
     );
-    console_log!("DRAW DONE");
     let mut png_data = Vec::new();
     img.write_to(&mut Cursor::new(&mut png_data), ImageFormat::Png)
         .expect("Failed writing png data");
-    console_log!("PNG_WRITE DONE");
     png_data
 }
 

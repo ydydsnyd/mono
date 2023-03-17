@@ -67,7 +67,6 @@ class RoomDO extends SuperRoomDO {
     super(state, env);
     if (env.CLEAN_ROOM_UID) {
       state.storage.get(CLEAN_ROOM_KEY).then((value: string) => {
-        console.log(value, env.CLEAN_ROOM_UID);
         if (value !== env.CLEAN_ROOM_UID) {
           console.log('Clearing data...');
           state.storage

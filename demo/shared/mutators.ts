@@ -1,17 +1,9 @@
 import type {WriteTransaction} from '@rocicorp/reflect';
-import {
-  SPLATTER_ANIM_FRAMES,
-  SPLATTER_FLATTEN_FREQUENCY,
-  SPLATTER_MAX_AGE,
-} from './constants';
 import {Actor, Cursor, Env, Letter, Position, Splatter, Vector} from './types';
 import {randomWithSeed} from './util';
-import {chunk, unchunk} from './chunks';
+import {chunk} from './chunks';
 import type {OrchestratorActor} from '../shared/types';
 import {LETTERS} from './letters';
-import {draw_cache_png} from '../../vendor/renderer';
-import {splatters2Render} from './wasm-args';
-import {decode, encode} from './uint82b64';
 
 export const UNINITIALIZED_CACHE_SENTINEL = 'uninitialized-cache-sentinel';
 export const UNINITIALIZED_CLEARED_SENTINEL = 'uninitialized-clear-sentinel';
@@ -141,81 +133,28 @@ export const mutators = {
     // order if we store more than 65535 splatters per letter, but that should be
     // very unlikely due to flattening and other performance implications.
     const splatterNum =
-      ((((await tx.get(`splatter-num`)) as number | undefined) || 0) % 0xffff) +
+      ((((await tx.get(`splatter-num/${letter}`)) as number | undefined) || 0) %
+        0xffff) +
       1;
     await tx.put(
       `splatter/${letter}/${String.fromCharCode(splatterNum)}/${actorId}`,
       splatter,
     );
-    await tx.put(`splatter-num`, splatterNum);
-
-    // Periodically do some "flattening":
-    // This takes any splatters that are no longer animating and draws them directly
-    // to a png. We can then use this png as the initial state for new clients,
-    // which means they won't need to draw as many splatters, and the storage space
-    // for infinite splatters will be limited to the number of pixels in the png as
-    // opposed to infinitely growing.
-    // We only do this on the client because it's too slow on to do on the server -
-    // server-side mutators need to be really fast and small.
-    if (env === Env.CLIENT) {
-      try {
-        await flattenTexture(tx, letter, timestamp);
-      } catch (e) {
-        console.error((e as Error).stack);
-        console.log(`Flattening failed with error ${(e as Error).message}`);
-      }
+    await tx.put(`splatter-num/${letter}`, splatterNum);
+  },
+  updateCache: async (
+    tx: WriteTransaction,
+    {
+      letter,
+      newCache,
+      flattenedKeys,
+    }: {letter: Letter; newCache: string; flattenedKeys: string[]},
+  ) => {
+    await chunk(tx, `cache/${letter}`, newCache);
+    for await (const key of flattenedKeys) {
+      await tx.del(key);
     }
   },
 
   nop: async (_: WriteTransaction) => {},
-};
-
-const flattenTexture = async (
-  tx: WriteTransaction,
-  letter: Letter,
-  timestamp: number,
-) => {
-  // To prevent infinite growth of the list of splatters, we need to periodically
-  // "flatten" our textures to a pixel map. This is a fast operation, but
-  // transferring the new pixel map data to clients can be slow - so we limit
-  // its frequency.
-  const lastFlatten = (await tx.get(`last-flatten/${letter}`)) as
-    | number
-    | undefined;
-  const now = new Date().getTime();
-  if (lastFlatten && lastFlatten >= now - SPLATTER_FLATTEN_FREQUENCY) {
-    return;
-  }
-  await tx.put(`last-flatten/${letter}`, now);
-
-  // Get all the splatters for this letter
-  const splatters = (await (await tx.scan({prefix: `splatter/${letter}`}))
-    .entries()
-    .toArray()) as [string, Splatter][];
-  // And find any splatters which are "old"
-  const oldSplatters: [string, Splatter][] = splatters.filter(
-    s => timestamp - s[1].t >= SPLATTER_MAX_AGE,
-  );
-  // Now if we have any cacheable splatters, draw them and move our last cached key
-  if (oldSplatters.length > 0) {
-    console.log(`${letter}: flatten ${oldSplatters.length} splatters`);
-    // Draw them on top of the last cached image
-    const png = await unchunk(tx, `cache/${letter}`);
-    const decoded = png ? decode(png) : undefined;
-    const newCache = draw_cache_png(
-      decoded,
-      ...splatters2Render(
-        oldSplatters.map(s => s[1]),
-        // When we draw a cache, we just want the "finished" state of all the
-        // animations, as they're presumed to be complete and immutable.
-        oldSplatters.map(() => SPLATTER_ANIM_FRAMES),
-      ),
-    );
-    // And write it back to the cache
-    await chunk(tx, `cache/${letter}`, encode(newCache));
-    // Then delete any old splatters we just drew
-    for await (const s of oldSplatters) {
-      await tx.del(s[0]);
-    }
-  }
 };
