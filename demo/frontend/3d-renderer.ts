@@ -32,9 +32,9 @@ export type LetterInfo = {
   letter?: Letter;
 };
 
-const ORTHO_SIZE_FACTOR = 0.048;
+const ORTHO_SIZE_FACTOR = 0.0478;
 const ORTHO_OFFSET_X = 0.7;
-const ORTHO_OFFSET_Y = -0.3;
+const ORTHO_OFFSET_Y = -0.29;
 
 export const renderer = async (canvas: HTMLCanvasElement) => {
   // Create an engine
