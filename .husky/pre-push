@@ -3,6 +3,8 @@
 
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 if [[ "$BRANCH" == "main" ]]; then
-  npm run publish-worker
+  npm run publish-worker-prod
+else
+  npm run publish-worker-staging
 fi
 
