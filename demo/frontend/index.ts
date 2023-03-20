@@ -189,7 +189,7 @@ export const init = async () => {
           updateLocation();
         }
       });
-      updateCursor(cursor);
+      updateCursor({...cursor});
     },
   );
 

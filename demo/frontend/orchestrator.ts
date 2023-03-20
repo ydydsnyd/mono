@@ -112,7 +112,7 @@ const waitForActor = (
             return;
           }
           unsubscribe();
-          resolve(actor);
+          resolve({...actor});
         },
         onError: error => reject(error),
       },
