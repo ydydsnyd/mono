@@ -72,9 +72,9 @@
   -ms-flex-direction: column;
   flex-direction: column;
   -webkit-box-pack: center;
-  -webkit-justify-content: center;
+  -webkit-justify-content: flex-start;
   -ms-flex-pack: center;
-  justify-content: center;
+  justify-content: flex-start;
   -webkit-box-align: start;
   -webkit-align-items: flex-start;
   -ms-flex-align: start;
@@ -161,4 +161,12 @@
   .benefitFullTitle {
     text-align: center;
   }
+}
+
+.inlineCode {
+  color: #ec4899;
+  background: #f5f5f5;
+  font-weight: bold;
+  padding: 2px 4px;
+  border-radius: 0.25em;
 }

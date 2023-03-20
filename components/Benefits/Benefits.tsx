@@ -1,7 +1,6 @@
 // components/Benefits/Benefits.tsx
 
 import Image from 'next/image';
-import Link from 'next/link';
 import styles from './Benefits.module.css';
 
 // static images
@@ -25,11 +24,11 @@ const Benefits = () => (
           className={styles.benefitIcon}
         />
       </div>
-      <h3 className={styles.benefitTitle}>Sync @ 60FPS</h3>
+      <h3 className={styles.benefitTitle}>Impossibly Smooth Motion</h3>
       <p className={styles.benefitDescription}>
-        Buttery smooth cursors and dragging automatically, with no interpolation
-        required. Every change, from every user, for the entire document,
-        replicated frame-by-frame at 60 fps.
+        Across town, or across the globe &#8212; 60FPS sync with dynamic
+        buffering provides perfectly buttery playback. No interpolation
+        required.
       </p>
     </div>
 
@@ -45,9 +44,8 @@ const Benefits = () => (
       </div>
       <h3 className={styles.benefitTitle}>Automatic Persistence</h3>
       <p className={styles.benefitDescription}>
-        There&apos;s no separate, slower persistence API. Just write changes as
-        they happen (yes, every mouse movement). Reflect stores everything
-        continuously — up to 25MB/room.
+        Write changes as they happen (yes, every mouse movement). Reflect stores
+        everything continuously, up to 25MB/room.
       </p>
     </div>
 
@@ -61,12 +59,11 @@ const Benefits = () => (
           className={styles.benefitIcon}
         />
       </div>
-      <h3 className={styles.benefitTitle}>Transactional Conflict Resolution</h3>
+      <h3 className={styles.benefitTitle}>Server Authority</h3>
       <p className={styles.benefitDescription}>
-        CRDTs converge, but to what? App-specific validation isn&apos;t
-        possible. Reflect uses <Link href="#">server reconciliation</Link>{' '}
-        instead, a more powerful and intuitive technique pioneered by
-        multiplayer games.
+        CRDTs converge, but to what? Validation isn&apos;t possible. Reflect
+        runs <strong>your code</strong> server-side, giving you complete control
+        over what gets stored.
       </p>
     </div>
 
@@ -82,9 +79,26 @@ const Benefits = () => (
       </div>
       <h3 className={styles.benefitTitle}>Optional Offline</h3>
       <p className={styles.benefitDescription}>
-        Set `enableClientStorage: true` and your data is also available offline
-        on the client. Reflect&apos;s use of client storage is “cache-first”, so
-        it transits online, offline, or flaky connections seamlessly.
+        Set <code className={styles.inlineCode}>clientPersistence: true</code>
+        and data is synced to the client, providing instant (“local-first”)
+        startup, navigation, and offline support.
+      </p>
+    </div>
+
+    {/* Fine-Grained Auth */}
+    <div className={styles.benefitBlock}>
+      <div className={styles.benefitIconContainer}>
+        <Image
+          src={auth}
+          loading="lazy"
+          alt="Authorization"
+          className={styles.benefitIcon}
+        />
+      </div>
+      <h3 className={styles.benefitTitle}>Fine-Grained Auth</h3>
+      <p className={styles.benefitDescription}>
+        Implement arbitrary access rules in JavaScript for reading or writing,
+        down to individual data items.
       </p>
     </div>
 
@@ -105,23 +119,6 @@ const Benefits = () => (
       </p>
     </div>
 
-    {/* Fine-Grained Auth */}
-    <div className={styles.benefitBlock}>
-      <div className={styles.benefitIconContainer}>
-        <Image
-          src={auth}
-          loading="lazy"
-          alt="Authorization"
-          className={styles.benefitIcon}
-        />
-      </div>
-      <h3 className={styles.benefitTitle}>Fine-Grained Auth</h3>
-      <p className={styles.benefitDescription}>
-        Implement arbitrary access rules in JavaScript for reading or
-        writing, down to individual data items.
-      </p>
-    </div>
-
     {/* Absurd Productivity */}
     <div className={styles.benefitBlockFull}>
       <div className={styles.benefitFullIconContainer}>
@@ -133,11 +130,11 @@ const Benefits = () => (
         />
       </div>
       <div className={styles.benefitInfoContainer}>
-        <h3 className={styles.benefitFullTitle}>Absurd Productivity</h3>
+        <h3 className={styles.benefitFullTitle}>Even More Coming Soon</h3>
         <p className={styles.benefitDescription}>
-          No servers. No databases. No APIs. Mutate data on one client and it
-          syncs to collaborators, then render changes reactively. You will build
-          multiplayer faster than you build single-player today.
+          First-class history, branching, painless migrations, optional on-prem
+          deployment, and more! Reflect&apos;s architecture is harder to build
+          up-front, but enables features that are difficult to build otherwise.
         </p>
       </div>
     </div>

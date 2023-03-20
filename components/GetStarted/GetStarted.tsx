@@ -1,19 +1,21 @@
 import styles from './GetStarted.module.css';
 import Link from 'next/link';
 
-export default function GetStarted(){
-
+export default function GetStarted() {
   return (
     <div className={styles.getStarted}>
-      <p>Reflect is in closed beta, and we are onboarding people as fast as we can. Sign up below and let us know what you’ll build with Reflect, and we’ll get you in as soon as we can.</p>
+      <p>
+        We expect a public beta of Reflect in Summer 2023. Let us know if
+        you&apos;re interested in getting access earlier.
+      </p>
       <div className={styles.ctaWrap}>
         <Link
           href="https://replicache.typeform.com/to/AV2PmaWm"
           className={styles.buttonPrimary}
-        >Beta Waitlist</Link>
+        >
+          Beta Waitlist
+        </Link>
       </div>
-      
-
-   </div>
+    </div>
   );
 }
