@@ -114,6 +114,7 @@ body.demo-active * {
   text-align: center;
   height: 1.2em;
   cursor: none;
+  color: black;
 }
 #reset-button.cleared {
   transform: rotateX(90deg);
