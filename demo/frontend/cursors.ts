@@ -32,7 +32,7 @@ export const cursorRenderer = (
         );
         return;
       }
-      cursorDiv = createCursor(actor);
+      cursorDiv = createCursor(actor, actor.id === actorId);
       document.body.appendChild(cursorDiv);
       cursorDivs.set(actor.id, cursorDiv);
     }
@@ -212,7 +212,6 @@ export const cursorRenderer = (
           const cursorX = x * demoBB.width + demoBB.x;
           const cursorY = y * demoBB.height + demoBB.y;
           cursorDiv.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0)`;
-          cursorDiv.style.opacity = cursor.onPage ? '1' : '0';
           const color = colorToString(
             COLOR_PALATE[actors[cursor.actorId].colorIndex],
           );
@@ -253,10 +252,13 @@ export const cursorRenderer = (
   ];
 };
 
-const createCursor = (actor: Actor) => {
+const createCursor = (actor: Actor, isLocal: boolean) => {
   const color = colorToString(COLOR_PALATE[actor.colorIndex]);
   const cursorDiv = document.createElement('div');
   cursorDiv.classList.add('cursor');
+  if (isLocal) {
+    cursorDiv.classList.add('local');
+  }
   cursorDiv.classList.add(actor.id);
   cursorDiv.dataset['color'] = color;
   const svgns = 'http://www.w3.org/2000/svg';

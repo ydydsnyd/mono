@@ -6,6 +6,10 @@ export {UVMAP_SIZE, SPLATTER_ANIM_FRAMES} from '../../renderer/src/constants';
 export const ORCHESTRATOR_ROOM_ID = 'orchestrator-room';
 export const ROOM_MAX_ACTORS = 100;
 
+// Cursors
+export const SHOW_CUSTOM_CURSOR_MIN_Y = -1.2;
+export const SHOW_CUSTOM_CURSOR_MAX_Y = 2;
+
 // Splatters
 // To avoid our data growing infinitely, "flatten" splatters to an image in
 // batches if they are sufficiently old.

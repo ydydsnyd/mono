@@ -9,7 +9,13 @@ import {
 } from './texture-renderer';
 import initRenderer, {draw_caches, precompute} from '../../vendor/renderer';
 import {cursorRenderer} from './cursors';
-import {UVMAP_SIZE, SPLATTER_MS, MIN_STEP_MS} from '../shared/constants';
+import {
+  UVMAP_SIZE,
+  SPLATTER_MS,
+  MIN_STEP_MS,
+  SHOW_CUSTOM_CURSOR_MIN_Y,
+  SHOW_CUSTOM_CURSOR_MAX_Y,
+} from '../shared/constants';
 import type {Actor, Debug, Letter, Position, Splatter} from '../shared/types';
 import {LETTERS} from '../shared/letters';
 import {letterMap, now} from '../shared/util';
@@ -189,6 +195,14 @@ export const init = async () => {
           updateLocation();
         }
       });
+      if (
+        cursor.y < SHOW_CUSTOM_CURSOR_MIN_Y ||
+        cursor.y > SHOW_CUSTOM_CURSOR_MAX_Y
+      ) {
+        document.body.classList.remove('custom-cursor');
+      } else {
+        document.body.classList.add('custom-cursor');
+      }
       updateCursor({...cursor});
     },
   );
