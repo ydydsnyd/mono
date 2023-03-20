@@ -15,7 +15,7 @@ export const cursorRenderer = (
   actorId: string,
   getState: () => {actors: State['actors']; cursors: State['cursors']},
   getDemoContainer: () => HTMLDivElement,
-  allowTouchStart: (cursor: Position) => boolean,
+  preventScroll: (cursor: Position) => boolean,
   onUpdateCursor: (localCursor: Cursor) => void,
 ): [() => PageCursor, () => Promise<void>] => {
   // Set up local state
@@ -48,6 +48,7 @@ export const cursorRenderer = (
     onPage: false,
     isDown: false,
     touchState: TouchState.Unknown,
+    startedOnLetter: false,
   };
   let lastPosition = {x: 0, y: 0};
   // Tracking touches is tricky. Browsers fire a touchstart, touchend, mousedown,
@@ -90,16 +91,14 @@ export const cursorRenderer = (
       updateCursorPosition({x: e.touches[0].clientX, y: e.touches[0].clientY});
       localCursor.touchState = TouchState.Touching;
       const demoBB = getDemoContainer().getBoundingClientRect();
-      if (
-        !allowTouchStart({
-          x: lastPosition.x - demoBB.x,
-          y: lastPosition.y - demoBB.y,
-        })
-      ) {
-        return;
-      }
+      localCursor.startedOnLetter = preventScroll({
+        x: lastPosition.x - demoBB.x,
+        y: lastPosition.y - demoBB.y,
+      });
       // If we're consuming the event, prevent scrolling.
-      e.preventDefault();
+      if (localCursor.startedOnLetter) {
+        e.preventDefault();
+      }
       localCursor.isDown = true;
       cursorNeedsUpdate = true;
     },
@@ -122,7 +121,7 @@ export const cursorRenderer = (
   mouseElement.addEventListener(
     'touchmove',
     (e: TouchEvent) => {
-      if (localCursor.isDown) {
+      if (localCursor.isDown && localCursor.startedOnLetter) {
         e.preventDefault();
       }
       updateCursorPosition({x: e.touches[0].clientX, y: e.touches[0].clientY});

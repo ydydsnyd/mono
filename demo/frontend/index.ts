@@ -178,7 +178,7 @@ export const init = async () => {
     () => ({actors, cursors}),
     () => demoContainer,
     cursor => {
-      // On mobile, only start painting if we begin by touching a letter. Otherwise,
+      // On mobile, don't scroll if we begin by touching a letter. Otherwise,
       // scroll will feel janky.
       const [letter] = getTexturePosition(cursor);
       return !!letter;
