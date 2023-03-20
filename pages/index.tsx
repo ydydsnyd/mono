@@ -31,13 +31,12 @@ export default function Home() {
           <Demo />
 
           <p className={styles.featuredStatement}>
-            Reflect is a web service and JavaScript library for building
-            high-performance multiplayer web apps like Figma or Notion.
+            High-performance sync for multiplayer web apps.
           </p>
         </section>
 
         <section id="benefits" className={styles.section}>
-          <h2 className={styles.subheader}>Benefits</h2>
+          <h2 className={styles.subheader}>Why Reflect?</h2>
           <Benefits />
         </section>
 
@@ -47,7 +46,7 @@ export default function Home() {
         </section>
 
         <section id="get-started" className={styles.section}>
-          <h2 className={styles.subheader}>Join the Waitlist</h2>
+          <h2 className={styles.subheader}>Coming This Summer</h2>
           <GetStarted />
         </section>
 
@@ -65,7 +64,6 @@ export default function Home() {
           <h2 className={styles.subheader}>Contact us</h2>
           <Contact />
         </section>
-
       </main>
 
       <Footer />
