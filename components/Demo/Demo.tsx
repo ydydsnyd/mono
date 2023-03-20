@@ -50,7 +50,7 @@ const PaintFight = () => {
       <div id="demo">
         <Preload
           animationDuration={animationDuration}
-          className={initialized ? '' : ''}
+          className={initialized ? 'loaded' : ''}
         />
         <canvas id="canvas3D" className={initialized ? 'loaded' : ''}></canvas>
       </div>
