@@ -27,8 +27,7 @@ const Benefits = () => (
       <h3 className={styles.benefitTitle}>Impossibly Smooth Motion</h3>
       <p className={styles.benefitDescription}>
         Across town, or across the globe &#8212; 60FPS sync with dynamic
-        buffering provides perfectly buttery playback. No interpolation
-        required.
+        buffering provides perfect, buttery playback. No interpolation required.
       </p>
     </div>
 

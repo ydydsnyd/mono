@@ -19,10 +19,8 @@ const r = new Reflect({
   mutators, 
 });
 
-r.subscribe(tx => tx.get("rotation"), {
-  onChange: val => {
-    document.querySelector("cube").rotation = val;
-  }
+r.subscribe(tx => tx.get("rotation"), val => {
+  document.querySelector("cube").rotation = val;
 });
 
 button.onclick = () => reflect.mutate.increment({key: "rotation", delta: 2});`;
