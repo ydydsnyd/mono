@@ -1,6 +1,5 @@
 import styles from './Testimonials.module.css';
 import Image from 'next/image';
-import malte from '@/public/quote-images/malte.jpeg';
 import guillermo from '@/public/quote-images/guillermo.jpeg';
 import noam from '@/public/quote-images/noam.jpg';
 
@@ -18,39 +17,20 @@ const Testimonials = () => (
           vercel.com
         </a>
       </div>
-      <div className={styles.testimonialQuoteContainer2Col}>
-        <div className={styles.testimonialQuote}>
-          &ldquo;Multiplayer finally made easy <b>and</b> simple.&rdquo;
-        </div>
-        <div className={styles.testimonialQuote}>
-          &ldquo;I love the programming model. The pairing with React is
-          perfect.&rdquo;
-        </div>
-        <div className={styles.testimonialAuthorBlock}>
-          <Image
-            src={guillermo}
-            alt="Guillermo Rauch"
-            className={styles.authorImage}
-            width={42}
-            height={42}
-          />
-          <div className={styles.authorInfo}>
-            <div className={styles.authorName}>Guillermo Rauch</div>
-            <div className={styles.authorTitle}>CEO</div>
-          </div>
-        </div>
-        <div className={styles.testimonialAuthorBlock}>
-          <Image
-            src={malte}
-            alt="Malte Ubl"
-            className={styles.authorImage}
-            width={42}
-            height={42}
-          />
-          <div className={styles.authorInfo}>
-            <div className={styles.authorName}>Malte Ubl</div>
-            <div className={styles.authorTitle}>Chief Architect</div>
-          </div>
+      <div className={styles.testimonialQuote}>
+        &ldquo;Multiplayer finally made easy <b>and</b> simple.&rdquo;
+      </div>
+      <div className={styles.testimonialAuthorBlock}>
+        <Image
+          src={guillermo}
+          alt="Guillermo Rauch"
+          className={styles.authorImage}
+          width={42}
+          height={42}
+        />
+        <div className={styles.authorInfo}>
+          <div className={styles.authorName}>Guillermo Rauch</div>
+          <div className={styles.authorTitle}>CEO</div>
         </div>
       </div>
     </div>

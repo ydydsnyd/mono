@@ -2,12 +2,7 @@ import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter';
 import {vscDarkPlus} from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 const Demo2b = () => {
-  const codeString = `// Subscribe to changes in Reflect and render your UI reactively.
-//
-// There’s no need to interpolate. You receive updates at 60fps,
-// just as if the collaborator was local.
-
-import {Reflect} from "@rocicorp/reflect";
+  const codeString = `import {Reflect} from "@rocicorp/reflect";
 import mutators from "./mutators";
 const authToken = "$your-auth-token";
 const roomID = "myFirstRoom";

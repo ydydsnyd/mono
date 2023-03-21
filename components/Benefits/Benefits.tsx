@@ -78,7 +78,7 @@ const Benefits = () => (
       </div>
       <h3 className={styles.benefitTitle}>Optional Offline</h3>
       <p className={styles.benefitDescription}>
-        Set <code className={styles.inlineCode}>clientPersistence: true</code>
+        Set <code className={styles.inlineCode}>clientPersistence: true</code>&nbsp;
         and data is synced to the client, providing instant (“local-first”)
         startup, navigation, and offline support.
       </p>

@@ -1,6 +1,6 @@
 .footer {
-  margin-top: 12rem;
-  padding: 16rem 0 16rem;
+  margin-top: 4rem;
+  padding: 4rem 0;
   -webkit-box-align: start;
   -webkit-align-items: flex-start;
   -ms-flex-align: start;
@@ -10,31 +10,14 @@
   text-align: center;
 }
 
-.footerInnerContainer {
-  display: flex;
-  margin: 0 auto 6rem;
-  width: 36rem;
-}
-
-.footerMessage {
-  text-align: left;
-  margin: 0;
-  font-size: 24px;
-  line-height: 40px;
-}
-
 .footerLink {
-  -webkit-box-flex: 0;
-  -webkit-flex: 0 auto;
-  -ms-flex: 0 auto;
-  flex: 0 auto;
   display: inline-block;
-  margin-right: 6rem;
+  margin-bottom: 2rem;
 }
 
 .footerLogo {
   display: inline-block;
-  width: 86px;
+  width: 8rem;
 }
 
 .footerCopyright {
@@ -43,6 +26,10 @@
   display: block;
   color: #fff;
   line-height: 20px;
+}
+
+.footerCopyright p {
+  margin: 0;
 }
 
 .footerCopyright a {
@@ -76,29 +63,4 @@
 .footer p a:hover::before {
   transform-origin: 0% 50%;
   transform: scale3d(1, 1, 1);
-}
-
-@media (max-width: 600px) {
-
-  .footer {
-    padding: 8rem 2rem;
-  }
-
-  .footerInnerContainer {
-    width: auto;
-  }
-
-  .footerLink {
-    margin-right: 3rem;
-  }
-
-  .footerLogo {
-    width: 64px;
-  }
-
-  .footerMessage {
-    font-size: 1rem;
-    line-height: 1.8;
-  }
-
 }

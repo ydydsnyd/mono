@@ -3,16 +3,6 @@ import {vscDarkPlus} from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 const Demo1a = () => {
   const codeString = `export default {
-  // _Mutators_ are functions you define to change the datastore.
-  //
-  // The UI updates *instantly* (in the same frame) when mutators
-  // are called. Milliseconds later, Reflect replays the mutator
-  // on the server to sync the change.
-  //
-  // Because of server replay, mutators handle many conflicts
-  // naturally. If two client simultaneously increment a counter,
-  // the mutator will naturally sum the changes rather than
-  // overwrite one.
   async increment(tx, args: {key: string, delta: number}) {
     const {key, delta} = args;
     const prev = (await tx.get(key) ?? 0);
