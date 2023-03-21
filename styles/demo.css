@@ -163,11 +163,15 @@ body.active {
   left: 0px;
   transform: translate3d(0, 0, 0);
   z-index: 100;
-}
-.local.cursor {
   opacity: 0;
 }
+/* .local.cursor {
+  opacity: 0;
+} */
 .custom-cursor .local.cursor {
+  opacity: 1;
+}
+.cursor.active {
   opacity: 1;
 }
 .cursor .pointer svg  {

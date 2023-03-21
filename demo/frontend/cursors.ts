@@ -20,10 +20,10 @@ export const cursorRenderer = (
 ): [() => PageCursor, () => Promise<void>] => {
   // Set up local state
   const cursorDivs: Map<ActorID, HTMLDivElement> = new Map();
-  const getCursorDiv = async (cursor: Cursor) => {
+  const getCursorDiv = async (cursor: Cursor, createIfMissing: boolean) => {
     // Make sure we have a div
     let cursorDiv = cursorDivs.get(cursor.actorId);
-    if (!cursorDiv) {
+    if (!cursorDiv && createIfMissing) {
       const {actors} = getState();
       const actor = actors[cursor.actorId];
       if (!actor) {
@@ -72,7 +72,10 @@ export const cursorRenderer = (
         y: position.y,
       };
     }
-    localCursor.onPage = true;
+    localCursor.onPage =
+      localCursor.touchState === TouchState.Touching && touchScrolling
+        ? false
+        : true;
     localCursor.x = (lastPosition.x - demoBB.x) / demoBB.width;
     localCursor.y = (lastPosition.y - demoBB.y) / demoBB.height;
     localCursor.ts = now();
@@ -80,7 +83,12 @@ export const cursorRenderer = (
   };
 
   // Update the cursor when the window is scrolled
+  let touchScrolling = false;
   window.addEventListener('scroll', () => {
+    if (localCursor.touchState === TouchState.Touching) {
+      touchScrolling = true;
+      return;
+    }
     updateCursorPosition();
   });
 
@@ -107,6 +115,7 @@ export const cursorRenderer = (
   mouseElement.addEventListener(
     'touchend',
     () => {
+      touchScrolling = false;
       // Only end if we started with a touch
       if (localCursor.touchState === TouchState.Touching) {
         // Prevent the mousedown-mouseup events that happens when tapping
@@ -124,7 +133,10 @@ export const cursorRenderer = (
       if (localCursor.isDown && localCursor.startedOnLetter) {
         e.preventDefault();
       }
-      updateCursorPosition({x: e.touches[0].clientX, y: e.touches[0].clientY});
+      updateCursorPosition({
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      });
     },
     {passive: false},
   );
@@ -202,15 +214,16 @@ export const cursorRenderer = (
         ) {
           return;
         }
-        // Don't show cursors that aren't on the page
-        if (!cursor.onPage) {
-          return;
-        }
         const {x, y} = cursor;
-        const cursorDiv = await getCursorDiv(cursor);
+        const cursorDiv = await getCursorDiv(cursor, cursor.onPage);
         if (cursorDiv) {
           const cursorX = x * demoBB.width + demoBB.x;
           const cursorY = y * demoBB.height + demoBB.y;
+          if (!cursor.onPage) {
+            cursorDiv.classList.remove('active');
+          } else {
+            cursorDiv.classList.add('active');
+          }
           cursorDiv.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0)`;
           const color = colorToString(
             COLOR_PALATE[actors[cursor.actorId].colorIndex],
