@@ -44,21 +44,6 @@ export const initialize = async (
   // Set up our connection to reflect
   console.log(`Connecting to room ${actor.room} on worker at ${WORKER_HOST}`);
 
-  // Make sure we have the room we'll be connecting to
-  const res = await fetch('/api/create-room', {
-    method: 'post',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({roomID: actor.room}),
-  });
-  if (!res.ok) {
-    const message = await res.text();
-    throw new Error(
-      `Failed to connect to room ${actor.room}\n(${res.status}: ${message})`,
-    );
-  }
-
   // Create a reflect client
   const reflectClient = new Reflect<M>({
     socketOrigin: WORKER_HOST,

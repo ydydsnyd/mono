@@ -23,21 +23,6 @@ export const initRoom = async (): Promise<{
   // Set up our connection to reflect
   console.log(`Orchestrator connecting to worker at ${WORKER_HOST}`);
 
-  // Make sure we have the orchestrator room
-  const res = await fetch('/api/create-room', {
-    method: 'post',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({roomID: ORCHESTRATOR_ROOM_ID}),
-  });
-  if (!res.ok) {
-    const message = await res.text();
-    throw new Error(
-      `Failed to connect to room ${ORCHESTRATOR_ROOM_ID}\n(${res.status}: ${message})`,
-    );
-  }
-
   // Create a reflect client
   const userID = nanoid();
   const orchestratorClient = new Reflect<typeof orchestratorMutators>({
