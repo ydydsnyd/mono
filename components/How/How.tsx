@@ -7,6 +7,7 @@ import Demo2b from './Demos/Demo2b';
 import ServerConsole from './ServerConsole';
 import ClientConsole from './ClientConsole';
 import DemoButton from './DemoButton';
+import RotateButton from './RotateButton';
 import Slider from './Slider';
 
 export default function How() {
@@ -99,12 +100,20 @@ export default function How() {
           <div className={styles.client}>
             <h4 className={styles.panelLabel}>Client 1</h4>
             <Slider />
+            <div className={styles.demo2layout}>
+              <RotateButton />
+              {/* Cube component goes here */}
+            </div>
             <ClientConsole />
           </div>
           <ServerConsole />
           <div className={styles.client}>
             <h4 className={styles.panelLabel}>Client 2</h4>
             <Slider />
+            <div className={styles.demo2layout}>
+              <RotateButton />
+              {/* Cube component goes here */}
+            </div>
             <ClientConsole />
           </div>
         </div>

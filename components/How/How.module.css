@@ -204,6 +204,10 @@ p.howDescription {
     line-height: 28px !important;
 }
 
+.demo2layout {
+    display: flex;
+}
+
 @media (max-width: 600px) {
     .panelLabel {
         font-size: 0.75rem;
