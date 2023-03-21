@@ -15,10 +15,6 @@ export const SHOW_CUSTOM_CURSOR_MAX_Y = 2;
 // batches if they are sufficiently old.
 export const SPLATTER_MAX_AGE = 1000; // ms
 export const SPLATTER_FLATTEN_FREQUENCY = 100; // count. This must be less than 65535
-// ms between splatters. This is a minimum, so any number below about 16 will
-// just splatter every frame (or more accurately, this will fall back to
-// MIN_STEP_MS)
-export const SPLATTER_MS = 42;
 // Splatter animation speed
 export const SPLATTER_ANIMATION_FRAME_DURATION = 30; // ~33fps
 

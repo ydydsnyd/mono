@@ -11,7 +11,6 @@ import initRenderer, {draw_caches, precompute} from '../../vendor/renderer';
 import {cursorRenderer} from './cursors';
 import {
   UVMAP_SIZE,
-  SPLATTER_MS,
   MIN_STEP_MS,
   SHOW_CUSTOM_CURSOR_MIN_Y,
   SHOW_CUSTOM_CURSOR_MAX_Y,
@@ -220,31 +219,17 @@ export const init = async () => {
   window.addEventListener('resize', resizeViewport);
   resizeViewport();
 
-  // We want to add a paint splatter if we're over a letter, and if _either_ we're
-  // "rapid firing" on a single letter, or if we're encountering a new letter.
-  // This gets us a best of both worlds, in that we won't fire too much on a
-  // single letter (which looks bad), but we also will always fire as soon as
-  // we're over a letter, even if that would cause our firing rate to be faster
-  // than SPLATTER_MS
-  let lastSplatter = 0;
-  let lastLetter: Letter | undefined;
   const maybeAddPaint = (at: Position) => {
     const [letter, texturePosition, hitPosition] = getTexturePosition(at);
     if (letter && texturePosition && hitPosition) {
-      const newLetter = letter !== lastLetter;
-      const rapidFireOk = !newLetter && now() - lastSplatter >= SPLATTER_MS;
-      if (newLetter || rapidFireOk) {
-        lastLetter = letter;
-        lastSplatter = now();
-        addSplatter({
-          letter,
-          actorId: actor.id,
-          colorIndex: actor.colorIndex,
-          texturePosition,
-          hitPosition,
-          timestamp: now(),
-        });
-      }
+      addSplatter({
+        letter,
+        actorId: actor.id,
+        colorIndex: actor.colorIndex,
+        texturePosition,
+        hitPosition,
+        timestamp: now(),
+      });
     }
   };
 
