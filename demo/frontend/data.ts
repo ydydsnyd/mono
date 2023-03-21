@@ -65,7 +65,7 @@ export const initialize = async (
     onOnlineChange: async online => {
       if (online) {
         await rebucket(actor);
-        await reflectClient.mutate.guaranteeActor(actor);
+        await reflectClient.mutate.guaranteeActor({...actor});
       }
       onlineChange(online);
     },
@@ -216,7 +216,7 @@ export const initialize = async (
   const createActorIfMissing = async () => {
     if (!localState.actors[actor.id]) {
       await rebucket(actor);
-      await mutations.guaranteeActor(actor);
+      await mutations.guaranteeActor({...actor});
       return true;
     }
     return false;
@@ -248,7 +248,6 @@ const flattenCache = async (
     s => timestamp - s[1].t >= SPLATTER_MAX_AGE,
   );
   // Now if we have any cacheable splatters, draw them to the cache
-  console.log(`${letter}: flatten ${oldSplatters.length} splatters`);
   // Draw them on top of the last cached image
   const png = await unchunk(tx, `cache/${letter}`);
   const decoded = png ? decode(png) : undefined;
