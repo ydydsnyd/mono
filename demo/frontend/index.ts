@@ -72,12 +72,6 @@ export const init = async () => {
     },
   };
 
-  // Kick off some preloading that can happen async
-  loadClearAnimationFrames().catch(err => {
-    console.error('Failed preloading clear animations');
-    console.error(err);
-  });
-
   // Set up 3D renderer
   const init3DDone = initTiming('setting up 3D engine', 1000);
   const {
@@ -245,6 +239,11 @@ export const init = async () => {
   // NOTE: If this takes more than a few ms, move to a worker or otherwise into
   // the bg.
   precompute();
+  // Kick off some preloading that can happen async
+  loadClearAnimationFrames().catch(err => {
+    console.error('Failed preloading clear animations');
+    console.error(err);
+  });
 
   // Add a listener for our cache - when it updates, trigger a full redraw.
   addListener<never>('cache', async (_, deleted, keyParts) => {
