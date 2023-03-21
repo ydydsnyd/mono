@@ -43,10 +43,12 @@ export const orchestratorMutators = {
     tx: WriteTransaction,
     {
       fallbackId,
+      lastRoom,
       lastColorIndex,
       forceNewRoomWithSecret,
     }: {
       fallbackId: string;
+      lastRoom?: string;
       lastColorIndex?: number;
       forceNewRoomWithSecret?: string | null;
     },
@@ -67,7 +69,6 @@ export const orchestratorMutators = {
     const roomCount = (await tx.get(ROOM_COUNT_KEY)) as number | undefined;
     const existingRoom = (await tx.get(ROOM_ID_KEY)) as string | undefined;
     let selectedRoomId: string;
-    let roomActorNum: number;
     let forceNewRoom = false;
     if (forceNewRoomWithSecret) {
       if (await isResetRoomSecret(forceNewRoomWithSecret)) {
@@ -90,10 +91,18 @@ export const orchestratorMutators = {
       selectedRoomId = fallbackId;
       await tx.put(ROOM_ID_KEY, selectedRoomId);
       await tx.put(ROOM_COUNT_KEY, 1);
-      roomActorNum = 1;
+    } else if (lastRoom && lastRoom !== existingRoom) {
+      // When we have a prior room and the new room has changed (likely due to being offline then reconnecting).
+      // Keep us there so we don't see weird paint jumping.
+      // This works because old rooms are never purged. If we start purging them, we
+      // may need to rethink this (e.g. just show a clear or something)
+      console.log(`user reconnected to old room ${lastRoom}`);
+      // Subtle: we expect that lastColorIndex will always be set if lastRoom is set.
+      // If not, we'll cause the main room to skip a color.
+      selectedRoomId = lastRoom;
     } else {
       selectedRoomId = (await tx.get(ROOM_ID_KEY)) as string;
-      roomActorNum = (roomCount || 0) + 1;
+      const roomActorNum = (roomCount || 0) + 1;
       console.log('update room count to', roomActorNum);
       await tx.put(ROOM_COUNT_KEY, roomActorNum);
     }

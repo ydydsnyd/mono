@@ -79,6 +79,7 @@ export const initRoom = async (): Promise<{
         lastColorIndex: actor.colorIndex,
         fallbackId: nanoid(),
         forceNewRoomWithSecret: null,
+        lastRoom: actor.room,
       });
       const newActor = await waitForActor(orchestratorClient);
       // TODO: this isn't very clear - perhaps move to a more event-based API?
