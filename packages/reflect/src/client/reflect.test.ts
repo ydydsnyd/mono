@@ -664,8 +664,10 @@ test('poke log context includes requestID', async () => {
 
   const r = new TestReflect({
     socketOrigin: url,
-    auth: '',
-    userID: 'user-id',
+    authOptions: {
+      auth: '',
+      userID: 'user-id',
+    },
     roomID: 'room-id',
     logSinks: [logSink],
     logLevel: 'debug',
@@ -808,7 +810,12 @@ test('Authentication', async () => {
     return 'auth-token';
   };
 
-  const r = reflectForTest({auth});
+  const r = reflectForTest({
+    authOptions: {
+      auth,
+      userID: 'user-id',
+    },
+  });
 
   const emulateErrorWhenConnecting = async (
     tickMS: number,

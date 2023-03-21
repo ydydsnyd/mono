@@ -231,11 +231,9 @@ export class Reflect<MD extends MutatorDefs> {
    * Constructs a new Reflect client.
    */
   constructor(options: ReflectOptions<MD>) {
-    const {userID, roomID, socketOrigin, onOnlineChange, jurisdiction} =
+    const {authOptions, roomID, socketOrigin, onOnlineChange, jurisdiction} =
       options;
-    if (!userID) {
-      throw new Error('ReflectOptions.userID must not be empty.');
-    }
+    const userID = authOptions?.userID ?? '';
 
     if (
       !socketOrigin.startsWith('ws://') &&
@@ -807,15 +805,22 @@ export class Reflect<MD extends MutatorDefs> {
     };
   }
 
-  #getAuthToken = (): MaybePromise<string> => {
-    const {auth} = this.#options;
-    return typeof auth === 'function' ? auth() : auth;
+  #getAuthToken = (): MaybePromise<string> | undefined => {
+    const {authOptions} = this.#options;
+    if (!authOptions) {
+      return undefined;
+    }
+    return typeof authOptions.auth === 'function'
+      ? authOptions.auth()
+      : authOptions.auth;
   };
 
   async #updateAuthToken(lc: LogContext): Promise<void> {
     const auth = await this.#getAuthToken();
-    lc.debug?.('Got auth token');
-    this._rep.auth = auth;
+    if (auth) {
+      lc.debug?.('Got auth token');
+      this._rep.auth = auth;
+    }
   }
 
   private async _runLoop() {

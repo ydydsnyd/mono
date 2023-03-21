@@ -1,15 +1,15 @@
 import type {LogLevel, LogSink, MaybePromise, MutatorDefs} from 'replicache';
 import type {Metrics} from './metrics.js';
 
-/**
- * Configuration for [[Reflect]].
- */
-export interface ReflectOptions<MD extends MutatorDefs> {
+export type AuthOptions = {
   /**
-   * Origin for WebSocket connections to the Reflect server. This must have a
-   * `'ws'` or `'wss'` scheme.
+   * A unique identifier for the user authenticated by
+   * [[ReflectOptions.auth]]. Must be non-empty.
+   *
+   * This must be the same as the `userID` returned by the `authHandler` you
+   * provide to the Reflect server.
    */
-  socketOrigin: string;
+  userID: string;
 
   /**
    * Identifies and authenticates the user.
@@ -25,34 +25,32 @@ export interface ReflectOptions<MD extends MutatorDefs> {
    * fetch a fresh token.
    */
   auth: string | (() => MaybePromise<string>);
+};
 
+/**
+ * Configuration for [[Reflect]].
+ */
+export interface ReflectOptions<MD extends MutatorDefs> {
   /**
-   * A unique identifier for the user authenticated by
-   * [[ReflectOptions.auth]]. Must be non-empty.
-   *
-   * This must be the same as the `userID` returned by the `authHandler` you
-   * provide to the Reflect server.
-   *
-   * For efficiency, a new Reflect instance will initialize its state from
-   * the persisted state of an existing Reflect instance with the same
-   * `userID`, `roomID`, domain and browser profile.
-   *
-   * Mutations from one Reflect instance may be pushed using the
-   * [[Reflect.auth]] of another Reflect instance with the same
-   * `userID`, `roomID`, domain and browser profile.
+   * Origin for WebSocket connections to the Reflect server. This must have a
+   * `'ws'` or `'wss'` scheme.
    */
-  userID: string;
+  socketOrigin: string;
+
+  authOptions?: AuthOptions | undefined;
 
   /**
    * A unique identifier for the room.
    *
    * For efficiency, a new Reflect instance will initialize its state from
    * the persisted state of an existing Reflect instance with the same
-   * `userID`, `roomID`, domain and browser profile.
+   * `userID`, `roomID`, domain and browser profile (see Note below).
    *
    * Mutations from one Reflect instance may be pushed using the
    * [[Reflect.auth]] of another Reflect instance with the same
-   * `userID`, `roomID`, domain and browser profile.
+   * `userID`, `roomID`, domain and browser profile (see Note below).
+   *
+   * Note: Two reflect instances are considered to have the same `userID` if their authOptions are undefined.
    */
   roomID: string;
 

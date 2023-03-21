@@ -159,9 +159,12 @@ export function reflectForTest<MD extends MutatorDefs>(
   const r = new TestReflect({
     socketOrigin: 'wss://example.com/',
     // Make sure we do not reuse IDB instances between tests by default
-    userID: 'test-user-id-' + testReflectCounter++,
+    authOptions: {
+      userID: 'test-user-id-' + testReflectCounter++,
+      auth: 'test-auth',
+      ...options.authOptions,
+    },
     roomID: 'test-room-id',
-    auth: 'test-auth',
     logSinks: [],
     ...options,
   });
