@@ -73,8 +73,8 @@ export const cursorRenderer = (
       };
     }
     localCursor.onPage =
-      localCursor.touchState === TouchState.Touching && touchScrolling
-        ? false
+      localCursor.touchState === TouchState.Touching
+        ? localCursor.isDown && !touchScrolling
         : true;
     localCursor.x = (lastPosition.x - demoBB.x) / demoBB.width;
     localCursor.y = (lastPosition.y - demoBB.y) / demoBB.height;
@@ -96,7 +96,6 @@ export const cursorRenderer = (
   mouseElement.addEventListener(
     'touchstart',
     (e: TouchEvent) => {
-      updateCursorPosition({x: e.touches[0].clientX, y: e.touches[0].clientY});
       localCursor.touchState = TouchState.Touching;
       const demoBB = getDemoContainer().getBoundingClientRect();
       localCursor.startedOnLetter = preventScroll({
@@ -109,6 +108,7 @@ export const cursorRenderer = (
       }
       localCursor.isDown = true;
       cursorNeedsUpdate = true;
+      updateCursorPosition({x: e.touches[0].clientX, y: e.touches[0].clientY});
     },
     {passive: false},
   );
@@ -206,23 +206,24 @@ export const cursorRenderer = (
         if (!actors[cursor.actorId]) {
           return;
         }
-        // Don't show a cursor for ourselves locally when using touch, as it's weird &
-        // confusing
-        if (
-          cursor.actorId === localCursor.actorId &&
-          localCursor.touchState === TouchState.Touching
-        ) {
-          return;
-        }
         const {x, y} = cursor;
         const cursorDiv = await getCursorDiv(cursor, cursor.onPage);
         if (cursorDiv) {
+          const isLocal = cursor.actorId === localCursor.actorId;
+          // Show a special, different cursor locally
+          cursorDiv.classList.remove('mobile');
+          if (isLocal && localCursor.touchState === TouchState.Touching) {
+            cursorDiv.classList.remove('desktop');
+            cursorDiv.classList.add('mobile');
+          } else {
+            cursorDiv.classList.add('desktop');
+          }
           const cursorX = x * demoBB.width + demoBB.x;
           const cursorY = y * demoBB.height + demoBB.y;
-          if (!cursor.onPage) {
-            cursorDiv.classList.remove('active');
-          } else {
+          if (cursor.onPage || (isLocal && localCursor.isDown)) {
             cursorDiv.classList.add('active');
+          } else {
+            cursorDiv.classList.remove('active');
           }
           cursorDiv.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0)`;
           const color = colorToString(
@@ -235,8 +236,16 @@ export const cursorRenderer = (
             const locationDiv = cursorDiv.querySelector(
               '.location',
             ) as HTMLDivElement;
+            const fingerDiv = cursorDiv.querySelector(
+              '.finger',
+            ) as HTMLDivElement;
+            const locationArrow = cursorDiv.querySelector(
+              '#location-arrow',
+            ) as SVGPathElement;
             pointer.style.fill = color;
             locationDiv.style.background = color;
+            fingerDiv.style.borderColor = color;
+            locationArrow.style.fill = color;
           }
           cursorDiv.dataset['color'] = color;
         }
@@ -257,7 +266,8 @@ export const cursorRenderer = (
         Object.values(actors).forEach(actor => {
           const cursorDiv = cursorDivs.get(actor.id);
           if (cursorDiv && actor.location) {
-            cursorDiv.querySelector('.location')!.innerHTML = actor.location;
+            cursorDiv.querySelector('.location-name')!.innerHTML =
+              actor.location;
           }
         });
       }
@@ -274,6 +284,7 @@ const createCursor = (actor: Actor, isLocal: boolean) => {
   }
   cursorDiv.classList.add(actor.id);
   cursorDiv.dataset['color'] = color;
+  // Draw the pointer cursor
   const svgns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgns, 'svg');
   svg.setAttributeNS(
@@ -311,13 +322,49 @@ const createCursor = (actor: Actor, isLocal: boolean) => {
   pointerIcon.appendChild(svg);
   cursorDiv.appendChild(pointerIcon);
 
+  // Add the location box
   const locationDiv = document.createElement('div');
   locationDiv.classList.add('location');
   locationDiv.style.backgroundColor = color;
+  const locationNameDiv = document.createElement('div');
+  locationNameDiv.classList.add('location-name');
+  locationDiv.appendChild(locationNameDiv);
   if (actor.location) {
-    locationDiv.innerHTML = actor.location;
+    locationNameDiv.innerHTML = actor.location;
   }
   cursorDiv.appendChild(locationDiv);
+
+  // Add the (mobile) bottom arrow on the box
+  const arrowDiv = document.createElement('div');
+  arrowDiv.classList.add('arrow');
+  locationDiv.appendChild(arrowDiv);
+  const asvg = document.createElementNS(svgns, 'svg');
+  asvg.setAttributeNS(
+    'http://www.w3.org/2000/xmlns/',
+    'xmlns:xlink',
+    'http://www.w3.org/1999/xlink/',
+  );
+  asvg.setAttribute('version', '1.1');
+  asvg.setAttribute('viewBox', '0 0 40.59 8.51');
+  asvg.setAttribute('x', '0px');
+  asvg.setAttribute('y', '0px');
+  asvg.setAttribute('height', '100%');
+  const afill = document.createElementNS(svgns, 'path');
+  afill.setAttribute('id', 'location-arrow');
+  afill.setAttribute('fill', color);
+  afill.setAttribute(
+    'd',
+    'm40.59,0c-2.75,0-5.43.87-7.65,2.49l-4.86,3.53c-4.46,3.25-10.49,3.32-15.03.19l-5.66-3.91C5.21.8,2.64,0,0,0h40.59Z',
+  );
+  asvg.appendChild(afill);
+  arrowDiv.appendChild(asvg);
+
+  // Add the mobile finger indicator
+  const fingerDiv = document.createElement('div');
+  fingerDiv.classList.add('finger');
+  fingerDiv.style.borderColor = color;
+  cursorDiv.appendChild(fingerDiv);
+
   return cursorDiv;
 };
 

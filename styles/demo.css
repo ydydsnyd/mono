@@ -145,10 +145,6 @@ body.custom-cursor * {
   margin-right: 8px;
 }
 
-body.active {
-  user-select: none;
-}
-
 #canvases {
   position: absolute;
   height: 149px;
@@ -157,25 +153,52 @@ body.active {
 
 .cursor {
   position: fixed;
-  transition: opacity 0.5s ease-out;
   pointer-events: none;
   top: 0px;
   left: 0px;
   transform: translate3d(0, 0, 0);
   z-index: 100;
+}
+.cursor {
+  transition: opacity 0.5s ease-out;
   opacity: 0;
 }
-/* .local.cursor {
-  opacity: 0;
-} */
 .custom-cursor .local.cursor {
   opacity: 1;
 }
-.cursor.active {
+.cursor:not(.local).active {
   opacity: 1;
 }
 .cursor .pointer svg  {
   filter: drop-shadow(0px 2px 2px rgba(0,0,0,.2));
+}
+
+.cursor.mobile {
+  top: -25px;
+}
+
+.cursor .finger {
+  border-radius: 50%;
+  transition: width, height, border-width, 220ms;
+  width: 0px;
+  height: 0px;
+  transition-timing-function: cubic-bezier(0.460, 0.110, 0.065, 1.650);
+  display: none;
+}
+.cursor.mobile .finger {
+  display: block;
+}
+.cursor.cursor.mobile .pointer {
+  display: none;
+}
+
+.custom-cursor .cursor.active .finger {
+  width: 60px;
+  height: 60px;
+  margin-left: -30px;
+  margin-top: -30px;
+  border-width: 5px;
+  border-style: solid;
 }
 
 .location {
@@ -188,5 +211,33 @@ body.active {
   white-space: nowrap;
   left: 12px;
   top: -12px;
-  box-shadow: 0 2px 2px rgba(0,0,0,.2);
+  transition: top 300ms, opacity 100ms;
+  transition-timing-function: cubic-bezier(0.460, 0.110, 0.065, 1.650);
+  box-shadow: 0px 2px 2px rgba(0,0,0,.2);
+}
+
+.location .arrow {
+  position: absolute;
+  top: 100%;
+  height: 6px;
+  margin-left: -4px;
+  margin-top: -1px;
+  width: 100%;
+  justify-content: center;
+  display: none;
+}
+
+.cursor.mobile .location .arrow {
+  display: flex;
+}
+
+.cursor.mobile .location {
+  top: 0px;
+  left: -50%;
+  opacity: 0;
+}
+.custom-cursor .cursor.mobile.active .location {
+  top: -40px;
+  left: -50%;
+  opacity: 1;
 }
