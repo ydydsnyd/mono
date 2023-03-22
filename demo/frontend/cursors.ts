@@ -19,7 +19,7 @@ export const cursorRenderer = (
   actorId: string,
   getState: () => {actors: State['actors']; cursors: State['cursors']},
   getDemoContainer: () => HTMLDivElement,
-  preventScroll: (cursor: Position) => boolean,
+  isOverLetter: (cursor: Position) => boolean,
   onUpdateCursor: (localCursor: Cursor) => void,
 ): [() => PageCursor, () => Promise<void>] => {
   // Set up local state
@@ -215,7 +215,7 @@ export const cursorRenderer = (
       lastTouchEvent = e;
       localCursor.touchState = TouchState.Touching;
       const demoBB = getDemoContainer().getBoundingClientRect();
-      localCursor.startedOnLetter = preventScroll({
+      localCursor.startedOnLetter = isOverLetter({
         x: lastPosition.x - demoBB.x,
         y: lastPosition.y - demoBB.y,
       });
@@ -248,13 +248,23 @@ export const cursorRenderer = (
     'touchmove',
     (e: TouchEvent) => {
       lastTouchEvent = e;
-      if (localCursor.isDown && localCursor.startedOnLetter) {
-        e.preventDefault();
-      }
       updateCursorPosition({
         x: e.touches[0].clientX,
         y: e.touches[0].clientY,
       });
+      if (e.cancelable) {
+        const demoBB = getDemoContainer().getBoundingClientRect();
+        const preventScroll = isOverLetter({
+          x: lastPosition.x - demoBB.x,
+          y: lastPosition.y - demoBB.y,
+        });
+        if (
+          localCursor.isDown &&
+          (preventScroll || localCursor.startedOnLetter)
+        ) {
+          e.preventDefault();
+        }
+      }
     },
     {passive: false},
   );
