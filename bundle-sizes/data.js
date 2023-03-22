@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1679064007472,
+  "lastUpdate": 1679501407437,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -37749,6 +37749,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.js.br (Brotli compressed)",
             "value": 46236,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 258600,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45895,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 96234,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27285,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "391d4ec9906f4ef94a15d3d307b9ccc07e12bd11",
+          "message": "chore: Make deps external (#431)\n\nThis moves some shared build code into shared.\r\n\r\nMake reflect use a build.js script like the other packages.\r\n\r\nThe following packages are now external:\r\n- `node:*`\r\n- `@rocicorp/datadog-util`\r\n- `@rocicorp/lock`\r\n- `@rocicorp/logger`\r\n- `@rocicorp/resolver`\r\n\r\nFixes #427",
+          "timestamp": "2023-03-22T16:08:29Z",
+          "tree_id": "6efc569cd2b6a5e17104bfb89dac7c2af310091f",
+          "url": "https://github.com/rocicorp/mono/commit/391d4ec9906f4ef94a15d3d307b9ccc07e12bd11"
+        },
+        "date": 1679501396340,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 257566,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45656,
             "unit": "bytes"
           },
           {
