@@ -1,4 +1,8 @@
-import {ACTOR_UPDATE_INTERVAL, COLOR_PALATE} from '../shared/constants';
+import {
+  ACTOR_UPDATE_INTERVAL,
+  COLOR_PALATE,
+  TOUCH_CIRCLE_PADDING,
+} from '../shared/constants';
 import {
   Actor,
   ActorID,
@@ -65,7 +69,8 @@ export const cursorRenderer = (
         }
         const cursorX = x * demoBB.width + demoBB.x;
         const cursorY = y * demoBB.height + demoBB.y;
-        if (cursor.onPage || (isLocal && localCursor.isDown)) {
+        const showingTouchCursor = isLocal && localCursor.isDown;
+        if (cursor.onPage || showingTouchCursor) {
           cursorDiv.classList.add('active');
         } else {
           cursorDiv.classList.remove('active');
@@ -74,13 +79,31 @@ export const cursorRenderer = (
         const color = colorToString(
           COLOR_PALATE[actors[cursor.actorId].colorIndex],
         );
+        const fingerDiv = cursorDiv.querySelector('.finger') as HTMLDivElement;
+        const locationDiv = cursorDiv.querySelector(
+          '.location',
+        ) as HTMLDivElement;
+        if (showingTouchCursor) {
+          const lastTouch = lastTouchEvent?.touches[0];
+          const size =
+            Math.max(lastTouch?.radiusX || 0, lastTouch?.radiusY || 0, 10) +
+            TOUCH_CIRCLE_PADDING;
+          fingerDiv.style.width = size + 'px';
+          fingerDiv.style.height = size + 'px';
+          fingerDiv.style.marginLeft = -(size / 2) + 'px';
+          fingerDiv.style.marginTop = -(size / 2) + 'px';
+          locationDiv.style.top = -size + 30 + 'px';
+        } else {
+          fingerDiv.style.removeProperty('width');
+          fingerDiv.style.removeProperty('height');
+          fingerDiv.style.removeProperty('marginLeft');
+          fingerDiv.style.removeProperty('marginTop');
+          locationDiv.style.removeProperty('top');
+        }
         if (cursorDiv.dataset['color'] !== color) {
           const pointer = cursorDiv.querySelector(
             '#pointer-fill',
           ) as SVGPathElement;
-          const locationDiv = cursorDiv.querySelector(
-            '.location',
-          ) as HTMLDivElement;
           const fingerDiv = cursorDiv.querySelector(
             '.finger',
           ) as HTMLDivElement;
@@ -179,15 +202,17 @@ export const cursorRenderer = (
     localCursor.ts = now();
     localCursor.isDown = false;
     localCursor.touchState = TouchState.Unknown;
-    localCursor.x = -100;
-    localCursor.y = -100;
+    localCursor.x = 0;
+    localCursor.y = 0;
     cursorNeedsUpdate = true;
   });
 
   // Touch Events
+  let lastTouchEvent: TouchEvent | undefined;
   mouseElement.addEventListener(
     'touchstart',
     (e: TouchEvent) => {
+      lastTouchEvent = e;
       localCursor.touchState = TouchState.Touching;
       const demoBB = getDemoContainer().getBoundingClientRect();
       localCursor.startedOnLetter = preventScroll({
@@ -222,6 +247,7 @@ export const cursorRenderer = (
   mouseElement.addEventListener(
     'touchmove',
     (e: TouchEvent) => {
+      lastTouchEvent = e;
       if (localCursor.isDown && localCursor.startedOnLetter) {
         e.preventDefault();
       }

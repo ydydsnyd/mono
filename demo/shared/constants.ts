@@ -9,6 +9,11 @@ export const ROOM_MAX_ACTORS = 100;
 // Cursors
 export const SHOW_CUSTOM_CURSOR_MIN_Y = -1.2;
 export const SHOW_CUSTOM_CURSOR_MAX_Y = 2;
+// Touches give us the radius of the contact surface:
+// https://developer.mozilla.org/en-US/docs/Web/API/Touch/radiusX
+// Draw a circle around it that has a diameter this many pixels bigger than
+// that circle.
+export const TOUCH_CIRCLE_PADDING = 70;
 
 // Splatters
 // To avoid our data growing infinitely, "flatten" splatters to an image in
