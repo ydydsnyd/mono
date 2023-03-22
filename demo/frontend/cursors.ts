@@ -149,7 +149,6 @@ export const cursorRenderer = (
     onPage: false,
     isDown: false,
     touchState: TouchState.Unknown,
-    startedOnLetter: false,
   };
   let lastPosition = {x: 0, y: 0};
   // Tracking touches is tricky. Browsers fire a touchstart, touchend, mousedown,
@@ -209,19 +208,22 @@ export const cursorRenderer = (
 
   // Touch Events
   let lastTouchEvent: TouchEvent | undefined;
+  let touchedLetter = false;
   mouseElement.addEventListener(
     'touchstart',
     (e: TouchEvent) => {
       lastTouchEvent = e;
       localCursor.touchState = TouchState.Touching;
       const demoBB = getDemoContainer().getBoundingClientRect();
-      localCursor.startedOnLetter = isOverLetter({
-        x: lastPosition.x - demoBB.x,
-        y: lastPosition.y - demoBB.y,
-      });
       // If we're consuming the event, prevent scrolling.
-      if (localCursor.startedOnLetter) {
+      if (
+        isOverLetter({
+          x: lastPosition.x - demoBB.x,
+          y: lastPosition.y - demoBB.y,
+        })
+      ) {
         e.preventDefault();
+        touchedLetter = true;
       }
       localCursor.isDown = true;
       cursorNeedsUpdate = true;
@@ -233,6 +235,7 @@ export const cursorRenderer = (
     'touchend',
     () => {
       touchScrolling = false;
+      touchedLetter = false;
       // Only end if we started with a touch
       if (localCursor.touchState === TouchState.Touching) {
         // Prevent the mousedown-mouseup events that happens when tapping
@@ -252,16 +255,17 @@ export const cursorRenderer = (
         x: e.touches[0].clientX,
         y: e.touches[0].clientY,
       });
-      if (e.cancelable) {
-        const demoBB = getDemoContainer().getBoundingClientRect();
-        const preventScroll = isOverLetter({
+      const demoBB = getDemoContainer().getBoundingClientRect();
+      if (
+        isOverLetter({
           x: lastPosition.x - demoBB.x,
           y: lastPosition.y - demoBB.y,
-        });
-        if (
-          localCursor.isDown &&
-          (preventScroll || localCursor.startedOnLetter)
-        ) {
+        })
+      ) {
+        touchedLetter = true;
+      }
+      if (e.cancelable) {
+        if (localCursor.isDown && touchedLetter) {
           e.preventDefault();
         }
       }

@@ -57,7 +57,6 @@ export type Cursor = Position & {
   ts: number;
   isDown: boolean;
   touchState: TouchState;
-  startedOnLetter: boolean;
 };
 
 export type BoundingBox = Position & Size;
