@@ -92,6 +92,17 @@ export const cursorRenderer = (
     updateCursorPosition();
   });
 
+  // Hide cursor when blurring
+  window.addEventListener('blur', () => {
+    localCursor.onPage = false;
+    localCursor.ts = now();
+    localCursor.isDown = false;
+    localCursor.touchState = TouchState.Unknown;
+    localCursor.x = -100;
+    localCursor.y = -100;
+    cursorNeedsUpdate = true;
+  });
+
   // Touch Events
   mouseElement.addEventListener(
     'touchstart',
