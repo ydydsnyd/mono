@@ -8,6 +8,8 @@ use crate::console_log;
 use crate::COLOR_PALATE_RS;
 use crate::SPLATTER_ANIM_FRAMES;
 
+use self::splatters::SplatterSize;
+
 pub fn precompute() {
     splatters::precompute();
 }
@@ -18,6 +20,7 @@ pub fn draw(
     splatter_frames: &[usize],
     splatter_actors: &[u32],
     colors: &[u8],
+    sizes: &[u8],
     x_vals: &[f32],
     y_vals: &[f32],
     splatter_animations: &[u8],
@@ -42,8 +45,17 @@ pub fn draw(
         let anim_frame = splatter_frames[idx];
 
         let anim_index = splatter_animations[idx] as usize;
-        let (splatter_image, (sx, sy)) =
-            splatters::for_index(anim_index, anim_frame, splatter_rotations[idx], x, y);
+        let (splatter_image, (sx, sy)) = splatters::for_index(
+            anim_index,
+            anim_frame,
+            splatter_rotations[idx],
+            match sizes[idx] {
+                1 => SplatterSize::Large,
+                _ => SplatterSize::Regular,
+            },
+            x,
+            y,
+        );
         let mut splatter_colored = splatter_image.to_rgba8();
         let (end_color, start_color) = colors_at_idx(colors[idx]);
         let mut end_color_alpha = end_color.to_rgba();

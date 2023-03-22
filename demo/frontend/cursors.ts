@@ -13,7 +13,7 @@ import {
 } from '../shared/types';
 import {colorToString, now} from '../shared/util';
 
-type PageCursor = {isDown: boolean; position: Position};
+type PageCursor = {isDown: boolean; position: Position; isMobile: boolean};
 
 export const cursorRenderer = (
   actorId: string,
@@ -69,7 +69,10 @@ export const cursorRenderer = (
         }
         const cursorX = x * demoBB.width + demoBB.x;
         const cursorY = y * demoBB.height + demoBB.y;
-        const showingTouchCursor = isLocal && localCursor.isDown;
+        const showingTouchCursor =
+          isLocal &&
+          localCursor.isDown &&
+          localCursor.touchState === TouchState.Touching;
         if (cursor.onPage || showingTouchCursor) {
           cursorDiv.classList.add('active');
         } else {
@@ -323,6 +326,7 @@ export const cursorRenderer = (
           x: lastPosition.x - demoBB.x,
           y: lastPosition.y - demoBB.y,
         },
+        isMobile: localCursor.touchState === TouchState.Touching,
       };
     },
     redrawCursors,

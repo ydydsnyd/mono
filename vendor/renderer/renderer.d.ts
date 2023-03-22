@@ -30,13 +30,14 @@ export function draw_caches(ctx_a: CanvasRenderingContext2D, ctx_l: CanvasRender
 * @param {Uint32Array} splatter_frames
 * @param {Uint32Array} splatter_actors
 * @param {Uint8Array} colors
+* @param {Uint8Array} sizes
 * @param {Float32Array} x_vals
 * @param {Float32Array} y_vals
 * @param {Uint8Array} splatter_animations
 * @param {Uint8Array} splatter_rotations
 * @returns {Uint8Array}
 */
-export function draw_cache_png(png_data: Uint8Array | undefined, splatter_count: number, splatter_frames: Uint32Array, splatter_actors: Uint32Array, colors: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_animations: Uint8Array, splatter_rotations: Uint8Array): Uint8Array;
+export function draw_cache_png(png_data: Uint8Array | undefined, splatter_count: number, splatter_frames: Uint32Array, splatter_actors: Uint32Array, colors: Uint8Array, sizes: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_animations: Uint8Array, splatter_rotations: Uint8Array): Uint8Array;
 /**
 * @param {number} letter
 * @param {CanvasRenderingContext2D} ctx
@@ -44,12 +45,13 @@ export function draw_cache_png(png_data: Uint8Array | undefined, splatter_count:
 * @param {Uint32Array} splatter_frames
 * @param {Uint32Array} splatter_actors
 * @param {Uint8Array} colors
+* @param {Uint8Array} sizes
 * @param {Float32Array} x_vals
 * @param {Float32Array} y_vals
 * @param {Uint8Array} splatter_animations
 * @param {Uint8Array} splatter_rotations
 */
-export function draw_buffer(letter: number, ctx: CanvasRenderingContext2D, splatter_count: number, splatter_frames: Uint32Array, splatter_actors: Uint32Array, colors: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_animations: Uint8Array, splatter_rotations: Uint8Array): void;
+export function draw_buffer(letter: number, ctx: CanvasRenderingContext2D, splatter_count: number, splatter_frames: Uint32Array, splatter_actors: Uint32Array, colors: Uint8Array, sizes: Uint8Array, x_vals: Float32Array, y_vals: Float32Array, splatter_animations: Uint8Array, splatter_rotations: Uint8Array): void;
 /**
 */
 export enum Letter {
@@ -68,8 +70,8 @@ export interface InitOutput {
   readonly update_cache: (a: number, b: number, c: number) => void;
   readonly overwrite_caches: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly draw_caches: (a: number, b: number, c: number, d: number, e: number) => void;
-  readonly draw_cache_png: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number) => void;
-  readonly draw_buffer: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number) => void;
+  readonly draw_cache_png: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number) => void;
+  readonly draw_buffer: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number) => void;
   readonly __wbindgen_malloc: (a: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number) => number;
   readonly __wbindgen_add_to_stack_pointer: (a: number) => number;

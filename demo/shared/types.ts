@@ -40,6 +40,7 @@ export type Splatter = Position & {
   u: ActorID; // actor ID
   c: number; // color index, from COLOR_PALATE
   a: number; // splatter animation index
+  s: number; // splatter size index
   t: number; // timestamp
   r: number; // rotation of splatter animation
 };

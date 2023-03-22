@@ -218,7 +218,7 @@ export const init = async () => {
   window.addEventListener('resize', resizeViewport);
   resizeViewport();
 
-  const maybeAddPaint = (at: Position) => {
+  const maybeAddPaint = (at: Position, isMobile: boolean) => {
     const [letter, texturePosition, hitPosition] = getTexturePosition(at);
     if (letter && texturePosition && hitPosition) {
       addSplatter({
@@ -226,6 +226,7 @@ export const init = async () => {
         actorId: actor.id,
         colorIndex: actor.colorIndex,
         texturePosition,
+        large: isMobile,
         hitPosition,
         timestamp: now(),
       });
@@ -306,9 +307,9 @@ export const init = async () => {
       renderFrame(now(), lastClear, letter => updateTexture(letter));
       render3D();
       // Splatter if needed
-      const {isDown, position} = localCursor();
+      const {isDown, position, isMobile} = localCursor();
       if (isDown) {
-        maybeAddPaint(position);
+        maybeAddPaint(position, isMobile);
       }
     },
     async () => {

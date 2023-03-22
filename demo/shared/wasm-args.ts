@@ -5,6 +5,7 @@ type renderArgs = [
   Uint32Array, // splatter_frames: Vec<usize>,
   Uint32Array, // splatter_actors: Vec<u32>,
   Uint8Array, // colors: Vec<u8>,
+  Uint8Array, // sizes: Vec<u8>,
   Float32Array, // x_vals: Vec<f32>,
   Float32Array, // y_vals: Vec<f32>,
   Uint8Array, // splatter_animations: Vec<u8>,
@@ -26,6 +27,7 @@ export const splatters2Render = (splatters: Splatter[], frames: number[]) => {
     new Uint32Array(splatters.length),
     new Uint32Array(splatters.length),
     new Uint8Array(splatters.length),
+    new Uint8Array(splatters.length),
     new Float32Array(splatters.length),
     new Float32Array(splatters.length),
     new Uint8Array(splatters.length),
@@ -35,10 +37,11 @@ export const splatters2Render = (splatters: Splatter[], frames: number[]) => {
     args[1][index] = frames[index];
     args[2][index] = actorNums[splatter.u];
     args[3][index] = splatter.c;
-    args[4][index] = splatter.x;
-    args[5][index] = splatter.y;
-    args[6][index] = splatter.a;
-    args[7][index] = splatter.r;
+    args[4][index] = splatter.s;
+    args[5][index] = splatter.x;
+    args[6][index] = splatter.y;
+    args[7][index] = splatter.a;
+    args[8][index] = splatter.r;
   });
   return args;
 };

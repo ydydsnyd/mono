@@ -107,12 +107,14 @@ export const mutators = {
       colorIndex,
       texturePosition,
       timestamp,
+      large,
     }: {
       letter: Letter;
       actorId: string;
       colorIndex: number;
       texturePosition: Position;
       timestamp: number;
+      large: boolean;
       hitPosition: Vector;
     },
   ) => {
@@ -122,6 +124,7 @@ export const mutators = {
       y,
       u: actorId,
       c: colorIndex,
+      s: large ? 1 : 0,
       t: timestamp,
       a: Math.floor(randomWithSeed(timestamp, Seeds.splatterAnimation, 5)),
       r: Math.floor(randomWithSeed(timestamp, Seeds.splatterRotation, 4)),
