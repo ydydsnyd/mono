@@ -227,6 +227,7 @@ export const cursorRenderer = (
       ) {
         e.preventDefault();
         touchedLetter = true;
+        touchScrolling = false;
       }
       localCursor.isDown = true;
       cursorNeedsUpdate = true;
@@ -266,6 +267,7 @@ export const cursorRenderer = (
         })
       ) {
         touchedLetter = true;
+        touchScrolling = false;
       }
       if (e.cancelable) {
         if (localCursor.isDown && touchedLetter) {
