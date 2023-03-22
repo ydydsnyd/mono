@@ -38,6 +38,84 @@ export const cursorRenderer = (
     }
     return cursorDiv;
   };
+  let lastActorUpdate = -1;
+  const redrawCursors = async () => {
+    if (cursorNeedsUpdate) {
+      cursorNeedsUpdate = false;
+      onUpdateCursor(localCursor);
+    }
+    const demoBB = getDemoContainer().getBoundingClientRect();
+    const {actors, cursors} = getState();
+    // Move cursors
+    Object.values(cursors).forEach(async cursor => {
+      if (!actors[cursor.actorId]) {
+        return;
+      }
+      const {x, y} = cursor;
+      const cursorDiv = await getCursorDiv(cursor, cursor.onPage);
+      if (cursorDiv) {
+        const isLocal = cursor.actorId === localCursor.actorId;
+        // Show a special, different cursor locally
+        cursorDiv.classList.remove('mobile');
+        if (isLocal && localCursor.touchState === TouchState.Touching) {
+          cursorDiv.classList.remove('desktop');
+          cursorDiv.classList.add('mobile');
+        } else {
+          cursorDiv.classList.add('desktop');
+        }
+        const cursorX = x * demoBB.width + demoBB.x;
+        const cursorY = y * demoBB.height + demoBB.y;
+        if (cursor.onPage || (isLocal && localCursor.isDown)) {
+          cursorDiv.classList.add('active');
+        } else {
+          cursorDiv.classList.remove('active');
+        }
+        cursorDiv.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0)`;
+        const color = colorToString(
+          COLOR_PALATE[actors[cursor.actorId].colorIndex],
+        );
+        if (cursorDiv.dataset['color'] !== color) {
+          const pointer = cursorDiv.querySelector(
+            '#pointer-fill',
+          ) as SVGPathElement;
+          const locationDiv = cursorDiv.querySelector(
+            '.location',
+          ) as HTMLDivElement;
+          const fingerDiv = cursorDiv.querySelector(
+            '.finger',
+          ) as HTMLDivElement;
+          const locationArrow = cursorDiv.querySelector(
+            '#location-arrow',
+          ) as SVGPathElement;
+          pointer.style.fill = color;
+          locationDiv.style.background = color;
+          fingerDiv.style.borderColor = color;
+          locationArrow.style.fill = color;
+        }
+        cursorDiv.dataset['color'] = color;
+      }
+    });
+    // Remove cursor divs that represent actors that are no longer here
+    for (const actorId of cursorDivs.keys()) {
+      if (!cursors[actorId]) {
+        for (const existing of document.getElementsByClassName(actorId)) {
+          existing.parentElement?.removeChild(existing);
+        }
+        cursorDivs.delete(actorId);
+      }
+    }
+    // At a lower frequency, update actor information (it only changes once per
+    // actor, when we first get the location).
+    if (now() - lastActorUpdate > ACTOR_UPDATE_INTERVAL) {
+      lastActorUpdate = now();
+      Object.values(actors).forEach(actor => {
+        const cursorDiv = cursorDivs.get(actor.id);
+        if (cursorDiv && actor.location) {
+          cursorDiv.querySelector('.location-name')!.innerHTML = actor.location;
+        }
+      });
+    }
+  };
   // Add a cursor tracker for this user
   const {cursors} = getState();
   let localCursor: Cursor = cursors[actorId] || {
@@ -90,6 +168,9 @@ export const cursorRenderer = (
       return;
     }
     updateCursorPosition();
+    // Since this fires more than once per frame, we need to redraw cursors too so
+    // that we don't jitter
+    redrawCursors();
   });
 
   // Hide cursor when blurring
@@ -193,7 +274,6 @@ export const cursorRenderer = (
     }
   });
 
-  let lastActorUpdate = -1;
   return [
     () => {
       const demoBB = getDemoContainer().getBoundingClientRect();
@@ -205,84 +285,7 @@ export const cursorRenderer = (
         },
       };
     },
-    async () => {
-      if (cursorNeedsUpdate) {
-        cursorNeedsUpdate = false;
-        onUpdateCursor(localCursor);
-      }
-      const demoBB = getDemoContainer().getBoundingClientRect();
-      const {actors, cursors} = getState();
-      // Move cursors
-      Object.values(cursors).forEach(async cursor => {
-        if (!actors[cursor.actorId]) {
-          return;
-        }
-        const {x, y} = cursor;
-        const cursorDiv = await getCursorDiv(cursor, cursor.onPage);
-        if (cursorDiv) {
-          const isLocal = cursor.actorId === localCursor.actorId;
-          // Show a special, different cursor locally
-          cursorDiv.classList.remove('mobile');
-          if (isLocal && localCursor.touchState === TouchState.Touching) {
-            cursorDiv.classList.remove('desktop');
-            cursorDiv.classList.add('mobile');
-          } else {
-            cursorDiv.classList.add('desktop');
-          }
-          const cursorX = x * demoBB.width + demoBB.x;
-          const cursorY = y * demoBB.height + demoBB.y;
-          if (cursor.onPage || (isLocal && localCursor.isDown)) {
-            cursorDiv.classList.add('active');
-          } else {
-            cursorDiv.classList.remove('active');
-          }
-          cursorDiv.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0)`;
-          const color = colorToString(
-            COLOR_PALATE[actors[cursor.actorId].colorIndex],
-          );
-          if (cursorDiv.dataset['color'] !== color) {
-            const pointer = cursorDiv.querySelector(
-              '#pointer-fill',
-            ) as SVGPathElement;
-            const locationDiv = cursorDiv.querySelector(
-              '.location',
-            ) as HTMLDivElement;
-            const fingerDiv = cursorDiv.querySelector(
-              '.finger',
-            ) as HTMLDivElement;
-            const locationArrow = cursorDiv.querySelector(
-              '#location-arrow',
-            ) as SVGPathElement;
-            pointer.style.fill = color;
-            locationDiv.style.background = color;
-            fingerDiv.style.borderColor = color;
-            locationArrow.style.fill = color;
-          }
-          cursorDiv.dataset['color'] = color;
-        }
-      });
-      // Remove cursor divs that represent actors that are no longer here
-      for (const actorId of cursorDivs.keys()) {
-        if (!cursors[actorId]) {
-          for (const existing of document.getElementsByClassName(actorId)) {
-            existing.parentElement?.removeChild(existing);
-          }
-          cursorDivs.delete(actorId);
-        }
-      }
-      // At a lower frequency, update actor information (it only changes once per
-      // actor, when we first get the location).
-      if (now() - lastActorUpdate > ACTOR_UPDATE_INTERVAL) {
-        lastActorUpdate = now();
-        Object.values(actors).forEach(actor => {
-          const cursorDiv = cursorDivs.get(actor.id);
-          if (cursorDiv && actor.location) {
-            cursorDiv.querySelector('.location-name')!.innerHTML =
-              actor.location;
-          }
-        });
-      }
-    },
+    redrawCursors,
   ];
 };
 
