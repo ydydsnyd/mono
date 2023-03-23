@@ -162,11 +162,3 @@
     text-align: center;
   }
 }
-
-.inlineCode {
-  color: #ec4899;
-  background: #f5f5f5;
-  font-weight: bold;
-  padding: 2px 4px;
-  border-radius: 0.25em;
-}

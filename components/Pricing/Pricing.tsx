@@ -7,8 +7,8 @@ import NotIncluded from './NotIncluded';
 const Pricing = () => (
   <div className={styles.pricingContainer}>
     <p>
-      Pricing is by active room hours. A room is active when it has one or more
-      connected users. Background tabs disconnect automatically.
+      Reflect is charged by monthly active room hours. A room is active when it
+      has one or more connected users. Background tabs disconnect automatically.
     </p>
     <div className={styles.pricingGrid}>
       {/* Pricing Grid Header */}
@@ -84,6 +84,19 @@ const Pricing = () => (
         <Included />
       </div>
     </div>
+    <h3 className={styles.pricingExamplesHead}>Examples</h3>
+    <ol className={styles.pricingExample}>
+      <li>
+        Bob is in room <code className="inline">giraffe</code> from 9am to 11am.
+        Sally joins <code className="inline">giraffe</code> at 10am and stays
+        until 12:30pm. That&apos;s 3.5 room hours (9am &#8211; 12:30pm).
+      </li>
+      <li>
+        Same as above, but James is concurrently in room{' '}
+        <code className="inline">platypus</code> from 10am to 12pm. That&apos;s
+        an additional 2 hours for a total of 5.5.
+      </li>
+    </ol>
   </div>
 );
 
