@@ -2,10 +2,14 @@
 
 VENDOR="$(pwd)/vendor"
 cd ../mono
-[[ ! -d node_modules ]] && npm install --prefix ./packages/reflect
+[[ $1 == "pull" ]] && git stash -u && git pull && git stash pop
+npm install
+echo "Building and packaging reflect"
 npm run build --prefix ./packages/reflect
 npm pack --workspace ./packages/reflect --pack-destination $VENDOR
 REFLECT_V=$(npm pkg get version --prefix ./packages/reflect | sed 's/"//g')
+echo "Building and packaging reflect"
+npm run build --prefix ./packages/reflect
 npm pack --workspace ./packages/reflect-server --pack-destination $VENDOR
 REFLECT_SERVER_V=$(npm pkg get version --prefix ./packages/reflect-server | sed 's/"//g')
 cd -
