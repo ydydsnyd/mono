@@ -1,6 +1,7 @@
 import {
   ACTOR_UPDATE_INTERVAL,
   COLOR_PALATE,
+  LOCATION_PLACEHOLDER,
   TOUCH_CIRCLE_PADDING,
 } from '../shared/constants';
 import {
@@ -389,9 +390,7 @@ const createCursor = (actor: Actor, isLocal: boolean) => {
   const locationNameDiv = document.createElement('div');
   locationNameDiv.classList.add('location-name');
   locationDiv.appendChild(locationNameDiv);
-  if (actor.location) {
-    locationNameDiv.innerHTML = actor.location;
-  }
+  locationNameDiv.innerHTML = actor.location || LOCATION_PLACEHOLDER;
   cursorDiv.appendChild(locationDiv);
 
   // Add the (mobile) bottom arrow on the box

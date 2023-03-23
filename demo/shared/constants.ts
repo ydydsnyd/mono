@@ -4,6 +4,7 @@ export {UVMAP_SIZE, SPLATTER_ANIM_FRAMES} from '../../renderer/src/constants';
 
 // Globals
 export const USER_ID = 'reflect-user-id';
+export const LOCATION_PLACEHOLDER = 'Somewhere';
 
 // Bucketing
 export const ORCHESTRATOR_ROOM_ID = 'orchestrator-room';
