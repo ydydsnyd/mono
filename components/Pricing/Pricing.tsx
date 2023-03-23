@@ -7,10 +7,8 @@ import NotIncluded from './NotIncluded';
 const Pricing = () => (
   <div className={styles.pricingContainer}>
     <p>
-      Simple, transparent usage-based pricing by hours of room usage. A
-      room-hour is an hour a had at least one user in it. For example, if Bob
-      was in a room from 8a-10a, and Sally was in the same room from 9a-11a,
-      that would be 2 room-hours.
+      Pricing is by active room hours. A room is active when it has one or more
+      connected users. Background tabs disconnect automatically.
     </p>
     <div className={styles.pricingGrid}>
       {/* Pricing Grid Header */}
@@ -21,7 +19,7 @@ const Pricing = () => (
       <div className={styles.pricingGridHeader}>Enterprise</div>
 
       {/* Pricing Grid Row 1: Hours included */}
-      <div className={styles.pricingGridHeader}>Room-Hours Included</div>
+      <div className={styles.pricingGridHeader}>Hours Included</div>
       <div className={styles.pricingGridData}>1,000</div>
       <div className={styles.pricingGridData}>2,000</div>
       <div className={styles.pricingGridData}>20,000</div>
@@ -35,7 +33,7 @@ const Pricing = () => (
       <div className={styles.pricingGridData}>Custom</div>
 
       {/* Pricing Grid Row 3: Additional hours */}
-      <div className={styles.pricingGridHeader}>Additional Room-Hours</div>
+      <div className={styles.pricingGridHeader}>Additional Hours</div>
       <div className={styles.pricingGridData}>N/A</div>
       <div className={styles.pricingGridData}>$0.005</div>
       <div className={styles.pricingGridData}>$0.002</div>
@@ -43,21 +41,6 @@ const Pricing = () => (
 
       {/* Pricing Grid Row 4: Source access */}
       <div className={styles.pricingGridHeader}>Source License</div>
-      <div className={styles.pricingGridData}>
-        <NotIncluded />
-      </div>
-      <div className={styles.pricingGridData}>
-        <NotIncluded />
-      </div>
-      <div className={styles.pricingGridData}>
-        <Included />
-      </div>
-      <div className={styles.pricingGridData}>
-        <Included />
-      </div>
-
-      {/* Pricing Grid Row 5: Jurisdiction controls */}
-      <div className={styles.pricingGridHeader}>Jurisdiction Controls</div>
       <div className={styles.pricingGridData}>
         <NotIncluded />
       </div>
