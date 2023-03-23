@@ -56,7 +56,7 @@ export default function Home() {
         </section>
 
         <section id="pricing" className={styles.section}>
-          <h2 className={styles.subheader}>Pricing</h2>
+          <h2 className={styles.subheader}>Simple, Usage-Based Pricing</h2>
           <Pricing />
         </section>
 
