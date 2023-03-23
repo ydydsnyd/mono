@@ -13,7 +13,7 @@ const Footer = () => (
 
     <div className={styles.footerCopyright}>
       <p>
-        Designed &amp; engineered by <br/><Link href="https://rocicorp.dev">Rocicorp</Link> &copy; 2019 - {currentYear}
+        Designed &amp; engineered by <br/><Link href="https://rocicorp.dev">Rocicorp</Link> &copy; 2019 &#8211; {currentYear}
       </p>
     </div>
   </footer>
