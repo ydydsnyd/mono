@@ -28,6 +28,7 @@ import {
   SPLATTER_ANIM_FRAMES,
   SPLATTER_FLATTEN_FREQUENCY,
   SPLATTER_MAX_AGE,
+  USER_ID,
 } from '../shared/constants';
 import {decode, encode} from '../shared/uint82b64';
 import {draw_cache_png} from '@/vendor/renderer/renderer';
@@ -54,10 +55,10 @@ export const initialize = async (
       }
       onlineChange(online);
     },
-    userID: actor.id,
+    userID: USER_ID,
     roomID: actor.room,
     auth: JSON.stringify({
-      userID: actor.id,
+      userID: USER_ID,
       roomID: actor.room,
     }),
     logLevel: 'error',
@@ -85,7 +86,7 @@ export const initialize = async (
   // Set up a local state - this is used to cache values that we don't want to
   // read every frame (and that will be updated via subscription instead)
   const localState: State = await reflectClient.query(
-    stateInitializer(actor.id, debug),
+    stateInitializer(USER_ID, debug),
   );
 
   let cacheTimeouts = letterMap<number | null>(() => null);

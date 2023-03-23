@@ -1,5 +1,5 @@
 import {Reflect} from '@rocicorp/reflect';
-import {ORCHESTRATOR_ROOM_ID} from '../shared/constants';
+import {ORCHESTRATOR_ROOM_ID, USER_ID} from '../shared/constants';
 import {WORKER_HOST} from '../shared/urls';
 import type {OrchestratorActor} from '../shared/types';
 import {
@@ -24,16 +24,15 @@ export const initRoom = async (): Promise<{
   console.log(`Orchestrator connecting to worker at ${WORKER_HOST}`);
 
   // Create a reflect client
-  const userID = nanoid();
   const orchestratorClient = new Reflect<typeof orchestratorMutators>({
     socketOrigin: WORKER_HOST,
     onOnlineChange: online => {
       console.log(`online: ${online}`);
     },
-    userID,
+    userID: USER_ID,
     roomID: ORCHESTRATOR_ROOM_ID,
     auth: JSON.stringify({
-      userID,
+      userID: USER_ID,
       roomID: ORCHESTRATOR_ROOM_ID,
     }),
     logLevel: 'error',

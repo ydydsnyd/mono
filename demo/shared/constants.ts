@@ -2,6 +2,9 @@ import type {Color} from './types';
 import {COLOR_PALATE_RS} from '../../renderer/src/constants';
 export {UVMAP_SIZE, SPLATTER_ANIM_FRAMES} from '../../renderer/src/constants';
 
+// Globals
+export const USER_ID = 'reflect-user-id';
+
 // Bucketing
 export const ORCHESTRATOR_ROOM_ID = 'orchestrator-room';
 export const ROOM_MAX_ACTORS = 100;
