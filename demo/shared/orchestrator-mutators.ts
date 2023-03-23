@@ -63,6 +63,7 @@ export const orchestratorMutators = {
     const hasActor = await tx.has(key);
     if (hasActor) {
       // already exists
+      console.log('exists', tx.clientID);
       return;
     }
     // Find the room we're currently filling
@@ -122,6 +123,7 @@ export const orchestratorMutators = {
       colorIndex,
       room: selectedRoomId,
     };
+    console.log(`Created orchestrator actor for ${tx.clientID}`);
     await tx.put(key, actor);
   },
 };

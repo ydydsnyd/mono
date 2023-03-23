@@ -3,7 +3,7 @@ import {COLOR_PALATE_RS} from '../../renderer/src/constants';
 export {UVMAP_SIZE, SPLATTER_ANIM_FRAMES} from '../../renderer/src/constants';
 
 // Globals
-export const USER_ID = 'reflect-user-id';
+export const USER_ID = 'anon';
 export const LOCATION_PLACEHOLDER = 'Somewhere';
 
 // Bucketing

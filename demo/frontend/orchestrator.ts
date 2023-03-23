@@ -44,6 +44,9 @@ export const initRoom = async (): Promise<{
   // Create our actor, which also will assign us a room. We have to wait for this
   // to complete (in the subscription above) before we can connect
   const params = new URLSearchParams(window.location.search);
+  console.log(
+    `Create actor for ${await orchestratorClient.query(tx => tx.clientID)}`,
+  );
   mutations.createOrchestratorActor({
     fallbackId: nanoid(),
     forceNewRoomWithSecret: params.get('reset'),
@@ -84,12 +87,22 @@ export const initRoom = async (): Promise<{
 const waitForActor = (
   client: Reflect<typeof orchestratorMutators>,
 ): Promise<OrchestratorActor> => {
-  return new Promise((resolve, reject) => {
-    const unsubscribe = client.subscribe<OrchestratorActor>(
-      async tx =>
-        (await tx.get(
-          `orchestrator-actor/${tx.clientID}`,
-        )) as OrchestratorActor,
+  return new Promise(async (resolve, reject) => {
+    const actor = await client.query(async tx => {
+      return (await tx.get(`orchestrator-actor/${tx.clientID}`)) as
+        | OrchestratorActor
+        | undefined;
+    });
+    if (actor) {
+      resolve({...actor});
+      return;
+    }
+    const unsubscribe = client.subscribe<OrchestratorActor | undefined>(
+      async tx => {
+        return (await tx.get(`orchestrator-actor/${tx.clientID}`)) as
+          | OrchestratorActor
+          | undefined;
+      },
       {
         onData: actor => {
           // We have to wait until an actor exists
@@ -99,7 +112,10 @@ const waitForActor = (
           unsubscribe();
           resolve({...actor});
         },
-        onError: error => reject(error),
+        onError: error => {
+          console.error(`init error: ${error}`);
+          reject(error);
+        },
       },
     );
   });
