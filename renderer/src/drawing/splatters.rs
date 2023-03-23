@@ -61,12 +61,14 @@ impl Splatter {
             frames_l_270: get_frames(strings, 3, SplatterSize::Large),
         }
     }
-    pub fn at(&self, x: f32, y: f32) -> (i64, i64) {
-        // NOTE: all splatters are 240 px, if this changes then remove the hardcode.
-        let half = 120.0;
+    pub fn at(&self, x: f32, y: f32, size: &SplatterSize) -> (i64, i64) {
+        let half = match size {
+            SplatterSize::Regular => 120.0,
+            SplatterSize::Large => 200.0,
+        };
         ((x - half).floor() as i64, (y - half).floor() as i64)
     }
-    pub fn frame(&self, frame: usize, rotation: u8, size: SplatterSize) -> &DynamicImage {
+    pub fn frame(&self, frame: usize, rotation: u8, size: &SplatterSize) -> &DynamicImage {
         let frames = match rotation {
             1 => match size {
                 SplatterSize::Regular => &self.frames_r_90,
@@ -109,10 +111,22 @@ pub fn for_index(
     y: f32,
 ) -> (&'static DynamicImage, (i64, i64)) {
     match index {
-        1 => (SPLATTER_1.frame(frame, rotation, size), SPLATTER_1.at(x, y)),
-        2 => (SPLATTER_2.frame(frame, rotation, size), SPLATTER_2.at(x, y)),
-        3 => (SPLATTER_3.frame(frame, rotation, size), SPLATTER_3.at(x, y)),
-        _ => (SPLATTER_0.frame(frame, rotation, size), SPLATTER_0.at(x, y)),
+        1 => (
+            SPLATTER_1.frame(frame, rotation, &size),
+            SPLATTER_1.at(x, y, &size),
+        ),
+        2 => (
+            SPLATTER_2.frame(frame, rotation, &size),
+            SPLATTER_2.at(x, y, &size),
+        ),
+        3 => (
+            SPLATTER_3.frame(frame, rotation, &size),
+            SPLATTER_3.at(x, y, &size),
+        ),
+        _ => (
+            SPLATTER_0.frame(frame, rotation, &size),
+            SPLATTER_0.at(x, y, &size),
+        ),
     }
 }
 
