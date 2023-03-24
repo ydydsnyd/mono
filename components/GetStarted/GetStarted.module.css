@@ -61,19 +61,20 @@
   text-decoration: none;
   cursor: pointer;
   padding: 1.4rem 2rem;
-  border: 1px solid #FC208A;
+  border: 1px solid #fc208a;
   border-radius: 8px;
   background: #fff;
   box-shadow: 0 2px 6px -2px rgb(0 0 0 / 37%);
-  transition: transform 200ms cubic-bezier(.645, .045, .355, 1);
-  color: #FC208A;
+  transition: transform 200ms cubic-bezier(0.645, 0.045, 0.355, 1);
+  color: #fc208a;
   font-size: 1.6rem;
   line-height: 1.2;
   font-weight: 500;
   position: relative;
 }
 
-.buttonPrimary:hover, .buttonPrimary:focus {
+.buttonPrimary:hover,
+.buttonPrimary:focus {
   transform: scale(1.06);
   background: #fff;
 }
@@ -83,7 +84,7 @@
   width: 30px;
   height: 30px;
   border-radius: 100%;
-  border: 12px solid #FC208A;
+  border: 12px solid #fc208a;
   position: absolute;
   z-index: -1;
   top: 50%;
@@ -97,8 +98,6 @@
   animation: none;
   display: none;
 }
-
-
 
 .buttonPrimary:active {
   box-shadow: none;

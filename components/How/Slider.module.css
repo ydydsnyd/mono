@@ -1,42 +1,42 @@
 .latencySlider {
-    position: absolute;
-    right: 24px;
-    top: 14px;
-    display: 'flex';
-    justifyContent: 'center';
-    flexWrap: 'wrap';
-    width: 4rem;
+  position: absolute;
+  right: 24px;
+  top: 14px;
+  display: 'flex';
+  justifycontent: 'center';
+  flexwrap: 'wrap';
+  width: 4rem;
 }
 
 .latencyValue {
-    position: absolute;
-    right: 5.5rem;
-    top: 8px;
-    width: 9rem;
-    font-size: 1rem;
-    text-align: right;
-    color: #24283B;
+  position: absolute;
+  right: 5.5rem;
+  top: 8px;
+  width: 9rem;
+  font-size: 1rem;
+  text-align: right;
+  color: #24283b;
 }
 
 .latencyValueNumber {
-    font-weight: 500;
-    color: #0A7AFF;
+  font-weight: 500;
+  color: #0a7aff;
 }
 
 @media (max-width: 600px) {
-    .latencySlider {
-        position: static;
-        margin: 0 auto;
-        width: 8rem;
-        display: block !important;
-    }
+  .latencySlider {
+    position: static;
+    margin: 0 auto;
+    width: 8rem;
+    display: block !important;
+  }
 
-    .latencyValue {
-        font-size: 0.75rem;
-        position: static;
-        margin: 0 auto;
-        display: block;
-        text-align: center;
-        width: auto;
-    }
+  .latencyValue {
+    font-size: 0.75rem;
+    position: static;
+    margin: 0 auto;
+    display: block;
+    text-align: center;
+    width: auto;
+  }
 }

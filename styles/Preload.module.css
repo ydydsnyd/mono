@@ -9,7 +9,7 @@
   stroke-dasharray: 767.2366333007812px;
   fill: transparent;
   transition: stroke-dashoffset 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) 0s,
-                fill 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) 0.1s;
+    fill 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) 0.1s;
 }
 
 .active .a {
@@ -22,7 +22,7 @@
   stroke-dasharray: 482.70001220703125px;
   fill: transparent;
   transition: stroke-dashoffset 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) 0.1s,
-                fill 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) 0.25s;
+    fill 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) 0.25s;
 }
 
 .active .l {
@@ -35,7 +35,7 @@
   stroke-dasharray: 540.2350463867188px;
   fill: transparent;
   transition: stroke-dashoffset 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) 0.2s,
-                fill 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) 0.4s;
+    fill 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) 0.4s;
 }
 
 .active .i {
@@ -47,8 +47,9 @@
   stroke-dashoffset: 634.2492065429688px;
   stroke-dasharray: 634.2492065429688px;
   fill: transparent;
-  transition: stroke-dashoffset 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) 0.30000000000000004s,
-                fill 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) 0.5499999999999999s;
+  transition: stroke-dashoffset 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53)
+      0.30000000000000004s,
+    fill 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) 0.5499999999999999s;
 }
 
 .active .v {
@@ -61,7 +62,7 @@
   stroke-dasharray: 759.9862060546875px;
   fill: transparent;
   transition: stroke-dashoffset 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) 0.4s,
-                fill 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) 0.7s;
+    fill 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) 0.7s;
 }
 
 .active .e {

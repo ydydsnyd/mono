@@ -2,7 +2,8 @@
   display: none;
 }
 
-.mobileNavButton, .mobileNavButtonActive {
+.mobileNavButton,
+.mobileNavButtonActive {
   height: 3rem;
   width: 3rem;
   border: none;
@@ -11,55 +12,55 @@
   cursor: pointer;
 }
 
-.menuOpen, .menuClose {
-display: none;
+.menuOpen,
+.menuClose {
+  display: none;
 }
 
-.mobileNavButton .menuOpen, .mobileNavButtonActive .menuClose {
-display: block;
+.mobileNavButton .menuOpen,
+.mobileNavButtonActive .menuClose {
+  display: block;
 }
 
 .mobileNavMenuDisabled {
-display: none;
+  display: none;
 }
 
 .mobileNavMenu {
-position: fixed;
-width: 100%;
-height: calc(89vh - 5.5rem);
-top: 5.5rem;
-left: 0;
-background-color: rgba(255, 255, 255, 1);
-font-size: 1.4rem;
+  position: fixed;
+  width: 100%;
+  height: calc(89vh - 5.5rem);
+  top: 5.5rem;
+  left: 0;
+  background-color: rgba(255, 255, 255, 1);
+  font-size: 1.4rem;
 }
 
 .navArray {
-margin: 0;
-display: flex;
-flex-direction: column;
-list-style: none;
-padding: 0;
-text-align: center;
-height: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  padding: 0;
+  text-align: center;
+  height: 100%;
 }
 
 .navArray li {
-width: 100%;
-flex: 1;
-display: flex;
-flex-direction: column;
-justify-content: center;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .navArray a {
-display: block;
+  display: block;
 }
 
 .navLink {
-color: #2a2c2e;
+  color: #2a2c2e;
 }
-
-
 
 @media only screen and (max-width: 828px) {
   .mobileNav {

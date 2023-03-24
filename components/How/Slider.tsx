@@ -1,31 +1,34 @@
 import * as React from 'react';
-import { Range, getTrackBackground } from 'react-range';
+import {Range, getTrackBackground} from 'react-range';
 import style from './Slider.module.css';
 
 const STEP = 30;
 const MIN = 4;
 const MAX = 2000;
 
-const Slider: React.FC<{ }> = ({  }) => {
+const Slider: React.FC<{}> = ({}) => {
   const [values, setValues] = React.useState([4]);
   return (
     <div
       className={style.latencySlider}
       style={{
         display: 'flex',
-        justifyContent: 'center'
+        justifyContent: 'center',
       }}
     >
       <output className={style.latencyValue} id="output">
-        Latency: <span className={style.latencyValueNumber}>{values[0].toFixed(0)}ms</span>
+        Latency:{' '}
+        <span className={style.latencyValueNumber}>
+          {values[0].toFixed(0)}ms
+        </span>
       </output>
       <Range
         values={values}
         step={STEP}
         min={MIN}
         max={MAX}
-        onChange={(values) => setValues(values)}
-        renderTrack={({ props, children }) => (
+        onChange={values => setValues(values)}
+        renderTrack={({props, children}) => (
           <div
             onMouseDown={props.onMouseDown}
             onTouchStart={props.onTouchStart}
@@ -33,7 +36,7 @@ const Slider: React.FC<{ }> = ({  }) => {
               ...props.style,
               height: '36px',
               display: 'flex',
-              width: '100%'
+              width: '100%',
             }}
           >
             <div
@@ -46,16 +49,16 @@ const Slider: React.FC<{ }> = ({  }) => {
                   values,
                   colors: ['#0A7AFF', '#D1D1D1'],
                   min: MIN,
-                  max: MAX
+                  max: MAX,
                 }),
-                alignSelf: 'center'
+                alignSelf: 'center',
               }}
             >
               {children}
             </div>
           </div>
         )}
-        renderThumb={({ props }) => (
+        renderThumb={({props}) => (
           <div
             {...props}
             style={{
@@ -67,11 +70,10 @@ const Slider: React.FC<{ }> = ({  }) => {
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              boxShadow: '0px 0.5px 4px 0px rgba(0,0,0,0.12), 0px 6px 13px 0px rgba(0,0,0,0.12)'
+              boxShadow:
+                '0px 0.5px 4px 0px rgba(0,0,0,0.12), 0px 6px 13px 0px rgba(0,0,0,0.12)',
             }}
-          >
-            
-          </div>
+          ></div>
         )}
       />
     </div>

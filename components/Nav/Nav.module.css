@@ -70,7 +70,7 @@
 }
 
 .navLogo {
-  transition: filter .1s ease-in-out;
+  transition: filter 0.1s ease-in-out;
   width: auto;
   height: 44px;
   -o-object-fit: contain;
@@ -88,7 +88,7 @@
 }
 
 .navLinkActive {
-  color: #FC208A;
+  color: #fc208a;
 }
 
 .buttonPrimary {
@@ -98,14 +98,15 @@
   cursor: pointer;
   padding: 14px 24px;
   border-radius: 8px;
-  background-color: #FC208A;
+  background-color: #fc208a;
   box-shadow: 0 2px 6px -2px rgb(0 0 0 / 37%);
-  -webkit-transition: -webkit-transform 200ms cubic-bezier(.645, .045, .355, 1);
-  transition: -webkit-transform 200ms cubic-bezier(.645, .045, .355, 1);
-  transition: transform 200ms cubic-bezier(.645, .045, .355, 1);
-  transition: transform 200ms cubic-bezier(.645, .045, .355, 1),
-  -webkit-transform 200ms cubic-bezier(.645, .045, .355, 1);
-  color: #FFF;
+  -webkit-transition: -webkit-transform 200ms
+    cubic-bezier(0.645, 0.045, 0.355, 1);
+  transition: -webkit-transform 200ms cubic-bezier(0.645, 0.045, 0.355, 1);
+  transition: transform 200ms cubic-bezier(0.645, 0.045, 0.355, 1);
+  transition: transform 200ms cubic-bezier(0.645, 0.045, 0.355, 1),
+    -webkit-transform 200ms cubic-bezier(0.645, 0.045, 0.355, 1);
+  color: #fff;
   font-size: 16px;
   line-height: 19px;
   font-weight: 700;
