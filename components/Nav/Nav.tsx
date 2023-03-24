@@ -1,26 +1,25 @@
 // components/Nav/Nav.tsx
 
-import React, { Component } from 'react'
+import React, {Component} from 'react';
 import * as Scroll from 'react-scroll';
-import NavLogo from './NavLogo'
-import styles from './Nav.module.css'
-import MobileNav from './MobileNav'
+import NavLogo from './NavLogo';
+import styles from './Nav.module.css';
+import MobileNav from './MobileNav';
 
 let Link = Scroll.Link;
 
-
 export default class Nav extends Component {
   state = {
-    scrollPosition: 0
-  }
+    scrollPosition: 0,
+  };
 
   listenToScrollEvent = () => {
-    document.addEventListener("scroll", () => {
+    document.addEventListener('scroll', () => {
       requestAnimationFrame(() => {
         this.calculateScrollDistance();
       });
     });
-  }
+  };
 
   calculateScrollDistance = () => {
     const scrollTop = window.pageYOffset; // how much the user has scrolled by
@@ -28,20 +27,23 @@ export default class Nav extends Component {
     const docHeight = this.getDocHeight();
 
     const totalDocScrollLength = docHeight - winHeight;
-    const scrollPosition = Math.floor(scrollTop / totalDocScrollLength * 100);
+    const scrollPosition = Math.floor((scrollTop / totalDocScrollLength) * 100);
 
     this.setState({
       scrollPosition,
     });
-  }
+  };
 
   getDocHeight = () => {
     return Math.max(
-      document.body.scrollHeight, document.documentElement.scrollHeight,
-      document.body.offsetHeight, document.documentElement.offsetHeight,
-      document.body.clientHeight, document.documentElement.clientHeight
+      document.body.scrollHeight,
+      document.documentElement.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.offsetHeight,
+      document.body.clientHeight,
+      document.documentElement.clientHeight,
     );
-  }
+  };
 
   componentDidMount() {
     this.listenToScrollEvent();
@@ -53,11 +55,16 @@ export default class Nav extends Component {
     } else {
       return '0';
     }
-  }
+  };
 
   render() {
     return (
-      <nav className={styles.nav} style={{borderBottom: '1px solid rgba(0, 0, 0, ' + this.navSepCalc() + ')'}}>
+      <nav
+        className={styles.nav}
+        style={{
+          borderBottom: '1px solid rgba(0, 0, 0, ' + this.navSepCalc() + ')',
+        }}
+      >
         <div className={styles.navContainer}>
           <Link
             href="#"
@@ -80,8 +87,7 @@ export default class Nav extends Component {
                 <NavLogo src="/reflect.svg" height="44" alt="Reflect logo" />
               </Link>
             </li>
-            <li>
-            </li>
+            <li></li>
             <li>
               <Link
                 href="#"
@@ -91,7 +97,9 @@ export default class Nav extends Component {
                 spy={true}
                 smooth={true}
                 duration={250}
-              >Benefits</Link>
+              >
+                Benefits
+              </Link>
             </li>
             <li>
               <Link
@@ -102,7 +110,9 @@ export default class Nav extends Component {
                 spy={true}
                 smooth={true}
                 duration={250}
-              >How it works</Link>
+              >
+                How it works
+              </Link>
             </li>
             <li>
               <Link
@@ -113,7 +123,9 @@ export default class Nav extends Component {
                 spy={true}
                 smooth={true}
                 duration={250}
-              >Customers</Link>
+              >
+                Customers
+              </Link>
             </li>
             <li>
               <Link
@@ -124,7 +136,9 @@ export default class Nav extends Component {
                 spy={true}
                 smooth={true}
                 duration={250}
-              >Pricing</Link>
+              >
+                Pricing
+              </Link>
             </li>
             <li>
               <Link
@@ -135,7 +149,9 @@ export default class Nav extends Component {
                 spy={true}
                 smooth={true}
                 duration={250}
-              >Contact</Link>
+              >
+                Contact
+              </Link>
             </li>
             <li>
               <Link
@@ -144,12 +160,14 @@ export default class Nav extends Component {
                 to="get-started"
                 smooth={true}
                 duration={250}
-              >Get started</Link>
+              >
+                Get started
+              </Link>
             </li>
           </ul>
           <MobileNav />
         </div>
       </nav>
     );
-}
+  }
 }

@@ -24,10 +24,17 @@ export default function How() {
     <>
       {/* Step 1: Define mutators */}
       <div className={styles.howStep}>
-        <h3 className={styles.howHeader}><strong>Step 1:</strong> Define Mutators</h3>
+        <h3 className={styles.howHeader}>
+          <strong>Step 1:</strong> Define Mutators
+        </h3>
         <p className={styles.howDescription}>
-          Mutators are functions you define to change the datastore. The UI updates <strong>instantly</strong> (in the same frame) when mutators are called. Milliseconds later, Reflect replays the mutator on the server to sync the change.
-          Because of server replay, mutators handle many conflicts naturally. If two client simultaneously increment a counter, the mutator will naturally sum the changes rather than overwrite one.
+          Mutators are functions you define to change the datastore. The UI
+          updates <strong>instantly</strong> (in the same frame) when mutators
+          are called. Milliseconds later, Reflect replays the mutator on the
+          server to sync the change. Because of server replay, mutators handle
+          many conflicts naturally. If two client simultaneously increment a
+          counter, the mutator will naturally sum the changes rather than
+          overwrite one.
         </p>
         <div className={styles.howGridLayout2}>
           <div className={styles.codeBlock}>
@@ -69,18 +76,20 @@ export default function How() {
 
       {/* Step 2: Render Reactively */}
       <div className={styles.howStep}>
-        <h3 className={styles.howHeader}><strong>Step 2:</strong> Render Reactively</h3>
+        <h3 className={styles.howHeader}>
+          <strong>Step 2:</strong> Render Reactively
+        </h3>
         <p className={styles.howDescription}>
-          Subscribe to changes in Reflect and render your UI reactively. There&apos;s no need to interpolate. You receive updates at 60fps, just as if the collaborator was local.
+          Subscribe to changes in Reflect and render your UI reactively.
+          There&apos;s no need to interpolate. You receive updates at 60fps,
+          just as if the collaborator was local.
         </p>
         <div className={styles.howGridLayout2}>
           <div className={styles.codeBlock}>
             {!toggleDemo2 ? (
               <>
                 <div className={styles.codeBlockToggle}>
-                  <button onClick={toggleSwitchDemo2}>
-                    index.tsx
-                  </button>
+                  <button onClick={toggleSwitchDemo2}>index.tsx</button>
                   <button className={styles.codeToggleActive}>
                     mutators.ts
                   </button>
@@ -121,7 +130,9 @@ export default function How() {
 
       {/* Step 3: Deploy */}
       <div className={styles.howStep}>
-        <h3 className={styles.howHeader}><strong>Step 3:</strong> Deploy</h3>
+        <h3 className={styles.howHeader}>
+          <strong>Step 3:</strong> Deploy
+        </h3>
         <p className={styles.howDescription}>
           Reflect publishes your mutators to a unique sandboxed server
           environment. Rooms are backed by Cloudflare&apos;s Durable Object
@@ -144,8 +155,6 @@ export default function How() {
             .
           </p>
         </div>
-
-        
       </div>
     </>
   );

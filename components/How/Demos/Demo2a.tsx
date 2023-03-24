@@ -1,8 +1,8 @@
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
+import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter';
+import {vscDarkPlus} from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 const Demo2a = () => {
-    const codeString = `export default {
+  const codeString = `export default {
   async increment(tx: WriteTransaction, args: {key: string, delta: number}) {
     console.log(\`Running mutation \${tx.mutationID} from \` +
                 \`\${tx.clientID} on \${tx.environment}\`);
@@ -16,14 +16,19 @@ const Demo2a = () => {
   const codeBlock = {
     background: 'transparent',
     paddingLeft: 0,
-    paddingRight: 0
+    paddingRight: 0,
   };
 
-    return (
-    <SyntaxHighlighter language="typescript" showLineNumbers customStyle={codeBlock} style={vscDarkPlus}>
-        {codeString}
+  return (
+    <SyntaxHighlighter
+      language="typescript"
+      showLineNumbers
+      customStyle={codeBlock}
+      style={vscDarkPlus}
+    >
+      {codeString}
     </SyntaxHighlighter>
-    );
+  );
 };
 
 export default Demo2a;

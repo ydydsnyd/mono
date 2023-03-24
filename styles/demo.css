@@ -6,7 +6,7 @@ body.custom-cursor * {
 }
 
 #demo {
-  pointer-events:none;
+  pointer-events: none;
   position: relative;
   width: 100%;
   max-width: 600px;
@@ -31,15 +31,17 @@ body.custom-cursor * {
 #preload.loaded {
   opacity: 0;
 }
-#preload, #canvas3D {
+#preload,
+#canvas3D {
   position: absolute;
   width: 100%;
   height: 100%;
   top: 0;
   left: 0;
 }
-.preload-1, .preload-2 {
-  stroke: #2A2C2E;
+.preload-1,
+.preload-2 {
+  stroke: #2a2c2e;
   stroke-miterlimit: 10;
   stroke-width: 1px;
 }
@@ -62,10 +64,12 @@ body.custom-cursor * {
   background-color: rgba(243, 227, 124, 0.5);
 }
 
-#caches, #server-caches {
+#caches,
+#server-caches {
   display: block;
 }
-#caches canvas, #server-caches canvas {
+#caches canvas,
+#server-caches canvas {
   width: 150px;
   height: 150px;
 }
@@ -169,8 +173,8 @@ body.custom-cursor * {
 .cursor:not(.local).active {
   opacity: 1;
 }
-.cursor .pointer svg  {
-  filter: drop-shadow(0px 2px 2px rgba(0,0,0,.2));
+.cursor .pointer svg {
+  filter: drop-shadow(0px 2px 2px rgba(0, 0, 0, 0.2));
 }
 
 .cursor.mobile {
@@ -182,7 +186,7 @@ body.custom-cursor * {
   transition: width, height, border-width, 220ms;
   width: 0px;
   height: 0px;
-  transition-timing-function: cubic-bezier(0.460, 0.110, 0.065, 1.650);
+  transition-timing-function: cubic-bezier(0.46, 0.11, 0.065, 1.65);
   transition-delay: 50ms;
   display: none;
 }
@@ -207,14 +211,14 @@ body.custom-cursor * {
   padding: 4px;
   font-weight: 700;
   font-size: 0.8em;
-  color: rgba(0,0,0,.8);
+  color: rgba(0, 0, 0, 0.8);
   border-radius: 4px;
   white-space: nowrap;
   left: 12px;
   top: -12px;
   transition: top 300ms, opacity 100ms;
-  transition-timing-function: cubic-bezier(0.460, 0.110, 0.065, 1.650);
-  box-shadow: 0px 2px 2px rgba(0,0,0,.2);
+  transition-timing-function: cubic-bezier(0.46, 0.11, 0.065, 1.65);
+  box-shadow: 0px 2px 2px rgba(0, 0, 0, 0.2);
 }
 
 .location .arrow {
