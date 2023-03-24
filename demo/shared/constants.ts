@@ -11,13 +11,18 @@ export const ORCHESTRATOR_ROOM_ID = 'orchestrator-room';
 export const ROOM_MAX_ACTORS = 100;
 
 // Cursors
+// Min/max Y values to show a custom cursor in. These values are percentage of
+// the alive canvas, calculated from the center of the canvas.
 export const SHOW_CUSTOM_CURSOR_MIN_Y = -1.2;
 export const SHOW_CUSTOM_CURSOR_MAX_Y = 2;
 // Touches give us the radius of the contact surface:
 // https://developer.mozilla.org/en-US/docs/Web/API/Touch/radiusX
 // Draw a circle around it that has a diameter this many pixels bigger than
 // that circle.
-export const TOUCH_CIRCLE_PADDING = 70;
+export const TOUCH_CIRCLE_PADDING = 70; // px
+// Require the finger to be down for a bit before showing the indicator, to
+// avoid triggering on taps
+export const MIN_TOUCH_TIME_FOR_INDICATOR = 100; // ms
 
 // Splatters
 // To avoid our data growing infinitely, "flatten" splatters to an image in

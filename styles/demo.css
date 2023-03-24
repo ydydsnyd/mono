@@ -183,6 +183,7 @@ body.custom-cursor * {
   width: 0px;
   height: 0px;
   transition-timing-function: cubic-bezier(0.460, 0.110, 0.065, 1.650);
+  transition-delay: 50ms;
   display: none;
 }
 .cursor.mobile .finger {

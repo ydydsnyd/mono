@@ -2,6 +2,7 @@ import {
   ACTOR_UPDATE_INTERVAL,
   COLOR_PALATE,
   LOCATION_PLACEHOLDER,
+  MIN_TOUCH_TIME_FOR_INDICATOR,
   TOUCH_CIRCLE_PADDING,
 } from '../shared/constants';
 import {
@@ -44,6 +45,14 @@ export const cursorRenderer = (
     return cursorDiv;
   };
   let lastActorUpdate = -1;
+  let touchStart = -1;
+  const showingTouchCursor = (cursor: Cursor) => {
+    return (
+      cursor.actorId === localCursor.actorId &&
+      localCursor.isDown &&
+      localCursor.touchState === TouchState.Touching
+    );
+  };
   const redrawCursors = async () => {
     if (cursorNeedsUpdate) {
       cursorNeedsUpdate = false;
@@ -60,6 +69,7 @@ export const cursorRenderer = (
       const cursorDiv = await getCursorDiv(cursor, cursor.onPage);
       if (cursorDiv) {
         const isLocal = cursor.actorId === localCursor.actorId;
+        const showFinger = now() - touchStart > MIN_TOUCH_TIME_FOR_INDICATOR;
         // Show a special, different cursor locally
         cursorDiv.classList.remove('mobile');
         if (isLocal && localCursor.touchState === TouchState.Touching) {
@@ -70,14 +80,11 @@ export const cursorRenderer = (
         }
         const cursorX = x * demoBB.width + demoBB.x;
         const cursorY = y * demoBB.height + demoBB.y;
-        const showingTouchCursor =
-          isLocal &&
-          localCursor.isDown &&
-          localCursor.touchState === TouchState.Touching;
-        if (cursor.onPage || showingTouchCursor) {
-          cursorDiv.classList.add('active');
-        } else {
-          cursorDiv.classList.remove('active');
+        cursorDiv.classList.remove('active');
+        if (cursor.onPage) {
+          if (cursor.touchState !== TouchState.Touching || showFinger) {
+            cursorDiv.classList.add('active');
+          }
         }
         cursorDiv.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0)`;
         const color = colorToString(
@@ -87,7 +94,7 @@ export const cursorRenderer = (
         const locationDiv = cursorDiv.querySelector(
           '.location',
         ) as HTMLDivElement;
-        if (showingTouchCursor) {
+        if (showingTouchCursor(cursor) && showFinger) {
           const lastTouch = lastTouchEvent?.touches[0];
           const size =
             Math.max(lastTouch?.radiusX || 0, lastTouch?.radiusY || 0, 10) +
@@ -100,8 +107,8 @@ export const cursorRenderer = (
         } else {
           fingerDiv.style.removeProperty('width');
           fingerDiv.style.removeProperty('height');
-          fingerDiv.style.removeProperty('marginLeft');
-          fingerDiv.style.removeProperty('marginTop');
+          fingerDiv.style.removeProperty('margin-left');
+          fingerDiv.style.removeProperty('margin-top');
           locationDiv.style.removeProperty('top');
         }
         if (cursorDiv.dataset['color'] !== color) {
@@ -156,15 +163,12 @@ export const cursorRenderer = (
   };
   let lastPosition = {x: 0, y: 0};
   // Tracking touches is tricky. Browsers fire a touchstart, touchend, mousedown,
-  // mouseup for every touch. If you move in between, that's fine. But for a brief
-  // touch, this will cause us to unset the Touching bit before firing mouse
-  // events. So, when we end touching, we just store a value here momentarily so
-  // that we can check it in the mousedown handler and not accidentally treat a
-  // tap as a click.
-  let touchTimer: null | number = null;
-  const startTouchTimer = () => {
-    touchTimer = window.setTimeout(() => (touchTimer = null), 50);
-  };
+  // mouseup for every touch. If you move your finger, things will work as expected.
+  // But for brief touches, this will cause us to unset the Touching bit before
+  // firing mouse events, which causes us to incorrectly identify a click.
+  // // Given the rarity of switching back and forth between mouse and finger, solve
+  // for this by always ignoring the next mouse event when a touch is identified.
+  let skipNextClick = false;
   const mouseElement = document.body;
   const isInIntro = getHasParent(document.getElementById('intro')!);
   let cursorNeedsUpdate = false;
@@ -178,7 +182,7 @@ export const cursorRenderer = (
     }
     localCursor.onPage =
       localCursor.touchState === TouchState.Touching
-        ? localCursor.isDown && !touchScrolling
+        ? showingTouchCursor(localCursor) && !touchScrolling
         : true;
     localCursor.x = (lastPosition.x - demoBB.x) / demoBB.width;
     localCursor.y = (lastPosition.y - demoBB.y) / demoBB.height;
@@ -217,7 +221,7 @@ export const cursorRenderer = (
     'touchstart',
     (e: TouchEvent) => {
       lastTouchEvent = e;
-      localCursor.touchState = TouchState.Touching;
+      touchStart = now();
       const demoBB = getDemoContainer().getBoundingClientRect();
       // If we're consuming the event, prevent scrolling.
       if (
@@ -231,8 +235,9 @@ export const cursorRenderer = (
         touchScrolling = false;
       }
       localCursor.isDown = true;
-      cursorNeedsUpdate = true;
+      localCursor.touchState = TouchState.Touching;
       updateCursorPosition({x: e.touches[0].clientX, y: e.touches[0].clientY});
+      cursorNeedsUpdate = true;
     },
     {passive: false},
   );
@@ -244,7 +249,7 @@ export const cursorRenderer = (
       // Only end if we started with a touch
       if (localCursor.touchState === TouchState.Touching) {
         // Prevent the mousedown-mouseup events that happens when tapping
-        startTouchTimer();
+        skipNextClick = true;
         localCursor.isDown = false;
         localCursor.onPage = false;
         cursorNeedsUpdate = true;
@@ -281,10 +286,7 @@ export const cursorRenderer = (
 
   // Mouse Events
   mouseElement.addEventListener('mousedown', (e: MouseEvent) => {
-    // Mousedown events always fire after touchstart events. If we tap, we'll
-    // accidentally perform mouse-like UX (e.g. showing the cursor) incorrectly
-    // unless we track a little delay on the touch.
-    if (touchTimer) {
+    if (skipNextClick) {
       return;
     }
     updateCursorPosition({x: e.clientX, y: e.clientY});
@@ -303,7 +305,8 @@ export const cursorRenderer = (
     updateCursorPosition({x: e.clientX, y: e.clientY});
   });
   mouseElement.addEventListener('mouseup', () => {
-    if (touchTimer) {
+    if (skipNextClick) {
+      skipNextClick = false;
       return;
     }
     localCursor.isDown = false;

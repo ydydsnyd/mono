@@ -266,7 +266,7 @@ const stateInitializer =
     }, {} as State['cursors']);
     for await (const letter of LETTERS) {
       const cache = await unchunk(tx, `cache/${letter}`);
-      if (cache) {
+      if (cache && cache !== UNINITIALIZED_CACHE_SENTINEL) {
         updateCache(letter, cache, debug);
       }
     }
