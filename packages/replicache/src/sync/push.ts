@@ -1,6 +1,10 @@
 import type {LogContext} from '@rocicorp/logger';
-import * as db from '../db/mod.js';
+import {assert} from 'shared/asserts.js';
+import * as valita from 'shared/valita.js';
 import type * as dag from '../dag/mod.js';
+import {commitIsLocalDD31, commitIsLocalSDD} from '../db/commit.js';
+import * as db from '../db/mod.js';
+import {FrozenJSONValue, jsonSchema, ReadonlyJSONValue} from '../json.js';
 import {
   assertPusherResult,
   Pusher,
@@ -8,77 +12,11 @@ import {
   PushError,
 } from '../pusher.js';
 import {toError} from '../to-error.js';
-import {commitIsLocalDD31, commitIsLocalSDD} from '../db/commit.js';
-import type {ClientID, ClientGroupID} from './ids.js';
-import {
-  assert,
-  assertArray,
-  assertNumber,
-  assertObject,
-  assertString,
-} from 'shared/asserts.js';
-import {
-  assertJSONValue,
-  FrozenJSONValue,
-  ReadonlyJSONObject,
-  ReadonlyJSONValue,
-} from '../json.js';
 import {withRead} from '../with-transactions.js';
+import {ClientGroupID, ClientID, clientIDSchema} from './ids.js';
 
 export const PUSH_VERSION_SDD = 0;
 export const PUSH_VERSION_DD31 = 1;
-
-/**
- * The JSON value used as the body when doing a POST to the [push
- * endpoint](/reference/server-push). This is the legacy version (V0) and it is
- * still used when recovering mutations from old clients.
- */
-export type PushRequestV0 = {
-  pushVersion: 0;
-  /**
-   * `schemaVersion` can optionally be used to specify to the push endpoint
-   * version information about the mutators the app is using (e.g., format of
-   * mutator args).
-   */
-  schemaVersion: string;
-  profileID: string;
-
-  clientID: ClientID;
-  mutations: MutationV0[];
-};
-
-/**
- * The JSON value used as the body when doing a POST to the [push
- * endpoint](/reference/server-push).
- */
-export type PushRequestV1 = {
-  pushVersion: 1;
-  /**
-   * `schemaVersion` can optionally be used to specify to the push endpoint
-   * version information about the mutators the app is using (e.g., format of
-   * mutator args).
-   */
-  schemaVersion: string;
-  profileID: string;
-
-  clientGroupID: ClientGroupID;
-  mutations: MutationV1[];
-};
-
-export type PushRequest = PushRequestV0 | PushRequestV1;
-
-function assertPushRequestBase(v: unknown): asserts v is ReadonlyJSONObject {
-  assertObject(v);
-  assertString(v.schemaVersion);
-  assertString(v.profileID);
-}
-
-export function assertPushRequestV1(v: unknown): asserts v is PushRequestV1 {
-  assertPushRequestBase(v);
-  assertString(v.clientGroupID);
-  assertArray(v.mutations);
-  v.mutations.forEach(assertMutationsV1);
-}
 
 /**
  * Mutation describes a single mutation done on the client. This is the legacy
@@ -102,17 +40,68 @@ export type MutationV1 = {
   readonly clientID: ClientID;
 };
 
-function assertMutationsV0(v: unknown): asserts v is MutationV0 {
-  assertObject(v);
-  assertNumber(v.id);
-  assertString(v.name);
-  assertJSONValue(v.args);
-  assertNumber(v.timestamp);
-}
+const mutationV1Schema = valita.object({
+  id: valita.number(),
+  name: valita.string(),
+  args: jsonSchema,
+  timestamp: valita.number(),
+  clientID: clientIDSchema,
+});
 
-function assertMutationsV1(v: unknown): asserts v is MutationV1 {
-  assertMutationsV0(v);
-  assertString((v as Partial<MutationV1>).clientID);
+/**
+ * The JSON value used as the body when doing a POST to the [push
+ * endpoint](/reference/server-push). This is the legacy version (V0) and it is
+ * still used when recovering mutations from old clients.
+ */
+export type PushRequestV0 = {
+  pushVersion: 0;
+  /**
+   * `schemaVersion` can optionally be used to specify to the push endpoint
+   * version information about the mutators the app is using (e.g., format of
+   * mutator args).
+   */
+  schemaVersion: string;
+  profileID: string;
+
+  clientID: ClientID;
+  mutations: MutationV0[];
+};
+
+const pushRequestV1Schema = valita.object({
+  pushVersion: valita.literal(1),
+  /**
+   * `schemaVersion` can optionally be used to specify to the push endpoint
+   * version information about the mutators the app is using (e.g., format of
+   * mutator args).
+   */
+  schemaVersion: valita.string(),
+  profileID: valita.string(),
+  clientGroupID: valita.string(),
+  mutations: valita.array(mutationV1Schema),
+});
+
+/**
+ * The JSON value used as the body when doing a POST to the [push
+ * endpoint](/reference/server-push).
+ */
+export type PushRequestV1 = {
+  pushVersion: 1;
+  /**
+   * `schemaVersion` can optionally be used to specify to the push endpoint
+   * version information about the mutators the app is using (e.g., format of
+   * mutator args).
+   */
+  schemaVersion: string;
+  profileID: string;
+
+  clientGroupID: ClientGroupID;
+  mutations: MutationV1[];
+};
+
+export type PushRequest = PushRequestV0 | PushRequestV1;
+
+export function assertPushRequestV1(v: unknown): asserts v is PushRequestV1 {
+  valita.assert(v, pushRequestV1Schema);
 }
 
 type FrozenMutationV0 = Omit<MutationV0, 'args'> & {

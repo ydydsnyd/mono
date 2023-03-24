@@ -1,3 +1,5 @@
+import * as valita from '@badrap/valita';
+import * as v from 'shared/valita.js';
 import {assertObject, throwInvalidType} from './asserts.js';
 import {skipAssertJSONValue} from './config.js';
 import {hasOwn} from './has-own.js';
@@ -211,3 +213,21 @@ function isJSONArray(v: unknown[], path: Path): v is JSONValue[] {
   }
   return true;
 }
+
+const path: (string | number)[] = [];
+
+export const jsonSchema: valita.Type<ReadonlyJSONValue> = v
+  .unknown()
+  .chain(v => {
+    if (skipAssertJSONValue) {
+      return valita.ok(v as ReadonlyJSONValue);
+    }
+    const rv = isJSONValue(v, path)
+      ? valita.ok(v)
+      : valita.err({
+          message: `Not a JSON value`,
+          path: path.slice(),
+        });
+    path.length = 0;
+    return rv;
+  });

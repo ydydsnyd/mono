@@ -1,37 +1,37 @@
 import {expect} from '@esm-bundle/chai';
+import {LogContext} from '@rocicorp/logger';
 import {assert, assertNotNull, assertNotUndefined} from 'shared/asserts.js';
+import sinon from 'sinon';
 import * as dag from '../dag/mod.js';
+import {assertLocalMetaDD31, assertSnapshotCommitDD31} from '../db/commit.js';
 import * as db from '../db/mod.js';
-import type * as sync from '../sync/mod.js';
 import {
   ChainBuilder,
   createMutatorName,
   getChunkSnapshot,
 } from '../db/test-helpers.js';
 import {assertHash, Hash, makeNewFakeHashFunction} from '../hash.js';
-import {
-  setClients,
-  getClients,
-  ClientStateNotFoundError,
-  ClientV5,
-  initClientV5,
-  Client,
-} from './clients.js';
-import {assertLocalMetaDD31, assertSnapshotCommitDD31} from '../db/commit.js';
-import {LogContext} from '@rocicorp/logger';
+import type {JSONValue} from '../json.js';
+import type {MutatorDefs} from '../mod.js';
+import {promiseVoid} from '../resolved-promises.js';
+import type {ClientGroupID, ClientID} from '../sync/ids.js';
+import type {WriteTransaction} from '../transactions.js';
+import {withRead, withWrite} from '../with-transactions.js';
 import {
   ClientGroup,
   CLIENT_GROUPS_HEAD_NAME,
   getClientGroup,
   setClientGroup,
 } from './client-groups.js';
+import {
+  Client,
+  ClientStateNotFoundError,
+  ClientV5,
+  getClients,
+  initClientV5,
+  setClients,
+} from './clients.js';
 import {persistDD31} from './persist.js';
-import type {WriteTransaction} from '../transactions.js';
-import type {JSONValue} from '../json.js';
-import type {MutatorDefs} from '../mod.js';
-import sinon from 'sinon';
-import {promiseVoid} from '../resolved-promises.js';
-import {withRead, withWrite} from '../with-transactions.js';
 
 const PERDAG_TEST_SETUP_HEAD_NAME = 'test-setup-head';
 
@@ -47,8 +47,8 @@ suite('persistDD31', () => {
     perdag: dag.TestStore,
     memdagChainBuilder: ChainBuilder,
     perdagClientGroupChainBuilder: ChainBuilder,
-    clients: {clientID: sync.ClientID; client: Client}[],
-    clientGroupID: sync.ClientGroupID,
+    clients: {clientID: ClientID; client: Client}[],
+    clientGroupID: ClientGroupID,
     testPersist: (
       persistedExpectation: PersistedExpectation,
       onGatherMemOnlyChunksForTest?: () => Promise<void>,
@@ -75,8 +75,8 @@ suite('persistDD31', () => {
     memdagCookie?: string;
     perdagClientGroupCookie?: string;
     memdagValueMap?: [string, JSONValue][];
-    memdagMutationIDs?: Record<sync.ClientID, number>;
-    perdagClientGroupMutationIDs?: Record<sync.ClientID, number>;
+    memdagMutationIDs?: Record<ClientID, number>;
+    perdagClientGroupMutationIDs?: Record<ClientID, number>;
   }) {
     const {
       memdagCookie = 'cookie1',
@@ -840,7 +840,7 @@ async function setupPersistTest() {
     };
   }
 
-  let clientGroupID: undefined | sync.ClientGroupID;
+  let clientGroupID: undefined | ClientGroupID;
   const createClient = async () => {
     const [cID, c] = await initClientV5(
       new LogContext(),
@@ -855,7 +855,7 @@ async function setupPersistTest() {
       client: c,
     };
   };
-  const clients: {clientID: sync.ClientID; client: ClientV5}[] = [];
+  const clients: {clientID: ClientID; client: ClientV5}[] = [];
   for (let i = 0; i < 3; i++) {
     clients.push(await createClient());
   }

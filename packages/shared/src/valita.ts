@@ -1,4 +1,4 @@
-import type * as v from '@badrap/valita';
+import * as v from '@badrap/valita';
 
 export * from '@badrap/valita';
 
@@ -16,6 +16,10 @@ function toDisplay(v: unknown): string {
       if (v === null) {
         return 'null';
       }
+      if (Array.isArray(v)) {
+        return 'array';
+      }
+
       return typeof v;
   }
 }
@@ -113,26 +117,36 @@ function getMessage(err: v.Err, v: unknown): string {
   }
 }
 
-export function parse<T>(v: unknown, s: Type<T>): T {
-  const res = test(v, s);
+type ParseOptionsMode = 'passthrough' | 'strict' | 'strip';
+
+export function parse<T>(v: unknown, s: Type<T>, mode?: ParseOptionsMode): T {
+  const res = test(v, s, mode);
   if (!res.ok) {
     throw new TypeError(res.error);
   }
   return res.value;
 }
 
-export function is<T>(v: unknown, s: Type<T>): v is T {
-  return (s as v.Type<T>).try(v).ok;
+export function is<T>(v: unknown, s: Type<T>, mode?: ParseOptionsMode): v is T {
+  return test(v, s, mode).ok;
 }
 
-export function assert<T>(v: unknown, s: Type<T>): asserts v is T {
-  parse(v, s);
+export function assert<T>(
+  v: unknown,
+  s: Type<T>,
+  mode?: ParseOptionsMode,
+): asserts v is T {
+  parse(v, s, mode);
 }
 
 type Result<T> = {ok: true; value: T} | {ok: false; error: string};
 
-export function test<T>(v: unknown, s: Type<T>): Result<T> {
-  const res = (s as v.Type<T>).try(v);
+export function test<T>(
+  v: unknown,
+  s: Type<T>,
+  mode?: ParseOptionsMode,
+): Result<T> {
+  const res = (s as v.Type<T>).try(v, mode ? {mode} : undefined);
   if (!res.ok) {
     return {ok: false, error: getMessage(res, v)};
   }
@@ -148,6 +162,17 @@ export type Type<T> = Omit<
 >;
 
 // Re-export the valita type `Type` using a longer less convenient name because
-// we do need it in one place.
-// TODO(arv): Remove this.
+// we do need it in a few places.
+// TODO(arv): Figure out a better way to do this.
 export type ValitaType<T> = v.Type<T>;
+
+export type InferReadonly<T extends v.Type> = Readonly<v.Infer<T>>;
+
+export function nonEmptyString(): ValitaType<string> {
+  return v.string().chain(s => {
+    if (s.length === 0) {
+      return v.err('Expected non-empty string');
+    }
+    return v.ok(s);
+  });
+}

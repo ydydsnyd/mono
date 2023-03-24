@@ -1,64 +1,63 @@
-import {
-  initReplicacheTesting,
-  replicacheForTesting,
-  tickAFewTimes,
-  clock,
-  disableAllBackgroundProcesses,
-} from './test-util.js';
+import {expect} from '@esm-bundle/chai';
+import {LogContext} from '@rocicorp/logger';
+import {assert} from 'shared/asserts.js';
+import sinon from 'sinon';
+import * as dag from './dag/mod.js';
+import type * as db from './db/mod.js';
+import {ChainBuilder} from './db/test-helpers.js';
+import {assertHash} from './hash.js';
+import {assertJSONObject, JSONObject, ReadonlyJSONObject} from './json.js';
+import * as persist from './persist/mod.js';
 import {
   MutatorDefs,
   REPLICACHE_FORMAT_VERSION_DD31,
   REPLICACHE_FORMAT_VERSION_SDD,
 } from './replicache.js';
-import {ChainBuilder} from './db/test-helpers.js';
-import type * as db from './db/mod.js';
-import * as dag from './dag/mod.js';
-import * as persist from './persist/mod.js';
-import type * as sync from './sync/mod.js';
-import {assertHash} from './hash.js';
-import {assert} from 'shared/asserts.js';
-import {expect} from '@esm-bundle/chai';
+import {
+  clock,
+  disableAllBackgroundProcesses,
+  initReplicacheTesting,
+  replicacheForTesting,
+  tickAFewTimes,
+} from './test-util.js';
 import {uuid} from './uuid.js';
-import {assertJSONObject, JSONObject, ReadonlyJSONObject} from './json.js';
-import sinon from 'sinon';
-
 // fetch-mock has invalid d.ts file so we removed that on npm install.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
-import {initClientWithClientID} from './persist/clients-test-helpers.js';
-import {
-  assertPushRequestV1,
-  PushRequestV1,
-  PushRequestV0,
-  PUSH_VERSION_DD31,
-  PUSH_VERSION_SDD,
-} from './sync/push.js';
-import {assertClientV5, assertClientV4} from './persist/clients.js';
-import {LogContext} from '@rocicorp/logger';
-import type {PullResponseV1, PullResponseV0} from './puller.js';
-import {
-  PullRequestV1,
-  PullRequestV0,
-  PULL_VERSION_DD31,
-  PULL_VERSION_SDD,
-} from './sync/pull.js';
 import {assertLocalMetaDD31} from './db/commit.js';
+import {initClientWithClientID} from './persist/clients-test-helpers.js';
+import {assertClientV4, assertClientV5} from './persist/clients.js';
+import type {PullResponseV0, PullResponseV1} from './puller.js';
+import type {PushResponse} from './pusher.js';
 import {
   createAndPersistClientWithPendingLocalSDD,
   createPerdag,
 } from './replicache-mutation-recovery.test.js';
 import {stringCompare} from './string-compare.js';
-import type {PushResponse} from './pusher.js';
+import type {ClientGroupID, ClientID} from './sync/ids.js';
+import {
+  PullRequestV0,
+  PullRequestV1,
+  PULL_VERSION_DD31,
+  PULL_VERSION_SDD,
+} from './sync/pull.js';
+import {
+  assertPushRequestV1,
+  PushRequestV0,
+  PushRequestV1,
+  PUSH_VERSION_DD31,
+  PUSH_VERSION_SDD,
+} from './sync/push.js';
 import {withRead} from './with-transactions.js';
 
 async function createAndPersistClientWithPendingLocalDD31(
-  clientID: sync.ClientID,
+  clientID: ClientID,
   perdag: dag.Store,
   numLocal: number,
   mutatorNames: string[],
   cookie: string | number,
-  snapshotLastMutationIDs?: Record<sync.ClientID, number> | undefined,
+  snapshotLastMutationIDs?: Record<ClientID, number> | undefined,
 ): Promise<db.LocalMetaDD31[]> {
   const testMemdag = new dag.LazyStore(
     perdag,
@@ -104,11 +103,11 @@ async function createAndPersistClientWithPendingLocalDD31(
 }
 
 async function persistSnapshotDD31(
-  clientID: sync.ClientID,
+  clientID: ClientID,
   perdag: dag.Store,
   cookie: string | number,
   mutatorNames: string[],
-  snapshotLastMutationIDs: Record<sync.ClientID, number>,
+  snapshotLastMutationIDs: Record<ClientID, number>,
 ): Promise<void> {
   const testMemdag = new dag.LazyStore(
     perdag,
@@ -146,8 +145,8 @@ suite('DD31', () => {
 
   function createPushRequestBodyDD31(
     profileID: string,
-    clientGroupID: sync.ClientGroupID,
-    clientID: sync.ClientID,
+    clientGroupID: ClientGroupID,
+    clientID: ClientID,
     localMetas: db.LocalMetaDD31[],
     schemaVersion: string,
   ): ReadonlyJSONObject {
@@ -169,14 +168,10 @@ suite('DD31', () => {
   async function testRecoveringMutationsOfClientV5(args: {
     schemaVersionOfClientWPendingMutations: string;
     schemaVersionOfClientRecoveringMutations: string;
-    snapshotLastMutationIDs?: Record<sync.ClientID, number> | undefined;
-    snapshotLastMutationIDsAfterPull?:
-      | Record<sync.ClientID, number>
-      | undefined;
-    pullLastMutationIDChanges?: Record<sync.ClientID, number> | undefined;
-    expectedLastServerAckdMutationIDs?:
-      | Record<sync.ClientID, number>
-      | undefined;
+    snapshotLastMutationIDs?: Record<ClientID, number> | undefined;
+    snapshotLastMutationIDsAfterPull?: Record<ClientID, number> | undefined;
+    pullLastMutationIDChanges?: Record<ClientID, number> | undefined;
+    expectedLastServerAckdMutationIDs?: Record<ClientID, number> | undefined;
     pullResponse?: PullResponseV1 | undefined;
     pushResponse?: PushResponse | undefined;
   }) {

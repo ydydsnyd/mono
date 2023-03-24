@@ -1,26 +1,25 @@
-import type * as dag from '../dag/mod.js';
-import type * as sync from '../sync/mod.js';
-import {
-  assertDeepFrozen,
-  assertJSONValue,
-  FrozenJSONValue,
-  FrozenTag,
-  deepFreeze,
-} from '../json.js';
 import {
   assert,
-  assertArray,
-  assertBoolean,
   assertNumber,
-  assertObject,
   assertString,
   unreachable,
 } from 'shared/asserts.js';
-import {assertHash, Hash} from '../hash.js';
+import * as valita from 'shared/valita.js';
 import {skipCommitDataAsserts} from '../config.js';
+import {compareCookies, cookieSchema, FrozenCookie} from '../cookies.js';
+import type * as dag from '../dag/mod.js';
 import type {MustGetChunk} from '../dag/store.js';
+import {frozenJSONSchema} from '../frozen-json.js';
+import {assertHash, Hash, hashSchema} from '../hash.js';
 import type {IndexDefinition} from '../index-defs.js';
-import {compareCookies, FrozenCookie} from '../cookies.js';
+import {
+  assertJSONValue,
+  deepFreeze,
+  FrozenJSONValue,
+  FrozenTag,
+  jsonSchema,
+} from '../json.js';
+import type {ClientID} from '../sync/ids.js';
 
 export const DEFAULT_HEAD_NAME = 'main';
 
@@ -91,14 +90,14 @@ export class Commit<M extends Meta> {
   }
 
   getMutationID(
-    clientID: sync.ClientID,
+    clientID: ClientID,
     dagRead: dag.MustGetChunk,
   ): Promise<number> {
     return getMutationID(clientID, dagRead, this.meta);
   }
 
   async getNextMutationID(
-    clientID: sync.ClientID,
+    clientID: ClientID,
     dagRead: dag.MustGetChunk,
   ): Promise<number> {
     return (await this.getMutationID(clientID, dagRead)) + 1;
@@ -111,7 +110,7 @@ export class Commit<M extends Meta> {
 }
 
 export async function getMutationID(
-  clientID: sync.ClientID,
+  clientID: ClientID,
   dagRead: dag.MustGetChunk,
   meta: Meta,
 ): Promise<number> {
@@ -174,7 +173,7 @@ export async function localMutationsDD31(
 
 export async function localMutationsGreaterThan(
   commit: Commit<Meta>,
-  mutationIDLimits: Record<sync.ClientID, number>,
+  mutationIDLimits: Record<ClientID, number>,
   dagRead: dag.Read,
 ): Promise<Commit<LocalMetaDD31>[]> {
   const commits: Commit<LocalMetaDD31>[] = [];
@@ -245,7 +244,7 @@ export async function baseSnapshotFromCommit(
 
 export function snapshotMetaParts(
   c: Commit<SnapshotMetaSDD | SnapshotMetaDD31>,
-  clientID: sync.ClientID,
+  clientID: ClientID,
 ): [lastMutationID: number, cookie: FrozenCookie | FrozenJSONValue] {
   const m = c.meta;
   if (isSnapshotMetaDD31(m)) {
@@ -309,6 +308,12 @@ export type IndexChangeMetaSDD = {
   readonly lastMutationID: number;
 };
 
+const indexChangeMetaSDDSchema = valita.object({
+  type: valita.literal(MetaType.IndexChangeSDD),
+  basisHash: hashSchema,
+  lastMutationID: valita.number(),
+});
+
 function assertIndexChangeMeta(
   v: Record<string, unknown>,
 ): asserts v is IndexChangeMetaSDD {
@@ -339,11 +344,41 @@ export type LocalMetaSDD = {
   readonly timestamp: number;
 };
 
-export type LocalMetaDD31 = Omit<LocalMetaSDD, 'type'> & {
+const mutatorNameSchema = valita.nonEmptyString();
+
+const localMetaSDDSchema = valita.object({
+  type: valita.literal(MetaType.LocalSDD),
+  basisHash: hashSchema,
+  mutationID: valita.number(),
+  mutatorName: mutatorNameSchema,
+  mutatorArgsJSON: frozenJSONSchema,
+  originalHash: valita.union(hashSchema, valita.null()),
+  timestamp: valita.number(),
+});
+
+export type LocalMetaDD31 = {
   readonly type: MetaType.LocalDD31;
-  readonly clientID: sync.ClientID;
+  readonly basisHash: Hash;
+  readonly mutationID: number;
+  readonly mutatorName: string;
+  readonly mutatorArgsJSON: FrozenJSONValue;
+  readonly originalHash: Hash | null;
+  readonly timestamp: number;
+  readonly clientID: ClientID;
   readonly baseSnapshotHash: Hash;
 };
+
+const localMetaDD31Schema = valita.object({
+  type: valita.literal(MetaType.LocalDD31),
+  basisHash: hashSchema,
+  mutationID: valita.number(),
+  mutatorName: mutatorNameSchema,
+  mutatorArgsJSON: frozenJSONSchema,
+  originalHash: valita.union(hashSchema, valita.null()),
+  timestamp: valita.number(),
+  clientID: valita.string(),
+  baseSnapshotHash: hashSchema,
+});
 
 export type LocalMeta = LocalMetaSDD | LocalMetaDD31;
 
@@ -398,44 +433,39 @@ export type SnapshotMetaSDD = {
   readonly cookieJSON: FrozenJSONValue;
 };
 
+const snapshotMetaSDDSchema = valita.object({
+  type: valita.literal(MetaType.SnapshotSDD),
+  basisHash: valita.union(hashSchema, valita.null()),
+  lastMutationID: valita.number(),
+  cookieJSON: jsonSchema,
+});
+
 export type SnapshotMetaDD31 = {
   readonly type: MetaType.SnapshotDD31;
   readonly basisHash: Hash | null;
-  readonly lastMutationIDs: Record<sync.ClientID, number>;
+  readonly lastMutationIDs: Record<ClientID, number>;
   readonly cookieJSON: FrozenCookie;
 };
 
-export type SnapshotMeta = SnapshotMetaSDD | SnapshotMetaDD31;
+const snapshotMetaDD31Schema = valita.object({
+  type: valita.literal(MetaType.SnapshotDD31),
+  basisHash: valita.union(hashSchema, valita.null()),
+  lastMutationIDs: valita.record(valita.number()),
+  cookieJSON: cookieSchema,
+});
 
-function assertSnapshotMetaBase(v: Record<string, unknown>) {
-  // type already asserted
-  if (v.basisHash !== null) {
-    assertHash(v.basisHash);
-  }
-  assertJSONValue(v.cookieJSON);
-}
+export type SnapshotMeta = SnapshotMetaSDD | SnapshotMetaDD31;
 
 export function assertSnapshotMetaSDD(
   v: Record<string, unknown>,
 ): asserts v is SnapshotMetaSDD {
-  assertSnapshotMetaBase(v);
-  assertNumber(v.lastMutationID);
+  valita.assert(v, snapshotMetaSDDSchema);
 }
 
 export function assertSnapshotMetaDD31(
   v: Record<string, unknown>,
 ): asserts v is SnapshotMetaDD31 {
-  assertSnapshotMetaBase(v);
-  assertLastMutationIDs(v.lastMutationIDs);
-}
-
-function assertLastMutationIDs(
-  v: unknown,
-): asserts v is Record<sync.ClientID, number> {
-  assertObject(v);
-  for (const e of Object.values(v)) {
-    assertNumber(e);
-  }
+  valita.assert(v, snapshotMetaDD31Schema);
 }
 
 export function assertSnapshotCommitSDD(
@@ -450,6 +480,14 @@ export type Meta =
   | LocalMetaDD31
   | SnapshotMetaSDD
   | SnapshotMetaDD31;
+
+const metaSchema = valita.union(
+  indexChangeMetaSDDSchema,
+  localMetaSDDSchema,
+  localMetaDD31Schema,
+  snapshotMetaSDDSchema,
+  snapshotMetaDD31Schema,
+);
 
 export function assertSnapshotCommitDD31(
   c: Commit<Meta>,
@@ -469,34 +507,10 @@ function isIndexChangeSDD(meta: Meta): meta is IndexChangeMetaSDD {
   return meta.type === MetaType.IndexChangeSDD;
 }
 
-function assertMeta(v: unknown): asserts v is Meta {
-  assertObject(v);
-  assertDeepFrozen(v);
-  if (v.basisHash !== null) {
-    assertString(v.basisHash);
-  }
-
-  assertNumber(v.type);
-  switch (v.type) {
-    case MetaType.IndexChangeSDD:
-      assertIndexChangeMeta(v);
-      break;
-    case MetaType.LocalSDD:
-      assertLocalMetaSDD(v);
-      break;
-    case MetaType.LocalDD31:
-      assertLocalMetaDD31(v);
-      break;
-    case MetaType.SnapshotSDD:
-      assertSnapshotMetaSDD(v);
-      break;
-    case MetaType.SnapshotDD31:
-      assertSnapshotMetaDD31(v);
-      break;
-    default:
-      throw new Error(`Invalid enum value ${v.type}`);
-  }
-}
+// function assertMeta(v: unknown): asserts v is Meta {
+//   valita.assert(v, metaSchema);
+//   assertDeepFrozen(v);
+// }
 
 /**
  * This is the type used for index definitions as defined in the Commit chunk data.
@@ -511,6 +525,13 @@ export type ChunkIndexDefinition = {
   readonly allowEmpty?: boolean;
 };
 
+const chunkIndexDefinitionSchema = valita.object({
+  name: valita.string(),
+  keyPrefix: valita.string(),
+  jsonPointer: valita.string(),
+  allowEmpty: valita.boolean().optional(),
+});
+
 export function chunkIndexDefinitionEqualIgnoreName(
   a: ChunkIndexDefinition,
   b: ChunkIndexDefinition,
@@ -522,18 +543,11 @@ export function chunkIndexDefinitionEqualIgnoreName(
   );
 }
 
-function assertChunkIndexDefinition(
-  v: unknown,
-): asserts v is ChunkIndexDefinition {
-  assertObject(v);
-  assertDeepFrozen(v);
-  assertString(v.name);
-  assertString(v.keyPrefix);
-  assertString(v.jsonPointer);
-  if (v.allowEmpty !== undefined) {
-    assertBoolean(v.allowEmpty);
-  }
-}
+// function assertChunkIndexDefinition(
+//   v: unknown,
+// ): asserts v is ChunkIndexDefinition {
+//   valita.assert(v, chunkIndexDefinitionSchema);
+// }
 
 export function toChunkIndexDefinition(
   name: string,
@@ -552,20 +566,16 @@ export type IndexRecord = {
   readonly valueHash: Hash;
 };
 
-function assertIndexRecord(v: unknown): asserts v is IndexRecord {
-  assertObject(v);
-  assertDeepFrozen(v);
-  assertChunkIndexDefinition(v.definition);
-  assertString(v.valueHash);
-}
+const indexRecordSchema = valita.object({
+  definition: chunkIndexDefinitionSchema,
+  valueHash: hashSchema,
+});
 
-function assertIndexRecords(v: unknown): asserts v is IndexRecord[] {
-  assertArray(v);
-  assertDeepFrozen(v);
-  for (const ir of v) {
-    assertIndexRecord(ir);
-  }
-}
+const indexRecordsSchema = valita.array(indexRecordSchema);
+
+// function assertIndexRecords(v: unknown): asserts v is IndexRecord[] {
+//   valita.assert(v, indexRecordsSchema);
+// }
 
 export function newLocalSDD(
   createChunk: dag.CreateChunk,
@@ -604,7 +614,7 @@ export function newLocalDD31(
   valueHash: Hash,
   indexes: readonly IndexRecord[],
   timestamp: number,
-  clientID: sync.ClientID,
+  clientID: ClientID,
 ): Commit<LocalMetaDD31> {
   const meta: LocalMetaDD31 = {
     type: MetaType.LocalDD31,
@@ -646,7 +656,7 @@ export function newSnapshotSDD(
 export function newSnapshotDD31(
   createChunk: dag.CreateChunk,
   basisHash: Hash | null,
-  lastMutationIDs: Record<sync.ClientID, number>,
+  lastMutationIDs: Record<ClientID, number>,
   cookieJSON: FrozenCookie,
   valueHash: Hash,
   indexes: readonly IndexRecord[],
@@ -681,7 +691,7 @@ export function newSnapshotCommitDataSDD(
 
 export function newSnapshotCommitDataDD31(
   basisHash: Hash | null,
-  lastMutationIDs: Record<sync.ClientID, number>,
+  lastMutationIDs: Record<ClientID, number>,
   cookieJSON: FrozenCookie,
   valueHash: Hash,
   indexes: readonly IndexRecord[],
@@ -758,6 +768,12 @@ export type CommitData<M extends Meta> = FrozenTag<{
   readonly indexes: readonly IndexRecord[];
 }>;
 
+const commitDataSchema = valita.object({
+  meta: metaSchema,
+  valueHash: hashSchema,
+  indexes: indexRecordsSchema,
+});
+
 export function makeCommitData<M extends Meta>(
   meta: M,
   valueHash: Hash,
@@ -775,11 +791,13 @@ export function assertCommitData(v: unknown): asserts v is CommitData<Meta> {
     return;
   }
 
-  assertObject(v);
-  assertDeepFrozen(v);
-  assertMeta(v.meta);
-  assertString(v.valueHash);
-  assertIndexRecords(v.indexes);
+  valita.assert(v, commitDataSchema);
+
+  // assertObject(v);
+  // assertDeepFrozen(v);
+  // assertMeta(v.meta);
+  // assertString(v.valueHash);
+  // assertIndexRecords(v.indexes);
 }
 
 function validateChunk(

@@ -1,4 +1,10 @@
-import {assertJSONObject, FrozenJSONValue, ReadonlyJSONValue} from './json.js';
+import * as valita from 'shared/valita.js';
+import {
+  assertJSONObject,
+  FrozenJSONValue,
+  jsonSchema,
+  ReadonlyJSONValue,
+} from './json.js';
 import {stringCompare} from './string-compare.js';
 
 /**
@@ -26,6 +32,29 @@ export type FrozenCookie =
   | string
   | number
   | (FrozenJSONValue & {readonly order: number | string});
+
+type CookieJSONObject = ReadonlyJSONValue & {readonly order: number | string};
+
+const orderObjectSchema = valita.object({
+  order: valita.union(valita.string(), valita.number()),
+});
+
+const cookieJSONSchema: valita.ValitaType<CookieJSONObject> = valita
+  .unknown()
+  .chain((v): valita.ValitaResult<CookieJSONObject> => {
+    const res = orderObjectSchema.try(v, {mode: 'passthrough'});
+    if (!res.ok) {
+      return res;
+    }
+    return jsonSchema.try(v) as valita.ValitaResult<CookieJSONObject>;
+  });
+
+export const cookieSchema = valita.union(
+  valita.null(),
+  valita.string(),
+  valita.number(),
+  cookieJSONSchema,
+);
 
 /**
  * Compare two cookies.

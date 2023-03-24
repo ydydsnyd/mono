@@ -1,3 +1,5 @@
+import * as valita from 'shared/valita.js';
+
 // TODO: Make these opaque types
 
 /**
@@ -6,7 +8,11 @@
  */
 export type ClientGroupID = string;
 
+export const clientGroupIDSchema = valita.string();
+
 /**
  * The ID describing a client.
  */
 export type ClientID = string;
+
+export const clientIDSchema = valita.string();

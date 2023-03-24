@@ -1,6 +1,13 @@
 import {throwInvalidType} from 'shared/asserts.js';
+import {skipAssertJSONValue} from 'shared/config.js';
 import {hasOwn} from 'shared/has-own.js';
-import type {ReadonlyJSONObject, ReadonlyJSONValue} from './json.js';
+import {
+  jsonSchema,
+  ReadonlyJSONObject,
+  ReadonlyJSONValue,
+} from 'shared/json.js';
+import * as valita from 'shared/valita.js';
+import {skipFreeze, skipFrozenAsserts} from './config.js';
 
 declare const frozenJSONTag: unique symbol;
 
@@ -42,6 +49,10 @@ export function deepFreeze(
 export function deepFreeze(
   v: ReadonlyJSONValue | undefined,
 ): FrozenJSONValue | undefined {
+  if (skipFreeze) {
+    return v as FrozenJSONValue | undefined;
+  }
+
   if (v === undefined) {
     return undefined;
   }
@@ -107,6 +118,10 @@ function deepFreezeObject(v: ReadonlyJSONObject, seen: object[]): void {
 export function assertFrozenJSONValue(
   v: unknown,
 ): asserts v is FrozenJSONValue {
+  if (skipFrozenAsserts || skipAssertJSONValue) {
+    return;
+  }
+
   switch (typeof v) {
     case 'boolean':
     case 'number':
@@ -125,6 +140,9 @@ export function assertFrozenJSONValue(
 }
 
 export function assertDeepFrozen<V>(v: V): asserts v is Readonly<V> {
+  if (skipFrozenAsserts) {
+    return;
+  }
   if (!isDeepFrozen(v, [])) {
     throw new Error('Expected frozen object');
   }
@@ -188,3 +206,11 @@ export function isDeepFrozen(v: unknown, seen: object[]): boolean {
       throwInvalidType(v, 'JSON value');
   }
 }
+
+export const frozenJSONSchema: valita.ValitaType<FrozenJSONValue> =
+  jsonSchema.chain(v => {
+    if (isDeepFrozen(v, [])) {
+      return valita.ok(v as FrozenJSONValue);
+    }
+    return valita.err('Expected frozen JSON value');
+  });

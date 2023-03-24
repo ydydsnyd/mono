@@ -1,4 +1,5 @@
 import {assert} from 'shared/asserts.js';
+import * as valita from 'shared/valita.js';
 import {uuid} from './uuid.js';
 
 export const STRING_LENGTH = 44;
@@ -104,3 +105,10 @@ export function assertHash(v: unknown): asserts v is Hash {
     throw new Error(`Invalid hash: '${v}'`);
   }
 }
+
+export const hashSchema: valita.ValitaType<Hash> = valita.unknown().chain(v => {
+  if (isHash(v)) {
+    return valita.ok(v);
+  }
+  return valita.err(`Invalid hash: '${v}'`);
+});

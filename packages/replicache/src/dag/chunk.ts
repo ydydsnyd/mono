@@ -1,5 +1,6 @@
-import {assert, assertString} from 'shared/asserts.js';
-import {Hash, newUUIDHash} from '../hash.js';
+import {assert} from 'shared/asserts.js';
+import * as valita from 'shared/valita.js';
+import {Hash, hashSchema, newUUIDHash} from '../hash.js';
 import {assertDeepFrozen} from '../json.js';
 
 type Refs = readonly Hash[];
@@ -23,13 +24,10 @@ export class Chunk<V = unknown> {
   }
 }
 
+const refsSchema = valita.array(hashSchema);
+
 export function assertMeta(v: unknown): asserts v is Refs {
-  if (!Array.isArray(v)) {
-    throw new Error('Meta must be an array');
-  }
-  for (const e of v) {
-    assertString(e);
-  }
+  valita.assert(v, refsSchema);
 }
 
 export function createChunk<V>(

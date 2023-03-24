@@ -1,6 +1,8 @@
 import {expect} from '@esm-bundle/chai';
+import {assert} from 'shared/asserts.js';
+import * as valita from 'shared/valita.js';
+import {deepFreeze, frozenJSONSchema, isDeepFrozen} from './frozen-json.js';
 import type {ReadonlyJSONValue} from './json.js';
-import {deepFreeze, isDeepFrozen} from './frozen-json.js';
 
 test('toDeepFrozen', () => {
   expect(deepFreeze(null)).to.equal(null);
@@ -80,4 +82,33 @@ test('isDeepFrozen', () => {
     expect(isDeepFrozen(o[2].c, [])).to.be.true;
     expect(Object.isFrozen(o[2].c)).to.be.true;
   }
+});
+
+test('frozenJSONSchema', () => {
+  const ok = (v: unknown) => {
+    const res = valita.test(v, frozenJSONSchema);
+    assert(res.ok);
+    expect(res.value).to.equal(v);
+  };
+
+  const notOK = (v: unknown, error: string) => {
+    const res = valita.test(v, frozenJSONSchema);
+    assert(!res.ok);
+    expect(res.error).to.equal(error);
+  };
+
+  ok(null);
+  ok(1);
+  ok(true);
+  ok(false);
+  ok('abc');
+
+  notOK([], 'Expected frozen JSON value. Got array');
+
+  ok(Object.freeze([]));
+
+  // TODO(arv): Add path to error message.
+  notOK(Object.freeze([{}]), 'Expected frozen JSON value. Got array');
+  notOK({}, 'Expected frozen JSON value. Got object');
+  notOK(Object.freeze({x: {}}), 'Expected frozen JSON value. Got object');
 });

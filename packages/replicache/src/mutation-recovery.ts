@@ -1,26 +1,26 @@
 import type {LogContext} from '@rocicorp/logger';
-import type {Puller, PullResponseV1, PullResponseV0} from './puller.js';
+import {assert, assertNotUndefined} from 'shared/asserts.js';
 import * as dag from './dag/mod.js';
 import * as db from './db/mod.js';
-import * as persist from './persist/mod.js';
-import * as sync from './sync/mod.js';
+import {
+  isClientStateNotFoundResponse,
+  isVersionNotSupportedResponse,
+} from './error-responses.js';
 import {assertHash} from './hash.js';
-import {assert, assertNotUndefined} from 'shared/asserts.js';
 import type {HTTPRequestInfo} from './http-request-info.js';
+import type {CreateStore} from './kv/store.js';
+import {assertClientV4, setClients} from './persist/clients.js';
+import * as persist from './persist/mod.js';
+import type {Puller, PullResponseV0, PullResponseV1} from './puller.js';
+import type {Pusher} from './pusher.js';
 import {
   MaybePromise,
   REPLICACHE_FORMAT_VERSION_DD31,
   REPLICACHE_FORMAT_VERSION_SDD,
 } from './replicache.js';
-import {assertClientV4, setClients} from './persist/clients.js';
-import type {ClientID, ClientGroupID} from './sync/ids.js';
-import type {Pusher} from './pusher.js';
+import type {ClientGroupID, ClientID} from './sync/ids.js';
+import * as sync from './sync/mod.js';
 import {PUSH_VERSION_DD31, PUSH_VERSION_SDD} from './sync/push.js';
-import {
-  isClientStateNotFoundResponse,
-  isVersionNotSupportedResponse,
-} from './error-responses.js';
-import type {CreateStore} from './kv/store.js';
 import {withRead, withWrite} from './with-transactions.js';
 
 const MUTATION_RECOVERY_LAZY_STORE_SOURCE_CHUNK_CACHE_SIZE_LIMIT = 10 * 2 ** 20; // 10 MB
@@ -162,7 +162,7 @@ function logMutationRecoveryError(
  */
 async function recoverMutationsOfClientV4(
   client: persist.Client,
-  clientID: sync.ClientID,
+  clientID: ClientID,
   perdag: dag.Store,
   database: persist.IndexedDBDatabase,
   options: MutationRecoveryOptions,
@@ -410,7 +410,7 @@ async function recoverMutationsFromPerdagSDD(
     let clientMap: persist.ClientMap | undefined =
       preReadClientMap ||
       (await withRead(perdag, read => persist.getClients(read)));
-    const clientIDsVisited = new Set<sync.ClientID>();
+    const clientIDsVisited = new Set<ClientID>();
     while (clientMap) {
       let newClientMap: persist.ClientMap | undefined;
       for (const [clientID, client] of clientMap) {
@@ -453,7 +453,7 @@ async function recoverMutationsFromPerdagDD31(
       perdag,
       read => persist.getClientGroups(read),
     );
-    const clientGroupIDsVisited = new Set<sync.ClientGroupID>();
+    const clientGroupIDsVisited = new Set<ClientGroupID>();
     while (clientGroups) {
       let newClientGroups: persist.ClientGroupMap | undefined;
       for (const [clientGroupID, clientGroup] of clientGroups) {
@@ -490,7 +490,7 @@ async function recoverMutationsFromPerdagDD31(
  */
 async function recoverMutationsOfClientGroupDD31(
   clientGroup: persist.ClientGroup,
-  clientGroupID: sync.ClientGroupID,
+  clientGroupID: ClientGroupID,
   perdag: dag.Store,
   database: persist.IndexedDBDatabase,
   options: MutationRecoveryOptions,
@@ -510,7 +510,7 @@ async function recoverMutationsOfClientGroupDD31(
     return;
   }
 
-  let clientID: sync.ClientID | undefined;
+  let clientID: ClientID | undefined;
 
   // If all local mutations have been applied then exit.
   let allAckd = true;

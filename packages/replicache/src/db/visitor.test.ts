@@ -1,11 +1,11 @@
 import {expect} from '@esm-bundle/chai';
-import * as dag from '../dag/mod.js';
-import type * as sync from '../sync/mod.js';
-import {ChainBuilder} from './test-helpers.js';
-import {fakeHash, Hash} from '../hash.js';
 import type {Entry, Node} from '../btree/node.js';
-import {FrozenJSONValue, ReadonlyJSONValue, deepFreeze} from '../json.js';
-import {Visitor} from './visitor.js';
+import * as dag from '../dag/mod.js';
+import {fakeHash, Hash} from '../hash.js';
+import {deepFreeze, FrozenJSONValue, ReadonlyJSONValue} from '../json.js';
+import {promiseVoid} from '../resolved-promises.js';
+import type {ClientID} from '../sync/ids.js';
+import {withRead, withWrite} from '../with-transactions.js';
 import {
   baseSnapshotHashFromHash,
   Commit,
@@ -14,8 +14,8 @@ import {
   newLocalDD31,
   newLocalSDD,
 } from './commit.js';
-import {promiseVoid} from '../resolved-promises.js';
-import {withRead, withWrite} from '../with-transactions.js';
+import {ChainBuilder} from './test-helpers.js';
+import {Visitor} from './visitor.js';
 
 function newLocal(
   createChunk: dag.CreateChunk,
@@ -28,7 +28,7 @@ function newLocal(
   valueHash: Hash,
   indexes: readonly IndexRecord[],
   timestamp: number,
-  clientID: sync.ClientID,
+  clientID: ClientID,
   dd31: boolean,
 ) {
   if (dd31) {

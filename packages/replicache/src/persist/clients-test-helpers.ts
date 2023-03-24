@@ -1,23 +1,23 @@
+import {LogContext} from '@rocicorp/logger';
+import * as btree from '../btree/mod.js';
+import * as dag from '../dag/mod.js';
+import {getRefs, newSnapshotCommitDataSDD} from '../db/commit.js';
+import * as db from '../db/mod.js';
+import {newUUIDHash} from '../hash.js';
+import type {IndexDefinitions} from '../index-defs.js';
+import type {ClientID} from '../sync/ids.js';
+import {uuid as makeUuid} from '../uuid.js';
+import {withWrite} from '../with-transactions.js';
 import {
+  Client,
   ClientMap,
-  ClientV5,
+  ClientMapDD31,
   ClientV4,
-  setClients,
+  ClientV5,
   getClients,
   initClientV5,
-  Client,
-  ClientMapDD31,
+  setClients,
 } from './clients.js';
-import * as dag from '../dag/mod.js';
-import type * as sync from '../sync/mod.js';
-import {LogContext} from '@rocicorp/logger';
-import type {IndexDefinitions} from '../index-defs.js';
-import {newUUIDHash} from '../hash.js';
-import * as btree from '../btree/mod.js';
-import * as db from '../db/mod.js';
-import {uuid as makeUuid} from '../uuid.js';
-import {getRefs, newSnapshotCommitDataSDD} from '../db/commit.js';
-import {withWrite} from '../with-transactions.js';
 
 export function setClientsForTesting(
   clients: ClientMap,
@@ -54,7 +54,7 @@ export function makeClientV4(partialClient: PartialClientV4): ClientV4 {
 }
 
 export function makeClientMapDD31(
-  obj: Record<sync.ClientID, PartialClientV5>,
+  obj: Record<ClientID, PartialClientV5>,
 ): ClientMapDD31 {
   return new Map(
     Object.entries(obj).map(
@@ -64,7 +64,7 @@ export function makeClientMapDD31(
 }
 
 export async function deleteClientForTesting(
-  clientID: sync.ClientID,
+  clientID: ClientID,
   dagStore: dag.Store,
 ): Promise<void> {
   await withWrite(dagStore, async dagWrite => {
@@ -76,7 +76,7 @@ export async function deleteClientForTesting(
 }
 
 export async function initClientWithClientID(
-  clientID: sync.ClientID,
+  clientID: ClientID,
   dagStore: dag.Store,
   mutatorNames: string[],
   indexes: IndexDefinitions,
@@ -104,7 +104,7 @@ function initClientV4(
   perdag: dag.Store,
 ): Promise<
   [
-    clientID: sync.ClientID,
+    clientID: ClientID,
     client: Client,
     clientMap: ClientMap,
     newClientGroup: boolean,

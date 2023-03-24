@@ -1,12 +1,12 @@
-import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
+import {LogContext} from '@rocicorp/logger';
 import * as dag from '../dag/mod.js';
 import * as db from '../db/mod.js';
-import type {JSONValue} from '../json.js';
 import {ChainBuilder} from '../db/test-helpers.js';
-import {apply} from './patch.js';
+import type {JSONValue} from '../json.js';
 import {assertPatchOperations} from '../patch-operation.js';
 import {withWrite} from '../with-transactions.js';
+import {apply} from './patch.js';
 
 suite('patch', () => {
   const t = async (dd31: boolean) => {

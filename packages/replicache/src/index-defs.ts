@@ -1,4 +1,4 @@
-import {assertBoolean, assertObject, assertString} from 'shared/asserts.js';
+import * as valita from 'shared/valita.js';
 
 /**
  * The definition of a single index.
@@ -25,11 +25,19 @@ export type IndexDefinition = {
   readonly allowEmpty?: boolean;
 };
 
+export const indexDefinitionSchema = valita.object({
+  prefix: valita.string().optional(),
+  jsonPointer: valita.string(),
+  allowEmpty: valita.boolean().optional(),
+});
+
 /**
  * An object as a map defining the indexes. The keys are the index names and the
  * values are the index definitions.
  */
 export type IndexDefinitions = {readonly [name: string]: IndexDefinition};
+
+export const indexDefinitionsSchema = valita.record(indexDefinitionSchema);
 
 export function indexDefinitionEqual(
   a: IndexDefinition,
@@ -58,24 +66,8 @@ export function indexDefinitionsEqual(
   return true;
 }
 
-function assertIndexDefinition(
-  value: unknown,
-): asserts value is IndexDefinition {
-  const indexDef = value as IndexDefinition;
-  assertString(indexDef.jsonPointer);
-  if (indexDef.allowEmpty !== undefined) {
-    assertBoolean(indexDef.allowEmpty);
-  }
-  if (indexDef.prefix !== undefined) {
-    assertString(indexDef.prefix);
-  }
-}
-
 export function assertIndexDefinitions(
   value: unknown,
 ): asserts value is IndexDefinitions {
-  assertObject(value);
-  for (const indexDef of Object.values(value)) {
-    assertIndexDefinition(indexDef);
-  }
+  valita.assert(value, indexDefinitionsSchema);
 }

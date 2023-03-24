@@ -1,6 +1,13 @@
+import type {LogContext} from '@rocicorp/logger';
 import type * as dag from '../dag/mod.js';
+import {assertSnapshotCommitDD31} from '../db/commit.js';
 import * as db from '../db/mod.js';
+import type {Hash} from '../hash.js';
+import type {MutatorDefs} from '../replicache.js';
+import {sleep} from '../sleep.js';
+import type {ClientID} from '../sync/ids.js';
 import * as sync from '../sync/mod.js';
+import {withRead, withWrite} from '../with-transactions.js';
 import {
   assertClientV5,
   ClientStateNotFoundError,
@@ -8,16 +15,10 @@ import {
   getClientGroupForClient,
   setClient,
 } from './clients.js';
-import type {MutatorDefs} from '../replicache.js';
-import type {Hash} from '../hash.js';
-import type {LogContext} from '@rocicorp/logger';
-import {assertSnapshotCommitDD31} from '../db/commit.js';
 import {
   ChunkWithSize,
   GatherNotCachedVisitor,
 } from './gather-not-cached-visitor.js';
-import {sleep} from '../sleep.js';
-import {withRead, withWrite} from '../with-transactions.js';
 
 const GATHER_SIZE_LIMIT = 5 * 2 ** 20; // 5 MB
 const DELAY_MS = 300;
@@ -30,7 +31,7 @@ export async function refresh(
   lc: LogContext,
   memdag: dag.LazyStore,
   perdag: dag.Store,
-  clientID: sync.ClientID,
+  clientID: ClientID,
   mutators: MutatorDefs,
   diffConfig: sync.DiffComputationConfig,
   closed: () => boolean,

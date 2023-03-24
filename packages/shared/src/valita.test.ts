@@ -1,7 +1,7 @@
-import {test, expect} from '@jest/globals';
+import {expect, test} from '@jest/globals';
 import * as v from 'shared/valita.js';
-import {parse} from './valita.js';
 import {assert} from './asserts.js';
+import {parse} from './valita.js';
 
 test('basic', () => {
   const t = <T>(s: v.Type<T>, v: unknown, message?: string) => {
@@ -221,4 +221,24 @@ test('basic', () => {
     });
     t(s2, {x: []}, 'Invalid union value at x');
   }
+});
+
+test('nonEmptyString', () => {
+  const s = v.nonEmptyString();
+  expect(v.test('hi', s)).toEqual({
+    ok: true,
+    value: 'hi',
+  });
+  expect(v.test('', s)).toEqual({
+    ok: false,
+    error: 'Expected non-empty string. Got ""',
+  });
+
+  const s2 = v.object({
+    x: s,
+  });
+  expect(v.test({x: ''}, s2)).toEqual({
+    ok: false,
+    error: 'Expected non-empty string at x. Got ""',
+  });
 });

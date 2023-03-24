@@ -1,28 +1,26 @@
 import type {LogContext} from '@rocicorp/logger';
-import {assertHash, Hash} from '../hash.js';
-import * as btree from '../btree/mod.js';
-import type * as dag from '../dag/mod.js';
-import * as db from '../db/mod.js';
-import type * as sync from '../sync/mod.js';
-import {FrozenJSONValue, deepFreeze} from '../json.js';
-import {
-  assert,
-  assertNumber,
-  assertObject,
-  assertString,
-} from 'shared/asserts.js';
+import {assert, assertObject} from 'shared/asserts.js';
 import {hasOwn} from 'shared/has-own.js';
-import {uuid as makeUuid} from '../uuid.js';
+import * as valita from 'shared/valita.js';
+import * as btree from '../btree/mod.js';
+import {compareCookies, FrozenCookie} from '../cookies.js';
+import type * as dag from '../dag/mod.js';
 import {
   assertSnapshotCommitDD31,
-  getRefs,
-  toChunkIndexDefinition,
-  newSnapshotCommitDataDD31,
   ChunkIndexDefinition,
   chunkIndexDefinitionEqualIgnoreName,
+  getRefs,
+  newSnapshotCommitDataDD31,
+  toChunkIndexDefinition,
 } from '../db/commit.js';
-import {compareCookies, FrozenCookie} from '../cookies.js';
-import type {ClientID} from '../sync/ids.js';
+import * as db from '../db/mod.js';
+import {createIndexBTree} from '../db/write.js';
+import {Hash, hashSchema} from '../hash.js';
+import {IndexDefinitions, indexDefinitionsEqual} from '../index-defs.js';
+import {deepFreeze, FrozenJSONValue} from '../json.js';
+import {ClientGroupID, clientGroupIDSchema, ClientID} from '../sync/ids.js';
+import {uuid as makeUuid} from '../uuid.js';
+import {withWrite} from '../with-transactions.js';
 import {
   ClientGroup,
   getClientGroup,
@@ -30,26 +28,23 @@ import {
   mutatorNamesEqual,
   setClientGroup,
 } from './client-groups.js';
-import {IndexDefinitions, indexDefinitionsEqual} from '../index-defs.js';
-import {createIndexBTree} from '../db/write.js';
-import {withWrite} from '../with-transactions.js';
 
-export type ClientMap = ReadonlyMap<sync.ClientID, ClientV4 | ClientV5>;
-export type ClientMapDD31 = ReadonlyMap<sync.ClientID, ClientV5>;
+export type ClientMap = ReadonlyMap<ClientID, ClientV4 | ClientV5>;
+export type ClientMapDD31 = ReadonlyMap<ClientID, ClientV5>;
 
-export type ClientV4 = {
+const clientV4Schema = valita.object({
   /**
    * A UNIX timestamp in milliseconds updated by the client once a minute
    * while it is active and every time the client persists its state to
    * the perdag.
    * Should only be updated by the client represented by this structure.
    */
-  readonly heartbeatTimestampMs: number;
+  heartbeatTimestampMs: valita.number(),
   /**
    * The hash of the commit in the perdag this client last persisted.
    * Should only be updated by the client represented by this structure.
    */
-  readonly headHash: Hash;
+  headHash: hashSchema,
   /**
    * The mutationID of the commit at headHash (mutationID if it is a
    * local commit, lastMutationID if it is an index change or snapshot commit).
@@ -61,7 +56,7 @@ export type ClientV4 = {
    * but allows other clients to determine if there are unacknowledged pending
    * mutations without having to load the commit graph at headHash.
    */
-  readonly mutationID: number;
+  mutationID: valita.number(),
   /**
    * The highest lastMutationID received from the server for this client.
    *
@@ -79,27 +74,31 @@ export type ClientV4 = {
    * the other client does not update the commit graph (it is unsafe to update
    * another client's commit graph).
    */
-  readonly lastServerAckdMutationID: number;
-};
+  lastServerAckdMutationID: valita.number(),
+});
 
-export type ClientV5 = {
-  readonly heartbeatTimestampMs: number;
-  readonly headHash: Hash;
+export type ClientV4 = valita.InferReadonly<typeof clientV4Schema>;
 
+const clientV5Schema = valita.object({
+  heartbeatTimestampMs: valita.number(),
+  headHash: hashSchema,
   /**
    * The hash of a commit we are in the middle of refreshing into this client's
    * memdag.
    */
-  readonly tempRefreshHash: Hash | null;
-
+  tempRefreshHash: valita.union(hashSchema, valita.null()),
   /**
    * ID of this client's perdag client group. This needs to be sent in pull
    * request (to enable syncing all last mutation ids in the client group).
    */
-  readonly clientGroupID: sync.ClientGroupID;
-};
+  clientGroupID: clientGroupIDSchema,
+});
+
+export type ClientV5 = valita.InferReadonly<typeof clientV5Schema>;
 
 export type Client = ClientV4 | ClientV5;
+
+const clientSchema = valita.union(clientV4Schema, clientV5Schema);
 
 function isClientV5(client: Client): client is ClientV5 {
   return (client as ClientV5).clientGroupID !== undefined;
@@ -112,44 +111,15 @@ export function isClientV4(client: Client): client is ClientV4 {
 export const CLIENTS_HEAD_NAME = 'clients';
 
 function assertClient(value: unknown): asserts value is Client {
-  assertClientBase(value);
-
-  if (typeof value.mutationID === 'number') {
-    assertNumber(value.lastServerAckdMutationID);
-  } else {
-    const {tempRefreshHash} = value;
-    if (tempRefreshHash) {
-      assertHash(tempRefreshHash);
-    }
-    assertString(value.clientGroupID);
-  }
-}
-
-function assertClientBase(value: unknown): asserts value is {
-  heartbeatTimestampMs: number;
-  headHash: Hash;
-  [key: string]: unknown;
-} {
-  assertObject(value);
-  const {heartbeatTimestampMs, headHash} = value;
-  assertNumber(heartbeatTimestampMs);
-  assertHash(headHash);
+  valita.assert(value, clientSchema);
 }
 
 export function assertClientV4(value: unknown): asserts value is ClientV4 {
-  assertClientBase(value);
-  const {mutationID, lastServerAckdMutationID} = value;
-  assertNumber(mutationID);
-  assertNumber(lastServerAckdMutationID);
+  valita.assert(value, clientV4Schema);
 }
 
 export function assertClientV5(value: unknown): asserts value is ClientV5 {
-  assertClientBase(value);
-  const {tempRefreshHash} = value;
-  if (tempRefreshHash) {
-    assertHash(tempRefreshHash);
-  }
-  assertString(value.clientGroupID);
+  valita.assert(value, clientV5Schema);
 }
 
 function chunkDataToClientMap(chunkData: unknown): ClientMap {
@@ -202,7 +172,7 @@ async function getClientsAtHash(
 export class ClientStateNotFoundError extends Error {
   name = 'ClientStateNotFoundError';
   readonly id: string;
-  constructor(id: sync.ClientID) {
+  constructor(id: ClientID) {
     super(`Client state not found, id: ${id}`);
     this.id = id;
   }
@@ -212,7 +182,7 @@ export class ClientStateNotFoundError extends Error {
  * Throws a `ClientStateNotFoundError` if the client does not exist.
  */
 export async function assertHasClientState(
-  id: sync.ClientID,
+  id: ClientID,
   dagRead: dag.Read,
 ): Promise<void> {
   if (!(await hasClientState(id, dagRead))) {
@@ -221,14 +191,14 @@ export async function assertHasClientState(
 }
 
 export async function hasClientState(
-  id: sync.ClientID,
+  id: ClientID,
   dagRead: dag.Read,
 ): Promise<boolean> {
   return !!(await getClient(id, dagRead));
 }
 
 export async function getClient(
-  id: sync.ClientID,
+  id: ClientID,
   dagRead: dag.Read,
 ): Promise<Client | undefined> {
   const clients = await getClients(dagRead);
@@ -242,7 +212,7 @@ export function initClientV5(
   indexes: IndexDefinitions,
 ): Promise<
   [
-    clientID: sync.ClientID,
+    clientID: ClientID,
     client: ClientV5,
     clientMap: ClientMap,
     newClientGroup: boolean,
@@ -254,7 +224,7 @@ export function initClientV5(
       cookieJSON: FrozenCookie,
       valueHash: Hash,
       indexRecords: readonly db.IndexRecord[],
-    ): Promise<[sync.ClientID, ClientV5, ClientMap, boolean]> {
+    ): Promise<[ClientID, ClientV5, ClientMap, boolean]> {
       const newSnapshotData = newSnapshotCommitDataDD31(
         basisHash,
         {},
@@ -423,7 +393,7 @@ export type FindMatchingClientResult =
     }
   | {
       type: typeof FIND_MATCHING_CLIENT_TYPE_HEAD;
-      clientGroupID: sync.ClientGroupID;
+      clientGroupID: ClientGroupID;
       headHash: Hash;
     };
 
@@ -502,7 +472,7 @@ export async function getClientGroupForClient(
 export async function getClientGroupIDForClient(
   clientID: ClientID,
   read: dag.Read,
-): Promise<sync.ClientGroupID | undefined> {
+): Promise<ClientGroupID | undefined> {
   const client = await getClient(clientID, read);
   if (!client || !isClientV5(client)) {
     return undefined;

@@ -1,21 +1,16 @@
-import {assertHash, Hash} from '../hash.js';
-import type * as sync from '../sync/mod.js';
+import {assert, assertObject} from 'shared/asserts.js';
+import * as valita from 'shared/valita.js';
 import type * as dag from '../dag/mod.js';
-import {FrozenJSONValue, deepFreeze} from '../json.js';
+import {Hash, hashSchema} from '../hash.js';
 import {
-  assert,
-  assertArray,
-  assertNumber,
-  assertObject,
-  assertString,
-} from 'shared/asserts.js';
-import {
-  assertIndexDefinitions,
   IndexDefinitions,
   indexDefinitionsEqual,
+  indexDefinitionsSchema,
 } from '../index-defs.js';
+import {deepFreeze, FrozenJSONValue} from '../json.js';
+import type {ClientGroupID, ClientID} from '../sync/ids.js';
 
-export type ClientGroupMap = ReadonlyMap<sync.ClientGroupID, ClientGroup>;
+export type ClientGroupMap = ReadonlyMap<ClientGroupID, ClientGroup>;
 
 export type ClientGroup = {
   /**
@@ -43,7 +38,7 @@ export type ClientGroup = {
    * are unacknowledged pending mutations without having to load the commit
    * graph.
    */
-  readonly mutationIDs: Record<sync.ClientID, number>;
+  readonly mutationIDs: Record<ClientID, number>;
 
   /**
    * The highest lastMutationID received from the server for every client
@@ -61,7 +56,7 @@ export type ClientGroup = {
    * it may be different because the other client does not update the commit
    * graph.
    */
-  readonly lastServerAckdMutationIDs: Record<sync.ClientID, number>;
+  readonly lastServerAckdMutationIDs: Record<ClientID, number>;
 
   /**
    * If the server deletes this client group it can signal that the client group
@@ -71,37 +66,24 @@ export type ClientGroup = {
   readonly disabled: boolean;
 };
 
+const clientGroupSchema = valita.object({
+  headHash: hashSchema,
+  mutatorNames: valita.array(valita.string()),
+  indexes: indexDefinitionsSchema,
+  mutationIDs: valita.record(valita.number()),
+  lastServerAckdMutationIDs: valita.record(valita.number()),
+  disabled: valita.boolean(),
+});
+
 export const CLIENT_GROUPS_HEAD_NAME = 'client-groups';
 
 function assertClientGroup(value: unknown): asserts value is ClientGroup {
-  assertObject(value);
-  const {
-    headHash,
-    mutatorNames,
-    indexes,
-    mutationIDs,
-    lastServerAckdMutationIDs,
-  } = value;
-  assertHash(headHash);
-  assertArray(mutatorNames);
-  for (const name of mutatorNames) {
-    assertString(name);
-  }
-  assertObject(indexes);
-  assertIndexDefinitions(indexes);
-  assertObject(mutationIDs);
-  for (const mutationID of Object.values(mutationIDs)) {
-    assertNumber(mutationID);
-  }
-  assertObject(lastServerAckdMutationIDs);
-  for (const mutationID of Object.values(lastServerAckdMutationIDs)) {
-    assertNumber(mutationID);
-  }
+  valita.assert(value, clientGroupSchema);
 }
 
 function chunkDataToClientGroupMap(chunkData: unknown): ClientGroupMap {
   assertObject(chunkData);
-  const clientGroups = new Map<sync.ClientGroupID, ClientGroup>();
+  const clientGroups = new Map<ClientGroupID, ClientGroup>();
   for (const [key, value] of Object.entries(chunkData)) {
     if (value !== undefined) {
       assertClientGroup(value);
@@ -115,7 +97,7 @@ function clientGroupMapToChunkData(
   clientGroups: ClientGroupMap,
   dagWrite: dag.Write,
 ): FrozenJSONValue {
-  const chunkData: {[id: sync.ClientGroupID]: ClientGroup} = {};
+  const chunkData: {[id: ClientGroupID]: ClientGroup} = {};
   for (const [clientGroupID, clientGroup] of clientGroups.entries()) {
     dagWrite.assertValidHash(clientGroup.headHash);
     chunkData[clientGroupID] = {
@@ -157,7 +139,7 @@ export async function setClientGroups(
 }
 
 export async function setClientGroup(
-  clientGroupID: sync.ClientGroupID,
+  clientGroupID: ClientGroupID,
   clientGroup: ClientGroup,
   dagWrite: dag.Write,
 ): Promise<ClientGroupMap> {
@@ -170,7 +152,7 @@ export async function setClientGroup(
 }
 
 export async function deleteClientGroup(
-  clientGroupID: sync.ClientGroupID,
+  clientGroupID: ClientGroupID,
   dagWrite: dag.Write,
 ): Promise<ClientGroupMap> {
   const currClientGroups = await getClientGroups(dagWrite);
@@ -234,7 +216,7 @@ export function mutatorNamesEqual(
 }
 
 export async function getClientGroup(
-  id: sync.ClientGroupID,
+  id: ClientGroupID,
   dagRead: dag.Read,
 ): Promise<ClientGroup | undefined> {
   const clientGroups = await getClientGroups(dagRead);

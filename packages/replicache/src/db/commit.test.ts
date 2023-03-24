@@ -1,30 +1,30 @@
 import {expect} from '@esm-bundle/chai';
 import * as dag from '../dag/mod.js';
+import {fakeHash, Hash, makeNewFakeHashFunction} from '../hash.js';
+import {deepFreeze} from '../json.js';
+import {withRead} from '../with-transactions.js';
 import {
+  baseSnapshotFromHash,
+  chain as commitChain,
+  ChunkIndexDefinition,
+  chunkIndexDefinitionEqualIgnoreName,
   Commit,
   CommitData,
   fromChunk,
+  getMutationID,
   IndexChangeMetaSDD,
+  localMutations,
+  localMutationsGreaterThan,
+  makeCommitData,
   Meta,
   MetaType,
   newIndexChange as commitNewIndexChange,
-  newLocalSDD as commitNewLocalSDD,
   newLocalDD31 as commitNewLocalDD31,
-  newSnapshotSDD as commitNewSnapshotSDD,
+  newLocalSDD as commitNewLocalSDD,
   newSnapshotDD31 as commitNewSnapshotDD31,
-  chain as commitChain,
-  localMutations,
-  baseSnapshotFromHash,
-  localMutationsGreaterThan,
-  chunkIndexDefinitionEqualIgnoreName,
-  ChunkIndexDefinition,
-  makeCommitData,
-  getMutationID,
+  newSnapshotSDD as commitNewSnapshotSDD,
 } from './commit.js';
 import {ChainBuilder} from './test-helpers.js';
-import {Hash, fakeHash, makeNewFakeHashFunction} from '../hash.js';
-import {deepFreeze} from '../json.js';
-import {withRead} from '../with-transactions.js';
 
 suite('base snapshot', () => {
   const t = async (dd31: boolean) => {
@@ -322,7 +322,7 @@ test('load roundtrip', () => {
       fakeHash('face4'),
       [fakeHash('000'), fakeHash('000')],
     ),
-    new Error('Missing mutator name'),
+    new Error('Expected non-empty string at meta.mutatorName. Got ""'),
   );
 
   t(
@@ -341,7 +341,7 @@ test('load roundtrip', () => {
       fakeHash('face4'),
       [fakeHash('000'), fakeHash('000')],
     ),
-    new Error('Missing mutator name'),
+    new Error('Expected non-empty string at meta.mutatorName. Got ""'),
   );
 
   t(
