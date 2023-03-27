@@ -1,1 +1,20 @@
-<?xml version="1.0" encoding="UTF-8"?><svg version="1.1" width="42px" height="32px" viewBox="0 0 42.0 32.0" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs><clipPath id="i0"><path d="M661,0 L661,128 L0,128 L0,0 L661,0 Z"></path></clipPath><clipPath id="i1"><path d="M1.14677617,19.0990985 C-0.382258724,17.4086535 -0.382258724,15.9426995 1.14677617,14.366754 C2.67581216,12.7908085 4.09813054,12.7908085 5.73825781,14.366754 L14.7034122,23.4969602 L36.3541857,1.18195915 C37.8832216,-0.393986383 39.30554,-0.393986383 40.8389497,1.18195915 C42.3679857,2.75790468 42.3679857,4.22385859 40.9499972,5.91430359 L16.672221,30.8172632 L12.3482573,30.8179955 C12.3227794,30.8179999 12.2991213,30.8180039 12.2772831,30.8180076 L16.672221,30.8180409 C15.0320937,32.3939864 13.6097753,32.3939864 12.0807393,30.8180409 C12.0804244,30.818503 8.43577,26.9121889 1.14677617,19.0990985 Z"></path></clipPath></defs><g transform="translate(-432.0 -57.0)"><g clip-path="url(#i0)"><g transform="translate(432.0 57.0)"><g clip-path="url(#i1)"><polygon points="0,0 42,0 42,32 0,32 0,0" stroke="none" fill="#1ACA86"></polygon></g></g></g></g></svg>
+<svg width="42" height="32" viewBox="0 0 42 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_1_2)">
+<mask id="mask0_1_2" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="-432" y="-57" width="661" height="128">
+<path d="M229 -57V71H-432V-57H229Z" fill="white"/>
+</mask>
+<g mask="url(#mask0_1_2)">
+<mask id="mask1_1_2" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="42" height="32">
+<path d="M1.14678 19.0991C-0.382259 17.4087 -0.382259 15.9427 1.14678 14.3668C2.67581 12.7908 4.09813 12.7908 5.73826 14.3668L14.7034 23.497L36.3542 1.18196C37.8832 -0.393986 39.3055 -0.393986 40.839 1.18196C42.368 2.7579 42.368 4.22386 40.95 5.9143L16.6722 30.8173L12.3483 30.818C12.3228 30.818 12.2991 30.818 12.2773 30.818L16.6722 30.8173C15.0321 32.3932 13.6098 32.394 12.0807 30.818C12.0804 30.8185 8.43577 26.9122 1.14678 19.0991Z" fill="white"/>
+</mask>
+<g mask="url(#mask1_1_2)">
+<path d="M0 0H42V32H0V0Z" fill="#FC208A"/>
+</g>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_1_2">
+<rect width="42" height="32" fill="white"/>
+</clipPath>
+</defs>
+</svg>
