@@ -35,8 +35,8 @@ const Pricing = () => (
       {/* Pricing Grid Row 3: Additional hours */}
       <div className={styles.pricingGridHeader}>Additional Hours</div>
       <div className={styles.pricingGridData}>N/A</div>
-      <div className={styles.pricingGridData}>$0.005</div>
-      <div className={styles.pricingGridData}>$0.002</div>
+      <div className={styles.pricingGridData}>$0.015</div>
+      <div className={styles.pricingGridData}>$0.012</div>
       <div className={styles.pricingGridData}>Custom</div>
 
       {/* Pricing Grid Row 4: Source access */}
