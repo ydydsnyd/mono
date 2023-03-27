@@ -13,6 +13,6 @@ console.log(new Uint8Array(o).toString())\
 })()"
 SECRET=$(node -e "$NODE_PROGRAM")
 
-echo "writing hashed value $SECRET"
+echo "writing hashed value $SECRET ($1)"
 
-./write-secret NEW_ROOM_SECRET $1 $2
+./write-secret.sh NEW_ROOM_SECRET $1 $2
