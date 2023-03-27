@@ -7,8 +7,8 @@ import NotIncluded from './NotIncluded';
 const Pricing = () => (
   <div className={styles.pricingContainer}>
     <p>
-      Reflect is charged by monthly active room hours. A room is active when it
-      has one or more connected users. Background tabs disconnect automatically.
+      We charge by monthly active hours. A room is active when it has one or
+      more connected users. Background tabs disconnect automatically.
     </p>
     <div className={styles.pricingGrid}>
       {/* Pricing Grid Header */}
