@@ -15,15 +15,41 @@ import {
   SHOW_CUSTOM_CURSOR_MIN_Y,
   SHOW_CUSTOM_CURSOR_MAX_Y,
 } from '../shared/constants';
-import type {Actor, Debug, Letter, Position, Splatter} from '../shared/types';
+import type {
+  Actor,
+  AnyActor,
+  Debug,
+  Letter,
+  OrchestratorActor,
+  Position,
+  RoomRecording,
+  Splatter,
+} from '../shared/types';
 import {LETTERS} from '../shared/letters';
 import {letterMap, now} from '../shared/util';
-import {getUserLocation} from './location';
+import {getRandomLocation, getUserLocation} from './location';
 import {initRoom} from './orchestrator';
 import {DEBUG_TEXTURES, FPS_LOW_PASS} from './constants';
 import {loadClearAnimationFrames} from './textures';
+import {nanoid} from 'nanoid';
 
-export const init = async () => {
+export type DemoAPI = {
+  toggleRecording: () => void;
+  playRecording: (id: string) => Promise<void>;
+  deleteRecording: (id: string) => Promise<void>;
+  getRecordings: () => Promise<{
+    actorId: string;
+    currentRecordingId?: string;
+    recordings: {
+      id: string;
+      frames: number;
+    }[];
+    activeRecordings: RoomRecording[];
+  }>;
+  onRefresh: (refresh: () => void) => void;
+};
+
+export const init = async (): Promise<DemoAPI> => {
   const initTiming = timing('Demo Load Timing');
   const ready = initTiming('loading demo', 1500);
 
@@ -34,6 +60,31 @@ export const init = async () => {
     CanvasRenderingContext2D,
     CanvasRenderingContext2D,
   ];
+
+  const getGuaranteeActor = (): [
+    (actor: AnyActor) => Promise<void>,
+    (createFn: (actor: AnyActor) => Promise<void>) => Promise<void>,
+  ] => {
+    let actorsToCreate: AnyActor[] = [];
+    let createFn: ((actor: AnyActor) => Promise<void>) | undefined;
+    return [
+      async (actor: AnyActor) => {
+        if (createFn) {
+          await createFn(actor);
+        } else {
+          actorsToCreate.push(actor);
+        }
+      },
+      async (fn: (actor: AnyActor) => Promise<void>) => {
+        createFn = fn;
+        if (actorsToCreate) {
+          for await (const actor of actorsToCreate) {
+            await createFn(actor);
+          }
+        }
+      },
+    ];
+  };
 
   // Canvases
   const canvas = document.getElementById('canvas3D') as HTMLCanvasElement;
@@ -83,12 +134,31 @@ export const init = async () => {
   init3DDone();
 
   const roomInitDone = initTiming('finding room', 100);
+  const playingRecordings: Record<string, RoomRecording> = {};
+  const recordingFrame: Record<string, number> = {};
+  const [guaranteeActor, setGuaranteeActor] = getGuaranteeActor();
   const {
     actor,
     clientCount,
     rebucket,
+    recordCursor,
+    playRecording,
+    deleteRecording,
+    finishRecording,
+    getRecordingFrame,
     getDebug: getOrchestratorDebug,
-  } = await initRoom();
+  } = await initRoom(
+    (recording: RoomRecording) => {
+      console.log('Start playing recording', recording.recordingId);
+      recordingFrame[recording.recordingId] = 1;
+      playingRecordings[recording.recordingId] = recording;
+    },
+    async (botActor: OrchestratorActor) => {
+      console.log('bot actor', botActor);
+      const location = getRandomLocation();
+      await guaranteeActor({...botActor, location});
+    },
+  );
   roomInitDone();
 
   // Set up info below demo
@@ -118,6 +188,8 @@ export const init = async () => {
     addListener,
     updateActorLocation,
     clearTextures,
+    removeBot,
+    guaranteeActor: guaranteeActorMutation,
   } = await initialize(
     actor,
     online => {
@@ -136,6 +208,7 @@ export const init = async () => {
     rebucket,
     debug,
   );
+  await setGuaranteeActor(guaranteeActorMutation);
   initReflectClientDone();
 
   // Draw splatters as we get them
@@ -159,25 +232,42 @@ export const init = async () => {
   LETTERS.forEach(letter => updateTexture(letter));
 
   // Update debug info periodically
-  if (window.location.search.includes('debug')) {
+  const showDebug = window.location.search.includes('debug');
+  if (showDebug) {
     setInterval(async () => {
-      const debugEl = document.getElementById('debug');
-      if (debugEl) {
+      const debugContentEl = document.querySelector('#debug .content');
+      if (debugContentEl) {
         let debugOutput = `actor id: ${actor.id}\n${
           Object.keys(actors).length
         } local actors\n${debug.fps.toFixed(1)} fps\n`;
         const orchestratorInfo = await getOrchestratorDebug();
         debugOutput += `current room: ${orchestratorInfo.currentRoom}\nlocal room:${actor.room}\nroom participants:${orchestratorInfo.currentRoomCount}`;
-        debugEl.innerHTML = debugOutput;
+        debugContentEl.innerHTML = debugOutput;
       }
       if (caches) {
         draw_caches(...caches);
       }
     }, 200);
+    document.addEventListener('keypress', (e: KeyboardEvent) => {
+      if (e.key === '®') {
+        if (currentRecordingId) {
+          stopRecording();
+        } else {
+          startRecording();
+        }
+      }
+    });
   }
 
   // Set up cursor renderer
-  const [localCursor, renderCursors] = cursorRenderer(
+  let currentRecordingId: string | undefined;
+  const startRecording = () => {
+    currentRecordingId = nanoid();
+  };
+  const stopRecording = () => {
+    currentRecordingId = undefined;
+  };
+  const [localCursor, renderCursors, getCursorPosition] = cursorRenderer(
     actor.id,
     () => ({actors, cursors}),
     () => demoContainer,
@@ -201,8 +291,12 @@ export const init = async () => {
       } else {
         document.body.classList.add('custom-cursor');
       }
+      if (currentRecordingId) {
+        recordCursor(currentRecordingId, {...cursor});
+      }
       updateCursor({...cursor});
     },
+    showDebug,
   );
 
   // When the window is resized, recalculate letter and cursor positions
@@ -218,13 +312,18 @@ export const init = async () => {
   window.addEventListener('resize', resizeViewport);
   resizeViewport();
 
-  const maybeAddPaint = (at: Position, isMobile: boolean) => {
+  const maybeAddPaint = (
+    at: Position,
+    isMobile: boolean,
+    actorId?: string,
+    colorIndex?: number,
+  ) => {
     const [letter, texturePosition, hitPosition] = getTexturePosition(at);
     if (letter && texturePosition && hitPosition) {
       addSplatter({
         letter,
-        actorId: actor.id,
-        colorIndex: actor.colorIndex,
+        actorId: actorId || actor.id,
+        colorIndex: colorIndex || actor.colorIndex,
         texturePosition,
         large: isMobile,
         hitPosition,
@@ -311,6 +410,32 @@ export const init = async () => {
       if (isDown) {
         maybeAddPaint(position, isMobile);
       }
+      // If we're playing a recording, do that
+      for (const recordingId in playingRecordings) {
+        const recording = playingRecordings[recordingId];
+        const frame = recordingFrame[recordingId];
+        const cursor = await getRecordingFrame(
+          recordingId,
+          recording.botId,
+          frame,
+        );
+        if (cursor) {
+          await updateCursor(cursor);
+          const cursorPagePosition = getCursorPosition(cursor);
+          await maybeAddPaint(
+            cursorPagePosition,
+            false,
+            recording.botId,
+            recording.colorIdx,
+          );
+          recordingFrame[recordingId] += 1;
+        } else {
+          delete playingRecordings[recordingId];
+          delete recordingFrame[recordingId];
+          await finishRecording(recordingId, recording.roomId, recording.botId);
+          await removeBot(recording.botId);
+        }
+      }
     },
     async () => {
       // Our cursors should update every animation frame.
@@ -318,6 +443,32 @@ export const init = async () => {
     },
     debug,
   );
+
+  return {
+    toggleRecording: () => {
+      if (currentRecordingId) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    },
+    playRecording: async (recordingId: string) => {
+      await playRecording(recordingId, actor.room);
+    },
+    deleteRecording,
+    getRecordings: async () => {
+      const debug = await getOrchestratorDebug();
+      return {
+        actorId: actor.id,
+        currentRecordingId,
+        recordings: debug.recordings,
+        activeRecordings: debug.activeRecordings,
+      };
+    },
+    onRefresh: (refresh: () => void) => {
+      setInterval(refresh, 250);
+    },
+  };
 };
 
 const startRenderLoop = (

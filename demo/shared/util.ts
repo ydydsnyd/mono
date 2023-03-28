@@ -1,7 +1,48 @@
 import {LETTERS} from '../shared/letters';
-import type {Color, Letter, Position, Size} from './types';
+import {
+  Color,
+  Cursor,
+  Letter,
+  Position,
+  RecordingCursor,
+  Size,
+  TouchState,
+} from './types';
 
 export const now = () => new Date().getTime();
+
+export const nextNumber = (last?: number): number => {
+  return (last || 0) + 1;
+};
+
+export const sortableKeyNum = (number: number): string => {
+  const hex = number.toString(16);
+  return String.fromCharCode(hex.length) + hex;
+};
+
+export const cursorToRecordingCursor = (cursor: Cursor): RecordingCursor => {
+  return {
+    x: cursor.x,
+    y: cursor.y,
+    t: cursor.ts,
+    o: cursor.onPage,
+    d: cursor.isDown,
+  };
+};
+export const recordingCursorToCursor = (
+  actorId: string,
+  rc: RecordingCursor,
+): Cursor => {
+  return {
+    x: rc.x,
+    y: rc.y,
+    ts: rc.y,
+    touchState: TouchState.Unknown,
+    actorId: actorId,
+    isDown: rc.d,
+    onPage: true,
+  };
+};
 
 export const colorToString = (color: Color) => {
   return `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
@@ -34,14 +75,29 @@ export const asyncLetterMap = async <T>(
 };
 
 export const randomWithSeed = (
-  value: number,
+  value: number | string,
   seed: number,
   max = 1,
   min = 0,
 ): number => {
+  const numVal =
+    typeof value === 'string' ? Math.abs(simpleHash(value) / 10000) : value;
   const range = max * 1000 - min * 1000;
-  const rand = (value * seed) % range;
+  const rand = (numVal * seed) % range;
   return (min * 1000 + rand) / 1000;
+};
+
+const simpleHash = (s: string) => {
+  var hash = 0,
+    i,
+    chr;
+  if (s.length === 0) return hash;
+  for (i = 0; i < s.length; i++) {
+    chr = s.charCodeAt(i);
+    hash = (hash << 5) - hash + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
 };
 
 export function must<T>(val: T | undefined): T {

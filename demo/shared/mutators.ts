@@ -1,8 +1,16 @@
 import type {WriteTransaction} from '@rocicorp/reflect';
-import {Actor, Cursor, Env, Letter, Position, Splatter, Vector} from './types';
-import {randomWithSeed} from './util';
+import {
+  Actor,
+  AnyActor,
+  Cursor,
+  Env,
+  Letter,
+  Position,
+  Splatter,
+  Vector,
+} from './types';
+import {nextNumber, randomWithSeed, sortableKeyNum} from './util';
 import {chunk} from './chunks';
-import type {OrchestratorActor} from '../shared/types';
 import {LETTERS} from './letters';
 
 export const UNINITIALIZED_CACHE_SENTINEL = 'uninitialized-cache-sentinel';
@@ -44,28 +52,49 @@ export const mutators = {
       await tx.put(`cursor/${cursor.actorId}`, cursor);
     }
   },
+  removeBot: async (tx: WriteTransaction, botId: string) => {
+    await removeBot(tx, botId);
+  },
   removeActor: async (tx: WriteTransaction, clientID: string) => {
-    const actorId = await tx.get(`client-actor/${clientID}`);
+    const actorId = await tx.get(`room-actor/${clientID}`);
+    if (!actorId) {
+      // Since we don't know which room onDisconnect is called in, we call
+      // removeOchestratorActor and removeActor mutators. If we don't have a record of
+      // this clientID, it's probably an orchestrator one.
+      return;
+    }
+    console.log(`Client ${clientID} (${actorId}) left room, cleaning up.`);
+    const botIds = (await tx
+      .scan({prefix: `bot-controller/${tx.clientID}`})
+      .values()
+      .toArray()) as string[];
+    for await (const id of botIds) {
+      await removeBot(tx, id);
+    }
     if (actorId) {
       await tx.del(`actor/${actorId}`);
       await tx.del(`cursor/${actorId}`);
-      await tx.del(`client-actor/${clientID}`);
+      await tx.del(`room-actor/${clientID}`);
     }
   },
-  guaranteeActor: async (tx: WriteTransaction, actor: OrchestratorActor) => {
+  guaranteeActor: async (tx: WriteTransaction, actor: AnyActor) => {
     const key = `actor/${actor.id}`;
     const hasActor = await tx.has(key);
     if (hasActor) {
       // already exists
       return;
     }
-    // Make sure there's only one actor per client
-    const existingActor = await tx.get(`client-actor/${tx.clientID}`);
-    if (existingActor) {
-      await tx.del(`actor/${existingActor}`);
-      await tx.del(`cursor/${existingActor}`);
+    if (actor.isBot) {
+      await tx.put(`bot-controller/${tx.clientID}/${actor.id}`, actor.id);
+    } else {
+      // Make sure there's only one actor per client
+      const existingActor = await tx.get(`room-actor/${tx.clientID}`);
+      if (existingActor) {
+        await tx.del(`actor/${existingActor}`);
+        await tx.del(`cursor/${existingActor}`);
+      }
+      await tx.put(`room-actor/${tx.clientID}`, actor.id);
     }
-    await tx.put(`client-actor/${tx.clientID}`, actor.id);
     await tx.put(key, actor);
   },
   updateActorLocation: async (
@@ -131,16 +160,12 @@ export const mutators = {
     };
     // Because data is returned in key order rather than insert order, we need to
     // increment a global counter.
-    // Because of string ordering, we also need to limit this to 0xFFFF, since there
-    // are no characters beyond that. This also means that our keys will be out of
-    // order if we store more than 65535 splatters per letter, but that should be
-    // very unlikely due to flattening and other performance implications.
-    const splatterNum =
-      ((((await tx.get(`splatter-num/${letter}`)) as number | undefined) || 0) %
-        0xffff) +
-      1;
+    const splatterNum = nextNumber(
+      (await tx.get(`splatter-num/${letter}`)) as number,
+    );
+    // Convert to hex so that it will sort correctly
     await tx.put(
-      `splatter/${letter}/${String.fromCharCode(splatterNum)}/${actorId}`,
+      `splatter/${letter}/${sortableKeyNum(splatterNum)}/${actorId}`,
       splatter,
     );
     await tx.put(`splatter-num/${letter}`, splatterNum);
@@ -160,4 +185,10 @@ export const mutators = {
   },
 
   nop: async (_: WriteTransaction) => {},
+};
+
+const removeBot = async (tx: WriteTransaction, botId: string) => {
+  console.log(`Delete room bot ${botId}.`);
+  await tx.del(`actor/${botId}`);
+  await tx.del(`cursor/${botId}`);
 };

@@ -15,6 +15,8 @@ export type ActorID = string;
 
 export type Color = [number, number, number]; // rgb
 
+export type AnyActor = OrchestratorActor | Actor;
+
 export type Actor = OrchestratorActor & {
   location: string;
 };
@@ -23,6 +25,8 @@ export type OrchestratorActor = {
   id: ActorID;
   colorIndex: number;
   room: string;
+  isBot: boolean;
+  botController: string | null;
 };
 
 export type LetterHandles = Record<Letter, number>;
@@ -83,3 +87,20 @@ export enum Env {
   CLIENT,
   SERVER,
 }
+
+// Bot Stuff
+export type RecordingID = string;
+export type RoomRecording = {
+  roomId: string;
+  broadcasterId: ActorID;
+  botId: ActorID;
+  recordingId: RecordingID;
+  colorIdx: number;
+};
+export type RecordingCursor = {
+  x: number;
+  y: number;
+  t: number; // timestamp
+  o: boolean; // on page
+  d: boolean; // is down
+};

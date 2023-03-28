@@ -50,7 +50,10 @@ const {
   authHandler,
   disconnectHandler: async write => {
     await mutators.removeActor(write, write.clientID);
-    await orchestratorMutators.removeOchestratorActor(write, write.clientID);
+    await orchestratorMutators.removeOchestratorActor(write, {
+      clientID: write.clientID,
+      timestamp: new Date().getTime(),
+    });
   },
   getLogLevel: () => 'debug',
   allowUnconfirmedWrites: false,

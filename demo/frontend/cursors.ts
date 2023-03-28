@@ -23,7 +23,12 @@ export const cursorRenderer = (
   getDemoContainer: () => HTMLDivElement,
   isOverLetter: (cursor: Position) => boolean,
   onUpdateCursor: (localCursor: Cursor) => void,
-): [() => PageCursor, () => Promise<void>] => {
+  debug?: boolean,
+): [
+  () => PageCursor,
+  () => Promise<void>,
+  (cursorPosition: Position) => Position,
+] => {
   // Set up local state
   const cursorDivs: Map<ActorID, HTMLDivElement> = new Map();
   const getCursorDiv = async (cursor: Cursor, createIfMissing: boolean) => {
@@ -146,6 +151,17 @@ export const cursorRenderer = (
         const cursorDiv = cursorDivs.get(actor.id);
         if (cursorDiv && actor.location) {
           cursorDiv.querySelector('.location-name')!.innerHTML = actor.location;
+        }
+        if (cursorDiv && debug) {
+          const botIndicator = cursorDiv.querySelector('.bot-indicator');
+          if (actor.isBot && !botIndicator) {
+            const botSpan = document.createElement('span');
+            botSpan.classList.add('bot-indicator');
+            botSpan.innerHTML = '[bot]';
+            cursorDiv.querySelector('.location-name')!.appendChild(botSpan);
+          } else if (!actor.isBot && botIndicator) {
+            botIndicator.parentElement?.removeChild(botIndicator);
+          }
         }
       });
     }
@@ -336,6 +352,13 @@ export const cursorRenderer = (
       };
     },
     redrawCursors,
+    (cursorPos: Position): Position => {
+      const demoBB = getDemoContainer().getBoundingClientRect();
+      return {
+        x: cursorPos.x * demoBB.width,
+        y: cursorPos.y * demoBB.height,
+      };
+    },
   ];
 };
 

@@ -246,3 +246,9 @@ body.custom-cursor * {
   left: -50%;
   opacity: 1;
 }
+
+.bot-indicator {
+  position: absolute;
+  top: -18px;
+  right: -18px;
+}

@@ -63,8 +63,20 @@ export const COLOR_PALATE: Color[] = COLOR_PALATE_RS.reduce(
   [] as [number, number, number][],
 );
 
-// Mutators/etc
+// Mutators
 
 // Can't put more than 131072 bytes in a DO, so use a number under half that
 // since these will refer to strings
 export const CACHE_CHUNK_STRING_SIZE = 65535;
+
+// Bots
+
+export const BOT_RANDOM_LOCATIONS = [
+  'The Moon 🌚',
+  'India 🇮🇳',
+  'Mexico 🇲🇽',
+  'Candada 🇨🇦',
+  'United Kingdom 🇬🇧',
+  'France 🇫🇷',
+  'Italy 🇮🇹',
+];
