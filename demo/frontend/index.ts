@@ -345,21 +345,16 @@ export const init = async (): Promise<DemoAPI> => {
     console.error(err);
   });
 
-  // Add a listener for our cache - when it updates, trigger a full redraw.
-  addListener<never>('cache', async (_, deleted, keyParts) => {
-    // Deleted caches are handled in the clearing code.
-    if (!deleted) {
-      const letter = keyParts[1] as Letter;
-      // Also make sure that our splatters are re-rendered in the correct order. By
-      // resetting the cache of rendered splatters, next frame will re-draw all the
-      // splatters in their current order.
-      const splatters = await getSplatters(letter);
-      setSplatters(letter, splatters);
-      triggerSplatterRedraw(letter);
-      doRender(letter);
-      updateTexture(letter);
-    }
-  });
+  const redrawTexture = async (letter: Letter) => {
+    // Make sure that our splatters are re-rendered in the correct order. By
+    // resetting the cache of rendered splatters, next frame will re-draw all the
+    // splatters in their current order.
+    const splatters = await getSplatters(letter);
+    setSplatters(letter, splatters);
+    triggerSplatterRedraw(letter);
+    doRender(letter);
+    updateTexture(letter);
+  };
 
   // Wait for round trip confirmation from the server before starting the render
   // loop
@@ -380,6 +375,19 @@ export const init = async (): Promise<DemoAPI> => {
       resolve();
     };
     checkReady();
+  });
+  // After we have caches, draw them + the splatters
+  for await (const letter of LETTERS) {
+    await redrawTexture(letter);
+  }
+
+  // Add a listener for our cache - when it updates, trigger a full redraw.
+  addListener<never>('cache', async (_, deleted, keyParts) => {
+    // Deleted caches are handled in the clearing code.
+    if (!deleted) {
+      const letter = keyParts[1] as Letter;
+      redrawTexture(letter);
+    }
   });
 
   // Handlers for data resetting

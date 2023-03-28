@@ -202,18 +202,27 @@ export const initialize = async (
     });
   };
 
+  let sawUninitialized = new Set();
   const cachesLoaded = async () => {
-    let loaded = true;
+    let loadedLetters = new Set();
     await reflectClient.query(async tx => {
       for await (const letter of LETTERS) {
+        if (loadedLetters.has(letter)) {
+          continue;
+        }
         const cacheVal = await unchunk(tx, `cache/${letter}`);
         if (cacheVal === UNINITIALIZED_CACHE_SENTINEL) {
-          loaded = false;
-          break;
+          sawUninitialized.add(letter);
+        }
+        if (
+          sawUninitialized.has(letter) &&
+          cacheVal !== UNINITIALIZED_CACHE_SENTINEL
+        ) {
+          loadedLetters.add(letter);
         }
       }
     });
-    return loaded;
+    return LETTERS.every(l => loadedLetters.has(l));
   };
 
   const createActorIfMissing = async () => {
