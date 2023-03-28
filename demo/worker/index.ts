@@ -55,7 +55,7 @@ const {
       timestamp: new Date().getTime(),
     });
   },
-  getLogLevel: () => 'debug',
+  logLevel: 'debug',
   allowUnconfirmedWrites: false,
 });
 
