@@ -87,7 +87,7 @@ export default function MobileNav() {
               className={styles.navLink}
               activeClass={styles.navLinkActive}
               to="customers"
-              offset={100}
+              offset={116}
               smooth={true}
               duration={250}
               onClick={toggleNav}
@@ -102,6 +102,7 @@ export default function MobileNav() {
               activeClass={styles.navLinkActive}
               to="pricing"
               offset={100}
+              spy={false}
               smooth={true}
               duration={250}
               onClick={toggleNav}

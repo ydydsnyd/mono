@@ -95,6 +95,7 @@ export default class Nav extends Component {
                 activeClass={styles.navLinkActive}
                 to="benefits"
                 spy={true}
+                hashSpy={true}
                 smooth={true}
                 duration={250}
               >
@@ -108,6 +109,7 @@ export default class Nav extends Component {
                 activeClass={styles.navLinkActive}
                 to="how"
                 spy={true}
+                hashSpy={true}
                 smooth={true}
                 duration={250}
               >
@@ -121,6 +123,7 @@ export default class Nav extends Component {
                 activeClass={styles.navLinkActive}
                 to="customers"
                 spy={true}
+                hashSpy={true}
                 smooth={true}
                 duration={250}
               >
@@ -134,6 +137,7 @@ export default class Nav extends Component {
                 activeClass={styles.navLinkActive}
                 to="pricing"
                 spy={true}
+                hashSpy={true}
                 smooth={true}
                 duration={250}
               >
@@ -147,6 +151,7 @@ export default class Nav extends Component {
                 activeClass={styles.navLinkActive}
                 to="contact"
                 spy={true}
+                hashSpy={true}
                 smooth={true}
                 duration={250}
               >
@@ -160,6 +165,8 @@ export default class Nav extends Component {
                 to="get-started"
                 smooth={true}
                 duration={250}
+                spy={true}
+                hashSpy={true}
               >
                 Get started
               </Link>

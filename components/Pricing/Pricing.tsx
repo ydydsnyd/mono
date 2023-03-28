@@ -3,6 +3,7 @@
 import styles from './Pricing.module.css';
 import Included from './Included';
 import NotIncluded from './NotIncluded';
+import InfoPop from '@/components/InfoPop/InfoPop';
 
 const Pricing = () => (
   <div className={styles.pricingContainer}>
@@ -40,7 +41,12 @@ const Pricing = () => (
       <div className={styles.pricingGridData}>Custom</div>
 
       {/* Pricing Grid Row 4: Source access */}
-      <div className={styles.pricingGridHeader}>Source License</div>
+      <div className={styles.pricingGridHeader}>
+        Source License
+        <InfoPop
+          message="Cronut hot chicken meh gentrify, migas fixie you probably haven't heard of them praxis bicycle rights."
+        />
+      </div>
       <div className={styles.pricingGridData}>
         <NotIncluded />
       </div>
@@ -70,7 +76,12 @@ const Pricing = () => (
       </div>
 
       {/* Pricing Grid Row 7: Managed onprem */}
-      <div className={styles.pricingGridHeader}>Managed On-Prem</div>
+      <div className={styles.pricingGridHeader}>
+        Managed On-Prem
+        <InfoPop
+          message="Pug tilde pitchfork beard taiyaki color book man bun."
+        />
+      </div>
       <div className={styles.pricingGridData}>
         <NotIncluded />
       </div>
