@@ -339,6 +339,13 @@ export const cursorRenderer = (
     }
   });
 
+  // Hide I-bar when dragging across canvas in safari
+  window.addEventListener('selectstart', e => {
+    if (e.target && isInIntro(e.target as HTMLElement)) {
+      e.preventDefault();
+    }
+  });
+
   return [
     () => {
       const demoBB = getDemoContainer().getBoundingClientRect();
@@ -458,6 +465,9 @@ const isHTMLElement = (t: EventTarget | null): t is HTMLElement =>
 
 const getHasParent = (element: HTMLElement) => {
   return (item: HTMLElement | ParentNode) => {
+    if (item === element) {
+      return true;
+    }
     while (item.parentNode) {
       if (item.parentNode === element) {
         return true;
