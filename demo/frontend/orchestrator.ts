@@ -27,7 +27,6 @@ export const initRoom = async (
 ): Promise<{
   actor: OrchestratorActor;
   getOrchestratorActorIds: () => Promise<string[]>;
-  clientCount: () => Promise<number>;
   rebucket: (actor: OrchestratorActor) => Promise<void>;
   recordCursor: (recordingId: string, cursor: Cursor) => Promise<void>;
   deleteRecording: (recordingId: string) => Promise<void>;
@@ -141,13 +140,6 @@ export const initRoom = async (
       );
       return actors.map(a => a.id);
     },
-    clientCount: async () =>
-      await orchestratorClient.query(
-        async tx =>
-          await (
-            await tx.scan({prefix: 'orchestrator-actor/'}).toArray()
-          ).length,
-      ),
     rebucket: async actor => {
       await mutations.createOrchestratorActor({
         lastColorIndex: actor.colorIndex,

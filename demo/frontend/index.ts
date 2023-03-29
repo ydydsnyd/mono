@@ -140,7 +140,6 @@ export const init = async (): Promise<DemoAPI> => {
   const {
     actor,
     getOrchestratorActorIds,
-    clientCount,
     rebucket,
     recordCursor,
     playRecording,
@@ -226,7 +225,7 @@ export const init = async (): Promise<DemoAPI> => {
 
   // Whenever actors change, update the count
   addListener<Actor>('actor', async () => {
-    const count = await clientCount();
+    const count = actors.length;
     activeUserCount.innerHTML = count + '';
   });
 
