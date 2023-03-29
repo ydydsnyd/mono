@@ -1,5 +1,9 @@
-import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
-import {COLOR_PALATE, ROOM_MAX_ACTORS} from './constants';
+import type {
+  AsyncIterableIteratorToArray,
+  ReadTransaction,
+  WriteTransaction,
+} from '@rocicorp/reflect';
+import {ACTIVITY_TIMEOUT, COLOR_PALATE, ROOM_MAX_ACTORS} from './constants';
 import {Cursor, Env, OrchestratorActor, RoomRecording} from './types';
 import {string2Uint8Array} from './uint82b64';
 import {
@@ -25,6 +29,9 @@ export const setEnv = (e: Env, secret?: Uint8Array) => {
 };
 
 export const orchestratorMutators = {
+  alive: async (tx: WriteTransaction, timestamp: number) => {
+    await tx.put(`alive/${tx.clientID}`, timestamp);
+  },
   removeOchestratorActor: async (
     tx: WriteTransaction,
     {clientID, timestamp}: {clientID: string; timestamp: number},
@@ -53,6 +60,9 @@ export const orchestratorMutators = {
       return;
     }
     await createActor(tx, {...args, isBot: false});
+    // We also need to periodically clean up old users - new user creation is as
+    // good a place as any to do it
+    await cleanupOldUsers(tx, args.timestamp);
   },
   finishRecording: async (
     tx: WriteTransaction,
@@ -129,6 +139,33 @@ export const orchestratorMutators = {
 const serverLog = (...args: string[]) => {
   if (env === Env.SERVER) {
     console.log(...args);
+  }
+};
+
+const cleanupOldUsers = async (tx: WriteTransaction, timestamp: number) => {
+  const alives = (await tx
+    .scan({prefix: 'alive/'})
+    .entries()) as AsyncIterableIteratorToArray<[string, number]>;
+  const actorsToRemove: string[] = [];
+  const aliveIds: Set<string> = new Set();
+  for await (const [key, lastPing] of alives) {
+    const id = key.split('/')[1];
+    aliveIds.add(id);
+    if (timestamp - lastPing > ACTIVITY_TIMEOUT) {
+      actorsToRemove.push(id);
+    }
+  }
+  // TODO: remove once it's been in prod a while
+  const allActors = (await tx
+    .scan({prefix: 'orchestrator-actor/'})
+    .values()) as AsyncIterableIteratorToArray<OrchestratorActor>;
+  for await (const actor of allActors) {
+    if (!aliveIds.has(actor.id) && actor.id !== tx.clientID) {
+      actorsToRemove.push(actor.id);
+    }
+  }
+  for (const actorId of actorsToRemove) {
+    await removeActor(tx, actorId, timestamp, actorsToRemove);
   }
 };
 
@@ -285,6 +322,8 @@ const removeActor = async (
     await removeActor(tx, botId, timestamp, [actorId, ...alsoRemoving]);
     await tx.del(key);
   }
+
+  await tx.del(`alive/${actorId}`);
 
   const actor = (await tx.get(key)) as OrchestratorActor;
   // Dunno who that is

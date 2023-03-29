@@ -8,7 +8,9 @@ export const LOCATION_PLACEHOLDER = 'Somewhere';
 
 // Bucketing
 export const ORCHESTRATOR_ROOM_ID = 'orchestrator-room';
-export const ROOM_MAX_ACTORS = 100;
+export const ROOM_MAX_ACTORS = 50;
+export const ACTIVITY_PING_FREQUENCY = 5000; // ms
+export const ACTIVITY_TIMEOUT = 5 * 1000 * 60; // ms
 
 // Cursors
 // Min/max Y values to show a custom cursor in. These values are percentage of

@@ -38,6 +38,7 @@ const CACHE_DEBOUNCE_MS = 100;
 
 export const initialize = async (
   actor: OrchestratorActor,
+  orchestratorActorIds: string[],
   onlineChange: (online: boolean) => void,
   rebucket: (actor: OrchestratorActor) => Promise<void>,
   debug: Debug,
@@ -81,6 +82,9 @@ export const initialize = async (
     logLevel: 'error',
     mutators,
   });
+
+  // Do a cleanup whenever we make a new client
+  reflectClient.mutate.removeActorsExcept(orchestratorActorIds);
 
   // To handle only doing an operation when something changes, we allow
   // registering listeners for a given key prefix.

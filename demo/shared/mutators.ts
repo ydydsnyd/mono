@@ -56,26 +56,7 @@ export const mutators = {
     await removeBot(tx, botId);
   },
   removeActor: async (tx: WriteTransaction, clientID: string) => {
-    const actorId = await tx.get(`room-actor/${clientID}`);
-    if (!actorId) {
-      // Since we don't know which room onDisconnect is called in, we call
-      // removeOchestratorActor and removeActor mutators. If we don't have a record of
-      // this clientID, it's probably an orchestrator one.
-      return;
-    }
-    console.log(`Client ${clientID} (${actorId}) left room, cleaning up.`);
-    const botIds = (await tx
-      .scan({prefix: `bot-controller/${tx.clientID}`})
-      .values()
-      .toArray()) as string[];
-    for await (const id of botIds) {
-      await removeBot(tx, id);
-    }
-    if (actorId) {
-      await tx.del(`actor/${actorId}`);
-      await tx.del(`cursor/${actorId}`);
-      await tx.del(`room-actor/${clientID}`);
-    }
+    await removeActor(tx, clientID);
   },
   guaranteeActor: async (tx: WriteTransaction, actor: AnyActor) => {
     const key = `actor/${actor.id}`;
@@ -183,8 +164,43 @@ export const mutators = {
       await tx.del(key);
     }
   },
+  removeActorsExcept: async (tx: WriteTransaction, ids: string[]) => {
+    const clients = (await tx
+      .scan({prefix: 'room-actor/'})
+      .values()
+      .toArray()) as string[];
+    const keepIds = new Set(ids);
+    for (const clientID of clients) {
+      if (!keepIds.has(clientID)) {
+        await removeActor(tx, clientID);
+      }
+    }
+  },
 
   nop: async (_: WriteTransaction) => {},
+};
+
+const removeActor = async (tx: WriteTransaction, clientID: string) => {
+  const actorId = await tx.get(`room-actor/${clientID}`);
+  if (!actorId) {
+    // Since we don't know which room onDisconnect is called in, we call
+    // removeOchestratorActor and removeActor mutators. If we don't have a record of
+    // this clientID, it's probably an orchestrator one.
+    return;
+  }
+  console.log(`Client ${clientID} (${actorId}) left room, cleaning up.`);
+  const botIds = (await tx
+    .scan({prefix: `bot-controller/${tx.clientID}`})
+    .values()
+    .toArray()) as string[];
+  for await (const id of botIds) {
+    await removeBot(tx, id);
+  }
+  if (actorId) {
+    await tx.del(`actor/${actorId}`);
+    await tx.del(`cursor/${actorId}`);
+    await tx.del(`room-actor/${clientID}`);
+  }
 };
 
 const removeBot = async (tx: WriteTransaction, botId: string) => {

@@ -1,5 +1,9 @@
 import {Reflect} from '@rocicorp/reflect';
-import {ORCHESTRATOR_ROOM_ID, USER_ID} from '../shared/constants';
+import {
+  ACTIVITY_PING_FREQUENCY,
+  ORCHESTRATOR_ROOM_ID,
+  USER_ID,
+} from '../shared/constants';
 import {WORKER_HOST} from '../shared/urls';
 import type {
   Cursor,
@@ -22,6 +26,7 @@ export const initRoom = async (
   onBotCreated: (bot: OrchestratorActor) => void,
 ): Promise<{
   actor: OrchestratorActor;
+  getOrchestratorActorIds: () => Promise<string[]>;
   clientCount: () => Promise<number>;
   rebucket: (actor: OrchestratorActor) => Promise<void>;
   recordCursor: (recordingId: string, cursor: Cursor) => Promise<void>;
@@ -118,8 +123,24 @@ export const initRoom = async (
     },
     {initialValuesInFirstDiff: true},
   );
+  // Ping the orchestrator periodically. If we don't ping for 5 minutes, it'll
+  // remove our user.
+  setInterval(() => {
+    orchestratorClient.mutate.alive(now());
+  }, ACTIVITY_PING_FREQUENCY);
+
   return {
     actor,
+    getOrchestratorActorIds: async () => {
+      const actors = await orchestratorClient.query(
+        async tx =>
+          (await tx
+            .scan({prefix: 'orchestrator-actor/'})
+            .values()
+            .toArray()) as OrchestratorActor[],
+      );
+      return actors.map(a => a.id);
+    },
     clientCount: async () =>
       await orchestratorClient.query(
         async tx =>

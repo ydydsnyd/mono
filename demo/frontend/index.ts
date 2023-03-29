@@ -139,6 +139,7 @@ export const init = async (): Promise<DemoAPI> => {
   const [guaranteeActor, setGuaranteeActor] = getGuaranteeActor();
   const {
     actor,
+    getOrchestratorActorIds,
     clientCount,
     rebucket,
     recordCursor,
@@ -192,6 +193,7 @@ export const init = async (): Promise<DemoAPI> => {
     guaranteeActor: guaranteeActorMutation,
   } = await initialize(
     actor,
+    await getOrchestratorActorIds(),
     online => {
       const dot = document.querySelector('.online-dot');
       if (dot) {
