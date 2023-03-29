@@ -212,6 +212,13 @@
   margin-left: 0.5rem;
 }
 
+@media (max-width: 828px) {
+  .title {
+    font-size: 10vw;
+    line-height: 1;
+  }
+}
+
 @media (max-width: 600px) {
   .grid {
     width: 100%;
@@ -235,11 +242,6 @@
   .section p {
     font-size: 1rem;
     line-height: 1.8;
-  }
-
-  .title {
-    font-size: 36px;
-    line-height: 1;
   }
 
   .introSection .featuredStatement {

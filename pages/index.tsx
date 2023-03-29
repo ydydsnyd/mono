@@ -30,7 +30,7 @@ export default function Home() {
           id="intro"
           className={`${styles.section} ${styles.introSection}`}
         >
-          <h1 className={styles.title}>The next web is </h1>
+          <h1 className={styles.title}>The next web is</h1>
           <Demo />
 
           <p className={styles.featuredStatement}>
