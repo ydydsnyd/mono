@@ -15,7 +15,8 @@ import {
   Camera,
 } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
-import type {Letter, Position, Vector} from '../shared/types';
+import type {Position, Vector} from '../shared/types';
+import {Letter} from '../shared/types';
 import {letterMap} from '../shared/util';
 import {LETTERS} from '../shared/letters';
 import {
@@ -35,6 +36,19 @@ export type LetterInfo = {
 const ORTHO_SIZE_FACTOR = 0.0478;
 const ORTHO_OFFSET_X = 0.7;
 const ORTHO_OFFSET_Y = -0.29;
+
+const BRIDGES = {
+  [Letter.A]: [],
+  [Letter.L]: [],
+  [Letter.I]: [
+    [
+      {x: 0.18, y: 0.33, width: 0.138, height: 0.05},
+      {x: 0.546, y: 0.271, width: 0.1, height: 0.05},
+    ],
+  ],
+  [Letter.V]: [],
+  [Letter.E]: [],
+};
 
 export const renderer = async (canvas: HTMLCanvasElement) => {
   // Create an engine
@@ -85,7 +99,7 @@ export const createScene = async (
   scene: Scene;
   getTexturePosition: (
     point: Position,
-  ) => [Letter | undefined, Position | undefined, Vector | undefined];
+  ) => [Letter | undefined, Position[] | undefined, Vector | undefined];
   updateTexture: (letter: Letter) => void;
   resizeCanvas: () => void;
 }> => {
@@ -184,22 +198,48 @@ export const createScene = async (
   // Expose a method for finding the letter and position of an arbitrary point.
   const getTexturePosition = (
     cursor: Position,
-  ): [Letter | undefined, Position | undefined, Vector | undefined] => {
+  ): [Letter | undefined, Position[] | undefined, Vector | undefined] => {
     const pickInfo = scene.pick(cursor.x, cursor.y, mesh =>
       letterMeshNames.has(mesh.name as Letter),
     );
     const {x: tx, y: ty} = pickInfo.getTextureCoordinates() || {x: -1, y: -1};
     const letter = pickInfo.pickedMesh?.name as Letter | undefined;
+    console.log(tx, ty);
     if (letter) {
       const {x, y, z} = pickInfo.pickedPoint!;
-      return [
-        letter,
+      const points = [
         {
           x: tx,
           y: 1 - ty, // Y is inverted in the 3D space
         },
-        {x, y, z},
       ];
+      BRIDGES[letter].forEach(areas => {
+        let hit: Position | undefined = undefined;
+        let hitIdx = -1;
+        for (const [idx, a] of areas.entries()) {
+          if (
+            tx > a.x &&
+            ty > a.y &&
+            tx - a.x < a.width &&
+            ty - a.y < a.height
+          ) {
+            hit = {x: tx - a.x, y: ty - a.y};
+            hitIdx = idx;
+            break;
+          }
+        }
+        if (hit) {
+          for (const [idx, a] of areas.entries()) {
+            if (idx !== hitIdx) {
+              points.push({
+                x: a.x + hit.x,
+                y: 1 - (a.y + hit.y),
+              });
+            }
+          }
+        }
+      });
+      return [letter, points, {x, y, z}];
     }
     return [undefined, undefined, undefined];
   };

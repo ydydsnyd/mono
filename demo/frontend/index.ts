@@ -318,17 +318,19 @@ export const init = async (): Promise<DemoAPI> => {
     actorId?: string,
     colorIndex?: number,
   ) => {
-    const [letter, texturePosition, hitPosition] = getTexturePosition(at);
-    if (letter && texturePosition && hitPosition) {
-      addSplatter({
-        letter,
-        actorId: actorId || actor.id,
-        colorIndex: colorIndex || actor.colorIndex,
-        texturePosition,
-        large: isMobile,
-        hitPosition,
-        timestamp: now(),
-      });
+    const [letter, texturePositions, hitPosition] = getTexturePosition(at);
+    if (letter && texturePositions && hitPosition) {
+      for (const texturePosition of texturePositions) {
+        addSplatter({
+          letter,
+          actorId: actorId || actor.id,
+          colorIndex: colorIndex || actor.colorIndex,
+          texturePosition,
+          large: isMobile,
+          hitPosition,
+          timestamp: now(),
+        });
+      }
     }
   };
 
