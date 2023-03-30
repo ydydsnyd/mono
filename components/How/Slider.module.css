@@ -1,7 +1,7 @@
 .latencySlider {
   position: absolute;
   right: 24px;
-  top: 14px;
+  top: 16px;
   display: 'flex';
   justifycontent: 'center';
   flexwrap: 'wrap';
@@ -10,9 +10,11 @@
 
 .latencyValue {
   position: absolute;
-  right: 5.5rem;
+  display: flex;
+  justify-content: space-between;
+  right: 5rem;
   top: 8px;
-  width: 9rem;
+  width: 7.5rem;
   font-size: 1rem;
   text-align: right;
   color: #24283b;

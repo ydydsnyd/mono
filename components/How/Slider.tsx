@@ -9,6 +9,16 @@ const MAX = 2000;
 
 const Slider = ({clientID}: {clientID: string}) => {
   const [values, setValues] = React.useState([4]);
+  function getLatencyPosition() {
+    var pos = values[0];
+    if (pos < 1000) {
+      return pos.toFixed(0) + "ms";
+    } else {
+      var adjustedPos = pos/1000;
+      return adjustedPos.toFixed(1) + "s";
+    };
+  };
+  const latencyPosition = getLatencyPosition();
   return (
     <div
       className={style.latencySlider}
@@ -18,9 +28,11 @@ const Slider = ({clientID}: {clientID: string}) => {
       }}
     >
       <output className={style.latencyValue} id="output">
-        Latency:{' '}
+        <span className={style.latencyLabel}>
+          Latency:{' '}
+        </span>
         <span className={style.latencyValueNumber}>
-          {values[0].toFixed(0)}ms
+          {latencyPosition}
         </span>
       </output>
       <Range
