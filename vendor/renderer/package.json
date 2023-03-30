@@ -11,5 +11,7 @@
   ],
   "module": "renderer.js",
   "types": "renderer.d.ts",
-  "sideEffects": false
+  "sideEffects": [
+    "./snippets/*"
+  ]
 }
