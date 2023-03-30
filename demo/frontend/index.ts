@@ -225,7 +225,7 @@ export const init = async (): Promise<DemoAPI> => {
 
   // Whenever actors change, update the count
   addListener<Actor>('actor', async () => {
-    const count = actors.length;
+    const count = Object.keys(actors).length;
     activeUserCount.innerHTML = count + '';
   });
 
