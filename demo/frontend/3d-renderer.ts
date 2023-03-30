@@ -204,7 +204,6 @@ export const createScene = async (
     );
     const {x: tx, y: ty} = pickInfo.getTextureCoordinates() || {x: -1, y: -1};
     const letter = pickInfo.pickedMesh?.name as Letter | undefined;
-    console.log(tx, ty);
     if (letter) {
       const {x, y, z} = pickInfo.pickedPoint!;
       const points = [
