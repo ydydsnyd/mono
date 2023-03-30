@@ -245,7 +245,7 @@ const removeActor = async (tx: WriteTransaction, clientID: string) => {
     // this clientID, it's probably an orchestrator one.
     return;
   }
-  console.log(`Client ${clientID} (${actorId}) left room, cleaning up.`);
+  serverLog(`Client ${clientID} (${actorId}) left room, cleaning up.`);
   const botIds = (await tx
     .scan({prefix: `bot-controller/${tx.clientID}`})
     .values()
@@ -261,7 +261,13 @@ const removeActor = async (tx: WriteTransaction, clientID: string) => {
 };
 
 const removeBot = async (tx: WriteTransaction, botId: string) => {
-  console.log(`Delete room bot ${botId}.`);
+  serverLog(`Delete room bot ${botId}.`);
   await tx.del(`actor/${botId}`);
   await tx.del(`cursor/${botId}`);
+};
+
+const serverLog = (...args: string[]) => {
+  if (env === Env.SERVER) {
+    console.log(...args);
+  }
 };

@@ -127,7 +127,7 @@ export const orchestratorMutators = {
       cursorToRecordingCursor(cursor),
     );
     await tx.put(`current-recording-frame/${recordingId}`, recordingNumber);
-    let index = ((await tx.get(`recordings-index`)) as string[]) || [];
+    let index = [...((await tx.get(`recordings-index`)) as string[])];
     // O(n) but also we've got bigger problems if this gets too big to scan.
     if (!index.includes(recordingId)) {
       index.push(recordingId);
