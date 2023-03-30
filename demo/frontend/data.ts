@@ -84,7 +84,7 @@ export const initialize = async (
   });
 
   // Do a cleanup whenever we make a new client
-  reflectClient.mutate.removeActorsExcept(orchestratorActorIds);
+  await reflectClient.mutate.removeActorsExcept(orchestratorActorIds);
 
   // To handle only doing an operation when something changes, we allow
   // registering listeners for a given key prefix.

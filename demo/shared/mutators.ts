@@ -109,11 +109,7 @@ export const mutators = {
       await tx.put(`bot-controller/${tx.clientID}/${actor.id}`, actor.id);
     } else {
       // Make sure there's only one actor per client
-      const existingActor = await tx.get(`room-actor/${tx.clientID}`);
-      if (existingActor) {
-        await tx.del(`actor/${existingActor}`);
-        await tx.del(`cursor/${existingActor}`);
-      }
+      await removeActor(tx, tx.clientID);
       await tx.put(`room-actor/${tx.clientID}`, actor.id);
     }
     await tx.put(key, actor);

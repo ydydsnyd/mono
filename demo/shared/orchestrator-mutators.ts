@@ -164,6 +164,7 @@ const cleanupOldUsers = async (tx: WriteTransaction, timestamp: number) => {
       actorsToRemove.push(actor.id);
     }
   }
+  console.log('Removing actors due to inactivity:', actorsToRemove);
   for (const actorId of actorsToRemove) {
     await removeActor(tx, actorId, timestamp, actorsToRemove);
   }
