@@ -1,4 +1,4 @@
-import type {WriteTransaction} from '@rocicorp/reflect';
+import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
 import {
   Actor,
   AnyActor,
@@ -33,6 +33,46 @@ const Seeds = {
   splatterRotation: 9847,
 };
 
+const clientConsoleMap = new Map<string, (log: string) => void>();
+
+export function registerClientConsole(
+  clientId: string,
+  log: (log: string) => void,
+) {
+  clientConsoleMap.set(clientId, log);
+}
+
+export function deregisterClientConsole(clientId: string) {
+  clientConsoleMap.delete(clientId);
+}
+
+const logsPrefix = 'refect-server-log';
+export const entriesPrefix = `${logsPrefix}/entries/`;
+export const entriesCountKey = `${logsPrefix}/count`;
+
+function entriesKey(count: number): string {
+  return `${entriesPrefix}${count.toString().padStart(10, '0')}`;
+}
+
+export async function getServerLogCount(tx: WriteTransaction): Promise<number> {
+  return ((await tx.get(entriesCountKey)) as number) ?? 0;
+}
+
+export async function getServerLogs(tx: ReadTransaction): Promise<string[]> {
+  return (await tx
+    .scan({prefix: entriesPrefix})
+    .values()
+    .toArray()) as string[];
+}
+
+export async function addServerLog(tx: WriteTransaction, log: string) {
+  if (tx.environment !== 'server') {
+    return;
+  }
+  const count = await getServerLogCount(tx);
+  await tx.put(entriesKey(count), log);
+  await tx.put(entriesCountKey, count + 1);
+}
 export const mutators = {
   initialize: async (tx: WriteTransaction) => {
     // We'd like to prevent drawing our local client until we load the server cache
@@ -176,7 +216,28 @@ export const mutators = {
       }
     }
   },
+  // These mutators are for the how it works demos
+  increment: async (
+    tx: WriteTransaction,
+    {key, delta}: {key: string; delta: number},
+  ) => {
+    const prev = ((await tx.get(key)) as number) ?? 0;
+    const next = prev + delta;
+    await tx.put(key, next);
+    clientConsoleMap.get(tx.clientID)?.(
+      `Running mutation ${tx.mutationID} from ${tx.clientID} on client: ${prev} → ${next}`,
+    );
+    await addServerLog(
+      tx,
+      `Running mutation ${tx.mutationID} from ` +
+        `${tx.clientID} on ${tx.environment}: ` +
+        `${prev} → ${next}`,
+    );
+  },
 
+  addServerLog,
+  getServerLogs,
+  getServerLogCount,
   nop: async (_: WriteTransaction) => {},
 };
 

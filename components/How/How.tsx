@@ -1,161 +1,83 @@
-import React, {useState} from 'react';
-import styles from './How.module.css';
-import Demo1a from './Demos/Demo1a';
-import Demo1b from './Demos/Demo1b';
-import Demo2a from './Demos/Demo2a';
-import Demo2b from './Demos/Demo2b';
-import ServerConsole from './ServerConsole';
-import ClientConsole from './ClientConsole';
-import DemoButton from './DemoButton';
-import RotateButton from './RotateButton';
-import Slider from './Slider';
+import React, {useState, useEffect} from 'react';
+import {init} from '@/demo/howto-frontend';
+import type {Reflect} from '@rocicorp/reflect';
+
+import {nanoid} from 'nanoid';
+import {delayWebSocket} from './delayWebSocket';
+import {M, deregisterClientConsole} from '@/demo/shared/mutators';
+import Demo1 from './Demo1';
+import Demo2 from './Demo2';
+import {ClientIDContext} from './ClientIDContext';
 
 export default function How() {
-  const [toggleDemo1, setToggleDemo1] = useState(true);
-  const toggleSwitchDemo1 = () => {
-    setToggleDemo1(!toggleDemo1);
-  };
-  const [toggleDemo2, setToggleDemo2] = useState(true);
-  const toggleSwitchDemo2 = () => {
-    setToggleDemo2(!toggleDemo2);
-  };
+  const [iReflect1, setiReflect1] = useState<Reflect<M>>();
+  const [iReflect2, setiReflect2] = useState<Reflect<M>>();
+  const [rReflect1, setrReflect1] = useState<Reflect<M>>();
+  const [rReflect2, setrReflect2] = useState<Reflect<M>>();
+  const [iClient1ID, setiClient1ID] = useState('');
+  const [iClient2ID, setiClient2ID] = useState('');
+  const [rClient1ID, setrClient1ID] = useState('');
+  const [rClient2ID, setrClient2ID] = useState('');
+
+  function initHowToReflect() {
+    delayWebSocket(process.env.NEXT_PUBLIC_WORKER_HOST!.replace(/^ws/, 'http'));
+    const [iRoomID, iClient1UserID, iClient2UserID] = [
+      'increment' + nanoid(),
+      'iClient1UserID' + nanoid(),
+      'iClient2UserID' + nanoid(),
+    ];
+
+    const [rRoomID, rClient1UserID, rClient2UserID] = [
+      'rorate' + nanoid(),
+      'rClient1UserID' + nanoid(),
+      'rClient2UserID' + nanoid(),
+    ];
+
+    const iReflect1 = init(iRoomID, iClient1UserID);
+    const iReflect2 = init(iRoomID, iClient2UserID);
+    const rReflect1 = init(rRoomID, rClient1UserID);
+    const rReflect2 = init(rRoomID, rClient2UserID);
+
+    setiReflect1(iReflect1);
+    setiReflect2(iReflect2);
+    setrReflect1(rReflect1);
+    setrReflect2(rReflect2);
+
+    iReflect1.clientID.then(id => setiClient1ID(id));
+    iReflect2.clientID.then(id => setiClient2ID(id));
+    rReflect1.clientID.then(id => setrClient1ID(id));
+    rReflect2.clientID.then(id => setrClient2ID(id));
+  }
+
+  useEffect(() => {
+    initHowToReflect();
+
+    return () => {
+      console.log("Closing iReflect's");
+      [iReflect1, iReflect2].forEach(reflect => {
+        reflect?.clientID.then(deregisterClientConsole);
+        reflect?.close();
+      });
+    };
+  }, []);
 
   return (
     <>
-      {/* Step 1: Define mutators */}
-      <div className={styles.howStep}>
-        <h3 className={styles.howHeader}>
-          <strong>Step 1:</strong> Define Mutators
-        </h3>
-        <p className={styles.howDescription}>
-          Mutators are functions you define to change the datastore. The UI
-          updates <strong>instantly</strong> (in the same frame) when mutators
-          are called. Milliseconds later, Reflect replays the mutator on the
-          server to sync the change. Because of server replay, mutators handle
-          many conflicts naturally. If two client simultaneously increment a
-          counter, the mutator will naturally sum the changes rather than
-          overwrite one.
-        </p>
-        <div className={styles.howGridLayout2}>
-          <div className={styles.codeBlock}>
-            {toggleDemo1 ? (
-              <>
-                <div className={styles.codeBlockToggle}>
-                  <button className={styles.codeToggleActive}>
-                    mutators.ts
-                  </button>
-                  <button onClick={toggleSwitchDemo1}>index.tsx</button>
-                </div>
-                <Demo1a />
-              </>
-            ) : (
-              <>
-                <div className={styles.codeBlockToggle}>
-                  <button onClick={toggleSwitchDemo1}>mutators.ts</button>
-                  <button className={styles.codeToggleActive}>index.tsx</button>
-                </div>
-                <Demo1b />
-              </>
-            )}
-          </div>
-          <div className={styles.client}>
-            <h4 className={styles.panelLabel}>Client 1</h4>
-            <Slider />
-            <DemoButton />
-            <ClientConsole />
-          </div>
-          <ServerConsole />
-          <div className={styles.client}>
-            <h4 className={styles.panelLabel}>Client 2</h4>
-            <Slider />
-            <DemoButton />
-            <ClientConsole />
-          </div>
-        </div>
-      </div>
+      {iReflect1 && iReflect2 && iClient1ID && iClient2ID ? (
+        <ClientIDContext.Provider
+          value={{client1ID: iClient1ID, client2ID: iClient2ID}}
+        >
+          <Demo1 reflect1={iReflect1} reflect2={iReflect2} />
+        </ClientIDContext.Provider>
+      ) : null}
 
-      {/* Step 2: Render Reactively */}
-      <div className={styles.howStep}>
-        <h3 className={styles.howHeader}>
-          <strong>Step 2:</strong> Render Reactively
-        </h3>
-        <p className={styles.howDescription}>
-          Subscribe to changes in Reflect and render your UI reactively.
-          There&apos;s no need to interpolate. You receive updates at 60fps,
-          just as if the collaborator was local.
-        </p>
-        <div className={styles.howGridLayout2}>
-          <div className={styles.codeBlock}>
-            {!toggleDemo2 ? (
-              <>
-                <div className={styles.codeBlockToggle}>
-                  <button onClick={toggleSwitchDemo2}>index.tsx</button>
-                  <button className={styles.codeToggleActive}>
-                    mutators.ts
-                  </button>
-                </div>
-                <Demo2a />
-              </>
-            ) : (
-              <>
-                <div className={styles.codeBlockToggle}>
-                  <button className={styles.codeToggleActive}>index.tsx</button>
-                  <button onClick={toggleSwitchDemo2}>mutators.ts</button>
-                </div>
-                <Demo2b />
-              </>
-            )}
-          </div>
-          <div className={styles.client}>
-            <h4 className={styles.panelLabel}>Client 1</h4>
-            <Slider />
-            <div className={styles.demo2layout}>
-              <RotateButton />
-              {/* Cube component goes here */}
-            </div>
-            <ClientConsole />
-          </div>
-          <ServerConsole />
-          <div className={styles.client}>
-            <h4 className={styles.panelLabel}>Client 2</h4>
-            <Slider />
-            <div className={styles.demo2layout}>
-              <RotateButton />
-              {/* Cube component goes here */}
-            </div>
-            <ClientConsole />
-          </div>
-        </div>
-      </div>
-
-      {/* Step 3: Deploy */}
-      <div className={styles.howStep}>
-        <h3 className={styles.howHeader}>
-          <strong>Step 3:</strong> Deploy
-        </h3>
-        <p className={styles.howDescription}>
-          Reflect publishes your mutators to a unique sandboxed server
-          environment. Rooms are backed by Cloudflare&apos;s Durable Object
-          technology and scale horizontally by room.
-        </p>
-        <div className={styles.deployTerminal}>
-          <img className={styles.menuControls} src="/img/menu-controls.svg" />
-          <h4 className={styles.terminalHeader}>Shell</h4>
-          <p className={styles.terminalLine}>
-            <span className={styles.prompt}>&gt;</span>
-            <span className={styles.userInputContainer}>
-              <span className={styles.userInput}>reflect publish</span>
-            </span>
-          </p>
-          <p className={`${styles.terminalLine} ${styles.terminalOutput}`}>
-            &#127881; Published! Running at{' '}
-            <span className={styles.terminalLink}>
-              https://myapp.reflect.net/
-            </span>
-            .
-          </p>
-        </div>
-      </div>
+      {rReflect1 && rReflect2 && rClient1ID && rClient2ID ? (
+        <ClientIDContext.Provider
+          value={{client1ID: rClient1ID, client2ID: rClient2ID}}
+        >
+          <Demo2 reflect1={rReflect1} reflect2={rReflect2} />
+        </ClientIDContext.Provider>
+      ) : null}
     </>
   );
 }

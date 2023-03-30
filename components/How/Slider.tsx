@@ -1,12 +1,13 @@
 import * as React from 'react';
 import {Range, getTrackBackground} from 'react-range';
+import {setLatency} from './delayWebSocket';
 import style from './Slider.module.css';
 
 const STEP = 30;
 const MIN = 4;
 const MAX = 2000;
 
-const Slider: React.FC<{}> = ({}) => {
+const Slider = ({clientID}: {clientID: string}) => {
   const [values, setValues] = React.useState([4]);
   return (
     <div
@@ -27,7 +28,10 @@ const Slider: React.FC<{}> = ({}) => {
         step={STEP}
         min={MIN}
         max={MAX}
-        onChange={values => setValues(values)}
+        onChange={values => {
+          setValues(values);
+          setLatency(clientID, values[0]);
+        }}
         renderTrack={({props, children}) => (
           <div
             onMouseDown={props.onMouseDown}

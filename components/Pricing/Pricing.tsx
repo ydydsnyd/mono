@@ -43,9 +43,7 @@ const Pricing = () => (
       {/* Pricing Grid Row 4: Source access */}
       <div className={styles.pricingGridHeader}>
         Source License
-        <InfoPop
-          message="Cronut hot chicken meh gentrify, migas fixie you probably haven't heard of them praxis bicycle rights."
-        />
+        <InfoPop message="Cronut hot chicken meh gentrify, migas fixie you probably haven't heard of them praxis bicycle rights." />
       </div>
       <div className={styles.pricingGridData}>
         <NotIncluded />
@@ -78,9 +76,7 @@ const Pricing = () => (
       {/* Pricing Grid Row 7: Managed onprem */}
       <div className={styles.pricingGridHeader}>
         Managed On-Prem
-        <InfoPop
-          message="Pug tilde pitchfork beard taiyaki color book man bun."
-        />
+        <InfoPop message="Pug tilde pitchfork beard taiyaki color book man bun." />
       </div>
       <div className={styles.pricingGridData}>
         <NotIncluded />
