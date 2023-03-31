@@ -5,7 +5,7 @@ use crate::{COLOR_PALATE_RS, SPLATTER_ANIM_FRAMES};
 use super::data;
 use base64::prelude::*;
 use image::{
-    imageops::{self, rotate180, rotate270, rotate90},
+    imageops::{rotate180, rotate270, rotate90},
     DynamicImage, ImageBuffer, ImageFormat, Pixel, Rgb, Rgba,
 };
 extern crate lazy_static;
@@ -15,6 +15,19 @@ pub fn precompute() {
     _ = SPLATTER_1;
     _ = SPLATTER_2;
     _ = SPLATTER_3;
+}
+
+pub struct SplatterImages {
+    pub i_0: DynamicImage,
+    pub i_1: DynamicImage,
+    pub i_2: DynamicImage,
+    pub i_3: DynamicImage,
+}
+
+impl SplatterImages {
+    pub fn to_arr(&self) -> [&DynamicImage; 4] {
+        return [&self.i_0, &self.i_1, &self.i_2, &self.i_3];
+    }
 }
 
 pub struct SplatterFrames {
@@ -39,28 +52,28 @@ pub enum SplatterSize {
 }
 
 fn get_frames(
-    strings: [&'static str; 4],
+    splatter_num: u8,
     rotation: u8,
     size: SplatterSize,
     color_index: u8,
 ) -> [ImageBuffer<Rgba<u8>, Vec<u8>>; 4] {
     let total_frames = SPLATTER_ANIM_FRAMES.clone();
-    let dynamic_images = [
-        image_from_str(&strings[0]),
-        image_from_str(&strings[1]),
-        image_from_str(&strings[2]),
-        image_from_str(&strings[3]),
-    ]
-    .map(|f| match rotation {
-        1 => DynamicImage::ImageRgba8(rotate90(&f)),
-        2 => DynamicImage::ImageRgba8(rotate180(&f)),
-        3 => DynamicImage::ImageRgba8(rotate270(&f)),
-        _ => f,
-    })
-    .map(|f| match size {
-        SplatterSize::Regular => f,
-        SplatterSize::Large => f.resize(400, 400, imageops::FilterType::Nearest),
+    let dynamic_images: [&DynamicImage; 4] = match splatter_num {
+        1 => IMAGES_0.to_arr(),
+        2 => IMAGES_1.to_arr(),
+        3 => IMAGES_2.to_arr(),
+        _ => IMAGES_3.to_arr(),
+    };
+    dynamic_images.map(|f| match rotation {
+        1 => DynamicImage::ImageRgba8(rotate90(f)),
+        2 => DynamicImage::ImageRgba8(rotate180(f)),
+        3 => DynamicImage::ImageRgba8(rotate270(f)),
+        _ => DynamicImage::ImageRgba8(f.to_rgba8()),
     });
+    // .map(|f| match size {
+    //     SplatterSize::Regular => f,
+    //     SplatterSize::Large => f.resize(400, 400, imageops::FilterType::Nearest),
+    // });
     let mut colored_images = vec![];
     for (frame, img) in dynamic_images.iter().enumerate() {
         let mut splatter_colored = img.to_rgba8();
@@ -88,7 +101,7 @@ fn get_frames(
 }
 
 impl Splatter {
-    pub fn from(strings: [&'static str; 4]) -> Splatter {
+    pub fn num(num: u8) -> Splatter {
         let num_colors = COLOR_PALATE_RS.len() / 6;
         let mut frames = HashMap::new();
         for color_index in 0..num_colors {
@@ -96,14 +109,14 @@ impl Splatter {
                 color_index,
                 SplatterFrames {
                     color_index: color_index as u8,
-                    r_0: get_frames(strings, 0, SplatterSize::Regular, color_index as u8),
-                    l_0: get_frames(strings, 0, SplatterSize::Large, color_index as u8),
-                    r_90: get_frames(strings, 1, SplatterSize::Regular, color_index as u8),
-                    l_90: get_frames(strings, 1, SplatterSize::Large, color_index as u8),
-                    r_180: get_frames(strings, 2, SplatterSize::Regular, color_index as u8),
-                    l_180: get_frames(strings, 2, SplatterSize::Large, color_index as u8),
-                    r_270: get_frames(strings, 3, SplatterSize::Regular, color_index as u8),
-                    l_270: get_frames(strings, 3, SplatterSize::Large, color_index as u8),
+                    r_0: get_frames(num, 0, SplatterSize::Regular, color_index as u8),
+                    l_0: get_frames(num, 0, SplatterSize::Large, color_index as u8),
+                    r_90: get_frames(num, 1, SplatterSize::Regular, color_index as u8),
+                    l_90: get_frames(num, 1, SplatterSize::Large, color_index as u8),
+                    r_180: get_frames(num, 2, SplatterSize::Regular, color_index as u8),
+                    l_180: get_frames(num, 2, SplatterSize::Large, color_index as u8),
+                    r_270: get_frames(num, 3, SplatterSize::Regular, color_index as u8),
+                    l_270: get_frames(num, 3, SplatterSize::Large, color_index as u8),
                 },
             );
         }
@@ -187,10 +200,34 @@ pub fn for_index(
 }
 
 lazy_static! {
-    pub static ref SPLATTER_0: Splatter = Splatter::from(data::SPLATTER_0_DATA);
-    pub static ref SPLATTER_1: Splatter = Splatter::from(data::SPLATTER_1_DATA);
-    pub static ref SPLATTER_2: Splatter = Splatter::from(data::SPLATTER_2_DATA);
-    pub static ref SPLATTER_3: Splatter = Splatter::from(data::SPLATTER_3_DATA);
+    pub static ref SPLATTER_0: Splatter = Splatter::num(0);
+    pub static ref SPLATTER_1: Splatter = Splatter::num(1);
+    pub static ref SPLATTER_2: Splatter = Splatter::num(2);
+    pub static ref SPLATTER_3: Splatter = Splatter::num(3);
+    pub static ref IMAGES_0: SplatterImages = SplatterImages {
+        i_0: image_from_str(&data::SPLATTER_0_DATA[0]),
+        i_1: image_from_str(&data::SPLATTER_0_DATA[1]),
+        i_2: image_from_str(&data::SPLATTER_0_DATA[2]),
+        i_3: image_from_str(&data::SPLATTER_0_DATA[3])
+    };
+    pub static ref IMAGES_1: SplatterImages = SplatterImages {
+        i_0: image_from_str(&data::SPLATTER_1_DATA[0]),
+        i_1: image_from_str(&data::SPLATTER_1_DATA[1]),
+        i_2: image_from_str(&data::SPLATTER_1_DATA[2]),
+        i_3: image_from_str(&data::SPLATTER_1_DATA[3])
+    };
+    pub static ref IMAGES_2: SplatterImages = SplatterImages {
+        i_0: image_from_str(&data::SPLATTER_2_DATA[0]),
+        i_1: image_from_str(&data::SPLATTER_2_DATA[1]),
+        i_2: image_from_str(&data::SPLATTER_2_DATA[2]),
+        i_3: image_from_str(&data::SPLATTER_2_DATA[3])
+    };
+    pub static ref IMAGES_3: SplatterImages = SplatterImages {
+        i_0: image_from_str(&data::SPLATTER_3_DATA[0]),
+        i_1: image_from_str(&data::SPLATTER_3_DATA[1]),
+        i_2: image_from_str(&data::SPLATTER_3_DATA[2]),
+        i_3: image_from_str(&data::SPLATTER_3_DATA[3])
+    };
 }
 
 fn colors_at_idx(idx: u8) -> (Rgb<u8>, Rgb<u8>) {
