@@ -23,11 +23,16 @@ pub fn main() {
 
 fn render_splatter_to_file(idx: usize, path: &Path) {
     for frame in 0..8 {
-        let (splatter, (_, _)) = drawing::splatters::for_index(idx, frame, 0, 0.0, 0.0);
-        let img_path = path.join(format!("{}-{}.png", idx, frame));
-        println!("Rendering {}-{}", idx, frame);
+        let (splatter, (_, _)) = drawing::splatters::for_index(
+            idx,
+            frame,
+            drawing::splatters::SplatterSize::Regular,
+            0.0,
+            0.0,
+        );
+        println!("Rendering {}-{}@240", idx, frame);
         image::save_buffer_with_format(
-            img_path,
+            path.join(format!("{}-{}@240.png", idx, frame)),
             &splatter.to_rgba8().to_vec(),
             240,
             240,
