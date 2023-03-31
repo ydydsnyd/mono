@@ -66,21 +66,21 @@ pub fn draw(
             for y in 0..s_height {
                 let pixel = splatter_image.get_pixel(x, y);
                 let alpha = pixel[3];
-                let mut dx = sx as u32 + x - 1;
-                let mut dy = sy as u32 + y - 1;
+                let mut dx = sx as u32 + x;
+                let mut dy = sy as u32 + y;
                 if alpha > 0 && (dx as f32) < width && (dy as f32) < height {
                     if splatter_rotations[idx] == 1 {
                         // 90 degrees
-                        let new_x = (height as u32) - dy;
+                        let new_x = (height as u32) - dy - 1;
                         dy = dx;
                         dx = new_x;
                     } else if splatter_rotations[idx] == 2 {
                         // 180 degrees
-                        dx = (width as u32) - dx;
-                        dy = (height as u32) - dy;
+                        dx = (width as u32) - dx - 1;
+                        dy = (height as u32) - dy - 1;
                     } else if splatter_rotations[idx] == 3 {
                         // 270 degrees
-                        let new_y = (width as u32) - dx;
+                        let new_y = (width as u32) - dx - 1;
                         dx = dy;
                         dy = new_y;
                     }
