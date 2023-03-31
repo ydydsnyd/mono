@@ -64,29 +64,35 @@ pub fn draw(
         let (s_width, s_height) = splatter_image.dimensions();
         for x in 0..s_width {
             for y in 0..s_height {
-                let pixel = splatter_image.get_pixel(x, y);
+                let mut fx = x;
+                let mut fy = y;
+                if splatter_rotations[idx] == 1 {
+                    // 90 degrees
+                    let new_x = (s_height as u32) - fy - 1;
+                    fy = fx;
+                    fx = new_x;
+                } else if splatter_rotations[idx] == 2 {
+                    // 180 degrees
+                    fx = (s_width as u32) - fx - 1;
+                    fy = (s_height as u32) - fy - 1;
+                } else if splatter_rotations[idx] == 3 {
+                    // 270 degrees
+                    let new_y = (s_width as u32) - fx - 1;
+                    fx = fy;
+                    fy = new_y;
+                }
+                let pixel = splatter_image.get_pixel(fx, fy);
                 let alpha = pixel[3];
-                let mut dx = sx as u32 + x;
-                let mut dy = sy as u32 + y;
+                let dx = sx as u32 + x;
+                let dy = sy as u32 + y;
                 if alpha > 0 && (dx as f32) < width && (dy as f32) < height {
-                    if splatter_rotations[idx] == 1 {
-                        // 90 degrees
-                        let new_x = (height as u32) - dy - 1;
-                        dy = dx;
-                        dx = new_x;
-                    } else if splatter_rotations[idx] == 2 {
-                        // 180 degrees
-                        dx = (width as u32) - dx - 1;
-                        dy = (height as u32) - dy - 1;
-                    } else if splatter_rotations[idx] == 3 {
-                        // 270 degrees
-                        let new_y = (width as u32) - dx - 1;
-                        dx = dy;
-                        dy = new_y;
-                    }
                     let mut pixel = image.get_pixel(dx, dy).clone();
-                    pixel.blend(&Rgba::from([color[0], color[1], color[2], alpha]));
-                    image.put_pixel(sx as u32 + x, sy as u32 + y, pixel);
+                    if pixel[3] > 0 {
+                        pixel.blend(&Rgba::from([color[0], color[1], color[2], alpha]));
+                    } else {
+                        pixel = Rgba::from([color[0], color[1], color[2], alpha]);
+                    }
+                    image.put_pixel(dx, dy, pixel);
                 }
             }
         }
