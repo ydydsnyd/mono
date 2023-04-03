@@ -3,7 +3,6 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 0 2rem;
 }
 
 .rotateButtonContainer .rotateButton {
@@ -32,6 +31,6 @@
 
 @media (max-width: 600px) {
   .rotateButtonContainer {
-    height: 7.4rem;
+    order: 1;
   }
 }

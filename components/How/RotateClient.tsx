@@ -53,7 +53,7 @@ function RotateClient({
   });
 
   return (
-    <div className={styles.client}>
+    <div className={`${styles.client} ${styles.clientExpanded}`}>
       <h4 className={styles.panelLabel}>{title}</h4>
       <Slider clientID={currentClientID} />
       <div className={styles.demo2layout}>

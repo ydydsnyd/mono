@@ -229,7 +229,10 @@ p.howDescription {
 }
 
 .demo2layout {
+  height: 11rem;
   display: flex;
+  align-items: center;
+  justify-content: space-around;
 }
 
 @media (max-width: 600px) {
@@ -238,5 +241,18 @@ p.howDescription {
     text-align: center;
     margin: 0 0 2rem;
     padding: 0;
+  }
+
+  .demo2layout {
+    flex-wrap: wrap;
+  }
+
+  .demo2layout svg {
+    order: 0;
+    height: 100px;
+  }
+
+  .clientExpanded {
+    height: 27rem;
   }
 }
