@@ -54,8 +54,32 @@
   visibility: visible;
 }
 
+.infoAreaMobile {
+  display: none;
+}
+
 @media (max-width: 600px) {
-  .infoPopContainer {
+  .infoIcon {
     display: none;
+  }
+
+  .infoPopContainer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    margin: 0;
+    overflow: visible;
+  }
+
+  .infoPopContainer:hover .messageContainer {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .messageContainer {
+    left: 110%;
+    max-width: 32vw;
   }
 }
