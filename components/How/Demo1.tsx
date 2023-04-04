@@ -6,6 +6,7 @@ import ServerConsole from './ServerConsole';
 import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '@/demo/shared/mutators';
 import IncrementClient from './IncrementClient';
+import Reset from './Reset';
 
 export default function Demo1({
   reflect1,
@@ -56,6 +57,7 @@ export default function Demo1({
         <ServerConsole reflect={reflectServer} />
         <IncrementClient title="Client 2" reflect={reflect2} />
       </div>
+      <Reset />
     </div>
   );
 }

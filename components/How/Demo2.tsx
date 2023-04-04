@@ -6,6 +6,7 @@ import Demo2b from './Demos/Demo1b';
 import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '@/demo/shared/mutators';
 import RotateClient from './RotateClient';
+import Reset from './Reset';
 
 export default function Demo2({
   reflect1,
@@ -57,6 +58,7 @@ export default function Demo2({
           <ServerConsole reflect={reflectServer} />
           <RotateClient title="Client 2" reflect={reflect2} />
         </div>
+        <Reset />
       </div>
       {/* Step 3: Deploy */}
       <div className={styles.howStep}>
