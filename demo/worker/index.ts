@@ -15,24 +15,6 @@ const CLEAN_ROOM_KEY = 'a-clean-room-key-that-is-unlikely-to-collide';
 
 setOrchestratorEnv(Env.SERVER);
 
-const authHandler = async (auth: string, roomID: string) => {
-  // Note a real implementation should use signed and encrypted auth tokens,
-  // or store the auth tokens in a session database for validation.
-  const authJson = JSON.parse(auth);
-  if (!authJson) {
-    throw Error('Empty auth');
-  }
-  if (authJson.roomID !== roomID) {
-    throw new Error('incorrect roomID');
-  }
-  if (!authJson.userID || typeof authJson.userID !== 'string') {
-    throw new Error('Missing userID');
-  }
-  return {
-    userID: authJson.userID,
-  };
-};
-
 const allMutators = {...mutators, ...orchestratorMutators};
 const mCount = (o: object) => Object.keys(o).length;
 if (mCount(mutators) + mCount(orchestratorMutators) !== mCount(allMutators)) {
@@ -47,7 +29,6 @@ const {
   AuthDO,
 } = createReflectServer({
   mutators: allMutators,
-  authHandler,
   disconnectHandler: async write => {
     await mutators.removeActor(write, write.clientID);
     await orchestratorMutators.removeOchestratorActor(write, {
@@ -56,8 +37,6 @@ const {
     });
   },
   logLevel: 'debug',
-  // getLogLevel: () => 'debug',
-  allowUnconfirmedWrites: false,
 });
 
 class RoomDO extends SuperRoomDO {
