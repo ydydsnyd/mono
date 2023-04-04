@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import Slider from './Slider';
 import ClientConsole from './ClientConsole';
 import styles from './How.module.css';
@@ -14,8 +14,9 @@ function IncrementClient({
   title: string;
   reflect: Reflect<M>;
 }) {
-  const increment = async (reflect: Reflect<M>) =>
+  const increment = useCallback(async (reflect: Reflect<M>) => {
     await reflect?.mutate.increment({key: 'count', delta: 1});
+  }, []);
 
   const [clientConsoleState, clientConsoleDispatch] = useClientConsoleReducer();
   const [currentClientID, setCurrentClientID] = useState('');

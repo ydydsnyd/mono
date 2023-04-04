@@ -10,7 +10,7 @@ const useLongPress = (
   onClick: (event: React.SyntheticEvent) => void,
   options?: UseLongPressOptions | undefined,
 ) => {
-  const {shouldPreventDefault = true, delay = 100} = options || {};
+  const {shouldPreventDefault = true, delay = 8} = options || {};
   const [longPressTriggered, setLongPressTriggered] = useState(false);
   const timeout = useRef<NodeJS.Timeout | null>(null);
   const target = useRef<EventTarget | null>(null);

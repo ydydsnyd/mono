@@ -1,4 +1,4 @@
-import React, {useEffect, useReducer, useState} from 'react';
+import React, {useEffect, useReducer, useState, useCallback} from 'react';
 import Slider from './Slider';
 import ClientConsole from './ClientConsole';
 import styles from './How.module.css';
@@ -9,20 +9,14 @@ import useLongPress from './useLongPress';
 import Roci from './Roci';
 import {useClientConsoleReducer, useCount} from './howtoUtils';
 
-function RotateClient({
-  title,
-  reflect,
-}: {
-  title: string;
-  reflect: Reflect<M>;
-}) {
-  const onLongPress = () => {
+function RotateClient({title, reflect}: {title: string; reflect: Reflect<M>}) {
+  const onLongPress = useCallback(() => {
     reflect?.mutate.increment({key: 'count', delta: 1});
-  };
+  }, [reflect]);
 
-  const onClick = () => {
+  const onClick = useCallback(() => {
     reflect?.mutate.increment({key: 'count', delta: 1});
-  };
+  }, [reflect]);
 
   const longPressEvent = useLongPress(onLongPress, onClick);
   const [clientConsoleState, clientConsoleDispatch] = useClientConsoleReducer();

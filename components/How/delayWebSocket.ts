@@ -30,17 +30,36 @@ export const delayWebSocket = (host: string) => {
     >;
     private readonly deliveryQueue: DelayQueue<MessageEvent>;
 
-    private onMessageCallback:
-      | ((this: WebSocket, ev: MessageEvent) => any)
-      | null = null;
+    private _onMessage = (ev: MessageEvent) => {
+      const latency = latencies.get(this.userID);
+      // console.log(
+      //   'latency',
+      //   latency,
+      //   'halfTripPing',
+      //   halfTripPing,
+      // );
+      // console.log(
+      //   'onmessage',
+      //   ev,
+      //   'ev',
+      //   latency,
+      //   'latency',
+      //   halfTripPing,
+      //   'halfTripPing',
+      // );
+      this.deliveryQueue.enqueue(ev, latency, halfTripPing);
+    };
 
+    private onMessageCallbacks: Set<
+      (this: WebSocket, ev: MessageEvent) => any
+    > = new Set();
     constructor(url: string | URL, protocols?: string | string[] | undefined) {
       super(url, protocols);
       const urlObj = new URL(url);
       this.userID = urlObj.searchParams.get('clientID') ?? '';
       this.sendQueue = new DelayQueue(data => super.send(data));
       this.deliveryQueue = new DelayQueue(ev =>
-        this.onMessageCallback?.call(this, ev),
+        this.onMessageCallbacks.forEach(cb => cb.call(this, ev)),
       );
     }
 
@@ -51,22 +70,41 @@ export const delayWebSocket = (host: string) => {
       this.sendQueue.enqueue(data, latency, halfTripPing);
     }
 
-    override set onmessage(
-      callback: ((this: WebSocket, ev: MessageEvent) => any) | null,
-    ) {
-      this.onMessageCallback = callback;
-      if (callback === null) {
-        super.onmessage = null;
+    override addEventListener<K extends keyof WebSocketEventMap>(
+      type: K,
+      listener: (this: WebSocket, ev: WebSocketEventMap[K]) => any,
+      options?: boolean | AddEventListenerOptions | undefined,
+    ): void {
+      if (type !== 'message') {
+        super.addEventListener(type, listener, options);
+        return;
       }
 
-      super.onmessage = (ev: MessageEvent) => {
-        const latency = latencies.get(this.userID);
-        this.deliveryQueue.enqueue(ev, latency, halfTripPing);
-      };
+      const first = this.onMessageCallbacks.size === 0;
+      this.onMessageCallbacks.add(
+        listener as (this: WebSocket, ev: MessageEvent) => any,
+      );
+
+      if (first) {
+        super.addEventListener('message', this._onMessage);
+      }
     }
 
-    override get onmessage() {
-      return super.onmessage;
+    override removeEventListener<K extends keyof WebSocketEventMap>(
+      type: K,
+      listener: (this: WebSocket, ev: WebSocketEventMap[K]) => any,
+      options?: boolean | EventListenerOptions | undefined,
+    ): void {
+      if (type !== 'message') {
+        super.removeEventListener(type, listener, options);
+        return;
+      }
+      this.onMessageCallbacks.delete(
+        listener as (this: WebSocket, ev: MessageEvent) => any,
+      );
+      if (this.onMessageCallbacks.size === 0) {
+        super.removeEventListener('message', this._onMessage);
+      }
     }
   };
 };
@@ -83,14 +121,18 @@ class DelayQueue<T> {
   }
 
   enqueue(t: T, latency: number | undefined, halfTripPing: number): void {
+    // console.log("enque ", t, "t", latency, "latency", halfTripPing, "halfTripPing");
+
     if ((latency && latency > halfTripPing) || this._queue.length > 0) {
       const targetTime = Date.now() + Math.max(latency ?? 0 - halfTripPing, 0);
       this._queue.push({
         targetTime,
         t,
       });
+      // console.log("enque - targetTime", targetTime, "t", t)
       this._maybeScheduleProcess();
     } else {
+      // console.log("there is no latency or nothing on queue so processing this....")
       this._process(t);
     }
   }
@@ -105,7 +147,10 @@ class DelayQueue<T> {
       const now = Date.now();
       const toProcess = this._queue.filter(({targetTime}) => targetTime <= now);
       this._queue.splice(0, toProcess.length);
-      toProcess.forEach(({t}) => this._process(t));
+      toProcess.forEach(({t}) => {
+        // console.log("toProcess - targetTime", targetTime, "t", t)
+        this._process(t);
+      });
       this._maybeScheduleProcess();
     }, this._queue[0].targetTime - Date.now());
   };
@@ -113,6 +158,6 @@ class DelayQueue<T> {
 
 const latencies: Map<string, number> = new Map();
 export const setLatency = (userID: string, latency: number) => {
-  console.log('setting lacency for', userID, latency);
+  // console.log('setting lacency for', userID, latency);
   latencies.set(userID, latency);
 };

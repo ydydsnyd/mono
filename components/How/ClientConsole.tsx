@@ -10,7 +10,7 @@ export default function ClientConsole({logs}: {logs: string[] | undefined}) {
       <h4 className={styles.panelLabel}>Console</h4>
       <div className={styles.consoleOutput}>
         {logs &&
-          logs.map((log, i) => {
+          logs.slice(-10).map((log, i) => {
             return (
               <p className={styles.consoleItem} key={i}>
                 {log

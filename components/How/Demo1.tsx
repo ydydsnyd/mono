@@ -5,20 +5,19 @@ import Demo1b from './Demos/Demo1b';
 import ServerConsole from './ServerConsole';
 import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '@/demo/shared/mutators';
-import {useServerLogs} from './howtoUtils';
 import IncrementClient from './IncrementClient';
 
 export default function Demo1({
   reflect1,
   reflect2,
+  reflectServer,
 }: {
   reflect1: Reflect<M>;
   reflect2: Reflect<M>;
+  reflectServer: Reflect<M>;
 }) {
   const [toggleDemo, setToggleDemo] = useState(true);
   const toggleSwitchDemo = () => setToggleDemo(!toggleDemo);
-
-  const logs = useServerLogs(reflect1);
 
   return (
     <div className={styles.howStep}>
@@ -54,7 +53,7 @@ export default function Demo1({
           )}
         </div>
         <IncrementClient title="Client 1" reflect={reflect1} />
-        <ServerConsole logs={logs} />
+        <ServerConsole reflect={reflectServer} />
         <IncrementClient title="Client 2" reflect={reflect2} />
       </div>
     </div>

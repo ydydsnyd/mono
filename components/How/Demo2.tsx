@@ -5,20 +5,19 @@ import Demo2a from './Demos/Demo2a';
 import Demo2b from './Demos/Demo1b';
 import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '@/demo/shared/mutators';
-import {useServerLogs} from './howtoUtils';
 import RotateClient from './RotateClient';
 
 export default function Demo2({
   reflect1,
   reflect2,
+  reflectServer,
 }: {
   reflect1: Reflect<M>;
   reflect2: Reflect<M>;
+  reflectServer: Reflect<M>;
 }) {
   const [toggleDemo, setToggleDemo] = useState(true);
   const toggleSwitchDemo = () => setToggleDemo(!toggleDemo);
-
-  const logs = useServerLogs(reflect1);
 
   return (
     <>
@@ -55,7 +54,7 @@ export default function Demo2({
             )}
           </div>
           <RotateClient reflect={reflect1} title="Client 1" />
-          <ServerConsole logs={logs} />
+          <ServerConsole reflect={reflectServer} />
           <RotateClient title="Client 2" reflect={reflect2} />
         </div>
       </div>
