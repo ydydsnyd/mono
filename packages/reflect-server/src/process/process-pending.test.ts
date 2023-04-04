@@ -213,6 +213,7 @@ describe('processPending', () => {
           timestamps: {
             normalizedTimestamp: 750,
             originTimestamp: 600,
+            serverReceivedTimestamp: 700,
           },
           name: 'inc',
         }),
@@ -237,6 +238,8 @@ describe('processPending', () => {
                 ],
                 timestamp: 750,
                 debugOriginTimestamp: 600,
+                debugServerReceivedTimestamp: 700,
+                debugServerSentTimestamp: START_TIME,
               },
             ],
             requestID: '4fxcm49g2j9',
