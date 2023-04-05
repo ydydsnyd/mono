@@ -7,7 +7,7 @@ import {
   setSplatters,
   triggerSplatterRedraw,
 } from './texture-renderer';
-import initRenderer, {draw_caches, precompute} from '../../vendor/renderer';
+import initRendererImpl, {draw_caches, precompute} from '../../vendor/renderer';
 import {cursorRenderer} from './cursors';
 import {
   UVMAP_SIZE,
@@ -124,51 +124,77 @@ export const init = async (): Promise<DemoAPI> => {
   };
 
   // Set up 3D renderer
-  const init3DDone = initTiming('setting up 3D engine', 1000);
-  const {
-    render: render3D,
-    getTexturePosition,
-    resizeCanvas: resize3DCanvas,
-    updateTexture,
-  } = await renderer3D(canvas);
-  init3DDone();
+  async function init3D() {
+    const init3DDone = initTiming('3d-engine', 500);
+    try {
+      return await renderer3D(canvas);
+    } finally {
+      init3DDone();
+    }
+  }
 
-  const roomInitDone = initTiming('finding room', 100);
   const playingRecordings: Record<string, RoomRecording> = {};
   const recordingFrame: Record<string, number> = {};
   const [guaranteeActor, setGuaranteeActor] = getGuaranteeActor();
-  const {
-    actor,
-    getOrchestratorActorIds,
-    rebucket,
-    recordCursor,
-    playRecording,
-    deleteRecording,
-    finishRecording,
-    getRecordingFrame,
-    getDebug: getOrchestratorDebug,
-  } = await initRoom(
-    (recording: RoomRecording) => {
-      console.log('Start playing recording', recording.recordingId);
-      recordingFrame[recording.recordingId] = 1;
-      playingRecordings[recording.recordingId] = recording;
-    },
-    async (botActor: OrchestratorActor) => {
-      console.log('bot actor', botActor);
-      const location = getRandomLocation();
-      await guaranteeActor({...botActor, location});
-    },
+
+  async function initOrchestrator() {
+    const roomInitDone = initTiming('find-room', 300);
+    try {
+      return await initRoom(
+        (recording: RoomRecording) => {
+          console.log('Start playing recording', recording.recordingId);
+          recordingFrame[recording.recordingId] = 1;
+          playingRecordings[recording.recordingId] = recording;
+        },
+        async (botActor: OrchestratorActor) => {
+          console.log('bot actor', botActor);
+          const location = getRandomLocation();
+          await guaranteeActor({...botActor, location});
+        },
+      );
+    } finally {
+      roomInitDone();
+    }
+  }
+
+  async function initRenderer() {
+    const initRendererDone = initTiming('init-renderer', 100);
+    try {
+      await initRendererImpl();
+    } finally {
+      initRendererDone();
+    }
+  }
+
+  const parallelDone = initTiming(
+    'parallel(3d-engine, find-room, init-renderer)',
+    500,
   );
-  roomInitDone();
+  const [
+    {
+      render: render3D,
+      getTexturePosition,
+      resizeCanvas: resize3DCanvas,
+      updateTexture,
+    },
+    {
+      actor,
+      getOrchestratorActorIds,
+      rebucket,
+      recordCursor,
+      playRecording,
+      deleteRecording,
+      finishRecording,
+      getRecordingFrame,
+      getDebug: getOrchestratorDebug,
+    },
+  ] = await Promise.all([init3D(), initOrchestrator(), initRenderer()]);
+  parallelDone();
 
   // Set up info below demo
   const activeUserCount = document.getElementById(
     'active-user-count',
   ) as HTMLDivElement;
-
-  const initRendererDone = initTiming('initializing renderer module', 100);
-  await initRenderer();
-  initRendererDone();
 
   const updateLocation = () => {
     // Get our location and add it when it's ready
@@ -362,10 +388,7 @@ export const init = async (): Promise<DemoAPI> => {
   // Wait for round trip confirmation from the server before starting the render
   // loop
   await new Promise<void>(resolve => {
-    const serverRoundTripDone = initTiming(
-      'waiting for initial server data',
-      1000,
-    );
+    const serverRoundTripDone = initTiming('receive-initial-server-data', 1000);
     const checkReady = async () => {
       if (!(await cachesLoaded())) {
         setTimeout(checkReady, 25);
@@ -374,15 +397,19 @@ export const init = async (): Promise<DemoAPI> => {
       // After we've started, flip a class on the body
       document.body.classList.add('demo-active');
       serverRoundTripDone();
-      ready(true);
       resolve();
     };
     checkReady();
   });
+
+  const redrawDone = initTiming('redrawTextures', 100);
+
   // After we have caches, draw them + the splatters
-  for await (const letter of LETTERS) {
+  for (const letter of LETTERS) {
     await redrawTexture(letter);
   }
+
+  redrawDone();
 
   // Add a listener for our cache - when it updates, trigger a full redraw.
   addListener<never>('cache', async (_, deleted, keyParts) => {
@@ -409,12 +436,25 @@ export const init = async (): Promise<DemoAPI> => {
     lastClear = now();
   });
 
+  let renderedFirstFrameDone: ReturnType<typeof initTiming> | null = initTiming(
+    'renderFirstFrame',
+    5,
+  );
+
   // Render our cursors and canvases at "animation speed", usually 60fps
   startRenderLoop(
     async () => {
       ({actors, cursors} = await getState());
+
       // Render our textures, and if they changed, send to the 3D scene.
       renderFrame(now(), lastClear, letter => updateTexture(letter));
+
+      if (renderedFirstFrameDone) {
+        renderedFirstFrameDone();
+        ready(true);
+        renderedFirstFrameDone = null;
+      }
+
       render3D();
       // Splatter if needed
       const {isDown, position, isMobile} = localCursor();
@@ -513,8 +553,10 @@ const startRenderLoop = (
 export const timing = (name: string) => {
   const emit = (message: string, duration: number, color?: string) => {
     if (duration === -1) {
+      performance.mark(`${name}-${message} start`);
       return console.log(`%cStart ${message}`, 'color: #9bb3af');
     }
+    performance.mark(`${name}-${message} end`);
     console.log(
       `%cFinished ${message} in %c${duration.toFixed(0)}ms`,
       'color: #9bb3af',
