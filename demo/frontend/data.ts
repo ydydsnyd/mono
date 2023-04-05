@@ -90,7 +90,7 @@ export const initialize = async (
   // Set up a local state - this is used to cache values that we don't want to
   // read every frame (and that will be updated via subscription instead)
   const localState: State = await reflectClient.query(
-    stateInitializer(actor.id, debug),
+    stateInitializer(actor.id),
   );
 
   let cacheTimeouts = letterMap<number | null>(() => null);
@@ -263,7 +263,7 @@ const flattenCache = async (
 };
 
 const stateInitializer =
-  (actorId: string, debug: Debug) =>
+  (actorId: string) =>
   async (tx: ReadTransaction): Promise<State> => {
     const actorList = (await tx.scan({prefix: 'actor/'}).toArray()) as Actor[];
     const actors = actorList.reduce((actors, actor) => {
@@ -277,12 +277,6 @@ const stateInitializer =
       cursors[cursor.actorId] = cursor;
       return cursors;
     }, {} as State['cursors']);
-    for await (const letter of LETTERS) {
-      const cache = await unchunk(tx, `cache/${letter}`);
-      if (cache && cache !== UNINITIALIZED_CACHE_SENTINEL) {
-        updateCache(letter, cache, debug);
-      }
-    }
     return {
       actorId,
       actors,
