@@ -16,15 +16,26 @@ pub fn precompute() {
 }
 
 pub fn draw(
+    // Destination image
     image: &mut RgbaImage,
+    // Number of splatters to draw
     splatter_count: usize,
+    // The frame within the animation of each splatter to draw
     splatter_frames: &[usize],
+    // The actor who drew each splatter
+    // Not used.
     splatter_actors: &[u32],
+    // The color of each splatter
     colors: &[u8],
+    // The size of each splatter
     sizes: &[u8],
+    // The x position of each splatter on the canvas
     x_vals: &[f32],
+    // The y position of each splatter on the canvas
     y_vals: &[f32],
+    // The index of one of the four splatter animations to use for each splatter
     splatter_animations: &[u8],
+    // The rotation of each splatter
     splatter_rotations: &[u8],
 ) {
     assert_eq!(splatter_count, splatter_actors.len());
@@ -83,16 +94,16 @@ pub fn draw(
                 }
                 let pixel = splatter_image.get_pixel(fx, fy);
                 let alpha = pixel[3];
-                let dx = sx as u32 + x;
-                let dy = sy as u32 + y;
-                if alpha > 0 && (dx as f32) < width && (dy as f32) < height {
-                    let mut pixel = image.get_pixel(dx, dy).clone();
+                let dx = sx + x as i64;
+                let dy = sy + y as i64;
+                if alpha > 0 && dx > 0 && dy > 0 && (dx as f32) < width && (dy as f32) < height {
+                    let mut pixel = image.get_pixel(dx as u32, dy as u32).clone();
                     if pixel[3] > 0 {
                         pixel.blend(&Rgba::from([color[0], color[1], color[2], alpha]));
                     } else {
                         pixel = Rgba::from([color[0], color[1], color[2], alpha]);
                     }
-                    image.put_pixel(dx, dy, pixel);
+                    image.put_pixel(dx as u32, dy as u32, pixel);
                 }
             }
         }

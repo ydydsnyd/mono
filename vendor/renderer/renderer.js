@@ -356,6 +356,19 @@ export function draw_buffer(letter, ctx, splatter_count, splatter_frames, splatt
     }
 }
 
+let cachedUint8ClampedMemory0 = new Uint8ClampedArray();
+
+function getUint8ClampedMemory0() {
+    if (cachedUint8ClampedMemory0.byteLength === 0) {
+        cachedUint8ClampedMemory0 = new Uint8ClampedArray(wasm.memory.buffer);
+    }
+    return cachedUint8ClampedMemory0;
+}
+
+function getClampedArrayU8FromWasm0(ptr, len) {
+    return getUint8ClampedMemory0().subarray(ptr / 1, ptr / 1 + len);
+}
+
 function addHeapObject(obj) {
     if (heap_next === heap.length) heap.push(heap.length + 1);
     const idx = heap_next;
@@ -371,19 +384,6 @@ function handleError(f, args) {
     } catch (e) {
         wasm.__wbindgen_exn_store(addHeapObject(e));
     }
-}
-
-let cachedUint8ClampedMemory0 = new Uint8ClampedArray();
-
-function getUint8ClampedMemory0() {
-    if (cachedUint8ClampedMemory0.byteLength === 0) {
-        cachedUint8ClampedMemory0 = new Uint8ClampedArray(wasm.memory.buffer);
-    }
-    return cachedUint8ClampedMemory0;
-}
-
-function getClampedArrayU8FromWasm0(ptr, len) {
-    return getUint8ClampedMemory0().subarray(ptr / 1, ptr / 1 + len);
 }
 /**
 */
@@ -423,6 +423,14 @@ async function load(module, imports) {
 function getImports() {
     const imports = {};
     imports.wbg = {};
+    imports.wbg.__wbg_static_accessor_SPLATTER_ANIM_FRAMES_659fe1818af3aa5a = function() {
+        const ret = SPLATTER_ANIM_FRAMES;
+        return ret;
+    };
+    imports.wbg.__wbg_static_accessor_UVMAP_SIZE_a2041fefcbe5a985 = function() {
+        const ret = UVMAP_SIZE;
+        return ret;
+    };
     imports.wbg.__wbg_static_accessor_COLOR_PALATE_RS_dc1f67e3ce655b58 = function(arg0) {
         const ret = COLOR_PALATE_RS;
         const ptr0 = passArray8ToWasm0(ret, wasm.__wbindgen_malloc);
@@ -430,26 +438,8 @@ function getImports() {
         getInt32Memory0()[arg0 / 4 + 1] = len0;
         getInt32Memory0()[arg0 / 4 + 0] = ptr0;
     };
-    imports.wbg.__wbg_static_accessor_UVMAP_SIZE_a2041fefcbe5a985 = function() {
-        const ret = UVMAP_SIZE;
-        return ret;
-    };
-    imports.wbg.__wbg_static_accessor_SPLATTER_ANIM_FRAMES_659fe1818af3aa5a = function() {
-        const ret = SPLATTER_ANIM_FRAMES;
-        return ret;
-    };
     imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
         takeObject(arg0);
-    };
-    imports.wbg.__wbg_getImageData_1d31a94ff8a4a1d7 = function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
-        const ret = getObject(arg0).getImageData(arg1, arg2, arg3, arg4);
-        return addHeapObject(ret);
-    }, arguments) };
-    imports.wbg.__wbg_putImageData_23e0cc41d4fabcde = function() { return handleError(function (arg0, arg1, arg2, arg3) {
-        getObject(arg0).putImageData(getObject(arg1), arg2, arg3);
-    }, arguments) };
-    imports.wbg.__wbg_clearRect_b3895f56c5ecd19d = function(arg0, arg1, arg2, arg3, arg4) {
-        getObject(arg0).clearRect(arg1, arg2, arg3, arg4);
     };
     imports.wbg.__wbg_data_f13601b88960b7eb = function(arg0, arg1) {
         const ret = getObject(arg1).data;
@@ -462,6 +452,16 @@ function getImports() {
         const ret = new ImageData(getClampedArrayU8FromWasm0(arg0, arg1), arg2 >>> 0, arg3 >>> 0);
         return addHeapObject(ret);
     }, arguments) };
+    imports.wbg.__wbg_getImageData_1d31a94ff8a4a1d7 = function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+        const ret = getObject(arg0).getImageData(arg1, arg2, arg3, arg4);
+        return addHeapObject(ret);
+    }, arguments) };
+    imports.wbg.__wbg_putImageData_23e0cc41d4fabcde = function() { return handleError(function (arg0, arg1, arg2, arg3) {
+        getObject(arg0).putImageData(getObject(arg1), arg2, arg3);
+    }, arguments) };
+    imports.wbg.__wbg_clearRect_b3895f56c5ecd19d = function(arg0, arg1, arg2, arg3, arg4) {
+        getObject(arg0).clearRect(arg1, arg2, arg3, arg4);
+    };
     imports.wbg.__wbg_new_abda76e883ba8a5f = function() {
         const ret = new Error();
         return addHeapObject(ret);

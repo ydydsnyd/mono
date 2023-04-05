@@ -28,6 +28,7 @@ pub struct Splatter {
     pub frames_l: [&'static DynamicImage; 4],
 }
 
+#[derive(Debug)]
 pub enum SplatterSize {
     Regular = 0,
     Large = 1,
@@ -61,10 +62,14 @@ impl Splatter {
             frames_l: get_frames(num, SplatterSize::Large),
         }
     }
+    // Returns the left and top edge of a splatter centered at x/y.
+    // Note that this can be negative because left/top edge can be off-screen.
     pub fn at(&self, x: f32, y: f32, size: &SplatterSize) -> (i64, i64) {
+        // TODO: This shouldn't be hardcoded but derived from data somehow.
+        // TODO: The large size is currently same dims as regular in the data.
         let half = match size {
             SplatterSize::Regular => 120.0,
-            SplatterSize::Large => 200.0,
+            SplatterSize::Large => 120.0,
         };
         ((x - half).floor() as i64, (y - half).floor() as i64)
     }
@@ -89,9 +94,13 @@ fn image_from_str(string: &str) -> DynamicImage {
 }
 
 pub fn for_index(
+    // Index of animation
     index: usize,
+    // frame within animation
     frame: usize,
+    // size of splatter needed
     size: SplatterSize,
+    // position of splatter on canvas
     x: f32,
     y: f32,
 ) -> (&'static DynamicImage, (i64, i64)) {

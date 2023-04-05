@@ -57,12 +57,15 @@ export const doRender = async (letter: Letter, frames?: number[]) => {
   frames =
     frames ||
     animatingSplatters[letter].map(_ => SPLATTER_ANIMATION_FRAME_DURATION);
+  const label = `render ${letter}`;
+  console.time(label);
   const ctx = getContext(letter);
   draw_buffer(
     getRendererLetter(letter),
     ctx,
     ...splatters2Render(animatingSplatters[letter], frames),
   );
+  console.timeEnd(label);
 };
 
 export const renderFrame = async (
