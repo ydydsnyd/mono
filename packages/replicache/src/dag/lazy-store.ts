@@ -309,7 +309,8 @@ export class LazyRead implements Read {
     return this._closed;
   }
 
-  protected getSourceRead(): Promise<Read> {
+  // TODO(arv): Make protected again.
+  getSourceRead(): Promise<Read> {
     if (!this._sourceRead) {
       this._sourceRead = this._sourceStore.read();
     }
@@ -344,19 +345,16 @@ export class LazyRead implements Read {
     return JSON.stringify(combinedTree, null, 2);
   }
 
-  async validateDag(endAt?: Hash) {
+  async validateDag(endAt: ReadonlySet<Hash>) {
     // if (Math.random() > -1) {
     //   return;
     // }
-    if (!endAt) {
-      endAt = await this.getHead(DEFAULT_HEAD_NAME);
-      assert(endAt);
-    }
     try {
       await validateState(this, await this.getSourceRead(), endAt);
     } catch (e) {
       debugger;
-      console.log(await this.dumpTrees());
+      await validateState(this, await this.getSourceRead(), endAt);
+      // console.log(await this.dumpTrees());
       // throw e;
     }
   }
@@ -757,6 +755,7 @@ class ChunksCache {
           this._delete(hash);
         }
       }
+      this._suspendedDeletes.length = 0;
       this._ensureCacheSizeLimit();
     }
   }
@@ -765,9 +764,13 @@ class ChunksCache {
 class ValidateStateVisitor extends Visitor {
   readonly memdagRead: LazyRead;
   readonly perdagRead: Read;
-  readonly endAt: Hash;
+  readonly endAt: ReadonlySet<Hash>;
 
-  constructor(memdagRead: LazyRead, perdagRead: Read, endAt: Hash) {
+  constructor(
+    memdagRead: LazyRead,
+    perdagRead: Read,
+    endAt: ReadonlySet<Hash>,
+  ) {
     super(memdagRead);
     this.memdagRead = memdagRead;
     this.perdagRead = perdagRead;
@@ -775,13 +778,13 @@ class ValidateStateVisitor extends Visitor {
   }
 
   override async visit(h: Hash): Promise<void> {
-    if (h === this.endAt) {
+    if (this.endAt.has(h)) {
       return;
     }
     if (this.memdagRead.isMemOnlyChunkHash(h)) {
       assert(
         !(await this.perdagRead.hasChunk(h)),
-        `Memdag claims {$h} is mem only but perdag has it`,
+        `Memdag claims ${h} is mem only but perdag has it`,
       );
     }
     await super.visit(h);
@@ -795,7 +798,7 @@ class ValidateStateVisitor extends Visitor {
 async function validateState(
   memdagRead: LazyRead,
   perdagRead: Read,
-  endAt: Hash,
+  endAt: ReadonlySet<Hash>,
 ) {
   const memMainHead = await memdagRead.getHead(DEFAULT_HEAD_NAME);
   assert(memMainHead);

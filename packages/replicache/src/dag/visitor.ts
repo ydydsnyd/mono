@@ -1,12 +1,12 @@
 import type {Hash} from '../hash.js';
 import type {Chunk} from './chunk.js';
-import type {Read} from './store.js';
+import type {MustGetChunk} from './store.js';
 
 export class Visitor {
   private _seen: Set<Hash> = new Set();
-  private _dagRead: Read;
+  private _dagRead: MustGetChunk;
 
-  constructor(dagRead: Read) {
+  constructor(dagRead: MustGetChunk) {
     this._dagRead = dagRead;
   }
 

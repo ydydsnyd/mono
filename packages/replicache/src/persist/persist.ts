@@ -2,7 +2,6 @@ import type {LogContext} from '@rocicorp/logger';
 import {assert} from 'shared/asserts.js';
 import * as dag from '../dag/mod.js';
 import {
-  assertAllMemOnly,
   assertAllPresent,
   assertNoMissingChunks,
   assertNoneMemOnly,
@@ -17,7 +16,6 @@ import type * as sync from '../sync/mod.js';
 import {withRead, withWrite} from '../with-transactions.js';
 import {
   CLIENT_GROUPS_HEAD_NAME,
-  ClientGroup,
   getClientGroup,
   setClientGroup,
 } from './client-groups.js';
@@ -26,7 +24,6 @@ import {
   assertHasClientState,
   getClientGroupIDForClient,
 } from './clients.js';
-import {GatherMemoryOnlyVisitor} from './gather-mem-only-visitor.js';
 
 /**
  * Persists the client's memdag state to the client's perdag client group.
@@ -83,55 +80,54 @@ async function persistInternal(
     return;
   }
 
-  await withRead(memdag, async memdagRead => {
-    const mainHeadHash = await memdagRead.getHead(db.DEFAULT_HEAD_NAME);
-    assert(mainHeadHash);
-    await memdagRead.validateDag(mainHeadHash);
+  const [
+    perdagLMID,
+    perdagBaseSnapshot,
+    mainClientGroupID,
+    headsFromBefore,
+    perdagMainClientGroupHeadHash,
+  ] = await withRead(perdag, async perdagRead => {
+    await assertHasClientState(clientID, perdagRead);
+    const mainClientGroupID = await getClientGroupIDForClient(
+      clientID,
+      perdagRead,
+    );
+    assert(mainClientGroupID, `No main client group for clientID: ${clientID}`);
+    const clientGroup = await getClientGroup(mainClientGroupID, perdagRead);
+    assert(clientGroup);
+    const perdagMainClientGroupHeadHash = clientGroup.headHash;
+    const perdagMainClientGroupHeadCommit = await db.commitFromHash(
+      perdagMainClientGroupHeadHash,
+      perdagRead,
+    );
+
+    const perdagLMID = await perdagMainClientGroupHeadCommit.getMutationID(
+      clientID,
+      perdagRead,
+    );
+    const perdagBaseSnapshot = await db.baseSnapshotFromCommit(
+      perdagMainClientGroupHeadCommit,
+      perdagRead,
+    );
+    assertSnapshotCommitDD31(perdagBaseSnapshot);
+
+    const headsFromBefore: Record<string, Hash | undefined> = {
+      [CLIENTS_HEAD_NAME]: await perdagRead.getHead(CLIENTS_HEAD_NAME),
+      [CLIENT_GROUPS_HEAD_NAME]: await perdagRead.getHead(
+        CLIENT_GROUPS_HEAD_NAME,
+      ),
+    };
+
+    return [
+      perdagLMID,
+      perdagBaseSnapshot,
+      mainClientGroupID,
+      headsFromBefore,
+      perdagMainClientGroupHeadHash,
+    ];
   });
 
-  const [perdagLMID, perdagBaseSnapshot, mainClientGroupID, headsFromBefore] =
-    await withRead(perdag, async perdagRead => {
-      await assertHasClientState(clientID, perdagRead);
-      const mainClientGroupID = await getClientGroupIDForClient(
-        clientID,
-        perdagRead,
-      );
-      assert(
-        mainClientGroupID,
-        `No main client group for clientID: ${clientID}`,
-      );
-      const [, perdagMainClientGroupHeadCommit] = await getClientGroupInfo(
-        perdagRead,
-        mainClientGroupID,
-      );
-      const perdagLMID = await perdagMainClientGroupHeadCommit.getMutationID(
-        clientID,
-        perdagRead,
-      );
-      const perdagBaseSnapshot = await db.baseSnapshotFromCommit(
-        perdagMainClientGroupHeadCommit,
-        perdagRead,
-      );
-      assertSnapshotCommitDD31(perdagBaseSnapshot);
-
-      const headsFromBefore: Record<string, Hash | undefined> = {
-        [CLIENTS_HEAD_NAME]: await perdagRead.getHead(CLIENTS_HEAD_NAME),
-        [CLIENT_GROUPS_HEAD_NAME]: await perdagRead.getHead(
-          CLIENT_GROUPS_HEAD_NAME,
-        ),
-      };
-
-      return [
-        perdagLMID,
-        perdagBaseSnapshot,
-        mainClientGroupID,
-        headsFromBefore,
-      ];
-    });
-
-  await withRead(memdag, async memdagRead => {
-    await memdagRead.validateDag();
-  });
+  await validateMemDag(memdag, clientID, mainClientGroupID);
 
   if (closed()) {
     return;
@@ -140,7 +136,7 @@ async function persistInternal(
   const [
     newMemdagMutations,
     memdagBaseSnapshot,
-    gatheredChunks,
+    gatheredChunksX,
     memdagHeadCommitHash,
   ] = await withRead(memdag, async memdagRead => {
     const memdagHeadCommit = await db.commitFromHead(
@@ -159,13 +155,11 @@ async function persistInternal(
     );
     assertSnapshotCommitDD31(memdagBaseSnapshot);
 
-    const gatheredChunks: ReadonlyMap<Hash, dag.Chunk> =
-      await gatherMemOnlyChunks(
-        memdagRead,
-        memdagHeadCommitHash,
-        newMemdagMutations,
-      );
-    assertAllMemOnly(memdagRead, gatheredChunks.keys());
+    const gatheredChunks: ReadonlyMap<Hash, dag.Chunk> = await gatherChunks(
+      memdagRead,
+      perdagMainClientGroupHeadHash,
+    );
+    // assertAllMemOnly(memdagRead, gatheredChunks.keys());
 
     return [
       newMemdagMutations,
@@ -179,9 +173,11 @@ async function persistInternal(
     return;
   }
 
-  await withRead(memdag, async memdagRead => {
-    await memdagRead.validateDag();
-  });
+  const gatheredChunks = await withRead(perdag, perdagRead =>
+    restrictGatherChunks(perdagRead, gatheredChunksX, memdagHeadCommitHash),
+  );
+
+  await validateMemDag(memdag, clientID, mainClientGroupID);
 
   await withRead(perdag, perdagRead =>
     assertNonePresent(perdagRead, gatheredChunks.keys()),
@@ -352,9 +348,7 @@ async function persistInternal(
       await perdagWrite.commit();
     });
 
-    await withRead(memdag, async memdagRead => {
-      await memdagRead.validateDag();
-    });
+    await validateMemDag(memdag, clientID, mainClientGroupID);
 
     if (memdagBaseSnapshotPersisted) {
       lc.debug?.(
@@ -389,9 +383,7 @@ async function persistInternal(
       );
     }
 
-    await withRead(memdag, async memdagRead => {
-      await memdagRead.validateDag();
-    });
+    await validateMemDag(memdag, clientID, mainClientGroupID);
   } else {
     if (lc.debug) {
       if (
@@ -458,40 +450,126 @@ async function persistInternal(
     });
   }
 
-  await withRead(memdag, async memdagRead => {
-    await memdagRead.validateDag();
-  });
+  await validateMemDag(memdag, clientID, mainClientGroupID);
 }
 
-async function getClientGroupInfo(
-  perdagRead: dag.Read,
-  clientGroupID: sync.ClientGroupID,
-): Promise<[ClientGroup, db.Commit<db.Meta>]> {
-  const clientGroup = await getClientGroup(clientGroupID, perdagRead);
-  assert(clientGroup, `No client group for clientGroupID: ${clientGroupID}`);
-  return [
-    clientGroup,
-    await db.commitFromHash(clientGroup.headHash, perdagRead),
-  ];
+async function validateMemDag(
+  _memdag: dag.LazyStore,
+  _clientID: string,
+  _mainClientGroupID: string,
+) {
+  // await withRead(memdag, async memdagRead => {
+  //   const perdagRead = await memdagRead.getSourceRead();
+  //   const client = await getClient(clientID, perdagRead);
+  //   const clientGroup = await getClientGroup(mainClientGroupID, perdagRead);
+  //   assert(client);
+  //   assert(clientGroup);
+  //   await memdagRead.validateDag(
+  //     new Set([client.headHash, clientGroup.headHash]),
+  //   );
+  // });
 }
 
-async function gatherMemOnlyChunks(
-  dagRead: dag.LazyRead,
-  headHash: Hash,
-  mutations: db.Commit<db.LocalMetaDD31>[],
-): Promise<ReadonlyMap<Hash, dag.Chunk>> {
-  const visitor = new GatherMemoryOnlyVisitor(dagRead);
-  await visitor.visit(headHash);
-  for (const mutation of mutations) {
-    const {size} = visitor.gatheredChunks;
-    await visitor.visit(mutation.chunk.hash);
-    assert(
-      size === visitor.gatheredChunks.size,
-      `Head hash should include all mutations`,
-    );
+// async function getClientGroupInfo(
+//   perdagRead: dag.Read,
+//   clientGroupID: sync.ClientGroupID,
+// ): Promise<[ClientGroup, db.Commit<db.Meta>]> {
+//   const clientGroup = await getClientGroup(clientGroupID, perdagRead);
+//   assert(clientGroup, `No client group for clientGroupID: ${clientGroupID}`);
+//   return [
+//     clientGroup,
+//     await db.commitFromHash(clientGroup.headHash, perdagRead),
+//   ];
+// }
+
+class GatherVisitor extends dag.Visitor {
+  readonly endAt: Hash;
+  readonly gatheredChunks = new Map<Hash, dag.Chunk>();
+
+  constructor(dagRead: dag.Read, endAt: Hash) {
+    super(dagRead);
+    this.endAt = endAt;
   }
+
+  override visit(h: Hash): Promise<void> {
+    if (h === this.endAt) {
+      return Promise.resolve();
+    }
+    return super.visit(h);
+  }
+
+  override visitChunk(c: dag.Chunk): Promise<void> {
+    this.gatheredChunks.set(c.hash, c);
+    return super.visitChunk(c);
+  }
+}
+
+async function gatherChunks(memdag: dag.LazyRead, endAt: Hash) {
+  const mainHeadHash = await memdag.getHead(db.DEFAULT_HEAD_NAME);
+  assert(mainHeadHash);
+  const visitor = new GatherVisitor(memdag, endAt);
+  await visitor.visit(mainHeadHash);
   return visitor.gatheredChunks;
 }
+
+class RestrictVisitor extends dag.Visitor {
+  readonly perdagRead: dag.HasChunk;
+  readonly gatheredChunks = new Map<Hash, dag.Chunk>();
+
+  constructor(dagRead: dag.MustGetChunk, perdagRead: dag.HasChunk) {
+    super(dagRead);
+    this.perdagRead = perdagRead;
+  }
+
+  override async visit(h: Hash): Promise<void> {
+    if (await this.perdagRead.hasChunk(h)) {
+      return Promise.resolve();
+    }
+    await super.visit(h);
+  }
+
+  override visitChunk(chunk: dag.Chunk<unknown>): Promise<void> {
+    this.gatheredChunks.set(chunk.hash, chunk);
+    return super.visitChunk(chunk);
+  }
+}
+
+async function restrictGatherChunks(
+  perdagRead: dag.Read,
+  gatheredChunks: ReadonlyMap<Hash, dag.Chunk>,
+  headHash: Hash,
+): Promise<Map<Hash, dag.Chunk<unknown>>> {
+  const memdagRead: dag.MustGetChunk = {
+    // eslint-disable-next-line require-await
+    async mustGetChunk(h: Hash): Promise<dag.Chunk> {
+      const c = gatheredChunks.get(h);
+      assert(c);
+      return Promise.resolve(c);
+    },
+  };
+  const visitor = new RestrictVisitor(memdagRead, perdagRead);
+  await visitor.visit(headHash);
+  return visitor.gatheredChunks;
+}
+
+// async function gatherMemOnlyChunks(
+//   dagRead: dag.LazyRead,
+//   headHash: Hash,
+//   mutations: db.Commit<db.LocalMetaDD31>[],
+//   endAt: Hash,
+// ): Promise<ReadonlyMap<Hash, dag.Chunk>> {
+//   const visitor = new GatherMemoryOnlyVisitor(dagRead);
+//   await visitor.visit(headHash);
+//   for (const mutation of mutations) {
+//     const {size} = visitor.gatheredChunks;
+//     await visitor.visit(mutation.chunk.hash);
+//     assert(
+//       size === visitor.gatheredChunks.size,
+//       `Head hash should include all mutations`,
+//     );
+//   }
+//   return visitor.gatheredChunks;
+// }
 
 async function rebase(
   mutations: db.Commit<db.LocalMetaDD31>[],

@@ -9,6 +9,6 @@ export * from './key.js';
 export {LazyRead, LazyStore} from './lazy-store.js';
 export {StoreImpl} from './store-impl.js';
 export {ChunkNotFoundError} from './store.js';
-export type {MustGetChunk, Read, Store, Write} from './store.js';
+export type {HasChunk, MustGetChunk, Read, Store, Write} from './store.js';
 export {TestStore} from './test-store.js';
 export {Visitor} from './visitor.js';

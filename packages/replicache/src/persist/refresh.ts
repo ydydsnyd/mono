@@ -58,7 +58,7 @@ export async function refreshInternal(
   lc = lc.addContext('refresh', clientID);
 
   await withRead(memdag, async memdagRead => {
-    await memdagRead.validateDag();
+    await memdagRead.validateDag(new Set());
   });
 
   const memdagBaseSnapshot = await withRead(memdag, memdagRead =>
@@ -191,7 +191,9 @@ export async function refreshInternal(
       ] = perdagWriteResult;
 
       await withRead(memdag, async memdagRead => {
-        await memdagRead.validateDag();
+        await memdagRead.validateDag(
+          new Set([perdagClientGroupHeadHash, perdagClientHeadHash]),
+        );
       });
 
       // pull/poke and refresh are racing to see who gets to update
@@ -207,7 +209,9 @@ export async function refreshInternal(
       }
 
       return withWrite(memdag, async memdagWrite => {
-        await memdagWrite.validateDag();
+        await memdagWrite.validateDag(
+          new Set([perdagClientGroupHeadHash, perdagClientHeadHash]),
+        );
         const memdagHeadCommit = await db.commitFromHead(
           db.DEFAULT_HEAD_NAME,
           memdagWrite,
