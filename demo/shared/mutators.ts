@@ -240,7 +240,7 @@ export const mutators = {
 };
 
 const removeActor = async (tx: WriteTransaction, clientID: string) => {
-  console.log(`Remove room actor ${clientID}`);
+  console.log(`Remove actors for client ${clientID}`);
   const actorId = await tx.get(`room-actor/${clientID}`);
   const botIds = (await tx
     .scan({prefix: `bot-controller/${tx.clientID}`})
@@ -249,7 +249,11 @@ const removeActor = async (tx: WriteTransaction, clientID: string) => {
   for await (const id of botIds) {
     await removeBot(tx, id);
   }
+  if (botIds.length) {
+    console.log('remove bots', botIds);
+  }
   if (actorId) {
+    console.log('remove actor', actorId);
     serverLog(`Client ${clientID} (${actorId}) left room, cleaning up.`);
     await tx.del(`actor/${actorId}`);
     await tx.del(`cursor/${actorId}`);
@@ -288,7 +292,7 @@ const flattenCache = async (
   if (oldSplatters.length === 0) {
     return;
   }
-  console.log(`${letter}: Flattening ${oldSplatters} splatters.`);
+  console.log(`${letter}: Flattening ${oldSplatters.length} splatters.`);
   const [png] = await Promise.all([
     unchunk(tx, `cache/${letter}`),
     _initRenderer!(),

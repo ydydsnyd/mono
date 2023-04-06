@@ -180,13 +180,16 @@ const cleanupOldUsers = async (tx: WriteTransaction, timestamp: number) => {
   const actorsToRemove: string[] = [];
   const aliveIds: Set<string> = new Set();
   for await (const [key, lastPing] of alives) {
+    console.log(key, timestamp - lastPing);
     const id = key.split('/')[1];
     aliveIds.add(id);
     if (timestamp - lastPing > ACTIVITY_TIMEOUT) {
       actorsToRemove.push(id);
     }
   }
-  console.log('Removing actors due to inactivity:', actorsToRemove);
+  if (actorsToRemove.length > 0) {
+    console.log('Removing actors due to inactivity:', actorsToRemove);
+  }
   for (const actorId of actorsToRemove) {
     await removeActor(tx, actorId, timestamp, actorsToRemove);
   }
