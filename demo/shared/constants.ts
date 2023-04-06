@@ -30,7 +30,7 @@ export const MIN_TOUCH_TIME_FOR_INDICATOR = 100; // ms
 // To avoid our data growing infinitely, "flatten" splatters to an image in
 // batches if they are sufficiently old.
 export const SPLATTER_MAX_AGE = 1000; // ms
-export const SPLATTER_FLATTEN_FREQUENCY = 100; // count. This must be less than 65535
+export const SPLATTER_FLATTEN_FREQUENCY = 50; // count. This must be less than 65535
 // Splatter animation speed
 export const SPLATTER_ANIMATION_FRAME_DURATION = 30; // ~33fps
 // Fire splatters at this rate
