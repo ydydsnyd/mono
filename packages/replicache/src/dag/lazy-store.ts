@@ -1,17 +1,22 @@
 import {RWLock} from '@rocicorp/lock';
+import {assert} from 'shared/asserts.js';
+import {DEFAULT_HEAD_NAME, MetaType} from '../db/commit.js';
 import type {Hash} from '../hash.js';
 import {joinIterables} from '../iterables.js';
+import {getClient} from '../persist/clients.js';
 import type {MaybePromise} from '../replicache.js';
 import {promiseVoid} from '../resolved-promises.js';
 import {getSizeOfValue} from '../size-of-value.js';
+import type {ClientID} from '../sync/ids.js';
 import {withWrite} from '../with-transactions.js';
 import {Chunk, ChunkHasher, createChunk} from './chunk.js';
 import {
-  computeRefCountUpdates,
   HeadChange,
   RefCountUpdatesDelegate,
+  computeRefCountUpdates,
 } from './gc.js';
-import {mustGetChunk, Read, Store, Write} from './store.js';
+import {Read, Store, Write, mustGetChunk} from './store.js';
+import {Visitor} from './visitor.js';
 
 /**
  * Dag Store which lazily loads values from a source store and then caches
@@ -141,6 +146,7 @@ export class LazyStore implements Store {
    */
   protected readonly _refCounts = new Map<Hash, number>();
   protected readonly _refs = new Map<Hash, readonly Hash[]>();
+  clientID: ClientID | undefined = undefined;
 
   constructor(
     sourceStore: Store,
@@ -169,6 +175,7 @@ export class LazyStore implements Store {
       this._sourceStore,
       release,
       this._assertValidHash,
+      this.clientID,
     );
   }
 
@@ -184,6 +191,7 @@ export class LazyStore implements Store {
       release,
       this._chunkHasher,
       this._assertValidHash,
+      this.clientID,
     );
   }
 
@@ -233,6 +241,7 @@ export class LazyRead implements Read {
   private readonly _release: () => void;
   private _closed = false;
   readonly assertValidHash: (hash: Hash) => void;
+  readonly clientID: ClientID | undefined;
 
   constructor(
     heads: Map<string, Hash>,
@@ -241,6 +250,7 @@ export class LazyRead implements Read {
     sourceStore: Store,
     release: () => void,
     assertValidHash: (hash: Hash) => void,
+    clientID: ClientID | undefined,
   ) {
     this._heads = heads;
     this._memOnlyChunks = memOnlyChunks;
@@ -248,6 +258,7 @@ export class LazyRead implements Read {
     this._sourceStore = sourceStore;
     this._release = release;
     this.assertValidHash = assertValidHash;
+    this.clientID = clientID;
   }
 
   isMemOnlyChunkHash(hash: Hash): boolean {
@@ -304,6 +315,51 @@ export class LazyRead implements Read {
     }
     return this._sourceRead;
   }
+
+  async dumpTrees() {
+    const {clientID} = this;
+    assert(clientID);
+
+    // debugger;
+    const perdagNodes = new Map<Hash, DebugNode>();
+    const perdagRead = await this.getSourceRead();
+    const client = await getClient(clientID, perdagRead);
+    assert(client);
+    const perdagRoot = await makePerdag(
+      perdagRead,
+      client.headHash,
+      perdagNodes,
+    );
+    const headHash = await this.getHead(DEFAULT_HEAD_NAME);
+    assert(headHash);
+    const memdagRoot = await makeMemdag(this, headHash, perdagNodes);
+
+    const combinedTree: DebugNode = {
+      name: 'Combined',
+      children: [
+        {name: 'Memdag h/main', children: [memdagRoot]},
+        {name: 'Perdag h/clients', children: [perdagRoot]},
+      ],
+    };
+    return JSON.stringify(combinedTree, null, 2);
+  }
+
+  async validateDag(endAt?: Hash) {
+    // if (Math.random() > -1) {
+    //   return;
+    // }
+    if (!endAt) {
+      endAt = await this.getHead(DEFAULT_HEAD_NAME);
+      assert(endAt);
+    }
+    try {
+      await validateState(this, await this.getSourceRead(), endAt);
+    } catch (e) {
+      debugger;
+      console.log(await this.dumpTrees());
+      // throw e;
+    }
+  }
 }
 
 class LazyWrite extends LazyRead implements Write, RefCountUpdatesDelegate {
@@ -328,6 +384,7 @@ class LazyWrite extends LazyRead implements Write, RefCountUpdatesDelegate {
     release: () => void,
     chunkHasher: ChunkHasher,
     assertValidHash: (hash: Hash) => void,
+    clientID: ClientID | undefined,
   ) {
     super(
       heads,
@@ -336,6 +393,7 @@ class LazyWrite extends LazyRead implements Write, RefCountUpdatesDelegate {
       sourceStore,
       release,
       assertValidHash,
+      clientID,
     );
     this._refCounts = refCounts;
     this._refs = refs;
@@ -470,6 +528,36 @@ class LazyWrite extends LazyRead implements Write, RefCountUpdatesDelegate {
     this._pendingMemOnlyChunks.clear();
     this._pendingCachedChunks.clear();
     this._pendingHeadChanges.clear();
+
+    // const {clientID} = this;
+    // if (clientID !== undefined) {
+    //   try {
+    //     await validateState(this, await this.getSourceRead(), clientID);
+    //   } catch (e) {
+    //     // debugger;
+    //     const perdagNodes = new Map<Hash, DebugNode>();
+    //     const perdagRead = await this.getSourceRead();
+    //     const client = await getClient(clientID, perdagRead);
+    //     assert(client);
+    //     const perdagRoot = await makePerdag(
+    //       perdagRead,
+    //       client.headHash,
+    //       perdagNodes,
+    //     );
+    //     const headHash = await this.getHead(DEFAULT_HEAD_NAME);
+    //     assert(headHash);
+    //     const memdagRoot = await makeMemdag(this, headHash, perdagNodes);
+
+    //     const combinedTree: DebugNode = {
+    //       name: 'Combined',
+    //       children: [
+    //         {name: 'Perdag h/clients', children: [perdagRoot]},
+    //         {name: 'Memdag h/main', children: [memdagRoot]},
+    //       ],
+    //     };
+    //     console.log('combined', JSON.stringify(combinedTree, null, 2));
+    //   }
+    // }
     this.release();
   }
 
@@ -673,3 +761,323 @@ class ChunksCache {
     }
   }
 }
+
+class ValidateStateVisitor extends Visitor {
+  readonly memdagRead: LazyRead;
+  readonly perdagRead: Read;
+  readonly endAt: Hash;
+
+  constructor(memdagRead: LazyRead, perdagRead: Read, endAt: Hash) {
+    super(memdagRead);
+    this.memdagRead = memdagRead;
+    this.perdagRead = perdagRead;
+    this.endAt = endAt;
+  }
+
+  override async visit(h: Hash): Promise<void> {
+    if (h === this.endAt) {
+      return;
+    }
+    if (this.memdagRead.isMemOnlyChunkHash(h)) {
+      assert(
+        !(await this.perdagRead.hasChunk(h)),
+        `Memdag claims {$h} is mem only but perdag has it`,
+      );
+    }
+    await super.visit(h);
+  }
+}
+
+/**
+ * We want to validate that all chunks in the memdag only references things in the memdag or things in the
+ * perdag that are under the client headHash in the perdag.
+ */
+async function validateState(
+  memdagRead: LazyRead,
+  perdagRead: Read,
+  endAt: Hash,
+) {
+  const memMainHead = await memdagRead.getHead(DEFAULT_HEAD_NAME);
+  assert(memMainHead);
+
+  const visitor = new ValidateStateVisitor(memdagRead, perdagRead, endAt);
+  await visitor.visit(memMainHead);
+
+  // await visitChunk(memMainHead, memdagRead, perdagRead);
+
+  // const clients = await getClients(perdagRead);
+  // for (const client of clients.values()) {
+  //   assertClientV5(client);
+  //   await visitChunk(client.headHash, memdagRead, perdagRead);
+  //   if (client.tempRefreshHash) {
+  //     await visitChunk(client.tempRefreshHash, memdagRead, perdagRead);
+  //   }
+  // }
+
+  // const clientGroups = await getClientGroups(perdagRead);
+  // for (const clientGroup of clientGroups.values()) {
+  //   await visitChunk(clientGroup.headHash, memdagRead, perdagRead);
+  // }
+}
+
+// async function visitChunk(h: Hash, memdagRead: LazyRead, perdagRead: Read) {
+//   const memdagChunk = await memdagRead.getChunk(h);
+//   const perdagChunk = await perdagRead.getChunk(h);
+//   if (memdagChunk) {
+//     if (perdagChunk) {
+//       assert(!memdagRead.isMemOnlyChunkHash(h));
+//     } else {
+//       assert(memdagRead.isMemOnlyChunkHash(h));
+//     }
+//     for (const ref of memdagChunk.meta) {
+//       await visitChunk(ref, memdagRead, perdagRead);
+//     }
+//   } else {
+//     assert(perdagChunk);
+//     for (const ref of perdagChunk.meta) {
+//       await visitChunk(ref, memdagRead, perdagRead);
+//     }
+//   }
+// }
+
+// async function validateStateOld(
+//   memdagRead: LazyRead,
+//   perdagRead: Read,
+//   clientID: ClientID,
+// ) {
+//   const client = await getClient(clientID, perdagRead);
+//   assertClientV5(client);
+
+//   // Step 1. Gather all the hashes under the client in the perdag.
+//   const perdagVisitor = new PerdagVisitor(perdagRead);
+//   await perdagVisitor.visitCommit(client.headHash);
+//   if (client.tempRefreshHash) {
+//     await perdagVisitor.visitCommit(client.tempRefreshHash);
+//   }
+//   const perdagHashes = perdagVisitor.hashes;
+
+//   const memMainHash = await memdagRead.getHead(DEFAULT_HEAD_NAME);
+//   assert(memMainHash);
+
+//   const memdagVisitor = new MemdagVisitor(memdagRead, perdagRead, perdagHashes);
+//   await memdagVisitor.visitCommit(memMainHash);
+// }
+
+// class PerdagVisitor extends Visitor {
+//   hashes: Set<Hash> = new Set();
+
+//   constructor(read: Read) {
+//     super(read);
+//   }
+
+//   override visitCommitChunk(chunk: Chunk<CommitData<Meta>>): Promise<void> {
+//     this.hashes.add(chunk.hash);
+//     return super.visitCommitChunk(chunk);
+//   }
+
+//   override visitBTreeNodeChunk(chunk: Chunk<Node>): Promise<void> {
+//     this.hashes.add(chunk.hash);
+//     return super.visitBTreeNodeChunk(chunk);
+//   }
+// }
+
+// class MemdagVisitor extends Visitor {
+//   lazyRead: LazyRead;
+//   hashesInPerdagReachableFromClientHead: Set<Hash>;
+//   perdagRead: Read;
+
+//   constructor(lazyRead: LazyRead, perdag: Read, hashesInPerdag: Set<Hash>) {
+//     super(lazyRead);
+//     this.lazyRead = lazyRead;
+//     this.perdagRead = perdag;
+//     this.hashesInPerdagReachableFromClientHead = hashesInPerdag;
+//   }
+
+//   override async visitCommit(
+//     h: Hash,
+//     hashRefType?: HashRefType,
+//   ): Promise<void> {
+//     if (this.hashesInPerdagReachableFromClientHead.has(h)) {
+//       return;
+//     }
+
+//     // Weak refs are not part of ref counting
+//     if (hashRefType === HashRefType.AllowWeak) {
+//       return;
+//     }
+
+//     const inPerdag = await this.perdagRead.hasChunk(h);
+//     const isMemOnly = this.lazyRead.isMemOnlyChunkHash(h);
+
+//     if (isMemOnly) {
+//       assert(!inPerdag);
+//       return super.visitBTreeNode(h);
+//     }
+
+//     if (inPerdag) {
+//       console.log('xxx', {inPerdag, isMemOnly});
+//       assert(false);
+//     }
+
+//     return super.visitCommit(h, hashRefType);
+//   }
+
+//   override async visitBTreeNode(h: Hash): Promise<void> {
+//     if (this.hashesInPerdagReachableFromClientHead.has(h)) {
+//       return;
+//     }
+
+//     const inPerdag = await this.perdagRead.hasChunk(h);
+//     const isMemOnly = this.lazyRead.isMemOnlyChunkHash(h);
+
+//     if (isMemOnly) {
+//       assert(!inPerdag);
+//       return super.visitBTreeNode(h);
+//     }
+
+//     if (inPerdag) {
+//       console.log('xxx', {inPerdag, isMemOnly});
+//       assert(false);
+//     }
+
+//     return super.visitBTreeNode(h);
+//   }
+// }
+
+type DebugNode = {
+  name: string;
+  children: DebugNode[];
+  attributes?: {
+    kind: 'memdag' | 'perdag';
+    missing: boolean;
+    type: string;
+  };
+};
+
+async function makePerdag(
+  perdag: Read,
+  hash: Hash,
+  allNodes: Map<Hash, DebugNode>,
+) {
+  if (allNodes.has(hash)) {
+    return allNodes.get(hash)!;
+  }
+  const node: DebugNode = {
+    name: hashToName(hash),
+    children: [],
+    attributes: {
+      kind: 'perdag',
+      missing: false,
+      type: 'unknown',
+    },
+  };
+  allNodes.set(hash, node);
+  const chunk = await perdag.getChunk(hash);
+  if (!chunk) {
+    node.attributes && (node.attributes.missing = true);
+    return node;
+  }
+
+  if (node.attributes) {
+    node.attributes.type = getKind(chunk.data);
+  }
+
+  for (const m of chunk.meta) {
+    const child = await makePerdag(perdag, m, allNodes);
+    node.children.push(child);
+  }
+  return node;
+}
+
+async function makeMemdag(
+  memdag: LazyRead,
+  hash: Hash,
+  perdagNodes: Map<Hash, DebugNode>,
+) {
+  if (perdagNodes.has(hash)) {
+    return perdagNodes.get(hash)!;
+  }
+
+  const node: DebugNode = {
+    name: hashToName(hash),
+    children: [],
+    attributes: {
+      kind: 'memdag',
+      missing: false,
+      type: 'unknown',
+    },
+  };
+  const chunk = await memdag.getChunk(hash);
+  if (!chunk) {
+    node.attributes && (node.attributes.missing = true);
+    return node;
+  }
+  if (node.attributes) {
+    node.attributes.type = getKind(chunk.data);
+  }
+  for (const m of chunk.meta) {
+    const child = await makeMemdag(memdag, m, perdagNodes);
+    node.children.push(child);
+  }
+  return node;
+}
+
+function hashToName(hash: Hash) {
+  return hash.slice(0, 5) + '-' + Number(hash.slice(-5));
+}
+
+function getKind(data: unknown): string {
+  if (
+    Array.isArray(data) &&
+    data.length === 2 &&
+    typeof data[0] === 'number' &&
+    Array.isArray(data[1])
+  ) {
+    return 'BTree Node';
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (
+    data &&
+    typeof data === 'object' &&
+    typeof (data as any)?.meta?.type === 'number'
+  ) {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    if (data.meta.type === MetaType.LocalDD31) {
+      return 'Local Commit';
+    }
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    if (data.meta.type === MetaType.SnapshotDD31) {
+      return 'Snapshot Commit';
+    }
+  }
+
+  return 'unknown';
+}
+
+// export async function dumpTrees(store: LazyRead, clientID: ClientID) {
+//   // debugger;
+//   const perdagNodes = new Map<Hash, DebugNode>();
+//   // @ts-expect-error protected
+//   const perdagRead = await store.getSourceRead();
+//   const client = await getClient(clientID, perdagRead);
+//   assert(client);
+//   const perdagRoot = await makePerdag(perdagRead, client.headHash, perdagNodes);
+//   const headHash = await store.getHead(DEFAULT_HEAD_NAME);
+//   assert(headHash);
+//   const memdagRoot = await makeMemdag(store, headHash, perdagNodes);
+
+//   const combinedTree: DebugNode = {
+//     name: 'Combined',
+//     children: [
+//       {name: 'Perdag h/clients', children: [perdagRoot]},
+//       {name: 'Memdag h/main', children: [memdagRoot]},
+//     ],
+//   };
+//   return JSON.stringify(combinedTree, null, 2);
+// }
+
+// // @ts-expect-error adssa
+// globalThis.dumpTrees = dumpTrees;

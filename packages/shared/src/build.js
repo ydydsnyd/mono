@@ -15,7 +15,7 @@ const external = [
  * @param {boolean=} metafile
  * @returns {import('esbuild').BuildOptions}
  */
-export function sharedOptions(minify = true, metafile = false) {
+export function sharedOptions(minify = false, metafile = false) {
   /** @type {import('esbuild').BuildOptions} */
   const opts = {
     bundle: true,
@@ -29,6 +29,7 @@ export function sharedOptions(minify = true, metafile = false) {
   if (minify) {
     return {...opts, mangleProps: /^_./, reserveProps: /^__.*__$/};
   }
+  opts.minify = false;
   return opts;
 }
 

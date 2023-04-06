@@ -1,7 +1,9 @@
 import {expect} from '@esm-bundle/chai';
+import {LogContext} from '@rocicorp/logger';
 import * as dag from '../dag/mod.js';
-import type * as sync from '../sync/mod.js';
 import {assertHash, fakeHash, Hash} from '../hash.js';
+import type * as sync from '../sync/mod.js';
+import {withRead, withWrite} from '../with-transactions.js';
 import {
   ClientGroup,
   clientGroupHasPendingMutations,
@@ -14,7 +16,6 @@ import {
   setClientGroup,
   setClientGroups,
 } from './client-groups.js';
-import {withRead, withWrite} from '../with-transactions.js';
 
 const headClientGroup1Hash = fakeHash('b1');
 const headClientGroup2Hash = fakeHash('b2');
@@ -326,6 +327,7 @@ async function testSetClientGroup(
   await withWrite(dagStore, async (write: dag.Write) => {
     const [clientGroupID, partialClientGroup] = partialClientGroupEntryToSet;
     const returnClientGroupMap = await setClientGroup(
+      new LogContext(),
       clientGroupID,
       makeClientGroup(partialClientGroup),
       write,
@@ -366,7 +368,7 @@ async function testSetClientGroupThrowsError(
     const clientGroup = makeClientGroup(partialClientGroup);
     let expectedE: unknown;
     try {
-      await setClientGroup(clientGroupID, clientGroup, write);
+      await setClientGroup(new LogContext(), clientGroupID, clientGroup, write);
     } catch (e) {
       expectedE = e;
     }
@@ -791,6 +793,7 @@ test('setClientGroup properly manages refs to client group heads when a client g
 
   await withWrite(dagStore, async (write: dag.Write) => {
     await setClientGroup(
+      new LogContext(),
       'client-group-3',
       makeClientGroup({
         headHash: clientGroup3HeadHash,
@@ -829,6 +832,7 @@ test("setClientGroup properly manages refs to client group heads when a client g
 
   await withWrite(dagStore, async (write: dag.Write) => {
     await setClientGroup(
+      new LogContext(),
       'client-group-1',
       makeClientGroup({
         headHash: clientGroup1V2HeadHash,
@@ -999,7 +1003,7 @@ test('Disable Client Group', async () => {
   }
 
   await withWrite(dagStore, async (write: dag.Write) => {
-    await disableClientGroup('client-group-1', write);
+    await disableClientGroup(new LogContext(), 'client-group-1', write);
     await testDisabledState(write);
     await write.commit();
   });

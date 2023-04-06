@@ -16,7 +16,7 @@ const dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function buildESM() {
   const mode = debug ? 'debug' : 'unknown';
-  const minify = !debug;
+  const minify = false; //!debug;
   const shared = sharedOptions(minify, metafile);
   const outfile = path.join(dirname, 'out', 'reflect.js');
   const define = await makeDefine(mode);

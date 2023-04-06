@@ -1,7 +1,4 @@
-import {assertHash, Hash} from '../hash.js';
-import type * as sync from '../sync/mod.js';
-import type * as dag from '../dag/mod.js';
-import {FrozenJSONValue, deepFreeze} from '../json.js';
+import type {LogContext} from '@rocicorp/logger';
 import {
   assert,
   assertArray,
@@ -9,11 +6,16 @@ import {
   assertObject,
   assertString,
 } from 'shared/asserts.js';
+import type * as dag from '../dag/mod.js';
+import {assertNoMissingChunks} from '../dag/util.js';
+import {Hash, assertHash} from '../hash.js';
 import {
-  assertIndexDefinitions,
   IndexDefinitions,
+  assertIndexDefinitions,
   indexDefinitionsEqual,
 } from '../index-defs.js';
+import {FrozenJSONValue, deepFreeze} from '../json.js';
+import type * as sync from '../sync/mod.js';
 
 export type ClientGroupMap = ReadonlyMap<sync.ClientGroupID, ClientGroup>;
 
@@ -157,6 +159,7 @@ export async function setClientGroups(
 }
 
 export async function setClientGroup(
+  lc: LogContext,
   clientGroupID: sync.ClientGroupID,
   clientGroup: ClientGroup,
   dagWrite: dag.Write,
@@ -166,7 +169,16 @@ export async function setClientGroup(
   validateClientGroupUpdate(clientGroup, currClientGroup);
   const newClientGroups = new Map(currClientGroups);
   newClientGroups.set(clientGroupID, clientGroup);
-  return setValidatedClientGroups(newClientGroups, dagWrite);
+  lc.debug?.(
+    'Setting client group headHash to',
+    clientGroup.headHash,
+    'for',
+    clientGroupID,
+  );
+
+  const m = await setValidatedClientGroups(newClientGroups, dagWrite);
+  await assertNoMissingChunks(dagWrite, clientGroup.headHash);
+  return m;
 }
 
 export async function deleteClientGroup(
@@ -265,6 +277,7 @@ export function clientGroupHasPendingMutations(clientGroup: ClientGroup) {
  * A disabled client group prevents pulls and pushes from happening.
  */
 export async function disableClientGroup(
+  lc: LogContext,
   clientGroupID: string,
   dagWrite: dag.Write,
 ): Promise<void> {
@@ -277,5 +290,5 @@ export async function disableClientGroup(
     ...clientGroup,
     disabled: true,
   };
-  await setClientGroup(clientGroupID, disabledClientGroup, dagWrite);
+  await setClientGroup(lc, clientGroupID, disabledClientGroup, dagWrite);
 }

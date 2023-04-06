@@ -1,11 +1,12 @@
 import {expect} from '@esm-bundle/chai';
 import {LogContext} from '@rocicorp/logger';
-import type * as sync from '../sync/mod.js';
+import {assert, assertNotUndefined} from 'shared/asserts.js';
+import * as btree from '../btree/mod.js';
+import type {Cookie} from '../cookies.js';
 import * as dag from '../dag/mod.js';
 import * as db from '../db/mod.js';
-import * as btree from '../btree/mod.js';
 import {ChainBuilder} from '../db/test-helpers.js';
-import {assertHash, Hash, makeNewFakeHashFunction} from '../hash.js';
+import {Hash, assertHash, makeNewFakeHashFunction} from '../hash.js';
 import {JSONValue, ReadonlyJSONValue, deepFreeze} from '../json.js';
 import {
   ClientGroupMap,
@@ -13,13 +14,12 @@ import {
   setClientGroups,
 } from '../persist/client-groups.js';
 import {ClientV5, setClient} from '../persist/clients.js';
-import {addData, testSubscriptionsManagerOptions} from '../test-util.js';
-import {refresh} from './refresh.js';
-import {assert, assertNotUndefined} from 'shared/asserts.js';
 import type {MutatorDefs} from '../replicache.js';
+import type * as sync from '../sync/mod.js';
+import {addData, testSubscriptionsManagerOptions} from '../test-util.js';
 import type {WriteTransaction} from '../transactions.js';
-import type {Cookie} from '../cookies.js';
 import {withRead, withWrite} from '../with-transactions.js';
+import {refresh} from './refresh.js';
 
 async function makeChain(
   store: dag.Store,
@@ -550,6 +550,8 @@ suite('refresh', () => {
       // entries: [['b', 2]],
     });
 
+    const lc = new LogContext();
+
     await withWrite(perdag, async dagWrite => {
       await setClient(
         clientID1,
@@ -572,6 +574,7 @@ suite('refresh', () => {
         dagWrite,
       );
       await setClientGroup(
+        lc,
         clientGroupID,
         {
           headHash: l2.chunk.hash,

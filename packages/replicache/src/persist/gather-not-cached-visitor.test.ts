@@ -1,10 +1,10 @@
 import {expect} from '@esm-bundle/chai';
 import * as dag from '../dag/mod.js';
-import {assertHash, makeNewFakeHashFunction} from '../hash.js';
-import {ChainBuilder} from '../db/test-helpers.js';
-import {GatherNotCachedVisitor} from './gather-not-cached-visitor.js';
 import {MetaType} from '../db/commit.js';
+import {ChainBuilder} from '../db/test-helpers.js';
+import {assertHash, makeNewFakeHashFunction} from '../hash.js';
 import {withRead, withWrite} from '../with-transactions.js';
+import {GatherNotCachedVisitor} from './gather-not-cached-visitor.js';
 
 suite('GatherNotCachedVisitor', () => {
   test('when gatherSizeLimit not exceeded, if none cached gathers all, if all cached gathers none', async () => {
@@ -17,7 +17,7 @@ suite('GatherNotCachedVisitor', () => {
         1000,
         getSize,
       );
-      await visitor.visitCommit(pb.headHash);
+      await visitor.visit(pb.headHash);
       expect(
         Object.fromEntries(visitor.gatheredChunks.entries()),
       ).to.deep.equal(allChunksInVisitOrder);
@@ -39,7 +39,7 @@ suite('GatherNotCachedVisitor', () => {
         1000,
         getSize,
       );
-      await visitor.visitCommit(pb.headHash);
+      await visitor.visit(pb.headHash);
       expect(visitor.gatheredChunks).to.be.empty;
     });
   });
@@ -55,7 +55,7 @@ suite('GatherNotCachedVisitor', () => {
         45,
         getSize,
       );
-      await visitor.visitCommit(pb.headHash);
+      await visitor.visit(pb.headHash);
 
       const allChunksInVisitOrderEntries = Object.entries(
         allChunksInVisitOrder,
@@ -80,7 +80,7 @@ suite('GatherNotCachedVisitor', () => {
         1000,
         getSize,
       );
-      await visitor.visitCommit(pb.headHash);
+      await visitor.visit(pb.headHash);
       expect(
         Object.fromEntries(visitor.gatheredChunks.entries()),
       ).to.deep.equal(allChunksInVisitOrder);
@@ -104,7 +104,7 @@ suite('GatherNotCachedVisitor', () => {
         1000,
         getSize,
       );
-      await visitor.visitCommit(pb.headHash);
+      await visitor.visit(pb.headHash);
       expect(
         Object.fromEntries(visitor.gatheredChunks.entries()),
       ).to.deep.equal({
@@ -195,7 +195,6 @@ async function setup() {
     100 * 2 ** 20, // 100 MB,
     hashFunction,
     assertHash,
-    getSize,
   );
 
   const pb = new ChainBuilder(perdag);

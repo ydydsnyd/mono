@@ -1,15 +1,32 @@
-import {assert} from 'shared/asserts.js';
-import type * as dag from '../dag/mod.js';
-import * as db from '../db/mod.js';
-import type * as sync from '../sync/mod.js';
-import {assertHasClientState, getClientGroupIDForClient} from './clients.js';
-import {GatherMemoryOnlyVisitor} from './gather-mem-only-visitor.js';
-import type {MutatorDefs} from '../replicache.js';
-import type {Hash} from '../hash.js';
 import type {LogContext} from '@rocicorp/logger';
+import {assert} from 'shared/asserts.js';
+import * as dag from '../dag/mod.js';
+import {
+  assertAllMemOnly,
+  assertAllPresent,
+  assertNoMissingChunks,
+  assertNoneMemOnly,
+  assertNonePresent,
+  containsHash,
+} from '../dag/util.js';
 import {assertSnapshotCommitDD31} from '../db/commit.js';
-import {ClientGroup, getClientGroup, setClientGroup} from './client-groups.js';
+import * as db from '../db/mod.js';
+import type {Hash} from '../hash.js';
+import type {MutatorDefs} from '../replicache.js';
+import type * as sync from '../sync/mod.js';
 import {withRead, withWrite} from '../with-transactions.js';
+import {
+  CLIENT_GROUPS_HEAD_NAME,
+  ClientGroup,
+  getClientGroup,
+  setClientGroup,
+} from './client-groups.js';
+import {
+  CLIENTS_HEAD_NAME,
+  assertHasClientState,
+  getClientGroupIDForClient,
+} from './clients.js';
+import {GatherMemoryOnlyVisitor} from './gather-mem-only-visitor.js';
 
 /**
  * Persists the client's memdag state to the client's perdag client group.
@@ -29,7 +46,7 @@ import {withRead, withWrite} from '../with-transactions.js';
  * Also updates the `lastMutationIDs` and `lastServerAckdMutationIDs` properties
  * of the client's client group's entry in the `ClientGroupMap`.
  */
-export async function persistDD31(
+export function persistDD31(
   lc: LogContext,
   clientID: sync.ClientID,
   memdag: dag.LazyStore,
@@ -38,13 +55,42 @@ export async function persistDD31(
   closed: () => boolean,
   onGatherMemOnlyChunksForTest = () => Promise.resolve(),
 ): Promise<void> {
+  return navigator.locks.request('replicache-persist-refresh', () =>
+    persistInternal(
+      lc,
+      clientID,
+      memdag,
+      perdag,
+      mutators,
+      closed,
+      onGatherMemOnlyChunksForTest,
+    ),
+  );
+}
+
+async function persistInternal(
+  lc: LogContext,
+  clientID: sync.ClientID,
+  memdag: dag.LazyStore,
+  perdag: dag.Store,
+  mutators: MutatorDefs,
+  closed: () => boolean,
+  onGatherMemOnlyChunksForTest = () => Promise.resolve(),
+): Promise<void> {
+  lc = lc.addContext('persist', clientID);
+
   if (closed()) {
     return;
   }
 
-  const [perdagLMID, perdagBaseSnapshot, mainClientGroupID] = await withRead(
-    perdag,
-    async perdagRead => {
+  await withRead(memdag, async memdagRead => {
+    const mainHeadHash = await memdagRead.getHead(db.DEFAULT_HEAD_NAME);
+    assert(mainHeadHash);
+    await memdagRead.validateDag(mainHeadHash);
+  });
+
+  const [perdagLMID, perdagBaseSnapshot, mainClientGroupID, headsFromBefore] =
+    await withRead(perdag, async perdagRead => {
       await assertHasClientState(clientID, perdagRead);
       const mainClientGroupID = await getClientGroupIDForClient(
         clientID,
@@ -67,32 +113,78 @@ export async function persistDD31(
         perdagRead,
       );
       assertSnapshotCommitDD31(perdagBaseSnapshot);
-      return [perdagLMID, perdagBaseSnapshot, mainClientGroupID];
-    },
-  );
+
+      const headsFromBefore: Record<string, Hash | undefined> = {
+        [CLIENTS_HEAD_NAME]: await perdagRead.getHead(CLIENTS_HEAD_NAME),
+        [CLIENT_GROUPS_HEAD_NAME]: await perdagRead.getHead(
+          CLIENT_GROUPS_HEAD_NAME,
+        ),
+      };
+
+      return [
+        perdagLMID,
+        perdagBaseSnapshot,
+        mainClientGroupID,
+        headsFromBefore,
+      ];
+    });
+
+  await withRead(memdag, async memdagRead => {
+    await memdagRead.validateDag();
+  });
 
   if (closed()) {
     return;
   }
-  const [newMemdagMutations, memdagBaseSnapshot] = await withRead(
-    memdag,
-    async memdagRead => {
-      const memdagHeadCommit = await db.commitFromHead(
-        db.DEFAULT_HEAD_NAME,
+
+  const [
+    newMemdagMutations,
+    memdagBaseSnapshot,
+    gatheredChunks,
+    memdagHeadCommitHash,
+  ] = await withRead(memdag, async memdagRead => {
+    const memdagHeadCommit = await db.commitFromHead(
+      db.DEFAULT_HEAD_NAME,
+      memdagRead,
+    );
+    const memdagHeadCommitHash = memdagHeadCommit.chunk.hash;
+    const newMemdagMutations = await db.localMutationsGreaterThan(
+      memdagHeadCommit,
+      {[clientID]: perdagLMID || 0},
+      memdagRead,
+    );
+    const memdagBaseSnapshot = await db.baseSnapshotFromCommit(
+      memdagHeadCommit,
+      memdagRead,
+    );
+    assertSnapshotCommitDD31(memdagBaseSnapshot);
+
+    const gatheredChunks: ReadonlyMap<Hash, dag.Chunk> =
+      await gatherMemOnlyChunks(
         memdagRead,
+        memdagHeadCommitHash,
+        newMemdagMutations,
       );
-      const newMutations = await db.localMutationsGreaterThan(
-        memdagHeadCommit,
-        {[clientID]: perdagLMID || 0},
-        memdagRead,
-      );
-      const memdagBaseSnapshot = await db.baseSnapshotFromCommit(
-        memdagHeadCommit,
-        memdagRead,
-      );
-      assertSnapshotCommitDD31(memdagBaseSnapshot);
-      return [newMutations, memdagBaseSnapshot];
-    },
+    assertAllMemOnly(memdagRead, gatheredChunks.keys());
+
+    return [
+      newMemdagMutations,
+      memdagBaseSnapshot,
+      gatheredChunks,
+      memdagHeadCommitHash,
+    ];
+  });
+
+  if (closed()) {
+    return;
+  }
+
+  await withRead(memdag, async memdagRead => {
+    await memdagRead.validateDag();
+  });
+
+  await withRead(perdag, perdagRead =>
+    assertNonePresent(perdagRead, gatheredChunks.keys()),
   );
 
   if (
@@ -103,18 +195,40 @@ export async function persistDD31(
     // after gathering the snapshot chunks from memdag
     const memdagBaseSnapshotHash = memdagBaseSnapshot.chunk.hash;
     // Gather all memory only chunks from base snapshot on the memdag.
-    const gatheredChunks = await gatherMemOnlyChunks(
-      memdag,
-      memdagBaseSnapshotHash,
-    );
+
+    // await withRead(perdag, perdagRead =>
+    //   assertNonePresent(perdagRead, gatheredChunks.keys()),
+    // );
+
+    // await withRead(memdag, memdagRead =>
+    //   assertAllMemOnly(memdagRead, gatheredChunks.keys()),
+    // );
+
     let memdagBaseSnapshotPersisted = false;
     if (closed()) {
       return;
     }
+
     await withWrite(perdag, async perdagWrite => {
+      for (const headName of [CLIENTS_HEAD_NAME, CLIENT_GROUPS_HEAD_NAME]) {
+        const head = await perdagWrite.getHead(headName);
+        assert(headsFromBefore[headName] === head);
+      }
+
+      await assertNonePresent(perdagWrite, gatheredChunks.keys());
+
       // check if memdag snapshot still newer than perdag snapshot
-      const [mainClientGroup, latestPerdagMainClientGroupHeadCommit] =
-        await getClientGroupInfo(perdagWrite, mainClientGroupID);
+      const mainClientGroup = await getClientGroup(
+        mainClientGroupID,
+        perdagWrite,
+      );
+      assert(mainClientGroup);
+      await assertNoMissingChunks(perdagWrite, mainClientGroup.headHash);
+
+      const latestPerdagMainClientGroupHeadCommit = await db.commitFromHash(
+        mainClientGroup.headHash,
+        perdagWrite,
+      );
       let mutationIDs;
       let {lastServerAckdMutationIDs} = mainClientGroup;
       const latestPerdagBaseSnapshot = await db.baseSnapshotFromCommit(
@@ -122,6 +236,16 @@ export async function persistDD31(
         perdagWrite,
       );
       assertSnapshotCommitDD31(latestPerdagBaseSnapshot);
+
+      // We may have local mutations and these references a valueHash which
+      // needs to be persisted if we are going to be able to do a rebase in the
+      // perdag.
+      await Promise.all(
+        Array.from(gatheredChunks.values(), c => perdagWrite.putChunk(c)),
+      );
+      memdagBaseSnapshotPersisted = true;
+      await assertNoMissingChunks(perdagWrite, memdagHeadCommitHash);
+
       let newMainClientGroupHeadHash: Hash;
       // check if memdag snapshot still newer than perdag snapshot
       if (
@@ -130,11 +254,12 @@ export async function persistDD31(
           latestPerdagBaseSnapshot,
         ) > 0
       ) {
+        lc.debug?.('still newer, persist memdag snapshot by writing chunks');
         // still newer, persist memdag snapshot by writing chunks
-        await Promise.all(
-          Array.from(gatheredChunks.values(), c => perdagWrite.putChunk(c)),
-        );
-        memdagBaseSnapshotPersisted = true;
+        // await Promise.all(
+        //   Array.from(gatheredChunks.values(), c => perdagWrite.putChunk(c)),
+        // );
+        // memdagBaseSnapshotPersisted = true;
         // Rebase local mutations from perdag main client group onto new
         // snapshot
         newMainClientGroupHeadHash = memdagBaseSnapshotHash;
@@ -142,33 +267,79 @@ export async function persistDD31(
           mainClientGroup.headHash,
           perdagWrite,
         );
+
+        for (const mutation of mainClientGroupLocalMutations) {
+          await assertNoMissingChunks(perdagWrite, mutation.chunk.hash);
+        }
+
         assertSnapshotCommitDD31(memdagBaseSnapshot);
         lastServerAckdMutationIDs = memdagBaseSnapshot.meta.lastMutationIDs;
         mutationIDs = {...lastServerAckdMutationIDs};
 
+        lc.debug?.(
+          'rebase perdag mutations on top of client group headHash',
+          newMainClientGroupHeadHash,
+        );
+        try {
+          newMainClientGroupHeadHash = await rebase(
+            mainClientGroupLocalMutations,
+            newMainClientGroupHeadHash,
+            perdagWrite,
+            mutators,
+            mutationIDs,
+            lc,
+          );
+          lc.debug?.(
+            'Rebased perdag mutations. New client group headHash:',
+            newMainClientGroupHeadHash,
+          );
+        } catch (e) {
+          if (e instanceof dag.ChunkNotFoundError) {
+            const missingHash = e.hash;
+            for (const h of gatheredChunks.keys()) {
+              if (await containsHash(perdagWrite, missingHash, h)) {
+                lc.error?.(`The gathered chunks references the missing chunk`);
+              }
+            }
+          }
+          throw e;
+        }
+      } else {
+        lc.debug?.('not newer, no perdag mutations to rebase');
+        newMainClientGroupHeadHash = mainClientGroup.headHash;
+        mutationIDs = {...mainClientGroup.mutationIDs};
+      }
+      // persist new memdag mutations
+      lc.debug?.(
+        'rebase memdag mutations on top of client group headHash',
+        newMainClientGroupHeadHash,
+      );
+      try {
         newMainClientGroupHeadHash = await rebase(
-          mainClientGroupLocalMutations,
+          newMemdagMutations,
           newMainClientGroupHeadHash,
           perdagWrite,
           mutators,
           mutationIDs,
           lc,
         );
-      } else {
-        newMainClientGroupHeadHash =
-          latestPerdagMainClientGroupHeadCommit.chunk.hash;
-        mutationIDs = {...mainClientGroup.mutationIDs};
+        lc.debug?.(
+          'Rebased perdag mutations. New client group headHash:',
+          newMainClientGroupHeadHash,
+        );
+      } catch (e) {
+        if (e instanceof dag.ChunkNotFoundError) {
+          const missingHash = e.hash;
+          for (const h of gatheredChunks.keys()) {
+            if (await containsHash(perdagWrite, missingHash, h)) {
+              lc.error?.(`The gathered chunks references the missing chunk`);
+            }
+          }
+        }
+        throw e;
       }
-      // persist new memdag mutations
-      newMainClientGroupHeadHash = await rebase(
-        newMemdagMutations,
-        newMainClientGroupHeadHash,
-        perdagWrite,
-        mutators,
-        mutationIDs,
-        lc,
-      );
       await setClientGroup(
+        lc,
         mainClientGroupID,
         {
           ...mainClientGroup,
@@ -180,34 +351,101 @@ export async function persistDD31(
       );
       await perdagWrite.commit();
     });
+
+    await withRead(memdag, async memdagRead => {
+      await memdagRead.validateDag();
+    });
+
     if (memdagBaseSnapshotPersisted) {
-      await memdag.chunksPersisted(gatheredChunks.keys());
-    }
-  } else {
-    if (closed()) {
-      return;
+      lc.debug?.(
+        'memdagBaseSnapshotPersisted. Telling memdag about persisted chunks',
+      );
+
+      // TODO(arv: We currently gather too much. We gather the Local commits
+      // which gets rebased and thus should not be part of the perdag after
+      // persist. We can change this by not gathering the Local commits.
+
+      const chunksThatWerePersisted = await withRead(
+        perdag,
+        async perdagRead => {
+          const chunksThatWerePersisted = new Set<Hash>();
+          for (const h of gatheredChunks.keys()) {
+            if (await perdagRead.hasChunk(h)) {
+              chunksThatWerePersisted.add(h);
+            } else {
+              lc.debug?.('chunk was not persisted', h, gatheredChunks.get(h));
+            }
+          }
+          return chunksThatWerePersisted;
+        },
+      );
+
+      await memdag.chunksPersisted(chunksThatWerePersisted);
+      await withRead(perdag, perdagRead =>
+        assertAllPresent(perdagRead, chunksThatWerePersisted),
+      );
+      await withRead(memdag, memdagRead =>
+        assertNoneMemOnly(memdagRead, chunksThatWerePersisted),
+      );
     }
 
-    lc.debug?.(
-      'memdag base snapshot is older than (or same as) perdag base snapshot',
-      memdagBaseSnapshot.meta.cookieJSON,
-      perdagBaseSnapshot.meta.cookieJSON,
-    );
+    await withRead(memdag, async memdagRead => {
+      await memdagRead.validateDag();
+    });
+  } else {
+    if (lc.debug) {
+      if (
+        db.compareCookiesForSnapshots(
+          memdagBaseSnapshot,
+          perdagBaseSnapshot,
+        ) === 0
+      ) {
+        lc.debug(
+          'memdag base snapshot is same as perdag base snapshot',
+          memdagBaseSnapshot.meta.cookieJSON,
+        );
+      } else {
+        lc.debug(
+          'memdag base snapshot is older than perdag base snapshot',
+          memdagBaseSnapshot.meta.cookieJSON,
+          perdagBaseSnapshot.meta.cookieJSON,
+        );
+      }
+    }
 
     // no need to persist snapshot, persist new memdag mutations
     await withWrite(perdag, async perdagWrite => {
-      const [mainClientGroup, latestPerdagMainClientGroupHeadCommit] =
-        await getClientGroupInfo(perdagWrite, mainClientGroupID);
+      const mainClientGroup = await getClientGroup(
+        mainClientGroupID,
+        perdagWrite,
+      );
+      assert(mainClientGroup);
+
+      await assertNoMissingChunks(perdagWrite, mainClientGroup.headHash);
+
+      // TODO(arv): We did this before...
+      await Promise.all(
+        Array.from(gatheredChunks.values(), c => perdagWrite.putChunk(c)),
+      );
+
+      await assertNoMissingChunks(perdagWrite, memdagHeadCommitHash);
+
       const mutationIDs = {...mainClientGroup.mutationIDs};
+      lc.debug?.(
+        'rebase memdag mutations onto perdag snapshot on top of client group headHash',
+        mainClientGroup.headHash,
+      );
+
       const newMainClientGroupHeadHash = await rebase(
         newMemdagMutations,
-        latestPerdagMainClientGroupHeadCommit.chunk.hash,
+        mainClientGroup.headHash,
         perdagWrite,
         mutators,
         mutationIDs,
         lc,
       );
       await setClientGroup(
+        lc,
         mainClientGroupID,
         {
           ...mainClientGroup,
@@ -219,6 +457,10 @@ export async function persistDD31(
       await perdagWrite.commit();
     });
   }
+
+  await withRead(memdag, async memdagRead => {
+    await memdagRead.validateDag();
+  });
 }
 
 async function getClientGroupInfo(
@@ -233,15 +475,22 @@ async function getClientGroupInfo(
   ];
 }
 
-function gatherMemOnlyChunks(
-  memdag: dag.LazyStore,
-  baseSnapshotHash: Hash,
+async function gatherMemOnlyChunks(
+  dagRead: dag.LazyRead,
+  headHash: Hash,
+  mutations: db.Commit<db.LocalMetaDD31>[],
 ): Promise<ReadonlyMap<Hash, dag.Chunk>> {
-  return withRead(memdag, async dagRead => {
-    const visitor = new GatherMemoryOnlyVisitor(dagRead);
-    await visitor.visitCommit(baseSnapshotHash);
-    return visitor.gatheredChunks;
-  });
+  const visitor = new GatherMemoryOnlyVisitor(dagRead);
+  await visitor.visit(headHash);
+  for (const mutation of mutations) {
+    const {size} = visitor.gatheredChunks;
+    await visitor.visit(mutation.chunk.hash);
+    assert(
+      size === visitor.gatheredChunks.size,
+      `Head hash should include all mutations`,
+    );
+  }
+  return visitor.gatheredChunks;
 }
 
 async function rebase(
@@ -252,8 +501,20 @@ async function rebase(
   mutationIDs: Record<sync.ClientID, number>,
   lc: LogContext,
 ): Promise<Hash> {
+  // Write all mutation chunks to perdag...
+  // TODO(arv): We should not write all mutations to perdag, we should only
+
   for (let i = mutations.length - 1; i >= 0; i--) {
     const mutationCommit = mutations[i];
+
+    try {
+      await assertNoMissingChunks(write, mutationCommit.chunk.hash);
+    } catch (e) {
+      debugger;
+      await assertNoMissingChunks(write, mutationCommit.chunk.hash);
+      throw e;
+    }
+
     const {meta} = mutationCommit;
     const newMainHead = await db.commitFromHash(basis, write);
     if (
@@ -261,6 +522,7 @@ async function rebase(
       (await newMainHead.getMutationID(meta.clientID, write))
     ) {
       mutationIDs[meta.clientID] = meta.mutationID;
+      await assertNoMissingChunks(write, basis);
       basis = (
         await db.rebaseMutationAndPutCommit(
           mutationCommit,
@@ -271,6 +533,7 @@ async function rebase(
           meta.clientID,
         )
       ).chunk.hash;
+      await assertNoMissingChunks(write, basis);
     }
   }
   return basis;

@@ -1,42 +1,41 @@
-import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
+import {LogContext} from '@rocicorp/logger';
 import {assert, assertNotUndefined} from 'shared/asserts.js';
+import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import {BTreeRead} from '../btree/read.js';
 import * as dag from '../dag/mod.js';
 import {
   Commit,
+  SnapshotMetaDD31,
+  SnapshotMetaSDD,
+  commitIsSnapshot,
   fromChunk,
   fromHash,
-  SnapshotMetaSDD,
-  SnapshotMetaDD31,
-  commitIsSnapshot,
 } from '../db/commit.js';
+import {ChainBuilder} from '../db/test-helpers.js';
 import {assertHash, fakeHash, newUUIDHash} from '../hash.js';
+import type {IndexDefinitions} from '../index-defs.js';
+import {deepFreeze} from '../json.js';
+import type {ClientGroupID, ClientID} from '../sync/ids.js';
+import {withRead, withWrite} from '../with-transactions.js';
+import {ClientGroup, getClientGroup, setClientGroup} from './client-groups.js';
+import {makeClientV5, setClientsForTesting} from './clients-test-helpers.js';
 import {
-  assertClientV5,
-  ClientV5,
   CLIENTS_HEAD_NAME,
-  findMatchingClient,
-  FindMatchingClientResult,
+  ClientV5,
   FIND_MATCHING_CLIENT_TYPE_FORK,
   FIND_MATCHING_CLIENT_TYPE_HEAD,
   FIND_MATCHING_CLIENT_TYPE_NEW,
+  FindMatchingClientResult,
+  assertClientV5,
+  findMatchingClient,
   getClient,
-  getClients,
   getClientGroupForClient,
   getClientGroupIDForClient,
+  getClients,
   initClientV5,
   setClient,
 } from './clients.js';
-import {SinonFakeTimers, useFakeTimers} from 'sinon';
-import {ChainBuilder} from '../db/test-helpers.js';
-import {makeClientV5, setClientsForTesting} from './clients-test-helpers.js';
-import type {ClientID} from '../sync/ids.js';
-import {ClientGroup, getClientGroup, setClientGroup} from './client-groups.js';
-import type {ClientGroupID} from '../sync/ids.js';
-import type {IndexDefinitions} from '../index-defs.js';
-import {deepFreeze} from '../json.js';
-import {withRead, withWrite} from '../with-transactions.js';
 
 let clock: SinonFakeTimers;
 setup(() => {
@@ -431,7 +430,7 @@ test('getClientGroupID', async () => {
   ) => {
     await withWrite(dagStore, async write => {
       await setClient(clientID, client, write);
-      await setClientGroup(clientGroupID, clientGroup, write);
+      await setClientGroup(new LogContext(), clientGroupID, clientGroup, write);
       await write.commit();
     });
 
@@ -551,7 +550,7 @@ suite('findMatchingClient', () => {
         mutatorNames: initialMutatorNames,
         disabled: initialDisabled,
       };
-      await setClientGroup(clientGroupID, clientGroup, write);
+      await setClientGroup(new LogContext(), clientGroupID, clientGroup, write);
 
       await write.commit();
     });
@@ -636,7 +635,7 @@ suite('findMatchingClient', () => {
       disabled: false,
     };
     await withWrite(perdag, async write => {
-      await setClientGroup(clientGroupID, clientGroup, write);
+      await setClientGroup(new LogContext(), clientGroupID, clientGroup, write);
       await write.commit();
     });
 
@@ -722,7 +721,7 @@ suite('initClientV5', () => {
 
     await withWrite(perdag, async write => {
       await setClient(clientID1, client1, write);
-      await setClientGroup(clientGroupID, clientGroup1, write);
+      await setClientGroup(lc, clientGroupID, clientGroup1, write);
       await write.commit();
     });
 
@@ -788,7 +787,7 @@ suite('initClientV5', () => {
 
     await withWrite(perdag, async write => {
       await setClient(clientID1, client1, write);
-      await setClientGroup(clientGroupID1, clientGroup1, write);
+      await setClientGroup(lc, clientGroupID1, clientGroup1, write);
       await write.commit();
     });
 
@@ -874,7 +873,7 @@ suite('initClientV5', () => {
 
     await withWrite(perdag, async write => {
       await setClient(clientID1, client1, write);
-      await setClientGroup(clientGroupID1, clientGroup1, write);
+      await setClientGroup(lc, clientGroupID1, clientGroup1, write);
       await write.commit();
     });
 

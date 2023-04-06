@@ -1,10 +1,4 @@
 import type {LogContext} from '@rocicorp/logger';
-import {assertHash, Hash} from '../hash.js';
-import * as btree from '../btree/mod.js';
-import type * as dag from '../dag/mod.js';
-import * as db from '../db/mod.js';
-import type * as sync from '../sync/mod.js';
-import {FrozenJSONValue, deepFreeze} from '../json.js';
 import {
   assert,
   assertNumber,
@@ -12,17 +6,26 @@ import {
   assertString,
 } from 'shared/asserts.js';
 import {hasOwn} from 'shared/has-own.js';
-import {uuid as makeUuid} from '../uuid.js';
+import * as btree from '../btree/mod.js';
+import {compareCookies, FrozenCookie} from '../cookies.js';
+import type * as dag from '../dag/mod.js';
 import {
   assertSnapshotCommitDD31,
-  getRefs,
-  toChunkIndexDefinition,
-  newSnapshotCommitDataDD31,
   ChunkIndexDefinition,
   chunkIndexDefinitionEqualIgnoreName,
+  getRefs,
+  newSnapshotCommitDataDD31,
+  toChunkIndexDefinition,
 } from '../db/commit.js';
-import {compareCookies, FrozenCookie} from '../cookies.js';
+import * as db from '../db/mod.js';
+import {createIndexBTree} from '../db/write.js';
+import {assertHash, Hash} from '../hash.js';
+import {IndexDefinitions, indexDefinitionsEqual} from '../index-defs.js';
+import {deepFreeze, FrozenJSONValue} from '../json.js';
 import type {ClientID} from '../sync/ids.js';
+import type * as sync from '../sync/mod.js';
+import {uuid as makeUuid} from '../uuid.js';
+import {withWrite} from '../with-transactions.js';
 import {
   ClientGroup,
   getClientGroup,
@@ -30,9 +33,6 @@ import {
   mutatorNamesEqual,
   setClientGroup,
 } from './client-groups.js';
-import {IndexDefinitions, indexDefinitionsEqual} from '../index-defs.js';
-import {createIndexBTree} from '../db/write.js';
-import {withWrite} from '../with-transactions.js';
 
 export type ClientMap = ReadonlyMap<sync.ClientID, ClientV4 | ClientV5>;
 export type ClientMapDD31 = ReadonlyMap<sync.ClientID, ClientV5>;
@@ -290,7 +290,7 @@ export function initClientV5(
       await Promise.all([
         dagWrite.putChunk(chunk),
         setClients(newClients, dagWrite),
-        setClientGroup(newClientGroupID, clientGroup, dagWrite),
+        setClientGroup(lc, newClientGroupID, clientGroup, dagWrite),
       ]);
 
       await dagWrite.commit();

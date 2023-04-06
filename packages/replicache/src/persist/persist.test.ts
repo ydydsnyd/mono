@@ -1,37 +1,37 @@
 import {expect} from '@esm-bundle/chai';
+import {LogContext} from '@rocicorp/logger';
 import {assert, assertNotNull, assertNotUndefined} from 'shared/asserts.js';
+import sinon from 'sinon';
 import * as dag from '../dag/mod.js';
+import {assertLocalMetaDD31, assertSnapshotCommitDD31} from '../db/commit.js';
 import * as db from '../db/mod.js';
-import type * as sync from '../sync/mod.js';
 import {
   ChainBuilder,
   createMutatorName,
   getChunkSnapshot,
 } from '../db/test-helpers.js';
-import {assertHash, Hash, makeNewFakeHashFunction} from '../hash.js';
+import {Hash, assertHash, makeNewFakeHashFunction} from '../hash.js';
+import type {JSONValue} from '../json.js';
+import type {MutatorDefs} from '../mod.js';
+import {promiseVoid} from '../resolved-promises.js';
+import type * as sync from '../sync/mod.js';
+import type {WriteTransaction} from '../transactions.js';
+import {withRead, withWrite} from '../with-transactions.js';
 import {
-  setClients,
-  getClients,
-  ClientStateNotFoundError,
-  ClientV5,
-  initClientV5,
-  Client,
-} from './clients.js';
-import {assertLocalMetaDD31, assertSnapshotCommitDD31} from '../db/commit.js';
-import {LogContext} from '@rocicorp/logger';
-import {
-  ClientGroup,
   CLIENT_GROUPS_HEAD_NAME,
+  ClientGroup,
   getClientGroup,
   setClientGroup,
 } from './client-groups.js';
+import {
+  Client,
+  ClientStateNotFoundError,
+  ClientV5,
+  getClients,
+  initClientV5,
+  setClients,
+} from './clients.js';
 import {persistDD31} from './persist.js';
-import type {WriteTransaction} from '../transactions.js';
-import type {JSONValue} from '../json.js';
-import type {MutatorDefs} from '../mod.js';
-import sinon from 'sinon';
-import {promiseVoid} from '../resolved-promises.js';
-import {withRead, withWrite} from '../with-transactions.js';
 
 const PERDAG_TEST_SETUP_HEAD_NAME = 'test-setup-head';
 
@@ -104,7 +104,7 @@ suite('persistDD31', () => {
     );
     const memdagHeadHash = memdagSnapshot.chunk.hash;
 
-    await setupClientGroup(perdagClientGroupHeadHash, {
+    await setupClientGroup(new LogContext(), perdagClientGroupHeadHash, {
       mutationIDs: perdagClientGroupMutationIDs,
       lastServerAckdMutationIDs: perdagClientGroupMutationIDs,
     });
@@ -192,7 +192,7 @@ suite('persistDD31', () => {
       await perdagClientGroupChainBuilder.addLocal(clients[2].clientID);
     const perdagClientGroupHeadHash =
       perdagClientGroupLocalCommit3Client2M1.chunk.hash;
-    await setupClientGroup(perdagClientGroupHeadHash, {
+    await setupClientGroup(new LogContext(), perdagClientGroupHeadHash, {
       mutationIDs: {
         [clients[0].clientID]: 1,
         [clients[1].clientID]: 1,
@@ -208,6 +208,7 @@ suite('persistDD31', () => {
   }
 
   async function setupClientGroup(
+    lc: LogContext,
     perdagClientGroupHeadHash: Hash,
     clientGroupPartial?: Partial<ClientGroup>,
   ) {
@@ -215,6 +216,7 @@ suite('persistDD31', () => {
       const clientGroup = await getClientGroup(clientGroupID, perdagWrite);
       assertNotUndefined(clientGroup);
       await setClientGroup(
+        lc,
         clientGroupID,
         {
           ...clientGroup,
@@ -449,7 +451,7 @@ suite('persistDD31', () => {
     const perdagClientGroupHeadHash =
       perdagClientGroupLocalCommit2Client2M1.chunk.hash;
     assertNotUndefined(perdagClientGroupHeadHash);
-    await setupClientGroup(perdagClientGroupHeadHash, {
+    await setupClientGroup(new LogContext(), perdagClientGroupHeadHash, {
       mutationIDs: {
         [clients[0].clientID]: 2,
         [clients[1].clientID]: 1,
@@ -704,10 +706,14 @@ suite('persistDD31', () => {
       updatedPerdagClientGroupHeadHash =
         updatePerdagClientGroupSnapshot.chunk.hash;
       assertNotUndefined(updatedPerdagClientGroupHeadHash);
-      await setupClientGroup(updatedPerdagClientGroupHeadHash, {
-        mutationIDs,
-        lastServerAckdMutationIDs: mutationIDs,
-      });
+      await setupClientGroup(
+        new LogContext(),
+        updatedPerdagClientGroupHeadHash,
+        {
+          mutationIDs,
+          lastServerAckdMutationIDs: mutationIDs,
+        },
+      );
       await perdagClientGroupChainBuilder.removeHead();
       updatedPerdagClientGroupSnapshot = await getChunkSnapshot(
         perdag,

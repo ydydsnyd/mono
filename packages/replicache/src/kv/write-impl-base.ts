@@ -32,6 +32,7 @@ export class WriteImplBase {
         return undefined;
       case undefined: {
         const v = await this._read.get(key);
+        // TODO(arv): get returns deep frozen values already.
         return deepFreeze(v);
       }
       default:

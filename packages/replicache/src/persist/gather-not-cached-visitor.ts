@@ -1,18 +1,17 @@
-import * as db from '../db/mod.js';
+import * as dag from '../dag/mod.js';
 import type {Hash} from '../hash.js';
-import type * as dag from '../dag/mod.js';
-import type * as btree from '../btree/mod.js';
+import {promiseFalse, promiseTrue, promiseVoid} from '../resolved-promises.js';
 import {getSizeOfValue} from '../size-of-value.js';
-import {promiseVoid} from '../resolved-promises.js';
 
 export type ChunkWithSize = {chunk: dag.Chunk; size: number};
 
-export class GatherNotCachedVisitor extends db.Visitor {
+export class GatherNotCachedVisitor extends dag.Visitor {
   private readonly _gatheredChunks: Map<Hash, ChunkWithSize> = new Map();
   private _gatheredChunksTotalSize = 0;
   private readonly _lazyStore: dag.LazyStore;
   private readonly _gatherSizeLimit: number;
   private readonly _getSizeOfChunk: (chunk: dag.Chunk) => number;
+  readonly #dagRead: dag.Read;
 
   constructor(
     dagRead: dag.Read,
@@ -21,6 +20,7 @@ export class GatherNotCachedVisitor extends db.Visitor {
     getSizeOfChunk: (chunk: dag.Chunk) => number = getSizeOfValue,
   ) {
     super(dagRead);
+    this.#dagRead = dagRead;
     this._lazyStore = lazyStore;
     this._gatherSizeLimit = gatherSizeLimit;
     this._getSizeOfChunk = getSizeOfChunk;
@@ -30,11 +30,17 @@ export class GatherNotCachedVisitor extends db.Visitor {
     return this._gatheredChunks;
   }
 
-  private _shouldVisit(h: Hash): boolean {
-    return (
-      this._gatheredChunksTotalSize < this._gatherSizeLimit &&
-      !this._lazyStore.isCached(h)
-    );
+  private _shouldVisit(h: Hash): Promise<boolean> {
+    if (this._gatheredChunksTotalSize >= this._gatherSizeLimit) {
+      return promiseFalse;
+    }
+
+    if (!this._lazyStore.isCached(h)) {
+      return promiseTrue;
+    }
+
+    // isCached is not reliable because perdag might have removed the chunk
+    return this.#dagRead.hasChunk(h);
   }
 
   private _gather(chunk: dag.Chunk): void {
@@ -43,29 +49,15 @@ export class GatherNotCachedVisitor extends db.Visitor {
     this._gatheredChunksTotalSize += size;
   }
 
-  override visitCommit(h: Hash, hashRefType?: db.HashRefType): Promise<void> {
+  override visit(h: Hash): Promise<void> {
     if (!this._shouldVisit(h)) {
       return promiseVoid;
     }
-    return super.visitCommit(h, hashRefType);
+    return super.visit(h);
   }
 
-  override visitCommitChunk(
-    chunk: dag.Chunk<db.CommitData<db.Meta>>,
-  ): Promise<void> {
+  override visitChunk(chunk: dag.Chunk): Promise<void> {
     this._gather(chunk);
-    return super.visitCommitChunk(chunk);
-  }
-
-  override visitBTreeNode(h: Hash): Promise<void> {
-    if (!this._shouldVisit(h)) {
-      return promiseVoid;
-    }
-    return super.visitBTreeNode(h);
-  }
-
-  override visitBTreeNodeChunk(chunk: dag.Chunk<btree.Node>): Promise<void> {
-    this._gather(chunk);
-    return super.visitBTreeNodeChunk(chunk);
+    return super.visitChunk(chunk);
   }
 }

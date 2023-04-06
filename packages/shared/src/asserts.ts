@@ -1,5 +1,6 @@
 export function assert(b: unknown, msg = 'Assertion failed'): asserts b {
   if (!b) {
+    debugger;
     throw new Error(msg);
   }
 }

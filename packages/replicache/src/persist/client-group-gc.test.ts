@@ -1,5 +1,10 @@
-import {SinonFakeTimers, useFakeTimers} from 'sinon';
+import {expect} from '@esm-bundle/chai';
+import {LogContext} from '@rocicorp/logger';
 import {assertNotUndefined} from 'shared/asserts.js';
+import {SinonFakeTimers, useFakeTimers} from 'sinon';
+import * as dag from '../dag/mod.js';
+import {fakeHash} from '../hash.js';
+import {withRead, withWrite} from '../with-transactions.js';
 import {getLatestGCUpdate, initClientGroupGC} from './client-group-gc.js';
 import {
   ClientGroup,
@@ -8,12 +13,7 @@ import {
   setClientGroup,
   setClientGroups,
 } from './client-groups.js';
-import * as dag from '../dag/mod.js';
-import {fakeHash} from '../hash.js';
 import {makeClientV5, setClientsForTesting} from './clients-test-helpers.js';
-import {LogContext} from '@rocicorp/logger';
-import {expect} from '@esm-bundle/chai';
-import {withRead, withWrite} from '../with-transactions.js';
 
 let clock: SinonFakeTimers;
 const START_TIME = 0;
@@ -158,7 +158,12 @@ test('initClientGroupGC starts 5 min interval that collects client groups that a
     lastServerAckdMutationIDs: clientGroup1.mutationIDs,
   };
   await withWrite(dagStore, async write => {
-    await setClientGroup('client-group-1', updatedClientGroup1, write);
+    await setClientGroup(
+      new LogContext(),
+      'client-group-1',
+      updatedClientGroup1,
+      write,
+    );
     await write.commit();
     return clientGroupMap;
   });

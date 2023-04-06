@@ -1,20 +1,20 @@
 import {expect} from '@esm-bundle/chai';
 import {LogContext} from '@rocicorp/logger';
 import sinon from 'sinon';
-import * as dag from '../dag/mod.js';
-import * as db from './mod.js';
-import {ChainBuilder} from './test-helpers.js';
-import type {WriteTransaction} from '../transactions.js';
-import {rebaseMutationAndCommit, rebaseMutationAndPutCommit} from './rebase.js';
-import {SYNC_HEAD_NAME} from '../sync/sync-head-name.js';
 import {BTreeRead} from '../btree/read.js';
+import * as dag from '../dag/mod.js';
 import type {Hash} from '../hash.js';
+import {SYNC_HEAD_NAME} from '../sync/sync-head-name.js';
+import type {WriteTransaction} from '../transactions.js';
+import {withRead, withWrite} from '../with-transactions.js';
 import {
   assertLocalCommitDD31,
   commitIsLocal,
   commitIsLocalDD31,
 } from './commit.js';
-import {withRead, withWrite} from '../with-transactions.js';
+import * as db from './mod.js';
+import {rebaseMutationAndCommit, rebaseMutationAndPutCommit} from './rebase.js';
+import {ChainBuilder} from './test-helpers.js';
 
 teardown(() => {
   sinon.restore();

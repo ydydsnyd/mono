@@ -1,56 +1,57 @@
-import {
-  initReplicacheTesting,
-  replicacheForTesting,
-  tickAFewTimes,
-  clock,
-  disableAllBackgroundProcesses,
-} from './test-util.js';
+import {expect} from '@esm-bundle/chai';
+import {LogContext} from '@rocicorp/logger';
+import {assert} from 'shared/asserts.js';
+import sinon from 'sinon';
+import * as dag from './dag/mod.js';
+import type * as db from './db/mod.js';
+import {ChainBuilder} from './db/test-helpers.js';
+import {assertHash} from './hash.js';
+import {JSONObject, ReadonlyJSONObject, assertJSONObject} from './json.js';
+import * as persist from './persist/mod.js';
 import {
   MutatorDefs,
   REPLICACHE_FORMAT_VERSION_DD31,
   REPLICACHE_FORMAT_VERSION_SDD,
 } from './replicache.js';
-import {ChainBuilder} from './db/test-helpers.js';
-import type * as db from './db/mod.js';
-import * as dag from './dag/mod.js';
-import * as persist from './persist/mod.js';
 import type * as sync from './sync/mod.js';
-import {assertHash} from './hash.js';
-import {assert} from 'shared/asserts.js';
-import {expect} from '@esm-bundle/chai';
+import {
+  clock,
+  disableAllBackgroundProcesses,
+  initReplicacheTesting,
+  replicacheForTesting,
+  tickAFewTimes,
+} from './test-util.js';
 import {uuid} from './uuid.js';
-import {assertJSONObject, JSONObject, ReadonlyJSONObject} from './json.js';
-import sinon from 'sinon';
 
-// fetch-mock has invalid d.ts file so we removed that on npm install.
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-expect-error
-import fetchMock from 'fetch-mock/esm/client';
-import {initClientWithClientID} from './persist/clients-test-helpers.js';
-import {
-  assertPushRequestV1,
-  PushRequestV1,
-  PushRequestV0,
-  PUSH_VERSION_DD31,
-  PUSH_VERSION_SDD,
-} from './sync/push.js';
-import {assertClientV5, assertClientV4} from './persist/clients.js';
-import {LogContext} from '@rocicorp/logger';
-import type {PullResponseV1, PullResponseV0} from './puller.js';
-import {
-  PullRequestV1,
-  PullRequestV0,
-  PULL_VERSION_DD31,
-  PULL_VERSION_SDD,
-} from './sync/pull.js';
 import {assertLocalMetaDD31} from './db/commit.js';
+import {initClientWithClientID} from './persist/clients-test-helpers.js';
+import {assertClientV4, assertClientV5} from './persist/clients.js';
+import type {PullResponseV0, PullResponseV1} from './puller.js';
+import type {PushResponse} from './pusher.js';
 import {
   createAndPersistClientWithPendingLocalSDD,
   createPerdag,
 } from './replicache-mutation-recovery.test.js';
 import {stringCompare} from './string-compare.js';
-import type {PushResponse} from './pusher.js';
+import {
+  PULL_VERSION_DD31,
+  PULL_VERSION_SDD,
+  PullRequestV0,
+  PullRequestV1,
+} from './sync/pull.js';
+import {
+  PUSH_VERSION_DD31,
+  PUSH_VERSION_SDD,
+  PushRequestV0,
+  PushRequestV1,
+  assertPushRequestV1,
+} from './sync/push.js';
 import {withRead} from './with-transactions.js';
+
+// fetch-mock has invalid d.ts file so we removed that on npm install.
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error
+import fetchMock from 'fetch-mock/esm/client';
 
 async function createAndPersistClientWithPendingLocalDD31(
   clientID: sync.ClientID,

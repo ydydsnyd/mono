@@ -1,7 +1,9 @@
-import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
+import {LogContext} from '@rocicorp/logger';
 import {assertNotUndefined} from 'shared/asserts.js';
+import {asyncIterableToArray} from '../async-iterable-to-array.js';
 import * as dag from '../dag/mod.js';
+import {withRead, withWrite} from '../with-transactions.js';
 import {DEFAULT_HEAD_NAME} from './commit.js';
 import {
   readCommitForBTreeRead,
@@ -9,10 +11,8 @@ import {
   whenceHash,
   whenceHead,
 } from './read.js';
-import {newWriteLocal} from './write.js';
-import {asyncIterableToArray} from '../async-iterable-to-array.js';
 import {initDB} from './test-helpers.js';
-import {withRead, withWrite} from '../with-transactions.js';
+import {newWriteLocal} from './write.js';
 
 suite('basics w/ commit', () => {
   const t = async (dd31: boolean) => {

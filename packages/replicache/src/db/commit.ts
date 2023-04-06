@@ -8,17 +8,17 @@ import {
   unreachable,
 } from 'shared/asserts.js';
 import {skipCommitDataAsserts} from '../config.js';
-import {compareCookies, FrozenCookie} from '../cookies.js';
+import {FrozenCookie, compareCookies} from '../cookies.js';
 import type * as dag from '../dag/mod.js';
 import type {MustGetChunk} from '../dag/store.js';
-import {assertHash, Hash} from '../hash.js';
+import {Hash, assertHash} from '../hash.js';
 import type {IndexDefinition} from '../index-defs.js';
 import {
+  FrozenJSONValue,
+  FrozenTag,
   assertDeepFrozen,
   assertJSONValue,
   deepFreeze,
-  FrozenJSONValue,
-  FrozenTag,
 } from '../json.js';
 import type * as sync from '../sync/mod.js';
 
@@ -736,6 +736,10 @@ export function getRefs(data: CommitData<Meta>): Hash[] {
     case MetaType.LocalDD31:
       meta.basisHash && refs.push(meta.basisHash);
       // Local has weak originalHash
+
+      // DD31 has baseSnapshotHash but that is just a shortcut to the base
+      // snapshot hash and that can be reached through the basisHash so we do
+      // not include it here.
       break;
     case MetaType.SnapshotSDD:
     case MetaType.SnapshotDD31:

@@ -56,7 +56,7 @@ async function buildReplicache(options) {
  * @param {Partial<BuildOptions>} options
  */
 async function buildMJS({
-  minify = true,
+  minify = false,
   ext = 'js',
   mode = 'unknown',
   external,
@@ -67,7 +67,7 @@ async function buildMJS({
 /**
  * @param {Partial<BuildOptions>} options
  */
-async function buildCJS({minify = true, ext = 'cjs', mode = 'unknown'} = {}) {
+async function buildCJS({minify = false, ext = 'cjs', mode = 'unknown'} = {}) {
   await buildReplicache({format: 'cjs', minify, ext, mode});
 }
 
@@ -94,10 +94,10 @@ if (perf) {
     buildCLI(),
   ]);
 } else {
-  let opts = {};
-  if (debug || (await isRocicorpPackage())) {
-    opts = {minify: false};
-  }
+  let opts = {minify: false};
+  // if (debug || (await isRocicorpPackage())) {
+  //   opts = {minify: false};
+  // }
   await Promise.all([buildMJS(opts), buildCJS(opts), buildCLI()]);
 }
 

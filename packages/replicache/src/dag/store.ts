@@ -1,6 +1,6 @@
-import type {Chunk} from './chunk.js';
 import type {Hash} from '../hash.js';
 import type {Release} from '../with-transactions.js';
+import type {Chunk} from './chunk.js';
 
 export interface Store {
   read(): Promise<Read>;
@@ -48,5 +48,6 @@ export async function mustGetChunk(
   if (chunk) {
     return chunk;
   }
+  debugger;
   throw new ChunkNotFoundError(hash);
 }
