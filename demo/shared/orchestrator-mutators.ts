@@ -6,6 +6,7 @@ import {
   ACTIVITY_TIMEOUT,
   BOT_RANDOM_SEED,
   COLOR_PALATE,
+  MAX_CLIENT_BROADCASTS,
   MAX_CONCURRENT_BOTS,
   ROOM_MAX_ACTORS,
 } from './constants';
@@ -40,10 +41,13 @@ export const orchestratorMutators = {
       .scan({prefix: 'room-recordings/'})
       .values()
       .toArray()) as RoomRecording[];
+    let broadcastingCount = 0;
     for (const recording of recordings) {
       if (recording.broadcasterId === tx.clientID) {
-        // Don't broadcast more than one bot at a time, as it can impact performance.
-        return;
+        // Don't broadcast more than N bots at a time, as it can impact performance.
+        if (++broadcastingCount > MAX_CLIENT_BROADCASTS) {
+          return;
+        }
       }
     }
     // We just chose a random number here, I don't know how probable this is, or how
