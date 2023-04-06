@@ -1,4 +1,4 @@
-use image::{GenericImageView, Rgba};
+use image::Rgba;
 use image::{Pixel, Rgb, RgbaImage};
 
 mod data;

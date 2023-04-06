@@ -33,7 +33,7 @@ fn render_splatter_to_file(idx: usize, path: &Path) {
         println!("Rendering {}-{}@240", idx, frame);
         image::save_buffer_with_format(
             path.join(format!("{}-{}@240.png", idx, frame)),
-            &splatter.to_rgba8().to_vec(),
+            &splatter.to_vec(),
             240,
             240,
             image::ColorType::Rgba8,

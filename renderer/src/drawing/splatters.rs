@@ -1,6 +1,6 @@
 use super::data;
 use base64::prelude::*;
-use image::{DynamicImage, ImageFormat};
+use image::{ImageFormat, RgbaImage};
 extern crate lazy_static;
 
 pub fn precompute() {
@@ -11,21 +11,21 @@ pub fn precompute() {
 }
 
 pub struct SplatterImages {
-    pub i_0: DynamicImage,
-    pub i_1: DynamicImage,
-    pub i_2: DynamicImage,
-    pub i_3: DynamicImage,
+    pub i_0: RgbaImage,
+    pub i_1: RgbaImage,
+    pub i_2: RgbaImage,
+    pub i_3: RgbaImage,
 }
 
 impl SplatterImages {
-    pub fn to_arr(&self) -> [&DynamicImage; 4] {
+    pub fn to_arr(&self) -> [&RgbaImage; 4] {
         return [&self.i_0, &self.i_1, &self.i_2, &self.i_3];
     }
 }
 
 pub struct Splatter {
-    pub frames_r: [&'static DynamicImage; 4],
-    pub frames_l: [&'static DynamicImage; 4],
+    pub frames_r: [&'static RgbaImage; 4],
+    pub frames_l: [&'static RgbaImage; 4],
 }
 
 #[derive(Debug)]
@@ -34,7 +34,7 @@ pub enum SplatterSize {
     Large = 1,
 }
 
-fn get_frames(splatter_num: u8, size: SplatterSize) -> [&'static DynamicImage; 4] {
+fn get_frames(splatter_num: u8, size: SplatterSize) -> [&'static RgbaImage; 4] {
     match splatter_num {
         1 => match size {
             SplatterSize::Regular => IMAGES_0_REGULAR.to_arr(),
@@ -73,7 +73,7 @@ impl Splatter {
         };
         ((x - half).floor() as i64, (y - half).floor() as i64)
     }
-    pub fn frame(&self, frame: usize, size: &SplatterSize) -> &DynamicImage {
+    pub fn frame(&self, frame: usize, size: &SplatterSize) -> &RgbaImage {
         let frames = match size {
             SplatterSize::Regular => &self.frames_r,
             SplatterSize::Large => &self.frames_l,
@@ -86,11 +86,13 @@ impl Splatter {
     }
 }
 
-fn image_from_str(string: &str) -> DynamicImage {
+fn image_from_str(string: &str) -> RgbaImage {
     let data = BASE64_STANDARD_NO_PAD
         .decode(string)
         .expect("Bad splatter image");
-    image::load_from_memory_with_format(&data, ImageFormat::Png).unwrap()
+    image::load_from_memory_with_format(&data, ImageFormat::Png)
+        .unwrap()
+        .to_rgba8()
 }
 
 pub fn for_index(
@@ -103,7 +105,7 @@ pub fn for_index(
     // position of splatter on canvas
     x: f32,
     y: f32,
-) -> (&'static DynamicImage, (i64, i64)) {
+) -> (&'static RgbaImage, (i64, i64)) {
     match index {
         1 => (SPLATTER_1.frame(frame, &size), SPLATTER_1.at(x, y, &size)),
         2 => (SPLATTER_2.frame(frame, &size), SPLATTER_2.at(x, y, &size)),
