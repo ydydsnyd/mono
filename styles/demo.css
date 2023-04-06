@@ -169,6 +169,7 @@ body.custom-cursor * {
 }
 .custom-cursor .local.cursor {
   opacity: 1;
+  z-index: 102;
 }
 .cursor:not(.local).active {
   opacity: 1;
