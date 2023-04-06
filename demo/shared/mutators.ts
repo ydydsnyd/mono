@@ -241,13 +241,6 @@ export const mutators = {
 
 const removeActor = async (tx: WriteTransaction, clientID: string) => {
   const actorId = await tx.get(`room-actor/${clientID}`);
-  if (!actorId) {
-    // Since we don't know which room onDisconnect is called in, we call
-    // removeOchestratorActor and removeActor mutators. If we don't have a record of
-    // this clientID, it's probably an orchestrator one.
-    return;
-  }
-  serverLog(`Client ${clientID} (${actorId}) left room, cleaning up.`);
   const botIds = (await tx
     .scan({prefix: `bot-controller/${tx.clientID}`})
     .values()
@@ -256,6 +249,7 @@ const removeActor = async (tx: WriteTransaction, clientID: string) => {
     await removeBot(tx, id);
   }
   if (actorId) {
+    serverLog(`Client ${clientID} (${actorId}) left room, cleaning up.`);
     await tx.del(`actor/${actorId}`);
     await tx.del(`cursor/${actorId}`);
     await tx.del(`room-actor/${clientID}`);

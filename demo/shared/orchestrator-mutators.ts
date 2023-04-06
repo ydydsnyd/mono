@@ -155,15 +155,6 @@ const cleanupOldUsers = async (tx: WriteTransaction, timestamp: number) => {
       actorsToRemove.push(id);
     }
   }
-  // TODO: remove once it's been in prod a while
-  const allActors = (await tx
-    .scan({prefix: 'orchestrator-actor/'})
-    .values()) as AsyncIterableIteratorToArray<OrchestratorActor>;
-  for await (const actor of allActors) {
-    if (!aliveIds.has(actor.id) && actor.id !== tx.clientID) {
-      actorsToRemove.push(actor.id);
-    }
-  }
   console.log('Removing actors due to inactivity:', actorsToRemove);
   for (const actorId of actorsToRemove) {
     await removeActor(tx, actorId, timestamp, actorsToRemove);
