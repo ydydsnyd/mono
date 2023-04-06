@@ -98,10 +98,10 @@ pub fn draw(
                 let dy = sy + y as i64;
                 if alpha > 0 && dx > 0 && dy > 0 && (dx as f32) < width && (dy as f32) < height {
                     let mut pixel = image.get_pixel(dx as u32, dy as u32).clone();
-                    if pixel[3] > 0 {
-                        pixel.blend(&Rgba::from([color[0], color[1], color[2], alpha]));
-                    } else {
+                    if pixel[3] == 0 || alpha == 255 {
                         pixel = Rgba::from([color[0], color[1], color[2], alpha]);
+                    } else {
+                        pixel.blend(&Rgba::from([color[0], color[1], color[2], alpha]));
                     }
                     image.put_pixel(dx as u32, dy as u32, pixel);
                 }
