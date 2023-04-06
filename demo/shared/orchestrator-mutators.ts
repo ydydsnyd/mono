@@ -403,6 +403,7 @@ const playRecording = async (
     isBot: true,
     controller: broadcasterId,
   });
+  console.log(`CREATE BOT ${botId}`, bot, bot.colorIndex);
   await tx.put(`controlled-bots/${broadcasterId}/${botId}`, botId);
   const recording: RoomRecording = {
     roomId,
