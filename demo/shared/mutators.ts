@@ -240,6 +240,7 @@ export const mutators = {
 };
 
 const removeActor = async (tx: WriteTransaction, clientID: string) => {
+  console.log(`Remove room actor ${clientID}`);
   const actorId = await tx.get(`room-actor/${clientID}`);
   const botIds = (await tx
     .scan({prefix: `bot-controller/${tx.clientID}`})

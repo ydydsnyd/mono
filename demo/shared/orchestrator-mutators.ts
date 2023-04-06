@@ -316,7 +316,7 @@ const removeActor = async (
   alsoRemoving: string[] = [],
 ) => {
   const key = `orchestrator-actor/${actorId}`;
-
+  console.log(`Remove orchestrator actor ${actorId}`);
   // Remove any recordings this actor was broadcasting
   const recordings = (await tx
     .scan({prefix: `broadcaster/${actorId}`})
