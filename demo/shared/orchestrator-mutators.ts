@@ -1,9 +1,14 @@
 import type {
   AsyncIterableIteratorToArray,
-  ReadTransaction,
   WriteTransaction,
 } from '@rocicorp/reflect';
-import {ACTIVITY_TIMEOUT, COLOR_PALATE, ROOM_MAX_ACTORS} from './constants';
+import {
+  ACTIVITY_TIMEOUT,
+  BOT_RANDOM_SEED,
+  COLOR_PALATE,
+  MAX_CONCURRENT_BOTS,
+  ROOM_MAX_ACTORS,
+} from './constants';
 import {Cursor, Env, OrchestratorActor, RoomRecording} from './types';
 import {string2Uint8Array} from './uint82b64';
 import {
@@ -31,6 +36,28 @@ export const setEnv = (e: Env, secret?: Uint8Array) => {
 export const orchestratorMutators = {
   alive: async (tx: WriteTransaction, timestamp: number) => {
     await tx.put(`alive/${tx.clientID}`, timestamp);
+    const recordings = (await tx
+      .scan({prefix: 'room-recordings/'})
+      .values()
+      .toArray()) as RoomRecording[];
+    for (const recording of recordings) {
+      if (recording.broadcasterId === tx.clientID) {
+        // Don't broadcast more than one bot at a time, as it can impact performance.
+        return;
+      }
+    }
+    // We just chose a random number here, I don't know how probable this is, or how
+    // to adjust probability more granularly than just making the number an order of
+    // magnitude larger or prime.
+    if (
+      recordings.length < MAX_CONCURRENT_BOTS &&
+      timestamp % BOT_RANDOM_SEED === 0
+    ) {
+      const actor = (await tx.get(
+        `orchestrator-actor/${tx.clientID}`,
+      )) as OrchestratorActor;
+      await playRandomRecording(tx, actor.room, actor.id, timestamp);
+    }
   },
   removeOchestratorActor: async (
     tx: WriteTransaction,
@@ -171,7 +198,6 @@ const createActor = async (
     lastColorIndex,
     controller,
     forceNewRoomWithSecret,
-    timestamp,
   }: {
     fallbackRoomId: string | null;
     actorId?: string;
@@ -180,7 +206,6 @@ const createActor = async (
     lastColorIndex?: number;
     controller?: string;
     forceNewRoomWithSecret?: string | null;
-    timestamp: number;
   },
 ) => {
   actorId = actorId || tx.clientID;
@@ -267,22 +292,16 @@ const createActor = async (
     roomActorNum = (await tx.get(ROOM_COUNT_KEY)) as number;
     actor = (await tx.get(key)) as OrchestratorActor;
   }
-  // When there's about to be only one person in the room, play one of our recordings for them.
-  if (roomActorNum === 1) {
-    serverLog(`${actor.id} is the first actor in the room, starting recording`);
-    await playRandomRecording(tx, selectedRoomId, actor.id, timestamp);
-  } else {
-    serverLog(
-      `Current room: ${selectedRoomId}\nActors:\n${await (
-        await tx
-          .scan({prefix: `actors/${selectedRoomId}`})
-          .values()
-          .toArray()
-      )
-        .map(a => `${a}`)
-        .join('\n')}`,
-    );
-  }
+  serverLog(
+    `Current room: ${selectedRoomId}\nActors:\n${await (
+      await tx
+        .scan({prefix: `actors/${selectedRoomId}`})
+        .values()
+        .toArray()
+    )
+      .map(a => `${a}`)
+      .join('\n')}`,
+  );
   return actor;
 };
 
@@ -340,53 +359,6 @@ const removeActor = async (
     return;
   }
   await tx.put(ROOM_COUNT_KEY, roomCount - 1);
-  // When there's about to be an empty room, find the last user and have them play
-  // a recording
-  if (roomCount - 1 === 1) {
-    const remainingActorId = await findBroadcasterId(tx, currentRoom, [
-      actor.id,
-      ...alsoRemoving,
-    ]);
-    if (!remainingActorId) {
-      return;
-    }
-    serverLog(
-      `Only one user (${remainingActorId}) remains in room, start a recording.`,
-    );
-    return await playRandomRecording(
-      tx,
-      currentRoom,
-      remainingActorId,
-      timestamp,
-    );
-  }
-  return undefined;
-};
-
-const findBroadcasterId = async (
-  tx: ReadTransaction,
-  roomId: string,
-  excludeIds: string[],
-) => {
-  const actorIds = (await tx
-    .scan({prefix: `actors/${roomId}/`})
-    .values()
-    .toArray()) as string[];
-  if (actorIds.length < 1) {
-    return;
-  }
-  for await (const id of actorIds) {
-    if (excludeIds.includes(id)) {
-      continue;
-    }
-    const actor = (await tx.get(
-      `orchestrator-actor/${id}`,
-    )) as OrchestratorActor;
-    if (!actor.isBot) {
-      return actor.id;
-    }
-  }
-  return undefined;
 };
 
 const playRandomRecording = async (
@@ -426,7 +398,6 @@ const playRecording = async (
     actorId: botId,
     isBot: true,
     controller: broadcasterId,
-    timestamp,
   });
   await tx.put(`controlled-bots/${broadcasterId}/${botId}`, botId);
   const recording: RoomRecording = {
