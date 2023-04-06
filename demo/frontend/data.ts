@@ -3,7 +3,7 @@ import {
   ReadTransaction,
   ExperimentalDiffOperation,
 } from '@rocicorp/reflect';
-import {letterMap, now} from '../shared/util';
+import {letterMap} from '../shared/util';
 import type {
   Actor,
   Cursor,
@@ -24,15 +24,7 @@ import {updateCache} from '../shared/renderer';
 import {WORKER_HOST} from '../shared/urls';
 import {unchunk} from '../shared/chunks';
 import type {OrchestratorActor} from '../shared/types';
-import {
-  SPLATTER_ANIM_FRAMES,
-  SPLATTER_FLATTEN_FREQUENCY,
-  SPLATTER_MAX_AGE,
-  USER_ID,
-} from '../shared/constants';
-import {decode, encode} from '../shared/uint82b64';
-import {draw_cache_png} from '@/vendor/renderer/renderer';
-import {splatters2Render} from '../shared/wasm-args';
+import {USER_ID} from '../shared/constants';
 
 const CACHE_DEBOUNCE_MS = 100;
 
@@ -159,15 +151,6 @@ export const initialize = async (
             return;
           }
           break;
-        case 'splatter-num':
-          const splatterNum = await getData<number>(diff);
-          if (splatterNum % SPLATTER_FLATTEN_FREQUENCY === 0) {
-            const letter = keyParts[1] as Letter;
-            const [newCache, flattenedKeys] = await reflectClient.query(
-              async tx => await flattenCache(tx, letter),
-            );
-            reflectClient.mutate.updateCache({letter, newCache, flattenedKeys});
-          }
       }
       triggerHandlers(keyParts, diff);
     });
@@ -230,36 +213,6 @@ export const initialize = async (
     getSplatters,
     reflectClient,
   };
-};
-
-const flattenCache = async (
-  tx: ReadTransaction,
-  letter: Letter,
-): Promise<[string, string[]]> => {
-  // Get all the splatters for this letter
-  const splatters = (await (await tx.scan({prefix: `splatter/${letter}`}))
-    .entries()
-    .toArray()) as [string, Splatter][];
-  const timestamp = now();
-
-  // And find any splatters which are "old"
-  const oldSplatters: [string, Splatter][] = splatters.filter(
-    s => timestamp - s[1].t >= SPLATTER_MAX_AGE,
-  );
-  // Now if we have any cacheable splatters, draw them to the cache
-  // Draw them on top of the last cached image
-  const png = await unchunk(tx, `cache/${letter}`);
-  const decoded = png ? decode(png) : undefined;
-  const newCache = draw_cache_png(
-    decoded,
-    ...splatters2Render(
-      oldSplatters.map(s => s[1]),
-      // When we draw a cache, we just want the "finished" state of all the
-      // animations, as they're presumed to be complete and immutable.
-      oldSplatters.map(() => SPLATTER_ANIM_FRAMES),
-    ),
-  );
-  return [encode(newCache), oldSplatters.map(s => s[0])];
 };
 
 const stateInitializer =

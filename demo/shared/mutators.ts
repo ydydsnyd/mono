@@ -10,8 +10,16 @@ import {
   Vector,
 } from './types';
 import {nextNumber, randomWithSeed, sortableKeyNum} from './util';
-import {chunk} from './chunks';
+import {chunk, unchunk} from './chunks';
 import {LETTERS} from './letters';
+import {draw_cache_png} from '../../vendor/renderer/renderer';
+import {splatters2Render} from './wasm-args';
+import {
+  SPLATTER_ANIM_FRAMES,
+  SPLATTER_FLATTEN_FREQUENCY,
+  SPLATTER_MAX_AGE,
+} from './constants';
+import {encode, decode} from './uint82b64';
 
 export const UNINITIALIZED_CACHE_SENTINEL = 'uninitialized-cache-sentinel';
 export const UNINITIALIZED_CLEARED_SENTINEL = 'uninitialized-clear-sentinel';
@@ -22,8 +30,10 @@ export const splatterId = (s: Splatter) =>
 export type M = typeof mutators;
 
 let env = Env.CLIENT;
-export const setEnv = (e: Env) => {
+let _initRenderer: (() => Promise<void>) | undefined;
+export const setEnv = (e: Env, initRenderer: () => Promise<void>) => {
   env = e;
+  _initRenderer = initRenderer;
 };
 
 // Seeds are used for creating pseudo-random values that are stable across
@@ -186,18 +196,10 @@ export const mutators = {
       splatter,
     );
     await tx.put(`splatter-num/${letter}`, splatterNum);
-  },
-  updateCache: async (
-    tx: WriteTransaction,
-    {
-      letter,
-      newCache,
-      flattenedKeys,
-    }: {letter: Letter; newCache: string; flattenedKeys: string[]},
-  ) => {
-    await chunk(tx, `cache/${letter}`, newCache);
-    for await (const key of flattenedKeys) {
-      await tx.del(key);
+
+    // On the server, perform periodic flattening
+    if (env === Env.SERVER && splatterNum % SPLATTER_FLATTEN_FREQUENCY === 0) {
+      await flattenCache(tx, timestamp, letter);
     }
   },
   removeActorsExcept: async (tx: WriteTransaction, ids: string[]) => {
@@ -269,5 +271,46 @@ const removeBot = async (tx: WriteTransaction, botId: string) => {
 const serverLog = (...args: string[]) => {
   if (env === Env.SERVER) {
     console.log(...args);
+  }
+};
+
+const flattenCache = async (
+  tx: WriteTransaction,
+  timestamp: number,
+  letter: Letter,
+) => {
+  // Get all the splatters for this letter
+  const splatters = (await (await tx.scan({prefix: `splatter/${letter}`}))
+    .entries()
+    .toArray()) as [string, Splatter][];
+
+  // And find any splatters which are "old"
+  const oldSplatters: [string, Splatter][] = splatters.filter(
+    s => timestamp - s[1].t >= SPLATTER_MAX_AGE,
+  );
+  // Now if we have any cacheable splatters, draw them to the cache
+  // Draw them on top of the last cached image
+  if (oldSplatters.length === 0) {
+    return;
+  }
+  console.log(`${letter}: Flattening ${oldSplatters} splatters.`);
+  const [png] = await Promise.all([
+    unchunk(tx, `cache/${letter}`),
+    _initRenderer!(),
+  ]);
+  const decoded = png ? decode(png) : undefined;
+  const newCache = draw_cache_png(
+    decoded,
+    ...splatters2Render(
+      oldSplatters.map(s => s[1]),
+      // When we draw a cache, we just want the "finished" state of all the
+      // animations, as they're presumed to be complete and immutable.
+      oldSplatters.map(() => SPLATTER_ANIM_FRAMES),
+    ),
+  );
+  const flattenedKeys = oldSplatters.map(s => s[0]);
+  await chunk(tx, `cache/${letter}`, encode(newCache));
+  for await (const key of flattenedKeys) {
+    await tx.del(key);
   }
 };
