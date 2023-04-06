@@ -77,9 +77,9 @@ export const CACHE_CHUNK_STRING_SIZE = 65535;
 
 // We divide the alive timestamp by this, and if it's 0 (and we have less than
 // MAX_CONCURRENT_BOTS, and we're not already playing a bot), we run a bot.
-export const BOT_RANDOM_SEED = 4;
-export const MAX_CLIENT_BROADCASTS = 2;
-export const MAX_CONCURRENT_BOTS = 5;
+export const BOT_RANDOM_SEED = 5;
+export const MAX_CLIENT_BROADCASTS = 1;
+export const MAX_CONCURRENT_BOTS = 3;
 export const BOT_RANDOM_LOCATIONS = [
   'Jaipur 🇮🇳',
   'Mumbai 🇮🇳',
