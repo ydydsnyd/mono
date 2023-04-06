@@ -24,6 +24,7 @@ import {getData, isAddDiff} from './data-util';
 export const initRoom = async (
   onPlayRecording: (recording: RoomRecording) => void,
   onBotCreated: (bot: OrchestratorActor) => void,
+  onActorsChanged: () => void,
 ): Promise<{
   actor: OrchestratorActor;
   getOrchestratorActorIds: () => Promise<string[]>;
@@ -93,6 +94,7 @@ export const initRoom = async (
             }
           }
         } else if (diff.key.startsWith('orchestrator-actor/')) {
+          onActorsChanged();
           if (isAddDiff(diff)) {
             const bot = getData<OrchestratorActor>(diff);
             if (bot.isBot && bot.botController === actor.id) {

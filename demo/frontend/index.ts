@@ -27,7 +27,7 @@ import type {
   Splatter,
 } from '../shared/types';
 import {LETTERS} from '../shared/letters';
-import {letterMap, now} from '../shared/util';
+import {getLazyFunction, letterMap, now} from '../shared/util';
 import {getRandomLocation, getUserLocation} from './location';
 import {initRoom} from './orchestrator';
 import {DEBUG_TEXTURES, FPS_LOW_PASS} from './constants';
@@ -61,31 +61,6 @@ export const init = async (): Promise<DemoAPI> => {
     CanvasRenderingContext2D,
     CanvasRenderingContext2D,
   ];
-
-  const getGuaranteeActor = (): [
-    (actor: AnyActor) => Promise<void>,
-    (createFn: (actor: AnyActor) => Promise<void>) => Promise<void>,
-  ] => {
-    let actorsToCreate: AnyActor[] = [];
-    let createFn: ((actor: AnyActor) => Promise<void>) | undefined;
-    return [
-      async (actor: AnyActor) => {
-        if (createFn) {
-          await createFn(actor);
-        } else {
-          actorsToCreate.push(actor);
-        }
-      },
-      async (fn: (actor: AnyActor) => Promise<void>) => {
-        createFn = fn;
-        if (actorsToCreate) {
-          for await (const actor of actorsToCreate) {
-            await createFn(actor);
-          }
-        }
-      },
-    ];
-  };
 
   // Canvases
   const canvas = document.getElementById('canvas3D') as HTMLCanvasElement;
@@ -136,7 +111,9 @@ export const init = async (): Promise<DemoAPI> => {
 
   const playingRecordings: Record<string, RoomRecording> = {};
   const recordingFrame: Record<string, number> = {};
-  const [guaranteeActor, setGuaranteeActor] = getGuaranteeActor();
+  const [guaranteeActor, setGuaranteeActor] = getLazyFunction<AnyActor>();
+  const [removeActorsExcept, setRemoveActorsExcept] =
+    getLazyFunction<string[]>();
 
   async function initOrchestrator() {
     const roomInitDone = initTiming('find-room', 300);
@@ -151,6 +128,10 @@ export const init = async (): Promise<DemoAPI> => {
           console.log('bot actor', botActor);
           const location = getRandomLocation();
           await guaranteeActor({...botActor, location});
+        },
+        async () => {
+          console.log('sync actors between orchestrator and room');
+          await removeActorsExcept(await getOrchestratorActorIds());
         },
       );
     } finally {
@@ -216,10 +197,10 @@ export const init = async (): Promise<DemoAPI> => {
     updateActorLocation,
     clearTextures,
     removeBot,
+    removeActorsExcept: removeActorsExceptMutation,
     guaranteeActor: guaranteeActorMutation,
   } = await initialize(
     actor,
-    await getOrchestratorActorIds(),
     online => {
       const dot = document.querySelector('.online-dot');
       if (dot) {
@@ -237,6 +218,7 @@ export const init = async (): Promise<DemoAPI> => {
     debug,
   );
   await setGuaranteeActor(guaranteeActorMutation);
+  await setRemoveActorsExcept(removeActorsExceptMutation);
   initReflectClientDone();
 
   // Draw splatters as we get them

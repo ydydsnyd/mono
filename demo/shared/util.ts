@@ -9,6 +9,32 @@ import {
   TouchState,
 } from './types';
 
+export const getLazyFunction = <T extends any>(): [
+  (arg: T) => Promise<void>,
+  (createFn: (arg: T) => Promise<void>) => Promise<void>,
+] => {
+  let pastCalls: T[] = [];
+  let currentFn: (arg: T) => Promise<void> | undefined;
+  return [
+    async arg => {
+      if (currentFn) {
+        await currentFn(arg);
+      } else {
+        pastCalls.push(arg);
+      }
+    },
+    async (fn: (arg: T) => Promise<void>) => {
+      currentFn = fn;
+      if (pastCalls) {
+        for await (const call of pastCalls) {
+          await currentFn(call);
+        }
+        pastCalls = [];
+      }
+    },
+  ];
+};
+
 export const now = () => new Date().getTime();
 
 export const nextNumber = (last?: number): number => {
