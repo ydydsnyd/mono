@@ -80,7 +80,7 @@ export async function removeExistingChunks(
   return result;
 }
 
-export function assertNoMissingChunks(dagRead: Read, h: Hash) {
+export function assertNoMissingChunks(dagRead: Read, h: Hash): Promise<void> {
   const v = new Visitor(dagRead);
   return v.visit(h);
 }

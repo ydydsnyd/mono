@@ -1,7 +1,7 @@
 import {assert, assertNumber} from 'shared/asserts.js';
-import {emptyHash, Hash} from '../hash.js';
-import type {MaybePromise} from '../replicache.js';
 import {skipGCAsserts} from '../config.js';
+import {Hash, emptyHash} from '../hash.js';
+import type {MaybePromise} from '../replicache.js';
 
 export type HeadChange = {
   new: Hash | undefined;
@@ -186,6 +186,7 @@ class RefCountUpdates {
   private _updateRefCount(hash: Hash, delta: number): boolean {
     const oldCount = this._refCountUpdates.get(hash);
     assertNumber(oldCount);
+    assert(oldCount + delta >= 0, 'ref count must be non-negative');
     this._refCountUpdates.set(hash, oldCount + delta);
     return (oldCount === 0 && delta === 1) || (oldCount === 1 && delta === -1);
   }
