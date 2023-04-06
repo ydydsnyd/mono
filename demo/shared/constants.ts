@@ -33,6 +33,8 @@ export const SPLATTER_MAX_AGE = 1000; // ms
 export const SPLATTER_FLATTEN_FREQUENCY = 100; // count. This must be less than 65535
 // Splatter animation speed
 export const SPLATTER_ANIMATION_FRAME_DURATION = 30; // ~33fps
+// Fire splatters at this rate
+export const SPLATTER_FIRE_RATE = 84; // ~12fps
 
 // Clear animation
 export const CLEAR_STEP_ANIM_FRAMES = 8;
