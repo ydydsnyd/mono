@@ -54,7 +54,7 @@ body.custom-cursor * {
   top: 0;
   text-align: end;
   padding-right: 1em;
-  z-index: 100;
+  z-index: 200;
   user-select: none;
 }
 #caches {
