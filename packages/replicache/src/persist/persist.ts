@@ -20,9 +20,11 @@ import {
   setClientGroup,
 } from './client-groups.js';
 import {
-  CLIENTS_HEAD_NAME,
+  Client,
   assertHasClientState,
+  getClient,
   getClientGroupIDForClient,
+  setClient,
 } from './clients.js';
 
 /**
@@ -112,7 +114,7 @@ async function persistInternal(
     assertSnapshotCommitDD31(perdagBaseSnapshot);
 
     const headsFromBefore: Record<string, Hash | undefined> = {
-      [CLIENTS_HEAD_NAME]: await perdagRead.getHead(CLIENTS_HEAD_NAME),
+      // [CLIENTS_HEAD_NAME]: await perdagRead.getHead(CLIENTS_HEAD_NAME),
       [CLIENT_GROUPS_HEAD_NAME]: await perdagRead.getHead(
         CLIENT_GROUPS_HEAD_NAME,
       ),
@@ -137,13 +139,15 @@ async function persistInternal(
     newMemdagMutations,
     memdagBaseSnapshot,
     gatheredChunksX,
-    memdagHeadCommitHash,
+    // gatheredChunksY,
+    // gatheredChunksUsingMemOnly,
+    // memdagHeadCommitHash,
   ] = await withRead(memdag, async memdagRead => {
     const memdagHeadCommit = await db.commitFromHead(
       db.DEFAULT_HEAD_NAME,
       memdagRead,
     );
-    const memdagHeadCommitHash = memdagHeadCommit.chunk.hash;
+    // const memdagHeadCommitHash = memdagHeadCommit.chunk.hash;
     const newMemdagMutations = await db.localMutationsGreaterThan(
       memdagHeadCommit,
       {[clientID]: perdagLMID || 0},
@@ -155,17 +159,34 @@ async function persistInternal(
     );
     assertSnapshotCommitDD31(memdagBaseSnapshot);
 
-    const gatheredChunks: ReadonlyMap<Hash, dag.Chunk> = await gatherChunks(
+    const gatheredChunksX: ReadonlyMap<Hash, dag.Chunk> = await gatherChunksX(
       memdagRead,
+      memdagBaseSnapshot.chunk.hash,
       perdagMainClientGroupHeadHash,
     );
+
+    // const gatheredChunksY: ReadonlyMap<Hash, dag.Chunk> = await gatherChunksY(
+    //   memdagRead,
+    //   memdagBaseSnapshot.chunk.hash,
+    //   perdagMainClientGroupHeadHash,
+    // );
+
+    // const gatheredChunksUsingMemOnly: ReadonlyMap<Hash, dag.Chunk> =
+    //   await gatherChunksUsingMemOnly(
+    //     memdagRead,
+    //     memdagBaseSnapshot.chunk.hash,
+    //     perdagMainClientGroupHeadHash,
+    //   );
+
     // assertAllMemOnly(memdagRead, gatheredChunks.keys());
 
     return [
       newMemdagMutations,
       memdagBaseSnapshot,
-      gatheredChunks,
-      memdagHeadCommitHash,
+      gatheredChunksX,
+      // gatheredChunksY,
+      // gatheredChunksUsingMemOnly,
+      // memdagHeadCommitHash,
     ];
   });
 
@@ -173,9 +194,25 @@ async function persistInternal(
     return;
   }
 
-  const gatheredChunks = await withRead(perdag, perdagRead =>
-    restrictGatherChunks(perdagRead, gatheredChunksX, memdagHeadCommitHash),
+  const gatheredChunksX2 = await withRead(perdag, perdagRead =>
+    restrictGatherChunks(
+      perdagRead,
+      gatheredChunksX,
+      memdagBaseSnapshot.chunk.hash,
+    ),
   );
+
+  const gatheredChunks = await withRead(perdag, perdagRead =>
+    restrictGatherChunks(
+      perdagRead,
+      gatheredChunksX2,
+      memdagBaseSnapshot.chunk.hash,
+    ),
+  );
+
+  // if (gatheredChunks.size !== gatheredChunksY2.size) {
+  //   debugger;
+  // }
 
   await validateMemDag(memdag, clientID, mainClientGroupID);
 
@@ -206,9 +243,16 @@ async function persistInternal(
     }
 
     await withWrite(perdag, async perdagWrite => {
-      for (const headName of [CLIENTS_HEAD_NAME, CLIENT_GROUPS_HEAD_NAME]) {
+      for (const headName of [
+        //CLIENTS_HEAD_NAME,
+        CLIENT_GROUPS_HEAD_NAME,
+      ]) {
         const head = await perdagWrite.getHead(headName);
-        assert(headsFromBefore[headName] === head);
+
+        if (headsFromBefore[headName] !== head) {
+          lc.debug?.(`Head ${headName} changed, aborting persist`);
+          return;
+        }
       }
 
       await assertNonePresent(perdagWrite, gatheredChunks.keys());
@@ -240,7 +284,7 @@ async function persistInternal(
         Array.from(gatheredChunks.values(), c => perdagWrite.putChunk(c)),
       );
       memdagBaseSnapshotPersisted = true;
-      await assertNoMissingChunks(perdagWrite, memdagHeadCommitHash);
+      await assertNoMissingChunks(perdagWrite, memdagBaseSnapshot.chunk.hash);
 
       let newMainClientGroupHeadHash: Hash;
       // check if memdag snapshot still newer than perdag snapshot
@@ -420,7 +464,7 @@ async function persistInternal(
         Array.from(gatheredChunks.values(), c => perdagWrite.putChunk(c)),
       );
 
-      await assertNoMissingChunks(perdagWrite, memdagHeadCommitHash);
+      await assertNoMissingChunks(perdagWrite, memdagBaseSnapshot.chunk.hash);
 
       const mutationIDs = {...mainClientGroup.mutationIDs};
       lc.debug?.(
@@ -436,6 +480,15 @@ async function persistInternal(
         mutationIDs,
         lc,
       );
+
+      const client = await getClient(clientID, perdagWrite);
+      assert(client);
+      const newClient: Client = {
+        ...client,
+        headHash: newMainClientGroupHeadHash,
+      };
+      await setClient(clientID, newClient, perdagWrite);
+
       await setClientGroup(
         lc,
         mainClientGroupID,
@@ -482,7 +535,7 @@ async function validateMemDag(
 //   ];
 // }
 
-class GatherVisitor extends dag.Visitor {
+class GatherVisitorX extends dag.Visitor {
   readonly endAt: Hash;
   readonly gatheredChunks = new Map<Hash, dag.Chunk>();
 
@@ -504,26 +557,93 @@ class GatherVisitor extends dag.Visitor {
   }
 }
 
-async function gatherChunks(memdag: dag.LazyRead, endAt: Hash) {
-  const mainHeadHash = await memdag.getHead(db.DEFAULT_HEAD_NAME);
-  assert(mainHeadHash);
-  const visitor = new GatherVisitor(memdag, endAt);
-  await visitor.visit(mainHeadHash);
+// class GatherVisitorY extends dag.Visitor {
+//   readonly endAt: Hash;
+//   readonly gatheredChunks = new Map<Hash, dag.Chunk>();
+//   readonly lazyRead: dag.LazyRead;
+
+//   constructor(dagRead: dag.LazyRead, endAt: Hash) {
+//     super(dagRead);
+//     this.endAt = endAt;
+//     this.lazyRead = dagRead;
+//   }
+
+//   override visit(h: Hash): Promise<void> {
+//     if (h === this.endAt || !this.lazyRead.isMemOnlyChunkHash(h)) {
+//       return Promise.resolve();
+//     }
+//     return super.visit(h);
+//   }
+
+//   override visitChunk(c: dag.Chunk): Promise<void> {
+//     this.gatheredChunks.set(c.hash, c);
+//     return super.visitChunk(c);
+//   }
+// }
+
+// class GatherVisitorMemOnly extends dag.Visitor {
+//   readonly endAt: Hash;
+//   readonly gatheredChunks = new Map<Hash, dag.Chunk>();
+//   readonly dagRead: dag.LazyRead;
+
+//   constructor(dagRead: dag.LazyRead, endAt: Hash) {
+//     super(dagRead);
+//     this.dagRead = dagRead;
+//     this.endAt = endAt;
+//   }
+
+//   override visit(h: Hash): Promise<void> {
+//     if (h === this.endAt || !this.dagRead.isMemOnlyChunkHash(h)) {
+//       return promiseVoid;
+//     }
+//     return super.visit(h);
+//   }
+
+//   override visitChunk(c: dag.Chunk): Promise<void> {
+//     this.gatheredChunks.set(c.hash, c);
+//     return super.visitChunk(c);
+//   }
+// }
+
+async function gatherChunksX(memdag: dag.LazyRead, beginAt: Hash, endAt: Hash) {
+  const visitor = new GatherVisitorX(memdag, endAt);
+  await visitor.visit(beginAt);
   return visitor.gatheredChunks;
 }
 
+// async function gatherChunksY(memdag: dag.LazyRead, beginAt: Hash, endAt: Hash) {
+//   const visitor = new GatherVisitorY(memdag, endAt);
+//   await visitor.visit(beginAt);
+//   return visitor.gatheredChunks;
+// }
+
+// async function gatherChunksUsingMemOnly(
+//   memdag: dag.LazyRead,
+//   beginAt: Hash,
+//   endAt: Hash,
+// ) {
+//   const visitor = new GatherVisitorMemOnly(memdag, endAt);
+//   await visitor.visit(beginAt);
+//   return visitor.gatheredChunks;
+// }
+
 class RestrictVisitor extends dag.Visitor {
   readonly perdagRead: dag.HasChunk;
+  readonly memdagRead: RestrictVisitorGatheredChunks;
   readonly gatheredChunks = new Map<Hash, dag.Chunk>();
 
-  constructor(dagRead: dag.MustGetChunk, perdagRead: dag.HasChunk) {
+  constructor(
+    dagRead: RestrictVisitorGatheredChunks,
+    perdagRead: dag.HasChunk,
+  ) {
     super(dagRead);
+    this.memdagRead = dagRead;
     this.perdagRead = perdagRead;
   }
 
   override async visit(h: Hash): Promise<void> {
-    if (await this.perdagRead.hasChunk(h)) {
-      return Promise.resolve();
+    if (!this.memdagRead.hasChunk(h) || (await this.perdagRead.hasChunk(h))) {
+      return;
     }
     await super.visit(h);
   }
@@ -534,17 +654,24 @@ class RestrictVisitor extends dag.Visitor {
   }
 }
 
+interface RestrictVisitorGatheredChunks extends dag.MustGetChunk {
+  hasChunk(h: Hash): boolean;
+}
+
 async function restrictGatherChunks(
   perdagRead: dag.Read,
   gatheredChunks: ReadonlyMap<Hash, dag.Chunk>,
   headHash: Hash,
 ): Promise<Map<Hash, dag.Chunk<unknown>>> {
-  const memdagRead: dag.MustGetChunk = {
+  const memdagRead: RestrictVisitorGatheredChunks = {
     // eslint-disable-next-line require-await
     async mustGetChunk(h: Hash): Promise<dag.Chunk> {
       const c = gatheredChunks.get(h);
       assert(c);
       return Promise.resolve(c);
+    },
+    hasChunk(h: Hash): boolean {
+      return gatheredChunks.has(h);
     },
   };
   const visitor = new RestrictVisitor(memdagRead, perdagRead);
@@ -585,13 +712,13 @@ async function rebase(
   for (let i = mutations.length - 1; i >= 0; i--) {
     const mutationCommit = mutations[i];
 
-    try {
-      await assertNoMissingChunks(write, mutationCommit.chunk.hash);
-    } catch (e) {
-      debugger;
-      await assertNoMissingChunks(write, mutationCommit.chunk.hash);
-      throw e;
-    }
+    // try {
+    //   await assertNoMissingChunks(write, mutationCommit.chunk.hash);
+    // } catch (e) {
+    //   debugger;
+    //   await assertNoMissingChunks(write, mutationCommit.chunk.hash);
+    //   throw e;
+    // }
 
     const {meta} = mutationCommit;
     const newMainHead = await db.commitFromHash(basis, write);

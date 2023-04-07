@@ -261,6 +261,12 @@ export class LazyRead implements Read {
     this.clientID = clientID;
   }
 
+  isCached(chunkHash: Hash): boolean {
+    return (
+      this._sourceChunksCache.getWithoutUpdatingLRU(chunkHash) !== undefined
+    );
+  }
+
   isMemOnlyChunkHash(hash: Hash): boolean {
     return this._memOnlyChunks.has(hash);
   }
