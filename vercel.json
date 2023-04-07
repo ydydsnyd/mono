@@ -1,0 +1,3 @@
+{
+  "buildCommand": "next build && [[ \"$VERCEL_PRODUCTION_BUILD\" != \"\" ]] && npm run publish-worker-prod"
+}
