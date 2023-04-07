@@ -167,7 +167,7 @@ body.custom-cursor * {
   transition: opacity 0.5s ease-out;
   opacity: 0;
 }
-.custom-cursor .local.cursor {
+.custom-cursor .local.cursor.on-page {
   opacity: 1;
   z-index: 102;
 }

@@ -83,8 +83,11 @@ export const cursorRenderer = (
         }
         const cursorX = x * demoBB.width + demoLeft;
         const cursorY = y * demoBB.height + demoTop;
-        cursorDiv.classList.remove('active');
+        cursorDiv.classList.remove('active', 'on-page');
         if (cursor.onPage) {
+          if (isLocal) {
+            cursorDiv.classList.add('on-page');
+          }
           if (cursor.touchState !== TouchState.Touching || showFinger) {
             cursorDiv.classList.add('active');
           }
@@ -223,8 +226,6 @@ export const cursorRenderer = (
     localCursor.ts = now();
     localCursor.isDown = false;
     localCursor.touchState = TouchState.Unknown;
-    localCursor.x = 0;
-    localCursor.y = 0;
     cursorNeedsUpdate = true;
   });
 
