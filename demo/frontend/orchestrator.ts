@@ -7,7 +7,7 @@ import {
 import {WORKER_HOST} from '../shared/urls';
 import type {
   Cursor,
-  OrchestratorActor,
+  Actor,
   RecordingCursor,
   RoomRecording,
 } from '../shared/types';
@@ -23,15 +23,14 @@ import {getData, isAddDiff} from './data-util';
 
 export const initRoom = async (
   onPlayRecording: (recording: RoomRecording) => void,
-  onBotCreated: (bot: OrchestratorActor) => void,
-  onActorsChanged: () => void,
+  onActorsChanged: (actorIds: Actor[]) => void,
+  onUpdateLocalActor: (actor: Actor) => void,
 ): Promise<{
-  actor: OrchestratorActor;
-  getOrchestratorActorIds: () => Promise<string[]>;
-  rebucket: (actor: OrchestratorActor) => Promise<void>;
+  actor: Actor;
   recordCursor: (recordingId: string, cursor: Cursor) => Promise<void>;
   deleteRecording: (recordingId: string) => Promise<void>;
   playRecording: (recordingId: string, roomId: string) => Promise<void>;
+  updateActorLocation: (location: string) => Promise<void>;
   finishRecording: (
     recordingId: string,
     roomId: string,
@@ -52,12 +51,22 @@ export const initRoom = async (
 }> => {
   // Set up our connection to reflect
   console.log(`Orchestrator connecting to worker at ${WORKER_HOST}`);
+  let actor: Actor | undefined;
 
   // Create a reflect client
   const orchestratorClient = new Reflect<typeof orchestratorMutators>({
     socketOrigin: WORKER_HOST,
-    onOnlineChange: online => {
+    onOnlineChange: async online => {
       console.log(`online: ${online}`);
+      await orchestratorClient.mutate.createActor({
+        lastColorIndex: actor?.colorIndex || null,
+        fallbackRoomId: nanoid(),
+        forceNewRoomWithSecret: null,
+        lastRoom: actor?.room || null,
+        timestamp: now(),
+      });
+      const newActor = await waitForActor(orchestratorClient);
+      onUpdateLocalActor(newActor);
     },
     userID: USER_ID,
     roomID: ORCHESTRATOR_ROOM_ID,
@@ -77,31 +86,31 @@ export const initRoom = async (
   console.log(
     `Create actor for ${await orchestratorClient.query(tx => tx.clientID)}`,
   );
-  mutations.createOrchestratorActor({
+  mutations.createActor({
     fallbackRoomId: nanoid(),
     forceNewRoomWithSecret: params.get('reset'),
     timestamp: now(),
+    lastRoom: null,
+    lastColorIndex: null,
   });
-  const actor = await waitForActor(orchestratorClient);
+  actor = await waitForActor(orchestratorClient);
+  onUpdateLocalActor(actor);
   orchestratorClient.experimentalWatch(
-    diffs => {
+    async diffs => {
       for (const diff of diffs.values()) {
-        if (diff.key.startsWith(`room-recordings/${actor.room}`)) {
+        if (diff.key.startsWith(`room-recordings/${actor!.room}`)) {
           if (isAddDiff(diff)) {
             const recording = getData<RoomRecording>(diff);
-            if (recording.broadcasterId === actor.id) {
+            if (recording.broadcasterId === actor!.id) {
               onPlayRecording(recording);
             }
           }
-        } else if (diff.key.startsWith('orchestrator-actor/')) {
-          onActorsChanged();
-          if (isAddDiff(diff)) {
-            const bot = getData<OrchestratorActor>(diff);
-            if (bot.isBot && bot.botController === actor.id) {
-              // This is our bot, we're responsible for making it in our reflect room.
-              onBotCreated(bot);
-            }
-          }
+        } else if (diff.key.startsWith('actor/')) {
+          const actors = await orchestratorClient.query(
+            async tx =>
+              (await tx.scan({prefix: 'actor/'}).values().toArray()) as Actor[],
+          );
+          onActorsChanged(actors);
         }
       }
     },
@@ -115,29 +124,6 @@ export const initRoom = async (
 
   return {
     actor,
-    getOrchestratorActorIds: async () => {
-      const actors = await orchestratorClient.query(
-        async tx =>
-          (await tx
-            .scan({prefix: 'orchestrator-actor/'})
-            .values()
-            .toArray()) as OrchestratorActor[],
-      );
-      return actors.map(a => a.id);
-    },
-    rebucket: async actor => {
-      await mutations.createOrchestratorActor({
-        lastColorIndex: actor.colorIndex,
-        fallbackRoomId: nanoid(),
-        forceNewRoomWithSecret: null,
-        lastRoom: actor.room,
-        timestamp: now(),
-      });
-      const newActor = await waitForActor(orchestratorClient);
-      // TODO: this isn't very clear - perhaps move to a more event-based API?
-      actor.id = newActor.id;
-      actor.room = newActor.room;
-    },
     recordCursor: async (recordingId: string, cursor: Cursor) => {
       await orchestratorClient.mutate.addCursorRecording({
         recordingId,
@@ -156,6 +142,7 @@ export const initRoom = async (
         timestamp: now(),
       });
     },
+    updateActorLocation: orchestratorClient.mutate.updateActorLocation,
     deleteRecording: orchestratorClient.mutate.deleteRecording,
     playRecording: async (recordingId: string, roomId: string) => {
       orchestratorClient.mutate.playRecording({
@@ -191,7 +178,7 @@ export const initRoom = async (
           )) as number;
         }
         const activeRecordings = (await tx
-          .scan({prefix: `room-recordings/${actor.room}`})
+          .scan({prefix: `room-recordings/${actor!.room}`})
           .values()
           .toArray()) as RoomRecording[];
         const currentRoom = (await tx.get(ROOM_ID_KEY)) as string;
@@ -211,22 +198,18 @@ export const initRoom = async (
 
 const waitForActor = (
   client: Reflect<typeof orchestratorMutators>,
-): Promise<OrchestratorActor> => {
+): Promise<Actor> => {
   return new Promise(async (resolve, reject) => {
     const actor = await client.query(async tx => {
-      return (await tx.get(`orchestrator-actor/${tx.clientID}`)) as
-        | OrchestratorActor
-        | undefined;
+      return (await tx.get(`actor/${tx.clientID}`)) as Actor | undefined;
     });
     if (actor) {
       resolve({...actor});
       return;
     }
-    const unsubscribe = client.subscribe<OrchestratorActor | undefined>(
+    const unsubscribe = client.subscribe<Actor | undefined>(
       async tx => {
-        return (await tx.get(`orchestrator-actor/${tx.clientID}`)) as
-          | OrchestratorActor
-          | undefined;
+        return (await tx.get(`actor/${tx.clientID}`)) as Actor | undefined;
       },
       {
         onData: actor => {

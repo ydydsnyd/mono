@@ -2,7 +2,6 @@
 // time we draw.
 export type State = {
   actorId: ActorID;
-  actors: Record<ActorID, Actor>;
   cursors: Record<ActorID, Cursor>;
 };
 
@@ -15,18 +14,13 @@ export type ActorID = string;
 
 export type Color = [number, number, number]; // rgb
 
-export type AnyActor = OrchestratorActor | Actor;
-
-export type Actor = OrchestratorActor & {
-  location: string;
-};
-
-export type OrchestratorActor = {
+export type Actor = {
   id: ActorID;
   colorIndex: number;
   room: string;
   isBot: boolean;
   botController: string | null;
+  location: string | null;
 };
 
 export type LetterHandles = Record<Letter, number>;

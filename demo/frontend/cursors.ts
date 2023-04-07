@@ -5,21 +5,15 @@ import {
   MIN_TOUCH_TIME_FOR_INDICATOR,
   TOUCH_CIRCLE_PADDING,
 } from '../shared/constants';
-import {
-  Actor,
-  ActorID,
-  Cursor,
-  Position,
-  State,
-  TouchState,
-} from '../shared/types';
+import {Actor, ActorID, Cursor, Position, TouchState} from '../shared/types';
 import {colorToString, now} from '../shared/util';
 
 type PageCursor = {isDown: boolean; position: Position; isMobile: boolean};
 
 export const cursorRenderer = (
   actorId: string,
-  getState: () => {actors: State['actors']; cursors: State['cursors']},
+  getActors: () => Record<ActorID, Actor>,
+  getCursors: () => Record<ActorID, Cursor>,
   getDemoContainer: () => HTMLDivElement,
   isOverLetter: (cursor: Position) => boolean,
   onUpdateCursor: (localCursor: Cursor) => void,
@@ -35,7 +29,7 @@ export const cursorRenderer = (
     // Make sure we have a div
     let cursorDiv = cursorDivs.get(cursor.actorId);
     if (!cursorDiv && createIfMissing) {
-      const {actors} = getState();
+      const actors = getActors();
       const actor = actors[cursor.actorId];
       if (!actor) {
         console.error(
@@ -64,7 +58,8 @@ export const cursorRenderer = (
       onUpdateCursor(localCursor);
     }
     const demoBB = getDemoContainer().getBoundingClientRect();
-    const {actors, cursors} = getState();
+    const actors = getActors();
+    const cursors = getCursors();
     // Move cursors
     Object.values(cursors).forEach(async cursor => {
       if (!actors[cursor.actorId]) {
@@ -167,7 +162,7 @@ export const cursorRenderer = (
     }
   };
   // Add a cursor tracker for this user
-  const {cursors} = getState();
+  const cursors = getCursors();
   let localCursor: Cursor = cursors[actorId] || {
     x: 0,
     y: 0,

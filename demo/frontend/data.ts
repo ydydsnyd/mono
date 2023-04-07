@@ -23,15 +23,13 @@ import {getData, isChangeDiff, isDeleteDiff} from './data-util';
 import {updateCache} from '../shared/renderer';
 import {WORKER_HOST} from '../shared/urls';
 import {unchunk} from '../shared/chunks';
-import type {OrchestratorActor} from '../shared/types';
 import {USER_ID} from '../shared/constants';
 
 const CACHE_DEBOUNCE_MS = 100;
 
 export const initialize = async (
-  actor: OrchestratorActor,
+  actor: Actor,
   onlineChange: (online: boolean) => void,
-  rebucket: (actor: OrchestratorActor) => Promise<void>,
   debug: Debug,
 ) => {
   // Set up our connection to reflect
@@ -41,10 +39,6 @@ export const initialize = async (
   const reflectClient = new Reflect<M>({
     socketOrigin: WORKER_HOST,
     onOnlineChange: async online => {
-      if (online) {
-        await rebucket(actor);
-        await reflectClient.mutate.guaranteeActor({...actor});
-      }
       onlineChange(online);
     },
     userID: USER_ID,
@@ -97,14 +91,6 @@ export const initialize = async (
     diffs.forEach(async diff => {
       const keyParts = diff.key.split('/');
       switch (keyParts[0]) {
-        case 'actor':
-          const actor = getData<Actor>(diff);
-          if (isDeleteDiff(diff)) {
-            delete localState.actors[actor.id];
-          } else {
-            localState.actors[actor.id] = actor;
-          }
-          break;
         case 'cursor':
           const cursor = getData<Cursor>(diff);
           if (isDeleteDiff(diff)) {
@@ -191,18 +177,8 @@ export const initialize = async (
     return LETTERS.every(l => loadedLetters.has(l));
   };
 
-  const createActorIfMissing = async () => {
-    if (!localState.actors[actor.id]) {
-      await rebucket(actor);
-      await mutations.guaranteeActor({...actor});
-      return true;
-    }
-    return false;
-  };
-
   return {
     ...mutations,
-    createActorIfMissing,
     cachesLoaded,
     getState,
     addListener,
@@ -214,11 +190,6 @@ export const initialize = async (
 const stateInitializer =
   (actorId: string) =>
   async (tx: ReadTransaction): Promise<State> => {
-    const actorList = (await tx.scan({prefix: 'actor/'}).toArray()) as Actor[];
-    const actors = actorList.reduce((actors, actor) => {
-      actors[actor.id] = actor;
-      return actors;
-    }, {} as State['actors']);
     const cursorList = (await tx
       .scan({prefix: 'cursor/'})
       .toArray()) as Cursor[];
@@ -228,7 +199,6 @@ const stateInitializer =
     }, {} as State['cursors']);
     return {
       actorId,
-      actors,
       cursors,
     };
   };

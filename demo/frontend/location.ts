@@ -1,5 +1,3 @@
-import {BOT_RANDOM_LOCATIONS} from '../shared/constants';
-
 export const getUserLocation = async (backoff = 1000): Promise<string> => {
   try {
     const data = await fetch('/api/get-location');
@@ -18,10 +16,4 @@ export const getUserLocation = async (backoff = 1000): Promise<string> => {
       }, backoff * 1.5);
     });
   }
-};
-
-export const getRandomLocation = () => {
-  return BOT_RANDOM_LOCATIONS[
-    Math.floor(Math.random() * BOT_RANDOM_LOCATIONS.length)
-  ];
 };

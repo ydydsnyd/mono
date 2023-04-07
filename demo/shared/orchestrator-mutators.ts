@@ -1,16 +1,14 @@
-import type {
-  AsyncIterableIteratorToArray,
-  WriteTransaction,
-} from '@rocicorp/reflect';
+import type {WriteTransaction} from '@rocicorp/reflect';
 import {
   ACTIVITY_TIMEOUT,
+  BOT_RANDOM_LOCATIONS,
   BOT_RANDOM_SEED,
   COLOR_PALATE,
   MAX_CLIENT_BROADCASTS,
   MAX_CONCURRENT_BOTS,
   ROOM_MAX_ACTORS,
 } from './constants';
-import {Cursor, Env, OrchestratorActor, RoomRecording} from './types';
+import {Cursor, Env, Actor, RoomRecording} from './types';
 import {string2Uint8Array} from './uint82b64';
 import {
   cursorToRecordingCursor,
@@ -57,30 +55,39 @@ export const orchestratorMutators = {
       recordings.length < MAX_CONCURRENT_BOTS &&
       timestamp % BOT_RANDOM_SEED === 0
     ) {
-      const actor = (await tx.get(
-        `orchestrator-actor/${tx.clientID}`,
-      )) as OrchestratorActor;
+      const actor = (await tx.get(`actor/${tx.clientID}`)) as Actor;
       await playRandomRecording(tx, actor.room, actor.id, timestamp);
     }
+    // We also need to periodically clean up old users - do it randomly here too
+    if (timestamp % 4) {
+      await cleanupOldUsers(tx, timestamp);
+    }
   },
-  removeOchestratorActor: async (
+  updateActorLocation: async (tx: WriteTransaction, location: string) => {
+    const key = `actor/${tx.clientID}`;
+    const actor = ((await tx.get(key)) as Actor | undefined) || {
+      id: tx.clientID,
+    };
+    await tx.put(key, {...actor, location});
+  },
+  removeActor: async (
     tx: WriteTransaction,
     {clientID, timestamp}: {clientID: string; timestamp: number},
   ) => {
     // This mutator is also called when clients disconnect from non-orchestrator
     // rooms, so if we don't have an actor for this client, just ignore it.
-    if (await tx.has(`orchestrator-actor/${clientID}`)) {
+    if (await tx.has(`actor/${clientID}`)) {
       serverLog(`Orchestrator client ${clientID} left, cleaning up.`);
       await removeActor(tx, clientID, timestamp);
     }
   },
-  createOrchestratorActor: async (
+  createActor: async (
     tx: WriteTransaction,
     args: {
       fallbackRoomId: string;
-      lastRoom?: string;
-      lastColorIndex?: number;
-      forceNewRoomWithSecret?: string | null;
+      lastRoom: string | null;
+      lastColorIndex: number | null;
+      forceNewRoomWithSecret: string | null;
       timestamp: number;
     },
   ) => {
@@ -91,9 +98,6 @@ export const orchestratorMutators = {
       return;
     }
     await createActor(tx, {...args, isBot: false});
-    // We also need to periodically clean up old users - new user creation is as
-    // good a place as any to do it
-    await cleanupOldUsers(tx, args.timestamp);
   },
   finishRecording: async (
     tx: WriteTransaction,
@@ -174,13 +178,18 @@ const serverLog = (...args: string[]) => {
 };
 
 const cleanupOldUsers = async (tx: WriteTransaction, timestamp: number) => {
-  const alives = (await tx
-    .scan({prefix: 'alive/'})
-    .entries()) as AsyncIterableIteratorToArray<[string, number]>;
+  const alives = (await tx.scan({prefix: 'alive/'}).entries().toArray()) as [
+    string,
+    number,
+  ][];
   const actorsToRemove: string[] = [];
   const aliveIds: Set<string> = new Set();
   for await (const [key, lastPing] of alives) {
-    console.log(key, timestamp - lastPing);
+    console.log(
+      key,
+      timestamp - lastPing,
+      timestamp - lastPing > ACTIVITY_TIMEOUT,
+    );
     const id = key.split('/')[1];
     aliveIds.add(id);
     if (timestamp - lastPing > ACTIVITY_TIMEOUT) {
@@ -204,20 +213,24 @@ const createActor = async (
     lastRoom,
     lastColorIndex,
     controller,
+    location,
     forceNewRoomWithSecret,
+    timestamp,
   }: {
     fallbackRoomId: string | null;
     actorId?: string;
     isBot: boolean;
-    lastRoom?: string;
-    lastColorIndex?: number;
+    lastRoom: string | null;
+    lastColorIndex?: number | null;
     controller?: string;
+    location?: string;
     forceNewRoomWithSecret?: string | null;
+    timestamp: number;
   },
 ) => {
   actorId = actorId || tx.clientID;
   serverLog(`Orchestrator creating ${actorId}`);
-  const key = `orchestrator-actor/${actorId}`;
+  const key = `actor/${actorId}`;
   const hasActor = await tx.has(key);
   // Find the room we're currently filling
   const roomCount = (await tx.get(ROOM_COUNT_KEY)) as number | undefined;
@@ -237,7 +250,7 @@ const createActor = async (
   }
   // Must be set by all branches below.
   let roomActorNum: number;
-  let actor: OrchestratorActor;
+  let actor: Actor;
   if (!hasActor) {
     if (
       forceNewRoom ||
@@ -274,7 +287,7 @@ const createActor = async (
     // Create an index entry so we can look up users by room
     await tx.put(`actors/${selectedRoomId}/${actorId}`, actorId);
     let colorIndex = lastColorIndex;
-    if (colorIndex === undefined) {
+    if (colorIndex === null || colorIndex === undefined) {
       // NOTE: we just cycle through colors, so if COLOR_PALATE.length <
       // ROOM_MAX_ACTORS, we'll see cycling duplicates.
       // We do this independently of room count, because that way if someone enters
@@ -284,12 +297,14 @@ const createActor = async (
       colorIndex = nextColorNum % COLOR_PALATE.length;
       await tx.put(COLOR_INDEX_KEY, nextColorNum);
     }
+    await tx.put(`alive/${actorId}`, timestamp);
     actor = {
       id: actorId,
       colorIndex,
       room: selectedRoomId,
       isBot,
       botController: controller || null,
+      location: location || null,
     };
     await tx.put(key, actor);
   } else {
@@ -297,7 +312,7 @@ const createActor = async (
     serverLog(`${actorId} already exists.`);
     selectedRoomId = (await tx.get(ROOM_ID_KEY)) as string;
     roomActorNum = (await tx.get(ROOM_COUNT_KEY)) as number;
-    actor = (await tx.get(key)) as OrchestratorActor;
+    actor = (await tx.get(key)) as Actor;
   }
   serverLog(
     `Current room: ${selectedRoomId}\nActors:\n${await (
@@ -318,7 +333,7 @@ const removeActor = async (
   timestamp: number,
   alsoRemoving: string[] = [],
 ) => {
-  const key = `orchestrator-actor/${actorId}`;
+  const key = `actor/${actorId}`;
   console.log(`Remove orchestrator actor ${actorId}`);
   // Remove any recordings this actor was broadcasting
   const recordings = (await tx
@@ -340,10 +355,9 @@ const removeActor = async (
     await removeActor(tx, botId, timestamp, [actorId, ...alsoRemoving]);
     await tx.del(key);
   }
-
   await tx.del(`alive/${actorId}`);
 
-  const actor = (await tx.get(key)) as OrchestratorActor;
+  const actor = (await tx.get(key)) as Actor;
   // Dunno who that is
   if (!actor) {
     return;
@@ -386,6 +400,7 @@ const playRandomRecording = async (
   return await playRecording(tx, roomId, recordingId, broadcasterId, timestamp);
 };
 
+const RANDOM_LOCATION_SEED = 239;
 const playRecording = async (
   tx: WriteTransaction,
   roomId: string,
@@ -405,6 +420,17 @@ const playRecording = async (
     actorId: botId,
     isBot: true,
     controller: broadcasterId,
+    location:
+      BOT_RANDOM_LOCATIONS[
+        Math.floor(
+          randomWithSeed(
+            timestamp,
+            RANDOM_LOCATION_SEED,
+            BOT_RANDOM_LOCATIONS.length,
+          ),
+        )
+      ],
+    timestamp,
   });
   console.log(`CREATE BOT ${botId}`, bot, bot.colorIndex);
   await tx.put(`controlled-bots/${broadcasterId}/${botId}`, botId);

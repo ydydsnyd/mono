@@ -17,18 +17,17 @@ import {
   SPLATTER_FIRE_RATE,
 } from '../shared/constants';
 import type {
-  Actor,
-  AnyActor,
   Debug,
   Letter,
-  OrchestratorActor,
+  Actor,
   Position,
   RoomRecording,
   Splatter,
+  ActorID,
 } from '../shared/types';
 import {LETTERS} from '../shared/letters';
 import {getLazyFunction, letterMap, now} from '../shared/util';
-import {getRandomLocation, getUserLocation} from './location';
+import {getUserLocation} from './location';
 import {initRoom} from './orchestrator';
 import {DEBUG_TEXTURES, FPS_LOW_PASS} from './constants';
 import {loadClearAnimationFrames} from './textures';
@@ -109,12 +108,16 @@ export const init = async (): Promise<DemoAPI> => {
     }
   }
 
+  // Set up info below demo
+  const activeUserCount = document.getElementById(
+    'active-user-count',
+  ) as HTMLDivElement;
+
   const playingRecordings: Record<string, RoomRecording> = {};
   const recordingFrame: Record<string, number> = {};
-  const [guaranteeActor, setGuaranteeActor] = getLazyFunction<AnyActor>();
-  const [removeActorsExcept, setRemoveActorsExcept] =
-    getLazyFunction<string[]>();
-
+  const [setPresentActors, setSetPresentActors] = getLazyFunction<ActorID[]>();
+  let actors: Record<ActorID, Actor> = {};
+  let actor: Actor;
   async function initOrchestrator() {
     const roomInitDone = initTiming('find-room', 300);
     try {
@@ -124,15 +127,12 @@ export const init = async (): Promise<DemoAPI> => {
           recordingFrame[recording.recordingId] = 1;
           playingRecordings[recording.recordingId] = recording;
         },
-        async (botActor: OrchestratorActor) => {
-          console.log('bot actor', botActor);
-          const location = getRandomLocation();
-          await guaranteeActor({...botActor, location});
+        async (newActors: Actor[]) => {
+          activeUserCount.innerHTML = newActors.length + '';
+          newActors.forEach(a => (actors[a.id] = a));
+          setPresentActors(newActors.map(a => a.id));
         },
-        async () => {
-          console.log('sync actors between orchestrator and room');
-          await removeActorsExcept(await getOrchestratorActorIds());
-        },
+        localActor => (actor = localActor),
       );
     } finally {
       roomInitDone();
@@ -160,28 +160,23 @@ export const init = async (): Promise<DemoAPI> => {
       updateTexture,
     },
     {
-      actor,
-      getOrchestratorActorIds,
-      rebucket,
+      actor: initActor,
       recordCursor,
       playRecording,
       deleteRecording,
       finishRecording,
       getRecordingFrame,
+      updateActorLocation,
       getDebug: getOrchestratorDebug,
     },
   ] = await Promise.all([init3D(), initOrchestrator(), initRenderer()]);
+  actor = initActor;
   parallelDone();
-
-  // Set up info below demo
-  const activeUserCount = document.getElementById(
-    'active-user-count',
-  ) as HTMLDivElement;
 
   const updateLocation = () => {
     // Get our location and add it when it's ready
     getUserLocation().then(location => {
-      updateActorLocation({actorId: actor.id, location});
+      updateActorLocation(location);
     });
   };
 
@@ -190,15 +185,11 @@ export const init = async (): Promise<DemoAPI> => {
     getState,
     cachesLoaded,
     getSplatters,
-    createActorIfMissing,
     updateCursor,
     addSplatter,
     addListener,
-    updateActorLocation,
     clearTextures,
-    removeBot,
-    removeActorsExcept: removeActorsExceptMutation,
-    guaranteeActor: guaranteeActorMutation,
+    setPresentActors: setPresentActorsMutation,
   } = await initialize(
     actor,
     online => {
@@ -214,11 +205,9 @@ export const init = async (): Promise<DemoAPI> => {
         updateLocation();
       }
     },
-    rebucket,
     debug,
   );
-  await setGuaranteeActor(guaranteeActorMutation);
-  await setRemoveActorsExcept(removeActorsExceptMutation);
+  setSetPresentActors(setPresentActorsMutation);
   initReflectClientDone();
 
   // Draw splatters as we get them
@@ -230,13 +219,7 @@ export const init = async (): Promise<DemoAPI> => {
   });
 
   // Initialize state
-  let {actors, cursors} = await getState();
-
-  // Whenever actors change, update the count
-  addListener<Actor>('actor', async () => {
-    const count = Object.keys(actors).length;
-    activeUserCount.innerHTML = count + '';
-  });
+  let {cursors} = await getState();
 
   // Initialize textures
   LETTERS.forEach(letter => updateTexture(letter));
@@ -279,7 +262,8 @@ export const init = async (): Promise<DemoAPI> => {
   };
   const [localCursor, renderCursors, getCursorPosition] = cursorRenderer(
     actor.id,
-    () => ({actors, cursors}),
+    () => actors,
+    () => cursors,
     () => demoContainer,
     cursor => {
       // On mobile, don't scroll if we begin by touching a letter. Otherwise,
@@ -288,11 +272,6 @@ export const init = async (): Promise<DemoAPI> => {
       return !!letter;
     },
     cursor => {
-      createActorIfMissing().then(recreated => {
-        if (recreated) {
-          updateLocation();
-        }
-      });
       if (
         cursor.y < SHOW_CUSTOM_CURSOR_MIN_Y ||
         cursor.y > SHOW_CUSTOM_CURSOR_MAX_Y
@@ -442,7 +421,7 @@ export const init = async (): Promise<DemoAPI> => {
   // Render our cursors and canvases at "animation speed", usually 60fps
   startRenderLoop(
     async () => {
-      ({actors, cursors} = await getState());
+      ({cursors} = await getState());
 
       // Render our textures, and if they changed, send to the 3D scene.
       renderFrame(now(), lastClear, letter => updateTexture(letter));
@@ -482,7 +461,6 @@ export const init = async (): Promise<DemoAPI> => {
           delete playingRecordings[recordingId];
           delete recordingFrame[recordingId];
           await finishRecording(recordingId, recording.roomId, recording.botId);
-          await removeBot(recording.botId);
         }
       }
     },

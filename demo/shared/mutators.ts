@@ -1,7 +1,6 @@
 import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
 import {
-  Actor,
-  AnyActor,
+  ActorID,
   Cursor,
   Env,
   Letter,
@@ -97,45 +96,21 @@ export const mutators = {
     }
     // Doing nothing on the server is equivalent to throwing out the sentinel value.
   },
+  setPresentActors: async (tx: WriteTransaction, actors: ActorID[]) => {
+    const allCursors = (await tx
+      .scan({prefix: 'cursor/'})
+      .entries()
+      .toArray()) as [string, Cursor][];
+    const actorIds = new Set(actors);
+    console.log(actorIds);
+    for await (const [key, cursor] of allCursors) {
+      if (!actorIds.has(cursor.actorId)) {
+        await tx.del(key);
+      }
+    }
+  },
   updateCursor: async (tx: WriteTransaction, cursor: Cursor) => {
-    if (await tx.has(`actor/${cursor.actorId}`)) {
-      await tx.put(`cursor/${cursor.actorId}`, cursor);
-    }
-  },
-  removeBot: async (tx: WriteTransaction, botId: string) => {
-    await removeBot(tx, botId);
-  },
-  removeActor: async (tx: WriteTransaction, clientID: string) => {
-    await removeActor(tx, clientID);
-  },
-  guaranteeActor: async (tx: WriteTransaction, actor: AnyActor) => {
-    const key = `actor/${actor.id}`;
-    const hasActor = await tx.has(key);
-    if (hasActor) {
-      // already exists
-      return;
-    }
-    if (actor.isBot) {
-      await tx.put(`bot-controller/${tx.clientID}/${actor.id}`, actor.id);
-    } else {
-      // Make sure there's only one actor per client
-      await removeActor(tx, tx.clientID);
-      await tx.put(`room-actor/${tx.clientID}`, actor.id);
-    }
-    await tx.put(key, actor);
-  },
-  updateActorLocation: async (
-    tx: WriteTransaction,
-    {actorId, location}: {actorId: string; location: string},
-  ) => {
-    const key = `actor/${actorId}`;
-    const actor = (await tx.get(key)) as Actor;
-    if (actor) {
-      await tx.put(key, {
-        ...actor,
-        location,
-      });
-    }
+    await tx.put(`cursor/${cursor.actorId}`, cursor);
   },
   clearTextures: async (tx: WriteTransaction, time: number) => {
     const cacheKeys = await tx.scan({prefix: `cache/`}).keys();
@@ -202,18 +177,6 @@ export const mutators = {
       await flattenCache(tx, timestamp, letter);
     }
   },
-  removeActorsExcept: async (tx: WriteTransaction, ids: string[]) => {
-    const clients = (await tx
-      .scan({prefix: 'room-actor/'})
-      .values()
-      .toArray()) as string[];
-    const keepIds = new Set(ids);
-    for (const clientID of clients) {
-      if (!keepIds.has(clientID)) {
-        await removeActor(tx, clientID);
-      }
-    }
-  },
   // These mutators are for the how it works demos
   increment: async (
     tx: WriteTransaction,
@@ -237,40 +200,6 @@ export const mutators = {
   getServerLogs,
   getServerLogCount,
   nop: async (_: WriteTransaction) => {},
-};
-
-const removeActor = async (tx: WriteTransaction, clientID: string) => {
-  console.log(`Remove actors for client ${clientID}`);
-  const actorId = await tx.get(`room-actor/${clientID}`);
-  const botIds = (await tx
-    .scan({prefix: `bot-controller/${tx.clientID}`})
-    .values()
-    .toArray()) as string[];
-  for await (const id of botIds) {
-    await removeBot(tx, id);
-  }
-  if (botIds.length) {
-    console.log('remove bots', botIds);
-  }
-  if (actorId) {
-    console.log('remove actor', actorId);
-    serverLog(`Client ${clientID} (${actorId}) left room, cleaning up.`);
-    await tx.del(`actor/${actorId}`);
-    await tx.del(`cursor/${actorId}`);
-    await tx.del(`room-actor/${clientID}`);
-  }
-};
-
-const removeBot = async (tx: WriteTransaction, botId: string) => {
-  serverLog(`Delete room bot ${botId}.`);
-  await tx.del(`actor/${botId}`);
-  await tx.del(`cursor/${botId}`);
-};
-
-const serverLog = (...args: string[]) => {
-  if (env === Env.SERVER) {
-    console.log(...args);
-  }
 };
 
 const flattenCache = async (

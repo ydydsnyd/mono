@@ -34,13 +34,12 @@ const {
 } = createReflectServer({
   mutators: allMutators,
   disconnectHandler: async write => {
-    await mutators.removeActor(write, write.clientID);
-    await orchestratorMutators.removeOchestratorActor(write, {
+    await orchestratorMutators.removeActor(write, {
       clientID: write.clientID,
       timestamp: new Date().getTime(),
     });
   },
-  logLevel: 'debug',
+  logLevel: 'info',
 });
 
 class RoomDO extends SuperRoomDO {
