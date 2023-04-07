@@ -171,7 +171,7 @@ export const orchestratorMutators = {
   },
 };
 
-const serverLog = (...args: string[]) => {
+const serverLog = (...args: any[]) => {
   if (env === Env.SERVER) {
     console.log(...args);
   }
@@ -185,11 +185,6 @@ const cleanupOldUsers = async (tx: WriteTransaction, timestamp: number) => {
   const actorsToRemove: string[] = [];
   const aliveIds: Set<string> = new Set();
   for await (const [key, lastPing] of alives) {
-    console.log(
-      key,
-      timestamp - lastPing,
-      timestamp - lastPing > ACTIVITY_TIMEOUT,
-    );
     const id = key.split('/')[1];
     aliveIds.add(id);
     if (timestamp - lastPing > ACTIVITY_TIMEOUT) {
@@ -432,7 +427,7 @@ const playRecording = async (
       ],
     timestamp,
   });
-  console.log(`CREATE BOT ${botId}`, bot, bot.colorIndex);
+  serverLog(`create bot ${botId}`, bot, bot.colorIndex);
   await tx.put(`controlled-bots/${broadcasterId}/${botId}`, botId);
   const recording: RoomRecording = {
     roomId,

@@ -102,7 +102,6 @@ export const mutators = {
       .entries()
       .toArray()) as [string, Cursor][];
     const actorIds = new Set(actors);
-    console.log(actorIds);
     for await (const [key, cursor] of allCursors) {
       if (!actorIds.has(cursor.actorId)) {
         await tx.del(key);
