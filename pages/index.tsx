@@ -15,7 +15,7 @@ export default function Home() {
     <div className={styles.container}>
       <Head>
         <title>Reflect: High-perfomance sync for multiplayer web apps.</title>
-        <meta name="description" content="Reflect" />
+        <meta name="description" content="60FPS sync, automatic persistence, server authority, optional offline, fine-grained auth, and more..." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link
           rel="apple-touch-icon"
@@ -63,6 +63,21 @@ export default function Home() {
           media="(prefers-color-scheme: dark)"
         />
         <link rel="manifest" href="/site.webmanifest" />
+        
+        {/* Facebook Meta Tags */}
+        <meta property="og:url" content="https://paint-fight.vercel.app/" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="Reflect: High-performance sync for multiplayer web apps." />
+        <meta property="og:description" content="60FPS sync, automatic persistence, server authority, optional offline, fine-grained auth, and more..." />
+        <meta property="og:image" content="https://paint-fight.vercel.app/reflect-og.jpg" />
+
+        {/* Twitter Meta Tags */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta property="twitter:domain" content="paint-fight.vercel.app" />
+        <meta property="twitter:url" content="https://paint-fight.vercel.app/" />
+        <meta name="twitter:title" content="Reflect: High-performance sync for multiplayer web apps." />
+        <meta name="twitter:description" content="60FPS sync, automatic persistence, server authority, optional offline, fine-grained auth, and more..." />
+        <meta name="twitter:image" content="https://paint-fight.vercel.app/reflect-og.jpg" />
       </Head>
 
       <Nav />
