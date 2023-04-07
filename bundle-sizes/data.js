@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1680876127471,
+  "lastUpdate": 1680880098025,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -38093,6 +38093,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27014,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cb1aa91d3a6a6ca251dfca1634f265ed45df6957",
+          "message": "fix: Add missing commit in refresh (#464)\n\nThe missing commit was causing us to never clear the tempRefreshHash,\r\nwhich only leads to us keeping more data around than we need to.\r\n\r\nIt also was causing us to not set the headHash to the updated client\r\nhead. This can cause our dag to be prematurely collected.",
+          "timestamp": "2023-04-07T15:06:56Z",
+          "tree_id": "9eb1b21be9cc0043cc0755962376a6f50a5c03d5",
+          "url": "https://github.com/rocicorp/mono/commit/cb1aa91d3a6a6ca251dfca1634f265ed45df6957"
+        },
+        "date": 1680880088778,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 254699,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45337,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 255661,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45570,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 94758,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27009,
             "unit": "bytes"
           }
         ]
