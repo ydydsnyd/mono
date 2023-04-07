@@ -327,7 +327,8 @@ export const init = async (): Promise<DemoAPI> => {
           addSplatter({
             letter,
             actorId: actorId || actor.id,
-            colorIndex: colorIndex || actor.colorIndex,
+            colorIndex:
+              colorIndex === undefined ? actor.colorIndex : colorIndex,
             texturePosition,
             large: isMobile,
             hitPosition,
