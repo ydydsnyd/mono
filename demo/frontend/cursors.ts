@@ -57,7 +57,10 @@ export const cursorRenderer = (
       cursorNeedsUpdate = false;
       onUpdateCursor(localCursor);
     }
-    const demoBB = getDemoContainer().getBoundingClientRect();
+    const demoContainer = getDemoContainer();
+    const demoBB = demoContainer.getBoundingClientRect();
+    const demoTop = demoContainer.offsetTop;
+    const demoLeft = demoContainer.offsetLeft;
     const actors = getActors();
     const cursors = getCursors();
     // Move cursors
@@ -78,8 +81,8 @@ export const cursorRenderer = (
         } else {
           cursorDiv.classList.add('desktop');
         }
-        const cursorX = x * demoBB.width + demoBB.x;
-        const cursorY = y * demoBB.height + demoBB.y;
+        const cursorX = x * demoBB.width + demoLeft;
+        const cursorY = y * demoBB.height + demoTop;
         cursorDiv.classList.remove('active');
         if (cursor.onPage) {
           if (cursor.touchState !== TouchState.Touching || showFinger) {

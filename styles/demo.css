@@ -156,7 +156,7 @@ body.custom-cursor * {
 }
 
 .cursor {
-  position: fixed;
+  position: absolute;
   pointer-events: none;
   top: 0px;
   left: 0px;
