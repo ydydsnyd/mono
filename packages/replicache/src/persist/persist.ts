@@ -19,13 +19,7 @@ import {
   getClientGroup,
   setClientGroup,
 } from './client-groups.js';
-import {
-  Client,
-  assertHasClientState,
-  getClient,
-  getClientGroupIDForClient,
-  setClient,
-} from './clients.js';
+import {assertHasClientState, getClientGroupIDForClient} from './clients.js';
 
 /**
  * Persists the client's memdag state to the client's perdag client group.
@@ -480,14 +474,6 @@ async function persistInternal(
         mutationIDs,
         lc,
       );
-
-      const client = await getClient(clientID, perdagWrite);
-      assert(client);
-      const newClient: Client = {
-        ...client,
-        headHash: newMainClientGroupHeadHash,
-      };
-      await setClient(clientID, newClient, perdagWrite);
 
       await setClientGroup(
         lc,
