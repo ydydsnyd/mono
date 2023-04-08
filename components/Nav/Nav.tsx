@@ -121,20 +121,6 @@ export default class Nav extends Component {
                 href="#"
                 className={styles.navLink}
                 activeClass={styles.navLinkActive}
-                to="customers"
-                spy={true}
-                hashSpy={true}
-                smooth={true}
-                duration={250}
-              >
-                Customers
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="#"
-                className={styles.navLink}
-                activeClass={styles.navLinkActive}
                 to="pricing"
                 spy={true}
                 hashSpy={true}
@@ -149,7 +135,21 @@ export default class Nav extends Component {
                 href="#"
                 className={styles.navLink}
                 activeClass={styles.navLinkActive}
-                to="contact"
+                to="customers"
+                spy={true}
+                hashSpy={true}
+                smooth={true}
+                duration={250}
+              >
+                Customers
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="#"
+                className={styles.navLink}
+                activeClass={styles.navLinkActive}
+                to="get-started"
                 spy={true}
                 hashSpy={true}
                 smooth={true}

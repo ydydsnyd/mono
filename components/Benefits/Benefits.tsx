@@ -10,7 +10,6 @@ import conflictResolution from '@/public/benefits/conflict-resolution.svg';
 import offline from '@/public/benefits/offline.svg';
 import tools from '@/public/benefits/tools.svg';
 import auth from '@/public/benefits/auth.svg';
-import productivity from '@/public/benefits/productivity.svg';
 
 const Benefits = () => (
   <div className={styles.benefitsGrid}>
@@ -24,10 +23,18 @@ const Benefits = () => (
           className={styles.benefitIcon}
         />
       </div>
-      <h3 className={styles.benefitTitle}>Impossibly Smooth Motion</h3>
+      <h3 className={styles.benefitTitle}>Perfectly Smooth Motion</h3>
       <p className={styles.benefitDescription}>
-        Across town, or across the globe &#8212; 60FPS sync with dynamic
-        buffering provides perfect, buttery playback. No interpolation required.
+        Great multiplayer starts with framerate.
+      </p>
+      <p className={styles.benefitDescription}>
+        To look alive, motion has to run consistently at 60&nbsp;FPS. Just a few
+        missed frames ruin the illusion.
+      </p>
+      <p className={styles.benefitDescription}>
+        Reflect captures source changes at up to 120&nbsp;FPS. Batching and
+        adaptive buffering ensure buttery smooth, precision playback &#8212;
+        across town or across the globe.
       </p>
     </div>
 
@@ -43,8 +50,14 @@ const Benefits = () => (
       </div>
       <h3 className={styles.benefitTitle}>Automatic Persistence</h3>
       <p className={styles.benefitDescription}>
-        Write changes as they happen (yes, every mouse movement). Reflect stores
-        everything continuously, up to 25MB/room.
+        Data is stored in <em>rooms</em>. All changes to rooms are saved
+        continously, automatically. There&apos;s no separate, slower persistence
+        API to juggle.
+      </p>
+      <p className={styles.benefitDescription}>
+        Reflect has a single memory-like abstraction. Write changes as they
+        happen (yes, every mouse movement) and they are stored transparently, up
+        to 50MB/room.
       </p>
     </div>
 
@@ -60,27 +73,45 @@ const Benefits = () => (
       </div>
       <h3 className={styles.benefitTitle}>Server Authority</h3>
       <p className={styles.benefitDescription}>
-        CRDTs converge, but to what? Validation isn&apos;t possible. Reflect
-        runs <strong>your code</strong> server-side, giving you complete control
-        over what gets stored.
+        CRDTs converge, but to what? Your application has no control. Validation
+        and custom business logic aren&apos;t possible.
+      </p>
+      <p className={styles.benefitDescription}>
+        Reflect uses a more flexible and intuitive technique based on{' '}
+        <a href="https://www.gabrielgambetta.com/client-side-prediction-server-reconciliation.html">
+          Server Reconciliation
+        </a>
+        .
+      </p>
+      <p className={styles.benefitDescription}>
+        <strong>Your own mutation code</strong> runs server-side, and is the
+        only way changes get written. Clients are guaranteed to converge with
+        server state.
       </p>
     </div>
 
-    {/* Optional Offline */}
+    {/* On-Prem */}
     <div className={styles.benefitBlock}>
       <div className={styles.benefitIconContainer}>
         <Image
-          src={offline}
+          src={tools}
           loading="lazy"
-          alt="Offline"
+          alt="Tools"
           className={styles.benefitIcon}
         />
       </div>
-      <h3 className={styles.benefitTitle}>Optional Offline</h3>
+      <h3 className={styles.benefitTitle}>On-&ldquo;Prem&rdquo; Available</h3>
       <p className={styles.benefitDescription}>
-        Set <code className="inline">clientPersistence: true</code>
-        &nbsp; and data is synced to the client, providing instant
-        (“local-first”) startup, navigation, and offline support.
+        Use Reflect as a traditional SaaS, or deploy it to your own Cloudflare
+        account.
+      </p>
+      <p className={styles.benefitDescription}>
+        We&apos;ll run, monitor, and update it. You maintain control and
+        ownership of your data.
+      </p>
+      <p className={styles.benefitDescription}>
+        Our on-prem license gives you complete business continuity security
+        &#8212 a perpetual source license to each version of the product.
       </p>
     </div>
 
@@ -101,24 +132,25 @@ const Benefits = () => (
       </p>
     </div>
 
-    {/* Works With Your Tools */}
+    {/* Optional Offline */}
     <div className={styles.benefitBlock}>
       <div className={styles.benefitIconContainer}>
         <Image
-          src={tools}
+          src={offline}
           loading="lazy"
-          alt="Tools"
+          alt="Offline"
           className={styles.benefitIcon}
         />
       </div>
-      <h3 className={styles.benefitTitle}>Works With Your Tools</h3>
+      <h3 className={styles.benefitTitle}>Optional Offline</h3>
       <p className={styles.benefitDescription}>
-        Reflect data is just JSON. It&apos;s easy to integrate with any UI
-        framework or state management library.
+        Set <code className="inline">clientPersistence: true</code>
+        &nbsp; and data is also stored on the client, providing instant
+        (“local-first”) startup, navigation, and offline support.
       </p>
     </div>
 
-    {/* Absurd Productivity */}
+    {/* 
     <div className={styles.benefitBlockFull}>
       <div className={styles.benefitFullIconContainer}>
         <Image
@@ -131,12 +163,11 @@ const Benefits = () => (
       <div className={styles.benefitInfoContainer}>
         <h3 className={styles.benefitFullTitle}>Even More Coming Soon</h3>
         <p className={styles.benefitDescription}>
-          First-class history, branching, painless migrations, optional on-prem
-          deployment, and more! Reflect&apos;s architecture is harder to build
-          up-front, but enables features that are difficult to build otherwise.
+          First-class history, branching, painless migrations, and more!
         </p>
       </div>
     </div>
+        */}
   </div>
 );
 

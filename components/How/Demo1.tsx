@@ -23,31 +23,39 @@ export default function Demo1({
   return (
     <div className={styles.howStep}>
       <h3 className={styles.howHeader}>
-        <strong>Step 1:</strong> Define Mutators
+        <strong>Step 2:</strong> Define Mutators
       </h3>
       <p className={styles.howDescription}>
-        Mutators are functions you define to change the datastore. The UI
-        updates <strong>instantly</strong> (in the same frame) when mutators are
-        called. Milliseconds later, Reflect replays the mutator on the server to
-        sync the change. Because of server replay, mutators handle many
-        conflicts naturally. If two client simultaneously increment a counter,
-        the mutator will naturally sum the changes rather than overwrite one.
+        Mutators are how you make changes to rooms. They are JavaScript
+        functions you define, that Reflect runs on{' '}
+        <strong>both the client and the server</strong>.
+      </p>
+      <p className={styles.howDescription}>
+        By replaying mutators on the server, Reflect naturally resolves many
+        types of merge conflicts while allowing for custom, authoritative server
+        logic.
+      </p>
+      <p className={styles.howDescription}>
+        <strong>Try it!</strong> Use the demo below to increment a multiplayer
+        counter. Increase the latency and quickly increment on both clients.
+        Notice how normal arithmetic logic in the mutator naturally sums
+        concurrent operations, without the need for CRDTs.
       </p>
       <div className={styles.howGridLayout2}>
         <div className={styles.codeBlock}>
           {toggleDemo ? (
             <>
               <div className={styles.codeBlockToggle}>
+                <button onClick={toggleSwitchDemo}>client.tsx</button>
                 <button className={styles.codeToggleActive}>mutators.ts</button>
-                <button onClick={toggleSwitchDemo}>index.tsx</button>
               </div>
               <Demo1a />
             </>
           ) : (
             <>
               <div className={styles.codeBlockToggle}>
+                <button className={styles.codeToggleActive}>client.tsx</button>
                 <button onClick={toggleSwitchDemo}>mutators.ts</button>
-                <button className={styles.codeToggleActive}>index.tsx</button>
               </div>
               <Demo1b />
             </>

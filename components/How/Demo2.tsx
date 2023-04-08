@@ -25,19 +25,24 @@ export default function Demo2({
       {/* Step 2: Render Reactively */}
       <div className={styles.howStep}>
         <h3 className={styles.howHeader}>
-          <strong>Step 2:</strong> Render Reactively
+          <strong>Step 3:</strong> Render Reactively
         </h3>
         <p className={styles.howDescription}>
           Subscribe to changes in Reflect and render your UI reactively.
           There&apos;s no need to interpolate. You receive updates at 60fps,
           just as if the collaborator was local.
         </p>
+        <p className={styles.howDescription}>
+          <strong>Try it!</strong> Notice how even when the latency is high,
+          changes playback on the receiver exactly how they happened on the
+          source.
+        </p>
         <div className={styles.howGridLayout2}>
           <div className={styles.codeBlock}>
             {!toggleDemo ? (
               <>
                 <div className={styles.codeBlockToggle}>
-                  <button onClick={toggleSwitchDemo}>index.tsx</button>
+                  <button onClick={toggleSwitchDemo}>client.tsx</button>
                   <button className={styles.codeToggleActive}>
                     mutators.ts
                   </button>
@@ -47,7 +52,9 @@ export default function Demo2({
             ) : (
               <>
                 <div className={styles.codeBlockToggle}>
-                  <button className={styles.codeToggleActive}>index.tsx</button>
+                  <button className={styles.codeToggleActive}>
+                    client.tsx
+                  </button>
                   <button onClick={toggleSwitchDemo}>mutators.ts</button>
                 </div>
                 <Demo2b />
@@ -63,7 +70,7 @@ export default function Demo2({
       {/* Step 3: Deploy */}
       <div className={styles.howStep}>
         <h3 className={styles.howHeader}>
-          <strong>Step 3:</strong> Deploy
+          <strong>You&apos;re done.</strong>
         </h3>
         <p className={styles.howDescription}>
           Reflect publishes your mutators to a unique sandboxed server

@@ -1,22 +1,17 @@
 import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter';
 import {vscDarkPlus} from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
-const Demo1b = () => {
+const Demo0a = () => {
   const codeString = `import {Reflect} from "@rocicorp/reflect";
-import mutators from "./mutators";
-const roomID = "myFirstRoom";
 
 const reflect = new Reflect({
-  reflectKey,
-  roomID,
-  mutators,
+  reflectAPIKey,
+  roomID: "myFirstRoom",
 });
 
-reflect.subscribe(tx => tx.get("foo"), val => {
-  console.log(\`Got change of key "foo" on client \${tx.clientID}: \${val}\`);
-});
-
-button.onclick = () => reflect.mutate.increment({key: "foo", delta: 2});`;
+reflect.onConnect(({roomID}) => {
+  console.log(\`Connected to room \${roomID}\`);
+});`;
   const codeBlock = {
     background: 'transparent',
     paddingLeft: 0,
@@ -35,4 +30,4 @@ button.onclick = () => reflect.mutate.increment({key: "foo", delta: 2});`;
   );
 };
 
-export default Demo1b;
+export default Demo0a;
