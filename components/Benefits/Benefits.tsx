@@ -26,12 +26,12 @@ const Benefits = () => (
       <h3 className={styles.benefitTitle}>Perfectly Smooth Motion</h3>
       <p className={styles.benefitDescription}>
         Great multiplayer starts with framerate. To look alive, motion has to
-        run at at least 60&nbsp;FPS.
+        run at 60&nbsp;FPS or better.
       </p>
       <p className={styles.benefitDescription}>
-        Reflect captures and replays changes at 120&nbsp;FPS. Batching and
-        adaptive buffering ensure buttery smooth, precision playback &#8212;
-        across town or across the globe.
+        Reflect captures and replays changes at 120&nbsp;FPS, hardware
+        permitting. Batching and adaptive buffering ensure buttery smooth,
+        precision playback &#8212; across town or across the globe.
       </p>
     </div>
 
