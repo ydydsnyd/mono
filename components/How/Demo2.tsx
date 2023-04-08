@@ -70,7 +70,7 @@ export default function Demo2({
       {/* Step 3: Deploy */}
       <div className={styles.howStep}>
         <h3 className={styles.howHeader}>
-          <strong>You&apos;re done.</strong>
+          <strong>You&apos;re Done.</strong>
         </h3>
         <p className={styles.howDescription}>
           Reflect publishes your mutators to a unique sandboxed environment.
