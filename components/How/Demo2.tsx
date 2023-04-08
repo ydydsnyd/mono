@@ -33,8 +33,8 @@ export default function Demo2({
           just as if the collaborator was local.
         </p>
         <p className={styles.howDescription}>
-          <strong>Try it!</strong> Notice how even when the latency is high,
-          changes playback on the receiver exactly how they happened on the
+          <strong>Try it:</strong> Notice how even when the latency is high,
+          changes playback on the receiver exactly as they happened on the
           source.
         </p>
         <div className={styles.howGridLayout2}>
@@ -73,8 +73,11 @@ export default function Demo2({
           <strong>You&apos;re done.</strong>
         </h3>
         <p className={styles.howDescription}>
-          Reflect publishes your mutators to a unique sandboxed server
-          environment. Rooms are backed by Cloudflare&apos;s Durable Object
+          Reflect publishes your mutators to a unique sandboxed environment.
+          Rooms are backed by Cloudflare&apos;s{' '}
+          <a href="https://developers.cloudflare.com/workers/learning/using-durable-objects/">
+            Durable Object
+          </a>{' '}
           technology and scale horizontally by room.
         </p>
         <div className={styles.deployTerminal}>

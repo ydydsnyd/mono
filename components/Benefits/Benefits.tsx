@@ -25,14 +25,11 @@ const Benefits = () => (
       </div>
       <h3 className={styles.benefitTitle}>Perfectly Smooth Motion</h3>
       <p className={styles.benefitDescription}>
-        Great multiplayer starts with framerate.
+        Great multiplayer starts with framerate. To look alive, motion has to
+        run at at least 60&nbsp;FPS.
       </p>
       <p className={styles.benefitDescription}>
-        To look alive, motion has to run consistently at 60&nbsp;FPS. Just a few
-        missed frames ruin the illusion.
-      </p>
-      <p className={styles.benefitDescription}>
-        Reflect captures source changes at up to 120&nbsp;FPS. Batching and
+        Reflect captures and replays changes at 120&nbsp;FPS. Batching and
         adaptive buffering ensure buttery smooth, precision playback &#8212;
         across town or across the globe.
       </p>
@@ -50,14 +47,13 @@ const Benefits = () => (
       </div>
       <h3 className={styles.benefitTitle}>Automatic Persistence</h3>
       <p className={styles.benefitDescription}>
-        Data is stored in <em>rooms</em>. All changes to rooms are saved
-        continously, automatically. There&apos;s no separate, slower persistence
-        API to juggle.
+        Reflect data is stored in <em>rooms</em>. Changes are saved continously
+        and automatically.
       </p>
       <p className={styles.benefitDescription}>
-        Reflect has a single memory-like abstraction. Write changes as they
-        happen (yes, every mouse movement) and they are stored transparently, up
-        to 50MB/room.
+        There&apos;s no separate, slower persistence API to juggle. Write
+        changes as they happen (yes, every mouse movement) and they are stored
+        transparently, up to 50MB/room.
       </p>
     </div>
 
@@ -84,9 +80,8 @@ const Benefits = () => (
         .
       </p>
       <p className={styles.benefitDescription}>
-        <strong>Your own mutation code</strong> runs server-side, and is the
-        only way changes get written. Clients are guaranteed to converge with
-        server state.
+        <strong>Your mutation code</strong> runs server-side, and clients are
+        guaranteed to converge with server state.
       </p>
     </div>
 
@@ -107,11 +102,11 @@ const Benefits = () => (
       </p>
       <p className={styles.benefitDescription}>
         We&apos;ll run, monitor, and update it. You maintain control and
-        ownership of your data.
+        ownership.
       </p>
       <p className={styles.benefitDescription}>
-        Our on-prem license gives you complete business continuity security
-        &#8212 a perpetual source license to each version of the product.
+        Enjoy complete business continuity security with a perpetual source
+        license to each version.
       </p>
     </div>
 
