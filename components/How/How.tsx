@@ -8,6 +8,7 @@ import {M, deregisterClientConsole} from '@/demo/shared/mutators';
 import Demo1 from './Demo1';
 import Demo2 from './Demo2';
 import {ClientIDContext} from './ClientIDContext';
+import Demo0 from './Demo0';
 
 export default function How() {
   const [iReflect1, setiReflect1] = useState<Reflect<M>>();
@@ -77,6 +78,8 @@ export default function How() {
 
   return (
     <>
+      <Demo0 />
+
       {iReflect1 && iReflect2 && iReflectServer && iClient1ID && iClient2ID ? (
         <ClientIDContext.Provider
           value={{client1ID: iClient1ID, client2ID: iClient2ID}}

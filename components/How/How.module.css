@@ -27,6 +27,7 @@
   grid-column-gap: 8px;
   grid-row-gap: 8px;
   margin-bottom: 4rem;
+  margin-top: 2rem;
 }
 
 .deployTerminal {
@@ -70,6 +71,7 @@
 .deployTerminal {
   border-radius: 0.5rem;
   padding: 1rem 2.5rem 2.5rem;
+  margin-top: 2rem;
   margin-bottom: 4rem;
   position: relative;
 }
@@ -226,6 +228,7 @@
 p.howDescription {
   font-size: 1rem !important;
   line-height: 28px !important;
+  margin-bottom: 0;
 }
 
 .demo2layout {
