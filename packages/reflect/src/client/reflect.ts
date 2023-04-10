@@ -257,6 +257,9 @@ export class Reflect<MD extends MutatorDefs> {
   // overwriting location fields for security reasons.
   private _reload = () => location.reload();
 
+  private _onlineResolve: (() => void) | undefined = undefined;
+
+  private _onlineListener = () => this._onlineResolve?.();
   /**
    * Constructs a new Reflect client.
    */
@@ -281,6 +284,8 @@ export class Reflect<MD extends MutatorDefs> {
 
     this.onOnlineChange = onOnlineChange;
     this.#options = options;
+
+    window?.addEventListener?.('online', this._onlineListener);
 
     const replicacheOptions: ReplicacheOptions<MD> = {
       schemaVersion: options.schemaVersion,
@@ -393,6 +398,7 @@ export class Reflect<MD extends MutatorDefs> {
         client: 'ReflectClosed',
       });
     }
+    window?.removeEventListener?.('online', this._onlineListener);
     this.#closeAbortController.abort();
     this._metrics.stop();
     return this._rep.close();
@@ -1055,7 +1061,19 @@ export class Reflect<MD extends MutatorDefs> {
           'state:',
           this._connectionState,
         );
-        await sleep(RUN_LOOP_INTERVAL_MS);
+
+        assert(this._onlineResolve === undefined);
+        if (navigator?.onLine) {
+          await sleep(RUN_LOOP_INTERVAL_MS);
+        } else {
+          const {promise, resolve} = resolver();
+          this._onlineResolve = resolve;
+          await Promise.race([promise, sleep(RUN_LOOP_INTERVAL_MS)]).finally(
+            () => {
+              this._onlineResolve = undefined;
+            },
+          );
+        }
       }
     }
   }
