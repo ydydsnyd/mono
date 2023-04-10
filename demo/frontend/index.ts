@@ -133,6 +133,22 @@ export const init = async (): Promise<DemoAPI> => {
           setPresentActors(newActors.map(a => a.id));
         },
         localActor => (actor = localActor),
+        async online => {
+          if (!online) {
+            console.log(playingRecordings);
+            // Don't play back recordings when offline, since we shouldn't see other users
+            for (const recordingId in playingRecordings) {
+              const recording = playingRecordings[recordingId];
+              delete playingRecordings[recordingId];
+              delete recordingFrame[recordingId];
+              await finishRecording(
+                recordingId,
+                recording.roomId,
+                recording.botId,
+              );
+            }
+          }
+        },
       );
     } finally {
       roomInitDone();
@@ -203,14 +219,6 @@ export const init = async (): Promise<DemoAPI> => {
       }
       if (online) {
         updateLocation();
-      } else {
-        // Don't play back recordings when offline, since we shouldn't see other users
-        for (const recordingId in playingRecordings) {
-          const recording = playingRecordings[recordingId];
-          delete playingRecordings[recordingId];
-          delete recordingFrame[recordingId];
-          await finishRecording(recordingId, recording.roomId, recording.botId);
-        }
       }
     },
     debug,

@@ -25,6 +25,7 @@ export const initRoom = async (
   onPlayRecording: (recording: RoomRecording) => void,
   onActorsChanged: (actorIds: Actor[]) => void,
   onUpdateLocalActor: (actor: Actor) => void,
+  onOnlineChange: (online: boolean) => void,
 ): Promise<{
   actor: Actor;
   recordCursor: (recordingId: string, cursor: Cursor) => Promise<void>;
@@ -58,6 +59,7 @@ export const initRoom = async (
     socketOrigin: WORKER_HOST,
     onOnlineChange: async online => {
       console.log(`online: ${online}`);
+      onOnlineChange(online);
       await orchestratorClient.mutate.createActor({
         lastColorIndex: actor?.colorIndex || null,
         fallbackRoomId: nanoid(),
