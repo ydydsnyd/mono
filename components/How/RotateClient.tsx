@@ -1,50 +1,53 @@
-import React, {useEffect, useReducer, useState, useCallback} from 'react';
+import React, { useEffect, useState, useCallback, Dispatch } from 'react';
 import Slider from './Slider';
 import ClientConsole from './ClientConsole';
 import styles from './How.module.css';
 import buttonStyles from './RotateButton.module.css';
-import type {ReadTransaction, Reflect} from '@rocicorp/reflect';
-import {M, registerClientConsole} from '@/demo/shared/mutators';
+import type { ReadTransaction, Reflect } from '@rocicorp/reflect';
+import { M, registerClientConsole } from '@/demo/shared/mutators';
 import useLongPress from './useLongPress';
 import Roci from './Roci';
-import {useClientConsoleReducer, useCount} from './howtoUtils';
+import { ConsoleAction, useCount } from './howtoUtils';
 
-function RotateClient({title, reflect}: {title: string; reflect: Reflect<M>}) {
-  const onLongPress = useCallback(() => {
-    reflect?.mutate.increment({key: 'count', delta: 1});
+function RotateClient({
+  title,
+  reflect,
+  clientConsoleDispatch,
+  clientConsoleState,
+}: {
+  title: string;
+  reflect: Reflect<M>;
+  clientConsoleDispatch: Dispatch<ConsoleAction>;
+  clientConsoleState: string[];
+}) {
+  const incrementCount = useCallback(() => {
+    reflect?.mutate.increment({ key: 'count', delta: 1 });
   }, [reflect]);
 
-  const onClick = useCallback(() => {
-    reflect?.mutate.increment({key: 'count', delta: 1});
-  }, [reflect]);
+  const longPressEvent = useLongPress(incrementCount, incrementCount);
 
-  const longPressEvent = useLongPress(onLongPress, onClick);
-  const [clientConsoleState, clientConsoleDispatch] = useClientConsoleReducer();
-
-  const [count, countDispatch] = useReducer(
-    (_state: number, action: number) => {
-      return action;
-    },
-    0,
-  );
   const [currentClientID, setCurrentClientID] = useState('');
-  useCount(
+  const count = useCount(
     reflect,
     'count',
     (key: string, val: string, tx: ReadTransaction) => {
-      clientConsoleDispatch(
-        `Got change of key ${key} on client ${tx.clientID}: ${val}`,
-      );
-      countDispatch(parseInt(val));
+      clientConsoleDispatch({
+        type: 'APPEND',
+        payload: `Got change of key ${key} on client ${tx.clientID}: ${val}`,
+      });
+      const parsedVal = parseInt(val);
+      return parsedVal == null || isNaN(parsedVal) ? 0 : parsedVal;
     },
   );
 
   useEffect(() => {
     reflect.clientID.then(id => {
       setCurrentClientID(id);
-      registerClientConsole(id, (log: string) => clientConsoleDispatch(log));
+      registerClientConsole(id, (log: string) =>
+        clientConsoleDispatch({ type: 'APPEND', payload: log }),
+      );
     });
-  });
+  }, [reflect, clientConsoleDispatch]);
 
   return (
     <div className={`${styles.client} ${styles.clientExpanded}`}>
@@ -56,7 +59,7 @@ function RotateClient({title, reflect}: {title: string; reflect: Reflect<M>}) {
             Rotate
           </button>
         </div>
-        <Roci rotation={count ?? 0} />
+        <Roci rotation={count === null || isNaN(count) ? 0 : count} />
       </div>
       <ClientConsole logs={clientConsoleState} />
     </div>

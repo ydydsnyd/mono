@@ -7,18 +7,25 @@ import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '@/demo/shared/mutators';
 import RotateClient from './RotateClient';
 import Reset from './Reset';
+import {useClientConsoleReducer} from './howtoUtils';
 
 export default function Demo2({
   reflect1,
   reflect2,
   reflectServer,
+  reset,
 }: {
   reflect1: Reflect<M>;
   reflect2: Reflect<M>;
   reflectServer: Reflect<M>;
+  reset: () => void;
 }) {
   const [toggleDemo, setToggleDemo] = useState(true);
   const toggleSwitchDemo = () => setToggleDemo(!toggleDemo);
+  const [client1ConsoleState, clientConsole1Dispatch] =
+    useClientConsoleReducer();
+  const [client2ConsoleState, clientConsole2Dispatch] =
+    useClientConsoleReducer();
 
   return (
     <>
@@ -61,11 +68,25 @@ export default function Demo2({
               </>
             )}
           </div>
-          <RotateClient reflect={reflect1} title="Client 1" />
+          <RotateClient
+            reflect={reflect1}
+            title="Client 1"
+            clientConsoleDispatch={clientConsole1Dispatch}
+            clientConsoleState={client1ConsoleState}
+          />
           <ServerConsole reflect={reflectServer} />
-          <RotateClient title="Client 2" reflect={reflect2} />
+          <RotateClient
+            title="Client 2"
+            reflect={reflect2}
+            clientConsoleDispatch={clientConsole2Dispatch}
+            clientConsoleState={client2ConsoleState}
+          />
         </div>
-        <Reset />
+        <Reset
+          reset={reset}
+          clientConsole1Dispatch={clientConsole1Dispatch}
+          clientConsole2Dispatch={clientConsole2Dispatch}
+        />
       </div>
       {/* Step 3: Deploy */}
       <div className={styles.howStep}>

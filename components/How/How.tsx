@@ -9,8 +9,18 @@ import Demo1 from './Demo1';
 import Demo2 from './Demo2';
 import {ClientIDContext} from './ClientIDContext';
 import Demo0 from './Demo0';
+import {useInView} from 'react-intersection-observer';
 
 export default function How() {
+  const {ref} = useInView({
+    triggerOnce: true,
+    onChange: inView => {
+      if (inView) {
+        initHowToReflect();
+      }
+    },
+  });
+
   const [iReflect1, setiReflect1] = useState<Reflect<M>>();
   const [iReflect2, setiReflect2] = useState<Reflect<M>>();
   const [iReflectServer, setiReflectServer] = useState<Reflect<M>>();
@@ -25,8 +35,13 @@ export default function How() {
   const [rClient1ID, setrClient1ID] = useState('');
   const [rClient2ID, setrClient2ID] = useState('');
 
-  function initHowToReflect() {
-    delayWebSocket(process.env.NEXT_PUBLIC_WORKER_HOST!.replace(/^ws/, 'http'));
+  function initIncrementDemo() {
+    console.log('initIncrementDemo');
+    [iReflect1, iReflect2, iReflectServer].forEach(reflect => {
+      reflect?.clientID.then(deregisterClientConsole);
+      reflect?.close();
+    });
+
     const [iRoomID, iClient1UserID, iClient2UserID, iClient3UserID] = [
       'increment' + nanoid(),
       'iClient1UserID' + nanoid(),
@@ -34,42 +49,57 @@ export default function How() {
       'iClient3UserID' + nanoid(),
     ];
 
+    const ir1 = init(iRoomID, iClient1UserID);
+    const ir2 = init(iRoomID, iClient2UserID);
+    const ir3 = init(iRoomID, iClient3UserID);
+    setiReflect1(ir1);
+    setiReflect2(ir2);
+    setiReflectServer(ir3);
+
+    ir1.clientID.then(id => setiClient1ID(id));
+    ir2.clientID.then(id => setiClient2ID(id));
+  }
+
+  async function initRotateDemo() {
+    [rReflect1, rReflect2, rReflectServer].forEach(reflect => {
+      reflect?.clientID.then(deregisterClientConsole);
+      reflect?.close();
+    });
     const [rRoomID, rClient1UserID, rClient2UserID, rClient3UserID] = [
-      'rorate' + nanoid(),
+      'rotate' + nanoid(),
       'rClient1UserID' + nanoid(),
       'rClient2UserID' + nanoid(),
       'rClient3UserID' + nanoid(),
     ];
+    const rr1 = init(rRoomID, rClient1UserID);
+    const rr2 = init(rRoomID, rClient2UserID);
+    const rr3 = init(rRoomID, rClient3UserID);
 
-    const iReflect1 = init(iRoomID, iClient1UserID);
-    const iReflect2 = init(iRoomID, iClient2UserID);
-    const iReflectServer = init(iRoomID, iClient3UserID);
+    setrReflect1(rr1);
+    setrReflect2(rr2);
+    setrReflectServer(rr3);
 
-    const rReflect1 = init(rRoomID, rClient1UserID);
-    const rReflect2 = init(rRoomID, rClient2UserID);
-    const rReflectServer = init(rRoomID, rClient3UserID);
+    rr1.clientID.then(id => setrClient1ID(id));
+    rr2.clientID.then(id => setrClient2ID(id));
+  }
 
-    setiReflect1(iReflect1);
-    setiReflect2(iReflect2);
-    setrReflect1(rReflect1);
-    setrReflect2(rReflect2);
-
-    setiReflectServer(iReflectServer);
-    setrReflectServer(rReflectServer);
-
-    iReflect1.clientID.then(id => setiClient1ID(id));
-    iReflect2.clientID.then(id => setiClient2ID(id));
-
-    rReflect1.clientID.then(id => setrClient1ID(id));
-    rReflect2.clientID.then(id => setrClient2ID(id));
+  function initHowToReflect() {
+    delayWebSocket(process.env.NEXT_PUBLIC_WORKER_HOST!.replace(/^ws/, 'http'));
+    initIncrementDemo();
+    initRotateDemo();
   }
 
   useEffect(() => {
-    initHowToReflect();
-
     return () => {
       console.log("Closing iReflect's");
-      [iReflect1, iReflect2].forEach(reflect => {
+      [
+        iReflect1,
+        iReflect2,
+        iReflectServer,
+        rReflect1,
+        rReflect2,
+        rReflectServer,
+      ].forEach(reflect => {
         reflect?.clientID.then(deregisterClientConsole);
         reflect?.close();
       });
@@ -77,9 +107,8 @@ export default function How() {
   }, []);
 
   return (
-    <>
+    <div ref={ref}>
       <Demo0 />
-
       {iReflect1 && iReflect2 && iReflectServer && iClient1ID && iClient2ID ? (
         <ClientIDContext.Provider
           value={{client1ID: iClient1ID, client2ID: iClient2ID}}
@@ -88,6 +117,7 @@ export default function How() {
             reflect1={iReflect1}
             reflect2={iReflect2}
             reflectServer={iReflectServer}
+            reset={() => initIncrementDemo()}
           />
         </ClientIDContext.Provider>
       ) : null}
@@ -100,9 +130,10 @@ export default function How() {
             reflect1={rReflect1}
             reflect2={rReflect2}
             reflectServer={rReflectServer}
+            reset={() => initRotateDemo()}
           />
         </ClientIDContext.Provider>
       ) : null}
-    </>
+    </div>
   );
 }

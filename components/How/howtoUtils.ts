@@ -7,7 +7,7 @@ import {M, getServerLogs} from '@/demo/shared/mutators';
 export function useCount(
   reflect: Reflect<M>,
   key: string,
-  clog: (key: string, val: string, tx: ReadTransaction) => void,
+  clog: (key: string, val: string, tx: ReadTransaction) => number,
 ) {
   return useSubscribe(
     reflect,
@@ -16,6 +16,7 @@ export function useCount(
       if (count) {
         clog(key, count, tx);
       }
+      return parseInt(count);
     },
     null,
   );
@@ -25,9 +26,17 @@ export function useServerLogs(reflect: Reflect<M>) {
   return useSubscribe(reflect, async tx => await getServerLogs(tx), []);
 }
 
+export type ConsoleAction = {type: 'APPEND'; payload: string} | {type: 'CLEAR'};
+
 export function useClientConsoleReducer(initialState: string[] = []) {
-  return useReducer(
-    (state: string[], action: string) => [...state, action],
-    initialState,
-  );
+  return useReducer((state: string[], action: ConsoleAction) => {
+    switch (action.type) {
+      case 'APPEND':
+        return [...state, action.payload];
+      case 'CLEAR':
+        return [];
+      default:
+        return state;
+    }
+  }, initialState);
 }

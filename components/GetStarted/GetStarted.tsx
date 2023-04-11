@@ -11,8 +11,9 @@ export default function GetStarted() {
       </p>
       <p>
         Sign up below for prioritized access &#8212; we&apos;ll let you know as
-        soon as the beta is available to try. You can also contact us by <Link href="#">email</Link>, on{' '}
-        <Link href="#">Twitter</Link>, or on <Link href="#">Discord</Link>.
+        soon as the beta is available to try. You can also contact us by{' '}
+        <Link href="#">email</Link>, on <Link href="#">Twitter</Link>, or on{' '}
+        <Link href="#">Discord</Link>.
       </p>
       <div className={styles.ctaWrap}>
         <Link

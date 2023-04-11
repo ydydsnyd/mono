@@ -7,18 +7,25 @@ import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '@/demo/shared/mutators';
 import IncrementClient from './IncrementClient';
 import Reset from './Reset';
+import {useClientConsoleReducer} from './howtoUtils';
 
 export default function Demo1({
   reflect1,
   reflect2,
   reflectServer,
+  reset,
 }: {
   reflect1: Reflect<M>;
   reflect2: Reflect<M>;
   reflectServer: Reflect<M>;
+  reset: () => void;
 }) {
   const [toggleDemo, setToggleDemo] = useState(true);
   const toggleSwitchDemo = () => setToggleDemo(!toggleDemo);
+  const [client1ConsoleState, clientConsole1Dispatch] =
+    useClientConsoleReducer();
+  const [client2ConsoleState, clientConsole2Dispatch] =
+    useClientConsoleReducer();
 
   return (
     <div className={styles.howStep}>
@@ -61,11 +68,25 @@ export default function Demo1({
             </>
           )}
         </div>
-        <IncrementClient title="Client 1" reflect={reflect1} />
+        <IncrementClient
+          title="Client 1"
+          reflect={reflect1}
+          clientConsoleDispatch={clientConsole1Dispatch}
+          clientConsoleState={client1ConsoleState}
+        />
         <ServerConsole reflect={reflectServer} />
-        <IncrementClient title="Client 2" reflect={reflect2} />
+        <IncrementClient
+          title="Client 2"
+          reflect={reflect2}
+          clientConsoleDispatch={clientConsole2Dispatch}
+          clientConsoleState={client2ConsoleState}
+        />
       </div>
-      <Reset />
+      <Reset
+        reset={reset}
+        clientConsole1Dispatch={clientConsole1Dispatch}
+        clientConsole2Dispatch={clientConsole2Dispatch}
+      />
     </div>
   );
 }
