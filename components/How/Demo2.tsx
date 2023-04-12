@@ -7,7 +7,6 @@ import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '@/demo/shared/mutators';
 import RotateClient from './RotateClient';
 import Reset from './Reset';
-import {useClientConsoleReducer} from './howtoUtils';
 
 export default function Demo2({
   reflect1,
@@ -22,10 +21,6 @@ export default function Demo2({
 }) {
   const [toggleDemo, setToggleDemo] = useState(true);
   const toggleSwitchDemo = () => setToggleDemo(!toggleDemo);
-  const [client1ConsoleState, clientConsole1Dispatch] =
-    useClientConsoleReducer();
-  const [client2ConsoleState, clientConsole2Dispatch] =
-    useClientConsoleReducer();
 
   return (
     <>
@@ -68,56 +63,11 @@ export default function Demo2({
               </>
             )}
           </div>
-          <RotateClient
-            reflect={reflect1}
-            title="Client 1"
-            clientConsoleDispatch={clientConsole1Dispatch}
-            clientConsoleState={client1ConsoleState}
-          />
+          <RotateClient reflect={reflect1} title="Client 1" />
           <ServerConsole reflect={reflectServer} />
-          <RotateClient
-            title="Client 2"
-            reflect={reflect2}
-            clientConsoleDispatch={clientConsole2Dispatch}
-            clientConsoleState={client2ConsoleState}
-          />
+          <RotateClient title="Client 2" reflect={reflect2} />
         </div>
-        <Reset
-          reset={reset}
-          clientConsole1Dispatch={clientConsole1Dispatch}
-          clientConsole2Dispatch={clientConsole2Dispatch}
-        />
-      </div>
-      {/* Step 3: Deploy */}
-      <div className={styles.howStep}>
-        <h3 className={styles.howHeader}>
-          <strong>You&apos;re Done.</strong>
-        </h3>
-        <p className={styles.howDescription}>
-          Reflect publishes your mutators to a unique sandboxed environment.
-          Rooms are backed by Cloudflare&apos;s{' '}
-          <a href="https://developers.cloudflare.com/workers/learning/using-durable-objects/">
-            Durable Object
-          </a>{' '}
-          technology and scale horizontally by room.
-        </p>
-        <div className={styles.deployTerminal}>
-          <img className={styles.menuControls} src="/img/menu-controls.svg" />
-          <h4 className={styles.terminalHeader}>Shell</h4>
-          <p className={styles.terminalLine}>
-            <span className={styles.prompt}>&gt;</span>
-            <span className={styles.userInputContainer}>
-              <span className={styles.userInput}>reflect publish</span>
-            </span>
-          </p>
-          <p className={`${styles.terminalLine} ${styles.terminalOutput}`}>
-            &#127881; Published! Running at{' '}
-            <span className={styles.terminalLink}>
-              https://myapp.reflect.net/
-            </span>
-            .
-          </p>
-        </div>
+        <Reset reset={reset} />
       </div>
     </>
   );

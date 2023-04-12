@@ -1,27 +1,19 @@
-import React, { useEffect, useState, useCallback, Dispatch } from 'react';
+import React, {useEffect, useState, useCallback} from 'react';
 import Slider from './Slider';
 import ClientConsole from './ClientConsole';
 import styles from './How.module.css';
 import buttonStyles from './RotateButton.module.css';
-import type { ReadTransaction, Reflect } from '@rocicorp/reflect';
-import { M, registerClientConsole } from '@/demo/shared/mutators';
+import type {ReadTransaction, Reflect} from '@rocicorp/reflect';
+import {M, registerClientConsole} from '@/demo/shared/mutators';
 import useLongPress from './useLongPress';
 import Roci from './Roci';
-import { ConsoleAction, useCount } from './howtoUtils';
+import {useClientConsoleReducer, useCount} from './howtoUtils';
 
-function RotateClient({
-  title,
-  reflect,
-  clientConsoleDispatch,
-  clientConsoleState,
-}: {
-  title: string;
-  reflect: Reflect<M>;
-  clientConsoleDispatch: Dispatch<ConsoleAction>;
-  clientConsoleState: string[];
-}) {
+function RotateClient({title, reflect}: {title: string; reflect: Reflect<M>}) {
+  const [clientConsoleState, clientConsoleDispatch] = useClientConsoleReducer();
+
   const incrementCount = useCallback(() => {
-    reflect?.mutate.increment({ key: 'count', delta: 1 });
+    reflect?.mutate.increment({key: 'count', delta: 1});
   }, [reflect]);
 
   const longPressEvent = useLongPress(incrementCount, incrementCount);
@@ -44,7 +36,7 @@ function RotateClient({
     reflect.clientID.then(id => {
       setCurrentClientID(id);
       registerClientConsole(id, (log: string) =>
-        clientConsoleDispatch({ type: 'APPEND', payload: log }),
+        clientConsoleDispatch({type: 'APPEND', payload: log}),
       );
     });
   }, [reflect, clientConsoleDispatch]);

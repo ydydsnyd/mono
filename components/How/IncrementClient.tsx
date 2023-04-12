@@ -1,23 +1,21 @@
-import React, {Dispatch, useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import Slider from './Slider';
 import ClientConsole from './ClientConsole';
 import styles from './How.module.css';
 import demoButtonStyles from './DemoButton.module.css';
 import type {ReadTransaction, Reflect} from '@rocicorp/reflect';
 import {M, registerClientConsole} from '@/demo/shared/mutators';
-import {ConsoleAction, useCount} from './howtoUtils';
+import {useClientConsoleReducer, useCount} from './howtoUtils';
 
 function IncrementClient({
   title,
   reflect,
-  clientConsoleDispatch,
-  clientConsoleState,
 }: {
   title: string;
   reflect: Reflect<M>;
-  clientConsoleDispatch: Dispatch<ConsoleAction>;
-  clientConsoleState: string[];
 }) {
+  const [clientConsoleState, clientConsoleDispatch] = useClientConsoleReducer();
+
   const increment = useCallback(async (reflect: Reflect<M>) => {
     await reflect?.mutate.increment({key: 'count', delta: 1});
   }, []);
