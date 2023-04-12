@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1680880098025,
+  "lastUpdate": 1681258453762,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -38147,6 +38147,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27009,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a408c680f683789f38841b599ee61037f1b0e997",
+          "message": "fix!: change how client heads work to fix ChunkNotFound (#465)\n\nInstead of a headHash and tempRefreshHash, we now have: refreshHashes and persistHash.  \r\n\r\n**refreshHashes**\r\nrefreshHashes is a set of hashes that replaces headHash and tempRefreshHash.  This change addresses a problem that occurs if the second perdag write tx in refresh fails, failing to update headHash and cleanup tempRefreshHash.  \r\nrefreshHashes contains:\r\n1. The hash of the last commit this client refreshed from its client group (this is the commit it bootstrapped from until it completes its first refresh).\r\n2. One or more hashes that were added to retain chunks of a commit while it was being refreshed into this client's memdag. (This can be one or more because refresh's cleanup step is a separate transaction and can fail).\r\nUpon refresh completing and successfully running its clean up step, this set will contain a single hash: the hash of the last commit this client refreshed.\r\n\r\n**persistHash**\r\nIs new and most directly resolves the observed ChunkNotFound issue.  persistHash is the hash of the last snapshot commit persisted by this client to this client's client group, or null if has never persisted a snapshot.\r\n\r\nIn persist, when we write the memdag's basesnapshot to the perdag we tell the memdag via call to chunksPersisted that it can move these chunks from its `_memOnlyChunks` (where chunks can not be evicted) to its `_sourceChunksCache` (where chunks can be evicted).  However, the only thing retaining these chunks in the perdag is the ClientGroup's head hash, which can be updated by another client.   This new `persistHash` will retain these chunks in the case that another client updates the ClientGroup's head hash.  \r\n\r\nFixes #434 #30 \r\n\r\nBREAKING CHANGE: Updates format version from 5 to 6 because the structure of persisted Client(s) in the ClientMap is changed.",
+          "timestamp": "2023-04-11T17:13:02-07:00",
+          "tree_id": "7816f80df7557b1c0ee4460902f17ed6753270a6",
+          "url": "https://github.com/rocicorp/mono/commit/a408c680f683789f38841b599ee61037f1b0e997"
+        },
+        "date": 1681258443872,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 255029,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45481,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 255994,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45716,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95153,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27150,
             "unit": "bytes"
           }
         ]
