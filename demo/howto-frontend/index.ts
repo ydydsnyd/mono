@@ -1,5 +1,5 @@
 import {Reflect} from '@rocicorp/reflect';
-import {logSinks} from '../frontend/logsinks';
+import {logSinks} from '../frontend/logging-options';
 import {mutators, M} from '../shared/mutators';
 
 import {WORKER_HOST} from '../shared/urls';
