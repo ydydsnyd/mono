@@ -24,6 +24,7 @@ import {updateCache} from '../shared/renderer';
 import {WORKER_HOST} from '../shared/urls';
 import {unchunk} from '../shared/chunks';
 import {USER_ID} from '../shared/constants';
+import {logSinks} from './logsinks';
 
 const CACHE_DEBOUNCE_MS = 100;
 
@@ -48,6 +49,7 @@ export const initialize = async (
       roomID: actor.room,
     }),
     logLevel: 'error',
+    logSinks,
     mutators,
   });
 

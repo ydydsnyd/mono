@@ -20,6 +20,7 @@ import {
 import {nanoid} from 'nanoid';
 import {now, recordingCursorToCursor, sortableKeyNum} from '../shared/util';
 import {getData, isAddDiff} from './data-util';
+import {logSinks} from './logsinks';
 
 export const initRoom = async (
   onPlayRecording: (recording: RoomRecording) => void,
@@ -77,6 +78,7 @@ export const initRoom = async (
       roomID: ORCHESTRATOR_ROOM_ID,
     }),
     logLevel: 'error',
+    logSinks,
     mutators: orchestratorMutators,
   });
 
