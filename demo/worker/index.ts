@@ -14,7 +14,7 @@ import renderModule from '../../vendor/renderer/renderer_bg.wasm';
 import initRenderer from '../../vendor/renderer';
 import {Env} from '../shared/types';
 
-type ReflectNetEnv = {
+type ReflectNetServerEnv = {
   NEW_ROOM_SECRET?: string;
   CLEAN_ROOM_UID?: string;
   DATADOG_METRICS_API_KEY?: string;
@@ -42,7 +42,7 @@ const {
   worker,
   RoomDO: SuperRoomDO,
   AuthDO,
-} = createReflectServer((env: ReflectNetEnv) => ({
+} = createReflectServer((env: ReflectNetServerEnv) => ({
   mutators: allMutators,
   disconnectHandler: async write => {
     await orchestratorMutators.removeActor(write, {
@@ -71,13 +71,7 @@ const {
 }));
 
 class RoomDO extends SuperRoomDO {
-  constructor(
-    state: any,
-    env: {
-      NEW_ROOM_SECRET?: string;
-      CLEAN_ROOM_UID?: string;
-    } & ReflectServerBaseEnv,
-  ) {
+  constructor(state: any, env: ReflectNetServerEnv) {
     super(state, env);
     if (env.CLEAN_ROOM_UID) {
       state.storage.get(CLEAN_ROOM_KEY).then((value: string) => {
