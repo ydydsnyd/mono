@@ -1,5 +1,5 @@
 import {Reflect} from '@rocicorp/reflect';
-import {logSinks} from '../frontend/logging-options';
+import {logLevel, logSinks} from '../frontend/logging-options';
 import {mutators, M} from '../shared/mutators';
 
 import {WORKER_HOST} from '../shared/urls';
@@ -19,7 +19,7 @@ export const init = (roomID: string, userID: string): Reflect<M> => {
       userID,
       roomID,
     }),
-    logLevel: 'error',
+    logLevel,
     logSinks,
     mutators,
   });
