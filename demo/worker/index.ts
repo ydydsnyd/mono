@@ -37,6 +37,35 @@ if (mCount(mutators) + mCount(orchestratorMutators) !== mCount(allMutators)) {
   );
 }
 
+function getMetricsSink(env: ReflectNetServerEnv) {
+  if (env.DATADOG_METRICS_API_KEY === undefined) {
+    console.warn(
+      'Not enabling datadog metrics because env.DATADOG_METRICS_API_KEY is undefined',
+    );
+    return undefined;
+  }
+  return createDatadogMetricsSink({
+    apiKey: env.DATADOG_METRICS_API_KEY,
+    service: DATADOG_SERVICE_LABEL,
+  });
+}
+
+function getLogSinks(env: ReflectNetServerEnv) {
+  if (env.DATADOG_LOGS_API_KEY === undefined) {
+    console.warn(
+      'Not enabling datadog logging because env.DATADOG_LOGS_API_KEY is undefined',
+    );
+    return undefined;
+  }
+  return [
+    createWorkerDatadogLogSink({
+      apiKey: env.DATADOG_LOGS_API_KEY,
+      service: DATADOG_SERVICE_LABEL,
+    }),
+    consoleLogSink,
+  ];
+}
+
 const DATADOG_SERVICE_LABEL = 'reflect.net';
 const {
   worker,
@@ -50,23 +79,8 @@ const {
       timestamp: new Date().getTime(),
     });
   },
-  metricsSink:
-    env.DATADOG_METRICS_API_KEY !== undefined
-      ? createDatadogMetricsSink({
-          apiKey: env.DATADOG_METRICS_API_KEY,
-          service: DATADOG_SERVICE_LABEL,
-        })
-      : undefined,
-  logSinks:
-    env.DATADOG_LOGS_API_KEY !== undefined
-      ? [
-          createWorkerDatadogLogSink({
-            apiKey: env.DATADOG_LOGS_API_KEY,
-            service: DATADOG_SERVICE_LABEL,
-          }),
-          consoleLogSink,
-        ]
-      : undefined,
+  metricsSink: getMetricsSink(env),
+  logSinks: getLogSinks(env),
   logLevel: 'info',
 }));
 
