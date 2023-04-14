@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1681380072875,
+  "lastUpdate": 1681480520823,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -38309,6 +38309,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27185,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b1a553cdc1e50873c2b7963b43f86e784133ef58",
+          "message": "chore: Move sleep to shared (#471)\n\nand add `sleepWithAbort` which returns two promises, one for the sleep\r\nfinishing without being aborted, and one for the sleep being aborted.",
+          "timestamp": "2023-04-14T15:53:55+02:00",
+          "tree_id": "5cf20dfaeb225f94636289ecd2bb371f51a5b081",
+          "url": "https://github.com/rocicorp/mono/commit/b1a553cdc1e50873c2b7963b43f86e784133ef58"
+        },
+        "date": 1681480509573,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 255293,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45590,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 256084,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45871,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95213,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27138,
             "unit": "bytes"
           }
         ]
