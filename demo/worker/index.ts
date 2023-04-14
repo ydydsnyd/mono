@@ -1,5 +1,8 @@
 import {
+  consoleLogSink,
+  createDatadogMetricsSink,
   createReflectServer,
+  createWorkerDatadogLogSink,
   ReflectServerBaseEnv,
 } from '@rocicorp/reflect-server';
 import {mutators, setEnv} from '../shared/mutators';
@@ -10,6 +13,13 @@ import {
 import renderModule from '../../vendor/renderer/renderer_bg.wasm';
 import initRenderer from '../../vendor/renderer';
 import {Env} from '../shared/types';
+
+type ReflectNetServerEnv = {
+  NEW_ROOM_SECRET?: string;
+  CLEAN_ROOM_UID?: string;
+  DATADOG_METRICS_API_KEY?: string;
+  DATADOG_LOGS_API_KEY?: string;
+} & ReflectServerBaseEnv;
 
 setEnv(Env.SERVER, async () => {
   await initRenderer(renderModule);
@@ -27,11 +37,12 @@ if (mCount(mutators) + mCount(orchestratorMutators) !== mCount(allMutators)) {
   );
 }
 
+const DATADOG_SERVICE_LABEL = 'reflect.net';
 const {
   worker,
   RoomDO: SuperRoomDO,
   AuthDO,
-} = createReflectServer({
+} = createReflectServer((env: ReflectNetServerEnv) => ({
   mutators: allMutators,
   disconnectHandler: async write => {
     await orchestratorMutators.removeActor(write, {
@@ -39,17 +50,28 @@ const {
       timestamp: new Date().getTime(),
     });
   },
+  metricsSink:
+    env.DATADOG_METRICS_API_KEY !== undefined
+      ? createDatadogMetricsSink({
+          apiKey: env.DATADOG_METRICS_API_KEY,
+          service: DATADOG_SERVICE_LABEL,
+        })
+      : undefined,
+  logSinks:
+    env.DATADOG_LOGS_API_KEY !== undefined
+      ? [
+          createWorkerDatadogLogSink({
+            apiKey: env.DATADOG_LOGS_API_KEY,
+            service: DATADOG_SERVICE_LABEL,
+          }),
+          consoleLogSink,
+        ]
+      : undefined,
   logLevel: 'info',
-});
+}));
 
 class RoomDO extends SuperRoomDO {
-  constructor(
-    state: any,
-    env: {
-      NEW_ROOM_SECRET?: string;
-      CLEAN_ROOM_UID?: string;
-    } & ReflectServerBaseEnv,
-  ) {
+  constructor(state: any, env: ReflectNetServerEnv) {
     super(state, env);
     if (env.CLEAN_ROOM_UID) {
       state.storage.get(CLEAN_ROOM_KEY).then((value: string) => {
