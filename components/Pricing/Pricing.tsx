@@ -74,9 +74,7 @@ const Pricing = () => (
       </div>
 
       {/* Pricing Grid Row 7: Managed onprem */}
-      <div className={styles.pricingGridHeader}>
-        <span className={styles.extraInfo}>Managed On-Prem</span>
-      </div>
+      <div className={styles.pricingGridHeader}>Managed On-Prem</div>
       <div className={styles.pricingGridData}>
         <NotIncluded />
       </div>

@@ -37,7 +37,7 @@ export default function Demo1({
         types of conflicts, while allowing for custom, authoritative server
         logic.
       </p>
-      <p className={styles.howDescription}>
+      <p className={styles.howTryIt}>
         <strong>Try it:</strong> Use the demo below to increment a multiplayer
         counter. Increase the latency and quickly increment on both clients.
         Notice how normal arithmetic logic naturally sums concurrent operations,

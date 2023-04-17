@@ -34,7 +34,7 @@ export default function Demo2({
           There&apos;s no need to interpolate. You receive updates at 60fps,
           just as if the collaborator was local.
         </p>
-        <p className={styles.howDescription}>
+        <p className={styles.howTryIt}>
           <strong>Try it:</strong> Notice how even when the latency is high,
           changes playback on the receiver exactly as they happened on the
           source.

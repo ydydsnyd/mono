@@ -147,20 +147,6 @@ export default class Nav extends Component {
             <li>
               <Link
                 href="#"
-                className={styles.navLink}
-                activeClass={styles.navLinkActive}
-                to="get-started"
-                spy={true}
-                hashSpy={true}
-                smooth={true}
-                duration={250}
-              >
-                Contact
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="#"
                 className={styles.buttonPrimary}
                 to="get-started"
                 smooth={true}
