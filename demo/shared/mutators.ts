@@ -185,13 +185,15 @@ export const mutators = {
     const next = prev + delta;
     await tx.put(key, next);
     clientConsoleMap.get(tx.clientID)?.(
-      `Running mutation ${tx.mutationID} from ${tx.clientID} on client: ${prev} → ${next}`,
+      `Running mutation ${tx.mutationID} from ${
+        tx.clientID
+      } on client: ${prev.toFixed(2)} → ${next.toFixed(2)}`,
     );
     await addServerLog(
       tx,
       `Running mutation ${tx.mutationID} from ` +
         `${tx.clientID} on ${tx.environment}: ` +
-        `${prev} → ${next}`,
+        `${prev.toFixed(2)} → ${next.toFixed(2)}`,
     );
   },
 

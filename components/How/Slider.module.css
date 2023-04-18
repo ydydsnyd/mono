@@ -3,8 +3,8 @@
   right: 24px;
   top: 16px;
   display: 'flex';
-  justifycontent: 'center';
-  flexwrap: 'wrap';
+  justify-content: 'center';
+  flex-wrap: 'wrap';
   width: 4rem;
 }
 
@@ -34,6 +34,43 @@
   }
 
   .latencyValue {
+    font-size: 0.75rem;
+    position: static;
+    margin: 0 auto;
+    display: block;
+    text-align: center;
+    width: auto;
+  }
+}
+
+.speedSlider {
+  justify-content: 'center';
+  width: 8rem;
+}
+
+.speedValue {
+  display: flex;
+  justify-content: flex-end;
+  padding-right: 10px;
+  font-size: 1rem;
+  text-align: right;
+  color: #24283b;
+}
+
+.speedValueNumber {
+  font-weight: 500;
+  color: #0a7aff;
+}
+
+@media (max-width: 600px) {
+  .speedSlider {
+    position: static;
+    margin: 0 auto;
+    width: 8rem;
+    display: block !important;
+  }
+
+  .speedValue {
     font-size: 0.75rem;
     position: static;
     margin: 0 auto;

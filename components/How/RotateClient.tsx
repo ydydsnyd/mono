@@ -5,29 +5,32 @@ import styles from './How.module.css';
 import buttonStyles from './RotateButton.module.css';
 import type {ReadTransaction, Reflect} from '@rocicorp/reflect';
 import {M, registerClientConsole} from '@/demo/shared/mutators';
-import useLongPress from './useLongPress';
 import Roci from './Roci';
 import {useClientConsoleReducer, useCount} from './howtoUtils';
+import GravitySlider from './GravitySlider';
 
 function RotateClient({title, reflect}: {title: string; reflect: Reflect<M>}) {
   const [clientConsoleState, clientConsoleDispatch] = useClientConsoleReducer();
 
-  const incrementCount = useCallback(() => {
-    reflect?.mutate.increment({key: 'count', delta: 1});
-  }, [reflect]);
-
-  const longPressEvent = useLongPress(incrementCount, incrementCount);
+  const incrementCount = useCallback(
+    (delta: number) => {
+      reflect?.mutate.increment({key: 'count', delta});
+    },
+    [reflect],
+  );
 
   const [currentClientID, setCurrentClientID] = useState('');
   const count = useCount(
     reflect,
     'count',
     (key: string, val: string, tx: ReadTransaction) => {
+      const parsedVal = parseFloat(val);
       clientConsoleDispatch({
         type: 'APPEND',
-        payload: `Got change of key ${key} on client ${tx.clientID}: ${val}`,
+        payload: `Got change of key ${key} on client ${
+          tx.clientID
+        }: ${parsedVal.toFixed(2)}`,
       });
-      const parsedVal = parseInt(val);
       return parsedVal == null || isNaN(parsedVal) ? 0 : parsedVal;
     },
   );
@@ -47,9 +50,7 @@ function RotateClient({title, reflect}: {title: string; reflect: Reflect<M>}) {
       <Slider clientID={currentClientID} />
       <div className={styles.demo2layout}>
         <div className={buttonStyles.rotateButtonContainer}>
-          <button className={buttonStyles.rotateButton} {...longPressEvent}>
-            Rotate
-          </button>
+          <GravitySlider increment={incrementCount} />
         </div>
         <Roci rotation={count === null || isNaN(count) ? 0 : count} />
       </div>

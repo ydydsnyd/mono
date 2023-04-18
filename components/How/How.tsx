@@ -18,66 +18,83 @@ type DemoReflectState = {
   reflectServer: Reflect<M>;
   clientID1: string | undefined;
   clientID2: string | undefined;
-  clientID3: string | undefined;
 };
 
 type DemoComponentProps = {
   reflect1: Reflect<M>;
   reflect2: Reflect<M>;
   reflectServer: Reflect<M>;
-  reset: () => Promise<void>;
+  reset: () => void;
   key: string;
 };
 
 type DemoComponent = React.ComponentType<DemoComponentProps>;
 
-async function initDemo() {
+function initDemo(
+  prevState: DemoReflectState | undefined,
+  setState: React.Dispatch<React.SetStateAction<DemoReflectState | undefined>>,
+  prepend: string,
+): void {
+  if (prevState) {
+    console.log('closing reflect1');
+    prevState.reflect1.close();
+    console.log('closing reflect2');
+    prevState.reflect2.close();
+    console.log('closing reflectServer');
+    prevState.reflectServer.close();
+  }
+
   const [roomID, client1UserID, client2UserID, client3UserID] = Array.from(
     {length: 4},
     () => nanoid(),
   );
 
-  const r1 = init(roomID, client1UserID);
-  const r2 = init(roomID, client2UserID);
-  const r3 = init(roomID, client3UserID);
+  const r1 = init(prepend + roomID, prepend + 'client1' + client1UserID);
+  const r2 = init(prepend + roomID, prepend + 'client2' + client2UserID);
+  const r3 = init(prepend + roomID, prepend + 'client3' + client3UserID);
 
-  const [clientID1, clientID2, clientID3] = await Promise.all([
-    r1.clientID,
-    r2.clientID,
-    r3.clientID,
-  ]);
-
-  return {
+  setState({
     roomID,
     reflect1: r1,
     reflect2: r2,
     reflectServer: r3,
-    clientID1,
-    clientID2,
-    clientID3,
-  };
+    clientID1: undefined,
+    clientID2: undefined,
+  });
+
+  Promise.all([r1.clientID, r2.clientID]).then(([clientID1, clientID2]) => {
+    setState((prev: DemoReflectState | undefined) => {
+      if (prev && prev.reflect1 === r1 && prev.reflect2 === r2) {
+        return {
+          ...prev,
+          clientID1,
+          clientID2,
+        };
+      }
+      return prev;
+    });
+  });
 }
 
 const DemoWrapperInternal = (
   Demo: DemoComponent,
   state: DemoReflectState | undefined,
   setState: React.Dispatch<React.SetStateAction<DemoReflectState | undefined>>,
+  prepend: string,
 ) =>
-  state &&
-  state.clientID1 &&
-  state.clientID2 &&
-  state.reflect1 &&
-  state.reflect2 &&
-  state.reflectServer ? (
+  state ? (
     <ClientIDContext.Provider
-      value={{client1ID: state.clientID1, client2ID: state.clientID2}}
+      value={{
+        client1ID: state.clientID1 ?? '',
+        client2ID: state.clientID2 ?? '',
+      }}
     >
       <Demo
         reflect1={state.reflect1}
         reflect2={state.reflect2}
         reflectServer={state.reflectServer}
-        reset={async () => setState(await initDemo())}
-        key={state.clientID1}
+        reset={() => initDemo(state, setState, prepend)}
+        key={state.roomID}
       />
     </ClientIDContext.Provider>
   ) : null;
@@ -96,8 +113,8 @@ export default function How() {
 
   async function initHowToReflect() {
     delayWebSocket(process.env.NEXT_PUBLIC_WORKER_HOST!.replace(/^ws/, 'http'));
-    setIReflectState(await initDemo());
-    setRReflectState(await initDemo());
+    initDemo(iReflectState, setIReflectState, 'increment_');
+    initDemo(rReflectState, setRReflectState, 'rotate_');
   }
 
   useEffect(() => {
@@ -130,8 +147,8 @@ export default function How() {
   return (
     <div ref={ref}>
       <Demo0 />
-      {DemoWrapper(Demo1, iReflectState, setIReflectState)}
-      {DemoWrapper(Demo2, rReflectState, setRReflectState)}
+      {DemoWrapper(Demo1, iReflectState, setIReflectState, 'increment_')}
+      {DemoWrapper(Demo2, rReflectState, setRReflectState, 'rotate_')}
       {/* Step 3: Deploy */}
       <div className={styles.howStep}>
         <h3 className={styles.howHeader}>
