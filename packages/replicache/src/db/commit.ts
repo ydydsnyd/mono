@@ -6,17 +6,17 @@ import {
 } from 'shared/asserts.js';
 import * as valita from 'shared/valita.js';
 import {skipCommitDataAsserts} from '../config.js';
-import {compareCookies, cookieSchema, FrozenCookie} from '../cookies.js';
+import {FrozenCookie, compareCookies, cookieSchema} from '../cookies.js';
 import type * as dag from '../dag/mod.js';
 import type {MustGetChunk} from '../dag/store.js';
 import {frozenJSONSchema} from '../frozen-json.js';
-import {assertHash, Hash, hashSchema} from '../hash.js';
+import {Hash, assertHash, hashSchema} from '../hash.js';
 import type {IndexDefinition} from '../index-defs.js';
 import {
-  assertJSONValue,
-  deepFreeze,
   FrozenJSONValue,
   FrozenTag,
+  assertJSONValue,
+  deepFreeze,
   jsonSchema,
 } from '../json.js';
 import type {ClientID} from '../sync/ids.js';
@@ -302,17 +302,15 @@ export async function fromHead(
   return fromHash(hash, dagRead);
 }
 
-export type IndexChangeMetaSDD = {
-  readonly type: MetaType.IndexChangeSDD;
-  readonly basisHash: Hash;
-  readonly lastMutationID: number;
-};
+const indexChangeMetaSDDSchema = valita.readonly(
+  valita.object({
+    basisHash: hashSchema,
+    lastMutationID: valita.number(),
+    type: valita.literal(MetaType.IndexChangeSDD),
+  }),
+);
 
-const indexChangeMetaSDDSchema = valita.object({
-  type: valita.literal(MetaType.IndexChangeSDD),
-  basisHash: hashSchema,
-  lastMutationID: valita.number(),
-});
+export type IndexChangeMetaSDD = valita.Infer<typeof indexChangeMetaSDDSchema>;
 
 function assertIndexChangeMeta(
   v: Record<string, unknown>,
@@ -334,51 +332,37 @@ export function assertIndexChangeCommit(
   assertIndexChangeMeta(c.meta);
 }
 
-export type LocalMetaSDD = {
-  readonly type: MetaType.LocalSDD;
-  readonly basisHash: Hash;
-  readonly mutationID: number;
-  readonly mutatorName: string;
-  readonly mutatorArgsJSON: FrozenJSONValue;
-  readonly originalHash: Hash | null;
-  readonly timestamp: number;
-};
-
 const mutatorNameSchema = valita.nonEmptyString();
 
-const localMetaSDDSchema = valita.object({
-  type: valita.literal(MetaType.LocalSDD),
-  basisHash: hashSchema,
-  mutationID: valita.number(),
-  mutatorName: mutatorNameSchema,
-  mutatorArgsJSON: frozenJSONSchema,
-  originalHash: valita.union(hashSchema, valita.null()),
-  timestamp: valita.number(),
-});
+const localMetaSDDSchema = valita.readonly(
+  valita.object({
+    basisHash: hashSchema,
+    mutationID: valita.number(),
+    mutatorArgsJSON: frozenJSONSchema,
+    mutatorName: mutatorNameSchema,
+    originalHash: valita.union(hashSchema, valita.null()),
+    timestamp: valita.number(),
+    type: valita.literal(MetaType.LocalSDD),
+  }),
+);
 
-export type LocalMetaDD31 = {
-  readonly type: MetaType.LocalDD31;
-  readonly basisHash: Hash;
-  readonly mutationID: number;
-  readonly mutatorName: string;
-  readonly mutatorArgsJSON: FrozenJSONValue;
-  readonly originalHash: Hash | null;
-  readonly timestamp: number;
-  readonly clientID: ClientID;
-  readonly baseSnapshotHash: Hash;
-};
+export type LocalMetaSDD = valita.Infer<typeof localMetaSDDSchema>;
 
-const localMetaDD31Schema = valita.object({
-  type: valita.literal(MetaType.LocalDD31),
-  basisHash: hashSchema,
-  mutationID: valita.number(),
-  mutatorName: mutatorNameSchema,
-  mutatorArgsJSON: frozenJSONSchema,
-  originalHash: valita.union(hashSchema, valita.null()),
-  timestamp: valita.number(),
-  clientID: valita.string(),
-  baseSnapshotHash: hashSchema,
-});
+const localMetaDD31Schema = valita.readonly(
+  valita.object({
+    baseSnapshotHash: hashSchema,
+    basisHash: hashSchema,
+    clientID: valita.string(),
+    mutationID: valita.number(),
+    mutatorArgsJSON: frozenJSONSchema,
+    mutatorName: mutatorNameSchema,
+    originalHash: valita.union(hashSchema, valita.null()),
+    timestamp: valita.number(),
+    type: valita.literal(MetaType.LocalDD31),
+  }),
+);
+
+export type LocalMetaDD31 = valita.Infer<typeof localMetaDD31Schema>;
 
 export type LocalMeta = LocalMetaSDD | LocalMetaDD31;
 
@@ -426,33 +410,27 @@ export function assertLocalCommitSDD(
   assertLocalMetaSDD(c.meta);
 }
 
-export type SnapshotMetaSDD = {
-  readonly type: MetaType.SnapshotSDD;
-  readonly basisHash: Hash | null;
-  readonly lastMutationID: number;
-  readonly cookieJSON: FrozenJSONValue;
-};
+const snapshotMetaSDDSchema = valita.readonly(
+  valita.object({
+    basisHash: valita.union(hashSchema, valita.null()),
+    cookieJSON: jsonSchema,
+    lastMutationID: valita.number(),
+    type: valita.literal(MetaType.SnapshotSDD),
+  }),
+);
 
-const snapshotMetaSDDSchema = valita.object({
-  type: valita.literal(MetaType.SnapshotSDD),
-  basisHash: valita.union(hashSchema, valita.null()),
-  lastMutationID: valita.number(),
-  cookieJSON: jsonSchema,
-});
+export type SnapshotMetaSDD = valita.Infer<typeof snapshotMetaSDDSchema>;
 
-export type SnapshotMetaDD31 = {
-  readonly type: MetaType.SnapshotDD31;
-  readonly basisHash: Hash | null;
-  readonly lastMutationIDs: Record<ClientID, number>;
-  readonly cookieJSON: FrozenCookie;
-};
+const snapshotMetaDD31Schema = valita.readonly(
+  valita.object({
+    basisHash: valita.union(hashSchema, valita.null()),
+    cookieJSON: cookieSchema,
+    lastMutationIDs: valita.readonly(valita.record(valita.number())),
+    type: valita.literal(MetaType.SnapshotDD31),
+  }),
+);
 
-const snapshotMetaDD31Schema = valita.object({
-  type: valita.literal(MetaType.SnapshotDD31),
-  basisHash: valita.union(hashSchema, valita.null()),
-  lastMutationIDs: valita.record(valita.number()),
-  cookieJSON: cookieSchema,
-});
+export type SnapshotMetaDD31 = valita.Infer<typeof snapshotMetaDD31Schema>;
 
 export type SnapshotMeta = SnapshotMetaSDD | SnapshotMetaDD31;
 

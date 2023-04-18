@@ -3,11 +3,11 @@ import {assert, assertObject} from 'shared/asserts.js';
 import {hasOwn} from 'shared/has-own.js';
 import * as valita from 'shared/valita.js';
 import * as btree from '../btree/mod.js';
-import {compareCookies, FrozenCookie} from '../cookies.js';
+import {FrozenCookie, compareCookies} from '../cookies.js';
 import type * as dag from '../dag/mod.js';
 import {
-  assertSnapshotCommitDD31,
   ChunkIndexDefinition,
+  assertSnapshotCommitDD31,
   chunkIndexDefinitionEqualIgnoreName,
   getRefs,
   newSnapshotCommitDataDD31,
@@ -17,8 +17,8 @@ import * as db from '../db/mod.js';
 import {createIndexBTree} from '../db/write.js';
 import {Hash, hashSchema} from '../hash.js';
 import {IndexDefinitions, indexDefinitionsEqual} from '../index-defs.js';
-import {deepFreeze, FrozenJSONValue} from '../json.js';
-import {ClientGroupID, clientGroupIDSchema, ClientID} from '../sync/ids.js';
+import {FrozenJSONValue, deepFreeze} from '../json.js';
+import {ClientGroupID, ClientID, clientGroupIDSchema} from '../sync/ids.js';
 import {uuid as makeUuid} from '../uuid.js';
 import {withWrite} from '../with-transactions.js';
 import {
@@ -32,69 +32,75 @@ import {
 export type ClientMap = ReadonlyMap<ClientID, ClientV4 | ClientV5>;
 export type ClientMapDD31 = ReadonlyMap<ClientID, ClientV5>;
 
-const clientV4Schema = valita.object({
-  /**
-   * A UNIX timestamp in milliseconds updated by the client once a minute
-   * while it is active and every time the client persists its state to
-   * the perdag.
-   * Should only be updated by the client represented by this structure.
-   */
-  heartbeatTimestampMs: valita.number(),
-  /**
-   * The hash of the commit in the perdag this client last persisted.
-   * Should only be updated by the client represented by this structure.
-   */
-  headHash: hashSchema,
-  /**
-   * The mutationID of the commit at headHash (mutationID if it is a
-   * local commit, lastMutationID if it is an index change or snapshot commit).
-   * Should only be updated by the client represented by this structure.
-   * Read by other clients to determine if there are unacknowledged pending
-   * mutations for them to push on behalf of the client represented by this
-   * structure.
-   * This is redundant with information in the commit graph at headHash,
-   * but allows other clients to determine if there are unacknowledged pending
-   * mutations without having to load the commit graph at headHash.
-   */
-  mutationID: valita.number(),
-  /**
-   * The highest lastMutationID received from the server for this client.
-   *
-   * Should be updated by the client represented by this structure whenever
-   * it persists its state to the perdag.
-   * Read by other clients to determine if there are unacknowledged pending
-   * mutations for them to push on behalf of the client represented by this
-   * structure, and *updated* by other clients upon successfully pushing
-   * pending mutations to avoid redundant pushes of those mutations.
-   *
-   * Note: This will be the same as the lastMutationID of the base snapshot of
-   * the commit graph at headHash when written by the client represented by this
-   * structure.  However, when written by another client pushing pending
-   * mutations on this client's behalf it will be different.  This is because
-   * the other client does not update the commit graph (it is unsafe to update
-   * another client's commit graph).
-   */
-  lastServerAckdMutationID: valita.number(),
-});
+const clientV4Schema = valita.readonly(
+  valita.object({
+    /**
+     * A UNIX timestamp in milliseconds updated by the client once a minute
+     * while it is active and every time the client persists its state to
+     * the perdag.
+     * Should only be updated by the client represented by this structure.
+     */
+    heartbeatTimestampMs: valita.number(),
+    /**
+     * The hash of the commit in the perdag this client last persisted.
+     * Should only be updated by the client represented by this structure.
+     */
+    headHash: hashSchema,
+    /**
+     * The mutationID of the commit at headHash (mutationID if it is a
+     * local commit, lastMutationID if it is an index change or snapshot commit).
+     * Should only be updated by the client represented by this structure.
+     * Read by other clients to determine if there are unacknowledged pending
+     * mutations for them to push on behalf of the client represented by this
+     * structure.
+     * This is redundant with information in the commit graph at headHash,
+     * but allows other clients to determine if there are unacknowledged pending
+     * mutations without having to load the commit graph at headHash.
+     */
+    mutationID: valita.number(),
+    /**
+     * The highest lastMutationID received from the server for this client.
+     *
+     * Should be updated by the client represented by this structure whenever
+     * it persists its state to the perdag.
+     * Read by other clients to determine if there are unacknowledged pending
+     * mutations for them to push on behalf of the client represented by this
+     * structure, and *updated* by other clients upon successfully pushing
+     * pending mutations to avoid redundant pushes of those mutations.
+     *
+     * Note: This will be the same as the lastMutationID of the base snapshot of
+     * the commit graph at headHash when written by the client represented by this
+     * structure.  However, when written by another client pushing pending
+     * mutations on this client's behalf it will be different.  This is because
+     * the other client does not update the commit graph (it is unsafe to update
+     * another client's commit graph).
+     */
+    lastServerAckdMutationID: valita.number(),
+  }),
+);
 
-export type ClientV4 = valita.InferReadonly<typeof clientV4Schema>;
+export type ClientV4 = valita.Infer<typeof clientV4Schema>;
 
-const clientV5Schema = valita.object({
-  heartbeatTimestampMs: valita.number(),
-  headHash: hashSchema,
-  /**
-   * The hash of a commit we are in the middle of refreshing into this client's
-   * memdag.
-   */
-  tempRefreshHash: valita.union(hashSchema, valita.null()),
-  /**
-   * ID of this client's perdag client group. This needs to be sent in pull
-   * request (to enable syncing all last mutation ids in the client group).
-   */
-  clientGroupID: clientGroupIDSchema,
-});
+const clientV5Schema = valita.readonly(
+  valita.object({
+    /**
+     * ID of this client's perdag client group. This needs to be sent in pull
+     * request (to enable syncing all last mutation ids in the client group).
+     */
+    clientGroupID: clientGroupIDSchema,
 
-export type ClientV5 = valita.InferReadonly<typeof clientV5Schema>;
+    headHash: hashSchema,
+
+    heartbeatTimestampMs: valita.number(),
+    /**
+     * The hash of a commit we are in the middle of refreshing into this client's
+     * memdag.
+     */
+    tempRefreshHash: valita.union(hashSchema, valita.null()),
+  }),
+);
+
+export type ClientV5 = valita.Infer<typeof clientV5Schema>;
 
 export type Client = ClientV4 | ClientV5;
 

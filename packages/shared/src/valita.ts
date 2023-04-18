@@ -166,8 +166,6 @@ export type Type<T> = Omit<
 // TODO(arv): Figure out a better way to do this.
 export type ValitaType<T> = v.Type<T>;
 
-export type InferReadonly<T extends v.Type> = Readonly<v.Infer<T>>;
-
 export function nonEmptyString(): ValitaType<string> {
   return v.string().chain(s => {
     if (s.length === 0) {
@@ -175,4 +173,11 @@ export function nonEmptyString(): ValitaType<string> {
     }
     return v.ok(s);
   });
+}
+
+/**
+ * Shallowly marks the schema as readonly.
+ */
+export function readonly<T extends v.Type>(t: T): v.Type<Readonly<v.Infer<T>>> {
+  return t as v.Type<Readonly<v.Infer<T>>>;
 }
