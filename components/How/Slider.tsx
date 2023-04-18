@@ -1,24 +1,21 @@
 import * as React from 'react';
 import {Range, getTrackBackground} from 'react-range';
-import {setLatency} from './delayWebSocket';
 import style from './Slider.module.css';
+import {setLatency} from './delayWebSocket';
 
-const STEP = 30;
-const MIN = 4;
-const MAX = 1000;
+const STEP = 1;
+const MIN = 0;
+const MAX = 2;
+
+type Latency = 0 | 1 | 2;
+
+function getLatencyName(latency: Latency): string {
+  return ['low', 'medium', 'high'][latency];
+}
 
 const Slider = ({clientID}: {clientID: string}) => {
-  const [values, setValues] = React.useState([4]);
-  function getLatencyPosition() {
-    var pos = values[0];
-    if (pos < 1000) {
-      return pos.toFixed(0) + 'ms';
-    } else {
-      var adjustedPos = pos / 1000;
-      return adjustedPos.toFixed(1) + 's';
-    }
-  }
-  const latencyPosition = getLatencyPosition();
+  const [value, setValue] = React.useState<Latency>(0);
+  const latencyName = getLatencyName(value);
   return (
     <div
       className={style.latencySlider}
@@ -29,16 +26,18 @@ const Slider = ({clientID}: {clientID: string}) => {
     >
       <output className={style.latencyValue} id="output">
         <span className={style.latencyLabel}>Latency: </span>
-        <span className={style.latencyValueNumber}>{latencyPosition}</span>
+        <span className={style.latencyName}>{latencyName}</span>
       </output>
       <Range
-        values={values}
+        values={[value]}
         step={STEP}
         min={MIN}
         max={MAX}
         onChange={values => {
-          setValues(values);
-          setLatency(clientID, values[0]);
+          setValue(values[0] as Latency);
+          // If the latency is higher than 1000ms we end up hitting the ping timeout.
+          const latencyMapping = [0, 300, 950];
+          setLatency(clientID, latencyMapping[values[0]]);
         }}
         renderTrack={({props, children}) => (
           <div
@@ -58,7 +57,7 @@ const Slider = ({clientID}: {clientID: string}) => {
                 width: '100%',
                 borderRadius: '2px',
                 background: getTrackBackground({
-                  values,
+                  values: [value],
                   colors: ['#0A7AFF', '#D1D1D1'],
                   min: MIN,
                   max: MAX,

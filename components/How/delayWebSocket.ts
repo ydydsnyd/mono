@@ -158,6 +158,6 @@ class DelayQueue<T> {
 
 const latencies: Map<string, number> = new Map();
 export const setLatency = (userID: string, latency: number) => {
-  // console.log('setting lacency for', userID, latency);
+  // console.log('setting latency for', userID, latency);
   latencies.set(userID, latency);
 };
