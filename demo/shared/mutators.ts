@@ -1,4 +1,12 @@
 import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
+import {draw_cache_png} from '../../vendor/renderer/renderer';
+import {chunk, unchunk} from './chunks';
+import {
+  SPLATTER_ANIM_FRAMES,
+  SPLATTER_FLATTEN_FREQUENCY,
+  SPLATTER_MAX_AGE,
+} from './constants';
+import {LETTERS} from './letters';
 import {
   ActorID,
   Cursor,
@@ -8,17 +16,9 @@ import {
   Splatter,
   Vector,
 } from './types';
+import {decode, encode} from './uint82b64';
 import {nextNumber, randomWithSeed, sortableKeyNum} from './util';
-import {chunk, unchunk} from './chunks';
-import {LETTERS} from './letters';
-import {draw_cache_png} from '../../vendor/renderer/renderer';
 import {splatters2Render} from './wasm-args';
-import {
-  SPLATTER_ANIM_FRAMES,
-  SPLATTER_FLATTEN_FREQUENCY,
-  SPLATTER_MAX_AGE,
-} from './constants';
-import {encode, decode} from './uint82b64';
 
 export const UNINITIALIZED_CACHE_SENTINEL = 'uninitialized-cache-sentinel';
 export const UNINITIALIZED_CLEARED_SENTINEL = 'uninitialized-clear-sentinel';
@@ -184,11 +184,13 @@ export const mutators = {
     const prev = ((await tx.get(key)) as number) ?? 0;
     const next = prev + delta;
     await tx.put(key, next);
-    clientConsoleMap.get(tx.clientID)?.(
-      `Running mutation ${tx.mutationID} from ${
-        tx.clientID
-      } on client: ${prev.toFixed(2)} → ${next.toFixed(2)}`,
-    );
+    if (tx.reason !== 'rebase') {
+      clientConsoleMap.get(tx.clientID)?.(
+        `Running mutation ${tx.mutationID} from ${
+          tx.clientID
+        } on client: ${prev.toFixed(2)} → ${next.toFixed(2)}`,
+      );
+    }
     await addServerLog(
       tx,
       `Running mutation ${tx.mutationID} from ` +
