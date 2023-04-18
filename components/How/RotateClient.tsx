@@ -3,7 +3,7 @@ import Slider from './Slider';
 import ClientConsole from './ClientConsole';
 import styles from './How.module.css';
 import buttonStyles from './RotateButton.module.css';
-import type {ReadTransaction, Reflect} from '@rocicorp/reflect';
+import type {Reflect} from '@rocicorp/reflect';
 import {M, registerClientConsole} from '@/demo/shared/mutators';
 import Roci from './Roci';
 import {useClientConsoleReducer, useCount} from './howtoUtils';
@@ -20,20 +20,12 @@ function RotateClient({title, reflect}: {title: string; reflect: Reflect<M>}) {
   );
 
   const [currentClientID, setCurrentClientID] = useState('');
-  const count = useCount(
-    reflect,
-    'count',
-    (key: string, val: string, tx: ReadTransaction) => {
-      const parsedVal = parseFloat(val);
-      clientConsoleDispatch({
-        type: 'APPEND',
-        payload: `Got change of key ${key} on client ${
-          tx.clientID
-        }: ${parsedVal.toFixed(2)}`,
-      });
-      return parsedVal == null || isNaN(parsedVal) ? 0 : parsedVal;
-    },
-  );
+  const count = useCount(reflect, 'count', (key: string, val: number) => {
+    clientConsoleDispatch({
+      type: 'APPEND',
+      payload: `Got change of key \`${key}\` to: ${val.toFixed(2)}`,
+    });
+  });
 
   useEffect(() => {
     reflect.clientID.then(id => {

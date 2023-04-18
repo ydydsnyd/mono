@@ -75,13 +75,11 @@ export async function getServerLogs(tx: ReadTransaction): Promise<string[]> {
 }
 
 export async function addServerLog(tx: WriteTransaction, log: string) {
-  if (tx.environment !== 'server') {
-    return;
-  }
   const count = await getServerLogCount(tx);
   await tx.put(entriesKey(count), log);
   await tx.put(entriesCountKey, count + 1);
 }
+
 export const mutators = {
   initialize: async (tx: WriteTransaction) => {
     // We'd like to prevent drawing our local client until we load the server cache
@@ -184,24 +182,20 @@ export const mutators = {
     const prev = ((await tx.get(key)) as number) ?? 0;
     const next = prev + delta;
     await tx.put(key, next);
-    if (tx.reason !== 'rebase') {
-      clientConsoleMap.get(tx.clientID)?.(
-        `Running mutation ${tx.mutationID} from ${
-          tx.clientID
-        } on client: ${prev.toFixed(2)} → ${next.toFixed(2)}`,
-      );
+
+    const prevStr = prev % 1 === 0 ? prev.toString() : prev.toFixed(2);
+    const nextStr = next % 1 === 0 ? next.toString() : next.toFixed(2);
+    const msg = `Running ${tx.clientID}@${tx.mutationID} on ${tx.environment}: ${prevStr} → ${nextStr}`;
+
+    if (tx.environment === 'client') {
+      if (tx.reason !== 'rebase') {
+        clientConsoleMap.get(tx.clientID)?.(msg);
+      }
+    } else {
+      await addServerLog(tx, msg);
     }
-    await addServerLog(
-      tx,
-      `Running mutation ${tx.mutationID} from ` +
-        `${tx.clientID} on ${tx.environment}: ` +
-        `${prev.toFixed(2)} → ${next.toFixed(2)}`,
-    );
   },
 
-  addServerLog,
-  getServerLogs,
-  getServerLogCount,
   nop: async (_: WriteTransaction) => {},
 };
 

@@ -3,7 +3,7 @@ import Slider from './Slider';
 import ClientConsole from './ClientConsole';
 import styles from './How.module.css';
 import demoButtonStyles from './DemoButton.module.css';
-import type {ReadTransaction, Reflect} from '@rocicorp/reflect';
+import type {Reflect} from '@rocicorp/reflect';
 import {M, registerClientConsole} from '@/demo/shared/mutators';
 import {useClientConsoleReducer, useCount} from './howtoUtils';
 
@@ -22,17 +22,12 @@ function IncrementClient({
 
   const [currentClientID, setCurrentClientID] = useState('');
 
-  useCount(
-    reflect,
-    'count',
-    (key: string, val: string, tx: ReadTransaction) => {
-      clientConsoleDispatch({
-        type: 'APPEND',
-        payload: `Got change of key ${key} on client ${tx.clientID}: ${val}`,
-      });
-      return parseInt(val) ?? 0;
-    },
-  );
+  useCount(reflect, 'count', (key: string, val: number) => {
+    clientConsoleDispatch({
+      type: 'APPEND',
+      payload: `Key "${key}" changed to: ${val}`,
+    });
+  });
 
   useEffect(() => {
     reflect.clientID.then(id => {

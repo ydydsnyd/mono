@@ -13,7 +13,7 @@ const reflect = new Reflect({
 });
 
 reflect.subscribe(tx => tx.get("foo"), val => {
-  console.log(\`Got change of key "foo" on client \${tx.clientID}: \${val}\`);
+  console.log(\`Key "foo" changed to: \${val}\`);
 });
 
 button.onclick = () => reflect.mutate.increment({key: "foo", delta: 2});`;

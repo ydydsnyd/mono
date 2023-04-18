@@ -7,16 +7,17 @@ import {M, getServerLogs} from '@/demo/shared/mutators';
 export function useCount(
   reflect: Reflect<M>,
   key: string,
-  clog: (key: string, val: string, tx: ReadTransaction) => number,
+  clog: (key: string, val: number) => void,
 ) {
   return useSubscribe(
     reflect,
     async (tx: ReadTransaction) => {
-      const count = (await tx.get(key)) as string;
-      if (count) {
-        clog(key, count, tx);
+      const count = (await tx.get(key)) as number | undefined;
+      if (!count) {
+        return 0;
       }
-      return parseInt(count);
+      clog(key, count);
+      return count;
     },
     null,
   );

@@ -7,9 +7,8 @@ const Demo1a = () => {
     const {key, delta} = args;
     const prev = await tx.get(key, 0);
     const next = prev + delta;
-    console.log(\`Running mutation \${tx.mutationID} from \` +
-                \`\${tx.clientID} on \${tx.environment}: \` +
-                \`\${prev} -> \${next}\`);
+    console.log(\`Running mutation \${tx.clientID}@\${tx.mutationID} \` +
+                \`on \${tx.environment}: \${prev} -> \${next}\`);
     await tx.put(key, next);
   },
 }`;
