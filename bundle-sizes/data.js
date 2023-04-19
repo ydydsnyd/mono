@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1681813699213,
+  "lastUpdate": 1681912516558,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -38387,6 +38387,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/99f18b035f13f4ef4da840d0207f740bcfb809e5"
         },
         "date": 1681813689996,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 255293,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45605,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 256084,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45828,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95213,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27127,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6c8a08068553daa9e1057345641a7673b878cef4",
+          "message": "chore: Add tests for changes to index definitions (#477)\n\nAdd a def and rename defs",
+          "timestamp": "2023-04-19T15:54:06+02:00",
+          "tree_id": "13820e5ebbbba4cee48872e0263061c7d792952c",
+          "url": "https://github.com/rocicorp/mono/commit/6c8a08068553daa9e1057345641a7673b878cef4"
+        },
+        "date": 1681912508108,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
