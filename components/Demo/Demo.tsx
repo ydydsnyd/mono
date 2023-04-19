@@ -212,7 +212,7 @@ const Demo = () => {
               width={16}
               height={16}
             />
-            &nbsp;Clear Paint
+            &nbsp;Reset Puzzle
           </div>
           <div className="success">
             <Image
