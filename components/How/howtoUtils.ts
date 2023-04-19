@@ -1,8 +1,8 @@
 import {useReducer} from 'react';
 
-import {useSubscribe} from 'replicache-react';
-import type {ReadTransaction, Reflect} from '@rocicorp/reflect';
 import {M, getServerLogs} from '@/demo/shared/mutators';
+import type {ReadTransaction, Reflect} from '@rocicorp/reflect';
+import {useSubscribe} from 'replicache-react';
 
 export function useCount(
   reflect: Reflect<M>,
@@ -32,8 +32,12 @@ export type ConsoleAction = {type: 'APPEND'; payload: string} | {type: 'CLEAR'};
 export function useClientConsoleReducer(initialState: string[] = []) {
   return useReducer((state: string[], action: ConsoleAction) => {
     switch (action.type) {
-      case 'APPEND':
-        return [...state, action.payload];
+      case 'APPEND': {
+        // We only display 5 lines of console output.
+        const newState = state.slice(-4);
+        newState.push(action.payload);
+        return newState;
+      }
       case 'CLEAR':
         return [];
       default:
