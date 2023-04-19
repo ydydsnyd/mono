@@ -3,7 +3,6 @@ import {
   ReadTransaction,
   ExperimentalDiffOperation,
 } from '@rocicorp/reflect';
-import {Metrics, Reporter} from '@rocicorp/datadog-util';
 import {consoleLogSink, OptionalLoggerImpl} from '@rocicorp/logger';
 import type {
   Actor,
@@ -35,13 +34,6 @@ export const initialize = async (
     logSinks.push(new DataDogBrowserLogSink());
   }
 
-  const metrics = new Metrics();
-  const metricsEndpoint = new URL('/api/metrics/v0/report', WORKER_HOST);
-  new Reporter({
-    metrics,
-    url: metricsEndpoint.toString(),
-  });
-
   // Create a reflect client
   const reflectClient = new Reflect<M>({
     socketOrigin: WORKER_HOST,
@@ -56,7 +48,6 @@ export const initialize = async (
     }),
     mutators,
     ...loggingOptions,
-    // metrics,
   });
 
   // To handle only doing an operation when something changes, we allow
