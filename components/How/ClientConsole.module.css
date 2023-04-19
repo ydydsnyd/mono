@@ -54,3 +54,8 @@
 .consoleOutput .consoleItem:last-child {
   opacity: 1;
 }
+
+.clientConsole.bright {
+  transition: background-color 1000;
+  background-color: #d1d1d1;
+}

@@ -51,3 +51,8 @@
 .consoleOutput .consoleItem:last-child {
   opacity: 1;
 }
+
+.serverConsole.bright {
+  transition: background-color 1000;
+  background-color: #2a2e45;
+}

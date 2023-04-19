@@ -1,15 +1,29 @@
-import React, {useContext} from 'react';
+import React, {useContext, useEffect, useState} from 'react';
 import {ClientIDContext} from './ClientIDContext';
 import styles from './ServerConsole.module.css';
 import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '@/demo/shared/mutators';
 import {useServerLogs} from './howtoUtils';
+import classNames from 'classnames';
 
 export default function ServerConsole({reflect}: {reflect: Reflect<M>}) {
   const logs = useServerLogs(reflect);
   const {client1ID, client2ID} = useContext(ClientIDContext);
+  const [bright, setBright] = useState(false);
+
+  useEffect(() => {
+    setBright(true);
+    const timer = setTimeout(() => {
+      setBright(false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [logs]);
+
   return (
-    <div className={styles.serverConsole}>
+    <div
+      className={classNames(styles.serverConsole, {[styles.bright]: bright})}
+    >
       <h4 className={styles.panelLabel}>Server Console</h4>
       <div className={styles.consoleOutput}>
         {logs &&

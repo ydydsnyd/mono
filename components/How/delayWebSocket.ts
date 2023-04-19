@@ -129,10 +129,8 @@ class DelayQueue<T> {
         targetTime,
         t,
       });
-      // console.log("enque - targetTime", targetTime, "t", t)
       this._maybeScheduleProcess();
     } else {
-      // console.log("there is no latency or nothing on queue so processing this....")
       this._process(t);
     }
   }
@@ -147,6 +145,7 @@ class DelayQueue<T> {
       const now = Date.now();
       const toProcess = this._queue.filter(({targetTime}) => targetTime <= now);
       this._queue.splice(0, toProcess.length);
+      toProcess.sort((a, b) => a.targetTime - b.targetTime); // sort by targetTime
       toProcess.forEach(({t}) => {
         // console.log("toProcess - targetTime", targetTime, "t", t)
         this._process(t);

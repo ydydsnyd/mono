@@ -1,12 +1,25 @@
-import React, {useContext} from 'react';
+import React, {useContext, useEffect, useState} from 'react';
 import styles from './ClientConsole.module.css';
 import {ClientIDContext} from './ClientIDContext';
+import classNames from 'classnames';
 
 export default function ClientConsole({logs}: {logs: string[] | undefined}) {
   const {client1ID, client2ID} = useContext(ClientIDContext);
+  const [bright, setBright] = useState(false);
+
+  useEffect(() => {
+    setBright(true);
+    const timer = setTimeout(() => {
+      setBright(false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [logs]);
 
   return (
-    <div className={styles.clientConsole}>
+    <div
+      className={classNames(styles.clientConsole, {[styles.bright]: bright})}
+    >
       <h4 className={styles.panelLabel}>Console</h4>
       <div className={styles.consoleOutput}>
         {logs &&
