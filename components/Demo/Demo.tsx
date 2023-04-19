@@ -200,7 +200,7 @@ const Demo = () => {
       <div id="info">
         <div className="active-user-info">
           <div className="online-dot online"></div>
-          &nbsp;Active users:&nbsp;
+          &nbsp;Active Users:&nbsp;
           <span id="active-user-count">1</span>
         </div>
         <button id="reset-button">
