@@ -66,17 +66,20 @@ export const positionToCoordinate = (
   const areaBottom = precisePos.y + preciseSize.height;
   let x = (position.x - precisePos.x) / preciseSize.width;
   if (x < 0) {
-    x = 0 - position.x / precisePos.x;
+    // calculate fraction of left margin used, then translate into domain [-1..0].
+    x = position.x / precisePos.x - 1;
   } else if (x > 1) {
+    // calculate fraction of right margin used, then translate into domain [1..2].
     const remainingScreen = screenSize.width - areaRight;
-    x = 1 + (position.x - areaRight) / remainingScreen;
+    x = (position.x - areaRight) / remainingScreen + 1;
   }
+  // same but for y coordinates.
   let y = (position.y - precisePos.y) / preciseSize.height;
   if (y < 0) {
-    y = 0 - position.y / precisePos.y;
+    y = position.y / precisePos.y - 1;
   } else if (y > 1) {
     const remainingScreen = screenSize.height - areaBottom;
-    y = 1 + (position.y - areaBottom) / remainingScreen;
+    y = (position.y - areaBottom) / remainingScreen + 1;
   }
   return {x, y};
 };
@@ -90,8 +93,10 @@ export const coordinateToPosition = (
   const areaRight = precisePos.x + preciseSize.width;
   let x = -1;
   if (coord.x < 0) {
-    x = Math.abs(coord.x) * precisePos.x;
+    // translate coord back into domain [0..1] then multiply by left margin.
+    x = (coord.x + 1) * precisePos.x;
   } else if (coord.x > 1) {
+    // same for right margin.
     x = areaRight + (coord.x - 1) * (screenSize.width - areaRight);
   } else {
     x = precisePos.x + coord.x * preciseSize.width;
@@ -99,7 +104,7 @@ export const coordinateToPosition = (
   const areaBottom = precisePos.y + preciseSize.height;
   let y = -1;
   if (coord.y < 0) {
-    y = Math.abs(coord.y) * precisePos.y;
+    y = (coord.y + 1) * precisePos.y;
   } else if (coord.y > 1) {
     y = areaBottom + (coord.y - 1) * (screenSize.height - areaBottom);
   } else {
