@@ -143,11 +143,15 @@ class DelayQueue<T> {
     setTimeout(() => {
       this._processScheduled = false;
       const now = Date.now();
-      const toProcess = this._queue.filter(({targetTime}) => targetTime <= now);
+      const toProcess = [];
+      for (const message of this._queue) {
+        if (message.targetTime > now) {
+          break;
+        }
+        toProcess.push(message);
+      }
       this._queue.splice(0, toProcess.length);
-      toProcess.sort((a, b) => a.targetTime - b.targetTime); // sort by targetTime
       toProcess.forEach(({t}) => {
-        // console.log("toProcess - targetTime", targetTime, "t", t)
         this._process(t);
       });
       this._maybeScheduleProcess();
