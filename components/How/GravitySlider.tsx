@@ -1,6 +1,6 @@
+import {useEffect, useState} from 'react';
 import {Range, getTrackBackground} from 'react-range';
 import style from './Slider.module.css';
-import {useEffect, useState} from 'react';
 
 const STEP = 0.1;
 const MIN = -10;
@@ -9,32 +9,38 @@ const DRIFT_RATE = 1; // adjust this to change the rate of drift
 const INTERVAL_MS = 8;
 
 const GravitySlider = ({increment}: {increment: (delta: number) => void}) => {
-  const [values, setValues] = useState([0]);
+  const [value, setValue] = useState(0);
   const [drifting, setDrifting] = useState(false);
 
   useEffect(() => {
     const intervalCallback = () => {
-      if (drifting && values[0] !== 0) {
-        const newValue =
-          values[0] > 0 ? values[0] - DRIFT_RATE : values[0] + DRIFT_RATE;
-        //zero clamp the newValue while its drifting
-        setValues([
+      if (drifting && value !== 0) {
+        const newValue = value > 0 ? value - DRIFT_RATE : value + DRIFT_RATE;
+        // zero clamp the newValue while its drifting
+        setValue(
           (newValue > 0 && newValue < DRIFT_RATE) ||
-          (newValue < 0 && newValue > -DRIFT_RATE)
+            (newValue < 0 && newValue > -DRIFT_RATE)
             ? 0
             : newValue,
-        ]);
+        );
         setDrifting(newValue !== 0);
-      } else if (values[0] !== 0) {
-        increment(values[0]);
+        if (value === 0) {
+          clearInterval(intervalId);
+        }
+      } else if (value !== 0) {
+        increment(value);
       }
     };
 
+    if (value === 0) {
+      return;
+    }
+
     const intervalId = setInterval(intervalCallback, INTERVAL_MS);
     return () => clearInterval(intervalId);
-  }, [drifting, values, increment]);
+  }, [drifting, value, increment]);
 
-  const speed = `${values[0].toFixed(1)}°`;
+  const speed = `${value.toFixed(1)}°`;
 
   return (
     <div
@@ -49,12 +55,12 @@ const GravitySlider = ({increment}: {increment: (delta: number) => void}) => {
         <span className={style.speedValueNumber}>{speed}</span>
       </output>
       <Range
-        values={values}
+        values={[value]}
         step={STEP}
         min={MIN}
         max={MAX}
         onChange={values => {
-          setValues(values);
+          setValue(values[0]);
           setDrifting(false);
         }}
         onFinalChange={() => {
@@ -84,7 +90,7 @@ const GravitySlider = ({increment}: {increment: (delta: number) => void}) => {
                 width: '100%',
                 borderRadius: '2px',
                 background: getTrackBackground({
-                  values,
+                  values: [value],
                   colors: ['#0A7AFF', '#D1D1D1'],
                   min: MIN,
                   max: MAX,
