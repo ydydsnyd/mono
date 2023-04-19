@@ -7,39 +7,40 @@ import {
 } from '../shared/constants';
 import {Actor, ActorID, Cursor, Position, TouchState} from '../shared/types';
 import {colorToString, now} from '../shared/util';
-
-type PageCursor = {isDown: boolean; position: Position; isMobile: boolean};
+import {
+  coordinateToPosition,
+  positionToCoordinate,
+  screenSize,
+} from './coordinates';
 
 export const cursorRenderer = (
-  actorId: string,
+  actorID: string,
   getActors: () => Record<ActorID, Actor>,
   getCursors: () => Record<ActorID, Cursor>,
   getDemoContainer: () => HTMLDivElement,
-  isOverLetter: (cursor: Position) => boolean,
+  isOverObject: (cursor: Position) => boolean,
   onUpdateCursor: (localCursor: Cursor) => void,
   debug?: boolean,
-): [
-  () => PageCursor,
-  () => Promise<void>,
-  (cursorPosition: Position) => Position,
-] => {
+): [() => Promise<void>, (cursorPosition: Position) => Position] => {
   // Set up local state
   const cursorDivs: Map<ActorID, HTMLDivElement> = new Map();
   const getCursorDiv = async (cursor: Cursor, createIfMissing: boolean) => {
     // Make sure we have a div
-    let cursorDiv = cursorDivs.get(cursor.actorId);
+    let cursorDiv = cursorDivs.get(cursor.actorID);
     if (!cursorDiv && createIfMissing) {
       const actors = getActors();
-      const actor = actors[cursor.actorId];
+      const actor = actors[cursor.actorID];
       if (!actor) {
         console.error(
           'Attempted to create cursor for actor that does not exist.',
         );
         return;
       }
-      cursorDiv = createCursor(actor, actor.id === actorId);
-      document.body.appendChild(cursorDiv);
-      cursorDivs.set(actor.id, cursorDiv);
+      if (actor.room) {
+        cursorDiv = createCursor(actor, actor.id === actorID);
+        document.body.appendChild(cursorDiv);
+        cursorDivs.set(actor.id, cursorDiv);
+      }
     }
     return cursorDiv;
   };
@@ -47,7 +48,7 @@ export const cursorRenderer = (
   let touchStart = -1;
   const showingTouchCursor = (cursor: Cursor) => {
     return (
-      cursor.actorId === localCursor.actorId &&
+      cursor.actorID === localCursor.actorID &&
       localCursor.isDown &&
       localCursor.touchState === TouchState.Touching
     );
@@ -57,21 +58,16 @@ export const cursorRenderer = (
       cursorNeedsUpdate = false;
       onUpdateCursor(localCursor);
     }
-    const demoContainer = getDemoContainer();
-    const demoBB = demoContainer.getBoundingClientRect();
-    const demoTop = demoContainer.offsetTop;
-    const demoLeft = demoContainer.offsetLeft;
     const actors = getActors();
     const cursors = getCursors();
     // Move cursors
     Object.values(cursors).forEach(async cursor => {
-      if (!actors[cursor.actorId]) {
+      if (!actors[cursor.actorID]) {
         return;
       }
-      const {x, y} = cursor;
       const cursorDiv = await getCursorDiv(cursor, cursor.onPage);
       if (cursorDiv) {
-        const isLocal = cursor.actorId === localCursor.actorId;
+        const isLocal = cursor.actorID === localCursor.actorID;
         const showFinger = now() - touchStart > MIN_TOUCH_TIME_FOR_INDICATOR;
         // Show a special, different cursor locally
         cursorDiv.classList.remove('mobile');
@@ -81,8 +77,11 @@ export const cursorRenderer = (
         } else {
           cursorDiv.classList.add('desktop');
         }
-        const cursorX = x * demoBB.width + demoLeft;
-        const cursorY = y * demoBB.height + demoTop;
+        const {x, y} = coordinateToPosition(
+          cursor,
+          getDemoContainer(),
+          screenSize(),
+        );
         cursorDiv.classList.remove('active', 'on-page');
         if (cursor.onPage) {
           if (isLocal) {
@@ -92,9 +91,9 @@ export const cursorRenderer = (
             cursorDiv.classList.add('active');
           }
         }
-        cursorDiv.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0)`;
+        cursorDiv.style.transform = `translate3d(${x}px, ${y}px, 0)`;
         const color = colorToString(
-          COLOR_PALATE[actors[cursor.actorId].colorIndex],
+          COLOR_PALATE[actors[cursor.actorID].colorIndex],
         );
         const fingerDiv = cursorDiv.querySelector('.finger') as HTMLDivElement;
         const locationDiv = cursorDiv.querySelector(
@@ -136,12 +135,12 @@ export const cursorRenderer = (
       }
     });
     // Remove cursor divs that represent actors that are no longer here
-    for (const actorId of cursorDivs.keys()) {
-      if (!cursors[actorId]) {
-        for (const existing of document.getElementsByClassName(actorId)) {
+    for (const actorID of cursorDivs.keys()) {
+      if (!cursors[actorID]) {
+        for (const existing of document.getElementsByClassName(actorID)) {
           existing.parentElement?.removeChild(existing);
         }
-        cursorDivs.delete(actorId);
+        cursorDivs.delete(actorID);
       }
     }
     // At a lower frequency, update actor information (it only changes once per
@@ -169,14 +168,15 @@ export const cursorRenderer = (
   };
   // Add a cursor tracker for this user
   const cursors = getCursors();
-  let localCursor: Cursor = cursors[actorId] || {
+  let localCursor: Cursor = cursors[actorID] || {
     x: 0,
     y: 0,
     ts: now(),
-    actorId,
+    actorID,
     onPage: false,
     isDown: false,
     touchState: TouchState.Unknown,
+    activePiece: -1,
   };
   let lastPosition = {x: 0, y: 0};
   // Tracking touches is tricky. Browsers fire a touchstart, touchend, mousedown,
@@ -189,32 +189,37 @@ export const cursorRenderer = (
   const mouseElement = document.body;
   const isInIntro = getHasParent(document.getElementById('intro')!);
   let cursorNeedsUpdate = false;
-  const updateCursorPosition = (position?: Position) => {
-    const demoBB = getDemoContainer().getBoundingClientRect();
-    if (position) {
-      lastPosition = {
-        x: position.x,
-        y: position.y,
-      };
-    }
+  const updateCursorPosition = (position: Position) => {
+    lastPosition = {
+      x: position.x,
+      y: position.y,
+    };
     localCursor.onPage =
       localCursor.touchState === TouchState.Touching
         ? showingTouchCursor(localCursor) && !touchScrolling
         : true;
-    localCursor.x = (lastPosition.x - demoBB.x) / demoBB.width;
-    localCursor.y = (lastPosition.y - demoBB.y) / demoBB.height;
+    const coordinate = positionToCoordinate(
+      lastPosition,
+      getDemoContainer(),
+      screenSize(),
+    );
+    localCursor.x = coordinate.x;
+    localCursor.y = coordinate.y;
     localCursor.ts = now();
     cursorNeedsUpdate = true;
   };
 
   // Update the cursor when the window is scrolled
   let touchScrolling = false;
+  let lastKnownScrollPosition = window.scrollY;
   window.addEventListener('scroll', () => {
     if (localCursor.touchState === TouchState.Touching) {
       touchScrolling = true;
       return;
     }
-    updateCursorPosition();
+    const scrollDelta = lastKnownScrollPosition - window.scrollY;
+    updateCursorPosition({x: lastPosition.x, y: lastPosition.y - scrollDelta});
+    lastKnownScrollPosition = window.scrollY;
     // Since this fires more than once per frame, we need to redraw cursors too so
     // that we don't jitter
     redrawCursors();
@@ -231,27 +236,26 @@ export const cursorRenderer = (
 
   // Touch Events
   let lastTouchEvent: TouchEvent | undefined;
-  let touchedLetter = false;
+  let touchedObject = false;
   mouseElement.addEventListener(
     'touchstart',
     (e: TouchEvent) => {
       lastTouchEvent = e;
       touchStart = now();
-      const demoBB = getDemoContainer().getBoundingClientRect();
       // If we're consuming the event, prevent scrolling.
       if (
-        isOverLetter({
-          x: lastPosition.x - demoBB.x,
-          y: lastPosition.y - demoBB.y,
+        isOverObject({
+          x: lastPosition.x,
+          y: lastPosition.y,
         })
       ) {
         e.preventDefault();
-        touchedLetter = true;
+        touchedObject = true;
         touchScrolling = false;
       }
       localCursor.isDown = true;
       localCursor.touchState = TouchState.Touching;
-      updateCursorPosition({x: e.touches[0].clientX, y: e.touches[0].clientY});
+      updateCursorPosition({x: e.touches[0].pageX, y: e.touches[0].pageY});
       cursorNeedsUpdate = true;
     },
     {passive: false},
@@ -260,7 +264,7 @@ export const cursorRenderer = (
     'touchend',
     () => {
       touchScrolling = false;
-      touchedLetter = false;
+      touchedObject = false;
       // Only end if we started with a touch
       if (localCursor.touchState === TouchState.Touching) {
         // Prevent the mousedown-mouseup events that happens when tapping
@@ -277,21 +281,20 @@ export const cursorRenderer = (
     (e: TouchEvent) => {
       lastTouchEvent = e;
       updateCursorPosition({
-        x: e.touches[0].clientX,
-        y: e.touches[0].clientY,
+        x: e.touches[0].pageX,
+        y: e.touches[0].pageY,
       });
-      const demoBB = getDemoContainer().getBoundingClientRect();
       if (
-        isOverLetter({
-          x: lastPosition.x - demoBB.x,
-          y: lastPosition.y - demoBB.y,
+        isOverObject({
+          x: lastPosition.x,
+          y: lastPosition.y,
         })
       ) {
-        touchedLetter = true;
+        touchedObject = true;
         touchScrolling = false;
       }
       if (e.cancelable) {
-        if (localCursor.isDown && touchedLetter) {
+        if (localCursor.isDown && touchedObject) {
           e.preventDefault();
         }
       }
@@ -304,7 +307,7 @@ export const cursorRenderer = (
     if (skipNextClick) {
       return;
     }
-    updateCursorPosition({x: e.clientX, y: e.clientY});
+    updateCursorPosition({x: e.pageX, y: e.pageY});
     localCursor.touchState = TouchState.Clicking;
     if (e.button !== 0) {
       // Ignore right-clicks
@@ -317,7 +320,7 @@ export const cursorRenderer = (
     cursorNeedsUpdate = true;
   });
   mouseElement.addEventListener('mousemove', (e: MouseEvent) => {
-    updateCursorPosition({x: e.clientX, y: e.clientY});
+    updateCursorPosition({x: e.pageX, y: e.pageY});
   });
   mouseElement.addEventListener('mouseup', () => {
     if (skipNextClick) {
@@ -346,24 +349,9 @@ export const cursorRenderer = (
   });
 
   return [
-    () => {
-      const demoBB = getDemoContainer().getBoundingClientRect();
-      return {
-        isDown: localCursor.isDown,
-        position: {
-          x: lastPosition.x - demoBB.x,
-          y: lastPosition.y - demoBB.y,
-        },
-        isMobile: localCursor.touchState === TouchState.Touching,
-      };
-    },
     redrawCursors,
     (cursorPos: Position): Position => {
-      const demoBB = getDemoContainer().getBoundingClientRect();
-      return {
-        x: cursorPos.x * demoBB.width,
-        y: cursorPos.y * demoBB.height,
-      };
+      return coordinateToPosition(cursorPos, getDemoContainer(), screenSize());
     },
   ];
 };

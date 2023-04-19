@@ -1,27 +1,51 @@
-import type {WriteTransaction} from '@rocicorp/reflect';
+import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
 import {
   ACTIVITY_TIMEOUT,
   BOT_RANDOM_LOCATIONS,
   BOT_RANDOM_SEED,
   COLOR_PALATE,
+  FIND_LENGTH_RANGE,
   MAX_CLIENT_BROADCASTS,
   MAX_CONCURRENT_BOTS,
+  MIN_BROWSE_FRAMES,
+  MIN_FIND_OR_DRAG_FRAMES,
+  PLACE_PIECE_PROBABILITY,
   ROOM_MAX_ACTORS,
 } from './constants';
-import {Cursor, Env, Actor, RoomRecording} from './types';
-import {string2Uint8Array} from './uint82b64';
 import {
+  Cursor,
+  Env,
+  Actor,
+  Broadcast,
+  RecordingCursor,
+  RecordingType,
+  RecordingInfo,
+  BroadcastQueue,
+  RecordingBroadcast,
+  PieceNumber,
+  Position,
+} from './types';
+import {string2Uint8Array} from './string2Uint';
+import {
+  addRadians,
+  chooseRandomWithSeed,
   cursorToRecordingCursor,
+  getAngle,
+  must,
   nextNumber,
   randomWithSeed,
+  relative,
+  rotatePosition,
   sortableKeyNum,
 } from './util';
+import {PUZZLE_PIECES} from './puzzle-pieces';
 
 export const ROOM_ID_KEY = 'current-room-id';
 export const ROOM_COUNT_KEY = 'current-room-count';
 export const COLOR_INDEX_KEY = 'color-index';
 
 const RECORDING_RANDOM_SEED = 9438;
+const RECORDING_PIECE_SEED = 189;
 
 let env = Env.CLIENT;
 let newRoomSecret: Uint8Array | undefined;
@@ -33,12 +57,15 @@ export const setEnv = (e: Env, secret?: Uint8Array) => {
 };
 
 export const orchestratorMutators = {
-  alive: async (tx: WriteTransaction, timestamp: number) => {
+  alive: async (
+    tx: WriteTransaction,
+    {timestamp, placedPieces}: {timestamp: number; placedPieces: PieceNumber[]},
+  ) => {
     await tx.put(`alive/${tx.clientID}`, timestamp);
     const recordings = (await tx
-      .scan({prefix: 'room-recordings/'})
+      .scan({prefix: 'broadcasts/'})
       .values()
-      .toArray()) as RoomRecording[];
+      .toArray()) as Broadcast[];
     let broadcastingCount = 0;
     for (const recording of recordings) {
       if (recording.broadcasterId === tx.clientID) {
@@ -56,7 +83,13 @@ export const orchestratorMutators = {
       timestamp % BOT_RANDOM_SEED === 0
     ) {
       const actor = (await tx.get(`actor/${tx.clientID}`)) as Actor;
-      await playRandomRecording(tx, actor.room, actor.id, timestamp);
+      await playRandomRecordings(
+        tx,
+        actor.room,
+        actor.id,
+        new Set(placedPieces),
+        timestamp,
+      );
     }
     // We also need to periodically clean up old users - do it randomly here too
     if (timestamp % 4) {
@@ -99,39 +132,93 @@ export const orchestratorMutators = {
     }
     await createActor(tx, {...args, isBot: false});
   },
-  finishRecording: async (
+  finishBroadcast: async (
     tx: WriteTransaction,
     {
+      broadcastId,
       recordingId,
       roomId,
       botId,
       timestamp,
-    }: {recordingId: string; roomId: string; botId: string; timestamp: number},
+      targetPiece,
+      targetCoord,
+    }: {
+      broadcastId: string;
+      recordingId: string;
+      roomId: string;
+      botId: string;
+      timestamp: number;
+      targetPiece: number | null;
+      targetCoord: Position | null;
+    },
   ) => {
-    serverLog(`Delete broadcast room-recordings/${roomId}/${recordingId}.`);
+    const queue = (await tx.get(
+      `broadcast-queues/${roomId}/${botId}`,
+    )) as BroadcastQueue;
+    if (queue) {
+      // If we're playing in a queue, find the next one and play it
+      const finishedIndex = queue.recordings.findIndex(
+        rb => rb.recordingId === recordingId,
+      );
+      if (finishedIndex > -1 && finishedIndex < queue.recordings.length - 1) {
+        const nextRecording: RecordingBroadcast = {
+          ...queue.recordings[finishedIndex + 1],
+        };
+        if (
+          nextRecording.type === RecordingType.PLACE &&
+          queue.recordings[finishedIndex].type === RecordingType.FIND
+        ) {
+          // When we transition to a drag, require that we send the prior piece and a
+          // target coordinate for it, so we know where to go.
+          nextRecording.pieceNum = must(
+            targetPiece,
+            'target piece must be provided when starting a FIND animation',
+          );
+          nextRecording.targetCoord = must(
+            targetCoord,
+            'target coordinate must be provided when starting a FIND animation',
+          );
+        }
+        const bot = (await tx.get(`actor/${queue.botId}`)) as Actor;
+        serverLog(
+          `Finished broadcast broadcasts/${roomId}/${broadcastId}, starting next in queue.`,
+        );
+        await tx.del(`broadcasts/${roomId}/${broadcastId}`);
+        playRecording(
+          tx,
+          bot,
+          queue.roomId,
+          nextRecording,
+          queue.broadcasterId,
+          timestamp,
+        );
+        return;
+      } else if (queue.recordings[finishedIndex].type !== RecordingType.FIND) {
+        console.warn(
+          'DRAG recordings only allowed after FIND recordings. Deleting queue.',
+        );
+        await tx.del(`broadcast-queues/${roomId}/${botId}`);
+      } else if (finishedIndex === queue.recordings.length - 1) {
+        serverLog(
+          `Finished broadcast broadcasts/${roomId}/${broadcastId}. Queue complete, deleting broadcast-queues/${roomId}/${botId}`,
+        );
+        await tx.del(`broadcast-queues/${roomId}/${botId}`);
+      }
+    }
+    serverLog(`Delete broadcast broadcasts/${roomId}/${broadcastId}.`);
     const recording = (await tx.get(
-      `room-recordings/${roomId}/${recordingId}`,
-    )) as RoomRecording;
+      `broadcasts/${roomId}/${broadcastId}`,
+    )) as Broadcast;
     if (recording) {
       await tx.del(`broadcaster/${recording.broadcasterId}/${recordingId}`);
       await tx.del(`controlled-bots/${recording.broadcasterId}/${botId}`);
-      await tx.del(`room-recordings/${roomId}/${recordingId}`);
+      await tx.del(`broadcasts/${roomId}/${broadcastId}`);
       await removeActor(tx, botId, timestamp);
     }
   },
   deleteRecording: async (tx: WriteTransaction, recordingId: string) => {
     // TODO: permissions/secret
-    const recordingKeys = await tx
-      .scan({prefix: `recordings/${recordingId}`})
-      .keys();
-    for await (const k of recordingKeys) {
-      await tx.del(k);
-    }
-    await tx.del(`current-recording-frame/${recordingId}`);
-    let index = ((await tx.get(`recordings-index`)) as string[]) || [];
-    // O(n) but also we've got bigger problems if this gets too big to scan.
-    index = index.filter(r => r !== recordingId);
-    await tx.put(`recordings-index`, index);
+    await deleteRecording(tx, recordingId);
   },
   playRecording: async (
     tx: WriteTransaction,
@@ -139,35 +226,147 @@ export const orchestratorMutators = {
       roomId,
       recordingId,
       timestamp,
-    }: {roomId: string; recordingId: string; timestamp: number},
+      placedPieces: placedPiecesArr,
+      currentPiece,
+      pieceCoordinates,
+    }: {
+      roomId: string;
+      recordingId: string;
+      timestamp: number;
+      placedPieces: PieceNumber[] | null;
+      currentPiece: PieceNumber | null;
+      pieceCoordinates: Record<PieceNumber, Position>;
+    },
   ) => {
     // TODO: permissions/secret
-    await playRecording(tx, roomId, recordingId, tx.clientID, timestamp);
+    const bot = await createBot(tx, tx.clientID, roomId, timestamp);
+    const recordingInfo = (await tx.get(`recording-info/${recordingId}`)) as
+      | RecordingInfo
+      | undefined;
+    if (!recordingInfo) {
+      console.error(
+        'Attempted playback of recording with no info',
+        recordingId,
+      );
+      return;
+    }
+    const recording: RecordingBroadcast = {
+      recordingId,
+      type: recordingInfo.type,
+    };
+    if (recordingInfo.type === RecordingType.FIND) {
+      const placedPieces = new Set(
+        must(
+          placedPiecesArr,
+          'placedPieces is required when starting a FIND recording',
+        ),
+      );
+      // Choose a random piece to find
+      let pieceIdx = must(
+        chooseRandomWithSeed(
+          timestamp,
+          RECORDING_PIECE_SEED,
+          PUZZLE_PIECES,
+          (_, i) => !placedPieces.has(i),
+        ),
+      )[1];
+      recording.pieceNum = pieceIdx;
+      recording.targetCoord = must(
+        pieceCoordinates[pieceIdx],
+        `pieceCoordinates was missing ${pieceIdx} when starting a FIND recording`,
+      );
+    } else if (recordingInfo.type === RecordingType.PLACE) {
+      recording.pieceNum = must(
+        currentPiece,
+        'currentPiece is required when starting a PLACE recording',
+      );
+      const piece = PUZZLE_PIECES[recording.pieceNum];
+      recording.targetCoord = {x: piece.dx, y: piece.dy};
+    }
+    await playRecording(tx, bot, roomId, recording, tx.clientID, timestamp);
   },
   addCursorRecording: async (
     tx: WriteTransaction,
     {
+      priorRecordingId,
       recordingId,
+      allocatedRecordingId,
+      recordingType,
       cursor,
     }: {
+      recordingType: RecordingType;
       recordingId: string;
+      priorRecordingId: string | null;
       cursor: Cursor;
+      allocatedRecordingId: string;
     },
   ) => {
     const recordingNumber = nextNumber(
       (await tx.get(`current-recording-frame/${recordingId}`)) as number,
     );
+    if (priorRecordingId) {
+      await finishRecording(tx, priorRecordingId);
+    }
+    if (!(await tx.has(`recording-info/${recordingId}`))) {
+      // If we start a placing animation, slice off the last N frames into a FIND recording.
+      if (recordingType === RecordingType.PLACE && priorRecordingId) {
+        // To be able to make a FIND animation, our current recording needs to be
+        // long enough to be split into a browse and a find animation.
+        // Otherwise we'll just record the PLACE and no FIND.
+        const {valid, frames} = await getAndValidateRecording(
+          tx,
+          priorRecordingId,
+          MIN_FIND_OR_DRAG_FRAMES + MIN_BROWSE_FRAMES,
+        );
+        if (valid) {
+          const count = randomWithSeed(
+            allocatedRecordingId,
+            1,
+            FIND_LENGTH_RANGE[1],
+            FIND_LENGTH_RANGE[0],
+          );
+          let frameNum = 1;
+          for await (const [key, frame] of frames) {
+            if (frameNum > count) {
+              break;
+            }
+            await tx.put(
+              `recordings/${allocatedRecordingId}/${sortableKeyNum(frameNum)}`,
+              frame,
+            );
+            await tx.del(key);
+          }
+          // Do any post-recording cleanup necessary on the newly sliced recording
+          await finishRecording(tx, allocatedRecordingId);
+        }
+      }
+      // If we're just starting, record the start location
+      console.log(`Start recording with cursor:`, cursor);
+      await tx.put(`recording-info/${recordingId}`, {
+        recordingType,
+        startCoord: {x: cursor.x, y: cursor.y},
+      });
+    }
     await tx.put(
       `recordings/${recordingId}/${sortableKeyNum(recordingNumber)}`,
       cursorToRecordingCursor(cursor),
     );
     await tx.put(`current-recording-frame/${recordingId}`, recordingNumber);
-    let index = [...(((await tx.get(`recordings-index`)) as string[]) || [])];
+    let index = [
+      ...(((await tx.get(`recording-index/${recordingType}`)) as string[]) ||
+        []),
+    ];
     // O(n) but also we've got bigger problems if this gets too big to scan.
     if (!index.includes(recordingId)) {
       index.push(recordingId);
-      await tx.put(`recordings-index`, index);
+      await tx.put(`recording-index/${recordingType}`, index);
     }
+  },
+  finishRecording: async (
+    tx: WriteTransaction,
+    {recordingId}: {recordingId: string},
+  ) => {
+    await finishRecording(tx, recordingId);
   },
 };
 
@@ -194,8 +393,8 @@ const cleanupOldUsers = async (tx: WriteTransaction, timestamp: number) => {
   if (actorsToRemove.length > 0) {
     console.log('Removing actors due to inactivity:', actorsToRemove);
   }
-  for (const actorId of actorsToRemove) {
-    await removeActor(tx, actorId, timestamp, actorsToRemove);
+  for (const actorID of actorsToRemove) {
+    await removeActor(tx, actorID, timestamp, actorsToRemove);
   }
 };
 
@@ -203,7 +402,7 @@ const createActor = async (
   tx: WriteTransaction,
   {
     fallbackRoomId,
-    actorId,
+    actorID,
     isBot,
     lastRoom,
     lastColorIndex,
@@ -213,7 +412,7 @@ const createActor = async (
     timestamp,
   }: {
     fallbackRoomId: string | null;
-    actorId?: string;
+    actorID?: string;
     isBot: boolean;
     lastRoom: string | null;
     lastColorIndex?: number | null;
@@ -223,9 +422,9 @@ const createActor = async (
     timestamp: number;
   },
 ) => {
-  actorId = actorId || tx.clientID;
-  serverLog(`Orchestrator creating ${actorId}`);
-  const key = `actor/${actorId}`;
+  actorID = actorID || tx.clientID;
+  serverLog(`Orchestrator creating ${actorID}`);
+  const key = `actor/${actorID}`;
   const hasActor = await tx.has(key);
   // Find the room we're currently filling
   const roomCount = (await tx.get(ROOM_COUNT_KEY)) as number | undefined;
@@ -280,7 +479,7 @@ const createActor = async (
       await tx.put(ROOM_COUNT_KEY, roomActorNum);
     }
     // Create an index entry so we can look up users by room
-    await tx.put(`actors/${selectedRoomId}/${actorId}`, actorId);
+    await tx.put(`actors/${selectedRoomId}/${actorID}`, actorID);
     let colorIndex = lastColorIndex;
     if (colorIndex === null || colorIndex === undefined) {
       // NOTE: we just cycle through colors, so if COLOR_PALATE.length <
@@ -292,9 +491,9 @@ const createActor = async (
       colorIndex = nextColorNum % COLOR_PALATE.length;
       await tx.put(COLOR_INDEX_KEY, nextColorNum);
     }
-    await tx.put(`alive/${actorId}`, timestamp);
+    await tx.put(`alive/${actorID}`, timestamp);
     actor = {
-      id: actorId,
+      id: actorID,
       colorIndex,
       room: selectedRoomId,
       isBot,
@@ -304,7 +503,7 @@ const createActor = async (
     await tx.put(key, actor);
   } else {
     // already exists
-    serverLog(`${actorId} already exists.`);
+    serverLog(`${actorID} already exists.`);
     selectedRoomId = (await tx.get(ROOM_ID_KEY)) as string;
     roomActorNum = (await tx.get(ROOM_COUNT_KEY)) as number;
     actor = (await tx.get(key)) as Actor;
@@ -324,33 +523,33 @@ const createActor = async (
 
 const removeActor = async (
   tx: WriteTransaction,
-  actorId: string,
+  actorID: string,
   timestamp: number,
   alsoRemoving: string[] = [],
 ) => {
-  const key = `actor/${actorId}`;
-  console.log(`Remove orchestrator actor ${actorId}`);
+  const key = `actor/${actorID}`;
+  console.log(`Remove orchestrator actor ${actorID}`);
   // Remove any recordings this actor was broadcasting
   const recordings = (await tx
-    .scan({prefix: `broadcaster/${actorId}`})
+    .scan({prefix: `broadcaster/${actorID}`})
     .entries()
     .toArray()) as [string, string][];
   for await (const [key, recordingSuffix] of recordings) {
-    serverLog(`Delete broadcast room-recordings/${recordingSuffix}.`);
-    await tx.del(`room-recordings/${recordingSuffix}`);
+    serverLog(`Delete broadcast broadcasts/${recordingSuffix}.`);
+    await tx.del(`broadcasts/${recordingSuffix}`);
     await tx.del(key);
   }
   // Remove any bots we control
   const bots = (await tx
-    .scan({prefix: `controlled-bots/${actorId}`})
+    .scan({prefix: `controlled-bots/${actorID}`})
     .entries()
     .toArray()) as [string, string][];
   for await (const [key, botId] of bots) {
     serverLog(`Delete bot ${botId}.`);
-    await removeActor(tx, botId, timestamp, [actorId, ...alsoRemoving]);
+    await removeActor(tx, botId, timestamp, [actorID, ...alsoRemoving]);
     await tx.del(key);
   }
-  await tx.del(`alive/${actorId}`);
+  await tx.del(`alive/${actorID}`);
 
   const actor = (await tx.get(key)) as Actor;
   // Dunno who that is
@@ -359,7 +558,7 @@ const removeActor = async (
   }
   // Delete the actor and the index entry for them
   await tx.del(key);
-  await tx.del(`actors/${actor.room}/${actorId}`);
+  await tx.del(`actors/${actor.room}/${actorID}`);
 
   const currentRoom = (await tx.get(ROOM_ID_KEY)) as string;
   if (!currentRoom || actor.room !== currentRoom) {
@@ -377,42 +576,221 @@ const removeActor = async (
   await tx.put(ROOM_COUNT_KEY, roomCount - 1);
 };
 
-const playRandomRecording = async (
+const playRandomRecordings = async (
   tx: WriteTransaction,
   roomId: string,
   broadcasterId: string,
+  placedPieces: Set<number>,
   timestamp: number,
 ) => {
-  const recordings = (await tx.get(`recordings-index`)) as string[];
-  if (!recordings || !recordings.length) {
+  const browseRecordings = (await tx.get(
+    `recording-index/${RecordingType.BROWSE}`,
+  )) as string[];
+  if (!browseRecordings || !browseRecordings.length) {
     console.log('Asked to start a recording, but there were none.');
     return;
   }
-  const recordingIdx = Math.floor(
-    randomWithSeed(timestamp, RECORDING_RANDOM_SEED, recordings.length),
+  const recordings: RecordingBroadcast[] = [];
+  recordings.push({
+    recordingId: must(
+      chooseRandomWithSeed(timestamp, RECORDING_RANDOM_SEED, browseRecordings),
+    )[0],
+    type: RecordingType.BROWSE,
+  });
+  if (randomWithSeed(timestamp, BOT_RANDOM_SEED) <= PLACE_PIECE_PROBABILITY) {
+    const dragRecordings = (await tx.get(
+      `recording-index/${RecordingType.PLACE}`,
+    )) as string[];
+    // const rotateRecordings = (await tx.get(
+    //   `recording-index/${RecordingType.ROTATE}`,
+    // )) as string[];
+    if (
+      dragRecordings &&
+      dragRecordings.length
+      /* && rotateRecordings && rotateRecordings.length */
+    ) {
+      // Choose a random piece to place.
+      const [_, pieceIdx] = must(
+        chooseRandomWithSeed(
+          timestamp,
+          RECORDING_PIECE_SEED,
+          PUZZLE_PIECES,
+          (_, i) => !placedPieces.has(i),
+        ),
+      );
+      const piece = PUZZLE_PIECES[pieceIdx];
+      // Find find and drag recordings
+      recordings.push({
+        recordingId: must(
+          chooseRandomWithSeed(
+            timestamp,
+            RECORDING_RANDOM_SEED,
+            dragRecordings,
+          ),
+        )[0],
+        type: RecordingType.PLACE,
+        pieceNum: pieceIdx,
+        targetCoord: {x: piece.dx, y: piece.dy},
+      });
+      recordings.push({
+        recordingId: must(
+          chooseRandomWithSeed(
+            timestamp,
+            RECORDING_RANDOM_SEED,
+            dragRecordings,
+          ),
+        )[0],
+        type: RecordingType.PLACE,
+        pieceNum: pieceIdx,
+        targetCoord: {x: piece.dx, y: piece.dy},
+      });
+    } else {
+      console.log(
+        'Asked to place a piece, but there were no drag/rotate recordings.',
+      );
+    }
+  }
+  // Create a bot to play these recordings with
+  const bot = await createBot(tx, broadcasterId, roomId, timestamp);
+  // Create a queue of recordings for this bot
+  const broadcastQueue: BroadcastQueue = {
+    roomId,
+    recordings,
+    broadcasterId,
+    botId: bot.id,
+    colorIdx: bot.colorIndex,
+  };
+  await tx.put(`broadcast-queues/${roomId}/${bot.id}`, broadcastQueue);
+  return await playRecording(
+    tx,
+    bot,
+    roomId,
+    recordings[recordings.length - 1],
+    broadcasterId,
+    timestamp,
   );
-  const recordingId = recordings[recordingIdx] + `@${timestamp}`;
-  return await playRecording(tx, roomId, recordingId, broadcasterId, timestamp);
+};
+
+const getAndValidateRecording = async (
+  tx: ReadTransaction,
+  recordingId: string,
+  minFrames?: number,
+): Promise<
+  | {
+      valid: false;
+      recordingInfo: RecordingInfo | undefined;
+      frames: [string, RecordingCursor][];
+    }
+  | {
+      valid: true;
+      recordingInfo: RecordingInfo;
+      frames: [string, RecordingCursor][];
+    }
+> => {
+  const recordingInfo = (await tx.get(`recording-info/${recordingId}`)) as
+    | RecordingInfo
+    | undefined;
+  if (!recordingInfo) {
+    return {
+      valid: false,
+      recordingInfo,
+      frames: [],
+    };
+  }
+  const frames = (await tx
+    .scan({prefix: `recordings/${recordingId}/`})
+    .entries()
+    .toArray()) as [string, RecordingCursor][];
+  // TODO: also remove rotations that don't go at least π*2 rad
+  let tooShort =
+    ((recordingInfo.type === RecordingType.PLACE ||
+      recordingInfo.type === RecordingType.FIND) &&
+      frames.length < MIN_FIND_OR_DRAG_FRAMES) ||
+    (recordingInfo.type === RecordingType.BROWSE &&
+      frames.length < MIN_BROWSE_FRAMES);
+  if (minFrames) {
+    tooShort = frames.length < minFrames;
+  }
+  return {
+    valid: !tooShort,
+    recordingInfo,
+    frames,
+  };
+};
+
+const deleteRecording = async (tx: WriteTransaction, recordingId: string) => {
+  const recordingKeys = await tx
+    .scan({prefix: `recordings/${recordingId}`})
+    .keys();
+  for await (const k of recordingKeys) {
+    await tx.del(k);
+  }
+  await tx.del(`current-recording-frame/${recordingId}`);
+  const info = (await tx.get(`recording-info/${recordingId}`)) as
+    | RecordingInfo
+    | undefined;
+  await tx.del(`recording-info/${recordingId}`);
+  if (info) {
+    let index =
+      ((await tx.get(`recording-index/${info.type}`)) as string[]) || [];
+    // O(n) but also we've got bigger problems if this gets too big to scan.
+    index = index.filter(r => r !== recordingId);
+    await tx.put(`recording-index`, index);
+  }
+};
+
+const finishRecording = async (tx: WriteTransaction, recordingId: string) => {
+  const {frames, recordingInfo, valid} = await getAndValidateRecording(
+    tx,
+    recordingId,
+  );
+  await tx.del(`current-recording-frame/${recordingId}`);
+  if (!valid) {
+    console.log('invalid recording, deleting.');
+    await deleteRecording(tx, recordingId);
+    return;
+  }
+  const lastFrame = frames[frames.length - 1][1];
+  const endCoord = {x: lastFrame.x, y: lastFrame.y};
+  if (recordingInfo.type === RecordingType.PLACE) {
+    const startCoord = must(
+      recordingInfo.startCoord,
+      'recording start coordinate',
+    );
+    // When we record drags, we want to normalize their angles to 0 degrees, so we
+    // can just rotate it directly to the final angle.
+    const angle = getAngle(startCoord, endCoord);
+    // Rotate all the coordinates so that the "angle" of this movement becomes 0
+    for await (const [key, frame] of frames) {
+      const newPosition = relative(
+        rotatePosition(frame, endCoord, addRadians(0, -angle)),
+        endCoord,
+      );
+      await tx.put(key, {...frame, ...newPosition});
+    }
+  } else if (recordingInfo.type === RecordingType.ROTATE) {
+    // TODO: something similar for rotations
+  }
+  await tx.put(`recording-info/${recordingId}`, {
+    ...recordingInfo,
+    endCoord,
+  });
 };
 
 const RANDOM_LOCATION_SEED = 239;
-const playRecording = async (
+const createBot = async (
   tx: WriteTransaction,
-  roomId: string,
-  recordingId: string,
   broadcasterId: string,
+  roomId: string,
   timestamp: number,
 ) => {
-  if (!recordingId) {
-    throw new Error('hi');
-  }
   // 8 bits of entropy is enough.
   const botId = broadcasterId.slice(0, 8) + `-${timestamp}-bot`;
   const bot = await createActor(tx, {
     fallbackRoomId: null,
     // Always make the bot in the same room as the controller
     lastRoom: roomId,
-    actorId: botId,
+    actorID: botId,
     isBot: true,
     controller: broadcasterId,
     location:
@@ -429,19 +807,33 @@ const playRecording = async (
   });
   serverLog(`create bot ${botId}`, bot, bot.colorIndex);
   await tx.put(`controlled-bots/${broadcasterId}/${botId}`, botId);
-  const recording: RoomRecording = {
+  return bot;
+};
+
+const playRecording = async (
+  tx: WriteTransaction,
+  bot: Actor,
+  roomId: string,
+  recording: RecordingBroadcast,
+  broadcasterId: string,
+  timestamp: number,
+) => {
+  const recordingId = recording.recordingId;
+  const broadcastId = recordingId + `@${timestamp}`;
+  const broadcast: Broadcast = {
+    broadcastId,
+    ...recording,
     roomId,
-    broadcasterId: broadcasterId,
-    botId,
-    recordingId,
+    broadcasterId,
+    botId: bot.id,
     colorIdx: bot.colorIndex,
   };
-  await tx.put(`room-recordings/${roomId}/${recordingId}`, recording);
+  await tx.put(`broadcasts/${roomId}/${broadcastId}`, broadcast);
   await tx.put(
     `broadcaster/${broadcasterId}/${recordingId}`,
-    `${roomId}/${recordingId}`,
+    `${roomId}/${broadcastId}`,
   );
-  return recording;
+  return broadcast;
 };
 
 const isResetRoomSecret = async (secret: string) => {

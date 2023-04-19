@@ -5,13 +5,11 @@ import {
   createWorkerDatadogLogSink,
   ReflectServerBaseEnv,
 } from '@rocicorp/reflect-server';
-import {mutators, setEnv} from '../shared/mutators';
+import {mutators} from '../shared/mutators';
 import {
   orchestratorMutators,
   setEnv as setOrchestratorEnv,
 } from '../shared/orchestrator-mutators';
-import renderModule from '../../vendor/renderer/renderer_bg.wasm';
-import initRenderer from '../../vendor/renderer';
 import {Env} from '../shared/types';
 
 type ReflectNetServerEnv = {
@@ -20,10 +18,6 @@ type ReflectNetServerEnv = {
   DATADOG_METRICS_API_KEY?: string;
   DATADOG_LOGS_API_KEY?: string;
 } & ReflectServerBaseEnv;
-
-setEnv(Env.SERVER, async () => {
-  await initRenderer(renderModule);
-});
 
 const CLEAN_ROOM_KEY = 'a-clean-room-key-that-is-unlikely-to-collide';
 

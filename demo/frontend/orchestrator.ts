@@ -5,11 +5,15 @@ import {
   USER_ID,
 } from '../shared/constants';
 import {WORKER_HOST} from '../shared/urls';
-import type {
+import {
   Cursor,
   Actor,
   RecordingCursor,
-  RoomRecording,
+  Broadcast,
+  RecordingType,
+  PieceNumber,
+  Position,
+  RecordingID,
 } from '../shared/types';
 import {
   COLOR_INDEX_KEY,
@@ -23,34 +27,12 @@ import {getData, isAddDiff} from './data-util';
 import {loggingOptions} from './logging-options';
 
 export const initRoom = async (
-  onPlayRecording: (recording: RoomRecording) => void,
-  onActorsChanged: (actorIds: Actor[]) => void,
+  onPlayRecording: (recording: Broadcast, frames: RecordingCursor[]) => void,
+  onActorsChanged: (actorIDs: Actor[]) => void,
   onUpdateLocalActor: (actor: Actor) => void,
   onOnlineChange: (online: boolean) => void,
-): Promise<{
-  actor: Actor;
-  recordCursor: (recordingId: string, cursor: Cursor) => Promise<void>;
-  deleteRecording: (recordingId: string) => Promise<void>;
-  playRecording: (recordingId: string, roomId: string) => Promise<void>;
-  updateActorLocation: (location: string) => Promise<void>;
-  finishRecording: (
-    recordingId: string,
-    roomId: string,
-    botId: string,
-  ) => Promise<void>;
-  getRecordingFrame: (
-    id: string,
-    botId: string,
-    frame: number,
-  ) => Promise<Cursor | undefined>;
-  getDebug: () => Promise<{
-    activeRecordings: RoomRecording[];
-    recordings: {id: string; frames: number}[];
-    currentRoom: string;
-    currentRoomCount: number;
-    currentColorIdx: number;
-  }>;
-}> => {
+  getPlacedPieces: () => Promise<PieceNumber[]>,
+) => {
   // Set up our connection to reflect
   console.log(`Orchestrator connecting to worker at ${WORKER_HOST}`);
   let actor: Actor | undefined;
@@ -81,6 +63,15 @@ export const initRoom = async (
     ...loggingOptions,
   });
 
+  const recordingFrames = async (recordingId: RecordingID) => {
+    return await orchestratorClient.query(
+      async tx =>
+        (await tx
+          .scan({prefix: `recordings/${recordingId}/`})
+          .toArray()) as RecordingCursor[],
+    );
+  };
+
   const mutations = orchestratorClient.mutate;
 
   // Create our actor, which also will assign us a room. We have to wait for this
@@ -101,11 +92,14 @@ export const initRoom = async (
   orchestratorClient.experimentalWatch(
     async diffs => {
       for (const diff of diffs.values()) {
-        if (diff.key.startsWith(`room-recordings/${actor!.room}`)) {
+        if (diff.key.startsWith(`broadcasts/${actor!.room}`)) {
           if (isAddDiff(diff)) {
-            const recording = getData<RoomRecording>(diff);
+            const recording = getData<Broadcast>(diff);
             if (recording.broadcasterId === actor!.id) {
-              onPlayRecording(recording);
+              onPlayRecording(
+                recording,
+                await recordingFrames(recording.recordingId),
+              );
             }
           }
         } else if (diff.key.startsWith('actor/')) {
@@ -121,44 +115,71 @@ export const initRoom = async (
   );
   // Ping the orchestrator periodically. If we don't ping for 5 minutes, it'll
   // remove our user.
-  setInterval(() => {
-    orchestratorClient.mutate.alive(now());
+  setInterval(async () => {
+    orchestratorClient.mutate.alive({
+      timestamp: now(),
+      placedPieces: await getPlacedPieces(),
+    });
   }, ACTIVITY_PING_FREQUENCY);
 
   return {
     actor,
-    recordCursor: async (recordingId: string, cursor: Cursor) => {
+    recordCursor: async (
+      recordingId: string,
+      cursor: Cursor,
+      recordingType: RecordingType,
+      priorRecordingId?: string,
+    ) => {
       await orchestratorClient.mutate.addCursorRecording({
         recordingId,
-        cursor,
+        recordingType,
+        cursor: {...cursor},
+        allocatedRecordingId: nanoid(),
+        priorRecordingId: priorRecordingId || null,
       });
     },
-    finishRecording: async (
+    finishBroadcast: async (
+      broadcastId: string,
       recordingId: string,
       roomId: string,
       botId: string,
+      currentTargetPiece?: PieceNumber,
+      targetPieceCoord?: Position,
     ) => {
-      await orchestratorClient.mutate.finishRecording({
+      await orchestratorClient.mutate.finishBroadcast({
+        broadcastId,
         recordingId,
         roomId,
         botId,
         timestamp: now(),
+        targetPiece: currentTargetPiece || null,
+        targetCoord: targetPieceCoord || null,
       });
+    },
+    finishRecording: async (recordingId: string) => {
+      await orchestratorClient.mutate.finishRecording({recordingId});
     },
     updateActorLocation: orchestratorClient.mutate.updateActorLocation,
     deleteRecording: orchestratorClient.mutate.deleteRecording,
-    playRecording: async (recordingId: string, roomId: string) => {
+    playRecording: async (
+      recordingId: string,
+      roomId: string,
+      pieceCoordinates: Record<PieceNumber, Position>,
+      currentPiece?: number,
+    ) => {
       orchestratorClient.mutate.playRecording({
         roomId,
         recordingId,
         timestamp: now(),
+        placedPieces: await getPlacedPieces(),
+        currentPiece: currentPiece || null,
+        pieceCoordinates,
       });
     },
     getRecordingFrame: async (id: string, botId: string, frameNum: number) => {
-      const idParts = id.split('@');
       const frame = (await orchestratorClient.query(
         async tx =>
-          await tx.get(`recordings/${idParts[0]}/${sortableKeyNum(frameNum)}`),
+          await tx.get(`recordings/${id}/${sortableKeyNum(frameNum)}`),
       )) as RecordingCursor | undefined;
       if (!frame) {
         return undefined;
@@ -167,23 +188,31 @@ export const initRoom = async (
     },
     getDebug: async () => {
       return await orchestratorClient.query(async tx => {
-        const recordings = (
-          ((await tx.get('recordings-index')) as string[]) || []
-        ).map(id => {
-          return {
-            id,
-            frames: 0,
-          };
-        });
-        for await (const r of recordings) {
-          r.frames = (await tx.get(
-            `current-recording-frame/${r.id}`,
-          )) as number;
-        }
+        const getRecordings = async (type: RecordingType) => {
+          const recordings = (
+            ((await tx.get(`recording-index/${type}`)) as string[]) || []
+          ).map(id => {
+            return {
+              id,
+              frames: 0,
+              type,
+            };
+          });
+          for await (const r of recordings) {
+            r.frames = (await recordingFrames(r.id)).length;
+          }
+          return recordings;
+        };
+        const recordings = [
+          ...(await getRecordings(RecordingType.BROWSE)),
+          ...(await getRecordings(RecordingType.FIND)),
+          ...(await getRecordings(RecordingType.PLACE)),
+          ...(await getRecordings(RecordingType.ROTATE)),
+        ];
         const activeRecordings = (await tx
-          .scan({prefix: `room-recordings/${actor!.room}`})
+          .scan({prefix: `broadcasts/${actor!.room}`})
           .values()
-          .toArray()) as RoomRecording[];
+          .toArray()) as Broadcast[];
         const currentRoom = (await tx.get(ROOM_ID_KEY)) as string;
         const currentRoomCount = (await tx.get(ROOM_COUNT_KEY)) as number;
         const currentColorIdx = (await tx.get(COLOR_INDEX_KEY)) as number;

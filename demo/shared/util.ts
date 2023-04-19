@@ -1,33 +1,34 @@
-import {LETTERS} from '../shared/letters';
 import {
+  BoundingBox,
   Color,
   Cursor,
-  Letter,
   Position,
   RecordingCursor,
   Size,
   TouchState,
 } from './types';
 
-export const getLazyFunction = <T extends any>(): [
-  (arg: T) => Promise<void>,
-  (createFn: (arg: T) => Promise<void>) => Promise<void>,
+export const getLazyFunction = <T, R = void>(): [
+  (arg: T) => Promise<R>,
+  (createFn: (arg: T) => Promise<R>) => Promise<void>,
 ] => {
-  let pastCalls: T[] = [];
-  let currentFn: (arg: T) => Promise<void> | undefined;
+  let pastCalls: [T, (value: R) => void][] = [];
+  let currentFn: ((arg: T) => Promise<R>) | undefined;
   return [
     async arg => {
       if (currentFn) {
-        await currentFn(arg);
-      } else {
-        pastCalls.push(arg);
+        return await currentFn(arg);
       }
+      return new Promise<R>(resolver => {
+        pastCalls.push([arg, resolver]);
+      });
     },
-    async (fn: (arg: T) => Promise<void>) => {
+    async (fn: (arg: T) => Promise<R>) => {
       currentFn = fn;
       if (pastCalls) {
-        for await (const call of pastCalls) {
-          await currentFn(call);
+        for await (const [arg, promise] of pastCalls) {
+          const ret = await currentFn(arg);
+          promise(ret as R);
         }
         pastCalls = [];
       }
@@ -56,7 +57,7 @@ export const cursorToRecordingCursor = (cursor: Cursor): RecordingCursor => {
   };
 };
 export const recordingCursorToCursor = (
-  actorId: string,
+  actorID: string,
   rc: RecordingCursor,
 ): Cursor => {
   return {
@@ -64,14 +65,36 @@ export const recordingCursorToCursor = (
     y: rc.y,
     ts: rc.y,
     touchState: TouchState.Unknown,
-    actorId: actorId,
+    actorID: actorID,
     isDown: rc.d,
     onPage: true,
+    activePiece: -1,
   };
 };
 
 export const colorToString = (color: Color) => {
   return `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+};
+
+export const rotatePosition = (
+  position: Position,
+  around: Position,
+  radians: number,
+) => {
+  const {x, y} = position;
+  const {x: cx, y: cy} = around;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const nx = cos * (x - cx) + sin * (y - cy) + cx;
+  const ny = cos * (y - cy) - sin * (x - cx) + cy;
+  return {x: nx, y: ny};
+};
+
+export const center = (box: BoundingBox) => {
+  return {
+    x: box.x + box.width / 2,
+    y: box.y + box.height / 2,
+  };
 };
 
 export const scalePosition = (position: Position, scale: Size) => {
@@ -81,23 +104,61 @@ export const scalePosition = (position: Position, scale: Size) => {
   };
 };
 
-export const letterMap = <T>(mapFn: (letter: Letter) => T) => {
-  return LETTERS.reduce((map, letter) => {
-    map[letter] = mapFn(letter);
-    return map;
-  }, {} as Record<Letter, T>);
+export const relative = (coordinate: Position, from: Position) => {
+  return {
+    x: coordinate.x - from.x,
+    y: coordinate.y - from.y,
+  };
 };
 
-export const asyncLetterMap = async <T>(
-  mapFn: (letter: Letter) => Promise<T>,
-) => {
-  const map = {} as Record<Letter, T>;
-  await Promise.all(
-    LETTERS.map(async letter => {
-      map[letter] = await mapFn(letter);
-    }),
-  );
-  return map;
+export const addCoords = (a: Position, b: Position) => {
+  return {
+    x: a.x + b.x,
+    y: a.y + b.y,
+  };
+};
+
+export const scaleRange = (min: number, max: number, scale: number) => {
+  return scale * (max - min) + min;
+};
+
+export const addRadians = (value: number, add: number) => {
+  const c = Math.PI * 2;
+  return (c + value + add) % c;
+};
+
+export const getAngle = (from: Position, to: Position) => {
+  return Math.atan2(from.y - to.y, from.x - to.x);
+};
+
+export const toCurve = (value: number, min: number, max: number) => {
+  // Given value between 0 and 1, find a value between min and max, where 0.5 is max and both 1 and 0 are min.
+  if (value >= 0.5) {
+    value = Math.abs(1 - value);
+  }
+  return scaleRange(min, max, value / 0.5);
+};
+
+export const chooseRandomWithSeed = <T>(
+  randomizer: string | number,
+  seed: number,
+  list: T[],
+  allowed?: (item: T, index: number) => boolean,
+): [T, number] | undefined => {
+  if (!list.length) {
+    return undefined;
+  }
+  let index: number;
+  let iterations = 1000;
+  do {
+    if (!--iterations) {
+      throw new Error(
+        'chooseRandomWithSeed should succeed in less than 1000 tries.',
+      );
+    }
+    index = Math.floor(randomWithSeed(randomizer, seed, list.length));
+  } while (allowed && !allowed(list[index], index));
+  return [list[index], index];
 };
 
 export const randomWithSeed = (
@@ -126,9 +187,9 @@ const simpleHash = (s: string) => {
   return hash;
 };
 
-export function must<T>(val: T | undefined): T {
-  if (val === undefined) {
-    throw new Error('assertion error: val must be defined');
+export function must<T>(val: T | undefined | null, name?: string): T {
+  if (val === undefined || val === null) {
+    throw new Error(`assertion error: ${name ? name : 'val must be defined'}`);
   }
   return val;
 }

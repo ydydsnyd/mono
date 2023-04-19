@@ -1,16 +1,20 @@
 // Per-frame application state. We query reflect directly for this data every
 // time we draw.
 export type State = {
-  actorId: ActorID;
+  actorID: ActorID;
   cursors: Record<ActorID, Cursor>;
+  pieces: ActivePuzzlePiece[];
 };
 
 export type Debug = {
   fps: number;
-  cacheUpdated: (letter: Letter, cache: string) => void;
 };
 
 export type ActorID = string;
+
+export type PieceNumber = number;
+// Note that this will be a huge number
+export type PieceOrder = number;
 
 export type Color = [number, number, number]; // rgb
 
@@ -23,25 +27,13 @@ export type Actor = {
   location: string | null;
 };
 
-export type LetterHandles = Record<Letter, number>;
-
 export enum Letter {
-  A = 'a',
-  L = 'l',
-  I = 'i',
-  V = 'v',
-  E = 'e',
+  A = 'A',
+  L = 'L',
+  I = 'I',
+  V = 'V',
+  E = 'E',
 }
-
-// Each letter also can be painted on, by adding splatters.
-export type Splatter = Position & {
-  u: ActorID; // actor ID
-  c: number; // color index, from COLOR_PALATE
-  a: number; // splatter animation index
-  s: number; // splatter size index
-  t: number; // timestamp
-  r: number; // rotation of splatter animation
-};
 
 // Each actor has a cursor. They are positioned in global space, so we also need
 // to send the space around so we can draw them relatively.
@@ -51,11 +43,29 @@ export enum TouchState {
   Clicking = 2,
 }
 export type Cursor = Position & {
-  actorId: ActorID;
+  actorID: ActorID;
   onPage: boolean;
   ts: number;
   isDown: boolean;
   touchState: TouchState;
+  activePiece: PieceNumber;
+};
+
+export type ActivePuzzlePiece = PuzzlePiece &
+  Position & {
+    number: PieceNumber;
+    rotation: number;
+    placed: boolean;
+    handlePosition: Position;
+    moverID: string;
+    rotatorID: string;
+  };
+
+export type PuzzlePiece = Size & {
+  letter: Letter;
+  paths: string[];
+  dx: number;
+  dy: number;
 };
 
 export type BoundingBox = Position & Size;
@@ -63,10 +73,6 @@ export type BoundingBox = Position & Size;
 export type Size = {
   width: number;
   height: number;
-};
-
-export type Vector = Position & {
-  z: number;
 };
 
 // In this app, all position values are between 0 and 1, and expected to be
@@ -84,11 +90,35 @@ export enum Env {
 
 // Bot Stuff
 export type RecordingID = string;
-export type RoomRecording = {
+export type BroadcastID = string;
+export enum RecordingType {
+  BROWSE,
+  FIND,
+  PLACE,
+  ROTATE,
+}
+export type RecordingInfo = {
+  type: RecordingType;
+  startCoord?: Position;
+  endCoord?: Position;
+};
+export type BroadcastQueue = BroadcastInfo & {
+  recordings: RecordingBroadcast[];
+};
+export type Broadcast = BroadcastInfo &
+  RecordingBroadcast & {broadcastId: BroadcastID};
+export type RecordingBroadcast = {
+  recordingId: RecordingID;
+  type: RecordingType;
+  pieceNum?: PieceNumber;
+  targetCoord?: Position;
+  angle?: number;
+  scale?: number;
+};
+export type BroadcastInfo = {
   roomId: string;
   broadcasterId: ActorID;
   botId: ActorID;
-  recordingId: RecordingID;
   colorIdx: number;
 };
 export type RecordingCursor = {

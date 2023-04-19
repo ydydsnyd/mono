@@ -12,6 +12,9 @@ export enum OP {
   DELETE = 'del',
 }
 
+export const op = (op: 'add' | 'change' | 'del') =>
+  op == OP.ADD ? OP.ADD : op == OP.DELETE ? OP.DELETE : OP.CHANGE;
+
 export type Diff = ExperimentalNoIndexDiff[number];
 export const isDeleteDiff = (
   diff: Diff,

@@ -1,4 +1,4 @@
-name = "paint-fight"
+name = "reflect-net"
 main = "demo/worker/index.ts"
 compatibility_date = "2022-11-30"
 account_id = "2a265bc62fc09e9ed1c43226f7a3de57"

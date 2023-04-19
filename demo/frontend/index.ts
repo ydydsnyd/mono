@@ -1,50 +1,50 @@
 import {initialize} from './data';
-import {renderer as renderer3D} from './3d-renderer';
-import {
-  drawSplatter,
-  renderFrame,
-  doRender,
-  setSplatters,
-  triggerSplatterRedraw,
-} from './texture-renderer';
-import initRendererImpl, {draw_caches, precompute} from '../../vendor/renderer';
 import {cursorRenderer} from './cursors';
 import {
-  UVMAP_SIZE,
   MIN_STEP_MS,
   SHOW_CUSTOM_CURSOR_MIN_Y,
   SHOW_CUSTOM_CURSOR_MAX_Y,
-  SPLATTER_FIRE_RATE,
 } from '../shared/constants';
-import type {
+import {
   Debug,
-  Letter,
   Actor,
-  Position,
-  RoomRecording,
-  Splatter,
+  Broadcast,
   ActorID,
+  ActivePuzzlePiece,
+  PieceOrder,
+  RecordingType,
+  PieceNumber,
+  Position,
 } from '../shared/types';
-import {LETTERS} from '../shared/letters';
-import {getLazyFunction, letterMap, now} from '../shared/util';
+import {getLazyFunction, now} from '../shared/util';
 import {getUserLocation} from './location';
 import {initRoom} from './orchestrator';
-import {DEBUG_TEXTURES, FPS_LOW_PASS} from './constants';
-import {loadClearAnimationFrames} from './textures';
+import {FPS_LOW_PASS} from './constants';
 import {nanoid} from 'nanoid';
+import {OP} from './data-util';
+import {
+  createPieceElements,
+  currentPiece,
+  hitTestPieces,
+  renderPieces,
+  updatePiecesWithCursor,
+  updateRotationHandles,
+} from './render-pieces';
+import {visualizeRecording} from './debug';
 
 export type DemoAPI = {
   toggleRecording: () => void;
   playRecording: (id: string) => Promise<void>;
   deleteRecording: (id: string) => Promise<void>;
   getRecordings: () => Promise<{
-    actorId: string;
+    actorID: string;
     currentRecordingId?: string;
     recordings: {
       id: string;
       frames: number;
+      type: RecordingType;
     }[];
-    activeRecordings: RoomRecording[];
+    activeRecordings: Broadcast[];
   }>;
   onRefresh: (refresh: () => void) => void;
 };
@@ -53,79 +53,35 @@ export const init = async (): Promise<DemoAPI> => {
   const initTiming = timing('Demo Load Timing');
   const ready = initTiming('loading demo', 1500);
 
-  type DebugCanvases = [
-    CanvasRenderingContext2D,
-    CanvasRenderingContext2D,
-    CanvasRenderingContext2D,
-    CanvasRenderingContext2D,
-    CanvasRenderingContext2D,
-  ];
-
-  // Canvases
-  const canvas = document.getElementById('canvas3D') as HTMLCanvasElement;
-  let caches: DebugCanvases;
-  let serverCacheContexts: Record<Letter, CanvasRenderingContext2D> | undefined;
-  if (DEBUG_TEXTURES) {
-    caches = LETTERS.map(letter => {
-      const tex = document.querySelector(
-        `#caches > .${letter}`,
-      ) as HTMLCanvasElement;
-      tex.width = UVMAP_SIZE;
-      tex.height = UVMAP_SIZE;
-      return tex.getContext('2d') as CanvasRenderingContext2D;
-    }) as DebugCanvases;
-    serverCacheContexts = letterMap(letter => {
-      const tex = document.querySelector(
-        `#server-caches > .${letter}`,
-      ) as HTMLCanvasElement;
-      tex.width = UVMAP_SIZE;
-      tex.height = UVMAP_SIZE;
-      return tex.getContext('2d') as CanvasRenderingContext2D;
-    });
-  }
-  const demoContainer = document.getElementById('demo') as HTMLDivElement;
-
   const debug: Debug = {
     fps: 60,
-    cacheUpdated: (letter, cache) => {
-      if (serverCacheContexts) {
-        const img = new Image();
-        img.onload = () => {
-          serverCacheContexts![letter].drawImage(img, 0, 0);
-        };
-        img.src = `data:image/png;base64,${cache}`;
-      }
-    },
   };
-
-  // Set up 3D renderer
-  async function init3D() {
-    const init3DDone = initTiming('3d-engine', 500);
-    try {
-      return await renderer3D(canvas);
-    } finally {
-      init3DDone();
-    }
-  }
+  const demoContainer = document.getElementById('demo') as HTMLDivElement;
+  const pieceContainer = document.getElementById('pieces') as HTMLDivElement;
 
   // Set up info below demo
   const activeUserCount = document.getElementById(
     'active-user-count',
   ) as HTMLDivElement;
 
-  const playingRecordings: Record<string, RoomRecording> = {};
+  const playingRecordings: Record<string, Broadcast> = {};
   const recordingFrame: Record<string, number> = {};
   const [setPresentActors, setSetPresentActors] = getLazyFunction<ActorID[]>();
+  const [getPlacedPieces, setGetPlacedPieces] = getLazyFunction<
+    undefined,
+    PieceNumber[]
+  >();
   let actors: Record<ActorID, Actor> = {};
   let actor: Actor;
-  async function initOrchestrator() {
+  const initOrchestrator = async () => {
     const roomInitDone = initTiming('find-room', 300);
     try {
       return await initRoom(
-        (recording: RoomRecording) => {
-          console.log('Start playing recording', recording.recordingId);
-          recordingFrame[recording.recordingId] = 1;
-          playingRecordings[recording.recordingId] = recording;
+        (broadcast, frames) => {
+          console.log('Start playing recording', broadcast.broadcastId);
+          recordingFrame[broadcast.broadcastId] = 1;
+          playingRecordings[broadcast.broadcastId] = broadcast;
+          visualizeRecording(broadcast, frames);
         },
         async (newActors: Actor[]) => {
           activeUserCount.innerHTML = newActors.length + '';
@@ -135,59 +91,41 @@ export const init = async (): Promise<DemoAPI> => {
         localActor => (actor = localActor),
         async online => {
           if (!online) {
-            console.log(playingRecordings);
             // Don't play back recordings when offline, since we shouldn't see other users
-            for (const recordingId in playingRecordings) {
-              const recording = playingRecordings[recordingId];
-              delete playingRecordings[recordingId];
-              delete recordingFrame[recordingId];
-              await finishRecording(
-                recordingId,
-                recording.roomId,
-                recording.botId,
+            for (const broadcastId in playingRecordings) {
+              const broadcast = playingRecordings[broadcastId];
+              delete playingRecordings[broadcastId];
+              delete recordingFrame[broadcastId];
+              await finishBroadcast(
+                broadcastId,
+                broadcast.recordingId,
+                broadcast.roomId,
+                broadcast.botId,
               );
             }
           }
         },
+        async () => await getPlacedPieces(undefined),
       );
     } finally {
       roomInitDone();
     }
-  }
+  };
 
-  async function initRenderer() {
-    const initRendererDone = initTiming('init-renderer', 100);
-    try {
-      await initRendererImpl();
-    } finally {
-      initRendererDone();
-    }
-  }
-
-  const parallelDone = initTiming(
-    'parallel(3d-engine, find-room, init-renderer)',
-    500,
-  );
-  const [
-    {
-      render: render3D,
-      getTexturePosition,
-      resizeCanvas: resize3DCanvas,
-      updateTexture,
-    },
-    {
-      actor: initActor,
-      recordCursor,
-      playRecording,
-      deleteRecording,
-      finishRecording,
-      getRecordingFrame,
-      updateActorLocation,
-      getDebug: getOrchestratorDebug,
-    },
-  ] = await Promise.all([init3D(), initOrchestrator(), initRenderer()]);
+  const initOrchestratorDone = initTiming('initializing orchestrator', 500);
+  const {
+    actor: initActor,
+    recordCursor,
+    finishRecording,
+    playRecording,
+    deleteRecording,
+    finishBroadcast,
+    getRecordingFrame,
+    updateActorLocation,
+    getDebug: getOrchestratorDebug,
+  } = await initOrchestrator();
   actor = initActor;
-  parallelDone();
+  initOrchestratorDone();
 
   const updateLocation = () => {
     // Get our location and add it when it's ready
@@ -198,47 +136,55 @@ export const init = async (): Promise<DemoAPI> => {
 
   const initReflectClientDone = initTiming('initializing reflect client', 20);
   const {
-    getState,
-    cachesLoaded,
-    getSplatters,
-    updateCursor,
-    addSplatter,
+    state,
+    mutators,
     addListener,
-    clearTextures,
-    setPresentActors: setPresentActorsMutation,
-  } = await initialize(
-    actor,
-    async online => {
-      const dot = document.querySelector('.online-dot');
-      if (dot) {
-        if (online) {
-          dot.classList.remove('offline');
-        } else {
-          dot.classList.add('offline');
-        }
-      }
+    getPieceOrder,
+    getPlacedPieces: getPlacedPiecesFn,
+  } = await initialize(actor, async online => {
+    const dot = document.querySelector('.online-dot');
+    if (dot) {
       if (online) {
-        updateLocation();
+        dot.classList.remove('offline');
+      } else {
+        dot.classList.add('offline');
       }
-    },
-    debug,
-  );
-  setSetPresentActors(setPresentActorsMutation);
-  initReflectClientDone();
-
-  // Draw splatters as we get them
-  addListener<Splatter>('splatter', (splatter, deleted, keyParts) => {
-    if (!deleted) {
-      const letter = keyParts[1] as Letter;
-      drawSplatter(now(), letter, splatter);
+    }
+    if (online) {
+      updateLocation();
     }
   });
+  setGetPlacedPieces(async () => getPlacedPiecesFn());
+  setSetPresentActors(mutators.setPresentActors);
+  initReflectClientDone();
 
-  // Initialize state
-  let {cursors} = await getState();
-
-  // Initialize textures
-  LETTERS.forEach(letter => updateTexture(letter));
+  let pieceOrder: PieceOrder[] = [];
+  addListener<ActivePuzzlePiece>('piece', (_, op) => {
+    if (op === OP.ADD) {
+      // when we add pieces, make sure we have them locally
+      createPieceElements(
+        state.pieces,
+        pieceContainer,
+        demoContainer,
+        () => state.cursors[actor.id],
+        mutators,
+      );
+    }
+  });
+  addListener<PieceOrder>('piece-order', async () => {
+    // Maintain an ordered list of pieces. This is necessary because our orders are
+    // very large, so they're inappropriate for use as z-index directly. Also note
+    // that they're ordered front-to-back, so things like hit testing can happen
+    // without re-ordering.
+    pieceOrder = await getPieceOrder();
+  });
+  createPieceElements(
+    state.pieces,
+    pieceContainer,
+    demoContainer,
+    () => state.cursors[actor.id],
+    mutators,
+  );
 
   // Update debug info periodically
   const showDebug = window.location.search.includes('debug');
@@ -253,9 +199,6 @@ export const init = async (): Promise<DemoAPI> => {
         debugOutput += `current room: ${orchestratorInfo.currentRoom}\nlocal room:${actor.room}\nroom participants:${orchestratorInfo.currentRoomCount}`;
         debugContentEl.innerHTML = debugOutput;
       }
-      if (caches) {
-        draw_caches(...caches);
-      }
     }, 200);
     document.addEventListener('keypress', (e: KeyboardEvent) => {
       if (e.key === '®') {
@@ -268,26 +211,52 @@ export const init = async (): Promise<DemoAPI> => {
     });
   }
 
+  const resetButton = document.getElementById('reset-button');
+  resetButton?.addEventListener('click', async () => {
+    await mutators.resetPuzzle({ts: now()});
+    resetButton.classList.add('cleared');
+    setTimeout(() => {
+      resetButton.classList.remove('cleared');
+    }, 1000);
+  });
+
   // Set up cursor renderer
   let currentRecordingId: string | undefined;
+  let lastRecordingId: string | undefined;
+  let currentRecordingType = RecordingType.BROWSE;
   const startRecording = () => {
+    currentRecordingType = RecordingType.BROWSE;
     currentRecordingId = nanoid();
   };
+  const startPlaceRecording = () => {
+    if (currentRecordingId) {
+      lastRecordingId = currentRecordingId;
+      finishRecording(currentRecordingId);
+    }
+    currentRecordingId = nanoid();
+    currentRecordingType = RecordingType.PLACE;
+  };
   const stopRecording = () => {
+    if (currentRecordingId) {
+      lastRecordingId = currentRecordingId;
+      finishRecording(currentRecordingId);
+    }
     currentRecordingId = undefined;
   };
-  const [localCursor, renderCursors, getCursorPosition] = cursorRenderer(
+  const pieceYLimits = {min: 0, max: 0};
+  const [renderCursors, getCursorPosition] = cursorRenderer(
     actor.id,
     () => actors,
-    () => cursors,
+    () => state.cursors,
     () => demoContainer,
     cursor => {
-      // On mobile, don't scroll if we begin by touching a letter. Otherwise,
-      // scroll will feel janky.
-      const [letter] = getTexturePosition(cursor);
-      return !!letter;
+      // On mobile, don't scroll if we begin by touching an interactive object.
+      // Otherwise, scroll will feel janky.
+      return (
+        hitTestPieces(cursor, state.pieces, pieceOrder, demoContainer) !== -1
+      );
     },
-    cursor => {
+    async cursor => {
       if (
         cursor.y < SHOW_CUSTOM_CURSOR_MIN_Y ||
         cursor.y > SHOW_CUSTOM_CURSOR_MAX_Y
@@ -297,189 +266,132 @@ export const init = async (): Promise<DemoAPI> => {
         document.body.classList.add('custom-cursor');
       }
       if (currentRecordingId) {
-        recordCursor(currentRecordingId, {...cursor});
+        recordCursor(
+          currentRecordingId,
+          cursor,
+          currentRecordingType,
+          lastRecordingId,
+        );
       }
-      updateCursor({...cursor});
+      mutators.updateCursor({...cursor});
+      await updatePiecesWithCursor(
+        cursor,
+        getCursorPosition(cursor),
+        state.pieces,
+        pieceOrder,
+        demoContainer,
+        mutators,
+        pieceYLimits,
+        () => {
+          if (currentRecordingId) {
+            startPlaceRecording();
+          }
+        },
+        () => {
+          if (
+            currentRecordingId &&
+            currentRecordingType === RecordingType.PLACE
+          ) {
+            finishRecording(currentRecordingId);
+          }
+        },
+      );
     },
     showDebug,
   );
 
-  // When the window is resized, recalculate letter and cursor positions
+  // When the window is resized, recalculate cursor positions
   const resizeViewport = () => {
-    const {width, height} = demoContainer.getBoundingClientRect();
-    canvas.height = height * window.devicePixelRatio;
-    canvas.width = width * window.devicePixelRatio;
-    canvas.style.height = height + 'px';
-    canvas.style.width = width + 'px';
-    resize3DCanvas();
     renderCursors();
+    pieceYLimits.min = document
+      .querySelector('nav')!
+      .getBoundingClientRect().height;
+    const intro = document.querySelector('#intro')!.getBoundingClientRect();
+    pieceYLimits.max = intro.top + intro.height;
   };
   window.addEventListener('resize', resizeViewport);
   resizeViewport();
-
-  // We want to add a paint splatter if we're over a letter, and if _either_ we're
-  // "rapid firing" on a single letter, or if we're encountering a new letter.
-  // This gets us a best of both worlds, in that we won't fire too much on a
-  // single letter (which looks bad), but we also will always fire as soon as
-  // we're over a letter, even if that would cause our firing rate to be faster
-  // than SPLATTER_FIRE_RATE
-  let lastSplatter = 0;
-  let lastLetter: Letter | undefined;
-  const maybeAddPaint = (
-    at: Position,
-    isMobile: boolean,
-    actorId?: string,
-    colorIndex?: number,
-  ) => {
-    const [letter, texturePositions, hitPosition] = getTexturePosition(at);
-    if (letter && texturePositions && hitPosition) {
-      for (const texturePosition of texturePositions) {
-        const newLetter = letter !== lastLetter;
-        const rapidFireOk =
-          !newLetter && now() - lastSplatter >= SPLATTER_FIRE_RATE;
-        if (newLetter || rapidFireOk) {
-          lastLetter = letter;
-          lastSplatter = now();
-          addSplatter({
-            letter,
-            actorId: actorId || actor.id,
-            colorIndex:
-              colorIndex === undefined ? actor.colorIndex : colorIndex,
-            texturePosition,
-            large: isMobile,
-            hitPosition,
-            timestamp: now(),
-          });
-        }
-      }
-    }
-  };
-
-  // Lazy-load any assets that aren't essential to interactivity.
-  // Note that all of these assets are gated behind their loaded-ness when they
-  // are accessed, but will likely result in dropped frames if we attempt to use
-  // them before we preload them.
-  // NOTE: If this takes more than a few ms, move to a worker or otherwise into
-  // the bg.
-  precompute();
-  // Kick off some preloading that can happen async
-  loadClearAnimationFrames().catch(err => {
-    console.error('Failed preloading clear animations');
-    console.error(err);
-  });
-
-  const redrawTexture = async (letter: Letter) => {
-    // Make sure that our splatters are re-rendered in the correct order. By
-    // resetting the cache of rendered splatters, next frame will re-draw all the
-    // splatters in their current order.
-    const splatters = await getSplatters(letter);
-    setSplatters(letter, splatters);
-    triggerSplatterRedraw(letter);
-    doRender(letter);
-    updateTexture(letter);
-  };
-
-  // Wait for round trip confirmation from the server before starting the render
-  // loop
-  await new Promise<void>(resolve => {
-    const serverRoundTripDone = initTiming('receive-initial-server-data', 1000);
-    const checkReady = async () => {
-      if (!(await cachesLoaded())) {
-        setTimeout(checkReady, 25);
-        return;
-      }
-      // After we've started, flip a class on the body
-      document.body.classList.add('demo-active');
-      serverRoundTripDone();
-      resolve();
-    };
-    checkReady();
-  });
-
-  const redrawDone = initTiming('redrawTextures', 100);
-
-  // After we have caches, draw them + the splatters
-  for (const letter of LETTERS) {
-    await redrawTexture(letter);
-  }
-
-  redrawDone();
-
-  // Add a listener for our cache - when it updates, trigger a full redraw.
-  addListener<never>('cache', async (_, deleted, keyParts) => {
-    // Deleted caches are handled in the clearing code.
-    if (!deleted) {
-      const letter = keyParts[1] as Letter;
-      redrawTexture(letter);
-    }
-  });
-
-  // Handlers for data resetting
-  const resetButton = document.getElementById('reset-button');
-  resetButton?.addEventListener('click', async () => {
-    await clearTextures(now());
-    resetButton.classList.add('cleared');
-    setTimeout(() => {
-      resetButton.classList.remove('cleared');
-    }, 1000);
-  });
-  let lastClear: number | undefined;
-  addListener<number>('cleared', async () => {
-    // Set lastClear to now, so that the animation will play all the way through on
-    // all clients whenever they happen to receive the clear.
-    lastClear = now();
-  });
 
   let renderedFirstFrameDone: ReturnType<typeof initTiming> | null = initTiming(
     'renderFirstFrame',
     5,
   );
 
+  // Wait for round trip confirmation from the server before starting the render
+  // loop
+  await new Promise<void>(resolve => {
+    const serverRoundTripDone = initTiming('receive-initial-server-data', 1000);
+    const checkReady = async () => {
+      // if (!(await cachesLoaded())) {
+      //   setTimeout(checkReady, 25);
+      //   return;
+      // }
+      serverRoundTripDone();
+      resolve();
+    };
+    checkReady();
+  });
+
+  // After we've started, flip a class on the body
+  document.body.classList.add('demo-active');
+
   // Render our cursors and canvases at "animation speed", usually 60fps
   startRenderLoop(
     async () => {
-      ({cursors} = await getState());
-
-      // Render our textures, and if they changed, send to the 3D scene.
-      renderFrame(now(), lastClear, letter => updateTexture(letter));
-
       if (renderedFirstFrameDone) {
         renderedFirstFrameDone();
         ready(true);
         renderedFirstFrameDone = null;
       }
 
-      render3D();
-      // Splatter if needed
-      const {isDown, position, isMobile} = localCursor();
-      if (isDown) {
-        maybeAddPaint(position, isMobile);
-      }
+      // Render pieces
+      await renderPieces(state.pieces, pieceOrder, demoContainer);
+
       // If we're playing a recording, do that
-      for (const recordingId in playingRecordings) {
-        const recording = playingRecordings[recordingId];
-        const frame = recordingFrame[recordingId];
+      for (const broadcastId in playingRecordings) {
+        const broadcast = playingRecordings[broadcastId];
+        const frame = recordingFrame[broadcastId];
         const cursor = await getRecordingFrame(
-          recordingId,
-          recording.botId,
+          broadcast.recordingId,
+          broadcast.botId,
           frame,
         );
         if (cursor) {
-          await updateCursor(cursor);
-          const cursorPagePosition = getCursorPosition(cursor);
-          await maybeAddPaint(
-            cursorPagePosition,
-            false,
-            recording.botId,
-            recording.colorIdx,
+          await mutators.updateCursor({...cursor});
+          await updatePiecesWithCursor(
+            cursor,
+            getCursorPosition(cursor),
+            state.pieces,
+            pieceOrder,
+            demoContainer,
+            mutators,
+            pieceYLimits,
           );
-          recordingFrame[recordingId] += 1;
+          recordingFrame[broadcastId] += 1;
         } else {
-          delete playingRecordings[recordingId];
-          delete recordingFrame[recordingId];
-          await finishRecording(recordingId, recording.roomId, recording.botId);
+          delete playingRecordings[broadcastId];
+          delete recordingFrame[broadcastId];
+          let piecePosition: Position | undefined;
+          if (broadcast.pieceNum !== undefined) {
+            const piece = state.pieces[broadcast.pieceNum];
+            piecePosition = {
+              x: piece.x,
+              y: piece.y,
+            };
+          }
+          await finishBroadcast(
+            broadcastId,
+            broadcast.recordingId,
+            broadcast.roomId,
+            broadcast.botId,
+            broadcast.pieceNum,
+            piecePosition,
+          );
         }
       }
+
+      // Render handles
+      await updateRotationHandles(state.pieces, demoContainer);
     },
     async () => {
       // Our cursors should update every animation frame.
@@ -497,13 +409,24 @@ export const init = async (): Promise<DemoAPI> => {
       }
     },
     playRecording: async (recordingId: string) => {
-      await playRecording(recordingId, actor.room);
+      await playRecording(
+        recordingId,
+        actor.room,
+        state.pieces.reduce((positions, piece) => {
+          positions[piece.number] = {
+            x: piece.x,
+            y: piece.y,
+          };
+          return positions;
+        }, {} as Record<PieceNumber, Position>),
+        currentPiece(actor.id),
+      );
     },
     deleteRecording,
     getRecordings: async () => {
       const debug = await getOrchestratorDebug();
       return {
-        actorId: actor.id,
+        actorID: actor.id,
         currentRecordingId,
         recordings: debug.recordings,
         activeRecordings: debug.activeRecordings,

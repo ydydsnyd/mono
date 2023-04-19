@@ -3,38 +3,44 @@ import {
   ReadTransaction,
   ExperimentalDiffOperation,
 } from '@rocicorp/reflect';
-import {letterMap} from '../shared/util';
+import {Metrics, Reporter} from '@rocicorp/datadog-util';
+import {consoleLogSink, OptionalLoggerImpl} from '@rocicorp/logger';
 import type {
   Actor,
   Cursor,
-  Debug,
-  Letter,
-  Splatter,
   State,
+  ActivePuzzlePiece,
+  PieceOrder,
+  PieceNumber,
 } from '../shared/types';
-import {
-  mutators,
-  M,
-  UNINITIALIZED_CACHE_SENTINEL,
-  UNINITIALIZED_CLEARED_SENTINEL,
-} from '../shared/mutators';
-import {LETTERS} from '../shared/letters';
-import {getData, isChangeDiff, isDeleteDiff} from './data-util';
-import {updateCache} from '../shared/renderer';
+import {mutators, M} from '../shared/mutators';
+import {OP, getData, isDeleteDiff, op} from './data-util';
 import {WORKER_HOST} from '../shared/urls';
-import {unchunk} from '../shared/chunks';
 import {USER_ID} from '../shared/constants';
 import {loggingOptions} from './logging-options';
-
-const CACHE_DEBOUNCE_MS = 100;
+import {DataDogBrowserLogSink} from './data-dog-browser-log-sink';
+import {now} from '../shared/util';
 
 export const initialize = async (
   actor: Actor,
   onlineChange: (online: boolean) => void,
-  debug: Debug,
 ) => {
   // Set up our connection to reflect
   console.log(`Connecting to room ${actor.room} on worker at ${WORKER_HOST}`);
+
+  const logSink = consoleLogSink;
+  const logger = new OptionalLoggerImpl(logSink);
+  const logSinks = [logSink];
+  if (process.env.NEXT_PUBLIC_DATADOG_CLIENT_TOKEN !== undefined) {
+    logSinks.push(new DataDogBrowserLogSink());
+  }
+
+  const metrics = new Metrics();
+  const metricsEndpoint = new URL('/api/metrics/v0/report', WORKER_HOST);
+  new Reporter({
+    metrics,
+    url: metricsEndpoint.toString(),
+  });
 
   // Create a reflect client
   const reflectClient = new Reflect<M>({
@@ -50,25 +56,23 @@ export const initialize = async (
     }),
     mutators,
     ...loggingOptions,
+    // metrics,
   });
 
   // To handle only doing an operation when something changes, we allow
   // registering listeners for a given key prefix.
   const listeners: Map<
     string,
-    ((data: any, deleted: boolean, keyParts: string[]) => void)[]
+    ((data: any, op: OP, keyParts: string[]) => void)[]
   > = new Map();
   const addListener = <T>(
     opName: string,
-    handler: (data: T, deleted: boolean, keyParts: string[]) => void,
+    handler: (data: T, op: OP, keyParts: string[]) => void,
   ) => {
     const existing = listeners.get(opName) || [];
     existing.push(handler);
     listeners.set(opName, existing);
   };
-
-  const getCache = async (letter: Letter) =>
-    await reflectClient.query(async tx => await unchunk(tx, `cache/${letter}`));
 
   // Set up a local state - this is used to cache values that we don't want to
   // read every frame (and that will be updated via subscription instead)
@@ -76,15 +80,13 @@ export const initialize = async (
     stateInitializer(actor.id),
   );
 
-  let cacheTimeouts = letterMap<number | null>(() => null);
-
   const triggerHandlers = (
     keyParts: string[],
     diff: ExperimentalDiffOperation<string>,
   ) => {
     const handlers = listeners.get(keyParts[0]);
     if (handlers) {
-      handlers.forEach(h => h(getData(diff), isDeleteDiff(diff), keyParts));
+      handlers.forEach(h => h(getData(diff), op(diff.op), keyParts));
     }
   };
 
@@ -95,111 +97,82 @@ export const initialize = async (
         case 'cursor':
           const cursor = getData<Cursor>(diff);
           if (isDeleteDiff(diff)) {
-            delete localState.cursors[cursor.actorId];
+            delete localState.cursors[cursor.actorID];
           } else {
-            localState.cursors[cursor.actorId] = cursor;
+            localState.cursors[cursor.actorID] = cursor;
           }
           break;
-        case 'cache':
-          const letter = keyParts[1] as Letter;
-          // Because cache is chunked, we'll get one update per key, which means we'll get
-          // a ton of partial updates. Since we trigger semi expensive operations on cache
-          // updates, we need to debounce them so that we don't draw bad caches or do a
-          // ton of unnecessary work.
-          if (cacheTimeouts[letter]) {
-            clearTimeout(cacheTimeouts[letter]!);
-          }
-          cacheTimeouts[letter] = window.setTimeout(async () => {
-            const cache = await getCache(letter);
-            if (cache === UNINITIALIZED_CACHE_SENTINEL) {
-              return;
-            }
-            if (cache) {
-              updateCache(letter, cache, debug);
-            }
-            triggerHandlers(keyParts, diff);
-          }, CACHE_DEBOUNCE_MS);
-          // Return so that we don't trigger handlers. We'll do so after the debounce.
-          return;
-        case 'cleared':
-          // Ignore both the initial (client) and second (first sync) value for 'cleared',
-          // so that we only fire handlers when we get a value and it's a new value that
-          // we're seeing in real time.
-          const d = await getData(diff);
-          if (
-            d === UNINITIALIZED_CLEARED_SENTINEL ||
-            (isChangeDiff(diff) &&
-              diff.oldValue === UNINITIALIZED_CLEARED_SENTINEL)
-          ) {
-            return;
-          }
+        case 'piece':
+          // We never delete pieces, so we don't need to handle that here.
+          const num = parseInt(keyParts[1], 10);
+          localState.pieces[num] = getData<ActivePuzzlePiece>(diff);
           break;
       }
       triggerHandlers(keyParts, diff);
     });
   });
 
-  const getState = async (): Promise<State> => {
-    return {...localState};
-  };
+  await reflectClient.mutate.guaranteePuzzle({ts: now()});
 
-  const mutations = reflectClient.mutate;
-
-  await mutations.initialize();
-
-  const getSplatters = async (letter: Letter) => {
-    return await reflectClient.query(async tx => {
-      return (await tx
-        .scan({prefix: `splatter/${letter}`})
-        .toArray()) as Splatter[];
+  const getPieceOrder = async () => {
+    const orders = await reflectClient.query(
+      async tx =>
+        (await tx.scan({prefix: 'piece-order/'}).entries().toArray()) as [
+          string,
+          PieceOrder,
+        ][],
+    );
+    const orderMap = orders.reduce((o, e) => {
+      const num = parseInt(e[0].split('/')[1], 10) as PieceNumber;
+      o[num] = e[1];
+      return o;
+    }, {} as Record<PieceNumber, PieceOrder>);
+    const getOrder = (number: PieceNumber) =>
+      orderMap[number] === undefined ? -1 : orderMap[number];
+    return [...Array(localState.pieces.length).keys()].sort((a, b) => {
+      const ao = getOrder(a);
+      const bo = getOrder(b);
+      return ao === bo ? 0 : ao > bo ? -1 : 1;
     });
   };
 
-  let sawUninitialized = new Set();
-  const cachesLoaded = async () => {
-    let loadedLetters = new Set();
-    await reflectClient.query(async tx => {
-      for await (const letter of LETTERS) {
-        if (loadedLetters.has(letter)) {
-          continue;
-        }
-        const cacheVal = await unchunk(tx, `cache/${letter}`);
-        if (cacheVal === UNINITIALIZED_CACHE_SENTINEL) {
-          sawUninitialized.add(letter);
-        }
-        if (
-          sawUninitialized.has(letter) &&
-          cacheVal !== UNINITIALIZED_CACHE_SENTINEL
-        ) {
-          loadedLetters.add(letter);
-        }
+  const getPlacedPieces = () => {
+    let placed = [];
+    for (const piece of localState.pieces) {
+      if (piece.placed) {
+        placed.push(piece.number);
       }
-    });
-    return LETTERS.every(l => loadedLetters.has(l));
+    }
+    return placed;
   };
 
   return {
-    ...mutations,
-    cachesLoaded,
-    getState,
+    mutators: reflectClient.mutate,
+    state: localState,
     addListener,
-    getSplatters,
     reflectClient,
+    logger,
+    getPieceOrder,
+    getPlacedPieces,
   };
 };
 
 const stateInitializer =
-  (actorId: string) =>
+  (actorID: string) =>
   async (tx: ReadTransaction): Promise<State> => {
     const cursorList = (await tx
       .scan({prefix: 'cursor/'})
       .toArray()) as Cursor[];
     const cursors = cursorList.reduce((cursors, cursor) => {
-      cursors[cursor.actorId] = cursor;
+      cursors[cursor.actorID] = cursor;
       return cursors;
     }, {} as State['cursors']);
+    const pieces = (await tx
+      .scan({prefix: 'piece/'})
+      .toArray()) as ActivePuzzlePiece[];
     return {
-      actorId,
+      actorID,
       cursors,
+      pieces,
     };
   };

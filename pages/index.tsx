@@ -67,7 +67,7 @@ export default function Home() {
         <link rel="manifest" href="/site.webmanifest" />
 
         {/* Facebook Meta Tags */}
-        <meta property="og:url" content="https://paint-fight.vercel.app/" />
+        <meta property="og:url" content="https://reflect-net.vercel.app/" />
         <meta property="og:type" content="website" />
         <meta
           property="og:title"
@@ -79,15 +79,15 @@ export default function Home() {
         />
         <meta
           property="og:image"
-          content="https://paint-fight.vercel.app/reflect-og.jpg"
+          content="https://reflect-net.vercel.app/reflect-og.jpg"
         />
 
         {/* Twitter Meta Tags */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta property="twitter:domain" content="paint-fight.vercel.app" />
+        <meta property="twitter:domain" content="reflect-net.vercel.app" />
         <meta
           property="twitter:url"
-          content="https://paint-fight.vercel.app/"
+          content="https://reflect-net.vercel.app/"
         />
         <meta
           name="twitter:title"

@@ -1,46 +1,43 @@
-import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
-import {draw_cache_png} from '../../vendor/renderer/renderer';
-import {chunk, unchunk} from './chunks';
-import {
-  SPLATTER_ANIM_FRAMES,
-  SPLATTER_FLATTEN_FREQUENCY,
-  SPLATTER_MAX_AGE,
-} from './constants';
-import {LETTERS} from './letters';
-import {
+import type {
+  MutatorDefs,
+  ReadTransaction,
+  WriteTransaction,
+} from '@rocicorp/reflect';
+import type {
+  ActivePuzzlePiece,
   ActorID,
   Cursor,
-  Env,
-  Letter,
+  PieceNumber,
   Position,
-  Splatter,
-  Vector,
 } from './types';
-import {decode, encode} from './uint82b64';
-import {nextNumber, randomWithSeed, sortableKeyNum} from './util';
-import {splatters2Render} from './wasm-args';
-
-export const UNINITIALIZED_CACHE_SENTINEL = 'uninitialized-cache-sentinel';
-export const UNINITIALIZED_CLEARED_SENTINEL = 'uninitialized-clear-sentinel';
-
-export const splatterId = (s: Splatter) =>
-  `${s.u}${s.t}${s.x.toFixed(1) + s.y.toFixed(1)}}`;
+import {randomWithSeed} from './util';
+import {PUZZLE_PIECES} from './puzzle-pieces';
+import {ACTIVITY_TIMEOUT} from './constants';
 
 export type M = typeof mutators;
 
-let env = Env.CLIENT;
-let _initRenderer: (() => Promise<void>) | undefined;
-export const setEnv = (e: Env, initRenderer: () => Promise<void>) => {
-  env = e;
-  _initRenderer = initRenderer;
+type _Mutators<MD extends MutatorDefs> = {
+  readonly [P in keyof MD]: MD[P] extends infer T
+    ? T extends MD[P]
+      ? T extends (tx: WriteTransaction, ...args: infer Args) => infer Ret
+        ? (...args: Args) => Ret extends Promise<unknown> ? Ret : Promise<Ret>
+        : never
+      : never
+    : never;
 };
 
-// Seeds are used for creating pseudo-random values that are stable across
-// server and client. (see: randomWithSeed)
-const Seeds = {
-  splatterAnimation: 2398,
-  splatterRotation: 9847,
+const PUZZLE_EXISTS_SENTINEL = 'puzzle-exists';
+const PUZZLE_SEEDS = {
+  xPos: 237,
+  yPos: 83,
+  rotation: 920,
 };
+
+const SNAP_ROTATIONS = [0, Math.PI / 2, Math.PI, Math.PI * 1.5, Math.PI * 2];
+
+const pieceKey = (num: number) => `piece/${num.toString().padStart(4)}`;
+
+export type Mutators = _Mutators<M>;
 
 const clientConsoleMap = new Map<string, (log: string) => void>();
 
@@ -81,99 +78,156 @@ export async function addServerLog(tx: WriteTransaction, log: string) {
 }
 
 export const mutators = {
-  initialize: async (tx: WriteTransaction) => {
-    // We'd like to prevent drawing our local client until we load the server cache
-    // - so when a client initializes, write a sentinel value into all the caches,
-    // then replace it with empty data or the real cache on the server. This allows
-    // us to prevent interactivity until all the caches are non-sentinel.
-    if (env === Env.CLIENT) {
-      for await (const letter of LETTERS) {
-        await chunk(tx, `cache/${letter}`, UNINITIALIZED_CACHE_SENTINEL);
-      }
-      await tx.put('cleared', UNINITIALIZED_CLEARED_SENTINEL);
-    }
-    // Doing nothing on the server is equivalent to throwing out the sentinel value.
-  },
   setPresentActors: async (tx: WriteTransaction, actors: ActorID[]) => {
     const allCursors = (await tx
       .scan({prefix: 'cursor/'})
       .entries()
       .toArray()) as [string, Cursor][];
-    const actorIds = new Set(actors);
+    const actorIDs = new Set(actors);
     for await (const [key, cursor] of allCursors) {
-      if (!actorIds.has(cursor.actorId)) {
+      if (!actorIDs.has(cursor.actorID)) {
         await tx.del(key);
       }
     }
   },
   updateCursor: async (tx: WriteTransaction, cursor: Cursor) => {
-    await tx.put(`cursor/${cursor.actorId}`, cursor);
+    await tx.put(`cursor/${cursor.actorID}`, {...cursor});
   },
-  clearTextures: async (tx: WriteTransaction, time: number) => {
-    const cacheKeys = await tx.scan({prefix: `cache/`}).keys();
-    for await (const k of cacheKeys) {
-      await tx.del(k);
+  resetPuzzle: async (tx: WriteTransaction, {ts}: {ts: number}) => {
+    if (tx.environment === 'client') {
+      // Clients may not init puzzles
+      return;
     }
-    const splatters = (await tx
-      .scan({prefix: 'splatter/'})
-      .keys()
-      .toArray()) as string[];
-    for await (const k of splatters) {
-      await tx.del(k);
-    }
-    // To provide a synced animation and to deal with the case where some clients
-    // may only have local cached splatters which we can't clean up individually
-    // (because they are already rendered), we also add a "cleared" timestamp which
-    // will let us run an animation on all the clients when they receive it.
-    await tx.put('cleared', time);
+    await initializePuzzle(tx, ts);
   },
-  addSplatter: async (
+  guaranteePuzzle: async (tx: WriteTransaction, {ts}: {ts: number}) => {
+    if (tx.environment === 'client') {
+      // Clients may not init puzzles
+      return;
+    }
+    let exists = await tx.get('puzzle-exists');
+    if (exists !== PUZZLE_EXISTS_SENTINEL) {
+      await initializePuzzle(tx, ts);
+    }
+  },
+  movePiece: async (
     tx: WriteTransaction,
     {
-      letter,
-      actorId,
-      colorIndex,
-      texturePosition,
-      timestamp,
-      large,
-    }: {
-      letter: Letter;
-      actorId: string;
-      colorIndex: number;
-      texturePosition: Position;
-      timestamp: number;
-      large: boolean;
-      hitPosition: Vector;
-    },
+      actorID,
+      pieceNum,
+      position,
+    }: {actorID: ActorID; pieceNum: PieceNumber; position: Position},
   ) => {
-    const {x, y} = texturePosition;
-    const splatter: Splatter = {
-      x,
-      y,
-      u: actorId,
-      c: colorIndex,
-      s: large ? 1 : 0,
-      t: timestamp,
-      a: Math.floor(randomWithSeed(timestamp, Seeds.splatterAnimation, 5)),
-      r: Math.floor(randomWithSeed(timestamp, Seeds.splatterRotation, 4)),
+    const key = pieceKey(pieceNum);
+    const piece = (await tx.get(key)) as ActivePuzzlePiece;
+    if (piece.placed) {
+      // Can't change placed pieces
+      return;
+    }
+    if (piece.moverID && piece.moverID !== actorID) {
+      // Someone is already moving this piece
+      return;
+    }
+    if (
+      position.x > 2 ||
+      position.y > 2 ||
+      position.x < -1 ||
+      position.y < -1
+    ) {
+      // Don't allow moving pieces outside of interactive area
+      return;
+    }
+    const newPiece: ActivePuzzlePiece = {
+      ...piece,
+      ...position,
+      moverID: actorID,
     };
-    // Because data is returned in key order rather than insert order, we need to
-    // increment a global counter.
-    const splatterNum = nextNumber(
-      (await tx.get(`splatter-num/${letter}`)) as number,
-    );
-    // Convert to hex so that it will sort correctly
-    await tx.put(
-      `splatter/${letter}/${sortableKeyNum(splatterNum)}/${actorId}`,
-      splatter,
-    );
-    await tx.put(`splatter-num/${letter}`, splatterNum);
-
-    // On the server, perform periodic flattening
-    if (env === Env.SERVER && splatterNum % SPLATTER_FLATTEN_FREQUENCY === 0) {
-      await flattenCache(tx, timestamp, letter);
+    await tx.put(key, newPiece);
+  },
+  finishMoving: async (
+    tx: WriteTransaction,
+    {pieceNum}: {pieceNum: PieceNumber},
+  ) => {
+    const key = pieceKey(pieceNum);
+    const piece = (await tx.get(key)) as ActivePuzzlePiece;
+    const newPiece = await placePieceIfClose({...piece});
+    newPiece.moverID = '';
+    await tx.put(key, newPiece);
+  },
+  setPieceActive: async (
+    tx: WriteTransaction,
+    {
+      actorID,
+      pieceNum,
+      ts,
+    }: {actorID: ActorID; pieceNum: number; ts: PieceNumber},
+  ) => {
+    // The goal here is to always show pieces on top that have been interacted with most recently.
+    const order = ts % ACTIVITY_TIMEOUT;
+    await tx.put(`piece-order/${pieceNum}`, order);
+    const cursorKey = `cursor/${actorID}`;
+    const cursor = (await tx.get(cursorKey)) as Cursor;
+    if (cursor) {
+      await tx.put(cursorKey, {...cursor, activePiece: pieceNum});
     }
   },
+  setPieceInactive: async (
+    tx: WriteTransaction,
+    {actorID}: {actorID: ActorID; pieceNum: PieceNumber},
+  ) => {
+    const cursorKey = `cursor/${actorID}`;
+    const cursor = (await tx.get(cursorKey)) as Cursor;
+    if (cursor) {
+      await tx.put(cursorKey, {...cursor, activePiece: -1});
+    }
+  },
+  rotatePiece: async (
+    tx: WriteTransaction,
+    {
+      actorID,
+      pieceNum,
+      rotation,
+      handlePosition,
+    }: {
+      actorID: ActorID;
+      pieceNum: PieceNumber;
+      rotation: number;
+      handlePosition: Position;
+    },
+  ) => {
+    const key = pieceKey(pieceNum);
+    const piece = (await tx.get(key)) as ActivePuzzlePiece;
+    if (piece.placed) {
+      // Can't change placed pieces
+      return;
+    }
+    if (piece.rotatorID && piece.rotatorID !== actorID) {
+      // Someone is already rotating this piece
+      return;
+    }
+    await tx.put(key, {
+      ...piece,
+      rotation,
+      rotatorID: actorID,
+      handlePosition,
+    });
+  },
+  finishRotating: async (
+    tx: WriteTransaction,
+    {pieceNum}: {pieceNum: PieceNumber},
+  ) => {
+    const key = pieceKey(pieceNum);
+    const piece = (await tx.get(key)) as ActivePuzzlePiece;
+
+    const newPiece = await placePieceIfClose({
+      ...piece,
+      rotation: snapRotation(piece.rotation),
+    });
+    newPiece.rotatorID = '';
+    newPiece.handlePosition = {x: -1, y: -1};
+    await tx.put(key, newPiece);
+  },
+
   // These mutators are for the how it works demos
   increment: async (
     tx: WriteTransaction,
@@ -195,47 +249,62 @@ export const mutators = {
       await addServerLog(tx, msg);
     }
   },
-
+  addServerLog,
+  getServerLogs,
+  getServerLogCount,
   nop: async (_: WriteTransaction) => {},
 };
 
-const flattenCache = async (
-  tx: WriteTransaction,
-  timestamp: number,
-  letter: Letter,
-) => {
-  // Get all the splatters for this letter
-  const splatters = (await (await tx.scan({prefix: `splatter/${letter}`}))
-    .entries()
-    .toArray()) as [string, Splatter][];
+const initializePuzzle = async (tx: WriteTransaction, ts: number) => {
+  for (const [index, piece] of PUZZLE_PIECES.entries()) {
+    // Generate a random location
+    const location = {
+      x: randomWithSeed(ts + index, PUZZLE_SEEDS.xPos),
+      y: randomWithSeed(ts + index, PUZZLE_SEEDS.yPos),
+    };
+    const newPiece: ActivePuzzlePiece = {
+      ...piece,
+      ...location,
+      number: index,
+      rotation: snapRotation(
+        randomWithSeed(ts + index, PUZZLE_SEEDS.rotation, Math.PI * 2),
+      ),
+      placed: false,
+      handlePosition: {x: -1, y: -1},
+      moverID: '',
+      rotatorID: '',
+    };
+    await tx.put(pieceKey(index), newPiece);
+  }
+  await tx.put('puzzle-exists', PUZZLE_EXISTS_SENTINEL);
+};
 
-  // And find any splatters which are "old"
-  const oldSplatters: [string, Splatter][] = splatters.filter(
-    s => timestamp - s[1].t >= SPLATTER_MAX_AGE,
-  );
-  // Now if we have any cacheable splatters, draw them to the cache
-  // Draw them on top of the last cached image
-  if (oldSplatters.length === 0) {
-    return;
+const rotationFuzzy = Math.PI / 4;
+const placementFuzzy = 0.025;
+const placePieceIfClose = async (
+  piece: ActivePuzzlePiece,
+): Promise<ActivePuzzlePiece> => {
+  const xDistance = Math.abs(piece.dx - piece.x);
+  const yDistance = Math.abs(piece.dy - piece.y);
+  if (
+    (piece.rotation < rotationFuzzy ||
+      piece.rotation > Math.PI * 2 - rotationFuzzy) &&
+    xDistance < placementFuzzy &&
+    yDistance < placementFuzzy
+  ) {
+    piece.placed = true;
+    piece.x = piece.dx;
+    piece.y = piece.dy;
   }
-  console.log(`${letter}: Flattening ${oldSplatters.length} splatters.`);
-  const [png] = await Promise.all([
-    unchunk(tx, `cache/${letter}`),
-    _initRenderer!(),
-  ]);
-  const decoded = png ? decode(png) : undefined;
-  const newCache = draw_cache_png(
-    decoded,
-    ...splatters2Render(
-      oldSplatters.map(s => s[1]),
-      // When we draw a cache, we just want the "finished" state of all the
-      // animations, as they're presumed to be complete and immutable.
-      oldSplatters.map(() => SPLATTER_ANIM_FRAMES),
-    ),
-  );
-  const flattenedKeys = oldSplatters.map(s => s[0]);
-  await chunk(tx, `cache/${letter}`, encode(newCache));
-  for await (const key of flattenedKeys) {
-    await tx.del(key);
+  return piece;
+};
+
+const snapRotation = (rotation: number) => {
+  let closest = [Infinity, -1];
+  for (const r of SNAP_ROTATIONS) {
+    if (Math.abs(rotation - r) < closest[0]) {
+      closest = [Math.abs(rotation - r), r];
+    }
   }
+  return closest[1];
 };
