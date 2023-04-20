@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1681912516558,
+  "lastUpdate": 1682020058345,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -38471,6 +38471,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27127,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4125ff9f502d3038775bcd27e959fa394866a405",
+          "message": "fix: Indexes with prefix should match the prefix (#478)\n\nWhen we create new index after forking a client we create the indexes by\r\niterating over the value BTree. When there is a prefix present we start\r\nfrom the prefix but we forgot to end when the key no longer matches the\r\nprefix, leading the index map to contain items that do not match the\r\nindex constraints.",
+          "timestamp": "2023-04-20T21:45:55+02:00",
+          "tree_id": "ebabd2efd69c7fa33232c4304b36a3e533340eab",
+          "url": "https://github.com/rocicorp/mono/commit/4125ff9f502d3038775bcd27e959fa394866a405"
+        },
+        "date": 1682020046645,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 255368,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45620,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 256159,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45815,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95248,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27143,
             "unit": "bytes"
           }
         ]
