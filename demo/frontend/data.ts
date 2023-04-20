@@ -18,7 +18,6 @@ import {WORKER_HOST} from '../shared/urls';
 import {USER_ID} from '../shared/constants';
 import {loggingOptions} from './logging-options';
 import {DataDogBrowserLogSink} from './data-dog-browser-log-sink';
-import {now} from '../shared/util';
 
 export const initialize = async (
   actor: Actor,
