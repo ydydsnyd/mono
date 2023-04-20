@@ -114,7 +114,7 @@ export default function Home() {
           <Demo />
 
           <p className={styles.featuredStatement}>
-            High-performance sync for the multiplayer web.
+            The missing piece for multiplayer web apps.
           </p>
         </section>
 
