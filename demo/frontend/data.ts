@@ -22,6 +22,7 @@ import {now} from '../shared/util';
 
 export const initialize = async (
   actor: Actor,
+  randomPieces: ActivePuzzlePiece[],
   onlineChange: (online: boolean) => void,
 ) => {
   // Set up our connection to reflect
@@ -103,7 +104,10 @@ export const initialize = async (
     });
   });
 
-  await reflectClient.mutate.guaranteePuzzle({ts: now()});
+  await reflectClient.mutate.initializePuzzle({
+    force: false,
+    pieces: randomPieces,
+  });
 
   const getPieceOrder = async () => {
     const orders = await reflectClient.query(

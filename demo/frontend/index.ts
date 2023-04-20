@@ -16,7 +16,12 @@ import {
   PieceNumber,
   Position,
 } from '../shared/types';
-import {getLazyFunction, now} from '../shared/util';
+import {
+  distance,
+  getLazyFunction,
+  randFloat,
+  snapRotation,
+} from '../shared/util';
 import {getUserLocation} from './location';
 import {initRoom} from './orchestrator';
 import {FPS_LOW_PASS} from './constants';
@@ -31,6 +36,8 @@ import {
   updateRotationHandles,
 } from './render-pieces';
 import {visualizeRecording} from './debug';
+import {PUZZLE_PIECES} from '../shared/puzzle-pieces';
+import {positionToCoordinate, screenSize} from './coordinates';
 
 export type DemoAPI = {
   toggleRecording: () => void;
@@ -134,6 +141,16 @@ export const init = async (): Promise<DemoAPI> => {
     });
   };
 
+  const pieceYLimits = {min: 0, max: 0};
+  const updatePieceYLimits = () => {
+    pieceYLimits.min = document
+      .querySelector('nav')!
+      .getBoundingClientRect().height;
+    const intro = document.querySelector('#intro')!.getBoundingClientRect();
+    pieceYLimits.max = intro.top + intro.height;
+  };
+  updatePieceYLimits();
+
   const initReflectClientDone = initTiming('initializing reflect client', 20);
   const {
     state,
@@ -141,7 +158,7 @@ export const init = async (): Promise<DemoAPI> => {
     addListener,
     getPieceOrder,
     getPlacedPieces: getPlacedPiecesFn,
-  } = await initialize(actor, async online => {
+  } = await initialize(actor, generateRandomPieces(), async online => {
     const dot = document.querySelector('.online-dot');
     if (dot) {
       if (online) {
@@ -213,7 +230,10 @@ export const init = async (): Promise<DemoAPI> => {
 
   const resetButton = document.getElementById('reset-button');
   resetButton?.addEventListener('click', async () => {
-    await mutators.resetPuzzle({ts: now()});
+    await mutators.initializePuzzle({
+      force: true,
+      pieces: generateRandomPieces(),
+    });
     resetButton.classList.add('cleared');
     setTimeout(() => {
       resetButton.classList.remove('cleared');
@@ -243,7 +263,69 @@ export const init = async (): Promise<DemoAPI> => {
     }
     currentRecordingId = undefined;
   };
-  const pieceYLimits = {min: 0, max: 0};
+
+  function generateRandomPieces() {
+    const ss = screenSize();
+    const selectedPositions: Position[] = [];
+
+    // This uses Mitchell's best candidate algorithm to generate the initial
+    // positions for the puzzle: https://gist.github.com/mbostock/1893974.
+    // The idea, roughly, is to loop through each piece and choose a random
+    // position that's farthese from other pieces.
+
+    const edgeBuffer = 10;
+    const approxPieceSize = 50;
+
+    const getCandidates = () => {
+      return new Array(10).fill(0).map(() => {
+        const pos = {
+          x: randFloat(edgeBuffer, ss.width - approxPieceSize - edgeBuffer),
+          y: randFloat(pieceYLimits.min, pieceYLimits.max),
+        };
+        let minDist = Infinity;
+        for (const selectedPos of selectedPositions) {
+          const d = distance(selectedPos, pos);
+          if (d < minDist) {
+            minDist = d;
+          }
+        }
+        return {
+          pos,
+          minDist,
+        };
+      });
+    };
+
+    for (let i = 0; i < PUZZLE_PIECES.length; i++) {
+      const candidates = getCandidates();
+      const farthest = candidates.reduce((best, cand) => {
+        if (cand.minDist > best.minDist) {
+          return cand;
+        }
+        return best;
+      }, candidates[0]);
+      selectedPositions.push(farthest.pos);
+    }
+
+    const ret: ActivePuzzlePiece[] = [];
+    for (const pos of selectedPositions) {
+      const coord = positionToCoordinate(pos, demoContainer, ss);
+      const newPiece: ActivePuzzlePiece = {
+        ...PUZZLE_PIECES[ret.length],
+        ...coord,
+        number: ret.length,
+        rotation: snapRotation(randFloat(0, Math.PI * 2)),
+        placed: false,
+        handlePosition: {x: -1, y: -1},
+        moverID: '',
+        rotatorID: '',
+      };
+      ret.push(newPiece);
+    }
+
+    return ret;
+  }
+
   const [renderCursors, getCursorPosition] = cursorRenderer(
     actor.id,
     () => actors,
@@ -303,11 +385,7 @@ export const init = async (): Promise<DemoAPI> => {
   // When the window is resized, recalculate cursor positions
   const resizeViewport = () => {
     renderCursors();
-    pieceYLimits.min = document
-      .querySelector('nav')!
-      .getBoundingClientRect().height;
-    const intro = document.querySelector('#intro')!.getBoundingClientRect();
-    pieceYLimits.max = intro.top + intro.height;
+    updatePieceYLimits();
   };
   window.addEventListener('resize', resizeViewport);
   resizeViewport();

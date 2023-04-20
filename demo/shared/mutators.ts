@@ -10,9 +10,8 @@ import type {
   PieceNumber,
   Position,
 } from './types';
-import {randomWithSeed} from './util';
-import {PUZZLE_PIECES} from './puzzle-pieces';
 import {ACTIVITY_TIMEOUT} from './constants';
+import {snapRotation} from './util';
 
 export type M = typeof mutators;
 
@@ -25,15 +24,6 @@ type _Mutators<MD extends MutatorDefs> = {
       : never
     : never;
 };
-
-const PUZZLE_EXISTS_SENTINEL = 'puzzle-exists';
-const PUZZLE_SEEDS = {
-  xPos: 237,
-  yPos: 83,
-  rotation: 920,
-};
-
-const SNAP_ROTATIONS = [0, Math.PI / 2, Math.PI, Math.PI * 1.5, Math.PI * 2];
 
 const pieceKey = (num: number) => `piece/${num.toString().padStart(4)}`;
 
@@ -93,22 +83,18 @@ export const mutators = {
   updateCursor: async (tx: WriteTransaction, cursor: Cursor) => {
     await tx.put(`cursor/${cursor.actorID}`, {...cursor});
   },
-  resetPuzzle: async (tx: WriteTransaction, {ts}: {ts: number}) => {
-    if (tx.environment === 'client') {
-      // Clients may not init puzzles
+  initializePuzzle: async (
+    tx: WriteTransaction,
+    {force, pieces}: {force: boolean; pieces: ActivePuzzlePiece[]},
+  ) => {
+    if (!force && (await tx.get('puzzle-exists'))) {
+      console.log('puzzle already exists, skipping non-force initialization');
       return;
     }
-    await initializePuzzle(tx, ts);
-  },
-  guaranteePuzzle: async (tx: WriteTransaction, {ts}: {ts: number}) => {
-    if (tx.environment === 'client') {
-      // Clients may not init puzzles
-      return;
+    for (const [index, piece] of pieces.entries()) {
+      await tx.put(pieceKey(index), piece);
     }
-    let exists = await tx.get('puzzle-exists');
-    if (exists !== PUZZLE_EXISTS_SENTINEL) {
-      await initializePuzzle(tx, ts);
-    }
+    await tx.put('puzzle-exists', true);
   },
   movePiece: async (
     tx: WriteTransaction,
@@ -255,30 +241,6 @@ export const mutators = {
   nop: async (_: WriteTransaction) => {},
 };
 
-const initializePuzzle = async (tx: WriteTransaction, ts: number) => {
-  for (const [index, piece] of PUZZLE_PIECES.entries()) {
-    // Generate a random location
-    const location = {
-      x: randomWithSeed(ts + index, PUZZLE_SEEDS.xPos),
-      y: randomWithSeed(ts + index, PUZZLE_SEEDS.yPos),
-    };
-    const newPiece: ActivePuzzlePiece = {
-      ...piece,
-      ...location,
-      number: index,
-      rotation: snapRotation(
-        randomWithSeed(ts + index, PUZZLE_SEEDS.rotation, Math.PI * 2),
-      ),
-      placed: false,
-      handlePosition: {x: -1, y: -1},
-      moverID: '',
-      rotatorID: '',
-    };
-    await tx.put(pieceKey(index), newPiece);
-  }
-  await tx.put('puzzle-exists', PUZZLE_EXISTS_SENTINEL);
-};
-
 const rotationFuzzy = Math.PI / 4;
 const placementFuzzy = 0.025;
 const placePieceIfClose = async (
@@ -297,14 +259,4 @@ const placePieceIfClose = async (
     piece.y = piece.dy;
   }
   return piece;
-};
-
-const snapRotation = (rotation: number) => {
-  let closest = [Infinity, -1];
-  for (const r of SNAP_ROTATIONS) {
-    if (Math.abs(rotation - r) < closest[0]) {
-      closest = [Math.abs(rotation - r), r];
-    }
-  }
-  return closest[1];
 };
