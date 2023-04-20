@@ -130,7 +130,7 @@ body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
   top: 0px;
   left: 0px;
   transform: translate3d(0, 0, 0);
-  z-index: 100;
+  z-index: 300;
   display: none;
 }
 .demo-active .cursor {
@@ -142,7 +142,7 @@ body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
 }
 .custom-cursor .local.cursor.on-page {
   opacity: 1;
-  z-index: 102;
+  z-index: 301;
 }
 .cursor:not(.local).active {
   opacity: 1;
@@ -242,7 +242,6 @@ body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
   overflow: visible;
 }
 .piece.active {
-  z-index: 200;
 }
 
 .piece.active #shape {
@@ -258,44 +257,44 @@ body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
   stroke: rgba(223, 0, 122, 0.6);
 }
 .piece.A.placed #shape {
-  fill: #FC49AB;
-  stroke: #FC49AB;
+  fill: #fc49ab;
+  stroke: #fc49ab;
 }
 .piece.L #shape {
-  fill:rgba(95, 232, 255, 0.5);
+  fill: rgba(95, 232, 255, 0.5);
   stroke: rgba(0, 197, 229, 0.6);
 }
 .piece.L.placed #shape {
-  fill: #5FE8FF;
-  stroke: #5FE8FF;
+  fill: #5fe8ff;
+  stroke: #5fe8ff;
 }
 .piece.I #shape {
-  fill:rgba(255, 153, 0, 0.5);
-  stroke:rgba(211, 127, 0, 0.8);
+  fill: rgba(255, 153, 0, 0.5);
+  stroke: rgba(211, 127, 0, 0.8);
 }
 .piece.I.placed #shape {
-  fill: #FF9900;
-  stroke: #FF9900;
+  fill: #ff9900;
+  stroke: #ff9900;
 }
 .piece.V #shape {
-  fill:rgba(213, 5, 232, 0.5);
-  stroke:rgba(174, 16, 188, 0.8);
+  fill: rgba(213, 5, 232, 0.5);
+  stroke: rgba(174, 16, 188, 0.8);
 }
 .piece.V.placed #shape {
-  fill: #D505E8;
-  stroke: #D505E8;
+  fill: #d505e8;
+  stroke: #d505e8;
 }
 .piece.E #shape {
-  fill:rgba(29, 157, 229, 0.5);
-  stroke:rgba(29, 157, 229, 0.8);
+  fill: rgba(29, 157, 229, 0.5);
+  stroke: rgba(29, 157, 229, 0.8);
 }
 .piece.E.placed #shape {
-  fill: #1D9DE5;
-  stroke: #1D9DE5;
+  fill: #1d9de5;
+  stroke: #1d9de5;
 }
 
 .rotation-handle {
-  border: 1px solid #0C8CE9;
+  border: 1px solid #0c8ce9;
   box-shadow: 0px 2px 4px 0px #00000040;
   background-color: white;
   width: 12px;
@@ -303,16 +302,18 @@ body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
   border-radius: 50%;
   position: absolute;
   opacity: 0;
-  z-index: 201;
 }
 .rotation-handle.active {
-  transition: left 50ms, top 50ms, margin-top 200ms cubic-bezier(0.46, 0.11, 0.065, 1.65), opacity 200ms cubic-bezier(0.46, 0.11, 0.065, 1.65);
+  transition: left 50ms, top 50ms,
+    margin-top 200ms cubic-bezier(0.46, 0.11, 0.065, 1.65),
+    opacity 200ms cubic-bezier(0.46, 0.11, 0.065, 1.65);
 }
 .rotation-handle.showing {
   margin-top: -40px;
   opacity: 1;
   cursor: grab;
 }
-.rotation-handle.showing.moving, .piece.active.moving #shape  {
+.rotation-handle.showing.moving,
+.piece.active.moving #shape {
   cursor: grabbing;
 }
