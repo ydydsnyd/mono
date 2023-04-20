@@ -394,14 +394,19 @@ export const updatePiecesWithCursor = async (
 
 export const updateRotationHandles = (
   pieces: ActivePuzzlePiece[],
+  pieceOrder: PieceOrder[],
   preciseElement: HTMLDivElement,
 ) => {
-  for (const piece of pieces) {
+  for (const [order, pieceNum] of pieceOrder.entries()) {
+    const piece = pieces[pieceNum];
+    const rotationHandle = rotationHandles[pieceNum];
+    // 2 to be one higher than the piece, and one higher than the placed pieces.
+    rotationHandle.style.zIndex = `${PIECE_MIN_Z_INDEX + 2 + order}`;
+
     if (piece.rotatorID) {
       // If other people are rotating a piece, show it so that it's not confusing when
       // we move it and it rotates or vise versa. Their cursors should be on top of
       // the handle already, making it clear what's happening.
-      const rotationHandle = rotationHandles[piece.number];
       if (rotationHandle) {
         const newPos = coordinateToPosition(
           piece.handlePosition,

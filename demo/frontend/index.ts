@@ -469,7 +469,7 @@ export const init = async (): Promise<DemoAPI> => {
       }
 
       // Render handles
-      await updateRotationHandles(state.pieces, demoContainer);
+      await updateRotationHandles(state.pieces, pieceOrder, demoContainer);
     },
     async () => {
       // Our cursors should update every animation frame.
