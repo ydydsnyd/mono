@@ -114,7 +114,7 @@ export default function Home() {
           <Demo />
 
           <p className={styles.featuredStatement}>
-            The missing piece for multiplayer web apps.
+            The missing piece for multiplayer web apps
           </p>
         </section>
 
