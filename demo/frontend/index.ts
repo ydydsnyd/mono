@@ -170,7 +170,7 @@ export const init = async (): Promise<DemoAPI> => {
   setSetPresentActors(mutators.setPresentActors);
   initReflectClientDone();
 
-  let pieceOrder: PieceOrder[] = [];
+  let pieceOrder = await getPieceOrder();
   addListener<ActivePuzzlePiece>('piece', (_, op) => {
     if (op === OP.ADD) {
       // when we add pieces, make sure we have them locally
