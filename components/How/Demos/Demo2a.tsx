@@ -3,15 +3,12 @@ import {vscDarkPlus} from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 const Demo2a = () => {
   const codeString = `export default {
-  async increment(tx: WriteTransaction, args: {key: string, delta: number}) {
-    console.log(\`Running mutation \${tx.mutationID} from \` +
-                \`\${tx.clientID} on \${tx.environment}\`);
-    const {key, delta} = args;
-    const prev = (await tx.get(key) ?? 0);
-    const next = Math.floor(prev + delta, 360);
-    tx.put(key, next);
-  };
-};`;
+    async setDegree(tx, degree: number) {
+      console.log(\`Running mutation \${tx.clientID}@\${tx.mutationID} \` +
+                  \`on \${tx.environment}: \${degree}\`);
+      await tx.put("degree", degree);
+    },
+  }`;
 
   const codeBlock = {
     background: 'transparent',

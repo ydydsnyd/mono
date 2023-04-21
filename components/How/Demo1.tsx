@@ -7,19 +7,29 @@ import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '@/demo/shared/mutators';
 import IncrementClient from './IncrementClient';
 import Reset from './Reset';
+import type {Latency} from '@/demo/shared/types';
 
 export default function Demo1({
   reflect1,
   reflect2,
   reflectServer,
   reset,
+  latency1,
+  latency2,
+  setLatency1,
+  setLatency2,
 }: {
   reflect1: Reflect<M>;
   reflect2: Reflect<M>;
   reflectServer: Reflect<M>;
   reset: () => void;
+  latency1: Latency;
+  latency2: Latency;
+  setLatency1: (latency: Latency) => void;
+  setLatency2: (latency: Latency) => void;
 }) {
   const [toggleDemo, setToggleDemo] = useState(true);
+
   const toggleSwitchDemo = () => setToggleDemo(!toggleDemo);
 
   return (
@@ -63,9 +73,19 @@ export default function Demo1({
             </>
           )}
         </div>
-        <IncrementClient title="Client 1" reflect={reflect1} />
+        <IncrementClient
+          title="Client 1"
+          reflect={reflect1}
+          latency={latency1}
+          setLatency={setLatency1}
+        />
         <ServerConsole reflect={reflectServer} />
-        <IncrementClient title="Client 2" reflect={reflect2} />
+        <IncrementClient
+          title="Client 2"
+          reflect={reflect2}
+          latency={latency2}
+          setLatency={setLatency2}
+        />
       </div>
       <Reset reset={reset} />
     </div>

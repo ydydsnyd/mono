@@ -14,11 +14,12 @@ const r = new Reflect({
   mutators, 
 });
 
-r.subscribe(tx => tx.get("rotation"), val => {
-  document.querySelector("cube").rotation = val;
+r.subscribe(tx => tx.get("degree"), val => {
+  console.log(\`Key "degree" changed to: \${val}\`);
+  document.querySelector("#degreeImage").rotation = val;
 });
 
-button.onclick = () => reflect.mutate.increment({key: "rotation", delta: 2});`;
+<Slider onChange={(val) => reflect.mutate.setDegree(val)} \\>`;
 
   const codeBlock = {
     background: 'transparent',

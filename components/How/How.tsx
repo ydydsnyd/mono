@@ -1,7 +1,7 @@
 import React, {useState, useEffect, useMemo} from 'react';
 import {init} from '@/demo/howto-frontend';
 import {nanoid} from 'nanoid';
-import {delayWebSocket} from './delayWebSocket';
+import {delayWebSocket, setLatency} from './delayWebSocket';
 import {M, deregisterClientConsole} from '@/demo/shared/mutators';
 import Demo1 from './Demo1';
 import Demo2 from './Demo2';
@@ -10,14 +10,17 @@ import Demo0 from './Demo0';
 import {useInView} from 'react-intersection-observer';
 import styles from './How.module.css';
 import type {Reflect} from '@rocicorp/reflect';
+import type {Latency} from '@/demo/shared/types';
 
-type DemoReflectState = {
+export type DemoReflectState = {
   roomID: string;
   reflect1: Reflect<M>;
   reflect2: Reflect<M>;
   reflectServer: Reflect<M>;
   clientID1: string | undefined;
   clientID2: string | undefined;
+  latency1: Latency;
+  latency2: Latency;
 };
 
 type DemoComponentProps = {
@@ -26,6 +29,10 @@ type DemoComponentProps = {
   reflectServer: Reflect<M>;
   reset: () => void;
   key: string;
+  latency1: Latency;
+  latency2: Latency;
+  setLatency1: (latency: Latency) => void;
+  setLatency2: (latency: Latency) => void;
 };
 
 type DemoComponent = React.ComponentType<DemoComponentProps>;
@@ -35,13 +42,14 @@ function initDemo(
   setState: React.Dispatch<React.SetStateAction<DemoReflectState | undefined>>,
   prepend: string,
 ): void {
+  let latency1 = 0 as Latency;
+  let latency2 = 0 as Latency;
   if (prevState) {
-    console.log('closing reflect1');
     prevState.reflect1.close();
-    console.log('closing reflect2');
     prevState.reflect2.close();
-    console.log('closing reflectServer');
     prevState.reflectServer.close();
+    latency1 = prevState.latency1;
+    latency2 = prevState.latency2;
   }
 
   const [roomID, client1UserID, client2UserID, client3UserID] = Array.from(
@@ -60,9 +68,14 @@ function initDemo(
     reflectServer: r3,
     clientID1: undefined,
     clientID2: undefined,
+    latency1,
+    latency2,
   });
 
   Promise.all([r1.clientID, r2.clientID]).then(([clientID1, clientID2]) => {
+    const latencyMapping = [0, 300, 950];
+    setLatency(clientID1, latencyMapping[latency1]);
+    setLatency(clientID2, latencyMapping[latency2]);
     setState((prev: DemoReflectState | undefined) => {
       if (prev && prev.reflect1 === r1 && prev.reflect2 === r2) {
         return {
@@ -81,8 +94,12 @@ const DemoWrapperInternal = (
   state: DemoReflectState | undefined,
   setState: React.Dispatch<React.SetStateAction<DemoReflectState | undefined>>,
   prepend: string,
-) =>
-  state ? (
+) => {
+  useEffect(() => {
+    initDemo(state, setState, prepend);
+  }, [state?.latency1, state?.latency2]);
+
+  return state ? (
     <ClientIDContext.Provider
       value={{
         client1ID: state.clientID1 ?? '',
@@ -93,12 +110,38 @@ const DemoWrapperInternal = (
         reflect1={state.reflect1}
         reflect2={state.reflect2}
         reflectServer={state.reflectServer}
-        reset={() => initDemo(state, setState, prepend)}
+        reset={() => {
+          initDemo(state, setState, prepend);
+        }}
         key={state.roomID}
+        latency1={state.latency1}
+        latency2={state.latency2}
+        setLatency1={(latency: Latency) => {
+          setState((prev: DemoReflectState | undefined) => {
+            if (prev) {
+              return {
+                ...prev,
+                latency1: latency,
+              };
+            }
+            return prev;
+          });
+        }}
+        setLatency2={(latency: Latency) =>
+          setState((prev: DemoReflectState | undefined) => {
+            if (prev) {
+              return {
+                ...prev,
+                latency2: latency,
+              };
+            }
+            return prev;
+          })
+        }
       />
     </ClientIDContext.Provider>
   ) : null;
-
+};
 export default function How() {
   const {ref} = useInView({
     triggerOnce: true,
@@ -119,7 +162,6 @@ export default function How() {
 
   useEffect(() => {
     const cleanup = async () => {
-      console.log("Closing reflect's");
       const reflects = [
         iReflectState?.reflect1,
         iReflectState?.reflect2,
@@ -142,7 +184,9 @@ export default function How() {
     };
   }, []);
 
-  const DemoWrapper = useMemo(() => DemoWrapperInternal, []);
+  const DemoWrapper = useMemo(() => {
+    return DemoWrapperInternal;
+  }, []);
 
   return (
     <div ref={ref}>

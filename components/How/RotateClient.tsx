@@ -7,23 +7,34 @@ import type {Reflect} from '@rocicorp/reflect';
 import {M, registerClientConsole} from '@/demo/shared/mutators';
 import Roci from './Roci';
 import {useClientConsoleReducer, useCount} from './howtoUtils';
-import GravitySlider from './GravitySlider';
+import RotateSlider from './RotateSlider';
+import type {Latency} from '@/demo/shared/types';
 
-function RotateClient({title, reflect}: {title: string; reflect: Reflect<M>}) {
+function RotateClient({
+  title,
+  reflect,
+  latency,
+  setLatency,
+}: {
+  title: string;
+  reflect: Reflect<M>;
+  latency: Latency;
+  setLatency: (latency: Latency) => void;
+}) {
   const [clientConsoleState, clientConsoleDispatch] = useClientConsoleReducer();
 
   const incrementCount = useCallback(
-    (delta: number) => {
-      reflect?.mutate.increment({key: 'count', delta});
+    (deg: number) => {
+      reflect?.mutate.degree({key: 'degree', deg});
     },
     [reflect],
   );
 
   const [currentClientID, setCurrentClientID] = useState('');
-  const count = useCount(reflect, 'count', (key: string, val: number) => {
+  const count = useCount(reflect, 'degree', (key: string, val: number) => {
     clientConsoleDispatch({
       type: 'APPEND',
-      payload: `Got change of key \`${key}\` to: ${val.toFixed(2)}`,
+      payload: `Key  \"${key}\" changed to: ${val}`,
     });
   });
 
@@ -39,12 +50,16 @@ function RotateClient({title, reflect}: {title: string; reflect: Reflect<M>}) {
   return (
     <div className={`${styles.client} ${styles.clientExpanded}`}>
       <h4 className={styles.panelLabel}>{title}</h4>
-      <Slider clientID={currentClientID} />
+      <Slider
+        clientID={currentClientID}
+        clientLatency={latency}
+        setClientLatency={setLatency}
+      />
       <div className={styles.demo2layout}>
         <div className={buttonStyles.rotateButtonContainer}>
-          <GravitySlider increment={incrementCount} />
+          <RotateSlider increment={incrementCount} degree={count} />
         </div>
-        <Roci rotation={count === null || isNaN(count) ? 0 : count} />
+        <Roci rotation={count === undefined ? 0 : count} />
       </div>
       <ClientConsole logs={clientConsoleState} />
     </div>

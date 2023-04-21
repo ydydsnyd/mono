@@ -1,7 +1,6 @@
 export default function Roci({rotation}: {rotation: number}) {
   const style = {
     transform: `rotate(${rotation}deg)`,
-    // transition: 'transform 0.2s ease-in',
   };
 
   return (

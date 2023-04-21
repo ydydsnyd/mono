@@ -2,15 +2,28 @@ import {useEffect, useState} from 'react';
 import {Range, getTrackBackground} from 'react-range';
 import style from './Slider.module.css';
 
-const STEP = 0.1;
-const MIN = -10;
-const MAX = 10;
-const DRIFT_RATE = 1; // adjust this to change the rate of drift
+const STEP = 1;
+const MIN = -360;
+const MAX = 360;
+const DRIFT_RATE = 36; // adjust this to change the rate of drift
 const INTERVAL_MS = 8;
 
-const GravitySlider = ({increment}: {increment: (delta: number) => void}) => {
+const GravitySlider = ({
+  increment,
+  degree,
+}: {
+  increment: (delta: number) => void;
+  degree: number | null;
+}) => {
   const [value, setValue] = useState(0);
   const [drifting, setDrifting] = useState(false);
+  const [touched, setTouched] = useState(false);
+
+  useEffect(() => {
+    if (degree !== null) {
+      setValue(degree);
+    }
+  }, [degree]);
 
   useEffect(() => {
     const intervalCallback = () => {
@@ -27,7 +40,10 @@ const GravitySlider = ({increment}: {increment: (delta: number) => void}) => {
         if (value === 0) {
           clearInterval(intervalId);
         }
-      } else if (value !== 0) {
+        if (touched && value !== 0) {
+          increment(value);
+        }
+      } else if (touched) {
         increment(value);
       }
     };
@@ -60,20 +76,27 @@ const GravitySlider = ({increment}: {increment: (delta: number) => void}) => {
         min={MIN}
         max={MAX}
         onChange={values => {
-          setValue(values[0]);
-          setDrifting(false);
+          if (touched) {
+            setValue(values[0]);
+            setDrifting(false);
+          }
         }}
         onFinalChange={() => {
-          setDrifting(true);
+          if (touched) {
+            setDrifting(true);
+            setTouched(false);
+          }
         }}
         renderTrack={({props, children}) => (
           <div
             onMouseDown={event => {
               props.onMouseDown(event);
+              setTouched(true);
               setDrifting(false);
             }}
             onTouchStart={event => {
               props.onTouchStart(event);
+              setTouched(true);
               setDrifting(false);
             }}
             style={{

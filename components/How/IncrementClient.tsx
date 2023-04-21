@@ -6,13 +6,18 @@ import demoButtonStyles from './DemoButton.module.css';
 import type {Reflect} from '@rocicorp/reflect';
 import {M, registerClientConsole} from '@/demo/shared/mutators';
 import {useClientConsoleReducer, useCount} from './howtoUtils';
+import type {Latency} from '@/demo/shared/types';
 
 function IncrementClient({
   title,
   reflect,
+  latency,
+  setLatency,
 }: {
   title: string;
   reflect: Reflect<M>;
+  latency: Latency;
+  setLatency: (latency: Latency) => void;
 }) {
   const [clientConsoleState, clientConsoleDispatch] = useClientConsoleReducer();
 
@@ -41,7 +46,11 @@ function IncrementClient({
   return (
     <div className={styles.client}>
       <h4 className={styles.panelLabel}>{title}</h4>
-      <Slider clientID={currentClientID} />
+      <Slider
+        clientID={currentClientID}
+        clientLatency={latency}
+        setClientLatency={setLatency}
+      />
       <div className={demoButtonStyles.demoContainer}>
         <button
           onClick={() => increment(reflect)}

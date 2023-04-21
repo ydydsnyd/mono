@@ -8,6 +8,7 @@ export default function ClientConsole({logs}: {logs: string[] | undefined}) {
   const [bright, setBright] = useState(false);
 
   useEffect(() => {
+    if (logs?.length === 0) return;
     setBright(true);
     const timer = setTimeout(() => {
       setBright(false);

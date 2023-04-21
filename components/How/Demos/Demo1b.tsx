@@ -12,11 +12,11 @@ const reflect = new Reflect({
   mutators,
 });
 
-reflect.subscribe(tx => tx.get("foo"), val => {
-  console.log(\`Key "foo" changed to: \${val}\`);
+reflect.subscribe(tx => tx.get("count"), val => {
+  console.log(\`Key "count" changed to: \${val}\`);
 });
 
-button.onclick = () => reflect.mutate.increment({key: "foo", delta: 2});`;
+button.onclick = () => reflect.mutate.increment({key: "count", delta: 1});`;
   const codeBlock = {
     background: 'transparent',
     paddingLeft: 0,

@@ -224,7 +224,22 @@ export const mutators = {
 
     const prevStr = prev % 1 === 0 ? prev.toString() : prev.toFixed(2);
     const nextStr = next % 1 === 0 ? next.toString() : next.toFixed(2);
-    const msg = `Running ${tx.clientID}@${tx.mutationID} on ${tx.environment}: ${prevStr} → ${nextStr}`;
+    const msg = `Running mutation ${tx.clientID}@${tx.mutationID} on ${tx.environment}: ${prevStr} → ${nextStr}`;
+
+    if (tx.environment === 'client') {
+      if (tx.reason !== 'rebase') {
+        clientConsoleMap.get(tx.clientID)?.(msg);
+      }
+    } else {
+      await addServerLog(tx, msg);
+    }
+  },
+  degree: async (
+    tx: WriteTransaction,
+    {key, deg}: {key: string; deg: number},
+  ) => {
+    await tx.put(key, deg);
+    const msg = `Running mutation ${tx.clientID}@${tx.mutationID} on ${tx.environment}: ${deg}`;
 
     if (tx.environment === 'client') {
       if (tx.reason !== 'rebase') {

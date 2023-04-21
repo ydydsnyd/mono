@@ -1,49 +1,72 @@
-import * as React from 'react';
+import {useEffect, useState} from 'react';
 import {Range, getTrackBackground} from 'react-range';
 import style from './Slider.module.css';
-import type {Latency} from '@/demo/shared/types';
 
 const STEP = 1;
 const MIN = 0;
-const MAX = 2;
+const MAX = 360;
 
-function getLatencyName(latency: Latency): string {
-  return ['low', 'medium', 'high'][latency];
-}
-
-const Slider = ({
-  clientLatency,
-  setClientLatency,
+const RotateSlider = ({
+  increment,
+  degree,
 }: {
-  clientID: string;
-  clientLatency: Latency;
-  setClientLatency: (l: Latency) => void;
+  increment: (delta: number) => void;
+  degree: number | undefined;
 }) => {
-  const latencyName = getLatencyName(clientLatency);
+  const [value, setValue] = useState(0);
+  const [touched, setTouched] = useState(false);
+
+  useEffect(() => {
+    if (!touched) {
+      setValue(degree ?? 0);
+    }
+  }, [degree]);
+
+  useEffect(() => {
+    if (touched) {
+      increment(value);
+    }
+  }, [touched, value, increment]);
+
+  const speed = `${value}°`;
+
   return (
     <div
-      className={style.latencySlider}
+      className={style.speedSlider}
       style={{
         display: 'flex',
         justifyContent: 'center',
+        alignItems: 'center',
       }}
     >
-      <output className={style.latencyValue} id="output">
-        <span className={style.latencyLabel}>Latency: </span>
-        <span className={style.latencyName}>{latencyName}</span>
+      <output className={style.speedValue} id="output">
+        <span className={style.speedValueNumber}>{speed}</span>
       </output>
       <Range
-        values={[clientLatency]}
+        values={[value]}
         step={STEP}
         min={MIN}
         max={MAX}
         onChange={values => {
-          setClientLatency(values[0] as Latency);
+          if (touched) {
+            setValue(values[0]);
+          }
+        }}
+        onFinalChange={() => {
+          if (touched) {
+            setTouched(false);
+          }
         }}
         renderTrack={({props, children}) => (
           <div
-            onMouseDown={props.onMouseDown}
-            onTouchStart={props.onTouchStart}
+            onMouseDown={event => {
+              props.onMouseDown(event);
+              setTouched(true);
+            }}
+            onTouchStart={event => {
+              props.onTouchStart(event);
+              setTouched(true);
+            }}
             style={{
               ...props.style,
               height: '36px',
@@ -54,11 +77,11 @@ const Slider = ({
             <div
               ref={props.ref}
               style={{
-                height: '4px',
+                height: '5px',
                 width: '100%',
                 borderRadius: '2px',
                 background: getTrackBackground({
-                  values: [clientLatency],
+                  values: [value],
                   colors: ['#0A7AFF', '#D1D1D1'],
                   min: MIN,
                   max: MAX,
@@ -92,4 +115,4 @@ const Slider = ({
   );
 };
 
-export default Slider;
+export default RotateSlider;

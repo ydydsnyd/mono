@@ -12,6 +12,7 @@ export default function ServerConsole({reflect}: {reflect: Reflect<M>}) {
   const [bright, setBright] = useState(false);
 
   useEffect(() => {
+    if (logs?.length === 0) return;
     setBright(true);
     const timer = setTimeout(() => {
       setBright(false);

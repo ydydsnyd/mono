@@ -128,3 +128,5 @@ export type RecordingCursor = {
   o: boolean; // on page
   d: boolean; // is down
 };
+
+export type Latency = 0 | 1 | 2;
