@@ -117,11 +117,10 @@ export const createPieceElements = (
       };
     };
     fill.addEventListener('mouseover', () => {
-      // TODO: ideally we'd use order to figure this out - it's common when moving a
-      // mouse over multiple elements that we'll fire hovers on many in a row,
-      // resulting in unexpected behavior. Right now due to transparency this is
-      // pretty ambiguous UX anyway, so just accept the first one.
       const cursor = getCursor();
+      if (!cursor) {
+        return;
+      }
       const actorID = cursor.actorID;
       const piece = pieces[pieceNum];
       if (rotatingPieces[actorID] || movingPieces[actorID] || piece.placed) {
