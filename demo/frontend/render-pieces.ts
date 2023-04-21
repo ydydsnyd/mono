@@ -27,7 +27,6 @@ const rotatingPieces: Record<
   ActorID,
   {startRotation: number; pieceNum: PieceNumber}
 > = {};
-let currentHover: MouseEvent | null = null;
 let cancelAnimations: (() => void) | null = null;
 // Bots need to be able to rotate, but since we won't show handles when they
 // hover, we need to allow them to just arbitrarily decide when to start
@@ -117,17 +116,11 @@ export const createPieceElements = (
         cancelAnimations = null;
       };
     };
-    fill.addEventListener('mouseover', (e: MouseEvent) => {
+    fill.addEventListener('mouseover', () => {
       // TODO: ideally we'd use order to figure this out - it's common when moving a
       // mouse over multiple elements that we'll fire hovers on many in a row,
       // resulting in unexpected behavior. Right now due to transparency this is
       // pretty ambiguous UX anyway, so just accept the first one.
-      if (currentHover) {
-        return;
-      }
-      currentHover = e;
-      setTimeout(() => (currentHover = null), 25);
-      // If we're doing something, don't trigger any of this.
       const cursor = getCursor();
       const actorID = cursor.actorID;
       const piece = pieces[pieceNum];

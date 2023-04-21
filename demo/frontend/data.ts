@@ -126,7 +126,7 @@ export const initialize = async (
     return [...Array(localState.pieces.length).keys()].sort((a, b) => {
       const ao = getOrder(a);
       const bo = getOrder(b);
-      return ao === bo ? 0 : ao > bo ? -1 : 1;
+      return ao - bo;
     });
   };
 
