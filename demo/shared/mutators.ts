@@ -11,7 +11,6 @@ import type {
   Position,
 } from './types';
 import {ACTIVITY_TIMEOUT} from './constants';
-import {snapRotation} from './util';
 
 export type M = typeof mutators;
 
@@ -207,7 +206,7 @@ export const mutators = {
 
     const newPiece = await placePieceIfClose({
       ...piece,
-      rotation: snapRotation(piece.rotation),
+      rotation: piece.rotation,
     });
     newPiece.rotatorID = '';
     newPiece.handlePosition = {x: -1, y: -1};
@@ -241,7 +240,7 @@ export const mutators = {
   nop: async (_: WriteTransaction) => {},
 };
 
-const rotationFuzzy = Math.PI / 4;
+const rotationFuzzy = Math.PI / 6;
 const placementFuzzy = 0.025;
 const placePieceIfClose = async (
   piece: ActivePuzzlePiece,
@@ -257,6 +256,7 @@ const placePieceIfClose = async (
     piece.placed = true;
     piece.x = piece.dx;
     piece.y = piece.dy;
+    piece.rotation = 0;
   }
   return piece;
 };

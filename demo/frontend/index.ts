@@ -16,12 +16,7 @@ import {
   PieceNumber,
   Position,
 } from '../shared/types';
-import {
-  distance,
-  getLazyFunction,
-  randFloat,
-  snapRotation,
-} from '../shared/util';
+import {distance, getLazyFunction, randFloat} from '../shared/util';
 import {getUserLocation} from './location';
 import {initRoom} from './orchestrator';
 import {FPS_LOW_PASS} from './constants';
@@ -314,7 +309,7 @@ export const init = async (): Promise<DemoAPI> => {
         ...PUZZLE_PIECES[ret.length],
         ...coord,
         number: ret.length,
-        rotation: snapRotation(randFloat(0, Math.PI * 2)),
+        rotation: randFloat(0, Math.PI * 2),
         placed: false,
         handlePosition: {x: -1, y: -1},
         moverID: '',

@@ -255,14 +255,3 @@ export const closest = <T, V>(v: T, inputs: V[], transform: (v: V) => T) => {
     }
   }
 };
-
-const SNAP_ROTATIONS = [0, Math.PI / 2, Math.PI, Math.PI * 1.5, Math.PI * 2];
-export const snapRotation = (rotation: number) => {
-  let closest = [Infinity, -1];
-  for (const r of SNAP_ROTATIONS) {
-    if (Math.abs(rotation - r) < closest[0]) {
-      closest = [Math.abs(rotation - r), r];
-    }
-  }
-  return closest[1];
-};
