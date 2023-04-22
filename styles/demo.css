@@ -8,11 +8,10 @@ body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
 #demo {
   user-select: none;
   position: relative;
-  width: 565.61px;
-  height: 195.07;
-  /* width: 100%; */
-  /* max-width: 600px;
-  aspect-ratio: 320 / 113; */
+}
+
+#wells {
+  display: block;
 }
 
 #debug {

@@ -1,7 +1,22 @@
-import {SVG_ORIGINAL_SIZE} from './constants';
-import {Letter, PuzzlePiece} from './types';
+import type {Position, Size} from './util';
 
-const A: PuzzlePiece[] = [
+const SVG_ORIGINAL_SIZE = {width: 568, height: 198};
+
+enum Letter {
+  A = 'A',
+  L = 'L',
+  I = 'I',
+  V = 'V',
+  E = 'E',
+}
+
+export type PieceDefinition = Size &
+  Position & {
+    letter: Letter;
+    paths: string[];
+  };
+
+const A: PieceDefinition[] = [
   // a1
   {
     letter: Letter.A,
@@ -10,8 +25,8 @@ const A: PuzzlePiece[] = [
     ],
     width: 58,
     height: 49,
-    dx: 3.815919876098633 / SVG_ORIGINAL_SIZE.width,
-    dy: 56.81010055541992 / SVG_ORIGINAL_SIZE.height,
+    x: 3.815919876098633 / SVG_ORIGINAL_SIZE.width,
+    y: 56.81010055541992 / SVG_ORIGINAL_SIZE.height,
   },
   // a2
   {
@@ -21,8 +36,8 @@ const A: PuzzlePiece[] = [
     ],
     width: 63,
     height: 56,
-    dx: 55.78390121459961 / SVG_ORIGINAL_SIZE.width,
-    dy: 56.80799865722656 / SVG_ORIGINAL_SIZE.height,
+    x: 55.78390121459961 / SVG_ORIGINAL_SIZE.width,
+    y: 56.80799865722656 / SVG_ORIGINAL_SIZE.height,
   },
   // a3
   {
@@ -32,8 +47,8 @@ const A: PuzzlePiece[] = [
     ],
     width: 50,
     height: 58,
-    dx: 70.78389739990234 / SVG_ORIGINAL_SIZE.width,
-    dy: 93.45220184326172 / SVG_ORIGINAL_SIZE.height,
+    x: 70.78389739990234 / SVG_ORIGINAL_SIZE.width,
+    y: 93.45220184326172 / SVG_ORIGINAL_SIZE.height,
   },
   // a4
   {
@@ -43,8 +58,8 @@ const A: PuzzlePiece[] = [
     ],
     width: 46,
     height: 29,
-    dx: 31.327600479125977 / SVG_ORIGINAL_SIZE.width,
-    dy: 113.21700286865234 / SVG_ORIGINAL_SIZE.height,
+    x: 31.327600479125977 / SVG_ORIGINAL_SIZE.width,
+    y: 113.21700286865234 / SVG_ORIGINAL_SIZE.height,
   },
   // a5
   {
@@ -54,8 +69,8 @@ const A: PuzzlePiece[] = [
     ],
     width: 47,
     height: 66,
-    dx: 1 / SVG_ORIGINAL_SIZE.width,
-    dy: 118.64600372314453 / SVG_ORIGINAL_SIZE.height,
+    x: 1 / SVG_ORIGINAL_SIZE.width,
+    y: 118.64600372314453 / SVG_ORIGINAL_SIZE.height,
   },
   // a6
   {
@@ -65,8 +80,8 @@ const A: PuzzlePiece[] = [
     ],
     width: 61,
     height: 40,
-    dx: 11.150099754333496 / SVG_ORIGINAL_SIZE.width,
-    dy: 156.79200744628906 / SVG_ORIGINAL_SIZE.height,
+    x: 11.150099754333496 / SVG_ORIGINAL_SIZE.width,
+    y: 156.79200744628906 / SVG_ORIGINAL_SIZE.height,
   },
   // a7
   {
@@ -76,12 +91,12 @@ const A: PuzzlePiece[] = [
     ],
     width: 66,
     height: 47,
-    dx: 56.372100830078125 / SVG_ORIGINAL_SIZE.width,
-    dy: 146 / SVG_ORIGINAL_SIZE.height,
+    x: 56.372100830078125 / SVG_ORIGINAL_SIZE.width,
+    y: 146 / SVG_ORIGINAL_SIZE.height,
   },
 ];
 
-const L: PuzzlePiece[] = [
+const L: PieceDefinition[] = [
   // l1
   {
     letter: Letter.L,
@@ -90,8 +105,8 @@ const L: PuzzlePiece[] = [
     ],
     width: 44,
     height: 76,
-    dx: 147.8699951171875 / SVG_ORIGINAL_SIZE.width,
-    dy: 8.6799898147583 / SVG_ORIGINAL_SIZE.height,
+    x: 147.8699951171875 / SVG_ORIGINAL_SIZE.width,
+    y: 8.6799898147583 / SVG_ORIGINAL_SIZE.height,
   },
   // l2
   {
@@ -101,8 +116,8 @@ const L: PuzzlePiece[] = [
     ],
     width: 44,
     height: 67,
-    dx: 147.8699951171875 / SVG_ORIGINAL_SIZE.width,
-    dy: 69.92937469482422 / SVG_ORIGINAL_SIZE.height,
+    x: 147.8699951171875 / SVG_ORIGINAL_SIZE.width,
+    y: 69.92937469482422 / SVG_ORIGINAL_SIZE.height,
   },
   // l3
   {
@@ -112,12 +127,12 @@ const L: PuzzlePiece[] = [
     ],
     width: 44,
     height: 77,
-    dx: 147.8699951171875 / SVG_ORIGINAL_SIZE.width,
-    dy: 116.88200378417969 / SVG_ORIGINAL_SIZE.height,
+    x: 147.8699951171875 / SVG_ORIGINAL_SIZE.width,
+    y: 116.88200378417969 / SVG_ORIGINAL_SIZE.height,
   },
 ];
 
-const I: PuzzlePiece[] = [
+const I: PieceDefinition[] = [
   // i1
   {
     letter: Letter.I,
@@ -126,8 +141,8 @@ const I: PuzzlePiece[] = [
     ],
     width: 35,
     height: 49,
-    dx: 216.53599548339844 / SVG_ORIGINAL_SIZE.width,
-    dy: 1 / SVG_ORIGINAL_SIZE.height,
+    x: 216.53599548339844 / SVG_ORIGINAL_SIZE.width,
+    y: 1 / SVG_ORIGINAL_SIZE.height,
   },
   // i2
   {
@@ -137,8 +152,8 @@ const I: PuzzlePiece[] = [
     ],
     width: 25,
     height: 49,
-    dx: 242.28399658203125 / SVG_ORIGINAL_SIZE.width,
-    dy: 1.002079963684082 / SVG_ORIGINAL_SIZE.height,
+    x: 242.28399658203125 / SVG_ORIGINAL_SIZE.width,
+    y: 1.002079963684082 / SVG_ORIGINAL_SIZE.height,
   },
   // i3
   {
@@ -148,8 +163,8 @@ const I: PuzzlePiece[] = [
     ],
     width: 44,
     height: 79,
-    dx: 220.1199951171875 / SVG_ORIGINAL_SIZE.width,
-    dy: 59.880001068115234 / SVG_ORIGINAL_SIZE.height,
+    x: 220.1199951171875 / SVG_ORIGINAL_SIZE.width,
+    y: 59.880001068115234 / SVG_ORIGINAL_SIZE.height,
   },
   // i4
   {
@@ -159,12 +174,12 @@ const I: PuzzlePiece[] = [
     ],
     width: 44,
     height: 99,
-    dx: 220.1199951171875 / SVG_ORIGINAL_SIZE.width,
-    dy: 94.10420227050781 / SVG_ORIGINAL_SIZE.height,
+    x: 220.1199951171875 / SVG_ORIGINAL_SIZE.width,
+    y: 94.10420227050781 / SVG_ORIGINAL_SIZE.height,
   },
 ];
 
-const V: PuzzlePiece[] = [
+const V: PieceDefinition[] = [
   // v1
   {
     letter: Letter.V,
@@ -173,8 +188,8 @@ const V: PuzzlePiece[] = [
     ],
     width: 60,
     height: 35,
-    dx: 278.03399658203125 / SVG_ORIGINAL_SIZE.width,
-    dy: 59.880001068115234 / SVG_ORIGINAL_SIZE.height,
+    x: 278.03399658203125 / SVG_ORIGINAL_SIZE.width,
+    y: 59.880001068115234 / SVG_ORIGINAL_SIZE.height,
   },
   // v2
   {
@@ -184,8 +199,8 @@ const V: PuzzlePiece[] = [
     ],
     width: 50,
     height: 37,
-    dx: 290.8290100097656 / SVG_ORIGINAL_SIZE.width,
-    dy: 88.46485137939453 / SVG_ORIGINAL_SIZE.height,
+    x: 290.8290100097656 / SVG_ORIGINAL_SIZE.width,
+    y: 88.46485137939453 / SVG_ORIGINAL_SIZE.height,
   },
   // v3
   {
@@ -195,8 +210,8 @@ const V: PuzzlePiece[] = [
     ],
     width: 49,
     height: 56,
-    dx: 302.4230041503906 / SVG_ORIGINAL_SIZE.width,
-    dy: 104.48899841308594 / SVG_ORIGINAL_SIZE.height,
+    x: 302.4230041503906 / SVG_ORIGINAL_SIZE.width,
+    y: 104.48899841308594 / SVG_ORIGINAL_SIZE.height,
   },
   // v4
   {
@@ -206,8 +221,8 @@ const V: PuzzlePiece[] = [
     ],
     width: 70,
     height: 54,
-    dx: 315.7080078125 / SVG_ORIGINAL_SIZE.width,
-    dy: 139.46157836914062 / SVG_ORIGINAL_SIZE.height,
+    x: 315.7080078125 / SVG_ORIGINAL_SIZE.width,
+    y: 139.46157836914062 / SVG_ORIGINAL_SIZE.height,
   },
   // v5
   {
@@ -217,8 +232,8 @@ const V: PuzzlePiece[] = [
     ],
     width: 49,
     height: 54,
-    dx: 350.5959777832031 / SVG_ORIGINAL_SIZE.width,
-    dy: 116.41200256347656 / SVG_ORIGINAL_SIZE.height,
+    x: 350.5959777832031 / SVG_ORIGINAL_SIZE.width,
+    y: 116.41200256347656 / SVG_ORIGINAL_SIZE.height,
   },
   // v6
   {
@@ -228,8 +243,8 @@ const V: PuzzlePiece[] = [
     ],
     width: 49,
     height: 49,
-    dx: 360.8280029296875 / SVG_ORIGINAL_SIZE.width,
-    dy: 87.74490356445312 / SVG_ORIGINAL_SIZE.height,
+    x: 360.8280029296875 / SVG_ORIGINAL_SIZE.width,
+    y: 87.74490356445312 / SVG_ORIGINAL_SIZE.height,
   },
   // v7
   {
@@ -239,12 +254,12 @@ const V: PuzzlePiece[] = [
     ],
     width: 57,
     height: 46,
-    dx: 369.8609924316406 / SVG_ORIGINAL_SIZE.width,
-    dy: 59.880001068115234 / SVG_ORIGINAL_SIZE.height,
+    x: 369.8609924316406 / SVG_ORIGINAL_SIZE.width,
+    y: 59.880001068115234 / SVG_ORIGINAL_SIZE.height,
   },
 ];
 
-const E: PuzzlePiece[] = [
+const E: PieceDefinition[] = [
   // e1
   {
     letter: Letter.E,
@@ -253,8 +268,8 @@ const E: PuzzlePiece[] = [
     ],
     width: 65,
     height: 64,
-    dx: 434.1159973144531 / SVG_ORIGINAL_SIZE.width,
-    dy: 59.43260192871094 / SVG_ORIGINAL_SIZE.height,
+    x: 434.1159973144531 / SVG_ORIGINAL_SIZE.width,
+    y: 59.43260192871094 / SVG_ORIGINAL_SIZE.height,
   },
   // e2
   {
@@ -264,8 +279,8 @@ const E: PuzzlePiece[] = [
     ],
     width: 68,
     height: 44,
-    dx: 479.9985046386719 / SVG_ORIGINAL_SIZE.width,
-    dy: 56.80799865722656 / SVG_ORIGINAL_SIZE.height,
+    x: 479.9985046386719 / SVG_ORIGINAL_SIZE.width,
+    y: 56.80799865722656 / SVG_ORIGINAL_SIZE.height,
   },
   // e3
   {
@@ -275,8 +290,8 @@ const E: PuzzlePiece[] = [
     ],
     width: 50,
     height: 63,
-    dx: 516.930908203125 / SVG_ORIGINAL_SIZE.width,
-    dy: 73.966796875 / SVG_ORIGINAL_SIZE.height,
+    x: 516.930908203125 / SVG_ORIGINAL_SIZE.width,
+    y: 73.966796875 / SVG_ORIGINAL_SIZE.height,
   },
   // e4
   {
@@ -286,8 +301,8 @@ const E: PuzzlePiece[] = [
     ],
     width: 48,
     height: 24,
-    dx: 475.5716552734375 / SVG_ORIGINAL_SIZE.width,
-    dy: 113.59500122070312 / SVG_ORIGINAL_SIZE.height,
+    x: 475.5716552734375 / SVG_ORIGINAL_SIZE.width,
+    y: 113.59500122070312 / SVG_ORIGINAL_SIZE.height,
   },
   // e5
   {
@@ -297,8 +312,8 @@ const E: PuzzlePiece[] = [
     ],
     width: 50,
     height: 65,
-    dx: 433.2380065917969 / SVG_ORIGINAL_SIZE.width,
-    dy: 111.39337158203125 / SVG_ORIGINAL_SIZE.height,
+    x: 433.2380065917969 / SVG_ORIGINAL_SIZE.width,
+    y: 111.39337158203125 / SVG_ORIGINAL_SIZE.height,
   },
   // e6
   {
@@ -308,8 +323,8 @@ const E: PuzzlePiece[] = [
     ],
     width: 74,
     height: 48,
-    dx: 450.4639892578125 / SVG_ORIGINAL_SIZE.width,
-    dy: 148.80999755859375 / SVG_ORIGINAL_SIZE.height,
+    x: 450.4639892578125 / SVG_ORIGINAL_SIZE.width,
+    y: 148.80999755859375 / SVG_ORIGINAL_SIZE.height,
   },
   // e7
   {
@@ -319,9 +334,9 @@ const E: PuzzlePiece[] = [
     ],
     width: 56,
     height: 45,
-    dx: 506.6757507324219 / SVG_ORIGINAL_SIZE.width,
-    dy: 148.96800231933594 / SVG_ORIGINAL_SIZE.height,
+    x: 506.6757507324219 / SVG_ORIGINAL_SIZE.width,
+    y: 148.96800231933594 / SVG_ORIGINAL_SIZE.height,
   },
 ];
 
-export const PUZZLE_PIECES = [...A, ...L, ...I, ...V, ...E];
+export const PIECE_DEFINITIONS = [...A, ...L, ...I, ...V, ...E];
