@@ -1,59 +1,56 @@
 import {Piece} from './Piece';
 import {useEffect, useState} from 'react';
-import {coordinateToPosition, getScreenSize, getAbsoluteRect} from './util';
-import {PIECE_DEFINITIONS} from './piece-definitions';
-import type {PieceModel} from './piece-model';
-
-/*
-const r = new Reflect<M>({
-  socketOrigin: WORKER_HOST,
-  userID: 'anon',
-  roomID: 'puzzle',
-  mutators,
-  ...loggingOptions,
-});
-*/
-
-let initialized = false;
+import {
+  coordinateToPosition,
+  getScreenSize,
+  getAbsoluteRect,
+  getStage,
+  generateRandomPieces,
+} from './util';
+import {listPieces} from './piece-model';
+import {Reflect} from '@rocicorp/reflect';
+import {loggingOptions} from '../frontend/logging-options';
+import {type M, mutators} from '../shared/mutators';
+import {WORKER_HOST} from '../shared/urls';
+import {useSubscribe} from 'replicache-react';
 
 export function Puzzle() {
+  const [r, setR] = useState<Reflect<M> | null>(null);
   const [screenSize, setScreenSize] = useState(getScreenSize());
-  const stage = getAbsoluteRect(document.querySelector('#demo') as HTMLElement);
-  //const pieceLimits = getPieceLimits(stage, screenSize);
+  const stage = getStage(screenSize);
+  const home = getAbsoluteRect(document.querySelector('#demo')!);
 
   useEffect(() => {
     const handleWindowResize = () => {
       setScreenSize(getScreenSize());
     };
     window.addEventListener('resize', handleWindowResize);
+
+    const r = new Reflect<M>({
+      socketOrigin: WORKER_HOST,
+      userID: 'anon',
+      roomID: 'puzzle',
+      mutators,
+      ...loggingOptions,
+    });
+    r.mutate.initializePuzzle({
+      pieces: generateRandomPieces(home, stage, screenSize),
+      force: true,
+    });
+    setR(r);
+
     return () => {
       window.removeEventListener('resize', handleWindowResize);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (!initialized) {
-      /*
-      r.mutate.initializePuzzle({
-        pieces: generateRandomPieces(stage, pieceLimits, screenSize),
-        force: false,
-      });
-      */
-      initialized = true;
-    }
-  });
+  const pieces = useSubscribe(r, listPieces, []);
 
   return (
     <>
-      {PIECE_DEFINITIONS.map((def, i) => {
-        const model: PieceModel = {
-          id: i.toString(),
-          x: def.x,
-          y: def.y,
-          placed: false,
-          rotation: 0,
-        };
-        const pos = coordinateToPosition(model, stage, screenSize);
+      {pieces.map((model, i) => {
+        const pos = coordinateToPosition(model, home, screenSize);
         return (
           <Piece
             key={i}

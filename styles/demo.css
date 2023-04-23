@@ -60,8 +60,7 @@ body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
   margin: 2em;
   align-items: center;
   justify-content: center;
-  transition: opacity 1s;
-  opacity: 0;
+  opacity: 1;
 }
 #info > *:not(:first-child) {
   margin-left: 3em;
@@ -85,7 +84,6 @@ body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
   transform-style: preserve-3d;
   text-align: center;
   height: 1.2em;
-  cursor: none;
   color: black;
 }
 #reset-button.cleared {

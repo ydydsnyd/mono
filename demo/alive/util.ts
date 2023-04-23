@@ -72,21 +72,25 @@ export const distance = (a: Position, b: Position): number => {
   return Math.sqrt(x * x + y * y);
 };
 
-export function getPieceLimits(stage: Rect, screenSize: Size) {
+export function getStage(screenSize: Size) {
   const edgeBuffer = 10;
   const approxPieceSize = 50;
 
+  const navBottom = document.querySelector('nav')!.offsetHeight;
+
   return new Rect(
     edgeBuffer,
-    stage.y,
-    screenSize.width - approxPieceSize - edgeBuffer,
-    stage.height,
+    navBottom,
+    screenSize.width - edgeBuffer * 2 - approxPieceSize,
+    getAbsoluteRect(document.querySelector('#intro')!).height -
+      edgeBuffer * 2 -
+      navBottom,
   );
 }
 
 export function generateRandomPieces(
+  home: BoundingBox,
   stage: BoundingBox,
-  pieceLimits: BoundingBox,
   screenSize: Size,
 ) {
   const selectedPositions: Position[] = [];
@@ -99,8 +103,8 @@ export function generateRandomPieces(
   const getCandidates = () => {
     return new Array(10).fill(0).map(() => {
       const pos = {
-        x: randFloat(pieceLimits.x, pieceLimits.y + pieceLimits.width),
-        y: randFloat(pieceLimits.y, pieceLimits.y + pieceLimits.height),
+        x: randFloat(stage.x, stage.y + stage.width),
+        y: randFloat(stage.y, stage.y + stage.height),
       };
       let minDist = Infinity;
       for (const selectedPos of selectedPositions) {
@@ -129,7 +133,7 @@ export function generateRandomPieces(
 
   const ret: PieceModel[] = [];
   for (const [i, pos] of selectedPositions.entries()) {
-    const coord = positionToCoordinate(pos, stage, screenSize);
+    const coord = positionToCoordinate(pos, home, screenSize);
     const newPiece: PieceModel = {
       id: i.toString(),
       ...coord,
@@ -143,7 +147,8 @@ export function generateRandomPieces(
 }
 // Our coordinate system has 2 requirements:
 // 1. We want pieces to be able to use the full horizontal width of the screen
-// on wider screens, even when that means they are far outside the stage.
+// on wider screens, even when that means they are far outside the home location
+// of letters.
 // 2. No piece should be positioned off screen on any user's device.
 // 3. When a piece is over a letter, it should be over the same part of the
 // letter on every other user's screen. Otherwise when users drop pieces, other
@@ -159,24 +164,24 @@ export function generateRandomPieces(
 // get closer or further away from the demo when you resize your screen.
 export const positionToCoordinate = (
   position: Position,
-  stage: BoundingBox,
+  home: BoundingBox,
   screenSize: Size,
 ) => {
-  const areaRight = stage.x + stage.width;
-  const areaBottom = stage.y + stage.height;
-  let x = (position.x - stage.x) / stage.width;
+  const areaRight = home.x + home.width;
+  const areaBottom = home.y + home.height;
+  let x = (position.x - home.x) / home.width;
   if (x < 0) {
     // calculate fraction of left margin used, then translate into domain [-1..0].
-    x = position.x / stage.x - 1;
+    x = position.x / home.x - 1;
   } else if (x > 1) {
     // calculate fraction of right margin used, then translate into domain [1..2].
     const remainingScreen = screenSize.width - areaRight;
     x = (position.x - areaRight) / remainingScreen + 1;
   }
   // same but for y coordinates.
-  let y = (position.y - stage.y) / stage.height;
+  let y = (position.y - home.y) / home.height;
   if (y < 0) {
-    y = position.y / stage.y - 1;
+    y = position.y / home.y - 1;
   } else if (y > 1) {
     const remainingScreen = screenSize.height - areaBottom;
     y = (position.y - areaBottom) / remainingScreen + 1;
@@ -186,28 +191,28 @@ export const positionToCoordinate = (
 
 export const coordinateToPosition = (
   coord: Position,
-  stage: BoundingBox,
+  home: BoundingBox,
   screenSize: Size,
 ) => {
-  const areaRight = stage.x + stage.width;
+  const areaRight = home.x + home.width;
   let x = -1;
   if (coord.x < 0) {
     // translate coord back into domain [0..1] then multiply by left margin.
-    x = (coord.x + 1) * stage.x;
+    x = (coord.x + 1) * home.x;
   } else if (coord.x > 1) {
     // same for right margin.
     x = areaRight + (coord.x - 1) * (screenSize.width - areaRight);
   } else {
-    x = stage.x + coord.x * stage.width;
+    x = home.x + coord.x * home.width;
   }
-  const areaBottom = stage.y + stage.height;
+  const areaBottom = home.y + home.height;
   let y = -1;
   if (coord.y < 0) {
-    y = (coord.y + 1) * stage.y;
+    y = (coord.y + 1) * home.y;
   } else if (coord.y > 1) {
     y = areaBottom + (coord.y - 1) * (screenSize.height - areaBottom);
   } else {
-    y = stage.y + coord.y * stage.height;
+    y = home.y + coord.y * home.height;
   }
   return {x, y};
 };
