@@ -93,6 +93,7 @@ export function Puzzle({
 
     if (model.id !== myClient.selectedPieceID) {
       r.mutate.updateClient({id: myClient.id, selectedPieceID: ''});
+      r.mutate.updatePiece({id: model.id, handleRotation: -Math.PI / 2});
     }
   };
   const handlePieceBlur = () => {
@@ -286,7 +287,7 @@ export function Puzzle({
     rotating.current.delete(e.pointerId);
   };
 
-  const handleRotationPointerDown = (
+  const handleRotateStart = (
     model: PieceInfo,
     e: React.PointerEvent,
     pos: Position,
@@ -339,7 +340,7 @@ export function Puzzle({
             onPointerDown={e => handlePiecePointerDown(model, e, pos)}
             onPointerOver={() => handlePieceHover(model)}
             onPointerOut={() => handlePieceBlur()}
-            onRotationStart={e => handleRotationPointerDown(model, e, pos)}
+            onRotationStart={e => handleRotateStart(model, e, pos)}
           />
         );
       })}
