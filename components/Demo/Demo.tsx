@@ -12,24 +12,23 @@ import Image from 'next/image';
 import {useEffect, useState} from 'react';
 import {Reflect} from '@rocicorp/reflect';
 import {SVG_ORIGINAL_SIZE} from '@/demo/alive/piece-definitions';
+import classNames from 'classnames';
 
 const Demo = () => {
-  const [r, setR] = useState<Reflect<M> | null>(null);
   const [screenSize, setScreenSize] = useState(getScreenSize());
-  const stage = getStage(screenSize);
-  const home = new Rect(
-    (screenSize.width - SVG_ORIGINAL_SIZE.width) / 2,
-    320,
-    SVG_ORIGINAL_SIZE.width,
-    SVG_ORIGINAL_SIZE.height,
-  );
-
   useEffect(() => {
     const handleWindowResize = () => {
       setScreenSize(getScreenSize());
     };
     window.addEventListener('resize', handleWindowResize);
 
+    return () => {
+      window.removeEventListener('resize', handleWindowResize);
+    };
+  }, []);
+
+  const [r, setR] = useState<Reflect<M> | null>(null);
+  useEffect(() => {
     const r = new Reflect<M>({
       socketOrigin: WORKER_HOST,
       userID: 'anon',
@@ -39,15 +38,39 @@ const Demo = () => {
     });
     r.mutate.initializePuzzle({
       pieces: generateRandomPieces(home, stage, screenSize),
-      force: true,
+      force: false,
     });
     setR(r);
-
-    return () => {
-      window.removeEventListener('resize', handleWindowResize);
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const [resetClicked, setResetClicked] = useState(false);
+  const handleResetClick = () => {
+    r!.mutate.initializePuzzle({
+      pieces: generateRandomPieces(home, stage, screenSize),
+      force: true,
+    });
+    setResetClicked(true);
+  };
+  useEffect(() => {
+    if (!resetClicked) {
+      return undefined;
+    }
+    const timerID = window.setTimeout(() => {
+      setResetClicked(false);
+    }, 1000);
+    return () => {
+      window.clearTimeout(timerID);
+    };
+  });
+
+  const stage = getStage(screenSize);
+  const home = new Rect(
+    (screenSize.width - SVG_ORIGINAL_SIZE.width) / 2,
+    320,
+    SVG_ORIGINAL_SIZE.width,
+    SVG_ORIGINAL_SIZE.height,
+  );
 
   return (
     <>
@@ -100,7 +123,11 @@ const Demo = () => {
           &nbsp;Active Users:&nbsp;
           <span id="active-user-count">1</span>
         </div>
-        <button id="reset-button">
+        <button
+          id="reset-button"
+          className={classNames({cleared: resetClicked})}
+          onClick={() => handleResetClick()}
+        >
           <div className="copy">
             <Image
               src="/img/clear.svg"

@@ -65,6 +65,12 @@ export const mutators = {
     tx: WriteTransaction,
     {force, pieces}: {force: boolean; pieces: PieceModel[]},
   ) => {
+    if (!force && tx.environment === 'client') {
+      console.log(
+        'client cannot initialize puzzle, skipping non-force optimistic mutation',
+      );
+      return;
+    }
     if (!force && (await tx.get('puzzle-exists'))) {
       console.log('puzzle already exists, skipping non-force initialization');
       return;
