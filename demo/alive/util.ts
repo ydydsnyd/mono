@@ -76,15 +76,15 @@ export function getStage(screenSize: Size) {
   const edgeBuffer = 10;
   const approxPieceSize = 50;
 
-  const navBottom = document.querySelector('nav')!.offsetHeight;
+  // TODO: would be better to get these from layout dynamically.
+  const navBottom = 88;
+  const introBottom = 763.5;
 
   return new Rect(
     edgeBuffer,
     navBottom,
     screenSize.width - edgeBuffer * 2 - approxPieceSize,
-    getAbsoluteRect(document.querySelector('#intro')!).height -
-      edgeBuffer * 2 -
-      navBottom,
+    introBottom - edgeBuffer * 2 - navBottom,
   );
 }
 

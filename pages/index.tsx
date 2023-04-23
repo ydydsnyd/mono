@@ -8,8 +8,14 @@ import Testimonials from '@/components/Testimonials/Testimonials';
 import Pricing from '@/components/Pricing/Pricing';
 import Demo from '@/components/Demo/Demo';
 import Footer from '@/components/Footer/Footer';
+import {useEffect, useState} from 'react';
 
 export default function Home() {
+  const [onClient, setOnClient] = useState(false);
+  useEffect(() => {
+    setOnClient(true);
+  }, []);
+
   return (
     <div className={styles.container}>
       <Head>
@@ -111,7 +117,7 @@ export default function Home() {
           className={`${styles.section} ${styles.introSection}`}
         >
           <h1 className={styles.title}>The next web is</h1>
-          <Demo />
+          {onClient && <Demo />}
 
           <p className={styles.featuredStatement}>
             The missing piece for multiplayer web apps

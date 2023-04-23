@@ -1,6 +1,6 @@
 import type {Position, Size} from './util';
 
-const SVG_ORIGINAL_SIZE = {width: 568, height: 198};
+export const SVG_ORIGINAL_SIZE = {width: 568, height: 198};
 
 enum Letter {
   A = 'A',

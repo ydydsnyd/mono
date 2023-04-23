@@ -1,11 +1,52 @@
 import {Puzzle} from '@/demo/alive/Puzzle';
+import {
+  getScreenSize,
+  getStage,
+  generateRandomPieces,
+  Rect,
+} from '@/demo/alive/util';
+import {loggingOptions} from '@/demo/frontend/logging-options';
+import {type M, mutators} from '@/demo/shared/mutators';
+import {WORKER_HOST} from '@/demo/shared/urls';
 import Image from 'next/image';
 import {useEffect, useState} from 'react';
+import {Reflect} from '@rocicorp/reflect';
+import {SVG_ORIGINAL_SIZE} from '@/demo/alive/piece-definitions';
 
 const Demo = () => {
-  const [onClient, setOnClient] = useState(false);
+  const [r, setR] = useState<Reflect<M> | null>(null);
+  const [screenSize, setScreenSize] = useState(getScreenSize());
+  const stage = getStage(screenSize);
+  const home = new Rect(
+    (screenSize.width - SVG_ORIGINAL_SIZE.width) / 2,
+    320,
+    SVG_ORIGINAL_SIZE.width,
+    SVG_ORIGINAL_SIZE.height,
+  );
+
   useEffect(() => {
-    setOnClient(true);
+    const handleWindowResize = () => {
+      setScreenSize(getScreenSize());
+    };
+    window.addEventListener('resize', handleWindowResize);
+
+    const r = new Reflect<M>({
+      socketOrigin: WORKER_HOST,
+      userID: 'anon',
+      roomID: 'puzzle',
+      mutators,
+      ...loggingOptions,
+    });
+    r.mutate.initializePuzzle({
+      pieces: generateRandomPieces(home, stage, screenSize),
+      force: true,
+    });
+    setR(r);
+
+    return () => {
+      window.removeEventListener('resize', handleWindowResize);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -50,7 +91,9 @@ const Demo = () => {
           />
         </svg>
       </div>
-      <div id="pieces">{onClient && <Puzzle />}</div>
+      <div id="pieces">
+        {r && <Puzzle r={r} home={home} screenSize={screenSize} />}
+      </div>
       <div id="info">
         <div className="active-user-info">
           <div className="online-dot online"></div>
