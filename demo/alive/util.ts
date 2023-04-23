@@ -74,7 +74,6 @@ export const distance = (a: Position, b: Position): number => {
 
 export function getStage(screenSize: Size) {
   const edgeBuffer = 10;
-  const approxPieceSize = 50;
 
   // TODO: would be better to get these from layout dynamically.
   const navBottom = 88;
@@ -83,16 +82,17 @@ export function getStage(screenSize: Size) {
   return new Rect(
     edgeBuffer,
     navBottom,
-    screenSize.width - edgeBuffer * 2 - approxPieceSize,
+    screenSize.width - edgeBuffer * 2,
     introBottom - edgeBuffer * 2 - navBottom,
   );
 }
 
 export function generateRandomPieces(
-  home: BoundingBox,
-  stage: BoundingBox,
+  home: Rect,
+  stage: Rect,
   screenSize: Size,
 ) {
+  const approxPieceSize = 50;
   const selectedPositions: Position[] = [];
 
   // This uses Mitchell's best candidate algorithm to generate the initial
@@ -103,8 +103,8 @@ export function generateRandomPieces(
   const getCandidates = () => {
     return new Array(10).fill(0).map(() => {
       const pos = {
-        x: randFloat(stage.x, stage.y + stage.width),
-        y: randFloat(stage.y, stage.y + stage.height),
+        x: randFloat(stage.left(), stage.right() - approxPieceSize),
+        y: randFloat(stage.top(), stage.bottom() - approxPieceSize),
       };
       let minDist = Infinity;
       for (const selectedPos of selectedPositions) {

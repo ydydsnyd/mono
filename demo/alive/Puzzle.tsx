@@ -11,6 +11,7 @@ import {useSubscribe} from 'replicache-react';
 import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '../shared/mutators';
 import {useEffect, useRef} from 'react';
+import {PIECE_DEFINITIONS} from './piece-definitions';
 
 export function Puzzle({
   r,
@@ -90,6 +91,8 @@ export function Puzzle({
       throw new Error(`Piece ${dragInfo.pieceID} not found`);
     }
 
+    const def = PIECE_DEFINITIONS[parseInt(piece.id)];
+
     const pos = {
       x: e.pageX - dragInfo.offset.x,
       y: e.pageY - dragInfo.offset.y,
@@ -101,11 +104,11 @@ export function Puzzle({
     if (pos.y < stage.y) {
       pos.y = stage.y;
     }
-    if (pos.x > stage.right()) {
-      pos.x = stage.right();
+    if (pos.x + def.width > stage.right()) {
+      pos.x = stage.right() - def.width;
     }
-    if (pos.y > stage.bottom()) {
-      pos.y = stage.bottom();
+    if (pos.y + def.height > stage.bottom()) {
+      pos.y = stage.bottom() - def.height;
     }
 
     const coordinate = positionToCoordinate(pos, home, screenSize);
