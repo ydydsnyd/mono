@@ -1,30 +1,25 @@
 import classNames from 'classnames';
 import {PIECE_DEFINITIONS} from './piece-definitions';
-import React, {PointerEventHandler, useEffect, useState} from 'react';
+import React, {PointerEventHandler} from 'react';
 import type {PieceInfo} from './piece-info';
+
+export type HoverState = 'hover' | 'wait' | 'none';
 
 export function Piece({
   piece,
+  hover,
   onPointerDown,
+  onPointerOver,
+  onPointerOut,
 }: {
   piece: PieceInfo;
+  hover: HoverState;
   onPointerDown: PointerEventHandler;
+  onPointerOver: PointerEventHandler;
+  onPointerOut: PointerEventHandler;
 }) {
   const def = PIECE_DEFINITIONS[parseInt(piece.id)];
-  type HoverState = 'hover' | 'wait' | 'none';
-  const [hover, setHover] = useState<HoverState>('none');
-
   const active = hover == 'hover' || hover == 'wait' || piece.selector;
-
-  useEffect(() => {
-    if (hover !== 'wait') {
-      return undefined;
-    }
-    const timerID = window.setTimeout(() => setHover('none'), 1000);
-    return () => {
-      window.clearTimeout(timerID);
-    };
-  }, [hover]);
 
   return (
     <>
@@ -41,8 +36,8 @@ export function Piece({
           transform: `translate3d(${piece.x}px, ${piece.y}px, 0px) rotate(${piece.rotation}rad)`,
         }}
         onPointerDown={onPointerDown}
-        onPointerOver={() => setHover('hover')}
-        onPointerOut={() => setHover('wait')}
+        onPointerOver={onPointerOver}
+        onPointerOut={onPointerOut}
       >
         {
           // TODO: We shouldn't really duplicate the id "shape" here but the CSS already had it that way.
@@ -58,6 +53,8 @@ export function Piece({
             piece.y + def.height / 2
           }px, 0px) rotate(0rad)`,
         }}
+        onPointerOver={onPointerOver}
+        onPointerOut={onPointerOut}
       >
         <div></div>
       </div>

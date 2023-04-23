@@ -10,7 +10,7 @@ import {PieceModel, listPieces} from './piece-model';
 import {useSubscribe} from 'replicache-react';
 import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '../shared/mutators';
-import {useEffect, useRef} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {PIECE_DEFINITIONS} from './piece-definitions';
 import {ClientModel, listClients} from './client-model';
 import type {PieceInfo} from './piece-info';
@@ -55,7 +55,27 @@ export function Puzzle({
     new Map<number, {pieceID: string; offset: Position}>(),
   );
 
-  console.log('rendering pieces', pieces);
+  const [hoveringPieceID, setHoveringPieceID] = useState<string | null>(null);
+  const [blurringPieceID, setBlurringPieceID] = useState<string | null>(null);
+  const handlePieceHover = (pieceID: string) => {
+    setHoveringPieceID(pieceID);
+    setBlurringPieceID(null);
+  };
+  const handlePieceBlur = (pieceID: string) => {
+    setBlurringPieceID(pieceID);
+  };
+  useEffect(() => {
+    if (blurringPieceID) {
+      const timerID = window.setTimeout(() => {
+        setHoveringPieceID(null);
+        setBlurringPieceID(null);
+      }, 1000);
+      return () => {
+        window.clearTimeout(timerID);
+      };
+    }
+    return undefined;
+  }, [blurringPieceID]);
 
   useEffect(() => {
     window.addEventListener('mousemove', e => {
@@ -162,7 +182,10 @@ export function Puzzle({
               ...model,
               ...pos,
             }}
+            hover={hoveringPieceID === model.id ? 'hover' : 'none'}
             onPointerDown={e => handlePiecePointerDown(model, e, pos)}
+            onPointerOver={() => handlePieceHover(model.id)}
+            onPointerOut={() => handlePieceBlur(model.id)}
           />
         );
       })}
