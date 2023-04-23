@@ -26,7 +26,10 @@ export function Puzzle({
   stage: Rect;
   screenSize: Size;
 }) {
-  const {pieces} = useSubscribe(
+  const {pieces, myClient} = useSubscribe<{
+    pieces: Record<string, PieceInfo>;
+    myClient: ClientModel | null;
+  }>(
     r,
     async tx => {
       const lp = await listPieces(tx);
@@ -45,9 +48,9 @@ export function Puzzle({
           mp[client.selectedPieceID].selector = client.id;
         }
       }
-      return {pieces: mp};
+      return {pieces: mp, myClient: mc[await r.clientID]};
     },
-    {pieces: {}},
+    {pieces: {}, myClient: null},
   );
 
   const ref = useRef<HTMLDivElement>(null);
@@ -55,11 +58,36 @@ export function Puzzle({
     new Map<number, {pieceID: string; offset: Position}>(),
   );
 
+  // The desired selection logic we're going for here is surprisingly subtle.
+  //
+  // A piece can be 'active', which means that it is being interacted with.
+  // In 'active' state, there is a drop shadow and the rotation handle is visible.
+  //
+  // A piece can also be 'selected', which is a synchronized state. When a piece
+  // is selected, all clients display that piece as active. (the idea is that the
+  // user will understand they cannot interact with the piece because another user
+  // has it selected).
+  //
+  // - When a user taps a piece, it makes it selected.
+  // - On devices that support hover, any selection by that client is cleared, and
+  //   the hovered piece becomes 'active', but not 'selected'.
+  //
+  // The reason this is necessary is that we do not have a separate visual hover
+  // state. Both selected and hover are represented the same way. So it would be
+  // confusing to leave a selection in place but hover something different.
+  //
+  // Finally when a piece becomes active because of the action of the local client,
+  // the rotation handle is animated into view. But this does not happen when a
+  // piece becomes active due to the actions of remote clients.
+
   const [hoveringPieceID, setHoveringPieceID] = useState<string | null>(null);
   const [blurringPieceID, setBlurringPieceID] = useState<string | null>(null);
   const handlePieceHover = (pieceID: string) => {
     setHoveringPieceID(pieceID);
     setBlurringPieceID(null);
+    if (pieceID !== myClient!.selectedPieceID) {
+      r.mutate.updateClient({id: myClient!.id, selectedPieceID: ''});
+    }
   };
   const handlePieceBlur = (pieceID: string) => {
     setBlurringPieceID(pieceID);
@@ -167,6 +195,10 @@ export function Puzzle({
     dragging.current.delete(e.pointerId);
   };
 
+  if (!myClient) {
+    return null;
+  }
+
   return (
     <div
       ref={ref}
@@ -174,6 +206,10 @@ export function Puzzle({
       onLostPointerCapture={e => handleLostPointerCapture(e)}
     >
       {Object.values(pieces).map(model => {
+        const active =
+          hoveringPieceID === model.id ||
+          blurringPieceID === model.id ||
+          model.selector !== null;
         const pos = coordinateToPosition(model, home, screenSize);
         return (
           <Piece
@@ -182,7 +218,8 @@ export function Puzzle({
               ...model,
               ...pos,
             }}
-            hover={hoveringPieceID === model.id ? 'hover' : 'none'}
+            active={active}
+            animateHandle={hoveringPieceID !== null || blurringPieceID !== null}
             onPointerDown={e => handlePiecePointerDown(model, e, pos)}
             onPointerOver={() => handlePieceHover(model.id)}
             onPointerOut={() => handlePieceBlur(model.id)}

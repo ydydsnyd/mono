@@ -7,19 +7,20 @@ export type HoverState = 'hover' | 'wait' | 'none';
 
 export function Piece({
   piece,
-  hover,
+  active,
+  animateHandle,
   onPointerDown,
   onPointerOver,
   onPointerOut,
 }: {
   piece: PieceInfo;
-  hover: HoverState;
+  active: boolean;
+  animateHandle: boolean;
   onPointerDown: PointerEventHandler;
   onPointerOver: PointerEventHandler;
   onPointerOut: PointerEventHandler;
 }) {
   const def = PIECE_DEFINITIONS[parseInt(piece.id)];
-  const active = hover == 'hover' || hover == 'wait' || piece.selector;
 
   return (
     <>
@@ -47,6 +48,7 @@ export function Piece({
       <div
         className={classNames('rotation-handle', {
           active,
+          animate: animateHandle,
         })}
         style={{
           transform: `translate3d(${piece.x + def.width / 2}px, ${

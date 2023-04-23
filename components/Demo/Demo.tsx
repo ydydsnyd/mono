@@ -51,6 +51,7 @@ const Demo = () => {
       r.mutate
         .putClient({
           id: cid,
+          selectedPieceID: '',
         })
         .catch(ignoreMutatorError);
     });

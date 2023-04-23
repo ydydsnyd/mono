@@ -2,7 +2,7 @@ import {z} from 'zod';
 import {entitySchema, generate, Update} from '@rocicorp/rails';
 
 export const clientModelSchema = entitySchema.extend({
-  selectedPieceID: z.string().optional(),
+  selectedPieceID: z.string(),
 });
 
 // Export generated interface.
