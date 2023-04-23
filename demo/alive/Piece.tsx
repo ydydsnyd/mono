@@ -1,13 +1,13 @@
 import classNames from 'classnames';
-import type {PieceModel} from './piece-model';
 import {PIECE_DEFINITIONS} from './piece-definitions';
 import React, {PointerEventHandler, useState} from 'react';
+import type {PieceInfo} from './piece-info';
 
 export function Piece({
   piece,
   onPointerDown,
 }: {
-  piece: PieceModel;
+  piece: PieceInfo;
   onPointerDown: PointerEventHandler;
 }) {
   const def = PIECE_DEFINITIONS[parseInt(piece.id)];
@@ -21,7 +21,7 @@ export function Piece({
       height={def.height}
       className={classNames('piece', def.letter, {
         placed: piece.placed,
-        active: hover,
+        active: hover || piece.selector,
       })}
       style={{
         transform: `translate3d(${piece.x}px, ${piece.y}px, 0px) rotate(${piece.rotation}rad)`,

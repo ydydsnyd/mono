@@ -37,20 +37,30 @@ const Demo = () => {
       ...loggingOptions,
     });
 
+    const ignoreMutatorError = (e: unknown) => {
+      console.warn('TODO - should not get this', e);
+    };
+
     const url = new URL(location.href);
     if (url.searchParams.has('reset')) {
       console.info('Restting replicache');
-      r.mutate.resetRoom();
+      r.mutate.resetRoom().catch(ignoreMutatorError);
     }
+
+    r.clientID.then(cid => {
+      r.mutate
+        .putClient({
+          id: cid,
+        })
+        .catch(ignoreMutatorError);
+    });
 
     r.mutate
       .initializePuzzle({
         pieces: generateRandomPieces(home, stage, screenSize),
         force: false,
       })
-      .catch(e => {
-        console.warn('TODO - should not get this', e);
-      });
+      .catch(ignoreMutatorError);
     setR(r);
     return () => {
       r.close();

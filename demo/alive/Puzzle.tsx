@@ -12,6 +12,8 @@ import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '../shared/mutators';
 import {useEffect, useRef} from 'react';
 import {PIECE_DEFINITIONS} from './piece-definitions';
+import {ClientModel, listClients} from './client-model';
+import type {PieceInfo} from './piece-info';
 
 export function Puzzle({
   r,
@@ -24,11 +26,36 @@ export function Puzzle({
   stage: Rect;
   screenSize: Size;
 }) {
-  const pieces = useSubscribe(r, listPieces, []);
+  const {pieces} = useSubscribe(
+    r,
+    async tx => {
+      const lp = await listPieces(tx);
+      const mp: Record<string, PieceInfo> = {};
+      for (const piece of lp) {
+        mp[piece.id] = {
+          ...piece,
+          selector: null,
+        };
+      }
+      const lc = await listClients(tx);
+      const mc: Record<string, ClientModel> = {};
+      for (const client of lc) {
+        mc[client.id] = client;
+        if (client.selectedPieceID) {
+          mp[client.selectedPieceID].selector = client.id;
+        }
+      }
+      return {pieces: mp};
+    },
+    {pieces: {}},
+  );
+
   const ref = useRef<HTMLDivElement>(null);
   const dragging = useRef(
     new Map<number, {pieceID: string; offset: Position}>(),
   );
+
+  console.log('rendering pieces', pieces);
 
   useEffect(() => {
     window.addEventListener('mousemove', e => {
@@ -64,6 +91,7 @@ export function Puzzle({
         y: event.pageY - piecePos.y,
       },
     });
+    r.mutate.updateClient({id: await r.clientID, selectedPieceID: model.id});
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
@@ -86,7 +114,7 @@ export function Puzzle({
     document.body.appendChild(elm);
     */
 
-    const piece = pieces.find(p => p.id === dragInfo.pieceID);
+    const piece = pieces[dragInfo.pieceID];
     if (!piece) {
       throw new Error(`Piece ${dragInfo.pieceID} not found`);
     }
@@ -125,7 +153,7 @@ export function Puzzle({
       onPointerMove={e => handlePointerMove(e)}
       onLostPointerCapture={e => handleLostPointerCapture(e)}
     >
-      {pieces.map(model => {
+      {Object.values(pieces).map(model => {
         const pos = coordinateToPosition(model, home, screenSize);
         return (
           <Piece

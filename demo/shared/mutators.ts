@@ -1,5 +1,6 @@
 import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
 import {PieceModel, putPiece, updatePiece} from '../alive/piece-model';
+import {putClient, updateClient} from '../alive/client-model';
 
 export type M = typeof mutators;
 
@@ -71,6 +72,8 @@ export const mutators = {
     await tx.put('puzzle-exists', true);
   },
 
+  putClient,
+  updateClient,
   updatePiece,
 
   // These mutators are for the how it works demos
