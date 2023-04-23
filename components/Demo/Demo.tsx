@@ -122,7 +122,9 @@ const Demo = () => {
         </svg>
       </div>
       <div id="pieces">
-        {r && <Puzzle r={r} home={home} screenSize={screenSize} />}
+        {r && (
+          <Puzzle r={r} home={home} stage={stage} screenSize={screenSize} />
+        )}
       </div>
       <div id="info">
         <div className="active-user-info">
