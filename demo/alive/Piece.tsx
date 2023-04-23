@@ -1,7 +1,7 @@
 import classNames from 'classnames';
 import type {PieceModel} from './piece-model';
 import {PIECE_DEFINITIONS} from './piece-definitions';
-import React, {PointerEventHandler} from 'react';
+import React, {PointerEventHandler, useState} from 'react';
 
 export function Piece({
   piece,
@@ -11,17 +11,24 @@ export function Piece({
   onPointerDown: PointerEventHandler;
 }) {
   const def = PIECE_DEFINITIONS[parseInt(piece.id)];
+  const [hover, setHover] = useState(false);
+
   return (
     <svg
       version="1.1"
       viewBox={`0 0 ${def.width} ${def.height}`}
       width={def.width}
       height={def.height}
-      className={classNames('piece', def.letter, {placed: piece.placed})}
+      className={classNames('piece', def.letter, {
+        placed: piece.placed,
+        active: hover,
+      })}
       style={{
         transform: `translate3d(${piece.x}px, ${piece.y}px, 0px) rotate(${piece.rotation}rad)`,
       }}
       onPointerDown={onPointerDown}
+      onPointerOver={() => setHover(true)}
+      onPointerOut={() => setHover(false)}
     >
       {
         // TODO: We shouldn't really duplicate the id "shape" here but the CSS already had it that way.

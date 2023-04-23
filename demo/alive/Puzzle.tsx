@@ -51,7 +51,7 @@ export function Puzzle({
     });
   }, []);
 
-  const handlePiecePointerDown = (
+  const handlePiecePointerDown = async (
     model: PieceModel,
     event: React.PointerEvent,
     piecePos: Position,
@@ -112,7 +112,7 @@ export function Puzzle({
     }
 
     const coordinate = positionToCoordinate(pos, home, screenSize);
-    r.mutate.movePiece({id: piece.id, coordinate});
+    r.mutate.updatePiece({id: piece.id, ...coordinate});
   };
 
   const handleLostPointerCapture = (e: React.PointerEvent) => {

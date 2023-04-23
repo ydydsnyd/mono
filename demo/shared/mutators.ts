@@ -1,6 +1,5 @@
 import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
 import {PieceModel, putPiece, updatePiece} from '../alive/piece-model';
-import type {Position} from '../alive/util';
 
 export type M = typeof mutators;
 
@@ -72,15 +71,7 @@ export const mutators = {
     await tx.put('puzzle-exists', true);
   },
 
-  movePiece: async (
-    tx: WriteTransaction,
-    {id, coordinate}: {id: string; coordinate: Position},
-  ) => {
-    await updatePiece(tx, {
-      id,
-      ...coordinate,
-    });
-  },
+  updatePiece,
 
   // These mutators are for the how it works demos
   increment: async (

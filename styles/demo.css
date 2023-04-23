@@ -245,7 +245,7 @@ body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
 }
 
 .piece.active #shape {
-  cursor: grab;
+  /*cursor: grab;*/
   filter: drop-shadow(2px 2px 6px #00000040);
 }
 .piece.rotating {
