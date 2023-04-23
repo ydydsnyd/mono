@@ -7,6 +7,7 @@ export const pieceModelSchema = entitySchema.extend({
   y: z.number(),
   rotation: z.number(),
   placed: z.boolean(),
+  handleRotation: z.number(),
 });
 
 // Export generated interface.
