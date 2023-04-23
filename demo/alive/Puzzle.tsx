@@ -24,6 +24,26 @@ export function Puzzle({
   const ref = useRef<HTMLDivElement>(null);
   const dragging = useRef(new Map<number, string>());
 
+  /*
+  useEffect(() => {
+    window.addEventListener('mousemove', e => {
+      if (e.buttons === 0) {
+        return;
+      }
+      const elm = document.createElement('div');
+      elm.style.position = 'absolute';
+      elm.style.left = e.pageX - 8 + 'px';
+      elm.style.top = e.pageY - 8 + 'px';
+      elm.style.width = '16px';
+      elm.style.height = '16px';
+      elm.style.backgroundColor = 'red';
+      elm.style.pointerEvents = 'none';
+      elm.style.zIndex = '1';
+      document.body.appendChild(elm);
+    });
+  }, []);
+  */
+
   const handlePiecePointerDown = (
     model: PieceModel,
     event: React.PointerEvent,
@@ -37,6 +57,18 @@ export function Puzzle({
     if (!pieceID) {
       return;
     }
+
+    /*
+    const elm = document.createElement('div');
+    elm.style.position = 'absolute';
+    elm.style.left = e.pageX - 5 + 'px';
+    elm.style.top = e.pageY - 5 + 'px';
+    elm.style.width = '10px';
+    elm.style.height = '10px';
+    elm.style.backgroundColor = 'green';
+    elm.style.zIndex = '2';
+    document.body.appendChild(elm);
+    */
 
     const piece = pieces.find(p => p.id === pieceID);
     if (!piece) {
