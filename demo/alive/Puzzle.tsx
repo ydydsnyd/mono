@@ -273,7 +273,12 @@ export function Puzzle({
     });
 
     const newRads = addRadians(pointerRads, -rotateInfo.radOffset);
-    r.mutate.updatePiece({id: piece.id, handleRotation: newRads});
+    const prevRads = piece.handleRotation;
+    r.mutate.updatePiece({
+      id: piece.id,
+      handleRotation: newRads,
+      rotation: addRadians(piece.rotation, newRads - prevRads),
+    });
   };
 
   const handleLostPointerCapture = (e: React.PointerEvent) => {
