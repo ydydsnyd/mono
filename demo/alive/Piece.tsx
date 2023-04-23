@@ -46,7 +46,7 @@ export function Piece({
     width: def.width,
     height: def.height,
   });
-  const handleSize = 12 + 16; // see css
+  const handleSize = 28; // see css
   const handlePos = {
     x: c.x - handleSize / 2,
     y: c.y - handleSize / 2,
@@ -82,13 +82,18 @@ export function Piece({
           animate: hovered || selectorID === myClient.id,
         })}
         style={{
-          transform: `translate3d(${handlePos.x}px, ${handlePos.y}px, 0px) rotate(${piece.handleRotation}rad)`,
+          transform: `translate3d(${handlePos.x}px, ${
+            handlePos.y
+          }px, 0px) rotate(${-piece.handleRotation}rad)`,
         }}
-        onPointerOver={onPointerOver}
-        onPointerOut={onPointerOut}
-        onPointerDown={e => handleRotationStart(e)}
       >
-        <div></div>
+        <div
+          onPointerOver={onPointerOver}
+          onPointerOut={onPointerOut}
+          onPointerDown={e => handleRotationStart(e)}
+        >
+          <div></div>
+        </div>
       </div>
     </>
   );

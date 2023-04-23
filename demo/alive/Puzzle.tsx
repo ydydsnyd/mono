@@ -3,6 +3,7 @@ import {
   Position,
   Rect,
   Size,
+  addRadians,
   center,
   coordinateToPosition,
   getAngle,
@@ -195,10 +196,20 @@ export function Puzzle({
 
   const handlePointerMove = (e: React.PointerEvent) => {
     const dragInfo = dragging.current.get(e.pointerId);
-    if (!dragInfo) {
-      return;
+    if (dragInfo) {
+      handleDrag(e, dragInfo);
     }
 
+    const rotateInfo = rotating.current.get(e.pointerId);
+    if (rotateInfo) {
+      handleRotate(e, rotateInfo);
+    }
+  };
+
+  const handleDrag = (
+    e: React.PointerEvent,
+    dragInfo: {pieceID: string; offset: Position},
+  ) => {
     /*
     const elm = document.createElement('div');
     elm.style.position = 'absolute';
@@ -242,8 +253,34 @@ export function Puzzle({
     r.mutate.updatePiece({id: piece.id, ...coordinate});
   };
 
+  const handleRotate = (
+    e: React.PointerEvent,
+    rotateInfo: {pieceID: string; radOffset: number},
+  ) => {
+    const piece = pieces[rotateInfo.pieceID];
+    if (!piece) {
+      throw new Error(`Piece ${rotateInfo.pieceID} not found`);
+    }
+
+    const pos = coordinateToPosition(piece, home, screenSize);
+    const def = PIECE_DEFINITIONS[parseInt(piece.id)];
+    const c = center({
+      ...pos,
+      width: def.width,
+      height: def.height,
+    });
+    const pointerRads = getAngle(c, {
+      x: e.pageX,
+      y: e.pageY,
+    });
+
+    const newRads = addRadians(pointerRads, -rotateInfo.radOffset);
+    r.mutate.updatePiece({id: piece.id, handleRotation: newRads});
+  };
+
   const handleLostPointerCapture = (e: React.PointerEvent) => {
     dragging.current.delete(e.pointerId);
+    rotating.current.delete(e.pointerId);
   };
 
   const handleRotationPointerDown = (
