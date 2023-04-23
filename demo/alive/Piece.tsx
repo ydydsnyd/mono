@@ -53,7 +53,9 @@ export function Piece({
         style={{
           transform: `translate3d(${piece.x + def.width / 2}px, ${
             piece.y + def.height / 2
-          }px, 0px) rotate(0rad)`,
+          }px, 0px) rotate(${0}rad)`,
+          transformOrigin:
+            '${piece.x + def.width / 2}px ${piece.y + def.height / 2}px',
         }}
         onPointerOver={onPointerOver}
         onPointerOut={onPointerOut}
