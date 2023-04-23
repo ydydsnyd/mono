@@ -228,7 +228,7 @@ body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
   left: 0;
   top: 0;
   width: 100%;
-  height: 100%;
+  height: 775px;
   overflow: hidden;
 }
 .piece {
