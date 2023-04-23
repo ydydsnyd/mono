@@ -43,11 +43,18 @@ const Demo = () => {
       r.mutate.resetRoom();
     }
 
-    r.mutate.initializePuzzle({
-      pieces: generateRandomPieces(home, stage, screenSize),
-      force: false,
-    });
+    r.mutate
+      .initializePuzzle({
+        pieces: generateRandomPieces(home, stage, screenSize),
+        force: false,
+      })
+      .catch(e => {
+        console.warn('TODO - should not get this', e);
+      });
     setR(r);
+    return () => {
+      r.close();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
