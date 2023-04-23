@@ -3,6 +3,7 @@ import {PIECE_DEFINITIONS} from './piece-definitions';
 import React, {PointerEventHandler} from 'react';
 import type {PieceInfo} from './piece-info';
 import type {ClientModel} from './client-model';
+import {center} from './util';
 
 export type HoverState = 'hover' | 'wait' | 'none';
 
@@ -39,6 +40,18 @@ export function Piece({
 
   const active = hovered || selectorID;
 
+  const c = center({
+    x: piece.x,
+    y: piece.y,
+    width: def.width,
+    height: def.height,
+  });
+  const handleSize = 12 + 16; // see css
+  const handlePos = {
+    x: c.x - handleSize / 2,
+    y: c.y - handleSize / 2,
+  };
+
   return (
     <>
       <svg
@@ -69,11 +82,7 @@ export function Piece({
           animate: hovered || selectorID === myClient.id,
         })}
         style={{
-          transform: `translate3d(${piece.x + def.width / 2}px, ${
-            piece.y + def.height / 2
-          }px, 0px) rotate(${piece.handleRotation}rad)`,
-          transformOrigin:
-            '${piece.x + def.width / 2}px ${piece.y + def.height / 2}px',
+          transform: `translate3d(${handlePos.x}px, ${handlePos.y}px, 0px) rotate(${piece.handleRotation}rad)`,
         }}
         onPointerOver={onPointerOver}
         onPointerOut={onPointerOut}

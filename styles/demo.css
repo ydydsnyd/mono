@@ -318,13 +318,13 @@ body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  position: absolute;
-  top: -6px;
-  left: -6px;
+  position: relative;
   transform: translate3d(0, 0, 0);
 }
 .rotation-handle.active > div {
-  transform: translate3d(0, -44px, 0);
+  /* 44 because it looks nice */
+  /* x axis because it corresponds to zero radians so that when we rotate by radians we get the right position */
+  transform: translate3d(44px, 0, 0);
 }
 .rotation-handle.animate > div {
   transition: transform 200ms cubic-bezier(0.46, 0.11, 0.065, 1.65);

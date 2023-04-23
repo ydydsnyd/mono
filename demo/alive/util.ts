@@ -138,7 +138,7 @@ export function generateRandomPieces(
       id: i.toString(),
       ...coord,
       rotation: randFloat(0, Math.PI * 2),
-      handleRotation: 0,
+      handleRotation: -Math.PI / 2,
       placed: false,
     };
     ret.push(newPiece);

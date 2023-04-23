@@ -3,7 +3,9 @@ import {
   Position,
   Rect,
   Size,
+  center,
   coordinateToPosition,
+  getAngle,
   positionToCoordinate,
 } from './util';
 import {listPieces} from './piece-model';
@@ -56,6 +58,11 @@ export function Puzzle({
   const ref = useRef<HTMLDivElement>(null);
   const dragging = useRef(
     new Map<number, {pieceID: string; offset: Position}>(),
+  );
+
+  const handleRef = useRef<HTMLDivElement>(null);
+  const rotating = useRef(
+    new Map<number, {pieceID: string; radOffset: number}>(),
   );
 
   type HoverState = {
@@ -241,22 +248,30 @@ export function Puzzle({
 
   const handleRotationPointerDown = (
     model: PieceInfo,
-    _: React.PointerEvent,
+    e: React.PointerEvent,
+    pos: Position,
   ) => {
     if (!selectIfAvailable(model)) {
       return;
     }
 
-    /*
-    ref.current!.setPointerCapture(e.pointerId);
-    dragging.current.set(e.pointerId, {
-      pieceID: model.id,
-      offset: {
-        x: e.pageX - piecePos.x,
-        y: e.pageY - piecePos.y,
-      },
+    handleRef.current?.setPointerCapture(e.pointerId);
+
+    const def = PIECE_DEFINITIONS[parseInt(model.id)];
+    const c = center({
+      ...pos,
+      width: def.width,
+      height: def.height,
     });
-    */
+    const pointerRads = getAngle(c, {
+      x: e.pageX,
+      y: e.pageY,
+    });
+    const offset = pointerRads - model.handleRotation;
+    rotating.current.set(e.pointerId, {
+      pieceID: model.id,
+      radOffset: offset,
+    });
   };
 
   if (!myClient) {
@@ -284,7 +299,7 @@ export function Puzzle({
             onPointerDown={e => handlePiecePointerDown(model, e, pos)}
             onPointerOver={() => handlePieceHover(model)}
             onPointerOut={() => handlePieceBlur()}
-            onRotationStart={e => handleRotationPointerDown(model, e)}
+            onRotationStart={e => handleRotationPointerDown(model, e, pos)}
           />
         );
       })}
