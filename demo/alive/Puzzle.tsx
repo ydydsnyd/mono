@@ -60,8 +60,6 @@ export function Puzzle({
   const dragging = useRef(
     new Map<number, {pieceID: string; offset: Position}>(),
   );
-
-  const handleRef = useRef<HTMLDivElement>(null);
   const rotating = useRef(
     new Map<number, {pieceID: string; radOffset: number}>(),
   );
@@ -292,7 +290,7 @@ export function Puzzle({
       return;
     }
 
-    handleRef.current?.setPointerCapture(e.pointerId);
+    ref.current?.setPointerCapture(e.pointerId);
 
     const def = PIECE_DEFINITIONS[parseInt(model.id)];
     const c = center({

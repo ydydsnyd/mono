@@ -82,9 +82,7 @@ export function Piece({
           animate: hovered || selectorID === myClient.id,
         })}
         style={{
-          transform: `translate3d(${handlePos.x}px, ${
-            handlePos.y
-          }px, 0px) rotate(${-piece.handleRotation}rad)`,
+          transform: `translate3d(${handlePos.x}px, ${handlePos.y}px, 0px) rotate(${piece.handleRotation}rad)`,
         }}
       >
         <div

@@ -41,8 +41,8 @@ export const addRadians = (value: number, add: number) => {
   return (c + value + add) % c;
 };
 
-export const getAngle = (from: Position, to: Position) => {
-  return Math.atan2(from.y - to.y, from.x - to.x);
+export const getAngle = (center: Position, to: Position) => {
+  return Math.atan2(to.y - center.y, to.x - center.x);
 };
 
 export function must<T>(val: T | undefined | null, name?: string): T {
@@ -138,7 +138,7 @@ export function generateRandomPieces(
       id: i.toString(),
       ...coord,
       rotation: randFloat(0, Math.PI * 2),
-      handleRotation: Math.PI / 2, // north
+      handleRotation: -Math.PI / 2, // north
       placed: false,
     };
     ret.push(newPiece);
