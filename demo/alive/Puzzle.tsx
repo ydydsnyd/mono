@@ -114,11 +114,7 @@ export function Puzzle({
     return undefined;
   }, [r, myClient, hoverState]);
 
-  const handlePiecePointerDown = async (
-    model: PieceInfo,
-    event: React.PointerEvent,
-    piecePos: Position,
-  ) => {
+  const selectIfAvailable = (model: PieceInfo) => {
     if (!myClient) {
       return;
     }
@@ -128,6 +124,19 @@ export function Puzzle({
       console.info(
         `Client ${myClient.id} cannot select piece ${model.id}, already selected by ${model.selector}}`,
       );
+      return false;
+    }
+
+    r.mutate.updateClient({id: myClient.id, selectedPieceID: model.id});
+    return true;
+  };
+
+  const handlePiecePointerDown = async (
+    model: PieceInfo,
+    event: React.PointerEvent,
+    piecePos: Position,
+  ) => {
+    if (!selectIfAvailable(model)) {
       return;
     }
 
@@ -139,7 +148,6 @@ export function Puzzle({
         y: event.pageY - piecePos.y,
       },
     });
-    r.mutate.updateClient({id: myClient.id, selectedPieceID: model.id});
   };
   useEffect(() => {
     const handlePointerDown = () => {
@@ -231,6 +239,26 @@ export function Puzzle({
     dragging.current.delete(e.pointerId);
   };
 
+  const handleRotationPointerDown = (
+    model: PieceInfo,
+    _: React.PointerEvent,
+  ) => {
+    if (!selectIfAvailable(model)) {
+      return;
+    }
+
+    /*
+    ref.current!.setPointerCapture(e.pointerId);
+    dragging.current.set(e.pointerId, {
+      pieceID: model.id,
+      offset: {
+        x: e.pageX - piecePos.x,
+        y: e.pageY - piecePos.y,
+      },
+    });
+    */
+  };
+
   if (!myClient) {
     return null;
   }
@@ -256,6 +284,7 @@ export function Puzzle({
             onPointerDown={e => handlePiecePointerDown(model, e, pos)}
             onPointerOver={() => handlePieceHover(model)}
             onPointerOut={() => handlePieceBlur()}
+            onRotationStart={e => handleRotationPointerDown(model, e)}
           />
         );
       })}

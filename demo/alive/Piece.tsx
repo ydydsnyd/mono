@@ -14,6 +14,7 @@ export function Piece({
   onPointerDown,
   onPointerOver,
   onPointerOut,
+  onRotationStart,
 }: {
   piece: PieceInfo;
   hovered: boolean;
@@ -22,12 +23,18 @@ export function Piece({
   onPointerDown: PointerEventHandler;
   onPointerOver: PointerEventHandler;
   onPointerOut: PointerEventHandler;
+  onRotationStart: (e: React.PointerEvent) => void;
 }) {
   const def = PIECE_DEFINITIONS[parseInt(piece.id)];
 
   const handlePointerDown = (e: React.PointerEvent) => {
     e.stopPropagation();
     onPointerDown(e);
+  };
+
+  const handleRotationStart = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    onRotationStart(e);
   };
 
   const active = hovered || selectorID;
@@ -64,12 +71,13 @@ export function Piece({
         style={{
           transform: `translate3d(${piece.x + def.width / 2}px, ${
             piece.y + def.height / 2
-          }px, 0px) rotate(${0}rad)`,
+          }px, 0px) rotate(${piece.handleRotation}rad)`,
           transformOrigin:
             '${piece.x + def.width / 2}px ${piece.y + def.height / 2}px',
         }}
         onPointerOver={onPointerOver}
         onPointerOut={onPointerOut}
+        onPointerDown={e => handleRotationStart(e)}
       >
         <div></div>
       </div>
