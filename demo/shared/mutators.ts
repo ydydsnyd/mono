@@ -1,25 +1,8 @@
-import type {
-  MutatorDefs,
-  ReadTransaction,
-  WriteTransaction,
-} from '@rocicorp/reflect';
-import type {PieceModel} from '../alive/piece-model';
+import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
+import {PieceModel, putPiece, updatePiece} from '../alive/piece-model';
+import type {Position} from '../alive/util';
 
 export type M = typeof mutators;
-
-type _Mutators<MD extends MutatorDefs> = {
-  readonly [P in keyof MD]: MD[P] extends infer T
-    ? T extends MD[P]
-      ? T extends (tx: WriteTransaction, ...args: infer Args) => infer Ret
-        ? (...args: Args) => Ret extends Promise<unknown> ? Ret : Promise<Ret>
-        : never
-      : never
-    : never;
-};
-
-const pieceKey = (num: number) => `piece/${num.toString().padStart(4)}`;
-
-export type Mutators = _Mutators<M>;
 
 const clientConsoleMap = new Map<string, (log: string) => void>();
 
@@ -60,25 +43,43 @@ export async function addServerLog(tx: WriteTransaction, log: string) {
 }
 
 export const mutators = {
+  resetRoom: async (tx: WriteTransaction) => {
+    for (const key of await tx.scan().keys().toArray()) {
+      await tx.del(key);
+    }
+  },
+
   // alive mutators
   initializePuzzle: async (
     tx: WriteTransaction,
     {force, pieces}: {force: boolean; pieces: PieceModel[]},
   ) => {
-    if (!force && tx.environment === 'client') {
-      console.log(
-        'client cannot initialize puzzle, skipping non-force optimistic mutation',
-      );
-      return;
+    if (tx.environment === 'client') {
+      if (!force) {
+        console.log(
+          'client cannot initialize puzzle, skipping non-force optimistic mutation',
+        );
+        return;
+      }
     }
     if (!force && (await tx.get('puzzle-exists'))) {
       console.log('puzzle already exists, skipping non-force initialization');
       return;
     }
-    for (const [index, piece] of pieces.entries()) {
-      await tx.put(pieceKey(index), piece);
+    for (const piece of pieces) {
+      await putPiece(tx, piece);
     }
     await tx.put('puzzle-exists', true);
+  },
+
+  movePiece: async (
+    tx: WriteTransaction,
+    {id, coordinate}: {id: string; coordinate: Position},
+  ) => {
+    await updatePiece(tx, {
+      id,
+      ...coordinate,
+    });
   },
 
   // These mutators are for the how it works demos

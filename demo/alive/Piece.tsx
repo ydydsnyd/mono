@@ -1,9 +1,15 @@
 import classNames from 'classnames';
 import type {PieceModel} from './piece-model';
 import {PIECE_DEFINITIONS} from './piece-definitions';
-import React from 'react';
+import React, {PointerEventHandler} from 'react';
 
-export function Piece({piece}: {piece: PieceModel}) {
+export function Piece({
+  piece,
+  onPointerDown,
+}: {
+  piece: PieceModel;
+  onPointerDown: PointerEventHandler;
+}) {
   const def = PIECE_DEFINITIONS[parseInt(piece.id)];
   return (
     <svg
@@ -15,6 +21,7 @@ export function Piece({piece}: {piece: PieceModel}) {
       style={{
         transform: `translate3d(${piece.x}px, ${piece.y}px, 0px) rotate(${piece.rotation}rad)`,
       }}
+      onPointerDown={onPointerDown}
     >
       {
         // TODO: We shouldn't really duplicate the id "shape" here but the CSS already had it that way.

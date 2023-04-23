@@ -36,6 +36,13 @@ const Demo = () => {
       mutators,
       ...loggingOptions,
     });
+
+    const url = new URL(location.href);
+    if (url.searchParams.has('reset')) {
+      console.info('Restting replicache');
+      r.mutate.resetRoom();
+    }
+
     r.mutate.initializePuzzle({
       pieces: generateRandomPieces(home, stage, screenSize),
       force: false,
