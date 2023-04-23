@@ -9,16 +9,6 @@ body {
   user-select: none;
 }
 
-.nav {
-  display: flex;
-  justify-content: center;
-}
-
-.nav img {
-  width: 100%;
-  max-width: 950px;
-}
-
 .hero-text {
   font-family: 'Muoto Black';
   width: 720px;
