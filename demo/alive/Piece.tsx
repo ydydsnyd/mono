@@ -2,25 +2,35 @@ import classNames from 'classnames';
 import {PIECE_DEFINITIONS} from './piece-definitions';
 import React, {PointerEventHandler} from 'react';
 import type {PieceInfo} from './piece-info';
+import type {ClientModel} from './client-model';
 
 export type HoverState = 'hover' | 'wait' | 'none';
 
 export function Piece({
   piece,
-  active,
-  animateHandle,
+  hovered,
+  selectorID,
+  myClient,
   onPointerDown,
   onPointerOver,
   onPointerOut,
 }: {
   piece: PieceInfo;
-  active: boolean;
-  animateHandle: boolean;
+  hovered: boolean;
+  selectorID: string | null;
+  myClient: ClientModel;
   onPointerDown: PointerEventHandler;
   onPointerOver: PointerEventHandler;
   onPointerOut: PointerEventHandler;
 }) {
   const def = PIECE_DEFINITIONS[parseInt(piece.id)];
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    onPointerDown(e);
+  };
+
+  const active = hovered || selectorID;
 
   return (
     <>
@@ -36,7 +46,7 @@ export function Piece({
         style={{
           transform: `translate3d(${piece.x}px, ${piece.y}px, 0px) rotate(${piece.rotation}rad)`,
         }}
-        onPointerDown={onPointerDown}
+        onPointerDown={e => handlePointerDown(e)}
         onPointerOver={onPointerOver}
         onPointerOut={onPointerOut}
       >
@@ -48,7 +58,8 @@ export function Piece({
       <div
         className={classNames('rotation-handle', {
           active,
-          animate: animateHandle,
+          // TODO: would also be nice to animate out, but that's a bit more complicated and this look good enough.
+          animate: hovered || selectorID === myClient.id,
         })}
         style={{
           transform: `translate3d(${piece.x + def.width / 2}px, ${

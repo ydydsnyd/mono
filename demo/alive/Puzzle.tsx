@@ -6,7 +6,7 @@ import {
   coordinateToPosition,
   positionToCoordinate,
 } from './util';
-import {PieceModel, listPieces} from './piece-model';
+import {listPieces} from './piece-model';
 import {useSubscribe} from 'replicache-react';
 import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '../shared/mutators';
@@ -58,59 +58,111 @@ export function Puzzle({
     new Map<number, {pieceID: string; offset: Position}>(),
   );
 
-  // The desired selection logic we're going for here is surprisingly subtle.
-  //
-  // A piece can be 'active', which means that it is being interacted with.
-  // In 'active' state, there is a drop shadow and the rotation handle is visible.
-  //
-  // A piece can also be 'selected', which is a synchronized state. When a piece
-  // is selected, all clients display that piece as active. (the idea is that the
-  // user will understand they cannot interact with the piece because another user
-  // has it selected).
-  //
-  // - When a user taps a piece, it makes it selected.
-  // - On devices that support hover, any selection by that client is cleared, and
-  //   the hovered piece becomes 'active', but not 'selected'.
-  //
-  // The reason this is necessary is that we do not have a separate visual hover
-  // state. Both selected and hover are represented the same way. So it would be
-  // confusing to leave a selection in place but hover something different.
-  //
-  // Finally when a piece becomes active because of the action of the local client,
-  // the rotation handle is animated into view. But this does not happen when a
-  // piece becomes active due to the actions of remote clients.
+  type HoverState = {
+    pieceID: string | null;
+    phase: 'hover' | 'wait' | 'none';
+  };
 
-  const [hoveringPieceID, setHoveringPieceID] = useState<string | null>(null);
-  const [blurringPieceID, setBlurringPieceID] = useState<string | null>(null);
-  const handlePieceHover = (pieceID: string) => {
-    setHoveringPieceID(pieceID);
-    setBlurringPieceID(null);
-    if (pieceID !== myClient!.selectedPieceID) {
-      r.mutate.updateClient({id: myClient!.id, selectedPieceID: ''});
+  const [hoverState, setHoverState] = useState<HoverState>({
+    pieceID: null,
+    phase: 'none',
+  });
+
+  const handlePieceHover = async (model: PieceInfo) => {
+    if (!myClient) {
+      return;
+    }
+    // Pieces selected by others can't be hovered.
+    if (model.selector !== null && model.selector !== myClient.id) {
+      console.log(
+        `Client ${myClient.id} cannot hover piece ${model.id}, selected by ${model.selector}}`,
+      );
+      return;
+    }
+
+    setHoverState({
+      pieceID: model.id,
+      phase: 'hover',
+    });
+
+    if (model.id !== myClient.selectedPieceID) {
+      r.mutate.updateClient({id: myClient.id, selectedPieceID: ''});
     }
   };
-  const handlePieceBlur = (pieceID: string) => {
-    setBlurringPieceID(pieceID);
+  const handlePieceBlur = () => {
+    setHoverState({
+      ...hoverState,
+      phase: 'wait',
+    });
   };
   useEffect(() => {
-    if (blurringPieceID) {
+    if (!myClient) {
+      return;
+    }
+    if (hoverState.phase === 'wait') {
       const timerID = window.setTimeout(() => {
-        setHoveringPieceID(null);
-        setBlurringPieceID(null);
+        setHoverState({
+          pieceID: null,
+          phase: 'none',
+        });
+        r.mutate.updateClient({id: myClient.id, selectedPieceID: ''});
       }, 1000);
       return () => {
         window.clearTimeout(timerID);
       };
     }
     return undefined;
-  }, [blurringPieceID]);
+  }, [r, myClient, hoverState]);
 
+  const handlePiecePointerDown = async (
+    model: PieceInfo,
+    event: React.PointerEvent,
+    piecePos: Position,
+  ) => {
+    if (!myClient) {
+      return;
+    }
+
+    // Pieces selected by others can't be selected.
+    if (model.selector !== null && model.selector !== myClient.id) {
+      console.info(
+        `Client ${myClient.id} cannot select piece ${model.id}, already selected by ${model.selector}}`,
+      );
+      return;
+    }
+
+    ref.current!.setPointerCapture(event.pointerId);
+    dragging.current.set(event.pointerId, {
+      pieceID: model.id,
+      offset: {
+        x: event.pageX - piecePos.x,
+        y: event.pageY - piecePos.y,
+      },
+    });
+    r.mutate.updateClient({id: myClient.id, selectedPieceID: model.id});
+  };
+  useEffect(() => {
+    const handlePointerDown = () => {
+      // clear selection when clicking outside of a piece
+      // the pointerdown handler inside piece cancels bubbling
+      setHoverState({
+        pieceID: null,
+        phase: 'none',
+      });
+      r.mutate.updateClient({id: myClient!.id, selectedPieceID: ''});
+    };
+    window.addEventListener('pointerdown', handlePointerDown);
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+    };
+  }, [r, myClient]);
+
+  /*
   useEffect(() => {
     window.addEventListener('mousemove', e => {
       if (e.buttons === 0) {
         return;
       }
-      /*
       const elm = document.createElement('div');
       elm.style.position = 'absolute';
       elm.style.left = e.pageX - 2 + 'px';
@@ -122,25 +174,9 @@ export function Puzzle({
       elm.style.zIndex = '1';
       elm.style.opacity = '0.3';
       document.body.appendChild(elm);
-      */
     });
   }, []);
-
-  const handlePiecePointerDown = async (
-    model: PieceModel,
-    event: React.PointerEvent,
-    piecePos: Position,
-  ) => {
-    ref.current!.setPointerCapture(event.pointerId);
-    dragging.current.set(event.pointerId, {
-      pieceID: model.id,
-      offset: {
-        x: event.pageX - piecePos.x,
-        y: event.pageY - piecePos.y,
-      },
-    });
-    r.mutate.updateClient({id: await r.clientID, selectedPieceID: model.id});
-  };
+  */
 
   const handlePointerMove = (e: React.PointerEvent) => {
     const dragInfo = dragging.current.get(e.pointerId);
@@ -206,10 +242,6 @@ export function Puzzle({
       onLostPointerCapture={e => handleLostPointerCapture(e)}
     >
       {Object.values(pieces).map(model => {
-        const active =
-          hoveringPieceID === model.id ||
-          blurringPieceID === model.id ||
-          model.selector !== null;
         const pos = coordinateToPosition(model, home, screenSize);
         return (
           <Piece
@@ -218,11 +250,12 @@ export function Puzzle({
               ...model,
               ...pos,
             }}
-            active={active}
-            animateHandle={hoveringPieceID !== null || blurringPieceID !== null}
+            hovered={hoverState.pieceID === model.id}
+            selectorID={model.selector}
+            myClient={myClient}
             onPointerDown={e => handlePiecePointerDown(model, e, pos)}
-            onPointerOver={() => handlePieceHover(model.id)}
-            onPointerOut={() => handlePieceBlur(model.id)}
+            onPointerOver={() => handlePieceHover(model)}
+            onPointerOut={() => handlePieceBlur()}
           />
         );
       })}
