@@ -56,14 +56,14 @@ export const mutators = {
   ) => {
     if (tx.environment === 'client') {
       if (!force) {
-        console.log(
+        console.debug(
           'client cannot initialize puzzle, skipping non-force optimistic mutation',
         );
         return;
       }
     }
     if (!force && (await tx.get('puzzle-exists'))) {
-      console.log('puzzle already exists, skipping non-force initialization');
+      console.debug('puzzle already exists, skipping non-force initialization');
       return;
     }
     for (const piece of pieces) {

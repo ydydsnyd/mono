@@ -13,7 +13,6 @@ import {WORKER_HOST} from '@/demo/shared/urls';
 import Image from 'next/image';
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {Reflect} from '@rocicorp/reflect';
-import {SVG_ORIGINAL_SIZE} from '@/demo/alive/piece-definitions';
 import classNames from 'classnames';
 import {COLOR_PALATE, colorToString} from '@/demo/alive/colors';
 
@@ -29,11 +28,10 @@ const Demo = () => {
       window.removeEventListener('resize', handleWindowResize);
     };
   }, []);
+  const stage = getStage(screenSize);
 
   const homeRef = useRef<HTMLDivElement>(null);
-  const [home, setHome] = useState<Rect | null>(
-    new Rect(0, 0, SVG_ORIGINAL_SIZE.width, SVG_ORIGINAL_SIZE.height),
-  );
+  const [home, setHome] = useState<Rect | null>(null);
   useLayoutEffect(() => {
     if (!homeRef.current) {
       return;
@@ -41,6 +39,9 @@ const Demo = () => {
     setHome(getAbsoluteRect(homeRef.current));
   }, [screenSize]);
 
+  const ignoreMutatorError = (e: unknown) => {
+    console.warn('TODO - should not get this', e);
+  };
   const [r, setR] = useState<Reflect<M> | null>(null);
   useEffect(() => {
     const r = new Reflect<M>({
@@ -50,10 +51,6 @@ const Demo = () => {
       mutators,
       ...loggingOptions,
     });
-
-    const ignoreMutatorError = (e: unknown) => {
-      console.warn('TODO - should not get this', e);
-    };
 
     const url = new URL(location.href);
     if (url.searchParams.has('reset')) {
@@ -76,18 +73,25 @@ const Demo = () => {
         .catch(ignoreMutatorError);
     });
 
-    r.mutate
-      .initializePuzzle({
-        pieces: generateRandomPieces(home!, stage, screenSize),
-        force: false,
-      })
-      .catch(ignoreMutatorError);
     setR(r);
     return () => {
       r.close();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+    // we only want to do this once per page-load.
   }, []);
+
+  useEffect(() => {
+    if (!r || !home) {
+      return;
+    }
+    r.mutate
+      .initializePuzzle({
+        pieces: generateRandomPieces(home, stage, screenSize),
+        force: false,
+      })
+      .catch(ignoreMutatorError);
+  }, [r, home, stage, screenSize]);
 
   const [resetClicked, setResetClicked] = useState(false);
   const handleResetClick = () => {
@@ -108,8 +112,6 @@ const Demo = () => {
       window.clearTimeout(timerID);
     };
   });
-
-  const stage = getStage(screenSize);
 
   return (
     <>
@@ -155,7 +157,12 @@ const Demo = () => {
       </div>
       <div id="pieces">
         {r && (
-          <Puzzle r={r} home={home!} stage={stage} screenSize={screenSize} />
+          <Puzzle
+            r={r}
+            home={home ?? new Rect(0, 0, 100, 100)}
+            stage={stage}
+            screenSize={screenSize}
+          />
         )}
       </div>
       <div id="info">
