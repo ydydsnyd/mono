@@ -37,7 +37,7 @@ const Demo = () => {
       return;
     }
     setHome(getAbsoluteRect(homeRef.current));
-  }, []);
+  }, [screenSize]);
 
   const [r, setR] = useState<Reflect<M> | null>(null);
   useEffect(() => {
