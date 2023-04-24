@@ -5,6 +5,7 @@ export const clientModelSchema = entitySchema.extend({
   selectedPieceID: z.string(),
   x: z.number(),
   y: z.number(),
+  color: z.string(),
 });
 
 // Export generated interface.

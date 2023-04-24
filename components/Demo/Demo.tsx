@@ -5,6 +5,7 @@ import {
   generateRandomPieces,
   Rect,
   getAbsoluteRect,
+  simpleHash,
 } from '@/demo/alive/util';
 import {loggingOptions} from '@/demo/frontend/logging-options';
 import {type M, mutators} from '@/demo/shared/mutators';
@@ -14,6 +15,7 @@ import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {Reflect} from '@rocicorp/reflect';
 import {SVG_ORIGINAL_SIZE} from '@/demo/alive/piece-definitions';
 import classNames from 'classnames';
+import {COLOR_PALATE, colorToString} from '@/demo/alive/colors';
 
 const Demo = () => {
   const [screenSize, setScreenSize] = useState(getScreenSize());
@@ -60,12 +62,16 @@ const Demo = () => {
     }
 
     r.clientID.then(cid => {
+      const h = simpleHash(cid);
+      const m = Math.abs(h % COLOR_PALATE.length);
+      const [color] = COLOR_PALATE[m];
       r.mutate
         .putClient({
           id: cid,
           selectedPieceID: '',
           x: 400,
           y: 400,
+          color: colorToString(color),
         })
         .catch(ignoreMutatorError);
     });
