@@ -80,6 +80,7 @@ export function Piece({
           active,
           // TODO: would also be nice to animate out, but that's a bit more complicated and this look good enough.
           animate: hovered || selectorID === myClient.id,
+          placed: piece.placed,
         })}
         style={{
           transform: `translate3d(${handlePos.x}px, ${handlePos.y}px, 0px) rotate(${piece.handleRotation}rad)`,

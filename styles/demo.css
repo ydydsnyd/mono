@@ -246,8 +246,8 @@ body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
 .piece #shape {
   cursor: grab;
 }
-
-.piece.active {
+.piece.placed #shape {
+  cursor: default;
 }
 
 .piece.active #shape {
@@ -320,6 +320,9 @@ body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
   height: 28px;
   transform: translate3d(0, 0, 0);
   pointer-events: all;
+}
+.rotation-handle.placed > div {
+  cursor: default;
 }
 .rotation-handle.active > div {
   /* 44 because it looks nice */

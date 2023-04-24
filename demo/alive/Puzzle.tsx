@@ -79,6 +79,12 @@ export function Puzzle({
     if (!myClient) {
       return;
     }
+
+    if (model.placed) {
+      console.log('cannot hover already placed pieces');
+      return;
+    }
+
     // Pieces selected by others can't be hovered.
     if (model.selector !== null && model.selector !== myClient.id) {
       console.log(
@@ -124,6 +130,11 @@ export function Puzzle({
 
   const selectIfAvailable = (model: PieceInfo) => {
     if (!myClient) {
+      return;
+    }
+
+    if (model.placed) {
+      console.log('cannot select already placed pieces');
       return;
     }
 
