@@ -223,6 +223,8 @@ export function Puzzle({
     document.body.appendChild(elm);
     */
 
+    console.log('drag', dragInfo);
+
     const piece = pieces[dragInfo.pieceID];
     if (!piece) {
       throw new Error(`Piece ${dragInfo.pieceID} not found`);
