@@ -4,12 +4,13 @@ import {
   getStage,
   generateRandomPieces,
   Rect,
+  getAbsoluteRect,
 } from '@/demo/alive/util';
 import {loggingOptions} from '@/demo/frontend/logging-options';
 import {type M, mutators} from '@/demo/shared/mutators';
 import {WORKER_HOST} from '@/demo/shared/urls';
 import Image from 'next/image';
-import {useEffect, useState} from 'react';
+import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {Reflect} from '@rocicorp/reflect';
 import {SVG_ORIGINAL_SIZE} from '@/demo/alive/piece-definitions';
 import classNames from 'classnames';
@@ -25,6 +26,17 @@ const Demo = () => {
     return () => {
       window.removeEventListener('resize', handleWindowResize);
     };
+  }, []);
+
+  const homeRef = useRef<HTMLDivElement>(null);
+  const [home, setHome] = useState<Rect | null>(
+    new Rect(0, 0, SVG_ORIGINAL_SIZE.width, SVG_ORIGINAL_SIZE.height),
+  );
+  useLayoutEffect(() => {
+    if (!homeRef.current) {
+      return;
+    }
+    setHome(getAbsoluteRect(homeRef.current));
   }, []);
 
   const [r, setR] = useState<Reflect<M> | null>(null);
@@ -58,7 +70,7 @@ const Demo = () => {
 
     r.mutate
       .initializePuzzle({
-        pieces: generateRandomPieces(home, stage, screenSize),
+        pieces: generateRandomPieces(home!, stage, screenSize),
         force: false,
       })
       .catch(ignoreMutatorError);
@@ -72,7 +84,7 @@ const Demo = () => {
   const [resetClicked, setResetClicked] = useState(false);
   const handleResetClick = () => {
     r!.mutate.initializePuzzle({
-      pieces: generateRandomPieces(home, stage, screenSize),
+      pieces: generateRandomPieces(home!, stage, screenSize),
       force: true,
     });
     setResetClicked(true);
@@ -90,16 +102,10 @@ const Demo = () => {
   });
 
   const stage = getStage(screenSize);
-  const home = new Rect(
-    (screenSize.width - SVG_ORIGINAL_SIZE.width) / 2,
-    320,
-    SVG_ORIGINAL_SIZE.width,
-    SVG_ORIGINAL_SIZE.height,
-  );
 
   return (
     <>
-      <div id="demo">
+      <div id="demo" ref={homeRef}>
         <svg
           id="wells"
           width="568"
@@ -141,7 +147,7 @@ const Demo = () => {
       </div>
       <div id="pieces">
         {r && (
-          <Puzzle r={r} home={home} stage={stage} screenSize={screenSize} />
+          <Puzzle r={r} home={home!} stage={stage} screenSize={screenSize} />
         )}
       </div>
       <div id="info">
