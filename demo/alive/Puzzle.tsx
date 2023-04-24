@@ -6,6 +6,7 @@ import {
   addRadians,
   center,
   coordinateToPosition,
+  distance,
   getAngle,
   positionToCoordinate,
 } from './util';
@@ -14,7 +15,7 @@ import {useSubscribe} from 'replicache-react';
 import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '../shared/mutators';
 import {useEffect, useRef, useState} from 'react';
-import {PIECE_DEFINITIONS} from './piece-definitions';
+import {PIECE_DEFINITIONS, PieceDefinition} from './piece-definitions';
 import {ClientModel, listClients} from './client-model';
 import type {PieceInfo} from './piece-info';
 
@@ -223,8 +224,6 @@ export function Puzzle({
     document.body.appendChild(elm);
     */
 
-    console.log('drag', dragInfo);
-
     const piece = pieces[dragInfo.pieceID];
     if (!piece) {
       throw new Error(`Piece ${dragInfo.pieceID} not found`);
@@ -252,6 +251,8 @@ export function Puzzle({
 
     const coordinate = positionToCoordinate(pos, home, screenSize);
     r.mutate.updatePiece({id: piece.id, ...coordinate});
+
+    checkSnap(piece, def, pos);
   };
 
   const handleRotate = (
@@ -277,11 +278,44 @@ export function Puzzle({
 
     const newRads = addRadians(pointerRads, -rotateInfo.radOffset);
     const prevRads = piece.handleRotation;
+    const newRot = addRadians(piece.rotation, newRads - prevRads);
     r.mutate.updatePiece({
       id: piece.id,
       handleRotation: newRads,
-      rotation: addRadians(piece.rotation, newRads - prevRads),
+      rotation: newRot,
     });
+
+    checkSnap(
+      {
+        ...piece,
+        rotation: newRot,
+      },
+      def,
+      pos,
+    );
+  };
+
+  const checkSnap = (
+    piece: PieceInfo,
+    def: PieceDefinition,
+    currPos: Position,
+  ) => {
+    const homePos = coordinateToPosition(def, home, screenSize);
+    const dist = distance(currPos, homePos);
+    const distThresh = 10;
+    const rotThresh = Math.PI / 6;
+    if (
+      dist <= distThresh &&
+      (piece.rotation <= rotThresh || piece.rotation - Math.PI * 2 <= rotThresh)
+    ) {
+      r.mutate.updatePiece({
+        id: piece.id,
+        x: def.x,
+        y: def.y,
+        rotation: 0,
+        placed: true,
+      });
+    }
   };
 
   const handleLostPointerCapture = (e: React.PointerEvent) => {
