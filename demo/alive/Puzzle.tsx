@@ -217,7 +217,7 @@ export function Puzzle({
     }
   };
 
-  const handleDrag = (
+  const handleDrag = async (
     e: React.PointerEvent,
     dragInfo: {pieceID: string; offset: Position},
   ) => {
@@ -263,7 +263,14 @@ export function Puzzle({
     const coordinate = positionToCoordinate(pos, home, screenSize);
     r.mutate.updatePiece({id: piece.id, ...coordinate});
 
-    checkSnap(piece, def, pos);
+    if (checkSnap(piece, def, pos)) {
+      ref.current?.releasePointerCapture(e.pointerId);
+      setHoverState({
+        pieceID: null,
+        phase: 'none',
+      });
+      r.mutate.updateClient({id: await r.clientID, selectedPieceID: ''});
+    }
   };
 
   const handleRotate = (
@@ -296,14 +303,18 @@ export function Puzzle({
       rotation: newRot,
     });
 
-    checkSnap(
-      {
-        ...piece,
-        rotation: newRot,
-      },
-      def,
-      pos,
-    );
+    if (
+      checkSnap(
+        {
+          ...piece,
+          rotation: newRot,
+        },
+        def,
+        pos,
+      )
+    ) {
+      ref.current?.releasePointerCapture(e.pointerId);
+    }
   };
 
   const checkSnap = (
@@ -317,7 +328,7 @@ export function Puzzle({
     const rotThresh = Math.PI / 6;
     if (
       dist <= distThresh &&
-      (piece.rotation <= rotThresh || piece.rotation - Math.PI * 2 <= rotThresh)
+      (piece.rotation <= rotThresh || Math.PI * 2 - piece.rotation <= rotThresh)
     ) {
       r.mutate.updatePiece({
         id: piece.id,
@@ -326,7 +337,9 @@ export function Puzzle({
         rotation: 0,
         placed: true,
       });
+      return true;
     }
+    return false;
   };
 
   const handleLostPointerCapture = (e: React.PointerEvent) => {
