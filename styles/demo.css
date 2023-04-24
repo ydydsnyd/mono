@@ -128,14 +128,13 @@ body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
   left: 0px;
   transform: translate3d(0, 0, 0);
   z-index: 300;
-  display: none;
 }
 .demo-active .cursor {
   display: block;
 }
 .cursor {
   transition: opacity 0.5s ease-out;
-  opacity: 0;
+  opacity: 1;
 }
 .custom-cursor .local.cursor.on-page {
   opacity: 1;

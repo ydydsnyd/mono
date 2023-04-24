@@ -64,6 +64,8 @@ const Demo = () => {
         .putClient({
           id: cid,
           selectedPieceID: '',
+          x: 400,
+          y: 400,
         })
         .catch(ignoreMutatorError);
     });
