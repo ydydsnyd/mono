@@ -95,10 +95,13 @@ const DemoWrapperInternal = (
   state: DemoReflectState | undefined,
   setState: React.Dispatch<React.SetStateAction<DemoReflectState | undefined>>,
   prepend: string,
+  intialized: boolean,
 ) => {
   useEffect(() => {
-    initDemo(state, setState, prepend);
-  }, [state?.latency1, state?.latency2]);
+    if (intialized) {
+      initDemo(state, setState, prepend);
+    }
+  }, [state?.latency1 ?? 0, state?.latency2 ?? 0, intialized]);
 
   return state ? (
     <ClientIDContext.Provider
@@ -144,22 +147,21 @@ const DemoWrapperInternal = (
   ) : null;
 };
 export default function How() {
+  const [initialized, setInitialized] = useState(false);
+
   const {ref} = useInView({
     triggerOnce: true,
     onChange: inView => {
       if (inView) {
-        initHowToReflect();
+        setInitialized(true);
+        delayWebSocket(
+          process.env.NEXT_PUBLIC_WORKER_HOST!.replace(/^ws/, 'http'),
+        );
       }
     },
   });
   const [iReflectState, setIReflectState] = useState<DemoReflectState>();
   const [rReflectState, setRReflectState] = useState<DemoReflectState>();
-
-  async function initHowToReflect() {
-    delayWebSocket(process.env.NEXT_PUBLIC_WORKER_HOST!.replace(/^ws/, 'http'));
-    initDemo(iReflectState, setIReflectState, 'increment_');
-    initDemo(rReflectState, setRReflectState, 'rotate_');
-  }
 
   useEffect(() => {
     const cleanup = async () => {
@@ -192,8 +194,20 @@ export default function How() {
   return (
     <div ref={ref}>
       <Demo0 />
-      {DemoWrapper(Demo1, iReflectState, setIReflectState, 'increment_')}
-      {DemoWrapper(Demo2, rReflectState, setRReflectState, 'rotate_')}
+      {DemoWrapper(
+        Demo1,
+        iReflectState,
+        setIReflectState,
+        'increment_',
+        initialized,
+      )}
+      {DemoWrapper(
+        Demo2,
+        rReflectState,
+        setRReflectState,
+        'rotate_',
+        initialized,
+      )}
       {/* Step 3: Deploy */}
       <div className={styles.howStep}>
         <h3 className={styles.howHeader}>
