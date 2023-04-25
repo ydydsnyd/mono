@@ -1,12 +1,46 @@
 import classNames from 'classnames';
-import type {ClientModel} from './client-model';
+import type {Reflect} from '@rocicorp/reflect';
+import type {M} from '../shared/mutators';
+import {getClient} from './client-model';
+import {useSubscribe} from 'replicache-react';
+import {Rect, Size, coordinateToPosition} from './util';
+import {useEffect} from 'react';
 
-export function Cursor({client}: {client: ClientModel}) {
+export function Cursor({
+  r,
+  clientID,
+  home,
+  stage,
+  screenSize,
+  isSelf,
+}: {
+  r: Reflect<M>;
+  clientID: string;
+  home: Rect;
+  stage: Rect;
+  screenSize: Size;
+  isSelf: boolean;
+}) {
+  const client = useSubscribe(r, async tx => getClient(tx, clientID), null);
+  const pos = client && coordinateToPosition(client, home, screenSize);
+  const active =
+    !isSelf || (pos && pos.y >= stage.top() && pos.y <= stage.bottom());
+
+  useEffect(() => {
+    if (isSelf && typeof active === 'boolean') {
+      document.body.classList.toggle('custom-cursor', active);
+    }
+  }, [isSelf, active]);
+
+  if (!client || !pos) {
+    return null;
+  }
+
   return (
     <div
-      className={classNames('cursor', {local: false})}
+      className={classNames('cursor', {active})}
       style={{
-        transform: `translate(${client.x}px, ${client.y}px)`,
+        transform: `translate(${pos.x}px, ${pos.y}px)`,
       }}
     >
       <div className="pointer">
@@ -19,12 +53,7 @@ export function Cursor({client}: {client: ClientModel}) {
           height="22px"
         >
           <path
-            id="pointer-fill"
             fill={client.color}
-            d="M2.6,0.7C2.6,0.3,3,0,3.4,0.2l14.3,8.2C18,8.6,18,9.2,17.6,9.3l-14.3,8.2C3,17.5,2.6,17.2,2.6,16.8V0.7z"
-          />
-          <path
-            fill="none"
             stroke="#fff"
             d="M6.5,16.7l-3.3-16l14.2,8.2L10.5,11c-0.2,0.1-0.4,0.2-0.5,0.4L6.5,16.7z"
           />

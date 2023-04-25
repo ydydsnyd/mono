@@ -11,6 +11,7 @@ import {useInView} from 'react-intersection-observer';
 import styles from './How.module.css';
 import type {Reflect} from '@rocicorp/reflect';
 import type {Latency} from '@/demo/shared/types';
+import {closeReflect} from '@/util/reflect';
 
 export type DemoReflectState = {
   roomID: string;
@@ -45,9 +46,9 @@ function initDemo(
   let latency1 = 0 as Latency;
   let latency2 = 0 as Latency;
   if (prevState) {
-    prevState.reflect1.close();
-    prevState.reflect2.close();
-    prevState.reflectServer.close();
+    closeReflect(prevState.reflect1);
+    closeReflect(prevState.reflect2);
+    closeReflect(prevState.reflectServer);
     latency1 = prevState.latency1;
     latency2 = prevState.latency2;
   }
@@ -174,7 +175,7 @@ export default function How() {
       for (const reflect of reflects) {
         if (reflect) {
           await reflect.clientID.then(deregisterClientConsole);
-          reflect.close();
+          closeReflect(reflect);
         }
       }
     };

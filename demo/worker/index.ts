@@ -6,6 +6,7 @@ import {
   ReflectServerBaseEnv,
 } from '@rocicorp/reflect-server';
 import {mutators} from '../shared/mutators';
+import {deleteClient} from '../alive/client-model';
 
 type ReflectNetServerEnv = {
   NEW_ROOM_SECRET?: string;
@@ -53,6 +54,10 @@ const {
   metricsSink: getMetricsSink(env),
   logSinks: getLogSinks(env),
   logLevel: 'info',
+  disconnectHandler: async tx => {
+    console.log('deleting old client', tx.clientID);
+    await deleteClient(tx, tx.clientID);
+  },
 }));
 
 class RoomDO extends SuperRoomDO {

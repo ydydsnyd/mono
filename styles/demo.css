@@ -1,4 +1,4 @@
-body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
+body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
   cursor: none;
 }
 #intro * {
@@ -128,10 +128,10 @@ body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
   left: 0px;
   transform: translate3d(0, 0, 0);
   z-index: 300;
-  display: none;
+  opacity: 0;
 }
-.demo-active .cursor {
-  display: block;
+.cursor.active {
+  opacity: 1;
 }
 .cursor {
   transition: opacity 0.5s ease-out;
@@ -145,6 +145,9 @@ body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
   opacity: 1;
 }
 .cursor .pointer svg {
+  position: absolute;
+  left: -1px;
+  top: -1px;
   filter: drop-shadow(0px 2px 2px rgba(0, 0, 0, 0.2));
 }
 
@@ -178,7 +181,7 @@ body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
 }
 
 .location {
-  position: relative;
+  position: absolute;
   padding: 4px;
   font-weight: 700;
   font-size: 0.8em;
@@ -186,7 +189,7 @@ body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
   border-radius: 4px;
   white-space: nowrap;
   left: 12px;
-  top: -12px;
+  top: 14x;
   transition: top 300ms, opacity 100ms;
   transition-timing-function: cubic-bezier(0.46, 0.11, 0.065, 1.65);
   box-shadow: 0px 2px 2px rgba(0, 0, 0, 0.2);
@@ -315,7 +318,7 @@ body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
 }
 .rotation-handle > div {
   position: absolute;
-  cursor: grab;
+  cursor: grab !important;
   width: 28px;
   height: 28px;
   transform: translate3d(0, 0, 0);
@@ -345,5 +348,5 @@ body.custom-cursor *:not(.rotation-handle.showing):not(.piece.active #shape) {
 
 .rotation-handle.showing.moving,
 .piece.active.moving #shape {
-  cursor: grabbing;
+  cursor: grabbing !important;
 }

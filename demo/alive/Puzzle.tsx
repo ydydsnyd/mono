@@ -18,7 +18,6 @@ import {useEffect, useRef, useState} from 'react';
 import {PIECE_DEFINITIONS, PieceDefinition} from './piece-definitions';
 import {ClientModel, listClients} from './client-model';
 import type {PieceInfo} from './piece-info';
-import {Cursor} from './Cursor';
 
 export function Puzzle({
   r,
@@ -31,7 +30,7 @@ export function Puzzle({
   stage: Rect;
   screenSize: Size;
 }) {
-  const {pieces, clients, myClient} = useSubscribe<{
+  const {pieces, myClient} = useSubscribe<{
     pieces: Record<string, PieceInfo>;
     clients: Record<string, ClientModel>;
     myClient: ClientModel | null;
@@ -405,10 +404,6 @@ export function Puzzle({
             onRotationStart={e => handleRotateStart(model, e, pos)}
           />
         );
-      })}
-
-      {Object.values(clients).map(model => {
-        return <Cursor key={model.id} client={model} />;
       })}
     </div>
   );

@@ -1,10 +1,5 @@
 import {Puzzle} from '@/demo/alive/Puzzle';
-import {
-  getStage,
-  generateRandomPieces,
-  Rect,
-  simpleHash,
-} from '@/demo/alive/util';
+import {getStage, generateRandomPieces, simpleHash} from '@/demo/alive/util';
 import {loggingOptions} from '@/demo/frontend/logging-options';
 import {type M, mutators} from '@/demo/shared/mutators';
 import {WORKER_HOST} from '@/demo/shared/urls';
@@ -15,6 +10,8 @@ import classNames from 'classnames';
 import {COLOR_PALATE, colorToString} from '@/demo/alive/colors';
 import {useDocumentSize} from '@/hooks/use-document-size';
 import {useElementSize} from '@/hooks/use-element-size';
+import {CursorField} from '@/demo/alive/CursorField';
+import {closeReflect} from '@/util/reflect';
 
 const Demo = () => {
   const screenSize = useDocumentSize();
@@ -57,9 +54,7 @@ const Demo = () => {
     r.onOnlineChange = setOnline;
 
     setR(r);
-    return () => {
-      r.close();
-    };
+    return () => closeReflect(r);
     // we only want to do this once per page-load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [home]);
@@ -145,13 +140,8 @@ const Demo = () => {
         </svg>
       </div>
       <div id="pieces">
-        {r && (
-          <Puzzle
-            r={r}
-            home={home ?? new Rect(0, 0, 100, 100)}
-            stage={stage}
-            screenSize={screenSize}
-          />
+        {r && home && (
+          <Puzzle r={r} home={home} stage={stage} screenSize={screenSize} />
         )}
       </div>
       <div id="info">
@@ -187,6 +177,15 @@ const Demo = () => {
           </div>
         </button>
       </div>
+      {r && home && myClientID && (
+        <CursorField
+          home={home}
+          stage={stage}
+          screenSize={screenSize}
+          r={r}
+          myClientID={myClientID}
+        />
+      )}
     </>
   );
 };
