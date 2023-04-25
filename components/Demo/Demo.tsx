@@ -1,49 +1,37 @@
 import {Puzzle} from '@/demo/alive/Puzzle';
 import {
-  getScreenSize,
   getStage,
   generateRandomPieces,
   Rect,
-  getAbsoluteRect,
   simpleHash,
 } from '@/demo/alive/util';
 import {loggingOptions} from '@/demo/frontend/logging-options';
 import {type M, mutators} from '@/demo/shared/mutators';
 import {WORKER_HOST} from '@/demo/shared/urls';
 import Image from 'next/image';
-import {useEffect, useLayoutEffect, useRef, useState} from 'react';
+import {useEffect, useState} from 'react';
 import {Reflect} from '@rocicorp/reflect';
 import classNames from 'classnames';
 import {COLOR_PALATE, colorToString} from '@/demo/alive/colors';
+import {useDocumentSize} from '@/hooks/use-document-size';
+import {useElementSize} from '@/hooks/use-element-size';
 
 const Demo = () => {
-  const [screenSize, setScreenSize] = useState(getScreenSize());
-  useEffect(() => {
-    const handleWindowResize = () => {
-      setScreenSize(getScreenSize());
-    };
-    window.addEventListener('resize', handleWindowResize);
-
-    return () => {
-      window.removeEventListener('resize', handleWindowResize);
-    };
-  }, []);
+  const screenSize = useDocumentSize();
   const stage = getStage(screenSize);
-
-  const homeRef = useRef<HTMLDivElement>(null);
-  const [home, setHome] = useState<Rect | null>(null);
-  useLayoutEffect(() => {
-    if (!homeRef.current) {
-      return;
-    }
-    setHome(getAbsoluteRect(homeRef.current));
-  }, [screenSize]);
+  const [homeRef, home] = useElementSize<HTMLDivElement>([screenSize]);
 
   const ignoreMutatorError = (e: unknown) => {
     console.warn('TODO - should not get this', e);
   };
   const [r, setR] = useState<Reflect<M> | null>(null);
+  const [myClientID, setMyClientID] = useState<string | null>(null);
+  const [online, setOnline] = useState<boolean>(true);
   useEffect(() => {
+    if (!home) {
+      return;
+    }
+
     const r = new Reflect<M>({
       socketOrigin: WORKER_HOST,
       userID: 'anon',
@@ -58,40 +46,41 @@ const Demo = () => {
       r.mutate.resetRoom().catch(ignoreMutatorError);
     }
 
-    r.clientID.then(cid => {
-      const h = simpleHash(cid);
-      const m = Math.abs(h % COLOR_PALATE.length);
-      const [color] = COLOR_PALATE[m];
-      r.mutate
-        .putClient({
-          id: cid,
-          selectedPieceID: '',
-          x: 400,
-          y: 400,
-          color: colorToString(color),
-        })
-        .catch(ignoreMutatorError);
-    });
-
-    setR(r);
-    return () => {
-      r.close();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    // we only want to do this once per page-load.
-  }, []);
-
-  useEffect(() => {
-    if (!r || !home) {
-      return;
-    }
     r.mutate
       .initializePuzzle({
         pieces: generateRandomPieces(home, stage, screenSize),
         force: false,
       })
       .catch(ignoreMutatorError);
-  }, [r, home, stage, screenSize]);
+
+    r.clientID.then(cid => setMyClientID(cid));
+    r.onOnlineChange = setOnline;
+
+    setR(r);
+    return () => {
+      r.close();
+    };
+    // we only want to do this once per page-load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [home]);
+
+  useEffect(() => {
+    if (!r || !myClientID || !online) {
+      return;
+    }
+    const h = simpleHash(myClientID);
+    const m = Math.abs(h % COLOR_PALATE.length);
+    const [color] = COLOR_PALATE[m];
+    r.mutate
+      .putClient({
+        id: myClientID,
+        selectedPieceID: '',
+        x: 0,
+        y: 0,
+        color: colorToString(color),
+      })
+      .catch(ignoreMutatorError);
+  }, [r, myClientID, online]);
 
   const [resetClicked, setResetClicked] = useState(false);
   const handleResetClick = () => {
@@ -167,7 +156,7 @@ const Demo = () => {
       </div>
       <div id="info">
         <div className="active-user-info">
-          <div className="online-dot online"></div>
+          <div className={classNames('online-dot', {offline: !online})}></div>
           &nbsp;Active Users:&nbsp;
           <span id="active-user-count">1</span>
         </div>
