@@ -127,57 +127,21 @@ body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
   top: 0px;
   left: 0px;
   transform: translate3d(0, 0, 0);
+  transition: opacity 0.5s ease-out;
   z-index: 300;
   opacity: 0;
 }
 .cursor.active {
   opacity: 1;
 }
-.cursor {
-  transition: opacity 0.5s ease-out;
-  opacity: 0;
-}
-.custom-cursor .local.cursor.on-page {
-  opacity: 1;
+.cursor.local.cursor {
   z-index: 301;
 }
-.cursor:not(.local).active {
-  opacity: 1;
-}
-.cursor .pointer svg {
+.cursor svg {
   position: absolute;
   left: -1px;
   top: -1px;
   filter: drop-shadow(0px 2px 2px rgba(0, 0, 0, 0.2));
-}
-
-.cursor.mobile {
-  top: -25px;
-}
-
-.cursor .finger {
-  border-radius: 50%;
-  transition: width, height, border-width, 220ms;
-  width: 0px;
-  height: 0px;
-  transition-timing-function: cubic-bezier(0.46, 0.11, 0.065, 1.65);
-  transition-delay: 50ms;
-  display: none;
-}
-.cursor.mobile .finger {
-  display: block;
-}
-.cursor.cursor.mobile .pointer {
-  display: none;
-}
-
-.custom-cursor .cursor.active .finger {
-  width: 60px;
-  height: 60px;
-  margin-left: -30px;
-  margin-top: -30px;
-  border-width: 8px;
-  border-style: solid;
 }
 
 .location {
@@ -189,36 +153,10 @@ body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
   border-radius: 4px;
   white-space: nowrap;
   left: 12px;
-  top: 14x;
+  top: 14px;
   transition: top 300ms, opacity 100ms;
   transition-timing-function: cubic-bezier(0.46, 0.11, 0.065, 1.65);
   box-shadow: 0px 2px 2px rgba(0, 0, 0, 0.2);
-}
-
-.location .arrow {
-  position: absolute;
-  top: 100%;
-  height: 6px;
-  margin-left: -4px;
-  margin-top: -1px;
-  width: 100%;
-  justify-content: center;
-  display: none;
-}
-
-.cursor.mobile .location .arrow {
-  display: flex;
-}
-
-.cursor.mobile .location {
-  top: 0px;
-  left: -50%;
-  opacity: 0;
-}
-.custom-cursor .cursor.mobile.active .location {
-  top: -40px;
-  left: -50%;
-  opacity: 1;
 }
 
 .bot-indicator {

@@ -43,29 +43,27 @@ export function Cursor({
         transform: `translate(${pos.x}px, ${pos.y}px)`,
       }}
     >
-      <div className="pointer">
-        <svg
-          version="1.1"
-          viewBox="0 0 20 22"
-          x="0px"
-          y="0px"
-          width="20px"
-          height="22px"
-        >
-          <path
-            fill={client.color}
-            stroke="#fff"
-            d="M6.5,16.7l-3.3-16l14.2,8.2L10.5,11c-0.2,0.1-0.4,0.2-0.5,0.4L6.5,16.7z"
-          />
-        </svg>
-        <div
-          className="location"
-          style={{
-            backgroundColor: client.color,
-          }}
-        >
-          <div className="location-name">Kailua, HI</div>
-        </div>
+      <svg
+        version="1.1"
+        viewBox="0 0 20 22"
+        x="0px"
+        y="0px"
+        width="20px"
+        height="22px"
+      >
+        <path
+          fill={client.color}
+          stroke="#fff"
+          d="M6.5,16.7l-3.3-16l14.2,8.2L10.5,11c-0.2,0.1-0.4,0.2-0.5,0.4L6.5,16.7z"
+        />
+      </svg>
+      <div
+        className="location"
+        style={{
+          backgroundColor: client.color,
+        }}
+      >
+        <div className="location-name">Kailua, HI</div>
       </div>
     </div>
   );
