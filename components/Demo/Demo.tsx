@@ -12,6 +12,13 @@ import {useDocumentSize} from '@/hooks/use-document-size';
 import {useElementSize} from '@/hooks/use-element-size';
 import {CursorField} from '@/demo/alive/CursorField';
 import {closeReflect} from '@/util/reflect';
+import {
+  getClientRoomAssignment,
+  ORCHESTRATOR_ROOM,
+} from '@/demo/alive/orchestrator-model';
+
+const ORCHESTRATOR_ALIVE_INTERVAL_MS = 10_000;
+let orchestratorInitialized = false;
 
 const Demo = () => {
   const screenSize = useDocumentSize();
@@ -21,18 +28,64 @@ const Demo = () => {
   const ignoreMutatorError = (e: unknown) => {
     console.warn('TODO - should not get this', e);
   };
+
+  const [puzzleRoomID, setPuzzleRoomID] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (orchestratorInitialized) {
+      return;
+    }
+    orchestratorInitialized = true;
+    const orchestratorClient = new Reflect<M>({
+      socketOrigin: WORKER_HOST,
+      userID: 'anon',
+      roomID: ORCHESTRATOR_ROOM,
+      mutators,
+      ...loggingOptions,
+    });
+    orchestratorClient.subscribe(
+      tx => getClientRoomAssignment(tx, tx.clientID),
+      {
+        onData: result => {
+          console.log('ROOM ID CHANGE', result);
+          setPuzzleRoomID(result?.roomID ?? null);
+        },
+      },
+    );
+    orchestratorClient.mutate.alive().catch(ignoreMutatorError);
+    const aliveInterval = setInterval(() => {
+      if (document.hasFocus()) {
+        orchestratorClient.mutate.alive().catch(ignoreMutatorError);
+      }
+    }, ORCHESTRATOR_ALIVE_INTERVAL_MS);
+    let cleanedUp = false;
+    window.addEventListener('focus', async () => {
+      orchestratorClient.mutate.alive().catch(ignoreMutatorError);
+    });
+    window.addEventListener('pagehide', async () => {
+      if (cleanedUp) {
+        return;
+      }
+      cleanedUp = true;
+      clearInterval(aliveInterval);
+      await orchestratorClient.mutate.unload().catch(ignoreMutatorError);
+    });
+
+    return () => {};
+  }, []);
+
   const [r, setR] = useState<Reflect<M> | null>(null);
   const [myClientID, setMyClientID] = useState<string | null>(null);
   const [online, setOnline] = useState<boolean>(true);
   useEffect(() => {
-    if (!home) {
+    if (!home || !puzzleRoomID) {
       return;
     }
 
     const r = new Reflect<M>({
       socketOrigin: WORKER_HOST,
       userID: 'anon',
-      roomID: 'puzzle',
+      roomID: puzzleRoomID,
       mutators,
       ...loggingOptions,
     });
@@ -54,10 +107,14 @@ const Demo = () => {
     r.onOnlineChange = setOnline;
 
     setR(r);
-    return () => closeReflect(r);
+    return () => {
+      setR(null);
+      setMyClientID(null);
+      closeReflect(r);
+    };
     // we only want to do this once per page-load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [home]);
+  }, [home, puzzleRoomID]);
 
   useEffect(() => {
     if (!r || !myClientID || !online) {

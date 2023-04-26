@@ -1,6 +1,7 @@
 import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
 import {PieceModel, putPiece, updatePiece} from '../alive/piece-model';
 import {putClient, updateClient} from '../alive/client-model';
+import {alive, unload} from '../alive/orchestrator-model';
 
 export type M = typeof mutators;
 
@@ -116,4 +117,8 @@ export const mutators = {
   getServerLogs,
   getServerLogCount,
   nop: async (_: WriteTransaction) => {},
+
+  // orchestrator mutators
+  alive,
+  unload,
 };
