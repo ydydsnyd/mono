@@ -17,7 +17,7 @@ export default function GetStarted() {
       </p>
       <div className={styles.ctaWrap}>
         <Link
-          href="https://replicache.typeform.com/to/AV2PmaWm"
+          href="mailto:hi@reflect.net?Subject=reflect%20beta"
           className={styles.buttonPrimary}
         >
           Beta Waitlist

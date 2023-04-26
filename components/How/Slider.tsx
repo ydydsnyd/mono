@@ -8,7 +8,7 @@ const MIN = 0;
 const MAX = 2;
 
 function getLatencyName(latency: Latency): string {
-  return ['low', 'medium', 'high'][latency];
+  return ['low', 'med', 'high'][latency];
 }
 
 const Slider = ({

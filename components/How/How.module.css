@@ -247,6 +247,13 @@ p.howTryIt {
   justify-content: space-around;
 }
 
+.incrementCounter {
+  margin: 0 0 1rem;
+  font-weight: 700;
+  font-size: 2rem;
+  color: #24283b;
+}
+
 @media (max-width: 600px) {
   .panelLabel {
     font-size: 0.75rem;
@@ -262,6 +269,7 @@ p.howTryIt {
   .demo2layout svg {
     order: 0;
     height: 100px;
+    margin: 1rem 0;
   }
 
   .clientExpanded {

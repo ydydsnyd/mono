@@ -1,22 +1,10 @@
 .benefitsGrid {
-  display: grid;
-  grid-auto-columns: 1fr;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto auto auto;
-  grid-row-gap: 5rem;
-  grid-column-gap: 4rem;
-  grid-auto-flow: row;
+  display: block;
 }
 
 .benefitBlock {
-  -ms-grid-column: span 1;
-  grid-column-start: span 1;
-  -ms-grid-column-span: 1;
-  grid-column-end: span 1;
-  -ms-grid-row: span 1;
-  grid-row-start: span 1;
-  -ms-grid-row-span: 1;
-  grid-row-end: span 1;
+  display: flex;
+  margin-bottom: 4rem;
 }
 
 .benefitBlockFull {
@@ -35,8 +23,7 @@
 }
 
 .benefitInfoContainer {
-  color: #fff;
-  margin-left: 3rem;
+
 }
 
 .benefitIconContainer {
@@ -44,16 +31,17 @@
   display: -webkit-flex;
   display: -ms-flexbox;
   display: flex;
-  min-height: 54px;
+  min-width: 54px;
+  margin: 0 4rem 0 0;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
   -webkit-flex-direction: column;
   -ms-flex-direction: column;
   flex-direction: column;
-  -webkit-box-pack: center;
-  -webkit-justify-content: center;
-  -ms-flex-pack: center;
-  justify-content: center;
+  -webkit-box-pack: flex-start;
+  -webkit-justify-content: flex-start;
+  -ms-flex-pack: flex-start;
+  justify-content: flex-start;
   -webkit-box-align: start;
   -webkit-align-items: flex-start;
   -ms-flex-align: start;
@@ -84,8 +72,8 @@
 .benefitIcon {
   display: block;
   max-width: 100%;
-  vertical-align: middle;
   border: 0;
+  width: 54px;
 }
 
 .benefitFullIcon {
@@ -93,13 +81,12 @@
 }
 
 .benefitTitle {
-  margin-top: 2.25rem;
   font-family: 'Muoto 205tf', sans-serif;
   text-align: left;
   font-weight: bold;
   font-size: 1.5rem;
   line-height: 30px;
-  margin-bottom: 0.625rem;
+  margin: 0 0 0.625rem;
 }
 
 .benefitFullTitle {
@@ -121,29 +108,27 @@
 
 @media (max-width: 600px) {
   .benefitsGrid {
-    grid-template-columns: 1fr;
-    align-items: center;
+    display: block;
+    align-items: left;
   }
 
   .benefitBlock {
-    -ms-grid-column: span 2;
-    grid-column-start: span 2;
-    -ms-grid-column-span: 2;
-    grid-column-end: span 2;
-    -ms-grid-row: span 2;
-    grid-row-start: span 2;
-    -ms-grid-row-span: 2;
-    grid-row-end: span 2;
+    display: block;
   }
 
   .benefitIconContainer {
-    align-items: center;
-    transform: scale(1.4);
+    align-items: left;
+    display: block;
+    margin-bottom: 1rem;
+  }
+
+  .benefitIcon {
+    
   }
 
   .benefitsGrid .benefitTitle,
   .benefitsGrid .benefitDescription {
-    text-align: center;
+    text-align: left;
   }
 
   .benefitBlockFull {

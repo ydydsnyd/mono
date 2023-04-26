@@ -23,16 +23,18 @@ const Benefits = () => (
           className={styles.benefitIcon}
         />
       </div>
-      <h3 className={styles.benefitTitle}>Perfectly Smooth Motion</h3>
-      <p className={styles.benefitDescription}>
-        Great multiplayer starts with framerate. To look alive, motion has to
-        run at 60&nbsp;FPS or better.
-      </p>
-      <p className={styles.benefitDescription}>
-        Reflect captures and replays changes at 120&nbsp;FPS, hardware
-        permitting. Batching and adaptive buffering ensure buttery smooth,
-        precision playback &#8212; across town or across the globe.
-      </p>
+      <div className={styles.benefitInfoContainer}>
+        <h3 className={styles.benefitTitle}>Perfectly Smooth Motion</h3>
+        <p className={styles.benefitDescription}>
+          Great multiplayer starts with framerate. To look alive, motion has to
+          run at 60&nbsp;FPS or better.
+        </p>
+        <p className={styles.benefitDescription}>
+          Reflect captures and replays changes at 120&nbsp;FPS, hardware
+          permitting. Batching and adaptive buffering ensure buttery smooth,
+          precision playback &#8212; across town or across the globe.
+        </p>
+      </div>
     </div>
 
     {/* Automatic Persistence */}
@@ -45,16 +47,18 @@ const Benefits = () => (
           className={styles.benefitIcon}
         />
       </div>
-      <h3 className={styles.benefitTitle}>Automatic Persistence</h3>
-      <p className={styles.benefitDescription}>
-        Reflect data is stored in <em>rooms</em>. Changes are saved continously
-        and automatically.
-      </p>
-      <p className={styles.benefitDescription}>
-        There&apos;s no separate, slower persistence API to juggle. Write
-        changes as they happen (yes, every mouse movement) and they are stored
-        transparently, up to 50MB/room.
-      </p>
+      <div className={styles.benefitInfoContainer}>
+        <h3 className={styles.benefitTitle}>Automatic Persistence</h3>
+        <p className={styles.benefitDescription}>
+          Reflect data is stored in <em>rooms</em>. Changes are saved continously
+          and automatically.
+        </p>
+        <p className={styles.benefitDescription}>
+          There&apos;s no separate, slower persistence API to juggle. Write
+          changes as they happen (yes, every mouse movement) and they are stored
+          transparently, up to 50MB/room.
+        </p>
+      </div>
     </div>
 
     {/* Transactional Conflict Resolution */}
@@ -67,22 +71,24 @@ const Benefits = () => (
           className={styles.benefitIcon}
         />
       </div>
-      <h3 className={styles.benefitTitle}>Server Authority</h3>
-      <p className={styles.benefitDescription}>
-        CRDTs converge, but to what? Your application has no control. Validation
-        and custom business logic aren&apos;t possible.
-      </p>
-      <p className={styles.benefitDescription}>
-        Reflect uses a more flexible and intuitive technique based on{' '}
-        <a href="https://www.gabrielgambetta.com/client-side-prediction-server-reconciliation.html">
-          Server Reconciliation
-        </a>
-        .
-      </p>
-      <p className={styles.benefitDescription}>
-        <strong>Your mutation code</strong> runs server-side, and clients are
-        guaranteed to converge with server state.
-      </p>
+      <div className={styles.benefitInfoContainer}>
+        <h3 className={styles.benefitTitle}>Server Authority</h3>
+        <p className={styles.benefitDescription}>
+          CRDTs converge, but to what? Your application has no control. Validation
+          and custom business logic aren&apos;t possible.
+        </p>
+        <p className={styles.benefitDescription}>
+          Reflect uses a more flexible and intuitive technique based on{' '}
+          <a href="https://www.gabrielgambetta.com/client-side-prediction-server-reconciliation.html">
+            Server Reconciliation
+          </a>
+          .
+        </p>
+        <p className={styles.benefitDescription}>
+          <strong>Your mutation code</strong> runs server-side, and clients are
+          guaranteed to converge with server state.
+        </p>
+      </div>
     </div>
 
     {/* On-Prem */}
@@ -95,19 +101,21 @@ const Benefits = () => (
           className={styles.benefitIcon}
         />
       </div>
-      <h3 className={styles.benefitTitle}>On-&ldquo;Prem&rdquo; Available</h3>
-      <p className={styles.benefitDescription}>
-        Use Reflect as a traditional SaaS, or deploy it to your own Cloudflare
-        account.
-      </p>
-      <p className={styles.benefitDescription}>
-        We&apos;ll run, monitor, and update it. You maintain control and
-        ownership.
-      </p>
-      <p className={styles.benefitDescription}>
-        Enjoy complete business continuity security with a perpetual source
-        license to each version.
-      </p>
+      <div className={styles.benefitInfoContainer}>
+        <h3 className={styles.benefitTitle}>On-&ldquo;Prem&rdquo; Available</h3>
+        <p className={styles.benefitDescription}>
+          Use Reflect as a traditional SaaS, or deploy it to your own Cloudflare
+          account.
+        </p>
+        <p className={styles.benefitDescription}>
+          We&apos;ll run, monitor, and update it. You maintain control and
+          ownership.
+        </p>
+        <p className={styles.benefitDescription}>
+          Enjoy complete business continuity security with a perpetual source
+          license to each version.
+        </p>
+      </div>
     </div>
 
     {/* Fine-Grained Auth */}
@@ -120,11 +128,13 @@ const Benefits = () => (
           className={styles.benefitIcon}
         />
       </div>
-      <h3 className={styles.benefitTitle}>Fine-Grained Auth</h3>
-      <p className={styles.benefitDescription}>
-        Implement arbitrary access rules in JavaScript for reading or writing,
-        down to individual data items.
-      </p>
+      <div className={styles.benefitInfoContainer}>
+        <h3 className={styles.benefitTitle}>Fine-Grained Auth</h3>
+        <p className={styles.benefitDescription}>
+          Implement arbitrary access rules in JavaScript for reading or writing,
+          down to individual data items.
+        </p>
+      </div>
     </div>
 
     {/* Optional Offline */}
@@ -137,12 +147,14 @@ const Benefits = () => (
           className={styles.benefitIcon}
         />
       </div>
-      <h3 className={styles.benefitTitle}>Optional Offline</h3>
-      <p className={styles.benefitDescription}>
-        Set <code className="inline">clientPersistence: true</code>
-        &nbsp; and data is also stored on the client, providing instant
-        (“local-first”) startup, navigation, and offline support.
-      </p>
+      <div className={styles.benefitInfoContainer}>
+        <h3 className={styles.benefitTitle}>Optional Offline</h3>
+        <p className={styles.benefitDescription}>
+          Set <code className="inline">clientPersistence: true</code>
+          &nbsp; and data is also stored on the client, providing instant
+          (“local-first”) startup, navigation, and offline support.
+        </p>
+      </div>
     </div>
 
     {/* 

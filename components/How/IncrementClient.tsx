@@ -27,7 +27,10 @@ function IncrementClient({
 
   const [currentClientID, setCurrentClientID] = useState('');
 
+  const [count, setCount] = useState(0);
+
   useCount(reflect, 'count', (key: string, val: number) => {
+    setCount(val);
     clientConsoleDispatch({
       type: 'APPEND',
       payload: `Key "${key}" changed to: ${val}`,
@@ -52,6 +55,7 @@ function IncrementClient({
         setClientLatency={setLatency}
       />
       <div className={demoButtonStyles.demoContainer}>
+        <span className={styles.incrementCounter}>{count}</span>
         <button
           onClick={() => increment(reflect)}
           className={demoButtonStyles.demoButton}
