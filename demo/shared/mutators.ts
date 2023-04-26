@@ -1,6 +1,6 @@
 import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
 import {PieceModel, putPiece, updatePiece} from '../alive/piece-model';
-import {putClient, updateClient} from '../alive/client-model';
+import {deleteClient, putClient, updateClient} from '../alive/client-model';
 import {alive, unload} from '../alive/orchestrator-model';
 
 export type M = typeof mutators;
@@ -75,6 +75,7 @@ export const mutators = {
 
   putClient,
   updateClient,
+  deleteClient,
   updatePiece,
 
   // These mutators are for the how it works demos

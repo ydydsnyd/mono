@@ -1,10 +1,16 @@
 import {Puzzle} from '@/demo/alive/Puzzle';
-import {getStage, generateRandomPieces, simpleHash} from '@/demo/alive/util';
+import {
+  getStage,
+  generateRandomPieces,
+  simpleHash,
+  Rect,
+  Size,
+} from '@/demo/alive/util';
 import {loggingOptions} from '@/demo/frontend/logging-options';
 import {type M, mutators} from '@/demo/shared/mutators';
 import {WORKER_HOST} from '@/demo/shared/urls';
 import Image from 'next/image';
-import {useEffect, useState} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import {Reflect} from '@rocicorp/reflect';
 import classNames from 'classnames';
 import {COLOR_PALATE, colorToString} from '@/demo/alive/colors';
@@ -16,16 +22,14 @@ import {
   getClientRoomAssignment,
   ORCHESTRATOR_ROOM,
 } from '@/demo/alive/orchestrator-model';
+import {useTimeout} from '@/hooks/use-timeout';
 
 const ORCHESTRATOR_ALIVE_INTERVAL_MS = 10_000;
 let orchestratorInitialized = false;
 
-const Demo = () => {
-  const screenSize = useDocumentSize();
-  const stage = getStage(screenSize);
-  const [homeRef, home] = useElementSize<HTMLDivElement>([screenSize]);
-
+function usePuzzleRoomID() {
   const [puzzleRoomID, setPuzzleRoomID] = useState<string | null>(null);
+  // Runs once, total. Gets the puzzle room ID we will be using.
   useEffect(() => {
     if (orchestratorInitialized) {
       return;
@@ -68,16 +72,27 @@ const Demo = () => {
 
     return () => closeReflect(orchestratorClient);
   }, []);
+  return puzzleRoomID;
+}
 
+function useReflect(
+  initialDims: {home: Rect; stage: Rect; screenSize: Size} | null,
+  puzzleRoomID: string | null,
+) {
   const [r, setR] = useState<Reflect<M> | null>(null);
   const [myClientID, setMyClientID] = useState<string | null>(null);
   const [online, setOnline] = useState<boolean>(true);
+
+  // Runs once, when dimensions are available.
+  // We only want to initialize reflect once, even if the dimensions change. The pieces are placed relatively,
+  // we only need the current dimensions so that we pick locations in which the pieces are spread out on this
+  // screen.
   useEffect(() => {
-    if (!home || !puzzleRoomID) {
+    if (!initialDims || !puzzleRoomID) {
       return;
     }
 
-    const r = new Reflect<M>({
+    const reflect = new Reflect<M>({
       socketOrigin: WORKER_HOST,
       userID: 'anon',
       roomID: puzzleRoomID,
@@ -88,27 +103,39 @@ const Demo = () => {
     const url = new URL(location.href);
     if (url.searchParams.has('reset')) {
       console.info('Restting replicache');
-      r.mutate.resetRoom();
+      reflect.mutate.resetRoom();
     }
 
-    r.mutate.initializePuzzle({
+    const {home, stage, screenSize} = initialDims;
+    reflect.mutate.initializePuzzle({
       pieces: generateRandomPieces(home, stage, screenSize),
       force: false,
     });
 
-    r.clientID.then(cid => setMyClientID(cid));
-    r.onOnlineChange = setOnline;
+    reflect.clientID.then(cid => setMyClientID(cid));
+    reflect.onOnlineChange = setOnline;
 
-    setR(r);
+    setR(reflect);
     return () => {
       setR(null);
       setMyClientID(null);
-      closeReflect(r);
+      closeReflect(reflect);
     };
     // we only want to do this once per page-load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [home, puzzleRoomID]);
+  }, [initialDims, puzzleRoomID]);
 
+  return {r, myClientID, online};
+}
+
+function useEnsureClient(
+  r: Reflect<M> | null,
+  myClientID: string | null,
+  online: boolean,
+) {
+  // Runs whenever we come online, ensures we have the current client created.
+  // Also proactively deletes the client when we go offline. The server does this
+  // to be sure, but it looks nicer to get rid of it fast when possible.
   useEffect(() => {
     if (!r || !myClientID || !online) {
       return;
@@ -123,37 +150,65 @@ const Demo = () => {
       y: 0,
       color: colorToString(color),
     });
+    return () => {
+      r.mutate.deleteClient(myClientID);
+    };
   }, [r, myClientID, online]);
+}
 
+function useClientIDs(r: Reflect<M> | null) {
   const [clientIDs, setClientIDs] = useState<string[]>([]);
+  // Runs once we have a Reflect instance. Watches all client models.
   useEffect(() => {
     if (!r) {
       return;
     }
-    watch(r, {prefix: 'client/', ops: ['add', 'del']}, async vals => {
+    return watch(r, {prefix: 'client/', ops: ['add', 'del']}, async vals => {
       setClientIDs([...vals.keys()]);
     });
   }, [r]);
+  return clientIDs;
+}
 
+function useResetButton(
+  r: Reflect<M> | null,
+  initialDims: {home: Rect; stage: Rect; screenSize: Size} | null,
+) {
   const [resetClicked, setResetClicked] = useState(false);
-  const handleResetClick = () => {
-    r!.mutate.initializePuzzle({
-      pieces: generateRandomPieces(home!, stage, screenSize),
+
+  // Runs whenever the reset button is clicked.
+  useTimeout(() => setResetClicked(false), 1000, [resetClicked], resetClicked);
+
+  const onResetClick = () => {
+    if (!r || !initialDims) {
+      return;
+    }
+    const {home, stage, screenSize} = initialDims;
+    r.mutate.initializePuzzle({
+      pieces: generateRandomPieces(home, stage, screenSize),
       force: true,
     });
     setResetClicked(true);
   };
-  useEffect(() => {
-    if (!resetClicked) {
-      return undefined;
-    }
-    const timerID = window.setTimeout(() => {
-      setResetClicked(false);
-    }, 1000);
-    return () => {
-      window.clearTimeout(timerID);
-    };
-  });
+
+  return {resetClicked, onResetClick};
+}
+
+const Demo = () => {
+  const screenSize = useDocumentSize();
+  const stage = getStage(screenSize);
+  const [homeRef, home] = useElementSize<HTMLDivElement>([screenSize]);
+  const initialDims = useMemo(
+    () => home && {home, stage, screenSize},
+    // We are only interested in the *initial* dimensions, we don't care when they change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [home !== null],
+  );
+  const puzzleRoomID = usePuzzleRoomID();
+  const {r, myClientID, online} = useReflect(initialDims, puzzleRoomID);
+  useEnsureClient(r, myClientID, online);
+  const clientIDs = useClientIDs(r);
+  const {resetClicked, onResetClick} = useResetButton(r, initialDims);
 
   return (
     <>
@@ -213,7 +268,7 @@ const Demo = () => {
         <button
           id="reset-button"
           className={classNames({cleared: resetClicked})}
-          onClick={() => handleResetClick()}
+          onClick={() => onResetClick()}
         >
           <div className="copy">
             <Image
