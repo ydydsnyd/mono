@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useEffect} from 'react';
 import {Cursor} from './Cursor';
 import {Rect, Size, positionToCoordinate} from './util';
 import type {Reflect} from '@rocicorp/reflect';
@@ -9,6 +9,7 @@ export function CursorField({
   stage,
   screenSize,
   r,
+  clientIDs,
   // TODO(reflect): Make clientID synchronous
   myClientID,
 }: {
@@ -16,35 +17,9 @@ export function CursorField({
   stage: Rect;
   screenSize: Size;
   r: Reflect<M>;
+  clientIDs: string[];
   myClientID: string;
 }) {
-  const [clientIDs, setClientIDs] = useState<Set<string>>(new Set());
-  const prefix = 'client/';
-
-  // TODO(reflect): we probably want something like this built in!
-  useEffect(() => {
-    return r.experimentalWatch(
-      diff => {
-        setClientIDs(v => {
-          const newVal = new Set(v);
-          for (const change of diff) {
-            if (change.op === 'add') {
-              newVal.add(change.key.substring(prefix.length));
-            } else if (change.op === 'del') {
-              newVal.delete(change.key.substring(prefix.length));
-            }
-          }
-          return newVal;
-        });
-      },
-      {
-        prefix,
-        initialValuesInFirstDiff: true,
-      },
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [r]);
-
   useEffect(() => {
     const handlePointerMove = (e: PointerEvent) => {
       const coord = positionToCoordinate(

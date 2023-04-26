@@ -11,7 +11,7 @@ import {COLOR_PALATE, colorToString} from '@/demo/alive/colors';
 import {useDocumentSize} from '@/hooks/use-document-size';
 import {useElementSize} from '@/hooks/use-element-size';
 import {CursorField} from '@/demo/alive/CursorField';
-import {closeReflect} from '@/util/reflect';
+import {closeReflect, watch} from '@/util/reflect';
 import {
   getClientRoomAssignment,
   ORCHESTRATOR_ROOM,
@@ -25,12 +25,7 @@ const Demo = () => {
   const stage = getStage(screenSize);
   const [homeRef, home] = useElementSize<HTMLDivElement>([screenSize]);
 
-  const ignoreMutatorError = (e: unknown) => {
-    console.warn('TODO - should not get this', e);
-  };
-
   const [puzzleRoomID, setPuzzleRoomID] = useState<string | null>(null);
-
   useEffect(() => {
     if (orchestratorInitialized) {
       return;
@@ -52,15 +47,15 @@ const Demo = () => {
         },
       },
     );
-    orchestratorClient.mutate.alive().catch(ignoreMutatorError);
+    orchestratorClient.mutate.alive();
     const aliveInterval = setInterval(() => {
       if (document.hasFocus()) {
-        orchestratorClient.mutate.alive().catch(ignoreMutatorError);
+        orchestratorClient.mutate.alive();
       }
     }, ORCHESTRATOR_ALIVE_INTERVAL_MS);
     let cleanedUp = false;
     window.addEventListener('focus', async () => {
-      orchestratorClient.mutate.alive().catch(ignoreMutatorError);
+      orchestratorClient.mutate.alive();
     });
     window.addEventListener('pagehide', async () => {
       if (cleanedUp) {
@@ -68,10 +63,10 @@ const Demo = () => {
       }
       cleanedUp = true;
       clearInterval(aliveInterval);
-      await orchestratorClient.mutate.unload().catch(ignoreMutatorError);
+      await orchestratorClient.mutate.unload();
     });
 
-    return () => {};
+    return () => closeReflect(orchestratorClient);
   }, []);
 
   const [r, setR] = useState<Reflect<M> | null>(null);
@@ -93,15 +88,13 @@ const Demo = () => {
     const url = new URL(location.href);
     if (url.searchParams.has('reset')) {
       console.info('Restting replicache');
-      r.mutate.resetRoom().catch(ignoreMutatorError);
+      r.mutate.resetRoom();
     }
 
-    r.mutate
-      .initializePuzzle({
-        pieces: generateRandomPieces(home, stage, screenSize),
-        force: false,
-      })
-      .catch(ignoreMutatorError);
+    r.mutate.initializePuzzle({
+      pieces: generateRandomPieces(home, stage, screenSize),
+      force: false,
+    });
 
     r.clientID.then(cid => setMyClientID(cid));
     r.onOnlineChange = setOnline;
@@ -123,16 +116,24 @@ const Demo = () => {
     const h = simpleHash(myClientID);
     const m = Math.abs(h % COLOR_PALATE.length);
     const [color] = COLOR_PALATE[m];
-    r.mutate
-      .putClient({
-        id: myClientID,
-        selectedPieceID: '',
-        x: 0,
-        y: 0,
-        color: colorToString(color),
-      })
-      .catch(ignoreMutatorError);
+    r.mutate.putClient({
+      id: myClientID,
+      selectedPieceID: '',
+      x: 0,
+      y: 0,
+      color: colorToString(color),
+    });
   }, [r, myClientID, online]);
+
+  const [clientIDs, setClientIDs] = useState<string[]>([]);
+  useEffect(() => {
+    if (!r) {
+      return;
+    }
+    watch(r, {prefix: 'client/', ops: ['add', 'del']}, async vals => {
+      setClientIDs([...vals.keys()]);
+    });
+  }, [r]);
 
   const [resetClicked, setResetClicked] = useState(false);
   const handleResetClick = () => {
@@ -205,7 +206,9 @@ const Demo = () => {
         <div className="active-user-info">
           <div className={classNames('online-dot', {offline: !online})}></div>
           &nbsp;Active Users:&nbsp;
-          <span id="active-user-count">1</span>
+          <span id="active-user-count">
+            {clientIDs.length > 0 ? clientIDs.length : 1}
+          </span>
         </div>
         <button
           id="reset-button"
@@ -241,6 +244,7 @@ const Demo = () => {
           screenSize={screenSize}
           r={r}
           myClientID={myClientID}
+          clientIDs={clientIDs}
         />
       )}
     </>
