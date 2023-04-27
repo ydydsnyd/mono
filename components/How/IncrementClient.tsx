@@ -27,12 +27,13 @@ function IncrementClient({
 
   const [currentClientID, setCurrentClientID] = useState('');
 
-  const count = useCount(reflect, 'count', (key: string, val: number) => {
-    clientConsoleDispatch({
-      type: 'APPEND',
-      payload: `Key "${key}" changed to: ${val}`,
-    });
-  });
+  const count =
+    useCount(reflect, 'count', (key: string, val: number) => {
+      clientConsoleDispatch({
+        type: 'APPEND',
+        payload: `Key "${key}" changed to: ${val}`,
+      });
+    }) ?? 0;
 
   useEffect(() => {
     reflect?.clientID.then(id => {
