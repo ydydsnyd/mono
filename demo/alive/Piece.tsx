@@ -1,6 +1,6 @@
 import classNames from 'classnames';
 import {PIECE_DEFINITIONS} from './piece-definitions';
-import React, {PointerEventHandler} from 'react';
+import React, {PointerEventHandler, useEffect} from 'react';
 import type {PieceInfo} from './piece-info';
 import type {ClientModel} from './client-model';
 import {center} from './util';
@@ -52,6 +52,21 @@ export function Piece({
     y: c.y - handleSize / 2,
   };
 
+  const [isHandleMouseActive, setIsHandleMouseActive] = React.useState(false);
+  useEffect(() => {
+    if (!hovered) {
+      setIsHandleMouseActive(false);
+      return;
+    }
+
+    const timerID = window.setTimeout(() => {
+      setIsHandleMouseActive(true);
+    }, 200);
+    return () => {
+      window.clearTimeout(timerID);
+    };
+  }, [hovered]);
+
   return (
     <>
       <svg
@@ -79,8 +94,9 @@ export function Piece({
         className={classNames('rotation-handle', {
           active,
           // TODO: would also be nice to animate out, but that's a bit more complicated and this look good enough.
-          animate: hovered || selectorID === myClient.id,
-          placed: piece.placed,
+          'animate': hovered || selectorID === myClient.id,
+          'placed': piece.placed,
+          'touch-active': isHandleMouseActive,
         })}
         style={{
           transform: `translate3d(${handlePos.x}px, ${handlePos.y}px, 0px) rotate(${piece.handleRotation}rad)`,

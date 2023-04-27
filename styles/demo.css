@@ -260,6 +260,8 @@ body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
   width: 28px;
   height: 28px;
   transform: translate3d(0, 0, 0);
+}
+.rotation-handle.touch-active > div {
   pointer-events: all;
 }
 .rotation-handle.placed > div {
