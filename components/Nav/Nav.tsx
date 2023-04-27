@@ -1,48 +1,24 @@
 // components/Nav/Nav.tsx
 
 import React, {Component} from 'react';
-import * as Scroll from 'react-scroll';
 import NavLogo from './NavLogo';
 import styles from './Nav.module.css';
 import MobileNav from './MobileNav';
-
-let Link = Scroll.Link;
+import {Link} from 'react-scroll';
 
 export default class Nav extends Component {
   state = {
-    scrollPosition: 0,
+    showNavBorder: false,
   };
 
   listenToScrollEvent = () => {
     document.addEventListener('scroll', () => {
       requestAnimationFrame(() => {
-        this.calculateScrollDistance();
+        this.setState({
+          showNavBorder: window.pageYOffset > 0,
+        });
       });
     });
-  };
-
-  calculateScrollDistance = () => {
-    const scrollTop = window.pageYOffset; // how much the user has scrolled by
-    const winHeight = window.innerHeight;
-    const docHeight = this.getDocHeight();
-
-    const totalDocScrollLength = docHeight - winHeight;
-    const scrollPosition = Math.floor((scrollTop / totalDocScrollLength) * 100);
-
-    this.setState({
-      scrollPosition,
-    });
-  };
-
-  getDocHeight = () => {
-    return Math.max(
-      document.body.scrollHeight,
-      document.documentElement.scrollHeight,
-      document.body.offsetHeight,
-      document.documentElement.offsetHeight,
-      document.body.clientHeight,
-      document.documentElement.clientHeight,
-    );
   };
 
   componentDidMount() {
@@ -50,11 +26,7 @@ export default class Nav extends Component {
   }
 
   navSepCalc = () => {
-    if (this.state.scrollPosition > 0) {
-      return '0.1';
-    } else {
-      return '0';
-    }
+    return this.state.showNavBorder ? '0.1' : '0';
   };
 
   render() {
@@ -72,6 +44,7 @@ export default class Nav extends Component {
             to="intro"
             smooth={true}
             duration={250}
+            isDynamic={true}
           >
             <NavLogo src="/reflect.svg" height="44" alt="Reflect logo" />
           </Link>
@@ -83,6 +56,7 @@ export default class Nav extends Component {
                 to="intro"
                 smooth={true}
                 duration={250}
+                isDynamic={true}
               >
                 <NavLogo src="/reflect.svg" height="44" alt="Reflect logo" />
               </Link>
@@ -98,6 +72,7 @@ export default class Nav extends Component {
                 hashSpy={true}
                 smooth={true}
                 duration={250}
+                isDynamic={true}
               >
                 Benefits
               </Link>
@@ -111,6 +86,7 @@ export default class Nav extends Component {
                 spy={true}
                 hashSpy={true}
                 smooth={true}
+                isDynamic={true}
                 duration={250}
               >
                 How it works
@@ -126,6 +102,7 @@ export default class Nav extends Component {
                 hashSpy={true}
                 smooth={true}
                 duration={250}
+                isDynamic={true}
               >
                 Pricing
               </Link>
@@ -138,6 +115,7 @@ export default class Nav extends Component {
                 to="customers"
                 spy={true}
                 hashSpy={true}
+                isDynamic={true}
                 smooth={true}
                 duration={250}
               >
@@ -153,6 +131,7 @@ export default class Nav extends Component {
                 duration={250}
                 spy={true}
                 hashSpy={true}
+                isDynamic={true}
               >
                 Get started
               </Link>

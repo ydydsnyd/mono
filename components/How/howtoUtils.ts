@@ -5,7 +5,7 @@ import type {ReadTransaction, Reflect} from '@rocicorp/reflect';
 import {useSubscribe} from 'replicache-react';
 
 export function useCount(
-  reflect: Reflect<M>,
+  reflect: Reflect<M> | undefined,
   key: string,
   clog: (key: string, val: number) => void,
 ) {
@@ -24,7 +24,7 @@ export function useCount(
   );
 }
 
-export function useServerLogs(reflect: Reflect<M>) {
+export function useServerLogs(reflect: Reflect<M> | undefined) {
   return useSubscribe(reflect, async tx => await getServerLogs(tx), []);
 }
 

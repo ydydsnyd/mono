@@ -16,10 +16,10 @@ const Slider = ({
   setClientLatency,
 }: {
   clientID: string;
-  clientLatency: Latency;
+  clientLatency: Latency | undefined;
   setClientLatency: (l: Latency) => void;
 }) => {
-  const latencyName = getLatencyName(clientLatency);
+  const latencyName = getLatencyName(clientLatency ?? 0);
   return (
     <div
       className={style.latencySlider}
@@ -33,7 +33,7 @@ const Slider = ({
         <span className={style.latencyName}>{latencyName}</span>
       </output>
       <Range
-        values={[clientLatency]}
+        values={[clientLatency ?? 0]}
         step={STEP}
         min={MIN}
         max={MAX}
@@ -58,7 +58,7 @@ const Slider = ({
                 width: '100%',
                 borderRadius: '2px',
                 background: getTrackBackground({
-                  values: [clientLatency],
+                  values: [clientLatency ?? 0],
                   colors: ['#0A7AFF', '#D1D1D1'],
                   min: MIN,
                   max: MAX,

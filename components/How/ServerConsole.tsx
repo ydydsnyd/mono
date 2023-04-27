@@ -6,7 +6,11 @@ import type {M} from '@/demo/shared/mutators';
 import {useServerLogs} from './howtoUtils';
 import classNames from 'classnames';
 
-export default function ServerConsole({reflect}: {reflect: Reflect<M>}) {
+export default function ServerConsole({
+  reflect,
+}: {
+  reflect: Reflect<M> | undefined;
+}) {
   const logs = useServerLogs(reflect);
   const {client1ID, client2ID} = useContext(ClientIDContext);
   const [bright, setBright] = useState(false);

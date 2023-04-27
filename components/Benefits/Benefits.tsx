@@ -50,8 +50,8 @@ const Benefits = () => (
       <div className={styles.benefitInfoContainer}>
         <h3 className={styles.benefitTitle}>Automatic Persistence</h3>
         <p className={styles.benefitDescription}>
-          Reflect data is stored in <em>rooms</em>. Changes are saved continously
-          and automatically.
+          Reflect data is stored in <em>rooms</em>. Changes are saved
+          continously and automatically.
         </p>
         <p className={styles.benefitDescription}>
           There&apos;s no separate, slower persistence API to juggle. Write
@@ -74,8 +74,8 @@ const Benefits = () => (
       <div className={styles.benefitInfoContainer}>
         <h3 className={styles.benefitTitle}>Server Authority</h3>
         <p className={styles.benefitDescription}>
-          CRDTs converge, but to what? Your application has no control. Validation
-          and custom business logic aren&apos;t possible.
+          CRDTs converge, but to what? Your application has no control.
+          Validation and custom business logic aren&apos;t possible.
         </p>
         <p className={styles.benefitDescription}>
           Reflect uses a more flexible and intuitive technique based on{' '}

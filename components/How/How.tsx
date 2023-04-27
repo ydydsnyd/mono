@@ -25,13 +25,13 @@ export type DemoReflectState = {
 };
 
 type DemoComponentProps = {
-  reflect1: Reflect<M>;
-  reflect2: Reflect<M>;
-  reflectServer: Reflect<M>;
+  reflect1: Reflect<M> | undefined;
+  reflect2: Reflect<M> | undefined;
+  reflectServer: Reflect<M> | undefined;
   reset: () => void;
-  key: string;
-  latency1: Latency;
-  latency2: Latency;
+  key?: string | undefined;
+  latency1?: Latency | undefined;
+  latency2?: Latency | undefined;
   setLatency1: (latency: Latency) => void;
   setLatency2: (latency: Latency) => void;
 };
@@ -103,23 +103,23 @@ const DemoWrapperInternal = (
     }
   }, [state?.latency1 ?? 0, state?.latency2 ?? 0, intialized]);
 
-  return state ? (
+  return (
     <ClientIDContext.Provider
       value={{
-        client1ID: state.clientID1 ?? '',
-        client2ID: state.clientID2 ?? '',
+        client1ID: state?.clientID1 ?? '',
+        client2ID: state?.clientID2 ?? '',
       }}
     >
       <Demo
-        reflect1={state.reflect1}
-        reflect2={state.reflect2}
-        reflectServer={state.reflectServer}
+        reflect1={state?.reflect1}
+        reflect2={state?.reflect2}
+        reflectServer={state?.reflectServer}
         reset={() => {
           initDemo(state, setState, prepend);
         }}
-        key={state.roomID}
-        latency1={state.latency1}
-        latency2={state.latency2}
+        key={state?.roomID}
+        latency1={state?.latency1}
+        latency2={state?.latency2}
         setLatency1={(latency: Latency) => {
           setState((prev: DemoReflectState | undefined) => {
             if (prev) {
@@ -144,7 +144,7 @@ const DemoWrapperInternal = (
         }
       />
     </ClientIDContext.Provider>
-  ) : null;
+  );
 };
 export default function How() {
   const [initialized, setInitialized] = useState(false);

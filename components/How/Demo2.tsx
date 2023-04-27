@@ -19,12 +19,13 @@ export default function Demo2({
   setLatency1,
   setLatency2,
 }: {
-  reflect1: Reflect<M>;
-  reflect2: Reflect<M>;
-  reflectServer: Reflect<M>;
+  reflect1: Reflect<M> | undefined;
+  reflect2: Reflect<M> | undefined;
+  reflectServer: Reflect<M> | undefined;
   reset: () => void;
-  latency1: Latency;
-  latency2: Latency;
+  key?: string | undefined;
+  latency1?: Latency | undefined;
+  latency2?: Latency | undefined;
   setLatency1: (latency: Latency) => void;
   setLatency2: (latency: Latency) => void;
 }) {

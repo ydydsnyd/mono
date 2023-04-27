@@ -17,8 +17,8 @@ function RotateClient({
   setLatency,
 }: {
   title: string;
-  reflect: Reflect<M>;
-  latency: Latency;
+  reflect: Reflect<M> | undefined;
+  latency: Latency | undefined;
   setLatency: (latency: Latency) => void;
 }) {
   const [clientConsoleState, clientConsoleDispatch] = useClientConsoleReducer();
@@ -31,6 +31,7 @@ function RotateClient({
   );
 
   const [currentClientID, setCurrentClientID] = useState('');
+
   const count = useCount(reflect, 'degree', (key: string, val: number) => {
     clientConsoleDispatch({
       type: 'APPEND',
@@ -39,7 +40,7 @@ function RotateClient({
   });
 
   useEffect(() => {
-    reflect.clientID.then(id => {
+    reflect?.clientID.then(id => {
       setCurrentClientID(id);
       registerClientConsole(id, (log: string) =>
         clientConsoleDispatch({type: 'APPEND', payload: log}),

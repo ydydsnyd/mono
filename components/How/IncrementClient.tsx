@@ -15,22 +15,19 @@ function IncrementClient({
   setLatency,
 }: {
   title: string;
-  reflect: Reflect<M>;
-  latency: Latency;
+  reflect: Reflect<M> | undefined;
+  latency: Latency | undefined;
   setLatency: (latency: Latency) => void;
 }) {
   const [clientConsoleState, clientConsoleDispatch] = useClientConsoleReducer();
 
-  const increment = useCallback(async (reflect: Reflect<M>) => {
+  const increment = useCallback(async (reflect: Reflect<M> | undefined) => {
     await reflect?.mutate.increment({key: 'count', delta: 1});
   }, []);
 
   const [currentClientID, setCurrentClientID] = useState('');
 
-  const [count, setCount] = useState(0);
-
-  useCount(reflect, 'count', (key: string, val: number) => {
-    setCount(val);
+  const count = useCount(reflect, 'count', (key: string, val: number) => {
     clientConsoleDispatch({
       type: 'APPEND',
       payload: `Key "${key}" changed to: ${val}`,
@@ -38,13 +35,13 @@ function IncrementClient({
   });
 
   useEffect(() => {
-    reflect.clientID.then(id => {
+    reflect?.clientID.then(id => {
       registerClientConsole(id, (log: string) =>
         clientConsoleDispatch({type: 'APPEND', payload: log}),
       );
       setCurrentClientID(id);
     });
-  }, [clientConsoleDispatch, reflect.clientID]);
+  }, [clientConsoleDispatch, reflect?.clientID]);
 
   return (
     <div className={styles.client}>
