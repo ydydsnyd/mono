@@ -25,16 +25,22 @@ export function watch<M extends MutatorDefs>(
   const result = new Map<string, ReadonlyJSONValue>();
   return r.experimentalWatch(
     diff => {
+      let changed = false;
       for (const change of diff) {
         if (change.op === 'add' && ops.includes('add')) {
           result.set(change.key.substring(prefix.length), change.newValue);
+          changed = true;
         } else if (change.op === 'change' && ops.includes('change')) {
           result.set(change.key.substring(prefix.length), change.newValue);
+          changed = true;
         } else if (change.op === 'del' && ops.includes('del')) {
           result.delete(change.key.substring(prefix.length));
+          changed = true;
         }
       }
-      callback(result);
+      if (changed) {
+        callback(result);
+      }
     },
     {prefix, initialValuesInFirstDiff: true},
   );

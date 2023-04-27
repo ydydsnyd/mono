@@ -14,6 +14,7 @@ export type ClientModelUpdate = Update<ClientModel>;
 export const {
   put: putClient,
   get: getClient,
+  has: hasClient,
   delete: deleteClient,
   update: updateClient,
   list: listClients,

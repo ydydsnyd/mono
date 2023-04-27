@@ -23,6 +23,8 @@ import {
   ORCHESTRATOR_ROOM,
 } from '@/demo/alive/orchestrator-model';
 import {useTimeout} from '@/hooks/use-timeout';
+import {hasClient} from '@/demo/alive/client-model';
+import {useSubscribe} from 'replicache-react';
 
 const ORCHESTRATOR_ALIVE_INTERVAL_MS = 10_000;
 let orchestratorInitialized = false;
@@ -113,7 +115,10 @@ function useReflect(
     });
 
     reflect.clientID.then(cid => setMyClientID(cid));
-    reflect.onOnlineChange = setOnline;
+    reflect.onOnlineChange = online => {
+      console.log('ONLINE CHANGE', online);
+      setOnline(online);
+    };
 
     setR(reflect);
     return () => {
@@ -128,32 +133,56 @@ function useReflect(
   return {r, myClientID, online};
 }
 
-function useEnsureClient(
-  r: Reflect<M> | null,
-  myClientID: string | null,
-  online: boolean,
-) {
-  // Runs whenever we come online, ensures we have the current client created.
-  // Also proactively deletes the client when we go offline. The server does this
-  // to be sure, but it looks nicer to get rid of it fast when possible.
+function useEnsureMyClient(r: Reflect<M> | null, tabIsVisible: boolean) {
+  const has = useSubscribe(
+    r,
+    tx => {
+      return hasClient(tx, tx.clientID);
+    },
+    null,
+  );
+
+  // Runs on every render :(
+  // Ideally we could do this only when we come back online, but the online
+  // event in Reflect is currently broken and doesn't fire. When we fix the
+  // online event, there is an interesting subtlety: we have decided that
+  // we will wait for two errors in a row to fire the online change, but the
+  // disconnect on server happens sooner. We have to be sure that it is not
+  // possible for the client to observe a situation where the disconnect
+  // handler has run server-side and had some effect that the client sees,
+  // before the online change event happens. Otherwise you cannot use this
+  // nice pattern of creating client-specific state in the online change
+  // handler and deleting in the server-side disconnect handler.
   useEffect(() => {
-    if (!r || !myClientID || !online) {
+    if (r === null) {
       return;
     }
-    const h = simpleHash(myClientID);
-    const m = Math.abs(h % COLOR_PALATE.length);
-    const [color] = COLOR_PALATE[m];
-    r.mutate.putClient({
-      id: myClientID,
-      selectedPieceID: '',
-      x: 0,
-      y: 0,
-      color: colorToString(color),
-    });
-    return () => {
-      r.mutate.deleteClient(myClientID);
+
+    // Do not rec-create the client if tab not visible.
+    if (!tabIsVisible) {
+      return;
+    }
+
+    if (has) {
+      return;
+    }
+
+    const ensure = async () => {
+      const myClientID = await r.clientID;
+      const h = simpleHash(myClientID);
+      const m = Math.abs(h % COLOR_PALATE.length);
+      const [color] = COLOR_PALATE[m];
+      r.mutate.putClient({
+        id: myClientID,
+        selectedPieceID: '',
+        x: 0,
+        y: 0,
+        color: colorToString(color),
+      });
     };
-  }, [r, myClientID, online]);
+
+    ensure();
+  });
 }
 
 function useClientIDs(r: Reflect<M> | null) {
@@ -194,7 +223,24 @@ function useResetButton(
   return {resetClicked, onResetClick};
 }
 
+function useTabIsVisible() {
+  const [tabIsVisible, setTabIsVisible] = useState(
+    document.visibilityState === 'visible',
+  );
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      setTabIsVisible(document.visibilityState === 'visible');
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, []);
+  return tabIsVisible;
+}
+
 const Demo = () => {
+  const tabIsVisible = useTabIsVisible();
   const screenSize = useDocumentSize();
   const stage = getStage(screenSize);
   const [homeRef, home] = useElementSize<HTMLDivElement>([screenSize]);
@@ -206,7 +252,7 @@ const Demo = () => {
   );
   const puzzleRoomID = usePuzzleRoomID();
   const {r, myClientID, online} = useReflect(initialDims, puzzleRoomID);
-  useEnsureClient(r, myClientID, online);
+  useEnsureMyClient(r, tabIsVisible);
   const clientIDs = useClientIDs(r);
   const {resetClicked, onResetClick} = useResetButton(r, initialDims);
 
@@ -260,10 +306,16 @@ const Demo = () => {
       <div id="info">
         <div className="active-user-info">
           <div className={classNames('online-dot', {offline: !online})}></div>
-          &nbsp;Active Users:&nbsp;
-          <span id="active-user-count">
-            {clientIDs.length > 0 ? clientIDs.length : 1}
-          </span>
+          {online ? (
+            <>
+              Active Users:&nbsp;
+              <span id="active-user-count">
+                {clientIDs.length > 0 ? clientIDs.length : 1}
+              </span>
+            </>
+          ) : (
+            <>Offline</>
+          )}
         </div>
         <button
           id="reset-button"
