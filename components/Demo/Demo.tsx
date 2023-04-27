@@ -258,8 +258,6 @@ function useTabIsVisible() {
 }
 
 const Demo = ({location}: {location: Location}) => {
-  console.log('user location', location);
-
   const tabIsVisible = useTabIsVisible();
   const screenSize = useDocumentSize();
   const stage = getStage(screenSize);
