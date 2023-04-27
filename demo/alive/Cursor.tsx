@@ -63,7 +63,7 @@ export function Cursor({
           backgroundColor: client.color,
         }}
       >
-        <div className="location-name">Kailua, HI</div>
+        <div className="location-name">{client.location ?? `You 👋`}</div>
       </div>
     </div>
   );

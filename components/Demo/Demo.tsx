@@ -25,6 +25,7 @@ import {
 import {useTimeout} from '@/hooks/use-timeout';
 import {hasClient} from '@/demo/alive/client-model';
 import {useSubscribe} from 'replicache-react';
+import type {Location} from '@/pages';
 
 const ORCHESTRATOR_ALIVE_INTERVAL_MS = 10_000;
 let orchestratorInitialized = false;
@@ -133,7 +134,11 @@ function useReflect(
   return {r, myClientID, online};
 }
 
-function useEnsureMyClient(r: Reflect<M> | null, tabIsVisible: boolean) {
+function useEnsureMyClient(
+  r: Reflect<M> | null,
+  tabIsVisible: boolean,
+  location: Location,
+) {
   const has = useSubscribe(
     r,
     tx => {
@@ -167,6 +172,18 @@ function useEnsureMyClient(r: Reflect<M> | null, tabIsVisible: boolean) {
       return;
     }
 
+    let locStr: string | null = null;
+    if (location) {
+      const {city, region, country} = location;
+      const flagEmoji = String.fromCodePoint(
+        ...country
+          .toUpperCase()
+          .split('')
+          .map(char => 127397 + char.charCodeAt(0)),
+      );
+      locStr = `${city}, ${region} ${flagEmoji}`;
+    }
+
     const ensure = async () => {
       const myClientID = await r.clientID;
       const h = simpleHash(myClientID);
@@ -178,6 +195,7 @@ function useEnsureMyClient(r: Reflect<M> | null, tabIsVisible: boolean) {
         x: 0,
         y: 0,
         color: colorToString(color),
+        location: locStr,
       });
     };
 
@@ -239,7 +257,9 @@ function useTabIsVisible() {
   return tabIsVisible;
 }
 
-const Demo = () => {
+const Demo = ({location}: {location: Location}) => {
+  console.log('user location', location);
+
   const tabIsVisible = useTabIsVisible();
   const screenSize = useDocumentSize();
   const stage = getStage(screenSize);
@@ -252,7 +272,7 @@ const Demo = () => {
   );
   const puzzleRoomID = usePuzzleRoomID();
   const {r, myClientID, online} = useReflect(initialDims, puzzleRoomID);
-  useEnsureMyClient(r, tabIsVisible);
+  useEnsureMyClient(r, tabIsVisible, location);
   const clientIDs = useClientIDs(r);
   const {resetClicked, onResetClick} = useResetButton(r, initialDims);
 

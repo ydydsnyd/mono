@@ -9,8 +9,42 @@ import Pricing from '@/components/Pricing/Pricing';
 import Demo from '@/components/Demo/Demo';
 import Footer from '@/components/Footer/Footer';
 import {useEffect, useState} from 'react';
+import type {GetServerSideProps} from 'next';
+import type {NextIncomingMessage} from 'next/dist/server/request-meta';
 
-export default function Home() {
+export type Location = {
+  country: string;
+  city: string;
+  region: string;
+} | null;
+
+export const getServerSideProps: GetServerSideProps<{
+  location: Location;
+}> = async ({req}: {req: NextIncomingMessage}) => {
+  const country = (req.headers['x-vercel-ip-country'] as string) ?? '';
+  const city = (req.headers['x-vercel-ip-city'] as string) ?? '';
+  const region = (req.headers['x-vercel-ip-country-region'] as string) ?? '';
+
+  if (!country || !city || !region) {
+    return {
+      props: {
+        location: null,
+      },
+    };
+  }
+
+  return {
+    props: {
+      location: {
+        country,
+        city,
+        region,
+      },
+    },
+  };
+};
+
+export default function Home({location}: {location: Location}) {
   const [onClient, setOnClient] = useState(false);
   useEffect(() => {
     setOnClient(true);
@@ -117,7 +151,7 @@ export default function Home() {
           className={`${styles.section} ${styles.introSection}`}
         >
           <h1 className={styles.title}>The next web is</h1>
-          {onClient && <Demo />}
+          {onClient && <Demo location={location} />}
 
           <p className={styles.featuredStatement}>
             The missing piece for multiplayer web apps
