@@ -2,7 +2,6 @@ import {Piece} from './Piece';
 import {
   Position,
   Rect,
-  Size,
   addRadians,
   center,
   coordinateToPosition,
@@ -27,12 +26,10 @@ export function Puzzle({
   r,
   home,
   stage,
-  screenSize,
 }: {
   r: Reflect<M>;
   home: Rect;
   stage: Rect;
-  screenSize: Size;
 }) {
   const {pieces, myClient} = useSubscribe<{
     pieces: Record<string, PieceInfo>;
@@ -265,7 +262,7 @@ export function Puzzle({
       pos.y = stage.bottom() - def.height;
     }
 
-    const coordinate = positionToCoordinate(pos, home, screenSize);
+    const coordinate = positionToCoordinate(pos, home, stage);
     r.mutate.updatePiece({id: piece.id, ...coordinate});
 
     if (checkSnap(piece, def, pos)) {
@@ -287,7 +284,7 @@ export function Puzzle({
       throw new Error(`Piece ${rotateInfo.pieceID} not found`);
     }
 
-    const pos = coordinateToPosition(piece, home, screenSize);
+    const pos = coordinateToPosition(piece, home, stage);
     const def = PIECE_DEFINITIONS[parseInt(piece.id)];
     const c = center({
       ...pos,
@@ -327,7 +324,7 @@ export function Puzzle({
     def: PieceDefinition,
     currPos: Position,
   ) => {
-    const homePos = coordinateToPosition(def, home, screenSize);
+    const homePos = coordinateToPosition(def, home, stage);
     const dist = distance(currPos, homePos);
     const distThresh = 10;
     const rotThresh = Math.PI / 6;
@@ -393,7 +390,7 @@ export function Puzzle({
       onLostPointerCapture={e => handleLostPointerCapture(e)}
     >
       {Object.values(pieces).map(model => {
-        const pos = coordinateToPosition(model, home, screenSize);
+        const pos = coordinateToPosition(model, home, stage);
         return (
           <Piece
             key={model.id}

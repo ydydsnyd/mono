@@ -3,7 +3,7 @@ import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '../shared/mutators';
 import {getClient} from './client-model';
 import {useSubscribe} from 'replicache-react';
-import {Rect, Size, coordinateToPosition} from './util';
+import {Rect, coordinateToPosition} from './util';
 import {useEffect} from 'react';
 
 export function Cursor({
@@ -11,18 +11,16 @@ export function Cursor({
   clientID,
   home,
   stage,
-  screenSize,
   isSelf,
 }: {
   r: Reflect<M>;
   clientID: string;
   home: Rect;
   stage: Rect;
-  screenSize: Size;
   isSelf: boolean;
 }) {
   const client = useSubscribe(r, async tx => getClient(tx, clientID), null);
-  const pos = client && coordinateToPosition(client, home, screenSize);
+  const pos = client && coordinateToPosition(client, home, stage);
   const active =
     !isSelf || (pos && pos.y >= stage.top() && pos.y <= stage.bottom());
 

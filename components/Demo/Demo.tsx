@@ -1,20 +1,13 @@
 import {Puzzle} from '@/demo/alive/Puzzle';
-import {
-  getStage,
-  generateRandomPieces,
-  simpleHash,
-  Rect,
-  Size,
-} from '@/demo/alive/util';
+import {generateRandomPieces, simpleHash, Rect, Size} from '@/demo/alive/util';
 import {loggingOptions} from '@/demo/frontend/logging-options';
 import {type M, mutators} from '@/demo/shared/mutators';
 import {WORKER_HOST} from '@/demo/shared/urls';
 import Image from 'next/image';
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useState} from 'react';
 import {Reflect} from '@rocicorp/reflect';
 import classNames from 'classnames';
 import {COLOR_PALATE, colorToString} from '@/demo/alive/colors';
-import {useDocumentSize} from '@/hooks/use-document-size';
 import {useElementSize} from '@/hooks/use-element-size';
 import {CursorField} from '@/demo/alive/CursorField';
 import {closeReflect, watch} from '@/util/reflect';
@@ -79,8 +72,9 @@ function usePuzzleRoomID() {
 }
 
 function useReflect(
-  initialDims: {home: Rect; stage: Rect; screenSize: Size} | null,
   puzzleRoomID: string | null,
+  stage: Rect,
+  home: Rect | null,
 ) {
   const [r, setR] = useState<Reflect<M> | null>(null);
   const [myClientID, setMyClientID] = useState<string | null>(null);
@@ -91,7 +85,7 @@ function useReflect(
   // we only need the current dimensions so that we pick locations in which the pieces are spread out on this
   // screen.
   useEffect(() => {
-    if (!initialDims || !puzzleRoomID) {
+    if (!home || !puzzleRoomID) {
       return;
     }
 
@@ -109,9 +103,8 @@ function useReflect(
       reflect.mutate.resetRoom();
     }
 
-    const {home, stage, screenSize} = initialDims;
     reflect.mutate.initializePuzzle({
-      pieces: generateRandomPieces(home, stage, screenSize),
+      pieces: generateRandomPieces(home, stage),
       force: false,
     });
 
@@ -129,7 +122,7 @@ function useReflect(
     };
     // we only want to do this once per page-load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialDims, puzzleRoomID]);
+  }, [home != null, puzzleRoomID]);
 
   return {r, myClientID, online};
 }
@@ -217,22 +210,18 @@ function useClientIDs(r: Reflect<M> | null) {
   return clientIDs;
 }
 
-function useResetButton(
-  r: Reflect<M> | null,
-  initialDims: {home: Rect; stage: Rect; screenSize: Size} | null,
-) {
+function useResetButton(r: Reflect<M> | null, home: Rect | null, stage: Rect) {
   const [resetClicked, setResetClicked] = useState(false);
 
   // Runs whenever the reset button is clicked.
   useTimeout(() => setResetClicked(false), 1000, [resetClicked], resetClicked);
 
   const onResetClick = () => {
-    if (!r || !initialDims) {
+    if (!r || !home) {
       return;
     }
-    const {home, stage, screenSize} = initialDims;
     r.mutate.initializePuzzle({
-      pieces: generateRandomPieces(home, stage, screenSize),
+      pieces: generateRandomPieces(home, stage),
       force: true,
     });
     setResetClicked(true);
@@ -257,22 +246,22 @@ function useTabIsVisible() {
   return tabIsVisible;
 }
 
-const Demo = ({location}: {location: Location}) => {
+const Demo = ({
+  location,
+  screenSize,
+  stage,
+}: {
+  location: Location;
+  screenSize: Size;
+  stage: Rect;
+}) => {
   const tabIsVisible = useTabIsVisible();
-  const screenSize = useDocumentSize();
-  const stage = getStage(screenSize);
   const [homeRef, home] = useElementSize<SVGSVGElement>([screenSize]);
-  const initialDims = useMemo(
-    () => home && {home, stage, screenSize},
-    // We are only interested in the *initial* dimensions, we don't care when they change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [home !== null],
-  );
   const puzzleRoomID = usePuzzleRoomID();
-  const {r, myClientID, online} = useReflect(initialDims, puzzleRoomID);
+  const {r, myClientID, online} = useReflect(puzzleRoomID, stage, home);
   useEnsureMyClient(r, tabIsVisible, location);
   const clientIDs = useClientIDs(r);
-  const {resetClicked, onResetClick} = useResetButton(r, initialDims);
+  const {resetClicked, onResetClick} = useResetButton(r, home, stage);
 
   return (
     <>
@@ -316,9 +305,7 @@ const Demo = ({location}: {location: Location}) => {
         </svg>
       </div>
       <div id="pieces">
-        {r && home && (
-          <Puzzle r={r} home={home} stage={stage} screenSize={screenSize} />
-        )}
+        {r && home && stage && <Puzzle r={r} home={home} stage={stage} />}
       </div>
       <div id="info">
         <div className="active-user-info">
@@ -365,7 +352,6 @@ const Demo = ({location}: {location: Location}) => {
         <CursorField
           home={home}
           stage={stage}
-          screenSize={screenSize}
           r={r}
           myClientID={myClientID}
           clientIDs={clientIDs}

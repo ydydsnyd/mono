@@ -72,12 +72,12 @@ export const distance = (a: Position, b: Position): number => {
   return Math.sqrt(x * x + y * y);
 };
 
-export function getStage(screenSize: Size) {
+export function getStage(
+  screenSize: Size,
+  navBottom: number,
+  introBottom: number,
+) {
   const edgeBuffer = 10;
-
-  // TODO: would be better to get these from layout dynamically.
-  const navBottom = 88;
-  const introBottom = 763.5;
 
   return new Rect(
     edgeBuffer,
@@ -87,12 +87,8 @@ export function getStage(screenSize: Size) {
   );
 }
 
-export function generateRandomPieces(
-  home: Rect,
-  stage: Rect,
-  screenSize: Size,
-) {
-  const approxPieceSize = 50;
+export function generateRandomPieces(home: Rect, stage: Rect) {
+  const approxPieceSize = 75;
   const selectedPositions: Position[] = [];
 
   // This uses Mitchell's best candidate algorithm to generate the initial
@@ -133,7 +129,7 @@ export function generateRandomPieces(
 
   const ret: PieceModel[] = [];
   for (const [i, pos] of selectedPositions.entries()) {
-    const coord = positionToCoordinate(pos, home, screenSize);
+    const coord = positionToCoordinate(pos, home, stage);
     const newPiece: PieceModel = {
       id: i.toString(),
       ...coord,
@@ -165,53 +161,66 @@ export function generateRandomPieces(
 // get closer or further away from the demo when you resize your screen.
 export const positionToCoordinate = (
   position: Position,
-  home: BoundingBox,
-  screenSize: Size,
+  home: Rect,
+  stage: Rect,
 ) => {
-  const areaRight = home.x + home.width;
-  const areaBottom = home.y + home.height;
-  let x = (position.x - home.x) / home.width;
-  if (x < 0) {
-    // calculate fraction of left margin used, then translate into domain [-1..0].
-    x = position.x / home.x - 1;
-  } else if (x > 1) {
-    // calculate fraction of right margin used, then translate into domain [1..2].
-    const remainingScreen = screenSize.width - areaRight;
-    x = (position.x - areaRight) / remainingScreen + 1;
+  let x: number;
+  if (position.x < home.x) {
+    const gutterWidth = home.x - stage.x;
+    const posWithinGutter = position.x - stage.x;
+    x = posWithinGutter / gutterWidth - 1;
+  } else if (position.x > home.right()) {
+    const gutterWidth = stage.right() - home.right();
+    const posWithinGutter = position.x - home.right();
+    x = posWithinGutter / gutterWidth + 1;
+  } else {
+    x = (position.x - home.x) / home.width;
   }
-  // same but for y coordinates.
-  let y = (position.y - home.y) / home.height;
-  if (y < 0) {
-    y = position.y / home.y - 1;
-  } else if (y > 1) {
-    const remainingScreen = screenSize.height - areaBottom;
-    y = (position.y - areaBottom) / remainingScreen + 1;
+  let y: number;
+  if (position.y < home.x) {
+    const gutterHeight = home.y - stage.y;
+    const posWithinGutter = position.y - stage.y;
+    y = posWithinGutter / gutterHeight - 1;
+  } else if (position.y > home.bottom()) {
+    const gutterHeight = stage.bottom() - home.bottom();
+    const posWithinGutter = position.y - home.bottom();
+    y = posWithinGutter / gutterHeight + 1;
+  } else {
+    y = (position.y - home.y) / home.height;
   }
   return {x, y};
 };
 
 export const coordinateToPosition = (
   coord: Position,
-  home: BoundingBox,
-  screenSize: Size,
+  home: Rect,
+  stage: Rect,
 ) => {
-  const areaRight = home.x + home.width;
   let x = -1;
   if (coord.x < 0) {
     // translate coord back into domain [0..1] then multiply by left margin.
-    x = (coord.x + 1) * home.x;
+    const gutterWidth = home.x - stage.x;
+    const posWithinGutter = (coord.x + 1) * gutterWidth;
+    x = stage.x + posWithinGutter;
   } else if (coord.x > 1) {
     // same for right margin.
-    x = areaRight + (coord.x - 1) * (screenSize.width - areaRight);
+    const gutterWidth = stage.right() - home.right();
+    const posWithinGutter = (coord.x - 1) * gutterWidth;
+    x = home.right() + posWithinGutter;
   } else {
     x = home.x + coord.x * home.width;
   }
-  const areaBottom = home.y + home.height;
+
+  // same for bottom
   let y = -1;
   if (coord.y < 0) {
-    y = (coord.y + 1) * home.y;
+    const gutterHeight = home.y - stage.y;
+    const posWithinGutter = (coord.y + 1) * gutterHeight;
+    y = stage.y + posWithinGutter;
   } else if (coord.y > 1) {
-    y = areaBottom + (coord.y - 1) * (screenSize.height - areaBottom);
+    const gutterHeight = stage.bottom() - home.bottom();
+    const posWithinGutter = (coord.y - 1) * gutterHeight;
+    y = home.bottom() + posWithinGutter;
   } else {
     y = home.y + coord.y * home.height;
   }

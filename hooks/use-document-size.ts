@@ -1,8 +1,13 @@
-import {useState, useEffect} from 'react';
+import {useState, useLayoutEffect} from 'react';
 
 export function useDocumentSize() {
-  const [docSize, setDocSize] = useState(getDocSize());
-  useEffect(() => {
+  const [docSize, setDocSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  useLayoutEffect(() => {
+    setDocSize(getDocSize());
+
     const handleWindowResize = () => {
       setDocSize(getDocSize());
     };

@@ -1,13 +1,12 @@
 import {useEffect} from 'react';
 import {Cursor} from './Cursor';
-import {Rect, Size, positionToCoordinate} from './util';
+import {Rect, positionToCoordinate} from './util';
 import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '../shared/mutators';
 
 export function CursorField({
   home,
   stage,
-  screenSize,
   r,
   clientIDs,
   // TODO(reflect): Make clientID synchronous
@@ -15,18 +14,13 @@ export function CursorField({
 }: {
   home: Rect;
   stage: Rect;
-  screenSize: Size;
   r: Reflect<M>;
   clientIDs: string[];
   myClientID: string;
 }) {
   useEffect(() => {
     const handlePointerMove = (e: PointerEvent) => {
-      const coord = positionToCoordinate(
-        {x: e.pageX, y: e.pageY},
-        home,
-        screenSize,
-      );
+      const coord = positionToCoordinate({x: e.pageX, y: e.pageY}, home, stage);
       r.clientID.then(cid => {
         r.mutate.updateClient({
           id: cid,
@@ -50,7 +44,6 @@ export function CursorField({
           isSelf={cid == myClientID}
           home={home}
           stage={stage}
-          screenSize={screenSize}
         />
       ))}
     </div>

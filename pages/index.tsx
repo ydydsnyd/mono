@@ -8,9 +8,11 @@ import Testimonials from '@/components/Testimonials/Testimonials';
 import Pricing from '@/components/Pricing/Pricing';
 import Demo from '@/components/Demo/Demo';
 import Footer from '@/components/Footer/Footer';
-import {useEffect, useState} from 'react';
+import {useLayoutEffect, useState} from 'react';
 import type {GetServerSideProps} from 'next';
 import type {NextIncomingMessage} from 'next/dist/server/request-meta';
+import {useDocumentSize} from '@/hooks/use-document-size';
+import {Rect, getStage} from '@/demo/alive/util';
 
 export type Location = {
   country: string;
@@ -45,10 +47,21 @@ export const getServerSideProps: GetServerSideProps<{
 };
 
 export default function Home({location}: {location: Location}) {
-  const [onClient, setOnClient] = useState(false);
-  useEffect(() => {
-    setOnClient(true);
-  }, []);
+  const screenSize = useDocumentSize();
+  const [navHeight, setNavHeight] = useState<number | null>(null);
+  const [introBottom, setIntroBottom] = useState<number | null>(null);
+
+  let stage: Rect | null = null;
+  if (screenSize !== null && introBottom !== null && navHeight !== null) {
+    stage = getStage(screenSize, navHeight, introBottom);
+  }
+
+  useLayoutEffect(() => {
+    setNavHeight(document.querySelector('nav')!.offsetHeight);
+    setIntroBottom(
+      document.body.scrollTop + document.querySelector('#intro')!.clientHeight,
+    );
+  }, [screenSize]);
 
   return (
     <div className={styles.container}>
@@ -151,7 +164,9 @@ export default function Home({location}: {location: Location}) {
           className={`${styles.section} ${styles.introSection}`}
         >
           <h1 className={styles.title}>The next web is</h1>
-          {onClient && <Demo location={location} />}
+          {stage && screenSize && (
+            <Demo location={location} stage={stage} screenSize={screenSize} />
+          )}
 
           <p className={styles.featuredStatement}>
             The missing piece for multiplayer web apps
