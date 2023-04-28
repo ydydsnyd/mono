@@ -1,4 +1,5 @@
 import styles from './GetStarted.module.css';
+import BetaSignup from './BetaSignup';
 import Link from 'next/link';
 
 export default function GetStarted() {
@@ -10,19 +11,15 @@ export default function GetStarted() {
         toward a public beta later this year.
       </p>
       <p>
-        Sign up below for prioritized access &#8212; we&apos;ll let you know as
-        soon as the beta is available to try. You can also contact us by{' '}
-        <Link href="hi@reflect.net">email</Link>, on{' '}
-        <Link href="#">Twitter</Link>, or on <Link href="#">Discord</Link>.
+        Want to be first in line? Let us know what you&apos;re building and how you&apos;d use Reflect. We&apos;ll get you access as soon as we can.
       </p>
-      <div className={styles.ctaWrap}>
-        <Link
-          href="mailto:hi@reflect.net?Subject=reflect%20beta"
-          className={styles.buttonPrimary}
-        >
-          Beta Waitlist
-        </Link>
-      </div>
+      <BetaSignup />
+      <p className={styles.getStartedNote}>
+        You can also contact us by{' '}
+        <Link href="mailto:hi@reflect.net">email</Link>, on{' '}
+        <Link href="https://twitter.com/rocicorp">Twitter</Link>, or on <Link href="https://discord.replicache.dev/">Discord</Link>.
+      </p>
+      
     </div>
   );
 }
