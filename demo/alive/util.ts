@@ -218,7 +218,7 @@ export const coordinateToPosition = (
   return {x, y};
 };
 
-export const getAbsoluteRect = (element: HTMLElement) => {
+export const getAbsoluteRect = (element: Element) => {
   const cr = element.getBoundingClientRect();
   return new Rect(
     cr.left + element.ownerDocument.documentElement.scrollLeft,

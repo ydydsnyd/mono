@@ -15,7 +15,11 @@ import {useSubscribe} from 'replicache-react';
 import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '../shared/mutators';
 import {useEffect, useRef, useState} from 'react';
-import {PIECE_DEFINITIONS, PieceDefinition} from './piece-definitions';
+import {
+  PIECE_DEFINITIONS,
+  PieceDefinition,
+  SVG_ORIGINAL_SIZE,
+} from './piece-definitions';
 import {ClientModel, listClients} from './client-model';
 import type {PieceInfo} from './piece-info';
 
@@ -380,6 +384,8 @@ export function Puzzle({
     return null;
   }
 
+  const sizeScale = home.width / SVG_ORIGINAL_SIZE.width;
+
   return (
     <div
       ref={ref}
@@ -395,6 +401,7 @@ export function Puzzle({
               ...model,
               ...pos,
             }}
+            sizeScale={sizeScale}
             hovered={hoverState.pieceID === model.id}
             selectorID={model.selector}
             myClient={myClient}

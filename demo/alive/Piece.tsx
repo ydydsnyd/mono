@@ -10,6 +10,7 @@ export type HoverState = 'hover' | 'wait' | 'none';
 export function Piece({
   piece,
   hovered,
+  sizeScale,
   selectorID,
   myClient,
   onPointerDown,
@@ -19,6 +20,7 @@ export function Piece({
 }: {
   piece: PieceInfo;
   hovered: boolean;
+  sizeScale: number;
   selectorID: string | null;
   myClient: ClientModel;
   onPointerDown: PointerEventHandler;
@@ -67,6 +69,12 @@ export function Piece({
     };
   }, [hovered]);
 
+  const adjustTranslate = (pos: number, originalExtent: number) => {
+    const scaledExtent = originalExtent * sizeScale;
+    const diff = originalExtent - scaledExtent;
+    return pos - diff / 2;
+  };
+
   return (
     <>
       <svg
@@ -79,7 +87,12 @@ export function Piece({
           active,
         })}
         style={{
-          transform: `translate3d(${piece.x}px, ${piece.y}px, 0px) rotate(${piece.rotation}rad)`,
+          transform: `translate3d(${adjustTranslate(
+            piece.x,
+            def.width,
+          )}px, ${adjustTranslate(piece.y, def.height)}px, 0px) rotate(${
+            piece.rotation
+          }rad) scale(${sizeScale})`,
         }}
         onPointerDown={e => handlePointerDown(e)}
         onPointerOver={onPointerOver}
@@ -99,7 +112,12 @@ export function Piece({
           'touch-active': isHandleMouseActive,
         })}
         style={{
-          transform: `translate3d(${handlePos.x}px, ${handlePos.y}px, 0px) rotate(${piece.handleRotation}rad)`,
+          transform: `translate3d(${adjustTranslate(
+            handlePos.x,
+            def.width,
+          )}px, ${adjustTranslate(handlePos.y, def.height)}px, 0px) rotate(${
+            piece.handleRotation
+          }rad)`,
         }}
       >
         <div

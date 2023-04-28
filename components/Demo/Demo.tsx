@@ -261,7 +261,7 @@ const Demo = ({location}: {location: Location}) => {
   const tabIsVisible = useTabIsVisible();
   const screenSize = useDocumentSize();
   const stage = getStage(screenSize);
-  const [homeRef, home] = useElementSize<HTMLDivElement>([screenSize]);
+  const [homeRef, home] = useElementSize<SVGSVGElement>([screenSize]);
   const initialDims = useMemo(
     () => home && {home, stage, screenSize},
     // We are only interested in the *initial* dimensions, we don't care when they change.
@@ -276,11 +276,10 @@ const Demo = ({location}: {location: Location}) => {
 
   return (
     <>
-      <div id="demo" ref={homeRef}>
+      <div id="demo">
         <svg
+          ref={homeRef}
           id="wells"
-          width="568"
-          height="198"
           viewBox="0 0 568 198"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"

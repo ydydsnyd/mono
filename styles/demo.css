@@ -8,10 +8,14 @@ body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
 #demo {
   user-select: none;
   position: relative;
+  width: 100%;
 }
 
 #wells {
   display: block;
+  width: 100%;
+  max-width: 568px;
+  margin: 0 auto;
 }
 
 #debug {
