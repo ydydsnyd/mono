@@ -176,6 +176,15 @@ body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
   height: 775px;
   overflow: hidden;
 }
+#cursor-field {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  /* height set by javascript */
+  overflow: hidden;
+  pointer-events: none;
+}
 .piece {
   position: absolute;
   left: 0;

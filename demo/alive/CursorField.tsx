@@ -1,12 +1,13 @@
 import {useEffect} from 'react';
 import {Cursor} from './Cursor';
-import {Rect, positionToCoordinate} from './util';
+import {Rect, Size, positionToCoordinate} from './util';
 import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '../shared/mutators';
 
 export function CursorField({
   home,
   stage,
+  screenSize,
   r,
   clientIDs,
   // TODO(reflect): Make clientID synchronous
@@ -14,6 +15,7 @@ export function CursorField({
 }: {
   home: Rect;
   stage: Rect;
+  screenSize: Size;
   r: Reflect<M>;
   clientIDs: string[];
   myClientID: string;
@@ -35,7 +37,12 @@ export function CursorField({
   });
 
   return (
-    <div>
+    <div
+      id="cursor-field"
+      style={{
+        height: screenSize.height,
+      }}
+    >
       {[...clientIDs].map(cid => (
         <Cursor
           key={cid}

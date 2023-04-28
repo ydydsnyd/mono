@@ -352,6 +352,7 @@ const Demo = ({
         <CursorField
           home={home}
           stage={stage}
+          screenSize={screenSize}
           r={r}
           myClientID={myClientID}
           clientIDs={clientIDs}
