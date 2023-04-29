@@ -5,11 +5,8 @@ import {
   addRadians,
   center,
   coordinateToPosition,
-  distance,
   getAngle,
-  positionToCoordinate,
 } from './util';
-import {listPieces} from './piece-model';
 import {useSubscribe} from 'replicache-react';
 import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '../shared/mutators';
@@ -19,8 +16,15 @@ import {
   PieceDefinition,
   SVG_ORIGINAL_SIZE,
 } from './piece-definitions';
-import {ClientModel, listClients} from './client-model';
-import type {PieceInfo} from './piece-info';
+import {ClientModel, getClient} from './client-model';
+import {getPieceInfos, PieceInfo} from './piece-info';
+import {
+  handleDrag as sharedHandleDrag,
+  checkSnap as sharedCheckSnap,
+  selectIfAvailable as sharedSelectIfAvailable,
+} from './puzzle-biz';
+import type {PieceModel} from './piece-model';
+import {Bots} from './bots';
 
 export function Puzzle({
   r,
@@ -33,30 +37,16 @@ export function Puzzle({
 }) {
   const {pieces, myClient} = useSubscribe<{
     pieces: Record<string, PieceInfo>;
-    clients: Record<string, ClientModel>;
     myClient: ClientModel | null;
   }>(
     r,
     async tx => {
-      const lp = await listPieces(tx);
-      const mp: Record<string, PieceInfo> = {};
-      for (const piece of lp) {
-        mp[piece.id] = {
-          ...piece,
-          selector: null,
-        };
-      }
-      const lc = await listClients(tx);
-      const mc: Record<string, ClientModel> = {};
-      for (const client of lc) {
-        mc[client.id] = client;
-        if (client.selectedPieceID) {
-          mp[client.selectedPieceID].selector = client.id;
-        }
-      }
-      return {pieces: mp, clients: mc, myClient: mc[await r.clientID]};
+      return {
+        pieces: await getPieceInfos(tx),
+        myClient: (await getClient(tx, tx.clientID)) ?? null,
+      };
     },
-    {pieces: {}, clients: {}, myClient: null},
+    {pieces: {}, myClient: null},
   );
 
   const ref = useRef<HTMLDivElement>(null);
@@ -134,22 +124,7 @@ export function Puzzle({
     if (!myClient) {
       return;
     }
-
-    if (model.placed) {
-      console.log('cannot select already placed pieces');
-      return;
-    }
-
-    // Pieces selected by others can't be selected.
-    if (model.selector !== null && model.selector !== myClient.id) {
-      console.info(
-        `Client ${myClient.id} cannot select piece ${model.id}, already selected by ${model.selector}}`,
-      );
-      return false;
-    }
-
-    r.mutate.updateClient({id: myClient.id, selectedPieceID: model.id});
-    return true;
+    return sharedSelectIfAvailable(myClient.id, model, r);
   };
 
   const handlePiecePointerDown = async (
@@ -186,26 +161,17 @@ export function Puzzle({
     };
   }, [r, myClient]);
 
-  /*
+  const botsRef = useRef<Bots>();
   useEffect(() => {
-    window.addEventListener('mousemove', e => {
-      if (e.buttons === 0) {
-        return;
-      }
-      const elm = document.createElement('div');
-      elm.style.position = 'absolute';
-      elm.style.left = e.pageX - 2 + 'px';
-      elm.style.top = e.pageY - 2 + 'px';
-      elm.style.width = '4px';
-      elm.style.height = '4px';
-      elm.style.backgroundColor = 'red';
-      elm.style.pointerEvents = 'none';
-      elm.style.zIndex = '1';
-      elm.style.opacity = '0.3';
-      document.body.appendChild(elm);
-    });
-  }, []);
-  */
+    const bots = new Bots(r, home, stage);
+    botsRef.current = bots;
+    return () => bots.cleanup();
+    // home, screenSize and stage changing our handled below
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [r]);
+  useEffect(() => {
+    botsRef.current?.handleResize(home, stage);
+  }, [home, stage]);
 
   const handlePointerMove = (e: React.PointerEvent) => {
     const dragInfo = dragging.current.get(e.pointerId);
@@ -236,45 +202,25 @@ export function Puzzle({
     elm.style.pointerEvents = 'none';
     document.body.appendChild(elm);
     */
+    if (!myClient) {
+      return;
+    }
 
     const piece = pieces[dragInfo.pieceID];
     if (!piece) {
       throw new Error(`Piece ${dragInfo.pieceID} not found`);
     }
 
-    const def = PIECE_DEFINITIONS[parseInt(piece.id)];
-
-    const pos = {
-      x: e.pageX - dragInfo.offset.x,
-      y: e.pageY - dragInfo.offset.y,
-    };
-
-    if (pos.x < stage.x) {
-      pos.x = stage.x;
-    }
-    if (pos.y < stage.y) {
-      pos.y = stage.y;
-    }
-    if (pos.x + def.width > stage.right()) {
-      pos.x = stage.right() - def.width;
-    }
-    if (pos.y + def.height > stage.bottom()) {
-      pos.y = stage.bottom() - def.height;
-    }
-
-    const coordinate = positionToCoordinate(pos, home, stage);
-    r.mutate.updatePiece({id: piece.id, ...coordinate});
-
-    if (checkSnap(piece, def, pos)) {
+    if (
+      sharedHandleDrag(myClient.id, e, piece, dragInfo.offset, r, home, stage)
+    ) {
       ref.current?.releasePointerCapture(e.pointerId);
       setHoverState({
         pieceID: null,
         phase: 'none',
       });
-      r.mutate.updateClient({id: await r.clientID, selectedPieceID: ''});
     }
   };
-
   const handleRotate = (
     e: React.PointerEvent,
     rotateInfo: {pieceID: string; radOffset: number},
@@ -320,28 +266,11 @@ export function Puzzle({
   };
 
   const checkSnap = (
-    piece: PieceInfo,
+    piece: PieceModel,
     def: PieceDefinition,
     currPos: Position,
   ) => {
-    const homePos = coordinateToPosition(def, home, stage);
-    const dist = distance(currPos, homePos);
-    const distThresh = 10;
-    const rotThresh = Math.PI / 6;
-    if (
-      dist <= distThresh &&
-      (piece.rotation <= rotThresh || Math.PI * 2 - piece.rotation <= rotThresh)
-    ) {
-      r.mutate.updatePiece({
-        id: piece.id,
-        x: def.x,
-        y: def.y,
-        rotation: 0,
-        placed: true,
-      });
-      return true;
-    }
-    return false;
+    return sharedCheckSnap(piece, def, currPos, r, home, stage);
   };
 
   const handleLostPointerCapture = (e: React.PointerEvent) => {

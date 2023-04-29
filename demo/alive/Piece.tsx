@@ -94,6 +94,7 @@ export function Piece({
             piece.rotation
           }rad) scale(${sizeScale})`,
         }}
+        data-pieceid={piece.id}
         onPointerDown={e => handlePointerDown(e)}
         onPointerOver={onPointerOver}
         onPointerOut={onPointerOut}
@@ -101,7 +102,12 @@ export function Piece({
         {
           // TODO: We shouldn't really duplicate the id "shape" here but the CSS already had it that way.
         }
-        <path id="shape" d={def.paths[0]} strokeWidth="1" />
+        <path
+          data-pieceid={piece.id}
+          id="shape"
+          d={def.paths[0]}
+          strokeWidth="1"
+        />
       </svg>
       <div
         className={classNames('rotation-handle', {

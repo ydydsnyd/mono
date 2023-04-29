@@ -5,7 +5,7 @@ import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
 export const ORCHESTRATOR_ROOM = 'orch';
 // These values should be tweaked higher for production but our useful for testing
 const MAX_CLIENTS_PER_ROOM = 5;
-const CLIENT_ROOM_ASSIGNMENT_GC_THRESHOLD_MS = 30_000;
+const CLIENT_ROOM_ASSIGNMENT_GC_THRESHOLD_MS = 10 * 60_000;
 const CLIENT_ROOM_ASSIGNMENT_GC_INTERVAL_MS = 5000;
 
 const roomIndexToRoomID = (index: number) =>

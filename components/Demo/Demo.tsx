@@ -1,5 +1,5 @@
 import {Puzzle} from '@/demo/alive/Puzzle';
-import {generateRandomPieces, simpleHash, Rect, Size} from '@/demo/alive/util';
+import {generateRandomPieces, Rect, Size} from '@/demo/alive/util';
 import {loggingOptions} from '@/demo/frontend/logging-options';
 import {type M, mutators} from '@/demo/shared/mutators';
 import {WORKER_HOST} from '@/demo/shared/urls';
@@ -7,7 +7,7 @@ import Image from 'next/image';
 import {useEffect, useState} from 'react';
 import {Reflect} from '@rocicorp/reflect';
 import classNames from 'classnames';
-import {COLOR_PALATE, colorToString} from '@/demo/alive/colors';
+import {colorToString, idToColor} from '@/demo/alive/colors';
 import {useElementSize} from '@/hooks/use-element-size';
 import {CursorField} from '@/demo/alive/CursorField';
 import {closeReflect, watch} from '@/util/reflect';
@@ -179,16 +179,14 @@ function useEnsureMyClient(
 
     const ensure = async () => {
       const myClientID = await r.clientID;
-      const h = simpleHash(myClientID);
-      const m = Math.abs(h % COLOR_PALATE.length);
-      const [color] = COLOR_PALATE[m];
       r.mutate.putClient({
         id: myClientID,
         selectedPieceID: '',
         x: 0,
         y: 0,
-        color: colorToString(color),
+        color: colorToString(idToColor(myClientID)),
         location: locStr,
+        botControllerID: '',
       });
     };
 

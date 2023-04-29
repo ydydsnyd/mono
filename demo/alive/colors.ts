@@ -1,3 +1,5 @@
+import {simpleHash} from './util';
+
 // start color, end color
 type Color = [number, number, number];
 export const COLOR_PALATE: [Color, Color][] = [
@@ -47,6 +49,13 @@ export const COLOR_PALATE: [Color, Color][] = [
     [219, 185, 9],
   ],
 ];
+
+export function idToColor(id: string) {
+  const h = simpleHash(id);
+  const m = Math.abs(h % COLOR_PALATE.length);
+  const [color] = COLOR_PALATE[m];
+  return color;
+}
 
 export function colorToString(c: Color) {
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
