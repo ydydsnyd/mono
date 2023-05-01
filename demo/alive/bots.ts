@@ -114,7 +114,6 @@ export class Bots {
     window.addEventListener('keypress', handleKeyPress);
 
     const interval = setInterval(() => {
-      console.log('bot controller interval!!!!', this._isBotController);
       if (this._clientID && this._isBotController) {
         const currentNumBots = this._botPlaybackByClientID.size;
         if (currentNumBots < 3) {
@@ -126,7 +125,6 @@ export class Bots {
               }
             }
             if (toPlayback) {
-              console.log('starting playback of', toPlayback);
               this._botsPlayedback.add(toPlayback.clientID);
               this._startPlayback(
                 this._clientID,

@@ -20,12 +20,10 @@ const setBotController = async (
   tx: WriteTransaction,
   value: BotControllerModel,
 ) => {
-  console.log('setBotController', value?.clientID);
   return tx.put(botControllerKey, value);
 };
 
 const deleteBotController = async (tx: WriteTransaction) => {
-  console.log('deleteBotController');
   return tx.del(botControllerKey);
 };
 
@@ -55,7 +53,6 @@ export const {
 export const deleteClient = async (tx: WriteTransaction, id: string) => {
   let botController = await getBotController(tx);
   if (tx.environment === 'server') {
-    console.log(botController?.clientID);
     if (botController?.clientID === id) {
       const clients = await listClients(tx);
       // Delete all bots
