@@ -142,6 +142,13 @@ body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
   z-index: 301;
 }
 .cursor svg {
+  /*
+  Needed to promote to layer and avoid paints on cursor movement.
+  Don't completely understand why this is necessary as the parent
+  .cursor element has its own layer and is what is being moved, but
+  promoting the svg element as well eliminates paints in Chrome.
+   */
+  transform: translate3d(0, 0, 0);
   position: absolute;
   left: -1px;
   top: -1px;

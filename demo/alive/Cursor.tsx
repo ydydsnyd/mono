@@ -38,7 +38,7 @@ export function Cursor({
     <div
       className={classNames('cursor', {active})}
       style={{
-        transform: `translate(${pos.x}px, ${pos.y}px)`,
+        transform: `translate3d(${pos.x}px, ${pos.y}px, 0)`,
       }}
     >
       <svg
