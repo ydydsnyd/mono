@@ -8,10 +8,11 @@ import Testimonials from '@/components/Testimonials/Testimonials';
 import Pricing from '@/components/Pricing/Pricing';
 import Demo from '@/components/Demo/Demo';
 import Footer from '@/components/Footer/Footer';
-import {useLayoutEffect, useState} from 'react';
+import {useEffect, useState} from 'react';
 import type {GetServerSideProps} from 'next';
 import type {NextIncomingMessage} from 'next/dist/server/request-meta';
 import {useDocumentSize} from '@/hooks/use-document-size';
+import {useWindowSize} from '@/hooks/use-window-size';
 import {Rect, getStage} from '@/demo/alive/util';
 
 export type Location = {
@@ -47,21 +48,65 @@ export const getServerSideProps: GetServerSideProps<{
 };
 
 export default function Home({location}: {location: Location}) {
-  const screenSize = useDocumentSize();
+  const winSize = useWindowSize();
+  const docSize = useDocumentSize();
   const [navHeight, setNavHeight] = useState<number | null>(null);
   const [introBottom, setIntroBottom] = useState<number | null>(null);
+  const [featureStatementTop, setFeatureStatementTop] = useState<number | null>(
+    null,
+  );
+  const [gameMode, setGameMode] = useState(false);
 
   let stage: Rect | null = null;
-  if (screenSize !== null && introBottom !== null && navHeight !== null) {
-    stage = getStage(screenSize, navHeight, introBottom);
+  if (gameMode) {
+    if (winSize) {
+      stage = new Rect(0, 0, winSize.width, winSize.height);
+    }
+  } else {
+    if (
+      winSize !== null &&
+      docSize !== null &&
+      featureStatementTop !== null &&
+      introBottom !== null &&
+      navHeight !== null
+    ) {
+      stage = getStage(
+        winSize,
+        docSize,
+        navHeight,
+        featureStatementTop,
+        introBottom,
+      );
+    }
   }
 
-  useLayoutEffect(() => {
-    setNavHeight(document.querySelector('nav')!.offsetHeight);
-    setIntroBottom(
-      document.body.scrollTop + document.querySelector('#intro')!.clientHeight,
+  useEffect(() => {
+    setNavHeight(document.querySelector('nav')?.offsetHeight ?? 0);
+    setFeatureStatementTop(
+      (document.querySelector('.featuredStatement') as any).offsetTop,
     );
-  }, [screenSize]);
+    setIntroBottom(
+      document.documentElement.scrollTop +
+        document.querySelector('#intro')!.getBoundingClientRect().bottom,
+    );
+  }, [docSize]);
+
+  useEffect(() => {
+    if (!winSize) {
+      return;
+    }
+    if (gameMode && winSize.width < winSize.height) {
+      setGameMode(false);
+    }
+    document.documentElement.classList.toggle('game-mode', gameMode);
+    if (gameMode) {
+      document.documentElement.scrollTop = 0;
+    }
+  }, [gameMode, winSize]);
+
+  const onSetGameMode = (gameMode: boolean) => {
+    setGameMode(gameMode);
+  };
 
   return (
     <div className={styles.container}>
@@ -156,22 +201,17 @@ export default function Home({location}: {location: Location}) {
         />
       </Head>
 
-      <Nav />
+      <Nav gameMode={gameMode} />
 
       <main className={styles.main}>
-        <section
-          id="intro"
-          className={`${styles.section} ${styles.introSection}`}
-        >
-          <h1 className={styles.title}>The next web is</h1>
-          {stage && screenSize && (
-            <Demo location={location} stage={stage} screenSize={screenSize} />
-          )}
-
-          <p className={styles.featuredStatement}>
-            The missing piece for multiplayer web apps
-          </p>
-        </section>
+        <Demo
+          location={location}
+          stage={stage}
+          docSize={docSize}
+          winSize={winSize}
+          gameMode={gameMode}
+          onSetGameMode={onSetGameMode}
+        />
 
         <section id="benefits" className={styles.section}>
           <h2 className={styles.subheader}>Why Reflect?</h2>

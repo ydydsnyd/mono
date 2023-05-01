@@ -7,7 +7,7 @@ import type {M} from '../shared/mutators';
 export function CursorField({
   home,
   stage,
-  screenSize,
+  docSize,
   r,
   clientIDs,
   // TODO(reflect): Make clientID synchronous
@@ -15,7 +15,7 @@ export function CursorField({
 }: {
   home: Rect;
   stage: Rect;
-  screenSize: Size;
+  docSize: Size;
   r: Reflect<M>;
   clientIDs: string[];
   myClientID: string;
@@ -40,7 +40,7 @@ export function CursorField({
     <div
       id="cursor-field"
       style={{
-        height: screenSize.height,
+        height: docSize.height,
       }}
     >
       {[...clientIDs].map(cid => (

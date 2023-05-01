@@ -31,17 +31,6 @@
   text-align: center;
 }
 
-.introSection {
-  margin: -115px auto 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.demoSection {
-  padding-top: 10rem;
-}
-
 .section p {
   font-size: 1.5rem;
   line-height: 40px;
@@ -77,10 +66,6 @@
 .section p a:hover::before {
   transform-origin: 0% 50%;
   transform: scale3d(1, 1, 1);
-}
-
-.introSection .featuredStatement {
-  text-align: center;
 }
 
 .videoContainer {
@@ -120,29 +105,6 @@
   margin-bottom: 0;
 }
 
-.title a {
-  color: #0070f3;
-  text-decoration: none;
-}
-
-.title a:hover,
-.title a:focus,
-.title a:active {
-  text-decoration: underline;
-}
-
-.title {
-  margin: 0 auto 1.5rem;
-  padding-right: 0px;
-  padding-left: 0px;
-  font-size: 96px;
-  line-height: 96px;
-  font-weight: 800;
-  text-align: center;
-  letter-spacing: -2px;
-}
-
-.title,
 .description {
   text-align: center;
 }
@@ -212,13 +174,6 @@
   margin-left: 0.5rem;
 }
 
-@media (max-width: 828px) {
-  .title {
-    font-size: 10vw;
-    line-height: 1;
-  }
-}
-
 @media (max-width: 600px) {
   .grid {
     width: 100%;
@@ -231,10 +186,6 @@
     margin-bottom: 0;
   }
 
-  .introSection {
-    padding-top: 9.5rem;
-  }
-
   .howSection {
     margin-bottom: 8rem;
   }
@@ -242,9 +193,5 @@
   .section p {
     font-size: 1rem;
     line-height: 1.8;
-  }
-
-  .introSection .featuredStatement {
-    font-size: 1.2rem;
   }
 }

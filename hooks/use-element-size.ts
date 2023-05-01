@@ -1,10 +1,10 @@
 import {type Rect, getAbsoluteRect} from '@/demo/alive/util';
-import {useRef, useState, useLayoutEffect} from 'react';
+import {useRef, useState, useEffect} from 'react';
 
 export function useElementSize<T extends Element>(deps: unknown[]) {
   const ref = useRef<T>(null);
   const [size, setSize] = useState<Rect | null>(null);
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!ref.current) {
       return;
     }

@@ -5,6 +5,31 @@ body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
   user-select: none;
 }
 
+#intro {
+  /* create a little extra space at bottom of intro for playing the puzzle */
+  margin-bottom: -50px;
+  padding-bottom: 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#intro .featuredStatement {
+  text-align: center;
+}
+
+.title {
+  margin: 0 auto 1.5rem;
+  padding-right: 0px;
+  padding-left: 0px;
+  font-size: 96px;
+  line-height: 96px;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: -2px;
+  text-align: center;
+}
+
 #demo {
   user-select: none;
   position: relative;
@@ -18,32 +43,14 @@ body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
   margin: 0 auto;
 }
 
-#debug {
-  position: fixed;
-  right: 0;
-  top: 0;
-  text-align: end;
-  padding-right: 1em;
-  z-index: 201;
-}
-#debug .content {
-  pointer-events: none;
-}
-#caches {
-  background-color: rgba(125, 130, 184, 0.5);
-}
-#server-caches {
-  background-color: rgba(243, 227, 124, 0.5);
+#back-button {
+  display: none;
 }
 
-#caches,
-#server-caches {
-  display: block;
-}
-#caches canvas,
-#server-caches canvas {
-  width: 150px;
-  height: 150px;
+#pieces {
+  position: absolute;
+  pointer-events: none;
+  overflow: hidden;
 }
 
 .online-dot {
@@ -61,7 +68,7 @@ body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
 
 #info {
   display: flex;
-  margin: 2em;
+  margin: 2rem;
   align-items: center;
   justify-content: center;
   opacity: 1;
@@ -175,14 +182,58 @@ body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
   top: -18px;
   right: -18px;
 }
-#pieces {
+
+/* On mouse devices, the prompt is completely hidden, the game works by default */
+.prompt {
   position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 775px;
-  overflow: hidden;
+  z-index: 10;
+  display: none;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
 }
+
+@media (hover: none) {
+  /* On touch devices, the prompt starts out completely transparent */
+  .prompt {
+    display: flex;
+    transition: opacity 200ms;
+  }
+}
+
+/** Then transitions to a semi-transparent backdrop when activated */
+.prompt.active {
+  opacity: 1;
+}
+
+.prompt.enableScreen.active {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  background-color: rgba(255, 255, 255, 0.6);
+}
+
+.prompt > .message {
+  padding: 1rem 2rem;
+  background-color: rgba(255, 255, 255, 0.91);
+  box-shadow: 0 0 20px 0 rgba(0, 0, 0, 0.25);
+  border-radius: 10px;
+  white-space: nowrap;
+  flex: 0;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.prompt.enableScreen > .message {
+  background-color: rgba(255, 255, 255, 0.5);
+  padding: 2.25rem 3.5rem 2rem 3.5rem;
+}
+
+.prompt > .message img {
+  height: 2.5rem;
+  margin-bottom: 1.5rem;
+}
+
 #cursor-field {
   position: absolute;
   left: 0;
@@ -266,6 +317,8 @@ body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
 
 .rotation-handle {
   position: absolute;
+  top: 0;
+  left: 0;
   opacity: 0;
   z-index: 201;
   width: 28px;
@@ -314,4 +367,72 @@ body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
 .rotation-handle.showing.moving,
 .piece.active.moving #shape {
   cursor: grabbing !important;
+}
+
+@media (max-width: 600px) {
+  #intro {
+    padding-top: 9.5rem;
+  }
+
+  #intro .featuredStatement {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 855px) {
+  .title {
+    font-size: 10vw;
+    line-height: 1;
+  }
+
+  @media (orientation: landscape) {
+    #intro {
+      padding-top: 8.6rem;
+    }
+
+    .title {
+      line-height: 0.6;
+      font-size: 6.6vw;
+    }
+
+    #wells {
+      max-width: 350px;
+    }
+  }
+}
+
+#intro.gameMode {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+#intro.gameMode .title {
+  margin: 1.5rem 0;
+  font-size: 4vw;
+}
+
+#intro.gameMode #demo {
+  flex: 1;
+}
+
+#intro.gameMode #wells {
+  max-width: none;
+  width: auto;
+  /* argh can't get this to just take up available space in flexbox */
+  height: 45vh;
+}
+
+#intro.gameMode .featuredStatement {
+  display: none;
+}
+
+#intro.gameMode #back-button {
+  display: block;
+  position: absolute;
+  top: 4vh;
+  left: 4vh;
+  width: 15vh;
+  height: 15vh;
+  z-index: 20;
 }

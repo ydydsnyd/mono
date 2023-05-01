@@ -21,8 +21,24 @@ export function Cursor({
 }) {
   const client = useSubscribe(r, async tx => getClient(tx, clientID), null);
   const pos = client && coordinateToPosition(client, home, stage);
-  const active =
-    !isSelf || (pos && pos.y >= stage.top() && pos.y <= stage.bottom());
+
+  let active: boolean;
+  if (!isSelf) {
+    // active if a collaborator
+    active = true;
+  } else {
+    if ('ontouchstart' in window) {
+      // self/touch always inactive
+      active = false;
+    } else {
+      // self/mouse active if in stage
+      active =
+        pos !== null &&
+        pos !== undefined &&
+        pos.y >= stage.top() &&
+        pos.y <= stage.bottom();
+    }
+  }
 
   useEffect(() => {
     if (isSelf && typeof active === 'boolean') {

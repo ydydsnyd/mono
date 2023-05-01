@@ -73,13 +73,13 @@ export function Puzzle({
     }
 
     if (model.placed) {
-      console.log('cannot hover already placed pieces');
+      console.debug('cannot hover already placed pieces');
       return;
     }
 
     // Pieces selected by others can't be hovered.
     if (model.selector !== null && model.selector !== myClient.id) {
-      console.log(
+      console.debug(
         `Client ${myClient.id} cannot hover piece ${model.id}, selected by ${model.selector}}`,
       );
       return;
@@ -318,7 +318,14 @@ export function Puzzle({
 
   return (
     <div
+      id="pieces"
       ref={ref}
+      style={{
+        top: 0,
+        left: stage.x,
+        width: stage.width,
+        height: stage.y + stage.height,
+      }}
       onPointerMove={e => handlePointerMove(e)}
       onLostPointerCapture={e => handleLostPointerCapture(e)}
     >

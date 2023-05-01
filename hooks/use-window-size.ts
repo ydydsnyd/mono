@@ -1,15 +1,15 @@
 import {useState, useEffect} from 'react';
 
-export function useDocumentSize() {
-  const [docSize, setDocSize] = useState<{
+export function useWindowSize() {
+  const [windowSize, setWindowSize] = useState<{
     width: number;
     height: number;
   } | null>(null);
   useEffect(() => {
-    setDocSize(getDocSize());
+    setWindowSize(getWindowSize());
 
     const handleWindowResize = () => {
-      setDocSize(getDocSize());
+      setWindowSize(getWindowSize());
     };
     window.addEventListener('resize', handleWindowResize);
 
@@ -17,12 +17,12 @@ export function useDocumentSize() {
       window.removeEventListener('resize', handleWindowResize);
     };
   }, []);
-  return docSize;
+  return windowSize;
 }
 
-function getDocSize() {
+function getWindowSize() {
   return {
-    width: document.body.scrollWidth,
-    height: document.body.scrollHeight,
+    width: window.innerWidth,
+    height: window.innerHeight,
   };
 }

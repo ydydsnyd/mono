@@ -1,3 +1,4 @@
+import styles from '@/styles/Home.module.css';
 import {Puzzle} from '@/demo/alive/Puzzle';
 import {generateRandomPieces, Rect, Size} from '@/demo/alive/util';
 import {loggingOptions} from '@/demo/frontend/logging-options';
@@ -19,6 +20,7 @@ import {useTimeout} from '@/hooks/use-timeout';
 import {hasClient} from '@/demo/alive/client-model';
 import {useSubscribe} from 'replicache-react';
 import type {Location} from '@/pages';
+import {TouchPrompt} from '@/demo/alive/touch-prompt';
 
 const ORCHESTRATOR_ALIVE_INTERVAL_MS = 10_000;
 let orchestratorInitialized = false;
@@ -73,7 +75,7 @@ function usePuzzleRoomID() {
 
 function useReflect(
   puzzleRoomID: string | null,
-  stage: Rect,
+  stage: Rect | null,
   home: Rect | null,
 ) {
   const [r, setR] = useState<Reflect<M> | null>(null);
@@ -85,7 +87,7 @@ function useReflect(
   // we only need the current dimensions so that we pick locations in which the pieces are spread out on this
   // screen.
   useEffect(() => {
-    if (!home || !puzzleRoomID) {
+    if (!home || !puzzleRoomID || !stage) {
       return;
     }
 
@@ -122,7 +124,7 @@ function useReflect(
     };
     // we only want to do this once per page-load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [home != null, puzzleRoomID]);
+  }, [home != null, stage !== null, puzzleRoomID]);
 
   return {r, myClientID, online};
 }
@@ -156,7 +158,7 @@ function useEnsureMyClient(
       return;
     }
 
-    // Do not rec-create the client if tab not visible.
+    // Do not re-create the client if tab not visible.
     if (!tabIsVisible) {
       return;
     }
@@ -208,14 +210,18 @@ function useClientIDs(r: Reflect<M> | null) {
   return clientIDs;
 }
 
-function useResetButton(r: Reflect<M> | null, home: Rect | null, stage: Rect) {
+function useResetButton(
+  r: Reflect<M> | null,
+  home: Rect | null,
+  stage: Rect | null,
+) {
   const [resetClicked, setResetClicked] = useState(false);
 
   // Runs whenever the reset button is clicked.
   useTimeout(() => setResetClicked(false), 1000, [resetClicked], resetClicked);
 
   const onResetClick = () => {
-    if (!r || !home) {
+    if (!r || !home || !stage) {
       return;
     }
     r.mutate.initializePuzzle({
@@ -229,13 +235,12 @@ function useResetButton(r: Reflect<M> | null, home: Rect | null, stage: Rect) {
 }
 
 function useTabIsVisible() {
-  const [tabIsVisible, setTabIsVisible] = useState(
-    document.visibilityState === 'visible',
-  );
+  const [tabIsVisible, setTabIsVisible] = useState(false);
   useEffect(() => {
     const onVisibilityChange = () => {
       setTabIsVisible(document.visibilityState === 'visible');
     };
+    onVisibilityChange();
     document.addEventListener('visibilitychange', onVisibilityChange);
     return () => {
       document.removeEventListener('visibilitychange', onVisibilityChange);
@@ -246,15 +251,21 @@ function useTabIsVisible() {
 
 const Demo = ({
   location,
-  screenSize,
+  winSize,
+  docSize,
   stage,
+  gameMode,
+  onSetGameMode,
 }: {
   location: Location;
-  screenSize: Size;
-  stage: Rect;
+  winSize: Size | null;
+  docSize: Size | null;
+  stage: Rect | null;
+  gameMode: boolean;
+  onSetGameMode: (gameMode: boolean) => void;
 }) => {
   const tabIsVisible = useTabIsVisible();
-  const [homeRef, home] = useElementSize<SVGSVGElement>([screenSize]);
+  const [homeRef, home] = useElementSize<SVGSVGElement>([docSize, gameMode]);
   const puzzleRoomID = usePuzzleRoomID();
   const {r, myClientID, online} = useReflect(puzzleRoomID, stage, home);
   useEnsureMyClient(r, tabIsVisible, location);
@@ -262,7 +273,8 @@ const Demo = ({
   const {resetClicked, onResetClick} = useResetButton(r, home, stage);
 
   return (
-    <>
+    <section id="intro" className={classNames(styles.section, {gameMode})}>
+      <h1 className="title">The next web is</h1>
       <div id="demo">
         <svg
           ref={homeRef}
@@ -301,9 +313,6 @@ const Demo = ({
             mask="url(#path-1-outside-1_425_487)"
           />
         </svg>
-      </div>
-      <div id="pieces">
-        {r && home && stage && <Puzzle r={r} home={home} stage={stage} />}
       </div>
       <div id="info">
         <div className="active-user-info">
@@ -346,17 +355,35 @@ const Demo = ({
           </div>
         </button>
       </div>
-      {r && home && myClientID && (
+      <p className="featuredStatement">
+        The missing piece for multiplayer web apps
+      </p>
+      <img
+        id="back-button"
+        src="/icon-prompt-back.svg"
+        onClick={() => onSetGameMode(false)}
+      />
+      {r && home && stage && winSize && (
+        <Puzzle r={r} home={home} stage={stage} />
+      )}
+      {r && home && stage && docSize && myClientID && (
         <CursorField
           home={home}
           stage={stage}
-          screenSize={screenSize}
+          docSize={docSize}
           r={r}
           myClientID={myClientID}
           clientIDs={clientIDs}
         />
       )}
-    </>
+      {!gameMode && stage && winSize && (
+        <TouchPrompt
+          winSize={winSize}
+          stage={stage}
+          onPlay={() => onSetGameMode(true)}
+        />
+      )}
+    </section>
   );
 };
 

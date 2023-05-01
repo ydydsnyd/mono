@@ -84,14 +84,13 @@ export function selectIfAvailable(
   r: Reflect<M>,
 ) {
   if (piece.placed) {
-    console.log('cannot select already placed pieces');
+    console.debug('cannot select already placed pieces');
     return false;
   }
 
   // Pieces selected by others can't be selected.
-  // Pieces selected by others can't be selected.
   if (piece.selector !== null && piece.selector !== clientID) {
-    console.info(
+    console.debug(
       `Client ${clientID} cannot select piece ${piece.id}, already selected by ${piece.selector}}`,
     );
     return false;

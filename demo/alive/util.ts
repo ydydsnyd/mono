@@ -73,17 +73,25 @@ export const distance = (a: Position, b: Position): number => {
 };
 
 export function getStage(
-  screenSize: Size,
+  winSize: Size,
+  docSize: Size,
   navBottom: number,
+  featureStatementTop: number,
   introBottom: number,
 ) {
-  const edgeBuffer = 10;
+  // On desktop don't like the stage starting right up on top of the nav.
+  const topBuffer = 20;
+
+  // If the bottom of the intro is on screen (large or tall screen), we use
+  // that. Otherwise, we use the top of the feature statement.
+  const stageBottom =
+    introBottom < winSize.height ? introBottom : featureStatementTop;
 
   return new Rect(
-    edgeBuffer,
-    navBottom,
-    screenSize.width - edgeBuffer * 2,
-    introBottom - edgeBuffer * 2 - navBottom,
+    0,
+    navBottom + topBuffer,
+    docSize.width,
+    stageBottom - navBottom - topBuffer * 2,
   );
 }
 
@@ -177,7 +185,7 @@ export const positionToCoordinate = (
     x = (position.x - home.x) / home.width;
   }
   let y: number;
-  if (position.y < home.x) {
+  if (position.y < home.y) {
     const gutterHeight = home.y - stage.y;
     const posWithinGutter = position.y - stage.y;
     y = posWithinGutter / gutterHeight - 1;
@@ -235,13 +243,6 @@ export const getAbsoluteRect = (element: Element) => {
     cr.width,
     cr.height,
   );
-};
-
-export const getScreenSize = () => {
-  return {
-    width: document.body.scrollWidth,
-    height: document.body.scrollHeight,
-  };
 };
 
 export class Rect {
