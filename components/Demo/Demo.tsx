@@ -3,7 +3,7 @@ import {Puzzle} from '@/demo/alive/Puzzle';
 import {generateRandomPieces, Rect, Size} from '@/demo/alive/util';
 import {loggingOptions} from '@/demo/frontend/logging-options';
 import {type M, mutators} from '@/demo/shared/mutators';
-import {WORKER_HOST} from '@/demo/shared/urls';
+import {getWorkerHost} from '@/util/worker-host';
 import Image from 'next/image';
 import {useEffect, useState} from 'react';
 import {Reflect} from '@rocicorp/reflect';
@@ -34,7 +34,7 @@ function usePuzzleRoomID() {
     }
     orchestratorInitialized = true;
     const orchestratorClient = new Reflect<M>({
-      socketOrigin: WORKER_HOST,
+      socketOrigin: getWorkerHost(),
       userID: 'anon',
       roomID: ORCHESTRATOR_ROOM,
       mutators,
@@ -92,7 +92,7 @@ function useReflect(
     }
 
     const reflect = new Reflect<M>({
-      socketOrigin: WORKER_HOST,
+      socketOrigin: getWorkerHost(),
       userID: 'anon',
       roomID: puzzleRoomID,
       mutators,
