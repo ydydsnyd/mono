@@ -116,8 +116,8 @@ export class Bots {
     const interval = setInterval(() => {
       if (this._clientID && this._isBotController) {
         const currentNumBots = this._botPlaybackByClientID.size;
-        if (currentNumBots < 3) {
-          if (currentNumBots === 0 || Math.random() > 0.25) {
+        if (currentNumBots < 2) {
+          if (currentNumBots === 0 || Math.random() > 0.9) {
             let toPlayback: BotRecording | undefined;
             for (const botRecording of shuffle(botRecordings)) {
               if (!this._botsPlayedback.has(botRecording.clientID)) {
