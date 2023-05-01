@@ -4,7 +4,7 @@ import type {M} from '../shared/mutators';
 import {BotMove, BotRecording, botRecordings} from './bot-recordings';
 import {getBotController} from './client-model';
 import {colorToString, idToColor} from './colors';
-import {getPieceInfos, PieceInfo} from './piece-info';
+import type {PieceInfo} from './piece-info';
 import {handleDrag, selectIfAvailable} from './puzzle-biz';
 import {
   coordinateToPosition,
@@ -144,14 +144,12 @@ export class Bots {
     const cleanupSubscribe = r.subscribe(
       async tx => {
         return {
-          pieces: await getPieceInfos(tx),
           isBotController:
             (await getBotController(tx))?.clientID === tx.clientID,
         };
       },
       {
         onData: result => {
-          this._pieces = result.pieces;
           this._isBotController = result.isBotController;
         },
       },
@@ -298,6 +296,10 @@ export class Bots {
       }
     }
     this._maybeRaf();
+  }
+
+  async setPieces(pieces: Record<string, PieceInfo>) {
+    this._pieces = pieces;
   }
 
   async handleResize(home: Rect, stage: Rect) {

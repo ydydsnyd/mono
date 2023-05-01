@@ -164,6 +164,7 @@ export function Puzzle({
   const botsRef = useRef<Bots>();
   useEffect(() => {
     const bots = new Bots(r, home, stage);
+    bots.setPieces(pieces);
     botsRef.current = bots;
     return () => bots.cleanup();
     // home, screenSize and stage changing our handled below
@@ -172,6 +173,9 @@ export function Puzzle({
   useEffect(() => {
     botsRef.current?.handleResize(home, stage);
   }, [home, stage]);
+  useEffect(() => {
+    botsRef.current?.setPieces(pieces);
+  }, [pieces]);
 
   const handlePointerMove = (e: React.PointerEvent) => {
     const dragInfo = dragging.current.get(e.pointerId);
