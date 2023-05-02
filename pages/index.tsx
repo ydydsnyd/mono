@@ -14,6 +14,7 @@ import type {NextIncomingMessage} from 'next/dist/server/request-meta';
 import {useDocumentSize} from '@/hooks/use-document-size';
 import {useWindowSize} from '@/hooks/use-window-size';
 import {Rect, getStage} from '@/demo/alive/util';
+import {useVHStyleProp} from '@/hooks/use-vh-style-prop';
 
 export type Location = {
   country: string;
@@ -50,6 +51,7 @@ export const getServerSideProps: GetServerSideProps<{
 export default function Home({location}: {location: Location}) {
   const winSize = useWindowSize();
   const docSize = useDocumentSize();
+  useVHStyleProp(winSize?.height ?? null);
   const [navHeight, setNavHeight] = useState<number | null>(null);
   const [introBottom, setIntroBottom] = useState<number | null>(null);
   const [featureStatementTop, setFeatureStatementTop] = useState<number | null>(
