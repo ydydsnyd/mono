@@ -12,6 +12,7 @@ import styles from './How.module.css';
 import type {Reflect} from '@rocicorp/reflect';
 import type {Latency} from '@/demo/shared/types';
 import {closeReflect} from '@/util/reflect';
+import {getWorkerHost} from '@/util/worker-host';
 
 export type DemoReflectState = {
   roomID: string;
@@ -154,9 +155,7 @@ export default function How() {
     onChange: inView => {
       if (inView) {
         setInitialized(true);
-        delayWebSocket(
-          process.env.NEXT_PUBLIC_WORKER_HOST!.replace(/^ws/, 'http'),
-        );
+        delayWebSocket(getWorkerHost());
       }
     },
   });
