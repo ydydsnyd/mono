@@ -306,7 +306,9 @@ const Demo = ({
 
   return (
     <section id="intro" className={classNames(styles.section, {gameMode})}>
-      <h1 className="title">The next web is</h1>
+      <div id="title-container">
+        <h1 className="title">The next web is</h1>
+      </div>
       <div id="demo">
         <div
           ref={ref}

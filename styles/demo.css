@@ -405,13 +405,27 @@ body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
   height: calc(var(--vh, 1vh) * 100);
 }
 
-#intro.gameMode .title {
-  margin: 4rem 0 2rem;
-  font-size: 4vw;
+#intro.gameMode #title-container {
+  margin: 0;
+  letter-spacing: 0;
+  flex: 0.5;
+  display: flex;
+  align-items: center;
+}
+
+#intro.gameMode #title-container .title {
+  margin: 0;
 }
 
 #intro.gameMode #demo {
   flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+#intro.gameMode #info {
+  margin: 0;
+  flex: 0.5;
 }
 
 #intro.gameMode #wells {
