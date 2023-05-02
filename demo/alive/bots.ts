@@ -253,10 +253,10 @@ export class Bots {
               playback.dragInfo = undefined;
             }
           }
-          // If bot is not currently dragging a piece, 80% of the
+          // If bot is not currently dragging a piece, 10% of the
           // time hit test to see if bot cursor is over a piece, if
           // it is the bot begins dragging it.
-        } else if (Math.random() > 0.8) {
+        } else if (Math.random() > 0.9) {
           const position = coordinateToPosition(
             {
               x: move.coordX,
@@ -276,7 +276,7 @@ export class Bots {
                 // by time shifting remaining moves).  Otherwise
                 // the bot can pick up a piece while its cursor
                 // is quickly moving over it, which looks unnatural.
-                playback.timeShift += Math.random() * 150 + 200;
+                playback.timeShift += Math.random() * 150 + 350;
                 const piecePos = coordinateToPosition(
                   {x: piece.x, y: piece.y},
                   this._home,
