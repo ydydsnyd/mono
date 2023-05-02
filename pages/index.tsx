@@ -94,17 +94,8 @@ export default function Home({location}: {location: Location}) {
   }, [docSize]);
 
   useEffect(() => {
-    if (!winSize) {
-      return;
-    }
-    if (gameMode && winSize.width < winSize.height) {
-      setGameMode(false);
-    }
     document.documentElement.classList.toggle('game-mode', gameMode);
-    if (gameMode) {
-      document.documentElement.scrollTop = 0;
-    }
-  }, [gameMode, winSize]);
+  }, [gameMode]);
 
   const onSetGameMode = (gameMode: boolean) => {
     setGameMode(gameMode);
