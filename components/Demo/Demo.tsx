@@ -4,7 +4,6 @@ import {generateRandomPieces, Rect, Size} from '@/demo/alive/util';
 import {loggingOptions} from '@/demo/frontend/logging-options';
 import {type M, mutators} from '@/demo/shared/mutators';
 import {getWorkerHost} from '@/util/worker-host';
-import Image from 'next/image';
 import {useEffect, useState} from 'react';
 import {Reflect} from '@rocicorp/reflect';
 import classNames from 'classnames';
@@ -21,6 +20,8 @@ import {hasClient} from '@/demo/alive/client-model';
 import {useSubscribe} from 'replicache-react';
 import type {Location} from '@/pages';
 import {TouchPrompt} from '@/demo/alive/touch-prompt';
+import ConfettiExplosion from 'react-confetti-explosion';
+import {listPieces} from '@/demo/alive/piece-model';
 
 const ORCHESTRATOR_ALIVE_INTERVAL_MS = 10_000;
 let orchestratorInitialized = false;
@@ -271,11 +272,60 @@ const Demo = ({
   useEnsureMyClient(r, tabIsVisible, location);
   const clientIDs = useClientIDs(r);
   const {resetClicked, onResetClick} = useResetButton(r, home, stage);
+  const [displayReset, setDisplayReset] = useState<boolean>(false);
+
+  const isPuzzleComplete = useSubscribe<boolean>(
+    r,
+    async tx => {
+      const pieces = await listPieces(tx);
+      return pieces.length > 0 && pieces.findIndex(p => !p.placed) === -1;
+    },
+    false,
+  );
 
   return (
     <section id="intro" className={classNames(styles.section, {gameMode})}>
       <h1 className="title">The next web is</h1>
       <div id="demo">
+        <div
+          id="confetti-container"
+          className={classNames({active: isPuzzleComplete})}
+        >
+          {isPuzzleComplete && (
+            <ConfettiExplosion
+              force={0.7}
+              particleCount={100}
+              duration={2500}
+              colors={['#fc49ab', '#5fe8ff', '#ff9900', '#d505e8', '#1d9de5']}
+            />
+          )}
+          {isPuzzleComplete && (
+            <ConfettiExplosion
+              force={0.7}
+              particleCount={100}
+              duration={2500}
+              colors={['#fc49ab', '#5fe8ff', '#ff9900', '#d505e8', '#1d9de5']}
+              onComplete={() => setDisplayReset(true)}
+            />
+          )}
+        </div>
+        <div id="reset-container">
+          <div
+            id="reset-button-container"
+            className={classNames({active: displayReset})}
+          >
+            <button
+              id="reset-button"
+              className={classNames({cleared: resetClicked})}
+              onClick={() => {
+                onResetClick();
+                setDisplayReset(false);
+              }}
+            >
+              <div className="copy">Reset Puzzle</div>
+            </button>
+          </div>
+        </div>
         <svg
           ref={homeRef}
           id="wells"
@@ -328,32 +378,6 @@ const Demo = ({
             <>Offline</>
           )}
         </div>
-        <button
-          id="reset-button"
-          className={classNames({cleared: resetClicked})}
-          onClick={() => onResetClick()}
-        >
-          <div className="copy">
-            <Image
-              src="/img/clear.svg"
-              className="icon"
-              alt=""
-              width={16}
-              height={16}
-            />
-            &nbsp;Reset Puzzle
-          </div>
-          <div className="success">
-            <Image
-              src="/img/success.svg"
-              className="icon"
-              alt=""
-              width={16}
-              height={16}
-            />
-            &nbsp;Cleared
-          </div>
-        </button>
       </div>
       <p className="featuredStatement">
         The missing piece for multiplayer web apps
