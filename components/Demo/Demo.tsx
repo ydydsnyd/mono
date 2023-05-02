@@ -39,10 +39,13 @@ function usePuzzleRoomID() {
       tx => getClientRoomAssignment(tx, tx.clientID),
       {
         onData: result => {
-          if (result?.roomID !== puzzleRoomID) {
-            console.log('ROOM ID CHANGE', result);
-          }
-          setPuzzleRoomID(result?.roomID ?? null);
+          setPuzzleRoomID(prev => {
+            const newVal = result?.roomID ?? null;
+            if (prev !== newVal) {
+              console.log('NEW ROOM ID', newVal);
+            }
+            return newVal;
+          });
         },
       },
     );
