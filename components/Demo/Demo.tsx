@@ -21,6 +21,7 @@ import type {Location} from '@/pages';
 import {TouchPrompt} from '@/demo/alive/touch-prompt';
 import ConfettiExplosion from 'react-confetti-explosion';
 import {listPieces} from '@/demo/alive/piece-model';
+import {useInView} from 'react-intersection-observer';
 
 const ORCHESTRATOR_ALIVE_INTERVAL_MS = 10_000;
 
@@ -279,6 +280,10 @@ const Demo = ({
   const {r, myClientID, online} = useReflect(puzzleRoomID, stage, home);
   useEnsureMyClient(r, tabIsVisible, location);
   const clientIDs = useClientIDs(r);
+  const [demoInView, setDemoInView] = useState(false);
+  const {ref} = useInView({
+    onChange: inView => setDemoInView(inView),
+  });
 
   const isPuzzleComplete = useSubscribe<boolean>(
     r,
@@ -289,7 +294,7 @@ const Demo = ({
     false,
   );
 
-  const onResetClick = () => {
+  const resetGame = () => {
     if (!r || !home || !stage) {
       return;
     }
@@ -304,35 +309,27 @@ const Demo = ({
       <h1 className="title">The next web is</h1>
       <div id="demo">
         <div
+          ref={ref}
           id="confetti-container"
           className={classNames({active: isPuzzleComplete})}
         >
-          {isPuzzleComplete && (
+          {isPuzzleComplete && demoInView && (
             <ConfettiExplosion
               force={0.7}
               particleCount={100}
-              duration={2500}
+              duration={3500}
               colors={['#fc49ab', '#5fe8ff', '#ff9900', '#d505e8', '#1d9de5']}
             />
           )}
-          {isPuzzleComplete && (
+          {isPuzzleComplete && demoInView && (
             <ConfettiExplosion
-              force={0.7}
+              force={0.9}
               particleCount={100}
-              duration={2500}
+              duration={4000}
               colors={['#fc49ab', '#5fe8ff', '#ff9900', '#d505e8', '#1d9de5']}
+              onComplete={resetGame}
             />
           )}
-        </div>
-        <div id="reset-container">
-          <div
-            id="reset-button-container"
-            className={classNames({active: isPuzzleComplete})}
-          >
-            <button id="reset-button" onClick={onResetClick}>
-              <div className="copy">Reset Puzzle</div>
-            </button>
-          </div>
         </div>
         <svg
           ref={homeRef}
