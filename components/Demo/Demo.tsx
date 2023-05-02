@@ -15,7 +15,6 @@ import {
   getClientRoomAssignment,
   ORCHESTRATOR_ROOM,
 } from '@/demo/alive/orchestrator-model';
-import {useEventTimeout} from '@/hooks/use-timeout';
 import {hasClient} from '@/demo/alive/client-model';
 import {useSubscribe} from 'replicache-react';
 import type {Location} from '@/pages';
@@ -244,29 +243,6 @@ function useClientIDs(r: Reflect<M> | null) {
   return clientIDs;
 }
 
-function useResetButton(
-  r: Reflect<M> | null,
-  home: Rect | null,
-  stage: Rect | null,
-) {
-  const [resetClicked, setResetClicked] = useState(false);
-  const [setAnimationTimeout] = useEventTimeout();
-
-  const onResetClick = () => {
-    if (!r || !home || !stage) {
-      return;
-    }
-    r.mutate.initializePuzzle({
-      pieces: generateRandomPieces(home, stage),
-      force: true,
-    });
-    setResetClicked(true);
-    setAnimationTimeout(() => setResetClicked(false), 1000);
-  };
-
-  return {resetClicked, onResetClick};
-}
-
 function useTabIsVisible() {
   const [tabIsVisible, setTabIsVisible] = useState(false);
   useEffect(() => {
@@ -303,8 +279,6 @@ const Demo = ({
   const {r, myClientID, online} = useReflect(puzzleRoomID, stage, home);
   useEnsureMyClient(r, tabIsVisible, location);
   const clientIDs = useClientIDs(r);
-  const {resetClicked, onResetClick} = useResetButton(r, home, stage);
-  const [displayReset, setDisplayReset] = useState<boolean>(false);
 
   const isPuzzleComplete = useSubscribe<boolean>(
     r,
@@ -314,6 +288,16 @@ const Demo = ({
     },
     false,
   );
+
+  const onResetClick = () => {
+    if (!r || !home || !stage) {
+      return;
+    }
+    r.mutate.initializePuzzle({
+      pieces: generateRandomPieces(home, stage),
+      force: true,
+    });
+  };
 
   return (
     <section id="intro" className={classNames(styles.section, {gameMode})}>
@@ -337,23 +321,15 @@ const Demo = ({
               particleCount={100}
               duration={2500}
               colors={['#fc49ab', '#5fe8ff', '#ff9900', '#d505e8', '#1d9de5']}
-              onComplete={() => setDisplayReset(true)}
             />
           )}
         </div>
         <div id="reset-container">
           <div
             id="reset-button-container"
-            className={classNames({active: displayReset})}
+            className={classNames({active: isPuzzleComplete})}
           >
-            <button
-              id="reset-button"
-              className={classNames({cleared: resetClicked})}
-              onClick={() => {
-                onResetClick();
-                setDisplayReset(false);
-              }}
-            >
+            <button id="reset-button" onClick={onResetClick}>
               <div className="copy">Reset Puzzle</div>
             </button>
           </div>

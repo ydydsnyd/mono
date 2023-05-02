@@ -106,6 +106,8 @@ body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
   position: absolute;
   height: 100%;
   width: 100%;
+  z-index: 3;
+  pointer-events: none;
 }
 
 #reset-button-container {
@@ -114,13 +116,13 @@ body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
   justify-content: center;
   align-items: center;
   opacity: 0;
-  pointer-events: none;
-  transition: opacity 200ms, ease-in 200ms;
+  transition: none;
 }
 
 #reset-button-container.active {
   opacity: 1;
   pointer-events: auto;
+  transition: opacity 200ms ease-in 2000ms;
 }
 
 #reset-button {
@@ -138,7 +140,6 @@ body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
   line-height: 19px;
   font-weight: 700;
   height: 23%;
-  z-index: 3;
   text-align: center;
   display: flex;
   justify-content: center;
@@ -148,10 +149,6 @@ body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
 #reset-button.active {
   opacity: 1;
   pointer-events: auto;
-}
-
-#reset-button.cleared {
-  transform: rotateX(90deg);
 }
 
 #reset-button > div {
