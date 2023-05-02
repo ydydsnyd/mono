@@ -477,11 +477,11 @@ body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
 #intro.gameMode {
   margin: 0;
   padding: 0;
-  height: 100%;
+  height: 100vh;
 }
 
 #intro.gameMode .title {
-  margin: 1.5rem 0;
+  margin: 4rem 0 2rem;
   font-size: 4vw;
 }
 
