@@ -15,7 +15,7 @@ import {
   getClientRoomAssignment,
   ORCHESTRATOR_ROOM,
 } from '@/demo/alive/orchestrator-model';
-import {useTimeout} from '@/hooks/use-timeout';
+import {useEventTimeout} from '@/hooks/use-timeout';
 import {hasClient} from '@/demo/alive/client-model';
 import {useSubscribe} from 'replicache-react';
 import type {Location} from '@/pages';
@@ -250,9 +250,7 @@ function useResetButton(
   stage: Rect | null,
 ) {
   const [resetClicked, setResetClicked] = useState(false);
-
-  // Runs whenever the reset button is clicked.
-  useTimeout(() => setResetClicked(false), 1000, [resetClicked], resetClicked);
+  const [setAnimationTimeout] = useEventTimeout();
 
   const onResetClick = () => {
     if (!r || !home || !stage) {
@@ -263,6 +261,7 @@ function useResetButton(
       force: true,
     });
     setResetClicked(true);
+    setAnimationTimeout(() => setResetClicked(false), 1000);
   };
 
   return {resetClicked, onResetClick};

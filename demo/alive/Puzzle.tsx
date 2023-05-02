@@ -10,7 +10,7 @@ import {
 import {useSubscribe} from 'replicache-react';
 import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '../shared/mutators';
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useRef} from 'react';
 import {
   PIECE_DEFINITIONS,
   PieceDefinition,
@@ -25,6 +25,7 @@ import {
 } from './puzzle-biz';
 import type {PieceModel} from './piece-model';
 import {Bots} from './bots';
+import {useEventTimeout} from '@/hooks/use-timeout';
 
 export function Puzzle({
   r,
@@ -57,35 +58,27 @@ export function Puzzle({
     new Map<number, {pieceID: string; radOffset: number}>(),
   );
 
-  type HoverState = 'hover' | 'wait' | 'none';
-  const [hoverState, setHoverState] = useState<HoverState>('none');
-
   const handlePieceHover = async (model: PieceInfo) => {
     if (selectIfAvailable(model)) {
-      setHoverState('hover');
+      cancelBlur();
     }
   };
 
   const handlePieceBlur = () => {
-    setHoverState('wait');
+    scheduleBlur();
   };
 
-  useEffect(() => {
-    if (!myClient) {
-      return;
-    }
-    if (hoverState === 'wait') {
-      const timerID = window.setTimeout(() => {
-        setHoverState('none');
-        r.mutate.updateClient({id: myClient.id, selectedPieceID: ''});
-      }, 1000);
-      return () => {
-        window.clearTimeout(timerID);
-      };
-    }
-    return undefined;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [r, myClient !== null, hoverState]);
+  const [setBlurTimeout, clearBlurTimeout] = useEventTimeout();
+
+  const scheduleBlur = () => {
+    setBlurTimeout(() => {
+      r.mutate.updateClient({id: myClient!.id, selectedPieceID: ''});
+    }, 1000);
+  };
+
+  const cancelBlur = () => {
+    clearBlurTimeout();
+  };
 
   const selectIfAvailable = (model: PieceInfo) => {
     if (!myClient) {
@@ -116,7 +109,7 @@ export function Puzzle({
     const handlePointerDown = () => {
       // clear selection when clicking outside of a piece
       // the pointerdown handler inside piece cancels bubbling
-      setHoverState('none');
+      cancelBlur();
       r.mutate.updateClient({id: myClient!.id, selectedPieceID: ''});
     };
     window.addEventListener('pointerdown', handlePointerDown);
@@ -183,7 +176,7 @@ export function Puzzle({
       sharedHandleDrag(myClient.id, e, piece, dragInfo.offset, r, home, stage)
     ) {
       ref.current?.releasePointerCapture(e.pointerId);
-      setHoverState('none');
+      cancelBlur();
     }
   };
   const handleRotate = (

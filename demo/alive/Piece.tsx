@@ -1,9 +1,10 @@
 import classNames from 'classnames';
 import {PIECE_DEFINITIONS} from './piece-definitions';
-import React, {PointerEventHandler, useEffect} from 'react';
+import React, {PointerEventHandler} from 'react';
 import type {PieceInfo} from './piece-info';
 import type {ClientModel} from './client-model';
 import {center} from './util';
+import useRenderTimeout from '@/hooks/use-timeout';
 
 export function Piece({
   piece,
@@ -52,19 +53,7 @@ export function Piece({
   };
 
   const [isHandleMouseActive, setIsHandleMouseActive] = React.useState(false);
-  useEffect(() => {
-    if (!animate) {
-      setIsHandleMouseActive(false);
-      return;
-    }
-
-    const timerID = window.setTimeout(() => {
-      setIsHandleMouseActive(true);
-    }, 200);
-    return () => {
-      window.clearTimeout(timerID);
-    };
-  }, [animate]);
+  useRenderTimeout(() => setIsHandleMouseActive(true), animate ? 200 : null);
 
   const adjustTranslate = (pos: number, originalExtent: number) => {
     const scaledExtent = originalExtent * sizeScale;
