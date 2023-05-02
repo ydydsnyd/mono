@@ -88,8 +88,12 @@ export function selectIfAvailable(
     return false;
   }
 
-  // Pieces selected by others can't be selected.
-  if (piece.selector !== null && piece.selector !== clientID) {
+  if (piece.selector === clientID) {
+    // already selected by this client, nothing to do.
+    return true;
+  }
+
+  if (piece.selector !== null) {
     console.debug(
       `Client ${clientID} cannot select piece ${piece.id}, already selected by ${piece.selector}}`,
     );
@@ -97,5 +101,6 @@ export function selectIfAvailable(
   }
 
   r.mutate.updateClient({id: clientID, selectedPieceID: piece.id});
+  r.mutate.updatePiece({id: piece.id, handleRotation: -Math.PI / 2});
   return true;
 }

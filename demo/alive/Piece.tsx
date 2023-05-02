@@ -5,11 +5,8 @@ import type {PieceInfo} from './piece-info';
 import type {ClientModel} from './client-model';
 import {center} from './util';
 
-export type HoverState = 'hover' | 'wait' | 'none';
-
 export function Piece({
   piece,
-  hovered,
   sizeScale,
   selectorID,
   myClient,
@@ -19,7 +16,6 @@ export function Piece({
   onRotationStart,
 }: {
   piece: PieceInfo;
-  hovered: boolean;
   sizeScale: number;
   selectorID: string | null;
   myClient: ClientModel;
@@ -40,7 +36,8 @@ export function Piece({
     onRotationStart(e);
   };
 
-  const active = hovered || selectorID;
+  const active = Boolean(selectorID);
+  const animate = selectorID === myClient.id;
 
   const c = center({
     x: piece.x,
@@ -56,7 +53,7 @@ export function Piece({
 
   const [isHandleMouseActive, setIsHandleMouseActive] = React.useState(false);
   useEffect(() => {
-    if (!hovered) {
+    if (!animate) {
       setIsHandleMouseActive(false);
       return;
     }
@@ -67,13 +64,21 @@ export function Piece({
     return () => {
       window.clearTimeout(timerID);
     };
-  }, [hovered]);
+  }, [animate]);
 
   const adjustTranslate = (pos: number, originalExtent: number) => {
     const scaledExtent = originalExtent * sizeScale;
     const diff = originalExtent - scaledExtent;
     return pos - diff / 2;
   };
+
+  function onlyOnMouseDevices<T>(e: T, handler: (e: T) => void) {
+    if ('ontouchstart' in window) {
+      console.debug('ignoring event on touch device', e);
+      return;
+    }
+    handler(e);
+  }
 
   return (
     <>
@@ -96,8 +101,8 @@ export function Piece({
         }}
         data-pieceid={piece.id}
         onPointerDown={e => handlePointerDown(e)}
-        onPointerOver={onPointerOver}
-        onPointerOut={onPointerOut}
+        onPointerOver={e => onlyOnMouseDevices(e, onPointerOver)}
+        onPointerOut={e => onlyOnMouseDevices(e, onPointerOut)}
       >
         {
           // TODO: We shouldn't really duplicate the id "shape" here but the CSS already had it that way.
@@ -113,7 +118,7 @@ export function Piece({
         className={classNames('rotation-handle', {
           active,
           // TODO: would also be nice to animate out, but that's a bit more complicated and this look good enough.
-          'animate': hovered || selectorID === myClient.id,
+          animate,
           'placed': piece.placed,
           'touch-active': isHandleMouseActive,
         })}
@@ -127,8 +132,8 @@ export function Piece({
         }}
       >
         <div
-          onPointerOver={onPointerOver}
-          onPointerOut={onPointerOut}
+          onPointerOver={e => onlyOnMouseDevices(e, onPointerOver)}
+          onPointerOut={e => onlyOnMouseDevices(e, onPointerOut)}
           onPointerDown={e => handleRotationStart(e)}
         >
           <div></div>

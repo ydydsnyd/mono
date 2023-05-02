@@ -57,60 +57,26 @@ export function Puzzle({
     new Map<number, {pieceID: string; radOffset: number}>(),
   );
 
-  type HoverState = {
-    pieceID: string | null;
-    phase: 'hover' | 'wait' | 'none';
-  };
-
-  const [hoverState, setHoverState] = useState<HoverState>({
-    pieceID: null,
-    phase: 'none',
-  });
+  type HoverState = 'hover' | 'wait' | 'none';
+  const [hoverState, setHoverState] = useState<HoverState>('none');
 
   const handlePieceHover = async (model: PieceInfo) => {
-    if (!myClient) {
-      return;
-    }
-
-    if (model.placed) {
-      console.debug('cannot hover already placed pieces');
-      return;
-    }
-
-    // Pieces selected by others can't be hovered.
-    if (model.selector !== null && model.selector !== myClient.id) {
-      console.debug(
-        `Client ${myClient.id} cannot hover piece ${model.id}, selected by ${model.selector}}`,
-      );
-      return;
-    }
-
-    setHoverState({
-      pieceID: model.id,
-      phase: 'hover',
-    });
-
-    if (model.id !== myClient.selectedPieceID) {
-      r.mutate.updateClient({id: myClient.id, selectedPieceID: ''});
-      r.mutate.updatePiece({id: model.id, handleRotation: -Math.PI / 2});
+    if (selectIfAvailable(model)) {
+      setHoverState('hover');
     }
   };
+
   const handlePieceBlur = () => {
-    setHoverState({
-      ...hoverState,
-      phase: 'wait',
-    });
+    setHoverState('wait');
   };
+
   useEffect(() => {
     if (!myClient) {
       return;
     }
-    if (hoverState.phase === 'wait') {
+    if (hoverState === 'wait') {
       const timerID = window.setTimeout(() => {
-        setHoverState({
-          pieceID: null,
-          phase: 'none',
-        });
+        setHoverState('none');
         r.mutate.updateClient({id: myClient.id, selectedPieceID: ''});
       }, 1000);
       return () => {
@@ -118,7 +84,8 @@ export function Puzzle({
       };
     }
     return undefined;
-  }, [r, myClient, hoverState]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [r, myClient !== null, hoverState]);
 
   const selectIfAvailable = (model: PieceInfo) => {
     if (!myClient) {
@@ -149,10 +116,7 @@ export function Puzzle({
     const handlePointerDown = () => {
       // clear selection when clicking outside of a piece
       // the pointerdown handler inside piece cancels bubbling
-      setHoverState({
-        pieceID: null,
-        phase: 'none',
-      });
+      setHoverState('none');
       r.mutate.updateClient({id: myClient!.id, selectedPieceID: ''});
     };
     window.addEventListener('pointerdown', handlePointerDown);
@@ -219,10 +183,7 @@ export function Puzzle({
       sharedHandleDrag(myClient.id, e, piece, dragInfo.offset, r, home, stage)
     ) {
       ref.current?.releasePointerCapture(e.pointerId);
-      setHoverState({
-        pieceID: null,
-        phase: 'none',
-      });
+      setHoverState('none');
     }
   };
   const handleRotate = (
@@ -339,7 +300,6 @@ export function Puzzle({
               ...pos,
             }}
             sizeScale={sizeScale}
-            hovered={hoverState.pieceID === model.id}
             selectorID={model.selector}
             myClient={myClient}
             onPointerDown={e => handlePiecePointerDown(model, e, pos)}
