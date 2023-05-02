@@ -33,6 +33,7 @@ export const clientModelSchema = entitySchema.extend({
   y: z.number(),
   color: z.string(),
   location: z.union([z.string(), z.null()]),
+  focused: z.boolean(),
   // If non-empty, this client is a bot controlled
   // by the client with this id.
   botControllerID: z.string(),

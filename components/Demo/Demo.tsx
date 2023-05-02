@@ -48,7 +48,6 @@ function usePuzzleRoomID() {
     );
     const aliveIfVisible = () => {
       if (document.visibilityState === 'visible') {
-        console.log('alive');
         orchestratorClient.mutate.alive();
       }
     };
@@ -58,7 +57,6 @@ function usePuzzleRoomID() {
       ORCHESTRATOR_ALIVE_INTERVAL_MS,
     );
     const visibilityChangeListener = () => {
-      console.log('handling visibilitychange');
       aliveIfVisible();
     };
     document.addEventListener('visibilitychange', visibilityChangeListener);
@@ -131,10 +129,27 @@ function useReflect(
       setOnline(online);
     };
 
+    const onBlur = async () => {
+      reflect.mutate.updateClient({
+        id: await reflect.clientID,
+        focused: false,
+      });
+    };
+    const onFocus = async () => {
+      reflect.mutate.updateClient({
+        id: await reflect.clientID,
+        focused: true,
+      });
+    };
+    window.addEventListener('blur', onBlur);
+    window.addEventListener('focus', onFocus);
+
     setR(reflect);
     return () => {
       setR(null);
       setMyClientID(null);
+      window.removeEventListener('blur', onBlur);
+      window.removeEventListener('focus', onFocus);
       closeReflect(reflect);
     };
     // we only want to do this once per page-load.
@@ -203,6 +218,7 @@ function useEnsureMyClient(
         y: 0,
         color: colorToString(idToColor(myClientID)),
         location: locStr,
+        focused: document.hasFocus(),
         botControllerID: '',
       });
     };

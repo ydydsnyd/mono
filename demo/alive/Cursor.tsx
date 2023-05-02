@@ -25,7 +25,7 @@ export function Cursor({
   let active: boolean;
   if (!isSelf) {
     // active if a collaborator
-    active = true;
+    active = client?.focused ?? false;
   } else {
     if ('ontouchstart' in window) {
       // self/touch always inactive
@@ -41,7 +41,7 @@ export function Cursor({
   }
 
   useEffect(() => {
-    if (isSelf && typeof active === 'boolean') {
+    if (isSelf) {
       document.body.classList.toggle('custom-cursor', active);
     }
   }, [isSelf, active]);

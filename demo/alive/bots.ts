@@ -176,6 +176,7 @@ export class Bots {
       selectedPieceID: '',
       color: colorToString(idToColor(botClientID)),
       location: 'Botalona',
+      focused: true,
       botControllerID: clientID,
     });
     this._botPlaybackByClientID.set(botClientID, {
