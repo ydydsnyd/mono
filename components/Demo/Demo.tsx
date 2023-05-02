@@ -24,16 +24,10 @@ import ConfettiExplosion from 'react-confetti-explosion';
 import {listPieces} from '@/demo/alive/piece-model';
 
 const ORCHESTRATOR_ALIVE_INTERVAL_MS = 10_000;
-let orchestratorInitialized = false;
 
 function usePuzzleRoomID() {
   const [puzzleRoomID, setPuzzleRoomID] = useState<string | null>(null);
-  // Runs once, total. Gets the puzzle room ID we will be using.
   useEffect(() => {
-    if (orchestratorInitialized) {
-      return;
-    }
-    orchestratorInitialized = true;
     const orchestratorClient = new Reflect<M>({
       socketOrigin: getWorkerHost(),
       userID: 'anon',
@@ -45,31 +39,51 @@ function usePuzzleRoomID() {
       tx => getClientRoomAssignment(tx, tx.clientID),
       {
         onData: result => {
-          console.log('ROOM ID CHANGE', result);
+          if (result?.roomID !== puzzleRoomID) {
+            console.log('ROOM ID CHANGE', result);
+          }
           setPuzzleRoomID(result?.roomID ?? null);
         },
       },
     );
-    orchestratorClient.mutate.alive();
-    const aliveInterval = setInterval(() => {
-      if (document.hasFocus()) {
+    const aliveIfVisible = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('alive');
         orchestratorClient.mutate.alive();
       }
-    }, ORCHESTRATOR_ALIVE_INTERVAL_MS);
+    };
+    aliveIfVisible();
+    const aliveInterval = setInterval(
+      aliveIfVisible,
+      ORCHESTRATOR_ALIVE_INTERVAL_MS,
+    );
+    const visibilityChangeListener = () => {
+      console.log('handling visibilitychange');
+      aliveIfVisible();
+    };
+    document.addEventListener('visibilitychange', visibilityChangeListener);
     let cleanedUp = false;
-    window.addEventListener('focus', async () => {
-      orchestratorClient.mutate.alive();
-    });
-    window.addEventListener('pagehide', async () => {
+    const pageHideListener = async () => {
       if (cleanedUp) {
         return;
       }
       cleanedUp = true;
       clearInterval(aliveInterval);
       await orchestratorClient.mutate.unload();
-    });
+    };
+    window.addEventListener('pagehide', pageHideListener);
 
-    return () => closeReflect(orchestratorClient);
+    return () => {
+      clearInterval(aliveInterval);
+      document.removeEventListener(
+        'visibilitychange',
+        visibilityChangeListener,
+      );
+      window.removeEventListener('pagehide', pageHideListener);
+      closeReflect(orchestratorClient);
+    };
+    // Run once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return puzzleRoomID;
 }
@@ -102,7 +116,7 @@ function useReflect(
 
     const url = new URL(location.href);
     if (url.searchParams.has('reset')) {
-      console.info('Restting replicache');
+      console.info('Resetting replicache');
       reflect.mutate.resetRoom();
     }
 

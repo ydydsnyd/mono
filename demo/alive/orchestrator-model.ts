@@ -5,8 +5,8 @@ import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
 export const ORCHESTRATOR_ROOM = 'orch';
 // These values should be tweaked higher for production but our useful for testing
 const MAX_CLIENTS_PER_ROOM = 5;
-const CLIENT_ROOM_ASSIGNMENT_GC_THRESHOLD_MS = 10 * 60_000;
-const CLIENT_ROOM_ASSIGNMENT_GC_INTERVAL_MS = 5000;
+const CLIENT_ROOM_ASSIGNMENT_GC_THRESHOLD_MS = 3 * 60_000;
+const CLIENT_ROOM_ASSIGNMENT_GC_INTERVAL_MS = 10_000;
 
 const roomIndexToRoomID = (index: number) =>
   'puzzle-' + index.toString(10).padStart(7, '0');
@@ -106,6 +106,7 @@ export async function alive(tx: WriteTransaction) {
         );
       }
     }
+    console.log('GCing', toDelete.length, 'assignments of', assignments.length);
     await Promise.all(
       toDelete.map(assignment => deleteClientRoomAssignment(tx, assignment.id)),
     );
@@ -129,13 +130,21 @@ export async function alive(tx: WriteTransaction) {
     const room = await getRoom(tx, roomID);
     const clientCount = room?.clientCount ?? 0;
     if (clientCount < MAX_CLIENTS_PER_ROOM) {
-      await updateRoomClientCount(tx, roomID, 1);
+      if (room === undefined) {
+        await putRoom(tx, {
+          id: roomID,
+          clientCount: 1,
+        });
+      } else {
+        await updateRoomClientCount(tx, roomID, 1);
+      }
       await putClientRoomAssignment(tx, {
         id: tx.clientID,
         roomID,
         aliveTimestamp: now,
       });
       roomAssigned = true;
+      console.log('assigned', tx.clientID, 'to room', JSON.stringify(room));
     }
   }
 }
@@ -146,6 +155,10 @@ export async function unload(tx: WriteTransaction) {
   }
   const assignment = await getClientRoomAssignment(tx, tx.clientID);
   if (assignment !== undefined) {
+    console.log(
+      'removing assignment due to unload',
+      JSON.stringify(assignment),
+    );
     await Promise.all([
       await updateRoomClientCount(tx, assignment.roomID, -1),
       await deleteClientRoomAssignment(tx, assignment.id),
