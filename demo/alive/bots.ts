@@ -183,13 +183,16 @@ export class Bots {
     r.clientID.then(clientID => (this._clientID = clientID));
     const cleanupSubscribe = r.subscribe(
       async tx => {
+        const botController = (await getBotController(tx)) ?? null;
+        const isBotController = botController?.clientID === tx.clientID;
         return {
-          isBotController:
-            (await getBotController(tx))?.clientID === tx.clientID,
+          botController,
+          isBotController,
         };
       },
       {
         onData: result => {
+          console.log('botController change', result);
           this._isBotController = result.isBotController;
         },
       },
