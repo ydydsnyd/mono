@@ -271,16 +271,12 @@ export function Puzzle({
 
   const sizeScale = home.width / SVG_ORIGINAL_SIZE.width;
 
+  // TODO: pieces div could probably go away, it's not doing anything but being
+  // a host for pointer capture. But the pieces themselves could do that?
   return (
     <div
       id="pieces"
       ref={ref}
-      style={{
-        top: 0,
-        left: stage.x,
-        width: stage.width,
-        height: stage.y + stage.height,
-      }}
       onPointerMove={e => handlePointerMove(e)}
       onLostPointerCapture={e => handleLostPointerCapture(e)}
     >

@@ -75,7 +75,7 @@ export default function Home({location}: {location: Location}) {
   const [gameMode, setGameMode] = useState<GameMode>('off');
 
   let stage: Rect | null = null;
-  if (gameMode) {
+  if (gameMode === 'active') {
     if (winSize) {
       stage = new Rect(0, 0, winSize.width, winSize.height);
     }
