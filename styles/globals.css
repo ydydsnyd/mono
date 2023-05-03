@@ -33,6 +33,7 @@ body {
 
 html.game-mode,
 html.game-mode body {
+  position: fixed;
   overflow: hidden;
   height: 100vh;
 }
