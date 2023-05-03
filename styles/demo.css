@@ -165,7 +165,7 @@ body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
 /* On mouse devices, the prompt is completely hidden, the game works by default */
 .prompt {
   position: absolute;
-  z-index: 10;
+  z-index: 350; /* above cursors, below nav */
   display: none;
   flex-direction: row;
   align-items: center;
