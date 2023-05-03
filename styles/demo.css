@@ -449,5 +449,5 @@ body.custom-cursor *:not(.rotation-handle.active):not(.piece.active #shape) {
   left: 4vh;
   width: 15vh;
   height: 15vh;
-  z-index: 20;
+  z-index: 1;
 }
