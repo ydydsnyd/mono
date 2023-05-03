@@ -10,7 +10,7 @@ import {
 import {useSubscribe} from 'replicache-react';
 import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '../shared/mutators';
-import {useEffect, useRef} from 'react';
+import {useRef} from 'react';
 import {
   PIECE_DEFINITIONS,
   PieceDefinition,
@@ -26,6 +26,7 @@ import {
 import type {PieceModel} from './piece-model';
 import {Bots} from './bots';
 import {useEventTimeout} from '@/hooks/use-timeout';
+import useIsomorphicLayoutEffect from '@/hooks/use-isomorphic-layout-effect';
 
 export function Puzzle({
   r,
@@ -105,7 +106,7 @@ export function Puzzle({
       },
     });
   };
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const handlePointerDown = () => {
       // clear selection when clicking outside of a piece
       // the pointerdown handler inside piece cancels bubbling
@@ -119,7 +120,7 @@ export function Puzzle({
   }, [r, myClient]);
 
   const botsRef = useRef<Bots>();
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const bots = new Bots(r, home, stage);
     bots.setPieces(pieces);
     botsRef.current = bots;
@@ -127,10 +128,10 @@ export function Puzzle({
     // home, screenSize and stage changing our handled below
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [r]);
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     botsRef.current?.handleResize(home, stage);
   }, [home, stage]);
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     botsRef.current?.setPieces(pieces);
   }, [pieces]);
 

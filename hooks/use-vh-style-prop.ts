@@ -1,7 +1,7 @@
-import {useEffect} from 'react';
+import useIsomorphicLayoutEffect from './use-isomorphic-layout-effect';
 
 export function useVHStyleProp(winHeight: number | null) {
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (winHeight === null) {
       return;
     }

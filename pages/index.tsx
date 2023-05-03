@@ -15,6 +15,7 @@ import {useDocumentSize} from '@/hooks/use-document-size';
 import {useWindowSize} from '@/hooks/use-window-size';
 import {Rect, getStage} from '@/demo/alive/util';
 import {useVHStyleProp} from '@/hooks/use-vh-style-prop';
+import useIsomorphicLayoutEffect from '@/hooks/use-isomorphic-layout-effect';
 
 export type Location = {
   country: string;
@@ -33,6 +34,8 @@ export function getLocationString(location: Location) {
   );
   return `${decodeURI(city)} ${flagEmoji}`;
 }
+
+export type GameMode = 'off' | 'requested' | 'active';
 
 export const getServerSideProps: GetServerSideProps<{
   location: Location;
@@ -69,7 +72,7 @@ export default function Home({location}: {location: Location}) {
   const [featureStatementTop, setFeatureStatementTop] = useState<number | null>(
     null,
   );
-  const [gameMode, setGameMode] = useState(false);
+  const [gameMode, setGameMode] = useState<GameMode>('off');
 
   let stage: Rect | null = null;
   if (gameMode) {
@@ -94,7 +97,7 @@ export default function Home({location}: {location: Location}) {
     }
   }
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     setNavHeight(document.querySelector('nav')?.offsetHeight ?? 0);
     setFeatureStatementTop(
       (document.querySelector('.featuredStatement') as any).offsetTop,
@@ -105,17 +108,37 @@ export default function Home({location}: {location: Location}) {
     );
   }, [docSize]);
 
+  useIsomorphicLayoutEffect(() => {
+    if (!winSize) {
+      return;
+    }
+    if (gameMode === 'active' && winSize.width < winSize.height) {
+      setGameMode('off');
+    }
+
+    document.documentElement.classList.toggle(
+      'game-mode',
+      gameMode === 'active',
+    );
+  }, [gameMode, winSize]);
+
+  // 💀💀💀 warning
+  // For some reason this is necessary to avoid a weird layout bug when going
+  // from requested game mode in portrait to active game mode in landscape on
+  // iOS/Safari. Without this it will appear to work but all the touch targets
+  // for all elements will be positioned incorrectly from Safari's pov. They
+  // will render in the correct location but when looking in the inspector you
+  // can see that Safari think they are in a different place.
   useEffect(() => {
     if (!winSize) {
       return;
     }
-    if (gameMode && winSize.width < winSize.height) {
-      setGameMode(false);
+    if (gameMode === 'requested' && winSize.width > winSize.height) {
+      setGameMode('active');
     }
-    document.documentElement.classList.toggle('game-mode', gameMode);
   }, [gameMode, winSize]);
 
-  const onSetGameMode = (gameMode: boolean) => {
+  const onSetGameMode = (gameMode: GameMode) => {
     setGameMode(gameMode);
   };
 

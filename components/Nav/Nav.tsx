@@ -1,15 +1,17 @@
 // components/Nav/Nav.tsx
 
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
 import NavLogo from './NavLogo';
 import styles from './Nav.module.css';
 import MobileNav from './MobileNav';
 import {Link} from 'react-scroll';
+import type {GameMode} from '@/pages';
+import useIsomorphicLayoutEffect from '@/hooks/use-isomorphic-layout-effect';
 
-export default function Nav({gameMode}: {gameMode: boolean}) {
+export default function Nav({gameMode}: {gameMode: GameMode}) {
   const [showNavBorder, setShowNavBorder] = useState(false);
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const scrollHandler = () => {
       requestAnimationFrame(() => {
         setShowNavBorder(window.pageYOffset > 0);
@@ -23,7 +25,7 @@ export default function Nav({gameMode}: {gameMode: boolean}) {
 
   const navSep = showNavBorder ? '0.1' : '0';
 
-  return gameMode ? null : (
+  return gameMode === 'active' ? null : (
     <nav
       className={styles.nav}
       style={{

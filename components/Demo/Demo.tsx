@@ -17,11 +17,12 @@ import {
 } from '@/demo/alive/orchestrator-model';
 import {hasClient} from '@/demo/alive/client-model';
 import {useSubscribe} from 'replicache-react';
-import {getLocationString, Location} from '@/pages';
+import {getLocationString, GameMode, Location} from '@/pages';
 import {TouchPrompt} from '@/demo/alive/touch-prompt';
 import ConfettiExplosion from 'react-confetti-explosion';
 import {listPieces} from '@/demo/alive/piece-model';
 import {useInView} from 'react-intersection-observer';
+import useIsomorphicLayoutEffect from '@/hooks/use-isomorphic-layout-effect';
 
 const ORCHESTRATOR_ALIVE_INTERVAL_MS = 10_000;
 
@@ -234,7 +235,7 @@ function useClientIDs(r: Reflect<M> | null) {
 
 function useTabIsVisible() {
   const [tabIsVisible, setTabIsVisible] = useState(false);
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const onVisibilityChange = () => {
       setTabIsVisible(document.visibilityState === 'visible');
     };
@@ -259,11 +260,15 @@ const Demo = ({
   winSize: Size | null;
   docSize: Size | null;
   stage: Rect | null;
-  gameMode: boolean;
-  onSetGameMode: (gameMode: boolean) => void;
+  gameMode: GameMode;
+  onSetGameMode: (gameMode: GameMode) => void;
 }) => {
   const tabIsVisible = useTabIsVisible();
-  const [homeRef, home] = useElementSize<SVGSVGElement>([docSize, gameMode]);
+  const [homeRef, home] = useElementSize<SVGSVGElement>([
+    winSize,
+    docSize,
+    gameMode,
+  ]);
   const puzzleRoomID = usePuzzleRoomID();
   const {r, myClientID, online} = useReflect(puzzleRoomID, stage, home);
   useEnsureMyClient(r, tabIsVisible, location);
@@ -293,7 +298,10 @@ const Demo = ({
   };
 
   return (
-    <section id="intro" className={classNames(styles.section, {gameMode})}>
+    <section
+      id="intro"
+      className={classNames(styles.section, {gameMode: gameMode === 'active'})}
+    >
       <div id="title-container">
         <h1 className="title">The next web is</h1>
       </div>
@@ -380,7 +388,7 @@ const Demo = ({
       <img
         id="back-button"
         src="/icon-prompt-back.svg"
-        onClick={() => onSetGameMode(false)}
+        onClick={() => onSetGameMode('off')}
       />
       {r && home && stage && winSize && (
         <Puzzle r={r} home={home} stage={stage} />
@@ -395,11 +403,12 @@ const Demo = ({
           clientIDs={clientIDs}
         />
       )}
-      {!gameMode && stage && winSize && (
+      {gameMode !== 'active' && stage && winSize && (
         <TouchPrompt
           winSize={winSize}
           stage={stage}
-          onPlay={() => onSetGameMode(true)}
+          gameMode={gameMode}
+          setGameMode={onSetGameMode}
         />
       )}
     </section>

@@ -1,36 +1,39 @@
 import classNames from 'classnames';
-import {useEffect, useRef, useState} from 'react';
+import {useRef} from 'react';
 import type {Rect, Size} from './util';
+import type {GameMode} from '@/pages';
+import useIsomorphicLayoutEffect from '@/hooks/use-isomorphic-layout-effect';
 
 export function TouchPrompt({
   winSize,
   stage,
-  onPlay,
+  gameMode,
+  setGameMode,
 }: {
   winSize: Size;
   stage: Rect;
-  onPlay: () => void;
+  gameMode: GameMode;
+  setGameMode: (mode: GameMode) => void;
 }) {
-  const [active, setActive] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   const isPortrait = winSize.width < winSize.height;
   const enableScreen = isPortrait;
   const message = isPortrait ? 'Rotate to play' : 'Tap to play';
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const handleTouch = (e: MouseEvent) => {
       if (isPortrait) {
-        if (!active) {
+        if (gameMode === 'off') {
           if (ref.current?.contains(e.target as Node)) {
-            setActive(true);
+            setGameMode('requested');
           }
         } else {
-          setActive(false);
+          setGameMode('off');
         }
       } else {
         if (ref.current?.contains(e.target as Node)) {
-          onPlay();
+          setGameMode('active');
         }
       }
     };
@@ -38,13 +41,13 @@ export function TouchPrompt({
     return () => {
       window.removeEventListener('click', handleTouch);
     };
-  }, [isPortrait, active, onPlay]);
+  }, [isPortrait, gameMode, setGameMode]);
 
   return (
     <div
       ref={ref}
       className={classNames('prompt', {
-        active: active || !isPortrait,
+        active: gameMode === 'requested' || !isPortrait,
         enableScreen,
       })}
       style={{

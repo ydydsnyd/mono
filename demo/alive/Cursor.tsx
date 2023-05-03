@@ -4,7 +4,7 @@ import type {M} from '../shared/mutators';
 import {getClient} from './client-model';
 import {useSubscribe} from 'replicache-react';
 import {Rect, coordinateToPosition} from './util';
-import {useEffect} from 'react';
+import useIsomorphicLayoutEffect from '@/hooks/use-isomorphic-layout-effect';
 
 export function Cursor({
   r,
@@ -40,7 +40,7 @@ export function Cursor({
     }
   }
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (isSelf) {
       document.body.classList.toggle('custom-cursor', active);
     }

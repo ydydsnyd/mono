@@ -1,8 +1,8 @@
-import {useEffect} from 'react';
 import {Cursor} from './Cursor';
 import {Rect, Size, positionToCoordinate} from './util';
 import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '../shared/mutators';
+import useIsomorphicLayoutEffect from '@/hooks/use-isomorphic-layout-effect';
 
 export function CursorField({
   home,
@@ -20,7 +20,7 @@ export function CursorField({
   clientIDs: string[];
   myClientID: string;
 }) {
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const handlePointerMove = (e: PointerEvent) => {
       const coord = positionToCoordinate({x: e.pageX, y: e.pageY}, home, stage);
       r.clientID.then(cid => {
