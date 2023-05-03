@@ -20,6 +20,46 @@ type BotPlayback = {
   moves: BotMove[];
 };
 
+import {Location, getLocationString} from '@/pages';
+
+const botLocations: Location[] = [
+  {
+    country: 'US',
+    city: 'San Francisco',
+    region: 'CA',
+  },
+  {
+    country: 'US',
+    city: 'Atlanta',
+    region: 'GA',
+  },
+  {
+    country: 'US',
+    city: 'Los Angeles ',
+    region: 'CA',
+  },
+  {
+    country: 'US',
+    city: 'New York ',
+    region: 'NY',
+  },
+  {
+    country: 'US',
+    city: 'Seattle',
+    region: 'WA',
+  },
+  {
+    country: 'GB',
+    city: 'London',
+    region: '',
+  },
+  {
+    country: 'FR',
+    city: 'Paris',
+    region: '',
+  },
+];
+
 export class Bots {
   private _home: Rect;
   private _stage: Rect;
@@ -175,7 +215,9 @@ export class Bots {
       id: botClientID,
       selectedPieceID: '',
       color: colorToString(idToColor(botClientID)),
-      location: 'Botalona',
+      location: getLocationString(
+        botLocations[Math.floor(Math.random() * botLocations.length)],
+      ),
       focused: true,
       botControllerID: clientID,
     });

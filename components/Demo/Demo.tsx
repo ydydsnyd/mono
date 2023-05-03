@@ -17,7 +17,7 @@ import {
 } from '@/demo/alive/orchestrator-model';
 import {hasClient} from '@/demo/alive/client-model';
 import {useSubscribe} from 'replicache-react';
-import type {Location} from '@/pages';
+import {getLocationString, Location} from '@/pages';
 import {TouchPrompt} from '@/demo/alive/touch-prompt';
 import ConfettiExplosion from 'react-confetti-explosion';
 import {listPieces} from '@/demo/alive/piece-model';
@@ -200,18 +200,6 @@ function useEnsureMyClient(
       return;
     }
 
-    let locStr: string | null = null;
-    if (location) {
-      const {city, region, country} = location;
-      const flagEmoji = String.fromCodePoint(
-        ...country
-          .toUpperCase()
-          .split('')
-          .map(char => 127397 + char.charCodeAt(0)),
-      );
-      locStr = `${city}, ${region} ${flagEmoji}`;
-    }
-
     const ensure = async () => {
       const myClientID = await r.clientID;
       r.mutate.putClient({
@@ -220,7 +208,7 @@ function useEnsureMyClient(
         x: 0,
         y: 0,
         color: colorToString(idToColor(myClientID)),
-        location: locStr,
+        location: getLocationString(location),
         focused: document.hasFocus(),
         botControllerID: '',
       });
