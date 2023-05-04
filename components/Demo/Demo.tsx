@@ -23,6 +23,7 @@ import {listPieces} from '@/demo/alive/piece-model';
 import {useInView} from 'react-intersection-observer';
 import useIsomorphicLayoutEffect from '@/hooks/use-isomorphic-layout-effect';
 import {getLocationString, Location} from '@/util/get-location-string';
+import {hasClient} from '@/demo/alive/client-model';
 
 const ORCHESTRATOR_ALIVE_INTERVAL_MS = 10_000;
 
@@ -165,7 +166,20 @@ function useReflect(
 }
 
 function useEnsureMyClient(r: Reflect<M> | null, tabIsVisible: boolean) {
-  const [myClientID, setMyClientID] = useState<string | null>(null);
+  const cid = useSubscribe(
+    r,
+    async tx => {
+      const cid = await tx.clientID;
+      if (await hasClient(tx, cid)) {
+        return cid;
+      }
+    },
+    undefined,
+  );
+
+  if (cid !== undefined) {
+    return cid;
+  }
 
   // Runs on every render :(
   // Ideally we could do this only when we come back online, but the online
@@ -178,48 +192,32 @@ function useEnsureMyClient(r: Reflect<M> | null, tabIsVisible: boolean) {
   // before the online change event happens. Otherwise you cannot use this
   // nice pattern of creating client-specific state in the online change
   // handler and deleting in the server-side disconnect handler.
-  useEffect(() => {
-    let ignore = false;
+  if (r === null) {
+    return undefined;
+  }
 
-    if (r === null) {
-      return;
-    }
+  // Do not re-create the client if tab not visible.
+  if (!tabIsVisible) {
+    return undefined;
+  }
 
-    // Do not re-create the client if tab not visible.
-    if (!tabIsVisible) {
-      return;
-    }
+  const ensure = async () => {
+    const cid = await r.clientID;
+    r.mutate.putClient({
+      id: cid,
+      selectedPieceID: '',
+      x: 0,
+      y: 0,
+      color: colorToString(idToColor(cid)),
+      location: null,
+      focused: document.hasFocus(),
+      botControllerID: '',
+    });
+  };
 
-    if (myClientID !== null) {
-      return;
-    }
+  ensure();
 
-    const ensure = async () => {
-      const cid = await r.clientID;
-      r.mutate.putClient({
-        id: cid,
-        selectedPieceID: '',
-        x: 0,
-        y: 0,
-        color: colorToString(idToColor(cid)),
-        location: null,
-        focused: document.hasFocus(),
-        botControllerID: '',
-      });
-      if (ignore) {
-        return;
-      }
-      setMyClientID(cid);
-    };
-
-    ensure();
-
-    return () => {
-      ignore = true;
-    };
-  });
-
-  return myClientID;
+  return undefined;
 }
 
 function useEnsureLocation(r: Reflect<M> | null, myClientID: string | null) {
