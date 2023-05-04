@@ -48,6 +48,7 @@ export const {
   get: getClient,
   has: hasClient,
   update: updateClient,
+  init: initClient,
   list: listClients,
 } = clientGenerateResult;
 

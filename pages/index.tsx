@@ -9,61 +9,15 @@ import Pricing from '@/components/Pricing/Pricing';
 import Demo from '@/components/Demo/Demo';
 import Footer from '@/components/Footer/Footer';
 import {useEffect, useState} from 'react';
-import type {GetServerSideProps} from 'next';
-import type {NextIncomingMessage} from 'next/dist/server/request-meta';
 import {useDocumentSize} from '@/hooks/use-document-size';
 import {useWindowSize} from '@/hooks/use-window-size';
 import {Rect, getStage} from '@/demo/alive/util';
 import {useVHStyleProp} from '@/hooks/use-vh-style-prop';
 import useIsomorphicLayoutEffect from '@/hooks/use-isomorphic-layout-effect';
 
-export type Location = {
-  country: string;
-  city: string;
-  region: string;
-} | null;
-
-export function getLocationString(location: Location) {
-  if (location === null) return null;
-  const {country, city} = location;
-  const flagEmoji = String.fromCodePoint(
-    ...country
-      .toUpperCase()
-      .split('')
-      .map((char: string) => 127397 + char.charCodeAt(0)),
-  );
-  return `${decodeURI(city)} ${flagEmoji}`;
-}
-
 export type GameMode = 'off' | 'requested' | 'active';
 
-export const getServerSideProps: GetServerSideProps<{
-  location: Location;
-}> = async ({req}: {req: NextIncomingMessage}) => {
-  const country = (req.headers['x-vercel-ip-country'] as string) ?? '';
-  const city = (req.headers['x-vercel-ip-city'] as string) ?? '';
-  const region = (req.headers['x-vercel-ip-country-region'] as string) ?? '';
-
-  if (!country || !city || !region) {
-    return {
-      props: {
-        location: null,
-      },
-    };
-  }
-
-  return {
-    props: {
-      location: {
-        country,
-        city,
-        region,
-      },
-    },
-  };
-};
-
-export default function Home({location}: {location: Location}) {
+export default function Home() {
   const winSize = useWindowSize();
   const docSize = useDocumentSize();
   useVHStyleProp(winSize?.height ?? null);
@@ -239,7 +193,6 @@ export default function Home({location}: {location: Location}) {
 
       <main className={styles.main}>
         <Demo
-          location={location}
           stage={stage}
           docSize={docSize}
           winSize={winSize}

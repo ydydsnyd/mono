@@ -15,14 +15,14 @@ import {
   getClientRoomAssignment,
   ORCHESTRATOR_ROOM,
 } from '@/demo/alive/orchestrator-model';
-import {hasClient} from '@/demo/alive/client-model';
 import {useSubscribe} from 'replicache-react';
-import {getLocationString, GameMode, Location} from '@/pages';
+import type {GameMode} from '@/pages';
 import {TouchPrompt} from '@/demo/alive/touch-prompt';
 import ConfettiExplosion from 'react-confetti-explosion';
 import {listPieces} from '@/demo/alive/piece-model';
 import {useInView} from 'react-intersection-observer';
 import useIsomorphicLayoutEffect from '@/hooks/use-isomorphic-layout-effect';
+import {getLocationString, Location} from '@/util/get-location-string';
 
 const ORCHESTRATOR_ALIVE_INTERVAL_MS = 10_000;
 
@@ -96,7 +96,6 @@ function useReflect(
   home: Rect | null,
 ) {
   const [r, setR] = useState<Reflect<M> | null>(null);
-  const [myClientID, setMyClientID] = useState<string | null>(null);
   const [online, setOnline] = useState<boolean>(true);
 
   // Runs once, when dimensions are available.
@@ -131,7 +130,6 @@ function useReflect(
       force: false,
     });
 
-    reflect.clientID.then(cid => setMyClientID(cid));
     reflect.onOnlineChange = online => {
       console.log('ONLINE CHANGE', online);
       setOnline(online);
@@ -155,7 +153,6 @@ function useReflect(
     setR(reflect);
     return () => {
       setR(null);
-      setMyClientID(null);
       window.removeEventListener('blur', onBlur);
       window.removeEventListener('focus', onFocus);
       closeReflect(reflect);
@@ -164,21 +161,11 @@ function useReflect(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [home != null, stage !== null, puzzleRoomID]);
 
-  return {r, myClientID, online};
+  return {r, online};
 }
 
-function useEnsureMyClient(
-  r: Reflect<M> | null,
-  tabIsVisible: boolean,
-  location: Location,
-) {
-  const has = useSubscribe(
-    r,
-    tx => {
-      return hasClient(tx, tx.clientID);
-    },
-    null,
-  );
+function useEnsureMyClient(r: Reflect<M> | null, tabIsVisible: boolean) {
+  const [myClientID, setMyClientID] = useState<string | null>(null);
 
   // Runs on every render :(
   // Ideally we could do this only when we come back online, but the online
@@ -192,6 +179,8 @@ function useEnsureMyClient(
   // nice pattern of creating client-specific state in the online change
   // handler and deleting in the server-side disconnect handler.
   useEffect(() => {
+    let ignore = false;
+
     if (r === null) {
       return;
     }
@@ -201,26 +190,62 @@ function useEnsureMyClient(
       return;
     }
 
-    if (has) {
+    if (myClientID !== null) {
       return;
     }
 
     const ensure = async () => {
-      const myClientID = await r.clientID;
+      const cid = await r.clientID;
       r.mutate.putClient({
-        id: myClientID,
+        id: cid,
         selectedPieceID: '',
         x: 0,
         y: 0,
-        color: colorToString(idToColor(myClientID)),
-        location: getLocationString(location),
+        color: colorToString(idToColor(cid)),
+        location: null,
         focused: document.hasFocus(),
         botControllerID: '',
       });
+      if (ignore) {
+        return;
+      }
+      setMyClientID(cid);
     };
 
     ensure();
+
+    return () => {
+      ignore = true;
+    };
   });
+
+  return myClientID;
+}
+
+function useEnsureLocation(r: Reflect<M> | null, myClientID: string | null) {
+  const [location, setLocation] = useState<Location | null>(null);
+  let ignore = false;
+
+  useEffect(() => {
+    fetch('/api/get-location')
+      .then(resp => resp.json())
+      .then(data => {
+        if (ignore) {
+          return;
+        }
+        setLocation(data);
+      });
+  }, [ignore]);
+
+  useEffect(() => {
+    if (r === null || location === null || myClientID === null) {
+      return;
+    }
+    r.mutate.updateClient({
+      id: myClientID,
+      location: getLocationString(location),
+    });
+  }, [location, r, myClientID]);
 }
 
 function useClientIDs(r: Reflect<M> | null) {
@@ -253,14 +278,12 @@ function useTabIsVisible() {
 }
 
 const Demo = ({
-  location,
   winSize,
   docSize,
   stage,
   gameMode,
   onSetGameMode,
 }: {
-  location: Location;
   winSize: Size | null;
   docSize: Size | null;
   stage: Rect | null;
@@ -274,8 +297,9 @@ const Demo = ({
     gameMode,
   ]);
   const puzzleRoomID = usePuzzleRoomID();
-  const {r, myClientID, online} = useReflect(puzzleRoomID, stage, home);
-  useEnsureMyClient(r, tabIsVisible, location);
+  const {r, online} = useReflect(puzzleRoomID, stage, home);
+  const myClientID = useEnsureMyClient(r, tabIsVisible);
+  useEnsureLocation(r, myClientID);
   const clientIDs = useClientIDs(r);
   const [demoInView, setDemoInView] = useState(false);
   const {ref} = useInView({

@@ -20,7 +20,7 @@ type BotPlayback = {
   moves: BotMove[];
 };
 
-import {Location, getLocationString} from '@/pages';
+import {Location, getLocationString} from '@/util/get-location-string';
 
 const botLocations: Location[] = [
   {

@@ -5,7 +5,12 @@ import {
   putPiece,
   updatePiece,
 } from '../alive/piece-model';
-import {deleteClient, putClient, updateClient} from '../alive/client-model';
+import {
+  deleteClient,
+  initClient,
+  putClient,
+  updateClient,
+} from '../alive/client-model';
 import {alive, unload} from '../alive/orchestrator-model';
 import {PIECE_DEFINITIONS} from '../alive/piece-definitions';
 
@@ -93,6 +98,7 @@ export const mutators = {
   },
 
   putClient,
+  initClient,
   updateClient,
   deleteClient,
   updatePiece,
