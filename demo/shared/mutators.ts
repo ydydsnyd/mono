@@ -1,7 +1,13 @@
 import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
-import {PieceModel, putPiece, updatePiece} from '../alive/piece-model';
+import {
+  PieceModel,
+  listPieces,
+  putPiece,
+  updatePiece,
+} from '../alive/piece-model';
 import {deleteClient, putClient, updateClient} from '../alive/client-model';
 import {alive, unload} from '../alive/orchestrator-model';
+import {PIECE_DEFINITIONS} from '../alive/piece-definitions';
 
 export type M = typeof mutators;
 
@@ -49,28 +55,41 @@ export const mutators = {
       await tx.del(key);
     }
   },
+  solve: async (tx: WriteTransaction) => {
+    for (const piece of await listPieces(tx)) {
+      const def = PIECE_DEFINITIONS[parseInt(piece.id)];
+      await updatePiece(tx, {
+        ...piece,
+        x: def.x,
+        y: def.y,
+        rotation: 0,
+        placed: true,
+      });
+    }
+  },
 
   // alive mutators
   initializePuzzle: async (
     tx: WriteTransaction,
     {force, pieces}: {force: boolean; pieces: PieceModel[]},
   ) => {
-    if (tx.environment === 'client') {
-      if (!force) {
-        console.debug(
-          'client cannot initialize puzzle, skipping non-force optimistic mutation',
-        );
-        return;
-      }
-    }
     if (!force && (await tx.get('puzzle-exists'))) {
       console.debug('puzzle already exists, skipping non-force initialization');
       return;
     }
-    for (const piece of pieces) {
-      await putPiece(tx, piece);
+    if (tx.environment === 'server') {
+      //only reset on server and only when completed
+      //removes potential race when multiple clients are trying to reset
+      if (
+        !force ||
+        (await (await listPieces(tx)).findIndex(piece => !piece.placed)) === -1
+      ) {
+        for (const piece of pieces) {
+          await putPiece(tx, piece);
+        }
+        await tx.put('puzzle-exists', true);
+      }
     }
-    await tx.put('puzzle-exists', true);
   },
 
   putClient,

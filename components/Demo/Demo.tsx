@@ -121,6 +121,10 @@ function useReflect(
       console.info('Resetting replicache');
       reflect.mutate.resetRoom();
     }
+    if (url.searchParams.has('solve')) {
+      console.info('Solving puzzle');
+      reflect.mutate.solve();
+    }
 
     reflect.mutate.initializePuzzle({
       pieces: generateRandomPieces(home, stage),
