@@ -22,7 +22,7 @@ export function TouchPrompt({
   const message = isPortrait ? 'Rotate to play' : 'Tap to play';
 
   useIsomorphicLayoutEffect(() => {
-    const handleTouch = (e: MouseEvent) => {
+    const handleTouch = (e: Event) => {
       if (isPortrait) {
         if (gameMode === 'off') {
           if (ref.current?.contains(e.target as Node)) {
@@ -37,9 +37,9 @@ export function TouchPrompt({
         }
       }
     };
-    window.addEventListener('click', handleTouch);
+    window.addEventListener('touchstart', handleTouch);
     return () => {
-      window.removeEventListener('click', handleTouch);
+      window.removeEventListener('touchstart', handleTouch);
     };
   }, [isPortrait, gameMode, setGameMode]);
 
