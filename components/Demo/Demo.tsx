@@ -5,7 +5,7 @@ import {loggingOptions} from '@/demo/frontend/logging-options';
 import {type M, mutators} from '@/demo/shared/mutators';
 import {getWorkerHost} from '@/util/worker-host';
 import {useEffect, useState} from 'react';
-import {Reflect} from '@rocicorp/reflect';
+import {ExperimentalMemKVStore, Reflect} from '@rocicorp/reflect';
 import classNames from 'classnames';
 import {colorToString, idToColor} from '@/demo/alive/colors';
 import {useElementSize} from '@/hooks/use-element-size';
@@ -32,11 +32,19 @@ function usePuzzleRoomID() {
   useEffect(() => {
     const orchestratorClient = new Reflect<M>({
       socketOrigin: getWorkerHost(),
+      createKVStore: name => new ExperimentalMemKVStore(name),
       userID: 'anon',
       roomID: ORCHESTRATOR_ROOM,
       mutators,
       ...loggingOptions,
     });
+
+    orchestratorClient.onUpdateNeeded = reason => {
+      if (reason.type !== 'NewClientGroup') {
+        location.reload();
+      }
+    };
+
     orchestratorClient.subscribe(
       tx => getClientRoomAssignment(tx, tx.clientID),
       {
@@ -110,11 +118,18 @@ function useReflect(
 
     const reflect = new Reflect<M>({
       socketOrigin: getWorkerHost(),
+      createKVStore: name => new ExperimentalMemKVStore(name),
       userID: 'anon',
       roomID: puzzleRoomID,
       mutators,
       ...loggingOptions,
     });
+
+    reflect.onUpdateNeeded = reason => {
+      if (reason.type !== 'NewClientGroup') {
+        location.reload();
+      }
+    };
 
     const url = new URL(location.href);
     if (url.searchParams.has('reset')) {
