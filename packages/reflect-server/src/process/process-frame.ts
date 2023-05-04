@@ -1,6 +1,9 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {NullableVersion, Patch, Version} from 'reflect-protocol';
-import type {DisconnectHandler} from '../server/disconnect.js';
+import type {
+  ConnectHandler,
+  DisconnectHandler,
+} from '../server/connect-handlers.js';
 import {EntryCache} from '../storage/entry-cache.js';
 import {unwrapPatch} from '../storage/replicache-transaction.js';
 import type {Storage} from '../storage/storage.js';
@@ -26,6 +29,7 @@ export async function processFrame(
   lc: LogContext,
   pendingMutations: PendingMutation[],
   mutators: MutatorMap,
+  connectHandler: ConnectHandler,
   disconnectHandler: DisconnectHandler,
   clients: ClientMap,
   storage: Storage,
@@ -35,8 +39,18 @@ export async function processFrame(
 
   const cache = new EntryCache(storage);
   const startVersion = must(await getVersion(cache));
+
   let prevVersion = startVersion;
   let nextVersion = (prevVersion ?? 0) + 1;
+
+  const connectsCache = new EntryCache(cache);
+  await processConnects(
+    lc,
+    connectHandler,
+    clientIDs,
+    connectsCache,
+    nextVersion,
+  );
 
   lc.debug?.('prevVersion', prevVersion, 'nextVersion', nextVersion);
   let count = 0;

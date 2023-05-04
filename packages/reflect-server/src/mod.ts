@@ -7,7 +7,7 @@ export {
   ReflectServerBaseEnv,
 } from './server/reflect.js';
 export type {AuthHandler, UserData} from './server/auth.js';
-export type {DisconnectHandler} from './server/disconnect.js';
+export type {DisconnectHandler} from './server/connect-handlers.js';
 export {
   consoleLogSink,
   TeeLogSink,

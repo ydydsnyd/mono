@@ -19,7 +19,7 @@ import {
   invalidateForRoomRequestSchema,
 } from 'reflect-protocol';
 import {closeConnections, getConnections} from './connections.js';
-import type {DisconnectHandler} from './disconnect.js';
+import type {ConnectHandler, DisconnectHandler} from './connect-handlers.js';
 import {DurableStorage} from '../storage/durable-storage.js';
 import * as valita from 'shared/valita.js';
 import {createRoomRequestSchema} from 'reflect-protocol';
@@ -51,6 +51,7 @@ export interface RoomDOOptions<MD extends MutatorDefs> {
   mutators: MD;
   state: DurableObjectState;
   authApiKey: string;
+  connectHandler: ConnectHandler;
   disconnectHandler: DisconnectHandler;
   logSink: LogSink;
   logLevel: LogLevel;
@@ -82,6 +83,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   private _maxProcessedMutationTimestamp = 0;
   private readonly _lock = new Lock();
   private readonly _mutators: MutatorMap;
+  private readonly _connectHandler: ConnectHandler;
   private readonly _disconnectHandler: DisconnectHandler;
   private _lcHasRoomIdContext = false;
   private _lc: LogContext;
@@ -92,10 +94,18 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   private readonly _router = new Router();
 
   constructor(options: RoomDOOptions<MD>) {
-    const {mutators, disconnectHandler, state, authApiKey, logSink, logLevel} =
-      options;
+    const {
+      mutators,
+      connectHandler,
+      disconnectHandler,
+      state,
+      authApiKey,
+      logSink,
+      logLevel,
+    } = options;
 
     this._mutators = new Map([...Object.entries(mutators)]) as MutatorMap;
+    this._connectHandler = connectHandler;
     this._disconnectHandler = disconnectHandler;
     this._storage = new DurableStorage(
       state.storage,
@@ -407,6 +417,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
           this._clients,
           this._pendingMutations,
           this._mutators,
+          this._connectHandler,
           this._disconnectHandler,
           this._maxProcessedMutationTimestamp,
           this._bufferSizer,

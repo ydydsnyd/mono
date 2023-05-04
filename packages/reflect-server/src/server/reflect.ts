@@ -2,7 +2,7 @@ import {consoleLogSink, LogLevel, LogSink, TeeLogSink} from '@rocicorp/logger';
 import type {MutatorDefs} from 'replicache';
 import {BaseAuthDO} from './auth-do.js';
 import type {AuthHandler} from './auth.js';
-import type {DisconnectHandler} from './disconnect.js';
+import type {ConnectHandler, DisconnectHandler} from './connect-handlers.js';
 import {BaseRoomDO} from './room-do.js';
 import {createWorker, MetricsSink} from './worker.js';
 
@@ -10,6 +10,7 @@ export interface ReflectServerOptions<MD extends MutatorDefs> {
   mutators: MD;
   authHandler?: AuthHandler | undefined;
 
+  connectHandler?: ConnectHandler | undefined;
   disconnectHandler?: DisconnectHandler | undefined;
 
   /**
@@ -45,6 +46,7 @@ export interface ReflectServerOptions<MD extends MutatorDefs> {
 export type NormalizedOptions<MD extends MutatorDefs> = {
   mutators: MD;
   authHandler?: AuthHandler | undefined;
+  connectHandler: ConnectHandler;
   disconnectHandler: DisconnectHandler;
   logSink: LogSink;
   logLevel: LogLevel;
@@ -127,6 +129,7 @@ export function makeNormalizedOptionsGetter<
     const {
       mutators,
       authHandler,
+      connectHandler = () => Promise.resolve(),
       disconnectHandler = () => Promise.resolve(),
       logSinks,
       logLevel = 'debug',
@@ -137,6 +140,7 @@ export function makeNormalizedOptionsGetter<
     normalizedOptions = {
       mutators,
       authHandler,
+      connectHandler,
       disconnectHandler,
       logSink,
       logLevel,
@@ -155,6 +159,7 @@ function createRoomDOClass<
     constructor(state: DurableObjectState, env: Env) {
       const {
         mutators,
+        connectHandler,
         disconnectHandler,
         logSink,
         logLevel,
@@ -163,6 +168,7 @@ function createRoomDOClass<
       super({
         mutators,
         state,
+        connectHandler,
         disconnectHandler,
         authApiKey: getAPIKey(env),
         logSink,

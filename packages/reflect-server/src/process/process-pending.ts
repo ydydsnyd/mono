@@ -5,7 +5,7 @@ import type {LogContext} from '@rocicorp/logger';
 import {must} from 'shared/must.js';
 import type {MutatorMap} from './process-mutation.js';
 import {processRoom} from './process-room.js';
-import type {DisconnectHandler} from '../server/disconnect.js';
+import type {DisconnectHandler} from '../server/connect-handlers.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
 import {send} from '../util/socket.js';
 import type {PendingMutation} from '../types/mutation.js';
@@ -27,6 +27,7 @@ export async function processPending(
   clients: ClientMap,
   pendingMutations: PendingMutation[],
   mutators: MutatorMap,
+  connectHandler: ConnectHandler,
   disconnectHandler: DisconnectHandler,
   maxProcessedMutationTimestamp: number,
   bufferSizer: BufferSizer,
@@ -114,6 +115,7 @@ export async function processPending(
       clients,
       toProcess,
       mutators,
+      connectHandler,
       disconnectHandler,
       storage,
     );
