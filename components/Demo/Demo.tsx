@@ -5,7 +5,7 @@ import {loggingOptions} from '@/demo/frontend/logging-options';
 import {type M, mutators} from '@/demo/shared/mutators';
 import {getWorkerHost} from '@/util/worker-host';
 import {useEffect, useState} from 'react';
-import {ExperimentalMemKVStore, Reflect} from '@rocicorp/reflect';
+import {Reflect} from '@rocicorp/reflect';
 import classNames from 'classnames';
 import {colorToString, idToColor} from '@/demo/alive/colors';
 import {useElementSize} from '@/hooks/use-element-size';
@@ -32,7 +32,6 @@ function usePuzzleRoomID() {
   useEffect(() => {
     const orchestratorClient = new Reflect<M>({
       socketOrigin: getWorkerHost(),
-      createKVStore: name => new ExperimentalMemKVStore(name),
       userID: 'anon',
       roomID: ORCHESTRATOR_ROOM,
       mutators,
@@ -111,7 +110,6 @@ function useReflect(
 
     const reflect = new Reflect<M>({
       socketOrigin: getWorkerHost(),
-      createKVStore: name => new ExperimentalMemKVStore(name),
       userID: 'anon',
       roomID: puzzleRoomID,
       mutators,
