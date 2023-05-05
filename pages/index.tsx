@@ -8,14 +8,12 @@ import Testimonials from '@/components/Testimonials/Testimonials';
 import Pricing from '@/components/Pricing/Pricing';
 import Demo from '@/components/Demo/Demo';
 import Footer from '@/components/Footer/Footer';
-import {useEffect, useState} from 'react';
+import {useState} from 'react';
 import {useDocumentSize} from '@/hooks/use-document-size';
 import {useWindowSize} from '@/hooks/use-window-size';
 import {Rect, getStage} from '@/demo/alive/util';
 import {useVHStyleProp} from '@/hooks/use-vh-style-prop';
 import useIsomorphicLayoutEffect from '@/hooks/use-isomorphic-layout-effect';
-
-export type GameMode = 'off' | 'requested' | 'active';
 
 export default function Home() {
   const winSize = useWindowSize();
@@ -26,10 +24,10 @@ export default function Home() {
   const [featureStatementTop, setFeatureStatementTop] = useState<number | null>(
     null,
   );
-  const [gameMode, setGameMode] = useState<GameMode>('off');
+  const [gameMode, setGameMode] = useState<boolean>(false);
 
   let stage: Rect | null = null;
-  if (gameMode === 'active') {
+  if (gameMode) {
     if (winSize) {
       stage = new Rect(0, 0, winSize.width, winSize.height);
     }
@@ -63,36 +61,10 @@ export default function Home() {
   }, [docSize]);
 
   useIsomorphicLayoutEffect(() => {
-    if (!winSize) {
-      return;
-    }
-    if (gameMode === 'active' && winSize.width < winSize.height) {
-      setGameMode('off');
-    }
+    document.documentElement.classList.toggle('game-mode', gameMode);
+  }, [gameMode]);
 
-    document.documentElement.classList.toggle(
-      'game-mode',
-      gameMode === 'active',
-    );
-  }, [gameMode, winSize]);
-
-  // 💀💀💀 warning
-  // For some reason this is necessary to avoid a weird layout bug when going
-  // from requested game mode in portrait to active game mode in landscape on
-  // iOS/Safari. Without this it will appear to work but all the touch targets
-  // for all elements will be positioned incorrectly from Safari's pov. They
-  // will render in the correct location but when looking in the inspector you
-  // can see that Safari think they are in a different place.
-  useEffect(() => {
-    if (!winSize) {
-      return;
-    }
-    if (gameMode === 'requested' && winSize.width > winSize.height) {
-      setGameMode('active');
-    }
-  }, [gameMode, winSize]);
-
-  const onSetGameMode = (gameMode: GameMode) => {
+  const onSetGameMode = (gameMode: boolean) => {
     setGameMode(gameMode);
   };
 

@@ -5,10 +5,9 @@ import NavLogo from './NavLogo';
 import styles from './Nav.module.css';
 import MobileNav from './MobileNav';
 import {Link} from 'react-scroll';
-import type {GameMode} from '@/pages';
 import useIsomorphicLayoutEffect from '@/hooks/use-isomorphic-layout-effect';
 
-export default function Nav({gameMode}: {gameMode: GameMode}) {
+export default function Nav({gameMode}: {gameMode: boolean}) {
   const [showNavBorder, setShowNavBorder] = useState(false);
 
   useIsomorphicLayoutEffect(() => {
@@ -25,7 +24,11 @@ export default function Nav({gameMode}: {gameMode: GameMode}) {
 
   const navSep = showNavBorder ? '0.1' : '0';
 
-  return gameMode === 'active' ? null : (
+  if (gameMode) {
+    return null;
+  }
+
+  return (
     <nav
       className={styles.nav}
       style={{

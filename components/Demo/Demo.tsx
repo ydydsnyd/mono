@@ -16,7 +16,6 @@ import {
   ORCHESTRATOR_ROOM,
 } from '@/demo/alive/orchestrator-model';
 import {useSubscribe} from 'replicache-react';
-import type {GameMode} from '@/pages';
 import {TouchPrompt} from '@/demo/alive/touch-prompt';
 import ConfettiExplosion from 'react-confetti-explosion';
 import {listPieces} from '@/demo/alive/piece-model';
@@ -300,8 +299,8 @@ const Demo = ({
   winSize: Size | null;
   docSize: Size | null;
   stage: Rect | null;
-  gameMode: GameMode;
-  onSetGameMode: (gameMode: GameMode) => void;
+  gameMode: boolean;
+  onSetGameMode: (gameMode: boolean) => void;
 }) => {
   const tabIsVisible = useTabIsVisible();
   const [homeRef, home] = useElementSize<SVGSVGElement>([
@@ -339,10 +338,7 @@ const Demo = ({
   };
 
   return (
-    <section
-      id="intro"
-      className={classNames(styles.section, {gameMode: gameMode === 'active'})}
-    >
+    <section id="intro" className={classNames(styles.section, {gameMode})}>
       <div id="title-container">
         <h1 className="title">The next web is</h1>
       </div>
@@ -429,7 +425,7 @@ const Demo = ({
       <img
         id="back-button"
         src="/icon-prompt-back.svg"
-        onClick={() => onSetGameMode('off')}
+        onClick={() => onSetGameMode(false)}
       />
       {r && home && stage && winSize && (
         <Puzzle r={r} home={home} stage={stage} />
@@ -444,7 +440,7 @@ const Demo = ({
           clientIDs={clientIDs}
         />
       )}
-      {gameMode !== 'active' && stage && winSize && (
+      {stage && winSize && (
         <TouchPrompt
           winSize={winSize}
           stage={stage}
