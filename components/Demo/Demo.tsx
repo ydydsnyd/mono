@@ -1,6 +1,6 @@
 import styles from '@/styles/Home.module.css';
 import {Puzzle} from '@/demo/alive/Puzzle';
-import {generateRandomPieces, Rect, Size} from '@/demo/alive/util';
+import {generateRandomPieces, getStage, Rect, Size} from '@/demo/alive/util';
 import {loggingOptions} from '@/demo/frontend/logging-options';
 import {type M, mutators} from '@/demo/shared/mutators';
 import {getWorkerHost} from '@/util/worker-host';
@@ -292,13 +292,11 @@ function useTabIsVisible() {
 const Demo = ({
   winSize,
   docSize,
-  stage,
   gameMode,
   onSetGameMode,
 }: {
   winSize: Size | null;
   docSize: Size | null;
-  stage: Rect | null;
   gameMode: boolean;
   onSetGameMode: (gameMode: boolean) => void;
 }) => {
@@ -308,6 +306,7 @@ const Demo = ({
     docSize,
     gameMode,
   ]);
+  const stage = getStage(home);
   const puzzleRoomID = usePuzzleRoomID();
   const {r, online} = useReflect(puzzleRoomID, stage, home);
   const myClientID = useEnsureMyClient(r, tabIsVisible);

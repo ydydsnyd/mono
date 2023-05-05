@@ -11,7 +11,6 @@ import Footer from '@/components/Footer/Footer';
 import {useState} from 'react';
 import {useDocumentSize} from '@/hooks/use-document-size';
 import {useWindowSize} from '@/hooks/use-window-size';
-import {Rect, getStage} from '@/demo/alive/util';
 import {useVHStyleProp} from '@/hooks/use-vh-style-prop';
 import useIsomorphicLayoutEffect from '@/hooks/use-isomorphic-layout-effect';
 
@@ -19,46 +18,7 @@ export default function Home() {
   const winSize = useWindowSize();
   const docSize = useDocumentSize();
   useVHStyleProp(winSize?.height ?? null);
-  const [navHeight, setNavHeight] = useState<number | null>(null);
-  const [introBottom, setIntroBottom] = useState<number | null>(null);
-  const [featureStatementTop, setFeatureStatementTop] = useState<number | null>(
-    null,
-  );
   const [gameMode, setGameMode] = useState<boolean>(false);
-
-  let stage: Rect | null = null;
-  if (gameMode) {
-    if (winSize) {
-      stage = new Rect(0, 0, winSize.width, winSize.height);
-    }
-  } else {
-    if (
-      winSize !== null &&
-      docSize !== null &&
-      featureStatementTop !== null &&
-      introBottom !== null &&
-      navHeight !== null
-    ) {
-      stage = getStage(
-        winSize,
-        docSize,
-        navHeight,
-        featureStatementTop,
-        introBottom,
-      );
-    }
-  }
-
-  useIsomorphicLayoutEffect(() => {
-    setNavHeight(document.querySelector('nav')?.offsetHeight ?? 0);
-    setFeatureStatementTop(
-      (document.querySelector('.featuredStatement') as any).offsetTop,
-    );
-    setIntroBottom(
-      document.documentElement.scrollTop +
-        document.querySelector('#intro')!.getBoundingClientRect().bottom,
-    );
-  }, [docSize]);
 
   useIsomorphicLayoutEffect(() => {
     document.documentElement.classList.toggle('game-mode', gameMode);
@@ -165,7 +125,6 @@ export default function Home() {
 
       <main className={styles.main}>
         <Demo
-          stage={stage}
           docSize={docSize}
           winSize={winSize}
           gameMode={gameMode}

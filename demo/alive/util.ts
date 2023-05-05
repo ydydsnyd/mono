@@ -72,31 +72,24 @@ export const distance = (a: Position, b: Position): number => {
   return Math.sqrt(x * x + y * y);
 };
 
-export function getStage(
-  winSize: Size,
-  docSize: Size,
-  navBottom: number,
-  featureStatementTop: number,
-  introBottom: number,
-) {
-  // On desktop don't like the stage starting right up on top of the nav.
-  const topBuffer = 20;
-
-  // If the bottom of the intro is on screen (large or tall screen), we use
-  // that. Otherwise, we use the top of the feature statement.
-  const stageBottom =
-    introBottom < winSize.height ? introBottom : featureStatementTop;
-
+export function getStage(home: Rect | null) {
+  if (!home) {
+    return null;
+  }
+  const gutterBase = 32;
+  const gutterX = gutterBase * 2;
+  const gutterTop = gutterBase * 2.5;
+  const gutterBottom = gutterBase * 3;
   return new Rect(
-    0,
-    navBottom + topBuffer,
-    docSize.width,
-    stageBottom - navBottom - topBuffer * 2,
+    home.x - gutterX,
+    home.y - gutterTop,
+    home.width + gutterX * 2,
+    home.height + gutterTop + gutterBottom,
   );
 }
 
 export function generateRandomPieces(home: Rect, stage: Rect) {
-  const approxPieceSize = 75;
+  const approxPieceSize = 50;
   const selectedPositions: Position[] = [];
 
   // This uses Mitchell's best candidate algorithm to generate the initial

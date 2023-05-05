@@ -34,7 +34,11 @@ function getMode(gameMode: boolean, isPortrait: boolean): Mode {
 
 function canGameMode() {
   // Supposed to be iOS/Safari and embedded WebView only. But not Chrome on iOS.
-  return /iP(ad|hone|od).+Version\/[\d\.]+.*Safari/i.test(navigator.userAgent);
+  return (
+    /iP(ad|hone|od)/i.test(navigator.userAgent) &&
+    /Safari/.test(navigator.userAgent) &&
+    !/Chrome/.test(navigator.userAgent)
+  );
 }
 
 function getMessage(mode: Mode) {
