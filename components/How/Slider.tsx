@@ -2,6 +2,7 @@ import * as React from 'react';
 import {Range, getTrackBackground} from 'react-range';
 import style from './Slider.module.css';
 import type {Latency} from '@/demo/shared/types';
+import { event } from "nextjs-google-analytics";
 
 const STEP = 1;
 const MIN = 0;
@@ -39,6 +40,11 @@ const Slider = ({
         max={MAX}
         onChange={values => {
           setClientLatency(values[0] as Latency);
+          event("demo_adjust_latency", {
+            category: "How it Works",
+            action: "Adjust latency slider",
+            label: "demos",
+          });
         }}
         renderTrack={({props, children}) => (
           <div

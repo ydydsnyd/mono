@@ -1,5 +1,6 @@
 import styles from './BetaSignup.module.css';
 import {useState, useRef} from 'react';
+import { event } from "nextjs-google-analytics";
 
 export default function BetaSignup() {
   const [name, setName] = useState('');
@@ -35,6 +36,11 @@ export default function BetaSignup() {
       setTimeout(() => {
         setButtonText('Join Waitlist');
       }, 3000);
+      event("beta_request_submitted", {
+        category: "Get started",
+        action: "Press join waitlist button",
+        label: "Conversion",
+      });
     } else {
       // display error message
       console.log('error');
