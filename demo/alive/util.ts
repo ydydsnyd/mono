@@ -79,7 +79,7 @@ export function getStage(home: Rect | null) {
   const gutterBase = 32;
   const gutterX = gutterBase * 2;
   const gutterTop = gutterBase * 2.5;
-  const gutterBottom = gutterBase * 3;
+  const gutterBottom = gutterBase * 2.5;
   return new Rect(
     home.x - gutterX,
     home.y - gutterTop,
