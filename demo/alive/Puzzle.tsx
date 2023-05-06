@@ -271,8 +271,6 @@ export function Puzzle({
 
   const sizeScale = home.width / SVG_ORIGINAL_SIZE.width;
 
-  // TODO: pieces div could probably go away, it's not doing anything but being
-  // a host for pointer capture. But the pieces themselves could do that?
   return (
     <div
       id="pieces"
