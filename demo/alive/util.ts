@@ -98,11 +98,25 @@ export function generateRandomPieces(home: Rect, stage: Rect) {
   // position that's farthese from other pieces.
 
   const getCandidates = () => {
-    return new Array(10).fill(0).map(() => {
+    var res = new Array();
+    // Most of the time put the pieces outside the letters, so you can still
+    // read "alive", but it looks nicer if a few are allowed inside.
+    const allowCandidateOverLetters = Math.random() < 0.15;
+    while (res.length < 10) {
       const pos = {
         x: randFloat(stage.left(), stage.right() - approxPieceSize),
         y: randFloat(stage.top(), stage.bottom() - approxPieceSize),
       };
+      if (!allowCandidateOverLetters) {
+        if (
+          pos.x >= home.left() &&
+          pos.x <= home.right() &&
+          pos.y >= home.top() &&
+          pos.y <= home.bottom()
+        ) {
+          continue;
+        }
+      }
       let minDist = Infinity;
       for (const selectedPos of selectedPositions) {
         const d = distance(selectedPos, pos);
@@ -110,11 +124,9 @@ export function generateRandomPieces(home: Rect, stage: Rect) {
           minDist = d;
         }
       }
-      return {
-        pos,
-        minDist,
-      };
-    });
+      res.push({pos, minDist});
+    }
+    return res;
   };
 
   for (let i = 0; i < PIECE_DEFINITIONS.length; i++) {
