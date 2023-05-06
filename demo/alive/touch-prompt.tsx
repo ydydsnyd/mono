@@ -37,7 +37,7 @@ function canGameMode() {
   return (
     /iP(ad|hone|od)/i.test(navigator.userAgent) &&
     /Safari/.test(navigator.userAgent) &&
-    !/Chrome/.test(navigator.userAgent)
+    !/CriOS/.test(navigator.userAgent)
   );
 }
 
