@@ -4,7 +4,7 @@ import {generateRandomPieces, getStage, Rect, Size} from '@/demo/alive/util';
 import {loggingOptions} from '@/demo/frontend/logging-options';
 import {type M, mutators} from '@/demo/shared/mutators';
 import {getWorkerHost} from '@/util/worker-host';
-import {useEffect, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {ExperimentalMemKVStore, Reflect} from '@rocicorp/reflect';
 import classNames from 'classnames';
 import {colorToString, idToColor} from '@/demo/alive/colors';
@@ -289,6 +289,34 @@ function useTabIsVisible() {
   return tabIsVisible;
 }
 
+function useBodyClasses() {
+  const [classes, setClasses] = useState(new Map<string, boolean>());
+  useIsomorphicLayoutEffect(() => {
+    for (const [cls, enabled] of classes.entries()) {
+      document.body.classList.toggle(cls, enabled);
+    }
+    return () => {
+      for (const [cls] of classes.entries()) {
+        document.body.classList.remove(cls);
+      }
+    };
+  }, [classes]);
+
+  const setClass = useCallback(
+    (cls: string, enabled: boolean) => {
+      console.log('SET CLASS', cls, enabled);
+      setClasses(old => {
+        const next = new Map(old);
+        next.set(cls, enabled);
+        return next;
+      });
+    },
+    [setClasses],
+  );
+
+  return [classes, setClass] as const;
+}
+
 const Demo = ({
   winSize,
   docSize,
@@ -316,6 +344,7 @@ const Demo = ({
   const {ref} = useInView({
     onChange: inView => setDemoInView(inView),
   });
+  const [bodyClasses, setBodyClass] = useBodyClasses();
 
   const isPuzzleComplete = useSubscribe<boolean>(
     r,
@@ -427,7 +456,7 @@ const Demo = ({
         onClick={() => onSetGameMode(false)}
       />
       {r && home && stage && winSize && (
-        <Puzzle r={r} home={home} stage={stage} />
+        <Puzzle r={r} home={home} stage={stage} setBodyClass={setBodyClass} />
       )}
       {r && home && stage && docSize && myClientID && (
         <CursorField
@@ -437,6 +466,11 @@ const Demo = ({
           r={r}
           myClientID={myClientID}
           clientIDs={clientIDs}
+          hideLocalArrow={
+            bodyClasses.get('grabbing') === true ||
+            bodyClasses.get('grab') === true
+          }
+          setBodyClass={setBodyClass}
         />
       )}
       {stage && winSize && (

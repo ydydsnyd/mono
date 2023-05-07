@@ -32,10 +32,12 @@ export function Puzzle({
   r,
   home,
   stage,
+  setBodyClass,
 }: {
   r: Reflect<M>;
   home: Rect;
   stage: Rect;
+  setBodyClass: (cls: string, enabled: boolean) => void;
 }) {
   const {pieces, myClient} = useSubscribe<{
     pieces: Record<string, PieceInfo>;
@@ -61,11 +63,13 @@ export function Puzzle({
 
   const handlePieceHover = async (model: PieceInfo) => {
     if (selectIfAvailable(model)) {
+      setBodyClass('grab', true);
       cancelBlur();
     }
   };
 
   const handlePieceBlur = () => {
+    setBodyClass('grab', false);
     scheduleBlur();
   };
 
@@ -105,6 +109,7 @@ export function Puzzle({
         y: event.pageY - piecePos.y,
       },
     });
+    setBodyClass('grabbing', true);
   };
   useIsomorphicLayoutEffect(() => {
     const handlePointerDown = () => {
@@ -235,6 +240,7 @@ export function Puzzle({
   const handleLostPointerCapture = (e: React.PointerEvent) => {
     dragging.current.delete(e.pointerId);
     rotating.current.delete(e.pointerId);
+    setBodyClass('grabbing', false);
   };
 
   const handleRotateStart = (
@@ -263,6 +269,7 @@ export function Puzzle({
       pieceID: model.id,
       radOffset: offset,
     });
+    setBodyClass('grabbing', true);
   };
 
   if (!myClient) {

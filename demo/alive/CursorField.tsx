@@ -12,6 +12,8 @@ export function CursorField({
   clientIDs,
   // TODO(reflect): Make clientID synchronous
   myClientID,
+  hideLocalArrow,
+  setBodyClass,
 }: {
   home: Rect;
   stage: Rect;
@@ -19,6 +21,8 @@ export function CursorField({
   r: Reflect<M>;
   clientIDs: string[];
   myClientID: string;
+  hideLocalArrow: boolean;
+  setBodyClass: (cls: string, enabled: boolean) => void;
 }) {
   useIsomorphicLayoutEffect(() => {
     const handlePointerMove = (e: PointerEvent) => {
@@ -49,6 +53,8 @@ export function CursorField({
           r={r}
           clientID={cid}
           isSelf={cid == myClientID}
+          hideArrow={cid == myClientID && hideLocalArrow}
+          setBodyClass={setBodyClass}
           home={home}
           stage={stage}
         />
