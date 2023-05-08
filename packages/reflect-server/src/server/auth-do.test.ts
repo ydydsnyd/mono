@@ -25,7 +25,13 @@ import {
   AUTH_API_KEY_HEADER_NAME,
   createAuthAPIHeaders,
 } from './auth-api-headers.js';
-import {AUTH_ROUTES, BaseAuthDO, ConnectionRecord} from './auth-do.js';
+import {
+  AUTH_DO_STORAGE_SCHEMA_VERSION,
+  AUTH_DO_STORAGE_SCHEMA_VERSION_KEY,
+  AUTH_ROUTES,
+  BaseAuthDO,
+  recordConnection,
+} from './auth-do.js';
 import {AuthHandler, USER_DATA_HEADER_NAME} from './auth.js';
 import {
   TestDurableObjectId,
@@ -44,8 +50,17 @@ import {
 const TEST_AUTH_API_KEY = 'TEST_REFLECT_AUTH_API_KEY_TEST';
 const {authDO} = getMiniflareBindings();
 const authDOID = authDO.idFromName('auth');
+let storage: DurableObjectStorage;
+let state: TestDurableObjectState;
 
-beforeEach(() => {
+beforeEach(async () => {
+  storage = await getMiniflareDurableObjectStorage(authDOID);
+  await storage.deleteAll();
+  await storage.put(
+    AUTH_DO_STORAGE_SCHEMA_VERSION_KEY,
+    AUTH_DO_STORAGE_SCHEMA_VERSION,
+  );
+  state = new TestDurableObjectState(authDOID, storage);
   jest.useFakeTimers();
   jest.setSystemTime(0);
 });
@@ -58,7 +73,35 @@ function isAuthRequest(request: Request) {
   return request.url.indexOf('/api/auth/') !== -1;
 }
 
-async function createCreateRoomTestFixture() {
+async function recordConnectionHelper(
+  userID: string,
+  roomID: string,
+  clientID: string,
+) {
+  recordConnection(
+    {
+      userID,
+      roomID,
+      clientID,
+    },
+    storage,
+    {
+      connectTimestamp: 1000,
+    },
+  );
+  await storage.sync();
+}
+
+async function storeTestConnectionState() {
+  await recordConnectionHelper('testUserID1', 'testRoomID1', 'testClientID1');
+  await recordConnectionHelper('testUserID1', 'testRoomID1', 'testClientID2');
+  await recordConnectionHelper('testUserID1', 'testRoomID2', 'testClientID3');
+  await recordConnectionHelper('testUserID2', 'testRoomID1', 'testClientID4');
+  await recordConnectionHelper('testUserID2', 'testRoomID3', 'testClientID5');
+  await recordConnectionHelper('testUserID3', 'testRoomID3', 'testClientID6');
+}
+
+function createCreateRoomTestFixture() {
   const testRoomID = 'testRoomID1';
 
   const testRequest = newCreateRoomRequest(
@@ -66,9 +109,6 @@ async function createCreateRoomTestFixture() {
     TEST_AUTH_API_KEY,
     testRoomID,
   );
-
-  const storage = await getMiniflareDurableObjectStorage(authDOID);
-  const state = new TestDurableObjectState(authDOID, storage);
 
   const roomDOcreateRoomCounts = new Map<
     string, // objectIDString
@@ -986,9 +1026,6 @@ describe("connect will implicitly create a room that doesn't exist", () => {
         mocket,
         encodedTestAuth,
       } = createConnectTestFixture({jurisdiction});
-
-      const storage = await getMiniflareDurableObjectStorage(authDOID);
-      const state = new TestDurableObjectState(authDOID, storage);
       const logSink = new TestLogSink();
       const authDO = new BaseAuthDO({
         roomDO: testRoomDO,
@@ -1031,9 +1068,6 @@ test('connect calls authHandler and sends resolved UserData in header to Room DO
     mocket,
     encodedTestAuth,
   } = createConnectTestFixture();
-
-  const storage = await getMiniflareDurableObjectStorage(authDOID);
-  const state = new TestDurableObjectState(authDOID, storage);
   const logSink = new TestLogSink();
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
@@ -1079,9 +1113,6 @@ describe('connect with undefined authHandler sends UserData with url param userI
         testAuth: tTestAuth,
         encodedTestAuth: tEncodedTestAuth,
       });
-
-      const storage = await getMiniflareDurableObjectStorage(authDOID);
-      const state = new TestDurableObjectState(authDOID, storage);
       const logSink = new TestLogSink();
       const authDO = new BaseAuthDO({
         roomDO: testRoomDO,
@@ -1117,9 +1148,6 @@ test('connect wont connect to a room that is closed', async () => {
   jest.useRealTimers();
   const {testUserID, testRoomID, testRequest, testRoomDO} =
     createConnectTestFixture();
-
-  const storage = await getMiniflareDurableObjectStorage(authDOID);
-  const state = new TestDurableObjectState(authDOID, storage);
   const logSink = new TestLogSink();
   const [, serverWS] = mockWebSocketPair();
   const authDO = new BaseAuthDO({
@@ -1165,8 +1193,6 @@ test('connect percent escapes components of the connection key', async () => {
     testClientID: '/testClientID/&',
   });
 
-  const storage = await getMiniflareDurableObjectStorage(authDOID);
-  const state = new TestDurableObjectState(authDOID, storage);
   const authDO = new BaseAuthDO({
     roomDO: testRoomDO,
     state,
@@ -1191,12 +1217,22 @@ test('connect percent escapes components of the connection key', async () => {
   expect(response.headers.get('Sec-WebSocket-Protocol')).toEqual(
     encodedTestAuth,
   );
-  expect((await storage.list({prefix: 'connection/'})).size).toEqual(1);
-  const connectionRecord = (await storage.get(
-    'connection/%2FtestUserID%2F%3F/testRoomID/%2FtestClientID%2F/',
-  )) as ConnectionRecord;
-  expect(connectionRecord).toBeDefined();
-  expect(connectionRecord.connectTimestamp).toEqual(testTime);
+  expect(await storage.list({prefix: 'connection/'})).toEqual(
+    new Map([
+      [
+        'connection/%2FtestUserID%2F%3F/testRoomID/%2FtestClientID%2F/',
+        {connectTimestamp: testTime},
+      ],
+    ]),
+  );
+  expect(await storage.list({prefix: 'connections_by_room/'})).toEqual(
+    new Map([
+      [
+        'connections_by_room/testRoomID/connection/%2FtestUserID%2F%3F/testRoomID/%2FtestClientID%2F/',
+        {},
+      ],
+    ]),
+  );
 });
 
 describe('connect pipes 401 over ws without calling Room DO if', () => {
@@ -1218,9 +1254,10 @@ describe('connect pipes 401 over ws without calling Room DO if', () => {
         },
       );
       const [clientWS, serverWS] = mockWebSocketPair();
+
       const authDO = new BaseAuthDO({
         roomDO: createRoomDOThatThrowsIfFetchIsCalled(),
-        state: {id: authDOID} as DurableObjectState,
+        state,
         authHandler,
         authApiKey: TEST_AUTH_API_KEY,
         logSink: new TestLogSink(),
@@ -1293,9 +1330,10 @@ describe('connect sends InvalidConnectionRequest over ws without calling Room DO
           headers,
         },
       );
+
       const authDO = new BaseAuthDO({
         roomDO: createRoomDOThatThrowsIfFetchIsCalled(),
-        state: {id: authDOID} as DurableObjectState,
+        state,
         // eslint-disable-next-line require-await
         authHandler: () =>
           Promise.reject(new Error('Unexpected call to authHandler')),
@@ -1347,9 +1385,10 @@ test('connect sends over InvalidConnectionRequest over ws without calling Room D
     },
   );
   const [clientWS, serverWS] = mockWebSocketPair();
+
   const authDO = new BaseAuthDO({
     roomDO: createRoomDOThatThrowsIfFetchIsCalled(),
-    state: {id: authDOID} as DurableObjectState,
+    state,
     // eslint-disable-next-line require-await
     authHandler: async (auth, roomID) => {
       expect(auth).toEqual(testAuth);
@@ -1397,9 +1436,10 @@ describe('connect sends VersionNotSupported error over ws if path is for unsuppo
         },
       );
       const [clientWS, serverWS] = mockWebSocketPair();
+
       const authDO = new BaseAuthDO({
         roomDO: createRoomDOThatThrowsIfFetchIsCalled(),
-        state: {id: authDOID} as DurableObjectState,
+        state,
         // eslint-disable-next-line require-await
         authHandler: () =>
           Promise.reject(new Error('Unexpected call to authHandler')),
@@ -1443,23 +1483,7 @@ test('authInvalidateForUser when requests to roomDOs are successful', async () =
     },
   );
 
-  const storage = await getMiniflareDurableObjectStorage(authDOID);
-  const state = new TestDurableObjectState(authDOID, storage);
-  await storage.put('connection/testUserID1/testRoomID1/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID1/testRoomID1/testClientID2/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID1/testRoomID2/testClientID3/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID2/testRoomID1/testClientID4/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID2/testRoomID3/testClientID5/', {
-    connectTimestamp: 1000,
-  });
+  await storeTestConnectionState();
   const roomDORequestCountsByRoomID = new Map();
   const testRoomDO: DurableObjectNamespace = {
     ...createTestDurableObjectNamespace(),
@@ -1520,29 +1544,22 @@ test('authInvalidateForUser when connection ids have chars that need to be perce
     },
   );
 
-  const storage = await getMiniflareDurableObjectStorage(authDOID);
-  const state = new TestDurableObjectState(authDOID, storage);
-  await storage.put(
-    'connection/%2FtestUserID%2F%3F/testRoomID1/%2FtestClientID%2F/',
-    {
-      connectTimestamp: 1000,
-    },
+  await recordConnectionHelper(
+    '/testUserID/?',
+    'testRoomID1',
+    '/testClientID1/&',
   );
-  await storage.put(
-    'connection/%2FtestUserID%2F%3F/testRoomID1/%2FtestClientID2%2F/',
-    {
-      connectTimestamp: 1000,
-    },
+  await recordConnectionHelper(
+    '/testUserID/?',
+    'testRoomID1',
+    '/testClientID2/&',
   );
-  await storage.put(
-    'connection/%2FtestUserID%2F%3F/testRoomID2/%2FtestClientID%2F/',
-    {
-      connectTimestamp: 1000,
-    },
+  await recordConnectionHelper(
+    '/testUserID/?',
+    'testRoomID2',
+    '/testClientID3/&',
   );
-  await storage.put('connection/testUserID2/testRoomID1/testClientID1/', {
-    connectTimestamp: 1000,
-  });
+  await recordConnectionHelper('testUserID2', 'testRoomID1', 'testClientID1');
 
   const roomDORequestCountsByRoomID = new Map();
   const testRoomDO: DurableObjectNamespace = {
@@ -1600,20 +1617,8 @@ test('authInvalidateForUser when any request to roomDOs returns error response',
     },
   );
 
-  const storage = await getMiniflareDurableObjectStorage(authDOID);
-  const state = new TestDurableObjectState(authDOID, storage);
-  await storage.put('connection/testUserID1/testRoomID1/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID1/testRoomID2/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID1/testRoomID3/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID2/testRoomID1/testClientID1/', {
-    connectTimestamp: 1000,
-  });
+  await storeTestConnectionState();
+  await recordConnectionHelper('testUserID1', 'testRoomID3', 'testClientID6');
 
   const roomDORequestCountsByRoomID = new Map();
   const testRoomDO: DurableObjectNamespace = {
@@ -1681,9 +1686,6 @@ test('authInvalidateForRoom when request to roomDO is successful', async () => {
     },
   );
 
-  const storage = await getMiniflareDurableObjectStorage(authDOID);
-  const state = new TestDurableObjectState(authDOID, storage);
-
   let roomDORequestCount = 0;
   let gotObjectId: DurableObjectId | undefined;
   const testRoomDO: DurableObjectNamespace = {
@@ -1750,12 +1752,23 @@ async function connectAndTestThatRoomGotCreated(
     )) as Record<string, unknown> | undefined;
     assert(connectionRecord);
     expect(connectionRecord.connectTimestamp).toEqual(testTime);
+    expect(await storage.list({prefix: 'connections_by_room/'})).toEqual(
+      new Map([
+        [
+          `connections_by_room/testRoomID1/connection/${testUserID}/testRoomID1/testClientID1/`,
+          {},
+        ],
+      ]),
+    );
   } else {
     expect((await storage.list({prefix: 'connection/'})).size).toEqual(0);
     const connectionRecord = await storage.get(
       `connection/${testUserID}/testRoomID1/testClientID1/`,
     );
     expect(connectionRecord).toBeUndefined();
+    expect((await storage.list({prefix: 'connections_by_room/'})).size).toEqual(
+      0,
+    );
   }
 }
 
@@ -1781,9 +1794,6 @@ test('authInvalidateForRoom when request to roomDO returns error response', asyn
       }),
     },
   );
-
-  const storage = await getMiniflareDurableObjectStorage(authDOID);
-  const state = new TestDurableObjectState(authDOID, storage);
 
   let roomDORequestCount = 0;
   let gotObjectId: DurableObjectId | undefined;
@@ -1841,29 +1851,7 @@ test('authInvalidateAll when requests to roomDOs are successful', async () => {
     },
   );
 
-  const storage = await getMiniflareDurableObjectStorage(authDOID);
-  const state = new TestDurableObjectState(authDOID, storage);
-  await storage.put('connection/testUserID1/testRoomID1/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID1/testRoomID1/testClientID2/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID1/testRoomID2/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID2/testRoomID1/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID2/testRoomID3/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put(
-    'connection/%2FtestUserID%2F%3F/testRoomID/%2FtestClientID%2F/',
-    {
-      connectTimestamp: 1000,
-    },
-  );
+  await storeTestConnectionState();
 
   const roomDORequestCountsByRoomID = new Map();
   const testRoomDO: DurableObjectNamespace = {
@@ -1897,16 +1885,14 @@ test('authInvalidateAll when requests to roomDOs are successful', async () => {
   await createRoom(authDO, 'testRoomID1');
   await createRoom(authDO, 'testRoomID2');
   await createRoom(authDO, 'testRoomID3');
-  await createRoom(authDO, 'testRoomID');
 
   const response = await authDO.fetch(testRequest);
   expect(response.status).toEqual(200);
 
-  expect(roomDORequestCountsByRoomID.size).toEqual(4);
+  expect(roomDORequestCountsByRoomID.size).toEqual(3);
   expect(roomDORequestCountsByRoomID.get('testRoomID1')).toEqual(1);
   expect(roomDORequestCountsByRoomID.get('testRoomID2')).toEqual(1);
   expect(roomDORequestCountsByRoomID.get('testRoomID3')).toEqual(1);
-  expect(roomDORequestCountsByRoomID.get('testRoomID')).toEqual(1);
 });
 
 async function expectForwardedAuthInvalidateRequest(
@@ -1934,29 +1920,7 @@ test('authInvalidateAll when any request to roomDOs returns error response', asy
     },
   );
 
-  const storage = await getMiniflareDurableObjectStorage(authDOID);
-  const state = new TestDurableObjectState(authDOID, storage);
-  await storage.put('connection/testUserID1/testRoomID1/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID1/testRoomID1/testClientID2/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID1/testRoomID2/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID2/testRoomID1/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID2/testRoomID3/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put(
-    'connection/%2FtestUserID%2F%3F/testRoomID/%2FtestClientID%2F/',
-    {
-      connectTimestamp: 1000,
-    },
-  );
+  await storeTestConnectionState();
 
   const roomDORequestCountsByRoomID = new Map();
   const testRoomDO: DurableObjectNamespace = {
@@ -1995,22 +1959,22 @@ test('authInvalidateAll when any request to roomDOs returns error response', asy
   await createRoom(authDO, 'testRoomID1');
   await createRoom(authDO, 'testRoomID2');
   await createRoom(authDO, 'testRoomID3');
-  await createRoom(authDO, 'testRoomID');
 
   const response = await authDO.fetch(testRequest);
   expect(response.status).toEqual(500);
 
-  expect(roomDORequestCountsByRoomID.size).toEqual(4);
+  expect(roomDORequestCountsByRoomID.size).toEqual(3);
   expect(roomDORequestCountsByRoomID.get('testRoomID1')).toEqual(1);
   expect(roomDORequestCountsByRoomID.get('testRoomID2')).toEqual(1);
   expect(roomDORequestCountsByRoomID.get('testRoomID3')).toEqual(1);
-  expect(roomDORequestCountsByRoomID.get('testRoomID')).toEqual(1);
   expect(await response.text()).toEqual(
     'Test authInvalidateAll Internal Server Error Msg',
   );
 });
 
-async function createRevalidateConnectionsTestFixture() {
+async function createRevalidateConnectionsTestFixture({
+  roomDOIDWithErrorResponse,
+}: {roomDOIDWithErrorResponse?: string} = {}) {
   const testRequest = new Request(
     `https://test.roci.dev/api/auth/v0/revalidateConnections`,
     {
@@ -2018,27 +1982,7 @@ async function createRevalidateConnectionsTestFixture() {
       method: 'post',
     },
   );
-
-  const storage = await getMiniflareDurableObjectStorage(authDOID);
-  const state = new TestDurableObjectState(authDOID, storage);
-  await storage.put('connection/testUserID1/testRoomID1/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID1/testRoomID1/testClientID2/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID2/testRoomID1/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID1/testRoomID2/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID2/testRoomID3/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID3/testRoomID3/testClientID1/', {
-    connectTimestamp: 1000,
-  });
+  await storeTestConnectionState();
 
   const roomDORequestCountsByRoomID = new Map();
   const testRoomDO: DurableObjectNamespace = {
@@ -2057,18 +2001,26 @@ async function createRevalidateConnectionsTestFixture() {
           expect(request.url).toEqual(
             'https://unused-reflect-room-do.dev/api/auth/v0/connections',
           );
+          if (roomDOIDWithErrorResponse === roomID) {
+            return new Response(
+              'Test revalidateConnections Internal Server Error Msg',
+              {
+                status: 500,
+              },
+            );
+          }
           switch (roomID) {
             case 'testRoomID1':
               return new Response(
                 JSON.stringify([
                   {userID: 'testUserID1', clientID: 'testClientID1'},
-                  {userID: 'testUserID2', clientID: 'testClientID1'},
+                  {userID: 'testUserID2', clientID: 'testClientID4'},
                 ]),
               );
             case 'testRoomID2':
               return new Response(
                 JSON.stringify([
-                  {userID: 'testUserID1', clientID: 'testClientID1'},
+                  {userID: 'testUserID1', clientID: 'testClientID3'},
                 ]),
               );
             case 'testRoomID3':
@@ -2108,8 +2060,15 @@ test('revalidateConnections', async () => {
 
   expect([...(await storage.list({prefix: 'connection/'})).keys()]).toEqual([
     'connection/testUserID1/testRoomID1/testClientID1/',
-    'connection/testUserID1/testRoomID2/testClientID1/',
-    'connection/testUserID2/testRoomID1/testClientID1/',
+    'connection/testUserID1/testRoomID2/testClientID3/',
+    'connection/testUserID2/testRoomID1/testClientID4/',
+  ]);
+  expect([
+    ...(await storage.list({prefix: 'connections_by_room/'})).keys(),
+  ]).toEqual([
+    'connections_by_room/testRoomID1/connection/testUserID1/testRoomID1/testClientID1/',
+    'connections_by_room/testRoomID1/connection/testUserID2/testRoomID1/testClientID4/',
+    'connections_by_room/testRoomID2/connection/testUserID1/testRoomID2/testClientID3/',
   ]);
 });
 
@@ -2130,94 +2089,24 @@ test('revalidateConnections continues if one storage delete throws an error', as
   expect([...(await storage.list({prefix: 'connection/'})).keys()]).toEqual([
     'connection/testUserID1/testRoomID1/testClientID1/',
     'connection/testUserID1/testRoomID1/testClientID2/',
-    'connection/testUserID1/testRoomID2/testClientID1/',
-    'connection/testUserID2/testRoomID1/testClientID1/',
+    'connection/testUserID1/testRoomID2/testClientID3/',
+    'connection/testUserID2/testRoomID1/testClientID4/',
+  ]);
+  expect([
+    ...(await storage.list({prefix: 'connections_by_room/'})).keys(),
+  ]).toEqual([
+    'connections_by_room/testRoomID1/connection/testUserID1/testRoomID1/testClientID1/',
+    'connections_by_room/testRoomID1/connection/testUserID1/testRoomID1/testClientID2/',
+    'connections_by_room/testRoomID1/connection/testUserID2/testRoomID1/testClientID4/',
+    'connections_by_room/testRoomID2/connection/testUserID1/testRoomID2/testClientID3/',
   ]);
 });
 
 test('revalidateConnections continues if one roomDO returns an error', async () => {
-  const testRequest = new Request(
-    `https://test.roci.dev/api/auth/v0/revalidateConnections`,
-    {
-      headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
-      method: 'post',
-    },
-  );
-
-  const storage = await getMiniflareDurableObjectStorage(authDOID);
-  const state = new TestDurableObjectState(authDOID, storage);
-  await storage.put('connection/testUserID1/testRoomID1/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID1/testRoomID1/testClientID2/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID2/testRoomID1/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID1/testRoomID2/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID2/testRoomID3/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-  await storage.put('connection/testUserID3/testRoomID3/testClientID1/', {
-    connectTimestamp: 1000,
-  });
-
-  const roomDORequestCountsByRoomID = new Map();
-  const testRoomDO: DurableObjectNamespace = {
-    ...createTestDurableObjectNamespace(),
-    get: (id: DurableObjectId) =>
-      new TestDurableObjectStub(id, async (request: Request) => {
-        if (isAuthRequest(request)) {
-          const {roomID} = (await getRoomRecordByObjectID(
-            storage,
-            id,
-          )) as RoomRecord;
-          roomDORequestCountsByRoomID.set(
-            roomID,
-            (roomDORequestCountsByRoomID.get(roomID) || 0) + 1,
-          );
-          expect(request.url).toEqual(
-            'https://unused-reflect-room-do.dev/api/auth/v0/connections',
-          );
-          switch (roomID) {
-            case 'testRoomID1':
-              return new Response(
-                'Test revalidateConnections Internal Server Error Msg',
-                {
-                  status: 500,
-                },
-              );
-            case 'testRoomID2':
-              return new Response(
-                JSON.stringify([
-                  {userID: 'testUserID1', clientID: 'testClientID1'},
-                ]),
-              );
-            case 'testRoomID3':
-              return new Response(JSON.stringify([]));
-            default:
-              throw new Error(`Unexpected roomID ${roomID}`);
-          }
-        }
-        return new Response('ok', {status: 200});
-      }),
-  };
-
-  const authDO = new BaseAuthDO({
-    roomDO: testRoomDO,
-    state,
-    authHandler: () =>
-      Promise.reject(new Error('Unexpected call to authHandler')),
-    authApiKey: TEST_AUTH_API_KEY,
-    logSink: new TestLogSink(),
-    logLevel: 'debug',
-  });
-  await createRoom(authDO, 'testRoomID1');
-  await createRoom(authDO, 'testRoomID2');
-  await createRoom(authDO, 'testRoomID3');
+  const {authDO, testRequest, roomDORequestCountsByRoomID, storage} =
+    await createRevalidateConnectionsTestFixture({
+      roomDOIDWithErrorResponse: 'testRoomID1',
+    });
 
   const response = await authDO.fetch(testRequest);
   expect(response.status).toEqual(200);
@@ -2228,7 +2117,135 @@ test('revalidateConnections continues if one roomDO returns an error', async () 
   expect([...(await storage.list({prefix: 'connection/'})).keys()]).toEqual([
     'connection/testUserID1/testRoomID1/testClientID1/',
     'connection/testUserID1/testRoomID1/testClientID2/',
-    'connection/testUserID1/testRoomID2/testClientID1/',
-    'connection/testUserID2/testRoomID1/testClientID1/',
+    'connection/testUserID1/testRoomID2/testClientID3/',
+    'connection/testUserID2/testRoomID1/testClientID4/',
   ]);
+  expect([
+    ...(await storage.list({prefix: 'connections_by_room/'})).keys(),
+  ]).toEqual([
+    'connections_by_room/testRoomID1/connection/testUserID1/testRoomID1/testClientID1/',
+    'connections_by_room/testRoomID1/connection/testUserID1/testRoomID1/testClientID2/',
+    'connections_by_room/testRoomID1/connection/testUserID2/testRoomID1/testClientID4/',
+    'connections_by_room/testRoomID2/connection/testUserID1/testRoomID2/testClientID3/',
+  ]);
+});
+
+test('test migration from schema 0 to schema 1, basic', async () => {
+  const {testRequest, testRoomDO, state} = await createCreateRoomTestFixture();
+
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: () => Promise.reject('should not be called'),
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: 'debug',
+  });
+  await storage.deleteAll();
+
+  await storage.put('connection/testUserID1/testRoomID1/testClientID1/', {
+    connectTimestamp: 1000,
+  });
+  await storage.put('connection/testUserID1/testRoomID1/testClientID2/', {
+    connectTimestamp: 1000,
+  });
+  await storage.put('connection/testUserID2/testRoomID1/testClientID3/', {
+    connectTimestamp: 1000,
+  });
+  await storage.put('connection/testUserID1/testRoomID2/testClientID4/', {
+    connectTimestamp: 1000,
+  });
+  await storage.put('connection/testUserID2/testRoomID3/testClientID5/', {
+    connectTimestamp: 1000,
+  });
+  await storage.put(
+    'connection/%2FtestUserID%2F%3F/%2FtestRoomID%2F%3F/%2FtestClientID%2F/',
+    {
+      connectTimestamp: 1000,
+    },
+  );
+
+  expect(await storage.get(AUTH_DO_STORAGE_SCHEMA_VERSION_KEY)).toEqual(
+    undefined,
+  );
+  expect([
+    ...(await storage.list({prefix: 'connections_by_room/'})).keys(),
+  ]).toEqual([]);
+
+  // Create the room for the first time.
+  await authDO.fetch(testRequest);
+
+  expect(await storage.get(AUTH_DO_STORAGE_SCHEMA_VERSION_KEY)).toEqual(1);
+
+  expect([...(await storage.list({prefix: 'connection/'})).keys()]).toEqual([
+    'connection/%2FtestUserID%2F%3F/%2FtestRoomID%2F%3F/%2FtestClientID%2F/',
+    'connection/testUserID1/testRoomID1/testClientID1/',
+    'connection/testUserID1/testRoomID1/testClientID2/',
+    'connection/testUserID1/testRoomID2/testClientID4/',
+    'connection/testUserID2/testRoomID1/testClientID3/',
+    'connection/testUserID2/testRoomID3/testClientID5/',
+  ]);
+  expect([
+    ...(await storage.list({prefix: 'connections_by_room/'})).keys(),
+  ]).toEqual([
+    'connections_by_room/%2FtestRoomID%2F%3F/connection/%2FtestUserID%2F%3F/%2FtestRoomID%2F%3F/%2FtestClientID%2F/',
+    'connections_by_room/testRoomID1/connection/testUserID1/testRoomID1/testClientID1/',
+    'connections_by_room/testRoomID1/connection/testUserID1/testRoomID1/testClientID2/',
+    'connections_by_room/testRoomID1/connection/testUserID2/testRoomID1/testClientID3/',
+    'connections_by_room/testRoomID2/connection/testUserID1/testRoomID2/testClientID4/',
+    'connections_by_room/testRoomID3/connection/testUserID2/testRoomID3/testClientID5/',
+  ]);
+});
+
+// 3333 is chosen because it is >3 x the limit used to page through the
+// connections and is not a multiple of the limit
+test('test migration from schema 0 to schema 1, 3333 connections', async () => {
+  const {testRequest, testRoomDO, state} = await createCreateRoomTestFixture();
+
+  const authDO = new BaseAuthDO({
+    roomDO: testRoomDO,
+    state,
+    authHandler: () => Promise.reject('should not be called'),
+    authApiKey: TEST_AUTH_API_KEY,
+    logSink: new TestLogSink(),
+    logLevel: 'debug',
+  });
+  await storage.deleteAll();
+
+  const expectedConnectionKeys = [];
+  const expectedConnectionRoomIndexKeys = [];
+  for (let i = 0; i < 3333; i++) {
+    const connectionKeyString = `connection/testUserID${i % 10}/testRoomID${
+      i % 10
+    }/testClientID${i}/`;
+    await storage.put(connectionKeyString, {
+      connectTimestamp: 1000,
+    });
+    expectedConnectionKeys.push(connectionKeyString);
+    expectedConnectionRoomIndexKeys.push(
+      `connections_by_room/testRoomID${i % 10}/connection/testUserID${
+        i % 10
+      }/testRoomID${i % 10}/testClientID${i}/`,
+    );
+  }
+  expectedConnectionKeys.sort();
+  expectedConnectionRoomIndexKeys.sort();
+  expect(await storage.get(AUTH_DO_STORAGE_SCHEMA_VERSION_KEY)).toEqual(
+    undefined,
+  );
+  expect([
+    ...(await storage.list({prefix: 'connections_by_room/'})).keys(),
+  ]).toEqual([]);
+
+  // Create the room for the first time.
+  await authDO.fetch(testRequest);
+
+  expect(await storage.get(AUTH_DO_STORAGE_SCHEMA_VERSION_KEY)).toEqual(1);
+
+  expect([...(await storage.list({prefix: 'connection/'})).keys()]).toEqual(
+    expectedConnectionKeys,
+  );
+  expect([
+    ...(await storage.list({prefix: 'connections_by_room/'})).keys(),
+  ]).toEqual(expectedConnectionRoomIndexKeys);
 });
