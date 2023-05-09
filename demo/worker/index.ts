@@ -29,6 +29,7 @@ function getMetricsSink(env: ReflectNetServerEnv) {
 }
 
 function getLogSinks(env: ReflectNetServerEnv) {
+  console.log('env.DATADOG_LOGS_API_KEY', env.DATADOG_LOGS_API_KEY);
   if (env.DATADOG_LOGS_API_KEY === undefined) {
     console.warn(
       'Not enabling datadog logging because env.DATADOG_LOGS_API_KEY is undefined',
