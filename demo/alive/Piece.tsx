@@ -4,6 +4,7 @@ import React, {PointerEventHandler} from 'react';
 import type {PieceInfo} from './piece-info';
 import type {ClientModel} from './client-model';
 import {center} from './util';
+import {event} from "nextjs-google-analytics";
 
 export function Piece({
   piece,
@@ -27,11 +28,21 @@ export function Piece({
   const handlePointerDown = (e: React.PointerEvent) => {
     e.stopPropagation();
     onPointerDown(e);
+    event("alive_move_piece", {
+      category: "Alive Demo",
+      action: "Move puzzle piece",
+      label: "Demo",
+    });
   };
 
   const handleRotationStart = (e: React.PointerEvent) => {
     e.stopPropagation();
     onRotationStart(e);
+    event("alive_rotate_piece", {
+      category: "Alive Demo",
+      action: "Rotate puzzle piece",
+      label: "Demo",
+    });
   };
 
   const active = Boolean(selectorID);

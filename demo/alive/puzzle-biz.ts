@@ -3,6 +3,7 @@ import type {M} from '../shared/mutators';
 import {PieceDefinition, PIECE_DEFINITIONS} from './piece-definitions';
 import type {PieceInfo} from './piece-info';
 import type {PieceModel} from './piece-model';
+import {event} from "nextjs-google-analytics";
 import {
   coordinateToPosition,
   distance,
@@ -45,6 +46,11 @@ export const handleDrag = (
 
   if (checkSnap(piece, def, pos, r, home, stage)) {
     r.mutate.updateClient({id: clientID, selectedPieceID: ''});
+    event("alive_snap_piece", {
+      category: "Alive Demo",
+      action: "Snap puzzle piece",
+      label: "Demo",
+    });
     return true;
   }
   return false;
