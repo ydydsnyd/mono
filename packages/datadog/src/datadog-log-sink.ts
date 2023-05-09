@@ -88,7 +88,7 @@ export class DatadogLogSink implements LogSink {
           method: 'POST',
           body,
           keepalive: true,
-        } as RequestInit);
+        });
 
         ok = response.ok;
       } catch {
