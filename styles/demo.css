@@ -339,15 +339,12 @@ body.grabbing {
   transform: translate3d(0, 0, 0);
 }
 
-.rotation-handle.touch-active > div {
-  pointer-events: all;
-}
-
 .rotation-handle.active > div {
   /* 44 because it looks nice */
   /* x axis because it corresponds to zero radians so that when we rotate by radians we get the right position */
   transform: translate3d(44px, 0, 0);
   transition: transform 200ms cubic-bezier(0.46, 0.11, 0.065, 1.65);
+  pointer-events: all;
 }
 
 .rotation-handle > div > div {
@@ -399,6 +396,7 @@ body.grabbing {
   padding: 0;
   height: 100vh;
   height: calc(var(--vh, 1vh) * 100);
+  user-select: none;
 }
 
 #intro.gameMode #title-container {

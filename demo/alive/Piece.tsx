@@ -4,7 +4,6 @@ import React, {PointerEventHandler} from 'react';
 import type {PieceInfo} from './piece-info';
 import type {ClientModel} from './client-model';
 import {center} from './util';
-import useRenderTimeout from '@/hooks/use-timeout';
 
 export function Piece({
   piece,
@@ -13,7 +12,6 @@ export function Piece({
   myClient,
   onPointerDown,
   onPointerOver,
-  onPointerOut,
   onRotationStart,
 }: {
   piece: PieceInfo;
@@ -22,7 +20,6 @@ export function Piece({
   myClient: ClientModel;
   onPointerDown: PointerEventHandler;
   onPointerOver: PointerEventHandler;
-  onPointerOut: PointerEventHandler;
   onRotationStart: (e: React.PointerEvent) => void;
 }) {
   const def = PIECE_DEFINITIONS[parseInt(piece.id)];
@@ -51,9 +48,6 @@ export function Piece({
     x: c.x - handleSize / 2,
     y: c.y - handleSize / 2,
   };
-
-  const [isHandleMouseActive, setIsHandleMouseActive] = React.useState(false);
-  useRenderTimeout(() => setIsHandleMouseActive(true), animate ? 200 : null);
 
   const adjustTranslate = (pos: number, originalExtent: number) => {
     const scaledExtent = originalExtent * sizeScale;
@@ -91,7 +85,6 @@ export function Piece({
         data-pieceid={piece.id}
         onPointerDown={e => handlePointerDown(e)}
         onPointerOver={e => onlyOnMouseDevices(e, onPointerOver)}
-        onPointerOut={e => onlyOnMouseDevices(e, onPointerOut)}
       >
         {
           // TODO: We shouldn't really duplicate the id "shape" here but the CSS already had it that way.
@@ -108,8 +101,7 @@ export function Piece({
           active,
           // TODO: would also be nice to animate out, but that's a bit more complicated and this look good enough.
           animate,
-          'placed': piece.placed,
-          'touch-active': isHandleMouseActive,
+          placed: piece.placed,
         })}
         style={{
           transform: `translate3d(${adjustTranslate(
@@ -122,7 +114,6 @@ export function Piece({
       >
         <div
           onPointerOver={e => onlyOnMouseDevices(e, onPointerOver)}
-          onPointerOut={e => onlyOnMouseDevices(e, onPointerOut)}
           onPointerDown={e => handleRotationStart(e)}
         >
           <div></div>

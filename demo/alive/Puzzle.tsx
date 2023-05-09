@@ -61,16 +61,22 @@ export function Puzzle({
     new Map<number, {pieceID: string; radOffset: number}>(),
   );
 
-  const handlePieceHover = async (model: PieceInfo) => {
+  const handlePieceHover = async (
+    model: PieceInfo,
+    event: React.PointerEvent,
+  ) => {
+    // only select if topmost piece at this position
+    if (
+      document
+        .elementFromPoint(event.clientX, event.clientY)
+        ?.getAttribute('data-pieceid') !== model.id
+    ) {
+      return;
+    }
     if (selectIfAvailable(model)) {
       setBodyClass('grab', true);
-      cancelBlur();
+      scheduleBlur();
     }
-  };
-
-  const handlePieceBlur = () => {
-    setBodyClass('grab', false);
-    scheduleBlur();
   };
 
   const [setBlurTimeout, clearBlurTimeout] = useEventTimeout();
@@ -100,7 +106,6 @@ export function Puzzle({
     if (!selectIfAvailable(model)) {
       return;
     }
-
     ref.current!.setPointerCapture(event.pointerId);
     dragging.current.set(event.pointerId, {
       pieceID: model.id,
@@ -144,11 +149,13 @@ export function Puzzle({
     const dragInfo = dragging.current.get(e.pointerId);
     if (dragInfo) {
       handleDrag(e, dragInfo);
+      scheduleBlur();
     }
 
     const rotateInfo = rotating.current.get(e.pointerId);
     if (rotateInfo) {
       handleRotate(e, rotateInfo);
+      scheduleBlur();
     }
   };
 
@@ -298,8 +305,7 @@ export function Puzzle({
             selectorID={model.selector}
             myClient={myClient}
             onPointerDown={e => handlePiecePointerDown(model, e, pos)}
-            onPointerOver={() => handlePieceHover(model)}
-            onPointerOut={() => handlePieceBlur()}
+            onPointerOver={e => handlePieceHover(model, e)}
             onRotationStart={e => handleRotateStart(model, e, pos)}
           />
         );
