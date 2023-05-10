@@ -23,6 +23,7 @@ import {useInView} from 'react-intersection-observer';
 import useIsomorphicLayoutEffect from '@/hooks/use-isomorphic-layout-effect';
 import {getLocationString, Location} from '@/util/get-location-string';
 import {hasClient} from '@/demo/alive/client-model';
+import {event} from "nextjs-google-analytics";
 
 const ORCHESTRATOR_ALIVE_INTERVAL_MS = 10_000;
 
@@ -390,7 +391,15 @@ const Demo = ({
               particleCount={100}
               duration={4000}
               colors={['#fc49ab', '#5fe8ff', '#ff9900', '#d505e8', '#1d9de5']}
-              onComplete={resetGame}
+              onComplete={() => {
+                event("alive_solve_puzzle", {
+                  category: "Alive Demo",
+                  action: "Place final piece",
+                  label: "Demo",
+                });
+                resetGame();
+              }
+              }
             />
           )}
         </div>
