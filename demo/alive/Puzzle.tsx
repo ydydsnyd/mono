@@ -61,6 +61,8 @@ export function Puzzle({
     new Map<number, {pieceID: string; radOffset: number}>(),
   );
 
+  const isMouseDown = useRef(false);
+
   const handlePieceHover = async (
     model: PieceInfo,
     event: React.PointerEvent,
@@ -83,7 +85,10 @@ export function Puzzle({
 
   const scheduleBlur = () => {
     setBlurTimeout(() => {
-      r.mutate.updateClient({id: myClient!.id, selectedPieceID: ''});
+      if (!isMouseDown.current) {
+        setBodyClass('grab', false);
+        r.mutate.updateClient({id: myClient!.id, selectedPieceID: ''});
+      }
     }, 1000);
   };
 
@@ -103,7 +108,11 @@ export function Puzzle({
     event: React.PointerEvent,
     piecePos: Position,
   ) => {
-    if (!selectIfAvailable(model)) {
+    if (selectIfAvailable(model)) {
+      isMouseDown.current = true;
+      setBodyClass('grab', true);
+      scheduleBlur();
+    } else {
       return;
     }
     ref.current!.setPointerCapture(event.pointerId);
@@ -247,6 +256,7 @@ export function Puzzle({
   const handleLostPointerCapture = (e: React.PointerEvent) => {
     dragging.current.delete(e.pointerId);
     rotating.current.delete(e.pointerId);
+    isMouseDown.current = false;
     setBodyClass('grabbing', false);
   };
 
