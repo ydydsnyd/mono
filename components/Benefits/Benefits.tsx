@@ -48,7 +48,7 @@ const Benefits = () => (
         <p className={styles.benefitDescription}>
           There&apos;s no separate, slower persistence API to juggle. Write
           changes as they happen (yes, every mouse movement) and they are stored
-          continously and automatically, up to 50MB/room.
+          continuously and automatically, up to 50MB/room.
         </p>
       </div>
     </div>

@@ -28,20 +28,20 @@ export function Piece({
   const handlePointerDown = (e: React.PointerEvent) => {
     e.stopPropagation();
     onPointerDown(e);
-    event("alive_move_piece", {
-      category: "Alive Demo",
-      action: "Move puzzle piece",
-      label: "Demo",
+    event('alive_move_piece', {
+      category: 'Alive Demo',
+      action: 'Move puzzle piece',
+      label: 'Demo',
     });
   };
 
   const handleRotationStart = (e: React.PointerEvent) => {
     e.stopPropagation();
     onRotationStart(e);
-    event("alive_rotate_piece", {
-      category: "Alive Demo",
-      action: "Rotate puzzle piece",
-      label: "Demo",
+    event('alive_rotate_piece', {
+      category: 'Alive Demo',
+      action: 'Rotate puzzle piece',
+      label: 'Demo',
     });
   };
 
