@@ -23,7 +23,7 @@ import {useInView} from 'react-intersection-observer';
 import useIsomorphicLayoutEffect from '@/hooks/use-isomorphic-layout-effect';
 import {getLocationString, Location} from '@/util/get-location-string';
 import {hasClient} from '@/demo/alive/client-model';
-import {event} from "nextjs-google-analytics";
+import {event} from 'nextjs-google-analytics';
 
 const ORCHESTRATOR_ALIVE_INTERVAL_MS = 10_000;
 
@@ -392,14 +392,13 @@ const Demo = ({
               duration={4000}
               colors={['#fc49ab', '#5fe8ff', '#ff9900', '#d505e8', '#1d9de5']}
               onComplete={() => {
-                event("alive_solve_puzzle", {
-                  category: "Alive Demo",
-                  action: "Place final piece",
-                  label: "Demo",
+                event('alive_solve_puzzle', {
+                  category: 'Alive Demo',
+                  action: 'Place final piece',
+                  label: 'Demo',
                 });
                 resetGame();
-              }
-              }
+              }}
             />
           )}
         </div>
@@ -464,10 +463,10 @@ const Demo = ({
         src="/icon-prompt-back.svg"
         onClick={() => onSetGameMode(false)}
       />
-      {r && home && stage && winSize && (
+      {r && home && stage && winSize && online && (
         <Puzzle r={r} home={home} stage={stage} setBodyClass={setBodyClass} />
       )}
-      {r && home && stage && docSize && myClientID && (
+      {r && home && stage && docSize && myClientID && online && (
         <CursorField
           home={home}
           stage={stage}
@@ -482,7 +481,7 @@ const Demo = ({
           setBodyClass={setBodyClass}
         />
       )}
-      {stage && winSize && (
+      {stage && winSize && online && (
         <TouchPrompt
           winSize={winSize}
           stage={stage}
