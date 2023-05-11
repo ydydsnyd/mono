@@ -93,6 +93,7 @@ export function Puzzle({
   };
 
   const cancelBlur = () => {
+    setBodyClass('grab', false);
     clearBlurTimeout();
   };
 
