@@ -462,7 +462,9 @@ const Demo = ({
           )}
         </div>
       </div>
-      <p className="featuredStatement">The missing piece for multiplayer.</p>
+      <p className="featuredStatement">
+        High-performance sync for multiplayer web apps
+      </p>
       <img
         id="back-button"
         src="/icon-prompt-back.svg"
