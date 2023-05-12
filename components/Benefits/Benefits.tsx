@@ -49,36 +49,29 @@ const Benefits = () => (
         <h3 className={styles.benefitTitle}>Servers: Pretty Great</h3>
         <p className={styles.benefitDescription}>
           CRDTs are designed for a world without servers. Reflect instead
-          embraces the server, enabling you to run your own server-side code for
-          validation, business logic, fine-grained authorization, background
+          embraces the server, enabling you to run your own code on the backend
+          for validation, custom business logic, authorization, background
           processing, integration with other services, and more.
         </p>
       </div>
     </div>
 
-    {/* Transactional Conflict Resolution */}
+    {/* Automatic Persistence */}
     <div className={styles.benefitBlock}>
       <div className={styles.benefitIconContainer}>
         <Image
-          src={conflictResolution}
+          src={persistence}
           loading="lazy"
-          alt="Conflict resolution"
+          alt="Persistence"
           className={styles.benefitIcon}
         />
       </div>
       <div className={styles.benefitInfoContainer}>
-        <h3 className={styles.benefitTitle}>Server Authority</h3>
+        <h3 className={styles.benefitTitle}>Automatic Persistence</h3>
         <p className={styles.benefitDescription}>
-          CRDTs converge, but to what??
-        </p>
-        <p className={styles.benefitDescription}>
-          Reflect uses a more flexible and intuitive technique based on{' '}
-          <a href="https://www.gabrielgambetta.com/client-side-prediction-server-reconciliation.html">
-            Server Reconciliation
-          </a>
-          . <strong>Your mutation code</strong> runs server-side &#8212;
-          enabling custom validation, business logic, and fine-grained
-          authorization.
+          There&apos;s no separate, slower persistence API to juggle. Write
+          changes as they happen (yes, every mouse movement) and they are stored
+          continuously and automatically, up to 50MB/room.
         </p>
       </div>
     </div>
