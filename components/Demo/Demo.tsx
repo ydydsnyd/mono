@@ -455,9 +455,7 @@ const Demo = ({
           )}
         </div>
       </div>
-      <p className="featuredStatement">
-        The missing piece for multiplayer web apps
-      </p>
+      <p className="featuredStatement">The missing piece for multiplayer.</p>
       <img
         id="back-button"
         src="/icon-prompt-back.svg"
