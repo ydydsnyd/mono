@@ -18,7 +18,9 @@ const Testimonials = () => (
         </a>
       </div>
       <div className={styles.testimonialQuote}>
-        &ldquo;Multiplayer finally made easy <b>and</b> simple.&rdquo;
+        &ldquo;The realtime http://nextjs.org/conf registration is powered by
+        Reflect … proven today to the tune of 190,000 messages per second{' '}
+        <span style={{fontStyle: 'normal'}}>🤯</span>.&rdquo;
       </div>
       <div className={styles.testimonialAuthorBlock}>
         <Image
