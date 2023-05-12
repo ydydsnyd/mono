@@ -1,29 +1,29 @@
-import styles from '@/styles/Home.module.css';
-import {Puzzle} from '@/demo/alive/Puzzle';
-import {generateRandomPieces, getStage, Rect, Size} from '@/demo/alive/util';
-import {loggingOptions} from '@/demo/frontend/logging-options';
-import {type M, mutators} from '@/demo/shared/mutators';
-import {getWorkerHost} from '@/util/worker-host';
-import {useCallback, useEffect, useState} from 'react';
-import {ExperimentalMemKVStore, Reflect} from '@rocicorp/reflect';
-import classNames from 'classnames';
+import {hasClient} from '@/demo/alive/client-model';
 import {colorToString, idToColor} from '@/demo/alive/colors';
-import {useElementSize} from '@/hooks/use-element-size';
 import {CursorField} from '@/demo/alive/CursorField';
-import {closeReflect, watch} from '@/util/reflect';
 import {
   getClientRoomAssignment,
   ORCHESTRATOR_ROOM,
 } from '@/demo/alive/orchestrator-model';
-import {useSubscribe} from 'replicache-react';
-import {TouchPrompt} from '@/demo/alive/touch-prompt';
-import ConfettiExplosion from 'react-confetti-explosion';
 import {listPieces} from '@/demo/alive/piece-model';
-import {useInView} from 'react-intersection-observer';
+import {Puzzle} from '@/demo/alive/Puzzle';
+import {TouchPrompt} from '@/demo/alive/touch-prompt';
+import {generateRandomPieces, getStage, Rect, Size} from '@/demo/alive/util';
+import {loggingOptions} from '@/demo/frontend/logging-options';
+import {mutators, type M} from '@/demo/shared/mutators';
+import {useElementSize} from '@/hooks/use-element-size';
 import useIsomorphicLayoutEffect from '@/hooks/use-isomorphic-layout-effect';
+import styles from '@/styles/Home.module.css';
 import {getLocationString, Location} from '@/util/get-location-string';
-import {hasClient} from '@/demo/alive/client-model';
+import {closeReflect, watch} from '@/util/reflect';
+import {getWorkerHost} from '@/util/worker-host';
+import {ExperimentalMemKVStore, Reflect} from '@rocicorp/reflect';
+import classNames from 'classnames';
 import {event} from 'nextjs-google-analytics';
+import {useCallback, useEffect, useState} from 'react';
+import ConfettiExplosion from 'react-confetti-explosion';
+import {useInView} from 'react-intersection-observer';
+import {useSubscribe} from 'replicache-react';
 
 const ORCHESTRATOR_ALIVE_INTERVAL_MS = 10_000;
 
@@ -180,14 +180,18 @@ function useReflect(
   return {r, online};
 }
 
-function useEnsureMyClient(r: Reflect<M> | null, tabIsVisible: boolean) {
+function useEnsureMyClient(
+  r: Reflect<M> | null,
+  tabIsVisible: boolean,
+): string | undefined {
   const cid = useSubscribe(
     r,
     async tx => {
-      const cid = await tx.clientID;
+      const cid = tx.clientID;
       if (await hasClient(tx, cid)) {
         return cid;
       }
+      return undefined;
     },
     undefined,
   );
@@ -235,7 +239,10 @@ function useEnsureMyClient(r: Reflect<M> | null, tabIsVisible: boolean) {
   return undefined;
 }
 
-function useEnsureLocation(r: Reflect<M> | null, myClientID: string | null) {
+function useEnsureLocation(
+  r: Reflect<M> | null,
+  myClientID: string | undefined,
+) {
   const [location, setLocation] = useState<Location | null>(null);
   let ignore = false;
 
@@ -251,7 +258,7 @@ function useEnsureLocation(r: Reflect<M> | null, myClientID: string | null) {
   }, [ignore]);
 
   useEffect(() => {
-    if (r === null || location === null || myClientID === null) {
+    if (r === null || location === null || myClientID === undefined) {
       return;
     }
     r.mutate.updateClient({
