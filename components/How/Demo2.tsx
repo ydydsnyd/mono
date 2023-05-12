@@ -41,8 +41,8 @@ export default function Demo2({
         </h3>
         <p className={styles.howDescription}>
           Subscribe to changes in Reflect and render your UI reactively.
-          There&apos;s no need to interpolate. You receive updates at 60fps,
-          just as if the collaborator was local.
+          There&apos;s no need to interpolate. You receive updates at up to 120
+          fps, just as if the collaborator was local.
         </p>
         <p className={styles.howTryIt}>
           <strong>Try it:</strong> Notice how even when the latency is high,

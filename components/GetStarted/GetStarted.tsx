@@ -11,8 +11,8 @@ export default function GetStarted() {
         working toward a public beta later this year.
       </p>
       <p>
-        Want to be first in line? Let us know what you&apos;re building and how
-        you&apos;d use Reflect. We&apos;ll get you access as soon as we can.
+        Want to be first to try it? Let us know what you&apos;re building and
+        how you&apos;d use Reflect. We&apos;ll get you access as soon as we can.
       </p>
       <BetaSignup />
       <p className={styles.getStartedNote}>
