@@ -35,22 +35,23 @@ const Benefits = () => (
       </div>
     </div>
 
-    {/* Automatic Persistence */}
+    {/* Servers */}
     <div className={styles.benefitBlock}>
       <div className={styles.benefitIconContainer}>
         <Image
-          src={persistence}
+          src={conflictResolution}
           loading="lazy"
-          alt="Persistence"
+          alt="Servers: Pretty Great"
           className={styles.benefitIcon}
         />
       </div>
       <div className={styles.benefitInfoContainer}>
-        <h3 className={styles.benefitTitle}>Automatic Persistence</h3>
+        <h3 className={styles.benefitTitle}>Servers: Pretty Great</h3>
         <p className={styles.benefitDescription}>
-          There&apos;s no separate, slower persistence API to juggle. Write
-          changes as they happen (yes, every mouse movement) and they are stored
-          continuously and automatically, up to 50MB/room.
+          CRDTs are designed for a world without servers. Reflect instead
+          embraces the server, enabling you to run your own server-side code for
+          validation, business logic, fine-grained authorization, background
+          processing, integration with other services, and more.
         </p>
       </div>
     </div>
