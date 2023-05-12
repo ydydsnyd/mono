@@ -8,7 +8,7 @@ body.grabbing {
   cursor: grabbing;
 }
 
-#intro * {
+#intro > * {
   user-select: none;
 }
 
@@ -250,7 +250,6 @@ body.grabbing {
 .piece.placed {
   z-index: 1;
 }
-
 
 .piece.A #shape {
   fill: rgba(252, 73, 171, 0.5);
