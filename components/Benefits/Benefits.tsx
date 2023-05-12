@@ -12,23 +12,25 @@ import tools from '@/public/benefits/tools.svg';
 
 const Benefits = () => (
   <div className={styles.benefitsGrid}>
-    {/* 60 Updates per Second */}
+    {/* 120 FPS */}
     <div className={styles.benefitBlock}>
       <div className={styles.benefitIconContainer}>
         <Image
           src={realtimeCollab}
           loading="lazy"
-          alt="60 FPS cursor"
+          alt="120 FPS cursor"
           className={styles.benefitIcon}
         />
       </div>
       <div className={styles.benefitInfoContainer}>
-        <h3 className={styles.benefitTitle}>Perfectly Smooth Motion</h3>
+        <h3 className={styles.benefitTitle}>
+          Absurdly Smooth Motion – Automatically
+        </h3>
         <p className={styles.benefitDescription}>
-          Reflect captures and replays changes at 120&nbsp;FPS, hardware
-          permitting. And built-in batching and adaptive buffering ensure
-          buttery smooth, precision playback &#8212; across town or across the
-          globe.
+          Reflect syncs changes at 120 FPS (hardware permitting), eliminating
+          the need for difficult and complex interpolation code. Adaptive
+          buffering provides buttery smooth, precision playback &#8212; across
+          town or across the globe.
         </p>
       </div>
     </div>
