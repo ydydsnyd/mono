@@ -90,7 +90,7 @@ export function getStage(home: Rect | null) {
 
 export function generateRandomPieces(home: Rect, stage: Rect) {
   const approxPieceSize = 50;
-  const selectedPositions: Position[] = [];
+  const res: PieceModel[] = [];
 
   // This uses Mitchell's best candidate algorithm to generate the initial
   // positions for the puzzle: https://gist.github.com/mbostock/1893974.
@@ -98,11 +98,11 @@ export function generateRandomPieces(home: Rect, stage: Rect) {
   // position that's farthese from other pieces.
 
   const getCandidates = () => {
-    var res = new Array();
+    var cands = new Array<{pos: Position; minDist: number}>();
     // Most of the time put the pieces outside the letters, so you can still
     // read "alive", but it looks nicer if a few are allowed inside.
     const allowCandidateOverLetters = Math.random() < 0.15;
-    while (res.length < 10) {
+    while (cands.length < 10) {
       const pos = {
         x: randFloat(stage.left(), stage.right() - approxPieceSize),
         y: randFloat(stage.top(), stage.bottom() - approxPieceSize),
@@ -118,15 +118,15 @@ export function generateRandomPieces(home: Rect, stage: Rect) {
         }
       }
       let minDist = Infinity;
-      for (const selectedPos of selectedPositions) {
+      for (const selectedPos of res) {
         const d = distance(selectedPos, pos);
         if (d < minDist) {
           minDist = d;
         }
       }
-      res.push({pos, minDist});
+      cands.push({pos, minDist});
     }
-    return res;
+    return cands;
   };
 
   for (let i = 0; i < PIECE_DEFINITIONS.length; i++) {
@@ -137,24 +137,23 @@ export function generateRandomPieces(home: Rect, stage: Rect) {
       }
       return best;
     }, candidates[0]);
-    selectedPositions.push(farthest.pos);
-  }
-
-  const ret: PieceModel[] = [];
-  for (const [i, pos] of selectedPositions.entries()) {
-    const coord = positionToCoordinate(pos, home, stage);
+    const {pos} = farthest;
     const newPiece: PieceModel = {
       id: i.toString(),
-      ...coord,
+      ...pos,
       rotation: randFloat(0, Math.PI * 2),
       handleRotation: -Math.PI / 2, // north
       placed: false,
     };
-    ret.push(newPiece);
+    res.push(newPiece);
   }
 
-  return ret;
+  return res.map(p => ({
+    ...p,
+    ...positionToCoordinate(p, home, stage),
+  }));
 }
+
 // Our coordinate system has 2 requirements:
 // 1. We want pieces to be able to use the full horizontal width of the screen
 // on wider screens, even when that means they are far outside the home location
