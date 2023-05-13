@@ -153,7 +153,7 @@ export class Bots {
     };
     window.addEventListener('keypress', handleKeyPress);
 
-    const interval = setInterval(() => {
+    const maybeLaunchBots = () => {
       if (this._clientID && this._isBotController) {
         const currentNumBots = this._botPlaybackByClientID.size;
         if (currentNumBots < 2) {
@@ -178,7 +178,11 @@ export class Bots {
           }
         }
       }
-    }, 3_000);
+    };
+
+    // Launch them once at startup, then every 3 seconds.
+    maybeLaunchBots();
+    const interval = setInterval(maybeLaunchBots, 3_000);
 
     r.clientID.then(clientID => (this._clientID = clientID));
     const cleanupSubscribe = r.subscribe(
@@ -194,6 +198,10 @@ export class Bots {
         onData: result => {
           console.log('botController change', result);
           this._isBotController = result.isBotController;
+          if (this._isBotController) {
+            // Don't wait for 3s to expire to launch bots.
+            maybeLaunchBots();
+          }
         },
       },
     );
