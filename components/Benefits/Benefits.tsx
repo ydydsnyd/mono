@@ -52,13 +52,16 @@ const Benefits = () => (
           aren&apos;t possible.
         </p>
         <p className={styles.benefitDescription}>
-          Reflect uses a more powerful technique known as Server Reconciliation.{' '}
-          <strong>Your own mutation code</strong> runs server-side and is
-          authoritative. Clients are guaranteed to converge with server state.
+          Reflect uses a more powerful technique known as{' '}
+          <a href="https://en.wikipedia.org/wiki/Client-side_prediction">
+            Server Reconciliation
+          </a>
+          . <strong>Your mutation code runs server-side</strong> and is
+          authoritative. Clients are guaranteed to converge with server changes.
         </p>
         <p className={styles.benefitDescription}>
-          This enables mutators to implement arbitrary business logic,
-          fine-grained authorization, server-side integrations, and more.
+          Mutators can enforce arbitrary business logic, fine-grained
+          authorization, server-side integrations, and more.
         </p>
       </div>
     </div>
