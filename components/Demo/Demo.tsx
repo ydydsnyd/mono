@@ -448,18 +448,12 @@ const Demo = ({
         </svg>
       </div>
       <div id="info">
-        <div className="active-user-info">
-          <div className={classNames('online-dot', {offline: !online})}></div>
-          {online ? (
-            <>
-              Active Users:&nbsp;
-              <span id="active-user-count">
-                {clientIDs.length > 0 ? clientIDs.length : 1}
-              </span>
-            </>
-          ) : (
-            <>Offline</>
-          )}
+        <div className={classNames('active-user-info', {offline: !online})}>
+          <div className="online-dot"></div>
+          Active Users:&nbsp;
+          <span id="active-user-count">
+            {clientIDs.length > 0 ? clientIDs.length : 1}
+          </span>
         </div>
       </div>
       <p className="featuredStatement">

@@ -102,6 +102,10 @@ body.grabbing {
   display: flex;
 }
 
+.active-user-info.offline {
+  visibility: hidden;
+}
+
 #confetti-container {
   display: none;
 }
