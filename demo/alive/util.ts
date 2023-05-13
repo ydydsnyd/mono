@@ -59,7 +59,7 @@ export const randFloat = (min: number, max: number) => {
 export const randInt = (min: number, max: number) => {
   min = Math.ceil(min);
   max = Math.floor(max);
-  return Math.floor(Math.random() * (max - min) + min);
+  return Math.round(Math.random() * (max - min) + min);
 };
 
 export const randElm = <T>(arr: Readonly<T[]>) => {
@@ -147,7 +147,8 @@ export function generateRandomPieces(home: Rect, stage: Rect) {
   for (let letter of ['A', 'L', 'I', 'V', 'E']) {
     const first = PIECE_DEFINITIONS.findIndex(def => def.letter === letter);
     const pieces = PIECE_DEFINITIONS.filter(def => def.letter === letter);
-    const placedIndicies = randIndices(1, pieces.length);
+    const numPlacedPieces = randInt(1, 2);
+    const placedIndicies = randIndices(numPlacedPieces, pieces.length - 1);
     for (let idx of placedIndicies) {
       initiallyPlacedPieces.push(first + idx);
     }
