@@ -66,6 +66,20 @@ export const randElm = <T>(arr: Readonly<T[]>) => {
   return arr[randInt(0, arr.length)];
 };
 
+export const randIndices = (count: number, max: number) => {
+  const res: number[] = [];
+  while (res.length < count) {
+    for (;;) {
+      const cand = randInt(0, max);
+      if (!res.includes(cand)) {
+        res.push(cand);
+        break;
+      }
+    }
+  }
+  return res;
+};
+
 export const distance = (a: Position, b: Position): number => {
   const x = b.x - a.x;
   const y = b.y - a.y;
@@ -77,7 +91,7 @@ export function getStage(home: Rect | null) {
     return null;
   }
   const gutterBase = 32;
-  const gutterX = gutterBase * 2;
+  const gutterX = gutterBase * 3.5;
   const gutterTop = gutterBase * 2.25;
   const gutterBottom = gutterBase * 2.25;
   return new Rect(
@@ -101,8 +115,8 @@ export function generateRandomPieces(home: Rect, stage: Rect) {
     var cands = new Array<{pos: Position; minDist: number}>();
     // Most of the time put the pieces outside the letters, so you can still
     // read "alive", but it looks nicer if a few are allowed inside.
-    const allowCandidateOverLetters = Math.random() < 0.15;
-    while (cands.length < 10) {
+    const allowCandidateOverLetters = Math.random() < 0;
+    while (cands.length < 20) {
       const pos = {
         x: randFloat(stage.left(), stage.right() - approxPieceSize),
         y: randFloat(stage.top(), stage.bottom() - approxPieceSize),
@@ -129,7 +143,29 @@ export function generateRandomPieces(home: Rect, stage: Rect) {
     return cands;
   };
 
+  const initiallyPlacedPieces = new Array<number>();
+  for (let letter of ['A', 'L', 'I', 'V', 'E']) {
+    const first = PIECE_DEFINITIONS.findIndex(def => def.letter === letter);
+    const pieces = PIECE_DEFINITIONS.filter(def => def.letter === letter);
+    const placedIndicies = randIndices(1, pieces.length);
+    for (let idx of placedIndicies) {
+      initiallyPlacedPieces.push(first + idx);
+    }
+  }
+
   for (let i = 0; i < PIECE_DEFINITIONS.length; i++) {
+    const def = PIECE_DEFINITIONS[i];
+    if (initiallyPlacedPieces.includes(i)) {
+      res.push({
+        id: i.toString(),
+        ...coordinateToPosition(def, home, stage),
+        rotation: 0,
+        handleRotation: 0,
+        placed: true,
+      });
+      continue;
+    }
+
     const candidates = getCandidates();
     const farthest = candidates.reduce((best, cand) => {
       if (cand.minDist > best.minDist) {
