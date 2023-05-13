@@ -23,14 +23,12 @@ const Benefits = () => (
         />
       </div>
       <div className={styles.benefitInfoContainer}>
-        <h3 className={styles.benefitTitle}>
-          Absurdly Smooth Motion – Automatically
-        </h3>
+        <h3 className={styles.benefitTitle}>Absurdly Smooth Motion</h3>
         <p className={styles.benefitDescription}>
-          Reflect syncs changes at 120 FPS (hardware permitting), eliminating
-          the need for difficult and complex interpolation code. Adaptive
-          buffering provides buttery smooth, precision playback &#8212; across
-          town or across the globe.
+          Throw away your interpolation code. Reflect syncs changes at 120 FPS
+          (hardware permitting). Built-in batching and buffering provide buttery
+          smooth, precision playback automatically &#8212; across town or across
+          the globe.
         </p>
       </div>
     </div>
@@ -46,12 +44,21 @@ const Benefits = () => (
         />
       </div>
       <div className={styles.benefitInfoContainer}>
-        <h3 className={styles.benefitTitle}>Servers: Pretty Great</h3>
+        <h3 className={styles.benefitTitle}>
+          Transactional Conflict Resolution
+        </h3>
         <p className={styles.benefitDescription}>
-          CRDTs are designed for a world without servers. Reflect instead
-          embraces the server, enabling you to run your own code on the backend
-          for validation, custom business logic, authorization, background
-          processing, integration with other services, and more.
+          CRDTs converge, but to what?? Validation and custom business logic
+          aren&apos;t possible.
+        </p>
+        <p className={styles.benefitDescription}>
+          Reflect uses a more powerful technique known as Server Reconciliation.{' '}
+          <strong>Your own mutation code</strong> runs server-side and is
+          authoritative. Clients are guaranteed to converge with server state.
+        </p>
+        <p className={styles.benefitDescription}>
+          This enables mutators to implement arbitrary business logic,
+          fine-grained authorization, server-side integrations, and more.
         </p>
       </div>
     </div>
