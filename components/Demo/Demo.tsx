@@ -73,14 +73,8 @@ function usePuzzleRoomID() {
       aliveIfVisible();
     };
     document.addEventListener('visibilitychange', visibilityChangeListener);
-    let cleanedUp = false;
     const pageHideListener = async () => {
-      if (cleanedUp) {
-        return;
-      }
-      cleanedUp = true;
-      clearInterval(aliveInterval);
-      await orchestratorClient.mutate.unload();
+      void orchestratorClient.mutate.unload();
     };
     window.addEventListener('pagehide', pageHideListener);
 
