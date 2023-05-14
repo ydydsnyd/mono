@@ -7,10 +7,10 @@ import {colorToString, idToColor} from './colors';
 import type {PieceInfo} from './piece-info';
 import {handleDrag, selectIfAvailable} from './puzzle-biz';
 import {
-  coordinateToPosition,
   Position,
-  positionToCoordinate,
   Rect,
+  coordinateToPosition,
+  positionToCoordinate,
 } from './util';
 type BotPlayback = {
   startTime: number;
@@ -249,11 +249,11 @@ export class Bots {
       }
     }
     if (this._botPlaybackByClientID.size > 0) {
-      this._raf = requestAnimationFrame(() => this._onRaf());
+      this._raf = requestAnimationFrame(this._onRaf);
     }
   }
 
-  private _onRaf() {
+  private _onRaf = () => {
     for (const [botClientID, playback] of this._botPlaybackByClientID) {
       const now = performance.now() - playback.startTime;
       let move = undefined;
@@ -350,7 +350,7 @@ export class Bots {
       }
     }
     this._maybeRaf();
-  }
+  };
 
   async setPieces(pieces: Record<string, PieceInfo>) {
     this._pieces = pieces;
