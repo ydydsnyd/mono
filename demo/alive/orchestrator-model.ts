@@ -2,14 +2,14 @@ import {z} from 'zod';
 import {entitySchema, generate} from '@rocicorp/rails';
 import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
 
-export const ORCHESTRATOR_ROOM = 'orch';
+export const ORCHESTRATOR_ROOM = 'orch-a';
 // These values should be tweaked higher for production but our useful for testing
 const MAX_CLIENTS_PER_ROOM = 15;
 const CLIENT_ROOM_ASSIGNMENT_GC_THRESHOLD_MS = 3 * 60_000;
 const CLIENT_ROOM_ASSIGNMENT_GC_INTERVAL_MS = 10_000;
 
 const roomIndexToRoomID = (index: number) =>
-  'puzzle-' + index.toString(10).padStart(7, '0');
+  'puzzle-a-' + index.toString(10).padStart(7, '0');
 
 const roomModelSchema = entitySchema.extend({
   clientCount: z.number(),
