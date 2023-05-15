@@ -8,7 +8,7 @@ import realtimeCollab from '@/public/benefits/realtimeCollab.svg';
 import persistence from '@/public/benefits/persistence.svg';
 import conflictResolution from '@/public/benefits/conflict-resolution.svg';
 import offline from '@/public/benefits/offline.svg';
-import tools from '@/public/benefits/tools.svg';
+import onprem from '@/public/benefits/onprem.svg';
 
 const Benefits = () => (
   <div className={styles.benefitsGrid}>
@@ -110,9 +110,9 @@ const Benefits = () => (
     <div className={styles.benefitBlock}>
       <div className={styles.benefitIconContainer}>
         <Image
-          src={tools}
+          src={onprem}
           loading="lazy"
-          alt="Tools"
+          alt="On-Prem"
           className={styles.benefitIcon}
         />
       </div>
