@@ -13,7 +13,7 @@
     width: 100%;
     padding: 1rem;
     border-radius: 0.5rem;
-    border: 1px solid rgba(42, 44, 46, 0.1);
+    border: 1px solid rgba(42, 44, 46, 0.3);
     font-weight: 700;
     outline-color: #fc208a;
 }
@@ -24,7 +24,7 @@
     padding: 0.75rem 1rem;
     color: #2a2c2e;
     border-radius: 0.5rem;
-    border: 1px solid rgba(42, 44, 46, 0.1);
+    border: 1px solid rgba(42, 44, 46, 0.3);
     font-family: 'Muoto 205tf', -apple-system, BlinkMacSystemFont, Segoe UI,
     Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue,
     sans-serif;
@@ -36,7 +36,7 @@
     display: block;
     text-align: left;
     font-weight: 700;
-    font-size: 0.75rem;
+    font-size: 1rem;
     position: relative;
     margin: 0 0 1rem;
     opacity: 1;
