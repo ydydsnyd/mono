@@ -8,6 +8,8 @@ import realtimeCollab from '@/public/benefits/realtimeCollab.svg';
 import persistence from '@/public/benefits/persistence.svg';
 import conflictResolution from '@/public/benefits/conflict-resolution.svg';
 import offline from '@/public/benefits/offline.svg';
+{/* import itworks from '@/public/benefits/itworks-white.svg'; */}
+import textedit from '@/public/benefits/text-editing.svg';
 import onprem from '@/public/benefits/onprem.svg';
 
 const Benefits = () => (
@@ -62,6 +64,26 @@ const Benefits = () => (
         <p className={styles.benefitDescription}>
           Mutators can enforce arbitrary business logic, fine-grained
           authorization, server-side integrations, and more.
+        </p>
+      </div>
+    </div>
+
+    {/* First-Class Text */}
+    <div className={styles.benefitBlock}>
+      <div className={styles.benefitIconContainer}>
+        <Image
+          src={textedit}
+          loading="lazy"
+          alt="Persistence"
+          className={styles.benefitIcon}
+        />
+      </div>
+      <div className={styles.benefitInfoContainer}>
+        <h3 className={styles.benefitTitle}>First-Class Text</h3>
+        <p className={styles.benefitDescription}>
+          Your may have heard that multiplayer text is hard. No worries. Reflect
+          has built-in, high-quality text support via the industry standard yjs
+          library.
         </p>
       </div>
     </div>
@@ -129,24 +151,33 @@ const Benefits = () => (
       </div>
     </div>
 
-    {/* 
+    {/*
     <div className={styles.benefitBlockFull}>
-      <div className={styles.benefitFullIconContainer}>
+      <div className={styles.benefitIconContainer}>
         <Image
-          src={productivity}
+          src={itworks}
           loading="lazy"
-          alt="Productivity"
-          className={styles.benefitFullIcon}
+          alt="Your have better things to do"
+          className={styles.benefitIcon}
         />
       </div>
       <div className={styles.benefitInfoContainer}>
-        <h3 className={styles.benefitFullTitle}>Even More Coming Soon</h3>
+        <h3 className={styles.benefitTitle}>
+          Because You Have Better Things to Do
+        </h3>
         <p className={styles.benefitDescription}>
-          First-class history, branching, painless migrations, and more!
+          Building solid multiplayer infrastructure is a huge project with many
+          difficult tradeoffs. Migrations? Monitoring? Persistence? Scaling?
+          Blech.
+        </p>
+        <p className={styles.benefitDescription}>
+          {' '}
+          Reflect provides a multiplayer foundation that just works, so you can
+          forget about sync and focus on your product.
         </p>
       </div>
     </div>
-        */}
+    */}
   </div>
 );
 
