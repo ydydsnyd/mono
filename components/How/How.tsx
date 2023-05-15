@@ -1,19 +1,20 @@
-import React, {useState, useEffect, useMemo} from 'react';
 import {init} from '@/demo/howto-frontend';
-import {nanoid} from 'nanoid';
-import {delayWebSocket, setLatency} from './delayWebSocket';
 import {M, deregisterClientConsole} from '@/demo/shared/mutators';
-import Demo1 from './Demo1';
-import Demo2 from './Demo2';
-import {ClientIDContext} from './ClientIDContext';
-import Demo0 from './Demo0';
-import {useInView} from 'react-intersection-observer';
-import styles from './How.module.css';
-import type {Reflect} from '@rocicorp/reflect';
 import type {Latency} from '@/demo/shared/types';
 import {closeReflect} from '@/util/reflect';
 import {getWorkerHost} from '@/util/worker-host';
-import { event } from "nextjs-google-analytics";
+import type {Reflect} from '@rocicorp/reflect';
+import {nanoid} from 'nanoid';
+import Image from 'next/image.js';
+import {event} from 'nextjs-google-analytics';
+import React, {useEffect, useMemo, useState} from 'react';
+import {useInView} from 'react-intersection-observer';
+import {ClientIDContext} from './ClientIDContext';
+import Demo0 from './Demo0';
+import Demo1 from './Demo1';
+import Demo2 from './Demo2';
+import styles from './How.module.css';
+import {delayWebSocket, setLatency} from './delayWebSocket';
 
 export type DemoReflectState = {
   roomID: string;
@@ -75,21 +76,23 @@ function initDemo(
     latency2,
   });
 
-  Promise.all([r1.clientID, r2.clientID]).then(([clientID1, clientID2]) => {
-    const latencyMapping = [0, 300, 950];
-    setLatency(clientID1, latencyMapping[latency1]);
-    setLatency(clientID2, latencyMapping[latency2]);
-    setState((prev: DemoReflectState | undefined) => {
-      if (prev && prev.reflect1 === r1 && prev.reflect2 === r2) {
-        return {
-          ...prev,
-          clientID1,
-          clientID2,
-        };
-      }
-      return prev;
-    });
-  });
+  Promise.all([r1.clientID, r2.clientID])
+    .then(([clientID1, clientID2]) => {
+      const latencyMapping = [0, 300, 950];
+      setLatency(clientID1, latencyMapping[latency1]);
+      setLatency(clientID2, latencyMapping[latency2]);
+      setState((prev: DemoReflectState | undefined) => {
+        if (prev && prev.reflect1 === r1 && prev.reflect2 === r2) {
+          return {
+            ...prev,
+            clientID1,
+            clientID2,
+          };
+        }
+        return prev;
+      });
+    })
+    .catch(e => console.error(e));
 }
 
 const DemoWrapperInternal = (
@@ -97,13 +100,13 @@ const DemoWrapperInternal = (
   state: DemoReflectState | undefined,
   setState: React.Dispatch<React.SetStateAction<DemoReflectState | undefined>>,
   prepend: string,
-  intialized: boolean,
+  initialized: boolean,
 ) => {
   useEffect(() => {
-    if (intialized) {
+    if (initialized) {
       initDemo(state, setState, prepend);
     }
-  }, [state?.latency1 ?? 0, state?.latency2 ?? 0, intialized]);
+  }, [initialized, prepend, setState, state]);
 
   return (
     <ClientIDContext.Provider
@@ -118,10 +121,10 @@ const DemoWrapperInternal = (
         reflectServer={state?.reflectServer}
         reset={() => {
           initDemo(state, setState, prepend);
-          event("demo_reset", {
-            category: "How it Works",
-            action: "Press reset demo button",
-            label: "demos",
+          event('demo_reset', {
+            category: 'How it Works',
+            action: 'Press reset demo button',
+            label: 'demos',
           });
         }}
         key={state?.roomID}
@@ -188,9 +191,16 @@ export default function How() {
     };
 
     return () => {
-      cleanup();
+      cleanup().catch(e => console.error(e));
     };
-  }, []);
+  }, [
+    iReflectState?.reflect1,
+    iReflectState?.reflect2,
+    iReflectState?.reflectServer,
+    rReflectState?.reflect1,
+    rReflectState?.reflect2,
+    rReflectState?.reflectServer,
+  ]);
 
   const DemoWrapper = useMemo(() => {
     return DemoWrapperInternal;
@@ -227,7 +237,11 @@ export default function How() {
           technology and scale horizontally by room.
         </p>
         <div className={styles.deployTerminal}>
-          <img className={styles.menuControls} src="/img/menu-controls.svg" />
+          <Image
+            alt="menu"
+            className={styles.menuControls}
+            src="/img/menu-controls.svg"
+          />
           <h4 className={styles.terminalHeader}>Shell</h4>
           <p className={styles.terminalLine}>
             <span className={styles.prompt}>&gt;</span>

@@ -1,5 +1,6 @@
-import styles from './Footer.module.css';
+import Image from 'next/image.js';
 import Link from 'next/link';
+import styles from './Footer.module.css';
 
 const todaysDate = new Date();
 const currentYear = todaysDate.getFullYear();
@@ -7,7 +8,7 @@ const currentYear = todaysDate.getFullYear();
 const Footer = () => (
   <footer id="about" className={styles.footer}>
     <a href="https://rocicorp.dev/" className={styles.footerLink}>
-      <img
+      <Image
         src="/rocicorp-lockup.svg"
         alt="Rocicorp logo"
         className={styles.footerLogo}

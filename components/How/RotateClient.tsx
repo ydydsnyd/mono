@@ -1,14 +1,14 @@
-import React, {useEffect, useState, useCallback} from 'react';
-import Slider from './Slider';
+import {M, registerClientConsole} from '@/demo/shared/mutators';
+import type {Latency} from '@/demo/shared/types';
+import type {Reflect} from '@rocicorp/reflect';
+import {useCallback, useEffect, useState} from 'react';
 import ClientConsole from './ClientConsole';
 import styles from './How.module.css';
-import buttonStyles from './RotateButton.module.css';
-import type {Reflect} from '@rocicorp/reflect';
-import {M, registerClientConsole} from '@/demo/shared/mutators';
 import Roci from './Roci';
-import {useClientConsoleReducer, useCount} from './howtoUtils';
+import buttonStyles from './RotateButton.module.css';
 import RotateSlider from './RotateSlider';
-import type {Latency} from '@/demo/shared/types';
+import Slider from './Slider';
+import {useClientConsoleReducer, useCount} from './howtoUtils';
 
 function RotateClient({
   title,
@@ -25,7 +25,7 @@ function RotateClient({
 
   const incrementCount = useCallback(
     (deg: number) => {
-      reflect?.mutate.degree({key: 'degree', deg});
+      reflect?.mutate.degree({key: 'degree', deg}).catch(e => console.error(e));
     },
     [reflect],
   );
@@ -35,17 +35,19 @@ function RotateClient({
   const count = useCount(reflect, 'degree', (key: string, val: number) => {
     clientConsoleDispatch({
       type: 'APPEND',
-      payload: `Key  \"${key}\" changed to: ${val}`,
+      payload: `Key  "${key}" changed to: ${val}`,
     });
   });
 
   useEffect(() => {
-    reflect?.clientID.then(id => {
-      setCurrentClientID(id);
-      registerClientConsole(id, (log: string) =>
-        clientConsoleDispatch({type: 'APPEND', payload: log}),
-      );
-    });
+    reflect?.clientID
+      .then(id => {
+        setCurrentClientID(id);
+        registerClientConsole(id, (log: string) =>
+          clientConsoleDispatch({type: 'APPEND', payload: log}),
+        );
+      })
+      .catch(e => console.error(e));
   }, [reflect, clientConsoleDispatch]);
 
   return (
