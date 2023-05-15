@@ -17,7 +17,6 @@ export const delayWebSocket = (host: string) => {
   fetchPing(`${host}/ping`)
     .then(ping => {
       halfTripPing = ping / 2;
-      console.log(`Half-trip ping: ${halfTripPing}ms`);
     })
     .catch(() => {
       console.debug('Failed to fetch ping, using default value of 0ms');

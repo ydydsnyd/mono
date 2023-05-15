@@ -5,7 +5,6 @@ import {getWorkerHost} from '@/util/worker-host';
 
 export const init = (roomID: string, userID: string): Reflect<M> => {
   // Set up our connection to reflect
-  console.log(`Creating ${userID} room`);
   // Create a reflect client
   const reflectClient = new Reflect<M>({
     createKVStore: name => new ExperimentalMemKVStore(name),

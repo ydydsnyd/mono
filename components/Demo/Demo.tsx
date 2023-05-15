@@ -52,7 +52,7 @@ function usePuzzleRoomID() {
           setPuzzleRoomID(prev => {
             const newVal = result?.roomID ?? null;
             if (prev !== newVal) {
-              console.log('NEW ROOM ID', newVal);
+              console.info('NEW ROOM ID', newVal);
             }
             return newVal;
           });
@@ -141,7 +141,6 @@ function useReflect(
     });
 
     reflect.onOnlineChange = online => {
-      console.log('ONLINE CHANGE', online);
       setOnline(online);
     };
 
@@ -306,7 +305,6 @@ function useBodyClasses() {
 
   const setClass = useCallback(
     (cls: string, enabled: boolean) => {
-      console.log('SET CLASS', cls, enabled);
       setClasses(old => {
         const next = new Map(old);
         next.set(cls, enabled);
