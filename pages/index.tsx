@@ -85,7 +85,7 @@ export default function Home() {
         <link rel="manifest" href="/site.webmanifest" />
 
         {/* Facebook Meta Tags */}
-        <meta property="og:url" content="https://reflect-net.vercel.app/" />
+        <meta property="og:url" content="reflect.net" />
         <meta property="og:type" content="website" />
         <meta
           property="og:title"
@@ -93,19 +93,19 @@ export default function Home() {
         />
         <meta
           property="og:description"
-          content="60FPS sync, automatic persistence, server authority, optional offline, fine-grained auth, and more..."
+          content="60FPS sync, automatic persistence, server authority, fine-grained auth, and more..."
         />
         <meta
           property="og:image"
-          content="https://reflect-net.vercel.app/reflect-og.jpg"
+          content="https://reflect.net/reflect-og.jpg"
         />
 
         {/* Twitter Meta Tags */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta property="twitter:domain" content="reflect-net.vercel.app" />
+        <meta property="twitter:domain" content="reflect.net" />
         <meta
           property="twitter:url"
-          content="https://reflect-net.vercel.app/"
+          content="https://reflect.net"
         />
         <meta
           name="twitter:title"
@@ -113,11 +113,11 @@ export default function Home() {
         />
         <meta
           name="twitter:description"
-          content="60FPS sync, automatic persistence, server authority, optional offline, fine-grained auth, and more..."
+          content="60FPS sync, automatic persistence, server authority, fine-grained auth, and more..."
         />
         <meta
           name="twitter:image"
-          content="https://paint-fight.vercel.app/reflect-og.jpg"
+          content="https://reflect.net/reflect-og.jpg"
         />
       </Head>
 
