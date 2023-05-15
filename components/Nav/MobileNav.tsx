@@ -1,8 +1,8 @@
-import {useState} from 'react';
-import * as Scroll from 'react-scroll';
 import styles from './MobileNav.module.css';
+import React, {useState} from 'react';
+import * as Scroll from 'react-scroll';
 
-const {Link} = Scroll;
+let Link = Scroll.Link;
 
 export default function MobileNav() {
   const [toggleMenu, setToggleMenu] = useState(false);

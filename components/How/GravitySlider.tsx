@@ -54,7 +54,7 @@ const GravitySlider = ({
 
     const intervalId = setInterval(intervalCallback, INTERVAL_MS);
     return () => clearInterval(intervalId);
-  }, [drifting, value, increment, touched]);
+  }, [drifting, value, increment]);
 
   const speed = `${value.toFixed(1)}°`;
 

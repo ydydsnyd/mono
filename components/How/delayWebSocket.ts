@@ -24,14 +24,14 @@ export const delayWebSocket = (host: string) => {
     });
   const OriginalWebSocket = WebSocket;
   globalThis.WebSocket = class extends OriginalWebSocket {
-    private readonly _userID: string;
-    private readonly _sendQueue: DelayQueue<
+    private readonly userID: string;
+    private readonly sendQueue: DelayQueue<
       string | ArrayBufferLike | Blob | ArrayBufferView
     >;
-    private readonly _deliveryQueue: DelayQueue<MessageEvent>;
+    private readonly deliveryQueue: DelayQueue<MessageEvent>;
 
     private _onMessage = (ev: MessageEvent) => {
-      const latency = latencies.get(this._userID);
+      const latency = latencies.get(this.userID);
       // console.log(
       //   'latency',
       //   latency,
@@ -47,32 +47,32 @@ export const delayWebSocket = (host: string) => {
       //   halfTripPing,
       //   'halfTripPing',
       // );
-      this._deliveryQueue.enqueue(ev, latency, halfTripPing);
+      this.deliveryQueue.enqueue(ev, latency, halfTripPing);
     };
 
-    private _onMessageCallbacks: Set<
-      (this: WebSocket, ev: MessageEvent) => void
+    private onMessageCallbacks: Set<
+      (this: WebSocket, ev: MessageEvent) => any
     > = new Set();
     constructor(url: string | URL, protocols?: string | string[] | undefined) {
       super(url, protocols);
       const urlObj = new URL(url);
-      this._userID = urlObj.searchParams.get('clientID') ?? '';
-      this._sendQueue = new DelayQueue(data => super.send(data));
-      this._deliveryQueue = new DelayQueue(ev =>
-        this._onMessageCallbacks.forEach(cb => cb.call(this, ev)),
+      this.userID = urlObj.searchParams.get('clientID') ?? '';
+      this.sendQueue = new DelayQueue(data => super.send(data));
+      this.deliveryQueue = new DelayQueue(ev =>
+        this.onMessageCallbacks.forEach(cb => cb.call(this, ev)),
       );
     }
 
     override send(
       data: string | ArrayBufferLike | Blob | ArrayBufferView,
     ): void {
-      const latency = latencies.get(this._userID);
-      this._sendQueue.enqueue(data, latency, halfTripPing);
+      const latency = latencies.get(this.userID);
+      this.sendQueue.enqueue(data, latency, halfTripPing);
     }
 
     override addEventListener<K extends keyof WebSocketEventMap>(
       type: K,
-      listener: (this: WebSocket, ev: WebSocketEventMap[K]) => void,
+      listener: (this: WebSocket, ev: WebSocketEventMap[K]) => any,
       options?: boolean | AddEventListenerOptions | undefined,
     ): void {
       if (type !== 'message') {
@@ -80,9 +80,9 @@ export const delayWebSocket = (host: string) => {
         return;
       }
 
-      const first = this._onMessageCallbacks.size === 0;
-      this._onMessageCallbacks.add(
-        listener as (this: WebSocket, ev: MessageEvent) => void,
+      const first = this.onMessageCallbacks.size === 0;
+      this.onMessageCallbacks.add(
+        listener as (this: WebSocket, ev: MessageEvent) => any,
       );
 
       if (first) {
@@ -92,17 +92,17 @@ export const delayWebSocket = (host: string) => {
 
     override removeEventListener<K extends keyof WebSocketEventMap>(
       type: K,
-      listener: (this: WebSocket, ev: WebSocketEventMap[K]) => void,
+      listener: (this: WebSocket, ev: WebSocketEventMap[K]) => any,
       options?: boolean | EventListenerOptions | undefined,
     ): void {
       if (type !== 'message') {
         super.removeEventListener(type, listener, options);
         return;
       }
-      this._onMessageCallbacks.delete(
-        listener as (this: WebSocket, ev: MessageEvent) => void,
+      this.onMessageCallbacks.delete(
+        listener as (this: WebSocket, ev: MessageEvent) => any,
       );
-      if (this._onMessageCallbacks.size === 0) {
+      if (this.onMessageCallbacks.size === 0) {
         super.removeEventListener('message', this._onMessage);
       }
     }

@@ -19,7 +19,6 @@ import {closeReflect, watch} from '@/util/reflect';
 import {getWorkerHost} from '@/util/worker-host';
 import {ExperimentalMemKVStore, Reflect} from '@rocicorp/reflect';
 import classNames from 'classnames';
-import Image from 'next/image.js';
 import {event} from 'nextjs-google-analytics';
 import {useCallback, useEffect, useState} from 'react';
 import ConfettiExplosion from 'react-confetti-explosion';
@@ -62,7 +61,7 @@ function usePuzzleRoomID() {
     );
     const aliveIfVisible = () => {
       if (document.visibilityState === 'visible') {
-        orchestratorClient.mutate.alive().catch(e => console.error(e));
+        orchestratorClient.mutate.alive();
       }
     };
     aliveIfVisible();
@@ -74,8 +73,8 @@ function usePuzzleRoomID() {
       aliveIfVisible();
     };
     document.addEventListener('visibilitychange', visibilityChangeListener);
-    const pageHideListener = () => {
-      orchestratorClient.mutate.unload().catch(e => console.error(e));
+    const pageHideListener = async () => {
+      void orchestratorClient.mutate.unload();
     };
     window.addEventListener('pagehide', pageHideListener);
 
@@ -129,19 +128,17 @@ function useReflect(
     const url = new URL(location.href);
     if (url.searchParams.has('reset')) {
       console.info('Resetting replicache');
-      reflect.mutate.resetRoom().catch(e => console.error(e));
+      reflect.mutate.resetRoom();
     }
     if (url.searchParams.has('solve')) {
       console.info('Solving puzzle');
-      reflect.mutate.solve().catch(e => console.error(e));
+      reflect.mutate.solve();
     }
 
-    reflect.mutate
-      .initializePuzzle({
-        pieces: generateRandomPieces(home, stage),
-        force: false,
-      })
-      .catch(e => console.error(e));
+    reflect.mutate.initializePuzzle({
+      pieces: generateRandomPieces(home, stage),
+      force: false,
+    });
 
     reflect.onOnlineChange = online => {
       console.log('ONLINE CHANGE', online);
@@ -149,20 +146,16 @@ function useReflect(
     };
 
     const onBlur = async () => {
-      reflect.mutate
-        .updateClient({
-          id: await reflect.clientID,
-          focused: false,
-        })
-        .catch(e => console.error(e));
+      reflect.mutate.updateClient({
+        id: await reflect.clientID,
+        focused: false,
+      });
     };
     const onFocus = async () => {
-      reflect.mutate
-        .updateClient({
-          id: await reflect.clientID,
-          focused: true,
-        })
-        .catch(e => console.error(e));
+      reflect.mutate.updateClient({
+        id: await reflect.clientID,
+        focused: true,
+      });
     };
     window.addEventListener('blur', onBlur);
     window.addEventListener('focus', onFocus);
@@ -176,7 +169,7 @@ function useReflect(
     };
     // we only want to do this once per page-load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [home !== null, stage !== null, puzzleRoomID]);
+  }, [home != null, stage !== null, puzzleRoomID]);
 
   return {r, online};
 }
@@ -223,7 +216,7 @@ function useEnsureMyClient(
 
   const ensure = async () => {
     const cid = await r.clientID;
-    return r.mutate.putClient({
+    r.mutate.putClient({
       id: cid,
       selectedPieceID: '',
       x: 0,
@@ -235,7 +228,7 @@ function useEnsureMyClient(
     });
   };
 
-  ensure().catch(e => console.error(e));
+  ensure();
 
   return undefined;
 }
@@ -245,7 +238,7 @@ function useEnsureLocation(
   myClientID: string | undefined,
 ) {
   const [location, setLocation] = useState<Location | null>(null);
-  const ignore = false;
+  let ignore = false;
 
   useEffect(() => {
     fetch('/api/get-location')
@@ -255,20 +248,17 @@ function useEnsureLocation(
           return;
         }
         setLocation(data);
-      })
-      .catch(e => console.error(e));
+      });
   }, [ignore]);
 
   useEffect(() => {
     if (r === null || location === null || myClientID === undefined) {
       return;
     }
-    r.mutate
-      .updateClient({
-        id: myClientID,
-        location: getLocationString(location),
-      })
-      .catch(e => console.error(e));
+    r.mutate.updateClient({
+      id: myClientID,
+      location: getLocationString(location),
+    });
   }, [location, r, myClientID]);
 }
 
@@ -279,8 +269,8 @@ function useClientIDs(r: Reflect<M> | null) {
     if (!r) {
       return;
     }
-    return watch(r, {prefix: 'client/', ops: ['add', 'del']}, values => {
-      setClientIDs([...values.keys()]);
+    return watch(r, {prefix: 'client/', ops: ['add', 'del']}, async vals => {
+      setClientIDs([...vals.keys()]);
     });
   }, [r]);
   return clientIDs;
@@ -371,12 +361,10 @@ const Demo = ({
     if (!r || !home || !stage) {
       return;
     }
-    r.mutate
-      .initializePuzzle({
-        pieces: generateRandomPieces(home, stage),
-        force: true,
-      })
-      .catch(e => console.error(e));
+    r.mutate.initializePuzzle({
+      pieces: generateRandomPieces(home, stage),
+      force: true,
+    });
   };
 
   return (
@@ -465,8 +453,7 @@ const Demo = ({
       <p className="featuredStatement">
         High-performance sync for multiplayer web apps
       </p>
-      <Image
-        alt="Back"
+      <img
         id="back-button"
         src="/icon-prompt-back.svg"
         onClick={() => onSetGameMode(false)}

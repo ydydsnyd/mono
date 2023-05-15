@@ -1,6 +1,6 @@
-import {event} from 'nextjs-google-analytics';
-import {useRef, useState} from 'react';
 import styles from './BetaSignup.module.css';
+import {useState, useRef} from 'react';
+import { event } from "nextjs-google-analytics";
 
 export default function BetaSignup() {
   const [name, setName] = useState('');
@@ -15,7 +15,7 @@ export default function BetaSignup() {
     setButtonText('Submitting...');
 
     const data = form.current;
-    if (data === null) return;
+    if (data == null) return;
     const formData = new FormData(data);
     const endpoint =
       'https://script.google.com/macros/s/AKfycbwMWYTH1CpaDIOdoQ4JTDgnq-fIucse6fm0ydVwBg2UBNvz8qToce16GrTsmT_q9PXdZw/exec';
@@ -36,10 +36,10 @@ export default function BetaSignup() {
       setTimeout(() => {
         setButtonText('Join Waitlist');
       }, 3000);
-      event('beta_request_submitted', {
-        category: 'Get started',
-        action: 'Press join waitlist button',
-        label: 'Conversion',
+      event("beta_request_submitted", {
+        category: "Get started",
+        action: "Press join waitlist button",
+        label: "Conversion",
       });
     } else {
       // display error message
