@@ -215,10 +215,12 @@ function useEnsureMyClient(
 
   const ensure = async () => {
     const cid = await r.clientID;
-    r.mutate.putClient({
+    r.mutate.ensureClient({
       id: cid,
       selectedPieceID: '',
-      x: 0,
+      // off the page, so not visible till user moves cursor
+      // avoids cursors stacking up at 0,0
+      x: Number.MIN_SAFE_INTEGER,
       y: 0,
       color: colorToString(idToColor(cid)),
       location: null,

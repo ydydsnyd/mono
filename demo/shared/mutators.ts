@@ -10,6 +10,7 @@ import {
   initClient,
   putClient,
   updateClient,
+  ensureClient,
 } from '../alive/client-model';
 import {alive, unload} from '../alive/orchestrator-model';
 import {PIECE_DEFINITIONS} from '../alive/piece-definitions';
@@ -101,6 +102,7 @@ export const mutators = {
   initClient,
   updateClient,
   deleteClient,
+  ensureClient,
   updatePiece,
 
   // These mutators are for the how it works demos

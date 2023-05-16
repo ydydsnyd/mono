@@ -122,3 +122,14 @@ export const putClient = async (tx: WriteTransaction, value: ClientModel) => {
   // }
   await clientGenerateResult.put(tx, value);
 };
+
+export const ensureClient = async (
+  tx: WriteTransaction,
+  value: ClientModel,
+) => {
+  const client = await getClient(tx, value.id);
+  if (client) {
+    return;
+  }
+  await putClient(tx, value);
+};
