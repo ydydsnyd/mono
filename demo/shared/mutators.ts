@@ -98,11 +98,11 @@ export const mutators = {
     }
   },
 
-  putClientL: wrapToDenyBadLocation(putClient),
-  initClient: wrapToDenyBadLocation(initClient),
-  updateClient: wrapToDenyBadLocation(updateClient),
+  putClient: wrapToFilterBadLocation(putClient),
+  initClient: wrapToFilterBadLocation(initClient),
+  updateClient: wrapToFilterBadLocation(updateClient),
   deleteClient,
-  ensureClient: wrapToDenyBadLocation(ensureClient),
+  ensureClient: wrapToFilterBadLocation(ensureClient),
   updatePiece,
 
   // These mutators are for the how it works demos
@@ -151,39 +151,21 @@ export const mutators = {
   unload,
 };
 
-function allowClientBasedOnLocation<
+function filterBadLocationForClient<
   C extends {location?: string | null | undefined},
 >(client: C): C {
-  const {location} = client;
-  if (!allowLocation(location)) {
-    return {...client, location: null};
-  }
-  return client;
+  return allowLocation(client.location) ? client : {...client, location: null};
 }
 
 function allowLocation(location: string | null | undefined): boolean {
-  if (typeof location !== 'string') {
-    return false;
-  }
-  // TODO(arv): Implement me.
-  return true;
+  // TODO(arv): Expand these as needed.
+  return typeof location === 'string' && !/\.\/\\:<>\|/.test(location);
 }
 
-type F =
-  | typeof ensureClient
-  | typeof initClient
-  | typeof putClient
-  | typeof updateClient;
-
-function wrapToDenyBadLocation(fn: typeof ensureClient): typeof ensureClient;
-function wrapToDenyBadLocation(fn: typeof initClient): typeof initClient;
-function wrapToDenyBadLocation(fn: typeof putClient): typeof putClient;
-function wrapToDenyBadLocation(fn: typeof updateClient): typeof updateClient;
-function wrapToDenyBadLocation(fn: F): F {
-  return (tx, client) => {
-    if (tx.environment === 'server') {
-      return fn(tx, client);
-    }
-    return fn(tx, allowClientBasedOnLocation(client));
-  };
+function wrapToFilterBadLocation<
+  R,
+  C extends {location?: string | null | undefined},
+>(fn: (tx: WriteTransaction, client: C) => R) {
+  return (tx: WriteTransaction, client: C) =>
+    fn(tx, filterBadLocationForClient(client));
 }
