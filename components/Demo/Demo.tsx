@@ -358,7 +358,12 @@ const Demo = ({
     false,
   );
 
-  const resetGame = () => {
+  const resetGame = useCallback(() => {
+    event('alive_solve_puzzle', {
+      category: 'Alive Demo',
+      action: 'Place final piece',
+      label: 'Demo',
+    });
     if (!r || !home || !stage) {
       return;
     }
@@ -366,7 +371,7 @@ const Demo = ({
       pieces: generateRandomPieces(home, stage),
       force: true,
     });
-  };
+  }, [r, home, stage]);
 
   return (
     <section id="intro" className={classNames(styles.section, {gameMode})}>
@@ -391,16 +396,9 @@ const Demo = ({
             <ConfettiExplosion
               force={0.9}
               particleCount={100}
-              duration={4000}
+              duration={3000}
               colors={['#fc49ab', '#5fe8ff', '#ff9900', '#d505e8', '#1d9de5']}
-              onComplete={() => {
-                event('alive_solve_puzzle', {
-                  category: 'Alive Demo',
-                  action: 'Place final piece',
-                  label: 'Demo',
-                });
-                resetGame();
-              }}
+              onComplete={resetGame}
             />
           )}
         </div>
