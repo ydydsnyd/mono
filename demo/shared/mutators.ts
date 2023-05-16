@@ -1,19 +1,19 @@
 import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
 import {
+  deleteClient,
+  ensureClient,
+  initClient,
+  putClient,
+  updateClient,
+} from '../alive/client-model';
+import {alive, unload} from '../alive/orchestrator-model';
+import {PIECE_DEFINITIONS} from '../alive/piece-definitions';
+import {
   PieceModel,
   listPieces,
   putPiece,
   updatePiece,
 } from '../alive/piece-model';
-import {
-  deleteClient,
-  initClient,
-  putClient,
-  updateClient,
-  ensureClient,
-} from '../alive/client-model';
-import {alive, unload} from '../alive/orchestrator-model';
-import {PIECE_DEFINITIONS} from '../alive/piece-definitions';
 
 export type M = typeof mutators;
 
@@ -98,11 +98,11 @@ export const mutators = {
     }
   },
 
-  putClient,
-  initClient,
-  updateClient,
+  putClientL: wrapToDenyBadLocation(putClient),
+  initClient: wrapToDenyBadLocation(initClient),
+  updateClient: wrapToDenyBadLocation(updateClient),
   deleteClient,
-  ensureClient,
+  ensureClient: wrapToDenyBadLocation(ensureClient),
   updatePiece,
 
   // These mutators are for the how it works demos
@@ -150,3 +150,40 @@ export const mutators = {
   alive,
   unload,
 };
+
+function allowClientBasedOnLocation<
+  C extends {location?: string | null | undefined},
+>(client: C): C {
+  const {location} = client;
+  if (!allowLocation(location)) {
+    return {...client, location: null};
+  }
+  return client;
+}
+
+function allowLocation(location: string | null | undefined): boolean {
+  if (typeof location !== 'string') {
+    return false;
+  }
+  // TODO(arv): Implement me.
+  return true;
+}
+
+type F =
+  | typeof ensureClient
+  | typeof initClient
+  | typeof putClient
+  | typeof updateClient;
+
+function wrapToDenyBadLocation(fn: typeof ensureClient): typeof ensureClient;
+function wrapToDenyBadLocation(fn: typeof initClient): typeof initClient;
+function wrapToDenyBadLocation(fn: typeof putClient): typeof putClient;
+function wrapToDenyBadLocation(fn: typeof updateClient): typeof updateClient;
+function wrapToDenyBadLocation(fn: F): F {
+  return (tx, client) => {
+    if (tx.environment === 'server') {
+      return fn(tx, client);
+    }
+    return fn(tx, allowClientBasedOnLocation(client));
+  };
+}
