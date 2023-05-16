@@ -18,6 +18,7 @@ type BotPlayback = {
   timeShift: number;
   dragInfo?: {pieceID: string; offset: Position; start: number} | undefined;
   moves: BotMove[];
+  manuallyTriggeredBot: boolean;
 };
 
 import {Location, getLocationString} from '@/util/get-location-string';
@@ -144,6 +145,7 @@ export class Bots {
               this._clientID,
               botClientID,
               transformedMoves,
+              true,
               i * 500,
             );
           }
@@ -170,6 +172,7 @@ export class Bots {
                 this._clientID,
                 toPlayback.clientID,
                 toPlayback.moves,
+                false,
               );
               this._maybeRaf();
             } else {
@@ -190,7 +193,6 @@ export class Bots {
         const botController = (await getBotController(tx)) ?? null;
         const isBotController = botController?.clientID === tx.clientID;
         return {
-          botController,
           isBotController,
         };
       },
@@ -201,6 +203,14 @@ export class Bots {
           if (this._isBotController) {
             // Don't wait for 3s to expire to launch bots.
             maybeLaunchBots();
+          } else {
+            // No longer bot controller, stop playing bots
+            for (const [botClientID, {manuallyTriggeredBot}] of this
+              ._botPlaybackByClientID) {
+              if (!manuallyTriggeredBot) {
+                this._botPlaybackByClientID.delete(botClientID);
+              }
+            }
           }
         },
       },
@@ -218,6 +228,7 @@ export class Bots {
     clientID: string,
     botClientID: string,
     moves: BotMove[],
+    manuallyTriggeredBot: boolean,
     timeShift = 0,
   ) {
     this._r.mutate.putClient({
@@ -231,12 +242,14 @@ export class Bots {
       ),
       focused: true,
       botControllerID: clientID,
+      manuallyTriggeredBot,
     });
     this._botPlaybackByClientID.set(botClientID, {
       startTime: performance.now(),
       moveIndex: 0,
       timeShift: timeShift,
       moves: moves,
+      manuallyTriggeredBot,
     });
   }
 
@@ -253,7 +266,7 @@ export class Bots {
     }
   }
 
-  private _onRaf = () => {
+  private _onRaf = async () => {
     for (const [botClientID, playback] of this._botPlaybackByClientID) {
       const now = performance.now() - playback.startTime;
       let move = undefined;
@@ -266,20 +279,38 @@ export class Bots {
         move = playback.moves[playback.moveIndex];
       }
       if (move) {
-        this._r.mutate.updateClient({
+        const updated = await this._r.mutate.updateClient({
           x: move.coordX,
           y: move.coordY,
           id: botClientID,
         });
+        if (!updated) {
+          console.log(
+            'failed to update bot client',
+            botClientID,
+            'stopping playback',
+          );
+          this._botPlaybackByClientID.delete(botClientID);
+          continue;
+        }
 
         if (playback.dragInfo) {
           // If bot has been dragging for at least 5 seconds,
           // 90% chance it drops the piece
           if (now - playback.dragInfo.start > 5_000 && Math.random() > 0.9) {
-            this._r.mutate.updateClient({
+            const updated = this._r.mutate.updateClient({
               id: botClientID,
               selectedPieceID: '',
             });
+            if (!updated) {
+              console.log(
+                'failed to update bot client',
+                botClientID,
+                'stopping playback',
+              );
+              this._botPlaybackByClientID.delete(botClientID);
+              continue;
+            }
             playback.dragInfo = undefined;
           } else {
             const position = coordinateToPosition(

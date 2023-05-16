@@ -226,6 +226,7 @@ function useEnsureMyClient(
       location: null,
       focused: document.hasFocus(),
       botControllerID: '',
+      manuallyTriggeredBot: false,
     });
   };
 
