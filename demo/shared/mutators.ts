@@ -161,7 +161,12 @@ function filterBadLocationForClient<
 
 function allowLocation(location: string | null): boolean {
   // TODO(arv): Expand these as needed.
-  return typeof location === 'string' && !/\.\/\\:<>\|/.test(location);
+  return (
+    typeof location === 'string' &&
+    !/\.\/\\:<>\|/.test(location) &&
+    // Note: this includes the flag and space too.
+    location.length <= 24
+  );
 }
 
 function wrapToFilterBadLocation<
