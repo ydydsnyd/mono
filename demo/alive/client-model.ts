@@ -93,49 +93,11 @@ export const deleteClient = async (tx: WriteTransaction, id: string) => {
   await clientGenerateResult.delete(tx, id);
 };
 
-async function ensureAliveBotControllerAndCanModify(
+function canModifyClient(
   tx: WriteTransaction,
   client: ClientModel,
+  botController: BotControllerModel | undefined,
 ) {
-  if (tx.environment !== 'server') {
-    return true;
-  }
-  let botController = await getBotController(tx);
-  if (!botController) {
-    console.log('No bot controller, assigning', tx.clientID);
-    botController = {
-      clientID: tx.clientID,
-      aliveTimestamp: Date.now(),
-    };
-    await setBotController(tx, botController);
-  } else if (
-    botController.clientID !== tx.clientID &&
-    (!botController.aliveTimestamp ||
-      Date.now() - botController.aliveTimestamp >
-        DEAD_BOT_CONTROLLER_THRESHHOLD_MS)
-  ) {
-    console.log(
-      'Dead bot controller',
-      botController.clientID,
-      'assigning',
-      tx.clientID,
-    );
-    // Delete non-manual bots controlled by dead bot controller
-    const clients = await listClients(tx);
-    for (const client of clients) {
-      if (
-        !client.manuallyTriggeredBot &&
-        client.botControllerID === botController.clientID
-      ) {
-        await clientGenerateResult.delete(tx, client.id);
-      }
-    }
-    botController = {
-      clientID: tx.clientID,
-      aliveTimestamp: Date.now(),
-    };
-    await setBotController(tx, botController);
-  }
   if (!client.botControllerID) {
     return true;
   }
@@ -146,6 +108,48 @@ async function ensureAliveBotControllerAndCanModify(
     tx.clientID === client.botControllerID &&
     tx.clientID === botController?.clientID
   );
+}
+
+async function ensureAliveBotController(tx: WriteTransaction) {
+  let botController = await getBotController(tx);
+  if (tx.environment === 'server') {
+    if (!botController) {
+      console.log('No bot controller, assigning', tx.clientID);
+      botController = {
+        clientID: tx.clientID,
+        aliveTimestamp: Date.now(),
+      };
+      await setBotController(tx, botController);
+    } else if (
+      botController.clientID !== tx.clientID &&
+      (!botController.aliveTimestamp ||
+        Date.now() - botController.aliveTimestamp >
+          DEAD_BOT_CONTROLLER_THRESHHOLD_MS)
+    ) {
+      console.log(
+        'Dead bot controller',
+        botController.clientID,
+        'assigning',
+        tx.clientID,
+      );
+      // Delete non-manual bots controlled by dead bot controller
+      const clients = await listClients(tx);
+      for (const client of clients) {
+        if (
+          !client.manuallyTriggeredBot &&
+          client.botControllerID === botController.clientID
+        ) {
+          await clientGenerateResult.delete(tx, client.id);
+        }
+      }
+      botController = {
+        clientID: tx.clientID,
+        aliveTimestamp: Date.now(),
+      };
+      await setBotController(tx, botController);
+    }
+  }
+  return botController;
 }
 
 /**
@@ -161,8 +165,9 @@ export const updateClient = async (
     await clientGenerateResult.update(tx, update);
     return false;
   }
-  if (!ensureAliveBotControllerAndCanModify(tx, client)) {
-    return;
+  const botController = await ensureAliveBotController(tx);
+  if (!canModifyClient(tx, client, botController)) {
+    return false;
   }
   if (
     tx.environment === 'server' &&
@@ -179,7 +184,8 @@ export const updateClient = async (
 };
 
 export const putClient = async (tx: WriteTransaction, value: ClientModel) => {
-  if (!ensureAliveBotControllerAndCanModify(tx, value)) {
+  const botController = await ensureAliveBotController(tx);
+  if (!canModifyClient(tx, value, botController)) {
     return;
   }
   await clientGenerateResult.put(tx, value);
