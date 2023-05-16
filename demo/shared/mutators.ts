@@ -154,10 +154,12 @@ export const mutators = {
 function filterBadLocationForClient<
   C extends {location?: string | null | undefined},
 >(client: C): C {
-  return allowLocation(client.location) ? client : {...client, location: null};
+  return client.location === undefined || allowLocation(client.location)
+    ? client
+    : {...client, location: null};
 }
 
-function allowLocation(location: string | null | undefined): boolean {
+function allowLocation(location: string | null): boolean {
   // TODO(arv): Expand these as needed.
   return typeof location === 'string' && !/\.\/\\:<>\|/.test(location);
 }
