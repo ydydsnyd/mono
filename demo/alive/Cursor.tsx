@@ -3,7 +3,7 @@ import type {Reflect} from '@rocicorp/reflect';
 import type {M} from '../shared/mutators';
 import {getClient} from './client-model';
 import {useSubscribe} from 'replicache-react';
-import {Rect, coordinateToPosition} from './util';
+import {Rect, coordinateToPosition, simpleHash} from './util';
 import useIsomorphicLayoutEffect from '@/hooks/use-isomorphic-layout-effect';
 
 export function Cursor({
@@ -25,6 +25,7 @@ export function Cursor({
 }) {
   const client = useSubscribe(r, async tx => getClient(tx, clientID), null);
   const pos = client && coordinateToPosition(client, home, stage);
+  const hash = simpleHash(clientID);
 
   let active: boolean;
   if (!isSelf) {
@@ -83,7 +84,9 @@ export function Cursor({
           backgroundColor: client.color,
         }}
       >
-        <div className="location-name">{client.location ?? `You 👋`}</div>
+        <div className="location-name">
+          {client.location ?? `Earth ${['🌎', '🌍', '🌏'][Math.abs(hash % 3)]}`}
+        </div>
       </div>
     </div>
   );
