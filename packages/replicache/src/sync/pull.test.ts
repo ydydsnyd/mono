@@ -28,34 +28,34 @@ import {
 import {assertHash, emptyHash} from '../hash.js';
 import type {HTTPRequestInfo} from '../http-request-info.js';
 import type {IndexDefinitions} from '../index-defs.js';
-import {deepFreeze, FrozenJSONValue, ReadonlyJSONValue} from '../json.js';
+import {FrozenJSONValue, ReadonlyJSONValue, deepFreeze} from '../json.js';
 import type {PatchOperation} from '../patch-operation.js';
 import type {
-  Puller,
-  PullerResultV0,
-  PullerResultV1,
   PullResponseOKV1,
   PullResponseV0,
   PullResponseV1,
+  Puller,
+  PullerResultV0,
+  PullerResultV1,
 } from '../puller.js';
 import {stringCompare} from '../string-compare.js';
 import {testSubscriptionsManagerOptions} from '../test-util.js';
 import {withRead, withWrite} from '../with-transactions.js';
 import type {DiffsMap} from './diff.js';
 import {
-  beginPullV1,
   BeginPullResponseV0,
   BeginPullResponseV1,
-  beginPullV0,
-  handlePullResponseV1,
   HandlePullResponseResultType,
-  isPullRequestV1,
-  maybeEndPull,
   MaybeEndPullResultV0,
-  PullRequestV0,
-  PullRequestV1,
   PULL_VERSION_DD31,
   PULL_VERSION_SDD,
+  PullRequestV0,
+  PullRequestV1,
+  beginPullV0,
+  beginPullV1,
+  handlePullResponseV1,
+  isPullRequestV1,
+  maybeEndPull,
 } from './pull.js';
 import {SYNC_HEAD_NAME} from './sync-head-name.js';
 
@@ -1035,7 +1035,9 @@ test('begin try pull DD31', async () => {
           db.whenceHash(syncHead.chunk.hash),
           read,
         );
-        const gotValueMap = await asyncIterableToArray(bTreeRead.entries());
+        const gotValueMap = (
+          await asyncIterableToArray(bTreeRead.entries())
+        ).map(e => [e[0], e[1]] as const);
         gotValueMap.sort((a, b) => stringCompare(a[0], b[0]));
         const expValueMap = Array.from(expSyncHead.valueMap);
         expValueMap.sort((a, b) => stringCompare(a[0], b[0]));

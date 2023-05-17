@@ -140,7 +140,7 @@ suite(
           : {type: MetaType.LocalSDD, ...metaBase};
         expect(Object.fromEntries(visitor.gatheredChunks)).to.deep.equal({
           ['face0000000040008000000000000000' + '' + '000000000004']: {
-            data: [0, [['local', '2']]],
+            data: [0, [['local', '2', 27]]],
             hash: 'face0000000040008000000000000000' + '' + '000000000004',
             meta: [],
           },
@@ -266,18 +266,20 @@ suite(
                   data: [
                     0,
                     [
-                      ['a', 1],
+                      ['a', 1, 22],
                       [
                         'b',
                         {
                           name: 'b-name',
                         },
+                        43,
                       ],
                       [
                         'c',
                         {
                           name: 'c-name',
                         },
+                        43,
                       ],
                     ],
                   ],
@@ -294,12 +296,14 @@ suite(
                         {
                           name: 'b-name',
                         },
+                        51,
                       ],
                       [
                         '\u0000c-name\u0000c',
                         {
                           name: 'c-name',
                         },
+                        51,
                       ],
                     ],
                   ],
@@ -316,6 +320,7 @@ suite(
                         {
                           name: 'b-name',
                         },
+                        51,
                       ],
                     ],
                   ],
@@ -356,18 +361,20 @@ suite(
                   data: [
                     0,
                     [
-                      ['a', 1],
+                      ['a', 1, 22],
                       [
                         'b',
                         {
                           name: 'b-name',
                         },
+                        43,
                       ],
                       [
                         'c',
                         {
                           name: 'c-name',
                         },
+                        43,
                       ],
                     ],
                   ],
@@ -383,12 +390,14 @@ suite(
                         {
                           name: 'b-name',
                         },
+                        51,
                       ],
                       [
                         '\u0000c-name\u0000c',
                         {
                           name: 'c-name',
                         },
+                        51,
                       ],
                     ],
                   ],
