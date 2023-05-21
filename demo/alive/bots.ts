@@ -1,7 +1,7 @@
 import type {ClientID, Reflect} from '@rocicorp/reflect';
 import {nanoid} from 'nanoid';
 import type {M} from '../shared/mutators';
-import {BotMove, BotRecording, botRecordings} from './bot-recordings';
+import {BotMove, BotRecording, BotType, botRecordings} from './bot-recordings';
 import {getBotController} from './client-model';
 import {colorToString, idToColor} from './colors';
 import type {PieceInfo} from './piece-info';
@@ -16,6 +16,7 @@ type BotPlayback = {
   startTime: number;
   moveIndex: number;
   timeShift: number;
+  type: BotType;
   dragInfo?: {pieceID: string; offset: Position; start: number} | undefined;
   moves: BotMove[];
   manuallyTriggeredBot: boolean;
@@ -72,7 +73,6 @@ export class Bots {
     | undefined = undefined;
   private _lastRecording: BotMove[] | undefined = undefined;
   private _botPlaybackByClientID: Map<string, BotPlayback> = new Map();
-  private _botsPlayedback: Set<string> = new Set();
   private readonly _cleanup: () => void;
   private _raf: number = 0;
 
@@ -145,6 +145,7 @@ export class Bots {
               this._clientID,
               botClientID,
               transformedMoves,
+              'puzzle',
               true,
               i * 500,
             );
@@ -157,29 +158,39 @@ export class Bots {
 
     const maybeLaunchBots = () => {
       if (this._clientID && this._isBotController) {
-        const currentNumBots = this._botPlaybackByClientID.size;
-        if (currentNumBots < 2) {
-          if (currentNumBots === 0 || Math.random() > 0.9) {
-            let toPlayback: BotRecording | undefined;
-            for (const botRecording of shuffle(botRecordings)) {
-              if (!this._botsPlayedback.has(botRecording.clientID)) {
-                toPlayback = botRecording;
-              }
-            }
-            if (toPlayback) {
-              this._botsPlayedback.add(toPlayback.clientID);
-              this._startPlayback(
-                this._clientID,
-                toPlayback.clientID,
-                toPlayback.moves,
-                false,
-              );
-              this._maybeRaf();
-            } else {
-              this._botsPlayedback.clear();
-            }
-          }
+        const currentNumPuzzleBots = [
+          ...this._botPlaybackByClientID.values(),
+        ].filter(p => p.type === 'puzzle').length;
+        const currentNumWanderBots = [
+          ...this._botPlaybackByClientID.values(),
+        ].filter(p => p.type === 'wander').length;
+
+        let toPlayback: BotRecording[] = [];
+        const shuffled = shuffle(botRecordings);
+        if (
+          currentNumPuzzleBots === 0 ||
+          (currentNumPuzzleBots === 1 && Math.random() > 0.9)
+        ) {
+          toPlayback.push(shuffled.find(p => p.type === 'puzzle')!);
         }
+
+        if (
+          currentNumWanderBots === 0 ||
+          (currentNumPuzzleBots === 1 && Math.random() > 0.9)
+        ) {
+          toPlayback.push(shuffled.find(p => p.type === 'wander')!);
+        }
+
+        for (const bot of toPlayback) {
+          this._startPlayback(
+            this._clientID,
+            bot.clientID,
+            bot.moves,
+            bot.type,
+            false,
+          );
+        }
+        this._maybeRaf();
       }
     };
 
@@ -228,6 +239,7 @@ export class Bots {
     clientID: string,
     botClientID: string,
     moves: BotMove[],
+    type: BotType,
     manuallyTriggeredBot: boolean,
     timeShift = 0,
   ) {
@@ -250,6 +262,7 @@ export class Bots {
       timeShift: timeShift,
       moves: moves,
       manuallyTriggeredBot,
+      type,
     });
   }
 

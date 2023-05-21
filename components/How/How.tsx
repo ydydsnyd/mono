@@ -13,7 +13,7 @@ import type {Reflect} from '@rocicorp/reflect';
 import type {Latency} from '@/demo/shared/types';
 import {closeReflect} from '@/util/reflect';
 import {getWorkerHost} from '@/util/worker-host';
-import { event } from "nextjs-google-analytics";
+import {event} from 'nextjs-google-analytics';
 
 export type DemoReflectState = {
   roomID: string;
@@ -118,10 +118,10 @@ const DemoWrapperInternal = (
         reflectServer={state?.reflectServer}
         reset={() => {
           initDemo(state, setState, prepend);
-          event("demo_reset", {
-            category: "How it Works",
-            action: "Press reset demo button",
-            label: "demos",
+          event('demo_reset', {
+            category: 'How it Works',
+            action: 'Press reset demo button',
+            label: 'demos',
           });
         }}
         key={state?.roomID}
