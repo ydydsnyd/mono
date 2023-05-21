@@ -1,4 +1,4 @@
-import {hasClient} from '@/demo/alive/client-model';
+import {hasClient, listClients} from '@/demo/alive/client-model';
 import {colorToString, idToColor} from '@/demo/alive/colors';
 import {CursorField} from '@/demo/alive/CursorField';
 import {
@@ -15,7 +15,7 @@ import {useElementSize} from '@/hooks/use-element-size';
 import useIsomorphicLayoutEffect from '@/hooks/use-isomorphic-layout-effect';
 import styles from '@/styles/Home.module.css';
 import {getLocationString, Location} from '@/util/get-location-string';
-import {closeReflect, watch} from '@/util/reflect';
+import {closeReflect} from '@/util/reflect';
 import {getWorkerHost} from '@/util/worker-host';
 import {ExperimentalMemKVStore, Reflect} from '@rocicorp/reflect';
 import classNames from 'classnames';
@@ -265,16 +265,20 @@ function useEnsureLocation(
 }
 
 function useClientIDs(r: Reflect<M> | null) {
-  const [clientIDs, setClientIDs] = useState<string[]>([]);
-  // Runs once we have a Reflect instance. Watches all client models.
-  useEffect(() => {
-    if (!r) {
-      return;
-    }
-    return watch(r, {prefix: 'client/', ops: ['add', 'del']}, async vals => {
-      setClientIDs([...vals.keys()]);
-    });
-  }, [r]);
+  const clientIDs = useSubscribe(
+    r,
+    async tx => {
+      const clients = await listClients(tx);
+      const ids = [];
+      for (const client of clients) {
+        if ((client.id === tx.clientID, client.focused)) {
+          ids.push(client.id);
+        }
+      }
+      return ids;
+    },
+    [],
+  );
   return clientIDs;
 }
 
