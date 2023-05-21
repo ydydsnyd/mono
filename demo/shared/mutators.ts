@@ -88,7 +88,7 @@ export const mutators = {
       //removes potential race when multiple clients are trying to reset
       if (
         !force ||
-        (await (await listPieces(tx)).findIndex(piece => !piece.placed)) === -1
+        (await listPieces(tx)).findIndex(piece => !piece.placed) === -1
       ) {
         for (const piece of pieces) {
           await putPiece(tx, piece);
