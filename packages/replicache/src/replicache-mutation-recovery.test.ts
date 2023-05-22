@@ -11,12 +11,7 @@ import {initClientWithClientID} from './persist/clients-test-helpers.js';
 import {assertClientV4} from './persist/clients.js';
 import * as persist from './persist/mod.js';
 import {persistSDD} from './persist/persist-test-helpers.js';
-import {
-  REPLICACHE_FORMAT_VERSION_DD31,
-  REPLICACHE_FORMAT_VERSION_SDD,
-  REPLICACHE_FORMAT_VERSION_V6,
-  makeIDBNameForTesting,
-} from './replicache.js';
+import {makeIDBNameForTesting} from './replicache.js';
 import {PUSH_VERSION_SDD} from './sync/push.js';
 import {
   clock,
@@ -34,6 +29,7 @@ import {withRead} from './with-transactions.js';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
+import {REPLICACHE_FORMAT_VERSION_SDD} from './format-version.js';
 import type {ClientID} from './sync/ids.js';
 
 initReplicacheTesting();
@@ -41,10 +37,7 @@ initReplicacheTesting();
 export async function createPerdag(args: {
   replicacheName: string;
   schemaVersion: string;
-  replicacheFormatVersion:
-    | typeof REPLICACHE_FORMAT_VERSION_SDD
-    | typeof REPLICACHE_FORMAT_VERSION_DD31
-    | typeof REPLICACHE_FORMAT_VERSION_V6;
+  replicacheFormatVersion: number;
 }): Promise<dag.Store> {
   const {replicacheName, schemaVersion, replicacheFormatVersion} = args;
   const idbName = makeIDBNameForTesting(
@@ -77,17 +70,24 @@ export async function createAndPersistClientWithPendingLocalSDD(
   perdag: dag.Store,
   numLocal: number,
 ): Promise<db.LocalMetaSDD[]> {
+  const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION_SDD;
   const testMemdag = new dag.LazyStore(
     perdag,
     100 * 2 ** 20, // 100 MB,
     dag.uuidChunkHasher,
     assertHash,
   );
-  const b = new ChainBuilder(testMemdag, undefined, false);
+  const b = new ChainBuilder(testMemdag, undefined, replicacheFormatVersion);
   await b.addGenesis(clientID);
   await b.addSnapshot([['unique', uuid()]], clientID);
 
-  await initClientWithClientID(clientID, perdag, [], {}, false);
+  await initClientWithClientID(
+    clientID,
+    perdag,
+    [],
+    {},
+    replicacheFormatVersion,
+  );
 
   const localMetas: db.LocalMetaSDD[] = [];
   for (let i = 0; i < numLocal; i++) {
@@ -165,10 +165,13 @@ async function testRecoveringMutationsOfClientV4(args: {
   fetchMock.post(pushURL, 'ok');
   const pullLastMutationID =
     client1.mutationID - numMutationsNotAcknowledgedByPull;
-  fetchMock.post(pullURL, {
-    cookie: 'pull_cookie_1',
-    lastMutationID: pullLastMutationID,
-    patch: [],
+  fetchMock.post(pullURL, () => {
+    debugger;
+    return {
+      cookie: 'pull_cookie_1',
+      lastMutationID: pullLastMutationID,
+      patch: [],
+    };
   });
 
   await rep.recoverMutations();
@@ -216,7 +219,8 @@ async function testRecoveringMutationsOfClientV4(args: {
   expect(updatedClient1.headHash).to.equal(client1.headHash);
 }
 
-test('successfully recovering mutations of client with same schema version and replicache format version', async () => {
+test.only('successfully recovering mutations of client with same schema version and replicache format version', async () => {
+  debugger;
   await testRecoveringMutationsOfClientV4({
     schemaVersionOfClientWPendingMutations: 'testSchema1',
     schemaVersionOfClientRecoveringMutations: 'testSchema1',
@@ -1021,6 +1025,7 @@ test('if an error occurs recovering one db, continues to try to recover clients 
 });
 
 test('mutation recovery exits early if Replicache is closed', async () => {
+  debugger;
   const schemaVersion = 'testSchema1';
   const client1ID = 'client1';
   const client2ID = 'client2';

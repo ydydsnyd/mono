@@ -94,7 +94,7 @@ if (perf) {
     buildCLI(),
   ]);
 } else {
-  let opts = {};
+  let opts = {minify: false};
   if (debug || (await isRocicorpPackage())) {
     opts = {minify: false};
   }

@@ -15,7 +15,7 @@ import {
   JSONValue,
   ReadonlyJSONValue,
   assertDeepFrozen,
-  assertFrozenJSONValue,
+  assertJSONValue,
   deepFreeze,
 } from '../json.js';
 import type {IndexKey} from '../mod.js';
@@ -173,13 +173,7 @@ export function binarySearchFound(
  * Asserts `v` is a valid B+Tree node. This includes checking that the node is
  * deep frozen as well.
  */
-export function internalizeBTreeNode(
-  v: unknown,
-): asserts v is InternalNode | DataNode {
-  assertBTreeNodeShape(v);
-}
-
-function assertBTreeNodeShape(
+export function assertBTreeNodeChunkData(
   v: unknown,
 ): asserts v is InternalNode | DataNode {
   if (skipBTreeNodeAsserts) {
@@ -188,29 +182,28 @@ function assertBTreeNodeShape(
   assertArray(v);
   assertDeepFrozen(v);
 
-  function assertEntry(
-    entry: unknown,
-    f:
-      | ((v: unknown) => asserts v is Hash)
-      | ((v: unknown) => asserts v is JSONValue),
-  ): asserts entry is Entry<Hash | JSONValue> {
-    assertArray(entry);
-    assert(entry.length === 3);
-    assertDeepFrozen(entry);
-    assertString(entry[0]);
-    f(entry[1]);
-    assertNumber(entry[2]);
-  }
-
-  assert(v.length >= 2);
+  assert(v.length === 2);
   const [level, entries] = v;
 
   assertNumber(level);
   assertArray(entries);
 
   for (const e of entries) {
-    assertEntry(e, level > 0 ? assertString : assertFrozenJSONValue);
+    assertEntry(e, level > 0 ? assertString : assertJSONValue);
   }
+}
+
+function assertEntry(
+  entry: unknown,
+  f:
+    | ((v: unknown) => asserts v is Hash)
+    | ((v: unknown) => asserts v is JSONValue),
+): asserts entry is Entry<Hash | JSONValue> {
+  assertArray(entry);
+  assert(entry.length === 3);
+  assertString(entry[0]);
+  f(entry[1]);
+  assertNumber(entry[2]);
 }
 
 export function isInternalNode(node: Node): node is InternalNode {

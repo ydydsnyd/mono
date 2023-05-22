@@ -6,6 +6,10 @@ import type {Cookie} from '../cookies.js';
 import * as dag from '../dag/mod.js';
 import * as db from '../db/mod.js';
 import {ChainBuilder} from '../db/test-helpers.js';
+import {
+  REPLICACHE_FORMAT_VERSION,
+  ReplicacheFormatVersion,
+} from '../format-version.js';
 import {Hash, assertHash, fakeHash, makeNewFakeHashFunction} from '../hash.js';
 import {JSONValue, ReadonlyJSONValue, deepFreeze} from '../json.js';
 import {
@@ -31,9 +35,14 @@ async function makeChain(
   clientID: ClientID,
   cookie: number,
   headName: string,
+  replicacheFormatVersion: ReplicacheFormatVersion,
   withLocal = true,
 ): Promise<{headHash: Hash; chainBuilder: ChainBuilder}> {
-  const chainBuilder: ChainBuilder = new ChainBuilder(store, headName);
+  const chainBuilder: ChainBuilder = new ChainBuilder(
+    store,
+    headName,
+    replicacheFormatVersion,
+  );
   await chainBuilder.addGenesis(clientID);
   await chainBuilder.addSnapshot([], clientID, cookie);
   if (withLocal) {
@@ -48,8 +57,15 @@ function makeMemdagChain(
   memdag: dag.Store,
   clientID: ClientID,
   cookie: number,
+  replicacheFormatVersion: ReplicacheFormatVersion,
 ): Promise<{headHash: Hash; chainBuilder: ChainBuilder}> {
-  return makeChain(memdag, clientID, cookie, db.DEFAULT_HEAD_NAME);
+  return makeChain(
+    memdag,
+    clientID,
+    cookie,
+    db.DEFAULT_HEAD_NAME,
+    replicacheFormatVersion,
+  );
 }
 
 const PERDAG_TEST_SETUP_HEAD_NAME = 'test-setup-head';
@@ -57,6 +73,7 @@ async function makePerdagChainAndSetClientsAndClientGroup(
   perdag: dag.Store,
   clientID: ClientID,
   cookie: number,
+  replicacheFormatVersion: ReplicacheFormatVersion,
   withLocal = true,
 ): Promise<{headHash: Hash; chainBuilder: ChainBuilder; client: ClientV6}> {
   const {headHash, chainBuilder} = await makeChain(
@@ -64,6 +81,7 @@ async function makePerdagChainAndSetClientsAndClientGroup(
     clientID,
     cookie,
     PERDAG_TEST_SETUP_HEAD_NAME,
+    replicacheFormatVersion,
     withLocal,
   );
   return {
@@ -153,13 +171,19 @@ function assertRefreshHashes(
 
 suite('refresh', () => {
   test('identical dags', async () => {
+    const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
     // If the dags are the same then refresh is a no op.
     const {perdag, memdag} = makeStores();
     const clientID = 'client-id-1';
     const mutators = mutatorsProxy();
 
-    await makePerdagChainAndSetClientsAndClientGroup(perdag, clientID, 1);
-    await makeMemdagChain(memdag, clientID, 1);
+    await makePerdagChainAndSetClientsAndClientGroup(
+      perdag,
+      clientID,
+      1,
+      replicacheFormatVersion,
+    );
+    await makeMemdagChain(memdag, clientID, 1, replicacheFormatVersion);
 
     const result = await refresh(
       new LogContext(),
@@ -169,6 +193,7 @@ suite('refresh', () => {
       mutators,
       testSubscriptionsManagerOptions,
       () => false,
+      replicacheFormatVersion,
     );
     assert(result);
     expect(result[0]).to.deep.equal(
@@ -180,6 +205,7 @@ suite('refresh', () => {
   });
 
   test('identical dags, multiple refreshHashes at start', async () => {
+    const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
     // If the dags are the same then refresh is a no op.
     const {perdag, memdag} = makeStores();
     const clientID = 'client-id-1';
@@ -189,6 +215,7 @@ suite('refresh', () => {
       perdag,
       clientID,
       1,
+      replicacheFormatVersion,
       undefined,
     );
     await withWrite(perdag, async perdagWrite => {
@@ -208,7 +235,7 @@ suite('refresh', () => {
       );
       await perdagWrite.commit();
     });
-    await makeMemdagChain(memdag, clientID, 1);
+    await makeMemdagChain(memdag, clientID, 1, replicacheFormatVersion);
 
     const result = await refresh(
       new LogContext(),
@@ -218,6 +245,7 @@ suite('refresh', () => {
       mutators,
       testSubscriptionsManagerOptions,
       () => false,
+      replicacheFormatVersion,
     );
     assert(result);
     expect(result[0]).to.deep.equal(
@@ -229,18 +257,25 @@ suite('refresh', () => {
   });
 
   test('memdag has one more LM', async () => {
+    const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
     const {perdag, memdag} = makeStores();
     const clientID = 'client-id-1';
     const mutators: MutatorDefs = mutatorsProxy();
 
     const {chainBuilder: perdagChainBuilder} =
-      await makePerdagChainAndSetClientsAndClientGroup(perdag, clientID, 1);
+      await makePerdagChainAndSetClientsAndClientGroup(
+        perdag,
+        clientID,
+        1,
+        replicacheFormatVersion,
+      );
 
     // Memdag has one more LM than perdag.
     const {chainBuilder: memdagChainBuilder} = await makeMemdagChain(
       memdag,
       clientID,
       1,
+      replicacheFormatVersion,
     );
     await memdagChainBuilder.addLocal(clientID, []);
 
@@ -252,6 +287,7 @@ suite('refresh', () => {
       mutators,
       testSubscriptionsManagerOptions,
       () => false,
+      replicacheFormatVersion,
     );
     assert(result);
     expect(result[0]).to.deep.equal(
@@ -273,6 +309,7 @@ suite('refresh', () => {
   });
 
   test('memdag has a newer cookie', async () => {
+    const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
     const {perdag, memdag} = makeStores();
     const clientID = 'client-id-1';
     const mutators: MutatorDefs = mutatorsProxy();
@@ -281,6 +318,7 @@ suite('refresh', () => {
       perdag,
       clientID,
       1,
+      replicacheFormatVersion,
     );
 
     // Memdag has a newer cookie than perdag so we abort the refresh
@@ -288,6 +326,7 @@ suite('refresh', () => {
       memdag,
       clientID,
       2,
+      replicacheFormatVersion,
     );
     // Memdag has one more LM than perdag.
     await memdagChainBuilder.addLocal(clientID, []);
@@ -300,12 +339,14 @@ suite('refresh', () => {
       mutators,
       testSubscriptionsManagerOptions,
       () => false,
+      replicacheFormatVersion,
     );
     expect(diffs).undefined;
     await assertRefreshHashes(perdag, clientID, client.refreshHashes);
   });
 
   test('cookies are equal and perdag has no LM', async () => {
+    const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
     const {perdag, memdag} = makeStores();
     const clientID = 'client-id-1';
     const mutators: MutatorDefs = mutatorsProxy();
@@ -314,12 +355,13 @@ suite('refresh', () => {
       perdag,
       clientID,
       1,
+      replicacheFormatVersion,
       false,
     );
 
     // Memdag has same cookie as perdag, and perdag has no
     // LM so we abort the refresh
-    await makeMemdagChain(memdag, clientID, 1);
+    await makeMemdagChain(memdag, clientID, 1, replicacheFormatVersion);
 
     const diffs = await refresh(
       new LogContext(),
@@ -329,24 +371,32 @@ suite('refresh', () => {
       mutators,
       testSubscriptionsManagerOptions,
       () => false,
+      replicacheFormatVersion,
     );
     expect(diffs).undefined;
     await assertRefreshHashes(perdag, clientID, client.refreshHashes);
   });
 
   test('memdag has two more LMs', async () => {
+    const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
     const {perdag, memdag} = makeStores();
     const clientID = 'client-id-1';
     const mutators: MutatorDefs = mutatorsProxy();
 
     const {chainBuilder: perdagChainBuilder} =
-      await makePerdagChainAndSetClientsAndClientGroup(perdag, clientID, 1);
+      await makePerdagChainAndSetClientsAndClientGroup(
+        perdag,
+        clientID,
+        1,
+        replicacheFormatVersion,
+      );
 
     // Memdag has two more LM than perdag.
     const {chainBuilder: memdagChainBuilder} = await makeMemdagChain(
       memdag,
       clientID,
       1,
+      replicacheFormatVersion,
     );
     await memdagChainBuilder.addLocal(clientID, []);
     await memdagChainBuilder.addLocal(clientID, []);
@@ -359,6 +409,7 @@ suite('refresh', () => {
       mutators,
       testSubscriptionsManagerOptions,
       () => false,
+      replicacheFormatVersion,
     );
     assert(result);
     expect(result[0]).to.deep.equal(
@@ -384,6 +435,7 @@ suite('refresh', () => {
   });
 
   test('perdag has LM from different clients', async () => {
+    const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
     const {perdag, memdag} = makeStores();
     const clientID1 = 'client-id-1';
     const clientID2 = 'client-id-2';
@@ -393,6 +445,7 @@ suite('refresh', () => {
     const perdagChainBuilder: ChainBuilder = new ChainBuilder(
       perdag,
       PERDAG_TEST_SETUP_HEAD_NAME,
+      REPLICACHE_FORMAT_VERSION,
     );
     await perdagChainBuilder.addGenesis(clientID1);
     await perdagChainBuilder.addSnapshot([], clientID1, 1, {
@@ -407,6 +460,7 @@ suite('refresh', () => {
     const memdagChainBuilder: ChainBuilder = new ChainBuilder(
       memdag,
       db.DEFAULT_HEAD_NAME,
+      REPLICACHE_FORMAT_VERSION,
     );
     await memdagChainBuilder.addGenesis(clientID1);
     await memdagChainBuilder.addSnapshot([], clientID1, 1, {
@@ -424,6 +478,7 @@ suite('refresh', () => {
       mutators,
       testSubscriptionsManagerOptions,
       () => false,
+      replicacheFormatVersion,
     );
     assert(result);
     expect(result[0]).to.deep.equal(
@@ -444,6 +499,7 @@ suite('refresh', () => {
   });
 
   test('new snapshot during refresh', async () => {
+    const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
     const {perdag, memdag} = makeStores();
     const clientID = 'client-id-1';
     const mutators: MutatorDefs = mutatorsProxy();
@@ -452,6 +508,7 @@ suite('refresh', () => {
       perdag,
       clientID,
       2,
+      replicacheFormatVersion,
     );
     client = await withWrite(perdag, async perdagWrite => {
       const newClient = {
@@ -468,6 +525,7 @@ suite('refresh', () => {
       memdag,
       clientID,
       2,
+      replicacheFormatVersion,
     );
     await memdagChainBuilder.addLocal(clientID, []);
 
@@ -491,18 +549,25 @@ suite('refresh', () => {
       mutators,
       testSubscriptionsManagerOptions,
       () => false,
+      replicacheFormatVersion,
     );
     expect(diffs).undefined;
     await assertRefreshHashes(perdag, clientID, client.refreshHashes);
   });
 
   test('second perdag write fails', async () => {
+    const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
     const {perdag, memdag} = makeStores();
     const clientID = 'client-id-1';
     const mutators: MutatorDefs = mutatorsProxy();
 
     const {chainBuilder: perdagChainBuilder, client: c} =
-      await makePerdagChainAndSetClientsAndClientGroup(perdag, clientID, 2);
+      await makePerdagChainAndSetClientsAndClientGroup(
+        perdag,
+        clientID,
+        2,
+        replicacheFormatVersion,
+      );
     const client = await withWrite(perdag, async perdagWrite => {
       const newClient = {
         ...c,
@@ -518,6 +583,7 @@ suite('refresh', () => {
       memdag,
       clientID,
       2,
+      replicacheFormatVersion,
     );
     await memdagChainBuilder.addLocal(clientID, []);
 
@@ -540,6 +606,7 @@ suite('refresh', () => {
         mutators,
         testSubscriptionsManagerOptions,
         () => false,
+        replicacheFormatVersion,
       );
     } catch (e) {
       expectedE = e;
@@ -585,6 +652,7 @@ suite('refresh', () => {
     // medag:main -> LM {clientID: 1 id: 5 } -> LM {clientID: 1 id: 4 } -> LM
     // {clientID: 2 id: 3 } -> Snapshot { lmids: { 1: 3, 2: 2} }
 
+    const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
     const {perdag, memdag} = makeStores();
 
     function makeSnapshot({
@@ -604,7 +672,7 @@ suite('refresh', () => {
     }): Promise<db.Commit<db.SnapshotMetaDD31>> {
       return withWrite(store, async dagWrite => {
         if (!valueHash) {
-          const map = new btree.BTreeWrite(dagWrite);
+          const map = new btree.BTreeWrite(dagWrite, replicacheFormatVersion);
           valueHash = await map.flush();
         }
         const c = db.newSnapshotDD31(
@@ -652,7 +720,11 @@ suite('refresh', () => {
       entries?: readonly btree.Entry<ReadonlyJSONValue>[];
     }): Promise<db.Commit<db.LocalMetaDD31>> {
       return withWrite(store, async dagWrite => {
-        const m = new btree.BTreeWrite(dagWrite, valueHash);
+        const m = new btree.BTreeWrite(
+          dagWrite,
+          replicacheFormatVersion,
+          valueHash,
+        );
         for (const [k, v] of entries) {
           await m.put(k, deepFreeze(v));
         }
@@ -791,6 +863,7 @@ suite('refresh', () => {
       },
       testSubscriptionsManagerOptions,
       () => false,
+      replicacheFormatVersion,
     );
     assert(result);
     expect(result[0]).to.deep.equal(

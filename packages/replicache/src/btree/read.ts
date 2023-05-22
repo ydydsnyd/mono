@@ -1,7 +1,9 @@
 import type * as dag from '../dag/mod.js';
+import type {ReplicacheFormatVersion} from '../format-version.js';
 import {emptyHash, Hash} from '../hash.js';
 import {deepEqual, FrozenJSONValue} from '../json.js';
 import {
+  assertBTreeNodeChunkData,
   binarySearch,
   binarySearchFound,
   DataNodeImpl,
@@ -10,7 +12,6 @@ import {
   findLeaf,
   InternalDiff,
   InternalDiffOperation,
-  internalizeBTreeNode,
   InternalNodeImpl,
   isDataNodeImpl,
   newNodeImpl,
@@ -40,14 +41,17 @@ export class BTreeRead implements AsyncIterable<Entry<FrozenJSONValue>> {
     new Map();
 
   readonly chunkHeaderSize: number;
+  protected readonly _replicacheFormatVersion: ReplicacheFormatVersion;
 
   constructor(
     dagRead: dag.Read,
+    replicacheFormatVersion: ReplicacheFormatVersion,
     root: Hash = emptyHash,
     chunkHeaderSize = NODE_HEADER_SIZE,
   ) {
     this.rootHash = root;
     this._dagRead = dagRead;
+    this._replicacheFormatVersion = replicacheFormatVersion;
     this.chunkHeaderSize = chunkHeaderSize;
   }
 
@@ -62,7 +66,7 @@ export class BTreeRead implements AsyncIterable<Entry<FrozenJSONValue>> {
     }
 
     const {data} = await this._dagRead.mustGetChunk(hash);
-    internalizeBTreeNode(data);
+    assertBTreeNodeChunkData(data);
     const impl = newNodeImpl(
       this._chunkEntriesToTreeEntries(
         data[NODE_ENTRIES] as readonly Entry<FrozenJSONValue>[],
@@ -126,7 +130,7 @@ export class BTreeRead implements AsyncIterable<Entry<FrozenJSONValue>> {
           ] as ReadNodeResult;
         }
         const {data} = await this._dagRead.mustGetChunk(hash);
-        internalizeBTreeNode(data);
+        assertBTreeNodeChunkData(data);
         return data as ReadNodeResult;
       },
     );

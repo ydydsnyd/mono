@@ -10,6 +10,10 @@ import {
   createMutatorName,
   getChunkSnapshot,
 } from '../db/test-helpers.js';
+import {
+  REPLICACHE_FORMAT_VERSION,
+  ReplicacheFormatVersion,
+} from '../format-version.js';
 import {Hash, assertHash, makeNewFakeHashFunction} from '../hash.js';
 import type {JSONValue} from '../json.js';
 import type {MutatorDefs} from '../replicache.js';
@@ -46,6 +50,7 @@ enum PersistedExpectation {
 }
 
 suite('persistDD31', () => {
+  const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
   let memdag: dag.LazyStore,
     perdag: dag.TestStore,
     memdagChainBuilder: ChainBuilder,
@@ -66,7 +71,7 @@ suite('persistDD31', () => {
       clients,
       clientGroupID,
       testPersist,
-    } = await setupPersistTest());
+    } = await setupPersistTest(replicacheFormatVersion));
   });
 
   teardown(async () => {
@@ -553,6 +558,7 @@ suite('persistDD31', () => {
       const [, , btreeRead] = await db.readCommitForBTreeRead(
         db.whenceHash(afterPersist.perdagClientGroupHeadHash),
         perdagRead,
+        replicacheFormatVersion,
       );
       expect(await btreeRead.get('k1')).to.equal('value1');
       expect(await btreeRead.get('k2')).to.equal('value2');
@@ -656,6 +662,7 @@ suite('persistDD31', () => {
         const [, , btreeRead] = await db.readCommitForBTreeRead(
           db.whenceHash(afterPersist.perdagClientGroupHeadHash),
           perdagRead,
+          replicacheFormatVersion,
         );
         expect(await btreeRead.get('k1')).to.equal('value1');
         expect(await btreeRead.get('k2')).to.equal('value2');
@@ -709,7 +716,11 @@ suite('persistDD31', () => {
       }
       perdagClientGroupUpdatedToNewerSnapshot = true;
       const updatedPerdagClientGroupChainBuilder: ChainBuilder =
-        new ChainBuilder(perdag, PERDAG_TEST_SETUP_HEAD_NAME);
+        new ChainBuilder(
+          perdag,
+          PERDAG_TEST_SETUP_HEAD_NAME,
+          replicacheFormatVersion,
+        );
       const mutationIDs = {
         [clients[0].clientID]: 1,
         [clients[1].clientID]: 1,
@@ -847,7 +858,9 @@ function expectUpdatedClientPersistHash(
   expect(afterPersistClientMap).to.deep.equal(expectedClientMap);
 }
 
-async function setupPersistTest() {
+async function setupPersistTest(
+  replicacheFormatVersion: ReplicacheFormatVersion,
+) {
   const hashFunction = makeNewFakeHashFunction();
   const perdag = new dag.TestStore(undefined, hashFunction);
   const memdag = new dag.LazyStore(
@@ -881,6 +894,7 @@ async function setupPersistTest() {
       perdag,
       mutatorNames,
       {},
+      replicacheFormatVersion,
     );
     assert(clientGroupID === undefined || c.clientGroupID === clientGroupID);
     clientGroupID = c.clientGroupID;
@@ -909,6 +923,7 @@ async function setupPersistTest() {
       perdag,
       mutators,
       () => false,
+      replicacheFormatVersion,
       onGatherMemOnlyChunksForTest,
     );
     const persistedChunkHashes: Hash[] = [];
@@ -958,10 +973,15 @@ async function setupPersistTest() {
   return {
     memdag,
     perdag,
-    memdagChainBuilder: new ChainBuilder(memdag),
+    memdagChainBuilder: new ChainBuilder(
+      memdag,
+      undefined,
+      replicacheFormatVersion,
+    ),
     perdagClientGroupChainBuilder: new ChainBuilder(
       perdag,
       PERDAG_TEST_SETUP_HEAD_NAME,
+      replicacheFormatVersion,
     ),
     clients,
     clientGroupID,

@@ -1,5 +1,9 @@
 import {assert, expect} from '@esm-bundle/chai';
 import * as dag from '../dag/mod.js';
+import {
+  REPLICACHE_FORMAT_VERSION,
+  ReplicacheFormatVersion,
+} from '../format-version.js';
 import {Hash, emptyHash, makeNewFakeHashFunction} from '../hash.js';
 import {FrozenJSONValue, ReadonlyJSONValue, deepFreeze} from '../json.js';
 import {getSizeOfEntry, getSizeOfValue} from '../size-of-value.js';
@@ -11,8 +15,8 @@ import {
   InternalNode,
   NODE_ENTRIES,
   NODE_LEVEL,
+  assertBTreeNodeChunkData,
   findLeaf,
-  internalizeBTreeNode,
   makeNodeChunkData,
   partition,
 } from './node.js';
@@ -27,6 +31,7 @@ function createSizedEntry<K, V>(
 }
 
 test('findLeaf', async () => {
+  const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
   const dagStore = new dag.TestStore();
 
   const leaf0 = makeNodeChunkData(0, [
@@ -78,7 +83,12 @@ test('findLeaf', async () => {
   });
 
   await withRead(dagStore, async dagRead => {
-    const source = new BTreeRead(dagRead, rootHash, chunkHeaderSize);
+    const source = new BTreeRead(
+      dagRead,
+      replicacheFormatVersion,
+      rootHash,
+      chunkHeaderSize,
+    );
 
     const t = async (
       key: string,
@@ -155,10 +165,11 @@ function makeTree(node: TreeData, dagStore: dag.Store): Promise<Hash> {
 async function readTreeData(
   rootHash: Hash,
   dagRead: dag.Read,
+  replicacheFormatVersion: ReplicacheFormatVersion,
 ): Promise<Record<string, unknown>> {
   const chunk = await dagRead.getChunk(rootHash);
   const node = chunk?.data;
-  internalizeBTreeNode(node);
+  assertBTreeNodeChunkData(node);
   let lastKey: string | undefined;
   const rv: Record<string, unknown> = {
     $level: node[NODE_LEVEL],
@@ -180,7 +191,7 @@ async function readTreeData(
       expect(lastKey < k);
       lastKey = k;
     }
-    rv[k] = await readTreeData(hash, dagRead);
+    rv[k] = await readTreeData(hash, dagRead, replicacheFormatVersion);
   }
   return rv;
 }
@@ -188,10 +199,13 @@ async function readTreeData(
 async function expectTree(
   rootHash: Hash,
   dagStore: dag.Store,
+  replicacheFormatVersion: ReplicacheFormatVersion,
   expected: TreeData,
 ) {
   await withRead(dagStore, async dagRead => {
-    expect(await readTreeData(rootHash, dagRead)).to.deep.equal(expected);
+    expect(
+      await readTreeData(rootHash, dagRead, replicacheFormatVersion),
+    ).to.deep.equal(expected);
   });
 }
 
@@ -210,10 +224,16 @@ setup(() => {
 function doRead<R>(
   rootHash: Hash,
   dagStore: dag.Store,
+  replicacheFormatVersion: ReplicacheFormatVersion,
   fn: (r: BTreeRead) => R | Promise<R>,
 ): Promise<R> {
   return withRead(dagStore, dagWrite => {
-    const r = new BTreeRead(dagWrite, rootHash, chunkHeaderSize);
+    const r = new BTreeRead(
+      dagWrite,
+      replicacheFormatVersion,
+      rootHash,
+      chunkHeaderSize,
+    );
     return fn(r);
   });
 }
@@ -221,11 +241,13 @@ function doRead<R>(
 function doWrite(
   rootHash: Hash,
   dagStore: dag.Store,
+  replicacheFormatVersion: ReplicacheFormatVersion,
   fn: (w: BTreeWrite) => void | Promise<void>,
 ): Promise<Hash> {
   return withWrite(dagStore, async dagWrite => {
     const w = new BTreeWrite(
       dagWrite,
+      replicacheFormatVersion,
       rootHash,
       minSize,
       maxSize,
@@ -249,9 +271,10 @@ async function asyncIterToArray<T>(iter: AsyncIterable<T>): Promise<T[]> {
 }
 
 test('empty read tree', async () => {
+  const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
   const dagStore = new dag.TestStore();
   await withRead(dagStore, async dagRead => {
-    const r = new BTreeRead(dagRead);
+    const r = new BTreeRead(dagRead, replicacheFormatVersion);
     expect(await r.get('a')).to.be.undefined;
     expect(await r.has('b')).to.be.false;
     expect(await asyncIterToArray(r.scan(''))).to.deep.equal([]);
@@ -259,6 +282,7 @@ test('empty read tree', async () => {
 });
 
 test('empty write tree', async () => {
+  const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
   const chunkHasher = makeNewFakeHashFunction();
   const dagStore = new dag.TestStore(undefined, chunkHasher);
 
@@ -267,6 +291,7 @@ test('empty write tree', async () => {
   await withWrite(dagStore, async dagWrite => {
     const w = new BTreeWrite(
       dagWrite,
+      replicacheFormatVersion,
       undefined,
       minSize,
       maxSize,
@@ -283,6 +308,7 @@ test('empty write tree', async () => {
   let rootHash = await withWrite(dagStore, async dagWrite => {
     const w = new BTreeWrite(
       dagWrite,
+      replicacheFormatVersion,
       undefined,
       minSize,
       maxSize,
@@ -298,9 +324,14 @@ test('empty write tree', async () => {
     return h;
   });
 
-  rootHash = await doWrite(rootHash, dagStore, async w => {
-    expect(await w.del('a')).to.be.true;
-  });
+  rootHash = await doWrite(
+    rootHash,
+    dagStore,
+    replicacheFormatVersion,
+    async w => {
+      expect(await w.del('a')).to.be.true;
+    },
+  );
 
   // We do not restore back to empty hash when empty.
   expect(rootHash).to.not.equal(emptyHash);
@@ -310,6 +341,7 @@ test('empty write tree', async () => {
 });
 
 test('get', async () => {
+  const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
   const dagStore = new dag.TestStore();
 
   const tree: TreeData = {
@@ -337,7 +369,12 @@ test('get', async () => {
   const rootHash = await makeTree(tree, dagStore);
 
   await withRead(dagStore, async dagRead => {
-    const source = new BTreeRead(dagRead, rootHash, chunkHeaderSize);
+    const source = new BTreeRead(
+      dagRead,
+      replicacheFormatVersion,
+      rootHash,
+      chunkHeaderSize,
+    );
 
     expect(await source.get('b')).to.equal(0);
     expect(await source.get('d')).to.equal(1);
@@ -363,6 +400,7 @@ test('get', async () => {
 });
 
 test('has', async () => {
+  const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
   const dagStore = new dag.TestStore();
 
   const tree: TreeData = {
@@ -390,7 +428,12 @@ test('has', async () => {
   const rootHash = await makeTree(tree, dagStore);
 
   await withRead(dagStore, async dagRead => {
-    const source = new BTreeRead(dagRead, rootHash, chunkHeaderSize);
+    const source = new BTreeRead(
+      dagRead,
+      replicacheFormatVersion,
+      rootHash,
+      chunkHeaderSize,
+    );
 
     expect(await source.has('b')).to.be.true;
     expect(await source.has('d')).to.be.true;
@@ -465,6 +508,7 @@ test('partition', () => {
 });
 
 test('put', async () => {
+  const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
   const dagStore = new dag.TestStore();
 
   const tree: TreeData = {
@@ -476,16 +520,21 @@ test('put', async () => {
 
   let rootHash = await makeTree(tree, dagStore);
 
-  rootHash = await doWrite(rootHash, dagStore, async w => {
-    await w.put('a', 'aaa');
+  rootHash = await doWrite(
+    rootHash,
+    dagStore,
+    replicacheFormatVersion,
+    async w => {
+      await w.put('a', 'aaa');
 
-    expect(await w.get('a')).to.equal('aaa');
-    expect(await w.get('b')).to.equal(0);
-    await w.put('b', 'bbb');
-    expect(await w.get('b')).to.equal('bbb');
-  });
+      expect(await w.get('a')).to.equal('aaa');
+      expect(await w.get('b')).to.equal(0);
+      await w.put('b', 'bbb');
+      expect(await w.get('b')).to.equal('bbb');
+    },
+  );
 
-  await expectTree(rootHash, dagStore, {
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 0,
     a: 'aaa',
     b: 'bbb',
@@ -493,14 +542,19 @@ test('put', async () => {
     f: 2,
   });
 
-  rootHash = await doWrite(rootHash, dagStore, async w => {
-    await w.put('c', 'ccc');
-    expect(await w.get('a')).to.equal('aaa');
-    expect(await w.get('b')).to.equal('bbb');
-    expect(await w.get('c')).to.equal('ccc');
-  });
+  rootHash = await doWrite(
+    rootHash,
+    dagStore,
+    replicacheFormatVersion,
+    async w => {
+      await w.put('c', 'ccc');
+      expect(await w.get('a')).to.equal('aaa');
+      expect(await w.get('b')).to.equal('bbb');
+      expect(await w.get('c')).to.equal('ccc');
+    },
+  );
 
-  await expectTree(rootHash, dagStore, {
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 1,
     b: {
       $level: 0,
@@ -519,6 +573,7 @@ test('put', async () => {
     rootHash = await withWrite(dagStore, async dagWrite => {
       const w = new BTreeWrite(
         dagWrite,
+        replicacheFormatVersion,
         rootHash,
         minSize,
         maxSize,
@@ -556,7 +611,7 @@ test('put', async () => {
     i: 'iii',
     j: 'jjj',
   });
-  await expectTree(rootHash, dagStore, {
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 1,
     b: {
       $level: 0,
@@ -585,7 +640,7 @@ test('put', async () => {
   await write({
     k: 'kkk',
   });
-  await expectTree(rootHash, dagStore, {
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 2,
     d: {
       $level: 1,
@@ -629,7 +684,7 @@ test('put', async () => {
     o: 'ooo',
     n: 'nnn',
   });
-  await expectTree(rootHash, dagStore, {
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 2,
     d: {
       $level: 1,
@@ -686,7 +741,7 @@ test('put', async () => {
   await write({
     boo: '👻',
   });
-  await expectTree(rootHash, dagStore, {
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 2,
     d: {
       $level: 1,
@@ -745,7 +800,7 @@ test('put', async () => {
     bx: true,
     bx2: false,
   });
-  await expectTree(rootHash, dagStore, {
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 2,
     d: {
       $level: 1,
@@ -807,6 +862,7 @@ test('put', async () => {
 });
 
 test('del - single data node', async () => {
+  const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
   const dagStore = new dag.TestStore();
 
   const tree: TreeData = {
@@ -818,36 +874,52 @@ test('del - single data node', async () => {
 
   let rootHash = await makeTree(tree, dagStore);
 
-  rootHash = await doWrite(rootHash, dagStore, async w => {
-    expect(await w.del('a')).to.equal(false);
-    expect(await w.del('d')).to.equal(true);
-  });
+  rootHash = await doWrite(
+    rootHash,
+    dagStore,
+    replicacheFormatVersion,
+    async w => {
+      expect(await w.del('a')).to.equal(false);
+      expect(await w.del('d')).to.equal(true);
+    },
+  );
 
-  await expectTree(rootHash, dagStore, {
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 0,
     b: 0,
     f: 2,
   });
 
-  rootHash = await doWrite(rootHash, dagStore, async w => {
-    expect(await w.del('f')).to.equal(true);
-  });
+  rootHash = await doWrite(
+    rootHash,
+    dagStore,
+    replicacheFormatVersion,
+    async w => {
+      expect(await w.del('f')).to.equal(true);
+    },
+  );
 
-  await expectTree(rootHash, dagStore, {
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 0,
     b: 0,
   });
 
-  rootHash = await doWrite(rootHash, dagStore, async w => {
-    expect(await w.del('b')).to.equal(true);
-  });
+  rootHash = await doWrite(
+    rootHash,
+    dagStore,
+    replicacheFormatVersion,
+    async w => {
+      expect(await w.del('b')).to.equal(true);
+    },
+  );
 
-  await expectTree(rootHash, dagStore, {
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 0,
   });
 });
 
 test('del - flatten', async () => {
+  const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
   const dagStore = new dag.TestStore();
 
   // This tests that we can flatten "an invalid tree"
@@ -870,11 +942,16 @@ test('del - flatten', async () => {
 
     let rootHash = await makeTree(tree, dagStore);
 
-    rootHash = await doWrite(rootHash, dagStore, async w => {
-      expect(await w.del('a')).to.equal(true);
-    });
+    rootHash = await doWrite(
+      rootHash,
+      dagStore,
+      replicacheFormatVersion,
+      async w => {
+        expect(await w.del('a')).to.equal(true);
+      },
+    );
 
-    await expectTree(rootHash, dagStore, {
+    await expectTree(rootHash, dagStore, replicacheFormatVersion, {
       $level: 0,
       b: 'bbb',
     });
@@ -898,11 +975,16 @@ test('del - flatten', async () => {
 
     let rootHash = await makeTree(tree, dagStore);
 
-    rootHash = await doWrite(rootHash, dagStore, async w => {
-      expect(await w.del('b')).to.equal(true);
-    });
+    rootHash = await doWrite(
+      rootHash,
+      dagStore,
+      replicacheFormatVersion,
+      async w => {
+        expect(await w.del('b')).to.equal(true);
+      },
+    );
 
-    await expectTree(rootHash, dagStore, {
+    await expectTree(rootHash, dagStore, replicacheFormatVersion, {
       $level: 0,
       a: 'aaa',
     });
@@ -910,6 +992,7 @@ test('del - flatten', async () => {
 });
 
 test('del - with internal nodes', async () => {
+  const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
   const dagStore = new dag.TestStore();
 
   const tree: TreeData = {
@@ -950,11 +1033,16 @@ test('del - with internal nodes', async () => {
 
   let rootHash = await makeTree(tree, dagStore);
 
-  rootHash = await doWrite(rootHash, dagStore, async w => {
-    expect(await w.del('k')).to.equal(true);
-  });
+  rootHash = await doWrite(
+    rootHash,
+    dagStore,
+    replicacheFormatVersion,
+    async w => {
+      expect(await w.del('k')).to.equal(true);
+    },
+  );
 
-  await expectTree(rootHash, dagStore, {
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 2,
     d: {
       $level: 1,
@@ -989,11 +1077,16 @@ test('del - with internal nodes', async () => {
     },
   });
 
-  rootHash = await doWrite(rootHash, dagStore, async w => {
-    expect(await w.del('c')).to.equal(true);
-  });
+  rootHash = await doWrite(
+    rootHash,
+    dagStore,
+    replicacheFormatVersion,
+    async w => {
+      expect(await w.del('c')).to.equal(true);
+    },
+  );
 
-  await expectTree(rootHash, dagStore, {
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 2,
     f: {
       $level: 1,
@@ -1024,14 +1117,19 @@ test('del - with internal nodes', async () => {
     },
   });
 
-  rootHash = await doWrite(rootHash, dagStore, async w => {
-    expect(await w.del('e')).to.equal(true);
-    expect(await w.del('f')).to.equal(true);
-    expect(await w.del('g')).to.equal(true);
-    expect(await w.del('h')).to.equal(true);
-  });
+  rootHash = await doWrite(
+    rootHash,
+    dagStore,
+    replicacheFormatVersion,
+    async w => {
+      expect(await w.del('e')).to.equal(true);
+      expect(await w.del('f')).to.equal(true);
+      expect(await w.del('g')).to.equal(true);
+      expect(await w.del('h')).to.equal(true);
+    },
+  );
 
-  await expectTree(rootHash, dagStore, {
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 1,
     d: {
       $level: 0,
@@ -1046,38 +1144,54 @@ test('del - with internal nodes', async () => {
     },
   });
 
-  rootHash = await doWrite(rootHash, dagStore, async w => {
-    expect(await w.del('a')).to.equal(true);
-    expect(await w.del('b')).to.equal(true);
-  });
+  rootHash = await doWrite(
+    rootHash,
+    dagStore,
+    replicacheFormatVersion,
+    async w => {
+      expect(await w.del('a')).to.equal(true);
+      expect(await w.del('b')).to.equal(true);
+    },
+  );
 
-  await expectTree(rootHash, dagStore, {
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 0,
     d: 'ddd',
     i: 'iii',
     j: 'jjj',
   });
 
-  rootHash = await doWrite(rootHash, dagStore, async w => {
-    expect(await w.del('i')).to.equal(true);
-    expect(await w.del('j')).to.equal(true);
-  });
+  rootHash = await doWrite(
+    rootHash,
+    dagStore,
+    replicacheFormatVersion,
+    async w => {
+      expect(await w.del('i')).to.equal(true);
+      expect(await w.del('j')).to.equal(true);
+    },
+  );
 
-  await expectTree(rootHash, dagStore, {
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 0,
     d: 'ddd',
   });
 
-  rootHash = await doWrite(rootHash, dagStore, async w => {
-    expect(await w.del('d')).to.equal(true);
-  });
+  rootHash = await doWrite(
+    rootHash,
+    dagStore,
+    replicacheFormatVersion,
+    async w => {
+      expect(await w.del('d')).to.equal(true);
+    },
+  );
 
-  await expectTree(rootHash, dagStore, {
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 0,
   });
 });
 
 test('put - invalid', async () => {
+  const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
   const dagStore = new dag.TestStore();
 
   // This tests that we can do puts on "an invalid tree"
@@ -1095,11 +1209,16 @@ test('put - invalid', async () => {
 
   let rootHash = await makeTree(tree, dagStore);
 
-  rootHash = await doWrite(rootHash, dagStore, async w => {
-    await w.put('c', 'ccc');
-  });
+  rootHash = await doWrite(
+    rootHash,
+    dagStore,
+    replicacheFormatVersion,
+    async w => {
+      await w.put('c', 'ccc');
+    },
+  );
 
-  await expectTree(rootHash, dagStore, {
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 2,
     c: {
       $level: 1,
@@ -1113,6 +1232,7 @@ test('put - invalid', async () => {
 });
 
 test('put/del - getSize', async () => {
+  const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
   minSize = 30;
   maxSize = minSize * 2;
   getEntrySize = (k, v) => getSizeOfEntry(k, v);
@@ -1127,33 +1247,48 @@ test('put/del - getSize', async () => {
 
   let rootHash = await makeTree(tree, dagStore);
 
-  rootHash = await doWrite(rootHash, dagStore, async w => {
-    await w.put('aaaa', 'a1');
-  });
+  rootHash = await doWrite(
+    rootHash,
+    dagStore,
+    replicacheFormatVersion,
+    async w => {
+      await w.put('aaaa', 'a1');
+    },
+  );
 
   expect(getSizeOfValue('aaaa')).to.equal(9);
   expect(getSizeOfValue('a1')).to.equal(7);
   expect(getSizeOfEntry('aaaa', 'a1')).to.equal(27);
-  await expectTree(rootHash, dagStore, {
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 0,
     aaaa: 'a1',
   });
 
-  rootHash = await doWrite(rootHash, dagStore, async w => {
-    await w.put('c', '');
-  });
+  rootHash = await doWrite(
+    rootHash,
+    dagStore,
+    replicacheFormatVersion,
+    async w => {
+      await w.put('c', '');
+    },
+  );
   expect(getSizeOfEntry('c', '')).to.equal(22);
-  await expectTree(rootHash, dagStore, {
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 0,
     aaaa: 'a1',
     c: '',
   });
 
-  rootHash = await doWrite(rootHash, dagStore, async w => {
-    await w.put('b', 'b234');
-  });
+  rootHash = await doWrite(
+    rootHash,
+    dagStore,
+    replicacheFormatVersion,
+    async w => {
+      await w.put('b', 'b234');
+    },
+  );
   expect(getSizeOfEntry('b', 'b234')).to.equal(26);
-  await expectTree(rootHash, dagStore, {
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 1,
 
     b: {
@@ -1167,10 +1302,15 @@ test('put/del - getSize', async () => {
     },
   });
 
-  rootHash = await doWrite(rootHash, dagStore, async w => {
-    await w.del('b');
-  });
-  await expectTree(rootHash, dagStore, {
+  rootHash = await doWrite(
+    rootHash,
+    dagStore,
+    replicacheFormatVersion,
+    async w => {
+      await w.del('b');
+    },
+  );
+  await expectTree(rootHash, dagStore, replicacheFormatVersion, {
     $level: 0,
     aaaa: 'a1',
     c: '',
@@ -1178,6 +1318,7 @@ test('put/del - getSize', async () => {
 });
 
 test('scan', async () => {
+  const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
   const t = async (
     entries: Entry<ReadonlyJSONValue>[],
     fromKey = '',
@@ -1191,13 +1332,18 @@ test('scan', async () => {
 
     let rootHash = await makeTree(tree, dagStore);
 
-    rootHash = await doWrite(rootHash, dagStore, async w => {
-      for (const [k, v] of entries) {
-        await w.put(k, deepFreeze(v));
-      }
-    });
+    rootHash = await doWrite(
+      rootHash,
+      dagStore,
+      replicacheFormatVersion,
+      async w => {
+        for (const [k, v] of entries) {
+          await w.put(k, deepFreeze(v));
+        }
+      },
+    );
 
-    await doRead(rootHash, dagStore, async r => {
+    await doRead(rootHash, dagStore, replicacheFormatVersion, async r => {
       const res: Entry<FrozenJSONValue>[] = [];
       const scanResult = r.scan(fromKey);
       for await (const e of scanResult) {
@@ -1274,6 +1420,7 @@ test('scan', async () => {
 });
 
 test('diff', async () => {
+  const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
   const t = async (
     oldEntries: Entry<ReadonlyJSONValue>[],
     newEntries: Entry<ReadonlyJSONValue>[],
@@ -1284,6 +1431,7 @@ test('diff', async () => {
     const [oldHash, newHash] = await withWrite(dagStore, async dagWrite => {
       const oldTree = new BTreeWrite(
         dagWrite,
+        replicacheFormatVersion,
         undefined,
         minSize,
         maxSize,
@@ -1296,6 +1444,7 @@ test('diff', async () => {
 
       const newTree = new BTreeWrite(
         dagWrite,
+        replicacheFormatVersion,
         undefined,
         minSize,
         maxSize,
@@ -1317,8 +1466,18 @@ test('diff', async () => {
     });
 
     await withRead(dagStore, async dagRead => {
-      const oldTree = new BTreeRead(dagRead, oldHash, chunkHeaderSize);
-      const newTree = new BTreeRead(dagRead, newHash, chunkHeaderSize);
+      const oldTree = new BTreeRead(
+        dagRead,
+        replicacheFormatVersion,
+        oldHash,
+        chunkHeaderSize,
+      );
+      const newTree = new BTreeRead(
+        dagRead,
+        replicacheFormatVersion,
+        newHash,
+        chunkHeaderSize,
+      );
 
       const actual = [];
       for await (const diffRes of newTree.diff(oldTree)) {

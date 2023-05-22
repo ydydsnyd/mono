@@ -17,11 +17,7 @@ import {
   createAndPersistClientWithPendingLocalSDD,
   createPerdag,
 } from './replicache-mutation-recovery.test.js';
-import {
-  MutatorDefs,
-  REPLICACHE_FORMAT_VERSION_SDD,
-  REPLICACHE_FORMAT_VERSION_V6,
-} from './replicache.js';
+import type {MutatorDefs} from './replicache.js';
 import {stringCompare} from './string-compare.js';
 import {
   PULL_VERSION_DD31,
@@ -50,6 +46,12 @@ import {withRead} from './with-transactions.js';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
+import {
+  REPLICACHE_FORMAT_VERSION,
+  REPLICACHE_FORMAT_VERSION_SDD,
+  REPLICACHE_FORMAT_VERSION_V6,
+  ReplicacheFormatVersion,
+} from './format-version.js';
 import type {ClientGroupID, ClientID} from './sync/ids.js';
 
 async function createAndPersistClientWithPendingLocalDD31(
@@ -58,6 +60,7 @@ async function createAndPersistClientWithPendingLocalDD31(
   numLocal: number,
   mutatorNames: string[],
   cookie: string | number,
+  replicacheFormatVersion: ReplicacheFormatVersion,
   snapshotLastMutationIDs?: Record<ClientID, number> | undefined,
 ): Promise<db.LocalMetaDD31[]> {
   const testMemdag = new dag.LazyStore(
@@ -67,7 +70,7 @@ async function createAndPersistClientWithPendingLocalDD31(
     assertHash,
   );
 
-  const b = new ChainBuilder(testMemdag, undefined, true);
+  const b = new ChainBuilder(testMemdag, undefined, replicacheFormatVersion);
 
   await b.addGenesis(clientID);
   await b.addSnapshot(
@@ -77,7 +80,13 @@ async function createAndPersistClientWithPendingLocalDD31(
     snapshotLastMutationIDs,
   );
 
-  await initClientWithClientID(clientID, perdag, mutatorNames, {}, true);
+  await initClientWithClientID(
+    clientID,
+    perdag,
+    mutatorNames,
+    {},
+    replicacheFormatVersion,
+  );
 
   const localMetas: db.LocalMetaDD31[] = [];
   for (let i = 0; i < numLocal; i++) {
@@ -98,6 +107,7 @@ async function createAndPersistClientWithPendingLocalDD31(
     perdag,
     mutators,
     () => false,
+    replicacheFormatVersion,
   );
 
   return localMetas;
@@ -109,6 +119,7 @@ async function persistSnapshotDD31(
   cookie: string | number,
   mutatorNames: string[],
   snapshotLastMutationIDs: Record<ClientID, number>,
+  replicacheFormatVersion: ReplicacheFormatVersion,
 ): Promise<void> {
   const testMemdag = new dag.LazyStore(
     perdag,
@@ -117,7 +128,7 @@ async function persistSnapshotDD31(
     assertHash,
   );
 
-  const b = new ChainBuilder(testMemdag, undefined, true);
+  const b = new ChainBuilder(testMemdag, undefined, replicacheFormatVersion);
 
   await b.addGenesis(clientID);
   await b.addSnapshot(
@@ -138,6 +149,7 @@ async function persistSnapshotDD31(
     perdag,
     mutators,
     () => false,
+    replicacheFormatVersion,
   );
 }
 
@@ -176,6 +188,7 @@ suite('DD31', () => {
     expectedLastServerAckdMutationIDs?: Record<ClientID, number> | undefined;
     pullResponse?: PullResponseV1 | undefined;
     pushResponse?: PushResponse | undefined;
+    replicacheFormatVersion?: ReplicacheFormatVersion | undefined;
   }) {
     sinon.stub(console, 'error');
 
@@ -194,6 +207,7 @@ suite('DD31', () => {
         [client1ID]: 1,
         [client2ID]: 1,
       },
+      replicacheFormatVersion = REPLICACHE_FORMAT_VERSION,
     } = args;
 
     const auth = '1';
@@ -220,7 +234,7 @@ suite('DD31', () => {
     const testPerdag = await createPerdag({
       replicacheName: rep.name,
       schemaVersion: schemaVersionOfClientWPendingMutations,
-      replicacheFormatVersion: REPLICACHE_FORMAT_VERSION_V6,
+      replicacheFormatVersion,
     });
 
     const mutatorNames = ['mutator_name_2', 'mutator_name_3'];
@@ -231,6 +245,7 @@ suite('DD31', () => {
         2,
         mutatorNames,
         'cookie_0',
+        replicacheFormatVersion,
         snapshotLastMutationIDs,
       );
 
@@ -241,6 +256,7 @@ suite('DD31', () => {
         2,
         mutatorNames,
         'cookie_0',
+        replicacheFormatVersion,
         snapshotLastMutationIDs,
       );
 
@@ -277,6 +293,7 @@ suite('DD31', () => {
           'cookie_1',
           mutatorNames,
           snapshotLastMutationIDsAfterPull,
+          replicacheFormatVersion,
         );
       }
       return pullResponse;
@@ -378,6 +395,14 @@ suite('DD31', () => {
     await testRecoveringMutationsOfClientV6({
       schemaVersionOfClientWPendingMutations: 'testSchema1',
       schemaVersionOfClientRecoveringMutations: 'testSchema1',
+    });
+  });
+
+  test('successfully recovering mutations of client with same schema version and replicache format version v6', async () => {
+    await testRecoveringMutationsOfClientV6({
+      schemaVersionOfClientWPendingMutations: 'testSchema1',
+      schemaVersionOfClientRecoveringMutations: 'testSchema1',
+      replicacheFormatVersion: REPLICACHE_FORMAT_VERSION_V6,
     });
   });
 
@@ -531,6 +556,7 @@ suite('DD31', () => {
         2,
         ['client1', 'mutator_name_2', 'mutator_name_3'],
         1,
+        REPLICACHE_FORMAT_VERSION,
       );
     const client1 = await withRead(testPerdag, read =>
       persist.getClient(client1ID, read),
@@ -619,6 +645,7 @@ suite('DD31', () => {
       2,
       ['client1', 'mutator_name_2', 'mutator_name_3'],
       1,
+      REPLICACHE_FORMAT_VERSION,
     );
     const clientWPendingMutations = await withRead(testPerdag, read =>
       persist.getClient(clientWPendingMutationsID, read),
@@ -686,6 +713,7 @@ suite('DD31', () => {
         2,
         ['client1', 'mutator_name_2', 'mutator_name_3'],
         1,
+        REPLICACHE_FORMAT_VERSION,
       );
     const client2PendingLocalMetas =
       await createAndPersistClientWithPendingLocalDD31(
@@ -694,6 +722,7 @@ suite('DD31', () => {
         0,
         ['client2'],
         2,
+        REPLICACHE_FORMAT_VERSION,
       );
     expect(client2PendingLocalMetas.length).to.equal(0);
     const client3PendingLocalMetas =
@@ -703,6 +732,7 @@ suite('DD31', () => {
         1,
         ['client3', 'mutator_name_2'],
         3,
+        REPLICACHE_FORMAT_VERSION,
       );
 
     const testPerdagForClient4 = await createPerdag({
@@ -717,6 +747,7 @@ suite('DD31', () => {
         2,
         ['client4', 'mutator_name_2', 'mutator_name_3'],
         4,
+        REPLICACHE_FORMAT_VERSION,
       );
 
     const clients1Thru3 = await withRead(testPerdagForClients1Thru3, read =>
@@ -952,6 +983,7 @@ suite('DD31', () => {
         2,
         ['client1', 'mutator_name_2', 'mutator_name_3'],
         1,
+        REPLICACHE_FORMAT_VERSION,
       );
     const client2PendingLocalMetas =
       await createAndPersistClientWithPendingLocalDD31(
@@ -960,6 +992,7 @@ suite('DD31', () => {
         1,
         ['client2', 'mutator_name_2'],
         2,
+        REPLICACHE_FORMAT_VERSION,
       );
     const client3PendingLocalMetas =
       await createAndPersistClientWithPendingLocalDD31(
@@ -968,6 +1001,7 @@ suite('DD31', () => {
         1,
         ['client3', 'mutator_name_2'],
         3,
+        REPLICACHE_FORMAT_VERSION,
       );
 
     const clients = await withRead(testPerdag, read =>
@@ -1160,6 +1194,7 @@ suite('DD31', () => {
         2,
         ['client1', 'mutator_name_2', 'mutator_name_3'],
         1,
+        REPLICACHE_FORMAT_VERSION,
       );
     await createAndPersistClientWithPendingLocalDD31(
       client2ID,
@@ -1167,6 +1202,7 @@ suite('DD31', () => {
       1,
       ['client2', 'mutator_name_2'],
       2,
+      REPLICACHE_FORMAT_VERSION,
     );
     const client3PendingLocalMetas =
       await createAndPersistClientWithPendingLocalDD31(
@@ -1175,6 +1211,7 @@ suite('DD31', () => {
         1,
         ['client3', 'mutator_name_2'],
         3,
+        REPLICACHE_FORMAT_VERSION,
       );
 
     const clients = await withRead(testPerdag, read =>
@@ -1357,6 +1394,7 @@ suite('DD31', () => {
       1,
       ['client1', 'mutator_name_2'],
       1,
+      REPLICACHE_FORMAT_VERSION,
     );
 
     const testPerdagForClient2 = await createPerdag({
@@ -1371,6 +1409,7 @@ suite('DD31', () => {
         1,
         ['client2', 'mutator_name_2'],
         2,
+        REPLICACHE_FORMAT_VERSION,
       );
 
     const client1 = await withRead(testPerdagForClient1, read =>
@@ -1528,6 +1567,7 @@ suite('DD31', () => {
         1,
         ['mutator_name_2', 'client1'],
         1,
+        REPLICACHE_FORMAT_VERSION,
       );
 
     await createAndPersistClientWithPendingLocalDD31(
@@ -1537,6 +1577,7 @@ suite('DD31', () => {
       // Different mutator names to ensure different client groups.
       ['mutator_name_2', 'client2'],
       2,
+      REPLICACHE_FORMAT_VERSION,
     );
 
     const clients = await withRead(testPerdag, read =>
@@ -1819,6 +1860,7 @@ suite('DD31', () => {
           1,
           ['client-2', 'mutator_name_2'],
           'c2',
+          REPLICACHE_FORMAT_VERSION,
         );
 
       const client1 = await withRead(testPerdagSDD, read =>
@@ -2013,6 +2055,7 @@ suite('DD31', () => {
       1,
       Object.keys(rep.mutate),
       'c1',
+      REPLICACHE_FORMAT_VERSION,
     );
 
     const client1 = await withRead(testPerdagDD31, read =>
@@ -2101,6 +2144,7 @@ suite('DD31', () => {
         1,
         ['client-1', 'mutator_name_2'],
         'c2',
+        REPLICACHE_FORMAT_VERSION,
       );
 
     const client1 = await withRead(testPerdagDD31, read =>
@@ -2177,3 +2221,33 @@ suite('DD31', () => {
     await testPullDisabled('schema-version-1', 'schema-version-2');
   });
 });
+
+// test.only('Can recover mutations in format version 6', async () => {
+//   // V6 uses BTree entries without entry size
+//   const client1ID = 'client1';
+//   const pushURL = 'https://test.replicache.dev/push';
+//   const pullURL = 'https://test.replicache.dev/pull';
+//   const rep = await replicacheForTesting(`recover-mutations-of-old-v6`, {
+//     pushURL,
+//     pullURL,
+//   });
+
+//   await tickAFewTimes();
+
+//   const testPerdag = await createPerdag({
+//     replicacheName: rep.name,
+//     schemaVersion: 'schema1',
+//     replicacheFormatVersion: REPLICACHE_FORMAT_VERSION_V6,
+//   });
+
+//   const mutatorNames = ['mutator_name_2', 'mutator_name_3'];
+//   const client1PendingLocalMetas =
+//     await createAndPersistClientWithPendingLocalDD31(
+//       client1ID,
+//       testPerdag,
+//       2,
+//       mutatorNames,
+//       'cookie_0',
+//       snapshotLastMutationIDs,
+//     );
+// });

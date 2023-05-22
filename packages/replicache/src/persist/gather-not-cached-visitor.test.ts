@@ -2,6 +2,7 @@ import {expect} from '@esm-bundle/chai';
 import * as dag from '../dag/mod.js';
 import {MetaType} from '../db/commit.js';
 import {ChainBuilder} from '../db/test-helpers.js';
+import {REPLICACHE_FORMAT_VERSION} from '../format-version.js';
 import {assertHash, makeNewFakeHashFunction} from '../hash.js';
 import {withRead, withWrite} from '../with-transactions.js';
 import {GatherNotCachedVisitor} from './gather-not-cached-visitor.js';
@@ -186,6 +187,7 @@ suite('GatherNotCachedVisitor', () => {
 });
 
 async function setup() {
+  const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
   const clientID = 'client-id';
   const hashFunction = makeNewFakeHashFunction();
   const getSize = () => 10;
@@ -198,7 +200,7 @@ async function setup() {
     getSize,
   );
 
-  const pb = new ChainBuilder(perdag);
+  const pb = new ChainBuilder(perdag, undefined, replicacheFormatVersion);
   await pb.addGenesis(clientID, {
     testIndex: {
       jsonPointer: '/id',

@@ -6,6 +6,13 @@ import {
   isClientStateNotFoundResponse,
   isVersionNotSupportedResponse,
 } from './error-responses.js';
+import {
+  REPLICACHE_FORMAT_VERSION_DD31,
+  REPLICACHE_FORMAT_VERSION_SDD,
+  REPLICACHE_FORMAT_VERSION_V6,
+  REPLICACHE_FORMAT_VERSION_V7,
+  parseReplicacheFormatVersion,
+} from './format-version.js';
 import {assertHash} from './hash.js';
 import type {HTTPRequestInfo} from './http-request-info.js';
 import type {CreateStore} from './kv/store.js';
@@ -13,12 +20,7 @@ import {assertClientV4, setClients} from './persist/clients.js';
 import * as persist from './persist/mod.js';
 import type {PullResponseV0, PullResponseV1, Puller} from './puller.js';
 import type {Pusher} from './pusher.js';
-import {
-  MaybePromise,
-  REPLICACHE_FORMAT_VERSION_DD31,
-  REPLICACHE_FORMAT_VERSION_SDD,
-  REPLICACHE_FORMAT_VERSION_V6,
-} from './replicache.js';
+import type {MaybePromise} from './replicache.js';
 import type {ClientGroupID, ClientID} from './sync/ids.js';
 import * as sync from './sync/mod.js';
 import {PUSH_VERSION_DD31, PUSH_VERSION_SDD} from './sync/push.js';
@@ -118,6 +120,7 @@ export class MutationRecovery {
             case REPLICACHE_FORMAT_VERSION_SDD:
             case REPLICACHE_FORMAT_VERSION_DD31:
             case REPLICACHE_FORMAT_VERSION_V6:
+            case REPLICACHE_FORMAT_VERSION_V7:
               await recoverMutationsWithNewPerdag(
                 database,
                 this._options,
@@ -259,6 +262,9 @@ async function recoverMutationsOfClientV4(
     const pullSucceeded = await wrapInOnlineCheck(async () => {
       const {result: beginPullResponse} = await wrapInReauthRetries(
         async (requestID: string, requestLc: LogContext) => {
+          const replicacheFormatVersion = parseReplicacheFormatVersion(
+            database.replicacheFormatVersion,
+          );
           const beginPullResponse = await sync.beginPullSDD(
             await delegate.profileID,
             clientID,
@@ -267,7 +273,7 @@ async function recoverMutationsOfClientV4(
             requestID,
             dagForOtherClient,
             requestLc,
-            false,
+            replicacheFormatVersion,
           );
           return {
             result: beginPullResponse,
@@ -497,7 +503,10 @@ async function recoverMutationsOfClientGroupDD31(
   database: persist.IndexedDBDatabase,
   options: MutationRecoveryOptions,
 ): Promise<persist.ClientGroupMap | undefined> {
-  assert(database.replicacheFormatVersion >= REPLICACHE_FORMAT_VERSION_DD31);
+  const replicacheFormatVersion = parseReplicacheFormatVersion(
+    database.replicacheFormatVersion,
+  );
+  assert(replicacheFormatVersion >= REPLICACHE_FORMAT_VERSION_DD31);
 
   const {
     delegate,
@@ -637,7 +646,7 @@ async function recoverMutationsOfClientGroupDD31(
             requestID,
             dagForOtherClientGroup,
             requestLc,
-            false,
+            replicacheFormatVersion,
           );
           return {
             result: beginPullResponse,

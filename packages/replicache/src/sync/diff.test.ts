@@ -1,15 +1,20 @@
 import {expect} from '@esm-bundle/chai';
 import type {InternalDiff} from '../btree/node.js';
 import * as dag from '../dag/mod.js';
-import {diff} from './diff.js';
 import {ChainBuilder} from '../db/test-helpers.js';
-import {testSubscriptionsManagerOptions} from '../test-util.js';
+import {
+  REPLICACHE_FORMAT_VERSION,
+  REPLICACHE_FORMAT_VERSION_SDD,
+} from '../format-version.js';
 import type {IndexDefinitions} from '../index-defs.js';
+import {testSubscriptionsManagerOptions} from '../test-util.js';
 import {withRead} from '../with-transactions.js';
+import {diff} from './diff.js';
 
 type DiffsRecord = Record<string, InternalDiff>;
 
 test('db diff dd31', async () => {
+  const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
   const clientID = 'client-id-1';
 
   const t = async ({
@@ -26,7 +31,7 @@ test('db diff dd31', async () => {
     setupChain?: (b: ChainBuilder) => Promise<void>;
   }) => {
     const store = new dag.TestStore();
-    const b = new ChainBuilder(store);
+    const b = new ChainBuilder(store, undefined, REPLICACHE_FORMAT_VERSION);
     await b.addGenesis(clientID, indexDefinitions);
     await b.addLocal(clientID, [['a', 'a2']]);
     await b.addLocal(clientID, [['b', 'b1']]);
@@ -38,6 +43,7 @@ test('db diff dd31', async () => {
         b.chain[iNew].chunk.hash,
         read,
         testSubscriptionsManagerOptions,
+        replicacheFormatVersion,
       );
       expect(Object.fromEntries(diffsMap)).to.deep.equal(expectedDiff);
     });
@@ -202,8 +208,8 @@ test('db diff dd31', async () => {
 });
 
 test('db diff sdd', async () => {
+  const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION_SDD;
   const clientID = 'client-id-1';
-  const dd31 = false;
 
   const t = async ({
     iOld,
@@ -217,7 +223,7 @@ test('db diff sdd', async () => {
     setupChain?: (b: ChainBuilder) => Promise<void>;
   }) => {
     const store = new dag.TestStore();
-    const b = new ChainBuilder(store, undefined, dd31);
+    const b = new ChainBuilder(store, undefined, replicacheFormatVersion);
     await b.addGenesis(clientID);
     await b.addLocal(clientID, [['a', 'a2']]);
     await b.addLocal(clientID, [['b', 'b1']]);
@@ -228,6 +234,7 @@ test('db diff sdd', async () => {
         b.chain[iNew].chunk.hash,
         read,
         testSubscriptionsManagerOptions,
+        replicacheFormatVersion,
       );
       expect(Object.fromEntries(diffsMap)).to.deep.equal(expectedDiff);
     });

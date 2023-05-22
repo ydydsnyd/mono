@@ -2,6 +2,7 @@ import {Lock} from '@rocicorp/lock';
 import {assert} from 'shared/asserts.js';
 import type {CreateChunk} from '../dag/chunk.js';
 import type * as dag from '../dag/mod.js';
+import type {ReplicacheFormatVersion} from '../format-version.js';
 import {Hash, emptyHash, newUUIDHash} from '../hash.js';
 import type {FrozenJSONValue, ReadonlyJSONValue} from '../json.js';
 import {getSizeOfEntry} from '../size-of-value.js';
@@ -47,13 +48,14 @@ export class BTreeWrite extends BTreeRead {
 
   constructor(
     dagWrite: dag.Write,
+    replicacheFormatVersion: ReplicacheFormatVersion,
     root: Hash = emptyHash,
     minSize = 8 * 1024,
     maxSize = 16 * 1024,
     getEntrySize: <K, V>(k: K, v: V) => number = getSizeOfEntry,
     chunkHeaderSize?: number,
   ) {
-    super(dagWrite, root, chunkHeaderSize);
+    super(dagWrite, replicacheFormatVersion, root, chunkHeaderSize);
 
     this.minSize = minSize;
 

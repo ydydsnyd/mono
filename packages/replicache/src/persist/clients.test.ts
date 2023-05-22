@@ -1,42 +1,42 @@
-import {LogContext} from '@rocicorp/logger';
 import {expect} from '@esm-bundle/chai';
+import {LogContext} from '@rocicorp/logger';
 import {assert, assertNotUndefined} from 'shared/asserts.js';
+import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import {BTreeRead} from '../btree/read.js';
 import * as dag from '../dag/mod.js';
 import {
   Commit,
+  SnapshotMetaDD31,
+  SnapshotMetaSDD,
+  commitIsSnapshot,
   fromChunk,
   fromHash,
-  SnapshotMetaSDD,
-  SnapshotMetaDD31,
-  commitIsSnapshot,
 } from '../db/commit.js';
+import {ChainBuilder} from '../db/test-helpers.js';
+import {REPLICACHE_FORMAT_VERSION} from '../format-version.js';
 import {assertHash, fakeHash, newUUIDHash} from '../hash.js';
+import type {IndexDefinitions} from '../index-defs.js';
+import {deepFreeze} from '../json.js';
+import type {ClientGroupID, ClientID} from '../sync/ids.js';
+import {withRead, withWrite} from '../with-transactions.js';
+import {ClientGroup, getClientGroup, setClientGroup} from './client-groups.js';
+import {makeClientV6, setClientsForTesting} from './clients-test-helpers.js';
 import {
-  ClientV5,
   CLIENTS_HEAD_NAME,
-  findMatchingClient,
-  FindMatchingClientResult,
+  ClientV5,
   FIND_MATCHING_CLIENT_TYPE_FORK,
   FIND_MATCHING_CLIENT_TYPE_HEAD,
   FIND_MATCHING_CLIENT_TYPE_NEW,
+  FindMatchingClientResult,
+  assertClientV6,
+  findMatchingClient,
   getClient,
-  getClients,
   getClientGroupForClient,
   getClientGroupIDForClient,
+  getClients,
   initClientV6,
   setClient,
-  assertClientV6,
 } from './clients.js';
-import {SinonFakeTimers, useFakeTimers} from 'sinon';
-import {ChainBuilder} from '../db/test-helpers.js';
-import {makeClientV6, setClientsForTesting} from './clients-test-helpers.js';
-import type {ClientID} from '../sync/ids.js';
-import {ClientGroup, getClientGroup, setClientGroup} from './client-groups.js';
-import type {ClientGroupID} from '../sync/ids.js';
-import type {IndexDefinitions} from '../index-defs.js';
-import {deepFreeze} from '../json.js';
-import {withRead, withWrite} from '../with-transactions.js';
 
 let clock: SinonFakeTimers;
 setup(() => {
@@ -335,6 +335,7 @@ test('updateClients throws errors if chunk pointed to by clients head does not c
 });
 
 test('initClient creates new empty snapshot when no existing snapshot to bootstrap from', async () => {
+  const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
   const dagStore = new dag.TestStore();
   clock.tick(4000);
   const [clientID, client, headHash, clients] = await initClientV6(
@@ -342,6 +343,7 @@ test('initClient creates new empty snapshot when no existing snapshot to bootstr
     dagStore,
     [],
     {},
+    replicacheFormatVersion,
   );
 
   expect(clients).to.deep.equal(
@@ -373,7 +375,13 @@ test('initClient creates new empty snapshot when no existing snapshot to bootstr
     expect(snapshotMeta.cookieJSON).to.be.null;
     expect(await commit.getMutationID(clientID, dagRead)).to.equal(0);
     expect(commit.indexes).to.be.empty;
-    expect(await new BTreeRead(dagRead, commit.valueHash).isEmpty()).to.be.true;
+    expect(
+      await new BTreeRead(
+        dagRead,
+        replicacheFormatVersion,
+        commit.valueHash,
+      ).isEmpty(),
+    ).to.be.true;
   });
 });
 
@@ -525,10 +533,11 @@ suite('findMatchingClient', () => {
     newIndexes: IndexDefinitions,
     initialDisabled = false,
   ) {
+    const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
     const perdag = new dag.TestStore();
     const clientID = 'client-id';
     const clientGroupID = 'client-group-id';
-    const b = new ChainBuilder(perdag);
+    const b = new ChainBuilder(perdag, undefined, replicacheFormatVersion);
     await b.addGenesis(clientID);
     await b.addLocal(clientID, []);
 
@@ -616,11 +625,16 @@ suite('findMatchingClient', () => {
     newMutatorNames: string[] = initialMutatorNames,
     newIndexes: IndexDefinitions = initialIndexes,
   ) {
+    const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
     const perdag = new dag.TestStore();
     const clientID = 'client-id';
     const clientGroupID = 'client-group-id';
 
-    const chainBuilder = new ChainBuilder(perdag, 'temp-head');
+    const chainBuilder = new ChainBuilder(
+      perdag,
+      'temp-head',
+      replicacheFormatVersion,
+    );
     await chainBuilder.addGenesis(clientID);
     await chainBuilder.addLocal(clientID, []);
     const {headHash} = chainBuilder;
@@ -670,6 +684,7 @@ suite('initClientV6', () => {
   });
 
   test('new client for empty db', async () => {
+    const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
     const lc = new LogContext();
     const perdag = new dag.TestStore();
     const mutatorNames: string[] = [];
@@ -680,6 +695,7 @@ suite('initClientV6', () => {
       perdag,
       mutatorNames,
       indexes,
+      replicacheFormatVersion,
     );
     expect(clientID).to.be.a('string');
     assertClientV6(client);
@@ -689,12 +705,13 @@ suite('initClientV6', () => {
   });
 
   test('reuse head', async () => {
+    const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
     const lc = new LogContext();
 
     const perdag = new dag.TestStore();
     const clientID1 = 'client-id-1';
     const clientGroupID = 'client-group-id';
-    const b = new ChainBuilder(perdag);
+    const b = new ChainBuilder(perdag, undefined, replicacheFormatVersion);
     await b.addGenesis(clientID1);
     await b.addLocal(clientID1, []);
     const headHash = b.chain[1].chunk.hash;
@@ -729,6 +746,7 @@ suite('initClientV6', () => {
       perdag,
       mutatorNames,
       indexes,
+      replicacheFormatVersion,
     );
     expect(clientID2).to.not.equal(clientID1);
     expect(clientMap.size).to.equal(2);
@@ -755,12 +773,13 @@ suite('initClientV6', () => {
   });
 
   test('fork snapshot due to incompatible defs', async () => {
+    const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
     const lc = new LogContext();
 
     const perdag = new dag.TestStore();
     const clientID1 = 'client-id-1';
     const clientGroupID1 = 'client-group-id-1';
-    const b = new ChainBuilder(perdag);
+    const b = new ChainBuilder(perdag, undefined, replicacheFormatVersion);
     await b.addGenesis(clientID1);
     await b.addLocal(clientID1, []);
     const headHash = b.chain[1].chunk.hash;
@@ -797,6 +816,7 @@ suite('initClientV6', () => {
       perdag,
       newMutatorNames,
       newIndexes,
+      replicacheFormatVersion,
     );
     expect(clientID2).to.not.equal(clientID1);
     assertClientV6(client2);
@@ -826,12 +846,13 @@ suite('initClientV6', () => {
   });
 
   test('fork snapshot due to incompatible index names - reuse index maps', async () => {
+    const replicacheFormatVersion = REPLICACHE_FORMAT_VERSION;
     const lc = new LogContext();
 
     const perdag = new dag.TestStore();
     const clientID1 = 'client-id-1';
     const clientGroupID1 = 'client-group-id-1';
-    const b = new ChainBuilder(perdag);
+    const b = new ChainBuilder(perdag, undefined, replicacheFormatVersion);
 
     const initialIndexes: IndexDefinitions = {
       a1: {jsonPointer: '', prefix: 'a'},
@@ -884,6 +905,7 @@ suite('initClientV6', () => {
       perdag,
       newMutatorNames,
       newIndexes,
+      replicacheFormatVersion,
     );
     expect(clientID2).to.not.equal(clientID1);
     assertClientV6(client2);
