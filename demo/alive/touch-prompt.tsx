@@ -17,6 +17,10 @@ function getMode(gameMode: boolean, isPortrait: boolean): Mode {
     return 'off';
   }
 
+  if (/Macintosh/.test(navigator.userAgent)) {
+    return 'off';
+  }
+
   if (isPortrait) {
     if (canGameMode()) {
       return 'prompt-rotate';
