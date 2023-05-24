@@ -1,5 +1,6 @@
 import {assert, expect} from '@esm-bundle/chai';
 import {resolver} from '@rocicorp/resolver';
+import type {Context} from '@rocicorp/logger';
 import {Mutation, NullableVersion, pushMessageSchema} from 'reflect-protocol';
 import {
   ExperimentalMemKVStore,
@@ -267,7 +268,7 @@ test('createSocket', () => {
       lmid,
       'wsidx',
       debugPerf,
-      new LogContext('error', new TestLogSink()),
+      new LogContext('error', undefined, new TestLogSink()),
     ) as unknown as MockSocket;
     expect(`${mockSocket.url}`).equal(expectedURL);
     expect(mockSocket.protocol).equal(expectedProtocol);
@@ -737,12 +738,9 @@ test('poke log context includes requestID', async () => {
 
   const {promise: foundRequestIDFromLogPromise, resolve} = resolver<string>();
   const logSink = {
-    log(_level: LogLevel, ...args: unknown[]) {
-      for (const arg of args) {
-        if (arg === 'requestID=test-request-id-poke') {
-          const foundRequestID = arg.slice('requestID='.length);
-          resolve(foundRequestID);
-        }
+    log(_level: LogLevel, context: Context | undefined, ..._args: unknown[]) {
+      if (context?.requestID === 'test-request-id-poke') {
+        resolve(context?.requestID);
       }
     },
   };
@@ -1279,11 +1277,11 @@ test('InvalidConnectionRequest', async () => {
 
   assert.equal(msg[0], 'error');
 
-  const err = msg.at(-2);
+  const err = msg[2].at(-2);
   assert(err instanceof ServerError);
   assert.equal(err.message, 'InvalidConnectionRequest: test');
 
-  const data = msg.at(-1);
+  const data = msg[2].at(-1);
   assert.deepEqual(data, {
     lmid: 0,
     baseCookie: null,
@@ -1338,7 +1336,7 @@ suite('Invalid Downstream message', () => {
       expect(r.connectionState).eq(ConnectionState.Connected);
 
       const found = testLogSink.messages.some(m =>
-        m.some(
+        m[2].some(
           v => v instanceof Error && v.message.includes('Invalid union value.'),
         ),
       );
@@ -1391,7 +1389,7 @@ test('Close during connect should sleep', async () => {
   await r.waitForConnectionState(ConnectionState.Disconnected);
   expect(r.online).equal(false);
   const hasSleeping = testLogSink.messages.some(m =>
-    m.some(v => v === 'Sleeping'),
+    m[2].some(v => v === 'Sleeping'),
   );
   expect(hasSleeping).true;
 

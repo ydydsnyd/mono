@@ -291,11 +291,13 @@ test('Logs version during construction', async () => {
   });
   expect(testLogSink.messages).toEqual(
     expect.arrayContaining([
-      ['info', 'RoomDO', 'doID=test-do-id', 'Starting server'],
-      ['info', 'RoomDO', 'doID=test-do-id', 'Version:', version],
+      /* eslint-disable @typescript-eslint/naming-convention */
+      ['info', {RoomDO: undefined, doID: 'test-do-id'}, ['Starting server']],
+      ['info', {RoomDO: undefined, doID: 'test-do-id'}, ['Version:', version]],
+      /* eslint-enable @typescript-eslint/naming-convention */
     ]),
   );
-  expect(testLogSink.messages[1][4]).toMatch(/^\d+\.\d+\.\d+/);
+  expect(testLogSink.messages[1][2][1]).toMatch(/^\d+\.\d+\.\d+/);
 });
 
 test('Sets turn duration based on allowUnconfirmedWrites flag', async () => {
