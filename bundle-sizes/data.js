@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1684892234140,
+  "lastUpdate": 1684939893377,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -38795,6 +38795,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27126,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7b1deb38f15c960cef3e866d92928f57a91e9664",
+          "message": "fix: Store BTree entry size in the chunk  (#538)\n\n## Problem\r\n\r\nWe need to know the size of an entry to know where to partition the nodes. We realized before that this is a performance bottle neck so we computed it once up front and cached it in memory. However, this means that we needed to compute the size of the entries when we read a btree chunk for writing. This was still too often and `getSizeOfValue` was still called to much.\r\n\r\n## Solution\r\n\r\nStore the size of the entry in the entry that we use in the the chunk store. Now an entry is `[key: string, value: V, sizeOfEntry: number]` inside the IDB.\r\n\r\n### Mutation Recovery\r\n\r\nThis is a format change. We are now up to `REPLICACHE_FORMAT_VERSION_V7`. To allow recovering mutations of `V6` we need to be able to read and write both `V6` and `V7` BTree node chunks. To safely do this we pipe through the replicache format version through almost all layers of the system. When we read a `V6` btree node chunk entry we compute the size of the entry. For `V7` we just read it from the chunk. When writing a `V6` btree node chunk entry we strip the size.",
+          "timestamp": "2023-05-24T16:50:24+02:00",
+          "tree_id": "3ac1ee5f21618ade71836fc4c04e1991e908dcbd",
+          "url": "https://github.com/rocicorp/mono/commit/7b1deb38f15c960cef3e866d92928f57a91e9664"
+        },
+        "date": 1684939884522,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 260073,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45933,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 261076,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 46215,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95792,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27399,
             "unit": "bytes"
           }
         ]
