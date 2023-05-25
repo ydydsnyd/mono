@@ -1,21 +1,23 @@
-import {expect} from '@esm-bundle/chai';
-import {LogContext} from '@rocicorp/logger';
-import sinon from 'sinon';
-import {
-  DID_NOT_CONNECT_VALUE,
-  Gauge,
-  MetricManager,
-  Point,
-  REPORT_INTERVAL_MS,
-  Series,
-  State,
-} from './metrics.js';
+import {describe, expect, test, beforeEach, afterEach} from '@jest/globals';
 
-teardown(() => {
-  sinon.restore();
+import {LogContext} from '@rocicorp/logger';
+import {SinonFakeTimers, useFakeTimers, mock} from 'sinon';
+import {Gauge, MetricManager, Point, Series, State} from './metrics.js';
+
+const DID_NOT_CONNECT_VALUE = 100 * 1000;
+
+const REPORT_INTERVAL_MS = 5_000;
+
+let clock: SinonFakeTimers;
+beforeEach(() => {
+  clock = useFakeTimers();
 });
 
-test('Gauge', () => {
+afterEach(() => {
+  clock.restore();
+});
+
+describe('Gauge', () => {
   type Case = {
     name: string;
     value: number | undefined;
@@ -45,19 +47,20 @@ test('Gauge', () => {
   ];
 
   const g = new Gauge('mygauge');
-  const clock = sinon.useFakeTimers();
 
   for (const c of cases) {
-    clock.setSystemTime(c.time);
-    if (c.value !== undefined) {
-      g.set(c.value);
-    }
-    const series = g.flush();
-    expect(series, c.name).deep.equal({metric: 'mygauge', points: c.expected});
+    test(c.name, () => {
+      clock.setSystemTime(c.time);
+      if (c.value !== undefined) {
+        g.set(c.value);
+      }
+      const series = g.flush();
+      expect(series).toEqual({metric: 'mygauge', points: c.expected});
+    });
   }
 });
 
-test('State', () => {
+describe('State', () => {
   type Case = {
     name: string;
     state: string | undefined;
@@ -92,36 +95,38 @@ test('State', () => {
     },
   ];
 
-  const clock = sinon.useFakeTimers();
-
   for (const c of cases) {
-    clock.setSystemTime(c.time);
+    test(c.name, () => {
+      clock.setSystemTime(c.time);
 
-    const m1 = new State('mygauge');
-    if (c.state !== undefined) {
-      m1.set(c.state);
-    }
-    const s1 = m1.flush();
-    expect(s1, c.name).deep.equal(c.expected);
-    const s2 = m1.flush();
-    expect(s2, c.name).deep.equal(c.expected);
+      const m1 = new State('mygauge');
+      if (c.state !== undefined) {
+        m1.set(c.state);
+      }
+      const s1 = m1.flush();
+      expect(s1).toEqual(c.expected);
+      const s2 = m1.flush();
+      expect(s2).toEqual(c.expected);
 
-    const m2 = new State('mygauge', true);
-    if (c.state !== undefined) {
-      m2.set(c.state);
-    }
-    const s3 = m2.flush();
-    expect(s3, c.name).deep.equal(c.expected);
-    const s4 = m2.flush();
-    expect(s4, c.name).deep.equal(undefined);
+      const m2 = new State('mygauge', true);
+      if (c.state !== undefined) {
+        m2.set(c.state);
+      }
+      const s3 = m2.flush();
+      expect(s3).toEqual(c.expected);
+      const s4 = m2.flush();
+      expect(s4).toEqual(undefined);
+    });
   }
 });
 
 test('MetricManager', async () => {
-  const clock = sinon.useFakeTimers();
-
-  const reporter = sinon.mock().returns(Promise.resolve());
-  const mm = new MetricManager({
+  const reporter = mock().returns(Promise.resolve());
+  const m = {
+    timeToConnectMs: new Gauge('time_to_connect_ms', DID_NOT_CONNECT_VALUE),
+    lastConnectError: new State('last_connect_error', true),
+  };
+  const mm = new MetricManager(m, {
     reportIntervalMs: REPORT_INTERVAL_MS,
     host: 'test-host',
     source: 'test-source',
@@ -236,10 +241,10 @@ test('MetricManager', async () => {
 
   for (const c of cases) {
     if (c.timeToConnect !== undefined) {
-      mm.timeToConnectMs.set(c.timeToConnect);
+      m.timeToConnectMs.set(c.timeToConnect);
     }
     if (c.lastConnectError !== undefined) {
-      mm.lastConnectError.set(c.lastConnectError);
+      m.lastConnectError.set(c.lastConnectError);
     }
     if (c.extraTags !== undefined) {
       mm.tags.push(...c.extraTags);
@@ -247,7 +252,7 @@ test('MetricManager', async () => {
 
     await clock.tickAsync(REPORT_INTERVAL_MS);
 
-    expect(reporter.calledOnceWithExactly(c.expected), c.name).true;
+    expect(reporter.calledOnceWithExactly(c.expected)).toBe(true);
 
     mm.tags.length = 1;
 
@@ -256,10 +261,12 @@ test('MetricManager', async () => {
 });
 
 test('MetricManager.stop', async () => {
-  const clock = sinon.useFakeTimers();
-
-  const reporter = sinon.mock().returns(Promise.resolve());
-  const mm = new MetricManager({
+  const reporter = mock().returns(Promise.resolve());
+  const m = {
+    timeToConnectMs: new Gauge('time_to_connect_ms', DID_NOT_CONNECT_VALUE),
+    lastConnectError: new State('last_connect_error', true),
+  };
+  const mm = new MetricManager(m, {
     reportIntervalMs: REPORT_INTERVAL_MS,
     host: 'test-host',
     source: 'test-source',
@@ -267,8 +274,8 @@ test('MetricManager.stop', async () => {
     lc: Promise.resolve(new LogContext()),
   });
 
-  mm.timeToConnectMs.set(100);
-  mm.lastConnectError.set('bonk');
+  m.timeToConnectMs.set(100);
+  m.lastConnectError.set('bonk');
 
   await clock.tickAsync(REPORT_INTERVAL_MS);
 
@@ -287,7 +294,7 @@ test('MetricManager.stop', async () => {
         tags: ['source:test-source'],
       },
     ]),
-  ).true;
+  ).toBe(true);
 
   reporter.resetHistory();
   mm.stop();

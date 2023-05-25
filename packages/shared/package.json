@@ -69,6 +69,10 @@
     "./timed.js": {
       "import": "./src/timed.ts",
       "types": "./src/timed.ts"
+    },
+    "./metrics.js": {
+      "import": "./src/metrics.ts",
+      "types": "./src/metrics.ts"
     }
   },
   "eslintConfig": {

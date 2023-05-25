@@ -1,20 +1,10 @@
 import type {LogContext} from '@rocicorp/logger';
-import type {MaybePromise} from 'replicache';
 
-export enum MetricName {
-  TimeToConnectMs = 'time_to_connect_ms',
-  LastConnectError = 'last_connect_error',
-}
+type MetricsReporter = (metrics: Series[]) => void | Promise<void>;
 
-// This value is used to indicate that the client's last connection attempt
-// failed. We don't make this -1 because we want to stack this never connected
-// state in a graph on top of actual connection times, so it should be greater
-// than any other value.
-export const DID_NOT_CONNECT_VALUE = 100 * 1000;
-
-export const REPORT_INTERVAL_MS = 5_000;
-
-type MetricsReporter = (metrics: Series[]) => MaybePromise<void>;
+export type Metrics = {
+  readonly [name: string]: Flushable;
+};
 
 export type MetricManagerOptions = {
   reportIntervalMs: number;
@@ -29,13 +19,15 @@ export type MetricManagerOptions = {
  * to a format suitable for reporting.
  */
 export class MetricManager {
+  private _metrics: Flushable[];
   private _reportIntervalMs: number;
   private _host: string;
   private _reporter: MetricsReporter;
   private _lc: Promise<LogContext>;
   private _timerID: number | null;
 
-  constructor(opts: MetricManagerOptions) {
+  constructor(metrics: Metrics, opts: MetricManagerOptions) {
+    this._metrics = [...Object.values(metrics)];
     this._reportIntervalMs = opts.reportIntervalMs;
     this._host = opts.host;
     this._reporter = opts.reporter;
@@ -43,48 +35,12 @@ export class MetricManager {
 
     this.tags.push(`source:${opts.source}`);
 
-    this.timeToConnectMs.set(DID_NOT_CONNECT_VALUE);
-
-    this._timerID = setInterval(() => {
-      void this.flush();
-    }, this._reportIntervalMs);
+    this._timerID = Number(
+      setInterval(() => {
+        void this.flush();
+      }, this._reportIntervalMs),
+    );
   }
-
-  private _metrics: Flushable[] = [];
-
-  // timeToConnectMs measures the time from the call to connect() to receiving
-  // the 'connected' ws message. We record the DID_NOT_CONNECT_VALUE if the previous
-  // connection attempt failed for any reason.
-  //
-  // We set the gauge using _connectingStart as follows:
-  // - _connectingStart is undefined if we are disconnected or connected; it is
-  //   defined only in the Connecting state, as a number representing the timestamp
-  //   at which we started connecting.
-  // - _connectingStart is set to the current time when connect() is called.
-  // - When we receive the 'connected' message we record the time to connect and
-  //   set _connectingStart to undefined.
-  // - If disconnect() is called with a defined _connectingStart then we record
-  //   DID_NOT_CONNECT_VALUE and set _connectingStart to undefined.
-  //
-  // TODO It's clear after playing with the connection code we should encapsulate
-  // the ConnectionState along with its state transitions and possibly behavior.
-  // In that world the metric gauge(s) and bookkeeping like _connectingStart would
-  // be encapsulated with the ConnectionState. This will probably happen as part
-  // of https://github.com/rocicorp/reflect-server/issues/255.
-  readonly timeToConnectMs = this._register(
-    new Gauge(MetricName.TimeToConnectMs),
-  );
-
-  // lastConnectError records the last error that occurred when connecting,
-  // if any. It is cleared when connecting successfully or when reported, so this
-  // state only gets reported if there was a failure during the reporting period and
-  // we are still not connected.
-  readonly lastConnectError = this._register(
-    new State(
-      MetricName.LastConnectError,
-      true, // clearOnFlush
-    ),
-  );
 
   /**
    * Tags to include in all metrics.
@@ -131,11 +87,6 @@ export class MetricManager {
     clearInterval(this._timerID);
     this._timerID = null;
   }
-
-  private _register<M extends Flushable>(metric: M) {
-    this._metrics.push(metric);
-    return metric;
-  }
 }
 
 // These two types are influenced by Datadog's API's needs. We could change what
@@ -170,21 +121,14 @@ type Flushable = {
  * down. It's typically used to track discrete values or counts eg the number
  * of active users, number of connections, cpu load, etc. A gauge retains
  * its value when flushed.
- *
- * We use a Gauge to sample at the client. If we are interested in tracking
- * a metric value *per client*, the client can note the latest value in
- * a Gauge metric. The metric is periodically reported via Reporter. On the
- * server, we graph the value of the metric rolled up over the periodic
- * reporting period, that is, counted over a span of time equal to the
- * reporting period. The result is ~one point per client per reporting
- * period.
  */
 export class Gauge implements Flushable {
   private readonly _name: string;
-  private _value: number | undefined = undefined;
+  private _value: number | undefined;
 
-  constructor(name: string) {
+  constructor(name: string, initialValue?: number) {
     this._name = name;
+    this._value = initialValue;
   }
 
   public set(value: number) {
@@ -239,8 +183,7 @@ export class State implements Flushable {
     if (this._current === undefined) {
       return undefined;
     }
-    const gauge = new Gauge([this._prefix, this._current].join('_'));
-    gauge.set(1);
+    const gauge = new Gauge([this._prefix, this._current].join('_'), 1);
     const series = gauge.flush();
     if (this._clearOnFlush) {
       this.clear();

@@ -42,11 +42,11 @@ import {nanoid} from '../util/nanoid.js';
 import {send} from '../util/socket.js';
 import {getDocumentVisibilityWatcher} from './document-visible.js';
 import {
+  ClientMetrics,
   DID_NOT_CONNECT_VALUE,
-  MetricManager,
   REPORT_INTERVAL_MS,
-  Series,
 } from './metrics.js';
+import {MetricManager, Series} from 'shared/metrics.js';
 import type {ReflectOptions} from './options.js';
 import {PokeHandler} from './poke-handler.js';
 import {reloadWithReason, reportReloadReason} from './reload-error-handler.js';
@@ -241,7 +241,7 @@ export class Reflect<MD extends MutatorDefs> {
     this.#connectionStateChangeResolver = resolver();
   }
 
-  // See comment on _metrics.timeToConnectMs for how _connectingStart is used.
+  // See comment on ClientMetrics.timeToConnectMs for how _connectingStart is used.
   protected _connectingStart: number | undefined = undefined;
 
   readonly #options: ReflectOptions<MD>;
@@ -312,11 +312,11 @@ export class Reflect<MD extends MutatorDefs> {
 
     void this._l.then(lc => reportReloadReason(lc, localStorage));
 
-    this._metrics = new MetricManager({
+    this._metrics = new MetricManager(ClientMetrics, {
       reportIntervalMs: REPORT_INTERVAL_MS,
       host: location.host,
       source: 'client',
-      reporter: allSeries => this._reportMetrics(allSeries),
+      reporter: (allSeries: Series[]) => this._reportMetrics(allSeries),
       lc: this._l,
     });
     this._metrics.tags.push(`version:${this.version}`);
@@ -563,7 +563,7 @@ export class Reflect<MD extends MutatorDefs> {
 
     this._connectionState = ConnectionState.Connected;
     this._connectedAt = Date.now();
-    this._metrics.lastConnectError.clear();
+    ClientMetrics.lastConnectError.clear();
 
     if (this._connectingStart === undefined) {
       lc.error?.(
@@ -571,7 +571,7 @@ export class Reflect<MD extends MutatorDefs> {
       );
     } else {
       const timeToConnectMs = Date.now() - this._connectingStart;
-      this._metrics.timeToConnectMs.set(timeToConnectMs);
+      ClientMetrics.timeToConnectMs.set(timeToConnectMs);
       lc.info?.('Connected', {
         navigatorOnline: navigator.onLine,
         timeToConnectMs,
@@ -677,13 +677,13 @@ export class Reflect<MD extends MutatorDefs> {
         break;
       }
       case ConnectionState.Connecting: {
-        this._metrics.lastConnectError.set(getLastConnectMetricState(reason));
+        ClientMetrics.lastConnectError.set(getLastConnectMetricState(reason));
         if (this._connectingStart === undefined) {
           l.error?.(
             'disconnect() called while connecting but connect start time is undefined. This should not happen.',
           );
         } else {
-          this._metrics.timeToConnectMs.set(DID_NOT_CONNECT_VALUE);
+          ClientMetrics.timeToConnectMs.set(DID_NOT_CONNECT_VALUE);
           // this._connectingStart reset below.
         }
 
