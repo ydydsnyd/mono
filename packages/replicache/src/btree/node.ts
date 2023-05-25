@@ -7,11 +7,7 @@ import {
 } from 'shared/asserts.js';
 import {binarySearch as binarySearchWithFunc} from '../binary-search.js';
 import {skipBTreeNodeAsserts} from '../config.js';
-import {
-  REPLICACHE_FORMAT_VERSION,
-  REPLICACHE_FORMAT_VERSION_V7,
-  ReplicacheFormatVersion,
-} from '../format-version.js';
+import {FormatVersion} from '../format-version.js';
 import {Hash, emptyHash, newUUIDHash} from '../hash.js';
 import {joinIterables} from '../iterables.js';
 import {
@@ -45,11 +41,11 @@ export type DataNode = BaseNode<FrozenJSONValue>;
 export function makeNodeChunkData<V>(
   level: number,
   entries: ReadonlyArray<Entry<V>>,
-  replicacheFormatVersion: ReplicacheFormatVersion,
+  formatVersion: FormatVersion,
 ): BaseNode<V> {
   return deepFreeze([
     level,
-    (replicacheFormatVersion >= REPLICACHE_FORMAT_VERSION_V7
+    (formatVersion >= FormatVersion.V7
       ? entries
       : entries.map(e => e.slice(0, 2))) as readonly ReadonlyJSONValue[],
   ]) as BaseNode<V>;
@@ -179,37 +175,32 @@ export function binarySearchFound(
 
 export function parseBTreeNode(
   v: unknown,
-  replicacheFormatVersion: ReplicacheFormatVersion,
+  formatVersion: FormatVersion,
   getSizeOfEntry: <K, V>(key: K, value: V) => number,
 ): InternalNode | DataNode {
-  if (
-    skipBTreeNodeAsserts &&
-    replicacheFormatVersion >= REPLICACHE_FORMAT_VERSION_V7
-  ) {
+  if (skipBTreeNodeAsserts && formatVersion >= FormatVersion.V7) {
     return v as InternalNode | DataNode;
   }
 
-  // For non v7 we convert
-
   assertArray(v);
   assertDeepFrozen(v);
-
-  assert(v.length === 2);
+  // Be relaxed about what we accept.
+  assert(v.length >= 2);
   const [level, entries] = v;
   assertNumber(level);
   assertArray(entries);
 
   const f = level > 0 ? assertString : assertJSONValue;
 
-  if (replicacheFormatVersion >= REPLICACHE_FORMAT_VERSION_V7) {
+  // For V7 we do not need to change the entries. Just assert that they are correct.
+  if (formatVersion >= FormatVersion.V7) {
     for (const e of entries) {
       assertEntry(e, f);
     }
     return v as unknown as InternalNode | DataNode;
   }
 
-  const newEntries = entries.map(e => parseEntry(e, f, getSizeOfEntry));
-
+  const newEntries = entries.map(e => convertNonV7Entry(e, f, getSizeOfEntry));
   return [level, newEntries] as unknown as InternalNode | DataNode;
 }
 
@@ -220,13 +211,18 @@ function assertEntry(
     | ((v: unknown) => asserts v is JSONValue),
 ): asserts entry is Entry<Hash | JSONValue> {
   assertArray(entry);
-  assert(entry.length === 3);
+  // Be relaxed about what we accept.
+  assert(entry.length >= 3);
   assertString(entry[0]);
   f(entry[1]);
   assertNumber(entry[2]);
 }
 
-function parseEntry(
+/**
+ * Converts an entry that was from a format version before V7 to the format
+ * wanted by V7.
+ */
+function convertNonV7Entry(
   entry: unknown,
   f:
     | ((v: unknown) => asserts v is Hash)
@@ -234,7 +230,6 @@ function parseEntry(
   getSizeOfEntry: <K, V>(key: K, value: V) => number,
 ): Entry<Hash | JSONValue> {
   assertArray(entry);
-  // TODO(arv): XXX
   assert(entry.length >= 2);
   assertString(entry[0]);
   f(entry[1]);
@@ -298,9 +293,9 @@ abstract class NodeImpl<Value> {
 
 export function toChunkData<V>(
   node: NodeImpl<V>,
-  replicacheFormatVersion: ReplicacheFormatVersion,
+  formatVersion: FormatVersion,
 ): BaseNode<V> {
-  return makeNodeChunkData(node.level, node.entries, replicacheFormatVersion);
+  return makeNodeChunkData(node.level, node.entries, formatVersion);
 }
 
 export class DataNodeImpl extends NodeImpl<FrozenJSONValue> {
@@ -705,7 +700,7 @@ export function partition<T>(
 export const emptyDataNode = makeNodeChunkData<ReadonlyJSONValue>(
   0,
   [],
-  REPLICACHE_FORMAT_VERSION,
+  FormatVersion.Latest,
 );
 export const emptyDataNodeImpl = new DataNodeImpl([], emptyHash, false);
 
