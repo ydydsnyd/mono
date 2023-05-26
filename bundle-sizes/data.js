@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1685017088048,
+  "lastUpdate": 1685098666218,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -39119,6 +39119,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27325,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bd12f1e11d8387ac8dcf0b8b533bcebe47e6729f",
+          "message": "chore: Remove Whence (#550)\n\nThe whence was delaying the branching between head name and hash. This\r\nbranching was often unnecessary and was causing extra microtasks.\r\n\r\nAlso, remove a bunch of helper functions that were not very helpful.",
+          "timestamp": "2023-05-26T12:56:17+02:00",
+          "tree_id": "7f41191c68becbceb533d71e3c25703d9d14629c",
+          "url": "https://github.com/rocicorp/mono/commit/bd12f1e11d8387ac8dcf0b8b533bcebe47e6729f"
+        },
+        "date": 1685098657502,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 257465,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45642,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 258531,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45884,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95511,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27296,
             "unit": "bytes"
           }
         ]
