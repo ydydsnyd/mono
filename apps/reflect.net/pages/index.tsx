@@ -2,28 +2,10 @@ import {Demo} from '@/components/Demo/Demo';
 import {Footer} from '@/components/Footer/Footer';
 import {How} from '@/components/How/How';
 import {Nav} from '@/components/Nav/Nav';
-import {useDocumentSize} from '@/hooks/use-document-size';
-import {useIsomorphicLayoutEffect} from '@/hooks/use-isomorphic-layout-effect';
-import {useVHStyleProp} from '@/hooks/use-vh-style-prop';
-import {useWindowSize} from '@/hooks/use-window-size';
 import styles from '@/styles/Home.module.css';
 import Head from 'next/head';
-import {useState} from 'react';
 
 export default function Home() {
-  const winSize = useWindowSize();
-  const docSize = useDocumentSize();
-  useVHStyleProp(winSize?.height ?? null);
-  const [gameMode, setGameMode] = useState<boolean>(false);
-
-  useIsomorphicLayoutEffect(() => {
-    document.documentElement.classList.toggle('game-mode', gameMode);
-  }, [gameMode]);
-
-  const onSetGameMode = (gameMode: boolean) => {
-    setGameMode(gameMode);
-  };
-
   return (
     <div className={styles.container}>
       <Head>
@@ -117,12 +99,7 @@ export default function Home() {
       <Nav />
 
       <main className={styles.main}>
-        <Demo
-          docSize={docSize}
-          winSize={winSize}
-          gameMode={gameMode}
-          onSetGameMode={onSetGameMode}
-        />
+        <Demo />
 
         <section id="how" className={styles.section}>
           <How />

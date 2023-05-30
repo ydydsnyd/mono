@@ -1,4 +1,4 @@
-body.custom-cursor {
+body {
   cursor: none;
 }
 body.grab {
@@ -238,7 +238,7 @@ body.grabbing {
   left: 0;
   top: 0;
   width: 100%;
-  /* height set by javascript */
+  height: 100%;
   overflow: hidden;
   pointer-events: none;
 }

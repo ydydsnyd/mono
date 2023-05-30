@@ -13,14 +13,7 @@ export function Nav() {
       }}
     >
       <div className={styles.navContainer}>
-        <Link
-          href="#"
-          className={styles.navLogoLinkMobile}
-          to="intro"
-          smooth={true}
-          duration={250}
-          isDynamic={true}
-        >
+        <Link href="#" to="intro" smooth={true} duration={250} isDynamic={true}>
           <NavLogo src="/reflect.svg" height="44" alt="Reflect logo" />
         </Link>
       </div>
