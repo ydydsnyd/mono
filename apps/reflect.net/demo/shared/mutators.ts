@@ -144,7 +144,6 @@ export const mutators = {
   addServerLog,
   getServerLogs,
   getServerLogCount,
-  nop: async (_: WriteTransaction) => {},
 
   // orchestrator mutators
   alive,

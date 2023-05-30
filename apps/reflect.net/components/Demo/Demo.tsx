@@ -12,6 +12,7 @@ import {ExperimentalMemKVStore, Reflect} from '@rocicorp/reflect';
 import classNames from 'classnames';
 import {useEffect, useState} from 'react';
 import {useSubscribe} from 'replicache-react';
+import {How} from '../How/How';
 
 function useReflect(puzzleRoomID: string | null) {
   const [r, setR] = useState<Reflect<M> | null>(null);
@@ -59,8 +60,8 @@ function useReflect(puzzleRoomID: string | null) {
         focused: true,
       });
     };
-    //window.addEventListener('blur', onBlur);
-    //window.addEventListener('focus', onFocus);
+    window.addEventListener('blur', onBlur);
+    window.addEventListener('focus', onFocus);
 
     setR(reflect);
     return () => {
@@ -206,9 +207,19 @@ export function Demo() {
   useEnsureLocation(r, myClientID);
   const clientIDs = useClientIDs(r);
 
+  if (!r || !myClientID || !online) {
+    return null;
+  }
+
   return (
-    <section id="intro" className={classNames(styles.section)}>
-      {r && myClientID && online && <CursorField r={r} clientIDs={clientIDs} />}
-    </section>
+    <>
+      <section id="intro" className={classNames(styles.section)}>
+        <CursorField r={r} clientIDs={clientIDs} />
+      </section>
+
+      <section id="how" className={styles.section}>
+        <How reflect={r} />
+      </section>
+    </>
   );
 }
