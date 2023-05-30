@@ -25,7 +25,7 @@ export function ServerConsole({reflect}: {reflect: Reflect<M> | undefined}) {
     <div
       className={classNames(styles.serverConsole, {[styles.bright]: bright})}
     >
-      <h4 className={styles.panelLabel}>Server Console</h4>
+      <h4 className={styles.panelLabel}>Server</h4>
       <div className={styles.consoleOutput}>
         {logs &&
           logs.slice(-10).map((log, i) => (

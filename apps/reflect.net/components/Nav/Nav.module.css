@@ -4,7 +4,7 @@
   position: sticky;
   top: 0px;
   bottom: auto;
-  z-index: 400;
+  z-index: 0;
   padding: 1.25rem;
   -webkit-backdrop-filter: saturate(180%) blur(5px);
   backdrop-filter: saturate(180%) blur(5px);
@@ -80,7 +80,7 @@
 }
 
 .navLink {
-  cursor: pointer;
+  cursor: none !important;
   color: #2a2c2e;
   display: block;
   margin: 0;
@@ -95,7 +95,7 @@
   display: inline-block;
   border: 0;
   text-decoration: none;
-  cursor: pointer;
+  cursor: none !important;
   padding: 14px 24px;
   border-radius: 8px;
   background-color: #fc208a;

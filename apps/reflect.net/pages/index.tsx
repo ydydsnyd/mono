@@ -1,5 +1,4 @@
 import {Demo} from '@/components/Demo/Demo';
-import {Footer} from '@/components/Footer/Footer';
 import {Nav} from '@/components/Nav/Nav';
 import styles from '@/styles/Home.module.css';
 import Head from 'next/head';
@@ -100,8 +99,6 @@ export default function Home() {
       <main className={styles.main}>
         <Demo />
       </main>
-
-      <Footer />
     </div>
   );
 }

@@ -51,6 +51,11 @@ button {
     sans-serif;
 }
 
+a,
+button {
+  cursor: none !important;
+}
+
 em {
   font-family: 'Muoto 205tf italic';
 }
