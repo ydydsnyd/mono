@@ -9,10 +9,7 @@ import {event} from 'nextjs-google-analytics';
 import React, {useEffect, useMemo, useState} from 'react';
 import {useInView} from 'react-intersection-observer';
 import {ClientIDContext} from './ClientIDContext';
-import {Demo0} from './Demo0';
 import {Demo1} from './Demo1';
-import {Demo2} from './Demo2';
-import styles from './How.module.css';
 import {delayWebSocket, setLatency} from './delayWebSocket';
 
 export type DemoReflectState = {
@@ -170,7 +167,6 @@ export function How() {
     },
   });
   const [iReflectState, setIReflectState] = useState<DemoReflectState>();
-  const [rReflectState, setRReflectState] = useState<DemoReflectState>();
 
   useEffect(() => {
     const cleanup = async () => {
@@ -178,9 +174,6 @@ export function How() {
         iReflectState?.reflect1,
         iReflectState?.reflect2,
         iReflectState?.reflectServer,
-        rReflectState?.reflect1,
-        rReflectState?.reflect2,
-        rReflectState?.reflectServer,
       ];
 
       for (const reflect of reflects) {
@@ -201,7 +194,6 @@ export function How() {
 
   return (
     <div ref={ref}>
-      <Demo0 />
       {DemoWrapper(
         Demo1,
         iReflectState,
@@ -209,44 +201,6 @@ export function How() {
         'increment_',
         initialized,
       )}
-      {DemoWrapper(
-        Demo2,
-        rReflectState,
-        setRReflectState,
-        'rotate_',
-        initialized,
-      )}
-      {/* Step 3: Deploy */}
-      <div className={styles.howStep}>
-        <h3 className={styles.howHeader}>
-          <strong>You&apos;re Done.</strong>
-        </h3>
-        <p className={styles.howDescription}>
-          Reflect publishes your mutators to a unique sandboxed environment.
-          Rooms are backed by Cloudflare&apos;s{' '}
-          <a href="https://developers.cloudflare.com/workers/learning/using-durable-objects/">
-            Durable Object
-          </a>{' '}
-          technology and scale horizontally by room.
-        </p>
-        <div className={styles.deployTerminal}>
-          <img className={styles.menuControls} src="/img/menu-controls.svg" />
-          <h4 className={styles.terminalHeader}>Shell</h4>
-          <p className={styles.terminalLine}>
-            <span className={styles.prompt}>&gt;</span>
-            <span className={styles.userInputContainer}>
-              <span className={styles.userInput}>reflect publish</span>
-            </span>
-          </p>
-          <p className={`${styles.terminalLine} ${styles.terminalOutput}`}>
-            &#127881; Published! Running at{' '}
-            <span className={styles.terminalLink}>
-              https://myapp.reflect.net/
-            </span>
-            .
-          </p>
-        </div>
-      </div>
     </div>
   );
 }

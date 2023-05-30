@@ -1,11 +1,7 @@
-import {Benefits} from '@/components/Benefits/Benefits';
 import {Demo} from '@/components/Demo/Demo';
 import {Footer} from '@/components/Footer/Footer';
-import {GetStarted} from '@/components/GetStarted/GetStarted';
 import {How} from '@/components/How/How';
 import {Nav} from '@/components/Nav/Nav';
-import {Pricing} from '@/components/Pricing/Pricing';
-import {Testimonials} from '@/components/Testimonials/Testimonials';
 import {useDocumentSize} from '@/hooks/use-document-size';
 import {useIsomorphicLayoutEffect} from '@/hooks/use-isomorphic-layout-effect';
 import {useVHStyleProp} from '@/hooks/use-vh-style-prop';
@@ -31,7 +27,7 @@ export default function Home() {
   return (
     <div className={styles.container}>
       <Head>
-        <title>Reflect: High-performance sync for multiplayer web apps</title>
+        <title>Reflect: counter demo</title>
         <meta
           name="description"
           content="60FPS sync, automatic persistence, server authority, optional offline, fine-grained auth, and more..."
@@ -128,29 +124,8 @@ export default function Home() {
           onSetGameMode={onSetGameMode}
         />
 
-        <section id="benefits" className={styles.section}>
-          <h2 className={styles.subheader}>Why Reflect?</h2>
-          <Benefits />
-        </section>
-
         <section id="how" className={styles.section}>
-          <h2 className={styles.subheader}>How it Works</h2>
           <How />
-        </section>
-
-        <section id="pricing" className={styles.section}>
-          <h2 className={styles.subheader}>Simple, Usage-Based Pricing</h2>
-          <Pricing />
-        </section>
-
-        <section id="get-started" className={styles.section}>
-          <h2 className={styles.subheader}>Coming Soon, from Rocicorp</h2>
-          <GetStarted />
-        </section>
-
-        <section id="customers" className={styles.section}>
-          <h2 className={styles.subheader}>Early Reactions</h2>
-          <Testimonials />
         </section>
       </main>
 
