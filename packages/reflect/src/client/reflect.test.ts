@@ -1171,10 +1171,10 @@ test('server ahead', async () => {
   );
 });
 
-test('Constructing Reflect with a negative disconnectHiddenDelay option throws an error', () => {
+test('Constructing Reflect with a negative hiddenTabDisconnectDelay option throws an error', () => {
   let expected;
   try {
-    reflectForTest({disconnectHiddenDelay: -1});
+    reflectForTest({hiddenTabDisconnectDelay: -1});
   } catch (e) {
     expected = e;
   }
@@ -1182,14 +1182,14 @@ test('Constructing Reflect with a negative disconnectHiddenDelay option throws a
     .instanceOf(Error)
     .property(
       'message',
-      'ReflectOptions.disconnectHiddenDelay must not be negative.',
+      'ReflectOptions.hiddenTabDisconnectDelay must not be negative.',
     );
 });
 
 suite('Disconnect on hide', () => {
   type Case = {
     name: string;
-    disconnectHiddenDelay?: number | undefined;
+    hiddenTabDisconnectDelay?: number | undefined;
     test: (
       r: TestReflect<MutatorDefs>,
       changeVisibilityState: (
@@ -1240,7 +1240,7 @@ suite('Disconnect on hide', () => {
     },
     {
       name: 'custom delay longer than ping interval not during ping',
-      disconnectHiddenDelay: Math.floor(PING_INTERVAL_MS * 6.3),
+      hiddenTabDisconnectDelay: Math.floor(PING_INTERVAL_MS * 6.3),
       test: async (r, changeVisibilityState) => {
         let timeTillHiddenDisconnect = Math.floor(PING_INTERVAL_MS * 6.3);
         changeVisibilityState('hidden');
@@ -1254,7 +1254,7 @@ suite('Disconnect on hide', () => {
     },
     {
       name: 'custom delay longer than ping interval during ping',
-      disconnectHiddenDelay: Math.floor(PING_INTERVAL_MS * 6.3),
+      hiddenTabDisconnectDelay: Math.floor(PING_INTERVAL_MS * 6.3),
       test: async (r, changeVisibilityState) => {
         let timeTillHiddenDisconnect = Math.floor(PING_INTERVAL_MS * 6.3);
         expect(timeTillHiddenDisconnect > PING_INTERVAL_MS + PING_TIMEOUT_MS);
@@ -1280,7 +1280,7 @@ suite('Disconnect on hide', () => {
     },
     {
       name: 'custom delay shorter than ping interval not during ping',
-      disconnectHiddenDelay: Math.floor(PING_INTERVAL_MS * 0.3),
+      hiddenTabDisconnectDelay: Math.floor(PING_INTERVAL_MS * 0.3),
       test: async (r, changeVisibilityState) => {
         await clock.tickAsync(PING_INTERVAL_MS);
         await r.triggerPong();
@@ -1291,7 +1291,7 @@ suite('Disconnect on hide', () => {
     },
     {
       name: 'custom delay shorter than ping interval during ping',
-      disconnectHiddenDelay: Math.floor(PING_INTERVAL_MS * 0.3),
+      hiddenTabDisconnectDelay: Math.floor(PING_INTERVAL_MS * 0.3),
       test: async (r, changeVisibilityState) => {
         await clock.tickAsync(PING_INTERVAL_MS);
         const timeTillHiddenDisconnect = Math.floor(PING_INTERVAL_MS * 0.3);
@@ -1306,7 +1306,7 @@ suite('Disconnect on hide', () => {
     },
     {
       name: 'custom delay 0, not during ping',
-      disconnectHiddenDelay: 0,
+      hiddenTabDisconnectDelay: 0,
       test: async (r, changeVisibilityState) => {
         await clock.tickAsync(PING_INTERVAL_MS);
         await r.triggerPong();
@@ -1316,7 +1316,7 @@ suite('Disconnect on hide', () => {
     },
     {
       name: 'custom delay 0, during ping',
-      disconnectHiddenDelay: 0,
+      hiddenTabDisconnectDelay: 0,
       test: async (r, changeVisibilityState) => {
         await clock.tickAsync(PING_INTERVAL_MS);
         changeVisibilityState('hidden');
@@ -1332,7 +1332,7 @@ suite('Disconnect on hide', () => {
 
   for (const c of cases) {
     test(c.name, async () => {
-      const {disconnectHiddenDelay} = c;
+      const {hiddenTabDisconnectDelay} = c;
 
       let visibilityState = 'visible';
       sinon.stub(document, 'visibilityState').get(() => visibilityState);
@@ -1345,7 +1345,7 @@ suite('Disconnect on hide', () => {
       };
 
       const r = reflectForTest({
-        disconnectHiddenDelay,
+        hiddenTabDisconnectDelay,
       });
       const makeOnOnlineChangePromise = () =>
         new Promise(resolve => {
