@@ -114,7 +114,7 @@ export default function Home() {
         />
       </Head>
 
-      <Nav gameMode={gameMode} />
+      <Nav />
 
       <main className={styles.main}>
         <Demo
