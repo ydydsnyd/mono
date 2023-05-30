@@ -9,12 +9,12 @@
 
 .section {
   display: block;
-  max-width: 960px;
+  max-width: 640px;
   width: 100%;
-  margin: -115px auto 9rem;
-  padding-top: 227px;
-  padding-right: 4rem;
-  padding-left: 4rem;
+  margin: -115px auto 9rem 1.25rem;
+  padding-top: 110px;
+  padding-right: 0;
+  padding-left: 0;
   -webkit-box-orient: horizontal;
   -webkit-box-direction: normal;
   -webkit-flex-direction: row;
