@@ -19,3 +19,5 @@ const withCors = fn => {
 
 export const publish = withCors(p);
 export const healthcheck = withCors(h);
+
+export * as user from './functions/user/index.js';
