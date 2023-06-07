@@ -3,9 +3,13 @@ title: Overview
 slug: /concepts/diff/overview
 ---
 
-# Diff Strategies
+# Backend Strategies
 
-The Replicache protocol leaves a lot of flexibility in how servers can calculate the diff to return in the [pull endpoint](/reference/server-pull). This section summarizes some common strategies, and their tradeoffs.
+Replicache defines [push](/reference/server-push.md) and [pull](/reference/server-pull.md) endpoints that servers must implement to sync. There are a number of possible strategies to implement these endpoints.
+
+The main difference is how they calcuate the `patch` required by the pull endpoint. Different approaches to calculating this patch require different state to be stored in the backend database, and also affects the logic of the push endpoint.
+
+This section summarizes some common approaches, and their differences. They are arranged in increasing order of complexity and build on each other. So it's worth reading through them all, even if you think you know the one you will use.
 
 Our general recommendation is to start with the [Global Version](/concepts/diff/global-version) strategy and move to [Row Versioning](/concepts/diff/row-version) when you need either increased flexibility or throughput.
 
