@@ -1,5 +1,6 @@
 {
   "name": "mirror-protocol",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "module": "./src/mod.ts",
@@ -27,6 +28,10 @@
     ".": {
       "import": "./src/mod.ts",
       "types": "./src/mod.ts"
+    },
+    "./base.js": {
+      "import": "./src/base.ts",
+      "types": "./src/base.ts"
     },
     "./user.js": {
       "import": "./src/user.ts",

@@ -1,23 +1,22 @@
-import * as functions from 'firebase-functions';
-import cors from 'cors';
+import {https} from 'firebase-functions/v2';
+import {initializeApp} from 'firebase-admin/app';
 import {functionsConfig} from './functions-config.js';
-import {publish as p} from './functions/publish.function.js';
-import {healthcheck as h} from './functions/healthcheck.function.js';
+import {publish as publishHandler} from './functions/publish.function.js';
+import {healthcheck as healthcheckHandler} from './functions/healthcheck.function.js';
+import * as userFunctions from './functions/user';
 
-// CORS configuration.
-const options: cors.CorsOptions = {
-  origin: functionsConfig.whitelist,
+// Initializes firestore and auth clients.
+initializeApp();
+
+export const publish = https.onRequest(
+  {cors: functionsConfig.whitelist},
+  publishHandler,
+);
+export const healthcheck = https.onRequest(
+  {cors: functionsConfig.whitelist},
+  healthcheckHandler,
+);
+
+export const user = {
+  ensure: https.onCall({cors: functionsConfig.whitelist}, userFunctions.ensure),
 };
-
-const withCors = fn => {
-  return functions.https.onRequest((req, res) => {
-    cors(options)(req, res, () => {
-      fn(req, res);
-    });
-  });
-};
-
-export const publish = withCors(p);
-export const healthcheck = withCors(h);
-
-export * as user from './functions/user/index.js';

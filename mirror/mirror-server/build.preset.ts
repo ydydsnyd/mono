@@ -12,6 +12,7 @@ export default definePreset({
       'body-parser',
       'busboy',
       'mirror-protocol',
+      'mirror-schema',
       'shared',
     ],
     inlineDependencies: true,
