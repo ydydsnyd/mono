@@ -1,0 +1,50 @@
+{
+  "name": "mirror-protocol",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "module": "./src/mod.ts",
+  "types": "./src/mod.ts",
+  "scripts": {
+    "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --watch",
+    "check-types": "tsc --noEmit",
+    "format": "prettier --write *",
+    "check-format": "prettier --check *",
+    "lint": "eslint --ext .ts,.tsx,.js,.jsx src/",
+    "build": "unbuild"
+  },
+  "dependencies": {
+    "@badrap/valita": "^0.2.0"
+  },
+  "devDependencies": {
+    "@rocicorp/eslint-config": "^0.4.1",
+    "@rocicorp/prettier-config": "^0.1.1",
+    "@types/jest": "^29.4.2",
+    "shared": "0.0.0",
+    "ts-jest": "^29.0.5",
+    "typescript": "^4.9.5",
+    "unbuild": "^1.1.1"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/mod.mjs",
+      "require": "./dist/mod.cjs"
+    },
+    "./base.js": {
+      "import": "./dist/base.mjs",
+      "require": "./dist/base.cjs"
+    },
+    "./user.js": {
+      "import": "./dist/user.mjs",
+      "require": "./dist/user.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "eslintConfig": {
+    "extends": "@rocicorp/eslint-config"
+  },
+  "prettier": "@rocicorp/prettier-config"
+}
