@@ -29,15 +29,15 @@
   "exports": {
     ".": {
       "import": "./dist/mod.mjs",
-      "require": "./dist/mod.cjs"
+      "types": "./dist/mod.d.ts"
     },
     "./base.js": {
       "import": "./dist/base.mjs",
-      "require": "./dist/base.cjs"
+      "types": "./dist/base.d.ts"
     },
     "./user.js": {
       "import": "./dist/user.mjs",
-      "require": "./dist/user.cjs"
+      "types": "./dist/user.d.ts"
     }
   },
   "files": [
