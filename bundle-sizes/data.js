@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1686165958583,
+  "lastUpdate": 1686232949139,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -39575,6 +39575,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/5ab54dbd536e8a66fdda21947620dd63ce9d7d6d"
         },
         "date": 1686165947094,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 257669,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45649,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 258735,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45899,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95549,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27268,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "32fab11eadbe0e1fdf6a292fd1061bda603b1bad",
+          "message": "chore: Fix test that using fake timers incorrectly (#586)\n\nThe fake clock was installed twice.",
+          "timestamp": "2023-06-08T14:00:53Z",
+          "tree_id": "f8c088b1b74994dbd85666998e03c7467073ac12",
+          "url": "https://github.com/rocicorp/mono/commit/32fab11eadbe0e1fdf6a292fd1061bda603b1bad"
+        },
+        "date": 1686232940477,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
