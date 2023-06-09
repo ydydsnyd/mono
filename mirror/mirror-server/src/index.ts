@@ -26,7 +26,7 @@ export const healthcheck = https.onRequest(
 // or deploy individual updated functions
 export const user = {
   ensure: https.onCall(
-    {cors: functionsConfig.whitelist},
+    {cors: functionsConfig.allowlist},
     userFunctions.ensure(getFirestore()),
   ),
 };
