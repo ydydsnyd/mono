@@ -3,10 +3,11 @@ import * as path from './path.js';
 import {shortRoleSchema} from './membership.js';
 
 export const userSchema = v.object({
-  name: v.string(),
+  email: v.string(),
+  name: v.string().optional(),
 
   roles: v.record(shortRoleSchema),
-  invites: v.record(shortRoleSchema),
+  invites: v.record(shortRoleSchema).optional(),
 });
 
 export type User = v.Infer<typeof userSchema>;

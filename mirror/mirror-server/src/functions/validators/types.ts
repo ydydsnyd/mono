@@ -1,4 +1,4 @@
-import {CallableRequest} from 'firebase-functions/v2/https';
+import type {CallableRequest} from 'firebase-functions/v2/https';
 
 export type AsyncCallable<Request, Response> = (
   request: CallableRequest<Request>,

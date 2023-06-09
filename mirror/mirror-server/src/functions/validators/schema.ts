@@ -1,5 +1,5 @@
-import {AsyncCallable, AsyncHandler} from './types';
-import {CallableRequest, HttpsError} from 'firebase-functions/v2/https';
+import type {AsyncCallable, AsyncHandler} from './types.js';
+import {type CallableRequest, HttpsError} from 'firebase-functions/v2/https';
 import * as v from 'shared/valitas.js';
 
 export function withSchema<Request, Response>(
@@ -12,7 +12,7 @@ export function withSchema<Request, Response>(
     try {
       payload = requestSchema.parse(req.data);
     } catch (e) {
-      throw new HttpsError('invalid-argument', e);
+      throw new HttpsError('invalid-argument', String(e));
     }
     const res = await handler(payload, req);
     return responseSchema.parse(res);
