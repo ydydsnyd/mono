@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1686306795915,
+  "lastUpdate": 1686339444302,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -39683,6 +39683,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/b0e0aa6cd9a15f3cd385674f878e9bee9feb1e46"
         },
         "date": 1686306786930,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 257669,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45649,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 258735,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45899,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95549,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27268,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b0f759c520e9ea4e3735000b48e19be6f9a5b5f2",
+          "message": "chore: Upgrade to chai@alpha (#594)\n\nWe were using @esm-bundle/chai and that was causing problems with TS5.1",
+          "timestamp": "2023-06-09T19:35:42Z",
+          "tree_id": "785fa26b9d916d2f012e6ed6b4ac1034d48b5fe0",
+          "url": "https://github.com/rocicorp/mono/commit/b0f759c520e9ea4e3735000b48e19be6f9a5b5f2"
+        },
+        "date": 1686339434225,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
