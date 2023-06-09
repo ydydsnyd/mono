@@ -9,7 +9,7 @@ export default {
       },
     ],
   },
-  modulePathIgnorePatterns: ["isolate"],
+  modulePathIgnorePatterns: ['isolate'],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
