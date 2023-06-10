@@ -42,7 +42,10 @@
     "./server.js": "./dist/server.mjs",
     "./team.js": "./dist/team.mjs",
     "./timestamp.js": "./dist/timestamp.mjs",
-    "./user.js": "./dist/user.mjs"
+    "./user.js": {
+      "import": "./dist/user.mjs",
+      "types": "./dist/user.d.ts"
+    }
   },
   "files": [
     "dist"

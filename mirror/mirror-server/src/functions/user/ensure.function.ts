@@ -1,7 +1,7 @@
 import type {Firestore, DocumentReference} from 'firebase-admin/firestore';
-import {withSchema} from '../validators/schema';
-import {withAuthorization} from '../validators/auth';
-import type {AsyncCallable} from '../validators/types';
+import {withSchema} from '../validators/schema.js';
+import {withAuthorization} from '../validators/auth.js';
+import type {AsyncCallable} from '../validators/types.js';
 import {
   EnsureUserRequest,
   EnsureUserResponse,

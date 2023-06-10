@@ -24,7 +24,10 @@
   },
   "exports": {
     ".": "./src/mod.ts",
-    "./valita.js": "./src/valita.ts",
+    "./valita.js": {
+      "import": "./src/valita.ts",
+      "types": "./src/valita.ts"
+    },
     "./must.js": "./src/must.ts",
     "./has-own.js": "./src/has-own.ts",
     "./asserts.js": "./src/asserts.ts",

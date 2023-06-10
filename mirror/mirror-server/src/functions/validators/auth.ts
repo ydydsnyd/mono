@@ -7,6 +7,7 @@ export function withAuthorization<Request extends BaseRequest, Response>(
 ): AsyncHandler<Request, Response> {
   // eslint-disable-next-line require-await
   return async (payload: Request, context: CallableRequest<Request>) => {
+    console.log('withAuthorization', payload, context);
     if (context.auth?.uid === undefined) {
       throw new HttpsError('unauthenticated', 'missing authentication');
     }

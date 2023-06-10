@@ -5,6 +5,8 @@ import {publish as publishHandler} from './functions/publish.function.js';
 import {healthcheck as healthcheckHandler} from './functions/healthcheck.function.js';
 import * as userFunctions from './functions/user/index.js';
 import {getFirestore} from 'firebase-admin/firestore';
+import {onObjectFinalized} from 'firebase-functions/v2/storage';
+import {logger} from 'firebase-functions';
 
 // Initializes firestore et al. (e.g. for subsequent calls to getFirestore())
 initializeApp();
@@ -30,3 +32,7 @@ export const user = {
     userFunctions.ensure(getFirestore()),
   ),
 };
+
+export const userStore = onObjectFinalized('my-bucket', cloudEvent => {
+  logger.log(cloudEvent);
+});
