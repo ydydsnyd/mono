@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1686581155853,
+  "lastUpdate": 1686619585968,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -39929,6 +39929,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27268,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "23980b4b2daa8390972c26af8833536b61ef2299",
+          "message": "fix(replicache): Improve error logs for errors in subscription bodys (#601)\n\nProblem\r\n=======\r\nWhen a subscription body throws an error we just log it and nothing else, making it hard to tell where the error occured.\r\n\r\nSolution\r\n======\r\nInclude `'Error in subscription body:'` in error log message.",
+          "timestamp": "2023-06-13T01:24:19Z",
+          "tree_id": "a45f7d830695867e9f94b0535f83dc6f6de4c3a2",
+          "url": "https://github.com/rocicorp/mono/commit/23980b4b2daa8390972c26af8833536b61ef2299"
+        },
+        "date": 1686619575450,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 257700,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45664,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 258766,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45926,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95579,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27257,
             "unit": "bytes"
           }
         ]
