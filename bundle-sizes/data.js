@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1686619585968,
+  "lastUpdate": 1686685707123,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -39973,6 +39973,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.mjs.br (Brotli compressed)",
             "value": 45926,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95579,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27257,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d4d25d2d6d34f4269a6612fcede6112c02010287",
+          "message": "fix(replicache): Update replicache docs to match behavior (#605)\n\nDocs currently say errors in body are thrown if no onError option is provided. In fact they are just logged.",
+          "timestamp": "2023-06-13T12:46:21-07:00",
+          "tree_id": "1dc31583dfc471a06d9b9e66b04b6fc1f68af85e",
+          "url": "https://github.com/rocicorp/mono/commit/d4d25d2d6d34f4269a6612fcede6112c02010287"
+        },
+        "date": 1686685695623,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 257721,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45715,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 258787,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45927,
             "unit": "bytes"
           },
           {
