@@ -3,9 +3,9 @@
   "version": "0.0.1",
   "scripts": {
     "build:dev": "rimraf ./lib/**/* && tsc --watch",
-    "build": "rimraf ./lib/**/* && npm run lint && unbuild",
+    "build": "rimraf ./lib/**/* && unbuild",
     "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js",
-    "serve:dev": "npx firebase-tools emulators:start --only functions",
+    "serve:dev": "npm run build && npx isolate && npx firebase-tools emulators:start --only functions",
     "serve": "npm run build && npx firebase-tools emulators:start --project staging --only functions",
     "shell": "npx firebase-tools functions:shell",
     "start": "npm run build && npm run shell",

@@ -1,14 +1,11 @@
 import busboy from 'busboy';
-import * as functions from 'firebase-functions';
+import type {Request, Response} from 'firebase-functions';
 
 /**
  * Publish function.
  * NOTE: This function will probably not use a multi/part form in the future and just handle a standard JSON payload.
  */
-export async function publish(
-  req: functions.Request,
-  res: functions.Response,
-): Promise<void> {
+export async function publish(req: Request, res: Response): Promise<void> {
   try {
     const bb = busboy({
       headers: req.headers,
