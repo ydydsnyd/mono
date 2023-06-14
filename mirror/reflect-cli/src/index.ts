@@ -1,8 +1,8 @@
+import {ProxyAgent, setGlobalDispatcher} from 'undici';
 import makeCLI from 'yargs';
 import {hideBin} from 'yargs/helpers';
-import process from 'process';
 import {publishHandler, publishOptions} from './publish.js';
-import {ProxyAgent, setGlobalDispatcher} from 'undici';
+import {version} from './version.js';
 
 const proxy =
   process.env.https_proxy ||
@@ -19,7 +19,7 @@ if (proxy) {
 }
 
 export class CommandLineArgsError extends Error {}
-const VERSION = '0.1.0';
+
 export function createCLIParser(argv: string[]) {
   // Type check result against CommonYargsOptions to make sure we've included
   // all common options
@@ -99,12 +99,12 @@ export function createCLIParser(argv: string[]) {
   // tail
   reflectCLI.command(
     'tail [worker]',
-    '🦚 Starts a log tailing session ruinning worker',
+    '🦚 Starts a log tailing session running worker',
     // tailOptions,
     // tailHandler
   );
 
-  // This set to false to allow overwrite of default behaviour
+  // This set to false to allow overwrite of default behavior
   reflectCLI.version(false);
 
   // version
@@ -114,7 +114,7 @@ export function createCLIParser(argv: string[]) {
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     () => {},
     () => {
-      console.log(VERSION);
+      console.log(version);
     },
   );
 
@@ -136,5 +136,8 @@ async function main(argv: string[]): Promise<void> {
     }
   }
 }
-// eslint-disable-next-line @typescript-eslint/no-floating-promises
-main(hideBin(process.argv));
+
+main(hideBin(process.argv)).catch(e => {
+  console.error(e.message);
+  process.exit(1);
+});
