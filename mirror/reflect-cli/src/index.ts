@@ -90,7 +90,7 @@ export function createCLIParser(argv: string[]) {
 
   // publish
   reflectCLI.command(
-    'publish [script]',
+    'publish <script>',
     '🆙 Publish your reflect project',
     publishOptions,
     publishHandler,
