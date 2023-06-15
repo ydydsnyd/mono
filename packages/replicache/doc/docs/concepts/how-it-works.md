@@ -209,7 +209,7 @@ Periodically, Replicache requests an update to the Client View by calling the _p
 
 The pull request contains a _cookie_ and a _clientGroupID_, and the response contains a new _cookie,_ a _patch,_ and a set of _lastMutationIDChanges_.
 
-The cookie is a value opaque to the client identifying the canonical server state that the client has. It is used by the server during pull to compute a patch that brings the client’s state up to date with the server’s. In its simplest implementation, the cookie encapsulates the entire state of all data in the client view. You can think of this as a global “version” of the data in the backend datastore. More fine-grained cookie versioning strategies are possible though. See [/concepts/diff/overview](Backend Strategies) for more information.
+The cookie is a value opaque to the client identifying the canonical server state that the client has. It is used by the server during pull to compute a patch that brings the client’s state up to date with the server’s. In its simplest implementation, the cookie encapsulates the entire state of all data in the client view. You can think of this as a global “version” of the data in the backend datastore. More fine-grained cookie versioning strategies are possible though. See [/concepts/strategies/overview](Backend Strategies) for more information.
 
 The lastMutationIDChanges returned in the response tells Replicache which mutations have been confirmed by the server for each client in the group. Those mutations have their effects, if any, represented in the patch. Replicache therefore discards any pending mutations it has for each client with id ≤ lastMutationID. Those mutations are no longer pending, they are confirmed.
 
