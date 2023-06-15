@@ -14,7 +14,7 @@ This walkthrough implements the [Global Version](/concepts/diff/global-version) 
 Let's define our Postgres schema. As suggested in the [Global Version Strategy](/concepts/diff/global-version) doc, we'll track:
 
 - **Global Version:** The version the backend database is currently at.
-- **Clients:** Clients that have connected to the server, and the last mutationID processed from each. This is used during push to ensure mutations are processed only once, and in the order they happened on the client.
+- **Clients:** Clients that have connected to the server, and the last mutationID processed from each. This is used during push to ensure mutations are processed only once, and in the order they happened on the client. We also store each client's `clientGroupID`, which is needed to correctly implement `pull`.
 - **Domain Data:** The user data the application stores to do its job. Each stored item has a few extra Replicache-specific attributes:
   - `version`: The version of the containing space that this item was last updated at. Used to calculate a diff during pull.
   - `deleted`: A [soft delete](https://en.wiktionary.org/wiki/soft_deletion) used to communicate to clients during pull that a item was logically deleted.
@@ -35,13 +35,17 @@ async function initDb() {
             sender varchar(255) not null,
             content text not null,
             ord integer not null,
-          deleted boolean not null,
+            deleted boolean not null,
             version integer not null)`);
 
     // Stores last mutationID processed for each Replicache client.
     await t.none(`create table replicache_client (
             id varchar(36) primary key not null,
-            last_mutation_id integer not null)`);
+            client_group_id varchar(36) not null,
+            last_mutation_id integer not null,
+            version integer not null)`);
+
+    // TODO: indexes
   }, db);
   return db;
 }
