@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1686841388895,
+  "lastUpdate": 1687263270317,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -40061,6 +40061,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/ea907f1a63060d9e055931970946b12206d229ac"
         },
         "date": 1686841377555,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 257721,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45715,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 258787,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45927,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95579,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27257,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9418ea65e17b42fea29377ffcb576bd8165a43d1",
+          "message": "fix: Work around for initializers in ambient mode (#623)\n\nThe generated .d.ts files for `datadog` package looked something like this:\r\n\r\n```\r\ndeclare class DatadogLogSink implements LogSink {\r\n  ...\r\n  private _flushLock = new Lock();\r\n```\r\n\r\nWhich gives an error in older versions of TypeScript:\r\n\r\n```\r\nerror TS1039: Initializers are not allowed in ambient contexts.\r\n```\r\n\r\nBy compiling the datadog package and importing the js/.d.ts pairs this problematic code is no longer present in the generated .d.ts files.",
+          "timestamp": "2023-06-20T14:12:37+02:00",
+          "tree_id": "7fdf6974b9564cf5e88166a2664de73dba1de0ce",
+          "url": "https://github.com/rocicorp/mono/commit/9418ea65e17b42fea29377ffcb576bd8165a43d1"
+        },
+        "date": 1687263260189,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
