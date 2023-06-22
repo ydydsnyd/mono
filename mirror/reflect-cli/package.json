@@ -4,6 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "dependencies": {
+    "jwt-decode": "^3.1.2",
+    "open": "^9.1.0",
     "yargs": "^17.4.1"
   },
   "scripts": {
@@ -12,7 +14,7 @@
     "format": "prettier --write .",
     "check-format": "prettier --check .",
     "lint": "eslint --ext .ts,.tsx,.js,.jsx src/",
-    "start": "ts-node --esm ./src/index.ts",
+    "start": "AUTH_URL=http://localhost:3000 ts-node --esm ./src/index.ts",
     "build": "node tool/build.js",
     "check-types": "tsc --noEmit"
   },

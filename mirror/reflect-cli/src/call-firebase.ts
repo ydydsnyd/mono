@@ -1,7 +1,7 @@
 import type {ReadonlyJSONValue} from 'shared/json.js';
 import * as v from 'shared/valita.js';
 
-type FunctionName = 'publish';
+type FunctionName = 'publish' | 'user-ensure';
 
 const firebaseErrorResponseSchema = v.object({
   error: v.object({
@@ -29,18 +29,25 @@ export async function callFirebase<
   functionName: FunctionName,
   data: Data,
   returnValueSchema?: v.Type<Return>,
+  apiToken?: string,
 ): Promise<ReadonlyJSONValue> {
   // TODO(arv): Pass along auth token.
   const body = JSON.stringify({data});
-
+  const headers = apiToken
+    ? {
+        'Content-type': 'application/json',
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        'Authorization': `Bearer ${apiToken}`,
+      }
+    : {
+        'Content-type': 'application/json',
+      };
   const resp = await fetch(
     // TODO(arv): Make this a parameter/config
     `http://127.0.0.1:5001/reflect-mirror-staging/us-central1/${functionName}`,
     {
       method: 'POST',
-      headers: {
-        'Content-type': 'application/json',
-      },
+      headers,
       body,
     },
   );
