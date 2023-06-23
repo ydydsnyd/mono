@@ -9,6 +9,7 @@ import {
 import {parse} from 'shared/valita.js';
 import {sleep} from 'shared/sleep.js';
 import {resolver} from '@rocicorp/resolver';
+import type {Socket} from 'node:net';
 
 async function timeout(signal: AbortSignal) {
   await sleep(120_000, signal);
@@ -53,6 +54,10 @@ export async function loginHandler(): Promise<void> {
           });
           return;
         }
+        res.writeHead(307, {
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          Location: `https://auth.reflect.net/reflect-auth-welcome`,
+        });
         res.end(() => {
           loginResolver.resolve();
         });
@@ -61,6 +66,17 @@ export async function loginHandler(): Promise<void> {
       }
     }
   });
+
+  // keeping track of connections so that when we call a server close it
+  // does not hold the process from exiting until all kee-alive connections are closed
+  const connections = new Set<Socket>();
+  server.on('connection', (conn: Socket) => {
+    connections.add(conn);
+    conn.on('close', () => {
+      connections.delete(conn);
+    });
+  });
+
   server.listen(8976);
 
   console.log(`Opening a link in your default browser: ${urlToOpen}`);
@@ -78,6 +94,11 @@ export async function loginHandler(): Promise<void> {
         console.warn('login credential server failed to close', closeErr);
       }
     });
+
+    //destroying all sockets to close all keep-alive connections
+    for (const socket of connections.values()) {
+      socket.destroy();
+    }
   }
 }
 
