@@ -61,6 +61,53 @@ test('flush calls fetch', async () => {
   );
 });
 
+test('reserved keys are prefixed', async () => {
+  const l = new DatadogLogSink({
+    apiKey: 'apiKey',
+  });
+  jest.setSystemTime(1);
+  l.log(
+    'debug',
+    {
+      usr: {name: 'bob'},
+      host: 'testHost',
+      source: 'testSource',
+      status: 'testStatus',
+      service: 'testService',
+      ['trace_id']: 'testTrace_id',
+      message: 'testMessage',
+      msg: 'testMsg',
+      date: 'test-date',
+    },
+    'debug message',
+  );
+
+  await l.flush();
+
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(fetch).toHaveBeenCalledWith(
+    'https://http-intake.logs.datadoghq.com/api/v2/logs?dd-api-key=apiKey',
+    {
+      body: stringifyMany({
+        usr: {name: 'bob'},
+        ['@DATADOG_RESERVED_host']: 'testHost',
+        ['@DATADOG_RESERVED_source']: 'testSource',
+        ['@DATADOG_RESERVED_status']: 'testStatus',
+        ['@DATADOG_RESERVED_service']: 'testService',
+        ['@DATADOG_RESERVED_trace_id']: 'testTrace_id',
+        ['@DATADOG_RESERVED_message']: 'testMessage',
+        ['@DATADOG_RESERVED_msg']: 'testMsg',
+        ['@DATADOG_RESERVED_date']: 'test-date',
+        date: 1,
+        message: 'debug message',
+        status: 'debug',
+      }),
+      method: 'POST',
+      keepalive: true,
+    },
+  );
+});
+
 test('Errors in multi arg messages are converted to JSON', async () => {
   const l = new DatadogLogSink({
     apiKey: 'apiKey',
