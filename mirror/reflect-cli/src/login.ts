@@ -4,9 +4,9 @@ import open from 'open';
 import {
   UserAuthConfig,
   userAuthConfigSchema,
-  writeAuthConfigFile,
+  writeAuthConfigFile as writeAuthConfigFileImpl,
 } from './auth-config.js';
-import {parse} from 'shared/valita.js';
+import * as v from 'shared/valita.js';
 import {sleep} from 'shared/sleep.js';
 import {resolver} from '@rocicorp/resolver';
 import type {Socket} from 'node:net';
@@ -16,10 +16,13 @@ async function timeout(signal: AbortSignal) {
   throw new Error('Login did not complete within 2 minutes');
 }
 
-export async function loginHandler(): Promise<void> {
+export async function loginHandler(
+  openInBrowser = openInBrowserImpl,
+  writeAuthConfigFile = writeAuthConfigFileImpl,
+): Promise<void> {
   const urlToOpen = process.env.AUTH_URL || 'https://auth.reflect.net';
   const loginResolver = resolver<void>();
-  const server = http.createServer((req, res) => {
+  const credentialReceiverServer = http.createServer((req, res) => {
     assert(req.url, "This request doesn't have a URL"); // This should never happen
     const reqUrl = new URL(req.url, `https://${req.headers.host}`);
     const {pathname, searchParams} = reqUrl;
@@ -28,28 +31,32 @@ export async function loginHandler(): Promise<void> {
       case '/oauth/callback': {
         const idToken = searchParams.get('idToken');
         const refreshToken = searchParams.get('refreshToken');
-        const expirationTime = searchParams.get('expirationTime');
-
+        const expirationTimeStr = searchParams.get('expirationTime');
         try {
-          if (!idToken || !refreshToken || !expirationTime) {
+          if (!idToken || !refreshToken || !expirationTimeStr) {
             throw new Error(
-              'Missing idToken, refreshToken, or expiresIn from the auth provider.',
+              `Missing ${!idToken ? 'idToken ' : ''}${
+                !refreshToken ? 'refreshToken ' : ''
+              }${
+                !expirationTimeStr ? 'expirationTime ' : ''
+              }from the auth provider.`,
             );
           }
+          const expirationTime = parseInt(expirationTimeStr);
+          assert(!isNaN(expirationTime), 'expirationTime is not a number');
 
           const authConfig: UserAuthConfig = {
             idToken,
             refreshToken,
-            expirationTime: parseInt(expirationTime),
+            expirationTime,
           };
-          parse(authConfig, userAuthConfigSchema);
+
+          v.assert(authConfig, userAuthConfigSchema);
           writeAuthConfigFile(authConfig);
         } catch (error) {
           res.end(() => {
             loginResolver.reject(
-              new Error(
-                'Invalid idToken, refreshToken, or expiresIn from the auth provider.',
-              ),
+              new Error('Error saving credentials: ' + error),
             );
           });
           return;
@@ -70,14 +77,14 @@ export async function loginHandler(): Promise<void> {
   // keeping track of connections so that when we call a server close it
   // does not hold the process from exiting until all kee-alive connections are closed
   const connections = new Set<Socket>();
-  server.on('connection', (conn: Socket) => {
+  credentialReceiverServer.on('connection', (conn: Socket) => {
     connections.add(conn);
     conn.on('close', () => {
       connections.delete(conn);
     });
   });
 
-  server.listen(8976);
+  credentialReceiverServer.listen(8976);
 
   console.log(`Opening a link in your default browser: ${urlToOpen}`);
   await openInBrowser(urlToOpen);
@@ -89,7 +96,7 @@ export async function loginHandler(): Promise<void> {
     ]);
   } finally {
     timeoutController.abort();
-    server.close((closeErr?: Error) => {
+    credentialReceiverServer.close((closeErr?: Error) => {
       if (closeErr) {
         console.warn('login credential server failed to close', closeErr);
       }
@@ -110,7 +117,7 @@ export async function loginHandler(): Promise<void> {
  *
  * @param url the URL to point the browser at
  */
-export default async function openInBrowser(url: string): Promise<void> {
+export default async function openInBrowserImpl(url: string): Promise<void> {
   const childProcess = await open(url);
   childProcess.on('error', () => {
     console.warn('Failed to open');
