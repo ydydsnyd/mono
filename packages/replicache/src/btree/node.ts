@@ -7,7 +7,6 @@ import {
 } from 'shared/asserts.js';
 import {binarySearch as binarySearchWithFunc} from '../binary-search.js';
 import {skipBTreeNodeAsserts} from '../config.js';
-import type {IndexKey} from '../db/index.js';
 import {FormatVersion} from '../format-version.js';
 import {Hash, emptyHash, newUUIDHash} from '../hash.js';
 import {joinIterables} from '../iterables.js';
@@ -22,6 +21,7 @@ import {
 } from '../json.js';
 import type {BTreeRead} from './read.js';
 import type {BTreeWrite} from './write.js';
+import type {IndexKey} from '../db/index.js';
 
 export type Entry<V> = readonly [key: string, value: V, sizeOfEntry: number];
 
@@ -252,8 +252,7 @@ abstract class NodeImpl<Value> {
   constructor(entries: Array<Entry<Value>>, hash: Hash, isMutable: boolean) {
     this.entries = entries;
     this.hash = hash;
-    this.isMutable = false;
-    isMutable;
+    this.isMutable = isMutable;
   }
 
   abstract set(
