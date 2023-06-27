@@ -170,7 +170,7 @@ export class BTreeRead implements AsyncIterable<Entry<FrozenJSONValue>> {
   }
 }
 
-async function* diffNodes(
+export async function* diffNodes(
   last: InternalNodeImpl | DataNodeImpl,
   current: InternalNodeImpl | DataNodeImpl,
   lastTree: BTreeRead,
@@ -360,6 +360,7 @@ export async function allEntriesAsDiff(
           oldValue: entry[1],
         });
 
+  // TODO(arv): need a read lock here too.
   for await (const entry of map.entries()) {
     diff.push(make(entry));
   }

@@ -7,6 +7,7 @@ import {
 } from 'shared/asserts.js';
 import {binarySearch as binarySearchWithFunc} from '../binary-search.js';
 import {skipBTreeNodeAsserts} from '../config.js';
+import type {IndexKey} from '../db/index.js';
 import {FormatVersion} from '../format-version.js';
 import {Hash, emptyHash, newUUIDHash} from '../hash.js';
 import {joinIterables} from '../iterables.js';
@@ -21,7 +22,6 @@ import {
 } from '../json.js';
 import type {BTreeRead} from './read.js';
 import type {BTreeWrite} from './write.js';
-import type {IndexKey} from '../db/index.js';
 
 export type Entry<V> = readonly [key: string, value: V, sizeOfEntry: number];
 
@@ -570,11 +570,12 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
     }
   }
 
-  getChildren(
+  private _getChildren(
     start: number,
     length: number,
     tree: BTreeRead,
   ): Promise<Array<InternalNodeImpl | DataNodeImpl>> {
+    // TODO(arv): Use a lock here too?
     const ps: Promise<DataNodeImpl | InternalNodeImpl>[] = [];
     for (let i = start; i < length && i < this.entries.length; i++) {
       ps.push(tree.getNode(this.entries[i][1]));
@@ -593,7 +594,7 @@ export class InternalNodeImpl extends NodeImpl<Hash> {
       return new InternalNodeImpl([], newUUIDHash(), level - 1, true);
     }
 
-    const output = await this.getChildren(start, start + length, tree);
+    const output = await this._getChildren(start, start + length, tree);
 
     if (level > 1) {
       const entries: Entry<Hash>[] = [];

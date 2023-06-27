@@ -1,4 +1,4 @@
-import {Lock} from '@rocicorp/lock';
+import {RWLock} from '@rocicorp/lock';
 import {assert} from 'shared/asserts.js';
 import type {CreateChunk} from '../dag/chunk.js';
 import type * as dag from '../dag/mod.js';
@@ -9,6 +9,7 @@ import {getSizeOfEntry} from '../size-of-value.js';
 import {
   DataNodeImpl,
   Entry,
+  InternalDiffOperation,
   InternalNodeImpl,
   createNewInternalEntryForNode,
   emptyDataNode,
@@ -17,7 +18,7 @@ import {
   partition,
   toChunkData,
 } from './node.js';
-import {BTreeRead} from './read.js';
+import {BTreeRead, diffNodes} from './read.js';
 
 export class BTreeWrite extends BTreeRead {
   /**
@@ -36,7 +37,7 @@ export class BTreeWrite extends BTreeRead {
    * them actually working, and it is not deterministic which one would finish
    * last.
    */
-  private readonly _lock = new Lock();
+  private readonly _lock = new RWLock();
   private readonly _modified: Map<Hash, DataNodeImpl | InternalNodeImpl> =
     new Map();
 
@@ -118,8 +119,20 @@ export class BTreeWrite extends BTreeRead {
     return n;
   }
 
+  override get(key: string): Promise<FrozenJSONValue | undefined> {
+    return this._lock.withRead(() => super.get(key));
+  }
+
+  override has(key: string): Promise<boolean> {
+    return this._lock.withRead(() => super.has(key));
+  }
+
+  override isEmpty(): Promise<boolean> {
+    return this._lock.withRead(() => super.isEmpty());
+  }
+
   put(key: string, value: FrozenJSONValue): Promise<void> {
-    return this._lock.withLock(async () => {
+    return this._lock.withWrite(async () => {
       const oldRootNode = await this.getNode(this.rootHash);
       const entrySize = this.getEntrySize(key, value);
       const rootNode = await oldRootNode.set(key, value, entrySize, this);
@@ -148,7 +161,7 @@ export class BTreeWrite extends BTreeRead {
   }
 
   del(key: string): Promise<boolean> {
-    return this._lock.withLock(async () => {
+    return this._lock.withWrite(async () => {
       const oldRootNode = await this.getNode(this.rootHash);
       const newRootNode = await oldRootNode.del(key, this);
 
@@ -169,14 +182,14 @@ export class BTreeWrite extends BTreeRead {
   }
 
   clear(): Promise<void> {
-    return this._lock.withLock(() => {
+    return this._lock.withWrite(() => {
       this._modified.clear();
       this.rootHash = emptyHash;
     });
   }
 
   flush(): Promise<Hash> {
-    return this._lock.withLock(async () => {
+    return this._lock.withWrite(async () => {
       const dagWrite = this._dagRead;
 
       if (this.rootHash === emptyHash) {
@@ -199,6 +212,15 @@ export class BTreeWrite extends BTreeRead {
       this.rootHash = newRoot;
       return newRoot;
     });
+  }
+
+  override async *diff(
+    last: BTreeRead,
+  ): AsyncIterableIterator<InternalDiffOperation> {
+    const [currentNode, lastNode] = await this._lock.withRead(() =>
+      Promise.all([this.getNode(this.rootHash), last.getNode(last.rootHash)]),
+    );
+    yield* diffNodes(lastNode, currentNode, last, this);
   }
 }
 
