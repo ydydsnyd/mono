@@ -77,7 +77,7 @@ export class BTreeWrite extends BTreeRead {
   }
 
   private _addToModified(node: DataNodeImpl | InternalNodeImpl): void {
-    assert(node.isMutable);
+    // assert(node.isMutable);
     this._modified.set(node.hash, node);
   }
 
@@ -174,6 +174,18 @@ export class BTreeWrite extends BTreeRead {
       this.rootHash = emptyHash;
     });
   }
+
+  // override get(key: string): Promise<FrozenJSONValue | undefined> {
+  //   return this._rwLock.withRead(() => super.get(key));
+  // }
+
+  // override has(key: string): Promise<boolean> {
+  //   return this._rwLock.withRead(() => super.has(key));
+  // }
+
+  // override isEmpty(): Promise<boolean> {
+  //   return this._rwLock.withRead(() => super.isEmpty());
+  // }
 
   flush(): Promise<Hash> {
     return this._lock.withLock(async () => {

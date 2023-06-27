@@ -147,11 +147,13 @@ export class BTreeRead implements AsyncIterable<Entry<FrozenJSONValue>> {
     );
   }
 
+  // TODO(arv): Use scan internally.
   async *keys(): AsyncIterableIterator<string> {
     const node = await this.getNode(this.rootHash);
     yield* node.keys(this);
   }
 
+  // TODO(arv): Use scan internally.
   async *entries(): AsyncIterableIterator<Entry<FrozenJSONValue>> {
     const node = await this.getNode(this.rootHash);
     yield* node.entriesIter(this);
