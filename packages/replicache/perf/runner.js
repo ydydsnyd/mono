@@ -289,6 +289,7 @@ async function runInBrowser(browser, page, options) {
     if (result) {
       if (result.error) {
         process.stderr.write(result.error + '\n');
+        process.stderr.write(result.stack + '\n');
         process.exit(1);
       } else {
         jsonEntries.push(...result.jsonEntries);

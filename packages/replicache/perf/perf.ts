@@ -1,16 +1,16 @@
-import {benchmarks as replicacheBenchmarks} from './replicache.js';
-import {benchmarkIDBRead, benchmarkIDBWrite} from './idb.js';
-import {benchmarks as hashBenchmarks} from './hash.js';
-import {benchmarks as storageBenchmarks} from './storage.js';
 import {benchmarks as compareBenchmarks} from './compare-utf8.js';
-import {benchmarks as uuidBenchmarks} from './uuid.js';
-import {benchmarks as mapLoopBenchmarks} from './map-loop.js';
+import type {RandomDataType} from './data.js';
 import {
   formatAsBenchmarkJS,
   formatAsReplicache,
   formatVariance,
 } from './format.js';
-import type {RandomDataType} from './data.js';
+import {benchmarks as hashBenchmarks} from './hash.js';
+import {benchmarkIDBRead, benchmarkIDBWrite} from './idb.js';
+import {benchmarks as mapLoopBenchmarks} from './map-loop.js';
+import {benchmarks as replicacheBenchmarks} from './replicache.js';
+import {benchmarks as storageBenchmarks} from './storage.js';
+import {benchmarks as uuidBenchmarks} from './uuid.js';
 
 export type Benchmark = {
   name: string;
@@ -192,7 +192,11 @@ export async function runBenchmarkByNameAndGroup(
   name: string,
   group: string,
   format: 'replicache' | 'benchmarkJS',
-): Promise<{jsonEntries: Entry[]; text: string} | {error: string} | undefined> {
+): Promise<
+  | {jsonEntries: Entry[]; text: string}
+  | {error: string; stack?: string | undefined}
+  | undefined
+> {
   const b = findBenchmark(name, group);
   try {
     const result = await runBenchmark(b);
@@ -207,7 +211,10 @@ export async function runBenchmarkByNameAndGroup(
           : formatAsBenchmarkJS(result),
     };
   } catch (e) {
-    return {error: `${b.name} had an error: ${e}`};
+    return {
+      error: `${b.name} had an error: ${e}`,
+      stack: e instanceof Error ? e.stack : undefined,
+    };
   }
 }
 
