@@ -7,8 +7,8 @@ import {
   test,
 } from '@jest/globals';
 import {Version, jsonSchema} from 'reflect-protocol';
-import type {WriteTransaction} from 'reflect-types';
-import type {ReadonlyJSONValue} from 'shared/json.js';
+import type {WriteTransaction} from 'reflect-types/src/mod.js';
+import type {ReadonlyJSONValue} from 'shared/src/json.js';
 import {DurableStorage} from '../../src/storage/durable-storage.js';
 import {
   ClientRecordMap,
