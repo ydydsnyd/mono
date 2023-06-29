@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687813675778,
+  "lastUpdate": 1688034560742,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -40199,6 +40199,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27277,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "erik.arvidsson@gmail.com",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d9a1e11fffd38861f897479a1fc1d12969d77e2d",
+          "message": "chore: Allow reflect.net to depend on shared (#660)\n\n- Next.js has a flag called `transpilePackages`. This allows us to depend on typescript files.\r\n- Remove `\"exports\"` from internal packages\r\n  - We now import using \"full\" path, i.e. `shared/src/foo.js`.\r\n- Allow `.js` extensions in import specifier in Next.js.\r\n- We also need to tell jest how to find these internal packages.",
+          "timestamp": "2023-06-29T12:27:28+02:00",
+          "tree_id": "30a8b6efb1412dcd51e679fd7ff1d09919c71304",
+          "url": "https://github.com/rocicorp/mono/commit/d9a1e11fffd38861f897479a1fc1d12969d77e2d"
+        },
+        "date": 1688034550876,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 257413,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45603,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 258479,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45857,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95514,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27251,
             "unit": "bytes"
           }
         ]
