@@ -8,6 +8,7 @@
     "nanoid": "^4.0.2",
     "open": "^9.1.0",
     "pkg-up": "^4.0.0",
+    "semver": "^7.5.3",
     "yargs": "^17.4.1"
   },
   "scripts": {
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@rocicorp/eslint-config": "^0.4.2",
     "@rocicorp/prettier-config": "^0.1.1",
+    "@rocicorp/reflect": "0.28.1",
     "@types/jwt-encode": "^1.0.0",
     "@types/node": "^18.16.0",
     "@types/yargs": "^17.0.10",
