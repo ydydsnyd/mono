@@ -35,6 +35,13 @@ export async function cfFetch<ResponseType = unknown>(
   assert(resource.startsWith('/'), 'resource must start with /');
   const base = 'https://api.cloudflare.com/client/v4';
   const queryString = searchParams ? `?${searchParams.toString()}` : '';
+
+  console.debug(
+    `cfFetch: URL: ${base}${resource}${queryString}`,
+    'init:',
+    init,
+  );
+
   const response = await fetch(`${base}${resource}${queryString}`, {
     ...init,
     headers: {
@@ -44,6 +51,11 @@ export async function cfFetch<ResponseType = unknown>(
     },
   });
   const jsonText = await response.text();
+  console.debug(
+    `cfFetch: URL: ${base}${resource}${queryString}`,
+    'response:',
+    jsonText,
+  );
 
   const method = init.method ?? 'GET';
 
