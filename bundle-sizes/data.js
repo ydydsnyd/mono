@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689156977599,
+  "lastUpdate": 1689241223691,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -40307,6 +40307,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27251,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dee8acb3198a30873dd032da4a56b0269a8f0fe4",
+          "message": "fix(replicache): ChunkNotFound error in BTree (#677)\n\nBy using the `_cache` in `BTreeRead` we can ensure that we do not evict a new node from the cache while we are reading it.\r\n\r\nFixes #624",
+          "timestamp": "2023-07-13T09:38:24Z",
+          "tree_id": "3800f476d0c05cfdded72837fb1caf9ba5756cb9",
+          "url": "https://github.com/rocicorp/mono/commit/dee8acb3198a30873dd032da4a56b0269a8f0fe4"
+        },
+        "date": 1689241214176,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 257119,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45575,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 258185,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45846,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95421,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27250,
             "unit": "bytes"
           }
         ]
