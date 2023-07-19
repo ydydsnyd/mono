@@ -2,15 +2,12 @@ import type {Firestore} from 'firebase-admin/firestore';
 import type {Auth} from 'firebase-admin/auth';
 import {HttpsError} from 'firebase-functions/v2/https';
 import {
-  EnsureUserRequest,
-  EnsureUserResponse,
   ensureUserRequestSchema,
   ensureUserResponseSchema,
 } from 'mirror-protocol/src/user.js';
 import {userDataConverter, userPath} from 'mirror-schema/src/user.js';
-import {withAuthorization} from '../validators/auth.js';
-import {withSchema} from '../validators/schema.js';
-import type {AsyncCallable} from '../validators/types.js';
+import {userAuthorization} from '../validators/auth.js';
+import {validateSchema} from '../validators/schema.js';
 import {logger} from 'firebase-functions';
 import {must} from 'shared/src/must.js';
 import {
@@ -19,15 +16,11 @@ import {
   teamMembershipPath,
 } from 'mirror-schema/src/membership.js';
 
-export function ensure(
-  firestore: Firestore,
-  auth: Auth,
-): AsyncCallable<EnsureUserRequest, EnsureUserResponse> {
-  return withSchema(
-    ensureUserRequestSchema,
-    ensureUserResponseSchema,
-    withAuthorization(async ensureUserRequest => {
-      const {userID} = ensureUserRequest.requester;
+export const ensure = (firestore: Firestore, auth: Auth) =>
+  validateSchema(ensureUserRequestSchema, ensureUserResponseSchema)
+    .validate(userAuthorization())
+    .handle(async (_, context) => {
+      const {userID} = context;
 
       const user = await auth.getUser(userID);
       if (!user.email) {
@@ -73,6 +66,4 @@ export function ensure(
         }
       });
       return {success: true};
-    }),
-  );
-}
+    });

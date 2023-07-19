@@ -7,20 +7,17 @@ import {
   publishRequestSchema,
   publishResponseSchema,
 } from 'mirror-protocol/src/publish.js';
-import {appDataConverter, appPath, type App} from 'mirror-schema/src/app.js';
 import * as schema from 'mirror-schema/src/deployment.js';
-import {userDataConverter, userPath} from 'mirror-schema/src/user.js';
 import * as semver from 'semver';
 import {newDeploymentID} from 'shared/src/mirror/ids.js';
 import {isSupportedSemverRange} from 'shared/src/mirror/is-supported-semver-range.js';
-import {must} from 'shared/src/must.js';
 import type {CfModule} from '../cloudflare/create-worker-upload-form.js';
 import {getServerModuleMetadata} from '../cloudflare/get-server-modules.js';
 import {publish as publishToCloudflare} from '../cloudflare/publish.js';
 import {findNewestMatchingVersion} from '../find-newest-matching-version.js';
 import {storeModule} from '../store-module.js';
-import {withAuthorization} from './validators/auth.js';
-import {withSchema} from './validators/schema.js';
+import {userAuthorization, appAuthorization} from './validators/auth.js';
+import {validateSchema} from './validators/schema.js';
 
 // This is the API token for reflect-server.net
 // https://dash.cloudflare.com/085f6d8eb08e5b23debfb08b21bda1eb/
@@ -31,12 +28,12 @@ export const publish = (
   storage: Storage,
   bucketName: string,
 ) =>
-  withSchema(
-    publishRequestSchema,
-    publishResponseSchema,
-    withAuthorization(async (publishRequest, context) => {
+  validateSchema(publishRequestSchema, publishResponseSchema)
+    .validate(userAuthorization())
+    .validate(appAuthorization(firestore))
+    .handle(async (publishRequest, context) => {
       const {serverVersionRange, appID} = publishRequest;
-      const userID = context.auth.uid;
+      const {userID, app} = context;
 
       if (semver.validRange(serverVersionRange) === null) {
         throw new HttpsError('invalid-argument', 'Invalid desired version');
@@ -51,8 +48,6 @@ export const publish = (
       logger.log(
         `Found matching version for ${serverVersionRange}: ${version}`,
       );
-
-      const app = await getApp(firestore, userID, appID);
 
       const config = {
         accountID: app.cfID,
@@ -114,8 +109,7 @@ export const publish = (
       await setDeploymentStatusOfAll(firestore, appID, deploymentID);
 
       return {success: true, hostname};
-    }),
-  );
+    });
 
 /**
  * Returns the URL (gs://...) of the uploaded file.
@@ -207,39 +201,5 @@ async function setDeploymentStatusOfAll(
         statusTime: Timestamp.now(),
       });
     }
-  });
-}
-
-function getApp(
-  firestore: Firestore,
-  userID: string,
-  appID: string,
-): Promise<App> {
-  const appDocRef = firestore
-    .doc(appPath(appID))
-    .withConverter(appDataConverter);
-  const userDocRef = firestore
-    .doc(userPath(userID))
-    .withConverter(userDataConverter);
-  return firestore.runTransaction(async tx => {
-    const [appDoc, userDoc] = await Promise.all([
-      tx.get(appDocRef),
-      tx.get(userDocRef),
-    ]);
-    if (!userDoc.exists) {
-      throw new HttpsError('not-found', 'User does not exist');
-    }
-    if (!appDoc.exists) {
-      throw new HttpsError('not-found', 'App does not exist');
-    }
-    const app = must(appDoc.data());
-    const user = must(userDoc.data());
-    if (!(app.teamID in user.roles)) {
-      throw new HttpsError(
-        'permission-denied',
-        'User does not have permission to publish this app',
-      );
-    }
-    return app;
   });
 }
