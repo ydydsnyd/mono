@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689241223691,
+  "lastUpdate": 1689845434530,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -40331,6 +40331,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/dee8acb3198a30873dd032da4a56b0269a8f0fe4"
         },
         "date": 1689241214176,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 257119,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45575,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 258185,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45846,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95421,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27250,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d01694202a3fa4651fc9c877ef57c9b768587f4e",
+          "message": "fix(reflect): fix missing types in reflect d.ts due to rollup config (#720)\n\nreflect-client should not have a dependency or devDependency on replicache. We should bundle replicache with reflect-client.\r\n\r\nThis fixes the issue where we didn't bundle it with the binary but the npm deps did not include replicache so typescript could not find the types that were provided by replicache.\r\n\r\n---------\r\n\r\nCo-authored-by: Erik Arvidsson <arv@roci.dev>",
+          "timestamp": "2023-07-20T10:28:19+01:00",
+          "tree_id": "8afb49bcb04c080faae1cddfab6d8fb1879c0c3d",
+          "url": "https://github.com/rocicorp/mono/commit/d01694202a3fa4651fc9c877ef57c9b768587f4e"
+        },
+        "date": 1689845424826,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
