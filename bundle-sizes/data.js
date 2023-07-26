@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690343432331,
+  "lastUpdate": 1690362503888,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -40439,6 +40439,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/09016fb8e05e18fa2a8719ee48ef529c920d26cb"
         },
         "date": 1690343420731,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 257119,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45575,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 258185,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45846,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95421,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27250,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "committer": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "distinct": true,
+          "id": "722aceb67fc89edd73a606ac68515d2a98670de9",
+          "message": "Combine concepts of \"todo example\" and quickstarts.\n\nWe were struggling with duplicating content. I think our customers\ncan understand the idea that a todo example is also a quick way\nto start.",
+          "timestamp": "2023-07-25T23:06:19-10:00",
+          "tree_id": "4cb86b24c7d6058881903f54709256881f4d80d7",
+          "url": "https://github.com/rocicorp/mono/commit/722aceb67fc89edd73a606ac68515d2a98670de9"
+        },
+        "date": 1690362494013,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
