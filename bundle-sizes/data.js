@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690391196024,
+  "lastUpdate": 1690837818137,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -40685,6 +40685,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27210,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "42f44cfd379c4cdc1b42db30d429ad3438920c86",
+          "message": "fix(replicache): fix mutation recovery behavior for disabled client groups (#760)\n\nProblem\r\n======\r\nMutation recovery logic tries to recover mutations for disabled client groups.\r\nAlso its logic for disabling client groups in response to push/pull error responses does not work as it writes to the wrong dag and does not commit.\r\n\r\nSolution\r\n======\r\nAdd check to early return if a client group is disabled.\r\nRefactor logic for disabling client groups, and ensure it properly writes to the perdag.",
+          "timestamp": "2023-07-31T21:06:52Z",
+          "tree_id": "ae9499ac63f2d7a51456fb7d01233caa236924d1",
+          "url": "https://github.com/rocicorp/mono/commit/42f44cfd379c4cdc1b42db30d429ad3438920c86"
+        },
+        "date": 1690837803399,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 257320,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45660,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 258399,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45980,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95492,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27248,
             "unit": "bytes"
           }
         ]
