@@ -1,5 +1,12 @@
-import {initializeApp} from 'firebase/app';
 import {connectFunctionsEmulator, getFunctions} from 'firebase/functions';
+
+// This magically sets things up so that we can use the old firestore() API
+// via the compatibility layer. We use the namespaced API so that we can share
+// more code with the server-side logic (e.g. mirror-schema, testing mocks, etc.).
+//
+// https://firebase.google.com/docs/web/modular-upgrade
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/firestore';
 
 export function getFirebaseConfig(stack: string) {
   return stack === 'prod'
@@ -25,9 +32,15 @@ export function getFirebaseConfig(stack: string) {
 export function initFirebase(stack: string) {
   const firebaseConfig = getFirebaseConfig(stack);
 
-  initializeApp(firebaseConfig);
+  firebase.default.initializeApp(firebaseConfig);
 
   if (stack === 'local') {
     connectFunctionsEmulator(getFunctions(), '127.0.0.1', 5001);
   }
+}
+
+export type Firestore = firebase.default.firestore.Firestore;
+
+export function getFirestore(): Firestore {
+  return firebase.default.firestore();
 }
