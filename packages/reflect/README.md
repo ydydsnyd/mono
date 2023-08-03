@@ -8,6 +8,10 @@ normal semantic versioning does not apply.
 Generally we bump the minor version for new release, and bump the patch version
 if we are just making minor build fixes for the minor version.
 
+## Pull main
+
+You probably want to ensure you are at tip before you do all of the below work so that the release has latest goodness on it.
+
 ## Build the release
 
 ```
@@ -16,6 +20,7 @@ git checkout -b release HEAD
 cd packages/reflect
 npm version minor # or patch
 npm pack --foreground-script
+git commit -a -m 'Bump reflect version to $version'
 ```
 
 ## Manual Testing
