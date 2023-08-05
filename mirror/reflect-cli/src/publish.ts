@@ -10,6 +10,9 @@ import {compile} from './compile.js';
 import {findServerVersionRange} from './find-reflect-server-version.js';
 import {makeRequester} from './requester.js';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
+import {Firestore, getFirestore} from './firebase.js';
+import {deploymentDataConverter} from 'mirror-schema/src/deployment.js';
+import {resolver} from '@rocicorp/resolver';
 
 export function publishOptions(yargs: CommonYargsArgv) {
   return yargs.positional('script', {
@@ -36,6 +39,7 @@ export async function publishHandler(
   yargs: PublishHandlerArgs,
   configDirPath?: string | undefined,
   publish: PublishCaller = publishCaller, // Overridden in tests.
+  firestore?: Firestore, // Overridden in tests.
 ) {
   const {script} = yargs;
 
@@ -68,8 +72,42 @@ export async function publishHandler(
     appID,
   };
 
-  const {hostname} = await publish(data);
+  const {deploymentPath} = await publish(data);
 
-  console.log(`🎁 Published successfully to:`);
-  console.log(`https://${hostname}`);
+  const {promise: isDoneWatching, resolve: done} = resolver<void>();
+  const stopListener = (firestore ?? getFirestore())
+    .doc(deploymentPath)
+    .withConverter(deploymentDataConverter)
+    .onSnapshot({
+      next: snapshot => {
+        const deployment = snapshot.data();
+        if (!deployment) {
+          console.error(`Deployment not found`);
+        } else {
+          console.info(
+            `Deployment ${deployment.status}${
+              deployment.statusMessage ? ': ' + deployment.statusMessage : ''
+            }`,
+          );
+        }
+        if (deployment?.status === 'RUNNING') {
+          console.log(`🎁 Published successfully to:`);
+          console.log(`https://${deployment.hostname}`);
+        }
+        if (
+          !deployment ||
+          deployment.status === 'RUNNING' ||
+          deployment.status === 'FAILED'
+        ) {
+          done();
+        }
+      },
+      error: e => {
+        console.error(e);
+        done();
+      },
+    });
+
+  await isDoneWatching;
+  stopListener();
 }
