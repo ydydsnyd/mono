@@ -15,7 +15,7 @@ import type {
 } from 'reflect-cli/src/yarg-types.js';
 import {SemVer} from 'semver';
 import {assert, assertObject, assertString} from 'shared/src/asserts.js';
-import {storeModule} from 'mirror-schema/src/module.js';
+import {storeModule, type Module} from 'mirror-schema/src/module.js';
 
 const require = createRequire(import.meta.url);
 
@@ -34,12 +34,6 @@ export function uploadReflectServerOptions(yargs: CommonYargsArgv) {
 type UploadReflectServerHandlerArgs = YargvToInterface<
   ReturnType<typeof uploadReflectServerOptions>
 >;
-
-type Module = {
-  name: string;
-  content: string;
-  type: 'esm' | 'text';
-};
 
 export async function uploadReflectServerHandler(
   yargs: UploadReflectServerHandlerArgs,
@@ -108,7 +102,7 @@ async function upload(
   };
   const bucket = storage.bucket(bucketName);
 
-  const [mainURL, workerTemplateURL] = await Promise.all([
+  const [mainModuleRef, workerTemplateModuleRef] = await Promise.all([
     storeModule(bucket, main),
     storeModule(bucket, workerTemplateModule),
   ]);
@@ -129,18 +123,7 @@ async function upload(
       major: version.major,
       minor: version.minor,
       patch: version.patch,
-      modules: [
-        {
-          name: main.name,
-          url: mainURL,
-          type: main.type,
-        },
-        {
-          name: workerTemplateModule.name,
-          url: workerTemplateURL,
-          type: workerTemplateModule.type,
-        },
-      ],
+      modules: [mainModuleRef, workerTemplateModuleRef],
       channel,
     };
 
