@@ -93,6 +93,6 @@ export async function processRoom(
     lc = lc.withContext('storageFlushTiming', cacheFlushLatencyMs);
     flushTotalLatencyMs += storageFlushLatencyMs;
   }
-  lc.debug?.('processRoom flush took', flushTotalLatencyMs, 'ms.');
+  lc.debug?.('processRoom flush took', flushTotalLatencyMs, 'ms.', flushStats);
   return clientPokes;
 }
