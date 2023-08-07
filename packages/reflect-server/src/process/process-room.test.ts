@@ -1,4 +1,4 @@
-import {describe, expect, test} from '@jest/globals';
+import {describe, expect, test, afterEach, jest} from '@jest/globals';
 import type {Version} from 'reflect-protocol';
 import type {WriteTransaction} from 'reflect-types/src/mod.js';
 import {processRoom} from '../process/process-room.js';
@@ -21,6 +21,10 @@ import {
   mockMathRandom,
   pendingMutation,
 } from '../util/test-utils.js';
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
 
 const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();
@@ -327,6 +331,7 @@ describe('processRoom', () => {
     headVersion: Version;
     clients: ClientMap;
     pendingMutations: PendingMutation[];
+    allowUnconfirmed?: boolean;
     expectedError?: string;
     expectedPokes?: ClientPoke[];
     expectedUserValues?: Map<string, UserValue>;
@@ -447,6 +452,43 @@ describe('processRoom', () => {
           name: 'inc',
         }),
       ],
+      expectedPokes: [
+        {
+          clientID: 'c1',
+          poke: {
+            baseCookie: 1,
+            cookie: 2,
+            lastMutationIDChanges: {c1: 2},
+            patch: [
+              {
+                key: 'count',
+                op: 'put',
+                value: 1,
+              },
+            ],
+            timestamp: 300,
+          },
+        },
+      ],
+      expectedClientRecords: new Map([['c1', clientRecord('cg1', 2, 2, 2)]]),
+      expectedUserValues: new Map(),
+      expectedVersion: 2,
+    },
+    {
+      name: 'one mutation, allowUnconfirmed=true',
+      clientRecords: new Map([['c1', clientRecord('cg1', 1)]]),
+      headVersion: 1,
+      clients: new Map([client('c1', 'u1', 'cg1')]),
+      pendingMutations: [
+        pendingMutation({
+          clientID: 'c1',
+          clientGroupID: 'cg1',
+          id: 2,
+          timestamps: 300,
+          name: 'inc',
+        }),
+      ],
+      allowUnconfirmed: true,
       expectedPokes: [
         {
           clientID: 'c1',
@@ -624,7 +666,9 @@ describe('processRoom', () => {
 
       const durable = await getMiniflareDurableObjectStorage(id);
       await durable.deleteAll();
-      const storage = new DurableStorage(durable);
+      const allowUnconfirmed = c.allowUnconfirmed ?? false;
+      const storage = new DurableStorage(durable, allowUnconfirmed);
+      const flushSpy = jest.spyOn(storage, 'flush');
       await storage.put(versionKey, c.headVersion);
       for (const [clientID, record] of c.clientRecords) {
         await putClientRecord(clientID, record, storage);
@@ -648,6 +692,7 @@ describe('processRoom', () => {
       } else {
         const pokes = await p;
         expect(pokes).toEqual(c.expectedPokes);
+        expect(flushSpy).toBeCalledTimes(allowUnconfirmed ? 0 : 1);
       }
 
       for (const [clientID, record] of c.expectedClientRecords ?? new Map()) {

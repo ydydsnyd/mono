@@ -31,7 +31,7 @@ export class DurableStorage implements Storage {
   #durable: DurableObjectStorage;
   readonly baseOptions: Readonly<DurableObjectPutOptions>;
 
-  constructor(durable: DurableObjectStorage, allowUnconfirmed = true) {
+  constructor(durable: DurableObjectStorage, allowUnconfirmed = false) {
     this.#durable = durable;
     this.baseOptions = {
       allowConcurrency: baseAllowConcurrency,
