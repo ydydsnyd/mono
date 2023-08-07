@@ -80,21 +80,19 @@ export async function processRoom(
 
   const startCacheFlush = Date.now();
   const flushStats = await cache.flush();
-  const cacheFlushLatencyMs = Date.now() - startCacheFlush;
-  const startStorageFlush = Date.now();
-  await storage.flush();
-  const storageFlushLatencyMs = Date.now() - startStorageFlush;
-
   for (const [k, v] of Object.entries(flushStats)) {
     lc = lc.withContext(k, v);
   }
-  lc = lc
-    .withContext('cacheFlushTiming', cacheFlushLatencyMs)
-    .withContext('storageFlushTiming', storageFlushLatencyMs);
-  lc.debug?.(
-    'Flushed to durable storage in',
-    cacheFlushLatencyMs + storageFlushLatencyMs,
-    'ms.',
-  );
+  const cacheFlushLatencyMs = Date.now() - startCacheFlush;
+  lc = lc.withContext('cacheFlushTiming', cacheFlushLatencyMs);
+  let flushTotalLatencyMs = cacheFlushLatencyMs;
+  if (!storage.baseOptions.allowUnconfirmed) {
+    const startStorageFlush = Date.now();
+    await storage.flush();
+    const storageFlushLatencyMs = Date.now() - startStorageFlush;
+    lc = lc.withContext('storageFlushTiming', cacheFlushLatencyMs);
+    flushTotalLatencyMs += storageFlushLatencyMs;
+  }
+  lc.debug?.('processRoom flush took', flushTotalLatencyMs, 'ms.');
   return clientPokes;
 }

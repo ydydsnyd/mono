@@ -29,32 +29,32 @@ const baseOptions = {
  */
 export class DurableStorage implements Storage {
   #durable: DurableObjectStorage;
-  readonly #baseOptions: Readonly<DurableObjectPutOptions>;
+  readonly baseOptions: Readonly<DurableObjectPutOptions>;
 
   constructor(durable: DurableObjectStorage, allowUnconfirmed = true) {
     this.#durable = durable;
-    this.#baseOptions = {
+    this.baseOptions = {
       allowConcurrency: baseAllowConcurrency,
       allowUnconfirmed,
     };
   }
 
   put<T extends ReadonlyJSONValue>(key: string, value: T): Promise<void> {
-    return putEntry(this.#durable, key, value, this.#baseOptions);
+    return putEntry(this.#durable, key, value, this.baseOptions);
   }
 
   putEntries<T extends ReadonlyJSONValue>(
     entries: Record<string, T>,
   ): Promise<void> {
-    return this.#durable.put(entries, this.#baseOptions);
+    return this.#durable.put(entries, this.baseOptions);
   }
 
   del(key: string): Promise<void> {
-    return delEntry(this.#durable, key, this.#baseOptions);
+    return delEntry(this.#durable, key, this.baseOptions);
   }
 
   delEntries(keys: string[]): Promise<void> {
-    return this.#durable.delete(keys, this.#baseOptions).then(() => undefined);
+    return this.#durable.delete(keys, this.baseOptions).then(() => undefined);
   }
 
   get<T extends ReadonlyJSONValue>(
