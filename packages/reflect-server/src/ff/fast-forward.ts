@@ -1,11 +1,11 @@
-import type {NullableVersion, Patch, Poke, Version} from 'reflect-protocol';
+import type {NullableVersion, Poke, Version} from 'reflect-protocol';
 import {must} from 'shared/src/must.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
 import type {ClientPoke} from '../types/client-poke.js';
 import {listClientRecords} from '../types/client-record.js';
 import type {ClientGroupID, ClientID} from '../types/client-state.js';
 import {compareVersions} from '../types/version.js';
-import {getPatch} from './get-patch.js';
+import {getPatches} from './get-patch.js';
 import type {LogContext} from '@rocicorp/logger';
 
 /**
@@ -38,15 +38,7 @@ export async function fastForwardRoom(
     `Computing patches for ${distinctBaseCookies.size} cookies of ${clients.length} connected clients (${clientRecords.size} clientRecords)`,
   );
 
-  // Calculate all the distinct patches in parallel
-  const getPatchEntry = async (baseCookie: NullableVersion) =>
-    [baseCookie, await getPatch(storage, baseCookie)] as [
-      NullableVersion,
-      Patch,
-    ];
-  const distinctPatches = new Map(
-    await Promise.all([...distinctBaseCookies].map(getPatchEntry)),
-  );
+  const distinctPatches = await getPatches(lc, storage, distinctBaseCookies);
   lc.debug?.(`Finished computing patches`);
 
   // Calculate the last mutation id changes for each

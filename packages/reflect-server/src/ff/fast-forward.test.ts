@@ -3,7 +3,11 @@ import {DurableStorage} from '../storage/durable-storage.js';
 import type {ClientPoke} from '../types/client-poke.js';
 import {ClientRecordMap, putClientRecord} from '../types/client-record.js';
 import type {ClientID} from '../types/client-state.js';
-import {putUserValue, UserValue} from '../types/user-value.js';
+import {
+  putUserValue,
+  UserValue,
+  userValueVersionEntry,
+} from '../types/user-value.js';
 import {fastForwardRoom} from '../ff/fast-forward.js';
 import {createSilentLogContext, mockMathRandom} from '../util/test-utils.js';
 
@@ -492,6 +496,8 @@ test('fastForward', async () => {
     }
     for (const [key, value] of c.state) {
       await putUserValue(key, value, storage);
+      const versionEntry = userValueVersionEntry(key, value);
+      await storage.put(versionEntry.key, versionEntry.value);
     }
 
     const pokes = await fastForwardRoom(
