@@ -5,6 +5,12 @@ slug: /strategies/per-space-version
 
 # 🛸 Per-Space Version Strategy
 
+:::caution
+
+This document has not yet been updated for Replicache 13.
+
+:::
+
 The Per-Space Version Strategy is the same as the [The Global Version Strategy](/strategies/global-version) except it partitions the database into separate _spaces_ and gives each space its own version number.
 
 This increases throughput of the server. Instead of approximately 50 pushes per second across your entire server, you can get 50 pushes per **space**.

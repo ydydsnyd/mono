@@ -5,6 +5,12 @@ slug: /strategies/row-version
 
 # 🚣 The Row Version Strategy
 
+:::caution
+
+This document has not yet been updated for Replicache 13.
+
+:::
+
 This strategy has a few big advantages over the other strategies:
 
 - The client view can be **computed** dynamically — it can be any arbitrary query over the database, including filters, joins, windows, auth, etc. This _pull query_ can even change per-user. If the user checks a box in the UI, the query might change from _“all active threads"_ to _"all active threads, or first 20 inactive threads ordered by modified-date”_.

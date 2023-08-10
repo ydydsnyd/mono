@@ -5,6 +5,12 @@ slug: /strategies/reset
 
 # 🤪 The Reset Strategy
 
+:::caution
+
+This document has not yet been updated for Replicache 13.
+
+:::
+
 The Reset Strategy is the easiest possible backend strategy: it sends the entire client view on every pull response, so no patch calculation is necessary at all.
 
 Sending the entire client view this way is very inefficient, and therefore this approach is not recommended for anything but early development or the tiniest production applications.
