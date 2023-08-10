@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691700361196,
+  "lastUpdate": 1691700697305,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -40925,6 +40925,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/b691bb46a80b5374ec9d587e742bbf2e8a146301"
         },
         "date": 1691700349571,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 257320,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45660,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 258399,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45980,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95492,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27248,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "committer": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "distinct": true,
+          "id": "fa4c8932a71ea7e9a41721708527f5c06825f480",
+          "message": "doc(replicache): Add caveats to some pages that haven't been updated yet.",
+          "timestamp": "2023-08-10T10:49:20-10:00",
+          "tree_id": "89c4e9ae2dced95a0bb43ac8714d4c3f706f3b4b",
+          "url": "https://github.com/rocicorp/mono/commit/fa4c8932a71ea7e9a41721708527f5c06825f480"
+        },
+        "date": 1691700687103,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
