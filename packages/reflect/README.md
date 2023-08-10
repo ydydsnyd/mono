@@ -19,8 +19,9 @@ git branch -D release
 git checkout -b release HEAD
 cd packages/reflect
 npm version minor # or patch
-npm pack --foreground-script
+npx syncpack fix-mismatches
 git commit -a -m 'Bump reflect version to $version'
+npm pack --foreground-script
 ```
 
 ## Manual Testing
