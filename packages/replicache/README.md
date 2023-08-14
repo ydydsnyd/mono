@@ -63,7 +63,7 @@ Send out the release branch as a PR like normal and land it.
 git checkout main
 git pull
 # Make sure you're at the commit that bumps the version
-export NEW_TAG="v$NEW_VERSION"
+export NEW_TAG="replicache/v$NEW_VERSION"
 git tag $NEW_TAG
 git push origin $NEW_TAG
 ```
