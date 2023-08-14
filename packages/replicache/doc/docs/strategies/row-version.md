@@ -121,7 +121,7 @@ The pull logic is more involved than in other strategies because of the need to 
 
 ## Example
 
-See [todo-row-versioning](https://github.com/rocicorp/todo-row-versioning) for a complete example of this strategy.
+See [todo-row-versioning](https://github.com/rocicorp/todo-row-versioning) for a complete example of this strategy, including sharing and dynamic authorization.
 
 ## Queries and Windowing
 
