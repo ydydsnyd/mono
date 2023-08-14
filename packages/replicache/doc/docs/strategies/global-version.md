@@ -19,11 +19,7 @@ You may wonder why not use a timestamp for the version instead of a counter. Whi
 
 ## Schema
 
-The schema builds on the schema for the [Reset Strategy](./reset.md), and adds a few things to support the global version concept:
-
-- A new singleton `ReplicacheSpace` entity.
-- The `ReplicacheClient` entity adds a `lastModifiedVersion` field.
-- Each domain entity adds two colums: `deleted` and `lastModifiedVersion`.
+The schema builds on the schema for the [Reset Strategy](./reset.md), and adds a few things to support the global version concept.
 
 ```ts
 // Tracks the current global version of the database. There is only one of
@@ -62,7 +58,7 @@ type Todo = {
 
 ## Push
 
-The push handler is the same as the Reset Strategy, but with a few additions. The additions are **marked below with bold type**.
+The push handler is the same as the Reset Strategy, but with changes to annotate entities with the version they were changed at.
 
 1. Create a new `ReplicacheClientGroup` if necessary.
 1. Verify that the requesting user owns the specified `ReplicacheClientGroup`.
@@ -73,15 +69,15 @@ Then, for each mutation described in the [`PushRequest`](/reference/server-push#
   <li value="3">Create the <code>ReplicacheClient</code> if necessary.</li>
   <li>Validate that the <code>ReplicacheClient</code> is part of the requested <code>ReplicacheClientGroup</code>.</li>
   <li>Validate that the received mutation ID is the next expected mutation ID from this client.</li>
-  <li><b>Increment the global version.</b></li>
+  <li>Increment the global version.</li>
   <li>Run the applicable business logic to apply the mutation.
     <ul>
-      <li><b>For each domain entity that is changed or deleted, update its <code>lastModifiedVersion</code> to the current global version.</b></li>
-      <li><b>For each domain entity that is deleted, set its <code>deleted</code> field to true.</b></li>
+      <li>For each domain entity that is changed or deleted, update its <code>lastModifiedVersion</code> to the current global version.</li>
+      <li>For each domain entity that is deleted, set its <code>deleted</code> field to true.</li>
     </ul>
   </li>
   <li>Update the <code>lastMutationID</code> of the client to store that the mutation was processed.</li>
-  <li><b>Update the <code>lastModifiedVersion</code> of the client to the current global version.</b></li>
+  <li>Update the <code>lastModifiedVersion</code> of the client to the current global version.</li>
 </ol>
 
 As with the Reset Strategy, it's important that each mutation is processed within a serializable transaction.
@@ -106,7 +102,7 @@ As with the Reset Strategy, it's important that each mutation is processed withi
 
 ## Example
 
-WIP
+See [todo-nextjs](https://github.com/rocicorp/todo-nextjs) for an example of this strategy.
 
 ## Challenges
 

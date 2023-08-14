@@ -27,9 +27,6 @@ This is why partitioning makes most sense at very high-level boundaries, like or
 
 The schema generalizes the schema from the [Global Version Strategy](./reset.md):
 
-- The `ReplicacheSpace` entity gains an `id` field.
-- The `ReplicacheClientGroup` entity and each domain entity add a `spaceID` field.
-
 ```ts
 type ReplicacheSpace = {
   id: string;
@@ -68,7 +65,7 @@ type Todo = {
 
 ## Push
 
-The push handler should receive the `spaceID` being operated on as an HTTP parameter. The logic is almost identical to the Global Version Strategy, with minor changes **marked below with bold type**.
+The push handler should receive the `spaceID` being operated on as an HTTP parameter. The logic is otherwise almost identical to the Global Version Strategy, with minor changes to deal with spaces.
 
 1. Create a new `ReplicacheClientGroup` if necessary.
 1. Verify that the requesting user owns the specified `ReplicacheClientGroup`.
@@ -80,27 +77,27 @@ Then, for each mutation described in the [`PushRequest`](/reference/server-push#
   <li value="3">Create the <code>ReplicacheClient</code> if necessary.</li>
   <li>Validate that the <code>ReplicacheClient</code> is part of the requested <code>ReplicacheClientGroup</code>.</li>
   <li>Validate that the received mutation ID is the next expected mutation ID from this client.</li>
-  <li><b>Increment the per-space version.</b></li>
+  <li>Increment the per-space version.</li>
   <li>Run the applicable business logic to apply the mutation.
     <ul>
-      <li><b>For each domain entity that is changed or deleted, update its <code>lastModifiedVersion</code> to the current per-space version.</b></li>
+      <li>For each domain entity that is changed or deleted, update its <code>lastModifiedVersion</code> to the current per-space version.</li>
       <li>For each domain entity that is deleted, set its <code>deleted</code> field to true.</li>
     </ul>
   </li>
   <li>Update the <code>lastMutationID</code> of the client to store that the mutation was processed.</li>
-  <li><b>Update the <code>lastModifiedVersion</code> of the client to the current per-space version.</b></li>
+  <li>Update the <code>lastModifiedVersion</code> of the client to the current per-space version.</li>
 </ol>
 
 ### Pull
 
-The pull handler should also receive the `spaceID` being operated on as an HTTP parameter. The logic changed from the Global Version Strategy is **marked in bold type**.
+The pull handler should also receive the `spaceID` being operated on as an HTTP parameter.
 
 <ol>
   <li>Verify that requesting user owns the requested <code>ReplicacheClientGroup</code>.</li>
-  <li><b>Verify that the requested <code>ReplicacheClientGroup</code> is within the requested space.</b></li>
+  <li>Verify that the requested <code>ReplicacheClientGroup</code> is within the requested space.</li>
   <li>Return a <code><a href="/reference/server-pull#http-response-body">PullResponse</a></code> with:
     <ul>
-      <li><b>The current per-space version as the cookie.</b></li>
+      <li>The current per-space version as the cookie.</li>
       <li>The <code>lastMutatationID</code> for each client that has changed since the requesting cookie.</li>
       <li>A patch with:
         <ul>
