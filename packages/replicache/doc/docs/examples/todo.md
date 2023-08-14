@@ -1,5 +1,5 @@
 ---
-title: Todo
+title: Todo, Three Ways
 slug: /examples/todo
 ---
 
