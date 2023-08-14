@@ -37,8 +37,6 @@ During pull, the server uses the cookie to lookup the CVR associated with the pr
 
 ## Schema
 
-The schema is similar to the [Reset Strategy](./reset.md) with some elements of the [Global Version Strategy](./global-version.md) mixed in.
-
 ```ts
 type ReplicacheClientGroup = {
   // Same as the Reset Strategy.
@@ -74,7 +72,7 @@ type Todo = {
 
 ## Push
 
-The push handler is similar to the Reset Strategy, except for with some modifications to track changes to clients and domain entities. These changes are **marked in bold type** below.
+The push handler is similar to the Reset Strategy, except for with some modifications to track changes to clients and domain entities.
 
 1. Create a new `ReplicacheClientGroup` if necessary.
 1. Verify that the requesting user owns the specified `ReplicacheClientGroup`.
@@ -84,15 +82,15 @@ Then, for each mutation described in the [`PushRequest`](/reference/server-push#
 <ol>
 	<li value="3">Create the <code>ReplicacheClient</code> if necessary.</li>
 	<li>Validate that the <code>ReplicacheClient</code> is part of the requested <code>ReplicacheClientGroup</code>.</li>
-	<li><b>Increment the <code>clientVersion</code> field of the <code>ReplicacheClientGroup</code>.</b></li>
+	<li>Increment the <code>clientVersion</code> field of the <code>ReplicacheClientGroup</code>.</li>
 	<li>Validate that the received mutation ID is the next expected mutation ID from this client.</li>
 	<li>Run the applicable business logic to apply the mutation.
 		<ul>
-			<li><b>Increment the <code>version</code> field of any affected domain entities.</b></li>
+			<li>Increment the <code>version</code> field of any affected domain entities.</li>
 		</ul>
 	</li>
 	<li>Update the <code>lastMutationID</code> of the client to store that the mutation was processed.</li>
-	<li><b>Update the <code>lastModifiedClientVersion</code> field of the client to the current <code>clientVersion</code> value.</b></li>
+	<li>Update the <code>lastModifiedClientVersion</code> field of the client to the current <code>clientVersion</code> value.</li>
 </ol>
 
 ## Pull
