@@ -10,7 +10,6 @@ Replicache defines abstract [push](/reference/server-push.md) and [pull](/refere
 The main difference between the strategies is how they calcuate the `patch` required by the pull endpoint. Different approaches to calculating this patch require different state to be stored in the backend database, affect the push and pull implementations, and also some features Replicache can support.
 
 <br/>
-<br/>
 
 <table>
     <thead>
