@@ -31,8 +31,8 @@ You can study them as an example of how to use a particular technique, or just c
 <div style={{float:"left", width:"50%", marginTop: '2.5em', paddingLeft:'2ex', boxSizing:'border-box'}}>
   <h3>todo-wc</h3>
   <div style={{marginBottom: '1em'}}>
-    <a style={{marginRight:'2ex'}} href="https://todo-wc.onrender.com/">Live Demo</a>
-    <a href="https://github.com/rocicorp/todo-wc">Source Code</a>
+    <a style={{marginRight:'2ex'}} href="https://todo-wc-pr-9.onrender.com/">Live Demo</a>
+    <a href="https://github.com/rocicorp/todo-wc/tree/replicache13">Source Code</a>
   </div>
   <p>
     <b>Frontend:</b> Web Components / Vanilla JS<br/>
