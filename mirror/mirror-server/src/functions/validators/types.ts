@@ -13,7 +13,7 @@ export type AppAuthorization = {
   role: Role;
 };
 
-type MaybePromise<T> = T | Promise<T>;
+export type MaybePromise<T> = T | Promise<T>;
 
 export type RequestContextValidator<Request, InputContext, OutputContext> = (
   req: Request,

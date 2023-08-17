@@ -1,4 +1,5 @@
 import {HttpsError} from 'firebase-functions/v2/https';
+import type {Auth} from 'firebase-admin/auth';
 import type {AuthData} from 'firebase-functions/v2/tasks';
 import type {BaseRequest} from 'mirror-protocol/src/base.js';
 import type {BaseAppRequest} from 'mirror-protocol/src/app.js';
@@ -14,10 +15,41 @@ import {must} from 'shared/src/must.js';
 import {logger} from 'firebase-functions';
 import type {Role} from 'mirror-schema/src/membership.js';
 import {assert} from 'shared/src/asserts.js';
+import type {HttpsRequestContext} from './https.js';
 
 // The subset of CallableRequest fields applicable to `userAuthorization`.
 interface AuthContext {
   auth?: AuthData;
+}
+
+const BEARER_PREFIX = 'bearer ';
+
+/**
+ * Creates an `AuthContext` from an `onRequest()` HttpsRequestContext by parsing
+ * and verifying the `Authorization: Bearer` request header. This bridges the
+ * API for https requests to callable requests.
+ */
+export function tokenAuthentication<
+  Request,
+  Context extends HttpsRequestContext,
+>(
+  auth: Auth,
+): RequestContextValidator<Request, Context, Context & AuthContext> {
+  return async (_, context) => {
+    const authorization = context.request.headers['Authorization'];
+    if (typeof authorization !== 'string') {
+      throw new HttpsError('unauthenticated', 'Invalid Authorization header');
+    }
+    if (!authorization.toLowerCase().startsWith(BEARER_PREFIX)) {
+      throw new HttpsError(
+        'unimplemented',
+        'Only Bearer Authorization is supported',
+      );
+    }
+    const token = authorization.substring(BEARER_PREFIX.length);
+    const decodedIdToken = await auth.verifyIdToken(token);
+    return {...context, auth: {uid: decodedIdToken.uid, token: decodedIdToken}};
+  };
 }
 
 /**
