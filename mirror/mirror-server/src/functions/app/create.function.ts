@@ -161,7 +161,6 @@ export const create = (firestore: Firestore) =>
         }
         txn.create(appDocRef, app);
         txn.create(appNameDocRef, {appID});
-
         return {appID, name: scriptName, success: true};
       });
     });
