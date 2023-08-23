@@ -4,33 +4,35 @@ import {
   SERVER_COLLECTION,
   serverDataConverter,
 } from 'mirror-schema/src/server.js';
-import * as semver from 'semver';
+import type {Range} from 'semver';
 
 export async function findNewestMatchingVersion(
   firestore: Firestore,
-  serverVersionRange: semver.Range,
+  serverVersionRange: Range,
+  serverReleaseChannel: string,
 ): Promise<string> {
-  const ref = firestore
+  const versions = await firestore
     .collection(SERVER_COLLECTION)
-    .withConverter(serverDataConverter);
-  let maxVersion: string | undefined;
-  for (const docRef of await ref.listDocuments()) {
-    const currentVersion = docRef.id;
-    if (serverVersionRange.test(currentVersion)) {
-      if (maxVersion === undefined) {
-        maxVersion = currentVersion;
-      } else if (semver.gt(currentVersion, maxVersion)) {
-        maxVersion = currentVersion;
-      }
+    .withConverter(serverDataConverter)
+    .where('channels', 'array-contains', serverReleaseChannel)
+    .orderBy('major', 'desc')
+    .orderBy('minor', 'desc')
+    .orderBy('patch', 'desc')
+    .select()
+    .get();
+
+  for (const doc of versions.docs) {
+    const version = doc.id;
+    if (serverVersionRange.test(version)) {
+      return version;
     }
   }
 
-  if (maxVersion === undefined) {
-    throw new HttpsError(
-      'out-of-range',
-      `No matching version for ${serverVersionRange} found`,
-    );
-  }
+  // TODO(darick): For non standard release channels (e.g. "debug-then-forgot"),
+  // consider logging a warning here and then falling back to the "stable" release.
 
-  return maxVersion;
+  throw new HttpsError(
+    'out-of-range',
+    `No matching version for ${serverVersionRange} found`,
+  );
 }
