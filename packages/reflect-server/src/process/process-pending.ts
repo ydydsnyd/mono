@@ -69,23 +69,30 @@ export async function processPending(
       break;
     }
   }
-  const toProcessMutations = pendingMutations.slice(0, endIndex);
+
   let missCount = 0;
   let bufferNeededMs = Number.MIN_SAFE_INTEGER;
-  for (let i = 0; i < pendingMutations.length; i++) {
-    const pendingM = pendingMutations[i];
+  let newMaxProcessedMutationTimestamp = maxProcessedMutationTimestamp;
+  for (let i = 0; i < endIndex; i++) {
+    const toProcess = pendingMutations[i];
     if (
       maxProcessedMutationTimestamp !== undefined &&
-      pendingM.timestamps !== undefined &&
-      pendingM.timestamps.normalizedTimestamp < maxProcessedMutationTimestamp
+      toProcess.timestamps !== undefined &&
+      toProcess.timestamps.normalizedTimestamp < maxProcessedMutationTimestamp
     ) {
       missCount++;
     }
-    if (pendingM.timestamps !== undefined) {
+    if (toProcess.timestamps !== undefined) {
       bufferNeededMs = Math.max(
         bufferNeededMs,
-        pendingM.timestamps.serverReceivedTimestamp -
-          pendingM.timestamps.normalizedTimestamp,
+        toProcess.timestamps.serverReceivedTimestamp -
+          toProcess.timestamps.normalizedTimestamp,
+      );
+    }
+    if (toProcess.timestamps?.normalizedTimestamp !== undefined) {
+      newMaxProcessedMutationTimestamp = Math.max(
+        newMaxProcessedMutationTimestamp,
+        toProcess.timestamps?.normalizedTimestamp,
       );
     }
   }
@@ -96,16 +103,16 @@ export async function processPending(
 
   lc = lc
     .withContext('numPending', pendingMutations.length)
-    .withContext('numMutations', toProcessMutations.length);
+    .withContext('numMutations', endIndex);
   lc.info?.(
     'Starting process pending',
     {
-      toProcessMutations: toProcessMutations.length,
+      toProcessMutations: endIndex,
       pendingMutations: pendingMutations.length,
       hasConnectsOrDisconnectsToProcess,
       missCount,
     },
-    toProcessMutations,
+    pendingMutations.slice(0, endIndex),
   );
   const pokes = await processRoom(
     lc,
@@ -121,11 +128,7 @@ export async function processPending(
   pendingMutations.splice(0, endIndex);
   return {
     nothingToProcess: false,
-    maxProcessedMutationTimestamp: toProcessMutations.reduce<number>(
-      (max, processed) =>
-        Math.max(max, processed.timestamps?.normalizedTimestamp ?? max),
-      maxProcessedMutationTimestamp,
-    ),
+    maxProcessedMutationTimestamp: newMaxProcessedMutationTimestamp,
   };
 }
 
