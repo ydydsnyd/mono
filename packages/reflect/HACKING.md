@@ -43,7 +43,18 @@ Make sure the `create` command still works as well as the app it generates.
 npx /path/to/rocicorp-reflect-<version>.tgz create my-app
 cd my-app
 npm install
+
+# Should run against remote server
 npm run dev
+
+# Should run against local server
+npx reflect dev src/reflect/index.ts
+VITE_WORKER_URL="ws://127.0.0.1:8080/" npm run dev
+
+# Should ask where to publish on vercel and run on vercel
+# Need to set VITE_WORKER_URL env var on deployment
+npx reflect publish src/reflect/index.ts
+npx vercel
 ```
 
 ### Replidraw-do
@@ -88,6 +99,7 @@ git push --tags
 
 ```
 # pull latest upstream
+git checkout main
 git pull
 
 git branch -D release
