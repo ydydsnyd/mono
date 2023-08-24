@@ -57,6 +57,19 @@ npx reflect publish src/reflect/index.ts
 npx vercel
 ```
 
+Note: The created app here will use the previous public version of Reflect, not the
+new one just built above. That is fine. What we're testing here is that `create` works.
+We will test the new build of Reflect below.
+
+If you want to test the new build works with the counter app, you can also do that by
+manually installing the new build:
+
+```bash
+cd my-app
+npm add /path/to/rocicorp-reflect-<version>.tgz
+npm run dev
+```
+
 ### Replidraw-do
 
 Check out [rocicorp/replidraw-do](https://github.com/rocicorp/replidraw-do)
