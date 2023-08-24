@@ -18,14 +18,13 @@ You probably want to ensure you are at tip before you do all of the below work s
 ## Build the release
 
 ```
-git branch -D release
-git checkout -b release HEAD
 cd packages/reflect
 npm version minor # or patch
-npx syncpack fix-mismatches
 cd ../..
+npx syncpack fix-mismatches
 npm install
 npm run build
+cd -
 npm pack --foreground-script
 git commit -a -m 'Bump reflect version to $version'
 ```
@@ -62,19 +61,34 @@ Check whether there are any public API changes by diffing `client.d.ts` and
 `server.d.ts` between the previous released version and the new candidate. Make
 sure all new API has been discussed and agreed to by the team.
 
-## Land the Release
-
-Send out the release branch as a PR like normal and land it.
-
 ## Tag the Release
 
 ```
-git checkout main
-git pull
-# Make sure you're at the commit that bumps the version
+# Make sure you're at the commit that bumps the version. We
+# want to tag the exact code you just tested, not something
+# potentially merged with other parallel changes on `main`.
 git tag "reflect/v$NEW_VERSION"
 git push --tags
 ```
+
+## Merge the Release
+
+```
+# pull latest upstream
+git pull
+
+git branch -D release
+git checkout -b release origin/main
+
+# This will typically be a fast-forward, but if other changes
+# have happened on main it will be a true merge. If there are
+# merge conflicts
+git merge "reflect/v$NEW_VERSION"
+
+git push origin release
+```
+
+Then send the code review and land as normal.
 
 ## Update the peer libraries for compat with the new Reflect
 
@@ -85,6 +99,8 @@ The following have peerDependencies that should to be updated to the new Reflect
 ## Publish the Release
 
 ```
+git checkout reflect/v$NEW_VERSION
+
 # note: this will publish the release to the "latest" tag, which means it's what
 # people will get when they `npm install`. If this is a beta release, you should
 # add the `--tag=beta` flag to this command but also make sure the semver has
