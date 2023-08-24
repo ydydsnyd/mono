@@ -18,6 +18,8 @@ You probably want to ensure you are at tip before you do all of the below work s
 ## Build the release
 
 ```
+git branch -D release
+git checkout -b release
 cd packages/reflect
 npm version minor # or patch
 cd ../..
@@ -32,6 +34,17 @@ git commit -a -m 'Bump reflect version to $version'
 ## Manual Testing
 
 To test that a release works before creating the release we use a tarball dependency.
+
+### Template App
+
+Make sure the `create` command still works as well as the app it generates.
+
+```bash
+npx /path/to/rocicorp-reflect-<version>.tgz create my-app
+cd my-app
+npm install
+npm run dev
+```
 
 ### Replidraw-do
 
