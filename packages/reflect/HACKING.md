@@ -23,8 +23,11 @@ git checkout -b release HEAD
 cd packages/reflect
 npm version minor # or patch
 npx syncpack fix-mismatches
-git commit -a -m 'Bump reflect version to $version'
+cd ../..
+npm install
+npm run build
 npm pack --foreground-script
+git commit -a -m 'Bump reflect version to $version'
 ```
 
 ## Manual Testing
