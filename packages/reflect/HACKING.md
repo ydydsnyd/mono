@@ -133,6 +133,28 @@ git checkout reflect/v$NEW_VERSION
 npm publish
 ```
 
+## Upload the Server to Mirror
+
+This is needed so that we can publish apps to Mirror that use this version.
+
+```bash
+# First, change packages/reflect/package.json version to the next number
+# temporarily. So say that the version is currently 0.40.5, change it to
+# 0.40.6. This is a temporary workaround for:
+# https://github.com/rocicorp/mono/issues/833.
+
+cd $REPO_ROOT
+npm install
+cd mirror/mirror-cli
+# adjust channels to taste
+# can also pass --force to overwrite old versions
+npm run start uploadServer -- --channels=canary --channels=stable
+npm run start uploadServer -- --stack=staging --channels=canary --channels=stable
+
+# Abandon temporary change to package.json
+git reset --hard HEAD
+```
+
 ## Update sample apps that depend on Reflect
 
 - reflect-todo
