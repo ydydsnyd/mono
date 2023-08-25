@@ -152,7 +152,12 @@ npm publish
 
 ```bash
 git checkout main
+git pull
+git branch -D release
+git checkout -b release main
 git merge replicache/v$NEW_VERSION
+git commit -a -m 'Merge replicache/$NEW_VERSION'
+git push origin release
 ```
 
 If there were no changes on main while the release was happening,
