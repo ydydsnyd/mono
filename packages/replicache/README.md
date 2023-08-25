@@ -137,16 +137,28 @@ paying customers to make it easier to debug their code.
 ```bash
 git checkout rocicorp-replicache
 
-# Make sure all the changes from main are included.
-git merge main
+# Merge new release
+git merge replicache/v$NEW_VERSION
 
 # Verify that the only diff is the name and the sourcemap
-git diff main
+git diff replicache/v$NEW_VERSION
 
-git push
+git push origin rocicorp-replicache
 
 npm publish
 ```
+
+## Merge release to main
+
+```bash
+git checkout main
+git merge replicache/v$NEW_VERSION
+```
+
+If there were no changes on main while the release was happening,
+this will be a fast-forward. Otherwise it will be a true merge.
+
+Send a PR for this and land as normal.
 
 ## Release docs
 
@@ -156,7 +168,7 @@ to deploy a new version.
 ```
 git checkout docs
 git pull
-git reset --hard <tag-of-release>
+git reset --hard replicache/v$NEW_VERSION
 git push origin docs
 ```
 
