@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692141525134,
+  "lastUpdate": 1692937270120,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -41843,6 +41843,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/2af240f38bc59f703f94a989dcbf744680068df7"
         },
         "date": 1692141509832,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 257313,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45672,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 258392,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45914,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95485,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27219,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "committer": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "distinct": true,
+          "id": "5e919da684373a57f97aefaea5d7da7f14b55df7",
+          "message": "doc(replicache): Temporarily change license instructions to use\nReplicache v12. `npx replicache` is broken for v13. This should\nbe reverted when the underlying bug is fixed.",
+          "timestamp": "2023-08-24T18:17:59-10:00",
+          "tree_id": "935d41714ae1263f6a446d8ad2728a09ef395816",
+          "url": "https://github.com/rocicorp/mono/commit/5e919da684373a57f97aefaea5d7da7f14b55df7"
+        },
+        "date": 1692937257327,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
