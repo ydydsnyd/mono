@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692937270120,
+  "lastUpdate": 1692955871180,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -41897,6 +41897,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/5e919da684373a57f97aefaea5d7da7f14b55df7"
         },
         "date": 1692937257327,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 257313,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45672,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 258392,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45914,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95485,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27219,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dddfa64a9f1249d0d11626afa00af50835e282b9",
+          "message": "fix(replicache): cli.cjs should be CJS (#876)\n\nSome refactoring in the v13 time frame changed the default to ESM which\r\nbroke the CLI.",
+          "timestamp": "2023-08-25T09:29:10Z",
+          "tree_id": "52c6c376689a75c4623dc65749d9464fec0d1f7d",
+          "url": "https://github.com/rocicorp/mono/commit/dddfa64a9f1249d0d11626afa00af50835e282b9"
+        },
+        "date": 1692955860758,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
