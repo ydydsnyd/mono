@@ -1,6 +1,31 @@
 # Cutting a release
 
-## Decide what the new version should be.
+## Build then code
+
+First make double-check the current build has passed tests on GitHub.
+
+Then:
+
+```bash
+git checkout main
+git pull
+git branch -D release
+git checkout -b release HEAD
+npm install
+npm run build
+```
+
+## Decide what the new version should be
+
+First look for API changes. Download the last release:
+
+```bash
+cd /tmp
+npm pack replicache@$CURRENT_VERSION
+tar -xvf replicache@$CURRENT_VERSION
+cd -
+diff -u /tmp/package/out/replicache.d.ts out/replicache.d.ts
+```
 
 Look through the changes since the last tag.
 
@@ -63,7 +88,7 @@ Send out the release branch as a PR like normal and land it.
 git checkout main
 git pull
 # Make sure you're at the commit that bumps the version
-export NEW_TAG="v$NEW_VERSION"
+export NEW_TAG="replicache/v$NEW_VERSION"
 git tag $NEW_TAG
 git push origin $NEW_TAG
 ```

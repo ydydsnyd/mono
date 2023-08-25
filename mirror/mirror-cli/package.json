@@ -4,10 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "dependencies": {
-    "@badrap/valita": "^0.2.0",
-    "@rocicorp/reflect": "0.30.1",
+    "@rocicorp/reflect": "0.31.7",
     "esbuild": "^0.18.3",
-    "firebase": "9.23.0",
     "firebase-admin": "^11.10.1",
     "pkg-up": "^4.0.0",
     "reflect-cli": "0.1.0",
@@ -20,6 +18,7 @@
     "check-format": "prettier --check .",
     "lint": "eslint --ext .ts,.tsx,.js,.jsx src/",
     "build": "node tool/build.js",
+    "start": "node --no-warnings --loader ts-node/esm ./src/index.ts",
     "check-types": "tsc --noEmit"
   },
   "devDependencies": {

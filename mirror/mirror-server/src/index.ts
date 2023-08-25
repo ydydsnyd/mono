@@ -11,7 +11,9 @@ import {
 } from './config/index.js';
 import * as appFunctions from './functions/app/index.js';
 import {healthcheck as healthcheckHandler} from './functions/healthcheck.function.js';
+import * as serverFunctions from './functions/server/index.js';
 import * as userFunctions from './functions/user/index.js';
+import {DEPLOYMENT_SECRETS_NAMES} from './functions/app/secrets.js';
 
 // Initializes firestore et al. (e.g. for subsequent calls to getFirestore())
 initializeApp(appOptions);
@@ -38,9 +40,14 @@ export const user = {
 export const app = {
   create: https.onCall(baseHttpsOptions, appFunctions.create(getFirestore())),
   publish: https.onCall(
-    baseHttpsOptions,
+    {...baseHttpsOptions, secrets: [...DEPLOYMENT_SECRETS_NAMES]},
     appFunctions.publish(getFirestore(), getStorage(), modulesBucketName),
   ),
   deploy: appFunctions.deploy(getFirestore(), getStorage()),
+  autoDeploy: appFunctions.autoDeploy(getFirestore()),
   rename: https.onCall(baseHttpsOptions, appFunctions.rename(getFirestore())),
+};
+
+export const server = {
+  autoDeploy: serverFunctions.autoDeploy(getFirestore()),
 };

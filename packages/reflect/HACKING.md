@@ -19,17 +19,56 @@ You probably want to ensure you are at tip before you do all of the below work s
 
 ```
 git branch -D release
-git checkout -b release HEAD
+git checkout -b release
 cd packages/reflect
 npm version minor # or patch
+cd ../..
 npx syncpack fix-mismatches
-git commit -a -m 'Bump reflect version to $version'
+npm install
+npm run build
+cd -
 npm pack --foreground-script
+git commit -a -m 'Bump reflect version to $version'
 ```
 
 ## Manual Testing
 
 To test that a release works before creating the release we use a tarball dependency.
+
+### Template App
+
+Make sure the `create` command still works as well as the app it generates.
+
+```bash
+npx /path/to/rocicorp-reflect-<version>.tgz create my-app
+cd my-app
+npm install
+
+# Should run against remote server
+npm run dev
+
+# Should run against local server
+npx reflect dev src/reflect/index.ts
+VITE_WORKER_URL="ws://127.0.0.1:8080/" npm run dev
+
+# Should ask where to publish on vercel and run on vercel
+# Need to set VITE_WORKER_URL env var on deployment
+npx reflect publish src/reflect/index.ts
+npx vercel
+```
+
+Note: The created app here will use the previous public version of Reflect, not the
+new one just built above. That is fine. What we're testing here is that `create` works.
+We will test the new build of Reflect below.
+
+If you want to test the new build works with the counter app, you can also do that by
+manually installing the new build:
+
+```bash
+cd my-app
+npm add /path/to/rocicorp-reflect-<version>.tgz
+npm run dev
+```
 
 ### Replidraw-do
 
@@ -59,19 +98,35 @@ Check whether there are any public API changes by diffing `client.d.ts` and
 `server.d.ts` between the previous released version and the new candidate. Make
 sure all new API has been discussed and agreed to by the team.
 
-## Land the Release
-
-Send out the release branch as a PR like normal and land it.
-
 ## Tag the Release
 
 ```
-git checkout main
-git pull
-# Make sure you're at the commit that bumps the version
+# Make sure you're at the commit that bumps the version. We
+# want to tag the exact code you just tested, not something
+# potentially merged with other parallel changes on `main`.
 git tag "reflect/v$NEW_VERSION"
 git push --tags
 ```
+
+## Merge the Release
+
+```
+# pull latest upstream
+git checkout main
+git pull
+
+git branch -D release
+git checkout -b release origin/main
+
+# This will typically be a fast-forward, but if other changes
+# have happened on main it will be a true merge. If there are
+# merge conflicts
+git merge "reflect/v$NEW_VERSION"
+
+git push origin release
+```
+
+Then send the code review and land as normal.
 
 ## Update the peer libraries for compat with the new Reflect
 
@@ -82,12 +137,63 @@ The following have peerDependencies that should to be updated to the new Reflect
 ## Publish the Release
 
 ```
+git checkout reflect/v$NEW_VERSION
+
 # note: this will publish the release to the "latest" tag, which means it's what
 # people will get when they `npm install`. If this is a beta release, you should
 # add the `--tag=beta` flag to this command but also make sure the semver has
 # beta in it.
 npm publish
 ```
+
+## Upload the Server to Mirror
+
+This is needed so that we can publish apps to Mirror that use this version.
+
+```bash
+# First, change packages/reflect/package.json version to the next number
+# temporarily. So say that the version is currently 0.40.5, change it to
+# 0.40.6. This is a temporary workaround for:
+# https://github.com/rocicorp/mono/issues/833.
+
+cd $REPO_ROOT
+git checkout reflect/v$NEW_VERSION
+npm install
+cd mirror/mirror-cli
+# adjust channels to taste
+# can also pass --force to overwrite old versions
+npm run start uploadServer -- --channels=canary --channels=stable
+npm run start uploadServer -- --stack=prod --channels=canary --channels=stable
+
+# Abandon temporary change to package.json
+git reset --hard HEAD
+```
+
+## Release a Server to more channels
+
+If a server was only uploaded to, say `--channels=canary` and you wish to roll it
+out to `stable`:
+
+```bash
+cd mirror/mirror-cli
+npm run start releaseServer -- --server=0.40.5 --channels=stable
+```
+
+The command is additive and will not remove any existing channels (e.g. "canary").
+This can also be used for one-off debugging, e.g. if you want to release to a specific
+app. Define your temporary channel name (e.g. "debug-#433") and release the desired server to
+that channel. Then in the [Firebase console](https://console.firebase.google.com/project/reflect-mirror-prod/firestore/data/~2Fapps), navigate to the `apps/${appID}` document and set that App's
+`serverReleaseChannel` to your channel name. The deployment should automatically kick in.
+Don't forget to return the App to its original channel (and clean up the server doc).
+
+## Unrelease a Server from a channel
+
+```bash
+cd mirror/mirror-cli
+npm run start unreleaseServer -- --server=0.40.5 --channels=stable
+```
+
+Essentially, `releaseServer` and `unreleaseServer` take the same cli arguments.
 
 ## Update sample apps that depend on Reflect
 

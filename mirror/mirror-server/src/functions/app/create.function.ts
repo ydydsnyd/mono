@@ -29,6 +29,7 @@ import {
 import {must} from 'shared/src/must.js';
 import {userAuthorization} from '../validators/auth.js';
 import {validateSchema} from '../validators/schema.js';
+import {defaultOptions} from 'mirror-schema/src/deployment.js';
 
 const cloudflareAccountId = defineString('CLOUDFLARE_ACCOUNT_ID');
 
@@ -48,7 +49,7 @@ export const create = (firestore: Firestore) =>
       return firestore.runTransaction(async txn => {
         const userDoc = await txn.get(userDocRef);
         if (!userDoc.exists) {
-          throw new HttpsError('not-found', 'User does not exist');
+          throw new HttpsError('not-found', `User ${userID} does not exist`);
         }
 
         const user = must(userDoc.data());
@@ -147,6 +148,7 @@ export const create = (firestore: Firestore) =>
           cfID: cloudflareAccountId.value(),
           cfScriptName: scriptName,
           serverReleaseChannel,
+          deploymentOptions: defaultOptions(),
         };
 
         if (createNewTeam) {
@@ -159,7 +161,6 @@ export const create = (firestore: Firestore) =>
         }
         txn.create(appDocRef, app);
         txn.create(appNameDocRef, {appID});
-
         return {appID, name: scriptName, success: true};
       });
     });
