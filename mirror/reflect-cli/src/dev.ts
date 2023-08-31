@@ -4,6 +4,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import {compile} from './compile.js';
 import {startDevServer} from './dev/start-dev-server.js';
+import {mustReadAppConfig} from './app-config.js';
 import type {CommonYargsArgv} from './yarg-types.js';
 
 const DEFAULT_PORT = 8080;
@@ -21,11 +22,6 @@ export function devOptions(yargs: CommonYargsArgv) {
         requiresArg: true,
       })
       .default('port', undefined, '' + DEFAULT_PORT)
-      .positional('script', {
-        describe: 'Path to the worker script',
-        type: 'string',
-        demandOption: true,
-      })
   );
 }
 
@@ -39,12 +35,11 @@ async function exists(path: string) {
 }
 
 type DevHandlerArgs = {
-  script: string;
   port?: number | undefined;
 };
 
 export async function devHandler(yargs: DevHandlerArgs) {
-  const {script} = yargs;
+  const {server: script} = mustReadAppConfig();
 
   const absPath = path.resolve(script);
   if (!(await exists(absPath))) {

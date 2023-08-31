@@ -21,7 +21,8 @@ export function useFakeAuthConfig() {
 
 export function useFakeAppConfig() {
   const appConfig: AppConfig = {
-    appID: 'test-app-id',
+    apps: {default: {appID: 'test-app-id'}},
+    server: 'test-server-path.js',
   };
 
   beforeEach(() => {

@@ -4,7 +4,10 @@ import {
 } from 'mirror-protocol/src/publish.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import {mustReadAppConfig} from './app-config.js';
+import {
+  ensureAppInstantiated,
+  writeTemplatedFilePlaceholders,
+} from './app-config.js';
 import {authenticate} from './auth-config.js';
 import {compile} from './compile.js';
 import {findServerVersionRange} from './find-reflect-server-version.js';
@@ -15,11 +18,7 @@ import {deploymentDataConverter} from 'mirror-schema/src/deployment.js';
 import {watch} from 'mirror-schema/src/watch.js';
 
 export function publishOptions(yargs: CommonYargsArgv) {
-  return yargs.positional('script', {
-    describe: 'Path to the worker script',
-    type: 'string',
-    demandOption: true,
-  });
+  return yargs;
 }
 
 async function exists(path: string) {
@@ -36,14 +35,11 @@ type PublishHandlerArgs = YargvToInterface<ReturnType<typeof publishOptions>>;
 export type PublishCaller = typeof publishCaller;
 
 export async function publishHandler(
-  yargs: PublishHandlerArgs,
-  configDirPath?: string | undefined,
+  _: PublishHandlerArgs,
   publish: PublishCaller = publishCaller, // Overridden in tests.
   firestore: Firestore = getFirestore(), // Overridden in tests.
 ) {
-  const {script} = yargs;
-
-  const {appID} = mustReadAppConfig(configDirPath);
+  const {appID, server: script} = await ensureAppInstantiated();
 
   const absPath = path.resolve(script);
   if (!(await exists(absPath))) {
@@ -56,7 +52,7 @@ export async function publishHandler(
   console.log(`Compiling ${script}`);
   const {code, sourcemap} = await compile(absPath, 'linked');
 
-  const user = await authenticate();
+  const {user} = await authenticate();
   const userID = user.uid;
 
   const data: PublishRequest = {
@@ -89,6 +85,9 @@ export async function publishHandler(
     if (deployment?.status === 'RUNNING') {
       console.log(`🎁 Published successfully to:`);
       console.log(`https://${deployment.spec.hostname}`);
+      writeTemplatedFilePlaceholders({
+        appHostname: deployment.spec.hostname,
+      });
       break;
     }
     console.info(

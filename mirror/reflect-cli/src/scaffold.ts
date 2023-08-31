@@ -1,27 +1,10 @@
-import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
-import color from 'picocolors';
 import fs, {existsSync} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import validateProjectName from 'validate-npm-package-name';
-
-function isValidPackageName(projectName: string): string | void {
-  const nameValidation = validateProjectName(projectName);
-  if (!nameValidation.validForNewPackages) {
-    return [
-      ...(nameValidation.errors || []),
-      ...(nameValidation.warnings || []),
-    ].join('\n');
-  }
-}
-
-export function scaffoldOptions(yargs: CommonYargsArgv) {
-  return yargs.option('name', {
-    describe: 'Name of the app',
-    type: 'string',
-    demandOption: true,
-  });
-}
+import {readFile} from 'node:fs/promises';
+import {pkgUp} from 'pkg-up';
+import {assert, assertObject, assertString} from 'shared/src/asserts.js';
+import {writeTemplatedFilePlaceholders} from './app-config.js';
 
 const templateDir = path.resolve(
   fileURLToPath(import.meta.url),
@@ -36,30 +19,12 @@ const templateBinDir = path.resolve(
   `template`,
 );
 
-type ScaffoldHandlerArgs = YargvToInterface<ReturnType<typeof scaffoldOptions>>;
-
-export function scaffoldHandler(yargs: ScaffoldHandlerArgs) {
-  const {name} = yargs;
-  const invalidPackageNameReason = isValidPackageName(name);
-  if (invalidPackageNameReason) {
-    console.log(
-      color.red(
-        `Invalid project name: ${color.bgWhite(
-          name,
-        )} - (${invalidPackageNameReason})`,
-      ),
-    );
-    process.exit(1);
-  }
-  console.log(color.green(`Creating folder: ${color.bgWhite(name)}`));
-
+export async function scaffold(appName: string, dest: string): Promise<void> {
+  const reflectVersion = await findReflectVersion();
   const sourceDir = existsSync(templateDir) ? templateDir : templateBinDir;
 
-  copyDir(sourceDir, name);
-
-  updateProjectName(name);
-  updateEnvFile(name, `wss://${name}.reflect-server.net`);
-  console.log(color.green('Finished initializing your reflect project 🎉'));
+  copyDir(sourceDir, dest);
+  writeTemplatedFilePlaceholders({appName, reflectVersion}, dest, false);
 }
 
 function copy(src: string, dest: string) {
@@ -80,26 +45,12 @@ function copyDir(srcDir: string, destDir: string) {
   }
 }
 
-function editFile(file: string, callback: (content: string) => string) {
-  const content = fs.readFileSync(file, 'utf-8');
-  fs.writeFileSync(file, callback(content), 'utf-8');
-}
-
-function updateProjectName(targetDir: string) {
-  const packageJsonPath = path.resolve(targetDir, 'package.json');
-  editFile(packageJsonPath, content =>
-    content.replace(
-      /"name": "reflect-template-example"/,
-      `"name": "${targetDir}"`,
-    ),
-  );
-}
-
-export function updateEnvFile(targetDir: string, workerUrl: string) {
-  const envExamplePath = path.resolve(targetDir, '.env.example');
-  const envFinal = path.resolve(targetDir, '.env');
-  fs.copyFileSync(envExamplePath, envFinal);
-  editFile(envFinal, content =>
-    content.replace('VITE_WORKER_URL=', `VITE_WORKER_URL=${workerUrl}`),
-  );
+async function findReflectVersion(): Promise<string> {
+  const pkg = await pkgUp({cwd: fileURLToPath(import.meta.url)});
+  assert(pkg);
+  const s = await readFile(pkg, 'utf-8');
+  const v = JSON.parse(s);
+  assertObject(v);
+  assertString(v.version);
+  return v.version;
 }
