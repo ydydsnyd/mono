@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1693420529975,
+  "lastUpdate": 1693484662793,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -42113,6 +42113,60 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/ecbfb8864575227ad7be395fcde01b24715b8f96"
         },
         "date": 1693420519467,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 257313,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45682,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 258392,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 45982,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95485,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27206,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "09d5978c4e32655feb640f18830f2a151b5f9925",
+          "message": "fix(reflect-cli): Use safe ports for dev (#897)\n\nThe dev server now runs on a free port. If the `port` flag is provided and the port is taken, we exit with an error.\r\n\r\nWe use a free port for the inspector protocol.\r\n\r\nhttps://www.notion.so/replicache/reflect-dev-fails-cryptically-if-cannot-get-port-d87cedcd80d248e3b5afc95731928d92?pvs=4",
+          "timestamp": "2023-08-31T12:22:35Z",
+          "tree_id": "b517d40ad661261afdb86dd4e4a6cc539962d16c",
+          "url": "https://github.com/rocicorp/mono/commit/09d5978c4e32655feb640f18830f2a151b5f9925"
+        },
+        "date": 1693484651647,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
