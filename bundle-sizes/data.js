@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1693715047729,
+  "lastUpdate": 1693724509807,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -42305,6 +42305,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27206,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fc30c366f5428583163e00e2c6fb9d9f0f176801",
+          "message": "fix(replicache): avoid continous refresh when mem-only kv store is used (#918)\n\nProblem\r\n======\r\n\r\nWhen ExperimentalMemKVStore is used via ReplicacheOptions.experimentalCreateKVStore, the new-client-channel logic results in tabs continuously refreshing, since each new client is assigned to a new client group.\r\n\r\nSolution\r\n======\r\nChange the new-client-channel logic to only trigger a refresh if \r\n1.  it can find the new client group id it learned about via the broadcast channel in its perdag (i.e. only if the clients actually share persistent storage).\r\n2. the new client has a new idb name",
+          "timestamp": "2023-09-03T00:00:20-07:00",
+          "tree_id": "08c3819a887ae1e9598a22046d205dd10e645e4c",
+          "url": "https://github.com/rocicorp/mono/commit/fc30c366f5428583163e00e2c6fb9d9f0f176801"
+        },
+        "date": 1693724506467,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 258129,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45822,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 259208,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 46036,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95764,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27312,
             "unit": "bytes"
           }
         ]
