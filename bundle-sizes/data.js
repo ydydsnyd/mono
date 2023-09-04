@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1693731101238,
+  "lastUpdate": 1693817885999,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -42413,6 +42413,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27312,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "922425e0c49eaadec19c1dd64f013c5beb1dd77a",
+          "message": "feat(replicache): Allow onData function in subscribe (#907)\n\n`subscribe` is now overloaded to either accept a `SubscribeOptions` object or a function, which acts as the `onData` field in the `SubscribeOptions`.\r\n\r\nFixes #380",
+          "timestamp": "2023-09-04T08:56:15Z",
+          "tree_id": "0c5c26de761ec512803d8511ecb8b0341324bad3",
+          "url": "https://github.com/rocicorp/mono/commit/922425e0c49eaadec19c1dd64f013c5beb1dd77a"
+        },
+        "date": 1693817875590,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 258467,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45857,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 259546,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 46152,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95801,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27385,
             "unit": "bytes"
           }
         ]
