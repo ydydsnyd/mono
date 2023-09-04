@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1693817885999,
+  "lastUpdate": 1693856922866,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -42467,6 +42467,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27385,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a088bb7e447db003aa889bc15935fdf86b8edbe6",
+          "message": " fix(replicache): improve new client channel message compatability (#928)\n\nProblem\r\n======\r\nOlder clients (<= replicache@13.0.1), *asserted* that the messages received on the new client broadcast channel were an array containing exactly one string.\r\n\r\nhttps://github.com/rocicorp/mono/commit/fc30c366f5428583163e00e2c6fb9d9f0f176801 added another string to the message array, which would have caused  <=replicache@13.0.1 clients to throw exceptions in their new client channel message handler, and fail to refresh if the new client had a new client group id.\r\n\r\nSolution\r\n=======\r\nSend the old message format, v0, on the old channel name `replicache-new-client-group:${replicacheName}`. \r\n\r\nSend the new message format, v1, on a new channel name `replicache-new-client-group-v1:${replicacheName}`. \r\n\r\nThe new message format uses an object instead of an array, and is designed for forward/backward compatibility (going forward).  The new message format can be extended with new optional properties.\r\n\r\nNote, this change is not perfectly forward/backwards compatible.  The client no longer listens on the old channel name.  This is because if it did, it would not be able to distinguish v0 messages from  <=replicache@13.0.1  clients (which ideally it would handle) from v0 messages from newer clients (which ideally it would ignore in favor of processing their v1 messages).  \r\n\r\nHowever, it is more compatible than the current code.   <=replicache@13.0.1 will refresh if the >replicache@13.0.1 client has a new client group id (and will not encounter any exceptions due to receiving messages with an unexpected format).  What does not work exactly as desired, is if >replicache@13.0.1  is deployed, but then the deployment is rolled back to <=replicache@13.0.1 , the >replicache@13.0.1 clients will not refresh if new <=replicache@13.0.1 clients have a different clientGroupID.",
+          "timestamp": "2023-09-04T19:46:46Z",
+          "tree_id": "b22b940a5a4433c33a95d5b3d62113806fb072ea",
+          "url": "https://github.com/rocicorp/mono/commit/a088bb7e447db003aa889bc15935fdf86b8edbe6"
+        },
+        "date": 1693856911650,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 258425,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45869,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 259504,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 46164,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95861,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27377,
             "unit": "bytes"
           }
         ]
