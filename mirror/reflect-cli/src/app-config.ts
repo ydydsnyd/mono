@@ -245,6 +245,7 @@ function getDefaultAppNameFromDir(dir: string): string {
 type TemplatePlaceholders = {
   appName: string;
   appHostname: string;
+  reflectVersion: string;
 };
 
 export function writeTemplatedFilePlaceholders(

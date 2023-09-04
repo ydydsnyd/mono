@@ -29,9 +29,9 @@ export async function createHandler(createYargs: CreatedHandlerArgs) {
   }
 
   await mkdir(name, {recursive: true});
-  scaffold(name, name);
+  await scaffold(name, name);
   console.log(`Installing @rocicorp/reflect`);
-  execSync(`npm add '@rocicorp/reflect'`, {
+  execSync(`npm install`, {
     cwd: name,
     stdio: ['ignore', 'inherit', 'inherit'],
   });
