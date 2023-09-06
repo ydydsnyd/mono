@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1693856922866,
+  "lastUpdate": 1694029104812,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -42521,6 +42521,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27377,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "840038af49b22c5d302c64c5ffb3a6f2255d0360",
+          "message": "feat: Parameterized Transaction get and scan (#792)\n\n`ReadTransaction` `get` and `scan` now gets an optional type parameter. If provided, the return value is tagged as `DeepReadonly<T>`. `DeepReadonly` is a type functor that recursively makes all properties of an object readonly.",
+          "timestamp": "2023-09-06T19:36:07Z",
+          "tree_id": "cb13e610753ae6b414c223a743834e6c9e547127",
+          "url": "https://github.com/rocicorp/mono/commit/840038af49b22c5d302c64c5ffb3a6f2255d0360"
+        },
+        "date": 1694029091367,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 258374,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45867,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 259453,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 46150,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95856,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27385,
             "unit": "bytes"
           }
         ]
