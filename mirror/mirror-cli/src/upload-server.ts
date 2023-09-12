@@ -9,7 +9,6 @@ import {readFile} from 'node:fs/promises';
 import {createRequire} from 'node:module';
 import {pkgUp} from 'pkg-up';
 import {compile} from 'reflect-cli/src/compile.js';
-import {getScriptTemplate} from 'reflect-cli/src/get-script-template.js';
 import {SemVer} from 'semver';
 import {assert, assertObject, assertString} from 'shared/src/asserts.js';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
@@ -46,7 +45,7 @@ export async function uploadReflectServerHandler(
   const bucketName = `reflect-mirror-${yargs.stack}-modules`;
   const source = await buildReflectServerContent();
   const version = await findVersion();
-  const scriptTemplate = await getScriptTemplate('prod');
+  const scriptTemplate = await buildScriptTemplate('prod');
   console.log('Script template:\n', scriptTemplate);
   console.log('Version (from @rocicorp/reflect):', version.toString());
 
@@ -63,6 +62,12 @@ export async function uploadReflectServerHandler(
   );
 
   console.log(`Uploaded version ${version} successfully`);
+}
+
+async function buildScriptTemplate(name: string): Promise<string> {
+  throw new Error(
+    `Want to somehow compile the mirror-templates/src/${name}-script.ts here`,
+  );
 }
 
 async function buildReflectServerContent(): Promise<string> {
