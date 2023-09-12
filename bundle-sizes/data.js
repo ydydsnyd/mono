@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1694029104812,
+  "lastUpdate": 1694517713604,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -42575,6 +42575,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27385,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bf253bb26e4e9c65c38a64566b5471a671630bb4",
+          "message": "chore: Update deps to pick up parcel fixes (#968)\n\nThe package.json files in `@rocicorp/logger`, `@rocicorp/lock` and\n`@rocicorp/resolver` were missing a `module` field which caused trouble\nfor the parcel bundler. This commit updates the deps to pick up the\nfixes.",
+          "timestamp": "2023-09-12T13:19:29+02:00",
+          "tree_id": "b1e689f604682cb287fab19870f36eaf56ea952a",
+          "url": "https://github.com/rocicorp/mono/commit/bf253bb26e4e9c65c38a64566b5471a671630bb4"
+        },
+        "date": 1694517697723,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 258324,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 45868,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 259331,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 46134,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 95791,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27336,
             "unit": "bytes"
           }
         ]
