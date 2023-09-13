@@ -10,16 +10,16 @@ import type * as dag from '../dag/mod.js';
 import {commitIsLocalDD31, commitIsLocalSDD} from '../db/commit.js';
 import * as db from '../db/mod.js';
 import {
-  assertJSONValue,
   FrozenJSONValue,
   ReadonlyJSONObject,
   ReadonlyJSONValue,
+  assertJSONValue,
 } from '../json.js';
 import {
-  assertPusherResult,
+  PushError,
   Pusher,
   PusherResult,
-  PushError,
+  assertPusherResult,
 } from '../pusher.js';
 import {toError} from '../to-error.js';
 import {withRead} from '../with-transactions.js';
@@ -27,6 +27,7 @@ import type {ClientGroupID, ClientID} from './ids.js';
 
 export const PUSH_VERSION_SDD = 0;
 export const PUSH_VERSION_DD31 = 1;
+export const PUSH_VERSION_V2 = 2;
 
 /**
  * The JSON value used as the body when doing a POST to the [push
@@ -65,7 +66,25 @@ export type PushRequestV1 = {
   mutations: MutationV1[];
 };
 
-export type PushRequest = PushRequestV0 | PushRequestV1;
+/**
+ * The JSON value used as the body when doing a POST to the [push
+ * endpoint](/reference/server-push).
+ */
+export type PushRequestV2 = {
+  pushVersion: 2;
+  /**
+   * `schemaVersion` can optionally be used to specify to the push endpoint
+   * version information about the mutators the app is using (e.g., format of
+   * mutator args).
+   */
+  schemaVersion: string;
+  profileID: string;
+
+  clientGroupID: ClientGroupID;
+  mutations: MutationV2[];
+};
+
+export type PushRequest = PushRequestV0 | PushRequestV1 | PushRequestV2;
 
 function assertPushRequestBase(v: unknown): asserts v is ReadonlyJSONObject {
   assertObject(v);
@@ -78,6 +97,13 @@ export function assertPushRequestV1(v: unknown): asserts v is PushRequestV1 {
   assertString(v.clientGroupID);
   assertArray(v.mutations);
   v.mutations.forEach(assertMutationsV1);
+}
+
+export function assertPushRequestV2(v: unknown): asserts v is PushRequestV2 {
+  assertPushRequestBase(v);
+  assertString(v.clientGroupID);
+  assertArray(v.mutations);
+  v.mutations.forEach(assertMutationsV2);
 }
 
 /**
@@ -102,6 +128,17 @@ export type MutationV1 = {
   readonly clientID: ClientID;
 };
 
+/**
+ * Mutation describes a single mutation done on the client.
+ */
+export type MutationV2 = {
+  readonly id: number;
+  readonly name: string;
+  readonly args: readonly ReadonlyJSONValue[];
+  readonly timestamp: number;
+  readonly clientID: ClientID;
+};
+
 function assertMutationsV0(v: unknown): asserts v is MutationV0 {
   assertObject(v);
   assertNumber(v.id);
@@ -115,6 +152,16 @@ function assertMutationsV1(v: unknown): asserts v is MutationV1 {
   assertString((v as Partial<MutationV1>).clientID);
 }
 
+function assertMutationsV2(v: unknown): asserts v is MutationV2 {
+  assertObject(v);
+  assertNumber(v.id);
+  assertString(v.name);
+  assertArray(v.args);
+  v.args.forEach(assertJSONValue);
+  assertNumber(v.timestamp);
+  assertString(v.clientID);
+}
+
 type FrozenMutationV0 = Omit<MutationV0, 'args'> & {
   readonly args: FrozenJSONValue;
 };
@@ -124,6 +171,10 @@ type FrozenMutationV0 = Omit<MutationV0, 'args'> & {
  */
 type FrozenMutationV1 = FrozenMutationV0 & {
   readonly clientID: ClientID;
+};
+
+type FrozenMutationV2 = Omit<FrozenMutationV1, 'args'> & {
+  readonly args: readonly FrozenJSONValue[];
 };
 
 function convertSDD(lm: db.LocalMetaSDD): FrozenMutationV0 {
@@ -145,6 +196,10 @@ function convertDD31(lm: db.LocalMetaDD31): FrozenMutationV1 {
   };
 }
 
+function convertVarArgs(lm: db.LocalMetaDD31): FrozenMutationV2 {
+  return convertDD31(lm) as FrozenMutationV2;
+}
+
 export async function push(
   requestID: string,
   store: dag.Store,
@@ -154,7 +209,10 @@ export async function push(
   clientID: ClientID,
   pusher: Pusher,
   schemaVersion: string,
-  pushVersion: typeof PUSH_VERSION_SDD | typeof PUSH_VERSION_DD31,
+  pushVersion:
+    | typeof PUSH_VERSION_SDD
+    | typeof PUSH_VERSION_DD31
+    | typeof PUSH_VERSION_V2,
 ): Promise<PusherResult | undefined> {
   // Find pending commits between the base snapshot and the main head and push
   // them to the data layer.
@@ -175,7 +233,47 @@ export async function push(
   // want tail first (in mutation id order).
   pending.reverse();
 
-  let pushReq: PushRequestV0 | PushRequestV1;
+  const pushReq = makePushRequest(
+    pushVersion,
+    pending,
+    clientGroupID,
+    profileID,
+    schemaVersion,
+    clientID,
+  );
+  lc.debug?.('Starting push...');
+  const pushStart = Date.now();
+  const pusherResult = await callPusher(pusher, pushReq, requestID);
+  lc.debug?.('...Push complete in ', Date.now() - pushStart, 'ms');
+  return pusherResult;
+}
+
+function makePushRequest(
+  pushVersion: number,
+  pending: db.Commit<db.LocalMetaSDD | db.LocalMetaDD31>[],
+  clientGroupID: string | undefined,
+  profileID: string,
+  schemaVersion: string,
+  clientID: string,
+): PushRequest {
+  if (pushVersion === PUSH_VERSION_V2) {
+    const pushMutations: FrozenMutationV2[] = [];
+    for (const commit of pending) {
+      if (commitIsLocalDD31(commit)) {
+        pushMutations.push(convertVarArgs(commit.meta));
+      } else {
+        throw new Error('Internal non local pending commit');
+      }
+    }
+    assert(clientGroupID);
+    return {
+      profileID,
+      clientGroupID,
+      mutations: pushMutations,
+      pushVersion: PUSH_VERSION_V2,
+      schemaVersion,
+    };
+  }
 
   if (pushVersion === PUSH_VERSION_DD31) {
     const pushMutations: FrozenMutationV1[] = [];
@@ -187,42 +285,36 @@ export async function push(
       }
     }
     assert(clientGroupID);
-    const r: PushRequestV1 = {
+    return {
       profileID,
       clientGroupID,
       mutations: pushMutations,
       pushVersion: PUSH_VERSION_DD31,
       schemaVersion,
     };
-    pushReq = r;
-  } else {
-    assert(pushVersion === PUSH_VERSION_SDD);
-    const pushMutations: FrozenMutationV0[] = [];
-    for (const commit of pending) {
-      if (commitIsLocalSDD(commit)) {
-        pushMutations.push(convertSDD(commit.meta));
-      } else {
-        throw new Error('Internal non local pending commit');
-      }
-    }
-    pushReq = {
-      profileID,
-      clientID,
-      mutations: pushMutations,
-      pushVersion: PUSH_VERSION_SDD,
-      schemaVersion,
-    };
   }
-  lc.debug?.('Starting push...');
-  const pushStart = Date.now();
-  const pusherResult = await callPusher(pusher, pushReq, requestID);
-  lc.debug?.('...Push complete in ', Date.now() - pushStart, 'ms');
-  return pusherResult;
+
+  assert(pushVersion === PUSH_VERSION_SDD);
+  const pushMutations: FrozenMutationV0[] = [];
+  for (const commit of pending) {
+    if (commitIsLocalSDD(commit)) {
+      pushMutations.push(convertSDD(commit.meta));
+    } else {
+      throw new Error('Internal non local pending commit');
+    }
+  }
+  return {
+    profileID,
+    clientID,
+    mutations: pushMutations,
+    pushVersion: PUSH_VERSION_SDD,
+    schemaVersion,
+  };
 }
 
 async function callPusher(
   pusher: Pusher,
-  body: PushRequestV0 | PushRequestV1,
+  body: PushRequest,
   requestID: string,
 ): Promise<PusherResult> {
   try {

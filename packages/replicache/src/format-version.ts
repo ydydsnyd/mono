@@ -5,7 +5,9 @@ export const enum FormatVersion {
   V6 = 6,
   // V7 added sizeOfEntry to the BTree chunk data.
   V7 = 7,
-  Latest = V7,
+  // V8 changed mutations to use var args
+  V8 = 8,
+  Latest = V8,
 }
 
 export function parseReplicacheFormatVersion(v: number): FormatVersion {

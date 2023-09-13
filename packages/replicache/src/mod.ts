@@ -95,9 +95,11 @@ export type {PullRequest, PullRequestV0, PullRequestV1} from './sync/pull.js';
 export type {
   MutationV0,
   MutationV1,
+  MutationV2,
   PushRequest,
   PushRequestV0,
   PushRequestV1,
+  PushRequestV2,
 } from './sync/push.js';
 export {TransactionClosedError} from './transaction-closed-error.js';
 export type {

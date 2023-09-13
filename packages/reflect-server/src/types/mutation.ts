@@ -9,7 +9,7 @@ export type PendingMutation = {
   readonly clientGroupID: ClientGroupID;
   readonly pusherClientIDs: ReadonlySet<ClientID>;
   readonly name: string;
-  readonly args: ReadonlyJSONValue;
+  readonly args: readonly ReadonlyJSONValue[];
   readonly timestamps?:
     | {
         normalizedTimestamp: number;

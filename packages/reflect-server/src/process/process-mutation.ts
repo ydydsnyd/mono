@@ -1,15 +1,18 @@
+import type {LogContext} from '@rocicorp/logger';
+import type {Version} from 'reflect-protocol';
+import {timed} from 'shared/src/timed.js';
 import {EntryCache} from '../storage/entry-cache.js';
 import {ReplicacheTransaction} from '../storage/replicache-transaction.js';
 import type {Storage} from '../storage/storage.js';
 import {getClientRecord, putClientRecord} from '../types/client-record.js';
-import {putVersion} from '../types/version.js';
-import type {Version} from 'reflect-protocol';
-import type {LogContext} from '@rocicorp/logger';
 import type {PendingMutation} from '../types/mutation.js';
-import {timed} from 'shared/src/timed.js';
+import {putVersion} from '../types/version.js';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type Mutator = (tx: ReplicacheTransaction, args: any) => Promise<void>;
+export type Mutator = (
+  tx: ReplicacheTransaction,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ...args: any[]
+) => Promise<void>;
 export type MutatorMap = Map<string, Mutator>;
 
 // Runs a single mutation and updates storage accordingly.
@@ -82,7 +85,7 @@ async function processMutationTimed(
     if (!mutator) {
       lc.error?.('skipping unknown mutator', pendingMutation);
     } else {
-      await mutator(tx, pendingMutation.args);
+      await mutator(tx, ...pendingMutation.args);
       await txCache.flush();
     }
   } catch (e) {

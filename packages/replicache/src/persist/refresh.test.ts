@@ -266,7 +266,7 @@ suite('refresh', () => {
       '': [
         {
           key: 'from mutator_name_3',
-          newValue: [3],
+          newValue: 3,
           op: 'add',
         },
       ],
@@ -376,12 +376,12 @@ suite('refresh', () => {
       '': [
         {
           key: 'from mutator_name_3',
-          newValue: [3],
+          newValue: 3,
           op: 'add',
         },
         {
           key: 'from mutator_name_4',
-          newValue: [4],
+          newValue: 4,
           op: 'add',
         },
       ],
@@ -442,7 +442,7 @@ suite('refresh', () => {
       '': [
         {
           key: 'from mutator_name_3',
-          newValue: [3],
+          newValue: 3,
           op: 'add',
         },
       ],
@@ -655,7 +655,7 @@ suite('refresh', () => {
       mutationID: number;
       basisHash: Hash;
       mutatorName: string;
-      mutatorArgsJSON: JSONValue;
+      mutatorArgsJSON: readonly JSONValue[];
       originalHash?: Hash | null;
       indexes?: readonly db.IndexRecord[];
       valueHash: Hash;
@@ -706,7 +706,7 @@ suite('refresh', () => {
       mutationID: 3,
       basisHash: s1.chunk.hash,
       mutatorName: 'addData',
-      mutatorArgsJSON: {a: 1},
+      mutatorArgsJSON: [{a: 1}],
       valueHash: s1.chunk.data.valueHash,
       // entries: [['a', 1]],
     });
@@ -716,7 +716,7 @@ suite('refresh', () => {
       mutationID: 4,
       basisHash: l1.chunk.hash,
       mutatorName: 'addData',
-      mutatorArgsJSON: {b: 2},
+      mutatorArgsJSON: [{b: 2}],
       valueHash: l1.chunk.data.valueHash,
       // entries: [['b', 2]],
     });
@@ -772,7 +772,7 @@ suite('refresh', () => {
         mutationID: 4,
         basisHash: s1.chunk.hash,
         mutatorName: 'addData',
-        mutatorArgsJSON: {b: 2},
+        mutatorArgsJSON: [{b: 2}],
         valueHash: s1.chunk.data.valueHash,
       });
       const l2 = await makeLocalMutation({
@@ -781,7 +781,7 @@ suite('refresh', () => {
         mutationID: 5,
         basisHash: l1.chunk.hash,
         mutatorName: 'addData',
-        mutatorArgsJSON: {c: 3},
+        mutatorArgsJSON: [{c: 3}],
         valueHash: l1.chunk.data.valueHash,
       });
 

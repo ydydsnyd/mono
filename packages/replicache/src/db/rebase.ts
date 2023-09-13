@@ -1,5 +1,5 @@
 import type {LogContext} from '@rocicorp/logger';
-import {assert} from 'shared/src/asserts.js';
+import {assert, assertArray} from 'shared/src/asserts.js';
 import type * as dag from '../dag/mod.js';
 import {FormatVersion} from '../format-version.js';
 import type {Hash} from '../hash.js';
@@ -88,7 +88,12 @@ async function rebaseMutation(
     dbWrite,
     lc,
   );
-  await mutatorImpl(tx, args);
+  if (formatVersion >= FormatVersion.V8) {
+    assertArray(args);
+    await mutatorImpl(tx, ...args);
+  } else {
+    await mutatorImpl(tx, args);
+  }
   return dbWrite;
 }
 

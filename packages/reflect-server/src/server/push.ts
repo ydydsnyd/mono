@@ -1,5 +1,7 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {PushBody} from 'reflect-protocol';
+import {assertArray} from 'shared/src/asserts.js';
+import type {ReadonlyJSONValue} from 'shared/src/json.js';
 import {must} from 'shared/src/must.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
 import {
@@ -176,11 +178,14 @@ export async function handlePush(
         ? m.timestamp + clockOffsetMs
         : undefined;
 
+    // pushVersion 2 changed args to be an array of JSONValue.
+    const args = ensureArray(body.pushVersion, m.args);
+
     const mWithNormalizedTimestamp: PendingMutation = {
       name: m.name,
       id: m.id,
       clientID: m.clientID,
-      args: m.args,
+      args,
       clientGroupID,
       pusherClientIDs: new Set([clientID]),
       timestamps: normalizedTimestamp
@@ -290,4 +295,15 @@ export async function handlePush(
     'pending mutations.',
   );
   processUntilDone();
+}
+
+function ensureArray(
+  pushVersion: 1 | 2,
+  args: ReadonlyJSONValue | ReadonlyJSONValue[],
+): ReadonlyJSONValue[] {
+  if (pushVersion === 1) {
+    return [args];
+  }
+  assertArray(args);
+  return args;
 }

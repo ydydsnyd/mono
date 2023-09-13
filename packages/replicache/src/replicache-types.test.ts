@@ -111,6 +111,9 @@ test.skip('Test register param [type checking only]', () => {
       mut4: async (tx: WriteTransaction) => {
         use(tx);
       },
+      mut5: async (tx: WriteTransaction, a: string, b: number) => {
+        use(tx, a, b);
+      },
     },
   });
 
@@ -129,20 +132,9 @@ test.skip('Test register param [type checking only]', () => {
   // This is fine according to the rules of JS/TS
   const mut4: (x: number) => Promise<void> = rep.mutate.mut4;
   use(mut4);
-  /* eslint-enable prefer-destructuring */
 
-  new Replicache({
-    licenseKey: TEST_LICENSE_KEY,
-    name: 'test-types',
-    mutators: {
-      // @ts-expect-error Type '(tx: WriteTransaction, a: string, b: number) =>
-      //   Promise<void>' is not assignable to type '(tx: WriteTransaction,
-      //   args?: any) => MaybePromise<void | JSONValue>'.ts(2322)
-      mut5: async (tx: WriteTransaction, a: string, b: number) => {
-        use(tx, a, b);
-      },
-    },
-  });
+  const mut5: (a: string, b: number) => Promise<void> = rep.mutate.mut5;
+  use(mut5);
 });
 
 // Only used for type checking

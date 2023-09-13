@@ -125,6 +125,7 @@ export class MutationRecovery {
             case FormatVersion.DD31:
             case FormatVersion.V6:
             case FormatVersion.V7:
+            case FormatVersion.V8:
               await recoverMutationsWithNewPerdag(
                 database,
                 this._options,

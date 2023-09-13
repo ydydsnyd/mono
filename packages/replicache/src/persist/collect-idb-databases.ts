@@ -156,7 +156,8 @@ async function canCollectDatabase(
     assert(
       db.replicacheFormatVersion === FormatVersion.DD31 ||
         db.replicacheFormatVersion === FormatVersion.V6 ||
-        db.replicacheFormatVersion === FormatVersion.V7,
+        db.replicacheFormatVersion === FormatVersion.V7 ||
+        db.replicacheFormatVersion === FormatVersion.V8,
     );
     return !(await anyPendingMutationsInClientGroups(newDagStore(db.name)));
   }

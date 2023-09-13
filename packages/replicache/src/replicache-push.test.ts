@@ -63,14 +63,14 @@ test('push', async () => {
       clientID,
       id: 1,
       name: 'deleteTodo',
-      args: {id: id1},
+      args: [{id: id1}],
       timestamp: 100,
     },
     {
       clientID,
       id: 2,
       name: 'deleteTodo',
-      args: {id: id2},
+      args: [{id: id2}],
       timestamp: 100,
     },
   ]);
@@ -98,21 +98,21 @@ test('push', async () => {
         clientID,
         id: 1,
         name: 'deleteTodo',
-        args: {id: id1},
+        args: [{id: id1}],
         timestamp: 100,
       },
       {
         clientID,
         id: 2,
         name: 'deleteTodo',
-        args: {id: id2},
+        args: [{id: id2}],
         timestamp: 100,
       },
       {
         clientID,
         id: 3,
         name: 'createTodo',
-        args: {id: id1, text: 'Test'},
+        args: [{id: id1, text: 'Test'}],
         timestamp: 200,
       },
     ]);
@@ -141,42 +141,42 @@ test('push', async () => {
         clientID,
         id: 1,
         name: 'deleteTodo',
-        args: {id: id1},
+        args: [{id: id1}],
         timestamp: 100,
       },
       {
         clientID,
         id: 2,
         name: 'deleteTodo',
-        args: {id: id2},
+        args: [{id: id2}],
         timestamp: 100,
       },
       {
         clientID,
         id: 3,
         name: 'createTodo',
-        args: {id: id1, text: 'Test'},
+        args: [{id: id1, text: 'Test'}],
         timestamp: 200,
       },
       {
         clientID,
         id: 4,
         name: 'createTodo',
-        args: {id: id2, text: 'Test 2'},
+        args: [{id: id2, text: 'Test 2'}],
         timestamp: 300,
       },
       {
         clientID,
         id: 5,
         name: 'deleteTodo',
-        args: {id: id1},
+        args: [{id: id1}],
         timestamp: 300,
       },
       {
         clientID,
         id: 6,
         name: 'deleteTodo',
-        args: {id: id2},
+        args: [{id: id2}],
         timestamp: 300,
       },
     ]);
@@ -313,6 +313,7 @@ test('Version not supported on server', async () => {
 });
 
 test('ClientStateNotFound on server', async () => {
+  sinon.stub(console, 'error');
   const onClientStateNotFound = sinon.stub();
   const rep = await replicacheForTesting('client-state-not-found-push', {
     mutators: {

@@ -48,7 +48,7 @@ export function mutation(
   id: number,
   timestamp = 1,
   name = 'foo',
-  args: ReadonlyJSONValue = [],
+  args: readonly ReadonlyJSONValue[] = [],
 ): Mutation {
   return {
     clientID,
@@ -73,7 +73,7 @@ export function pendingMutation(opts: {
     | undefined;
   pusherClientIDs?: Set<ClientID>;
   name?: string;
-  args?: ReadonlyJSONValue;
+  args?: readonly ReadonlyJSONValue[];
   auth?: AuthData | undefined;
 }): PendingMutation {
   const {

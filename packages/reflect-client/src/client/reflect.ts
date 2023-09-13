@@ -9,12 +9,13 @@ import {
   PullRequestMessage,
   PullResponseBody,
   PullResponseMessage,
+  PushBody,
   PushMessage,
   downstreamSchema,
   nullableVersionSchema,
   type ErrorMessage,
 } from 'reflect-protocol';
-import type {MutatorDefs, ReadTransaction} from 'reflect-shared';
+import type {MutatorDefs, PushRequest, ReadTransaction} from 'reflect-shared';
 import {version} from 'reflect-shared';
 import {
   ClientGroupID,
@@ -30,8 +31,6 @@ import {
   Puller,
   PullerResultV0,
   PullerResultV1,
-  PushRequestV0,
-  PushRequestV1,
   Pusher,
   PusherResult,
   Replicache,
@@ -907,10 +906,7 @@ export class Reflect<MD extends MutatorDefs> {
     resolver.resolve(pullResponseMessage[1]);
   }
 
-  async #pusher(
-    req: PushRequestV0 | PushRequestV1,
-    requestID: string,
-  ): Promise<PusherResult> {
+  async #pusher(req: PushRequest, requestID: string): Promise<PusherResult> {
     // If we are connecting we wait until we are connected.
     await this.#connectResolver.promise;
     const l = (await this.#l).withContext('requestID', requestID);
@@ -966,7 +962,8 @@ export class Reflect<MD extends MutatorDefs> {
           pushVersion: req.pushVersion,
           schemaVersion: req.schemaVersion,
           requestID,
-        },
+          // Need a static cast because TS is having trouble inferring that pushVersion 1 means m is a MutationV1.
+        } as PushBody,
       ];
       send(socket, msg);
       if (!isMutationRecoveryPush) {

@@ -8,7 +8,7 @@ import {
 import {consoleLogSink, LogContext, TeeLogSink} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
 import {AbortError} from 'shared/src/abort-error.js';
-import {assert} from 'shared/src/asserts.js';
+import {assert, assertArray} from 'shared/src/asserts.js';
 import {initBgIntervalProcess} from './bg-interval.js';
 import {PullDelegate, PushDelegate} from './connection-loop-delegates.js';
 import {ConnectionLoop, MAX_DELAY_MS, MIN_DELAY_MS} from './connection-loop.js';
@@ -27,7 +27,6 @@ import {getDefaultPusher, isDefaultPusher} from './get-default-pusher.js';
 import {assertHash, emptyHash, Hash} from './hash.js';
 import type {HTTPRequestInfo} from './http-request-info.js';
 import type {IndexDefinitions} from './index-defs.js';
-import type {JSONValue} from './json.js';
 import {deepFreeze, ReadonlyJSONValue} from './json.js';
 import {newIDBStoreWithMemFallback} from './kv/idb-store-with-mem-fallback.js';
 import type {CreateStore} from './kv/mod.js';
@@ -141,14 +140,14 @@ export type MutatorDefs = {
     tx: WriteTransaction,
     // Not sure how to not use any here...
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    args?: any,
+    ...args: any[]
   ) => MutatorReturn;
 };
 
 type MakeMutator<
   F extends (
     tx: WriteTransaction,
-    ...args: [] | [ReadonlyJSONValue]
+    ...args: ReadonlyJSONValue[]
   ) => MutatorReturn,
 > = F extends (tx: WriteTransaction, ...args: infer Args) => infer Ret
   ? (...args: Args) => ToPromise<Ret>
@@ -202,7 +201,7 @@ export type QueryInternal = <R>(
 export type PendingMutation = {
   readonly name: string;
   readonly id: number;
-  readonly args: ReadonlyJSONValue;
+  readonly args: readonly ReadonlyJSONValue[];
   readonly clientID: ClientID;
 };
 
@@ -1543,17 +1542,17 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
   private _register<
     Return extends ReadonlyJSONValue | void,
-    Args extends JSONValue,
+    Args extends ReadonlyJSONValue[],
   >(
     name: string,
-    mutatorImpl: (tx: WriteTransaction, args?: Args) => MaybePromise<Return>,
-  ): (args?: Args) => Promise<Return> {
-    this._mutatorRegistry[name] = mutatorImpl as (
+    mutatorImpl: (tx: WriteTransaction, ...args: Args) => MaybePromise<Return>,
+  ): (...args: Args) => Promise<Return> {
+    this._mutatorRegistry[name] = mutatorImpl as unknown as (
       tx: WriteTransaction,
-      args: JSONValue | undefined,
-    ) => Promise<void | JSONValue>;
+      ...args: ReadonlyJSONValue[]
+    ) => Promise<void | ReadonlyJSONValue>;
 
-    return async (args?: Args): Promise<Return> =>
+    return async (...args: Args): Promise<Return> =>
       (await this._mutate(name, mutatorImpl, args, performance.now())).result;
   }
 
@@ -1561,7 +1560,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
     M extends {
       [key: string]: (
         tx: WriteTransaction,
-        args?: ReadonlyJSONValue,
+        ...args: ReadonlyJSONValue[]
       ) => MutatorReturn;
     },
   >(regs: M): MakeMutators<M> {
@@ -1575,14 +1574,14 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
   private async _mutate<
     R extends ReadonlyJSONValue | void,
-    A extends ReadonlyJSONValue,
+    A extends readonly ReadonlyJSONValue[],
   >(
     name: string,
-    mutatorImpl: (tx: WriteTransaction, args?: A) => MaybePromise<R>,
-    args: A | undefined,
+    mutatorImpl: (tx: WriteTransaction, ...args: A) => MaybePromise<R>,
+    args: A,
     timestamp: number,
   ): Promise<{result: R; ref: Hash}> {
-    const frozenArgs = deepFreeze(args ?? null);
+    const frozenArgs = deepFreeze(args);
 
     // Ensure that we run initial pending subscribe functions before starting a
     // write transaction.
@@ -1615,7 +1614,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
           dbWrite,
           this._lc,
         );
-        const result: R = await mutatorImpl(tx, args);
+        const result: R = await mutatorImpl(tx, ...args);
         throwIfClosed(dbWrite);
         const [ref, diffs] = await dbWrite.commitWithDiffs(
           db.DEFAULT_HEAD_NAME,
@@ -1680,12 +1679,14 @@ export class Replicache<MD extends MutatorDefs = {}> {
       return Promise.all(
         pending.map(async p => {
           assertLocalCommitDD31(p);
+          const {mutatorArgsJSON} = p.meta;
+          assertArray(mutatorArgsJSON);
           return {
             id: await p.getMutationID(clientID, dagRead),
             name: p.meta.mutatorName,
-            args: p.meta.mutatorArgsJSON,
+            args: mutatorArgsJSON as readonly ReadonlyJSONValue[],
             clientID: p.meta.clientID,
-          };
+          } satisfies PendingMutation;
         }),
       );
     });

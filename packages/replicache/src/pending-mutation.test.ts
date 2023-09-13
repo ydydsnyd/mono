@@ -33,12 +33,17 @@ test('pending mutation', async () => {
   expect(await rep.experimentalPendingMutations()).to.deep.equal([]);
 
   await rep.mutate.addData({a: 1, b: 2});
-  const addABMutation = {id: 1, name: 'addData', args: {a: 1, b: 2}, clientID};
+  const addABMutation = {
+    id: 1,
+    name: 'addData',
+    args: [{a: 1, b: 2}],
+    clientID,
+  };
   expect(await rep.experimentalPendingMutations()).to.deep.equal([
     addABMutation,
   ]);
 
-  const delBMutation = {id: 2, name: 'del', args: 'b', clientID};
+  const delBMutation = {id: 2, name: 'del', args: ['b'], clientID};
   await rep.mutate.del('b');
   expect(await rep.experimentalPendingMutations()).to.deep.equal([
     delBMutation,
@@ -50,7 +55,7 @@ test('pending mutation', async () => {
   rep.pull();
   await tickAFewTimes(100);
   await rep.mutate.addData({a: 3});
-  const addAMutation = {id: 3, name: 'addData', args: {a: 3}, clientID};
+  const addAMutation = {id: 3, name: 'addData', args: [{a: 3}], clientID};
   expect(await rep.experimentalPendingMutations()).to.deep.equal([
     addAMutation,
   ]);

@@ -67,7 +67,7 @@ describe('handleMessage', () => {
         {
           clientGroupID: 'cg1',
           mutations: [mutation('c1', 1, 10), mutation('c1', 2, 20)],
-          pushVersion: 1,
+          pushVersion: 2,
           schemaVersion: '',
           timestamp: 42,
           requestID: randomID(),
@@ -105,7 +105,7 @@ describe('handleMessage', () => {
         {
           clientID: 'c1',
           mutations: [mutation('c1', 1, 10), mutation('c1', 2, 20)],
-          pushVersion: 1,
+          pushVersion: 2,
           schemaVersion: '',
           timestamp: 42,
         },
@@ -121,7 +121,7 @@ describe('handleMessage', () => {
         {
           clientGroupID: 'cg1',
           mutations: [mutation('c1', 1), mutation('c1', 2)],
-          pushVersion: 1,
+          pushVersion: 2,
           schemaVersion: '',
           timestamp: 42,
           requestID: randomID(),
@@ -142,6 +142,8 @@ describe('handleMessage', () => {
       expectedErrorMessage: 'c1',
       expectSocketClosed: true,
     },
+
+    // TODO(arv): pushVersion 1
   ];
 
   for (const c of cases) {

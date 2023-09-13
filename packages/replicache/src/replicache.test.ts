@@ -2176,7 +2176,7 @@ test('mutation timestamps are immutable', async () => {
   let pending: unknown;
   const rep = await replicacheForTesting('mutation-timestamps-are-immutable', {
     mutators: {
-      foo: async (tx: WriteTransaction, _: JSONValue) => {
+      foo: async (tx: WriteTransaction) => {
         await tx.put('foo', 'bar');
       },
     },
@@ -2193,14 +2193,14 @@ test('mutation timestamps are immutable', async () => {
   });
 
   // Create a mutation and verify it has been assigned current time.
-  await rep.mutate.foo(null);
+  await rep.mutate.foo();
   await rep.invokePush();
   expect(pending).deep.equal([
     {
       clientID: await rep.clientID,
       id: 1,
       name: 'foo',
-      args: null,
+      args: [],
       timestamp: 100,
     },
   ]);
@@ -2239,7 +2239,7 @@ test('mutation timestamps are immutable', async () => {
       clientID: await rep.clientID,
       id: 1,
       name: 'foo',
-      args: null,
+      args: [],
       timestamp: 100,
     },
   ]);

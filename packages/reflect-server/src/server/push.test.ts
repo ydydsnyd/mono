@@ -1,6 +1,6 @@
 import {describe, expect, test} from '@jest/globals';
 import {LogContext} from '@rocicorp/logger';
-import type {Mutation} from 'reflect-protocol';
+import type {MutationV1, MutationV2, PushBody} from 'reflect-protocol';
 import {handlePush} from '../server/push.js';
 import {DurableStorage} from '../storage/durable-storage.js';
 import {
@@ -59,7 +59,8 @@ describe('handlePush', () => {
     clientMap: ClientMap;
     pendingMutations: PendingMutation[];
     clientRecords: ClientRecordMap;
-    mutations: Mutation[];
+    pushVersion: 1 | 2;
+    mutations: MutationV1[] | MutationV2[];
     now?: number;
     pushTimestamp?: number;
     expectedClientMap?: ClientMap;
@@ -78,6 +79,7 @@ describe('handlePush', () => {
         [clientID, clientRecord(clientGroupID, 1, 2, 1)],
       ]),
       expectedPendingMutations: [],
+      pushVersion: 2,
     },
     {
       name: 'empty pending, single mutation',
@@ -97,6 +99,7 @@ describe('handlePush', () => {
           auth: {userID: 'u1'},
         }),
       ],
+      pushVersion: 2,
     },
     {
       name: 'empty pending, multiple mutations',
@@ -124,6 +127,7 @@ describe('handlePush', () => {
           auth: {userID: 'u1'},
         }),
       ],
+      pushVersion: 2,
     },
     {
       name: 'empty pending, multiple mutations, no timestamps for old mutations relative to push timestamp',
@@ -164,6 +168,7 @@ describe('handlePush', () => {
           auth: {userID: 'u1'},
         }),
       ],
+      pushVersion: 2,
     },
     {
       name: 'empty pending, multiple mutations, no timestamps for mutations from other clients',
@@ -207,6 +212,7 @@ describe('handlePush', () => {
           auth: {userID: 'u1'},
         }),
       ],
+      pushVersion: 2,
     },
     {
       name: 'empty pending, multiple mutations, new client',
@@ -250,6 +256,7 @@ describe('handlePush', () => {
         [clientID, clientRecord(clientGroupID, 1, 2, 1)],
         ['c2', clientRecord(clientGroupID, null, 0, null)],
       ]),
+      pushVersion: 2,
     },
     {
       name: 'already applied according to client record',
@@ -285,6 +292,7 @@ describe('handlePush', () => {
           auth: {userID: 'u1'},
         }),
       ],
+      pushVersion: 2,
     },
     {
       name: 'pending duplicates',
@@ -345,6 +353,7 @@ describe('handlePush', () => {
           auth: {userID: 'u1'},
         }),
       ],
+      pushVersion: 2,
     },
     {
       name: 'unexpected client group id is an error',
@@ -366,6 +375,7 @@ describe('handlePush', () => {
       expectedPendingMutations: [],
       expectedErrorAndSocketClosed:
         'Push for client c1 with clientGroupID cg1 contains mutation for client c2 which belongs to clientGroupID cg2.',
+      pushVersion: 2,
     },
     {
       name: 'unexpected mutation id for new client is an error, client not recorded',
@@ -384,6 +394,7 @@ describe('handlePush', () => {
       // new client not recorded, so no expectedClientRecords
       expectedErrorAndSocketClosed:
         'Push contains unexpected mutation id 2 for client c2. Expected mutation id 1.',
+      pushVersion: 2,
     },
     {
       name: 'unexpected mutation id for existing client',
@@ -403,6 +414,7 @@ describe('handlePush', () => {
       // new client not recorded, so no expectedClientRecords
       expectedErrorAndSocketClosed:
         'Push contains unexpected mutation id 6 for client c2. Expected mutation id 5.',
+      pushVersion: 2,
     },
     // clock offset tests
     {
@@ -434,6 +446,7 @@ describe('handlePush', () => {
       expectedClientMap: new Map([
         client(clientID, 'u1', clientGroupID, s1, 495),
       ]),
+      pushVersion: 2,
     },
     {
       name: 'uses existing clock offset',
@@ -462,6 +475,7 @@ describe('handlePush', () => {
       expectedClientMap: new Map([
         client(clientID, 'u1', clientGroupID, s1, 495),
       ]),
+      pushVersion: 2,
     },
     {
       name: 'resets clock offset if changes by greater than 1 second',
@@ -490,6 +504,7 @@ describe('handlePush', () => {
       expectedClientMap: new Map([
         client(clientID, 'u1', clientGroupID, s1, 1105),
       ]),
+      pushVersion: 2,
     },
     {
       name: 'if push has an error clock offset is not initialized',
@@ -507,6 +522,7 @@ describe('handlePush', () => {
       expectedPendingMutations: [],
       expectedErrorAndSocketClosed:
         'Push contains unexpected mutation id 5 for client c1. Expected mutation id 4.',
+      pushVersion: 2,
     },
     // end clock offset tests
     {
@@ -611,6 +627,7 @@ describe('handlePush', () => {
           auth: {userID: 'u1'},
         }),
       ],
+      pushVersion: 2,
     },
     {
       name: 'orders by order pushed by pusher if in same client group',
@@ -705,6 +722,7 @@ describe('handlePush', () => {
           auth: {userID: 'u1'},
         }),
       ],
+      pushVersion: 2,
     },
     {
       name: 'does not by order pushed by pusher if different client group',
@@ -790,7 +808,10 @@ describe('handlePush', () => {
           auth: {userID: 'u1'},
         }),
       ],
+      pushVersion: 2,
     },
+
+    // TODO(arv): pushVersion 1?
   ];
 
   // Special LC that waits for a requestID to be added to the context.
@@ -821,11 +842,11 @@ describe('handlePush', () => {
       const push = {
         clientGroupID,
         mutations: c.mutations,
-        pushVersion: 1,
+        pushVersion: c.pushVersion,
         schemaVersion: '',
         timestamp: c.pushTimestamp ?? startTime,
         requestID,
-      };
+      } as PushBody;
 
       const lc = new TestLogContext('info', undefined, new SilentLogSink());
       const pendingMutationsPrePush = [...c.pendingMutations];

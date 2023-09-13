@@ -39,12 +39,12 @@ async function createMutationSequenceFixture() {
   const syncChain = await b.addSyncSnapshot(1, clientID);
   const syncSnapshotCommit = syncChain[0] as db.Commit<db.SnapshotMetaDD31>;
 
-  const testMutator1 = async (tx: WriteTransaction, args?: unknown) => {
+  const testMutator1 = async (tx: WriteTransaction, ...args: unknown[]) => {
     await tx.put('whiz', 'bang');
     expect(args).to.deep.equal(localCommit1.meta.mutatorArgsJSON);
     fixture.testMutator1CallCount++;
   };
-  const testMutator2 = async (tx: WriteTransaction, args?: unknown) => {
+  const testMutator2 = async (tx: WriteTransaction, ...args: unknown[]) => {
     await tx.put('fuzzy', 'wuzzy');
     expect(args).to.deep.equal(localCommit2.meta.mutatorArgsJSON);
     fixture.testMutator2CallCount++;
