@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1694597522260,
+  "lastUpdate": 1694706534094,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -42683,6 +42683,60 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27336,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "49342ec287f9c277ccd04d9248564ba129a4e2c7",
+          "message": "chore: Upgrade to use #private everywhere (#977)\n\nThis upgrades to use `@rocicorp/eslint-config` which dissallowes `private` in favor of using `#nativePrivate` fields.\r\n\r\nSome tests needed some careful refactoring to allow the to continue to work.",
+          "timestamp": "2023-09-14T17:46:59+02:00",
+          "tree_id": "81c3d1224d5fd44ccddbe3b1a7d8cae1f108357c",
+          "url": "https://github.com/rocicorp/mono/commit/49342ec287f9c277ccd04d9248564ba129a4e2c7"
+        },
+        "date": 1694706522411,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.js",
+            "value": 259217,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.js.br (Brotli compressed)",
+            "value": 46044,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 260224,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 46368,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 96246,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27112,
             "unit": "bytes"
           }
         ]
