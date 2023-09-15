@@ -68,6 +68,8 @@ function doCopy(dst, src, name) {
   fs.copyFileSync(src, dst);
 }
 
+const reflectIgnoreList = ['node_modules'];
+
 function copyReflectCLI() {
   const binDir = basePath('bin');
   fs.rmSync(binDir, {recursive: true, force: true});
@@ -82,7 +84,31 @@ function copyReflectCLI() {
     'templates',
   );
   const templateDst = basePath('bin', 'templates');
-  fs.cpSync(templateSrc, templateDst, {recursive: true});
+  fs.cpSync(templateSrc, templateDst, {
+    recursive: true,
+    filter: src => {
+      const baseName = path.basename(src);
+
+      // Exclude "." directories
+      if (fs.statSync(src).isDirectory() && baseName.startsWith('.')) {
+        return false;
+      }
+
+      // Check against the ignoreList
+      for (const pattern of reflectIgnoreList) {
+        if (pattern.startsWith('*')) {
+          // Handling simple wildcard patterns like *.tmp
+          if (baseName.endsWith(pattern.slice(1))) {
+            return false;
+          }
+        } else if (baseName === pattern) {
+          return false;
+        }
+      }
+
+      return true;
+    },
+  });
 }
 
 /**
