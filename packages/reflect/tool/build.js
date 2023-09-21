@@ -67,8 +67,52 @@ function doCopy(dst, src, name) {
   }
   fs.copyFileSync(src, dst);
 }
+/**
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-const reflectIgnoreList = ['node_modules'];
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+ */
+const reflectIgnoreList = [
+  /^logs$/,
+  /^.*\.log$/,
+  /^npm-debug\.log.*$/,
+  /^yarn-debug\.log.*$/,
+  /^yarn-error\.log.*$/,
+  /^pnpm-debug\.log.*$/,
+  /^lerna-debug\.log.*$/,
+  /^node_modules$/,
+  /^dist$/,
+  /^dist-ssr$/,
+  /^.*\.local$/,
+  /^\.vscode$/,
+  /^\.idea$/,
+  /^\.DS_Store$/,
+  /^.*\.suo$/,
+  /^.*\.ntvs.*$/,
+  /^.*\.njsproj$/,
+  /^.*\.sln$/,
+  /^.*\.sw?$/,
+];
 
 function copyReflectCLI() {
   const binDir = basePath('bin');
@@ -96,12 +140,7 @@ function copyReflectCLI() {
 
       // Check against the ignoreList
       for (const pattern of reflectIgnoreList) {
-        if (pattern.startsWith('*')) {
-          // Handling simple wildcard patterns like *.tmp
-          if (baseName.endsWith(pattern.slice(1))) {
-            return false;
-          }
-        } else if (baseName === pattern) {
+        if (baseName.match(pattern)) {
           return false;
         }
       }
