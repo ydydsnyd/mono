@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1694706534094,
+  "lastUpdate": 1695373170176,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -42719,6 +42719,50 @@ window.BENCHMARK_DATA = {
             "value": 46044,
             "unit": "bytes"
           },
+          {
+            "name": "Size of replicache.mjs",
+            "value": 260224,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 46368,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 96246,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27112,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "317880526a7ff8bac1a92419c7521a9611bf3820",
+          "message": "fix(replicache): Do not publish broken CJS (#987)\n\nWe used to include a cjs version of replicache. It stopped working\r\nin v13 when we stopped bundling some dependencies.\r\n\r\nBy removing the cjs version things like next (on the server) will use\r\nthe esm version instead of the broken cjs version.\r\n\r\nFixes #986",
+          "timestamp": "2023-09-22T08:57:39Z",
+          "tree_id": "554e4b2754f3bd25664ce1a692c30a28bc694a78",
+          "url": "https://github.com/rocicorp/mono/commit/317880526a7ff8bac1a92419c7521a9611bf3820"
+        },
+        "date": 1695373158522,
+        "tool": "customSmallerIsBetter",
+        "benches": [
           {
             "name": "Size of replicache.mjs",
             "value": 260224,
