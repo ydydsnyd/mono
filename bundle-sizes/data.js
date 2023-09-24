@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1695373170176,
+  "lastUpdate": 1695555390294,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -42761,6 +42761,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/317880526a7ff8bac1a92419c7521a9611bf3820"
         },
         "date": 1695373158522,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 260224,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 46368,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 96246,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27112,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ae73a2f9819a73e7a47534e4057a58ab92d42f7a",
+          "message": "docs(replicache): Fix link to pullInterval (#991)\n\nFixes https://github.com/rocicorp/replicache/issues/1051",
+          "timestamp": "2023-09-24T11:34:19Z",
+          "tree_id": "116a7e2d65eb453bb92b3be867a543840a12ff60",
+          "url": "https://github.com/rocicorp/mono/commit/ae73a2f9819a73e7a47534e4057a58ab92d42f7a"
+        },
+        "date": 1695555376567,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
