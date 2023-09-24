@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1695555390294,
+  "lastUpdate": 1695557078688,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -42805,6 +42805,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/ae73a2f9819a73e7a47534e4057a58ab92d42f7a"
         },
         "date": 1695555376567,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 260224,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 46368,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 96246,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27112,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "committer": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "distinct": true,
+          "id": "8767d6a4766900491f1b8ad53e126b8cbdf05214",
+          "message": "doc(replicache): miscellaneous changes to the faq.",
+          "timestamp": "2023-09-24T02:02:32-10:00",
+          "tree_id": "fd91af3ca048ffedbfb6ad8129c27033b0871188",
+          "url": "https://github.com/rocicorp/mono/commit/8767d6a4766900491f1b8ad53e126b8cbdf05214"
+        },
+        "date": 1695557064332,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
