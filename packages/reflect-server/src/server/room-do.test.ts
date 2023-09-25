@@ -1,6 +1,13 @@
-import {afterEach, beforeEach, expect, jest, test} from '@jest/globals';
-
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  jest,
+  test,
+} from '@jest/globals';
 import {LogContext} from '@rocicorp/logger';
+import assert from 'node:assert';
 import type {WriteTransaction} from 'reflect-shared';
 import {version} from 'reflect-shared';
 import {
@@ -15,7 +22,9 @@ import {getVersion, putVersion} from '../types/version.js';
 import {newAuthConnectionsRequest} from '../util/auth-test-util.js';
 import {resolver} from '../util/resolver.js';
 import {TestLogSink, createSilentLogContext} from '../util/test-utils.js';
+import {originalConsole} from './console.js';
 import {createTestDurableObjectState} from './do-test-utils.js';
+import {TAIL_URL_PATH} from './paths.js';
 import {BaseRoomDO, getDefaultTurnDuration} from './room-do.js';
 
 const testLogSink = new TestLogSink();
@@ -372,6 +381,20 @@ test('Sets turn duration based on allowUnconfirmedWrites flag', () => {
   }
 });
 
+async function makeBaseRoomDO() {
+  return new BaseRoomDO({
+    mutators: {},
+    roomStartHandler: () => Promise.resolve(),
+    disconnectHandler: () => Promise.resolve(),
+    state: await createTestDurableObjectState('test-do-id'),
+    authApiKey: 'API KEY',
+    logSink: testLogSink,
+    logLevel: 'info',
+    allowUnconfirmedWrites: true,
+    maxMutationsPerTurn: Number.MAX_SAFE_INTEGER,
+  });
+}
+
 test('good, bad, invalid connect requests', async () => {
   const goodRequest = new Request('ws://test.roci.dev/connect');
   goodRequest.headers.set('Upgrade', 'websocket');
@@ -393,18 +416,7 @@ test('good, bad, invalid connect requests', async () => {
     expectedText: 'unsupported method',
   };
 
-  const state = await createTestDurableObjectState('test-do-id');
-  const roomDO = new BaseRoomDO({
-    mutators: {},
-    roomStartHandler: () => Promise.resolve(),
-    disconnectHandler: () => Promise.resolve(),
-    state,
-    authApiKey: 'API KEY',
-    logSink: testLogSink,
-    logLevel: 'info',
-    allowUnconfirmedWrites: true,
-    maxMutationsPerTurn: Number.MAX_SAFE_INTEGER,
-  });
+  const roomDO = await makeBaseRoomDO();
   for (const test of [goodTest, nonWebSocketTest, badRequestTest]) {
     const response = await roomDO.fetch(test.request);
     expect(await response.text()).toEqual(test.expectedText);
@@ -412,97 +424,273 @@ test('good, bad, invalid connect requests', async () => {
   }
 });
 
-/*
-import { ClientID, ClientMap, Socket } from "../../src/types/client-state";
-import { Mocket } from "../util/test-utils";
-import { sleep } from "../../src/util/sleep";
-import { Server } from "../../src/server/server";
-import { MessageHandler, CloseHandler } from "../../src/server/connect";
-test("serialization", async () => {
-  const s1 = new Mocket();
-  const url = "u1";
-  const clients: ClientMap = new Map();
-  const roomID = "r1";
-  const clientID = "c1";
-  const data = "data";
+describe('good, bad, invalid tail requests', () => {
+  function makeRequest(init?: RequestInit) {
+    return new Request(
+      'ws://test.roci.dev' + TAIL_URL_PATH + '?roomID=testRoomID',
+      init,
+    );
+  }
 
-  const log: string[] = [];
-
-  const messageHandler = (
-    pClients: ClientMap,
-    pClientID: ClientID,
-    pData: string,
-    pWS: Socket
-  ) => {
-    log.push("> message");
-    expect(pClients).toEqual(clients);
-    expect(pClientID).toEqual(clientID);
-    expect(pData).toEqual(data);
-    expect(pWS).toEqual(s1);
-    log.push("< message");
+  type Case = {
+    name: string;
+    request: Request;
+    expectedStatus: number;
+    expectedText: string;
   };
 
-  const closeHandler = (
-    pRooms: RoomMap,
-    pRoomID: RoomID,
-    pClientID: ClientID
-  ) => {
-    log.push("> close");
-    expect(pRooms).toEqual(rooms);
-    expect(pRoomID).toEqual(roomID);
-    expect(pClientID).toEqual(clientID);
-    log.push("< close");
-  };
+  const cases: Case[] = [
+    {
+      name: 'good',
+      request: makeRequest({headers: {['Upgrade']: 'websocket'}}),
+      expectedStatus: 101,
+      expectedText: '',
+    },
+    {
+      name: 'nonWebSocket',
+      request: makeRequest(),
+      expectedStatus: 400,
+      expectedText: 'expected websocket',
+    },
+    {
+      name: 'badRequest',
+      request: makeRequest({method: 'POST'}),
+      expectedStatus: 405,
+      expectedText: 'unsupported method',
+    },
+  ];
+  for (const c of cases) {
+    test(c.name, async () => {
+      const state = await createTestDurableObjectState('test-do-id');
+      const roomDO = new BaseRoomDO({
+        mutators: {},
+        roomStartHandler: () => Promise.resolve(),
+        disconnectHandler: () => Promise.resolve(),
+        state,
+        authApiKey: 'API KEY',
+        logSink: testLogSink,
+        logLevel: 'info',
+        allowUnconfirmedWrites: true,
+        maxMutationsPerTurn: Number.MAX_SAFE_INTEGER,
+      });
 
-  const connectHandler = async (
-    pWS: Socket,
-    pURL: string,
-    pRooms: RoomMap,
-    onMessage: MessageHandler,
-    onClose: CloseHandler
-  ): Promise<void> => {
-    expect(pWS).toEqual(s1);
-    expect(pURL).toEqual(url);
-    expect(pRooms).deep.toEqual(rooms);
-    log.push("> connect");
-    onMessage(roomID, clientID, data, pWS);
-    onClose(roomID, clientID);
-    await sleep(10);
-    onMessage(roomID, clientID, data, pWS);
-    onClose(roomID, clientID);
-    log.push("< connect");
-  };
-
-  const server = new Server(
-    rooms,
-    () => {},
-    () => 42,
-    () => {}
-  );
-  server.handleConnection(s1, url);
-  server.handleConnection(s1, url);
-  await sleep(50);
-  expect(log).deep.toEqual([
-    "> connect",
-    "< connect",
-    "> connect",
-    "< connect",
-    "> message",
-    "< message",
-    "> close",
-    "< close",
-    "> message",
-    "< message",
-    "> close",
-    "< close",
-    "> message",
-    "< message",
-    "> close",
-    "< close",
-    "> message",
-    "< message",
-    "> close",
-    "< close",
-  ]);
+      const response = await roomDO.fetch(c.request);
+      expect(await response.text()).toEqual(c.expectedText);
+      expect(response.status).toBe(c.expectedStatus);
+      if (c.expectedStatus === 101) {
+        expect(response.ok).toBe(true);
+        expect(response.webSocket).toBeDefined();
+        response.webSocket!.accept();
+        response.webSocket!.close();
+      }
+    });
+  }
 });
-*/
+
+test('tail should replace global console', async () => {
+  jest.setSystemTime(1984);
+  const roomDO = await makeBaseRoomDO();
+
+  const request = new Request(
+    'ws://test.roci.dev' + TAIL_URL_PATH + '?roomID=testRoomID',
+    {headers: {['Upgrade']: 'websocket'}},
+  );
+
+  const originalConsoleLogSpy = jest
+    .spyOn(originalConsole, 'log')
+    .mockImplementation(() => {
+      // Do nothing.
+    });
+  const response = await roomDO.fetch(request);
+  expect(response.status).toBe(101);
+  const tailConsoleLogSpy = jest.spyOn(console, 'log');
+  const ws = response.webSocket;
+  assert(ws);
+  ws.accept();
+
+  let {promise, resolve} = resolver<void>();
+
+  ws.addEventListener(
+    'message',
+    e => {
+      expect(typeof e.data).toBe('string');
+      expect(JSON.parse(e.data as string)).toEqual({
+        logs: [{message: ['hello', 'world'], level: 'log', timestamp: 1984}],
+      });
+      resolve();
+    },
+    {once: true},
+  );
+
+  console.log('hello', 'world');
+
+  expect(originalConsoleLogSpy).not.toHaveBeenCalled();
+  expect(tailConsoleLogSpy).toHaveBeenCalledTimes(1);
+  expect(tailConsoleLogSpy).toHaveBeenCalledWith('hello', 'world');
+
+  tailConsoleLogSpy.mockReset();
+
+  // Wait for addEventListener to get called
+  await promise;
+
+  ({promise, resolve} = resolver<void>());
+  const log: unknown[] = [];
+  ws.addEventListener('message', e => {
+    expect(typeof e.data).toBe('string');
+    log.push(JSON.parse(e.data as string));
+    if (log.length === 5) {
+      resolve();
+    }
+  });
+
+  console.debug('debug');
+  console.error('error');
+  console.info('info');
+  console.log('log');
+  console.warn('warn');
+
+  // Wait to allow event listeners to get called
+  await promise;
+
+  function makeLog(s: string) {
+    return {
+      logs: [{message: [s], level: s, timestamp: 1984}],
+    };
+  }
+
+  expect(log).toEqual([
+    makeLog('debug'),
+    makeLog('error'),
+    makeLog('info'),
+    makeLog('log'),
+    makeLog('warn'),
+  ]);
+
+  ws.close();
+  // Wait for close to be dispatched
+  await Promise.resolve();
+
+  expect(tailConsoleLogSpy).toHaveBeenCalledTimes(1);
+  tailConsoleLogSpy.mockReset();
+
+  // This should be logged to the original console... which is spied on by
+  // originalConsoleLogSpy.
+  console.log('good', 'bye');
+
+  expect(tailConsoleLogSpy).toHaveBeenCalledTimes(1);
+  expect(tailConsoleLogSpy).toHaveBeenCalledWith('good', 'bye');
+
+  expect(originalConsoleLogSpy).toHaveBeenCalledTimes(1);
+  expect(originalConsoleLogSpy).toHaveBeenCalledWith('good', 'bye');
+});
+
+test('tail two websockets', async () => {
+  jest.setSystemTime(1984);
+  const roomDO = await makeBaseRoomDO();
+
+  jest.spyOn(originalConsole, 'log').mockImplementation(() => {
+    // Do nothing.
+  });
+
+  const request1 = new Request(
+    'ws://test.roci.dev' + TAIL_URL_PATH + '?roomID=testRoomID',
+    {headers: {['Upgrade']: 'websocket'}},
+  );
+  const response1 = await roomDO.fetch(request1);
+  expect(response1.status).toBe(101);
+  response1.webSocket!.accept();
+
+  const request2 = new Request(
+    'ws://test.roci.dev' + TAIL_URL_PATH + '?roomID=testRoomID',
+    {headers: {['Upgrade']: 'websocket'}},
+  );
+  const response2 = await roomDO.fetch(request2);
+  expect(response2.status).toBe(101);
+  response2.webSocket!.accept();
+
+  const log1: unknown[] = [];
+  response1.webSocket!.addEventListener('message', e => {
+    log1.push(JSON.parse(e.data as string));
+  });
+
+  const log2: unknown[] = [];
+  response2.webSocket!.addEventListener('message', e => {
+    log2.push(JSON.parse(e.data as string));
+  });
+
+  console.log('hello', 'world');
+
+  function makeLog(message: unknown) {
+    return {
+      logs: [{message, level: 'log', timestamp: 1984}],
+    };
+  }
+
+  await Promise.resolve();
+  expect(log1).toEqual([makeLog(['hello', 'world'])]);
+  expect(log2).toEqual(log1);
+
+  response1.webSocket!.close();
+
+  // Wait for close to be dispatched
+  await Promise.resolve();
+
+  console.log('good', 'bye');
+
+  await Promise.resolve();
+
+  expect(log1).toEqual([makeLog(['hello', 'world'])]);
+  expect(log2).toEqual([makeLog(['hello', 'world']), makeLog(['good', 'bye'])]);
+});
+
+test('tail log throws on json stringify', async () => {
+  jest.setSystemTime(1984);
+  const roomDO = await makeBaseRoomDO();
+
+  jest.spyOn(originalConsole, 'log').mockImplementation(() => {});
+
+  const originalConsoleErrorSpy = jest
+    .spyOn(originalConsole, 'error')
+    .mockImplementation(() => {});
+
+  const request = new Request(
+    'ws://test.roci.dev' + TAIL_URL_PATH + '?roomID=testRoomID',
+    {headers: {['Upgrade']: 'websocket'}},
+  );
+  const response = await roomDO.fetch(request);
+  expect(response.status).toBe(101);
+  response.webSocket!.accept();
+
+  const log: unknown[] = [];
+  response.webSocket!.addEventListener('message', e => {
+    log.push(JSON.parse(e.data as string));
+  });
+
+  const o = {
+    a: 1,
+    b: {
+      toJSON() {
+        throw new TypeError();
+      },
+    },
+  };
+
+  console.log(o);
+
+  await Promise.resolve();
+  expect(log).toEqual([]);
+  expect(originalConsoleErrorSpy).toBeCalledTimes(1);
+  originalConsoleErrorSpy.mockReset();
+
+  response.webSocket!.close();
+
+  // Wait for close to be dispatched
+  await Promise.resolve();
+
+  console.error('good', 'bye');
+
+  await Promise.resolve();
+
+  expect(log).toEqual([]);
+  expect(originalConsoleErrorSpy).toBeCalledTimes(0);
+});
