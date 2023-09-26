@@ -1,5 +1,4 @@
 import type {Firestore} from 'firebase-admin/firestore';
-import {defineString} from 'firebase-functions/params';
 import {HttpsError} from 'firebase-functions/v2/https';
 import {
   createRequestSchema,
@@ -12,9 +11,9 @@ import {
   isValidAppName,
 } from 'mirror-schema/src/app.js';
 import {
-  cloudflareDataConverter,
-  cloudflarePath,
-} from 'mirror-schema/src/cloudflare.js';
+  providerDataConverter,
+  providerPath,
+} from 'mirror-schema/src/provider.js';
 import {defaultOptions} from 'mirror-schema/src/deployment.js';
 import {
   appNameIndexDataConverter,
@@ -27,8 +26,6 @@ import {newAppID, newAppIDAsNumber, newAppScriptName} from '../../ids.js';
 import {userAuthorization} from '../validators/auth.js';
 import {getDataOrFail} from '../validators/data.js';
 import {validateSchema} from '../validators/schema.js';
-
-const cloudflareAccountId = defineString('CLOUDFLARE_ACCOUNT_ID');
 
 export const create = (firestore: Firestore) =>
   validateSchema(createRequestSchema, createResponseSchema)
@@ -79,16 +76,19 @@ export const create = (firestore: Firestore) =>
           'not-found',
           `Team ${teamID} does not exist`,
         );
-        const cf = getDataOrFail(
+        // TODO: To support onprem, allow apps to be created for a specific provider with
+        //       appropriate authorization.
+        const {defaultProvider} = team;
+        const provider = getDataOrFail(
           await txn.get(
             firestore
-              .doc(cloudflarePath(team.defaultCfID))
-              .withConverter(cloudflareDataConverter),
+              .doc(providerPath(defaultProvider))
+              .withConverter(providerDataConverter),
           ),
           'internal',
-          `Account ${team.defaultCfID} is not properly set up.`,
+          `Provider ${defaultProvider} is not properly set up.`,
         );
-        if (team.numApps >= (team.maxApps ?? cf.defaultMaxApps)) {
+        if (team.numApps >= (team.maxApps ?? provider.defaultMaxApps)) {
           throw new HttpsError(
             'resource-exhausted',
             `Maximum number of apps reached. Use 'npx @rocicorp/reflect delete' to clean up old apps.`,
@@ -110,7 +110,9 @@ export const create = (firestore: Firestore) =>
           name: appName,
           teamID,
           teamLabel: team.label,
-          cfID: cloudflareAccountId.value(),
+          teamSubdomain: '', // Deprecated
+          provider: defaultProvider,
+          cfID: 'deprecated',
           cfScriptName: scriptName,
           serverReleaseChannel,
           deploymentOptions: defaultOptions(),

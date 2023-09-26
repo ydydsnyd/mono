@@ -1,6 +1,7 @@
 import * as v from 'shared/src/valita.js';
 import {firestoreDataConverter} from './converter.js';
 import * as path from './path.js';
+import {DEFAULT_PROVIDER_ID} from './provider.js';
 
 export const teamSchema = v.object({
   name: v.string(),
@@ -24,7 +25,10 @@ export const teamSchema = v.object({
   /** @deprecated TODO(darick): Remove with the cli migration code. */
   subdomain: v.string().optional(),
 
-  defaultCfID: v.string(),
+  /** @deprecated Remove when reflect-cli supported versions consider this optional */
+  defaultCfID: v.string().optional(),
+
+  defaultProvider: v.string().default(DEFAULT_PROVIDER_ID),
 
   // Number of memberships of role 'admin'.
   // A team must have at least one admin.

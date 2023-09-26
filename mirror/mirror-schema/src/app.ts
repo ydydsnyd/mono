@@ -1,9 +1,14 @@
 import * as v from 'shared/src/valita.js';
 import {firestoreDataConverter} from './converter.js';
 import {deploymentOptionsSchema, deploymentSchema} from './deployment.js';
+import {DEFAULT_PROVIDER_ID} from './provider.js';
 
 export const appSchema = v.object({
-  cfID: v.string(),
+  /** @deprecated Remove when reflect-cli supported versions consider this optional */
+  cfID: v.string().optional(),
+
+  provider: v.string().default(DEFAULT_PROVIDER_ID),
+
   // Globally unique, stable, internal script name in Cloudflare.
   cfScriptName: v.string(),
   teamID: v.string(),

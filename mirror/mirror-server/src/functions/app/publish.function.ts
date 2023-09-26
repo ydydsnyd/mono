@@ -19,9 +19,9 @@ import type {App} from 'mirror-schema/src/app.js';
 import {getAppSecrets} from './secrets.js';
 import {getDataOrFail} from '../validators/data.js';
 import {
-  cloudflareDataConverter,
-  cloudflarePath,
-} from 'mirror-schema/src/cloudflare.js';
+  providerDataConverter,
+  providerPath,
+} from 'mirror-schema/src/provider.js';
 
 export const publish = (
   firestore: Firestore,
@@ -91,13 +91,14 @@ export async function computeDeploymentSpec(
     `Found matching version for ${serverVersionRange}: ${serverVersion}`,
   );
 
-  const cf = getDataOrFail(
+  const {provider: providerID} = app;
+  const provider = getDataOrFail(
     await firestore
-      .doc(cloudflarePath(app.cfID))
-      .withConverter(cloudflareDataConverter)
+      .doc(providerPath(providerID))
+      .withConverter(providerDataConverter)
       .get(),
     'internal',
-    `Account ${app.cfID} is not properly set up.`,
+    `Provider ${providerID} is not properly set up.`,
   );
 
   const {hashes: hashesOfSecrets} = await getAppSecrets();
@@ -106,7 +107,7 @@ export async function computeDeploymentSpec(
     serverVersionRange,
     serverVersion,
     // Note: Hyphens are not allowed in teamLabels.
-    hostname: `${app.name}-${app.teamLabel}.${cf.domain}`,
+    hostname: `${app.name}-${app.teamLabel}.${provider.defaultZone.name}`,
     options: app.deploymentOptions,
     hashesOfSecrets,
   };
