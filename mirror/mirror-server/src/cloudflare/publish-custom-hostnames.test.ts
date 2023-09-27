@@ -1,5 +1,8 @@
 import {afterEach, describe, expect, jest, test} from '@jest/globals';
-import {publishCustomHostnames} from './publish-custom-hostnames.js';
+import {
+  deleteCustomHostnames,
+  publishCustomHostname,
+} from './publish-custom-hostnames.js';
 import {mockFetch} from 'cloudflare-api/src/fetch-test-helper.js';
 import type {ZoneConfig} from './config.js';
 import {NamespacedScript} from 'cloudflare-api/src/scripts.js';
@@ -10,7 +13,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe('publish-custom-hostnames', () => {
+describe('custom-hostnames', () => {
   const ACCOUNT_ID = '92c9f92f0e';
   const NAMESPACE = 'prod';
   const SCRIPT_NAME = 'foo-script';
@@ -22,13 +25,12 @@ describe('publish-custom-hostnames', () => {
 
   const script = new NamespacedScript(
     {apiToken: ZONE_CONFIG.apiToken, accountID: ACCOUNT_ID},
-    NAMESPACE,
-    SCRIPT_NAME,
+    {namespace: NAMESPACE, name: SCRIPT_NAME},
   );
 
   async function publish(hostname: string): Promise<string[]> {
     const msgs: string[] = [];
-    for await (const msg of publishCustomHostnames(
+    for await (const msg of publishCustomHostname(
       ZONE_CONFIG,
       script,
       hostname,
@@ -216,7 +218,9 @@ describe('publish-custom-hostnames', () => {
       .result('DELETE', '/custom_hostnames/bar-ch-id', {id: 'bar-ch-id'})
       .result('DELETE', '/dns_records/bar-record-id', {id: 'bar-record-id'});
 
-    expect(await publish('foo.reflect-o-rama.net')).toEqual([]);
+    expect(await publish('foo.reflect-o-rama.net')).toEqual([
+      'Deleting hostname bar.reflect-o-rama.net',
+    ]);
 
     expect(fetch.requests()).toEqual([
       [
@@ -232,6 +236,57 @@ describe('publish-custom-hostnames', () => {
         'https://api.cloudflare.com/client/v4/zones/1ab3d299c/dns_records/bar-record-id',
       ],
     ]);
+  });
+
+  test('deletes all hostnames', async () => {
+    const fetch = mockFetch()
+      .result<Partial<DNSRecord>[]>(
+        'GET',
+        '/dns_records', // DNSRecords.list()
+        [
+          {
+            name: 'foo.reflect-o-rama.net',
+            id: 'foo-record-id',
+            tags: ['ch:foo-ch-id'],
+          },
+          {
+            name: 'bar.reflect-o-rama.net',
+            id: 'bar-record-id',
+            tags: ['ch:bar-ch-id'],
+          },
+        ],
+      )
+      .result('DELETE', '/custom_hostnames/bar-ch-id', {id: 'bar-ch-id'})
+      .result('DELETE', '/dns_records/bar-record-id', {id: 'bar-record-id'})
+      .result('DELETE', '/custom_hostnames/foo-ch-id', {id: 'foo-ch-id'})
+      .result('DELETE', '/dns_records/foo-record-id', {id: 'foo-record-id'});
+
+    await deleteCustomHostnames(ZONE_CONFIG, script);
+
+    expect(fetch.requests()).toEqual(
+      expect.arrayContaining([
+        [
+          'GET',
+          'https://api.cloudflare.com/client/v4/zones/1ab3d299c/dns_records?tag=script%3Aprod%2Ffoo-script&comment.contains=%7Cscript%3Aprod%2Ffoo-script%7C&match=any',
+        ],
+        [
+          'DELETE',
+          'https://api.cloudflare.com/client/v4/zones/1ab3d299c/custom_hostnames/bar-ch-id',
+        ],
+        [
+          'DELETE',
+          'https://api.cloudflare.com/client/v4/zones/1ab3d299c/dns_records/bar-record-id',
+        ],
+        [
+          'DELETE',
+          'https://api.cloudflare.com/client/v4/zones/1ab3d299c/custom_hostnames/foo-ch-id',
+        ],
+        [
+          'DELETE',
+          'https://api.cloudflare.com/client/v4/zones/1ab3d299c/dns_records/foo-record-id',
+        ],
+      ]),
+    );
   });
 
   test('delete is resumable', async () => {
@@ -259,7 +314,9 @@ describe('publish-custom-hostnames', () => {
       )
       .error('DELETE', '/dns_records/bar-record-id', Errors.RecordDoesNotExist);
 
-    expect(await publish('foo.reflect-o-rama.net')).toEqual([]);
+    expect(await publish('foo.reflect-o-rama.net')).toEqual([
+      'Deleting hostname bar.reflect-o-rama.net',
+    ]);
 
     expect(fetch.requests()).toEqual([
       [
@@ -282,7 +339,13 @@ describe('publish-custom-hostnames', () => {
       .result<Partial<DNSRecord>[]>(
         'GET',
         '/dns_records', // DNSRecords.list()
-        [{name: 'baz', id: 'baz-record-id', tags: ['ch:baz-ch-id']}],
+        [
+          {
+            name: 'baz.reflect-o-rama.net',
+            id: 'baz-record-id',
+            tags: ['ch:baz-ch-id'],
+          },
+        ],
       )
       .result('DELETE', '/custom_hostnames/baz-ch-id', {id: 'bar-ch-id'})
       .result('DELETE', '/dns_records/baz-record-id', {id: 'bar-record-id'})
@@ -290,9 +353,12 @@ describe('publish-custom-hostnames', () => {
       .result('POST', '/dns_records', {id: 'record-id'}) // DNSRecords.create()
       .result('PATCH', '/custom_hostnames/ch-id', {status: 'active'}); // CustomHostnames.edit()
 
-    expect(await publish('foo.reflect-o-rama.net')).toEqual([
-      'Setting up hostname foo.reflect-o-rama.net',
-    ]);
+    expect(await publish('foo.reflect-o-rama.net')).toEqual(
+      expect.arrayContaining([
+        'Setting up hostname foo.reflect-o-rama.net',
+        'Deleting hostname baz.reflect-o-rama.net',
+      ]),
+    );
 
     expect(fetch.spy).toHaveBeenCalledTimes(6);
     expect(fetch.requests()).toEqual(

@@ -122,6 +122,11 @@ export abstract class Script {
   }
 }
 
+export type NamespacedName = {
+  namespace: string;
+  name: string;
+};
+
 export class NamespacedScript extends Script {
   readonly id: string;
   readonly namespace: string;
@@ -129,8 +134,7 @@ export class NamespacedScript extends Script {
 
   constructor(
     {apiToken, accountID}: AccountAccess,
-    namespace: string,
-    name: string,
+    {namespace, name}: NamespacedName,
   ) {
     super(
       new Resource(

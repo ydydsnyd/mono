@@ -96,18 +96,19 @@ export async function runDeployment(
   } = must(deploymentDoc.data());
 
   try {
-    const [apiToken, accountDoc] = await Promise.all([
+    const [apiToken, providerDoc] = await Promise.all([
       getApiTokenSecret(provider),
       firestore
         .doc(providerPath(provider))
         .withConverter(providerDataConverter)
         .get(),
     ]);
-    const {accountID} = getDataOrFail(
-      accountDoc,
+    const {accountID, defaultZone} = getDataOrFail(
+      providerDoc,
       'internal',
       `Unknown provider ${provider} for App ${appID}`,
     );
+    const zone = {apiToken, ...defaultZone};
 
     if (status !== 'REQUESTED') {
       logger.warn(`Deployment is already ${status}`);
@@ -127,7 +128,7 @@ export async function runDeployment(
 
     if (deploymentType === 'DELETE') {
       // For a DELETE, the Deployment lifecycle is 'REQUESTED' -> 'DEPLOYING' -> (document deleted) | 'FAILED'
-      await deleteFromCloudflare(script);
+      await deleteFromCloudflare(script, zone);
       await deleteAppDocs(firestore, appID);
       logger.info(`Deleted app ${appID}`);
       return;

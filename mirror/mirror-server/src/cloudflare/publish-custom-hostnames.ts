@@ -12,16 +12,37 @@ import {Errors, FetchResultError} from 'cloudflare-api/src/fetch.js';
 import type {PartialDeep} from 'type-fest';
 import {HttpsError} from 'firebase-functions/v2/https';
 
-export async function* publishCustomHostnames(
+export async function* publishCustomHostname(
   zone: ZoneConfig,
   script: NamespacedScript,
   hostname: string,
 ): AsyncGenerator<string> {
+  for await (const msg of setCustomHostnames(zone, script, [hostname])) {
+    yield msg;
+  }
+}
+
+export async function deleteCustomHostnames(
+  zone: ZoneConfig,
+  script: NamespacedScript,
+): Promise<void> {
+  for await (const msg of setCustomHostnames(zone, script, [])) {
+    logger.info(msg);
+  }
+}
+
+async function* setCustomHostnames(
+  zone: ZoneConfig,
+  script: NamespacedScript,
+  hostnames: string[],
+): AsyncGenerator<string> {
   const {zoneName} = zone;
-  assert(
-    hostname.endsWith(`.${zoneName}`),
-    `hostname must be in zone ${zoneName}`,
-  );
+  hostnames.forEach(hostname => {
+    assert(
+      hostname.endsWith(`.${zoneName}`),
+      `hostname must be in zone ${zoneName}`,
+    );
+  });
 
   const records = new DNSRecords(zone);
   const currentRecords = await records.list(
@@ -34,7 +55,7 @@ export async function* publishCustomHostnames(
       match: 'any',
     }),
   );
-  const create = new Set([hostname]);
+  const create = new Set(hostnames);
   const discard = new Set<DNSRecord>();
   currentRecords.forEach(record => {
     if (create.has(record.name)) {
@@ -49,16 +70,17 @@ export async function* publishCustomHostnames(
     return;
   }
 
-  const hostnames = new CustomHostnames(zone);
+  const chs = new CustomHostnames(zone);
   for (const name of create) {
     yield `Setting up hostname ${name}`;
   }
+  for (const record of discard) {
+    yield `Deleting hostname ${record.name}`;
+  }
   const p: Promise<unknown>[] = [];
-  discard.forEach(record =>
-    p.push(deleteCustomHostname(record, records, hostnames)),
-  );
+  discard.forEach(record => p.push(deleteCustomHostname(record, records, chs)));
   create.forEach(name =>
-    p.push(createCustomHostname(name, zoneName, script, records, hostnames)),
+    p.push(createCustomHostname(name, zoneName, script, records, chs)),
   );
   const results = await Promise.allSettled(p);
 
