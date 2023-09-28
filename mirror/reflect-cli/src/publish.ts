@@ -17,7 +17,6 @@ import {findServerVersionRange} from './find-reflect-server-version.js';
 import {Firestore, getFirestore} from './firebase.js';
 import {makeRequester} from './requester.js';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
-import {checkForServerDeprecation} from './version.js';
 
 export function publishOptions(yargs: CommonYargsArgv) {
   return yargs;
@@ -49,7 +48,6 @@ export async function publishHandler(
   }
 
   const range = await findServerVersionRange(absPath);
-  await checkForServerDeprecation(yargs, range);
   const serverVersionRange = range.raw;
 
   console.log(`Compiling ${script}`);
