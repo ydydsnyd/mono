@@ -3,6 +3,7 @@ import {getMockReq, getMockRes} from '@jest-mock/express';
 import {beforeEach, describe, expect, jest, test} from '@jest/globals';
 import type {Auth} from 'firebase-admin/auth';
 import type {https} from 'firebase-functions/v2';
+import type {TailMessage} from 'mirror-protocol/src/tail.js';
 import {
   fakeFirestore,
   setApp,
@@ -132,46 +133,103 @@ describe('test tail', () => {
     req.res = res;
     const createTailPromise = createTailFunction(req, res);
     await createTailMockPromise;
+    wsMock.message(JSON.stringify({type: 'connected'}));
     wsMock.message(
       JSON.stringify({
-        outcome: 'ok',
-        scriptName: 'arv-cli-test-1',
-        diagnosticsChannelEvents: [],
-        exceptions: [],
-        logs: [
-          {
-            message: [
-              'component=Worker',
-              'scheduled=ry5fw9fphyb',
-              'Handling scheduled event',
-            ],
-            level: 'info',
-            timestamp: 1691593226241,
-          },
-          {
-            message: [
-              'component=Worker',
-              'scheduled=ry5fw9fphyb',
-              'Returning early because REFLECT_AUTH_API_KEY is not defined in env.',
-            ],
-            level: 'debug',
-            timestamp: 1691593226241,
-          },
-        ],
-        eventTimestamp: 1691593226234,
-        event: {
-          cron: '* /5 * * * *',
-          scheduledTime: 1691593225000,
-        },
+        type: 'log',
+        level: 'info',
+        message: ['info message', 'one'],
+      }),
+    );
+    wsMock.message(
+      JSON.stringify({
+        type: 'log',
+        level: 'debug',
+        message: ['debug message', 123, true],
       }),
     );
     await sleep(1);
-    expect(res.write).toBeCalledTimes(2);
-    expect(req.res.write).toBeCalledWith(
-      `data: {"message":["component=Worker","scheduled=ry5fw9fphyb","Returning early because REFLECT_AUTH_API_KEY is not defined in env."],"level":"debug","timestamp":1691593226241}\n\n`,
+    expect(res.write).toBeCalledTimes(3);
+    expect(req.res.write).toHaveBeenNthCalledWith(
+      1,
+      'data: {"type":"connected"}\n\n',
     );
+    expect(req.res.write).toHaveBeenNthCalledWith(
+      2,
+      'data: {"type":"log","level":"info","message":["info message","one"]}\n\n',
+    );
+    expect(req.res.write).toHaveBeenNthCalledWith(
+      3,
+      'data: {"type":"log","level":"debug","message":["debug message",123,true]}\n\n',
+    );
+
     wsMock.close();
     await createTailPromise;
     expect(auth.verifyIdToken).toBeCalledWith('this-is-the-encoded-token');
+  });
+
+  async function testForwardMessage(
+    m: TailMessage,
+    expected: string,
+    expectsError?: boolean,
+  ) {
+    const req = getRequestWithHeaders();
+
+    const {res} = getMockRes();
+    req.res = res;
+    const createTailPromise = createTailFunction(req, res);
+    await createTailMockPromise;
+    wsMock.message(JSON.stringify(m));
+    await sleep(1);
+    if (expectsError) {
+      expect(res.write).toBeCalledTimes(2);
+      expect(req.res.write).toHaveBeenNthCalledWith(1, 'event: error\n');
+      expect(req.res.write).toHaveBeenNthCalledWith(2, expected);
+    } else {
+      expect(res.write).toBeCalledTimes(1);
+      expect(req.res.write).toHaveBeenNthCalledWith(1, expected);
+    }
+
+    wsMock.close();
+    await createTailPromise;
+    expect(auth.verifyIdToken).toBeCalledWith('this-is-the-encoded-token');
+  }
+
+  test('Invalid auth in header', async () => {
+    const m: TailMessage = {
+      type: 'error',
+      kind: 'Unauthorized',
+      message: 'missing x',
+    };
+    await testForwardMessage(
+      m,
+      'data: {"type":"error","kind":"Unauthorized","message":"missing x"}\n\n',
+    );
+  });
+
+  test('No such room', async () => {
+    await testForwardMessage(
+      {type: 'error', kind: 'RoomNotFound', message: 'no such room'},
+      'data: {"type":"error","kind":"RoomNotFound","message":"no such room"}\n\n',
+    );
+  });
+
+  test('InvalidConnectionRequest', async () => {
+    await testForwardMessage(
+      {
+        type: 'error',
+        kind: 'InvalidConnectionRequest',
+        message: 'missing roomID',
+      },
+      'data: {"type":"error","kind":"InvalidConnectionRequest","message":"missing roomID"}\n\n',
+    );
+  });
+
+  test('Invalid type', async () => {
+    await testForwardMessage(
+      42 as unknown as TailMessage,
+      'data: Expected object. Got 42\n\n',
+      true,
+    );
   });
 });
