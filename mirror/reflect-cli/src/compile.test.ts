@@ -107,71 +107,123 @@ test('it should bundle into one file', async () => {
   `);
 });
 
-test('watch should work', async () => {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'reflect-compile-test-'));
-  const fileA = path.join(dir, 'a.js');
-  await fs.writeFile(
-    fileA,
-    `import {b} from './b.js'; console.log(b);`,
-    'utf-8',
-  );
-  const fileB = path.join(dir, 'b.js');
-  await fs.writeFile(fileB, `export const b = 'BBB';`, 'utf-8');
+describe('watch', () => {
+  type CheckResult = (snapshot: string) => Promise<void>;
+  type Write = (
+    filename: string,
+    data: string,
+    options: {compilationExpected: false} | {expectedResult: string},
+  ) => Promise<void>;
 
-  const ac = new AbortController();
-  const q = new Queue<CompileResult>();
+  async function watchHarness(
+    entryPoint: string,
+    testBody: (checkResult: CheckResult, write: Write) => Promise<void>,
+  ) {
+    const ac = new AbortController();
+    const q = new Queue<CompileResult>();
 
-  try {
     let compilationExpected = true;
-    (async () => {
-      try {
-        for await (const change of watch(
-          fileA,
-          true,
-          'development',
-          ac.signal,
-        )) {
-          if (!compilationExpected) {
-            throw new Error('Unexpected recompilation');
-          }
-          q.enqueue(change).catch(e => fail(e));
-        }
-      } catch (e) {
-        // In Jest e is not an instance of Error?!?
-        // https://github.com/jestjs/jest/issues/2549
-        if ((e as AbortError).name !== 'AbortError') {
-          throw e;
-        }
-      }
-    })().catch(e => fail(e));
 
-    await checkResult(`var b = "BBB";
+    const write: Write = async (filename, data, options) => {
+      compilationExpected = !('compilationExpected' in options);
+      await sleep(50);
+      await fs.writeFile(filename, data, 'utf-8');
+      if ('expectedResult' in options) {
+        await checkResult(options.expectedResult);
+      }
+    };
+
+    const checkResult: CheckResult = async (snapshot: string) => {
+      const result = await q.dequeue();
+      expect(result.code.path).toBe(path.resolve('a.js'));
+      expect(result.sourcemap?.path).toBe(path.resolve('a.js.map'));
+      expect(stripCommentLines(result.code.text)).toBe(snapshot);
+    };
+
+    try {
+      (async () => {
+        try {
+          for await (const change of watch(
+            entryPoint,
+            true,
+            'development',
+            ac.signal,
+          )) {
+            if (!compilationExpected) {
+              throw new Error('Unexpected recompilation');
+            }
+            q.enqueue(change).catch(e => fail(e));
+          }
+        } catch (e) {
+          // In Jest e is not an instance of Error?!?
+          // https://github.com/jestjs/jest/issues/2549
+          if ((e as AbortError).name !== 'AbortError') {
+            throw e;
+          }
+        }
+      })().catch(e => fail(e));
+
+      await testBody(checkResult, write);
+
+      await sleep(100);
+    } finally {
+      ac.abort();
+    }
+  }
+
+  test('watch should work', async () => {
+    const dir = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'reflect-compile-test-'),
+    );
+    const fileA = path.join(dir, 'a.js');
+    await fs.writeFile(
+      fileA,
+      `import {b} from './b.js'; console.log(b);`,
+      'utf-8',
+    );
+    const fileB = path.join(dir, 'b.js');
+    await fs.writeFile(fileB, `export const b = 'BBB';`, 'utf-8');
+
+    await watchHarness(fileA, async (checkResult, write) => {
+      await checkResult(`var b = "BBB";
 console.log(b);`);
 
-    await fs.writeFile(fileA, `console.log('changed');`, 'utf-8');
-    await checkResult(`console.log("changed");`);
+      await write(fileA, `console.log('changed');`, {
+        expectedResult: `console.log("changed");`,
+      });
 
-    // Changing b now should not trigger the watcher since a no longer depends on b.
-    compilationExpected = false;
-    await fs.writeFile(fileB, `console.log('changed b');`, 'utf-8');
+      // Changing b now should not trigger the watcher since a no longer depends on b.
+      await write(fileB, `console.log('changed b');`, {
+        compilationExpected: false,
+      });
 
-    compilationExpected = true;
-    await fs.writeFile(fileA, `console.log('changed a again');`, 'utf-8');
-    await checkResult(`console.log("changed a again");`);
+      await write(fileA, `console.log('changed a again');`, {
+        expectedResult: `console.log("changed a again");`,
+      });
 
-    compilationExpected = true;
-    await fs.writeFile(fileA, `console.log(process.env.NODE_ENV);`, 'utf-8');
-    await checkResult(`console.log("development");`);
+      await write(fileA, `console.log(process.env.NODE_ENV);`, {
+        expectedResult: `console.log("development");`,
+      });
+    });
+  });
 
-    await sleep(100);
-  } finally {
-    ac.abort();
-  }
+  test('watch should continue after syntax errors', async () => {
+    const dir = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'reflect-compile-test-'),
+    );
+    const fileA = path.join(dir, 'a.js');
+    await fs.writeFile(fileA, `console.log(1);`, 'utf-8');
 
-  async function checkResult(snapshot: string) {
-    const result = await q.dequeue();
-    expect(result.code.path).toBe(path.resolve('a.js'));
-    expect(result.sourcemap?.path).toBe(path.resolve('a.js.map'));
-    expect(stripCommentLines(result.code.text)).toBe(snapshot);
-  }
+    await watchHarness(fileA, async (checkResult, write) => {
+      await checkResult(`console.log(1);`);
+
+      await write(fileA, `console.log(`, {compilationExpected: false});
+
+      await write(fileA, `console.log('`, {compilationExpected: false});
+
+      await write(fileA, `console.log(2);`, {
+        expectedResult: `console.log(2);`,
+      });
+    });
+  });
 });
