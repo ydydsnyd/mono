@@ -3,7 +3,6 @@ import {
   Precondition,
   Timestamp,
   type Firestore,
-  type UpdateData,
 } from 'firebase-admin/firestore';
 import type {Storage} from 'firebase-admin/storage';
 import {logger} from 'firebase-functions';
@@ -30,7 +29,6 @@ import {
   getAppSecrets,
 } from './secrets.js';
 import {FetchResultError} from 'cloudflare-api/src/fetch.js';
-import type {App, ScriptRef} from 'mirror-schema/src/app.js';
 import {
   providerDataConverter,
   providerPath,
@@ -41,8 +39,6 @@ import {
   NamespacedScriptHandler,
   ScriptHandler,
 } from '../../cloudflare/script-handler.js';
-import {MIN_WFP_VERSION} from './create.function.js';
-import {lt} from 'semver';
 
 export const deploy = (firestore: Firestore, storage: Storage) =>
   onDocumentCreated(
@@ -110,7 +106,7 @@ export async function runDeployment(
         .withConverter(providerDataConverter)
         .get(),
     ]);
-    const {accountID, dispatchNamespace, defaultZone} = getDataOrFail(
+    const {accountID, defaultZone} = getDataOrFail(
       providerDoc,
       'internal',
       `Unknown provider ${provider} for App ${appID}`,
@@ -154,25 +150,7 @@ export async function runDeployment(
 
     const {secrets, hashes} = await getAppSecrets();
 
-    const newScriptRef = (await migrateToWFP(
-      firestore,
-      appID,
-      deploymentID,
-      scriptRef,
-      script,
-      serverVersion,
-    ))
-      ? {
-          name: cfScriptName,
-          namespace: dispatchNamespace,
-        }
-      : undefined;
-    const publisher =
-      newScriptRef && script instanceof GlobalScriptHandler // Note: Leaves testScriptHandler as is.
-        ? new NamespacedScriptHandler(account, zone, newScriptRef)
-        : script;
-
-    for await (const deploymentUpdate of publisher.publish(
+    for await (const deploymentUpdate of script.publish(
       storage,
       {id: appID, name: appName},
       {id: teamID, label: teamLabel},
@@ -190,13 +168,7 @@ export async function runDeployment(
         deploymentUpdate,
       );
     }
-    await setRunningDeployment(
-      firestore,
-      appID,
-      deploymentID,
-      hashes,
-      newScriptRef,
-    );
+    await setRunningDeployment(firestore, appID, deploymentID, hashes);
   } catch (e) {
     logger.error(e);
     const error =
@@ -371,7 +343,6 @@ async function setRunningDeployment(
   appID: string,
   newDeploymentID: string,
   hashesOfSecrets: DeploymentSecrets,
-  newScriptRef: ScriptRef | undefined,
 ): Promise<void> {
   const appDocRef = firestore
     .doc(appPath(appID))
@@ -406,16 +377,11 @@ async function setRunningDeployment(
       ...deploymentUpdate('RUNNING'),
     };
 
-    const appUpdate: UpdateData<App> = {
+    tx.set(newDeploymentDocRef, newRunningDeployment);
+    tx.update(appDocRef, {
       runningDeployment: newRunningDeployment,
       queuedDeploymentIDs: FieldValue.arrayRemove(newDeploymentID),
-    };
-    if (newScriptRef) {
-      appUpdate.scriptRef = newScriptRef;
-    }
-
-    tx.set(newDeploymentDocRef, newRunningDeployment);
-    tx.update(appDocRef, appUpdate);
+    });
 
     const oldDeploymentID = appDoc.data()?.runningDeployment?.deploymentID;
     if (oldDeploymentID) {
@@ -425,29 +391,4 @@ async function setRunningDeployment(
       tx.update(oldDeploymentDoc, deploymentUpdate('STOPPED'));
     }
   });
-}
-
-async function migrateToWFP(
-  firestore: Firestore,
-  appID: string,
-  deploymentID: string,
-  scriptRef: ScriptRef | undefined,
-  script: ScriptHandler,
-  serverVersion: string,
-): Promise<boolean> {
-  if (scriptRef || lt(serverVersion, MIN_WFP_VERSION)) {
-    // Already on WFP or cannot migrate to WFP
-    return false;
-  }
-  await setDeploymentStatus(
-    firestore,
-    appID,
-    deploymentID,
-    'DEPLOYING',
-    'Upgrading to new infrastructure',
-  );
-  logger.info(`Deleting legacy script and custom domain for App ${appID}`);
-  await script.delete();
-
-  return true;
 }
