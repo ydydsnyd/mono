@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1696855784848,
+  "lastUpdate": 1696860580047,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -42937,6 +42937,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/b2d5487f18c2d4d845ff2567fc744c81569e748c"
         },
         "date": 1696855770940,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 260569,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 46415,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 96432,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27125,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ca3b50e2821248159e19b750a62f65e9e5ac517b",
+          "message": "chore: Upgrade prettier-config to .2 (#1058)\n\nAnd reformat",
+          "timestamp": "2023-10-09T14:07:01Z",
+          "tree_id": "7c3e439c79e614b05878b8f1ec56ad560dc512d2",
+          "url": "https://github.com/rocicorp/mono/commit/ca3b50e2821248159e19b750a62f65e9e5ac517b"
+        },
+        "date": 1696860565703,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
