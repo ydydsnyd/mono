@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1696865253800,
+  "lastUpdate": 1696955408827,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -43045,6 +43045,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27125,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c36b36471080b6875a3a18fb38e0857c4ab9f215",
+          "message": "chore(replicache): Remove barrel files (#1069)\n\nRemove all the `mod.ts` files except the public API for Replicache.\r\n\r\nhttps://marvinh.dev/blog/speeding-up-javascript-ecosystem-part-7/",
+          "timestamp": "2023-10-10T16:28:13Z",
+          "tree_id": "4b6b9d1d72ea935a160df6fbc2ab80451e44f2d2",
+          "url": "https://github.com/rocicorp/mono/commit/c36b36471080b6875a3a18fb38e0857c4ab9f215"
+        },
+        "date": 1696955396808,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 260509,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 46462,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 96432,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27154,
             "unit": "bytes"
           }
         ]
