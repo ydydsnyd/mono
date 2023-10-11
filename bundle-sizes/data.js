@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1696955408827,
+  "lastUpdate": 1697013797388,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -43089,6 +43089,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27154,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "826396bb4a8bf9417ea03ef00b12a24187526a78",
+          "message": "feat: Rename tx.put to to tx.set (#1080)\n\nThis renames `WriteTransaction` `put` to `set`.\r\n\r\nIt keeps `put` as a deprecated method that invokes `set`.",
+          "timestamp": "2023-10-11T10:41:13+02:00",
+          "tree_id": "b7a31e8404bf22da3eb498c80a0b4ce8746f7841",
+          "url": "https://github.com/rocicorp/mono/commit/826396bb4a8bf9417ea03ef00b12a24187526a78"
+        },
+        "date": 1697013785343,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 260566,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 46477,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 96462,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27162,
             "unit": "bytes"
           }
         ]
