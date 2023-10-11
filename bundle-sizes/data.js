@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1697013797388,
+  "lastUpdate": 1697032385312,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -43113,6 +43113,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/826396bb4a8bf9417ea03ef00b12a24187526a78"
         },
         "date": 1697013785343,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 260566,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 46477,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 96462,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27162,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2981a97807c23efa95d63dc3912bada50b918103",
+          "message": "chore: Upgrade esbuild (#1081)",
+          "timestamp": "2023-10-11T15:51:00+02:00",
+          "tree_id": "8399aee8e7c21ea20767cf448d5c02cc2521a896",
+          "url": "https://github.com/rocicorp/mono/commit/2981a97807c23efa95d63dc3912bada50b918103"
+        },
+        "date": 1697032374275,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
