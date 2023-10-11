@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1697032385312,
+  "lastUpdate": 1697033212283,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -43177,6 +43177,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 27162,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "27e1ebe2a9dd9e1eeacd1e62ab18ef6aa10cb086",
+          "message": "chore(replicache): Make withWrite auto commit (#1082)\n\nThis is done by adding a new function called `withWriteNoImplicitCommit`\r\nwhich allows manual `commit` if needed.\r\n\r\nTowards #135",
+          "timestamp": "2023-10-11T16:04:57+02:00",
+          "tree_id": "c6e2766fc932f35b731db7cd04d3da80b317d085",
+          "url": "https://github.com/rocicorp/mono/commit/27e1ebe2a9dd9e1eeacd1e62ab18ef6aa10cb086"
+        },
+        "date": 1697033200316,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 260197,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 46496,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 96145,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27152,
             "unit": "bytes"
           }
         ]
