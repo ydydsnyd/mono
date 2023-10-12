@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1697033212283,
+  "lastUpdate": 1697095523410,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -43201,6 +43201,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/27e1ebe2a9dd9e1eeacd1e62ab18ef6aa10cb086"
         },
         "date": 1697033200316,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 260197,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 46496,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 96145,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 27152,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c761384d69aa5c6aab35a62aa84802b5112e07de",
+          "message": "docs(replicache): Update the blobs howto (#1083)\n\n- Add some text about server side implementation of addBlob\r\n- Add a section about doing sync of files on an interval.\r\n- And rename uploaded to shouldUpload to be more clear.",
+          "timestamp": "2023-10-12T09:23:27+02:00",
+          "tree_id": "a21459b4365cc030b707095aa183a1724536917b",
+          "url": "https://github.com/rocicorp/mono/commit/c761384d69aa5c6aab35a62aa84802b5112e07de"
+        },
+        "date": 1697095512056,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
