@@ -1,52 +1,23 @@
 import {deleteApp} from 'mirror-protocol/src/app.js';
 import {
   APP_COLLECTION,
-  appViewDataConverter,
   appPath,
+  appViewDataConverter,
 } from 'mirror-schema/src/client-view/app.js';
 import {deploymentViewDataConverter} from 'mirror-schema/src/client-view/deployment.js';
 import {
-  userViewDataConverter,
   userPath,
+  userViewDataConverter,
 } from 'mirror-schema/src/client-view/user.js';
 import {watch} from 'mirror-schema/src/client-view/watch.js';
 import {must} from 'shared/src/must.js';
 import {readAppConfig, writeAppConfig} from './app-config.js';
 import {authenticate} from './auth-config.js';
+import type {DeleteHandlerArgs} from './delete-options.js';
 import {Firestore, getFirestore} from './firebase.js';
 import {confirm} from './inquirer.js';
 import {logErrorAndExit} from './log-error-and-exit.js';
 import {makeRequester} from './requester.js';
-import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
-
-export function deleteOptions(yargs: CommonYargsArgv) {
-  return yargs
-    .option('name', {
-      describe: 'Name of the app to delete',
-      type: 'string',
-      conflicts: ['appID', 'all'],
-    })
-    .option('appID', {
-      describe: 'Internal ID of the app',
-      type: 'string',
-      conflicts: ['all', 'name'],
-      hidden: true,
-    })
-    .option('all', {
-      describe:
-        'Delete all of your apps, confirming for each one (unless --force is specified)',
-      type: 'boolean',
-      conflicts: ['name', 'appID'],
-    })
-    .option('force', {
-      describe: 'Suppress the confirmation prompt',
-      type: 'boolean',
-      alias: 'f',
-      default: false,
-    });
-}
-
-type DeleteHandlerArgs = YargvToInterface<ReturnType<typeof deleteOptions>>;
 
 export async function deleteHandler(yargs: DeleteHandlerArgs) {
   const firestore = getFirestore();

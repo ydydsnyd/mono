@@ -3,19 +3,33 @@ import assert from 'node:assert';
 import http from 'node:http';
 import type {Socket} from 'node:net';
 import open from 'open';
-import {confirm} from './inquirer.js';
 import {sleep} from 'shared/src/sleep.js';
 import {parse} from 'shared/src/valita.js';
 import {
   authCredentialSchema,
+  authenticate,
   UserAuthConfig,
   writeAuthConfigFile as writeAuthConfigFileImpl,
 } from './auth-config.js';
+import {confirm} from './inquirer.js';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
 
 async function timeout(signal: AbortSignal) {
   await sleep(120_000, signal);
   throw new Error('Login did not complete within 2 minutes');
+}
+
+export async function loginAndAuthenticateHandler(
+  yargs: YargvToInterface<CommonYargsArgv>,
+) {
+  try {
+    await loginHandler(yargs);
+    // authenticate() validates that credentials were written
+    // and outputs the logged in user to the console.
+    await authenticate(yargs);
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 export async function loginHandler(

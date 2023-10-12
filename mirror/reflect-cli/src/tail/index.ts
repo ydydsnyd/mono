@@ -8,19 +8,8 @@ import * as valita from 'shared/src/valita.js';
 import {ensureAppInstantiated} from '../app-config.js';
 import {authenticate} from '../auth-config.js';
 import {makeRequester} from '../requester.js';
-import type {CommonYargsArgv, YargvToInterface} from '../yarg-types.js';
 import {createTailEventSource} from './tail-event-source.js';
-
-export function tailOptions(yargs: CommonYargsArgv) {
-  return yargs.option('room-id', {
-    describe: 'The room ID of the room to tail',
-    type: 'string',
-    requiresArg: true,
-    demandOption: true,
-  });
-}
-
-type TailHandlerArgs = YargvToInterface<ReturnType<typeof tailOptions>>;
+import type {TailHandlerArgs} from './tail-options.js';
 
 export async function tailHandler(yargs: TailHandlerArgs) {
   const {appID} = await ensureAppInstantiated(yargs);

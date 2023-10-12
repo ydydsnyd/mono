@@ -16,7 +16,7 @@ function basePath(...parts) {
   );
 }
 
-function copyPackages() {
+function copyDTSFilesFromPackages() {
   for (const name of ['client', 'server', 'shared']) {
     for (const ext of ['d.ts']) {
       const src = basePath(
@@ -68,12 +68,34 @@ function doCopy(dst, src, name) {
   fs.copyFileSync(src, dst);
 }
 
+/**
+ * @param {string} sourceDirectory
+ * @param {string} targetDirectory
+ */
+function copyFiles(sourceDirectory, targetDirectory) {
+  fs.mkdirSync(targetDirectory, {recursive: true});
+  const files = fs.readdirSync(sourceDirectory);
+  for (const file of files) {
+    const sourceFile = path.join(sourceDirectory, file);
+    const targetFile = path.join(targetDirectory, file);
+    fs.copyFileSync(sourceFile, targetFile);
+  }
+}
+
 function copyReflectCLI() {
-  const binDir = basePath('bin');
-  fs.rmSync(binDir, {recursive: true, force: true});
-  const src = basePath('..', '..', 'mirror', 'reflect-cli', 'out', 'index.mjs');
-  const dst = basePath('bin', 'cli.js');
-  doCopy(dst, src, 'mirror/reflect-cli');
+  const sourceDirectory = basePath('..', '..', 'mirror', 'reflect-cli', 'out');
+  if (!fs.existsSync(sourceDirectory)) {
+    console.error(
+      `File does not exist: ${sourceDirectory}. Make sure to build mirror/reflect-cli first`,
+    );
+    process.exit(1);
+  }
+
+  const targetDirectory = basePath('bin');
+  fs.rmSync(targetDirectory, {recursive: true, force: true});
+
+  copyFiles(sourceDirectory, targetDirectory);
+
   const templateSrc = basePath(
     '..',
     '..',
@@ -149,7 +171,7 @@ async function buildPackages() {
 
 await buildPackages();
 
-copyPackages();
+copyDTSFilesFromPackages();
 
 copyReflectCLI();
 

@@ -3,19 +3,9 @@ import {existsSync} from 'node:fs';
 import {mkdir} from 'node:fs/promises';
 import color from 'picocolors';
 import validateProjectName from 'validate-npm-package-name';
+import type {CreatedHandlerArgs} from './create-options.js';
 import {logErrorAndExit} from './log-error-and-exit.js';
 import {scaffold} from './scaffold.js';
-import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
-
-export function createOptions(yargs: CommonYargsArgv) {
-  return yargs.option('name', {
-    describe: 'Name of the app',
-    type: 'string',
-    demandOption: true,
-  });
-}
-
-type CreatedHandlerArgs = YargvToInterface<ReturnType<typeof createOptions>>;
 
 export async function createHandler(createYargs: CreatedHandlerArgs) {
   const {name} = createYargs;

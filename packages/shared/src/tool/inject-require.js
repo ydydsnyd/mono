@@ -1,5 +1,5 @@
 function createRandomIdentifier(name) {
-  return `${name}_${Math.random() * 10000}`.replace('.', '');
+  return `${name}${Math.random() * 10000}`.replace('.', '');
 }
 
 /**
@@ -9,8 +9,6 @@ function createRandomIdentifier(name) {
  * @returns {esbuild.BuildOptions}
  */
 export function injectRequire() {
-  const createRequireAlias = createRandomIdentifier('createRequire');
-  return `import {createRequire as ${createRequireAlias}} from 'node:module';
-var require = ${createRequireAlias}(import.meta.url);
-`;
+  const createRequireAlias = createRandomIdentifier('$');
+  return `import {createRequire as ${createRequireAlias}} from 'node:module';var require = ${createRequireAlias}(import.meta.url);`;
 }

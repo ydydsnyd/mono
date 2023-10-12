@@ -65,11 +65,10 @@
     "server.js",
     "react.d.ts",
     "react.js",
-    "bin/cli.js",
     "script-templates/dev-script.js",
     "script-templates/prod-script.js",
-    "bin/templates",
-    "out"
+    "bin/",
+    "out/"
   ],
   "directories": {
     "template": "bin/templates"

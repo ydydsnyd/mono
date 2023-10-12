@@ -1,19 +1,15 @@
 import {hideBin} from 'yargs/helpers';
-import {authenticate} from './auth-config.js';
 import {
   CommandLineArgsError,
   createCLIParserBase,
 } from './create-cli-parser.js';
-import {createHandler, createOptions} from './create.js';
-import {devHandler, devOptions} from './dev.js';
+import {CreatedHandlerArgs, createOptions} from './create-options.js';
+import {DeleteHandlerArgs, deleteOptions} from './delete-options.js';
+import {DevHandlerArgs, devOptions} from './dev-options.js';
 import {handleWith} from './firebase.js';
-import {loginHandler} from './login.js';
-import {publishHandler, publishOptions} from './publish.js';
-import {statusHandler} from './status.js';
-import {tailHandler, tailOptions} from './tail/index.js';
-import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
-import {deleteHandler, deleteOptions} from './delete.js';
-import {initHandler, initOptions} from './init.js';
+import {initOptions} from './init-options.js';
+import {PublishHandlerArgs, publishOptions} from './publish-options.js';
+import {TailHandlerArgs, tailOptions} from './tail/tail-options.js';
 
 async function main(argv: string[]): Promise<void> {
   const reflectCLI = createCLIParser(argv);
@@ -38,7 +34,9 @@ function createCLIParser(argv: string[]) {
     'create <name>',
     '🛠  Create a basic Reflect project',
     createOptions,
-    handleWith(createHandler).andCleanup(),
+    handleWith(async (yargs: CreatedHandlerArgs) =>
+      (await import('./create.js')).createHandler(yargs),
+    ).andCleanup(),
   );
 
   // init
@@ -46,7 +44,9 @@ function createCLIParser(argv: string[]) {
     ['init', 'lfg'],
     '🚀 Add Reflect and basic mutators to an existing project',
     initOptions,
-    handleWith(initHandler).andCleanup(),
+    handleWith(async yargs =>
+      (await import('./init.js')).initHandler(yargs),
+    ).andCleanup(),
   );
 
   // dev
@@ -54,7 +54,9 @@ function createCLIParser(argv: string[]) {
     'dev',
     '👷 Start a local dev server for your Reflect project',
     devOptions,
-    handleWith(devHandler).andCleanup(),
+    handleWith(async (yargs: DevHandlerArgs) =>
+      (await import('./dev.js')).devHandler(yargs),
+    ).andCleanup(),
   );
 
   // login
@@ -63,16 +65,9 @@ function createCLIParser(argv: string[]) {
     '🔓 Login to Reflect',
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     () => {},
-    handleWith(async (yargs: YargvToInterface<CommonYargsArgv>) => {
-      try {
-        await loginHandler(yargs);
-        // authenticate() validates that credentials were written
-        // and outputs the logged in user to the console.
-        await authenticate(yargs);
-      } catch (e) {
-        console.error(e);
-      }
-    }).andCleanup(),
+    handleWith(async yargs =>
+      (await import('./login.js')).loginAndAuthenticateHandler(yargs),
+    ).andCleanup(),
   );
 
   // publish
@@ -80,7 +75,9 @@ function createCLIParser(argv: string[]) {
     'publish',
     '🆙 Publish your Reflect project',
     publishOptions,
-    handleWith(publishHandler).andCleanup(),
+    handleWith(async (yargs: PublishHandlerArgs) =>
+      (await import('./publish.js')).publishHandler(yargs),
+    ).andCleanup(),
   );
 
   // tail
@@ -88,7 +85,9 @@ function createCLIParser(argv: string[]) {
     'tail',
     '🦚 Start a log tailing session',
     tailOptions,
-    handleWith(tailHandler).andCleanup(),
+    handleWith(async (yargs: TailHandlerArgs) =>
+      (await import('./tail/index.js')).tailHandler(yargs),
+    ).andCleanup(),
   );
 
   // delete
@@ -96,7 +95,9 @@ function createCLIParser(argv: string[]) {
     'delete',
     '🗑️  Delete one or more Apps and their associated data. If no flags are specified, defaults to the App of the current directory.',
     deleteOptions,
-    handleWith(deleteHandler).andCleanup(),
+    handleWith(async (yargs: DeleteHandlerArgs) =>
+      (await import('./delete.js')).deleteHandler(yargs),
+    ).andCleanup(),
   );
 
   reflectCLI.command(
@@ -104,7 +105,9 @@ function createCLIParser(argv: string[]) {
     '📊 Show the status of current deployed app',
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     () => {},
-    handleWith(statusHandler).andCleanup(),
+    handleWith(async yargs =>
+      (await import('./status.js')).statusHandler(yargs),
+    ).andCleanup(),
   );
 
   return reflectCLI;

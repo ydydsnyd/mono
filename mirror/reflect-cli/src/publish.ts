@@ -15,17 +15,9 @@ import {authenticate} from './auth-config.js';
 import {compile} from './compile.js';
 import {findServerVersionRange} from './find-reflect-server-version.js';
 import {Firestore, getFirestore} from './firebase.js';
+import type {PublishHandlerArgs} from './publish-options.js';
 import {makeRequester} from './requester.js';
-import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
 import {checkForServerDeprecation} from './version.js';
-
-export function publishOptions(yargs: CommonYargsArgv) {
-  return yargs.option('reflect-channel', {
-    desc: 'Set the Reflect Channel for server updates',
-    type: 'string',
-    hidden: true,
-  });
-}
 
 async function exists(path: string) {
   try {
@@ -35,8 +27,6 @@ async function exists(path: string) {
     return false;
   }
 }
-
-type PublishHandlerArgs = YargvToInterface<ReturnType<typeof publishOptions>>;
 
 export type PublishCaller = typeof publishCaller;
 
