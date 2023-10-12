@@ -31,8 +31,8 @@ import {sleep} from 'shared/src/sleep.js';
 export type ScriptHandler = {
   publish(
     storage: Storage,
-    appName: string,
-    teamLabel: string,
+    app: {id: string; name: string},
+    team: {id: string; label: string},
     hostname: string,
     options: DeploymentOptions,
     secrets: DeploymentSecrets,
@@ -56,8 +56,8 @@ abstract class AbstractScriptHandler<S extends Script = Script>
 
   async *publish(
     storage: Storage,
-    appName: string,
-    teamLabel: string,
+    app: {id: string; name: string},
+    team: {id: string; label: string},
     hostname: string,
     options: DeploymentOptions,
     secrets: DeploymentSecrets,
@@ -67,18 +67,25 @@ abstract class AbstractScriptHandler<S extends Script = Script>
     logger.log(`Publishing ${hostname} (${this._script.id})`);
 
     const assembler = new ModuleAssembler(
-      appName,
-      teamLabel,
+      app.name,
+      team.label,
       this._script.id,
       appModules,
       serverModules,
     );
+    const tags = [
+      `appID:${app.id}`,
+      `appName:${app.name}`,
+      `teamID:${team.id}`,
+      `teamLabel:${team.label}`,
+    ];
 
     for await (const msg of this._doPublish(
       assembler.assemble(storage),
       hostname,
       options,
       secrets,
+      tags,
     )) {
       yield msg;
     }
@@ -92,6 +99,7 @@ abstract class AbstractScriptHandler<S extends Script = Script>
     hostname: string,
     options: DeploymentOptions,
     secrets: DeploymentSecrets,
+    tags: string[],
   ): AsyncGenerator<string>;
 
   async delete(): Promise<void> {
@@ -118,6 +126,7 @@ export class GlobalScriptHandler extends AbstractScriptHandler<GlobalScript> {
     hostname: string,
     options: DeploymentOptions,
     secrets: DeploymentSecrets,
+    tags: string[],
   ): AsyncGenerator<string> {
     const modules = await assembled;
     await uploadScript(
@@ -125,6 +134,7 @@ export class GlobalScriptHandler extends AbstractScriptHandler<GlobalScript> {
       modules[0],
       modules.slice(1),
       options.vars,
+      tags,
     );
 
     await Promise.all([
@@ -142,26 +152,39 @@ export class NamespacedScriptHandler extends AbstractScriptHandler<NamespacedScr
     super(new NamespacedScript(account, name), zone);
   }
 
+  async #deployScript(
+    assembled: Promise<CfModule[]>,
+    options: DeploymentOptions,
+    secrets: DeploymentSecrets,
+    tags: string[],
+  ): Promise<void> {
+    const modules = await assembled;
+    await uploadScript(
+      this._script,
+      modules[0],
+      modules.slice(1),
+      options.vars,
+      tags,
+    );
+
+    await Promise.all([
+      ...Object.entries(secrets).map(([name, value]) =>
+        submitSecret(this._script, name, value),
+      ),
+    ]);
+  }
+
   protected async *_doPublish(
     assembled: Promise<CfModule[]>,
     hostname: string,
     options: DeploymentOptions,
     secrets: DeploymentSecrets,
+    tags: string[],
   ): AsyncGenerator<string> {
-    const published = assembled
-      .then(modules =>
-        uploadScript(this._script, modules[0], modules.slice(1), options.vars),
-      )
-      .then(() =>
-        Promise.all(
-          Object.entries(secrets).map(([name, value]) =>
-            submitSecret(this._script, name, value),
-          ),
-        ),
-      );
+    const published = this.#deployScript(assembled, options, secrets, tags);
 
     // Custom Hostnames are not explicitly tied to scripts, so they can be set up / managed
-    // in parallel to the deployment of the script.
+    // in parallel with the deployment of the script.
     for await (const msg of publishCustomHostname(
       this._zone,
       this._script,
@@ -190,11 +213,7 @@ export class NamespacedScriptHandler extends AbstractScriptHandler<NamespacedScr
 // we use dns.Resolver.resolve() instead of lookup, and we have fetch connect directly
 // to the resulting IP address (to avoid fetch calling `getaddrinfo` to resolve the
 // hostname).
-//
-// When polling DNS, avoid being too aggressive, as resolve() anecdotally gets stuck
-// when polling too frequently because of some downstream caching or DOS-protection
-// logic.
-const DNS_POLL_INTERVAL = 8000;
+const DNS_POLL_INTERVAL = 3000;
 const FETCH_POLL_INTERVAL = 1000;
 const LIVENESS_TIMEOUT = 3 * 60 * 1000;
 const CLOUDFLARE_DNS_SERVERS = ['1.1.1.1'] as const;

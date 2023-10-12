@@ -10,10 +10,15 @@ import type {
  */
 export interface ReflectOptions<MD extends MutatorDefs> {
   /**
-   * Origin for WebSocket connections to the Reflect server. This must have a `'ws'` or `'wss'`
-   * scheme. If null, Reflect will not connect to any server (useful for testing).
+   * Server to connect to, for example "https://myapp-myteam.reflect.net/".
    */
-  socketOrigin: string | null;
+  server?: string | null | undefined;
+
+  /**
+   * Server to connect to, for example "wss://myapp-myteam.reflect.net/".
+   * @deprecated Use {@code server} instead.
+   */
+  socketOrigin?: string | null | undefined;
 
   /**
    * Identifies and authenticates the user.
@@ -91,7 +96,7 @@ export interface ReflectOptions<MD extends MutatorDefs> {
    *
    * ```ts
    * const reflect = new Reflect({
-   *   socketOrigin: 'wss://example.com/',
+   *   server: 'https://example.com/',
    *   userID: 'user-id',
    *   roomID: 'room-id',
    *   mutators: {

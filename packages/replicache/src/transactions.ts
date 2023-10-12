@@ -1,7 +1,8 @@
 import type {LogContext} from '@rocicorp/logger';
 import {greaterThan} from 'compare-utf8';
 import {IndexKey, decodeIndexKey} from './db/index.js';
-import type * as db from './db/mod.js';
+import type {Read} from './db/read.js';
+import type {Write} from './db/write.js';
 import type {IndexDefinition} from './index-defs.js';
 import {JSONValue, ReadonlyJSONValue, deepFreeze} from './json.js';
 import type {ScanResult} from './scan-iterator.js';
@@ -114,7 +115,7 @@ let transactionIDCounter = 0;
 
 export class ReadTransactionImpl implements ReadTransaction {
   readonly clientID: ClientID;
-  readonly dbtx: db.Read;
+  readonly dbtx: Read;
   protected readonly _lc: LogContext;
 
   /**
@@ -124,7 +125,7 @@ export class ReadTransactionImpl implements ReadTransaction {
 
   constructor(
     clientID: ClientID,
-    dbRead: db.Read,
+    dbRead: Read,
     lc: LogContext,
     rpcName = 'openReadTransaction',
   ) {
@@ -177,7 +178,7 @@ function noop(_: unknown): void {
 
 function scan<Options extends ScanOptions, V extends JSONValue>(
   options: Options | undefined,
-  dbRead: db.Read,
+  dbRead: Read,
   onLimitKey: (inclusiveLimitKey: string) => void,
 ): ScanResult<KeyTypeForScanOptions<Options>, V> {
   const iter = getScanIterator<Options, V>(dbRead, options);
@@ -270,9 +271,15 @@ export interface WriteTransaction extends ReadTransaction {
    * The reason for the transaction. This can be `initial`, `rebase` or `authoriative`.
    */
   readonly reason: TransactionReason;
+
   /**
    * Sets a single `value` in the database. The value will be frozen (using
    * `Object.freeze`) in debug mode.
+   */
+  set(key: string, value: ReadonlyJSONValue): Promise<void>;
+
+  /**
+   * @deprecated Use {@link WriteTransaction.set} instead.
    */
   put(key: string, value: ReadonlyJSONValue): Promise<void>;
 
@@ -288,7 +295,7 @@ export class WriteTransactionImpl
   implements WriteTransaction
 {
   // use `declare` to specialize the type.
-  declare readonly dbtx: db.Write;
+  declare readonly dbtx: Write;
   readonly reason: TransactionReason;
   readonly mutationID: number;
 
@@ -296,7 +303,7 @@ export class WriteTransactionImpl
     clientID: ClientID,
     mutationID: number,
     reason: TransactionReason,
-    dbWrite: db.Write,
+    dbWrite: Write,
     lc: LogContext,
     rpcName = 'openWriteTransaction',
   ) {
@@ -305,7 +312,11 @@ export class WriteTransactionImpl
     this.reason = reason;
   }
 
-  async put(key: string, value: ReadonlyJSONValue): Promise<void> {
+  put(key: string, value: ReadonlyJSONValue): Promise<void> {
+    return this.set(key, value);
+  }
+
+  async set(key: string, value: ReadonlyJSONValue): Promise<void> {
     throwIfClosed(this.dbtx);
     await this.dbtx.put(this._lc, key, deepFreeze(value));
   }
@@ -329,7 +340,7 @@ export type EntryForOptions<
 > = Options extends ScanIndexOptions ? IndexKeyEntry<V> : StringKeyEntry<V>;
 
 function getScanIterator<Options extends ScanOptions, V>(
-  dbRead: db.Read,
+  dbRead: Read,
   options: Options | undefined,
 ): AsyncIterable<EntryForOptions<Options, V>> {
   if (options && isScanIndexOptions(options)) {
@@ -363,14 +374,14 @@ function makeScanResultFromScanIteratorInternal<
 >(
   iter: AsyncIterable<EntryForOptions<Options, V>>,
   options: Options,
-  dbRead: db.Read,
+  dbRead: Read,
   onLimitKey: (inclusiveLimitKey: string) => void,
 ): ScanResult<KeyTypeForScanOptions<Options>, V> {
   return new ScanResultImpl(iter, options, dbRead, onLimitKey);
 }
 
 async function* getScanIteratorForIndexMap(
-  dbRead: db.Read,
+  dbRead: Read,
   options: ScanIndexOptions,
 ): AsyncIterable<IndexKeyEntry<ReadonlyJSONValue>> {
   const map = dbRead.getMapForIndex(options.indexName);

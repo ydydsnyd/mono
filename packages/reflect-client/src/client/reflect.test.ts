@@ -14,6 +14,7 @@ import {assert} from 'shared/src/asserts.js';
 import type {JSONValue} from 'shared/src/json.js';
 import * as valita from 'shared/src/valita.js';
 import * as sinon from 'sinon';
+import type {WSString} from './http-string.js';
 import {REPORT_INTERVAL_MS} from './metrics.js';
 import type {ReflectOptions} from './options.js';
 import {
@@ -60,6 +61,7 @@ test('onOnlineChange callback', async () => {
   let offlineCount = 0;
 
   const r = reflectForTest({
+    logLevel: 'debug',
     onOnlineChange: online => {
       if (online) {
         onlineCount++;
@@ -247,7 +249,7 @@ test('createSocket', () => {
   const nowStub = sinon.stub(performance, 'now').returns(0);
 
   const t = (
-    socketURL: string,
+    socketURL: WSString,
     baseCookie: NullableVersion,
     clientID: string,
     roomID: string,
@@ -662,21 +664,21 @@ test('puller with normal non-mutation recovery pull', async () => {
 test('smokeTest', async () => {
   const cases: {
     name: string;
-    enableSocket: boolean;
+    enableServer: boolean;
   }[] = [
     {
       name: 'socket enabled',
-      enableSocket: true,
+      enableServer: true,
     },
     {
       name: 'socket disabled',
-      enableSocket: false,
+      enableServer: false,
     },
   ];
 
   for (const c of cases) {
     // reflectForTest adds the socket by default.
-    const socketOptions = c.enableSocket ? {} : {socketOrigin: null};
+    const serverOptions = c.enableServer ? {} : {server: null};
     const r = reflectForTest({
       roomID: 'smokeTestRoom',
       mutators: {
@@ -685,14 +687,14 @@ test('smokeTest', async () => {
           data: {[key: string]: JSONValue},
         ) => {
           for (const [key, value] of Object.entries(data)) {
-            await tx.put(key, value);
+            await tx.set(key, value);
           }
         },
         del: async (tx: WriteTransaction, key: string) => {
           await tx.del(key);
         },
       },
-      ...socketOptions,
+      ...serverOptions,
     });
 
     const spy = sinon.spy();
@@ -755,12 +757,12 @@ test('smokeTest', async () => {
 });
 
 test('poke log context includes requestID', async () => {
-  const url = 'ws://example.com/';
+  const url = 'http://example.com/';
 
   const {promise: foundRequestIDFromLogPromise, resolve} = resolver<string>();
 
   const r = new TestReflect({
-    socketOrigin: url,
+    server: url,
     auth: '',
     userID: 'user-id',
     roomID: 'room-id',
@@ -1008,8 +1010,18 @@ test('Ping timeout', async () => {
   expect(r.connectionState).to.equal(ConnectionState.Connected);
 });
 
+const connectTimeoutMessage = 'Rejecting connect resolver due to timeout';
+
+function expectLogMessages(r: TestReflect<MutatorDefs>) {
+  return expect(
+    r.testLogSink.messages.flatMap(([level, _context, msg]) =>
+      level === 'debug' ? msg : [],
+    ),
+  );
+}
+
 test('Connect timeout', async () => {
-  const r = reflectForTest();
+  const r = reflectForTest({logLevel: 'debug'});
 
   await r.waitForConnectionState(ConnectionState.Connecting);
 
@@ -1025,6 +1037,7 @@ test('Connect timeout', async () => {
     expect(r.connectionState).to.equal(ConnectionState.Connecting);
     await clock.tickAsync(1);
     expect(r.connectionState).to.equal(ConnectionState.Disconnected);
+    expectLogMessages(r).contain(connectTimeoutMessage);
 
     // We got disconnected so we sleep for RUN_LOOP_INTERVAL_MS before trying again
 
@@ -1062,7 +1075,7 @@ test('socketOrigin', async () => {
   ];
 
   for (const c of cases) {
-    const r = reflectForTest(c.socketEnabled ? {} : {socketOrigin: null});
+    const r = reflectForTest(c.socketEnabled ? {} : {server: null});
 
     await tickAFewTimes(clock);
 
@@ -1519,12 +1532,12 @@ test('kvStore option', async () => {
     expectedValue: JSONValue | undefined = undefined,
   ) => {
     const r = reflectForTest({
-      socketOrigin: null,
+      server: null,
       userID,
       kvStore,
       mutators: {
         putFoo: async (tx, val: string) => {
-          await tx.put('foo', val);
+          await tx.set('foo', val);
         },
       },
     });
@@ -1581,4 +1594,15 @@ test('Close during connect should sleep', async () => {
   await r.waitForConnectionState(ConnectionState.Connected);
   await clock.tickAsync(0);
   expect(r.online).equal(true);
+});
+
+test('Reflect close should stop timeout', async () => {
+  const r = reflectForTest({
+    logLevel: 'debug',
+  });
+
+  await r.waitForConnectionState(ConnectionState.Connecting);
+  await r.close();
+  await clock.tickAsync(CONNECT_TIMEOUT_MS);
+  expectLogMessages(r).not.contain(connectTimeoutMessage);
 });

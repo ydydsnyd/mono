@@ -1,12 +1,12 @@
 import {expect} from 'chai';
 import type {JSONValue} from './json.js';
-import type {WriteTransaction} from './mod.js';
 import {
   initReplicacheTesting,
   makePullResponseV1,
   replicacheForTesting,
   tickAFewTimes,
 } from './test-util.js';
+import type {WriteTransaction} from './transactions.js';
 // fetch-mock has invalid d.ts file so we removed that on npm install.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
@@ -16,7 +16,7 @@ initReplicacheTesting();
 
 async function addData(tx: WriteTransaction, data: {[key: string]: JSONValue}) {
   for (const [key, value] of Object.entries(data)) {
-    await tx.put(key, value);
+    await tx.set(key, value);
   }
 }
 

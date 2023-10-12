@@ -11,6 +11,7 @@ export async function uploadScript(
   mainModule: CfModule,
   modules: CfModule[],
   vars: CfVars,
+  tags: string[],
 ) {
   const cfMigrations = await getMigrationsToUpload(script, {
     config: {migrations},
@@ -33,8 +34,11 @@ export async function uploadScript(
     },
     modules,
     migrations: cfMigrations,
+    tags,
     // eslint-disable-next-line @typescript-eslint/naming-convention
     compatibility_date: '2023-05-18',
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    compatibility_flags: ['nodejs_compat'],
   });
 
   const searchParams = new URLSearchParams({

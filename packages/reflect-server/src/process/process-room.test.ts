@@ -617,7 +617,7 @@ describe('processRoom', () => {
           inc: async (tx: WriteTransaction) => {
             let count = ((await tx.get('count')) as number) ?? 0;
             count++;
-            await tx.put('count', count);
+            await tx.set('count', count);
           },
         }),
       );
@@ -637,6 +637,7 @@ describe('processRoom', () => {
         c.pendingMutations.length,
         mutators,
         () => Promise.resolve(),
+        {onConnectionCountChange: () => Promise.resolve()},
         storage,
       );
       if (c.expectedError) {

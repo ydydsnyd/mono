@@ -48,11 +48,17 @@ import {
   deleteTeamSubdomainsOptions,
 } from './delete-team-subdomains.js';
 import {
+  checkProviderHandler,
+  checkProviderOptions,
   configureProviderHandler,
   configureProviderOptions,
 } from './configure-provider.js';
 import {migrateToWFPHandler, migrateToWFPOptions} from './migrate-to-wfp.js';
 import {certificatesHandler, certificatesOptions} from './certificates.js';
+import {
+  migrateDnsCommentsToTagsHandler,
+  migrateDnsCommentsToTagsOptions,
+} from './migrate-dns-comments-to-tags.js';
 
 async function main(argv: string[]): Promise<void> {
   const reflectCLI = createCLIParser(argv);
@@ -112,6 +118,14 @@ function createCLIParser(argv: string[]) {
     'Configures a provider for hosting Workers.',
     configureProviderOptions,
     configureProviderHandler,
+  );
+
+  // check-provider
+  reflectCLI.command(
+    'check-provider',
+    'Checks that the provider is properly set up.',
+    checkProviderOptions,
+    checkProviderHandler,
   );
 
   // wfp
@@ -183,6 +197,13 @@ function createCLIParser(argv: string[]) {
     'Converts team subdomains to team labels. Triggers new deployments of those apps.',
     migrateTeamLabelsOptions,
     migrateTeamLabelsHandler,
+  );
+
+  reflectCLI.command(
+    'migrate-dns-comments-to-tags',
+    'Converts workaround-comments in DNSRecords to actual tags.',
+    migrateDnsCommentsToTagsOptions,
+    migrateDnsCommentsToTagsHandler,
   );
 
   reflectCLI.command(

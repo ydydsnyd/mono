@@ -1,12 +1,13 @@
 import {expect} from 'chai';
 import {assertNotUndefined} from 'shared/src/asserts.js';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
-import * as dag from '../dag/mod.js';
+import type {Store} from '../dag/store.js';
+import {TestStore} from '../dag/test-store.js';
 import {FormatVersion} from '../format-version.js';
 import {fakeHash} from '../hash.js';
 import {IDBStore} from '../kv/idb-store.js';
 import {TestMemStore} from '../kv/test-mem-store.js';
-import {withWrite} from '../with-transactions.js';
+import {withWriteNoImplicitCommit} from '../with-transactions.js';
 import {ClientGroupMap, setClientGroups} from './client-groups.js';
 import {makeClientGroupMap} from './client-groups.test.js';
 import {
@@ -72,9 +73,9 @@ suite('collectIDBDatabases', () => {
     for (const legacy of legacyValues) {
       test(name + ' > time ' + now + (legacy ? ' > legacy' : ''), async () => {
         const store = new IDBDatabasesStore(_ => new TestMemStore());
-        const clientDagStores = new Map<IndexedDBName, dag.Store>();
+        const clientDagStores = new Map<IndexedDBName, Store>();
         for (const [db, clients, clientGroups] of entries) {
-          const dagStore = new dag.TestStore();
+          const dagStore = new TestStore();
           clientDagStores.set(db.name, dagStore);
           if (legacy) {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -86,7 +87,7 @@ suite('collectIDBDatabases', () => {
 
           await setClientsForTesting(clients, dagStore);
           if (clientGroups) {
-            await withWrite(dagStore, async tx => {
+            await withWriteNoImplicitCommit(dagStore, async tx => {
               await setClientGroups(clientGroups, tx);
               await tx.commit();
             });
