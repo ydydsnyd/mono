@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1697229888812,
+  "lastUpdate": 1697464038797,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -43421,6 +43421,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/e365df28fdb81826f021e92fcb92b97a24f13a99"
         },
         "date": 1697229877619,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 294956,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 52836,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 110290,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31020,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "09d57cbb1087acc568a8fe89a33a362a2c84d8f5",
+          "message": "chore: Export valita Type as Type (#1099)\n\nI had an idea that I wanted to hide the valita parse instance method but\r\nthe hiding was just causing problems in practice.",
+          "timestamp": "2023-10-16T09:45:22-04:00",
+          "tree_id": "0bca8cb853d05ea0eb277ad7d071822845edecf6",
+          "url": "https://github.com/rocicorp/mono/commit/09d57cbb1087acc568a8fe89a33a362a2c84d8f5"
+        },
+        "date": 1697464027796,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
