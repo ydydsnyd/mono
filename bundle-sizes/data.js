@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1697464038797,
+  "lastUpdate": 1697478739524,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -43485,6 +43485,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31020,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b4b4a0cb759731d1ca252b5958fd112e0658f429",
+          "message": "feat(replicache): Use valita for validation (3/?) (#1100)\n\nRedoing #474 in smaller incremental chunks.\r\n\r\nThis does src/sync/pulls.\r\n\r\nTowards #216",
+          "timestamp": "2023-10-16T17:50:25Z",
+          "tree_id": "5dfcf90e1865428cca46f72248135e214671fd3a",
+          "url": "https://github.com/rocicorp/mono/commit/b4b4a0cb759731d1ca252b5958fd112e0658f429"
+        },
+        "date": 1697478728246,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 297214,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53112,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111368,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31258,
             "unit": "bytes"
           }
         ]
