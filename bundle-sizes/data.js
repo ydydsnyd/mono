@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1697478739524,
+  "lastUpdate": 1697584011597,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -43529,6 +43529,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31258,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d69f1ded77f88643aa8c7a3e1a7576454ac8532a",
+          "message": "chore: Upgrade valita (#1111)\n\nUses target es2021 for the dist files which is slightly smaller/faster",
+          "timestamp": "2023-10-17T23:04:47Z",
+          "tree_id": "8f1507eb2d21ebf2e6d40fe2319c00a305936653",
+          "url": "https://github.com/rocicorp/mono/commit/d69f1ded77f88643aa8c7a3e1a7576454ac8532a"
+        },
+        "date": 1697583995571,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 297280,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53140,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111393,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31278,
             "unit": "bytes"
           }
         ]
