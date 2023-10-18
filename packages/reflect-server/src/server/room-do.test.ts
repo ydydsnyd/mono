@@ -7,6 +7,7 @@ import {
   test,
 } from '@jest/globals';
 import {LogContext} from '@rocicorp/logger';
+import type {LogLevel, TailMessage} from 'mirror-protocol/src/tail-message.js';
 import assert from 'node:assert';
 import type {WriteTransaction} from 'reflect-shared';
 import {version} from 'reflect-shared';
@@ -21,12 +22,17 @@ import {getUserValue, putUserValue} from '../types/user-value.js';
 import {getVersion, putVersion} from '../types/version.js';
 import {newAuthConnectionsRequest} from '../util/auth-test-util.js';
 import {resolver} from '../util/resolver.js';
+import {sleep} from '../util/sleep.js';
 import {TestLogSink, createSilentLogContext} from '../util/test-utils.js';
 import {originalConsole} from './console.js';
 import {createTestDurableObjectState} from './do-test-utils.js';
 import {TAIL_URL_PATH} from './paths.js';
 import {BaseRoomDO, getDefaultTurnDuration} from './room-do.js';
-import {sleep} from '../util/sleep.js';
+import {Queue} from 'shared/src/queue.js';
+import {subscribe, unsubscribe} from 'node:diagnostics_channel';
+import {CONNECTION_SECONDS_CHANNEL_NAME} from 'shared/src/events/connection-seconds.js';
+import {AUTH_DATA_HEADER_NAME} from './auth.js';
+import {REPORTING_INTERVAL_MS} from '../events/connection-seconds.js';
 
 test('sets roomID in createRoom', async () => {
   const testLogSink = new TestLogSink();
@@ -343,13 +349,13 @@ test('Sets turn duration based on allowUnconfirmedWrites flag', () => {
   }
 });
 
-async function makeBaseRoomDO() {
+async function makeBaseRoomDO(state?: DurableObjectState) {
   const testLogSink = new TestLogSink();
   return new BaseRoomDO({
     mutators: {},
     roomStartHandler: () => Promise.resolve(),
     disconnectHandler: () => Promise.resolve(),
-    state: await createTestDurableObjectState('test-do-id'),
+    state: state ?? (await createTestDurableObjectState('test-do-id')),
     authApiKey: 'API KEY',
     logSink: testLogSink,
     logLevel: 'info',
@@ -357,6 +363,58 @@ async function makeBaseRoomDO() {
     maxMutationsPerTurn: Number.MAX_SAFE_INTEGER,
   });
 }
+
+describe('connection seconds tracking', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test('tracks', async () => {
+    const START_TIME = 10000;
+    jest.setSystemTime(START_TIME);
+
+    const state = await createTestDurableObjectState('test-do-id');
+    const roomDO = await makeBaseRoomDO(state);
+    const reports = new Queue<unknown>();
+    function onPublish(message: unknown) {
+      void reports.enqueue(message);
+    }
+    subscribe(CONNECTION_SECONDS_CHANNEL_NAME, onPublish);
+
+    const request = new Request(
+      'ws://test.roci.dev/connect?clientID=cid1&clientGroupID=cg1&ts=123&lmid=0&wsid=wsidx1',
+      {
+        headers: {
+          [AUTH_DATA_HEADER_NAME]: '{"userID":"u1","more":"data"}',
+          ['Upgrade']: 'websocket',
+        },
+      },
+    );
+    const response = await roomDO.fetch(request);
+    expect(response.status).toBe(101);
+
+    // Let the async handleConnection() code run.
+    await jest.advanceTimersByTimeAsync(1);
+
+    const alarmTime = await state.storage.getAlarm();
+    expect(alarmTime).toBe(START_TIME + REPORTING_INTERVAL_MS);
+
+    // Fire the alarm at the scheduled time.
+    jest.setSystemTime(alarmTime ?? 0);
+    await roomDO.alarm();
+
+    expect(await reports.dequeue()).toEqual({
+      elapsed: REPORTING_INTERVAL_MS / 1000,
+      interval: REPORTING_INTERVAL_MS / 1000,
+    });
+
+    unsubscribe(CONNECTION_SECONDS_CHANNEL_NAME, onPublish);
+  });
+});
 
 test('good, bad, invalid connect requests', async () => {
   const goodRequest = new Request('ws://test.roci.dev/connect');
@@ -487,11 +545,11 @@ describe('tail', () => {
       'message',
       e => {
         expect(typeof e.data).toBe('string');
-        expect(JSON.parse(e.data as string)).toEqual([
-          'log',
-          1984,
-          ['hello', 'world'],
-        ]);
+        expect(JSON.parse(e.data as string)).toEqual({
+          type: 'log',
+          level: 'log',
+          message: ['hello', 'world'],
+        });
         resolve();
       },
       {once: true},
@@ -527,8 +585,8 @@ describe('tail', () => {
     // Wait to allow event listeners to get called
     await promise;
 
-    function makeLog(s: string) {
-      return [s, 1984, [s]];
+    function makeLog(s: LogLevel): TailMessage {
+      return {type: 'log', level: s, message: [s]};
     }
 
     expect(log).toEqual([
@@ -594,7 +652,7 @@ describe('tail', () => {
     console.log('hello', 'world');
 
     function makeLog(message: unknown[]) {
-      return ['log', 1984, message];
+      return {type: 'log', level: 'log', message};
     }
 
     await Promise.resolve();

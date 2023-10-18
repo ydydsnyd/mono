@@ -1,3 +1,5 @@
+//@ts-check
+
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import {execSync} from 'node:child_process';
@@ -8,31 +10,51 @@ function basePath(...parts) {
   return path.join(process.cwd(), ...parts);
 }
 
-function execute(command) {
+/**
+ * @param {string} command
+ * @param {{stdio?:'inherit'|'pipe'|undefined, cwd?:string|undefined}|undefined} [options]
+ */
+function execute(command, options) {
   console.log(`Executing: ${command}`);
-  return execSync(command, {stdio: 'inherit'});
+  return execSync(command, {stdio: 'inherit', ...options});
 }
 
+/**
+ * @param {fs.PathOrFileDescriptor} packagePath
+ */
 function getPackageData(packagePath) {
   return JSON.parse(fs.readFileSync(packagePath, 'utf8'));
 }
 
+/**
+ * @param {fs.PathOrFileDescriptor} packagePath
+ * @param {any} data
+ */
 function writePackageData(packagePath, data) {
   fs.writeFileSync(packagePath, JSON.stringify(data, null, 2));
 }
 
-function bumpCanaryVersion(version) {
-  const match = version.match(/-canary\.(\d+)$/);
-  if (match) {
-    const canaryNum = parseInt(match[1], 10);
-    return `${version.split('-canary.')[0]}-canary.${canaryNum + 1}`;
+/**
+ * @param {string} version
+ * @param {string} hash
+ */
+function bumpCanaryVersion(version, hash) {
+  const match = version.match(/^(\d+)\.(\d+)\./);
+  if (!match) {
+    throw new Error('Cannot parse existing version');
   }
-  const [major, minor] = version.split('.');
-  return `${major}.${parseInt(minor, 10) + 1}.0-canary.0`;
+
+  const [, major, minor] = match;
+  const [year, month, day, hour, minute] = new Date()
+    .toISOString()
+    .split(/[^\d]/);
+  const ts = `${year}${month}${day}${hour}${minute}`;
+
+  return `${major}.${minor}.${ts}+${hash}`;
 }
 
 try {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'shallow-clone'));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'reflect-build-'));
   execute(`git clone --depth 1 git@github.com:rocicorp/mono.git ${tempDir}`);
   process.chdir(tempDir);
   //installs turbo and other build dependencies
@@ -42,8 +64,19 @@ try {
     'reflect',
     'package.json',
   );
+
+  const changes = execute('git diff HEAD .', {stdio: 'pipe'}).toString().trim();
+  if (changes.length > 0) {
+    console.error('There are uncommitted changes, cannot continue');
+    process.exit(1);
+  }
+
+  const hash = execute('git rev-parse HEAD', {stdio: 'pipe'})
+    .toString()
+    .trim()
+    .substring(0, 6);
   const currentPackageData = getPackageData(REFLECT_PACKAGE_JSON_PATH);
-  const nextCanaryVersion = bumpCanaryVersion(currentPackageData.version);
+  const nextCanaryVersion = bumpCanaryVersion(currentPackageData.version, hash);
   currentPackageData.version = nextCanaryVersion;
 
   const tagName = `reflect/v${nextCanaryVersion}`;
@@ -52,11 +85,6 @@ try {
 
   writePackageData(REFLECT_PACKAGE_JSON_PATH, currentPackageData);
 
-  // publish current canary version so that `npm install` will work down the line
-  process.chdir(basePath('packages', 'reflect'));
-  execute('npm publish --tag=canary');
-
-  process.chdir(tempDir);
   const dependencyPaths = [
     basePath('apps', 'reflect.net', 'package.json'),
     basePath('mirror', 'mirror-cli', 'package.json'),
@@ -78,6 +106,9 @@ try {
   execute('git add **/package.json');
   execute('git add package-lock.json');
   execute(`git commit -m "Bump version to ${nextCanaryVersion}"`);
+
+  execute('npm publish --tag=canary', {cwd: basePath('packages', 'reflect')});
+
   execute(`git tag ${tagName}`);
   execute(`git push origin ${tagName}`);
   execute(`git checkout main`);
@@ -86,12 +117,10 @@ try {
   console.log(`please do the following:`);
   console.log(`1. cd ${tempDir}`);
   console.log(
-    `2. Please confirm the diff of the commit at HEAD and push to origin if correct`,
+    '2. Review the head commit with `git show HEAD`. Note: If work has happened on main since this release began, HEAD will be a merge commit. Otherwise it will be a normal commit.',
   );
-  console.log(`3. git diff HEAD^ HEAD`);
-  console.log(`4. git push origin main`);
-  console.log(`5. cd ~`);
-  console.log(`6. rm -rf ${tempDir}`);
+  console.log(`3. git push origin main`);
+  console.log(`4. cd -`);
 } catch (error) {
   console.error(`Error during execution: ${error}`);
   process.exit(1);

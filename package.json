@@ -26,5 +26,19 @@
   "eslintConfig": {
     "extends": "@rocicorp/eslint-config"
   },
-  "prettier": "@rocicorp/prettier-config"
+  "prettier": "@rocicorp/prettier-config",
+  "syncpack": {
+    "versionGroups": [
+      {
+        "dependencies": [
+          "@cloudflare/workers-types"
+        ],
+        "packages": [
+          "mirror-cli",
+          "mirror-workers"
+        ],
+        "label": "TODO: Move reflect packages to 4.x.x"
+      }
+    ]
+  }
 }

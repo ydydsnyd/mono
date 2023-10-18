@@ -1,9 +1,10 @@
+import {doc, getFirestore, Firestore} from 'firebase/firestore';
 import {
   publish as publishCaller,
   type PublishRequest,
 } from 'mirror-protocol/src/publish.js';
-import {deploymentViewDataConverter} from 'mirror-schema/src/client-view/deployment.js';
-import {watch} from 'mirror-schema/src/client-view/watch.js';
+import {deploymentViewDataConverter} from 'mirror-schema/src/external/deployment.js';
+import {watchDoc} from 'mirror-schema/src/external/watch.js';
 import assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
@@ -14,17 +15,23 @@ import {
 import {authenticate} from './auth-config.js';
 import {compile} from './compile.js';
 import {findServerVersionRange} from './find-reflect-server-version.js';
-import {Firestore, getFirestore} from './firebase.js';
 import {makeRequester} from './requester.js';
-import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
 import {checkForServerDeprecation} from './version.js';
+import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
 
 export function publishOptions(yargs: CommonYargsArgv) {
-  return yargs.option('reflect-channel', {
-    desc: 'Set the Reflect Channel for server updates',
-    type: 'string',
-    hidden: true,
-  });
+  return yargs
+    .option('reflect-channel', {
+      desc: 'Set the Reflect Channel for server updates',
+      type: 'string',
+      hidden: true,
+    })
+    .option('force-version-range', {
+      describe: 'Force the version range',
+      type: 'string',
+      requiresArg: true,
+      hidden: true,
+    });
 }
 
 async function exists(path: string) {
@@ -53,9 +60,14 @@ export async function publishHandler(
     throw new Error(`File not found: ${absPath}`);
   }
 
-  const range = await findServerVersionRange(absPath);
-  await checkForServerDeprecation(yargs, range);
-  const serverVersionRange = range.raw;
+  let serverVersionRange;
+  if (yargs.forceVersionRange) {
+    serverVersionRange = yargs.forceVersionRange;
+  } else {
+    const range = await findServerVersionRange(absPath);
+    await checkForServerDeprecation(yargs, range);
+    serverVersionRange = yargs.forceVersionRange ?? range.raw;
+  }
 
   console.log(`Compiling ${script}`);
   const {code, sourcemap} = await compile(absPath, 'linked', 'production');
@@ -83,11 +95,11 @@ export async function publishHandler(
   console.log('Requesting deployment');
   const {deploymentPath} = await publish(data);
 
-  const deploymentDoc = firestore
-    .doc(deploymentPath)
-    .withConverter(deploymentViewDataConverter);
+  const deploymentDoc = doc(firestore, deploymentPath).withConverter(
+    deploymentViewDataConverter,
+  );
 
-  for await (const snapshot of watch(deploymentDoc)) {
+  for await (const snapshot of watchDoc(deploymentDoc)) {
     const deployment = snapshot.data();
     if (!deployment) {
       console.error(`Deployment not found`);

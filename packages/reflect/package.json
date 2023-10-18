@@ -1,7 +1,7 @@
 {
   "name": "@rocicorp/reflect",
   "description": "",
-  "version": "0.36.0-canary.0",
+  "version": "0.36.202310172246+95297b",
   "license": "SEE LICENSE IN https://roci.dev/terms.html",
   "type": "module",
   "main": "index.js",
@@ -16,25 +16,24 @@
     "check-format": "prettier --ignore-path .gitignore --check *",
     "check-types": "tsc --noEmit",
     "lint": "eslint --ext .ts,.tsx,.js,.jsx tool/",
-    "//": "Force is used to ensure reflect-shared is rebuilt picking up the latest version from this package.json",
-    "prepack": "turbo run test --force",
+    "prepack": "npx turbo build",
     "postpack": "node tool/check-version.js && node tool/check-ambient-context.js",
     "create-canary": "node tool/create-canary.js"
   },
   "dependencies": {
-    "@badrap/valita": "^0.2.10",
+    "@badrap/valita": "^0.3.0",
     "@rocicorp/lock": "^1.0.3",
     "@rocicorp/logger": "^5.2.1",
     "@rocicorp/resolver": "^1.0.1",
     "esbuild": "^0.19.4",
-    "miniflare": "^3.20230717.0"
+    "miniflare": "^3.20230717.0",
+    "replicache-react": "^3.1.0"
   },
   "devDependencies": {
     "nanoid": "^4.0.2",
     "open": "^9.1.0",
     "picocolors": "^1.0.0",
     "pkg-up": "^4.0.0",
-    "replicache-react": "^3.1.0",
     "semver": "^7.5.4",
     "validate-npm-package-name": "^5.0.0",
     "ws": "^8.13.0",

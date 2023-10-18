@@ -1,14 +1,14 @@
+import {doc, getDoc, getFirestore} from 'firebase/firestore';
 import {ensureUser} from 'mirror-protocol/src/user.js';
 import {authenticate} from './auth-config.js';
 import {makeRequester} from './requester.js';
-import {getFirestore} from './firebase.js';
 import color from 'picocolors';
 import {
   appPath,
   AppView,
   appViewDataConverter,
-} from 'mirror-schema/src/client-view/app.js';
-import type {DeploymentView} from 'mirror-schema/src/client-view/deployment.js';
+} from 'mirror-schema/src/external/app.js';
+import type {DeploymentView} from 'mirror-schema/src/external/deployment.js';
 import {readAppConfig} from './app-config.js';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
 
@@ -28,10 +28,9 @@ export async function statusHandler(
   }
 
   const appView = (
-    await firestore
-      .doc(appPath(appID))
-      .withConverter(appViewDataConverter)
-      .get()
+    await getDoc(
+      doc(firestore, appPath(appID)).withConverter(appViewDataConverter),
+    )
   ).data();
 
   displayStatus(appID, appView);

@@ -1,9 +1,9 @@
 import {
-  RoomTailRequest,
   TailMessage,
   connectedMessageSchema,
   errorMessageSchema,
-} from 'mirror-protocol/src/tail.js';
+} from 'mirror-protocol/src/tail-message.js';
+import type {RoomTailRequest} from 'mirror-protocol/src/tail.js';
 import * as valita from 'shared/src/valita.js';
 import {ensureAppInstantiated} from '../app-config.js';
 import {authenticate} from '../auth-config.js';
@@ -12,7 +12,7 @@ import type {CommonYargsArgv, YargvToInterface} from '../yarg-types.js';
 import {createTailEventSource} from './tail-event-source.js';
 
 export function tailOptions(yargs: CommonYargsArgv) {
-  return yargs.option('room-id', {
+  return yargs.option('room', {
     describe: 'The room ID of the room to tail',
     type: 'string',
     requiresArg: true,
@@ -26,7 +26,7 @@ export async function tailHandler(yargs: TailHandlerArgs) {
   const {appID} = await ensureAppInstantiated(yargs);
   const {userID, getIdToken} = await authenticate(yargs);
   const idToken = await getIdToken();
-  const {roomId: roomID} = yargs;
+  const {room: roomID} = yargs;
 
   const data: RoomTailRequest = {
     requester: makeRequester(userID),
