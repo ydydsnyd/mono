@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1697584011597,
+  "lastUpdate": 1697651992678,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -43553,6 +43553,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/d69f1ded77f88643aa8c7a3e1a7576454ac8532a"
         },
         "date": 1697583995571,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 297280,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53140,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111393,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31278,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5ef9626b600d95149a798f738de338689b194647",
+          "message": "chore: Update templates and docs to use set (#1116)\n\nUpdate templates and docs to use WriteTransaction set instead of put.",
+          "timestamp": "2023-10-18T13:58:03-04:00",
+          "tree_id": "3d768305447e6de65c28ba799b2dcade47056c9a",
+          "url": "https://github.com/rocicorp/mono/commit/5ef9626b600d95149a798f738de338689b194647"
+        },
+        "date": 1697651979988,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
