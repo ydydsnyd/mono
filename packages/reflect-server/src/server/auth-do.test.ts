@@ -33,7 +33,8 @@ import {
   BaseAuthDO,
   recordConnection,
 } from './auth-do.js';
-import {AUTH_DATA_HEADER_NAME, AuthHandler} from './auth.js';
+import type {AuthHandler} from './auth.js';
+import { AUTH_DATA_HEADER_NAME, ROOM_ID_HEADER_NAME } from './internal-headers.js';
 import {
   TestDurableObjectId,
   TestDurableObjectState,
@@ -128,6 +129,7 @@ function createCreateRoomTestFixture({
 
       // eslint-disable-next-line require-await
       return new TestDurableObjectStub(id, async (request: Request) => {
+        expect(request.headers.get(ROOM_ID_HEADER_NAME)).toEqual(testRoomID);
         const url = new URL(request.url);
         if (url.pathname === CREATE_ROOM_PATH) {
           const count = roomDOcreateRoomCounts.get(objectIDString) || 0;
@@ -973,6 +975,7 @@ function createConnectTestFixture(
       expect(id.toString()).toEqual('room-do-0');
       // eslint-disable-next-line require-await
       return new TestDurableObjectStub(id, async (request: Request) => {
+        expect(request.headers.get(ROOM_ID_HEADER_NAME)).toEqual(testRoomID);
         const url = new URL(request.url);
         if (
           url.pathname === INTERNAL_CREATE_ROOM_PATH ||
@@ -1538,6 +1541,7 @@ test('authInvalidateForUser when requests to roomDOs are successful', async () =
             roomID,
             (roomDORequestCountsByRoomID.get(roomID) || 0) + 1,
           );
+          expect(request.headers.get(ROOM_ID_HEADER_NAME)).toEqual(roomID);
           await expectForwardedAuthInvalidateRequest(request, testRequestClone);
         }
         return new Response('Test Success', {status: 200});
@@ -1613,6 +1617,7 @@ test('authInvalidateForUser when connection ids have chars that need to be perce
             roomID,
             (roomDORequestCountsByRoomID.get(roomID) || 0) + 1,
           );
+          expect(request.headers.get(ROOM_ID_HEADER_NAME)).toEqual(roomID);
           await expectForwardedAuthInvalidateRequest(request, testRequestClone);
         }
         return new Response('Test Success', {status: 200});
@@ -1673,6 +1678,7 @@ test('authInvalidateForUser when any request to roomDOs returns error response',
             roomID,
             (roomDORequestCountsByRoomID.get(roomID) || 0) + 1,
           );
+          expect(request.headers.get(ROOM_ID_HEADER_NAME)).toEqual(roomID);
           await expectForwardedAuthInvalidateRequest(request, testRequestClone);
           return roomID === 'testRoomID2'
             ? new Response(
@@ -1732,6 +1738,7 @@ test('authInvalidateForRoom when request to roomDO is successful', async () => {
       gotObjectId = id;
       // eslint-disable-next-line require-await
       return new TestDurableObjectStub(id, async (request: Request) => {
+        expect(request.headers.get(ROOM_ID_HEADER_NAME)).toEqual(testRoomID);
         if (isAuthRequest(request)) {
           roomDORequestCount++;
           expect(request).toBe(testRequest);
@@ -1843,6 +1850,7 @@ test('authInvalidateForRoom when request to roomDO returns error response', asyn
       gotObjectId = id;
       // eslint-disable-next-line require-await
       return new TestDurableObjectStub(id, async (request: Request) => {
+        expect(request.headers.get(ROOM_ID_HEADER_NAME)).toEqual(testRoomID);
         if (isAuthRequest(request)) {
           roomDORequestCount++;
           expect(request).toBe(testRequest);
@@ -1908,6 +1916,7 @@ test('authInvalidateAll when requests to roomDOs are successful', async () => {
             roomID,
             (roomDORequestCountsByRoomID.get(roomID) || 0) + 1,
           );
+          expect(request.headers.get(ROOM_ID_HEADER_NAME)).toEqual(roomID);
           await expectForwardedAuthInvalidateRequest(request, testRequestClone);
         }
         return new Response('Test Success', {status: 200});
@@ -1978,6 +1987,7 @@ test('authInvalidateAll when any request to roomDOs returns error response', asy
             roomID,
             (roomDORequestCountsByRoomID.get(roomID) || 0) + 1,
           );
+          expect(request.headers.get(ROOM_ID_HEADER_NAME)).toEqual(roomID);
           await expectForwardedAuthInvalidateRequest(request, testRequestClone);
           return roomID === 'testRoomID2'
             ? new Response('Test authInvalidateAll Internal Server Error Msg', {
@@ -2033,6 +2043,7 @@ async function createRevalidateConnectionsTestFixture({
             roomID,
             (roomDORequestCountsByRoomID.get(roomID) || 0) + 1,
           );
+          expect(request.headers.get(ROOM_ID_HEADER_NAME)).toEqual(roomID);
           expect(request.url).toEqual(
             'https://unused-reflect-room-do.dev/api/auth/v0/connections',
           );
@@ -2199,6 +2210,7 @@ function createTailTestFixture(
         if (request.url !== tailURL.toString()) {
           return new Response();
         }
+        expect(request.headers.get(ROOM_ID_HEADER_NAME)).toEqual(testRoomID);
         expect(request.url).toEqual(testRequest.url);
         expect(request.headers.has(AUTH_DATA_HEADER_NAME)).toBe(false);
         if (testApiToken !== undefined) {

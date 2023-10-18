@@ -31,7 +31,7 @@ import {BaseRoomDO, getDefaultTurnDuration} from './room-do.js';
 import {Queue} from 'shared/src/queue.js';
 import {subscribe, unsubscribe} from 'node:diagnostics_channel';
 import {CONNECTION_SECONDS_CHANNEL_NAME} from 'shared/src/events/connection-seconds.js';
-import {AUTH_DATA_HEADER_NAME} from './auth.js';
+import { AUTH_DATA_HEADER_NAME } from './AUTH_DATA_HEADER_NAME.js';
 import {REPORTING_INTERVAL_MS} from '../events/connection-seconds.js';
 
 test('sets roomID in createRoom', async () => {

@@ -25,7 +25,7 @@ import {
   Mocket,
 } from '../util/test-utils.js';
 import {getConnectRequest, handleConnection} from '../server/connect.js';
-import {AUTH_DATA_HEADER_NAME} from './auth.js';
+import { AUTH_DATA_HEADER_NAME } from './AUTH_DATA_HEADER_NAME.js';
 import {encodeHeaderValue} from '../util/headers.js';
 import {DurableStorage} from '../storage/durable-storage.js';
 import {putVersion} from '../types/version.js';

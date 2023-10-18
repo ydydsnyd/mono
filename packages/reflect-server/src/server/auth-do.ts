@@ -23,7 +23,7 @@ import {
 } from '../util/socket.js';
 import {createAuthAPIHeaders} from './auth-api-headers.js';
 import {initAuthDOSchema} from './auth-do-schema.js';
-import {AUTH_DATA_HEADER_NAME, AuthHandler} from './auth.js';
+import type { AuthHandler } from './auth.js';
 import {requireUpgradeHeader, roomNotFoundResponse} from './http-util.js';
 import {
   CONNECT_URL_PATTERN,
@@ -62,6 +62,7 @@ import {
 import type {TailErrorKind} from './tail.js';
 import {registerUnhandledRejectionHandler} from './unhandled-rejection-handler.js';
 import {AlarmManager, TimeoutID} from './alarms.js';
+import { AUTH_DATA_HEADER_NAME, ROOM_ID_HEADER_NAME } from './internal-headers.js';
 
 export const AUTH_HANDLER_TIMEOUT_MS = 5_000;
 
@@ -994,15 +995,20 @@ async function roomDOFetch(
   lc: LogContext,
 ): Promise<Response> {
   lc.debug?.(`Sending request ${request.url} to roomDO with roomID ${roomID}`);
+  const requestWithRoomID = new Request(request);
+  requestWithRoomID.headers.set(
+    ROOM_ID_HEADER_NAME,
+    encodeHeaderValue(roomID),
+  );
   const responseFromDO = await timed(
     lc.debug,
     `RoomDO fetch for ${fetchDescription}`,
     async () => {
       try {
-        return await roomDOStub.fetch(request);
+        return await roomDOStub.fetch(requestWithRoomID);
       } catch (e) {
         lc.error?.(
-          `Exception fetching ${request.url} from roomDO with roomID ${roomID}`,
+          `Exception fetching ${requestWithRoomID.url} from roomDO with roomID ${roomID}`,
           e,
         );
         throw e;

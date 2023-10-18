@@ -53,6 +53,8 @@ import {connectTail} from './tail.js';
 import {registerUnhandledRejectionHandler} from './unhandled-rejection-handler.js';
 import {AlarmManager} from './alarms.js';
 import {ConnectionSecondsReporter} from '../events/connection-seconds.js';
+import { ROOM_ID_HEADER_NAME } from './internal-headers.js';
+import { decodeHeaderValue } from '../util/headers.js';
 
 const roomIDKey = '/system/roomID';
 const deletedKey = '/system/deleted';
@@ -95,9 +97,10 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   #maxProcessedMutationTimestamp = 0;
   readonly #lock = new LoggingLock();
   readonly #mutators: MutatorMap;
+  readonly #roomStartHandler: RoomStartHandler;
   readonly #disconnectHandler: DisconnectHandler;
   readonly #maxMutationsPerTurn: number;
-  #lcHasRoomIdContext = false;
+  #roomIDInited = false;
   #lc: LogContext;
   readonly #storage: DurableStorage;
   readonly #authApiKey: string;
@@ -122,6 +125,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     } = options;
 
     this.#mutators = new Map([...Object.entries(mutators)]) as MutatorMap;
+    this.#roomStartHandler =roomStartHandler;
     this.#disconnectHandler = disconnectHandler;
     this.#maxMutationsPerTurn = maxMutationsPerTurn;
     this.#storage = new DurableStorage(
@@ -152,7 +156,6 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
     void state.blockConcurrencyWhile(async () => {
       await initRoomSchema(this.#lc, this.#storage);
-      await processRoomStart(this.#lc, roomStartHandler, this.#storage);
     });
   }
 
@@ -189,46 +192,44 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     next: Handler<Context, Resp>,
   ) => requireAuthAPIKey(() => this.#authApiKey, next);
 
-  async fetch(request: Request): Promise<Response> {
-    let lc = populateLogContextFromRequest(this.#lc, request);
-
+  async fetch(request: Request): Promise<Response> { 
+    const lc = populateLogContextFromRequest(this.#lc, request);
     try {
       if (await this.deleted()) {
         return new Response('deleted', {
           status: 410, // Gone
         });
       }
-      const roomID = await this.maybeRoomID();
+      const roomIDHeaderValue = request.headers.get(ROOM_ID_HEADER_NAME);
+      if (roomIDHeaderValue === null || roomIDHeaderValue === '') {
+        return new Response('Missing Room ID Header', {status: 500});
+      }
+      const headerRoomID = decodeHeaderValue(roomIDHeaderValue);
+      const storedRoomID = await this.maybeRoomID();
       const url = new URL(request.url);
       const urlRoomID = url.searchParams.get('roomID');
       if (
         // roomID is not going to be set on the createRoom request, or after
         // the room has been deleted.
-        roomID !== undefined &&
+        storedRoomID !== undefined &&
         // roomID is not going to be set for all calls, eg to delete the room.
         urlRoomID !== null &&
-        urlRoomID !== roomID
+        urlRoomID !== storedRoomID
       ) {
-        lc.error?.('roomID mismatch', 'urlRoomID', urlRoomID, 'roomID', roomID);
+        lc.error?.('roomID mismatch', 'urlRoomID', urlRoomID, 'roomID', storedRoomID);
         return new Response('Unexpected roomID', {status: 400});
       }
 
-      if (!this.#lcHasRoomIdContext) {
+      if (!this.#roomIDInited) {
         await this.#lock.withLock(lc, 'initRoomIDContext', lcInLock => {
-          if (this.#lcHasRoomIdContext) {
-            lcInLock.debug?.('roomID context already initialized, returning');
+          if (this.#roomIDInited) {
+            lcInLock.debug?.('roomID already initialized, returning');
             return;
           }
-          if (urlRoomID !== null && roomID === undefined) {
-            lcInLock.error?.('Expected roomID to be present in storage', {
-              urlRoomID,
-            });
-          }
-          if (roomID || urlRoomID) {
-            const roomIDForContext = roomID ?? urlRoomID;
-            this.#lc = this.#lc.withContext('roomID', roomIDForContext);
-            lc = lc.withContext('roomID', roomIDForContext);
-            this.#lcHasRoomIdContext = true;
+          await this.#roomStartHandler()
+          this.#roomIDInited = true;
+          this.#lc = this.#lc.withContext('roomID', roomIDHeaderValue);
+          
             lc.info?.('initialized roomID context');
           }
         });
