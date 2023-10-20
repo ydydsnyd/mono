@@ -16,13 +16,13 @@
   },
   "dependencies": {
     "@badrap/valita": "^0.3.0",
-    "@inquirer/checkbox": "^1.4.0",
     "@rocicorp/resolver": "^1.0.1",
     "esbuild": "^0.19.4",
     "miniflare": "^3.20230717.0"
   },
   "devDependencies": {
     "@google-cloud/firestore": "^6.6.1",
+    "@inquirer/checkbox": "^1.4.0",
     "@inquirer/confirm": "^2.0.12",
     "@inquirer/input": "^1.2.11",
     "@rocicorp/eslint-config": "^0.5.1",
