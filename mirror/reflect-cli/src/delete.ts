@@ -64,22 +64,13 @@ export async function deleteHandler(yargs: DeleteHandlerArgs) {
   let selectedApps = [];
   if (apps.length > 1) {
     selectedApps = await checkbox({
-      message: `Delete the following apps?`,
+      message: `Select the apps and associated data to delete:`,
       choices: apps.map(app => ({name: app.name, value: app})),
     });
   } else {
     selectedApps = apps;
   }
   for (const app of selectedApps) {
-    const confirmed =
-      yargs.force ||
-      (await confirm({
-        message: `Delete "${app.name}" and associated data?`,
-        default: false,
-      }));
-    if (!confirmed) {
-      continue;
-    }
     console.info(`Requesting delete of "${app.name}"`);
     const {deploymentPath} = await deleteApp({
       requester: makeRequester(userID),
