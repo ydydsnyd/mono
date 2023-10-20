@@ -83,7 +83,7 @@ export async function deleteHandler(yargs: DeleteHandlerArgs) {
     console.info(`Requesting delete of "${app.name}"`);
     const {deploymentPath} = await deleteApp({
       requester: makeRequester(userID),
-      appID: app.name,
+      appID: app.id,
     });
 
     const deploymentDoc = doc(firestore, deploymentPath).withConverter(
