@@ -23,7 +23,7 @@ import {watchDoc} from 'mirror-schema/src/external/watch.js';
 import {must} from 'shared/src/must.js';
 import {readAppConfig, writeAppConfig} from './app-config.js';
 import {authenticate} from './auth-config.js';
-import {checkbox, confirm} from './inquirer.js';
+import {checkbox} from './inquirer.js';
 import {logErrorAndExit} from './log-error-and-exit.js';
 import {makeRequester} from './requester.js';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
