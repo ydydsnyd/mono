@@ -206,7 +206,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       }
       const roomID = decodeHeaderValue(roomIDHeaderValue);
       if (!this.#roomIDDependentInitCompleted) {
-        await this.#lock.withLock(lc, 'initRoomIDContext', async lcInLock => {
+        await this.#lock.withLock(lc, 'initRoomID', async lcInLock => {
           if (this.#roomIDDependentInitCompleted) {
             lcInLock.debug?.('roomID already initialized, returning');
             return;
