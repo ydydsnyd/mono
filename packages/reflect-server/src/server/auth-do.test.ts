@@ -34,7 +34,10 @@ import {
   recordConnection,
 } from './auth-do.js';
 import type {AuthHandler} from './auth.js';
-import { AUTH_DATA_HEADER_NAME, ROOM_ID_HEADER_NAME } from './internal-headers.js';
+import {
+  AUTH_DATA_HEADER_NAME,
+  ROOM_ID_HEADER_NAME,
+} from './internal-headers.js';
 import {
   TestDurableObjectId,
   TestDurableObjectState,
@@ -129,7 +132,9 @@ function createCreateRoomTestFixture({
 
       // eslint-disable-next-line require-await
       return new TestDurableObjectStub(id, async (request: Request) => {
-        expect(request.headers.get(ROOM_ID_HEADER_NAME)).toEqual(testRoomID);
+        expect(request.headers.get(ROOM_ID_HEADER_NAME)).toEqual(
+          encodeHeaderValue(testRoomID),
+        );
         const url = new URL(request.url);
         if (url.pathname === CREATE_ROOM_PATH) {
           const count = roomDOcreateRoomCounts.get(objectIDString) || 0;
@@ -182,7 +187,10 @@ test("createRoom creates a room and doesn't allow it to be re-created", async ()
 });
 
 test('createRoom allows slashes in roomIDs', async () => {
-  const {testRoomDO, state} = createCreateRoomTestFixture();
+  const testRoomID = '/';
+  const {testRoomDO, state} = createCreateRoomTestFixture({
+    testRoomID,
+  });
 
   const authDO = new TestAuthDO({
     roomDO: testRoomDO,
@@ -196,7 +204,7 @@ test('createRoom allows slashes in roomIDs', async () => {
   const testRequest = newCreateRoomRequest(
     'https://test.roci.dev',
     TEST_AUTH_API_KEY,
-    '/',
+    testRoomID,
   );
   let response = await authDO.fetch(testRequest);
   expect(response.status).toEqual(200);
@@ -206,7 +214,7 @@ test('createRoom allows slashes in roomIDs', async () => {
     {
       jurisdiction: '',
       objectIDString: 'unique-room-do-0',
-      roomID: '/',
+      roomID: testRoomID,
       status: 'open',
     },
   ]);
@@ -817,7 +825,8 @@ test('roomStatusByRoomID returns unknown for a room that does not exist', async 
 });
 
 test('roomStatusByRoomID requires authApiKey', async () => {
-  const {testRoomDO, state} = createCreateRoomTestFixture();
+  const testRoomID = 'abc123';
+  const {testRoomDO, state} = createCreateRoomTestFixture({testRoomID});
 
   const authDO = new TestAuthDO({
     roomDO: testRoomDO,
@@ -828,7 +837,7 @@ test('roomStatusByRoomID requires authApiKey', async () => {
     logLevel: 'debug',
   });
 
-  const path = AUTH_ROUTES.roomStatusByRoomID.replace(':roomID', 'abc123');
+  const path = AUTH_ROUTES.roomStatusByRoomID.replace(':roomID', testRoomID);
   const statusRequest = new Request(`https://test.roci.dev${path}`, {
     method: 'get',
     // No auth header.
@@ -865,7 +874,20 @@ test('roomRecords returns empty array if no rooms exist', async () => {
 });
 
 test('roomRecords returns rooms that exists', async () => {
-  const {testRoomDO, state} = createCreateRoomTestFixture();
+  let roomNum = 0;
+  const testRoomDO: DurableObjectNamespace = {
+    ...createTestDurableObjectNamespace(),
+    idFromName: () => {
+      throw 'should not be called';
+    },
+    newUniqueId: () => new TestDurableObjectId('unique-room-do-' + roomNum++),
+    get: (id: DurableObjectId) =>
+      // eslint-disable-next-line require-await
+      new TestDurableObjectStub(id, async (request: Request) => {
+        expect(request.headers.has(ROOM_ID_HEADER_NAME)).toBeTruthy();
+        return new Response('', {status: 200});
+      }),
+  };
 
   const authDO = new TestAuthDO({
     roomDO: testRoomDO,
@@ -891,7 +913,8 @@ test('roomRecords returns rooms that exists', async () => {
 });
 
 test('roomRecords requires authApiKey', async () => {
-  const {testRoomDO, state} = createCreateRoomTestFixture();
+  const testRoomID = 'testRoomID';
+  const {testRoomDO, state} = createCreateRoomTestFixture({testRoomID});
 
   const authDO = new TestAuthDO({
     roomDO: testRoomDO,
@@ -901,7 +924,7 @@ test('roomRecords requires authApiKey', async () => {
     logSink: new TestLogSink(),
     logLevel: 'debug',
   });
-  await createRoom(authDO, '1');
+  await createRoom(authDO, testRoomID);
 
   const roomRecordsRequest = new Request(
     `https://test.roci.dev${AUTH_ROUTES.roomRecords}`,
@@ -1729,6 +1752,7 @@ test('authInvalidateForRoom when request to roomDO is successful', async () => {
       }),
     },
   );
+  const testRequestClone = testRequest.clone();
 
   let roomDORequestCount = 0;
   let gotObjectId: DurableObjectId | undefined;
@@ -1741,7 +1765,7 @@ test('authInvalidateForRoom when request to roomDO is successful', async () => {
         expect(request.headers.get(ROOM_ID_HEADER_NAME)).toEqual(testRoomID);
         if (isAuthRequest(request)) {
           roomDORequestCount++;
-          expect(request).toBe(testRequest);
+          await expectForwardedAuthInvalidateRequest(request, testRequestClone);
         }
         return new Response('Test Success', {status: 200});
       });
@@ -1841,6 +1865,7 @@ test('authInvalidateForRoom when request to roomDO returns error response', asyn
       }),
     },
   );
+  const testRequestClone = testRequest.clone();
 
   let roomDORequestCount = 0;
   let gotObjectId: DurableObjectId | undefined;
@@ -1853,7 +1878,7 @@ test('authInvalidateForRoom when request to roomDO returns error response', asyn
         expect(request.headers.get(ROOM_ID_HEADER_NAME)).toEqual(testRoomID);
         if (isAuthRequest(request)) {
           roomDORequestCount++;
-          expect(request).toBe(testRequest);
+          await expectForwardedAuthInvalidateRequest(request, testRequestClone);
           return new Response(
             'Test authInvalidateForRoom Internal Server Error Msg',
             {status: 500},
