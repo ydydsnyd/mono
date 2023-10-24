@@ -1,6 +1,6 @@
 import type {LogContext} from '@rocicorp/logger';
-import { ROOM_ID_HEADER_NAME } from '../server/internal-headers.js';
-import { decodeHeaderValue } from './headers.js';
+import {ROOM_ID_HEADER_NAME} from '../server/internal-headers.js';
+import {decodeHeaderValue} from './headers.js';
 
 export function populateLogContextFromRequest(
   lc: LogContext,

@@ -17,4 +17,3 @@ export type AuthHandler = (
   auth: string,
   roomID: string,
 ) => MaybePromise<AuthData | null>;
-
