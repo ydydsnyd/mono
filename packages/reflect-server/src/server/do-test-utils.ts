@@ -77,7 +77,7 @@ export function createTestDurableObjectNamespace(): DurableObjectNamespace {
     newUniqueId: (_options?: DurableObjectNamespaceNewUniqueIdOptions) =>
       // TODO(fritz) support options
       new TestDurableObjectId('unique-id-' + objectIDCounter++),
-    // Note: uses the given name for both the object ID and the name.
+    // Note: uses the given name for both the object ID and the name. Touch.
     idFromName: (name: string) => new TestDurableObjectId(name, name),
     idFromString: (objectIDString: string) =>
       // Note: doesn't support names.
