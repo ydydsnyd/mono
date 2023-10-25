@@ -204,13 +204,13 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       if (roomIDHeaderValue === null || roomIDHeaderValue === '') {
         return new Response('Missing Room ID Header', {status: 500});
       }
-      const roomID = decodeHeaderValue(roomIDHeaderValue);
       if (!this.#roomIDDependentInitCompleted) {
         await this.#lock.withLock(lc, 'initRoomID', async lcInLock => {
           if (this.#roomIDDependentInitCompleted) {
             lcInLock.debug?.('roomID already initialized, returning');
             return;
           }
+          const roomID = decodeHeaderValue(roomIDHeaderValue);
           await processRoomStart(
             lcInLock,
             this.#roomStartHandler,

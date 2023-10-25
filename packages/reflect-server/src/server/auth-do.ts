@@ -179,7 +179,6 @@ export class BaseAuthDO implements DurableObject {
       lc.info?.(`Returning response: ${resp.status} ${resp.statusText}`);
       return resp;
     } catch (e) {
-      console.log(e);
       lc.error?.('Unhandled exception in fetch', e);
       return new Response(
         e instanceof Error ? e.message : 'Unexpected error.',
