@@ -66,7 +66,9 @@ export class ConnectionSecondsReporter implements ConnectionCountTracker {
     if (prevTimeoutID === 0) {
       this.#intervalStartTime = now;
     }
-    this.#timeoutID = await this.#scheduler.promiseTimeout(
+    // Note: We must use setTimeout() here (and not promiseTimeout()) because
+    // the reading and writing of this.#timeoutID must be atomic.
+    this.#timeoutID = this.#scheduler.setTimeout(
       lc => this.#flush(lc),
       intervalMs,
     );
