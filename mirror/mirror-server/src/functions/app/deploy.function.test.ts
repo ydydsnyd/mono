@@ -1,22 +1,18 @@
 import {
-  describe,
-  test,
-  jest,
-  expect,
-  beforeAll,
   afterAll,
-  beforeEach,
   afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  jest,
+  test,
 } from '@jest/globals';
+import {resolver} from '@rocicorp/resolver';
 import {initializeApp} from 'firebase-admin/app';
 import {FieldValue, Timestamp, getFirestore} from 'firebase-admin/firestore';
-import {resolver} from '@rocicorp/resolver';
-import {
-  runDeployment,
-  earlierDeployments,
-  requestDeployment,
-} from './deploy.function.js';
 import type {Storage} from 'firebase-admin/storage';
+import {appDataConverter, type ScriptRef} from 'mirror-schema/src/app.js';
 import {
   Deployment,
   DeploymentStatus,
@@ -28,27 +24,32 @@ import {
   deploymentsCollection,
 } from 'mirror-schema/src/deployment.js';
 import {
-  setApp,
-  dummySecrets,
-  getApp,
-  setTeam,
-  setAppName,
-  getTeam,
-} from 'mirror-schema/src/test-helpers.js';
-import {must} from 'shared/src/must.js';
-import {serverDataConverter, serverPath} from 'mirror-schema/src/server.js';
-import {type ScriptRef, appDataConverter} from 'mirror-schema/src/app.js';
-import {Queue} from 'shared/src/queue.js';
-import {mockFunctionParamsAndSecrets} from '../../test-helpers.js';
-import {appNameIndexPath, teamPath} from 'mirror-schema/src/team.js';
-import {sleep} from 'shared/src/sleep.js';
-import {
   DEFAULT_PROVIDER_ID,
   providerDataConverter,
   providerPath,
 } from 'mirror-schema/src/provider.js';
+import {serverDataConverter, serverPath} from 'mirror-schema/src/server.js';
+import {appNameIndexPath, teamPath} from 'mirror-schema/src/team.js';
+import {
+  dummySecrets,
+  getApp,
+  getTeam,
+  setApp,
+  setAppName,
+  setTeam,
+} from 'mirror-schema/src/test-helpers.js';
+import {must} from 'shared/src/must.js';
+import {Queue} from 'shared/src/queue.js';
+import {sleep} from 'shared/src/sleep.js';
 import type {ScriptHandler} from '../../cloudflare/script-handler.js';
+import type {SecretValue, Secrets} from '../../secrets/index.js';
+import {mockFunctionParamsAndSecrets} from '../../test-helpers.js';
 import {MIN_WFP_VERSION} from './create.function.js';
+import {
+  earlierDeployments,
+  requestDeployment,
+  runDeployment,
+} from './deploy.function.js';
 
 mockFunctionParamsAndSecrets();
 
@@ -70,9 +71,12 @@ describe('deploy', () => {
     async delete(): Promise<void> {},
   };
 
-  function mockGetApiToken(provider: string): Promise<string> {
-    expect(provider).toBe(DEFAULT_PROVIDER_ID);
-    return Promise.resolve('api-token');
+  class MockSecrets implements Secrets {
+    getSecret(name: string, version = 'latest'): Promise<SecretValue> {
+      expect(name).toBe(`${DEFAULT_PROVIDER_ID}_api_token`);
+      expect(version).toBe('latest');
+      return Promise.resolve({payload: 'api-token', version: '1'});
+    }
   }
 
   beforeAll(async () => {
@@ -246,9 +250,9 @@ describe('deploy', () => {
     const deploymentFinished = runDeployment(
       firestore,
       null as unknown as Storage,
+      new MockSecrets(),
       APP_ID,
       deploymentID,
-      mockGetApiToken,
       {
         async *publish() {
           publishing();
@@ -298,9 +302,9 @@ describe('deploy', () => {
     await runDeployment(
       firestore,
       null as unknown as Storage,
+      new MockSecrets(),
       APP_ID,
       nextDeploymentID,
-      mockGetApiToken,
       noopScriptHandler,
     );
 
@@ -339,9 +343,9 @@ describe('deploy', () => {
     const deploymentFinished = runDeployment(
       firestore,
       null as unknown as Storage,
+      new MockSecrets(),
       APP_ID,
       deploymentID,
-      mockGetApiToken,
       {
         // eslint-disable-next-line require-yield
         async *publish() {
@@ -432,17 +436,17 @@ describe('deploy', () => {
       runDeployment(
         firestore,
         null as unknown as Storage,
+        new MockSecrets(),
         APP_ID,
         id,
-        mockGetApiToken,
         testScriptHandler,
       ),
       runDeployment(
         firestore,
         null as unknown as Storage,
+        new MockSecrets(),
         APP_ID,
         id,
-        mockGetApiToken,
         testScriptHandler,
       ),
     ]);
@@ -470,9 +474,9 @@ describe('deploy', () => {
     await runDeployment(
       firestore,
       null as unknown as Storage,
+      new MockSecrets(),
       APP_ID,
       deleteID,
-      mockGetApiToken,
       {
         async *publish() {},
         // eslint-disable-next-line require-await
@@ -544,9 +548,9 @@ describe('deploy', () => {
         await runDeployment(
           firestore,
           null as unknown as Storage,
+          new MockSecrets(),
           APP_ID,
           deploymentID,
-          mockGetApiToken,
           {
             async *publish() {},
             // eslint-disable-next-line require-await
