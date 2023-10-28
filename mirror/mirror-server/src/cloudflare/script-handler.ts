@@ -1,32 +1,32 @@
-import type {Storage} from 'firebase-admin/storage';
+import type {CfModule} from 'cloudflare-api/src/create-script-upload-form.js';
+import {Errors, FetchResultError} from 'cloudflare-api/src/fetch.js';
+import type {AccountAccess} from 'cloudflare-api/src/resources.js';
 import {
-  Script,
-  NamespacedScript,
   GlobalScript,
   NamespacedName,
+  NamespacedScript,
+  Script,
 } from 'cloudflare-api/src/scripts.js';
-import {Errors, FetchResultError} from 'cloudflare-api/src/fetch.js';
-import type {ZoneConfig} from './config.js';
-import {
-  deleteCustomHostnames,
-  publishCustomHostname,
-} from './publish-custom-hostnames.js';
+import {Resolver} from 'dns/promises';
+import type {Storage} from 'firebase-admin/storage';
 import {logger} from 'firebase-functions';
+import {HttpsError} from 'firebase-functions/v2/https';
 import type {
   DeploymentOptions,
   DeploymentSecrets,
 } from 'mirror-schema/src/deployment.js';
 import type {ModuleRef} from 'mirror-schema/src/module.js';
+import {sleep} from 'shared/src/sleep.js';
+import type {ZoneConfig} from './config.js';
 import {ModuleAssembler} from './module-assembler.js';
-import type {CfModule} from 'cloudflare-api/src/create-script-upload-form.js';
+import {publishCustomDomains} from './publish-custom-domains.js';
+import {
+  deleteCustomHostnames,
+  publishCustomHostname,
+} from './publish-custom-hostnames.js';
 import {uploadScript} from './publish.js';
 import {submitSecret} from './submit-secret.js';
-import {publishCustomDomains} from './publish-custom-domains.js';
 import {submitTriggers} from './submit-triggers.js';
-import type {AccountAccess} from 'cloudflare-api/src/resources.js';
-import {Resolver} from 'dns/promises';
-import {HttpsError} from 'firebase-functions/v2/https';
-import {sleep} from 'shared/src/sleep.js';
 
 export type ScriptHandler = {
   publish(
@@ -214,8 +214,9 @@ export class NamespacedScriptHandler extends AbstractScriptHandler<NamespacedScr
 // to the resulting IP address (to avoid fetch calling `getaddrinfo` to resolve the
 // hostname).
 const DNS_POLL_INTERVAL = 3000;
-const FETCH_POLL_INTERVAL = 1000;
-const LIVENESS_TIMEOUT = 3 * 60 * 1000;
+const DNS_TIMEOUT = 2 * 60 * 1000;
+// const FETCH_POLL_INTERVAL = 1000;
+// const LIVENESS_TIMEOUT = 5 * 1000;
 const CLOUDFLARE_DNS_SERVERS = ['1.1.1.1'] as const;
 
 export async function* waitForLiveness(host: string): AsyncGenerator<string> {
@@ -223,12 +224,11 @@ export async function* waitForLiveness(host: string): AsyncGenerator<string> {
   resolver.setServers(CLOUDFLARE_DNS_SERVERS);
 
   const start = Date.now();
-  let ip: string;
+  let ips: string[];
   for (let first = true; ; first = false) {
     try {
-      const res = await resolver.resolve4(host);
-      logger.info(`${host} resolves to ${res}`);
-      ip = res[0];
+      ips = await resolver.resolve4(host);
+      logger.info(`${host} resolves to ${ips}`);
       break;
     } catch (err) {
       logger.debug(`resolve(${host}) DNS error`, err);
@@ -236,7 +236,7 @@ export async function* waitForLiveness(host: string): AsyncGenerator<string> {
     if (first) {
       yield `Waiting for DNS to resolve`;
     }
-    if (Date.now() - start > LIVENESS_TIMEOUT) {
+    if (Date.now() - start > DNS_TIMEOUT) {
       throw new HttpsError(
         'deadline-exceeded',
         `Timed out waiting for ${host}. DNS records may not be correctly set up.`,
@@ -245,25 +245,28 @@ export async function* waitForLiveness(host: string): AsyncGenerator<string> {
     await sleep(DNS_POLL_INTERVAL);
   }
 
-  yield `Verifying liveness of https://${host}/`;
-  const url = `https://${ip}:443/`;
-  for (;;) {
-    try {
-      const res = await fetch(url, {headers: {host}});
-      if (res.ok) {
-        logger.info(`${url} (Host: ${host}) is live`);
-        break;
-      }
-      logger.debug(`GET ${url}: ${res.status}`);
-    } catch (err) {
-      logger.debug(`GET ${url} error`, err);
-    }
-    if (Date.now() - start > LIVENESS_TIMEOUT) {
-      throw new HttpsError(
-        'deadline-exceeded',
-        `Timed out waiting for https://${host}/`,
-      );
-    }
-    await sleep(FETCH_POLL_INTERVAL);
-  }
+  // Disabled while investigating https://github.com/rocicorp/mono/issues/1159
+  //
+  // yield `Verifying liveness of https://${host}/`;
+  // start = Date.now();
+  // for (let i = 0; ; i++) {
+  //   const url = `https://${ips[i % ips.length]}:443/`;
+  //   try {
+  //     const res = await fetch(url, {headers: {host}});
+  //     if (res.ok) {
+  //       logger.info(`${url} (Host: ${host}) is live`);
+  //       break;
+  //     }
+  //     logger.debug(`GET ${url}: ${res.status}`);
+  //   } catch (err) {
+  //     logger.debug(`GET ${url} error`, err);
+  //   }
+  //   if (Date.now() - start > LIVENESS_TIMEOUT) {
+  //     logger.warn(
+  //       `Timed out waiting for https://${host}/. But the Worker was presumably successfully deployed.`,
+  //     );
+  //     break;
+  //   }
+  //   await sleep(FETCH_POLL_INTERVAL);
+  // }
 }
