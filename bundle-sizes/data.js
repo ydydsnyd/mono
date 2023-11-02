@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1698703892142,
+  "lastUpdate": 1698933626991,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -43661,6 +43661,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31259,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1e33de602aabe792eb4d94dfd88e5debcf7dab6c",
+          "message": "feat(replicache): Include type in error message (#1194)\n\nIn getSizeOfValue, if the value is an invalid type we throw an error.\r\nThis error message now includes the typeof the value.\r\n\r\nhttps://discord.com/channels/830183651022471199/1169588647683694593/1169588647683694593",
+          "timestamp": "2023-11-02T13:58:26Z",
+          "tree_id": "3bfacd0bfaf586dcb9a875bf7d21a74e4e9d1fef",
+          "url": "https://github.com/rocicorp/mono/commit/1e33de602aabe792eb4d94dfd88e5debcf7dab6c"
+        },
+        "date": 1698933615581,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 297272,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53137,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111383,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31244,
             "unit": "bytes"
           }
         ]
