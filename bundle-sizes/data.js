@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1698933626991,
+  "lastUpdate": 1699031662039,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -43705,6 +43705,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31244,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d83d471a67b84d7ab4ca97e1978c89beef481348",
+          "message": "refactor(replicache, reflect)!: Make clientID synchronous, rather than a Promise. (#1197)\n\n`clientID` no longer needs to be a `Promise<string>`, as it is simply a uuid.  `clientID` being a `Promise<string>` creates quite a bit of unnecessary complexity in `Reflect` client's impls and in many of our samples and demos, and more than likely our customers' apps.\r\n\r\nBREAKING CHANGE: The type of `Replicache.clientID`  was changed from `Promise<string>` to `string`.  The type of `Reflect.clientID`  was changed from `Promise<ClientID>` to `ClientID`.",
+          "timestamp": "2023-11-03T10:12:31-07:00",
+          "tree_id": "6ec4a74bdb0352bf6d58d703ca727c74457f5b53",
+          "url": "https://github.com/rocicorp/mono/commit/d83d471a67b84d7ab4ca97e1978c89beef481348"
+        },
+        "date": 1699031651071,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 296676,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53062,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111215,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31240,
             "unit": "bytes"
           }
         ]
