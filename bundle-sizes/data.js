@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1699061982846,
+  "lastUpdate": 1699114360060,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -43783,6 +43783,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.mjs.br (Brotli compressed)",
             "value": 53138,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111283,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31224,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "132324914+d-llama@users.noreply.github.com",
+            "name": "d-llama",
+            "username": "d-llama"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a7ff93c2d540ece7f120ec4b20eeeb259c33f26e",
+          "message": "fix(replicache): Restore the export of TransactionEnvironment (#1205)",
+          "timestamp": "2023-11-04T16:10:42Z",
+          "tree_id": "f55e9254185c6511b2c49a1bde85c4d8a766c2e0",
+          "url": "https://github.com/rocicorp/mono/commit/a7ff93c2d540ece7f120ec4b20eeeb259c33f26e"
+        },
+        "date": 1699114347410,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 296810,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53113,
             "unit": "bytes"
           },
           {
