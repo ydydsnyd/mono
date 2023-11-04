@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1699031662039,
+  "lastUpdate": 1699061982846,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -43749,6 +43749,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31240,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "132324914+d-llama@users.noreply.github.com",
+            "name": "d-llama",
+            "username": "d-llama"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "73b4ff0e1d435aa75347c86ce0da3a8fe5e78c8d",
+          "message": "feat(reflect-server): extract and plumb Env vars (#1201)",
+          "timestamp": "2023-11-04T01:37:44Z",
+          "tree_id": "3f5dc6dc31ba13d667104b605cd5896b1b703d7c",
+          "url": "https://github.com/rocicorp/mono/commit/73b4ff0e1d435aa75347c86ce0da3a8fe5e78c8d"
+        },
+        "date": 1699061970383,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 296798,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53138,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111283,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31224,
             "unit": "bytes"
           }
         ]
