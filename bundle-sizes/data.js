@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1699114360060,
+  "lastUpdate": 1699292539794,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -43827,6 +43827,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.mjs.br (Brotli compressed)",
             "value": 53113,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111283,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31224,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "132324914+d-llama@users.noreply.github.com",
+            "name": "d-llama",
+            "username": "d-llama"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "13e5a3c56d10f804957606a7e58c0211c4aa245e",
+          "message": "doc(replicache): use @link in @deprecated description (#1207)",
+          "timestamp": "2023-11-06T17:40:28Z",
+          "tree_id": "a835ff6fa772f39330b1e66aec34c954f840db8e",
+          "url": "https://github.com/rocicorp/mono/commit/13e5a3c56d10f804957606a7e58c0211c4aa245e"
+        },
+        "date": 1699292528608,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 296832,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53103,
             "unit": "bytes"
           },
           {
