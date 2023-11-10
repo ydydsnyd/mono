@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1699626116276,
+  "lastUpdate": 1699626973371,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -43905,6 +43905,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/28c7d3f98beac93b2cca636b10b1fa903edd21bf"
         },
         "date": 1699626104075,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 296832,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53103,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111283,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31224,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6c377c59d71bb3252fbc69d6e35a3a3afa6e6484",
+          "message": "fix(reflect-client): Make Reflect work in a Worker (#1220)\n\nDon't assume localStorage is present\r\n\r\nThis also adds a worker smoke test to ensure we do not regress this\r\nagain.",
+          "timestamp": "2023-11-10T14:33:55Z",
+          "tree_id": "99419de31865a53a94bb9b18890a9a508946e7c8",
+          "url": "https://github.com/rocicorp/mono/commit/6c377c59d71bb3252fbc69d6e35a3a3afa6e6484"
+        },
+        "date": 1699626958720,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
