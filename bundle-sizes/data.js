@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1699292539794,
+  "lastUpdate": 1699626116276,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -43861,6 +43861,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/13e5a3c56d10f804957606a7e58c0211c4aa245e"
         },
         "date": 1699292528608,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 296832,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53103,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111283,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31224,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "28c7d3f98beac93b2cca636b10b1fa903edd21bf",
+          "message": "chore: Upgrade playwright etc (#1219)\n\nThe reason is so that we can run esm workers in firefox",
+          "timestamp": "2023-11-10T14:20:21Z",
+          "tree_id": "19c7261c539bab214133ab89bb3ba4b9c784d4a5",
+          "url": "https://github.com/rocicorp/mono/commit/28c7d3f98beac93b2cca636b10b1fa903edd21bf"
+        },
+        "date": 1699626104075,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
