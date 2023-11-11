@@ -36,7 +36,11 @@ export async function storeModule(
   const file = bucket.file(filename);
   const [exists] = await file.exists();
   if (!exists) {
-    await file.save(module.content, {resumable: false});
+    await file.save(module.content, {
+      contentType: 'text/plain',
+      gzip: true,
+      resumable: false,
+    });
   }
   return {
     name: module.name,
