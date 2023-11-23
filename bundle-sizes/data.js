@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1700206851105,
+  "lastUpdate": 1700732017632,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -44013,6 +44013,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31224,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "acefbcefff649eed8adf5f06de345fee4f74f66c",
+          "message": "feat(replicache): Custom isEqual for subscriptions (#1246)\n\nThis allows the `subscribe` `body` to return anything (not limited to\r\n`JSONValue`).\r\n\r\nTo make that useful `subscribe` now allows a custom `isEqual` function\r\nto be passed as an option. This defaults to the old behavior using the\r\nJSON `deepEquals` check.",
+          "timestamp": "2023-11-23T09:31:36Z",
+          "tree_id": "07371bcc071bc39e887a7a74b836ef4133bf86e5",
+          "url": "https://github.com/rocicorp/mono/commit/acefbcefff649eed8adf5f06de345fee4f74f66c"
+        },
+        "date": 1700732003932,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 297001,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53186,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111318,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31232,
             "unit": "bytes"
           }
         ]
