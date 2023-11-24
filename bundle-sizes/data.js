@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1700732017632,
+  "lastUpdate": 1700827956514,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -44057,6 +44057,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31232,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c087650506c88bc6285a41be94639abc1936c02c",
+          "message": "fix(replicache): Better name type check (#1259)\n\nThe previous code allowed a bunch of non strings to make it into the\r\nname which eventually fails validation when readin the idb databases.",
+          "timestamp": "2023-11-24T12:10:17Z",
+          "tree_id": "31e8773c094f26d0da6eb9693484a8dfbee171f1",
+          "url": "https://github.com/rocicorp/mono/commit/c087650506c88bc6285a41be94639abc1936c02c"
+        },
+        "date": 1700827941349,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 297008,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53146,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111326,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31247,
             "unit": "bytes"
           }
         ]
