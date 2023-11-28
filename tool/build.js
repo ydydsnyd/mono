@@ -2,6 +2,7 @@
 
 import * as esbuild from 'esbuild';
 import {makeDefine} from './make-define.js';
+import {readPackageJSON} from './read-package-json.js';
 
 const forBundleSizeDashboard = process.argv.includes('--bundle-sizes');
 const perf = process.argv.includes('--perf');
@@ -53,6 +54,7 @@ async function buildReplicache(options) {
     outfile: 'out/replicache.' + ext,
     entryPoints: ['src/mod.ts'],
     define: await makeDefine(mode, dd31),
+    sourcemap: true,
   });
 }
 
@@ -81,6 +83,11 @@ async function buildCLI() {
   });
 }
 
+async function isRocicorpPackage() {
+  const packageJSON = await readPackageJSON();
+  return packageJSON.name.startsWith('@rocicorp/');
+}
+
 if (perf) {
   await buildMJS({mode: 'release'});
 } else if (forBundleSizeDashboard) {
@@ -94,7 +101,7 @@ if (perf) {
   ]);
 } else {
   let opts = {};
-  if (debug) {
+  if (debug || (await isRocicorpPackage())) {
     opts = {minify: false};
   }
   await Promise.all([buildMJS(opts), buildCJS(opts), buildCLI()]);
