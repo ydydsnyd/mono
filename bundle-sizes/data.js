@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1701186200173,
+  "lastUpdate": 1701187954866,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -44233,6 +44233,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31308,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "02124710fbc3d73e549027649b00e16fb800e7a8",
+          "message": "feat(replicache)!: Return promise for push/pull (#1267)\n\nBREAKING CHANGE!\r\n\r\npush and pull now returns a promise which is fulfilled when the next\r\npush/pull is fulfilled.\r\n\r\nIn case of errors, we retry the push/pull but this is not reflected in\r\nthe promise.",
+          "timestamp": "2023-11-28T16:10:21Z",
+          "tree_id": "5160a59958039b9178c4c861857822c402d391b1",
+          "url": "https://github.com/rocicorp/mono/commit/02124710fbc3d73e549027649b00e16fb800e7a8"
+        },
+        "date": 1701187940727,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 298818,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53501,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111616,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31374,
             "unit": "bytes"
           }
         ]
