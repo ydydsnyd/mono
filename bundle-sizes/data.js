@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1701161979140,
+  "lastUpdate": 1701186200173,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -44189,6 +44189,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31275,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0ae6bf60b6665a9ad2d1b6489c98a6992edd002b",
+          "message": " feat(replicache): Expose pull(now) and push(now) (#1260)\n\nWe now have a way to force a pull or push to happen immediately. This\r\nignores the normal delays and backoff in case of errors.",
+          "timestamp": "2023-11-28T15:41:25Z",
+          "tree_id": "1246cf2e17173056ca50da6685f853cf4c3b382b",
+          "url": "https://github.com/rocicorp/mono/commit/0ae6bf60b6665a9ad2d1b6489c98a6992edd002b"
+        },
+        "date": 1701186186757,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 297776,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53341,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111429,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31308,
             "unit": "bytes"
           }
         ]
