@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1701187954866,
+  "lastUpdate": 1701336423893,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -44277,6 +44277,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31374,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b18c43799b2c3ccf619117ce07140da4848dada5",
+          "message": "fix(replicache)! Fix `scan` type params (#1274)\n\nBREAKING CHANGE!\r\n\r\nTo allow `tx.scan<TodoItem>(options)` to work correctly we need to\r\nchange the type parameters slightly because `scan` already had a type\r\nparameter for the `options`.",
+          "timestamp": "2023-11-30T09:25:00Z",
+          "tree_id": "5827d0a560bce6fc6bb45a398620d8d6043c7248",
+          "url": "https://github.com/rocicorp/mono/commit/b18c43799b2c3ccf619117ce07140da4848dada5"
+        },
+        "date": 1701336408833,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 298818,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53501,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111616,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31315,
             "unit": "bytes"
           }
         ]
