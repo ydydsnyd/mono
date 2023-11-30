@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1701336423893,
+  "lastUpdate": 1701355509034,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -44321,6 +44321,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31315,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0c83a55345a7aa7c5fd716e4c00fc0156c50be62",
+          "message": "fix(replicache): pendingMutations have wrong IDs (#1261)\n\nIn case there are multiple clients in the client group and more than one\r\nclient has pending changes the id was incorrect.\r\n\r\nAlso, change the order so that the oldest mutation is first in the\r\nreturned array.\r\n\r\nThis is technically a breaking change but this API is flagged as\r\nexperimental.",
+          "timestamp": "2023-11-30T14:43:03Z",
+          "tree_id": "69d759e48878710a1ab6b9e648d090347932f7d1",
+          "url": "https://github.com/rocicorp/mono/commit/0c83a55345a7aa7c5fd716e4c00fc0156c50be62"
+        },
+        "date": 1701355489718,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 298626,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53514,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111504,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31316,
             "unit": "bytes"
           }
         ]
