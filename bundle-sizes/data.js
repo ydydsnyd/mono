@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1701455411052,
+  "lastUpdate": 1701474152202,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -44629,6 +44629,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31331,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "distinct": true,
+          "id": "ffa03af88674db9d4b93a9740fcd5c43736efc3f",
+          "message": "feat(replicache)!: Change pull push to take options\n\nNow `push` and `pull` takes a `{now: boolean}` argument instead of a\nboolean.",
+          "timestamp": "2023-12-01T13:40:54-10:00",
+          "tree_id": "374ce82072a1bae0ac6064829a64a00ef9b17781",
+          "url": "https://github.com/rocicorp/mono/commit/ffa03af88674db9d4b93a9740fcd5c43736efc3f"
+        },
+        "date": 1701474139533,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 298644,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53511,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111522,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31330,
             "unit": "bytes"
           }
         ]
