@@ -10,7 +10,7 @@
     "@inquirer/input": "^1.2.11",
     "@inquirer/password": "^1.1.11",
     "@inquirer/select": "^1.2.11",
-    "@rocicorp/reflect": "0.38.202312012307+772132",
+    "@rocicorp/reflect": "0.38.202312012312+a043ea",
     "esbuild": "^0.19.4",
     "mirror-server": "0.0.1",
     "pkg-up": "^4.0.0",
