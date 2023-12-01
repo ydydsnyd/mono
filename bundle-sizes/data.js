@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1701416674474,
+  "lastUpdate": 1701417425129,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -44433,6 +44433,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/47be95e67a67eed182881e29eb4016e03a18bd08"
         },
         "date": 1701416660755,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 298626,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53579,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111504,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31343,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "committer": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "distinct": true,
+          "id": "0e8fd6b44f34b41ee22b2f54769781e0b82caae2",
+          "message": "chore(replicache): fix lint error",
+          "timestamp": "2023-11-30T21:54:51-10:00",
+          "tree_id": "36bd8bf739e2e4c87c9b8fe778915e6e0515598c",
+          "url": "https://github.com/rocicorp/mono/commit/0e8fd6b44f34b41ee22b2f54769781e0b82caae2"
+        },
+        "date": 1701417409969,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
