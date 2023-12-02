@@ -73,8 +73,6 @@
   "files": [
     "out/cli.cjs",
     "out/replicache.d.ts",
-    "out/replicache.cjs",
-    "out/replicache.cjs.map",
     "out/replicache.js",
     "out/replicache.js.map"
   ],
