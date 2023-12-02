@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1701474152202,
+  "lastUpdate": 1701475415788,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -44673,6 +44673,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31330,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "committer": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "distinct": true,
+          "id": "7c8383b903fbfe1e4d86458dd800c2eaebffe3bf",
+          "message": "chore(replicache): Bump version to v14.0.3",
+          "timestamp": "2023-12-01T13:59:21-10:00",
+          "tree_id": "72d832db789d0d86c06a140f1644a7fc0496cc2c",
+          "url": "https://github.com/rocicorp/mono/commit/7c8383b903fbfe1e4d86458dd800c2eaebffe3bf"
+        },
+        "date": 1701475403921,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 298644,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53512,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111522,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31346,
             "unit": "bytes"
           }
         ]
