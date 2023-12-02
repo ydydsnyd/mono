@@ -6,6 +6,7 @@ import {
   PokeHandler,
   RESET_PLAYBACK_OFFSET_THRESHOLD_MS,
 } from './poke-handler.js';
+import {PresenceManager} from './presence-manager.js';
 
 let clock: sinon.SinonFakeTimers;
 let rafStub: sinon.SinonStub;
@@ -34,11 +35,16 @@ teardown(() => {
 test('playback all pokes dont have timestamps, all merge and play on first raf', async () => {
   const outOfOrderPokeStub = sinon.stub();
   const replicachePokeStub = sinon.stub();
+  const clientID = 'c1';
+  const logContext = new LogContext('error');
+  const presenceManager = new PresenceManager(clientID, logContext);
+  const updatePresenceSpy = sinon.spy(presenceManager, 'updatePresence');
   const pokeHandler = new PokeHandler(
     replicachePokeStub,
+    presenceManager,
     outOfOrderPokeStub,
-    Promise.resolve('c1'),
-    Promise.resolve(new LogContext('error')),
+    clientID,
+    logContext,
   );
   expect(rafStub.callCount).to.equal(0);
 
@@ -48,6 +54,13 @@ test('playback all pokes dont have timestamps, all merge and play on first raf',
         baseCookie: 1,
         cookie: 2,
         lastMutationIDChanges: {c2: 2},
+        presence: [
+          {
+            op: 'put',
+            key: 'c1',
+            value: 1,
+          },
+        ],
         patch: [
           {
             op: 'put',
@@ -60,6 +73,7 @@ test('playback all pokes dont have timestamps, all merge and play on first raf',
         baseCookie: 2,
         cookie: 3,
         lastMutationIDChanges: {c2: 3},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -72,6 +86,13 @@ test('playback all pokes dont have timestamps, all merge and play on first raf',
         baseCookie: 3,
         cookie: 4,
         lastMutationIDChanges: {c3: 2},
+        presence: [
+          {
+            op: 'put',
+            key: 'c3',
+            value: 1,
+          },
+        ],
         patch: [
           {
             op: 'put',
@@ -87,6 +108,7 @@ test('playback all pokes dont have timestamps, all merge and play on first raf',
   expect(lastMutationIDChangeForSelf).to.equal(undefined);
 
   expect(replicachePokeStub.callCount).to.equal(0);
+  expect(updatePresenceSpy.callCount).to.equal(0);
   expect(rafStub.callCount).to.equal(1);
 
   const rafCallback0 = rafStub.getCall(0).args[0];
@@ -121,22 +143,44 @@ test('playback all pokes dont have timestamps, all merge and play on first raf',
       ],
     },
   });
+
+  expect(updatePresenceSpy.callCount).to.equal(1);
+  const updatePresence0 = updatePresenceSpy.getCall(0).args[0];
+  expect(updatePresence0).to.deep.equal([
+    {
+      op: 'put',
+      key: 'c1',
+      value: 1,
+    },
+    {
+      op: 'put',
+      key: 'c3',
+      value: 1,
+    },
+  ]);
+
   expect(rafStub.callCount).to.equal(2);
 
   const rafCallback1 = rafStub.getCall(1).args[0];
   await rafCallback1();
   expect(replicachePokeStub.callCount).to.equal(1);
+  expect(updatePresenceSpy.callCount).to.equal(1);
   expect(rafStub.callCount).to.equal(2);
 });
 
 test('playback all pokes have timestamps but are for this client so merge and play on first raf', async () => {
   const outOfOrderPokeStub = sinon.stub();
   const replicachePokeStub = sinon.stub();
+  const clientID = 'c1';
+  const logContext = new LogContext('error');
+  const presenceManager = new PresenceManager(clientID, logContext);
+  const updatePresenceSpy = sinon.spy(presenceManager, 'updatePresence');
   const pokeHandler = new PokeHandler(
     replicachePokeStub,
+    presenceManager,
     outOfOrderPokeStub,
-    Promise.resolve('c1'),
-    Promise.resolve(new LogContext('error')),
+    clientID,
+    logContext,
     new BufferSizer(TEST_BUFFER_SIZER_OPTIONS),
   );
   expect(rafStub.callCount).to.equal(0);
@@ -147,6 +191,13 @@ test('playback all pokes have timestamps but are for this client so merge and pl
         baseCookie: 1,
         cookie: 2,
         lastMutationIDChanges: {c1: 2},
+        presence: [
+          {
+            op: 'put',
+            key: 'c1',
+            value: 1,
+          },
+        ],
         patch: [
           {
             op: 'put',
@@ -159,6 +210,7 @@ test('playback all pokes have timestamps but are for this client so merge and pl
         baseCookie: 2,
         cookie: 3,
         lastMutationIDChanges: {c1: 3},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -171,6 +223,13 @@ test('playback all pokes have timestamps but are for this client so merge and pl
         baseCookie: 3,
         cookie: 4,
         lastMutationIDChanges: {c1: 4},
+        presence: [
+          {
+            op: 'put',
+            key: 'c3',
+            value: 1,
+          },
+        ],
         patch: [
           {
             op: 'put',
@@ -186,6 +245,7 @@ test('playback all pokes have timestamps but are for this client so merge and pl
   expect(lastMutationIDChangeForSelf).to.equal(4);
 
   expect(replicachePokeStub.callCount).to.equal(0);
+  expect(updatePresenceSpy.callCount).to.equal(0);
   expect(rafStub.callCount).to.equal(1);
 
   const rafCallback0 = rafStub.getCall(0).args[0];
@@ -219,22 +279,44 @@ test('playback all pokes have timestamps but are for this client so merge and pl
       ],
     },
   });
+
+  expect(updatePresenceSpy.callCount).to.equal(1);
+  const updatePresence0 = updatePresenceSpy.getCall(0).args[0];
+  expect(updatePresence0).to.deep.equal([
+    {
+      op: 'put',
+      key: 'c1',
+      value: 1,
+    },
+    {
+      op: 'put',
+      key: 'c3',
+      value: 1,
+    },
+  ]);
+
   expect(rafStub.callCount).to.equal(2);
 
   const rafCallback1 = rafStub.getCall(1).args[0];
   await rafCallback1();
   expect(replicachePokeStub.callCount).to.equal(1);
+  expect(updatePresenceSpy.callCount).to.equal(1);
   expect(rafStub.callCount).to.equal(2);
 });
 
 test('playback all pokes have timestamps without any merges', async () => {
   const outOfOrderPokeStub = sinon.stub();
   const replicachePokeStub = sinon.stub();
+  const clientID = 'c1';
+  const logContext = new LogContext('error');
+  const presenceManager = new PresenceManager(clientID, logContext);
+  const updatePresenceSpy = sinon.spy(presenceManager, 'updatePresence');
   const pokeHandler = new PokeHandler(
     replicachePokeStub,
+    presenceManager,
     outOfOrderPokeStub,
-    Promise.resolve('c1'),
-    Promise.resolve(new LogContext('error')),
+    clientID,
+    logContext,
     new BufferSizer(TEST_BUFFER_SIZER_OPTIONS),
   );
   expect(rafStub.callCount).to.equal(0);
@@ -245,6 +327,13 @@ test('playback all pokes have timestamps without any merges', async () => {
         baseCookie: 1,
         cookie: 2,
         lastMutationIDChanges: {c2: 2},
+        presence: [
+          {
+            op: 'put',
+            key: 'c1',
+            value: 1,
+          },
+        ],
         patch: [
           {
             op: 'put',
@@ -258,6 +347,7 @@ test('playback all pokes have timestamps without any merges', async () => {
         baseCookie: 2,
         cookie: 3,
         lastMutationIDChanges: {c2: 3},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -271,6 +361,13 @@ test('playback all pokes have timestamps without any merges', async () => {
         baseCookie: 3,
         cookie: 4,
         lastMutationIDChanges: {c3: 2},
+        presence: [
+          {
+            op: 'put',
+            key: 'c3',
+            value: 1,
+          },
+        ],
         patch: [
           {
             op: 'put',
@@ -287,17 +384,20 @@ test('playback all pokes have timestamps without any merges', async () => {
   expect(lastMutationIDChangeForSelf).to.equal(undefined);
 
   expect(replicachePokeStub.callCount).to.equal(0);
+  expect(updatePresenceSpy.callCount).to.equal(0);
   expect(rafStub.callCount).to.equal(1);
 
   const rafCallback0 = rafStub.getCall(0).args[0];
   await rafCallback0();
 
   expect(replicachePokeStub.callCount).to.equal(0);
+  expect(updatePresenceSpy.callCount).to.equal(0);
   expect(rafStub.callCount).to.equal(2);
 
   const rafCallback1 = rafStub.getCall(1).args[0];
   await clock.tickAsync(250);
   expect(replicachePokeStub.callCount).to.equal(0);
+  expect(updatePresenceSpy.callCount).to.equal(0);
   await rafCallback1();
 
   expect(replicachePokeStub.callCount).to.equal(1);
@@ -318,11 +418,23 @@ test('playback all pokes have timestamps without any merges', async () => {
       ],
     },
   });
+
+  expect(updatePresenceSpy.callCount).to.equal(1);
+  const updatePresence0 = updatePresenceSpy.getCall(0).args[0];
+  expect(updatePresence0).to.deep.equal([
+    {
+      op: 'put',
+      key: 'c1',
+      value: 1,
+    },
+  ]);
+
   expect(rafStub.callCount).to.equal(3);
 
   const rafCallback2 = rafStub.getCall(2).args[0];
   await clock.tickAsync(20);
   expect(replicachePokeStub.callCount).to.equal(1);
+  expect(updatePresenceSpy.callCount).to.equal(1);
   await rafCallback2();
 
   expect(replicachePokeStub.callCount).to.equal(2);
@@ -343,11 +455,17 @@ test('playback all pokes have timestamps without any merges', async () => {
       ],
     },
   });
+
+  expect(updatePresenceSpy.callCount).to.equal(2);
+  const updatePresence1 = updatePresenceSpy.getCall(1).args[0];
+  expect(updatePresence1).to.deep.equal([]);
+
   expect(rafStub.callCount).to.equal(4);
 
   const rafCallback3 = rafStub.getCall(3).args[0];
   await clock.tickAsync(20);
   expect(replicachePokeStub.callCount).to.equal(2);
+  expect(updatePresenceSpy.callCount).to.equal(2);
   await rafCallback3();
 
   expect(replicachePokeStub.callCount).to.equal(3);
@@ -368,22 +486,39 @@ test('playback all pokes have timestamps without any merges', async () => {
       ],
     },
   });
+
+  expect(updatePresenceSpy.callCount).to.equal(3);
+  const updatePresence2 = updatePresenceSpy.getCall(2).args[0];
+  expect(updatePresence2).to.deep.equal([
+    {
+      op: 'put',
+      key: 'c3',
+      value: 1,
+    },
+  ]);
+
   expect(rafStub.callCount).to.equal(5);
 
   const rafCallback4 = rafStub.getCall(4).args[0];
   await rafCallback4();
   expect(replicachePokeStub.callCount).to.equal(3);
+  expect(updatePresenceSpy.callCount).to.equal(3);
   expect(rafStub.callCount).to.equal(5);
 });
 
 test('playback all pokes have timestamps, two pokes merge due to timing', async () => {
   const outOfOrderPokeStub = sinon.stub();
   const replicachePokeStub = sinon.stub();
+  const clientID = 'c1';
+  const logContext = new LogContext('error');
+  const presenceManager = new PresenceManager(clientID, logContext);
+  const updatePresenceSpy = sinon.spy(presenceManager, 'updatePresence');
   const pokeHandler = new PokeHandler(
     replicachePokeStub,
+    presenceManager,
     outOfOrderPokeStub,
-    Promise.resolve('c1'),
-    Promise.resolve(new LogContext('error')),
+    clientID,
+    logContext,
     new BufferSizer(TEST_BUFFER_SIZER_OPTIONS),
   );
   expect(rafStub.callCount).to.equal(0);
@@ -394,6 +529,13 @@ test('playback all pokes have timestamps, two pokes merge due to timing', async 
         baseCookie: 1,
         cookie: 2,
         lastMutationIDChanges: {c2: 2},
+        presence: [
+          {
+            op: 'put',
+            key: 'c1',
+            value: 1,
+          },
+        ],
         patch: [
           {
             op: 'put',
@@ -407,6 +549,7 @@ test('playback all pokes have timestamps, two pokes merge due to timing', async 
         baseCookie: 2,
         cookie: 3,
         lastMutationIDChanges: {c2: 3},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -420,6 +563,13 @@ test('playback all pokes have timestamps, two pokes merge due to timing', async 
         baseCookie: 3,
         cookie: 4,
         lastMutationIDChanges: {c3: 2},
+        presence: [
+          {
+            op: 'put',
+            key: 'c3',
+            value: 1,
+          },
+        ],
         patch: [
           {
             op: 'put',
@@ -436,17 +586,20 @@ test('playback all pokes have timestamps, two pokes merge due to timing', async 
   expect(lastMutationIDChangeForSelf).to.equal(undefined);
 
   expect(replicachePokeStub.callCount).to.equal(0);
+  expect(updatePresenceSpy.callCount).to.equal(0);
   expect(rafStub.callCount).to.equal(1);
 
   const rafCallback0 = rafStub.getCall(0).args[0];
   await rafCallback0();
 
   expect(replicachePokeStub.callCount).to.equal(0);
+  expect(updatePresenceSpy.callCount).to.equal(0);
   expect(rafStub.callCount).to.equal(2);
 
   const rafCallback1 = rafStub.getCall(1).args[0];
   await clock.tickAsync(250);
   expect(replicachePokeStub.callCount).to.equal(0);
+  expect(updatePresenceSpy.callCount).to.equal(0);
   await rafCallback1();
 
   expect(replicachePokeStub.callCount).to.equal(1);
@@ -467,11 +620,23 @@ test('playback all pokes have timestamps, two pokes merge due to timing', async 
       ],
     },
   });
+
+  expect(updatePresenceSpy.callCount).to.equal(1);
+  const updatePresence0 = updatePresenceSpy.getCall(0).args[0];
+  expect(updatePresence0).to.deep.equal([
+    {
+      op: 'put',
+      key: 'c1',
+      value: 1,
+    },
+  ]);
+
   expect(rafStub.callCount).to.equal(3);
 
   const rafCallback2 = rafStub.getCall(2).args[0];
   await clock.tickAsync(40);
   expect(replicachePokeStub.callCount).to.equal(1);
+  expect(updatePresenceSpy.callCount).to.equal(1);
   await rafCallback2();
 
   expect(replicachePokeStub.callCount).to.equal(2);
@@ -498,22 +663,39 @@ test('playback all pokes have timestamps, two pokes merge due to timing', async 
       ],
     },
   });
+
+  expect(updatePresenceSpy.callCount).to.equal(2);
+  const updatePresence1 = updatePresenceSpy.getCall(1).args[0];
+  expect(updatePresence1).to.deep.equal([
+    {
+      op: 'put',
+      key: 'c3',
+      value: 1,
+    },
+  ]);
+
   expect(rafStub.callCount).to.equal(4);
 
   const rafCallback3 = rafStub.getCall(3).args[0];
   await rafCallback3();
   expect(replicachePokeStub.callCount).to.equal(2);
+  expect(updatePresenceSpy.callCount).to.equal(2);
   expect(rafStub.callCount).to.equal(4);
 });
 
 test('playback pokes with no timestamp or for this client playback ASAP', async () => {
   const outOfOrderPokeStub = sinon.stub();
   const replicachePokeStub = sinon.stub();
+  const clientID = 'c1';
+  const logContext = new LogContext('error');
+  const presenceManager = new PresenceManager(clientID, logContext);
+  const updatePresenceSpy = sinon.spy(presenceManager, 'updatePresence');
   const pokeHandler = new PokeHandler(
     replicachePokeStub,
+    presenceManager,
     outOfOrderPokeStub,
-    Promise.resolve('c1'),
-    Promise.resolve(new LogContext('error')),
+    clientID,
+    logContext,
     new BufferSizer(TEST_BUFFER_SIZER_OPTIONS),
   );
   expect(rafStub.callCount).to.equal(0);
@@ -524,6 +706,13 @@ test('playback pokes with no timestamp or for this client playback ASAP', async 
         baseCookie: 1,
         cookie: 2,
         lastMutationIDChanges: {c2: 2},
+        presence: [
+          {
+            op: 'put',
+            key: 'c1',
+            value: 1,
+          },
+        ],
         patch: [
           {
             op: 'put',
@@ -537,6 +726,7 @@ test('playback pokes with no timestamp or for this client playback ASAP', async 
         baseCookie: 2,
         cookie: 3,
         lastMutationIDChanges: {c2: 3},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -550,6 +740,13 @@ test('playback pokes with no timestamp or for this client playback ASAP', async 
         baseCookie: 3,
         cookie: 4,
         lastMutationIDChanges: {c1: 2},
+        presence: [
+          {
+            op: 'put',
+            key: 'c3',
+            value: 1,
+          },
+        ],
         patch: [
           {
             op: 'put',
@@ -566,17 +763,20 @@ test('playback pokes with no timestamp or for this client playback ASAP', async 
   expect(lastMutationIDChangeForSelf).to.equal(2);
 
   expect(replicachePokeStub.callCount).to.equal(0);
+  expect(updatePresenceSpy.callCount).to.equal(0);
   expect(rafStub.callCount).to.equal(1);
 
   const rafCallback0 = rafStub.getCall(0).args[0];
   await rafCallback0();
 
   expect(replicachePokeStub.callCount).to.equal(0);
+  expect(updatePresenceSpy.callCount).to.equal(0);
   expect(rafStub.callCount).to.equal(2);
 
   const rafCallback1 = rafStub.getCall(1).args[0];
   await clock.tickAsync(250);
   expect(replicachePokeStub.callCount).to.equal(0);
+  expect(updatePresenceSpy.callCount).to.equal(0);
   await rafCallback1();
 
   expect(replicachePokeStub.callCount).to.equal(1);
@@ -608,22 +808,44 @@ test('playback pokes with no timestamp or for this client playback ASAP', async 
       ],
     },
   });
+
+  expect(updatePresenceSpy.callCount).to.equal(1);
+  const updatePresence0 = updatePresenceSpy.getCall(0).args[0];
+  expect(updatePresence0).to.deep.equal([
+    {
+      op: 'put',
+      key: 'c1',
+      value: 1,
+    },
+    {
+      op: 'put',
+      key: 'c3',
+      value: 1,
+    },
+  ]);
+
   expect(rafStub.callCount).to.equal(3);
 
   const rafCallback2 = rafStub.getCall(2).args[0];
   await rafCallback2();
   expect(replicachePokeStub.callCount).to.equal(1);
+  expect(updatePresenceSpy.callCount).to.equal(1);
   expect(rafStub.callCount).to.equal(3);
 });
 
 test('playback sequence of poke messages', async () => {
   const outOfOrderPokeStub = sinon.stub();
   const replicachePokeStub = sinon.stub();
+  const clientID = 'c1';
+  const logContext = new LogContext('error');
+  const presenceManager = new PresenceManager(clientID, logContext);
+  const updatePresenceSpy = sinon.spy(presenceManager, 'updatePresence');
   const pokeHandler = new PokeHandler(
     replicachePokeStub,
+    presenceManager,
     outOfOrderPokeStub,
-    Promise.resolve('c1'),
-    Promise.resolve(new LogContext('error')),
+    clientID,
+    logContext,
     new BufferSizer(TEST_BUFFER_SIZER_OPTIONS),
   );
   expect(rafStub.callCount).to.equal(0);
@@ -634,6 +856,13 @@ test('playback sequence of poke messages', async () => {
         baseCookie: 1,
         cookie: 2,
         lastMutationIDChanges: {c2: 2},
+        presence: [
+          {
+            op: 'put',
+            key: 'c1',
+            value: 1,
+          },
+        ],
         patch: [
           {
             op: 'put',
@@ -647,6 +876,13 @@ test('playback sequence of poke messages', async () => {
         baseCookie: 2,
         cookie: 3,
         lastMutationIDChanges: {c2: 3},
+        presence: [
+          {
+            op: 'put',
+            key: 'c2',
+            value: 1,
+          },
+        ],
         patch: [
           {
             op: 'put',
@@ -663,12 +899,14 @@ test('playback sequence of poke messages', async () => {
   expect(lastMutationIDChangeForSelf).to.equal(undefined);
 
   expect(replicachePokeStub.callCount).to.equal(0);
+  expect(updatePresenceSpy.callCount).to.equal(0);
   expect(rafStub.callCount).to.equal(1);
 
   const rafCallback0 = rafStub.getCall(0).args[0];
   await rafCallback0();
 
   expect(replicachePokeStub.callCount).to.equal(0);
+  expect(updatePresenceSpy.callCount).to.equal(0);
   expect(rafStub.callCount).to.equal(2);
 
   const rafCallback1 = rafStub.getCall(1).args[0];
@@ -694,6 +932,17 @@ test('playback sequence of poke messages', async () => {
       ],
     },
   });
+
+  expect(updatePresenceSpy.callCount).to.equal(1);
+  const updatePresence0 = updatePresenceSpy.getCall(0).args[0];
+  expect(updatePresence0).to.deep.equal([
+    {
+      op: 'put',
+      key: 'c1',
+      value: 1,
+    },
+  ]);
+
   expect(rafStub.callCount).to.equal(3);
 
   const lastMutationIDChangeForSelf2 = await pokeHandler.handlePoke({
@@ -702,6 +951,13 @@ test('playback sequence of poke messages', async () => {
         baseCookie: 3,
         cookie: 4,
         lastMutationIDChanges: {c3: 2},
+        presence: [
+          {
+            op: 'put',
+            key: 'c3',
+            value: 1,
+          },
+        ],
         patch: [
           {
             op: 'put',
@@ -715,6 +971,7 @@ test('playback sequence of poke messages', async () => {
         baseCookie: 4,
         cookie: 5,
         lastMutationIDChanges: {c3: 3},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -732,6 +989,7 @@ test('playback sequence of poke messages', async () => {
   const rafCallback2 = rafStub.getCall(2).args[0];
   await clock.tickAsync(40);
   expect(replicachePokeStub.callCount).to.equal(1);
+  expect(updatePresenceSpy.callCount).to.equal(1);
   await rafCallback2();
 
   expect(replicachePokeStub.callCount).to.equal(2);
@@ -758,11 +1016,28 @@ test('playback sequence of poke messages', async () => {
       ],
     },
   });
+
+  expect(updatePresenceSpy.callCount).to.equal(2);
+  const updatePresence1 = updatePresenceSpy.getCall(1).args[0];
+  expect(updatePresence1).to.deep.equal([
+    {
+      op: 'put',
+      key: 'c2',
+      value: 1,
+    },
+    {
+      op: 'put',
+      key: 'c3',
+      value: 1,
+    },
+  ]);
+
   expect(rafStub.callCount).to.equal(4);
 
   const rafCallback3 = rafStub.getCall(3).args[0];
   await clock.tickAsync(20);
   expect(replicachePokeStub.callCount).to.equal(2);
+  expect(updatePresenceSpy.callCount).to.equal(2);
   await rafCallback3();
 
   expect(replicachePokeStub.callCount).to.equal(3);
@@ -783,6 +1058,11 @@ test('playback sequence of poke messages', async () => {
       ],
     },
   });
+
+  expect(updatePresenceSpy.callCount).to.equal(3);
+  const updatePresence2 = updatePresenceSpy.getCall(2).args[0];
+  expect(updatePresence2).to.deep.equal([]);
+
   expect(rafStub.callCount).to.equal(5);
 
   const rafCallback4 = rafStub.getCall(4).args[0];
@@ -794,11 +1074,16 @@ test('playback sequence of poke messages', async () => {
 test(`playback offset is reset for new pokes if timestamp offset delta is > ${RESET_PLAYBACK_OFFSET_THRESHOLD_MS}`, async () => {
   const outOfOrderPokeStub = sinon.stub();
   const replicachePokeStub = sinon.stub();
+  const clientID = 'c1';
+  const logContext = new LogContext('error');
+  const presenceManager = new PresenceManager(clientID, logContext);
+  const updatePresenceSpy = sinon.spy(presenceManager, 'updatePresence');
   const pokeHandler = new PokeHandler(
     replicachePokeStub,
+    presenceManager,
     outOfOrderPokeStub,
-    Promise.resolve('c1'),
-    Promise.resolve(new LogContext('error')),
+    clientID,
+    logContext,
     new BufferSizer(TEST_BUFFER_SIZER_OPTIONS),
   );
   expect(rafStub.callCount).to.equal(0);
@@ -809,6 +1094,13 @@ test(`playback offset is reset for new pokes if timestamp offset delta is > ${RE
         baseCookie: 1,
         cookie: 2,
         lastMutationIDChanges: {c2: 2},
+        presence: [
+          {
+            op: 'put',
+            key: 'c1',
+            value: 1,
+          },
+        ],
         patch: [
           {
             op: 'put',
@@ -822,6 +1114,13 @@ test(`playback offset is reset for new pokes if timestamp offset delta is > ${RE
         baseCookie: 2,
         cookie: 3,
         lastMutationIDChanges: {c2: 3},
+        presence: [
+          {
+            op: 'put',
+            key: 'c2',
+            value: 1,
+          },
+        ],
         patch: [
           {
             op: 'put',
@@ -838,17 +1137,20 @@ test(`playback offset is reset for new pokes if timestamp offset delta is > ${RE
   expect(lastMutationIDChangeForSelf).to.equal(undefined);
 
   expect(replicachePokeStub.callCount).to.equal(0);
+  expect(updatePresenceSpy.callCount).to.equal(0);
   expect(rafStub.callCount).to.equal(1);
 
   const rafCallback0 = rafStub.getCall(0).args[0];
   await rafCallback0();
 
   expect(replicachePokeStub.callCount).to.equal(0);
+  expect(updatePresenceSpy.callCount).to.equal(0);
   expect(rafStub.callCount).to.equal(2);
 
   const rafCallback1 = rafStub.getCall(1).args[0];
   await clock.tickAsync(250);
   expect(replicachePokeStub.callCount).to.equal(0);
+  expect(updatePresenceSpy.callCount).to.equal(0);
   await rafCallback1();
 
   expect(replicachePokeStub.callCount).to.equal(1);
@@ -869,6 +1171,17 @@ test(`playback offset is reset for new pokes if timestamp offset delta is > ${RE
       ],
     },
   });
+
+  expect(updatePresenceSpy.callCount).to.equal(1);
+  const updatePresence0 = updatePresenceSpy.getCall(0).args[0];
+  expect(updatePresence0).to.deep.equal([
+    {
+      op: 'put',
+      key: 'c1',
+      value: 1,
+    },
+  ]);
+
   expect(rafStub.callCount).to.equal(3);
 
   const lastMutationIDChangeForSelf2 = await pokeHandler.handlePoke({
@@ -877,6 +1190,13 @@ test(`playback offset is reset for new pokes if timestamp offset delta is > ${RE
         baseCookie: 3,
         cookie: 4,
         lastMutationIDChanges: {c3: 2},
+        presence: [
+          {
+            op: 'put',
+            key: 'c3',
+            value: 1,
+          },
+        ],
         patch: [
           {
             op: 'put',
@@ -891,6 +1211,7 @@ test(`playback offset is reset for new pokes if timestamp offset delta is > ${RE
         baseCookie: 4,
         cookie: 5,
         lastMutationIDChanges: {c3: 3},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -909,6 +1230,7 @@ test(`playback offset is reset for new pokes if timestamp offset delta is > ${RE
   const rafCallback2 = rafStub.getCall(2).args[0];
   await clock.tickAsync(20);
   expect(replicachePokeStub.callCount).to.equal(1);
+  expect(updatePresenceSpy.callCount).to.equal(1);
   await rafCallback2();
 
   expect(replicachePokeStub.callCount).to.equal(2);
@@ -930,11 +1252,23 @@ test(`playback offset is reset for new pokes if timestamp offset delta is > ${RE
       ],
     },
   });
+
+  expect(updatePresenceSpy.callCount).to.equal(2);
+  const updatePresence1 = updatePresenceSpy.getCall(1).args[0];
+  expect(updatePresence1).to.deep.equal([
+    {
+      op: 'put',
+      key: 'c2',
+      value: 1,
+    },
+  ]);
+
   expect(rafStub.callCount).to.equal(4);
 
   const rafCallback3 = rafStub.getCall(3).args[0];
   await clock.tickAsync(230);
   expect(replicachePokeStub.callCount).to.equal(2);
+  expect(updatePresenceSpy.callCount).to.equal(2);
   await rafCallback3();
 
   expect(replicachePokeStub.callCount).to.equal(3);
@@ -955,11 +1289,23 @@ test(`playback offset is reset for new pokes if timestamp offset delta is > ${RE
       ],
     },
   });
+
+  expect(updatePresenceSpy.callCount).to.equal(3);
+  const updatePresence2 = updatePresenceSpy.getCall(2).args[0];
+  expect(updatePresence2).to.deep.equal([
+    {
+      op: 'put',
+      key: 'c3',
+      value: 1,
+    },
+  ]);
+
   expect(rafStub.callCount).to.equal(5);
 
   const rafCallback4 = rafStub.getCall(4).args[0];
   await clock.tickAsync(60);
   expect(replicachePokeStub.callCount).to.equal(3);
+  expect(updatePresenceSpy.callCount).to.equal(3);
   await rafCallback4();
 
   expect(replicachePokeStub.callCount).to.equal(4);
@@ -980,11 +1326,17 @@ test(`playback offset is reset for new pokes if timestamp offset delta is > ${RE
       ],
     },
   });
+
+  expect(updatePresenceSpy.callCount).to.equal(4);
+  const updatePresence3 = updatePresenceSpy.getCall(3).args[0];
+  expect(updatePresence3).to.deep.equal([]);
+
   expect(rafStub.callCount).to.equal(6);
 
   const rafCallback5 = rafStub.getCall(5).args[0];
   await rafCallback5();
   expect(replicachePokeStub.callCount).to.equal(4);
+  expect(updatePresenceSpy.callCount).to.equal(4);
   expect(rafStub.callCount).to.equal(6);
 });
 
@@ -1047,12 +1399,14 @@ test('playback stats', async () => {
       ],
     ]);
   };
-
+  const clientID = 'c1';
+  const presenceManager = new PresenceManager(clientID, logContext);
   const pokeHandler = new PokeHandler(
     replicachePokeStub,
+    presenceManager,
     outOfOrderPokeStub,
-    Promise.resolve('c1'),
-    Promise.resolve(logContext),
+    clientID,
+    logContext,
     new BufferSizer(TEST_BUFFER_SIZER_OPTIONS),
     3 /* maxRecentPokeLatenciesSize */,
   );
@@ -1064,6 +1418,7 @@ test('playback stats', async () => {
         baseCookie: 1,
         cookie: 2,
         lastMutationIDChanges: {c2: 1},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -1077,6 +1432,7 @@ test('playback stats', async () => {
         baseCookie: 2,
         cookie: 3,
         lastMutationIDChanges: {c1: 2},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -1091,6 +1447,7 @@ test('playback stats', async () => {
         baseCookie: 3,
         cookie: 4,
         lastMutationIDChanges: {c2: 2},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -1105,6 +1462,7 @@ test('playback stats', async () => {
         baseCookie: 4,
         cookie: 5,
         lastMutationIDChanges: {c2: 3},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -1119,6 +1477,7 @@ test('playback stats', async () => {
         baseCookie: 5,
         cookie: 6,
         lastMutationIDChanges: {c2: 4},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -1133,6 +1492,7 @@ test('playback stats', async () => {
         baseCookie: 6,
         cookie: 7,
         lastMutationIDChanges: {c2: 5},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -1290,11 +1650,15 @@ test('playback stats', async () => {
 test('onOutOfOrderPoke is called if replicache poke throws an unexpected base cookie error', async () => {
   const outOfOrderPokeStub = sinon.stub();
   const replicachePokeStub = sinon.stub();
+  const clientID = 'c1';
+  const logContext = new LogContext('error');
+  const presenceManager = new PresenceManager(clientID, logContext);
   const pokeHandler = new PokeHandler(
     replicachePokeStub,
+    presenceManager,
     outOfOrderPokeStub,
-    Promise.resolve('c1'),
-    Promise.resolve(new LogContext('error')),
+    clientID,
+    logContext,
     new BufferSizer(TEST_BUFFER_SIZER_OPTIONS),
   );
   expect(rafStub.callCount).to.equal(0);
@@ -1305,6 +1669,7 @@ test('onOutOfOrderPoke is called if replicache poke throws an unexpected base co
         baseCookie: 1,
         cookie: 2,
         lastMutationIDChanges: {c2: 2},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -1334,11 +1699,16 @@ test('onOutOfOrderPoke is called if replicache poke throws an unexpected base co
 test('onDisconnect clears pending pokes and playback offset', async () => {
   const outOfOrderPokeStub = sinon.stub();
   const replicachePokeStub = sinon.stub();
+  const clientID = 'c1';
+  const logContext = new LogContext('error');
+  const presenceManager = new PresenceManager(clientID, logContext);
+  const updatePresenceSpy = sinon.spy(presenceManager, 'updatePresence');
   const pokeHandler = new PokeHandler(
     replicachePokeStub,
+    presenceManager,
     outOfOrderPokeStub,
-    Promise.resolve('c1'),
-    Promise.resolve(new LogContext('error')),
+    clientID,
+    logContext,
     new BufferSizer(TEST_BUFFER_SIZER_OPTIONS),
   );
   expect(rafStub.callCount).to.equal(0);
@@ -1349,6 +1719,13 @@ test('onDisconnect clears pending pokes and playback offset', async () => {
         baseCookie: 1,
         cookie: 2,
         lastMutationIDChanges: {c2: 2},
+        presence: [
+          {
+            op: 'put',
+            key: 'c1',
+            value: 1,
+          },
+        ],
         patch: [
           {
             op: 'put',
@@ -1362,6 +1739,7 @@ test('onDisconnect clears pending pokes and playback offset', async () => {
         baseCookie: 2,
         cookie: 3,
         lastMutationIDChanges: {c2: 3},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -1375,6 +1753,13 @@ test('onDisconnect clears pending pokes and playback offset', async () => {
         baseCookie: 3,
         cookie: 4,
         lastMutationIDChanges: {c3: 2},
+        presence: [
+          {
+            op: 'put',
+            key: 'c2',
+            value: 1,
+          },
+        ],
         patch: [
           {
             op: 'put',
@@ -1391,17 +1776,20 @@ test('onDisconnect clears pending pokes and playback offset', async () => {
   expect(lastMutationIDChangeForSelf).to.equal(undefined);
 
   expect(replicachePokeStub.callCount).to.equal(0);
+  expect(updatePresenceSpy.callCount).to.equal(0);
   expect(rafStub.callCount).to.equal(1);
 
   const rafCallback0 = rafStub.getCall(0).args[0];
   await rafCallback0();
 
   expect(replicachePokeStub.callCount).to.equal(0);
+  expect(updatePresenceSpy.callCount).to.equal(0);
   expect(rafStub.callCount).to.equal(2);
 
   const rafCallback1 = rafStub.getCall(1).args[0];
   await clock.tickAsync(250);
   expect(replicachePokeStub.callCount).to.equal(0);
+  expect(updatePresenceSpy.callCount).to.equal(0);
   await rafCallback1();
 
   expect(replicachePokeStub.callCount).to.equal(1);
@@ -1422,6 +1810,17 @@ test('onDisconnect clears pending pokes and playback offset', async () => {
       ],
     },
   });
+
+  expect(updatePresenceSpy.callCount).to.equal(1);
+  const updatePresence0 = updatePresenceSpy.getCall(0).args[0];
+  expect(updatePresence0).to.deep.equal([
+    {
+      op: 'put',
+      key: 'c1',
+      value: 1,
+    },
+  ]);
+
   expect(rafStub.callCount).to.equal(3);
 
   await pokeHandler.handleDisconnect();
@@ -1429,6 +1828,7 @@ test('onDisconnect clears pending pokes and playback offset', async () => {
   const rafCallback2 = rafStub.getCall(2).args[0];
   await clock.tickAsync(40);
   expect(replicachePokeStub.callCount).to.equal(1);
+  expect(updatePresenceSpy.callCount).to.equal(1);
   await rafCallback2();
 
   // raf not called again because buffer is empty
@@ -1440,6 +1840,13 @@ test('onDisconnect clears pending pokes and playback offset', async () => {
         baseCookie: 2,
         cookie: 3,
         lastMutationIDChanges: {c2: 3},
+        presence: [
+          {
+            op: 'put',
+            key: 'c3',
+            value: 1,
+          },
+        ],
         patch: [
           {
             op: 'put',
@@ -1453,6 +1860,7 @@ test('onDisconnect clears pending pokes and playback offset', async () => {
         baseCookie: 3,
         cookie: 4,
         lastMutationIDChanges: {c3: 2},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -1469,18 +1877,22 @@ test('onDisconnect clears pending pokes and playback offset', async () => {
   expect(lastMutationIDChangeForSelf2).to.equal(undefined);
 
   expect(replicachePokeStub.callCount).to.equal(1);
+  expect(updatePresenceSpy.callCount).to.equal(1);
   expect(rafStub.callCount).to.equal(4);
 
   const rafCallback3 = rafStub.getCall(3).args[0];
   expect(replicachePokeStub.callCount).to.equal(1);
+  expect(updatePresenceSpy.callCount).to.equal(1);
   await rafCallback3();
   // not called not enough time has elapsed
   expect(replicachePokeStub.callCount).to.equal(1);
+  expect(updatePresenceSpy.callCount).to.equal(1);
 
   expect(rafStub.callCount).to.equal(5);
   const rafCallback4 = rafStub.getCall(3).args[0];
   await clock.tickAsync(250 + 20);
   expect(replicachePokeStub.callCount).to.equal(1);
+  expect(updatePresenceSpy.callCount).to.equal(1);
   await rafCallback4();
   expect(replicachePokeStub.callCount).to.equal(2);
 
@@ -1507,31 +1919,47 @@ test('onDisconnect clears pending pokes and playback offset', async () => {
       ],
     },
   });
+
+  expect(updatePresenceSpy.callCount).to.equal(2);
+  const updatePresence1 = updatePresenceSpy.getCall(1).args[0];
+  expect(updatePresence1).to.deep.equal([
+    {
+      op: 'put',
+      key: 'c3',
+      value: 1,
+    },
+  ]);
+
   expect(rafStub.callCount).to.equal(6);
 
   const rafCallback5 = rafStub.getCall(4).args[0];
   await rafCallback5();
   expect(replicachePokeStub.callCount).to.equal(2);
+  expect(updatePresenceSpy.callCount).to.equal(2);
   expect(rafStub.callCount).to.equal(6);
 });
 
 test('handlePoke returns the last mutation id change for this client from poke message or undefined if none', async () => {
   const outOfOrderPokeStub = sinon.stub();
   const replicachePokeStub = sinon.stub();
+  const clientID = 'c1';
+  const logContext = new LogContext('error');
+  const presenceManager = new PresenceManager(clientID, logContext);
   const pokeHandler = new PokeHandler(
     replicachePokeStub,
+    presenceManager,
     outOfOrderPokeStub,
-    Promise.resolve('c1'),
-    Promise.resolve(new LogContext('error')),
+    clientID,
+    logContext,
     new BufferSizer(TEST_BUFFER_SIZER_OPTIONS),
   );
-
   const lastMutationIDChangeForSelf = await pokeHandler.handlePoke({
     pokes: [
       {
         baseCookie: 1,
         cookie: 2,
         lastMutationIDChanges: {c2: 2},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -1544,6 +1972,7 @@ test('handlePoke returns the last mutation id change for this client from poke m
         baseCookie: 2,
         cookie: 3,
         lastMutationIDChanges: {c2: 3},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -1563,6 +1992,7 @@ test('handlePoke returns the last mutation id change for this client from poke m
         baseCookie: 1,
         cookie: 2,
         lastMutationIDChanges: {c1: 2},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -1575,6 +2005,7 @@ test('handlePoke returns the last mutation id change for this client from poke m
         baseCookie: 2,
         cookie: 3,
         lastMutationIDChanges: {c2: 3},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -1594,6 +2025,7 @@ test('handlePoke returns the last mutation id change for this client from poke m
         baseCookie: 1,
         cookie: 2,
         lastMutationIDChanges: {c2: 2, c1: 1},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -1606,6 +2038,7 @@ test('handlePoke returns the last mutation id change for this client from poke m
         baseCookie: 2,
         cookie: 3,
         lastMutationIDChanges: {c2: 3},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -1618,6 +2051,7 @@ test('handlePoke returns the last mutation id change for this client from poke m
         baseCookie: 3,
         cookie: 4,
         lastMutationIDChanges: {c2: 4, c1: 3},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -1638,11 +2072,15 @@ test('integration with BufferSizer', async () => {
   const bufferSizer = new BufferSizer(TEST_BUFFER_SIZER_OPTIONS);
   const recordMissableSpy = sinon.spy(bufferSizer, 'recordMissable');
   const bufferSizeMsStub = sinon.stub(bufferSizer, 'bufferSizeMs');
+  const clientID = 'c1';
+  const logContext = new LogContext('error');
+  const presenceManager = new PresenceManager(clientID, logContext);
   const pokeHandler = new PokeHandler(
     replicachePokeStub,
+    presenceManager,
     outOfOrderPokeStub,
-    Promise.resolve('c1'),
-    Promise.resolve(new LogContext('error')),
+    clientID,
+    logContext,
     bufferSizer,
   );
   expect(rafStub.callCount).to.equal(0);
@@ -1654,6 +2092,7 @@ test('integration with BufferSizer', async () => {
         baseCookie: 1,
         cookie: 2,
         lastMutationIDChanges: {c2: 2},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -1667,6 +2106,7 @@ test('integration with BufferSizer', async () => {
         baseCookie: 2,
         cookie: 3,
         lastMutationIDChanges: {c2: 3},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -1731,6 +2171,7 @@ test('integration with BufferSizer', async () => {
         baseCookie: 3,
         cookie: 4,
         lastMutationIDChanges: {c3: 2},
+        presence: [],
         patch: [
           {
             op: 'put',
@@ -1744,6 +2185,7 @@ test('integration with BufferSizer', async () => {
         baseCookie: 4,
         cookie: 5,
         lastMutationIDChanges: {c3: 3},
+        presence: [],
         patch: [
           {
             op: 'put',

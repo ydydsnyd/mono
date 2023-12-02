@@ -1,17 +1,20 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {describe, test, expect, beforeEach, afterEach} from '@jest/globals';
+import {afterEach, beforeEach, describe, expect, test} from '@jest/globals';
 import {initializeApp} from 'firebase-admin/app';
 import {Timestamp, getFirestore} from 'firebase-admin/firestore';
+import {appDataConverter} from 'mirror-schema/src/app.js';
 import {
   appPath,
   deploymentDataConverter,
   deploymentPath,
 } from 'mirror-schema/src/deployment.js';
-import {must} from 'shared/src/must.js';
+import {
+  DEFAULT_PROVIDER_ID,
+  providerDataConverter,
+  providerPath,
+} from 'mirror-schema/src/provider.js';
 import {serverDataConverter, serverPath} from 'mirror-schema/src/server.js';
-import {appDataConverter} from 'mirror-schema/src/app.js';
-import {mockFunctionParamsAndSecrets} from '../../test-helpers.js';
-import {getAppSecrets} from '../app/secrets.js';
+import {must} from 'shared/src/must.js';
 import {
   checkAppsInChannels,
   getAffectedChannels,
@@ -37,22 +40,21 @@ test('getAffectedChannels', () => {
   ).toEqual(['stable']);
 });
 
-describe('server auto-deploy', () => {
+describe('server.auto-deploy', () => {
   initializeApp({projectId: 'server-auto-deploy-function-test'});
   const firestore = getFirestore();
   const APP_ID = 'server-auto-deploy-test-app-';
   const SERVER_VERSION_1 = '0.209.1';
   const SERVER_VERSION_2 = '0.209.2';
+  const CLOUDFLARE_ACCOUNT_ID = 'cf-abc';
+  const ENV_UPDATE_TIME = Timestamp.now();
 
   const appDocs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(i =>
     firestore.doc(appPath(`${APP_ID}${i}`)).withConverter(appDataConverter),
   );
 
   beforeEach(async () => {
-    mockFunctionParamsAndSecrets();
-
     const batch = firestore.batch();
-    const {hashes} = await getAppSecrets();
     batch.create(
       firestore
         .doc(serverPath(SERVER_VERSION_1))
@@ -77,18 +79,29 @@ describe('server auto-deploy', () => {
         channels: ['test-canary'],
       },
     );
+    batch.create(
+      firestore
+        .doc(providerPath(DEFAULT_PROVIDER_ID))
+        .withConverter(providerDataConverter),
+      {
+        accountID: CLOUDFLARE_ACCOUNT_ID,
+        defaultMaxApps: 3,
+        defaultZone: {
+          zoneID: 'zone-id',
+          zoneName: 'reflect-o-rama.net',
+        },
+        dispatchNamespace: 'prod',
+      },
+    );
+
     appDocs.forEach((appDoc, i) => {
       batch.create(appDoc, {
-        cfID: 'foo',
+        cfID: 'deprecated',
+        provider: DEFAULT_PROVIDER_ID,
         cfScriptName: 'bar',
         teamID: 'baz',
+        teamLabel: 'boom',
         name: 'boo',
-        deploymentOptions: {
-          vars: {
-            DISABLE_LOG_FILTERING: 'false',
-            LOG_LEVEL: 'info',
-          },
-        },
         serverReleaseChannel: i % 2 === 0 ? 'test-stable' : 'test-canary',
 
         runningDeployment: {
@@ -101,16 +114,11 @@ describe('server auto-deploy', () => {
             appModules: [],
             serverVersionRange: '^0.209.0',
             serverVersion: '0.209.0',
-            hostname: 'boo.reflect-server.net',
-            options: {
-              vars: {
-                DISABLE_LOG_FILTERING: 'false',
-                LOG_LEVEL: 'info',
-              },
-            },
-            hashesOfSecrets: hashes,
+            hostname: 'boo-boom.reflect-o-rama.net',
+            envUpdateTime: ENV_UPDATE_TIME,
           },
         },
+        envUpdateTime: ENV_UPDATE_TIME,
       });
     });
     await batch.commit();
@@ -124,6 +132,7 @@ describe('server auto-deploy', () => {
     for (const path of [
       serverPath(SERVER_VERSION_1),
       serverPath(SERVER_VERSION_2),
+      providerPath(DEFAULT_PROVIDER_ID),
     ]) {
       batch.delete(firestore.doc(path));
     }

@@ -52,8 +52,6 @@ lerna-debug.log*
 .env
 .env*.local
 .dev.vars
-.env.reflect-mirror-staging
-.env.reflect-mirror-prod
 
 # vercel
 .vercel
@@ -64,7 +62,7 @@ lerna-debug.log*
 next-env.d.ts
 
 # wrangler
-.wrangler/*
+.wrangler/
 .mf
 
 reflect.config.json

@@ -26,11 +26,11 @@ test('poke', async () => {
         tx: WriteTransaction,
         args: A,
       ) => {
-        await tx.put(`/todo/${args.id}`, args);
+        await tx.set(`/todo/${args.id}`, args);
       },
     },
   });
-  const clientID = await rep.clientID;
+  const {clientID} = rep;
 
   const {setTodo} = rep.mutate;
 
@@ -92,7 +92,7 @@ test('overlapped pokes not supported', async () => {
     enablePullAndPushInOpen: false,
   });
 
-  const clientID = await rep.clientID;
+  const {clientID} = rep;
   const poke: Poke = {
     baseCookie: null,
     pullResponse: makePullResponseV1(

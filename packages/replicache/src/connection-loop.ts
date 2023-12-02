@@ -49,24 +49,35 @@ export class ConnectionLoop {
 
   // Controls whether the next iteration of the loop will wait at the pending
   // state.
-  private _pendingResolver = resolver<void>();
+  #pendingResolver = resolver<void>();
 
-  private readonly _delegate: ConnectionLoopDelegate;
-  private _closed = false;
+  /**
+   * This resolver is used to allow us to skip sleeps when we do send(true)
+   */
+  #skipSleepsResolver = resolver<void>();
+
+  /** Resolver for the next send */
+  #sendResolver = resolver<void>();
+
+  readonly #delegate: ConnectionLoopDelegate;
+  #closed = false;
 
   constructor(delegate: ConnectionLoopDelegate) {
-    this._delegate = delegate;
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.run();
+    this.#delegate = delegate;
+    void this.run();
   }
 
   close(): void {
-    this._closed = true;
+    this.#closed = true;
   }
 
-  send(): void {
-    this._delegate.debug?.('send');
-    this._pendingResolver.resolve();
+  send(now: boolean): Promise<void> {
+    this.#delegate.debug?.('send', now);
+    if (now) {
+      this.#skipSleepsResolver.resolve();
+    }
+    this.#pendingResolver.resolve();
+    return this.#sendResolver.promise;
   }
 
   async run(): Promise<void> {
@@ -77,13 +88,16 @@ export class ConnectionLoop {
 
     // The number of active connections.
     let counter = 0;
-    const delegate = this._delegate;
+    const delegate = this.#delegate;
     const {debug} = delegate;
     let delay = 0;
 
     debug?.('Starting connection loop');
 
-    while (!this._closed) {
+    const sleepMaybeSkip: typeof sleep = ms =>
+      Promise.race([this.#skipSleepsResolver.promise, sleep(ms)]);
+
+    while (!this.#closed) {
       debug?.(
         didLastSendRequestFail(sendRecords)
           ? 'Last request failed. Trying again'
@@ -91,26 +105,26 @@ export class ConnectionLoop {
       );
 
       // Wait until send is called or until the watchdog timer fires.
-      const races = [this._pendingResolver.promise];
+      const races = [this.#pendingResolver.promise];
       const t = delegate.watchdogTimer;
       if (t !== null) {
         races.push(sleep(t));
       }
       await Promise.race(races);
-      if (this._closed) break;
+      if (this.#closed) break;
 
       debug?.('Waiting for debounce');
-      await sleep(delegate.debounceDelay);
-      if (this._closed) break;
+      await sleepMaybeSkip(delegate.debounceDelay);
+      if (this.#closed) break;
       debug?.('debounced');
 
       // This resolver is used to wait for incoming push calls.
-      this._pendingResolver = resolver();
+      this.#pendingResolver = resolver();
 
       if (counter >= delegate.maxConnections) {
         debug?.('Too many request in flight. Waiting until one finishes...');
-        await this._waitUntilAvailableConnection();
-        if (this._closed) break;
+        await this.#waitUntilAvailableConnection();
+        if (this.#closed) break;
         debug?.('...finished');
       }
 
@@ -143,10 +157,10 @@ export class ConnectionLoop {
         const timeSinceLastSend = Date.now() - lastSendTime;
         if (clampedDelay > timeSinceLastSend) {
           await Promise.race([
-            sleep(clampedDelay - timeSinceLastSend),
+            sleepMaybeSkip(clampedDelay - timeSinceLastSend),
             recoverResolver.promise,
           ]);
-          if (this._closed) break;
+          if (this.#closed) break;
         }
       }
 
@@ -155,16 +169,19 @@ export class ConnectionLoop {
       (async () => {
         const start = Date.now();
         let ok: boolean;
+        let error: unknown;
         try {
           lastSendTime = start;
           debug?.('Sending request');
+          this.#skipSleepsResolver = resolver();
           ok = await delegate.invokeSend();
           debug?.('Send returned', ok);
         } catch (e) {
           debug?.('Send failed', e);
+          error = e;
           ok = false;
         }
-        if (this._closed) {
+        if (this.#closed) {
           debug?.('Closed after invokeSend');
           return;
         }
@@ -175,28 +192,37 @@ export class ConnectionLoop {
           recoverResolver = resolver();
         }
         counter--;
-        this._connectionAvailable();
-        if (!ok) {
+        this.#connectionAvailable();
+        const sendResolver = this.#sendResolver;
+        this.#sendResolver = resolver();
+        this.#sendResolver.promise.catch(() => {
+          // We do not want this promise to be treated as unhandled.
+        });
+        if (ok) {
+          sendResolver.resolve();
+        } else {
+          sendResolver.reject(error ?? new Error('Send failed'));
+
           // Keep trying
-          this._pendingResolver.resolve();
+          this.#pendingResolver.resolve();
         }
       })();
     }
   }
 
-  private _waitingConnectionResolve: (() => void) | undefined = undefined;
+  #waitingConnectionResolve: (() => void) | undefined = undefined;
 
-  private _connectionAvailable() {
-    if (this._waitingConnectionResolve) {
-      const resolve = this._waitingConnectionResolve;
-      this._waitingConnectionResolve = undefined;
+  #connectionAvailable() {
+    if (this.#waitingConnectionResolve) {
+      const resolve = this.#waitingConnectionResolve;
+      this.#waitingConnectionResolve = undefined;
       resolve();
     }
   }
 
-  private _waitUntilAvailableConnection() {
+  #waitUntilAvailableConnection() {
     const {promise, resolve} = resolver();
-    this._waitingConnectionResolve = resolve;
+    this.#waitingConnectionResolve = resolve;
     return promise;
   }
 }
@@ -205,7 +231,7 @@ export class ConnectionLoop {
 const CONNECTION_MEMORY_COUNT = 9;
 
 // Computes a new delay based on the previous requests. We use the median of the
-// previous successfull request divided by `maxConnections`. When we get errors
+// previous successful request divided by `maxConnections`. When we get errors
 // we do exponential backoff. As soon as we recover from an error we reset back
 // to delegate.minDelayMs.
 function computeDelayAndUpdateDurations(

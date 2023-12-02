@@ -1,9 +1,9 @@
 import {resolver} from '@rocicorp/resolver';
 import {expect} from 'chai';
 import * as sinon from 'sinon';
+import type {VersionNotSupportedResponse} from './error-responses.js';
 import {getDefaultPuller} from './get-default-puller.js';
 import {Hash, emptyHash} from './hash.js';
-import type {VersionNotSupportedResponse, WriteTransaction} from './mod.js';
 import type {Puller} from './puller.js';
 import {UpdateNeededReason, httpStatusUnauthorized} from './replicache.js';
 import {
@@ -16,6 +16,7 @@ import {
   tickAFewTimes,
   waitForSync,
 } from './test-util.js';
+import type {WriteTransaction} from './transactions.js';
 
 // fetch-mock has invalid d.ts file so we removed that on npm install.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -36,7 +37,7 @@ test('pull', async () => {
         args: A,
       ) => {
         createCount++;
-        await tx.put(`/todo/${args.id}`, args);
+        await tx.set(`/todo/${args.id}`, args);
       },
       deleteTodo: async <A extends {id: number}>(
         tx: WriteTransaction,
@@ -68,7 +69,7 @@ test('pull', async () => {
   await deleteTodo({id: id2});
 
   expect(deleteCount).to.equal(2);
-  const clientID = await rep.clientID;
+  const {clientID} = rep;
   fetchMock.postOnce(
     pullURL,
     makePullResponseV1(clientID, 2, [
@@ -80,7 +81,7 @@ test('pull', async () => {
       },
     ]),
   );
-  rep.pull();
+  void rep.pull();
   await tickAFewTimes();
   expect(deleteCount).to.equal(2);
 
@@ -139,7 +140,7 @@ test('pull', async () => {
     pullURL,
     makePullResponseV1(clientID, 6, [{op: 'del', key: '/todo/14323534'}], ''),
   );
-  rep.pull();
+  void rep.pull();
   await tickAFewTimes();
 
   expect(deleteCount).to.equal(4);
@@ -211,7 +212,7 @@ test('pull request is only sent when pullURL or non-default puller are set', asy
   fetchMock.reset();
   fetchMock.postAny({});
 
-  rep.pull();
+  void rep.pull();
   await tickAFewTimes();
 
   expect(fetchMock.calls()).to.have.length(0);
@@ -222,7 +223,7 @@ test('pull request is only sent when pullURL or non-default puller are set', asy
   rep.pullURL = 'https://diff.com/pull';
   fetchMock.post(rep.pullURL, {lastMutationID: 0, patch: []});
 
-  rep.pull();
+  void rep.pull();
   await tickAFewTimes();
   expect(fetchMock.calls()).to.have.length.greaterThan(0);
 
@@ -232,7 +233,7 @@ test('pull request is only sent when pullURL or non-default puller are set', asy
 
   rep.pullURL = '';
 
-  rep.pull();
+  void rep.pull();
   await tickAFewTimes();
   expect(fetchMock.calls()).to.have.length(0);
 
@@ -254,7 +255,7 @@ test('pull request is only sent when pullURL or non-default puller are set', asy
     });
   };
 
-  rep.pull();
+  void rep.pull();
   await tickAFewTimes();
 
   expect(fetchMock.calls()).to.have.length(0);
@@ -275,7 +276,7 @@ test('pull request is only sent when pullURL or non-default puller are set', asy
 
   rep.puller = getDefaultPuller(rep);
 
-  rep.pull();
+  void rep.pull();
   await tickAFewTimes();
 
   expect(fetchMock.calls()).to.have.length(0);
@@ -303,7 +304,7 @@ test('Client Group not found on server', async () => {
   expect(rep.isClientGroupDisabled).false;
 
   rep.puller = puller;
-  rep.pull();
+  void rep.pull();
 
   await waitForSync(rep);
 
@@ -337,7 +338,7 @@ test('Version not supported on server', async () => {
     });
 
     rep.puller = puller;
-    rep.pull();
+    void rep.pull();
 
     await promise;
 

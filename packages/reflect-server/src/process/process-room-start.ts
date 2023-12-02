@@ -1,7 +1,11 @@
 import type {LogContext} from '@rocicorp/logger';
+import type {Env} from 'reflect-shared';
 import type {RoomStartHandler} from '../server/room-start.js';
 import {EntryCache} from '../storage/entry-cache.js';
-import {ReplicacheTransaction} from '../storage/replicache-transaction.js';
+import {
+  NOOP_MUTATION_ID,
+  ReplicacheTransaction,
+} from '../storage/replicache-transaction.js';
 import type {Storage} from '../storage/storage.js';
 import {getVersion, putVersion} from '../types/version.js';
 
@@ -10,13 +14,12 @@ import {getVersion, putVersion} from '../types/version.js';
 // to be in an invalid state).
 export async function processRoomStart(
   lc: LogContext,
+  env: Env,
   roomStartHandler: RoomStartHandler,
   storage: Storage,
+  roomID: string,
 ): Promise<void> {
   lc.debug?.('processing room start');
-
-  // Note: Internal schema migrations will go here, before
-  // invoking the app-specified RoomStartHandler.
 
   const cache = new EntryCache(storage);
   const startVersion = (await getVersion(cache)) ?? 0;
@@ -25,12 +28,13 @@ export async function processRoomStart(
   const tx = new ReplicacheTransaction(
     cache,
     '', // clientID,
-    -1, // mutationID,
-    startVersion,
+    NOOP_MUTATION_ID,
+    nextVersion,
     undefined,
+    env,
   );
   try {
-    await roomStartHandler(tx);
+    await roomStartHandler(tx, roomID);
     if (!cache.isDirty()) {
       lc.debug?.('noop roomStartHandler');
       return;

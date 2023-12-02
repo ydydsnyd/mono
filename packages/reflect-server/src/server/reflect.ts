@@ -1,10 +1,11 @@
 import {consoleLogSink, LogLevel, LogSink, TeeLogSink} from '@rocicorp/logger';
-import type {MutatorDefs} from 'reflect-types/src/mod.js';
+import type {MutatorDefs} from 'reflect-shared';
 import {BaseAuthDO} from './auth-do.js';
 import type {AuthHandler} from './auth.js';
 import type {DisconnectHandler} from './disconnect.js';
-import {BaseRoomDO} from './room-do.js';
+import {BaseRoomDO, getDefaultTurnDuration} from './room-do.js';
 import type {RoomStartHandler} from './room-start.js';
+import {extractVars} from './vars.js';
 import {createWorker} from './worker.js';
 
 export type DatadogMetricsOptions = {
@@ -46,10 +47,12 @@ export interface ReflectServerOptions<MD extends MutatorDefs> {
   allowUnconfirmedWrites?: boolean | undefined;
 
   /**
-   * If defined limits the number of mutations that will be processed per
-   * turn.
-   * Setting this limit can prevent busy rooms from experiencing "overloaded"
+   * The max number of mutations that will be processed per turn.
+   * Lowering this limit can prevent busy rooms from experiencing "overloaded"
    * exceptions at the cost of peer-to-peer latency.
+   *
+   * Default is `66` when `allowUnconfirmedWrites` is `false`, or `16` when
+   * `allowUnconfirmedWrites` is `true`.
    */
   maxMutationsPerTurn?: number | undefined;
 }
@@ -138,7 +141,7 @@ function makeNormalizedOptionsGetter<
       logLevel = 'debug',
       allowUnconfirmedWrites = false,
       datadogMetricsOptions = undefined,
-      maxMutationsPerTurn = Number.MAX_SAFE_INTEGER,
+      maxMutationsPerTurn,
     } = makeOptions(env);
     const logSink = logSinks ? combineLogSinks(logSinks) : consoleLogSink;
     return {
@@ -150,7 +153,9 @@ function makeNormalizedOptionsGetter<
       logLevel,
       allowUnconfirmedWrites,
       datadogMetricsOptions,
-      maxMutationsPerTurn,
+      // default to a max of 1 mutation per millisecond of turn duration
+      maxMutationsPerTurn:
+        maxMutationsPerTurn ?? getDefaultTurnDuration(allowUnconfirmedWrites),
     };
   };
 }
@@ -180,6 +185,7 @@ function createRoomDOClass<
         logLevel,
         allowUnconfirmedWrites,
         maxMutationsPerTurn,
+        env: extractVars(env),
       });
     }
   };
@@ -199,6 +205,7 @@ function createAuthDOClass<
         authApiKey: getAPIKey(env),
         logSink,
         logLevel,
+        env: extractVars(env),
       });
     }
   };

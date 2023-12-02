@@ -1,5 +1,5 @@
 import {describe, expect, test} from '@jest/globals';
-import type {WriteTransaction} from 'reflect-types/src/mod.js';
+import type {WriteTransaction} from 'reflect-shared';
 import type {RoomStartHandler} from '../server/room-start.js';
 import {DurableStorage} from '../storage/durable-storage.js';
 import {getUserValue} from '../types/user-value.js';
@@ -28,7 +28,7 @@ describe('processRoomStart', () => {
     {
       name: 'room handler with no starting version',
       roomStartHandler: async (tx: WriteTransaction) => {
-        await tx.put('foo', 'bar');
+        await tx.set('foo', 'bar');
       },
       endingVersion: 1,
       expectFooBar: true,
@@ -36,7 +36,7 @@ describe('processRoomStart', () => {
     {
       name: 'room handler with starting version',
       roomStartHandler: async (tx: WriteTransaction) => {
-        await tx.put('foo', 'bar');
+        await tx.set('foo', 'bar');
       },
       startingVersion: 12,
       endingVersion: 13,
@@ -49,6 +49,15 @@ describe('processRoomStart', () => {
       endingVersion: 12,
       expectFooBar: false,
       expectedError: 'tossed!',
+    },
+    {
+      name: 'room start handler is passed roomID and env',
+      roomStartHandler: (tx: WriteTransaction, roomID: string) => {
+        expect(roomID).toEqual('testRoomID');
+        expect(tx.env).toEqual({env: 'yo'});
+        return Promise.resolve();
+      },
+      expectFooBar: false,
     },
   ];
 
@@ -66,8 +75,10 @@ describe('processRoomStart', () => {
       try {
         await processRoomStart(
           createSilentLogContext(),
+          {env: 'yo'},
           c.roomStartHandler,
           storage,
+          'testRoomID',
         );
       } catch (e) {
         err = String(e);
@@ -76,7 +87,7 @@ describe('processRoomStart', () => {
       expect(err).toEqual(c.expectedError);
       expect(await getUserValue('foo', storage)).toEqual(
         c.expectFooBar
-          ? {version: c.startingVersion ?? 0, deleted: false, value: 'bar'}
+          ? {version: c.endingVersion, deleted: false, value: 'bar'}
           : undefined,
       );
       expect(await getVersion(storage)).toEqual(c.endingVersion);

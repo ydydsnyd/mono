@@ -1,8 +1,14 @@
 import type {LogContext} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
-import {assert} from 'shared/src/asserts.js';
 import {sleep} from 'shared/src/sleep.js';
 import {nanoid} from '../util/nanoid.js';
+import {
+  HTTPString,
+  WSString,
+  assertHTTPString,
+  assertWSString,
+  toWSString,
+} from './http-string.js';
 
 type CheckResult = {success: boolean; detail: string};
 type Check = (l: LogContext) => Promise<CheckResult>;
@@ -10,24 +16,25 @@ type Checks = Record<string, Check>;
 
 export async function checkConnectivity(
   reason: string,
-  socketOrigin: string,
+  server: HTTPString,
   lc: LogContext,
-) {
-  assert(socketOrigin.startsWith('ws://') || socketOrigin.startsWith('wss://'));
+  signal: AbortSignal,
+): Promise<void> {
   const id = nanoid();
   lc = lc.withContext('connectCheckID', id).withContext('checkReason', reason);
   lc.info?.('Starting connectivity checks', {
     navigatorOnline: navigator.onLine,
   });
+  const socketOrigin = toWSString(server);
   const checks: Checks = {
-    cfGet: _ => checkCfGet(id, socketOrigin),
-    cfWebSocket: l => checkCfSocket(id, socketOrigin, false, l),
+    cfGet: _ => checkCfGet(id, server, signal),
+    cfWebSocket: l => checkCfSocket(id, socketOrigin, false, l, signal),
     cfWebSocketWSecWebSocketProtocolHeader: l =>
-      checkCfSocket(id, socketOrigin, true, l),
-    renderGet: _ => checkRenderGet(id),
-    renderWebSocket: l => checkRenderSocket(id, false, l),
+      checkCfSocket(id, socketOrigin, true, l, signal),
+    renderGet: _ => checkRenderGet(id, signal),
+    renderWebSocket: l => checkRenderSocket(id, false, l, signal),
     renderWebSocketWSecWebSocketProtocolHeader: l =>
-      checkRenderSocket(id, true, l),
+      checkRenderSocket(id, true, l, signal),
   };
 
   const resultPs: Promise<CheckResult>[] = [];
@@ -41,7 +48,7 @@ export async function checkConnectivity(
           result = await check(checkLc);
         } catch (e) {
           const detail = `Error: ${
-            e instanceof Error ? {name: e.name, message: e.message} : e
+            e instanceof Error ? `{name: ${e.name}, message: ${e.message}}` : e
           }`;
           result = {success: false, detail};
         }
@@ -52,6 +59,10 @@ export async function checkConnectivity(
   }
 
   const results = await Promise.all(resultPs);
+  if (signal.aborted) {
+    return;
+  }
+
   lc.info?.(
     'Connectivity checks summary\n',
     ...Object.keys(checks).map(
@@ -72,23 +83,29 @@ export async function checkConnectivity(
   );
 }
 
-function checkRenderGet(id: string) {
-  return checkGet(id, 'https://canary-render.onrender.com/canary/get');
+function checkRenderGet(id: string, signal: AbortSignal) {
+  return checkGet(
+    id,
+    'https://networkcheck.reflect-server.net/canary/get',
+    signal,
+  );
 }
 
-function checkCfGet(id: string, socketOrigin: string) {
-  const cfGetCheckBaseURL = new URL(socketOrigin.replace(/^ws/, 'http'));
+function checkCfGet(id: string, server: HTTPString, signal: AbortSignal) {
+  const cfGetCheckBaseURL = new URL(server);
   cfGetCheckBaseURL.pathname = '/api/canary/v0/get';
-  return checkGet(id, cfGetCheckBaseURL.toString());
+  const url = cfGetCheckBaseURL.toString();
+  assertHTTPString(url);
+  return checkGet(id, url, signal);
 }
 
-function checkGet(id: string, baseURL: string) {
+function checkGet(id: string, baseURL: HTTPString, signal: AbortSignal) {
   const getCheckURL = new URL(baseURL);
   getCheckURL.searchParams.set('id', id);
   return Promise.race([
-    timeout(),
+    timeout(signal),
     (async () => {
-      const response = await fetch(getCheckURL);
+      const response = await fetch(getCheckURL, {signal});
       return {
         success: response.status === 200,
         detail: `Got response ${response.status} "${await response.text()}"`,
@@ -101,36 +118,37 @@ function checkRenderSocket(
   id: string,
   wSecWebSocketProtocolHeader: boolean,
   lc: LogContext,
+  signal: AbortSignal,
 ) {
   return checkSocket(
     id,
-    'wss://canary-render.onrender.com/canary/websocket',
+    'wss://networkcheck.reflect-server.net/canary/websocket',
     wSecWebSocketProtocolHeader,
     lc,
+    signal,
   );
 }
 
 function checkCfSocket(
   id: string,
-  socketOrigin: string,
+  socketOrigin: WSString,
   wSecWebSocketProtocolHeader: boolean,
   lc: LogContext,
+  signal: AbortSignal,
 ) {
   const cfSocketCheckBaseURL = new URL(socketOrigin);
   cfSocketCheckBaseURL.pathname = '/api/canary/v0/websocket';
-  return checkSocket(
-    id,
-    cfSocketCheckBaseURL.toString(),
-    wSecWebSocketProtocolHeader,
-    lc,
-  );
+  const url = cfSocketCheckBaseURL.toString();
+  assertWSString(url);
+  return checkSocket(id, url, wSecWebSocketProtocolHeader, lc, signal);
 }
 
 async function checkSocket(
   id: string,
-  socketBaseURL: string,
+  socketBaseURL: WSString,
   wSecWebSocketProtocolHeader: boolean,
   lc: LogContext,
+  signal: AbortSignal,
 ) {
   const socketCheckURL = new URL(socketBaseURL);
   socketCheckURL.searchParams.set('id', id);
@@ -171,7 +189,7 @@ async function checkSocket(
     cfWebSocket.addEventListener('message', onMessage);
     cfWebSocket.addEventListener('open', onOpen);
     cfWebSocket.addEventListener('close', onClose);
-    return await Promise.race([timeout(), promise]);
+    return await Promise.race([timeout(signal), promise]);
   } finally {
     cfWebSocket.removeEventListener('message', onMessage);
     cfWebSocket.removeEventListener('open', onOpen);
@@ -182,7 +200,7 @@ async function checkSocket(
 
 const TIMEOUT_MS = 10_000;
 
-async function timeout(): Promise<CheckResult> {
-  await sleep(TIMEOUT_MS);
+async function timeout(signal: AbortSignal): Promise<CheckResult> {
+  await sleep(TIMEOUT_MS, signal);
   return {success: false, detail: 'Timed out.'};
 }

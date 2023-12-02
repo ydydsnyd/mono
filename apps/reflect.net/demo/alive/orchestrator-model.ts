@@ -1,12 +1,12 @@
 import {entitySchema, generate} from '@rocicorp/rails';
-import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect/client';
+import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
 import {z} from 'zod';
 
 // Changing this string to the next in the sequence a-z,aa-zz,aaa-zzz,..
 // will force all new orchestrator and puzzle rooms.  This
 // can be useful if we make breaking schema changes or simply want
 // rooms with less garbage built up (which can slow down initial sync).
-const ROOMS_VERSION = 'b';
+const ROOMS_VERSION = 'c';
 
 export const ORCHESTRATOR_ROOM = `orch-${ROOMS_VERSION}`;
 
@@ -66,7 +66,7 @@ async function putClientRoomAssignmentMeta(
   tx: WriteTransaction,
   meta: ClientRoomAssignmentMetaModel,
 ) {
-  await tx.put(clientRoomAssignmentMetaKey, meta);
+  await tx.set(clientRoomAssignmentMetaKey, meta);
 }
 
 async function updateRoomClientCount(

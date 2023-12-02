@@ -1,12 +1,17 @@
 /* eslint-disable require-await */
 
 import {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
+import {assert} from 'shared/src/asserts.js';
+import type {ReadonlyJSONObject} from 'shared/src/json.js';
 import type {IndexKey} from './db/index.js';
-import type {ReadonlyJSONObject} from './mod.js';
 import {Replicache} from './replicache.js';
-import type {WriteTransaction} from './transactions.js';
+import type {DeepReadonly, WriteTransaction} from './transactions.js';
 
 function use(..._args: unknown[]) {
+  // do nothing
+}
+
+function expectType<T>(_: T) {
   // do nothing
 }
 
@@ -252,7 +257,7 @@ test.skip('mut [type checking only]', async () => {
         // @ts-expect-error xxx
         custom.n as boolean;
 
-        await tx.put('c', custom);
+        await tx.set('c', custom);
       },
 
       k: async (tx: WriteTransaction, custom: CustomInterface) => {
@@ -263,7 +268,7 @@ test.skip('mut [type checking only]', async () => {
         custom.n as boolean;
 
         // @ts-expect-error Index signature is missing in type 'CustomInterface'
-        await tx.put('c', custom);
+        await tx.set('c', custom);
       },
 
       l: async (tx: WriteTransaction, custom: ToRecord<CustomInterface>) => {
@@ -273,7 +278,7 @@ test.skip('mut [type checking only]', async () => {
         // @ts-expect-error xxx
         custom.n as boolean;
 
-        await tx.put('c', custom);
+        await tx.set('c', custom);
       },
     },
   });
@@ -424,4 +429,413 @@ test.skip('Allowing undefined in JSONObject [type checking only]', async () => {
     },
   });
   await rep.mutate.mut({a: undefined});
+});
+
+test.skip('Parameterized get [type checking only]', async () => {
+  const rep = new Replicache({
+    name: 'test-types',
+    licenseKey: TEST_LICENSE_KEY,
+    mutators: {
+      mut: async (tx: WriteTransaction) => {
+        const p: {x: string} | undefined = await tx.get<{x: string}>('x');
+        use(p);
+      },
+    },
+  });
+  await rep.query(async tx => {
+    const p: {x: string} | undefined = await tx.get<{x: string}>('x');
+    use(p);
+  });
+});
+
+test.skip('Parameterized get invalid types [type checking only]', async () => {
+  const rep = new Replicache({
+    name: 'test-types',
+    licenseKey: TEST_LICENSE_KEY,
+    mutators: {
+      mut: async (tx: WriteTransaction) => {
+        // @ts-expect-error Type 'string' is not assignable to type 'number'.ts(2322)
+        const p: {x: number} | undefined = await tx.get<{x: string}>('x');
+        use(p);
+      },
+    },
+  });
+  await rep.query(async tx => {
+    // @ts-expect-error Type 'string' is not assignable to type 'number'.ts(2322)
+    const p: {x: number} | undefined = await tx.get<{x: string}>('x');
+    use(p);
+  });
+});
+
+test.skip('Parameterized get deep read only object/array [type checking only]', async () => {
+  type T = {x: number[]};
+  const rep = new Replicache({
+    name: 'test-types',
+    licenseKey: TEST_LICENSE_KEY,
+    mutators: {
+      mut: async (tx: WriteTransaction) => {
+        const v = await tx.get<T>('x');
+        assert(v);
+        // @ts-expect-error Cannot assign to 'x' because it is a read-only property.ts(2540)
+        v.x = [42];
+        // @ts-expect-error Index signature in type 'readonly number[]' only permits reading.ts(2542)
+        v.x[0] = 42;
+      },
+    },
+  });
+  await rep.query(async tx => {
+    const v = await tx.get<T>('x');
+    assert(v);
+    // @ts-expect-error Cannot assign to 'x' because it is a read-only property.ts(2540)
+    v.x = [42];
+    // @ts-expect-error Index signature in type 'readonly number[]' only permits reading.ts(2542)
+    v.x[0] = 42;
+  });
+});
+
+test.skip('Parameterized scan.values [type checking only]', async () => {
+  type V = {x: number};
+  type DeepV = DeepReadonly<V>;
+  const rep = new Replicache({
+    name: 'test-types',
+    licenseKey: TEST_LICENSE_KEY,
+    mutators: {
+      mut: async (tx: WriteTransaction) => {
+        for await (const v of tx.scan<V>()) {
+          expectType<DeepV>(v);
+        }
+
+        for await (const v of tx.scan<V>().values()) {
+          expectType<DeepV>(v);
+        }
+
+        const vs = await tx.scan<V>().values().toArray();
+        expectType<DeepV[]>(vs);
+
+        const vs2 = await tx.scan<V>().toArray();
+        expectType<DeepV[]>(vs2);
+      },
+    },
+  });
+
+  await rep.query(async tx => {
+    for await (const v of tx.scan<V>()) {
+      expectType<DeepV>(v);
+    }
+
+    for await (const v of tx.scan<V>().values()) {
+      expectType<DeepV>(v);
+    }
+
+    const vs: V[] = await tx.scan<V>().values().toArray();
+    expectType<DeepV[]>(vs);
+
+    const vs2: V[] = await tx.scan<V>().toArray();
+    expectType<DeepV[]>(vs2);
+  });
+});
+
+test.skip('Parameterized index scan.values [type checking only]', async () => {
+  type V = {x: number};
+  type DeepV = DeepReadonly<V>;
+  const rep = new Replicache({
+    name: 'test-types',
+    licenseKey: TEST_LICENSE_KEY,
+    mutators: {
+      mut: async (tx: WriteTransaction) => {
+        for await (const v of tx.scan<V>({indexName: 'x'})) {
+          expectType<DeepV>(v);
+        }
+
+        for await (const v of tx.scan<V>({indexName: 'x'}).values()) {
+          expectType<DeepV>(v);
+        }
+
+        const vs = await tx.scan<V>({indexName: 'x'}).values().toArray();
+        expectType<DeepV[]>(vs);
+
+        const vs2 = await tx.scan<V>({indexName: 'x'}).toArray();
+        expectType<DeepV[]>(vs2);
+      },
+    },
+  });
+
+  await rep.query(async tx => {
+    for await (const v of tx.scan<V>()) {
+      expectType<DeepV>(v);
+    }
+
+    for await (const v of tx.scan<V>().values()) {
+      expectType<DeepV>(v);
+    }
+
+    const vs: V[] = await tx.scan<V>().values().toArray();
+    expectType<DeepV[]>(vs);
+
+    const vs2: V[] = await tx.scan<V>().toArray();
+    expectType<DeepV[]>(vs2);
+  });
+});
+
+test.skip('Parameterized scan.values invalid types [type checking only]', async () => {
+  type V = {x: number};
+  const rep = new Replicache({
+    name: 'test-types',
+    licenseKey: TEST_LICENSE_KEY,
+    mutators: {
+      mut: async (tx: WriteTransaction) => {
+        for await (const v of tx.scan<V>()) {
+          // @ts-expect-error Type 'number' is not assignable to type 'string'.ts(2322)
+          const v2: {x: string} = v;
+          use(v2);
+        }
+
+        for await (const v of tx.scan<V>().values()) {
+          // @ts-expect-error Type 'number' is not assignable to type 'string'.ts(2322)
+          const v2: {x: string} = v;
+          use(v2);
+        }
+
+        // @ts-expect-error Type 'number' is not assignable to type 'string'.ts(2322)
+        const vs: {x: string}[] = await tx.scan<V>().toArray();
+        use(vs);
+
+        // @ts-expect-error Type 'number' is not assignable to type 'string'.ts(2322)
+        const vs2: {x: string}[] = await tx.scan<V>().values().toArray();
+        use(vs2);
+      },
+    },
+  });
+
+  await rep.query(async tx => {
+    for await (const v of tx.scan<V>()) {
+      // @ts-expect-error Type 'number' is not assignable to type 'string'.ts(2322)
+      const v2: {x: string} = v;
+      use(v2);
+    }
+
+    for await (const v of tx.scan<V>().values()) {
+      // @ts-expect-error Type 'number' is not assignable to type 'string'.ts(2322)
+      const v2: {x: string} = v;
+      use(v2);
+    }
+
+    // @ts-expect-error Type 'number' is not assignable to type 'string'.ts(2322)
+    const vs: {x: string}[] = await tx.scan<V>().toArray();
+    use(vs);
+
+    // @ts-expect-error Type 'number' is not assignable to type 'string'.ts(2322)
+    const vs2: {x: string}[] = await tx.scan<V>().values().toArray();
+    use(vs2);
+  });
+});
+
+test.skip('Parameterized scan.values deep read only object/array [type checking only]', async () => {
+  type V = {x: number[]};
+  const rep = new Replicache({
+    name: 'test-types',
+    licenseKey: TEST_LICENSE_KEY,
+    mutators: {
+      mut: async (tx: WriteTransaction) => {
+        for await (const v of tx.scan<V>()) {
+          // @ts-expect-error Cannot assign to 'x' because it is a read-only property.ts(2540)
+          v.x = [42];
+          // @ts-expect-error Index signature in type 'readonly number[]' only permits reading.ts(2542)
+          v.x[0] = 42;
+        }
+
+        for await (const v of tx.scan<V>().values()) {
+          // @ts-expect-error Cannot assign to 'x' because it is a read-only property.ts(2540)
+          v.x = [42];
+          // @ts-expect-error Index signature in type 'readonly number[]' only permits reading.ts(2542)
+          v.x[0] = 42;
+        }
+
+        const vs = await tx.scan<V>().toArray();
+        // @ts-expect-error Cannot assign to 'x' because it is a read-only property.ts(2540)
+        vs[0].x = [42];
+        // @ts-expect-error Index signature in type 'readonly number[]' only permits reading.ts(2542)
+        vs[0].x[0] = 42;
+
+        const vs2 = await tx.scan<V>().values().toArray();
+        // @ts-expect-error Cannot assign to 'x' because it is a read-only property.ts(2540)
+        vs2[0].x = [42];
+        // @ts-expect-error Index signature in type 'readonly number[]' only permits reading.ts(2542)
+        vs2[0].x[0] = 42;
+      },
+    },
+  });
+
+  await rep.query(async tx => {
+    for await (const v of tx.scan<V>()) {
+      // @ts-expect-error Cannot assign to 'x' because it is a read-only property.ts(2540)
+      v.x = [42];
+      // @ts-expect-error Index signature in type 'readonly number[]' only permits reading.ts(2542)
+      v.x[0] = 42;
+    }
+
+    for await (const v of tx.scan<V>().values()) {
+      // @ts-expect-error Cannot assign to 'x' because it is a read-only property.ts(2540)
+      v.x = [42];
+      // @ts-expect-error Index signature in type 'readonly number[]' only permits reading.ts(2542)
+      v.x[0] = 42;
+    }
+
+    const vs = await tx.scan<V>().toArray();
+    // @ts-expect-error Cannot assign to 'x' because it is a read-only property.ts(2540)
+    vs[0].x = [42];
+    // @ts-expect-error Index signature in type 'readonly number[]' only permits reading.ts(2542)
+    vs[0].x[0] = 42;
+
+    const vs2 = await tx.scan<V>().values().toArray();
+    // @ts-expect-error Cannot assign to 'x' because it is a read-only property.ts(2540)
+    vs2[0].x = [42];
+    // @ts-expect-error Index signature in type 'readonly number[]' only permits reading.ts(2542)
+    vs2[0].x[0] = 42;
+  });
+});
+
+test.skip('Parameterized scan.entries [type checking only]', async () => {
+  type V = {x: number};
+  const rep = new Replicache({
+    name: 'test-types',
+    licenseKey: TEST_LICENSE_KEY,
+    mutators: {
+      mut: async (tx: WriteTransaction) => {
+        for await (const e of tx.scan<V>().entries()) {
+          const v: readonly [string, {readonly x: number}] = e;
+          use(v);
+        }
+
+        const es: (readonly [string, {readonly x: number}])[] = await tx
+          .scan<V>()
+          .entries()
+          .toArray();
+        use(es);
+      },
+    },
+  });
+
+  await rep.query(async tx => {
+    for await (const v of tx.scan<V>().entries()) {
+      const v2: readonly [string, {x: number}] = v;
+      use(v2);
+    }
+
+    const es: (readonly [string, {readonly x: number}])[] = await tx
+      .scan<V>()
+      .entries()
+      .toArray();
+    use(es);
+  });
+});
+
+test.skip('Parameterized index scan.entries [type checking only]', async () => {
+  type V = {x: number};
+  type EntryDeepV = readonly [IndexKey, DeepReadonly<{x: number}>];
+  const rep = new Replicache({
+    name: 'test-types',
+    licenseKey: TEST_LICENSE_KEY,
+    mutators: {
+      mut: async (tx: WriteTransaction) => {
+        for await (const e of tx.scan<V>({indexName: 'x'}).entries()) {
+          expectType<EntryDeepV>(e);
+        }
+
+        const es = await tx.scan<V>({indexName: 'x'}).entries().toArray();
+        expectType<EntryDeepV[]>(es);
+      },
+    },
+  });
+
+  await rep.query(async tx => {
+    for await (const v of tx.scan<V>({indexName: 'x'}).entries()) {
+      expectType<EntryDeepV>(v);
+    }
+
+    const es = await tx.scan<V>({indexName: 'x'}).entries().toArray();
+    expectType<EntryDeepV[]>(es);
+  });
+});
+
+test.skip('Parameterized scan.entries invalid types [type checking only]', async () => {
+  type V = {x: number};
+  const rep = new Replicache({
+    name: 'test-types',
+    licenseKey: TEST_LICENSE_KEY,
+    mutators: {
+      mut: async (tx: WriteTransaction) => {
+        for await (const e of tx.scan<V>().entries()) {
+          // @ts-expect-error Type 'number' is not assignable to type 'string'.ts(2322)
+          const v: readonly [string, {readonly x: string}] = e;
+          use(v);
+        }
+
+        // @ts-expect-error Type 'number' is not assignable to type 'string'.ts(2322)
+        const es: (readonly [string, {readonly x: string}])[] = await tx
+          .scan<V>()
+          .entries()
+          .toArray();
+        use(es);
+      },
+    },
+  });
+
+  await rep.query(async tx => {
+    for await (const e of tx.scan<V>().entries()) {
+      // @ts-expect-error Type 'number' is not assignable to type 'string'.ts(2322)
+      const v: readonly [string, {x: string}] = e;
+      use(v);
+    }
+
+    // @ts-expect-error Type 'number' is not assignable to type 'string'.ts(2322)
+    const es: (readonly [string, {readonly x: string}])[] = await tx
+      .scan<V>()
+      .entries()
+      .toArray();
+    use(es);
+  });
+});
+
+test.skip('Parameterized scan.entries deep read only object/array [type checking only]', async () => {
+  type V = {x: number[]};
+  const rep = new Replicache({
+    name: 'test-types',
+    licenseKey: TEST_LICENSE_KEY,
+    mutators: {
+      mut: async (tx: WriteTransaction) => {
+        for await (const e of tx.scan<V>().entries()) {
+          const [k, v] = e;
+          use(k);
+          // @ts-expect-error Cannot assign to 'x' because it is a read-only property.ts(2540)
+          v.x = [42];
+          // @ts-expect-error Index signature in type 'readonly number[]' only permits reading.ts(2542)
+          v.x[0] = 42;
+        }
+
+        const es = await tx.scan<V>().entries().toArray();
+        // @ts-expect-error Cannot assign to 'x' because it is a read-only property.ts(2540)
+        es[0][1].x = [42];
+        // @ts-expect-error Index signature in type 'readonly number[]' only permits reading.ts(2542)
+        es[0][1].x[0] = 42;
+      },
+    },
+  });
+
+  await rep.query(async tx => {
+    for await (const e of tx.scan<V>().entries()) {
+      const [k, v] = e;
+      use(k);
+      // @ts-expect-error Cannot assign to 'x' because it is a read-only property.ts(2540)
+      v.x = [42];
+      // @ts-expect-error Index signature in type 'readonly number[]' only permits reading.ts(2542)
+      v.x[0] = 42;
+    }
+
+    const es = await tx.scan<V>().entries().toArray();
+    // @ts-expect-error Cannot assign to 'x' because it is a read-only property.ts(2540)
+    es[0][1].x = [42];
+    // @ts-expect-error Index signature in type 'readonly number[]' only permits reading.ts(2542)
+    es[0][1].x[0] = 42;
+  });
 });

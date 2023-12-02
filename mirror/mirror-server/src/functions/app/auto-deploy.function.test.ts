@@ -1,40 +1,41 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {describe, test, expect, beforeEach, afterEach} from '@jest/globals';
+import {afterEach, beforeEach, describe, expect, test} from '@jest/globals';
 import {initializeApp} from 'firebase-admin/app';
 import {FieldValue, Timestamp, getFirestore} from 'firebase-admin/firestore';
+import {appDataConverter} from 'mirror-schema/src/app.js';
 import {
   DeploymentSpec,
   DeploymentType,
   appPath,
-  defaultOptions,
   deploymentDataConverter,
   deploymentPath,
   deploymentsCollection,
 } from 'mirror-schema/src/deployment.js';
-import {must} from 'shared/src/must.js';
+import {DEFAULT_ENV, envDataConverter, envPath} from 'mirror-schema/src/env.js';
+import {
+  DEFAULT_PROVIDER_ID,
+  providerDataConverter,
+  providerPath,
+} from 'mirror-schema/src/provider.js';
 import {serverDataConverter, serverPath} from 'mirror-schema/src/server.js';
-import {appDataConverter} from 'mirror-schema/src/app.js';
-import {mockFunctionParamsAndSecrets} from '../../test-helpers.js';
-import {getAppSecrets} from './secrets.js';
+import {must} from 'shared/src/must.js';
 import {
   MAX_AUTO_DEPLOYMENTS_PER_MINUTE,
   MIRROR_SERVER_REQUESTER_ID,
   checkForAutoDeployment,
 } from './auto-deploy.function.js';
-import {dummySecrets} from 'mirror-schema/src/test-helpers.js';
 
-describe('auto-deploy', () => {
+describe('app.auto-deploy', () => {
   initializeApp({projectId: 'auto-deploy-function-test'});
   const firestore = getFirestore();
   const APP_ID = 'auto-deploy-test-app-id';
   const SERVER_VERSION_1 = '0.28.0';
   const SERVER_VERSION_2 = '0.28.2';
+  const CLOUDFLARE_ACCOUNT_ID = 'foo-cloudflare-account';
+  const ENV_UPDATE_TIME = Timestamp.fromDate(new Date(2023, 1, 6));
 
   beforeEach(async () => {
-    mockFunctionParamsAndSecrets();
-
     const batch = firestore.batch();
-    const {hashes} = await getAppSecrets();
     batch.create(
       firestore
         .doc(serverPath(SERVER_VERSION_1))
@@ -60,18 +61,28 @@ describe('auto-deploy', () => {
       },
     );
     batch.create(
+      firestore
+        .doc(providerPath(DEFAULT_PROVIDER_ID))
+        .withConverter(providerDataConverter),
+      {
+        accountID: CLOUDFLARE_ACCOUNT_ID,
+        defaultMaxApps: 3,
+        defaultZone: {
+          zoneID: 'zone-id',
+          zoneName: 'reflect-o-rama.net',
+        },
+        dispatchNamespace: 'prod',
+      },
+    );
+    batch.create(
       firestore.doc(appPath(APP_ID)).withConverter(appDataConverter),
       {
-        cfID: 'foo',
+        cfID: 'deprecated',
+        provider: DEFAULT_PROVIDER_ID,
         cfScriptName: 'bar',
         teamID: 'baz',
         name: 'boo',
-        deploymentOptions: {
-          vars: {
-            DISABLE_LOG_FILTERING: 'false',
-            LOG_LEVEL: 'info',
-          },
-        },
+        teamLabel: 'yah',
         serverReleaseChannel: 'stable',
 
         runningDeployment: {
@@ -84,16 +95,27 @@ describe('auto-deploy', () => {
             appModules: [],
             serverVersionRange: '^0.28.0',
             serverVersion: SERVER_VERSION_1,
-            hostname: 'boo.reflect-server.net',
-            options: {
-              vars: {
-                DISABLE_LOG_FILTERING: 'false',
-                LOG_LEVEL: 'info',
-              },
-            },
-            hashesOfSecrets: hashes,
+            hostname: 'boo-yah.reflect-o-rama.net',
+            envUpdateTime: ENV_UPDATE_TIME,
           },
         },
+
+        envUpdateTime: ENV_UPDATE_TIME,
+      },
+    );
+    batch.create(
+      firestore
+        .doc(envPath(APP_ID, DEFAULT_ENV))
+        .withConverter(envDataConverter),
+      {
+        deploymentOptions: {
+          vars: {
+            DISABLE: 'false',
+            DISABLE_LOG_FILTERING: 'false',
+            LOG_LEVEL: 'info',
+          },
+        },
+        secrets: {},
       },
     );
     await batch.commit();
@@ -108,9 +130,11 @@ describe('auto-deploy', () => {
       batch.delete(d);
     }
     for (const path of [
+      envPath(APP_ID, DEFAULT_ENV),
       appPath(APP_ID),
       serverPath(SERVER_VERSION_1),
       serverPath(SERVER_VERSION_2),
+      providerPath(DEFAULT_PROVIDER_ID),
     ]) {
       batch.delete(firestore.doc(path));
     }
@@ -151,48 +175,35 @@ describe('auto-deploy', () => {
       },
       expectedType: 'HOSTNAME_UPDATE',
       expectedSpec: {
-        hostname: 'bonk.reflect-server.net',
+        hostname: 'bonk-yah.reflect-o-rama.net',
       },
     },
     {
-      name: 'options update',
+      name: 'env update',
+      prep: async () => {
+        await firestore
+          .doc(appPath(APP_ID))
+          .withConverter(appDataConverter)
+          .update({envUpdateTime: Timestamp.fromDate(new Date(2023, 1, 7))});
+      },
+      expectedType: 'ENV_UPDATE',
+      expectedSpec: {
+        envUpdateTime: Timestamp.fromDate(new Date(2023, 1, 7)),
+      },
+    },
+    {
+      name: 'forced redeployment',
       prep: async () => {
         await firestore.doc(appPath(APP_ID)).update({
-          ['deploymentOptions.vars.LOG_LEVEL']: 'debug',
+          forceRedeployment: true,
         });
       },
-      expectedType: 'OPTIONS_UPDATE',
-      expectedSpec: {
-        options: {
-          vars: {
-            DISABLE_LOG_FILTERING: 'false',
-            LOG_LEVEL: 'debug',
-          },
-        },
-      },
-    },
-    {
-      name: 'secrets update',
-      // eslint-disable-next-line require-await
-      prep: async () => {
-        process.env['DATADOG_LOGS_API_KEY'] = 'new-test-logs-api-key';
-      },
-      expectedType: 'SECRETS_UPDATE',
-      expectedSpec: {
-        hashesOfSecrets: {
-          REFLECT_AUTH_API_KEY:
-            '285dc16b33d25be52925bde20ee776bc512e0f2bde27e5a51e103bef7466e4',
-          DATADOG_LOGS_API_KEY:
-            'd9da1b936f37db9f7106c3c6c11678161e8ca22f21963e645d5f41c29def50',
-          DATADOG_METRICS_API_KEY:
-            '25340f89a65b75e8ebd4b0e621fa55270eba047a9b0ffbe65daeace5bc0',
-        },
-      },
+      expectedType: 'MAINTENANCE_UPDATE',
     },
   ];
 
   for (const c of cases) {
-    test(c.name, async () => {
+    test(`${c.name}: app.auto-deploy`, async () => {
       await c.prep();
 
       const appDoc = firestore
@@ -215,6 +226,7 @@ describe('auto-deploy', () => {
         expect(afterApp.queuedDeploymentIDs).toBeUndefined;
       } else {
         expect(afterApp.queuedDeploymentIDs).toHaveLength(1);
+        expect(afterApp.forceRedeployment).toBeUndefined;
         const queuedDeploymentID = must(afterApp.queuedDeploymentIDs)[0];
 
         const deployment = await firestore
@@ -289,9 +301,8 @@ describe('auto-deploy', () => {
               appModules: [],
               serverVersionRange: '^0.28.0',
               serverVersion: SERVER_VERSION_1,
-              options: defaultOptions(),
-              hashesOfSecrets: dummySecrets(),
-              hostname: 'boo.reflect-server.net',
+              envUpdateTime: Timestamp.now(),
+              hostname: 'boo-yah.reflect-o-rama.net',
             },
           },
         );

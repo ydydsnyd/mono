@@ -1,9 +1,10 @@
 import {expect} from 'chai';
-import * as dag from '../dag/mod.js';
+import {LazyStore} from '../dag/lazy-store.js';
+import {TestStore} from '../dag/test-store.js';
 import {MetaType} from '../db/commit.js';
 import {ChainBuilder} from '../db/test-helpers.js';
 import {assertHash, makeNewFakeHashFunction} from '../hash.js';
-import {withRead, withWrite} from '../with-transactions.js';
+import {withRead, withWriteNoImplicitCommit} from '../with-transactions.js';
 import {GatherNotCachedVisitor} from './gather-not-cached-visitor.js';
 
 suite('GatherNotCachedVisitor', () => {
@@ -24,7 +25,7 @@ suite('GatherNotCachedVisitor', () => {
       return visitor.gatheredChunks;
     });
 
-    await withWrite(memdag, async dagWrite => {
+    await withWriteNoImplicitCommit(memdag, async dagWrite => {
       for (const {chunk, size} of gatheredChunks.values()) {
         await dagWrite.putChunk(chunk, size);
         await dagWrite.setHead('test', pb.headHash);
@@ -87,7 +88,7 @@ suite('GatherNotCachedVisitor', () => {
       return visitor.gatheredChunks;
     });
 
-    await withWrite(memdag, async dagWrite => {
+    await withWriteNoImplicitCommit(memdag, async dagWrite => {
       for (const {chunk, size} of gatheredChunks.values()) {
         await dagWrite.putChunk(chunk, size);
         await dagWrite.setHead('test', pb.headHash);
@@ -189,8 +190,8 @@ async function setup() {
   const clientID = 'client-id';
   const hashFunction = makeNewFakeHashFunction();
   const getSize = () => 10;
-  const perdag = new dag.TestStore(undefined, hashFunction);
-  const memdag = new dag.LazyStore(
+  const perdag = new TestStore(undefined, hashFunction);
+  const memdag = new LazyStore(
     perdag,
     100 * 2 ** 20, // 100 MB,
     hashFunction,

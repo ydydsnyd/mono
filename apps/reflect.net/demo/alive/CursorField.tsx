@@ -9,8 +9,8 @@ export function CursorField({
   stage,
   docSize,
   r,
-  clientIDs,
-  // TODO(reflect): Make clientID synchronous
+  presentClientIDs: clientIDs,
+  botIDs,
   myClientID,
   hideLocalArrow,
   setBodyClass,
@@ -19,7 +19,8 @@ export function CursorField({
   stage: Rect;
   docSize: Size;
   r: Reflect<M>;
-  clientIDs: string[];
+  presentClientIDs: ReadonlyArray<string>;
+  botIDs: string[];
   myClientID: string;
   hideLocalArrow: boolean;
   setBodyClass: (cls: string, enabled: boolean) => void;
@@ -27,9 +28,7 @@ export function CursorField({
   useIsomorphicLayoutEffect(() => {
     const handlePointerMove = async (e: PointerEvent) => {
       const coord = positionToCoordinate({x: e.pageX, y: e.pageY}, home, stage);
-      const cid = await r.clientID;
       await r.mutate.updateClient({
-        id: cid,
         ...coord,
       });
     };
@@ -46,13 +45,27 @@ export function CursorField({
         height: docSize.height,
       }}
     >
-      {[...clientIDs].map(cid => (
+      {clientIDs.map(cid => (
         <Cursor
-          key={cid}
+          key={`c-${cid}`}
           r={r}
-          clientID={cid}
+          id={cid}
+          type="client"
           isSelf={cid === myClientID}
           hideArrow={cid === myClientID && hideLocalArrow}
+          setBodyClass={setBodyClass}
+          home={home}
+          stage={stage}
+        />
+      ))}
+      {botIDs.map(bid => (
+        <Cursor
+          key={`b-${bid}`}
+          r={r}
+          id={bid}
+          type="bot"
+          isSelf={false}
+          hideArrow={false}
           setBodyClass={setBodyClass}
           home={home}
           stage={stage}

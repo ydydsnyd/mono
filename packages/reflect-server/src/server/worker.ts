@@ -1,17 +1,22 @@
 import {LogContext, LogLevel, LogSink} from '@rocicorp/logger';
 import {version} from 'reflect-shared';
 import type {MaybePromise} from 'replicache';
+import {timed} from 'shared/src/timed.js';
 import {Series, reportMetricsSchema} from '../types/report-metrics.js';
-import {randomID} from '../util/rand.js';
-import {createAuthAPIHeaders} from './auth-api-headers.js';
+import {isTrueEnvValue} from '../util/env.js';
+import {populateLogContextFromRequest} from '../util/log-context-common.js';
 import {
-  AUTH_ROUTES,
   AUTH_ROUTES_AUTHED_BY_API_KEY,
-  AUTH_ROUTES_AUTHED_BY_AUTH_HANDLER,
+  AUTH_ROUTES_CUSTOM_AUTH,
   AUTH_ROUTES_UNAUTHED,
 } from './auth-do.js';
 import {createDatadogMetricsSink} from './datadog-metrics-sink.js';
-import {CANARY_GET, HELLO, REPORT_METRICS_PATH} from './paths.js';
+import {
+  CANARY_GET,
+  HELLO,
+  LOG_LOGS_PATH,
+  REPORT_METRICS_PATH,
+} from './paths.js';
 import type {DatadogMetricsOptions} from './reflect.js';
 import {
   BaseContext,
@@ -25,8 +30,6 @@ import {
   withBody,
 } from './router.js';
 import {withUnhandledRejectionHandler} from './unhandled-rejection-handler.js';
-import {timed} from 'shared/src/timed.js';
-import {populateLogContextFromRequest} from '../util/log-context-common.js';
 
 export type MetricsSink = (
   allSeries: Series[],
@@ -41,8 +44,16 @@ export interface WorkerOptions {
 
 export interface BaseWorkerEnv {
   authDO: DurableObjectNamespace;
+  /**
+   * If DISABLE is 'true' or '1' (ignoring case), all request will be returned
+   * a 503 response, and scheduled events will not be handled.
+   */
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  DISABLE?: string;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   REFLECT_AUTH_API_KEY?: string;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  DATADOG_LOGS_API_KEY?: string;
 }
 
 type WithEnv = {
@@ -69,7 +80,7 @@ function registerRoutes(router: WorkerRouter) {
       requireAPIKeyMatchesEnv((ctx, req) => sendToAuthDO(ctx, req)),
     );
   }
-  for (const pattern of Object.values(AUTH_ROUTES_AUTHED_BY_AUTH_HANDLER)) {
+  for (const pattern of Object.values(AUTH_ROUTES_CUSTOM_AUTH)) {
     router.register(pattern, sendToAuthDO);
   }
   for (const pattern of Object.values(AUTH_ROUTES_UNAUTHED)) {
@@ -93,7 +104,7 @@ const reportMetrics = post<WorkerContext, Response>(
 
     if (!datadogMetricsOptions) {
       lc.debug?.('No DatadogMetricsOptions configured, dropping metrics.');
-      return new Response('ok');
+      return new Response('noop');
     }
 
     if (body.series.length === 0) {
@@ -113,6 +124,68 @@ const reportMetrics = post<WorkerContext, Response>(
 
     return new Response('ok');
   }),
+);
+
+const logLogs = post<WorkerContext, Response>(
+  async (ctx: WorkerContext, req: Request) => {
+    const {lc, env} = ctx;
+
+    if (env.DATADOG_LOGS_API_KEY === undefined) {
+      lc.debug?.('No DATADOG_LOGS_API_KEY configured, dropping client logs.');
+      return new Response('noop');
+    }
+
+    const ip = req.headers.get('CF-Connecting-IP');
+    const ddUrl = new URL(req.url);
+    ddUrl.protocol = 'https';
+    ddUrl.host = 'http-intake.logs.datadoghq.com';
+    ddUrl.pathname = 'api/v2/logs';
+    ddUrl.searchParams.set('dd-api-key', env.DATADOG_LOGS_API_KEY);
+    // Set ddsource to the custom string 'client', instead of 'browser'
+    // because 'browser' triggers automatic DataDog pipeline processing
+    // behavior that will be incorrect for these requests since
+    // they are proxied and not directly from the browser (in particular the
+    // automatic behavior of populating the attirbutes http.useragent from the
+    // User-Agent header and network.client.ip from the Request's ip).  Instead
+    // set network.client.ip and http.useragent attributes explicitly
+    // to the values from the request being proxied.
+    ddUrl.searchParams.set('ddsource', 'client');
+    if (ip) {
+      ddUrl.searchParams.set('network.client.ip', ip);
+    }
+    const userAgent = req.headers.get('User-Agent');
+    if (userAgent) {
+      ddUrl.searchParams.set('http.useragent', userAgent);
+    }
+
+    const ddRequest = new Request(ddUrl.toString(), {
+      method: 'POST',
+      headers: new Headers({
+        'content-type':
+          req.headers.get('content-type') ?? 'text/plain;charset=UTF-8',
+      }),
+      body: req.body,
+    });
+
+    lc.info?.('ddRequest', ddRequest.url, [...ddRequest.headers.entries()]);
+    try {
+      const ddResponse = await fetch(ddRequest);
+      if (ddResponse.ok) {
+        lc.debug?.('Successfully sent client logs to Datadog.');
+        return new Response('ok');
+      }
+      lc.error?.(
+        'Failed to send client logs to DataDog, error response',
+        ddResponse.status,
+        ddResponse.statusText,
+        await ddResponse.text,
+      );
+      return new Response('Error response.', {status: ddResponse.status});
+    } catch (e) {
+      lc.error?.('Failed to send client logs to DataDog, error', e);
+      return new Response('Error.', {status: 500});
+    }
+  },
 );
 
 const hello = get<WorkerContext, Response>(
@@ -157,51 +230,14 @@ export function createWorker<Env extends BaseWorkerEnv>(
         logLevel,
         request,
         withUnhandledRejectionHandler(lc =>
-          fetch(request, env, router, lc, datadogMetricsOptions),
+          workerFetch(request, env, router, lc, datadogMetricsOptions),
         ),
-      );
-    },
-    scheduled: (
-      _controller: ScheduledController,
-      env: Env,
-      ctx: ExecutionContext,
-    ) => {
-      const {logSink, logLevel} = getOptions(env);
-      return withLogContext(
-        ctx,
-        logSink,
-        logLevel,
-        undefined,
-        withUnhandledRejectionHandler(lc => scheduled(env, lc)),
       );
     },
   };
 }
 
-async function scheduled(env: BaseWorkerEnv, lc: LogContext): Promise<void> {
-  lc = lc.withContext('scheduled', randomID());
-  lc.info?.('Handling scheduled event');
-  if (!env.REFLECT_AUTH_API_KEY) {
-    lc.debug?.(
-      'Returning early because REFLECT_AUTH_API_KEY is not defined in env.',
-    );
-    return;
-  }
-  lc.info?.(
-    `Sending ${AUTH_ROUTES.authRevalidateConnections} request to AuthDO`,
-  );
-  const req = new Request(
-    `https://unused-reflect-auth-do.dev${AUTH_ROUTES.authRevalidateConnections}`,
-    {
-      method: 'POST',
-      headers: createAuthAPIHeaders(env.REFLECT_AUTH_API_KEY),
-    },
-  );
-  const resp = await sendToAuthDO({lc, env}, req);
-  lc.info?.(`Response: ${resp.status} ${resp.statusText}`);
-}
-
-async function fetch(
+async function workerFetch(
   request: Request,
   env: BaseWorkerEnv,
   router: WorkerRouter,
@@ -210,14 +246,21 @@ async function fetch(
 ): Promise<Response> {
   lc.debug?.('Handling request:', request.method, request.url);
   try {
-    const resp = await withAllowAllCORS(
-      request,
-      async (request: Request) =>
-        (await router.dispatch(request, {lc, env, datadogMetricsOptions})) ??
+    const resp = await withAllowAllCORS(request, async (request: Request) => {
+      if (isTrueEnvValue(env.DISABLE)) {
+        return new Response('Disabled', {status: 503});
+      }
+      return (
+        (await router.dispatch(request, {
+          lc,
+          env,
+          datadogMetricsOptions,
+        })) ??
         new Response(null, {
           status: 404,
-        }),
-    );
+        })
+      );
+    });
     lc.debug?.(`Returning response: ${resp.status} ${resp.statusText}`);
     return resp;
   } catch (e) {
@@ -338,6 +381,7 @@ async function sendToAuthDO(
 
 export const WORKER_ROUTES = {
   [REPORT_METRICS_PATH]: reportMetrics,
+  [LOG_LOGS_PATH]: logLogs,
   [HELLO]: hello,
   [CANARY_GET]: canaryGet,
 } as const;

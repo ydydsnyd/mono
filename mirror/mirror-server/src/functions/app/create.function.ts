@@ -1,166 +1,212 @@
-import type {Firestore} from 'firebase-admin/firestore';
-import {defineString} from 'firebase-functions/params';
+import type {Firestore, WithFieldValue} from 'firebase-admin/firestore';
+import {FieldValue} from 'firebase-admin/firestore';
+import {logger} from 'firebase-functions';
 import {HttpsError} from 'firebase-functions/v2/https';
 import {
   createRequestSchema,
   createResponseSchema,
 } from 'mirror-protocol/src/app.js';
+import type {UserAgent} from 'mirror-protocol/src/user-agent.js';
+import {DistTag} from 'mirror-protocol/src/version.js';
 import {
   App,
   appDataConverter,
+  appPath,
+  isValidAppName,
+} from 'mirror-schema/src/app.js';
+import {encryptUtf8} from 'mirror-schema/src/crypto.js';
+import {defaultOptions} from 'mirror-schema/src/deployment.js';
+import {
+  DEFAULT_ENV,
+  ENCRYPTION_KEY_SECRET_NAME,
+  Env,
+  envDataConverter,
+  envPath,
+} from 'mirror-schema/src/env.js';
+import {
+  providerDataConverter,
+  providerPath,
+} from 'mirror-schema/src/provider.js';
+import {
   appNameIndexDataConverter,
   appNameIndexPath,
-  appPath,
-} from 'mirror-schema/src/app.js';
-import {
-  Membership,
-  membershipDataConverter,
-  teamMembershipPath,
-} from 'mirror-schema/src/membership.js';
-import {Team, teamDataConverter, teamPath} from 'mirror-schema/src/team.js';
+  teamDataConverter,
+  teamPath,
+} from 'mirror-schema/src/team.js';
 import {userDataConverter, userPath} from 'mirror-schema/src/user.js';
-import assert from 'node:assert';
-import {
-  newAppID,
-  newAppIDAsNumber,
-  newAppScriptName,
-  newTeamID,
-} from 'shared/src/mirror/ids.js';
-import {must} from 'shared/src/must.js';
+import {randomBytes} from 'node:crypto';
+import {SemVer, coerce, gt, gte} from 'semver';
+import {newAppID, newAppIDAsNumber, newAppScriptName} from '../../ids.js';
+import {SecretsCache, SecretsClient} from '../../secrets/index.js';
 import {userAuthorization} from '../validators/auth.js';
+import {getDataOrFail} from '../validators/data.js';
 import {validateSchema} from '../validators/schema.js';
-import {defaultOptions} from 'mirror-schema/src/deployment.js';
+import {DistTags, userAgentVersion} from '../validators/version.js';
+import {REFLECT_API_KEY} from './secrets.js';
 
-const cloudflareAccountId = defineString('CLOUDFLARE_ACCOUNT_ID');
-
-export const DEFAULT_MAX_APPS = null;
-
-export const create = (firestore: Firestore) =>
+export const create = (
+  firestore: Firestore,
+  secretsClient: SecretsClient,
+  testDistTags?: DistTags,
+) =>
   validateSchema(createRequestSchema, createResponseSchema)
+    .validate(userAgentVersion(testDistTags))
     .validate(userAuthorization())
     .handle((request, context) => {
-      const {userID} = context;
-      const {serverReleaseChannel} = request;
+      const secrets = new SecretsCache(secretsClient);
+      const {userID, distTags} = context;
+      const {
+        requester: {userAgent},
+        teamID,
+        serverReleaseChannel,
+        name: appName,
+      } = request;
+
+      if (!teamID || !appName) {
+        throw new HttpsError(
+          'invalid-argument',
+          'Please update to the latest release of @rocicorp/reflect',
+        );
+      }
+
+      const minNonDeprecated = distTags[DistTag.MinNonDeprecated];
+      if (
+        minNonDeprecated &&
+        gt(minNonDeprecated, new SemVer(userAgent.version))
+      ) {
+        throw new HttpsError(
+          'out-of-range',
+          'This version of Reflect is deprecated. Please update to @rocicorp/reflect@latest to create a new app.',
+        );
+      }
+
+      if (appName !== undefined && !isValidAppName(appName)) {
+        throw new HttpsError(
+          'invalid-argument',
+          `Invalid App Name "${appName}". Names must be lowercased alphanumeric, starting with a letter and not ending with a hyphen.`,
+        );
+      }
+
+      // Fetch the secret in parallel with the Firestore transaction.
+      const encryptionKey = secrets.getSecret(ENCRYPTION_KEY_SECRET_NAME);
+      const reflectAuthApiKey = randomBytes(32).toString('base64url');
 
       const userDocRef = firestore
         .doc(userPath(userID))
         .withConverter(userDataConverter);
+      const teamDocRef = firestore
+        .doc(teamPath(teamID))
+        .withConverter(teamDataConverter);
 
       return firestore.runTransaction(async txn => {
-        const userDoc = await txn.get(userDocRef);
-        if (!userDoc.exists) {
-          throw new HttpsError('not-found', `User ${userID} does not exist`);
-        }
+        const user = getDataOrFail(
+          await txn.get(userDocRef),
+          'not-found',
+          `User ${userID} does not exist`,
+        );
 
-        const user = must(userDoc.data());
-        const {email} = user;
-
-        const teamIDs = Object.keys(user.roles);
-        let teamID: string;
-
-        const createNewTeam = teamIDs.length === 0;
-        if (createNewTeam) {
-          // User is not a member of any team. Create a new team.
-          teamID = newTeamID();
-        } else if (teamIDs.length === 1) {
-          // User is a member of one team. Use that team.
-          teamID = teamIDs[0];
-        } else {
+        const role = user.roles[teamID];
+        if (role !== 'admin') {
           throw new HttpsError(
-            'internal',
-            'User is part of multiple teams, but only one team is supported at this time',
+            'permission-denied',
+            `User ${userID} does not have permission to create new apps for team ${teamID}`,
           );
         }
 
-        const teamDocRef = firestore
-          .doc(teamPath(teamID))
-          .withConverter(teamDataConverter);
-        const teamDoc = await txn.get(teamDocRef);
-
-        let team: Team;
-        let membership: Membership | undefined;
-
-        if (createNewTeam) {
-          if (teamDoc.exists) {
-            throw new HttpsError('already-exists', 'Team already exists');
-          }
-          team = {
-            name: '',
-            defaultCfID: cloudflareAccountId.value(),
-            numAdmins: 1,
-            numMembers: 0,
-            numInvites: 0,
-            numApps: 1,
-            maxApps: DEFAULT_MAX_APPS,
-          };
-          user.roles[teamID] = 'admin';
-          membership = {email, role: 'admin'};
-        } else {
-          if (!teamDoc.exists) {
-            throw new HttpsError('not-found', 'Team does not exist');
-          }
-          team = must(teamDoc.data());
-          // Check app limits
-          if (team.maxApps !== null && team.numApps >= team.maxApps) {
-            throw new HttpsError(
-              'resource-exhausted',
-              'Team has too many apps',
-            );
-          }
-          team.numApps++;
-          // No need to change admins or members. User is already part of team.
-          // No need to create a membership. User is already a member of team.
-        }
-
-        const membershipDocRef = firestore
-          .doc(teamMembershipPath(teamID, userID))
-          .withConverter(membershipDataConverter);
-        const membershipDoc = await txn.get(membershipDocRef);
-        if (!createNewTeam) {
-          if (!membershipDoc.exists) {
-            throw new HttpsError('internal', 'Team membership should exist');
-          }
-        } else {
-          if (membershipDoc.exists) {
-            throw new HttpsError('internal', 'Team membership already exists');
-          }
+        // Check app limits
+        const team = getDataOrFail(
+          await txn.get(teamDocRef),
+          'not-found',
+          `Team ${teamID} does not exist`,
+        );
+        // TODO: To support onprem, allow apps to be created for a specific provider with
+        //       appropriate authorization.
+        const {defaultProvider} = team;
+        const {defaultMaxApps, dispatchNamespace} = getDataOrFail(
+          await txn.get(
+            firestore
+              .doc(providerPath(defaultProvider))
+              .withConverter(providerDataConverter),
+          ),
+          'internal',
+          `Provider ${defaultProvider} is not properly set up.`,
+        );
+        if (team.numApps >= (team.maxApps ?? defaultMaxApps)) {
+          throw new HttpsError(
+            'resource-exhausted',
+            `Maximum number of apps reached. Use 'npx @rocicorp/reflect delete' to clean up old apps.`,
+          );
         }
 
         const appIDNumber = newAppIDAsNumber();
         const appID = newAppID(appIDNumber);
         const scriptName = newAppScriptName(appIDNumber);
 
-        // TODO(arv): Ensure that Cloudflare is OK with this script name?
         const appDocRef = firestore
           .doc(appPath(appID))
           .withConverter(appDataConverter);
         const appNameDocRef = firestore
-          .doc(appNameIndexPath(scriptName))
+          .doc(appNameIndexPath(teamID, appName))
           .withConverter(appNameIndexDataConverter);
-        const appDoc = await txn.get(appDocRef);
-        if (appDoc.exists) {
-          throw new HttpsError('already-exists', 'App already exists');
-        }
+        const envDocRef = firestore
+          .doc(envPath(appID, DEFAULT_ENV))
+          .withConverter(envDataConverter);
 
-        const app: App = {
-          name: scriptName,
+        const {version, payload: secretKey} = await encryptionKey;
+        const encryptedApiKey = encryptUtf8(
+          reflectAuthApiKey,
+          Buffer.from(secretKey, 'base64url'),
+          {version},
+        );
+
+        const app: WithFieldValue<App> = {
+          name: appName,
           teamID,
-          cfID: cloudflareAccountId.value(),
+          teamLabel: team.label,
+          teamSubdomain: '', // Deprecated
+          provider: defaultProvider,
+          cfID: 'deprecated',
           cfScriptName: scriptName,
           serverReleaseChannel,
+          // This will technically be slightly behind the resulting updateTime:
+          // https://github.com/googleapis/nodejs-firestore/issues/1610
+          // but being behind is okay; timestamps will align at the first deployment.
+          envUpdateTime: FieldValue.serverTimestamp(),
+        };
+        const env: Env = {
           deploymentOptions: defaultOptions(),
+          secrets: {[REFLECT_API_KEY]: encryptedApiKey},
         };
 
-        if (createNewTeam) {
-          txn.create(teamDocRef, team);
-          txn.update(userDocRef, user);
-          assert(membership);
-          txn.create(membershipDocRef, membership);
-        } else {
-          txn.update(teamDocRef, team);
+        if (supportsWorkersForPlatforms(userAgent)) {
+          app.scriptRef = {
+            namespace: dispatchNamespace,
+            name: scriptName,
+          };
         }
+        txn.update(teamDocRef, {numApps: team.numApps + 1});
         txn.create(appDocRef, app);
         txn.create(appNameDocRef, {appID});
-        return {appID, name: scriptName, success: true};
+        txn.create(envDocRef, env);
+        return {appID, success: true};
       });
     });
+
+export const MIN_WFP_VERSION = new SemVer('0.36.0');
+
+function supportsWorkersForPlatforms(userAgent: UserAgent): boolean {
+  const {type: agent, version} = userAgent;
+  if (agent !== 'reflect-cli') {
+    throw new HttpsError(
+      'invalid-argument',
+      'Please use @rocicorp/reflect to create and publish apps.',
+    );
+  }
+  // coerce to treat pre-releases equally.
+  if (gte(coerce(version) ?? version, MIN_WFP_VERSION)) {
+    logger.info(`Creating WFP app for reflect-cli v${version}`);
+    return true;
+  }
+  logger.info(`Creating legacy app for reflect-cli v${version}`);
+  return false;
+}

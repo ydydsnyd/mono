@@ -3,13 +3,24 @@ import {LogContext} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
 import {expect} from 'chai';
 import {Mutation, NullableVersion, pushMessageSchema} from 'reflect-protocol';
-import type {MutatorDefs, WriteTransaction} from 'reflect-types/src/mod.js';
-import {ExperimentalMemKVStore, PullRequestV1, PushRequestV1} from 'replicache';
+import type {
+  MutatorDefs,
+  ReadonlyJSONValue,
+  WriteTransaction,
+} from 'reflect-shared';
+import {
+  ExperimentalCreateKVStore,
+  ExperimentalMemKVStore,
+  PullRequestV1,
+  PushRequestV1,
+} from 'replicache';
 import {assert} from 'shared/src/asserts.js';
 import type {JSONValue} from 'shared/src/json.js';
 import * as valita from 'shared/src/valita.js';
 import * as sinon from 'sinon';
+import type {WSString} from './http-string.js';
 import {REPORT_INTERVAL_MS} from './metrics.js';
+import type {ReflectOptions} from './options.js';
 import {
   CONNECT_TIMEOUT_MS,
   ConnectionState,
@@ -27,7 +38,6 @@ import {
   MockSocket,
   TestLogSink,
   TestReflect,
-  idbExists,
   reflectForTest,
   tickAFewTimes,
   waitForUpstreamMessage,
@@ -39,8 +49,11 @@ const startTime = 1678829450000;
 setup(() => {
   clock = sinon.useFakeTimers();
   clock.setSystemTime(startTime);
-  // @ts-expect-error MockSocket is not sufficiently compatible with WebSocket
-  sinon.replace(globalThis, 'WebSocket', MockSocket);
+  sinon.replace(
+    globalThis,
+    'WebSocket',
+    MockSocket as unknown as typeof WebSocket,
+  );
 });
 
 teardown(() => {
@@ -52,6 +65,7 @@ test('onOnlineChange callback', async () => {
   let offlineCount = 0;
 
   const r = reflectForTest({
+    logLevel: 'debug',
     onOnlineChange: online => {
       if (online) {
         onlineCount++;
@@ -239,7 +253,7 @@ test('createSocket', () => {
   const nowStub = sinon.stub(performance, 'now').returns(0);
 
   const t = (
-    socketURL: string,
+    socketURL: WSString,
     baseCookie: NullableVersion,
     clientID: string,
     roomID: string,
@@ -654,21 +668,21 @@ test('puller with normal non-mutation recovery pull', async () => {
 test('smokeTest', async () => {
   const cases: {
     name: string;
-    enableSocket: boolean;
+    enableServer: boolean;
   }[] = [
     {
       name: 'socket enabled',
-      enableSocket: true,
+      enableServer: true,
     },
     {
       name: 'socket disabled',
-      enableSocket: false,
+      enableServer: false,
     },
   ];
 
   for (const c of cases) {
     // reflectForTest adds the socket by default.
-    const socketOptions = c.enableSocket ? {} : {socketOrigin: null};
+    const serverOptions = c.enableServer ? {} : {server: null};
     const r = reflectForTest({
       roomID: 'smokeTestRoom',
       mutators: {
@@ -677,14 +691,14 @@ test('smokeTest', async () => {
           data: {[key: string]: JSONValue},
         ) => {
           for (const [key, value] of Object.entries(data)) {
-            await tx.put(key, value);
+            await tx.set(key, value);
           }
         },
         del: async (tx: WriteTransaction, key: string) => {
           await tx.del(key);
         },
       },
-      ...socketOptions,
+      ...serverOptions,
     });
 
     const spy = sinon.spy();
@@ -747,28 +761,27 @@ test('smokeTest', async () => {
 });
 
 test('poke log context includes requestID', async () => {
-  const url = 'ws://example.com/';
-  const log: unknown[][] = [];
+  const url = 'http://example.com/';
 
   const {promise: foundRequestIDFromLogPromise, resolve} = resolver<string>();
-  const logSink = {
-    log(_level: LogLevel, context: Context | undefined, ..._args: unknown[]) {
-      if (context?.requestID === 'test-request-id-poke') {
-        resolve(context?.requestID);
-      }
-    },
-  };
 
   const r = new TestReflect({
-    socketOrigin: url,
+    server: url,
     auth: '',
     userID: 'user-id',
     roomID: 'room-id',
-    logSinks: [logSink],
     logLevel: 'debug',
   });
 
-  log.length = 0;
+  sinon
+    .stub(r.testLogSink, 'log')
+    .callsFake(
+      (_level: LogLevel, context: Context | undefined, ..._args: unknown[]) => {
+        if (context?.requestID === 'test-request-id-poke') {
+          resolve(context?.requestID);
+        }
+      },
+    );
 
   await r.triggerPoke({
     pokes: [
@@ -776,6 +789,7 @@ test('poke log context includes requestID', async () => {
         baseCookie: null,
         cookie: 1,
         lastMutationIDChanges: {c1: 1},
+        presence: [],
         patch: [],
         timestamp: 123456,
       },
@@ -804,11 +818,31 @@ test('Metrics', async () => {
     await r.triggerPong();
   }
 
-  fetchStub.calledOnceWithExactly('https://example.com/api/metrics/v0/report', {
-    method: 'POST',
-    body: '{"series":[{"metric":"time_to_connect_ms","points":[[120,[0]]]}]}',
-    keepalive: true,
-  });
+  expect(
+    fetchStub.calledWithMatch(
+      sinon.match(new RegExp('^https://example.com/api/metrics/v0/report?.*')),
+    ),
+  ).to.be.true;
+});
+
+test('Metrics not reported when enableAnalytics is false', async () => {
+  const fetchStub = sinon.stub(window, 'fetch');
+
+  const r = reflectForTest({enableAnalytics: false});
+  await r.waitForConnectionState(ConnectionState.Connecting);
+  await r.triggerConnected();
+  await r.waitForConnectionState(ConnectionState.Connected);
+
+  for (let t = 0; t < REPORT_INTERVAL_MS; t += PING_INTERVAL_MS) {
+    await clock.tickAsync(PING_INTERVAL_MS);
+    await r.triggerPong();
+  }
+
+  expect(
+    fetchStub.calledWithMatch(
+      sinon.match(new RegExp('^https://example.com/api/metrics/v0/report?.*')),
+    ),
+  ).to.be.false;
 });
 
 test('Authentication', async () => {
@@ -981,8 +1015,18 @@ test('Ping timeout', async () => {
   expect(r.connectionState).to.equal(ConnectionState.Connected);
 });
 
+const connectTimeoutMessage = 'Rejecting connect resolver due to timeout';
+
+function expectLogMessages(r: TestReflect<MutatorDefs>) {
+  return expect(
+    r.testLogSink.messages.flatMap(([level, _context, msg]) =>
+      level === 'debug' ? msg : [],
+    ),
+  );
+}
+
 test('Connect timeout', async () => {
-  const r = reflectForTest();
+  const r = reflectForTest({logLevel: 'debug'});
 
   await r.waitForConnectionState(ConnectionState.Connecting);
 
@@ -998,6 +1042,7 @@ test('Connect timeout', async () => {
     expect(r.connectionState).to.equal(ConnectionState.Connecting);
     await clock.tickAsync(1);
     expect(r.connectionState).to.equal(ConnectionState.Disconnected);
+    expectLogMessages(r).contain(connectTimeoutMessage);
 
     // We got disconnected so we sleep for RUN_LOOP_INTERVAL_MS before trying again
 
@@ -1035,7 +1080,7 @@ test('socketOrigin', async () => {
   ];
 
   for (const c of cases) {
-    const r = reflectForTest(c.socketEnabled ? {} : {socketOrigin: null});
+    const r = reflectForTest(c.socketEnabled ? {} : {server: null});
 
     await tickAFewTimes(clock);
 
@@ -1048,23 +1093,13 @@ test('socketOrigin', async () => {
 });
 
 test('Logs errors in connect', async () => {
-  const log: [LogLevel, unknown[]][] = [];
-
-  const r = reflectForTest({
-    logSinks: [
-      {
-        log: (level, ...args) => {
-          log.push([level, args]);
-        },
-      },
-    ],
-  });
+  const r = reflectForTest({});
   await r.triggerError('ClientNotFound', 'client-id-a');
   expect(r.connectionState).to.equal(ConnectionState.Disconnected);
   await clock.tickAsync(0);
 
-  const index = log.findIndex(
-    ([level, args]) =>
+  const index = r.testLogSink.messages.findIndex(
+    ([level, _context, args]) =>
       level === 'error' && args.find(arg => /client-id-a/.test(String(arg))),
   );
 
@@ -1072,17 +1107,8 @@ test('Logs errors in connect', async () => {
 });
 
 test('New connection logs', async () => {
-  const log: [LogLevel, unknown[]][] = [];
   clock.setSystemTime(1000);
-  const r = reflectForTest({
-    logSinks: [
-      {
-        log: (level, ...args) => {
-          log.push([level, args]);
-        },
-      },
-    ],
-  });
+  const r = reflectForTest({logLevel: 'info'});
   await r.waitForConnectionState(ConnectionState.Connecting);
   await clock.tickAsync(500);
   await r.triggerConnected();
@@ -1092,8 +1118,8 @@ test('New connection logs', async () => {
   await r.triggerClose();
   await r.waitForConnectionState(ConnectionState.Disconnected);
   expect(r.connectionState).to.equal(ConnectionState.Disconnected);
-  const connectIndex = log.findIndex(
-    ([level, args]) =>
+  const connectIndex = r.testLogSink.messages.findIndex(
+    ([level, _context, args]) =>
       level === 'info' &&
       args.find(arg => /Connected/.test(String(arg))) &&
       args.find(
@@ -1103,8 +1129,8 @@ test('New connection logs', async () => {
       ),
   );
 
-  const disconnectIndex = log.findIndex(
-    ([level, args]) =>
+  const disconnectIndex = r.testLogSink.messages.findIndex(
+    ([level, _context, args]) =>
       level === 'info' &&
       args.find(arg => /disconnecting/.test(String(arg))) &&
       args.find(
@@ -1191,13 +1217,10 @@ test('Protocol mismatch', async () => {
 });
 
 test('server ahead', async () => {
-  const sink = new TestLogSink();
   const {promise, resolve} = resolver();
   const storage: Record<string, string> = {};
   sinon.replaceGetter(window, 'localStorage', () => storage as Storage);
-  const r = reflectForTest({
-    logSinks: [sink],
-  });
+  const r = reflectForTest();
   r.reload = resolve;
 
   await r.triggerError(
@@ -1429,14 +1452,11 @@ suite('Disconnect on hide', () => {
 });
 
 test('InvalidConnectionRequest', async () => {
-  const testLogSink = new TestLogSink();
-  const r = reflectForTest({
-    logSinks: [testLogSink],
-  });
+  const r = reflectForTest({});
   await r.triggerError('InvalidConnectionRequest', 'test');
   expect(r.connectionState).to.equal(ConnectionState.Disconnected);
   await clock.tickAsync(0);
-  const msg = testLogSink.messages.at(-1);
+  const msg = r.testLogSink.messages.at(-1);
   assert(msg);
 
   expect(msg[0]).equal('error');
@@ -1465,9 +1485,7 @@ suite('Invalid Downstream message', () => {
 
   for (const c of cases) {
     test(c.name, async () => {
-      const testLogSink = new TestLogSink();
       const r = reflectForTest({
-        logSinks: [testLogSink],
         logLevel: 'debug',
       });
       await r.triggerConnected();
@@ -1499,7 +1517,7 @@ suite('Invalid Downstream message', () => {
       expect(r.online).eq(true);
       expect(r.connectionState).eq(ConnectionState.Connected);
 
-      const found = testLogSink.messages.some(m =>
+      const found = r.testLogSink.messages.some(m =>
         m[2].some(
           v => v instanceof Error && v.message.includes('Invalid union value.'),
         ),
@@ -1509,35 +1527,49 @@ suite('Invalid Downstream message', () => {
   }
 });
 
-test('experimentalKVStore', async () => {
-  const r1 = reflectForTest({
-    mutators: {
-      putFoo: async (tx, val: string) => {
-        await tx.put('foo', val);
-      },
-    },
-  });
-  await r1.mutate.putFoo('bar');
-  expect(await r1.query(tx => tx.get('foo'))).to.equal('bar');
-  expect(await idbExists(r1.idbName)).is.true;
+test('kvStore option', async () => {
+  const spy = sinon.spy(IDBFactory.prototype, 'open');
 
-  const r2 = reflectForTest({
-    createKVStore: name => new ExperimentalMemKVStore(name),
-    mutators: {
-      putFoo: async (tx, val: string) => {
-        await tx.put('foo', val);
+  const t = async (
+    kvStore: ReflectOptions<Record<string, never>>['kvStore'],
+    userID: string,
+    expectedIDBOpenCalled: boolean,
+    expectedValue: JSONValue | undefined = undefined,
+  ) => {
+    const r = reflectForTest({
+      server: null,
+      userID,
+      kvStore,
+      mutators: {
+        putFoo: async (tx, val: string) => {
+          await tx.set('foo', val);
+        },
       },
-    },
-  });
-  await r2.mutate.putFoo('bar');
-  expect(await r2.query(tx => tx.get('foo'))).to.equal('bar');
-  expect(await idbExists(r2.idbName)).is.false;
+    });
+    expect(await r.query(tx => tx.get('foo'))).to.equal(expectedValue);
+    await r.mutate.putFoo('bar');
+    expect(await r.query(tx => tx.get('foo'))).to.equal('bar');
+    // Wait for persist to finish
+    await tickAFewTimes(clock, 2000);
+    await r.close();
+    expect(spy.called).equal(expectedIDBOpenCalled, 'IDB existed!');
+
+    spy.resetHistory();
+  };
+
+  await t('idb', 'kv-store-test-user-id-1', true);
+  await t('idb', 'kv-store-test-user-id-1', true, 'bar');
+  await t('mem', 'kv-store-test-user-id-2', false);
+  await t(undefined, 'kv-store-test-user-id-3', false);
+
+  const kvStore: ExperimentalCreateKVStore = name =>
+    new ExperimentalMemKVStore(name);
+  await t(kvStore, 'kv-store-test-user-id-4', false, undefined);
+  await t(kvStore, 'kv-store-test-user-id-4', false, 'bar');
 });
 
 test('Close during connect should sleep', async () => {
-  const testLogSink = new TestLogSink();
   const r = reflectForTest({
-    logSinks: [testLogSink],
     logLevel: 'debug',
   });
 
@@ -1555,7 +1587,7 @@ test('Close during connect should sleep', async () => {
   await r.waitForConnectionState(ConnectionState.Disconnected);
   await clock.tickAsync(0);
   expect(r.online).equal(false);
-  const hasSleeping = testLogSink.messages.some(m =>
+  const hasSleeping = r.testLogSink.messages.some(m =>
     m[2].some(v => v === 'Sleeping'),
   );
   expect(hasSleeping).true;
@@ -1567,4 +1599,63 @@ test('Close during connect should sleep', async () => {
   await r.waitForConnectionState(ConnectionState.Connected);
   await clock.tickAsync(0);
   expect(r.online).equal(true);
+});
+
+test('Reflect close should stop timeout', async () => {
+  const r = reflectForTest({
+    logLevel: 'debug',
+  });
+
+  await r.waitForConnectionState(ConnectionState.Connecting);
+  await r.close();
+  await clock.tickAsync(CONNECT_TIMEOUT_MS);
+  expectLogMessages(r).not.contain(connectTimeoutMessage);
+});
+
+test('subscribe where body returns non json', async () => {
+  const log: unknown[] = [];
+
+  const reflect = reflectForTest({
+    logLevel: 'debug',
+    mutators: {
+      async addData(tx, x: Record<string, ReadonlyJSONValue>) {
+        for (const [key, value] of Object.entries(x)) {
+          await tx.set(key, value);
+        }
+      },
+    },
+  });
+  const cancel = reflect.subscribe(
+    async tx => {
+      const entries = await tx.scan().entries().toArray();
+      return new Map(entries.map(([k, v]) => [k, BigInt(v as number)]));
+    },
+    {
+      onData(values) {
+        expect(values).instanceof(Map);
+        for (const entry of values) {
+          log.push(entry);
+        }
+      },
+      isEqual(a, b) {
+        if (!(a instanceof Map) || !(b instanceof Map) || a.size !== b.size) {
+          return false;
+        }
+        for (const [k, v] of a) {
+          if (b.get(k) !== v) {
+            return false;
+          }
+        }
+        return true;
+      },
+    },
+  );
+
+  await reflect.mutate.addData({a: 0, b: 1});
+  expect(log).to.deep.equal([
+    ['a', 0n],
+    ['b', 1n],
+  ]);
+
+  cancel();
 });

@@ -2,7 +2,7 @@ import {describe, expect, test} from '@jest/globals';
 import type {Storage} from 'firebase-admin/storage';
 import type {Module, ModuleRef} from 'mirror-schema/src/module.js';
 import {ModuleAssembler} from './module-assembler.js';
-import type {CfModule} from './create-script-upload-form.js';
+import type {CfModule} from 'cloudflare-api/src/create-script-upload-form.js';
 
 describe('module-assembler', () => {
   const serverModules: (Module & ModuleRef)[] = [
@@ -17,7 +17,7 @@ describe('module-assembler', () => {
       type: 'esm',
       url: 'gs://reflect-modules/script.template.js',
       content:
-        'import "server-module-name.js"; import "app-module-name.js"; console.log("app-script-name");',
+        'import "server-module-name.js"; import "app-module-name.js"; console.log("app-script-name@app-name-team-label");',
     },
   ];
   type Case = {
@@ -41,7 +41,7 @@ describe('module-assembler', () => {
           name: 'script.js',
           type: 'esm',
           content:
-            'import "server.js"; import "index.js"; console.log("my-app-script");',
+            'import "server.js"; import "index.js"; console.log("my-app-script@my-app-name-myteamlabel");',
         },
         {
           name: 'index.js',
@@ -76,7 +76,7 @@ describe('module-assembler', () => {
           name: 'script0.js',
           type: 'esm',
           content:
-            'import "server0.js"; import "script.js"; console.log("my-app-script");',
+            'import "server0.js"; import "script.js"; console.log("my-app-script@my-app-name-myteamlabel");',
         },
         {
           name: 'script.js',
@@ -128,7 +128,7 @@ describe('module-assembler', () => {
           name: 'script1.js',
           type: 'esm',
           content:
-            'import "server1.js"; import "script.js"; console.log("my-app-script");',
+            'import "server1.js"; import "script.js"; console.log("my-app-script@my-app-name-myteamlabel");',
         },
         {
           name: 'script.js',
@@ -186,6 +186,8 @@ describe('module-assembler', () => {
       } as unknown as Storage;
 
       const assembler = new ModuleAssembler(
+        'my-app-name',
+        'myteamlabel',
         'my-app-script',
         c.appModules,
         serverModules,

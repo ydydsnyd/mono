@@ -1,4 +1,4 @@
-import {expect, test} from '@jest/globals';
+import {describe, expect, test} from '@jest/globals';
 import {assert} from 'shared/src/asserts.js';
 import type {JSONObject, ReadonlyJSONValue} from 'shared/src/json.js';
 import {must} from 'shared/src/must.js';
@@ -156,11 +156,12 @@ test('requireMethod', async () => {
   }
 });
 
-test('checkAuthAPIKey', async () => {
+describe('checkAuthAPIKey', () => {
   type Case = {
+    name: string;
     required: string;
-    actual: string | null;
-    expected:
+    headers: Record<string, string>;
+    expectedError:
       | {error: string}
       | {result: {text: string; status: number}}
       | undefined;
@@ -168,75 +169,91 @@ test('checkAuthAPIKey', async () => {
 
   const cases: Case[] = [
     {
+      name: 'required key cannot be empty even if actual key is not sent in the headers',
       required: '',
-      actual: null,
-      expected: {
+      headers: {},
+      expectedError: {
         error: 'Error: Internal error: expected auth api key cannot be empty',
       },
     },
     {
+      name: 'required key cannot be empty even if actual is the same empty key',
       required: '',
-      actual: '',
-      expected: {
+      headers: {
+        ['x-reflect-auth-api-key']: '',
+      },
+      expectedError: {
         error: 'Error: Internal error: expected auth api key cannot be empty',
       },
     },
     {
+      name: 'required key cannot be empty, even if actual key is provided',
       required: '',
-      actual: 'foo',
-      expected: {
+      headers: {
+        ['x-reflect-auth-api-key']: 'foo',
+      },
+      expectedError: {
         error: 'Error: Internal error: expected auth api key cannot be empty',
       },
     },
     {
+      name: 'no api key sent',
       required: 'foo',
-      actual: null,
-      expected: {result: {text: 'Unauthorized', status: 401}},
+      headers: {},
+      expectedError: {result: {text: 'Unauthorized', status: 401}},
     },
     {
+      name: 'empty api key sent',
       required: 'foo',
-      actual: '',
-      expected: {result: {text: 'Unauthorized', status: 401}},
+      headers: {
+        ['x-reflect-auth-api-key']: '',
+      },
+      expectedError: {result: {text: 'Unauthorized', status: 401}},
     },
     {
+      name: 'wrong api key sent',
       required: 'foo',
-      actual: 'bar',
-      expected: {result: {text: 'Unauthorized', status: 401}},
+      headers: {
+        ['x-reflect-auth-api-key']: 'bar',
+      },
+      expectedError: {result: {text: 'Unauthorized', status: 401}},
     },
     {
+      name: 'correct api key sent',
       required: 'foo',
-      actual: 'foo',
-      expected: undefined,
+      headers: {
+        ['x-reflect-auth-api-key']: 'foo',
+      },
+      expectedError: undefined,
     },
   ];
 
   for (const c of cases) {
-    const headers: Record<string, string> = {};
-    if (c.actual !== null) {
-      headers['x-reflect-auth-api-key'] = c.actual;
-    }
+    test(c.name, async () => {
+      const {headers} = c;
 
-    let result: Case['expected'];
+      let result: Case['expectedError'];
 
-    try {
-      const response = checkAuthAPIKey(
-        c.required,
-        new Request('https://roci.dev/', {
-          headers,
-        }),
-      );
-      if (response === undefined) {
-        result = response;
-      } else {
-        result = {
-          result: {status: response.status, text: await response.text()},
-        };
+      try {
+        const response = checkAuthAPIKey(
+          c.required,
+          new Request('https://roci.dev/', {
+            headers,
+          }),
+        );
+        if (response === undefined) {
+          result = response;
+        } else {
+          result = {
+            result: {status: response.status, text: await response.text()},
+          };
+        }
+      } catch (e) {
+        result = {error: String(e)};
       }
-    } catch (e) {
-      result = {error: String(e)};
-    }
 
-    expect(result).toEqual(c.expected);
+      expect(result).toEqual(c.expectedError);
+    });
   }
 });
 
@@ -411,6 +428,13 @@ test('withBody', async () => {
     },
     {
       body: {badUserId: 'bar'},
+      expected: {
+        status: 400,
+        text: 'Body schema error. Missing property userID',
+      },
+    },
+    {
+      body: {userID: 'foo', badUserId: 'bar'},
       expected: {
         status: 400,
         text: 'Body schema error. Unexpected property badUserId',

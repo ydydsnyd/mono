@@ -12,11 +12,19 @@ import {
   PullResponseMessage,
   upstreamSchema,
 } from 'reflect-protocol';
-import type {MutatorDefs} from 'reflect-types/src/mod.js';
+import type {MutatorDefs} from 'reflect-shared';
 import {assert} from 'shared/src/asserts.js';
 import type {SinonFakeTimers} from 'sinon';
+import type {LogOptions} from './log-options.js';
 import type {ReflectOptions} from './options.js';
-import {ConnectionState, Reflect} from './reflect.js';
+import {
+  ConnectionState,
+  Reflect,
+  TestingContext,
+  createLogOptionsSymbol,
+  exposedToTestingSymbol,
+  onSetConnectionStateSymbol,
+} from './reflect.js';
 
 export async function tickAFewTimes(clock: SinonFakeTimers, duration = 100) {
   const n = 10;
@@ -57,11 +65,12 @@ export class TestReflect<MD extends MutatorDefs> extends Reflect<MD> {
   }> = new Set();
 
   get connectionState() {
-    return this._connectionState;
+    assert(TESTING);
+    return this[exposedToTestingSymbol].connectionState();
   }
 
   get connectionStateAsString(): string {
-    switch (this._connectionState) {
+    switch (this.connectionState) {
       case ConnectionState.Disconnected:
         return 'Disconnected';
       case ConnectionState.Connecting:
@@ -72,14 +81,11 @@ export class TestReflect<MD extends MutatorDefs> extends Reflect<MD> {
   }
 
   get connectingStart() {
-    return this._connectStart;
+    return this[exposedToTestingSymbol].connectStart;
   }
 
-  protected get _connectionState(): ConnectionState {
-    return super._connectionState;
-  }
-  protected set _connectionState(newState: ConnectionState) {
-    super._connectionState = newState;
+  // Testing only hook
+  [onSetConnectionStateSymbol](newState: ConnectionState) {
     for (const entry of this.#connectionStateResolvers) {
       const {state, resolve} = entry;
       if (state === newState) {
@@ -89,8 +95,23 @@ export class TestReflect<MD extends MutatorDefs> extends Reflect<MD> {
     }
   }
 
+  [createLogOptionsSymbol](options: {consoleLogLevel: LogLevel}): LogOptions {
+    assert(TESTING);
+    return {
+      logLevel: options.consoleLogLevel,
+      logSink: new TestLogSink(),
+    };
+  }
+
+  get testLogSink(): TestLogSink {
+    assert(TESTING);
+    const {logSink} = this[exposedToTestingSymbol].logOptions;
+    assert(logSink instanceof TestLogSink);
+    return logSink;
+  }
+
   waitForConnectionState(state: ConnectionState) {
-    if (this._connectionState === state) {
+    if (this.connectionState === state) {
       return Promise.resolve(state);
     }
     const {promise, resolve} = resolver<ConnectionState>();
@@ -99,7 +120,7 @@ export class TestReflect<MD extends MutatorDefs> extends Reflect<MD> {
   }
 
   get socket(): Promise<MockSocket> {
-    return this._socketResolver
+    return this[exposedToTestingSymbol].socketResolver()
       .promise as Promise<unknown> as Promise<MockSocket>;
   }
 
@@ -141,21 +162,25 @@ export class TestReflect<MD extends MutatorDefs> extends Reflect<MD> {
     socket.dispatchEvent(new CloseEvent('close'));
   }
 
+  declare [exposedToTestingSymbol]: TestingContext;
+
   get pusher() {
-    // @ts-expect-error Property '_pusher' is private
-    return this._pusher;
+    assert(TESTING);
+    return this[exposedToTestingSymbol].pusher;
   }
 
   get puller() {
-    // @ts-expect-error Property '_puller' is private
-    return this._puller;
+    assert(TESTING);
+    return this[exposedToTestingSymbol].puller;
   }
 
   set reload(r: () => void) {
-    // @ts-expect-error Property '_reload' is private
-    this._reload = r;
+    assert(TESTING);
+    this[exposedToTestingSymbol].setReload(r);
   }
 }
+
+declare const TESTING: boolean;
 
 const testReflectInstances = new Set<TestReflect<MutatorDefs>>();
 
@@ -165,12 +190,11 @@ export function reflectForTest<MD extends MutatorDefs>(
   options: Partial<ReflectOptions<MD>> = {},
 ): TestReflect<MD> {
   const r = new TestReflect({
-    socketOrigin: 'wss://example.com/',
+    server: 'https://example.com/',
     // Make sure we do not reuse IDB instances between tests by default
     userID: 'test-user-id-' + testReflectCounter++,
     roomID: 'test-room-id',
     auth: 'test-auth',
-    logSinks: [],
     ...options,
   });
   // We do not want any unexpected onUpdateNeeded calls in tests. If the test
@@ -183,21 +207,30 @@ export function reflectForTest<MD extends MutatorDefs>(
   testReflectInstances.add(r);
   return r;
 }
-
-teardown(async () => {
-  for (const r of testReflectInstances) {
-    if (!r.closed) {
-      await r.close();
-      testReflectInstances.delete(r);
+// This file is imported in a worker and web-test-runner does not inject the
+// teardown function there.
+if (typeof teardown === 'function') {
+  teardown(async () => {
+    for (const r of testReflectInstances) {
+      if (!r.closed) {
+        await r.close();
+        testReflectInstances.delete(r);
+      }
     }
-  }
-});
+  });
+}
 
 export class TestLogSink implements LogSink {
   messages: [LogLevel, Context | undefined, unknown[]][] = [];
+  flushCallCount = 0;
 
   log(level: LogLevel, context: Context | undefined, ...args: unknown[]): void {
     this.messages.push([level, context, args]);
+  }
+
+  flush() {
+    this.flushCallCount++;
+    return Promise.resolve();
   }
 }
 
@@ -220,19 +253,4 @@ export async function waitForUpstreamMessage(
       break;
     }
   }
-}
-
-export function idbExists(idbName: string): Promise<boolean> {
-  const req = indexedDB.open(idbName);
-  let existed = true;
-  const {promise, resolve} = resolver<boolean>();
-
-  req.onsuccess = function () {
-    req.result.close();
-    resolve(existed);
-  };
-  req.onupgradeneeded = function () {
-    existed = false;
-  };
-  return promise;
 }

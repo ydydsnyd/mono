@@ -1,6 +1,6 @@
 import {expect, test} from '@jest/globals';
 import {compareUTF8} from 'compare-utf8';
-import type {ScanOptions} from 'replicache';
+import type {ScanNoIndexOptions} from 'replicache';
 import {assert} from 'shared/src/asserts.js';
 import type {ReadonlyJSONValue} from 'shared/src/json.js';
 import {DurableStorage} from '../../src/storage/durable-storage.js';
@@ -14,6 +14,7 @@ import {
 
 const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();
+const env = {var: 'bar'};
 
 test('ReplicacheTransaction', async () => {
   const storage = new DurableStorage(
@@ -21,13 +22,20 @@ test('ReplicacheTransaction', async () => {
   );
 
   const entryCache = new EntryCache(storage);
-  const writeTx = new ReplicacheTransaction(entryCache, 'c1', 1, 1, undefined);
+  const writeTx = new ReplicacheTransaction(
+    entryCache,
+    'c1',
+    1,
+    1,
+    undefined,
+    env,
+  );
 
   expect(!(await writeTx.has('foo')));
   expect(await writeTx.get('foo')).toBeUndefined;
   expect(await writeTx.isEmpty()).toBe(true);
 
-  await writeTx.put('foo', 'bar');
+  await writeTx.set('foo', 'bar');
   expect(await writeTx.has('foo'));
   expect(await writeTx.get('foo')).toEqual('bar');
   expect(await writeTx.isEmpty()).toBe(false);
@@ -39,6 +47,7 @@ test('ReplicacheTransaction', async () => {
     2,
     2,
     undefined,
+    env,
   );
   expect(!(await writeTx2.has('foo')));
   expect(await writeTx2.get('foo')).toBeUndefined;
@@ -48,7 +57,14 @@ test('ReplicacheTransaction', async () => {
 
   // Go ahead and flush one
   await entryCache.flush();
-  const writeTx3 = new ReplicacheTransaction(entryCache, 'c1', 3, 3, undefined);
+  const writeTx3 = new ReplicacheTransaction(
+    entryCache,
+    'c1',
+    3,
+    3,
+    undefined,
+    env,
+  );
   expect(await writeTx3.has('foo'));
   expect(await writeTx3.get('foo')).toEqual('bar');
 
@@ -73,7 +89,7 @@ test('ReplicacheTransaction environment and reason', async () => {
   );
 
   const entryCache = new EntryCache(storage);
-  const tx = new ReplicacheTransaction(entryCache, 'c1', 1, 1, undefined);
+  const tx = new ReplicacheTransaction(entryCache, 'c1', 1, 1, undefined, env);
   expect(tx.environment).toEqual('server');
   expect(tx.reason).toEqual('authoritative');
 });
@@ -95,19 +111,20 @@ test('ReplicacheTransaction scan()', async () => {
       mutationID,
       version,
       undefined,
+      env,
     );
     version++;
     mutationID++;
     return [tx, cache];
   }
 
-  async function put(tx: ReplicacheTransaction, key: string) {
-    await tx.put(key, key);
+  async function set(tx: ReplicacheTransaction, key: string) {
+    await tx.set(key, key);
   }
 
   async function expectScan(
     tx: ReplicacheTransaction,
-    opts: ScanOptions,
+    opts: ScanNoIndexOptions,
     expected: [string, string][],
   ) {
     const actual = await tx.scan(opts).entries().toArray();
@@ -132,7 +149,7 @@ test('ReplicacheTransaction scan()', async () => {
 
   let [tx, cache] = makeTx();
   for (const k of existingKeys) {
-    await put(tx, k);
+    await set(tx, k);
   }
   await cache.flush();
 
@@ -179,8 +196,8 @@ test('ReplicacheTransaction scan()', async () => {
   );
 
   // pending put()s
-  await put(tx, 'item/1.5');
-  await put(tx, 'user/4.5');
+  await set(tx, 'item/1.5');
+  await set(tx, 'user/4.5');
 
   async function testScanForPuts(tx: ReplicacheTransaction) {
     await expectScan(tx, {}, [
@@ -284,17 +301,24 @@ test('ReplicacheTransaction scan()', async () => {
   await testScanForDels(tx);
 });
 
-test('put with non JSON value', async () => {
+test('set with non JSON value', async () => {
   const storage = new DurableStorage(
     await getMiniflareDurableObjectStorage(id),
   );
 
   const entryCache = new EntryCache(storage);
-  const writeTx = new ReplicacheTransaction(entryCache, 'c1', 1, 1, undefined);
+  const writeTx = new ReplicacheTransaction(
+    entryCache,
+    'c1',
+    1,
+    1,
+    undefined,
+    env,
+  );
 
   let err;
   try {
-    await writeTx.put('key', {a: Symbol()} as unknown as ReadonlyJSONValue);
+    await writeTx.set('key', {a: Symbol()} as unknown as ReadonlyJSONValue);
   } catch (e) {
     err = e;
   }

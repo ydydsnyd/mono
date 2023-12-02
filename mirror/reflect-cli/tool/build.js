@@ -1,7 +1,22 @@
+// @ts-check
+
 import * as esbuild from 'esbuild';
-import {checkOutfileForNodeModules} from 'shared/src/tool/check-outfile-for-node-modules.js';
-import {getExternalFromPackageJSON} from 'shared/src/tool/get-external-from-package-json.js';
-import {injectRequire} from 'shared/src/tool/inject-require.js';
+import {readFile} from 'node:fs/promises';
+import {getVersion} from '../../../packages/reflect-shared/tool/get-version.js';
+import {getExternalFromPackageJSON} from '../../../packages/shared/src/tool/get-external-from-package-json.js';
+import {injectRequire} from '../../../packages/shared/src/tool/inject-require.js';
+
+/**
+ * @returns {Promise<{name: string; version: string}>}
+ * @param {string | URL} relPath
+ */
+async function packageJSON(relPath) {
+  const s = await readFile(new URL(relPath, import.meta.url), 'utf-8');
+  return JSON.parse(s);
+}
+
+const reflectVersion = getVersion();
+const reflectCliName = (await packageJSON('../package.json')).name;
 
 async function main() {
   const outfile = 'out/index.mjs';
@@ -17,8 +32,11 @@ async function main() {
     banner: {
       js: injectRequire(),
     },
+    define: {
+      REFLECT_VERSION: JSON.stringify(reflectVersion),
+      REFLECT_CLI_NAME: JSON.stringify(reflectCliName),
+    },
   });
-  await checkOutfileForNodeModules(outfile);
 }
 
 await main();

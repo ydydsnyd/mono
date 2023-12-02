@@ -1,8 +1,8 @@
-import {useReducer} from 'react';
-
 import {M, getServerLogs} from '@/demo/shared/mutators';
-import type {ReadTransaction, Reflect} from '@rocicorp/reflect/client';
-import {useSubscribe} from 'replicache-react';
+import type {ReadTransaction} from '@rocicorp/reflect';
+import type {Reflect} from '@rocicorp/reflect/client';
+import {useSubscribe} from '@rocicorp/reflect/react';
+import {useReducer} from 'react';
 
 export function useCount(
   reflect: Reflect<M> | undefined,
@@ -12,7 +12,7 @@ export function useCount(
   return useSubscribe(
     reflect,
     async (tx: ReadTransaction) => {
-      const count = (await tx.get(key)) as number | undefined;
+      const count = await tx.get<number>(key);
       // dont want to log if key doesn't exist yet or we are getting  default value from subscribe
       if (count === undefined) {
         return 0;

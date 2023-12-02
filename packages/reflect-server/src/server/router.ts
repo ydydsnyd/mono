@@ -114,11 +114,15 @@ export function requireAuthAPIKey<Context extends BaseContext, Resp>(
   };
 }
 
-export function checkAuthAPIKey(required: string | undefined, req: Request) {
+export function checkAuthAPIKey(
+  required: string | undefined,
+  request: Request,
+) {
   if (!required) {
     throw new Error('Internal error: expected auth api key cannot be empty');
   }
-  const authHeader = req.headers.get(AUTH_API_KEY_HEADER_NAME);
+
+  const authHeader = request.headers.get(AUTH_API_KEY_HEADER_NAME);
   if (authHeader !== required) {
     return createUnauthorizedResponse();
   }
@@ -126,6 +130,7 @@ export function checkAuthAPIKey(required: string | undefined, req: Request) {
 }
 
 export type WithRoomID = {roomID: string};
+
 export function withRoomID<Context extends BaseContext, Resp>(
   next: Handler<Context & WithRoomID, Resp>,
 ) {
@@ -146,7 +151,7 @@ export function withVersion<Context extends BaseContext, Resp>(
   return (ctx: Context, req: Request) => {
     const {version: versionString} = ctx.parsedURL.pathname.groups;
     if (versionString === undefined) {
-      throw new Error('version not found by withVersion' + req.url);
+      throw new Error('version not found by withVersion url: ' + req.url);
     }
     if (!/^v\d+$/.test(versionString)) {
       throw new Error(`invalid version found by withVersion, ${versionString}`);
@@ -186,13 +191,13 @@ async function validateBody<T>(
 ): Promise<ValidateResult<T>> {
   let json;
   try {
-    // Note: if the original request body is not consumed after this clone
-    // then CF complains in the console, "Your worker called response.clone(),
-    // but did not read the body of both clones. <snip>". To eliminate that
-    // log line we could consume the original request body here and then
-    // both create and pass the validated request as well as the body
-    // in case something downstream wants it.
-    json = await request.clone().json();
+    // Note: we don't clone the request here, because if we did clone and the
+    // original request body is not consumed CF complains in the console, "Your
+    // worker called response.clone(), but did not read the body of both
+    // clones. <snip>". Routes that use validateBody, should use
+    // the ValidateResult and not try to read the body, as reading the body
+    // again will result in an error "TypeError: body used already for <snip>".
+    json = await request.json();
   } catch (e) {
     return {
       errorResponse: new Response('Body must be valid json.', {status: 400}),

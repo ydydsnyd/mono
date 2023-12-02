@@ -1,15 +1,16 @@
 name = "reflect-net-east"
 main = "demo/worker/index.ts"
 compatibility_date = "2022-11-30"
+compatibility_flags = ["nodejs_compat"]
 account_id = "085f6d8eb08e5b23debfb08b21bda1eb"
 logpush = false
 
 route = { pattern = "reflect-server.net", custom_domain = true }
 durable_objects.bindings = [
   { name = "roomDO", class_name = "RoomDO" },
-  { name = "authDO", class_name = "AuthDO" }
+  { name = "authDO", class_name = "AuthDO" },
 ]
-vars = { DATADOG_SERVICE_LABEL = "reflect.net", LOG_LEVEL = "info"}
+vars = { DATADOG_SERVICE_LABEL = "reflect.net", LOG_LEVEL = "info" }
 
 [[migrations]]
 tag = "v1"
@@ -17,7 +18,7 @@ new_classes = ["Server"]
 
 [[migrations]]
 tag = "v2"
-renamed_classes = [{from = "Server", to = "RoomDO" }]
+renamed_classes = [{ from = "Server", to = "RoomDO" }]
 new_classes = ["AuthDO"]
 
 
@@ -26,9 +27,6 @@ new_classes = ["AuthDO"]
 # possible, so restarts delete data.
 watch_dir = "demo/worker"
 
-[triggers]
-crons = [ "*/5 * * * *" ] # ever 5 mins for AuthDO connection revalidation
-
 #[secrets]
 #DATADOG_LOGS_API_KEY
 #DATADOG_METRICS_API_KEY
@@ -36,11 +34,20 @@ crons = [ "*/5 * * * *" ] # ever 5 mins for AuthDO connection revalidation
 #NEW_ROOM_SECRET
 
 
-[env.staging]
-name = "reflect-net-east-staging"
-route = { pattern = "staging.reflect-server.net", custom_domain = true }
+[env.sandbox]
+name = "reflect-net-east-sandbox"
+route = { pattern = "sandbox.reflect-server.net", custom_domain = true }
 durable_objects.bindings = [
   { name = "roomDO", class_name = "RoomDO" },
-  { name = "authDO", class_name = "AuthDO" }
+  { name = "authDO", class_name = "AuthDO" },
 ]
-vars = { DATADOG_SERVICE_LABEL = "staging.reflect.net", LOG_LEVEL = "info" }
+vars = { DATADOG_SERVICE_LABEL = "sandbox.reflect.net", LOG_LEVEL = "info" }
+
+[env.preview]
+name = "reflect-net-east-preview"
+route = { pattern = "preview.reflect-server.net", custom_domain = true }
+durable_objects.bindings = [
+  { name = "roomDO", class_name = "RoomDO" },
+  { name = "authDO", class_name = "AuthDO" },
+]
+vars = { DATADOG_SERVICE_LABEL = "preview.reflect.net", LOG_LEVEL = "info" }

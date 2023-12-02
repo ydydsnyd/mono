@@ -1,15 +1,19 @@
 import {Lock} from '@rocicorp/lock';
-import type {LogLevel, LogSink, Context} from '@rocicorp/logger';
+import type {Context, LogLevel, LogSink} from '@rocicorp/logger';
 
 export interface DatadogLogSinkOptions {
-  apiKey: string;
+  apiKey?: string | undefined;
   source?: string | undefined;
   service?: string | undefined;
   host?: string | undefined;
+  version?: string | undefined;
   interval?: number | undefined;
+  baseURL?: URL | undefined;
 }
 
-const DD_URL = 'https://http-intake.logs.datadoghq.com/api/v2/logs';
+const DD_BASE_URL = new URL(
+  'https://http-intake.logs.datadoghq.com/api/v2/logs',
+);
 
 // https://docs.datadoghq.com/api/latest/logs/
 export const MAX_LOG_ENTRIES_PER_FLUSH = 1000;
@@ -23,49 +27,61 @@ const MAX_MESSAGE_RETRIES = 2;
 export const MAX_ENTRY_CHARS = MAX_ENTRY_BYTES / 4;
 
 export class DatadogLogSink implements LogSink {
-  private _messages: Message[] = [];
-  private readonly _apiKey: string;
-  private readonly _source: string | undefined;
-  private readonly _service: string | undefined;
-  private readonly _host: string | undefined;
-  private readonly _interval: number;
-  private _timerID: ReturnType<typeof setTimeout> | 0 = 0;
-  private _flushLock = new Lock();
+  #messages: Message[] = [];
+  readonly #apiKey: string | undefined;
+  readonly #source: string | undefined;
+  readonly #service: string | undefined;
+  readonly #host: string | undefined;
+  readonly #version: string | undefined;
+  readonly #interval: number;
+  readonly #baseURL: string;
+  #timerID: ReturnType<typeof setTimeout> | 0 = 0;
+  #flushLock = new Lock();
 
   constructor(options: DatadogLogSinkOptions) {
-    const {apiKey, source, service, host, interval = 5_000} = options;
+    const {
+      apiKey,
+      source,
+      service,
+      host,
+      version,
+      interval = 5_000,
+      baseURL: baseUrl = DD_BASE_URL,
+    } = options;
 
-    this._apiKey = apiKey;
-    this._source = source;
-    this._service = service;
-    this._host = host;
-    this._interval = interval;
+    this.#apiKey = apiKey;
+    this.#source = source;
+    this.#service = service;
+    this.#host = host;
+    this.#version = version;
+    this.#interval = interval;
+    this.#baseURL = baseUrl.toString();
   }
 
   log(level: LogLevel, context: Context | undefined, ...args: unknown[]): void {
-    this._messages.push(makeMessage(args, context, level));
-    if (level === 'error' || this._messages.length === FORCE_FLUSH_THRESHOLD) {
+    this.#messages.push(makeMessage(args, context, level));
+    if (level === 'error' || this.#messages.length === FORCE_FLUSH_THRESHOLD) {
       // Do not await. Later calls to flush will await as needed.
       void this.flush();
     } else {
-      this._startTimer();
+      this.#startTimer();
     }
   }
-  private _startTimer() {
-    if (this._timerID) {
+  #startTimer() {
+    if (this.#timerID) {
       return;
     }
 
-    this._timerID = setTimeout(() => {
-      this._timerID = 0;
+    this.#timerID = setTimeout(() => {
+      this.#timerID = 0;
 
       void this.flush();
-    }, this._interval);
+    }, this.#interval);
   }
 
   flush(): Promise<void> {
-    return this._flushLock.withLock(async () => {
-      const {length} = this._messages;
+    return this.#flushLock.withLock(async () => {
+      const {length} = this.#messages;
       if (length === 0) {
         return;
       }
@@ -74,7 +90,7 @@ export class DatadogLogSink implements LogSink {
         const stringified = [];
         let totalBytes = 0;
 
-        for (const m of this._messages) {
+        for (const m of this.#messages) {
           // As a small perf optimization, we directly mutate
           // the message rather than making a shallow copy.
           // The LOG_SINK_FLUSH_DELAY_ATTRIBUTE will be clobbered by
@@ -101,22 +117,28 @@ export class DatadogLogSink implements LogSink {
         }
 
         const body = stringified.join('\n');
-        const url = new URL(DD_URL);
-        url.searchParams.set('dd-api-key', this._apiKey);
+        const url = new URL(this.#baseURL);
+        if (this.#apiKey !== undefined) {
+          url.searchParams.set('dd-api-key', this.#apiKey);
+        }
 
-        if (this._source) {
+        if (this.#source) {
           // Both need to be set for server to treat us as the browser SDK for
           // value 'browser'.
-          url.searchParams.set('ddsource', this._source);
-          url.searchParams.set('dd-evp-origin', this._source);
+          url.searchParams.set('ddsource', this.#source);
+          url.searchParams.set('dd-evp-origin', this.#source);
         }
 
-        if (this._service) {
-          url.searchParams.set('service', this._service);
+        if (this.#service) {
+          url.searchParams.set('service', this.#service);
         }
 
-        if (this._host) {
-          url.searchParams.set('host', this._host);
+        if (this.#host) {
+          url.searchParams.set('host', this.#host);
+        }
+
+        if (this.#version) {
+          url.searchParams.set('ddtags', `version:${this.#version}`);
         }
 
         let ok = false;
@@ -144,11 +166,11 @@ export class DatadogLogSink implements LogSink {
 
         if (ok) {
           // Remove messages that were successfully flushed.
-          this._messages.splice(0, stringified.length);
+          this.#messages.splice(0, stringified.length);
         } else {
           let numWithTooManyRetries = 0;
           for (let i = 0; i < stringified.length; i++) {
-            const m = this._messages[i];
+            const m = this.#messages[i];
             m.flushRetryCount = (m.flushRetryCount ?? 0) + 1;
             if (m.flushRetryCount > MAX_MESSAGE_RETRIES) {
               numWithTooManyRetries++;
@@ -161,13 +183,13 @@ export class DatadogLogSink implements LogSink {
               } times.`,
             );
             // Remove messages that have failed too many times.
-            this._messages.splice(0, numWithTooManyRetries);
+            this.#messages.splice(0, numWithTooManyRetries);
           }
         }
-      } while (this._messages.length >= FORCE_FLUSH_THRESHOLD);
+      } while (this.#messages.length >= FORCE_FLUSH_THRESHOLD);
       // If any messages left at this point schedule another flush.
-      if (this._messages.length) {
-        this._startTimer();
+      if (this.#messages.length) {
+        this.#startTimer();
       }
     });
   }
@@ -235,6 +257,7 @@ const RESERVED_KEYS: ReadonlyArray<string> = [
   'source',
   'status',
   'service',
+  'version',
   'trace_id',
   'message',
   'msg', // alias for message

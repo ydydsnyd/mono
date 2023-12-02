@@ -1,19 +1,19 @@
 import {expect} from 'chai';
 import * as sinon from 'sinon';
 import type {JSONValue} from './json.js';
-import type {WriteTransaction} from './mod.js';
 import {
   disableAllBackgroundProcesses,
   initReplicacheTesting,
   replicacheForTesting,
   tickAFewTimes,
 } from './test-util.js';
+import type {WriteTransaction} from './transactions.js';
 
 initReplicacheTesting();
 
 async function addData(tx: WriteTransaction, data: {[key: string]: JSONValue}) {
   for (const [key, value] of Object.entries(data)) {
-    await tx.put(key, value);
+    await tx.set(key, value);
   }
 }
 

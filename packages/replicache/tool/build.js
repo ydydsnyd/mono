@@ -22,7 +22,6 @@ const dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * @typedef {{
- *   format: 'esm' | 'cjs',
  *   minify: boolean,
  *   ext: string,
  *   mode: BuildMode,
@@ -41,9 +40,13 @@ async function buildReplicache(options) {
     ...sharedOptions(options.minify, metafile),
     ...(external ? {external} : {}),
     ...restOfOptions,
+    format: 'esm',
     // Use neutral to remove the automatic define for process.env.NODE_ENV
     platform: 'neutral',
-    define,
+    define: {
+      ...define,
+      ['TESTING']: 'false',
+    },
     outfile,
     entryPoints: [path.join(dirname, '..', 'src', 'mod.ts')],
   });
@@ -61,14 +64,7 @@ async function buildMJS({
   mode = 'unknown',
   external,
 } = {}) {
-  await buildReplicache({format: 'esm', minify, ext, mode, external});
-}
-
-/**
- * @param {Partial<BuildOptions>} options
- */
-async function buildCJS({minify = true, ext = 'cjs', mode = 'unknown'} = {}) {
-  await buildReplicache({format: 'cjs', minify, ext, mode});
+  await buildReplicache({minify, ext, mode, external});
 }
 
 async function buildCLI() {
@@ -81,17 +77,20 @@ async function buildCLI() {
   });
 }
 
+async function isRocicorpPackage() {
+  const packageJSON = await readPackageJSON();
+  return packageJSON.name.startsWith('@rocicorp/');
+}
+
 if (perf) {
   await buildMJS({mode: 'release'});
 } else if (forBundleSizeDashboard) {
   // Bundle external modules for the bundle size dashboard
   const external = ['node:*'];
-  // We keep cjs as js and mjs as mjs so the dashboard does not get reset
+  // We keep mjs as mjs so the dashboard does not get reset
   await Promise.all([
     buildMJS({minify: false, ext: 'mjs', external}),
     buildMJS({minify: true, ext: 'min.mjs', external}),
-    buildCJS({minify: false, ext: 'js', external}),
-    buildCJS({minify: true, ext: 'min.js', external}),
     buildCLI(),
   ]);
 } else {
@@ -99,10 +98,5 @@ if (perf) {
   if (debug || (await isRocicorpPackage())) {
     opts = {minify: false};
   }
-  await Promise.all([buildMJS(opts), buildCJS(opts), buildCLI()]);
-}
-
-async function isRocicorpPackage() {
-  const packageJSON = await readPackageJSON();
-  return packageJSON.name.startsWith('@rocicorp/');
+  await Promise.all([buildMJS(opts), buildCLI()]);
 }

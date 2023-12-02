@@ -1,4 +1,4 @@
-import type {WriteTransaction} from 'reflect-types/src/mod.js';
+import type {WriteTransaction} from 'reflect-shared';
 
 /**
  * The `RoomStartHandler` is invoked when the room is started, before
@@ -20,4 +20,7 @@ import type {WriteTransaction} from 'reflect-types/src/mod.js';
  * As the transaction is not associated with any client, `write.clientID`
  * will be empty and `write.mutationID` will be -1.
  */
-export type RoomStartHandler = (write: WriteTransaction) => Promise<void>;
+export type RoomStartHandler = (
+  write: WriteTransaction,
+  roomID: string,
+) => Promise<void>;

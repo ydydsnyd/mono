@@ -1,6 +1,6 @@
 import {expect} from 'chai';
 import * as sinon from 'sinon';
-import type {VersionNotSupportedResponse, WriteTransaction} from './mod.js';
+import type {VersionNotSupportedResponse} from './error-responses.js';
 import type {Pusher} from './pusher.js';
 import {
   disableAllBackgroundProcesses,
@@ -8,6 +8,7 @@ import {
   replicacheForTesting,
   tickAFewTimes,
 } from './test-util.js';
+import type {WriteTransaction} from './transactions.js';
 
 // fetch-mock has invalid d.ts file so we removed that on npm install.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -30,7 +31,7 @@ test('push', async () => {
         tx: WriteTransaction,
         args: A,
       ) => {
-        await tx.put(`/todo/${args.id}`, args);
+        await tx.set(`/todo/${args.id}`, args);
       },
       deleteTodo: async <A extends {id: number}>(
         tx: WriteTransaction,
@@ -57,7 +58,7 @@ test('push', async () => {
   });
   await tickAFewTimes();
   const {mutations} = await fetchMock.lastCall().request.json();
-  const clientID = await rep.clientID;
+  const {clientID} = rep;
   expect(mutations).to.deep.equal([
     {
       clientID,
@@ -195,7 +196,7 @@ test('push request is only sent when pushURL or non-default pusher are set', asy
           tx: WriteTransaction,
           args: A,
         ) => {
-          await tx.put(`/todo/${args.id}`, args);
+          await tx.set(`/todo/${args.id}`, args);
         },
       },
     },
@@ -295,7 +296,7 @@ test('Version not supported on server', async () => {
     rep.pusher = pusher as Pusher;
 
     await rep.mutate.noop();
-    await rep.invokePush();
+    await rep.push({now: true});
 
     expect(onUpdateNeededStub.callCount).to.equal(1);
     expect(onUpdateNeededStub.lastCall.args).deep.equal([reason]);
@@ -336,7 +337,7 @@ test('ClientStateNotFound on server', async () => {
   rep.pusher = pusher as Pusher;
 
   await rep.mutate.noop();
-  await rep.invokePush();
+  await rep.push({now: true});
 
   expect(onUpdateNeededStub.callCount).equal(0);
   expect(onClientStateNotFound.callCount).equal(1);

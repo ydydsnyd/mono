@@ -1,6 +1,8 @@
 // Processes zero or more mutations against a room, returning necessary pokes
 
 import type {LogContext} from '@rocicorp/logger';
+import type {Poke} from 'reflect-protocol';
+import type {Env} from 'reflect-shared';
 import {must} from 'shared/src/must.js';
 import {fastForwardRoom} from '../ff/fast-forward.js';
 import type {DisconnectHandler} from '../server/disconnect.js';
@@ -8,9 +10,11 @@ import type {DurableStorage} from '../storage/durable-storage.js';
 import {EntryCache} from '../storage/entry-cache.js';
 import type {ClientPoke} from '../types/client-poke.js';
 import {getClientRecord, putClientRecord} from '../types/client-record.js';
-import type {ClientMap} from '../types/client-state.js';
+import type {ClientID, ClientMap} from '../types/client-state.js';
+import {getConnectedClients} from '../types/connected-clients.js';
 import type {PendingMutation} from '../types/mutation.js';
 import {getVersion, putVersion} from '../types/version.js';
+import {addPresence} from './add-presence.js';
 import {processFrame} from './process-frame.js';
 import type {MutatorMap} from './process-mutation.js';
 
@@ -19,16 +23,20 @@ const FLUSH_SIZE_THRESHOLD_FOR_LOG_FLUSH = 500;
 
 export async function processRoom(
   lc: LogContext,
+  env: Env,
   clients: ClientMap,
   pendingMutations: PendingMutation[],
   numPendingMutationsToProcess: number,
   mutators: MutatorMap,
   disconnectHandler: DisconnectHandler,
   storage: DurableStorage,
-): Promise<ClientPoke[]> {
+  shouldGCClients: (now: number) => boolean,
+): Promise<Map<ClientID, Poke[]>> {
   const cache = new EntryCache(storage);
   const clientIDs = [...clients.keys()];
   lc.debug?.('processing room');
+
+  const previousConnectedClients = await getConnectedClients(storage);
 
   // Before running any mutations, fast forward connected clients to
   // current state.
@@ -61,13 +69,26 @@ export async function processRoom(
   clientPokes.push(
     ...(await processFrame(
       lc,
+      env,
       pendingMutations,
       numPendingMutationsToProcess,
       mutators,
       disconnectHandler,
       clients,
       cache,
+      shouldGCClients,
     )),
+  );
+
+  const pokesByClientID = groupByClientID(clientPokes);
+  const nextConnectedClients = await getConnectedClients(cache);
+
+  await addPresence(
+    clients,
+    pokesByClientID,
+    cache,
+    previousConnectedClients,
+    nextConnectedClients,
   );
 
   const startCacheFlush = Date.now();
@@ -92,5 +113,18 @@ export async function processRoom(
     `Finished cache flush in ${cacheFlushLatencyMs} ms.`,
     pendingCounts,
   );
-  return clientPokes;
+  return pokesByClientID;
+}
+
+function groupByClientID(clientPokes: ClientPoke[]): Map<ClientID, Poke[]> {
+  const pokesByClientID = new Map<ClientID, Poke[]>();
+  for (const clientPoke of clientPokes) {
+    let pokes = pokesByClientID.get(clientPoke.clientID);
+    if (!pokes) {
+      pokes = [];
+      pokesByClientID.set(clientPoke.clientID, pokes);
+    }
+    pokes.push(clientPoke.poke);
+  }
+  return pokesByClientID;
 }

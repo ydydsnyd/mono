@@ -1,6 +1,6 @@
 import {describe, expect, test} from '@jest/globals';
 import type {Firestore} from 'firebase-admin/firestore';
-import {fakeFirestore} from 'mirror-schema/src/test-helpers.js';
+import {Timestamp} from 'firebase-admin/firestore';
 import {https} from 'firebase-functions/v2';
 import {
   FunctionsErrorCode,
@@ -8,16 +8,21 @@ import {
   Request,
 } from 'firebase-functions/v2/https';
 import type {AuthData} from 'firebase-functions/v2/tasks';
-import {validateSchema} from './schema.js';
-import {appAuthorization, userAuthorization} from './auth.js';
 import {baseAppRequestFields} from 'mirror-protocol/src/app.js';
 import {baseResponseFields} from 'mirror-protocol/src/base.js';
-import * as v from 'shared/src/valita.js';
-import type {Callable} from './types.js';
-import type {User} from 'mirror-schema/src/user.js';
 import type {App} from 'mirror-schema/src/app.js';
 import type {Role} from 'mirror-schema/src/membership.js';
-import {defaultOptions} from 'mirror-schema/src/deployment.js';
+import {DEFAULT_PROVIDER_ID} from 'mirror-schema/src/provider.js';
+import {
+  fakeFirestore,
+  setApp,
+  setUser,
+} from 'mirror-schema/src/test-helpers.js';
+import type {User} from 'mirror-schema/src/user.js';
+import * as v from 'shared/src/valita.js';
+import {appAuthorization, userAuthorization} from './auth.js';
+import {validateSchema} from './schema.js';
+import type {Callable} from './types.js';
 
 const testRequestSchema = v.object({
   ...baseAppRequestFields,
@@ -54,7 +59,7 @@ function testFunction(
     );
 }
 
-describe('user authorization failures', () => {
+describe('user authorization', () => {
   const goodRequest = {
     requester: {
       userID: 'foo',
@@ -68,9 +73,14 @@ describe('user authorization failures', () => {
     name: string;
     request: TestRequest;
     authData: AuthData;
-    errorCode: FunctionsErrorCode;
+    errorCode?: FunctionsErrorCode;
   };
   const cases: Case[] = [
+    {
+      name: 'successful authentication',
+      authData: {uid: 'foo'} as AuthData,
+      request: goodRequest,
+    },
     {
       name: 'missing authentication',
       authData: {} as AuthData,
@@ -80,6 +90,23 @@ describe('user authorization failures', () => {
     {
       name: 'wrong authenticated user',
       authData: {uid: 'bar'} as AuthData,
+      request: goodRequest,
+      errorCode: 'permission-denied',
+    },
+    {
+      name: 'user with super powers',
+      authData: {
+        uid: 'bar',
+        token: {superUntil: Date.now() + 10000},
+      } as unknown as AuthData,
+      request: goodRequest,
+    },
+    {
+      name: 'user with expired super powers',
+      authData: {
+        uid: 'bar',
+        token: {superUntil: Date.now() - 10000},
+      } as unknown as AuthData,
       request: goodRequest,
       errorCode: 'permission-denied',
     },
@@ -94,11 +121,20 @@ describe('user authorization failures', () => {
   for (const c of cases) {
     test(c.name, async () => {
       const firestore = fakeFirestore();
+      await setUser(firestore, 'foo', 'foo@bar.com', 'Foo', {
+        ['appTeam']: 'admin',
+      });
+      await setApp(firestore, 'myApp', {
+        teamID: 'appTeam',
+        name: 'My App Name',
+      });
+
       const authenticatedFunction = https.onCall(testFunction(firestore));
 
       let error: HttpsError | undefined;
+      let resp: TestResponse | undefined;
       try {
-        await authenticatedFunction.run({
+        resp = await authenticatedFunction.run({
           auth: c.authData,
           data: c.request,
           rawRequest: null as unknown as Request,
@@ -109,8 +145,15 @@ describe('user authorization failures', () => {
       }
 
       expect(error?.code).toBe(c.errorCode);
-      const fooDoc = await firestore.doc('users/foo').get();
-      expect(fooDoc.exists).toBe(false);
+      if (!c.errorCode) {
+        expect(resp).toEqual({
+          appName: 'My App Name',
+          userEmail: 'foo@bar.com',
+          role: 'admin',
+          bar: 'boo',
+          success: true,
+        });
+      }
     });
   }
 });
@@ -126,11 +169,13 @@ describe('app authorization', () => {
   };
   const defaultApp: App = {
     teamID: 'myTeam',
+    teamLabel: 'teamlabel',
     name: 'My App',
-    cfID: 'cfID',
+    cfID: 'deprecated',
+    provider: DEFAULT_PROVIDER_ID,
     cfScriptName: 'cfScriptName',
     serverReleaseChannel: 'stable',
-    deploymentOptions: defaultOptions(),
+    envUpdateTime: Timestamp.now(),
   };
   const defaultUser: User = {
     email: 'foo@bar.com',

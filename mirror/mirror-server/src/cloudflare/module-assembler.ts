@@ -3,21 +3,27 @@ import {logger} from 'firebase-functions';
 import {FunctionsErrorCode, HttpsError} from 'firebase-functions/v2/https';
 import {type ModuleRef, loadModule} from 'mirror-schema/src/module.js';
 import {assert} from 'shared/src/asserts.js';
-import type {CfModule} from './create-script-upload-form.js';
+import type {CfModule} from 'cloudflare-api/src/create-script-upload-form.js';
 
 export class ModuleAssembler {
+  #appName: string;
+  #teamLabel: string;
   #appScriptName: string;
   #appModules: ModuleRef[];
   #serverModules: ModuleRef[];
   #uniqueModuleNames: Set<string>;
 
   constructor(
+    appName: string,
+    teamLabel: string,
     appScriptName: string,
     appModules: ModuleRef[],
     serverModules: ModuleRef[],
   ) {
     assert(appModules.length >= 1);
     assert(serverModules.length === 2); // The current logic only supports the server and template modules.
+    this.#appName = appName;
+    this.#teamLabel = teamLabel;
     this.#appScriptName = appScriptName;
     this.#appModules = appModules;
     this.#serverModules = serverModules;
@@ -48,7 +54,10 @@ export class ModuleAssembler {
         const content = m.content
           .replaceAll('server-module-name.js', serverModuleName)
           .replaceAll('app-module-name.js', appModuleName)
-          .replaceAll('app-script-name', this.#appScriptName);
+          .replaceAll('app-script-name', this.#appScriptName)
+          .replaceAll('app-name', this.#appName)
+          .replaceAll('team-label', this.#teamLabel)
+          .replaceAll('team-subdomain', this.#teamLabel); // Note: Have to keep this around for old templates
         logger.debug('Assembled app script:\n', content);
         const name = this.#uniquifyAndAddName('script.js');
         // Main module is the first.

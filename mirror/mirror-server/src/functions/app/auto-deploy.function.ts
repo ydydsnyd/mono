@@ -1,41 +1,32 @@
 import {Timestamp, type Firestore} from 'firebase-admin/firestore';
 import {logger} from 'firebase-functions';
-import {HttpsError} from 'firebase-functions/v2/https';
 import {onDocumentUpdated} from 'firebase-functions/v2/firestore';
+import {HttpsError} from 'firebase-functions/v2/https';
+import _ from 'lodash';
+import {App, appDataConverter} from 'mirror-schema/src/app.js';
 import {
   DeploymentSpec,
   DeploymentType,
   deploymentsCollection,
 } from 'mirror-schema/src/deployment.js';
-import {App, appDataConverter} from 'mirror-schema/src/app.js';
-import {DEPLOYMENT_SECRETS_NAMES} from './secrets.js';
-import {computeDeploymentSpec} from './publish.function.js';
-import _ from 'lodash';
 import {requestDeployment} from './deploy.function.js';
+import {computeDeploymentSpec} from './publish.function.js';
 
 export const autoDeploy = (firestore: Firestore) =>
-  onDocumentUpdated(
-    {
-      document: 'apps/{appID}',
-      secrets: [...DEPLOYMENT_SECRETS_NAMES],
-    },
-    async event => {
-      if (!event.data) {
-        throw new Error(
-          `Missing event.data for ${JSON.stringify(event.params)}`,
-        );
-      }
-      const {appID} = event.params;
-      const app = appDataConverter.fromFirestore(event.data.after);
+  onDocumentUpdated({document: 'apps/{appID}'}, async event => {
+    if (!event.data) {
+      throw new Error(`Missing event.data for ${JSON.stringify(event.params)}`);
+    }
+    const {appID} = event.params;
+    const app = appDataConverter.fromFirestore(event.data.after);
 
-      await checkForAutoDeployment(
-        firestore,
-        appID,
-        app,
-        event.data.after.updateTime,
-      );
-    },
-  );
+    await checkForAutoDeployment(
+      firestore,
+      appID,
+      app,
+      event.data.after.updateTime,
+    );
+  });
 
 export const MIRROR_SERVER_REQUESTER_ID = 'mirror-server';
 export const MAX_AUTO_DEPLOYMENTS_PER_MINUTE = 4;
@@ -59,6 +50,7 @@ export async function checkForAutoDeployment(
   const autoDeploymentType = getAutoDeploymentType(
     app.runningDeployment.spec,
     desiredSpec,
+    app.forceRedeployment,
   );
   if (!autoDeploymentType) {
     return;
@@ -91,31 +83,27 @@ export async function checkForAutoDeployment(
         ...desiredSpec,
       },
     },
+    undefined,
     lastAppUpdateTime,
   );
 }
 
 export function getAutoDeploymentType(
-  current: Pick<
-    DeploymentSpec,
-    'serverVersion' | 'options' | 'hashesOfSecrets' | 'hostname'
-  >,
-  desired: Pick<
-    DeploymentSpec,
-    'serverVersion' | 'options' | 'hashesOfSecrets' | 'hostname'
-  >,
+  current: Pick<DeploymentSpec, 'serverVersion' | 'envUpdateTime' | 'hostname'>,
+  desired: Pick<DeploymentSpec, 'serverVersion' | 'envUpdateTime' | 'hostname'>,
+  forceRedeployment: boolean | undefined,
 ): DeploymentType | undefined {
   if (current.serverVersion !== desired.serverVersion) {
     return 'SERVER_UPDATE';
   }
-  if (!_.isEqual(current.options, desired.options)) {
-    return 'OPTIONS_UPDATE';
-  }
-  if (!_.isEqual(current.hashesOfSecrets, desired.hashesOfSecrets)) {
-    return 'SECRETS_UPDATE';
+  if (current.envUpdateTime.toMillis() !== desired.envUpdateTime.toMillis()) {
+    return 'ENV_UPDATE';
   }
   if (!_.isEqual(current.hostname, desired.hostname)) {
     return 'HOSTNAME_UPDATE';
+  }
+  if (forceRedeployment) {
+    return 'MAINTENANCE_UPDATE';
   }
   return undefined;
 }

@@ -1,7 +1,11 @@
 import {defineSecret} from 'firebase-functions/params';
-import type {DeploymentSecrets} from 'mirror-schema/src/deployment.js';
-import {sha256OfString} from 'mirror-schema/src/module.js';
+import {decryptUtf8} from 'mirror-schema/src/crypto.js';
+import {
+  ENCRYPTION_KEY_SECRET_NAME,
+  type Secrets as AppSecrets,
+} from 'mirror-schema/src/env.js';
 import {assert} from 'shared/src/asserts.js';
+import type {Secrets} from '../../secrets/index.js';
 
 export function defineSecretSafely(name: string) {
   const secret = defineSecret(name);
@@ -29,32 +33,52 @@ export function defineSecretSafely(name: string) {
 const datadogLogsApiKey = defineSecretSafely('DATADOG_LOGS_API_KEY');
 const datadogMetricsApiKey = defineSecretSafely('DATADOG_METRICS_API_KEY');
 
+// TODO(darick): Find the right place for this constant. Somewhere in packages/reflect* ?
+export const REFLECT_API_KEY = 'REFLECT_API_KEY';
+export const LEGACY_REFLECT_API_KEY = 'REFLECT_AUTH_API_KEY';
+
 export const DEPLOYMENT_SECRETS_NAMES = [
   'DATADOG_LOGS_API_KEY',
   'DATADOG_METRICS_API_KEY',
 ] as const;
 
-export async function getAppSecrets() {
-  const secrets: DeploymentSecrets = {
-    /* eslint-disable @typescript-eslint/naming-convention */
-    REFLECT_AUTH_API_KEY: 'dummy-api-key', // TODO(darick): Replace with a stable per-app secret.
-    DATADOG_LOGS_API_KEY: datadogLogsApiKey.value(),
-    DATADOG_METRICS_API_KEY: datadogMetricsApiKey.value(),
-    /* eslint-enable @typescript-eslint/naming-convention */
+export async function getAllDeploymentSecrets(
+  secrets: Secrets,
+  encrypted: AppSecrets,
+): Promise<Record<string, string>> {
+  const decryptedAppSecrets = await decryptSecrets(secrets, encrypted);
+  return {
+    ['DATADOG_LOGS_API_KEY']: datadogLogsApiKey.value(),
+    ['DATADOG_METRICS_API_KEY']: datadogMetricsApiKey.value(),
+    ...decryptedAppSecrets,
   };
-  const hashes = await hashSecrets(secrets);
-  return {secrets, hashes};
 }
 
-export async function hashSecrets(
-  secrets: DeploymentSecrets,
-): Promise<DeploymentSecrets> {
-  const hashes = {...secrets};
-  const hashSecret = async (key: keyof DeploymentSecrets) => {
-    hashes[key] = await sha256OfString(secrets[key]);
-  };
-  await Promise.all(
-    Object.keys(secrets).map(key => hashSecret(key as keyof DeploymentSecrets)),
+export async function decryptSecrets(
+  secrets: Secrets,
+  encrypted: AppSecrets,
+): Promise<Record<string, string>> {
+  const decrypted = await Promise.all(
+    Object.entries(encrypted).map(async ([name, val]) => {
+      const {secretName, version} = val.key;
+      const {payload: encryptionKey} = await secrets.getSecret(
+        secretName ?? ENCRYPTION_KEY_SECRET_NAME,
+        version,
+      );
+      return [name, decryptUtf8(val, Buffer.from(encryptionKey, 'base64url'))];
+    }),
   );
-  return hashes;
+
+  const decryptedSecrets = Object.fromEntries(decrypted);
+
+  // Until all Apps are updated to a version using the new REFLECT_API_KEY,
+  // also set the LEGACY_REFLECT_API_KEY secret for backwards compatibility.
+  if (decryptedSecrets[REFLECT_API_KEY]) {
+    decryptedSecrets[LEGACY_REFLECT_API_KEY] =
+      decryptedSecrets[REFLECT_API_KEY];
+  } else if (decryptedSecrets[LEGACY_REFLECT_API_KEY]) {
+    decryptedSecrets[REFLECT_API_KEY] =
+      decryptedSecrets[LEGACY_REFLECT_API_KEY];
+  }
+  return decryptedSecrets;
 }

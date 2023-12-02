@@ -18,21 +18,30 @@ import {
 import fetchMock from 'fetch-mock/esm/client';
 import {assert, assertNotUndefined} from 'shared/src/asserts.js';
 import {sleep} from 'shared/src/sleep.js';
-import * as dag from './dag/mod.js';
+import {uuidChunkHasher} from './dag/chunk.js';
+import {StoreImpl} from './dag/store-impl.js';
+import type {Store} from './dag/store.js';
 import {assertHash} from './hash.js';
-import {IDBNotFoundError} from './kv/idb-store.js';
-import * as kv from './kv/mod.js';
-import {deleteClientGroup} from './persist/client-groups.js';
+import {IDBNotFoundError, IDBStore} from './kv/idb-store.js';
+import {dropStore as dropIDBStore} from './kv/idb-util.js';
+import {
+  ClientGroup,
+  deleteClientGroup,
+  getClientGroup,
+} from './persist/client-groups.js';
 import {deleteClientForTesting} from './persist/clients-test-helpers.js';
-import {assertClientV6} from './persist/clients.js';
-import * as persist from './persist/mod.js';
+import {
+  assertClientV6,
+  ClientStateNotFoundError,
+  getClient,
+} from './persist/clients.js';
 import type {MutatorDefs} from './replicache.js';
 import type {WriteTransaction} from './transactions.js';
-import {withRead, withWrite} from './with-transactions.js';
+import {withRead, withWriteNoImplicitCommit} from './with-transactions.js';
 
 initReplicacheTesting();
 
-let perdag: dag.Store | undefined;
+let perdag: Store | undefined;
 teardown(async () => {
   await perdag?.close();
 });
@@ -43,7 +52,7 @@ async function deleteClientGroupForTesting<
 >(rep: ReplicacheTest<MD>) {
   const clientGroupID = await rep.clientGroupID;
   assert(clientGroupID);
-  await withWrite(rep.perdag, async tx => {
+  await withWriteNoImplicitCommit(rep.perdag, async tx => {
     await deleteClientGroup(clientGroupID, tx);
     await tx.commit();
   });
@@ -54,22 +63,21 @@ test('basic persist & load', async () => {
   const rep = await replicacheForTesting('persist-test', {
     pullURL,
   });
-  const clientID = await rep.clientID;
-
-  perdag = new dag.StoreImpl(
-    new kv.IDBStore(rep.idbName),
-    dag.uuidChunkHasher,
+  const {clientID} = rep;
+  perdag = new StoreImpl(
+    new IDBStore(rep.idbName),
+    uuidChunkHasher,
     assertHash,
   );
 
   const clientBeforePull = await withRead(perdag, read =>
-    persist.getClient(clientID, read),
+    getClient(clientID, read),
   );
   assertNotUndefined(clientBeforePull);
 
   assertClientV6(clientBeforePull);
   const clientGroupBeforePull = await withRead(perdag, read =>
-    persist.getClientGroup(clientBeforePull.clientGroupID, read),
+    getClientGroup(clientBeforePull.clientGroupID, read),
   );
   assertNotUndefined(clientGroupBeforePull);
 
@@ -89,7 +97,7 @@ test('basic persist & load', async () => {
     ]),
   );
 
-  rep.pull();
+  await rep.pull();
 
   // maxWaitAttempts * waitMs should be at least PERSIST_TIMEOUT
   // plus some buffer for the persist process to complete
@@ -106,9 +114,8 @@ test('basic persist & load', async () => {
     await tickAFewTimes(waitMs);
     assertClientV6(clientBeforePull);
     assertNotUndefined(clientGroupBeforePull);
-    const clientGroup: persist.ClientGroup | undefined = await withRead(
-      perdag,
-      read => persist.getClientGroup(clientBeforePull.clientGroupID, read),
+    const clientGroup: ClientGroup | undefined = await withRead(perdag, read =>
+      getClientGroup(clientBeforePull.clientGroupID, read),
     );
     assertNotUndefined(clientGroup);
     if (clientGroupBeforePull.headHash !== clientGroup.headHash) {
@@ -135,7 +142,7 @@ test('basic persist & load', async () => {
     expect(await tx.get('b')).to.equal(2);
   });
 
-  expect(await rep.clientID).to.not.equal(await rep2.clientID);
+  expect(rep.clientID).to.not.equal(rep2.clientID);
 
   await perdag.close();
 });
@@ -151,7 +158,7 @@ suite('onClientStateNotFound', () => {
     await rep.mutate.addData({foo: 'bar'});
     await rep.persist();
 
-    const clientID = await rep.clientID;
+    const {clientID} = rep;
     await deleteClientForTesting(clientID, rep.perdag);
 
     const onClientStateNotFound = sinon.fake();
@@ -182,7 +189,7 @@ suite('onClientStateNotFound', () => {
 
     await rep.mutate.addData({foo: 'bar'});
     await rep.persist();
-    const clientID = await rep.clientID;
+    const {clientID} = rep;
     await deleteClientForTesting(clientID, rep.perdag);
 
     // Need a real timeout here.
@@ -204,7 +211,7 @@ suite('onClientStateNotFound', () => {
       {useUniqueName: false},
     );
 
-    const clientID2 = await rep2.clientID;
+    const {clientID: clientID2} = rep2;
 
     await deleteClientForTesting(clientID2, rep2.perdag);
 
@@ -222,7 +229,7 @@ suite('onClientStateNotFound', () => {
     } catch (err) {
       e = err;
     }
-    expect(e).to.be.instanceOf(persist.ClientStateNotFoundError);
+    expect(e).to.be.instanceOf(ClientStateNotFoundError);
     expectLogContext(
       consoleErrorStub,
       0,
@@ -249,7 +256,7 @@ suite('onClientStateNotFound', () => {
 
     await rep.mutate.addData({foo: 'bar'});
     await rep.persist();
-    const clientID = await rep.clientID;
+    const {clientID} = rep;
     await deleteClientForTesting(clientID, rep.perdag);
     await rep.close();
 
@@ -266,7 +273,7 @@ suite('onClientStateNotFound', () => {
       {useUniqueName: false},
     );
 
-    const clientID2 = await rep2.clientID;
+    const {clientID: clientID2} = rep2;
     await deleteClientForTesting(clientID2, rep2.perdag);
 
     // Cannot simply gcClientGroups because the client group has pending mutations.
@@ -283,7 +290,7 @@ suite('onClientStateNotFound', () => {
       e = err;
     }
 
-    expect(e).to.be.instanceOf(persist.ClientStateNotFoundError);
+    expect(e).to.be.instanceOf(ClientStateNotFoundError);
     expectLogContext(
       consoleErrorStub,
       0,
@@ -306,7 +313,7 @@ test('Persist throws if idb dropped', async () => {
 
   await rep.mutate.addData({foo: 'bar'});
 
-  await kv.dropIDBStore(rep.idbName);
+  await dropIDBStore(rep.idbName);
 
   const onClientStateNotFound = sinon.fake();
   rep.onClientStateNotFound = onClientStateNotFound;

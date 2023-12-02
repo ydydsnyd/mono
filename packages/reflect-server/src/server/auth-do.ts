@@ -1,4 +1,4 @@
-import {RWLock} from '@rocicorp/lock';
+import {Lock, RWLock} from '@rocicorp/lock';
 import {LogContext, LogLevel, LogSink} from '@rocicorp/logger';
 import type {ErrorKind} from 'reflect-protocol';
 import {
@@ -8,23 +8,33 @@ import {
   invalidateForRoomRequestSchema,
   invalidateForUserRequestSchema,
 } from 'reflect-protocol';
+import type {TailErrorKind} from 'reflect-protocol/src/tail.js';
+import type {AuthData, Env} from 'reflect-shared';
 import {version} from 'reflect-shared';
-import type {AuthData} from 'reflect-types/src/mod.js';
 import {assert} from 'shared/src/asserts.js';
 import {timed} from 'shared/src/timed.js';
 import * as valita from 'shared/src/valita.js';
 import {DurableStorage} from '../storage/durable-storage.js';
 import {encodeHeaderValue} from '../util/headers.js';
+import {populateLogContextFromRequest} from '../util/log-context-common.js';
 import {sleep} from '../util/sleep.js';
-import {closeWithError} from '../util/socket.js';
+import {
+  SEC_WEBSOCKET_PROTOCOL_HEADER,
+  createWSAndCloseWithError,
+  createWSAndCloseWithTailError,
+} from '../util/socket.js';
+import {AlarmManager, TimeoutID} from './alarms.js';
 import {createAuthAPIHeaders} from './auth-api-headers.js';
 import {initAuthDOSchema} from './auth-do-schema.js';
-import {AUTH_DATA_HEADER_NAME, AuthHandler} from './auth.js';
+import type {AuthHandler} from './auth.js';
+import {requireUpgradeHeader, roomNotFoundResponse} from './http-util.js';
+import {AUTH_DATA_HEADER_NAME, addRoomIDHeader} from './internal-headers.js';
 import {
   CONNECT_URL_PATTERN,
   CREATE_ROOM_PATH,
   LEGACY_CONNECT_PATH,
   LEGACY_CREATE_ROOM_PATH,
+  TAIL_URL_PATH,
 } from './paths.js';
 import {ROOM_ROUTES} from './room-do.js';
 import {
@@ -54,7 +64,6 @@ import {
   withVersion,
 } from './router.js';
 import {registerUnhandledRejectionHandler} from './unhandled-rejection-handler.js';
-import {populateLogContextFromRequest} from '../util/log-context-common.js';
 
 export const AUTH_HANDLER_TIMEOUT_MS = 5_000;
 
@@ -65,6 +74,7 @@ export interface AuthDOOptions {
   authApiKey: string;
   logSink: LogSink;
   logLevel: LogLevel;
+  env: Env;
 }
 export type ConnectionKey = {
   userID: string;
@@ -90,14 +100,14 @@ export const AUTH_ROUTES_AUTHED_BY_API_KEY = {
   authInvalidateAll: '/api/auth/v0/invalidateAll',
   authInvalidateForUser: '/api/auth/v0/invalidateForUser',
   authInvalidateForRoom: '/api/auth/v0/invalidateForRoom',
-  authRevalidateConnections: '/api/auth/v0/revalidateConnections',
   legacyCreateRoom: LEGACY_CREATE_ROOM_PATH,
   createRoom: CREATE_ROOM_PATH,
 } as const;
 
-export const AUTH_ROUTES_AUTHED_BY_AUTH_HANDLER = {
+export const AUTH_ROUTES_CUSTOM_AUTH = {
   legacyConnect: LEGACY_CONNECT_PATH,
   connect: CONNECT_URL_PATTERN,
+  tail: TAIL_URL_PATH,
 } as const;
 
 export const AUTH_ROUTES_UNAUTHED = {
@@ -106,9 +116,11 @@ export const AUTH_ROUTES_UNAUTHED = {
 
 export const AUTH_ROUTES = {
   ...AUTH_ROUTES_AUTHED_BY_API_KEY,
-  ...AUTH_ROUTES_AUTHED_BY_AUTH_HANDLER,
+  ...AUTH_ROUTES_CUSTOM_AUTH,
   ...AUTH_ROUTES_UNAUTHED,
 } as const;
+
+export const ALARM_INTERVAL = 5 * 60 * 1000;
 
 export class BaseAuthDO implements DurableObject {
   readonly #router = new Router();
@@ -121,6 +133,10 @@ export class BaseAuthDO implements DurableObject {
   readonly #authHandler: AuthHandler | undefined;
   readonly #authApiKey: string;
   readonly #lc: LogContext;
+  readonly #alarm: AlarmManager;
+  readonly #env: Env;
+
+  #revalidateConnectionsTimeoutID: TimeoutID = 0;
 
   // _authLock ensures that at most one auth api call is processed at a time.
   // For safety, if something requires both the auth lock and the room record
@@ -132,8 +148,11 @@ export class BaseAuthDO implements DurableObject {
   // acquired first.
   readonly #roomRecordLock = new RWLock();
 
+  readonly #authRevalidateConnectionsLock = new Lock();
+
   constructor(options: AuthDOOptions) {
-    const {roomDO, state, authHandler, authApiKey, logSink, logLevel} = options;
+    const {roomDO, state, authHandler, authApiKey, logSink, logLevel, env} =
+      options;
     this.#roomDO = roomDO;
     this.#durableStorage = new DurableStorage(
       state.storage,
@@ -147,6 +166,8 @@ export class BaseAuthDO implements DurableObject {
     );
     registerUnhandledRejectionHandler(lc);
     this.#lc = lc.withContext('doID', state.id.toString());
+    this.#alarm = new AlarmManager(state.storage);
+    this.#env = env;
 
     this.#initRoutes();
     this.#lc.info?.('Starting AuthDO. Version:', version);
@@ -205,16 +226,14 @@ export class BaseAuthDO implements DurableObject {
   #createRoom = post(
     this.#requireAPIKey(
       withBody(createRoomRequestSchema, (ctx, req) => {
-        const {
-          lc,
-          body: {roomID, jurisdiction},
-        } = ctx;
+        const {lc, body} = ctx;
+        const {roomID, jurisdiction} = body;
         return this.#roomRecordLock.withWrite(() =>
           createRoom(
             lc,
             this.#roomDO,
             this.#durableStorage,
-            req,
+            new Request(req, {body: JSON.stringify(body)}),
             roomID,
             jurisdiction,
           ),
@@ -287,6 +306,54 @@ export class BaseAuthDO implements DurableObject {
     ),
   );
 
+  #tail = get(async (ctx: BaseContext, request) => {
+    const {lc} = ctx;
+    lc.info?.('authDO received websocket tail request:', request.url);
+
+    const errorResponse = requireUpgradeHeader(request, lc);
+    if (errorResponse) {
+      return errorResponse;
+    }
+
+    // From this point forward we want to return errors over the websocket so
+    // the client can see them.
+    //
+    // See comment in #connectImpl for more details.
+
+    const closeWithErrorLocal = (errorKind: TailErrorKind, msg: string) =>
+      createWSAndCloseWithTailError(lc, request, errorKind, msg);
+
+    // For tail we send the REFLECT_AUTH_API_KEY in the Sec-WebSocket-Protocol
+    // header and it is always required
+    const authApiKey = request.headers.get(SEC_WEBSOCKET_PROTOCOL_HEADER);
+    if (authApiKey !== this.#authApiKey) {
+      return closeWithErrorLocal('Unauthorized', 'auth required');
+    }
+
+    const url = new URL(request.url);
+    const roomID = url.searchParams.get('roomID');
+    if (!roomID) {
+      return closeWithErrorLocal(
+        'InvalidConnectionRequest',
+        'roomID parameter required',
+      );
+    }
+
+    const roomRecord = await this.#roomRecordLock.withRead(() =>
+      roomRecordByRoomID(this.#durableStorage, roomID),
+    );
+    if (roomRecord === undefined) {
+      return closeWithErrorLocal('RoomNotFound', `room not found: ${roomID}`);
+    }
+
+    const roomObjectID = this.#roomDO.idFromString(roomRecord.objectIDString);
+
+    // Forward the request to the Room Durable Object...
+    const stub = this.#roomDO.get(roomObjectID);
+    const requestToDO = new Request(request);
+    return roomDOFetch(requestToDO, 'tail', stub, roomID, lc);
+  });
+
   #initRoutes() {
     this.#router.register(
       AUTH_ROUTES.roomStatusByRoomID,
@@ -311,14 +378,12 @@ export class BaseAuthDO implements DurableObject {
       AUTH_ROUTES.authInvalidateForRoom,
       this.#authInvalidateForRoom,
     );
-    this.#router.register(
-      AUTH_ROUTES.authRevalidateConnections,
-      this.#authRevalidateConnections,
-    );
 
     this.#router.register(AUTH_ROUTES.legacyConnect, this.#legacyConnect);
     this.#router.register(AUTH_ROUTES.connect, this.#connect);
     this.#router.register(AUTH_ROUTES.canaryWebSocket, this.#canaryWebSocket);
+
+    this.#router.register(AUTH_ROUTES.tail, this.#tail);
   }
 
   #canaryWebSocket = get((ctx: BaseContext, request) => {
@@ -336,9 +401,10 @@ export class BaseAuthDO implements DurableObject {
           : 'cfWebSocket',
       );
     lc.debug?.('Handling WebSocket connection check.');
-    if (request.headers.get('Upgrade') !== 'websocket') {
-      lc.error?.('returning 400 bc missing Upgrade header:', url);
-      return new Response('expected websocket', {status: 400});
+
+    const errorResponse = requireUpgradeHeader(request, lc);
+    if (errorResponse) {
+      return errorResponse;
     }
 
     const secWebSocketProtocolHeader = request.headers.get(
@@ -411,12 +477,11 @@ export class BaseAuthDO implements DurableObject {
   #connectImpl(lc: LogContext, version: number, request: Request) {
     const {url} = request;
     lc.info?.('authDO received websocket connection request:', url);
-    if (request.headers.get('Upgrade') !== 'websocket') {
-      lc.error?.('authDO returning 400 bc missing Upgrade header:', url);
-      return new Response('expected websocket', {status: 400});
-    }
 
-    const encodedAuth = request.headers.get('Sec-WebSocket-Protocol');
+    const errorResponse = requireUpgradeHeader(request, lc);
+    if (errorResponse) {
+      return errorResponse;
+    }
 
     // From this point forward we want to return errors over the websocket so
     // the client can see them.
@@ -436,12 +501,14 @@ export class BaseAuthDO implements DurableObject {
     //   does it.
 
     const closeWithErrorLocal = (errorKind: ErrorKind, msg: string) =>
-      createWSAndCloseWithError(lc, url, errorKind, msg, encodedAuth);
+      createWSAndCloseWithError(lc, request, errorKind, msg);
 
+    const encodedAuth = request.headers.get('Sec-WebSocket-Protocol');
     if (this.#authHandler && !encodedAuth) {
       lc.error?.('authDO auth not found in Sec-WebSocket-Protocol header.');
       return closeWithErrorLocal('InvalidConnectionRequest', 'auth required');
     }
+
     const expectedVersion = 1;
     if (version !== expectedVersion) {
       lc.debug?.(
@@ -516,10 +583,10 @@ export class BaseAuthDO implements DurableObject {
           };
 
           const callHandlerWithTimeout = () =>
-            Promise.race([authHandler(auth, roomID), timeout()]);
+            Promise.race([authHandler(auth, roomID, this.#env), timeout()]);
 
           const [authHandlerAuthData, response] = await timed(
-            lc.debug,
+            lc.info,
             'calling authHandler',
             async () => {
               try {
@@ -555,7 +622,7 @@ export class BaseAuthDO implements DurableObject {
             );
             return closeWithErrorLocal(
               'Unauthorized',
-              'userID returned by authHandler does not match userID url parameter',
+              'userID returned by authHandler must match userID specified in Reflect constructor.',
             );
           }
           authData = authHandlerAuthData;
@@ -606,7 +673,7 @@ export class BaseAuthDO implements DurableObject {
 
         if (roomRecord === undefined || roomRecord.status !== RoomStatus.Open) {
           const kind = roomRecord ? 'RoomClosed' : 'RoomNotFound';
-          return createWSAndCloseWithError(lc, url, kind, roomID, encodedAuth);
+          return createWSAndCloseWithError(lc, request, kind, roomID);
         }
 
         const roomObjectID = this.#roomDO.idFromString(
@@ -642,23 +709,10 @@ export class BaseAuthDO implements DurableObject {
           roomID,
           lc,
         );
-        const responseHeaders = new Headers(responseFromDO.headers);
-        // While Sec-WebSocket-Protocol is just being used as a mechanism for
-        // sending `auth` since custom headers are not supported by the browser
-        // WebSocket API, the Sec-WebSocket-Protocol semantics must be followed.
-        // Send a Sec-WebSocket-Protocol response header with a value
-        // matching the Sec-WebSocket-Protocol request header, to indicate
-        // support for the protocol, otherwise the client will close the connection.
-        if (encodedAuth !== null) {
-          responseHeaders.set('Sec-WebSocket-Protocol', encodedAuth);
-        }
-        const response = new Response(responseFromDO.body, {
-          status: responseFromDO.status,
-          statusText: responseFromDO.statusText,
-          webSocket: responseFromDO.webSocket,
-          headers: responseHeaders,
-        });
-        return response;
+
+        await this.#scheduleRevalidateConnectionsTask(lc);
+
+        return responseFromDO;
       }),
     );
   }
@@ -670,7 +724,14 @@ export class BaseAuthDO implements DurableObject {
         const {roomID} = body;
         lc.debug?.(`authInvalidateForRoom ${roomID} waiting for lock.`);
         return this.#authLock.withWrite(async () => {
-          lc.debug?.('got lock.');
+          lc.debug?.(`authInvalidateForRoom ${roomID} acquired lock.`);
+          if (!(await roomHasConnections(this.#durableStorage, roomID))) {
+            lc.debug?.(
+              `authInvalidateForRoom ${roomID} no connections to invalidate returning 200.`,
+            );
+            return new Response('Success', {status: 200});
+          }
+
           lc.debug?.(`Sending authInvalidateForRoom request to ${roomID}`);
           // The request to the Room DO must be completed inside the write lock
           // to avoid races with connect requests for this room.
@@ -678,11 +739,11 @@ export class BaseAuthDO implements DurableObject {
             objectIDByRoomID(this.#durableStorage, this.#roomDO, roomID),
           );
           if (roomObjectID === undefined) {
-            return new Response('room not found', {status: 404});
+            return roomNotFoundResponse();
           }
           const stub = this.#roomDO.get(roomObjectID);
           const response = await roomDOFetch(
-            req,
+            new Request(req, {body: JSON.stringify(body)}),
             'authInvalidateForRoom',
             stub,
             roomID,
@@ -706,9 +767,9 @@ export class BaseAuthDO implements DurableObject {
       withBody(invalidateForUserRequestSchema, (ctx, req) => {
         const {lc, body} = ctx;
         const {userID} = body;
-        lc.debug?.(`_authInvalidateForUser waiting for lock.`);
+        lc.debug?.(`authInvalidateForUser waiting for lock.`);
         return this.#authLock.withWrite(async () => {
-          lc.debug?.('got lock.');
+          lc.debug?.(`authInvalidateForUser acquired lock.`);
           const connections = await this.#durableStorage.list(
             {
               prefix: getConnectionKeyStringUserPrefix(userID),
@@ -721,6 +782,7 @@ export class BaseAuthDO implements DurableObject {
             lc,
             'authInvalidateForUser',
             req,
+            JSON.stringify(body),
             connections,
           );
         });
@@ -733,13 +795,14 @@ export class BaseAuthDO implements DurableObject {
       const {lc} = ctx;
       lc.debug?.(`authInvalidateAll waiting for lock.`);
       return this.#authLock.withWrite(() => {
-        lc.debug?.('got lock.');
+        lc.debug?.(`authInvalidateAll acquired lock.`);
         // The request to the Room DOs must be completed inside the write lock
         // to avoid races with connect requests.
         return this.#forwardInvalidateRequest(
           lc,
           'authInvalidateAll',
           req,
+          '',
           // Use async generator because the full list of connections
           // may exceed the DO's memory limits.
           getConnections(this.#durableStorage),
@@ -748,10 +811,43 @@ export class BaseAuthDO implements DurableObject {
     }),
   );
 
-  #authRevalidateConnections = post(
-    this.#requireAPIKey(async ctx => {
-      const {lc} = ctx;
-      lc.info?.('Revalidating connections.');
+  async alarm(): Promise<void> {
+    const lc = this.#lc.withContext('handler', 'alarm');
+    await this.#alarm.fireScheduled(lc);
+  }
+
+  runRevalidateConnectionsTaskForTest() {
+    return this.#revalidateConnectionsTask(this.#lc);
+  }
+
+  async #revalidateConnectionsTask(lc: LogContext) {
+    this.#revalidateConnectionsTimeoutID = 0;
+    await this.#authRevalidateConnections(lc);
+    if (await hasAnyConnection(this.#durableStorage)) {
+      await this.#scheduleRevalidateConnectionsTask(lc);
+    }
+  }
+
+  async #scheduleRevalidateConnectionsTask(lc: LogContext): Promise<void> {
+    lc.debug?.('Ensuring revalidate connections task is scheduled.');
+    if (this.#revalidateConnectionsTimeoutID === 0) {
+      lc.debug?.('Scheduling revalidate connections task.');
+      this.#revalidateConnectionsTimeoutID =
+        await this.#alarm.scheduler.promiseTimeout(
+          lc => this.#revalidateConnectionsTask(lc),
+          ALARM_INTERVAL,
+        );
+    }
+  }
+
+  /**
+   * Revalidates all connections in the server by sending a request to the roomDO API.
+   * Deletes any connections that are no longer valid.
+   */
+  #authRevalidateConnections(lc: LogContext): Promise<void> {
+    lc.debug?.('Revalidating connections waiting for lock.');
+    return this.#authRevalidateConnectionsLock.withLock(async () => {
+      lc.debug?.('Revalidating connections acquired lock.');
       const connectionsByRoom = getConnectionsByRoom(this.#durableStorage, lc);
       let connectionCount = 0;
       let revalidatedCount = 0;
@@ -761,8 +857,9 @@ export class BaseAuthDO implements DurableObject {
         lc.info?.(
           `Revalidating ${connectionKeys.length} connections for room ${roomID}.`,
         );
+        lc.debug?.('waiting for authLock.');
         await this.#authLock.withWrite(async () => {
-          lc.debug?.('got lock.');
+          lc.debug?.('authLock acquired.');
           const roomObjectID = await this.#roomRecordLock.withRead(() =>
             objectIDByRoomID(this.#durableStorage, this.#roomDO, roomID),
           );
@@ -837,14 +934,14 @@ export class BaseAuthDO implements DurableObject {
           connectionCount - revalidatedCount
         } connections.`,
       );
-      return new Response('Complete', {status: 200});
-    }),
-  );
+    });
+  }
 
   async #forwardInvalidateRequest(
     lc: LogContext,
     invalidateRequestName: string,
     request: Request,
+    body: string,
     connections:
       | Iterable<[string, ConnectionRecord]>
       | AsyncGenerator<[string, ConnectionRecord]>,
@@ -879,7 +976,7 @@ export class BaseAuthDO implements DurableObject {
       }
 
       const stub = this.#roomDO.get(roomObjectID);
-      const req = roomIDs.length === 1 ? request : request.clone();
+      const req = new Request(request, {body});
       responsePromises.push(
         roomDOFetch(req, 'fwd invalidate request', stub, roomID, lc),
       );
@@ -902,7 +999,7 @@ export class BaseAuthDO implements DurableObject {
   }
 }
 
-async function roomDOFetch(
+export async function roomDOFetch(
   request: Request,
   fetchDescription: string,
   roomDOStub: DurableObjectStub,
@@ -910,15 +1007,16 @@ async function roomDOFetch(
   lc: LogContext,
 ): Promise<Response> {
   lc.debug?.(`Sending request ${request.url} to roomDO with roomID ${roomID}`);
+  const requestWithRoomID = addRoomIDHeader(new Request(request), roomID);
   const responseFromDO = await timed(
     lc.debug,
     `RoomDO fetch for ${fetchDescription}`,
     async () => {
       try {
-        return await roomDOStub.fetch(request);
+        return await roomDOStub.fetch(requestWithRoomID);
       } catch (e) {
         lc.error?.(
-          `Exception fetching ${request.url} from roomDO with roomID ${roomID}`,
+          `Exception fetching ${requestWithRoomID.url} from roomDO with roomID ${roomID}`,
           e,
         );
         throw e;
@@ -942,39 +1040,6 @@ async function roomDOFetch(
 // we simply changed prefixes and abandoned the old entries.
 const CONNECTION_KEY_PREFIX = 'conn/';
 const CONNECTIONS_BY_ROOM_INDEX_PREFIX = 'conns_by_room/';
-
-function createWSAndCloseWithError(
-  lc: LogContext,
-  url: string,
-  kind: ErrorKind,
-  msg: string,
-  encodedAuth: string | null,
-) {
-  const pair = new WebSocketPair();
-  const ws = pair[1];
-  lc.info?.('accepting connection to send error', url);
-  ws.accept();
-
-  // MDN tells me that the message will be delivered even if we call close
-  // immediately after send:
-  //   https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/close
-  // However the relevant section of the RFC says this behavior is non-normative?
-  //   https://www.rfc-editor.org/rfc/rfc6455.html#section-1.4
-  // In any case, it seems to work just fine to send the message and
-  // close before even returning the response.
-
-  closeWithError(lc, ws, kind, msg);
-
-  const responseHeaders = new Headers();
-  if (encodedAuth) {
-    responseHeaders.set('Sec-WebSocket-Protocol', encodedAuth);
-  }
-  return new Response(null, {
-    status: 101,
-    headers: responseHeaders,
-    webSocket: pair[0],
-  });
-}
 
 function connectionKeyToString(key: ConnectionKey): string {
   return `${getConnectionKeyStringUserPrefix(key.userID)}${encodeURIComponent(
@@ -1028,6 +1093,20 @@ export function connectionKeyFromRoomIndexString(
   }
   return connectionKeyFromString(
     key.substring(indexOfFirstSlashAfterPrefix + 1),
+  );
+}
+
+async function roomHasConnections(
+  storage: DurableStorage,
+  roomID: string,
+): Promise<boolean> {
+  return (
+    (
+      await storage.list(
+        {prefix: getConnectionRoomIndexPrefix(roomID), limit: 1},
+        connectionsByRoomSchema,
+      )
+    ).size > 0
   );
 }
 
@@ -1099,6 +1178,14 @@ async function* getConnections(
       yield entry;
     }
   }
+}
+
+async function hasAnyConnection(storage: DurableStorage): Promise<boolean> {
+  const entries = await storage.list(
+    {prefix: CONNECTION_KEY_PREFIX, limit: 1},
+    connectionRecordSchema,
+  );
+  return entries.size > 0;
 }
 
 export async function recordConnection(

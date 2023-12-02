@@ -1,49 +1,53 @@
 import {assertNumber} from 'shared/src/asserts.js';
 import {Hash, assertHash} from '../hash.js';
 import type {ReadonlyJSONValue} from '../json.js';
-import type * as kv from '../kv/mod.js';
+import type {
+  Read as KVRead,
+  Store as KVStore,
+  Write as KVWrite,
+} from '../kv/store.js';
 import {Chunk, ChunkHasher, assertMeta, createChunk} from './chunk.js';
 import {RefCountUpdatesDelegate, computeRefCountUpdates} from './gc.js';
 import {chunkDataKey, chunkMetaKey, chunkRefCountKey, headKey} from './key.js';
 import {Read, Store, Write, mustGetChunk} from './store.js';
 
 export class StoreImpl implements Store {
-  private readonly _kv: kv.Store;
-  private readonly _chunkHasher: ChunkHasher;
-  private readonly _assertValidHash: (hash: Hash) => void;
+  readonly #kv: KVStore;
+  readonly #chunkHasher: ChunkHasher;
+  readonly #assertValidHash: (hash: Hash) => void;
 
   constructor(
-    kv: kv.Store,
+    kv: KVStore,
     chunkHasher: ChunkHasher,
     assertValidHash: (hash: Hash) => void,
   ) {
-    this._kv = kv;
-    this._chunkHasher = chunkHasher;
-    this._assertValidHash = assertValidHash;
+    this.#kv = kv;
+    this.#chunkHasher = chunkHasher;
+    this.#assertValidHash = assertValidHash;
   }
 
   async read(): Promise<Read> {
-    return new ReadImpl(await this._kv.read(), this._assertValidHash);
+    return new ReadImpl(await this.#kv.read(), this.#assertValidHash);
   }
 
   async write(): Promise<Write> {
     return new WriteImpl(
-      await this._kv.write(),
-      this._chunkHasher,
-      this._assertValidHash,
+      await this.#kv.write(),
+      this.#chunkHasher,
+      this.#assertValidHash,
     );
   }
 
   close(): Promise<void> {
-    return this._kv.close();
+    return this.#kv.close();
   }
 }
 
 export class ReadImpl implements Read {
-  protected readonly _tx: kv.Read;
+  protected readonly _tx: KVRead;
   readonly assertValidHash: (hash: Hash) => void;
 
-  constructor(kv: kv.Read, assertValidHash: (hash: Hash) => void) {
+  constructor(kv: KVRead, assertValidHash: (hash: Hash) => void) {
     this._tx = kv;
     this.assertValidHash = assertValidHash;
   }
@@ -100,25 +104,25 @@ export class WriteImpl
   extends ReadImpl
   implements Write, RefCountUpdatesDelegate
 {
-  protected declare readonly _tx: kv.Write;
-  private readonly _chunkHasher: ChunkHasher;
+  protected declare readonly _tx: KVWrite;
+  readonly #chunkHasher: ChunkHasher;
 
-  private readonly _putChunks = new Set<Hash>();
-  private readonly _changedHeads = new Map<string, HeadChange>();
+  readonly #putChunks = new Set<Hash>();
+  readonly #changedHeads = new Map<string, HeadChange>();
 
   constructor(
-    kvw: kv.Write,
+    kvw: KVWrite,
     chunkHasher: ChunkHasher,
     assertValidHash: (hash: Hash) => void,
   ) {
     super(kvw, assertValidHash);
-    this._chunkHasher = chunkHasher;
+    this.#chunkHasher = chunkHasher;
   }
 
   createChunk = <V>(data: V, refs: readonly Hash[]): Chunk<V> =>
-    createChunk(data, refs, this._chunkHasher);
+    createChunk(data, refs, this.#chunkHasher);
 
-  get kvWrite(): kv.Write {
+  get kvWrite(): KVWrite {
     return this._tx;
   }
 
@@ -136,20 +140,20 @@ export class WriteImpl
       }
       p2 = this._tx.put(chunkMetaKey(hash), meta);
     }
-    this._putChunks.add(hash);
+    this.#putChunks.add(hash);
     await p1;
     await p2;
   }
 
   setHead(name: string, hash: Hash): Promise<void> {
-    return this._setHead(name, hash);
+    return this.#setHead(name, hash);
   }
 
   removeHead(name: string): Promise<void> {
-    return this._setHead(name, undefined);
+    return this.#setHead(name, undefined);
   }
 
-  private async _setHead(name: string, hash: Hash | undefined): Promise<void> {
+  async #setHead(name: string, hash: Hash | undefined): Promise<void> {
     const oldHash = await this.getHead(name);
     const hk = headKey(name);
 
@@ -160,9 +164,9 @@ export class WriteImpl
       p1 = this._tx.put(hk, hash);
     }
 
-    const v = this._changedHeads.get(name);
+    const v = this.#changedHeads.get(name);
     if (v === undefined) {
-      this._changedHeads.set(name, {new: hash, old: oldHash});
+      this.#changedHeads.set(name, {new: hash, old: oldHash});
     } else {
       // Keep old if existing
       v.new = hash;
@@ -173,11 +177,11 @@ export class WriteImpl
 
   async commit(): Promise<void> {
     const refCountUpdates = await computeRefCountUpdates(
-      this._changedHeads.values(),
-      this._putChunks,
+      this.#changedHeads.values(),
+      this.#putChunks,
       this,
     );
-    await this._applyRefCountUpdates(refCountUpdates);
+    await this.#applyRefCountUpdates(refCountUpdates);
     await this._tx.commit();
   }
 
@@ -204,13 +208,11 @@ export class WriteImpl
     return meta;
   }
 
-  private async _applyRefCountUpdates(
-    refCountCache: Map<Hash, number>,
-  ): Promise<void> {
+  async #applyRefCountUpdates(refCountCache: Map<Hash, number>): Promise<void> {
     const ps: Promise<void>[] = [];
     for (const [hash, count] of refCountCache) {
       if (count === 0) {
-        ps.push(this._removeAllRelatedKeys(hash));
+        ps.push(this.#removeAllRelatedKeys(hash));
       } else {
         const refCountKey = chunkRefCountKey(hash);
         ps.push(this._tx.put(refCountKey, count));
@@ -219,14 +221,14 @@ export class WriteImpl
     await Promise.all(ps);
   }
 
-  private async _removeAllRelatedKeys(hash: Hash): Promise<void> {
+  async #removeAllRelatedKeys(hash: Hash): Promise<void> {
     await Promise.all([
       this._tx.del(chunkDataKey(hash)),
       this._tx.del(chunkMetaKey(hash)),
       this._tx.del(chunkRefCountKey(hash)),
     ]);
 
-    this._putChunks.delete(hash);
+    this.#putChunks.delete(hash);
   }
 
   release(): void {

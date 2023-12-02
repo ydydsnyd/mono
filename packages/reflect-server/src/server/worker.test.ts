@@ -12,16 +12,23 @@ import {
   TestExecutionContext,
   createTestDurableObjectNamespace,
 } from './do-test-utils.js';
-import {REPORT_METRICS_PATH} from './paths.js';
+import {LOG_LOGS_PATH, REPORT_METRICS_PATH} from './paths.js';
 import {BaseWorkerEnv, createWorker} from './worker.js';
 
 const TEST_AUTH_API_KEY = 'TEST_REFLECT_AUTH_API_KEY_TEST';
 
 function createTestFixture(
-  createTestResponse: (req: Request) => Response = () =>
-    new Response('success', {status: 200}),
-  authApiKeyDefined = true,
+  options: {
+    createTestResponse?: (req: Request) => Response;
+    authApiKeyDefined?: boolean;
+    disable?: string | undefined;
+  } = {},
 ) {
+  const {
+    createTestResponse = () => new Response('success', {status: 200}),
+    authApiKeyDefined = true,
+    disable,
+  } = options;
   const authDORequests: {req: Request; resp: Response}[] = [];
 
   const testEnv: BaseWorkerEnv = {
@@ -45,6 +52,9 @@ function createTestFixture(
   if (authApiKeyDefined) {
     testEnv.REFLECT_AUTH_API_KEY = TEST_AUTH_API_KEY;
   }
+  if (disable !== undefined) {
+    testEnv.DISABLE = disable;
+  }
 
   return {
     testEnv,
@@ -59,12 +69,24 @@ function createWorkerWithTestLogSink() {
   }));
 }
 
+function testDisabled(testRequest: Request) {
+  return testNotForwardedToAuthDo(
+    testRequest,
+    new Response('Disabled', {status: 503}),
+    'true',
+  );
+}
+
 async function testNotForwardedToAuthDo(
   testRequest: Request,
   expectedResponse: Response,
+  disable?: string | undefined,
 ) {
-  const {testEnv, authDORequests} = createTestFixture(() => {
-    throw new Error('Unexpected call to auth DO');
+  const {testEnv, authDORequests} = createTestFixture({
+    createTestResponse: () => {
+      throw new Error('Unexpected call to auth DO');
+    },
+    disable,
   });
   const worker = createWorkerWithTestLogSink();
   if (!worker.fetch) {
@@ -105,7 +127,9 @@ async function testForwardedToAuthDO(
   const testResponseClone = authDoResponse.webSocket
     ? undefined
     : authDoResponse.clone();
-  const {testEnv, authDORequests} = createTestFixture(() => authDoResponse);
+  const {testEnv, authDORequests} = createTestFixture({
+    createTestResponse: () => authDoResponse,
+  });
   const worker = createWorkerWithTestLogSink();
   if (!worker.fetch) {
     throw new Error('Expect fetch to be defined');
@@ -145,6 +169,10 @@ test('worker forwards connect requests to authDO', async () => {
       webSocket: new Mocket(),
     }),
   );
+});
+
+test('worker does not forward connect requests to authDO when DISABLE is true', async () => {
+  await testDisabled(new Request('ws://test.roci.dev/connect'));
 });
 
 test('worker forwards authDO api requests to authDO', async () => {
@@ -233,6 +261,13 @@ test('worker forwards authDO api requests to authDO', async () => {
         body: tc.body ? JSON.stringify(tc.body) : null,
       }),
     );
+    await testDisabled(
+      new Request(tc.path, {
+        method: tc.method,
+        headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
+        body: tc.body ? JSON.stringify(tc.body) : null,
+      }),
+    );
     await testNotForwardedToAuthDo(
       new Request(tc.path, {
         method: tc.path,
@@ -244,44 +279,6 @@ test('worker forwards authDO api requests to authDO', async () => {
       }),
     );
   }
-});
-
-test('on scheduled event sends api/auth/v0/revalidateConnections to AuthDO when REFLECT_AUTH_API_KEY is defined', async () => {
-  const worker = createWorkerWithTestLogSink();
-
-  const {testEnv, authDORequests} = createTestFixture();
-
-  if (!worker.scheduled) {
-    throw new Error('Expect scheduled to be defined');
-  }
-  await worker.scheduled(
-    {scheduledTime: 100, cron: '', noRetry: () => undefined},
-    testEnv,
-    new TestExecutionContext(),
-  );
-  expect(authDORequests.length).toEqual(1);
-  const {req} = authDORequests[0];
-  expect(req.method).toEqual('POST');
-  expect(req.url).toEqual(
-    'https://unused-reflect-auth-do.dev/api/auth/v0/revalidateConnections',
-  );
-  expect(req.headers.get('x-reflect-auth-api-key')).toEqual(TEST_AUTH_API_KEY);
-});
-
-test('on scheduled event does not send api/auth/v0/revalidateConnections to AuthDO when REFLECT_AUTH_API_KEY is undefined', async () => {
-  const worker = createWorkerWithTestLogSink();
-
-  const {testEnv, authDORequests} = createTestFixture(undefined, false);
-
-  if (!worker.scheduled) {
-    throw new Error('Expect scheduled to be defined');
-  }
-  await worker.scheduled(
-    {scheduledTime: 100, cron: '', noRetry: () => undefined},
-    testEnv,
-    new TestExecutionContext(),
-  );
-  expect(authDORequests.length).toEqual(0);
 });
 
 async function testLogging(
@@ -356,20 +353,6 @@ test('fetch logging', async () => {
       throw new Error('Expected fetch to be defined');
     }
     return worker.fetch(testRequest, testEnv, testExecutionContext);
-  });
-});
-
-test('scheduled logging', async () => {
-  // eslint-disable-next-line require-await
-  await testLogging(async (worker, testEnv, testExecutionContext) => {
-    if (!worker.scheduled) {
-      throw new Error('Expected scheduled to be defined');
-    }
-    return worker.scheduled(
-      {scheduledTime: 100, cron: '', noRetry: () => undefined},
-      testEnv,
-      testExecutionContext,
-    );
   });
 });
 
@@ -560,6 +543,7 @@ describe('reportMetrics', () => {
       datadogMetricsOptions: {
         apiKey: 'test-dd-key',
         service: 'test-service',
+        tags: {script: 'test-script'},
       },
     }));
 
@@ -596,7 +580,11 @@ describe('reportMetrics', () => {
               ...tc.body,
               series: (tc.body.series as Series[]).map(s => ({
                 ...s,
-                tags: [...(s.tags ?? []), 'service:test-service'],
+                tags: [
+                  ...(s.tags ?? []),
+                  'script:test-script',
+                  'service:test-service',
+                ],
                 type: s.type,
               })),
             })
@@ -610,6 +598,101 @@ describe('reportMetrics', () => {
       expect(fetchSpy).not.toHaveBeenCalled();
     }
   }
+});
+
+describe('log logs', () => {
+  async function testLogLogs(
+    fetchSpy: jest.SpiedFunction<typeof fetch>,
+    expectedResponseStatusCode: number,
+    ddLogsApiKeyInEnv = true,
+  ) {
+    const logLogsURL = new URL(LOG_LOGS_PATH, 'https://test.roci.dev/');
+    logLogsURL.searchParams.set('service', 'test-service');
+    logLogsURL.searchParams.set('ddtags', 'version:0.35.0');
+    logLogsURL.searchParams.set('host', 'test.host.com');
+    logLogsURL.searchParams.set('foo', 'bar');
+
+    const testEnv: BaseWorkerEnv = {
+      authDO: {
+        ...createTestDurableObjectNamespace(),
+      },
+    };
+    if (ddLogsApiKeyInEnv) {
+      testEnv['DATADOG_LOGS_API_KEY'] = 'test-dd-logs-api-key';
+    }
+
+    const worker = createWorker(() => ({
+      logSink: new TestLogSink(),
+      logLevel: 'error',
+      datadogMetricsOptions: {
+        apiKey: 'test-dd-key',
+        service: 'test-service',
+        tags: {script: 'test-script'},
+      },
+    }));
+
+    const testBody = 'test-body';
+
+    const testRequest = new Request(logLogsURL.toString(), {
+      method: 'POST',
+      body: testBody,
+    });
+    if (worker.fetch === undefined) {
+      throw new Error('Expect fetch to be defined');
+    }
+    const response = await worker.fetch(
+      testRequest,
+      testEnv,
+      new TestExecutionContext(),
+    );
+
+    expect(response.status).toEqual(expectedResponseStatusCode);
+
+    if (!ddLogsApiKeyInEnv) {
+      expect(fetchSpy).toHaveBeenCalledTimes(0);
+      return;
+    }
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const fetchedRequest = fetchSpy.mock.calls[0][0];
+    if (typeof fetchedRequest === 'string') {
+      throw new Error('Expected request not string fetched');
+    }
+    expect(fetchedRequest.url).toEqual(
+      'https://http-intake.logs.datadoghq.com/api/v2/logs?service=test-service&ddtags=version%3A0.35.0&host=test.host.com&foo=bar&dd-api-key=test-dd-logs-api-key&ddsource=client',
+    );
+    expect(fetchedRequest.headers.get('content-type')).toEqual(
+      'text/plain;charset=UTF-8',
+    );
+    expect(await fetchedRequest.text()).toEqual(testBody);
+  }
+
+  test('success', async () => {
+    const fetchSpy = jest
+      .spyOn(globalThis, 'fetch')
+      .mockReturnValue(Promise.resolve(new Response('{}')));
+    await testLogLogs(fetchSpy, 200);
+  });
+
+  test('error response', async () => {
+    const fetchSpy = jest
+      .spyOn(globalThis, 'fetch')
+      .mockReturnValue(Promise.resolve(new Response('failed', {status: 403})));
+    await testLogLogs(fetchSpy, 403);
+  });
+
+  test('error', async () => {
+    const fetchSpy = jest.spyOn(globalThis, 'fetch').mockImplementation(() => {
+      throw new Error('test error');
+    });
+    await testLogLogs(fetchSpy, 500);
+  });
+
+  test('no api key in env', async () => {
+    const fetchSpy = jest
+      .spyOn(globalThis, 'fetch')
+      .mockReturnValue(Promise.resolve(new Response('{}')));
+    await testLogLogs(fetchSpy, 200, false);
+  });
 });
 
 test('hello', async () => {

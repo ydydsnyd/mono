@@ -1,5 +1,14 @@
-import {describe, expect, test} from '@jest/globals';
-import {defineSecretSafely, hashSecrets} from './secrets.js';
+import {beforeEach, describe, expect, test} from '@jest/globals';
+import type {EncryptedBytes} from 'mirror-schema/src/bytes.js';
+import {encryptUtf8} from 'mirror-schema/src/crypto.js';
+import {ENCRYPTION_KEY_SECRET_NAME} from 'mirror-schema/src/env.js';
+import {TestSecrets} from '../../secrets/test-utils.js';
+import {
+  LEGACY_REFLECT_API_KEY,
+  REFLECT_API_KEY,
+  decryptSecrets,
+  defineSecretSafely,
+} from './secrets.js';
 
 describe('secrets', () => {
   test('defineSecretSafely', () => {
@@ -14,26 +23,41 @@ describe('secrets', () => {
     expect(secret.value()).toBe('foo');
   });
 
-  test('hashing', async () => {
-    /* eslint-disable @typescript-eslint/naming-convention */
-    const secrets = {
-      REFLECT_AUTH_API_KEY: 'foo',
-      DATADOG_LOGS_API_KEY: 'bar',
-      DATADOG_METRICS_API_KEY: 'baz',
-    };
-    expect(await hashSecrets(secrets)).toEqual({
-      REFLECT_AUTH_API_KEY:
-        '2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae',
-      DATADOG_LOGS_API_KEY:
-        'fcde2b2edba56bf40601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9',
-      DATADOG_METRICS_API_KEY:
-        'baa5a0964d3320fbc0c6a92214053c8513ea24ab8fd0770480a967248096',
+  describe('decryptSecrets', () => {
+    let secrets: TestSecrets;
+    let encryptedApiKey: EncryptedBytes;
+
+    beforeEach(() => {
+      secrets = new TestSecrets([
+        ENCRYPTION_KEY_SECRET_NAME,
+        '2',
+        TestSecrets.TEST_KEY,
+      ]);
+      encryptedApiKey = encryptUtf8(
+        'the-bestest-api-key-ever',
+        Buffer.from(TestSecrets.TEST_KEY, 'base64url'),
+        {version: '2'},
+      );
     });
-    expect(secrets).toEqual({
-      REFLECT_AUTH_API_KEY: 'foo',
-      DATADOG_LOGS_API_KEY: 'bar',
-      DATADOG_METRICS_API_KEY: 'baz',
+
+    test('with new api key', async () => {
+      const decrypted = await decryptSecrets(secrets, {
+        [REFLECT_API_KEY]: encryptedApiKey,
+      });
+      expect(decrypted).toEqual({
+        [REFLECT_API_KEY]: 'the-bestest-api-key-ever',
+        [LEGACY_REFLECT_API_KEY]: 'the-bestest-api-key-ever',
+      });
     });
-    /* eslint-enable @typescript-eslint/naming-convention */
+
+    test('with legacy api key', async () => {
+      const decrypted = await decryptSecrets(secrets, {
+        [LEGACY_REFLECT_API_KEY]: encryptedApiKey,
+      });
+      expect(decrypted).toEqual({
+        [REFLECT_API_KEY]: 'the-bestest-api-key-ever',
+        [LEGACY_REFLECT_API_KEY]: 'the-bestest-api-key-ever',
+      });
+    });
   });
 });

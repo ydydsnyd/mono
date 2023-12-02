@@ -1,4 +1,4 @@
-import type {AuthData} from 'reflect-types/src/mod.js';
+import type {AuthData, Env} from 'reflect-shared';
 import type {MaybePromise} from 'replicache';
 
 /**
@@ -16,10 +16,5 @@ import type {MaybePromise} from 'replicache';
 export type AuthHandler = (
   auth: string,
   roomID: string,
+  env: Env,
 ) => MaybePromise<AuthData | null>;
-
-/**
- * Value should be an `AuthData` value JSON stringified and encoded
- * with `encodeUrlComponent`.
- */
-export const AUTH_DATA_HEADER_NAME = 'x-reflect-auth-data';

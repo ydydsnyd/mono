@@ -1,0 +1,50 @@
+import {getFirestore, terminate} from 'firebase/firestore';
+import color from 'picocolors';
+import type {ArgumentsCamelCase} from 'yargs';
+import {reportE} from './error.js';
+import {sendAnalyticsEvent} from './metrics/send-ga-event.js';
+import type {CommonYargsOptions} from './yarg-types.js';
+
+// Wraps a command handler with cleanup code (e.g. terminating any Firestore client)
+// to ensure that the process exits after the handler completes.
+
+export function handleWith<T extends ArgumentsCamelCase<CommonYargsOptions>>(
+  handler: (args: T) => void | Promise<void>,
+) {
+  return {
+    andCleanup: () => async (args: T) => {
+      let success = false;
+      const eventName =
+        args._ && args._.length ? `cmd_${args._[0]}` : 'cmd_unknown';
+
+      // It is tempting to send analytics in parallel with running
+      // the handler, but that appears to cause problems for some commands
+      // for reasons unknown.
+      // https://github.com/rocicorp/mono/issues/1078
+      try {
+        // Promise race to handle sendAnalyticsEvent with a 3-second timeout
+        await Promise.race([
+          sendAnalyticsEvent(eventName),
+          new Promise(resolve => setTimeout(resolve, 3_000)),
+        ]);
+      } catch (e) {
+        await reportE(args, eventName, e, 'WARNING');
+      }
+
+      try {
+        await handler(args);
+        success = true;
+      } catch (e) {
+        await reportE(args, eventName, e);
+        const message = e instanceof Error ? e.message : String(e);
+        console.error(`\n${color.red(color.bold('Error'))}: ${message}`);
+      } finally {
+        await terminate(getFirestore());
+      }
+
+      if (!success) {
+        process.exit(-1);
+      }
+    },
+  };
+}

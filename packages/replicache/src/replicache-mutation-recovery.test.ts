@@ -1,7 +1,8 @@
 import {expect} from 'chai';
 import {assertNotUndefined} from 'shared/src/asserts.js';
 import sinon from 'sinon';
-import * as dag from './dag/mod.js';
+import {LazyStore} from './dag/lazy-store.js';
+import {StoreImpl} from './dag/store-impl.js';
 import {FormatVersion} from './format-version.js';
 import {JSONObject, assertJSONObject} from './json.js';
 import {
@@ -9,8 +10,7 @@ import {
   createPerdag,
   createPushBodySDD,
 } from './mutation-recovery-test-helper.js';
-import {assertClientV4} from './persist/clients.js';
-import * as persist from './persist/mod.js';
+import {assertClientV4, getClient, getClients} from './persist/clients.js';
 import {PUSH_VERSION_SDD} from './sync/push.js';
 import {
   clock,
@@ -68,7 +68,7 @@ suite('SDD', () => {
     const client1PendingLocalMetas =
       await createAndPersistClientWithPendingLocalSDD(client1ID, testPerdag, 2);
     const client1 = await withRead(testPerdag, read =>
-      persist.getClient(client1ID, read),
+      getClient(client1ID, read),
     );
     assertClientV4(client1);
 
@@ -119,7 +119,7 @@ suite('SDD', () => {
     });
 
     const updatedClient1 = await withRead(testPerdag, read =>
-      persist.getClient(client1ID, read),
+      getClient(client1ID, read),
     );
     assertClientV4(updatedClient1);
     expect(updatedClient1.mutationID).to.equal(client1.mutationID);
@@ -180,7 +180,7 @@ suite('SDD', () => {
     const client1PendingLocalMetas =
       await createAndPersistClientWithPendingLocalSDD(client1ID, testPerdag, 2);
     const client1 = await withRead(testPerdag, read =>
-      persist.getClient(client1ID, read),
+      getClient(client1ID, read),
     );
     assertNotUndefined(client1);
 
@@ -219,7 +219,7 @@ suite('SDD', () => {
     expect(fetchMock.calls('unmatched').length).to.equal(0);
 
     const updatedClient1 = await withRead(testPerdag, read =>
-      persist.getClient(client1ID, read),
+      getClient(client1ID, read),
     );
     // unchanged
     expect(updatedClient1).to.deep.equal(client1);
@@ -259,7 +259,7 @@ suite('SDD', () => {
       2,
     );
     const clientWPendingMutations = await withRead(testPerdag, read =>
-      persist.getClient(clientWPendingMutationsID, read),
+      getClient(clientWPendingMutationsID, read),
     );
     assertClientV4(clientWPendingMutations);
 
@@ -343,7 +343,7 @@ suite('SDD', () => {
       );
 
     const clients1Thru3 = await withRead(testPerdagForClients1Thru3, read =>
-      persist.getClients(read),
+      getClients(read),
     );
     const client1 = clients1Thru3.get(client1ID);
     assertClientV4(client1);
@@ -353,7 +353,7 @@ suite('SDD', () => {
     assertClientV4(client3);
 
     const client4 = await withRead(testPerdagForClient4, read =>
-      persist.getClient(client4ID, read),
+      getClient(client4ID, read),
     );
     assertClientV4(client4);
 
@@ -449,7 +449,7 @@ suite('SDD', () => {
 
     const updateClients1Thru3 = await withRead(
       testPerdagForClients1Thru3,
-      read => persist.getClients(read),
+      read => getClients(read),
     );
     const updatedClient1 = updateClients1Thru3.get(client1ID);
     assertClientV4(updatedClient1);
@@ -459,7 +459,7 @@ suite('SDD', () => {
     assertClientV4(updatedClient3);
 
     const updatedClient4 = await withRead(testPerdagForClient4, read =>
-      persist.getClient(client4ID, read),
+      getClient(client4ID, read),
     );
     assertClientV4(updatedClient4);
 
@@ -529,9 +529,7 @@ suite('SDD', () => {
     const client3PendingLocalMetas =
       await createAndPersistClientWithPendingLocalSDD(client3ID, testPerdag, 1);
 
-    const clients = await withRead(testPerdag, read =>
-      persist.getClients(read),
-    );
+    const clients = await withRead(testPerdag, read => getClients(read));
     const client1 = clients.get(client1ID);
     assertClientV4(client1);
     const client2 = clients.get(client2ID);
@@ -628,9 +626,7 @@ suite('SDD', () => {
       pullVersion: 0,
     });
 
-    const updateClients = await withRead(testPerdag, read =>
-      persist.getClients(read),
-    );
+    const updateClients = await withRead(testPerdag, read => getClients(read));
     const updatedClient1 = updateClients.get(client1ID);
     assertClientV4(updatedClient1);
     const updatedClient2 = updateClients.get(client2ID);
@@ -696,9 +692,7 @@ suite('SDD', () => {
     const client3PendingLocalMetas =
       await createAndPersistClientWithPendingLocalSDD(client3ID, testPerdag, 1);
 
-    const clients = await withRead(testPerdag, read =>
-      persist.getClients(read),
-    );
+    const clients = await withRead(testPerdag, read => getClients(read));
     const client1 = clients.get(client1ID);
     assertClientV4(client1);
     const client2 = clients.get(client2ID);
@@ -735,7 +729,7 @@ suite('SDD', () => {
       },
     );
 
-    const lazyDagWithWriteStub = sinon.stub(dag.LazyStore.prototype, 'write');
+    const lazyDagWithWriteStub = sinon.stub(LazyStore.prototype, 'write');
     const testErrorMsg = 'Test dag.LazyStore.write error';
     lazyDagWithWriteStub.onSecondCall().throws(testErrorMsg);
     lazyDagWithWriteStub.callThrough();
@@ -784,9 +778,7 @@ suite('SDD', () => {
       pullVersion: 0,
     });
 
-    const updateClients = await withRead(testPerdag, read =>
-      persist.getClients(read),
-    );
+    const updateClients = await withRead(testPerdag, read => getClients(read));
     const updatedClient1 = updateClients.get(client1ID);
     assertClientV4(updatedClient1);
     const updatedClient2 = updateClients.get(client2ID);
@@ -862,12 +854,12 @@ suite('SDD', () => {
       );
 
     const client1 = await withRead(testPerdagForClient1, read =>
-      persist.getClient(client1ID, read),
+      getClient(client1ID, read),
     );
     assertClientV4(client1);
 
     const client2 = await withRead(testPerdagForClient2, read =>
-      persist.getClient(client2ID, read),
+      getClient(client2ID, read),
     );
     assertClientV4(client2);
 
@@ -894,7 +886,7 @@ suite('SDD', () => {
       },
     );
 
-    const dagStoreWithReadStub = sinon.stub(dag.StoreImpl.prototype, 'read');
+    const dagStoreWithReadStub = sinon.stub(StoreImpl.prototype, 'read');
     const testErrorMsg = 'Test dag.StoreImpl.read error';
     dagStoreWithReadStub.onSecondCall().throws(testErrorMsg);
     dagStoreWithReadStub.callThrough();
@@ -928,12 +920,12 @@ suite('SDD', () => {
     });
 
     const updatedClient1 = await withRead(testPerdagForClient1, read =>
-      persist.getClient(client1ID, read),
+      getClient(client1ID, read),
     );
     assertClientV4(updatedClient1);
 
     const updatedClient2 = await withRead(testPerdagForClient2, read =>
-      persist.getClient(client2ID, read),
+      getClient(client2ID, read),
     );
     assertClientV4(updatedClient2);
 
@@ -982,9 +974,7 @@ suite('SDD', () => {
       await createAndPersistClientWithPendingLocalSDD(client1ID, testPerdag, 1);
     await createAndPersistClientWithPendingLocalSDD(client2ID, testPerdag, 1);
 
-    const clients = await withRead(testPerdag, read =>
-      persist.getClients(read),
-    );
+    const clients = await withRead(testPerdag, read => getClients(read));
     const client1 = clients.get(client1ID);
     assertClientV4(client1);
     const client2 = clients.get(client2ID);
@@ -1014,7 +1004,7 @@ suite('SDD', () => {
     );
 
     // At the end of recovering client1 close the recovering Replicache instance
-    const lazyDagWithWriteStub = sinon.stub(dag.LazyStore.prototype, 'close');
+    const lazyDagWithWriteStub = sinon.stub(LazyStore.prototype, 'close');
     lazyDagWithWriteStub.onFirstCall().callsFake(async () => {
       await rep.close();
     });
@@ -1043,9 +1033,7 @@ suite('SDD', () => {
       pullVersion: 0,
     });
 
-    const updateClients = await withRead(testPerdag, read =>
-      persist.getClients(read),
-    );
+    const updateClients = await withRead(testPerdag, read => getClients(read));
     const updatedClient1 = updateClients.get(client1ID);
     assertClientV4(updatedClient1);
     const updatedClient2 = updateClients.get(client2ID);
@@ -1069,9 +1057,9 @@ suite('SDD', () => {
 
   test('mutation recovery is invoked at startup', async () => {
     const rep = await replicacheForTesting('mutation-recovery-startup');
-    expect(rep.recoverMutationsSpy.callCount).to.equal(1);
-    expect(rep.recoverMutationsSpy.callCount).to.equal(1);
-    expect(await rep.recoverMutationsSpy.firstCall.returnValue).to.equal(true);
+    expect(rep.recoverMutationsFake.callCount).to.equal(1);
+    expect(rep.recoverMutationsFake.callCount).to.equal(1);
+    expect(await rep.recoverMutationsFake.firstCall.returnValue).to.equal(true);
   });
 
   test('mutation recovery returns early without running if push is disabled', async () => {
@@ -1082,8 +1070,10 @@ suite('SDD', () => {
       },
       {useDefaultURLs: false},
     );
-    expect(rep.recoverMutationsSpy.callCount).to.equal(1);
-    expect(await rep.recoverMutationsSpy.firstCall.returnValue).to.equal(false);
+    expect(rep.recoverMutationsFake.callCount).to.equal(1);
+    expect(await rep.recoverMutationsFake.firstCall.returnValue).to.equal(
+      false,
+    );
     expect(await rep.recoverMutations()).to.equal(false);
   });
 
@@ -1096,8 +1086,10 @@ suite('SDD', () => {
       },
       {useDefaultURLs: false},
     );
-    expect(rep.recoverMutationsSpy.callCount).to.equal(1);
-    expect(await rep.recoverMutationsSpy.firstCall.returnValue).to.equal(false);
+    expect(rep.recoverMutationsFake.callCount).to.equal(1);
+    expect(await rep.recoverMutationsFake.firstCall.returnValue).to.equal(
+      false,
+    );
     expect(await rep.recoverMutations()).to.equal(false);
   });
 
@@ -1106,20 +1098,20 @@ suite('SDD', () => {
     const rep = await replicacheForTesting('mutation-recovery-online', {
       pullURL,
     });
-    expect(rep.recoverMutationsSpy.callCount).to.equal(1);
+    expect(rep.recoverMutationsFake.callCount).to.equal(1);
     expect(rep.online).to.equal(true);
 
     fetchMock.post(pullURL, () => ({
       throws: new Error('Simulate fetch error in push'),
     }));
 
-    rep.pull();
+    void rep.pull();
 
     await tickAFewTimes();
     expect(rep.online).to.equal(false);
-    expect(rep.recoverMutationsSpy.callCount).to.equal(1);
+    expect(rep.recoverMutationsFake.callCount).to.equal(1);
 
-    const clientID = await rep.clientID;
+    const {clientID} = rep;
     fetchMock.reset();
     fetchMock.post(pullURL, {
       cookie: 'test_cookie',
@@ -1127,22 +1119,22 @@ suite('SDD', () => {
       patch: [],
     });
 
-    rep.pull();
-    expect(rep.recoverMutationsSpy.callCount).to.equal(1);
+    void rep.pull();
+    expect(rep.recoverMutationsFake.callCount).to.equal(1);
     while (!rep.online) {
       await tickAFewTimes();
     }
-    expect(rep.recoverMutationsSpy.callCount).to.equal(2);
+    expect(rep.recoverMutationsFake.callCount).to.equal(2);
   });
 
   test('mutation recovery is invoked on 5 minute interval', async () => {
     const rep = await replicacheForTesting('mutation-recovery-startup', {
       enableLicensing: false,
     });
-    expect(rep.recoverMutationsSpy.callCount).to.equal(1);
+    expect(rep.recoverMutationsFake.callCount).to.equal(1);
     await clock.tickAsync(5 * 60 * 1000);
-    expect(rep.recoverMutationsSpy.callCount).to.equal(2);
+    expect(rep.recoverMutationsFake.callCount).to.equal(2);
     await clock.tickAsync(5 * 60 * 1000);
-    expect(rep.recoverMutationsSpy.callCount).to.equal(3);
+    expect(rep.recoverMutationsFake.callCount).to.equal(3);
   });
 });

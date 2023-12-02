@@ -1,6 +1,7 @@
-import type {Request} from 'firebase-functions/v2/https';
 import type {Response} from 'express';
-import type {RequestContextValidator, MaybePromise} from './types.js';
+import {HttpsError, type Request} from 'firebase-functions/v2/https';
+import type {MaybePromise, RequestContextValidator} from './types.js';
+import {logger} from 'firebase-functions';
 
 type OnRequest = (request: Request, response: Response) => MaybePromise<void>;
 
@@ -20,7 +21,7 @@ export type HttpsResponseContext = {
 export type OnRequestContext = HttpsRequestContext & HttpsResponseContext;
 
 export class OnRequestBuilder<Request, Context> {
-  private readonly _requestValidator: RequestContextValidator<
+  readonly #requestValidator: RequestContextValidator<
     Request,
     OnRequestContext,
     Context
@@ -33,7 +34,7 @@ export class OnRequestBuilder<Request, Context> {
       Context
     >,
   ) {
-    this._requestValidator = requestValidator;
+    this.#requestValidator = requestValidator;
   }
 
   /**
@@ -44,7 +45,7 @@ export class OnRequestBuilder<Request, Context> {
     nextValidator: RequestContextValidator<Request, Context, NewContext>,
   ): OnRequestBuilder<Request, NewContext> {
     return new OnRequestBuilder(async (request, ctx) => {
-      const context = await this._requestValidator(request, ctx);
+      const context = await this.#requestValidator(request, ctx);
       return nextValidator(request, context);
     });
   }
@@ -52,10 +53,26 @@ export class OnRequestBuilder<Request, Context> {
   handle(handler: OnRequestHandler<Request, Context>): OnRequest {
     return async (request, response) => {
       const ctx: OnRequestContext = {request, response};
-      const payload: Request = request.body as Request;
-
-      const context = await this._requestValidator(payload, ctx);
-      await handler(payload, context);
+      try {
+        // If the body is a Buffer, it's likely a JSON payload.
+        const {body} = request;
+        const payload =
+          body instanceof Buffer ? JSON.parse(body.toString('utf-8')) : body;
+        const context = await this.#requestValidator(payload, ctx);
+        await handler(payload, context);
+      } catch (e) {
+        const err =
+          e instanceof HttpsError
+            ? e
+            : new HttpsError('internal', String(e), e);
+        const {status} = err.httpErrorCode;
+        if (status >= 500) {
+          logger.error(e);
+        } else {
+          logger.warn(e);
+        }
+        response.status(err.httpErrorCode.status).send(err.message);
+      }
     };
   }
 }

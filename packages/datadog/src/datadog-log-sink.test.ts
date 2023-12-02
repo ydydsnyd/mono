@@ -225,6 +225,45 @@ test('flush calls fetch', async () => {
   );
 });
 
+test('flush calls fetch with specified baseURL', async () => {
+  const l = new DatadogLogSink({
+    apiKey: 'apiKey',
+    baseURL: new URL('http://custom.base.com/api/path/log'),
+  });
+  jest.setSystemTime(1);
+  l.log('debug', {usr: {name: 'bob'}}, 'debug message');
+  jest.setSystemTime(2);
+  l.log('info', {usr: {name: 'bob'}}, 'info message');
+
+  jest.setSystemTime(10);
+  await l.flush();
+
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(fetch).toHaveBeenCalledWith(
+    'http://custom.base.com/api/path/log?dd-api-key=apiKey',
+    {
+      body: stringifyMany(
+        {
+          usr: {name: 'bob'},
+          date: 1,
+          message: 'debug message',
+          status: 'debug',
+          flushDelayMs: 9,
+        },
+        {
+          usr: {name: 'bob'},
+          date: 2,
+          message: 'info message',
+          status: 'info',
+          flushDelayMs: 8,
+        },
+      ),
+      method: 'POST',
+      keepalive: true,
+    },
+  );
+});
+
 test('flush truncates large messages and batches', async () => {
   const l = new DatadogLogSink({
     apiKey: 'apiKey',
@@ -330,6 +369,7 @@ test('reserved keys are prefixed', async () => {
       source: 'testSource',
       status: 'testStatus',
       service: 'testService',
+      version: 'testVersion',
       ['trace_id']: 'testTrace_id',
       message: 'testMessage',
       msg: 'testMsg',
@@ -353,6 +393,7 @@ test('reserved keys are prefixed', async () => {
         ['@DATADOG_RESERVED_source']: 'testSource',
         ['@DATADOG_RESERVED_status']: 'testStatus',
         ['@DATADOG_RESERVED_service']: 'testService',
+        ['@DATADOG_RESERVED_version']: 'testVersion',
         ['@DATADOG_RESERVED_trace_id']: 'testTrace_id',
         ['@DATADOG_RESERVED_message']: 'testMessage',
         ['@DATADOG_RESERVED_msg']: 'testMsg',

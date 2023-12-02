@@ -4,33 +4,45 @@ import {
   invalidateForRoomRequestSchema,
   invalidateForUserRequestSchema,
 } from 'reflect-protocol';
+import type {Env, MutatorDefs} from 'reflect-shared';
 import {version} from 'reflect-shared';
-import type {MutatorDefs} from 'reflect-types/src/mod.js';
 import {BufferSizer} from 'shared/src/buffer-sizer.js';
 import * as valita from 'shared/src/valita.js';
+import {ConnectionLifetimeReporter} from '../events/connection-lifetimes.js';
+import {ConnectionSecondsReporter} from '../events/connection-seconds.js';
 import type {MutatorMap} from '../process/process-mutation.js';
 import {processPending} from '../process/process-pending.js';
 import {processRoomStart} from '../process/process-room-start.js';
 import {DurableStorage} from '../storage/durable-storage.js';
-import type {
-  ClientID,
-  ClientMap,
-  ClientState,
-  Socket,
+import {
+  ConnectionCountTrackingClientMap,
+  type ClientID,
+  type ClientMap,
+  type ClientState,
+  type Socket,
 } from '../types/client-state.js';
 import type {PendingMutation} from '../types/mutation.js';
+import {decodeHeaderValue} from '../util/headers.js';
+import {LoggingLock} from '../util/lock.js';
+import {populateLogContextFromRequest} from '../util/log-context-common.js';
 import {randomID} from '../util/rand.js';
+import {AlarmManager} from './alarms.js';
+import {CLIENT_GC_FREQUENCY} from './client-gc.js';
 import {handleClose} from './close.js';
 import {handleConnection} from './connect.js';
 import {closeConnections, getConnections} from './connections.js';
 import type {DisconnectHandler} from './disconnect.js';
+import {requireUpgradeHeader, upgradeWebsocketResponse} from './http-util.js';
+import {ROOM_ID_HEADER_NAME} from './internal-headers.js';
 import {handleMessage} from './message.js';
 import {
+  AUTH_CONNECTIONS_PATH,
   CONNECT_URL_PATTERN,
   CREATE_ROOM_PATH,
   INTERNAL_CREATE_ROOM_PATH,
   LEGACY_CONNECT_PATH,
   LEGACY_CREATE_ROOM_PATH,
+  TAIL_URL_PATH,
 } from './paths.js';
 import {initRoomSchema} from './room-schema.js';
 import type {RoomStartHandler} from './room-start.js';
@@ -43,9 +55,8 @@ import {
   requireAuthAPIKey,
   withBody,
 } from './router.js';
+import {connectTail} from './tail.js';
 import {registerUnhandledRejectionHandler} from './unhandled-rejection-handler.js';
-import {LoggingLock} from '../util/lock.js';
-import {populateLogContextFromRequest} from '../util/log-context-common.js';
 
 const roomIDKey = '/system/roomID';
 const deletedKey = '/system/deleted';
@@ -60,6 +71,7 @@ export interface RoomDOOptions<MD extends MutatorDefs> {
   logLevel: LogLevel;
   allowUnconfirmedWrites: boolean;
   maxMutationsPerTurn: number;
+  env: Env;
 }
 
 export const ROOM_ROUTES = {
@@ -67,16 +79,17 @@ export const ROOM_ROUTES = {
   authInvalidateAll: '/api/auth/v0/invalidateAll',
   authInvalidateForUser: '/api/auth/v0/invalidateForUser',
   authInvalidateForRoom: '/api/auth/v0/invalidateForRoom',
-  authConnections: '/api/auth/v0/connections',
+  authConnections: AUTH_CONNECTIONS_PATH,
   legacyCreateRoom: LEGACY_CREATE_ROOM_PATH,
   createRoom: CREATE_ROOM_PATH,
   internalCreateRoom: INTERNAL_CREATE_ROOM_PATH,
   legacyConnect: LEGACY_CONNECT_PATH,
   connect: CONNECT_URL_PATTERN,
+  tail: TAIL_URL_PATH,
 } as const;
 
 export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
-  readonly #clients: ClientMap = new Map();
+  readonly #clients: ClientMap;
   readonly #pendingMutations: PendingMutation[] = [];
   readonly #bufferSizer = new BufferSizer({
     initialBufferSizeMs: 25,
@@ -87,9 +100,10 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   #maxProcessedMutationTimestamp = 0;
   readonly #lock = new LoggingLock();
   readonly #mutators: MutatorMap;
+  readonly #roomStartHandler: RoomStartHandler;
   readonly #disconnectHandler: DisconnectHandler;
   readonly #maxMutationsPerTurn: number;
-  #lcHasRoomIdContext = false;
+  #roomIDDependentInitCompleted = false;
   #lc: LogContext;
   readonly #storage: DurableStorage;
   readonly #authApiKey: string;
@@ -97,6 +111,12 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
   readonly #turnDuration: number;
   readonly #router = new Router();
+
+  readonly #alarm: AlarmManager;
+  readonly #connectionSecondsReporter: ConnectionSecondsReporter;
+  readonly #connectionLifetimeReporter: ConnectionLifetimeReporter;
+  readonly #env: Env;
+  #lastGCClientsTimestamp: undefined | number = undefined;
 
   constructor(options: RoomDOOptions<MD>) {
     const {
@@ -108,14 +128,29 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       logSink,
       logLevel,
       maxMutationsPerTurn,
+      env,
     } = options;
 
     this.#mutators = new Map([...Object.entries(mutators)]) as MutatorMap;
+    this.#roomStartHandler = roomStartHandler;
     this.#disconnectHandler = disconnectHandler;
     this.#maxMutationsPerTurn = maxMutationsPerTurn;
     this.#storage = new DurableStorage(
       state.storage,
       options.allowUnconfirmedWrites,
+    );
+
+    this.#alarm = new AlarmManager(state.storage);
+    this.#connectionSecondsReporter = new ConnectionSecondsReporter(
+      this.#alarm.scheduler,
+    );
+    this.#connectionLifetimeReporter = new ConnectionLifetimeReporter(
+      this.#alarm.scheduler,
+    );
+    this.#env = env;
+    this.#clients = new ConnectionCountTrackingClientMap(
+      this.#connectionSecondsReporter,
+      this.#connectionLifetimeReporter,
     );
 
     this.#initRoutes();
@@ -133,7 +168,6 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
     void state.blockConcurrencyWhile(async () => {
       await initRoomSchema(this.#lc, this.#storage);
-      await processRoomStart(this.#lc, roomStartHandler, this.#storage);
     });
   }
 
@@ -162,6 +196,8 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
     this.#router.register(ROOM_ROUTES.connect, this.#connect);
     this.#router.register(ROOM_ROUTES.legacyConnect, this.#connect);
+
+    this.#router.register(ROOM_ROUTES.tail, this.#tail);
   }
 
   #requireAPIKey = <Context extends BaseContext, Resp>(
@@ -169,47 +205,35 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   ) => requireAuthAPIKey(() => this.#authApiKey, next);
 
   async fetch(request: Request): Promise<Response> {
-    let lc = populateLogContextFromRequest(this.#lc, request);
-
+    const lc = populateLogContextFromRequest(this.#lc, request);
     try {
       if (await this.deleted()) {
         return new Response('deleted', {
           status: 410, // Gone
         });
       }
-      const roomID = await this.maybeRoomID();
-      const url = new URL(request.url);
-      const urlRoomID = url.searchParams.get('roomID');
-      if (
-        // roomID is not going to be set on the createRoom request, or after
-        // the room has been deleted.
-        roomID !== undefined &&
-        // roomID is not going to be set for all calls, eg to delete the room.
-        urlRoomID !== null &&
-        urlRoomID !== roomID
-      ) {
-        lc.error?.('roomID mismatch', 'urlRoomID', urlRoomID, 'roomID', roomID);
-        return new Response('Unexpected roomID', {status: 400});
+      const roomIDHeaderValue = request.headers.get(ROOM_ID_HEADER_NAME);
+      if (roomIDHeaderValue === null || roomIDHeaderValue === '') {
+        return new Response('Missing Room ID Header', {status: 500});
       }
-
-      if (!this.#lcHasRoomIdContext) {
-        await this.#lock.withLock(lc, 'initRoomIDContext', lcInLock => {
-          if (this.#lcHasRoomIdContext) {
-            lcInLock.debug?.('roomID context already initialized, returning');
+      if (!this.#roomIDDependentInitCompleted) {
+        await this.#lock.withLock(lc, 'initRoomID', async lcInLock => {
+          if (this.#roomIDDependentInitCompleted) {
+            lcInLock.debug?.('roomID already initialized, returning');
             return;
           }
-          if (urlRoomID !== null && roomID === undefined) {
-            lcInLock.error?.('Expected roomID to be present in storage', {
-              urlRoomID,
-            });
-          }
-          if (roomID || urlRoomID) {
-            const roomIDForContext = roomID ?? urlRoomID;
-            this.#lc = this.#lc.withContext('roomID', roomIDForContext);
-            lc = lc.withContext('roomID', roomIDForContext);
-            this.#lcHasRoomIdContext = true;
-            lc.info?.('initialized roomID context');
-          }
+          const roomID = decodeHeaderValue(roomIDHeaderValue);
+          await processRoomStart(
+            lcInLock,
+            this.#env,
+            this.#roomStartHandler,
+            this.#storage,
+            roomID,
+          );
+          this.#lc = this.#lc.withContext('roomID', roomID);
+          this.#roomIDDependentInitCompleted = true;
+          this.#connectionSecondsReporter.setRoomID(roomID);
+          lc.info?.('initialized roomID');
         });
       }
 
@@ -237,18 +261,6 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
   async deleted(): Promise<boolean> {
     return (await this.#storage.get(deletedKey, valita.boolean())) === true;
-  }
-
-  // roomID errors and returns "unknown" if the roomID is not set. Prefer
-  // roomID() to maybeRoomID() in cases where the roomID is expected to be set,
-  // which is most cases.
-  async roomID(lc: LogContext): Promise<string> {
-    const roomID = await this.maybeRoomID();
-    if (roomID !== undefined) {
-      return roomID;
-    }
-    lc.error?.('roomID is not set');
-    return 'unknown';
   }
 
   /**
@@ -288,9 +300,9 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
   #connect = get((ctx, request) => {
     const {lc} = ctx;
-    if (request.headers.get('Upgrade') !== 'websocket') {
-      lc.error?.('roomDO: missing Upgrade header');
-      return new Response('expected websocket', {status: 400});
+    const errorResponse = requireUpgradeHeader(request, lc);
+    if (errorResponse) {
+      return errorResponse;
     }
 
     const {0: clientWS, 1: serverWS} = new WebSocketPair();
@@ -316,7 +328,24 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
         lc.error?.('unhandled exception in handleConnection', e);
       });
 
-    return new Response(null, {status: 101, webSocket: clientWS});
+    return upgradeWebsocketResponse(clientWS, request.headers);
+  });
+
+  #tail = get((ctx, request) => {
+    const {lc} = ctx;
+    lc.debug?.('tail request', request.url);
+
+    const errorResponse = requireUpgradeHeader(request, lc);
+    if (errorResponse) {
+      return errorResponse;
+    }
+
+    const {0: clientWS, 1: serverWS} = new WebSocketPair();
+
+    serverWS.accept();
+    connectTail(serverWS);
+
+    return upgradeWebsocketResponse(clientWS, request.headers);
   });
 
   #authInvalidateForRoom = post(
@@ -376,12 +405,21 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     );
   }
 
-  #handleMessage = async (
+  #handleMessage = (
     lc: LogContext,
     clientID: ClientID,
     data: string,
     ws: Socket,
-  ): Promise<void> => {
+  ): void => {
+    void this.#handleMessageInner(lc, clientID, data, ws);
+  };
+
+  async #handleMessageInner(
+    lc: LogContext,
+    clientID: ClientID,
+    data: string,
+    ws: Socket,
+  ): Promise<void> {
     lc = lc.withContext('msgID', randomID());
     lc.debug?.('handling message', data);
 
@@ -399,9 +437,14 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
         );
       });
     } catch (e) {
-      lc.error?.('Unhandled exception in _handleMessage', e);
+      lc.error?.('Unhandled exception in handleMessage', e);
     }
-  };
+  }
+
+  async alarm(): Promise<void> {
+    const lc = this.#lc.withContext('handler', 'alarm');
+    await this.#alarm.fireScheduled(lc);
+  }
 
   #processUntilDone(lc: LogContext) {
     lc.debug?.('handling processUntilDone');
@@ -430,7 +473,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     beforeQueue = () => {
       /* hook for testing */
     },
-  ): NodeJS.Timer {
+  ): ReturnType<typeof setInterval> {
     let queued = false;
 
     return setInterval(async () => {
@@ -474,6 +517,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     const {maxProcessedMutationTimestamp, nothingToProcess} =
       await processPending(
         lc,
+        this.#env,
         this.#storage,
         this.#clients,
         this.#pendingMutations,
@@ -482,12 +526,24 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
         this.#maxProcessedMutationTimestamp,
         this.#bufferSizer,
         this.#maxMutationsPerTurn,
+        (now: number) => this.#shouldGCClients(now),
       );
     this.#maxProcessedMutationTimestamp = maxProcessedMutationTimestamp;
     if (nothingToProcess && this.#turnTimerID) {
       clearInterval(this.#turnTimerID);
       this.#turnTimerID = 0;
     }
+  }
+
+  #shouldGCClients(now: number): boolean {
+    if (
+      this.#lastGCClientsTimestamp === undefined ||
+      now - this.#lastGCClientsTimestamp > CLIENT_GC_FREQUENCY
+    ) {
+      this.#lastGCClientsTimestamp = now;
+      return true;
+    }
+    return false;
   }
 
   #handleClose = async (
@@ -505,5 +561,5 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 export function getDefaultTurnDuration(
   allowUnconfirmedWrites: boolean,
 ): number {
-  return 1000 / (allowUnconfirmedWrites ? 60 : 15);
+  return Math.floor(1000 / (allowUnconfirmedWrites ? 60 : 15));
 }

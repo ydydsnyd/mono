@@ -1,4 +1,4 @@
-import type {FirestoreError, SnapshotListenOptions} from 'firebase/firestore';
+import type {FirestoreError} from 'firebase/firestore';
 import {HttpsError} from 'firebase-functions/v2/https';
 import {Queue} from 'shared/src/queue.js';
 
@@ -41,21 +41,7 @@ export function watch<Snapshot>(
         clearTimeout(timeoutID);
       }
 
-      return {
-        next: async () => {
-          try {
-            const value = await snapshots.dequeue();
-            return {value};
-          } catch (e) {
-            cleanup();
-            throw e;
-          }
-        },
-        return: value => {
-          cleanup();
-          return Promise.resolve({value, done: true});
-        },
-      };
+      return snapshots.asAsyncIterator(cleanup);
     },
   };
 }
@@ -78,12 +64,6 @@ interface ServerDocumentReferenceOrQuery<Snapshot> {
 // Web SDK methods common to DocumentReference and Query.
 interface WebDocumentReferenceOrQuery<Snapshot> {
   onSnapshot(
-    onNext: (snapshot: Snapshot) => void,
-    onError?: (error: FirestoreError) => void,
-    onCompletion?: () => void,
-  ): () => void;
-  onSnapshot(
-    options: SnapshotListenOptions,
     onNext: (snapshot: Snapshot) => void,
     onError?: (error: FirestoreError) => void,
     onCompletion?: () => void,

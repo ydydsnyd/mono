@@ -14,7 +14,7 @@ import {assert} from 'shared/src/asserts.js';
 import {sleep} from 'shared/src/sleep.js';
 import * as sinon from 'sinon';
 import {asyncIterableToArray} from './async-iterable-to-array.js';
-import * as db from './db/mod.js';
+import {Write} from './db/write.js';
 import type {JSONValue, ReadonlyJSONValue} from './json.js';
 import {TestMemStore} from './kv/test-mem-store.js';
 import type {PatchOperation} from './patch-operation.js';
@@ -24,6 +24,7 @@ import {
   MutatorDefs,
   Poke,
   Replicache,
+  getTestInstance,
   httpStatusUnauthorized,
 } from './replicache.js';
 import type {ScanOptions} from './scan-options.js';
@@ -92,7 +93,7 @@ test('put, get, has, del inside tx', async () => {
         args: {key: string; value: JSONValue},
       ) => {
         const {key, value} = args;
-        await tx.put(key, value);
+        await tx.set(key, value);
         expect(await tx.has(key)).to.equal(true);
         const v = await tx.get(key);
         expect(v).to.deep.equal(value);
@@ -387,7 +388,7 @@ test('push delay', async () => {
         tx: WriteTransaction,
         args: A,
       ) => {
-        await tx.put(`/todo/${args.id}`, args);
+        await tx.set(`/todo/${args.id}`, args);
       },
     },
   });
@@ -471,7 +472,7 @@ test('HTTP status pull', async () => {
     pullURL,
   });
 
-  const clientID = await rep.clientID;
+  const {clientID} = rep;
   let okCalled = false;
   let i = 0;
   fetchMock.post(pullURL, () => {
@@ -489,7 +490,7 @@ test('HTTP status pull', async () => {
 
   const consoleErrorStub = sinon.stub(console, 'error');
 
-  rep.pull();
+  void rep.pull({now: true});
 
   await tickAFewTimes(20, 10);
 
@@ -582,7 +583,7 @@ test('closed tx', async () => {
 
   await rep.mutate.mut();
   expect(wtx).to.not.be.undefined;
-  await expectAsyncFuncToThrow(() => wtx?.put('z', 1), TransactionClosedError);
+  await expectAsyncFuncToThrow(() => wtx?.set('z', 1), TransactionClosedError);
   await expectAsyncFuncToThrow(() => wtx?.del('w'), TransactionClosedError);
 });
 
@@ -1185,7 +1186,7 @@ test('isEmpty', async () => {
         await tx.del('a');
         expect(await tx.isEmpty()).to.equal(true);
 
-        await tx.put('d', 4);
+        await tx.set('d', 4);
         expect(await tx.isEmpty()).to.equal(false);
       },
     },
@@ -1221,7 +1222,7 @@ test('mutationID on transaction', async () => {
         data: {[key: string]: JSONValue},
       ) => {
         for (const [key, value] of Object.entries(data)) {
-          await tx.put(key, value);
+          await tx.set(key, value);
         }
         expect(tx.mutationID).to.equal(expectedMutationID++);
       },
@@ -1252,9 +1253,9 @@ test('onSync', async () => {
 
   expect(onSync.callCount).to.equal(0);
 
-  const clientID = await rep.clientID;
+  const {clientID} = rep;
   fetchMock.postOnce(pullURL, makePullResponseV1(clientID, 2));
-  rep.pull();
+  await rep.pull();
   await tickAFewTimes(15);
 
   expect(onSync.callCount).to.equal(2);
@@ -1323,7 +1324,7 @@ test('push timing', async () => {
     mutators: {addData},
   });
 
-  const invokePushSpy = sinon.spy(rep, 'invokePush');
+  const onInvokePush = (getTestInstance(rep).onPushInvoked = sinon.fake());
 
   const add = rep.mutate.addData;
 
@@ -1332,8 +1333,8 @@ test('push timing', async () => {
   await tickAFewTimes();
 
   const pushCallCount = () => {
-    const rv = invokePushSpy.callCount;
-    invokePushSpy.resetHistory();
+    const rv = onInvokePush.callCount;
+    onInvokePush.resetHistory();
     return rv;
   };
 
@@ -1380,21 +1381,21 @@ test('push and pull concurrently', async () => {
     enablePullAndPushInOpen: false,
   });
 
-  const beginPullSpy = sinon.spy(rep, 'beginPull');
-  const commitSpy = sinon.spy(db.Write.prototype, 'commitWithDiffs');
-  const invokePushSpy = sinon.spy(rep, 'invokePush');
+  const onBeginPull = (getTestInstance(rep).onBeginPull = sinon.fake());
+  const commitSpy = sinon.spy(Write.prototype, 'commitWithDiffs');
+  const onPushInvoked = (getTestInstance(rep).onPushInvoked = sinon.fake());
 
   function resetSpies() {
-    beginPullSpy.resetHistory();
+    onBeginPull.resetHistory();
     commitSpy.resetHistory();
-    invokePushSpy.resetHistory();
+    onPushInvoked.resetHistory();
   }
 
   const callCounts = () => {
     const rv = {
-      beginPull: beginPullSpy.callCount,
+      beginPull: onBeginPull.callCount,
       commit: commitSpy.callCount,
-      invokePush: invokePushSpy.callCount,
+      invokePush: onPushInvoked.callCount,
     };
     resetSpies();
     return rv;
@@ -1404,7 +1405,7 @@ test('push and pull concurrently', async () => {
 
   const requests: string[] = [];
 
-  const clientID = await rep.clientID;
+  const {clientID} = rep;
   fetchMock.post(pushURL, () => {
     requests.push(pushURL);
     return {};
@@ -1418,7 +1419,7 @@ test('push and pull concurrently', async () => {
   resetSpies();
 
   await add({b: 1});
-  rep.pull();
+  await rep.pull();
 
   await clock.tickAsync(10);
 
@@ -1451,7 +1452,7 @@ test('schemaVersion pull', async () => {
     schemaVersion,
   });
 
-  rep.pull();
+  await rep.pull();
   await tickAFewTimes();
 
   const req = await fetchMock.lastCall().request.json();
@@ -1484,17 +1485,17 @@ test('clientID', async () => {
     /^[0-9:A-z]{8}-[0-9:A-z]{4}-4[0-9:A-z]{3}-[0-9:A-z]{4}-[0-9:A-z]{12}$/;
 
   let rep = await replicacheForTesting('clientID');
-  const clientID = await rep.clientID;
+  const {clientID} = rep;
   expect(clientID).to.match(re);
   await rep.close();
 
   const rep2 = await replicacheForTesting('clientID2');
-  const clientID2 = await rep2.clientID;
+  const clientID2 = rep2.clientID;
   expect(clientID2).to.match(re);
   expect(clientID2).to.not.equal(clientID);
 
   rep = await replicacheForTesting('clientID');
-  const clientID3 = await rep.clientID;
+  const clientID3 = rep.clientID;
   expect(clientID3).to.match(re);
   // With SDD we never reuse client IDs.
   expect(clientID3).to.not.equal(clientID);
@@ -1504,7 +1505,7 @@ test('clientID', async () => {
     name: 'clientID4',
     pullInterval: null,
   });
-  const clientID4 = await rep4.clientID;
+  const clientID4 = rep4.clientID;
   expect(clientID4).to.match(re);
   await rep4.close();
 });
@@ -1514,7 +1515,7 @@ test('profileID', async () => {
 
   const rep = await replicacheForTesting('clientID');
   const profileID = await rep.profileID;
-  expect(profileID).to.not.equal(await rep.clientID);
+  expect(profileID).to.not.equal(rep.clientID);
   expect(profileID).to.match(re);
   await rep.close();
 
@@ -1538,7 +1539,7 @@ test('pull and index update', async () => {
     pullURL,
     indexes: {[indexName]: {jsonPointer: '/id'}},
   });
-  const clientID = await rep.clientID;
+  const {clientID} = rep;
 
   let lastMutationID = 0;
   async function testPull(opt: {
@@ -1551,7 +1552,7 @@ test('pull and index update', async () => {
       return makePullResponseV1(clientID, lastMutationID++, opt.patch);
     });
 
-    rep.pull();
+    await rep.pull();
 
     await tickUntil(() => pullDone);
     await tickAFewTimes();
@@ -1619,7 +1620,7 @@ async function populateDataUsingPull<
   // eslint-disable-next-line @typescript-eslint/ban-types
   MD extends MutatorDefs = {},
 >(rep: ReplicacheTest<MD>, data: Record<string, ReadonlyJSONValue>) {
-  const clientID = await rep.clientID;
+  const {clientID} = rep;
   fetchMock.postOnce(rep.pullURL, {
     cookie: '',
     lastMutationIDChanges: {[clientID]: 2},
@@ -1630,7 +1631,7 @@ async function populateDataUsingPull<
     })),
   });
 
-  rep.pull();
+  await rep.pull();
 
   // Allow pull to finish (larger than PERSIST_TIMEOUT)
   await clock.tickAsync(22 * 1000);
@@ -1653,7 +1654,7 @@ test('pull mutate options', async () => {
     ...disableAllBackgroundProcesses,
     enablePullAndPushInOpen: false,
   });
-  const clientID = await rep.clientID;
+  const {clientID} = rep;
   const log: number[] = [];
 
   fetchMock.post(pullURL, () => {
@@ -1664,21 +1665,21 @@ test('pull mutate options', async () => {
   await tickUntilTimeIs(1000);
 
   while (Date.now() < 1150) {
-    rep.pull();
+    void rep.pull();
     await clock.tickAsync(10);
   }
 
   rep.requestOptions.minDelayMs = 500;
 
   while (Date.now() < 2000) {
-    rep.pull();
+    void rep.pull();
     await clock.tickAsync(100);
   }
 
   rep.requestOptions.minDelayMs = 25;
 
   while (Date.now() < 2500) {
-    rep.pull();
+    void rep.pull();
     await clock.tickAsync(5);
   }
 
@@ -2017,14 +2018,14 @@ test('overlapping open/close', async () => {
       name,
       pullInterval,
     });
-    await rep.clientID;
+    await rep.clientGroupID;
     const p = rep.close();
     const rep2 = new Replicache({
       licenseKey: TEST_LICENSE_KEY,
       name,
       pullInterval,
     });
-    await rep2.clientID;
+    await rep2.clientGroupID;
     const p2 = rep2.close();
     await p;
     await p2;
@@ -2131,7 +2132,7 @@ test('mutate args in mutation throws due to frozen', async () => {
     mutators: {
       async mutArgs(tx: WriteTransaction, args: {v: number}) {
         args.v = 42;
-        await tx.put('v', args.v);
+        await tx.set('v', args.v);
       },
     },
   });
@@ -2163,13 +2164,13 @@ test('client ID is set correctly on transactions', async () => {
     },
   );
 
-  const repClientID = await rep.clientID;
+  const {clientID} = rep;
 
   await rep.query(tx => {
-    expect(tx.clientID).to.equal(repClientID);
+    expect(tx.clientID).to.equal(clientID);
   });
 
-  await rep.mutate.expectClientID(repClientID);
+  await rep.mutate.expectClientID(clientID);
 });
 
 test('mutation timestamps are immutable', async () => {
@@ -2177,7 +2178,7 @@ test('mutation timestamps are immutable', async () => {
   const rep = await replicacheForTesting('mutation-timestamps-are-immutable', {
     mutators: {
       foo: async (tx: WriteTransaction, _: JSONValue) => {
-        await tx.put('foo', 'bar');
+        await tx.set('foo', 'bar');
       },
     },
     // eslint-disable-next-line require-await
@@ -2194,10 +2195,10 @@ test('mutation timestamps are immutable', async () => {
 
   // Create a mutation and verify it has been assigned current time.
   await rep.mutate.foo(null);
-  await rep.invokePush();
+  await rep.push({now: true});
   expect(pending).deep.equal([
     {
-      clientID: await rep.clientID,
+      clientID: rep.clientID,
       id: 1,
       name: 'foo',
       args: null,
@@ -2210,7 +2211,7 @@ test('mutation timestamps are immutable', async () => {
   pending = [];
   await tickAFewTimes();
 
-  const clientID = await rep.clientID;
+  const {clientID} = rep;
   const poke: Poke = {
     baseCookie: null,
     pullResponse: makePullResponseV1(
@@ -2233,10 +2234,10 @@ test('mutation timestamps are immutable', async () => {
   expect(val).equal('dog');
 
   // Check that mutation timestamp did not change
-  await rep.invokePush();
+  await rep.push({now: true});
   expect(pending).deep.equal([
     {
-      clientID: await rep.clientID,
+      clientID: rep.clientID,
       id: 1,
       name: 'foo',
       args: null,
@@ -2273,7 +2274,7 @@ suite('check for client not found in visibilitychange', () => {
       onClientStateNotFound.called = false;
       rep.onClientStateNotFound = onClientStateNotFound;
 
-      const clientID = await rep.clientID;
+      const {clientID} = rep;
       await deleteClientForTesting(clientID, rep.perdag);
 
       consoleErrorStub.resetHistory();
@@ -2307,7 +2308,7 @@ test('scan in write transaction', async () => {
   const rep = await replicacheForTesting('scan-before-commit', {
     mutators: {
       async test(tx: WriteTransaction, v: number) {
-        await tx.put('a', v);
+        await tx.set('a', v);
         expect(await tx.scan().toArray()).to.deep.equal([v]);
         x++;
       },
@@ -2330,7 +2331,7 @@ test('scan mutate', async () => {
           switch (entry[0]) {
             case 'a':
               // put upcoming entry
-              await tx.put('e', 4);
+              await tx.set('e', 4);
               break;
             case 'b':
               // delete upcoming entry
@@ -2342,11 +2343,11 @@ test('scan mutate', async () => {
               break;
             case 'g':
               // set existing key to new value
-              await tx.put('h', 77);
+              await tx.set('h', 77);
               break;
             case 'h':
               // set already visited key to new value
-              await tx.put('b', 11);
+              await tx.set('b', 11);
               break;
           }
         }
@@ -2389,7 +2390,7 @@ test('index scan mutate', async () => {
           switch (entry[0][1]) {
             case 'a':
               // put upcoming entry
-              await tx.put('e', {a: '4'});
+              await tx.set('e', {a: '4'});
               break;
             case 'b':
               // delete upcoming entry
@@ -2401,11 +2402,11 @@ test('index scan mutate', async () => {
               break;
             case 'g':
               // set existing key to new value
-              await tx.put('h', {a: '77'});
+              await tx.set('h', {a: '77'});
               break;
             case 'h':
               // set already visited key to new value
-              await tx.put('b', {a: '11'});
+              await tx.set('b', {a: '11'});
               break;
           }
         }
@@ -2441,17 +2442,17 @@ test('concurrent puts and gets', async () => {
   const rep = await replicacheForTesting('concurrent-puts', {
     mutators: {
       async insert(tx: WriteTransaction, args: Record<string, number>) {
-        const ps = Object.entries(args).map(([k, v]) => tx.put(k, v));
+        const ps = Object.entries(args).map(([k, v]) => tx.set(k, v));
         await Promise.all(ps);
       },
       async race(tx: WriteTransaction) {
         // Conceptually the put could finish first but in practice that does not
         // happen.
-        const p1 = tx.put('a', 4);
+        const p1 = tx.set('a', 4);
         const p2 = tx.get('a');
         await Promise.all([p1, p2]);
         const v = await p2;
-        await tx.put('d', v ?? null);
+        await tx.set('d', v ?? null);
       },
     },
   });
@@ -2471,4 +2472,25 @@ test('concurrent puts and gets', async () => {
 
   const v2 = await rep.query(tx => tx.get('a'));
   expect(v2).to.equal(4);
+});
+
+test('Invalid name', () => {
+  expect(
+    () => new ReplicacheTest({name: '', licenseKey: TEST_LICENSE_KEY}),
+  ).to.throw('name is required and must be non-empty');
+  expect(
+    () =>
+      new Replicache({
+        name: 1 as unknown as string,
+        licenseKey: TEST_LICENSE_KEY,
+      }),
+  ).to.throw('name is required and must be non-empty');
+
+  expect(
+    () =>
+      new ReplicacheTest({
+        name: true as unknown as string,
+        licenseKey: TEST_LICENSE_KEY,
+      }),
+  ).to.throw(TypeError);
 });

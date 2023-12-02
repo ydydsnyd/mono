@@ -1,14 +1,6 @@
-import type {Firestore} from '@google-cloud/firestore';
-import type firebase from 'firebase/compat/app';
+import {Timestamp, type Firestore} from '@google-cloud/firestore';
 import {firebaseStub} from 'firestore-jest-mock/mocks/firebase.js';
-import {
-  App,
-  appDataConverter,
-  appPath,
-  AppNameIndex,
-  appNameIndexDataConverter,
-  appNameIndexPath,
-} from 'mirror-schema/src/app.js';
+import {App, appDataConverter, appPath} from 'mirror-schema/src/app.js';
 import {
   Membership,
   Role,
@@ -16,8 +8,12 @@ import {
   teamMembershipPath,
 } from 'mirror-schema/src/membership.js';
 import {
+  appNameIndexDataConverter,
+  appNameIndexPath,
+  sanitizeForLabel,
   teamDataConverter,
   teamPath,
+  type AppNameIndex,
   type Team,
 } from 'mirror-schema/src/team.js';
 import {
@@ -26,17 +22,20 @@ import {
   type User,
 } from 'mirror-schema/src/user.js';
 import {must} from 'shared/src/must.js';
-import {DeploymentSecrets, defaultOptions} from './deployment.js';
+import {defaultOptions} from './deployment.js';
+import {DEFAULT_ENV, envDataConverter, envPath, type Env} from './env.js';
+import {
+  DEFAULT_PROVIDER_ID,
+  providerDataConverter,
+  providerPath,
+  type Provider,
+} from './provider.js';
 
-// The server and (v8) client Firestore interfaces are largely the same.
-// Have the jest mock implement both, which should largely work for our testing purposes.
-type AllTheFirestores = Firestore & firebase.default.firestore.Firestore;
-
-export function fakeFirestore(): AllTheFirestores {
+export function fakeFirestore(): Firestore {
   return firebaseStub(
     {database: {}},
     {mutable: true},
-  ).firestore() as unknown as AllTheFirestores;
+  ).firestore() as unknown as Firestore;
 }
 
 export async function setUser(
@@ -76,7 +75,8 @@ export async function setTeam(
 ): Promise<Team> {
   const {
     name = `Name of ${teamID}`,
-    defaultCfID = 'default-cloudflare-id',
+    label = sanitizeForLabel(name),
+    defaultProvider = DEFAULT_PROVIDER_ID,
     numAdmins = 0,
     numMembers = 0,
     numInvites = 0,
@@ -85,7 +85,9 @@ export async function setTeam(
   } = team;
   const newTeam: Team = {
     name,
-    defaultCfID,
+    label,
+    defaultCfID: 'deprecated',
+    defaultProvider,
     numAdmins,
     numMembers,
     numInvites,
@@ -141,6 +143,33 @@ export async function getMembership(
   return must(membershipDoc.data());
 }
 
+export async function setProvider(
+  firestore: Firestore,
+  providerID: string,
+  provider: Partial<Provider>,
+): Promise<Provider> {
+  const {
+    accountID = `${providerID}-account-id`,
+    defaultZone = {
+      zoneID: `${providerID}-zone-id`,
+      zoneName: `${providerID}-zone-name`,
+    },
+    defaultMaxApps = 3,
+    dispatchNamespace = 'prod',
+  } = provider;
+  const newProvider: Provider = {
+    accountID,
+    defaultZone,
+    defaultMaxApps,
+    dispatchNamespace,
+  };
+  await firestore
+    .doc(providerPath(providerID))
+    .withConverter(providerDataConverter)
+    .set(newProvider);
+  return newProvider;
+}
+
 export async function getApp(
   firestore: Firestore,
   appID: string,
@@ -160,18 +189,26 @@ export async function setApp(
   const {
     name = `Name of ${appID}`,
     teamID = 'team-id',
-    cfID = 'default-cloudflare-id',
+    teamLabel = 'teamlabel',
+    provider = DEFAULT_PROVIDER_ID,
     cfScriptName = 'cf-script-name',
     serverReleaseChannel = 'stable',
+    envUpdateTime = Timestamp.now(),
+    runningDeployment,
   } = app;
   const newApp: App = {
     name,
     teamID,
-    cfID,
+    teamLabel,
+    cfID: 'deprecated',
+    provider,
     cfScriptName,
     serverReleaseChannel,
-    deploymentOptions: defaultOptions(),
+    envUpdateTime,
   };
+  if (runningDeployment) {
+    newApp.runningDeployment = runningDeployment;
+  }
   await firestore
     .doc(appPath(appID))
     .withConverter(appDataConverter)
@@ -181,10 +218,11 @@ export async function setApp(
 
 export async function getAppName(
   firestore: Firestore,
+  teamID: string,
   appName: string,
 ): Promise<AppNameIndex> {
   const appNameDoc = await firestore
-    .doc(appNameIndexPath(appName))
+    .doc(appNameIndexPath(teamID, appName))
     .withConverter(appNameIndexDataConverter)
     .get();
   return must(appNameDoc.data());
@@ -192,21 +230,40 @@ export async function getAppName(
 
 export async function setAppName(
   firestore: Firestore,
+  teamID: string,
   appID: string,
   name: NamedCurve,
 ): Promise<void> {
   await firestore
-    .doc(appNameIndexPath(name))
+    .doc(appNameIndexPath(teamID, name))
     .withConverter(appNameIndexDataConverter)
     .set({appID});
 }
 
-export function dummySecrets(): DeploymentSecrets {
-  return {
-    /* eslint-disable @typescript-eslint/naming-convention */
-    REFLECT_AUTH_API_KEY: 'dummy1',
-    DATADOG_LOGS_API_KEY: 'dummy2',
-    DATADOG_METRICS_API_KEY: 'dummy3',
-    /* eslint-enable @typescript-eslint/naming-convention */
+export async function getEnv(
+  firestore: Firestore,
+  appID: string,
+): Promise<Env> {
+  const envDoc = await firestore
+    .doc(envPath(appID, DEFAULT_ENV))
+    .withConverter(envDataConverter)
+    .get();
+  return must(envDoc.data());
+}
+
+export async function setEnv(
+  firestore: Firestore,
+  appID: string,
+  env: Partial<Env>,
+): Promise<Env> {
+  const {deploymentOptions = defaultOptions(), secrets = {}} = env;
+  const newEnv: Env = {
+    deploymentOptions,
+    secrets,
   };
+  await firestore
+    .doc(envPath(appID, DEFAULT_ENV))
+    .withConverter(envDataConverter)
+    .set(newEnv);
+  return newEnv;
 }

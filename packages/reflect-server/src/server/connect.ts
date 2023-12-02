@@ -5,7 +5,7 @@ import type {
   NullableVersion,
   Version,
 } from 'reflect-protocol';
-import type {AuthData} from 'reflect-types/src/mod.js';
+import type {AuthData} from 'reflect-shared';
 import {assert} from 'shared/src/asserts.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
 import {
@@ -22,7 +22,7 @@ import type {
 import {compareVersions, getVersion} from '../types/version.js';
 import {decodeHeaderValue} from '../util/headers.js';
 import {closeWithError, send} from '../util/socket.js';
-import {AUTH_DATA_HEADER_NAME} from './auth.js';
+import {AUTH_DATA_HEADER_NAME} from './internal-headers.js';
 
 export type MessageHandler = (
   lc: LogContext,
@@ -134,6 +134,7 @@ export async function handleConnection(
     baseCookie: requestBaseCookie,
     lastMutationID: existingLastMutationID,
     lastMutationIDVersion: existingRecordLastMutationIDVersion,
+    lastSeen: Date.now(),
   };
   await putClientRecord(clientID, record, storage);
   lc.debug?.('Put client record', record);
@@ -174,6 +175,7 @@ export async function handleConnection(
     auth,
     clockOffsetMs: undefined,
     clientGroupID: requestClientGroupID,
+    sentInitialPresence: false,
     debugPerf: result.debugPerf,
   };
   lc.debug?.('Setting client map entry', clientID, client);

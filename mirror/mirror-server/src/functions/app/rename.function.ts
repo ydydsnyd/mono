@@ -6,18 +6,22 @@ import {
 } from 'mirror-protocol/src/app.js';
 import {
   appDataConverter,
-  appNameIndexDataConverter,
-  appNameIndexPath,
   appPath,
   isValidAppName,
 } from 'mirror-schema/src/app.js';
+import {
+  appNameIndexDataConverter,
+  appNameIndexPath,
+} from 'mirror-schema/src/team.js';
 import {must} from 'shared/src/must.js';
 import {appAuthorization, userAuthorization} from '../validators/auth.js';
 import {validateSchema} from '../validators/schema.js';
 import {logger} from 'firebase-functions';
+import {userAgentVersion} from '../validators/version.js';
 
 export const rename = (firestore: Firestore) =>
   validateSchema(renameAppRequestSchema, renameAppResponseSchema)
+    .validate(userAgentVersion())
     .validate(userAuthorization())
     .validate(appAuthorization(firestore))
     .handle(async (request, context) => {
@@ -26,16 +30,13 @@ export const rename = (firestore: Firestore) =>
       if (!isValidAppName(newName)) {
         throw new HttpsError(
           'invalid-argument',
-          'Names must be lowercased alphanumeric, starting with a letter and not ending with a hyphen',
+          `Invalid App Name "${newName}". Names must be lowercased alphanumeric, starting with a letter and not ending with a hyphen`,
         );
       }
 
       const appDocRef = firestore
         .doc(appPath(appID))
         .withConverter(appDataConverter);
-      const newAppNameDocRef = firestore
-        .doc(appNameIndexPath(newName))
-        .withConverter(appNameIndexDataConverter);
 
       await firestore.runTransaction(async txn => {
         // Note: Although the app has already been looked up once in appValidation(),
@@ -55,7 +56,10 @@ export const rename = (firestore: Firestore) =>
           return;
         }
         const oldAppNameDocRef = firestore
-          .doc(appNameIndexPath(app.name))
+          .doc(appNameIndexPath(app.teamID, app.name))
+          .withConverter(appNameIndexDataConverter);
+        const newAppNameDocRef = firestore
+          .doc(appNameIndexPath(app.teamID, newName))
           .withConverter(appNameIndexDataConverter);
         const [oldAppNameDoc, newAppNameDoc] = await Promise.all([
           txn.get(oldAppNameDocRef),
@@ -82,8 +86,5 @@ export const rename = (firestore: Firestore) =>
       });
 
       logger.info(`Renamed ${appID} from ${context.app.name} to ${newName}`);
-
-      // TODO(darick): Kick off a deployment to the new hostname if there
-      // is a deployment running.
       return {success: true};
     });

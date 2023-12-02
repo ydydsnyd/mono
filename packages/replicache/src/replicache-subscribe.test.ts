@@ -2,7 +2,6 @@ import {resolver} from '@rocicorp/resolver';
 import {assert, expect} from 'chai';
 import {sleep} from 'shared/src/sleep.js';
 import * as sinon from 'sinon';
-import type * as dag from './dag/mod.js';
 import type {IndexKey} from './db/index.js';
 import type {IndexDefinitions} from './index-defs.js';
 import type {JSONValue, ReadonlyJSONValue} from './json.js';
@@ -24,12 +23,13 @@ import type {ReadTransaction, WriteTransaction} from './transactions.js';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
+import type {TestingReplicacheWithTesting} from './replicache.js';
 
 initReplicacheTesting();
 
 async function addData(tx: WriteTransaction, data: {[key: string]: JSONValue}) {
   for (const [key, value] of Object.entries(data)) {
-    await tx.put(key, value);
+    await tx.set(key, value);
   }
 }
 
@@ -686,13 +686,13 @@ test('subscribe pull and index update', async () => {
       expectedQueryCallCount++;
     }
     log.length = 0;
-    const clientID = await rep.clientID;
+    const {clientID} = rep;
     fetchMock.post(
       pullURL,
       makePullResponseV1(clientID, lastMutationID++, opt.patch),
     );
 
-    rep.pull();
+    void rep.pull();
     await tickUntil(() => log.length >= opt.expectedLog.length);
     expect(queryCallCount).to.equal(expectedQueryCallCount);
     expect(log).to.deep.equal(opt.expectedLog);
@@ -826,8 +826,7 @@ test('subscription coalescing', async () => {
     enablePullAndPushInOpen: false,
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const store = sinon.spy((rep as any)._memdag as dag.Store);
+  const store = sinon.spy((rep as TestingReplicacheWithTesting).memdag);
   const resetCounters = () => {
     store.read.resetHistory();
     store.write.resetHistory();
@@ -912,11 +911,11 @@ test('subscribe perf test regression', async () => {
     mutators: {
       async init(tx: WriteTransaction) {
         await Promise.all(
-          Array.from({length: maxCount}, (_, i) => tx.put(key(i), i)),
+          Array.from({length: maxCount}, (_, i) => tx.set(key(i), i)),
         );
       },
       async put(tx: WriteTransaction, options: {key: string; val: JSONValue}) {
-        await tx.put(options.key, options.val);
+        await tx.set(options.key, options.val);
       },
     },
   });
@@ -1065,4 +1064,79 @@ test('Errors in subscriptions are logged if no onError', async () => {
   await t(f, err);
   assert.equal(f.callCount, 1);
   assert.isTrue(f.calledWith(err));
+});
+
+test('subscribe using a function', async () => {
+  const log: (readonly [string, ReadonlyJSONValue])[] = [];
+
+  const rep = await replicacheForTesting('subscribe', {
+    mutators: {
+      addData,
+    },
+  });
+  let queryCallCount = 0;
+  const cancel = rep.subscribe(
+    tx => {
+      queryCallCount++;
+      return tx.scan({prefix: 'a/'}).entries().toArray();
+    },
+    values => {
+      for (const entry of values) {
+        log.push(entry);
+      }
+    },
+  );
+
+  expect(log).to.have.length(0);
+  expect(queryCallCount).to.equal(0);
+
+  const add = rep.mutate.addData;
+  await add({'a/0': 0});
+  expect(log).to.deep.equal([['a/0', 0]]);
+  expect(queryCallCount).to.equal(2); // One for initial subscribe and one for the add.
+
+  cancel();
+});
+
+test('subscribe where body returns non json', async () => {
+  const log: unknown[] = [];
+
+  const rep = await replicacheForTesting('subscribe-non-json-result', {
+    mutators: {
+      addData,
+    },
+  });
+  const cancel = rep.subscribe(
+    async tx => {
+      const entries = await tx.scan().entries().toArray();
+      return new Map(entries.map(([k, v]) => [k, BigInt(v as number)]));
+    },
+    {
+      onData(values) {
+        assert.instanceOf(values, Map);
+        for (const entry of values) {
+          log.push(entry);
+        }
+      },
+      isEqual(a, b) {
+        if (!(a instanceof Map) || !(b instanceof Map) || a.size !== b.size) {
+          return false;
+        }
+        for (const [k, v] of a) {
+          if (b.get(k) !== v) {
+            return false;
+          }
+        }
+        return true;
+      },
+    },
+  );
+
+  await rep.mutate.addData({a: 0, b: 1});
+  expect(log).to.deep.equal([
+    ['a', 0n],
+    ['b', 1n],
+  ]);
+
+  cancel();
 });

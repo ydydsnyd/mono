@@ -1,31 +1,32 @@
-import type * as dag from '../dag/mod.js';
+import type {Chunk} from '../dag/chunk.js';
+import type {LazyRead} from '../dag/lazy-store.js';
 import {Visitor} from '../dag/visitor.js';
 import type {Hash} from '../hash.js';
 import {promiseVoid} from '../resolved-promises.js';
 
 export class GatherMemoryOnlyVisitor extends Visitor {
-  private readonly _gatheredChunks: Map<Hash, dag.Chunk> = new Map();
-  private readonly _lazyRead: dag.LazyRead;
+  readonly #gatheredChunks: Map<Hash, Chunk> = new Map();
+  readonly #lazyRead: LazyRead;
 
-  constructor(dagRead: dag.LazyRead) {
+  constructor(dagRead: LazyRead) {
     super(dagRead);
-    this._lazyRead = dagRead;
+    this.#lazyRead = dagRead;
   }
 
-  get gatheredChunks(): ReadonlyMap<Hash, dag.Chunk> {
-    return this._gatheredChunks;
+  get gatheredChunks(): ReadonlyMap<Hash, Chunk> {
+    return this.#gatheredChunks;
   }
 
   override visit(h: Hash): Promise<void> {
-    if (!this._lazyRead.isMemOnlyChunkHash(h)) {
+    if (!this.#lazyRead.isMemOnlyChunkHash(h)) {
       // Not a memory-only hash, no need to visit anything else.
       return promiseVoid;
     }
     return super.visit(h);
   }
 
-  override visitChunk(chunk: dag.Chunk): Promise<void> {
-    this._gatheredChunks.set(chunk.hash, chunk);
+  override visitChunk(chunk: Chunk): Promise<void> {
+    this.#gatheredChunks.set(chunk.hash, chunk);
     return super.visitChunk(chunk);
   }
 }

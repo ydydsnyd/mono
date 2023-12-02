@@ -4,6 +4,7 @@
 
 import {esbuildPlugin} from '@web/dev-server-esbuild';
 import {playwrightLauncher} from '@web/test-runner-playwright';
+import {getVersion} from '../reflect-shared/tool/get-version.js';
 import {makeDefine} from '../shared/src/build.js';
 
 const chromium = playwrightLauncher({product: 'chromium'});
@@ -22,7 +23,12 @@ const config = {
     esbuildPlugin({
       ts: true,
       target: 'es2022',
-      define,
+      define: {
+        ...define,
+        ['REFLECT_VERSION']: JSON.stringify(getVersion()),
+        ['TESTING']: 'true',
+      },
+      banner: 'var process = { env: { NODE_ENV: "development" } }',
     }),
   ],
   staticLogging: !!process.env.CI,
@@ -40,7 +46,6 @@ const config = {
     `<!doctype html>
       <html>
       <body>
-        <script>window.process = { env: { NODE_ENV: "development" } }</script>
         <script type="module" src="${testFramework}"></script>
       </body>
     </html>`,

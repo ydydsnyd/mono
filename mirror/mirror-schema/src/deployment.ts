@@ -1,8 +1,8 @@
 import * as v from 'shared/src/valita.js';
 import {firestoreDataConverter} from './converter.js';
+import {moduleRefSchema} from './module.js';
 import * as path from './path.js';
 import {timestampSchema} from './timestamp.js';
-import {moduleRefSchema} from './module.js';
 
 export const logLevelSchema = v.union(
   v.literal('debug'),
@@ -24,6 +24,7 @@ export const stringBooleanSchema = v.union(
  */
 export const varsSchema = v.object({
   /* eslint-disable @typescript-eslint/naming-convention */
+  DISABLE: stringBooleanSchema.default('false'),
   DISABLE_LOG_FILTERING: stringBooleanSchema.default('false'),
   LOG_LEVEL: logLevelSchema.default('info'),
   /* eslint-enable @typescript-eslint/naming-convention */
@@ -32,10 +33,7 @@ export const varsSchema = v.object({
 export type DeploymentVars = v.Infer<typeof varsSchema>;
 
 function defaultVars(): DeploymentVars {
-  //shallow copy to ensure this will pass firestore isPlainObject check which requires objects to have a constructor with name 'Object'
-  //valita creates objects without a prototype and thus without a constructor
-  //https://github.com/badrap/valita/blob/5db630edb1397959f613b94b0f9e22ceb8ec78d4/src/index.ts#L568
-  return {...varsSchema.parse({})};
+  return v.parse({}, varsSchema);
 }
 
 export const deploymentOptionsSchema = v.object({
@@ -48,13 +46,7 @@ export function defaultOptions(): DeploymentOptions {
   return {vars: defaultVars()};
 }
 
-export const deploymentSecretsSchema = v.object({
-  /* eslint-disable @typescript-eslint/naming-convention */
-  REFLECT_AUTH_API_KEY: v.string(),
-  DATADOG_LOGS_API_KEY: v.string(),
-  DATADOG_METRICS_API_KEY: v.string(),
-  /* eslint-enable @typescript-eslint/naming-convention */
-});
+export const deploymentSecretsSchema = v.record(v.string());
 
 export type DeploymentSecrets = v.Infer<typeof deploymentSecretsSchema>;
 
@@ -62,9 +54,15 @@ export const deploymentTypeSchema = v.union(
   v.literal('USER_UPLOAD'),
   v.literal('USER_ROLLBACK'),
   v.literal('SERVER_UPDATE'),
-  v.literal('OPTIONS_UPDATE'),
-  v.literal('SECRETS_UPDATE'),
+  v.literal('ENV_UPDATE'),
+  v.literal('OPTIONS_UPDATE'), // Subsumed by ENV_UPDATE, but may be revived at some point
+  v.literal('SECRETS_UPDATE'), // Subsumed by ENV_UPDATE, but may be revived at some point
   v.literal('HOSTNAME_UPDATE'),
+  v.literal('MAINTENANCE_UPDATE'), // Triggered by the App.forceDeployment field
+  // Although DELETE is not technically a cloudflare "deployment", all cloudflare
+  // worker commands are serialized via the deployment queue to avoid race
+  // conditions that could otherwise arise from concurrent execution.
+  v.literal('DELETE'),
 );
 export type DeploymentType = v.Infer<typeof deploymentTypeSchema>;
 
@@ -98,10 +96,9 @@ export const deploymentSpecSchema = v.object({
   // The hostname of the worker, which is https://<appName>.reflect-server.net
   // can be a vanity domain in the future.
   hostname: v.string(),
-  // Options with which the app was deployed, used to check for redeployment if options change.
-  options: deploymentOptionsSchema,
-  // SHA-256 hashes of deployed secrets, used to check for redeployment if secrets change.
-  hashesOfSecrets: deploymentSecretsSchema,
+  // UpdateTime of the Env that determines aspects of the deployment such as
+  // vars and secrets.
+  envUpdateTime: timestampSchema,
 });
 
 export type DeploymentSpec = v.Infer<typeof deploymentSpecSchema>;

@@ -1,5 +1,6 @@
 import * as esbuild from 'esbuild';
 import {createRequire} from 'node:module';
+import {watchFiles} from './watch-files.js';
 
 const reflectServerFileName = 'reflect-server.js';
 
@@ -13,43 +14,55 @@ const replaceReflectServerPlugin: esbuild.Plugin = {
   },
 };
 
-export async function compile(
-  entryPoint: string,
-  sourcemap: true | 'both' | 'external' | 'linked',
-): Promise<{
-  code: esbuild.OutputFile;
-  sourcemap: esbuild.OutputFile;
-}>;
-export async function compile(
-  entryPoint: string,
-  sourcemap: false | undefined | 'inline',
-): Promise<{
-  code: esbuild.OutputFile;
-  sourcemap: undefined;
-}>;
-export async function compile(
+function getEsbuildOptions(
   entryPoint: string,
   sourcemap: esbuild.BuildOptions['sourcemap'] = 'external',
-): Promise<{
-  code: esbuild.OutputFile;
-  sourcemap: esbuild.OutputFile | undefined;
-}> {
-  const res = await esbuild.build({
+  mode: 'production' | 'development',
+) {
+  return {
     bundle: true,
     conditions: ['workerd', 'worker', 'browser'],
     // Remove process.env. It does not exist in CF workers and we have npm
     // packages that use it.
-    define: {'process.env': '{}'},
-    entryPoints: [entryPoint],
-    external: [],
+    define: {'process.env.NODE_ENV': JSON.stringify(mode), 'process.env': '{}'},
+    external: ['node:diagnostics_channel'],
     format: 'esm',
     outdir: '.',
     platform: 'browser',
     plugins: [replaceReflectServerPlugin],
-    sourcemap,
     target: 'esnext',
     write: false,
-  });
+    metafile: true,
+    entryPoints: [entryPoint],
+    sourcemap,
+  } as esbuild.BuildOptions & {metafile: true; write: false};
+}
+
+export type CompileResult = {
+  code: esbuild.OutputFile;
+  sourcemap: esbuild.OutputFile | undefined;
+};
+
+export async function compile(
+  entryPoint: string,
+  sourcemap: esbuild.BuildOptions['sourcemap'],
+  mode: 'production' | 'development',
+): Promise<CompileResult> {
+  const res = await esbuild.build(
+    getEsbuildOptions(entryPoint, sourcemap, mode),
+  );
+  return getResultFromEsbuildResult(res, sourcemap);
+}
+
+function getResultFromEsbuildResult(
+  res: esbuild.BuildResult<
+    esbuild.BuildOptions & {
+      metafile: true;
+      write: false;
+    }
+  >,
+  sourcemap: esbuild.BuildOptions['sourcemap'] = 'external',
+): CompileResult {
   const {errors, outputFiles} = res;
   if (errors.length > 0) {
     throw new Error(res.errors.join('\n'));
@@ -71,6 +84,65 @@ export async function compile(
   return {code: outputFiles[0], sourcemap: outputFiles[1]};
 }
 
+export async function* watch(
+  entryPoint: string,
+  sourcemap: esbuild.BuildOptions['sourcemap'] | undefined,
+  mode: 'production' | 'development',
+  signal: AbortSignal,
+): AsyncGenerator<CompileResult> {
+  const buildContext = await esbuild.context(
+    getEsbuildOptions(entryPoint, sourcemap, mode),
+  );
+
+  const hashes = new Map<string, string>();
+  let first = true;
+  let filesToWatch = [entryPoint];
+  try {
+    while (!signal.aborted) {
+      if (first) {
+        process.stdout.write('Building...');
+
+        first = false;
+      } else {
+        process.stdout.write('Rebuilding...');
+      }
+      const start = Date.now();
+      let res;
+      try {
+        res = await buildContext.rebuild();
+      } catch {
+        // esbuild already printed the error.
+      }
+
+      if (signal.aborted) {
+        break;
+      }
+
+      process.stdout.write(
+        ` ${res ? `Done in` : `\nGot error after`} ${Date.now() - start}ms.\n`,
+      );
+
+      if (res) {
+        yield getResultFromEsbuildResult(res, sourcemap);
+        if (signal.aborted) {
+          return;
+        }
+
+        filesToWatch = Object.keys(res.metafile.inputs).filter(
+          input => !input.startsWith('<define:'),
+        );
+      }
+
+      await watchFiles(filesToWatch, signal, hashes);
+      if (!signal.aborted) {
+        process.stdout.write('Files changed. ');
+      }
+    }
+  } finally {
+    await buildContext.dispose();
+  }
+}
+
 function shouldHaveSourcemapFile(
   v: esbuild.BuildOptions['sourcemap'] | undefined,
 ): boolean {
@@ -87,9 +159,11 @@ function shouldHaveSourcemapFile(
   }
 }
 
-export async function buildReflectServerContent(): Promise<string> {
+export async function buildReflectServerContent(
+  mode: 'production' | 'development',
+): Promise<string> {
   const require = createRequire(import.meta.url);
   const serverPath = require.resolve('@rocicorp/reflect/server');
-  const {code} = await compile(serverPath, false);
+  const {code} = await compile(serverPath, false, mode);
   return code.text;
 }

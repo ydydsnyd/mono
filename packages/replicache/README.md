@@ -1,66 +1,106 @@
 # Cutting a release
 
-## Build then code
-
-First make double-check the current build has passed tests on GitHub.
-
-Then:
-
-```bash
-git checkout main
-git pull
-git branch -D release
-git checkout -b release HEAD
-npm install
-npm run build
-```
-
 ## Decide what the new version should be
 
-First look for API changes. Download the last release:
+First look for API changes. Download the last release and compare the .d.ts files:
 
 ```bash
 cd /tmp
-npm pack replicache@$CURRENT_VERSION
-tar -xvf replicache@$CURRENT_VERSION
+npm pack replicache@$LAST_RELEASE_VERSION
+tar -xvf replicache@$LAST_RELEASE_VERSION
 cd -
-diff -u /tmp/package/out/replicache.d.ts out/replicache.d.ts
+diff -u /tmp/package/out/replicache.d.ts out/packages/replicache/replicache.d.ts | less
 ```
 
-Look through the changes since the last tag.
+We need to be very careful about public API changes as we then have to maintain them. Make sure all new API has been discussed and agreed to by the team.
+
+Next look through all changes in the repo since the last release. To do this properly:
+
+```bash
+# List all commits on main from the commit prior to last tag (which should be
+# present on main) to HEAD.
+git log replicache/v$LAST_RELEASE_VERSION^..HEAD
+```
+
+Build a list of all changes that affect Replicache. This will become the release notes later.
 
 - If there are any breaking changes, then this needs to be a new major version.
 - If there are any new (non-breaking) features, then this needs to be a new minor version.
 - Otherwise, if there are only non-breaking bugfixes, it's a patch.
 
-## Build the release
+## Get a clean checkout
 
+```bash
+rm -rf /tmp/release
+mkdir /tmp/release
+cd /tmp/release
+git clone --depth=1 git@github.com:rocicorp/mono.git
+cd mono
+npm install
 ```
-git branch -D release
-git checkout -b release HEAD
-npm version major # or minor or patch v12.0.0-beta.0
+
+## Bump the version
+
+```bash
+vim packages/replicache/package.json
+# Must be done in root of mono checkout
+npm install
 npx syncpack fix-mismatches
-# Ensure all fixed, else fix manually
-npx syncpack
+npm install
+git commit -a -m 'chore(replicache): Bump version to v$NEW_VERSION'
+```
+
+## Publish a canary
+
+```bash
+cd packages/replicache
+npm publish --tag=canary
+```
+
+## Tag the Release
+
+We tag the release _on the branch_. This is important because we only want to
+tag the code we just tested above, not any other code that may have landed on
+main in the meantime.
+
+```bash
+# From temp dir we published from above
+git tag replicache/v$NEW_VERSION
+git push origin --tags
+```
+
+## Merge the Release
+
+```bash
+# From your main checkout (not temp dir)
+git fetch -t
+git merge replicache/v$NEW_VERSION
+git push origin main
 ```
 
 ## Manual Testing
 
-To test that a release works before creating the release we use a tarball dependency.
+### npx replicache get-license
 
+Test that the `get-license` script still works:
+
+```bash
+npx replicache@canary get-license
 ```
-npm pack
-```
+
+Go through the flow and ensure you get a license.
 
 ### Todo Samples
 
-Check out each of the [todo samples](https://trunk.doc.replicache.dev/examples/todo). Manually add the tarball:
+Check out each of the [todo samples](https://trunk.doc.replicache.dev/examples/todo). Install the canary version:
 
 ```bash
-npm add /path/to/replicache-<version>.tgz
+npm add replicache@canary
 ```
 
 Then run the app and ensure it works properly.
+
+Push a PR (but don't land yet) that update to new version.
 
 ### Repliear Sample
 
@@ -68,39 +108,29 @@ Check out [rocicorp/repliear](https://github.com/rocicorp/repliear)
 
 Same as todo.
 
+### Hello Replicache
+
+Go through https://doc.replicache.dev/tutorial and test still works / make any updates necessary
+
 ### BYOB Guide
 
 Walk through [the integration guide](https://trunk.doc.replicache.dev/byob/intro) and make sure things still work.
 
-## Check for API Changes
-
-We need to be very careful about public API changes as we then have to maintain them.
-
-Check whether there are any public API changes by diffing `out/replicache.d.ts` between the previous released version and the new candidate. Make sure all new API has been discussed and agreed to by the team.
-
-## Land the Release
-
-Send out the release branch as a PR like normal and land it.
-
-## Tag the Release
-
-```
-git checkout main
-git pull
-# Make sure you're at the commit that bumps the version
-export NEW_TAG="replicache/v$NEW_VERSION"
-git tag $NEW_TAG
-git push origin $NEW_TAG
-```
-
 ## Update the peer libraries for compat with the new Replicache
 
-The following have peerDependencies that should to be updated to the new Replicache version:
+If the major version changed, then update the following packages that have peerDependencies on Replicache:
 
 - `replicache-nextjs`
 - `rails`
+- `replicache-transaction`
 
-## Publish the Release
+## Finish Release Notes
+
+Finalize the release notes you started earlier
+
+## Push and test all the sample apps
+
+## Switch the Release to Latest
 
 ```
 # note: this will publish the release to the "latest" tag, which means it's what
@@ -120,13 +150,13 @@ paying customers to make it easier to debug their code.
 ```bash
 git checkout rocicorp-replicache
 
-# Make sure all the changes from main are included.
-git merge main
+# Merge new release
+git merge replicache/v$NEW_VERSION
 
 # Verify that the only diff is the name and the sourcemap
-git diff main
+git diff replicache/v$NEW_VERSION
 
-git push
+git push origin rocicorp-replicache
 
 npm publish
 ```
@@ -139,7 +169,7 @@ to deploy a new version.
 ```
 git checkout docs
 git pull
-git reset --hard <tag-of-release>
+git reset --hard replicache/v$NEW_VERSION
 git push origin docs
 ```
 
@@ -148,18 +178,6 @@ git push origin docs
 **Note:** It's likely that when you `git push origin docs` above, you'll get a conflict error. This is expected if there have been any cherry-picks onto this branch as would happen if somebody "spruced" (below). Check that all the new commits on this docs branch since the last release are present in `origin/main`. To do this, for each such commit, there should be a message `Cherry-picked from <original-hash>` in the commit message. This message is added by the "spruce" procedure. Look for each such `<original-hash>` in `origin/main`. If all such commits on `docs` are present in `origin/main` then you can force the push with `git push origin docs --force`. If there is a commit on this branch which is missing from `origin/main` then somebody edited directly on this branch and it should be investigated.
 
 **TODO:** We should write a script `release-docs.sh` to automate the above.
-
-## Push updates to the sample apps that update their dependency on Replicache
-
-- replicache-todo
-- repliear
-- replidraw{-do}
-
-## Write Release Notes
-
-Our release notes are now blog posts.
-
-TODO: Document how to do this.
 
 ---
 

@@ -8,7 +8,7 @@ import {
 } from '@jest/globals';
 import type {LogContext} from '@rocicorp/logger';
 import type {PokeBody, Version} from 'reflect-protocol';
-import type {WriteTransaction} from 'reflect-types/src/mod.js';
+import type {WriteTransaction} from 'reflect-shared';
 import {BufferSizer} from 'shared/src/buffer-sizer.js';
 import {DurableStorage} from '../../src/storage/durable-storage.js';
 import {
@@ -136,19 +136,59 @@ describe('processPending', () => {
       ]),
       clients: new Map([
         client('c1', 'u1', 'cg1', s1, 0),
-        client('c2', 'u2', 'cg1', s2, 0),
+        client(
+          'c2',
+          'u2',
+          'cg1',
+          s2,
+          0,
+          false,
+          false /* sentInitialPresence */,
+        ),
       ]),
       storedConnectedClients: ['c1'],
       pendingMutations: [],
       maxProcessedMutationTimestamp: 500,
-      expectedVersion: 3,
+      expectedVersion: 4,
       // newly connected client is fast forwarded
       expectedPokes: new Map([
+        [
+          'c1',
+          {
+            pokes: [
+              {
+                baseCookie: 3,
+                cookie: 4,
+                lastMutationIDChanges: {},
+                presence: [{op: 'put', key: 'c2', value: 1}],
+                patch: [],
+              },
+            ],
+            requestID: '4fxcm49g2j9',
+          },
+        ],
         [
           'c2',
           {
             pokes: [
-              {baseCookie: 1, cookie: 3, lastMutationIDChanges: {}, patch: []},
+              {
+                baseCookie: 1,
+                cookie: 3,
+                lastMutationIDChanges: {},
+                presence: [
+                  {op: 'clear'},
+                  {op: 'put', key: 'c1', value: 1},
+                  {op: 'put', key: 'c2', value: 1},
+                ],
+                patch: [],
+              },
+              {
+                baseCookie: 3,
+                cookie: 4,
+                lastMutationIDChanges: {},
+                presence: [],
+                patch: [],
+              },
             ],
             requestID: '4fxcm49g2j9',
           },
@@ -157,8 +197,8 @@ describe('processPending', () => {
       expectedUserValues: new Map(),
       expectNothingToProcess: false,
       expectedClientRecords: new Map([
-        ['c1', clientRecord('cg1', 3)],
-        ['c2', clientRecord('cg1', 3)],
+        ['c1', clientRecord('cg1', 4)],
+        ['c2', clientRecord('cg1', 4)],
       ]),
       expectedMissableRecords: [],
     },
@@ -180,7 +220,18 @@ describe('processPending', () => {
           'c1',
           {
             pokes: [
-              {baseCookie: 1, cookie: 2, lastMutationIDChanges: {}, patch: []},
+              {
+                baseCookie: 1,
+                cookie: 2,
+                lastMutationIDChanges: {},
+                presence: [
+                  {
+                    op: 'del',
+                    key: 'c2',
+                  },
+                ],
+                patch: [],
+              },
             ],
             requestID: '4fxcm49g2j9',
           },
@@ -220,6 +271,7 @@ describe('processPending', () => {
                 baseCookie: 1,
                 cookie: 2,
                 lastMutationIDChanges: {c1: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -252,7 +304,15 @@ describe('processPending', () => {
       version: 1,
       clientRecords: new Map([['c1', clientRecord('cg1', 1)]]),
       clients: new Map([
-        client('c1', 'u1', 'cg1', s1, 0, true /* debugPerf */),
+        client(
+          'c1',
+          'u1',
+          'cg1',
+          s1,
+          0,
+          true /* debugPerf */,
+          true /* sentInitialPresence */,
+        ),
       ]),
       storedConnectedClients: ['c1'],
       pendingMutations: [
@@ -279,6 +339,7 @@ describe('processPending', () => {
                 baseCookie: 1,
                 cookie: 2,
                 lastMutationIDChanges: {c1: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -358,6 +419,7 @@ describe('processPending', () => {
                 baseCookie: 1,
                 cookie: 2,
                 lastMutationIDChanges: {c1: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -371,6 +433,7 @@ describe('processPending', () => {
                 baseCookie: 2,
                 cookie: 3,
                 lastMutationIDChanges: {c2: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -384,6 +447,7 @@ describe('processPending', () => {
                 baseCookie: 3,
                 cookie: 4,
                 lastMutationIDChanges: {},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -405,6 +469,7 @@ describe('processPending', () => {
                 baseCookie: 1,
                 cookie: 2,
                 lastMutationIDChanges: {c1: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -418,6 +483,7 @@ describe('processPending', () => {
                 baseCookie: 2,
                 cookie: 3,
                 lastMutationIDChanges: {c2: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -431,6 +497,7 @@ describe('processPending', () => {
                 baseCookie: 3,
                 cookie: 4,
                 lastMutationIDChanges: {},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -452,6 +519,7 @@ describe('processPending', () => {
                 baseCookie: 1,
                 cookie: 2,
                 lastMutationIDChanges: {},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -465,6 +533,7 @@ describe('processPending', () => {
                 baseCookie: 2,
                 cookie: 3,
                 lastMutationIDChanges: {},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -478,6 +547,7 @@ describe('processPending', () => {
                 baseCookie: 3,
                 cookie: 4,
                 lastMutationIDChanges: {c3: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -558,6 +628,7 @@ describe('processPending', () => {
                 baseCookie: 1,
                 cookie: 2,
                 lastMutationIDChanges: {c1: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -571,6 +642,7 @@ describe('processPending', () => {
                 baseCookie: 2,
                 cookie: 3,
                 lastMutationIDChanges: {c2: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -592,6 +664,7 @@ describe('processPending', () => {
                 baseCookie: 1,
                 cookie: 2,
                 lastMutationIDChanges: {c1: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -605,6 +678,7 @@ describe('processPending', () => {
                 baseCookie: 2,
                 cookie: 3,
                 lastMutationIDChanges: {c2: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -626,6 +700,7 @@ describe('processPending', () => {
                 baseCookie: 1,
                 cookie: 2,
                 lastMutationIDChanges: {},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -639,6 +714,7 @@ describe('processPending', () => {
                 baseCookie: 2,
                 cookie: 3,
                 lastMutationIDChanges: {},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -732,6 +808,7 @@ describe('processPending', () => {
                 baseCookie: 1,
                 cookie: 2,
                 lastMutationIDChanges: {c1: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -745,6 +822,7 @@ describe('processPending', () => {
                 baseCookie: 2,
                 cookie: 3,
                 lastMutationIDChanges: {c2: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -766,6 +844,7 @@ describe('processPending', () => {
                 baseCookie: 1,
                 cookie: 2,
                 lastMutationIDChanges: {c1: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -779,6 +858,7 @@ describe('processPending', () => {
                 baseCookie: 2,
                 cookie: 3,
                 lastMutationIDChanges: {c2: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -895,6 +975,7 @@ describe('processPending', () => {
                 baseCookie: 1,
                 cookie: 2,
                 lastMutationIDChanges: {c1: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -908,6 +989,7 @@ describe('processPending', () => {
                 baseCookie: 2,
                 cookie: 3,
                 lastMutationIDChanges: {c2: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -921,6 +1003,7 @@ describe('processPending', () => {
                 baseCookie: 3,
                 cookie: 4,
                 lastMutationIDChanges: {c1: 3},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -942,6 +1025,7 @@ describe('processPending', () => {
                 baseCookie: 1,
                 cookie: 2,
                 lastMutationIDChanges: {c1: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -955,6 +1039,7 @@ describe('processPending', () => {
                 baseCookie: 2,
                 cookie: 3,
                 lastMutationIDChanges: {c2: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -968,6 +1053,7 @@ describe('processPending', () => {
                 baseCookie: 3,
                 cookie: 4,
                 lastMutationIDChanges: {c1: 3},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -986,8 +1072,8 @@ describe('processPending', () => {
         ['count', {value: 3, version: 4, deleted: false}],
       ]),
       expectedClientRecords: new Map([
-        ['c1', clientRecord('cg1', 4, 3, 4)],
-        ['c2', clientRecord('cg1', 4, 2, 3)],
+        ['c1', clientRecord('cg1', 4, 3, 4, 1000)],
+        ['c2', clientRecord('cg1', 4, 2, 3, 1000)],
       ]),
       expectedPendingMutations: [
         pendingMutation({
@@ -1064,6 +1150,7 @@ describe('processPending', () => {
                 baseCookie: 1,
                 cookie: 2,
                 lastMutationIDChanges: {c1: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -1077,6 +1164,7 @@ describe('processPending', () => {
                 baseCookie: 2,
                 cookie: 3,
                 lastMutationIDChanges: {c2: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -1098,6 +1186,7 @@ describe('processPending', () => {
                 baseCookie: 1,
                 cookie: 2,
                 lastMutationIDChanges: {c1: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -1111,6 +1200,7 @@ describe('processPending', () => {
                 baseCookie: 2,
                 cookie: 3,
                 lastMutationIDChanges: {c2: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -1129,8 +1219,8 @@ describe('processPending', () => {
         ['count', {value: 2, version: 3, deleted: false}],
       ]),
       expectedClientRecords: new Map([
-        ['c1', clientRecord('cg1', 3, 2, 2)],
-        ['c2', clientRecord('cg1', 3, 2, 3)],
+        ['c1', clientRecord('cg1', 3, 2, 2, 1000)],
+        ['c2', clientRecord('cg1', 3, 2, 3, 1000)],
       ]),
       expectedPendingMutations: [
         pendingMutation({
@@ -1187,6 +1277,7 @@ describe('processPending', () => {
                 baseCookie: 1,
                 cookie: 2,
                 lastMutationIDChanges: {c1: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -1204,7 +1295,9 @@ describe('processPending', () => {
       expectedUserValues: new Map([
         ['count', {value: 1, version: 2, deleted: false}],
       ]),
-      expectedClientRecords: new Map([['c1', clientRecord('cg1', 2, 2, 2)]]),
+      expectedClientRecords: new Map([
+        ['c1', clientRecord('cg1', 2, 2, 2, 1000)],
+      ]),
       expectedMaxProcessedMutationTimestamp: 800,
       expectedMissableRecords: [
         {
@@ -1247,6 +1340,7 @@ describe('processPending', () => {
                 baseCookie: 1,
                 cookie: 2,
                 lastMutationIDChanges: {c1: 2},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -1260,6 +1354,7 @@ describe('processPending', () => {
                 baseCookie: 2,
                 cookie: 3,
                 lastMutationIDChanges: {c1: 3},
+                presence: [],
                 patch: [
                   {
                     op: 'put',
@@ -1277,7 +1372,9 @@ describe('processPending', () => {
       expectedUserValues: new Map([
         ['count', {value: 2, version: 3, deleted: false}],
       ]),
-      expectedClientRecords: new Map([['c1', clientRecord('cg1', 3, 3, 3)]]),
+      expectedClientRecords: new Map([
+        ['c1', clientRecord('cg1', 3, 3, 3, 1000)],
+      ]),
       expectedMaxProcessedMutationTimestamp: 750,
       expectedMissableRecords: [
         {
@@ -1289,12 +1386,15 @@ describe('processPending', () => {
     },
   ];
 
+  const env = {boo: 'far'};
+
   const mutators = new Map(
     Object.entries({
       inc: async (tx: WriteTransaction) => {
+        expect(tx.env).toEqual(env);
         let count = ((await tx.get('count')) as number) ?? 0;
         count++;
-        await tx.put('count', count);
+        await tx.set('count', count);
       },
     }),
   );
@@ -1316,6 +1416,7 @@ describe('processPending', () => {
       fakeBufferSizer.testBufferSizeMs = c.bufferSizeMs ?? 200;
       const p = processPending(
         createSilentLogContext(),
+        env,
         storage,
         c.clients,
         c.pendingMutations,
@@ -1324,6 +1425,7 @@ describe('processPending', () => {
         c.maxProcessedMutationTimestamp,
         fakeBufferSizer,
         c.maxMutationsToProcess ?? Number.MAX_SAFE_INTEGER,
+        () => true,
       );
       if (c.expectedError) {
         let expectedE;
@@ -1350,6 +1452,7 @@ describe('processPending', () => {
       expect(c.expectedError).toBeUndefined;
       expect(await getVersion(storage)).toEqual(c.expectedVersion);
       for (const [clientID, clientState] of c.clients) {
+        expect(clientState.sentInitialPresence).toEqual(true);
         const mocket = clientState.socket as Mocket;
         const expectedPoke = c.expectedPokes?.get(clientID);
         if (!expectedPoke) {

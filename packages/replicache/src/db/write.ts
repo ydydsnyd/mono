@@ -1,18 +1,18 @@
 import type {LogContext} from '@rocicorp/logger';
 import {assert} from 'shared/src/asserts.js';
-import * as btree from '../btree/mod.js';
-import {BTreeRead, BTreeWrite} from '../btree/mod.js';
+import {diff} from '../btree/diff.js';
 import type {InternalDiff} from '../btree/node.js';
-import {allEntriesAsDiff} from '../btree/read.js';
+import {BTreeRead, allEntriesAsDiff} from '../btree/read.js';
+import {BTreeWrite} from '../btree/write.js';
 import type {FrozenCookie} from '../cookies.js';
-import type * as dag from '../dag/mod.js';
+import type {Write as DagWrite} from '../dag/store.js';
 import {FormatVersion} from '../format-version.js';
 import {Hash, emptyHash} from '../hash.js';
 import type {FrozenJSONValue} from '../json.js';
 import {lazy} from '../lazy.js';
 import type {DiffComputationConfig} from '../sync/diff.js';
+import {DiffsMap} from '../sync/diff.js';
 import type {ClientID} from '../sync/ids.js';
-import * as sync from '../sync/mod.js';
 import {
   Commit,
   Meta as CommitMeta,
@@ -32,18 +32,18 @@ import {IndexOperation, IndexRead, IndexWrite, indexValue} from './index.js';
 import {Read, readIndexesForRead} from './read.js';
 
 export class Write extends Read {
-  private readonly _dagWrite: dag.Write;
-  private readonly _basis: Commit<CommitMeta> | undefined;
-  private readonly _meta: CommitMeta;
+  readonly #dagWrite: DagWrite;
+  readonly #basis: Commit<CommitMeta> | undefined;
+  readonly #meta: CommitMeta;
 
   declare map: BTreeWrite;
 
   declare readonly indexes: Map<string, IndexWrite>;
-  private readonly _clientID: ClientID;
-  private readonly _formatVersion: FormatVersion;
+  readonly #clientID: ClientID;
+  readonly #formatVersion: FormatVersion;
 
   constructor(
-    dagWrite: dag.Write,
+    dagWrite: DagWrite,
     map: BTreeWrite,
     basis: Commit<CommitMeta> | undefined,
     meta: CommitMeta,
@@ -53,11 +53,11 @@ export class Write extends Read {
   ) {
     // TypeScript has trouble
     super(dagWrite, map, indexes);
-    this._dagWrite = dagWrite;
-    this._basis = basis;
-    this._meta = meta;
-    this._clientID = clientID;
-    this._formatVersion = formatVersion;
+    this.#dagWrite = dagWrite;
+    this.#basis = basis;
+    this.#meta = meta;
+    this.#clientID = clientID;
+    this.#formatVersion = formatVersion;
 
     // TODO(arv): if (DEBUG) { ...
     if (basis === undefined) {
@@ -76,7 +76,7 @@ export class Write extends Read {
     key: string,
     value: FrozenJSONValue,
   ): Promise<void> {
-    if (this._meta.type === MetaType.IndexChangeSDD) {
+    if (this.#meta.type === MetaType.IndexChangeSDD) {
       throw new Error('Not allowed');
     }
     const oldVal = lazy(() => this.map.get(key));
@@ -86,11 +86,11 @@ export class Write extends Read {
   }
 
   getMutationID(): Promise<number> {
-    return getMutationID(this._clientID, this._dagWrite, this._meta);
+    return getMutationID(this.#clientID, this.#dagWrite, this.#meta);
   }
 
   async del(lc: LogContext, key: string): Promise<boolean> {
-    if (this._meta.type === MetaType.IndexChangeSDD) {
+    if (this.#meta.type === MetaType.IndexChangeSDD) {
       throw new Error('Not allowed');
     }
 
@@ -103,7 +103,7 @@ export class Write extends Read {
   }
 
   async clear(): Promise<void> {
-    if (this._meta.type === MetaType.IndexChangeSDD) {
+    if (this.#meta.type === MetaType.IndexChangeSDD) {
       throw new Error('Not allowed');
     }
 
@@ -129,7 +129,7 @@ export class Write extends Read {
     }
 
     let commit: Commit<Meta>;
-    const meta = this._meta;
+    const meta = this.#meta;
     switch (meta.type) {
       case MetaType.LocalSDD: {
         const {
@@ -141,7 +141,7 @@ export class Write extends Read {
           timestamp,
         } = meta;
         commit = commitNewLocalSDD(
-          this._dagWrite.createChunk,
+          this.#dagWrite.createChunk,
           basisHash,
           mutationID,
           mutatorName,
@@ -155,7 +155,7 @@ export class Write extends Read {
       }
 
       case MetaType.LocalDD31: {
-        assert(this._formatVersion >= FormatVersion.DD31);
+        assert(this.#formatVersion >= FormatVersion.DD31);
         const {
           basisHash,
           mutationID,
@@ -165,9 +165,9 @@ export class Write extends Read {
           timestamp,
         } = meta;
         commit = commitNewLocalDD31(
-          this._dagWrite.createChunk,
+          this.#dagWrite.createChunk,
           basisHash,
-          await baseSnapshotHashFromHash(basisHash, this._dagWrite),
+          await baseSnapshotHashFromHash(basisHash, this.#dagWrite),
           mutationID,
           mutatorName,
           mutatorArgsJSON,
@@ -175,16 +175,16 @@ export class Write extends Read {
           valueHash,
           indexRecords,
           timestamp,
-          this._clientID,
+          this.#clientID,
         );
         break;
       }
 
       case MetaType.SnapshotSDD: {
-        assert(this._formatVersion <= FormatVersion.SDD);
+        assert(this.#formatVersion <= FormatVersion.SDD);
         const {basisHash, lastMutationID, cookieJSON} = meta;
         commit = commitNewSnapshotSDD(
-          this._dagWrite.createChunk,
+          this.#dagWrite.createChunk,
           basisHash,
           lastMutationID,
           cookieJSON,
@@ -195,10 +195,10 @@ export class Write extends Read {
       }
 
       case MetaType.SnapshotDD31: {
-        assert(this._formatVersion > FormatVersion.DD31);
+        assert(this.#formatVersion > FormatVersion.DD31);
         const {basisHash, lastMutationIDs, cookieJSON} = meta;
         commit = commitNewSnapshotDD31(
-          this._dagWrite.createChunk,
+          this.#dagWrite.createChunk,
           basisHash,
           lastMutationIDs,
           cookieJSON,
@@ -210,21 +210,21 @@ export class Write extends Read {
 
       case MetaType.IndexChangeSDD: {
         const {basisHash, lastMutationID} = meta;
-        if (this._basis !== undefined) {
+        if (this.#basis !== undefined) {
           if (
-            (await this._basis.getMutationID(
-              this._clientID,
-              this._dagWrite,
+            (await this.#basis.getMutationID(
+              this.#clientID,
+              this.#dagWrite,
             )) !== lastMutationID
           ) {
             throw new Error('Index change must not change mutationID');
           }
-          if (this._basis.valueHash !== valueHash) {
+          if (this.#basis.valueHash !== valueHash) {
             throw new Error('Index change must not change valueHash');
           }
         }
         commit = commitNewIndexChange(
-          this._dagWrite.createChunk,
+          this.#dagWrite.createChunk,
           basisHash,
           lastMutationID,
           valueHash,
@@ -233,7 +233,7 @@ export class Write extends Read {
         break;
       }
     }
-    await this._dagWrite.putChunk(commit.chunk);
+    await this.#dagWrite.putChunk(commit.chunk);
     return commit;
   }
 
@@ -241,47 +241,45 @@ export class Write extends Read {
   async commit(headName: string): Promise<Hash> {
     const commit = await this.putCommit();
     const commitHash = commit.chunk.hash;
-    await this._dagWrite.setHead(headName, commitHash);
-    await this._dagWrite.commit();
+    await this.#dagWrite.setHead(headName, commitHash);
+    await this.#dagWrite.commit();
     return commitHash;
   }
 
   async commitWithDiffs(
     headName: string,
     diffConfig: DiffComputationConfig,
-  ): Promise<[Hash, sync.DiffsMap]> {
+  ): Promise<[Hash, DiffsMap]> {
     const commit = this.putCommit();
-    const diffMap = await this._generateDiffs(diffConfig);
+    const diffMap = await this.#generateDiffs(diffConfig);
     const commitHash = (await commit).chunk.hash;
-    await this._dagWrite.setHead(headName, commitHash);
-    await this._dagWrite.commit();
+    await this.#dagWrite.setHead(headName, commitHash);
+    await this.#dagWrite.commit();
     return [commitHash, diffMap];
   }
 
-  private async _generateDiffs(
-    diffConfig: DiffComputationConfig,
-  ): Promise<sync.DiffsMap> {
-    const diffsMap = new sync.DiffsMap();
+  async #generateDiffs(diffConfig: DiffComputationConfig): Promise<DiffsMap> {
+    const diffsMap = new DiffsMap();
     if (!diffConfig.shouldComputeDiffs()) {
       return diffsMap;
     }
 
     let valueDiff: InternalDiff = [];
-    if (this._basis) {
+    if (this.#basis) {
       const basisMap = new BTreeRead(
-        this._dagWrite,
-        this._formatVersion,
-        this._basis.valueHash,
+        this.#dagWrite,
+        this.#formatVersion,
+        this.#basis.valueHash,
       );
-      valueDiff = await btree.diff(basisMap, this.map);
+      valueDiff = await diff(basisMap, this.map);
     }
     diffsMap.set('', valueDiff);
     let basisIndexes: Map<string, IndexRead>;
-    if (this._basis) {
+    if (this.#basis) {
       basisIndexes = readIndexesForRead(
-        this._basis,
-        this._dagWrite,
-        this._formatVersion,
+        this.#basis,
+        this.#dagWrite,
+        this.#formatVersion,
       );
     } else {
       basisIndexes = new Map();
@@ -295,7 +293,7 @@ export class Write extends Read {
       assert(index !== basisIndex);
 
       const indexDiffResult = await (basisIndex
-        ? btree.diff(basisIndex.map, index.map)
+        ? diff(basisIndex.map, index.map)
         : // No basis. All keys are new.
           allEntriesAsDiff(index.map, 'add'));
       diffsMap.set(name, indexDiffResult);
@@ -316,7 +314,7 @@ export class Write extends Read {
   }
 
   close(): void {
-    this._dagWrite.release();
+    this.#dagWrite.release();
   }
 }
 
@@ -325,7 +323,7 @@ export async function newWriteLocal(
   mutatorName: string,
   mutatorArgsJSON: FrozenJSONValue,
   originalHash: Hash | null,
-  dagWrite: dag.Write,
+  dagWrite: DagWrite,
   timestamp: number,
   clientID: ClientID,
   formatVersion: FormatVersion,
@@ -369,7 +367,7 @@ export async function newWriteSnapshotSDD(
   basisHash: Hash,
   lastMutationID: number,
   cookieJSON: FrozenJSONValue,
-  dagWrite: dag.Write,
+  dagWrite: DagWrite,
   indexes: Map<string, IndexWrite>,
   clientID: ClientID,
   formatVersion: FormatVersion,
@@ -392,7 +390,7 @@ export async function newWriteSnapshotDD31(
   basisHash: Hash,
   lastMutationIDs: Record<ClientID, number>,
   cookieJSON: FrozenCookie,
-  dagWrite: dag.Write,
+  dagWrite: DagWrite,
   clientID: ClientID,
   formatVersion: FormatVersion,
 ): Promise<Write> {
@@ -454,7 +452,7 @@ export async function updateIndexes(
 
 export function readIndexesForWrite(
   commit: Commit<CommitMeta>,
-  dagWrite: dag.Write,
+  dagWrite: DagWrite,
   formatVersion: FormatVersion,
 ): Map<string, IndexWrite> {
   const m = new Map();
@@ -472,7 +470,7 @@ export function readIndexesForWrite(
 
 export async function createIndexBTree(
   lc: LogContext,
-  dagWrite: dag.Write,
+  dagWrite: DagWrite,
   valueMap: BTreeRead,
   prefix: string,
   jsonPointer: string,

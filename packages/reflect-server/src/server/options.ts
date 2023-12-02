@@ -1,7 +1,13 @@
+import {
+  consoleLogSink,
+  type Context,
+  type LogLevel,
+  type LogSink,
+} from '@rocicorp/logger';
+import {version, type MutatorDefs} from 'reflect-shared';
+import {isTrueEnvValue} from '../util/env.js';
+import {createWorkerDatadogLogSink} from './create-worker-datadog-log-sink.js';
 import type {ReflectServerOptions} from './reflect.js';
-import type {MutatorDefs} from 'reflect-types/src/mod.js';
-import type {Context, LogLevel, LogSink} from '@rocicorp/logger';
-import {consoleLogSink, createWorkerDatadogLogSink} from '../mod.js';
 
 export type BuildableOptionsEnv = LogFilterEnv &
   LogLevelEnv &
@@ -36,10 +42,8 @@ export function logFilter<Env extends LogFilterEnv, MD extends MutatorDefs>(
   include: LogPredicate,
 ): OptionsAdder<Env, MD> {
   return (options, env) => {
-    switch ((env.DISABLE_LOG_FILTERING ?? '0').toLowerCase()) {
-      case 'true':
-      case '1':
-        return options;
+    if (isTrueEnvValue(env.DISABLE_LOG_FILTERING)) {
+      return options;
     }
     const numLogSinks = options.logSinks?.length ?? 0;
     if (numLogSinks === 0) {
@@ -88,7 +92,7 @@ export type DataDogLogEnv = {
 export function datadogLogging<
   Env extends DataDogLogEnv,
   MD extends MutatorDefs,
->(defaultServiceLabel: string): OptionsAdder<Env, MD> {
+>(defaultServiceLabel: string, host?: string): OptionsAdder<Env, MD> {
   return (options, env) => {
     if (env.DATADOG_LOGS_API_KEY === undefined) {
       console.warn(
@@ -99,6 +103,8 @@ export function datadogLogging<
     const logSink = createWorkerDatadogLogSink({
       apiKey: env.DATADOG_LOGS_API_KEY,
       service: env.DATADOG_SERVICE_LABEL ?? defaultServiceLabel,
+      version,
+      host,
     });
     return {...options, logSinks: [...(options.logSinks ?? []), logSink]};
   };
@@ -114,7 +120,10 @@ export type DataDogMetricsEnv = {
 export function datadogMetrics<
   Env extends DataDogMetricsEnv,
   MD extends MutatorDefs,
->(defaultServiceLabel: string): OptionsAdder<Env, MD> {
+>(
+  defaultServiceLabel: string,
+  tags?: Record<string, string>,
+): OptionsAdder<Env, MD> {
   return (options, env) => {
     if (env.DATADOG_METRICS_API_KEY === undefined) {
       console.warn(
@@ -127,6 +136,7 @@ export function datadogMetrics<
       datadogMetricsOptions: {
         apiKey: env.DATADOG_METRICS_API_KEY,
         service: env.DATADOG_SERVICE_LABEL ?? defaultServiceLabel,
+        tags,
       },
     };
   };

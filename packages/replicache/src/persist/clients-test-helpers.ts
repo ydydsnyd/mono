@@ -1,9 +1,15 @@
 import {LogContext} from '@rocicorp/logger';
 import {assert} from 'shared/src/asserts.js';
-import * as btree from '../btree/mod.js';
-import * as dag from '../dag/mod.js';
-import {getRefs, newSnapshotCommitDataSDD} from '../db/commit.js';
-import * as db from '../db/mod.js';
+import {emptyDataNode} from '../btree/node.js';
+import {Chunk} from '../dag/chunk.js';
+import type {Store} from '../dag/store.js';
+import {
+  CommitData,
+  SnapshotMetaSDD,
+  baseSnapshotFromHash,
+  getRefs,
+  newSnapshotCommitDataSDD,
+} from '../db/commit.js';
 import {FormatVersion} from '../format-version.js';
 import {newUUIDHash} from '../hash.js';
 import type {IndexDefinitions} from '../index-defs.js';
@@ -25,11 +31,10 @@ import {
 
 export function setClientsForTesting(
   clients: ClientMap,
-  dagStore: dag.Store,
+  dagStore: Store,
 ): Promise<ClientMap> {
   return withWrite(dagStore, async dagWrite => {
     await setClients(clients, dagWrite);
-    await dagWrite.commit();
     return clients;
   });
 }
@@ -81,26 +86,25 @@ export function makeClientMapDD31(
 
 export async function deleteClientForTesting(
   clientID: ClientID,
-  dagStore: dag.Store,
+  dagStore: Store,
 ): Promise<void> {
   await withWrite(dagStore, async dagWrite => {
     const clients = new Map(await getClients(dagWrite));
     clients.delete(clientID);
     await setClients(clients, dagWrite);
-    await dagWrite.commit();
   });
 }
 
 export async function initClientWithClientID(
   clientID: ClientID,
-  dagStore: dag.Store,
+  dagStore: Store,
   mutatorNames: string[],
   indexes: IndexDefinitions,
   formatVersion: FormatVersion,
 ): Promise<void> {
-  let generatedClientID, client, clientMap;
   if (formatVersion >= FormatVersion.DD31) {
-    [generatedClientID, client, , clientMap] = await initClientV6(
+    await initClientV6(
+      clientID,
       new LogContext(),
       dagStore,
       mutatorNames,
@@ -108,17 +112,17 @@ export async function initClientWithClientID(
       formatVersion,
     );
   } else {
-    [generatedClientID, client, clientMap] = await initClientV4(dagStore);
+    const [generatedClientID, client, clientMap] = await initClientV4(dagStore);
+    const newMap = new Map(clientMap);
+    newMap.delete(generatedClientID);
+    newMap.set(clientID, client);
+    await setClientsForTesting(newMap, dagStore);
   }
-  const newMap = new Map(clientMap);
-  newMap.delete(generatedClientID);
-  newMap.set(clientID, client);
-  await setClientsForTesting(newMap, dagStore);
 }
 
 // We only keep this around for testing purposes.
 function initClientV4(
-  perdag: dag.Store,
+  perdag: Store,
 ): Promise<
   [
     clientID: ClientID,
@@ -141,12 +145,12 @@ function initClientV4(
       }
     }
 
-    let newClientCommitData: db.CommitData<db.SnapshotMetaSDD>;
-    const chunksToPut: dag.Chunk[] = [];
+    let newClientCommitData: CommitData<SnapshotMetaSDD>;
+    const chunksToPut: Chunk[] = [];
     if (bootstrapClient) {
       const constBootstrapClient = bootstrapClient;
       assert(isClientV4(constBootstrapClient));
-      const bootstrapCommit = await db.baseSnapshotFromHash(
+      const bootstrapCommit = await baseSnapshotFromHash(
         constBootstrapClient.headHash,
         dagWrite,
       );
@@ -163,11 +167,7 @@ function initClientV4(
       );
     } else {
       // No existing snapshot to bootstrap from. Create empty snapshot.
-      const emptyBTreeChunk = new dag.Chunk(
-        newUUIDHash(),
-        btree.emptyDataNode,
-        [],
-      );
+      const emptyBTreeChunk = new Chunk(newUUIDHash(), emptyDataNode, []);
       chunksToPut.push(emptyBTreeChunk);
       newClientCommitData = newSnapshotCommitDataSDD(
         null /* basisHash */,
@@ -178,7 +178,7 @@ function initClientV4(
       );
     }
 
-    const newClientCommitChunk = new dag.Chunk(
+    const newClientCommitChunk = new Chunk(
       newUUIDHash(),
       newClientCommitData,
       getRefs(newClientCommitData),
@@ -195,8 +195,6 @@ function initClientV4(
     await setClients(updatedClients, dagWrite);
 
     await Promise.all(chunksToPut.map(c => dagWrite.putChunk(c)));
-
-    await dagWrite.commit();
 
     return [newClientID, newClient, updatedClients, false];
   });

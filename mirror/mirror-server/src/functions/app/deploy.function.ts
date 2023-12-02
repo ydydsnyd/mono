@@ -1,65 +1,86 @@
+import {Errors, FetchResultError} from 'cloudflare-api/src/fetch.js';
 import {
-  Timestamp,
-  type Firestore,
   FieldValue,
   Precondition,
+  Timestamp,
+  type Firestore,
+  type UpdateData,
 } from 'firebase-admin/firestore';
 import type {Storage} from 'firebase-admin/storage';
 import {logger} from 'firebase-functions';
-import {HttpsError} from 'firebase-functions/v2/https';
 import {onDocumentCreated} from 'firebase-functions/v2/firestore';
+import {HttpsError} from 'firebase-functions/v2/https';
+import type {App, ScriptRef} from 'mirror-schema/src/app.js';
+import {appDataConverter, appPath} from 'mirror-schema/src/app.js';
 import {
-  deploymentPath,
-  deploymentDataConverter,
   Deployment,
   DeploymentStatus,
-  DeploymentSecrets,
+  DeploymentType,
+  deploymentDataConverter,
+  deploymentPath,
 } from 'mirror-schema/src/deployment.js';
-import {newDeploymentID} from 'shared/src/mirror/ids.js';
-import {getServerModuleMetadata} from '../../cloudflare/get-server-modules.js';
-import {publish} from '../../cloudflare/publish.js';
-import {appDataConverter, appPath} from 'mirror-schema/src/app.js';
-import {must} from 'shared/src/must.js';
+import {DEFAULT_ENV, envDataConverter, envPath} from 'mirror-schema/src/env.js';
 import {
-  getAppSecrets,
-  DEPLOYMENT_SECRETS_NAMES,
-  defineSecretSafely,
-} from './secrets.js';
+  providerDataConverter,
+  providerPath,
+} from 'mirror-schema/src/provider.js';
+import type {Timestamp as SchemaTimestamp} from 'mirror-schema/src/timestamp.js';
 import {watch} from 'mirror-schema/src/watch.js';
-import {toMillis} from 'mirror-schema/src/timestamp.js';
-import _ from 'lodash';
+import {coerce, lt} from 'semver';
+import {must} from 'shared/src/must.js';
+import {getServerModuleMetadata} from '../../cloudflare/get-server-modules.js';
+import {
+  GlobalScriptHandler,
+  NamespacedScriptHandler,
+  ScriptHandler,
+} from '../../cloudflare/script-handler.js';
+import {newDeploymentID} from '../../ids.js';
+import {
+  SecretsCache,
+  SecretsClient,
+  apiTokenName,
+} from '../../secrets/index.js';
+import {getDataOrFail} from '../validators/data.js';
+import {MIN_WFP_VERSION} from './create.function.js';
+import {deleteAppDocs} from './delete.function.js';
+import {DEPLOYMENT_SECRETS_NAMES, getAllDeploymentSecrets} from './secrets.js';
 
-// This is the API token for reflect-server.net
-// https://dash.cloudflare.com/085f6d8eb08e5b23debfb08b21bda1eb/
-const cloudflareApiToken = defineSecretSafely('CLOUDFLARE_API_TOKEN');
-
-export const deploy = (firestore: Firestore, storage: Storage) =>
+export const deploy = (
+  firestore: Firestore,
+  storage: Storage,
+  secrets: SecretsClient,
+) =>
   onDocumentCreated(
     {
       document: 'apps/{appID}/deployments/{deploymentID}',
-      secrets: ['CLOUDFLARE_API_TOKEN', ...DEPLOYMENT_SECRETS_NAMES],
+      secrets: [...DEPLOYMENT_SECRETS_NAMES],
     },
     async event => {
       const {appID, deploymentID} = event.params;
 
       await earlierDeployments(firestore, appID, deploymentID);
-      await runDeployment(firestore, storage, appID, deploymentID);
+      await runDeployment(firestore, storage, secrets, appID, deploymentID);
     },
   );
-
-export type PublishFn = typeof publish;
 
 export async function runDeployment(
   firestore: Firestore,
   storage: Storage,
+  secretsClient: SecretsClient,
   appID: string,
   deploymentID: string,
-  publishToCloudflare: PublishFn = publish, // Overridden in tests.
+  testScriptHandler?: ScriptHandler, // Overridden in tests.
 ): Promise<void> {
-  const [appDoc, deploymentDoc] = await firestore.runTransaction(
+  const secrets = new SecretsCache(secretsClient);
+  const [appDoc, envDoc, deploymentDoc] = await firestore.runTransaction(
     tx =>
       Promise.all([
         tx.get(firestore.doc(appPath(appID)).withConverter(appDataConverter)),
+        tx.get(
+          firestore
+            .doc(envPath(appID, DEFAULT_ENV))
+            .withConverter(envDataConverter),
+        ),
         tx.get(
           firestore
             .doc(deploymentPath(appID, deploymentID))
@@ -71,6 +92,9 @@ export async function runDeployment(
   if (!appDoc.exists) {
     throw new HttpsError('not-found', `Missing app doc for ${appID}`);
   }
+  if (!envDoc.exists) {
+    throw new HttpsError('not-found', `Missing environment doc for ${appID}`);
+  }
   if (!deploymentDoc.exists) {
     throw new HttpsError(
       'not-found',
@@ -78,67 +102,162 @@ export async function runDeployment(
     );
   }
 
-  const {cfID, cfScriptName} = must(appDoc.data());
   const {
+    provider,
+    cfScriptName,
+    scriptRef,
+    name: appName,
+    teamID,
+    teamLabel,
+  } = must(appDoc.data());
+  const {deploymentOptions, secrets: encryptedSecrets} = must(envDoc.data());
+  const envUpdateTime = must(envDoc.updateTime);
+  const {
+    type: deploymentType,
     status,
-    spec: {serverVersion, hostname, options, appModules},
+    spec: {serverVersion, hostname, appModules},
   } = must(deploymentDoc.data());
 
-  if (status !== 'REQUESTED') {
-    logger.warn(`Deployment is already ${status}`);
-    return;
-  }
-
-  const config = {
-    accountID: cfID,
-    scriptName: cfScriptName,
-    apiToken: cloudflareApiToken.value(),
-  } as const;
-
-  const {modules: serverModules} = await getServerModuleMetadata(
-    firestore,
-    serverVersion,
-  );
-
-  const {secrets, hashes} = await getAppSecrets();
-
-  const lastUpdateTime = must(deploymentDoc.updateTime);
-  await setDeploymentStatus(
-    firestore,
-    appID,
-    deploymentID,
-    'DEPLOYING',
-    undefined,
-    {lastUpdateTime}, // Aborts if another trigger is already publishing the same deployment.
-  );
   try {
-    await publishToCloudflare(
+    const [apiToken, providerDoc] = await Promise.all([
+      secrets.getSecretPayload(apiTokenName(provider)),
+      firestore
+        .doc(providerPath(provider))
+        .withConverter(providerDataConverter)
+        .get(),
+    ]);
+    const {accountID, defaultZone, dispatchNamespace} = getDataOrFail(
+      providerDoc,
+      'internal',
+      `Unknown provider ${provider} for App ${appID}`,
+    );
+    const account = {apiToken, accountID};
+    const zone = {apiToken, ...defaultZone};
+
+    if (status !== 'REQUESTED') {
+      logger.warn(`Deployment is already ${status}`);
+      return;
+    }
+    const lastUpdateTime = must(deploymentDoc.updateTime);
+    await setDeploymentStatus(
+      firestore,
+      appID,
+      deploymentID,
+      'DEPLOYING',
+      undefined,
+      {lastUpdateTime}, // Aborts if another trigger is already executing the same deployment.
+    );
+
+    const script = testScriptHandler
+      ? testScriptHandler
+      : scriptRef
+      ? new NamespacedScriptHandler(account, zone, scriptRef)
+      : new GlobalScriptHandler(account, zone, cfScriptName);
+
+    if (deploymentType === 'DELETE') {
+      // For a DELETE, the Deployment lifecycle is 'REQUESTED' -> 'DEPLOYING' -> (document deleted) | 'FAILED'
+      await script.delete();
+      await deleteAppDocs(firestore, appID);
+      logger.info(`Deleted app ${appID}`);
+      return;
+    }
+
+    // For all other deployments, the lifecycle is 'REQUESTED' -> 'DEPLOYING' -> 'RUNNING' | 'FAILED'
+    const {modules: serverModules} = await getServerModuleMetadata(
+      firestore,
+      serverVersion,
+    );
+
+    const appSecrets = await getAllDeploymentSecrets(secrets, encryptedSecrets);
+
+    const newScriptRef = (await migrateToWFP(
+      firestore,
+      appID,
+      deploymentID,
+      scriptRef,
+      script,
+      serverVersion,
+    ))
+      ? {
+          name: cfScriptName,
+          namespace: dispatchNamespace,
+        }
+      : undefined;
+    const publisher =
+      newScriptRef && script instanceof GlobalScriptHandler // Note: Leaves testScriptHandler as is.
+        ? new NamespacedScriptHandler(account, zone, newScriptRef)
+        : script;
+
+    for await (const deploymentUpdate of publisher.publish(
       storage,
-      config,
+      {id: appID, name: appName},
+      {id: teamID, label: teamLabel},
       hostname,
-      options,
-      secrets,
+      deploymentOptions,
+      appSecrets,
       appModules,
       serverModules,
+    )) {
+      await setDeploymentStatus(
+        firestore,
+        appID,
+        deploymentID,
+        'DEPLOYING',
+        deploymentUpdate,
+      );
+    }
+    await setRunningDeployment(
+      firestore,
+      appID,
+      deploymentID,
+      envUpdateTime,
+      newScriptRef,
     );
   } catch (e) {
+    const {message, severity} = deploymentErrorMessage(deploymentType, e);
     await setDeploymentStatus(
       firestore,
       appID,
       deploymentID,
       'FAILED',
-      String(e),
+      message,
     );
-    throw e;
+    if (severity === 'WARNING') {
+      logger.warn(e); // Log warnings but do not throw/report as an error.
+    } else {
+      throw e;
+    }
   }
+}
 
-  await setRunningDeployment(firestore, appID, deploymentID, hashes);
+const userActionableErrorCodes = new Set([
+  Errors.ScriptContentFailedValidationChecks,
+  Errors.ScriptBodyWasTooLarge,
+]);
+
+function deploymentErrorMessage(
+  deploymentType: DeploymentType,
+  e: unknown,
+): {message: string; severity: 'WARNING' | 'ERROR'} {
+  let message = `There was an error ${
+    deploymentType === 'DELETE' ? 'deleting' : 'deploying'
+  } the app`;
+  if (e instanceof FetchResultError) {
+    if (userActionableErrorCodes.has(e.code)) {
+      return {message: e.messages().join('\n'), severity: 'WARNING'};
+    }
+    message += ` (error code ${e.code})`;
+  } else if (e instanceof HttpsError) {
+    message += `: ${e.message}`;
+  }
+  return {message, severity: 'ERROR'};
 }
 
 export function requestDeployment(
   firestore: Firestore,
   appID: string,
   data: Pick<Deployment, 'requesterID' | 'type' | 'spec'>,
+  newServerReleaseChannel?: string,
   lastAppUpdateTime?: Timestamp,
 ): Promise<string> {
   const appDocRef = firestore
@@ -161,13 +280,20 @@ export function requestDeployment(
         status: 'REQUESTED',
         requestTime: FieldValue.serverTimestamp() as Timestamp,
       };
+      logger.debug(`Creating Deployment ${deploymentID}`, deployment);
+
+      const appUpdate: UpdateData<App> = {
+        queuedDeploymentIDs: FieldValue.arrayUnion(deploymentID),
+        forceRedeployment: FieldValue.delete(),
+      };
+      if (newServerReleaseChannel) {
+        appUpdate.serverReleaseChannel = newServerReleaseChannel;
+      }
 
       tx.create(docRef, deployment);
       tx.update(
         appDocRef,
-        {
-          queuedDeploymentIDs: FieldValue.arrayUnion(deploymentID),
-        },
+        appUpdate,
         lastAppUpdateTime ? {lastUpdateTime: lastAppUpdateTime} : {},
       );
       return docRef.path;
@@ -218,17 +344,20 @@ export async function earlierDeployments(
     const deployment = must(deploymentDoc.data());
     const lastUpdateTime = must(deploymentDoc.updateTime);
     const lastActionTime = deployment.deployTime ?? deployment.requestTime;
-    failureTimeout = setTimeoutFn(async () => {
-      await setDeploymentStatus(
-        firestore,
-        appID,
-        nextDeploymentID,
-        'FAILED',
-        'Deployment timed out',
-        {lastUpdateTime},
-      );
-      logger.warn(`Set ${nextDeploymentID} to FAILED after timeout`);
-    }, toMillis(lastActionTime) + DEPLOYMENT_FAILURE_TIMEOUT_MS - Date.now());
+    failureTimeout = setTimeoutFn(
+      async () => {
+        await setDeploymentStatus(
+          firestore,
+          appID,
+          nextDeploymentID,
+          'FAILED',
+          'Deployment timed out',
+          {lastUpdateTime},
+        );
+        logger.warn(`Set ${nextDeploymentID} to FAILED after timeout`);
+      },
+      lastActionTime.toMillis() + DEPLOYMENT_FAILURE_TIMEOUT_MS - Date.now(),
+    );
   }
 }
 
@@ -236,10 +365,10 @@ function deploymentUpdate(
   status: Exclude<DeploymentStatus, 'REQUESTED'>,
   statusMessage?: string,
 ): Partial<Deployment> {
-  const update: Partial<Deployment> = {status};
-  if (statusMessage) {
-    update.statusMessage = statusMessage;
-  }
+  const update: Partial<Deployment> = {
+    status,
+    statusMessage: statusMessage ?? '',
+  };
   switch (status) {
     case 'DEPLOYING':
       update.deployTime = Timestamp.now();
@@ -274,9 +403,7 @@ async function setDeploymentStatus(
   if (status !== 'DEPLOYING') {
     batch.update(
       firestore.doc(appPath(appID)).withConverter(appDataConverter),
-      {
-        queuedDeploymentIDs: FieldValue.arrayRemove(deploymentID),
-      },
+      {queuedDeploymentIDs: FieldValue.arrayRemove(deploymentID)},
     );
   }
   await batch.commit();
@@ -290,7 +417,8 @@ async function setRunningDeployment(
   firestore: Firestore,
   appID: string,
   newDeploymentID: string,
-  hashesOfSecrets: DeploymentSecrets,
+  envUpdateTime: SchemaTimestamp,
+  newScriptRef: ScriptRef | undefined,
 ): Promise<void> {
   const appDocRef = firestore
     .doc(appPath(appID))
@@ -314,24 +442,46 @@ async function setRunningDeployment(
       );
     }
     const newDeployment = must(newDeploymentDoc.data());
-    if (!_.isEqual(hashesOfSecrets, newDeployment.spec.hashesOfSecrets)) {
-      logger.warn(
-        `Deployed secrets differ from secrets at request time. This should only happen if secrets concurrently changed.`,
+    if (
+      envUpdateTime.toMillis() !== newDeployment.spec.envUpdateTime.toMillis()
+    ) {
+      logger.debug(
+        `Deployed envUpdateTime differs from that at request time. ` +
+          `This should only happen on the first publish or if the env concurrently changes.`,
       );
-      newDeployment.spec.hashesOfSecrets = hashesOfSecrets;
+      newDeployment.spec.envUpdateTime = envUpdateTime;
     }
     const newRunningDeployment = {
       ...newDeployment,
       ...deploymentUpdate('RUNNING'),
     };
 
-    tx.set(newDeploymentDocRef, newRunningDeployment);
-    tx.update(appDocRef, {
+    const app = must(appDoc.data());
+    const appUpdate: UpdateData<App> = {
       runningDeployment: newRunningDeployment,
       queuedDeploymentIDs: FieldValue.arrayRemove(newDeploymentID),
-    });
+    };
+    if (newScriptRef) {
+      appUpdate.scriptRef = newScriptRef;
+    }
+    if (app.envUpdateTime.toMillis() < envUpdateTime.toMillis()) {
+      // Note that it is possible for the app.envUpdateTime to differ from the deployed
+      // envUpdateTime because deployments and env updates can happen concurrently. However,
+      // a pathological scenario in which the update to app.envUpdateTime permanently
+      // fails would result in an infinite deployment loop with the app.envUpdateTime never
+      // matching the deployed envUpdateTime. To prevent such a scenario from happening,
+      // update the app.envUpdateTime if it is behind. It is always (and only) safe to move
+      // the value forward in time.
+      logger.debug(
+        `App ${appID} envUpdateTime is behind (${app.envUpdateTime.toMillis()} vs ${envUpdateTime.toMillis()}). Updating it with deployment.`,
+      );
+      appUpdate.envUpdateTime = envUpdateTime;
+    }
 
-    const oldDeploymentID = appDoc.data()?.runningDeployment?.deploymentID;
+    tx.set(newDeploymentDocRef, newRunningDeployment);
+    tx.update(appDocRef, appUpdate);
+
+    const oldDeploymentID = app.runningDeployment?.deploymentID;
     if (oldDeploymentID) {
       const oldDeploymentDoc = firestore
         .doc(deploymentPath(appID, oldDeploymentID))
@@ -339,4 +489,33 @@ async function setRunningDeployment(
       tx.update(oldDeploymentDoc, deploymentUpdate('STOPPED'));
     }
   });
+}
+
+async function migrateToWFP(
+  firestore: Firestore,
+  appID: string,
+  deploymentID: string,
+  scriptRef: ScriptRef | undefined,
+  script: ScriptHandler,
+  serverVersion: string,
+): Promise<boolean> {
+  if (
+    scriptRef ||
+    // coerce to pre-releases equally.
+    lt(coerce(serverVersion) ?? serverVersion, MIN_WFP_VERSION)
+  ) {
+    // Already on WFP or cannot migrate to WFP
+    return false;
+  }
+  await setDeploymentStatus(
+    firestore,
+    appID,
+    deploymentID,
+    'DEPLOYING',
+    'Upgrading to new infrastructure',
+  );
+  logger.info(`Deleting legacy script and custom domain for App ${appID}`);
+  await script.delete();
+
+  return true;
 }

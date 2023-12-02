@@ -1,32 +1,75 @@
 import type {LogContext} from '@rocicorp/logger';
+import {assert} from 'shared/src/asserts.js';
+import {jsonSchema} from 'shared/src/json-schema.js';
+import * as valita from 'shared/src/valita.js';
+import type {Store} from '../dag/store.js';
 import {
-  assert,
-  assertArray,
-  assertNumber,
-  assertObject,
-  assertString,
-} from 'shared/src/asserts.js';
-import type * as dag from '../dag/mod.js';
-import {commitIsLocalDD31, commitIsLocalSDD} from '../db/commit.js';
-import * as db from '../db/mod.js';
+  DEFAULT_HEAD_NAME,
+  LocalMetaDD31,
+  LocalMetaSDD,
+  commitIsLocalDD31,
+  commitIsLocalSDD,
+  localMutations,
+} from '../db/commit.js';
+import type {FrozenJSONValue, ReadonlyJSONValue} from '../json.js';
 import {
-  assertJSONValue,
-  FrozenJSONValue,
-  ReadonlyJSONObject,
-  ReadonlyJSONValue,
-} from '../json.js';
-import {
-  assertPusherResult,
+  PushError,
   Pusher,
   PusherResult,
-  PushError,
+  assertPusherResult,
 } from '../pusher.js';
 import {toError} from '../to-error.js';
 import {withRead} from '../with-transactions.js';
-import type {ClientGroupID, ClientID} from './ids.js';
+import {
+  clientGroupIDSchema,
+  clientIDSchema,
+  type ClientGroupID,
+  type ClientID,
+} from './ids.js';
 
 export const PUSH_VERSION_SDD = 0;
 export const PUSH_VERSION_DD31 = 1;
+
+/**
+ * Mutation describes a single mutation done on the client. This is the legacy
+ * version (V0) and it is used when recovering mutations from old clients.
+ */
+export type MutationV0 = {
+  readonly id: number;
+  readonly name: string;
+  readonly args: ReadonlyJSONValue;
+  readonly timestamp: number;
+};
+
+const mutationV0Schema: valita.Type<MutationV0> = valita.readonlyObject({
+  id: valita.number(),
+  name: valita.string(),
+  args: jsonSchema,
+  timestamp: valita.number(),
+});
+
+/**
+ * Mutation describes a single mutation done on the client.
+ */
+export type MutationV1 = {
+  readonly id: number;
+  readonly name: string;
+  readonly args: ReadonlyJSONValue;
+  readonly timestamp: number;
+  readonly clientID: ClientID;
+};
+
+const mutationV1Schema: valita.Type<MutationV1> = valita.readonlyObject({
+  id: valita.number(),
+  name: valita.string(),
+  args: jsonSchema,
+  timestamp: valita.number(),
+  clientID: clientIDSchema,
+});
+
+type FrozenMutationV0 = Omit<MutationV0, 'args'> & {
+  readonly args: FrozenJSONValue;
+};
 
 /**
  * The JSON value used as the body when doing a POST to the [push
@@ -47,6 +90,14 @@ export type PushRequestV0 = {
   mutations: MutationV0[];
 };
 
+const pushRequestV0Schema: valita.Type<PushRequestV0> = valita.object({
+  pushVersion: valita.literal(0),
+  schemaVersion: valita.string(),
+  profileID: valita.string(),
+  clientID: clientIDSchema,
+  mutations: valita.array(mutationV0Schema),
+});
+
 /**
  * The JSON value used as the body when doing a POST to the [push
  * endpoint](/reference/server-push).
@@ -65,59 +116,27 @@ export type PushRequestV1 = {
   mutations: MutationV1[];
 };
 
+const pushRequestV1Schema = valita.object({
+  pushVersion: valita.literal(1),
+  schemaVersion: valita.string(),
+  profileID: valita.string(),
+  clientGroupID: clientGroupIDSchema,
+  mutations: valita.array(mutationV1Schema),
+});
+
 export type PushRequest = PushRequestV0 | PushRequestV1;
 
-function assertPushRequestBase(v: unknown): asserts v is ReadonlyJSONObject {
-  assertObject(v);
-  assertString(v.schemaVersion);
-  assertString(v.profileID);
+export function assertPushRequestV0(
+  value: unknown,
+): asserts value is PushRequestV0 {
+  valita.assert(value, pushRequestV0Schema);
 }
 
-export function assertPushRequestV1(v: unknown): asserts v is PushRequestV1 {
-  assertPushRequestBase(v);
-  assertString(v.clientGroupID);
-  assertArray(v.mutations);
-  v.mutations.forEach(assertMutationsV1);
+export function assertPushRequestV1(
+  value: unknown,
+): asserts value is PushRequestV1 {
+  valita.assert(value, pushRequestV1Schema);
 }
-
-/**
- * Mutation describes a single mutation done on the client. This is the legacy
- * version (V0) and it is used when recovering mutations from old clients.
- */
-export type MutationV0 = {
-  readonly id: number;
-  readonly name: string;
-  readonly args: ReadonlyJSONValue;
-  readonly timestamp: number;
-};
-
-/**
- * Mutation describes a single mutation done on the client.
- */
-export type MutationV1 = {
-  readonly id: number;
-  readonly name: string;
-  readonly args: ReadonlyJSONValue;
-  readonly timestamp: number;
-  readonly clientID: ClientID;
-};
-
-function assertMutationsV0(v: unknown): asserts v is MutationV0 {
-  assertObject(v);
-  assertNumber(v.id);
-  assertString(v.name);
-  assertJSONValue(v.args);
-  assertNumber(v.timestamp);
-}
-
-function assertMutationsV1(v: unknown): asserts v is MutationV1 {
-  assertMutationsV0(v);
-  assertString((v as Partial<MutationV1>).clientID);
-}
-
-type FrozenMutationV0 = Omit<MutationV0, 'args'> & {
-  readonly args: FrozenJSONValue;
-};
 
 /**
  * Mutation describes a single mutation done on the client.
@@ -126,7 +145,7 @@ type FrozenMutationV1 = FrozenMutationV0 & {
   readonly clientID: ClientID;
 };
 
-function convertSDD(lm: db.LocalMetaSDD): FrozenMutationV0 {
+function convertSDD(lm: LocalMetaSDD): FrozenMutationV0 {
   return {
     id: lm.mutationID,
     name: lm.mutatorName,
@@ -135,7 +154,7 @@ function convertSDD(lm: db.LocalMetaSDD): FrozenMutationV0 {
   };
 }
 
-function convertDD31(lm: db.LocalMetaDD31): FrozenMutationV1 {
+function convertDD31(lm: LocalMetaDD31): FrozenMutationV1 {
   return {
     id: lm.mutationID,
     name: lm.mutatorName,
@@ -147,7 +166,7 @@ function convertDD31(lm: db.LocalMetaDD31): FrozenMutationV1 {
 
 export async function push(
   requestID: string,
-  store: dag.Store,
+  store: Store,
   lc: LogContext,
   profileID: string,
   clientGroupID: ClientGroupID | undefined,
@@ -159,11 +178,11 @@ export async function push(
   // Find pending commits between the base snapshot and the main head and push
   // them to the data layer.
   const pending = await withRead(store, async dagRead => {
-    const mainHeadHash = await dagRead.getHead(db.DEFAULT_HEAD_NAME);
+    const mainHeadHash = await dagRead.getHead(DEFAULT_HEAD_NAME);
     if (!mainHeadHash) {
       throw new Error('Internal no main head');
     }
-    return db.localMutations(mainHeadHash, dagRead);
+    return localMutations(mainHeadHash, dagRead);
     // Important! Don't hold the lock through an HTTP request!
   });
 

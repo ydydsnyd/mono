@@ -1,29 +1,28 @@
-import {hasClient, listClients} from '@/demo/alive/client-model';
-import {colorToString, idToColor} from '@/demo/alive/colors';
+import {Puzzle} from '@/demo/alive/Puzzle';
+import {hasClient, listBots} from '@/demo/alive/client-model';
 import {CursorField} from '@/demo/alive/CursorField';
 import {
-  getClientRoomAssignment,
   ORCHESTRATOR_ROOM,
+  getClientRoomAssignment,
 } from '@/demo/alive/orchestrator-model';
 import {listPieces} from '@/demo/alive/piece-model';
-import {Puzzle} from '@/demo/alive/Puzzle';
 import {TouchPrompt} from '@/demo/alive/touch-prompt';
-import {generateRandomPieces, getStage, Rect, Size} from '@/demo/alive/util';
+import {Rect, Size, generateRandomPieces, getStage} from '@/demo/alive/util';
 import {loggingOptions} from '@/demo/frontend/logging-options';
 import {mutators, type M} from '@/demo/shared/mutators';
 import {useElementSize} from '@/hooks/use-element-size';
 import {useIsomorphicLayoutEffect} from '@/hooks/use-isomorphic-layout-effect';
 import styles from '@/styles/Home.module.css';
-import {getLocationString, Location} from '@/util/get-location-string';
+import {Location, getLocationString} from '@/util/get-location-string';
 import {closeReflect} from '@/util/reflect';
 import {getWorkerHost} from '@/util/worker-host';
-import {ExperimentalMemKVStore, Reflect} from '@rocicorp/reflect/client';
+import {Reflect} from '@rocicorp/reflect/client';
+import {useSubscribe, usePresence} from '@rocicorp/reflect/react';
 import classNames from 'classnames';
 import {event} from 'nextjs-google-analytics';
 import {useCallback, useEffect, useState} from 'react';
 import ConfettiExplosion from 'react-confetti-explosion';
 import {useInView} from 'react-intersection-observer';
-import {useSubscribe} from 'replicache-react';
 
 const ORCHESTRATOR_ALIVE_INTERVAL_MS = 10_000;
 
@@ -31,12 +30,10 @@ function usePuzzleRoomID() {
   const [puzzleRoomID, setPuzzleRoomID] = useState<string | null>(null);
   useEffect(() => {
     const orchestratorClient = new Reflect<M>({
-      socketOrigin: getWorkerHost(),
-      createKVStore: name => new ExperimentalMemKVStore(name),
+      server: getWorkerHost(),
       userID: 'anon',
       roomID: ORCHESTRATOR_ROOM,
       mutators,
-      ...loggingOptions,
     });
 
     orchestratorClient.onUpdateNeeded = reason => {
@@ -111,8 +108,7 @@ function useReflect(
     }
 
     const reflect = new Reflect<M>({
-      socketOrigin: getWorkerHost(),
-      createKVStore: name => new ExperimentalMemKVStore(name),
+      server: getWorkerHost(),
       userID: 'anon',
       roomID: puzzleRoomID,
       mutators,
@@ -135,6 +131,8 @@ function useReflect(
       void reflect.mutate.solve();
     }
 
+    void reflect.mutate.initClient({focused: document.hasFocus()});
+
     void reflect.mutate.initializePuzzle({
       pieces: generateRandomPieces(home, stage),
       force: false,
@@ -144,18 +142,14 @@ function useReflect(
       setOnline(online);
     };
 
-    const onBlur = async () => {
-      void reflect.mutate.updateClient({
-        id: await reflect.clientID,
+    const onBlur = () =>
+      reflect.mutate.updateClient({
         focused: false,
       });
-    };
-    const onFocus = async () => {
-      void reflect.mutate.updateClient({
-        id: await reflect.clientID,
+    const onFocus = () =>
+      reflect.mutate.updateClient({
         focused: true,
       });
-    };
     window.addEventListener('blur', onBlur);
     window.addEventListener('focus', onFocus);
 
@@ -173,10 +167,7 @@ function useReflect(
   return {r, online};
 }
 
-function useEnsureMyClient(
-  r: Reflect<M> | null,
-  tabIsVisible: boolean,
-): string | undefined {
+function useThisClient(r: Reflect<M> | null): string | undefined {
   const cid = useSubscribe(
     r,
     async tx => {
@@ -189,56 +180,10 @@ function useEnsureMyClient(
     undefined,
   );
 
-  if (cid !== undefined) {
-    return cid;
-  }
-
-  // Runs on every render :(
-  // Ideally we could do this only when we come back online, but the online
-  // event in Reflect is currently broken and doesn't fire. When we fix the
-  // online event, there is an interesting subtlety: we have decided that
-  // we will wait for two errors in a row to fire the online change, but the
-  // disconnect on server happens sooner. We have to be sure that it is not
-  // possible for the client to observe a situation where the disconnect
-  // handler has run server-side and had some effect that the client sees,
-  // before the online change event happens. Otherwise you cannot use this
-  // nice pattern of creating client-specific state in the online change
-  // handler and deleting in the server-side disconnect handler.
-  if (r === null) {
-    return undefined;
-  }
-
-  // Do not re-create the client if tab not visible.
-  if (!tabIsVisible) {
-    return undefined;
-  }
-
-  const ensure = async () => {
-    const cid = await r.clientID;
-    await r.mutate.ensureClient({
-      id: cid,
-      selectedPieceID: '',
-      // off the page, so not visible till user moves cursor
-      // avoids cursors stacking up at 0,0
-      x: Number.MIN_SAFE_INTEGER,
-      y: 0,
-      color: colorToString(idToColor(cid)),
-      location: null,
-      focused: document.hasFocus(),
-      botControllerID: '',
-      manuallyTriggeredBot: false,
-    });
-  };
-
-  void ensure();
-
-  return undefined;
+  return cid;
 }
 
-function useEnsureLocation(
-  r: Reflect<M> | null,
-  myClientID: string | undefined,
-) {
+function useEnsureLocation(r: Reflect<M> | null) {
   const [location, setLocation] = useState<Location | null>(null);
   const ignore = false;
 
@@ -254,47 +199,22 @@ function useEnsureLocation(
   }, [ignore]);
 
   useEffect(() => {
-    if (r === null || location === null || myClientID === undefined) {
+    if (r === null || location === null) {
       return;
     }
     void r.mutate.updateClient({
-      id: myClientID,
       location: getLocationString(location),
     });
-  }, [location, r, myClientID]);
+  }, [location, r]);
 }
 
-function useClientIDs(r: Reflect<M> | null) {
-  const clientIDs = useSubscribe(
+function useBotIDs(r: Reflect<M> | null) {
+  const botIDs = useSubscribe(
     r,
-    async tx => {
-      const clients = await listClients(tx);
-      const ids = [];
-      for (const client of clients) {
-        if ((client.id === tx.clientID, client.focused)) {
-          ids.push(client.id);
-        }
-      }
-      return ids;
-    },
+    async tx => [...(await listBots(tx)).values()].map(b => b.id),
     [],
   );
-  return clientIDs;
-}
-
-function useTabIsVisible() {
-  const [tabIsVisible, setTabIsVisible] = useState(false);
-  useIsomorphicLayoutEffect(() => {
-    const onVisibilityChange = () => {
-      setTabIsVisible(document.visibilityState === 'visible');
-    };
-    onVisibilityChange();
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-    };
-  }, []);
-  return tabIsVisible;
+  return botIDs;
 }
 
 function useBodyClasses() {
@@ -335,7 +255,6 @@ export function Demo({
   gameMode: boolean;
   onSetGameMode: (gameMode: boolean) => void;
 }) {
-  const tabIsVisible = useTabIsVisible();
   const [homeRef, home] = useElementSize<SVGSVGElement>([
     winSize,
     docSize,
@@ -344,16 +263,17 @@ export function Demo({
   const stage = getStage(home);
   const puzzleRoomID = usePuzzleRoomID();
   const {r, online} = useReflect(puzzleRoomID, stage, home);
-  const myClientID = useEnsureMyClient(r, tabIsVisible);
-  useEnsureLocation(r, myClientID);
-  const clientIDs = useClientIDs(r);
+  const myClientID = useThisClient(r);
+  useEnsureLocation(r);
+  const presentClientIDs = usePresence(r);
+  const botIDs = useBotIDs(r);
   const [demoInView, setDemoInView] = useState(false);
   const {ref} = useInView({
     onChange: inView => setDemoInView(inView),
   });
   const [bodyClasses, setBodyClass] = useBodyClasses();
 
-  const isPuzzleComplete = useSubscribe<boolean>(
+  const isPuzzleComplete = useSubscribe(
     r,
     async tx => {
       const pieces = await listPieces(tx);
@@ -449,7 +369,7 @@ export function Demo({
           <div className="online-dot"></div>
           Active Users:&nbsp;
           <span id="active-user-count">
-            {clientIDs.length > 0 ? clientIDs.length : 1}
+            {Math.max(presentClientIDs.length + botIDs.length, 1)}
           </span>
         </div>
       </div>
@@ -461,17 +381,24 @@ export function Demo({
         src="/icon-prompt-back.svg"
         onClick={() => onSetGameMode(false)}
       />
-      {r && home && stage && winSize && online && (
-        <Puzzle r={r} home={home} stage={stage} setBodyClass={setBodyClass} />
+      {r && home && stage && winSize && (
+        <Puzzle
+          r={r}
+          presentClientIDs={presentClientIDs}
+          home={home}
+          stage={stage}
+          setBodyClass={setBodyClass}
+        />
       )}
-      {r && home && stage && docSize && myClientID && online && (
+      {r && home && stage && docSize && myClientID && (
         <CursorField
           home={home}
           stage={stage}
           docSize={docSize}
           r={r}
           myClientID={myClientID}
-          clientIDs={clientIDs}
+          presentClientIDs={presentClientIDs}
+          botIDs={botIDs}
           hideLocalArrow={
             bodyClasses.get('grabbing') === true ||
             bodyClasses.get('grab') === true

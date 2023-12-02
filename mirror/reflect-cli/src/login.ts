@@ -10,17 +10,33 @@ import {
   UserAuthConfig,
   writeAuthConfigFile as writeAuthConfigFileImpl,
 } from './auth-config.js';
+import {ErrorWithSeverity} from './error.js';
+import {confirm} from './inquirer.js';
+import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
 
 async function timeout(signal: AbortSignal) {
   await sleep(120_000, signal);
-  throw new Error('Login did not complete within 2 minutes');
+  throw new ErrorWithSeverity(
+    'Login did not complete within 2 minutes',
+    'WARNING',
+  );
 }
 
 export async function loginHandler(
+  yargs: YargvToInterface<CommonYargsArgv>,
+  promptToOpenBrowser = true,
   openInBrowser = openInBrowserImpl,
   writeAuthConfigFile = writeAuthConfigFileImpl,
 ): Promise<void> {
-  const urlToOpen = process.env.AUTH_URL || 'https://reflect.net/auth';
+  const PROD_DOMAIN = 'reflect.net';
+  const SANDBOX_DOMAIN = 'sandbox.reflect.net';
+  const BASE_URL = yargs.local
+    ? 'http://localhost:3000'
+    : yargs.stack === 'prod'
+    ? `https://${PROD_DOMAIN}`
+    : `https://${SANDBOX_DOMAIN}`;
+  const urlToOpen = process.env.AUTH_URL || `${BASE_URL}/auth`;
+
   const loginResolver = resolver();
   const credentialReceiverServer = http.createServer((req, res) => {
     assert(req.url, "This request doesn't have a URL"); // This should never happen
@@ -42,7 +58,7 @@ export async function loginHandler(
             ),
           };
 
-          writeAuthConfigFile(authConfig);
+          writeAuthConfigFile(yargs, authConfig);
         } catch (error) {
           res.end(() => {
             loginResolver.reject(
@@ -53,7 +69,7 @@ export async function loginHandler(
         }
         res.writeHead(307, {
           // eslint-disable-next-line @typescript-eslint/naming-convention
-          Location: `https://reflect.net/reflect-auth-welcome`,
+          Location: `${BASE_URL}/reflect-auth-welcome`,
         });
         res.end(() => {
           loginResolver.resolve();
@@ -75,8 +91,16 @@ export async function loginHandler(
 
   credentialReceiverServer.listen(8976);
 
-  console.log(`Opening a link in your default browser: ${urlToOpen}`);
-  await openInBrowser(urlToOpen);
+  if (
+    !promptToOpenBrowser ||
+    (await confirm({
+      message: 'Open login page in your default browser?',
+      default: true,
+    }))
+  ) {
+    await openInBrowser(urlToOpen);
+  }
+  console.log(`Please login at: ${urlToOpen}`);
   const timeoutController = new AbortController();
   try {
     await Promise.race([

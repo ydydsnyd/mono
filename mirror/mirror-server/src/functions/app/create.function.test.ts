@@ -1,55 +1,118 @@
-import {describe, expect, test, afterEach} from '@jest/globals';
+import {afterEach, beforeEach, describe, expect, test} from '@jest/globals';
+import {initializeApp} from 'firebase-admin/app';
 import type {DecodedIdToken} from 'firebase-admin/auth';
-import {getFirestore, type Firestore} from 'firebase-admin/firestore';
+import {Timestamp, getFirestore} from 'firebase-admin/firestore';
 import {https} from 'firebase-functions/v2';
 import {HttpsError, type Request} from 'firebase-functions/v2/https';
+import {appPath} from 'mirror-schema/src/deployment.js';
+import {ENCRYPTION_KEY_SECRET_NAME} from 'mirror-schema/src/env.js';
+import {teamMembershipPath} from 'mirror-schema/src/membership.js';
 import {
-  type Membership,
-  teamMembershipPath,
-} from 'mirror-schema/src/membership.js';
+  providerDataConverter,
+  providerPath,
+} from 'mirror-schema/src/provider.js';
+import type {StandardReleaseChannel} from 'mirror-schema/src/server.js';
+import {
+  appNameIndexPath,
+  teamDataConverter,
+  teamPath,
+} from 'mirror-schema/src/team.js';
 import {
   getApp,
   getAppName,
-  getMembership,
+  getEnv,
   getTeam,
-  getUser,
-  setMembership,
   setTeam,
   setUser,
 } from 'mirror-schema/src/test-helpers.js';
-import {mockFunctionParamsAndSecrets} from '../../test-helpers.js';
-import {DEFAULT_MAX_APPS, create} from './create.function.js';
-import {initializeApp} from 'firebase-admin/app';
-import {userPath} from 'mirror-schema/src/user.js';
-import {teamPath} from 'mirror-schema/src/team.js';
-
-mockFunctionParamsAndSecrets();
-
-function callCreate(firestore: Firestore, userID: string, email: string) {
-  const createFunction = https.onCall(create(firestore));
-
-  return createFunction.run({
-    data: {
-      requester: {
-        userID,
-        userAgent: {type: 'reflect-cli', version: '0.0.1'},
-      },
-      serverReleaseChannel: 'stable',
-    },
-
-    auth: {
-      uid: userID,
-      token: {email} as DecodedIdToken,
-    },
-    rawRequest: null as unknown as Request,
-  });
-}
+import {userDataConverter, userPath} from 'mirror-schema/src/user.js';
+import {SemVer} from 'semver';
+import {TestSecrets} from '../../secrets/test-utils.js';
+import type {DistTags} from '../validators/version.js';
+import {MIN_WFP_VERSION, create} from './create.function.js';
 
 describe('app-create function', () => {
-  initializeApp({projectId: 'deploy-function-test'});
+  initializeApp({projectId: 'app-create-function-test'});
   const firestore = getFirestore();
   const USER_ID = 'app-create-test-user';
+  const USER_EMAIL = 'foo@bar.com';
+  const PROVIDER = 'tuesday';
+  const CF_ID = 'cf-123';
   const TEAM_ID = 'app-create-test-team';
+  const TEAM_LABEL = 'footeam';
+
+  function callCreate(
+    appName: string,
+    reflectVersion = '0.35.0',
+    serverReleaseChannel?: string,
+    testDistTags: DistTags = {},
+  ) {
+    const createFunction = https.onCall(
+      create(
+        firestore,
+        new TestSecrets([
+          ENCRYPTION_KEY_SECRET_NAME,
+          'latest',
+          TestSecrets.TEST_KEY,
+        ]),
+        testDistTags,
+      ),
+    );
+
+    return createFunction.run({
+      data: {
+        requester: {
+          userID: USER_ID,
+          userAgent: {type: 'reflect-cli', version: reflectVersion},
+        },
+        teamID: TEAM_ID,
+        name: appName,
+        serverReleaseChannel: (serverReleaseChannel ??
+          'stable') as StandardReleaseChannel,
+      },
+
+      auth: {
+        uid: USER_ID,
+        token: {email: USER_EMAIL} as DecodedIdToken,
+      },
+      rawRequest: null as unknown as Request,
+    });
+  }
+
+  async function deleteApp(appID: string, appName: string): Promise<void> {
+    const batch = firestore.batch();
+    batch.delete(firestore.doc(appPath(appID)));
+    batch.delete(firestore.doc(appNameIndexPath(TEAM_ID, appName)));
+    await batch.commit();
+  }
+
+  beforeEach(async () => {
+    await setUser(firestore, USER_ID, USER_EMAIL, 'Alice', {
+      [TEAM_ID]: 'admin',
+    });
+
+    await firestore
+      .doc(providerPath(PROVIDER))
+      .withConverter(providerDataConverter)
+      .create({
+        accountID: CF_ID,
+        defaultMaxApps: 3,
+        defaultZone: {
+          zoneID: 'zone-id',
+          zoneName: 'reflect-o-rama.net',
+        },
+        dispatchNamespace: 'prod',
+      });
+
+    await setTeam(firestore, TEAM_ID, {
+      defaultCfID: 'deprecated',
+      defaultProvider: PROVIDER,
+      label: TEAM_LABEL,
+      numAdmins: 1,
+      numApps: 2,
+      maxApps: 5,
+    });
+  });
 
   // Clean up test data from global emulator state.
   afterEach(async () => {
@@ -58,6 +121,7 @@ describe('app-create function', () => {
         firestore.doc(userPath(USER_ID)),
         firestore.doc(teamPath(TEAM_ID)),
         firestore.doc(teamMembershipPath(TEAM_ID, USER_ID)),
+        firestore.doc(providerPath(PROVIDER)),
       );
       for (const doc of docs) {
         tx.delete(doc.ref);
@@ -65,117 +129,29 @@ describe('app-create function', () => {
     });
   });
 
-  describe('create when user is already member of a team', () => {
-    for (const role of ['admin', 'member'] as const) {
-      test(`create when role was ${role}`, async () => {
-        const email = 'foo@bar.com';
-        const name = 'Test User';
-
-        const user = await setUser(firestore, USER_ID, email, name, {
-          [TEAM_ID]: role,
-        });
-
-        const team = await setTeam(firestore, TEAM_ID, {
-          numAdmins: 1,
-          maxApps: 5,
-        });
-
-        const teamMembership: Membership = await setMembership(
-          firestore,
-          TEAM_ID,
-          USER_ID,
-          email,
-          role,
-        );
-
-        const resp = await callCreate(firestore, USER_ID, email);
-        expect(resp).toMatchObject({
-          success: true,
-          appID: expect.any(String),
-          name: expect.any(String),
-        });
-
-        const newUser = await getUser(firestore, USER_ID);
-        expect(newUser).toEqual(user);
-
-        const newTeam = await getTeam(firestore, TEAM_ID);
-        expect(newTeam).toEqual({
-          ...team,
-          numApps: 1,
-        });
-
-        const membership = await getMembership(firestore, TEAM_ID, USER_ID);
-        expect(membership).toEqual(teamMembership);
-
-        const app = await getApp(firestore, resp.appID);
-        expect(app).toMatchObject({
-          teamID: TEAM_ID,
-          name: expect.any(String),
-          cfID: 'default-CLOUDFLARE_ACCOUNT_ID',
-          cfScriptName: expect.any(String),
-          serverReleaseChannel: 'stable',
-          deploymentOptions: {
-            vars: {
-              /* eslint-disable @typescript-eslint/naming-convention */
-              DISABLE_LOG_FILTERING: 'false',
-              LOG_LEVEL: 'info',
-              /* eslint-enable @typescript-eslint/naming-convention */
-            },
-          },
-        });
-
-        const appName = await getAppName(firestore, app.name);
-        expect(appName).toEqual({
-          appID: resp.appID,
-        });
-      });
-    }
-  });
-
-  test('create when no team', async () => {
-    const email = 'foo@bar.com';
-    const user = await setUser(firestore, USER_ID, email, 'Foo Bar', {});
-
-    const resp = await callCreate(firestore, USER_ID, email);
-
+  test('create app as admin', async () => {
+    const appName = 'my-app';
+    const resp = await callCreate(appName);
     expect(resp).toMatchObject({
       success: true,
       appID: expect.any(String),
-      name: expect.any(String),
-    });
-
-    const newUser = await getUser(firestore, USER_ID);
-    expect(Object.values(newUser.roles)).toEqual(['admin']);
-    const teamID = Object.keys(newUser.roles)[0];
-    expect(newUser).toEqual({
-      ...user,
-      roles: {[teamID]: 'admin'},
-    });
-
-    const team = await getTeam(firestore, teamID);
-    expect(team).toEqual({
-      name: '',
-      defaultCfID: 'default-CLOUDFLARE_ACCOUNT_ID',
-      numAdmins: 1,
-      numMembers: 0,
-      numInvites: 0,
-      numApps: 1,
-      maxApps: DEFAULT_MAX_APPS,
-    });
-
-    const membership = await getMembership(firestore, teamID, USER_ID);
-    expect(membership).toEqual({
-      email,
-      role: 'admin',
     });
 
     const app = await getApp(firestore, resp.appID);
     expect(app).toMatchObject({
-      teamID,
-      name: expect.any(String),
-      cfID: 'default-CLOUDFLARE_ACCOUNT_ID',
+      teamID: TEAM_ID,
+      teamLabel: TEAM_LABEL,
+      name: appName,
+      provider: PROVIDER,
       cfScriptName: expect.any(String),
       serverReleaseChannel: 'stable',
+      envUpdateTime: expect.any(Timestamp),
+    });
+    // Not a WFP app.
+    expect(app.scriptRef).toBeUndefined;
+
+    const env = await getEnv(firestore, resp.appID);
+    expect(env).toMatchObject({
       deploymentOptions: {
         vars: {
           /* eslint-disable @typescript-eslint/naming-convention */
@@ -184,52 +160,174 @@ describe('app-create function', () => {
           /* eslint-enable @typescript-eslint/naming-convention */
         },
       },
+      secrets: {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        REFLECT_API_KEY: {
+          key: {version: TestSecrets.LATEST_ALIAS},
+          iv: expect.any(Uint8Array),
+          ciphertext: expect.any(Uint8Array),
+        },
+      },
     });
 
-    const appName = await getAppName(firestore, app.name);
-    expect(appName).toEqual({
+    const team = await getTeam(firestore, TEAM_ID);
+    expect(team.numApps).toBe(3); // This was initialized with 2 in beforeEach()
+
+    const appNameEntry = await getAppName(firestore, TEAM_ID, appName);
+    expect(appNameEntry).toEqual({
       appID: resp.appID,
     });
+
+    // Cleanup
+    await deleteApp(resp.appID, appName);
   });
 
-  test(`create when too many apps`, async () => {
-    const email = 'foo@bar.com';
-    const name = 'Test User';
+  describe('create WFP app', () => {
+    const minWFPRelease = MIN_WFP_VERSION.raw;
+    for (const release of [minWFPRelease, `${minWFPRelease}-canary.0`]) {
+      test(`release ${release}`, async () => {
+        const appName = 'my-app';
+        const resp = await callCreate(appName, release);
+        expect(resp).toMatchObject({
+          success: true,
+          appID: expect.any(String),
+        });
 
-    const user = await setUser(firestore, USER_ID, email, name, {
-      [TEAM_ID]: 'admin',
-    });
+        const app = await getApp(firestore, resp.appID);
+        expect(app).toMatchObject({
+          teamID: TEAM_ID,
+          teamLabel: TEAM_LABEL,
+          name: appName,
+          provider: PROVIDER,
+          cfScriptName: expect.any(String),
+          scriptRef: {
+            namespace: 'prod',
+            name: app.cfScriptName,
+          },
+          serverReleaseChannel: 'stable',
+          envUpdateTime: expect.any(Timestamp),
+        });
 
-    const team = await setTeam(firestore, TEAM_ID, {
-      numAdmins: 1,
-      numApps: 5,
-      maxApps: 5,
-    });
+        const env = await getEnv(firestore, resp.appID);
+        expect(env).toMatchObject({
+          deploymentOptions: {
+            vars: {
+              /* eslint-disable @typescript-eslint/naming-convention */
+              DISABLE_LOG_FILTERING: 'false',
+              LOG_LEVEL: 'info',
+              /* eslint-enable @typescript-eslint/naming-convention */
+            },
+          },
+          secrets: {
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            REFLECT_API_KEY: {
+              key: {version: TestSecrets.LATEST_ALIAS},
+              iv: expect.any(Uint8Array),
+              ciphertext: expect.any(Uint8Array),
+            },
+          },
+        });
+        const team = await getTeam(firestore, TEAM_ID);
+        expect(team.numApps).toBe(3); // This was initialized with 2 in beforeEach()
 
-    const teamMembership: Membership = await setMembership(
-      firestore,
-      TEAM_ID,
-      USER_ID,
-      email,
-      'admin',
-    );
+        const appNameEntry = await getAppName(firestore, TEAM_ID, appName);
+        expect(appNameEntry).toEqual({
+          appID: resp.appID,
+        });
 
-    let error;
-    try {
-      await callCreate(firestore, USER_ID, email);
-    } catch (e) {
-      error = e;
+        // Cleanup
+        await deleteApp(resp.appID, appName);
+      });
     }
-    expect(error).toBeInstanceOf(HttpsError);
-    expect((error as HttpsError).message).toBe('Team has too many apps');
+  });
 
-    const newUser = await getUser(firestore, USER_ID);
-    expect(newUser).toEqual(user);
+  test('cannot create app on non-standard release channel', async () => {
+    const appName = 'my-app';
+    try {
+      await callCreate(appName, '0.35.0', 'debug');
+      throw new Error('Expected invalid-argument');
+    } catch (e) {
+      expect(e).toBeInstanceOf(HttpsError);
+      expect((e as HttpsError).code).toBe('invalid-argument');
+    }
 
-    const newTeam = await getTeam(firestore, TEAM_ID);
-    expect(newTeam).toEqual(team);
+    const resp = await callCreate(appName, '0.35.0', 'canary');
+    expect(resp).toMatchObject({
+      success: true,
+      appID: expect.any(String),
+    });
 
-    const membership = await getMembership(firestore, TEAM_ID, USER_ID);
-    expect(membership).toEqual(teamMembership);
+    await deleteApp(resp.appID, appName);
+  });
+
+  test('cannot create app with deprecated cli', async () => {
+    const appName = 'my-app';
+    try {
+      await callCreate(appName, '0.35.0', undefined, {
+        rec: new SemVer('0.35.1'),
+      });
+      throw new Error('Expected out-of-range');
+    } catch (e) {
+      expect(e).toBeInstanceOf(HttpsError);
+      expect((e as HttpsError).code).toBe('out-of-range');
+    }
+
+    const resp = await callCreate(appName, '0.35.1', undefined, {
+      rec: new SemVer('0.35.1'),
+    });
+    expect(resp).toMatchObject({
+      success: true,
+      appID: expect.any(String),
+    });
+
+    await deleteApp(resp.appID, appName);
+  });
+
+  test('cannot create app as non-admin', async () => {
+    await firestore
+      .doc(userPath(USER_ID))
+      .withConverter(userDataConverter)
+      .update({roles: {[TEAM_ID]: 'member'}});
+
+    const appName = 'my-app';
+    try {
+      await callCreate(appName);
+      throw new Error('Expected permission-denied');
+    } catch (e) {
+      expect(e).toBeInstanceOf(HttpsError);
+      expect((e as HttpsError).code).toBe('permission-denied');
+    }
+  });
+
+  test('cannot create app when explicit app limit exceeded', async () => {
+    await firestore
+      .doc(teamPath(TEAM_ID))
+      .withConverter(teamDataConverter)
+      .update({numApps: 4, maxApps: 4});
+
+    const appName = 'my-app';
+    try {
+      await callCreate(appName);
+      throw new Error('Expected resource-exhausted');
+    } catch (e) {
+      expect(e).toBeInstanceOf(HttpsError);
+      expect((e as HttpsError).code).toBe('resource-exhausted');
+    }
+  });
+
+  test('cannot create app when default app limit exceeded', async () => {
+    await firestore
+      .doc(teamPath(TEAM_ID))
+      .withConverter(teamDataConverter)
+      .update({numApps: 3, maxApps: null}); // Cloudflare.defaultMaxApps set to 3.
+
+    const appName = 'my-app';
+    try {
+      await callCreate(appName);
+      throw new Error('Expected resource-exhausted');
+    } catch (e) {
+      expect(e).toBeInstanceOf(HttpsError);
+      expect((e as HttpsError).code).toBe('resource-exhausted');
+    }
   });
 });

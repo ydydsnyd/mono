@@ -11,21 +11,17 @@ onmessage = async (e: MessageEvent) => {
   const {name} = e.data;
   try {
     await testGetHasScanOnEmptyDB(name);
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore TypeScripts type defs are incorrect.
     postMessage(undefined);
     await closeAllReps();
   } catch (ex) {
     await closeAllReps();
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore TypeScripts type defs are incorrect.
     postMessage(ex);
   }
 };
 
 async function testGetHasScanOnEmptyDB(name: string) {
   const rep = new ReplicacheTest({
-    pushDelay: 60_000, // Large to prevent interferin;,
+    pushDelay: 60_000, // Large to prevent interfering
     name,
     licenseKey: TEST_LICENSE_KEY,
     mutators: {
@@ -34,7 +30,7 @@ async function testGetHasScanOnEmptyDB(name: string) {
         args: {key: string; value: JSONValue},
       ) => {
         const {key, value} = args;
-        await tx.put(key, value);
+        await tx.set(key, value);
         expect(await tx.has(key)).to.equal(true);
         const v = await tx.get(key);
         expect(v).to.deep.equal(value);

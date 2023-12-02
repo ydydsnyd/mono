@@ -6,8 +6,9 @@ import {
   jest,
   test,
 } from '@jest/globals';
-import {Version, jsonSchema} from 'reflect-protocol';
-import type {WriteTransaction} from 'reflect-types/src/mod.js';
+import type {Version} from 'reflect-protocol';
+import type {Env, WriteTransaction} from 'reflect-shared';
+import {jsonSchema} from 'shared/src/json-schema.js';
 import type {ReadonlyJSONValue} from 'shared/src/json.js';
 import {DurableStorage} from '../../src/storage/durable-storage.js';
 import {
@@ -16,7 +17,11 @@ import {
   putClientRecord,
 } from '../../src/types/client-record.js';
 import type {ClientID, ClientMap} from '../../src/types/client-state.js';
-import {UserValue, userValueKey} from '../../src/types/user-value.js';
+import {
+  UserValue,
+  putUserValue,
+  userValueKey,
+} from '../../src/types/user-value.js';
 import {versionKey} from '../../src/types/version.js';
 import {processFrame} from '../process/process-frame.js';
 import type {ClientPoke} from '../types/client-poke.js';
@@ -37,6 +42,10 @@ import {
 const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();
 const startTime = 1000;
+const env: Env = {env: 'dood'};
+
+const TWO_WEEKS = 2 * 7 * 24 * 60 * 60 * 1000;
+
 beforeEach(() => {
   jest.useFakeTimers();
   jest.setSystemTime(startTime);
@@ -59,6 +68,7 @@ describe('processFrame', () => {
     numPendingMutationsToProcess: number;
     clients: ClientMap;
     clientRecords: ClientRecordMap;
+    initialUserValues?: Record<string, UserValue>;
     storedConnectedClients: ClientID[];
     expectedPokes: ClientPoke[];
     expectedUserValues: Map<string, UserValue>;
@@ -67,6 +77,7 @@ describe('processFrame', () => {
     expectedDisconnectedClients: ClientID[];
     expectedConnectedClients: ClientID[];
     disconnectHandlerThrows: boolean;
+    shouldGCClients?: boolean;
   };
 
   const mutators = new Map(
@@ -75,9 +86,11 @@ describe('processFrame', () => {
         tx: WriteTransaction,
         {key, value}: {key: string; value: ReadonlyJSONValue},
       ) => {
-        await tx.put(key, value);
+        expect(tx.env).toEqual(env);
+        await tx.set(key, value);
       },
       del: async (tx: WriteTransaction, {key}: {key: string}) => {
+        expect(tx.env).toEqual(env);
         await tx.del(key);
       },
     }),
@@ -143,6 +156,7 @@ describe('processFrame', () => {
             baseCookie: startVersion,
             cookie: startVersion + 1,
             lastMutationIDChanges: {c1: 2},
+            presence: [],
             patch: [
               {
                 op: 'put',
@@ -189,6 +203,7 @@ describe('processFrame', () => {
             baseCookie: startVersion,
             cookie: startVersion + 1,
             lastMutationIDChanges: {c1: 2},
+            presence: [],
             patch: [
               {
                 op: 'put',
@@ -205,6 +220,7 @@ describe('processFrame', () => {
             baseCookie: startVersion,
             cookie: startVersion + 1,
             lastMutationIDChanges: {c1: 2},
+            presence: [],
             patch: [
               {
                 op: 'put',
@@ -259,6 +275,7 @@ describe('processFrame', () => {
             baseCookie: startVersion,
             cookie: startVersion + 1,
             lastMutationIDChanges: {c1: 2},
+            presence: [],
             patch: [
               {
                 op: 'put',
@@ -278,6 +295,7 @@ describe('processFrame', () => {
             baseCookie: startVersion,
             cookie: startVersion + 1,
             lastMutationIDChanges: {c1: 2},
+            presence: [],
             patch: [
               {
                 op: 'put',
@@ -340,6 +358,7 @@ describe('processFrame', () => {
             baseCookie: startVersion,
             cookie: startVersion + 1,
             lastMutationIDChanges: {c1: 2},
+            presence: [],
             patch: [
               {
                 op: 'put',
@@ -356,6 +375,7 @@ describe('processFrame', () => {
             baseCookie: startVersion,
             cookie: startVersion + 1,
             lastMutationIDChanges: {c1: 2},
+            presence: [],
             patch: [
               {
                 op: 'put',
@@ -372,6 +392,7 @@ describe('processFrame', () => {
             baseCookie: startVersion,
             cookie: startVersion + 1,
             lastMutationIDChanges: {},
+            presence: [],
             patch: [
               {
                 op: 'put',
@@ -388,6 +409,7 @@ describe('processFrame', () => {
             baseCookie: startVersion + 1,
             cookie: startVersion + 2,
             lastMutationIDChanges: {},
+            presence: [],
             patch: [
               {
                 op: 'put',
@@ -404,6 +426,7 @@ describe('processFrame', () => {
             baseCookie: startVersion + 1,
             cookie: startVersion + 2,
             lastMutationIDChanges: {},
+            presence: [],
             patch: [
               {
                 op: 'put',
@@ -420,6 +443,7 @@ describe('processFrame', () => {
             baseCookie: startVersion + 1,
             cookie: startVersion + 2,
             lastMutationIDChanges: {c3: 8},
+            presence: [],
             patch: [
               {
                 op: 'put',
@@ -477,6 +501,7 @@ describe('processFrame', () => {
             baseCookie: startVersion,
             cookie: startVersion + 1,
             lastMutationIDChanges: {c1: 2},
+            presence: [],
             patch: [
               {
                 op: 'put',
@@ -493,6 +518,7 @@ describe('processFrame', () => {
             baseCookie: startVersion + 1,
             cookie: startVersion + 2,
             lastMutationIDChanges: {c1: 3},
+            presence: [],
             patch: [
               {
                 op: 'put',
@@ -564,6 +590,7 @@ describe('processFrame', () => {
             baseCookie: startVersion,
             cookie: startVersion + 1,
             lastMutationIDChanges: {},
+            presence: [],
             patch: [
               {
                 key: 'test-disconnected-c1',
@@ -601,6 +628,7 @@ describe('processFrame', () => {
             baseCookie: startVersion,
             cookie: startVersion + 1,
             lastMutationIDChanges: {},
+            presence: [],
             patch: [
               {
                 key: 'test-disconnected-c1',
@@ -653,6 +681,7 @@ describe('processFrame', () => {
             baseCookie: startVersion,
             cookie: startVersion + 1,
             lastMutationIDChanges: {c1: 2},
+            presence: [],
             patch: [
               {
                 op: 'put',
@@ -669,6 +698,7 @@ describe('processFrame', () => {
             baseCookie: startVersion,
             cookie: startVersion + 1,
             lastMutationIDChanges: {c1: 2},
+            presence: [],
             patch: [
               {
                 op: 'put',
@@ -685,6 +715,7 @@ describe('processFrame', () => {
             baseCookie: startVersion + 1,
             cookie: startVersion + 2,
             lastMutationIDChanges: {},
+            presence: [],
             patch: [
               {
                 key: 'test-disconnected-c3',
@@ -701,6 +732,7 @@ describe('processFrame', () => {
             baseCookie: startVersion + 1,
             cookie: startVersion + 2,
             lastMutationIDChanges: {},
+            presence: [],
             patch: [
               {
                 key: 'test-disconnected-c3',
@@ -760,6 +792,7 @@ describe('processFrame', () => {
             baseCookie: startVersion,
             cookie: startVersion + 1,
             lastMutationIDChanges: {c1: 2},
+            presence: [],
             patch: [
               {
                 op: 'put',
@@ -776,6 +809,7 @@ describe('processFrame', () => {
             baseCookie: startVersion,
             cookie: startVersion + 1,
             lastMutationIDChanges: {c1: 2},
+            presence: [],
             patch: [
               {
                 op: 'put',
@@ -834,6 +868,7 @@ describe('processFrame', () => {
             baseCookie: startVersion,
             cookie: startVersion + 1,
             lastMutationIDChanges: {},
+            presence: [],
             patch: [
               {
                 op: 'put',
@@ -850,6 +885,7 @@ describe('processFrame', () => {
             baseCookie: startVersion,
             cookie: startVersion + 1,
             lastMutationIDChanges: {},
+            presence: [],
             patch: [
               {
                 op: 'put',
@@ -866,6 +902,7 @@ describe('processFrame', () => {
             baseCookie: startVersion + 1,
             cookie: startVersion + 2,
             lastMutationIDChanges: {},
+            presence: [],
             patch: [
               {
                 key: 'test-disconnected-c3',
@@ -882,6 +919,7 @@ describe('processFrame', () => {
             baseCookie: startVersion + 1,
             cookie: startVersion + 2,
             lastMutationIDChanges: {},
+            presence: [],
             patch: [
               {
                 key: 'test-disconnected-c3',
@@ -908,6 +946,241 @@ describe('processFrame', () => {
       expectedConnectedClients: ['c1', 'c2'],
       disconnectHandlerThrows: false,
     },
+    {
+      name: '1 mutation, 2 clients. 1 client should be garbage collected',
+      initialUserValues: {
+        '-/c/c1/a': userValue('aa', startVersion),
+        '-/c/c2/b': userValue('bb', startVersion),
+        '-/c/c2/c': userValue('cc', startVersion, true),
+      },
+      pendingMutations: [
+        pendingMutation({
+          clientID: 'c1',
+          clientGroupID: 'cg1',
+          id: 2,
+          timestamps: 100,
+          name: 'put',
+          args: {key: 'foo', value: 'bar'},
+        }),
+      ],
+      numPendingMutationsToProcess: 1,
+      clients: new Map([client('c1', 'u1', 'cg1')]),
+      clientRecords: new Map([
+        ['c1', clientRecord('cg1', null, 1, 1)],
+        ['c2', clientRecord('cg2', 1, 7, 1, startTime - TWO_WEEKS)],
+      ]),
+      storedConnectedClients: ['c1'],
+      expectedPokes: [
+        {
+          clientID: 'c1',
+          poke: {
+            baseCookie: startVersion,
+            cookie: startVersion + 1,
+            lastMutationIDChanges: {c1: 2},
+            presence: [],
+            patch: [
+              {
+                op: 'put',
+                key: 'foo',
+                value: 'bar',
+              },
+            ],
+            timestamp: 100,
+          },
+        },
+        {
+          clientID: 'c1',
+          poke: {
+            baseCookie: startVersion + 1,
+            cookie: startVersion + 2,
+            lastMutationIDChanges: {},
+            presence: [],
+            patch: [{op: 'del', key: '-/c/c2/b'}],
+            timestamp: undefined,
+          },
+        },
+      ],
+      expectedUserValues: new Map([
+        ['foo', userValue('bar', startVersion + 1)],
+        ['-/c/c1/a', userValue('aa', startVersion)],
+        ['-/c/c2/b', userValue('bb', startVersion + 2, true)],
+        // The next one was already deleted so no update to startVersion
+        ['-/c/c2/c', userValue('cc', startVersion, true)],
+      ]),
+      expectedClientRecords: new Map([
+        ['c1', clientRecord('cg1', startVersion + 2, 2, startVersion + 1)],
+      ]),
+      expectedVersion: startVersion + 2,
+      expectedDisconnectedClients: [],
+      expectedConnectedClients: ['c1'],
+      disconnectHandlerThrows: false,
+    },
+    {
+      name: '1 mutation, 3 clients. 1 client should be garbage collected. 1 got disconnected',
+      initialUserValues: {
+        '-/c/c1/a': userValue('aa', startVersion),
+        '-/c/c2/b': userValue('bb', startVersion),
+        '-/c/c2/c': userValue('cc', startVersion, true),
+        '-/c/c3/d': userValue('dd', startVersion),
+      },
+      pendingMutations: [
+        pendingMutation({
+          clientID: 'c1',
+          clientGroupID: 'cg1',
+          id: 2,
+          timestamps: 100,
+          name: 'put',
+          args: {key: 'foo', value: 'bar'},
+        }),
+      ],
+      numPendingMutationsToProcess: 1,
+      clients: new Map([client('c1', 'u1', 'cg1')]),
+      clientRecords: new Map([
+        ['c1', clientRecord('cg1', null, 1, 1)],
+        ['c2', clientRecord('cg2', 1, 7, 1, startTime - TWO_WEEKS)],
+        ['c3', clientRecord('cg3', null, 1, 1)],
+      ]),
+      storedConnectedClients: ['c1', 'c3'],
+      expectedPokes: [
+        {
+          clientID: 'c1',
+          poke: {
+            baseCookie: startVersion,
+            cookie: startVersion + 1,
+            lastMutationIDChanges: {c1: 2},
+            presence: [],
+            patch: [
+              {
+                op: 'put',
+                key: 'foo',
+                value: 'bar',
+              },
+            ],
+            timestamp: 100,
+          },
+        },
+        {
+          clientID: 'c1',
+          poke: {
+            baseCookie: startVersion + 1,
+            cookie: startVersion + 2,
+            lastMutationIDChanges: {},
+            presence: [],
+            patch: [{op: 'del', key: '-/c/c2/b'}],
+            timestamp: undefined,
+          },
+        },
+        {
+          clientID: 'c1',
+          poke: {
+            baseCookie: startVersion + 2,
+            cookie: startVersion + 3,
+            lastMutationIDChanges: {},
+            presence: [],
+            patch: [
+              {
+                key: 'test-disconnected-c3',
+                op: 'put',
+                value: true,
+              },
+            ],
+            timestamp: undefined,
+          },
+        },
+      ],
+      expectedUserValues: new Map([
+        ['foo', userValue('bar', startVersion + 1)],
+        ['-/c/c1/a', userValue('aa', startVersion)],
+        ['-/c/c2/b', userValue('bb', startVersion + 2, true)],
+        // The next one was already deleted so no update to startVersion
+        ['-/c/c2/c', userValue('cc', startVersion, true)],
+        ['-/c/c3/d', userValue('dd', startVersion)],
+        ['test-disconnected-c3', userValue(true, startVersion + 3)],
+      ]),
+      expectedClientRecords: new Map([
+        ['c1', clientRecord('cg1', startVersion + 3, 2, startVersion + 1)],
+        ['c3', clientRecord('cg3', null, 1, startVersion)],
+      ]),
+      expectedVersion: startVersion + 3,
+      expectedDisconnectedClients: ['c3'],
+      expectedConnectedClients: ['c1'],
+      disconnectHandlerThrows: false,
+    },
+
+    {
+      name: '0 mutations, 2 clients. 1 client should be garbage collected',
+      initialUserValues: {
+        '-/c/c1/a': userValue('aa', startVersion),
+        '-/c/c2/b': userValue('bb', startVersion),
+        '-/c/c2/c': userValue('cc', startVersion, true),
+      },
+      pendingMutations: [],
+      numPendingMutationsToProcess: 0,
+      clients: new Map([client('c1', 'u1', 'cg1')]),
+      clientRecords: new Map([
+        ['c1', clientRecord('cg1', null, 1, 1)],
+        ['c2', clientRecord('cg2', 1, 7, 1, startTime - TWO_WEEKS)],
+      ]),
+      storedConnectedClients: ['c1'],
+      expectedPokes: [
+        {
+          clientID: 'c1',
+          poke: {
+            baseCookie: startVersion,
+            cookie: startVersion + 1,
+            lastMutationIDChanges: {},
+            presence: [],
+            patch: [{op: 'del', key: '-/c/c2/b'}],
+            timestamp: undefined,
+          },
+        },
+      ],
+      expectedUserValues: new Map([
+        ['-/c/c1/a', userValue('aa', startVersion)],
+        ['-/c/c2/b', userValue('bb', startVersion + 1, true)],
+        // The next one was already deleted so no update to startVersion
+        ['-/c/c2/c', userValue('cc', startVersion, true)],
+      ]),
+      expectedClientRecords: new Map([
+        ['c1', clientRecord('cg1', startVersion + 1, 1, startVersion)],
+      ]),
+      expectedVersion: startVersion + 1,
+      expectedDisconnectedClients: [],
+      expectedConnectedClients: ['c1'],
+      disconnectHandlerThrows: false,
+    },
+
+    {
+      name: '0 mutations, 2 clients. No gc because it is turned off',
+      shouldGCClients: false,
+      initialUserValues: {
+        '-/c/c1/a': userValue('aa', startVersion),
+        '-/c/c2/b': userValue('bb', startVersion),
+        '-/c/c2/c': userValue('cc', startVersion, true),
+      },
+      pendingMutations: [],
+      numPendingMutationsToProcess: 0,
+      clients: new Map([client('c1', 'u1', 'cg1')]),
+      clientRecords: new Map([
+        ['c1', clientRecord('cg1', null, 1, 1)],
+        ['c2', clientRecord('cg2', 1, 7, 1, startTime - TWO_WEEKS)],
+      ]),
+      storedConnectedClients: ['c1'],
+      expectedPokes: [],
+      expectedUserValues: new Map([
+        ['-/c/c1/a', userValue('aa', startVersion)],
+        ['-/c/c2/b', userValue('bb', startVersion)],
+        ['-/c/c2/c', userValue('cc', startVersion, true)],
+      ]),
+      expectedClientRecords: new Map([
+        ['c1', clientRecord('cg1', null, 1, 1)],
+        ['c2', clientRecord('cg2', 1, 7, 1, startTime - TWO_WEEKS)],
+      ]),
+      expectedVersion: startVersion,
+      expectedDisconnectedClients: [],
+      expectedConnectedClients: ['c1'],
+      disconnectHandlerThrows: false,
+    },
   ];
 
   for (const c of cases) {
@@ -922,14 +1195,21 @@ describe('processFrame', () => {
       }
       await putConnectedClients(new Set(c.storedConnectedClients), storage);
 
+      if (c.initialUserValues) {
+        for (const [key, value] of Object.entries(c.initialUserValues)) {
+          await putUserValue(key, value, storage);
+        }
+      }
+
       const disconnectCallClients: ClientID[] = [];
       const result = await processFrame(
         createSilentLogContext(),
+        env,
         c.pendingMutations,
         c.numPendingMutationsToProcess,
         mutators,
         async write => {
-          await write.put(disconnectHandlerWriteKey(write.clientID), true);
+          await write.set(disconnectHandlerWriteKey(write.clientID), true);
           disconnectCallClients.push(write.clientID);
           // Throw after writes to confirm they are not saved.
           if (c.disconnectHandlerThrows) {
@@ -938,6 +1218,7 @@ describe('processFrame', () => {
         },
         c.clients,
         storage,
+        () => c.shouldGCClients ?? true,
       );
 
       expect(result).toEqual(c.expectedPokes);

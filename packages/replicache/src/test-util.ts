@@ -5,10 +5,12 @@ import {expect} from 'chai';
 import * as sinon from 'sinon';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import type {Cookie} from './cookies.js';
+import type {Store} from './dag/store.js';
 import type {Hash} from './hash.js';
 import type {JSONValue} from './json.js';
+import {dropStore as dropIDBStore} from './kv/idb-util.js';
 import {MemStore} from './kv/mem-store.js';
-import * as kv from './kv/mod.js';
+import type {Store as KVStore} from './kv/store.js';
 import type {PatchOperation} from './patch-operation.js';
 import {
   setupForTest as setupIDBDatabasesStoreForTest,
@@ -20,7 +22,12 @@ import type {
   ReplicacheInternalOptions,
   ReplicacheOptions,
 } from './replicache-options.js';
-import {BeginPullResult, MutatorDefs, Replicache} from './replicache.js';
+import {
+  BeginPullResult,
+  MutatorDefs,
+  Replicache,
+  getTestInstance,
+} from './replicache.js';
 import type {DiffComputationConfig} from './sync/diff.js';
 import type {ClientID} from './sync/ids.js';
 import type {WriteTransaction} from './transactions.js';
@@ -35,7 +42,7 @@ export class ReplicacheTest<
   // eslint-disable-next-line @typescript-eslint/ban-types
   MD extends MutatorDefs = {},
 > extends Replicache<MD> {
-  private readonly _internalAPI!: ReplicacheInternalAPI;
+  readonly #internalAPI!: ReplicacheInternalAPI;
 
   constructor(options: ReplicacheOptions<MD>) {
     let internalAPI!: ReplicacheInternalAPI;
@@ -45,66 +52,47 @@ export class ReplicacheTest<
         internalAPI = api;
       },
     } as ReplicacheOptions<MD>);
-    this._internalAPI = internalAPI;
+    this.#internalAPI = internalAPI;
   }
 
   beginPull(): Promise<BeginPullResult> {
-    return super._beginPull();
+    return getTestInstance(this).beginPull();
   }
 
   maybeEndPull(syncHead: Hash, requestID: string): Promise<void> {
-    return super._maybeEndPull(syncHead, requestID);
-  }
-
-  invokePush(): Promise<boolean> {
-    return super._invokePush();
-  }
-
-  protected override _invokePush(): Promise<boolean> {
-    // indirection to allow test to spy on it.
-    return this.invokePush();
-  }
-
-  protected override _beginPull(): Promise<BeginPullResult> {
-    return this.beginPull();
+    return getTestInstance(this).maybeEndPull(syncHead, requestID);
   }
 
   persist() {
-    return this._internalAPI.persist();
+    return this.#internalAPI.persist();
   }
 
-  recoverMutationsSpy = sinon.spy(this, 'recoverMutations');
+  recoverMutationsFake = (getTestInstance(this).onRecoverMutations = sinon.fake(
+    r => r,
+  ));
 
   recoverMutations(): Promise<boolean> {
-    return super._recoverMutations();
-  }
-
-  protected override _recoverMutations(): Promise<boolean> {
-    // indirection to allow test to spy on it.
-    return this.recoverMutations();
+    return getTestInstance(this).recoverMutations();
   }
 
   licenseActive(): Promise<boolean> {
-    return this._licenseActivePromise;
+    return getTestInstance(this).licenseActivePromise;
   }
 
   licenseValid(): Promise<boolean> {
-    return this._licenseCheckPromise;
+    return getTestInstance(this).licenseCheckPromise;
   }
 
   get perdag() {
-    // @ts-expect-error Property '_perdag' is private
-    return this._perdag;
-  }
-
-  get persistIsScheduled() {
-    // @ts-expect-error Property '_persistIsScheduled' is private
-    return this._persistIsScheduled;
+    return getTestInstance(this).perdag;
   }
 
   get isClientGroupDisabled(): boolean {
-    // @ts-expect-error Property '_isClientGroupDisabled' is private
-    return this._isClientGroupDisabled;
+    return getTestInstance(this).isClientGroupDisabled();
+  }
+
+  get memdag(): Store {
+    return getTestInstance(this).memdag;
   }
 }
 
@@ -137,7 +125,7 @@ async function closeAllCloseables(): Promise<void> {
 export const dbsToDrop: Set<string> = new Set();
 export async function deleteAllDatabases(): Promise<void> {
   for (const name of dbsToDrop) {
-    await kv.dropIDBStore(name);
+    await dropIDBStore(name);
   }
   dbsToDrop.clear();
 }
@@ -194,8 +182,9 @@ export async function replicacheForTesting<
 
   rep.onClientStateNotFound = onClientStateNotFound;
 
+  const {clientID} = rep;
   // Wait for open to be done.
-  const clientID = await rep.clientID;
+  await rep.clientGroupID;
   fetchMock.post(pullURL, makePullResponseV1(clientID, 0, [], null));
   fetchMock.post(pushURL, 'ok');
   await tickAFewTimes();
@@ -235,8 +224,8 @@ export async function tickUntil(f: () => boolean, msPerTest = 10) {
   }
 }
 
-export class MemStoreWithCounters implements kv.Store {
-  readonly store: kv.Store;
+export class MemStoreWithCounters implements KVStore {
+  readonly store: KVStore;
   readCount = 0;
   writeCount = 0;
   closeCount = 0;
@@ -276,7 +265,7 @@ export async function addData(
   data: {[key: string]: JSONValue},
 ) {
   for (const [key, value] of Object.entries(data)) {
-    await tx.put(key, value);
+    await tx.set(key, value);
   }
 }
 

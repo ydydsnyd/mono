@@ -1,18 +1,40 @@
 import * as v from 'shared/src/valita.js';
 import {firestoreDataConverter} from './converter.js';
-import {deploymentOptionsSchema, deploymentSchema} from './deployment.js';
-import * as path from './path.js';
+import {deploymentSchema} from './deployment.js';
+import {DEFAULT_PROVIDER_ID} from './provider.js';
+import {timestampSchema} from './timestamp.js';
+
+const scriptRefSchema = v.object({
+  namespace: v.string(),
+  name: v.string(),
+});
+
+export type ScriptRef = v.Infer<typeof scriptRefSchema>;
 
 export const appSchema = v.object({
-  cfID: v.string(),
+  /** @deprecated Remove when reflect-cli supported versions consider this optional */
+  cfID: v.string().optional(),
+
+  provider: v.string().default(DEFAULT_PROVIDER_ID),
+  scriptRef: scriptRefSchema.optional(),
+
   // Globally unique, stable, internal script name in Cloudflare.
+  // TODO: Deprecate when migrating to `scriptRef`
   cfScriptName: v.string(),
+
   teamID: v.string(),
 
+  // Denormalized from the `label` field of the Team doc. This is used, in conjunction
+  // with the app `name`, to determine the hostname of the app worker URL:
+  //
+  // https://<app-name>-<teamlabel>.reflect-server.net.
+  teamLabel: v.string(),
+
+  /** @deprecated TODO(darick): Remove with the cli migration code. */
+  teamSubdomain: v.string().optional(),
+
   // The user requested name, which must be suitable as a subdomain
-  // (lower-cased alphanumeric with hyphens). Uniqueness is enforced
-  // by the APP_NAME_INDEX_COLLECTION. The app worker URL is
-  // https://<name>.reflect-server.net/.
+  // (lower-cased alphanumeric with hyphens).
   //
   // Users can rename their app (and thus worker url) via the
   // app-rename command.
@@ -28,8 +50,6 @@ export const appSchema = v.object({
   // release process.
   serverReleaseChannel: v.string(),
 
-  deploymentOptions: deploymentOptionsSchema,
-
   // The App document tracks the running and queued deployments and serves as
   // a coordination point for (1) determining if a new deployment is necessary
   // (i.e. if the desired `DeploymentSpec` differs from that which is running)
@@ -37,8 +57,26 @@ export const appSchema = v.object({
   //
   // These fields are transactionally consistent views of the documents in the
   // deployments subcollection.
+  //
+  // TODO: These fields will eventually be moved to an `Instance` doc in an
+  // `instances` subcollection in order to support multiple envs and/or
+  // auto-deployed "preview" instances.
   runningDeployment: deploymentSchema.optional(),
   queuedDeploymentIDs: v.array(v.string()).optional(),
+
+  // The last update time of the Env, which is tracked here to trigger a
+  // redeployment when the Env changes.
+  envUpdateTime: timestampSchema,
+
+  // When set to true, forces a redeployment of the App even if the DeploymentSpec
+  // has not changed. This is useful for testing deployment-related changes (e.g.
+  // manually through the Firebase console) or for facilitating infrastructure
+  // migrations that aren't triggered by changes to the App's DeploymentSpec.
+  //
+  // A deployment triggered by this field, in the absence of any other change that
+  // would trigger a redeployment, is given the DeploymentType `MAINTENANCE_UPDATE`.
+  // The field is always deleted upon queueing a new deployment.
+  forceRedeployment: v.boolean().optional(),
 });
 
 export type App = v.Infer<typeof appSchema>;
@@ -50,23 +88,4 @@ export const appDataConverter = firestoreDataConverter(appSchema);
 // consistent with other schema files.
 export {APP_COLLECTION, appPath} from './deployment.js';
 
-export const appNameIndexSchema = v.object({
-  appID: v.string(),
-});
-
-export type AppNameIndex = v.Infer<typeof appNameIndexSchema>;
-
-export const appNameIndexDataConverter =
-  firestoreDataConverter(appNameIndexSchema);
-
-export const APP_NAME_INDEX_COLLECTION = 'appNames';
-
-export function appNameIndexPath(appName: string): string {
-  return path.join(APP_NAME_INDEX_COLLECTION, appName);
-}
-
-const VALID_APP_NAME = /^[a-z]([a-z0-9\\-])*[a-z0-9]$/;
-
-export function isValidAppName(name: string): boolean {
-  return VALID_APP_NAME.test(name);
-}
+export {isValidSubdomain as isValidAppName} from './team.js';

@@ -6,6 +6,8 @@ import type {ArgumentsCamelCase, Argv} from 'yargs';
 export interface CommonYargsOptions {
   v: boolean | undefined;
   stack: string;
+  local: boolean;
+  runAs: string | undefined;
 }
 
 export type CommonYargsArgv = Argv<CommonYargsOptions>;

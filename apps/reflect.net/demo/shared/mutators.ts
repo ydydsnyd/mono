@@ -1,9 +1,11 @@
-import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect/client';
+import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
+import {assert} from 'shared/src/valita';
+import * as v from 'shared/src/valita.js';
 import {
-  deleteClient,
-  ensureClient,
+  deleteBot,
   initClient,
-  putClient,
+  putBot,
+  updateBot,
   updateClient,
 } from '../alive/client-model';
 import {alive, unload} from '../alive/orchestrator-model';
@@ -14,8 +16,6 @@ import {
   putPiece,
   updatePiece,
 } from '../alive/piece-model';
-import {assert} from 'shared/src/valita';
-import * as v from 'shared/src/valita.js';
 
 export type M = typeof mutators;
 
@@ -53,8 +53,8 @@ export async function getServerLogs(tx: ReadTransaction): Promise<string[]> {
 
 export async function addServerLog(tx: WriteTransaction, log: string) {
   const count = await getServerLogCount(tx);
-  await tx.put(entriesKey(count), log);
-  await tx.put(entriesCountKey, count + 1);
+  await tx.set(entriesKey(count), log);
+  await tx.set(entriesCountKey, count + 1);
 }
 
 export const mutators = {
@@ -95,17 +95,17 @@ export const mutators = {
         for (const piece of pieces) {
           await putPiece(tx, piece);
         }
-        await tx.put('puzzle-exists', true);
+        await tx.set('puzzle-exists', true);
       }
     }
   },
 
-  putClient: wrapToFilterBadLocation(putClient),
-  initClient: wrapToFilterBadLocation(initClient),
+  initClient,
   updateClient: wrapToFilterBadLocation(updateClient),
-  deleteClient,
-  ensureClient: wrapToFilterBadLocation(ensureClient),
   updatePiece,
+  putBot: wrapToFilterBadLocation(putBot),
+  updateBot: wrapToFilterBadLocation(updateBot),
+  deleteBot,
 
   // These mutators are for the how it works demos
   increment: async (
@@ -115,7 +115,7 @@ export const mutators = {
     const prev = (await tx.get(key)) ?? 0;
     assert(prev, v.number());
     const next = prev + delta;
-    await tx.put(key, next);
+    await tx.set(key, next);
 
     const prevStr = prev % 1 === 0 ? prev.toString() : prev.toFixed(2);
     const nextStr = next % 1 === 0 ? next.toString() : next.toFixed(2);
@@ -133,7 +133,7 @@ export const mutators = {
     tx: WriteTransaction,
     {key, deg}: {key: string; deg: number},
   ) => {
-    await tx.put(key, deg);
+    await tx.set(key, deg);
     const msg = `Running mutation ${tx.clientID}@${tx.mutationID} on ${tx.environment}: ${deg}`;
 
     if (tx.environment === 'client') {

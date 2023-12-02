@@ -37,11 +37,12 @@ export type {
 } from './kv/store.js';
 export {mergeAsyncIterables} from './merge-async-iterables.js';
 export type {PatchOperation} from './patch-operation.js';
+export type {PendingMutation} from './pending-mutations.js';
 export {
   deleteAllReplicacheData,
   dropAllDatabases,
   dropDatabase,
-} from './persist/mod.js';
+} from './persist/collect-idb-databases.js';
 export type {
   PullResponse,
   PullResponseOKV0,
@@ -60,7 +61,6 @@ export type {
   MaybePromise,
   MutatorDefs,
   MutatorReturn,
-  PendingMutation,
   Poke,
   RequestOptions,
   UpdateNeededReason,
@@ -102,8 +102,11 @@ export type {
 export {TransactionClosedError} from './transaction-closed-error.js';
 export type {
   CreateIndexDefinition,
+  DeepReadonly,
+  DeepReadonlyObject,
   ReadTransaction,
   TransactionEnvironment,
+  TransactionLocation,
   TransactionReason,
   WriteTransaction,
 } from './transactions.js';

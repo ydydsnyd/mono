@@ -5,7 +5,7 @@ import {
   assertString,
 } from 'shared/src/asserts.js';
 import {deepFreeze} from '../json.js';
-import type * as kv from '../kv/mod.js';
+import type {CreateStore, Read, Store} from '../kv/store.js';
 import {uuid} from '../uuid.js';
 import {withRead, withWrite} from '../with-transactions.js';
 import {getIDBDatabasesDBName} from './idb-databases-store-db-name.js';
@@ -53,46 +53,40 @@ function assertIndexedDBDatabase(
 }
 
 export class IDBDatabasesStore {
-  private readonly _kvStore: kv.Store;
+  readonly #kvStore: Store;
 
-  constructor(createKVStore: kv.CreateStore) {
-    this._kvStore = createKVStore(getIDBDatabasesDBName());
+  constructor(createKVStore: CreateStore) {
+    this.#kvStore = createKVStore(getIDBDatabasesDBName());
   }
 
   putDatabase(db: IndexedDBDatabase): Promise<IndexedDBDatabaseRecord> {
-    return this._putDatabase({...db, lastOpenedTimestampMS: Date.now()});
+    return this.#putDatabase({...db, lastOpenedTimestampMS: Date.now()});
   }
 
   putDatabaseForTesting(
     db: IndexedDBDatabase,
   ): Promise<IndexedDBDatabaseRecord> {
-    return this._putDatabase(db);
+    return this.#putDatabase(db);
   }
 
-  private _putDatabase(
-    db: IndexedDBDatabase,
-  ): Promise<IndexedDBDatabaseRecord> {
-    return withWrite(this._kvStore, async write => {
+  #putDatabase(db: IndexedDBDatabase): Promise<IndexedDBDatabaseRecord> {
+    return withWrite(this.#kvStore, async write => {
       const oldDbRecord = await getDatabases(write);
       const dbRecord = {
         ...oldDbRecord,
         [db.name]: db,
       };
       await write.put(DBS_KEY, dbRecord);
-      await write.commit();
       return dbRecord;
     });
   }
 
   clearDatabases(): Promise<void> {
-    return withWrite(this._kvStore, async write => {
-      await write.del(DBS_KEY);
-      await write.commit();
-    });
+    return withWrite(this.#kvStore, write => write.del(DBS_KEY));
   }
 
   deleteDatabases(names: Iterable<IndexedDBName>): Promise<void> {
-    return withWrite(this._kvStore, async write => {
+    return withWrite(this.#kvStore, async write => {
       const oldDbRecord = await getDatabases(write);
       const dbRecord = {
         ...oldDbRecord,
@@ -101,26 +95,24 @@ export class IDBDatabasesStore {
         delete dbRecord[name];
       }
       await write.put(DBS_KEY, dbRecord);
-      await write.commit();
     });
   }
 
   getDatabases(): Promise<IndexedDBDatabaseRecord> {
-    return withRead(this._kvStore, getDatabases);
+    return withRead(this.#kvStore, getDatabases);
   }
 
   close(): Promise<void> {
-    return this._kvStore.close();
+    return this.#kvStore.close();
   }
 
   getProfileID(): Promise<string> {
-    return withWrite(this._kvStore, async write => {
+    return withWrite(this.#kvStore, async write => {
       let profileId = await write.get(PROFILE_ID_KEY);
       if (profileId === undefined) {
         // Profile id is 'p' followed by the guid with no dashes.
         profileId = `p${uuid().replace(/-/g, '')}`;
         await write.put(PROFILE_ID_KEY, profileId);
-        await write.commit();
       }
       assertString(profileId);
       return profileId;
@@ -128,7 +120,7 @@ export class IDBDatabasesStore {
   }
 }
 
-async function getDatabases(read: kv.Read): Promise<IndexedDBDatabaseRecord> {
+async function getDatabases(read: Read): Promise<IndexedDBDatabaseRecord> {
   let dbRecord = await read.get(DBS_KEY);
   if (!dbRecord) {
     dbRecord = deepFreeze({});

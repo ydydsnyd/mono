@@ -1,6 +1,7 @@
-import {describe, expect, test, jest, beforeAll, afterAll} from '@jest/globals';
+import {afterAll, beforeAll, describe, expect, jest, test} from '@jest/globals';
 import {initializeApp} from 'firebase-admin/app';
-import {getFirestore} from 'firebase-admin/firestore';
+import {Timestamp, getFirestore} from 'firebase-admin/firestore';
+import type {Storage} from 'firebase-admin/storage';
 import {https} from 'firebase-functions/v2';
 import {
   FunctionsErrorCode,
@@ -8,26 +9,30 @@ import {
   Request,
 } from 'firebase-functions/v2/https';
 import type {AuthData} from 'firebase-functions/v2/tasks';
-import {publish} from './publish.function.js';
 import type {PublishRequest} from 'mirror-protocol/src/publish.js';
-import type {Storage} from 'firebase-admin/storage';
+import {appDataConverter} from 'mirror-schema/src/app.js';
 import {
   appPath,
-  defaultOptions,
   deploymentDataConverter,
 } from 'mirror-schema/src/deployment.js';
-import {appDataConverter} from 'mirror-schema/src/app.js';
-import {userDataConverter, userPath} from 'mirror-schema/src/user.js';
+import {
+  DEFAULT_PROVIDER_ID,
+  providerDataConverter,
+  providerPath,
+} from 'mirror-schema/src/provider.js';
 import {serverDataConverter, serverPath} from 'mirror-schema/src/server.js';
-import {mockFunctionParamsAndSecrets} from '../../test-helpers.js';
-
-mockFunctionParamsAndSecrets();
+import {userDataConverter, userPath} from 'mirror-schema/src/user.js';
+import {SemVer} from 'semver';
+import type {DistTags} from '../validators/version.js';
+import {publish} from './publish.function.js';
 
 describe('publish', () => {
   initializeApp({projectId: 'publish-function-test'});
   const firestore = getFirestore();
   const USER_ID = 'app-publish-test-user';
   const APP_ID = 'app-publish-test-app';
+  const CF_ID = 'cf-abc';
+  const ENV_UPDATE_TIME = Timestamp.now();
 
   beforeAll(async () => {
     const batch = firestore.batch();
@@ -39,14 +44,30 @@ describe('publish', () => {
       },
     );
     batch.create(
+      firestore
+        .doc(providerPath(DEFAULT_PROVIDER_ID))
+        .withConverter(providerDataConverter),
+      {
+        accountID: CF_ID,
+        defaultZone: {
+          zoneID: 'zone-id',
+          zoneName: 'reflect-o-rama.net',
+        },
+        defaultMaxApps: 3,
+        dispatchNamespace: 'prod',
+      },
+    );
+    batch.create(
       firestore.doc(appPath(APP_ID)).withConverter(appDataConverter),
       {
         name: 'foo-bar',
-        cfID: '123',
+        teamLabel: 'teamblue',
+        provider: DEFAULT_PROVIDER_ID,
+        cfID: 'deprecated',
         cfScriptName: 'foo-bar-script',
         serverReleaseChannel: 'stable',
         teamID: 'fooTeam',
-        deploymentOptions: defaultOptions(),
+        envUpdateTime: ENV_UPDATE_TIME,
       },
     );
     batch.create(
@@ -88,6 +109,7 @@ describe('publish', () => {
     for (const path of [
       userPath(USER_ID),
       appPath(APP_ID),
+      providerPath(DEFAULT_PROVIDER_ID),
       serverPath('0.28.0'),
       serverPath('0.28.1'),
       serverPath('0.29.0'),
@@ -117,9 +139,11 @@ describe('publish', () => {
   type Case = {
     name: string;
     serverReleaseChannel: string;
+    newServerReleaseChannel?: string;
     expectedServerVersion?: string;
     requestAdditions?: Partial<PublishRequest>;
     errorCode?: FunctionsErrorCode;
+    testDistTags?: DistTags;
   };
   const cases: Case[] = [
     {
@@ -131,6 +155,18 @@ describe('publish', () => {
       name: 'multiple server candidates',
       serverReleaseChannel: 'canary',
       expectedServerVersion: '0.28.1',
+    },
+    {
+      name: 'update server release channel',
+      serverReleaseChannel: 'stable',
+      newServerReleaseChannel: 'canary',
+      expectedServerVersion: '0.28.1',
+    },
+    {
+      name: 'deprecated server version',
+      serverReleaseChannel: 'stable',
+      testDistTags: {rec: new SemVer('0.29.0')},
+      errorCode: 'out-of-range',
     },
     {
       name: 'no matching server version',
@@ -152,10 +188,10 @@ describe('publish', () => {
 
   for (const c of cases) {
     test(c.name, async () => {
-      await firestore
+      const appDoc = firestore
         .doc(appPath(APP_ID))
-        .withConverter(appDataConverter)
-        .update({serverReleaseChannel: c.serverReleaseChannel});
+        .withConverter(appDataConverter);
+      await appDoc.update({serverReleaseChannel: c.serverReleaseChannel});
 
       const save = jest.fn();
       const storage = {
@@ -171,7 +207,7 @@ describe('publish', () => {
         },
       } as unknown as Storage;
       const publishFunction = https.onCall(
-        publish(firestore, storage, 'modulez'),
+        publish(firestore, storage, 'modulez', c.testDistTags ?? {}),
       );
 
       let error: HttpsError | undefined = undefined;
@@ -180,6 +216,7 @@ describe('publish', () => {
           auth: {uid: USER_ID} as AuthData,
           data: {
             ...request,
+            serverReleaseChannel: c.newServerReleaseChannel,
             ...c.requestAdditions,
           },
           rawRequest: null as unknown as Request,
@@ -217,19 +254,17 @@ describe('publish', () => {
             ],
             serverVersion: c.expectedServerVersion,
             serverVersionRange: request.serverVersionRange,
-            hostname: 'foo-bar.reflect-server.net',
-            options: {
-              vars: {
-                /* eslint-disable @typescript-eslint/naming-convention */
-                DISABLE_LOG_FILTERING: 'false',
-                LOG_LEVEL: 'info',
-                /* eslint-enable @typescript-eslint/naming-convention */
-              },
-            },
+            hostname: 'foo-bar-teamblue.reflect-o-rama.net',
+            envUpdateTime: ENV_UPDATE_TIME,
           },
           status: 'REQUESTED',
         });
         expect(deployment).toHaveProperty('requestTime');
+
+        const app = (await appDoc.get()).data();
+        expect(app?.serverReleaseChannel).toBe(
+          c.newServerReleaseChannel ?? c.serverReleaseChannel,
+        );
 
         // Cleanup.
         await deployments.docs[0].ref.delete();

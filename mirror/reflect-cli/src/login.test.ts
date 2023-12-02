@@ -4,6 +4,8 @@ import {mockHttpServer} from './login.test.helper.js';
 import type http from 'node:http';
 import type {UserAuthConfig} from './auth-config.js';
 
+type Args = Parameters<typeof loginHandler>[0];
+
 const credentialReceiverServerFetch: (
   req: Request,
 ) => Promise<http.ServerResponse<http.IncomingMessage>> = mockHttpServer();
@@ -15,6 +17,8 @@ describe('loginHandler', () => {
     let writeAuthConfigFileCalled = false;
 
     const loginHandlerPromise = loginHandler(
+      {stack: 'prod'} as Args,
+      false,
       async url => {
         openInBrowserCalled = true;
         expect(url).toEqual('https://reflect.net/auth');
@@ -23,7 +27,8 @@ describe('loginHandler', () => {
         );
         expect(serverResponse).toBeDefined();
       },
-      (config: UserAuthConfig) => {
+      (yargs, config: UserAuthConfig) => {
+        expect(yargs.stack).toBe('prod');
         expect(config).toBeDefined();
         expect(config.authCredential).toEqual({
           accessToken: 'valid-token',
@@ -52,15 +57,18 @@ describe('loginHandler', () => {
     let writeAuthConfigFileCalled = false;
 
     const loginHandlerPromise = loginHandler(
+      {stack: 'sandbox'} as Args,
+      false,
       async url => {
         openInBrowserCalled = true;
-        expect(url).toEqual('https://reflect.net/auth');
+        expect(url).toEqual('https://sandbox.reflect.net/auth');
         const serverResponse = await credentialReceiverServerFetch(
           new Request(callbackUrl.toString()),
         );
         expect(serverResponse).toBeDefined();
       },
-      (config: UserAuthConfig) => {
+      (yargs, config: UserAuthConfig) => {
+        expect(yargs.stack).toBe('sandbox');
         expect(config).toBeDefined();
         expect(config.authCredential).toEqual({
           accessToken: 'valid-token',

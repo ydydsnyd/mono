@@ -1,13 +1,22 @@
-import {jsonSchema, Patch, Version} from 'reflect-protocol';
-import type {AuthData, WriteTransaction} from 'reflect-types/src/mod.js';
+import type {DelOp, PutOp, Version} from 'reflect-protocol';
+import type {
+  AuthData,
+  Env,
+  TransactionLocation,
+  WriteTransaction,
+} from 'reflect-shared';
 import {
-  isScanIndexOptions,
-  makeScanResult,
+  DeepReadonly,
+  IndexKey,
+  ScanIndexOptions,
   ScanNoIndexOptions,
   ScanOptions,
-  TransactionEnvironment,
+  ScanResult,
   TransactionReason,
+  isScanIndexOptions,
+  makeScanResult,
 } from 'replicache';
+import {jsonSchema} from 'shared/src/json-schema.js';
 import type {ReadonlyJSONValue} from 'shared/src/json.js';
 import * as v from 'shared/src/valita.js';
 import type {ClientID} from '../types/client-state.js';
@@ -19,6 +28,8 @@ import {
 } from '../types/user-value.js';
 import type {Storage} from './storage.js';
 
+export const NOOP_MUTATION_ID = -1;
+
 /**
  * Implements Replicache's WriteTransaction in terms of EntryCache.
  */
@@ -26,11 +37,13 @@ export class ReplicacheTransaction implements WriteTransaction {
   readonly clientID: ClientID;
   readonly mutationID: number;
   readonly auth?: AuthData | undefined;
+  readonly env: Env;
   #storage: Storage;
   #version: Version;
 
   readonly reason: TransactionReason = 'authoritative';
-  readonly environment: TransactionEnvironment = 'server';
+  readonly environment: TransactionLocation = 'server';
+  readonly location: TransactionLocation = 'server';
 
   constructor(
     storage: Storage,
@@ -38,15 +51,24 @@ export class ReplicacheTransaction implements WriteTransaction {
     mutationID: number,
     version: Version,
     auth: AuthData | undefined,
+    env: Env,
   ) {
     this.#storage = storage;
     this.clientID = clientID;
     this.#version = version;
     this.mutationID = mutationID;
     this.auth = auth;
+    this.env = env;
   }
 
-  async put(key: string, value: ReadonlyJSONValue): Promise<void> {
+  /**
+   * @deprecated Use `set` instead.
+   */
+  put(key: string, value: ReadonlyJSONValue): Promise<void> {
+    return this.set(key, value);
+  }
+
+  async set(key: string, value: ReadonlyJSONValue): Promise<void> {
     const userValue: UserValue = {
       deleted: false,
       version: this.#version,
@@ -90,7 +112,23 @@ export class ReplicacheTransaction implements WriteTransaction {
     return !!done;
   }
 
-  scan(options: ScanOptions = {}) {
+  scan(options: ScanIndexOptions): ScanResult<IndexKey, ReadonlyJSONValue>;
+  scan(options?: ScanNoIndexOptions): ScanResult<string, ReadonlyJSONValue>;
+  scan(options?: ScanOptions): ScanResult<IndexKey | string, ReadonlyJSONValue>;
+
+  scan<V extends ReadonlyJSONValue>(
+    options: ScanIndexOptions,
+  ): ScanResult<IndexKey, DeepReadonly<V>>;
+  scan<V extends ReadonlyJSONValue>(
+    options?: ScanNoIndexOptions,
+  ): ScanResult<string, DeepReadonly<V>>;
+  scan<V extends ReadonlyJSONValue>(
+    options?: ScanOptions,
+  ): ScanResult<IndexKey | string, DeepReadonly<V>>;
+
+  scan(
+    options: ScanOptions = {},
+  ): ScanResult<IndexKey | string, ReadonlyJSONValue> {
     if (isScanIndexOptions(options)) {
       throw new Error('not implemented');
     }
@@ -128,7 +166,7 @@ function stripPrefix(key: string) {
   return key.slice(userValuePrefix.length);
 }
 
-export function unwrapPatch(inner: Patch): Patch {
+export function unwrapPatch(inner: (PutOp | DelOp)[]): (PutOp | DelOp)[] {
   return inner
     .filter(p => p.key.startsWith(userValuePrefix))
     .map(p => {

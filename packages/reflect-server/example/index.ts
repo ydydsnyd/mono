@@ -1,11 +1,13 @@
-import type {WriteTransaction} from 'reflect-types/src/mod.js';
-import type {JSONValue} from '../src/mod.js';
+import type {ReadonlyJSONValue, WriteTransaction} from 'reflect-shared';
 import {createReflectServer} from '../src/mod.js';
 
 const mutators = {
-  async addData(tx: WriteTransaction, object: {[key: string]: JSONValue}) {
+  async addData(
+    tx: WriteTransaction,
+    object: {[key: string]: ReadonlyJSONValue},
+  ) {
     for (const [key, value] of Object.entries(object)) {
-      await tx.put(key, value);
+      await tx.set(key, value);
     }
   },
 };
