@@ -21,7 +21,6 @@ function makeOptions(): ReflectServerOptions<M> {
   return {
     mutators,
     authHandler,
-    logLevel: 'debug',
   };
 }
 
