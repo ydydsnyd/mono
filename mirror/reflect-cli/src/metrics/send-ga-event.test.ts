@@ -6,6 +6,8 @@ const fetch = new FetchMocker().result(
   [],
 );
 import {sendGAEvent} from './send-ga-event.js';
+import {authContext} from '../login.test.helper.js';
+import type {AuthenticatedUser} from '../auth-config.js';
 
 afterEach(() => {
   jest.restoreAllMocks();
@@ -13,7 +15,10 @@ afterEach(() => {
 
 test('send-ga-event', async () => {
   try {
-    await sendGAEvent([{en: 'event-name'}]);
+    await sendGAEvent(
+      [{en: 'event-name'}],
+      authContext?.user as AuthenticatedUser,
+    );
   } catch (e) {
     console.log(e);
   }
@@ -26,4 +31,6 @@ test('send-ga-event', async () => {
   expect(reqs[0][1]).toContain(
     'uamb=0&seg=1&uafvl=Google%2520Chrome%3B111.0.5563.64%7CNot(A%253ABrand%3B8.0.0.0%7CChromium%3B111.0.5563.64',
   );
+  expect(reqs[0][1]).toContain('cid=fake-uid');
+  expect(reqs[0][1]).toContain('uid=fake-uid');
 });

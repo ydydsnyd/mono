@@ -110,7 +110,7 @@ function isFileNotFoundError(err: unknown): boolean {
   );
 }
 
-type AuthenticatedUser = {
+export type AuthenticatedUser = {
   userID: string;
   getIdToken: (forceRefresh?: boolean | undefined) => Promise<string>;
   additionalUserInfo: AdditionalUserInfo | null;
@@ -162,7 +162,7 @@ async function authenticateImpl(
       if (!promptLogin) {
         throw new Error(`No auth config file found.`);
       }
-      console.info('Login required');
+      console.info('Welcome to Reflect! Please login.');
       await loginHandler(yargs);
     }
     const {authCredential} = mustReadAuthConfigFile(authConfigFilePath);

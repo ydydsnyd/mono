@@ -61,7 +61,7 @@ export async function reportE(
       userID,
       userAgent: {type: 'reflect-cli', version},
     },
-    agentContext: getUserParameters(version),
+    agentContext: getUserParameters(version, userID),
   };
   // console.debug(error); // For testing
   await reportError(error).catch(_err => {
