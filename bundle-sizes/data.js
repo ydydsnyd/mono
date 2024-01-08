@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1701475415788,
+  "lastUpdate": 1704713674322,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -44717,6 +44717,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31346,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cec8f4d0b369eb41d98fa2703079760b9f847c9b",
+          "message": "fix(replicache): Allow undefined JSON properties (#1340)\n\nThe intended behavior is that we allow objects that have a property\r\nvalue of undefined.\r\n\r\nThis behavior was removed in Replicache 12 and reverted in Replicache\r\n13. However, the revert didn't correctly all the cases leading to the\r\nunintended behavior.\r\n\r\nNow we have tests that check for the desired behavior.",
+          "timestamp": "2024-01-08T12:32:31+01:00",
+          "tree_id": "a880901805c9048b68a1431342e33ec46eeb3c3a",
+          "url": "https://github.com/rocicorp/mono/commit/cec8f4d0b369eb41d98fa2703079760b9f847c9b"
+        },
+        "date": 1704713662203,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 298924,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53589,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111640,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31400,
             "unit": "bytes"
           }
         ]
