@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1704900244755,
+  "lastUpdate": 1704900281623,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -44805,6 +44805,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31382,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8e7541067aca6dc71ffc6a4c3a8d65543ff033ed",
+          "message": "chore(replicacache): frozen json follow up (#1342)\n\nRemoved src/json.ts and use shared/src/json.ts instead",
+          "timestamp": "2024-01-10T16:22:47+01:00",
+          "tree_id": "e7e73a9321908dad0222f900bd46e82459e0645c",
+          "url": "https://github.com/rocicorp/mono/commit/8e7541067aca6dc71ffc6a4c3a8d65543ff033ed"
+        },
+        "date": 1704900270056,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 298981,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53553,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111684,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31386,
             "unit": "bytes"
           }
         ]
