@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1704713674322,
+  "lastUpdate": 1704900244755,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -44761,6 +44761,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31400,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0cc9fac31380c3f9b646975486d1db77fe69bf4a",
+          "message": "chore(replicache): No EventTarget in noop broadcast channel. (#1350)\n\nWe used to `extends EventTarget` in the noop broadcast channel, but\r\nthat's not available in React Native. Instead, we just use a plain\r\nobject and add the `addEventListener` and `dispatchEvent` methods\r\nourselves.",
+          "timestamp": "2024-01-10T16:21:49+01:00",
+          "tree_id": "be4aff95d10650856c996060c5af9c79936e0519",
+          "url": "https://github.com/rocicorp/mono/commit/0cc9fac31380c3f9b646975486d1db77fe69bf4a"
+        },
+        "date": 1704900230960,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 299106,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53591,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111733,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31382,
             "unit": "bytes"
           }
         ]
