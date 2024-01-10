@@ -2,10 +2,44 @@ import {SemVer} from 'semver';
 import makeCLI, {Argv} from 'yargs';
 import {initFirebase} from './firebase.js';
 import {tryDeprecationCheck, version} from './version.js';
+import Table from 'cli-table3';
 
 export class CommandLineArgsError extends Error {}
 
 export const scriptName = `npx reflect`;
+
+
+function outputCommands(commands: (string | boolean)[][], options: (string | boolean)[][]): void {
+  // Create a table instance with column headers
+  const commandTable = new Table({
+    head: ['Command', 'Description'],
+    colWidths: [20, 60],
+    wordWrap: true,
+  });
+
+  // Loop through each command and add it to the table
+  for (const command of commands) {
+    commandTable.push([command[0], command[1]]);
+  }
+
+  // Print the table to the console
+  console.log(commandTable.toString());
+
+    // Create a table instance with column headers
+    const optionsTable = new Table({
+      head: ['Option', 'Description'],
+      colWidths: [20, 60],
+      wordWrap: true,
+    });
+  
+    // Loop through each command and add it to the table
+    for (const option of options) {
+      optionsTable.push([option[0], option[1]]);
+    }
+  
+    // Print the table to the console
+    console.log(optionsTable.toString());
+}
 
 export function createCLIParserBase(argv: string[]): Argv<{
   v: boolean | undefined;
@@ -68,7 +102,15 @@ export function createCLIParserBase(argv: string[]): Argv<{
     } else if (args.v) {
       console.log(version);
     } else {
-      reflectCLI.showHelp();
+      reflectCLI.showHelp((_msg: string) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const commands = (reflectCLI as any).getInternalMethods().getUsageInstance().getCommands();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const options = (reflectCLI as any).getOptions();
+        console.log(options);
+        outputCommands(commands, commands);
+        
+      });
     }
   });
 
