@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1704900281623,
+  "lastUpdate": 1704903968000,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -44849,6 +44849,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31386,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3a8a9ac89b4f48fc5b094418aa872b51d5176552",
+          "message": "fix(replicache): Reject pull/push if closed (#1351)\n\nThere was a bug where if you called pull/push on a closed replicache instance, it would never resolve or reject. This fixes that so that the methods reject with an error if the replicache instance is closed.\r\n\r\nThis got a bit more complicated then I expected because we must not reject promises that has no catch because that leads to log spew. Therefore we keep track of pending push/pull calls so that we only reject if someone called push/pull.",
+          "timestamp": "2024-01-10T17:23:49+01:00",
+          "tree_id": "bdf4f54bb0d2145492f91c2382ddf2840174bc2d",
+          "url": "https://github.com/rocicorp/mono/commit/3a8a9ac89b4f48fc5b094418aa872b51d5176552"
+        },
+        "date": 1704903956131,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 299443,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53755,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111809,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31454,
             "unit": "bytes"
           }
         ]
