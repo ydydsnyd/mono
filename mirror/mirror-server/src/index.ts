@@ -13,6 +13,7 @@ import * as apiFunctions from './functions/api/index.js';
 import * as appFunctions from './functions/app/index.js';
 import * as envFunctions from './functions/env/index.js';
 import * as errorFunctions from './functions/error/index.js';
+import {INTERNAL_FUNCTION_SECRET_NAME} from './functions/internal/auth.js';
 import * as appKeyFunctions from './functions/keys/index.js';
 import * as metricsFunctions from './functions/metrics/index.js';
 import * as roomFunctions from './functions/room/index.js';
@@ -55,7 +56,7 @@ export const error = {
 
 export const api = {
   apps: https.onRequest(
-    baseHttpsOptions,
+    {...baseHttpsOptions, secrets: [INTERNAL_FUNCTION_SECRET_NAME]},
     apiFunctions.apps(getFirestore(), getAuth(), secrets),
   ),
 };
@@ -69,6 +70,7 @@ export const app = {
     {
       ...baseHttpsOptions,
       memory: '512MiB',
+      secrets: [INTERNAL_FUNCTION_SECRET_NAME],
     },
     appFunctions.publish(getFirestore(), getStorage(), modulesBucketName),
   ),
@@ -95,6 +97,17 @@ export const appKeys = {
   delete: https.onCall(
     baseHttpsOptions,
     appKeyFunctions.delete(getFirestore()),
+  ),
+  update: https.onCall(
+    {
+      ...baseHttpsOptions,
+      secrets: [INTERNAL_FUNCTION_SECRET_NAME],
+      // Configure with a high concurrency so that a single instance
+      // can service a burst of many invocations. Only the last invocation
+      // actually waits for the buffer timeout to fire.
+      concurrency: 128,
+    },
+    appKeyFunctions.update(getFirestore()),
   ),
 };
 
@@ -133,13 +146,16 @@ export const token = {
 };
 
 export const vars = {
-  delete: https.onCall(baseHttpsOptions, varsFunctions.delete(getFirestore())),
+  delete: https.onCall(
+    {...baseHttpsOptions, secrets: [INTERNAL_FUNCTION_SECRET_NAME]},
+    varsFunctions.delete(getFirestore()),
+  ),
   list: https.onCall(
     baseHttpsOptions,
     varsFunctions.list(getFirestore(), secrets),
   ),
   set: https.onCall(
-    baseHttpsOptions,
+    {...baseHttpsOptions, secrets: [INTERNAL_FUNCTION_SECRET_NAME]},
     varsFunctions.set(getFirestore(), secrets),
   ),
 };

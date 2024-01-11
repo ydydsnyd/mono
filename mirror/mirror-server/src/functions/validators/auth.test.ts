@@ -1,4 +1,4 @@
-import {afterEach, describe, expect, test} from '@jest/globals';
+import {afterEach, beforeEach, describe, expect, test} from '@jest/globals';
 import {initializeApp} from 'firebase-admin/app';
 import {Timestamp, getFirestore} from 'firebase-admin/firestore';
 import {https} from 'firebase-functions/v2';
@@ -22,7 +22,9 @@ import {DEFAULT_PROVIDER_ID} from 'mirror-schema/src/provider.js';
 import {setApp, setUser} from 'mirror-schema/src/test-helpers.js';
 import type {User} from 'mirror-schema/src/user.js';
 import {userPath} from 'mirror-schema/src/user.js';
+import {FetchMocker} from 'shared/src/fetch-mocker.js';
 import * as v from 'shared/src/valita.js';
+import {mockFunctionParamsAndSecrets} from '../../test-helpers.js';
 import {
   appAuthorization,
   appOrKeyAuthorization,
@@ -52,6 +54,14 @@ describe('auth-validators', () => {
   const USER_ID = 'auth-user-id';
   const APP_ID = 'auth-app-id';
   const APP_KEY_NAME = 'auth-app-key';
+
+  let fetchMocker: FetchMocker;
+
+  mockFunctionParamsAndSecrets();
+
+  beforeEach(() => {
+    fetchMocker = new FetchMocker().result('POST', '/appKeys-update', {});
+  });
 
   afterEach(async () => {
     const batch = firestore.batch();
@@ -411,10 +421,23 @@ describe('auth-validators', () => {
       expect(response).toEqual(c.response);
 
       if (c.response) {
-        const key = await firestore
-          .doc(`apps/${APP_ID}/keys/${APP_KEY_NAME}`)
-          .get();
-        expect(key?.data()?.lastUsed).toBeInstanceOf(Timestamp);
+        expect(fetchMocker.requests()).toEqual([
+          ['POST', 'http://127.0.0.1:5001/appKeys-update'],
+        ]);
+        expect(fetchMocker.headers()).toEqual([
+          {
+            'Content-Type': 'application/json',
+            'X-Mirror-Internal-Function': 'default-INTERNAL_FUNCTION_SECRET',
+          },
+        ]);
+        const body = JSON.parse(String(fetchMocker.bodys()[0]));
+        expect(body).toMatchObject({
+          data: {
+            appID: APP_ID,
+            keyName: APP_KEY_NAME,
+            lastUsed: expect.any(Number),
+          },
+        });
       }
     });
   }
