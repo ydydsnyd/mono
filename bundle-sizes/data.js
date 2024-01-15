@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1704903968000,
+  "lastUpdate": 1705311867724,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -44893,6 +44893,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31454,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8c03c655a0c5ef225f77b709276f5654073259a0",
+          "message": "chore(replicache): Make noop broadcast channel event target noops (#1363)\n\nInstead of throwing, just do nothing.",
+          "timestamp": "2024-01-15T09:42:36Z",
+          "tree_id": "1f26679b8c0ee052b1792185f25bad2f798431c2",
+          "url": "https://github.com/rocicorp/mono/commit/8c03c655a0c5ef225f77b709276f5654073259a0"
+        },
+        "date": 1705311856156,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 299319,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53651,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111755,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31410,
             "unit": "bytes"
           }
         ]
