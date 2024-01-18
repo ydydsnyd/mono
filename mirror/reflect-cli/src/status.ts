@@ -4,29 +4,33 @@ import {
   appPath,
   appViewDataConverter,
 } from 'mirror-schema/src/external/app.js';
+
 import type {DeploymentView} from 'mirror-schema/src/external/deployment.js';
 import color from 'picocolors';
-import {readAppConfig} from './app-config.js';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
+import type {AuthContext} from './handler.js';
+import {getAppsByTeamAndName} from './firestore-query.js';
 
 export async function statusHandler(
   _yargs: YargvToInterface<CommonYargsArgv>,
+  authContext: AuthContext,
 ): Promise<void> {
   const firestore = getFirestore();
-  const config = readAppConfig();
-  const appID = config?.apps?.default?.appID;
+  const apps = await getAppsByTeamAndName(firestore, authContext.user.userID);
 
-  if (!appID) {
-    return displayStatus();
+  if (apps.length === 0) {
+    console.log('No apps found.');
+    return;
   }
 
-  const appView = (
-    await getDoc(
-      doc(firestore, appPath(appID)).withConverter(appViewDataConverter),
-    )
-  ).data();
-
-  displayStatus(appID, appView);
+  for (const app of apps) {
+    const appView = (
+      await getDoc(
+        doc(firestore, appPath(app.id)).withConverter(appViewDataConverter),
+      )
+    ).data();
+    await displayStatus(app.id, appView);
+  }
 }
 
 function displayStatus(appID?: string, appView?: AppView): void {

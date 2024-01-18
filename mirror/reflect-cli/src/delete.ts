@@ -1,24 +1,7 @@
-import {
-  Firestore,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  getFirestore,
-  query,
-  where,
-} from 'firebase/firestore';
+import {Firestore, doc, getDoc, getFirestore} from 'firebase/firestore';
 import {deleteApp} from 'mirror-protocol/src/app.js';
-import {
-  APP_COLLECTION,
-  appPath,
-  appViewDataConverter,
-} from 'mirror-schema/src/external/app.js';
+import {appPath, appViewDataConverter} from 'mirror-schema/src/external/app.js';
 import {deploymentViewDataConverter} from 'mirror-schema/src/external/deployment.js';
-import {
-  userPath,
-  userViewDataConverter,
-} from 'mirror-schema/src/external/user.js';
 import {watchDoc} from 'mirror-schema/src/external/watch.js';
 import {must} from 'shared/src/must.js';
 import {readAppConfig, writeAppConfig} from './app-config.js';
@@ -27,6 +10,8 @@ import {checkbox, confirm} from './inquirer.js';
 import {logErrorAndExit} from './log-error-and-exit.js';
 import {makeRequester} from './requester.js';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
+import {getAppsByTeamAndName} from './firestore-query.js';
+import type {AuthContext} from './handler.js';
 
 export function deleteOptions(yargs: CommonYargsArgv) {
   return yargs
@@ -51,10 +36,13 @@ export function deleteOptions(yargs: CommonYargsArgv) {
 
 type DeleteHandlerArgs = YargvToInterface<ReturnType<typeof deleteOptions>>;
 
-export async function deleteHandler(yargs: DeleteHandlerArgs) {
+export async function deleteHandler(
+  yargs: DeleteHandlerArgs,
+  authContext: AuthContext,
+): Promise<void> {
   const firestore = getFirestore();
-  const {userID} = await authenticate(yargs);
   const {all} = yargs;
+  const {userID} = authContext.user;
   const apps = await getAppsToDelete(firestore, userID, yargs);
   let selectedApps = [];
   if (apps.length === 1 && !all) {
@@ -142,16 +130,8 @@ async function getAppsToDelete(
     return getApp(firestore, appID);
   }
   if (all || name) {
-    const teamID = await getSingleAdminTeam(firestore, userID);
-    let q = query(
-      collection(firestore, APP_COLLECTION).withConverter(appViewDataConverter),
-      where('teamID', '==', teamID),
-    );
-    if (name) {
-      q = query(q, where('name', '==', name));
-    }
-    const apps = await getDocs(q);
-    return apps.docs.map(doc => ({id: doc.id, name: doc.data().name}));
+    const apps = await getAppsByTeamAndName(firestore, userID, name);
+    return apps;
   }
   const config = readAppConfig();
   const defaultAppID = config?.apps?.default?.appID;
@@ -176,30 +156,4 @@ async function getApp(
   }
   const {name} = must(appDoc.data());
   return [{id, name, fromAppConfig}];
-}
-
-async function getSingleAdminTeam(
-  firestore: Firestore,
-  userID: string,
-): Promise<string> {
-  const userDoc = await getDoc(
-    doc(firestore, userPath(userID)).withConverter(userViewDataConverter),
-  );
-  if (!userDoc.exists()) {
-    throw new Error('UserDoc does not exist.');
-  }
-  const {roles} = must(userDoc.data());
-  const adminTeams = Object.entries(roles)
-    .filter(([_, role]) => role === 'admin')
-    .map(([teamID]) => teamID);
-  switch (adminTeams.length) {
-    case 0:
-      throw new Error('You are not an admin of any teams');
-    case 1:
-      return adminTeams[0];
-    default:
-      throw new Error(
-        'This version of @rocicorp/reflect does not support multiple teams. Please update to the latest version.',
-      );
-  }
 }
