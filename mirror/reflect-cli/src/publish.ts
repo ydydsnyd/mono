@@ -29,6 +29,18 @@ export function publishOptions(yargs: CommonYargsArgv) {
       type: 'string',
       requiresArg: true,
       hidden: true,
+    })
+    .option('app', {
+      describe: 'App to run',
+      type: 'string',
+      requiresArg: true,
+      require: true,
+    })
+    .option('server-path', {
+      describe: 'Path to the server',
+      type: 'string',
+      requiresArg: true,
+      require: true,
     });
 }
 
@@ -51,7 +63,7 @@ export async function publishHandler(
   publish: PublishCaller = publishCaller, // Overridden in tests.
   firestore: Firestore = getFirestore(), // Overridden in tests.
 ) {
-  const {reflectChannel} = yargs;
+  const {reflectChannel, app, serverPath} = yargs;
   const {appID, server: script} = await ensureAppInstantiated(authContext);
 
   const absPath = path.resolve(script);

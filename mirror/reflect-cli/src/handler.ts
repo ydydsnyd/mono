@@ -24,7 +24,6 @@ export function authenticateAndHandleWith<
       callers = c;
       return builder;
     },
-
     andCleanup: () => async (args: T) => {
       callers.forEach(caller => caller.warm());
 

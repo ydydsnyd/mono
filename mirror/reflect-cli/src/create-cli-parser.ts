@@ -13,6 +13,7 @@ export function createCLIParserBase(argv: string[]): Argv<{
   stack: string;
   local: boolean;
   runAs: string | undefined;
+  app: string | undefined;
 }> {
   // Type check result against CommonYargsOptions to make sure we've included
   // all common options

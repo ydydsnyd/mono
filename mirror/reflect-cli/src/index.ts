@@ -85,7 +85,7 @@ function createCLIParser(argv: string[]) {
 
   reflectCLI.command(
     'status',
-    '💡 Show the status of current deployed app',
+    '💡 Show the status of all deployed apps',
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     () => {},
     authenticateAndHandleWith(statusHandler).andCleanup(),
@@ -126,8 +126,9 @@ function createCLIParser(argv: string[]) {
         'Delete one or more environment variables',
         deleteVarsOptions,
         authenticateAndHandleWith(deleteVarsHandler)
+          .appRequired()
           .withWarmup(deleteVars)
-          .andCleanup(),
+          .andCleanup()
       )
       .demandCommand(1, 'Available commands:\n');
   });

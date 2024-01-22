@@ -2,8 +2,6 @@ import type {LogLevel} from '@rocicorp/logger';
 import isPortReachable from 'is-port-reachable';
 import assert from 'node:assert';
 import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
-import {mustReadAppConfig} from './app-config.js';
 import {watch} from './compile.js';
 import {startDevServer} from './dev/start-dev-server.js';
 import {ErrorWrapper} from './error.js';
@@ -34,6 +32,12 @@ export function devOptions(yargs: CommonYargsArgv) {
         default: 'error',
         requiresArg: true,
       })
+      .option('server-path', {
+        describe: 'Path to the server',
+        type: 'string',
+        requiresArg: true,
+        require: true,
+      })
   );
 }
 
@@ -49,14 +53,12 @@ async function exists(path: string) {
 type DevHandlerArgs = YargvToInterface<ReturnType<typeof devOptions>>;
 
 export async function devHandler(yargs: DevHandlerArgs) {
-  const {server: script} = mustReadAppConfig();
+  const {port, silenceStartupMessage, logLevel, serverPath} = yargs;
 
-  const absPath = path.resolve(script);
-  if (!(await exists(absPath))) {
-    logErrorAndExit(`File not found: ${absPath}`);
+  if (!(await exists(serverPath))) {
+    logErrorAndExit(`File not found: ${serverPath}`);
   }
 
-  const {port, silenceStartupMessage, logLevel} = yargs;
   if (await isPortReachable(port, {host: '0.0.0.0'})) {
     logErrorAndExit(`Port ${port} is already in use`);
   }
@@ -68,7 +70,7 @@ export async function devHandler(yargs: DevHandlerArgs) {
 
   try {
     for await (const {code, sourcemap} of watch(
-      absPath,
+      serverPath,
       'linked',
       mode,
       ac.signal,
