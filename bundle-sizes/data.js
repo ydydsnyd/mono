@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1705740670243,
+  "lastUpdate": 1705935522296,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -45025,6 +45025,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31462,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c95f30431402c9314bab5ab51fb63384123a1c46",
+          "message": "feat(reflect): Add client side disconnect beacon (#1373)\n\nWe now keep track of the last mutationID of the current client. This is updated when we do a:\r\n- Mutation (as in `rep.mutate.foo()`)\r\n- `refresh`\r\n- `maybeEndPull` when it rebases the mutations after the pull.\r\n\r\nThis is stored in `#lastMutationID` on the Replicache instance. It is exposed to Reflect using the `internalOptions.exposeInternalAPI` hook.\r\n\r\nIn Reflect, we have a disconnect beacon that sends the last mutation ID. It is called in 2 places:\r\n1. When `Reflect` `close()` is called.\r\n2. When `window` `pagehide` is fired and the page is not `persisted` in the BFCache.",
+          "timestamp": "2024-01-22T15:55:05+01:00",
+          "tree_id": "9a185871029574171b25033802c82befec098288",
+          "url": "https://github.com/rocicorp/mono/commit/c95f30431402c9314bab5ab51fb63384123a1c46"
+        },
+        "date": 1705935501994,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 300264,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53769,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 112015,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31557,
             "unit": "bytes"
           }
         ]
