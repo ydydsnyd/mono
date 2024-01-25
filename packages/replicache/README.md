@@ -6,7 +6,7 @@ First look for API changes. Download the last release and compare the .d.ts file
 
 ```bash
 # BUILD
-cd rocicorp/mono 
+cd rocicorp/mono
 npm run build
 
 # DOWNLOAD
@@ -141,12 +141,14 @@ Finalize the release notes you started earlier
 
 ## Switch the Release to Latest
 
-```
+We already have the npm package on npmjs.com but it is tagged as `@canary`. We
+want `@latest` to point at the same release. To do this, we use `npm dist-tag`:
+
+```bash
 # note: this will publish the release to the "latest" tag, which means it's what
 # people will get when they `npm install`. If this is a beta release, you should
-# add the `--tag=beta` flag to this command but also make sure the semver has
-# beta in it.
-npm publish
+# use the `beta` tag but also make sure the semver has beta in it.
+npm dist-tag add replicache@$NEW_VERSION latest
 ```
 
 ## Publish the Private Release
