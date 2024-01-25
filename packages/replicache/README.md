@@ -5,11 +5,20 @@
 First look for API changes. Download the last release and compare the .d.ts files:
 
 ```bash
+# BUILD
+cd rocicorp/mono 
+npm run build
+
+# DOWNLOAD
 cd /tmp
 npm pack replicache@$LAST_RELEASE_VERSION
-tar -xvf replicache@$LAST_RELEASE_VERSION
+tar -xvf replicache-$LAST_RELEASE_VERSION.tgz
 cd -
-diff -u /tmp/package/out/replicache.d.ts out/packages/replicache/replicache.d.ts | less
+
+# COMPARE
+diff -u /tmp/package/out/replicache.d.ts packages/out/replicache/replicache.d.ts | less
+# or
+# code --diff /tmp/package/out/replicache.d.ts packages/replicache/out/replicache.d.ts
 ```
 
 We need to be very careful about public API changes as we then have to maintain them. Make sure all new API has been discussed and agreed to by the team.
