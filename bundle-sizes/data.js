@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706102812460,
+  "lastUpdate": 1706174064162,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -45093,6 +45093,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/5208d9263c70ba89d1cfff13eb55865d588a6e32"
         },
         "date": 1706102797334,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 299725,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53687,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111830,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31514,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cf3f6c896ef02513ecf894f478200df51b781f6b",
+          "message": "Update README.md",
+          "timestamp": "2024-01-25T10:12:08+01:00",
+          "tree_id": "d73d709b3d4588891821d47d6a2c1ebe8207a7c2",
+          "url": "https://github.com/rocicorp/mono/commit/cf3f6c896ef02513ecf894f478200df51b781f6b"
+        },
+        "date": 1706174049449,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
