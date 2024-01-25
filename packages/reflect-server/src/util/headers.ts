@@ -12,6 +12,5 @@ export function encodeHeaderValue(value: string): string {
 }
 
 export function decodeHeaderValue(encoded: string): string {
-  encoded;
   return decodeURIComponent(encoded);
 }

@@ -6,11 +6,17 @@ import {Series, reportMetricsSchema} from '../types/report-metrics.js';
 import {isTrueEnvValue} from '../util/env.js';
 import {populateLogContextFromRequest} from '../util/log-context-common.js';
 import {
+  SEC_WEBSOCKET_PROTOCOL_HEADER,
+  createWSAndCloseWithTailError,
+} from '../util/socket.js';
+import {
   AUTH_ROUTES_AUTHED_BY_API_KEY,
   AUTH_ROUTES_CUSTOM_AUTH,
   AUTH_ROUTES_UNAUTHED,
+  AUTH_WEBSOCKET_ROUTES_AUTHED_BY_API_KEY,
 } from './auth-do.js';
 import {createDatadogMetricsSink} from './datadog-metrics-sink.js';
+import {makeErrorResponse} from './errors.js';
 import {
   CANARY_GET,
   HELLO,
@@ -23,11 +29,10 @@ import {
   Handler,
   Router,
   WithLogContext,
-  asJSON,
+  bodyAndArbitraryQueryParams,
   checkAuthAPIKey,
   get,
   post,
-  withBody,
 } from './router.js';
 import {withUnhandledRejectionHandler} from './unhandled-rejection-handler.js';
 
@@ -51,7 +56,7 @@ export interface BaseWorkerEnv {
   // eslint-disable-next-line @typescript-eslint/naming-convention
   DISABLE?: string;
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  REFLECT_AUTH_API_KEY?: string;
+  REFLECT_API_KEY?: string;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   DATADOG_LOGS_API_KEY?: string;
 }
@@ -80,6 +85,16 @@ function registerRoutes(router: WorkerRouter) {
       requireAPIKeyMatchesEnv((ctx, req) => sendToAuthDO(ctx, req)),
     );
   }
+  for (const pattern of Object.values(
+    AUTH_WEBSOCKET_ROUTES_AUTHED_BY_API_KEY,
+  )) {
+    router.register(
+      pattern,
+      requireWebsocketProtocolMatchesAPIKey((ctx, req) =>
+        sendToAuthDO(ctx, req),
+      ),
+    );
+  }
   for (const pattern of Object.values(AUTH_ROUTES_CUSTOM_AUTH)) {
     router.register(pattern, sendToAuthDO);
   }
@@ -98,8 +113,9 @@ function registerRoutes(router: WorkerRouter) {
 // - maybe authenticate requests (but not just utilizing the auth
 //    handler: we want to be able to report metrics for a logged
 //    out user as well)
-const reportMetrics = post<WorkerContext, Response>(
-  withBody(reportMetricsSchema, async ctx => {
+const reportMetrics = post<WorkerContext>()
+  .with(bodyAndArbitraryQueryParams(reportMetricsSchema))
+  .handle(async ctx => {
     const {lc, body, datadogMetricsOptions} = ctx;
 
     if (!datadogMetricsOptions) {
@@ -123,10 +139,9 @@ const reportMetrics = post<WorkerContext, Response>(
     }
 
     return new Response('ok');
-  }),
-);
+  });
 
-const logLogs = post<WorkerContext, Response>(
+const logLogs = post<WorkerContext>().handle(
   async (ctx: WorkerContext, req: Request) => {
     const {lc, env} = ctx;
 
@@ -188,13 +203,11 @@ const logLogs = post<WorkerContext, Response>(
   },
 );
 
-const hello = get<WorkerContext, Response>(
-  asJSON(() => ({
-    reflectServerVersion: version,
-  })),
-);
+const hello = get<WorkerContext>().handleJSON(() => ({
+  reflectServerVersion: version,
+}));
 
-const canaryGet = get<WorkerContext, Response>(
+const canaryGet = get<WorkerContext>().handle(
   (ctx: WorkerContext, req: Request) => {
     const url = new URL(req.url);
     const checkID = url.searchParams.get('id') ?? 'missing';
@@ -208,9 +221,30 @@ const canaryGet = get<WorkerContext, Response>(
 
 function requireAPIKeyMatchesEnv(next: Handler<WorkerContext, Response>) {
   return (ctx: WorkerContext, req: Request) => {
-    const resp = checkAuthAPIKey(ctx.env.REFLECT_AUTH_API_KEY, req);
-    if (resp) {
-      return resp;
+    try {
+      checkAuthAPIKey(ctx.env.REFLECT_API_KEY, req);
+    } catch (e) {
+      return makeErrorResponse(e);
+    }
+    return next(ctx, req);
+  };
+}
+
+function requireWebsocketProtocolMatchesAPIKey(
+  next: Handler<WorkerContext, Response>,
+) {
+  return (ctx: WorkerContext, req: Request) => {
+    // For tail we send the REFLECT_API_KEY in the Sec-WebSocket-Protocol
+    // header and it is always required
+    // TODO: Generalize the error protocol if we introduce other auth'ed websocket protocols.
+    const authApiKey = req.headers.get(SEC_WEBSOCKET_PROTOCOL_HEADER);
+    if (authApiKey !== ctx.env.REFLECT_API_KEY) {
+      createWSAndCloseWithTailError(
+        ctx.lc,
+        req,
+        'Unauthorized',
+        'auth required',
+      );
     }
     return next(ctx, req);
   };

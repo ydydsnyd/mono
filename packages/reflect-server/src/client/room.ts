@@ -1,8 +1,14 @@
 import type {CreateRoomRequest} from 'reflect-protocol';
-import {createAuthAPIHeaders} from '../server/auth-api-headers.js';
-import {AUTH_ROUTES} from '../server/auth-do.js';
-import {CREATE_ROOM_PATH} from '../server/paths.js';
-import type {RoomStatus} from '../server/rooms.js';
+import {createAPIHeaders} from 'shared/src/api/headers.js';
+import * as v from 'shared/src/valita.js';
+import {
+  CLOSE_ROOM_PATH,
+  CREATE_ROOM_PATH,
+  DELETE_ROOM_PATH,
+  GET_ROOM_PATH,
+  fmtPath,
+} from '../server/paths.js';
+import {roomStatusSchema, type RoomStatus} from '../server/rooms.js';
 import {newAuthedPostRequest} from './authedpost.js';
 
 /**
@@ -75,14 +81,15 @@ export async function roomStatus(
   roomID: string,
 ): Promise<RoomStatus> {
   const resp = await fetch(
-    newRoomStatusRequest(reflectServerURL, authApiKey, roomID),
+    newGetRoomRequest(reflectServerURL, authApiKey, roomID),
   );
   if (!resp.ok) {
     throw new Error(
       `Failed to get room status: ${resp.status} ${resp.statusText}`,
     );
   }
-  return resp.json();
+  const value = await resp.json();
+  return v.parse(value, roomStatusSchema);
 }
 
 /**
@@ -94,19 +101,16 @@ export async function roomStatus(
  * @param {string} roomID - The ID of the room to return status of.
  * @returns {Request} - The Request to get room status.
  */
-export function newRoomStatusRequest(
+export function newGetRoomRequest(
   reflectServerURL: string,
   authApiKey: string,
   roomID: string,
 ) {
-  const path = AUTH_ROUTES.roomStatusByRoomID.replace(
-    ':roomID',
-    encodeURIComponent(roomID),
-  );
+  const path = fmtPath(GET_ROOM_PATH, {roomID});
   const url = new URL(path, reflectServerURL);
   return new Request(url.toString(), {
     method: 'get',
-    headers: createAuthAPIHeaders(authApiKey),
+    headers: createAPIHeaders(authApiKey),
   });
 }
 
@@ -127,8 +131,8 @@ export function newCreateRoomRequest(
   roomID: string,
   jurisdiction?: 'eu',
 ) {
-  const url = new URL(CREATE_ROOM_PATH, reflectServerURL);
-  const req: CreateRoomRequest = {roomID, jurisdiction};
+  const url = new URL(fmtPath(CREATE_ROOM_PATH, {roomID}), reflectServerURL);
+  const req: CreateRoomRequest = {jurisdiction};
   return newAuthedPostRequest(url, authApiKey, req);
 }
 
@@ -137,8 +141,7 @@ export function newCloseRoomRequest(
   authApiKey: string,
   roomID: string,
 ) {
-  const path = AUTH_ROUTES.closeRoom.replace(':roomID', roomID);
-  const url = new URL(path, reflectServerURL);
+  const url = new URL(fmtPath(CLOSE_ROOM_PATH, {roomID}), reflectServerURL);
   return newAuthedPostRequest(url, authApiKey);
 }
 
@@ -147,26 +150,6 @@ export function newDeleteRoomRequest(
   authApiKey: string,
   roomID: string,
 ) {
-  const path = AUTH_ROUTES.deleteRoom.replace(':roomID', roomID);
-  const url = new URL(path, reflectServerURL);
-  return newAuthedPostRequest(url, authApiKey);
-}
-export function newForgetRoomRequest(
-  reflectServerURL: string,
-  authApiKey: string,
-  roomID: string,
-) {
-  const path = AUTH_ROUTES.forgetRoom.replace(':roomID', roomID);
-  const url = new URL(path, reflectServerURL);
-  return newAuthedPostRequest(url, authApiKey);
-}
-
-export function newMigrateRoomRequest(
-  reflectServerURL: string,
-  authApiKey: string,
-  roomID: string,
-) {
-  const path = AUTH_ROUTES.migrateRoom.replace(':roomID', roomID);
-  const url = new URL(path, reflectServerURL);
+  const url = new URL(fmtPath(DELETE_ROOM_PATH, {roomID}), reflectServerURL);
   return newAuthedPostRequest(url, authApiKey);
 }

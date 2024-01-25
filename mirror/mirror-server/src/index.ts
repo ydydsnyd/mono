@@ -9,13 +9,17 @@ import {
   modulesBucketName,
   serviceAccountId,
 } from './config/index.js';
+import * as apiFunctions from './functions/api/index.js';
 import * as appFunctions from './functions/app/index.js';
 import * as envFunctions from './functions/env/index.js';
 import * as errorFunctions from './functions/error/index.js';
+import {INTERNAL_FUNCTION_SECRET_NAME} from './functions/internal/auth.js';
+import * as apiKeyFunctions from './functions/keys/index.js';
 import * as metricsFunctions from './functions/metrics/index.js';
 import * as roomFunctions from './functions/room/index.js';
 import * as serverFunctions from './functions/server/index.js';
 import * as teamFunctions from './functions/team/index.js';
+import * as tokenFunctions from './functions/token/index.js';
 import * as userFunctions from './functions/user/index.js';
 import * as varsFunctions from './functions/vars/index.js';
 import {SecretsClientImpl} from './secrets/index.js';
@@ -25,6 +29,7 @@ initializeApp(appOptions);
 setGlobalOptions({
   serviceAccount: serviceAccountId,
   concurrency: 32, // https://github.com/rocicorp/mono/issues/1280
+  timeoutSeconds: 120,
 });
 
 // Cache the secrets manager client to amortize connection establishment time.
@@ -49,6 +54,13 @@ export const error = {
   report: https.onCall(baseHttpsOptions, errorFunctions.report()),
 };
 
+export const api = {
+  apps: https.onRequest(
+    {...baseHttpsOptions, secrets: [INTERNAL_FUNCTION_SECRET_NAME]},
+    apiFunctions.apps(getFirestore(), getAuth(), secrets),
+  ),
+};
+
 export const app = {
   create: https.onCall(
     baseHttpsOptions,
@@ -58,6 +70,7 @@ export const app = {
     {
       ...baseHttpsOptions,
       memory: '512MiB',
+      secrets: [INTERNAL_FUNCTION_SECRET_NAME],
     },
     appFunctions.publish(getFirestore(), getStorage(), modulesBucketName),
   ),
@@ -72,6 +85,33 @@ export const app = {
     appFunctions.tail(getFirestore(), getAuth(), secrets),
   ),
   delete: https.onCall(baseHttpsOptions, appFunctions.delete(getFirestore())),
+};
+
+export const appKeys = {
+  list: https.onCall(baseHttpsOptions, apiKeyFunctions.list(getFirestore())),
+  create: https.onCall(
+    baseHttpsOptions,
+    apiKeyFunctions.create(getFirestore()),
+  ),
+  edit: https.onCall(baseHttpsOptions, apiKeyFunctions.edit(getFirestore())),
+  delete: https.onCall(
+    baseHttpsOptions,
+    apiKeyFunctions.delete(getFirestore()),
+  ),
+};
+
+export const apiKeys = {
+  update: https.onCall(
+    {
+      ...baseHttpsOptions,
+      secrets: [INTERNAL_FUNCTION_SECRET_NAME],
+      // Configure with a high concurrency so that a single instance
+      // can service a burst of many invocations. Only the last invocation
+      // actually waits for the buffer timeout to fire.
+      concurrency: 128,
+    },
+    apiKeyFunctions.update(getFirestore()),
+  ),
 };
 
 export const env = {
@@ -101,14 +141,24 @@ export const team = {
   ensure: https.onCall(baseHttpsOptions, teamFunctions.ensure(getFirestore())),
 };
 
+export const token = {
+  create: https.onCall(
+    baseHttpsOptions,
+    tokenFunctions.create(getFirestore(), getAuth()),
+  ),
+};
+
 export const vars = {
-  delete: https.onCall(baseHttpsOptions, varsFunctions.delete(getFirestore())),
+  delete: https.onCall(
+    {...baseHttpsOptions, secrets: [INTERNAL_FUNCTION_SECRET_NAME]},
+    varsFunctions.delete(getFirestore()),
+  ),
   list: https.onCall(
     baseHttpsOptions,
     varsFunctions.list(getFirestore(), secrets),
   ),
   set: https.onCall(
-    baseHttpsOptions,
+    {...baseHttpsOptions, secrets: [INTERNAL_FUNCTION_SECRET_NAME]},
     varsFunctions.set(getFirestore(), secrets),
   ),
 };

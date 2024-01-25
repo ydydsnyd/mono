@@ -253,7 +253,7 @@ function deploymentErrorMessage(
   return {message, severity: 'ERROR'};
 }
 
-export function requestDeployment(
+export async function requestDeployment(
   firestore: Firestore,
   appID: string,
   data: Pick<Deployment, 'requesterID' | 'type' | 'spec'>,
@@ -263,7 +263,8 @@ export function requestDeployment(
   const appDocRef = firestore
     .doc(appPath(appID))
     .withConverter(appDataConverter);
-  return firestore.runTransaction(async tx => {
+  logger.debug(`Requesting ${data.type} for ${appID}`, data);
+  const path = await firestore.runTransaction(async tx => {
     for (let i = 0; i < 5; i++) {
       const deploymentID = newDeploymentID();
       const docRef = firestore
@@ -303,6 +304,8 @@ export function requestDeployment(
       'Failed to generate unused deployment ID',
     );
   });
+  logger.info(`Requested ${path}`);
+  return path;
 }
 
 const DEPLOYMENT_FAILURE_TIMEOUT_MS = 1000 * 60; // 1 minute.
@@ -314,7 +317,7 @@ export async function earlierDeployments(
   setTimeoutFn = setTimeout,
 ): Promise<void> {
   const appDoc = firestore.doc(appPath(appID)).withConverter(appDataConverter);
-  let failureTimeout: NodeJS.Timer | undefined;
+  let failureTimeout;
 
   for await (const appSnapshot of watch(appDoc)) {
     clearTimeout(failureTimeout);

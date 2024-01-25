@@ -10,8 +10,8 @@ export class LoggingLock {
   readonly #waiters: string[] = [];
   #holder: string | undefined;
 
-  // By default, logs timings over 0 ms.
-  constructor(loggingMinThresholdMs = 1) {
+  // By default, logs all timings.
+  constructor(loggingMinThresholdMs = 0) {
     this.#minThresholdMs = loggingMinThresholdMs;
   }
 

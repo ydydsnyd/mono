@@ -5,13 +5,15 @@
   "scripts": {
     "build:watch": "node --no-warnings tool/build.js --watch",
     "build": "node --no-warnings tool/build.js",
-    "test": "npx firebase-tools emulators:exec --only=firestore 'node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --silent'",
-    "test:watch": "npx firebase-tools emulators:exec --only=firestore 'node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --watch'",
+    "test": "npx firebase-tools emulators:exec --project=test --only=firestore 'node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --silent'",
+    "test:watch": "npx firebase-tools emulators:exec  --project=test --only=firestore 'node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --watch'",
     "serve": "npm run build && npx firebase-tools emulators:start --project sandbox --only functions",
     "shell": "npx firebase-tools functions:shell",
     "start": "npm run build && npm run shell",
     "deploy-functions-sandbox": "npx firebase-tools deploy --project sandbox --only functions",
     "deploy-functions-prod": "npx firebase-tools deploy --project prod --only functions",
+    "deploy-hosting-sandbox": "npx firebase-tools deploy --project sandbox --only hosting",
+    "deploy-hosting-prod": "npx firebase-tools deploy --project prod --only hosting",
     "logs-sandbox": "npx firebase-tools --project sandbox functions:log",
     "logs-prod": "npx firebase-tools --project prod functions:log",
     "format": "prettier --write *",
@@ -31,6 +33,7 @@
     "friendly-words": "^1.2.3",
     "lodash": "^4.17.21",
     "nanoid": "^4.0.2",
+    "path-to-regexp": "^6.2.1",
     "semver": "^7.5.4"
   },
   "devDependencies": {

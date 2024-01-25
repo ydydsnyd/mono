@@ -1,5 +1,5 @@
+import {createAPIHeaders} from 'shared/src/api/headers.js';
 import type {ReadonlyJSONValue} from 'shared/src/json.js';
-import {createAuthAPIHeaders} from '../server/auth-api-headers.js';
 
 export function newAuthedPostRequest(
   url: URL,
@@ -8,7 +8,7 @@ export function newAuthedPostRequest(
 ) {
   return new Request(url.toString(), {
     method: 'POST',
-    headers: createAuthAPIHeaders(authApiKey),
+    headers: createAPIHeaders(authApiKey),
     body: req !== undefined ? JSON.stringify(req) : null,
   });
 }

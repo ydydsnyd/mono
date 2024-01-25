@@ -1,11 +1,11 @@
 import {LogContext, LogLevel, LogSink} from '@rocicorp/logger';
 import {
-  createRoomRequestSchema,
-  invalidateForRoomRequestSchema,
-  invalidateForUserRequestSchema,
-} from 'reflect-protocol';
+  disconnectBeaconQueryParamsSchema,
+  disconnectBeaconSchema,
+} from 'reflect-protocol/src/disconnect-beacon.js';
 import type {Env, MutatorDefs} from 'reflect-shared';
 import {version} from 'reflect-shared';
+import {getConfig} from 'reflect-shared/src/config.js';
 import {BufferSizer} from 'shared/src/buffer-sizer.js';
 import * as valita from 'shared/src/valita.js';
 import {ConnectionLifetimeReporter} from '../events/connection-lifetimes.js';
@@ -39,22 +39,16 @@ import {
   AUTH_CONNECTIONS_PATH,
   CONNECT_URL_PATTERN,
   CREATE_ROOM_PATH,
-  INTERNAL_CREATE_ROOM_PATH,
-  LEGACY_CONNECT_PATH,
-  LEGACY_CREATE_ROOM_PATH,
+  DELETE_ROOM_PATH,
+  DISCONNECT_BEACON_PATH,
+  INVALIDATE_ALL_CONNECTIONS_PATH,
+  INVALIDATE_ROOM_CONNECTIONS_PATH,
+  INVALIDATE_USER_CONNECTIONS_PATH,
   TAIL_URL_PATH,
 } from './paths.js';
 import {initRoomSchema} from './room-schema.js';
 import type {RoomStartHandler} from './room-start.js';
-import {
-  BaseContext,
-  Handler,
-  Router,
-  get,
-  post,
-  requireAuthAPIKey,
-  withBody,
-} from './router.js';
+import {Router, get, inputParams, post, roomID, userID} from './router.js';
 import {connectTail} from './tail.js';
 import {registerUnhandledRejectionHandler} from './unhandled-rejection-handler.js';
 
@@ -64,7 +58,6 @@ const deletedKey = '/system/deleted';
 export interface RoomDOOptions<MD extends MutatorDefs> {
   mutators: MD;
   state: DurableObjectState;
-  authApiKey: string;
   roomStartHandler: RoomStartHandler;
   disconnectHandler: DisconnectHandler;
   logSink: LogSink;
@@ -75,16 +68,14 @@ export interface RoomDOOptions<MD extends MutatorDefs> {
 }
 
 export const ROOM_ROUTES = {
-  deletePath: '/api/room/v0/room/:roomID/delete',
-  authInvalidateAll: '/api/auth/v0/invalidateAll',
-  authInvalidateForUser: '/api/auth/v0/invalidateForUser',
-  authInvalidateForRoom: '/api/auth/v0/invalidateForRoom',
+  deletePath: DELETE_ROOM_PATH,
+  authInvalidateAll: INVALIDATE_ALL_CONNECTIONS_PATH,
+  authInvalidateForUser: INVALIDATE_USER_CONNECTIONS_PATH,
+  authInvalidateForRoom: INVALIDATE_ROOM_CONNECTIONS_PATH,
   authConnections: AUTH_CONNECTIONS_PATH,
-  legacyCreateRoom: LEGACY_CREATE_ROOM_PATH,
   createRoom: CREATE_ROOM_PATH,
-  internalCreateRoom: INTERNAL_CREATE_ROOM_PATH,
-  legacyConnect: LEGACY_CONNECT_PATH,
   connect: CONNECT_URL_PATTERN,
+  disconnectBeacon: DISCONNECT_BEACON_PATH,
   tail: TAIL_URL_PATH,
 } as const;
 
@@ -106,7 +97,6 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   #roomIDDependentInitCompleted = false;
   #lc: LogContext;
   readonly #storage: DurableStorage;
-  readonly #authApiKey: string;
   #turnTimerID: ReturnType<typeof setInterval> | 0 = 0;
 
   readonly #turnDuration: number;
@@ -124,7 +114,6 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       roomStartHandler,
       disconnectHandler,
       state,
-      authApiKey,
       logSink,
       logLevel,
       maxMutationsPerTurn,
@@ -156,7 +145,6 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     this.#initRoutes();
 
     this.#turnDuration = getDefaultTurnDuration(options.allowUnconfirmedWrites);
-    this.#authApiKey = authApiKey;
     const lc = new LogContext(logLevel, undefined, logSink).withContext(
       'component',
       'RoomDO',
@@ -186,23 +174,16 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       this.#authInvalidateForRoom,
     );
     this.#router.register(ROOM_ROUTES.authConnections, this.#authConnections);
-
     this.#router.register(ROOM_ROUTES.createRoom, this.#createRoom);
-    this.#router.register(ROOM_ROUTES.legacyCreateRoom, this.#createRoom);
-    this.#router.register(
-      ROOM_ROUTES.internalCreateRoom,
-      this.#internalCreateRoom,
-    );
-
     this.#router.register(ROOM_ROUTES.connect, this.#connect);
-    this.#router.register(ROOM_ROUTES.legacyConnect, this.#connect);
-
     this.#router.register(ROOM_ROUTES.tail, this.#tail);
+    if (getConfig('disconnectBeacon')) {
+      this.#router.register(
+        ROOM_ROUTES.disconnectBeacon,
+        this.#disconnectBeacon,
+      );
+    }
   }
-
-  #requireAPIKey = <Context extends BaseContext, Resp>(
-    next: Handler<Context, Resp>,
-  ) => requireAuthAPIKey(() => this.#authApiKey, next);
 
   async fetch(request: Request): Promise<Response> {
     const lc = populateLogContextFromRequest(this.#lc, request);
@@ -269,16 +250,16 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
    * from the AuthDO.
    *
    */
-  #internalCreateRoom = withBody(createRoomRequestSchema, async ctx => {
-    const {roomID} = ctx.body;
-    this.#lc.info?.('Handling create room request for roomID', roomID);
-    await this.#setRoomID(roomID);
-    await this.#storage.flush();
-    this.#lc.debug?.('Flushed roomID to storage', roomID);
-    return new Response('ok');
-  });
-
-  #createRoom = this.#requireAPIKey(this.#internalCreateRoom);
+  #createRoom = post()
+    .with(roomID())
+    .handle(async ctx => {
+      const {roomID} = ctx;
+      this.#lc.info?.('Handling create room request for roomID', roomID);
+      await this.#setRoomID(roomID);
+      await this.#storage.flush();
+      this.#lc.debug?.('Flushed roomID to storage', roomID);
+      return new Response('ok');
+    });
 
   // There's a bit of a question here about whether we really want to delete *all* the
   // data when a room is deleted. This deletes everything, including values kept by the
@@ -286,19 +267,17 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   // delete room only delete the room user data and not the system keys, because once
   // system keys are deleted who knows what behavior the room will have when its apis are
   // called. Maybe it's fine if they error out, dunno.
-  #deleteAllData = post(
-    this.#requireAPIKey(async ctx => {
-      const {lc} = ctx;
-      // Maybe we should validate that the roomID in the request matches?
-      lc.info?.('delete all data');
-      await this.#storage.deleteAll();
-      lc.info?.('done deleting all data');
-      await this.#setDeleted();
-      return new Response('ok');
-    }),
-  );
+  #deleteAllData = post().handle(async ctx => {
+    const {lc} = ctx;
+    // Maybe we should validate that the roomID in the request matches?
+    lc.info?.('delete all data');
+    await this.#storage.deleteAll();
+    lc.info?.('done deleting all data');
+    await this.#setDeleted();
+    return new Response('ok');
+  });
 
-  #connect = get((ctx, request) => {
+  #connect = get().handle((ctx, request) => {
     const {lc} = ctx;
     const errorResponse = requireUpgradeHeader(request, lc);
     if (errorResponse) {
@@ -331,7 +310,34 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     return upgradeWebsocketResponse(clientWS, request.headers);
   });
 
-  #tail = get((ctx, request) => {
+  #disconnectBeacon = post()
+    // not checking authorization header again.
+    .with(
+      inputParams(disconnectBeaconQueryParamsSchema, disconnectBeaconSchema),
+    )
+    .handle(ctx => {
+      const lc = ctx.lc.withContext('handler', 'disconnectBeacon');
+      const {
+        body,
+        query: {clientID, roomID, userID},
+      } = ctx;
+
+      lc.debug?.(
+        'disconnect client beacon request',
+        roomID,
+        userID,
+        clientID,
+        body,
+      );
+
+      // TODO(arv): Apply the mutations if any.
+      // TODO(arv): Delete the client record.
+      // TODO(arv): Collect the presence state.
+
+      return new Response('ok');
+    });
+
+  #tail = get().handle((ctx, request) => {
     const {lc} = ctx;
     lc.debug?.('tail request', request.url);
 
@@ -348,54 +354,44 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     return upgradeWebsocketResponse(clientWS, request.headers);
   });
 
-  #authInvalidateForRoom = post(
-    this.#requireAPIKey(
-      withBody(invalidateForRoomRequestSchema, async ctx => {
-        const {lc, body} = ctx;
-        const {roomID} = body;
-        lc.debug?.(
-          `Closing room ${roomID}'s connections fulfilling auth api invalidateForRoom request.`,
-        );
-        await this.#closeConnections(_ => true);
-        return new Response('Success', {status: 200});
-      }),
-    ),
-  );
-
-  #authInvalidateForUser = post(
-    this.#requireAPIKey(
-      withBody(invalidateForUserRequestSchema, async ctx => {
-        const {lc, body} = ctx;
-        const {userID} = body;
-        lc.debug?.(
-          `Closing user ${userID}'s connections fulfilling auth api invalidateForUser request.`,
-        );
-        await this.#closeConnections(
-          clientState => clientState.auth.userID === userID,
-        );
-        return new Response('Success', {status: 200});
-      }),
-    ),
-  );
-
-  #authInvalidateAll = post(
-    this.#requireAPIKey(async ctx => {
-      const {lc} = ctx;
+  #authInvalidateForRoom = post()
+    .with(roomID())
+    .handle(async ctx => {
+      const {lc, roomID} = ctx;
       lc.debug?.(
-        'Closing all connections fulfilling auth api invalidateAll request.',
+        `Closing room ${roomID}'s connections fulfilling auth api invalidateForRoom request.`,
       );
       await this.#closeConnections(_ => true);
       return new Response('Success', {status: 200});
-    }),
-  );
+    });
 
-  #authConnections = post(
-    this.#requireAPIKey(ctx => {
-      const {lc} = ctx;
-      lc.debug?.('Retrieving all auth connections');
-      return new Response(JSON.stringify(getConnections(this.#clients)));
-    }),
-  );
+  #authInvalidateForUser = post()
+    .with(userID())
+    .handle(async ctx => {
+      const {lc, userID} = ctx;
+      lc.debug?.(
+        `Closing user ${userID}'s connections fulfilling auth api invalidateForUser request.`,
+      );
+      await this.#closeConnections(
+        clientState => clientState.auth.userID === userID,
+      );
+      return new Response('Success', {status: 200});
+    });
+
+  #authInvalidateAll = post().handle(async ctx => {
+    const {lc} = ctx;
+    lc.debug?.(
+      'Closing all connections fulfilling auth api invalidateAll request.',
+    );
+    await this.#closeConnections(_ => true);
+    return new Response('Success', {status: 200});
+  });
+
+  #authConnections = post().handle(ctx => {
+    const {lc} = ctx;
+    lc.debug?.('Retrieving all auth connections');
+    return new Response(JSON.stringify(getConnections(this.#clients)));
+  });
 
   #closeConnections(
     predicate: (clientState: ClientState) => boolean,

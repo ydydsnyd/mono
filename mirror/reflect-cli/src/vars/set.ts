@@ -1,9 +1,9 @@
 import {getFirestore} from 'firebase/firestore';
 import {setVars} from 'mirror-protocol/src/vars.js';
 import {ensureAppInstantiated} from '../app-config.js';
-import {authenticate} from '../auth-config.js';
 import {setDevVars} from '../dev/vars.js';
 import {UserError} from '../error.js';
+import type {AuthContext} from '../handler.js';
 import {password} from '../inquirer.js';
 import {makeRequester} from '../requester.js';
 import {watchDeployment} from '../watch-deployment.js';
@@ -22,7 +22,10 @@ export function setVarsOptions(yargs: CommonVarsYargsArgv) {
 
 type SetVarsHandlerArgs = YargvToInterface<ReturnType<typeof setVarsOptions>>;
 
-export async function setVarsHandler(yargs: SetVarsHandlerArgs): Promise<void> {
+export async function setVarsHandler(
+  yargs: SetVarsHandlerArgs,
+  authContext: AuthContext,
+): Promise<void> {
   const {keysAndValues, dev} = yargs;
 
   const vars: Record<string, string> = {};
@@ -46,18 +49,18 @@ export async function setVarsHandler(yargs: SetVarsHandlerArgs): Promise<void> {
 
   if (dev) {
     setDevVars(vars);
-    console.log('Set Dev Variables');
+    console.log('Set dev variables');
     return;
   }
 
-  const {userID} = await authenticate(yargs);
-  const {appID} = await ensureAppInstantiated(yargs);
+  const {userID} = authContext.user;
+  const {appID} = await ensureAppInstantiated(authContext);
   const data = {requester: makeRequester(userID), appID, vars};
-  const {deploymentPath} = await setVars(data);
+  const {deploymentPath} = await setVars.call(data);
   if (!deploymentPath) {
-    console.log('Stored encrypted Server Variables');
+    console.log('Stored encrypted environment variables');
   } else {
-    console.log('Deploying updated Server Variables');
+    console.log('Deploying updated environment variables');
     await watchDeployment(getFirestore(), deploymentPath, 'Deployed');
   }
 }

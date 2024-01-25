@@ -1,18 +1,18 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {MaybePromise} from 'replicache';
+import {API_KEY_HEADER_NAME} from 'shared/src/api/headers.js';
+import {makeAPIResponse} from 'shared/src/api/responses.js';
+import {assert} from 'shared/src/asserts.js';
 import type {ReadonlyJSONValue} from 'shared/src/json.js';
 import * as valita from 'shared/src/valita.js';
-import {AUTH_API_KEY_HEADER_NAME} from './auth-api-headers.js';
-import {createUnauthorizedResponse} from './create-unauthorized-response.js';
+import {decodeHeaderValue} from '../util/headers.js';
+import {APIError, makeAPIErrorResponse} from './api-errors.js';
+import {HttpError, makeErrorResponse} from './errors.js';
 
 /**
- * Handles a request dispatched by router. Handlers are meant to be nested
- * in a chain, implementing the concept of "middleware" that validate and/or
- * compute additional parameters used by downstream handlers.
- *
- * Request is passed through the handler chain as-is, unmolested. Each
- * handler however can create a new, different `context` and pass this to
- * the next handler. This is how things like body validation are implemented.
+ * Handles a request dispatched by router. The Handler is
+ * invoked after it has passed through any number of
+ * {@link RequestValidator}s.
  */
 export type Handler<Context, Resp> = (
   context: Context,
@@ -73,151 +73,311 @@ export class Router<InitialContext extends BaseContext = BaseContext> {
 
     const {lc} = context;
     lc.debug?.(`no matching route for ${request.url}`);
-    return new Response('not found', {status: 404});
+    return makeAPIErrorResponse({
+      code: 404,
+      resource: 'request',
+      message: 'Unknown or invalid URL',
+    });
   }
 }
 
-function requireMethod<Context extends BaseContext, Resp extends Response>(
+function requireMethod<Context extends BaseContext>(
   method: string,
-  next: Handler<Context, Resp>,
-) {
-  return (context: Context, request: Request) => {
+): RequestValidator<Context> {
+  return (ctx: Context, request: Request) => {
     if (request.method !== method) {
-      return new Response('unsupported method', {status: 405});
+      throw new APIError(405, 'request', 'unsupported method');
     }
-    return next(context, request);
+    return {ctx};
   };
 }
 
-export function get<Context extends BaseContext, Resp extends Response>(
-  next: Handler<Context, Resp>,
-) {
-  return requireMethod('GET', next);
+export function get<Context extends BaseContext = BaseContext>() {
+  return new ValidatorChainer<Context, Context>(requireMethod('GET'));
 }
 
-export function post<Context extends BaseContext, Resp extends Response>(
-  next: Handler<Context, Resp>,
-) {
-  return requireMethod('POST', next);
+export function post<Context extends BaseContext = BaseContext>() {
+  return new ValidatorChainer<Context, Context>(requireMethod('POST'));
 }
 
-export function requireAuthAPIKey<Context extends BaseContext, Resp>(
+export function requiredAuthAPIKey<Context extends BaseContext>(
   required: (context: Context) => string,
-  next: Handler<Context, Resp>,
-) {
-  return (context: Context, req: Request) => {
-    const resp = checkAuthAPIKey(required(context), req);
-    if (resp) {
-      return resp;
-    }
-    return next(context, req);
+): RequestValidator<Context> {
+  return (ctx: Context, req: Request) => {
+    checkAuthAPIKey(required(ctx), req);
+    return {ctx};
   };
 }
+
+const LEGACY_API_KEY_HEADER_NAME = 'x-reflect-auth-api-key';
 
 export function checkAuthAPIKey(
   required: string | undefined,
   request: Request,
 ) {
   if (!required) {
-    throw new Error('Internal error: expected auth api key cannot be empty');
+    throw new HttpError(
+      500,
+      'Internal error: expected auth api key cannot be empty',
+    );
   }
 
-  const authHeader = request.headers.get(AUTH_API_KEY_HEADER_NAME);
+  const authHeader =
+    request.headers.get(API_KEY_HEADER_NAME) ??
+    request.headers.get(LEGACY_API_KEY_HEADER_NAME);
   if (authHeader !== required) {
-    return createUnauthorizedResponse();
+    throw new HttpError(401, 'Unauthorized');
   }
-  return undefined;
 }
 
-export type WithRoomID = {roomID: string};
-
-export function withRoomID<Context extends BaseContext, Resp>(
-  next: Handler<Context & WithRoomID, Resp>,
-) {
-  return (ctx: Context, req: Request) => {
+export function roomID<Context extends BaseContext>(): RequestValidator<
+  Context,
+  Context & {roomID: string}
+> {
+  return (ctx: Context) => {
     const {roomID} = ctx.parsedURL.pathname.groups;
-    if (roomID === undefined) {
-      throw new Error('Internal error: roomID not found by withRoomID');
-    }
+    assert(roomID, 'roomID() configured for URL without :roomID group');
     const decoded = decodeURIComponent(roomID);
-    return next({...ctx, roomID: decoded}, req);
+    return {ctx: {...ctx, roomID: decoded}};
   };
 }
 
-export type WithVersion = {version: number};
-export function withVersion<Context extends BaseContext, Resp>(
-  next: Handler<Context & WithVersion, Resp>,
-) {
+export function userID<Context extends BaseContext>(): RequestValidator<
+  Context,
+  Context & {userID: string}
+> {
+  return (ctx: Context) => {
+    const {userID} = ctx.parsedURL.pathname.groups;
+    assert(userID, 'userID() configured for URL without :userID group');
+    const decoded = decodeURIComponent(userID);
+    return {ctx: {...ctx, userID: decoded}};
+  };
+}
+
+export function urlVersion<Context extends BaseContext>(): RequestValidator<
+  Context,
+  Context & {version: number}
+> {
   return (ctx: Context, req: Request) => {
     const {version: versionString} = ctx.parsedURL.pathname.groups;
     if (versionString === undefined) {
-      throw new Error('version not found by withVersion url: ' + req.url);
+      throw new HttpError(
+        500,
+        'version not found by withVersion url: ' + req.url,
+      );
     }
     if (!/^v\d+$/.test(versionString)) {
-      throw new Error(`invalid version found by withVersion, ${versionString}`);
+      throw new HttpError(
+        500,
+        `invalid version found by withVersion, ${versionString}`,
+      );
     }
     const version = Number(versionString.slice(1));
-    return next({...ctx, version}, req);
+    return {ctx: {...ctx, version}};
   };
 }
 
-export function asJSON<Context extends BaseContext>(
-  next: Handler<Context, ReadonlyJSONValue>,
-) {
-  return async (ctx: Context, req: Request) =>
-    new Response(JSON.stringify(await next(ctx, req)));
+// Note: queryParams(), bodyOnly(), and noInputParams() are mutually exclusive.
+export function queryParams<T, Context extends BaseContext>(
+  schema: valita.Type<T>,
+): RequestValidator<Context, Context & {query: T; body: null}> {
+  return inputParams<T, null, Context>(schema, valita.null());
 }
 
-export function withBody<T, Context extends BaseContext, Resp>(
+export function bodyOnly<T, Context extends BaseContext>(
   schema: valita.Type<T>,
-  next: Handler<Context & {body: T}, Resp>,
-) {
-  return async (ctx: Context, req: Request) => {
-    const {value, errorResponse} = await validateBody(req, schema);
-    if (errorResponse) {
-      return errorResponse;
+): RequestValidator<Context, Context & {body: T; query: null}> {
+  return inputParams<null, T, Context>(valita.null(), schema);
+}
+
+export function bearerToken<Context extends BaseContext>(): RequestValidator<
+  Context,
+  Context & {bearerToken: string}
+> {
+  function throwError(kind: string): never {
+    throw new APIError(401, 'request', `${kind} Authorization header`);
+  }
+  return (ctx: Context, req: Request) => {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throwError('Missing');
     }
-    return next({...ctx, body: value}, req);
+    const parts = authHeader.split(/\s+/);
+    if (parts.length !== 2) {
+      throwError('Invalid');
+    }
+    const authScheme = parts[0].toLowerCase();
+    const token = parts[1];
+    if (authScheme !== 'bearer') {
+      throwError('Invalid');
+    }
+    try {
+      const decoded = decodeHeaderValue(token);
+      return {
+        ctx: {...ctx, bearerToken: decoded},
+      };
+    } catch {
+      throwError('Malformed');
+    }
   };
 }
 
-type ValidateResult<T> =
-  | {value: T; errorResponse: undefined}
-  | {value: undefined; errorResponse: Response};
+const arbitraryQueryParamsSchema = valita.record(valita.string());
 
-async function validateBody<T>(
-  request: Request,
+// For reportMetrics the client sends common query parameters that the server ignores.
+export function bodyAndArbitraryQueryParams<T, Context extends BaseContext>(
   schema: valita.Type<T>,
-): Promise<ValidateResult<T>> {
+): RequestValidator<
+  Context,
+  Context & {body: T; query: Record<string, string>}
+> {
+  return inputParams<Record<string, string>, T, Context>(
+    arbitraryQueryParamsSchema,
+    schema,
+  );
+}
+
+export function noInputParams<Context extends BaseContext>(): RequestValidator<
+  Context,
+  Context & {body: null; query: null}
+> {
+  return inputParams<null, null, Context>(valita.null(), valita.null());
+}
+
+export function inputParams<Q, B, Context extends BaseContext>(
+  querySchema: valita.Type<Q>,
+  bodySchema: valita.Type<B>,
+): RequestValidator<Context, Context & {query: Q; body: B}> {
+  return async (ctx: Context, req: Request) => {
+    const {parsedURL} = ctx;
+    const query = validateQuery(parsedURL, querySchema);
+    const text = await req.text();
+    const body = validateBody(text, bodySchema);
+    return {
+      ctx: {...ctx, query, body},
+      // Create a new Request if the body of the input Request was consumed.
+      req: !req.bodyUsed ? req : new Request(req, {body: text}),
+    };
+  };
+}
+
+function validateQuery<T>(
+  parsedURL: URLPatternURLPatternResult,
+  schema: valita.Type<T>,
+): T {
+  const queryString = parsedURL.search.input;
+  const queryObj = Object.fromEntries(
+    new URLSearchParams(queryString).entries(),
+  );
+  if (schema.name === 'null') {
+    if (Object.keys(queryObj).length > 0) {
+      throw new APIError(400, 'request', 'Unexpected query parameters');
+    }
+    return valita.parse(null, schema);
+  }
+  try {
+    return valita.parse(queryObj, schema);
+  } catch (e) {
+    throw new APIError(
+      400,
+      'request',
+      'Query string error. ' + (e as Error).message,
+    );
+  }
+}
+
+function validateBody<T>(text: string, schema: valita.Type<T>): T {
+  if (schema.name === 'null') {
+    if (text.length > 0) {
+      throw new APIError(400, 'request', 'Unexpected request body.');
+    }
+    return valita.parse(null, schema);
+  }
   let json;
   try {
-    // Note: we don't clone the request here, because if we did clone and the
-    // original request body is not consumed CF complains in the console, "Your
-    // worker called response.clone(), but did not read the body of both
-    // clones. <snip>". Routes that use validateBody, should use
-    // the ValidateResult and not try to read the body, as reading the body
-    // again will result in an error "TypeError: body used already for <snip>".
-    json = await request.json();
+    json = JSON.parse(text);
   } catch (e) {
-    return {
-      errorResponse: new Response('Body must be valid json.', {status: 400}),
-      value: undefined,
+    throw new APIError(400, 'request', 'Body must be valid json.');
+  }
+  try {
+    return valita.parse(json, schema);
+  } catch (e) {
+    throw new APIError(
+      400,
+      'request',
+      'Body schema error. ' + (e as Error).message,
+    );
+  }
+}
+
+/**
+ * A RequestValidator validates an `Input` context and returns
+ * a (possibly augmented) `Output` context to be passed to the next
+ * RequestValidator, and eventually to the {@link Handler}.
+ *
+ * If the RequestValidator reads the `body` of the Request, it should
+ * return a new copy of the Request so that subsequent logic in the pipeline
+ * can read the body (e.g. `new Request(req, {body: ...})`). If no request
+ * is returned, the original request is passed to the next validator or handler.
+ */
+type RequestValidator<
+  Input extends BaseContext,
+  Output extends BaseContext = Input,
+> = (ctx: Input, req: Request) => MaybePromise<{ctx: Output; req?: Request}>;
+
+class ValidatorChainer<Input extends BaseContext, Output extends BaseContext> {
+  readonly #requestValidator: RequestValidator<Input, Output>;
+
+  constructor(requestValidator: RequestValidator<Input, Output>) {
+    this.#requestValidator = requestValidator;
+  }
+
+  /**
+   * Used to chain ContextValidators that convert / augment
+   * the final context passed to the handler.
+   */
+  with<Next extends BaseContext>(
+    nextValidator: RequestValidator<Output, Next>,
+  ): ValidatorChainer<Input, Next> {
+    return new ValidatorChainer(async (prev, req) => {
+      const next = await this.#requestValidator(prev, req);
+      return nextValidator(next.ctx, next.req ?? req);
+    });
+  }
+
+  #validateAndHandle(
+    handler: Handler<Output, Response>,
+  ): Handler<Input, Response> {
+    return async (origCtx: Input, request: Request) => {
+      try {
+        const validated = await this.#requestValidator(origCtx, request);
+        return await handler(validated.ctx, validated.req ?? request);
+      } catch (e) {
+        return makeErrorResponse(e);
+      }
     };
   }
-  const validateResult = valita.test(json, schema);
-  if (!validateResult.ok) {
-    return {
-      errorResponse: new Response(
-        'Body schema error. ' + validateResult.error,
-        {
-          status: 400,
-        },
-      ),
-      value: undefined,
-    };
+
+  handle(handler: Handler<Output, Response>): Handler<Input, Response> {
+    return this.#validateAndHandle(handler);
   }
-  return {
-    value: validateResult.value,
-    errorResponse: undefined,
-  };
+
+  handleJSON(
+    handler: Handler<Output, ReadonlyJSONValue>,
+  ): Handler<Input, Response> {
+    return this.handle(
+      async (ctx: Output, request: Request) =>
+        new Response(JSON.stringify(await handler(ctx, request)), {
+          headers: {'Content-Type': 'application/json'},
+        }),
+    );
+  }
+
+  handleAPIResult<Result extends ReadonlyJSONValue | void>(
+    handler: Handler<Output, Result>,
+  ): Handler<Input, Response> {
+    return this.handleJSON(async (ctx: Output, request: Request) =>
+      makeAPIResponse((await handler(ctx, request)) ?? {}),
+    );
+  }
 }

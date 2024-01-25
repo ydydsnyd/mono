@@ -1,8 +1,8 @@
 import {getFirestore} from 'firebase/firestore';
 import {deleteVars} from 'mirror-protocol/src/vars.js';
 import {ensureAppInstantiated} from '../app-config.js';
-import {authenticate} from '../auth-config.js';
 import {deleteDevVars} from '../dev/vars.js';
+import type {AuthContext} from '../handler.js';
 import {makeRequester} from '../requester.js';
 import {watchDeployment} from '../watch-deployment.js';
 import type {YargvToInterface} from '../yarg-types.js';
@@ -23,6 +23,7 @@ type DeleteVarsHandlerArgs = YargvToInterface<
 
 export async function deleteVarsHandler(
   yargs: DeleteVarsHandlerArgs,
+  authContext: AuthContext,
 ): Promise<void> {
   const {keys: vars, dev} = yargs;
   if (dev) {
@@ -30,15 +31,15 @@ export async function deleteVarsHandler(
     console.log('Deleted specified Dev Variables');
     return;
   }
-  const {userID} = await authenticate(yargs);
-  const {appID} = await ensureAppInstantiated(yargs);
+  const {userID} = authContext.user;
+  const {appID} = await ensureAppInstantiated(authContext);
 
   const data = {requester: makeRequester(userID), appID, vars};
-  const {deploymentPath} = await deleteVars(data);
+  const {deploymentPath} = await deleteVars.call(data);
   if (!deploymentPath) {
-    console.log('Deleted specified Server Variables');
+    console.log('Deleted specified environment variables');
   } else {
-    console.log('Deploying updated Server Variables');
+    console.log('Deploying updated environment variables');
     await watchDeployment(getFirestore(), deploymentPath, 'Deployed');
   }
 }

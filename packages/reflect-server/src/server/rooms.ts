@@ -1,16 +1,46 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {CreateRoomRequest} from 'reflect-protocol';
+import type {ReadonlyJSONValue} from 'shared/src/json.js';
 import * as valita from 'shared/src/valita.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
-import {INTERNAL_CREATE_ROOM_PATH} from './paths.js';
+import type {ListOptions} from '../storage/storage.js';
+import {APIError, roomNotFoundAPIError} from './api-errors.js';
 import {roomDOFetch} from './auth-do.js';
+import {ErrorWithForwardedResponse} from './errors.js';
+import {CREATE_ROOM_PATH, fmtPath} from './paths.js';
+import {isValidRoomID, makeInvalidRoomIDMessage} from 'reflect-shared';
 
-// RoomRecord keeps information about the room, for example the Durable
-// Object ID of the DO instance that has the room.
-export type RoomRecord = {
+export enum RoomStatus {
+  // An Open room can be used by users. We will accept connect()s to it.
+  Open = 'open',
+  // A Closed room cannot be used by users. We will reject connect()s to it.
+  // Once closed, a room cannot be opened again.
+  Closed = 'closed',
+  // A Deleted room is a Closed room that has had all its data deleted.
+  Deleted = 'deleted',
+}
+
+// The DurableStorage interface adds type-awareness to the DO Storage API. It
+// requires a valita schema for values, which we define here. I've chosen
+// the slightly non-DRY path of having a separate ts type definition and schema,
+// instead of inferring the type from a schema, because frankly I like reading
+// type definitions in the type definition language (ts) and want to keep goop
+// (valita) from polluting the main ideas.
+export const roomStatusSchema = valita.union(
+  valita.literal(RoomStatus.Open),
+  valita.literal(RoomStatus.Closed),
+  valita.literal(RoomStatus.Deleted),
+);
+
+const jurisdictionSchema = valita.union(
+  valita.literal(''),
+  valita.literal('eu'),
+);
+
+const roomRecordSchema = valita.object({
   // roomID is the name of the room. It is externally visible, e.g.,
   // present in URLs.
-  roomID: string;
+  roomID: valita.string(),
 
   // objectIDString is the stringified Durable Object ID, the unique
   // identifier of the Durable Object instance that has this room.
@@ -22,50 +52,35 @@ export type RoomRecord = {
   // via newUniqueId(). The unique ID is not derived from the roomID, so we
   // need to keep track of them eg when we receive connect() we need to
   // look the objectID up by roomID.
-  objectIDString: string;
+  objectIDString: valita.string(),
 
   // Indicates whether the room is pinned in the EU.
-  jurisdiction: '' | 'eu';
-
-  status: RoomStatus;
-};
-
-export enum RoomStatus {
-  // An Open room can be used by users. We will accept connect()s to it.
-  Open = 'open',
-  // A Closed room cannot be used by users. We will reject connect()s to it.
-  // Once closed, a room cannot be opened again.
-  Closed = 'closed',
-  // A Deleted room is a Closed room that has had all its data deleted.
-  Deleted = 'deleted',
-
-  Unknown = 'unknown',
-}
-
-// The DurableStorage interface adds type-awareness to the DO Storage API. It
-// requires a valita schema for values, which we define here. I've chosen
-// the slightly non-DRY path of having a separate ts type definition and schema,
-// instead of inferring the type from a schema, because frankly I like reading
-// type definitions in the type definition language (ts) and want to keep goop
-// (valita) from polluting the main ideas.
-const roomStatusSchema = valita.union(
-  valita.literal(RoomStatus.Open),
-  valita.literal(RoomStatus.Closed),
-  valita.literal(RoomStatus.Deleted),
-  valita.literal(RoomStatus.Unknown),
-);
-
-const jurisdictionSchema = valita.union(
-  valita.literal(''),
-  valita.literal('eu'),
-);
-// The type annotation here that RoomRecord and roomRecordSchema stay in sync.
-const roomRecordSchema: valita.Type<RoomRecord> = valita.object({
-  roomID: valita.string(),
-  objectIDString: valita.string(),
   jurisdiction: jurisdictionSchema,
+
   status: roomStatusSchema,
 });
+
+// RoomRecord keeps information about the room, for example the Durable
+// Object ID of the DO instance that has the room.
+export type RoomRecord = valita.Infer<typeof roomRecordSchema>;
+
+// Public subset of RoomRecord that can be listed via the REST API
+// (i.e. everything but the objectIDString).
+//
+// The schema is constructed by chaining the `roomRecordSchema` (as opposed to
+// using `roomRecordSchema.pick(...)`) so that it can be passed into
+// storage.listEntries(...) to validate the returned data with the
+// full schema and from there construct the desired view.
+export const roomPropertiesSchema = roomRecordSchema.chain(record =>
+  valita.ok({
+    roomID: record.roomID,
+    jurisdiction: record.jurisdiction,
+    // objectIDString is excluded since it's an internal CF detail.
+    status: record.status,
+  }),
+);
+
+export type RoomProperties = valita.Infer<typeof roomPropertiesSchema>;
 
 export function internalCreateRoom(
   lc: LogContext,
@@ -73,9 +88,11 @@ export function internalCreateRoom(
   storage: DurableStorage,
   roomID: string,
   jurisdiction: 'eu' | undefined,
-) {
-  const url = `https://unused-reflect-room-do.dev${INTERNAL_CREATE_ROOM_PATH}`;
-  const req: CreateRoomRequest = {roomID, jurisdiction};
+): Promise<void> {
+  const url = `https://unused-reflect-room-do.dev${fmtPath(CREATE_ROOM_PATH, {
+    roomID,
+  })}`;
+  const req: CreateRoomRequest = {jurisdiction};
   const request = new Request(url, {
     method: 'POST',
     // no auth headers, because this is an internal call
@@ -93,20 +110,19 @@ export async function createRoom(
   request: Request,
   roomID: string,
   jurisdiction: 'eu' | undefined,
-): Promise<Response> {
+): Promise<void> {
   // Note: this call was authenticated by dispatch, so no need to check for
   // authApiKey here.
 
-  const invalidResponse = validateRoomID(roomID);
-  if (invalidResponse) {
-    return invalidResponse;
-  }
+  validateRoomID(roomID);
 
   // Check if the room already exists.
   if ((await roomRecordByRoomID(storage, roomID)) !== undefined) {
-    return new Response('room already exists', {
-      status: 409 /* Conflict */,
-    });
+    throw new APIError(
+      409 /* Conflict */,
+      'rooms',
+      `Room "${roomID}" already exists`,
+    );
   }
 
   const options = jurisdiction ? {jurisdiction} : undefined;
@@ -128,7 +144,7 @@ export async function createRoom(
         response.status
       } ${await response.clone().text()}`,
     );
-    return response;
+    throw new ErrorWithForwardedResponse(response);
   }
 
   // Write the record for the room only after it has been successfully
@@ -142,8 +158,6 @@ export async function createRoom(
   const roomRecordKey = roomKeyToString(roomRecord);
   await storage.put(roomRecordKey, roomRecord);
   lc.debug?.(`created room ${JSON.stringify(roomRecord)}`);
-
-  return new Response('ok');
 }
 
 // Caller must enforce no other concurrent calls to this and other
@@ -155,28 +169,26 @@ export async function closeRoom(
   lc: LogContext,
   storage: DurableStorage,
   roomID: string,
-): Promise<Response> {
+): Promise<void> {
   const roomRecord = await roomRecordByRoomID(storage, roomID);
   if (roomRecord === undefined) {
-    return new Response('no such room', {
-      status: 404,
-    });
+    throw roomNotFoundAPIError(roomID);
   }
 
   if (roomRecord.status === RoomStatus.Closed) {
-    return new Response('ok (room already closed)');
+    return; // OK: Already closed
   } else if (roomRecord.status !== RoomStatus.Open) {
-    return new Response('room is not open', {
-      status: 409 /* Conflict */,
-    });
+    throw new APIError(
+      409 /* Conflict */,
+      'rooms',
+      `Room "${roomID}" is ${roomRecord.status}`,
+    );
   }
 
   roomRecord.status = RoomStatus.Closed;
   const roomRecordKey = roomKeyToString(roomRecord);
   await storage.put(roomRecordKey, roomRecord);
   lc.debug?.(`closed room ${JSON.stringify(roomRecord)}`);
-
-  return new Response('ok');
 }
 
 // Caller must enforce no other concurrent calls to this and other
@@ -187,20 +199,20 @@ export async function deleteRoom(
   storage: DurableStorage,
   roomID: string,
   request: Request,
-): Promise<Response> {
+): Promise<void> {
   const roomRecord = await roomRecordByRoomID(storage, roomID);
   if (roomRecord === undefined) {
-    return new Response('no such room', {
-      status: 404,
-    });
+    throw roomNotFoundAPIError(roomID);
   }
 
   if (roomRecord.status === RoomStatus.Deleted) {
-    return new Response('ok (room already deleted)');
+    return; // OK: Already deleted.
   } else if (roomRecord.status !== RoomStatus.Closed) {
-    return new Response('room must first be closed', {
-      status: 409 /* Conflict */,
-    });
+    throw new APIError(
+      409 /* Conflict */,
+      'rooms',
+      `Room "${roomID}" must first be closed`,
+    );
   }
 
   const objectID = roomDO.idFromString(roomRecord.objectIDString);
@@ -218,85 +230,19 @@ export async function deleteRoom(
         response.status
       } ${await response.clone().text()}`,
     );
-    return response;
+    throw new ErrorWithForwardedResponse(response);
   }
 
   roomRecord.status = RoomStatus.Deleted;
   const roomRecordKey = roomKeyToString(roomRecord);
   await storage.put(roomRecordKey, roomRecord);
   lc.debug?.(`deleted room ${JSON.stringify(roomRecord)}`);
-  return new Response('ok');
 }
-
-// Deletes the RoomRecord without any concern for the room's status.
-// Customers probably won't want/need to call this but it is useful for
-// developing.
-//
-// Caller must enforce no other concurrent calls to this and other
-// functions that create or modify the room record.
-export async function deleteRoomRecord(
-  lc: LogContext,
-  storage: DurableStorage,
-  roomID: string,
-): Promise<Response> {
-  const roomRecord = await roomRecordByRoomID(storage, roomID);
-  if (roomRecord === undefined) {
-    return new Response('no such room', {
-      status: 404,
-    });
-  }
-
-  lc.debug?.(`DANGER: deleting room record ${JSON.stringify(roomRecord)}`);
-  const roomRecordKey = roomKeyToString(roomRecord);
-  await storage.del(roomRecordKey);
-  lc.debug?.(`deleted RoomRecord ${JSON.stringify(roomRecord)}`);
-
-  return new Response('ok');
-}
-
-// Creates a RoomRecord for a roomID that already exists whose objectID
-// was derived from the roomID. It overwrites any record that already
-// exists for the roomID.
-//
-// Caller must enforce no other concurrent calls to this and other
-// room-modifying functions.
-export async function createRoomRecordForLegacyRoom(
-  lc: LogContext,
-  roomDO: DurableObjectNamespace,
-  storage: DurableStorage,
-  roomID: string,
-): Promise<Response> {
-  const invalidResponse = validateRoomID(roomID);
-  if (invalidResponse) {
-    return invalidResponse;
-  }
-
-  const objectID = await roomDO.idFromName(roomID);
-
-  const roomRecord: RoomRecord = {
-    roomID,
-    objectIDString: objectID.toString(),
-    jurisdiction: '',
-    status: RoomStatus.Open,
-  };
-  const roomRecordKey = roomKeyToString(roomRecord);
-  await storage.put(roomRecordKey, roomRecord);
-  lc.debug?.(
-    `migrated created roomID ${roomID}; record: ${JSON.stringify(roomRecord)}`,
-  );
-
-  return new Response('ok');
-}
-
-const roomIDRegex = /^[A-Za-z0-9_\-/]+$/;
 
 function validateRoomID(roomID: string) {
-  if (!roomIDRegex.test(roomID)) {
-    return new Response(`Invalid roomID (must match ${roomIDRegex})`, {
-      status: 400,
-    });
+  if (!isValidRoomID(roomID)) {
+    throw new APIError(400, 'rooms', makeInvalidRoomIDMessage(roomID));
   }
-  return undefined;
 }
 
 // Caller must enforce no other concurrent calls to
@@ -316,8 +262,25 @@ export async function objectIDByRoomID(
 // Caller must enforce no other concurrent calls to
 // functions that create or modify the room record.
 export function roomRecordByRoomID(storage: DurableStorage, roomID: string) {
+  return roomDataByRoomID(storage, roomID, roomRecordSchema);
+}
+
+// Caller must enforce no other concurrent calls to
+// functions that create or modify the room record.
+export function roomPropertiesByRoomID(
+  storage: DurableStorage,
+  roomID: string,
+) {
+  return roomDataByRoomID(storage, roomID, roomPropertiesSchema);
+}
+
+function roomDataByRoomID<T extends ReadonlyJSONValue>(
+  storage: DurableStorage,
+  roomID: string,
+  schema: valita.Type<T>,
+) {
   const roomRecordKey = roomKeyToString({roomID});
-  return storage.get(roomRecordKey, roomRecordSchema);
+  return storage.get(roomRecordKey, schema);
 }
 
 export async function roomRecordByObjectIDForTest(
@@ -338,8 +301,12 @@ export async function roomRecordByObjectIDForTest(
   return undefined;
 }
 
-export async function roomRecords(storage: DurableStorage) {
-  const map = await storage.list({prefix: ROOM_KEY_PREFIX}, roomRecordSchema);
+export async function roomProperties(
+  storage: DurableStorage,
+  opts: ListOptions,
+) {
+  const options = convertListOptionKeysToRoomKeys(opts);
+  const map = await storage.list(options, roomPropertiesSchema);
   return map.values();
 }
 
@@ -354,4 +321,22 @@ type RoomKey = {
 
 function roomKeyToString(key: RoomKey): string {
   return `${ROOM_KEY_PREFIX}${encodeURIComponent(key.roomID)}/`;
+}
+
+export function convertListOptionKeysToRoomKeys(
+  opts: ListOptions,
+): ListOptions {
+  const prefix = ROOM_KEY_PREFIX + (opts.prefix ?? '');
+  const options = {...opts, prefix};
+  if (opts.start) {
+    options.start = {
+      ...opts.start,
+      // Encoding the empty key with roomKeyToString() would result in the start key being "room//",
+      // which is lexicographically larger than "room/-.*/". Instead, leave the empty string as-is
+      // so that it preserves the semantics of "before the first valid key".
+      key:
+        opts.start.key === '' ? '' : roomKeyToString({roomID: opts.start.key}),
+    };
+  }
+  return options;
 }

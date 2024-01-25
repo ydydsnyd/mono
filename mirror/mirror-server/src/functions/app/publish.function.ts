@@ -1,6 +1,5 @@
 import type {Firestore} from 'firebase-admin/firestore';
 import type {Storage} from 'firebase-admin/storage';
-import {logger} from 'firebase-functions';
 import {HttpsError} from 'firebase-functions/v2/https';
 import {
   publishRequestSchema,
@@ -18,7 +17,10 @@ import * as semver from 'semver';
 import {gtr} from 'semver';
 import {isSupportedSemverRange} from 'shared/src/mirror/is-supported-semver-range.js';
 import {assertAllModulesHaveUniqueNames} from '../../cloudflare/module-assembler.js';
-import {appAuthorization, userAuthorization} from '../validators/auth.js';
+import {
+  appOrKeyAuthorization,
+  userOrKeyAuthorization,
+} from '../validators/auth.js';
 import {getDataOrFail} from '../validators/data.js';
 import {validateSchema} from '../validators/schema.js';
 import {DistTags, userAgentVersion} from '../validators/version.js';
@@ -33,8 +35,8 @@ export const publish = (
 ) =>
   validateSchema(publishRequestSchema, publishResponseSchema)
     .validate(userAgentVersion(testDistTags))
-    .validate(userAuthorization())
-    .validate(appAuthorization(firestore))
+    .validate(userOrKeyAuthorization())
+    .validate(appOrKeyAuthorization(firestore, 'app:publish'))
     .handle(async (publishRequest, context) => {
       const {
         serverVersionRange,
@@ -93,8 +95,6 @@ export const publish = (
         },
         serverReleaseChannel,
       );
-
-      logger.log(`Requested ${deploymentPath}`);
       return {deploymentPath, success: true};
     });
 
@@ -117,9 +117,6 @@ export async function computeDeploymentSpec(
     firestore,
     range,
     serverReleaseChannel,
-  );
-  logger.log(
-    `Found matching version for ${serverVersionRange}: ${serverVersion}`,
   );
 
   const {provider: providerID, name: appName, teamLabel} = app;

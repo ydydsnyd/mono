@@ -1,9 +1,15 @@
 import {expect, test} from '@jest/globals';
 import * as valita from 'shared/src/valita.js';
-import {delEntry, getEntry, getEntries, listEntries, putEntry} from './data.js';
+import {delEntry, getEntries, getEntry, listEntries, putEntry} from './data.js';
 
 const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();
+
+// Schema that sometimes produces a normalized value.
+const numberToString = valita.union(
+  valita.string(),
+  valita.number().chain(n => valita.ok(String(n))),
+);
 
 test('getEntry', async () => {
   type Case = {
@@ -37,8 +43,8 @@ test('getEntry', async () => {
       await storage.put('foo', c.validSchema ? 42 : {});
     }
 
-    const promise = getEntry(storage, 'foo', valita.number(), {});
-    let result: number | undefined;
+    const promise = getEntry(storage, 'foo', numberToString, {});
+    let result: string | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let error: any | undefined;
     await promise.then(
@@ -51,9 +57,11 @@ test('getEntry', async () => {
       expect(error).toBeUndefined();
     } else if (!c.validSchema) {
       expect(result).toBeUndefined();
-      expect(String(error)).toMatch('TypeError: Expected number. Got object');
+      expect(String(error)).toMatch(
+        'TypeError: Expected string or number. Got object',
+      );
     } else {
-      expect(result).toEqual(42);
+      expect(result).toEqual('42');
       expect(error).toBeUndefined();
     }
   }
@@ -72,6 +80,7 @@ test('getEntry RoundTrip types', async () => {
     true,
   );
   expect(await getEntry(storage, 'number', valita.number(), {})).toEqual(42);
+  expect(await getEntry(storage, 'number', numberToString, {})).toEqual('42');
   expect(await getEntry(storage, 'string', valita.string(), {})).toEqual('foo');
   expect(
     await getEntry(storage, 'array', valita.array(valita.number()), {}),
@@ -112,6 +121,30 @@ test('getEntries', async () => {
   ]);
 });
 
+test('getEntries schema chaining', async () => {
+  const storage = await getMiniflareDurableObjectStorage(id);
+
+  await putEntry(storage, 'a', '1', {});
+  // Make normalization apparent midway through the Map to verify
+  // that the result still follows iteration order.
+  await putEntry(storage, 'b', 2, {});
+  await putEntry(storage, 'c', '3', {});
+
+  const entries = await getEntries(
+    storage,
+    ['a', 'b', 'c', 'is', 'easy', 'as', '1', '2', '3'],
+    numberToString,
+    {},
+  );
+
+  // Note: Also verifies that iteration order is sorted in UTF-8.
+  expect([...entries]).toEqual([
+    ['a', '1'],
+    ['b', '2'],
+    ['c', '3'],
+  ]);
+});
+
 test('listEntries', async () => {
   type Case = {
     name: string;
@@ -141,16 +174,20 @@ test('listEntries', async () => {
   for (const c of cases) {
     await storage.delete('foos/1');
     await storage.delete('foos/2');
+    await storage.delete('foos/3');
     if (c.exists) {
-      await storage.put('foos/1', c.validSchema ? 11 : {});
+      await storage.put('foos/1', c.validSchema ? '11' : {});
+      // Make normalization apparent midway through the Map to verify
+      // that the result still follows iteration order.
       await storage.put('foos/2', c.validSchema ? 22 : {});
+      await storage.put('foos/3', c.validSchema ? '33' : {});
     }
 
-    let result: Map<string, number> | undefined = undefined;
+    let result: Map<string, string> | undefined = undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let error: any | undefined;
     try {
-      result = await listEntries(storage, valita.number(), {prefix: 'foos/'});
+      result = await listEntries(storage, numberToString, {prefix: 'foos/'});
     } catch (e) {
       error = e;
     }
@@ -162,15 +199,20 @@ test('listEntries', async () => {
       expect(result.size).toEqual(0);
     } else if (!c.validSchema) {
       expect(result).toBeUndefined();
-      expect(String(error)).toMatch('TypeError: Expected number. Got object');
+      expect(String(error)).toMatch(
+        'TypeError: Expected string or number. Got object',
+      );
     } else {
       expect(result).toBeDefined();
       if (result === undefined) {
         throw new Error('result should be defined');
       }
-      expect(result.size).toEqual(2);
-      expect(result.get('foos/1')).toEqual(11);
-      expect(result.get('foos/2')).toEqual(22);
+      // Note: Also verifies that iteration order is sorted in UTF-8.
+      expect([...result]).toEqual([
+        ['foos/1', '11'],
+        ['foos/2', '22'],
+        ['foos/3', '33'],
+      ]);
     }
   }
 });

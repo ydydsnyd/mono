@@ -1,3 +1,12 @@
+import {
+  createAppKey,
+  deleteAppKeys,
+  editAppKey,
+  listAppKeys,
+} from 'mirror-protocol/src/app-keys.js';
+import {deleteApp} from 'mirror-protocol/src/app.js';
+import {publish} from 'mirror-protocol/src/publish.js';
+import {deleteVars, listVars, setVars} from 'mirror-protocol/src/vars.js';
 import {hideBin} from 'yargs/helpers';
 import {authenticate} from './auth-config.js';
 import {
@@ -7,8 +16,11 @@ import {
 import {createHandler, createOptions} from './create.js';
 import {deleteHandler, deleteOptions} from './delete.js';
 import {devHandler, devOptions} from './dev.js';
-import {handleWith} from './handler.js';
-import {initHandler, initOptions} from './init.js';
+import {authenticateAndHandleWith, handleWith} from './handler.js';
+import {createAppKeyHandler, createAppKeyOptions} from './keys/create.js';
+import {deleteAppKeysHandler, deleteAppKeysOptions} from './keys/delete.js';
+import {editAppKeyHandler, editAppKeyOptions} from './keys/edit.js';
+import {listAppKeysHandler, listAppKeysOptions} from './keys/list.js';
 import {loginHandler} from './login.js';
 import {publishHandler, publishOptions} from './publish.js';
 import {statusHandler} from './status.js';
@@ -41,21 +53,14 @@ function createCLIParser(argv: string[]) {
     'create <name>',
     '🛠  Create a basic Reflect project',
     createOptions,
-    handleWith(createHandler).andCleanup(),
-  );
-
-  reflectCLI.command(
-    ['init', 'lfg'],
-    '🚀 Add Reflect and basic mutators to an existing project',
-    initOptions,
-    handleWith(initHandler).andCleanup(),
+    authenticateAndHandleWith(createHandler).andCleanup(),
   );
 
   reflectCLI.command(
     'dev',
     '💻 Start a local dev server for your Reflect project',
     devOptions,
-    handleWith(devHandler).andCleanup(),
+    authenticateAndHandleWith(devHandler).andCleanup(),
   );
 
   reflectCLI.command(
@@ -75,7 +80,7 @@ function createCLIParser(argv: string[]) {
     'publish',
     '🌏 Publish your Reflect project',
     publishOptions,
-    handleWith(publishHandler).andCleanup(),
+    authenticateAndHandleWith(publishHandler).withWarmup(publish).andCleanup(),
   );
 
   reflectCLI.command(
@@ -83,14 +88,14 @@ function createCLIParser(argv: string[]) {
     '💡 Show the status of current deployed app',
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     () => {},
-    handleWith(statusHandler).andCleanup(),
+    authenticateAndHandleWith(statusHandler).andCleanup(),
   );
 
   reflectCLI.command(
     'tail',
     '🦚 Start a log tailing session',
     tailOptions,
-    handleWith(tailHandler).andCleanup(),
+    authenticateAndHandleWith(tailHandler).andCleanup(),
   );
 
   reflectCLI.command('env', '🎛️  Manage environment variables', yargs => {
@@ -104,19 +109,62 @@ function createCLIParser(argv: string[]) {
         'list',
         'List environment variables',
         listVarsOptions,
-        handleWith(listVarsHandler).andCleanup(),
+        authenticateAndHandleWith(listVarsHandler)
+          .withWarmup(listVars)
+          .andCleanup(),
       )
       .command(
         'set <keysAndValues..>',
         'Set one or more environment variables',
         setVarsOptions,
-        handleWith(setVarsHandler).andCleanup(),
+        authenticateAndHandleWith(setVarsHandler)
+          .withWarmup(setVars)
+          .andCleanup(),
       )
       .command(
         'delete <keys..>',
         'Delete one or more environment variables',
         deleteVarsOptions,
-        handleWith(deleteVarsHandler).andCleanup(),
+        authenticateAndHandleWith(deleteVarsHandler)
+          .withWarmup(deleteVars)
+          .andCleanup(),
+      )
+      .demandCommand(1, 'Available commands:\n');
+  });
+
+  reflectCLI.command('keys', '🔑 Manage app keys', yargs => {
+    yargs
+      .command(
+        'list',
+        'List app keys',
+        listAppKeysOptions,
+        authenticateAndHandleWith(listAppKeysHandler)
+          .withWarmup(listAppKeys)
+          .andCleanup(),
+      )
+      .command(
+        'create <name>',
+        'Create an app key',
+        createAppKeyOptions,
+        authenticateAndHandleWith(createAppKeyHandler)
+          .withWarmup(listAppKeys, createAppKey)
+          .andCleanup(),
+      )
+      .command(
+        'edit <name>',
+        'Edit an app key',
+        editAppKeyOptions,
+        authenticateAndHandleWith(editAppKeyHandler)
+          .withWarmup(listAppKeys, editAppKey)
+          .andCleanup(),
+      )
+      .command(
+        'delete <names..>',
+        'Delete one or more app keys',
+        deleteAppKeysOptions,
+        authenticateAndHandleWith(deleteAppKeysHandler)
+          .withWarmup(deleteAppKeys)
+          .andCleanup(),
       )
       .demandCommand(1, 'Available commands:\n');
   });
@@ -125,14 +173,14 @@ function createCLIParser(argv: string[]) {
     'usage',
     '📊 Show usage summary (room time), with monthly, daily, or hourly breakdowns',
     usageOptions,
-    handleWith(usageHandler).andCleanup(),
+    authenticateAndHandleWith(usageHandler).andCleanup(),
   );
 
   reflectCLI.command(
-    'delete',
-    '🗑️  Delete one or more Apps and their associated data. If no flags are specified, defaults to the App of the current directory.',
+    'delete [name]',
+    '🗑️  Delete one or more Apps. Defaults to the App of the current directory.',
     deleteOptions,
-    handleWith(deleteHandler).andCleanup(),
+    authenticateAndHandleWith(deleteHandler).withWarmup(deleteApp).andCleanup(),
   );
 
   return reflectCLI;

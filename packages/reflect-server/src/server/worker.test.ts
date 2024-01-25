@@ -1,21 +1,30 @@
 import {describe, expect, jest, test} from '@jest/globals';
 import type {LogLevel} from '@rocicorp/logger';
 import {version} from 'reflect-shared';
+import {createAPIHeaders} from 'shared/src/api/headers.js';
 import {assertString} from 'shared/src/asserts.js';
 import type {Series} from '../types/report-metrics.js';
 import {Mocket, TestLogSink, fail} from '../util/test-utils.js';
-import {createAuthAPIHeaders} from './auth-api-headers.js';
-import {AUTH_ROUTES} from './auth-do.js';
 import {
   TestDurableObjectId,
   TestDurableObjectStub,
   TestExecutionContext,
   createTestDurableObjectNamespace,
 } from './do-test-utils.js';
-import {LOG_LOGS_PATH, REPORT_METRICS_PATH} from './paths.js';
+import {
+  CLOSE_ROOM_PATH,
+  DELETE_ROOM_PATH,
+  GET_ROOM_PATH,
+  INVALIDATE_ROOM_CONNECTIONS_PATH,
+  INVALIDATE_USER_CONNECTIONS_PATH,
+  LIST_ROOMS_PATH,
+  LOG_LOGS_PATH,
+  REPORT_METRICS_PATH,
+  fmtPath,
+} from './paths.js';
 import {BaseWorkerEnv, createWorker} from './worker.js';
 
-const TEST_AUTH_API_KEY = 'TEST_REFLECT_AUTH_API_KEY_TEST';
+const TEST_API_KEY = 'TEST_REFLECT_API_KEY_TEST';
 
 function createTestFixture(
   options: {
@@ -50,7 +59,7 @@ function createTestFixture(
     },
   };
   if (authApiKeyDefined) {
-    testEnv.REFLECT_AUTH_API_KEY = TEST_AUTH_API_KEY;
+    testEnv.REFLECT_API_KEY = TEST_API_KEY;
   }
   if (disable !== undefined) {
     testEnv.DISABLE = disable;
@@ -161,9 +170,18 @@ async function testForwardedToAuthDO(
   expect(response.headers.get('Access-Control-Allow-Origin')).toEqual('*');
 }
 
+test('worker forwards disconnect requests to authDO', async () => {
+  await testForwardedToAuthDO(
+    new Request('http://test.roci.dev/api/sync/v1/disconnect'),
+    new Response(null, {
+      status: 200,
+    }),
+  );
+});
+
 test('worker forwards connect requests to authDO', async () => {
   await testForwardedToAuthDO(
-    new Request('ws://test.roci.dev/connect'),
+    new Request('ws://test.roci.dev/api/sync/v1/connect'),
     new Response(null, {
       status: 101,
       webSocket: new Mocket(),
@@ -171,48 +189,47 @@ test('worker forwards connect requests to authDO', async () => {
   );
 });
 
+test('worker does not forward disconnect requests to authDO when DISABLE is true', async () => {
+  await testDisabled(
+    new Request('http://test.roci.dev/api/sync/v1/disconnect'),
+  );
+});
+
 test('worker does not forward connect requests to authDO when DISABLE is true', async () => {
-  await testDisabled(new Request('ws://test.roci.dev/connect'));
+  await testDisabled(new Request('ws://test.roci.dev/api/sync/v1/connect'));
 });
 
 test('worker forwards authDO api requests to authDO', async () => {
-  const roomStatusByRoomIDPathWithRoomID =
-    AUTH_ROUTES.roomStatusByRoomID.replace(':roomID', 'ae4565');
+  const roomStatusByRoomIDPathWithRoomID = fmtPath(GET_ROOM_PATH, {
+    roomID: 'ae4565',
+  });
   type TestCase = {
     path: string;
     method: string;
     body: undefined | Record<string, unknown>;
   };
-  const closeRoomPathWithRoomID = AUTH_ROUTES.closeRoom.replace(
-    ':roomID',
-    'ae4565',
-  );
-  const deleteRoomPathWithRoomID = AUTH_ROUTES.roomRecords.replace(
-    ':roomID',
-    'ae4565',
-  );
-  const forgetRoomPathWithRoomID = AUTH_ROUTES.forgetRoom.replace(
-    ':roomID',
-    'ae4565',
-  );
-  const migrateRoomPathWithRoomID = AUTH_ROUTES.migrateRoom.replace(
-    ':roomID',
-    'ae4565',
-  );
+  const closeRoomPathWithRoomID = fmtPath(CLOSE_ROOM_PATH, {roomID: 'ae4565'});
+  const deleteRoomPathWithRoomID = fmtPath(DELETE_ROOM_PATH, {
+    roomID: 'ae4656',
+  });
   const testCases: TestCase[] = [
     // Auth API calls.
     {
-      path: 'https://test.roci.dev/api/auth/v0/invalidateForUser',
+      path: `https://test.roci.dev${fmtPath(INVALIDATE_USER_CONNECTIONS_PATH, {
+        userID: 'userID1',
+      })}`,
       method: 'post',
-      body: {userID: 'userID1'},
+      body: undefined,
     },
     {
-      path: 'https://test.roci.dev/api/auth/v0/invalidateForRoom',
+      path: `https://test.roci.dev${fmtPath(INVALIDATE_ROOM_CONNECTIONS_PATH, {
+        roomID: 'roomID1',
+      })}`,
       method: 'post',
-      body: {roomID: 'roomID1'},
+      body: undefined,
     },
     {
-      path: 'https://test.roci.dev/api/auth/v0/invalidateAll',
+      path: 'https://test.roci.dev/api/v1/connections/all:invalidate',
       method: 'post',
       body: undefined,
     },
@@ -224,7 +241,7 @@ test('worker forwards authDO api requests to authDO', async () => {
       body: undefined,
     },
     {
-      path: `https://test.roci.dev${AUTH_ROUTES.roomRecords}`,
+      path: `https://test.roci.dev${fmtPath(LIST_ROOMS_PATH)}`,
       method: 'get',
       body: undefined,
     },
@@ -238,16 +255,6 @@ test('worker forwards authDO api requests to authDO', async () => {
       method: 'post',
       body: undefined,
     },
-    {
-      path: `https://test.roci.dev${forgetRoomPathWithRoomID}`,
-      method: 'post',
-      body: undefined,
-    },
-    {
-      path: `https://test.roci.dev${migrateRoomPathWithRoomID}`,
-      method: 'post',
-      body: undefined,
-    },
   ];
   for (const tc of testCases) {
     await testForwarding(tc);
@@ -257,14 +264,14 @@ test('worker forwards authDO api requests to authDO', async () => {
     await testForwardedToAuthDO(
       new Request(tc.path, {
         method: tc.method,
-        headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
+        headers: createAPIHeaders(TEST_API_KEY),
         body: tc.body ? JSON.stringify(tc.body) : null,
       }),
     );
     await testDisabled(
       new Request(tc.path, {
         method: tc.method,
-        headers: createAuthAPIHeaders(TEST_AUTH_API_KEY),
+        headers: createAPIHeaders(TEST_API_KEY),
         body: tc.body ? JSON.stringify(tc.body) : null,
       }),
     );
@@ -426,6 +433,17 @@ async function testPreflightRequest({
   );
 }
 
+function fetchSpyWithResponse(response: Response | string) {
+  const r = typeof response === 'string' ? new Response(response) : response;
+  return (
+    jest
+      .spyOn(globalThis, 'fetch')
+      // undici / worker-types conflict
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .mockReturnValue(Promise.resolve(r as any))
+  );
+}
+
 describe('reportMetrics', () => {
   const reportMetricsURL = new URL(
     REPORT_METRICS_PATH,
@@ -527,9 +545,7 @@ describe('reportMetrics', () => {
   }
 
   async function testReportMetrics(tc: TestCase) {
-    const fetchSpy = jest
-      .spyOn(globalThis, 'fetch')
-      .mockReturnValue(Promise.resolve(new Response('{}')));
+    const fetchSpy = fetchSpyWithResponse('{}');
 
     const testEnv: BaseWorkerEnv = {
       authDO: {
@@ -547,10 +563,15 @@ describe('reportMetrics', () => {
       },
     }));
 
-    const testRequest = new Request(reportMetricsURL.toString(), {
-      method: tc.method,
-      body: tc.method === 'post' && tc.body ? JSON.stringify(tc.body) : null,
-    });
+    const testRequest = new Request(
+      // The client appends common query parameters to the URL (which are ignored on the server)
+      reportMetricsURL.toString() +
+        '?clientID=foo&clientGroupID=bar&roomID=bax&userID=bonk&requestID=12345',
+      {
+        method: tc.method,
+        body: tc.method === 'post' && tc.body ? JSON.stringify(tc.body) : null,
+      },
+    );
     if (worker.fetch === undefined) {
       throw new Error('Expect fetch to be defined');
     }
@@ -654,8 +675,8 @@ describe('log logs', () => {
     }
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const fetchedRequest = fetchSpy.mock.calls[0][0];
-    if (typeof fetchedRequest === 'string') {
-      throw new Error('Expected request not string fetched');
+    if (!(fetchedRequest instanceof Request)) {
+      throw new Error('Expected fetch to be called with a Request object');
     }
     expect(fetchedRequest.url).toEqual(
       'https://http-intake.logs.datadoghq.com/api/v2/logs?service=test-service&ddtags=version%3A0.35.0&host=test.host.com&foo=bar&dd-api-key=test-dd-logs-api-key&ddsource=client',
@@ -667,16 +688,14 @@ describe('log logs', () => {
   }
 
   test('success', async () => {
-    const fetchSpy = jest
-      .spyOn(globalThis, 'fetch')
-      .mockReturnValue(Promise.resolve(new Response('{}')));
+    const fetchSpy = fetchSpyWithResponse('{}');
     await testLogLogs(fetchSpy, 200);
   });
 
   test('error response', async () => {
-    const fetchSpy = jest
-      .spyOn(globalThis, 'fetch')
-      .mockReturnValue(Promise.resolve(new Response('failed', {status: 403})));
+    const fetchSpy = fetchSpyWithResponse(
+      new Response('failed', {status: 403}),
+    );
     await testLogLogs(fetchSpy, 403);
   });
 
@@ -688,9 +707,7 @@ describe('log logs', () => {
   });
 
   test('no api key in env', async () => {
-    const fetchSpy = jest
-      .spyOn(globalThis, 'fetch')
-      .mockReturnValue(Promise.resolve(new Response('{}')));
+    const fetchSpy = fetchSpyWithResponse('{}');
     await testLogLogs(fetchSpy, 200, false);
   });
 });

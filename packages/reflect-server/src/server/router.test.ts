@@ -1,22 +1,30 @@
 import {describe, expect, test} from '@jest/globals';
+import type {APIErrorInfo} from 'shared/src/api/responses.js';
 import {assert} from 'shared/src/asserts.js';
 import type {JSONObject, ReadonlyJSONValue} from 'shared/src/json.js';
 import {must} from 'shared/src/must.js';
 import * as valita from 'shared/src/valita.js';
 import {createSilentLogContext} from '../util/test-utils.js';
+import {HttpError} from './errors.js';
 import {
   BaseContext,
   Handler,
   Router,
-  asJSON,
+  bearerToken,
+  bodyOnly,
   checkAuthAPIKey,
   get,
   post,
-  requireAuthAPIKey,
-  withBody,
-  withRoomID,
-  withVersion,
+  queryParams,
+  requiredAuthAPIKey,
+  roomID,
+  urlVersion,
+  userID,
 } from './router.js';
+
+function expectBodyNotUsed(req: Request) {
+  expect(req.bodyUsed).toBe(false);
+}
 
 test('Router', async () => {
   const router = new Router();
@@ -44,64 +52,63 @@ test('Router', async () => {
 
   type Case = {
     path: string;
-    expectedError?: string | undefined;
     expectedResponseCode: number | undefined;
-    expectedResponseText: string | undefined;
+    expectedResponseText?: string;
+    expectedResponseJSON?: ReadonlyJSONValue;
   };
 
   const cases: Case[] = [
     {
       path: '/foo/42',
-      expectedError: undefined,
       expectedResponseCode: 200,
       expectedResponseText: 'foo:42',
     },
     {
       path: '/bar/44',
-      expectedError: undefined,
       expectedResponseCode: 400,
       expectedResponseText: 'bar:44',
     },
     {
       path: '/bar',
-      expectedError: undefined,
       expectedResponseCode: 500,
       expectedResponseText: 'bar',
     },
     {
       path: '/monkey/nuts',
-      expectedError: undefined,
       expectedResponseCode: 404,
-      expectedResponseText: 'not found',
+      expectedResponseJSON: {
+        error: {
+          code: 404,
+          resource: 'request',
+          message: 'Unknown or invalid URL',
+        },
+      },
     },
   ];
   for (const c of cases) {
-    let error: unknown;
-    let resp: Response | undefined;
-    try {
-      resp = await router.dispatch(
-        new Request(`https://test.roci.dev${c.path}`),
-        {lc: createSilentLogContext()},
-      );
-    } catch (e) {
-      error = e;
-    }
-    if (c.expectedError === undefined) {
-      expect(error).toBeUndefined();
-    } else {
-      expect(String(error)).toMatch(c.expectedError);
-    }
+    const resp = await router.dispatch(
+      new Request(`https://test.roci.dev${c.path}`),
+      {lc: createSilentLogContext()},
+    );
+
     expect(resp?.status).toEqual(c.expectedResponseCode);
-    expect(await resp?.text()).toEqual(c.expectedResponseText);
+    if (c.expectedResponseText) {
+      expect(await resp?.text()).toEqual(c.expectedResponseText);
+    } else if (c.expectedResponseJSON) {
+      expect(await resp?.json()).toEqual(c.expectedResponseJSON);
+    }
   }
 });
 
 test('requireMethod', async () => {
-  const getHandler = get((_, req) => new Response(`${req.url}`, {status: 300}));
-  const postHandler = post(
-    async (_, req) =>
-      new Response(`${req.url}:${await req.text()}`, {status: 301}),
-  );
+  const getHandler = get().handle((_, req) => {
+    expectBodyNotUsed(req);
+    return new Response(`${req.url}`, {status: 300});
+  });
+  const postHandler = post().handle(async (_, req) => {
+    expectBodyNotUsed(req);
+    return new Response(`${req.url}:${await req.text()}`, {status: 301});
+  });
 
   const pattern = new URLPattern();
   const url = 'https://test.roci.dev/';
@@ -112,7 +119,8 @@ test('requireMethod', async () => {
     handler: Handler<BaseContext, Response>;
     method: string;
     expectedStatus: number;
-    expectedText: string;
+    expectedText?: string;
+    expectedJSON?: ReadonlyJSONValue;
   };
 
   const cases: Case[] = [
@@ -126,7 +134,13 @@ test('requireMethod', async () => {
       handler: getHandler,
       method: 'POST',
       expectedStatus: 405,
-      expectedText: 'unsupported method',
+      expectedJSON: {
+        error: {
+          code: 405,
+          resource: 'request',
+          message: 'unsupported method',
+        },
+      },
     },
     {
       handler: postHandler,
@@ -138,7 +152,13 @@ test('requireMethod', async () => {
       handler: postHandler,
       method: 'GET',
       expectedStatus: 405,
-      expectedText: 'unsupported method',
+      expectedJSON: {
+        error: {
+          code: 405,
+          resource: 'request',
+          message: 'unsupported method',
+        },
+      },
     },
   ];
 
@@ -152,7 +172,11 @@ test('requireMethod', async () => {
 
     const resp = await c.handler({lc, parsedURL}, req);
     expect(resp.status).toBe(c.expectedStatus);
-    expect(await resp.text()).toBe(c.expectedText);
+    if (c.expectedText) {
+      expect(await resp.text()).toBe(c.expectedText);
+    } else if (c.expectedJSON) {
+      expect(await resp.json()).toEqual(c.expectedJSON);
+    }
   }
 });
 
@@ -161,10 +185,7 @@ describe('checkAuthAPIKey', () => {
     name: string;
     required: string;
     headers: Record<string, string>;
-    expectedError:
-      | {error: string}
-      | {result: {text: string; status: number}}
-      | undefined;
+    expectedError?: string;
   };
 
   const cases: Case[] = [
@@ -172,87 +193,87 @@ describe('checkAuthAPIKey', () => {
       name: 'required key cannot be empty even if actual key is not sent in the headers',
       required: '',
       headers: {},
-      expectedError: {
-        error: 'Error: Internal error: expected auth api key cannot be empty',
-      },
+      expectedError:
+        'Error: Internal error: expected auth api key cannot be empty',
     },
     {
       name: 'required key cannot be empty even if actual is the same empty key',
       required: '',
       headers: {
-        ['x-reflect-auth-api-key']: '',
+        ['x-reflect-api-key']: '',
       },
-      expectedError: {
-        error: 'Error: Internal error: expected auth api key cannot be empty',
-      },
+      expectedError:
+        'Error: Internal error: expected auth api key cannot be empty',
     },
     {
       name: 'required key cannot be empty, even if actual key is provided',
       required: '',
       headers: {
-        ['x-reflect-auth-api-key']: 'foo',
+        ['x-reflect-api-key']: 'foo',
       },
-      expectedError: {
-        error: 'Error: Internal error: expected auth api key cannot be empty',
-      },
+      expectedError:
+        'Error: Internal error: expected auth api key cannot be empty',
     },
     {
       name: 'no api key sent',
       required: 'foo',
       headers: {},
-      expectedError: {result: {text: 'Unauthorized', status: 401}},
+      expectedError: 'Error: Unauthorized',
     },
     {
       name: 'empty api key sent',
       required: 'foo',
       headers: {
-        ['x-reflect-auth-api-key']: '',
+        ['x-reflect-api-key']: '',
       },
-      expectedError: {result: {text: 'Unauthorized', status: 401}},
+      expectedError: 'Error: Unauthorized',
     },
     {
       name: 'wrong api key sent',
       required: 'foo',
       headers: {
+        ['x-reflect-api-key']: 'bar',
+      },
+      expectedError: 'Error: Unauthorized',
+    },
+    {
+      name: 'wrong legacy api key sent',
+      required: 'foo',
+      headers: {
         ['x-reflect-auth-api-key']: 'bar',
       },
-      expectedError: {result: {text: 'Unauthorized', status: 401}},
+      expectedError: 'Error: Unauthorized',
     },
     {
       name: 'correct api key sent',
       required: 'foo',
       headers: {
+        ['x-reflect-api-key']: 'foo',
+      },
+    },
+    {
+      name: 'legacy api key sent',
+      required: 'foo',
+      headers: {
         ['x-reflect-auth-api-key']: 'foo',
       },
-      expectedError: undefined,
     },
   ];
 
   for (const c of cases) {
-    test(c.name, async () => {
+    test(c.name, () => {
       const {headers} = c;
-
-      let result: Case['expectedError'];
-
       try {
-        const response = checkAuthAPIKey(
+        checkAuthAPIKey(
           c.required,
           new Request('https://roci.dev/', {
             headers,
           }),
         );
-        if (response === undefined) {
-          result = response;
-        } else {
-          result = {
-            result: {status: response.status, text: await response.text()},
-          };
-        }
+        expect(c.expectedError).toBeUndefined;
       } catch (e) {
-        result = {error: String(e)};
+        expect(String(e)).toEqual(c.expectedError);
       }
-
-      expect(result).toEqual(c.expectedError);
     });
   }
 });
@@ -261,65 +282,66 @@ test('requireAuthAPIKey', async () => {
   type Case = {
     required: string;
     actual: string | null;
-    expected: {error: string} | {result: {text: string; status: number}};
+    text: string;
+    status?: number;
   };
 
   const cases: Case[] = [
     {
       required: '',
       actual: null,
-      expected: {
-        error: 'Error: Internal error: expected auth api key cannot be empty',
-      },
+      text: 'Internal error: expected auth api key cannot be empty',
+      status: 500,
     },
     {
       required: '',
       actual: '',
-      expected: {
-        error: 'Error: Internal error: expected auth api key cannot be empty',
-      },
+      text: 'Internal error: expected auth api key cannot be empty',
+      status: 500,
     },
     {
       required: '',
       actual: 'foo',
-      expected: {
-        error: 'Error: Internal error: expected auth api key cannot be empty',
-      },
+      text: 'Internal error: expected auth api key cannot be empty',
+      status: 500,
     },
     {
       required: 'foo',
       actual: null,
-      expected: {result: {text: 'Unauthorized', status: 401}},
+      text: 'Unauthorized',
+      status: 401,
     },
     {
       required: 'foo',
       actual: '',
-      expected: {result: {text: 'Unauthorized', status: 401}},
+      text: 'Unauthorized',
+      status: 401,
     },
     {
       required: 'foo',
       actual: 'bar',
-      expected: {result: {text: 'Unauthorized', status: 401}},
+      text: 'Unauthorized',
+      status: 401,
     },
     {
       required: 'foo',
       actual: 'foo',
-      expected: {result: {text: 'ok', status: 200}},
+      text: 'ok',
+      status: 200,
     },
   ];
 
   for (const c of cases) {
     const headers: Record<string, string> = {};
     if (c.actual !== null) {
-      headers['x-reflect-auth-api-key'] = c.actual;
+      headers['x-reflect-api-key'] = c.actual;
     }
-
-    let result: Case['expected'] | undefined = undefined;
-
-    const handler = requireAuthAPIKey(
-      () => c.required,
-      async (_, req) => new Response(await req.text(), {status: 200}),
-    );
+    const handler = post()
+      .with(requiredAuthAPIKey(() => c.required))
+      .handle(async (_, req) => {
+        expectBodyNotUsed(req);
+        return new Response(await req.text(), {status: 200});
+      });
 
     const req = new Request('https://roci.dev/', {
       method: 'POST',
@@ -331,27 +353,16 @@ test('requireAuthAPIKey', async () => {
       parsedURL: new URLPattern().exec()!,
       lc: createSilentLogContext(),
     };
-    try {
-      const response = await handler(ctx, req);
-      if (response === undefined) {
-        result = response;
-      } else {
-        result = {
-          result: {status: response.status, text: await response.text()},
-        };
-      }
-    } catch (e) {
-      result = {error: String(e)};
-    }
-
-    expect(result).toEqual(c.expected);
+    const response = await handler(ctx, req);
+    expect(await response.text()).toBe(c.text);
+    expect(response.status).toBe(c.status ?? 200);
   }
 });
 
 test('withRoomID', async () => {
   type Case = {
     parsedURL: URLPatternURLPatternResult;
-    expected: {result: {text: string; status: number}} | {error: string};
+    expected: {result: {text: string; status: number}};
   };
 
   const cases: Case[] = [
@@ -386,14 +397,20 @@ test('withRoomID', async () => {
         ),
       ),
       expected: {
-        error: 'Error: Internal error: roomID not found by withRoomID',
+        result: {
+          text: 'roomID() configured for URL without :roomID group',
+          status: 500,
+        },
       },
     },
   ];
 
-  const handler = withRoomID(
-    ctx => new Response(`roomID:${ctx.roomID}`, {status: 200}),
-  );
+  const handler = get()
+    .with(roomID())
+    .handle((ctx, req) => {
+      expectBodyNotUsed(req);
+      return new Response(`roomID:${ctx.roomID}`, {status: 200});
+    });
 
   for (const c of cases) {
     const url = `https://roci.dev/`;
@@ -403,22 +420,181 @@ test('withRoomID', async () => {
       lc: createSilentLogContext(),
     };
 
-    let result: Case['expected'] | undefined = undefined;
-    try {
-      const response = await handler(ctx, request);
-      result = {result: {status: response.status, text: await response.text()}};
-    } catch (e) {
-      result = {error: String(e)};
-    }
+    const response = await handler(ctx, request);
+    const result = {
+      result: {status: response.status, text: await response.text()},
+    };
 
     expect(result).toEqual(c.expected);
+  }
+});
+
+test('withUserID', async () => {
+  type Case = {
+    parsedURL: URLPatternURLPatternResult;
+    expected?: {result: {text: string; status: number}};
+  };
+
+  const cases: Case[] = [
+    {
+      parsedURL: must(
+        new URLPattern({pathname: '/users/:userID'}).exec(
+          'https://roci.dev/users/monkey',
+        ),
+      ),
+      expected: {result: {text: 'userID:monkey', status: 200}},
+    },
+    {
+      parsedURL: must(
+        new URLPattern({pathname: '/users/:userID'}).exec(
+          'https://roci.dev/users/%24',
+        ),
+      ),
+      expected: {result: {text: 'userID:$', status: 200}},
+    },
+    {
+      parsedURL: must(
+        new URLPattern({pathname: '/users/:userID/x'}).exec(
+          'https://roci.dev/users/a%2Fb/x',
+        ),
+      ),
+      expected: {result: {text: 'userID:a/b', status: 200}},
+    },
+    {
+      parsedURL: must(
+        new URLPattern({pathname: '/users/:otherThing'}).exec(
+          'https://roci.dev/users/monkey',
+        ),
+      ),
+      expected: {
+        result: {
+          text: 'userID() configured for URL without :userID group',
+          status: 500,
+        },
+      },
+    },
+  ];
+
+  const handler = get()
+    .with(userID())
+    .handle((ctx, req) => {
+      expectBodyNotUsed(req);
+      return new Response(`userID:${ctx.userID}`, {status: 200});
+    });
+
+  for (const c of cases) {
+    const url = `https://roci.dev/`;
+    const request = new Request(url);
+    const ctx = {
+      parsedURL: c.parsedURL,
+      lc: createSilentLogContext(),
+    };
+
+    const response = await handler(ctx, request);
+    const result = {
+      result: {status: response.status, text: await response.text()},
+    };
+
+    expect(result).toEqual(c.expected);
+  }
+});
+
+test('withQueryParams', async () => {
+  type Case = {
+    schema: valita.Type<unknown>;
+    parsedURL: URLPatternURLPatternResult;
+    expected?: {result: {text: string; status: number}};
+    error?: APIErrorInfo;
+  };
+
+  const fooSchema = valita.object({foo: valita.string()});
+
+  const cases: Case[] = [
+    {
+      schema: valita.null(),
+      parsedURL: must(new URLPattern().exec('https://roci.dev/room/monkey')),
+      expected: {result: {text: 'query: null', status: 200}},
+    },
+    {
+      schema: valita.null(),
+      parsedURL: must(new URLPattern().exec('https://roci.dev/room/monkey?')),
+      expected: {result: {text: 'query: null', status: 200}},
+    },
+    {
+      schema: valita.null(),
+      parsedURL: must(
+        new URLPattern().exec('https://roci.dev/room/monkey?foo'),
+      ),
+      error: {
+        code: 400,
+        resource: 'request',
+        message: 'Unexpected query parameters',
+      },
+    },
+    {
+      schema: fooSchema,
+      parsedURL: must(new URLPattern().exec('https://roci.dev/room/monkey?')),
+      error: {
+        code: 400,
+        resource: 'request',
+        message: 'Query string error. Missing property foo',
+      },
+    },
+    {
+      schema: fooSchema,
+      parsedURL: must(
+        new URLPattern().exec('https://roci.dev/room/monkey?foo=bar'),
+      ),
+      expected: {result: {text: 'query: {"foo":"bar"}', status: 200}},
+    },
+    {
+      schema: fooSchema,
+      parsedURL: must(
+        new URLPattern().exec('https://roci.dev/room/monkey?foo=bar&baz=bonk'),
+      ),
+      error: {
+        code: 400,
+        resource: 'request',
+        message: 'Query string error. Unexpected property baz',
+      },
+    },
+  ];
+
+  for (const c of cases) {
+    const handler = get()
+      .with(queryParams(c.schema))
+      .handle((ctx, req) => {
+        expectBodyNotUsed(req);
+        return new Response(`query: ${JSON.stringify(ctx.query)}`, {
+          status: 200,
+        });
+      });
+    const url = `https://roci.dev/`;
+    const request = new Request(url);
+    const ctx = {
+      parsedURL: c.parsedURL,
+      lc: createSilentLogContext(),
+    };
+
+    const response = await handler(ctx, request);
+    if (response.status === 200) {
+      const result = {
+        result: {status: response.status, text: await response.text()},
+      };
+      expect(result).toEqual(c.expected);
+    } else {
+      expect(response.status).toBe(c.error?.code);
+      expect(await response.json()).toEqual({error: c.error});
+    }
   }
 });
 
 test('withBody', async () => {
   type Case = {
     body: JSONObject | undefined | string;
-    expected: {text: string; status: number} | {error: string};
+    queryString?: string;
+    expected?: {text: string; status: number};
+    error?: APIErrorInfo;
   };
 
   const cases: Case[] = [
@@ -427,44 +603,60 @@ test('withBody', async () => {
       expected: {text: 'userID:foo', status: 200},
     },
     {
+      body: {userID: 'foo'},
+      queryString: '?not=expected',
+      error: {
+        code: 400,
+        resource: 'request',
+        message: 'Unexpected query parameters',
+      },
+    },
+    {
       body: {badUserId: 'bar'},
-      expected: {
-        status: 400,
-        text: 'Body schema error. Missing property userID',
+      error: {
+        code: 400,
+        resource: 'request',
+        message: 'Body schema error. Missing property userID',
       },
     },
     {
       body: {userID: 'foo', badUserId: 'bar'},
-      expected: {
-        status: 400,
-        text: 'Body schema error. Unexpected property badUserId',
+      error: {
+        code: 400,
+        resource: 'request',
+        message: 'Body schema error. Unexpected property badUserId',
       },
     },
     {
       body: undefined,
-      expected: {
-        status: 400,
-        text: 'Body must be valid json.',
+      error: {
+        code: 400,
+        resource: 'request',
+        message: 'Body must be valid json.',
       },
     },
     {
       body: 'foo',
-      expected: {
-        status: 400,
-        text: 'Body schema error. Expected object. Got "foo"',
+      error: {
+        code: 400,
+        resource: 'request',
+        message: 'Body schema error. Expected object. Got "foo"',
       },
     },
   ];
 
   const userIdSchema = valita.object({userID: valita.string()});
-  const handler = withBody(userIdSchema, ctx => {
-    const {body} = ctx;
-    const {userID} = body;
-    return new Response(`userID:${userID}`, {status: 200});
-  });
+  const handler = post()
+    .with(bodyOnly(userIdSchema))
+    .handle((ctx, req) => {
+      const {body} = ctx;
+      const {userID} = body;
+      expectBodyNotUsed(req);
+      return new Response(`userID:${userID}`, {status: 200});
+    });
 
   for (const c of cases) {
-    const url = `https://roci.dev/`;
+    const url = `https://roci.dev/${c.queryString ?? ''}`;
     const request = new Request(url, {
       method: 'post',
       body: JSON.stringify(c.body),
@@ -472,22 +664,103 @@ test('withBody', async () => {
     const ctx = {
       lc: createSilentLogContext(),
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      parsedURL: new URLPattern().exec()!,
+      parsedURL: new URLPattern().exec(url)!,
     };
 
-    let result: Case['expected'] | undefined = undefined;
-    try {
-      const response = await handler(ctx, request);
-      result = {status: response.status, text: await response.text()};
-    } catch (e) {
-      result = {error: String(e)};
+    const response = await handler(ctx, request);
+    if (response.status === 200) {
+      expect({status: response.status, text: await response.text()}).toEqual(
+        c.expected,
+      );
+    } else {
+      expect(response.status).toBe(c.error?.code);
+      expect(await response.json()).toEqual({error: c.error});
     }
-
-    expect(result).toEqual(c.expected);
   }
 });
 
-test('asJSON', async () => {
+describe('withNoBody', () => {
+  type Case = {
+    body: string | null | undefined;
+    expected?: {text: string; status: number};
+    error?: APIErrorInfo;
+  };
+
+  const cases: Case[] = [
+    {
+      body: undefined,
+      expected: {text: 'ok', status: 200},
+    },
+    {
+      body: null,
+      expected: {text: 'ok', status: 200},
+    },
+    {
+      body: '', // As per the fetch spec, an empty body string is equivalent to no body.
+      expected: {text: 'ok', status: 200},
+    },
+    {
+      body: ' ',
+      error: {
+        code: 400,
+        resource: 'request',
+        message: 'Unexpected request body.',
+      },
+    },
+    {
+      body: '{}',
+      error: {
+        code: 400,
+        resource: 'request',
+        message: 'Unexpected request body.',
+      },
+    },
+    {
+      body: '{"newParam":"should be rejected"}',
+      error: {
+        code: 400,
+        resource: 'request',
+        message: 'Unexpected request body.',
+      },
+    },
+  ];
+
+  const handler = post()
+    .with(bodyOnly(valita.null()))
+    .handle((ctx, req) => {
+      const {body} = ctx;
+      expect(body).toBe(null);
+      expectBodyNotUsed(req);
+      return new Response(`ok`, {status: 200});
+    });
+
+  for (const c of cases) {
+    test(`"${String(c.body)}"`, async () => {
+      const url = `https://roci.dev/`;
+      const request = new Request(url, {
+        method: 'post',
+        body: c.body ?? null,
+      });
+      const ctx = {
+        lc: createSilentLogContext(),
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        parsedURL: new URLPattern().exec()!,
+      };
+
+      const response = await handler(ctx, request);
+      if (response.status === 200) {
+        expect({status: response.status, text: await response.text()}).toEqual(
+          c.expected,
+        );
+      } else {
+        expect(response.status).toBe(c.error?.code);
+        expect(await response.json()).toEqual({error: c.error});
+      }
+    });
+  }
+});
+
+test('handleJSON', async () => {
   type Case = {
     input: string;
     expected: ReadonlyJSONValue;
@@ -509,9 +782,10 @@ test('asJSON', async () => {
   ];
 
   for (const c of cases) {
-    const handler = asJSON(async (_, req) => ({
-      foo: await req.text(),
-    }));
+    const handler = post().handleJSON(async (_, req) => {
+      expectBodyNotUsed(req);
+      return {foo: await req.text()};
+    });
     const request = new Request('http://roci.dev/', {
       method: 'POST',
       body: c.input,
@@ -523,14 +797,52 @@ test('asJSON', async () => {
     };
     const response = await handler(ctx, request);
     expect(await response.json()).toEqual(c.expected);
+    expect(response.headers.get('content-type')).toBe('application/json');
+  }
+});
+
+test('handleAPIResult', async () => {
+  type Case = {
+    input: string;
+    expected: ReadonlyJSONValue;
+  };
+
+  const cases: Case[] = [
+    {
+      input: 'bar',
+      expected: {
+        foo: 'bar',
+      },
+    },
+    {
+      input: 'monkey',
+      expected: {
+        foo: 'monkey',
+      },
+    },
+  ];
+
+  for (const c of cases) {
+    const handler = post().handleAPIResult(async (_, req) => {
+      expectBodyNotUsed(req);
+      return {foo: await req.text()};
+    });
+    const request = new Request('http://roci.dev/', {
+      method: 'POST',
+      body: c.input,
+    });
+    const ctx = {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      parsedURL: new URLPattern().exec('https://roci.dev/')!,
+      lc: createSilentLogContext(),
+    };
+    const response = await handler(ctx, request);
+    expect(await response.json()).toEqual({result: c.expected});
   }
 });
 
 test('withVersion', async () => {
-  const t = async (
-    path: string,
-    exp: {text: string; status: number} | {error: string},
-  ) => {
+  const t = async (path: string, exp: {text: string; status: number}) => {
     const url = `https://roci.dev`;
     const request = new Request(url);
     const parsedURL = new URLPattern({
@@ -542,17 +854,18 @@ test('withVersion', async () => {
       lc: createSilentLogContext(),
     };
 
-    const handler = withVersion(
-      ctx => new Response(`version:${ctx.version}`, {status: 200}),
-    );
+    const handler = get()
+      .with(urlVersion())
+      .handle((ctx, req) => {
+        expectBodyNotUsed(req);
+        return new Response(`version:${ctx.version}`, {status: 200});
+      });
 
-    let result: typeof exp;
-    try {
-      const response = await handler(ctx, request);
-      result = {status: response.status, text: await response.text()} as const;
-    } catch (e) {
-      result = {error: String(e)} as const;
-    }
+    const response = await handler(ctx, request);
+    const result = {
+      status: response.status,
+      text: await response.text(),
+    } as const;
 
     expect(result).toEqual(exp);
   };
@@ -563,15 +876,156 @@ test('withVersion', async () => {
   await t('/version/v01/monkey', {text: 'version:1', status: 200});
 
   await t('/version/1/monkey', {
-    error: 'Error: invalid version found by withVersion, 1',
+    text: 'invalid version found by withVersion, 1',
+    status: 500,
   });
   await t('/version/123/monkey', {
-    error: 'Error: invalid version found by withVersion, 123',
+    text: 'invalid version found by withVersion, 123',
+    status: 500,
   });
   await t('/version/123v/monkey', {
-    error: 'Error: invalid version found by withVersion, 123v',
+    text: 'invalid version found by withVersion, 123v',
+    status: 500,
   });
   await t('/version/bananas/monkey', {
-    error: 'Error: invalid version found by withVersion, bananas',
+    text: 'invalid version found by withVersion, bananas',
+    status: 500,
   });
+});
+
+test('handleErrors', async () => {
+  const ctx = {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    parsedURL: new URLPattern().exec('https://roci.dev/')!,
+    lc: createSilentLogContext(),
+  };
+
+  const handler = get().handle(() => {
+    throw new HttpError(401, 'foo');
+  });
+  let response = await handler(ctx, new Request('https://roci.dev/'));
+  expect(response.status).toBe(401);
+  expect(await response.text()).toBe('foo');
+
+  const jsonHandler = get().handleJSON(() => {
+    throw new HttpError(402, 'bar');
+  });
+  response = await jsonHandler(ctx, new Request('https://roci.dev/'));
+  expect(response.status).toBe(402);
+  expect(await response.text()).toBe('bar');
+
+  const apiHandler = get().handleAPIResult(() => {
+    throw new HttpError(403, 'bonk');
+  });
+  response = await apiHandler(ctx, new Request('https://roci.dev/'));
+  expect(response.status).toBe(403);
+  expect(await response.text()).toBe('bonk');
+});
+
+describe('with bearerToken', () => {
+  type Case = {
+    name: string;
+    headers?: Record<string, string>;
+    expected?: {text: string; status: number};
+    error?: APIErrorInfo;
+  };
+
+  const cases: Case[] = [
+    {
+      name: 'no auth header',
+      error: {
+        code: 401,
+        resource: 'request',
+        message: 'Missing Authorization header',
+      },
+    },
+    {
+      name: 'empty header lowercase',
+      headers: {authorization: ''},
+      error: {
+        code: 401,
+        resource: 'request',
+        message: 'Missing Authorization header',
+      },
+    },
+    {
+      name: 'valid header',
+      headers: {authorization: 'Bearer abc'},
+      expected: {text: 'abc', status: 200},
+    },
+    {
+      name: 'valid header with escapes',
+      headers: {authorization: 'Bearer abc%20def'},
+      expected: {text: 'abc def', status: 200},
+    },
+    {
+      name: 'invalid header',
+      headers: {authorization: 'Bearer'},
+      error: {
+        code: 401,
+        resource: 'request',
+        message: 'Invalid Authorization header',
+      },
+    },
+    {
+      name: 'invalid header',
+      headers: {authorization: 'Bear grizzly'},
+      error: {
+        code: 401,
+        resource: 'request',
+        message: 'Invalid Authorization header',
+      },
+    },
+    {
+      name: 'invalid header',
+      headers: {authorization: 'Bearer a b c'},
+      error: {
+        code: 401,
+        resource: 'request',
+        message: 'Invalid Authorization header',
+      },
+    },
+    {
+      name: 'invalid header',
+      headers: {authorization: 'Bearer a%'},
+      error: {
+        code: 401,
+        resource: 'request',
+        message: 'Malformed Authorization header',
+      },
+    },
+  ];
+
+  for (const c of cases) {
+    test(c.name, async () => {
+      const handler = get()
+        .with(bearerToken())
+        .handle(
+          ctx =>
+            new Response(ctx.bearerToken, {
+              status: 200,
+            }),
+        );
+      const url = `https://roci.dev/`;
+      const request = new Request(url, {headers: c.headers ?? {}});
+      const ctx = {
+        parsedURL: must(new URLPattern().exec(url)),
+        lc: createSilentLogContext(),
+      };
+
+      const response = await handler(ctx, request);
+      if (response.status === 200) {
+        const result = {
+          status: response.status,
+          text: await response.text(),
+        };
+        expect(result).toEqual(c.expected);
+      } else {
+        expect(response.status).toBe(c.error?.code);
+        expect(await response.json()).toEqual({
+          error: c.error,
+        });
+      }
+    });
+  }
 });

@@ -83,7 +83,7 @@ export interface ReflectServerBaseEnv {
   roomDO: DurableObjectNamespace;
   authDO: DurableObjectNamespace;
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  REFLECT_AUTH_API_KEY: string;
+  REFLECT_API_KEY: string;
 }
 
 export type DurableObjectCtor<Env> = new (
@@ -180,7 +180,6 @@ function createRoomDOClass<
         state,
         roomStartHandler,
         disconnectHandler,
-        authApiKey: getAPIKey(env),
         logSink,
         logLevel,
         allowUnconfirmedWrites,
@@ -202,19 +201,10 @@ function createAuthDOClass<
         roomDO: env.roomDO,
         state,
         authHandler,
-        authApiKey: getAPIKey(env),
         logSink,
         logLevel,
         env: extractVars(env),
       });
     }
   };
-}
-
-function getAPIKey(env: ReflectServerBaseEnv) {
-  const val = env.REFLECT_AUTH_API_KEY;
-  if (!val) {
-    throw new Error('REFLECT_AUTH_API_KEY environment var is required');
-  }
-  return val;
 }

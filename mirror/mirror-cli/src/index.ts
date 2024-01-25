@@ -39,6 +39,11 @@ import {
   listDeployedAppsHandler,
   listDeployedAppsOptions,
 } from './list-deployed-apps.js';
+import {lookupAuthHandler, lookupAuthOptions} from './lookup-auth.js';
+import {
+  migrateApiKeysHandler,
+  migrateApiKeysOptions,
+} from './migrate-api-keys.js';
 import {
   migrateDnsCommentsToTagsHandler,
   migrateDnsCommentsToTagsOptions,
@@ -131,6 +136,13 @@ function createCLIParser(argv: string[]) {
     'Removes a server version from a set of server channels. The resulting highest server version will be re-deployed to apps in those channels.',
     revertReflectServerOptions,
     revertReflectServerHandler,
+  );
+
+  reflectCLI.command(
+    'lookup-auth <email|uid>',
+    'Looks up a user in Firebase Auth',
+    lookupAuthOptions,
+    lookupAuthHandler,
   );
 
   // grant-super
@@ -259,6 +271,13 @@ function createCLIParser(argv: string[]) {
     'Backfills aggregated metrics into Firestore. Also suitable for rerunning aggregations if Cloudflare Analytics data is delayed.',
     backfillMetricsOptions,
     backfillMetricsHandler,
+  );
+
+  reflectCLI.command(
+    'migrate-api-keys',
+    'Migrates the field in api keys from "apps" to "appIDs',
+    migrateApiKeysOptions,
+    migrateApiKeysHandler,
   );
 
   reflectCLI.command(
