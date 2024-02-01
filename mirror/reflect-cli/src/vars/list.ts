@@ -16,11 +16,11 @@ export function listVarsOptions(yargs: CommonVarsYargsArgv) {
       default: false,
     })
     .option('app', {
-      describe: 'The name of the App, or "id:<app-id>"',
+      describe: 'The name of the App',
       type: 'string',
       requiresArg: true,
       default: getDefaultApp(),
-      required: !getDefaultApp(),
+      required: true,
     });
 }
 

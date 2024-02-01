@@ -45,11 +45,11 @@ export function usageOptions(yargs: CommonYargsArgv) {
       conflicts: ['year', 'month', 'day'],
     })
     .option('app', {
-      describe: 'The name of the App, or "id:<app-id>"',
+      describe: 'The name of the App',
       type: 'string',
       requiresArg: true,
       default: getDefaultApp(),
-      required: !getDefaultApp(),
+      required: true,
     });
 }
 

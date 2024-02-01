@@ -17,11 +17,11 @@ export function deleteVarsOptions(yargs: CommonVarsYargsArgv) {
       demandOption: true,
     })
     .option('app', {
-      describe: 'The name of the App, or "id:<app-id>"',
+      describe: 'The name of the App',
       type: 'string',
       requiresArg: true,
       default: getDefaultApp(),
-      required: !getDefaultApp(),
+      required: true,
     });
 }
 

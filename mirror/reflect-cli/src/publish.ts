@@ -7,7 +7,13 @@ import {
 import assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import {getDefaultApp, getDefaultServerPath, getAppID} from './app-config.js';
+import {
+  getDefaultApp,
+  getDefaultServerPath,
+  getAppID,
+  mustReadAppConfig,
+  DEFAULT_FROM_REFLECT_CONFIG,
+} from './app-config.js';
 import {CompileResult, compile} from './compile.js';
 import {ErrorWrapper} from './error.js';
 import {findServerVersionRange} from './find-reflect-server-version.js';
@@ -35,14 +41,14 @@ export function publishOptions(yargs: CommonYargsArgv) {
       type: 'string',
       requiresArg: true,
       default: getDefaultServerPath(),
-      required: !getDefaultServerPath(),
+      required: true,
     })
     .option('app', {
-      describe: 'The name of the App, or "id:<app-id>"',
+      describe: 'The name of the App',
       type: 'string',
       requiresArg: true,
       default: getDefaultApp(),
-      required: !getDefaultApp(),
+      required: true,
     });
 }
 
@@ -65,7 +71,11 @@ export async function publishHandler(
   publish: PublishCaller = publishCaller, // Overridden in tests.
   firestore: Firestore = getFirestore(), // Overridden in tests.
 ) {
-  const {reflectChannel, serverPath, app} = yargs;
+  const {reflectChannel, app} = yargs;
+  let {serverPath} = yargs;
+  if (serverPath === DEFAULT_FROM_REFLECT_CONFIG) {
+    serverPath = mustReadAppConfig().server;
+  }
   if (!serverPath) logErrorAndExit('No server path found');
   const absPath = path.resolve(serverPath);
   if (!absPath || !(await exists(absPath))) {
