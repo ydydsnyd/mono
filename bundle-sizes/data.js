@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706189638071,
+  "lastUpdate": 1706878460026,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -45289,6 +45289,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31514,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5f16004af85d72aec9fe53bf1cb7627777e7b6b2",
+          "message": "fix(replicache): Do not reject send promises (#1408)\n\nInstead we resolve the promise with an object with\r\nan error field if there was an error. We then\r\nextract and throw this error in the public\r\npull/push methods.",
+          "timestamp": "2024-02-02T12:52:25Z",
+          "tree_id": "8a77b7e2a4a844471bb01ed048cc593ae1522c70",
+          "url": "https://github.com/rocicorp/mono/commit/5f16004af85d72aec9fe53bf1cb7627777e7b6b2"
+        },
+        "date": 1706878447630,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 300001,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53770,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111899,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31456,
             "unit": "bytes"
           }
         ]
