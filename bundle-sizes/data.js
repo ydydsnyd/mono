@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706886318932,
+  "lastUpdate": 1706886974186,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -45377,6 +45377,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31480,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ea3bf4f98c0afe106c87b7462bb35da3ac6112ec",
+          "message": "chore(replicache): Simplify connection loop slightly (#1410)\n\nMove the LogContext into a \"normal\" property\r\ninstead of making the delegate an OptionalLogger.",
+          "timestamp": "2024-02-02T15:14:24Z",
+          "tree_id": "75f209829900c4ed8f10a99f52babf2ae793cf65",
+          "url": "https://github.com/rocicorp/mono/commit/ea3bf4f98c0afe106c87b7462bb35da3ac6112ec"
+        },
+        "date": 1706886960923,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 299913,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53770,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 111860,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31465,
             "unit": "bytes"
           }
         ]
