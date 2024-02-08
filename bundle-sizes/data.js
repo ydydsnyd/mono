@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1707398378558,
+  "lastUpdate": 1707402722039,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -45577,6 +45577,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/41a1460f8248fe07a6734da7812d08436083ccc9"
         },
         "date": 1707398363895,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 302358,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54191,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 112812,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31689,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "252a5426936a5cd1a3a07863325eebbeb09e6043",
+          "message": "chore(replicache): remove old test-util-new-tab.html (#1428)\n\nThis is remnant of the past and is no longer used.",
+          "timestamp": "2024-02-08T14:30:08Z",
+          "tree_id": "0706d2610bd63a143ac21033ebba6e629283ff7a",
+          "url": "https://github.com/rocicorp/mono/commit/252a5426936a5cd1a3a07863325eebbeb09e6043"
+        },
+        "date": 1707402708118,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
