@@ -89,7 +89,7 @@ test('it should throw warning if the source has syntax errors', async () => {
   const testFilePath = await writeTempFiles('const x =');
   await expect(
     publishHandler(
-      {serverPath: testFilePath, app: '0000'} as Args,
+      {serverPath: testFilePath, app: 'abc123'} as Args,
       teamAuthContext,
     ),
   ).rejects.toEqual(
@@ -101,6 +101,18 @@ test('it should throw warning if the source has syntax errors', async () => {
   );
 });
 
+test('it should throw if an invalid appname', async () => {
+  const testFilePath = await writeTempFiles('const x = 42;', 'test.ts');
+  await expect(
+    publishHandler(
+      {serverPath: testFilePath, app: '0000'} as Args,
+      teamAuthContext,
+    ),
+  ).rejects.toThrow(
+    /Invalid App Name "0000".*lowercased alphanumeric, starting with a letter and not ending with a hyphen./,
+  );
+});
+
 test('it should throw warning if invalid version', async () => {
   const testFilePath = await writeTempFiles(
     'const x = 42;',
@@ -109,7 +121,7 @@ test('it should throw warning if invalid version', async () => {
   );
   await expect(
     publishHandler(
-      {serverPath: testFilePath, app: '0000'} as Args,
+      {serverPath: testFilePath, app: 'abc123'} as Args,
       teamAuthContext,
     ),
   ).rejects.toEqual(

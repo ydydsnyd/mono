@@ -1,5 +1,4 @@
 import {doc, getDoc, getFirestore} from 'firebase/firestore';
-import {readFileSync} from 'fs';
 import {createApp} from 'mirror-protocol/src/app.js';
 import {ensureTeam} from 'mirror-protocol/src/team.js';
 import {
@@ -11,11 +10,11 @@ import * as path from 'node:path';
 import {pkgUpSync} from 'pkg-up';
 
 import * as v from 'shared/src/valita.js';
-import {ErrorWrapper} from './error.js';
+import {ErrorWrapper, UserError} from './error.js';
 import type {AuthContext} from './handler.js';
 import {logErrorAndExit} from './log-error-and-exit.js';
 import {makeRequester} from './requester.js';
-
+import {isValidAppName} from 'mirror-schema/src/external/app.js';
 // { srcFile: destFile }
 const templateFiles = v.record(v.string());
 
@@ -119,7 +118,7 @@ export function getDefaultApp() {
   if (configAppId) {
     return DEFAULT_FROM_REFLECT_CONFIG;
   }
-  return getDefaultAppName();
+  return undefined;
 }
 /**
  * Reads reflect.config.json in the "project root".
@@ -179,6 +178,7 @@ async function getAppIDfromAppName(
   teamID: string,
   appName: string,
 ): Promise<string | undefined> {
+  mustValidAppName(appName);
   const firestore = getFirestore();
   const nameEntry = await getDoc(
     doc(firestore, appNameIndexPath(teamID, appName)).withConverter(
@@ -235,17 +235,6 @@ export function writeAppConfig(
   fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2), 'utf-8');
 }
 
-function getDefaultAppName(): string | undefined {
-  const pkg = pkgUpSync();
-  if (pkg) {
-    const {name} = JSON.parse(readFileSync(pkg, 'utf-8'));
-    if (name) {
-      return String(name);
-    }
-  }
-  return undefined;
-}
-
 type TemplatePlaceholders = {
   appName: string;
   appHostname: string;
@@ -297,5 +286,13 @@ function copyAndEditFile(
     // In case the user has deleted the template source file, classify this as a
     // warning instead.
     throw new ErrorWrapper(e, 'WARNING');
+  }
+}
+
+export function mustValidAppName(appName: string) {
+  if (!isValidAppName(appName) && appName !== DEFAULT_FROM_REFLECT_CONFIG) {
+    throw new UserError(
+      `Invalid App Name "${appName}". Names must be lowercased alphanumeric, starting with a letter and not ending with a hyphen.`,
+    );
   }
 }
