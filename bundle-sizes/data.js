@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1707207205956,
+  "lastUpdate": 1707398378558,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -45553,6 +45553,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31465,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "41a1460f8248fe07a6734da7812d08436083ccc9",
+          "message": "feat(replicache): Delay pull in hidden tabs (#1426)\n\nIf a tab is hidden (`document.visibilityState === 'hidden'`), we fall back\r\nto the `pullInterval` when `pull` is called. If `pull({now: true}` is\r\ncalled we ignore the visibility state and pull immediately.",
+          "timestamp": "2024-02-08T14:17:32+01:00",
+          "tree_id": "b1ac484a12125120ed8d294e2a09118dbb520088",
+          "url": "https://github.com/rocicorp/mono/commit/41a1460f8248fe07a6734da7812d08436083ccc9"
+        },
+        "date": 1707398363895,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 302358,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54191,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 112812,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31689,
             "unit": "bytes"
           }
         ]
