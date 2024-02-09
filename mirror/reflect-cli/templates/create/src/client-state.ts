@@ -2,10 +2,11 @@
 // cursors. It also defines some basic CRUD functions using the
 // @rocicorp/rails helper library.
 
+import {generatePresence} from '@rocicorp/rails';
 import type {WriteTransaction} from '@rocicorp/reflect';
-import {Entity, generate} from '@rocicorp/rails';
 
-export type ClientState = Entity & {
+export type ClientState = {
+  clientID: string;
   cursor: {x: number; y: number} | null;
   userInfo: UserInfo;
 };
@@ -17,23 +18,22 @@ export type UserInfo = {
 };
 
 export {
-  initClientState,
   getClientState,
-  putClientState,
-  updateClientState,
+  initClientState,
   randUserInfo,
+  setClientState,
+  updateClientState,
 };
 
 const {
   init: initImpl,
   get: getClientState,
-  put: putClientState,
+  set: setClientState,
   update: updateClientState,
-} = generate<ClientState>('client-state');
+} = generatePresence<ClientState>('client-state');
 
 function initClientState(tx: WriteTransaction, userInfo: UserInfo) {
   return initImpl(tx, {
-    id: tx.clientID,
     cursor: null,
     userInfo,
   });

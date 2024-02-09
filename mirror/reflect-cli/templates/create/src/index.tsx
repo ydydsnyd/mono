@@ -27,10 +27,8 @@ const r = new Reflect({
 
 function App() {
   useEffect(() => {
-    void (async () => {
-      const userInfo = randUserInfo();
-      await r.mutate.initClientState(userInfo);
-    })();
+    const userInfo = randUserInfo();
+    void r.mutate.initClientState(userInfo);
   }, []);
 
   const handleButtonClick = () => {

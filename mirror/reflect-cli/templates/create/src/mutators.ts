@@ -39,7 +39,7 @@ async function increment(
 
 async function setCursor(
   tx: WriteTransaction,
-  {x, y}: {x: number; y: number},
+  cursor: {x: number; y: number},
 ): Promise<void> {
-  await updateClientState(tx, {id: tx.clientID, cursor: {x, y}});
+  await updateClientState(tx, {cursor});
 }

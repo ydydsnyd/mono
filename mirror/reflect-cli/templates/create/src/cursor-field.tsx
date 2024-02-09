@@ -9,11 +9,11 @@
 // is only there to support slower initial load from local storage.
 
 import {Reflect} from '@rocicorp/reflect/client';
+import {usePresence} from '@rocicorp/reflect/react';
 import {useEffect} from 'react';
 import styles from './cursor-field.module.css';
 import {M} from './mutators.js';
 import {useClientState} from './subscriptions.js';
-import {usePresence} from '@rocicorp/reflect/react';
 
 export default function CursorField({r}: {r: Reflect<M>}) {
   useEffect(() => {
@@ -31,22 +31,22 @@ export default function CursorField({r}: {r: Reflect<M>}) {
 
   return (
     <>
-      {clientStateIDs.map(id => (
-        <Cursor r={r} id={id} key={id} />
+      {clientStateIDs.map(clientID => (
+        <Cursor r={r} clientID={clientID} key={clientID} />
       ))}
     </>
   );
 }
 
-function Cursor({r, id}: {r: Reflect<M>; id: string}) {
-  const cs = useClientState(r, id);
+function Cursor({r, clientID}: {r: Reflect<M>; clientID: string}) {
+  const cs = useClientState(r, clientID);
   if (!cs) return null;
 
   const {cursor, userInfo} = cs;
   if (!cursor) return null;
 
   return (
-    <div key={id} className={styles.collaborator}>
+    <div key={clientID} className={styles.collaborator}>
       <div
         className={styles.cursor}
         style={{

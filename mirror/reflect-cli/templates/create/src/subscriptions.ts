@@ -18,6 +18,6 @@ export function useCount(reflect: Reflect<M>, key: string) {
   return useSubscribe(reflect, tx => tx.get<number>(key), 0);
 }
 
-export function useClientState(r: Reflect<M>, id: string) {
-  return useSubscribe(r, tx => getClientState(tx, id), null);
+export function useClientState(r: Reflect<M>, clientID: string) {
+  return useSubscribe(r, tx => getClientState(tx, {clientID}), null);
 }
