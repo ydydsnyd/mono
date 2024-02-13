@@ -1254,9 +1254,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
    * @param [now=false] If true, push will happen immediately and ignore
    *   {@link pushDelay}, {@link RequestOptions.minDelayMs} as well as the
    *   exponential backoff in case of errors.
-   * @returns A promise that resolves when the next push completes. In case of
-   * errors the first error will reject the returned promise. Subsequent errors
-   * will not be reflected in the promise.
+   * @returns A promise that resolves when the next push attempt completes.
    */
   push({now = false} = {}): Promise<void> {
     return throwIfError(this.#pushConnectionLoop.send(now));
@@ -1272,9 +1270,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
    * @param [now=false] If true, pull will happen immediately and ignore
    *   {@link RequestOptions.minDelayMs} as well as the exponential backoff in
    *   case of errors.
-   * @returns A promise that resolves when the next pull completes. In case of
-   * errors the first error will reject the returned promise. Subsequent errors
-   * will not be reflected in the promise.
+   * @returns A promise that resolves when the next pull attempt completes.
    */
   pull({now = false} = {}): Promise<void> {
     return throwIfError(this.#pullConnectionLoop.send(now));

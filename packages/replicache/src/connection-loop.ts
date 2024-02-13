@@ -232,11 +232,12 @@ export class ConnectionLoop {
         this.#connectionAvailable();
         const sendResolver = this.#sendResolver;
         this.#sendResolver = resolver();
-        if (ok) {
-          sendResolver.resolve(undefined);
+        if (error) {
+          sendResolver.resolve({error});
         } else {
-          sendResolver.resolve({error: error ?? new Error('Send failed')});
-
+          sendResolver.resolve(undefined);
+        }
+        if (!ok) {
           // Keep trying
           this.#pendingResolver.resolve();
         }

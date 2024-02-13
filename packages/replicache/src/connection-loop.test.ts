@@ -731,6 +731,12 @@ test('Send promise', async () => {
   await tickUntilTimeIs(250);
   const err = await p2;
   expect(err?.error).to.equal(expectedError);
+
+  nextInvokeSendResult = false;
+  const p3 = loop.send(false);
+  await tickUntilTimeIs(500);
+  const err2 = await p3;
+  expect(err2).undefined;
 });
 
 suite('Send when closed should resolve with error', () => {
