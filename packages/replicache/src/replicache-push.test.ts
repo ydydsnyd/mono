@@ -296,8 +296,9 @@ test('Version not supported on server', async () => {
     rep.pusher = pusher as Pusher;
 
     await rep.mutate.noop();
-    await rep.push({now: true});
+    const ret = await rep.push({now: true});
 
+    expect(ret).true;
     expect(onUpdateNeededStub.callCount).to.equal(1);
     expect(onUpdateNeededStub.lastCall.args).deep.equal([reason]);
   };
@@ -337,7 +338,8 @@ test('ClientStateNotFound on server', async () => {
   rep.pusher = pusher as Pusher;
 
   await rep.mutate.noop();
-  await rep.push({now: true});
+  const ret = await rep.push({now: true});
+  expect(ret).true;
 
   expect(onUpdateNeededStub.callCount).equal(0);
   expect(onClientStateNotFound.callCount).equal(1);

@@ -60,7 +60,7 @@ export class ConnectionLoop {
   /**
    * Resolver for the next send. Never rejects.
    */
-  #sendResolver = resolver<undefined | {error: unknown}>();
+  #sendResolver = resolver<{ok: boolean} | {error: unknown}>();
 
   readonly #delegate: ConnectionLoopDelegate;
   #closed = false;
@@ -98,7 +98,7 @@ export class ConnectionLoop {
    * @returns Returns undefined if ok, otherwise it return the error that caused
    * the send to fail.
    */
-  async send(now: boolean): Promise<undefined | {error: unknown}> {
+  async send(now: boolean): Promise<{ok: boolean} | {error: unknown}> {
     if (this.#closed) {
       return {error: closeError()};
     }
@@ -235,7 +235,7 @@ export class ConnectionLoop {
         if (error) {
           sendResolver.resolve({error});
         } else {
-          sendResolver.resolve(undefined);
+          sendResolver.resolve({ok});
         }
         if (!ok) {
           // Keep trying

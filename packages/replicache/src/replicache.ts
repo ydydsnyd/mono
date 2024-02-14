@@ -1256,8 +1256,8 @@ export class Replicache<MD extends MutatorDefs = {}> {
    *   exponential backoff in case of errors.
    * @returns A promise that resolves when the next push attempt completes.
    */
-  push({now = false} = {}): Promise<void> {
-    return throwIfError(this.#pushConnectionLoop.send(now));
+  push({now = false} = {}): Promise<boolean> {
+    return unwrapConnectionLoopSend(this.#pushConnectionLoop.send(now));
   }
 
   /**
@@ -1272,8 +1272,8 @@ export class Replicache<MD extends MutatorDefs = {}> {
    *   case of errors.
    * @returns A promise that resolves when the next pull attempt completes.
    */
-  pull({now = false} = {}): Promise<void> {
-    return throwIfError(this.#pullConnectionLoop.send(now));
+  pull({now = false} = {}): Promise<boolean> {
+    return unwrapConnectionLoopSend(this.#pullConnectionLoop.send(now));
   }
 
   /**
@@ -1770,9 +1770,11 @@ function reload(): void {
  */
 class ReportError extends Error {}
 
-async function throwIfError(p: Promise<undefined | {error: unknown}>) {
+async function unwrapConnectionLoopSend(p: ReturnType<ConnectionLoop['send']>) {
   const res = await p;
-  if (res) {
+  if ('error' in res) {
     throw res.error;
+  } else {
+    return res.ok;
   }
 }
