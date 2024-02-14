@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1707793781871,
+  "lastUpdate": 1707952112583,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -45685,6 +45685,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31643,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "committer": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "distinct": true,
+          "id": "ac247f31e1c093b4da4251658db7da867533bcaa",
+          "message": "feat(replicache): In push() and pull() don't reject for network errors.\n\nIt's very common for people to call pull() in their poke handler and\nnot think of the fact that it can reject. In some configurations, this\nunhandled rejection causes a pretty dramatic error message.\n\nAs of this change, there is no longer a way to know if push()/pull()\ncompletes successfully. If users want this, we can extend the return\nvalue to indicate success without rejecting.",
+          "timestamp": "2024-02-14T13:06:31-10:00",
+          "tree_id": "87ed9f784d545b80092b65664575f68e00f350d5",
+          "url": "https://github.com/rocicorp/mono/commit/ac247f31e1c093b4da4251658db7da867533bcaa"
+        },
+        "date": 1707952100079,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 302531,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54253,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 112787,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31693,
             "unit": "bytes"
           }
         ]
