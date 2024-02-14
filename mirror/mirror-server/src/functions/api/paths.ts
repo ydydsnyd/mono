@@ -27,7 +27,7 @@ const matchReadParams = match<ReadParams>(
 );
 
 const matchWriteParams = match<WriteParams>(
-  '/v1/apps/:appID/:resource{/:subpath([^:]*)}?\\::command',
+  '/v1/apps/:appID/:resource{/:subpath(.*)}?\\::command([^:]+)',
 );
 
 export function parseReadParams(path: string): ReadParams {

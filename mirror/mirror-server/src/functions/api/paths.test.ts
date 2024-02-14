@@ -144,6 +144,16 @@ describe('api-paths', () => {
       },
       workerPath: '/api/v1/connections/rooms/id%2Fwith%2Fslashes:invalidate',
     },
+    {
+      path: '/v1/apps/lm3idfw/connections/users/id%3Awith:colons:invalidate',
+      params: {
+        appID: 'lm3idfw',
+        resource: 'connections',
+        subpath: 'users/id%3Awith:colons',
+        command: 'invalidate',
+      },
+      workerPath: '/api/v1/connections/users/id%3Awith:colons:invalidate',
+    },
   ];
 
   writeCases.forEach(c => {
