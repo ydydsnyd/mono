@@ -14,9 +14,9 @@ import {
   nullableVersionSchema,
   type ErrorMessage,
 } from 'reflect-protocol';
-import type {MutatorDefs, ReadTransaction} from 'reflect-shared';
-import {version} from 'reflect-shared';
-import {isValidRoomID, ROOM_ID_REGEX} from 'reflect-shared';
+import {ROOM_ID_REGEX, isValidRoomID} from 'reflect-shared/src/room-id.js';
+import type {MutatorDefs, ReadTransaction} from 'reflect-shared/src/types.js';
+import {version} from 'reflect-shared/src/version.js';
 import {
   ClientGroupID,
   ClientID,
@@ -42,12 +42,16 @@ import {
   dropDatabase,
 } from 'replicache';
 import {assert} from 'shared/src/asserts.js';
+import {getDocumentVisibilityWatcher} from 'shared/src/document-visible.js';
+import {getDocument} from 'shared/src/get-document.js';
+import {getWindow} from 'shared/src/get-window.js';
 import {sleep, sleepWithAbort} from 'shared/src/sleep.js';
 import * as valita from 'shared/src/valita.js';
 import {nanoid} from '../util/nanoid.js';
 import {send} from '../util/socket.js';
+import {CloseBeaconManager} from './close-beacon.js';
 import {checkConnectivity} from './connect-checks.js';
-import {getDocumentVisibilityWatcher} from './document-visible.js';
+import {shouldEnableAnalytics} from './enable-analytics.js';
 import {toWSString, type HTTPString, type WSString} from './http-string.js';
 import {LogOptions, createLogOptions} from './log-options.js';
 import {
@@ -67,7 +71,6 @@ import {
 import {reloadWithReason, reportReloadReason} from './reload-error-handler.js';
 import {ServerError, isAuthError, isServerError} from './server-error.js';
 import {getServer} from './server-option.js';
-import {shouldEnableAnalytics} from './enable-analytics.js';
 
 declare const TESTING: boolean;
 
@@ -165,6 +168,11 @@ const enum PingResult {
   Success = 1,
 }
 
+// Keep in sync with packages/replicache/src/replicache-options.ts
+export interface ReplicacheInternalAPI {
+  lastMutationID(): number;
+}
+
 export class Reflect<MD extends MutatorDefs> {
   readonly version = version;
 
@@ -208,6 +216,9 @@ export class Reflect<MD extends MutatorDefs> {
   #abortPingTimeout = () => {
     // intentionally empty
   };
+
+  #internalAPI: ReplicacheInternalAPI;
+  readonly #closeBeaconManager: CloseBeaconManager;
 
   /**
    * `onUpdateNeeded` is called when a code update is needed.
@@ -319,8 +330,6 @@ export class Reflect<MD extends MutatorDefs> {
       options.enableAnalytics,
     );
 
-    console.log('enableAnalytics', this.#enableAnalytics);
-
     if (jurisdiction !== undefined && jurisdiction !== 'eu') {
       throw new Error('ReflectOptions.jurisdiction must be "eu" if present.');
     }
@@ -357,14 +366,19 @@ export class Reflect<MD extends MutatorDefs> {
       licenseKey: 'reflect-client-static-key',
       experimentalCreateKVStore: getCreateKVStore(options),
     };
+    let internalAPI: ReplicacheInternalAPI;
     const replicacheInternalOptions = {
       enableLicensing: false,
+      exposeInternalAPI: (api: ReplicacheInternalAPI) => {
+        internalAPI = api;
+      },
     };
 
     this.#rep = new Replicache({
       ...replicacheOptions,
       ...replicacheInternalOptions,
     });
+    this.#internalAPI = internalAPI!;
     this.#rep.getAuth = this.#getAuthToken;
     this.#onUpdateNeeded = this.#rep.onUpdateNeeded; // defaults to reload.
     this.#server = server;
@@ -376,6 +390,7 @@ export class Reflect<MD extends MutatorDefs> {
       {roomID, clientID: this.#rep.clientID},
       logOptions.logSink,
     );
+
     reportReloadReason(this.#lc);
 
     this.#metrics = new MetricManager({
@@ -403,6 +418,16 @@ export class Reflect<MD extends MutatorDefs> {
       getDocument(),
       hiddenTabDisconnectDelay,
       this.#closeAbortController.signal,
+    );
+
+    this.#closeBeaconManager = new CloseBeaconManager(
+      this,
+      this.#lc,
+      server,
+      () => this.#rep.auth,
+      () => this.#internalAPI.lastMutationID(),
+      this.#closeAbortController.signal,
+      getWindow(),
     );
 
     void this.#runLoop();
@@ -484,12 +509,14 @@ export class Reflect<MD extends MutatorDefs> {
    * When closed all subscriptions end and no more read or writes are allowed.
    */
   close(): Promise<void> {
-    const lc = this.#lc;
+    const lc = this.#lc.withContext('close');
+
     if (this.#connectionState !== ConnectionState.Disconnected) {
       this.#disconnect(lc, {
         client: 'ReflectClosed',
       });
     }
+    this.#closeBeaconManager.send('ReflectClosed');
     lc.debug?.('Aborting closeAbortController due to close()');
     this.#closeAbortController.abort();
     this.#metrics.stop();
@@ -1475,15 +1502,6 @@ function addWebSocketIDFromSocketToLogContext(
 
 function addWebSocketIDToLogContext(wsid: string, lc: LogContext): LogContext {
   return lc.withContext('wsid', wsid);
-}
-
-/**
- * Returns the document object. This is wrapped in a function because Reflect
- * runs in environments that do not have a document (such as Web Workers, Deno
- * etc)
- */
-function getDocument(): Document | undefined {
-  return typeof document !== 'undefined' ? document : undefined;
 }
 
 /**

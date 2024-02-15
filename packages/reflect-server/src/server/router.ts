@@ -194,14 +194,36 @@ export function bearerToken<Context extends BaseContext>(): RequestValidator<
   Context,
   Context & {bearerToken: string}
 > {
+  return bearerTokenImpl(true);
+}
+
+export function optionalBearerToken<
+  Context extends BaseContext,
+>(): RequestValidator<Context, Context & {bearerToken?: string}> {
+  return bearerTokenImpl(false);
+}
+
+function bearerTokenImpl<Context extends BaseContext>(
+  required: true,
+): RequestValidator<Context, Context & {bearerToken: string}>;
+function bearerTokenImpl<Context extends BaseContext>(
+  required: false,
+): RequestValidator<Context, Context & {bearerToken: string}>;
+function bearerTokenImpl<Context extends BaseContext>(
+  required: boolean,
+): RequestValidator<Context, Context & {bearerToken?: string}> {
   function throwError(kind: string): never {
     throw new APIError(401, 'request', `${kind} Authorization header`);
   }
   return (ctx: Context, req: Request) => {
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throwError('Missing');
+    if (authHeader === null) {
+      if (required) {
+        throwError('Missing');
+      }
+      return {ctx};
     }
+
     const parts = authHeader.split(/\s+/);
     if (parts.length !== 2) {
       throwError('Invalid');
@@ -257,6 +279,18 @@ export function inputParams<Q, B, Context extends BaseContext>(
       ctx: {...ctx, query, body},
       // Create a new Request if the body of the input Request was consumed.
       req: !req.bodyUsed ? req : new Request(req, {body: text}),
+    };
+  };
+}
+
+export function queryParamsIgnoreBody<Q, Context extends BaseContext>(
+  querySchema: valita.Type<Q>,
+): RequestValidator<Context, Context & {query: Q}> {
+  return (ctx: Context) => {
+    const {parsedURL} = ctx;
+    const query = validateQuery(parsedURL, querySchema);
+    return {
+      ctx: {...ctx, query},
     };
   };
 }

@@ -1,6 +1,6 @@
 import {describe, expect, jest, test} from '@jest/globals';
 import type {LogLevel} from '@rocicorp/logger';
-import {version} from 'reflect-shared';
+import {version} from 'reflect-shared/src/version.js';
 import {createAPIHeaders} from 'shared/src/api/headers.js';
 import {assertString} from 'shared/src/asserts.js';
 import type {Series} from '../types/report-metrics.js';
@@ -170,9 +170,9 @@ async function testForwardedToAuthDO(
   expect(response.headers.get('Access-Control-Allow-Origin')).toEqual('*');
 }
 
-test('worker forwards disconnect requests to authDO', async () => {
+test('worker forwards close beacon requests to authDO', async () => {
   await testForwardedToAuthDO(
-    new Request('http://test.roci.dev/api/sync/v1/disconnect'),
+    new Request('http://test.roci.dev/api/sync/v1/close'),
     new Response(null, {
       status: 200,
     }),
@@ -189,10 +189,8 @@ test('worker forwards connect requests to authDO', async () => {
   );
 });
 
-test('worker does not forward disconnect requests to authDO when DISABLE is true', async () => {
-  await testDisabled(
-    new Request('http://test.roci.dev/api/sync/v1/disconnect'),
-  );
+test('worker does not forward close beacon requests to authDO when DISABLE is true', async () => {
+  await testDisabled(new Request('http://test.roci.dev/api/sync/v1/close'));
 });
 
 test('worker does not forward connect requests to authDO when DISABLE is true', async () => {

@@ -14,8 +14,10 @@ import {
   bodyOnly,
   checkAuthAPIKey,
   get,
+  optionalBearerToken,
   post,
   queryParams,
+  queryParamsIgnoreBody,
   requiredAuthAPIKey,
   roomID,
   urlVersion,
@@ -503,6 +505,7 @@ test('withQueryParams', async () => {
   type Case = {
     schema: valita.Type<unknown>;
     parsedURL: URLPatternURLPatternResult;
+    body?: string;
     expected?: {result: {text: string; status: number}};
     error?: APIErrorInfo;
   };
@@ -558,10 +561,22 @@ test('withQueryParams', async () => {
         message: 'Query string error. Unexpected property baz',
       },
     },
+    {
+      schema: fooSchema,
+      parsedURL: must(
+        new URLPattern().exec('https://roci.dev/room/monkey?foo=bar'),
+      ),
+      body: 'abc',
+      error: {
+        code: 400,
+        resource: 'request',
+        message: 'Unexpected request body.',
+      },
+    },
   ];
 
   for (const c of cases) {
-    const handler = get()
+    const handler = post()
       .with(queryParams(c.schema))
       .handle((ctx, req) => {
         expectBodyNotUsed(req);
@@ -570,7 +585,7 @@ test('withQueryParams', async () => {
         });
       });
     const url = `https://roci.dev/`;
-    const request = new Request(url);
+    const request = new Request(url, {method: 'post', body: c.body ?? null});
     const ctx = {
       parsedURL: c.parsedURL,
       lc: createSilentLogContext(),
@@ -945,7 +960,7 @@ describe('with bearerToken', () => {
       error: {
         code: 401,
         resource: 'request',
-        message: 'Missing Authorization header',
+        message: 'Invalid Authorization header',
       },
     },
     {
@@ -1027,5 +1042,213 @@ describe('with bearerToken', () => {
         });
       }
     });
+  }
+});
+
+describe('with optionalBearerToken', () => {
+  type Case = {
+    name: string;
+    headers?: Record<string, string>;
+    expected?: {text: string; status: number};
+    error?: APIErrorInfo;
+  };
+
+  const cases: Case[] = [
+    {
+      name: 'no auth header',
+      expected: {text: 'bearerToken undefined', status: 200},
+      error: {
+        code: 401,
+        resource: 'request',
+        message: 'Missing Authorization header',
+      },
+    },
+    {
+      name: 'empty header lowercase',
+      headers: {authorization: ''},
+      error: {
+        code: 401,
+        resource: 'request',
+        message: 'Invalid Authorization header',
+      },
+    },
+    {
+      name: 'valid header',
+      headers: {authorization: 'Bearer abc'},
+      expected: {text: 'abc', status: 200},
+    },
+    {
+      name: 'valid header with escapes',
+      headers: {authorization: 'Bearer abc%20def'},
+      expected: {text: 'abc def', status: 200},
+    },
+    {
+      name: 'invalid header',
+      headers: {authorization: 'Bearer'},
+      error: {
+        code: 401,
+        resource: 'request',
+        message: 'Invalid Authorization header',
+      },
+    },
+    {
+      name: 'invalid header',
+      headers: {authorization: 'Bear grizzly'},
+      error: {
+        code: 401,
+        resource: 'request',
+        message: 'Invalid Authorization header',
+      },
+    },
+    {
+      name: 'invalid header',
+      headers: {authorization: 'Bearer a b c'},
+      error: {
+        code: 401,
+        resource: 'request',
+        message: 'Invalid Authorization header',
+      },
+    },
+    {
+      name: 'invalid header',
+      headers: {authorization: 'Bearer a%'},
+      error: {
+        code: 401,
+        resource: 'request',
+        message: 'Malformed Authorization header',
+      },
+    },
+  ];
+
+  for (const c of cases) {
+    test(c.name, async () => {
+      const handler = get()
+        .with(optionalBearerToken())
+        .handle(
+          ctx =>
+            new Response(ctx.bearerToken ?? 'bearerToken undefined', {
+              status: 200,
+            }),
+        );
+      const url = `https://roci.dev/`;
+      const request = new Request(url, {headers: c.headers ?? {}});
+      const ctx = {
+        parsedURL: must(new URLPattern().exec(url)),
+        lc: createSilentLogContext(),
+      };
+
+      const response = await handler(ctx, request);
+      if (response.status === 200) {
+        const result = {
+          status: response.status,
+          text: await response.text(),
+        };
+        expect(result).toEqual(c.expected);
+      } else {
+        expect(response.status).toBe(c.error?.code);
+        expect(await response.json()).toEqual({
+          error: c.error,
+        });
+      }
+    });
+  }
+});
+
+test('withQueryParamsIgnoreBody', async () => {
+  type Case = {
+    schema: valita.Type<unknown>;
+    parsedURL: URLPatternURLPatternResult;
+    body?: string;
+    expected?: {result: {text: string; status: number}};
+    error?: APIErrorInfo;
+  };
+
+  const fooSchema = valita.object({foo: valita.string()});
+
+  const cases: Case[] = [
+    {
+      schema: valita.null(),
+      parsedURL: must(new URLPattern().exec('https://roci.dev/room/monkey')),
+      expected: {result: {text: 'query: null', status: 200}},
+    },
+    {
+      schema: valita.null(),
+      parsedURL: must(new URLPattern().exec('https://roci.dev/room/monkey?')),
+      expected: {result: {text: 'query: null', status: 200}},
+    },
+    {
+      schema: valita.null(),
+      parsedURL: must(
+        new URLPattern().exec('https://roci.dev/room/monkey?foo'),
+      ),
+      error: {
+        code: 400,
+        resource: 'request',
+        message: 'Unexpected query parameters',
+      },
+    },
+    {
+      schema: fooSchema,
+      parsedURL: must(new URLPattern().exec('https://roci.dev/room/monkey?')),
+      error: {
+        code: 400,
+        resource: 'request',
+        message: 'Query string error. Missing property foo',
+      },
+    },
+    {
+      schema: fooSchema,
+      parsedURL: must(
+        new URLPattern().exec('https://roci.dev/room/monkey?foo=bar'),
+      ),
+      expected: {result: {text: 'query: {"foo":"bar"}', status: 200}},
+    },
+    {
+      schema: fooSchema,
+      parsedURL: must(
+        new URLPattern().exec('https://roci.dev/room/monkey?foo=bar'),
+      ),
+      body: 'abc',
+      expected: {result: {text: 'query: {"foo":"bar"}', status: 200}},
+    },
+    {
+      schema: fooSchema,
+      parsedURL: must(
+        new URLPattern().exec('https://roci.dev/room/monkey?foo=bar&baz=bonk'),
+      ),
+      error: {
+        code: 400,
+        resource: 'request',
+        message: 'Query string error. Unexpected property baz',
+      },
+    },
+  ];
+
+  for (const c of cases) {
+    const handler = post()
+      .with(queryParamsIgnoreBody(c.schema))
+      .handle((ctx, req) => {
+        expectBodyNotUsed(req);
+        return new Response(`query: ${JSON.stringify(ctx.query)}`, {
+          status: 200,
+        });
+      });
+    const url = `https://roci.dev/`;
+    const request = new Request(url, {method: 'POST', body: c.body ?? null});
+    const ctx = {
+      parsedURL: c.parsedURL,
+      lc: createSilentLogContext(),
+    };
+
+    const response = await handler(ctx, request);
+    if (response.status === 200) {
+      const result = {
+        result: {status: response.status, text: await response.text()},
+      };
+      expect(result).toEqual(c.expected);
+    } else {
+      expect(response.status).toBe(c.error?.code);
+      expect(await response.json()).toEqual({error: c.error});
+    }
   }
 });

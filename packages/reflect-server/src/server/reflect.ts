@@ -1,8 +1,12 @@
 import {consoleLogSink, LogLevel, LogSink, TeeLogSink} from '@rocicorp/logger';
-import type {MutatorDefs} from 'reflect-shared';
+import type {MutatorDefs} from 'reflect-shared/src/types.js';
 import {BaseAuthDO} from './auth-do.js';
 import type {AuthHandler} from './auth.js';
-import type {DisconnectHandler} from './disconnect.js';
+import type {ClientDeleteHandler} from './client-delete-handler.js';
+import type {
+  ClientDisconnectHandler,
+  DisconnectHandler,
+} from './client-disconnect-handler.js';
 import {BaseRoomDO, getDefaultTurnDuration} from './room-do.js';
 import type {RoomStartHandler} from './room-start.js';
 import {extractVars} from './vars.js';
@@ -19,7 +23,14 @@ export interface ReflectServerOptions<MD extends MutatorDefs> {
 
   roomStartHandler?: RoomStartHandler | undefined;
 
+  /**
+   * @deprecated Use {@link onClientDisconnect} instead.
+   */
   disconnectHandler?: DisconnectHandler | undefined;
+
+  onClientDisconnect?: ClientDisconnectHandler | undefined;
+
+  onClientDelete?: ClientDeleteHandler | undefined;
 
   /**
    * Where to send logs. By default logs are sent to `console.log`.
@@ -64,7 +75,8 @@ export type NormalizedOptions<MD extends MutatorDefs> = {
   mutators: MD;
   authHandler?: AuthHandler | undefined;
   roomStartHandler: RoomStartHandler;
-  disconnectHandler: DisconnectHandler;
+  onClientDisconnect: ClientDisconnectHandler;
+  onClientDelete: ClientDeleteHandler;
   logSink: LogSink;
   logLevel: LogLevel;
   datadogMetricsOptions?: DatadogMetricsOptions | undefined;
@@ -125,6 +137,8 @@ type GetNormalizedOptions<
   MD extends MutatorDefs,
 > = (env: Env) => NormalizedOptions<MD>;
 
+const noopAsync = () => Promise.resolve();
+
 function makeNormalizedOptionsGetter<
   Env extends ReflectServerBaseEnv,
   MD extends MutatorDefs,
@@ -135,8 +149,10 @@ function makeNormalizedOptionsGetter<
     const {
       mutators,
       authHandler,
-      roomStartHandler = () => Promise.resolve(),
-      disconnectHandler = () => Promise.resolve(),
+      roomStartHandler = noopAsync,
+      disconnectHandler,
+      onClientDisconnect,
+      onClientDelete = noopAsync,
       logSinks,
       logLevel = 'debug',
       allowUnconfirmedWrites = false,
@@ -148,7 +164,8 @@ function makeNormalizedOptionsGetter<
       mutators,
       authHandler,
       roomStartHandler,
-      disconnectHandler,
+      onClientDisconnect: onClientDisconnect ?? disconnectHandler ?? noopAsync,
+      onClientDelete,
       logSink,
       logLevel,
       allowUnconfirmedWrites,
@@ -169,7 +186,8 @@ function createRoomDOClass<
       const {
         mutators,
         roomStartHandler,
-        disconnectHandler,
+        onClientDisconnect,
+        onClientDelete,
         logSink,
         logLevel,
         allowUnconfirmedWrites,
@@ -179,7 +197,8 @@ function createRoomDOClass<
         mutators,
         state,
         roomStartHandler,
-        disconnectHandler,
+        onClientDisconnect,
+        onClientDelete,
         logSink,
         logLevel,
         allowUnconfirmedWrites,

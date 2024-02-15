@@ -9,11 +9,9 @@ import {
 import {LogContext} from '@rocicorp/logger';
 import assert from 'node:assert';
 import {subscribe, unsubscribe} from 'node:diagnostics_channel';
-import type {DisconnectBeacon} from 'reflect-protocol/src/disconnect-beacon.js';
 import type {LogLevel, TailMessage} from 'reflect-protocol/src/tail.js';
-import type {MutatorDefs, WriteTransaction} from 'reflect-shared';
-import {version} from 'reflect-shared';
-import {resetAllConfig, setConfig} from 'reflect-shared/src/config.js';
+import type {MutatorDefs, WriteTransaction} from 'reflect-shared/src/types.js';
+import {version} from 'reflect-shared/src/version.js';
 import {CONNECTION_SECONDS_CHANNEL_NAME} from 'shared/src/events/connection-seconds.js';
 import type {ReadonlyJSONValue} from 'shared/src/json.js';
 import {Queue} from 'shared/src/queue.js';
@@ -28,7 +26,7 @@ import {TestLogSink} from '../util/test-utils.js';
 import {originalConsole} from './console.js';
 import {createTestDurableObjectState} from './do-test-utils.js';
 import {AUTH_DATA_HEADER_NAME, addRoomIDHeader} from './internal-headers.js';
-import {DISCONNECT_BEACON_PATH, TAIL_URL_PATH} from './paths.js';
+import {TAIL_URL_PATH} from './paths.js';
 import {BaseRoomDO, getDefaultTurnDuration} from './room-do.js';
 
 async function createRoom<MD extends MutatorDefs>(
@@ -45,6 +43,12 @@ async function createRoom<MD extends MutatorDefs>(
   expect(createResponse.status).toBe(expectedStatus);
 }
 
+const noopHandlers = {
+  roomStartHandler: () => Promise.resolve(),
+  onClientDisconnect: () => Promise.resolve(),
+  onClientDelete: () => Promise.resolve(),
+} as const;
+
 test('inits storage schema', async () => {
   const testLogSink = new TestLogSink();
   const state = await createTestDurableObjectState('test-do-id');
@@ -53,8 +57,7 @@ test('inits storage schema', async () => {
 
   new BaseRoomDO({
     mutators: {},
-    roomStartHandler: () => Promise.resolve(),
-    disconnectHandler: () => Promise.resolve(),
+    ...noopHandlers,
     state,
     logSink: testLogSink,
     logLevel: 'info',
@@ -89,13 +92,13 @@ test('runs roomStartHandler on first fetch', async () => {
   let roomStartHandlerCallCount = 0;
   const roomDO = new BaseRoomDO({
     mutators: {},
+    ...noopHandlers,
     roomStartHandler: async (tx: WriteTransaction, roomID: string) => {
       expect(roomID).toEqual(testRoomID);
       roomStartHandlerCallCount++;
       const value = await tx.get('foo');
       await tx.set('foo', `${value}+${roomStartHandlerCallCount}`);
     },
-    disconnectHandler: () => Promise.resolve(),
     state,
     logSink: testLogSink,
     logLevel: 'info',
@@ -149,6 +152,7 @@ test('runs roomStartHandler on next fetch if throws on first fetch', async () =>
   let roomStartHandlerCallCount = 0;
   const roomDO = new BaseRoomDO({
     mutators: {},
+    ...noopHandlers,
     roomStartHandler: async (tx: WriteTransaction, roomID: string) => {
       expect(roomID).toEqual(testRoomID);
       roomStartHandlerCallCount++;
@@ -158,7 +162,6 @@ test('runs roomStartHandler on next fetch if throws on first fetch', async () =>
       const value = await tx.get('foo');
       await tx.set('foo', `${value}+${roomStartHandlerCallCount}`);
     },
-    disconnectHandler: () => Promise.resolve(),
     state,
 
     logSink: testLogSink,
@@ -205,8 +208,7 @@ test('deleteAllData deletes all data', async () => {
 
   const roomDO = new BaseRoomDO({
     mutators: {},
-    roomStartHandler: () => Promise.resolve(),
-    disconnectHandler: () => Promise.resolve(),
+    ...noopHandlers,
     state,
 
     logSink: testLogSink,
@@ -236,8 +238,7 @@ test('after deleteAllData the roomDO just 410s', async () => {
 
   const roomDO = new BaseRoomDO({
     mutators: {},
-    roomStartHandler: () => Promise.resolve(),
-    disconnectHandler: () => Promise.resolve(),
+    ...noopHandlers,
     state: await createTestDurableObjectState('test-do-id'),
     logSink: testLogSink,
     logLevel: 'info',
@@ -265,8 +266,7 @@ test('Logs version during construction', async () => {
   const testLogSink = new TestLogSink();
   new BaseRoomDO({
     mutators: {},
-    roomStartHandler: () => Promise.resolve(),
-    disconnectHandler: () => Promise.resolve(),
+    ...noopHandlers,
     state: await createTestDurableObjectState('test-do-id'),
     logSink: testLogSink,
     logLevel: 'info',
@@ -290,8 +290,7 @@ test('Avoids queueing many intervals in the lock', async () => {
   const testLogSink = new TestLogSink();
   const room = new BaseRoomDO({
     mutators: {},
-    roomStartHandler: () => Promise.resolve(),
-    disconnectHandler: () => Promise.resolve(),
+    ...noopHandlers,
     state: await createTestDurableObjectState('test-do-id'),
     logSink: testLogSink,
     logLevel: 'info',
@@ -348,8 +347,7 @@ async function makeBaseRoomDO(state?: DurableObjectState) {
   const testLogSink = new TestLogSink();
   return new BaseRoomDO({
     mutators: {},
-    roomStartHandler: () => Promise.resolve(),
-    disconnectHandler: () => Promise.resolve(),
+    ...noopHandlers,
     state: state ?? (await createTestDurableObjectState('test-do-id')),
     logSink: testLogSink,
     logLevel: 'info',
@@ -511,7 +509,8 @@ describe('good, bad, invalid tail requests', () => {
       const roomDO = new BaseRoomDO({
         mutators: {},
         roomStartHandler: () => Promise.resolve(),
-        disconnectHandler: () => Promise.resolve(),
+        onClientDisconnect: () => Promise.resolve(),
+        onClientDelete: () => Promise.resolve(),
         state,
         logSink: testLogSink,
         logLevel: 'info',
@@ -763,71 +762,5 @@ describe('tail', () => {
 
     expect(log).toEqual([]);
     expect(originalConsoleErrorSpy).toBeCalledTimes(0);
-  });
-});
-
-describe('Client disconnect beacon', () => {
-  beforeEach(() => {
-    setConfig('disconnectBeacon', true);
-  });
-
-  afterEach(() => {
-    resetAllConfig();
-  });
-
-  const body: DisconnectBeacon = {
-    clientGroupID: 'testClientGroupID',
-    mutations: [],
-    pushVersion: 0,
-    schemaVersion: 's1',
-    requestID: 'r1',
-    timestamp: 123,
-  };
-
-  const roomID = 'testRoomID';
-  const clientID = 'testClientID';
-  const userID = 'testUserID';
-
-  describe('enabled', () => {
-    for (const enabled of [true, false]) {
-      test(`${enabled}`, async () => {
-        setConfig('disconnectBeacon', enabled);
-
-        const roomDO = await makeBaseRoomDO();
-
-        await createRoom(roomDO, roomID, undefined);
-
-        const url = `http://test.roci.dev${DISCONNECT_BEACON_PATH}?roomID=${roomID}&clientID=${clientID}&userID=${userID}`;
-        const request = addRoomIDHeader(
-          new Request(url, {method: 'POST', body: JSON.stringify(body)}),
-          roomID,
-        );
-        const response = await roomDO.fetch(request);
-
-        expect(response.status).toBe(enabled ? 200 : 404);
-      });
-    }
-  });
-
-  describe('Missing search params', () => {
-    for (const url of [
-      `http://test.roci.dev${DISCONNECT_BEACON_PATH}?clientID=${clientID}&userID=${userID}`,
-      `http://test.roci.dev${DISCONNECT_BEACON_PATH}?clientID=${clientID}&roomID=${roomID}`,
-      `http://test.roci.dev${DISCONNECT_BEACON_PATH}?userID=${userID}&roomID=${roomID}`,
-    ]) {
-      test(`url: ${url}`, async () => {
-        const roomDO = await makeBaseRoomDO();
-
-        await createRoom(roomDO, roomID, undefined);
-
-        const request = addRoomIDHeader(
-          new Request(url, {method: 'POST', body: JSON.stringify(body)}),
-          roomID,
-        );
-        const response = await roomDO.fetch(request);
-
-        expect(response.status).toBe(400);
-      });
-    }
   });
 });

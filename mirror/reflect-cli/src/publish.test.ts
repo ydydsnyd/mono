@@ -13,10 +13,13 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {setAppConfigForTesting} from './app-config.js';
+import {
+  DEFAULT_FROM_REFLECT_CONFIG,
+  setAppConfigForTesting,
+} from './app-config.js';
 import {ErrorWrapper} from './error.js';
 import {initFirebase} from './firebase.js';
-import {authContext} from './login.test.helper.js';
+import {teamAuthContext} from './login.test.helper.js';
 import {publishHandler, type PublishCaller} from './publish.js';
 import {reflectVersionMatcher, useFakeAuthConfig} from './test-helpers.js';
 
@@ -43,7 +46,7 @@ async function writeTempFiles(
   data: string,
   filename = 'test.js',
   reflectVersion?: string,
-) {
+): Promise<string> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'reflect-publish-test-'));
   const testFilePath = path.join(dir, filename);
   await fs.writeFile(testFilePath, data, 'utf-8');
@@ -78,11 +81,18 @@ async function writeTempFiles(
     }),
     'utf-8',
   );
+
+  return testFilePath;
 }
 
 test('it should throw warning if the source has syntax errors', async () => {
-  await writeTempFiles('const x =');
-  await expect(publishHandler({} as Args, authContext)).rejects.toEqual(
+  const testFilePath = await writeTempFiles('const x =');
+  await expect(
+    publishHandler(
+      {serverPath: testFilePath, app: 'abc123'} as Args,
+      teamAuthContext,
+    ),
+  ).rejects.toEqual(
     expect.objectContaining({
       constructor: ErrorWrapper,
       message: expect.stringMatching(/Unexpected end of file/),
@@ -91,9 +101,30 @@ test('it should throw warning if the source has syntax errors', async () => {
   );
 });
 
+test('it should throw if an invalid appname', async () => {
+  const testFilePath = await writeTempFiles('const x = 42;', 'test.ts');
+  await expect(
+    publishHandler(
+      {serverPath: testFilePath, app: '0000'} as Args,
+      teamAuthContext,
+    ),
+  ).rejects.toThrow(
+    /Invalid App Name "0000".*lowercased alphanumeric, starting with a letter and not ending with a hyphen./,
+  );
+});
+
 test('it should throw warning if invalid version', async () => {
-  await writeTempFiles('const x = 42;', 'test.ts', '1.0.0');
-  await expect(publishHandler({} as Args, authContext)).rejects.toEqual(
+  const testFilePath = await writeTempFiles(
+    'const x = 42;',
+    'test.ts',
+    '1.0.0',
+  );
+  await expect(
+    publishHandler(
+      {serverPath: testFilePath, app: 'abc123'} as Args,
+      teamAuthContext,
+    ),
+  ).rejects.toEqual(
     expect.objectContaining({
       constructor: ErrorWrapper,
       message: expect.stringMatching(
@@ -134,7 +165,7 @@ async function testPublishedCode(source: string, expectedOutputs: string[]) {
       }),
   };
 
-  await writeTempFiles(source, 'test.ts');
+  const testFilePath = await writeTempFiles(source, 'test.ts');
 
   // Set the Deployment doc to RUNNING so that the cli command exits.
   const firestore = getFirestore();
@@ -152,8 +183,8 @@ async function testPublishedCode(source: string, expectedOutputs: string[]) {
   );
 
   await publishHandler(
-    {} as Args,
-    authContext,
+    {serverPath: testFilePath, app: DEFAULT_FROM_REFLECT_CONFIG} as Args,
+    teamAuthContext,
     publishMock as unknown as PublishCaller,
     firestore,
   );

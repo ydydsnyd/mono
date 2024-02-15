@@ -1,5 +1,5 @@
 const defaultConfig = {
-  disconnectBeacon: false,
+  closeBeacon: true,
 };
 Object.freeze(defaultConfig);
 

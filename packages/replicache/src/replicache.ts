@@ -9,6 +9,8 @@ import {consoleLogSink, LogContext, TeeLogSink} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
 import {AbortError} from 'shared/src/abort-error.js';
 import {assert, assertNotUndefined} from 'shared/src/asserts.js';
+import {getDocumentVisibilityWatcher} from 'shared/src/document-visible.js';
+import {getDocument} from 'shared/src/get-document.js';
 import type {JSONValue, ReadonlyJSONValue} from 'shared/src/json.js';
 import {must} from 'shared/src/must.js';
 import {initBgIntervalProcess} from './bg-interval.js';
@@ -119,6 +121,7 @@ type TestingInstance = {
   onRecoverMutations: <T>(r: T) => T;
   perdag: Store;
   recoverMutations: () => Promise<boolean>;
+  lastMutationID: () => number;
 };
 
 const exposedToTestingMap = new WeakMap<object, TestingInstance>();
@@ -291,6 +294,8 @@ export class Replicache<MD extends MutatorDefs = {}> {
    * IDBStore(name)`.
    */
   readonly #createStore: CreateStore;
+
+  #lastMutationID: number = 0;
 
   /**
    * This is the name Replicache uses for the IndexedDB database where data is
@@ -502,8 +507,12 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
     if (internalOptions.exposeInternalAPI) {
       internalOptions.exposeInternalAPI({
+        // Needed by perf test
         persist: () => this.#persist(),
+        // Needed by perf test
         refresh: () => this.#refresh(),
+        // Needed by reflect
+        lastMutationID: () => this.#lastMutationID,
       });
     }
 
@@ -564,6 +573,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
         beginPull: () => this.#beginPull(),
         onRecoverMutations: r => r,
         recoverMutations: () => this.#recoverMutations(),
+        lastMutationID: () => this.#lastMutationID,
       });
     }
 
@@ -571,20 +581,21 @@ export class Replicache<MD extends MutatorDefs = {}> {
       requestOptions;
     this.#requestOptions = {maxDelayMs, minDelayMs};
 
+    const visibilityWatcher = getDocumentVisibilityWatcher(
+      getDocument(),
+      0,
+      this.#closeAbortController.signal,
+    );
+
     this.#pullConnectionLoop = new ConnectionLoop(
-      new PullDelegate(
-        this,
-        () => this.#invokePull(),
-        this.#lc.withContext('PULL'),
-      ),
+      this.#lc.withContext('PULL'),
+      new PullDelegate(this, () => this.#invokePull()),
+      visibilityWatcher,
     );
 
     this.#pushConnectionLoop = new ConnectionLoop(
-      new PushDelegate(
-        this,
-        () => this.#invokePush(),
-        this.#lc.withContext('PUSH'),
-      ),
+      this.#lc.withContext('PUSH'),
+      new PushDelegate(this, () => this.#invokePush()),
     );
 
     this.mutate = this.#registerMutators(mutators);
@@ -1060,7 +1071,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
       if (e instanceof PushError || e instanceof PullError) {
         online = false;
-        this.#lc.info?.(`${name} threw:\n`, e, '\nwith cause:\n', e.causedBy);
+        this.#lc.debug?.(`${name} threw:\n`, e, '\nwith cause:\n', e.causedBy);
       } else if (e instanceof ReportError) {
         this.#lc.error?.(e);
       } else {
@@ -1248,7 +1259,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
    * will not be reflected in the promise.
    */
   push({now = false} = {}): Promise<void> {
-    return this.#pushConnectionLoop.send(now);
+    return throwIfError(this.#pushConnectionLoop.send(now));
   }
 
   /**
@@ -1266,7 +1277,7 @@ export class Replicache<MD extends MutatorDefs = {}> {
    * will not be reflected in the promise.
    */
   pull({now = false} = {}): Promise<void> {
-    return this.#pullConnectionLoop.send(now);
+    return throwIfError(this.#pullConnectionLoop.send(now));
   }
 
   /**
@@ -1685,11 +1696,17 @@ export class Replicache<MD extends MutatorDefs = {}> {
         );
         const result: R = await mutatorImpl(tx, args);
         throwIfClosed(dbWrite);
+        const lastMutationID = await dbWrite.getMutationID();
         const [ref, diffs] = await dbWrite.commitWithDiffs(
           DEFAULT_HEAD_NAME,
           this.#subscriptions,
         );
-        this.#pushConnectionLoop.send(false).catch(noop);
+
+        // Update this after the commit in case the commit fails.
+        this.#lastMutationID = lastMutationID;
+
+        // Send is not supposed to reject
+        void this.#pushConnectionLoop.send(false);
         await this.#checkChange(ref, diffs);
         void this.#schedulePersist();
         return {result, ref};
@@ -1746,15 +1763,6 @@ export class Replicache<MD extends MutatorDefs = {}> {
 // instance is opening we wait for any currently closing instances.
 const closingInstances: Map<string, Promise<unknown>> = new Map();
 
-/**
- * Returns the document object. This is wrapped in a function because Replicache
- * runs in environments that do not have a document (such as Web Workers, Deno
- * etc)
- */
-function getDocument(): Document | undefined {
-  return typeof document !== 'undefined' ? document : undefined;
-}
-
 function reload(): void {
   if (typeof location !== 'undefined') {
     location.reload();
@@ -1765,3 +1773,10 @@ function reload(): void {
  * Wrapper error class that should be reported as error (logger.error)
  */
 class ReportError extends Error {}
+
+async function throwIfError(p: Promise<undefined | {error: unknown}>) {
+  const res = await p;
+  if (res) {
+    throw res.error;
+  }
+}

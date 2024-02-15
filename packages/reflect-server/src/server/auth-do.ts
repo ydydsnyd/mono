@@ -6,11 +6,16 @@ import {
   connectionsResponseSchema,
   createRoomRequestSchema,
 } from 'reflect-protocol';
-import {disconnectBeaconQueryParamsSchema} from 'reflect-protocol/src/disconnect-beacon.js';
+import {closeBeaconQueryParamsSchema} from 'reflect-protocol/src/close-beacon.js';
 import type {TailErrorKind} from 'reflect-protocol/src/tail.js';
-import type {AuthData, Env} from 'reflect-shared';
-import {isValidRoomID, makeInvalidRoomIDMessage, version} from 'reflect-shared';
 import {getConfig} from 'reflect-shared/src/config.js';
+import {CLOSE_BEACON_PATH} from 'reflect-shared/src/paths.js';
+import {
+  isValidRoomID,
+  makeInvalidRoomIDMessage,
+} from 'reflect-shared/src/room-id.js';
+import type {AuthData, Env} from 'reflect-shared/src/types.js';
+import {version} from 'reflect-shared/src/version.js';
 import {assert} from 'shared/src/asserts.js';
 import {must} from 'shared/src/must.js';
 import {timed} from 'shared/src/timed.js';
@@ -37,7 +42,6 @@ import {
   CONNECT_URL_PATTERN,
   CREATE_ROOM_PATH,
   DELETE_ROOM_PATH,
-  DISCONNECT_BEACON_PATH,
   GET_ROOM_PATH,
   INVALIDATE_ALL_CONNECTIONS_PATH,
   INVALIDATE_ROOM_CONNECTIONS_PATH,
@@ -61,12 +65,13 @@ import {
 import {
   BaseContext,
   Router,
-  bearerToken,
   bodyOnly,
   get,
   noInputParams,
+  optionalBearerToken,
   post,
   queryParams,
+  queryParamsIgnoreBody,
   roomID,
   urlVersion,
   userID,
@@ -114,7 +119,7 @@ export const AUTH_WEBSOCKET_ROUTES_AUTHED_BY_API_KEY = {
 
 export const AUTH_ROUTES_CUSTOM_AUTH = {
   connect: CONNECT_URL_PATTERN,
-  disconnectBeacon: DISCONNECT_BEACON_PATH,
+  closeBeacon: CLOSE_BEACON_PATH,
 } as const;
 
 export const AUTH_ROUTES_UNAUTHED = {
@@ -307,12 +312,12 @@ export class BaseAuthDO implements DurableObject {
     return roomDOFetch(requestToDO, 'tail', stub, roomID, lc);
   });
 
-  #disconnectBeacon = post()
-    .with(queryParams(disconnectBeaconQueryParamsSchema))
-    .with(bearerToken())
+  #closeBeacon = post()
+    .with(queryParamsIgnoreBody(closeBeaconQueryParamsSchema))
+    .with(optionalBearerToken())
     .handle((ctx, request) => {
-      const lc = ctx.lc.withContext('handler', 'disconnectBeacon');
-      lc.info?.('authDO received disconnect beacon request:', request.url);
+      const lc = ctx.lc.withContext('handler', 'closeBeacon');
+      lc.info?.('authDO received close beacon request:', request.url);
 
       const {
         bearerToken,
@@ -379,7 +384,7 @@ export class BaseAuthDO implements DurableObject {
       AUTH_DATA_HEADER_NAME,
       encodeHeaderValue(JSON.stringify(authData)),
     );
-    return roomDOFetch(requestToDO, 'disconnect beacon', stub, roomID, lc);
+    return roomDOFetch(requestToDO, 'close beacon', stub, roomID, lc);
   }
 
   #initRoutes() {
@@ -410,11 +415,8 @@ export class BaseAuthDO implements DurableObject {
     this.#router.register(AUTH_ROUTES.connect, this.#connect);
     this.#router.register(AUTH_ROUTES.canaryWebSocket, this.#canaryWebSocket);
     this.#router.register(AUTH_ROUTES.tail, this.#tail);
-    if (getConfig('disconnectBeacon')) {
-      this.#router.register(
-        AUTH_ROUTES.disconnectBeacon,
-        this.#disconnectBeacon,
-      );
+    if (getConfig('closeBeacon')) {
+      this.#router.register(AUTH_ROUTES.closeBeacon, this.#closeBeacon);
     }
   }
 

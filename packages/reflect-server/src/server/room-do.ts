@@ -1,11 +1,12 @@
 import {LogContext, LogLevel, LogSink} from '@rocicorp/logger';
 import {
-  disconnectBeaconQueryParamsSchema,
-  disconnectBeaconSchema,
-} from 'reflect-protocol/src/disconnect-beacon.js';
-import type {Env, MutatorDefs} from 'reflect-shared';
-import {version} from 'reflect-shared';
+  closeBeaconQueryParamsSchema,
+  closeBeaconSchema,
+} from 'reflect-protocol/src/close-beacon.js';
 import {getConfig} from 'reflect-shared/src/config.js';
+import {CLOSE_BEACON_PATH} from 'reflect-shared/src/paths.js';
+import type {Env, MutatorDefs} from 'reflect-shared/src/types.js';
+import {version} from 'reflect-shared/src/version.js';
 import {BufferSizer} from 'shared/src/buffer-sizer.js';
 import * as valita from 'shared/src/valita.js';
 import {ConnectionLifetimeReporter} from '../events/connection-lifetimes.js';
@@ -27,11 +28,13 @@ import {LoggingLock} from '../util/lock.js';
 import {populateLogContextFromRequest} from '../util/log-context-common.js';
 import {randomID} from '../util/rand.js';
 import {AlarmManager} from './alarms.js';
+import type {ClientDeleteHandler} from './client-delete-handler.js';
+import type {ClientDisconnectHandler} from './client-disconnect-handler.js';
 import {CLIENT_GC_FREQUENCY} from './client-gc.js';
+import {closeBeacon} from './close-beacon.js';
 import {handleClose} from './close.js';
 import {handleConnection} from './connect.js';
 import {closeConnections, getConnections} from './connections.js';
-import type {DisconnectHandler} from './disconnect.js';
 import {requireUpgradeHeader, upgradeWebsocketResponse} from './http-util.js';
 import {ROOM_ID_HEADER_NAME} from './internal-headers.js';
 import {handleMessage} from './message.js';
@@ -40,7 +43,6 @@ import {
   CONNECT_URL_PATTERN,
   CREATE_ROOM_PATH,
   DELETE_ROOM_PATH,
-  DISCONNECT_BEACON_PATH,
   INVALIDATE_ALL_CONNECTIONS_PATH,
   INVALIDATE_ROOM_CONNECTIONS_PATH,
   INVALIDATE_USER_CONNECTIONS_PATH,
@@ -59,7 +61,8 @@ export interface RoomDOOptions<MD extends MutatorDefs> {
   mutators: MD;
   state: DurableObjectState;
   roomStartHandler: RoomStartHandler;
-  disconnectHandler: DisconnectHandler;
+  onClientDisconnect: ClientDisconnectHandler;
+  onClientDelete: ClientDeleteHandler;
   logSink: LogSink;
   logLevel: LogLevel;
   allowUnconfirmedWrites: boolean;
@@ -75,7 +78,7 @@ export const ROOM_ROUTES = {
   authConnections: AUTH_CONNECTIONS_PATH,
   createRoom: CREATE_ROOM_PATH,
   connect: CONNECT_URL_PATTERN,
-  disconnectBeacon: DISCONNECT_BEACON_PATH,
+  closeBeacon: CLOSE_BEACON_PATH,
   tail: TAIL_URL_PATH,
 } as const;
 
@@ -92,7 +95,8 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   readonly #lock = new LoggingLock();
   readonly #mutators: MutatorMap;
   readonly #roomStartHandler: RoomStartHandler;
-  readonly #disconnectHandler: DisconnectHandler;
+  readonly #onClientDisconnect: ClientDisconnectHandler;
+  readonly #onClientDelete: ClientDeleteHandler;
   readonly #maxMutationsPerTurn: number;
   #roomIDDependentInitCompleted = false;
   #lc: LogContext;
@@ -112,7 +116,8 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     const {
       mutators,
       roomStartHandler,
-      disconnectHandler,
+      onClientDisconnect,
+      onClientDelete,
       state,
       logSink,
       logLevel,
@@ -122,7 +127,8 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
     this.#mutators = new Map([...Object.entries(mutators)]) as MutatorMap;
     this.#roomStartHandler = roomStartHandler;
-    this.#disconnectHandler = disconnectHandler;
+    this.#onClientDisconnect = onClientDisconnect;
+    this.#onClientDelete = onClientDelete;
     this.#maxMutationsPerTurn = maxMutationsPerTurn;
     this.#storage = new DurableStorage(
       state.storage,
@@ -177,11 +183,8 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     this.#router.register(ROOM_ROUTES.createRoom, this.#createRoom);
     this.#router.register(ROOM_ROUTES.connect, this.#connect);
     this.#router.register(ROOM_ROUTES.tail, this.#tail);
-    if (getConfig('disconnectBeacon')) {
-      this.#router.register(
-        ROOM_ROUTES.disconnectBeacon,
-        this.#disconnectBeacon,
-      );
+    if (getConfig('closeBeacon')) {
+      this.#router.register(ROOM_ROUTES.closeBeacon, this.#closeBeacon);
     }
   }
 
@@ -310,31 +313,25 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     return upgradeWebsocketResponse(clientWS, request.headers);
   });
 
-  #disconnectBeacon = post()
+  #closeBeacon = post()
     // not checking authorization header again.
-    .with(
-      inputParams(disconnectBeaconQueryParamsSchema, disconnectBeaconSchema),
-    )
+    .with(inputParams(closeBeaconQueryParamsSchema, closeBeaconSchema))
     .handle(ctx => {
-      const lc = ctx.lc.withContext('handler', 'disconnectBeacon');
       const {
-        body,
+        body: {lastMutationID},
         query: {clientID, roomID, userID},
       } = ctx;
 
-      lc.debug?.(
-        'disconnect client beacon request',
+      return closeBeacon(
+        ctx.lc.withContext('handler', 'closeBeacon'),
+        this.#env,
+        clientID,
         roomID,
         userID,
-        clientID,
-        body,
+        lastMutationID,
+        this.#onClientDelete,
+        this.#storage,
       );
-
-      // TODO(arv): Apply the mutations if any.
-      // TODO(arv): Delete the client record.
-      // TODO(arv): Collect the presence state.
-
-      return new Response('ok');
     });
 
   #tail = get().handle((ctx, request) => {
@@ -518,7 +515,8 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
         this.#clients,
         this.#pendingMutations,
         this.#mutators,
-        this.#disconnectHandler,
+        this.#onClientDisconnect,
+        this.#onClientDelete,
         this.#maxProcessedMutationTimestamp,
         this.#bufferSizer,
         this.#maxMutationsPerTurn,

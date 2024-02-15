@@ -1,9 +1,10 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {Patch, Poke} from 'reflect-protocol';
-import type {Env} from 'reflect-shared';
+import type {Env} from 'reflect-shared/src/types.js';
 import type {BufferSizer} from 'shared/src/buffer-sizer.js';
 import {must} from 'shared/src/must.js';
-import type {DisconnectHandler} from '../server/disconnect.js';
+import type {ClientDeleteHandler} from '../server/client-delete-handler.js';
+import type {ClientDisconnectHandler} from '../server/client-disconnect-handler.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
 import type {ClientID, ClientMap, ClientState} from '../types/client-state.js';
 import {getConnectedClients} from '../types/connected-clients.js';
@@ -25,7 +26,8 @@ export async function processPending(
   clients: ClientMap,
   pendingMutations: PendingMutation[],
   mutators: MutatorMap,
-  disconnectHandler: DisconnectHandler,
+  clientDisconnectHandler: ClientDisconnectHandler,
+  clientDeleteHandler: ClientDeleteHandler,
   maxProcessedMutationTimestamp: number,
   bufferSizer: BufferSizer,
   maxMutationsToProcess: number,
@@ -126,7 +128,8 @@ export async function processPending(
     pendingMutations,
     endIndex,
     mutators,
-    disconnectHandler,
+    clientDisconnectHandler,
+    clientDeleteHandler,
     storage,
     shouldGCClients,
   );

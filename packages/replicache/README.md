@@ -5,11 +5,20 @@
 First look for API changes. Download the last release and compare the .d.ts files:
 
 ```bash
+# BUILD
+cd rocicorp/mono
+npm run build
+
+# DOWNLOAD
 cd /tmp
 npm pack replicache@$LAST_RELEASE_VERSION
-tar -xvf replicache@$LAST_RELEASE_VERSION
+tar -xvf replicache-$LAST_RELEASE_VERSION.tgz
 cd -
-diff -u /tmp/package/out/replicache.d.ts out/packages/replicache/replicache.d.ts | less
+
+# COMPARE
+diff -u /tmp/package/out/replicache.d.ts packages/out/replicache/replicache.d.ts | less
+# or
+# code --diff /tmp/package/out/replicache.d.ts packages/replicache/out/replicache.d.ts
 ```
 
 We need to be very careful about public API changes as we then have to maintain them. Make sure all new API has been discussed and agreed to by the team.
@@ -126,18 +135,29 @@ If the major version changed, then update the following packages that have peerD
 
 ## Finish Release Notes
 
-Finalize the release notes you started earlier
+We write the [release notes in
+Notion](https://www.notion.so/replicache/Replicache-Releases-f86ffef7f72f46ca9b597d5081e05b88)
+and publish them to the web.
+
+Finalize the release notes based on the list of relevant changes you gathered
+earlier.
+
+### Post Release Notes to Discord
+
+Also copy the release notes to Discord. If the release notes are long summarize it.
 
 ## Push and test all the sample apps
 
 ## Switch the Release to Latest
 
-```
+We already have the npm package on npmjs.com but it is tagged as `@canary`. We
+want `@latest` to point at the same release. To do this, we use `npm dist-tag`:
+
+```bash
 # note: this will publish the release to the "latest" tag, which means it's what
 # people will get when they `npm install`. If this is a beta release, you should
-# add the `--tag=beta` flag to this command but also make sure the semver has
-# beta in it.
-npm publish
+# use the `beta` tag but also make sure the semver has beta in it.
+npm dist-tag add replicache@$NEW_VERSION latest
 ```
 
 ## Publish the Private Release

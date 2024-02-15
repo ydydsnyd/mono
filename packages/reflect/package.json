@@ -1,7 +1,7 @@
 {
   "name": "@rocicorp/reflect",
   "description": "",
-  "version": "0.39.202401100534+a0eacc",
+  "version": "0.39.202402052206+7f0050",
   "license": "SEE LICENSE IN https://roci.dev/terms.html",
   "type": "module",
   "main": "index.js",
@@ -68,7 +68,7 @@
     "reflect-server": "0.0.0",
     "reflect-shared": "0.0.0",
     "reflect-react": "0.0.0",
-    "replicache": "14.1.0"
+    "replicache": "14.2.2"
   },
   "engines": {
     "node": ">=18"

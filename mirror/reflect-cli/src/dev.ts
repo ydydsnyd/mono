@@ -2,13 +2,17 @@ import type {LogLevel} from '@rocicorp/logger';
 import isPortReachable from 'is-port-reachable';
 import assert from 'node:assert';
 import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
-import {mustReadAppConfig} from './app-config.js';
 import {watch} from './compile.js';
 import {startDevServer} from './dev/start-dev-server.js';
 import {ErrorWrapper} from './error.js';
 import {logErrorAndExit} from './log-error-and-exit.js';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
+import {
+  DEFAULT_FROM_REFLECT_CONFIG,
+  getDefaultServerPath,
+  mustReadAppConfig,
+} from './app-config.js';
+import * as path from 'node:path';
 
 export function devOptions(yargs: CommonYargsArgv) {
   return (
@@ -34,6 +38,13 @@ export function devOptions(yargs: CommonYargsArgv) {
         default: 'error',
         requiresArg: true,
       })
+      .option('server-path', {
+        describe: 'Path to the reflect server entry file',
+        type: 'string',
+        requiresArg: true,
+        default: getDefaultServerPath(),
+        required: !getDefaultServerPath(),
+      })
   );
 }
 
@@ -49,10 +60,15 @@ async function exists(path: string) {
 type DevHandlerArgs = YargvToInterface<ReturnType<typeof devOptions>>;
 
 export async function devHandler(yargs: DevHandlerArgs) {
-  const {server: script} = mustReadAppConfig();
-
-  const absPath = path.resolve(script);
-  if (!(await exists(absPath))) {
+  let {serverPath} = yargs;
+  if (serverPath === DEFAULT_FROM_REFLECT_CONFIG) {
+    serverPath = mustReadAppConfig().server;
+  }
+  if (!serverPath) {
+    logErrorAndExit(`Server path not provided`);
+  }
+  const absPath = path.resolve(serverPath);
+  if (!absPath || !(await exists(absPath))) {
     logErrorAndExit(`File not found: ${absPath}`);
   }
 

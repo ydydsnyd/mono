@@ -63,7 +63,7 @@ export async function refresh(
   diffConfig: DiffComputationConfig,
   closed: () => boolean,
   formatVersion: FormatVersion,
-): Promise<[Hash, DiffsMap] | undefined> {
+): Promise<[newMemdagHeadHash: Hash, diffs: DiffsMap] | undefined> {
   if (closed()) {
     return;
   }
@@ -238,9 +238,13 @@ export async function refresh(
           ).chunk.hash;
         }
 
+        const newMemdagHeadCommit = await commitFromHash(
+          newMemdagHeadHash,
+          memdagWrite,
+        );
         const diffs = await diffCommits(
           memdagHeadCommit,
-          await commitFromHash(newMemdagHeadHash, memdagWrite),
+          newMemdagHeadCommit,
           memdagWrite,
           diffConfig,
           formatVersion,

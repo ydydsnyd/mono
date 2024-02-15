@@ -1,5 +1,6 @@
-import type {OptionalLogger} from '@rocicorp/logger';
+import type {LogContext} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
+import type {DocumentVisibilityWatcher} from 'shared/src/document-visible.js';
 import {sleep} from 'shared/src/sleep.js';
 
 export const DEBOUNCE_DELAY_MS = 10;
@@ -9,7 +10,7 @@ export const MAX_DELAY_MS = 60_000;
 
 type SendRecord = {duration: number; ok: boolean};
 
-export interface ConnectionLoopDelegate extends OptionalLogger {
+export interface ConnectionLoopDelegate {
   invokeSend(): Promise<boolean>;
   debounceDelay: number;
   // If null, no watchdog timer is used.
@@ -56,8 +57,12 @@ export class ConnectionLoop {
    */
   #skipSleepsResolver = resolver<void>();
 
-  /** Resolver for the next send */
-  #sendResolver = resolver<void>();
+  /**
+   * Resolver for the next send. Never rejects. Returns an error instead since
+   * this resolver is used in cases where they might not be someone waiting,
+   * and we don't want an unhandled promise rejection in that case.
+   */
+  #sendResolver = resolver<undefined | {error: unknown}>();
 
   readonly #delegate: ConnectionLoopDelegate;
   #closed = false;
@@ -69,31 +74,49 @@ export class ConnectionLoop {
    * send to resolve we should reject the send promise.
    */
   #sendCounter = 0;
+  readonly #lc: LogContext;
+  readonly #visibilityWatcher: DocumentVisibilityWatcher | undefined;
 
-  constructor(delegate: ConnectionLoopDelegate) {
+  constructor(
+    lc: LogContext,
+    delegate: ConnectionLoopDelegate,
+    visibilityWatcher?: DocumentVisibilityWatcher,
+  ) {
+    this.#lc = lc;
     this.#delegate = delegate;
+    this.#visibilityWatcher = visibilityWatcher;
     void this.run();
   }
 
   close(): void {
     this.#closed = true;
     if (this.#sendCounter > 0) {
-      this.#sendResolver.reject(closeError());
+      this.#sendResolver.resolve({error: closeError()});
     }
   }
 
-  async send(now: boolean): Promise<void> {
+  /**
+   *
+   * @returns Returns undefined if ok, otherwise it return the error that caused
+   * the send to fail.
+   */
+  async send(now: boolean): Promise<undefined | {error: unknown}> {
     if (this.#closed) {
-      throw closeError();
+      return {error: closeError()};
     }
     this.#sendCounter++;
-    this.#delegate.debug?.('send', now);
+    this.#lc.debug?.('send', now);
     if (now) {
       this.#skipSleepsResolver.resolve();
+    } else {
+      await this.#visibilityWatcher?.waitForVisible();
     }
+
     this.#pendingResolver.resolve();
-    await this.#sendResolver.promise;
+
+    const result = await this.#sendResolver.promise;
     this.#sendCounter--;
+    return result;
   }
 
   async run(): Promise<void> {
@@ -105,7 +128,7 @@ export class ConnectionLoop {
     // The number of active connections.
     let counter = 0;
     const delegate = this.#delegate;
-    const {debug} = delegate;
+    const {debug} = this.#lc;
     let delay = 0;
 
     debug?.('Starting connection loop');
@@ -211,14 +234,12 @@ export class ConnectionLoop {
         this.#connectionAvailable();
         const sendResolver = this.#sendResolver;
         this.#sendResolver = resolver();
-        this.#sendResolver.promise.catch(() => {
-          // We do not want this promise to be treated as unhandled.
-        });
-        if (ok) {
-          sendResolver.resolve();
+        if (error) {
+          sendResolver.resolve({error});
         } else {
-          sendResolver.reject(error ?? new Error('Send failed'));
-
+          sendResolver.resolve(undefined);
+        }
+        if (!ok) {
           // Keep trying
           this.#pendingResolver.resolve();
         }

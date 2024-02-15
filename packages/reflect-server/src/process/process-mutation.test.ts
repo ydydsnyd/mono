@@ -1,5 +1,9 @@
 import {expect, test} from '@jest/globals';
-import type {AuthData, Env, WriteTransaction} from 'reflect-shared';
+import type {
+  AuthData,
+  Env,
+  WriteTransaction,
+} from 'reflect-shared/src/types.js';
 import {
   MutatorMap,
   processMutation,
@@ -22,7 +26,8 @@ import {
 const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();
 const version = 2;
-const auth: AuthData = {userID: 'testUser1', foo: 'bar'};
+const userID = 'testUser1';
+const auth: AuthData = {userID, foo: 'bar'};
 const env: Env = {env: 'baby'};
 
 test('processMutation', async () => {
@@ -52,7 +57,13 @@ test('processMutation', async () => {
     },
     {
       name: 'duplicate mutation',
-      existingRecord: clientRecord('cg1', null, 1, 1),
+      existingRecord: clientRecord({
+        clientGroupID: 'cg1',
+        baseCookie: null,
+        lastMutationID: 1,
+        lastMutationIDVersion: 1,
+        userID,
+      }),
       pendingMutation: pendingMutation({
         clientID: 'c1',
         clientGroupID: 'cg1',
@@ -60,13 +71,24 @@ test('processMutation', async () => {
         timestamps: 100,
         auth,
       }),
-      expectedRecord: clientRecord('cg1', null, 1, 1),
+      expectedRecord: clientRecord({
+        clientGroupID: 'cg1',
+        baseCookie: null,
+        lastMutationID: 1,
+        lastMutationIDVersion: 1,
+      }),
       expectAppWrite: false,
       expectVersionWrite: false,
     },
     {
       name: 'ooo mutation',
-      existingRecord: clientRecord('cg1', null, 1, 1),
+      existingRecord: clientRecord({
+        clientGroupID: 'cg1',
+        baseCookie: null,
+        lastMutationID: 1,
+        lastMutationIDVersion: 1,
+        userID,
+      }),
       pendingMutation: pendingMutation({
         clientID: 'c1',
         clientGroupID: 'cg1',
@@ -74,13 +96,24 @@ test('processMutation', async () => {
         timestamps: 100,
         auth,
       }),
-      expectedRecord: clientRecord('cg1', null, 1, 1),
+      expectedRecord: clientRecord({
+        clientGroupID: 'cg1',
+        baseCookie: null,
+        lastMutationID: 1,
+        lastMutationIDVersion: 1,
+      }),
       expectAppWrite: false,
       expectVersionWrite: false,
     },
     {
       name: 'unknown mutator',
-      existingRecord: clientRecord('cg1', null, 1, 1),
+      existingRecord: clientRecord({
+        clientGroupID: 'cg1',
+        baseCookie: null,
+        lastMutationID: 1,
+        lastMutationIDVersion: 1,
+        userID,
+      }),
       pendingMutation: pendingMutation({
         clientID: 'c1',
         clientGroupID: 'cg1',
@@ -89,13 +122,24 @@ test('processMutation', async () => {
         name: 'unknown',
         auth,
       }),
-      expectedRecord: clientRecord('cg1', null, 2, version),
+      expectedRecord: clientRecord({
+        clientGroupID: 'cg1',
+        baseCookie: null,
+        lastMutationID: 2,
+        lastMutationIDVersion: version,
+      }),
       expectAppWrite: false,
       expectVersionWrite: true,
     },
     {
       name: 'mutator throws',
-      existingRecord: clientRecord('cg1', null, 1, 1),
+      existingRecord: clientRecord({
+        clientGroupID: 'cg1',
+        baseCookie: null,
+        lastMutationID: 1,
+        lastMutationIDVersion: 1,
+        userID,
+      }),
       pendingMutation: pendingMutation({
         clientID: 'c1',
         clientGroupID: 'cg1',
@@ -104,13 +148,24 @@ test('processMutation', async () => {
         name: 'throws',
         auth,
       }),
-      expectedRecord: clientRecord('cg1', null, 2, version),
+      expectedRecord: clientRecord({
+        clientGroupID: 'cg1',
+        baseCookie: null,
+        lastMutationID: 2,
+        lastMutationIDVersion: version,
+      }),
       expectAppWrite: false,
       expectVersionWrite: true,
     },
     {
       name: 'success',
-      existingRecord: clientRecord('cg1', null, 1, 1),
+      existingRecord: clientRecord({
+        clientGroupID: 'cg1',
+        baseCookie: null,
+        lastMutationID: 1,
+        lastMutationIDVersion: 1,
+        userID,
+      }),
       pendingMutation: pendingMutation({
         clientID: 'c1',
         clientGroupID: 'cg1',
@@ -119,7 +174,12 @@ test('processMutation', async () => {
         name: 'foo',
         auth,
       }),
-      expectedRecord: clientRecord('cg1', null, 2, version),
+      expectedRecord: clientRecord({
+        clientGroupID: 'cg1',
+        baseCookie: null,
+        lastMutationID: 2,
+        lastMutationIDVersion: version,
+      }),
       expectAppWrite: true,
       expectVersionWrite: true,
     },

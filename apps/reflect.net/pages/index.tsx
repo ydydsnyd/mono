@@ -32,7 +32,7 @@ export default function Home() {
   return (
     <div className={styles.container}>
       <Head>
-        <title>Reflect: High-performance sync for multiplayer web apps</title>
+        <title>Reflect - High-performance sync for multiplayer web apps</title>
         <meta
           name="description"
           content="60FPS sync, automatic persistence, server authority, optional offline, fine-grained auth, and more..."
@@ -91,7 +91,7 @@ export default function Home() {
         <meta property="og:site_name" content="Reflect" />
         <meta
           property="og:title"
-          content="Reflect: High-performance sync for multiplayer web apps."
+          content="Reflect - High-performance sync for multiplayer web apps."
         />
         <meta
           property="og:description"
@@ -108,7 +108,7 @@ export default function Home() {
         <meta property="twitter:url" content="https://reflect.net" />
         <meta
           name="twitter:title"
-          content="Reflect: High-performance sync for multiplayer web apps."
+          content="Reflect - High-performance sync for multiplayer web apps."
         />
         <meta
           name="twitter:description"

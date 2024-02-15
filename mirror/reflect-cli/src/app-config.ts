@@ -1,29 +1,24 @@
 import {doc, getDoc, getFirestore} from 'firebase/firestore';
-import {readFile} from 'fs/promises';
 import {createApp} from 'mirror-protocol/src/app.js';
 import {ensureTeam} from 'mirror-protocol/src/team.js';
-import {isValidAppName} from 'mirror-schema/src/external/app.js';
 import {
   appNameIndexDataConverter,
   appNameIndexPath,
-  sanitizeForSubdomain,
 } from 'mirror-schema/src/external/team.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import {basename, resolve} from 'node:path';
-import {pkgUp, pkgUpSync} from 'pkg-up';
-import {must} from 'shared/src/must.js';
-import {randInt} from 'shared/src/rand.js';
+import {pkgUpSync} from 'pkg-up';
+
 import * as v from 'shared/src/valita.js';
-import {ErrorWrapper} from './error.js';
+import {ErrorWrapper, UserError} from './error.js';
 import type {AuthContext} from './handler.js';
-import {confirm, input} from './inquirer.js';
 import {logErrorAndExit} from './log-error-and-exit.js';
 import {makeRequester} from './requester.js';
-
+import {isValidAppName} from 'mirror-schema/src/external/app.js';
 // { srcFile: destFile }
 const templateFiles = v.record(v.string());
 
+export const DEFAULT_FROM_REFLECT_CONFIG = '(from reflect.config.json)';
 // AppInstance identifies an app that has been initialized on mirror via app-create.
 const appInstanceSchema = v.object({
   appID: v.string(),
@@ -83,15 +78,18 @@ export function mustFindAppConfigRoot(): string {
   return configRoot;
 }
 
-function mustFindConfigFilePath(): string {
-  const configRoot = mustFindAppConfigRoot();
+function findConfigFilePath(): string | undefined {
+  const configRoot = findConfigRoot();
+  if (!configRoot) {
+    return undefined;
+  }
   return path.join(configRoot, configFileName);
 }
 
 function getConfigFilePath(configDirPath?: string | undefined) {
   return configDirPath
     ? path.join(configDirPath, configFileName)
-    : mustFindConfigFilePath();
+    : findConfigFilePath();
 }
 
 const configFileName = 'reflect.config.json';
@@ -102,11 +100,26 @@ export function setAppConfigForTesting(config: AppConfig | undefined) {
   appConfigForTesting = config;
 }
 
-export function configFileExists(configDirPath: string): boolean {
-  const configFilePath = getConfigFilePath(configDirPath);
-  return fs.existsSync(configFilePath);
+export function getDefaultServerPath() {
+  const config = readAppConfig();
+  if (config?.server) {
+    return DEFAULT_FROM_REFLECT_CONFIG;
+  }
+  return './reflect-server/index.ts';
 }
 
+export function getAppIDfromConfig(instance = 'default') {
+  const config = readAppConfig();
+  return config?.apps?.[instance]?.appID;
+}
+
+export function getDefaultApp() {
+  const configAppId = getAppIDfromConfig();
+  if (configAppId) {
+    return DEFAULT_FROM_REFLECT_CONFIG;
+  }
+  return undefined;
+}
 /**
  * Reads reflect.config.json in the "project root".
  */
@@ -117,6 +130,9 @@ export function readAppConfig(
     return appConfigForTesting;
   }
   const configFilePath = getConfigFilePath(configDirPath);
+  if (!configFilePath) {
+    return undefined;
+  }
   if (fs.existsSync(configFilePath)) {
     try {
       const json = JSON.parse(fs.readFileSync(configFilePath, 'utf-8'));
@@ -127,7 +143,6 @@ export function readAppConfig(
       throw new ErrorWrapper(e, 'WARNING');
     }
   }
-
   return undefined;
 }
 
@@ -136,48 +151,77 @@ export function mustReadAppConfig(
 ): AppConfig {
   const config = readAppConfig(configDirPath);
   if (!config) {
-    logErrorAndExit(
-      `Could not find ${configFileName}. Please run \`reflect init\` to create one.`,
-    );
+    logErrorAndExit(`Could not find ${configFileName}.`);
   }
   return config;
 }
 
-export async function ensureAppInstantiated(
-  authContext: AuthContext,
-  instance = 'default',
-): Promise<LocalConfig & AppInstance> {
-  const config = mustReadAppConfig();
-  if (config.apps?.[instance]) {
-    return {
-      ...config,
-      ...config.apps?.[instance],
-    };
-  }
+export async function ensureTeamID(authContext: AuthContext): Promise<string> {
   const {userID, additionalUserInfo} = authContext.user;
+  const requester = makeRequester(userID);
+  if (userID.startsWith('teams/')) {
+    // API key authentication is already associated with a team.
+    return userID.split('/')[1];
+  }
   const defaultTeamName = additionalUserInfo?.username;
   if (!defaultTeamName) {
     throw new Error('Could not determine GitHub username from OAuth');
   }
-  const requester = makeRequester(userID);
-  const {teamID} = await ensureTeam.call({
+  const ensured = await ensureTeam.call({
     requester,
     name: defaultTeamName,
   });
-  const app = await getNewAppNameOrExistingID(teamID);
-  const appID =
-    app.id !== undefined
-      ? app.id
-      : (
-          await createApp.call({
-            requester,
-            teamID,
-            name: app.name,
-            serverReleaseChannel: 'stable',
-          })
-        ).appID;
-  writeAppConfig({...config, apps: {[instance]: {appID}}});
-  return {...config, appID};
+  return ensured.teamID;
+}
+
+async function getAppIDfromAppName(
+  teamID: string,
+  appName: string,
+): Promise<string | undefined> {
+  mustValidAppName(appName);
+  const firestore = getFirestore();
+  const nameEntry = await getDoc(
+    doc(firestore, appNameIndexPath(teamID, appName)).withConverter(
+      appNameIndexDataConverter,
+    ),
+  );
+  return nameEntry.data()?.appID;
+}
+
+export async function getAppID(
+  authContext: AuthContext,
+  app: string,
+  create = false,
+): Promise<string> {
+  if (app === DEFAULT_FROM_REFLECT_CONFIG) {
+    const appID = getAppIDfromConfig();
+    if (!appID) {
+      logErrorAndExit('No appID found in reflect.config.json');
+    }
+    return appID;
+  }
+  // Otherwise it's a name.
+  const teamID = await ensureTeamID(authContext);
+  const appID = await getAppIDfromAppName(teamID, app); // From the index in Firestore
+  if (appID) {
+    return appID;
+  }
+  if (!create) {
+    console.log(
+      `The "${app}" app must first be published with "npx reflect publish"`,
+    );
+    process.exit(-1);
+  }
+  console.log(`Creating the "${app}" app ...`);
+  const requester = makeRequester(authContext.user.userID);
+  const resp = await createApp.call({
+    requester,
+    teamID,
+    name: app,
+    serverReleaseChannel: 'stable',
+  });
+
+  return resp.appID;
 }
 
 export function writeAppConfig(
@@ -185,65 +229,10 @@ export function writeAppConfig(
   configDirPath?: string | undefined,
 ) {
   const configFilePath = getConfigFilePath(configDirPath);
+  if (!configFilePath) {
+    throw new Error('Could not find config file path');
+  }
   fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2), 'utf-8');
-}
-
-async function getNewAppNameOrExistingID(
-  teamID: string,
-): Promise<{name: string; id?: undefined} | {id: string; name?: undefined}> {
-  const firestore = getFirestore();
-  const defaultAppName = await getDefaultAppName();
-  if (isValidAppName(defaultAppName)) {
-    const nameEntry = await getDoc(
-      doc(firestore, appNameIndexPath(teamID, defaultAppName)).withConverter(
-        appNameIndexDataConverter,
-      ),
-    );
-    if (!nameEntry.exists()) {
-      // Common case. The name in package.json is not taken. Create an app with it.
-      return {name: defaultAppName};
-    }
-  }
-  for (let appNameSuffix = ''; ; appNameSuffix = `-${randInt(1000, 9999)}`) {
-    const name = await input({
-      message: 'Name of your App:',
-      default: `${defaultAppName}${appNameSuffix}`,
-      validate: isValidAppName,
-    });
-    const nameEntry = await getDoc(
-      doc(firestore, appNameIndexPath(teamID, name)).withConverter(
-        appNameIndexDataConverter,
-      ),
-    );
-    if (!nameEntry.exists()) {
-      return {name};
-    }
-    const {appID: id} = must(nameEntry.data());
-    if (
-      await confirm({
-        message: `There is an existing App named "${name}". Do you want to use it?`,
-        default: false,
-      })
-    ) {
-      return {id};
-    }
-  }
-}
-
-async function getDefaultAppName(): Promise<string> {
-  const pkg = await pkgUp();
-  if (pkg) {
-    const {name} = JSON.parse(await readFile(pkg, 'utf-8'));
-    if (name) {
-      return String(name);
-    }
-  }
-  return getDefaultAppNameFromDir('./');
-}
-
-function getDefaultAppNameFromDir(dir: string): string {
-  const dirname = basename(resolve(dir));
-  return sanitizeForSubdomain(dirname);
 }
 
 type TemplatePlaceholders = {
@@ -252,26 +241,23 @@ type TemplatePlaceholders = {
   reflectVersion: string;
 };
 
-export function writeTemplatedFilePlaceholders(
+export function writePackageJson(
   placeholders: Partial<{[Key in keyof TemplatePlaceholders]: string}>,
   dir = './',
   logConsole = true,
 ) {
-  const appConfig = mustReadAppConfig(dir);
-  Object.entries(appConfig.templates ?? {}).forEach(([src, dst]) => {
-    copyAndEditFile(
-      dir,
-      src,
-      dst,
-      content => {
-        for (const [key, value] of Object.entries(placeholders)) {
-          content = content.replaceAll(`{{${key}}}`, value);
-        }
-        return content;
-      },
-      logConsole,
-    );
-  });
+  copyAndEditFile(
+    dir,
+    'package.json',
+    'package.json',
+    content => {
+      for (const [key, value] of Object.entries(placeholders)) {
+        content = content.replaceAll(`{{${key}}}`, value);
+      }
+      return content;
+    },
+    logConsole,
+  );
 }
 
 function copyAndEditFile(
@@ -300,5 +286,13 @@ function copyAndEditFile(
     // In case the user has deleted the template source file, classify this as a
     // warning instead.
     throw new ErrorWrapper(e, 'WARNING');
+  }
+}
+
+export function mustValidAppName(appName: string) {
+  if (!isValidAppName(appName) && appName !== DEFAULT_FROM_REFLECT_CONFIG) {
+    throw new UserError(
+      `Invalid App Name "${appName}". Names must be lowercased alphanumeric, starting with a letter and not ending with a hyphen.`,
+    );
   }
 }

@@ -310,7 +310,7 @@ suite('refresh', () => {
     // Memdag has one more LM than perdag.
     await memdagChainBuilder.addLocal(clientID, []);
 
-    const diffs = await refresh(
+    const result = await refresh(
       new LogContext(),
       memdag,
       perdag,
@@ -320,7 +320,7 @@ suite('refresh', () => {
       () => false,
       formatVersion,
     );
-    expect(diffs).undefined;
+    expect(result).undefined;
     await assertRefreshHashes(perdag, clientID, client.refreshHashes);
   });
 
@@ -340,7 +340,7 @@ suite('refresh', () => {
     // LM so we abort the refresh
     await makeMemdagChain(memdag, clientID, 1);
 
-    const diffs = await refresh(
+    const result = await refresh(
       new LogContext(),
       memdag,
       perdag,
@@ -350,7 +350,7 @@ suite('refresh', () => {
       () => false,
       formatVersion,
     );
-    expect(diffs).undefined;
+    expect(result).undefined;
     await assertRefreshHashes(perdag, clientID, client.refreshHashes);
   });
 
@@ -505,7 +505,7 @@ suite('refresh', () => {
       return write.call(perdag);
     };
 
-    const diffs = await refresh(
+    const result = await refresh(
       new LogContext(),
       memdag,
       perdag,
@@ -515,7 +515,7 @@ suite('refresh', () => {
       () => false,
       formatVersion,
     );
-    expect(diffs).undefined;
+    expect(result).undefined;
     await assertRefreshHashes(perdag, clientID, client.refreshHashes);
   });
 
@@ -571,7 +571,10 @@ suite('refresh', () => {
     } catch (e) {
       expectedE = e;
     }
-    expect(expectedE).to.not.be.undefined;
+    expect(expectedE).instanceOf(Error);
+    expect((expectedE as Error).message).equal(
+      'Test error in second perdag write',
+    );
     await assertRefreshHashes(perdag, clientID, [
       ...client.refreshHashes,
       perdagChainBuilder.chain.at(-1)?.chunk.hash,

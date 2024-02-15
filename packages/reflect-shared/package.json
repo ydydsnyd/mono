@@ -17,15 +17,10 @@
     "@rocicorp/eslint-config": "^0.5.1",
     "@rocicorp/prettier-config": "^0.2.0",
     "esbuild": "^0.19.4",
-    "replicache": "14.1.0",
+    "replicache": "14.2.2",
     "rollup": "^3.24.0",
     "ts-jest": "^29.1.0",
     "typescript": "^5.2.2"
-  },
-  "exports": {
-    ".": "./src/mod.ts",
-    "./src/": "./src/",
-    "./tool/get-version.js": "./tool/get-version.js"
   },
   "eslintConfig": {
     "extends": "@rocicorp/eslint-config"

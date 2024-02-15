@@ -7,11 +7,11 @@ import {
   test,
 } from '@jest/globals';
 import type {Version} from 'reflect-protocol';
-import type {Env, WriteTransaction} from 'reflect-shared';
-import {jsonSchema} from 'shared/src/json-schema.js';
+import type {Env, WriteTransaction} from 'reflect-shared/src/types.js';
 import type {ReadonlyJSONValue} from 'shared/src/json.js';
 import {DurableStorage} from '../../src/storage/durable-storage.js';
 import {
+  ClientRecord,
   ClientRecordMap,
   clientRecordKey,
   putClientRecord,
@@ -60,7 +60,11 @@ mockMathRandom();
 describe('processFrame', () => {
   const startVersion = 1;
   const disconnectHandlerWriteKey = (clientID: string) =>
-    'test-disconnected-' + clientID;
+    `test-disconnected-${clientID}`;
+  const clientDeleteHandlerWriteKey = (clientID: string) =>
+    `test-client-delete-${clientID}`;
+  const clientDeleteHandlerWritePresenceKey = (clientID: string) =>
+    `-/p/${clientID}/clientDeleteHandler`;
 
   type Case = {
     name: string;
@@ -74,10 +78,13 @@ describe('processFrame', () => {
     expectedUserValues: Map<string, UserValue>;
     expectedClientRecords: ClientRecordMap;
     expectedVersion: Version;
-    expectedDisconnectedClients: ClientID[];
-    expectedConnectedClients: ClientID[];
-    disconnectHandlerThrows: boolean;
+    expectedDisconnectedCalls?: ClientID[];
+    expectedConnectedClients?: ClientID[];
+    expectedClientDeletedCalls?: ClientID[];
+    disconnectHandlerThrows?: boolean;
+    clientDeleteHandlerThrows?: boolean;
     shouldGCClients?: boolean;
+    clientTombstoneEntries?: [string, ReadonlyJSONValue][];
   };
 
   const mutators = new Map(
@@ -97,9 +104,33 @@ describe('processFrame', () => {
   );
 
   const records = new Map([
-    ['c1', clientRecord('cg1', null, 1, 1)],
-    ['c2', clientRecord('cg1', 1, 7, 1)],
-    ['c3', clientRecord('cg2', 1, 7, 1)],
+    [
+      'c1',
+      clientRecord({
+        clientGroupID: 'cg1',
+        baseCookie: null,
+        lastMutationID: 1,
+        lastMutationIDVersion: 1,
+      }),
+    ],
+    [
+      'c2',
+      clientRecord({
+        clientGroupID: 'cg1',
+        baseCookie: 1,
+        lastMutationID: 7,
+        lastMutationIDVersion: 1,
+      }),
+    ],
+    [
+      'c3',
+      clientRecord({
+        clientGroupID: 'cg2',
+        baseCookie: 1,
+        lastMutationID: 7,
+        lastMutationIDVersion: 1,
+      }),
+    ],
   ]);
 
   const cases: Case[] = [
@@ -114,9 +145,6 @@ describe('processFrame', () => {
       expectedUserValues: new Map(),
       expectedClientRecords: records,
       expectedVersion: startVersion,
-      expectedDisconnectedClients: [],
-      expectedConnectedClients: [],
-      disconnectHandlerThrows: false,
     },
     {
       name: 'no mutations, one client',
@@ -129,9 +157,7 @@ describe('processFrame', () => {
       expectedUserValues: new Map(),
       expectedClientRecords: records,
       expectedVersion: startVersion,
-      expectedDisconnectedClients: [],
       expectedConnectedClients: ['c1'],
-      disconnectHandlerThrows: false,
     },
     {
       name: 'one mutation, one client',
@@ -173,12 +199,18 @@ describe('processFrame', () => {
       ]),
       expectedClientRecords: new Map([
         ...records,
-        ['c1', clientRecord('cg1', startVersion + 1, 2, startVersion + 1)],
+        [
+          'c1',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: startVersion + 1,
+            lastMutationID: 2,
+            lastMutationIDVersion: startVersion + 1,
+          }),
+        ],
       ]),
       expectedVersion: startVersion + 1,
-      expectedDisconnectedClients: [],
       expectedConnectedClients: ['c1'],
-      disconnectHandlerThrows: false,
     },
     {
       name: 'one mutation, two clients',
@@ -237,13 +269,27 @@ describe('processFrame', () => {
       ]),
       expectedClientRecords: new Map([
         ...records,
-        ['c1', clientRecord('cg1', startVersion + 1, 2, startVersion + 1)],
-        ['c2', clientRecord('cg1', startVersion + 1, 7, startVersion)],
+        [
+          'c1',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: startVersion + 1,
+            lastMutationID: 2,
+            lastMutationIDVersion: startVersion + 1,
+          }),
+        ],
+        [
+          'c2',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: startVersion + 1,
+            lastMutationID: 7,
+            lastMutationIDVersion: startVersion,
+          }),
+        ],
       ]),
       expectedVersion: startVersion + 1,
-      expectedDisconnectedClients: [],
       expectedConnectedClients: ['c1', 'c2'],
-      disconnectHandlerThrows: false,
     },
     {
       name: 'one mutation, two clients, debugPerf',
@@ -312,13 +358,27 @@ describe('processFrame', () => {
       ]),
       expectedClientRecords: new Map([
         ...records,
-        ['c1', clientRecord('cg1', startVersion + 1, 2, startVersion + 1)],
-        ['c2', clientRecord('cg1', startVersion + 1, 7, startVersion)],
+        [
+          'c1',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: startVersion + 1,
+            lastMutationID: 2,
+            lastMutationIDVersion: startVersion + 1,
+          }),
+        ],
+        [
+          'c2',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: startVersion + 1,
+            lastMutationID: 7,
+            lastMutationIDVersion: startVersion,
+          }),
+        ],
       ]),
       expectedVersion: startVersion + 1,
-      expectedDisconnectedClients: [],
       expectedConnectedClients: ['c1', 'c2'],
-      disconnectHandlerThrows: false,
     },
     {
       name: 'two mutations, three clients, two client groups',
@@ -461,14 +521,36 @@ describe('processFrame', () => {
       ]),
       expectedClientRecords: new Map([
         ...records,
-        ['c1', clientRecord('cg1', startVersion + 2, 2, startVersion + 1)],
-        ['c2', clientRecord('cg1', startVersion + 2, 7, startVersion)],
-        ['c3', clientRecord('cg2', startVersion + 2, 8, startVersion + 2)],
+        [
+          'c1',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: startVersion + 2,
+            lastMutationID: 2,
+            lastMutationIDVersion: startVersion + 1,
+          }),
+        ],
+        [
+          'c2',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: startVersion + 2,
+            lastMutationID: 7,
+            lastMutationIDVersion: startVersion,
+          }),
+        ],
+        [
+          'c3',
+          clientRecord({
+            clientGroupID: 'cg2',
+            baseCookie: startVersion + 2,
+            lastMutationID: 8,
+            lastMutationIDVersion: startVersion + 2,
+          }),
+        ],
       ]),
       expectedVersion: startVersion + 2,
-      expectedDisconnectedClients: [],
       expectedConnectedClients: ['c1', 'c2', 'c3'],
-      disconnectHandlerThrows: false,
     },
     {
       name: 'two mutations, one client, one key',
@@ -535,12 +617,18 @@ describe('processFrame', () => {
       ]),
       expectedClientRecords: new Map([
         ...records,
-        ['c1', clientRecord('cg1', startVersion + 2, 3, startVersion + 2)],
+        [
+          'c1',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: startVersion + 2,
+            lastMutationID: 3,
+            lastMutationIDVersion: startVersion + 2,
+          }),
+        ],
       ]),
       expectedVersion: startVersion + 2,
-      expectedDisconnectedClients: [],
       expectedConnectedClients: ['c1'],
-      disconnectHandlerThrows: false,
     },
     {
       name: 'no mutations, no clients, 1 client disconnects',
@@ -555,25 +643,22 @@ describe('processFrame', () => {
       ]),
       expectedClientRecords: records,
       expectedVersion: startVersion + 1,
-      expectedDisconnectedClients: ['c1'],
-      expectedConnectedClients: [],
-      disconnectHandlerThrows: false,
+      expectedDisconnectedCalls: ['c1'],
     },
     {
-      name: 'no mutations, no clients, 1 client disconnects, disconnect handler throws',
+      name: 'no mutations, no clients, 1 client disconnects, client disconnect handler throws',
       pendingMutations: [],
       numPendingMutationsToProcess: 0,
       clients: new Map(),
       clientRecords: records,
       storedConnectedClients: ['c1'],
-      // No user values or pokes because only write was in disconnect handler which threw
+      // No user values or pokes because only write was in client disconnect handler which threw
       expectedPokes: [],
       expectedUserValues: new Map(),
       expectedClientRecords: records,
       // version not incremented for same reason
       expectedVersion: startVersion,
-      expectedDisconnectedClients: ['c1'],
-      expectedConnectedClients: [],
+      expectedDisconnectedCalls: ['c1'],
       disconnectHandlerThrows: true,
     },
     {
@@ -607,12 +692,19 @@ describe('processFrame', () => {
       ]),
       expectedClientRecords: new Map([
         ...records,
-        ['c2', clientRecord('cg1', startVersion + 1, 7, startVersion)],
+        [
+          'c2',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: startVersion + 1,
+            lastMutationID: 7,
+            lastMutationIDVersion: startVersion,
+          }),
+        ],
       ]),
       expectedVersion: startVersion + 1,
-      expectedDisconnectedClients: ['c1'],
+      expectedDisconnectedCalls: ['c1'],
       expectedConnectedClients: ['c2'],
-      disconnectHandlerThrows: false,
     },
     {
       name: 'no mutations, 1 client, 2 clients disconnected',
@@ -651,12 +743,19 @@ describe('processFrame', () => {
       ]),
       expectedClientRecords: new Map([
         ...records,
-        ['c2', clientRecord('cg1', startVersion + 1, 7, startVersion)],
+        [
+          'c2',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: startVersion + 1,
+            lastMutationID: 7,
+            lastMutationIDVersion: startVersion,
+          }),
+        ],
       ]),
       expectedVersion: startVersion + 1,
-      expectedDisconnectedClients: ['c1', 'c3'],
+      expectedDisconnectedCalls: ['c1', 'c3'],
       expectedConnectedClients: ['c2'],
-      disconnectHandlerThrows: false,
     },
     {
       name: '1 mutation, 2 clients, 1 client disconnects',
@@ -750,13 +849,28 @@ describe('processFrame', () => {
       ]),
       expectedClientRecords: new Map([
         ...records,
-        ['c1', clientRecord('cg1', startVersion + 2, 2, startVersion + 1)],
-        ['c2', clientRecord('cg1', startVersion + 2, 7, startVersion)],
+        [
+          'c1',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: startVersion + 2,
+            lastMutationID: 2,
+            lastMutationIDVersion: startVersion + 1,
+          }),
+        ],
+        [
+          'c2',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: startVersion + 2,
+            lastMutationID: 7,
+            lastMutationIDVersion: startVersion,
+          }),
+        ],
       ]),
       expectedVersion: startVersion + 2,
-      expectedDisconnectedClients: ['c3'],
+      expectedDisconnectedCalls: ['c3'],
       expectedConnectedClients: ['c1', 'c2'],
-      disconnectHandlerThrows: false,
     },
     {
       name: '1 mutation, 2 clients, 1 client disconnects but has pending not process in this frame',
@@ -826,13 +940,27 @@ describe('processFrame', () => {
       ]),
       expectedClientRecords: new Map([
         ...records,
-        ['c1', clientRecord('cg1', startVersion + 1, 2, startVersion + 1)],
-        ['c2', clientRecord('cg1', startVersion + 1, 7, startVersion)],
+        [
+          'c1',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: startVersion + 1,
+            lastMutationID: 2,
+            lastMutationIDVersion: startVersion + 1,
+          }),
+        ],
+        [
+          'c2',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: startVersion + 1,
+            lastMutationID: 7,
+            lastMutationIDVersion: startVersion,
+          }),
+        ],
       ]),
       expectedVersion: startVersion + 1,
-      expectedDisconnectedClients: [],
       expectedConnectedClients: ['c1', 'c2', 'c3'],
-      disconnectHandlerThrows: false,
     },
     {
       name: '1 mutation, 2 clients, 1 client disconnects and has pending processed in this frame',
@@ -937,14 +1065,37 @@ describe('processFrame', () => {
       ]),
       expectedClientRecords: new Map([
         ...records,
-        ['c1', clientRecord('cg1', startVersion + 2, 1, startVersion)],
-        ['c2', clientRecord('cg1', startVersion + 2, 7, startVersion)],
-        ['c3', clientRecord('cg2', startVersion, 8, startVersion + 1)],
+        [
+          'c1',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: startVersion + 2,
+            lastMutationID: 1,
+            lastMutationIDVersion: startVersion,
+          }),
+        ],
+        [
+          'c2',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: startVersion + 2,
+            lastMutationID: 7,
+            lastMutationIDVersion: startVersion,
+          }),
+        ],
+        [
+          'c3',
+          clientRecord({
+            clientGroupID: 'cg2',
+            baseCookie: startVersion,
+            lastMutationID: 8,
+            lastMutationIDVersion: startVersion + 1,
+          }),
+        ],
       ]),
       expectedVersion: startVersion + 2,
-      expectedDisconnectedClients: ['c3'],
+      expectedDisconnectedCalls: ['c3'],
       expectedConnectedClients: ['c1', 'c2'],
-      disconnectHandlerThrows: false,
     },
     {
       name: '1 mutation, 2 clients. 1 client should be garbage collected',
@@ -966,8 +1117,27 @@ describe('processFrame', () => {
       numPendingMutationsToProcess: 1,
       clients: new Map([client('c1', 'u1', 'cg1')]),
       clientRecords: new Map([
-        ['c1', clientRecord('cg1', null, 1, 1)],
-        ['c2', clientRecord('cg2', 1, 7, 1, startTime - TWO_WEEKS)],
+        [
+          'c1',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: null,
+            lastMutationID: 1,
+            lastMutationIDVersion: 1,
+            userID: 'u1',
+          }),
+        ],
+        [
+          'c2',
+          clientRecord({
+            clientGroupID: 'cg2',
+            baseCookie: 1,
+            lastMutationID: 7,
+            lastMutationIDVersion: 1,
+            lastSeen: startTime - TWO_WEEKS,
+            userID: 'u2',
+          }),
+        ],
       ]),
       storedConnectedClients: ['c1'],
       expectedPokes: [
@@ -995,7 +1165,18 @@ describe('processFrame', () => {
             cookie: startVersion + 2,
             lastMutationIDChanges: {},
             presence: [],
-            patch: [{op: 'del', key: '-/p/c2/b'}],
+            patch: [
+              {
+                key: 'test-client-delete-c2',
+                op: 'put',
+                value: true,
+              },
+              {
+                key: '-/p/c2/clientDeleteHandler',
+                op: 'del',
+              },
+              {op: 'del', key: '-/p/c2/b'},
+            ],
             timestamp: undefined,
           },
         },
@@ -1006,14 +1187,25 @@ describe('processFrame', () => {
         ['-/p/c2/b', userValue('bb', startVersion + 2, true)],
         // The next one was already deleted so no update to startVersion
         ['-/p/c2/c', userValue('cc', startVersion, true)],
+        ['-/p/c2/clientDeleteHandler', userValue(true, startVersion + 2, true)],
+        ['test-client-delete-c2', userValue(true, startVersion + 2)],
       ]),
+      clientTombstoneEntries: [['clientTombstone/c2', {userID: 'u2'}]],
       expectedClientRecords: new Map([
-        ['c1', clientRecord('cg1', startVersion + 2, 2, startVersion + 1)],
+        [
+          'c1',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: startVersion + 2,
+            lastMutationID: 2,
+            lastMutationIDVersion: startVersion + 1,
+            userID: 'u1',
+          }),
+        ],
       ]),
       expectedVersion: startVersion + 2,
-      expectedDisconnectedClients: [],
       expectedConnectedClients: ['c1'],
-      disconnectHandlerThrows: false,
+      expectedClientDeletedCalls: ['c2'],
     },
     {
       name: '1 mutation, 3 clients. 1 client should be garbage collected. 1 got disconnected',
@@ -1036,9 +1228,37 @@ describe('processFrame', () => {
       numPendingMutationsToProcess: 1,
       clients: new Map([client('c1', 'u1', 'cg1')]),
       clientRecords: new Map([
-        ['c1', clientRecord('cg1', null, 1, 1)],
-        ['c2', clientRecord('cg2', 1, 7, 1, startTime - TWO_WEEKS)],
-        ['c3', clientRecord('cg3', null, 1, 1)],
+        [
+          'c1',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: null,
+            lastMutationID: 1,
+            lastMutationIDVersion: 1,
+            userID: 'u1',
+          }),
+        ],
+        [
+          'c2',
+          clientRecord({
+            clientGroupID: 'cg2',
+            baseCookie: 1,
+            lastMutationID: 7,
+            lastMutationIDVersion: 1,
+            lastSeen: startTime - TWO_WEEKS,
+            userID: 'u2',
+          }),
+        ],
+        [
+          'c3',
+          clientRecord({
+            clientGroupID: 'cg3',
+            baseCookie: null,
+            lastMutationID: 1,
+            lastMutationIDVersion: 1,
+            userID: 'u3',
+          }),
+        ],
       ]),
       storedConnectedClients: ['c1', 'c3'],
       expectedPokes: [
@@ -1066,7 +1286,18 @@ describe('processFrame', () => {
             cookie: startVersion + 2,
             lastMutationIDChanges: {},
             presence: [],
-            patch: [{op: 'del', key: '-/p/c2/b'}],
+            patch: [
+              {
+                key: 'test-client-delete-c2',
+                op: 'put',
+                value: true,
+              },
+              {
+                key: '-/p/c2/clientDeleteHandler',
+                op: 'del',
+              },
+              {op: 'del', key: '-/p/c2/b'},
+            ],
             timestamp: undefined,
           },
         },
@@ -1096,15 +1327,36 @@ describe('processFrame', () => {
         ['-/p/c2/c', userValue('cc', startVersion, true)],
         ['-/p/c3/d', userValue('dd', startVersion)],
         ['test-disconnected-c3', userValue(true, startVersion + 3)],
+        ['-/p/c2/clientDeleteHandler', userValue(true, startVersion + 2, true)],
+        ['test-client-delete-c2', userValue(true, startVersion + 2)],
       ]),
+      clientTombstoneEntries: [['clientTombstone/c2', {userID: 'u2'}]],
       expectedClientRecords: new Map([
-        ['c1', clientRecord('cg1', startVersion + 3, 2, startVersion + 1)],
-        ['c3', clientRecord('cg3', null, 1, startVersion)],
+        [
+          'c1',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: startVersion + 3,
+            lastMutationID: 2,
+            lastMutationIDVersion: startVersion + 1,
+            userID: 'u1',
+          }),
+        ],
+        [
+          'c3',
+          clientRecord({
+            clientGroupID: 'cg3',
+            baseCookie: null,
+            lastMutationID: 1,
+            lastMutationIDVersion: startVersion,
+            userID: 'u3',
+          }),
+        ],
       ]),
       expectedVersion: startVersion + 3,
-      expectedDisconnectedClients: ['c3'],
+      expectedDisconnectedCalls: ['c3'],
       expectedConnectedClients: ['c1'],
-      disconnectHandlerThrows: false,
+      expectedClientDeletedCalls: ['c2'],
     },
 
     {
@@ -1118,8 +1370,27 @@ describe('processFrame', () => {
       numPendingMutationsToProcess: 0,
       clients: new Map([client('c1', 'u1', 'cg1')]),
       clientRecords: new Map([
-        ['c1', clientRecord('cg1', null, 1, 1)],
-        ['c2', clientRecord('cg2', 1, 7, 1, startTime - TWO_WEEKS)],
+        [
+          'c1',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: null,
+            lastMutationID: 1,
+            lastMutationIDVersion: 1,
+            userID: 'u1',
+          }),
+        ],
+        [
+          'c2',
+          clientRecord({
+            clientGroupID: 'cg2',
+            baseCookie: 1,
+            lastMutationID: 7,
+            lastMutationIDVersion: 1,
+            lastSeen: startTime - TWO_WEEKS,
+            userID: 'u2',
+          }),
+        ],
       ]),
       storedConnectedClients: ['c1'],
       expectedPokes: [
@@ -1130,7 +1401,18 @@ describe('processFrame', () => {
             cookie: startVersion + 1,
             lastMutationIDChanges: {},
             presence: [],
-            patch: [{op: 'del', key: '-/p/c2/b'}],
+            patch: [
+              {
+                key: 'test-client-delete-c2',
+                op: 'put',
+                value: true,
+              },
+              {
+                key: '-/p/c2/clientDeleteHandler',
+                op: 'del',
+              },
+              {op: 'del', key: '-/p/c2/b'},
+            ],
             timestamp: undefined,
           },
         },
@@ -1140,14 +1422,39 @@ describe('processFrame', () => {
         ['-/p/c2/b', userValue('bb', startVersion + 1, true)],
         // The next one was already deleted so no update to startVersion
         ['-/p/c2/c', userValue('cc', startVersion, true)],
+        [
+          '-/p/c2/clientDeleteHandler',
+          {
+            deleted: true,
+            value: true,
+            version: 2,
+          },
+        ],
+        [
+          'test-client-delete-c2',
+          {
+            deleted: false,
+            value: true,
+            version: 2,
+          },
+        ],
       ]),
       expectedClientRecords: new Map([
-        ['c1', clientRecord('cg1', startVersion + 1, 1, startVersion)],
+        [
+          'c1',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: startVersion + 1,
+            lastMutationID: 1,
+            lastMutationIDVersion: startVersion,
+            userID: 'u1',
+          }),
+        ],
       ]),
+      expectedClientDeletedCalls: ['c2'],
+      clientTombstoneEntries: [['clientTombstone/c2', {userID: 'u2'}]],
       expectedVersion: startVersion + 1,
-      expectedDisconnectedClients: [],
       expectedConnectedClients: ['c1'],
-      disconnectHandlerThrows: false,
     },
 
     {
@@ -1162,8 +1469,25 @@ describe('processFrame', () => {
       numPendingMutationsToProcess: 0,
       clients: new Map([client('c1', 'u1', 'cg1')]),
       clientRecords: new Map([
-        ['c1', clientRecord('cg1', null, 1, 1)],
-        ['c2', clientRecord('cg2', 1, 7, 1, startTime - TWO_WEEKS)],
+        [
+          'c1',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: null,
+            lastMutationID: 1,
+            lastMutationIDVersion: 1,
+          }),
+        ],
+        [
+          'c2',
+          clientRecord({
+            clientGroupID: 'cg2',
+            baseCookie: 1,
+            lastMutationID: 7,
+            lastMutationIDVersion: 1,
+            lastSeen: startTime - TWO_WEEKS,
+          }),
+        ],
       ]),
       storedConnectedClients: ['c1'],
       expectedPokes: [],
@@ -1173,18 +1497,120 @@ describe('processFrame', () => {
         ['-/p/c2/c', userValue('cc', startVersion, true)],
       ]),
       expectedClientRecords: new Map([
-        ['c1', clientRecord('cg1', null, 1, 1)],
-        ['c2', clientRecord('cg2', 1, 7, 1, startTime - TWO_WEEKS)],
+        [
+          'c1',
+          clientRecord({
+            clientGroupID: 'cg1',
+            baseCookie: null,
+            lastMutationID: 1,
+            lastMutationIDVersion: 1,
+          }),
+        ],
+        [
+          'c2',
+          clientRecord({
+            clientGroupID: 'cg2',
+            baseCookie: 1,
+            lastMutationID: 7,
+            lastMutationIDVersion: 1,
+            lastSeen: startTime - TWO_WEEKS,
+          }),
+        ],
       ]),
       expectedVersion: startVersion,
-      expectedDisconnectedClients: [],
       expectedConnectedClients: ['c1'],
-      disconnectHandlerThrows: false,
+    },
+
+    {
+      name: 'no mutations, 1 client disconnects, client delete handler should be called',
+      pendingMutations: [],
+      numPendingMutationsToProcess: 0,
+      clients: new Map(),
+      clientRecords: recordsWith('c1', {lastMutationIDAtClose: 1}),
+      storedConnectedClients: ['c1'],
+      // No user values or pokes because only write was in client disconnect handler which threw
+      expectedPokes: [],
+      expectedUserValues: new Map([
+        [disconnectHandlerWriteKey('c1'), userValue(true, startVersion + 1)],
+        [clientDeleteHandlerWriteKey('c1'), userValue(true, startVersion + 1)],
+        [
+          clientDeleteHandlerWritePresenceKey('c1'),
+          userValue(true, startVersion + 1, true),
+        ],
+      ]),
+      expectedClientRecords: recordsWithoutClientID('c1'),
+      // version incremented because client delete handler changed keys
+      expectedVersion: startVersion + 1,
+      expectedDisconnectedCalls: ['c1'],
+      expectedClientDeletedCalls: ['c1'],
+      clientTombstoneEntries: [['clientTombstone/c1', {userID: 'testUser1'}]],
+      shouldGCClients: true,
+    },
+    {
+      name: 'no mutations, 1 client disconnects, client delete handler throws',
+      pendingMutations: [],
+      numPendingMutationsToProcess: 0,
+      clients: new Map(),
+      clientRecords: recordsWith('c1', {lastMutationIDAtClose: 1}),
+      storedConnectedClients: ['c1'],
+      // No user values or pokes because only write was in client disconnect handler which threw
+      expectedPokes: [],
+      expectedUserValues: new Map([
+        [disconnectHandlerWriteKey('c1'), userValue(true, startVersion + 1)],
+      ]),
+      expectedClientRecords: recordsWithoutClientID('c1'),
+      // version incremented because client disconnect handler changed keys
+      expectedVersion: startVersion + 1,
+      expectedDisconnectedCalls: ['c1'],
+      expectedClientDeletedCalls: ['c1'],
+      clientTombstoneEntries: [['clientTombstone/c1', {userID: 'testUser1'}]],
+      clientDeleteHandlerThrows: true,
+      shouldGCClients: true,
+    },
+    {
+      name: 'no mutations, 1 client disconnects, disconnect and client delete handler throw',
+      pendingMutations: [],
+      numPendingMutationsToProcess: 0,
+      clients: new Map(),
+      clientRecords: recordsWith('c1', {lastMutationIDAtClose: 1}),
+      storedConnectedClients: ['c1'],
+      // No user values or pokes because only write was in client disconnect handler which threw
+      expectedPokes: [],
+      expectedUserValues: new Map(),
+      expectedClientRecords: recordsWithoutClientID('c1'),
+      // version not incremented because both disconnect and client delete handler threw
+      expectedVersion: startVersion,
+      expectedDisconnectedCalls: ['c1'],
+      expectedClientDeletedCalls: ['c1'],
+      clientTombstoneEntries: [['clientTombstone/c1', {userID: 'testUser1'}]],
+      clientDeleteHandlerThrows: true,
+      disconnectHandlerThrows: true,
+      shouldGCClients: true,
     },
   ];
 
+  function recordsWith(clientID: string, props: Partial<ClientRecord>) {
+    return new Map(records).set(clientID, {
+      ...records.get(clientID)!,
+      ...props,
+    });
+  }
+
+  function recordsWithoutClientID(clientID: string): ClientRecordMap {
+    const newRecords = new Map(records);
+    newRecords.delete(clientID);
+    return newRecords;
+  }
+
   for (const c of cases) {
     test(c.name, async () => {
+      const {
+        expectedDisconnectedCalls = [],
+        expectedConnectedClients = [],
+        expectedClientDeletedCalls = [],
+        clientTombstoneEntries = [],
+      } = c;
+
       const durable = await getMiniflareDurableObjectStorage(id);
       await durable.deleteAll();
       const storage = new DurableStorage(durable);
@@ -1202,6 +1628,7 @@ describe('processFrame', () => {
       }
 
       const disconnectCallClients: ClientID[] = [];
+      const clientDeletedCalls: ClientID[] = [];
       const result = await processFrame(
         createSilentLogContext(),
         env,
@@ -1213,7 +1640,19 @@ describe('processFrame', () => {
           disconnectCallClients.push(write.clientID);
           // Throw after writes to confirm they are not saved.
           if (c.disconnectHandlerThrows) {
-            throw new Error('disconnectHandler threw');
+            throw new Error('clientDisconnectHandler threw');
+          }
+        },
+        async write => {
+          await write.set(clientDeleteHandlerWriteKey(write.clientID), true);
+
+          // write presence state too... which should be collected
+          await write.set(`-/p/${write.clientID}/clientDeleteHandler`, true);
+
+          clientDeletedCalls.push(write.clientID);
+          // Throw after writes to confirm they are not saved.
+          if (c.clientDeleteHandlerThrows) {
+            throw new Error('clientDeleteHandler threw');
           }
         },
         c.clients,
@@ -1224,7 +1663,11 @@ describe('processFrame', () => {
       expect(result).toEqual(c.expectedPokes);
 
       expect(disconnectCallClients.sort()).toEqual(
-        c.expectedDisconnectedClients.sort(),
+        expectedDisconnectedCalls.sort(),
+      );
+
+      expect(clientDeletedCalls.sort()).toEqual(
+        expectedClientDeletedCalls.sort(),
       );
 
       const expectedState = new Map([
@@ -1241,13 +1684,11 @@ describe('processFrame', () => {
           ]),
         ),
         [versionKey, c.expectedVersion],
-        [connectedClientsKey, [...c.expectedConnectedClients]],
+        [connectedClientsKey, [...expectedConnectedClients]],
+        ...clientTombstoneEntries,
       ]);
 
-      expect((await durable.list()).size).toEqual(expectedState.size);
-      for (const [key, value] of expectedState) {
-        expect(await storage.get(key, jsonSchema)).toEqual(value);
-      }
+      expect(await durable.list()).toEqual(expectedState);
     });
   }
 });

@@ -1,10 +1,13 @@
 import type {LogContext} from '@rocicorp/logger';
-import type {ClientID} from 'reflect-shared';
+import type {ClientID, Env} from 'reflect-shared/src/mod.js';
 import {assert} from 'shared/src/asserts.js';
+import {must} from 'shared/src/must.js';
 import {difference} from 'shared/src/set-utils.js';
+import {EntryCache} from '../storage/entry-cache.js';
 import type {Storage} from '../storage/storage.js';
 import {
   ClientRecordMap,
+  delClientRecord,
   delClientRecords,
   getClientRecord,
   listClientRecords,
@@ -12,6 +15,10 @@ import {
 } from '../types/client-record.js';
 import {userValueKey, userValueSchema} from '../types/user-value.js';
 import {putVersion} from '../types/version.js';
+import {
+  callClientDeleteHandler,
+  type ClientDeleteHandler,
+} from './client-delete-handler.js';
 
 /**
  * Thw frequency at which we run the client GC. This is used to not do gc in
@@ -26,13 +33,17 @@ function clientGCSpaceUserKey(clientID: string): string {
   return `-/p/${clientID}`;
 }
 
-async function updateLastSeenForClient(
+export async function updateLastSeenForClient(
+  lc: LogContext,
   clientID: ClientID,
   storage: Storage,
   now: number,
 ): Promise<void> {
   const clientRecord = await getClientRecord(clientID, storage);
-  assert(clientRecord);
+  if (!clientRecord) {
+    lc.debug?.(`Not updating lastSeen for removed client ${clientID}`);
+    return;
+  }
   await putClientRecord(
     clientID,
     {
@@ -44,6 +55,7 @@ async function updateLastSeenForClient(
 }
 
 export function updateLastSeen(
+  lc: LogContext,
   oldClients: Set<ClientID>,
   newClients: Set<ClientID>,
   storage: Storage,
@@ -54,14 +66,16 @@ export function updateLastSeen(
   // We update the lastSeen for all disconnected clients.
   const ps: Promise<unknown>[] = [];
   for (const clientID of difference(oldClients, newClients)) {
-    ps.push(updateLastSeenForClient(clientID, storage, now));
+    ps.push(updateLastSeenForClient(lc, clientID, storage, now));
   }
   return Promise.all(ps);
 }
 
 export async function collectClients(
   lc: LogContext,
+  env: Env,
   storage: Storage,
+  clientDeleteHandler: ClientDeleteHandler,
   connectedClients: Set<ClientID>,
   now: number,
   maxAge: number,
@@ -84,13 +98,24 @@ export async function collectClients(
   );
 
   if (clientsToCollect.length > 0) {
-    await delClientRecords(clientsToCollect, storage);
+    for (const clientID of clientsToCollect) {
+      await callClientDeleteHandler(
+        lc,
+        clientID,
+        env,
+        clientDeleteHandler,
+        nextVersion,
+        storage,
+      );
+    }
+
     await collectOldUserSpaceClientKeys(
       lc,
       storage,
       clientsToCollect,
       nextVersion,
     );
+    await delClientRecords(clientsToCollect, storage);
 
     await putVersion(nextVersion, storage);
   }
@@ -155,4 +180,75 @@ export async function collectOldUserSpaceClientKeys(
   }
   await Promise.all(ps);
   lc.debug?.(`Deleted ${ps.length} old client keys`);
+}
+
+export async function collectClientIfDeleted(
+  lc: LogContext,
+  env: Env,
+  clientID: ClientID,
+  clientDeleteHandler: ClientDeleteHandler,
+  storage: Storage,
+  nextVersion: number,
+): Promise<void> {
+  const {lastMutationID, lastMutationIDAtClose} = must(
+    await getClientRecord(clientID, storage),
+  );
+  if (lastMutationIDAtClose === undefined) {
+    lc.debug?.(
+      `Client ${clientID} has no lastMutationIDAtClose. Not collecting.`,
+    );
+    return;
+  }
+
+  lc.debug?.('Maybe collecting client', {
+    clientID,
+    lastMutationID,
+    lastMutationIDAtClose,
+  });
+
+  if (lastMutationID < lastMutationIDAtClose) {
+    // This means that the client still has pending clients that we haven't seen
+    // yet. We need to keep the client alive.
+    lc.debug?.(
+      `Client has lastMutationID < lastMutationIDAtClose. Not collecting.`,
+    );
+
+    // TODO(arv): Collect client when the lastMutationIDAtClose gets pushed using mutation recovery.
+
+    return;
+  }
+
+  if (lastMutationID > lastMutationIDAtClose) {
+    // This means that we received a mutation after the client closed. This can
+    // happen if we have a race between closing the client and sending a
+    // mutation at close.
+    //
+    // It is safe to collect the client here because these mutations have been
+    // applied and the client is not connected anymore.
+    //
+    // It is not possible for the client to have persisted pending mutations
+    // during "close" because persist is async and writes to IDB which does not
+    // block unloading.
+    lc.debug?.(
+      `Client applied mutations after close beacon was sent/received. Collecting.`,
+    );
+  } else {
+    assert(lastMutationID === lastMutationIDAtClose);
+    lc.debug?.(`Client and server are fully synced. Collecting.`);
+  }
+
+  await callClientDeleteHandler(
+    lc,
+    clientID,
+    env,
+    clientDeleteHandler,
+    nextVersion,
+    storage,
+  );
+
+  const cache = new EntryCache(storage);
+  await collectOldUserSpaceClientKeys(lc, cache, [clientID], nextVersion);
+
+  await delClientRecord(clientID, cache);
+  await cache.flush();
 }

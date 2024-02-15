@@ -1,16 +1,22 @@
-import {describe, expect, test} from '@jest/globals';
+import {describe, expect, jest, test} from '@jest/globals';
+import type {Env} from 'reflect-shared/src/types.js';
 import {jsonSchema} from 'shared/src/json-schema.js';
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
 import {DurableStorage} from '../storage/durable-storage.js';
 import {EntryCache} from '../storage/entry-cache.js';
 import type {Storage} from '../storage/storage.js';
-import {getClientRecord, putClientRecord} from '../types/client-record.js';
+import {
+  ClientRecord,
+  getClientRecord,
+  putClientRecord,
+} from '../types/client-record.js';
 import type {ClientID} from '../types/client-state.js';
 import {putConnectedClients} from '../types/connected-clients.js';
-import {putUserValue, userValueKey} from '../types/user-value.js';
+import {getUserValue, putUserValue} from '../types/user-value.js';
 import {putVersion} from '../types/version.js';
-import {createSilentLogContext} from '../util/test-utils.js';
+import {createSilentLogContext, setUserEntries} from '../util/test-utils.js';
+import type {ClientDeleteHandler} from './client-delete-handler.js';
 import {
+  collectClientIfDeleted,
   collectClients,
   collectOldUserSpaceClientKeys,
   updateLastSeen,
@@ -18,20 +24,6 @@ import {
 
 const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();
-
-async function setUserEntries(
-  cache: Storage,
-  version: number,
-  entries: Record<string, ReadonlyJSONValue>,
-) {
-  for (const [k, value] of Object.entries(entries)) {
-    await cache.put(userValueKey(k), {
-      value,
-      deleted: false,
-      version,
-    });
-  }
-}
 
 async function setLastSeenEntries(
   cache: Storage,
@@ -46,6 +38,7 @@ async function setLastSeenEntries(
         clientGroupID: 'client-group-id',
         lastMutationID: 2,
         lastMutationIDVersion: 3,
+        userID: 'u1',
       },
       cache,
     );
@@ -238,6 +231,7 @@ Map {
 describe('collectClients', () => {
   test('empty storage', async () => {
     const lc = createSilentLogContext();
+    const env = {a: 'b'};
     const durable = await getMiniflareDurableObjectStorage(id);
     await durable.deleteAll();
     const storage = new DurableStorage(durable);
@@ -245,12 +239,17 @@ describe('collectClients', () => {
     const now = 123;
     const maxAge = 456;
     const version = 789;
+    const clientDeleteHandler = jest
+      .fn<ClientDeleteHandler>()
+      .mockRejectedValue('should not be called');
 
     await putVersion(version, storage);
 
     await collectClients(
       lc,
+      env,
       storage,
+      clientDeleteHandler,
       connectedClients,
       now,
       maxAge,
@@ -262,10 +261,12 @@ Map {
   "version" => 789,
 }
 `);
+    expect(clientDeleteHandler).not.toHaveBeenCalled();
   });
 
   test('normal operation', async () => {
     const lc = createSilentLogContext();
+    const env = {a: 'b'};
     const durable = await getMiniflareDurableObjectStorage(id);
     await durable.deleteAll();
     const storage = new DurableStorage(durable);
@@ -273,6 +274,9 @@ Map {
     const now = 4500;
     const maxAge = 2000;
     const connectedClients = new Set(['client-a', 'client-c']);
+    const clientDeleteHandler = jest
+      .fn<ClientDeleteHandler>()
+      .mockResolvedValue(undefined);
 
     await putVersion(version, storage);
     await setUserEntries(storage, version, {
@@ -296,7 +300,9 @@ Map {
 
     await collectClients(
       lc,
+      env,
       storage,
+      clientDeleteHandler,
       connectedClients,
       now,
       maxAge,
@@ -304,14 +310,23 @@ Map {
     );
     await storage.flush();
 
+    expect(clientDeleteHandler).toHaveBeenCalledTimes(1);
+    expect(clientDeleteHandler).toHaveBeenCalledWith(
+      expect.objectContaining({clientID: 'client-b'}),
+    );
+
     expect(await storage.list({}, jsonSchema)).toMatchInlineSnapshot(`
 Map {
+  "clientTombstone/client-b" => {
+    "userID": "u1",
+  },
   "clientV1/client-a" => {
     "baseCookie": 1,
     "clientGroupID": "client-group-id",
     "lastMutationID": 2,
     "lastMutationIDVersion": 3,
     "lastSeen": 1000,
+    "userID": "u1",
   },
   "clientV1/client-c" => {
     "baseCookie": 1,
@@ -319,6 +334,7 @@ Map {
     "lastMutationID": 2,
     "lastMutationIDVersion": 3,
     "lastSeen": 3000,
+    "userID": "u1",
   },
   "clientV1/client-d" => {
     "baseCookie": 1,
@@ -326,6 +342,7 @@ Map {
     "lastMutationID": 2,
     "lastMutationIDVersion": 3,
     "lastSeen": 4000,
+    "userID": "u1",
   },
   "connectedclients" => [
     "client-a",
@@ -378,6 +395,7 @@ Map {
 
   test('no client key space used', async () => {
     const lc = createSilentLogContext();
+    const env = {a: 'b'};
     const durable = await getMiniflareDurableObjectStorage(id);
     await durable.deleteAll();
     const storage = new DurableStorage(durable);
@@ -385,6 +403,9 @@ Map {
     const now = 4500;
     const maxAge = 2000;
     const connectedClients = new Set(['client-a', 'client-c']);
+    const clientDeleteHandler = jest
+      .fn<ClientDeleteHandler>()
+      .mockResolvedValue(undefined);
 
     await putVersion(version, storage);
     await setLastSeenEntries(storage, {
@@ -398,21 +419,32 @@ Map {
 
     await collectClients(
       lc,
+      env,
       storage,
+      clientDeleteHandler,
       connectedClients,
       now,
       maxAge,
       version + 1,
     );
 
+    expect(clientDeleteHandler).toHaveBeenCalledTimes(1);
+    expect(clientDeleteHandler).toHaveBeenCalledWith(
+      expect.objectContaining({clientID: 'client-b'}),
+    );
+
     expect(await storage.list({}, jsonSchema)).toMatchInlineSnapshot(`
 Map {
+  "clientTombstone/client-b" => {
+    "userID": "u1",
+  },
   "clientV1/client-a" => {
     "baseCookie": 1,
     "clientGroupID": "client-group-id",
     "lastMutationID": 2,
     "lastMutationIDVersion": 3,
     "lastSeen": 1000,
+    "userID": "u1",
   },
   "clientV1/client-c" => {
     "baseCookie": 1,
@@ -420,6 +452,7 @@ Map {
     "lastMutationID": 2,
     "lastMutationIDVersion": 3,
     "lastSeen": 3000,
+    "userID": "u1",
   },
   "clientV1/client-d" => {
     "baseCookie": 1,
@@ -427,6 +460,7 @@ Map {
     "lastMutationID": 2,
     "lastMutationIDVersion": 3,
     "lastSeen": 4000,
+    "userID": "u1",
   },
   "connectedclients" => [
     "client-a",
@@ -439,6 +473,7 @@ Map {
 
   test('client record missing lastSeen', async () => {
     const lc = createSilentLogContext();
+    const env: Env = {a: 'b'};
     const durable = await getMiniflareDurableObjectStorage(id);
     await durable.deleteAll();
     const storage = new DurableStorage(durable);
@@ -446,6 +481,9 @@ Map {
     const now = 4500;
     const maxAge = 2000;
     const connectedClients = new Set(['client-a', 'client-c']);
+    const clientDeleteHandler = jest
+      .fn<ClientDeleteHandler>()
+      .mockRejectedValue('should not be called');
 
     await putVersion(version, storage);
     await setLastSeenEntries(storage, {
@@ -473,13 +511,16 @@ Map {
       clientGroupID: 'client-group-id',
       lastMutationID: 2,
       lastMutationIDVersion: 3,
+      userID: 'u1',
     });
 
     // client-b does not get deleted because it has no lastSeen so it just now
     // gets a lastSeen value.
     await collectClients(
       lc,
+      env,
       storage,
+      clientDeleteHandler,
       connectedClients,
       now,
       maxAge,
@@ -490,12 +531,16 @@ Map {
     // client-b gets a lastSeen of now
     expect(await storage.list({}, jsonSchema)).toMatchInlineSnapshot(`
 Map {
+  "clientTombstone/client-d" => {
+    "userID": "u1",
+  },
   "clientV1/client-a" => {
     "baseCookie": 1,
     "clientGroupID": "client-group-id",
     "lastMutationID": 2,
     "lastMutationIDVersion": 3,
     "lastSeen": 1000,
+    "userID": "u1",
   },
   "clientV1/client-b" => {
     "baseCookie": 1,
@@ -503,6 +548,7 @@ Map {
     "lastMutationID": 2,
     "lastMutationIDVersion": 3,
     "lastSeen": 4500,
+    "userID": "u1",
   },
   "clientV1/client-c" => {
     "baseCookie": 1,
@@ -510,6 +556,7 @@ Map {
     "lastMutationID": 2,
     "lastMutationIDVersion": 3,
     "lastSeen": 3000,
+    "userID": "u1",
   },
   "connectedclients" => [
     "client-a",
@@ -566,6 +613,7 @@ test('touchClients', async () => {
   await durable.deleteAll();
   const storage = new DurableStorage(durable);
   const landed = 1969;
+  const lc = createSilentLogContext();
 
   for (const c of 'abcd') {
     await putClientRecord(
@@ -575,12 +623,14 @@ test('touchClients', async () => {
         clientGroupID: 'client-group-id',
         lastMutationID: 2,
         lastMutationIDVersion: 3,
+        userID: 'u1',
       },
       storage,
     );
   }
 
   await updateLastSeen(
+    lc,
     new Set(['client-a', 'client-b']),
     new Set(['client-b', 'client-c']),
     storage,
@@ -596,25 +646,101 @@ Map {
     "lastMutationID": 2,
     "lastMutationIDVersion": 3,
     "lastSeen": 1969,
+    "userID": "u1",
   },
   "clientV1/client-b" => {
     "baseCookie": 1,
     "clientGroupID": "client-group-id",
     "lastMutationID": 2,
     "lastMutationIDVersion": 3,
+    "userID": "u1",
   },
   "clientV1/client-c" => {
     "baseCookie": 1,
     "clientGroupID": "client-group-id",
     "lastMutationID": 2,
     "lastMutationIDVersion": 3,
+    "userID": "u1",
   },
   "clientV1/client-d" => {
     "baseCookie": 1,
     "clientGroupID": "client-group-id",
     "lastMutationID": 2,
     "lastMutationIDVersion": 3,
+    "userID": "u1",
   },
 }
 `);
+});
+
+describe('collectClientIfDeleted', () => {
+  const lc = createSilentLogContext();
+
+  const cases = [
+    {
+      name: 'client not deleted because it has pending mutations',
+      lastMutationID: 1,
+      lastMutationIDAtClose: 2,
+      expectDeleted: false,
+    },
+    {
+      name: 'client  deleted because it no pending mutations',
+      lastMutationID: 2,
+      lastMutationIDAtClose: 2,
+      expectDeleted: true,
+    },
+    {
+      name: 'client  deleted because it finished processing extra mutations',
+      lastMutationID: 3,
+      lastMutationIDAtClose: 2,
+      expectDeleted: true,
+    },
+  ];
+
+  for (const c of cases) {
+    test(c.name, async () => {
+      const {expectDeleted, lastMutationID, lastMutationIDAtClose} = c;
+
+      const durable = await getMiniflareDurableObjectStorage(id);
+      await durable.deleteAll();
+      const storage = new DurableStorage(durable);
+      const cache = new EntryCache(storage);
+      const version = 1;
+      const clientID = 'client-a';
+      const clientGroupID = 'client-group-id';
+      const env: Env = {a: 'b'};
+      const clientDeleteHandler = async () => {};
+      const userID = 'user-id-xyz';
+
+      // Set a presence state key value
+      const keyToTest = `-/p/${clientID}/test`;
+      await setUserEntries(cache, version, {
+        [keyToTest]: 1,
+      });
+
+      const clientRecord: ClientRecord = {
+        baseCookie: 1,
+        clientGroupID,
+        lastMutationID,
+        lastMutationIDVersion: null,
+        lastSeen: 4,
+        lastMutationIDAtClose,
+        userID,
+      };
+
+      await putClientRecord(clientID, clientRecord, cache);
+
+      await collectClientIfDeleted(
+        lc,
+        env,
+        clientID,
+        clientDeleteHandler,
+        cache,
+        version,
+      );
+
+      const testEntry = await getUserValue(keyToTest, cache);
+      expect(testEntry?.deleted).toBe(expectDeleted);
+    });
+  }
 });
