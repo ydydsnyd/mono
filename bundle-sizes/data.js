@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1707952112583,
+  "lastUpdate": 1707959599665,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -45729,6 +45729,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31693,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "committer": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "distinct": true,
+          "id": "f5b99992ea394f5b24e86138e1f0919821eea800",
+          "message": "chore(replicache): Demote log statement from info to debug.\n\nThis was getting logged with every failed push while offline. Since\nReplicache is designed to be used offline, logging messages at info\nwhile offline is inappropriate.",
+          "timestamp": "2024-02-14T15:11:24-10:00",
+          "tree_id": "9094b6f87c3dbb8756427c72bfd5e575a83b060b",
+          "url": "https://github.com/rocicorp/mono/commit/f5b99992ea394f5b24e86138e1f0919821eea800"
+        },
+        "date": 1707959586860,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 302532,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54252,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 112788,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31692,
             "unit": "bytes"
           }
         ]
