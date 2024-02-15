@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1707962864958,
+  "lastUpdate": 1707990419538,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -45797,6 +45797,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/b65a3726099d58fe75942b5002f7c8f48704cb63"
         },
         "date": 1707962852549,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 302532,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54252,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 112788,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31651,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "committer": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "distinct": true,
+          "id": "ab3d71b6d416acd5b3379af45cff3f5ae8b49469",
+          "message": "doc(replicache): Remove comment explaining how we are handling errors.\n\nI think it is fairly clear from reading the code.\n\nTwo users complained about the introduction of the term 'lmid' here,\nbut upon reflection I think the entire comment is not needed.",
+          "timestamp": "2024-02-14T23:45:02-10:00",
+          "tree_id": "b82ad2071ae4c2c3cbf39b5b6080b394e01a6f96",
+          "url": "https://github.com/rocicorp/mono/commit/ab3d71b6d416acd5b3379af45cff3f5ae8b49469"
+        },
+        "date": 1707990405359,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
