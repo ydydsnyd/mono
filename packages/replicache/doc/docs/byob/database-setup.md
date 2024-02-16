@@ -45,7 +45,7 @@ function getDB() {
   return global.__db as IDatabase<{}>;
 }
 
-type Transaction = ITask<{}>;
+export type Transaction = ITask<{}>;
 type TransactionCallback<R> = (t: Transaction) => Promise<R>;
 
 // Helper to make sure we always access database at serializable level.

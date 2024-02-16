@@ -25,9 +25,8 @@ This looks like a lot of code, but it's just implementing the description above.
 
 ```ts
 import {NextApiRequest, NextApiResponse} from 'next';
-import {serverID, tx} from '../../db';
+import {serverID, tx, Transaction} from '../../db';
 import Pusher from 'pusher';
-import {ITask} from 'pg-promise';
 import {MessageWithID} from '../../types';
 import {MutationV1} from 'replicache';
 
@@ -70,7 +69,7 @@ export default async function (req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function processMutation(
-  t: ITask<{}>,
+  t: Transaction,
   clientGroupID: string,
   mutation: MutationV1,
   error?: string | undefined,
@@ -146,7 +145,7 @@ async function processMutation(
   ]);
 }
 
-export async function getLastMutationID(t: ITask<{}>, clientID: string) {
+export async function getLastMutationID(t: Transaction, clientID: string) {
   const clientRow = await t.oneOrNone(
     'select last_mutation_id from replicache_client where id = $1',
     clientID,
@@ -158,7 +157,7 @@ export async function getLastMutationID(t: ITask<{}>, clientID: string) {
 }
 
 async function setLastMutationID(
-  t: ITask<{}>,
+  t: Transaction,
   clientID: string,
   clientGroupID: string,
   mutationID: number,
@@ -186,7 +185,7 @@ async function setLastMutationID(
 }
 
 async function createMessage(
-  t: ITask<{}>,
+  t: Transaction,
   {id, from, content, order}: MessageWithID,
   version: number,
 ) {

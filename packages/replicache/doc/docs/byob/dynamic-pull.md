@@ -31,8 +31,7 @@ Replace the contents of `pages/api/replicache-pull.ts` with this code:
 
 ```ts
 import {NextApiRequest, NextApiResponse} from 'next';
-import {serverID, tx} from '../../db';
-import {ITask} from 'pg-promise';
+import {serverID, tx, Transaction} from '../../db';
 import {PullResponse} from 'replicache';
 
 export default async function (req: NextApiRequest, res: NextApiResponse) {
@@ -118,7 +117,7 @@ export default async function (req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function getLastMutationIDChanges(
-  t: ITask<{}>,
+  t: Transaction,
   clientGroupID: string,
   fromVersion: number,
 ) {
