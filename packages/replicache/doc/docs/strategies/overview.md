@@ -47,7 +47,7 @@ Here are the strategies in increasing order of implementation difficulty:
 
 **[Get started with the Per-Space Version Strategy →](./per-space-version)**
 
-## 🛸 Row Version Strategy
+## 🚣‍♀️ Row Version Strategy
 
 - **When to use:** Apps that need greater performance, fine-grained read authorization, or partial sync that can't be served by per-space versioning. This is the most flexible and powerful strategy, but also the hardest to implement.
 - **Performance:** 👍🏼 Close to traditional web app.
