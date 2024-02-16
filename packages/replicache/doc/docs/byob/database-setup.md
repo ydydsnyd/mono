@@ -45,10 +45,11 @@ function getDB() {
   return global.__db as IDatabase<{}>;
 }
 
-type TransactionCallback = (t: ITask<{}>) => Promise<R>;
+type Transaction = ITask<{}>;
+type TransactionCallback<R> = (t: Transaction) => Promise<R>;
 
 // Helper to make sure we always access database at serializable level.
-export async function tx<R>(f: TransactionCallback, dbp = getDB()) {
+export async function tx<R>(f: TransactionCallback<R>, dbp = getDB()) {
   const db = await dbp;
   return await db.tx(
     {
