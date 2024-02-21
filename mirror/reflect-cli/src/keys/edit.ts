@@ -6,6 +6,7 @@ import {makeRequester} from '../requester.js';
 import {getSingleTeam} from '../teams.js';
 import type {CommonYargsArgv, YargvToInterface} from '../yarg-types.js';
 import {promptForKeyConfiguration} from './create.js';
+import {getLogger} from '../logger.js';
 
 export function editKeyOptions(yargs: CommonYargsArgv) {
   return yargs.positional('name', {
@@ -34,7 +35,7 @@ export async function editKeyHandler(
   });
   const key = keys.find(key => key.name === name);
   if (!key) {
-    console.warn(color.yellow(`Key named "${name}" was not found.`));
+    getLogger().warn(color.yellow(`Key named "${name}" was not found.`));
     process.exit(-1);
   }
 
@@ -57,5 +58,5 @@ export async function editKeyHandler(
       remove: Object.keys(key.apps).filter(id => !appIDs.includes(id)),
     },
   });
-  console.log(`Edited key "${color.bold(name)}".`);
+  getLogger().log(`Edited key "${color.bold(name)}".`);
 }

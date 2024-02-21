@@ -16,9 +16,22 @@ import color from 'picocolors';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
 import type {AuthContext} from './handler.js';
 import {getSingleTeam} from './teams.js';
+import {getLogger} from './logger.js';
+
+export function appListOptions(yargs: CommonYargsArgv) {
+  return yargs.option('output', {
+    describe: 'Output the result in a specified format',
+    type: 'string',
+    requiresArg: true,
+    choices: ['json', 'text'],
+    default: 'text',
+  });
+}
+
+type AppListOptionArgs = YargvToInterface<ReturnType<typeof appListOptions>>;
 
 export async function appListHandler(
-  _yargs: YargvToInterface<CommonYargsArgv>,
+  _yargs: AppListOptionArgs,
   authContext: AuthContext,
 ): Promise<void> {
   const firestore = getFirestore();
@@ -34,50 +47,59 @@ export async function appListHandler(
 
   const apps = await getDocs(q);
   if (apps.size === 0) {
-    console.log('No apps found.');
+    getLogger().log('No apps found.');
     return;
   }
 
+  const appList = [];
   for (const doc of apps.docs) {
     const appView = doc.data();
+    appList.push({
+      name: appView?.name,
+      id: doc.id,
+      status: getDeploymentStatus(appView?.runningDeployment),
+      hostname: appView?.runningDeployment?.spec.hostname,
+      serverVersion: appView?.runningDeployment?.spec.serverVersion,
+    });
     displayApp(doc.id, appView);
   }
-}
+  getLogger().json(appList);
 
-function displayApp(appID?: string, appView?: AppView): void {
-  const getAppText = (label: string, value: string | undefined): string =>
-    color.green(`${label}: `) +
-    color.reset(value ? value : color.red('Unknown'));
+  function displayApp(appID?: string, appView?: AppView): void {
+    const getAppText = (label: string, value: string | undefined): string =>
+      color.green(`${label}: `) +
+      color.reset(value ? value : color.red('Unknown'));
 
-  console.log(`-------------------------------------------------`);
-  const lines: [string, string | undefined][] = appView?.name
-    ? [
-        ['App', appView?.name],
-        ['ID', appID],
-        ['Status', getDeploymentStatus(appView?.runningDeployment)],
-        ['Hostname', appView?.runningDeployment?.spec.hostname],
-        ['Server Version', appView?.runningDeployment?.spec.serverVersion],
-      ]
-    : [['App', undefined]];
+    getLogger().log(`-------------------------------------------------`);
+    const lines: [string, string | undefined][] = appView?.name
+      ? [
+          ['App', appView?.name],
+          ['ID', appID],
+          ['Status', getDeploymentStatus(appView?.runningDeployment)],
+          ['Hostname', appView?.runningDeployment?.spec.hostname],
+          ['Server Version', appView?.runningDeployment?.spec.serverVersion],
+        ]
+      : [['App', undefined]];
 
-  const maxLabelLen = Math.max(...lines.map(l => l[0].length));
-  const pad = ' ';
-  for (const [label, value] of lines) {
-    console.log(
-      getAppText(label + pad.repeat(maxLabelLen - label.length), value),
-    );
+    const maxLabelLen = Math.max(...lines.map(l => l[0].length));
+    const pad = ' ';
+    for (const [label, value] of lines) {
+      getLogger().log(
+        getAppText(label + pad.repeat(maxLabelLen - label.length), value),
+      );
+    }
+    getLogger().log(`-------------------------------------------------`);
   }
-  console.log(`-------------------------------------------------`);
-}
 
-function getDeploymentStatus(deployment?: DeploymentView): string {
-  switch (deployment?.status) {
-    case 'RUNNING':
-      return `${deployment?.status}🏃`;
-    case undefined:
-      return 'Awaiting first publish';
+  function getDeploymentStatus(deployment?: DeploymentView): string {
+    switch (deployment?.status) {
+      case 'RUNNING':
+        return `${deployment?.status}`;
+      case undefined:
+        return 'Awaiting first publish';
+    }
+    return deployment?.statusMessage
+      ? `${deployment?.status}: ${deployment?.statusMessage}`
+      : `${deployment?.status}`;
   }
-  return deployment?.statusMessage
-    ? `${deployment?.status}: ${deployment?.statusMessage}`
-    : `${deployment?.status}`;
 }

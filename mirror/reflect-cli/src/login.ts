@@ -13,6 +13,7 @@ import {
 import {ErrorWithSeverity} from './error.js';
 import {confirm} from './inquirer.js';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
+import {getLogger} from './logger.js';
 
 async function timeout(signal: AbortSignal) {
   await sleep(120_000, signal);
@@ -100,7 +101,7 @@ export async function loginHandler(
   ) {
     await openInBrowser(urlToOpen);
   }
-  console.log(`Please login at: ${urlToOpen}`);
+  getLogger().log(`Please login at: ${urlToOpen}`);
   const timeoutController = new AbortController();
   try {
     await Promise.race([
@@ -111,7 +112,7 @@ export async function loginHandler(
     timeoutController.abort();
     credentialReceiverServer.close((closeErr?: Error) => {
       if (closeErr) {
-        console.warn('login credential server failed to close', closeErr);
+        getLogger().warn('login credential server failed to close', closeErr);
       }
     });
 
@@ -133,6 +134,6 @@ export async function loginHandler(
 export default async function openInBrowserImpl(url: string): Promise<void> {
   const childProcess = await open(url);
   childProcess.on('error', () => {
-    console.warn('Failed to open');
+    getLogger().warn('Failed to open');
   });
 }
