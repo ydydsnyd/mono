@@ -5,15 +5,13 @@ slug: /byob/remote-mutations
 
 Replicache will periodically invoke your [push endpoint](/reference/server-push) sending a list of mutations that need to be applied.
 
-The implementation of push will depend on the backend strategy you are using. For the [Global Version](/strategies/global-version) strategy we're using, the basics steps are:
+The implementation of push will depend on the backend strategy you are using. For the [Reset](/strategies/reset) strategy we're using, the basics steps are:
 
 1. Open an exclusive (serializable) transaction.
-1. Read the current global version and compute the next one.
 1. Create a client record for the requesting client if the client is new.
 1. Validate that the received mutation is the next expected one. If the received mutation has already been processed (by a previous push), skip it. If the received mutation is not expected, then error.
-1. Run the received mutation by making the requested changes to the backend database. For any modified domain data objects, update their `version` to the new global version.
-1. Update the stored `version` and `lastMutationID` for the pushing client, so that `pull` can later report the last-processed mutationID.
-1. Store the new global version.
+1. Run the received mutation by making the requested changes to the backend database.
+1. Update the stored `lastMutationID` for the pushing client, so that `pull` can later report the last-processed mutationID.
 
 At minimum, all of these changes **must** happen atomically in a serialized transaction for each mutation in a push. However, putting multiple mutations together in a single wider transaction is also acceptable.
 
@@ -76,17 +74,10 @@ async function processMutation(
 ) {
   const {clientID} = mutation;
 
-  // Get the previous version and calculate the next one.
-  const {version: prevVersion} = await t.one(
-    'select version from replicache_server where id = $1 for update',
-    serverID,
-  );
-  const nextVersion = prevVersion + 1;
-
   const lastMutationID = await getLastMutationID(t, clientID);
   const nextMutationID = lastMutationID + 1;
 
-  console.log('nextVersion', nextVersion, 'nextMutationID', nextMutationID);
+  console.log('nextMutationID', nextMutationID);
 
   // It's common due to connectivity issues for clients to send a
   // mutation which has already been processed. Skip these.
@@ -113,7 +104,7 @@ async function processMutation(
     // mutation.
     switch (mutation.name) {
       case 'createMessage':
-        await createMessage(t, mutation.args as MessageWithID, nextVersion);
+        await createMessage(t, mutation.args as MessageWithID);
         break;
       default:
         throw new Error(`Unknown mutation: ${mutation.name}`);
@@ -130,19 +121,7 @@ async function processMutation(
 
   console.log('setting', clientID, 'last_mutation_id to', nextMutationID);
   // Update lastMutationID for requesting client.
-  await setLastMutationID(
-    t,
-    clientID,
-    clientGroupID,
-    nextMutationID,
-    nextVersion,
-  );
-
-  // Update global version.
-  await t.none('update replicache_server set version = $1 where id = $2', [
-    nextVersion,
-    serverID,
-  ]);
+  await setLastMutationID(t, clientID, clientGroupID, nextMutationID);
 }
 
 export async function getLastMutationID(t: Transaction, clientID: string) {
@@ -161,25 +140,22 @@ async function setLastMutationID(
   clientID: string,
   clientGroupID: string,
   mutationID: number,
-  version: number,
 ) {
   const result = await t.result(
     `update replicache_client set
       client_group_id = $2,
-      last_mutation_id = $3,
-      version = $4
+      last_mutation_id = $3
     where id = $1`,
-    [clientID, clientGroupID, mutationID, version],
+    [clientID, clientGroupID, mutationID],
   );
   if (result.rowCount === 0) {
     await t.none(
       `insert into replicache_client (
         id,
         client_group_id,
-        last_mutation_id,
-        version
-      ) values ($1, $2, $3, $4)`,
-      [clientID, clientGroupID, mutationID, version],
+        last_mutation_id
+      ) values ($1, $2, $3)`,
+      [clientID, clientGroupID, mutationID],
     );
   }
 }
@@ -187,13 +163,12 @@ async function setLastMutationID(
 async function createMessage(
   t: Transaction,
   {id, from, content, order}: MessageWithID,
-  version: number,
 ) {
   await t.none(
     `insert into message (
-    id, sender, content, ord, deleted, version) values
-    ($1, $2, $3, $4, false, $5)`,
-    [id, from, content, order, version],
+    id, sender, content, ord) values
+    ($1, $2, $3, $4)`,
+    [id, from, content, order],
   );
 }
 

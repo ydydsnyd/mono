@@ -5,25 +5,20 @@ slug: /byob/dynamic-pull
 
 Even though in the previous step we're making persistent changes in the database, we still aren't _serving_ that data in the pull endpoint – it's still static 🤣. Let's fix that now.
 
-The implementation of pull will depend on the backend strategy you are using. For the [Global Version](/strategies/global-version) strategy we're using, the basics steps are:
+The implementation of pull will depend on the backend strategy you are using. For the [Reset Strategy](/strategies/reset) strategy we're using, the steps are trivial:
 
-<ul>
-  <li>Open an exclusive (serializable) transaction</li>
-  <li>Read the latest global version from the database</li>
-  <li>Build the response patch:
-    <ul>
-      <li>If the request cookie is null, this patch contains a `put` for each entity in the database that isn't deleted</li>
-      <li>Otherwise, this patch contains only entries that have been changed since the request cookie</li>
-    </ul>
-  </li>
-  <li>Build a map of changes to client `lastMutationID` values:
-    <ul>
-      <li>If the request cookie is null, this map contains an entry for every client in the requesting `clientGroup`</li>
-      <li>Otherwise, it contains only entries for clients that have changed since the request cookie</li>
-    </ul>
-  </li>
-  <li>Return the patch, the current global `version`, and the `lastMutationID` changes as a `PullResponse` struct</li>
-</ul>
+1. Open an exclusive (serializable) transaction
+1. Build the response patch (`op:clear` followed by `op:put` for all items in client view)
+1. Build a map of `lastMutationID` values for all clients
+1. Return the patch, `lastMutationID` values, and the current timestamp as a cookie
+
+:::info
+
+Experienced developers may be wondering if it's safe to rely on the server clock this way.
+
+Because this strategy returns the entire dataset in each pull response, clock skew can't cause many problems. The worst case is if the clock jumps backward. In that case, Replicache will ignore pull responses until the cookie passes the last value that Replicache saw. But no data will be corrupted.
+
+:::
 
 ## Implement Pull
 
@@ -32,7 +27,7 @@ Replace the contents of `pages/api/replicache-pull.ts` with this code:
 ```ts
 import {NextApiRequest, NextApiResponse} from 'next';
 import {serverID, tx, Transaction} from '../../db';
-import {PullResponse} from 'replicache';
+import {PatchOperation, PullResponse} from 'replicache';
 
 export default async function (req: NextApiRequest, res: NextApiResponse) {
   const pull = req.body;
@@ -44,65 +39,39 @@ export default async function (req: NextApiRequest, res: NextApiResponse) {
   try {
     // Read all data in a single transaction so it's consistent.
     await tx(async t => {
-      // Get current version.
-      const {version: currentVersion} = await t.one<{version: number}>(
-        'select version from replicache_server where id = $1',
-        serverID,
-      );
-
-      if (fromVersion > currentVersion) {
-        throw new Error(
-          `fromVersion ${fromVersion} is from the future - aborting. This can happen in development if the server restarts. In that case, clear appliation data in browser and refresh.`,
-        );
-      }
-
       // Get lmids for requesting client groups.
       const lastMutationIDChanges = await getLastMutationIDChanges(
         t,
         clientGroupID,
-        fromVersion,
       );
 
-      // Get changed domain objects since requested version.
+      // Get all domain objects.
       const changed = await t.manyOrNone<{
         id: string;
         sender: string;
         content: string;
         ord: number;
-        version: number;
-        deleted: boolean;
-      }>(
-        'select id, sender, content, ord, version, deleted from message where version > $1',
-        fromVersion,
-      );
+      }>('select id, sender, content, ord from message', fromVersion);
 
       // Build and return response.
-      const patch = [];
+      const patch: PatchOperation[] = [{op: 'clear'}];
+
       for (const row of changed) {
-        const {id, sender, content, ord, version: rowVersion, deleted} = row;
-        if (deleted) {
-          if (rowVersion > fromVersion) {
-            patch.push({
-              op: 'del',
-              key: `message/${id}`,
-            });
-          }
-        } else {
-          patch.push({
-            op: 'put',
-            key: `message/${id}`,
-            value: {
-              from: sender,
-              content: content,
-              order: ord,
-            },
-          });
-        }
+        const {id, sender, content, ord} = row;
+        patch.push({
+          op: 'put',
+          key: `message/${id}`,
+          value: {
+            from: sender,
+            content: content,
+            order: ord,
+          },
+        });
       }
 
       const body: PullResponse = {
         lastMutationIDChanges: lastMutationIDChanges ?? {},
-        cookie: currentVersion,
+        cookie: Date.now(),
         patch,
       };
       res.json(body);
@@ -116,16 +85,12 @@ export default async function (req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-async function getLastMutationIDChanges(
-  t: Transaction,
-  clientGroupID: string,
-  fromVersion: number,
-) {
+async function getLastMutationIDChanges(t: Transaction, clientGroupID: string) {
   const rows = await t.manyOrNone<{id: string; last_mutation_id: number}>(
     `select id, last_mutation_id
     from replicache_client
-    where client_group_id = $1 and version > $2`,
-    [clientGroupID, fromVersion],
+    where client_group_id = $1`,
+    [clientGroupID],
   );
   return Object.fromEntries(rows.map(r => [r.id, r.last_mutation_id]));
 }
