@@ -48,7 +48,7 @@ export default async function (req: NextApiRequest, res: NextApiResponse) {
         // Handle errors inside mutations by skipping and moving on. This is
         // convenient in development but you may want to reconsider as your app
         // gets close to production:
-        // https://doc.replicache.dev/server-push#error-handling
+        // https://doc.replicache.dev/reference/server-push#error-handling
         await tx(t => processMutation(t, push.clientGroupID, mutation, e));
       }
 
