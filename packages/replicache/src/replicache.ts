@@ -1229,7 +1229,10 @@ export class Replicache<MD extends MutatorDefs = {}> {
 
       // No pushResponse means we didn't do a push because there were no
       // pending mutations.
-      return httpRequestInfo.httpStatusCode === 200;
+      return (
+        httpRequestInfo.httpStatusCode >= 200 &&
+        httpRequestInfo.httpStatusCode < 300
+      );
     }, 'Push');
   }
 
@@ -1382,7 +1385,13 @@ export class Replicache<MD extends MutatorDefs = {}> {
     }
 
     const {syncHead, httpRequestInfo} = beginPullResponse;
-    return {requestID, syncHead, ok: httpRequestInfo.httpStatusCode === 200};
+    return {
+      requestID,
+      syncHead,
+      ok:
+        httpRequestInfo.httpStatusCode >= 200 &&
+        httpRequestInfo.httpStatusCode < 300,
+    };
   }
 
   async #persist(): Promise<void> {
