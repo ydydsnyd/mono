@@ -5,8 +5,8 @@ import fetchMock from 'fetch-mock/esm/client';
 import {callDefaultFetch} from './call-default-fetch.js';
 import {expect} from 'chai';
 
-test('209', async () => {
-  fetchMock.post('http://test.com/pull', {body: {bar: 'baz'}, status: 209});
+test('204', async () => {
+  fetchMock.post('http://test.com/pull', {body: {bar: 'baz'}, status: 204});
 
   const fetchResponse = await callDefaultFetch(
     'http://test.com/pull',
@@ -18,7 +18,7 @@ test('209', async () => {
   );
 
   expect(await fetchResponse[0]?.json()).deep.equal({bar: 'baz'});
-  expect(fetchResponse[1]).deep.equal({httpStatusCode: 209, errorMessage: ''});
+  expect(fetchResponse[1]).deep.equal({httpStatusCode: 204, errorMessage: ''});
   expect(fetchMock.calls().length).equal(1);
   const fetchReq = fetchMock.calls()[0];
   expect(fetchReq[0]).equal('http://test.com/pull');

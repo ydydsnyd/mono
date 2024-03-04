@@ -156,6 +156,33 @@ test('pull', async () => {
   expect(createCount).to.equal(3);
 });
 
+test('pull ok on 204', async () => {
+  const pullURL = 'https://diff.com/pull';
+
+  const rep = await replicacheForTesting('pull', {
+    auth: '1',
+    pullURL,
+    mutators: {},
+    ...disableAllBackgroundProcesses,
+    enablePullAndPushInOpen: false,
+    logLevel: 'debug',
+  });
+
+  fetchMock.postOnce(pullURL, {
+    body: makePullResponseV1(rep.clientID, 2, [
+      {
+        op: 'put',
+        key: 'foo',
+        value: 'bar',
+      },
+    ]),
+    status: 206,
+  });
+  await rep.pull();
+  await tickAFewTimes();
+  expect((await rep.query(tx => tx.get('foo'))) as string).to.equal('bar');
+});
+
 test('reauth pull', async () => {
   const pullURL = 'https://diff.com/pull';
 
