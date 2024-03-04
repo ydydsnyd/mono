@@ -24,7 +24,7 @@ export async function callDefaultFetch<Body>(
   const request = new Request(url, init);
   const response = await fetch(request);
   const httpStatusCode = response.status;
-  if (httpStatusCode !== 200) {
+  if (httpStatusCode < 200 || httpStatusCode >= 300) {
     return [
       undefined,
       {
