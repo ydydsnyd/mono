@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1709657476060,
+  "lastUpdate": 1709659445365,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -46301,6 +46301,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31718,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cesar@roci.dev",
+            "name": "Cesar Alaestante",
+            "username": "cesara"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "39daea00491ac87178b51f3f9b9249e0b5361b7d",
+          "message": "fix (replicache): handle non 200 errors correctly (#1464)",
+          "timestamp": "2024-03-05T10:22:07-07:00",
+          "tree_id": "241d6b0943d49f3a4501cb4554ce5effdd51f716",
+          "url": "https://github.com/rocicorp/mono/commit/39daea00491ac87178b51f3f9b9249e0b5361b7d"
+        },
+        "date": 1709659431929,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 303406,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54390,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113204,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31798,
             "unit": "bytes"
           }
         ]
