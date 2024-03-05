@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1709659445365,
+  "lastUpdate": 1709666156439,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -46345,6 +46345,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31798,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cesar@roci.dev",
+            "name": "Cesar Alaestante",
+            "username": "cesara"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e8db883b70ee1e4c96a32a42cd5c6442210f1fcd",
+          "message": "feature (replicache): De-experimentalify kvStore (#1461)",
+          "timestamp": "2024-03-05T12:13:37-07:00",
+          "tree_id": "0c09fbeec504bc53283709b79e8dc32444c4ca4e",
+          "url": "https://github.com/rocicorp/mono/commit/e8db883b70ee1e4c96a32a42cd5c6442210f1fcd"
+        },
+        "date": 1709666140636,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 303600,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54425,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113331,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31802,
             "unit": "bytes"
           }
         ]
