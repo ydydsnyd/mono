@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1708858202344,
+  "lastUpdate": 1709657476060,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -46257,6 +46257,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31651,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "287b8f9b781ba2e50751e859fa0303107ec14691",
+          "message": "fix(reflect-server): Deal with pushes of of mutations originating from a deleted client (#1462)\n\n* chore(reflect-server): Get rid of client tombstone\r\n\r\nInstead have a `deleted` property on the client record.\r\n\r\nIf a client with pending mutations gets deleted due to inactivity, and\r\nthere are other clients in the client group. When these other clients\r\ndo a push we need to update the lastMutationID on the server so that\r\npull can work correctly and mark the pending mutations as applied.\r\n\r\n* fix(reflect-server): Fast forward and pull logic for deleted clients\r\n\r\nWe need to update the lmid even if the client is deleted. This is\r\nbecause when a push happens from a different client in the same client\r\ngroup we need to mark the mutation as processed in pull or we will get\r\nstuck on mutations done on the deleted client.\r\n\r\nFor mutations created in the deleted client we ignore the effect of the\r\nmutation but we still update the lastMutationID.",
+          "timestamp": "2024-03-05T17:49:22+01:00",
+          "tree_id": "93967cbf50a01bdf4bdc997fd9f7785cfc65e5ab",
+          "url": "https://github.com/rocicorp/mono/commit/287b8f9b781ba2e50751e859fa0303107ec14691"
+        },
+        "date": 1709657462138,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 303189,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54373,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113085,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31718,
             "unit": "bytes"
           }
         ]
