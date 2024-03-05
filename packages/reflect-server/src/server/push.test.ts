@@ -5,6 +5,7 @@ import {handlePush} from '../server/push.js';
 import {DurableStorage} from '../storage/durable-storage.js';
 import {
   ClientRecordMap,
+  IncludeDeleted,
   listClientRecords,
   putClientRecord,
 } from '../types/client-record.js';
@@ -1021,6 +1022,67 @@ describe('handlePush', () => {
         }),
       ],
     },
+
+    {
+      name: 'empty pending, multiple mutations one deleted client with pending',
+      clientMap: new Map([
+        client(clientID, 'u1', clientGroupID, s1, 0),
+        client('c2', 'u2', clientGroupID),
+      ]),
+      pendingMutations: [],
+      mutations: [
+        mutation(clientID, 3, 10),
+        mutation('c2', 5, 20),
+        mutation(clientID, 4, 20),
+      ],
+      clientRecords: new Map([
+        [
+          clientID,
+          clientRecord({
+            clientGroupID,
+            baseCookie: 1,
+            lastMutationID: 2,
+            lastMutationIDVersion: 1,
+          }),
+        ],
+        [
+          'c2',
+          clientRecord({
+            clientGroupID,
+            baseCookie: 1,
+            lastMutationID: 4,
+            lastMutationIDVersion: 1,
+            deleted: true,
+          }),
+        ],
+      ]),
+      expectedPendingMutations: [
+        pendingMutation({
+          clientID,
+          clientGroupID,
+          id: 3,
+          timestamps: timestamps(10),
+          pusherClientIDs: new Set([clientID]),
+          auth: {userID: 'u1'},
+        }),
+        pendingMutation({
+          clientID: 'c2',
+          clientGroupID,
+          id: 5,
+          timestamps: undefined,
+          pusherClientIDs: new Set([clientID]),
+          auth: {userID: 'u1'},
+        }),
+        pendingMutation({
+          clientID,
+          clientGroupID,
+          id: 4,
+          timestamps: timestamps(20),
+          pusherClientIDs: new Set([clientID]),
+          auth: {userID: 'u1'},
+        }),
+      ],
+    },
   ];
 
   // Special LC that waits for a requestID to be added to the context.
@@ -1045,7 +1107,9 @@ describe('handlePush', () => {
       for (const [clientID, record] of c.clientRecords) {
         await putClientRecord(clientID, record, storage);
       }
-      expect(await listClientRecords(storage)).toEqual(c.clientRecords);
+      expect(await listClientRecords(IncludeDeleted.Include, storage)).toEqual(
+        c.clientRecords,
+      );
 
       const requestID = randomID();
       const push: PushBody = {
@@ -1084,7 +1148,9 @@ describe('handlePush', () => {
         expect(message).toContain(c.expectedErrorAndSocketClosed);
         expect(s1.log[1][0]).toEqual('close');
         expect(c.pendingMutations).toEqual(pendingMutationsPrePush);
-        expect(await listClientRecords(storage)).toEqual(clientRecordsPrePush);
+        expect(
+          await listClientRecords(IncludeDeleted.Include, storage),
+        ).toEqual(clientRecordsPrePush);
         expect(clientMapSansSockets(c.clientMap)).toEqual(
           clientMapSansSockets(clientMapPrePush),
         );
@@ -1092,9 +1158,9 @@ describe('handlePush', () => {
         expect(processUntilDoneCallCount).toEqual(1);
         expect(s1.log).toEqual([]);
         expect(c.pendingMutations).toEqual(c.expectedPendingMutations);
-        expect(await listClientRecords(storage)).toEqual(
-          c.expectedClientRecords ?? clientRecordsPrePush,
-        );
+        expect(
+          await listClientRecords(IncludeDeleted.Include, storage),
+        ).toEqual(c.expectedClientRecords ?? clientRecordsPrePush);
         expect(clientMapSansSockets(c.clientMap)).toEqual(
           clientMapSansSockets(c.expectedClientMap ?? clientMapPrePush),
         );
