@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1709982888483,
+  "lastUpdate": 1710026675515,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -46433,6 +46433,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31802,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "1009003+tantaman@users.noreply.github.com",
+            "name": "Matt",
+            "username": "tantaman"
+          },
+          "committer": {
+            "email": "matt.wonlaw@gmail.com",
+            "name": "Matt Wonlaw",
+            "username": "tantaman"
+          },
+          "distinct": true,
+          "id": "e2f5a472c2856d9f5cc01888043ce7085c8dc131",
+          "message": "Update to only check `deepEqual(frozenResponseCookie, baseCookie)`\n\nHad a number of tests that needed updating afterwards\n\n- Tests were not bumping cookies when sending new data\n- `lastMutationIDChanges` was never empty as tests always added `[clientID]: 0` to the map\n- Some tests expected the behavior that updates would be taken even when cookies did not change",
+          "timestamp": "2024-03-09T18:22:46-05:00",
+          "tree_id": "39b5ae753f91023e33d08cdc46419559cc83406d",
+          "url": "https://github.com/rocicorp/mono/commit/e2f5a472c2856d9f5cc01888043ce7085c8dc131"
+        },
+        "date": 1710026660250,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 303908,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54455,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113646,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31869,
             "unit": "bytes"
           }
         ]
