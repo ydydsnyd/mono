@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710026675515,
+  "lastUpdate": 1710324913084,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -46477,6 +46477,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31869,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dc687c4ab85f4657e584e9bfe3e81a6a42ce0649",
+          "message": "chore(replicache): No need to keep #root (#1468)\n\nWe used to keep track of the root hash inside the Replicache instance.\r\nThe intended use case was to prevent firing changes when the root hash\r\ndidn't change.\r\n\r\nHowever when we switched to UUIDs for the hashes we end up generating a\r\nnew \"hash\" even when nothing changes. Therefore we can remove this extra\r\nbook keeping.",
+          "timestamp": "2024-03-13T10:13:20Z",
+          "tree_id": "1139e19ead71c0aacf570f87eb2cb723c6ff274e",
+          "url": "https://github.com/rocicorp/mono/commit/dc687c4ab85f4657e584e9bfe3e81a6a42ce0649"
+        },
+        "date": 1710324897763,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 303236,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54295,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113324,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31771,
             "unit": "bytes"
           }
         ]
