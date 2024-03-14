@@ -9,7 +9,7 @@ import {assertHash} from '../hash.js';
 import {newIDBStoreWithMemFallback} from '../kv/idb-store-with-mem-fallback.js';
 import {IDBStore} from '../kv/idb-store.js';
 import {dropStore} from '../kv/idb-util.js';
-import type {CreateStore} from '../kv/store.js';
+import type {CreateStore, DeleteStore} from '../kv/store.js';
 import {withRead} from '../with-transactions.js';
 import {
   clientGroupHasPendingMutations,
@@ -36,6 +36,7 @@ export function initCollectIDBDatabases(
   idbDatabasesStore: IDBDatabasesStore,
   lc: LogContext,
   signal: AbortSignal,
+  deleteKVStore: DeleteStore = name => dropStore(name),
 ): void {
   let initial = true;
   initBgIntervalProcess(
@@ -46,6 +47,7 @@ export function initCollectIDBDatabases(
         Date.now(),
         MAX_AGE,
         DD31_MAX_AGE,
+        deleteKVStore,
       );
     },
     () => {
@@ -65,6 +67,7 @@ export async function collectIDBDatabases(
   now: number,
   maxAge: number,
   dd31MaxAge: number,
+  deleteKVStore: DeleteStore = name => dropStore(name),
   newDagStore = defaultNewDagStore,
 ): Promise<void> {
   const databases = await idbDatabasesStore.getDatabases();
@@ -84,7 +87,11 @@ export async function collectIDBDatabases(
     .filter(result => result[1])
     .map(result => result[0]);
 
-  const {errors} = await dropDatabases(idbDatabasesStore, namesToRemove);
+  const {errors} = await dropDatabases(
+    idbDatabasesStore,
+    deleteKVStore,
+    namesToRemove,
+  );
   if (errors.length) {
     throw errors[0];
   }
@@ -93,20 +100,22 @@ export async function collectIDBDatabases(
 async function dropDatabaseInternal(
   name: string,
   idbDatabasesStore: IDBDatabasesStore,
+  deleteKVStore: DeleteStore,
 ) {
-  await dropStore(name);
+  await deleteKVStore(name);
   await idbDatabasesStore.deleteDatabases([name]);
 }
 
 async function dropDatabases(
   idbDatabasesStore: IDBDatabasesStore,
+  deleteKVStore: DeleteStore,
   namesToRemove: string[],
 ): Promise<{dropped: string[]; errors: unknown[]}> {
   // Try to remove the databases in parallel. Don't let a single reject fail the
   // other ones. We will check for failures afterwards.
   const dropStoreResults = await Promise.allSettled(
     namesToRemove.map(async name => {
-      await dropDatabaseInternal(name, idbDatabasesStore);
+      await dropDatabaseInternal(name, idbDatabasesStore, deleteKVStore);
       return name;
     }),
   );
@@ -196,8 +205,13 @@ export async function dropDatabase(
   dbName: string,
   createKVStore: CreateStore = name =>
     newIDBStoreWithMemFallback(new LogContext(), name),
+  kvStore: DeleteStore = name => dropStore(name),
 ) {
-  await dropDatabaseInternal(dbName, new IDBDatabasesStore(createKVStore));
+  await dropDatabaseInternal(
+    dbName,
+    new IDBDatabasesStore(createKVStore),
+    kvStore,
+  );
 }
 
 /**
@@ -209,6 +223,7 @@ export async function dropDatabase(
 export async function dropAllDatabases(
   createKVStore: CreateStore = name =>
     newIDBStoreWithMemFallback(new LogContext(), name),
+  deleteKVStore: DeleteStore = name => dropStore(name),
 ): Promise<{
   dropped: string[];
   errors: unknown[];
@@ -217,7 +232,7 @@ export async function dropAllDatabases(
   const databases = await store.getDatabases();
   const dbNames = Object.values(databases).map(db => db.name);
 
-  const result = await dropDatabases(store, dbNames);
+  const result = await dropDatabases(store, deleteKVStore, dbNames);
   return result;
 }
 

@@ -35,6 +35,7 @@ export interface Store {
  */
 export type CreateStore = (name: string) => Store;
 
+export type DeleteStore = (name: string) => Promise<void>;
 /**
  * This interface is used so that we can release the lock when the transaction
  * is done.

@@ -26,6 +26,7 @@ import {
   IndexedDBDatabase,
   IndexedDBName,
 } from './idb-databases-store.js';
+import {dropStore} from '../kv/idb-util.js';
 
 suite('collectIDBDatabases', () => {
   let clock: SinonFakeTimers;
@@ -102,7 +103,14 @@ suite('collectIDBDatabases', () => {
 
         const maxAge = 1000;
 
-        await collectIDBDatabases(store, now, maxAge, maxAge, newDagStore);
+        await collectIDBDatabases(
+          store,
+          now,
+          maxAge,
+          maxAge,
+          name => dropStore(name),
+          newDagStore,
+        );
 
         expect(Object.keys(await store.getDatabases())).to.deep.equal(
           expectedDatabases,
