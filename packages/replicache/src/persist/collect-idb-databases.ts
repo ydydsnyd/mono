@@ -205,12 +205,12 @@ export async function dropDatabase(
   dbName: string,
   createKVStore: CreateStore = name =>
     newIDBStoreWithMemFallback(new LogContext(), name),
-  kvStore: DeleteStore = name => dropStore(name),
+  deleteKvStore: DeleteStore = name => dropStore(name),
 ) {
   await dropDatabaseInternal(
     dbName,
     new IDBDatabasesStore(createKVStore),
-    kvStore,
+    deleteKvStore,
   );
 }
 

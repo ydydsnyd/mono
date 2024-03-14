@@ -35,6 +35,16 @@ export interface Store {
  */
 export type CreateStore = (name: string) => Store;
 
+/**
+ * Factory function for deleting {@link Store} instances.
+ *
+ * The name is used to identify the store. If the same name is used for multiple
+ * stores, they should share the same data. It is also desirable to have these
+ * stores share an {@link RWLock}.
+ *
+ * @experimental This type is experimental and might be removed or changed
+ * in the future without following semver versioning. Please be cautious.
+ */
 export type DeleteStore = (name: string) => Promise<void>;
 /**
  * This interface is used so that we can release the lock when the transaction
