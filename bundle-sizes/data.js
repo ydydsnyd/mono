@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710684957092,
+  "lastUpdate": 1710873342427,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -46653,6 +46653,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31771,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cesar@roci.dev",
+            "name": "Cesar Alaestante",
+            "username": "cesara"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "445c4d08948f3eeb34a3fabe06f9b26f2997d64b",
+          "message": "fix(replicache / reflect): BREAKING CHANGE: StoreProvider, updated params for dropAllDatabases (#1478)\n\n- modifies the Reflection and Replicache options.\r\n- updated dropAllDatabases and dropDatabase params \r\n- added DropDatabaseOptions\r\n- added StoreProvider",
+          "timestamp": "2024-03-19T11:33:49-07:00",
+          "tree_id": "4fed91c0dbe4172b37e02097186210bfff24170f",
+          "url": "https://github.com/rocicorp/mono/commit/445c4d08948f3eeb34a3fabe06f9b26f2997d64b"
+        },
+        "date": 1710873325821,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 304171,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54452,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113683,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31895,
             "unit": "bytes"
           }
         ]
