@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1710873342427,
+  "lastUpdate": 1711127119499,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -46697,6 +46697,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31895,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cesar@roci.dev",
+            "name": "Cesar Alaestante",
+            "username": "cesara"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3b9868bf7a189a87833d1121d6e7e9e20afcd128",
+          "message": "chore(replicache): clean up createLogContext (#1494)",
+          "timestamp": "2024-03-22T10:03:07-07:00",
+          "tree_id": "50c2dc52f48d9656bf5156a184e1b91a503e830a",
+          "url": "https://github.com/rocicorp/mono/commit/3b9868bf7a189a87833d1121d6e7e9e20afcd128"
+        },
+        "date": 1711127104053,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 304121,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54447,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113661,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31843,
             "unit": "bytes"
           }
         ]
