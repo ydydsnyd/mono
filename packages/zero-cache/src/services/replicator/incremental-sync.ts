@@ -580,6 +580,7 @@ class TransactionProcessor {
     }
     if (this.#failure) {
       this.#lc.debug?.(`Dropping ${message.tag} enqueued after failure`);
+      return;
     }
     void this.#toProcess.enqueue({message, stmts});
   }
