@@ -321,7 +321,7 @@ export class MessageProcessor {
   readonly #failService: (lc: LogContext, err: unknown) => void;
 
   #failure: Error | undefined;
-  #tx: TransactionProcessor | undefined;
+  #txProcessor: TransactionProcessor | undefined;
 
   constructor(
     replica: postgres.Sql,
@@ -341,18 +341,17 @@ export class MessageProcessor {
     lc: LogContext,
     commitLsn: string,
   ): TransactionProcessor {
-    const processor = new TransactionProcessor(lc, commitLsn);
+    const txProcessor = new TransactionProcessor(lc, commitLsn);
     void this.#txSerializer.withLock(async () => {
       try {
         if (this.#failure) {
           // If a preceding transaction failed, all subsequent transactions
           // must also fail.
-          processor.fail(new PrecedingTransactionError(this.#failure));
-          return;
+          txProcessor.fail(new PrecedingTransactionError(this.#failure));
         }
-        await this.#replica.begin(tx => {
+        this.#replica.begin(tx => {
           lc.debug?.('Began tx');
-          return processor.processWithTx(tx);
+          return txProcessor.execute(tx);
         });
         this.#acknowledge(commitLsn);
         lc.debug?.(`Committed tx`);
@@ -374,16 +373,16 @@ export class MessageProcessor {
         }
       }
     });
-    return processor;
+    return txProcessor;
   }
 
   /** See {@link MessageProcessor} documentation for error handling semantics. */
   #fail(lc: LogContext, err: unknown) {
-    if (this.#tx) {
+    if (this.#txProcessor) {
       // If a current transaction is being assembled, fail it so that the `err` is surfaced
-      // from within the transaction's processing stage, i.e. from within the `txSerializer`
-      // lock via the TransactionProcessor's `setFailed` rejection callback.
-      this.#tx.fail(err);
+      // from within the transaction's execution stage, i.e. from within the `txSerializer`
+      // lock via the TransactionProcessor's
+      this.#txProcessor.fail(err);
     } else {
       // Otherwise, manually enqueue the failure on the `txSerializer` to allow previous
       // transactions to complete, and prevent subsequent transactions from proceeding.
@@ -421,18 +420,18 @@ export class MessageProcessor {
       const {commitLsn} = message;
       assert(commitLsn);
 
-      if (this.#tx) {
+      if (this.#txProcessor) {
         throw new Error(`Already in a transaction ${safeStringify(message)}`);
       }
-      this.#tx = this.#createAndEnqueueNewTransaction(
+      this.#txProcessor = this.#createAndEnqueueNewTransaction(
         lc.withContext('txBegin', lsn).withContext('txCommit', commitLsn),
         commitLsn,
       );
-      this.#tx.processBegin(message);
+      this.#txProcessor.processBegin(message);
     }
 
     // For non-begin messages, there should be a TransactionProcessor set.
-    if (!this.#tx) {
+    if (!this.#txProcessor) {
       throw new Error(
         `Received message outside of transaction: ${safeStringify(message)}`,
       );
@@ -442,21 +441,21 @@ export class MessageProcessor {
         this.#processRelation(message);
         break;
       case 'insert':
-        this.#tx.processInsert(message);
+        this.#txProcessor.processInsert(message);
         break;
       case 'update':
-        this.#tx.processUpdate(message);
+        this.#txProcessor.processUpdate(message);
         break;
       case 'delete':
-        this.#tx.processDelete(message);
+        this.#txProcessor.processDelete(message);
         break;
       case 'truncate':
-        this.#tx.processTruncate(message);
+        this.#txProcessor.processTruncate(message);
         break;
       case 'commit': {
         // Undef this.#tx to allow the assembly of the next transaction.
-        const tx = this.#tx;
-        this.#tx = undefined;
+        const tx = this.#txProcessor;
+        this.#txProcessor = undefined;
         tx.processCommit(message);
         break;
       }
@@ -519,6 +518,7 @@ class TransactionProcessor {
   readonly #toProcess = new Queue<StatementsForMessage | 'failure'>();
   readonly #pendingQueries: Promise<postgres.RowList<postgres.Row[]>>[] = [];
 
+  #executionStarted = false;
   #commitEnqueued = false;
   #failure: Error | undefined;
 
@@ -527,10 +527,11 @@ class TransactionProcessor {
     this.#lc = lc.withContext('tx', this.#version);
   }
 
-  async processWithTx(tx: postgres.TransactionSql) {
-    // eslint-disable-next-line no-constant-condition
+  async execute(tx: postgres.TransactionSql) {
     while (true) {
       const toProcess = await this.#toProcess.dequeue();
+      if (this.failure) {
+      }
       if (this.#failure || toProcess === 'failure') {
         if (toProcess === 'failure') {
           throw this.#failure;
@@ -571,6 +572,28 @@ class TransactionProcessor {
     }
   }
 
+  get isFailed() {
+    return this.#failure !== undefined;
+  }
+
+  async #dequeue(): StatementsForMessage | Error {
+    while (true) {
+      const toProcess = await this.#toProcess.dequeue();
+      if (this.#failure || toProcess === 'failure') {
+        if (toProcess === 'failure') {
+          return this.#failure;
+        } else {
+          const {message} = toProcess;
+          this.#lc.debug?.(
+            `Dropping previously enqueued ${message.tag} due to failure`,
+          );
+          continue;
+        }
+      }
+    }
+    return toProcess;
+  }
+
   #process(
     message: Pgoutput.Message,
     stmts: (
@@ -599,6 +622,8 @@ class TransactionProcessor {
         this.#lc.error?.('Transaction failed:', this.#failure);
       }
       void this.#toProcess.enqueue('failure');
+      if (!this.#executionStarted) {
+      }
     }
   }
 
