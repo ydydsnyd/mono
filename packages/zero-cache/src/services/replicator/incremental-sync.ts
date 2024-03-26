@@ -1,13 +1,13 @@
 import {PG_UNIQUE_VIOLATION} from '@drdgvhbh/postgres-error-codes';
 import {Lock} from '@rocicorp/lock';
 import type {LogContext} from '@rocicorp/logger';
-import {resolver} from '@rocicorp/resolver';
 import {
   LogicalReplicationService,
   Pgoutput,
   PgoutputPlugin,
 } from 'pg-logical-replication';
 import postgres from 'postgres';
+import {Queue} from 'shared/src/queue.js';
 import {assert} from 'shared/src/asserts.js';
 import {sleep} from 'shared/src/sleep.js';
 import {epochMicrosToTimestampTz} from '../../types/big-time.js';
@@ -341,63 +341,40 @@ export class MessageProcessor {
     lc: LogContext,
     commitLsn: string,
   ): TransactionProcessor {
-    // The `tx` resolver manages the availability of the downstream
-    // Postgres transaction handle, resolving when it is the
-    // TransactionProcessor's turn to be processed.
-    const {
-      promise: tx,
-      resolve: setTx,
-      reject: failTx,
-    } = resolver<postgres.TransactionSql>();
-
-    // The `processed` resolver manages the lifetime and status of the
-    // processing stage. This is the logical "output" of the
-    // TransactionProcessor.
-    const {
-      promise: processed,
-      resolve: setProcessed,
-      reject: setFailed,
-    } = resolver();
-
-    return new TransactionProcessor(
-      lc,
-      commitLsn,
-      tx,
-      setProcessed,
-      setFailed,
-      this.#txSerializer.withLock(async () => {
-        try {
-          if (this.#failure) {
-            // If a preceding transaction failed, all subsequent transactions must also fail.
-            failTx(new PrecedingTransactionError(this.#failure));
-            return await processed;
-          }
-          await this.#replica.begin(tx => {
-            lc.debug?.('Began tx');
-            setTx(tx); // allows the TransactionProcessor to start processing
-            return processed; // signalled when the TransactionProcessor finishes
-          });
-          this.#acknowledge(commitLsn);
-          lc.debug?.(`Committed tx`);
-        } catch (e) {
-          if (
-            // A unique violation on the TxLog means that the transaction has already been
-            // processed. This is not a real error, and can happen, for example, if the upstream
-            // the connection was lost before the acknowledgment was sent. Recover by resending
-            // the acknowledgement, and continue processing the stream.
-            e instanceof postgres.PostgresError &&
-            e.code === PG_UNIQUE_VIOLATION &&
-            e.schema_name === '_zero' &&
-            e.table_name === 'TxLog'
-          ) {
-            this.#acknowledge(commitLsn);
-            lc.debug?.(`Skipped repeat tx`);
-          } else {
-            this.#failInLock(lc, e);
-          }
+    const processor = new TransactionProcessor(lc, commitLsn);
+    void this.#txSerializer.withLock(async () => {
+      try {
+        if (this.#failure) {
+          // If a preceding transaction failed, all subsequent transactions
+          // must also fail.
+          processor.fail(new PrecedingTransactionError(this.#failure));
+          return;
         }
-      }),
-    );
+        await this.#replica.begin(tx => {
+          lc.debug?.('Began tx');
+          return processor.processWithTx(tx);
+        });
+        this.#acknowledge(commitLsn);
+        lc.debug?.(`Committed tx`);
+      } catch (e) {
+        if (
+          // A unique violation on the TxLog means that the transaction has already been
+          // processed. This is not a real error, and can happen, for example, if the upstream
+          // the connection was lost before the acknowledgment was sent. Recover by resending
+          // the acknowledgement, and continue processing the stream.
+          e instanceof postgres.PostgresError &&
+          e.code === PG_UNIQUE_VIOLATION &&
+          e.schema_name === '_zero' &&
+          e.table_name === 'TxLog'
+        ) {
+          this.#acknowledge(commitLsn);
+          lc.debug?.(`Skipped repeat tx`);
+        } else {
+          this.#failInLock(lc, e);
+        }
+      }
+    });
+    return processor;
   }
 
   /** See {@link MessageProcessor} documentation for error handling semantics. */
@@ -426,14 +403,14 @@ export class MessageProcessor {
     }
   }
 
-  async processMessage(lc: LogContext, lsn: string, message: Pgoutput.Message) {
+  processMessage(lc: LogContext, lsn: string, message: Pgoutput.Message) {
     lc = lc.withContext('lsn', lsn);
     if (this.#failure) {
       lc.debug?.(`Dropping ${message.tag}`);
       return;
     }
     try {
-      await this.#processMessage(lc, lsn, message);
+      this.#processMessage(lc, lsn, message);
     } catch (e) {
       this.#fail(lc, e);
     }
@@ -451,7 +428,7 @@ export class MessageProcessor {
         lc.withContext('txBegin', lsn).withContext('txCommit', commitLsn),
         commitLsn,
       );
-      return this.#tx.processBegin(message);
+      this.#tx.processBegin(message);
     }
 
     // For non-begin messages, there should be a TransactionProcessor set.
@@ -462,20 +439,26 @@ export class MessageProcessor {
     }
     switch (message.tag) {
       case 'relation':
-        return this.#processRelation(message);
+        this.#processRelation(message);
+        break;
       case 'insert':
-        return this.#tx.processInsert(message);
+        this.#tx.processInsert(message);
+        break;
       case 'update':
-        return this.#tx.processUpdate(message);
+        this.#tx.processUpdate(message);
+        break;
       case 'delete':
-        return this.#tx.processDelete(message);
+        this.#tx.processDelete(message);
+        break;
       case 'truncate':
-        return this.#tx.processTruncate(message);
+        this.#tx.processTruncate(message);
+        break;
       case 'commit': {
         // Undef this.#tx to allow the assembly of the next transaction.
         const tx = this.#tx;
         this.#tx = undefined;
-        return tx.processCommit(message);
+        tx.processCommit(message);
+        break;
       }
       case 'origin':
         // We are agnostic as to which node a transaction originated from.
@@ -517,6 +500,12 @@ export class MessageProcessor {
     this.#replicated;
   }
 }
+type StatementsForMessage = {
+  message: Pgoutput.Message;
+  stmts: (
+    tx: postgres.TransactionSql,
+  ) => postgres.PendingQuery<postgres.Row[]>[] | 'commit';
+};
 
 /**
  * The {@link TransactionProcessor} handles the sequence of messages from
@@ -526,60 +515,35 @@ export class MessageProcessor {
 class TransactionProcessor {
   readonly #lc: LogContext;
   readonly #version: LexiVersion;
-  readonly #tx: Promise<postgres.TransactionSql>;
-  readonly #setTxProcessed: (queries: unknown) => void;
-  readonly #setTxFailed: (err: unknown) => void;
-  readonly #txCommitted: Promise<void>;
 
+  readonly #toProcess = new Queue<StatementsForMessage | 'failure'>();
   readonly #pendingQueries: Promise<postgres.RowList<postgres.Row[]>>[] = [];
-  readonly #processLock = new Lock();
 
-  #commitProcessed = false;
+  #commitEnqueued = false;
   #failure: Error | undefined;
 
-  constructor(
-    lc: LogContext,
-    lsn: string,
-    tx: Promise<postgres.TransactionSql>,
-    setProcessed: () => void,
-    setFailed: (err: unknown) => void,
-    txCommitted: Promise<void>,
-  ) {
+  constructor(lc: LogContext, lsn: string) {
     this.#version = toLexiVersion(lsn);
     this.#lc = lc.withContext('tx', this.#version);
-    this.#tx = tx;
-    this.#setTxProcessed = setProcessed;
-    this.#setTxFailed = setFailed;
-    this.#txCommitted = txCommitted;
   }
 
-  /**
-   * Ensures that all messages are processed serially. The callback returns
-   * the postgres statements to execute, or `"commit"` when processing has
-   * completed.
-   */
-  async #process(
-    message: Pgoutput.Message,
-    stmts: (
-      tx: postgres.TransactionSql,
-    ) => postgres.PendingQuery<postgres.Row[]>[] | 'commit',
-  ) {
-    try {
-      return await this.#processLock.withLock(async () => {
-        // All queued messages are dropped if anything failed.
-        if (this.#failure) {
-          this.#lc.debug?.(`Dropping ${message.tag}`);
-          return;
+  async processWithTx(tx: postgres.TransactionSql) {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const toProcess = await this.#toProcess.dequeue();
+      if (this.#failure || toProcess === 'failure') {
+        if (toProcess === 'failure') {
+          throw this.#failure;
+        } else {
+          const {message} = toProcess;
+          this.#lc.debug?.(
+            `Dropping previously enqueued ${message.tag} due to failure`,
+          );
+          continue;
         }
-        assert(
-          !this.#commitProcessed,
-          `Received a ${message.tag} message after commit`,
-        );
-
-        // This will block until it is this Transaction's turn to be processed,
-        // as coordinated by the `txSerializer` logic in the {@link MessageProcessor}.
-        const tx = await this.#tx;
-
+      }
+      try {
+        const {stmts} = toProcess;
         const qs = stmts(tx);
         if (qs !== 'commit') {
           // Call execute() to send the statements immediately, allowing other messages
@@ -599,13 +563,31 @@ class TransactionProcessor {
         } else {
           // `await` all queries at the final commit.
           const results = await Promise.all(this.#pendingQueries);
-          this.#setTxProcessed(results);
-          this.#commitProcessed = true;
+          return results;
         }
-      });
-    } catch (e) {
-      return this.fail(e);
+      } catch (e) {
+        this.fail(e);
+      }
     }
+  }
+
+  #process(
+    message: Pgoutput.Message,
+    stmts: (
+      tx: postgres.TransactionSql,
+    ) => postgres.PendingQuery<postgres.Row[]>[] | 'commit',
+  ) {
+    assert(
+      !this.#commitEnqueued,
+      `Received a ${message.tag} message after commit`,
+    );
+    if (message.tag === 'commit') {
+      this.#commitEnqueued = true;
+    }
+    if (this.#failure) {
+      this.#lc.debug?.(`Dropping ${message.tag} enqueued after failure`);
+    }
+    void this.#toProcess.enqueue({message, stmts});
   }
 
   fail(err: unknown) {
@@ -616,8 +598,7 @@ class TransactionProcessor {
       } else {
         this.#lc.error?.('Transaction failed:', this.#failure);
       }
-      // surfaces the error in the txSerializer of the MessageProcessor
-      this.#setTxFailed(this.#failure);
+      void this.#toProcess.enqueue('failure');
     }
   }
 
@@ -629,9 +610,7 @@ class TransactionProcessor {
       xid: begin.xid,
     };
 
-    return this.#process(begin, tx => [
-      tx`INSERT INTO _zero."TxLog" ${tx(row)}`,
-    ]);
+    this.#process(begin, tx => [tx`INSERT INTO _zero."TxLog" ${tx(row)}`]);
   }
 
   processInsert(insert: Pgoutput.MessageInsert) {
@@ -640,7 +619,7 @@ class TransactionProcessor {
       [ZERO_VERSION_COLUMN_NAME]: this.#version,
     };
 
-    return this.#process(insert, tx => [
+    this.#process(insert, tx => [
       tx`INSERT INTO ${tx(table(insert))} ${tx(row)}`,
     ]);
   }
@@ -658,7 +637,7 @@ class TransactionProcessor {
         update.relation.keyColumns.map(col => [col, update.new[col]]),
       );
 
-    return this.#process(update, tx => {
+    this.#process(update, tx => {
       const conds = Object.entries(key).map(
         ([col, val]) => tx`${tx(col)} = ${val}`,
       );
@@ -676,7 +655,7 @@ class TransactionProcessor {
   }
 
   processDelete(del: Pgoutput.MessageDelete) {
-    return this.#process(del, tx => {
+    this.#process(del, tx => {
       // REPLICA IDENTITY DEFAULT means the `key` must be set.
       // https://www.postgresql.org/docs/current/protocol-logicalrep-message-formats.html
       assert(del.relation.replicaIdentity === 'default');
@@ -699,12 +678,11 @@ class TransactionProcessor {
   processTruncate(truncate: Pgoutput.MessageTruncate) {
     const tables = truncate.relations.map(r => `${r.schema}.${r.name}`);
 
-    return this.#process(truncate, tx => [tx`TRUNCATE ${tx(tables)}`]);
+    this.#process(truncate, tx => [tx`TRUNCATE ${tx(tables)}`]);
   }
 
-  async processCommit(commit: Pgoutput.MessageCommit) {
-    await this.#process(commit, () => 'commit');
-    return this.#txCommitted; // allows tests to await completion of the full postgres transaction
+  processCommit(commit: Pgoutput.MessageCommit) {
+    this.#process(commit, () => 'commit');
   }
 }
 
