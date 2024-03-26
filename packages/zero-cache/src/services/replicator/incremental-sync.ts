@@ -349,10 +349,7 @@ export class MessageProcessor {
           // must also fail.
           txProcessor.fail(new PrecedingTransactionError(this.#failure));
         }
-        this.#replica.begin(tx => {
-          lc.debug?.('Began tx');
-          return txProcessor.execute(tx);
-        });
+        await txProcessor.execute(this.#replica);
         this.#acknowledge(commitLsn);
         lc.debug?.(`Committed tx`);
       } catch (e) {
@@ -381,7 +378,7 @@ export class MessageProcessor {
     if (this.#txProcessor) {
       // If a current transaction is being assembled, fail it so that the `err` is surfaced
       // from within the transaction's execution stage, i.e. from within the `txSerializer`
-      // lock via the TransactionProcessor's
+      // lock via the TransactionProcessor#execute call.
       this.#txProcessor.fail(err);
     } else {
       // Otherwise, manually enqueue the failure on the `txSerializer` to allow previous
@@ -518,7 +515,6 @@ class TransactionProcessor {
   readonly #toProcess = new Queue<StatementsForMessage | 'failure'>();
   readonly #pendingQueries: Promise<postgres.RowList<postgres.Row[]>>[] = [];
 
-  #executionStarted = false;
   #commitEnqueued = false;
   #failure: Error | undefined;
 
@@ -527,71 +523,46 @@ class TransactionProcessor {
     this.#lc = lc.withContext('tx', this.#version);
   }
 
-  async execute(tx: postgres.TransactionSql) {
-    while (true) {
-      const toProcess = await this.#toProcess.dequeue();
-      if (this.failure) {
-      }
-      if (this.#failure || toProcess === 'failure') {
-        if (toProcess === 'failure') {
+  async execute(replica: postgres.Sql) {
+    if (this.#failure) {
+      throw this.#failure;
+    }
+    await replica.begin(async tx => {
+      this.#lc.debug?.('starting transaction');
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const toProcess = await this.#toProcess.dequeue();
+        if (this.#failure || toProcess === 'failure') {
           throw this.#failure;
-        } else {
-          const {message} = toProcess;
-          this.#lc.debug?.(
-            `Dropping previously enqueued ${message.tag} due to failure`,
-          );
-          continue;
+        }
+        try {
+          const {stmts} = toProcess;
+          const qs = stmts(tx);
+          if (qs !== 'commit') {
+            // Call execute() to send the statements immediately, allowing other messages
+            // to be processed while the statements are being applied.
+            //
+            // Optimization: Fail immediately to drop subsequent transaction processing
+            // (instead of waiting until the Promise.all() in 'commit'). This can save a
+            // lot of time, for example, if a large transaction is re-received from upstream.
+            this.#pendingQueries.push(
+              ...qs.map(q =>
+                q.execute().catch(e => {
+                  this.fail(e);
+                  throw e;
+                }),
+              ),
+            );
+          } else {
+            // `await` all queries at the final commit.
+            const results = await Promise.all(this.#pendingQueries);
+            return results;
+          }
+        } catch (e) {
+          this.fail(e);
         }
       }
-      try {
-        const {stmts} = toProcess;
-        const qs = stmts(tx);
-        if (qs !== 'commit') {
-          // Call execute() to send the statements immediately, allowing other messages
-          // to be processed while the statements are being applied.
-          //
-          // Optimization: Fail immediately to drop subsequent transaction processing
-          // (instead of waiting until the Promise.all() in 'commit'). This can save a
-          // lot of time, for example, if a large transaction is re-received from upstream.
-          this.#pendingQueries.push(
-            ...qs.map(q =>
-              q.execute().catch(e => {
-                this.fail(e);
-                throw e;
-              }),
-            ),
-          );
-        } else {
-          // `await` all queries at the final commit.
-          const results = await Promise.all(this.#pendingQueries);
-          return results;
-        }
-      } catch (e) {
-        this.fail(e);
-      }
-    }
-  }
-
-  get isFailed() {
-    return this.#failure !== undefined;
-  }
-
-  async #dequeue(): StatementsForMessage | Error {
-    while (true) {
-      const toProcess = await this.#toProcess.dequeue();
-      if (this.#failure || toProcess === 'failure') {
-        if (toProcess === 'failure') {
-          return this.#failure;
-        } else {
-          const {message} = toProcess;
-          this.#lc.debug?.(
-            `Dropping previously enqueued ${message.tag} due to failure`,
-          );
-          continue;
-        }
-      }
-    }
-    return toProcess;
+    });
   }
 
   #process(
@@ -622,8 +593,6 @@ class TransactionProcessor {
         this.#lc.error?.('Transaction failed:', this.#failure);
       }
       void this.#toProcess.enqueue('failure');
-      if (!this.#executionStarted) {
-      }
     }
   }
 
