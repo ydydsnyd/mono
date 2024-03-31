@@ -5,22 +5,15 @@ slug: /byob/setup
 
 Replicache is framework agnostic, and you can use most any libraries and frameworks you like.
 
-We're going to use [Rocicorp's BYOB starter](https://github.com/rocicorp/byob-starter). This is an example of a standard [Express](https://expressjs.com/), [Vite](https://vitejs.dev/) web application.
-
-Clone the BYOB Starter
+In this guide, we're going to use Express/Vite/React. To start, clone the [BYOB starter](https://github.com/rocicorp/byob-starter) repo:
 
 ```bash
 git clone git@github.com:rocicorp/byob-starter.git
 cd byob-starter
-```
-
-Install the Dependencies
-
-```bash
 npm install
 ```
 
-This repository establishes a mono-repository, divided into three distinct workspaces: `client`, `server`, and `shared`. The `client` workspace houses the client-side interface, developed with [Vite](https://vitejs.dev/) for scaffolding and [React](https://react.dev/) for the user interface construction. The `server` workspace contains the server-side logic, implemented using [Express](https://expressjs.com/). The `shared` workspace serves as a central repository for types and classes that are utilized jointly by both the client view and server.
+This project is a monorepo web app with three workspaces: `client`, `server`, and `shared`. The `client` workspace contains the client-side UI, developed with [Vite](https://vitejs.dev/) and [React](https://react.dev/). The `server` workspace contains the server-side logic, implemented using [Express](https://expressjs.com/). And the `shared` workspace contains types and classes that are shared between client and server.
 
 ## Next
 

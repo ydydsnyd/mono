@@ -97,7 +97,7 @@ Replicache sends a [`PushRequest`](/reference/server-push#http-request-body) to 
 7. Verify the requesting client group owns the requested client.
 1. `let nextMutationID = client.lastMutationID + 1`
 1. **Read the `ReplicacheSpace` for `request.params.spaceID`**
-1. `let nextVersion = replicacheSpace.version`
+1. `let nextVersion = replicacheSpace.version + 1`
 1. Rollback transaction and skip this mutation if already processed (`mutation.id < nextMutationID`)
 1. Rollback transaction and error if mutation from the future (`mutation.id > nextMutationID`)
 1. If `errorMode != true` then:
@@ -144,7 +144,7 @@ Replicache sends a [`PushRequest`](/reference/server-push#http-request-body) to 
 
 After the loop is complete, poke clients to cause them to pull.
 
-### Pull
+## Pull
 
 The pull handler is the same as in the Global Version Strategy, but with mionr changes to support multiple spaces. Changes from the Global Version Strategy are **marked in bold**.
 

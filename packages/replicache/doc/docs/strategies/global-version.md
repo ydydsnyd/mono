@@ -82,7 +82,7 @@ Replicache sends a [`PushRequest`](/reference/server-push#http-request-body) to 
 6. Verify the requesting client group owns the requested client.
 1. `let nextMutationID = client.lastMutationID + 1`
 1. **Read the global `ReplicacheSpace`.**
-1. **`let nextVersion = replicacheSpace.version`**
+1. **`let nextVersion = replicacheSpace.version + 1`**
 1. Rollback transaction and skip this mutation if already processed (`mutation.id < nextMutationID`)
 1. Rollback transaction and error if mutation from the future (`mutation.id > nextMutationID`)
 1. If `errorMode != true` then:
