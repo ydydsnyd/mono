@@ -69,6 +69,7 @@ import {
 import {reloadWithReason, reportReloadReason} from './reload-error-handler.js';
 import {ServerError, isAuthError, isServerError} from './server-error.js';
 import {getServer} from './server-option.js';
+import type {AuthReason} from '../types/auth-reason.js';
 
 declare const TESTING: boolean;
 
@@ -1030,13 +1031,15 @@ export class Reflect<MD extends MutatorDefs> {
     };
   }
 
-  #getAuthToken = (): MaybePromise<string> | undefined => {
+  #getAuthToken = (
+    reason?: AuthReason | undefined,
+  ): MaybePromise<string> | undefined => {
     const {auth} = this.#options;
-    return typeof auth === 'function' ? auth() : auth;
+    return typeof auth === 'function' ? auth(reason) : auth;
   };
 
-  async #updateAuthToken(lc: LogContext): Promise<void> {
-    const auth = await this.#getAuthToken();
+  async #updateAuthToken(lc: LogContext, reason: AuthReason): Promise<void> {
+    const auth = await this.#getAuthToken(reason);
     if (auth) {
       lc.debug?.('Got auth token');
       this.#rep.auth = auth;
@@ -1053,6 +1056,7 @@ export class Reflect<MD extends MutatorDefs> {
 
     let runLoopCounter = 0;
     const bareLogContext = this.#lc;
+    let reason: AuthReason = {type: 'initial'};
     const getLogContext = () => {
       let lc = bareLogContext;
       if (this.#socket) {
@@ -1061,7 +1065,7 @@ export class Reflect<MD extends MutatorDefs> {
       return lc.withContext('runLoopCounter', runLoopCounter);
     };
 
-    await this.#updateAuthToken(bareLogContext);
+    await this.#updateAuthToken(bareLogContext, reason);
 
     let needsReauth = false;
     let gotError = false;
@@ -1084,7 +1088,7 @@ export class Reflect<MD extends MutatorDefs> {
 
             // If we got an auth error we try to get a new auth token before reconnecting.
             if (needsReauth) {
-              await this.#updateAuthToken(lc);
+              await this.#updateAuthToken(lc, reason);
             }
 
             await this.#connect(lc);
@@ -1184,6 +1188,14 @@ export class Reflect<MD extends MutatorDefs> {
         );
 
         if (isAuthError(ex)) {
+          switch (ex.kind) {
+            case 'AuthInvalidated':
+              reason = {type: 'invalidated'};
+              break;
+            case 'Unauthorized':
+              reason = {type: 'error', error: 'missingAuth or userIDMismatch'};
+              break;
+          }
           if (!needsReauth) {
             needsReauth = true;
             // First auth error, try right away without waiting.

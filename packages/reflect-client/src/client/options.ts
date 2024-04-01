@@ -1,6 +1,7 @@
 import type {LogLevel} from '@rocicorp/logger';
 import type {MutatorDefs} from 'reflect-shared/src/types.js';
 import type {KVStoreProvider, MaybePromise} from 'replicache';
+import type {AuthReason} from '../types/auth-reason.js';
 
 /**
  * Configuration for [[Reflect]].
@@ -32,7 +33,10 @@ export interface ReflectOptions<MD extends MutatorDefs> {
    * attempt. This provides the application the opportunity to calculate or
    * fetch a fresh token.
    */
-  auth?: string | (() => MaybePromise<string>) | undefined;
+  auth?:
+    | string
+    | ((reason?: AuthReason | undefined) => MaybePromise<string>)
+    | undefined;
 
   /**
    * A unique identifier for the user. Must be non-empty.
