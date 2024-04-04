@@ -568,16 +568,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       lc.debug?.('already processing, nothing to do');
       return;
     }
-
-    // this.#turnTimerID = this.runInLockAtInterval(
-    //   // The logging in turn processing should use this.#lc (i.e. the RoomDO's
-    //   // general log context), rather than lc which has the context of a
-    //   // specific request/connection
-    //   this.#lc,
-    //   '#processNext',
-    //   this.#turnDuration,
-    //   logContext => this.#processNextInLock(logContext),
-    // );
+    void this.#alarm.scheduler.promiseTimeout(() => this.#processUntilDoneTask(), 1);
   }
 
   // Exposed for testing.
