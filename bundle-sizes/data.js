@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712581232201,
+  "lastUpdate": 1712583737650,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -46873,6 +46873,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31843,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2c638dffec02e044a2c5fa2b81b3e3667665b9cd",
+          "message": "fix: Call return in mergeAsyncIterables if present\n\nSometimes iterator do cleanup work in `return`. This change ensures that\r\n`return` is called on the iterators used in `mergeAsyncIterables`.\r\n\r\nhttps://discord.com/channels/830183651022471199/830183651022471202/1225550392201449482\r\n\r\nUse finally which gets executed when generators are \"closed\".",
+          "timestamp": "2024-04-08T13:39:49Z",
+          "tree_id": "a15daea22441c19f709138d635248ec35ca3c773",
+          "url": "https://github.com/rocicorp/mono/commit/2c638dffec02e044a2c5fa2b81b3e3667665b9cd"
+        },
+        "date": 1712583721628,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 304305,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54481,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113732,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31891,
             "unit": "bytes"
           }
         ]
