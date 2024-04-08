@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1712581007447,
+  "lastUpdate": 1712581232201,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -46829,6 +46829,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31879,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3722e6e6e5638f5b4fa47f1350722c91f1f115a9",
+          "message": "Revert \"fix: Call return in mergeAsyncIterables if present (#1527)\" (#1528)\n\nThis reverts commit e6959c83960c297184acbce4f5822e17aebc129e.",
+          "timestamp": "2024-04-08T14:58:16+02:00",
+          "tree_id": "ccd214bf24d7ba4ce29d2af0b9979a8ea95b8dc3",
+          "url": "https://github.com/rocicorp/mono/commit/3722e6e6e5638f5b4fa47f1350722c91f1f115a9"
+        },
+        "date": 1712581216462,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 304121,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54447,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113661,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31843,
             "unit": "bytes"
           }
         ]
