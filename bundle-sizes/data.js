@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711905626335,
+  "lastUpdate": 1712581007447,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -46785,6 +46785,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31843,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e6959c83960c297184acbce4f5822e17aebc129e",
+          "message": "fix: Call return in mergeAsyncIterables if present (#1527)\n\nSometimes iterator do cleanup work in `return`. This change ensures that\r\n`return` is called on the iterators used in `mergeAsyncIterables`.\r\n\r\nhttps://discord.com/channels/830183651022471199/830183651022471202/1225550392201449482",
+          "timestamp": "2024-04-08T14:54:21+02:00",
+          "tree_id": "2950017fef5b6d4e72eea9f9bcdf0182136810b9",
+          "url": "https://github.com/rocicorp/mono/commit/e6959c83960c297184acbce4f5822e17aebc129e"
+        },
+        "date": 1712580990664,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 304208,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54452,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113713,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31879,
             "unit": "bytes"
           }
         ]
