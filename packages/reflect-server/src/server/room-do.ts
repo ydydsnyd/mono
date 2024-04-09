@@ -680,9 +680,10 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
 
   #processUntilDoneTask() {
     if (this.#turnTimerID) {
-      this.#lc.debug?.('already processing, nothing to do');
+      // this.#lc.info?.('processUntilDoneTask already processing, nothing to do!!');
       return Promise.resolve();
     }
+    // this.#lc.info?.('processUntilDoneTask starting processing!!');
 
     this.#turnTimerID = this.runInLockAtInterval(
       // The logging in turn processing should use this.#lc (i.e. the RoomDO's
@@ -697,6 +698,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       // so that logs will be flushed to tail
 
       async _lc => {
+        this.#lc.info?.('processUntilDoneTask turn processing took too long, rescheduling!!');
         clearInterval(this.#turnTimerID);
         this.#turnTimerID = 0;
         await this.#alarm.scheduler.promiseTimeout(() => this.#processUntilDoneTask(), 1);

@@ -118,6 +118,7 @@ export async function processRoom(
     void lc.flush();
   }
   await cache.flush();
+  await storage.flush();
   const cacheFlushLatencyMs = Date.now() - startCacheFlush;
   lc = lc.withContext('cacheFlushTiming', cacheFlushLatencyMs);
   lc.info?.(
