@@ -150,6 +150,21 @@ export class EntryCache implements Storage {
     return counts;
   }
 
+  cacheSize(): number {
+    let totalSize = 0;
+    this.#cache.forEach((entry, key) => {
+      const keySize = key.length * 2;
+      let valueSize = 0;
+
+      if (entry.value !== undefined) {
+        const valueStr = JSON.stringify(entry.value);
+        valueSize = valueStr.length * 2;
+      }
+      totalSize += keySize + valueSize;
+    });
+    return totalSize;
+  }
+
   async flush(): Promise<void> {
     // Note the order of operations: all del()` and put() calls are
     // invoked before await. This ensures atomicity of the flushed

@@ -233,6 +233,7 @@ export async function handlePush(
       ),
     ),
   );
+  await storage.flush();
 
   // All validation and writes which can fail have been completed,
   // only now do we mutate client and pendingMutations.

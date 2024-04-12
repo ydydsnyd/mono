@@ -181,15 +181,17 @@ export class BaseAuthDO implements DurableObject {
   constructor(options: AuthDOOptions) {
     const {roomDO, state, authHandler, logSink, logLevel, env} = options;
     this.#roomDO = roomDO;
-    this.#durableStorage = new DurableStorage(
-      state.storage,
-      false, // don't allow unconfirmed
-    );
-    this.#authHandler = authHandler;
     const lc = new LogContext(logLevel, undefined, logSink).withContext(
       'component',
       'AuthDO',
     );
+    this.#durableStorage = new DurableStorage(
+      lc,
+      state.storage,
+      false, // don't allow unconfirmed
+    );
+    this.#authHandler = authHandler;
+
     registerUnhandledRejectionHandler(lc);
     this.#lc = lc.withContext('doID', state.id.toString());
     this.#alarm = new AlarmManager(state.storage);

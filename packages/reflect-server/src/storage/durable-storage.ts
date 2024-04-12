@@ -11,6 +11,8 @@ import {
 } from '../db/data.js';
 import {batchScan, scan} from './scan-storage.js';
 import type {ListOptions, Storage} from './storage.js';
+import type {LogContext} from '@rocicorp/logger';
+import {performance} from 'perf_hooks'; // Ensure you import performance from 'perf_hooks' if in a Node.js environment
 
 const baseAllowConcurrency = true;
 
@@ -30,8 +32,13 @@ const baseOptions = {
 export class DurableStorage implements Storage {
   #durable: DurableObjectStorage;
   readonly #baseOptions: Readonly<DurableObjectPutOptions>;
-
-  constructor(durable: DurableObjectStorage, allowUnconfirmed = true) {
+  #lc: LogContext;
+  constructor(
+    lc: LogContext,
+    durable: DurableObjectStorage,
+    allowUnconfirmed = true,
+  ) {
+    this.#lc = lc;
     this.#durable = durable;
     this.#baseOptions = {
       allowConcurrency: baseAllowConcurrency,
@@ -39,14 +46,43 @@ export class DurableStorage implements Storage {
     };
   }
 
+  getSizeOfEntries<T extends ReadonlyJSONValue>(
+    entries: Record<string, T>,
+  ): number {
+    let totalSizeBytes = 0;
+    if (entries === null) {
+      return totalSizeBytes;
+    }
+    for (const [key, value] of Object.entries(entries)) {
+      const entrySize = new TextEncoder().encode(
+        JSON.stringify({key, value}),
+      ).length;
+      totalSizeBytes += entrySize;
+    }
+    return totalSizeBytes; // Convert bytes to kilobytes
+  }
+
   put<T extends ReadonlyJSONValue>(key: string, value: T): Promise<void> {
-    return putEntry(this.#durable, key, value, this.#baseOptions);
+    this.#lc.withContext('sizeBytes', this.getSizeOfEntries({[key]: value}));
+    const startTime = performance.now();
+    return putEntry(this.#durable, key, value, this.#baseOptions).then(() => {
+      const durationMs = performance.now() - startTime;
+      this.#lc.withContext('writeDurationMs', durationMs);
+      this.#lc.info?.('DurableStorage put');
+    });
   }
 
   putEntries<T extends ReadonlyJSONValue>(
     entries: Record<string, T>,
   ): Promise<void> {
-    return this.#durable.put(entries, this.#baseOptions);
+    this.#lc.withContext('numEntries', Object.keys(entries).length);
+    this.#lc.withContext('sizeBytes', this.getSizeOfEntries(entries));
+    const startTime = performance.now();
+    return this.#durable.put(entries, this.#baseOptions).then(() => {
+      const durationMs = performance.now() - startTime;
+      this.#lc.withContext('writeDurationMs', durationMs);
+      this.#lc.info?.('DurableStorage putEntries');
+    });
   }
 
   del(key: string): Promise<void> {
@@ -61,7 +97,19 @@ export class DurableStorage implements Storage {
     key: string,
     schema: valita.Type<T>,
   ): Promise<T | undefined> {
-    return getEntry(this.#durable, key, schema, baseOptions);
+    const startTime = performance.now();
+    return getEntry(this.#durable, key, schema, baseOptions).then(
+      (e: T | undefined) => {
+        const durationMs = performance.now() - startTime;
+        this.#lc.withContext('writeDurationMs', durationMs);
+        this.#lc.withContext(
+          'sizeBytes',
+          new TextEncoder().encode(JSON.stringify({key, e})).length,
+        );
+        this.#lc.info?.('DurableStorage get');
+        return e;
+      },
+    );
   }
 
   /**

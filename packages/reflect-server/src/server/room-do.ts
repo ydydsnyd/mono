@@ -153,7 +153,12 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     this.#onClientDisconnect = onClientDisconnect;
     this.#onClientDelete = onClientDelete;
     this.#maxMutationsPerTurn = maxMutationsPerTurn;
+    const lc = new LogContext(logLevel, undefined, logSink).withContext(
+      'component',
+      'RoomDO',
+    );
     this.#storage = new DurableStorage(
+      lc,
       state.storage,
       options.allowUnconfirmedWrites,
     );
@@ -174,10 +179,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     this.#initRoutes();
 
     this.#turnDuration = getDefaultTurnDuration(options.allowUnconfirmedWrites);
-    const lc = new LogContext(logLevel, undefined, logSink).withContext(
-      'component',
-      'RoomDO',
-    );
+
     registerUnhandledRejectionHandler(lc);
     this.#lc = lc.withContext('doID', state.id.toString());
 
