@@ -1,5 +1,5 @@
 name = "zero-cache"
-main = "./out/tool/miniflare-environment.js"
+main = "../out/test/miniflare-environment.js"
 
 workers_dev = true
 

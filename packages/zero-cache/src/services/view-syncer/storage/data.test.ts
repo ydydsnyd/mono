@@ -1,11 +1,7 @@
-import {env, runInDurableObject} from 'cloudflare:test';
 import * as valita from 'shared/src/valita.js';
 import {expect, test} from 'vitest';
+import {runWithDurableObjectStorage} from '../../../test/do.js';
 import {delEntry, getEntries, getEntry, listEntries, putEntry} from './data.js';
-
-const {runnerDO} = env;
-const id = runnerDO.newUniqueId();
-const stub = runnerDO.get(id);
 
 // Schema that sometimes produces a normalized value.
 const numberToString = valita.union(
@@ -37,7 +33,7 @@ test('getEntry', async () => {
     },
   ];
 
-  await runInDurableObject(stub, async (_, {storage}) => {
+  await runWithDurableObjectStorage(async storage => {
     for (const c of cases) {
       await storage.delete('foo');
       if (c.exists) {
@@ -70,7 +66,7 @@ test('getEntry', async () => {
 });
 
 test('getEntry RoundTrip types', async () => {
-  await runInDurableObject(stub, async (_, {storage}) => {
+  await runWithDurableObjectStorage(async storage => {
     await putEntry(storage, 'boolean', true, {});
     await putEntry(storage, 'number', 42, {});
     await putEntry(storage, 'string', 'foo', {});
@@ -100,7 +96,7 @@ test('getEntry RoundTrip types', async () => {
 });
 
 test('getEntries', async () => {
-  await runInDurableObject(stub, async (_, {storage}) => {
+  await runWithDurableObjectStorage(async storage => {
     await putEntry(storage, 'a', 'b', {});
     await putEntry(storage, 'c', 'is', {});
     await putEntry(storage, 'easy', 'as', {});
@@ -126,7 +122,7 @@ test('getEntries', async () => {
 });
 
 test('getEntries schema chaining', async () => {
-  await runInDurableObject(stub, async (_, {storage}) => {
+  await runWithDurableObjectStorage(async storage => {
     await putEntry(storage, 'a', '1', {});
     // Make normalization apparent midway through the Map to verify
     // that the result still follows iteration order.
@@ -173,7 +169,7 @@ test('listEntries', async () => {
     },
   ];
 
-  await runInDurableObject(stub, async (_, {storage}) => {
+  await runWithDurableObjectStorage(async storage => {
     for (const c of cases) {
       await storage.delete('foos/1');
       await storage.delete('foos/2');
@@ -222,7 +218,7 @@ test('listEntries', async () => {
 });
 
 test('listEntries ordering', async () => {
-  await runInDurableObject(stub, async (_, {storage}) => {
+  await runWithDurableObjectStorage(async storage => {
     // Use these keys to test collation: Z,𝙕,Ｚ, from
     // https://github.com/rocicorp/compare-utf8/blob/b0b21f235d3227b42e565708647649c160fabacb/src/index.test.js#L63-L71
     await putEntry(storage, 'Z', 1, {});
@@ -241,7 +237,7 @@ test('listEntries ordering', async () => {
 });
 
 test('putEntry', async () => {
-  await runInDurableObject(stub, async (_, {storage}) => {
+  await runWithDurableObjectStorage(async storage => {
     type Case = {
       name: string;
       duplicate: boolean;
@@ -278,7 +274,7 @@ test('putEntry', async () => {
 });
 
 test('delEntry', async () => {
-  await runInDurableObject(stub, async (_, {storage}) => {
+  await runWithDurableObjectStorage(async storage => {
     type Case = {
       name: string;
       exists: boolean;

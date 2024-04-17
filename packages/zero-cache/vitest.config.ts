@@ -10,7 +10,7 @@ export default defineWorkersConfig({
     include: ['src/**/*.{test,spec}.?(c|m)[jt]s?(x)'],
     poolOptions: {
       workers: {
-        wrangler: {configPath: './wrangler.toml'},
+        wrangler: {configPath: './test/wrangler.toml'},
       },
     },
   },

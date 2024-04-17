@@ -1,7 +1,7 @@
-import {env, runInDurableObject} from 'cloudflare:test';
 import {randInt} from 'shared/src/rand.js';
 import * as valita from 'shared/src/valita.js';
 import {describe, expect, test} from 'vitest';
+import {runWithDurableObjectStorage} from '../../../test/do.js';
 import {DurableStorage} from './durable-storage.js';
 import type {ListOptions} from './storage.js';
 
@@ -78,12 +78,8 @@ describe('list and scan', () => {
 
   for (const c of cases) {
     test(c.name, async () => {
-      const {runnerDO} = env;
-      const id = runnerDO.newUniqueId();
-      const stub = runnerDO.get(id);
-
-      await runInDurableObject(stub, async (_, state) => {
-        const storage = new DurableStorage(state.storage);
+      await runWithDurableObjectStorage(async doStorage => {
+        const storage = new DurableStorage(doStorage);
 
         for (const [k, v] of Object.entries(entries)) {
           await storage.put(k, v);
@@ -126,12 +122,8 @@ describe('getEntries', () => {
       );
       const entries = new Map(orderedKeys.map(key => [key, `value of ${key}`]));
 
-      const {runnerDO} = env;
-      const id = runnerDO.newUniqueId();
-      const stub = runnerDO.get(id);
-
-      await runInDurableObject(stub, async (_, state) => {
-        const storage = new DurableStorage(state.storage);
+      await runWithDurableObjectStorage(async doStorage => {
+        const storage = new DurableStorage(doStorage);
 
         for (const [k, v] of entries) {
           await storage.put(k, v);
