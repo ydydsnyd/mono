@@ -1,7 +1,7 @@
-import {afterEach, beforeEach, describe, expect, test} from '@jest/globals';
 import {Lock} from '@rocicorp/lock';
 import type postgres from 'postgres';
 import {sleep} from 'shared/src/sleep.js';
+import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 import {
   dropReplicationSlot,
   expectTables,
