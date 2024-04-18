@@ -14,7 +14,7 @@ const incrementKey = 'count';
 
 const server: string | undefined = import.meta.env.VITE_REFLECT_URL;
 if (!server) {
-  throw new Error('VITE_REFLECT_URL required');
+  throw new Error('VITE_REFLECT_URL required 2');
 }
 
 const r = new Reflect({
