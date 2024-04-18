@@ -1,7 +1,7 @@
-import {afterEach, beforeEach, describe, expect, test} from '@jest/globals';
 import type postgres from 'postgres';
 import {Queue} from 'shared/src/queue.js';
 import {sleep} from 'shared/src/sleep.js';
+import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 import {initDB, testDBs} from '../../test/db.js';
 import {createSilentLogContext} from '../../test/logger.js';
 import {normalizeFilterSpec} from '../../types/invalidation.js';
