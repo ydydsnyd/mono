@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713231671461,
+  "lastUpdate": 1713472303569,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -47005,6 +47005,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31845,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cd6bfcd36560cb59ee927bee320ae77cbf093900",
+          "message": "fix(replicache): Fix limit for index scans. (#1586)\n\nWe have an optimization in the subscriptions that use scan. This\noptimization keeps track of the key that represents the limit. This is\nused to determine if a key can affect a subscription that has the scan\nwith a limit.\n\nHowever, this optimization is only implemented for non index scans. When\nthis code was refactored the exit condition for the iterator got\nincorrectly merged with the test whether this is an index scan. This\ncaused the limit to be ignored for index scans.",
+          "timestamp": "2024-04-18T20:29:13Z",
+          "tree_id": "5398978447bf811bd85e8997c96265e0743320d3",
+          "url": "https://github.com/rocicorp/mono/commit/cd6bfcd36560cb59ee927bee320ae77cbf093900"
+        },
+        "date": 1713472286518,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 304325,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54474,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113731,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31857,
             "unit": "bytes"
           }
         ]
