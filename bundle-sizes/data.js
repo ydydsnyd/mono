@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713472303569,
+  "lastUpdate": 1713902227502,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -47049,6 +47049,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31857,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d1c7c79d07da846aa026c61aff212e06dfa0b422",
+          "message": "chore(zero-client): Allow importing replicache sources  (#1618)\n\nInstead of using NodeJS resolution, we now use the paths property in\r\ntsconfig.json to allow importing replicache sources directly.\r\n\r\nThis is in preparation for the upcoming changes to the replicache to\r\nallow zero client to provide custom subscriptions for zql.\r\n\r\nChange a bunch of packages to vitest to simplify things",
+          "timestamp": "2024-04-23T19:54:44Z",
+          "tree_id": "4a041848ecdddd063c9ca55c9031a34e801cfcf8",
+          "url": "https://github.com/rocicorp/mono/commit/d1c7c79d07da846aa026c61aff212e06dfa0b422"
+        },
+        "date": 1713902211728,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 303836,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54380,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113448,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31807,
             "unit": "bytes"
           }
         ]
