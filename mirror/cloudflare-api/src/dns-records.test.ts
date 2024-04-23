@@ -1,13 +1,13 @@
-import {afterEach, expect, jest, test} from '@jest/globals';
+import {afterEach, expect, test, vi} from 'vitest';
 import {DNSRecords} from './dns-records.js';
 import {mockFetch} from './fetch-test-helper.js';
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 test('dns-records', async () => {
-  const fetch = mockFetch().default({});
+  const fetch = mockFetch(vi).default({});
 
   const resource = new DNSRecords({apiToken: 'api-token', zoneID: 'zone-id'});
   await resource.list();
