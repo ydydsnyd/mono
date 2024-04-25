@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1713902227502,
+  "lastUpdate": 1714033584302,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -47093,6 +47093,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31807,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7ab9f7fb59e2b67a5bce21954a0facbc2f216d18",
+          "message": "chore(replicache): Split Replicache Impl (#1631)\n\nNow we have a thin wrapper around the ReplicacheImpl class. The impl\r\nclass is what reflect and zero should be using and we will expose the\r\nrequired APIs on the impl class.\r\n\r\nThis changes a few data properties to accessors. This should not be a problem unless someone is subclassing Replicache or depend on the enumerable properties of the Replicache instance.",
+          "timestamp": "2024-04-25T08:23:55Z",
+          "tree_id": "c808ad87f22a087ebce59e764d8c085a103f17bf",
+          "url": "https://github.com/rocicorp/mono/commit/7ab9f7fb59e2b67a5bce21954a0facbc2f216d18"
+        },
+        "date": 1714033567730,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 315198,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54854,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 115286,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32155,
             "unit": "bytes"
           }
         ]
