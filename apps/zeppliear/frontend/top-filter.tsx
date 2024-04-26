@@ -98,6 +98,7 @@ function TopFilter({
       queryTypes.stringEnum<PriorityString>(Object.values(PriorityString)),
     ),
   );
+  const [textSearch, setTextSearch] = useQueryState('q', queryTypes.string);
 
   const statusFilters = statusStringFilters?.map(statusFromString) ?? null;
   const setStatusFilterByParam = (value: Status[] | null) =>
@@ -150,6 +151,16 @@ function TopFilter({
               }
               await setStatusFilterByParam([...statusSet]);
             }}
+          />
+        </div>
+
+        <div className="flex grow items-center mx-3">
+          <input
+            type="text"
+            className="grow border-gray-700 bg-gray-700 opacity-75 hover:opacity-100 focus:opacity-100"
+            placeholder="Search"
+            value={textSearch ?? ''}
+            onChange={e => setTextSearch(e.target.value)}
           />
         </div>
 

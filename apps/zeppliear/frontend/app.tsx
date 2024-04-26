@@ -26,6 +26,7 @@ import type {M} from './mutators';
 import TopFilter from './top-filter';
 import {useQuery} from './hooks/useZql';
 import {useZero} from './hooks/useZero';
+import {exp, or} from '@rocicorp/zql/src/zql/query/entity-query';
 
 function getIssueOrder(view: string | null, orderBy: string | null): Order {
   if (view === 'board') {
@@ -63,6 +64,7 @@ const App = ({undoManager}: AppProps) => {
   const [priorityFilter] = useQueryState('priorityFilter');
   const [statusFilter] = useQueryState('statusFilter');
   const [orderBy] = useQueryState('orderBy');
+  const [textFilter] = useQueryState('q');
   const [detailIssueID, setDetailIssueID] = useQueryState('iss');
   const [menuVisible, setMenuVisible] = useState(false);
   const zero = useZero<M, Collections>();
@@ -76,10 +78,17 @@ const App = ({undoManager}: AppProps) => {
     view,
     priorityFilter,
     statusFilter,
+    textFilter,
   );
   const issueOrder = getIssueOrder(view, orderBy);
   const filteredAndOrderedQuery = orderQuery(filteredQuery, issueOrder);
-  const deps = [view, priorityFilter, statusFilter, issueOrder] as const;
+  const deps = [
+    view,
+    priorityFilter,
+    statusFilter,
+    issueOrder,
+    textFilter,
+  ] as const;
   const filteredIssues = useQuery(filteredAndOrderedQuery, deps);
   const viewIssueCount = useQuery(viewCountQuery, deps)[0]?.count ?? 0;
 
@@ -287,6 +296,7 @@ function filterQuery(
   view: string | null,
   priorityFilter: string | null,
   statusFilter: string | null,
+  textFilter: string | null,
 ) {
   let viewStatuses: Set<Status> | undefined;
   switch (view?.toLowerCase()) {
@@ -343,6 +353,14 @@ function filterQuery(
   }
   if (issuesPriorities) {
     q = q.where('priority', 'IN', [...issuesPriorities]);
+  }
+  if (textFilter) {
+    q = q.where(
+      or(
+        exp('issue.title', 'ILIKE', `%${textFilter}%`),
+        exp('issue.description', 'ILIKE', `%${textFilter}%`),
+      ),
+    );
   }
 
   return {filteredQuery: q, hasNonViewFilters, viewCountQuery};

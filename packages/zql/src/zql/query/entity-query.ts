@@ -242,6 +242,10 @@ export class EntityQuery<From extends FromSet, Return = []> {
     astWeakMap.set(this, this.#ast);
   }
 
+  toString() {
+    return JSON.stringify(this.#ast);
+  }
+
   select<Fields extends (Selector<From> | Aggregator<From>)[]>(
     ...x: Fields
   ): EntityQuery<From, CombineSelections<From, Fields>[]> {
