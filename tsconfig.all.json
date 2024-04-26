@@ -2,6 +2,7 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {},
   "include": [],
+  "exclude": ["node_modules"],
   "references": [
     {"path": "./packages/datadog"},
     {"path": "./packages/reflect"},

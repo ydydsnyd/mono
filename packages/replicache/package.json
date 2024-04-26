@@ -66,10 +66,6 @@
   "engines": {
     "node": ">=14.8.0"
   },
-  "exports": {
-    "module": "./out/mod.js",
-    "default": "./out/mod.js"
-  },
   "files": [
     "out"
   ],

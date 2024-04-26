@@ -1,4 +1,5 @@
 {
+  "exclude": ["node_modules"],
   "compilerOptions": {
     "composite": true,
     "target": "es2022",

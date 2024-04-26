@@ -10,7 +10,7 @@ import {
 test('undefined/null PresenceSubscribable', async () => {
   function A({presenceSubscribable}: {presenceSubscribable: null | undefined}) {
     const presentClientIDs = usePresence(presenceSubscribable);
-    return JSON.stringify([...presentClientIDs]);
+    return <>{JSON.stringify([...presentClientIDs])}</>;
   }
 
   const t = async (presenceSubscribable: null | undefined) => {
@@ -33,7 +33,7 @@ test('updating', async () => {
     presenceSubscribable: PresenceSubscribable;
   }) {
     const presentClientIDs = usePresence(presenceSubscribable);
-    return JSON.stringify([...presentClientIDs]);
+    return <>{JSON.stringify([...presentClientIDs])}</>;
   }
 
   const callbacks: SubscribeToPresenceCallback[] = [];
@@ -73,7 +73,7 @@ test('cleanup', async () => {
     presenceSubscribable: PresenceSubscribable;
   }) {
     const presentClientIDs = usePresence(presenceSubscribable);
-    return JSON.stringify([...presentClientIDs]);
+    return <>{JSON.stringify([...presentClientIDs])}</>;
   }
 
   const callbacks: SubscribeToPresenceCallback[] = [];
