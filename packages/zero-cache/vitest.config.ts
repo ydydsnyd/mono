@@ -9,7 +9,7 @@ export default defineWorkersConfig({
         miniflare: {
           compatibilityDate: '2024-04-05',
           compatibilityFlags: ['nodejs_compat'],
-          durableObjects: {runnerDO: 'ServiceRunnerDO'},
+          durableObjects: {serviceRunnerDO: 'ServiceRunnerDO'},
         },
       },
     },
