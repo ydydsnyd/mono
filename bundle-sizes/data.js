@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714033584302,
+  "lastUpdate": 1714127477717,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -47137,6 +47137,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32155,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "35271c41dc6ace2f97137de45723bc8f52403ba6",
+          "message": "chore(replicache): Remove TestingInstance (#1649)\n\nInstead expose things on ReplicacheImpl",
+          "timestamp": "2024-04-26T12:28:54+02:00",
+          "tree_id": "e72c89777c5ea39eed87f002dd170e183da7d24d",
+          "url": "https://github.com/rocicorp/mono/commit/35271c41dc6ace2f97137de45723bc8f52403ba6"
+        },
+        "date": 1714127461676,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 314578,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54767,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 115728,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32200,
             "unit": "bytes"
           }
         ]
