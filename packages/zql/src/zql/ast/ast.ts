@@ -25,7 +25,7 @@ export type Join = {
   readonly other: AST;
   readonly as: string;
   // only joining by equality is supported at the moment.
-  readonly on: [leftTableColumn: string, rightTableColumn: string];
+  readonly on: readonly [leftTableColumn: string, rightTableColumn: string];
 };
 
 // type Ref = `${string}.${string}`;
@@ -38,25 +38,27 @@ export type Join = {
 export type AST = {
   readonly table: string;
   readonly alias?: string | undefined;
-  readonly select?: [selector: string, alias: string][] | undefined;
-  readonly aggregate?: Aggregation[] | undefined;
+  readonly select?:
+    | readonly (readonly [selector: string, alias: string])[]
+    | undefined;
+  readonly aggregate?: readonly Aggregation[] | undefined;
   // readonly subQueries?: {
   //   readonly alias: string;
   //   readonly query: AST;
   // }[];
   readonly where?: Condition | undefined;
-  readonly joins?: Join[] | undefined;
+  readonly joins?: readonly Join[] | undefined;
   readonly limit?: number | undefined;
-  readonly groupBy?: string[] | undefined;
+  readonly groupBy?: readonly string[] | undefined;
   readonly orderBy?: Ordering | undefined;
   // readonly after?: Primitive;
 };
 
 export type Condition = SimpleCondition | Conjunction;
 export type Conjunction = {
-  type: 'conjunction';
-  op: 'AND' | 'OR';
-  conditions: Condition[];
+  readonly type: 'conjunction';
+  readonly op: 'AND' | 'OR';
+  readonly conditions: readonly Condition[];
 };
 export type SimpleOperator = EqualityOps | OrderOps | InOps | LikeOps;
 
@@ -71,12 +73,12 @@ export type LikeOps = 'LIKE' | 'NOT LIKE' | 'ILIKE' | 'NOT ILIKE';
 export type SimpleCondition =
   // | ConditionList
   {
-    type: 'simple';
-    op: SimpleOperator;
-    field: string;
-    value: {
-      type: 'literal';
-      value: Primitive;
+    readonly type: 'simple';
+    readonly op: SimpleOperator;
+    readonly field: string;
+    readonly value: {
+      readonly type: 'literal';
+      readonly value: Primitive;
     };
     //  | {
     //   type: 'ref';
