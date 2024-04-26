@@ -17,5 +17,6 @@
       "zero-protocol/src/*": ["../zero-protocol/src/*"]
     }
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "references": [{"path": "../shared"}, {"path": "../datadog"}]
 }

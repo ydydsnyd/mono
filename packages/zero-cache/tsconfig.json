@@ -3,5 +3,6 @@
   "include": ["src/**/*.ts", "src/**/*.js"],
   "compilerOptions": {
     "types": ["@cloudflare/vitest-pool-workers"]
-  }
+  },
+  "references": [{"path": "../shared"}, {"path": "../zql"}]
 }

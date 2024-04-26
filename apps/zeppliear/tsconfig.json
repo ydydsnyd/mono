@@ -17,5 +17,10 @@
     "next.config.js",
     "reps",
     ".parcel-cache"
+  ],
+  "references": [
+    {"path": "../../packages/zero-client"},
+    {"path": "../../packages/reflect"},
+    {"path": "../../packages/zql"}
   ]
 }

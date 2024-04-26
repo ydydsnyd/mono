@@ -6,5 +6,6 @@
       "replicache/src/*": ["../replicache/src/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.js"]
+  "include": ["src/**/*.ts", "src/**/*.js"],
+  "references": [{"path": "../replicache"}, {"path": "../shared"}]
 }

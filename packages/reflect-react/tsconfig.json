@@ -4,5 +4,10 @@
     "lib": ["dom", "es2022"],
     "jsx": "react"
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "references": [
+    {"path": "../reflect-shared"},
+    {"path": "../reflect-client"},
+    {"path": "../shared"}
+  ]
 }

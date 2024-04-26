@@ -14,5 +14,10 @@
       "reflect-protocol/src/*": ["../reflect-protocol/src/*"]
     }
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "references": [
+    {"path": "../reflect-shared"},
+    {"path": "../reflect-protocol"},
+    {"path": "../shared"}
+  ]
 }

@@ -4,5 +4,6 @@
     // For crypto when running under jest
     "lib": ["dom"]
   },
-  "include": ["src/**/*.ts", "src/**/*.js"]
+  "include": ["src/**/*.ts", "src/**/*.js"],
+  "references": []
 }

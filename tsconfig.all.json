@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {},
+  "include": [],
+  "references": [
+    {"path": "./packages/datadog"},
+    {"path": "./packages/reflect"},
+    {"path": "./packages/reflect-client"},
+    {"path": "./packages/reflect-protocol"},
+    {"path": "./packages/reflect-react"},
+    {"path": "./packages/reflect-server"},
+    {"path": "./packages/reflect-shared"},
+    {"path": "./packages/replicache"},
+    {"path": "./packages/shared"},
+    {"path": "./packages/zero-cache"},
+    {"path": "./packages/zero-client"},
+    {"path": "./packages/zero-protocol"},
+    {"path": "./packages/zql"},
+    {"path": "./apps/zeppliear"}
+  ]
+}

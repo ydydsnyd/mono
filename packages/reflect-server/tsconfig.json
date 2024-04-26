@@ -3,5 +3,12 @@
   "compilerOptions": {
     "lib": ["es2022"]
   },
-  "include": ["**/*.ts"]
+  "include": ["**/*.ts"],
+  "references": [
+    {"path": "../reflect-shared"},
+    {"path": "../shared"},
+    {"path": "../replicache"},
+    {"path": "../reflect-protocol"},
+    {"path": "../datadog"}
+  ]
 }

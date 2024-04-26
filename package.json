@@ -9,6 +9,8 @@
   ],
   "scripts": {
     "build": "turbo run build",
+    "build:ts": "tsc --build tsconfig.all.json",
+    "watch:ts": "pnpm run build:ts --watch",
     "dev": "turbo run dev",
     "test": "turbo run test",
     "lint": "turbo run lint",
