@@ -15,6 +15,7 @@ import {
   not,
   or,
 } from './entity-query.js';
+type WeakKey = object;
 
 function ast(q: WeakKey): AST {
   const {alias: _, ...rest} = astForTesting(q);

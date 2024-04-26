@@ -1,4 +1,4 @@
-import type {Env} from 'reflect-shared/src/types.js';
+import type {Env} from 'reflect-shared/out/types.js';
 
 const VARS_PREFIX = 'REFLECT_VAR_';
 

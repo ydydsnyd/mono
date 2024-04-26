@@ -1,8 +1,14 @@
 {
   "extends": "../tsconfig.json",
-  "include": ["*.ts", "*.js"],
+  "include": ["."],
   "exclude": ["node_modules", "runner.js"],
   "compilerOptions": {
-    "noEmit": true
-  }
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "references": [
+    {
+      "path": "../"
+    }
+  ]
 }

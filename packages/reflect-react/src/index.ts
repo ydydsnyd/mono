@@ -1,5 +1,5 @@
 import {useEffect, useState} from 'react';
-import type {ClientID} from 'reflect-shared/src/mod.js';
+import type {ClientID} from 'reflect-shared/out/mod.js';
 
 export type SubscribeToPresenceCallback = (
   presentClientIDs: ReadonlyArray<ClientID>,

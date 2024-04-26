@@ -3,7 +3,7 @@ import type {CreateRoomRequest} from 'reflect-protocol';
 import {
   isValidRoomID,
   makeInvalidRoomIDMessage,
-} from 'reflect-shared/src/room-id.js';
+} from 'reflect-shared/out/room-id.js';
 import * as valita from 'shared/src/valita.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
 import type {ListOptions} from '../storage/storage.js';

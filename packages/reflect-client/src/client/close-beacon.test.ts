@@ -1,5 +1,5 @@
 import {LogContext} from '@rocicorp/logger';
-import {resetAllConfig, setConfig} from 'reflect-shared/src/config.js';
+import {resetAllConfig, setConfig} from 'reflect-shared/out/config.js';
 import * as sinon from 'sinon';
 import {afterEach, beforeEach, expect, suite, test} from 'vitest';
 import {CloseBeaconManager} from './close-beacon.js';

@@ -4,10 +4,10 @@ import {
   closeBeaconQueryParamsSchema,
   closeBeaconSchema,
 } from 'reflect-protocol/src/close-beacon.js';
-import {getConfig} from 'reflect-shared/src/config.js';
-import {CLOSE_BEACON_PATH} from 'reflect-shared/src/paths.js';
-import type {Env, MutatorDefs} from 'reflect-shared/src/types.js';
-import {version} from 'reflect-shared/src/version.js';
+import {getConfig} from 'reflect-shared/out/config.js';
+import {CLOSE_BEACON_PATH} from 'reflect-shared/out/paths.js';
+import type {Env, MutatorDefs} from 'reflect-shared/out/types.js';
+import {version} from 'reflect-shared/out/version.js';
 import {BufferSizer} from 'shared/src/buffer-sizer.js';
 import * as valita from 'shared/src/valita.js';
 import {ConnectionLifetimeReporter} from '../events/connection-lifetimes.js';

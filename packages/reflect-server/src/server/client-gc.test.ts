@@ -1,5 +1,5 @@
 import {describe, expect, jest, test} from '@jest/globals';
-import type {Env} from 'reflect-shared/src/types.js';
+import type {Env} from 'reflect-shared/out/types.js';
 import {jsonSchema} from 'shared/src/json-schema.js';
 import {DurableStorage} from '../storage/durable-storage.js';
 import {EntryCache} from '../storage/entry-cache.js';

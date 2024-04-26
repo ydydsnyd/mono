@@ -4,7 +4,9 @@
     "types": ["node"],
     // For WebAssembly used by esbuild
     "lib": ["esnext", "dom"],
-    "noEmit": true
+    "noEmit": true,
+    "outDir": "./out",
+    "rootDir": "./src"
   },
   "include": ["tool/*.js"],
   "references": [

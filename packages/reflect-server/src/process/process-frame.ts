@@ -1,6 +1,6 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {NullableVersion, Patch, Version} from 'reflect-protocol';
-import type {Env} from 'reflect-shared/src/types.js';
+import type {Env} from 'reflect-shared/out/types.js';
 import {assert} from 'shared/src/asserts.js';
 import {must} from 'shared/src/must.js';
 import type {ClientDeleteHandler} from '../server/client-delete-handler.js';

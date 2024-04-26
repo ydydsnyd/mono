@@ -1,8 +1,10 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["src/**/*.ts", "src/**/*.js"],
+  "include": ["./src"],
   "compilerOptions": {
-    "types": ["@cloudflare/vitest-pool-workers"]
+    "types": ["@cloudflare/vitest-pool-workers"],
+    "outDir": "./out",
+    "rootDir": "./src"
   },
   "references": [{"path": "../shared"}, {"path": "../zql"}]
 }

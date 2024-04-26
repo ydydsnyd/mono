@@ -2,12 +2,12 @@ import type {Context, LogLevel} from '@rocicorp/logger';
 import {LogContext} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
 import {Mutation, NullableVersion, pushMessageSchema} from 'reflect-protocol';
-import {resetAllConfig} from 'reflect-shared/src/config.js';
+import {resetAllConfig} from 'reflect-shared/out/config.js';
 import type {
   MutatorDefs,
   ReadonlyJSONValue,
   WriteTransaction,
-} from 'reflect-shared/src/mod.js';
+} from 'reflect-shared/out/mod.js';
 import type {
   PullRequestV1,
   PushRequestV1,

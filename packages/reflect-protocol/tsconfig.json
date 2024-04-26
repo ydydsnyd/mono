@@ -1,5 +1,9 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["src/**/*.ts"],
-  "references": [{"path": "../shared"}]
+  "include": ["./src"],
+  "references": [{"path": "../shared"}],
+  "compilerOptions": {
+    "outDir": "./out",
+    "rootDir": "./src"
+  }
 }

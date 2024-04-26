@@ -1,5 +1,5 @@
 import type {LogLevel} from '@rocicorp/logger';
-import type {MutatorDefs} from 'reflect-shared/src/types.js';
+import type {MutatorDefs} from 'reflect-shared/out/types.js';
 import type {KVStoreProvider, MaybePromise} from 'replicache';
 
 /**

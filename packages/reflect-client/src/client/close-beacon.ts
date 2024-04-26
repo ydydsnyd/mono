@@ -3,8 +3,8 @@ import type {
   CloseBeacon,
   CloseBeaconQueryParams,
 } from 'reflect-protocol/src/close-beacon.js';
-import {getConfig} from 'reflect-shared/src/config.js';
-import {CLOSE_BEACON_PATH} from 'reflect-shared/src/paths.js';
+import {getConfig} from 'reflect-shared/out/config.js';
+import {CLOSE_BEACON_PATH} from 'reflect-shared/out/paths.js';
 
 type ReflectLike = {
   roomID: string;

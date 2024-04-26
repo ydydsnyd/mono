@@ -2,7 +2,7 @@ import type {
   MutatorDefs,
   ReadonlyJSONValue,
   WriteTransaction,
-} from 'reflect-shared/src/mod.js';
+} from 'reflect-shared/out/mod.js';
 import {createReflectServer} from '../src/mod.js';
 
 const mutators = {

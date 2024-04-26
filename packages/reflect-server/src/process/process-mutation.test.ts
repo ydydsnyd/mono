@@ -3,7 +3,7 @@ import type {
   AuthData,
   Env,
   WriteTransaction,
-} from 'reflect-shared/src/types.js';
+} from 'reflect-shared/out/types.js';
 import {
   MutatorMap,
   processMutation,

@@ -1,5 +1,5 @@
 import {consoleLogSink, LogLevel, LogSink, TeeLogSink} from '@rocicorp/logger';
-import type {MutatorDefs} from 'reflect-shared/src/types.js';
+import type {MutatorDefs} from 'reflect-shared/out/types.js';
 import {BaseAuthDO} from './auth-do.js';
 import type {AuthHandler} from './auth.js';
 import type {ClientDeleteHandler} from './client-delete-handler.js';

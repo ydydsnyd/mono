@@ -1,4 +1,4 @@
-import type {WriteTransaction} from 'reflect-shared/src/types.js';
+import type {WriteTransaction} from 'reflect-shared/out/types.js';
 
 /**
  * @deprecated Use {@link ClientDisconnectHandler} instead.

@@ -1,5 +1,9 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["src/**/*.ts"],
+  "include": ["./src"],
+  "compilerOptions": {
+    "outDir": "./out",
+    "rootDir": "./src"
+  },
   "references": [{"path": "../shared"}, {"path": "../zql"}]
 }

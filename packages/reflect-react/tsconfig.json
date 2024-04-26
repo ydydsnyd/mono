@@ -2,9 +2,11 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "lib": ["dom", "es2022"],
-    "jsx": "react"
+    "jsx": "react",
+    "outDir": "./out",
+    "rootDir": "./src"
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "include": ["./src"],
   "references": [
     {"path": "../reflect-shared"},
     {"path": "../reflect-client"},

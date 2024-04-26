@@ -2,10 +2,9 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "lib": ["dom", "es2022"],
-    "paths": {
-      "shared/src/*": ["../shared/src/*"]
-    }
+    "outDir": "./out",
+    "rootDir": "./src"
   },
-  "include": ["src/**/*.ts"],
+  "include": ["./src"],
   "references": [{"path": "../shared"}]
 }

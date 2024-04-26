@@ -57,9 +57,9 @@
     "xbytes": "^1.7.0"
   },
   "type": "module",
-  "main": "out/replicache.js",
-  "module": "out/replicache.js",
-  "types": "out/replicache.d.ts",
+  "main": "out/mod.js",
+  "module": "out/mod.js",
+  "types": "out/mod.d.ts",
   "bin": {
     "replicache": "./out/cli.cjs"
   },
@@ -67,13 +67,11 @@
     "node": ">=14.8.0"
   },
   "exports": {
-    "module": "./out/replicache.js",
-    "default": "./out/replicache.js"
+    "module": "./out/mod.js",
+    "default": "./out/mod.js"
   },
   "files": [
-    "out/cli.cjs",
-    "out/replicache.d.ts",
-    "out/replicache.js"
+    "out"
   ],
   "eslintConfig": {
     "extends": "@rocicorp/eslint-config"

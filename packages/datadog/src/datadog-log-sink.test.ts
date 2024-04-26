@@ -1,5 +1,5 @@
 import {jest, afterEach, beforeEach, test, expect} from '@jest/globals';
-import type {ReadonlyJSONObject} from 'replicache';
+type ReadonlyJSONObject = Record<string, unknown>;
 import {
   DatadogLogSink,
   FORCE_FLUSH_THRESHOLD,

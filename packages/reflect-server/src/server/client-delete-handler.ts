@@ -1,5 +1,5 @@
 import type {LogContext} from '@rocicorp/logger';
-import type {Env, WriteTransaction} from 'reflect-shared/src/types.js';
+import type {Env, WriteTransaction} from 'reflect-shared/out/types.js';
 import {EntryCache} from '../storage/entry-cache.js';
 import {
   NOOP_MUTATION_ID,

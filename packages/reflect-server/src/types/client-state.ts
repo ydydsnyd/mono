@@ -1,4 +1,4 @@
-import type {AuthData} from 'reflect-shared/src/types.js';
+import type {AuthData} from 'reflect-shared/out/types.js';
 
 export type ClientID = string;
 export type ClientGroupID = string;

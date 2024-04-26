@@ -8,7 +8,7 @@ import {
   test,
 } from '@jest/globals';
 import type {TailErrorMessage} from 'reflect-protocol/src/tail.js';
-import {resetAllConfig, setConfig} from 'reflect-shared/src/config.js';
+import {resetAllConfig, setConfig} from 'reflect-shared/out/config.js';
 import {API_KEY_HEADER_NAME, createAPIHeaders} from 'shared/src/api/headers.js';
 import type {APIErrorInfo} from 'shared/src/api/responses.js';
 import {assert} from 'shared/src/asserts.js';

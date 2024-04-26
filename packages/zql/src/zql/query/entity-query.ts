@@ -442,6 +442,7 @@ export class EntityQuery<From extends FromSet, Return = []> {
   }
 }
 
+type WeakKey = object;
 const astWeakMap = new WeakMap<WeakKey, AST>();
 
 export function astForTesting(q: WeakKey): AST {

@@ -2,8 +2,10 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     // For crypto when running under jest
-    "lib": ["dom"]
+    "lib": ["dom"],
+    "outDir": "./out",
+    "rootDir": "./src"
   },
-  "include": ["src/**/*.ts", "src/**/*.js"],
+  "include": ["./src"],
   "references": []
 }
