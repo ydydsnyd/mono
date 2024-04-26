@@ -334,7 +334,7 @@ function ensurePublishedTables(
     let dataPublication = '';
     if (published.publications.length === 0) {
       // If there are no custom zero_* publications, set one up to publish all tables.
-      dataPublication = `CREATE PUBLICATION ${ZERO_PUB_PREFIX}data FOR ALL TABLES;`;
+      dataPublication = `CREATE PUBLICATION ${ZERO_PUB_PREFIX}data FOR ALL TABLES IN SCHEMA zero, public;`;
     }
 
     // Send everything as a single batch.
