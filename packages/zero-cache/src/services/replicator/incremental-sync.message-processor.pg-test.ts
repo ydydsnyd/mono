@@ -56,7 +56,7 @@ describe('replicator/message-processor', () => {
       },
     ],
     keyColumns: ['id'],
-  } as const;
+  };
 
   type Case = {
     name: string;

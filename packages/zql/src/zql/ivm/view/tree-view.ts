@@ -85,6 +85,8 @@ export class MutableTreeView<T extends object> extends AbstractView<T, T[]> {
     data: ITree<T>,
     needsUpdate: boolean,
   ): [boolean, ITree<T>] {
+    console.log('got some data!', c);
+
     const iterator = c[Symbol.iterator]();
     let next;
 
