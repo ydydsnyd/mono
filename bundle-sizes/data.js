@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714133921141,
+  "lastUpdate": 1714141909605,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -47225,6 +47225,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32154,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a67ede4ec6cef604f31c48f4967bf2b7d83b30d2",
+          "message": "fix(zero-client): Call zql subscriptions in a single tx (#1641)\n\nNow we call all the zql subscriptions in a single materialite\r\ntransaction.\r\n\r\nThis is done by refactoring zero-client to use ReplicacheImpl and having\r\nReplicacheImpl take a function to create the SubscriptionsManager. The\r\nSubscriptionsManager used be zero-client wraps all the callbacks in a\r\nsingle materialite transaction.",
+          "timestamp": "2024-04-26T14:29:22Z",
+          "tree_id": "698c2f26387988db20d27910be7dcbca07f3f49b",
+          "url": "https://github.com/rocicorp/mono/commit/a67ede4ec6cef604f31c48f4967bf2b7d83b30d2"
+        },
+        "date": 1714141893713,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 314348,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54724,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 115726,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32187,
             "unit": "bytes"
           }
         ]
