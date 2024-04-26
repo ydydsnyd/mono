@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714127477717,
+  "lastUpdate": 1714133921141,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -47181,6 +47181,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32200,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "68710dae8fc4d96fb747f1ecb171025960d811c2",
+          "message": "chore: Make reflect-client use ReplicacheImpl (#1652)\n\nand remove `exposeInternalAPI` hacks",
+          "timestamp": "2024-04-26T12:16:08Z",
+          "tree_id": "656e73ca08a48f9c84ed79550a5f60bc3aecea3c",
+          "url": "https://github.com/rocicorp/mono/commit/68710dae8fc4d96fb747f1ecb171025960d811c2"
+        },
+        "date": 1714133904375,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 314213,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54676,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 115619,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32154,
             "unit": "bytes"
           }
         ]
