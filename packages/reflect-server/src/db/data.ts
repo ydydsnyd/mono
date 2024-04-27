@@ -2,7 +2,6 @@ import {compareUTF8} from 'compare-utf8';
 import {assert} from 'shared/src/asserts.js';
 import type {ReadonlyJSONValue} from 'shared/src/json.js';
 import * as valita from 'shared/src/valita.js';
-import type {DurableObjectStorage} from '@cloudflare/workers-types';
 
 export async function getEntry<T extends ReadonlyJSONValue>(
   durable: DurableObjectStorage,

@@ -65,7 +65,6 @@
     "@types/node": "^18.16.0",
     "reflect-cli": "0.0.0",
     "reflect-client": "0.0.0",
-    "reflect-server": "0.0.0",
     "reflect-shared": "0.0.0",
     "reflect-react": "0.0.0",
     "replicache": "15.0.0"
