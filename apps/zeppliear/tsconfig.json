@@ -6,9 +6,10 @@
     "jsx": "preserve",
     "noEmit": true,
     "isolatedModules": true,
-    "module": "esnext"
+    "module": "esnext",
+    "rootDir": ""
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+  "include": ["next-env.d.ts", "backend", "frontend", "util", "sample-data"],
   "exclude": [
     ".next",
     "dist",

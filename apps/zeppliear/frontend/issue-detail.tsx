@@ -3,7 +3,7 @@ import {nanoid} from 'nanoid';
 import {useQueryState} from 'next-usequerystate';
 import {useCallback, useEffect, useState} from 'react';
 import {Remark} from 'react-remark';
-import {timeAgo} from '../util/date';
+import {timeAgo} from '../util/date.js';
 import type {Collections} from './app.jsx';
 import ArrowIcon from './assets/icons/arrow.svg';
 import DefaultAvatarIcon from './assets/icons/avatar.svg';

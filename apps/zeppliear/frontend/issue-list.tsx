@@ -89,7 +89,7 @@ function IssueList({onUpdateIssues, onOpenDetail, issues, view}: Props) {
   return (
     <div className="flex flex-col flex-grow overflow-auto">
       <AutoSizer>
-        {({height, width}) => (
+        {({height, width}: {width: number; height: number}) => (
           <FixedSizeList
             ref={fixedSizeListRef}
             height={height}

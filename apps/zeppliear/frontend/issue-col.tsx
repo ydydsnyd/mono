@@ -121,7 +121,7 @@ function IssueCol({
               : issues.length;
             return (
               <AutoSizer>
-                {({height, width}) => (
+                {({height, width}: {width: number; height: number}) => (
                   <FixedSizeList
                     height={height}
                     itemCount={itemCount}

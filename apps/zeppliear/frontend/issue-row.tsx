@@ -1,8 +1,8 @@
 import React from 'react';
-import {formatDate} from '../util/date';
+import {formatDate} from '../util/date.js';
 import type {Issue, Priority, Status} from './issue';
-import PriorityMenu from './priority-menu';
-import StatusMenu from './status-menu';
+import PriorityMenu from './priority-menu.js';
+import StatusMenu from './status-menu.js';
 
 interface Props {
   issue: Issue;
