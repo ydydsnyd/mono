@@ -1,4 +1,4 @@
-import type {FromSet} from '@rocicorp/zql/src/zql/query/entity-query.js';
+import type {FromSet} from '@rocicorp/zql/dist/zql/query/entity-query.js';
 import {useEffect, useRef, useState} from 'react';
 import type {EntityQuery} from 'zero-client';
 

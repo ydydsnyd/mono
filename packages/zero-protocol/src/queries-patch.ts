@@ -1,4 +1,4 @@
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import {astSchema} from './ast.js';
 
 const putOpSchema = v.object({

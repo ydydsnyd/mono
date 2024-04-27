@@ -1,5 +1,5 @@
 import type {LogContext} from '@rocicorp/logger';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/out/must.js';
 import {FormatVersion} from './format-version.js';
 import {
   dropIDBStoreWithMemFallback,

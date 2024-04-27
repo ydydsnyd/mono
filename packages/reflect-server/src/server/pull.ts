@@ -1,5 +1,5 @@
 import type {PullRequestBody, PullResponseMessage} from 'reflect-protocol';
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
 import {
   IncludeDeleted,

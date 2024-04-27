@@ -1,8 +1,8 @@
 /* eslint-disable require-await */
 
-import {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
-import {assert} from 'shared/src/asserts.js';
-import type {ReadonlyJSONObject} from 'shared/src/json.js';
+import {TEST_LICENSE_KEY} from '@rocicorp/licensing/out/client';
+import {assert} from 'shared/out/asserts.js';
+import type {ReadonlyJSONObject} from 'shared/out/json.js';
 import type {IndexKey} from './db/index.js';
 import {Replicache} from './replicache.js';
 import type {DeepReadonly, WriteTransaction} from './transactions.js';

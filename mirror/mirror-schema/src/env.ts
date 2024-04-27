@@ -1,4 +1,4 @@
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import {encryptedBytesSchema} from './bytes.js';
 import {firestoreDataConverter} from './converter.js';
 import {appPath, deploymentOptionsSchema} from './deployment.js';

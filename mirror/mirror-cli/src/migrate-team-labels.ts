@@ -8,7 +8,7 @@ import {
 } from 'mirror-schema/src/team.js';
 import {appDataConverter, APP_COLLECTION} from 'mirror-schema/src/app.js';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 
 export const DEPRECATED_TEAM_SUBDOMAIN_INDEX_COLLECTION = 'teamSubdomains';
 

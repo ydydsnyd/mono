@@ -6,7 +6,7 @@ import type {
   Version,
 } from 'reflect-protocol';
 import type {AuthData} from 'reflect-shared/out/types.js';
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
 import {
   ClientRecord,

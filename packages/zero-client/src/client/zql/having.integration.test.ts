@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest';
 import {Artist, newZero, Track, TrackArtist} from './integration-test-util.js';
-import * as agg from '@rocicorp/zql/src/zql/query/agg.js';
+import * as agg from '@rocicorp/zql/dist/zql/query/agg.js';
 
 describe('having against scalaer', async () => {
   const z = newZero();

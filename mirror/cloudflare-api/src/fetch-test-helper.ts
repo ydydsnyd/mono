@@ -1,4 +1,4 @@
-import {FetchMocker, SpyOn} from 'shared/src/fetch-mocker.js';
+import {FetchMocker, SpyOn} from 'shared/out/fetch-mocker.js';
 import type {FetchResult} from './fetch.js';
 
 export function mockFetch(spyOn: SpyOn): FetchMocker {

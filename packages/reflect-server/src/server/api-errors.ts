@@ -2,7 +2,7 @@ import {
   makeAPIError,
   type APIErrorCode,
   type APIErrorInfo,
-} from 'shared/src/api/responses.js';
+} from 'shared/out/api/responses.js';
 import {ErrorWithResponse} from './errors.js';
 
 export class APIError extends ErrorWithResponse {

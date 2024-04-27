@@ -1,4 +1,4 @@
-import type {AST} from '@rocicorp/zql/src/zql/ast/ast.js';
+import type {AST} from '@rocicorp/zql/dist/zql/ast/ast.js';
 import type {JSONValue} from 'postgres';
 import {describe, expect, test} from 'vitest';
 import {getNormalized} from './normalize.js';

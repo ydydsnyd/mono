@@ -4,7 +4,7 @@ import {
   userPath,
   userViewDataConverter,
 } from 'mirror-schema/src/external/user.js';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/out/must.js';
 import {ensureTeamID} from './app-config.js';
 import {ErrorWithSeverity} from './error.js';
 import type {AuthContext} from './handler.js';

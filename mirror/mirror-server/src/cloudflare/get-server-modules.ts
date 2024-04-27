@@ -1,7 +1,7 @@
 import type {Firestore} from 'firebase-admin/firestore';
 import {HttpsError} from 'firebase-functions/v2/https';
 import * as schema from 'mirror-schema/src/server.js';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/out/must.js';
 
 /**
  * Throws an HttpsError if the server module does not exist.

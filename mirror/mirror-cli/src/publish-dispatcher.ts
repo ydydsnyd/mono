@@ -6,7 +6,7 @@ import {DNSRecords} from 'cloudflare-api/src/dns-records.js';
 import {FallbackOrigin} from 'cloudflare-api/src/fallback-origin.js';
 import {WorkerRoutes} from 'cloudflare-api/src/worker-routes.js';
 import {publishWorker} from './publish-worker.js';
-import {sleep} from 'shared/src/sleep.js';
+import {sleep} from 'shared/out/sleep.js';
 
 export function publishDispatcherOptions(yargs: CommonYargsArgv) {
   return yargs

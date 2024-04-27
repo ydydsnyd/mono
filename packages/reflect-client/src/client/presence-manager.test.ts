@@ -1,7 +1,7 @@
 import {LogContext} from '@rocicorp/logger';
 import {Resolver, resolver} from '@rocicorp/resolver';
 import type {ClientID} from 'replicache';
-import {sleep} from 'shared/src/sleep.js';
+import {sleep} from 'shared/out/sleep.js';
 import {expect, test} from 'vitest';
 import {PresenceManager} from './presence-manager.js';
 

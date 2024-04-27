@@ -8,7 +8,7 @@ import type {
   QueryDocumentSnapshot as ClientQueryDocumentSnapshot,
   SnapshotOptions,
 } from 'firebase/firestore';
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 
 export function firestoreDataConverter<T extends DocumentData>(
   schema: v.Type<T>,

@@ -5,7 +5,7 @@ slug: /byob/render-ui
 
 The next step is to use the data in the Client View to render your UI.
 
-First, let's define a few simple types. Replicache supports strongly-typed mutators – we'll use these types later to ensure our UI passes the correct data. Modify the `types.ts` at `shared/src/types.ts`
+First, let's define a few simple types. Replicache supports strongly-typed mutators – we'll use these types later to ensure our UI passes the correct data. Modify the `types.ts` at `shared/out/types.ts`
 
 ```ts
 export type Message = {

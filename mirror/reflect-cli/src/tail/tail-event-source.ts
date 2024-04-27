@@ -5,7 +5,7 @@ import {
 } from 'mirror-protocol/src/tail-message.js';
 import {createTailEventSourceURL} from 'mirror-protocol/src/tail.js';
 import assert from 'node:assert';
-import * as valita from 'shared/src/valita.js';
+import * as valita from 'shared/out/valita.js';
 import {ErrorWithSeverity} from '../error.js';
 import {EventSourceEntry, eventSourceStream} from './event-source-stream.js';
 import {lineByLineStream} from './line-by-line-stream.js';

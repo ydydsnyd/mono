@@ -1,6 +1,6 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {Env} from 'reflect-shared/out/types.js';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/out/must.js';
 import {EntryCache} from '../storage/entry-cache.js';
 import type {Storage} from '../storage/storage.js';
 import {

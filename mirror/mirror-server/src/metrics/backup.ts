@@ -1,7 +1,7 @@
 import type {Bucket} from '@google-cloud/storage';
 import type {Analytics} from 'cloudflare-api/src/analytics.js';
 import {logger} from 'firebase-functions';
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 
 // Backs up the previous week's worth of metrics to the specified bucket in
 // the file `{cloudflare-account-id}/{table-name}/YYYY-MM-DD~YYYY-MM-DD`

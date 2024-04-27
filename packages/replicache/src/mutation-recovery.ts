@@ -1,5 +1,5 @@
 import type {LogContext} from '@rocicorp/logger';
-import {assert, assertNotUndefined} from 'shared/src/asserts.js';
+import {assert, assertNotUndefined} from 'shared/out/asserts.js';
 import {throwChunkHasher, uuidChunkHasher} from './dag/chunk.js';
 import {LazyStore} from './dag/lazy-store.js';
 import {StoreImpl} from './dag/store-impl.js';

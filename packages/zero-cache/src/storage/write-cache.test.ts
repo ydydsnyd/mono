@@ -1,4 +1,4 @@
-import * as valita from 'shared/src/valita.js';
+import * as valita from 'shared/out/valita.js';
 import {describe, expect, test} from 'vitest';
 import {runWithDurableObjectStorage} from '../test/do.js';
 import {DurableStorage} from './durable-storage.js';

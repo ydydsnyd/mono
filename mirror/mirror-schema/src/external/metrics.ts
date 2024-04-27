@@ -1,4 +1,4 @@
-import type * as v from 'shared/src/valita.js';
+import type * as v from 'shared/out/valita.js';
 import {firestoreDataConverter} from '../converter.js';
 import {monthMetricsSchema, totalMetricsSchema} from '../metrics.js';
 export {

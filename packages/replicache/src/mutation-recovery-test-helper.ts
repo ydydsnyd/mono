@@ -1,6 +1,6 @@
 import {LogContext} from '@rocicorp/logger';
-import {assert} from 'shared/src/asserts.js';
-import type {ReadonlyJSONObject} from 'shared/src/json.js';
+import {assert} from 'shared/out/asserts.js';
+import type {ReadonlyJSONObject} from 'shared/out/json.js';
 import {uuidChunkHasher} from './dag/chunk.js';
 import {LazyStore} from './dag/lazy-store.js';
 import {StoreImpl} from './dag/store-impl.js';

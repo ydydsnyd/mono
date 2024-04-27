@@ -1,4 +1,4 @@
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 import type {Entity} from '../../../entity.js';
 import type {Primitive} from '../../ast/ast.js';
 import type {Multiset} from '../multiset.js';

@@ -1,7 +1,7 @@
 import {getFirestore} from 'firebase-admin/firestore';
 import {APP_DEPLOYMENTS_COLLECTION_ID} from 'mirror-schema/src/deployment.js';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 
 export function wipeDeploymentsOptions(yargs: CommonYargsArgv) {
   return yargs.option('forrealz', {

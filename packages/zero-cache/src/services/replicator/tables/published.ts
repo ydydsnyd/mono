@@ -1,6 +1,6 @@
 import type postgres from 'postgres';
-import {assert} from 'shared/src/asserts.js';
-import * as v from 'shared/src/valita.js';
+import {assert} from 'shared/out/asserts.js';
+import * as v from 'shared/out/valita.js';
 import type {TableSpec} from './specs.js';
 
 const publishedColumnsSchema = v.array(

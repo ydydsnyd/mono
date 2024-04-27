@@ -1,5 +1,5 @@
 import {Context, LogContext, LogLevel} from '@rocicorp/logger';
-import {BufferSizer} from 'shared/src/buffer-sizer.js';
+import {BufferSizer} from 'shared/out/buffer-sizer.js';
 import * as sinon from 'sinon';
 import {afterEach, beforeEach, expect, test} from 'vitest';
 import {

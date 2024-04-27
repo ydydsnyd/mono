@@ -21,8 +21,8 @@ import type {
   Primitive,
   SimpleCondition,
   SimpleOperator,
-} from '@rocicorp/zql/src/zql/ast/ast.js';
-import * as v from 'shared/src/valita.js';
+} from '@rocicorp/zql/dist/zql/ast/ast.js';
+import * as v from 'shared/out/valita.js';
 
 export const orderingSchema: v.Type<Ordering> = v.tuple([
   v.array(v.string()),

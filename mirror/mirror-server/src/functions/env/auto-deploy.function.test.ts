@@ -6,7 +6,7 @@ import {appDataConverter} from 'mirror-schema/src/app.js';
 import {appPath} from 'mirror-schema/src/deployment.js';
 import {DEFAULT_ENV, envPath} from 'mirror-schema/src/env.js';
 import {setApp, setEnv} from 'mirror-schema/src/test-helpers.js';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/out/must.js';
 import {autoDeploy} from './auto-deploy.function.js';
 
 describe('env.auto-deploy', () => {

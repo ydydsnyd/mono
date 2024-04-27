@@ -1,6 +1,6 @@
 import {ENCRYPTION_KEY_SECRET_NAME} from 'mirror-schema/src/env.js';
 import crypto from 'node:crypto';
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 import {storeSecret} from './secrets.js';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
 

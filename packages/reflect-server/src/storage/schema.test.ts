@@ -1,6 +1,6 @@
 import {describe, expect, test} from '@jest/globals';
 import type {LogContext} from '@rocicorp/logger';
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import {createSilentLogContext} from '../util/test-utils.js';
 import {DurableStorage} from './durable-storage.js';
 import {

@@ -1,5 +1,5 @@
 import * as esbuild from 'esbuild';
-import {injectRequire} from 'shared/src/tool/inject-require.js';
+import {injectRequire} from 'shared/out/tool/inject-require.js';
 import packageJSON from '../package.json' assert {type: 'json'};
 
 const {dependencies, devDependencies, bundleDependencies} = packageJSON;

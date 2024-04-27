@@ -1,5 +1,5 @@
-import {createAPIHeaders} from 'shared/src/api/headers.js';
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
+import {createAPIHeaders} from 'shared/out/api/headers.js';
+import type {ReadonlyJSONValue} from 'shared/out/json.js';
 
 export function newAuthedPostRequest(
   url: URL,

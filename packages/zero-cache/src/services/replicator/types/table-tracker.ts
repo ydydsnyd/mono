@@ -15,7 +15,7 @@
  * into the effective pre- and post- transaction values, dropping
  * intermediate and ephemeral changes.
  */
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 import type {RowKey, RowKeyType, RowValue} from '../../../types/row-key.js';
 import {rowKeyString} from '../../../types/row-key.js';
 

@@ -1,4 +1,4 @@
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import {firestoreDataConverter} from './converter.js';
 import {roleSchema} from './membership.js';
 import * as path from './path.js';

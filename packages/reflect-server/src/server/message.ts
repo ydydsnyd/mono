@@ -1,6 +1,6 @@
 import type {LogContext} from '@rocicorp/logger';
 import {Upstream, upstreamSchema} from 'reflect-protocol';
-import * as valita from 'shared/src/valita.js';
+import * as valita from 'shared/out/valita.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
 import type {ClientID, ClientMap, Socket} from '../types/client-state.js';
 import type {PendingMutation} from '../types/mutation.js';

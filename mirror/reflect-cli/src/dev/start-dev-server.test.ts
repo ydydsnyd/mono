@@ -1,6 +1,6 @@
 import {afterEach, expect, jest, test} from '@jest/globals';
 import getPort from 'get-port';
-import {sleep} from 'shared/src/sleep.js';
+import {sleep} from 'shared/out/sleep.js';
 import {MiniflareWrapper, fakeCrashForTesting} from './miniflare-wrapper.js';
 import {getLogger} from '../logger.js';
 

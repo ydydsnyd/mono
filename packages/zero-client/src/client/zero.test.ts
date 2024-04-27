@@ -13,8 +13,8 @@ import type {
   PushRequestV1,
   ReadonlyJSONObject,
 } from 'replicache';
-import {assert} from 'shared/src/asserts.js';
-import * as valita from 'shared/src/valita.js';
+import {assert} from 'shared/out/asserts.js';
+import * as valita from 'shared/out/valita.js';
 import * as sinon from 'sinon';
 import {afterEach, beforeEach, expect, suite, test, vi} from 'vitest';
 import type {EntityQuery} from '../mod.js';

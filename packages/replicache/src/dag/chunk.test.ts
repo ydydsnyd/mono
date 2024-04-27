@@ -1,5 +1,5 @@
 import {expect} from 'chai';
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
+import type {ReadonlyJSONValue} from 'shared/out/json.js';
 import {deepFreeze} from '../frozen-json.js';
 import {Hash, fakeHash, makeNewFakeHashFunction, parse} from '../hash.js';
 import {Chunk, createChunk} from './chunk.js';

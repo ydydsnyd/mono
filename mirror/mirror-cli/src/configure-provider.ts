@@ -8,7 +8,7 @@ import {
   providerPath,
   type Provider,
 } from 'mirror-schema/src/provider.js';
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 import {getProviderConfig} from './cf.js';
 import {confirm, password, select} from './inquirer.js';
 import {storeSecret} from './secrets.js';

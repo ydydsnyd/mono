@@ -10,8 +10,8 @@ import {
 import type {App} from 'mirror-schema/src/app.js';
 import {DEFAULT_ENV, envDataConverter, envPath} from 'mirror-schema/src/env.js';
 import {SemVer, lt} from 'semver';
-import {API_KEY_HEADER_NAME} from 'shared/src/api/headers.js';
-import {APIErrorCode, makeAPIError} from 'shared/src/api/responses.js';
+import {API_KEY_HEADER_NAME} from 'shared/out/api/headers.js';
+import {APIErrorCode, makeAPIError} from 'shared/out/api/responses.js';
 import {
   Secrets,
   SecretsCache,

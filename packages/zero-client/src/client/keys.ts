@@ -1,4 +1,4 @@
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 import type {EntityID} from 'zero-protocol/src/entity.js';
 
 export const CLIENTS_KEY_PREFIX = 'c/';

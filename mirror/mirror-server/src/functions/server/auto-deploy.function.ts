@@ -4,7 +4,7 @@ import {onDocumentWritten} from 'firebase-functions/v2/firestore';
 import {appDataConverter} from 'mirror-schema/src/app.js';
 import {APP_COLLECTION} from 'mirror-schema/src/deployment.js';
 import {serverSchema} from 'mirror-schema/src/server.js';
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import {checkForAutoDeployment} from '../app/auto-deploy.function.js';
 
 /**

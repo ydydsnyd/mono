@@ -1,5 +1,5 @@
-import {joinSymbol} from '@rocicorp/zql/src/zql/ivm/types.js';
-import * as agg from '@rocicorp/zql/src/zql/query/agg.js';
+import {joinSymbol} from '@rocicorp/zql/dist/zql/ivm/types.js';
+import * as agg from '@rocicorp/zql/dist/zql/query/agg.js';
 import {expect, test} from 'vitest';
 import {
   Album,

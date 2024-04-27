@@ -10,9 +10,9 @@ import {
   providerPath,
 } from 'mirror-schema/src/provider.js';
 import assert from 'node:assert';
-import {jsonSchema} from 'shared/src/json-schema.js';
-import {Queue} from 'shared/src/queue.js';
-import * as v from 'shared/src/valita.js';
+import {jsonSchema} from 'shared/out/json-schema.js';
+import {Queue} from 'shared/out/queue.js';
+import * as v from 'shared/out/valita.js';
 import type WebSocket from 'ws';
 import packageJson from '../../../package.json';
 import {createTail as createTailDefault} from '../../cloudflare/tail/tail.js';

@@ -1,5 +1,5 @@
 import type {LogContext} from '@rocicorp/logger';
-import type {Materialite} from '@rocicorp/zql/src/zql/ivm/materialite.js';
+import type {Materialite} from '@rocicorp/zql/dist/zql/ivm/materialite.js';
 import type {Diff} from 'replicache/src/btree/node.js';
 import {
   SubscriptionsManagerImpl,

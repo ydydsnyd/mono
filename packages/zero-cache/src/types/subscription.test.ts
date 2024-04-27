@@ -1,4 +1,4 @@
-import {sleep} from 'shared/src/sleep.js';
+import {sleep} from 'shared/out/sleep.js';
 import {describe, expect, test, vi} from 'vitest';
 import {Subscription} from './subscription.js';
 

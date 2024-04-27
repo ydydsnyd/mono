@@ -1,5 +1,5 @@
-import {unreachable} from 'shared/src/asserts.js';
-import type * as v from 'shared/src/valita.js';
+import {unreachable} from 'shared/out/asserts.js';
+import type * as v from 'shared/out/valita.js';
 
 /**
  * Interfaces to access (a subset of) the SQL API supported by Workers Analytics Engine:

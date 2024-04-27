@@ -1,8 +1,8 @@
 import type {LogContext} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
 import type postgres from 'postgres';
-import {assert} from 'shared/src/asserts.js';
-import {Queue} from 'shared/src/queue.js';
+import {assert} from 'shared/out/asserts.js';
+import {Queue} from 'shared/out/queue.js';
 import type {PostgresDB, PostgresTransaction} from '../types/pg.js';
 
 type MaybePromise<T> = Promise<T> | T;

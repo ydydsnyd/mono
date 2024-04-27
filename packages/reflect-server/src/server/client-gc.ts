@@ -1,8 +1,8 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {ClientID, Env} from 'reflect-shared/out/mod.js';
-import {assert} from 'shared/src/asserts.js';
-import {must} from 'shared/src/must.js';
-import {difference} from 'shared/src/set-utils.js';
+import {assert} from 'shared/out/asserts.js';
+import {must} from 'shared/out/must.js';
+import {difference} from 'shared/out/set-utils.js';
 import {EntryCache} from '../storage/entry-cache.js';
 import type {Storage} from '../storage/storage.js';
 import {

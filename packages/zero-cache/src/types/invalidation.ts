@@ -1,5 +1,5 @@
 import {compareUTF8} from 'compare-utf8';
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import XXH from 'xxhashjs'; // TODO: Use xxhash-wasm
 import {stringify} from './bigint-json.js';
 

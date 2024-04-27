@@ -4,14 +4,14 @@ import {
   LicenseStatus,
   PROD_LICENSE_SERVER_URL,
   TEST_LICENSE_KEY,
-} from '@rocicorp/licensing/src/client';
+} from '@rocicorp/licensing/out/client';
 import {consoleLogSink, LogContext} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
-import {AbortError} from 'shared/src/abort-error.js';
-import {assert} from 'shared/src/asserts.js';
-import {getDocumentVisibilityWatcher} from 'shared/src/document-visible.js';
-import {getDocument} from 'shared/src/get-document.js';
-import type {JSONValue, ReadonlyJSONValue} from 'shared/src/json.js';
+import {AbortError} from 'shared/out/abort-error.js';
+import {assert} from 'shared/out/asserts.js';
+import {getDocumentVisibilityWatcher} from 'shared/out/document-visible.js';
+import {getDocument} from 'shared/out/get-document.js';
+import type {JSONValue, ReadonlyJSONValue} from 'shared/out/json.js';
 import {initBgIntervalProcess} from './bg-interval.js';
 import {PullDelegate, PushDelegate} from './connection-loop-delegates.js';
 import {ConnectionLoop, MAX_DELAY_MS, MIN_DELAY_MS} from './connection-loop.js';

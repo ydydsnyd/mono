@@ -1,8 +1,8 @@
 import {expect, test} from '@jest/globals';
 import {compareUTF8} from 'compare-utf8';
 import type {ScanNoIndexOptions} from 'replicache';
-import {assert} from 'shared/src/asserts.js';
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
+import {assert} from 'shared/out/asserts.js';
+import type {ReadonlyJSONValue} from 'shared/out/json.js';
 import {DurableStorage} from '../../src/storage/durable-storage.js';
 import {EntryCache} from '../../src/storage/entry-cache.js';
 import {

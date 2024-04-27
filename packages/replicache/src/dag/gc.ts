@@ -1,4 +1,4 @@
-import {assert, assertNumber} from 'shared/src/asserts.js';
+import {assert, assertNumber} from 'shared/out/asserts.js';
 import {skipGCAsserts} from '../config.js';
 import {Hash, emptyHash} from '../hash.js';
 import type {MaybePromise} from '../types.js';

@@ -15,7 +15,7 @@ import {
   providerDataConverter,
   providerPath,
 } from 'mirror-schema/src/provider.js';
-import {FetchMocker} from 'shared/src/fetch-mocker.js';
+import {FetchMocker} from 'shared/out/fetch-mocker.js';
 import {TestSecrets} from '../../secrets/test-utils.js';
 import {aggregate} from './aggregate.function.js';
 

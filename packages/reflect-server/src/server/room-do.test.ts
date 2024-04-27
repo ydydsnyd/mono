@@ -12,10 +12,10 @@ import {subscribe, unsubscribe} from 'node:diagnostics_channel';
 import type {LogLevel, TailMessage} from 'reflect-protocol/src/tail.js';
 import type {MutatorDefs, WriteTransaction} from 'reflect-shared/out/types.js';
 import {version} from 'reflect-shared/out/version.js';
-import type {APIResponse} from 'shared/src/api/responses.js';
-import {CONNECTION_SECONDS_CHANNEL_NAME} from 'shared/src/events/connection-seconds.js';
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
-import {Queue} from 'shared/src/queue.js';
+import type {APIResponse} from 'shared/out/api/responses.js';
+import {CONNECTION_SECONDS_CHANNEL_NAME} from 'shared/out/events/connection-seconds.js';
+import type {ReadonlyJSONValue} from 'shared/out/json.js';
+import {Queue} from 'shared/out/queue.js';
 import {
   newCreateRoomRequest,
   newDeleteRoomRequest,

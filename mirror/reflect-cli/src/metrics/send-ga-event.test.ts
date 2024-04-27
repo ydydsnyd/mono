@@ -1,5 +1,5 @@
 import {afterEach, expect, jest, test} from '@jest/globals';
-import {FetchMocker} from 'shared/src/fetch-mocker.js';
+import {FetchMocker} from 'shared/out/fetch-mocker.js';
 import type {AuthenticatedUser} from '../auth-config.js';
 import {authContext} from '../login.test.helper.js';
 import {sendGAEvent} from './send-ga-event.js';

@@ -14,7 +14,7 @@ import {
 import {appPath} from 'mirror-schema/src/deployment.js';
 import {setApp, setUser} from 'mirror-schema/src/test-helpers.js';
 import {userPath} from 'mirror-schema/src/user.js';
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import {getMockReq} from '../../test-helpers.js';
 import {
   appAuthorization,

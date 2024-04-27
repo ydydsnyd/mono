@@ -16,7 +16,7 @@ import {
 } from 'mirror-schema/src/provider.js';
 import * as semver from 'semver';
 import {gtr} from 'semver';
-import {isSupportedSemverRange} from 'shared/src/mirror/is-supported-semver-range.js';
+import {isSupportedSemverRange} from 'shared/out/mirror/is-supported-semver-range.js';
 import {assertAllModulesHaveUniqueNames} from '../../cloudflare/module-assembler.js';
 import {
   appOrKeyAuthorization,

@@ -2,9 +2,9 @@ import type {
   Condition,
   Primitive,
   SimpleCondition,
-} from '@rocicorp/zql/src/zql/ast/ast.js';
+} from '@rocicorp/zql/dist/zql/ast/ast.js';
 import {compareUTF8} from 'compare-utf8';
-import {defined} from 'shared/src/arrays.js';
+import {defined} from 'shared/out/arrays.js';
 import {BigIntJSON} from '../types/bigint-json.js';
 import {
   NormalizedInvalidationFilterSpec,

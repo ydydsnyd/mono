@@ -3,9 +3,9 @@ import {fail} from 'node:assert';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import type {AbortError} from 'shared/src/abort-error.js';
-import {Queue} from 'shared/src/queue.js';
-import {sleep} from 'shared/src/sleep.js';
+import type {AbortError} from 'shared/out/abort-error.js';
+import {Queue} from 'shared/out/queue.js';
+import {sleep} from 'shared/out/sleep.js';
 import {CompileResult, compile, watch} from './compile.js';
 
 async function writeTempFile(data: string, filename = 'test.js') {

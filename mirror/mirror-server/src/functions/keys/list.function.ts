@@ -15,8 +15,8 @@ import {
   apiKeysCollection,
 } from 'mirror-schema/src/api-key.js';
 import {appPath} from 'mirror-schema/src/deployment.js';
-import {assertString} from 'shared/src/asserts.js';
-import {must} from 'shared/src/must.js';
+import {assertString} from 'shared/out/asserts.js';
+import {must} from 'shared/out/must.js';
 import {
   appAuthorization,
   teamAuthorization,

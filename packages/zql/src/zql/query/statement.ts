@@ -1,4 +1,4 @@
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/out/must.js';
 import type {Entity} from '../../entity.js';
 import {
   buildPipeline,

@@ -4,14 +4,14 @@ import {
   isValidRoomID,
   makeInvalidRoomIDMessage,
 } from 'reflect-shared/out/room-id.js';
-import * as valita from 'shared/src/valita.js';
+import * as valita from 'shared/out/valita.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
 import type {ListOptions} from '../storage/storage.js';
 import {APIError, roomNotFoundAPIError} from './api-errors.js';
 import {roomDOFetch} from './auth-do.js';
 import {ErrorWithForwardedResponse} from './errors.js';
 import {CREATE_ROOM_PATH, fmtPath} from './paths.js';
-import {jsonSchema} from 'shared/src/json-schema.js';
+import {jsonSchema} from 'shared/out/json-schema.js';
 
 export enum RoomStatus {
   // An Open room can be used by users. We will accept connect()s to it.

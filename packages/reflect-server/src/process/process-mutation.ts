@@ -1,7 +1,7 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {Version} from 'reflect-protocol';
 import type {Env} from 'reflect-shared/out/types.js';
-import {timed} from 'shared/src/timed.js';
+import {timed} from 'shared/out/timed.js';
 import {EntryCache} from '../storage/entry-cache.js';
 import {ReplicacheTransaction} from '../storage/replicache-transaction.js';
 import type {Storage} from '../storage/storage.js';

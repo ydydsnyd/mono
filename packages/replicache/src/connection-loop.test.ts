@@ -1,7 +1,7 @@
 import {LogContext} from '@rocicorp/logger';
 import {expect} from 'chai';
-import {getDocumentVisibilityWatcher} from 'shared/src/document-visible.js';
-import {sleep} from 'shared/src/sleep.js';
+import {getDocumentVisibilityWatcher} from 'shared/out/document-visible.js';
+import {sleep} from 'shared/out/sleep.js';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import {
   ConnectionLoop,

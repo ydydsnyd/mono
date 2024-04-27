@@ -3,7 +3,7 @@ import type {Firestore} from 'firebase-admin/firestore';
 import {logger} from 'firebase-functions';
 import {runningConnectionSeconds} from 'mirror-schema/src/datasets.js';
 import {CONNECTION_SECONDS, ROOM_SECONDS} from 'mirror-schema/src/metrics.js';
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import {Ledger} from './ledger.js';
 
 export const sums = {

@@ -16,7 +16,7 @@ import {
 } from 'mirror-schema/src/external/app.js';
 import {deploymentViewDataConverter} from 'mirror-schema/src/external/deployment.js';
 import {watchDoc} from 'mirror-schema/src/external/watch.js';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/out/must.js';
 import {getAppID, readAppConfig, writeAppConfig} from './app-config.js';
 import type {AuthContext} from './handler.js';
 import {checkbox, confirm} from './inquirer.js';

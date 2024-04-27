@@ -1,4 +1,4 @@
-import * as valita from 'shared/src/valita.js';
+import * as valita from 'shared/out/valita.js';
 import type {Storage} from '../storage/storage.js';
 import type {ClientID} from './client-state.js';
 

@@ -1,8 +1,8 @@
 // This test file is loaded by worker.test.ts
 
-import {assert} from 'shared/src/asserts.js';
-import {JSONValue, deepEqual} from 'shared/src/json.js';
-import {sleep} from 'shared/src/sleep.js';
+import {assert} from 'shared/out/asserts.js';
+import {JSONValue, deepEqual} from 'shared/out/json.js';
+import {sleep} from 'shared/out/sleep.js';
 import {reflectForTest} from './test-utils.js';
 
 onmessage = async (e: MessageEvent) => {

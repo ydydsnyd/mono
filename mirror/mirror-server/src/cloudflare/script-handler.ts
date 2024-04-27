@@ -16,7 +16,7 @@ import type {
   DeploymentSecrets,
 } from 'mirror-schema/src/deployment.js';
 import type {ModuleRef} from 'mirror-schema/src/module.js';
-import {sleep} from 'shared/src/sleep.js';
+import {sleep} from 'shared/out/sleep.js';
 import type {ZoneConfig} from './config.js';
 import {ModuleAssembler} from './module-assembler.js';
 import {publishCustomDomains} from './publish-custom-domains.js';

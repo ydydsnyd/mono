@@ -1,4 +1,4 @@
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import type {ListOptions} from '../storage/storage.js';
 
 const numericString = v.string().chain(str => {

@@ -1,6 +1,6 @@
 import * as esbuild from 'esbuild';
-import {getExternalFromPackageJSON} from 'shared/src/tool/get-external-from-package-json.js';
-import {injectRequire} from 'shared/src/tool/inject-require.js';
+import {getExternalFromPackageJSON} from 'shared/out/tool/get-external-from-package-json.js';
+import {injectRequire} from 'shared/out/tool/inject-require.js';
 
 async function main() {
   await esbuild.build({

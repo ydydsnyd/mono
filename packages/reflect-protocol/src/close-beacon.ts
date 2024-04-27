@@ -1,4 +1,4 @@
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 
 export const closeBeaconSchema = v.object({
   lastMutationID: v.number(),

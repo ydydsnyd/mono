@@ -1,7 +1,7 @@
 import {PG_UNIQUE_VIOLATION} from '@drdgvhbh/postgres-error-codes';
 import postgres from 'postgres';
-import {Queue} from 'shared/src/queue.js';
-import {sleep} from 'shared/src/sleep.js';
+import {Queue} from 'shared/out/queue.js';
+import {sleep} from 'shared/out/sleep.js';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 import {expectTables, testDBs} from '../test/db.js';
 import {createSilentLogContext} from '../test/logger.js';

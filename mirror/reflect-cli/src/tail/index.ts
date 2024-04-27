@@ -4,7 +4,7 @@ import {
   errorMessageSchema,
 } from 'mirror-protocol/src/tail-message.js';
 import type {RoomTailRequest} from 'mirror-protocol/src/tail.js';
-import * as valita from 'shared/src/valita.js';
+import * as valita from 'shared/out/valita.js';
 import {getAppID, getDefaultApp} from '../app-config.js';
 import type {CommonYargsArgv, YargvToInterface} from '../yarg-types.js';
 import {createTailEventSource} from './tail-event-source.js';

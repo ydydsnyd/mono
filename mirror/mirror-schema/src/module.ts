@@ -1,7 +1,7 @@
 import type {Bucket} from '@google-cloud/storage';
 import type {Storage} from 'firebase-admin/storage';
-import {sha256OfString} from 'shared/src/sha256.js';
-import * as v from 'shared/src/valita.js';
+import {sha256OfString} from 'shared/out/sha256.js';
+import * as v from 'shared/out/valita.js';
 import {parseCloudStorageURL} from './cloud-storage.js';
 
 // Subset of the wrangler `CfModuleType` applicable to Mirror.

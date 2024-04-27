@@ -1,6 +1,6 @@
 import {expect, test} from '@jest/globals';
 import {userAgentSchema} from 'mirror-protocol/src/user-agent.js';
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import reflectPackageJSON from '../../../packages/reflect/package.json';
 import {reflectVersionMatcher} from './test-helpers.js';
 import {getUserAgent, version} from './version.js';

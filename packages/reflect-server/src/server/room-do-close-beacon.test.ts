@@ -3,7 +3,7 @@ import {resetAllConfig, setConfig} from 'reflect-shared/out/config.js';
 import type {ClientID} from 'reflect-shared/out/mod.js';
 import {CLOSE_BEACON_PATH} from 'reflect-shared/out/paths.js';
 import type {MutatorDefs, WriteTransaction} from 'reflect-shared/out/types.js';
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
+import type {ReadonlyJSONValue} from 'shared/out/json.js';
 import {newCreateRoomRequest} from '../client/room.js';
 import {DurableStorage} from '../storage/durable-storage.js';
 import {

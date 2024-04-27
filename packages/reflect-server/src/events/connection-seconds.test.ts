@@ -8,7 +8,7 @@ import {
 } from '@jest/globals';
 import type {LogContext} from '@rocicorp/logger';
 import {subscribe, unsubscribe} from 'node:diagnostics_channel';
-import {Queue} from 'shared/src/queue.js';
+import {Queue} from 'shared/out/queue.js';
 import type {AlarmScheduler} from '../server/alarms.js';
 import {createSilentLogContext} from '../util/test-utils.js';
 import {

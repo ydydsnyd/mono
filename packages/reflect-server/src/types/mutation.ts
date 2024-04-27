@@ -1,6 +1,6 @@
 import type {AuthData} from 'reflect-shared/out/types.js';
 import type {ClientGroupID} from 'replicache';
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
+import type {ReadonlyJSONValue} from 'shared/out/json.js';
 import type {ClientID} from './client-state.js';
 
 export type PendingMutation = {

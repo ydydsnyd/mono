@@ -1,1 +1,1 @@
-export {config as default} from '../../packages/shared/src/tool/vitest-config.js';
+export {config as default} from '../../packages/shared/out/tool/vitest-config.js';

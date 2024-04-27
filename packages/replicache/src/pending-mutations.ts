@@ -1,4 +1,4 @@
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
+import type {ReadonlyJSONValue} from 'shared/out/json.js';
 import {mustGetHeadHash, Read} from './dag/store.js';
 import {DEFAULT_HEAD_NAME, localMutationsDD31} from './db/commit.js';
 import type {ClientID} from './sync/ids.js';

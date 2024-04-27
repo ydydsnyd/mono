@@ -1,6 +1,6 @@
 // @ts-check
 
-import {jestConfig} from 'shared/src/tool/jest-config.js';
+import {jestConfig} from 'shared/out/tool/jest-config.js';
 
 /** @type {import('jest').Config} */
 const config = {

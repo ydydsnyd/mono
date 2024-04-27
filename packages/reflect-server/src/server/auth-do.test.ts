@@ -9,11 +9,11 @@ import {
 } from '@jest/globals';
 import type {TailErrorMessage} from 'reflect-protocol/src/tail.js';
 import {resetAllConfig, setConfig} from 'reflect-shared/out/config.js';
-import {API_KEY_HEADER_NAME, createAPIHeaders} from 'shared/src/api/headers.js';
-import type {APIErrorInfo} from 'shared/src/api/responses.js';
-import {assert} from 'shared/src/asserts.js';
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
-import {must} from 'shared/src/must.js';
+import {API_KEY_HEADER_NAME, createAPIHeaders} from 'shared/out/api/headers.js';
+import type {APIErrorInfo} from 'shared/out/api/responses.js';
+import {assert} from 'shared/out/asserts.js';
+import type {ReadonlyJSONValue} from 'shared/out/json.js';
+import {must} from 'shared/out/must.js';
 import {
   newCloseRoomRequest,
   newCreateRoomRequest,

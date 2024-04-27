@@ -1,4 +1,8 @@
-import type {AST, Condition, Primitive} from '@rocicorp/zql/src/zql/ast/ast.js';
+import type {
+  AST,
+  Condition,
+  Primitive,
+} from '@rocicorp/zql/dist/zql/ast/ast.js';
 import {describe, expect, test} from 'vitest';
 import {
   NormalizedInvalidationFilterSpec,

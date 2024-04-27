@@ -1,5 +1,5 @@
 import type {LogContext} from '@rocicorp/logger';
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import {describe, expect, test} from 'vitest';
 import {runWithDurableObjectStorage} from '../test/do.js';
 import {createSilentLogContext} from '../test/logger.js';

@@ -15,7 +15,7 @@ import {
   type Permissions,
 } from 'mirror-schema/src/api-key.js';
 import {fakeFirestore} from 'mirror-schema/src/test-helpers.js';
-import {Queue} from 'shared/src/queue.js';
+import {Queue} from 'shared/out/queue.js';
 import type {UpdateKeyRequest, UpdateKeyResponse} from '../../keys/updates.js';
 import {getMockReq, mockFunctionParamsAndSecrets} from '../../test-helpers.js';
 import {

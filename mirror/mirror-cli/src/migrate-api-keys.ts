@@ -4,7 +4,7 @@ import {
   apiKeySchema,
 } from 'mirror-schema/src/api-key.js';
 import {firestoreDataConverter} from 'mirror-schema/src/converter.js';
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
 
 const legacyApiKeySchema = apiKeySchema.omit('appIDs').extend({

@@ -4,7 +4,7 @@ import type {
   Primitive,
   SimpleCondition,
   SimpleOperator,
-} from '@rocicorp/zql/src/zql/ast/ast.js';
+} from '@rocicorp/zql/dist/zql/ast/ast.js';
 
 // Readability helpers
 export function and(...conditions: Condition[]): Conjunction {

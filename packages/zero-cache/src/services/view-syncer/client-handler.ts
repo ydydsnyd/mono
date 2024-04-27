@@ -1,6 +1,6 @@
 import type {LogContext} from '@rocicorp/logger';
-import type {AST} from '@rocicorp/zql/src/zql/ast/ast.js';
-import {assert, unreachable} from 'shared/src/asserts.js';
+import type {AST} from '@rocicorp/zql/dist/zql/ast/ast.js';
+import {assert, unreachable} from 'shared/out/asserts.js';
 import type {Downstream, PokePartBody} from 'zero-protocol';
 import type {Subscription} from '../../types/subscription.js';
 import {

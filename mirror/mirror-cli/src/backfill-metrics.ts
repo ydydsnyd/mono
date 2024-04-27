@@ -1,7 +1,7 @@
 import {Analytics} from 'cloudflare-api/src/analytics.js';
 import {getFirestore} from 'firebase-admin/firestore';
 import {aggregateHourBefore} from 'mirror-server/src/metrics/aggregate.js';
-import {sleep} from 'shared/src/sleep.js';
+import {sleep} from 'shared/out/sleep.js';
 import {getProviderConfig} from './cf.js';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
 

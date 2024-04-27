@@ -1,8 +1,8 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {Patch, Poke} from 'reflect-protocol';
 import type {Env} from 'reflect-shared/out/types.js';
-import type {BufferSizer} from 'shared/src/buffer-sizer.js';
-import {must} from 'shared/src/must.js';
+import type {BufferSizer} from 'shared/out/buffer-sizer.js';
+import {must} from 'shared/out/must.js';
 import type {ClientDeleteHandler} from '../server/client-delete-handler.js';
 import type {ClientDisconnectHandler} from '../server/client-disconnect-handler.js';
 import type {DurableStorage} from '../storage/durable-storage.js';

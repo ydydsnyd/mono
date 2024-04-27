@@ -6,7 +6,7 @@ import {
 import type {AccountAccess} from 'cloudflare-api/src/resources.js';
 import {GlobalScript} from 'cloudflare-api/src/scripts.js';
 import * as esbuild from 'esbuild';
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 import {fileURLToPath} from 'url';
 import type {WorkerName} from 'mirror-workers/src/service-names.js';
 

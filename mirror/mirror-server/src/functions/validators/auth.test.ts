@@ -29,8 +29,8 @@ import {DEFAULT_PROVIDER_ID} from 'mirror-schema/src/provider.js';
 import {setUser} from 'mirror-schema/src/test-helpers.js';
 import type {User} from 'mirror-schema/src/user.js';
 import {userPath} from 'mirror-schema/src/user.js';
-import {FetchMocker} from 'shared/src/fetch-mocker.js';
-import * as v from 'shared/src/valita.js';
+import {FetchMocker} from 'shared/out/fetch-mocker.js';
+import * as v from 'shared/out/valita.js';
 import {mockFunctionParamsAndSecrets} from '../../test-helpers.js';
 import {
   appAuthorization,

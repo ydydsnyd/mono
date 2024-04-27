@@ -1,4 +1,4 @@
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 
 // Include all characters that are encoded by encodeURIComponent
 // so that they can be used as non-ID delimiters in the future.

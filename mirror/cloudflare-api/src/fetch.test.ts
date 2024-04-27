@@ -1,4 +1,4 @@
-import {FetchMocker} from 'shared/src/fetch-mocker.js';
+import {FetchMocker} from 'shared/out/fetch-mocker.js';
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
 import {CustomHostnames} from './custom-hostnames.js';
 import {mockFetch} from './fetch-test-helper.js';

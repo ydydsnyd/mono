@@ -1,5 +1,5 @@
 import {expect} from 'chai';
-import * as valita from 'shared/src/valita.js';
+import * as valita from 'shared/out/valita.js';
 import {
   Hash,
   STRING_LENGTH,

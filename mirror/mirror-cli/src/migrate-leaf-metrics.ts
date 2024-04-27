@@ -9,7 +9,7 @@ import {
   type Metrics,
   type Month,
 } from 'mirror-schema/src/metrics.js';
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
 
 export function migrateLeafMetricsOptions(yargs: CommonYargsArgv) {

@@ -7,7 +7,7 @@ import colors from 'picocolors';
 import {
   internalPackagesMap,
   isInternalPackage,
-} from '../../shared/src/tool/internal-packages.js';
+} from '../../shared/out/tool/internal-packages.js';
 
 const devDeps = getGenericDependencies('packages/reflect', 'devDependencies');
 

@@ -25,7 +25,7 @@ import {readAppConfig} from '../app-config.js';
 import {Separator, checkbox, type Choice, type Item} from '../inquirer.js';
 import {makeRequester} from '../requester.js';
 
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/out/must.js';
 import type {AuthContext} from '../handler.js';
 import {getLogger} from '../logger.js';
 import {padColumns} from '../table.js';

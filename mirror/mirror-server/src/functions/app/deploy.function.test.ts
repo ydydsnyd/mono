@@ -51,9 +51,9 @@ import {
   setEnv,
   setTeam,
 } from 'mirror-schema/src/test-helpers.js';
-import {must} from 'shared/src/must.js';
-import {Queue} from 'shared/src/queue.js';
-import {sleep} from 'shared/src/sleep.js';
+import {must} from 'shared/out/must.js';
+import {Queue} from 'shared/out/queue.js';
+import {sleep} from 'shared/out/sleep.js';
 import type {ScriptHandler} from '../../cloudflare/script-handler.js';
 import {TestSecrets} from '../../secrets/test-utils.js';
 import {mockFunctionParamsAndSecrets} from '../../test-helpers.js';

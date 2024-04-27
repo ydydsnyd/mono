@@ -1,6 +1,6 @@
 import type {LogContext} from '@rocicorp/logger';
-import {assert} from 'shared/src/asserts.js';
-import * as v from 'shared/src/valita.js';
+import {assert} from 'shared/out/asserts.js';
+import * as v from 'shared/out/valita.js';
 import type {DurableStorage} from './durable-storage.js';
 import type {Storage} from './storage.js';
 

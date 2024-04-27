@@ -1,5 +1,5 @@
 import {describe, expect, test} from '@jest/globals';
-import {parse} from 'shared/src/valita.js';
+import {parse} from 'shared/out/valita.js';
 import {defaultOptions, varsSchema} from './deployment.js';
 import {envSchema} from './env.js';
 

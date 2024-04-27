@@ -1,4 +1,4 @@
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 
 // Subset of Bytes type returned in the client-side Firestore sdk:
 // https://firebase.google.com/docs/reference/js/firestore_.bytes

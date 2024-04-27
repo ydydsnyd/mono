@@ -16,10 +16,10 @@ import {
 } from 'reflect-shared/out/room-id.js';
 import type {AuthData, Env} from 'reflect-shared/out/types.js';
 import {version} from 'reflect-shared/out/version.js';
-import {assert} from 'shared/src/asserts.js';
-import {must} from 'shared/src/must.js';
-import {timed} from 'shared/src/timed.js';
-import * as valita from 'shared/src/valita.js';
+import {assert} from 'shared/out/asserts.js';
+import {must} from 'shared/out/must.js';
+import {timed} from 'shared/out/timed.js';
+import * as valita from 'shared/out/valita.js';
 import {DurableStorage} from '../storage/durable-storage.js';
 import {encodeHeaderValue} from '../util/headers.js';
 import {populateLogContextFromRequest} from '../util/log-context-common.js';

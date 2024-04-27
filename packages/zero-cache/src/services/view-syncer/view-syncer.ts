@@ -1,5 +1,5 @@
 import type {LogContext} from '@rocicorp/logger';
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import type {DurableStorage} from '../../storage/durable-storage.js';
 import {initStorageSchema} from '../../storage/schema.js';
 import type {InvalidationWatcherRegistry} from '../invalidation-watcher/registry.js';

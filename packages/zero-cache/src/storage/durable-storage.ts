@@ -3,8 +3,8 @@ import type {
   DurableObjectStorage,
 } from '@cloudflare/workers-types';
 import {compareUTF8} from 'compare-utf8';
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
-import type * as valita from 'shared/src/valita.js';
+import type {ReadonlyJSONValue} from 'shared/out/json.js';
+import type * as valita from 'shared/out/valita.js';
 import {
   MAX_ENTRIES_TO_GET,
   delEntry,

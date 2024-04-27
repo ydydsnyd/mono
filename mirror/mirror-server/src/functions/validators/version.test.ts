@@ -12,7 +12,7 @@ import {
   baseResponseFields,
 } from 'mirror-protocol/src/base.js';
 import {SemVer} from 'semver';
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import {validateSchema} from './schema.js';
 import type {Callable} from './types.js';
 import {userAgentVersion, type DistTags} from './version.js';

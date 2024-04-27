@@ -8,8 +8,8 @@ import {
   connectionSecondsReportSchema as reportSchema,
   connectionSecondsReportV1Schema as reportV1Schema,
   type ConnectionSecondsReport,
-} from 'shared/src/events/connection-seconds.js';
-import * as v from 'shared/src/valita.js';
+} from 'shared/out/events/connection-seconds.js';
+import * as v from 'shared/out/valita.js';
 import {parseScriptTags, type ScriptTags} from '../script-tags.js';
 
 export interface Env {

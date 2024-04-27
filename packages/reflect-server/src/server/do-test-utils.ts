@@ -1,4 +1,4 @@
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 
 export class TestExecutionContext implements ExecutionContext {
   waitUntil(_promise: Promise<unknown>): void {

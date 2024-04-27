@@ -1,6 +1,6 @@
 import {compareUTF8} from 'compare-utf8';
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
-import * as valita from 'shared/src/valita.js';
+import type {ReadonlyJSONValue} from 'shared/out/json.js';
+import * as valita from 'shared/out/valita.js';
 import {batchScan, scan} from './scan-storage.js';
 import type {ListOptions, Storage} from './storage.js';
 

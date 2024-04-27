@@ -1,4 +1,4 @@
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
+import type {ReadonlyJSONValue} from 'shared/out/json.js';
 
 interface Logger {
   log: typeof console.log;

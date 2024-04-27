@@ -3,8 +3,8 @@ import {resolver, type Resolver} from '@rocicorp/resolver';
 import {Timestamp, type Firestore} from 'firebase-admin/firestore';
 import {logger} from 'firebase-functions';
 import {apiKeyDataConverter, apiKeyPath} from 'mirror-schema/src/api-key.js';
-import {assert} from 'shared/src/asserts.js';
-import {must} from 'shared/src/must.js';
+import {assert} from 'shared/out/asserts.js';
+import {must} from 'shared/out/must.js';
 import {
   UpdateBatch,
   updateKeyRequestSchema,

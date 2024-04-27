@@ -1,6 +1,6 @@
 import {Lock} from '@rocicorp/lock';
-import {assert} from 'shared/src/asserts.js';
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
+import {assert} from 'shared/out/asserts.js';
+import type {ReadonlyJSONValue} from 'shared/out/json.js';
 import type {Chunk, CreateChunk} from '../dag/chunk.js';
 import type {Write} from '../dag/store.js';
 import type {FormatVersion} from '../format-version.js';

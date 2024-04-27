@@ -1,12 +1,12 @@
 import {LogContext, LogLevel} from '@rocicorp/logger';
 import {Resolver, resolver} from '@rocicorp/resolver';
-import type {Entity} from '@rocicorp/zql/src/entity.js';
-import type {AST} from '@rocicorp/zql/src/zql/ast/ast.js';
-import type {Context as ZQLContext} from '@rocicorp/zql/src/zql/context/context.js';
-import {ZeroContext} from '@rocicorp/zql/src/zql/context/zero-context.js';
-import {Materialite} from '@rocicorp/zql/src/zql/ivm/materialite.js';
-import type {FromSet} from '@rocicorp/zql/src/zql/query/entity-query.js';
-import {EntityQuery} from '@rocicorp/zql/src/zql/query/entity-query.js';
+import type {Entity} from '@rocicorp/zql/dist/entity.js';
+import type {AST} from '@rocicorp/zql/dist/zql/ast/ast.js';
+import type {Context as ZQLContext} from '@rocicorp/zql/dist/zql/context/context.js';
+import {ZeroContext} from '@rocicorp/zql/dist/zql/context/zero-context.js';
+import {Materialite} from '@rocicorp/zql/dist/zql/ivm/materialite.js';
+import type {FromSet} from '@rocicorp/zql/dist/zql/query/entity-query.js';
+import {EntityQuery} from '@rocicorp/zql/dist/zql/query/entity-query.js';
 import {
   ConnectedMessage,
   Downstream,
@@ -44,12 +44,12 @@ import type {
   MaybePromise,
   UpdateNeededReason as ReplicacheUpdateNeededReason,
 } from 'replicache/src/types.js';
-import {assert} from 'shared/src/asserts.js';
-import {getDocumentVisibilityWatcher} from 'shared/src/document-visible.js';
-import {getDocument} from 'shared/src/get-document.js';
-import {must} from 'shared/src/must.js';
-import {sleep, sleepWithAbort} from 'shared/src/sleep.js';
-import * as valita from 'shared/src/valita.js';
+import {assert} from 'shared/out/asserts.js';
+import {getDocumentVisibilityWatcher} from 'shared/out/document-visible.js';
+import {getDocument} from 'shared/out/get-document.js';
+import {must} from 'shared/out/must.js';
+import {sleep, sleepWithAbort} from 'shared/out/sleep.js';
+import * as valita from 'shared/out/valita.js';
 import {nanoid} from '../util/nanoid.js';
 import {send} from '../util/socket.js';
 import {checkConnectivity} from './connect-checks.js';

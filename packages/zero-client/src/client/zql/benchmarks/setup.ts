@@ -1,8 +1,8 @@
 import {generate} from '@rocicorp/rails';
 import {nanoid} from 'nanoid';
 import {Replicache, TEST_LICENSE_KEY, WriteTransaction} from 'replicache';
-import {makeReplicacheContext} from '@rocicorp/zql/src/zql/context/replicache-context.js';
-import {EntityQuery} from '@rocicorp/zql/src/zql/query/entity-query.js';
+import {makeReplicacheContext} from '@rocicorp/zql/dist/zql/context/replicache-context.js';
+import {EntityQuery} from '@rocicorp/zql/dist/zql/query/entity-query.js';
 
 export type Track = {
   id: string;

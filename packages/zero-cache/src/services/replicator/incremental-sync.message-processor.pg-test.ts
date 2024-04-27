@@ -1,7 +1,7 @@
 import {Lock} from '@rocicorp/lock';
 import type {LogContext} from '@rocicorp/logger';
 import type {Pgoutput} from 'pg-logical-replication';
-import {Queue} from 'shared/src/queue.js';
+import {Queue} from 'shared/out/queue.js';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 import {expectTables, testDBs} from '../../test/db.js';
 import {createSilentLogContext} from '../../test/logger.js';

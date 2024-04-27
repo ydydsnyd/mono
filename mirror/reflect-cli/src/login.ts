@@ -3,8 +3,8 @@ import assert from 'node:assert';
 import http from 'node:http';
 import type {Socket} from 'node:net';
 import open from 'open';
-import {sleep} from 'shared/src/sleep.js';
-import {parse} from 'shared/src/valita.js';
+import {sleep} from 'shared/out/sleep.js';
+import {parse} from 'shared/out/valita.js';
 import {
   authCredentialSchema,
   UserAuthConfig,

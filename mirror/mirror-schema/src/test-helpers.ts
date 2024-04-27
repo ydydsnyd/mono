@@ -21,7 +21,7 @@ import {
   userPath,
   type User,
 } from 'mirror-schema/src/user.js';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/out/must.js';
 import {defaultOptions} from './deployment.js';
 import {DEFAULT_ENV, envDataConverter, envPath, type Env} from './env.js';
 import {

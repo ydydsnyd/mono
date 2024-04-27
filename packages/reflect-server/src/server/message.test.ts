@@ -7,7 +7,7 @@ import {
   test,
 } from '@jest/globals';
 import type {ErrorKind} from 'reflect-protocol';
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 import {handleMessage} from '../../src/server/message.js';
 import type {
   ClientGroupID,

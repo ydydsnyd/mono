@@ -1,5 +1,5 @@
-import {assertArray, assertObject, assertString} from 'shared/src/asserts.js';
-import {ReadonlyJSONValue, assertJSONValue} from 'shared/src/json.js';
+import {assertArray, assertObject, assertString} from 'shared/out/asserts.js';
+import {ReadonlyJSONValue, assertJSONValue} from 'shared/out/json.js';
 
 /**
  * This type describes the patch field in a {@link PullResponse} and it is used

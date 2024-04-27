@@ -14,7 +14,7 @@ import {
   apiKeyDataConverter,
   apiKeyPath,
 } from 'mirror-schema/src/api-key.js';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/out/must.js';
 import {
   appAuthorization,
   teamAuthorization,

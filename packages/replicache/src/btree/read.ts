@@ -1,4 +1,4 @@
-import {deepEqual} from 'shared/src/json.js';
+import {deepEqual} from 'shared/out/json.js';
 import type {Read} from '../dag/store.js';
 import type {FormatVersion} from '../format-version.js';
 import type {FrozenJSONValue} from '../frozen-json.js';

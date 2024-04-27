@@ -6,7 +6,7 @@ import {
 } from 'mirror-schema/src/team.js';
 import {appDataConverter, APP_COLLECTION} from 'mirror-schema/src/app.js';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 import {DEPRECATED_TEAM_SUBDOMAIN_INDEX_COLLECTION} from './migrate-team-labels.js';
 
 export function deleteTeamSubdomainsOptions(yargs: CommonYargsArgv) {

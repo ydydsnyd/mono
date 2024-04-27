@@ -19,7 +19,7 @@ import {
   teamPath,
 } from 'mirror-schema/src/team.js';
 import {userDataConverter, userPath} from 'mirror-schema/src/user.js';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/out/must.js';
 import {newTeamID} from '../../ids.js';
 import {userAuthorization} from '../validators/auth.js';
 import {validateSchema} from '../validators/schema.js';

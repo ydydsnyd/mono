@@ -1,6 +1,6 @@
 import {HttpsError, type CallableRequest} from 'firebase-functions/v2/https';
-import type * as v from 'shared/src/valita.js';
-import {parse} from 'shared/src/valita.js';
+import type * as v from 'shared/out/valita.js';
+import {parse} from 'shared/out/valita.js';
 import {RequestContextValidator, ValidatorChainer} from './types.js';
 import {logger} from 'firebase-functions';
 import {OnRequestBuilder} from './https.js';

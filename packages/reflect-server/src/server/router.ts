@@ -1,10 +1,10 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {MaybePromise} from 'replicache';
-import {API_KEY_HEADER_NAME} from 'shared/src/api/headers.js';
-import {makeAPIResponse} from 'shared/src/api/responses.js';
-import {assert} from 'shared/src/asserts.js';
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
-import * as valita from 'shared/src/valita.js';
+import {API_KEY_HEADER_NAME} from 'shared/out/api/headers.js';
+import {makeAPIResponse} from 'shared/out/api/responses.js';
+import {assert} from 'shared/out/asserts.js';
+import type {ReadonlyJSONValue} from 'shared/out/json.js';
+import * as valita from 'shared/out/valita.js';
 import {decodeHeaderValue} from '../util/headers.js';
 import {APIError, makeAPIErrorResponse} from './api-errors.js';
 import {HttpError, makeErrorResponse} from './errors.js';

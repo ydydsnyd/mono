@@ -3,7 +3,7 @@ import {Analytics} from 'cloudflare-api/src/analytics.js';
 import {initializeApp} from 'firebase-admin/app';
 import {getFirestore} from 'firebase-admin/firestore';
 import {monthMetricsPath, totalMetricsPath} from 'mirror-schema/src/metrics.js';
-import {FetchMocker} from 'shared/src/fetch-mocker.js';
+import {FetchMocker} from 'shared/out/fetch-mocker.js';
 import {aggregateHourBefore} from './aggregate.js';
 
 const QUERY_RESULT = {

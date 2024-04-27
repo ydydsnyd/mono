@@ -1,6 +1,6 @@
 import {describe, expect, test} from '@jest/globals';
 import {Bytes} from 'firebase/firestore';
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import {bytesSchema} from './bytes.js';
 
 describe('bytes schema', () => {

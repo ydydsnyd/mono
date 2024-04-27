@@ -1,6 +1,6 @@
 import type {ScanNoIndexOptions} from 'replicache';
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
-import type * as valita from 'shared/src/valita.js';
+import type {ReadonlyJSONValue} from 'shared/out/json.js';
+import type * as valita from 'shared/out/valita.js';
 
 export type ListOptions = ScanNoIndexOptions;
 

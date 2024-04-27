@@ -14,8 +14,8 @@ import {
 import {appDataConverter, appPath} from 'mirror-schema/src/app.js';
 import type {Role} from 'mirror-schema/src/membership.js';
 import {userDataConverter, userPath} from 'mirror-schema/src/user.js';
-import {assert} from 'shared/src/asserts.js';
-import {must} from 'shared/src/must.js';
+import {assert} from 'shared/out/asserts.js';
+import {must} from 'shared/out/must.js';
 import {updateKey} from '../../keys/updates.js';
 import {
   INTERNAL_FUNCTION_HEADER,

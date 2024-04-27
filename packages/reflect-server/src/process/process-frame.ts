@@ -1,8 +1,8 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {NullableVersion, Patch, Version} from 'reflect-protocol';
 import type {Env} from 'reflect-shared/out/types.js';
-import {assert} from 'shared/src/asserts.js';
-import {must} from 'shared/src/must.js';
+import {assert} from 'shared/out/asserts.js';
+import {must} from 'shared/out/must.js';
 import type {ClientDeleteHandler} from '../server/client-delete-handler.js';
 import type {ClientDisconnectHandler} from '../server/client-disconnect-handler.js';
 import {GC_MAX_AGE, collectClients} from '../server/client-gc.js';

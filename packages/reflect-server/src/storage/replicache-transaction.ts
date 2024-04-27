@@ -16,9 +16,9 @@ import {
   isScanIndexOptions,
   makeScanResult,
 } from 'replicache';
-import {jsonSchema} from 'shared/src/json-schema.js';
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
-import * as v from 'shared/src/valita.js';
+import {jsonSchema} from 'shared/out/json-schema.js';
+import type {ReadonlyJSONValue} from 'shared/out/json.js';
+import * as v from 'shared/out/valita.js';
 import type {ClientID} from '../types/client-state.js';
 import {
   UserValue,

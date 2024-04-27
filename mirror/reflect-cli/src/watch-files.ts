@@ -1,5 +1,5 @@
 import * as fs from 'node:fs/promises';
-import {sha256OfString} from 'shared/src/sha256.js';
+import {sha256OfString} from 'shared/out/sha256.js';
 
 async function fileChanged(absPath: string, hashes: Map<string, string>) {
   const content = await fs.readFile(absPath, 'utf-8');

@@ -1,5 +1,5 @@
-import {assert} from 'shared/src/asserts.js';
-import * as valita from 'shared/src/valita.js';
+import {assert} from 'shared/out/asserts.js';
+import * as valita from 'shared/out/valita.js';
 import {uuid} from './uuid.js';
 
 export const STRING_LENGTH = 44;

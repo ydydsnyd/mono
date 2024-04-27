@@ -1,5 +1,5 @@
 import {Lock} from '@rocicorp/lock';
-import {sleep} from 'shared/src/sleep.js';
+import {sleep} from 'shared/out/sleep.js';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 import {
   dropReplicationSlot,

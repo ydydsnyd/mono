@@ -6,8 +6,8 @@ import {
   CustomHostnames,
 } from 'cloudflare-api/src/custom-hostnames.js';
 import type {ZoneConfig} from './config.js';
-import {assert} from 'shared/src/asserts.js';
-import {sleep} from 'shared/src/sleep.js';
+import {assert} from 'shared/out/asserts.js';
+import {sleep} from 'shared/out/sleep.js';
 import {Errors, FetchResultError} from 'cloudflare-api/src/fetch.js';
 import type {PartialDeep} from 'type-fest';
 import {HttpsError} from 'firebase-functions/v2/https';

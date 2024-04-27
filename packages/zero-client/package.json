@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "out/zero-client.js",
-  "module": "out/zero-client.js",
-  "types": "out/zero-client.d.ts",
+  "main": "out/mod.js",
+  "module": "out/mod.js",
+  "types": "out/mod.d.ts",
   "scripts": {
     "format": "prettier --write *",
     "check-format": "prettier --check *",
@@ -43,7 +43,7 @@
     "out"
   ],
   "exports": {
-    ".": "./out/zero-client.js"
+    ".": "./out/mod.js"
   },
   "eslintConfig": {
     "extends": "@rocicorp/eslint-config"

@@ -1,5 +1,5 @@
 import {describe, expect, test} from '@jest/globals';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/out/must.js';
 import type {ListOptions} from '../storage/storage.js';
 import {createSilentLogContext} from '../util/test-utils.js';
 import {listParamsSchema, makeListControl, makeListResults} from './list.js';

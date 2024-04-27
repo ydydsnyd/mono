@@ -1,4 +1,4 @@
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import {createCall} from '../functions/internal/call.js';
 
 export const updateKeyRequestSchema = v.object({

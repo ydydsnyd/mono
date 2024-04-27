@@ -1,4 +1,4 @@
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import {cfCall} from './fetch.js';
 import type {AccountAccess} from './resources.js';
 import type {SelectSchema, SelectStatement} from './sql.js';

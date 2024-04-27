@@ -1,4 +1,4 @@
-export {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
+export {TEST_LICENSE_KEY} from '@rocicorp/licensing/out/client';
 export {consoleLogSink} from '@rocicorp/logger';
 export type {LogLevel, LogSink} from '@rocicorp/logger';
 export type {
@@ -6,7 +6,7 @@ export type {
   JSONValue,
   ReadonlyJSONObject,
   ReadonlyJSONValue,
-} from 'shared/src/json.js';
+} from 'shared/out/json.js';
 export type {
   Diff as ExperimentalDiff,
   DiffOperation as ExperimentalDiffOperation,

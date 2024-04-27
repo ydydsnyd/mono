@@ -1,7 +1,7 @@
 import type {Bucket} from '@google-cloud/storage';
 import {afterEach, describe, expect, jest, test} from '@jest/globals';
 import {Analytics} from 'cloudflare-api/src/analytics.js';
-import {FetchMocker} from 'shared/src/fetch-mocker.js';
+import {FetchMocker} from 'shared/out/fetch-mocker.js';
 import {backupWeekBefore, checkResults} from './backup.js';
 
 const WELL_FORMED_RESULT =

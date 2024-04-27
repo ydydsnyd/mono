@@ -9,7 +9,7 @@ import {
 import {
   CONNECTION_SECONDS_CHANNEL_NAME,
   CONNECTION_SECONDS_V1_CHANNEL_NAME,
-} from 'shared/src/events/connection-seconds.js';
+} from 'shared/out/events/connection-seconds.js';
 import type {Env} from './index.js';
 import reporter, {AUTH_DATA_HEADER_NAME, ROOM_ID_HEADER_NAME} from './index.js';
 

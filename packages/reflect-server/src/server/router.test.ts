@@ -1,9 +1,9 @@
 import {describe, expect, test} from '@jest/globals';
-import type {APIErrorInfo} from 'shared/src/api/responses.js';
-import {assert} from 'shared/src/asserts.js';
-import type {JSONObject, ReadonlyJSONValue} from 'shared/src/json.js';
-import {must} from 'shared/src/must.js';
-import * as valita from 'shared/src/valita.js';
+import type {APIErrorInfo} from 'shared/out/api/responses.js';
+import {assert} from 'shared/out/asserts.js';
+import type {JSONObject, ReadonlyJSONValue} from 'shared/out/json.js';
+import {must} from 'shared/out/must.js';
+import * as valita from 'shared/out/valita.js';
 import {createSilentLogContext} from '../util/test-utils.js';
 import {HttpError} from './errors.js';
 import {

@@ -1,7 +1,7 @@
 import {LogContext, LogLevel, LogSink} from '@rocicorp/logger';
 import {version} from 'reflect-shared/out/version.js';
 import type {MaybePromise} from 'replicache';
-import {timed} from 'shared/src/timed.js';
+import {timed} from 'shared/out/timed.js';
 import {Series, reportMetricsSchema} from '../types/report-metrics.js';
 import {isTrueEnvValue} from '../util/env.js';
 import {populateLogContextFromRequest} from '../util/log-context-common.js';

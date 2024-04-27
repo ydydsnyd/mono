@@ -1,5 +1,5 @@
 import {expect, test} from '@jest/globals';
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 import {TestLogSink} from '../util/test-utils.js';
 import {TestDurableObjectState, TestExecutionContext} from './do-test-utils.js';
 import {

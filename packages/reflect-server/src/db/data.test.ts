@@ -1,5 +1,5 @@
 import {expect, test} from '@jest/globals';
-import * as valita from 'shared/src/valita.js';
+import * as valita from 'shared/out/valita.js';
 import {delEntry, getEntries, getEntry, listEntries, putEntry} from './data.js';
 
 const {roomDO} = getMiniflareBindings();

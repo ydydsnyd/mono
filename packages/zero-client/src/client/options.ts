@@ -1,7 +1,7 @@
 import type {LogLevel} from '@rocicorp/logger';
 import type {MutatorDefs} from 'reflect-shared/out/types.js';
 import type {KVStoreProvider, MaybePromise} from 'replicache';
-import type {ReadonlyJSONObject} from 'shared/src/json.js';
+import type {ReadonlyJSONObject} from 'shared/out/json.js';
 import type {QueryDefs} from './zero.js';
 
 export type QueryParseDefs<QD extends QueryDefs> = {

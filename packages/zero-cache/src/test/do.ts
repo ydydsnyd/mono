@@ -1,6 +1,6 @@
 import type {DurableObjectStorage} from '@cloudflare/workers-types';
 import {env, runInDurableObject} from 'cloudflare:test';
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
+import type {ReadonlyJSONValue} from 'shared/out/json.js';
 import {expect} from 'vitest';
 
 export function runWithDurableObjectStorage<R>(

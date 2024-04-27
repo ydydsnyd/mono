@@ -16,8 +16,8 @@ import fs, {mkdirSync, readFileSync, writeFileSync} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import color from 'picocolors';
-import * as v from 'shared/src/valita.js';
-import {parse} from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
+import {parse} from 'shared/out/valita.js';
 import {scriptName} from './create-cli-parser.js';
 import {loginHandler} from './login.js';
 

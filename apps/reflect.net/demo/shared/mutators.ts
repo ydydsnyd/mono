@@ -1,6 +1,6 @@
 import type {ReadTransaction, WriteTransaction} from '@rocicorp/reflect';
-import {assert} from 'shared/src/valita';
-import * as v from 'shared/src/valita.js';
+import {assert} from 'shared/out/valita';
+import * as v from 'shared/out/valita.js';
 import {
   deleteBot,
   initClient,

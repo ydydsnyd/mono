@@ -9,7 +9,7 @@ import {userDataConverter, userPath} from 'mirror-schema/src/user.js';
 import {userAuthorization} from '../validators/auth.js';
 import {validateSchema} from '../validators/schema.js';
 import {logger} from 'firebase-functions';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/out/must.js';
 import {
   membershipDataConverter,
   teamInvitePath,

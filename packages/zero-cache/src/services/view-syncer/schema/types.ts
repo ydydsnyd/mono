@@ -1,4 +1,4 @@
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import {astSchema} from 'zero-protocol';
 import {jsonObjectSchema} from '../../../types/bigint-json.js';
 import {versionFromLexi} from '../../../types/lexi-version.js';

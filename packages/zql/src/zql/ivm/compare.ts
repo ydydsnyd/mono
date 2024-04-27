@@ -1,4 +1,4 @@
-import {unreachable} from 'shared/src/asserts.js';
+import {unreachable} from 'shared/out/asserts.js';
 
 export function compareEntityFields<T>(lVal: T, rVal: T) {
   if (lVal === rVal) {

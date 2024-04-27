@@ -1,6 +1,6 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {NullableVersion, Patch, Poke, Version} from 'reflect-protocol';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/out/must.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
 import type {ClientPoke} from '../types/client-poke.js';
 import {

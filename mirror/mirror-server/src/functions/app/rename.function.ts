@@ -13,7 +13,7 @@ import {
   appNameIndexDataConverter,
   appNameIndexPath,
 } from 'mirror-schema/src/team.js';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/out/must.js';
 import {appAuthorization, userAuthorization} from '../validators/auth.js';
 import {validateSchema} from '../validators/schema.js';
 import {logger} from 'firebase-functions';

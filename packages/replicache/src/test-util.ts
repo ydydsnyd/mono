@@ -1,8 +1,8 @@
-import {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
+import {TEST_LICENSE_KEY} from '@rocicorp/licensing/out/client';
 import type {Context, LogLevel, LogSink} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
 import {expect} from 'chai';
-import type {JSONValue} from 'shared/src/json.js';
+import type {JSONValue} from 'shared/out/json.js';
 import * as sinon from 'sinon';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import type {Cookie} from './cookies.js';

@@ -4,7 +4,7 @@ import {
   ENCRYPTION_KEY_SECRET_NAME,
   type Secrets as AppSecrets,
 } from 'mirror-schema/src/env.js';
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 import type {Secrets} from '../../secrets/index.js';
 
 export function defineSecretSafely(name: string) {

@@ -2,10 +2,10 @@ import {
   normalizeAST,
   type AST,
   type Condition,
-} from '@rocicorp/zql/src/zql/ast/ast.js';
+} from '@rocicorp/zql/dist/zql/ast/ast.js';
 import {ident} from 'pg-format';
 import type {JSONValue} from 'postgres';
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 import xxh from 'xxhashjs';
 
 export type ParameterizedQuery = {

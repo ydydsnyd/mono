@@ -1,5 +1,5 @@
 import webpack from 'webpack';
-import {makeDefine} from '../../packages/shared/src/build.js';
+import {makeDefine} from '../../packages/shared/out/build.js';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

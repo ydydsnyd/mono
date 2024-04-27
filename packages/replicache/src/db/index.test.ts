@@ -1,6 +1,6 @@
 import {LogContext} from '@rocicorp/logger';
 import {expect} from 'chai';
-import type {JSONValue} from 'shared/src/json.js';
+import type {JSONValue} from 'shared/out/json.js';
 import {asyncIterableToArray} from '../async-iterable-to-array.js';
 import {BTreeWrite} from '../btree/write.js';
 import {TestStore} from '../dag/test-store.js';

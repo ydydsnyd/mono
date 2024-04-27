@@ -27,7 +27,7 @@ import {
 import type {Timestamp as SchemaTimestamp} from 'mirror-schema/src/timestamp.js';
 import {watch} from 'mirror-schema/src/watch.js';
 import {coerce, lt} from 'semver';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/out/must.js';
 import {getServerModuleMetadata} from '../../cloudflare/get-server-modules.js';
 import {
   GlobalScriptHandler,

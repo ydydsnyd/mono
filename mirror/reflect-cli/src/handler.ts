@@ -1,7 +1,7 @@
 import {getFirestore, terminate} from 'firebase/firestore';
 import type {WarmupCaller} from 'mirror-protocol/src/call.js';
 import color from 'picocolors';
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 import type {ArgumentsCamelCase} from 'yargs';
 import {AuthenticatedUser, authenticate} from './auth-config.js';
 import {reportE} from './error.js';

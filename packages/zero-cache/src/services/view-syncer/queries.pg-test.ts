@@ -1,4 +1,4 @@
-import type {AST} from '@rocicorp/zql/src/zql/ast/ast.js';
+import type {AST} from '@rocicorp/zql/dist/zql/ast/ast.js';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 import {testDBs} from '../../test/db.js';
 import {createSilentLogContext} from '../../test/logger.js';

@@ -1,6 +1,6 @@
 import {entityIDSchema} from './entity.js';
-import {jsonSchema} from 'shared/src/json-schema.js';
-import * as v from 'shared/src/valita.js';
+import {jsonSchema} from 'shared/out/json-schema.js';
+import * as v from 'shared/out/valita.js';
 
 /**
  * Inserts if entity with id does not already exist.

@@ -1,5 +1,5 @@
-export type {Entity} from '@rocicorp/zql/src/entity.js';
-export type {EntityQuery} from '@rocicorp/zql/src/zql/query/entity-query.js';
+export type {Entity} from '@rocicorp/zql/dist/entity.js';
+export type {EntityQuery} from '@rocicorp/zql/dist/zql/query/entity-query.js';
 export {
   IDBNotFoundError,
   TransactionClosedError,
@@ -9,7 +9,7 @@ export {
   makeIDBName,
 } from 'replicache';
 export type {
-  // based on reflect-shared/src/mod.ts, but slimmed
+  // based on reflect-shared/out/mod.ts, but slimmed
   AsyncIterableIteratorToArray,
   ClientGroupID,
   ClientID,

@@ -1,4 +1,4 @@
-import {assertArray, assertString} from 'shared/src/asserts.js';
+import {assertArray, assertString} from 'shared/out/asserts.js';
 import type {Hash} from '../hash.js';
 import {
   assertHash,

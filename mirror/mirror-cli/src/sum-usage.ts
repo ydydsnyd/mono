@@ -3,8 +3,8 @@ import {
   connectionLifetimes,
   runningConnectionSeconds,
 } from 'mirror-schema/src/datasets.js';
-import {unreachable} from 'shared/src/asserts.js';
-import * as v from 'shared/src/valita.js';
+import {unreachable} from 'shared/out/asserts.js';
+import * as v from 'shared/out/valita.js';
 import {getProviderConfig} from './cf.js';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
 

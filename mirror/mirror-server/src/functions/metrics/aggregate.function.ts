@@ -19,7 +19,7 @@ import {
   Provider,
   providerDataConverter,
 } from 'mirror-schema/src/provider.js';
-import {sleep} from 'shared/src/sleep.js';
+import {sleep} from 'shared/out/sleep.js';
 import {aggregateHourBefore} from '../../metrics/aggregate.js';
 import {
   Secrets,

@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "lib": ["ESNext.Array", "ESNext", "DOM"],
-    "outDir": "./out",
+    "outDir": "./dist",
     "rootDir": "./src"
   },
   "include": ["./src"],

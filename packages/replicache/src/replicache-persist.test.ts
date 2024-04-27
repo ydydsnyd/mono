@@ -16,8 +16,8 @@ import {
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
-import {assert, assertNotUndefined} from 'shared/src/asserts.js';
-import {sleep} from 'shared/src/sleep.js';
+import {assert, assertNotUndefined} from 'shared/out/asserts.js';
+import {sleep} from 'shared/out/sleep.js';
 import {uuidChunkHasher} from './dag/chunk.js';
 import {StoreImpl} from './dag/store-impl.js';
 import type {Store} from './dag/store.js';

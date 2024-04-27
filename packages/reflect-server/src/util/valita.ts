@@ -1,4 +1,4 @@
-import * as valita from 'shared/src/valita.js';
+import * as valita from 'shared/out/valita.js';
 
 export function assert<T>(v: unknown, schema: valita.Type<T>): asserts v is T {
   if (typeof MINIFLARE !== 'undefined') {

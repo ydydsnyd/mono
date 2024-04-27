@@ -1,4 +1,4 @@
-import {assert, assertString} from 'shared/src/asserts.js';
+import {assert, assertString} from 'shared/out/asserts.js';
 import {assertDeepFrozen} from '../frozen-json.js';
 import {Hash, newUUIDHash} from '../hash.js';
 

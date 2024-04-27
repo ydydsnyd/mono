@@ -1,6 +1,6 @@
 import type {LogContext} from '@rocicorp/logger';
 import postgres from 'postgres';
-import {sleep} from 'shared/src/sleep.js';
+import {sleep} from 'shared/out/sleep.js';
 import {postgresTypeConfig} from '../../types/pg.js';
 import {id, idList} from '../../types/sql.js';
 import {createTableStatementIgnoringNotNullConstraint} from './tables/create.js';

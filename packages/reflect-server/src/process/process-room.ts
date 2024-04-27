@@ -3,7 +3,7 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {Poke} from 'reflect-protocol';
 import type {Env} from 'reflect-shared/out/types.js';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/out/must.js';
 import {fastForwardRoom} from '../ff/fast-forward.js';
 import type {ClientDeleteHandler} from '../server/client-delete-handler.js';
 import type {ClientDisconnectHandler} from '../server/client-disconnect-handler.js';

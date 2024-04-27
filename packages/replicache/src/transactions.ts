@@ -1,6 +1,6 @@
 import type {LogContext} from '@rocicorp/logger';
 import {greaterThan} from 'compare-utf8';
-import type {JSONValue, ReadonlyJSONValue} from 'shared/src/json.js';
+import type {JSONValue, ReadonlyJSONValue} from 'shared/out/json.js';
 import {IndexKey, decodeIndexKey} from './db/index.js';
 import type {Read} from './db/read.js';
 import type {Write} from './db/write.js';

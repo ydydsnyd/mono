@@ -32,9 +32,9 @@ import {
   APIResponse,
   makeAPIError,
   makeAPIResponse,
-} from 'shared/src/api/responses.js';
-import {FetchMocker} from 'shared/src/fetch-mocker.js';
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
+} from 'shared/out/api/responses.js';
+import {FetchMocker} from 'shared/out/fetch-mocker.js';
+import type {ReadonlyJSONValue} from 'shared/out/json.js';
 import {TestSecrets} from '../../secrets/test-utils.js';
 import {dummyDeployment, getMockReq} from '../../test-helpers.js';
 import {apps} from './apps.function.js';

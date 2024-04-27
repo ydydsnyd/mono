@@ -9,9 +9,9 @@ import type {
   WriteTransaction,
 } from 'reflect-shared/out/mod.js';
 import type {PullRequestV1, PushRequestV1} from 'replicache';
-import {assert} from 'shared/src/asserts.js';
-import type {JSONValue} from 'shared/src/json.js';
-import * as valita from 'shared/src/valita.js';
+import {assert} from 'shared/out/asserts.js';
+import type {JSONValue} from 'shared/out/json.js';
+import * as valita from 'shared/out/valita.js';
 import * as sinon from 'sinon';
 import {afterEach, beforeEach, expect, suite, test} from 'vitest';
 import type {WSString} from './http-string.js';

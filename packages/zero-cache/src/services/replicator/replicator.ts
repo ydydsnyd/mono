@@ -1,7 +1,7 @@
 import {Lock} from '@rocicorp/lock';
 import type {LogContext} from '@rocicorp/logger';
 import postgres from 'postgres';
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import {normalizedFilterSpecSchema} from '../../types/invalidation.js';
 import {PostgresDB, postgresTypeConfig} from '../../types/pg.js';
 import type {CancelableAsyncIterable} from '../../types/streams.js';

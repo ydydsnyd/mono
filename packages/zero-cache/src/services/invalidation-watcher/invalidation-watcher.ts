@@ -1,8 +1,8 @@
 import type {LogContext} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
-import {assert} from 'shared/src/asserts.js';
-import {union} from 'shared/src/set-utils.js';
-import * as v from 'shared/src/valita.js';
+import {assert} from 'shared/out/asserts.js';
+import {union} from 'shared/out/set-utils.js';
+import * as v from 'shared/out/valita.js';
 import {
   TransactionPool,
   sharedReadOnlySnapshot,

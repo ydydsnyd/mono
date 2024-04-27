@@ -1,5 +1,5 @@
 import type {UndoManager} from '@rocicorp/undo';
-import * as agg from '@rocicorp/zql/src/zql/query/agg.js';
+import * as agg from '@rocicorp/zql/dist/zql/query/agg.js';
 import classnames from 'classnames';
 import {generateKeyBetween} from 'fractional-indexing';
 import {minBy, pickBy} from 'lodash';

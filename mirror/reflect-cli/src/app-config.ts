@@ -9,7 +9,7 @@ import {
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {pkgUpSync} from 'pkg-up';
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import {ErrorWrapper, UserError} from './error.js';
 import type {AuthContext} from './handler.js';
 import {logErrorAndExit} from './log-error-and-exit.js';

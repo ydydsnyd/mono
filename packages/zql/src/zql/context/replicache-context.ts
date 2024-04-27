@@ -1,6 +1,6 @@
 import {compareUTF8} from 'compare-utf8';
 import type {ExperimentalNoIndexDiff} from 'replicache';
-import {assert} from 'shared/src//asserts.js';
+import {assert} from 'shared/out//asserts.js';
 import type {Entity} from '../../entity.js';
 import type {ReplicacheLike} from '../../replicache-like.js';
 import type {AST} from '../ast/ast.js';

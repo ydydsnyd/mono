@@ -1,5 +1,5 @@
 import {getFunctions, httpsCallable} from 'firebase/functions';
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 
 export const warmupRequestSchema = v.object({
   // eslint-disable-next-line @typescript-eslint/naming-convention

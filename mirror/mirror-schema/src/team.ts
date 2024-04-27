@@ -1,4 +1,4 @@
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import {firestoreDataConverter} from './converter.js';
 import * as path from './path.js';
 import {DEFAULT_PROVIDER_ID} from './provider.js';

@@ -5,7 +5,7 @@ import * as esbuild from 'esbuild';
 import {polyfillNode} from 'esbuild-plugin-polyfill-node';
 import * as fs from 'node:fs';
 import * as path from 'path';
-import {sharedOptions} from 'shared/src/build.js';
+import {sharedOptions} from 'shared/out/build.js';
 import {fileURLToPath} from 'url';
 
 const metafile = process.argv.includes('--metafile');

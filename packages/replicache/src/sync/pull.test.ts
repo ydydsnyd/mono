@@ -1,7 +1,7 @@
 import {LogContext} from '@rocicorp/logger';
 import {expect} from 'chai';
-import {assertObject, assertString} from 'shared/src/asserts.js';
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
+import {assertObject, assertString} from 'shared/out/asserts.js';
+import type {ReadonlyJSONValue} from 'shared/out/json.js';
 import {asyncIterableToArray} from '../async-iterable-to-array.js';
 import {BTreeRead} from '../btree/read.js';
 import type {Cookie, FrozenCookie} from '../cookies.js';

@@ -1,6 +1,6 @@
 import {expect} from 'chai';
-import {assert} from 'shared/src/asserts.js';
-import {JSONObject, assertJSONObject} from 'shared/src/json.js';
+import {assert} from 'shared/out/asserts.js';
+import {JSONObject, assertJSONObject} from 'shared/out/json.js';
 import sinon from 'sinon';
 import {LazyStore} from './dag/lazy-store.js';
 import {StoreImpl} from './dag/store-impl.js';

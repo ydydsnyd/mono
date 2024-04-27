@@ -17,7 +17,7 @@ import colors from 'picocolors';
 import {compile} from 'reflect-cli/src/compile.js';
 import {getScriptTemplate} from 'reflect-cli/src/get-script-template.js';
 import {SemVer} from 'semver';
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
 
 const {bold} = colors;

@@ -1,6 +1,6 @@
 import {nullableVersionSchema} from 'reflect-protocol';
-import {wrapIterable} from 'shared/src/iterables.js';
-import * as valita from 'shared/src/valita.js';
+import {wrapIterable} from 'shared/out/iterables.js';
+import * as valita from 'shared/out/valita.js';
 import type {Storage} from '../storage/storage.js';
 import type {ClientGroupID, ClientID} from './client-state.js';
 

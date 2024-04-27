@@ -1,4 +1,4 @@
-import {makeInputOptions} from 'shared/src/tool/rollup-dts.js';
+import {makeInputOptions} from 'shared/out/tool/rollup-dts.js';
 
 export default makeInputOptions(
   'out/.dts/zero-client/src/mod.d.ts',

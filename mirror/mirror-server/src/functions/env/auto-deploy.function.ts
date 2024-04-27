@@ -4,7 +4,7 @@ import {onDocumentUpdated} from 'firebase-functions/v2/firestore';
 import {appDataConverter} from 'mirror-schema/src/app.js';
 import {appPath} from 'mirror-schema/src/deployment.js';
 import {envDataConverter, envPath} from 'mirror-schema/src/env.js';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/out/must.js';
 
 // Propagates the Env document's updateTime to the App document's
 // `envUpdateTime` field to kick off a new deployment.

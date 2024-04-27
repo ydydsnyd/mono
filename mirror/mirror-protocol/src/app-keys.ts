@@ -1,4 +1,4 @@
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import {apiKeySchema, permissionsSchema} from './api-keys.js';
 import {baseAppRequestFields} from './app.js';
 import {baseResponseFields} from './base.js';

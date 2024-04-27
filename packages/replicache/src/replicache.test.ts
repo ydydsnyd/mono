@@ -2,17 +2,17 @@ import {
   LicenseStatus,
   PROD_LICENSE_SERVER_URL,
   TEST_LICENSE_KEY,
-} from '@rocicorp/licensing/src/client';
+} from '@rocicorp/licensing/out/client';
 import {
   LICENSE_ACTIVE_PATH,
   LICENSE_STATUS_PATH,
-} from '@rocicorp/licensing/src/server/api-types.js';
+} from '@rocicorp/licensing/out/server/api-types.js';
 import type {Context, LogLevel} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
 import {assert as chaiAssert, expect} from 'chai';
-import {assert} from 'shared/src/asserts.js';
-import type {JSONValue, ReadonlyJSONValue} from 'shared/src/json.js';
-import {sleep} from 'shared/src/sleep.js';
+import {assert} from 'shared/out/asserts.js';
+import type {JSONValue, ReadonlyJSONValue} from 'shared/out/json.js';
+import {sleep} from 'shared/out/sleep.js';
 import * as sinon from 'sinon';
 import {asyncIterableToArray} from './async-iterable-to-array.js';
 import {Write} from './db/write.js';

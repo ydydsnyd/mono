@@ -3,7 +3,7 @@ import {channel, Channel} from 'node:diagnostics_channel';
 import {
   CONNECTION_SECONDS_CHANNEL_NAME,
   type ConnectionSecondsReport,
-} from 'shared/src/events/connection-seconds.js';
+} from 'shared/out/events/connection-seconds.js';
 import type {AlarmScheduler, TimeoutID} from '../server/alarms.js';
 import type {ConnectionCountTracker} from '../types/client-state.js';
 

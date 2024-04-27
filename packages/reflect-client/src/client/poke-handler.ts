@@ -2,8 +2,8 @@ import {Lock} from '@rocicorp/lock';
 import type {LogContext} from '@rocicorp/logger';
 import type {Poke, PokeBody} from 'reflect-protocol';
 import type {ClientID, MaybePromise, Poke as ReplicachePoke} from 'replicache';
-import {assert} from 'shared/src/asserts.js';
-import {BufferSizer} from 'shared/src/buffer-sizer.js';
+import {assert} from 'shared/out/asserts.js';
+import {BufferSizer} from 'shared/out/buffer-sizer.js';
 import {mergePokes} from './merge-pokes.js';
 import type {PresenceManager} from './presence-manager.js';
 

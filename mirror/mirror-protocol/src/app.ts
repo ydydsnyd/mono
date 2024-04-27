@@ -1,5 +1,5 @@
 import {standardReleaseChannelSchema} from 'mirror-schema/src/server.js';
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import {baseRequestFields, baseResponseFields} from './base.js';
 import {createCaller} from './call.js';
 import {baseTeamRequestFields} from './team.js';

@@ -1,4 +1,4 @@
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 import {versionToLexi, type LexiVersion} from '../../../types/lexi-version.js';
 
 /**

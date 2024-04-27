@@ -9,7 +9,7 @@ import {
   setProvider,
   setUser,
 } from 'mirror-schema/src/test-helpers.js';
-import {sleep} from 'shared/src/sleep.js';
+import {sleep} from 'shared/out/sleep.js';
 import type WebSocket from 'ws';
 import {TestSecrets} from '../../secrets/test-utils.js';
 import {getMockReq} from '../../test-helpers.js';

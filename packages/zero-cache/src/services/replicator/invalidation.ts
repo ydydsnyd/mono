@@ -2,7 +2,7 @@ import type {Lock} from '@rocicorp/lock';
 import type {LogContext} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
 import {stringify} from 'json-custom-numbers';
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 import {lookupRowsWithKeys} from '../../db/queries.js';
 import type {TransactionPool} from '../../db/transaction-pool.js';
 import {

@@ -2,7 +2,7 @@ import type {LogContext} from '@rocicorp/logger';
 import type {Version} from 'reflect-protocol';
 import type {Env} from 'reflect-shared/out/types.js';
 import type {PendingMutation} from 'replicache';
-import {equals as setEquals} from 'shared/src/set-utils.js';
+import {equals as setEquals} from 'shared/out/set-utils.js';
 import type {ClientDeleteHandler} from '../server/client-delete-handler.js';
 import type {ClientDisconnectHandler} from '../server/client-disconnect-handler.js';
 import {collectClientIfDeleted, updateLastSeen} from '../server/client-gc.js';

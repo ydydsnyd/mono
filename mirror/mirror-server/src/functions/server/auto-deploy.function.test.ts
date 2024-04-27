@@ -14,7 +14,7 @@ import {
   providerPath,
 } from 'mirror-schema/src/provider.js';
 import {serverDataConverter, serverPath} from 'mirror-schema/src/server.js';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/out/must.js';
 import {
   checkAppsInChannels,
   getAffectedChannels,

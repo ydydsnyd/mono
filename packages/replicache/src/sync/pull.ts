@@ -1,6 +1,6 @@
 import type {LogContext} from '@rocicorp/logger';
-import {assert} from 'shared/src/asserts.js';
-import {deepEqual, ReadonlyJSONValue} from 'shared/src/json.js';
+import {assert} from 'shared/out/asserts.js';
+import {deepEqual, ReadonlyJSONValue} from 'shared/out/json.js';
 import {diff} from '../btree/diff.js';
 import {BTreeRead} from '../btree/read.js';
 import {compareCookies, Cookie} from '../cookies.js';

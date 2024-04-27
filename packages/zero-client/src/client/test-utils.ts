@@ -13,7 +13,7 @@ import {
   upstreamSchema,
 } from 'reflect-protocol';
 import type {MutatorDefs} from 'reflect-shared/out/types.js';
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 import type {SinonFakeTimers} from 'sinon';
 import type {LogOptions} from './log-options.js';
 import type {ZeroOptions} from './options.js';

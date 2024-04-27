@@ -2,7 +2,7 @@ import type {Storage} from 'firebase-admin/storage';
 import {logger} from 'firebase-functions';
 import {FunctionsErrorCode, HttpsError} from 'firebase-functions/v2/https';
 import {type ModuleRef, loadModule} from 'mirror-schema/src/module.js';
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 import type {CfModule} from 'cloudflare-api/src/create-script-upload-form.js';
 
 export class ModuleAssembler {

@@ -39,12 +39,12 @@ import {
   dropDatabase,
 } from 'replicache';
 import {ReplicacheImpl} from 'replicache/src/replicache-impl.js';
-import {assert} from 'shared/src/asserts.js';
-import {getDocumentVisibilityWatcher} from 'shared/src/document-visible.js';
-import {getDocument} from 'shared/src/get-document.js';
-import {getWindow} from 'shared/src/get-window.js';
-import {sleep, sleepWithAbort} from 'shared/src/sleep.js';
-import * as valita from 'shared/src/valita.js';
+import {assert} from 'shared/out/asserts.js';
+import {getDocumentVisibilityWatcher} from 'shared/out/document-visible.js';
+import {getDocument} from 'shared/out/get-document.js';
+import {getWindow} from 'shared/out/get-window.js';
+import {sleep, sleepWithAbort} from 'shared/out/sleep.js';
+import * as valita from 'shared/out/valita.js';
 import {nanoid} from '../util/nanoid.js';
 import {send} from '../util/socket.js';
 import {CloseBeaconManager} from './close-beacon.js';

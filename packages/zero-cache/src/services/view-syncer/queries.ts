@@ -1,6 +1,6 @@
 import type {LogContext} from '@rocicorp/logger';
-import type {AST} from '@rocicorp/zql/src/zql/ast/ast.js';
-import {assert} from 'shared/src/asserts.js';
+import type {AST} from '@rocicorp/zql/dist/zql/ast/ast.js';
+import {assert} from 'shared/out/asserts.js';
 import type {JSONObject} from '../../types/bigint-json.js';
 import {rowKeyHash} from '../../types/row-key.js';
 import {

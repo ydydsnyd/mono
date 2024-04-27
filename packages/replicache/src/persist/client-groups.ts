@@ -1,5 +1,5 @@
-import {assert, assertObject} from 'shared/src/asserts.js';
-import * as valita from 'shared/src/valita.js';
+import {assert, assertObject} from 'shared/out/asserts.js';
+import * as valita from 'shared/out/valita.js';
 import type {Read, Write} from '../dag/store.js';
 import {deepFreeze, type FrozenJSONValue} from '../frozen-json.js';
 import {Hash, hashSchema} from '../hash.js';

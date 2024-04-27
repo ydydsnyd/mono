@@ -1,6 +1,6 @@
 import {resolver} from '@rocicorp/resolver';
-import {assert} from 'shared/src/asserts.js';
-import {deepEqual} from 'shared/src/json.js';
+import {assert} from 'shared/out/asserts.js';
+import {deepEqual} from 'shared/out/json.js';
 import {dropIDBStoreWithMemFallback} from '../src/kv/idb-store-with-mem-fallback.js';
 import {
   IndexDefinitions,

@@ -2,7 +2,7 @@
 // https://www.sqlite.org/lang_select.html
 
 import {compareUTF8} from 'compare-utf8';
-import {defined} from 'shared/src/arrays.js';
+import {defined} from 'shared/out/arrays.js';
 
 // TODO: the chosen operator needs to constrain the allowed values for the value
 // input to the query builder.

@@ -1,6 +1,6 @@
 import type {FirestoreError} from 'firebase/firestore';
 import {HttpsError} from 'firebase-functions/v2/https';
-import {Queue} from 'shared/src/queue.js';
+import {Queue} from 'shared/out/queue.js';
 
 /**
  * Returns an AsyncIterable of snapshots, streamed when the document or query results

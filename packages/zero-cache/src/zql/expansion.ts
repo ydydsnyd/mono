@@ -1,6 +1,6 @@
-import type {AST, Condition} from '@rocicorp/zql/src/zql/ast/ast.js';
-import {assert} from 'shared/src/asserts.js';
-import {union} from 'shared/src/set-utils.js';
+import type {AST, Condition} from '@rocicorp/zql/dist/zql/ast/ast.js';
+import {assert} from 'shared/out/asserts.js';
+import {union} from 'shared/out/set-utils.js';
 
 /**
  * Maps a table to the set of columns that must always be selected. For example,

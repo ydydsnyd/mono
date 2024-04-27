@@ -1,4 +1,4 @@
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 
 // Interface to represent both client-side and server-side versions of the Timestamp
 // class.

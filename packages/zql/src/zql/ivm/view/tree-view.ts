@@ -43,6 +43,7 @@ export class MutableTreeView<T extends object> extends AbstractView<T, T[]> {
     name: string = '',
   ) {
     super(context, ast, stream, name);
+    console.log('CARSDFSDFSDFSDFSDF');
     this.#limit = limit;
     this.#data = new Treap(comparator);
     this.#comparator = comparator;

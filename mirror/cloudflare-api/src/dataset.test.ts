@@ -1,4 +1,4 @@
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import {describe, expect, test} from 'vitest';
 import {Dataset, timestampSchema} from './dataset.js';
 

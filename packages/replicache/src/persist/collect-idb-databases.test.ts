@@ -1,5 +1,5 @@
 import {expect} from 'chai';
-import {assertNotUndefined} from 'shared/src/asserts.js';
+import {assertNotUndefined} from 'shared/out/asserts.js';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import type {Store} from '../dag/store.js';
 import {TestStore} from '../dag/test-store.js';

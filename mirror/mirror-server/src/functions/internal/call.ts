@@ -1,4 +1,4 @@
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/out/valita.js';
 import {cloudFunctionURL} from '../../config/index.js';
 import {INTERNAL_FUNCTION_HEADER, INTERNAL_FUNCTION_SECRET} from './auth.js';
 

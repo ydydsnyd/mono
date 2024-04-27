@@ -4,7 +4,7 @@ import * as esbuild from 'esbuild';
 import {writeFile} from 'fs/promises';
 import * as path from 'path';
 import {fileURLToPath} from 'url';
-import {makeDefine, sharedOptions} from '../../shared/src/build.js';
+import {makeDefine, sharedOptions} from '../../shared/out/build.js';
 import {readPackageJSON} from './read-package-json.js';
 
 const forBundleSizeDashboard = process.argv.includes('--bundle-sizes');

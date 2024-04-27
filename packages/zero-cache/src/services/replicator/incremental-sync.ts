@@ -8,8 +8,8 @@ import {
   PgoutputPlugin,
 } from 'pg-logical-replication';
 import postgres from 'postgres';
-import {assert} from 'shared/src/asserts.js';
-import {sleep} from 'shared/src/sleep.js';
+import {assert} from 'shared/out/asserts.js';
+import {sleep} from 'shared/out/sleep.js';
 import {
   ControlFlowError,
   Statement,

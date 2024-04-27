@@ -3,7 +3,7 @@
 
 import * as esbuild from 'esbuild';
 import * as path from 'path';
-import {sharedOptions} from 'shared/src/build.js';
+import {sharedOptions} from 'shared/out/build.js';
 import {fileURLToPath} from 'url';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));

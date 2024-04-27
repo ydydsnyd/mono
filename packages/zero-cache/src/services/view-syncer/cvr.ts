@@ -1,8 +1,8 @@
-import type {AST} from '@rocicorp/zql/src/zql/ast/ast.js';
+import type {AST} from '@rocicorp/zql/dist/zql/ast/ast.js';
 import {compareUTF8} from 'compare-utf8';
-import {assert} from 'shared/src/asserts.js';
-import type {DeepReadonly} from 'shared/src/json.js';
-import {difference, intersection, union} from 'shared/src/set-utils.js';
+import {assert} from 'shared/out/asserts.js';
+import type {DeepReadonly} from 'shared/out/json.js';
+import {difference, intersection, union} from 'shared/out/set-utils.js';
 import type {DurableStorage} from '../../storage/durable-storage.js';
 import type {Storage} from '../../storage/storage.js';
 import {WriteCache} from '../../storage/write-cache.js';

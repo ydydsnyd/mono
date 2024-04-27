@@ -3,8 +3,8 @@ import SQLiteAsyncESMFactory from 'wa-sqlite/dist/wa-sqlite-async.mjs';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import {IDBBatchAtomicVFS} from 'wa-sqlite/src/examples/IDBBatchAtomicVFS.js';
-import type {EntityQuery} from '@rocicorp/zql/src/zql/query/entity-query.js';
-import type {Statement} from '@rocicorp/zql/src/zql/query/statement.js';
+import type {EntityQuery} from '@rocicorp/zql/dist/zql/query/entity-query.js';
+import type {Statement} from '@rocicorp/zql/dist/zql/query/statement.js';
 import {
   Album,
   Artist,

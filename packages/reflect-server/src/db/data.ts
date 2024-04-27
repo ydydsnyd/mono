@@ -1,7 +1,7 @@
 import {compareUTF8} from 'compare-utf8';
-import {assert} from 'shared/src/asserts.js';
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
-import * as valita from 'shared/src/valita.js';
+import {assert} from 'shared/out/asserts.js';
+import type {ReadonlyJSONValue} from 'shared/out/json.js';
+import * as valita from 'shared/out/valita.js';
 
 export async function getEntry<T extends ReadonlyJSONValue>(
   durable: DurableObjectStorage,

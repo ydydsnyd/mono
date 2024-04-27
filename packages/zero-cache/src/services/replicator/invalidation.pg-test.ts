@@ -1,5 +1,5 @@
 import {Lock} from '@rocicorp/lock';
-import {randInt} from 'shared/src/rand.js';
+import {randInt} from 'shared/out/rand.js';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 import {
   TransactionPool,

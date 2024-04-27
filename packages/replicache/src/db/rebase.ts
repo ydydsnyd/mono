@@ -1,5 +1,5 @@
 import type {LogContext} from '@rocicorp/logger';
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/out/asserts.js';
 import type {Write as DagWrite} from '../dag/store.js';
 import {FormatVersion} from '../format-version.js';
 import type {Hash} from '../hash.js';
