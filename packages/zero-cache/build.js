@@ -27,6 +27,7 @@ function buildInternal(options) {
     define: {'process.env': '{}'},
     ...shared,
     ...options,
+    platform: 'node',
   });
 }
 

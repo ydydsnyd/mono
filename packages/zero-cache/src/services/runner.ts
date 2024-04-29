@@ -4,9 +4,9 @@ import {
   ViewSyncerService,
 } from './view-syncer/view-syncer.js';
 import {Replicator, ReplicatorService} from './replicator/replicator.js';
-import type {LogContext} from '@rocicorp/logger';
-import type {DurableStorage} from '../storage/durable-storage.js';
-import type {InvalidationWatcherRegistry} from './invalidation-watcher/registry.js';
+import {LogContext} from '@rocicorp/logger';
+import {DurableStorage} from '../storage/durable-storage.js';
+// import type {InvalidationWatcherRegistry} from './invalidation-watcher/registry.js';
 import type {ReplicatorRegistry} from './replicator/registry.js';
 import type {DurableObjectNamespace} from '@cloudflare/workers-types';
 
@@ -22,21 +22,23 @@ export class ServiceRunnerDO implements ViewSyncerRegistry, ReplicatorRegistry {
   #replicator: Map<string, ReplicatorService>;
   #storage: DurableStorage;
   #env: ServiceRunnerEnv;
-  readonly #registry: InvalidationWatcherRegistry;
+  // readonly #registry: InvalidationWatcherRegistry;
   readonly #lc: LogContext;
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  #REPLICATOR_ID = 'REPLICATOR_ID';
+  #REPLICATOR_ID = 'r1';
   constructor(
-    lc: LogContext,
-    storage: DurableStorage,
-    registry: InvalidationWatcherRegistry,
+    // lc: LogContext,
+    // storage: DurableStorage,
+    // registry: InvalidationWatcherRegistry,
+    state: DurableObjectState,
     env: ServiceRunnerEnv,
   ) {
+    this.#lc =  new LogContext();
     this.#viewSyncers = new Map();
     this.#replicator = new Map();
-    this.#storage = storage;
-    this.#lc = lc.withContext('component', 'ServiceRunnerDO');
-    this.#registry = registry;
+    this.#storage = new DurableStorage(state.storage);
+    this.#lc = this.#lc.withContext('component', 'ServiceRunnerDO');
+    // this.#registry = registry;
     this.#env = env;
   }
 
@@ -57,23 +59,23 @@ export class ServiceRunnerDO implements ViewSyncerRegistry, ReplicatorRegistry {
     return Promise.resolve(rep);
   }
 
-  getViewSyncer(id: string): ViewSyncer {
-    const v = this.#viewSyncers.get(id);
-    if (v) {
-      return v;
-    }
-    const vsync = new ViewSyncerService(
-      this.#lc,
-      id,
-      this.#storage,
-      this.#registry,
-    );
-    this.#viewSyncers.set(id, vsync);
-    void vsync.run().then(() => {
-      this.#viewSyncers.delete(id);
-    });
-    return vsync;
-  }
+  // getViewSyncer(id: string): ViewSyncer {
+  //   const v = this.#viewSyncers.get(id);
+  //   if (v) {
+  //     return v;
+  //   }
+  //   const vsync = new ViewSyncerService(
+  //     this.#lc,
+  //     id,
+  //     this.#storage,
+  //     this.#registry,
+  //   );
+  //   this.#viewSyncers.set(id, vsync);
+  //   void vsync.run().then(() => {
+  //     this.#viewSyncers.delete(id);
+  //   });
+  //   return vsync;
+  // }
 
   async fetch(request: Request): Promise<Response> {
     const lc = this.#lc.withContext('url', request.url);
