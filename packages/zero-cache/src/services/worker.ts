@@ -112,10 +112,10 @@ async function sendToRunnerDO(
   request: Request,
 ): Promise<Response> {
   const {lc, env} = ctx;
-  const {serviceRunnerDO} = env;
+  const {runnerDO} = env;
 
-  const id = serviceRunnerDO.idFromName('runnerDO');
-  const stub = serviceRunnerDO.get(id);
+  const id = runnerDO.idFromName('runnerDO');
+  const stub = runnerDO.get(id);
 
   lc.debug?.(`Sending request ${request.url} to runnerDO`);
   const responseFromDO = await timed(lc.debug, 'runnerDO fetch', async () => {

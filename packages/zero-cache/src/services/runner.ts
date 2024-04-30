@@ -4,41 +4,45 @@ import {
   ViewSyncerService,
 } from './view-syncer/view-syncer.js';
 import {Replicator, ReplicatorService} from './replicator/replicator.js';
-import {LogContext} from '@rocicorp/logger';
+import {LogContext, LogLevel, LogSink} from '@rocicorp/logger';
 import {DurableStorage} from '../storage/durable-storage.js';
-// import type {InvalidationWatcherRegistry} from './invalidation-watcher/registry.js';
+import type {InvalidationWatcherRegistry} from './invalidation-watcher/registry.js';
 import type {ReplicatorRegistry} from './replicator/registry.js';
 import type {DurableObjectNamespace} from '@cloudflare/workers-types';
 
 export interface ServiceRunnerEnv {
-  serviceRunnerDO: DurableObjectNamespace;
+  runnerDO: DurableObjectNamespace;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   UPSTREAM_URI: string;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   SYNC_REPLICA_URI: string;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  LOG_LEVEL: LogLevel;
 }
 export class ServiceRunnerDO implements ViewSyncerRegistry, ReplicatorRegistry {
   #viewSyncers: Map<string, ViewSyncerService>;
   #replicator: Map<string, ReplicatorService>;
   #storage: DurableStorage;
   #env: ServiceRunnerEnv;
-  // readonly #registry: InvalidationWatcherRegistry;
+  #registry: InvalidationWatcherRegistry;
   readonly #lc: LogContext;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   #REPLICATOR_ID = 'r1';
   constructor(
-    // lc: LogContext,
-    // storage: DurableStorage,
-    // registry: InvalidationWatcherRegistry,
+    registry: InvalidationWatcherRegistry,
+    logSink: LogSink,
+    logLevel: LogLevel,
     state: DurableObjectState,
     env: ServiceRunnerEnv,
   ) {
-    this.#lc =  new LogContext();
+    this.#lc = new LogContext(logLevel, undefined, logSink).withContext(
+      'component',
+      'ServiceRunnerDO',
+    );
     this.#viewSyncers = new Map();
     this.#replicator = new Map();
     this.#storage = new DurableStorage(state.storage);
-    this.#lc = this.#lc.withContext('component', 'ServiceRunnerDO');
-    // this.#registry = registry;
+    this.#registry = registry;
     this.#env = env;
   }
 
@@ -59,23 +63,23 @@ export class ServiceRunnerDO implements ViewSyncerRegistry, ReplicatorRegistry {
     return Promise.resolve(rep);
   }
 
-  // getViewSyncer(id: string): ViewSyncer {
-  //   const v = this.#viewSyncers.get(id);
-  //   if (v) {
-  //     return v;
-  //   }
-  //   const vsync = new ViewSyncerService(
-  //     this.#lc,
-  //     id,
-  //     this.#storage,
-  //     this.#registry,
-  //   );
-  //   this.#viewSyncers.set(id, vsync);
-  //   void vsync.run().then(() => {
-  //     this.#viewSyncers.delete(id);
-  //   });
-  //   return vsync;
-  // }
+  getViewSyncer(id: string): ViewSyncer {
+    const v = this.#viewSyncers.get(id);
+    if (v) {
+      return v;
+    }
+    const vsync = new ViewSyncerService(
+      this.#lc,
+      id,
+      this.#storage,
+      this.#registry,
+    );
+    this.#viewSyncers.set(id, vsync);
+    void vsync.run().then(() => {
+      this.#viewSyncers.delete(id);
+    });
+    return vsync;
+  }
 
   async fetch(request: Request): Promise<Response> {
     const lc = this.#lc.withContext('url', request.url);
