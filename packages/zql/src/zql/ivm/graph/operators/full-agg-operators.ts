@@ -1,7 +1,5 @@
-import {
-  getValueFromEntity,
-  selectorToQualifiedColumn,
-} from '../../../ast-to-ivm/pipeline-builder.js';
+import {getValueFromEntity} from '../../../ast-to-ivm/pipeline-builder.js';
+import {selectorToQualifiedColumn} from '../../../ast/required-columns.js';
 import type {Multiset} from '../../multiset.js';
 import type {DifferenceStream} from '../difference-stream.js';
 import {LinearUnaryOperator} from './linear-unary-operator.js';

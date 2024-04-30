@@ -346,7 +346,7 @@ export class EntityQuery<From extends FromSet, Return = []> {
       this.#prefix,
       {
         ...this.#ast,
-        groupBy: x as string[],
+        groupBy: (x as string[]).map(x => qualifySelector(this.#ast, x)),
       },
     );
   }

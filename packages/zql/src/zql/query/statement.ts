@@ -4,9 +4,9 @@ import type {Entity} from '../../entity.js';
 import {
   buildPipeline,
   getValueFromEntity,
-  selectorsToQualifiedColumns,
 } from '../ast-to-ivm/pipeline-builder.js';
 import type {AST} from '../ast/ast.js';
+import {selectorsToQualifiedColumns} from '../ast/required-columns.js';
 import type {Context} from '../context/context.js';
 import {compareEntityFields} from '../ivm/compare.js';
 import type {DifferenceStream} from '../ivm/graph/difference-stream.js';

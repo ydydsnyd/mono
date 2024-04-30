@@ -8,6 +8,10 @@ import type {
   Primitive,
   SimpleCondition,
 } from '../ast/ast.js';
+import {
+  selectorsToQualifiedColumns,
+  selectorToQualifiedColumn,
+} from '../ast/required-columns.js';
 import {DifferenceStream, concat} from '../ivm/graph/difference-stream.js';
 import {isJoinResult, StringOrNumber} from '../ivm/types.js';
 
@@ -484,21 +488,6 @@ function patternToRegExp(source: string, flags: '' | 'i' = ''): RegExp {
     }
   }
   return new RegExp(pattern + '$', flags);
-}
-
-export function selectorsToQualifiedColumns(
-  selectors: string[],
-): (readonly [string | undefined, string])[] {
-  return selectors.map(selectorToQualifiedColumn);
-}
-
-export function selectorToQualifiedColumn(
-  x: string,
-): readonly [string | undefined, string] {
-  if (x.includes('.')) {
-    return x.split('.') as [string, string];
-  }
-  return [undefined, x];
 }
 
 export function getValueFromEntity(
