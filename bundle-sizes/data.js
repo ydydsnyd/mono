@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714141909605,
+  "lastUpdate": 1714508319826,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -47269,6 +47269,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32187,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d994828bdf79167a36a6e0c53b1263b0ef62bfd0",
+          "message": "feat(replicache): getter for cookie (#1682)\n\nThis allows us to get rid of hacks to get the cookie in zero and reflect.",
+          "timestamp": "2024-04-30T20:16:06Z",
+          "tree_id": "d2de9153ab6b2e52f6fdb84982554cec91806bcf",
+          "url": "https://github.com/rocicorp/mono/commit/d994828bdf79167a36a6e0c53b1263b0ef62bfd0"
+        },
+        "date": 1714508302395,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 315196,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54784,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 116096,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32302,
             "unit": "bytes"
           }
         ]
