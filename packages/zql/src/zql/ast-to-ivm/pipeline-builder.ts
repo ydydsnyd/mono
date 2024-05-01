@@ -9,6 +9,7 @@ import type {
   SimpleCondition,
 } from '../ast/ast.js';
 import {
+  getRequiredColumns,
   selectorsToQualifiedColumns,
   selectorToQualifiedColumn,
 } from '../ast/required-columns.js';
@@ -22,15 +23,30 @@ function getId(e: Entity) {
 export function buildPipeline(
   sourceStreamProvider: (sourceName: string) => DifferenceStream<Entity>,
   ast: AST,
+  parentRequiredColumns?: Map<string, Set<string>> | undefined,
 ) {
   let stream = sourceStreamProvider(
     must(ast.table, 'Table not specified in the AST'),
   );
 
+  const requiredColumns = merge(getRequiredColumns(ast), parentRequiredColumns);
+  const requiredForThisTable = requiredColumns.get(ast.table);
+  if (requiredForThisTable) {
+    stream.filter(x =>
+      Object.keys(x).every(key => requiredForThisTable.has(key)),
+    );
+  }
+
   // TODO: start working on pipeline sharing so we don't have to
   // re-build the join index every time.
   if (ast.joins) {
-    stream = applyJoins(sourceStreamProvider, ast.table, stream, ast.joins);
+    stream = applyJoins(
+      sourceStreamProvider,
+      ast.table,
+      stream,
+      ast.joins,
+      requiredColumns,
+    );
   }
 
   if (ast.where) {
@@ -67,16 +83,41 @@ export function buildPipeline(
   return ret;
 }
 
+function merge(
+  into: Map<string, Set<string>>,
+  from?: Map<string, Set<string>> | undefined,
+) {
+  if (!from) {
+    return into;
+  }
+  for (const [key, value] of from.entries()) {
+    let existing = into.get(key);
+    if (!existing) {
+      existing = new Set();
+      into.set(key, existing);
+    }
+    for (const v of value) {
+      existing.add(v);
+    }
+  }
+  return into;
+}
+
 export function applyJoins<T extends Entity, O extends Entity>(
   sourceStreamProvider: (sourceName: string) => DifferenceStream<Entity>,
   sourceTableOrAlias: string,
   stream: DifferenceStream<T>,
   joins: Join[],
+  parentRequiredColumns: Map<string, Set<string>>,
 ): DifferenceStream<O> {
   let ret: DifferenceStream<Entity> =
     stream as unknown as DifferenceStream<Entity>;
   for (const join of joins) {
-    const bPipeline = buildPipeline(sourceStreamProvider, join.other);
+    const bPipeline = buildPipeline(
+      sourceStreamProvider,
+      join.other,
+      parentRequiredColumns,
+    );
 
     const aQualifiedColumn = selectorToQualifiedColumn(join.on[0]);
     const bQualifiedColumn = selectorToQualifiedColumn(join.on[1]);
