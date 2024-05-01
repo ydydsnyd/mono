@@ -2,12 +2,15 @@ import {assert} from 'shared/src/asserts.js';
 import type {Entity} from '../../../entity.js';
 import type {Primitive} from '../../ast/ast.js';
 import type {Multiset} from '../multiset.js';
-import type {JoinResult, Version} from '../types.js';
+import type {JoinResult, StringOrNumber, Version} from '../types.js';
 import type {Reply, Request} from './message.js';
 import {ConcatOperator} from './operators/concat-operator.js';
 import {DebugOperator} from './operators/debug-operator.js';
 import {DifferenceEffectOperator} from './operators/difference-effect-operator.js';
-import {DistinctOperator} from './operators/distinct-operator.js';
+import {
+  DistinctAllOperator,
+  DistinctOperator,
+} from './operators/distinct-operator.js';
 import {FilterOperator} from './operators/filter-operator.js';
 import {
   AggregateOut,
@@ -20,6 +23,7 @@ import {InnerJoinOperator, JoinArgs} from './operators/join-operator.js';
 import {MapOperator} from './operators/map-operator.js';
 import type {Operator} from './operators/operator.js';
 import {ReduceOperator} from './operators/reduce-operator.js';
+import {must} from 'shared/src/must.js';
 
 export type Listener<T> = {
   newDifference: (
@@ -65,7 +69,7 @@ export class DifferenceStream<T extends object> {
   /**
    * Downstreams that requested historical data.
    */
-  readonly #requestors = new Set<Listener<T>>();
+  readonly #requestors = new Map<number, Set<Listener<T>>>();
 
   addDownstream(listener: Listener<T>) {
     this.#downstreams.add(listener);
@@ -83,7 +87,8 @@ export class DifferenceStream<T extends object> {
     reply?: Reply | undefined,
   ) {
     if (reply) {
-      for (const requestor of this.#requestors) {
+      const requestors = this.#requestors.get(reply.replyingTo);
+      for (const requestor of must(requestors)) {
         requestor.newDifference(version, data, reply);
       }
     } else {
@@ -94,21 +99,28 @@ export class DifferenceStream<T extends object> {
   }
 
   messageUpstream(message: Request, downstream: Listener<T>): void {
-    this.#requestors.add(downstream);
+    let existing = this.#requestors.get(message.id);
+    if (!existing) {
+      existing = new Set();
+      this.#requestors.set(message.id, existing);
+    }
+    existing.add(downstream);
     this.#upstream?.messageUpstream(message);
   }
 
   commit(version: Version) {
     if (this.#requestors.size > 0) {
-      for (const requestor of this.#requestors) {
-        try {
-          requestor.commit(version);
-        } catch (e) {
-          // `commit` notifies client code
-          // If client code throws we'll put IVM back into a consistent state
-          // by clearing the requestors.
-          this.#requestors.clear();
-          throw e;
+      for (const requestors of this.#requestors.values()) {
+        for (const requestor of requestors) {
+          try {
+            requestor.commit(version);
+          } catch (e) {
+            // `commit` notifies client code
+            // If client code throws we'll put IVM back into a consistent state
+            // by clearing the requestors.
+            this.#requestors.clear();
+            throw e;
+          }
         }
       }
       this.#requestors.clear();
@@ -141,6 +153,11 @@ export class DifferenceStream<T extends object> {
         stream as unknown as DifferenceStream<Entity>,
       ),
     );
+  }
+
+  distinctAll(keyFn: (e: T) => StringOrNumber): DifferenceStream<T> {
+    const stream = new DifferenceStream<T>();
+    return stream.setUpstream(new DistinctAllOperator<T>(this, stream, keyFn));
   }
 
   reduce<K extends Primitive, O extends object>(
@@ -204,17 +221,16 @@ export class DifferenceStream<T extends object> {
     return stream.setUpstream(new FullCountOperator(this, stream, alias));
   }
 
-  average<Field extends keyof T, Alias extends string>(
-    field: Field,
-    alias: Alias,
-  ) {
+  average<Alias extends string>(selector: string, alias: Alias) {
     const stream = new DifferenceStream<AggregateOut<T, [[Alias, number]]>>();
-    return stream.setUpstream(new FullAvgOperator(this, stream, field, alias));
+    return stream.setUpstream(
+      new FullAvgOperator(this, stream, selector, alias),
+    );
   }
 
-  sum<Field extends keyof T, Alias extends string>(field: Field, alias: Alias) {
+  sum<Alias extends string>(selector: string, alias: Alias) {
     const stream = new DifferenceStream<AggregateOut<T, [[Alias, number]]>>();
-    stream.setUpstream(new FullSumOperator(this, stream, field, alias));
+    stream.setUpstream(new FullSumOperator(this, stream, selector, alias));
     return stream;
   }
 
@@ -244,7 +260,16 @@ export class DifferenceStream<T extends object> {
 
   removeDownstream(listener: Listener<T>) {
     this.#downstreams.delete(listener);
-    this.#requestors.delete(listener);
+    for (const [id, requestors] of this.#requestors) {
+      for (const entry of requestors) {
+        if (entry === listener) {
+          requestors.delete(entry);
+          if (requestors.size === 0) {
+            this.#requestors.delete(id);
+          }
+        }
+      }
+    }
     if (this.#downstreams.size === 0) {
       this.destroy();
     }

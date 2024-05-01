@@ -9,18 +9,22 @@ const e1 = z.object({
   n: z.number(),
   optStr: z.string().optional(),
 });
+
 type E1 = z.infer<typeof e1>;
+
+const entitiesPrefix = 'e/';
+
 test('basic materialization', async () => {
   const context = makeTestContext();
-  const q = new EntityQuery<{e1: E1}>(context, 'e1');
+  const q = new EntityQuery<{e1: E1}>(context, 'e1', entitiesPrefix);
 
   const stmt = q.select('id', 'n').where('n', '>', 100).prepare();
 
-  const expected: E1[] = [];
   const calledWith: (readonly E1[])[] = [];
   stmt.subscribe(data => {
     calledWith.push(data);
-  });
+  }, false);
+  await new Promise(resolve => setTimeout(resolve, 0));
 
   const items = [
     {id: 'a', n: 1},
@@ -29,21 +33,22 @@ test('basic materialization', async () => {
   ] as const;
 
   context.getSource('e1').add(items[0]);
-
-  expected.push(items[1]);
   context.getSource('e1').add(items[1]);
-
-  expected.push(items[2]);
   context.getSource('e1').add(items[2]);
 
-  await Promise.resolve();
-  expect(calledWith).toEqual([[items[1], items[2]]]);
+  expect(calledWith).toEqual([
+    [{id: 'b', n: 101}],
+    [
+      {id: 'b', n: 101},
+      {id: 'c', n: 102},
+    ],
+  ]);
 });
 
 test('sorted materialization', async () => {
   const context = makeTestContext();
   type E1 = z.infer<typeof e1>;
-  const q = new EntityQuery<{e1: E1}>(context, 'e1');
+  const q = new EntityQuery<{e1: E1}>(context, 'e1', entitiesPrefix);
   const ascStatement = q.select('id').asc('n').prepare();
   const descStatement = q.select('id').desc('n').prepare();
 
@@ -76,7 +81,7 @@ test('sorted materialization', async () => {
 test('sorting is stable via suffixing the primary key to the order', async () => {
   const context = makeTestContext();
   type E1 = z.infer<typeof e1>;
-  const q = new EntityQuery<{e1: E1}>(context, 'e1');
+  const q = new EntityQuery<{e1: E1}>(context, 'e1', entitiesPrefix);
 
   const ascStatement = q.select('id').asc('n').prepare();
   const descStatement = q.select('id').desc('n').prepare();
@@ -143,14 +148,15 @@ test('makeComparator', () => {
 
 test('destroying the statement stops updating the view', async () => {
   const context = makeTestContext();
-  const q = new EntityQuery<{e1: E1}>(context, 'e1');
+  const q = new EntityQuery<{e1: E1}>(context, 'e1', entitiesPrefix);
 
   const stmt = q.select('id', 'n').prepare();
 
   let callCount = 0;
   stmt.subscribe(_ => {
     ++callCount;
-  });
+  }, false);
+  await new Promise(resolve => setTimeout(resolve, 0));
 
   const items = [
     {id: 'a', n: 1},
@@ -159,24 +165,27 @@ test('destroying the statement stops updating the view', async () => {
   ] as const;
 
   context.getSource('e1').add(items[0]);
-  await Promise.resolve();
   expect(callCount).toBe(1);
   stmt.destroy();
+  await new Promise(resolve => setTimeout(resolve, 0));
   context.getSource('e1').add(items[1]);
   context.getSource('e1').add(items[2]);
-  await Promise.resolve();
   expect(callCount).toBe(1);
   expect(await stmt.exec()).toEqual([{id: 'a', n: 1}]);
 });
 
-test('ensure we get callbacks when subscribing and unsubscribing', () => {
+test('ensure we get callbacks when subscribing and unsubscribing', async () => {
   const context = makeTestContext();
-  const q = new EntityQuery<{e1: E1}>(context, 'e1').select('id', 'n');
+  const q = new EntityQuery<{e1: E1}>(context, 'e1', entitiesPrefix).select(
+    'id',
+    'n',
+  );
 
   const statement = q.prepare();
   const unsubscribe = statement.subscribe(_ => {
     // noop
   });
+  await new Promise(resolve => setTimeout(resolve, 0));
 
   expect(context.subscriptionsChangedLog).toEqual([
     {type: 'added', ast: ast(q)},
@@ -184,6 +193,7 @@ test('ensure we get callbacks when subscribing and unsubscribing', () => {
 
   context.subscriptionsChangedLog.length = 0;
   unsubscribe();
+  await new Promise(resolve => setTimeout(resolve, 0));
   expect(context.subscriptionsChangedLog).toEqual([
     {type: 'removed', ast: ast(q)},
   ]);

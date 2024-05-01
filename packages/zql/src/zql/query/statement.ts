@@ -1,3 +1,4 @@
+import {assert} from 'shared/src/asserts.js';
 import {must} from 'shared/src/must.js';
 import type {Entity} from '../../entity.js';
 import {
@@ -10,41 +11,63 @@ import type {Context} from '../context/context.js';
 import {compareEntityFields} from '../ivm/compare.js';
 import type {DifferenceStream} from '../ivm/graph/difference-stream.js';
 import {MutableTreeView} from '../ivm/view/tree-view.js';
+import type {Source} from '../ivm/source/source.js';
 import type {View} from '../ivm/view/view.js';
 import type {MakeHumanReadable} from './entity-query.js';
 
 export interface IStatement<TReturn> {
   subscribe(cb: (value: MakeHumanReadable<TReturn>) => void): () => void;
-  exec(): Promise<MakeHumanReadable<TReturn>>;
+  exec(): PromiseLike<MakeHumanReadable<TReturn>>;
   destroy(): void;
 }
 
 export class Statement<Return> implements IStatement<Return> {
-  readonly #pipeline;
   readonly #ast;
   readonly #context;
-  #materialization: View<Return extends [] ? Return[number] : Return> | null =
-    null;
+  #materialization?:
+    | PromiseLike<View<Return extends [] ? Return[number] : Return>>
+    | undefined = undefined;
 
   constructor(context: Context, ast: AST) {
     this.#ast = ast;
-    this.#pipeline = buildPipeline(
-      <T extends Entity>(sourceName: string) =>
-        context.getSource(sourceName).stream as unknown as DifferenceStream<T>,
-      ast,
-    );
     this.#context = context;
   }
 
-  #getMaterialization(): View<Return> {
-    // TODO: invariants to throw if the statement is not completely bound before materialization.
-    if (this.#materialization === null) {
-      this.#materialization = new MutableTreeView<
+  #getMaterialization(): PromiseLike<View<Return>> {
+    if (this.#materialization === undefined) {
+      this.#createMaterilization();
+    }
+    return this.#materialization as PromiseLike<View<Return>>;
+  }
+
+  #createMaterilization() {
+    assert(this.#materialization === undefined);
+
+    const usedSources: Source<Entity>[] = [];
+    const pipeline = buildPipeline(<T extends Entity>(sourceName: string) => {
+      const source = this.#context.getSource(sourceName);
+      const ret = source.stream as unknown as DifferenceStream<T>;
+      usedSources.push(source);
+      return ret;
+    }, this.#ast);
+
+    // We need to await seeding since sources can be ready at different times.
+    // If someone queries for Table A in one query then
+    // queries for Table A join Table B, Table A will be immediately ready.
+    // Since we optimisitcally run joins, we'll return an incomplete result
+    // as Table B hasn't returned from `watch` yet.
+    //
+    // This waits for all sources to have been loaded into memory
+    // before creating the view.
+    this.#materialization = Promise.all(
+      usedSources.filter(s => !s.isSeeded()).map(s => s.awaitSeeding()),
+    ).then(() => {
+      const view = new MutableTreeView<
         Return extends [] ? Return[number] : never
       >(
         this.#context,
         this.#ast,
-        this.#pipeline as unknown as DifferenceStream<
+        pipeline as unknown as DifferenceStream<
           Return extends [] ? Return[number] : never
         >,
         makeComparator<readonly string[], Record<string, unknown>>(
@@ -54,22 +77,31 @@ export class Statement<Return> implements IStatement<Return> {
         this.#ast.orderBy,
         this.#ast.limit,
       ) as unknown as View<Return extends [] ? Return[number] : Return>;
-
-      this.#materialization.pullHistoricalData();
-    }
-    return this.#materialization as View<Return>;
+      view.pullHistoricalData();
+      return view;
+    });
   }
 
-  subscribe(cb: (value: MakeHumanReadable<Return>) => void) {
+  subscribe(
+    cb: (value: MakeHumanReadable<Return>) => void,
+    initialData = true,
+  ) {
     const materialization = this.#getMaterialization();
-    return materialization.on(cb);
+    const cleanupPromise = materialization.then(view =>
+      view.on(cb, initialData),
+    );
+    const cleanup = () => {
+      void cleanupPromise.then(p => p());
+    };
+
+    return cleanup;
   }
 
   // Note: should we provide a version that takes a callback?
   // So it can resolve in the same micro task?
   // since, in the common case, the data will always be available.
-  exec() {
-    const materialization = this.#getMaterialization();
+  async exec() {
+    const materialization = await this.#getMaterialization();
 
     if (materialization.hydrated) {
       return Promise.resolve(materialization.value) as Promise<
@@ -81,15 +113,15 @@ export class Statement<Return> implements IStatement<Return> {
       const cleanup = materialization.on(value => {
         resolve(value as MakeHumanReadable<Return>);
         cleanup();
-      });
+      }, true);
     }) as Promise<MakeHumanReadable<Return>>;
   }
 
   // For savvy users that want to subscribe directly to diffs.
-  // onDifference() {}
+  // onDifference();
 
   destroy() {
-    this.#pipeline.destroy();
+    void this.#materialization?.then(v => v.destroy());
   }
 }
 

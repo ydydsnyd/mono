@@ -9,7 +9,7 @@ import type {
   SimpleCondition,
 } from '../ast/ast.js';
 import {DifferenceStream, concat} from '../ivm/graph/difference-stream.js';
-import {isJoinResult} from '../ivm/types.js';
+import {isJoinResult, StringOrNumber} from '../ivm/types.js';
 
 function getId(e: Entity) {
   return e.id;
@@ -50,6 +50,14 @@ export function buildPipeline(
     );
   }
 
+  if (ast.having) {
+    ret = applyWhere(ret, ast.having);
+  }
+
+  if (ast.distinct) {
+    ret = applyDistinct(ret, ast.distinct);
+  }
+
   // Note: the stream is technically attached at this point.
   // We could detach it until the user actually runs (or subscribes to) the statement as a tiny optimization.
   return ret;
@@ -72,7 +80,8 @@ export function applyJoins<T extends Entity, O extends Entity>(
       aAs: sourceTableOrAlias,
       getAJoinKey(e: Entity) {
         // TODO: runtime validation?
-        return getValueFromEntity(e, aQualifiedColumn) as Primitive;
+        const ret = getValueFromEntity(e, aQualifiedColumn) as Primitive;
+        return ret;
       },
       getAPrimaryKey: getId,
 
@@ -80,7 +89,8 @@ export function applyJoins<T extends Entity, O extends Entity>(
       bAs: join.as,
       getBJoinKey(e: Entity) {
         // TODO: runtime validation?
-        return getValueFromEntity(e, bQualifiedColumn) as Primitive;
+        const ret = getValueFromEntity(e, bQualifiedColumn) as Primitive;
+        return ret;
       },
       getBPrimaryKey: getId,
     } as const;
@@ -155,13 +165,18 @@ function applySimpleCondition<T extends Entity>(
 ) {
   const operator = getOperator(condition);
   const {field: selector} = condition;
-  let source: string = selector;
-  let field = selector;
-  if (selector.includes('.')) {
-    [source, field] = selector.split('.');
-  }
-  const qualifiedColumn = [source, field] as [string, string];
-  return stream.filter(x => operator(getValueFromEntity(x, qualifiedColumn)));
+  const column = selectorToQualifiedColumn(selector);
+  return stream.filter(x => operator(getValueFromEntity(x, column)));
+}
+
+function applyDistinct<T extends Entity>(
+  stream: DifferenceStream<T>,
+  distinct: string,
+) {
+  const column = selectorToQualifiedColumn(distinct);
+  return stream.distinctAll(
+    x => getValueFromEntity(x, column) as StringOrNumber,
+  );
 }
 
 function applyGroupBy<T extends Entity>(
@@ -173,6 +188,7 @@ function applyGroupBy<T extends Entity>(
   const qualifiedColumns = aggregations.map(q =>
     q.field === undefined ? undefined : selectorToQualifiedColumn(q.field),
   );
+
   return stream.reduce(
     keyFunction,
     value => value.id as string,
@@ -287,13 +303,13 @@ function applyFullTableAggregation<T extends Entity>(
           `${agg.aggregate} not yet supported outside of group-by`,
         );
       case 'avg':
-        ret = ret.average(agg.field as keyof T, agg.alias);
+        ret = ret.average(agg.field as string, agg.alias);
         break;
       case 'count':
         ret = ret.count(agg.alias);
         break;
       case 'sum':
-        ret = ret.sum(agg.field as keyof T, agg.alias);
+        ret = ret.sum(agg.field as string, agg.alias);
         break;
     }
   }
@@ -346,9 +362,66 @@ export function getOperator(condition: SimpleCondition): (lhs: any) => boolean {
       return getLikeOp(rhs, 'i');
     case 'NOT ILIKE':
       return not(getLikeOp(rhs, 'i'));
-    default:
-      throw new Error(`Operator ${op} not supported`);
+    case 'INTERSECTS': {
+      const rhSet = new Set(rhs);
+      return lhs => {
+        if (Array.isArray(lhs)) {
+          return lhs.some(x => rhSet.has(x));
+        }
+        return rhSet.has(lhs);
+      };
+    }
+    case 'DISJOINT': {
+      const rhSet = new Set(rhs);
+      return lhs => {
+        if (Array.isArray(lhs)) {
+          return lhs.every(x => !rhSet.has(x));
+        }
+        return !rhSet.has(lhs);
+      };
+    }
+    case 'SUPERSET': {
+      return lhs => {
+        if (rhs.length === 0) {
+          return true;
+        }
+        if (Array.isArray(lhs)) {
+          const lhSet = new Set(lhs);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          return rhs.every((x: any) => lhSet.has(x));
+        }
+        return rhs.length === 1 && lhs === rhs[0];
+      };
+    }
+    case 'CONGRUENT': {
+      const rhSet = new Set(rhs);
+      return lhs => {
+        if (Array.isArray(lhs)) {
+          return rhSet.size === lhs.length && lhs.every(x => rhSet.has(x));
+        }
+        return rhs.length === 1 && lhs === rhs[0];
+      };
+    }
+    case 'INCONGRUENT': {
+      const rhSet = new Set(rhs);
+      return lhs => {
+        if (Array.isArray(lhs)) {
+          return rhSet.size !== lhs.length || !lhs.every(x => rhSet.has(x));
+        }
+        return rhs.length !== 1 || lhs !== rhs[0];
+      };
+    }
+    case 'SUBSET': {
+      const rhSet = new Set(rhs);
+      return lhs => {
+        if (Array.isArray(lhs)) {
+          return lhs.every(x => rhSet.has(x));
+        }
+        return rhSet.has(lhs);
+      };
+    }
   }
+  throw new Error(`unexpected op: ${op}`);
 }
 
 function not<T>(f: (lhs: T) => boolean) {
@@ -436,12 +509,26 @@ export function getValueFromEntity(
     if (qualifiedColumn[1] === '*') {
       return (entity as Record<string, unknown>)[qualifiedColumn[0]];
     }
-    return (
+    return getOrLiftValue(
       (entity as Record<string, unknown>)[must(qualifiedColumn[0])] as Record<
         string,
         unknown
-      >
-    )?.[qualifiedColumn[1]];
+      >,
+      qualifiedColumn[1],
+    );
   }
-  return entity[qualifiedColumn[1]];
+  return getOrLiftValue(entity, qualifiedColumn[1]);
+}
+
+export function getOrLiftValue(
+  containerOrValue:
+    | Record<string, unknown>
+    | Array<Record<string, unknown>>
+    | undefined,
+  field: string,
+) {
+  if (Array.isArray(containerOrValue)) {
+    return containerOrValue.map(x => x?.[field]);
+  }
+  return containerOrValue?.[field];
 }

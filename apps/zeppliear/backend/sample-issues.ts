@@ -1,4 +1,12 @@
-import {Issue, Comment, Priority, Status, Member} from '../frontend/issue';
+import {
+  Issue,
+  Comment,
+  Priority,
+  Status,
+  Member,
+  Label,
+  IssueLabel,
+} from '../frontend/issue';
 import {generateNKeysBetween} from 'fractional-indexing';
 import {sortBy} from 'lodash';
 import {reactIssues} from '../sample-data/issues-react';
@@ -9,7 +17,21 @@ export type SampleData = {
   issues: Issue[];
   comments: Comment[];
   members: Member[];
+  labels: Label[];
+  issueLabels: IssueLabel[];
 };
+
+const labels = [
+  'Feature',
+  'Bug',
+  'Enhancement',
+  'Help Wanted',
+  'Good First Issue',
+  'Needs Reproduction',
+  'Needs More Info',
+  'Duplicate',
+  'Invalid',
+].map((name, idx) => ({id: `${idx}`, name}));
 
 export function getReactSampleData(): SampleData {
   const sortedIssues = sortBy(
@@ -66,10 +88,25 @@ export function getReactSampleData(): SampleData {
     ([login, id]) => ({id, name: login}),
   );
 
+  const issueLabels = issues.flatMap(issue => {
+    const numLabels = Math.floor(Math.random() * 3);
+    const labelIDs = new Set<string>();
+    while (labelIDs.size < numLabels) {
+      labelIDs.add(labels[Math.floor(Math.random() * labels.length)].id);
+    }
+    return [...labelIDs].map(labelID => ({
+      id: issue.id + '-' + labelID,
+      issueID: issue.id,
+      labelID,
+    }));
+  });
+
   return {
     issues,
     comments,
     members,
+    labels,
+    issueLabels,
   };
 }
 
@@ -139,3 +176,6 @@ function getPriority({
   }
   return Priority.None;
 }
+
+// cXCY9kvANCumG9onAEqZn
+// ^^ what nanoid is that?

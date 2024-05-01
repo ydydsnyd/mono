@@ -1,5 +1,5 @@
-import {versionToLexi} from '../../../types/lexi-version.js';
-import {rowKeyHash} from '../../../types/row-key.js';
+import {versionFromLexi, versionToLexi} from '../../../types/lexi-version.js';
+import {rowIDHash} from '../../../types/row-key.js';
 import type {CVRVersion, ClientRecord, QueryRecord, RowID} from './types.js';
 
 // At a glance
@@ -12,20 +12,29 @@ import type {CVRVersion, ClientRecord, QueryRecord, RowID} from './types.js';
 // -----------------------------------------------------------------------
 // CVR
 // -----------------------------------------------------------------------
-// /vs/cvr/{id}/meta/version: {stateVersion: LexiVersion, minorVersion?: number}
-// /vs/cvr/{id}/meta/lastActive: {epochMillis: string}  // Can include non-version activity
 //
-// /vs/cvr/{id}/meta/clients/{cid}: ClientRecord (desiredQueries)
-// /vs/cvr/{id}/meta/clients/{cid}: ClientRecord
-// /vs/cvr/{id}/meta/clients/{cid}: ClientRecord
+// Abbreviations:
+// m: metadata
+// d: data
+// p: patches
+// r: rows
+// q: queries
+// c: clients
 //
-// /vs/cvr/{id}/meta/queries/{qid}: QueryRecord (ast, transformationHash)
-// /vs/cvr/{id}/meta/queries/{qid}: QueryRecord
-// /vs/cvr/{id}/meta/queries/{qid}: QueryRecord
+// /vs/cvr/{id}/m/version: {stateVersion: LexiVersion, minorVersion?: number}
+// /vs/cvr/{id}/m/lastActive: {epochMillis: string}  // Can include non-version activity
 //
-// /vs/cvr/{id}/data/rows/{schema}/{table}/{row-key-hash}: RowRecord (stateVersion, columns, queries)
-// /vs/cvr/{id}/data/rows/{schema}/{table}/{row-key-hash}: RowRecord
-// /vs/cvr/{id}/data/rows/{schema}/{table}/{row-key-hash}: RowRecord
+// /vs/cvr/{id}/m/c/{cid}: ClientRecord (desiredQueries)
+// /vs/cvr/{id}/m/c/{cid}: ClientRecord
+// /vs/cvr/{id}/m/c/{cid}: ClientRecord
+//
+// /vs/cvr/{id}/m/q/{qid}: QueryRecord (ast, transformationHash)
+// /vs/cvr/{id}/m/q/{qid}: QueryRecord
+// /vs/cvr/{id}/m/q/{qid}: QueryRecord
+//
+// /vs/cvr/{id}/d/r/{row-id-hash}: RowRecord (stateVersion, columns, queries)
+// /vs/cvr/{id}/d/r/{row-id-hash}: RowRecord
+// /vs/cvr/{id}/d/r/{row-id-hash}: RowRecord
 //
 // Patches to data and metadata are indexed under separate prefixes.
 // Although this means that both indexes need to be scanned to perform incremental
@@ -33,19 +42,19 @@ import type {CVRVersion, ClientRecord, QueryRecord, RowID} from './types.js';
 // a re-query catchup (the metadata patch index being generally much smaller than
 // the data patch index).
 //
-// /vs/cvr/{id}/patches/meta/{version-str}/clients/{cid}}: ClientPatch
-// /vs/cvr/{id}/patches/meta/{version-str}/clients/{cid}}: ClientPatch
-// /vs/cvr/{id}/patches/meta/{version-str}/clients/{cid}}: ClientPatch
-// /vs/cvr/{id}/patches/meta/{version-str}/queries/{qid}: QueryPatch (got)
-// /vs/cvr/{id}/patches/meta/{version-str}/queries/{qid}: QueryPatch (got)
-// /vs/cvr/{id}/patches/meta/{version-str}/queries/{qid}: QueryPatch (got)
-// /vs/cvr/{id}/patches/meta/{version-str}/queries/{qid}/clients/{cid}: QueryPatch (desired)
-// /vs/cvr/{id}/patches/meta/{version-str}/queries/{qid}/clients/{cid}: QueryPatch (desired)
-// /vs/cvr/{id}/patches/meta/{version-str}/queries/{qid}/clients/{cid}: QueryPatch (desired)
+// /vs/cvr/{id}/p/m/{version-str}/c/{cid}}: ClientPatch
+// /vs/cvr/{id}/p/m/{version-str}/c/{cid}}: ClientPatch
+// /vs/cvr/{id}/p/m/{version-str}/c/{cid}}: ClientPatch
+// /vs/cvr/{id}/p/m/{version-str}/q/{qid}: QueryPatch (got)
+// /vs/cvr/{id}/p/m/{version-str}/q/{qid}: QueryPatch (got)
+// /vs/cvr/{id}/p/m/{version-str}/q/{qid}: QueryPatch (got)
+// /vs/cvr/{id}/p/m/{version-str}/q/{qid}/c/{cid}: QueryPatch (desired)
+// /vs/cvr/{id}/p/m/{version-str}/q/{qid}/c/{cid}: QueryPatch (desired)
+// /vs/cvr/{id}/p/m/{version-str}/q/{qid}/c/{cid}: QueryPatch (desired)
 //
-// /vs/cvr/{id}/patches/data/{version-str}/rows/{schema}/{table}/{row-key-hash}: RowPatch
-// /vs/cvr/{id}/patches/data/{version-str}/rows/{schema}/{table}/{row-key-hash}: RowPatch
-// /vs/cvr/{id}/patches/data/{version-str}/rows/{schema}/{table}/{row-key-hash}: RowPatch
+// /vs/cvr/{id}/p/d/{version-str}/r/{row-id-hash}: RowPatch
+// /vs/cvr/{id}/p/d/{version-str}/r/{row-id-hash}: RowPatch
+// /vs/cvr/{id}/p/d/{version-str}/r/{row-id-hash}: RowPatch
 //
 // -----------------------------------------------------------------------
 // Last Active Index
@@ -78,66 +87,101 @@ export class CVRPaths {
   }
 
   metaPrefix(): string {
-    return `${this.root}/meta/`;
+    return `${this.root}/m/`;
   }
 
   version(): string {
-    return `${this.root}/meta/version`;
+    return `${this.root}/m/version`;
   }
 
   lastActive(): string {
-    return `${this.root}/meta/lastActive`;
+    return `${this.root}/m/lastActive`;
   }
 
   client(client: ClientRecord | {id: string}): string {
-    return `${this.root}/meta/clients/${client.id}`;
+    return `${this.root}/m/c/${client.id}`;
   }
 
   query(query: QueryRecord | {id: string}): string {
-    return `${this.root}/meta/queries/${query.id}`;
+    return `${this.root}/m/q/${query.id}`;
   }
 
   row(row: RowID): string {
-    const {schema, table, rowKey} = row;
-    const hash = rowKeyHash(rowKey);
-    return `${this.root}/rows/${schema}/${table}/${hash}`;
+    return `${this.root}/d/r/${rowIDHash(row)}`;
   }
 
-  clientPatch(
-    cvrVersion: CVRVersion,
-    client: ClientRecord | {id: string},
-  ): string {
-    const v = versionString(cvrVersion);
-    return `${this.root}/patches/meta/${v}/clients/${client.id}`;
+  rowPrefix(): string {
+    return `${this.root}/d/r/`;
   }
 
-  rowPatch(cvrVersion: CVRVersion, row: RowID): string {
+  rowPatchVersionPrefix(cvrVersion: CVRVersion): string {
     const v = versionString(cvrVersion);
-    const {schema, table, rowKey} = row;
-    const hash = rowKeyHash(rowKey);
-    return `${this.root}/patches/data/${v}/rows/${schema}/${table}/${hash}`;
+    return `${this.root}/p/d/${v}/`;
   }
 
-  queryPatch(
-    cvrVersion: CVRVersion,
-    query: QueryRecord | {id: string},
-  ): string {
+  rowPatch(v: CVRVersion, row: RowID): string {
+    return `${this.rowPatchVersionPrefix(v)}r/${rowIDHash(row)}`;
+  }
+
+  versionFromPatchPath(path: string): CVRVersion {
+    const start = this.root.length + '/p/d/'.length; // Also works for '/p/m/' for metadata patches.
+    const end = path.indexOf('/', start);
+    const version = path.substring(start, end);
+    return versionFromString(version);
+  }
+
+  metadataPatchPrefix(): string {
+    return `${this.root}/p/m/`;
+  }
+
+  metadataPatchVersionPrefix(cvrVersion: CVRVersion): string {
     const v = versionString(cvrVersion);
-    return `${this.root}/patches/meta/${v}/queries/${query.id}`;
+    return `${this.root}/p/m/${v}/`;
+  }
+
+  clientPatch(v: CVRVersion, client: ClientRecord | {id: string}): string {
+    return `${this.metadataPatchVersionPrefix(v)}c/${client.id}`;
+  }
+
+  queryPatch(v: CVRVersion, query: QueryRecord | {id: string}): string {
+    return `${this.metadataPatchVersionPrefix(v)}q/${query.id}`;
   }
 
   desiredQueryPatch(
-    cvrVersion: CVRVersion,
+    v: CVRVersion,
     query: QueryRecord | {id: string},
     client: ClientRecord | {id: string},
   ): string {
-    const v = versionString(cvrVersion);
-    return `${this.root}/patches/meta/${v}/queries/${query.id}/clients/${client.id}`;
+    return `${this.metadataPatchVersionPrefix(v)}q/${query.id}/c/${client.id}`;
   }
 }
 
 export function versionString(v: CVRVersion) {
+  // The separator (e.g. ":") needs to be lexicographically greater than the
+  // storage key path separator (e.g. "/") so that "01/row-hash" is less than "01:01/row-hash".
+  // In particular, the traditional separator for major.minor versions (".") does not
+  // satisfy this quality.
   return v.minorVersion
-    ? `${v.stateVersion}.${versionToLexi(v.minorVersion)}`
+    ? `${v.stateVersion}:${versionToLexi(v.minorVersion)}`
     : v.stateVersion;
+}
+
+export function versionFromString(str: string): CVRVersion {
+  const parts = str.split(':');
+  const stateVersion = parts[0];
+  switch (parts.length) {
+    case 1: {
+      versionFromLexi(stateVersion); // Purely for validation.
+      return {stateVersion};
+    }
+    case 2: {
+      const minorVersion = versionFromLexi(parts[1]);
+      if (minorVersion > BigInt(Number.MAX_SAFE_INTEGER)) {
+        throw new Error(`minorVersion ${parts[1]} exceeds max safe integer`);
+      }
+      return {stateVersion, minorVersion: Number(minorVersion)};
+    }
+    default:
+      throw new TypeError(`Invalid version string ${str}`);
+  }
 }

@@ -20,11 +20,7 @@ import {TestMemStore} from './kv/test-mem-store.js';
 import type {PatchOperation} from './patch-operation.js';
 import {deleteClientForTesting} from './persist/clients-test-helpers.js';
 import type {ReplicacheOptions} from './replicache-options.js';
-import {
-  Replicache,
-  getTestInstance,
-  httpStatusUnauthorized,
-} from './replicache.js';
+import {Replicache, httpStatusUnauthorized} from './replicache.js';
 import type {ScanOptions} from './scan-options.js';
 import type {ClientID} from './sync/ids.js';
 import {
@@ -70,6 +66,28 @@ test('name cannot be empty', () => {
   expect(
     () => new Replicache({licenseKey: TEST_LICENSE_KEY, name: ''}),
   ).to.throw(/name.*must be non-empty/);
+});
+
+test('cookie', async () => {
+  const pullURL = 'https://pull.com/rep';
+  const rep = await replicacheForTesting('test2', {
+    pullURL,
+  });
+  expect(await rep.impl.cookie).to.equal(null);
+
+  let pullDone = false;
+  fetchMock.post(pullURL, () => {
+    pullDone = true;
+    return makePullResponseV1(rep.clientID, 0, [], 'newCookie');
+  });
+
+  await rep.pull();
+
+  await tickUntil(() => pullDone);
+  await tickAFewTimes();
+
+  expect(await rep.impl.cookie).to.equal('newCookie');
+  fetchMock.reset();
 });
 
 test('get, has, scan on empty db', async () => {
@@ -1362,7 +1380,7 @@ test('push timing', async () => {
     mutators: {addData},
   });
 
-  const onInvokePush = (getTestInstance(rep).onPushInvoked = sinon.fake());
+  const onInvokePush = (rep.onPushInvoked = sinon.fake());
 
   const add = rep.mutate.addData;
 
@@ -1419,9 +1437,9 @@ test('push and pull concurrently', async () => {
     enablePullAndPushInOpen: false,
   });
 
-  const onBeginPull = (getTestInstance(rep).onBeginPull = sinon.fake());
+  const onBeginPull = (rep.onBeginPull = sinon.fake());
   const commitSpy = sinon.spy(Write.prototype, 'commitWithDiffs');
-  const onPushInvoked = (getTestInstance(rep).onPushInvoked = sinon.fake());
+  const onPushInvoked = (rep.onPushInvoked = sinon.fake());
 
   function resetSpies() {
     onBeginPull.resetHistory();

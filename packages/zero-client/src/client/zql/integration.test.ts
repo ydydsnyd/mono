@@ -1,13 +1,18 @@
-import {generate} from '@rocicorp/rails';
+import {generate as generateRails} from '@rocicorp/rails';
+import {joinSymbol} from '@rocicorp/zql/src/zql/ivm/types.js';
+import * as agg from '@rocicorp/zql/src/zql/query/agg.js';
+import {exp, not, or} from '@rocicorp/zql/src/zql/query/entity-query.js';
 import fc from 'fast-check';
-import {nanoid} from 'nanoid';
-import {Replicache, TEST_LICENSE_KEY} from 'replicache';
+import * as v from 'shared/src/valita.js';
 import {expect, test} from 'vitest';
-import {z} from 'zod';
-import {makeReplicacheContext} from '../context/replicache-context.js';
-import {joinSymbol} from '../ivm/types.js';
-import * as agg from '../query/agg.js';
-import {EntityQuery, exp, not, or} from '../query/entity-query.js';
+import type {Entity} from '../../mod.js';
+import {nanoid} from '../../util/nanoid.js';
+import {ENTITIES_KEY_PREFIX} from '../keys.js';
+import {Zero, getInternalReplicacheImplForTesting} from '../zero.js';
+
+function generate<E extends Entity>(name: string, parse?: (v: unknown) => E) {
+  return generateRails<E>(`${ENTITIES_KEY_PREFIX}${name}`, parse);
+}
 
 export async function tickAFewTimes(n = 10, time = 0) {
   for (let i = 0; i < n; i++) {
@@ -15,18 +20,18 @@ export async function tickAFewTimes(n = 10, time = 0) {
   }
 }
 
-const issueSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  status: z.enum(['open', 'closed']),
-  priority: z.enum(['high', 'medium', 'low']),
-  assignee: z.string(),
-  created: z.number(),
-  updated: z.number(),
-  closed: z.number().optional(),
+const issueSchema = v.object({
+  id: v.string(),
+  title: v.string(),
+  status: v.union(v.literal('open'), v.literal('closed')),
+  priority: v.union(v.literal('high'), v.literal('medium'), v.literal('low')),
+  assignee: v.string(),
+  created: v.number(),
+  updated: v.number(),
+  closed: v.number().optional(),
 });
 
-type Issue = z.infer<typeof issueSchema>;
+type Issue = v.Infer<typeof issueSchema>;
 type Label = {id: string; name: string};
 type IssueLabel = {id: string; issueID: string; labelID: string};
 
@@ -35,7 +40,7 @@ const {
   set: setIssue,
   update: updateIssue,
   delete: deleteIssue,
-} = generate<Issue>('issue', issueSchema.parse);
+} = generate<Issue>('issue', v => issueSchema.parse(v));
 const {
   init: initLabel,
   set: setLabel,
@@ -108,14 +113,6 @@ const defaultIssueLabels: readonly IssueLabel[] = [
   {id: 'c-c', issueID: 'c', labelID: 'c'},
 ];
 
-function newRep() {
-  return new Replicache({
-    licenseKey: TEST_LICENSE_KEY,
-    name: nanoid(),
-    mutators,
-  });
-}
-
 const issueArbitrary: fc.Arbitrary<Issue> = fc.record({
   id: fc.string({
     minLength: 1,
@@ -148,19 +145,19 @@ function sampleTenUniqueIssues() {
   return fc.sample(tenUniqueIssues, 1)[0];
 }
 
-function setup() {
-  const r = newRep();
-  const c = makeReplicacheContext(r, {
-    subscriptionAdded() {},
-    subscriptionRemoved() {},
+function newZero() {
+  const z = new Zero({
+    roomID: 'room-' + nanoid(),
+    userID: 'user-' + nanoid(),
+    mutators,
+    queries: {
+      issue: v => v as Issue,
+      label: v => v as Label,
+      issueLabel: v => v as IssueLabel,
+    },
   });
-  const issueQuery = new EntityQuery<{issue: Issue}>(c, 'issue');
-  const labelQuery = new EntityQuery<{label: Label}>(c, 'label');
-  const issueLabelQuery = new EntityQuery<{issueLabel: IssueLabel}>(
-    c,
-    'issueLabel',
-  );
-  return {r, c, issueQuery, labelQuery, issueLabelQuery};
+
+  return z;
 }
 
 const compareIds = (a: {id: string}, b: {id: string}) =>
@@ -187,56 +184,56 @@ function makeComparator(...fields: (keyof Issue)[]) {
 }
 
 test('1-shot against an empty collection', async () => {
-  const {issueQuery} = setup();
-  const rows = issueQuery.select('id').prepare().exec();
+  const z = newZero();
+  const rows = z.query.issue.select('id').prepare().exec();
   expect(await rows).toEqual([]);
 });
 
 test('prepare a query before the collection has writes then run it', async () => {
   const issues = sampleTenUniqueIssues();
-  const {issueQuery: q, r} = setup();
-  const stmt = q.select('id').prepare();
-  await Promise.all(issues.map(r.mutate.initIssue));
+  const z = newZero();
+  const stmt = z.query.issue.select('id').prepare();
+  await Promise.all(issues.map(z.mutate.initIssue));
 
   const rows = await stmt.exec();
   expect(rows).toEqual(issues.sort(compareIds));
 
-  await r.close();
+  await z.close();
 });
 
 test('prepare a query then run it once `experimentalWatch` has completed', async () => {
   const issues = sampleTenUniqueIssues();
-  const {issueQuery: q, r} = setup();
-  await Promise.all(issues.map(r.mutate.initIssue));
+  const z = newZero();
+  await Promise.all(issues.map(z.mutate.initIssue));
 
-  const stmt = q.select('id').prepare();
+  const stmt = z.query.issue.select('id').prepare();
   // This is a hacky way to wait for the watch to complete.
   await new Promise(resolve => setTimeout(resolve, 0));
   const rows = await stmt.exec();
 
   expect(rows).toEqual(issues.sort(compareIds));
 
-  await r.close();
+  await z.close();
 }, 30000);
 
 test('exec a query before the source has been filled by anything', async () => {
   const issues = sampleTenUniqueIssues();
-  const {issueQuery: q, r} = setup();
-  await Promise.all(issues.map(r.mutate.initIssue));
+  const z = newZero();
+  await Promise.all(issues.map(z.mutate.initIssue));
 
   // it should wait until the source has been seeded
   // before returning.
-  const rows = await q.select('id').prepare().exec();
+  const rows = await z.query.issue.select('id').prepare().exec();
 
   expect(rows).toEqual(issues.sort(compareIds));
 
-  await r.close();
+  await z.close();
 }, 30000);
 
 test('subscribing to a query calls us with the complete query results on change', async () => {
   const issues = sampleTenUniqueIssues();
-  const {issueQuery: q, r} = setup();
-  await Promise.all(issues.map(r.mutate.initIssue));
+  const z = newZero();
+  await Promise.all(issues.map(z.mutate.initIssue));
 
   let resolve: (v: unknown) => void;
   const calledPromise = new Promise(res => {
@@ -244,7 +241,8 @@ test('subscribing to a query calls us with the complete query results on change'
   });
 
   let callCount = 0;
-  q.select('id')
+  z.query.issue
+    .select('id')
     .prepare()
     .subscribe(value => {
       expect(value).toEqual(issues.sort(compareIds));
@@ -263,7 +261,7 @@ test('subscribing to a query calls us with the complete query results on change'
   let lastCallCount = callCount;
   for (const issue of deletedIssues) {
     issues.shift();
-    await r.mutate.deleteIssue(issue.id);
+    await z.mutate.deleteIssue(issue.id);
     // check that our observer was called after each deletion.
     // TODO: if a mutator deletes many things in a single
     // transaction, we need to tie that to the lifetime of
@@ -273,7 +271,7 @@ test('subscribing to a query calls us with the complete query results on change'
     lastCallCount = callCount;
   }
 
-  await r.close();
+  await z.close();
 });
 
 test('subscribing to differences', () => {});
@@ -314,82 +312,85 @@ test('each where operator', async () => {
     },
   ];
 
-  const {issueQuery: q, r} = setup();
-  await Promise.all(issues.map(r.mutate.initIssue));
+  const z = newZero();
+  await Promise.all(issues.map(z.mutate.initIssue));
 
-  let stmt = q.select('id').where('id', '=', 'a').prepare();
+  let stmt = z.query.issue.select('id').where('id', '=', 'a').prepare();
   const rows = await stmt.exec();
   expect(rows).toEqual([issues[0]]);
   stmt.destroy();
 
-  stmt = q.select('id').where('id', '<', 'b').prepare();
+  stmt = z.query.issue.select('id').where('id', '<', 'b').prepare();
   expect(await stmt.exec()).toEqual([issues[0]]);
   stmt.destroy();
 
-  stmt = q.select('id').where('id', '>', 'a').prepare();
+  stmt = z.query.issue.select('id').where('id', '>', 'a').prepare();
   expect(await stmt.exec()).toEqual([issues[1], issues[2]]);
   stmt.destroy();
 
-  stmt = q.select('id').where('id', '>=', 'b').prepare();
+  stmt = z.query.issue.select('id').where('id', '>=', 'b').prepare();
   expect(await stmt.exec()).toEqual([issues[1], issues[2]]);
   stmt.destroy();
 
-  stmt = q.select('id').where('id', '<=', 'b').prepare();
+  stmt = z.query.issue.select('id').where('id', '<=', 'b').prepare();
   expect(await stmt.exec()).toEqual([issues[0], issues[1]]);
   stmt.destroy();
 
   // TODO: this breaks
-  // stmt = q.select('id').where('id', 'IN', ['a', 'b']).prepare();
+  // stmt = z.query.issue.select('id').where('id', 'IN', ['a', 'b']).prepare();
   // expect(await stmt.exec()).toEqual([{id: 'a'}, {id: 'b'}]);
   // stmt.destroy();
 
-  stmt = q.select('id').where('assignee', 'LIKE', 'al%').prepare();
+  stmt = z.query.issue.select('id').where('assignee', 'LIKE', 'al%').prepare();
   expect(await stmt.exec()).toEqual([issues[2]]);
   stmt.destroy();
 
-  stmt = q.select('id').where('assignee', 'ILIKE', 'AL%').prepare();
+  stmt = z.query.issue.select('id').where('assignee', 'ILIKE', 'AL%').prepare();
   expect(await stmt.exec()).toEqual([issues[2]]);
   stmt.destroy();
 
   // now compare against created date
   // TODO: this breaks
-  // stmt = q.select('id').where('created', '=', now).prepare();
+  // stmt = z.query.issue.select('id').where('created', '=', now).prepare();
   // expect(await stmt.exec()).toEqual([{id: 'b'}]);
   // stmt.destroy();
 
-  stmt = q.select('id').where('created', '<', now).prepare();
+  stmt = z.query.issue.select('id').where('created', '<', now).prepare();
   expect(await stmt.exec()).toEqual([issues[0]]);
   stmt.destroy();
 
-  stmt = q.select('id').where('created', '>', now).prepare();
+  stmt = z.query.issue.select('id').where('created', '>', now).prepare();
   expect(await stmt.exec()).toEqual([issues[2]]);
   stmt.destroy();
 
-  stmt = q.select('id').where('created', '>=', now).prepare();
+  stmt = z.query.issue.select('id').where('created', '>=', now).prepare();
   expect(await stmt.exec()).toEqual([issues[1], issues[2]]);
   stmt.destroy();
 
-  stmt = q.select('id').where('created', '<=', now).prepare();
+  stmt = z.query.issue.select('id').where('created', '<=', now).prepare();
   expect(await stmt.exec()).toEqual([issues[0], issues[1]]);
   stmt.destroy();
 
-  await r.close();
+  await z.close();
 });
 
 test('order by single field', async () => {
   await fc.assert(
     fc.asyncProperty(uniqueNonEmptyIssuesArbitrary, async issues => {
-      const {issueQuery: q, r} = setup();
-      await Promise.all(issues.map(r.mutate.initIssue));
+      const z = newZero();
+      await Promise.all(issues.map(z.mutate.initIssue));
       await new Promise(resolve => setTimeout(resolve, 0));
 
       const compareAssignees = makeComparator('assignee', 'id');
-      const stmt = q.select('id', 'assignee').asc('assignee').prepare();
+      const stmt = z.query.issue
+        .select('id', 'assignee')
+        .asc('assignee')
+        .prepare();
       const rows = await stmt.exec();
       try {
         expect(rows).toEqual(issues.sort(compareAssignees));
       } finally {
-        await r.close();
+        await z.close();
       }
     }),
     {interruptAfterTimeLimit: 4000},
@@ -399,14 +400,14 @@ test('order by single field', async () => {
 test('order by id', async () => {
   await fc.assert(
     fc.asyncProperty(uniqueNonEmptyIssuesArbitrary, async issues => {
-      const {issueQuery: q, r} = setup();
-      await Promise.all(issues.map(r.mutate.initIssue));
+      const z = newZero();
+      await Promise.all(issues.map(z.mutate.initIssue));
 
-      const stmt = q.select('id').asc('id').prepare();
+      const stmt = z.query.issue.select('id').asc('id').prepare();
       const rows = await stmt.exec();
       expect(rows).toEqual(issues.sort(compareIds));
 
-      await r.close();
+      await z.close();
     }),
     {interruptAfterTimeLimit: 4000},
   );
@@ -415,18 +416,18 @@ test('order by id', async () => {
 test('order by compound fields', async () => {
   await fc.assert(
     fc.asyncProperty(uniqueNonEmptyIssuesArbitrary, async issues => {
-      const {issueQuery: q, r} = setup();
-      await Promise.all(issues.map(r.mutate.initIssue));
+      const z = newZero();
+      await Promise.all(issues.map(z.mutate.initIssue));
 
       const compareExpected = makeComparator('assignee', 'created', 'id');
-      const stmt = q
+      const stmt = z.query.issue
         .select('id', 'assignee', 'created')
         .asc('assignee', 'created')
         .prepare();
       const rows = await stmt.exec();
       expect(rows).toEqual(issues.sort(compareExpected));
 
-      await r.close();
+      await z.close();
     }),
     {interruptAfterTimeLimit: 4000},
   );
@@ -435,26 +436,26 @@ test('order by compound fields', async () => {
 test('order by optional field', async () => {
   await fc.assert(
     fc.asyncProperty(uniqueNonEmptyIssuesArbitrary, async issues => {
-      const {issueQuery: q, r} = setup();
-      await Promise.all(issues.map(r.mutate.initIssue));
+      const z = newZero();
+      await Promise.all(issues.map(z.mutate.initIssue));
 
       const compareExpected = makeComparator('closed', 'id');
-      const stmt = q.select('id', 'closed').asc('closed').prepare();
+      const stmt = z.query.issue.select('id', 'closed').asc('closed').prepare();
       const rows = await stmt.exec();
       expect(rows).toEqual(issues.sort(compareExpected));
 
-      await r.close();
+      await z.close();
     }),
     {interruptAfterTimeLimit: 4000},
   );
 });
 
 test('qualified selectors in where', async () => {
-  const {issueQuery: q, r} = setup();
+  const z = newZero();
   const issues = defaultIssues;
-  await Promise.all(issues.map(r.mutate.initIssue));
+  await Promise.all(issues.map(z.mutate.initIssue));
 
-  const stmt = q
+  const stmt = z.query.issue
     .select('id')
     .where('issue.status', '=', 'open')
     .where('issue.priority', '>=', 'medium')
@@ -463,15 +464,18 @@ test('qualified selectors in where', async () => {
   const rows = await stmt.exec();
   expect(rows).toEqual([issues[1]]);
 
-  await r.close();
+  await z.close();
 });
 
 test('qualified selectors in group-by', async () => {
-  const {issueQuery: q, r} = setup();
+  const z = newZero();
   const issues = defaultIssues;
-  await Promise.all(issues.map(r.mutate.initIssue));
+  await Promise.all(issues.map(z.mutate.initIssue));
 
-  const stmt = q.select(agg.count()).groupBy('issue.status').prepare();
+  const stmt = z.query.issue
+    .select(agg.count())
+    .groupBy('issue.status')
+    .prepare();
 
   const rows = await stmt.exec();
   expect(rows).toEqual([
@@ -479,36 +483,36 @@ test('qualified selectors in group-by', async () => {
     {...issues[2], count: 1},
   ]);
 
-  await r.close();
+  await z.close();
 });
 
 test('qualified selectors in order-by', async () => {
-  const {issueQuery: q, r} = setup();
+  const z = newZero();
   const issues = defaultIssues;
-  await Promise.all(issues.map(r.mutate.initIssue));
+  await Promise.all(issues.map(z.mutate.initIssue));
 
-  const stmt = q.select('id').asc('issue.priority').prepare();
+  const stmt = z.query.issue.select('id').asc('issue.priority').prepare();
   const rows = await stmt.exec();
   expect(rows).toEqual([issues[0], issues[2], issues[1]]);
 
-  await r.close();
+  await z.close();
 });
 
 test('join', async () => {
-  const {issueQuery, issueLabelQuery, labelQuery, r} = setup();
+  const z = newZero();
   const issues = defaultIssues;
   const labels = defaultLabels;
   const issueLabels = defaultIssueLabels;
 
   await Promise.all([
-    ...issues.map(r.mutate.initIssue),
-    ...labels.map(r.mutate.initLabel),
-    ...issueLabels.map(r.mutate.initIssueLabel),
+    ...issues.map(z.mutate.initIssue),
+    ...labels.map(z.mutate.initLabel),
+    ...issueLabels.map(z.mutate.initIssueLabel),
   ]);
 
-  const stmt = issueQuery
-    .join(issueLabelQuery, 'issueLabel', 'issue.id', 'issueLabel.issueID')
-    .join(labelQuery, 'label', 'issueLabel.labelID', 'label.id')
+  const stmt = z.query.issue
+    .join(z.query.issueLabel, 'issueLabel', 'issue.id', 'issueLabel.issueID')
+    .join(z.query.label, 'label', 'issueLabel.labelID', 'label.id')
     .select('issue.*', 'label.name')
     .prepare();
   const rows = await stmt.exec();
@@ -561,13 +565,13 @@ test('join', async () => {
   // - test deletes
   // - benchmark
 
-  await r.close();
+  await z.close();
 });
 
 test('having', () => {});
 
 test('group by', async () => {
-  const {issueQuery: q, r} = setup();
+  const z = newZero();
   const issues: readonly Issue[] = [
     {
       id: 'a',
@@ -597,8 +601,11 @@ test('group by', async () => {
       updated: Date.now(),
     },
   ] as const;
-  await Promise.all(issues.map(r.mutate.initIssue));
-  const stmt = q.select('status', agg.count()).groupBy('status').prepare();
+  await Promise.all(issues.map(z.mutate.initIssue));
+  const stmt = z.query.issue
+    .select('status', agg.count())
+    .groupBy('status')
+    .prepare();
   const rows = await stmt.exec();
 
   expect(rows).toEqual([
@@ -614,7 +621,7 @@ test('group by', async () => {
 
   stmt.destroy();
 
-  const stmt2 = q
+  const stmt2 = z.query.issue
     .select('status', agg.array('assignee'))
     .groupBy('status')
     .prepare();
@@ -631,7 +638,7 @@ test('group by', async () => {
     },
   ]);
 
-  const stmt3 = q
+  const stmt3 = z.query.issue
     .select('status', agg.array('assignee'), agg.min('created'))
     .groupBy('status')
     .prepare();
@@ -650,7 +657,7 @@ test('group by', async () => {
     },
   ]);
 
-  const stmt4 = q
+  const stmt4 = z.query.issue
     .select(
       'status',
       agg.array('assignee'),
@@ -679,7 +686,7 @@ test('group by', async () => {
   ]);
 
   {
-    const statement = q
+    const statement = z.query.issue
       .select(
         'status',
         agg.min('created', 'minCreated'),
@@ -694,7 +701,7 @@ test('group by', async () => {
   }
 
   {
-    const statement = q
+    const statement = z.query.issue
       .select(
         'status',
         agg.min('assignee', 'minAssignee'),
@@ -718,17 +725,17 @@ test('group by', async () => {
     ]);
   }
 
-  await r.close();
+  await z.close();
 });
 
 test('sorted groupings', () => {});
 
 test('compound where', async () => {
-  const {issueQuery: q, r} = setup();
+  const z = newZero();
   const issues = defaultIssues;
-  await Promise.all(issues.map(r.mutate.initIssue));
+  await Promise.all(issues.map(z.mutate.initIssue));
 
-  const stmt = q
+  const stmt = z.query.issue
     .select('id')
     .where('status', '=', 'open')
     .where('priority', '>=', 'medium')
@@ -736,22 +743,23 @@ test('compound where', async () => {
   const rows = await stmt.exec();
   expect(rows).toEqual([issues[1]]);
 
-  await r.close();
+  await z.close();
 });
 
 test('0 copy', async () => {
   const issues = sampleTenUniqueIssues();
-  const {issueQuery: q, r} = setup();
-  await Promise.all(issues.map(r.mutate.initIssue));
-  const replicacheIssues = (await r.query(tx =>
+  const z = newZero();
+  const rep = getInternalReplicacheImplForTesting(z);
+  await Promise.all(issues.map(z.mutate.initIssue));
+  const replicacheIssues = (await rep.query(tx =>
     tx
       .scan({
-        prefix: 'issue',
+        prefix: `${ENTITIES_KEY_PREFIX}issue`,
       })
       .toArray(),
   )) as Issue[];
 
-  const stmt = q.select('id').prepare();
+  const stmt = z.query.issue.select('id').prepare();
   const zqlIssues = await stmt.exec();
 
   replicacheIssues.sort(compareIds);
@@ -761,7 +769,7 @@ test('0 copy', async () => {
     expect(zqlIssues[i]).toBe(replicacheIssues[i]);
   }
 
-  const stmt2 = q.select('title').prepare();
+  const stmt2 = z.query.issue.select('title').prepare();
   const zqlIssues2 = await stmt2.exec();
   expect(zqlIssues2).toEqual(replicacheIssues);
   for (let i = 0; i < zqlIssues2.length; i++) {
@@ -772,35 +780,8 @@ test('0 copy', async () => {
   expect(replicacheIssues.length).toBe(10);
 });
 
-// Need to pull this implementation into here from Materialite.
-// The one thing we need to address when doing so is when the
-// view goes under the limit (because a remove). in that case we should re-compute the query.
-test('limit', () => {});
-
-// To be implemented here: `asEntries` in `set-source.ts`
-test('after', () => {});
-
-test('adding items late to a source materializes them in the correct order', () => {});
-test('disposing of a subscription causes us to no longer be called back', () => {});
-
-test('hoisting `after` operations to the source', () => {});
-test('hoisting `limit` operations to the source', () => {});
-test('hoisting `where` operations to the source', () => {});
-
-test('order by joined fields', () => {});
-
-test('correctly sorted source is used to optimize joins', () => {});
-
-test('order-by selects the correct source', () => {});
-
-test('write delay with 1, 10, 100, 1000s of active queries', () => {});
-
-test('asc/desc difference does not create new sources', () => {});
-
-test('we do not do a full scan when the source order matches the view order', () => {});
-
 test('or where', async () => {
-  const {issueQuery: q, r} = setup();
+  const z = newZero();
   const issues: readonly Issue[] = [
     {
       id: 'a',
@@ -830,24 +811,24 @@ test('or where', async () => {
       updated: Date.now(),
     },
   ] as const;
-  await Promise.all(issues.map(r.mutate.initIssue));
+  await Promise.all(issues.map(z.mutate.initIssue));
 
-  const stmt = q
+  const stmt = z.query.issue
     .select('id')
     .where(or(exp('status', '=', 'open'), exp('priority', '>=', 'medium')))
     .prepare();
   const rows = await stmt.exec();
   expect(rows).toEqual([issues[0], issues[1]]);
 
-  await r.mutate.deleteIssue('a');
+  await z.mutate.deleteIssue('a');
   const rows2 = await stmt.exec();
   expect(rows2).toEqual([issues[1]]);
 
-  await r.close();
+  await z.close();
 });
 
 test('not', async () => {
-  const {issueQuery: q, r} = setup();
+  const z = newZero();
   const issues: readonly Issue[] = [
     {
       id: 'a',
@@ -877,25 +858,25 @@ test('not', async () => {
       updated: Date.now(),
     },
   ] as const;
-  await Promise.all(issues.map(r.mutate.initIssue));
+  await Promise.all(issues.map(z.mutate.initIssue));
 
-  const stmt = q
+  const stmt = z.query.issue
     .select('id')
     .where(not(exp('status', '=', 'closed')))
     .prepare();
   const rows = await stmt.exec();
   expect(rows).toEqual([issues[0], issues[1]]);
 
-  await r.mutate.deleteIssue('a');
+  await z.mutate.deleteIssue('a');
   const rows2 = await stmt.exec();
   expect(rows2).toEqual([issues[1]]);
 
-  await r.close();
+  await z.close();
 });
 
 test('count', async () => {
-  const {issueQuery: q, r} = setup();
-  const issues: Issue[] = [
+  const z = newZero();
+  const issues: readonly Issue[] = [
     {
       id: 'a',
       title: 'foo',
@@ -924,17 +905,29 @@ test('count', async () => {
       updated: Date.now(),
     },
   ] as const;
-  await Promise.all(issues.map(r.mutate.initIssue));
+  await Promise.all(issues.map(z.mutate.initIssue));
 
-  const stmt = q.select(agg.count()).prepare();
+  const stmt = z.query.issue.select(agg.count()).prepare();
   const rows = await stmt.exec();
   let {count} = rows[0];
   expect(count).toBe(3);
 
-  await r.mutate.deleteIssue('a');
+  await z.mutate.deleteIssue('a');
   const rows2 = await stmt.exec();
   ({count} = rows2[0]);
   expect(count).toBe(2);
 
-  await r.close();
+  await z.close();
 });
+
+// test('limit', () => {});
+// test('adding items late to a source materializes them in the correct order', () => {});
+// test('disposing of a subscription causes us to no longer be called back', () => {});
+// test('hoisting `after` operations to the source', () => {});
+// test('hoisting `limit` operations to the source', () => {});
+// test('hoisting `where` operations to the source', () => {});
+// test('correctly sorted source is used to optimize joins', () => {});
+// test('order-by selects the correct source', () => {});
+// test('write delay with 1, 10, 100, 1000s of active queries', () => {});
+// test('asc/desc difference does not create new sources', () => {});
+// test('we do not do a full scan when the source order matches the view order', () => {});

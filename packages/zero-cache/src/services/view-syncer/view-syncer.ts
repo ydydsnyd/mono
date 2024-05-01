@@ -1,7 +1,8 @@
 import type {LogContext} from '@rocicorp/logger';
-import * as v from 'shared/src/valita.js';
+import type {Downstream, Upstream} from 'zero-protocol';
 import type {DurableStorage} from '../../storage/durable-storage.js';
 import {initStorageSchema} from '../../storage/schema.js';
+import type {CancelableAsyncIterable} from '../../types/streams.js';
 import type {InvalidationWatcherRegistry} from '../invalidation-watcher/registry.js';
 import type {Service} from '../service.js';
 import {SCHEMA_MIGRATIONS} from './schema/migrations.js';
@@ -18,6 +19,7 @@ export const viewContentsUpdateSchema = v.object({
 });
 
 export type ViewContentsUpdate = v.Infer<typeof viewContentsUpdateSchema>;
+
 export interface ViewSyncerRegistry {
   /**
    * Gets the global ViewSyncer.
@@ -34,10 +36,18 @@ export interface ViewSyncerRegistry {
    */
   getViewSyncer(id: string): ViewSyncer;
 }
+
+export type SyncContext = {
+  clientID: string;
+  baseCookie: string | null;
+};
+
 export interface ViewSyncer {
+  // The SyncContext comes from query parameters.
   sync(
-    shapeUpdates: AsyncIterable<ViewShapeUpdate>,
-  ): AsyncIterable<ViewContentsUpdate>;
+    ctx: SyncContext,
+    updates: CancelableAsyncIterable<Upstream>,
+  ): Promise<CancelableAsyncIterable<Downstream>>;
 }
 
 export class ViewSyncerService implements ViewSyncer, Service {
@@ -72,8 +82,9 @@ export class ViewSyncerService implements ViewSyncer, Service {
   }
 
   sync(
-    _shapeUpdates: AsyncIterable<ViewShapeUpdate>,
-  ): AsyncIterable<ViewContentsUpdate> {
+    _ctx: SyncContext,
+    _updates: CancelableAsyncIterable<Upstream>,
+  ): Promise<CancelableAsyncIterable<Downstream>> {
     throw new Error('todo');
   }
 

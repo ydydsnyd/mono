@@ -19,25 +19,30 @@ import type {Source, SourceInternal} from './source.js';
  * exists to be able to receive historical data.
  *
  */
+let id = 0;
 export abstract class SetSource<T extends object> implements Source<T> {
   readonly #stream: DifferenceStream<T>;
   readonly #internal: SourceInternal;
   protected readonly _materialite: MaterialiteForSourceInternal;
   readonly #listeners = new Set<(data: ITree<T>, v: Version) => void>();
   #pending: Entry<T>[] = [];
-  #historyRequests: Set<PullMsg> = new Set();
+  #historyRequests: Map<number, PullMsg> = new Map();
   #tree: ITree<T>;
   #seeded = false;
   #noChange = false;
   readonly comparator: Comparator<T>;
+  #id = id++;
+  readonly #name: string | undefined;
 
   constructor(
     materialite: MaterialiteForSourceInternal,
     comparator: Comparator<T>,
     treapConstructor: (comparator: Comparator<T>) => ITree<T>,
+    name?: string | undefined,
   ) {
     this._materialite = materialite;
     this.#stream = new DifferenceStream<T>();
+    this.#name = name;
     this.#stream.setUpstream({
       commit: () => {},
       messageUpstream: (message: Request) => {
@@ -51,23 +56,27 @@ export abstract class SetSource<T extends object> implements Source<T> {
     this.#internal = {
       onCommitEnqueue: (version: Version) => {
         if (
-          !(
-            this.#pending.length > 0 ||
-            (this.#seeded && this.#historyRequests.size > 0)
-          )
+          this.#seeded &&
+          !(this.#pending.length > 0 || this.#historyRequests.size > 0)
         ) {
           this.#noChange = true;
           return;
         }
 
-        if (this.#seeded) {
-          for (const request of this.#historyRequests) {
-            this.#stream.newDifference(
-              this._materialite.getVersion(),
-              asEntries(this.#tree, request),
-              createPullResponseMessage(request),
-            );
-          }
+        // We know that the first diff to a source is the seed
+        this.#seeded = true;
+
+        const historyRequests = this.#historyRequests;
+        if (historyRequests.size > 0) {
+          this.#historyRequests = new Map();
+        }
+
+        for (const request of historyRequests.values()) {
+          this.#stream.newDifference(
+            this._materialite.getVersion(),
+            asEntries(this.#tree, request),
+            createPullResponseMessage(request),
+          );
         }
 
         for (let i = 0; i < this.#pending.length; i++) {
@@ -183,9 +192,25 @@ export abstract class SetSource<T extends object> implements Source<T> {
     for (const v of values) {
       this.#tree = this.#tree.add(v);
     }
-    this.#seeded = true;
     this._materialite.addDirtySource(this.#internal);
     return this;
+  }
+
+  awaitSeeding(): PromiseLike<void> {
+    if (this.#seeded) {
+      return Promise.resolve();
+    }
+    return new Promise(resolve => {
+      const listener = () => {
+        this.off(listener);
+        resolve();
+      };
+      this.on(listener);
+    });
+  }
+
+  isSeeded(): boolean {
+    return this.#seeded;
   }
 
   get(key: T): T | undefined {
@@ -199,11 +224,15 @@ export abstract class SetSource<T extends object> implements Source<T> {
   processMessage(message: Request): void {
     switch (message.type) {
       case 'pull': {
-        this.#historyRequests.add(message);
+        this.#historyRequests.set(message.id, message);
         this._materialite.addDirtySource(this.#internal);
         break;
       }
     }
+  }
+
+  toString(): string {
+    return this.#name ?? `SetSource(${this.#id})`;
   }
 }
 
@@ -211,8 +240,9 @@ export class MutableSetSource<T extends object> extends SetSource<T> {
   constructor(
     materialite: MaterialiteForSourceInternal,
     comparator: Comparator<T>,
+    name?: string | undefined,
   ) {
-    super(materialite, comparator, comparator => new Treap(comparator));
+    super(materialite, comparator, comparator => new Treap(comparator), name);
   }
 
   protected _withNewOrdering(comp: Comparator<T>): this {

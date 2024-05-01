@@ -1,8 +1,10 @@
-import {generate} from '@rocicorp/rails';
+import {generate as generateRails} from '@rocicorp/rails';
 import {nanoid} from 'nanoid';
 import {Replicache, TEST_LICENSE_KEY, WriteTransaction} from 'replicache';
-import {makeReplicacheContext} from '../context/replicache-context.js';
-import {EntityQuery} from '../query/entity-query.js';
+import {makeReplicacheContext} from '../../../../../zql/src/zql/context/replicache-context.js';
+import {EntityQuery} from '../../../../../zql/src/zql/query/entity-query.js';
+import type {Entity} from '../../../mod.js';
+import {ENTITIES_KEY_PREFIX} from '../../keys.js';
 
 export type Track = {
   id: string;
@@ -39,6 +41,10 @@ export type PlaylistTrack = {
   trackId: string;
   position: number;
 };
+
+function generate<E extends Entity>(name: string, parse?: (v: unknown) => E) {
+  return generateRails<E>(`${ENTITIES_KEY_PREFIX}${name}`, parse);
+}
 
 const {
   init: initTrack,
@@ -82,7 +88,7 @@ const {
   delete: deletePlaylistTrack,
 } = generate<PlaylistTrack>('playlistTrack');
 
-const mutators = {
+export const mutators = {
   initTrack,
   setTrack,
   updateTrack,
@@ -118,20 +124,22 @@ const mutators = {
     },
   ) => {
     const promises: Promise<void>[] = [];
+    const set = (name: string, entity: Entity) =>
+      tx.set(`${ENTITIES_KEY_PREFIX}${name}/${entity.id}`, entity);
     for (const track of items.tracks ?? []) {
-      promises.push(tx.set(`track/${track.id}`, track));
+      promises.push(set('track', track));
     }
     for (const album of items.albums ?? []) {
-      promises.push(tx.set(`album/${album.id}`, album));
+      promises.push(set('album', album));
     }
     for (const artist of items.artists ?? []) {
-      promises.push(tx.set(`artist/${artist.id}`, artist));
+      promises.push(set('artist', artist));
     }
     for (const playlist of items.playlists ?? []) {
-      promises.push(tx.set(`playlist/${playlist.id}`, playlist));
+      promises.push(set('playlist', playlist));
     }
     for (const trackArtist of items.trackArtists ?? []) {
-      promises.push(tx.set(`trackArtist/${trackArtist.id}`, trackArtist));
+      promises.push(set('trackArtist', trackArtist));
     }
 
     await Promise.all(promises);
@@ -147,25 +155,29 @@ const mutators = {
     },
   ) => {
     const promises: Promise<boolean>[] = [];
+    const del = (name: string, id: string) =>
+      tx.del(`${ENTITIES_KEY_PREFIX}${name}/${id}`);
     for (const track of items.tracks ?? []) {
-      promises.push(tx.del(`track/${track.id}`));
+      promises.push(del('track', track.id));
     }
     for (const album of items.albums ?? []) {
-      promises.push(tx.del(`album/${album.id}`));
+      promises.push(del('album', album.id));
     }
     for (const artist of items.artists ?? []) {
-      promises.push(tx.del(`artist/${artist.id}`));
+      promises.push(del('artist', artist.id));
     }
     for (const playlist of items.playlists ?? []) {
-      promises.push(tx.del(`playlist/${playlist.id}`));
+      promises.push(del('playlist', playlist.id));
     }
     for (const trackArtist of items.trackArtists ?? []) {
-      promises.push(tx.del(`trackArtist/${trackArtist.id}`));
+      promises.push(del('trackArtist', trackArtist.id));
     }
 
     await Promise.all(promises);
   },
 };
+
+export type Mutators = typeof mutators;
 
 function newRep() {
   return new Replicache({
@@ -175,23 +187,41 @@ function newRep() {
   });
 }
 
-export function setup() {
+export function setupUsingReplicache() {
   const r = newRep();
   const c = makeReplicacheContext(r, {
     subscriptionAdded(_ast) {},
     subscriptionRemoved(_ast) {},
   });
-  const trackQuery = new EntityQuery<{track: Track}>(c, 'track');
-  const albumQuery = new EntityQuery<{album: Album}>(c, 'album');
-  const artistQuery = new EntityQuery<{artist: Artist}>(c, 'artist');
-  const playlistQuery = new EntityQuery<{playlist: Playlist}>(c, 'playlist');
+  const trackQuery = new EntityQuery<{track: Track}>(
+    c,
+    'track',
+    ENTITIES_KEY_PREFIX,
+  );
+  const albumQuery = new EntityQuery<{album: Album}>(
+    c,
+    'album',
+    ENTITIES_KEY_PREFIX,
+  );
+  const artistQuery = new EntityQuery<{artist: Artist}>(
+    c,
+    'artist',
+    ENTITIES_KEY_PREFIX,
+  );
+  const playlistQuery = new EntityQuery<{playlist: Playlist}>(
+    c,
+    'playlist',
+    ENTITIES_KEY_PREFIX,
+  );
   const trackArtistQuery = new EntityQuery<{trackArtist: TrackArtist}>(
     c,
     'trackArtist',
+    ENTITIES_KEY_PREFIX,
   );
   const playlistTrackQuery = new EntityQuery<{playlistTrack: PlaylistTrack}>(
     c,
     'playlistTrack',
+    ENTITIES_KEY_PREFIX,
   );
 
   return {

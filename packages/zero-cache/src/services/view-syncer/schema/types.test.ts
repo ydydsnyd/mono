@@ -3,6 +3,7 @@ import {
   CVRVersion,
   cmpVersions,
   cookieToVersion,
+  oneAfter,
   versionToNullableCookie,
 } from './types.js';
 
@@ -61,10 +62,10 @@ describe('view-syncer/schema/types', () => {
       {cookie: null, version: null},
       {cookie: '00', version: {stateVersion: '00'}},
       {cookie: '2abc', version: {stateVersion: '2abc'}},
-      {cookie: '00.01', version: {stateVersion: '00', minorVersion: 1}},
-      {cookie: '100.0a', version: {stateVersion: '100', minorVersion: 10}},
+      {cookie: '00:01', version: {stateVersion: '00', minorVersion: 1}},
+      {cookie: '100:0a', version: {stateVersion: '100', minorVersion: 10}},
       {
-        cookie: 'a128adk2f9s.110',
+        cookie: 'a128adk2f9s:110',
         version: {stateVersion: 'a128adk2f9s', minorVersion: 36},
       },
     ] satisfies {
@@ -80,8 +81,8 @@ describe('view-syncer/schema/types', () => {
     (
       [
         {reason: 'not a lexiversion', cookie: 'foo-bar'},
-        {reason: 'too many dots', cookie: '1.2.3'},
-        {reason: 'minor version too big', cookie: '110.93jlxpt2ps'},
+        {reason: 'too many colons', cookie: '1:2:3'},
+        {reason: 'minor version too big', cookie: '110:93jlxpt2ps'},
       ] satisfies {
         reason: string;
         cookie: string;
@@ -90,6 +91,38 @@ describe('view-syncer/schema/types', () => {
       test(`invalid cookie: ${c.reason}`, () => {
         expect(() => cookieToVersion(c.cookie)).toThrowError();
       });
+    });
+  });
+
+  (
+    [
+      {
+        version: {stateVersion: '00'},
+        plusOne: {stateVersion: '00', minorVersion: 1},
+      },
+      {
+        version: {stateVersion: '2abc'},
+        plusOne: {stateVersion: '2abc', minorVersion: 1},
+      },
+      {
+        version: {stateVersion: '00', minorVersion: 1},
+        plusOne: {stateVersion: '00', minorVersion: 2},
+      },
+      {
+        version: {stateVersion: '100', minorVersion: 10},
+        plusOne: {stateVersion: '100', minorVersion: 11},
+      },
+      {
+        version: {stateVersion: 'a128adk2f9s', minorVersion: 36},
+        plusOne: {stateVersion: 'a128adk2f9s', minorVersion: 37},
+      },
+    ] satisfies {
+      version: CVRVersion;
+      plusOne: CVRVersion;
+    }[]
+  ).forEach(c => {
+    test(`oneAfter version ${JSON.stringify(c.version)}`, () => {
+      expect(oneAfter(c.version)).toEqual(c.plusOne);
     });
   });
 });

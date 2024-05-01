@@ -19,7 +19,12 @@ import {uuidChunkHasher} from './dag/chunk.js';
 import {LazyStore} from './dag/lazy-store.js';
 import {StoreImpl} from './dag/store-impl.js';
 import {ChunkNotFoundError, mustGetHeadHash, Store} from './dag/store.js';
-import {DEFAULT_HEAD_NAME, isLocalMetaDD31, LocalMeta} from './db/commit.js';
+import {
+  baseSnapshotFromHash,
+  DEFAULT_HEAD_NAME,
+  isLocalMetaDD31,
+  LocalMeta,
+} from './db/commit.js';
 import {readFromDefaultHead} from './db/read.js';
 import {rebaseMutationAndCommit} from './db/rebase.js';
 import {newWriteLocal} from './db/write.js';
@@ -70,9 +75,7 @@ import type {
   ReplicacheOptions,
 } from './replicache-options.js';
 import {
-  exposeToTesting,
   getKVStoreProvider,
-  getTestInstance,
   httpStatusUnauthorized,
   makeIDBName,
   ReportError,
@@ -81,11 +84,14 @@ import {setIntervalWithSignal} from './set-interval-with-signal.js';
 import {mustSimpleFetch} from './simple-fetch.js';
 import {
   SubscribeOptions,
+  SubscriptionImpl,
   SubscriptionsManager,
+  SubscriptionsManagerImpl,
   WatchCallback,
   WatchCallbackForOptions,
   WatchNoIndexCallback,
   WatchOptions,
+  WatchSubscription,
 } from './subscriptions.js';
 import type {ClientGroupID, ClientID} from './sync/ids.js';
 import {PullError} from './sync/pull-error.js';
@@ -120,6 +126,7 @@ import {
   withWrite,
   withWriteNoImplicitCommit,
 } from './with-transactions.js';
+import {assertCookie, type Cookie} from './cookies.js';
 
 declare const TESTING: boolean;
 
@@ -149,6 +156,15 @@ const updateNeededReasonNewClientGroup: UpdateNeededReason = {
   type: 'NewClientGroup',
 } as const;
 
+export interface MakeSubscriptionsManager {
+  (queryInternal: QueryInternal, lc: LogContext): SubscriptionsManager;
+}
+
+const defaultMakeSubscriptionsManager: MakeSubscriptionsManager = (
+  queryInternal,
+  lc,
+) => new SubscriptionsManagerImpl(queryInternal, lc);
+
 // eslint-disable-next-line @typescript-eslint/ban-types
 export class ReplicacheImpl<MD extends MutatorDefs = {}> {
   /** The URL to use when doing a pull request. */
@@ -163,18 +179,18 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
   /** The name of the Replicache database. Populated by {@link ReplicacheOptions#name}. */
   readonly name: string;
 
-  readonly #subscriptions: SubscriptionsManager;
+  readonly subscriptions: SubscriptionsManager;
   readonly #mutationRecovery: MutationRecovery;
 
   /**
    * Client groups gets disabled when the server does not know about it.
    * A disabled client group prevents the client from pushing and pulling.
    */
-  #isClientGroupDisabled = false;
+  isClientGroupDisabled = false;
 
   readonly #kvStoreProvider: StoreProvider;
 
-  #lastMutationID: number = 0;
+  lastMutationID: number = 0;
 
   /**
    * This is the name Replicache uses for the IndexedDB database where data is
@@ -201,13 +217,13 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
   readonly #ready: Promise<void>;
   readonly #profileIDPromise: Promise<string>;
   readonly #clientGroupIDPromise: Promise<string>;
-  readonly #licenseCheckPromise: Promise<boolean>;
+  readonly licenseCheckPromise: Promise<boolean>;
 
   /* The license is active if we have sent at least one license active ping
    * (and we will continue to). We do not send license active pings when
    * for the TEST_LICENSE_KEY.
    */
-  readonly #licenseActivePromise: Promise<boolean>;
+  readonly licenseActivePromise: Promise<boolean>;
   #testLicenseKeyTimeout: ReturnType<typeof setTimeout> | null = null;
   readonly #mutatorRegistry: MutatorDefs = {};
 
@@ -250,8 +266,8 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
 
   readonly #licenseKey: string | undefined;
 
-  readonly #memdag: LazyStore;
-  readonly #perdag: Store;
+  readonly memdag: LazyStore;
+  readonly perdag: Store;
   readonly #idbDatabases: IDBDatabasesStore;
   readonly #lc: LogContext;
 
@@ -262,14 +278,14 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
   readonly #enableScheduledRefresh: boolean;
   readonly #enablePullAndPushInOpen: boolean;
   #persistScheduler = new ProcessScheduler(
-    () => this.#persist(),
+    () => this.persist(),
     PERSIST_IDLE_TIMEOUT_MS,
     PERSIST_THROTTLE_MS,
     this.#closeAbortController.signal,
   );
   readonly #onPersist: OnPersist;
   #refreshScheduler = new ProcessScheduler(
-    () => this.#refresh(),
+    () => this.refresh(),
     REFRESH_IDLE_TIMEOUT_MS,
     REFRESH_THROTTLE_MS,
     this.#closeAbortController.signal,
@@ -342,7 +358,15 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
   getAuth: (() => MaybePromise<string | null | undefined>) | null | undefined =
     null;
 
-  constructor(options: ReplicacheOptions<MD>) {
+  // These three are used for testing
+  onPushInvoked = () => undefined;
+  onBeginPull = () => undefined;
+  onRecoverMutations = (r: Promise<boolean>) => r;
+
+  constructor(
+    options: ReplicacheOptions<MD> & ReplicacheInternalOptions,
+    makeSubscriptionsManager: MakeSubscriptionsManager = defaultMakeSubscriptionsManager,
+  ) {
     const {
       name,
       logLevel = 'info',
@@ -359,6 +383,13 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
       pusher,
       licenseKey,
       indexes = {},
+      enableMutationRecovery = true,
+      enableLicensing = true,
+      enableScheduledPersist = true,
+
+      enableScheduledRefresh = true,
+
+      enablePullAndPushInOpen = true,
     } = options;
     this.auth = auth ?? '';
     this.pullURL = pullURL;
@@ -373,27 +404,10 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
     this.puller = puller ?? getDefaultPuller(this);
     this.pusher = pusher ?? getDefaultPusher(this);
 
-    const internalOptions = options as unknown as ReplicacheInternalOptions;
-    const enableMutationRecovery =
-      internalOptions.enableMutationRecovery ?? true;
-    this.#enableLicensing = internalOptions.enableLicensing ?? true;
-    this.#enableScheduledPersist =
-      internalOptions.enableScheduledPersist ?? true;
-    this.#enableScheduledRefresh =
-      internalOptions.enableScheduledRefresh ?? true;
-    this.#enablePullAndPushInOpen =
-      internalOptions.enablePullAndPushInOpen ?? true;
-
-    if (internalOptions.exposeInternalAPI) {
-      internalOptions.exposeInternalAPI({
-        // Needed by perf test
-        persist: () => this.#persist(),
-        // Needed by perf test
-        refresh: () => this.#refresh(),
-        // Needed by reflect
-        lastMutationID: () => this.#lastMutationID,
-      });
-    }
+    this.#enableLicensing = enableLicensing;
+    this.#enableScheduledPersist = enableScheduledPersist;
+    this.#enableScheduledRefresh = enableScheduledRefresh;
+    this.#enablePullAndPushInOpen = enablePullAndPushInOpen;
 
     this.#lc = createLogContext(logLevel, logSinks, {name});
     this.#lc.debug?.('Constructing Replicache', {
@@ -401,7 +415,7 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
       'replicache version': version,
     });
 
-    this.#subscriptions = new SubscriptionsManager(
+    this.subscriptions = makeSubscriptionsManager(
       this.#queryInternal,
       this.#lc,
     );
@@ -412,9 +426,9 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
     const perKVStore = kvStoreProvider.create(this.idbName);
 
     this.#idbDatabases = new IDBDatabasesStore(kvStoreProvider.create);
-    this.#perdag = new StoreImpl(perKVStore, uuidChunkHasher, assertHash);
-    this.#memdag = new LazyStore(
-      this.#perdag,
+    this.perdag = new StoreImpl(perKVStore, uuidChunkHasher, assertHash);
+    this.memdag = new LazyStore(
+      this.perdag,
       LAZY_STORE_SOURCE_CHUNK_CACHE_SIZE_LIMIT,
       uuidChunkHasher,
       assertHash,
@@ -427,27 +441,9 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
 
     this.#licenseKey = licenseKey;
     const licenseCheckResolver = resolver<boolean>();
-    this.#licenseCheckPromise = licenseCheckResolver.promise;
+    this.licenseCheckPromise = licenseCheckResolver.promise;
     const licenseActiveResolver = resolver<boolean>();
-    this.#licenseActivePromise = licenseActiveResolver.promise;
-
-    if (TESTING) {
-      exposeToTesting(this, {
-        memdag: this.#memdag,
-        perdag: this.#perdag,
-        isClientGroupDisabled: () => this.#isClientGroupDisabled,
-        licenseCheckPromise: this.#licenseCheckPromise,
-        licenseActivePromise: this.#licenseActivePromise,
-        maybeEndPull: (syncHead, requestID) =>
-          this.#maybeEndPull(syncHead, requestID),
-        onPushInvoked: () => undefined,
-        onBeginPull: () => undefined,
-        beginPull: () => this.#beginPull(),
-        onRecoverMutations: r => r,
-        recoverMutations: () => this.#recoverMutations(),
-        lastMutationID: () => this.#lastMutationID,
-      });
-    }
+    this.licenseActivePromise = licenseActiveResolver.promise;
 
     const {minDelayMs = MIN_DELAY_MS, maxDelayMs = MAX_DELAY_MS} =
       requestOptions;
@@ -523,14 +519,14 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
     const [client, headHash, clients, isNewClientGroup] = await initClientV6(
       clientID,
       this.#lc,
-      this.#perdag,
+      this.perdag,
       Object.keys(this.#mutatorRegistry),
       indexes,
       FormatVersion.Latest,
     );
 
     resolveClientGroupID(client.clientGroupID);
-    await withWrite(this.#memdag, write =>
+    await withWrite(this.memdag, write =>
       write.setHead(DEFAULT_HEAD_NAME, headHash),
     );
 
@@ -548,21 +544,21 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
 
     startHeartbeats(
       clientID,
-      this.#perdag,
+      this.perdag,
       () => {
         this.#clientStateNotFoundOnClient(clientID);
       },
       this.#lc,
       signal,
     );
-    initClientGC(clientID, this.#perdag, this.#lc, signal);
+    initClientGC(clientID, this.perdag, this.#lc, signal);
     initCollectIDBDatabases(
       this.#idbDatabases,
       this.#lc,
       signal,
       this.#kvStoreProvider.drop,
     );
-    initClientGroupGC(this.#perdag, this.#lc, signal);
+    initClientGroupGC(this.perdag, this.#lc, signal);
     initNewClientChannel(
       this.name,
       this.idbName,
@@ -572,15 +568,15 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
       () => {
         this.#fireOnUpdateNeeded(updateNeededReasonNewClientGroup);
       },
-      this.#perdag,
+      this.perdag,
     );
 
     setIntervalWithSignal(
-      () => this.#recoverMutations(),
+      () => this.recoverMutations(),
       RECOVER_MUTATIONS_INTERVAL_MS,
       signal,
     );
-    void this.#recoverMutations(clients);
+    void this.recoverMutations(clients);
 
     getDocument()?.addEventListener(
       'visibilitychange',
@@ -605,7 +601,7 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
 
   async #checkForClientStateNotFoundAndCallHandler(): Promise<boolean> {
     const {clientID} = this;
-    const hasClientState = await withRead(this.#perdag, read =>
+    const hasClientState = await withRead(this.perdag, read =>
       persistHasClientState(clientID, read),
     );
     if (!hasClientState) {
@@ -812,15 +808,15 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
 
     await this.#ready;
     const closingPromises = [
-      this.#memdag.close(),
-      this.#perdag.close(),
+      this.memdag.close(),
+      this.perdag.close(),
       this.#idbDatabases.close(),
     ];
 
     this.#pullConnectionLoop.close();
     this.#pushConnectionLoop.close();
 
-    this.#subscriptions.clear();
+    this.subscriptions.clear();
 
     if (this.#testLicenseKeyTimeout) {
       clearTimeout(this.#testLicenseKeyTimeout);
@@ -831,7 +827,7 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
     resolve();
   }
 
-  async #maybeEndPull(syncHead: Hash, requestID: string): Promise<void> {
+  async maybeEndPull(syncHead: Hash, requestID: string): Promise<void> {
     for (;;) {
       if (this.#closed) {
         return;
@@ -843,17 +839,17 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
         .withContext('maybeEndPull')
         .withContext('requestID', requestID);
       const {replayMutations, diffs} = await maybeEndPull<LocalMeta>(
-        this.#memdag,
+        this.memdag,
         lc,
         syncHead,
         clientID,
-        this.#subscriptions,
+        this.subscriptions,
         FormatVersion.Latest,
       );
 
       if (!replayMutations || replayMutations.length === 0) {
         // All done.
-        await this.#subscriptions.fire(diffs);
+        await this.subscriptions.fire(diffs);
         void this.#schedulePersist();
         return;
       }
@@ -863,11 +859,11 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
         // TODO(greg): I'm not sure why this was in Replicache#_mutate...
         // Ensure that we run initial pending subscribe functions before starting a
         // write transaction.
-        if (this.#subscriptions.hasPendingSubscriptionRuns) {
+        if (this.subscriptions.hasPendingSubscriptionRuns) {
           await Promise.resolve();
         }
         const {meta} = mutation;
-        syncHead = await withWriteNoImplicitCommit(this.#memdag, dagWrite =>
+        syncHead = await withWriteNoImplicitCommit(this.memdag, dagWrite =>
           rebaseMutationAndCommit(
             mutation,
             dagWrite,
@@ -891,12 +887,12 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
     return this.#wrapInOnlineCheck(async () => {
       try {
         this.#changeSyncCounters(0, 1);
-        const {syncHead, requestID, ok} = await this.#beginPull();
+        const {syncHead, requestID, ok} = await this.beginPull();
         if (!ok) {
           return false;
         }
         if (syncHead !== emptyHash) {
-          await this.#maybeEndPull(syncHead, requestID);
+          await this.maybeEndPull(syncHead, requestID);
         }
       } catch (e) {
         throw await this.#convertToClientStateNotFoundError(e);
@@ -909,7 +905,7 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
 
   #isPullDisabled() {
     return (
-      this.#isClientGroupDisabled ||
+      this.isClientGroupDisabled ||
       (this.pullURL === '' && isDefaultPuller(this.puller))
     );
   }
@@ -948,7 +944,7 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
         this.#online = online;
         this.onOnlineChange?.(online);
         if (online) {
-          void this.#recoverMutations();
+          void this.recoverMutations();
         }
       }
     }
@@ -1032,14 +1028,14 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
 
   #isPushDisabled() {
     return (
-      this.#isClientGroupDisabled ||
+      this.isClientGroupDisabled ||
       (this.pushURL === '' && isDefaultPusher(this.pusher))
     );
   }
 
   async #invokePush(): Promise<boolean> {
     if (TESTING) {
-      getTestInstance(this).onPushInvoked();
+      this.onPushInvoked();
     }
     if (this.#isPushDisabled()) {
       return true;
@@ -1056,7 +1052,7 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
             this.#changeSyncCounters(1, 0);
             const pusherResult = await push(
               requestID,
-              this.#memdag,
+              this.memdag,
               requestLc,
               profileID,
               clientGroupID,
@@ -1182,7 +1178,7 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
 
     const result = await handlePullResponseV1(
       lc,
-      this.#memdag,
+      this.memdag,
       deepFreeze(poke.baseCookie),
       pullResponse,
       clientID,
@@ -1191,7 +1187,7 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
 
     switch (result.type) {
       case HandlePullResponseResultType.Applied:
-        await this.#maybeEndPull(result.syncHead, requestID);
+        await this.maybeEndPull(result.syncHead, requestID);
         break;
       case HandlePullResponseResultType.CookieMismatch:
         throw new Error(
@@ -1203,9 +1199,9 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
     }
   }
 
-  async #beginPull(): Promise<BeginPullResult> {
+  async beginPull(): Promise<BeginPullResult> {
     if (TESTING) {
-      getTestInstance(this).onBeginPull();
+      this.onBeginPull();
     }
     await this.#ready;
     const profileID = await this.profileID;
@@ -1222,7 +1218,7 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
           this.schemaVersion,
           this.puller,
           requestID,
-          this.#memdag,
+          this.memdag,
           FormatVersion.Latest,
           requestLc,
         );
@@ -1248,7 +1244,7 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
     return {requestID, syncHead, ok: httpRequestInfo.httpStatusCode === 200};
   }
 
-  async #persist(): Promise<void> {
+  async persist(): Promise<void> {
     assert(!this.#persistIsRunning);
     this.#persistIsRunning = true;
     try {
@@ -1261,8 +1257,8 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
         await persistDD31(
           this.#lc,
           clientID,
-          this.#memdag,
-          this.#perdag,
+          this.memdag,
+          this.perdag,
           this.#mutatorRegistry,
           () => this.closed,
           FormatVersion.Latest,
@@ -1286,7 +1282,7 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
     this.#onPersist({clientID, clientGroupID});
   }
 
-  async #refresh(): Promise<void> {
+  async refresh(): Promise<void> {
     await this.#ready;
     const {clientID} = this;
     if (this.#closed) {
@@ -1296,11 +1292,11 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
     try {
       diffs = await refresh(
         this.#lc,
-        this.#memdag,
-        this.#perdag,
+        this.memdag,
+        this.perdag,
         clientID,
         this.#mutatorRegistry,
-        this.#subscriptions,
+        this.subscriptions,
         () => this.closed,
         FormatVersion.Latest,
       );
@@ -1314,7 +1310,7 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
       }
     }
     if (diffs !== undefined) {
-      await this.#subscriptions.fire(diffs);
+      await this.subscriptions.fire(diffs);
     }
   }
 
@@ -1330,8 +1326,8 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
   async #clientStateNotFoundOnServer() {
     const clientGroupID = await this.#clientGroupIDPromise;
     assert(clientGroupID);
-    this.#isClientGroupDisabled = true;
-    await withWrite(this.#perdag, dagWrite =>
+    this.isClientGroupDisabled = true;
+    await withWrite(this.perdag, dagWrite =>
       disableClientGroup(clientGroupID, dagWrite),
     );
     this.#lc.error?.(
@@ -1435,7 +1431,11 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
     if (typeof options === 'function') {
       options = {onData: options};
     }
-    return this.#subscriptions.addSubscription(body, options);
+
+    const {onData, onError, onDone, isEqual} = options;
+    return this.subscriptions.add(
+      new SubscriptionImpl(body, onData, onError, onDone, isEqual),
+    );
   }
 
   /**
@@ -1462,7 +1462,9 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
     callback: WatchCallbackForOptions<Options>,
     options?: Options,
   ): () => void {
-    return this.#subscriptions.addWatch(callback as WatchCallback, options);
+    return this.subscriptions.add(
+      new WatchSubscription(callback as WatchCallback, options),
+    );
   }
 
   /**
@@ -1474,10 +1476,24 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
     return this.#queryInternal(body);
   }
 
+  get cookie(): Promise<Cookie> {
+    return withRead(this.memdag, async dagRead => {
+      const mainHeadHash = await dagRead.getHead(DEFAULT_HEAD_NAME);
+      if (!mainHeadHash) {
+        throw new Error('Internal no main head found');
+      }
+      const baseSnapshot = await baseSnapshotFromHash(mainHeadHash, dagRead);
+      const baseSnapshotMeta = baseSnapshot.meta;
+      const cookie = baseSnapshotMeta.cookieJSON;
+      assertCookie(cookie);
+      return cookie;
+    });
+  }
+
   #queryInternal: QueryInternal = async body => {
     await this.#ready;
     const {clientID} = this;
-    return withRead(this.#memdag, async dagRead => {
+    return withRead(this.memdag, async dagRead => {
       try {
         const dbRead = await readFromDefaultHead(dagRead, FormatVersion.Latest);
         const tx = new ReadTransactionImpl(clientID, dbRead, this.#lc);
@@ -1530,13 +1546,13 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
 
     // Ensure that we run initial pending subscribe functions before starting a
     // write transaction.
-    if (this.#subscriptions.hasPendingSubscriptionRuns) {
+    if (this.subscriptions.hasPendingSubscriptionRuns) {
       await Promise.resolve();
     }
 
     await this.#ready;
     const {clientID} = this;
-    return withWriteNoImplicitCommit(this.#memdag, async dagWrite => {
+    return withWriteNoImplicitCommit(this.memdag, async dagWrite => {
       try {
         const headHash = await mustGetHeadHash(DEFAULT_HEAD_NAME, dagWrite);
         const originalHash = null;
@@ -1564,15 +1580,15 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
         const lastMutationID = await dbWrite.getMutationID();
         const diffs = await dbWrite.commitWithDiffs(
           DEFAULT_HEAD_NAME,
-          this.#subscriptions,
+          this.subscriptions,
         );
 
         // Update this after the commit in case the commit fails.
-        this.#lastMutationID = lastMutationID;
+        this.lastMutationID = lastMutationID;
 
         // Send is not supposed to reject
         this.#pushConnectionLoop.send(false).catch(() => void 0);
-        await this.#subscriptions.fire(diffs);
+        await this.subscriptions.fire(diffs);
         void this.#schedulePersist();
         return result;
       } catch (ex) {
@@ -1596,17 +1612,17 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
     return ex;
   }
 
-  #recoverMutations(preReadClientMap?: ClientMap): Promise<boolean> {
+  recoverMutations(preReadClientMap?: ClientMap): Promise<boolean> {
     const result = this.#mutationRecovery.recoverMutations(
       preReadClientMap,
       this.#ready,
-      this.#perdag,
+      this.perdag,
       this.#idbDatabase,
       this.#idbDatabases,
       this.#kvStoreProvider.create,
     );
     if (TESTING) {
-      void getTestInstance(this).onRecoverMutations(result);
+      void this.onRecoverMutations(result);
     }
     return result;
   }
@@ -1620,7 +1636,7 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
    * @experimental This method is experimental and may change in the future.
    */
   experimentalPendingMutations(): Promise<readonly PendingMutation[]> {
-    return withRead(this.#memdag, pendingMutationsForAPI);
+    return withRead(this.memdag, pendingMutationsForAPI);
   }
 }
 

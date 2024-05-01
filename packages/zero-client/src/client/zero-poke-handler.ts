@@ -1,18 +1,18 @@
 import {Lock} from '@rocicorp/lock';
 import type {LogContext} from '@rocicorp/logger';
 import type {
-  PokeStartBody,
-  PokePartBody,
-  PokeEndBody,
-  ClientsPatchOp,
-  EntitiesPatchOp,
-  QueriesPatchOp,
-} from 'zero-protocol';
-import type {
   ClientID,
   PatchOperation,
   Poke as ReplicachePoke,
 } from 'replicache';
+import type {
+  ClientsPatchOp,
+  EntitiesPatchOp,
+  PokeEndBody,
+  PokePartBody,
+  PokeStartBody,
+  QueriesPatchOp,
+} from 'zero-protocol';
 import {
   toClientsKey,
   toDesiredQueriesKey,
@@ -298,14 +298,16 @@ function entitiesPatchOpToReplicachePatchOp(
     case 'del':
       return {
         op: 'del',
-        key: toEntitiesKey(op.key),
+        key: toEntitiesKey(op.entityType, op.entityID),
       };
     case 'put':
-    default:
       return {
         op: 'put',
-        key: toEntitiesKey(op.key),
+        key: toEntitiesKey(op.entityType, op.entityID),
         value: op.value,
       };
+    case 'patch':
+    default:
+      throw new Error('to be implemented');
   }
 }

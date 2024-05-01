@@ -25,9 +25,12 @@ const e1 = z.object({
 type E1 = z.infer<typeof e1>;
 
 const context = makeTestContext();
+
+const entitiesPrefix = 'e/';
+
 const comparator = (l: E1, r: E1) => compareUTF8(l.id, r.id);
 test('A simple select', () => {
-  const q = new EntityQuery<{e1: E1}>(context, 'e1');
+  const q = new EntityQuery<{e1: E1}>(context, 'e1', entitiesPrefix);
   const m = new Materialite();
   let s = m.newSetSource<E1>(comparator);
   let pipeline = buildPipeline(
@@ -66,7 +69,7 @@ test('A simple select', () => {
 });
 
 test('Count', () => {
-  const q = new EntityQuery<{e1: E1}>(context, 'e1');
+  const q = new EntityQuery<{e1: E1}>(context, 'e1', entitiesPrefix);
   const m = new Materialite();
   const s = m.newSetSource<E1>(comparator);
   const pipeline = buildPipeline(
@@ -96,7 +99,7 @@ test('Count', () => {
 });
 
 test('Where', () => {
-  const q = new EntityQuery<{e1: E1}>(context, 'e1');
+  const q = new EntityQuery<{e1: E1}>(context, 'e1', entitiesPrefix);
   const m = new Materialite();
   const s = m.newSetSource<E1>(comparator);
   const pipeline = buildPipeline(
@@ -145,10 +148,21 @@ describe('OR', () => {
   const cases: Case[] = [
     {
       where: {
+        type: 'conjunction',
         op: 'OR',
         conditions: [
-          {op: '=', field: 'a', value: {type: 'literal', value: 1}},
-          {op: '=', field: 'b', value: {type: 'literal', value: 2}},
+          {
+            type: 'simple',
+            op: '=',
+            field: 'a',
+            value: {type: 'literal', value: 1},
+          },
+          {
+            type: 'simple',
+            op: '=',
+            field: 'b',
+            value: {type: 'literal', value: 2},
+          },
         ],
       },
       expected: [
@@ -159,8 +173,16 @@ describe('OR', () => {
     },
     {
       where: {
+        type: 'conjunction',
         op: 'OR',
-        conditions: [{op: '=', field: 'a', value: {type: 'literal', value: 1}}],
+        conditions: [
+          {
+            type: 'simple',
+            op: '=',
+            field: 'a',
+            value: {type: 'literal', value: 1},
+          },
+        ],
       },
       expected: [
         {id: 'a', a: 1, b: 1},
@@ -169,11 +191,27 @@ describe('OR', () => {
     },
     {
       where: {
+        type: 'conjunction',
         op: 'OR',
         conditions: [
-          {op: '=', field: 'a', value: {type: 'literal', value: 1}},
-          {op: '=', field: 'b', value: {type: 'literal', value: 2}},
-          {op: '=', field: 'a', value: {type: 'literal', value: 2}},
+          {
+            type: 'simple',
+            op: '=',
+            field: 'a',
+            value: {type: 'literal', value: 1},
+          },
+          {
+            type: 'simple',
+            op: '=',
+            field: 'b',
+            value: {type: 'literal', value: 2},
+          },
+          {
+            type: 'simple',
+            op: '=',
+            field: 'a',
+            value: {type: 'literal', value: 2},
+          },
         ],
       },
       values: [
@@ -190,10 +228,21 @@ describe('OR', () => {
     },
     {
       where: {
+        type: 'conjunction',
         op: 'OR',
         conditions: [
-          {op: '=', field: 'a', value: {type: 'literal', value: 1}},
-          {op: '=', field: 'a', value: {type: 'literal', value: 1}},
+          {
+            type: 'simple',
+            op: '=',
+            field: 'a',
+            value: {type: 'literal', value: 1},
+          },
+          {
+            type: 'simple',
+            op: '=',
+            field: 'a',
+            value: {type: 'literal', value: 1},
+          },
         ],
       },
       expected: [
@@ -203,20 +252,43 @@ describe('OR', () => {
     },
     {
       where: {
+        type: 'conjunction',
         op: 'OR',
         conditions: [
           {
+            type: 'conjunction',
             op: 'AND',
             conditions: [
-              {op: '=', field: 'a', value: {type: 'literal', value: 1}},
-              {op: '=', field: 'b', value: {type: 'literal', value: 1}},
+              {
+                type: 'simple',
+                op: '=',
+                field: 'a',
+                value: {type: 'literal', value: 1},
+              },
+              {
+                type: 'simple',
+                op: '=',
+                field: 'b',
+                value: {type: 'literal', value: 1},
+              },
             ],
           },
           {
+            type: 'conjunction',
             op: 'AND',
             conditions: [
-              {op: '=', field: 'a', value: {type: 'literal', value: 2}},
-              {op: '=', field: 'b', value: {type: 'literal', value: 2}},
+              {
+                type: 'simple',
+                op: '=',
+                field: 'a',
+                value: {type: 'literal', value: 2},
+              },
+              {
+                type: 'simple',
+                op: '=',
+                field: 'b',
+                value: {type: 'literal', value: 2},
+              },
             ],
           },
         ],
@@ -229,20 +301,43 @@ describe('OR', () => {
 
     {
       where: {
+        type: 'conjunction',
         op: 'AND',
         conditions: [
           {
+            type: 'conjunction',
             op: 'OR',
             conditions: [
-              {op: '=', field: 'a', value: {type: 'literal', value: 1}},
-              {op: '=', field: 'b', value: {type: 'literal', value: 1}},
+              {
+                type: 'simple',
+                op: '=',
+                field: 'a',
+                value: {type: 'literal', value: 1},
+              },
+              {
+                type: 'simple',
+                op: '=',
+                field: 'b',
+                value: {type: 'literal', value: 1},
+              },
             ],
           },
           {
+            type: 'conjunction',
             op: 'OR',
             conditions: [
-              {op: '=', field: 'a', value: {type: 'literal', value: 2}},
-              {op: '=', field: 'b', value: {type: 'literal', value: 2}},
+              {
+                type: 'simple',
+                op: '=',
+                field: 'a',
+                value: {type: 'literal', value: 2},
+              },
+              {
+                type: 'simple',
+                op: '=',
+                field: 'b',
+                value: {type: 'literal', value: 2},
+              },
             ],
           },
         ],
@@ -255,20 +350,43 @@ describe('OR', () => {
 
     {
       where: {
+        type: 'conjunction',
         op: 'AND',
         conditions: [
           {
+            type: 'conjunction',
             op: 'OR',
             conditions: [
-              {op: '=', field: 'a', value: {type: 'literal', value: 1}},
-              {op: '=', field: 'b', value: {type: 'literal', value: 1}},
+              {
+                type: 'simple',
+                op: '=',
+                field: 'a',
+                value: {type: 'literal', value: 1},
+              },
+              {
+                type: 'simple',
+                op: '=',
+                field: 'b',
+                value: {type: 'literal', value: 1},
+              },
             ],
           },
           {
+            type: 'conjunction',
             op: 'OR',
             conditions: [
-              {op: '=', field: 'a', value: {type: 'literal', value: 1}},
-              {op: '=', field: 'b', value: {type: 'literal', value: 1}},
+              {
+                type: 'simple',
+                op: '=',
+                field: 'a',
+                value: {type: 'literal', value: 1},
+              },
+              {
+                type: 'simple',
+                op: '=',
+                field: 'b',
+                value: {type: 'literal', value: 1},
+              },
             ],
           },
         ],
@@ -283,11 +401,27 @@ describe('OR', () => {
     {
       name: 'Repeat identical conditions',
       where: {
+        type: 'conjunction',
         op: 'OR',
         conditions: [
-          {op: '=', field: 'a', value: {type: 'literal', value: 1}},
-          {op: '=', field: 'a', value: {type: 'literal', value: 1}},
-          {op: '=', field: 'a', value: {type: 'literal', value: 1}},
+          {
+            type: 'simple',
+            op: '=',
+            field: 'a',
+            value: {type: 'literal', value: 1},
+          },
+          {
+            type: 'simple',
+            op: '=',
+            field: 'a',
+            value: {type: 'literal', value: 1},
+          },
+          {
+            type: 'simple',
+            op: '=',
+            field: 'a',
+            value: {type: 'literal', value: 1},
+          },
         ],
       },
       expected: [
@@ -298,11 +432,27 @@ describe('OR', () => {
 
     {
       where: {
+        type: 'conjunction',
         op: 'OR',
         conditions: [
-          {op: '=', field: 'a', value: {type: 'literal', value: 3}},
-          {op: '=', field: 'a', value: {type: 'literal', value: 4}},
-          {op: '=', field: 'a', value: {type: 'literal', value: 5}},
+          {
+            type: 'simple',
+            op: '=',
+            field: 'a',
+            value: {type: 'literal', value: 3},
+          },
+          {
+            type: 'simple',
+            op: '=',
+            field: 'a',
+            value: {type: 'literal', value: 4},
+          },
+          {
+            type: 'simple',
+            op: '=',
+            field: 'a',
+            value: {type: 'literal', value: 5},
+          },
         ],
       },
       expected: [],
@@ -310,17 +460,35 @@ describe('OR', () => {
 
     {
       where: {
+        type: 'conjunction',
         op: 'AND',
         conditions: [
           {
+            type: 'conjunction',
             op: 'OR',
             conditions: [
-              {op: '=', field: 'a', value: {type: 'literal', value: 1}},
-              {op: '=', field: 'a', value: {type: 'literal', value: 2}},
-              {op: '=', field: 'a', value: {type: 'literal', value: 3}},
+              {
+                type: 'simple',
+                op: '=',
+                field: 'a',
+                value: {type: 'literal', value: 1},
+              },
+              {
+                type: 'simple',
+                op: '=',
+                field: 'a',
+                value: {type: 'literal', value: 2},
+              },
+              {
+                type: 'simple',
+                op: '=',
+                field: 'a',
+                value: {type: 'literal', value: 3},
+              },
             ],
           },
           {
+            type: 'simple',
             op: '=',
             field: 'b',
             value: {type: 'literal', value: 1},
@@ -342,10 +510,21 @@ describe('OR', () => {
     {
       name: 'With delete',
       where: {
+        type: 'conjunction',
         op: 'OR',
         conditions: [
-          {op: '=', field: 'a', value: {type: 'literal', value: 1}},
-          {op: '=', field: 'a', value: {type: 'literal', value: 2}},
+          {
+            type: 'simple',
+            op: '=',
+            field: 'a',
+            value: {type: 'literal', value: 1},
+          },
+          {
+            type: 'simple',
+            op: '=',
+            field: 'a',
+            value: {type: 'literal', value: 2},
+          },
         ],
       },
       values: [
@@ -413,18 +592,18 @@ describe('OR', () => {
 
 describe('getOperator', () => {
   const cases = [
-    {op: '=', left: 1, right: 1, expected: true},
+    {type: 'simple', op: '=', left: 1, right: 1, expected: true},
     {op: '!=', left: 1, right: 1, expected: false},
-    {op: '=', left: 'a', right: 'a', expected: true},
+    {type: 'simple', op: '=', left: 'a', right: 'a', expected: true},
     {op: '!=', left: 'a', right: 'a', expected: false},
-    {op: '=', left: true, right: true, expected: true},
+    {type: 'simple', op: '=', left: true, right: true, expected: true},
     {op: '!=', left: true, right: true, expected: false},
 
-    {op: '=', left: 1, right: 2, expected: false},
+    {type: 'simple', op: '=', left: 1, right: 2, expected: false},
     {op: '!=', left: 1, right: 2, expected: true},
-    {op: '=', left: 'a', right: 'b', expected: false},
+    {type: 'simple', op: '=', left: 'a', right: 'b', expected: false},
     {op: '!=', left: 'a', right: 'b', expected: true},
-    {op: '=', left: true, right: false, expected: false},
+    {type: 'simple', op: '=', left: true, right: false, expected: false},
     {op: '!=', left: true, right: false, expected: true},
 
     {op: '>', left: 1, right: 1, expected: false},
@@ -513,6 +692,67 @@ describe('getOperator', () => {
     {op: 'LIKE', left: 'a\n', right: 'a\n', expected: true},
     {op: 'LIKE', left: 'an', right: 'a\\n', expected: true},
     {op: 'LIKE', left: 'a ', right: 'a\\s', expected: false},
+
+    {op: 'INTERSECTS', left: [1, 2, 3], right: [2, 3, 4], expected: true},
+    {op: 'INTERSECTS', left: [1, 2, 3], right: [4, 5, 6], expected: false},
+    {op: 'INTERSECTS', left: [1, 2, 3], right: [1, 2, 3], expected: true},
+    {op: 'INTERSECTS', left: [1, 2, 3], right: [1], expected: true},
+    {op: 'INTERSECTS', left: [1], right: [1, 2, 3], expected: true},
+    {op: 'INTERSECTS', left: 1, right: [1, 2, 3], expected: true},
+    {op: 'INTERSECTS', left: [], right: [], expected: false},
+    {op: 'INTERSECTS', left: 1, right: [], expected: false},
+
+    {op: 'SUPERSET', left: [1, 2, 3], right: [2, 3], expected: true},
+    {op: 'SUPERSET', left: [1, 2, 3], right: [4, 5], expected: false},
+    {op: 'SUPERSET', left: [1, 2, 3], right: [3, 4], expected: false},
+    {op: 'SUPERSET', left: [1, 2, 3], right: [1, 2, 3], expected: true},
+    {op: 'SUPERSET', left: [1, 2, 3], right: [1, 2, 3, 4], expected: false},
+    {op: 'SUPERSET', left: [1, 2, 3], right: [], expected: true},
+    {op: 'SUPERSET', left: [], right: [], expected: true},
+    {op: 'SUPERSET', left: 1, right: [1, 2, 3], expected: false},
+    {op: 'SUPERSET', left: 1, right: [], expected: true},
+    {op: 'SUPERSET', left: 1, right: [1], expected: true},
+
+    {op: 'SUBSET', left: [2, 3], right: [1, 2, 3], expected: true},
+    {op: 'SUBSET', left: [4, 5], right: [1, 2, 3], expected: false},
+    {op: 'SUBSET', left: [3, 4], right: [1, 2, 3], expected: false},
+    {op: 'SUBSET', left: [1, 2, 3], right: [1, 2, 3], expected: true},
+    {op: 'SUBSET', left: [1, 2, 3, 4], right: [1, 2, 3], expected: false},
+    {op: 'SUBSET', left: [], right: [], expected: true},
+    {op: 'SUBSET', left: [], right: [1, 2, 3], expected: true},
+    {op: 'SUBSET', left: [1], right: [1, 2, 3], expected: true},
+    {op: 'SUBSET', left: 1, right: [1, 2], expected: true},
+    {op: 'SUBSET', left: 1, right: [], expected: false},
+    {op: 'SUBSET', left: 1, right: [1], expected: true},
+
+    {op: 'DISJOINT', left: [1, 2, 3], right: [4, 5, 6], expected: true},
+    {op: 'DISJOINT', left: [1, 2, 3], right: [3, 4, 5], expected: false},
+    {op: 'DISJOINT', left: [1, 2, 3], right: [1, 2, 3], expected: false},
+    {op: 'DISJOINT', left: [1, 2, 3], right: [1], expected: false},
+    {op: 'DISJOINT', left: [1], right: [1, 2, 3], expected: false},
+    {op: 'DISJOINT', left: 1, right: [1, 2, 3], expected: false},
+    {op: 'DISJOINT', left: [], right: [], expected: true},
+    {op: 'DISJOINT', left: 1, right: [], expected: true},
+
+    {op: 'CONGRUENT', left: [1, 2, 3], right: [1, 2, 3], expected: true},
+    {op: 'CONGRUENT', left: [1, 2, 3], right: [3, 2, 1], expected: true},
+    {op: 'CONGRUENT', left: [1, 2, 3], right: [1, 2], expected: false},
+    {op: 'CONGRUENT', left: [1, 2], right: [1, 2, 3], expected: false},
+    {op: 'CONGRUENT', left: [1, 2, 3], right: [1, 2, 4], expected: false},
+    {op: 'CONGRUENT', left: [], right: [], expected: true},
+    {op: 'CONGRUENT', left: 1, right: [1, 2, 3], expected: false},
+    {op: 'CONGRUENT', left: 1, right: [], expected: false},
+    {op: 'CONGRUENT', left: 1, right: [1], expected: true},
+
+    {op: 'INCONGRUENT', left: [1, 2, 3], right: [1, 2, 3], expected: false},
+    {op: 'INCONGRUENT', left: [1, 2, 3], right: [3, 2, 1], expected: false},
+    {op: 'INCONGRUENT', left: [1, 2, 3], right: [1, 2], expected: true},
+    {op: 'INCONGRUENT', left: [1, 2], right: [1, 2, 3], expected: true},
+    {op: 'INCONGRUENT', left: [1, 2, 3], right: [1, 2, 4], expected: true},
+    {op: 'INCONGRUENT', left: [], right: [], expected: false},
+    {op: 'INCONGRUENT', left: 1, right: [1, 2, 3], expected: true},
+    {op: 'INCONGRUENT', left: 1, right: [], expected: true},
+    {op: 'INCONGRUENT', left: 1, right: [1], expected: false},
   ] as const;
 
   for (const c of cases) {

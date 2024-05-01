@@ -7,6 +7,7 @@ import {
   parse as customParse,
   stringify as customStringify,
 } from 'json-custom-numbers';
+import * as v from 'shared/src/valita.js';
 
 function numberParser(_: unknown, v: string) {
   const n = +v;
@@ -25,7 +26,25 @@ export type JSONValue =
   | boolean
   | Date // serialized as `string`
   | readonly JSONValue[]
-  | {readonly [prop: string | number]: undefined | JSONValue};
+  | JSONObject;
+
+export type JSONObject = {readonly [prop: string]: JSONValue | undefined};
+
+export const jsonValueSchema: v.Type<JSONValue> = v.lazy(() => {
+  const jsonObjectSchema = v.readonly(v.record(jsonValueSchema));
+
+  return v.union(
+    v.null(),
+    v.string(),
+    v.number(),
+    v.bigint(),
+    v.boolean(),
+    v.readonly(v.array(jsonValueSchema)),
+    jsonObjectSchema,
+  );
+});
+
+export const jsonObjectSchema = v.readonly(v.record(jsonValueSchema));
 
 /**
  * Parses JSON strings that may contain arbitrarily large integers. Integers

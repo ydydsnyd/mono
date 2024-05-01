@@ -1,19 +1,24 @@
+import type {Immutable} from 'shared/src/immutable';
 import type {
   ReadonlyJSONValue,
   ReadTransaction,
   WriteTransaction,
 } from 'zero-client';
 import {z} from 'zod';
-import type {Immutable} from './immutable';
+
+const ENTITIES_KEY_PREFIX = 'e/';
 
 export const ISSUE_ENTITY_NAME = `issue`;
 export const ISSUE_KEY_PREFIX = `${ISSUE_ENTITY_NAME}/`;
-export const issueKey = (id: string) => `${ISSUE_KEY_PREFIX}${id}`;
+export const issueKey = (id: string) =>
+  `${ENTITIES_KEY_PREFIX}${ISSUE_KEY_PREFIX}${id}`;
+const labelKey = (id: string) => `${ENTITIES_KEY_PREFIX}label/${id}`;
+const issueLabelKey = (id: string) => `${ENTITIES_KEY_PREFIX}issueLabel/${id}`;
 export const issueID = (key: string) => {
-  if (!key.startsWith(ISSUE_KEY_PREFIX)) {
+  if (!key.startsWith(`${ENTITIES_KEY_PREFIX}${ISSUE_KEY_PREFIX}`)) {
     throw new Error(`Invalid issue key: ${key}`);
   }
-  return key.substring(ISSUE_KEY_PREFIX.length);
+  return key.substring(`${ENTITIES_KEY_PREFIX}${ISSUE_KEY_PREFIX}`.length);
 };
 
 export const enum Priority {
@@ -38,6 +43,22 @@ export enum PriorityString {
   Medium = 'MEDIUM',
   High = 'HIGH',
   Urgent = 'URGENT',
+}
+
+const labelColors = [
+  '#483D8B', // Dark Slate Blue
+  '#191970', // Midnight Blue
+  '#36454F', // Charcoal
+  '#556B2F', // Dark Olive Green
+  '#4B0082', // Indigo
+  '#333333', // Dark Charcoal
+  '#2F4F4F', // Dark Slate Gray
+  '#0C1021', // Onyx
+];
+
+export function getLabelColor(labelName: string) {
+  const charCode = labelName.charCodeAt(2) || labelName.charCodeAt(0);
+  return labelColors[charCode % labelColors.length];
 }
 
 export const priorityEnumSchema = z
@@ -148,6 +169,7 @@ export type OrderEnum = z.infer<typeof orderEnumSchema>;
 export enum Filter {
   Priority,
   Status,
+  Label,
 }
 
 const filterEnumSchema = z.nativeEnum(Filter);
@@ -167,6 +189,8 @@ export const issueSchema = z.object({
 
 export type Issue = Immutable<z.TypeOf<typeof issueSchema>>;
 export type IssueUpdate = Omit<Partial<Issue>, 'modified'> & {id: string};
+export type Label = {id: string; name: string};
+export type IssueLabel = {id: string; issueID: string; labelID: string};
 
 export async function getIssue(
   tx: ReadTransaction,
@@ -196,12 +220,12 @@ export function issueFromKeyAndValue(
 export const COMMENT_ENTITY_NAME = `comment`;
 export const COMMENT_KEY_PREFIX = `${COMMENT_ENTITY_NAME}/`;
 export const commentKey = (commentID: string) =>
-  `${COMMENT_KEY_PREFIX}${commentID}`;
+  `${ENTITIES_KEY_PREFIX}${COMMENT_KEY_PREFIX}${commentID}`;
 export const commentID = (key: string) => {
-  if (!key.startsWith(COMMENT_KEY_PREFIX)) {
+  if (!key.startsWith(`${ENTITIES_KEY_PREFIX}${COMMENT_KEY_PREFIX}`)) {
     throw new Error(`Invalid comment key: ${key}`);
   }
-  return key.substring(COMMENT_KEY_PREFIX.length);
+  return key.substring(`${ENTITIES_KEY_PREFIX}${COMMENT_KEY_PREFIX}`.length);
 };
 
 export const commentSchema = z.object({
@@ -223,12 +247,12 @@ export async function putIssueComment(
 
 export const MEMBER_KEY_PREFIX = `member/`;
 export const memberKey = (memberId: string) =>
-  `${MEMBER_KEY_PREFIX}${memberId}`;
+  `${ENTITIES_KEY_PREFIX}${MEMBER_KEY_PREFIX}${memberId}`;
 export const memberID = (key: string) => {
-  if (!key.startsWith(MEMBER_KEY_PREFIX)) {
+  if (!key.startsWith(`${ENTITIES_KEY_PREFIX}${MEMBER_KEY_PREFIX}`)) {
     throw new Error(`Invalid member key: ${key}`);
   }
-  return key.substring(MEMBER_KEY_PREFIX.length);
+  return key.substring(`${ENTITIES_KEY_PREFIX}${MEMBER_KEY_PREFIX}`.length);
 };
 
 export async function getMember(
@@ -247,6 +271,20 @@ export async function putMember(
   member: Member,
 ): Promise<void> {
   await tx.set(memberKey(member.id), member);
+}
+
+export async function putLabel(
+  tx: WriteTransaction,
+  label: Label,
+): Promise<void> {
+  await tx.set(labelKey(label.id), label);
+}
+
+export async function putIssueLabel(
+  tx: WriteTransaction,
+  issueLabel: IssueLabel,
+): Promise<void> {
+  await tx.set(issueLabelKey(issueLabel.id), issueLabel);
 }
 
 export const memberSchema = z.object({

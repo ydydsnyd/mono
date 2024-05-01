@@ -8,7 +8,7 @@ import {fileURLToPath} from 'url';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// jest-environment-miniflare looks at the wrangler.toml file which builds the local miniflare.
+// @cloudflare/vitest-pool-workers/config needs a js file with the miniflare environment.
 function buildMiniflareEnvironment() {
   return buildInternal({
     entryPoints: [path.join(dirname, 'test', 'miniflare-environment.ts')],
@@ -18,7 +18,7 @@ function buildMiniflareEnvironment() {
 }
 
 /**
- * @param {Partial<import("esbuild").BuildOptions>} options
+ * @param {import("esbuild").BuildOptions} options
  */
 function buildInternal(options) {
   const shared = sharedOptions(true);

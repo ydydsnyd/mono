@@ -7,6 +7,7 @@ import type {
   InOps,
   LikeOps,
   OrderOps,
+  SetOps,
   SimpleOperator,
 } from '../ast/ast.js';
 import type {Context} from '../context/context.js';
@@ -16,6 +17,7 @@ import {AggArray, Aggregate, Max, Min, isAggregate} from './agg.js';
 import {Statement} from './statement.js';
 
 type NotUndefined<T> = Exclude<T, undefined>;
+type WeakKey = object;
 
 export type ValueAsOperatorInput<
   V,
@@ -32,6 +34,8 @@ export type ValueAsOperatorInput<
     : NotUndefined<V>
   : Op extends EqualityOps
   ? NotUndefined<V>
+  : Op extends SetOps
+  ? NotUndefined<V>[]
   : never;
 
 export type FieldAsOperatorInput<
@@ -54,10 +58,12 @@ type ObjectHasSingleProperty<T> = {
   [K in keyof T]: Exclude<keyof Omit<T, K>, K>;
 }[keyof T];
 
+type QualifiedSelector<F extends FromSet> = {
+  [K in keyof F]: `${string & K}.${string & keyof NotUndefined<F[K]>}`;
+}[keyof F];
+
 type SimpleSelector<F extends FromSet> =
-  | {
-      [K in keyof F]: `${string & K}.${string & keyof NotUndefined<F[K]>}`;
-    }[keyof F]
+  | QualifiedSelector<F>
   | (ObjectHasSingleProperty<F> extends never ? NestedKeys<F> : never);
 
 type Selector<F extends FromSet> =
@@ -95,27 +101,21 @@ type ExtractAggregatePiece<From extends FromSet, K extends Aggregator<From>> =
       ? {
           [K in Alias]: From[Table][];
         }
-      : AggregateResult<
-          Selection,
-          From,
-          Alias,
-          ExtractFieldValue<
+      : {
+          [K in Alias]: ExtractFieldValue<
             From,
             Selection extends SimpleSelector<From> ? Selection : never
-          >[]
-        >
+          >[];
+        }
     : K extends
         | Min<infer Selection, infer Alias>
         | Max<infer Selection, infer Alias>
-    ? AggregateResult<
-        Selection,
-        From,
-        Alias,
-        ExtractFieldValue<
+    ? {
+        [K in Alias]: ExtractFieldValue<
           From,
           Selection extends SimpleSelector<From> ? Selection : never
-        >
-      >
+        >;
+      }
     : // all other aggregate functions
     K extends Aggregate<infer Selection, infer Alias>
     ? AggregateResult<Selection, From, Alias, number>
@@ -207,6 +207,7 @@ export type MakeHumanReadable<T> = {} & {
 
 export type WhereCondition<From extends FromSet> =
   | {
+      type: 'conjunction';
       op: 'AND' | 'OR';
       conditions: WhereCondition<From>[];
     }
@@ -217,6 +218,7 @@ type SimpleCondition<
   Selector extends SimpleSelector<From>,
   Op extends SimpleOperator,
 > = {
+  type: 'simple';
   op: SimpleOperator;
   field: SimpleSelector<From>;
   value: {
@@ -227,14 +229,16 @@ type SimpleCondition<
 
 export class EntityQuery<From extends FromSet, Return = []> {
   readonly #ast: AST;
+  readonly #prefix: string;
   readonly #name: string;
   readonly #context: Context;
 
-  constructor(context: Context, tableName: string, ast?: AST) {
+  constructor(context: Context, tableName: string, prefix: string, ast?: AST) {
     this.#ast = ast ?? {
       table: tableName,
       orderBy: [['id'], 'asc'],
     };
+    this.#prefix = prefix;
     this.#name = tableName;
     this.#context = context;
 
@@ -254,16 +258,24 @@ export class EntityQuery<From extends FromSet, Return = []> {
           continue;
         }
         seen.add(more);
-        select.push([more, more]);
+        select.push([qualifySelector(this.#ast, more), more]);
 
         continue;
       }
-      aggregate.push(more);
+      aggregate.push({
+        field:
+          more.field !== undefined
+            ? qualifySelector(this.#ast, more.field)
+            : undefined,
+        alias: more.alias,
+        aggregate: more.aggregate,
+      });
     }
 
     return new EntityQuery<From, CombineSelections<From, Fields>[]>(
       this.#context,
       this.#name,
+      this.#prefix,
       {
         ...this.#ast,
         select: [...select],
@@ -285,7 +297,7 @@ export class EntityQuery<From extends FromSet, Return = []> {
     },
     Return
   > {
-    return new EntityQuery(this.#context, this.#name, {
+    return new EntityQuery(this.#context, this.#name, this.#prefix, {
       ...this.#ast,
       joins: [
         ...(this.#ast.joins ?? []),
@@ -293,7 +305,10 @@ export class EntityQuery<From extends FromSet, Return = []> {
           type: 'inner',
           other: other.#ast,
           as: alias,
-          on: [thisField, otherField],
+          on: [
+            qualifySelector(this.#ast, thisField),
+            qualifySelector(other.#ast, otherField, alias),
+          ],
         },
       ],
     });
@@ -310,7 +325,7 @@ export class EntityQuery<From extends FromSet, Return = []> {
     },
     Return
   > {
-    return new EntityQuery(this.#context, this.#name, {
+    return new EntityQuery(this.#context, this.#name, this.#prefix, {
       ...this.#ast,
       joins: [
         ...(this.#ast.joins ?? []),
@@ -325,10 +340,27 @@ export class EntityQuery<From extends FromSet, Return = []> {
   }
 
   groupBy<Fields extends SimpleSelector<From>[]>(...x: Fields) {
-    return new EntityQuery<From, Return>(this.#context, this.#name, {
-      ...this.#ast,
-      groupBy: x as string[],
-    });
+    return new EntityQuery<From, Return>(
+      this.#context,
+      this.#name,
+      this.#prefix,
+      {
+        ...this.#ast,
+        groupBy: x as string[],
+      },
+    );
+  }
+
+  distinct<Field extends SimpleSelector<From>>(field: Field) {
+    return new EntityQuery<From, Return>(
+      this.#context,
+      this.#name,
+      this.#prefix,
+      {
+        ...this.#ast,
+        distinct: field,
+      },
+    );
   }
 
   where(expr: WhereCondition<From>): EntityQuery<From, Return>;
@@ -342,6 +374,40 @@ export class EntityQuery<From extends FromSet, Return = []> {
     op?: Op,
     value?: FieldAsOperatorInput<From, K, Op>,
   ): EntityQuery<From, Return> {
+    return this.#whereOrHaving('where', exprOrField, op, value);
+  }
+
+  having(expr: WhereCondition<From>): EntityQuery<From, Return>;
+  having<
+    K extends
+      | SimpleSelector<From>
+      | keyof (Return extends Array<unknown> ? Return[number] : never),
+    Op extends SimpleOperator,
+  >(
+    field: K,
+    op: Op,
+    value: K extends SimpleSelector<From>
+      ? FieldAsOperatorInput<From, K, Op>
+      : Return extends Array<unknown>
+      ? K extends keyof Return[number]
+        ? Return[number][K]
+        : never
+      : never,
+  ): EntityQuery<From, Return>;
+  having<K extends SimpleSelector<From>, Op extends SimpleOperator>(
+    exprOrField: K | WhereCondition<From>,
+    op?: Op,
+    value?: FieldAsOperatorInput<From, K, Op>,
+  ): EntityQuery<From, Return> {
+    return this.#whereOrHaving('having', exprOrField, op, value);
+  }
+
+  #whereOrHaving<K extends SimpleSelector<From>, Op extends SimpleOperator>(
+    whereOrHaving: 'where' | 'having',
+    exprOrField: K | WhereCondition<From>,
+    op?: Op,
+    value?: FieldAsOperatorInput<From, K, Op>,
+  ) {
     let expr: WhereCondition<From>;
     if (typeof exprOrField === 'string') {
       expr = exp(exprOrField, op!, value!);
@@ -349,24 +415,41 @@ export class EntityQuery<From extends FromSet, Return = []> {
       expr = exprOrField;
     }
 
+    if (whereOrHaving === 'where') {
+      // HAVING operates on the result of the query
+      // so it does not qualify its accessors.
+      expr = qualify(this.#ast, expr);
+    }
+
     let cond: WhereCondition<From>;
-    const where = this.#ast.where as WhereCondition<From> | undefined;
-    if (!where) {
+    const exitingWhereOrHaving = this.#ast[whereOrHaving] as
+      | WhereCondition<From>
+      | undefined;
+    if (!exitingWhereOrHaving) {
       cond = expr;
-    } else if (where.op === 'AND') {
-      const {conditions} = where;
+    } else if (exitingWhereOrHaving.op === 'AND') {
+      const {conditions} = exitingWhereOrHaving;
       cond = flatten('AND', [...conditions, expr]);
     } else {
       cond = {
+        type: 'conjunction',
         op: 'AND',
-        conditions: [where, expr],
+        conditions: [exitingWhereOrHaving, expr],
       };
     }
 
-    return new EntityQuery<From, Return>(this.#context, this.#name, {
-      ...this.#ast,
-      where: cond as Condition,
-    });
+    return new EntityQuery<From, Return>(
+      this.#context,
+      this.#name,
+      this.#prefix,
+      {
+        ...this.#ast,
+        // Can't use satisfies here because WhereCondition is recursive.
+        // Tests ensure that the expected AST output satisfies the Condition
+        // type.
+        [whereOrHaving]: cond as Condition,
+      },
+    );
   }
 
   limit(n: number) {
@@ -374,10 +457,15 @@ export class EntityQuery<From extends FromSet, Return = []> {
       throw new Misuse('Limit already set');
     }
 
-    return new EntityQuery<From, Return>(this.#context, this.#name, {
-      ...this.#ast,
-      limit: n,
-    });
+    return new EntityQuery<From, Return>(
+      this.#context,
+      this.#name,
+      this.#prefix,
+      {
+        ...this.#ast,
+        limit: n,
+      },
+    );
   }
 
   asc(...x: SimpleSelector<From>[]) {
@@ -385,10 +473,15 @@ export class EntityQuery<From extends FromSet, Return = []> {
       x.push('id');
     }
 
-    return new EntityQuery<From, Return>(this.#context, this.#name, {
-      ...this.#ast,
-      orderBy: [x, 'asc'],
-    });
+    return new EntityQuery<From, Return>(
+      this.#context,
+      this.#name,
+      this.#prefix,
+      {
+        ...this.#ast,
+        orderBy: [x.map(x => qualifySelector(this.#ast, x)), 'asc'],
+      },
+    );
   }
 
   desc(...x: SimpleSelector<From>[]) {
@@ -396,14 +489,23 @@ export class EntityQuery<From extends FromSet, Return = []> {
       x.push('id');
     }
 
-    return new EntityQuery<From, Return>(this.#context, this.#name, {
-      ...this.#ast,
-      orderBy: [x, 'desc'],
-    });
+    return new EntityQuery<From, Return>(
+      this.#context,
+      this.#name,
+      this.#prefix,
+      {
+        ...this.#ast,
+        orderBy: [x.map(x => qualifySelector(this.#ast, x)), 'desc'],
+      },
+    );
   }
 
   prepare(): Statement<Return> {
     return new Statement<Return>(this.#context, this.#ast);
+  }
+
+  toString() {
+    return JSON.stringify(this.#ast, null, 2);
   }
 }
 
@@ -440,7 +542,7 @@ function flatten<F extends FromSet>(
     }
   }
 
-  return {op, conditions: flattened};
+  return {type: 'conjunction', op, conditions: flattened};
 }
 
 export function exp<
@@ -453,6 +555,7 @@ export function exp<
   value: FieldAsOperatorInput<From, Selector, Op>,
 ): WhereCondition<From> {
   return {
+    type: 'simple',
     op,
     field,
     value: {
@@ -469,16 +572,19 @@ export function not<From extends FromSet>(
   switch (expr.op) {
     case 'AND':
       return {
+        type: 'conjunction',
         op: 'OR',
         conditions: expr.conditions.map(not),
       };
     case 'OR':
       return {
+        type: 'conjunction',
         op: 'AND',
         conditions: expr.conditions.map(not),
       };
     default:
       return {
+        type: 'simple',
         op: negateOperator(expr.op),
         field: expr.field,
         value: expr.value,
@@ -512,5 +618,54 @@ function negateOperator(op: SimpleOperator): SimpleOperator {
       return 'NOT ILIKE';
     case 'NOT ILIKE':
       return 'ILIKE';
+    case 'INTERSECTS':
+      return 'DISJOINT';
+    case 'DISJOINT':
+      return 'INTERSECTS';
+    case 'SUPERSET':
+      return 'SUBSET';
+    case 'SUBSET':
+      return 'SUPERSET';
+    case 'CONGRUENT':
+      return 'INCONGRUENT';
+    case 'INCONGRUENT':
+      return 'CONGRUENT';
   }
+}
+
+export function qualify<F extends FromSet>(
+  ast: AST,
+  expr: WhereCondition<F>,
+): WhereCondition<F> {
+  switch (expr.op) {
+    case 'AND':
+    case 'OR':
+      return {
+        ...expr,
+        conditions: expr.conditions.map(c => qualify(ast, c)),
+      };
+    default:
+      return {
+        ...expr,
+        field: qualifySelector(ast, expr.field),
+      };
+  }
+}
+
+function qualifySelector(
+  ast: AST,
+  selector: string,
+  alias?: string | undefined,
+): string {
+  // if there are joins then the type system
+  // will have ensured that the selector is already qualified
+  if (
+    (ast.joins !== undefined && ast.joins.length > 0) ||
+    (alias && selector.startsWith(alias + '.')) ||
+    (alias === undefined && selector.startsWith(ast.table + '.'))
+  ) {
+    return selector;
+  }
+
+  return `${alias ?? ast.table}.${selector}`;
 }

@@ -3,7 +3,8 @@ import {Resolver, resolver} from '@rocicorp/resolver';
 import type {Entity} from '@rocicorp/zql/src/entity.js';
 import type {AST} from '@rocicorp/zql/src/zql/ast/ast.js';
 import type {Context as ZQLContext} from '@rocicorp/zql/src/zql/context/context.js';
-import {makeReplicacheContext} from '@rocicorp/zql/src/zql/context/replicache-context.js';
+import {ZeroContext} from '@rocicorp/zql/src/zql/context/zero-context.js';
+import {Materialite} from '@rocicorp/zql/src/zql/ivm/materialite.js';
 import type {FromSet} from '@rocicorp/zql/src/zql/query/entity-query.js';
 import {EntityQuery} from '@rocicorp/zql/src/zql/query/entity-query.js';
 import {
@@ -29,13 +30,11 @@ import type {
   PullerResultV1,
 } from 'replicache/src/puller.js';
 import type {Pusher, PusherResult} from 'replicache/src/pusher.js';
+import {ReplicacheImpl} from 'replicache/src/replicache-impl.js';
 import type {ReplicacheOptions} from 'replicache/src/replicache-options.js';
-import {Replicache} from 'replicache/src/replicache.js';
 import type {
-  WatchCallbackForOptions as ExperimentalWatchCallbackForOptions,
-  WatchNoIndexCallback as ExperimentalWatchNoIndexCallback,
-  WatchOptions as ExperimentalWatchOptions,
   SubscribeOptions,
+  WatchCallback,
 } from 'replicache/src/subscriptions.js';
 import type {ClientGroupID, ClientID} from 'replicache/src/sync/ids.js';
 import type {PullRequestV0, PullRequestV1} from 'replicache/src/sync/pull.js';
@@ -47,13 +46,21 @@ import type {
 import {assert} from 'shared/src/asserts.js';
 import {getDocumentVisibilityWatcher} from 'shared/src/document-visible.js';
 import {getDocument} from 'shared/src/get-document.js';
+import {must} from 'shared/src/must.js';
 import {sleep, sleepWithAbort} from 'shared/src/sleep.js';
 import * as valita from 'shared/src/valita.js';
 import {nanoid} from '../util/nanoid.js';
 import {send} from '../util/socket.js';
 import {checkConnectivity} from './connect-checks.js';
+import {
+  MakeMutateObject,
+  WithCRUD,
+  makeCRUDMutate,
+  makeCRUDMutator,
+} from './crud.js';
 import {shouldEnableAnalytics} from './enable-analytics.js';
 import {toWSString, type HTTPString, type WSString} from './http-string.js';
+import {ENTITIES_KEY_PREFIX} from './keys.js';
 import {LogOptions, createLogOptions} from './log-options.js';
 import {
   DID_NOT_CONNECT_VALUE,
@@ -68,6 +75,10 @@ import {PokeHandler} from './poke-handler.js';
 import {reloadWithReason, reportReloadReason} from './reload-error-handler.js';
 import {ServerError, isAuthError, isServerError} from './server-error.js';
 import {getServer} from './server-option.js';
+import {
+  ZQLSubscriptionsManager,
+  ZQLWatchSubscription,
+} from './subscriptions.js';
 import {version} from './version.js';
 
 export type QueryDefs = {
@@ -95,18 +106,18 @@ export const exposedToTestingSymbol = Symbol();
 export const createLogOptionsSymbol = Symbol();
 
 interface TestZero {
-  [exposedToTestingSymbol]: TestingContext;
-  [onSetConnectionStateSymbol]: (state: ConnectionState) => void;
-  [createLogOptionsSymbol]: (options: {
+  [exposedToTestingSymbol]?: TestingContext;
+  [onSetConnectionStateSymbol]?: (state: ConnectionState) => void;
+  [createLogOptionsSymbol]?: (options: {
     consoleLogLevel: LogLevel;
     server: string | null;
   }) => LogOptions;
 }
 
-function forTesting<MD extends MutatorDefs, QD extends QueryDefs>(
-  r: Zero<MD, QD>,
+function asTestZero<MD extends MutatorDefs, QD extends QueryDefs>(
+  z: Zero<MD, QD>,
 ): TestZero {
-  return r as unknown as TestZero;
+  return z as TestZero;
 }
 
 export const enum ConnectionState {
@@ -181,10 +192,19 @@ export interface ReplicacheInternalAPI {
   lastMutationID(): number;
 }
 
+const internalReplicacheImplMap = new WeakMap<object, ReplicacheImpl>();
+
+export function getInternalReplicacheImplForTesting<
+  MD extends MutatorDefs,
+  QD extends QueryDefs,
+>(z: Zero<MD, QD>): ReplicacheImpl<MD> {
+  return must(internalReplicacheImplMap.get(z)) as ReplicacheImpl<MD>;
+}
+
 export class Zero<MD extends MutatorDefs, QD extends QueryDefs> {
   readonly version = version;
 
-  readonly #rep: Replicache<MD>;
+  readonly #rep: ReplicacheImpl<WithCRUD<MD>>;
   readonly #server: HTTPString | null;
   readonly userID: string;
   readonly roomID: string;
@@ -225,6 +245,7 @@ export class Zero<MD extends MutatorDefs, QD extends QueryDefs> {
   };
 
   readonly #zqlContext: ZQLContext;
+  readonly #materialite = new Materialite();
 
   /**
    * `onUpdateNeeded` is called when a code update is needed.
@@ -290,7 +311,7 @@ export class Zero<MD extends MutatorDefs, QD extends QueryDefs> {
     this.#connectionStateChangeResolver = resolver();
 
     if (TESTING) {
-      forTesting(this)[onSetConnectionStateSymbol](state);
+      asTestZero(this)[onSetConnectionStateSymbol]?.(state);
     }
   }
 
@@ -359,11 +380,16 @@ export class Zero<MD extends MutatorDefs, QD extends QueryDefs> {
     });
     const logOptions = this.#logOptions;
 
-    const replicacheOptions: ReplicacheOptions<MD> = {
+    const replicacheMutators = {
+      ...((options.mutators ?? {}) as MD),
+      ['_zero_crud']: makeCRUDMutator(queries),
+    };
+
+    const replicacheOptions: ReplicacheOptions<WithCRUD<MD>> = {
       schemaVersion: options.schemaVersion,
       logLevel: logOptions.logLevel,
       logSinks: [logOptions.logSink],
-      mutators: options.mutators,
+      mutators: replicacheMutators,
       name: `zero-${userID}-${roomID}`,
       pusher: (req, reqID) => this.#pusher(req, reqID),
       puller: (req, reqID) => this.#puller(req, reqID),
@@ -380,26 +406,48 @@ export class Zero<MD extends MutatorDefs, QD extends QueryDefs> {
       enableLicensing: false,
     };
 
-    this.#rep = new Replicache({
-      ...replicacheOptions,
-      ...replicacheInternalOptions,
-    });
-    this.#rep.getAuth = this.#getAuthToken;
-    this.#onUpdateNeeded = this.#rep.onUpdateNeeded; // defaults to reload.
+    const rep = new ReplicacheImpl(
+      {
+        ...replicacheOptions,
+        ...replicacheInternalOptions,
+      },
+      (queryInternal, lc) =>
+        new ZQLSubscriptionsManager(this.#materialite, queryInternal, lc),
+    );
+    this.#rep = rep;
+
+    if (TESTING) {
+      internalReplicacheImplMap.set(this, rep);
+    }
+
+    rep.getAuth = this.#getAuthToken;
+    this.#onUpdateNeeded = rep.onUpdateNeeded; // defaults to reload.
     this.#server = server;
     this.roomID = roomID;
     this.userID = userID;
     this.#jurisdiction = jurisdiction;
     this.#lc = new LogContext(
       logOptions.logLevel,
-      {roomID, clientID: this.#rep.clientID},
+      {roomID, clientID: rep.clientID},
       logOptions.logSink,
     );
 
-    this.#zqlContext = makeReplicacheContext(this.#rep, {
-      subscriptionAdded: ast => this.#zqlSubscriptionAdded(ast),
-      subscriptionRemoved: ast => this.#zqlSubscriptionRemoved(ast),
-    });
+    this.mutate = makeCRUDMutate<MD, QD>(queries, rep.mutate);
+
+    this.#zqlContext = new ZeroContext(
+      this.#materialite,
+      (name, cb) =>
+        rep.subscriptions.add(
+          new ZQLWatchSubscription(
+            `${ENTITIES_KEY_PREFIX}${name}`,
+            cb as WatchCallback,
+          ),
+        ),
+      {
+        subscriptionAdded: ast => this.#zqlSubscriptionAdded(ast),
+        subscriptionRemoved: ast => this.#zqlSubscriptionRemoved(ast),
+      },
+    );
 
     this.query = this.#registerQueries(queries);
 
@@ -419,7 +467,7 @@ export class Zero<MD extends MutatorDefs, QD extends QueryDefs> {
     this.#pokeHandler = new PokeHandler(
       pokeDD31 => this.#rep.poke(pokeDD31),
       () => this.#onOutOfOrderPoke(),
-      this.#rep.clientID,
+      rep.clientID,
       this.#lc,
     );
 
@@ -432,7 +480,7 @@ export class Zero<MD extends MutatorDefs, QD extends QueryDefs> {
     void this.#runLoop();
 
     if (TESTING) {
-      forTesting(this)[exposedToTestingSymbol] = {
+      asTestZero(this)[exposedToTestingSymbol] = {
         puller: this.#puller,
         pusher: this.#pusher,
         setReload: (r: () => void) => {
@@ -452,7 +500,10 @@ export class Zero<MD extends MutatorDefs, QD extends QueryDefs> {
     enableAnalytics: boolean;
   }): LogOptions {
     if (TESTING) {
-      return forTesting(this)[createLogOptionsSymbol](options);
+      const testZero = asTestZero(this);
+      if (testZero[createLogOptionsSymbol]) {
+        return testZero[createLogOptionsSymbol](options);
+      }
     }
     return createLogOptions(options);
   }
@@ -486,11 +537,11 @@ export class Zero<MD extends MutatorDefs, QD extends QueryDefs> {
   }
 
   /**
-   * The registered mutators (see [[ZeroOptions.mutators]]).
+   * This consists of the custom mutators passed into the options as mutators
+   * (see [[ZeroOptions.mutators]]) and the CRUD mutators for the entities
+   * passed into the options as queries.
    */
-  get mutate() {
-    return this.#rep.mutate;
-  }
+  readonly mutate: MakeMutateObject<MD, QD>;
 
   /**
    * Whether this Zero instance has been closed. Once a Zero instance has
@@ -537,33 +588,6 @@ export class Zero<MD extends MutatorDefs, QD extends QueryDefs> {
     options: SubscribeOptions<R> | ((result: R) => void),
   ): () => void {
     return this.#rep.subscribe(body, options);
-  }
-
-  /**
-   * Watches Zero for changes.
-   *
-   * The `callback` gets called whenever the underlying data changes and the
-   * `key` changes matches the
-   * [[ExperimentalWatchNoIndexOptions|ExperimentalWatchOptions.prefix]]
-   * if present. If a change occurs to the data but the change does not impact
-   * the key space the callback is not called. In other words, the callback is
-   * never called with an empty diff.
-   *
-   * This gets called after commit (a mutation or a rebase).
-   *
-   * @experimental This method is under development and its semantics will
-   * change.
-   */
-  experimentalWatch(callback: ExperimentalWatchNoIndexCallback): () => void;
-  experimentalWatch<Options extends ExperimentalWatchOptions>(
-    callback: ExperimentalWatchCallbackForOptions<Options>,
-    options?: Options,
-  ): () => void;
-  experimentalWatch<Options extends ExperimentalWatchOptions>(
-    callback: ExperimentalWatchCallbackForOptions<Options>,
-    options?: Options,
-  ): () => void {
-    return this.#rep.experimentalWatch(callback, options);
   }
 
   #onMessage = (e: MessageEvent<string>) => {
@@ -1425,7 +1449,7 @@ export class Zero<MD extends MutatorDefs, QD extends QueryDefs> {
     const context = this.#zqlContext;
     // Not using parse yet
     for (const name of Object.keys(queryDefs)) {
-      rv[name] = new EntityQuery(context, name);
+      rv[name] = new EntityQuery(context, name, ENTITIES_KEY_PREFIX);
     }
 
     return rv as MakeEntityQueriesFromQueryDefs<QD>;

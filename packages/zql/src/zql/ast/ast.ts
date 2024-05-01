@@ -39,6 +39,7 @@ export type AST = {
   readonly table: string;
   readonly alias?: string | undefined;
   readonly select?: [selector: string, alias: string][] | undefined;
+  readonly distinct?: string | undefined;
   readonly aggregate?: Aggregation[] | undefined;
   // readonly subQueries?: {
   //   readonly alias: string;
@@ -49,6 +50,7 @@ export type AST = {
   readonly limit?: number | undefined;
   readonly groupBy?: string[] | undefined;
   readonly orderBy?: Ordering | undefined;
+  readonly having?: Condition | undefined;
   // readonly after?: Primitive;
 };
 
@@ -58,7 +60,7 @@ export type Conjunction = {
   op: 'AND' | 'OR';
   conditions: Condition[];
 };
-export type SimpleOperator = EqualityOps | OrderOps | InOps | LikeOps;
+export type SimpleOperator = EqualityOps | OrderOps | InOps | LikeOps | SetOps;
 
 export type EqualityOps = '=' | '!=';
 
@@ -68,24 +70,30 @@ export type InOps = 'IN' | 'NOT IN';
 
 export type LikeOps = 'LIKE' | 'NOT LIKE' | 'ILIKE' | 'NOT ILIKE';
 
-export type SimpleCondition =
-  // | ConditionList
-  {
-    type: 'simple';
-    op: SimpleOperator;
-    field: string;
-    value: {
-      type: 'literal';
-      value: Primitive;
-    };
-    //  | {
-    //   type: 'ref';
-    //   value: Ref;
-    // } | {
-    //   type: 'query';
-    //   value: AST;
-    // };
+export type SetOps =
+  | 'INTERSECTS'
+  | 'DISJOINT'
+  | 'SUPERSET'
+  | 'CONGRUENT'
+  | 'INCONGRUENT'
+  | 'SUBSET';
+
+export type SimpleCondition = {
+  type: 'simple';
+  op: SimpleOperator;
+  field: string;
+  value: {
+    type: 'literal';
+    value: Primitive;
   };
+  //  | {
+  //   type: 'ref';
+  //   value: Ref;
+  // } | {
+  //   type: 'query';
+  //   value: AST;
+  // };
+};
 
 /**
  * Returns a normalized version the AST with all order-agnostic lists
