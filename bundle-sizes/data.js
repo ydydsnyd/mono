@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714508319826,
+  "lastUpdate": 1714605171647,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -47313,6 +47313,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32302,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "679e306e8a7ffb15bda474431abeb750d67b8779",
+          "message": "feat(replicache,zero-client): Implement 'update' patch operation. (#1702)\n\nAdd 'update' patch operation support to ReplicacheImpl and update zero PokeHandler to wire entity update ops through from the zero-protocol.\r\n\r\nThis is exposed only via ReplicacheImpl and not via the public Replicache wrapper.",
+          "timestamp": "2024-05-01T23:10:15Z",
+          "tree_id": "f5231753a6682d164139fff6fb63c0867f0a1ef4",
+          "url": "https://github.com/rocicorp/mono/commit/679e306e8a7ffb15bda474431abeb750d67b8779"
+        },
+        "date": 1714605154673,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 316150,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54997,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 116486,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32439,
             "unit": "bytes"
           }
         ]
