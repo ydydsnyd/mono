@@ -1,6 +1,8 @@
 import {assert} from 'shared/src/asserts.js';
 import type {AST, Condition} from './ast.js';
 
+// TODO: deal with *....
+// We need runtime schema information to deal with that :(
 export function getRequiredColumns(ast: AST) {
   const maybeAliased = new Map<string, Set<string>>();
   const dealiased = new Map<string, Set<string>>();

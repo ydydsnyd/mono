@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest';
 import {makeTestContext} from '../context/context.js';
-import {astForTesting, EntityQuery} from '../query/entity-query.js';
+import {astForTesting, EntityQuery, exp, or} from '../query/entity-query.js';
 import {getRequiredColumns} from './required-columns.js';
 import * as agg from '../query/agg.js';
 
@@ -56,6 +56,16 @@ describe('RequiredColumns', () => {
     {
       test: 'where against aliased join',
       q: q.join(q, 'e2', 'e1.id', 'id').where('e2.name', '=', 'foo'),
+      expected: new Map([['e1', new Set(['id', 'name'])]]),
+    },
+    {
+      test: 'chained wheres',
+      q: q.where('name', '=', 'foo').where('id', '=', 'bar'),
+      expected: new Map([['e1', new Set(['id', 'name'])]]),
+    },
+    {
+      test: 'wheres with or',
+      q: q.where(or(exp('name', '=', 'foo'), exp('id', '=', 'bar'))),
       expected: new Map([['e1', new Set(['id', 'name'])]]),
     },
   ])('$test', ({q, expected}) => {
