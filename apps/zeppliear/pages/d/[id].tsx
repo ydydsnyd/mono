@@ -2,7 +2,7 @@ import {UndoManager} from '@rocicorp/undo';
 import {useEffect, useRef, useState} from 'react';
 import {Zero} from 'zero-client';
 import App, {Collections} from '../../frontend/app';
-import {ZeroProvider} from '../../frontend/hooks/useZero';
+import {ZeroProvider} from '../../frontend/hooks/use-zero';
 import type {Comment, Issue, IssueLabel, Label} from '../../frontend/issue.js';
 import {M, mutators} from '../../frontend/mutators';
 
@@ -17,11 +17,9 @@ export default function Home() {
         return;
       }
 
-      const [, , spaceID] = location.pathname.split('/');
       const z = new Zero({
         server: process.env.NEXT_PUBLIC_SERVER,
         userID: 'anon',
-        roomID: spaceID,
         mutators,
         kvStore: 'idb',
         queries: {

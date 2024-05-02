@@ -8,18 +8,25 @@ import type {Collections} from './app.jsx';
 import ArrowIcon from './assets/icons/arrow.svg';
 import DefaultAvatarIcon from './assets/icons/avatar.svg';
 import CloseIcon from './assets/icons/close.svg';
-import {useKeyPressed} from './hooks/useKeyPressed';
-import {Comment, Issue, IssueUpdate, Priority, Status} from './issue';
+import {useKeyPressed} from './hooks/use-key-pressed';
+import {
+  Comment,
+  Issue,
+  IssueUpdate,
+  IssueWithLabels,
+  Priority,
+  Status,
+} from './issue';
 import type {M} from './mutators';
 import PriorityMenu from './priority-menu';
 import StatusMenu from './status-menu';
-import {useQuery} from './hooks/useZql';
-import {useZero} from './hooks/useZero';
+import {useQuery} from './hooks/use-zql';
+import {useZero} from './hooks/use-zero';
 
 interface Props {
   onUpdateIssues: (issueUpdates: {issue: Issue; update: IssueUpdate}[]) => void;
   onAddComment: (comment: Comment) => void;
-  issues: {issue: Issue; labels: string[]}[];
+  issues: IssueWithLabels[];
   isLoading: boolean;
 }
 

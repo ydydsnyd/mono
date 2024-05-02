@@ -114,7 +114,7 @@ import type {
   MaybePromise,
   MutatorDefs,
   MutatorReturn,
-  Poke,
+  PokeInternal,
   QueryInternal,
   RequestOptions,
   UpdateNeededReason,
@@ -1150,7 +1150,7 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
    *
    * @experimental This method is under development and its semantics will change.
    */
-  async poke(poke: Poke): Promise<void> {
+  async poke(poke: PokeInternal): Promise<void> {
     await this.#ready;
     // TODO(MP) Previously we created a request ID here and included it with the
     // PullRequest to the server so we could tie events across client and server
@@ -1477,17 +1477,19 @@ export class ReplicacheImpl<MD extends MutatorDefs = {}> {
   }
 
   get cookie(): Promise<Cookie> {
-    return withRead(this.memdag, async dagRead => {
-      const mainHeadHash = await dagRead.getHead(DEFAULT_HEAD_NAME);
-      if (!mainHeadHash) {
-        throw new Error('Internal no main head found');
-      }
-      const baseSnapshot = await baseSnapshotFromHash(mainHeadHash, dagRead);
-      const baseSnapshotMeta = baseSnapshot.meta;
-      const cookie = baseSnapshotMeta.cookieJSON;
-      assertCookie(cookie);
-      return cookie;
-    });
+    return this.#ready.then(() =>
+      withRead(this.memdag, async dagRead => {
+        const mainHeadHash = await dagRead.getHead(DEFAULT_HEAD_NAME);
+        if (!mainHeadHash) {
+          throw new Error('Internal no main head found');
+        }
+        const baseSnapshot = await baseSnapshotFromHash(mainHeadHash, dagRead);
+        const baseSnapshotMeta = baseSnapshot.meta;
+        const cookie = baseSnapshotMeta.cookieJSON;
+        assertCookie(cookie);
+        return cookie;
+      }),
+    );
   }
 
   #queryInternal: QueryInternal = async body => {

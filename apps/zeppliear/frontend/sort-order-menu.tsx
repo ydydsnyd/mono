@@ -1,7 +1,7 @@
 import React, {RefObject, useRef, useState} from 'react';
 import {usePopper} from 'react-popper';
 import {Order} from './issue';
-import {useClickOutside} from './hooks/useClickOutside';
+import {useClickOutside} from './hooks/use-click-outside';
 import SortOutlinedIcon from '@mui/icons-material/SortOutlined';
 import classNames from 'classnames';
 
@@ -16,7 +16,7 @@ function SortOrderMenu({onSelect, order}: Props) {
   const [orderByDropDownVisible, setOrderByDropDownVisible] = useState(false);
 
   const {styles, attributes, update} = usePopper(orderRef, popperRef, {
-    placement: 'bottom-start',
+    placement: 'bottom-end',
   });
 
   const ref = useRef<HTMLDivElement>() as RefObject<HTMLDivElement>;
