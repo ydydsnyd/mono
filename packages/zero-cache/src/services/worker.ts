@@ -1,4 +1,4 @@
-import {
+import type {
   ExecutionContext,
   ExportedHandler,
   Request,

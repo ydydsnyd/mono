@@ -1,5 +1,4 @@
 // @ts-check
-/* eslint-env node, es2022 */
 
 import * as esbuild from 'esbuild';
 import * as path from 'path';
