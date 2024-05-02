@@ -1,7 +1,12 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["src/**/*.ts", "src/**/*.js"],
+  "include": ["src/**/*.ts", "src/**/*.js", "tool/**/*.ts", "tool/**/*.js"],
   "compilerOptions": {
-    "types": ["@cloudflare/vitest-pool-workers","@cloudflare/workers-types"]
+    "skipLibCheck": true,
+    "types": ["@cloudflare/vitest-pool-workers"],
+    "paths": {
+      "shared/src/*": ["../shared/src/*"]
+    },
+    "outDir": "out"
   }
 }

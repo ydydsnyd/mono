@@ -1,7 +1,8 @@
+import type {DurableObjectState} from '@cloudflare/workers-types';
 import type {LogLevel, LogSink} from '@rocicorp/logger';
+import type {InvalidationWatcherRegistry} from './invalidation-watcher/registry.js';
 import {ServiceRunnerDO, ServiceRunnerEnv} from './runner.js';
 import {createWorker} from './worker.js';
-import type {InvalidationWatcherRegistry} from './invalidation-watcher/registry.js';
 
 const DEFAULT_LOG_LEVEL = 'info';
 

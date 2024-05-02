@@ -1,14 +1,17 @@
+import type {
+  DurableObjectNamespace,
+  DurableObjectState,
+} from '@cloudflare/workers-types';
+import {LogContext, LogLevel, LogSink} from '@rocicorp/logger';
+import {DurableStorage} from '../storage/durable-storage.js';
+import type {InvalidationWatcherRegistry} from './invalidation-watcher/registry.js';
+import type {ReplicatorRegistry} from './replicator/registry.js';
+import {Replicator, ReplicatorService} from './replicator/replicator.js';
 import {
   ViewSyncer,
   ViewSyncerRegistry,
   ViewSyncerService,
 } from './view-syncer/view-syncer.js';
-import {Replicator, ReplicatorService} from './replicator/replicator.js';
-import {LogContext, LogLevel, LogSink} from '@rocicorp/logger';
-import {DurableStorage} from '../storage/durable-storage.js';
-import type {InvalidationWatcherRegistry} from './invalidation-watcher/registry.js';
-import type {ReplicatorRegistry} from './replicator/registry.js';
-import type {DurableObjectNamespace} from '@cloudflare/workers-types';
 
 export interface ServiceRunnerEnv {
   runnerDO: DurableObjectNamespace;
