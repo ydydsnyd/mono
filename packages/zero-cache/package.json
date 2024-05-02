@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "build-test": "node tool/build-test.js",
-    "build-worker": "node tool/build-worker.js",
     "miniflare-test": "npm run build-test && vitest run --config vitest.config.miniflare.ts '.test.ts' ",
     "node-test": "vitest run --config vitest.config.node.ts",
     "pg-test": "vitest run --config vitest.config.pg.ts",
