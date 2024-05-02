@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714605171647,
+  "lastUpdate": 1714627519290,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -47357,6 +47357,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32439,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "133604070ee6ea418a5d178cca7b4480b96fc72f",
+          "message": "feat(zero-client): Move from reflect-protocol to zero-protocol (#1672)",
+          "timestamp": "2024-05-01T22:22:56-07:00",
+          "tree_id": "6bf8e058c9ce31a53fc4ba2e5ac804f51725093e",
+          "url": "https://github.com/rocicorp/mono/commit/133604070ee6ea418a5d178cca7b4480b96fc72f"
+        },
+        "date": 1714627502564,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 316206,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55002,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 116504,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32405,
             "unit": "bytes"
           }
         ]
