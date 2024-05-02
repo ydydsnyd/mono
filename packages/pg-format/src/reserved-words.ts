@@ -1,7 +1,7 @@
 //
 // PostgreSQL reserved words
 //
-export const reserved: ReadonlySet<string> = new Set([
+export const reservedWords: ReadonlySet<string> = new Set([
   'AES128',
   'AES256',
   'ALL',

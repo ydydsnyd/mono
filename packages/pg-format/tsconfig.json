@@ -1,5 +1,4 @@
 {
   "extends": "../../tsconfig.json",
-  "compilerOptions": {},
-  "include": ["lib/**/*.ts", "lib/**/*.js"]
+  "include": ["src/**/*.ts", "src/**/*.js"]
 }

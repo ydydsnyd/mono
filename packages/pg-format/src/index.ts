@@ -1,5 +1,5 @@
 // reserved Postgres words
-import { reserved as reservedMap } from './reserved.js';
+import {reservedWords} from './reserved.js';
 
 const fmtPattern = {
   ident: 'I',
@@ -15,7 +15,7 @@ function formatDate(date: string) {
 }
 
 function isReserved(value: string) {
-  return reservedMap.has(value.toUpperCase());
+  return reservedWords.has(value.toUpperCase());
 }
 
 function arrayToList(

@@ -5,7 +5,7 @@ import {
   quoteIdent,
   quoteLiteral,
   quoteString,
-} from '../lib/index.js';
+} from './index.js';
 
 //
 // Original source from https://github.com/segmentio/pg-escape
@@ -105,7 +105,7 @@ describe('format(fmt, ...)', () => {
     });
 
     it('should not format identifier using position 0', () => {
-      expect(function () {
+      expect(() => {
         format('some %0$I', 'thing');
       }).toThrow(Error);
     });
