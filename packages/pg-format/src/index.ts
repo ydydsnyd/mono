@@ -1,5 +1,5 @@
 // reserved Postgres words
-import {reservedWords} from './reserved.js';
+import {reservedWords} from './reserved-words.js';
 
 const fmtPattern = {
   ident: 'I',
@@ -34,8 +34,10 @@ function arrayToList(
   return sql;
 }
 
+export {quoteIdent as ident};
+
 // Ported from PostgreSQL 9.2.4 source code in src/interfaces/libpq/fe-exec.c
-export function quoteIdent(value: unknown): string {
+function quoteIdent(value: unknown): string {
   if (value === undefined || value === null) {
     throw new Error('SQL identifier cannot be null or undefined');
   } else if (value === false) {

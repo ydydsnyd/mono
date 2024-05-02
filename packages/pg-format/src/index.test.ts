@@ -2,7 +2,7 @@ import {describe, expect, it} from 'vitest';
 import {
   format,
   formatWithArray,
-  quoteIdent,
+  ident,
   quoteLiteral,
   quoteString,
 } from './index.js';
@@ -244,39 +244,39 @@ describe('quoteString(val)', () => {
 
 describe('quoteIdent(val)', () => {
   it('should quote when necessary', () => {
-    expect(quoteIdent('foo')).toBe('foo');
-    expect(quoteIdent('_foo')).toBe('_foo');
-    expect(quoteIdent('_foo_bar$baz')).toBe('_foo_bar$baz');
-    expect(quoteIdent('test.some.stuff')).toBe('"test.some.stuff"');
-    expect(quoteIdent('test."some".stuff')).toBe('"test.""some"".stuff"');
+    expect(ident('foo')).toBe('foo');
+    expect(ident('_foo')).toBe('_foo');
+    expect(ident('_foo_bar$baz')).toBe('_foo_bar$baz');
+    expect(ident('test.some.stuff')).toBe('"test.some.stuff"');
+    expect(ident('test."some".stuff')).toBe('"test.""some"".stuff"');
   });
 
   it('should quote reserved words', () => {
-    expect(quoteIdent('desc')).toBe('"desc"');
-    expect(quoteIdent('join')).toBe('"join"');
-    expect(quoteIdent('cross')).toBe('"cross"');
+    expect(ident('desc')).toBe('"desc"');
+    expect(ident('join')).toBe('"join"');
+    expect(ident('cross')).toBe('"cross"');
   });
 
   it('should quote', () => {
-    expect(quoteIdent(true)).toBe('"t"');
-    expect(quoteIdent(false)).toBe('"f"');
-    expect(quoteIdent(0)).toBe('"0"');
-    expect(quoteIdent(15)).toBe('"15"');
-    expect(quoteIdent(-15)).toBe('"-15"');
-    expect(quoteIdent(45.13)).toBe('"45.13"');
-    expect(quoteIdent(-45.13)).toBe('"-45.13"');
-    expect(quoteIdent(testIdentArray)).toBe(
+    expect(ident(true)).toBe('"t"');
+    expect(ident(false)).toBe('"f"');
+    expect(ident(0)).toBe('"0"');
+    expect(ident(15)).toBe('"15"');
+    expect(ident(-15)).toBe('"-15"');
+    expect(ident(45.13)).toBe('"45.13"');
+    expect(ident(-45.13)).toBe('"-45.13"');
+    expect(ident(testIdentArray)).toBe(
       'abc,"AbC","1","t","2012-12-14 13:06:43.152+00"',
     );
     expect(() => {
-      quoteIdent(testNestedArray);
+      ident(testNestedArray);
     }).toThrow(Error);
-    expect(quoteIdent(testDate)).toBe('"2012-12-14 13:06:43.152+00"');
+    expect(ident(testDate)).toBe('"2012-12-14 13:06:43.152+00"');
   });
 
   it('should throw when undefined', () => {
     try {
-      quoteIdent(undefined);
+      ident(undefined);
     } catch (err) {
       expect((err as Error).message).toBe(
         'SQL identifier cannot be null or undefined',
@@ -286,7 +286,7 @@ describe('quoteIdent(val)', () => {
 
   it('should throw when null', () => {
     try {
-      quoteIdent(null);
+      ident(null);
     } catch (err) {
       expect((err as Error).message).toBe(
         'SQL identifier cannot be null or undefined',
@@ -296,7 +296,7 @@ describe('quoteIdent(val)', () => {
 
   it('should throw when object', () => {
     try {
-      quoteIdent({});
+      ident({});
     } catch (err) {
       expect((err as Error).message).toBe('SQL identifier cannot be an object');
     }
