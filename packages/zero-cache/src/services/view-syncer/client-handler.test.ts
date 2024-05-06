@@ -281,15 +281,7 @@ describe('view-syncer/client-handler', () => {
     ]);
   });
 
-  test('error on unsafe integer', () => {
-    const handler = new ClientHandler(
-      createSilentLogContext(),
-      'id1',
-      '121',
-      new Subscription(),
-    );
-    const poker = handler.startPoke({stateVersion: '123'});
-
+  test('error on unsafe integer', async () => {
     for (const patch of [
       {
         type: 'row',
@@ -310,9 +302,30 @@ describe('view-syncer/client-handler', () => {
         contents: {clientID: 'boo', lastMutationID: 98371234123423412341238n},
       },
     ] satisfies Patch[]) {
+      let terminated = false;
+      const downstream = new Subscription<Downstream>({
+        cleanup: () => {
+          terminated = true;
+        },
+      });
+
+      const handler = new ClientHandler(
+        createSilentLogContext(),
+        'id1',
+        '121',
+        downstream,
+      );
+      const poker = handler.startPoke({stateVersion: '123'});
+
+      expect(terminated).toBe(false);
+      poker.addPatch({toVersion: {stateVersion: '123'}, patch});
+      expect(terminated).toBe(true);
+
       let err;
       try {
-        poker.addPatch({toVersion: {stateVersion: '123'}, patch});
+        for await (const _ of downstream) {
+          // Should not be reached.
+        }
       } catch (e) {
         err = e;
       }

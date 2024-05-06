@@ -71,6 +71,7 @@ describe('types/subscription', () => {
     expect(consumed).toEqual(new Set(received));
     expect(cleanup).toBeCalledTimes(1);
     expect(cleanup.mock.calls[0][0]).toEqual([3, 4]);
+    expect(cleanup.mock.calls[0][1]).toBe(failure);
   });
 
   test('iteration break', async () => {
