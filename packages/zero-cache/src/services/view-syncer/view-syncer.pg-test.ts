@@ -1,4 +1,3 @@
-import {LogContext, consoleLogSink} from '@rocicorp/logger';
 import type {AST} from '@rocicorp/zql/src/zql/ast/ast.js';
 import {Queue} from 'shared/src/queue.js';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
@@ -24,8 +23,7 @@ import {ViewSyncerService} from './view-syncer.js';
 
 describe('view-syncer/service', () => {
   let db: PostgresDB;
-  const lc = new LogContext('debug', {}, consoleLogSink);
-  createSilentLogContext();
+  const lc = createSilentLogContext();
 
   beforeEach(async () => {
     db = await testDBs.create('view_syncer_service_test');
