@@ -40,6 +40,7 @@ describe('view-syncer/service', () => {
       id text PRIMARY KEY,
       owner_id text,
       parent_id text,
+      big int8,
       title text,
       _0_version VARCHAR(38)
     );
@@ -52,14 +53,14 @@ describe('view-syncer/service', () => {
     INSERT INTO zero.clients ("clientID", "lastMutationID", _0_version)
                       VALUES ('foo', 42, '0a');
 
-    INSERT INTO users (id, name, _0_version) VALUES (100, 'Alice', '0a');
-    INSERT INTO users (id, name, _0_version) VALUES (101, 'Bob', '0b');
-    INSERT INTO users (id, name, _0_version) VALUES (102, 'Candice', '0c');
+    INSERT INTO users (id, name, _0_version) VALUES ('100', 'Alice', '0a');
+    INSERT INTO users (id, name,  _0_version) VALUES ('101', 'Bob', '0b');
+    INSERT INTO users (id, name, _0_version) VALUES ('102', 'Candice', '0c');
 
-    INSERT INTO issues (id, title, owner_id, _0_version) VALUES (1, 'parent issue foo', 100, '1a0');
-    INSERT INTO issues (id, title, owner_id, _0_version) VALUES (2, 'parent issue bar', 101, '1ab');
-    INSERT INTO issues (id, title, owner_id, parent_id, _0_version) VALUES (3, 'foo', 102, 1, '1ca');
-    INSERT INTO issues (id, title, owner_id, parent_id, _0_version) VALUES (4, 'bar', 101, 2, '1cd');
+    INSERT INTO issues (id, title, owner_id, big, _0_version) VALUES ('1', 'parent issue foo', 100, 9007199254740991, '1a0');
+    INSERT INTO issues (id, title, owner_id, big, _0_version) VALUES ('2', 'parent issue bar', 101, -9007199254740991, '1ab');
+    INSERT INTO issues (id, title, owner_id, parent_id, big, _0_version) VALUES ('3', 'foo', 102, 1, 123, '1ca');
+    INSERT INTO issues (id, title, owner_id, parent_id, big, _0_version) VALUES ('4', 'bar', 101, 2, 100, '1cd');
 
     CREATE PUBLICATION zero_all FOR ALL TABLES;
     `.simple();
@@ -81,6 +82,7 @@ describe('view-syncer/service', () => {
     select: [
       ['id', 'id'],
       ['title', 'title'],
+      ['big', 'big'],
     ],
     table: 'issues',
   };
@@ -220,25 +222,33 @@ describe('view-syncer/service', () => {
                 op: 'put',
                 entityID: {id: '1'},
                 entityType: 'issues',
-                value: {id: '1', title: 'parent issue foo'},
+                value: {
+                  id: '1',
+                  title: 'parent issue foo',
+                  big: 9007199254740991,
+                },
               },
               {
                 op: 'put',
                 entityID: {id: '2'},
                 entityType: 'issues',
-                value: {id: '2', title: 'parent issue bar'},
+                value: {
+                  id: '2',
+                  title: 'parent issue bar',
+                  big: -9007199254740991,
+                },
               },
               {
                 op: 'put',
                 entityID: {id: '3'},
                 entityType: 'issues',
-                value: {id: '3', title: 'foo'},
+                value: {id: '3', title: 'foo', big: 123},
               },
               {
                 op: 'put',
                 entityID: {id: '4'},
                 entityType: 'issues',
-                value: {id: '4', title: 'bar'},
+                value: {id: '4', title: 'bar', big: 100},
               },
             ],
             gotQueriesPatch: [
@@ -312,25 +322,41 @@ describe('view-syncer/service', () => {
           {
             id: {rowKey: {id: '1'}, schema: 'public', table: 'issues'},
             patchVersion: {stateVersion: '1xz'},
-            queriedColumns: {id: ['query-hash1'], title: ['query-hash1']},
+            queriedColumns: {
+              id: ['query-hash1'],
+              title: ['query-hash1'],
+              big: ['query-hash1'],
+            },
             rowVersion: '1a0',
           },
           {
             id: {rowKey: {id: '2'}, schema: 'public', table: 'issues'},
             patchVersion: {stateVersion: '1xz'},
-            queriedColumns: {id: ['query-hash1'], title: ['query-hash1']},
+            queriedColumns: {
+              id: ['query-hash1'],
+              title: ['query-hash1'],
+              big: ['query-hash1'],
+            },
             rowVersion: '1ab',
           },
           {
             id: {rowKey: {id: '3'}, schema: 'public', table: 'issues'},
             patchVersion: {stateVersion: '1xz'},
-            queriedColumns: {id: ['query-hash1'], title: ['query-hash1']},
+            queriedColumns: {
+              id: ['query-hash1'],
+              title: ['query-hash1'],
+              big: ['query-hash1'],
+            },
             rowVersion: '1ca',
           },
           {
             id: {rowKey: {id: '4'}, schema: 'public', table: 'issues'},
             patchVersion: {stateVersion: '1xz'},
-            queriedColumns: {id: ['query-hash1'], title: ['query-hash1']},
+            queriedColumns: {
+              id: ['query-hash1'],
+              title: ['query-hash1'],
+              big: ['query-hash1'],
+            },
             rowVersion: '1cd',
           },
           {
@@ -350,7 +376,7 @@ describe('view-syncer/service', () => {
           [
             '/vs/cvr/9876/p/d/1xz/r/Qxp2tFD-UOgu7-78ZYiLHw',
             {
-              columns: ['id', 'title'],
+              columns: ['big', 'id', 'title'],
               id: {rowKey: {id: '4'}, schema: 'public', table: 'issues'},
               op: 'put',
               rowVersion: '1cd',
@@ -360,7 +386,7 @@ describe('view-syncer/service', () => {
           [
             '/vs/cvr/9876/p/d/1xz/r/VPg9hxKPhJtHB6oYkGqBpw',
             {
-              columns: ['id', 'title'],
+              columns: ['big', 'id', 'title'],
               id: {rowKey: {id: '2'}, schema: 'public', table: 'issues'},
               op: 'put',
               rowVersion: '1ab',
@@ -370,7 +396,7 @@ describe('view-syncer/service', () => {
           [
             '/vs/cvr/9876/p/d/1xz/r/oA1bf0ulYhik9qypZFPeLQ',
             {
-              columns: ['id', 'title'],
+              columns: ['big', 'id', 'title'],
               id: {rowKey: {id: '1'}, schema: 'public', table: 'issues'},
               op: 'put',
               rowVersion: '1a0',
@@ -380,7 +406,230 @@ describe('view-syncer/service', () => {
           [
             '/vs/cvr/9876/p/d/1xz/r/wfZrxQPRsszHpdfLRWoPzA',
             {
-              columns: ['id', 'title'],
+              columns: ['big', 'id', 'title'],
+              id: {rowKey: {id: '3'}, schema: 'public', table: 'issues'},
+              op: 'put',
+              rowVersion: '1ca',
+              type: 'row',
+            },
+          ],
+          [
+            '/vs/cvr/9876/p/d/1xz/r/RRjZLHnRXDtSeGWxUc_a4w',
+            {
+              columns: ['clientID', 'lastMutationID'],
+              id: {
+                schema: 'zero',
+                table: 'clients',
+                rowKey: {clientID: 'foo'},
+              },
+              op: 'put',
+              rowVersion: '0a',
+              type: 'row',
+            },
+          ],
+        ]),
+      );
+
+      await vs.stop();
+      return Promise.all([done, readerDone]);
+    });
+  });
+
+  test('fails pokes with error on unsafe integer', async () => {
+    await runWithFakeDurableObjectStorage(async storage => {
+      const watcher = new MockInvalidationWatcher();
+      const vs = new ViewSyncerService(
+        lc,
+        serviceID,
+        new DurableStorage(storage),
+        watcher,
+      );
+
+      const done = vs.run();
+
+      // Make one value too large to send back in the current zero-protocol.
+      await db`UPDATE issues SET big = 10000000000000000 WHERE id = '4';`;
+
+      const downstream = await vs.sync(
+        {clientID: 'foo', baseCookie: null},
+        {
+          desiredQueriesPatch: [
+            {op: 'put', hash: 'query-hash1', ast: ISSUES_TITLE_QUERY},
+          ],
+        },
+        clientUpstream(),
+      );
+
+      await watcher.requests.dequeue();
+      const reader = new TransactionPool(lc);
+      const readerDone = reader.run(db);
+
+      watcher.subscriptions[0].push({
+        fromVersion: null,
+        newVersion: '1xz',
+        invalidatedQueries: new Set(),
+        reader,
+      });
+
+      await watcher.consumed[0].dequeue();
+      reader.setDone();
+
+      let err;
+      let i = 0;
+      try {
+        for await (const _ of downstream) {
+          if (++i >= 3) {
+            break;
+          }
+        }
+      } catch (e) {
+        err = e;
+      }
+      expect(err).not.toBeUndefined();
+
+      // Everything else should succeed, however, because CVRs are agnostic to row
+      // contents, and the data in the DB is technically "valid" (and available when
+      // the protocol supports it).
+      const cvr = await loadCVR(new DurableStorage(storage), serviceID);
+      expect(cvr).toMatchObject({
+        clients: {
+          foo: {
+            desiredQueryIDs: ['query-hash1'],
+            id: 'foo',
+            patchVersion: {stateVersion: '00', minorVersion: 1},
+          },
+        },
+        id: '9876',
+        queries: {
+          'lmids': {
+            ast: {
+              schema: 'zero',
+              table: 'clients',
+              select: [
+                ['clientID', 'clientID'],
+                ['lastMutationID', 'lastMutationID'],
+              ],
+              where: {
+                type: 'conjunction',
+                op: 'OR',
+                conditions: [
+                  {
+                    type: 'simple',
+                    op: '=',
+                    field: 'clientID',
+                    value: {type: 'literal', value: 'foo'},
+                  },
+                ],
+              },
+            },
+            internal: true,
+            id: 'lmids',
+            transformationVersion: {stateVersion: '1xz'},
+          },
+          'query-hash1': {
+            ast: ISSUES_TITLE_QUERY,
+            desiredBy: {foo: {stateVersion: '00', minorVersion: 1}},
+            id: 'query-hash1',
+            patchVersion: {stateVersion: '1xz'},
+            transformationVersion: {stateVersion: '1xz'},
+          },
+        },
+        version: {stateVersion: '1xz'},
+      });
+
+      const rowRecords = await storage.list({
+        prefix: `/vs/cvr/${serviceID}/d/`,
+      });
+      expect(new Set(rowRecords.values())).toEqual(
+        new Set([
+          {
+            id: {rowKey: {id: '1'}, schema: 'public', table: 'issues'},
+            patchVersion: {stateVersion: '1xz'},
+            queriedColumns: {
+              id: ['query-hash1'],
+              title: ['query-hash1'],
+              big: ['query-hash1'],
+            },
+            rowVersion: '1a0',
+          },
+          {
+            id: {rowKey: {id: '2'}, schema: 'public', table: 'issues'},
+            patchVersion: {stateVersion: '1xz'},
+            queriedColumns: {
+              id: ['query-hash1'],
+              title: ['query-hash1'],
+              big: ['query-hash1'],
+            },
+            rowVersion: '1ab',
+          },
+          {
+            id: {rowKey: {id: '3'}, schema: 'public', table: 'issues'},
+            patchVersion: {stateVersion: '1xz'},
+            queriedColumns: {
+              id: ['query-hash1'],
+              title: ['query-hash1'],
+              big: ['query-hash1'],
+            },
+            rowVersion: '1ca',
+          },
+          {
+            id: {rowKey: {id: '4'}, schema: 'public', table: 'issues'},
+            patchVersion: {stateVersion: '1xz'},
+            queriedColumns: {
+              id: ['query-hash1'],
+              title: ['query-hash1'],
+              big: ['query-hash1'],
+            },
+            rowVersion: '1cd',
+          },
+          {
+            id: {rowKey: {clientID: 'foo'}, schema: 'zero', table: 'clients'},
+            patchVersion: {stateVersion: '1xz'},
+            queriedColumns: {clientID: ['lmids'], lastMutationID: ['lmids']},
+            rowVersion: '0a',
+          },
+        ]),
+      );
+
+      const rowPatches = await storage.list({
+        prefix: `/vs/cvr/${serviceID}/p/d/`,
+      });
+      expect(rowPatches).toEqual(
+        new Map([
+          [
+            '/vs/cvr/9876/p/d/1xz/r/Qxp2tFD-UOgu7-78ZYiLHw',
+            {
+              columns: ['big', 'id', 'title'],
+              id: {rowKey: {id: '4'}, schema: 'public', table: 'issues'},
+              op: 'put',
+              rowVersion: '1cd',
+              type: 'row',
+            },
+          ],
+          [
+            '/vs/cvr/9876/p/d/1xz/r/VPg9hxKPhJtHB6oYkGqBpw',
+            {
+              columns: ['big', 'id', 'title'],
+              id: {rowKey: {id: '2'}, schema: 'public', table: 'issues'},
+              op: 'put',
+              rowVersion: '1ab',
+              type: 'row',
+            },
+          ],
+          [
+            '/vs/cvr/9876/p/d/1xz/r/oA1bf0ulYhik9qypZFPeLQ',
+            {
+              columns: ['big', 'id', 'title'],
+              id: {rowKey: {id: '1'}, schema: 'public', table: 'issues'},
+              op: 'put',
+              rowVersion: '1a0',
+              type: 'row',
+            },
+          ],
+          [
+            '/vs/cvr/9876/p/d/1xz/r/wfZrxQPRsszHpdfLRWoPzA',
+            {
+              columns: ['big', 'id', 'title'],
               id: {rowKey: {id: '3'}, schema: 'public', table: 'issues'},
               op: 'put',
               rowVersion: '1ca',
