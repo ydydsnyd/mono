@@ -41,53 +41,42 @@ async function processMutationWithTx(
   const lastMutationID = await readLastMutationID(tx, mutation.clientID);
   const expectedMutationID = lastMutationID + 1n;
 
-  lc?.debug?.(
-    'Begin processing mutation',
-    {
-      lastMutationID,
-      expectedMutationID,
-    },
-    mutation,
-  );
+  if (mutation.id < expectedMutationID) {
+    lc?.debug?.(
+      `Ignoring mutation with ID ${mutation.id} as it was already processed. Expected: ${expectedMutationID}`,
+    );
+    return;
+  } else if (mutation.id > expectedMutationID) {
+    throw new Error(
+      `Mutation ID was out of order. Expected: ${expectedMutationID} received: ${mutation.id}`,
+    );
+  }
 
-  try {
-    if (mutation.id < expectedMutationID) {
-      lc?.debug?.(
-        `Ignoring mutation with ID ${mutation.id} as it was already processed. Expected: ${expectedMutationID}`,
-      );
-      return;
-    } else if (mutation.id > expectedMutationID) {
-      throw new Error(
-        `Mutation ID was out of order. Expected: ${expectedMutationID} received: ${mutation.id}`,
-      );
+  const {ops} = mutation.args[0];
+  const queryPromises: Promise<unknown>[] = [];
+  for (const op of ops) {
+    switch (op.op) {
+      case 'create':
+        queryPromises.push(getCreateSQL(tx, op).execute());
+        break;
+      case 'set':
+        queryPromises.push(getSetSQL(tx, op).execute());
+        break;
+      case 'update':
+        queryPromises.push(getUpdateSQL(tx, op).execute());
+        break;
+      case 'delete':
+        queryPromises.push(getDeleteSQL(tx, op).execute());
+        break;
+      default:
+        op satisfies never;
     }
+  }
 
-    const {ops} = mutation.args[0];
-    const queryPromises: Promise<unknown>[] = [];
-    for (const op of ops) {
-      switch (op.op) {
-        case 'create':
-          queryPromises.push(getCreateSQL(tx, op).execute());
-          break;
-        case 'set':
-          queryPromises.push(getSetSQL(tx, op).execute());
-          break;
-        case 'update':
-          queryPromises.push(getUpdateSQL(tx, op).execute());
-          break;
-        case 'delete':
-          queryPromises.push(getDeleteSQL(tx, op).execute());
-          break;
-        default:
-          op satisfies never;
-      }
-    }
-
-    // All the CRUD operations were dispatched serially (above).
-    // Now wait for their completion and then update `lastMutationID`.
-    await Promise.all(queryPromises);
-    await writeLastMutationID(tx, mutation.clientID, expectedMutationID);
-  } catch (e) {}
+  // All the CRUD operations were dispatched serially (above).
+  // Now wait for their completion and then update `lastMutationID`.
+  await Promise.all(queryPromises);
+  await writeLastMutationID(tx, mutation.clientID, expectedMutationID);
 }
 
 export function getCreateSQL(
