@@ -174,7 +174,11 @@ function applySimpleCondition<T extends Entity>(
   const operator = getOperator(condition);
   const {field: selector} = condition;
   const column = selectorToQualifiedColumn(selector);
-  return stream.filter(x => operator(getValueFromEntity(x, column)));
+  return stream.filter(x => {
+    const value = getValueFromEntity(x, column);
+    const result = operator(value);
+    return result;
+  });
 }
 
 function applyDistinct<T extends Entity>(
