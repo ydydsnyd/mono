@@ -47,7 +47,9 @@ export type PullReplyMsg = {
   readonly replyingTo: number;
   readonly type: 'pullResponse';
   // the order of the data we are sending.
-  readonly order: Ordering | undefined;
+  readonly sourceOrder: Ordering | undefined;
+  // the desired order at the output end
+  readonly destOrder: Ordering | undefined;
   // columns we are not ordered by but do produce contiguous groups for.
   readonly contiguousGroups: readonly string[];
 };
@@ -84,7 +86,8 @@ export function createPullResponseMessage(
   return {
     replyingTo: pullMsg.id,
     type: 'pullResponse',
-    order,
+    sourceOrder: order,
+    destOrder: pullMsg.order,
     contiguousGroups: [],
   };
 }

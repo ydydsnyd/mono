@@ -168,7 +168,7 @@ export class MutableTreeView<T extends object> extends AbstractView<T, T[]> {
    * 2. There are no deletes, only adds
    */
   #getLimitedIterator(data: Multiset<T>, reply: Reply, limit: number) {
-    const {order} = reply;
+    const {sourceOrder: order} = reply;
     const fields = (order && order[0]) || [];
     const iterator = data[Symbol.iterator]();
     let i = 0;
