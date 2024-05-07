@@ -39,16 +39,26 @@ export function genFilter<S extends T, T>(
 
 /**
  * Flat maps the items returned from the iterable.
+ *
+ * finallyCb is provided so people can clean up resources when the iterator is
+ * done being consumed.
  */
 export function genFlatMap<T, U>(
   iter: () => Iterable<T>,
   f: (t: T, index: number) => Iterable<U>,
+  finallyCb?: (() => void) | undefined,
 ) {
   return {
     *[Symbol.iterator]() {
       let index = 0;
-      for (const t of iter()) {
-        yield* f(t, index++);
+      try {
+        for (const t of iter()) {
+          yield* f(t, index++);
+        }
+      } finally {
+        if (finallyCb) {
+          finallyCb();
+        }
       }
     },
   };
