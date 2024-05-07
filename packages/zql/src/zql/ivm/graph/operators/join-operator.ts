@@ -2,7 +2,7 @@ import {assert} from 'shared/src/asserts.js';
 import type {Primitive} from '../../../ast/ast.js';
 import {genFlatMap} from '../../../util/iterables.js';
 import type {Entry, Multiset} from '../../multiset.js';
-import type {JoinResult, StringOrNumber} from '../../types.js';
+import type {JoinResult, StringOrNumber, Version} from '../../types.js';
 import type {DifferenceStream} from '../difference-stream.js';
 import type {Reply} from '../message.js';
 import {DifferenceIndex, joinType} from './difference-index.js';
@@ -81,30 +81,22 @@ export class InnerJoinOperator<
       joinArgs.a,
       joinArgs.b,
       joinArgs.output,
-      (_, inputA, aMsg, inputB, bMsg) => this.#join(inputA, aMsg, inputB, bMsg),
+      (version, inputA, aMsg, inputB, bMsg) =>
+        this.#join(version, inputA, aMsg, inputB, bMsg),
     );
     this.#indexA = new DifferenceIndex<K, AValue>(joinArgs.getAPrimaryKey);
     this.#indexB = new DifferenceIndex<K, BValue>(joinArgs.getBPrimaryKey);
     this.#joinArgs = joinArgs;
+    this.#deltaAIndex = new DifferenceIndex<K, AValue>(
+      this.#joinArgs.getAPrimaryKey,
+    );
+    this.#deltaBIndex = new DifferenceIndex<K, BValue>(
+      this.#joinArgs.getBPrimaryKey,
+    );
   }
 
-  // If it is a reply
-  // then we hold until we have both sides.
-  // Once we have both sides
-  // we determine loop order by looking at reply messages.
-  // We're trying to match `viewOrder` so we need that
-  // in the reply message.
-  // Can we be lazy without any of the reply stuff?
-  // Just always use `A` as outer (rather than smallest as outer)
-  // and hold until we have both sides (for inner join).
-  // We can't know smaller given we're lazy so we don't know size of either side.
-  //
-  // Buffer As and concat iterables until B is ready.
-  // Then iterate over A, joining with B.
-  //
-  // Index would need to be created for B immediately
-  // so B is exhausted and not lazy.
   #join(
+    version: Version,
     inputA: Multiset<AValue> | undefined,
     aMsg: Reply | undefined,
     inputB: Multiset<BValue> | undefined,
@@ -118,21 +110,11 @@ export class InnerJoinOperator<
       aMsg === undefined || bMsg === undefined,
       'Can not have both messages at once',
     );
-    // 1. got a reply?
-    // 2. check if we have the other reply
-    // 3. if not, hold onto the data
-    // 4. got both sides?
-    // 5. figure out who is the outer loop based on replies
-    // 6. exhaust the inner loop into an index
-    // 7. genFlatMap the outer loop, joining with the index
-    // 8. emit the joined results
-    // 9. not a reply? Just regular data and no buffered reply?
-    // 10. do a normal join thing.
 
     if (aMsg !== undefined) {
       this.#bufferA(inputA, aMsg);
       if (this.#buffer.bMsg !== undefined) {
-        return this.#lazyJoin();
+        return this.#lazyJoin(version);
       }
 
       // still waiting on B
@@ -142,25 +124,17 @@ export class InnerJoinOperator<
     if (bMsg !== undefined) {
       this.#bufferB(inputB, bMsg);
       if (this.#buffer.aMsg !== undefined) {
-        return this.#lazyJoin();
+        return this.#lazyJoin(version);
       }
 
       // still waiting on A
       return undefined;
     }
 
-    return this.#normalJoin(inputA, inputB);
+    return this.#runJoin(version, inputA, inputB);
   }
 
-  #lazyJoin() {
-    //
-    // as we're pulled we add to the difference index?
-    // we can just `genFlatMap` the outer loop and have it call normal join???
-    //
-    // We do need to do index consultation to not re-play items already in the join.
-    // This is only important when we share structure between queries.
-    //
-
+  #lazyJoin(version: Version) {
     const {inputA, inputB} = this.#buffer;
     assert(inputA !== undefined, 'inputA must be defined');
     assert(inputB !== undefined, 'inputB must be defined');
@@ -174,48 +148,61 @@ export class InnerJoinOperator<
     // who goes in the outer loop. We'll just make it A for now.
 
     // Build the `B` index
-    this.#normalJoin(undefined, inputB);
+    this.#runJoin(version, undefined, inputB);
 
     // Now do the join, lazily.
     // This allows the downstream to stop pulling values once it has hit
     // `limit` results.
     const wrapper: Entry<AValue>[] = [];
-    // TODO: you should pull in chunks rather than single values.
-    // Join creates a lot of structures that require re-creation for each item.
-    // Chunk size as 2x limit? If no limit just pull it all?
-    // So we should pass around knowledge of limit then.
     return genFlatMap(
       () => inputA,
       a => {
         wrapper[0] = a;
-        return this.#normalJoin(wrapper, undefined);
+        return this.#runJoin(version, wrapper, undefined);
       },
     );
   }
 
-  #normalJoin(
+  readonly #aKeysForCompaction = new Set<K>();
+  readonly #bKeysForCompaction = new Set<K>();
+  #lastVersion = -1;
+  readonly #deltaAIndex;
+  readonly #deltaBIndex;
+
+  #runJoin(
+    version: Version,
     inputA: Multiset<AValue> | undefined,
     inputB: Multiset<BValue> | undefined,
   ) {
+    this.#deltaAIndex.clear();
+    this.#deltaBIndex.clear();
+
+    if (version !== this.#lastVersion) {
+      this.#lastVersion = version;
+      this.#indexA.compact(this.#aKeysForCompaction);
+      this.#indexB.compact(this.#bKeysForCompaction);
+
+      this.#aKeysForCompaction.clear();
+      this.#bKeysForCompaction.clear();
+    }
+    const aKeysForCompaction = this.#aKeysForCompaction;
+    const bKeysForCompaction = this.#bKeysForCompaction;
+    const deltaA = this.#deltaAIndex;
+    const deltaB = this.#deltaBIndex;
+
     const {aAs, getAJoinKey, getAPrimaryKey, bAs, getBJoinKey, getBPrimaryKey} =
       this.#joinArgs;
-    const aKeysForCompaction = new Set<K>();
-    const bKeysForCompaction = new Set<K>();
 
-    // TODO: just concat the two iterables rather than pushing onto result
+    // TODO: concat the two iterables rather than pushing onto result
     const result: Entry<JoinResult<AValue, BValue, AAlias, BAlias>>[] = [];
     if (!this.#indexB.isEmpty()) {
-      const deltaA = new DifferenceIndex<K, AValue>(getAPrimaryKey);
-      for (const entry of inputA || []) {
-        const aKey = getAJoinKey(entry[0]);
-        if (aKey === undefined) {
-          continue;
-        }
-        deltaA.add(aKey, entry);
-        if (!this.#indexA.isEmpty()) {
-          aKeysForCompaction.add(aKey);
-        }
-      }
+      this.#updateIndex(
+        inputA,
+        getAJoinKey,
+        deltaA,
+        this.#indexA,
+        aKeysForCompaction,
+      );
 
       for (const x of deltaA.join(
         joinType.inner,
@@ -228,30 +215,24 @@ export class InnerJoinOperator<
       }
       this.#indexA.extend(deltaA);
     } else {
-      for (const entry of inputA || []) {
-        const aKey = getAJoinKey(entry[0]);
-        if (aKey === undefined) {
-          continue;
-        }
-        this.#indexA.add(aKey, entry);
-        if (!this.#indexA.isEmpty()) {
-          aKeysForCompaction.add(aKey);
-        }
-      }
+      this.#updateIndex(
+        inputA,
+        getAJoinKey,
+        this.#indexA,
+        this.#indexA,
+        aKeysForCompaction,
+      );
     }
 
     if (!this.#indexA.isEmpty()) {
-      const deltaB = new DifferenceIndex<K, BValue>(getBPrimaryKey);
-      for (const entry of inputB || []) {
-        const bKey = getBJoinKey(entry[0]);
-        if (bKey === undefined) {
-          continue;
-        }
-        deltaB.add(bKey, entry);
-        if (!this.#indexB.isEmpty()) {
-          bKeysForCompaction.add(bKey);
-        }
-      }
+      this.#updateIndex(
+        inputB,
+        getBJoinKey,
+        deltaB,
+        this.#indexB,
+        bKeysForCompaction,
+      );
+
       for (const x of deltaB.join(
         joinType.inner,
         bAs,
@@ -263,21 +244,35 @@ export class InnerJoinOperator<
       }
       this.#indexB.extend(deltaB);
     } else {
-      for (const entry of inputB || []) {
-        const bKey = getBJoinKey(entry[0]);
-        if (bKey === undefined) {
-          continue;
-        }
-        this.#indexB.add(bKey, entry);
-        if (!this.#indexB.isEmpty()) {
-          bKeysForCompaction.add(bKey);
-        }
-      }
+      this.#updateIndex(
+        inputB,
+        getBJoinKey,
+        this.#indexB,
+        this.#indexB,
+        bKeysForCompaction,
+      );
     }
 
-    this.#indexA.compact(aKeysForCompaction);
-    this.#indexB.compact(bKeysForCompaction);
     return result;
+  }
+
+  #updateIndex<V>(
+    input: Multiset<V> | undefined,
+    getJoinKey: (value: V) => K | undefined,
+    indexToUpdate: DifferenceIndex<K, V>,
+    indexToCompact: DifferenceIndex<K, V>,
+    keysToCompact: Set<K>,
+  ) {
+    for (const entry of input || []) {
+      const key = getJoinKey(entry[0]);
+      if (key === undefined) {
+        continue;
+      }
+      indexToUpdate.add(key, entry);
+      if (!indexToCompact.isEmpty()) {
+        keysToCompact.add(key);
+      }
+    }
   }
 
   #bufferA(inputA: Multiset<AValue> | undefined, aMsg: Reply) {

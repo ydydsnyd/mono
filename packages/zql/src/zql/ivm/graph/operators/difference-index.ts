@@ -29,6 +29,10 @@ export class DifferenceIndex<Key extends Primitive | undefined, V> {
     return this.#index.size === 0;
   }
 
+  clear() {
+    this.#index.clear();
+  }
+
   add(key: Key, value: Entry<V>) {
     let existing = this.#index.get(key);
     if (existing === undefined) {
