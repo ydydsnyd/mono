@@ -180,6 +180,10 @@ export class InnerJoinOperator<
     // This allows the downstream to stop pulling values once it has hit
     // `limit` results.
     const wrapper: Entry<AValue>[] = [];
+    // TODO: you should pull in chunks rather than single values.
+    // Join creates a lot of structures that require re-creation for each item.
+    // Chunk size as 2x limit? If no limit just pull it all?
+    // So we should pass around knowledge of limit then.
     return genFlatMap(
       () => inputA,
       a => {
@@ -208,7 +212,9 @@ export class InnerJoinOperator<
           continue;
         }
         deltaA.add(aKey, entry);
-        aKeysForCompaction.add(aKey);
+        if (!this.#indexA.isEmpty()) {
+          aKeysForCompaction.add(aKey);
+        }
       }
 
       for (const x of deltaA.join(
@@ -228,7 +234,9 @@ export class InnerJoinOperator<
           continue;
         }
         this.#indexA.add(aKey, entry);
-        aKeysForCompaction.add(aKey);
+        if (!this.#indexA.isEmpty()) {
+          aKeysForCompaction.add(aKey);
+        }
       }
     }
 
@@ -240,7 +248,9 @@ export class InnerJoinOperator<
           continue;
         }
         deltaB.add(bKey, entry);
-        bKeysForCompaction.add(bKey);
+        if (!this.#indexB.isEmpty()) {
+          bKeysForCompaction.add(bKey);
+        }
       }
       for (const x of deltaB.join(
         joinType.inner,
@@ -259,7 +269,9 @@ export class InnerJoinOperator<
           continue;
         }
         this.#indexB.add(bKey, entry);
-        bKeysForCompaction.add(bKey);
+        if (!this.#indexB.isEmpty()) {
+          bKeysForCompaction.add(bKey);
+        }
       }
     }
 
