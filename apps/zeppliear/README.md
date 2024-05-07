@@ -6,19 +6,36 @@ Built with Zero and [Next.js](https://nextjs.org/),).
 
 Running at [zeppliear.vercel.app](https://zeppliear.vercel.app/).
 
-# To run locally
+# To run wrangler worker locally
+
+update .dev.vars URIs to point to your internal ip adress (169._._._ or 192._._._) do not use the 127.0.0.1 address
+
+```
+UPSTREAM_URI = "postgresql://user:password@add.your.host.ip:6432/postgres"
+SYNC_REPLICA_URI = "postgres://user:password@add.your.host.ip:6433/postgres"
+```
+
+Open two windows one with docker-compose and the other wrangler:
+
+```
+cd docker && docker-compose up
+npx wrangler dev --ip 0.0.0.0
+```
+
+# To run web locally
 
 ```
 npm install
-npx reflect dev --server-path backend/index.ts
-NEXT_PUBLIC_SERVER='http://localhost:8080' npm run dev
+NEXT_PUBLIC_SERVER='http://localhost:8787' npm run dev
 ```
 
-# To deploy the reflect.net server
+# To reset clear local postgres dbs and docker volumes
 
-1. Login to the reflect cli as replicache@roci.dev
-2. update `@rocicorp/reflect` version in package.json by prepending a `^`
-3. `npx reflect publish --server-path backend/index.ts --app zeppliear`
+```
+docker-compose down
+docker volume rm -f docker_pgdata_sync
+docker volume rm -f docker_pgdata_upstream
+```
 
 ## Credits
 
