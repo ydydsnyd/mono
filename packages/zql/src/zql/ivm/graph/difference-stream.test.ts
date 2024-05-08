@@ -207,9 +207,11 @@ test('replying to a message only notifies along the requesting path', () => {
   Graph:
        s0
      / | \
-    d  d  d
+    s1 s2 s3
     |  |  |
-    d  d  d
+  s1d s2d s3d
+       |
+       x
   */
 
   const stream = new DifferenceStream();
@@ -220,14 +222,14 @@ test('replying to a message only notifies along the requesting path', () => {
   const s3 = stream.debug(() => notified.push(3));
 
   s1.debug(() => notified.push(4));
-  const x = new DifferenceStream();
-  const s2Dbg = new DebugOperator(s2, x, () => notified.push(5));
-  x.setUpstream(s2Dbg);
+  const s2dOut = new DifferenceStream();
+  const s2Dbg = new DebugOperator(s2, s2dOut, () => notified.push(5));
+  s2dOut.setUpstream(s2Dbg);
   s3.debug(() => notified.push(6));
 
   const msg = createPullMessage([[], 'asc']);
 
-  x.messageUpstream(msg, {
+  s2dOut.messageUpstream(msg, {
     commit: () => {},
     newDifference: () => {},
   });

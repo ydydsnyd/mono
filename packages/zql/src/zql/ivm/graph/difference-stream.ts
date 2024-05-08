@@ -77,6 +77,10 @@ export class DifferenceStream<T extends object> {
     this.#downstreams.add(listener);
   }
 
+  get id() {
+    return this.#id;
+  }
+
   setUpstream(operator: Operator) {
     assert(this.#upstream === undefined, 'upstream already set');
     this.#upstream = operator;
@@ -84,14 +88,14 @@ export class DifferenceStream<T extends object> {
   }
 
   newDifference(version: Version, data: Multiset<T>, reply: Reply | undefined) {
-    if (reply) {
+    if (reply !== undefined) {
       const requestors = this.#requestors.get(reply.replyingTo);
       for (const requestor of must(requestors)) {
         requestor.newDifference(version, data, reply);
       }
     } else {
       for (const listener of this.#downstreams) {
-        listener.newDifference(version, data, reply);
+        listener.newDifference(version, data, undefined);
       }
     }
   }
