@@ -1,7 +1,7 @@
 import type {Entry} from '../../multiset.js';
 import type {Version} from '../../types.js';
 import type {DifferenceStream, Listener} from '../difference-stream.js';
-import type {Request} from '../message.js';
+import type {Reply, Request} from '../message.js';
 import type {Operator} from './operator.js';
 import {OperatorBase} from './operator.js';
 
@@ -18,12 +18,17 @@ export class UnaryOperator<I extends object, O extends object>
   constructor(
     input: DifferenceStream<I>,
     output: DifferenceStream<O>,
-    fn: (version: Version, data: Entry<I>, out: DifferenceStream<O>) => void,
+    fn: (
+      version: Version,
+      data: Entry<I>,
+      reply: Reply | undefined,
+      out: DifferenceStream<O>,
+    ) => void,
   ) {
     super(output);
     this.#listener = {
-      newDifference: (version, data) => {
-        fn(version, data, output);
+      newDifference: (version, data, reply) => {
+        fn(version, data, reply, output);
       },
       commit: version => {
         this.commit(version);

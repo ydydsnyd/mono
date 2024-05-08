@@ -19,10 +19,10 @@ export class DistinctOperator<T extends Entity> extends UnaryOperator<T, T> {
   #lastSeenVersion: Version = -1;
 
   constructor(input: DifferenceStream<T>, output: DifferenceStream<T>) {
-    super(input, output, (version, data, output) => {
+    super(input, output, (version, data, reply, output) => {
       const ret = this.#handleDiff(version, data);
       if (ret !== undefined) {
-        output.newDifference(version, ret);
+        output.newDifference(version, ret, reply);
       }
     });
   }
@@ -73,10 +73,10 @@ export class DistinctAllOperator<T extends object> extends UnaryOperator<T, T> {
     output: DifferenceStream<T>,
     keyFn: (entry: T) => StringOrNumber,
   ) {
-    super(input, output, (version, data, out) => {
+    super(input, output, (version, data, reply, out) => {
       const diff = this.#handleDiff(data);
       if (diff !== undefined) {
-        out.newDifference(version, diff);
+        out.newDifference(version, diff, reply);
       }
     });
     this.#keyFn = keyFn;

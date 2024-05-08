@@ -10,10 +10,10 @@ export class FilterOperator<I extends object> extends LinearUnaryOperator<
     output: DifferenceStream<I>,
     f: (input: I) => boolean,
   ) {
-    super(input, output, (version, data, out) => {
+    super(input, output, (version, data, reply, out) => {
       const keep = f(data[0]);
       if (keep) {
-        out.newDifference(version, data);
+        out.newDifference(version, data, reply);
       }
     });
   }

@@ -15,11 +15,15 @@ test('map', () => {
     expect(x).toEqual({x: 4});
   });
 
-  s.newDifferences(1, [
-    [{x: 2}, 1],
-    [{x: 2}, 1],
-    [{x: 2}, 1],
-  ]);
+  s.newDifferences(
+    1,
+    [
+      [{x: 2}, 1],
+      [{x: 2}, 1],
+      [{x: 2}, 1],
+    ],
+    undefined,
+  );
   s.commit(1);
 
   expect(expectRan).toBe(3);
@@ -33,11 +37,15 @@ test('filter', () => {
     expect(x).toEqual({x: 2});
   });
 
-  s.newDifferences(1, [
-    [{x: 1}, 1],
-    [{x: 2}, 1],
-    [{x: 3}, 1],
-  ]);
+  s.newDifferences(
+    1,
+    [
+      [{x: 1}, 1],
+      [{x: 2}, 1],
+      [{x: 3}, 1],
+    ],
+    undefined,
+  );
   s.commit(1);
 
   expect(expectRan).toBe(1);
@@ -54,21 +62,29 @@ test('count', () => {
     }
   });
 
-  s.newDifferences(1, [
-    [{x: 1}, 1],
-    [{x: 2}, 1],
-    [{x: 3}, 1],
-  ]);
+  s.newDifferences(
+    1,
+    [
+      [{x: 1}, 1],
+      [{x: 2}, 1],
+      [{x: 3}, 1],
+    ],
+    undefined,
+  );
   s.commit(1);
 
   expect(expectRan).toBe(1);
 
-  s.newDifferences(2, [
-    [{x: 1}, 1],
-    [{x: 2}, 1],
-    [{x: 3}, 1],
-    [{x: 3}, 1],
-  ]);
+  s.newDifferences(
+    2,
+    [
+      [{x: 1}, 1],
+      [{x: 2}, 1],
+      [{x: 3}, 1],
+      [{x: 3}, 1],
+    ],
+    undefined,
+  );
   expectedCount = 7;
   s.commit(2);
 
@@ -91,15 +107,19 @@ test('map, filter, linearCount', () => {
       }
     });
 
-  s.newDifferences(1, [[{x: 1}, 1]]);
+  s.newDifferences(1, [[{x: 1}, 1]], undefined);
   s.commit(1);
 
   expect(expectRan).toBe(1);
 
-  s.newDifferences(2, [
-    [{x: 1}, 1],
-    [{x: 2}, 1],
-  ]);
+  s.newDifferences(
+    2,
+    [
+      [{x: 1}, 1],
+      [{x: 2}, 1],
+    ],
+    undefined,
+  );
   expectedCount = 3;
   s.commit(2);
 
@@ -160,7 +180,7 @@ test('adding data runs the operator', () => {
     ran = true;
   });
   expect(ran).toBe(false);
-  stream.newDifferences(1, []);
+  stream.newDifferences(1, [], undefined);
   expect(ran).toBe(true);
 });
 
@@ -170,7 +190,7 @@ test('commit notifies the operator', () => {
   stream.effect(() => {
     ran = true;
   });
-  stream.newDifferences(1, [[{}, 1]]);
+  stream.newDifferences(1, [[{}, 1]], undefined);
   expect(ran).toBe(false);
   stream.commit(1);
   expect(ran).toBe(true);

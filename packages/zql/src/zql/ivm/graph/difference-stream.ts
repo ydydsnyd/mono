@@ -84,14 +84,14 @@ export class DifferenceStream<T extends object> {
   newDifferences(
     version: Version,
     data: Multiset<T>,
-    reply?: Reply | undefined,
+    reply: Reply | undefined,
   ) {
     for (const entry of data) {
       this.newDifference(version, entry, reply);
     }
   }
 
-  newDifference(version: Version, data: Entry<T>, reply?: Reply) {
+  newDifference(version: Version, data: Entry<T>, reply: Reply | undefined) {
     if (reply) {
       const requestors = this.#requestors.get(reply.replyingTo);
       for (const requestor of must(requestors)) {

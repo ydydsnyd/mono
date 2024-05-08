@@ -5,6 +5,7 @@ import {
 import type {Entry} from '../../multiset.js';
 import type {Version} from '../../types.js';
 import type {DifferenceStream} from '../difference-stream.js';
+import type {Reply} from '../message.js';
 import {LinearUnaryOperator} from './linear-unary-operator.js';
 
 export type AggregateOut<
@@ -31,6 +32,7 @@ class FullAggregateOperator<
     const inner = (
       version: Version,
       entry: Entry<V>,
+      reply: Reply | undefined,
       out: DifferenceStream<AggregateOut<V, AggregateResult>>,
     ): void => {
       let last: V | AggregateOut<V, AggregateResult>;
@@ -53,7 +55,7 @@ class FullAggregateOperator<
         ret = [[next, 1]] as const;
       }
       this.#lastOutput = next;
-      out.newDifferences(version, ret);
+      out.newDifferences(version, ret, reply);
     };
     super(input, output, inner);
   }

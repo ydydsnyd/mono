@@ -4,6 +4,7 @@ import {flatMapIter} from '../../../util/iterables.js';
 import type {Entry} from '../../multiset.js';
 import type {StringOrNumber, Version} from '../../types.js';
 import type {DifferenceStream} from '../difference-stream.js';
+import type {Reply} from '../message.js';
 import {UnaryOperator} from './unary-operator.js';
 
 /**
@@ -52,6 +53,7 @@ export class ReduceOperator<
     const inner = (
       version: Version,
       entry: Entry<V>,
+      reply: Reply | undefined,
       out: DifferenceStream<O>,
     ) => {
       const ret: Entry<O>[] = [];
@@ -85,7 +87,7 @@ export class ReduceOperator<
         this.#outIndex.set(key, reduction);
       }
 
-      out.newDifferences(version, ret);
+      out.newDifferences(version, ret, reply);
     };
     super(input, output, inner);
     this.#getValueIdentity = getValueIdentity;

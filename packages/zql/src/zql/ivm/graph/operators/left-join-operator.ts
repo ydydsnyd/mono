@@ -25,8 +25,13 @@ export class LeftJoinOperator<
   > = new Map();
 
   constructor(joinArgs: JoinArgs<K, AValue, BValue, AAlias, BAlias>) {
-    super(joinArgs.a, joinArgs.b, joinArgs.output, (_, inputA, inputB) =>
-      this.#join(inputA, inputB),
+    super(
+      joinArgs.a,
+      joinArgs.b,
+      joinArgs.output,
+      (version, inputA, aMsg, inputB, bMsg, out) => {
+        out.newDifferences(version, this.#join(inputA, inputB), aMsg || bMsg);
+      },
     );
     this.#indexA = new DifferenceIndex<K | undefined, AValue>(
       joinArgs.getAPrimaryKey,

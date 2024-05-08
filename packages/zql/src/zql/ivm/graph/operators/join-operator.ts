@@ -67,8 +67,8 @@ export class InnerJoinOperator<
       joinArgs.a,
       joinArgs.b,
       joinArgs.output,
-      (version, inputA, inputB, out) => {
-        out.newDifferences(version, this.#join(inputA, inputB));
+      (version, inputA, aMsg, inputB, bMsg, out) => {
+        out.newDifferences(version, this.#join(inputA, inputB), aMsg || bMsg);
       },
     );
     this.#indexA = new DifferenceIndex<K, AValue>(joinArgs.getAPrimaryKey);

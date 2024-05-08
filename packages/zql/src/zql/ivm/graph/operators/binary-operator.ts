@@ -1,7 +1,7 @@
 import type {Entry} from '../../multiset.js';
 import type {Version} from '../../types.js';
 import type {DifferenceStream, Listener} from '../difference-stream.js';
-import type {Request} from '../message.js';
+import type {Reply, Request} from '../message.js';
 import {OperatorBase} from './operator.js';
 
 export class BinaryOperator<
@@ -21,22 +21,24 @@ export class BinaryOperator<
     fn: (
       v: Version,
       inputA: Entry<I1> | undefined,
+      aMsg: Reply | undefined,
       inputB: Entry<I2> | undefined,
+      bMsg: Reply | undefined,
       out: DifferenceStream<O>,
     ) => void,
   ) {
     super(output);
     this.#listener1 = {
-      newDifference: (version, data) => {
-        fn(version, data, undefined, output);
+      newDifference: (version, data, reply) => {
+        fn(version, data, reply, undefined, undefined, output);
       },
       commit: version => {
         this.commit(version);
       },
     };
     this.#listener2 = {
-      newDifference: (version, data) => {
-        fn(version, undefined, data, output);
+      newDifference: (version, data, reply) => {
+        fn(version, undefined, undefined, data, reply, output);
       },
       commit: version => {
         this.commit(version);
