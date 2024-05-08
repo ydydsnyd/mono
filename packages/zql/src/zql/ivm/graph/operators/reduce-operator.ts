@@ -5,7 +5,7 @@ import type {Entry} from '../../multiset.js';
 import type {StringOrNumber, Version} from '../../types.js';
 import type {DifferenceStream} from '../difference-stream.js';
 import type {Reply} from '../message.js';
-import {UnaryOperator} from './unary-operator.js';
+import {UnaryOperatorWithBatching} from './unary-operator.js';
 
 /**
  * Applies a `reduce` function against a stream of values.
@@ -23,7 +23,7 @@ export class ReduceOperator<
   K extends Primitive,
   V extends object,
   O extends object = V,
-> extends UnaryOperator<V, O> {
+> extends UnaryOperatorWithBatching<V, O> {
   /**
    * The set of all values that have been seen for a given key.
    *
@@ -52,23 +52,26 @@ export class ReduceOperator<
   ) {
     const inner = (
       version: Version,
-      entry: Entry<V>,
+      data: Entry<V>[],
       reply: Reply | undefined,
       out: DifferenceStream<O>,
     ) => {
       const ret: Entry<O>[] = [];
-      const key = getGroupKey(entry[0]);
-      this.#addToIndex(key, entry[0], entry[1]);
+      for (const entry of data) {
+        const key = getGroupKey(entry[0]);
+        this.#addToIndex(key, entry[0], entry[1]);
 
-      const dataIn = this.#inIndex.get(key);
-      const existingOut = this.#outIndex.get(key);
-      if (dataIn === undefined) {
-        if (existingOut !== undefined) {
-          // retract the reduction
-          this.#outIndex.delete(key);
-          ret.push([existingOut, -1]);
+        const dataIn = this.#inIndex.get(key);
+        const existingOut = this.#outIndex.get(key);
+        if (dataIn === undefined) {
+          if (existingOut !== undefined) {
+            // retract the reduction
+            this.#outIndex.delete(key);
+            ret.push([existingOut, -1]);
+          }
+          continue;
         }
-      } else {
+
         const reduction = f(
           flatMapIter(
             () => dataIn.values(),

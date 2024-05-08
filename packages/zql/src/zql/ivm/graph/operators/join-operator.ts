@@ -2,7 +2,7 @@ import type {Primitive} from '../../../ast/ast.js';
 import type {Entry} from '../../multiset.js';
 import type {JoinResult, StringOrNumber} from '../../types.js';
 import type {DifferenceStream} from '../difference-stream.js';
-import {BinaryOperator} from './binary-operator.js';
+import {BinaryOperatorWithBatching} from './binary-operator.js';
 import {DifferenceIndex, joinType} from './difference-index.js';
 
 export type JoinArgs<
@@ -50,7 +50,7 @@ export class InnerJoinOperator<
   BValue extends object,
   AAlias extends string | undefined,
   BAlias extends string | undefined,
-> extends BinaryOperator<
+> extends BinaryOperatorWithBatching<
   AValue,
   BValue,
   // If AValue or BValue are join results
@@ -76,7 +76,10 @@ export class InnerJoinOperator<
     this.#joinArgs = joinArgs;
   }
 
-  #join(inputA: Entry<AValue> | undefined, inputB: Entry<BValue> | undefined) {
+  #join(
+    inputA: Entry<AValue>[] | undefined,
+    inputB: Entry<BValue>[] | undefined,
+  ) {
     const {aAs, getAJoinKey, getAPrimaryKey, bAs, getBJoinKey, getBPrimaryKey} =
       this.#joinArgs;
     const aKeysForCompaction = new Set<K>();
@@ -84,19 +87,19 @@ export class InnerJoinOperator<
 
     // TODO: `deltaA` is only ever a single value now. re-write to not use `DifferenceIndex` for deltaA / deltaB
     const deltaA = new DifferenceIndex<K, AValue>(getAPrimaryKey);
-    if (inputA !== undefined) {
-      const aKey = getAJoinKey(inputA[0]);
+    for (const entry of inputA || []) {
+      const aKey = getAJoinKey(entry[0]);
       if (aKey !== undefined) {
-        deltaA.add(aKey, inputA);
+        deltaA.add(aKey, entry);
         aKeysForCompaction.add(aKey);
       }
     }
 
     const deltaB = new DifferenceIndex<K, BValue>(getBPrimaryKey);
-    if (inputB !== undefined) {
-      const bKey = getBJoinKey(inputB[0]);
+    for (const entry of inputB || []) {
+      const bKey = getBJoinKey(entry[0]);
       if (bKey !== undefined) {
-        deltaB.add(bKey, inputB);
+        deltaB.add(bKey, entry);
         bKeysForCompaction.add(bKey);
       }
     }
