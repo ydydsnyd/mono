@@ -19,11 +19,12 @@ import {
   FullSumOperator,
 } from './operators/full-agg-operators.js';
 import {LeftJoinOperator} from './operators/left-join-operator.js';
-import {InnerJoinOperator, JoinArgs} from './operators/join-operator.js';
+import {InnerJoinOperator} from './operators/join-operator.js';
 import {MapOperator} from './operators/map-operator.js';
 import type {Operator} from './operators/operator.js';
 import {ReduceOperator} from './operators/reduce-operator.js';
 import {must} from 'shared/src/must.js';
+import type {JoinArgs} from './operators/join-operator-base.js';
 
 export type Listener<T> = {
   newDifference: (

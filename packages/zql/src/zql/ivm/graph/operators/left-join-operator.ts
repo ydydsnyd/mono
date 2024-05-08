@@ -3,7 +3,7 @@ import type {Entry, Multiset} from '../../multiset.js';
 import {isJoinResult, JoinResult, StringOrNumber} from '../../types.js';
 import {BinaryOperator} from './binary-operator.js';
 import {DifferenceIndex, joinType} from './difference-index.js';
-import type {JoinArgs} from './join-operator.js';
+import type {JoinArgs} from './join-operator-base.js';
 
 export class LeftJoinOperator<
   K extends Primitive,

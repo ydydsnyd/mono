@@ -2,29 +2,9 @@ import {assert} from 'shared/src/asserts.js';
 import type {Primitive} from '../../../ast/ast.js';
 import {genFlatMap} from '../../../util/iterables.js';
 import type {Entry, Multiset} from '../../multiset.js';
-import type {JoinResult, StringOrNumber, Version} from '../../types.js';
-import type {DifferenceStream} from '../difference-stream.js';
-import type {Reply} from '../message.js';
+import type {JoinResult, Version} from '../../types.js';
 import {DifferenceIndex, joinType} from './difference-index.js';
 import {JoinOperatorBase} from './join-operator-base.js';
-
-export type JoinArgs<
-  Key extends Primitive,
-  AValue extends object,
-  BValue extends object,
-  AAlias extends string | undefined,
-  BAlias extends string | undefined,
-> = {
-  a: DifferenceStream<AValue>;
-  aAs: AAlias | undefined;
-  getAJoinKey: (value: AValue) => Key | undefined;
-  getAPrimaryKey: (value: AValue) => StringOrNumber;
-  b: DifferenceStream<BValue>;
-  bAs: BAlias | undefined;
-  getBJoinKey: (value: BValue) => Key | undefined;
-  getBPrimaryKey: (value: BValue) => StringOrNumber;
-  output: DifferenceStream<JoinResult<AValue, BValue, AAlias, BAlias>>;
-};
 
 /**
  * Joins two streams.
@@ -139,16 +119,19 @@ export class InnerJoinOperator<
     assert(inputA !== undefined, 'inputA must be defined');
     assert(inputB !== undefined, 'inputB must be defined');
 
-    this.#buffer.aMsg = undefined;
-    this.#buffer.bMsg = undefined;
-    this.#buffer.inputA = undefined;
-    this.#buffer.inputB = undefined;
+    this._buffer.aMsg = undefined;
+    this._buffer.bMsg = undefined;
+    this._buffer.inputA = undefined;
+    this._buffer.inputB = undefined;
 
     // TODO(mlaw): consult the messages to determine
     // who goes in the outer loop. We'll just make it A for now.
 
     // Build the `B` index
-    this.#runJoin(version, undefined, inputB);
+    this._runJoin(version, undefined, inputB);
+
+    // TODO(mlaw): if there is no limit, might as well not do the lazy join. Right?
+    // since we'll process the entire set in that case.
 
     // Now do the join, lazily.
     // This allows the downstream to stop pulling values once it has hit
@@ -158,97 +141,83 @@ export class InnerJoinOperator<
       () => inputA,
       a => {
         wrapper[0] = a;
-        return this.#runJoin(version, wrapper, undefined);
+        return this._runJoin(version, wrapper, undefined);
       },
     );
   }
 
-  readonly #aKeysForCompaction = new Set<K>();
-  readonly #bKeysForCompaction = new Set<K>();
-  #lastVersion = -1;
-  readonly #deltaAIndex;
-  readonly #deltaBIndex;
-
-  #runJoin(
-    version: Version,
+  // TODO(mlaw): this'll often be called with inputs of length 1.
+  // We should re-write to handle that case / re-write so all calls always pass
+  // a single entry.
+  protected _runJoinImpl(
+    _version: Version,
     inputA: Multiset<AValue> | undefined,
     inputB: Multiset<BValue> | undefined,
   ) {
-    this.#deltaAIndex.clear();
-    this.#deltaBIndex.clear();
-
-    if (version !== this.#lastVersion) {
-      this.#lastVersion = version;
-      this.#indexA.compact(this.#aKeysForCompaction);
-      this.#indexB.compact(this.#bKeysForCompaction);
-
-      this.#aKeysForCompaction.clear();
-      this.#bKeysForCompaction.clear();
-    }
-    const aKeysForCompaction = this.#aKeysForCompaction;
-    const bKeysForCompaction = this.#bKeysForCompaction;
-    const deltaA = this.#deltaAIndex;
-    const deltaB = this.#deltaBIndex;
+    const aKeysForCompaction = this._aKeysForCompaction;
+    const bKeysForCompaction = this._bKeysForCompaction;
+    const deltaA = this._deltaAIndex;
+    const deltaB = this._deltaBIndex;
 
     const {aAs, getAJoinKey, getAPrimaryKey, bAs, getBJoinKey, getBPrimaryKey} =
-      this.#joinArgs;
+      this._joinArgs;
 
-    // TODO: concat the two iterables rather than pushing onto result
     const result: Entry<JoinResult<AValue, BValue, AAlias, BAlias>>[] = [];
-    if (!this.#indexB.isEmpty()) {
-      this.#updateIndex(
+    if (!this._indexB.isEmpty()) {
+      this._updateIndex(
         inputA,
         getAJoinKey,
         deltaA,
-        this.#indexA,
+        this._indexA,
         aKeysForCompaction,
       );
 
+      // TODO: concat the two iterables rather than pushing onto result
       for (const x of deltaA.join(
         joinType.inner,
         aAs,
-        this.#indexB,
+        this._indexB,
         bAs,
         getBPrimaryKey,
       )[0]) {
         result.push(x);
       }
-      this.#indexA.extend(deltaA);
+      this._indexA.extend(deltaA);
     } else {
-      this.#updateIndex(
+      this._updateIndex(
         inputA,
         getAJoinKey,
-        this.#indexA,
-        this.#indexA,
+        this._indexA,
+        this._indexA,
         aKeysForCompaction,
       );
     }
 
-    if (!this.#indexA.isEmpty()) {
-      this.#updateIndex(
+    if (!this._indexA.isEmpty()) {
+      this._updateIndex(
         inputB,
         getBJoinKey,
         deltaB,
-        this.#indexB,
+        this._indexB,
         bKeysForCompaction,
       );
 
       for (const x of deltaB.join(
         joinType.inner,
         bAs,
-        this.#indexA,
+        this._indexA,
         aAs,
         getAPrimaryKey,
       )[0]) {
         result.push(x);
       }
-      this.#indexB.extend(deltaB);
+      this._indexB.extend(deltaB);
     } else {
-      this.#updateIndex(
+      this._updateIndex(
         inputB,
         getBJoinKey,
-        this.#indexB,
-        this.#indexB,
+        this._indexB,
+        this._indexB,
         bKeysForCompaction,
       );
     }
@@ -256,7 +225,7 @@ export class InnerJoinOperator<
     return result;
   }
 
-  #updateIndex<V>(
+  protected _updateIndex<V>(
     input: Multiset<V> | undefined,
     getJoinKey: (value: V) => K | undefined,
     indexToUpdate: DifferenceIndex<K, V>,
@@ -273,23 +242,5 @@ export class InnerJoinOperator<
         keysToCompact.add(key);
       }
     }
-  }
-
-  #bufferA(inputA: Multiset<AValue> | undefined, aMsg: Reply) {
-    assert(inputA !== undefined, 'inputA must be defined');
-    assert(this.#buffer.inputA === undefined, 'a must not already be buffered');
-    this.#buffer.aMsg = aMsg;
-    this.#buffer.inputA = inputA;
-  }
-
-  #bufferB(inputB: Multiset<BValue> | undefined, bMsg: Reply) {
-    assert(inputB !== undefined, 'inputB must be defined');
-    assert(this.#buffer.inputB === undefined, 'b must not already be buffered');
-    this.#buffer.bMsg = bMsg;
-    this.#buffer.inputB = inputB;
-  }
-
-  toString() {
-    return `indexa: ${this.#indexA.toString()}\n\n\nindexb: ${this.#indexB.toString()}`;
   }
 }
