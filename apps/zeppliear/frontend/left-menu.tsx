@@ -7,7 +7,7 @@ import {useClickOutside} from './hooks/use-click-outside';
 import classnames from 'classnames';
 import SearchBox from './searchbox';
 import IssueModal from './issue-modal';
-import ReactLogo from './assets/images/logo.svg';
+import RocinanteLogo from './assets/images/rocinante-logo.svg';
 import type {IssueCreationPartial} from './issue';
 import {queryTypes, useQueryState, useQueryStates} from 'next-usequerystate';
 import AboutModal from './about-modal';
@@ -70,9 +70,9 @@ function LeftMenu({menuVisible, onCloseMenu = noop, onCreateIssue}: Props) {
               }}
             >
               <div className="w-8 text-white">
-                <ReactLogo />
+                <RocinanteLogo />
               </div>
-              <div className="text-sm font-medium">React</div>
+              <div className="text-sm font-large px-8">Rocinante</div>
             </div>
           </div>
 
