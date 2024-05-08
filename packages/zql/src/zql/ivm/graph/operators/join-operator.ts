@@ -132,6 +132,10 @@ export class InnerJoinOperator<
 
     // TODO(mlaw): if there is no limit, might as well not do the lazy join. Right?
     // since we'll process the entire set in that case.
+    // TODO(mlaw): pass back a different `reply` if we find that we are unable to
+    // respect ordering(s)
+    // TODO(mlaw): take control of the `reply` object from `BinaryOperator`. We should only
+    // forward the outer loop's message.
 
     // Now do the join, lazily.
     // This allows the downstream to stop pulling values once it has hit
