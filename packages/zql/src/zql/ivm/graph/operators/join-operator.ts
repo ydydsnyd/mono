@@ -1,5 +1,5 @@
 import type {Primitive} from '../../../ast/ast.js';
-import type {Entry, Multiset} from '../../multiset.js';
+import type {Entry} from '../../multiset.js';
 import type {JoinResult, StringOrNumber} from '../../types.js';
 import type {DifferenceStream} from '../difference-stream.js';
 import {BinaryOperator} from './binary-operator.js';
@@ -63,40 +63,42 @@ export class InnerJoinOperator<
   readonly #joinArgs;
 
   constructor(joinArgs: JoinArgs<K, AValue, BValue, AAlias, BAlias>) {
-    super(joinArgs.a, joinArgs.b, joinArgs.output, (_, inputA, inputB) =>
-      this.#join(inputA, inputB),
+    super(
+      joinArgs.a,
+      joinArgs.b,
+      joinArgs.output,
+      (version, inputA, inputB, out) => {
+        out.newDifferences(version, this.#join(inputA, inputB));
+      },
     );
     this.#indexA = new DifferenceIndex<K, AValue>(joinArgs.getAPrimaryKey);
     this.#indexB = new DifferenceIndex<K, BValue>(joinArgs.getBPrimaryKey);
     this.#joinArgs = joinArgs;
   }
 
-  #join(
-    inputA: Multiset<AValue> | undefined,
-    inputB: Multiset<BValue> | undefined,
-  ) {
+  #join(inputA: Entry<AValue> | undefined, inputB: Entry<BValue> | undefined) {
     const {aAs, getAJoinKey, getAPrimaryKey, bAs, getBJoinKey, getBPrimaryKey} =
       this.#joinArgs;
     const aKeysForCompaction = new Set<K>();
     const bKeysForCompaction = new Set<K>();
+
+    // TODO: `deltaA` is only ever a single value now. re-write to not use `DifferenceIndex` for deltaA / deltaB
     const deltaA = new DifferenceIndex<K, AValue>(getAPrimaryKey);
-    for (const entry of inputA || []) {
-      const aKey = getAJoinKey(entry[0]);
-      if (aKey === undefined) {
-        continue;
+    if (inputA !== undefined) {
+      const aKey = getAJoinKey(inputA[0]);
+      if (aKey !== undefined) {
+        deltaA.add(aKey, inputA);
+        aKeysForCompaction.add(aKey);
       }
-      deltaA.add(aKey, entry);
-      aKeysForCompaction.add(aKey);
     }
 
     const deltaB = new DifferenceIndex<K, BValue>(getBPrimaryKey);
-    for (const entry of inputB || []) {
-      const bKey = getBJoinKey(entry[0]);
-      if (bKey === undefined) {
-        continue;
+    if (inputB !== undefined) {
+      const bKey = getBJoinKey(inputB[0]);
+      if (bKey !== undefined) {
+        deltaB.add(bKey, inputB);
+        bKeysForCompaction.add(bKey);
       }
-      deltaB.add(bKey, entry);
-      bKeysForCompaction.add(bKey);
     }
 
     const result: Entry<JoinResult<AValue, BValue, AAlias, BAlias>>[] = [];

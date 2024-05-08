@@ -1,7 +1,7 @@
 import {assert} from 'shared/src/asserts.js';
 import type {Entity} from '../../../entity.js';
 import type {Primitive} from '../../ast/ast.js';
-import type {Multiset} from '../multiset.js';
+import type {Entry, Multiset} from '../multiset.js';
 import type {JoinResult, StringOrNumber, Version} from '../types.js';
 import type {Reply, Request} from './message.js';
 import {ConcatOperator} from './operators/concat-operator.js';
@@ -28,7 +28,7 @@ import {must} from 'shared/src/must.js';
 export type Listener<T> = {
   newDifference: (
     version: Version,
-    multiset: Multiset<T>,
+    entry: Entry<T>,
     reply?: Reply | undefined,
   ) => void;
   commit: (version: Version) => void;
@@ -81,11 +81,17 @@ export class DifferenceStream<T extends object> {
     return this;
   }
 
-  newDifference(
+  newDifferences(
     version: Version,
     data: Multiset<T>,
     reply?: Reply | undefined,
   ) {
+    for (const entry of data) {
+      this.newDifference(version, entry, reply);
+    }
+  }
+
+  newDifference(version: Version, data: Entry<T>, reply?: Reply) {
     if (reply) {
       const requestors = this.#requestors.get(reply.replyingTo);
       for (const requestor of must(requestors)) {
@@ -246,7 +252,7 @@ export class DifferenceStream<T extends object> {
     return stream;
   }
 
-  debug(onMessage: (v: Version, data: Multiset<T>) => void) {
+  debug(onMessage: (v: Version, data: Entry<T>) => void) {
     const stream = new DifferenceStream<T>();
     stream.setUpstream(new DebugOperator(this, stream, onMessage));
     return stream;

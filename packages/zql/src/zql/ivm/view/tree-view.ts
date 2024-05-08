@@ -8,7 +8,7 @@ import type {Ordering} from '../../ast/ast.js';
 import type {Context} from '../../context/context.js';
 import type {DifferenceStream} from '../graph/difference-stream.js';
 import {createPullMessage} from '../graph/message.js';
-import type {Multiset} from '../multiset.js';
+import type {Entry} from '../multiset.js';
 import {AbstractView} from './abstract-view.js';
 
 /**
@@ -62,7 +62,7 @@ export class MutableTreeView<T extends object> extends AbstractView<T, T[]> {
     return this.#jsSlice;
   }
 
-  protected _newDifference(data: Multiset<T>): boolean {
+  protected _newDifference(data: Entry<T>): boolean {
     let needsUpdate = false || this.hydrated === false;
 
     let newData = this.#data;
@@ -80,13 +80,10 @@ export class MutableTreeView<T extends object> extends AbstractView<T, T[]> {
   }
 
   #sink(
-    c: Multiset<T>,
+    entry: Entry<T>,
     data: ITree<T>,
     needsUpdate: boolean,
   ): [boolean, ITree<T>] {
-    const iterator = c[Symbol.iterator]();
-    let next;
-
     const process = (value: T, mult: number) => {
       if (mult > 0) {
         needsUpdate = true;
@@ -98,30 +95,9 @@ export class MutableTreeView<T extends object> extends AbstractView<T, T[]> {
     };
 
     // TODO: process with a limit if we have a limit and we're in source order.
-    while (!(next = iterator.next()).done) {
-      const [value, mult] = next.value;
-
-      const nextNext = iterator.next();
-      if (!nextNext.done) {
-        const [nextValue, nextMult] = nextNext.value;
-        if (
-          Math.abs(mult) === 1 &&
-          mult === -nextMult &&
-          this.#comparator(nextValue, value) === 0
-        ) {
-          needsUpdate = true;
-          // The tree doesn't allow dupes -- so this is a replace.
-          data = data.add(nextMult > 0 ? nextValue : value);
-          continue;
-        }
-      }
-
-      process(value, mult);
-      if (!nextNext.done) {
-        const [value, mult] = nextNext.value;
-        process(value, mult);
-      }
-    }
+    // we'd push back on `reply` by saying `done` if we're at limit.
+    const [value, mult] = entry;
+    process(value, mult);
 
     return [needsUpdate, data];
   }

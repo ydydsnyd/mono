@@ -98,14 +98,14 @@ export abstract class SetSource<T extends object> implements Source<T> {
 
   add(v: T): this {
     this.#tree = this.#tree.add(v);
-    this.#stream.newDifference(this._materialite.getVersion(), [[v, 1]]);
+    this.#stream.newDifferences(this._materialite.getVersion(), [[v, 1]]);
     this._materialite.addDirtySource(this.#internal);
     return this;
   }
 
   delete(v: T): this {
     this.#tree = this.#tree.delete(v);
-    this.#stream.newDifference(this._materialite.getVersion(), [[v, -1]]);
+    this.#stream.newDifferences(this._materialite.getVersion(), [[v, -1]]);
     this._materialite.addDirtySource(this.#internal);
     return this;
   }
@@ -162,7 +162,7 @@ export abstract class SetSource<T extends object> implements Source<T> {
   }
 
   #sendHistoryTo(request: PullMsg) {
-    this.#stream.newDifference(
+    this.#stream.newDifferences(
       this._materialite.getVersion(),
       asEntries(this.#tree, request),
       createPullResponseMessage(request),

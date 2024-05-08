@@ -44,7 +44,7 @@ test('collects all things with the same key', () => {
     items.push([e, m]);
   });
 
-  input.newDifference(1, [
+  input.newDifferences(1, [
     [
       {
         id: 'a',
@@ -65,7 +65,7 @@ test('collects all things with the same key', () => {
   check([[{id: 'x', sum: 5}, 1]]);
 
   // retract an item
-  input.newDifference(1, [
+  input.newDifferences(1, [
     [
       {
         id: 'a',
@@ -81,7 +81,7 @@ test('collects all things with the same key', () => {
   ]);
 
   // fully retract items that constitute a grouping
-  input.newDifference(1, [
+  input.newDifferences(1, [
     [
       {
         id: 'b',
@@ -94,7 +94,7 @@ test('collects all things with the same key', () => {
   check([[{id: 'x', sum: 4}, -1]]);
 
   // add more entries
-  input.newDifference(1, [
+  input.newDifferences(1, [
     [
       {
         id: 'a',
@@ -105,7 +105,7 @@ test('collects all things with the same key', () => {
     ],
   ]);
   check([[{id: 'c', sum: 1}, 1]]);
-  input.newDifference(1, [
+  input.newDifferences(1, [
     [
       {
         id: 'b',
@@ -120,7 +120,7 @@ test('collects all things with the same key', () => {
     [{id: 'c', sum: 3}, 1],
   ]);
 
-  input.newDifference(1, [
+  input.newDifferences(1, [
     [
       {
         id: 'a',

@@ -1,5 +1,5 @@
 import {expect, test} from 'vitest';
-import type {Multiset} from '../../multiset.js';
+import type {Entry} from '../../multiset.js';
 import {DifferenceStream, concat} from '../difference-stream.js';
 
 test('All branches notify', () => {
@@ -13,13 +13,13 @@ test('All branches notify', () => {
 
   let version = 1;
 
-  const items: Multiset<T>[] = [];
+  const items: Entry<T>[] = [];
   output.debug((v, d) => {
     expect(v).toBe(version);
     items.push(d);
   });
 
-  inputs[0].newDifference(version, [
+  inputs[0].newDifferences(version, [
     [{x: 1}, 1],
     [{x: 2}, 2],
   ]);
@@ -35,9 +35,9 @@ test('All branches notify', () => {
   items.length = 0;
   version++;
 
-  inputs[0].newDifference(version, [[{x: 0}, 1]]);
-  inputs[1].newDifference(version, [[{x: 1}, 1]]);
-  inputs[2].newDifference(version, [[{x: 2}, 2]]);
+  inputs[0].newDifferences(version, [[{x: 0}, 1]]);
+  inputs[1].newDifferences(version, [[{x: 1}, 1]]);
+  inputs[2].newDifferences(version, [[{x: 2}, 2]]);
   inputs[0].commit(version);
   inputs[1].commit(version);
   inputs[2].commit(version);
@@ -52,13 +52,13 @@ test('Test with single input', () => {
 
   const version = 1;
 
-  const items: Multiset<T>[] = [];
+  const items: Entry<T>[] = [];
   output.debug((v, d) => {
     expect(v).toBe(version);
     items.push(d);
   });
 
-  input.newDifference(version, [
+  input.newDifferences(version, [
     [{x: 1}, 1],
     [{x: 2}, 2],
   ]);

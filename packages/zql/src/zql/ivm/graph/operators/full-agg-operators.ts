@@ -2,7 +2,8 @@ import {
   getValueFromEntity,
   selectorToQualifiedColumn,
 } from '../../../ast-to-ivm/pipeline-builder.js';
-import type {Multiset} from '../../multiset.js';
+import type {Entry} from '../../multiset.js';
+import type {Version} from '../../types.js';
 import type {DifferenceStream} from '../difference-stream.js';
 import {LinearUnaryOperator} from './linear-unary-operator.js';
 
@@ -23,27 +24,24 @@ class FullAggregateOperator<
     input: DifferenceStream<V>,
     output: DifferenceStream<AggregateOut<V, AggregateResult>>,
     fn: (
-      collection: Multiset<V>,
+      entry: Entry<V>,
       last: AggregateOut<V, AggregateResult> | V,
     ) => AggregateOut<V, AggregateResult>,
   ) {
     const inner = (
-      collection: Multiset<V>,
-    ): Multiset<AggregateOut<V, AggregateResult>> => {
+      version: Version,
+      entry: Entry<V>,
+      out: DifferenceStream<AggregateOut<V, AggregateResult>>,
+    ): void => {
       let last: V | AggregateOut<V, AggregateResult>;
       if (this.#lastOutput === undefined) {
-        const iter = collection[Symbol.iterator]();
-        const first = iter.next().value;
-        if (!first) {
-          return [];
-        }
         last = {
-          ...first[0],
+          ...entry[0],
         };
       } else {
         last = this.#lastOutput;
       }
-      const next = fn(collection, last);
+      const next = fn(entry, last);
 
       let ret;
       if (this.#lastOutput !== undefined) {
@@ -55,7 +53,7 @@ class FullAggregateOperator<
         ret = [[next, 1]] as const;
       }
       this.#lastOutput = next;
-      return ret;
+      out.newDifferences(version, ret);
     };
     super(input, output, inner);
   }
@@ -76,12 +74,12 @@ export class FullCountOperator<
       input,
       output,
       (
-        collection: Multiset<V>,
+        entry: Entry<V>,
         last: AggregateOut<V, [[Alias, number]]> | V,
       ): AggregateOut<V, [[Alias, number]]> => {
-        for (const entry of collection) {
-          this.#count += entry[1];
-        }
+        this.#count += entry[1];
+        // TODO: can we skip the spreading?
+        // its the same row if last has not changed... you could update count in place theoretically.
         return {
           ...(last as AggregateOut<V, [[Alias, number]]>),
           [alias]: this.#count,
@@ -109,19 +107,17 @@ export class FullAvgOperator<
       input,
       output,
       (
-        collection: Multiset<V>,
+        entry: Entry<V>,
         last: AggregateOut<V, [[Alias, number]]> | V,
       ): AggregateOut<V, [[Alias, number]]> => {
         let numElements = 0;
         let sum = 0;
-        for (const entry of collection) {
-          numElements += entry[1];
-          sum +=
-            (getValueFromEntity(
-              entry[0] as Record<string, unknown>,
-              qualifiedColumn,
-            ) as number) * entry[1];
-        }
+        numElements += entry[1];
+        sum +=
+          (getValueFromEntity(
+            entry[0] as Record<string, unknown>,
+            qualifiedColumn,
+          ) as number) * entry[1];
 
         if (this.#numElements + numElements === 0) {
           this.#avg = 0;
@@ -158,17 +154,16 @@ export class FullSumOperator<
       input,
       output,
       (
-        collection: Multiset<V>,
+        entry: Entry<V>,
         last: AggregateOut<V, [[Alias, number]]> | V,
       ): AggregateOut<V, [[Alias, number]]> => {
-        for (const entry of collection) {
-          this.#sum +=
-            (getValueFromEntity(
-              entry[0] as Record<string, unknown>,
-              qualifiedColumn,
-            ) as number) * entry[1];
-        }
+        this.#sum +=
+          (getValueFromEntity(
+            entry[0] as Record<string, unknown>,
+            qualifiedColumn,
+          ) as number) * entry[1];
 
+        // TODO: maybe mutate in place? Dangerous but should be safe in this context.
         return {
           ...(last as AggregateOut<V, [[Alias, number]]>),
           [alias]: this.#sum,

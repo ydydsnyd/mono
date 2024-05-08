@@ -1,5 +1,5 @@
 import {expect, test} from 'vitest';
-import type {Entry, Multiset} from '../../multiset.js';
+import type {Entry} from '../../multiset.js';
 import {DifferenceStream} from '../difference-stream.js';
 
 test('distinct', () => {
@@ -10,13 +10,13 @@ test('distinct', () => {
   const output = input.distinct();
   let version = 1;
 
-  const items: Multiset<T>[] = [];
+  const items: Entry<T>[] = [];
   output.debug((v, d) => {
     expect(v).toBe(version);
     items.push(d);
   });
 
-  input.newDifference(version, [
+  input.newDifferences(version, [
     [{id: 'a'}, 1],
     [{id: 'b'}, 2],
     [{id: 'a'}, -1],
@@ -33,28 +33,28 @@ test('distinct', () => {
 
   version++;
   items.length = 0;
-  input.newDifference(version, [[{id: 'b'}, -2]]);
+  input.newDifferences(version, [[{id: 'b'}, -2]]);
   input.commit(version);
   expect(items).toEqual([[[{id: 'b'}, -1]]]);
 
   version++;
   items.length = 0;
-  input.newDifference(version, [[{id: 'd'}, -1]]);
-  input.newDifference(version, [[{id: 'd'}, 1]]);
+  input.newDifferences(version, [[{id: 'd'}, -1]]);
+  input.newDifferences(version, [[{id: 'd'}, 1]]);
   input.commit(version);
   expect(items).toEqual([[[{id: 'd'}, -1]], [[{id: 'd'}, 1]]]);
 
   version++;
   items.length = 0;
-  input.newDifference(version, [[{id: 'e'}, -1]]);
-  input.newDifference(version, [[{id: 'e'}, 5]]);
+  input.newDifferences(version, [[{id: 'e'}, -1]]);
+  input.newDifferences(version, [[{id: 'e'}, 5]]);
   input.commit(version);
   expect(items).toEqual([[[{id: 'e'}, -1]], [[{id: 'e'}, 2]]]);
 
   version++;
   items.length = 0;
-  input.newDifference(version, [[{id: 'e'}, 5]]);
-  input.newDifference(version, [[{id: 'e'}, -6]]);
+  input.newDifferences(version, [[{id: 'e'}, 5]]);
+  input.newDifferences(version, [[{id: 'e'}, -6]]);
   input.commit(version);
   expect(items).toEqual([[[{id: 'e'}, 1]], [[{id: 'e'}, -2]]]);
 });
@@ -70,7 +70,7 @@ test('distinct all', () => {
     items.push([item, mult]);
   });
 
-  input.newDifference(version, [
+  input.newDifferences(version, [
     [{id: 'a'}, 1],
     [{id: 'b'}, 2],
     [{id: 'a'}, -1],
@@ -85,7 +85,7 @@ test('distinct all', () => {
   ]);
 
   // output b and negative c
-  input.newDifference(version, [
+  input.newDifferences(version, [
     [{id: 'b'}, 1],
     [{id: 'c'}, -1],
   ]);
@@ -93,22 +93,22 @@ test('distinct all', () => {
   check([]);
 
   // move c to positive
-  input.newDifference(version, [[{id: 'c'}, 6]]);
+  input.newDifferences(version, [[{id: 'c'}, 6]]);
   input.commit(version);
   check([[{id: 'c'}, 1]]);
 
   // bring back a
-  input.newDifference(version, [[{id: 'a'}, 1]]);
+  input.newDifferences(version, [[{id: 'a'}, 1]]);
   input.commit(version);
   check([[{id: 'a'}, 1]]);
 
   // delete b fully
-  input.newDifference(version, [[{id: 'b'}, -3]]);
+  input.newDifferences(version, [[{id: 'b'}, -3]]);
   input.commit(version);
   check([[{id: 'b'}, -1]]);
 
   // more a and b. should be ignored.
-  input.newDifference(version, [
+  input.newDifferences(version, [
     [{id: 'a'}, 1],
     [{id: 'b'}, -1],
   ]);

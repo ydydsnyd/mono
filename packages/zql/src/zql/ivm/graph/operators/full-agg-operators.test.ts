@@ -10,7 +10,7 @@ test('count', () => {
   });
 
   // does not count things that do not exist
-  input.newDifference(1, [
+  input.newDifferences(1, [
     [
       {
         x: 'foo',
@@ -21,7 +21,7 @@ test('count', () => {
   check(1, [[{x: 'foo', count: 0}, 1]]);
 
   // counts multiplicity of 1
-  input.newDifference(2, [
+  input.newDifferences(2, [
     [
       {
         x: 'foo',
@@ -35,7 +35,7 @@ test('count', () => {
   ]);
 
   // decrements if an item is removed
-  input.newDifference(3, [
+  input.newDifferences(3, [
     [
       {
         x: 'foo',
@@ -49,7 +49,7 @@ test('count', () => {
   ]);
 
   // double counts doubly present items
-  input.newDifference(4, [
+  input.newDifferences(4, [
     [
       {
         x: 'foo',
@@ -81,7 +81,7 @@ test('average', () => {
   });
 
   // does not avg things that do not exist
-  input.newDifference(1, [
+  input.newDifferences(1, [
     [
       {
         x: 1,
@@ -92,7 +92,7 @@ test('average', () => {
   check(1, [[{x: 0}, 1]]);
 
   // averages things that exist
-  input.newDifference(1, [
+  input.newDifferences(1, [
     [
       {
         x: 1,
@@ -118,7 +118,7 @@ test('average', () => {
   ]);
 
   // updates the average when new items enter
-  input.newDifference(1, [
+  input.newDifferences(1, [
     [
       {
         x: 4,
@@ -138,7 +138,7 @@ test('average', () => {
   ]);
 
   // updates the average when items leave
-  input.newDifference(1, [
+  input.newDifferences(1, [
     [
       {
         x: 4,
@@ -173,7 +173,7 @@ test('sum', () => {
   });
 
   // does not sum things that do not exist
-  input.newDifference(1, [
+  input.newDifferences(1, [
     [
       {
         x: 1,
@@ -184,7 +184,7 @@ test('sum', () => {
   check(1, [[{x: 0}, 1]]);
 
   // sums things that exist
-  input.newDifference(1, [
+  input.newDifferences(1, [
     [
       {
         x: 1,
@@ -210,7 +210,7 @@ test('sum', () => {
   ]);
 
   // updates the sum when new items enter
-  input.newDifference(1, [
+  input.newDifferences(1, [
     [
       {
         x: 4,
@@ -230,7 +230,7 @@ test('sum', () => {
   ]);
 
   // updates the sum when items leave
-  input.newDifference(1, [
+  input.newDifferences(1, [
     [
       {
         x: 4,

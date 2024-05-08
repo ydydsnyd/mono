@@ -1,5 +1,5 @@
 import {expect, test} from 'vitest';
-import type {Multiset} from '../../multiset.js';
+import type {Entry} from '../../multiset.js';
 import {DifferenceStream} from '../difference-stream.js';
 
 type E = {id: number};
@@ -10,12 +10,12 @@ test('lazy', () => {
     called = true;
     return x;
   });
-  const items: Multiset<E>[] = [];
+  const items: Entry<E>[] = [];
   output.debug((_, d) => {
     items.push(d);
   });
 
-  input.newDifference(1, [
+  input.newDifferences(1, [
     [{id: 1}, 1],
     [{id: 2}, 2],
     [{id: 1}, -1],
@@ -43,7 +43,7 @@ test('applies to rows', () => {
     items.push([e, m]);
   });
 
-  input.newDifference(1, [
+  input.newDifferences(1, [
     [{id: 1}, 1],
     [{id: 2}, 2],
     [{id: 1}, -1],

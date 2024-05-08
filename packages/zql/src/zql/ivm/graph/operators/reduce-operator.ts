@@ -1,7 +1,7 @@
 import {assert} from 'shared/src/asserts.js';
 import type {Primitive} from '../../../ast/ast.js';
 import {flatMapIter} from '../../../util/iterables.js';
-import type {Entry, Multiset} from '../../multiset.js';
+import type {Entry} from '../../multiset.js';
 import type {StringOrNumber, Version} from '../../types.js';
 import type {DifferenceStream} from '../difference-stream.js';
 import {UnaryOperator} from './unary-operator.js';
@@ -49,27 +49,24 @@ export class ReduceOperator<
     getGroupKey: (value: V) => K,
     f: (input: Iterable<V>) => O,
   ) {
-    const inner = (_: Version, data: Multiset<V>) => {
-      const keysToProcess = new Set<K>();
+    const inner = (
+      version: Version,
+      entry: Entry<V>,
+      out: DifferenceStream<O>,
+    ) => {
       const ret: Entry<O>[] = [];
-      for (const [value, mult] of data) {
-        const key = getGroupKey(value);
-        keysToProcess.add(key);
-        this.#addToIndex(key, value, mult);
-      }
+      const key = getGroupKey(entry[0]);
+      this.#addToIndex(key, entry[0], entry[1]);
 
-      for (const k of keysToProcess) {
-        const dataIn = this.#inIndex.get(k);
-        const existingOut = this.#outIndex.get(k);
-        if (dataIn === undefined) {
-          if (existingOut !== undefined) {
-            // retract the reduction
-            this.#outIndex.delete(k);
-            ret.push([existingOut, -1]);
-          }
-          continue;
+      const dataIn = this.#inIndex.get(key);
+      const existingOut = this.#outIndex.get(key);
+      if (dataIn === undefined) {
+        if (existingOut !== undefined) {
+          // retract the reduction
+          this.#outIndex.delete(key);
+          ret.push([existingOut, -1]);
         }
-
+      } else {
         const reduction = f(
           flatMapIter(
             () => dataIn.values(),
@@ -85,10 +82,10 @@ export class ReduceOperator<
           ret.push([existingOut, -1]);
         }
         ret.push([reduction, 1]);
-        this.#outIndex.set(k, reduction);
+        this.#outIndex.set(key, reduction);
       }
 
-      return ret;
+      out.newDifferences(version, ret);
     };
     super(input, output, inner);
     this.#getValueIdentity = getValueIdentity;

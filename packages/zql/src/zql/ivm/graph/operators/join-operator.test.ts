@@ -43,7 +43,7 @@ test('unbalanced input', () => {
     items.push([e, m]);
   });
 
-  trackInput.newDifference(1, [
+  trackInput.newDifferences(1, [
     [
       {
         id: 1,
@@ -60,7 +60,7 @@ test('unbalanced input', () => {
   items.length = 0;
 
   // now add to the other side
-  albumInput.newDifference(2, [
+  albumInput.newDifferences(2, [
     [
       {
         id: 1,
@@ -93,7 +93,7 @@ test('unbalanced input', () => {
   items.length = 0;
 
   // now try deleting items
-  albumInput.newDifference(3, [
+  albumInput.newDifferences(3, [
     [
       {
         id: 1,
@@ -127,7 +127,7 @@ test('unbalanced input', () => {
   items.length = 0;
 
   // add it back
-  albumInput.newDifference(4, [
+  albumInput.newDifferences(4, [
     [
       {
         id: 1,
@@ -179,7 +179,7 @@ test('basic join', () => {
     items.push([e, m]);
   });
 
-  trackInput.newDifference(1, [
+  trackInput.newDifferences(1, [
     [
       {
         id: 1,
@@ -191,7 +191,7 @@ test('basic join', () => {
     ],
   ]);
 
-  albumInput.newDifference(1, [
+  albumInput.newDifferences(1, [
     [
       {
         id: 1,
@@ -265,7 +265,7 @@ test('join through a junction table', () => {
   });
 
   ++version;
-  trackInput.newDifference(version, [
+  trackInput.newDifferences(version, [
     [
       {
         id: 1,
@@ -276,7 +276,7 @@ test('join through a junction table', () => {
       1,
     ],
   ]);
-  trackArtistInput.newDifference(version, [
+  trackArtistInput.newDifferences(version, [
     [
       {
         trackId: 1,
@@ -292,7 +292,7 @@ test('join through a junction table', () => {
       1,
     ],
   ]);
-  artistInput.newDifference(version, [
+  artistInput.newDifferences(version, [
     [
       {
         id: 1,
@@ -339,7 +339,7 @@ test('join through a junction table', () => {
 
   // remove an artist
   ++version;
-  artistInput.newDifference(version, [
+  artistInput.newDifferences(version, [
     [
       {
         id: 2,
@@ -367,7 +367,7 @@ test('join through a junction table', () => {
 
   // remove a track-artist link
   ++version;
-  trackArtistInput.newDifference(version, [
+  trackArtistInput.newDifferences(version, [
     [
       {
         trackId: 1,
@@ -384,7 +384,7 @@ test('join through a junction table', () => {
 
   // remove the track
   ++version;
-  trackInput.newDifference(version, [
+  trackInput.newDifferences(version, [
     [
       {
         id: 1,
@@ -414,7 +414,7 @@ test('join through a junction table', () => {
 
   // remove remaining track-artist link
   ++version;
-  trackArtistInput.newDifference(version, [
+  trackArtistInput.newDifferences(version, [
     [
       {
         trackId: 1,
@@ -424,7 +424,7 @@ test('join through a junction table', () => {
     ],
   ]);
   // remove remaining artist
-  artistInput.newDifference(version, [
+  artistInput.newDifferences(version, [
     [
       {
         id: 1,
@@ -441,7 +441,7 @@ test('join through a junction table', () => {
   items.length = 0;
 
   ++version;
-  artistInput.newDifference(version, [
+  artistInput.newDifferences(version, [
     [
       {
         id: 1,
@@ -450,7 +450,7 @@ test('join through a junction table', () => {
       1,
     ],
   ]);
-  artistInput.newDifference(version, [
+  artistInput.newDifferences(version, [
     [
       {
         id: 2,
@@ -459,7 +459,7 @@ test('join through a junction table', () => {
       1,
     ],
   ]);
-  trackInput.newDifference(version, [
+  trackInput.newDifferences(version, [
     [
       {
         id: 1,
@@ -470,7 +470,7 @@ test('join through a junction table', () => {
       1,
     ],
   ]);
-  trackInput.newDifference(version, [
+  trackInput.newDifferences(version, [
     [
       {
         id: 2,
@@ -481,7 +481,7 @@ test('join through a junction table', () => {
       1,
     ],
   ]);
-  trackArtistInput.newDifference(version, [
+  trackArtistInput.newDifferences(version, [
     [
       {
         trackId: 1,
@@ -490,7 +490,7 @@ test('join through a junction table', () => {
       1,
     ],
   ]);
-  trackArtistInput.newDifference(version, [
+  trackArtistInput.newDifferences(version, [
     [
       {
         trackId: 2,
@@ -564,7 +564,7 @@ test('add many items to the same source as separate calls in the same tick', () 
 
   // add some artists
   ++version;
-  artistInput.newDifference(version, [
+  artistInput.newDifferences(version, [
     [
       {
         id: 1,
@@ -573,7 +573,7 @@ test('add many items to the same source as separate calls in the same tick', () 
       1,
     ],
   ]);
-  artistInput.newDifference(version, [
+  artistInput.newDifferences(version, [
     [
       {
         id: 2,
@@ -582,7 +582,7 @@ test('add many items to the same source as separate calls in the same tick', () 
       1,
     ],
   ]);
-  trackInput.newDifference(version, [
+  trackInput.newDifferences(version, [
     [
       {
         id: 1,
@@ -593,7 +593,7 @@ test('add many items to the same source as separate calls in the same tick', () 
       1,
     ],
   ]);
-  trackInput.newDifference(version, [
+  trackInput.newDifferences(version, [
     [
       {
         id: 2,
@@ -604,7 +604,7 @@ test('add many items to the same source as separate calls in the same tick', () 
       1,
     ],
   ]);
-  trackArtistInput.newDifference(version, [
+  trackArtistInput.newDifferences(version, [
     [
       {
         trackId: 1,
@@ -613,7 +613,7 @@ test('add many items to the same source as separate calls in the same tick', () 
       1,
     ],
   ]);
-  trackArtistInput.newDifference(version, [
+  trackArtistInput.newDifferences(version, [
     [
       {
         trackId: 2,

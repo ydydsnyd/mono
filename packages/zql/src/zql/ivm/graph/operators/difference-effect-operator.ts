@@ -1,4 +1,4 @@
-import type {Multiset} from '../../multiset.js';
+import type {Entry} from '../../multiset.js';
 import type {Version} from '../../types.js';
 import type {DifferenceStream} from '../difference-stream.js';
 import {UnaryOperator} from './unary-operator.js';
@@ -15,16 +15,20 @@ export class DifferenceEffectOperator<T extends object> extends UnaryOperator<
   T
 > {
   readonly #f: (input: T, mult: number) => void;
-  #collected: Multiset<T>[] = [];
+  #collected: Entry<T>[] = [];
 
   constructor(
     input: DifferenceStream<T>,
     output: DifferenceStream<T>,
     f: (input: T, mult: number) => void,
   ) {
-    const inner = (_version: Version, data: Multiset<T>) => {
+    const inner = (
+      version: Version,
+      data: Entry<T>,
+      out: DifferenceStream<T>,
+    ) => {
       this.#collected.push(data);
-      return data;
+      out.newDifference(version, data);
     };
     super(input, output, inner);
     this.#f = f;
@@ -33,10 +37,8 @@ export class DifferenceEffectOperator<T extends object> extends UnaryOperator<
   commit(v: number): void {
     const collected = this.#collected;
     this.#collected = [];
-    for (const collection of collected) {
-      for (const [val, mult] of collection) {
-        this.#f(val, mult);
-      }
+    for (const [val, mult] of collected) {
+      this.#f(val, mult);
     }
     super.commit(v);
   }

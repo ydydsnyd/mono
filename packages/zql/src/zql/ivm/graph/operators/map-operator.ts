@@ -1,5 +1,5 @@
-import {genMap} from '../../../util/iterables.js';
-import type {Multiset} from '../../multiset.js';
+import type {Entry} from '../../multiset.js';
+import type {Version} from '../../types.js';
 import type {DifferenceStream} from '../difference-stream.js';
 import {LinearUnaryOperator} from './linear-unary-operator.js';
 
@@ -12,11 +12,11 @@ export class MapOperator<
     output: DifferenceStream<O>,
     f: (input: I) => O,
   ) {
-    const inner = (collection: Multiset<I>) =>
-      genMap(
-        collection,
-        ([value, multiplicity]) => [f(value), multiplicity] as const,
-      );
+    const inner = (
+      version: Version,
+      entry: Entry<I>,
+      out: DifferenceStream<O>,
+    ) => out.newDifference(version, [f(entry[0]), entry[1]] as const);
     super(input, output, inner);
   }
 }

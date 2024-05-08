@@ -1,5 +1,5 @@
 import type {Primitive} from '../../../ast/ast.js';
-import type {Entry, Multiset} from '../../multiset.js';
+import type {Entry} from '../../multiset.js';
 import {isJoinResult, JoinResult, StringOrNumber} from '../../types.js';
 import {BinaryOperator} from './binary-operator.js';
 import {DifferenceIndex, joinType} from './difference-index.js';
@@ -35,30 +35,27 @@ export class LeftJoinOperator<
     this.#joinArgs = joinArgs;
   }
 
-  #join(
-    inputA: Multiset<AValue> | undefined,
-    inputB: Multiset<BValue> | undefined,
-  ) {
+  #join(inputA: Entry<AValue> | undefined, inputB: Entry<BValue> | undefined) {
     const {aAs, getAJoinKey, getAPrimaryKey, bAs, getBJoinKey, getBPrimaryKey} =
       this.#joinArgs;
     const aKeysForCompaction = new Set<K | undefined>();
     const bKeysForCompaction = new Set<K>();
     const deltaA = new DifferenceIndex<K | undefined, AValue>(getAPrimaryKey);
 
-    for (const entry of inputA || []) {
-      const aKey = getAJoinKey(entry[0]);
-      deltaA.add(aKey, entry);
+    // TODO: `deltaA` is only ever a single value now. re-write to not use `DifferenceIndex` for deltaA / deltaB
+    if (inputA !== undefined) {
+      const aKey = getAJoinKey(inputA[0]);
+      deltaA.add(aKey, inputA);
       aKeysForCompaction.add(aKey);
     }
 
     const deltaB = new DifferenceIndex<K, BValue>(getBPrimaryKey);
-    for (const entry of inputB || []) {
-      const bKey = getBJoinKey(entry[0]);
-      if (bKey === undefined) {
-        continue;
+    if (inputB !== undefined) {
+      const bKey = getBJoinKey(inputB[0]);
+      if (bKey !== undefined) {
+        deltaB.add(bKey, inputB);
+        bKeysForCompaction.add(bKey);
       }
-      deltaB.add(bKey, entry);
-      bKeysForCompaction.add(bKey);
     }
 
     const result: Entry<JoinResult<AValue, BValue, AAlias, BAlias>>[] = [];

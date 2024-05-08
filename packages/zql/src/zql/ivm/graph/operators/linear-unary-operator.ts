@@ -1,4 +1,4 @@
-import type {Multiset} from '../../multiset.js';
+import type {Entry} from '../../multiset.js';
 import type {Version} from '../../types.js';
 import type {DifferenceStream} from '../difference-stream.js';
 import {UnaryOperator} from './unary-operator.js';
@@ -22,8 +22,8 @@ export class LinearUnaryOperator<
   constructor(
     input: DifferenceStream<I>,
     output: DifferenceStream<O>,
-    f: (input: Multiset<I>) => Multiset<O>,
+    f: (version: Version, data: Entry<I>, out: DifferenceStream<O>) => void,
   ) {
-    super(input, output, (_v: Version, data: Multiset<I>) => f(data));
+    super(input, output, (v: Version, data: Entry<I>, out) => f(v, data, out));
   }
 }

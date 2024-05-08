@@ -1,5 +1,3 @@
-import {genFilter} from '../../../util/iterables.js';
-import type {Multiset} from '../../multiset.js';
 import type {DifferenceStream} from '../difference-stream.js';
 import {LinearUnaryOperator} from './linear-unary-operator.js';
 
@@ -12,6 +10,11 @@ export class FilterOperator<I extends object> extends LinearUnaryOperator<
     output: DifferenceStream<I>,
     f: (input: I) => boolean,
   ) {
-    super(input, output, (data: Multiset<I>) => genFilter(data, e => f(e[0])));
+    super(input, output, (version, data, out) => {
+      const keep = f(data[0]);
+      if (keep) {
+        out.newDifference(version, data);
+      }
+    });
   }
 }
