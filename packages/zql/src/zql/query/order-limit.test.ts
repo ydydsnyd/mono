@@ -149,3 +149,63 @@ describe('pulling from an infinite source is possible if we set a limit', () => 
     stmt.destroy();
   });
 });
+
+/**
+ * To make sure `limit` is actually `limiting` the amount of data we're processing
+ * from a source, we need to test it with an infinite source.
+ *
+ * There are some forms of queries which are not supported with an infinite source
+ * but here we test all those that we expect to work.
+ */
+describe('pulling from an infinite source is possible if we set a limit', () => {
+  type E = {
+    id: string;
+  };
+  const infiniteGenerator = {
+    *[Symbol.iterator]() {
+      let i = 0;
+      while (true) {
+        yield [{id: String(++i)}, 1] as const;
+      }
+    },
+  };
+
+  const context = makeInfiniteSourceContext(infiniteGenerator);
+
+  test('bare select', async () => {
+    const q = new EntityQuery<{e: E}>(context, 'e');
+    const stmt = q.select('id').limit(2).prepare();
+    const data = await stmt.exec();
+
+    expect(data).toEqual([{id: '1'}, {id: '2'}]);
+
+    stmt.destroy();
+  });
+
+  test('select and where', async () => {
+    const q = new EntityQuery<{e: E}>(context, 'e');
+    const stmt = q.select('id').where('e.id', '>', '9').limit(2).prepare();
+    const data = await stmt.exec();
+
+    expect(data).toEqual([{id: '90'}, {id: '91'}]);
+
+    stmt.destroy();
+  });
+
+  // TODO(mlaw): test select with alternate ordering. differing fields and same fields but differing direction
+  // TODO(mlaw): test cases for when `withNewOrdering` should or should not be invoked. e.g., join should drop order rn
+
+  // test when the view is sorted by a superset of the fields used to sort the source
+
+  // join currently tries to consume the entire source. This is fixed and tested in later commits.
+  // test('join 2 tables', () => {});
+  // test('join 3 tables', () => {});
+
+  // need the `contiguous groups` optimization
+  // test('group-by', () => {});
+
+  // test:
+  // - concat (or)
+  // - distinct
+  // - concat + distinct (or)
+});

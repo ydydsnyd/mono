@@ -31,6 +31,15 @@ describe('sorting and limiting with different query operations', async () => {
     },
     {} as Record<string, Artist>,
   );
+
+  // const indexedAlbums = albums.reduce(
+  //   (acc, a) => {
+  //     acc[a.id] = a;
+  //     return acc;
+  //   },
+  //   {} as Record<string, Album>,
+  // );
+
   const indexedTrackArtists = trackArtists.reduce(
     (acc, a) => {
       acc[a.trackId] = acc[a.trackId] || [];
