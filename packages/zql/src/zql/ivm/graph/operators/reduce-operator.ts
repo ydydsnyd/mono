@@ -59,47 +59,44 @@ export class ReduceOperator<
     f: (input: Iterable<V>) => O,
   ) => {
     const keysToProcess = new Set<K>();
-
+    const ret: Entry<O>[] = [];
     for (const [value, mult] of data) {
       const key = getGroupKey(value);
       keysToProcess.add(key);
       this.#addToIndex(key, value, mult);
     }
 
-    return flatMapIter(
-      () => keysToProcess,
-      k => {
-        const dataIn = this.#inIndex.get(k);
-        const existingOut = this.#outIndex.get(k);
-        if (dataIn === undefined) {
-          if (existingOut !== undefined) {
-            // retract the reduction
-            this.#outIndex.delete(k);
-            return [[existingOut, -1]] as const;
-          }
-          return [];
-        }
-
-        const reduction = f(
-          flatMapIter(
-            () => dataIn.values(),
-            function* ([v, mult]) {
-              for (let i = 0; i < mult; i++) {
-                yield v;
-              }
-            },
-          ),
-        );
-        const ret: Entry<O>[] = [];
+    for (const k of keysToProcess) {
+      const dataIn = this.#inIndex.get(k);
+      const existingOut = this.#outIndex.get(k);
+      if (dataIn === undefined) {
         if (existingOut !== undefined) {
-          // modified reduction
+          // retract the reduction
+          this.#outIndex.delete(k);
           ret.push([existingOut, -1]);
         }
-        ret.push([reduction, 1]);
-        this.#outIndex.set(k, reduction);
-        return ret;
-      },
-    );
+        continue;
+      }
+
+      const reduction = f(
+        flatMapIter(
+          () => dataIn.values(),
+          function* ([v, mult]) {
+            for (let i = 0; i < mult; i++) {
+              yield v;
+            }
+          },
+        ),
+      );
+      if (existingOut !== undefined) {
+        // modified reduction
+        ret.push([existingOut, -1]);
+      }
+      ret.push([reduction, 1]);
+      this.#outIndex.set(k, reduction);
+    }
+
+    return ret;
   };
 
   #addToIndex(key: K, value: V, mult: number) {

@@ -279,8 +279,8 @@ export class SetSource<T extends object> implements Source<T> {
 }
 
 function asEntries<T>(
-  m: ISortedMap<T, T>,
-  _message?: Request | undefined,
+  m: BTree<T, T>,
+  message?: Request | undefined,
 ): Multiset<T> {
   // message will contain hoisted expressions so we can do relevant
   // index selection against the source.
@@ -296,6 +296,17 @@ function asEntries<T>(
   // 1. if it compares on a unique field by equality, just send the single row
   // 2. if the view is in the same order as the source, start the iterator at the where clause
   // which matches this position in the source. (e.g., where id > x)
+
+  if (message?.order) {
+    if (message.order[1] === 'desc') {
+      return {
+        [Symbol.iterator]() {
+          return genFromEntries(m.entriesReversed());
+        },
+      };
+    }
+  }
+
   return {
     [Symbol.iterator]() {
       return gen(m.keys());
@@ -306,5 +317,11 @@ function asEntries<T>(
 function* gen<T>(m: Iterable<T>) {
   for (const v of m) {
     yield [v, 1] as const;
+  }
+}
+
+function* genFromEntries<T>(m: Iterable<[T, T]>) {
+  for (const pair of m) {
+    yield [pair[0], 1] as const;
   }
 }

@@ -111,6 +111,7 @@ export class MutableTreeView<T extends object> extends AbstractView<T, T[]> {
     ) {
       iterator = c[Symbol.iterator]();
     } else {
+      console.log('get limited!?');
       // We only get the limited iterator if we're receiving historical data.
       iterator = this.#getLimitedIterator(c, reply, this.#limit);
     }
@@ -258,6 +259,7 @@ export class MutableTreeView<T extends object> extends AbstractView<T, T[]> {
     }
 
     // at limit? We can only add if the value is under max
+    // TODO(mlaw): asc/desc matters here.
     const comp = this.#comparator(value, this.#max!);
     if (comp > 0) {
       return data;
