@@ -6,13 +6,15 @@ import {makeComparator} from '../../query/statement.js';
 import {MutableTreeView} from './tree-view.js';
 
 const numberComparator = (l: number, r: number) => l - r;
+const ordering = [['id'], 'asc'] as const;
 
 type Selected = {id: string};
 test('asc and descComparator on Entities', () => {
   const context = makeTestContext();
   const {materialite} = context;
-  const s = materialite.newSetSource<Entity>((l, r) =>
-    l.id.localeCompare(r.id),
+  const s = materialite.newSetSource<Entity>(
+    (l, r) => l.id.localeCompare(r.id),
+    ordering,
   );
   const orderBy = [['n', 'id'], 'asc'] as const;
   const view = new MutableTreeView<Selected>(
@@ -63,7 +65,10 @@ test('add & remove', async () => {
     fc.asyncProperty(fc.uniqueArray(fc.integer()), async arr => {
       const context = makeTestContext();
       const {materialite} = context;
-      const source = materialite.newSetSource<{x: number}>((l, r) => l.x - r.x);
+      const source = materialite.newSetSource<{x: number}>(
+        (l, r) => l.x - r.x,
+        [['x'], 'asc'] as const,
+      );
       const view = new MutableTreeView(
         context,
         source.stream,
@@ -91,7 +96,10 @@ test('replace', async () => {
     fc.asyncProperty(fc.uniqueArray(fc.integer()), async arr => {
       const context = makeTestContext();
       const {materialite} = context;
-      const source = materialite.newSetSource<{x: number}>((l, r) => l.x - r.x);
+      const source = materialite.newSetSource<{x: number}>(
+        (l, r) => l.x - r.x,
+        [['x'], 'asc'] as const,
+      );
       const orderBy = [['id'], 'asc'] as const;
       const view = new MutableTreeView(
         context,
