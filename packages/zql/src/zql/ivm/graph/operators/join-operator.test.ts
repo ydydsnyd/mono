@@ -753,3 +753,7 @@ test('add many items to the same source as separate calls in the same tick', () 
     ],
   ]);
 });
+
+test('order is removed from request', () => {});
+// TODO: we can stick order in there for outer-most loop.
+test('order is removed from reply', () => {});
