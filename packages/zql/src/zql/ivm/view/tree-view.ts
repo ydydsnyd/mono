@@ -112,7 +112,6 @@ export class TreeView<T extends object> extends AbstractView<T, T[]> {
     ) {
       iterator = c[Symbol.iterator]();
     } else {
-      console.log('get limited!?');
       // We only get the limited iterator if we're receiving historical data.
       iterator = this.#getLimitedIterator(c, reply, this.#limit);
     }
