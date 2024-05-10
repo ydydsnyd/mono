@@ -1,4 +1,3 @@
-import type {LogContext} from '@rocicorp/logger';
 import type {AST} from '@rocicorp/zql/src/zql/ast/ast.js';
 import {compareUTF8} from 'compare-utf8';
 import {assert, unreachable} from 'shared/src/asserts.js';
@@ -482,10 +481,7 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
    * returned to update their state, versioned by patchVersion so that only the
    * patches new to the clients are sent.
    */
-  async received(
-    lc: LogContext,
-    rows: Map<string, ParsedRow>,
-  ): Promise<PatchToVersion[]> {
+  async received(rows: Map<string, ParsedRow>): Promise<PatchToVersion[]> {
     const merges: PatchToVersion[] = [];
 
     const existingRows = await this._writes.getEntries(
@@ -498,8 +494,6 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
         contents,
         record: {id, rowVersion, queriedColumns},
       } = row;
-      lc.debug?.(`received ${JSON.stringify(id)}`);
-
       const existing = existingRows.get(path);
       const {merged, putColumns} = mergeQueriedColumns(
         existing?.queriedColumns,
@@ -563,7 +557,6 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
    *        version after `generatePatchesAfter`.
    */
   async deleteUnreferencedColumnsAndRows(
-    lc: LogContext,
     generatePatchesAfter: NullableCVRVersion,
   ): Promise<PatchToVersion[]> {
     const removedOrExecutedQueryIDs = union(
@@ -593,7 +586,6 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
     for await (const existingRows of allRowRecords) {
       for (const [path, existing] of existingRows) {
         const update = this.#deleteUnreferencedColumnsOrRow(
-          lc,
           path,
           existing,
           removedOrExecutedQueryIDs,
@@ -645,7 +637,6 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
               toVersion,
             });
           } else {
-            lc.debug?.(`catchup delete: ${JSON.stringify(id)}`);
             patches.push({patch: {type: 'row', op: 'del', id}, toVersion});
           }
         }
@@ -656,7 +647,6 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
   }
 
   #deleteUnreferencedColumnsOrRow(
-    lc: LogContext,
     rowRecordPath: string,
     existing: RowRecord,
     removedOrExecutedQueryIDs: Set<string>,
@@ -686,11 +676,6 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
     void this._writes.del(this._paths.rowPatch(existing.patchVersion, id));
 
     if (op === 'del') {
-      lc.debug?.(
-        `deleting ${JSON.stringify(id)}, before: ${JSON.stringify(
-          existing.queriedColumns,
-        )}, merged: ${JSON.stringify(newQueriedColumns)}`,
-      );
       void this._writes.put(this._paths.rowPatch(patchVersion, id), {
         type: 'row',
         op: 'del',

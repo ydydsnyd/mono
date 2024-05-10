@@ -386,7 +386,7 @@ export class ViewSyncerService implements ViewSyncer, Service {
           .cursor(cursorPageSize)) {
           lc.debug?.(`processing ${rows.length} for queries ${queryIDs}`);
           const parsed = resultParser.parseResults(queryIDs, rows);
-          const patches = await updater.received(lc, parsed);
+          const patches = await updater.received(parsed);
           patches.forEach(patch =>
             pokers.forEach(poker => poker.addPatch(patch)),
           );
@@ -398,7 +398,6 @@ export class ViewSyncerService implements ViewSyncer, Service {
 
     lc.debug?.(`generating delete / constrain patches`);
     for (const patch of await updater.deleteUnreferencedColumnsAndRows(
-      lc,
       minCVRVersion,
     )) {
       pokers.forEach(poker => poker.addPatch(patch));
