@@ -107,6 +107,11 @@ export class WriteCache implements Storage {
     return this.#cache.size > 0;
   }
 
+  pendingDelete(k: string): boolean {
+    const v = this.#cache.get(k);
+    return v !== undefined && v.value === undefined;
+  }
+
   pending(): (PutOp | DelOp)[] {
     const res: (PutOp | DelOp)[] = [];
     for (const [key, {value}] of this.#cache.entries()) {
@@ -197,6 +202,7 @@ export class WriteCache implements Storage {
 
     // build a list of pending changes to overlay atop stored values
     const pending: [string, T | undefined][] = [];
+    console.error(`filtering ${this.#cache.size} entries`);
     for (const entry of this.#cache.entries()) {
       const [k, v] = entry;
 
@@ -218,6 +224,7 @@ export class WriteCache implements Storage {
 
     // The map of entries coming back from DurableStorage is utf8 sorted.
     // Maintain this by merging the pending changes in-order
+    console.error(`sorting ${pending.length} entries in range`);
     pending.sort(([a], [b]) => compareUTF8(a, b));
 
     const out = new Map<string, T>();
