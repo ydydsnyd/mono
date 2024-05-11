@@ -11,6 +11,7 @@ import {
 } from '../server/paths.js';
 import {roomStatusSchema, type RoomStatus} from '../server/rooms.js';
 import {newAuthedPostRequest} from './authedpost.js';
+import {Request, fetch} from '@cloudflare/workers-types';
 
 /**
  * createRoom creates a new room with the given roomID. If the room already

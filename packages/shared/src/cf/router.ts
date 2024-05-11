@@ -10,11 +10,9 @@ import {assert} from 'shared/src/asserts.js';
 import type {ReadonlyJSONValue} from 'shared/src/json.js';
 import * as valita from 'shared/src/valita.js';
 import {decodeHeaderValue} from 'shared/src/headers.js';
-import {
-  HttpError,
-  makeErrorResponse,
-} from '../../../reflect-server/src/server/errors.js';
+import {HttpError, makeErrorResponse} from 'shared/src/api/errors.js';
 import type {MaybePromise} from 'shared/src/types.js';
+import {Request, Response} from '@cloudflare/workers-types';
 
 /**
  * Handles a request dispatched by router. The Handler is

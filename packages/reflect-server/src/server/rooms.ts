@@ -9,9 +9,14 @@ import type {DurableStorage} from '../storage/durable-storage.js';
 import type {ListOptions} from '../storage/storage.js';
 import {APIError, roomNotFoundAPIError} from 'shared/src/api/api-errors.js';
 import {roomDOFetch} from './auth-do.js';
-import {ErrorWithForwardedResponse} from './errors.js';
+import {ErrorWithForwardedResponse} from 'shared/src/api/errors.js';
 import {CREATE_ROOM_PATH, fmtPath} from './paths.js';
 import {jsonSchema} from 'shared/src/json-schema.js';
+import type {
+  DurableObjectId,
+  DurableObjectNamespace,
+} from '@cloudflare/workers-types';
+import {Request} from '@cloudflare/workers-types';
 
 export enum RoomStatus {
   // An Open room can be used by users. We will accept connect()s to it.

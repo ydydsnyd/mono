@@ -7,6 +7,7 @@ import type {Series} from '../types/report-metrics.js';
 import {Mocket, fail} from '../util/test-utils.js';
 import {TestLogSink} from 'shared/src/logging-test-utils.js';
 import {
+  IncomingRequest,
   TestDurableObjectId,
   TestDurableObjectStub,
   TestExecutionContext,
@@ -28,6 +29,13 @@ import {
   fmtPath,
 } from './paths.js';
 import {BaseWorkerEnv, createWorker} from './worker.js';
+import type {
+  DurableObjectId,
+  ExecutionContext,
+  ExportedHandler,
+  WebSocket,
+} from '@cloudflare/workers-types';
+import {Request, Response} from '@cloudflare/workers-types';
 
 const TEST_API_KEY = 'TEST_REFLECT_API_KEY_TEST';
 
@@ -83,7 +91,7 @@ function createWorkerWithTestLogSink() {
   }));
 }
 
-function testDisabled(testRequest: Request) {
+function testDisabled(testRequest: IncomingRequest) {
   return testNotForwardedToAuthDo(
     testRequest,
     new Response('Disabled', {status: 503}),
@@ -92,7 +100,7 @@ function testDisabled(testRequest: Request) {
 }
 
 async function testNotForwardedToAuthDo(
-  testRequest: Request,
+  testRequest: IncomingRequest,
   expectedResponse: Response,
   disable?: string | undefined,
 ) {
@@ -132,7 +140,7 @@ async function testNotForwardedToAuthDo(
 }
 
 async function testForwardedToAuthDO(
-  testRequest: Request,
+  testRequest: IncomingRequest,
   authDoResponse = new Response('success', {status: 200}),
 ) {
   // Don't clone response if it has a websocket, otherwise CloudFlare's Response
@@ -189,7 +197,7 @@ test('worker forwards connect requests to authDO', async () => {
     new Request('ws://test.roci.dev/api/sync/v1/connect'),
     new Response(null, {
       status: 101,
-      webSocket: new Mocket(),
+      webSocket: new Mocket() as unknown as WebSocket,
     }),
   );
 });
@@ -391,11 +399,14 @@ async function testLogging(
 test('fetch logging', async () => {
   // eslint-disable-next-line require-await
   await testLogging(async (worker, testEnv, testExecutionContext) => {
-    const testRequest = new Request('ws://test.roci.dev/connect');
     if (!worker.fetch) {
       throw new Error('Expected fetch to be defined');
     }
-    return worker.fetch(testRequest, testEnv, testExecutionContext);
+    return worker.fetch(
+      new Request('ws://test.roci.dev/connect'),
+      testEnv,
+      testExecutionContext,
+    );
   });
 });
 
@@ -599,20 +610,20 @@ describe('reportMetrics', () => {
       },
     }));
 
-    const testRequest = new Request(
-      // The client appends common query parameters to the URL (which are ignored on the server)
-      reportMetricsURL.toString() +
-        '?clientID=foo&clientGroupID=bar&roomID=bax&userID=bonk&requestID=12345',
-      {
-        method: tc.method,
-        body: tc.method === 'post' && tc.body ? JSON.stringify(tc.body) : null,
-      },
-    );
     if (worker.fetch === undefined) {
       throw new Error('Expect fetch to be defined');
     }
     const response = await worker.fetch(
-      testRequest,
+      new Request(
+        // The client appends common query parameters to the URL (which are ignored on the server)
+        reportMetricsURL.toString() +
+          '?clientID=foo&clientGroupID=bar&roomID=bax&userID=bonk&requestID=12345',
+        {
+          method: tc.method,
+          body:
+            tc.method === 'post' && tc.body ? JSON.stringify(tc.body) : null,
+        },
+      ),
       testEnv,
       new TestExecutionContext(),
     );
@@ -690,15 +701,14 @@ describe('log logs', () => {
 
     const testBody = 'test-body';
 
-    const testRequest = new Request(logLogsURL.toString(), {
-      method: 'POST',
-      body: testBody,
-    });
     if (worker.fetch === undefined) {
       throw new Error('Expect fetch to be defined');
     }
     const response = await worker.fetch(
-      testRequest,
+      new Request(logLogsURL.toString(), {
+        method: 'POST',
+        body: testBody,
+      }),
       testEnv,
       new TestExecutionContext(),
     );
@@ -764,12 +774,11 @@ test('hello', async () => {
     },
   }));
 
-  const testRequest = new Request('https://test.roci.dev/'.toString());
   if (worker.fetch === undefined) {
     throw new Error('Expect fetch to be defined');
   }
   const response = await worker.fetch(
-    testRequest,
+    new Request('https://test.roci.dev/'.toString()),
     testEnv,
     new TestExecutionContext(),
   );

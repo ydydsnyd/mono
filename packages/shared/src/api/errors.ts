@@ -1,3 +1,7 @@
+import {
+  Response,
+} from '@cloudflare/workers-types';
+
 export abstract class ErrorWithResponse extends Error {
   constructor(message?: string, options?: ErrorOptions) {
     super(message, options);
@@ -12,7 +16,7 @@ export class ErrorWithForwardedResponse extends ErrorWithResponse {
   constructor(response: Response) {
     super(`Forwarded response for ${response.url}: ${response.status}`);
     this.#response = response;
-  }
+}
 
   response() {
     return this.#response;

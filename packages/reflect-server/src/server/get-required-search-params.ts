@@ -1,3 +1,5 @@
+import type {Response, URLSearchParams} from '@cloudflare/workers-types';
+
 export function getRequiredSearchParams(
   keys: string[],
   searchParams: URLSearchParams,

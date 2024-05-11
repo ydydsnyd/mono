@@ -12,6 +12,7 @@ import type {
 import type {Storage} from '../storage/storage.js';
 import type {PendingMutation} from '../types/mutation.js';
 import {userValueKey} from '../types/user-value.js';
+import {EventTarget} from '@cloudflare/workers-types';
 
 afterEach(() => {
   jest.restoreAllMocks();

@@ -3,7 +3,8 @@ import {
   type APIErrorCode,
   type APIErrorInfo,
 } from 'shared/src/api/responses.js';
-import {ErrorWithResponse} from '../../../reflect-server/src/server/errors.js';
+import {ErrorWithResponse} from 'shared/src/api/errors.js';
+import {Response} from '@cloudflare/workers-types';
 
 export class APIError extends ErrorWithResponse {
   readonly #info: APIErrorInfo;

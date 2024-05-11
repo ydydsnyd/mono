@@ -19,13 +19,14 @@ import type {
   ClientGroupID,
   ClientID,
   ClientMap,
-  Socket,
 } from '../types/client-state.js';
+import type {Socket} from 'shared/src/cf/socket.js';
 import {putVersion} from '../types/version.js';
 import {encodeHeaderValue} from 'shared/src/headers.js';
 import {Mocket, client, clientRecord} from '../util/test-utils.js';
 import {createSilentLogContext} from 'shared/src/logging-test-utils.js';
 import {AUTH_DATA_HEADER_NAME} from './internal-headers.js';
+import {Headers} from '@cloudflare/workers-types';
 
 const START_TIME = 1686690000000;
 

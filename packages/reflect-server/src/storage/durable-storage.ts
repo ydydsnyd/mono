@@ -11,6 +11,11 @@ import {
 } from '../db/data.js';
 import {batchScan, scan} from './scan-storage.js';
 import type {ListOptions, Storage} from './storage.js';
+import type {
+  DurableObjectListOptions,
+  DurableObjectPutOptions,
+  DurableObjectStorage,
+} from '@cloudflare/workers-types';
 
 const baseAllowConcurrency = true;
 

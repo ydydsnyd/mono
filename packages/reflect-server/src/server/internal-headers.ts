@@ -1,4 +1,5 @@
 import {encodeHeaderValue} from 'shared/src/headers.js';
+import type {Request} from '@cloudflare/workers-types';
 
 /**
  * Name of header used to pass `AuthData` received by AuthDO from the

@@ -1,3 +1,4 @@
+import {addEventListener} from '@cloudflare/workers-types';
 import type {LogContext} from '@rocicorp/logger';
 
 let unhandledRejectHandlerAdded = false;

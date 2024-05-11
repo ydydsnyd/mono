@@ -1,5 +1,6 @@
 import {createAPIHeaders} from 'shared/src/api/headers.js';
 import type {ReadonlyJSONValue} from 'shared/src/json.js';
+import {Request} from '@cloudflare/workers-types';
 
 export function newAuthedPostRequest(
   url: URL,

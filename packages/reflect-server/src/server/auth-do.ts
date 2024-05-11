@@ -33,7 +33,10 @@ import {AlarmManager, TimeoutID} from './alarms.js';
 import {roomNotFoundAPIError} from 'shared/src/api/api-errors.js';
 import {initAuthDOSchema} from './auth-do-schema.js';
 import type {AuthHandler} from './auth.js';
-import {ErrorWithForwardedResponse, makeErrorResponse} from './errors.js';
+import {
+  ErrorWithForwardedResponse,
+  makeErrorResponse,
+} from 'shared/src/api/errors.js';
 import {getRequiredSearchParams} from './get-required-search-params.js';
 import {AUTH_DATA_HEADER_NAME, addRoomIDHeader} from './internal-headers.js';
 import {listRoomsParamsSchema, makeListControl} from './list.js';
@@ -87,6 +90,13 @@ import {
   userID,
 } from 'shared/src/cf/router.js';
 import {registerUnhandledRejectionHandler} from './unhandled-rejection-handler.js';
+import type {
+  DurableObject,
+  DurableObjectNamespace,
+  DurableObjectState,
+  DurableObjectStub,
+} from '@cloudflare/workers-types';
+import {Request, Response, WebSocketPair} from '@cloudflare/workers-types';
 
 export const AUTH_HANDLER_TIMEOUT_MS = 5_000;
 

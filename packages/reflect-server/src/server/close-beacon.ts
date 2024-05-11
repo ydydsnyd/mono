@@ -16,6 +16,7 @@ import {
   type ClientDeleteHandler,
 } from './client-delete-handler.js';
 import {collectOldUserSpaceClientKeys} from './client-gc.js';
+import {Response} from '@cloudflare/workers-types';
 
 export async function closeBeacon(
   lc: LogContext,

@@ -12,6 +12,7 @@ import {
   createSilentLogContext,
 } from 'shared/src/logging-test-utils.js';
 import {LogContext} from '@rocicorp/logger';
+import type {DurableObjectStorage} from '@cloudflare/workers-types';
 
 describe('alarm timeout tests', () => {
   const STARTING_TIME = 1000;

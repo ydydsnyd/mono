@@ -2,16 +2,21 @@ import {LogContext, LogLevel, LogSink} from '@rocicorp/logger';
 import {CONNECT_URL_PATTERN} from './paths.js';
 import {ServiceRunner, ServiceRunnerEnv} from './service-runner.js';
 import {BaseContext, Router} from 'shared/src/cf/router.js';
-// TODO(mlaw): break dependency on reflect-server
 import {
   requireUpgradeHeader,
   upgradeWebsocketResponse,
-} from 'reflect-server/http-util';
+} from 'shared/src/cf/socket.js';
 import type {ErrorKind} from 'zero-protocol/src/error.js';
 import {closeWithError} from 'shared/src/cf/socket.js';
 import type {ConnectedMessage} from 'zero-protocol';
 import {getConnectRequest} from '../connect.js';
 import {Connection, send} from './connection.js';
+import type {
+  DurableObjectState,
+  Request,
+  WebSocket,
+} from '@cloudflare/workers-types';
+import {Response, WebSocketPair} from '@cloudflare/workers-types';
 
 export class ServiceRunnerDO {
   readonly #lc: LogContext;

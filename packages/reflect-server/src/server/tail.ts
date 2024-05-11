@@ -1,5 +1,6 @@
 import type {TailMessage} from 'reflect-protocol/src/tail.js';
 import {originalConsole, setConsole, type Console} from './console.js';
+import type {WebSocket} from '@cloudflare/workers-types';
 
 const tailWebSockets = new Set<WebSocket>();
 

@@ -1,4 +1,26 @@
+import type {
+  DurableObjectId,
+  DurableObjectJurisdiction,
+  DurableObjectNamespace,
+  DurableObjectNamespaceNewUniqueIdOptions,
+  DurableObjectState,
+  DurableObjectStorage,
+  DurableObjectStub,
+  ExecutionContext,
+  IncomingRequestCfProperties,
+  Socket,
+  SocketAddress,
+  SocketOptions,
+  WebSocket,
+  WebSocketRequestResponsePair,
+} from '@cloudflare/workers-types';
+import {Response, Request, RequestInit} from '@cloudflare/workers-types';
 import {assert} from 'shared/src/asserts.js';
+
+export type IncomingRequest = Request<
+  unknown,
+  IncomingRequestCfProperties<unknown>
+>;
 
 export class TestExecutionContext implements ExecutionContext {
   waitUntil(_promise: Promise<unknown>): void {
@@ -30,11 +52,10 @@ export class TestDurableObjectId implements DurableObjectId {
 export class TestDurableObjectStub implements DurableObjectStub {
   readonly id: DurableObjectId;
   readonly objectIDString?: string;
-  readonly fetch: InstanceType<typeof Fetcher>['fetch'];
+  readonly fetch: DurableObjectStub['fetch'];
   constructor(
     id: DurableObjectId,
-    fetch: InstanceType<typeof Fetcher>['fetch'] = () =>
-      Promise.resolve(new Response()),
+    fetch: DurableObjectStub['fetch'] = () => Promise.resolve(new Response()),
   ) {
     this.id = id;
     this.objectIDString = id.toString();
@@ -57,6 +78,13 @@ export class TestDurableObjectStub implements DurableObjectStub {
       return fetch(requestOrUrl, requestInit);
     };
   }
+  connect(
+    _address: string | SocketAddress,
+    _options?: SocketOptions | undefined,
+  ): Socket {
+    throw new Error('Method not implemented.');
+  }
+  name?: string;
 }
 
 export async function createTestDurableObjectState(
@@ -76,6 +104,7 @@ export class TestDurableObjectState implements DurableObjectState {
     this.id = id;
     this.storage = storage;
   }
+
   waitUntil(_promise: Promise<unknown>): void {
     return;
   }
@@ -86,6 +115,33 @@ export class TestDurableObjectState implements DurableObjectState {
   }
   concurrencyBlockingCallbacks(): Promise<unknown[]> {
     return Promise.all(this.#blockingCallbacks);
+  }
+
+  acceptWebSocket(_ws: WebSocket, _tags?: string[] | undefined): void {
+    throw new Error('Method not implemented.');
+  }
+  getWebSockets(_tag?: string | undefined): WebSocket[] {
+    throw new Error('Method not implemented.');
+  }
+  setWebSocketAutoResponse(
+    _maybeReqResp?: WebSocketRequestResponsePair | undefined,
+  ): void {
+    throw new Error('Method not implemented.');
+  }
+  getWebSocketAutoResponse(): WebSocketRequestResponsePair | null {
+    throw new Error('Method not implemented.');
+  }
+  getWebSocketAutoResponseTimestamp(_ws: WebSocket): Date | null {
+    throw new Error('Method not implemented.');
+  }
+  setHibernatableWebSocketEventTimeout(_timeoutMs?: number | undefined): void {
+    throw new Error('Method not implemented.');
+  }
+  getHibernatableWebSocketEventTimeout(): number | null {
+    throw new Error('Method not implemented.');
+  }
+  getTags(_ws: WebSocket): string[] {
+    throw new Error('Method not implemented.');
   }
 }
 
@@ -102,5 +158,7 @@ export function createTestDurableObjectNamespace(): DurableObjectNamespace {
       // Note: doesn't support names.
       new TestDurableObjectId(objectIDString),
     get: (id: DurableObjectId) => new TestDurableObjectStub(id),
+    jurisdiction: (_jurisdiction: DurableObjectJurisdiction) =>
+      createTestDurableObjectNamespace(),
   };
 }

@@ -1,3 +1,9 @@
+import type {
+  DurableObject,
+  DurableObjectGetAlarmOptions,
+  DurableObjectSetAlarmOptions,
+  DurableObjectStorage,
+} from '@cloudflare/workers-types';
 import {AuthDOOptions, BaseAuthDO} from './auth-do.js';
 
 // https://community.cloudflare.com/t/durable-objects-larger-storage-limit-per-object-time-invalidated-storage/222156/17

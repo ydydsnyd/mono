@@ -3,6 +3,7 @@ import {ServiceRunnerDO} from './runner-do.js';
 import {createWorker} from './worker.js';
 import type {ServiceRunnerEnv} from './service-runner.js';
 import {createLogSink, getLogLevel} from './logging.js';
+import type {DurableObjectState} from '@cloudflare/workers-types';
 
 const worker = createWorker((env: ServiceRunnerEnv) => ({
   logLevel: getLogLevel(env),

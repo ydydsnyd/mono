@@ -11,6 +11,12 @@ import {BaseRoomDO, getDefaultTurnDuration} from './room-do.js';
 import type {RoomStartHandler} from './room-start.js';
 import {extractVars} from './vars.js';
 import {createWorker} from './worker.js';
+import type {
+  DurableObject,
+  DurableObjectNamespace,
+  DurableObjectState,
+  ExportedHandler,
+} from '@cloudflare/workers-types';
 
 export type DatadogMetricsOptions = {
   apiKey: string;

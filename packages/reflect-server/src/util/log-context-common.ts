@@ -1,6 +1,7 @@
 import type {LogContext} from '@rocicorp/logger';
 import {ROOM_ID_HEADER_NAME} from '../server/internal-headers.js';
 import {decodeHeaderValue} from 'shared/src/headers.js';
+import type {Request} from '@cloudflare/workers-types';
 
 export function populateLogContextFromRequest(
   lc: LogContext,

@@ -1,3 +1,4 @@
+import type {DurableObjectStorage} from '@cloudflare/workers-types';
 import type {LogContext} from '@rocicorp/logger';
 
 /**

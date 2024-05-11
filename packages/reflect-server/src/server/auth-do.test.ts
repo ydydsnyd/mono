@@ -34,6 +34,7 @@ import {
 } from './auth-do.js';
 import type {AuthHandler} from './auth.js';
 import {
+  IncomingRequest,
   TestDurableObjectId,
   TestDurableObjectState,
   TestDurableObjectStub,
@@ -69,6 +70,18 @@ import {
   type RoomRecord,
 } from './rooms.js';
 import {createWorker} from './worker.js';
+import {
+  BodyInit,
+  DurableObjectId,
+  Response,
+  Request,
+  DurableObjectStorage,
+  DurableObjectNamespaceNewUniqueIdOptions,
+  DurableObjectNamespace,
+  URLSearchParams,
+  URLPattern,
+  WebSocket,
+} from '@cloudflare/workers-types';
 
 const TEST_API_KEY = 'TEST_REFLECT_API_KEY_TEST';
 const {authDO} = getMiniflareBindings();
@@ -404,7 +417,10 @@ test('400 bad body requests', async () => {
   }
 });
 
-function createBadBodyRequest(path: string, body: BodyInit | null): Request {
+function createBadBodyRequest(
+  path: string,
+  body: BodyInit | null,
+): IncomingRequest {
   const url = new URL(path, 'https://roci.dev');
   return new Request(url.toString(), {
     method: 'post',
@@ -738,7 +754,9 @@ test('get room that does not exist', async () => {
   });
 });
 
-function newRoomRecordsRequest(queryParams?: URLSearchParamsInit) {
+function newRoomRecordsRequest(
+  queryParams?: Record<string, string> | [key: string, value: string][],
+) {
   const query = queryParams
     ? `?${new URLSearchParams(queryParams).toString()}`
     : '';
@@ -988,7 +1006,10 @@ function createConnectTestFixture(
           );
         }
 
-        return upgradeWebsocketResponse(mocket, request.headers);
+        return upgradeWebsocketResponse(
+          mocket as unknown as WebSocket,
+          request.headers,
+        );
       });
     },
   };
@@ -2465,7 +2486,13 @@ function createTailTestFixture(
     testRoomID?: string | null;
     testApiToken?: string | null;
   } = {},
-) {
+): {
+  testRoomID: string | null;
+  testRequest: IncomingRequest;
+  testRoomDO: DurableObjectNamespace;
+  socketFromRoomDO: Mocket;
+  testApiToken: string | null;
+} {
   const {testRoomID = null, testApiToken = null} = options;
 
   const headers = new Headers();
@@ -2478,7 +2505,7 @@ function createTailTestFixture(
     tailURL.searchParams.set('roomID', testRoomID);
   }
 
-  const testRequest = new Request(tailURL.toString(), {
+  const testRequest: IncomingRequest = new Request(tailURL.toString(), {
     headers,
   });
 
@@ -2511,7 +2538,10 @@ function createTailTestFixture(
           expect(request.headers.has('Sec-WebSocket-Protocol')).toBe(false);
         }
 
-        return upgradeWebsocketResponse(socketFromRoomDO, request.headers);
+        return upgradeWebsocketResponse(
+          socketFromRoomDO as unknown as WebSocket,
+          request.headers,
+        );
       });
     },
   };

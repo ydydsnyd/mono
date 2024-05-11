@@ -20,6 +20,8 @@ import {TestLogSink} from 'shared/src/logging-test-utils.js';
 import {createTestDurableObjectState} from './do-test-utils.js';
 import {addRoomIDHeader} from './internal-headers.js';
 import {BaseRoomDO} from './room-do.js';
+import type {DurableObjectState} from '@cloudflare/workers-types';
+import {Request} from '@cloudflare/workers-types';
 
 async function createRoom<MD extends MutatorDefs>(
   roomDO: BaseRoomDO<MD>,

@@ -22,7 +22,6 @@ import {
   type ClientID,
   type ClientMap,
   type ClientState,
-  type Socket,
 } from '../types/client-state.js';
 import type {PendingMutation} from '../types/mutation.js';
 import {decodeHeaderValue} from 'shared/src/headers.js';
@@ -40,6 +39,7 @@ import {closeConnections, getConnections} from './connections.js';
 import {
   requireUpgradeHeader,
   upgradeWebsocketResponse,
+  Socket,
 } from 'shared/src/cf/socket.js';
 import {ROOM_ID_HEADER_NAME} from './internal-headers.js';
 import {handleMessage} from './message.js';
@@ -74,6 +74,13 @@ import {
 } from 'shared/src/cf/router.js';
 import {connectTail} from './tail.js';
 import {registerUnhandledRejectionHandler} from './unhandled-rejection-handler.js';
+import {
+  DurableObject,
+  DurableObjectState,
+  Request,
+  Response,
+  WebSocketPair,
+} from '@cloudflare/workers-types';
 
 const roomIDKey = '/system/roomID';
 const deletedKey = '/system/deleted';

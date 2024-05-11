@@ -6,6 +6,7 @@ import type {SyncContext, ViewSyncer} from './view-syncer/view-syncer.js';
 import {closeWithError, sendError} from 'shared/src/cf/socket.js';
 import type {CancelableAsyncIterable} from '../types/streams.js';
 import type {Mutagen} from './mutagen/mutagen.js';
+import type {MessageEvent, WebSocket} from '@cloudflare/workers-types';
 
 /**
  * Represents a connection between the client and server.

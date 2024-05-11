@@ -14,16 +14,13 @@ import {
   getClientRecord,
   putClientRecord,
 } from '../types/client-record.js';
-import type {
-  ClientID,
-  ClientMap,
-  ClientState,
-  Socket,
-} from '../types/client-state.js';
+import type {ClientID, ClientMap, ClientState} from '../types/client-state.js';
 import {compareVersions, getVersion} from '../types/version.js';
 import {decodeHeaderValue} from 'shared/src/headers.js';
 import {closeWithError, send} from 'shared/src/cf/socket.js';
+import type {Socket} from 'shared/src/cf/socket.js';
 import {AUTH_DATA_HEADER_NAME} from './internal-headers.js';
+import type {Headers} from '@cloudflare/workers-types';
 
 export type MessageHandler = (
   lc: LogContext,

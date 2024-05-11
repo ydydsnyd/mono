@@ -1,4 +1,8 @@
-import type {DurableObjectLocationHint} from '@cloudflare/workers-types';
+import type {
+  DurableObjectLocationHint,
+  DurableObjectNamespace,
+  DurableObjectState,
+} from '@cloudflare/workers-types';
 import {LogContext, LogLevel, LogSink} from '@rocicorp/logger';
 import postgres from 'postgres';
 import {DurableStorage} from '../storage/durable-storage.js';

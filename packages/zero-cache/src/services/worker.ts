@@ -1,7 +1,10 @@
 import type {
+  DurableObjectLocationHint,
   ExecutionContext,
   ExportedHandler,
+  Request,
 } from '@cloudflare/workers-types';
+import {Response} from '@cloudflare/workers-types';
 import {LogContext, LogLevel, LogSink} from '@rocicorp/logger';
 import {timed} from 'shared/src/timed.js';
 import type {ServiceRunnerEnv} from './service-runner.js';

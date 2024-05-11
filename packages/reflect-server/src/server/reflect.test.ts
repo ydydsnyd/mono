@@ -7,6 +7,7 @@ import {
   createReflectServer,
   type ReflectServerBaseEnv,
 } from './reflect.js';
+import {Request} from '@cloudflare/workers-types';
 
 test('Make sure makeOptions is called every time DO is constructed or worker fetch is called', async () => {
   const testLogSink = new TestLogSink();

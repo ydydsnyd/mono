@@ -34,6 +34,11 @@ import {AUTH_DATA_HEADER_NAME, addRoomIDHeader} from './internal-headers.js';
 import {TAIL_URL_PATH} from './paths.js';
 import {BaseRoomDO, getDefaultTurnDuration} from './room-do.js';
 import type {RoomContents} from './rooms.js';
+import {
+  DurableObjectState,
+  Request,
+  RequestInit,
+} from '@cloudflare/workers-types';
 
 async function createRoom<MD extends MutatorDefs>(
   roomDO: BaseRoomDO<MD>,
@@ -247,7 +252,6 @@ test('deleteRoom deletes all data except roomID', async () => {
     mutators: {},
     ...noopHandlers,
     state,
-
     logSink: testLogSink,
     logLevel: 'info',
     allowUnconfirmedWrites: true,

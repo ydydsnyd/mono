@@ -152,7 +152,7 @@ function createWSAndCloseWithErrorInternal<Data, Kind>(
   data: Data,
   kind: Kind,
   message: string,
-) {
+): Response {
   const pair = new WebSocketPair();
   const ws = pair[1];
   lc.info?.('accepting connection to send error', request.url);

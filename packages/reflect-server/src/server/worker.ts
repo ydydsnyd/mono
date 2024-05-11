@@ -16,7 +16,7 @@ import {
   AUTH_WEBSOCKET_ROUTES_AUTHED_BY_API_KEY,
 } from './auth-do.js';
 import {createDatadogMetricsSink} from './datadog-metrics-sink.js';
-import {makeErrorResponse} from './errors.js';
+import {makeErrorResponse} from 'shared/src/api/errors.js';
 import {
   CANARY_GET,
   HELLO,
@@ -35,6 +35,14 @@ import {
   post,
 } from 'shared/src/cf/router.js';
 import {withUnhandledRejectionHandler} from './unhandled-rejection-handler.js';
+import {
+  DurableObjectNamespace,
+  ExecutionContext,
+  ExportedHandler,
+  Request,
+  Response,
+  fetch,
+} from '@cloudflare/workers-types';
 
 export type MetricsSink = (
   allSeries: Series[],
