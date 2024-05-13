@@ -12,7 +12,7 @@
  * froeign keys as it doesn't make much sense to sort a foreign key.
  */
 export interface Index<K, V> {
-  get(key: K): V;
+  get(key: K): V | undefined;
 }
 
 export interface SortedIndex<K, V> extends Index<K, V> {
@@ -35,7 +35,7 @@ export class IndexRepositry {
 
   addSortedIndex<K, V>(
     collection: string,
-    columns: string[],
+    columns: readonly string[],
     index: SortedIndex<K, V>,
   ) {
     this.#sortedIndices.set(makeKey(collection, columns), index);
@@ -43,7 +43,7 @@ export class IndexRepositry {
 
   addHashIndex<K, V>(
     collection: string,
-    columns: string[],
+    columns: readonly string[],
     index: HashIndex<K, V>,
   ) {
     this.#hashIndiecs.set(makeKey(collection, columns), index);
@@ -79,6 +79,6 @@ export class IndexRepositry {
   }
 }
 
-function makeKey(collection: string, columns: string[]) {
+function makeKey(collection: string, columns: readonly string[]) {
   return collection + '-' + columns.join('-');
 }

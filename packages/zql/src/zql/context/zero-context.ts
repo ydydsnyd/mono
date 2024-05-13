@@ -111,8 +111,6 @@ class ZeroSource {
         // it is done so by iterating over the source that determines the result order
         // as the outer loop of the join. If two sources determine order then the leftmost one
         // in the order-by is the outer loop.
-        // const old = this.#canonicalSource.get(diff.oldValue as Entity);
-        // assert(old, 'oldValue not found in canonical source');
         this.#canonicalSource.delete(diff.oldValue as Entity);
       }
       if (diff.op === 'add' || diff.op === 'change') {

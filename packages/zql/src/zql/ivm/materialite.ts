@@ -6,12 +6,18 @@ import {SetSource} from './source/set-source.js';
 import type {Ordering} from '../ast/ast.js';
 import type {Source, SourceInternal} from './source/source.js';
 import type {Version} from './types.js';
+import {IndexRepositry, SortedIndex} from './source/index-repository.js';
 
 export type MaterialiteForSourceInternal = {
   readonly materialite: Materialite;
   nextVersion(): number;
   getVersion(): number;
   addDirtySource(source: SourceInternal): void;
+  addSortedIndex<K, V>(
+    collection: string,
+    columns: readonly string[],
+    index: SortedIndex<K, V>,
+  ): void;
 };
 
 export class Materialite {
@@ -23,6 +29,7 @@ export class Materialite {
 
   constructor() {
     this.#version = 0;
+    const indexRepository = new IndexRepositry();
     this.#internal = {
       materialite: this,
       getVersion: () => this.#version,
@@ -37,6 +44,13 @@ export class Materialite {
           this.#currentTx = this.#version + 1;
           this.#commit();
         }
+      },
+      addSortedIndex: <K, V>(
+        collection: string,
+        columns: string[],
+        index: SortedIndex<K, V>,
+      ) => {
+        indexRepository.addSortedIndex(collection, columns, index);
       },
     };
   }
