@@ -258,4 +258,7 @@ test('history requests with an alternate ordering are fulfilled by that ordering
 test('alternate ordering creations', () => {
   // is created for an ordering
   // is not created for undefined
+  // test by checking the reply
+  // `undefined` request will reply with `id` sort
+  // check that `desc` doesn't create new sort.
 });
