@@ -256,9 +256,54 @@ test('history requests with an alternate ordering are fulfilled by that ordering
 });
 
 test('alternate ordering creations', () => {
-  // is created for an ordering
-  // is not created for undefined
-  // test by checking the reply
-  // `undefined` request will reply with `id` sort
-  // check that `desc` doesn't create new sort.
+  const m = new Materialite();
+
+  expect(m.indexRepo.numIndices).toBe(0);
+
+  type E2 = {
+    id: number;
+    x: string;
+  };
+  const comparator = (l: E2, r: E2) => l.id - r.id;
+  const source = m.newSetSource(comparator, ordering, 'test');
+  const listener = {
+    commit() {},
+    newDifference() {},
+  };
+  source.seed([]);
+
+  expect(m.indexRepo.numIndices).toBe(1);
+  expect(m.indexRepo.getIndex('test', ['id'])).toBe(source);
+
+  m.tx(() => {
+    source.stream.messageUpstream(
+      {
+        id: 1,
+        hoistedConditions: [],
+        type: 'pull',
+        order: [['name', 'id'], 'asc'],
+      },
+      listener,
+    );
+  });
+
+  expect(m.indexRepo.numIndices).toBe(2);
+  expect(m.indexRepo.getIndex('test', ['name', 'id'])).not.toBe(undefined);
+
+  // asc/desc swap does not create new indices
+  m.tx(() => {
+    source.stream.messageUpstream(
+      {
+        id: 2,
+        hoistedConditions: [],
+        type: 'pull',
+        order: [['name', 'id'], 'desc'],
+      },
+      listener,
+    );
+  });
+
+  expect(m.indexRepo.numIndices).toBe(2);
+
+  // TODO(mlaw): should only create new indice on first column in later iterations.
 });

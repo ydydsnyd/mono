@@ -26,10 +26,12 @@ export class Materialite {
 
   #currentTx: Version | null = null;
   #internal: MaterialiteForSourceInternal;
+  readonly #indexRepo;
 
   constructor() {
     this.#version = 0;
     const indexRepository = new IndexRepositry();
+    this.#indexRepo = indexRepository;
     this.#internal = {
       materialite: this,
       getVersion: () => this.#version,
@@ -106,6 +108,10 @@ export class Materialite {
     } finally {
       this.#dirtySources.clear();
     }
+  }
+
+  get indexRepo() {
+    return this.#indexRepo;
   }
 
   #rollback() {

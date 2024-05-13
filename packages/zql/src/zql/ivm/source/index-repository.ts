@@ -60,6 +60,7 @@ export class IndexRepositry {
    * have an index for is returned.
    */
   // indexExists(collection: string, columns: string[]): string[] {}
+  // getBestIndex(collection: string, columns: string[]): string[] {}
 
   getIndex<K, V>(
     collection: string,
@@ -76,6 +77,10 @@ export class IndexRepositry {
     }
 
     return undefined;
+  }
+
+  get numIndices() {
+    return this.#sortedIndices.size + this.#hashIndiecs.size;
   }
 }
 
