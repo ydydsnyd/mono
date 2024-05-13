@@ -1,10 +1,14 @@
-import {expect, test} from 'vitest';
+import {expect, test, vi} from 'vitest';
 import {JoinResult, joinSymbol} from '../../types.js';
 import {DifferenceStream} from '../difference-stream.js';
+<<<<<<< HEAD
 import {
   orderIsRemovedFromReply,
   orderIsRemovedFromRequest,
 } from './left-join-operator.test.js';
+=======
+import {createPullResponseMessage} from '../message.js';
+>>>>>>> 908d36ce6 (chore(zql): implement tests to check removal of `order` in join messages)
 
 type Track = {
   id: number;
