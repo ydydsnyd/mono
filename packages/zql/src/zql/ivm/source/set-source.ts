@@ -26,7 +26,7 @@ export class SetSource<T extends object> implements Source<T> {
   >();
   readonly #sorts = new Map<string, SetSource<T>>();
   readonly comparator: Comparator<T>;
-  readonly #name: string | undefined;
+  readonly #name: string;
   readonly #order: Ordering;
 
   protected readonly _materialite: MaterialiteForSourceInternal;
@@ -40,7 +40,7 @@ export class SetSource<T extends object> implements Source<T> {
     materialite: MaterialiteForSourceInternal,
     comparator: Comparator<T>,
     order: Ordering,
-    name?: string | undefined,
+    name: string,
   ) {
     this.#order = order;
     this._materialite = materialite;
@@ -107,7 +107,12 @@ export class SetSource<T extends object> implements Source<T> {
   }
 
   withNewOrdering(comp: Comparator<T>, ordering: Ordering): this {
-    const ret = new SetSource(this._materialite, comp, ordering) as this;
+    const ret = new SetSource(
+      this._materialite,
+      comp,
+      ordering,
+      this.#name,
+    ) as this;
     if (this.#seeded) {
       ret.seed(this.#tree.keys());
     }
