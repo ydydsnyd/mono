@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1714627519290,
+  "lastUpdate": 1715622357934,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -47401,6 +47401,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32405,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "493747c88ff16e9fe4885b9c615339868ab32a81",
+          "message": "refactor(zero-cache,reflect-server): break zero-cache dependency on reflect-server (#1805)\n\nTo do this I created a new cf-shared package and factored router and some other utilities from reflect-server into this new package.  This package is separate from shared because its tsconfig needs to include `types: ['@cloudflare/worker-types']`\r\nand it need to not include `lib: ['DOM']`.\r\n\r\n\r\nI did attempt an approach where I put this in shared and did not use `types: ['@cloudflare/worker-types']` but rather imported the cloudflare types explicitly in the files that used them.  I even updated all of reflect-server and zero-cache to do this explicit importing.  However, I could not get the reflect-server d.ts to build with this approach (which otherwise I liked better).",
+          "timestamp": "2024-05-13T10:43:23-07:00",
+          "tree_id": "aaed9c6b9919e87ac5dfd56ffe37b5a1b5c4d271",
+          "url": "https://github.com/rocicorp/mono/commit/493747c88ff16e9fe4885b9c615339868ab32a81"
+        },
+        "date": 1715622341757,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 316216,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54998,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 116504,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32389,
             "unit": "bytes"
           }
         ]
