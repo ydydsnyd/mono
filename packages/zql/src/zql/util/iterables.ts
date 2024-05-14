@@ -50,7 +50,7 @@ export function genCached<T>(
           }
 
           lastIteratorResult = innerIterator.next();
-          if (lastIteratorResult?.done) {
+          if (lastIteratorResult.done) {
             return;
           }
 

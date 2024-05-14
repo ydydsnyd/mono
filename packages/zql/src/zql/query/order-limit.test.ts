@@ -201,9 +201,23 @@ describe('pulling from an infinite source is possible if we set a limit', () => 
       .prepare();
     const data = await stmt.exec();
 
-    console.log(data);
-    // ^^ concat needs to understand if sources are same order.
-    // expect(data).toEqual([{id: '90'}, {id: '91'}]);
+    expect(data).toEqual([
+      {id: '80'},
+      {id: '81'},
+      {id: '82'},
+      {id: '83'},
+      {id: '84'},
+      {id: '85'},
+      {id: '86'},
+      {id: '87'},
+      {id: '88'},
+      {id: '89'},
+      {id: '9'},
+      {id: '90'},
+      {id: '91'},
+      {id: '92'},
+      {id: '93'},
+    ]);
 
     stmt.destroy();
   });

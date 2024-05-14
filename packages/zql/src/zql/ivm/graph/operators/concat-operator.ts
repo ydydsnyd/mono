@@ -7,6 +7,7 @@ import type {DifferenceStream, Listener} from '../difference-stream.js';
 import type {PullMsg, Reply} from '../message.js';
 import type {Operator} from './operator.js';
 
+let id = 0;
 /**
  * A dataflow operator (node) that has many incoming edges and
  * one outgoing edge (write handle). It just sends all the input messages from
@@ -16,6 +17,7 @@ export class ConcatOperator<T extends object> implements Operator {
   readonly #listener: Listener<T>;
   readonly #inputs: DifferenceStream<T>[];
   readonly #output: DifferenceStream<T>;
+  readonly #id = id++;
 
   readonly #replyBuffer: [multiset: Multiset<T>, reply: Reply][] = [];
   #replyVersion: number = -1;
@@ -42,6 +44,10 @@ export class ConcatOperator<T extends object> implements Operator {
     for (const input of inputs) {
       input.addDownstream(this.#listener);
     }
+  }
+
+  get id() {
+    return this.#id;
   }
 
   #flushReplyBuffer() {
