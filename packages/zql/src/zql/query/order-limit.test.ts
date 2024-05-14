@@ -5,7 +5,7 @@ import {
   TestContext,
 } from '../context/test-context.js';
 import type {Source} from '../ivm/source/source.js';
-import {EntityQuery} from './entity-query.js';
+import {EntityQuery, exp, or} from './entity-query.js';
 
 describe('a limited window is correctly maintained over differences', () => {
   type E = {
@@ -188,6 +188,22 @@ describe('pulling from an infinite source is possible if we set a limit', () => 
     const data = await stmt.exec();
 
     expect(data).toEqual([{id: '90'}, {id: '91'}]);
+
+    stmt.destroy();
+  });
+
+  test('select and where with or', async () => {
+    const q = new EntityQuery<{e: E}>(context, 'e', 'e');
+    const stmt = q
+      .select('id')
+      .where(or(exp('e.id', '>', '9'), exp('e.id', '>', '8')))
+      .limit(15)
+      .prepare();
+    const data = await stmt.exec();
+
+    console.log(data);
+    // ^^ concat needs to understand if sources are same order.
+    // expect(data).toEqual([{id: '90'}, {id: '91'}]);
 
     stmt.destroy();
   });
