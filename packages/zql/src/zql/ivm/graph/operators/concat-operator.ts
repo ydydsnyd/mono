@@ -12,6 +12,14 @@ export class ConcatOperator<T extends object> implements Operator {
   readonly #inputs: DifferenceStream<T>[];
   readonly #output: DifferenceStream<T>;
 
+  // TODO: if we receive a reply then we should start holding onto everyone
+  // until we've gotten all replies
+  // then we release.
+  // That release we try to do in-order, if possible.
+  // We look at all the replies and if they're all from the same source and order
+  // then we emit our concat in order.
+  // Otherwise we just emit each input to exhaustion.
+
   constructor(inputs: DifferenceStream<T>[], output: DifferenceStream<T>) {
     this.#inputs = inputs;
     this.#output = output;
