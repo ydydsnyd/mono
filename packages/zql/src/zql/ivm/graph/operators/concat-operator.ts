@@ -1,6 +1,7 @@
 import {assert} from 'shared/src/asserts.js';
 import {must} from 'shared/src/must.js';
 import {makeComparator} from '../../../query/statement.js';
+import {gen} from '../../../util/iterables.js';
 import type {Entry, Multiset} from '../../multiset.js';
 import {sourcesAreIdentical} from '../../source/util.js';
 import type {DifferenceStream, Listener} from '../difference-stream.js';
@@ -75,7 +76,7 @@ export class ConcatOperator<T extends object> implements Operator {
     } else {
       this.#output.newDifference(
         this.#replyVersion,
-        genInOrder(this.#replyBuffer),
+        gen(genInOrder(this.#replyBuffer)),
         first[1],
       );
     }
@@ -113,28 +114,33 @@ export function* genInOrder<T extends object>(
   const comparator = makeComparator(order[0], order[1]);
 
   const iterators = buffer.map(r => r[0][Symbol.iterator]());
-
-  const current = iterators.map(it => it.next());
-  while (current.some(c => !c.done)) {
-    const min = current.reduce(
-      (
-        acc: [Entry<T>, number] | undefined,
-        c,
-        i,
-      ): [Entry<T>, number] | undefined => {
-        if (c.done) {
+  try {
+    const current = iterators.map(it => it.next());
+    while (current.some(c => !c.done)) {
+      const min = current.reduce(
+        (
+          acc: [Entry<T>, number] | undefined,
+          c,
+          i,
+        ): [Entry<T>, number] | undefined => {
+          if (c.done) {
+            return acc;
+          }
+          if (acc === undefined || comparator(c.value[0], acc[0]) < 0) {
+            return [c.value, i];
+          }
           return acc;
-        }
-        if (acc === undefined || comparator(c.value[0], acc[0]) < 0) {
-          return [c.value, i];
-        }
-        return acc;
-      },
-      undefined,
-    );
+        },
+        undefined,
+      );
 
-    assert(min !== undefined, 'min is undefined');
-    yield min[0];
-    current[min[1]] = iterators[min[1]].next();
+      assert(min !== undefined, 'min is undefined');
+      yield min[0];
+      current[min[1]] = iterators[min[1]].next();
+    }
+  } finally {
+    for (const it of iterators) {
+      it.return?.();
+    }
   }
 }

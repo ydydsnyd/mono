@@ -1,3 +1,11 @@
+export function gen<T>(iter: Iterable<T>) {
+  return {
+    *[Symbol.iterator]() {
+      yield* iter;
+    },
+  };
+}
+
 export function genConcat<T>(iters: Iterable<T>[]) {
   return {
     *[Symbol.iterator]() {

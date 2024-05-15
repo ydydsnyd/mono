@@ -1,5 +1,6 @@
 import {expect, test} from 'vitest';
 import {
+  gen,
   genCached,
   genFilter,
   genFlatMap,
@@ -155,3 +156,17 @@ function check<R>(
   expect(firstResult).toEqual(secondResult);
   expect(secondResult).toEqual(thirdResult);
 }
+
+test('gen makes a generator re-iterable', () => {
+  function* generator() {
+    yield 1;
+    yield 2;
+    yield 3;
+  }
+
+  const iterable = gen(generator());
+
+  expect([...iterable]).toEqual([1, 2, 3]);
+  expect([...iterable]).toEqual([1, 2, 3]);
+  expect([...iterable]).toEqual([1, 2, 3]);
+});
