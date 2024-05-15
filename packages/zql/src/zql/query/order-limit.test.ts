@@ -193,7 +193,7 @@ describe('pulling from an infinite source is possible if we set a limit', () => 
   });
 
   test('select and where with or', async () => {
-    const q = new EntityQuery<{e: E}>(context, 'e', 'e');
+    const q = new EntityQuery<{e: E}>(context, 'e');
     const stmt = q
       .select('id')
       .where(or(exp('e.id', '>', '9'), exp('e.id', '>', '8')))

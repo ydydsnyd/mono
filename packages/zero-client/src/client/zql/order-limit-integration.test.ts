@@ -322,6 +322,11 @@ describe('sorting and limiting with different query operations', async () => {
       },
     },
     {
+      // This is bugged. We have a partial order match
+      // from the join to the view. We need to split the msg upstream and reply
+      // to indicate that fact.
+      // TODO: this should have fataled in the source with an unknown column being ordered by
+      // for source a
       name: '3-way join, limits, ordered, desc',
       query: () =>
         z.query.track
