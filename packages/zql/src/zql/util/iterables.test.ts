@@ -164,7 +164,7 @@ test('gen makes a generator re-iterable', () => {
     yield 3;
   }
 
-  const iterable = gen(generator());
+  const iterable = gen(generator);
 
   expect([...iterable]).toEqual([1, 2, 3]);
   expect([...iterable]).toEqual([1, 2, 3]);

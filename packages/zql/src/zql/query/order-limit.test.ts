@@ -222,6 +222,22 @@ describe('pulling from an infinite source is possible if we set a limit', () => 
     stmt.destroy();
   });
 
+  test('bare select with a join', async () => {});
+
+  // test:
+  // 1. join
+  //   - subset order
+  //   - exact order
+  //   - no match?
+  // 2. group by
+  // 3. distinct
+  // 4. having
+  // 5. concat / or
+  // 6. or having
+  // 7. re-aliasing the table in the join
+  // 8. 3-way join with re-aliasing
+  // 9. re-entrant concat ordered
+
   // TODO(mlaw): test select with alternate ordering. differing fields and same fields but differing direction
   // TODO(mlaw): test cases for when `withNewOrdering` should or should not be invoked. e.g., join should drop order rn
 

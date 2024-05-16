@@ -544,7 +544,7 @@ describe('OR', () => {
     test((c.name ? c.name + ': ' : '') + conditionToString(c.where), () => {
       const {values = defaultValues} = c;
       const m = new Materialite();
-      const s = m.newSetSource<E>(comparator, [[['items', 'id']], 'asc'], 'e1');
+      const s = m.newSetSource<E>(comparator, [[['e1', 'id']], 'asc'], 'e1');
 
       const ast: AST = {
         table: 'items',

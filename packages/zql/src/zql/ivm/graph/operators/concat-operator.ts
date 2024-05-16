@@ -76,7 +76,7 @@ export class ConcatOperator<T extends object> implements Operator {
     } else {
       this.#output.newDifference(
         this.#replyVersion,
-        gen(genInOrder(this.#replyBuffer)),
+        gen(() => genInOrder(this.#replyBuffer)),
         first[1],
       );
     }

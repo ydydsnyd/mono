@@ -273,7 +273,7 @@ test('alternate ordering creations', () => {
   source.seed([]);
 
   expect(m.indexRepo.numIndices).toBe(1);
-  expect(m.indexRepo.getIndex('test', ['id'])).toBe(source);
+  expect(m.indexRepo.getIndex('test', [['test', 'id']])).toBe(source);
 
   m.tx(() => {
     source.stream.messageUpstream(
@@ -281,14 +281,25 @@ test('alternate ordering creations', () => {
         id: 1,
         hoistedConditions: [],
         type: 'pull',
-        order: [['name', 'id'], 'asc'],
+        order: [
+          [
+            ['test', 'name'],
+            ['test', 'id'],
+          ],
+          'asc',
+        ],
       },
       listener,
     );
   });
 
   expect(m.indexRepo.numIndices).toBe(2);
-  expect(m.indexRepo.getIndex('test', ['name', 'id'])).not.toBe(undefined);
+  expect(
+    m.indexRepo.getIndex('test', [
+      ['test', 'name'],
+      ['test', 'id'],
+    ]),
+  ).not.toBe(undefined);
 
   // asc/desc swap does not create new indices
   m.tx(() => {
@@ -297,7 +308,13 @@ test('alternate ordering creations', () => {
         id: 2,
         hoistedConditions: [],
         type: 'pull',
-        order: [['name', 'id'], 'desc'],
+        order: [
+          [
+            ['test', 'name'],
+            ['test', 'id'],
+          ],
+          'desc',
+        ],
       },
       listener,
     );

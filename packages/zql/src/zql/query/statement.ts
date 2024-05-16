@@ -106,9 +106,11 @@ async function createMaterialization<Return>(ast: AST, context: Context) {
   //
   // This waits for all sources to have been loaded into memory
   // before creating the view.
-  await Promise.all(
-    usedSources.filter(s => !s.isSeeded()).map(s => s.awaitSeeding()),
-  );
+  const seedingPromises = usedSources
+    .filter(s => !s.isSeeded())
+    .map(s => s.awaitSeeding());
+  await Promise.all(seedingPromises);
+
   const view = new TreeView<Return extends [] ? Return[number] : never>(
     context,
     pipeline as unknown as DifferenceStream<

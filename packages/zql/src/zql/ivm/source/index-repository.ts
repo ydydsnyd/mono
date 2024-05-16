@@ -1,3 +1,5 @@
+import type {Selector} from '../../ast/ast.js';
+
 /**
  * Keys can be:
  * - string, numbers or objects
@@ -35,7 +37,7 @@ export class IndexRepositry {
 
   addSortedIndex<K, V>(
     collection: string,
-    columns: readonly string[],
+    columns: readonly Selector[],
     index: SortedIndex<K, V>,
   ) {
     this.#sortedIndices.set(makeKey(collection, columns), index);
@@ -43,7 +45,7 @@ export class IndexRepositry {
 
   addHashIndex<K, V>(
     collection: string,
-    columns: readonly string[],
+    columns: readonly Selector[],
     index: HashIndex<K, V>,
   ) {
     this.#hashIndiecs.set(makeKey(collection, columns), index);
@@ -64,7 +66,7 @@ export class IndexRepositry {
 
   getIndex<K, V>(
     collection: string,
-    columns: string[],
+    columns: Selector[],
   ): Index<K, V> | undefined {
     const key = makeKey(collection, columns);
     const sorted = this.#sortedIndices.get(key);
@@ -84,6 +86,6 @@ export class IndexRepositry {
   }
 }
 
-function makeKey(collection: string, columns: readonly string[]) {
-  return collection + '-' + columns.join('-');
+function makeKey(collection: string, columns: readonly Selector[]) {
+  return collection + '|' + columns.map(c => c.join('|')).join('|');
 }

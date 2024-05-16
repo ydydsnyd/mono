@@ -1,7 +1,7 @@
-export function gen<T>(iter: Iterable<T>) {
+export function gen<T>(generator: () => Generator<T, void, unknown>) {
   return {
-    *[Symbol.iterator]() {
-      yield* iter;
+    [Symbol.iterator]() {
+      return generator();
     },
   };
 }
