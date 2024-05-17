@@ -1,4 +1,4 @@
-import type {Ordering, SimpleCondition} from '../../ast/ast.js';
+import type {Ordering, Selector, SimpleCondition} from '../../ast/ast.js';
 
 export type Request = PullMsg;
 
@@ -37,6 +37,7 @@ export type Request = PullMsg;
 export type PullMsg = {
   readonly id: number;
   readonly type: 'pull';
+  // undefined means that the data does not need to be ordered in the reply.
   readonly order?: Ordering | undefined;
   readonly hoistedConditions: readonly SimpleCondition[];
 };
@@ -48,9 +49,14 @@ export type PullReplyMsg = {
   readonly type: 'pullResponse';
   readonly sourceName: string;
   // the order of the data we are sending.
+  // undefined means that it is not ordered.
   readonly order: Ordering | undefined;
-  // columns we are not ordered by but do produce contiguous groups for.
-  readonly contiguousGroups: readonly string[];
+  // columns we are not ordered by but do produce contiguous groupings for.
+  // E.g., `SELECT * FROM a LEFT JOIN b ON a.id = b.a_id ORDER BY a.modified`
+  // We sort on `a.modified` but we also have a contiguous group on `a.id`.
+  // As in, `a.id` is unique and is only duplicated by the join which duplicates the row
+  // in a contiguous group.
+  readonly contiguousGroup: readonly Selector[];
 };
 
 let messageID = 0;
@@ -88,6 +94,6 @@ export function createPullResponseMessage(
     type: 'pullResponse',
     sourceName,
     order,
-    contiguousGroups: [],
+    contiguousGroup: [],
   };
 }
