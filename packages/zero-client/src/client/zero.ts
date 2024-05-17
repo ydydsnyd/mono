@@ -689,11 +689,20 @@ export class Zero<QD extends QueryDefs> {
     }
 
     if (
-      kind === 'InvalidConnectionRequestLastMutationID' ||
-      kind === 'InvalidConnectionRequestBaseCookie'
+      kind === ErrorKind.InvalidConnectionRequestLastMutationID ||
+      kind === ErrorKind.InvalidConnectionRequestBaseCookie
     ) {
       await dropDatabase(this.#rep.idbName);
       reloadWithReason(lc, this.#reload, serverAheadReloadReason(kind));
+    }
+
+    if (kind === ErrorKind.CVRNotFound) {
+      await this.#rep.disableClientGroup();
+      reloadWithReason(
+        lc,
+        this.#reload,
+        'Synchronization state for client not found on server.',
+      );
     }
 
     const error = new ServerError(kind, message);

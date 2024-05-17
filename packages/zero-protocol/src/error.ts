@@ -6,7 +6,7 @@ import * as v from 'shared/src/valita.js';
 
 export enum ErrorKind {
   AuthInvalidated = 'AuthInvalidated',
-  ClientNotFound = 'ClientNotFound',
+  CVRNotFound = 'CVRNotFound',
   InvalidConnectionRequest = 'InvalidConnectionRequest',
   InvalidConnectionRequestBaseCookie = 'InvalidConnectionRequestBaseCookie',
   InvalidConnectionRequestLastMutationID = 'InvalidConnectionRequestLastMutationID',
@@ -21,7 +21,7 @@ export enum ErrorKind {
 
 export const errorKindSchema = v.union(
   v.literal(ErrorKind.AuthInvalidated),
-  v.literal(ErrorKind.ClientNotFound),
+  v.literal(ErrorKind.CVRNotFound),
   v.literal(ErrorKind.InvalidConnectionRequest),
   v.literal(ErrorKind.InvalidConnectionRequestBaseCookie),
   v.literal(ErrorKind.InvalidConnectionRequestLastMutationID),
@@ -34,7 +34,7 @@ export const errorKindSchema = v.union(
   v.literal(ErrorKind.Internal),
 );
 
-export const errorMessageSchema: v.Type<ErrorMessage> = v.tuple([
+export const errorMessageSchema = v.tuple([
   v.literal('error'),
   errorKindSchema,
   v.string(),

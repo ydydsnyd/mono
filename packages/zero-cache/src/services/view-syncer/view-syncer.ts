@@ -3,11 +3,12 @@ import type {LogContext} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
 import type {AST} from '@rocicorp/zql/src/zql/ast/ast.js';
 import {assert} from 'shared/src/asserts.js';
-import type {
-  ChangeDesiredQueriesBody,
-  ChangeDesiredQueriesMessage,
-  Downstream,
-  InitConnectionMessage,
+import {
+  ErrorKind,
+  type ChangeDesiredQueriesBody,
+  type ChangeDesiredQueriesMessage,
+  type Downstream,
+  type InitConnectionMessage,
 } from 'zero-protocol';
 import type {DurableStorage} from '../../storage/durable-storage.js';
 import {initStorageSchema} from '../../storage/schema.js';
@@ -16,7 +17,7 @@ import type {CancelableAsyncIterable} from '../../types/streams.js';
 import {Subscription} from '../../types/subscription.js';
 import type {QueryInvalidationUpdate} from '../invalidation-watcher/invalidation-watcher.js';
 import type {InvalidationWatcherRegistry} from '../invalidation-watcher/registry.js';
-import type {Service} from '../service.js';
+import {StoppedError, type Service} from '../service.js';
 import {ClientHandler} from './client-handler.js';
 import {
   CVRConfigDrivenUpdater,
@@ -28,6 +29,7 @@ import {QueryHandler, TransformedQuery} from './queries.js';
 import {SCHEMA_MIGRATIONS} from './schema/migrations.js';
 import {schemaRoot} from './schema/paths.js';
 import {cmpVersions} from './schema/types.js';
+import {ErrorForClient} from '../error.js';
 
 export type SyncContext = {
   readonly clientID: string;
@@ -63,6 +65,7 @@ export class ViewSyncerService implements ViewSyncer, Service {
 
   #started = false;
   #stopped = false;
+  #stopCause: unknown = undefined;
   readonly #shouldRun = resolver<false>();
   #hasSyncRequests = resolver<true>();
 
@@ -92,7 +95,7 @@ export class ViewSyncerService implements ViewSyncer, Service {
 
     this.#lc.info?.('starting view-syncer');
     try {
-      await this.#lock.withLock(async () => {
+      await this.#runInLockButThrowIfStopped(async () => {
         await initStorageSchema(
           this.#lc,
           'view-syncer',
@@ -101,7 +104,15 @@ export class ViewSyncerService implements ViewSyncer, Service {
           SCHEMA_MIGRATIONS,
         );
 
-        this.#cvr = await loadCVR(this.#lc, this.#storage, this.id);
+        try {
+          this.#cvr = await loadCVR(this.#lc, this.#storage, this.id);
+        } catch (e) {
+          throw e instanceof TypeError
+            ? new ErrorForClient(['error', ErrorKind.CVRNotFound, e.message], {
+                cause: e,
+              })
+            : e;
+        }
       });
 
       this.#lc.info?.('started view-syncer');
@@ -115,6 +126,7 @@ export class ViewSyncerService implements ViewSyncer, Service {
           // sleep(IDLE_TIMEOUT_MS),
         ])
       ) {
+<<<<<<< HEAD
         const watching = await this.#lock.withLock(() =>
           this.#watchInvalidations(),
         );
@@ -124,8 +136,14 @@ export class ViewSyncerService implements ViewSyncer, Service {
           break;
         }
         const {subscription, handleInvalidations} = watching;
+=======
+        const {subscription, handleInvalidations} =
+          await this.#runInLockButThrowIfStopped(() =>
+            this.#watchInvalidations(),
+          );
+>>>>>>> 484e74b22 (feat(zero-cache): ViewSyncer error propogation to client)
         for await (const update of subscription) {
-          await this.#lock.withLock(async () => {
+          await this.#runInLockButThrowIfStopped(async () => {
             if (!this.#invalidationSubscription) {
               return; // Subscription was canceled. Update must be dropped.
             }
@@ -136,15 +154,17 @@ export class ViewSyncerService implements ViewSyncer, Service {
         this.#invalidationSubscription = undefined;
         this.#lc.info?.(`waiting for syncers`);
       }
-      await this.stop();
     } catch (e) {
-      this.#lc.error?.(e);
-      await this.stop(e);
+      if (!(e instanceof StoppedError)) {
+        this.#lc.error?.(e);
+        await this.stop(e);
+      }
     } finally {
       this.#lc.info?.('stopped');
     }
   }
 
+<<<<<<< HEAD
   #deleteClient(
     lc: LogContext,
     clientID: string,
@@ -166,6 +186,9 @@ export class ViewSyncerService implements ViewSyncer, Service {
   }
 
   async initConnection(
+=======
+  initConnection(
+>>>>>>> 484e74b22 (feat(zero-cache): ViewSyncer error propogation to client)
     ctx: SyncContext,
     initConnectionMessage: InitConnectionMessage,
   ): Promise<CancelableAsyncIterable<Downstream>> {
@@ -176,6 +199,7 @@ export class ViewSyncerService implements ViewSyncer, Service {
     lc.debug?.('initConnection', initConnectionMessage);
 
     // Setup the downstream connection.
+<<<<<<< HEAD
     const downstream = new Subscription<Downstream>({
       cleanup: (_, err) => {
         err
@@ -193,21 +217,51 @@ export class ViewSyncerService implements ViewSyncer, Service {
       baseCookie,
       downstream,
     );
+=======
+>>>>>>> 484e74b22 (feat(zero-cache): ViewSyncer error propogation to client)
 
     // Note: It is tempting to try to re-use #runInLockForClient(), but for
     // the initConnection case the client is not yet in the #clients map, and
     // it must be added from within the lock, and only after the desired
     // queries have been processed.
-    await this.#lock.withLock(async () => {
-      await this.#patchQueries(lc, client, initConnectionMessage[1]);
+    return this.#runInLockButThrowIfStopped(async () => {
+      const downstream = new Subscription<Downstream>({
+        cleanup: (_, err) => {
+          if (err) {
+            lc.error?.(`client closed with error`, err);
+          } else {
+            lc.info?.('client closed');
+          }
+          const c = this.#clients.get(clientID);
+          if (c === client) {
+            this.#clients.delete(clientID);
+
+            if (this.#clients.size === 0) {
+              lc.info?.('no more clients. closing invalidation subscription');
+              this.#invalidationSubscription?.cancel();
+              this.#invalidationSubscription = undefined;
+              this.#hasSyncRequests = resolver<true>();
+            }
+          }
+        },
+      });
+      const client = new ClientHandler(
+        lc,
+        this.id,
+        clientID,
+        wsID,
+        baseCookie,
+        downstream,
+      );
 
       // Update #clients, close any previous connection.
       this.#clients.get(clientID)?.close();
       this.#clients.set(clientID, client);
-
+      await this.#patchQueries(lc, client, initConnectionMessage[1]);
       this.#hasSyncRequests.resolve(true);
+
+      return downstream;
     });
-    return downstream;
   }
 
   async changeDesiredQueries(
@@ -243,11 +297,27 @@ export class ViewSyncerService implements ViewSyncer, Service {
     }
 
     try {
-      await this.#lock.withLock(() => fn(lc, client, body));
+      await this.#runInLockButThrowIfStopped(() => fn(lc, client, body));
     } catch (e) {
       lc.error?.(`closing connection with error`, e);
       client.fail(e);
       throw e;
+    }
+  }
+
+  #runInLockButThrowIfStopped<T>(body: () => Promise<T>): Promise<T> {
+    this.#throwIfStopped();
+    return this.#lock.withLock(() => {
+      this.#throwIfStopped();
+      return body();
+    });
+  }
+
+  #throwIfStopped() {
+    if (this.#stopped) {
+      throw new StoppedError(`ViewSyncer ${this.id} is stopped.`, {
+        cause: this.#stopCause,
+      });
     }
   }
 
@@ -440,20 +510,25 @@ export class ViewSyncerService implements ViewSyncer, Service {
     lc.info?.(`finished processing update`);
   }
 
-  // eslint-disable-next-line require-await
-  async stop(err?: unknown): Promise<void> {
-    this.#stopped = true;
-    this.#shouldRun.resolve(false);
-    this.#invalidationSubscription?.cancel();
-    this.#invalidationSubscription = undefined;
-
-    for (const client of this.#clients.values()) {
-      if (err) {
-        client.fail(err);
-      } else {
-        client.close();
+  stop(err?: unknown): Promise<void> {
+    return this.#lock.withLock(() => {
+      if (this.#stopped) {
+        return;
       }
-    }
+      this.#stopped = true;
+      this.#stopCause = err;
+      this.#shouldRun.resolve(false);
+      this.#invalidationSubscription?.cancel();
+      this.#invalidationSubscription = undefined;
+
+      for (const client of this.#clients.values()) {
+        if (err) {
+          client.fail(err);
+        } else {
+          client.close();
+        }
+      }
+    });
   }
 
   async #checkQueries(queries: {id: string; ast: AST}[]): Promise<void> {
