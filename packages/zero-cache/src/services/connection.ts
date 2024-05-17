@@ -13,6 +13,8 @@ import type {SyncContext, ViewSyncer} from './view-syncer/view-syncer.js';
 import type {CancelableAsyncIterable} from '../types/streams.js';
 import type {Mutagen} from './mutagen/mutagen.js';
 import {assert} from 'shared/src/asserts.js';
+import {StoppedError} from './service.js';
+import {findErrorForClient} from './error.js';
 
 export function handleConnection(
   lc: LogContext,
@@ -104,6 +106,7 @@ export class Connection {
     this.#clientGroupID = clientGroupID;
     this.#syncContext = {clientID, wsID, baseCookie};
     this.#lc = lc
+      .withContext('connection')
       .withContext('clientID', clientID)
       .withContext('clientGroupID', clientGroupID)
       .withContext('wsID', wsID);
@@ -127,6 +130,7 @@ export class Connection {
     if (this.#closed) {
       return;
     }
+    this.#lc.debug?.('close');
     this.#closed = true;
     this.#ws.removeEventListener('message', this.#handleMessage);
     this.#ws.removeEventListener('close', this.#handleClose);
@@ -196,16 +200,24 @@ export class Connection {
             this.#syncContext,
             msg,
           );
-
-          void this.#proxyOutbound(this.#outboundStream);
+          if (this.#closed) {
+            this.#outboundStream.cancel();
+          } else {
+            void this.#proxyOutbound(this.#outboundStream);
+          }
           break;
         }
         default:
           msgType satisfies never;
       }
     } catch (e) {
+      const errorMessage = findErrorForClient(e)?.message ?? [
+        'error',
+        'General',
+        String(e),
+      ];
       // TODO: Determine the ErrorKind from a custom Error type for e.
-      this.#closeWithError('InvalidMessage', String(e));
+      this.#closeWithError(errorMessage);
     }
   };
 
@@ -227,17 +239,24 @@ export class Connection {
       this.#lc.info?.('downstream closed by ViewSyncer');
       this.close();
     } catch (e) {
-      // TODO: Determine the ErrorKind from a custom Error type for e.
-      this.#closeWithError('InvalidMessage', String(e));
+      this.#closeWithThrown(e);
     }
   }
 
+  #closeWithThrown(e: unknown) {
+    const errorMessage = findErrorForClient(e)?.errorMessage ?? [
+      'error',
+      'General',
+      String(e),
+    ];
+    this.#closeWithError(errorMessage);
+  }
+
   #closeWithError(
-    kind: ErrorKind,
-    message = '',
+    errorMessage: ErrorMessage,
     logLevel: 'info' | 'error' = 'info',
   ) {
-    this.sendError(kind, message, logLevel);
+    this.sendError(errorMessage, logLevel);
     this.close();
   }
 
@@ -245,12 +264,8 @@ export class Connection {
     send(this.#ws, data);
   }
 
-  sendError(
-    kind: ErrorKind,
-    message = '',
-    logLevel: 'info' | 'error' = 'info',
-  ) {
-    sendError(this.#lc, this.#ws, kind, message, logLevel);
+  sendError(errorMessage: ErrorMessage, logLevel: 'info' | 'error' = 'info') {
+    sendError(this.#lc, this.#ws, errorMessage, logLevel);
   }
 }
 
@@ -261,15 +276,11 @@ export function send(ws: WebSocket, data: Downstream) {
 export function sendError(
   lc: LogContext,
   ws: WebSocket,
-  kind: ErrorKind,
-  message = '',
+  errorMessage: ErrorMessage,
   logLevel: 'info' | 'error' = 'info',
 ) {
-  lc[logLevel]?.('Sending error on socket', {
-    kind,
-    message,
-  });
-  const errorMessage: ErrorMessage = ['error', kind, message];
+  lc = lc.withContext('errorKind', errorMessage[1]);
+  lc[logLevel]?.('Sending error on WebSocket', errorMessage);
   send(ws, errorMessage);
 }
 

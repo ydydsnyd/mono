@@ -16,7 +16,7 @@ import type {CancelableAsyncIterable} from '../../types/streams.js';
 import {Subscription} from '../../types/subscription.js';
 import type {QueryInvalidationUpdate} from '../invalidation-watcher/invalidation-watcher.js';
 import type {InvalidationWatcherRegistry} from '../invalidation-watcher/registry.js';
-import type {Service} from '../service.js';
+import {StoppedError, type Service} from '../service.js';
 import {ClientHandler} from './client-handler.js';
 import {
   CVRConfigDrivenUpdater,
@@ -63,6 +63,7 @@ export class ViewSyncerService implements ViewSyncer, Service {
 
   #started = false;
   #stopped = false;
+  #stopCause: unknown = undefined;
   readonly #shouldRun = resolver<false>();
   #hasSyncRequests = resolver<true>();
 
@@ -144,10 +145,11 @@ export class ViewSyncerService implements ViewSyncer, Service {
     }
   }
 
-  async initConnection(
+  initConnection(
     ctx: SyncContext,
     initConnectionMessage: InitConnectionMessage,
   ): Promise<CancelableAsyncIterable<Downstream>> {
+    this.#throwIfStopped();
     const {clientID, wsID, baseCookie} = ctx;
     const lc = this.#lc
       .withContext('clientID', clientID)
@@ -155,50 +157,51 @@ export class ViewSyncerService implements ViewSyncer, Service {
     lc.debug?.('initConnection', initConnectionMessage);
 
     // Setup the downstream connection.
-    const downstream = new Subscription<Downstream>({
-      cleanup: (_, err) => {
-        if (err) {
-          lc.error?.(`client closed with error`, err);
-        } else {
-          lc.info?.('client closed');
-        }
-        const c = this.#clients.get(clientID);
-        if (c === client) {
-          this.#clients.delete(clientID);
-
-          if (this.#clients.size === 0) {
-            lc.info?.('no more clients. closing invalidation subscription');
-            this.#invalidationSubscription?.cancel();
-            this.#invalidationSubscription = undefined;
-            this.#hasSyncRequests = resolver<true>();
-          }
-        }
-      },
-    });
-
-    const client = new ClientHandler(
-      lc,
-      this.id,
-      clientID,
-      wsID,
-      baseCookie,
-      downstream,
-    );
 
     // Note: It is tempting to try to re-use #runInLockForClient(), but for
     // the initConnection case the client is not yet in the #clients map, and
     // it must be added from within the lock, and only after the desired
     // queries have been processed.
-    await this.#lock.withLock(async () => {
-      await this.#patchQueries(lc, client, initConnectionMessage[1]);
+    return this.#lock.withLock(async () => {
+      this.#throwIfStopped();
+      const downstream = new Subscription<Downstream>({
+        cleanup: (_, err) => {
+          if (err) {
+            lc.error?.(`client closed with error`, err);
+          } else {
+            lc.info?.('client closed');
+          }
+          const c = this.#clients.get(clientID);
+          if (c === client) {
+            this.#clients.delete(clientID);
+
+            if (this.#clients.size === 0) {
+              lc.info?.('no more clients. closing invalidation subscription');
+              this.#invalidationSubscription?.cancel();
+              this.#invalidationSubscription = undefined;
+              this.#hasSyncRequests = resolver<true>();
+            }
+          }
+        },
+      });
+      const client = new ClientHandler(
+        lc,
+        this.id,
+        clientID,
+        wsID,
+        baseCookie,
+        downstream,
+      );
 
       // Update #clients, close any previous connection.
       this.#clients.get(clientID)?.close();
       this.#clients.set(clientID, client);
-
+      await this.#patchQueries(lc, client, initConnectionMessage[1]);
       this.#hasSyncRequests.resolve(true);
+
+      this.#throwIfStopped();
+      return downstream;
     });
-    return downstream;
   }
 
   async changeDesiredQueries(
@@ -239,6 +242,14 @@ export class ViewSyncerService implements ViewSyncer, Service {
       lc.error?.(`closing connection with error`, e);
       client.fail(e);
       throw e;
+    }
+  }
+
+  #throwIfStopped() {
+    if (this.#stopped) {
+      throw new StoppedError(`ViewSyncer ${this.id} is already stopped.`, {
+        cause: this.#stopCause,
+      });
     }
   }
 
@@ -424,7 +435,11 @@ export class ViewSyncerService implements ViewSyncer, Service {
 
   // eslint-disable-next-line require-await
   async stop(err?: unknown): Promise<void> {
+    if (this.#stopped) {
+      return;
+    }
     this.#stopped = true;
+    this.#stopCause = err;
     this.#shouldRun.resolve(false);
     this.#invalidationSubscription?.cancel();
     this.#invalidationSubscription = undefined;

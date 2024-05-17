@@ -16,3 +16,9 @@ export interface Service {
    */
   stop(): Promise<void>;
 }
+
+export class StoppedError extends Error {
+  constructor(message: string, options: ErrorOptions) {
+    super(message, options);
+  }
+}
