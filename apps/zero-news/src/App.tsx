@@ -1,5 +1,3 @@
-import './App.css';
-
 import {Zero} from 'zero-client';
 import {User} from './user.ts';
 import {useQuery} from './hooks/use-zql.ts';
@@ -23,20 +21,9 @@ function App() {
       .desc('created_at')
       .limit(100),
   );
+  console.log({items});
 
-  return (
-    <>
-      <div>
-        {items.map(item => (
-          <div key={item.id}>
-            <h2>{item.title}</h2>
-            <p>{item.text}</p>
-            <p>Score: {item.score}</p>
-          </div>
-        ))}
-      </div>
-    </>
-  );
+  return <></>;
 }
 
 export default App;
