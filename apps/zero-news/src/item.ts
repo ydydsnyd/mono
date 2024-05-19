@@ -1,7 +1,7 @@
 export type Item = {
   id: string;
   deleted: boolean;
-  type: string;
+  type: number;
   user_id: string;
   created_at: number;
   updated_at: number;
