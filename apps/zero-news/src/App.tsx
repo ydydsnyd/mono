@@ -2,6 +2,7 @@ import {Zero} from 'zero-client';
 import {User} from './user.ts';
 import {useQuery} from './hooks/use-zql.ts';
 import {Item} from './item.ts';
+import {Header} from './Header.tsx';
 
 const z = new Zero({
   server: import.meta.env.VITE_ZERO_URL,
@@ -23,7 +24,12 @@ function App() {
   );
   console.log({items});
 
-  return <></>;
+  return (
+    <div className="w-5/6 mx-auto my-3 bg-stone-200">
+      <Header />
+      <div>foo bar</div>
+    </div>
+  );
 }
 
 export default App;
