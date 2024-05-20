@@ -79,11 +79,7 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
       // idk.. would be more efficient for users to just use the
       // treap directly. We have a PersistentTreap variant for React users
       // or places where immutability is important.
-      const arr: T[] = [];
-      for (const key of this.#data.keys()) {
-        arr.push(key);
-      }
-      this.#jsSlice = arr;
+      this.#jsSlice = [...this.#data.keys()];
     }
 
     return needsUpdate;
@@ -276,13 +272,17 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
     // otherwise we removed a element that doesn't impact min/max
 
     data = data.without(value);
-    // TODO: since we deleted we need to send a request upstream for more data!
 
-    if (minComp === 0) {
-      this.#min = value;
-    }
-    if (maxComp === 0) {
-      this.#max = value;
+    // TODO: since we deleted we need to send a request upstream for more data!
+    if (minComp === 0 || maxComp === 0) {
+      if (minComp === 0) {
+        this.#min = data.minKey();
+      }
+      if (maxComp === 0) {
+        this.#max = data.maxKey();
+      }
+
+      this.pullHistoricalData();
     }
 
     return data;

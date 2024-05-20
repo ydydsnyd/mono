@@ -1,4 +1,5 @@
 import fc from 'fast-check';
+import {must} from 'shared/src/must.js';
 import {expect, test} from 'vitest';
 import {makeTestContext} from '../../context/test-context.js';
 import type {Entity} from '../../schema/entity-schema.js';
@@ -196,5 +197,105 @@ test('replace outside viewport', () => {
     {id: 2, s: '2'},
     {id: 3, s: '3'},
     {id: 4, s: '4'},
+  ]);
+});
+
+test('Delete limits', () => {
+  type Item = {
+    id: string;
+    x: number;
+  };
+  const context = makeTestContext();
+  const {materialite} = context;
+  const comparator: Comparator<Item> = (l, r) => l.x - r.x;
+  const orderBy = [[['x', 'id']], 'asc'] as const;
+  const source = materialite.newSetSource<Item>(comparator, orderBy, 'test');
+  const view = new TreeView(context, source.stream, comparator, orderBy, 5);
+  materialite.tx(() => {
+    for (let x = 5; x < 15; x += 2) {
+      const id = String.fromCodePoint(must('a'.codePointAt(0)) + x);
+      source.add({id, x});
+    }
+  });
+
+  expect(view.value).toEqual([
+    {id: 'f', x: 5},
+    {id: 'h', x: 7},
+    {id: 'j', x: 9},
+    {id: 'l', x: 11},
+    {id: 'n', x: 13},
+  ]);
+
+  materialite.tx(() => {
+    source.add({id: 'd', x: 3});
+  });
+
+  expect(view.value).toEqual([
+    {id: 'd', x: 3},
+    {id: 'f', x: 5},
+    {id: 'h', x: 7},
+    {id: 'j', x: 9},
+    {id: 'l', x: 11},
+  ]);
+
+  materialite.tx(() => {
+    source.add({id: 'e', x: 4});
+  });
+  expect(view.value).toEqual([
+    {id: 'd', x: 3},
+    {id: 'e', x: 4},
+    {id: 'f', x: 5},
+    {id: 'h', x: 7},
+    {id: 'j', x: 9},
+  ]);
+
+  // Add an item after max
+  materialite.tx(() => {
+    source.add({id: 'l', x: 11});
+  });
+  expect(view.value).toEqual([
+    {id: 'd', x: 3},
+    {id: 'e', x: 4},
+    {id: 'f', x: 5},
+    {id: 'h', x: 7},
+    {id: 'j', x: 9},
+  ]);
+
+  // Add another after max... we will need it later
+  materialite.tx(() => {
+    source.add({id: 'n', x: 13});
+  });
+  expect(view.value).toEqual([
+    {id: 'd', x: 3},
+    {id: 'e', x: 4},
+    {id: 'f', x: 5},
+    {id: 'h', x: 7},
+    {id: 'j', x: 9},
+  ]);
+
+  // Now with some deletes
+
+  // Delete min
+  materialite.tx(() => {
+    source.delete({id: 'd', x: 3});
+  });
+  expect(view.value).toEqual([
+    {id: 'e', x: 4},
+    {id: 'f', x: 5},
+    {id: 'h', x: 7},
+    {id: 'j', x: 9},
+    {id: 'l', x: 11},
+  ]);
+
+  // Delete max
+  materialite.tx(() => {
+    source.delete({id: 'l', x: 11});
+  });
+  expect(view.value).toEqual([
+    {id: 'e', x: 4},
+    {id: 'f', x: 5},
+    {id: 'h', x: 7},
+    {id: 'j', x: 9},
+    {id: 'n', x: 13},
   ]);
 });
