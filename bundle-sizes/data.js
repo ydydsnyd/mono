@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1715622357934,
+  "lastUpdate": 1716265504842,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -47445,6 +47445,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32389,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c03c6610b1596ef3fd8aeb71c448b574b5bae558",
+          "message": "feat(replicache): expose disableClientGroup from ReplicacheImpl (#1875)\n\nThis will allow zero-client to disable client groups when they are determined to be in a bad state (i.e. bad cookie, bad last mutation id, cvr not found on server, etc).",
+          "timestamp": "2024-05-20T21:22:37-07:00",
+          "tree_id": "78192f0fe9d159da0bcd7a7a32574958dcbdfba7",
+          "url": "https://github.com/rocicorp/mono/commit/c03c6610b1596ef3fd8aeb71c448b574b5bae558"
+        },
+        "date": 1716265488506,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 316348,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55031,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 116583,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32390,
             "unit": "bytes"
           }
         ]
