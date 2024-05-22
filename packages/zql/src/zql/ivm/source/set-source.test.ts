@@ -563,3 +563,113 @@ describe('history requests with hoisted filters', () => {
     });
   });
 });
+
+test('alternate ordering creations', () => {
+  const m = new Materialite();
+
+  expect(m.indexRepo.numIndices).toBe(0);
+
+  type E2 = {
+    id: number;
+    x: string;
+  };
+  const comparator = (l: E2, r: E2) => l.id - r.id;
+  const source = m.newSetSource(comparator, ordering, 'test');
+  const listener = {
+    commit() {},
+    newDifference() {},
+  };
+  source.seed([]);
+
+  expect(m.indexRepo.numIndices).toBe(1);
+  expect(m.indexRepo.getIndex('test', [['test', 'id']])).toBe(source);
+
+  m.tx(() => {
+    source.stream.messageUpstream(
+      {
+        id: 1,
+        hoistedConditions: [],
+        type: 'pull',
+        order: [
+          [
+            ['test', 'name'],
+            ['test', 'id'],
+          ],
+          'asc',
+        ],
+      },
+      listener,
+    );
+  });
+
+  expect(m.indexRepo.numIndices).toBe(2);
+  expect(
+    m.indexRepo.getIndex('test', [
+      ['test', 'name'],
+      ['test', 'id'],
+    ]),
+  ).not.toBe(undefined);
+
+  // asc/desc swap does not create new indices
+  m.tx(() => {
+    source.stream.messageUpstream(
+      {
+        id: 2,
+        hoistedConditions: [],
+        type: 'pull',
+        order: [
+          [
+            ['test', 'name'],
+            ['test', 'id'],
+          ],
+          'desc',
+        ],
+      },
+      listener,
+    );
+  });
+
+  expect(m.indexRepo.numIndices).toBe(2);
+
+  // new indices are only created on the first column of the sort
+  m.tx(() => {
+    source.stream.messageUpstream(
+      {
+        id: 2,
+        hoistedConditions: [],
+        type: 'pull',
+        order: [
+          [
+            ['test', 'name'],
+            ['test', 'other-col'],
+            ['test', 'id'],
+          ],
+          'desc',
+        ],
+      },
+      listener,
+    );
+  });
+
+  expect(m.indexRepo.numIndices).toBe(2);
+
+  m.tx(() => {
+    source.stream.messageUpstream(
+      {
+        id: 2,
+        hoistedConditions: [],
+        type: 'pull',
+        order: [
+          [
+            ['test', 'other-col'],
+            ['test', 'id'],
+          ],
+          'desc',
+        ],
+      },
+      listener,
+    );
+  });
+
+  expect(m.indexRepo.numIndices).toBe(3);
+});

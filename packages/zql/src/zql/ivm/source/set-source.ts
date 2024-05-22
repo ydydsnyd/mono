@@ -15,6 +15,7 @@ import type {ISortedMap} from 'sorted-btree-roci';
 import BTree from 'sorted-btree-roci';
 import {gen} from '../../util/iterables.js';
 import {makeComparator} from '../compare.js';
+import type {SortedIndex} from './index-repository.js';
 
 /**
  * A source that remembers what values it contains.
@@ -24,7 +25,9 @@ import {makeComparator} from '../compare.js';
  *
  */
 let id = 0;
-export class SetSource<T extends PipelineEntity> implements Source<T> {
+export class SetSource<T extends PipelineEntity>
+  implements Source<T>, SortedIndex<T, Entry<T>>
+{
   readonly #stream: DifferenceStream<T>;
   readonly #internal: SourceInternal;
   readonly #listeners = new Set<
@@ -110,6 +113,7 @@ export class SetSource<T extends PipelineEntity> implements Source<T> {
         this.#pending = [];
       },
     };
+    this._materialite.addSortedIndex(name, order[0], this);
   }
 
   withNewOrdering(comp: Comparator<T>, ordering: Ordering): this {
@@ -361,9 +365,22 @@ export class SetSource<T extends PipelineEntity> implements Source<T> {
     return this.#seeded;
   }
 
-  get(key: T): T | undefined {
+  get(key: T): Entry<T> | undefined {
     const ret = this.#tree.get(key);
-    return ret;
+    if (ret === undefined) {
+      return undefined;
+    }
+    return [ret, 1];
+  }
+
+  after(key: T): Iterable<Entry<T>> {
+    const entries = this.#tree.entries(key);
+    return gen(() => genFromBTreeEntries(entries));
+  }
+
+  before(key: T): Iterable<Entry<T>> {
+    const entries = this.#tree.entriesReversed(key);
+    return gen(() => genFromBTreeEntries(entries));
   }
 
   toString(): string {
