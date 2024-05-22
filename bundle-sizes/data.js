@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716265504842,
+  "lastUpdate": 1716410495137,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -47489,6 +47489,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32390,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8b2d411a1966cab33cc1981b5db99d5c6d409b7f",
+          "message": "feat(replicache,zero-client): add support for disabling client group forking and use in zero-client (#1887)\n\nzero-cache does not currently work with client-group forking as CVR data is keyed by client group id.  \r\n\r\nEventually zero-cache could support client group forking if it did roughly the following:\r\n\r\n- Client Group ABC provides cookie 'DEF @ version'.\r\n- We check that the authenticated userID of ABC matches that of DEF.\r\n- Initialize the new ABC CVR with the rows from DEF.\r\n- Set the new ABC CVR's client set to empty set (rather than the set of client's for DEF)\r\n- Set the new ABC CVR's desired query map to empty (these should all become evictable queries)\r\n- Then proceed with the rest of the initConnectionMessage logic.\r\n\r\nSee https://rocicorp.slack.com/archives/C013XFG80JC/p1716339090352989 for more context.",
+          "timestamp": "2024-05-22T20:38:55Z",
+          "tree_id": "05fc9a9c0e16afea8c0f4727ba325694306d071f",
+          "url": "https://github.com/rocicorp/mono/commit/8b2d411a1966cab33cc1981b5db99d5c6d409b7f"
+        },
+        "date": 1716410478374,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 316588,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55028,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 116665,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32494,
             "unit": "bytes"
           }
         ]
