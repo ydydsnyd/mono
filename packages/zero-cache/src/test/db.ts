@@ -78,11 +78,13 @@ class TestDBs {
    * it manually.
    */
   async end() {
-    if (this.#sql) {
-      await this.#sql.end();
+    const sql = this.#sql;
+    if (sql) {
+      await sql.end();
     }
-    if (this.#container) {
-      await this.#container.stop();
+    const container = this.#container;
+    if (container) {
+      await container.stop();
     }
   }
 }

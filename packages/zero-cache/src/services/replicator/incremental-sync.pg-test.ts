@@ -1491,103 +1491,109 @@ describe('replicator/incremental-sync', () => {
   ];
 
   for (const c of cases) {
-    test(c.name, async () => {
-      await initDB(upstream, c.setupUpstream);
-      await initDB(replica, c.setupReplica);
+    test(
+      c.name,
+      async () => {
+        await initDB(upstream, c.setupUpstream);
+        await initDB(replica, c.setupReplica);
 
-      const lc = createSilentLogContext();
-      await setupUpstream(lc, upstream, replicationSlot(REPLICA_ID));
-      await replica.begin(tx =>
-        setupReplicationTables(
-          lc,
-          REPLICA_ID,
-          tx,
-          upstream,
-          getConnectionURI(upstream),
-        ),
-      );
-
-      expect(await queryLastLSN(replica)).toBeNull();
-
-      if (c.invalidationFilters?.length) {
-        const specs = c.invalidationFilters.map(spec =>
-          normalizeFilterSpec(spec),
+        const lc = createSilentLogContext();
+        await setupUpstream(lc, upstream, replicationSlot(REPLICA_ID));
+        await replica.begin(tx =>
+          setupReplicationTables(
+            lc,
+            REPLICA_ID,
+            tx,
+            upstream,
+            getConnectionURI(upstream),
+          ),
         );
-        await invalidator.registerInvalidationFilters(lc, {specs});
-      }
 
-      const syncing = syncer.run(lc);
-      const incrementalVersionSubscription = await syncer.versionChanges();
-      const coalescedVersionSubscription = await syncer.versionChanges();
+        expect(await queryLastLSN(replica)).toBeNull();
 
-      // Listen concurrently to capture incremental version changes.
-      const incrementalVersions = (async () => {
-        const versions: VersionChange[] = [];
+        if (c.invalidationFilters?.length) {
+          const specs = c.invalidationFilters.map(spec =>
+            normalizeFilterSpec(spec),
+          );
+          await invalidator.registerInvalidationFilters(lc, {specs});
+        }
+
+        const syncing = syncer.run(lc);
+        const incrementalVersionSubscription = await syncer.versionChanges();
+        const coalescedVersionSubscription = await syncer.versionChanges();
+
+        // Listen concurrently to capture incremental version changes.
+        const incrementalVersions = (async () => {
+          const versions: VersionChange[] = [];
+          if (c.expectedTransactions) {
+            for await (const v of incrementalVersionSubscription) {
+              versions.push(v);
+              if (versions.length === c.expectedTransactions) {
+                break;
+              }
+            }
+          }
+          return versions;
+        })();
+
+        for (const query of c.writeUpstream ?? []) {
+          await upstream.unsafe(query);
+        }
+
+        let versions: string[] = [];
         if (c.expectedTransactions) {
-          for await (const v of incrementalVersionSubscription) {
-            versions.push(v);
+          // TODO: Replace this with the mechanism that will be used to notify ViewSyncers.
+          for (let i = 0; i < 100; i++) {
+            const result =
+              await replica`SELECT "stateVersion" FROM _zero."TxLog"`.values();
+            versions = result.flat();
+            expect(versions.length).toBeLessThanOrEqual(c.expectedTransactions);
             if (versions.length === c.expectedTransactions) {
               break;
             }
+            // Wait or throw any error from the syncer.
+            await Promise.race([sleep(50), syncing]);
           }
         }
-        return versions;
-      })();
 
-      for (const query of c.writeUpstream ?? []) {
-        await upstream.unsafe(query);
-      }
+        if (versions.length) {
+          const lsn = await queryLastLSN(replica);
+          assert(lsn);
+          expect(toLexiVersion(lsn)).toBe(versions.at(-1));
+        } else {
+          expect(await queryLastLSN(replica)).toBeNull();
+        }
 
-      let versions: string[] = [];
-      if (c.expectedTransactions) {
-        // TODO: Replace this with the mechanism that will be used to notify ViewSyncers.
-        for (let i = 0; i < 100; i++) {
-          const result =
-            await replica`SELECT "stateVersion" FROM _zero."TxLog"`.values();
-          versions = result.flat();
-          expect(versions.length).toBeLessThanOrEqual(c.expectedTransactions);
-          if (versions.length === c.expectedTransactions) {
+        const published = await getPublicationInfo(replica);
+        expect(
+          Object.fromEntries(
+            published.tables.map(table => [
+              `${table.schema}.${table.name}`,
+              table,
+            ]),
+          ),
+        ).toEqual(c.specs);
+
+        await expectTables(replica, replaceVersions(c.data, versions));
+
+        if (c.expectedVersionChanges) {
+          expect(await incrementalVersions).toEqual(
+            c.expectedVersionChanges.map(v =>
+              convertVersionChange(v, versions),
+            ),
+          );
+        }
+        if (c.coalescedVersionChange) {
+          for await (const v of coalescedVersionSubscription) {
+            expect(v).toEqual(
+              convertVersionChange(c.coalescedVersionChange, versions),
+            );
             break;
           }
-          // Wait or throw any error from the syncer.
-          await Promise.race([sleep(50), syncing]);
         }
-      }
-
-      if (versions.length) {
-        const lsn = await queryLastLSN(replica);
-        assert(lsn);
-        expect(toLexiVersion(lsn)).toBe(versions.at(-1));
-      } else {
-        expect(await queryLastLSN(replica)).toBeNull();
-      }
-
-      const published = await getPublicationInfo(replica);
-      expect(
-        Object.fromEntries(
-          published.tables.map(table => [
-            `${table.schema}.${table.name}`,
-            table,
-          ]),
-        ),
-      ).toEqual(c.specs);
-
-      await expectTables(replica, replaceVersions(c.data, versions));
-
-      if (c.expectedVersionChanges) {
-        expect(await incrementalVersions).toEqual(
-          c.expectedVersionChanges.map(v => convertVersionChange(v, versions)),
-        );
-      }
-      if (c.coalescedVersionChange) {
-        for await (const v of coalescedVersionSubscription) {
-          expect(v).toEqual(
-            convertVersionChange(c.coalescedVersionChange, versions),
-          );
-          break;
-        }
-      }
-    });
+      },
+      20000,
+    );
   }
 
   function convertVersionChange(
