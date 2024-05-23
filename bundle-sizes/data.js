@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716435332295,
+  "lastUpdate": 1716437097343,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -47557,6 +47557,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/61d9d28e0622fee7194872a0c308e51aff7b0dd8"
         },
         "date": 1716435315721,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 316590,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55069,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 116647,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32481,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f69bf7265cb197ff59d515e2ab9d0417e525f3e1",
+          "message": "fix(perf): fix perf test breakage by 61d9d28e0622fee7194872a0c308e51aff7b0dd8 (#1893)",
+          "timestamp": "2024-05-23T04:02:17Z",
+          "tree_id": "1a3f97fa10d507ff1e9e70cd3fcae08f6c3d6f59",
+          "url": "https://github.com/rocicorp/mono/commit/f69bf7265cb197ff59d515e2ab9d0417e525f3e1"
+        },
+        "date": 1716437080829,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
