@@ -17,12 +17,27 @@ import type {
 } from '../ast/ast.js';
 import type {Context} from '../context/context.js';
 import {Misuse} from '../error/misuse.js';
-import type {Entity} from '../schema/entity-schema.js';
+import type {
+  Entity,
+  InferType,
+  RowSchema,
+  TableSchema,
+} from '../schema/entity-schema.js';
 import {AggArray, Aggregate, Max, Min, isAggregate} from './agg.js';
 import {Statement} from './statement.js';
 
 type NotUndefined<T> = Exclude<T, undefined>;
 type WeakKey = object;
+
+export type SchemaToQuery<
+  Table extends TableSchema<Row, Name>,
+  Row extends RowSchema = Table extends TableSchema<infer R, string>
+    ? R
+    : never,
+  Name extends string = Table extends TableSchema<Row, infer N> ? N : never,
+> = EntityQuery<{
+  [key in Name]: InferType<Table> extends Entity ? InferType<Table> : never;
+}>;
 
 export type ValueAsOperatorInput<
   V,
