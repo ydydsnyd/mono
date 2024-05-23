@@ -484,17 +484,10 @@ export class EntityQuery<From extends FromSet, Return = []> {
     });
   }
 
-  asc(...x: SimpleSelector<From>[]) {
+  orderBy(x: SimpleSelector<From>[], direction: 'asc' | 'desc') {
     return new EntityQuery<From, Return>(this.#context, this.#name, {
       ...this.#ast,
-      orderBy: [x.map(x => qualifySelector(this.#ast, x)), 'asc'],
-    });
-  }
-
-  desc(...x: SimpleSelector<From>[]) {
-    return new EntityQuery<From, Return>(this.#context, this.#name, {
-      ...this.#ast,
-      orderBy: [x.map(x => qualifySelector(this.#ast, x)), 'desc'],
+      orderBy: [x.map(x => qualifySelector(this.#ast, x)), direction],
     });
   }
 
@@ -503,7 +496,7 @@ export class EntityQuery<From extends FromSet, Return = []> {
       ...this.#ast,
       orderBy:
         this.#ast.orderBy !== undefined
-          ? makeOrderingDetereministic(this.#ast, this.#ast.orderBy)
+          ? makeOrderingDeterministic(this.#ast, this.#ast.orderBy)
           : undefined,
     });
   }
@@ -723,10 +716,7 @@ function qualifySelector(
 // Because we do this it is also important to ensure we are only creating sources in a new order based on
 // the first key and not all the keys in `orderBy`. To prevent an explosion of sources
 // while also giving us a perf gain. If/when we allow cleaning up of new orderings we can revisit that choice.
-export function makeOrderingDetereministic(
-  ast: AST,
-  order: Ordering,
-): Ordering {
+export function makeOrderingDeterministic(ast: AST, order: Ordering): Ordering {
   const required = getRequiredOrderFieldsForDeterministicOrdering(ast);
 
   const selectors = [...order[0]];

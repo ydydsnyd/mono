@@ -647,15 +647,15 @@ describe('ast', () => {
     const q = new EntityQuery<{e1: E1}>(context, 'e1');
 
     // order methods update the ast
-    expect(ast(q.asc('id'))).toEqual({
+    expect(ast(q.orderBy(['id'], 'asc'))).toEqual({
       table: 'e1',
       orderBy: [[['e1', 'id']], 'asc'],
     } satisfies AST);
-    expect(ast(q.desc('id'))).toEqual({
+    expect(ast(q.orderBy(['id'], 'desc'))).toEqual({
       table: 'e1',
       orderBy: [[['e1', 'id']], 'desc'],
     } satisfies AST);
-    expect(ast(q.asc('id', 'a', 'b', 'c', 'd'))).toEqual({
+    expect(ast(q.orderBy(['id', 'a', 'b', 'c', 'd'], 'asc'))).toEqual({
       table: 'e1',
       orderBy: [
         [
@@ -684,7 +684,7 @@ describe('ast', () => {
         return q.limit(10);
       },
       asc(q: typeof base) {
-        return q.asc('a');
+        return q.orderBy(['a'], 'asc');
       },
     };
 
@@ -1305,7 +1305,7 @@ describe('all references to columns are always qualified', () => {
     },
     {
       test: 'order by',
-      q: q.asc('a'),
+      q: q.orderBy(['a'], 'asc'),
       expected: {
         orderBy: [[['e1', 'a']], 'asc'],
         table: 'e1',
