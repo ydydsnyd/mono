@@ -125,16 +125,16 @@ const App = ({undoManager}: AppProps) => {
   //   .desc('priority', 'modified');
 
   const allLabelPreloadQuery = zero.query.label.select('id', 'name');
-  const allIssueLabelPreloadQuery = zero.query.issueLabel.select(
-    'id',
-    'issueID',
-    'labelID',
-  );
+  // const allIssueLabelPreloadQuery = zero.query.issueLabel.select(
+  //   'id',
+  //   'issueID',
+  //   'labelID',
+  // );
   // usePreloadQuery(createdPreloadQuery);
   // usePreloadQuery(modifiedPreloadQuery);
   // usePreloadQuery(statusPreloadQuery);
   // usePreloadQuery(priorityPreloadQuery);
-  usePreloadQuery(allIssueLabelPreloadQuery);
+  //usePreloadQuery(allIssueLabelPreloadQuery);
   usePreloadQuery(allLabelPreloadQuery);
   // ========= end pre-loads
 
