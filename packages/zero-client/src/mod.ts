@@ -1,5 +1,10 @@
+export {
+  and,
+  exp,
+  or,
+  type EntityQuery,
+} from '@rocicorp/zql/src/zql/query/entity-query.js';
 export type {Entity} from '@rocicorp/zql/src/zql/schema/entity-schema.js';
-export type {EntityQuery} from '@rocicorp/zql/src/zql/query/entity-query.js';
 export {
   IDBNotFoundError,
   TransactionClosedError,
@@ -61,4 +66,4 @@ export type {
   WriteTransaction,
 } from 'replicache';
 export type {ZeroOptions} from './client/options.js';
-export {Zero, QueryDefs} from './client/zero.js';
+export {QueryDefs, Zero} from './client/zero.js';
