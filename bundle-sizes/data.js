@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716410495137,
+  "lastUpdate": 1716435332295,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -47533,6 +47533,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32494,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "61d9d28e0622fee7194872a0c308e51aff7b0dd8",
+          "message": "refactor(replicache): merge ReplicacheOptionsInternal into ReplicacheImplOptions (#1891)",
+          "timestamp": "2024-05-22T20:32:54-07:00",
+          "tree_id": "0f947affa0d47d68eb01de728c5d056e13ea5e0b",
+          "url": "https://github.com/rocicorp/mono/commit/61d9d28e0622fee7194872a0c308e51aff7b0dd8"
+        },
+        "date": 1716435315721,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 316590,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55069,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 116647,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32481,
             "unit": "bytes"
           }
         ]
