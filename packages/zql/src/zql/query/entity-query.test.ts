@@ -142,19 +142,51 @@ test('query types', () => {
   ).toMatchTypeOf<Promise<readonly {readonly bool: boolean}[]>>();
 });
 
+type Issue = {
+  id: string;
+  title: string;
+  ownerId: string;
+  creatorId: string;
+};
+
+type User = {
+  id: string;
+  name: string;
+};
+
+test('before/after types', () => {
+  const issueQuery = new EntityQuery<{issue: Issue}>(context, 'issue');
+  const userQuery = new EntityQuery<{user: User}>(context, 'user');
+
+  const ordered = issueQuery.orderBy(['issue.title', 'issue.ownerId'], 'asc');
+  ordered.after({
+    'issue.title': 'a',
+    'issue.ownerId': 'b',
+  });
+
+  ordered.after({
+    // @ts-expect-error - only fields that were ordered by can appear in before/after
+    unorderedField: 'a',
+  });
+
+  ordered.before({
+    // @ts-expect-error - only fields that were ordered by can appear in before/after
+    unorderedField: 'a',
+  });
+
+  ordered.after({
+    // @ts-expect-error - number not assignable to string
+    'issue.ownerId': 1,
+  });
+
+  const orderedAndJoined = ordered.join(userQuery, 'owner', 'ownerId', 'id');
+  orderedAndJoined.after({
+    'issue.title': 'a',
+    'issue.ownerId': 'b',
+  });
+});
+
 test('join types', () => {
-  type Issue = {
-    id: string;
-    title: string;
-    ownerId: string;
-    creatorId: string;
-  };
-
-  type User = {
-    id: string;
-    name: string;
-  };
-
   const issueQuery = new EntityQuery<{issue: Issue}>(context, 'issue');
   const userQuery = new EntityQuery<{user: User}>(context, 'user');
 

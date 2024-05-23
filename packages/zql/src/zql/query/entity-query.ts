@@ -318,7 +318,8 @@ export class EntityQuery<
         [K in Alias]: OtherFromSet[keyof OtherFromSet];
       }
     >,
-    Return
+    Return,
+    Order
   > {
     return new EntityQuery(this.#context, this.#name, {
       ...this.#ast,
@@ -494,6 +495,9 @@ export class EntityQuery<
       orderBy: [x.map(x => qualifySelector(this.#ast, x)), direction],
     });
   }
+
+  before(_cursor: {[K in Order[number]]: ExtractFieldValue<From, K>}) {}
+  after(_cursor: {[K in Order[number]]: ExtractFieldValue<From, K>}) {}
 
   prepare(): Statement<Return> {
     return new Statement<Return>(this.#context, {
