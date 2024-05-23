@@ -93,34 +93,36 @@ const App = ({undoManager}: AppProps) => {
 
   const issuesProps = useIssuesProps(filteredQuery, issueQueryDeps, issueOrder);
   // ========= pre-loads
-  const fields = [
-    'created',
-    'creatorID',
-    'description',
-    'id',
-    'kanbanOrder',
-    'priority',
-    'modified',
-    'status',
-    'title',
-  ] as const;
-  const preloadIssueLimit = 10_000;
-  const createdPreloadQuery = issueQuery
-    .select(...fields)
-    .limit(preloadIssueLimit)
-    .desc('created');
-  const modifiedPreloadQuery = issueQuery
-    .select(...fields)
-    .limit(preloadIssueLimit)
-    .desc('modified');
-  const statusPreloadQuery = issueQuery
-    .select(...fields)
-    .limit(preloadIssueLimit)
-    .desc('status', 'modified');
-  const priorityPreloadQuery = issueQuery
-    .select(...fields)
-    .limit(preloadIssueLimit)
-    .desc('priority', 'modified');
+  // const fields = [
+  //   'created',
+  //   'creatorID',
+  //   'description',
+  //   'id',
+  //   'kanbanOrder',
+  //   'priority',
+  //   'modified',
+  //   'status',
+  //   'title',
+  // ] as const;
+  // const preloadIssueLimit = 10_000;
+  // const preloadIncrement = 500;
+
+  // const createdPreloadQuery = issueQuery
+  //   .select(...fields)
+  //   .limit(preloadIssueLimit)
+  //   .desc('created');
+  // const modifiedPreloadQuery = issueQuery
+  //   .select(...fields)
+  //   .limit(preloadIssueLimit)
+  //   .desc('modified');
+  // const statusPreloadQuery = issueQuery
+  //   .select(...fields)
+  //   .limit(preloadIssueLimit)
+  //   .desc('status', 'modified');
+  // const priorityPreloadQuery = issueQuery
+  //   .select(...fields)
+  //   .limit(preloadIssueLimit)
+  //   .desc('priority', 'modified');
 
   const allLabelPreloadQuery = zero.query.label.select('id', 'name');
   const allIssueLabelPreloadQuery = zero.query.issueLabel.select(
@@ -128,10 +130,10 @@ const App = ({undoManager}: AppProps) => {
     'issueID',
     'labelID',
   );
-  usePreloadQuery(createdPreloadQuery);
-  usePreloadQuery(modifiedPreloadQuery);
-  usePreloadQuery(statusPreloadQuery);
-  usePreloadQuery(priorityPreloadQuery);
+  // usePreloadQuery(createdPreloadQuery);
+  // usePreloadQuery(modifiedPreloadQuery);
+  // usePreloadQuery(statusPreloadQuery);
+  // usePreloadQuery(priorityPreloadQuery);
   usePreloadQuery(allIssueLabelPreloadQuery);
   usePreloadQuery(allLabelPreloadQuery);
   // ========= end pre-loads
