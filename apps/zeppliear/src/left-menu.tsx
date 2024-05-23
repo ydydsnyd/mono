@@ -76,58 +76,56 @@ function LeftMenu({menuVisible, onCloseMenu = noop, onCreateIssue}: Props) {
 
         {/* actions */}
         <div className="flex flex-col flex-shrink flex-grow overflow-y-auto mb-0.5 px-4">
-          <ItemGroup title="Views">
-            <div
-              className="flex items-center pl-9 rounded cursor-pointer group h-8 hover:bg-gray-900"
-              onMouseDown={async () => {
-                await Promise.all([
-                  setView('all'),
-                  setStatusFilter(null),
-                  setIss(null),
-                ]);
-                onCloseMenu && onCloseMenu();
-              }}
-            >
-              <span>All</span>
-            </div>
+          <div
+            className="flex items-center pl-9 rounded cursor-pointer group h-8 hover:bg-gray-900"
+            onMouseDown={async () => {
+              await Promise.all([
+                setView('all'),
+                setStatusFilter(null),
+                setIss(null),
+              ]);
+              onCloseMenu && onCloseMenu();
+            }}
+          >
+            <span>All</span>
+          </div>
 
-            <div
-              className="flex items-center pl-9 rounded cursor-pointer group h-8 hover:bg-gray-900"
-              onMouseDown={async () => {
-                await Promise.all([
-                  setView('active'),
-                  setStatusFilter(null),
-                  setIss(null),
-                ]);
-                onCloseMenu && onCloseMenu();
-              }}
-            >
-              <span>Active</span>
-            </div>
+          <div
+            className="flex items-center pl-9 rounded cursor-pointer group h-8 hover:bg-gray-900"
+            onMouseDown={async () => {
+              await Promise.all([
+                setView('active'),
+                setStatusFilter(null),
+                setIss(null),
+              ]);
+              onCloseMenu && onCloseMenu();
+            }}
+          >
+            <span>Active</span>
+          </div>
 
-            <div
-              className="flex items-center pl-9 rounded cursor-pointer group h-8 hover:bg-gray-900"
-              onMouseDown={async () => {
-                await Promise.all([
-                  setView('backlog'),
-                  setStatusFilter(null),
-                  setIss(null),
-                ]);
-                onCloseMenu && onCloseMenu();
-              }}
-            >
-              <span>Backlog</span>
-            </div>
-            <div
-              className="flex items-center pl-9 rounded cursor-pointer group h-8 hover:bg-gray-900"
-              onMouseDown={async () => {
-                await Promise.all([setView('board'), setIss(null)]);
-                onCloseMenu && onCloseMenu();
-              }}
-            >
-              <span>Board</span>
-            </div>
-          </ItemGroup>
+          <div
+            className="flex items-center pl-9 rounded cursor-pointer group h-8 hover:bg-gray-900"
+            onMouseDown={async () => {
+              await Promise.all([
+                setView('backlog'),
+                setStatusFilter(null),
+                setIss(null),
+              ]);
+              onCloseMenu && onCloseMenu();
+            }}
+          >
+            <span>Backlog</span>
+          </div>
+          <div
+            className="flex items-center pl-9 rounded cursor-pointer group h-8 hover:bg-gray-900"
+            onMouseDown={async () => {
+              await Promise.all([setView('board'), setIss(null)]);
+              onCloseMenu && onCloseMenu();
+            }}
+          >
+            <span>Board</span>
+          </div>
 
           {/* extra space */}
           <div className="flex flex-col flex-grow flex-shrink" />
