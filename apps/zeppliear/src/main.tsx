@@ -50,7 +50,7 @@ function incrementalPreload(
   currentLimit = Math.min(currentLimit, targetLimit);
   const createdPreloadStatement = baseQuery.limit(currentLimit).prepare();
 
-  console.debug('prefetching', description, {currentLimit});
+  console.log('prefetching', description, {currentLimit});
   const {resolve, promise} = resolver<() => void>();
   let done = false;
   const unsub = createdPreloadStatement.subscribe(result => {
@@ -60,7 +60,7 @@ function incrementalPreload(
     });
     if (currentLimit >= targetLimit && !done) {
       done = true;
-      console.debug('DONE', description, {currentLimit});
+      console.log('DONE', description, {currentLimit});
       resolve(unsub);
     }
     if (result.length === currentLimit && currentLimit < targetLimit) {
@@ -71,7 +71,7 @@ function incrementalPreload(
         increment,
         currentLimit + increment,
       ).then(resolve);
-      console.debug('unsub', description, {currentLimit});
+      console.log('unsub', description, {currentLimit});
       unsub();
       createdPreloadStatement.destroy();
     }
