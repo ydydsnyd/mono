@@ -8,6 +8,12 @@ import type {Comment, Issue, IssueLabel, Label, Member} from './issue.js';
 import {resolver} from '@rocicorp/resolver';
 
 async function preload(z: Zero<Collections>) {
+  const allLabelPreloadQuery = z.query.label.select('id', 'name');
+  allLabelPreloadQuery.prepare().preload();
+
+  const allMembersPreload = z.query.member.select('id', 'name');
+  allMembersPreload.prepare().preload();
+
   const preloadIssueLimit = 10_000;
   const preloadIssueIncrement = 500;
   const issueBaseQuery = z.query.issue.select(
@@ -24,9 +30,9 @@ async function preload(z: Zero<Collections>) {
 
   const issueSorts: Parameters<typeof issueBaseQuery.desc>[] = [
     ['created'],
-    // ['modified'],
-    // ['status', 'modified'],
-    // ['priority', 'modified'],
+    ['modified'],
+    ['status', 'modified'],
+    ['priority', 'modified'],
   ];
   for (const issueSort of issueSorts) {
     const desc = `issues order by ${issueSort.join(', ')} desc`;
