@@ -244,7 +244,11 @@ type SimpleCondition<
   };
 };
 
-export class EntityQuery<From extends FromSet, Return = []> {
+export class EntityQuery<
+  From extends FromSet,
+  Return = [],
+  Order extends SimpleSelector<From>[] = [],
+> {
   readonly #ast: AST;
   readonly #name: string;
   readonly #context: Context;
@@ -289,7 +293,7 @@ export class EntityQuery<From extends FromSet, Return = []> {
       });
     }
 
-    return new EntityQuery<From, CombineSelections<From, Fields>[]>(
+    return new EntityQuery<From, CombineSelections<From, Fields>[], Order>(
       this.#context,
       this.#name,
       {
@@ -365,14 +369,14 @@ export class EntityQuery<From extends FromSet, Return = []> {
   }
 
   groupBy<Fields extends SimpleSelector<From>[]>(...x: Fields) {
-    return new EntityQuery<From, Return>(this.#context, this.#name, {
+    return new EntityQuery<From, Return, Order>(this.#context, this.#name, {
       ...this.#ast,
       groupBy: x.map(x => qualifySelector(this.#ast, x)),
     });
   }
 
   distinct<Field extends SimpleSelector<From>>(field: Field) {
-    return new EntityQuery<From, Return>(this.#context, this.#name, {
+    return new EntityQuery<From, Return, Order>(this.#context, this.#name, {
       ...this.#ast,
       distinct: qualifySelector(this.#ast, field),
     });
@@ -464,7 +468,7 @@ export class EntityQuery<From extends FromSet, Return = []> {
       }
     }
 
-    return new EntityQuery<From, Return>(this.#context, this.#name, {
+    return new EntityQuery<From, Return, Order>(this.#context, this.#name, {
       ...this.#ast,
       // Can't use satisfies here because WhereCondition is recursive.
       // Tests ensure that the expected AST output satisfies the Condition
@@ -478,14 +482,14 @@ export class EntityQuery<From extends FromSet, Return = []> {
       throw new Misuse('Limit already set');
     }
 
-    return new EntityQuery<From, Return>(this.#context, this.#name, {
+    return new EntityQuery<From, Return, Order>(this.#context, this.#name, {
       ...this.#ast,
       limit: n,
     });
   }
 
-  orderBy(x: SimpleSelector<From>[], direction: 'asc' | 'desc') {
-    return new EntityQuery<From, Return>(this.#context, this.#name, {
+  orderBy<O extends SimpleSelector<From>[]>(x: O, direction: 'asc' | 'desc') {
+    return new EntityQuery<From, Return, O>(this.#context, this.#name, {
       ...this.#ast,
       orderBy: [x.map(x => qualifySelector(this.#ast, x)), direction],
     });
