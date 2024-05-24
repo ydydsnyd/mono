@@ -676,7 +676,21 @@ describe('view-syncer/cvr', () => {
                   rowVersion: '03',
                   queriedColumns: {id: ['oneHash'], name: ['oneHash']},
                 },
-                contents: {id: 'new version patch with new field'},
+                contents: {
+                  id: 'new version patch',
+                  name: 'because of new field',
+                },
+              },
+            ],
+            [
+              `/vs/cvr/abc123/d/r/${ROW_HASH2}`,
+              {
+                record: {
+                  id: ROW_ID2,
+                  rowVersion: '03',
+                  queriedColumns: {id: ['oneHash']},
+                },
+                contents: {id: 'same column selection as twoHash'},
               },
             ],
             [
@@ -699,7 +713,16 @@ describe('view-syncer/cvr', () => {
             type: 'row',
             op: 'merge',
             id: ROW_ID1,
-            contents: {id: 'new version patch with new field'},
+            contents: {id: 'new version patch', name: 'because of new field'},
+          },
+        },
+        {
+          toVersion: {stateVersion: '1a0'},
+          patch: {
+            type: 'row',
+            op: 'merge',
+            id: ROW_ID2,
+            contents: {id: 'same column selection as twoHash'},
           },
         },
         {
@@ -821,6 +844,12 @@ describe('view-syncer/cvr', () => {
           id: ROW_ID1,
           patchVersion: updated.version,
           queriedColumns: {id: ['twoHash', 'oneHash'], name: ['oneHash']},
+          rowVersion: '03',
+        } satisfies RowRecord,
+        [`/vs/cvr/abc123/d/r/${ROW_HASH2}`]: {
+          id: ROW_ID2,
+          patchVersion: {stateVersion: '1a0'},
+          queriedColumns: {id: ['twoHash', 'oneHash']},
           rowVersion: '03',
         } satisfies RowRecord,
         [`/vs/cvr/abc123/d/r/${ROW_HASH3}`]: {
@@ -1416,7 +1445,7 @@ describe('view-syncer/cvr', () => {
           patchVersion: updated.version,
           id: ROW_ID2,
           rowVersion: '09',
-          queriedColumns: {id: ['twoHash', 'oneHash']},
+          queriedColumns: {id: ['oneHash', 'twoHash']},
         } satisfies RowRecord,
         [`/vs/cvr/abc123/d/r/${ROW_HASH3}`]: {
           id: ROW_ID3,
