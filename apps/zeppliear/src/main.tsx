@@ -35,8 +35,6 @@ async function preload(z: Zero<Collections>) {
     ['priority', 'modified'],
   ];
   for (const issueSort of issueSorts) {
-    const desc = `issues order by ${issueSort.join(', ')} desc`;
-    console.debug('STARTING preload of', desc);
     await incrementalPreload(
       `issues order by ${issueSort.join(', ')} desc`,
       issueBaseQuery.desc(...issueSort),
@@ -58,21 +56,27 @@ function incrementalPreload(
   baseQuery: EntityQuery<FromSet, unknown[]>,
   targetLimit: number,
   increment: number,
-  currentLimit: number = increment,
+  currentLimit = 0,
 ): Promise<() => void> {
+  if (currentLimit === 0) {
+    currentLimit = increment;
+    console.debug('STARTING preload of', description);
+  }
   currentLimit = Math.min(currentLimit, targetLimit);
   const createdPreloadStatement = baseQuery.limit(currentLimit).prepare();
 
-  console.log('prefetching', description, {currentLimit});
+  console.log('incremental preload', description, {currentLimit, targetLimit});
   const {resolve, promise} = resolver<() => void>();
   let done = false;
   const unsub = createdPreloadStatement.subscribe(result => {
-    console.log('prefetching got', description, {
+    console.log('incremental preload', description, 'got', {
       currentLimit,
+      targetLimit,
       resultLength: result.length,
     });
     if (currentLimit >= targetLimit && !done) {
       done = true;
+      console.debug('COMPLETED preload of', description);
       resolve(unsub);
     }
     if (result.length === currentLimit && currentLimit < targetLimit) {
