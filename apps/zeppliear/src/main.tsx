@@ -44,6 +44,13 @@ async function preload(z: Zero<Collections>) {
       preloadIssueIncrement,
     );
   }
+
+  await incrementalPreload(
+    'issueLabels',
+    z.query.issueLabel.select('id', 'issueID', 'labelID'),
+    100_000,
+    2_000,
+  );
 }
 
 function incrementalPreload(
@@ -60,13 +67,12 @@ function incrementalPreload(
   const {resolve, promise} = resolver<() => void>();
   let done = false;
   const unsub = createdPreloadStatement.subscribe(result => {
-    console.log('got', description, {
+    console.log('prefetching got', description, {
       currentLimit,
       resultLength: result.length,
     });
     if (currentLimit >= targetLimit && !done) {
       done = true;
-      console.log('DONE', description, {currentLimit});
       resolve(unsub);
     }
     if (result.length === currentLimit && currentLimit < targetLimit) {
@@ -77,7 +83,6 @@ function incrementalPreload(
         increment,
         currentLimit + increment,
       ).then(resolve);
-      console.log('unsub', description, {currentLimit});
       unsub();
       createdPreloadStatement.destroy();
     }
