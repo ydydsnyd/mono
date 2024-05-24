@@ -51,9 +51,9 @@ async function preload(z: Zero<Collections>) {
   );
 }
 
-function incrementalPreload(
+function incrementalPreload<F extends FromSet, R>(
   description: string,
-  baseQuery: EntityQuery<FromSet, unknown[]>,
+  baseQuery: EntityQuery<F, R[]>,
   targetLimit: number,
   increment: number,
   currentLimit = 0,
