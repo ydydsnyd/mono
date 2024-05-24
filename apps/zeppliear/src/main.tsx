@@ -47,7 +47,7 @@ async function preload(z: Zero<Collections>) {
     'issueLabels',
     z.query.issueLabel.select('id', 'issueID', 'labelID'),
     100_000,
-    2_000,
+    5_000,
   );
 }
 
@@ -109,7 +109,7 @@ async function init() {
   });
   const undoManager = new UndoManager();
 
-  void preload(z);
+  setTimeout(() => preload(z), 2_000);
 
   function Home({
     zero,
