@@ -33,7 +33,6 @@ export abstract class AbstractView<T extends PipelineEntity, CT>
     name: string = '',
   ) {
     this.#context = context;
-    // TODO(arv): Remove name?
     this.name = name;
     this.#stream = stream;
     this._listener = {
