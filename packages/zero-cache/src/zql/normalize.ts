@@ -1,8 +1,12 @@
 import {
   Aggregate,
+  Aggregation,
   AST,
+  HavingCondition,
+  HavingSelector,
   normalizeAST,
   Selector,
+  type SimpleOperator,
   type Condition,
 } from '@rocicorp/zql/src/zql/ast/ast.js';
 import {compareUTF8} from 'compare-utf8';
@@ -11,6 +15,7 @@ import type {JSONValue} from 'postgres';
 import {assert} from 'shared/src/asserts.js';
 import {create64} from '../types/xxhash.js';
 import type {ServerAST} from './server-ast.js';
+import {must} from 'shared/src/must.js';
 
 export type ParameterizedQuery = {
   query: string;
@@ -27,6 +32,24 @@ export function getNormalized(ast: ServerAST): Normalized {
 
 function aggFn(agg: Aggregate) {
   return agg === 'array' ? 'array_agg' : agg;
+}
+
+function aggOp(op: SimpleOperator): string {
+  switch (op) {
+    case 'INTERSECTS':
+      return '&&';
+    case 'DISJOINT':
+      return 'NOT &&';
+    case 'SUPERSET':
+      return '@>';
+    case 'CONGRUENT':
+    case 'INCONGRUENT':
+      throw new Error('not implemented yet');
+    case 'SUBSET':
+      return '<@';
+    default:
+      return op;
+  }
 }
 
 export class Normalized {
@@ -62,6 +85,7 @@ export class Normalized {
       groupBy,
       orderBy,
       limit,
+      having,
     } = ast;
 
     let query = '';
@@ -76,7 +100,7 @@ export class Normalized {
         const agg = `${aggFn(a.aggregate)}(${
           a.field ? selector(a.field) : '*'
         })`;
-        return `${agg} AS ${ident(agg)}`;
+        return `${agg} AS ${a.alias}`;
       }),
       ...(ast.aggLift ?? []).map(
         agg =>
@@ -109,11 +133,20 @@ export class Normalized {
       query += ` AS ${ident(as)} ON ${selector(left)} = ${selector(right)}`;
     });
     if (where) {
-      query += ` WHERE ${this.#condition(where)}`;
+      query += ` WHERE ${this.#condition(where, undefined)}`;
     }
     if (groupBy) {
       query += ` GROUP BY ${groupBy.map(x => selector(x)).join(', ')}`;
     }
+
+    // now process having
+    // only `array_agg` needs special casting?
+    // having refers to an aggregate by alias
+    // so we need to look up the aggregate in order to re-apply it in having
+    if (having) {
+      query += ` HAVING ${this.#condition(having, aggregate)}`;
+    }
+
     if (orderBy) {
       const [names, dir] = orderBy;
       query += ` ORDER BY ${names
@@ -126,7 +159,10 @@ export class Normalized {
     return query;
   }
 
-  #condition(cond: Condition): string {
+  #condition(
+    cond: Condition | HavingCondition,
+    aggs: Aggregation[] | undefined,
+  ): string {
     if (cond.type === 'simple') {
       const {
         value: {type, value},
@@ -134,10 +170,42 @@ export class Normalized {
       assert(type === 'value');
       if (!Array.isArray(value)) {
         this.#values.push(value);
-        return `${selector(cond.field)} ${cond.op} $${this.#nextParam++}`;
+        if (aggs) {
+          // aggs are provided? Then we're a HavingCondition
+          // 1. look up the `agg`. It should have an `alias` that matches `field`.
+          // 2. Use the `agg` to re-apply the aggregation.
+          const agg = must(
+            aggs.find(agg =>
+              cond.field[0] === null
+                ? agg.alias === cond.field[1]
+                : agg.alias === cond.field[0],
+            ),
+          );
+          return `${aggFn(agg.aggregate)}(${
+            agg.field ? selector(agg.field) : '*'
+          }) ${aggOp(cond.op)} $${this.#nextParam++}`;
+        }
+
+        return `${selector(cond.field as Selector)} ${cond.op} $${this
+          .#nextParam++}`;
       }
+
       // Unroll the array
-      let expr = `${selector(cond.field)} ${cond.op} (`;
+      let expr = '';
+      if (aggs) {
+        const agg = must(
+          aggs.find(agg =>
+            cond.field[0] === null
+              ? agg.alias === cond.field[1]
+              : agg.alias === cond.field[0],
+          ),
+        );
+        expr = `${aggFn(agg.aggregate)}(${
+          agg.field ? selector(agg.field) : '*'
+        }) ${aggOp(cond.op)} (`;
+      } else {
+        expr = `${selector(cond.field)} ${cond.op} (`;
+      }
       value.forEach((v, i) => {
         this.#values.push(v);
         expr += (i ? ', ' : '') + `$${this.#nextParam++}`;
@@ -147,7 +215,7 @@ export class Normalized {
     }
 
     return `(${cond.conditions
-      .map(sub => `${this.#condition(sub)}`)
+      .map(sub => `${this.#condition(sub, aggs)}`)
       .join(` ${cond.op} `)})`;
   }
 
@@ -177,8 +245,11 @@ export class Normalized {
   }
 }
 
-function selector(selector: Selector): string {
-  return selector.flatMap(id => id.split('.').map(id => ident(id))).join('.');
+function selector(selector: Selector | HavingSelector): string {
+  return selector
+    .filter((id: string | null): id is string => id !== null)
+    .flatMap(id => (id as string).split('.').map(id => ident(id)))
+    .join('.');
 }
 
 const SEED = 0x34567890n;

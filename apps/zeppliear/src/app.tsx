@@ -329,8 +329,6 @@ function filterQuery(
       agg.array('label.name', 'labels'),
     );
   if (filters.labelFilter) {
-    // TODO: if `having` has been applied then selection
-    // set should not be updated to remove what `having` operates against.
     filteredQuery = filteredQuery.having('labels', 'INTERSECTS', [
       ...filters.labelFilter,
     ]);

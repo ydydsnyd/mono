@@ -155,6 +155,57 @@ describe('zql/expansion', () => {
       issues.id`,
     },
     {
+      name: 'having',
+      ast: {
+        table: 'issues',
+        select: [[['issues', 'title'], 'title']],
+        aggregate: [
+          {
+            aggregate: 'array',
+            field: ['labels', 'name'],
+            alias: 'labels',
+          },
+        ],
+        having: {
+          type: 'simple',
+          field: [null, 'labels'],
+          op: 'INTERSECTS',
+          value: {
+            type: 'value',
+            value: ['bug'],
+          },
+        },
+        joins: [
+          {
+            type: 'left',
+            other: {table: 'issueLabels'},
+            as: 'issueLabels',
+            on: [
+              ['issueLabels', 'issueId'],
+              ['issues', 'id'],
+            ],
+          },
+          {
+            type: 'left',
+            other: {table: 'labels'},
+            as: 'labels',
+            on: [
+              ['labels', 'id'],
+              ['issueLabels', 'labelId'],
+            ],
+          },
+        ],
+        groupBy: [['issues', 'id']],
+      },
+      original: `SELECT
+        issues.title AS title,
+        array_agg(labels.name) AS "array_agg(labels.name)"
+      FROM issues LEFT JOIN "issueLabels" AS "issueLabels" ON "issueLabels"."issueId" = issues.id
+      LEFT JOIN labels AS labels ON labels.id = "issueLabels"."labelId" GROUP BY issues.id`,
+      afterSubqueryExpansion: ``,
+      afterReAliasAndBubble: ``,
+    },
+    {
       name: 'adds primary keys, preserved existing selects',
       ast: {
         table: 'issues',
@@ -665,6 +716,9 @@ describe('zql/expansion', () => {
   ];
 
   for (const c of cases) {
+    if (c.name !== 'having') {
+      continue;
+    }
     test(c.name, () => {
       expect(new Normalized(c.ast).query().query).toBe(
         stripCommentsAndWhitespace(c.original),

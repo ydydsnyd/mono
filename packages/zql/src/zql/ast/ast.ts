@@ -5,6 +5,7 @@ import {compareUTF8} from 'compare-utf8';
 import {defined} from 'shared/src/arrays.js';
 
 export type Selector = readonly [table: string, column: string];
+export type HavingSelector = readonly [maybeTablish: string | null, column: string];
 
 export type Ordering = readonly [
   // TODO(mlaw): table being nullable is temporary until we fixup order-by application for joined tables
