@@ -52,8 +52,18 @@ export class Normalized {
   }
 
   #constructQuery(ast: ServerAST): string {
-    const {schema, table, alias, select, aggregate, joins} = ast;
-    let {groupBy, orderBy, limit, where} = ast;
+    const {
+      schema,
+      table,
+      alias,
+      select,
+      aggregate,
+      joins,
+      groupBy,
+      orderBy,
+      limit,
+      where,
+    } = ast;
 
     let query = '';
     const selection = [
@@ -91,35 +101,12 @@ export class Normalized {
     const getOrderByStr = ([names, dir]: Ordering) =>
       ` ORDER BY ${names.map(x => `${selector(x)} ${dir}`).join(', ')}`;
 
-    if (moveOrderByAndLimit(ast)) {
-      query += `(SELECT * FROM `;
-      if (schema) {
-        query += ident(schema) + '.';
-      }
-      query += ident(table);
-      if (where) {
-        query += ` WHERE ${this.#condition(where)}`;
-      }
-      if (orderBy) {
-        query += getOrderByStr(orderBy);
-      }
-      if (limit !== undefined) {
-        query += ` LIMIT ${limit}`;
-      }
-      query += `) AS ${ident(alias ?? table)}`;
-
-      orderBy = undefined;
-      limit = undefined;
-      groupBy = undefined;
-      where = undefined;
-    } else {
-      if (schema) {
-        query += ident(schema) + '.';
-      }
-      query += ident(table);
-      if (alias) {
-        query += ` AS ${ident(alias)}`;
-      }
+    if (schema) {
+      query += ident(schema) + '.';
+    }
+    query += ident(table);
+    if (alias) {
+      query += ` AS ${ident(alias)}`;
     }
 
     joins?.forEach(join => {
@@ -219,36 +206,4 @@ function withNormalizedServerFields(ast: AST, serverAst: ServerAST): ServerAST {
     ...ast,
     aggLift: serverAst.aggLift,
   };
-}
-
-function moveOrderByAndLimit(ast: ServerAST): boolean {
-  return !!(
-    // all left joins
-    (
-      ast.joins?.every(join => join.type === 'left') &&
-      // ordering only against left most table
-      ast.orderBy?.[0].every(selector => selector[0] === ast.table) &&
-      // group by only against primary key of left most table
-      ast.groupBy?.every(
-        selector => selector[0] === ast.table && selector[1] === 'id',
-      ) &&
-      // limit exists
-      ast.limit !== undefined &&
-      allWheresAgainst(ast.table, ast.where)
-    )
-  );
-}
-
-// ugh... this is overly specific.
-function allWheresAgainst(
-  table: string,
-  where: Condition | undefined,
-): boolean {
-  if (where === undefined) {
-    return true;
-  }
-  if (where.type === 'simple') {
-    return where.field[0] === table;
-  }
-  return where.conditions.every(cond => allWheresAgainst(table, cond));
 }
