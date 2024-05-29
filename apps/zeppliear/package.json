@@ -13,13 +13,13 @@
     "preview": "vite preview",
     "publish-worker-prod": "npm run wrangler-prod -- publish",
     "publish-worker-sandbox": "npm run wrangler-sandbox -- publish",
-    "publish-worker-amsterdam": "npm run wrangler-amsterdam -- publish",
+    "publish-worker-europe": "npm run wrangler-europe -- publish",
     "wrangler-prod": "npx wrangler --config wrangler.toml",
     "wrangler-sandbox": "npx wrangler --config wrangler.toml --env=sandbox",
-    "wrangler-amsterdam": "npx wrangler --config wrangler.toml --env=amsterdam",
+    "wrangler-europe": "npx wrangler --config wrangler.toml --env=europe",
     "worker-logs-sandbox": "npm run wrangler-sandbox -- tail",
     "worker-logs-prod": "npm run wrangler-prod -- tail",
-    "worker-logs-amsterdam": "npm run wrangler-amsterdam -- tail"
+    "worker-logs-europe": "npm run wrangler-europe -- tail"
   },
   "dependencies": {
     "@emotion/react": "^11.8.2",
