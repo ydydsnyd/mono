@@ -307,8 +307,19 @@ export function expandSubqueries(
   // just stick the entire `expandedSelect` into `aggLifts`?
   let aggLift: AggLift[] | undefined;
   if (aggregateColumns) {
-    aggLift = getColumnsAsAggregate(expandedSelect);
-    expandedSelect = [];
+    const tablesToIgnoreForAggregation = new Set<string>();
+    groupBy?.forEach(grouping => {
+      if (grouping[1] === 'id') {
+        tablesToIgnoreForAggregation.add(grouping[0]);
+      }
+    });
+    aggLift = getColumnsAsAggregate(
+      expandedSelect,
+      tablesToIgnoreForAggregation,
+    );
+    expandedSelect = expandedSelect.filter(selectorAndAlias =>
+      tablesToIgnoreForAggregation.has(selectorAndAlias[0][0]),
+    );
   }
 
   return {
@@ -357,10 +368,14 @@ function getColumnsAsAggregate(
     selector: Selector,
     alias: string,
   ])[],
+  tablesToIgnoreForAggregation: Set<string>,
 ): AggLift[] {
   const selectorsByTable = new Map<string, Selector[]>();
   selectorsAndAliases.forEach(([selector]) => {
     const [table] = selector;
+    if (tablesToIgnoreForAggregation.has(table)) {
+      return;
+    }
     selectorsByTable.get(table)?.push(selector) ??
       selectorsByTable.set(table, [selector]);
   });

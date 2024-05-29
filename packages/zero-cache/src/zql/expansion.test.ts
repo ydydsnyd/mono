@@ -84,42 +84,24 @@ describe('zql/expansion', () => {
       FROM issues LEFT JOIN "issueLabels" AS "issueLabels" ON "issueLabels"."issueId" = issues.id
       LEFT JOIN labels AS labels ON labels.id = "issueLabels"."labelId" GROUP BY issues.id`,
       afterSubqueryExpansion: `SELECT
-      array_agg(labels.name) AS "array_agg(labels.name)",
-      jsonb_agg(jsonb_build_object('title',
-          issues.title,
-          'id',
-          issues.id,
-          'issues_key',
-          issues.issues_key,
-          '_0_version',
-          issues._0_version)) AS "issues/_0_agg_lift"
-    FROM
-      issues
-      LEFT JOIN (SELECT
-          "issueLabels"._0_version AS _0_version,
-          "issueLabels"."issueId" AS "issueId",
-          "issueLabels"."issueLabels_key" AS "issueLabels_key",
-          "issueLabels"."labelId" AS "labelId"
-        FROM
-          "issueLabels") AS "issueLabels" ON "issueLabels"."issueId" = issues.id
-      LEFT JOIN (SELECT
+        issues._0_version AS _0_version,
+        issues.id AS id, issues.issues_key AS issues_key,
+        issues.title AS title, array_agg(labels.name) AS "array_agg(labels.name)"
+      FROM issues LEFT JOIN (SELECT
+        "issueLabels"._0_version AS _0_version,
+        "issueLabels"."issueId" AS "issueId",
+        "issueLabels"."issueLabels_key" AS "issueLabels_key",
+        "issueLabels"."labelId" AS "labelId" FROM "issueLabels") AS "issueLabels"
+        ON "issueLabels"."issueId" = issues.id LEFT JOIN (SELECT
           labels._0_version AS _0_version,
           labels.id AS id,
           labels.labels_key AS labels_key,
-          labels.name AS name
-        FROM
-          labels) AS labels ON labels.id = "issueLabels"."labelId"
-    GROUP BY
-      issues.id`,
+          labels.name AS name FROM labels) AS labels ON labels.id = "issueLabels"."labelId" GROUP BY issues.id`,
       afterReAliasAndBubble: `SELECT
-      jsonb_agg(jsonb_build_object('title',
-          issues.title,
-          'id',
-          issues.id,
-          'issues_key',
-          issues.issues_key,
-          '_0_version',
-          issues._0_version)) AS "public/issues/_0_agg_lift",
+      public.issues._0_version AS "public/issues/_0_version",
+      public.issues.id AS "public/issues/id",
+      public.issues.issues_key AS "public/issues/issues_key",
+      public.issues.title AS "public/issues/title",
       jsonb_agg(jsonb_build_object('issueId',
           "issueLabels"."public/issueLabels/issueId",
           'labelId',
@@ -130,7 +112,8 @@ describe('zql/expansion', () => {
           "issueLabels"."public/issueLabels/_0_version")) AS "public/issueLabels/_0_agg_lift",
       jsonb_agg(jsonb_build_object('id',
           labels."public/labels/id",
-          'name', labels."public/labels/name",
+          'name',
+          labels."public/labels/name",
           'labels_key',
           labels."public/labels/labels_key",
           '_0_version',
@@ -143,7 +126,7 @@ describe('zql/expansion', () => {
           public."issueLabels"."issueLabels_key" AS "public/issueLabels/issueLabels_key",
           public."issueLabels"."labelId" AS "public/issueLabels/labelId"
         FROM
-          "issueLabels") AS "issueLabels" ON "issueLabels"."public/issueLabels/issueId" = issues.id
+          "issueLabels") AS "issueLabels" ON "issueLabels"."public/issueLabels/issueId" = public.issues.id
       LEFT JOIN (SELECT
           public.labels._0_version AS "public/labels/_0_version",
           public.labels.id AS "public/labels/id",
@@ -152,7 +135,7 @@ describe('zql/expansion', () => {
         FROM
           labels) AS labels ON labels."public/labels/id" = "issueLabels"."public/issueLabels/labelId"
     GROUP BY
-      issues.id`,
+      public.issues.id`,
     },
     {
       name: 'adds primary keys, preserved existing selects',
