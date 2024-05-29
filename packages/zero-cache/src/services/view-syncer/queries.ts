@@ -2,7 +2,6 @@ import type {AST, Selector} from '@rocicorp/zql/src/zql/ast/ast.js';
 import {assert} from 'shared/src/asserts.js';
 import {stringify, type JSONObject} from '../../types/bigint-json.js';
 import {
-  AGG_LIFT_SUFFIX,
   ALIAS_COMPONENT_SEPARATOR,
   expandSelection,
 } from '../../zql/expansion.js';
@@ -15,7 +14,7 @@ import {ZERO_VERSION_COLUMN_NAME} from '../replicator/schema/replication.js';
 import type {TableSpec} from '../replicator/tables/specs.js';
 import {CVRPaths} from './schema/paths.js';
 import type {QueryRecord, RowID, RowRecord} from './schema/types.js';
-import {joinIterables} from 'shared/src/iterables.js';
+import {deaggregate} from '../../zql/deaggregation.js';
 
 export class InvalidQueryError extends Error {}
 
@@ -80,7 +79,8 @@ export class QueryHandler {
         ];
       };
 
-      const expanded = expandSelection(q.ast, requiredColumns);
+      const deaggregated = deaggregate(q.ast);
+      const expanded = expandSelection(deaggregated, requiredColumns);
       const transformedAST = new Normalized(expanded);
       const transformationHash = transformedAST.hash();
 
@@ -165,29 +165,17 @@ class ResultParser {
       // "parent/public/issues": {id: 5, name: "trix"}
       //```
       const rows = new Map<string, JSONObject>();
-      const aggLifts: [rowAlias: string, value: JSONObject][] = [];
 
       for (const [alias, value] of Object.entries(result)) {
         const [rowAlias, columnName] = splitLastComponent(alias);
-        if (columnName === AGG_LIFT_SUFFIX) {
-          if (Array.isArray(value)) {
-            for (const row of value) {
-              aggLifts.push([rowAlias, row as JSONObject]);
-            }
-          }
-        } else {
-          rows.set(rowAlias, {
-            ...rows.get(rowAlias),
-            [columnName]: value,
-          });
-        }
+        rows.set(rowAlias, {
+          ...rows.get(rowAlias),
+          [columnName]: value,
+        });
       }
 
       // Now, merge each row into its corresponding RowResult by row key.
-      for (const [rowAlias, rowWithVersion] of joinIterables(
-        rows.entries(),
-        aggLifts,
-      )) {
+      for (const [rowAlias, rowWithVersion] of rows.entries()) {
         // Exclude the _0_version column from what is sent to the client.
         const {[ZERO_VERSION_COLUMN_NAME]: rowVersion, ...row} = rowWithVersion;
         if (rowVersion === null) {

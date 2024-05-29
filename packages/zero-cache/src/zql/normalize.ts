@@ -6,12 +6,10 @@ import {
   Selector,
   type Condition,
 } from '@rocicorp/zql/src/zql/ast/ast.js';
-import {compareUTF8} from 'compare-utf8';
 import {ident} from 'pg-format';
 import type {JSONValue} from 'postgres';
 import {assert} from 'shared/src/asserts.js';
 import {create64} from '../types/xxhash.js';
-import type {ServerAST} from './server-ast.js';
 
 export type ParameterizedQuery = {
   query: string;
@@ -22,7 +20,7 @@ export type ParameterizedQuery = {
  * @returns An object for producing normalized version of the supplied `ast`,
  *     the resulting parameterized query, and hash identifier.
  */
-export function getNormalized(ast: ServerAST): Normalized {
+export function getNormalized(ast: AST): Normalized {
   return new Normalized(ast);
 }
 
@@ -31,27 +29,23 @@ function aggFn(agg: Aggregate) {
 }
 
 export class Normalized {
-  readonly #ast: ServerAST;
+  readonly #ast: AST;
   readonly #values: JSONValue[] = [];
   readonly #query;
   #nextParam = 1;
 
-  constructor(ast: ServerAST) {
+  constructor(ast: AST) {
     // Normalize the AST such that all order-agnostic lists (basically, everything
     // except ORDER BY) are sorted in a deterministic manner such that semantically
     // equivalent ASTs produce the same queries and hash identifier.
-    this.#ast = withNormalizedServerFields(normalizeAST(ast), ast);
+    this.#ast = normalizeAST(ast);
 
-    assert(
-      this.#ast.select?.length ||
-        this.#ast.aggregate?.length ||
-        this.#ast.aggLift?.length,
-    );
+    assert(this.#ast.select?.length || this.#ast.aggregate?.length);
 
     this.#query = this.#constructQuery(this.#ast);
   }
 
-  #constructQuery(ast: ServerAST): string {
+  #constructQuery(ast: AST): string {
     const {
       schema,
       table,
@@ -79,12 +73,6 @@ export class Normalized {
         })`;
         return `${agg} AS ${ident(agg)}`;
       }),
-      ...(ast.aggLift ?? []).map(
-        agg =>
-          `jsonb_agg(jsonb_build_object(${agg.selectors
-            .map(s => `'${s.alias}', ${ident(agg.table)}.${ident(s.column)}`)
-            .join(', ')})) AS ${ident(agg.alias)}`,
-      ),
     ].join(', ');
 
     // 1. all joins are left joins
@@ -162,7 +150,7 @@ export class Normalized {
   }
 
   /** @returns The normalized AST. */
-  ast(): ServerAST {
+  ast(): AST {
     return this.#ast;
   }
 
@@ -192,18 +180,3 @@ function selector(selector: Selector): string {
 }
 
 const SEED = 0x34567890n;
-
-function withNormalizedServerFields(ast: AST, serverAst: ServerAST): ServerAST {
-  if (serverAst.aggLift === undefined) {
-    return ast;
-  }
-  const aggLift = serverAst.aggLift.map(agg => ({
-    ...agg,
-    selectors: [...agg.selectors].sort((a, b) => compareUTF8(a.alias, b.alias)),
-  }));
-  aggLift.sort((a, b) => compareUTF8(a.alias, b.alias));
-  return {
-    ...ast,
-    aggLift: serverAst.aggLift,
-  };
-}
