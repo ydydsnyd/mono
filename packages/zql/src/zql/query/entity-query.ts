@@ -252,9 +252,6 @@ export class EntityQuery<From extends FromSet, Return = []> {
   constructor(context: Context, tableName: string, ast?: AST) {
     this.#ast = ast ?? {
       table: tableName,
-      // TODO(mlaw): this is wrong if we have joins.
-      // We need to suffix the order-by as our final operation.
-      orderBy: [[[tableName, 'id']], 'asc'] as const,
     };
     this.#name = tableName;
     this.#context = context;
@@ -501,10 +498,7 @@ export class EntityQuery<From extends FromSet, Return = []> {
   prepare(): Statement<Return> {
     return new Statement<Return>(this.#context, {
       ...this.#ast,
-      orderBy:
-        this.#ast.orderBy !== undefined
-          ? makeOrderingDetereministic(this.#ast, this.#ast.orderBy)
-          : undefined,
+      orderBy: makeOrderingDetereministic(this.#ast, this.#ast.orderBy),
     });
   }
 
@@ -725,9 +719,12 @@ function qualifySelector(
 // while also giving us a perf gain. If/when we allow cleaning up of new orderings we can revisit that choice.
 export function makeOrderingDetereministic(
   ast: AST,
-  order: Ordering,
+  order: Ordering | undefined,
 ): Ordering {
   const required = getRequiredOrderFieldsForDeterministicOrdering(ast);
+  if (order === undefined) {
+    return [[...required.values()], 'asc'];
+  }
 
   const selectors = [...order[0]];
   for (const selector of selectors) {
