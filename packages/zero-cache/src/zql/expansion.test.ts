@@ -87,11 +87,8 @@ describe('zql/expansion', () => {
           ),
         ),
         orderBy: [
-          [
-            ['issues', 'date'],
-            ['issues', 'priority'],
-          ],
-          'asc',
+          [['issues', 'date'], 'asc'],
+          [['issues', 'priority'], 'asc'],
         ],
       },
       original: `
@@ -142,11 +139,8 @@ describe('zql/expansion', () => {
               ),
             ),
             orderBy: [
-              [
-                ['issues', 'date'],
-                ['issues', 'priority'],
-              ],
-              'asc',
+              [['issues', 'date'], 'asc'],
+              [['issues', 'priority'], 'asc'],
             ],
           },
         },
@@ -214,7 +208,7 @@ describe('zql/expansion', () => {
             ],
           },
         ],
-        orderBy: [[['owner', 'level']], 'asc'],
+        orderBy: [[['owner', 'level'], 'asc']],
       },
       original: `
       SELECT 
@@ -283,11 +277,8 @@ describe('zql/expansion', () => {
               ),
             ),
             orderBy: [
-              [
-                ['issues', 'date'],
-                ['issues', 'priority'],
-              ],
-              'asc',
+              [['issues', 'date'], 'asc'],
+              [['issues', 'priority'], 'asc'],
             ],
           },
         },
@@ -465,7 +456,7 @@ describe('zql/expansion', () => {
             ],
           },
         ],
-        orderBy: [[['owner', 'awesomeness']], 'desc'],
+        orderBy: [[['owner', 'awesomeness'], 'desc']],
       },
       original: `
       SELECT 

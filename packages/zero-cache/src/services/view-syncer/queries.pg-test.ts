@@ -76,11 +76,8 @@ describe('view-syncer/queries', () => {
         [['parent', 'owner'], 'parent_owner'],
       ],
       orderBy: [
-        [
-          ['issues', 'id'],
-          ['issues', 'title'],
-        ],
-        'desc',
+        [['issues', 'id'], 'desc'],
+        [['issues', 'title'], 'desc'],
       ],
       table: 'issues',
       joins: [
@@ -575,11 +572,8 @@ describe('view-syncer/queries', () => {
         [['parent', 'owner'], 'parent_owner'],
       ],
       orderBy: [
-        [
-          ['issues', 'id'],
-          ['issues', 'title'],
-        ],
-        'desc',
+        [['issues', 'id'], 'desc'],
+        [['issues', 'title'], 'desc'],
       ],
       table: 'issues',
       joins: [

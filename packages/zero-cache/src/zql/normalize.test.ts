@@ -18,7 +18,7 @@ describe('zql/normalize-query-hash', () => {
         {
           table: 'issues',
           select: [[['issues', 'id'], 'id']],
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
       ],
       query: 'SELECT issues.id AS id FROM issues ORDER BY issues.id asc',
@@ -40,7 +40,7 @@ describe('zql/normalize-query-hash', () => {
             alias: 'issues_alias',
           },
           select: [[['issues_alias', 'id'], 'id']],
-          orderBy: [[['issues_alias', 'id']], 'asc'],
+          orderBy: [[['issues_alias', 'id'], 'asc']],
         },
       ],
       query:
@@ -59,7 +59,7 @@ describe('zql/normalize-query-hash', () => {
             [['clients', 'col.with.dots'], 'clientID'],
             [['zero.clients', 'lastMutationID'], 'lastMutationID'],
           ],
-          orderBy: [[['clients', 'col.with.dots']], 'asc'],
+          orderBy: [[['clients', 'col.with.dots'], 'asc']],
         },
       ],
       query:
@@ -74,7 +74,7 @@ describe('zql/normalize-query-hash', () => {
           table: 'issues',
           alias: 'Ishooz',
           select: [[['issues', 'id'], 'id']],
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
       ],
       query:
@@ -89,7 +89,7 @@ describe('zql/normalize-query-hash', () => {
             [['issues', 'id'], 'id'],
             [['issues', 'name'], 'name'],
           ],
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
         {
           table: 'issues',
@@ -97,7 +97,7 @@ describe('zql/normalize-query-hash', () => {
             [['issues', 'name'], 'name'],
             [['issues', 'id'], 'id'],
           ],
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
       ],
       query:
@@ -109,7 +109,7 @@ describe('zql/normalize-query-hash', () => {
         {
           table: 'issues',
           aggregate: [{aggregate: 'count', alias: 'num'}],
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
       ],
       query: 'SELECT count(*) AS "count(*)" FROM issues ORDER BY issues.id asc',
@@ -123,7 +123,7 @@ describe('zql/normalize-query-hash', () => {
             {aggregate: 'count', alias: 'num'},
             {aggregate: 'max', field: ['issues', 'priority'], alias: 'maxPri'},
           ],
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
         {
           table: 'issues',
@@ -131,7 +131,7 @@ describe('zql/normalize-query-hash', () => {
             {aggregate: 'max', field: ['issues', 'priority'], alias: 'maxPri'},
             {aggregate: 'count', alias: 'num'},
           ],
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
       ],
       query:
@@ -151,7 +151,7 @@ describe('zql/normalize-query-hash', () => {
             ['issues', 'id'],
             ['issues', 'name'],
           ],
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
         {
           table: 'issues',
@@ -163,7 +163,7 @@ describe('zql/normalize-query-hash', () => {
             ['issues', 'name'],
             ['issues', 'id'],
           ],
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
       ],
       query:
@@ -183,11 +183,8 @@ describe('zql/normalize-query-hash', () => {
             ['issues', 'name'],
           ],
           orderBy: [
-            [
-              ['issues', 'id'],
-              ['issues', 'name'],
-            ],
-            'desc',
+            [['issues', 'id'], 'desc'],
+            [['issues', 'name'], 'desc'],
           ],
         },
       ],
@@ -209,11 +206,8 @@ describe('zql/normalize-query-hash', () => {
           ],
           // ORDER BY expression order must be preserved.
           orderBy: [
-            [
-              ['issues', 'dueDate'],
-              ['issues', 'priority'],
-            ],
-            'desc',
+            [['issues', 'dueDate'], 'desc'],
+            [['issues', 'priority'], 'desc'],
           ],
           limit: 10,
         },
@@ -237,11 +231,8 @@ describe('zql/normalize-query-hash', () => {
           ],
           // ORDER BY expression order must be preserved.
           orderBy: [
-            [
-              ['issues', 'priority'],
-              ['issues', 'dueDate'],
-            ],
-            'desc',
+            [['issues', 'priority'], 'desc'],
+            [['issues', 'dueDate'], 'desc'],
           ],
           limit: 10,
         },
@@ -259,7 +250,7 @@ describe('zql/normalize-query-hash', () => {
             [['camelCaseTable', 'userID'], 'u'],
             [['camelCaseTable', 'name'], 'n'],
           ],
-          orderBy: [[['camelCaseTable', 'id']], 'asc'],
+          orderBy: [[['camelCaseTable', 'id'], 'asc']],
         },
       ],
       query:
@@ -271,7 +262,7 @@ describe('zql/normalize-query-hash', () => {
         {
           table: 'camelCaseTable',
           select: [[['camelCaseTable', 'userID'], 'id']],
-          orderBy: [[['camelCaseTable', 'userID']], 'asc'],
+          orderBy: [[['camelCaseTable', 'userID'], 'asc']],
         },
       ],
       query:
@@ -294,7 +285,7 @@ describe('zql/normalize-query-hash', () => {
               ],
             },
           ],
-          orderBy: [[['owner', 'id']], 'asc'],
+          orderBy: [[['owner', 'id'], 'asc']],
         },
       ],
       query:
@@ -324,7 +315,7 @@ describe('zql/normalize-query-hash', () => {
               ],
             },
           ],
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
         {
           table: 'issues',
@@ -346,7 +337,7 @@ describe('zql/normalize-query-hash', () => {
               ],
             },
           ],
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
       ],
       query:
@@ -368,7 +359,7 @@ describe('zql/normalize-query-hash', () => {
             op: '=',
             value: {type: 'value', value: 12345},
           },
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
       ],
       query:
@@ -390,7 +381,7 @@ describe('zql/normalize-query-hash', () => {
             op: '=',
             value: {type: 'value', value: 1234},
           },
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
       ],
       query:
@@ -412,7 +403,7 @@ describe('zql/normalize-query-hash', () => {
             op: 'IN',
             value: {type: 'value', value: ['1234', '2345', '4567']},
           },
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
       ],
       query:
@@ -434,7 +425,7 @@ describe('zql/normalize-query-hash', () => {
             op: '=',
             value: {type: 'value', value: '1234'},
           },
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
       ],
       query:
@@ -480,7 +471,7 @@ describe('zql/normalize-query-hash', () => {
               },
             ],
           },
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
         {
           table: 'issues',
@@ -518,7 +509,7 @@ describe('zql/normalize-query-hash', () => {
               },
             ],
           },
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
       ],
       query:
@@ -541,7 +532,7 @@ describe('zql/normalize-query-hash', () => {
             op: 'AND',
             conditions: [],
           },
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
         {
           table: 'issues',
@@ -554,7 +545,7 @@ describe('zql/normalize-query-hash', () => {
             op: 'OR',
             conditions: [],
           },
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
       ],
       query:
@@ -587,7 +578,7 @@ describe('zql/normalize-query-hash', () => {
               },
             ],
           },
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
         {
           table: 'issues',
@@ -613,7 +604,7 @@ describe('zql/normalize-query-hash', () => {
               },
             ],
           },
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
       ],
       query:
@@ -661,7 +652,7 @@ describe('zql/normalize-query-hash', () => {
               },
             ],
           },
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
         {
           table: 'issues',
@@ -699,7 +690,7 @@ describe('zql/normalize-query-hash', () => {
               },
             ],
           },
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
       ],
       query:
@@ -759,7 +750,7 @@ describe('zql/normalize-query-hash', () => {
               },
             ],
           },
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
       ],
       query:
@@ -819,7 +810,7 @@ describe('zql/normalize-query-hash', () => {
               },
             ],
           },
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
         {
           table: 'issues',
@@ -869,7 +860,7 @@ describe('zql/normalize-query-hash', () => {
               },
             ],
           },
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
       ],
       query:
@@ -935,7 +926,7 @@ describe('zql/normalize-query-hash', () => {
               },
             ],
           },
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
         {
           table: 'issues',
@@ -991,7 +982,7 @@ describe('zql/normalize-query-hash', () => {
               },
             ],
           },
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
       ],
       query:
@@ -1117,7 +1108,7 @@ describe('zql/normalize-query-hash', () => {
               },
             ],
           },
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
         {
           // AST with different but equivalent nesting of AND's and OR's
@@ -1253,7 +1244,7 @@ describe('zql/normalize-query-hash', () => {
               },
             ],
           },
-          orderBy: [[['issues', 'id']], 'asc'],
+          orderBy: [[['issues', 'id'], 'asc']],
         },
       ],
       query:
