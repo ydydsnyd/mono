@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1716437097343,
+  "lastUpdate": 1717587872123,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -47621,6 +47621,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32481,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ff18b0410017ba35042db5ee92ff25e7729057d4",
+          "message": "fix: Do not assume navigator is defined (#1977)\n\nInstead get navigator from shared/src/navigator.ts which annotates the\r\ntype as `Navigator | undefined` which forces us to check it before using\r\nit.",
+          "timestamp": "2024-06-05T11:42:08Z",
+          "tree_id": "027a0ff6c7dd0b4cd685503a3b4ebbaf444176af",
+          "url": "https://github.com/rocicorp/mono/commit/ff18b0410017ba35042db5ee92ff25e7729057d4"
+        },
+        "date": 1717587856274,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 316712,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55067,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 116690,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32448,
             "unit": "bytes"
           }
         ]
