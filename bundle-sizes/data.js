@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1717587872123,
+  "lastUpdate": 1717622946008,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -47665,6 +47665,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32448,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "87777826712945adfe9892dbab7e327e2e3b9303",
+          "message": "fix: Do not access global crypto (#1978)\n\nInstead go through shared/src/crypto.ts which will use the global crypto\r\nif available, and fallback node's crypto module if not.",
+          "timestamp": "2024-06-05T21:26:44Z",
+          "tree_id": "c7da12030d1a0cd0ec254572efbd488510d7fcb4",
+          "url": "https://github.com/rocicorp/mono/commit/87777826712945adfe9892dbab7e327e2e3b9303"
+        },
+        "date": 1717622929264,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 316993,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55159,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 116804,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32569,
             "unit": "bytes"
           }
         ]
