@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1717622946008,
+  "lastUpdate": 1717707326663,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -47689,6 +47689,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/87777826712945adfe9892dbab7e327e2e3b9303"
         },
         "date": 1717622929264,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 316993,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55159,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 116804,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32569,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e98f00d5eab0e6643d2c607bf0ab5e1934b02d12",
+          "message": "chore: Let the different tsconfig share the paths (#1980)\n\nExcept for reflect-server which cannot reference replicache because then\r\nwe end up pulling in DOM types that are not present on the server.",
+          "timestamp": "2024-06-06T20:53:00Z",
+          "tree_id": "6c25e49bf1f598e6a60c7e9c494c36e3c4997e67",
+          "url": "https://github.com/rocicorp/mono/commit/e98f00d5eab0e6643d2c607bf0ab5e1934b02d12"
+        },
+        "date": 1717707309135,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
