@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1717707326663,
+  "lastUpdate": 1717762934916,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -47753,6 +47753,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32569,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "distinct": true,
+          "id": "ecdf9a702b4e62a20ae2475750b65fee0a937199",
+          "message": "Revert \"fix: Do not access global crypto (#1978)\"\n\nThis reverts commit 87777826712945adfe9892dbab7e327e2e3b9303.\n\nNext.js was unhappy with the use of `await import(expr)`. Both top level\nawait as well as the expression in the dynamic import caused problems.",
+          "timestamp": "2024-06-07T14:18:45+02:00",
+          "tree_id": "69a9a6d6ae27f7ffbcafe7f319d452d338f56ddc",
+          "url": "https://github.com/rocicorp/mono/commit/ecdf9a702b4e62a20ae2475750b65fee0a937199"
+        },
+        "date": 1717762917510,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 316712,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55067,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 116690,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32448,
             "unit": "bytes"
           }
         ]
