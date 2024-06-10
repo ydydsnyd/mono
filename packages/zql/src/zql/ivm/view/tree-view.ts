@@ -68,7 +68,11 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
     data: Multiset<T>,
     reply?: Reply | undefined,
   ): boolean {
-    let needsUpdate = this.hydrated === false;
+    let needsUpdate = false;
+    if (this.hydrated === false) {
+      this._hydrated = true;
+      needsUpdate = true;
+    }
 
     let newData = this.#data;
     [needsUpdate, newData] = this.#sink(data, newData, needsUpdate, reply);

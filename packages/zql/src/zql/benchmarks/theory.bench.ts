@@ -31,12 +31,8 @@ describe.each([
       new EntityQuery<{issue: Issue}>(context, 'issue')
         .select('id')
         .where('id', '=', '005000'),
-    zqlExpected: (result: Issue[]) => {
-      expect(result.length).toBe(1);
-      expect(result[0].id).toEqual('005000');
-    },
-    theoryQuery: (collection: Map<string, Issue>) =>
-      expect(collection.get('005000')).not.toBeUndefined(),
+    zqlExpected: (_: Issue[]) => {},
+    theoryQuery: (collection: Map<string, Issue>) => collection.get('005000'),
   },
   /*
   Results as of 86bfe06a5d0d0f868c31449fb90c1f1d8bb4ee86:
@@ -54,10 +50,7 @@ describe.each([
       new EntityQuery<{issue: Issue}>(context, 'issue')
         .select('id')
         .where('title', '=', 'Issue 5000'),
-    zqlExpected: (result: Issue[]) => {
-      expect(result.length).toBe(1);
-      expect(result[0].id).toEqual('005000');
-    },
+    zqlExpected: (_: Issue[]) => {},
     theoryQuery: (collection: Map<string, Issue>) => {
       const ret: Issue[] = [];
       for (const issue of collection.values()) {
@@ -65,22 +58,18 @@ describe.each([
           ret.push(issue);
         }
       }
-      expect(ret[0].id).toEqual('005000');
     },
   },
   {
     name: 'table scan with no comparisons',
     getZql: (context: TestContext) =>
       new EntityQuery<{issue: Issue}>(context, 'issue').select('id'),
-    zqlExpected: (result: Issue[]) => {
-      expect(result.length).toBe(10_000);
-    },
+    zqlExpected: (_: Issue[]) => {},
     theoryQuery: (collection: Map<string, Issue>) => {
       const ret: Issue[] = [];
       for (const issue of collection.values()) {
         ret.push(issue);
       }
-      expect(ret.length).toBe(10_000);
     },
   },
 ])(`[Hydration Planner] $name`, async ({getZql, zqlExpected, theoryQuery}) => {

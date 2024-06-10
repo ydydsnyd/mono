@@ -14,7 +14,7 @@ export abstract class AbstractView<T extends PipelineEntity, CT>
   protected readonly _listener: Listener<T>;
   readonly #listeners: Set<(s: CT, v: Version) => void> = new Set();
   readonly name;
-  #hydrated = false;
+  protected _hydrated = false;
 
   // We keep track of the last version we saw so we can keep track of whether we
   // had any changes in the last commit.
@@ -51,7 +51,7 @@ export abstract class AbstractView<T extends PipelineEntity, CT>
         }
       },
       commit: (v: Version) => {
-        this.#hydrated = true;
+        this._hydrated = true;
         this._notifyCommitted(this.value, v);
       },
     };
@@ -67,7 +67,7 @@ export abstract class AbstractView<T extends PipelineEntity, CT>
   }
 
   get hydrated() {
-    return this.#hydrated;
+    return this._hydrated;
   }
 
   abstract pullHistoricalData(): void;
@@ -83,7 +83,7 @@ export abstract class AbstractView<T extends PipelineEntity, CT>
 
   on(listener: (s: CT, v: Version) => void, initialData = true) {
     this.#listeners.add(listener);
-    if (this.#hydrated && initialData) {
+    if (this._hydrated && initialData) {
       listener(this.value, this.#lastSeenVersion);
     }
     return () => {
