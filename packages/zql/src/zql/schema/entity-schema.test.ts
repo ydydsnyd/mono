@@ -1,4 +1,4 @@
-import * as v from 'shared/src/valita.js';
+import * as v from 'shared/dist/valita.js';
 import {expectTypeOf, test} from 'vitest';
 import {InferType, table} from './entity-schema.js';
 

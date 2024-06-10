@@ -1,7 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore next.js is having issues finding the .d.ts
 import type {Comparator, PipelineEntity} from './types.js';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/dist/must.js';
 import {SetSource} from './source/set-source.js';
 import type {Ordering} from '../ast/ast.js';
 import type {Source, SourceInternal} from './source/source.js';

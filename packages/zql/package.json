@@ -9,6 +9,7 @@
     "check-format": "prettier --check 'src/*.{js,jsx,json,ts,tsx,html,css,md}' '*.{cjs,js,jsx,json,ts,tsx,html,css,md}'",
     "check-types": "tsc --noEmit",
     "lint": "eslint --ext .ts,.tsx,.js,.jsx src/",
+    "build": "tsc --build",
     "test": "vitest run",
     "test:watch": "vitest watch",
     "bench": "vitest bench",

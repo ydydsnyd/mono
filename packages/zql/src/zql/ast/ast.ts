@@ -2,7 +2,7 @@
 // https://www.sqlite.org/lang_select.html
 
 import {compareUTF8} from 'compare-utf8';
-import {defined} from 'shared/src/arrays.js';
+import {defined} from 'shared/dist/arrays.js';
 
 export type Selector = readonly [table: string, column: string];
 

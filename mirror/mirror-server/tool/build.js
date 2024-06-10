@@ -1,6 +1,6 @@
 import * as esbuild from 'esbuild';
 import {injectRequire} from 'shared/src/tool/inject-require.js';
-import packageJSON from '../package.json' assert {type: 'json'};
+import packageJSON from '../package.json' with {type: 'json'};
 
 const {dependencies, devDependencies, bundleDependencies} = packageJSON;
 const external = new Set(

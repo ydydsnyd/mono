@@ -1,4 +1,4 @@
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/dist/asserts.js';
 import type {Ordering, Selector, SimpleOperator} from '../../ast/ast.js';
 import type {Multiset} from '../multiset.js';
 import type {
@@ -27,7 +27,7 @@ import {InnerJoinOperator, JoinArgs} from './operators/join-operator.js';
 import {MapOperator} from './operators/map-operator.js';
 import type {Operator} from './operators/operator.js';
 import {ReduceOperator} from './operators/reduce-operator.js';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/dist/must.js';
 import type {Entity} from '../../schema/entity-schema.js';
 import type {Source} from '../source/source.js';
 

@@ -10,6 +10,8 @@
   "type": "module",
   "scripts": {
     "build": "turbo run build",
+    "build2": "tsc --build tsconfig.all.json",
+    "build2:watch": "tsc --build tsconfig.all.json --watch",
     "dev": "turbo run dev",
     "test": "turbo run test",
     "lint": "turbo run lint",

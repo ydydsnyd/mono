@@ -1,5 +1,5 @@
-import * as v from 'shared/src/valita.js';
-import type {ReadonlyJSONObject} from 'shared/src/json.js';
+import * as v from 'shared/dist/valita.js';
+import type {ReadonlyJSONObject} from 'shared/dist/json.js';
 
 export type Entity = {
   readonly id: string;

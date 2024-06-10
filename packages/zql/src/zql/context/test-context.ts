@@ -1,5 +1,5 @@
 import {compareUTF8} from 'compare-utf8';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/dist/must.js';
 import type {AST} from '../ast/ast.js';
 import {DifferenceStream} from '../ivm/graph/difference-stream.js';
 import {createPullResponseMessage, Request} from '../ivm/graph/message.js';

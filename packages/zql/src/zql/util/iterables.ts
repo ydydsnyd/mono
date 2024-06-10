@@ -1,4 +1,4 @@
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/dist/asserts.js';
 
 export function gen<T>(generator: () => Iterator<T>): Iterable<T> {
   return {

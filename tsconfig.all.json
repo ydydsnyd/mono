@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {},
+  "include": [],
+  "references": [{"path": "./packages/zql"}, {"path": "./packages/shared"}]
+}

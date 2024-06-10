@@ -1,6 +1,5 @@
 import {compareUTF8} from 'compare-utf8';
-import type {ExperimentalNoIndexDiff} from 'replicache';
-import {assert} from 'shared/src//asserts.js';
+import {assert} from 'shared/dist//asserts.js';
 import type {AST} from '../ast/ast.js';
 import type {Materialite} from '../ivm/materialite.js';
 import type {SetSource} from '../ivm/source/set-source.js';
@@ -12,7 +11,13 @@ import type {Context, GotCallback, SubscriptionDelegate} from './context.js';
 
 export type AddWatch = (name: string, cb: WatchCallback) => void;
 
-export type WatchCallback = (changes: ExperimentalNoIndexDiff) => void;
+type Diff = {
+  op: 'add' | 'del' | 'change';
+  key: string;
+  oldValue?: Entity | undefined;
+  newValue?: Entity | undefined;
+};
+export type WatchCallback = (changes: Diff[]) => void;
 
 export class ZeroContext implements Context {
   readonly materialite: Materialite;
@@ -77,7 +82,7 @@ class ZeroSource {
     addWatch(name, this.#handleDiff);
   }
 
-  #handleDiff = (changes: ExperimentalNoIndexDiff) => {
+  #handleDiff = (changes: Diff[]) => {
     // The first diff is the set of initial values
     // to seed the source. We call `seed`, rather than add,
     // to process these. `seed` will only send to changes

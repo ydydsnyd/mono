@@ -1,4 +1,4 @@
-import {unreachable} from 'shared/src/asserts.js';
+import {unreachable} from 'shared/dist/asserts.js';
 import type {Ordering} from '../ast/ast.js';
 import {getValueFromEntity} from './source/util.js';
 

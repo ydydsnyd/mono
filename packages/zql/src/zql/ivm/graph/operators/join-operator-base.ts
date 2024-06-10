@@ -1,4 +1,4 @@
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/dist/asserts.js';
 import type {Selector} from '../../../ast/ast.js';
 import type {Multiset} from '../../multiset.js';
 import type {PipelineEntity, Version} from '../../types.js';

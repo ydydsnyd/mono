@@ -1,6 +1,6 @@
 import type {ISortedMap} from 'btree';
 import BTree from 'btree';
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/dist/must.js';
 import type {Ordering, Primitive, Selector} from '../../ast/ast.js';
 import {gen} from '../../util/iterables.js';
 import {makeComparator} from '../compare.js';

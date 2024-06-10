@@ -1,5 +1,5 @@
-import {assert} from 'shared/src/asserts.js';
-import {must} from 'shared/src/must.js';
+import {assert} from 'shared/dist/asserts.js';
+import {must} from 'shared/dist/must.js';
 import type {Selector} from '../../../ast/ast.js';
 import {genCached, genFlatMap} from '../../../util/iterables.js';
 import type {Entry, Multiset} from '../../multiset.js';

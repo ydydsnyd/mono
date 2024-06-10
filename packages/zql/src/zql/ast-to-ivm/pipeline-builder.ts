@@ -1,4 +1,4 @@
-import {must} from 'shared/src/must.js';
+import {must} from 'shared/dist/must.js';
 import type {
   AST,
   Aggregation,

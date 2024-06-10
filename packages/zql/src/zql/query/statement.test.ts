@@ -1,4 +1,4 @@
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/dist/asserts.js';
 import {expect, test} from 'vitest';
 import {z} from 'zod';
 import {makeTestContext} from '../context/test-context.js';

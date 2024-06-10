@@ -1,4 +1,4 @@
-import {assert} from 'shared/src/asserts.js';
+import {assert} from 'shared/dist/asserts.js';
 import {expect, test} from 'vitest';
 import {Materialite} from '../ivm/materialite.js';
 import type {SetSource} from '../ivm/source/set-source.js';

@@ -1,10 +1,46 @@
-import {TestContext} from '@rocicorp/zql/src/context/test-context.js';
+import {TestContext} from 'zql/dist/zql/context/test-context.js';
+import {EntityQuery} from 'zql/dist/zql/query/entity-query.js';
 import './App.css';
 
-function App() {
-  function runZQL() {}
+const ctx = new TestContext();
+type Issue = {
+  id: string;
+  title: string;
+};
+const issueQuery = new EntityQuery<{issue: Issue}>(ctx, 'issue');
+const issueSource = ctx.getSource('issue');
 
-  return <div onClick={runZQL}>Run ZQL</div>;
+ctx.materialite.tx(() => {
+  for (let i = 0; i < 10_000; i++) {
+    issueSource.add({id: i.toString().padStart(6, '0'), title: `Issue ${i}`});
+  }
+});
+
+function App() {
+  async function runZQL() {
+    const stmt = issueQuery
+      .select('id', 'title')
+      .where('title', '=', 'Issue 1')
+      .prepare();
+    const rows = await stmt.exec();
+    stmt.destroy();
+    console.log(rows);
+  }
+
+  return (
+    <div
+      onClick={runZQL}
+      style={{
+        cursor: 'pointer',
+        background: 'grey',
+        padding: 5,
+        borderRadius: 5,
+        color: 'white',
+      }}
+    >
+      Run ZQL
+    </div>
+  );
 }
 
 export default App;
