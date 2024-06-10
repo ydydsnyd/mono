@@ -31,6 +31,10 @@ describe.each([
       new EntityQuery<{issue: Issue}>(context, 'issue')
         .select('id')
         .where('id', '=', '005000'),
+    zqlExpected: (result: Issue[]) => {
+      expect(result.length).toBe(1);
+      expect(result[0].id).toEqual('005000');
+    },
     theoryQuery: (collection: Map<string, Issue>) =>
       expect(collection.get('005000')).not.toBeUndefined(),
   },
@@ -50,6 +54,10 @@ describe.each([
       new EntityQuery<{issue: Issue}>(context, 'issue')
         .select('id')
         .where('title', '=', 'Issue 5000'),
+    zqlExpected: (result: Issue[]) => {
+      expect(result.length).toBe(1);
+      expect(result[0].id).toEqual('005000');
+    },
     theoryQuery: (collection: Map<string, Issue>) => {
       const ret: Issue[] = [];
       for (const issue of collection.values()) {
@@ -60,7 +68,22 @@ describe.each([
       expect(ret[0].id).toEqual('005000');
     },
   },
-])(`[Hydration Planner] $name`, async ({getZql, theoryQuery}) => {
+  {
+    name: 'table scan with no comparisons',
+    getZql: (context: TestContext) =>
+      new EntityQuery<{issue: Issue}>(context, 'issue').select('id'),
+    zqlExpected: (result: Issue[]) => {
+      expect(result.length).toBe(10_000);
+    },
+    theoryQuery: (collection: Map<string, Issue>) => {
+      const ret: Issue[] = [];
+      for (const issue of collection.values()) {
+        ret.push(issue);
+      }
+      expect(ret.length).toBe(10_000);
+    },
+  },
+])(`[Hydration Planner] $name`, async ({getZql, zqlExpected, theoryQuery}) => {
   const context = new TestContext();
   const source = context.getSource<Issue>('issue');
   const theory = new Map<string, Issue>();
@@ -76,14 +99,13 @@ describe.each([
   bench('prepare and run', async () => {
     const stmt = getZql(context).prepare();
     const result = await stmt.exec();
-
-    expect(result[0].id).toEqual('005000');
+    zqlExpected(result as Issue[]);
     stmt.destroy();
   });
 
   bench('previously prepared', async () => {
     const result = await prepared.exec();
-    expect(result[0].id).toEqual('005000');
+    zqlExpected(result as Issue[]);
   });
 
   // Make sure we _actually_ cleaned up statements.
@@ -94,6 +116,7 @@ describe.each([
   //  1 million point queries do not take 1 million iterations.
   prepared.destroy();
   expect(source.stream.numDownstreams).toBe(0);
+  source.stream.destroy();
 
   bench('theory', () => {
     theoryQuery(theory);
