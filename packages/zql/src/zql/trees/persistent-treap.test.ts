@@ -154,7 +154,9 @@ test('getting an iterator', () => {
   const iter = t.iteratorAfter(6);
   expect(iter.next().value).toBe(10);
   expect(iter.next().value).toBe(15);
-  expect(iter.next().value).toBe(undefined);
+  const next = iter.next();
+  expect(next.done).toBe(true);
+  expect(next.value).toBe(undefined);
 });
 
 test('reverse iterating from the end', () => {
@@ -171,17 +173,17 @@ test('reverse iterating from the end', () => {
   expect(iter.next().value).toBe(undefined);
 });
 
-// test('getting a reverse iterator', () => {
-//   let t = new PersistentTreap<number>((a, b) => a - b);
-//   t = t.add(10);
-//   t = t.add(5);
-//   t = t.add(15);
-//   t = t.add(2);
-//   const iter = t.iteratorBefore(6);
-//   expect(iter.next().value).toBe(5);
-//   expect(iter.next().value).toBe(2);
-//   expect(iter.next().value).toBe(undefined);
-// });
+test('getting a reverse iterator from a specific point', () => {
+  let t = new PersistentTreap<number>((a, b) => a - b);
+  t = t.add(10);
+  t = t.add(5);
+  t = t.add(15);
+  t = t.add(2);
+  const iter = t.iteratorBefore(6);
+  expect(iter.next().value).toBe(5);
+  expect(iter.next().value).toBe(2);
+  expect(iter.next().value).toBe(undefined);
+});
 
 test('finding an index', () => {
   let t = new PersistentTreap<number>((a, b) => a - b);

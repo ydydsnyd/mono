@@ -1,7 +1,6 @@
 // Copyright (c) 2023 One Law LLC
 
-import {INode, ITree, Node} from './types.js';
-import {TreeIterator} from './tree-iterator.js';
+import {ITree, Node} from './types.js';
 type Comparator<T> = (a: T, b: T) => number;
 
 /**
@@ -38,40 +37,11 @@ export class PersistentTreap<T> implements ITree<T> {
   }
 
   iteratorAfter(data: T) {
-    const iter = this.lowerBound(data);
-
-    while (iter.data !== undefined && this.#comparator(iter.data, data) === 0) {
-      iter.next();
-    }
-
-    return iter;
+    return boundedInOrderTraversal(this.#comparator, this.#root, data);
   }
 
-  lowerBound(data: T): TreeIterator<T> {
-    let cur: INode<T> | undefined = this.#root;
-    const iter = new TreeIterator(this, false);
-
-    while (cur !== undefined) {
-      const c = this.#comparator(data, cur.value);
-      if (c === 0) {
-        iter.cursor = cur;
-        return iter;
-      }
-      iter.ancestors.push(cur);
-      cur = cur.getChild(c > 0);
-    }
-
-    for (let i = iter.ancestors.length - 1; i >= 0; --i) {
-      cur = iter.ancestors[i]!;
-      if (this.#comparator(data, cur.value) < 0) {
-        iter.cursor = cur;
-        iter.ancestors.length = i;
-        return iter;
-      }
-    }
-
-    iter.ancestors.length = 0;
-    return iter;
+  iteratorBefore(data: T) {
+    return boundedReverseOrderTraversal(this.#comparator, this.#root, data);
   }
 
   add(value: T): PersistentTreap<T> {
@@ -383,23 +353,70 @@ function* inOrderTraversal<T>(node: Node<T> | undefined): Generator<T> {
   }
 }
 
+function* boundedInOrderTraversal<T>(
+  comparator: Comparator<T>,
+  root: Node<T> | undefined,
+  lowerBound: T,
+): Generator<T> {
+  const stack: Node<T>[] = [];
+  let currentNode = root;
+
+  while (stack.length > 0 || currentNode) {
+    while (currentNode) {
+      if (comparator(currentNode.value, lowerBound) < 0) {
+        currentNode = currentNode.right;
+      } else {
+        stack.push(currentNode);
+        currentNode = currentNode.left;
+      }
+    }
+
+    if (stack.length === 0) {
+      return undefined;
+    }
+
+    currentNode = stack.pop()!;
+    yield currentNode.value;
+    currentNode = currentNode.right;
+  }
+}
+
 function* reverseOrderTraversal<T>(node: Node<T> | undefined): Generator<T> {
   const stack: Node<T>[] = [];
   let currentNode = node;
 
   while (stack.length > 0 || currentNode) {
-    // Reach the right most Node of the current Node
     while (currentNode) {
       stack.push(currentNode);
       currentNode = currentNode.right;
     }
 
-    // currentNode is undefined at this point
     currentNode = stack.pop()!;
-
     yield currentNode.value;
+    currentNode = currentNode.left;
+  }
+}
 
-    // Move to the left node
+function* boundedReverseOrderTraversal<T>(
+  comparator: Comparator<T>,
+  root: Node<T> | undefined,
+  upperBound: T,
+): Generator<T> {
+  const stack: Node<T>[] = [];
+  let currentNode = root;
+
+  while (stack.length > 0 || currentNode) {
+    while (currentNode) {
+      if (comparator(currentNode.value, upperBound) > 0) {
+        currentNode = currentNode.left;
+      } else {
+        stack.push(currentNode);
+        currentNode = currentNode.right;
+      }
+    }
+
+    currentNode = stack.pop()!;
+    yield currentNode.value;
     currentNode = currentNode.left;
   }
 }
