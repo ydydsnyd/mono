@@ -20,10 +20,10 @@ function App() {
   async function runZQL() {
     const stmt = issueQuery
       .select('id', 'title')
-      .where('title', '=', 'Issue 5000')
+      // .where('title', '=', 'Issue 5000')
       .prepare();
     const rows = await stmt.exec();
-    console.log(rows);
+    console.log(rows.length);
     stmt.destroy();
   }
 

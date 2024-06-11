@@ -62,16 +62,16 @@ describe.each([
     },
   },
   /*
-  ✓ [Hydration Planner] 'table scan with no comparisons' (3) 2098ms
+  ✓ [Hydration Planner] 'table scan with no comparisons' (3) 2090ms
      name                           hz     min     max    mean     p75     p99    p995    p999     rme  samples
-   · prepare and run            164.26  5.8000  6.5000  6.0880  6.1000  6.5000  6.5000  6.5000  ±0.41%       83   slowest
-   · previously prepared  3,164,980.00  0.0000  2.6000  0.0003  0.0000  0.0000  0.0000  0.1000  ±2.94%  1582490   fastest
-   · theory                  43,495.30  0.0000  0.2000  0.0230  0.0000  0.1000  0.1000  0.2000  ±2.46%    21752
+   · prepare and run            222.13  4.0000  5.4000  4.5018  4.7000  5.3000  5.4000  5.4000  ±1.21%      112   slowest
+   · previously prepared  3,172,698.00  0.0000  0.2000  0.0003  0.0000  0.0000  0.0000  0.1000  ±2.77%  1586349   fastest
+   · theory                  42,894.00  0.0000  0.2000  0.0233  0.0000  0.1000  0.1000  0.2000  ±2.46%    21447
 
-   omg... wtf is going on here. 2 orders of magnitude off!?
+   NOTE: we could have a massive perf win here by creating a view that does not care about order if the query has no defined order.
   */
   {
-    name: 'table scan with no comparisons',
+    name: 'Table scan with no comparisons. Unconcerned about output order.',
     getZql: (context: TestContext) =>
       new EntityQuery<{issue: Issue}>(context, 'issue').select('id'),
     zqlExpected: (_: Issue[]) => {},
@@ -83,11 +83,12 @@ describe.each([
     },
   },
 ])(`[Hydration Planner] $name`, async ({getZql, zqlExpected, theoryQuery}) => {
+  const datasetSize = 10_000;
   const context = new TestContext();
   const source = context.getSource<Issue>('issue');
   const theory = new Map<string, Issue>();
 
-  for (let i = 0; i < 10_000; ++i) {
+  for (let i = 0; i < datasetSize; ++i) {
     const issue = {id: i.toString().padStart(6, '0'), title: `Issue ${i}`};
     source.add(issue);
     theory.set(issue.id, issue);
@@ -122,7 +123,14 @@ describe.each([
   });
 });
 
-describe('is the btree just trash?', () => {
+/**
+ * As of 553f556ab87c9005a1caaab06a64058df9835be8 we're within 3x perf of a Map.
+ * Regardless of 100, 1k, 10k or 100k items.
+ *
+ * This is a useful metric to track since running a query from scratch will create
+ * a new treap each time to hold the view.
+ */
+describe('Treap construction vs Map construction', () => {
   const limit = 10_000;
 
   bench('create and iterate 10k item map', () => {
@@ -149,5 +157,3 @@ describe('is the btree just trash?', () => {
     }
   });
 });
-
-// table scan with limit 1
