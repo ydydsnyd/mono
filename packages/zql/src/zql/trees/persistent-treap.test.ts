@@ -77,9 +77,9 @@ describe('Get operations', () => {
       expect(treap.at(6)).toBe(80);
     });
 
-    it('should return null for out-of-bounds indices', () => {
-      expect(treap.at(-1)).toBeNull();
-      expect(treap.at(7)).toBeNull();
+    it('should return undefined for out-of-bounds indices', () => {
+      expect(treap.at(-1)).toBeUndefined();
+      expect(treap.at(7)).toBeUndefined();
     });
   });
 
@@ -89,9 +89,9 @@ describe('Get operations', () => {
       expect(treap.get(60)).toBe(60);
     });
 
-    it('should return null if the element is not in the treap', () => {
-      expect(treap.get(10)).toBeNull();
-      expect(treap.get(100)).toBeNull();
+    it('should return undefined if the element is not in the treap', () => {
+      expect(treap.get(10)).toBeUndefined();
+      expect(treap.get(100)).toBeUndefined();
     });
   });
 });
@@ -110,7 +110,7 @@ describe('size', () => {
     treap = treap.add(1);
     treap = treap.add(2);
     treap = treap.add(3);
-    // console.log(inspect(treap, true, null));
+    // console.log(inspect(treap, true, undefined));
     expect(treap.size).toBe(3);
   });
 });
@@ -154,7 +154,21 @@ test('getting an iterator', () => {
   const iter = t.iteratorAfter(6);
   expect(iter.next().value).toBe(10);
   expect(iter.next().value).toBe(15);
-  expect(iter.next().value).toBe(null);
+  expect(iter.next().value).toBe(undefined);
+});
+
+test('reverse iterating from the end', () => {
+  let t = new PersistentTreap<number>((a, b) => a - b);
+  t = t.add(10);
+  t = t.add(5);
+  t = t.add(15);
+  t = t.add(2);
+  const iter = t.reverseIterator();
+  expect(iter.next().value).toBe(15);
+  expect(iter.next().value).toBe(10);
+  expect(iter.next().value).toBe(5);
+  expect(iter.next().value).toBe(2);
+  expect(iter.next().value).toBe(undefined);
 });
 
 // test('getting a reverse iterator', () => {
@@ -166,7 +180,7 @@ test('getting an iterator', () => {
 //   const iter = t.iteratorBefore(6);
 //   expect(iter.next().value).toBe(5);
 //   expect(iter.next().value).toBe(2);
-//   expect(iter.next().value).toBe(null);
+//   expect(iter.next().value).toBe(undefined);
 // });
 
 test('finding an index', () => {
@@ -179,6 +193,6 @@ test('finding an index', () => {
     expect(index).toBe(t.at(index));
     expect(index).toBe(i);
   }
-  expect(t.findIndex(100)).toBe(null);
-  expect(t.findIndex(-1)).toBe(null);
+  expect(t.findIndex(100)).toBe(undefined);
+  expect(t.findIndex(-1)).toBe(undefined);
 });

@@ -6,24 +6,27 @@ export class TreeIterator<T> implements IterableIterator<T> {
   readonly ancestors;
   readonly #treeVersion;
   readonly #primed;
+  readonly #reversed;
   #first = true;
   cursor;
 
   constructor(
     tree: ITree<T>,
+    reversed: boolean,
     primed: boolean = true,
     ancestors: INode<T>[] = [],
-    cursor: INode<T> | null = null,
+    cursor?: INode<T> | undefined,
   ) {
     this.#tree = tree;
     this.ancestors = ancestors;
     this.cursor = cursor;
     this.#treeVersion = tree.version;
     this.#primed = primed;
+    this.#reversed = reversed;
   }
 
   get data() {
-    return this.cursor !== null ? this.cursor.value : null;
+    return this.cursor !== undefined ? this.cursor.value : undefined;
   }
 
   [Symbol.iterator](): IterableIterator<T> {
@@ -31,6 +34,7 @@ export class TreeIterator<T> implements IterableIterator<T> {
     // when other people want to iterate it.
     return new TreeIterator(
       this.#tree,
+      this.#reversed,
       this.#primed,
       [...this.ancestors],
       this.cursor,
@@ -49,25 +53,29 @@ export class TreeIterator<T> implements IterableIterator<T> {
     if (this.#primed && this.#first) {
       this.#first = false;
       return {
-        done: this.cursor === null ? true : false,
-        value: this.cursor !== null ? this.cursor.value : null,
+        done: this.cursor === undefined ? true : false,
+        value: this.cursor !== undefined ? this.cursor.value : undefined,
       } as IteratorResult<T>;
     }
 
-    if (this.cursor === null) {
+    if (this.cursor === undefined) {
       const {root} = this.#tree;
-      if (root !== null) {
-        this.#minNode(root);
+      if (root !== undefined) {
+        if (this.#reversed) {
+          this.#maxNode(root);
+        } else {
+          this.#minNode(root);
+        }
       }
     } else {
-      if (this.cursor.right === null) {
-        let save: INode<T> | null;
+      if (this.cursor.right === undefined) {
+        let save: INode<T> | undefined;
         do {
           save = this.cursor;
           if (this.ancestors.length) {
             this.cursor = this.ancestors.pop()!;
           } else {
-            this.cursor = null;
+            this.cursor = undefined;
             break;
           }
         } while (this.cursor.right === save);
@@ -77,15 +85,23 @@ export class TreeIterator<T> implements IterableIterator<T> {
       }
     }
     return {
-      done: this.cursor === null,
-      value: this.cursor !== null ? this.cursor.value : null,
+      done: this.cursor === undefined,
+      value: this.cursor !== undefined ? this.cursor.value : undefined,
     } as IteratorResult<T>;
   }
 
   #minNode(start: INode<T>) {
-    while (start.left !== null) {
+    while (start.left !== undefined) {
       this.ancestors.push(start);
       start = start.left;
+    }
+    this.cursor = start;
+  }
+
+  #maxNode(start: INode<T>) {
+    while (start.right !== undefined) {
+      this.ancestors.push(start);
+      start = start.right;
     }
     this.cursor = start;
   }

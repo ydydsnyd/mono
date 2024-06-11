@@ -17,7 +17,7 @@ type Comparator<T> = (a: T, b: T) => number;
  */
 export class PersistentTreap<T> implements ITree<T> {
   #comparator: Comparator<T>;
-  #root: Node<T> | null = null;
+  #root?: Node<T> | undefined;
   readonly version;
 
   constructor(comparator: Comparator<T>, version = 0) {
@@ -40,7 +40,7 @@ export class PersistentTreap<T> implements ITree<T> {
   iteratorAfter(data: T) {
     const iter = this.lowerBound(data);
 
-    while (iter.data !== null && this.#comparator(iter.data, data) === 0) {
+    while (iter.data !== undefined && this.#comparator(iter.data, data) === 0) {
       iter.next();
     }
 
@@ -48,10 +48,10 @@ export class PersistentTreap<T> implements ITree<T> {
   }
 
   lowerBound(data: T): TreeIterator<T> {
-    let cur: INode<T> | null = this.#root;
-    const iter = new TreeIterator(this);
+    let cur: INode<T> | undefined = this.#root;
+    const iter = new TreeIterator(this, false);
 
-    while (cur !== null) {
+    while (cur !== undefined) {
       const c = this.#comparator(data, cur.value);
       if (c === 0) {
         iter.cursor = cur;
@@ -91,7 +91,7 @@ export class PersistentTreap<T> implements ITree<T> {
 
   clear(): PersistentTreap<T> {
     const ret = new PersistentTreap(this.#comparator, this.version + 1);
-    ret.#root = null;
+    ret.#root = undefined;
     return ret;
   }
 
@@ -131,12 +131,16 @@ export class PersistentTreap<T> implements ITree<T> {
     return -1;
   }
 
-  findIndex(value: T): number | null {
+  findIndex(value: T): number | undefined {
     return this.#findIndex(this.#root, value, 0);
   }
 
-  #findIndex(node: Node<T> | null, value: T, offset: number): number | null {
-    if (!node) return null;
+  #findIndex(
+    node: Node<T> | undefined,
+    value: T,
+    offset: number,
+  ): number | undefined {
+    if (!node) return undefined;
 
     const cmp = this.#comparator(value, node.value);
     const thisIndex = (node.left?.size ?? 0) + offset;
@@ -171,11 +175,11 @@ export class PersistentTreap<T> implements ITree<T> {
     return result;
   }
 
-  at(index: number): T | null {
+  at(index: number): T | undefined {
     return this.#getByIndex(this.#root, index);
   }
 
-  get(value: T): T | null {
+  get(value: T): T | undefined {
     let currentNode = this.#root;
 
     while (currentNode) {
@@ -190,16 +194,16 @@ export class PersistentTreap<T> implements ITree<T> {
       }
     }
 
-    return null;
+    return undefined;
   }
 
-  getMin(): T | null {
-    if (!this.#root) return null;
+  getMin(): T | undefined {
+    if (!this.#root) return undefined;
     return this.findMin(this.#root).value;
   }
 
-  getMax(): T | null {
-    if (!this.#root) return null;
+  getMax(): T | undefined {
+    if (!this.#root) return undefined;
     let currentNode = this.#root;
     while (currentNode.right) {
       currentNode = currentNode.right;
@@ -207,8 +211,8 @@ export class PersistentTreap<T> implements ITree<T> {
     return currentNode.value;
   }
 
-  #getByIndex(node: Node<T> | null, index: number): T | null {
-    if (!node) return null;
+  #getByIndex(node: Node<T> | undefined, index: number): T | undefined {
+    if (!node) return undefined;
 
     const leftSize = node.left ? node.left.size : 0;
 
@@ -220,7 +224,7 @@ export class PersistentTreap<T> implements ITree<T> {
     return this.#getByIndex(node.right, index - leftSize - 1);
   }
 
-  #contains(node: Node<T> | null, value: T): boolean {
+  #contains(node: Node<T> | undefined, value: T): boolean {
     if (!node) return false;
 
     const cmp = this.#comparator(value, node.value);
@@ -234,7 +238,11 @@ export class PersistentTreap<T> implements ITree<T> {
     return inOrderTraversal(this.#root);
   }
 
-  #insert(node: Node<T> | null, value: T, priority: number): Node<T> {
+  reverseIterator(): Generator<T> {
+    return reverseOrderTraversal(this.#root);
+  }
+
+  #insert(node: Node<T> | undefined, value: T, priority: number): Node<T> {
     if (!node) {
       return new Node(value, priority);
     }
@@ -258,8 +266,8 @@ export class PersistentTreap<T> implements ITree<T> {
     return this.#balance(newNode); // Balance the node after insertion.
   }
 
-  #remove(node: Node<T> | null, value: T): Node<T> | null {
-    if (!node) return null;
+  #remove(node: Node<T> | undefined, value: T): Node<T> | undefined {
+    if (!node) return undefined;
 
     const newNode = new Node(node.value, node.priority, node.left, node.right);
 
@@ -284,7 +292,7 @@ export class PersistentTreap<T> implements ITree<T> {
     return this.#balance(newNode);
   }
 
-  removeMin(node: Node<T>): Node<T> | null {
+  removeMin(node: Node<T>): Node<T> | undefined {
     if (!node.left) return node.right;
     const newNode = new Node(node.value, node.priority);
     newNode.size = node.size - 1;
@@ -342,7 +350,7 @@ export class PersistentTreap<T> implements ITree<T> {
     this.#print(this.#root);
   }
 
-  #print(node: Node<T> | null) {
+  #print(node: Node<T> | undefined) {
     if (!node) return;
     console.log(node);
     if (node.left) {
@@ -354,7 +362,7 @@ export class PersistentTreap<T> implements ITree<T> {
   }
 }
 
-function* inOrderTraversal<T>(node: Node<T> | null): Generator<T> {
+function* inOrderTraversal<T>(node: Node<T> | undefined): Generator<T> {
   const stack: Node<T>[] = [];
   let currentNode = node;
 
@@ -365,13 +373,34 @@ function* inOrderTraversal<T>(node: Node<T> | null): Generator<T> {
       currentNode = currentNode.left;
     }
 
-    // currentNode is null at this point
+    // currentNode is undefined at this point
     currentNode = stack.pop()!; // Pop the top node, which is the next node in in-order
 
     yield currentNode.value;
 
     // Move to the right node
     currentNode = currentNode.right;
+  }
+}
+
+function* reverseOrderTraversal<T>(node: Node<T> | undefined): Generator<T> {
+  const stack: Node<T>[] = [];
+  let currentNode = node;
+
+  while (stack.length > 0 || currentNode) {
+    // Reach the right most Node of the current Node
+    while (currentNode) {
+      stack.push(currentNode);
+      currentNode = currentNode.right;
+    }
+
+    // currentNode is undefined at this point
+    currentNode = stack.pop()!;
+
+    yield currentNode.value;
+
+    // Move to the left node
+    currentNode = currentNode.left;
   }
 }
 

@@ -10,8 +10,7 @@ import {bench, describe, expect} from 'vitest';
 import {TestContext} from '../context/test-context.js';
 import {EntityQuery} from '../query/entity-query.js';
 import BTree from 'btree';
-import {Treap} from '@vlcn.io/ds-and-algos/Treap';
-import {PersistentTreap} from '@vlcn.io/ds-and-algos/PersistentTreap';
+import {PersistentTreap} from '../trees/persistent-treap.js';
 
 type Issue = {
   id: string;
@@ -150,17 +149,17 @@ describe('is the btree just trash?', () => {
     }
   });
 
-  bench('create and iterate 10k item treap', () => {
-    const treap = new Treap<Issue>((l, r) => l.id.localeCompare(r.id));
-    for (let i = 0; i < limit; ++i) {
-      const issue = {id: i.toString().padStart(6, '0'), title: `Issue ${i}`};
-      treap.add(issue);
-    }
-    const ret: Issue[] = [];
-    for (const issue of treap) {
-      ret.push(issue);
-    }
-  });
+  // bench('create and iterate 10k item treap', () => {
+  //   const treap = new Treap<Issue>((l, r) => l.id.localeCompare(r.id));
+  //   for (let i = 0; i < limit; ++i) {
+  //     const issue = {id: i.toString().padStart(6, '0'), title: `Issue ${i}`};
+  //     treap.add(issue);
+  //   }
+  //   const ret: Issue[] = [];
+  //   for (const issue of treap) {
+  //     ret.push(issue);
+  //   }
+  // });
 
   bench('create and iterate 10k item persistent treap', () => {
     let treap = new PersistentTreap<Issue>((l, r) => l.id.localeCompare(r.id));
