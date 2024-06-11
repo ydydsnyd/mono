@@ -1,4 +1,4 @@
-import BTree from 'btree';
+import {PersistentTreap} from '../../trees/persistent-treap.js';
 import {assert} from 'shared/dist/asserts.js';
 import {must} from 'shared/dist/must.js';
 import type {Ordering} from '../../ast/ast.js';
@@ -22,7 +22,7 @@ import {AbstractView} from './abstract-view.js';
  */
 let id = 0;
 export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
-  #data: BTree<T, undefined>;
+  #data: PersistentTreap<T>;
 
   #jsSlice: T[] = [];
 
@@ -43,9 +43,7 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
   ) {
     super(context, stream, name);
     this.#limit = limit;
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    this.#data = new BTree(undefined, comparator);
+    this.#data = new PersistentTreap(comparator);
     this.#comparator = comparator;
     this.#order = order;
     if (limit !== undefined) {
@@ -57,8 +55,8 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
     }
   }
 
-  #add: (data: BTree<T, undefined>, value: T) => BTree<T, undefined>;
-  #remove: (data: BTree<T, undefined>, value: T) => BTree<T, undefined>;
+  #add: (data: PersistentTreap<T>, value: T) => PersistentTreap<T>;
+  #remove: (data: PersistentTreap<T>, value: T) => PersistentTreap<T>;
 
   get value(): T[] {
     return this.#jsSlice;
@@ -83,7 +81,7 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
       // treap directly. We have a PersistentTreap variant for React users
       // or places where immutability is important.
       const arr: T[] = [];
-      for (const key of this.#data.keys()) {
+      for (const key of this.#data) {
         arr.push(key);
       }
       this.#jsSlice = arr;
@@ -94,12 +92,12 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
 
   #sink(
     c: Multiset<T>,
-    data: BTree<T, undefined>,
+    data: PersistentTreap<T>,
     needsUpdate: boolean,
     reply?: Reply | undefined,
-  ): [boolean, BTree<T, undefined>] {
+  ): [boolean, PersistentTreap<T>] {
     const process = (value: T, mult: number) => {
-      let newData: BTree<T, undefined>;
+      let newData: PersistentTreap<T>;
       if (mult > 0) {
         newData = this.#add(data, value);
       } else if (mult < 0) {
@@ -228,12 +226,12 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
     };
   }
 
-  #limitedAdd(data: BTree<T, undefined>, value: T) {
+  #limitedAdd(data: PersistentTreap<T>, value: T) {
     const limit = this.#limit || 0;
     // Under limit? We can just add.
     if (data.size < limit) {
       this.#updateMinMax(value);
-      return data.with(value, undefined, true);
+      return data.add(value);
     }
 
     if (data.size > limit) {
@@ -248,11 +246,11 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
     }
 
     // <= max we add.
-    data = data.with(value, undefined, true);
+    data = data.add(value);
     // and then remove the max since we were at limit
-    data = data.without(this.#max!);
+    data = data.delete(this.#max!);
     // and then update max
-    this.#max = data.maxKey() || undefined;
+    this.#max = data.getMax();
 
     // and what if the value was under min? We update our min.
     assert(this.#min !== undefined);
@@ -262,7 +260,7 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
     return data;
   }
 
-  #limitedRemove(data: BTree<T, undefined>, value: T) {
+  #limitedRemove(data: PersistentTreap<T>, value: T) {
     // if we're outside the window, do not remove.
     const minComp = this.#min && this.#comparator(value, this.#min);
     const maxComp = this.#max && this.#comparator(value, this.#max);
@@ -280,7 +278,7 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
     // only update min/max if the removals was equal to min/max tho
     // otherwise we removed a element that doesn't impact min/max
 
-    data = data.without(value);
+    data = data.delete(value);
     // TODO: since we deleted we need to send a request upstream for more data!
 
     if (minComp === 0) {
@@ -320,14 +318,14 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
   }
 }
 
-function add<T>(data: BTree<T, undefined>, value: T) {
+function add<T>(data: PersistentTreap<T>, value: T) {
   // A treap can't have dupes so we can ignore `mult`
-  return data.with(value, undefined, true);
+  return data.add(value);
 }
 
-function remove<T>(data: BTree<T, undefined>, value: T) {
+function remove<T>(data: PersistentTreap<T>, value: T) {
   // A treap can't have dupes so we can ignore `mult`
-  return data.without(value);
+  return data.delete(value);
 }
 
 /**

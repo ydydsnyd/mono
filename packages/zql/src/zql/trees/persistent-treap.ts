@@ -36,11 +36,17 @@ export class PersistentTreap<T> implements ITree<T> {
     return this.#root;
   }
 
-  iteratorAfter(data: T) {
+  iteratorAfter(data: T | undefined) {
+    if (data === undefined) {
+      return inOrderTraversal(this.#root);
+    }
     return boundedInOrderTraversal(this.#comparator, this.#root, data);
   }
 
-  iteratorBefore(data: T) {
+  iteratorBefore(data: T | undefined) {
+    if (data === undefined) {
+      return reverseOrderTraversal(this.#root);
+    }
     return boundedReverseOrderTraversal(this.#comparator, this.#root, data);
   }
 
@@ -204,12 +210,16 @@ export class PersistentTreap<T> implements ITree<T> {
     return this.#contains(node.right, value);
   }
 
-  [Symbol.iterator](): Generator<T> {
+  [Symbol.iterator]() {
     return inOrderTraversal(this.#root);
   }
 
-  reverseIterator(): Generator<T> {
+  reverseIterator() {
     return reverseOrderTraversal(this.#root);
+  }
+
+  iterator() {
+    return inOrderTraversal(this.#root);
   }
 
   #insert(node: Node<T> | undefined, value: T, priority: number): Node<T> {

@@ -9,7 +9,6 @@
 import {bench, describe, expect} from 'vitest';
 import {TestContext} from '../context/test-context.js';
 import {EntityQuery} from '../query/entity-query.js';
-import BTree from 'btree';
 import {PersistentTreap} from '../trees/persistent-treap.js';
 
 type Issue = {
@@ -125,17 +124,17 @@ describe.each([
 
 describe('is the btree just trash?', () => {
   const limit = 10_000;
-  bench('create and iterate 10k item tree', () => {
-    let tree = new BTree<string, Issue>();
-    for (let i = 0; i < limit; ++i) {
-      const issue = {id: i.toString().padStart(6, '0'), title: `Issue ${i}`};
-      tree = tree.with(issue.id, issue);
-    }
-    const ret: Issue[] = [];
-    for (const issue of tree.values()) {
-      ret.push(issue);
-    }
-  });
+  // bench('create and iterate 10k item tree', () => {
+  //   let tree = new BTree<string, Issue>();
+  //   for (let i = 0; i < limit; ++i) {
+  //     const issue = {id: i.toString().padStart(6, '0'), title: `Issue ${i}`};
+  //     tree = tree.with(issue.id, issue);
+  //   }
+  //   const ret: Issue[] = [];
+  //   for (const issue of tree.values()) {
+  //     ret.push(issue);
+  //   }
+  // });
 
   bench('create and iterate 10k item map', () => {
     const map = new Map<string, Issue>();

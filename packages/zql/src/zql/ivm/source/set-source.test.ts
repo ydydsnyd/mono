@@ -19,7 +19,7 @@ test('add', () => {
       const source = m.newSetSource(comparator, ordering, 'test');
 
       arr.forEach(x => source.add({id: x}));
-      expect([...source.value.keys()]).toEqual(
+      expect([...source.value]).toEqual(
         arr.sort(numberComparator).map(x => ({id: x})),
       );
     }),
@@ -34,7 +34,7 @@ test('delete', () => {
 
       arr.forEach(x => source.add({id: x}));
       arr.forEach(x => source.delete({id: x}));
-      expect([...source.value.keys()]).toEqual([]);
+      expect([...source.value]).toEqual([]);
     }),
   );
 });
@@ -48,7 +48,7 @@ test('on', () => {
     expect(value).toEqual(source.value);
     ++callCount;
 
-    expect([...value.keys()]).toEqual([{id: 1}, {id: 2}]);
+    expect([...value]).toEqual([{id: 1}, {id: 2}]);
   });
   m.tx(() => {
     source.add({id: 1});
@@ -92,9 +92,7 @@ test('replace', async () => {
         });
       });
 
-      expect([...source.value.keys()]).toEqual(
-        arr.map(id => ({id})).sort(comparator),
-      );
+      expect([...source.value]).toEqual(arr.map(id => ({id})).sort(comparator));
     }),
   );
 });
@@ -115,11 +113,11 @@ test('rollback', async () => {
   }
   await Promise.resolve();
 
-  expect([...source.value.keys()]).toEqual([]);
+  expect([...source.value]).toEqual([]);
 
   source.add({id: 2});
   await Promise.resolve();
-  expect([...source.value.keys()]).toEqual([{id: 2}]);
+  expect([...source.value]).toEqual([{id: 2}]);
 });
 
 test('withNewOrdering - we do not update the derived thing / withNewOrdering is not tied to the original. User must do that.', async () => {
@@ -133,8 +131,8 @@ test('withNewOrdering - we do not update the derived thing / withNewOrdering is 
   });
   await Promise.resolve();
 
-  expect([...source.value.keys()]).toEqual([{id: 1}, {id: 2}]);
-  expect([...derived.value.keys()]).toEqual([]);
+  expect([...source.value]).toEqual([{id: 1}, {id: 2}]);
+  expect([...derived.value]).toEqual([]);
 });
 
 test('withNewOrdering - is correctly ordered', async () => {
@@ -155,10 +153,8 @@ test('withNewOrdering - is correctly ordered', async () => {
       });
       await Promise.resolve();
 
-      expect([...source.value.keys()]).toEqual(
-        arr.map(id => ({id})).sort(comparator),
-      );
-      expect([...derived.value.keys()]).toEqual(
+      expect([...source.value]).toEqual(arr.map(id => ({id})).sort(comparator));
+      expect([...derived.value]).toEqual(
         arr.sort((l, r) => r - l).map(id => ({id})),
       );
     }),

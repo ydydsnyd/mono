@@ -35,7 +35,7 @@ test('getSource - no ordering', () => {
   ]);
 
   // source is ordered by id
-  expect([...(source as unknown as SetSource<E1>).value.keys()]).toEqual([
+  expect([...(source as unknown as SetSource<E1>).value]).toEqual([
     {id: '1', str: 'a'},
     {id: '2', str: 'a'},
     {id: '3', str: 'a'},
@@ -43,7 +43,7 @@ test('getSource - no ordering', () => {
 
   callback([{op: 'del', key: 'e1/1', oldValue: {id: '1', str: 'a'}}]);
 
-  expect([...(source as unknown as SetSource<E1>).value.keys()]).toEqual([
+  expect([...(source as unknown as SetSource<E1>).value]).toEqual([
     {id: '2', str: 'a'},
     {id: '3', str: 'a'},
   ]);
@@ -57,7 +57,7 @@ test('getSource - no ordering', () => {
     },
   ]);
 
-  expect([...(source as unknown as SetSource<E1>).value.keys()]).toEqual([
+  expect([...(source as unknown as SetSource<E1>).value]).toEqual([
     {id: '2', str: 'a'},
     {id: '3', str: 'z'},
   ]);
