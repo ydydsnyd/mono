@@ -124,17 +124,6 @@ describe.each([
 
 describe('is the btree just trash?', () => {
   const limit = 10_000;
-  // bench('create and iterate 10k item tree', () => {
-  //   let tree = new BTree<string, Issue>();
-  //   for (let i = 0; i < limit; ++i) {
-  //     const issue = {id: i.toString().padStart(6, '0'), title: `Issue ${i}`};
-  //     tree = tree.with(issue.id, issue);
-  //   }
-  //   const ret: Issue[] = [];
-  //   for (const issue of tree.values()) {
-  //     ret.push(issue);
-  //   }
-  // });
 
   bench('create and iterate 10k item map', () => {
     const map = new Map<string, Issue>();
@@ -147,18 +136,6 @@ describe('is the btree just trash?', () => {
       ret.push(issue);
     }
   });
-
-  // bench('create and iterate 10k item treap', () => {
-  //   const treap = new Treap<Issue>((l, r) => l.id.localeCompare(r.id));
-  //   for (let i = 0; i < limit; ++i) {
-  //     const issue = {id: i.toString().padStart(6, '0'), title: `Issue ${i}`};
-  //     treap.add(issue);
-  //   }
-  //   const ret: Issue[] = [];
-  //   for (const issue of treap) {
-  //     ret.push(issue);
-  //   }
-  // });
 
   bench('create and iterate 10k item persistent treap', () => {
     let treap = new PersistentTreap<Issue>((l, r) => l.id.localeCompare(r.id));
