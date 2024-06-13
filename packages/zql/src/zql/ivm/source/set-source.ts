@@ -1,8 +1,7 @@
-import type {ISortedMap} from 'btree';
-import BTree from 'btree';
 import {must} from 'shared/src/must.js';
 import {assert} from '../../../../../shared/src/asserts.js';
 import type {Ordering, Primitive, Selector} from '../../ast/ast.js';
+import {PersistentTreap} from '../../trees/persistent-treap.js';
 import {gen} from '../../util/iterables.js';
 import {makeComparator} from '../compare.js';
 import {DifferenceStream} from '../graph/difference-stream.js';
@@ -32,7 +31,7 @@ export class SetSource<T extends PipelineEntity> implements Source<T> {
   readonly #stream: DifferenceStream<T>;
   readonly #internal: SourceInternal;
   readonly #listeners = new Set<
-    (data: ISortedMap<T, undefined>, v: Version) => void
+    (data: PersistentTreap<T>, v: Version) => void
   >();
   readonly #sorts = new Map<string, SetSource<T>>();
   readonly #hashes = new Map<string, SourceHashIndex<Primitive, T>>();
@@ -43,7 +42,7 @@ export class SetSource<T extends PipelineEntity> implements Source<T> {
   protected readonly _materialite: MaterialiteForSourceInternal;
   #id = id++;
   #historyRequests: Map<number, PullMsg> = new Map();
-  #tree: BTree<T, undefined>;
+  #tree: PersistentTreap<T>;
   #seeded = false;
   #pending: Entry<T>[] = [];
 
@@ -64,9 +63,7 @@ export class SetSource<T extends PipelineEntity> implements Source<T> {
       },
       destroy: () => {},
     });
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    this.#tree = new BTree(undefined, comparator);
+    this.#tree = new PersistentTreap(comparator);
     this.comparator = comparator;
 
     this.#internal = {
@@ -98,11 +95,7 @@ export class SetSource<T extends PipelineEntity> implements Source<T> {
               comparator(val, nextVal) === 0
             ) {
               // The tree doesn't allow dupes -- so this is a replace.
-              this.#tree = this.#tree.with(
-                nextMult > 0 ? nextVal : val,
-                undefined,
-                true,
-              );
+              this.#tree = this.#tree.add(nextMult > 0 ? nextVal : val);
               for (const hash of this.#hashes.values()) {
                 hash.add(val);
               }
@@ -111,12 +104,12 @@ export class SetSource<T extends PipelineEntity> implements Source<T> {
             }
           }
           if (mult < 0) {
-            this.#tree = this.#tree.without(val);
+            this.#tree = this.#tree.delete(val);
             for (const hash of this.#hashes.values()) {
               hash.delete(val);
             }
           } else if (mult > 0) {
-            this.#tree = this.#tree.with(val, undefined, true);
+            this.#tree = this.#tree.add(val);
             for (const hash of this.#hashes.values()) {
               hash.add(val);
             }
@@ -150,7 +143,7 @@ export class SetSource<T extends PipelineEntity> implements Source<T> {
       this.#name,
     ) as this;
     if (this.#seeded) {
-      ret.seed(this.#tree.keys(), true);
+      ret.seed(this.#tree, true);
     }
     return ret;
   }
@@ -168,14 +161,12 @@ export class SetSource<T extends PipelineEntity> implements Source<T> {
     this.#stream.destroy();
   }
 
-  on(
-    cb: (value: ISortedMap<T, undefined>, version: Version) => void,
-  ): () => void {
+  on(cb: (value: PersistentTreap<T>, version: Version) => void): () => void {
     this.#listeners.add(cb);
     return () => this.#listeners.delete(cb);
   }
 
-  off(fn: (value: ISortedMap<T, undefined>, version: Version) => void): void {
+  off(fn: (value: PersistentTreap<T>, version: Version) => void): void {
     this.#listeners.delete(fn);
   }
 
@@ -220,7 +211,7 @@ export class SetSource<T extends PipelineEntity> implements Source<T> {
   seed(values: Iterable<T>, derived: boolean = false): this {
     // TODO: invariant to ensure we are in a tx.
     for (const v of values) {
-      this.#tree = this.#tree.with(v, undefined, true);
+      this.#tree = this.#tree.add(v);
       for (const hash of this.#hashes.values()) {
         hash.add(v);
       }
@@ -261,16 +252,12 @@ export class SetSource<T extends PipelineEntity> implements Source<T> {
     // Primary key lookup.
     if (primaryKeyEquality !== undefined) {
       const {value} = primaryKeyEquality;
-      const entry = this.#tree.getPairOrNextHigher({
+      const entry = this.#tree.get({
         id: value,
       } as unknown as T);
       this.#stream.newDifference(
         this._materialite.getVersion(),
-        entry !== undefined
-          ? entry[0].id !== value
-            ? []
-            : [[entry[0], 1]]
-          : [],
+        entry !== undefined ? [[entry, 1]] : [],
         createPullResponseMessage(request, this.#name, this.#order),
       );
       return;
@@ -288,8 +275,8 @@ export class SetSource<T extends PipelineEntity> implements Source<T> {
       this.#stream.newDifference(
         version,
         gen(() =>
-          genFromBTreeEntries(
-            newSort.#tree.entries(maybeGetKey(range.field, range.bottom)),
+          genFromTreeEntries(
+            newSort.#tree.iteratorAfter(maybeGetKey(range.field, range.bottom)),
             createEndPredicate(range.field, range.top, 'asc'),
           ),
         ),
@@ -298,28 +285,30 @@ export class SetSource<T extends PipelineEntity> implements Source<T> {
       return;
     }
 
-    let maybeKey = maybeGetKey<T>(range.field, range.top);
+    const maybeKey = maybeGetKey<T>(range.field, range.top);
     if (maybeKey !== undefined && newSort.#order.length > 1) {
-      const entriesBelow = newSort.#tree.entries(maybeKey);
-      let key: T | undefined;
-      const specialComparator = makeComparator<T>([[range.field, 'asc']]);
-      for (const entry of entriesBelow) {
-        if (specialComparator(entry[0], maybeKey) > 0) {
-          key = entry[0];
-          break;
-        }
-      }
-      maybeKey = key;
+      this.#stream.newDifference(
+        this._materialite.getVersion(),
+        gen(() =>
+          genFromTreeEntries(
+            newSort.#tree.iteratorBefore(maybeKey),
+            createEndPredicate(range.field, range.bottom, 'desc'),
+          ),
+        ),
+        createPullResponseMessage(request, this.#name, orderForReply),
+      );
+      return;
     }
+
     this.#stream.newDifference(
-      version,
+      this._materialite.getVersion(),
       gen(() =>
-        genFromBTreeEntries(
-          newSort.#tree.entriesReversed(maybeKey),
+        genFromTreeEntries(
+          newSort.#tree.iteratorBefore(maybeKey),
           createEndPredicate(range.field, range.bottom, 'desc'),
         ),
       ),
-      reply,
+      createPullResponseMessage(request, this.#name, orderForReply),
     );
   }
 
@@ -379,7 +368,7 @@ export class SetSource<T extends PipelineEntity> implements Source<T> {
     const index = new SourceHashIndex<K, T>(column);
     this.#hashes.set(column[1], index);
     if (this.#seeded) {
-      for (const v of this.#tree.keys()) {
+      for (const v of this.#tree) {
         index.add(v);
       }
     }
@@ -414,19 +403,19 @@ export class SetSource<T extends PipelineEntity> implements Source<T> {
   }
 }
 
-function* genFromBTreeEntries<T>(
-  m: Iterable<[T, undefined]>,
+function* genFromTreeEntries<T>(
+  m: Iterable<T>,
   end?: ((t: T) => boolean) | undefined,
 ): Iterator<Entry<T>> {
-  for (const pair of m) {
+  for (const e of m) {
     if (end !== undefined) {
-      if (end(pair[0]) === false) {
-        yield [pair[0], 1];
+      if (end(e) === false) {
+        yield [e, 1];
       } else {
         return false;
       }
     } else {
-      yield [pair[0], 1];
+      yield [e, 1];
     }
   }
 }
