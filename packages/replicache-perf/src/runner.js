@@ -10,8 +10,8 @@ import getPort from 'get-port';
 import * as os from 'os';
 import * as path from 'path';
 import * as playwright from 'playwright';
+import {makeDefine} from 'shared/src/build.js';
 import {fileURLToPath} from 'url';
-import {makeDefine} from '../../shared/src/build.js';
 
 /** @typedef {'chromium' | 'firefox' | 'webkit'} Browser */
 
@@ -150,6 +150,7 @@ async function main() {
   }
 
   const port = await getPort();
+
   const server = await startDevServer({
     config: {
       nodeResolve: true,
@@ -160,7 +161,7 @@ async function main() {
         esbuildPlugin({
           ts: true,
           target: 'es2022',
-          define: await makeDefine('release'),
+          define: makeDefine('release'),
         }),
       ],
     },
@@ -200,7 +201,7 @@ async function main() {
       process.exit(1);
     });
 
-    await page.goto(`http://127.0.0.1:${port}/perf/index.html`);
+    await page.goto(`http://127.0.0.1:${port}/index.html`);
 
     await runInBrowser(browser, page, options);
 
