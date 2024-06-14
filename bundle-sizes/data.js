@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718012601093,
+  "lastUpdate": 1718361947832,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -47821,6 +47821,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/86bfe06a5d0d0f868c31449fb90c1f1d8bb4ee86"
         },
         "date": 1718012582403,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 316712,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55067,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 116690,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32448,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3a22c44090e8d8568c2732eb4198909ec08ea796",
+          "message": "chore(replicache): Move perf to its own package (#2007)\n\nThe way that we put perf inside replicache/perf was from before the mono\r\nrepo. Now that have multiple packages it makes more sense to have perf\r\nbe its own package.",
+          "timestamp": "2024-06-14T12:43:06+02:00",
+          "tree_id": "1f949c6eda60cbf5c648074463ef65c87967c816",
+          "url": "https://github.com/rocicorp/mono/commit/3a22c44090e8d8568c2732eb4198909ec08ea796"
+        },
+        "date": 1718361930086,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
