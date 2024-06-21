@@ -11,6 +11,9 @@ import './App.css';
 // @ts-ignore
 import {createTag} from 'wa-sqlite/src/examples/tag.js';
 
+import {EntityQuery} from 'zql/src/zql/query/entity-query.js';
+import {TestContext} from 'zql/src/zql/context/test-context.js';
+
 const wasmModule = await SQLiteAsyncESMFactory();
 const sqlite3 = SQLite.Factory(wasmModule);
 sqlite3.vfs_register(
@@ -41,6 +44,28 @@ type Label = {
   id: string;
   name: string;
 };
+
+const context = new TestContext();
+const issueSource = context.getSource<Issue>('issue');
+const labelSource = context.getSource<Label>('label');
+const issueLabelSource = context.getSource<IssueLabel>('issueLabel');
+
+const issueQuery = new EntityQuery<{issue: Issue}>(context, 'issue');
+const labelQuery = new EntityQuery<{label: Label}>(context, 'label');
+const issueLabelQuery = new EntityQuery<{issueLabel: IssueLabel}>(
+  context,
+  'issueLabel',
+);
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+window.issueQuery = issueQuery;
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+window.labelQuery = labelQuery;
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+window.issueLabelQuery = issueLabelQuery;
 
 function makeId(num: number) {
   return num.toString().padStart(6, '0');
@@ -81,6 +106,18 @@ async function makeData() {
   if (madeData == null) {
     makeSqliteData(issues, labels, issueLabels);
   }
+
+  context.materialite.tx(() => {
+    for (const issue of issues) {
+      issueSource.add(issue);
+    }
+    for (const label of labels) {
+      labelSource.add(label);
+    }
+    for (const issueLabel of issueLabels) {
+      issueLabelSource.add(issueLabel);
+    }
+  });
 }
 
 async function makeSqliteData(
@@ -99,8 +136,9 @@ async function makeSqliteData(
   CREATE INDEX issue_modified ON issue(modified);
 
   CREATE TABLE issueLabel (
-    issueId TEXT PRIMARY KEY,
-    labelId TEXT
+    issueId TEXT,
+    labelId TEXT,
+    PRIMARY KEY (issueId, labelId)
   );
 
   CREATE TABLE label (
@@ -129,8 +167,8 @@ async function makeSqliteData(
     sqlite3.bind_text(insertIssue, 1, issue.id);
     sqlite3.bind_text(insertIssue, 2, issue.title);
     sqlite3.bind_text(insertIssue, 3, issue.body);
-    sqlite3.bind_int(insertIssue, 4, issue.created);
-    sqlite3.bind_int(insertIssue, 5, issue.modified);
+    sqlite3.bind_int64(insertIssue, 4, BigInt(issue.created));
+    sqlite3.bind_int64(insertIssue, 5, BigInt(issue.modified));
     await sqlite3.step(insertIssue);
     await sqlite3.reset(insertIssue);
   }
