@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "zero-client": "0.0.0",
+    "wa-sqlite": "github:rhashimoto/wa-sqlite#ca2084cdd188c56532ba3e272696d0b9e21a23bf"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
