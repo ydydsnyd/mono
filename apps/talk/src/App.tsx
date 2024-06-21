@@ -16,10 +16,12 @@ const sqlite3 = SQLite.Factory(wasmModule);
 sqlite3.vfs_register(
   new IDBBatchAtomicVFS('idb-batch-atomic', {durability: 'relaxed'}),
 );
-const db = await sqlite3.open_v2('test-db');
+const db = await sqlite3.open_v2(':memory:'); // memory for fairness?
+
+const sql = createTag(sqlite3, db);
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-window.sql = createTag(sqlite3, db);
+window.sql = sql;
 
 type Issue = {
   id: string;
@@ -45,9 +47,7 @@ function makeId(num: number) {
 }
 
 const madeData = localStorage.getItem('made-data');
-if (madeData == null) {
-  makeData();
-}
+makeData();
 
 async function makeData() {
   const issues = Array.from({length: 10_000}, (_, i) => {
@@ -78,10 +78,75 @@ async function makeData() {
     }
   }
 
-  // start a tx, write to sqlite
+  if (madeData == null) {
+    makeSqliteData(issues, labels, issueLabels);
+  }
+}
+
+async function makeSqliteData(
+  issues: Issue[],
+  labels: Label[],
+  issueLabels: IssueLabel[],
+) {
+  await sql`
+  CREATE TABLE issue (
+    id TEXT PRIMARY KEY,
+    title TEXT,
+    body TEXT,
+    created INT,
+    modified INT
+  );
+  CREATE INDEX issue_modified ON issue(modified);
+
+  CREATE TABLE issueLabel (
+    issueId TEXT PRIMARY KEY,
+    labelId TEXT
+  );
+
+  CREATE TABLE label (
+    id TEXT PRIMARY KEY,
+    "name" TEXT
+  );
+  `;
+
   const begin = await prepare(db, 'BEGIN');
   const commit = await prepare(db, 'COMMIT');
-  // start a tx, write to store
+  const insertIssue = await prepare(
+    db,
+    /*sql*/ `INSERT INTO issue (id, title, body, created, modified) VALUES (?, ?, ?, ?, ?)`,
+  );
+  const insertIssueLabel = await prepare(
+    db,
+    /*sql*/ `INSERT INTO issueLabel (issueId, labelId) VALUES (?, ?)`,
+  );
+  const insertLabel = await prepare(
+    db,
+    /*sql*/ `INSERT INTO label (id, "name") VALUES (?, ?)`,
+  );
+
+  await sqlite3.step(begin);
+  for (const issue of issues) {
+    sqlite3.bind_text(insertIssue, 1, issue.id);
+    sqlite3.bind_text(insertIssue, 2, issue.title);
+    sqlite3.bind_text(insertIssue, 3, issue.body);
+    sqlite3.bind_int(insertIssue, 4, issue.created);
+    sqlite3.bind_int(insertIssue, 5, issue.modified);
+    await sqlite3.step(insertIssue);
+    await sqlite3.reset(insertIssue);
+  }
+  for (const label of labels) {
+    sqlite3.bind_text(insertLabel, 1, label.id);
+    sqlite3.bind_text(insertLabel, 2, label.name);
+    await sqlite3.step(insertLabel);
+    await sqlite3.reset(insertLabel);
+  }
+  for (const issueLabel of issueLabels) {
+    sqlite3.bind_text(insertIssueLabel, 1, issueLabel.issueId);
+    sqlite3.bind_text(insertIssueLabel, 2, issueLabel.labelId);
+    await sqlite3.step(insertIssueLabel);
+    await sqlite3.reset(insertIssueLabel);
+  }
+  await sqlite3.step(commit);
 }
 
 async function prepare(db: number, sql: string) {
