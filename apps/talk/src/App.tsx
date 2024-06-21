@@ -1,30 +1,47 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import * as SQLite from 'wa-sqlite';
-import SQLiteAsyncESMFactory from 'wa-sqlite/dist/wa-sqlite-async.mjs';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+import SQLiteESMFactory from 'wa-sqlite/dist/wa-sqlite.mjs';
 // @ts-ignore
-import {IDBBatchAtomicVFS} from 'wa-sqlite/src/examples/IDBBatchAtomicVFS.js';
 import {useState} from 'react';
 import reactLogo from './assets/react.svg';
 import viteLogo from '/vite.svg';
 import './App.css';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import {createTag} from 'wa-sqlite/src/examples/tag.js';
 
 import {EntityQuery} from 'zql/src/zql/query/entity-query.js';
 import {TestContext} from 'zql/src/zql/context/test-context.js';
+import * as agg from 'zql/src/zql/query/agg.js';
 
-const wasmModule = await SQLiteAsyncESMFactory();
+const wasmModule = await SQLiteESMFactory();
 const sqlite3 = SQLite.Factory(wasmModule);
-sqlite3.vfs_register(
-  new IDBBatchAtomicVFS('idb-batch-atomic', {durability: 'relaxed'}),
-);
 const db = await sqlite3.open_v2(':memory:'); // memory for fairness?
 
 const sql = createTag(sqlite3, db);
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 window.sql = sql;
+
+async function measure(cb: <T>() => Promise<T>) {
+  const start = performance.now();
+  const ret = await cb();
+  const end = performance.now();
+  return [(end - start).toFixed(6) + 'ms', ret];
+}
+// @ts-ignore
+window.measure = measure;
+
+async function runSqliteStmt(stmt: number) {
+  const ret = [];
+  let rc = SQLite.SQLITE_DONE;
+  while ((rc = await sqlite3.step(stmt)) === SQLite.SQLITE_ROW) {
+    ret.push(sqlite3.row(stmt));
+  }
+  sqlite3.reset(stmt);
+  if (rc !== SQLite.SQLITE_DONE) {
+    throw new Error(`Unexpected rc: ${rc}`);
+  }
+  return ret;
+}
 
 type Issue = {
   id: string;
@@ -57,22 +74,65 @@ const issueLabelQuery = new EntityQuery<{issueLabel: IssueLabel}>(
   'issueLabel',
 );
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const zql = async function (q: any) {
+  const stmt = q.prepare();
+  const ret = await stmt.exec();
+  stmt.destroy();
+  return ret;
+};
+zql.setIssue = (issue: Issue) => {
+  context.materialite.tx(() => {
+    issueSource.add(issue);
+  });
+};
+
 // @ts-ignore
 window.issueQuery = issueQuery;
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 window.labelQuery = labelQuery;
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 window.issueLabelQuery = issueLabelQuery;
+// @ts-ignore
+window.agg = agg;
+// @ts-ignore
+window.zql = zql;
 
 function makeId(num: number) {
   return num.toString().padStart(6, '0');
 }
 
-const madeData = localStorage.getItem('made-data');
-makeData();
+// @ts-ignore
+window.makeId = makeId;
+
+await makeData();
+
+const writeIssueStmt = await prepare(
+  db,
+  `INSERT INTO issue (
+  id,
+  title,
+  created,
+  modified
+) VALUES (?, ?, ?, ?)`,
+);
+
+const sqlite = {
+  prepare: (sql: string) => prepare(db, sql),
+  run: runSqliteStmt,
+  sqlite3,
+  setIssue: async (issue: Issue) => {
+    sqlite3.bind_text(writeIssueStmt, 1, issue.id);
+    sqlite3.bind_text(writeIssueStmt, 2, issue.title);
+    sqlite3.bind_int64(writeIssueStmt, 3, BigInt(issue.created));
+    sqlite3.bind_int64(writeIssueStmt, 4, BigInt(issue.modified));
+    await sqlite3.step(writeIssueStmt);
+    await sqlite3.reset(writeIssueStmt);
+  },
+};
+
+// @ts-ignore
+window.sqlite = sqlite;
 
 async function makeData() {
   const issues = Array.from({length: 10_000}, (_, i) => {
@@ -92,8 +152,9 @@ async function makeData() {
   });
   const issueLabels: IssueLabel[] = [];
   let x = 0;
+  let c = 0;
   for (const issue of issues) {
-    const numLabels = Math.floor(Math.random() * 4);
+    const numLabels = ++c % 3;
     for (let i = 0; i < numLabels; ++i) {
       issueLabels.push({
         id: makeId(++x),
@@ -103,9 +164,7 @@ async function makeData() {
     }
   }
 
-  if (madeData == null) {
-    makeSqliteData(issues, labels, issueLabels);
-  }
+  makeSqliteData(issues, labels, issueLabels);
 
   context.materialite.tx(() => {
     for (const issue of issues) {
@@ -118,6 +177,8 @@ async function makeData() {
       issueLabelSource.add(issueLabel);
     }
   });
+
+  await warmUpZQL();
 }
 
 async function makeSqliteData(
@@ -185,6 +246,10 @@ async function makeSqliteData(
     await sqlite3.reset(insertIssueLabel);
   }
   await sqlite3.step(commit);
+
+  sqlite3.finalize(insertIssue);
+  sqlite3.finalize(insertIssueLabel);
+  sqlite3.finalize(insertLabel);
 }
 
 async function prepare(db: number, sql: string) {
@@ -222,3 +287,16 @@ function App() {
 }
 
 export default App;
+
+async function warmUpZQL() {
+  const stmt = issueQuery
+    .leftJoin(issueLabelQuery, 'issueLabel', 'issue.id', 'issueLabel.issueId')
+    .leftJoin(labelQuery, 'label', 'issueLabel.labelId', 'label.id')
+    .groupBy('issue.id')
+    .orderBy('issue.modified', 'asc')
+    .select('*', agg.array('label.name', 'labels'))
+    .limit(100)
+    .prepare();
+  await stmt.exec();
+  stmt.destroy();
+}
