@@ -27,33 +27,41 @@ read2 = await sqlite.prepare(
 await measure(() => sqlite.run(read2));
 
 async function sqliteWriteThenRead() {
-  const results = [];
-  for (let i = 0; i < 1_000; ++i) {
+  const start = performance.now();
+  let i = 0;
+  for (i = 0; ; ++i) {
     sqlite.setIssue({
       id: makeId(i + 10_000),
       title: `Issue ${i + 10_000}`,
       created: i,
       modified: i,
     });
-    results.push(await sqlite.run(read2));
+    await sqlite.run(read2);
+    if (performance.now() - start > 1000) {
+      break;
+    }
   }
-  return results;
+  return i.toLocaleString();
 }
 
 await measure(sqliteWriteThenRead);
 
 async function zqlWriteThenRead() {
-  const results = [];
-  for (let i = 0; i < 1_000; ++i) {
+  const start = performance.now();
+  let i = 0;
+  for (i = 0; ; ++i) {
     zql.setIssue({
       id: makeId(i + 10_000),
       title: `Issue ${i + 10_000}`,
       created: i,
       modified: i,
     });
-    results.push(await stmt.exec());
+    await stmt.exec();
+    if (performance.now() - start > 1000) {
+      break;
+    }
   }
-  return results;
+  return i.toLocaleString();
 }
 
 await measure(zqlWriteThenRead);
