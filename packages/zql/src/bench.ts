@@ -1,6 +1,6 @@
 // import {bench} from 'vitest';
-import {TestContext} from '../context/test-context.js';
-import {EntityQuery} from '../query/entity-query.js';
+import {TestContext} from './zql/context/test-context.js';
+import {EntityQuery} from './zql/query/entity-query.js';
 
 type Issue = {
   id: string;
