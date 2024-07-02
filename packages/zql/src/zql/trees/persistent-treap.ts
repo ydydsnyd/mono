@@ -1,5 +1,9 @@
 import {ITree, Node} from './types.js';
-type Comparator<T> = (a: T, b: T) => number;
+type Comparator<T> = (
+  a: T,
+  b: T,
+  undefinedIsGreater?: boolean | undefined,
+) => number;
 
 /**
  * A persistent binary search tree.
@@ -116,7 +120,7 @@ export class PersistentTreap<T> implements ITree<T> {
   ): number | undefined {
     if (!node) return undefined;
 
-    const cmp = this.#comparator(value, node.value);
+    const cmp = this.#comparator(value, node.value, false);
     const thisIndex = (node.left?.size ?? 0) + offset;
     if (cmp === 0) {
       return thisIndex;
@@ -157,7 +161,7 @@ export class PersistentTreap<T> implements ITree<T> {
     let currentNode = this.#root;
 
     while (currentNode) {
-      const cmp = this.#comparator(value, currentNode.value);
+      const cmp = this.#comparator(value, currentNode.value, false);
 
       if (cmp === 0) {
         return currentNode.value;
@@ -201,7 +205,7 @@ export class PersistentTreap<T> implements ITree<T> {
   #contains(node: Node<T> | undefined, value: T): boolean {
     if (!node) return false;
 
-    const cmp = this.#comparator(value, node.value);
+    const cmp = this.#comparator(value, node.value, false);
 
     if (cmp === 0) return true; // Found the value
     if (cmp < 0) return this.#contains(node.left, value);
@@ -225,7 +229,7 @@ export class PersistentTreap<T> implements ITree<T> {
       return new Node(value, priority);
     }
 
-    const cmp = this.#comparator(value, node.value);
+    const cmp = this.#comparator(value, node.value, false);
 
     const newNode = new Node(node.value, node.priority);
     newNode.left = node.left;
@@ -249,7 +253,7 @@ export class PersistentTreap<T> implements ITree<T> {
 
     const newNode = new Node(node.value, node.priority, node.left, node.right);
 
-    const cmp = this.#comparator(value, newNode.value);
+    const cmp = this.#comparator(value, newNode.value, false);
     if (cmp < 0) {
       newNode.left = this.#remove(newNode.left, value);
     } else if (cmp > 0) {
@@ -371,7 +375,7 @@ function* boundedInOrderTraversal<T>(
 
   while (stack.length > 0 || currentNode) {
     while (currentNode) {
-      if (comparator(currentNode.value, lowerBound) < 0) {
+      if (comparator(currentNode.value, lowerBound, false) < 0) {
         currentNode = currentNode.right;
       } else {
         stack.push(currentNode);
@@ -415,7 +419,7 @@ function* boundedReverseOrderTraversal<T>(
 
   while (stack.length > 0 || currentNode) {
     while (currentNode) {
-      if (comparator(currentNode.value, upperBound) > 0) {
+      if (comparator(currentNode.value, upperBound, true) > 0) {
         currentNode = currentNode.left;
       } else {
         stack.push(currentNode);
@@ -423,7 +427,10 @@ function* boundedReverseOrderTraversal<T>(
       }
     }
 
-    currentNode = stack.pop()!;
+    currentNode = stack.pop();
+    if (!currentNode) {
+      return;
+    }
     yield currentNode.value;
     currentNode = currentNode.left;
   }
