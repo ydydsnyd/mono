@@ -8,6 +8,9 @@
   ],
   "type": "module",
   "scripts": {
+    "build-ci": "npm install && turbo run build",
+    "start-replicator": "cd packages/zero-cache && npm run start-replicator",
+    "start-sync": "cd packages/zero-cache && npm run start-service-runner",
     "build": "turbo run build",
     "dev": "turbo run dev",
     "test": "turbo run test",
