@@ -39,6 +39,7 @@ export class Replicator {
   }
 
   #initRoutes() {
+    this.#fastify.get('/', this.#healthcheck);
     this.#fastify.post(REPLICATOR_STATUS_PATTERN, this.#status);
     this.#fastify.post(
       REGISTER_FILTERS_PATTERN,
@@ -60,6 +61,10 @@ export class Replicator {
       this.#versionChanges,
     );
   }
+
+  #healthcheck = async (_request: FastifyRequest, reply: FastifyReply) => {
+    await reply.send('OK');
+  };
 
   #status = async (_request: FastifyRequest, reply: FastifyReply) => {
     try {

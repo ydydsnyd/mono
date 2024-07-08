@@ -52,11 +52,16 @@ export class Runner {
     }
   };
 
+  #healthcheck = async (_request: FastifyRequest, reply: FastifyReply) => {
+    await reply.send('OK');
+  };
+
   async start() {
     if (this.#embeddedReplicator) {
       await this.#serviceRunner.getReplicator();
     }
     await this.#fastify.register(websocket);
+    this.#fastify.get('/', this.#healthcheck);
     this.#fastify.get(CONNECT_URL_PATTERN, {websocket: true}, this.#connect);
     this.#fastify.get(STATUS_URL_PATTERN, this.#status);
     this.#fastify.listen({port: 3000}, (err, address) => {
