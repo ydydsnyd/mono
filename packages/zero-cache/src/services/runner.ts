@@ -64,7 +64,7 @@ export class Runner {
     this.#fastify.get('/', this.#healthcheck);
     this.#fastify.get(CONNECT_URL_PATTERN, {websocket: true}, this.#connect);
     this.#fastify.get(STATUS_URL_PATTERN, this.#status);
-    this.#fastify.listen({port: 3000}, (err, address) => {
+    this.#fastify.listen({host: '0.0.0.0', port: 3000}, (err, address) => {
       if (err) {
         this.#lc.error?.('Error starting server:', err);
         process.exit(1);

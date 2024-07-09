@@ -29,7 +29,7 @@ export class Replicator {
     await this.#serviceRunner.getReplicator();
     await this.#fastify.register(websocket);
     this.#initRoutes();
-    this.#fastify.listen({port: 3001}, (err, address) => {
+    this.#fastify.listen({host: '0.0.0.0', port: 3001}, (err, address) => {
       if (err) {
         this.#lc.error?.('Error starting server:', err);
         process.exit(1);
