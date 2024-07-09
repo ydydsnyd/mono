@@ -58,6 +58,7 @@ export class Runner {
 
   async start() {
     if (this.#embeddedReplicator) {
+    if (this.#env.EMBEDDED_REPLICATOR) {
       await this.#serviceRunner.getReplicator();
     }
     await this.#fastify.register(websocket);
