@@ -4,10 +4,13 @@ import {handleConnection, Connection} from './duped/connection.js';
 import {CONNECT_URL_PATTERN, STATUS_URL_PATTERN} from './duped/paths.js';
 import websocket, {WebSocket} from '@fastify/websocket';
 import type {DurableStorage} from './duped/durable-storage.js';
+import {ServiceRunner} from './service-runner.js';
+import {must} from '../../../shared/src/must.js';
 
 export class ZeroCache {
   readonly #lc: LogContext;
   readonly #clientConnections = new Map<string, Connection>();
+  readonly #serviceRunner: ServiceRunner;
   #fastify: FastifyInstance;
 
   constructor(logSink: LogSink, logLevel: LogLevel, state: DurableStorage) {
@@ -20,6 +23,11 @@ export class ZeroCache {
     // instantiate: service-runner and kick off replicator.
 
     this.#fastify = Fastify();
+    this.#serviceRunner = new ServiceRunner(
+      state,
+      must(process.env.PG_CONNECTION_STRING),
+      must(process.env.SQLITE_DB_PATH),
+    );
   }
 
   #connect = async (socket: WebSocket, request: FastifyRequest) => {

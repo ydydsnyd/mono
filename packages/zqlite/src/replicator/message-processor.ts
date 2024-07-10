@@ -165,6 +165,9 @@ export class MessageProcessor {
     // The future implementation will not block. As in,
     // ViewSyncers are in separate processes and we can continue taking writes while
     // they're running.
+    // Pipeline manager.
+    // Has all pipelines.
+    // We shove through the source.
   }
 }
 

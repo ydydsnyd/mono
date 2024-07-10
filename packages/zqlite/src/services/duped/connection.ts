@@ -14,6 +14,8 @@ import type {Mutagen} from './mutagen.js';
 import type {FastifyRequest} from 'fastify';
 import type {WebSocket} from '@fastify/websocket';
 import type {CloseEvent, ErrorEvent, MessageEvent} from 'ws';
+import type {ServiceRunner} from '../service-runner.js';
+import type {SyncContext, ViewSyncer} from '../view-syncer.js';
 
 export function handleConnection(
   lc: LogContext,
@@ -87,8 +89,8 @@ export class Connection {
       .withContext('wsID', wsID);
     this.#onClose = onClose;
 
-    this.#viewSyncer = serviceRunner.getViewSyncer(clientGroupID);
-    this.#mutagen = serviceRunner.getMutagen(clientGroupID);
+    this.#viewSyncer = serviceRunner.getViewSyncer(this.#lc, clientGroupID);
+    this.#mutagen = serviceRunner.getMutagen(this.#lc, clientGroupID);
 
     this.#ws.addEventListener('message', this.#handleMessage);
     this.#ws.addEventListener('close', this.#handleClose);
