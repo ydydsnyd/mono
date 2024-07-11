@@ -8,6 +8,7 @@ import {ZERO_VERSION_COLUMN_NAME} from '../consts.js';
 import {assert} from '../../../shared/src/asserts.js';
 import type {Context} from 'zql/src/zql/context/context.js';
 import type {ServiceProvider} from '../services/service-provider.js';
+import type {TableTracker} from '../services/duped/table-tracker.js';
 
 /**
  * Handles incoming messages from the replicator.
@@ -24,6 +25,7 @@ export class MessageProcessor {
   readonly #setIvmLsnStmt: Database.Statement;
   readonly #ivmContext: Context;
   readonly #serviceProvider: ServiceProvider;
+  readonly #tableTrackers = new Map<string, TableTracker>();
   #rowVersion: LexiVersion | undefined;
   #inTransaction = false;
 
@@ -193,9 +195,9 @@ export class MessageProcessor {
     // 3. Tell them all their query results are ready
     // 4. They iterate over their pipelines and deal with that
     this.#ivmContext.materialite.tx(() => {
-      for (const tableData of this.#tableTrackers) {
-        const source = this.#ivmContext.getSource(tableData.name);
-        source.directlyEnqueueDiffs(tableData.diffs);
+      for (const [name, tableData] of this.#tableTrackers) {
+        const source = this.#ivmContext.getSource(name);
+        source.__directlyEnqueueDiffs(tableData.getDiffs());
       }
     });
   }

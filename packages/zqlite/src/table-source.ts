@@ -11,15 +11,17 @@ import {
   Request,
 } from 'zql/src/zql/ivm/graph/message.js';
 import type {MaterialiteForSourceInternal} from 'zql/src/zql/ivm/materialite.js';
-import type {Entry} from 'zql/src/zql/ivm/multiset.js';
+import type {Multiset} from 'zql/src/zql/ivm/multiset.js';
 import type {Source, SourceInternal} from 'zql/src/zql/ivm/source/source.js';
 import type {PipelineEntity, Version} from 'zql/src/zql/ivm/types.js';
 import {genMap, genCached} from 'zql/src/zql/util/iterables.js';
-import type {Database, Statement} from 'better-sqlite3';
+import type {Database} from 'better-sqlite3';
 import type {HoistedCondition} from 'zql/src/zql/ivm/graph/message.js';
-import type {HashIndex} from '../../zql/src/zql/ivm/source/source-hash-index.js';
+import type {HashIndex} from 'zql/src/zql/ivm/source/source-hash-index.js';
 import {StatementCache} from './internal/statement-cache.js';
 import {TableSourceHashIndex} from './table-source-hash-index.js';
+import {mergeRequests} from 'zql/src/zql/ivm/source/set-source.js';
+import {assert} from 'shared/src/asserts.js';
 
 const resolved = Promise.resolve();
 
@@ -36,18 +38,17 @@ export class TableSource<T extends PipelineEntity> implements Source<T> {
   // request. We keep a cache to avoid preparing each unique request more than
   // once.
   readonly #historyStatements: StatementCache;
-  readonly #cols: string[];
+  readonly #historyRequests: Map<number, PullMsg> = new Map();
 
   // Field for debugging.
   #id = id++;
   // Pending changes to be committed in the current transaction.
-  #pending: Entry<T>[] = [];
+  #pending: Multiset<T> | undefined;
 
   constructor(
     db: Database,
     materialite: MaterialiteForSourceInternal,
     name: string,
-    columns: string[],
   ) {
     this.#materialite = materialite;
     this.#name = name;
@@ -63,51 +64,34 @@ export class TableSource<T extends PipelineEntity> implements Source<T> {
     this.#historyStatements = new StatementCache(db);
 
     this.#internal = {
-      onCommitEnqueue: (_v: Version) => {
-        // fk checks must be _off_
-        if (this.#pending.length === 0) {
+      onCommitEnqueue: (version: Version) => {
+        if (this.#pending === undefined && this.#historyRequests.size === 0) {
           return;
         }
-        insertOrDeleteTx(this.#pending, insertStmt, deleteStmt);
+
+        if (this.#historyRequests.size > 0) {
+          assert(this.#pending === undefined);
+          for (const request of this.#historyRequests.values()) {
+            this.#sendHistory(request);
+          }
+          this.#historyRequests.clear();
+          return;
+        }
+
+        if (this.#pending !== undefined) {
+          this.#stream.newDifference(version, this.#pending, undefined);
+        }
+
+        this.#pending = undefined;
       },
       onCommitted: (version: Version) => {
         this.#stream.commit(version);
       },
       onRollback: () => {
-        this.#pending = [];
+        this.#pending = undefined;
       },
     };
-
-    const sortedCols = columns.concat().sort();
-    const insertSQL = `INSERT INTO "${name}" (${sortedCols
-      .map(c => `"${c}"`)
-      .join(', ')}) VALUES (${sortedCols
-      .map(() => '?')
-      .join(', ')}) ON CONFLICT DO UPDATE SET ${sortedCols
-      .map(c => `"${c}" = excluded."${c}"`)
-      .join(', ')}`;
-    const deleteSQL = `DELETE FROM "${name}" WHERE id = ?`;
-
-    const insertOrDeleteTx = this.#db.transaction(this.#insertOrDelete);
-    const insertStmt = this.#db.prepare(insertSQL);
-    const deleteStmt = this.#db.prepare(deleteSQL);
-
-    this.#cols = sortedCols;
   }
-
-  #insertOrDelete = (
-    pending: Entry<T>[],
-    insertStmt: Statement,
-    deleteStmt: Statement,
-  ) => {
-    for (const [v, delta] of pending) {
-      if (delta > 0) {
-        insertStmt.run(...this.#cols.map(c => v[c]));
-      } else if (delta < 0) {
-        deleteStmt.run(v.id);
-      }
-    }
-  };
 
   get stream(): DifferenceStream<T> {
     return this.#stream;
@@ -119,23 +103,28 @@ export class TableSource<T extends PipelineEntity> implements Source<T> {
     return new TableSourceHashIndex(this.#db, this.#name, column);
   }
 
-  add(v: T): this {
-    this.#pending.push([v, 1]);
-    this.#materialite.addDirtySource(this.#internal);
-    return this;
+  add(_: T): this {
+    throw new Error('Unsupported');
   }
 
-  delete(v: T): this {
-    this.#pending.push([v, -1]);
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  __directlyEnqueueDiffs(diffs: Multiset<T>): void {
+    this.#pending = diffs;
     this.#materialite.addDirtySource(this.#internal);
-    return this;
+  }
+
+  delete(_: T): this {
+    throw new Error('Unsupported');
   }
 
   processMessage(message: Request): void {
     switch (message.type) {
       case 'pull': {
         this.#materialite.addDirtySource(this.#internal);
-        this.#sendHistory(message);
+        this.#historyRequests.set(
+          message.id,
+          mergeRequests(message, this.#historyRequests.get(message.id)),
+        );
         break;
       }
     }

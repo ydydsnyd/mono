@@ -241,11 +241,7 @@ export class LeftJoinOperator<
 
       const existing = this.#aMatches.get(aPrimaryKey);
       if (existing) {
-        // TODO(aa): This is a bug. We need to update the reference to the row
-        // here, like:
-        // existing[0] = joinEntry[0];
-        // because otherwise when we retract/reassert later, we will send the
-        // wrong version of the row.
+        existing[0] = joinEntry[0];
         existing[1] += joinEntry[1];
       } else {
         this.#aMatches.set(aPrimaryKey, [joinEntry[0], joinEntry[1]]);

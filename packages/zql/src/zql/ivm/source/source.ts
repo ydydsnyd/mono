@@ -3,11 +3,14 @@ import type {PipelineEntity, Version} from '../types.js';
 import type {Request} from '../graph/message.js';
 import type {HashIndex} from './source-hash-index.js';
 import type {Primitive, Selector} from '../../ast/ast.js';
+import type {Multiset} from '../multiset.js';
 
 export interface Source<T extends PipelineEntity> {
   readonly stream: DifferenceStream<T>;
   add(value: T): this;
   delete(value: T): this;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  __directlyEnqueueDiffs(diffs: Multiset<T>): void;
 
   processMessage(message: Request): void;
   getOrCreateAndMaintainNewHashIndex<K extends Primitive>(

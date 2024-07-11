@@ -14,7 +14,7 @@ import {
   mergeConditionLists,
 } from '../graph/message.js';
 import type {MaterialiteForSourceInternal} from '../materialite.js';
-import type {Entry} from '../multiset.js';
+import type {Entry, Multiset} from '../multiset.js';
 import type {Comparator, PipelineEntity, Version} from '../types.js';
 import {SourceHashIndex} from './source-hash-index.js';
 import type {Source, SourceInternal} from './source.js';
@@ -140,6 +140,11 @@ export class SetSource<T extends PipelineEntity> implements Source<T> {
         this.#pending = [];
       },
     };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  __directlyEnqueueDiffs(_: Multiset<T>): void {
+    throw new Error('unsupported');
   }
 
   withNewOrdering(comp: Comparator<T>, ordering: Ordering): this {
@@ -491,6 +496,8 @@ function maybeGetKey<T>(selector: Selector, value: unknown): T | undefined {
 
 // TODO(mlaw): request selectors and orderings need to be de-aliased on the way up
 // the graph.
+// TODO: we should stop merging requests. Give the requests separate IDs
+// and send custom history to each branch.
 export function mergeRequests(a: Request, b: Request | undefined) {
   if (b === undefined) {
     return a;

@@ -29,14 +29,14 @@ export type InsertRowChange = {
 export type UpdateRowChange = {
   /** `preRowKey` is set for an UPDATE in which the row key changed. */
   preRowKey?: RowKey | null;
-  preValue: 'unknown';
+  preValue: RowValue;
   postRowKey: RowKey;
   postValue: RowValue;
 };
 
 export type DeleteRowChange = {
   preRowKey?: undefined;
-  preValue: 'unknown';
+  preValue: RowValue;
   postRowKey: RowKey;
   postValue: 'none';
 };
@@ -50,7 +50,7 @@ export type RowChange = InsertRowChange | UpdateRowChange | DeleteRowChange;
  */
 export type EffectiveRowChange = {
   readonly rowKey: RowKey;
-  readonly preValue: 'unknown' | 'none';
+  readonly preValue: RowValue | 'none';
   readonly postValue: RowValue | 'none';
 };
 
@@ -137,5 +137,19 @@ export class TableTracker {
         ),
       ),
     };
+  }
+
+  *getDiffs() {
+    if (this.#truncated) {
+      throw new Error('truncate not yet supported');
+    }
+    for (const [_, change] of this.#rows) {
+      if (change.preValue !== 'none') {
+        yield [change.preValue, -1] as const;
+      }
+      if (change.postValue !== 'none') {
+        yield [change.postValue, 1] as const;
+      }
+    }
   }
 }
