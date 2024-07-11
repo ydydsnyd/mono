@@ -9,6 +9,9 @@ import {PUBLICATION_NAME, SLOT_NAME} from '../consts.js';
 import {copy} from './initial-sync.js';
 import {MessageProcessor} from './message-processor.js';
 import {DB, queries} from '../internal/db.js';
+import type {ServiceProvider} from '../services/service-provider.js';
+import type {Materialite} from 'zql/src/zql/ivm/materialite.js';
+import {createContext} from '../context.js';
 
 /**
  * The replicator attaches to the Postgres replication slot and listens for changes.
@@ -21,15 +24,24 @@ import {DB, queries} from '../internal/db.js';
 export class Replicator {
   readonly #pgConnectionString: string;
   readonly #sqliteDbPath: string;
+  readonly #materialite: Materialite;
   #replicationService: LogicalReplicationService | undefined;
 
-  constructor(pgConnectionString: string, sqliteDbPath: string) {
+  constructor(
+    materialite: Materialite,
+    pgConnectionString: string,
+    sqliteDbPath: string,
+  ) {
     this.#pgConnectionString = pgConnectionString;
     this.#sqliteDbPath = sqliteDbPath;
+    this.#materialite = materialite;
   }
 
-  async start(lc: LogContext) {
+  async start(serviceProvider: ServiceProvider, lc: LogContext) {
     try {
+      // TODO: the db will alrdy be open? Since we're sharing the same IVM context
+      // between `Replicator` and `PipelineManager`
+      // So replicator needs to check another way? Or Replicator can return the IVM context!
       await fs.promises.access(this.#sqliteDbPath);
     } catch (e) {
       lc.info?.('Starting initial sync to SQLite');
@@ -47,11 +59,17 @@ export class Replicator {
         {acknowledge: {auto: false, timeoutSeconds: 0}},
       ));
 
-    const messageProcessor = new MessageProcessor(this.#sqliteDbPath);
+    const ivmContext = createContext(this.#materialite, db.db);
+    const messageProcessor = new MessageProcessor(
+      serviceProvider,
+      ivmContext,
+      this.#sqliteDbPath,
+    );
     this.#replicationService.on(
       'data',
       (lsn: string, message: Pgoutput.Message) => {
         lc.debug?.('DATA:', lsn, message);
+        // TODO: if `processMessage` fails, kill the whole process.
         messageProcessor.processMessage(lc, lsn, message);
       },
     );
@@ -73,5 +91,7 @@ export class Replicator {
       lastLsn,
     );
     lc.info?.('Subscribed to Postgres changes');
+
+    return ivmContext;
   }
 }

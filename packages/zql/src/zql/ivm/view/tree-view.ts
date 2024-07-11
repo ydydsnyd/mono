@@ -25,6 +25,7 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
   #data: BTree<T, undefined>;
 
   #jsSlice: T[] = [];
+  #diffs: Entry<T>[] = [];
 
   #limit: number | undefined;
   #min: T | undefined = undefined;
@@ -32,6 +33,7 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
   readonly #order;
   readonly id = id++;
   readonly #comparator: Comparator<T>;
+  readonly #maintainJsSlice: boolean;
 
   constructor(
     context: Context,
@@ -40,9 +42,11 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
     order: Ordering | undefined,
     limit?: number | undefined,
     name: string = '',
+    maintainJsSlice: boolean = true,
   ) {
     super(context, stream, name);
     this.#limit = limit;
+    this.#maintainJsSlice = maintainJsSlice;
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     this.#data = new BTree(undefined, comparator);
@@ -57,6 +61,10 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
     }
   }
 
+  get data(): BTree<T, undefined> {
+    return this.#data;
+  }
+
   #add: (data: BTree<T, undefined>, value: T) => BTree<T, undefined>;
   #remove: (data: BTree<T, undefined>, value: T) => BTree<T, undefined>;
 
@@ -68,13 +76,14 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
     data: Multiset<T>,
     reply?: Reply | undefined,
   ): boolean {
+    this.#diffs = [];
     let needsUpdate = this.hydrated === false;
 
     let newData = this.#data;
     [needsUpdate, newData] = this.#sink(data, newData, needsUpdate, reply);
     this.#data = newData;
 
-    if (needsUpdate) {
+    if (needsUpdate && this.#maintainJsSlice) {
       // idk.. would be more efficient for users to just use the
       // treap directly. We have a PersistentTreap variant for React users
       // or places where immutability is important.
@@ -107,6 +116,8 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
         data = newData;
         needsUpdate = true;
       }
+
+      return newData !== data;
     };
 
     let iterator: Iterable<Entry<T>>;
@@ -123,12 +134,13 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
 
     for (const entry of iterator) {
       const [value, mult] = entry;
-      process(value, mult);
+      if (process(value, mult) && !this.#maintainJsSlice) {
+        this.#diffs.push(entry);
+      }
     }
 
     return [needsUpdate, data];
   }
-
   /**
    * Limits the iterator to only pull `limit` items from the stream.
    * This is only used in cases where we're processing initial data

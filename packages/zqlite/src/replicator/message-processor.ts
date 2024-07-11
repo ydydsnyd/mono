@@ -6,6 +6,8 @@ import type {LexiVersion} from 'zqlite-zero-cache-shared/src/lexi-version.js';
 import {DB, queries} from '../internal/db.js';
 import {ZERO_VERSION_COLUMN_NAME} from '../consts.js';
 import {assert} from '../../../shared/src/asserts.js';
+import type {Context} from 'zql/src/zql/context/context.js';
+import type {ServiceProvider} from '../services/service-provider.js';
 
 /**
  * Handles incoming messages from the replicator.
@@ -20,10 +22,19 @@ export class MessageProcessor {
   readonly #db: DB;
   readonly #setCommittedLsnStmt: Database.Statement;
   readonly #setIvmLsnStmt: Database.Statement;
+  readonly #ivmContext: Context;
+  readonly #serviceProvider: ServiceProvider;
   #rowVersion: LexiVersion | undefined;
+  #inTransaction = false;
 
-  constructor(sqliteDbPath: string) {
+  constructor(
+    serviceProvider: ServiceProvider,
+    ivmContext: Context,
+    sqliteDbPath: string,
+  ) {
+    this.#serviceProvider = serviceProvider;
     this.#db = new DB(sqliteDbPath);
+    this.#ivmContext = ivmContext;
 
     this.#setCommittedLsnStmt = this.#db.prepare(queries.setCommittedLsn);
     this.#setIvmLsnStmt = this.#db.prepare(queries.setIvmLsn);
@@ -33,7 +44,9 @@ export class MessageProcessor {
     try {
       this.processMessageImpl(lc, lsn, message);
     } catch (e) {
-      this.#db.rollbackImperativeTransaction();
+      if (this.#inTransaction) {
+        this.#db.rollbackImperativeTransaction();
+      }
       throw e;
     }
   }
@@ -79,6 +92,7 @@ export class MessageProcessor {
   }
 
   #begin(lsn: string) {
+    this.#inTransaction = true;
     this.#rowVersion = toLexiVersion(lsn);
     this.#db.beginImperativeTransaction();
   }
@@ -155,19 +169,47 @@ export class MessageProcessor {
 
   #commit(lsn: string) {
     this.#setCommittedLsnStmt.run(lsn);
+    this.#inTransaction = false;
     this.#db.commitImperativeTransaction();
 
-    this.#runIvmAndBlock();
+    this.#runIvm();
+    this.#updateCvrs();
     this.#setIvmLsnStmt.run(lsn);
+    // The async bit. Should be serialized with queries that need to run from scratch.
+    // Any promise that fails here will cause the connection to reset.
+    this.#flushChangesToClients();
   }
 
-  #runIvmAndBlock() {
+  #runIvm() {
     // The future implementation will not block. As in,
     // ViewSyncers are in separate processes and we can continue taking writes while
     // they're running.
-    // Pipeline manager.
-    // Has all pipelines.
+    // Pipeline manager has all pipelines.
     // We shove through the source.
+    // loop through each accumulated row for each source via (table-tracker)
+    // apply those diffs through the IVMContext in a single transaction.
+    // 1. Run IVM across all sources
+    // 2. Get all view syncers
+    // 3. Tell them all their query results are ready
+    // 4. They iterate over their pipelines and deal with that
+    this.#ivmContext.materialite.tx(() => {
+      for (const tableData of this.#tableTrackers) {
+        const source = this.#ivmContext.getSource(tableData.name);
+        source.directlyEnqueueDiffs(tableData.diffs);
+      }
+    });
+  }
+
+  #updateCvrs() {
+    this.#serviceProvider.mapViewSyncers(viewSyncer => {
+      viewSyncer.updateCvrWithNewQueryResults();
+    });
+  }
+
+  #flushChangesToClients() {
+    this.#serviceProvider.mapViewSyncers(viewSyncer => {
+      viewSyncer.flushChangesToClients();
+    });
   }
 }
 

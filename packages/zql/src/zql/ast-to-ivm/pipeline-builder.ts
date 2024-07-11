@@ -34,6 +34,7 @@ export function buildPipeline(
     order: Ordering | undefined,
   ) => Source<PipelineEntity>,
   ast: AST,
+  explode: boolean,
 ) {
   let {stream} = sourceProvider(
     must(ast.table, 'Table not specified in the AST'),
@@ -43,7 +44,7 @@ export function buildPipeline(
   // TODO: start working on pipeline sharing so we don't have to
   // re-build the join index every time.
   if (ast.joins) {
-    stream = applyJoins(sourceProvider, ast.table, stream, ast.joins);
+    stream = applyJoins(sourceProvider, ast.table, stream, ast.joins, explode);
   }
 
   if (ast.where) {
@@ -57,6 +58,7 @@ export function buildPipeline(
       ret as DifferenceStream<PipelineEntity>,
       ast.groupBy,
       ast.aggregate ?? [],
+      explode,
     ) as unknown as DifferenceStream<PipelineEntity>;
   }
   // if there was no group-by then we could be aggregating the entire table
@@ -88,11 +90,12 @@ export function applyJoins<T extends PipelineEntity, O extends PipelineEntity>(
   sourceTableOrAlias: string,
   stream: DifferenceStream<T>,
   joins: Join[],
+  explode: boolean,
 ): DifferenceStream<O> {
   let ret: DifferenceStream<Entity> =
     stream as unknown as DifferenceStream<Entity>;
   for (const join of joins) {
-    const bPipeline = buildPipeline(sourceProvider, join.other);
+    const bPipeline = buildPipeline(sourceProvider, join.other, explode);
 
     const aQualifiedColumn = join.on[0];
     const bQualifiedColumn = join.on[1];
@@ -196,6 +199,7 @@ function applyGroupBy<T extends PipelineEntity>(
   stream: DifferenceStream<T>,
   columns: Selector[],
   aggregations: Aggregation[],
+  explode: boolean,
 ) {
   const qualifiedColumns = aggregations.map(q =>
     q.field === undefined ? undefined : q.field,
@@ -207,6 +211,10 @@ function applyGroupBy<T extends PipelineEntity>(
     values => {
       const first = values[Symbol.iterator]().next().value;
       const ret: Record<string, unknown> = {...first};
+      let contributors: PipelineEntity[] | undefined;
+      if (explode) {
+        contributors = [];
+      }
 
       for (let i = 0; i < aggregations.length; i++) {
         const aggregation = aggregations[i];
@@ -214,7 +222,8 @@ function applyGroupBy<T extends PipelineEntity>(
         switch (aggregation.aggregate) {
           case 'count': {
             let count = 0;
-            for (const _ of values) {
+            for (const v of values) {
+              contributors?.push(v);
               count++;
             }
             ret[aggregation.alias] = count;
@@ -223,6 +232,7 @@ function applyGroupBy<T extends PipelineEntity>(
           case 'sum': {
             let sum = 0;
             for (const value of values) {
+              contributors?.push(value);
               sum += (getValueFromEntity(value, must(qualifiedColumn)) ??
                 0) as number;
             }
@@ -233,6 +243,7 @@ function applyGroupBy<T extends PipelineEntity>(
             let sum = 0;
             let count = 0;
             for (const value of values) {
+              contributors?.push(value);
               const v = getValueFromEntity(value, must(qualifiedColumn));
               if (v === undefined) {
                 continue;
@@ -246,6 +257,7 @@ function applyGroupBy<T extends PipelineEntity>(
           case 'min': {
             let min;
             for (const value of values) {
+              contributors?.push(value);
               const newValue = getValueFromEntity(
                 value,
                 must(qualifiedColumn),
@@ -263,6 +275,7 @@ function applyGroupBy<T extends PipelineEntity>(
           case 'max': {
             let max;
             for (const value of values) {
+              contributors?.push(value);
               const newValue = getValueFromEntity(
                 value,
                 must(qualifiedColumn),
@@ -280,6 +293,7 @@ function applyGroupBy<T extends PipelineEntity>(
           case 'array': {
             const arr: unknown[] = [];
             for (const value of values) {
+              contributors?.push(value);
               const extracted = getValueFromEntity(
                 value,
                 must(qualifiedColumn),
@@ -294,6 +308,9 @@ function applyGroupBy<T extends PipelineEntity>(
           default:
             throw new Error(`Unknown aggregation ${aggregation.aggregate}`);
         }
+      }
+      if (contributors) {
+        ret.__source_rows = contributors;
       }
       return ret;
     },

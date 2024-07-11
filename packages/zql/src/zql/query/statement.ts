@@ -163,6 +163,7 @@ async function createMaterialization<Return>(ast: AST, context: Context) {
   const pipeline = buildPipeline(
     (sourceName: string) => context.getSource(sourceName),
     ast,
+    false,
   );
   const view = new TreeView<Return extends [] ? Return[number] : never>(
     context,

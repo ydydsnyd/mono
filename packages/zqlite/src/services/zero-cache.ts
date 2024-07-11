@@ -4,13 +4,13 @@ import {handleConnection, Connection} from './duped/connection.js';
 import {CONNECT_URL_PATTERN, STATUS_URL_PATTERN} from './duped/paths.js';
 import websocket, {WebSocket} from '@fastify/websocket';
 import type {DurableStorage} from './duped/durable-storage.js';
-import {ServiceRunner} from './service-runner.js';
+import {ServiceProvider} from './service-provider.js';
 import {must} from '../../../shared/src/must.js';
 
 export class ZeroCache {
   readonly #lc: LogContext;
   readonly #clientConnections = new Map<string, Connection>();
-  readonly #serviceRunner: ServiceRunner;
+  readonly #serviceProvider: ServiceProvider;
   #fastify: FastifyInstance;
 
   constructor(logSink: LogSink, logLevel: LogLevel, state: DurableStorage) {
@@ -20,10 +20,8 @@ export class ZeroCache {
     );
     this.#lc = lc;
 
-    // instantiate: service-runner and kick off replicator.
-
     this.#fastify = Fastify();
-    this.#serviceRunner = new ServiceRunner(
+    this.#serviceProvider = new ServiceProvider(
       state,
       must(process.env.PG_CONNECTION_STRING),
       must(process.env.SQLITE_DB_PATH),
@@ -35,7 +33,7 @@ export class ZeroCache {
       handleConnection(
         this.#lc,
         // service-runner will instantiate or return required view-syncer
-        this.#serviceRunner,
+        this.#serviceProvider,
         this.#clientConnections,
         socket,
         request,
@@ -60,8 +58,14 @@ export class ZeroCache {
   };
 
   async start() {
+    await this.#serviceProvider.start(this.#lc);
+
     await this.#fastify.register(websocket);
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
     this.#fastify.get(CONNECT_URL_PATTERN, {websocket: true}, this.#connect);
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
     this.#fastify.get(STATUS_URL_PATTERN, this.#status);
     this.#fastify.listen({port: 3000}, (err, address) => {
       if (err) {

@@ -17,8 +17,9 @@ import type {PipelineEntity, Version} from 'zql/src/zql/ivm/types.js';
 import {genMap, genCached} from 'zql/src/zql/util/iterables.js';
 import type {Database, Statement} from 'better-sqlite3';
 import type {HoistedCondition} from 'zql/src/zql/ivm/graph/message.js';
-import type {SourceHashIndex} from '../../zql/src/zql/ivm/source/source-hash-index.js';
+import type {HashIndex} from '../../zql/src/zql/ivm/source/source-hash-index.js';
 import {StatementCache} from './internal/statement-cache.js';
+import {TableSourceHashIndex} from './table-source-hash-index.js';
 
 const resolved = Promise.resolve();
 
@@ -113,9 +114,9 @@ export class TableSource<T extends PipelineEntity> implements Source<T> {
   }
 
   getOrCreateAndMaintainNewHashIndex<K extends Primitive>(
-    _column: Selector,
-  ): SourceHashIndex<K, T> {
-    throw new Error('Being replace by `pull`');
+    column: Selector,
+  ): HashIndex<K, T> {
+    return new TableSourceHashIndex(this.#db, this.#name, column);
   }
 
   add(v: T): this {

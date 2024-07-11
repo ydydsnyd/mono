@@ -14,12 +14,12 @@ import type {Mutagen} from './mutagen.js';
 import type {FastifyRequest} from 'fastify';
 import type {WebSocket} from '@fastify/websocket';
 import type {CloseEvent, ErrorEvent, MessageEvent} from 'ws';
-import type {ServiceRunner} from '../service-runner.js';
+import type {ServiceProvider} from '../service-provider.js';
 import type {SyncContext, ViewSyncer} from '../view-syncer.js';
 
 export function handleConnection(
   lc: LogContext,
-  serviceRunner: ServiceRunner,
+  serviceRunner: ServiceProvider,
   clientConnections: Map<string, Connection>,
   socket: WebSocket,
   request: FastifyRequest,
@@ -64,6 +64,7 @@ export class Connection {
   readonly #syncContext: SyncContext;
   readonly #lc: LogContext;
   readonly #onClose: () => void;
+  readonly #serviceRunner: ServiceProvider;
 
   readonly #viewSyncer: ViewSyncer;
   readonly #mutagen: Mutagen;
@@ -73,12 +74,13 @@ export class Connection {
 
   constructor(
     lc: LogContext,
-    serviceRunner: ServiceRunner,
+    serviceRunner: ServiceProvider,
     connectParams: ConnectParams,
     ws: WebSocket,
     onClose: () => void,
   ) {
     this.#ws = ws;
+    this.#serviceRunner = serviceRunner;
     const {clientGroupID, clientID, wsID, baseCookie} = connectParams;
     this.#clientGroupID = clientGroupID;
     this.#syncContext = {clientID, wsID, baseCookie};
@@ -89,7 +91,11 @@ export class Connection {
       .withContext('wsID', wsID);
     this.#onClose = onClose;
 
-    this.#viewSyncer = serviceRunner.getViewSyncer(this.#lc, clientGroupID);
+    this.#viewSyncer = serviceRunner.getViewSyncer(
+      this.#lc,
+      clientGroupID,
+      clientID,
+    );
     this.#mutagen = serviceRunner.getMutagen(this.#lc, clientGroupID);
 
     this.#ws.addEventListener('message', this.#handleMessage);
@@ -107,6 +113,10 @@ export class Connection {
     if (this.#closed) {
       return;
     }
+    this.#serviceRunner.returnViewSyncer(
+      this.#clientGroupID,
+      this.#syncContext.clientID,
+    );
     this.#lc.debug?.('close');
     this.#closed = true;
     this.#ws.removeEventListener('message', this.#handleMessage);
@@ -168,21 +178,13 @@ export class Connection {
           lc.error?.('TODO: implement pull');
           break;
         case 'changeDesiredQueries':
-          await viewSyncer.changeDesiredQueries(this.#syncContext, msg);
+          viewSyncer.changeDesiredQueries(this.#syncContext, msg);
           break;
         case 'deleteClients':
           lc.error?.('TODO: implement deleteClients');
           break;
         case 'initConnection': {
-          this.#outboundStream = await viewSyncer.initConnection(
-            this.#syncContext,
-            msg,
-          );
-          if (this.#closed) {
-            this.#outboundStream.cancel();
-          } else {
-            void this.#proxyOutbound(this.#outboundStream);
-          }
+          viewSyncer.initConnection(this.#syncContext, msg, this);
           break;
         }
         default:
@@ -202,18 +204,6 @@ export class Connection {
   #handleError = (e: ErrorEvent) => {
     this.#lc.error?.('WebSocket error event', e.message, e.error);
   };
-
-  async #proxyOutbound(outboundStream: CancelableAsyncIterable<Downstream>) {
-    try {
-      for await (const outMsg of outboundStream) {
-        this.send(outMsg);
-      }
-      this.#lc.info?.('downstream closed by ViewSyncer');
-      this.close();
-    } catch (e) {
-      this.#closeWithThrown(e);
-    }
-  }
 
   #closeWithThrown(e: unknown) {
     const errorMessage = findErrorForClient(e)?.errorMessage ?? [

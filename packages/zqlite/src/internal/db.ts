@@ -9,16 +9,17 @@ export class DB {
   readonly #rollbackStmt: Database.Statement;
 
   constructor(sqliteDbPath: string) {
-    this.#db = new Database(sqliteDbPath);
-    this.#db.pragma('journal_mode = WAL');
-    this.#db.pragma('synchronous = NORMAL');
+    this.#db = DB.open(sqliteDbPath);
     this.transaction = this.#db.transaction.bind(this.#db);
     this.prepare = this.#db.prepare.bind(this.#db);
-    DB.ensureSchema(this.#db);
 
     this.#beginStmt = this.#db.prepare('BEGIN');
     this.#commitStmt = this.#db.prepare('COMMIT');
     this.#rollbackStmt = this.#db.prepare('ROLLBACK');
+  }
+
+  get db(): Database.Database {
+    return this.#db;
   }
 
   static ensureSchema(db: Database.Database) {
@@ -26,6 +27,14 @@ export class DB {
         key TEXT PRIMARY KEY,
         value TEXT
       );`);
+  }
+
+  static open(sqliteDbPath: string): Database.Database {
+    const db = new Database(sqliteDbPath);
+    db.pragma('journal_mode = WAL');
+    db.pragma('synchronous = NORMAL');
+    DB.ensureSchema(db);
+    return db;
   }
 
   beginImperativeTransaction() {

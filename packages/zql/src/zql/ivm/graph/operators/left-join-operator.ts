@@ -155,7 +155,7 @@ export class LeftJoinOperator<
     >[] = [];
 
     // fill the inner set first so we don't emit 2x the amount of data
-    // I.e., so we don't omit `null` values for each `a` value followed by
+    // I.e., so we don't emit `null` values for each `a` value followed by
     // the actual join results.
     //
     // Don't iterate over `inputB` in history mode.
