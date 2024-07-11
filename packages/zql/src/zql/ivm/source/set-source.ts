@@ -49,6 +49,8 @@ export class SetSource<T extends PipelineEntity> implements Source<T> {
 
   constructor(
     materialite: MaterialiteForSourceInternal,
+    // TODO(aa): Should we derive comparator from `order` so that they cannot
+    // be out of sync?
     comparator: Comparator<T>,
     order: Ordering,
     name: string,

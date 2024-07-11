@@ -3,7 +3,6 @@ import {expect, test} from 'vitest';
 import {makeTestContext} from '../../context/test-context.js';
 import type {Entity} from '../../schema/entity-schema.js';
 import {makeComparator} from '../compare.js';
-import type {Comparator} from '../types.js';
 import {TreeView} from './tree-view.js';
 
 const numberComparator = (l: number, r: number) => l - r;
@@ -14,10 +13,11 @@ test('asc and descComparator on Entities', () => {
   const context = makeTestContext();
   const {materialite} = context;
   const s = materialite.newSetSource<Entity>(
-    (l, r) => l.id.localeCompare(r.id),
+    makeComparator(ordering),
     ordering,
     'x',
   );
+
   const orderBy = [
     [['x', 'n'], 'asc'],
     [['x', 'id'], 'asc'],
@@ -98,7 +98,7 @@ test('replace', () => {
       const context = makeTestContext();
       const {materialite} = context;
       const orderBy = [[['test', 'x'], 'asc']] as const;
-      const comparator: Comparator<{x: number}> = (l, r) => l.x - r.x;
+      const comparator = makeComparator(orderBy);
       const source = materialite.newSetSource<{x: number}>(
         comparator,
         orderBy,
@@ -133,8 +133,8 @@ test('replace outside viewport', () => {
   type Item = {id: number; s: string};
   const context = makeTestContext();
   const {materialite} = context;
-  const orderBy = [[['test', 'x'], 'asc']] as const;
-  const comparator: Comparator<Item> = (l, r) => l.id - r.id;
+  const orderBy = [[['test', 'id'], 'asc']] as const;
+  const comparator = makeComparator(orderBy);
   const source = materialite.newSetSource<Item>(comparator, orderBy, 'test');
   const view = new TreeView(context, source.stream, comparator, orderBy, 5);
 
