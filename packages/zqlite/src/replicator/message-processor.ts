@@ -6,9 +6,9 @@ import type {LexiVersion} from 'zqlite-zero-cache-shared/src/lexi-version.js';
 import {DB, queries} from '../internal/db.js';
 import {ZERO_VERSION_COLUMN_NAME} from '../consts.js';
 import {assert} from '../../../shared/src/asserts.js';
-import type {Context} from 'zql/src/zql/context/context.js';
 import type {ServiceProvider} from '../services/service-provider.js';
 import type {TableTracker} from '../services/duped/table-tracker.js';
+import type {ZQLiteContext} from '../context.js';
 
 /**
  * Handles incoming messages from the replicator.
@@ -22,8 +22,7 @@ import type {TableTracker} from '../services/duped/table-tracker.js';
 export class MessageProcessor {
   readonly #db: DB;
   readonly #setCommittedLsnStmt: Database.Statement;
-  readonly #setIvmLsnStmt: Database.Statement;
-  readonly #ivmContext: Context;
+  readonly #ivmContext: ZQLiteContext;
   readonly #serviceProvider: ServiceProvider;
   readonly #tableTrackers = new Map<string, TableTracker>();
   #rowVersion: LexiVersion | undefined;
@@ -31,7 +30,7 @@ export class MessageProcessor {
 
   constructor(
     serviceProvider: ServiceProvider,
-    ivmContext: Context,
+    ivmContext: ZQLiteContext,
     sqliteDbPath: string,
   ) {
     this.#serviceProvider = serviceProvider;
@@ -39,7 +38,6 @@ export class MessageProcessor {
     this.#ivmContext = ivmContext;
 
     this.#setCommittedLsnStmt = this.#db.prepare(queries.setCommittedLsn);
-    this.#setIvmLsnStmt = this.#db.prepare(queries.setIvmLsn);
   }
 
   processMessage(lc: LogContext, lsn: string, message: Pgoutput.Message) {
@@ -175,6 +173,7 @@ export class MessageProcessor {
     this.#db.commitImperativeTransaction();
 
     this.#runIvm();
+    this.#ivmContext.lsn = lsn;
     this.#updateClients();
     // this.#setIvmLsnStmt.run(lsn);
   }

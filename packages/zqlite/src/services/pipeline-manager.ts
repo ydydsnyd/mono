@@ -1,12 +1,12 @@
 export type ASTHash = string;
 import type {AST} from 'zql/src/zql/ast/ast.js';
 import {buildPipeline} from 'zql/src/zql/ast-to-ivm/pipeline-builder.js';
-import type {Context} from 'zql/src/zql/context/context.js';
 import {TreeView} from 'zql/src/zql/ivm/view/tree-view.js';
 import {assert} from 'shared/src/asserts.js';
 import {makeComparator} from 'zql/src/zql/ivm/compare.js';
 import type {PipelineEntity} from 'zql/src/zql/ivm/types.js';
 import type {GroupAndClientIDStr} from './view-syncer.js';
+import type {ZQLiteContext} from '../context.js';
 
 /**
  * In the future, there will be one PipelineManager per ViewSyncer process.
@@ -18,10 +18,10 @@ export class PipelineManager {
   readonly #pipelines = new Map<ASTHash, TreeView<PipelineEntity>>();
   readonly #pipelineConsumers = new Map<ASTHash, Set<GroupAndClientIDStr>>();
   readonly #consumersToHashes = new Map<GroupAndClientIDStr, Set<ASTHash>>();
-  readonly #context: Context;
+  readonly context: ZQLiteContext;
 
-  constructor(context: Context) {
-    this.#context = context;
+  constructor(context: ZQLiteContext) {
+    this.context = context;
   }
 
   getOrCreatePipeline(consumer: GroupAndClientIDStr, hash: ASTHash, ast: AST) {
@@ -33,7 +33,7 @@ export class PipelineManager {
     }
 
     const pipeline = buildPipeline(
-      (sourceName: string) => this.#context.getSource(sourceName),
+      (sourceName: string) => this.context.getSource(sourceName),
       ast,
       true,
     );
@@ -43,7 +43,7 @@ export class PipelineManager {
     assert(orderBy.length > 0);
 
     const view = new TreeView(
-      this.#context,
+      this.context,
       pipeline,
       makeComparator<Record<string, unknown>>(orderBy),
       orderBy,

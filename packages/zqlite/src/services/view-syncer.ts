@@ -17,6 +17,7 @@ import {DurableObjectCVRStore} from './duped/durable-object-cvr-store.js';
 import type {DurableStorage} from './duped/durable-storage.js';
 import type {PipelineManager} from './pipeline-manager.js';
 import {cmpVersions} from './duped/types.js';
+import {toLexiVersion} from 'zqlite-zero-cache-shared/src/lsn.js';
 
 export type SyncContext = {
   readonly clientID: string;
@@ -194,9 +195,11 @@ export class ViewSyncer {
 
     const cvr = must(this.#cvr);
     const doStore = new DurableObjectCVRStore(this.#lc, this.#storage, cvr.id);
-    // need lexi version... this can be tracked in `PipelineProvider`
-    // as the lexi version if that of the last LSN the queries were run at.
-    const updater = new CVRQueryDrivenUpdater(doStore, cvr, version);
+    const updater = new CVRQueryDrivenUpdater(
+      doStore,
+      cvr,
+      toLexiVersion(this.#pipelineManager.context.lsn),
+    );
   }
 
   #flushPatchesToClients() {

@@ -8,7 +8,7 @@ import type {LogContext} from '@rocicorp/logger';
 import {PUBLICATION_NAME, SLOT_NAME} from '../consts.js';
 import {copy} from './initial-sync.js';
 import {MessageProcessor} from './message-processor.js';
-import {DB, queries} from '../internal/db.js';
+import {DB} from '../internal/db.js';
 import type {ServiceProvider} from '../services/service-provider.js';
 import type {Materialite} from 'zql/src/zql/ivm/materialite.js';
 import {createContext} from '../context.js';
@@ -49,9 +49,6 @@ export class Replicator {
     }
 
     const db = new DB(this.#sqliteDbPath);
-    const lastLsn =
-      db.prepare(queries.getCommittedLsn).pluck().get() ?? '0/00000000';
-    lc.debug?.('Last LSN:', lastLsn);
 
     const replicationService = (this.#replicationService =
       new LogicalReplicationService(
@@ -77,7 +74,7 @@ export class Replicator {
       'heartbeat',
       (_lsn: string, _time: number, shouldRespond: boolean) => {
         if (shouldRespond) {
-          void replicationService.acknowledge(lastLsn);
+          void replicationService.acknowledge(ivmContext.lsn);
         }
       },
     );
@@ -88,7 +85,7 @@ export class Replicator {
         publicationNames: [PUBLICATION_NAME],
       }),
       SLOT_NAME,
-      lastLsn,
+      ivmContext.lsn,
     );
     lc.info?.('Subscribed to Postgres changes');
 
