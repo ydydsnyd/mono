@@ -1,23 +1,25 @@
 import {Lock} from '@rocicorp/lock';
 import type {LogContext} from '@rocicorp/logger';
-import {assert} from 'shared/src/asserts.js';
 import type {InitConnectionBody} from 'zero-protocol/src/connect.js';
 import type {QueriesPatch} from 'zero-protocol/src/queries-patch.js';
 import type {AST} from 'zql/src/zql/ast/ast.js';
 import type {PipelineEntity} from 'zql/src/zql/ivm/types.js';
 import type {TreeView} from 'zql/src/zql/ivm/view/tree-view.js';
 import {must} from 'shared/src/must.js';
-import type {Connection} from './duped/connection.js';
 import {
   CVRConfigDrivenUpdater,
   CVRQueryDrivenUpdater,
   CVRSnapshot,
+  ParsedRow,
 } from './duped/cvr.js';
 import {DurableObjectCVRStore} from './duped/durable-object-cvr-store.js';
 import type {DurableStorage} from './duped/durable-storage.js';
 import type {PipelineManager} from './pipeline-manager.js';
-import {cmpVersions} from './duped/types.js';
+import {cmpVersions, RowID} from './duped/types.js';
 import {toLexiVersion} from 'zqlite-zero-cache-shared/src/lsn.js';
+import {ClientHandler} from './duped/client-handler.js';
+import {Subscription} from './duped/subscription.js';
+import type {Downstream} from 'zero-protocol/src/down.js';
 
 export type SyncContext = {
   readonly clientID: string;
@@ -41,7 +43,7 @@ export class ViewSyncer {
 
   readonly #clientGroupID: string;
   readonly #lc: LogContext;
-  readonly #activeClients = new Map<string, Connection | null>();
+  readonly #clients = new Map<string, ClientHandler>();
   readonly #pipelineManager: PipelineManager;
   #cvr: CVRSnapshot | undefined;
 
@@ -61,25 +63,40 @@ export class ViewSyncer {
     this.#pipelineManager = pipelineManager;
   }
 
-  addActiveClient(clientID: string) {
-    this.#activeClients.set(clientID, null);
-  }
-
-  removeActiveClient(clientID: string) {
-    const existed = this.#activeClients.delete(clientID);
+  deleteClient(clientID: string) {
+    this.#clients.delete(clientID);
     this.#pipelineManager.removeConsumer(`${this.#clientGroupID}:${clientID}`);
-    assert(existed, 'Client not found');
-    return this.#activeClients.size === 0;
+    return this.#clients.size === 0;
   }
 
-  async initConnection(
-    syncContext: SyncContext,
-    init: InitConnectionBody,
-    connection: Connection,
-  ) {
-    const existing = this.#activeClients.get(syncContext.clientID);
+  async initConnection(syncContext: SyncContext, init: InitConnectionBody) {
+    const {clientID, wsID, baseCookie} = syncContext;
+    const existing = this.#clients.get(clientID);
     existing?.close();
-    this.#activeClients.set(syncContext.clientID, connection);
+
+    const lc = this.#lc
+      .withContext('clientID', clientID)
+      .withContext('wsID', wsID);
+    lc.debug?.('initConnection', init);
+
+    const downstream = Subscription.create<Downstream>({
+      cleanup: (_, err) => {
+        err
+          ? lc.error?.(`client closed with error`, err)
+          : lc.info?.('client closed');
+      },
+    });
+
+    const client = new ClientHandler(
+      this.#lc,
+      this.#clientGroupID,
+      clientID,
+      wsID,
+      baseCookie,
+      downstream,
+    );
+
+    this.#clients.set(syncContext.clientID, client);
 
     await this.#lock.withLock(async () => {
       if (this.#cvr === undefined) {
@@ -181,6 +198,7 @@ export class ViewSyncer {
   async #updateCvrWithFirstQueryRuns(
     queryResults: Map<string, TreeView<PipelineEntity>>,
   ) {
+    const lc = this.#lc;
     // - get the right cvr version. This is related to `connection` and the `version` of that connection.
     //   minimum.
     // - pull all the component rows from `queryResults`
@@ -188,8 +206,8 @@ export class ViewSyncer {
     // - flush to clients
     // this function should return what would need to be flushed / poked out to clients...
 
-    const minCvrVersion = [...this.#activeClients.values()]
-      .filter((c): c is Connection => c !== null)
+    const minCvrVersion = [...this.#clients.values()]
+      .filter((c): c is ClientHandler => c !== null)
       .map(c => c.version())
       .reduce((a, b) => (cmpVersions(a, b) < 0 ? a : b));
 
@@ -200,9 +218,52 @@ export class ViewSyncer {
       cvr,
       toLexiVersion(this.#pipelineManager.context.lsn),
     );
+    const cvrVersion = updater.trackQueries(
+      this.#lc,
+      [...queryResults.keys()].map(k => ({id: k, transformationHash: k})),
+      Object.values(cvr.queries)
+        .filter(q => !q.internal && Object.keys(q.desiredBy).length === 0)
+        .map(q => q.id),
+      minCvrVersion,
+    );
+
+    const pokers = [...this.#clients.values()].map(c =>
+      c.startPoke(cvrVersion),
+    );
+
+    const queriesDone = [...queryResults.values()].map(async view => {
+      const rows = parseFirstRunResults(view);
+      const patches = await updater.received(lc, rows);
+      patches.forEach(patch => pokers.forEach(p => p.addPatch(patch)));
+    });
+    await Promise.all(queriesDone);
+
+    for (const patch of await updater.deleteUnreferencedColumnsAndRows(lc)) {
+      pokers.forEach(p => p.addPatch(patch));
+    }
+    for (const patch of await updater.generateConfigPatches(lc)) {
+      pokers.forEach(poker => poker.addPatch(patch));
+    }
+
+    // Commit the changes and update the CVR snapshot.
+    this.#cvr = await updater.flush(lc);
+
+    // Signal clients to commit.
+    pokers.forEach(poker => poker.end());
   }
 
   #flushPatchesToClients() {
     // flush accumulated diffs from the cvr step for each connection in active clients.
   }
 }
+
+function parseFirstRunResults(
+  view: TreeView<PipelineEntity>,
+): Map<RowID, ParsedRow> {
+  // source name
+  // schema
+  // ...
+  return new Map();
+}
+
+// TODO: lmid stuff over replication log...

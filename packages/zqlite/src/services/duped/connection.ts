@@ -194,7 +194,7 @@ export class Connection {
           lc.error?.('TODO: implement deleteClients');
           break;
         case 'initConnection': {
-          await viewSyncer.initConnection(this.#syncContext, msg[1], this);
+          await viewSyncer.initConnection(this.#syncContext, msg[1]);
           break;
         }
         default:

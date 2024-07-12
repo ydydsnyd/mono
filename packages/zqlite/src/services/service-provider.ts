@@ -41,7 +41,7 @@ export class ServiceProvider {
     this.#pipelineManager = new PipelineManager(context);
   }
 
-  getViewSyncer(lc: LogContext, clientGroupID: string, clientID: string) {
+  getViewSyncer(lc: LogContext, clientGroupID: string) {
     let viewSyncer = this.#viewSyncers.get(clientGroupID);
     if (!viewSyncer) {
       viewSyncer = new ViewSyncer(
@@ -52,14 +52,13 @@ export class ServiceProvider {
       );
       this.#viewSyncers.set(clientGroupID, viewSyncer);
     }
-    viewSyncer.addActiveClient(clientID);
     return viewSyncer;
   }
 
   returnViewSyncer(clientGroupID: string, clientID: string) {
     const viewSyncer = this.#viewSyncers.get(clientGroupID);
     assert(viewSyncer, 'ViewSyncer not found');
-    if (viewSyncer.removeActiveClient(clientID)) {
+    if (viewSyncer.deleteClient(clientID)) {
       this.#viewSyncers.delete(clientGroupID);
     }
   }
