@@ -16,6 +16,7 @@ import type {WebSocket} from '@fastify/websocket';
 import type {CloseEvent, ErrorEvent, MessageEvent} from 'ws';
 import type {ServiceProvider} from '../service-provider.js';
 import type {SyncContext, ViewSyncer} from '../view-syncer.js';
+import {cookieToVersion, NullableCVRVersion} from './types.js';
 
 export function handleConnection(
   lc: LogContext,
@@ -65,6 +66,7 @@ export class Connection {
   readonly #lc: LogContext;
   readonly #onClose: () => void;
   readonly #serviceRunner: ServiceProvider;
+  readonly #baseVersion: NullableCVRVersion;
 
   readonly #viewSyncer: ViewSyncer;
   readonly #mutagen: Mutagen;
@@ -84,6 +86,7 @@ export class Connection {
     const {clientGroupID, clientID, wsID, baseCookie} = connectParams;
     this.#clientGroupID = clientGroupID;
     this.#syncContext = {clientID, wsID, baseCookie};
+    this.#baseVersion = cookieToVersion(baseCookie);
     this.#lc = lc
       .withContext('connection')
       .withContext('clientID', clientID)
@@ -107,6 +110,10 @@ export class Connection {
       {wsid: wsID, timestamp: Date.now()},
     ];
     send(ws, connectedMessage);
+  }
+
+  version(): NullableCVRVersion {
+    return this.#baseVersion;
   }
 
   close() {
@@ -178,13 +185,16 @@ export class Connection {
           lc.error?.('TODO: implement pull');
           break;
         case 'changeDesiredQueries':
-          viewSyncer.changeDesiredQueries(this.#syncContext, msg);
+          await viewSyncer.changeDesiredQueries(
+            this.#syncContext,
+            msg[1].desiredQueriesPatch,
+          );
           break;
         case 'deleteClients':
           lc.error?.('TODO: implement deleteClients');
           break;
         case 'initConnection': {
-          viewSyncer.initConnection(this.#syncContext, msg, this);
+          await viewSyncer.initConnection(this.#syncContext, msg[1], this);
           break;
         }
         default:

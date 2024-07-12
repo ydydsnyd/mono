@@ -175,25 +175,14 @@ export class MessageProcessor {
     this.#db.commitImperativeTransaction();
 
     this.#runIvm();
-    this.#updateCvrs();
-    this.#setIvmLsnStmt.run(lsn);
-    // The async bit. Should be serialized with queries that need to run from scratch.
-    // Any promise that fails here will cause the connection to reset.
-    this.#flushChangesToClients();
+    this.#updateClients();
+    // this.#setIvmLsnStmt.run(lsn);
   }
 
   #runIvm() {
     // The future implementation will not block. As in,
     // ViewSyncers are in separate processes and we can continue taking writes while
     // they're running.
-    // Pipeline manager has all pipelines.
-    // We shove through the source.
-    // loop through each accumulated row for each source via (table-tracker)
-    // apply those diffs through the IVMContext in a single transaction.
-    // 1. Run IVM across all sources
-    // 2. Get all view syncers
-    // 3. Tell them all their query results are ready
-    // 4. They iterate over their pipelines and deal with that
     this.#ivmContext.materialite.tx(() => {
       for (const [name, tableData] of this.#tableTrackers) {
         const source = this.#ivmContext.getSource(name);
@@ -202,15 +191,14 @@ export class MessageProcessor {
     });
   }
 
-  #updateCvrs() {
+  #updateClients() {
     this.#serviceProvider.mapViewSyncers(viewSyncer => {
-      viewSyncer.updateCvrWithNewQueryResults();
-    });
-  }
-
-  #flushChangesToClients() {
-    this.#serviceProvider.mapViewSyncers(viewSyncer => {
-      viewSyncer.flushChangesToClients();
+      // Errors handled in the view syncer.
+      // If a view syncer fails for a given client connection,
+      // it will restart that connection.
+      // TODO: we need a way to monitor this queue such that IVM isn't
+      // generating more events than we can flush to clients.
+      void viewSyncer.newQueryResultsReady();
     });
   }
 }
