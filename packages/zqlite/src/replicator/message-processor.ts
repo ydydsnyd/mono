@@ -10,6 +10,12 @@ import type {ServiceProvider} from '../services/service-provider.js';
 import type {TableTracker} from '../services/duped/table-tracker.js';
 import type {ZQLiteContext} from '../context.js';
 
+const relationRenames: Record<string, Record<string, string>> = {
+  zero: {
+    clients: '_zero_clients',
+  },
+};
+
 /**
  * Handles incoming messages from the replicator.
  * Applies them to SQLite.
@@ -98,6 +104,9 @@ export class MessageProcessor {
   }
 
   #insert(insert: Pgoutput.MessageInsert) {
+    const relationName =
+      relationRenames[insert.relation.schema]?.[insert.relation.name] ??
+      insert.relation.name;
     const row = {
       ...insert.new,
       [ZERO_VERSION_COLUMN_NAME]: this.#rowVersion,
@@ -112,12 +121,15 @@ export class MessageProcessor {
       .join(', ');
     this.#db
       .prepare(
-        `INSERT INTO "${insert.relation.name}" (${columns}) VALUES (${valuePlaceholders})`,
+        `INSERT INTO "${relationName}" (${columns}) VALUES (${valuePlaceholders})`,
       )
       .run(row);
   }
 
   #update(update: Pgoutput.MessageUpdate) {
+    const relationName =
+      relationRenames[update.relation.schema]?.[update.relation.name] ??
+      update.relation.name;
     const row = {
       ...update.new,
       [ZERO_VERSION_COLUMN_NAME]: this.#rowVersion,
@@ -134,7 +146,7 @@ export class MessageProcessor {
     // Do _not_ use their SQLite bindings, however. Just the builder.
     this.#db
       .prepare(
-        `UPDATE "${update.relation.name}" SET ${Object.keys(row)
+        `UPDATE "${relationName}" SET ${Object.keys(row)
           .map(c => `"${c}" = @${c}`)
           .join(', ')} WHERE ${keyConditions.join(' AND ')}`,
       )
@@ -145,6 +157,9 @@ export class MessageProcessor {
   }
 
   #delete(del: Pgoutput.MessageDelete) {
+    const relationName =
+      relationRenames[del.relation.schema]?.[del.relation.name] ??
+      del.relation.name;
     assert(del.relation.replicaIdentity === 'default');
     assert(del.key);
     const keyConditions = getKeyConditions(del.key);
@@ -152,16 +167,16 @@ export class MessageProcessor {
 
     this.#db
       .prepare(
-        `DELETE FROM "${del.relation.name}" WHERE ${keyConditions.join(
-          ' AND ',
-        )}`,
+        `DELETE FROM "${relationName}" WHERE ${keyConditions.join(' AND ')}`,
       )
       .run(rowKey);
   }
 
   #truncate(truncate: Pgoutput.MessageTruncate) {
     for (const relation of truncate.relations) {
-      this.#db.prepare(`DELETE FROM "${relation.name}"`).run();
+      const relationName =
+        relationRenames[relation.schema]?.[relation.name] ?? relation.name;
+      this.#db.prepare(`DELETE FROM "${relationName}"`).run();
     }
     // VACUUM could be rather expensive. How shall we schedule this?
     this.#db.prepare('VACUUM').run();

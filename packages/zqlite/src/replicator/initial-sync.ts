@@ -194,16 +194,19 @@ export async function copy(
     FROM pg_replication_slots
     WHERE slot_name = ${SLOT_NAME}`;
 
-    const pubExists =
-      await sql`SELECT 1 FROM pg_publication WHERE pubname = ${PUBLICATION_NAME}`;
-    if (pubExists.length > 0) {
-      lc.info?.('Publication already exists');
-    } else {
-      await sql`CREATE PUBLICATION ${sql(
-        PUBLICATION_NAME,
-      )} FOR TABLES IN SCHEMA public`;
-      lc.info?.('Publication created');
+    async function createPublication(publicationName: string) {
+      const pubExists =
+        await sql`SELECT 1 FROM pg_publication WHERE pubname = ${publicationName}`;
+      if (pubExists.length > 0) {
+        lc.info?.(`${publicationName} already exists`);
+      } else {
+        await sql`CREATE PUBLICATION ${sql(
+          publicationName,
+        )} FOR TABLES IN SCHEMA public, zero`;
+        lc.info?.(`${publicationName} created`);
+      }
     }
+    await createPublication(PUBLICATION_NAME);
 
     lc.info?.('LSNs:', rows[0]);
     confirmedLsn = rows[0].confirmed_flush_lsn;

@@ -27,6 +27,13 @@ export class DB {
         key TEXT PRIMARY KEY,
         value TEXT
       );`);
+    db.exec(/*sql*/ `CREATE TABLE IF NOT EXISTS _zero_clients (
+      "clientGroupID"  TEXT NOT NULL,
+      "clientID"       TEXT NOT NULL,
+      "lastMutationID" INTEGER,
+      "userID"         TEXT,
+      PRIMARY KEY ("clientGroupID", "clientID")
+    )`);
   }
 
   static open(sqliteDbPath: string): Database.Database {
