@@ -16,7 +16,6 @@ import type {WebSocket} from '@fastify/websocket';
 import type {CloseEvent, ErrorEvent, MessageEvent} from 'ws';
 import type {ServiceProvider} from '../service-provider.js';
 import type {SyncContext, ViewSyncer} from '../view-syncer.js';
-import {cookieToVersion, NullableCVRVersion} from './types.js';
 
 export function handleConnection(
   lc: LogContext,
@@ -56,8 +55,6 @@ export function handleConnection(
  *
  * Handles incoming messages on the connection and dispatches
  * them to the correct service.
- *
- * Listens to the ViewSyncer and sends messages to the client.
  */
 export class Connection {
   readonly #ws: WebSocket;
@@ -66,7 +63,6 @@ export class Connection {
   readonly #lc: LogContext;
   readonly #onClose: () => void;
   readonly #serviceRunner: ServiceProvider;
-  readonly #baseVersion: NullableCVRVersion;
 
   readonly #viewSyncer: ViewSyncer;
   readonly #mutagen: Mutagen;
@@ -76,17 +72,16 @@ export class Connection {
 
   constructor(
     lc: LogContext,
-    serviceRunner: ServiceProvider,
+    serviceProvider: ServiceProvider,
     connectParams: ConnectParams,
     ws: WebSocket,
     onClose: () => void,
   ) {
     this.#ws = ws;
-    this.#serviceRunner = serviceRunner;
+    this.#serviceRunner = serviceProvider;
     const {clientGroupID, clientID, wsID, baseCookie} = connectParams;
     this.#clientGroupID = clientGroupID;
     this.#syncContext = {clientID, wsID, baseCookie};
-    this.#baseVersion = cookieToVersion(baseCookie);
     this.#lc = lc
       .withContext('connection')
       .withContext('clientID', clientID)
@@ -94,12 +89,8 @@ export class Connection {
       .withContext('wsID', wsID);
     this.#onClose = onClose;
 
-    this.#viewSyncer = serviceRunner.getViewSyncer(
-      this.#lc,
-      clientGroupID,
-      clientID,
-    );
-    this.#mutagen = serviceRunner.getMutagen(this.#lc, clientGroupID);
+    this.#viewSyncer = serviceProvider.getViewSyncer(this.#lc, clientGroupID);
+    this.#mutagen = serviceProvider.getMutagen(this.#lc, clientGroupID);
 
     this.#ws.addEventListener('message', this.#handleMessage);
     this.#ws.addEventListener('close', this.#handleClose);
@@ -112,14 +103,13 @@ export class Connection {
     send(ws, connectedMessage);
   }
 
-  version(): NullableCVRVersion {
-    return this.#baseVersion;
-  }
-
   close() {
     if (this.#closed) {
       return;
     }
+    // De-reference the ViewSyncer.
+    // If no references to the ViewSyncer are left,
+    // it will clean itself up.
     this.#serviceRunner.returnViewSyncer(
       this.#clientGroupID,
       this.#syncContext.clientID,

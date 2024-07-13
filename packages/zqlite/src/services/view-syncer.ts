@@ -193,6 +193,12 @@ export class ViewSyncer {
     // Flush the CVR.
     // Accumulate the diffs that we need to send to the client.
     // Unique diffs. Many queries can produce the same diff.
+    //
+    // TODO: deal with LMID changes
+    // coming in over the replication stream...
+    //
+    // TODO: deal with our row format not matching
+    // expectations of client-handler
   }
 
   async #updateCvrWithFirstQueryRuns(

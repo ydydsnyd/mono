@@ -5,8 +5,23 @@ import {CONNECT_URL_PATTERN, STATUS_URL_PATTERN} from './duped/paths.js';
 import websocket, {WebSocket} from '@fastify/websocket';
 import type {DurableStorage} from './duped/durable-storage.js';
 import {ServiceProvider} from './service-provider.js';
-import {must} from '../../../shared/src/must.js';
+import {must} from 'shared/src/must.js';
 
+/**
+ * Main entrypoint to ZeroCache.
+ *
+ * Starts up Fastify to accept web-socket connections
+ * from clients.
+ *
+ * One client creates one connection.
+ *
+ * Client connections are serviced by ViewSyncers where
+ * one ViewSyncer is created per client group. Many clients
+ * can be a part of the same client group.
+ *
+ * The ServiceProvider is responsible for creating and
+ * managing the lifecycle of ViewSyncers.
+ */
 export class ZeroCache {
   readonly #lc: LogContext;
   readonly #clientConnections = new Map<string, Connection>();
