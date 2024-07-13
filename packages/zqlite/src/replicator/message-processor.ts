@@ -5,10 +5,13 @@ import {toLexiVersion} from 'zqlite-zero-cache-shared/src/lsn.js';
 import type {LexiVersion} from 'zqlite-zero-cache-shared/src/lexi-version.js';
 import {DB, queries} from '../internal/db.js';
 import {ZERO_VERSION_COLUMN_NAME} from '../consts.js';
-import {assert} from '../../../shared/src/asserts.js';
+import {assert} from 'shared/src/asserts.js';
 import type {ServiceProvider} from '../services/service-provider.js';
-import type {TableTracker} from '../services/duped/table-tracker.js';
+import {TableTracker} from '../services/duped/table-tracker.js';
 import type {ZQLiteContext} from '../context.js';
+import type {RowKeyType} from '../services/duped/row-key.js';
+import type {UpdateRowChange} from '../services/duped/table-tracker.js';
+import {must} from '../../../shared/src/must.js';
 
 const relationRenames: Record<string, Record<string, string>> = {
   zero: {
@@ -31,7 +34,7 @@ export class MessageProcessor {
   readonly #ivmContext: ZQLiteContext;
   readonly #serviceProvider: ServiceProvider;
   readonly #tableTrackers = new Map<string, TableTracker>();
-  #rowVersion: LexiVersion | undefined;
+  #version: LexiVersion;
   #inTransaction = false;
 
   constructor(
@@ -42,6 +45,7 @@ export class MessageProcessor {
     this.#serviceProvider = serviceProvider;
     this.#db = new DB(sqliteDbPath);
     this.#ivmContext = ivmContext;
+    this.#version = toLexiVersion(ivmContext.lsn);
 
     this.#setCommittedLsnStmt = this.#db.prepare(queries.setCommittedLsn);
   }
@@ -99,7 +103,7 @@ export class MessageProcessor {
 
   #begin(lsn: string) {
     this.#inTransaction = true;
-    this.#rowVersion = toLexiVersion(lsn);
+    this.#version = toLexiVersion(lsn);
     this.#db.beginImperativeTransaction();
   }
 
@@ -109,8 +113,17 @@ export class MessageProcessor {
       insert.relation.name;
     const row = {
       ...insert.new,
-      [ZERO_VERSION_COLUMN_NAME]: this.#rowVersion,
+      [ZERO_VERSION_COLUMN_NAME]: this.#version,
     };
+    const key = Object.fromEntries(
+      insert.relation.keyColumns.map(col => [col, insert.new[col]]),
+    );
+
+    this.#getTableTracker(insert.relation).add({
+      preValue: 'none',
+      postRowKey: key,
+      postValue: row,
+    });
 
     // TODO: in the future we can look up an already prepared statement
     const columns = Object.keys(row)
@@ -132,18 +145,28 @@ export class MessageProcessor {
       update.relation.name;
     const row = {
       ...update.new,
-      [ZERO_VERSION_COLUMN_NAME]: this.#rowVersion,
+      [ZERO_VERSION_COLUMN_NAME]: this.#version,
     };
     const oldKey = update.key;
     const newKey = Object.fromEntries(
       update.relation.keyColumns.map(col => [col, update.new[col]]),
     );
+
+    this.#getTableTracker(update.relation).add({
+      preRowKey: oldKey,
+      preValue: must(update.old),
+      postRowKey: newKey,
+      postValue: row,
+    } as const);
+
     const rowKey = oldKey ?? newKey;
     const keyConditions = getKeyConditions(rowKey);
 
     // TODO: bring in @databases query builder (https://www.atdatabases.org/docs/sql)
     // so we don't need to do this manual mangling.
     // Do _not_ use their SQLite bindings, however. Just the builder.
+    // TODO: accumulate write lambdas into a queue
+    // run them all after IVM is run.
     this.#db
       .prepare(
         `UPDATE "${relationName}" SET ${Object.keys(row)
@@ -164,6 +187,12 @@ export class MessageProcessor {
     assert(del.key);
     const keyConditions = getKeyConditions(del.key);
     const rowKey = del.key;
+
+    this.#getTableTracker(del.relation).add({
+      preValue: must(del.old),
+      postRowKey: rowKey,
+      postValue: 'none',
+    } as const);
 
     this.#db
       .prepare(
@@ -214,6 +243,24 @@ export class MessageProcessor {
       // generating more events than we can flush to clients.
       void viewSyncer.newQueryResultsReady();
     });
+  }
+
+  #getTableTracker(relation: Pgoutput.MessageRelation) {
+    const key =
+      relationRenames[relation.schema]?.[relation.name] ?? relation.name;
+    const rowKeyType: RowKeyType = Object.fromEntries(
+      relation.keyColumns.map(name => {
+        const column = relation.columns.find(c => c.name === name);
+        assert(column);
+        return [name, column];
+      }),
+    );
+    let tracker = this.#tableTrackers.get(key);
+    if (!tracker) {
+      tracker = new TableTracker(relation.schema, relation.name, rowKeyType);
+      this.#tableTrackers.set(key, tracker);
+    }
+    return tracker;
   }
 }
 
