@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1718361947832,
+  "lastUpdate": 1720939061195,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -47885,6 +47885,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32448,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "committer": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "distinct": true,
+          "id": "dd0e8ca031064010148416fe4c7931b7590d69c8",
+          "message": "fix(replicache): Fix error message when cookie is object and out of order.\n\nSee: https://discord.com/channels/830183651022471199/1260896074122530826/1260896074122530826",
+          "timestamp": "2024-07-13T20:34:48-10:00",
+          "tree_id": "1cb3bc1b64738e7ef47676faa868936090e41bf6",
+          "url": "https://github.com/rocicorp/mono/commit/dd0e8ca031064010148416fe4c7931b7590d69c8"
+        },
+        "date": 1720939043361,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 316971,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55123,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 116813,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32473,
             "unit": "bytes"
           }
         ]
