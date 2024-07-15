@@ -273,6 +273,9 @@ function parseFirstRunResults(
         if (k === 'id') {
           continue;
         }
+        if (v === undefined) {
+          continue;
+        }
         // TODO: handle aliases in join. This assumes k = table name
         parseSingleRow(queryId, ret, k, v as unknown as PipelineEntity);
       }
@@ -289,6 +292,12 @@ function parseSingleRow(
   table: string,
   row: PipelineEntity,
 ) {
+  if (row.id === undefined) {
+    return;
+  }
+
+  // THIS IS WRONG. We can have many aggregations on a single row!
+  // see parallel comment in `pipeline-builder` ^^
   const sourceRows = (row as TODO).__source_rows;
   if (sourceRows !== undefined) {
     const source = (row as TODO).__source as string;
@@ -307,16 +316,15 @@ function parseSingleRow(
         ret.set(rowId, parsedRow);
       }
     }
+  }
+  const [rowId, parsedRow] = parseSingleRowNoAggregates(queryId, table, row);
+  const existing = ret.get(rowId);
+  if (existing) {
+    existing.record.queriedColumns ??= {};
+    existing.record.queriedColumns[queryId] =
+      parsedRow.record.queriedColumns?.[queryId] ?? [];
   } else {
-    const [rowId, parsedRow] = parseSingleRowNoAggregates(queryId, table, row);
-    const existing = ret.get(rowId);
-    if (existing) {
-      existing.record.queriedColumns ??= {};
-      existing.record.queriedColumns[queryId] =
-        parsedRow.record.queriedColumns?.[queryId] ?? [];
-    } else {
-      ret.set(rowId, parsedRow);
-    }
+    ret.set(rowId, parsedRow);
   }
 }
 

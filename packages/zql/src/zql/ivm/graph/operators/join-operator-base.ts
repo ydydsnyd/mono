@@ -35,6 +35,7 @@ export class JoinOperatorBase<
     inputB: undefined,
   };
   readonly #aJoinColumn;
+  readonly #noPullRight: boolean;
 
   constructor(
     inputA: DifferenceStream<AValue>,
@@ -47,8 +48,10 @@ export class JoinOperatorBase<
       isHistory: boolean,
     ) => Multiset<O>,
     aJoinColumn: Selector,
+    noPullRight: boolean,
   ) {
     super(output);
+    this.#noPullRight = noPullRight;
     this.#fn = fn;
     this.#output = output;
     this.#aJoinColumn = aJoinColumn;
@@ -76,7 +79,7 @@ export class JoinOperatorBase<
     reply: Reply | undefined,
   ) => {
     if (reply !== undefined) {
-      if (this.#buffer.inputB !== undefined) {
+      if (this.#buffer.inputB !== undefined || this.#noPullRight) {
         this.#output.newDifference(
           version,
           this.#fn(version, data, this.#buffer.inputB, true),
@@ -169,7 +172,9 @@ export class JoinOperatorBase<
       order: undefined,
     };
     this.#inputA.messageUpstream(message, this.#listenerA);
-    this.#inputB.messageUpstream(bMessage, this.#listenerB);
+    if (!this.#noPullRight) {
+      this.#inputB.messageUpstream(bMessage, this.#listenerB);
+    }
   }
 
   destroy() {

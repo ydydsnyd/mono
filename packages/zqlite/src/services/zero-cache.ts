@@ -73,15 +73,21 @@ export class ZeroCache {
   };
 
   async start() {
-    await this.#serviceProvider.start(this.#lc);
+    this.#lc.debug?.('Starting ZeroCache');
+    const lc = this.#lc.withContext('component', 'serviceProvider');
+    await this.#serviceProvider.start(lc);
 
+    this.#lc.debug?.('Registering websocket');
     await this.#fastify.register(websocket);
+    this.#lc.debug?.('Registered websocket');
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     this.#fastify.get(CONNECT_URL_PATTERN, {websocket: true}, this.#connect);
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     this.#fastify.get(STATUS_URL_PATTERN, this.#status);
+
+    this.#lc.debug?.('Registered routes');
     this.#fastify.listen({port: 3000}, (err, address) => {
       if (err) {
         this.#lc.error?.('Error starting server:', err);

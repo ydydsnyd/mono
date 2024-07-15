@@ -79,7 +79,7 @@ export class Replicator {
       },
     );
 
-    await this.#replicationService.subscribe(
+    void this.#replicationService.subscribe(
       new PgoutputPlugin({
         protoVersion: 1,
         publicationNames: [PUBLICATION_NAME],

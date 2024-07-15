@@ -80,6 +80,7 @@ export class LeftJoinOperator<
       (version, inputA, inputB, isHistory) =>
         this.#join(version, inputA, inputB, isHistory),
       joinArgs.aJoinColumn,
+      true,
     );
 
     this.#getAPrimaryKey = (value: AValue) =>

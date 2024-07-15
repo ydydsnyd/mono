@@ -5,7 +5,7 @@ import {DurableStorage} from '../services/duped/durable-storage.js';
 console.log('CREATING DURABLE STORAGE');
 const storage = new DurableStorage();
 console.log('CREATED DURABLE STORAGE');
-const cache = new ZeroCache(consoleLogSink, 'info', storage);
+const cache = new ZeroCache(consoleLogSink, 'debug', storage);
 console.log('MADE CACHE');
 
 await cache.start();

@@ -311,6 +311,7 @@ function applyGroupBy<T extends PipelineEntity>(
             throw new Error(`Unknown aggregation ${aggregation.aggregate}`);
         }
       }
+      // THIS IS WRONG. We can have many aggregations on a single row!
       if (contributors) {
         ret.__source = contributorSource;
         ret.__source_rows = contributors;

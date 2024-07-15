@@ -88,6 +88,7 @@ export class InnerJoinOperator<
       joinArgs.output,
       (version, inputA, inputB) => this.#join(version, inputA, inputB),
       joinArgs.aJoinColumn,
+      false,
     );
 
     this.#getAPrimaryKey = (value: AValue) =>

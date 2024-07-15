@@ -16,7 +16,7 @@ export class LmidTracker {
     // read out the lmids for the current client group.
     if (!lmidStatement) {
       lmidStatement = context.db.prepare(
-        `SELECT client_id, lmid FROM _zero_lmid WHERE client_group_id = ?`,
+        `SELECT clientID, clientGroupID, lastMutationID FROM _zero_clients WHERE clientGroupID = ?`,
       );
     }
 

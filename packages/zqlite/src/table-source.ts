@@ -150,6 +150,7 @@ export class TableSource<T extends PipelineEntity> implements Source<T> {
     const stmt = this.#historyStatements.get(sql);
 
     try {
+      console.log('ITERATING: ', sql);
       this.#stream.newDifference(
         this.#materialite.getVersion(),
         // cached since multiple downstreams may pull on the same iterator.
@@ -218,7 +219,14 @@ export function conditionsAndSortToSQL(
   let sql = `SELECT * FROM ${table}`;
   if (conditions.length > 0) {
     sql += ' WHERE ';
-    sql += conditions.map(c => `${c.selector[1]} ${c.op} ?`).join(' AND ');
+    sql += conditions
+      .map(c => {
+        if (c.op === 'IN') {
+          return `${c.selector[1]} ${c.op} (SELECT value FROM json_each(?))`;
+        }
+        return `${c.selector[1]} ${c.op} ?`;
+      })
+      .join(' AND ');
   }
   if (sort) {
     sql += ' ORDER BY ';
@@ -229,5 +237,7 @@ export function conditionsAndSortToSQL(
 }
 
 export function getConditionBindParams(conditions: HoistedCondition[]) {
-  return conditions.map(c => c.value);
+  return conditions.map(c =>
+    c.op === 'IN' ? JSON.stringify(c.value) : c.value,
+  );
 }

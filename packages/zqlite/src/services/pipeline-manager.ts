@@ -61,7 +61,9 @@ export class PipelineManager {
     );
     this.#pipelines.set(hash, view);
 
+    console.log('====Created pipeline:', hash, ast);
     view.pullHistoricalData();
+    console.log('====Pulled historical data for:', hash, ast);
 
     return view;
   }

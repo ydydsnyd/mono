@@ -564,11 +564,17 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
 
       this.#receivedRows.set(rowID, merged);
 
-      const patchVersion =
-        existing?.rowVersion === rowVersion &&
-        Object.keys(merged).every(col => existing.queriedColumns?.[col])
-          ? existing.patchVersion
-          : this.#assertNewVersion();
+      let patchVersion;
+      try {
+        patchVersion =
+          existing?.rowVersion === rowVersion &&
+          Object.keys(merged).every(col => existing.queriedColumns?.[col])
+            ? existing.patchVersion
+            : this.#assertNewVersion();
+      } catch (e) {
+        console.log('!!!!! ERR', existing, rowVersion, row, rowID);
+        throw e;
+      }
 
       if (existing) {
         this._cvrStore.delRowPatch(existing);

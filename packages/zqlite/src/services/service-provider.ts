@@ -42,9 +42,11 @@ export class ServiceProvider {
   }
 
   async start(lc: LogContext) {
+    lc.debug?.('Starting ServiceProvider');
     const context = await this.#replicator.start(this, lc);
     this.#zqliteContext = context;
     this.#pipelineManager.setContext(context);
+    lc.debug?.('Started ServiceProvider');
   }
 
   getViewSyncer(lc: LogContext, clientGroupID: string) {

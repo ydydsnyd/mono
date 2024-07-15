@@ -103,6 +103,7 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
     needsUpdate: boolean,
     reply?: Reply | undefined,
   ): [boolean, BTree<T, undefined>] {
+    console.log('SINKING....');
     const process = (value: T, mult: number) => {
       let newData: BTree<T, undefined>;
       if (mult > 0) {
@@ -120,24 +121,36 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
       return newData !== data;
     };
 
-    let iterator: Iterable<Entry<T>>;
+    let iterable: Iterable<Entry<T>>;
     if (
       reply === undefined ||
       this.#limit === undefined ||
       !orderingsAreCompatible(reply.order, this.#order)
     ) {
-      iterator = c;
+      iterable = c;
+      console.log('GOT UNLIMITED ITERATOR ====');
     } else {
       // We only get the limited iterator if we're receiving historical data.
-      iterator = this.#getLimitedIterator(c, reply, this.#limit);
+      console.log('GOT LIMITED ITERATOR ====');
+      iterable = this.#getLimitedIterable(c, reply, this.#limit);
     }
 
-    for (const entry of iterator) {
-      const [value, mult] = entry;
-      if (process(value, mult) && !this.#maintainJsSlice) {
-        this.#diffs.push(entry);
+    const iterator = iterable[Symbol.iterator]();
+    let next: IteratorResult<Entry<T>>;
+    try {
+      while ((next = iterator.next()) && !next.done) {
+        const entry = next.value;
+        const [value, mult] = entry;
+        if (process(value, mult) && !this.#maintainJsSlice) {
+          this.#diffs.push(entry);
+        }
       }
+    } finally {
+      console.log('FORCED RETURN !!!!!');
+      iterator.return?.();
     }
+
+    console.log('DONE SINKING ====');
 
     return [needsUpdate, data];
   }
@@ -146,7 +159,7 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
    * This is only used in cases where we're processing initial data
    * for initial query run. Initial data will never contain removes, only adds.
    */
-  #getLimitedIterator(
+  #getLimitedIterable(
     data: Multiset<T>,
     reply: Reply,
     limit: number,
@@ -172,6 +185,19 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
           const entry = next.value;
           i += entry[1];
           return next;
+        },
+        return() {
+          console.log('RETURNING ITERATOR!!! ');
+          if (iterator.return) {
+            iterator.return();
+          }
+          return {done: true, value: undefined} as const;
+        },
+        throw() {
+          if (iterator.throw) {
+            iterator.throw();
+          }
+          return {done: true, value: undefined} as const;
         },
       };
     }
@@ -232,6 +258,19 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
         i += Math.abs(entry[1]);
         last = entry[0];
         return next;
+      },
+      return() {
+        console.log('RETURNING ITERATOR222!!! ');
+        if (iterator.return) {
+          iterator.return();
+        }
+        return {done: true, value: undefined} as const;
+      },
+      throw() {
+        if (iterator.throw) {
+          iterator.throw();
+        }
+        return {done: true, value: undefined} as const;
       },
     };
   }
