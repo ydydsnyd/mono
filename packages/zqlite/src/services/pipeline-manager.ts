@@ -7,6 +7,7 @@ import {makeComparator} from 'zql/src/zql/ivm/compare.js';
 import type {PipelineEntity} from 'zql/src/zql/ivm/types.js';
 import type {GroupAndClientIDStr} from './view-syncer.js';
 import type {ZQLiteContext} from '../context.js';
+import {must} from 'shared/src/must.js';
 
 /**
  * In the future, there will be one PipelineManager per ViewSyncer process.
@@ -18,13 +19,20 @@ export class PipelineManager {
   readonly #pipelines = new Map<ASTHash, TreeView<PipelineEntity>>();
   readonly #pipelineConsumers = new Map<ASTHash, Set<GroupAndClientIDStr>>();
   readonly #consumersToHashes = new Map<GroupAndClientIDStr, Set<ASTHash>>();
-  readonly context: ZQLiteContext;
+  #context: ZQLiteContext | undefined;
 
-  constructor(context: ZQLiteContext) {
-    this.context = context;
+  constructor() {}
+
+  get context() {
+    return must(this.#context);
+  }
+
+  setContext(context: ZQLiteContext) {
+    this.#context = context;
   }
 
   getOrCreatePipeline(consumer: GroupAndClientIDStr, hash: ASTHash, ast: AST) {
+    const context = must(this.context);
     this.#updateConsumerMapping(consumer, hash);
 
     const existing = this.#pipelines.get(hash);
@@ -33,7 +41,7 @@ export class PipelineManager {
     }
 
     const pipeline = buildPipeline(
-      (sourceName: string) => this.context.getSource(sourceName),
+      (sourceName: string) => context.getSource(sourceName),
       ast,
       true,
     );
@@ -43,7 +51,7 @@ export class PipelineManager {
     assert(orderBy.length > 0);
 
     const view = new TreeView(
-      this.context,
+      context,
       pipeline,
       makeComparator<Record<string, unknown>>(orderBy),
       orderBy,

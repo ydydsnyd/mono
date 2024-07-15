@@ -10,6 +10,7 @@ const emptyFunction = () => {};
 
 export type ZQLiteContext = Context & {
   lsn: string;
+  db: Database;
 };
 
 export function createContext(
@@ -21,6 +22,7 @@ export function createContext(
 
   return {
     lsn,
+    db,
     materialite,
     getSource: <T extends PipelineEntity>(name: string): Source<T> => {
       let existing = sources.get(name);

@@ -20,6 +20,7 @@ import {toLexiVersion} from 'zqlite-zero-cache-shared/src/lsn.js';
 import {ClientHandler} from './duped/client-handler.js';
 import {Subscription} from './duped/subscription.js';
 import type {Downstream} from 'zero-protocol/src/down.js';
+import type {LmidTracker} from './lmid-tracker.js';
 
 export type SyncContext = {
   readonly clientID: string;
@@ -45,6 +46,7 @@ export class ViewSyncer {
   readonly #lc: LogContext;
   readonly #clients = new Map<string, ClientHandler>();
   readonly #pipelineManager: PipelineManager;
+  readonly #lmidTracker: LmidTracker;
   #cvr: CVRSnapshot | undefined;
 
   /**
@@ -56,11 +58,13 @@ export class ViewSyncer {
     cvrStore: DurableStorage,
     clientGroupID: string,
     pipelineManager: PipelineManager,
+    lmidTracker: LmidTracker,
   ) {
     this.#storage = cvrStore;
     this.#clientGroupID = clientGroupID;
     this.#lc = lc;
     this.#pipelineManager = pipelineManager;
+    this.#lmidTracker = lmidTracker;
   }
 
   deleteClient(clientID: string) {
@@ -112,21 +116,24 @@ export class ViewSyncer {
         init.desiredQueriesPatch,
       );
 
-      const patchesForClients =
-        await this.#updateCvrWithFirstQueryRuns(newQueryResults);
+      await this.#updateCvrAndClientsWithFirstQueryRuns(newQueryResults);
     });
   }
 
   async changeDesiredQueries(syncContext: SyncContext, patch: QueriesPatch) {
     await this.#lock.withLock(async () => {
       const newQueryResults = await this.#patchQueries(syncContext, patch);
-
-      // update CVR with query results
-      // flush to clients
+      await this.#updateCvrAndClientsWithFirstQueryRuns(newQueryResults);
     });
   }
 
-  async newQueryResultsReady() {}
+  async newQueryDeltasReady() {
+    // TODO: process LMID here
+    // 1. stick it into PipelineManager
+    // await this.#lock.withLock(async () => {
+    //   this.#pipelineManager.getPipelinesFor();
+    // });
+  }
 
   async #patchQueries(syncContext: SyncContext, patch: QueriesPatch) {
     // 1. register with pipeline manager
@@ -184,7 +191,7 @@ export class ViewSyncer {
     return newQueryResults;
   }
 
-  #updateCvrWithQueryDeltas() {
+  #updateCvrAndClientsWithQueryDeltas() {
     // iterate over PipelineManager and grab CVRs this ViewSyncer cares about.
     // clientGroupId + clientID
     // into a set.
@@ -196,12 +203,14 @@ export class ViewSyncer {
     //
     // TODO: deal with LMID changes
     // coming in over the replication stream...
+    // We'd need to create a query for each client that selects the LMID.
+    //
     //
     // TODO: deal with our row format not matching
     // expectations of client-handler
   }
 
-  async #updateCvrWithFirstQueryRuns(
+  async #updateCvrAndClientsWithFirstQueryRuns(
     queryResults: Map<string, TreeView<PipelineEntity>>,
   ) {
     const lc = this.#lc;
@@ -256,10 +265,6 @@ export class ViewSyncer {
 
     // Signal clients to commit.
     pokers.forEach(poker => poker.end());
-  }
-
-  #flushPatchesToClients() {
-    // flush accumulated diffs from the cvr step for each connection in active clients.
   }
 }
 

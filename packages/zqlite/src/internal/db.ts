@@ -50,4 +50,5 @@ export const queries = {
   setIvmLsn: /*sql*/ `INSERT OR REPLACE INTO _zero_metadata (key, value) VALUES ('ivm-lsn', ?);`,
   getCommittedLsn: /*sql*/ `SELECT value FROM _zero_metadata WHERE key = 'committed-lsn';`,
   getIvmLsn: /*sql*/ `SELECT value FROM _zero_metadata WHERE key = 'ivm-lsn';`,
+  getLmids: /*sql*/ `SELECT "clientID", "lastMutationID" FROM _zero_clients WHERE "clientGroupID" = ?;`,
 };

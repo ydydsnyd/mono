@@ -9,13 +9,17 @@ import {assert} from '../../../shared/src/asserts.js';
 import {Materialite} from '../../../zql/src/zql/ivm/materialite.js';
 import {PipelineManager} from './pipeline-manager.js';
 import {must} from '../../../shared/src/must.js';
+import {LmidTracker} from './lmid-tracker.js';
+import type {ZQLiteContext} from '../context.js';
 
 export class ServiceProvider {
   readonly #replicator: Replicator;
   readonly #viewSyncers: Map<string, ViewSyncer> = new Map();
   readonly #cvrStore: DurableStorage;
   readonly #upstream: PostgresDB;
-  #pipelineManager: PipelineManager | undefined;
+  readonly #pipelineManager: PipelineManager;
+  readonly #lmidTracker = new Map<string, LmidTracker>();
+  #zqliteContext: ZQLiteContext | undefined;
 
   constructor(
     cvrStore: DurableStorage,
@@ -29,6 +33,7 @@ export class ServiceProvider {
     });
 
     const materialite = new Materialite();
+    this.#pipelineManager = new PipelineManager();
     this.#replicator = new Replicator(
       materialite,
       pgConnectionString,
@@ -38,17 +43,23 @@ export class ServiceProvider {
 
   async start(lc: LogContext) {
     const context = await this.#replicator.start(this, lc);
-    this.#pipelineManager = new PipelineManager(context);
+    this.#zqliteContext = context;
+    this.#pipelineManager.setContext(context);
   }
 
   getViewSyncer(lc: LogContext, clientGroupID: string) {
     let viewSyncer = this.#viewSyncers.get(clientGroupID);
+    let lmidTracker = this.#lmidTracker.get(clientGroupID);
+    if (!lmidTracker) {
+      lmidTracker = new LmidTracker(clientGroupID, must(this.#zqliteContext));
+    }
     if (!viewSyncer) {
       viewSyncer = new ViewSyncer(
         lc,
         this.#cvrStore,
         clientGroupID,
         must(this.#pipelineManager),
+        lmidTracker,
       );
       this.#viewSyncers.set(clientGroupID, viewSyncer);
     }
@@ -62,6 +73,8 @@ export class ServiceProvider {
       this.#viewSyncers.delete(clientGroupID);
     }
   }
+
+  getLmidTracker() {}
 
   mapViewSyncers<R>(cb: (viewSyncer: ViewSyncer) => R) {
     const ret: R[] = [];

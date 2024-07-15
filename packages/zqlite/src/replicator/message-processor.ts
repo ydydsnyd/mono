@@ -265,7 +265,7 @@ export class MessageProcessor {
       // generating more events than we can flush to clients.
       // TODO: if we have a slow client whose connection buffer is filling...
       //  should we drop that client? Slow everyone for that client?
-      void viewSyncer.newQueryResultsReady();
+      void viewSyncer.newQueryDeltasReady();
     });
   }
 
