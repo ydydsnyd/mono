@@ -248,7 +248,7 @@ export class MessageProcessor {
   #updateLmidTracker(
     clientGroupID: string,
     clientID: string,
-    lastMutationID: string,
+    lastMutationID: number,
   ) {
     this.#serviceProvider
       .maybeGetLmidTracker(clientGroupID)

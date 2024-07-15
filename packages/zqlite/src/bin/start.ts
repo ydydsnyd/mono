@@ -1,12 +1,11 @@
-import {must} from '../../../shared/src/must.js';
-import {Replicator} from '../replicator/replicator.js';
-import {consoleLogSink, LogContext} from '@rocicorp/logger';
+import {consoleLogSink} from '@rocicorp/logger';
+import {ZeroCache} from '../services/zero-cache.js';
+import {DurableStorage} from '../services/duped/durable-storage.js';
 
-const pgConnectionString = process.env.PG_CONNECTION_STRING;
-const sqliteDbPath = process.env.SQLITE_DB_PATH;
+console.log('CREATING DURABLE STORAGE');
+const storage = new DurableStorage();
+console.log('CREATED DURABLE STORAGE');
+const cache = new ZeroCache(consoleLogSink, 'info', storage);
+console.log('MADE CACHE');
 
-const lc = new LogContext('info', undefined, consoleLogSink).withContext(
-  'component',
-  'Replicator',
-);
-await new Replicator(must(pgConnectionString), must(sqliteDbPath)).start(lc);
+await cache.start();

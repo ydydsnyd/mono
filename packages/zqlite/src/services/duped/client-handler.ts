@@ -85,7 +85,6 @@ const PART_COUNT_FLUSH_THRESHOLD = 100;
  * Handles a single {@link ViewSyncer.sync()} connection.
  */
 export class ClientHandler {
-  readonly #clientGroupID: string;
   readonly clientID: string;
   readonly wsID: string;
   readonly #lc: LogContext;
@@ -94,13 +93,11 @@ export class ClientHandler {
 
   constructor(
     lc: LogContext,
-    clientGroupID: string,
     clientID: string,
     wsID: string,
     baseCookie: string | null,
     pokes: Subscription<Downstream>,
   ) {
-    this.#clientGroupID = clientGroupID;
     this.clientID = clientID;
     this.wsID = wsID;
     this.#lc = lc.withContext('clientID', clientID);

@@ -96,7 +96,6 @@ export class ViewSyncer {
 
     const client = new ClientHandler(
       this.#lc,
-      this.#clientGroupID,
       clientID,
       wsID,
       baseCookie,
@@ -131,11 +130,9 @@ export class ViewSyncer {
   }
 
   async newQueryDeltasReady() {
-    // TODO: process LMID here
-    // 1. stick it into PipelineManager
-    // await this.#lock.withLock(async () => {
-    //   this.#pipelineManager.getPipelinesFor();
-    // });
+    await this.#lock.withLock(async () => {
+      await this.#updateCvrAndClientsWithQueryDeltas();
+    });
   }
 
   async #patchQueries(syncContext: SyncContext, patch: QueriesPatch) {
@@ -194,25 +191,17 @@ export class ViewSyncer {
     return newQueryResults;
   }
 
-  #updateCvrAndClientsWithQueryDeltas() {
-    // iterate over PipelineManager and grab CVRs this ViewSyncer cares about.
-    // clientGroupId + clientID
-    // into a set.
-    // Get the new diffs from the pipelines.
-    // Update the CVR.
-    // Flush the CVR.
-    // Accumulate the diffs that we need to send to the client.
-    // Unique diffs. Many queries can produce the same diff.
+  async #updateCvrAndClientsWithQueryDeltas() {
     //
-    // TODO: deal with LMID changes
-    // coming in over the replication stream...
-    // We'd need to create a query for each client that selects the LMID.
-    //
-    //
-    // TODO: deal with our row format not matching
-    // expectations of client-handler
-    // deleteUnreferencedColumnsAndRows
-    // query ids better map to columns..
+    // 1. loop over all queries related to us from PipelineManager
+    // 2. keep only those with diffs
+    // 3. trackQueries for those
+    // 4. pass +mult to `updater.received`
+    // 5. manually delete unreferenced row when seeing -mult e.g., `deleteUnreferencedColumnsAndRows`
+    // 6. `generateConfigPatches` : lc.debug?.(`generating config patches`);
+    // 7. Commit the changes and update the CVR snapshot.
+    // 8. Signal clients to commit.
+    // don't forget LMID throw-in
   }
 
   async #updateCvrAndClientsWithFirstQueryRuns(
