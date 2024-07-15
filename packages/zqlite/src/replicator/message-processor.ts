@@ -10,7 +10,6 @@ import type {ServiceProvider} from '../services/service-provider.js';
 import {TableTracker} from '../services/duped/table-tracker.js';
 import type {ZQLiteContext} from '../context.js';
 import type {RowKeyType} from '../services/duped/row-key.js';
-import type {UpdateRowChange} from '../services/duped/table-tracker.js';
 import {must} from '../../../shared/src/must.js';
 
 const relationRenames: Record<string, Record<string, string>> = {
@@ -22,11 +21,21 @@ const relationRenames: Record<string, Record<string, string>> = {
 /**
  * Handles incoming messages from the replicator.
  * Applies them to SQLite.
- * Commits the transaction once a boundary is reached, unless
- * IVM pipelines are still processing. In that case, continues
- * processing new writes until all pipelines are done and we reach a commit boundary.
+ * Commits the transaction once a boundary is reached.
  *
- * Tells IVM pipelines to process once tx boundary is reached and committed.
+ * This does not commit to SQLite until IVM pipelines are run.
+ *
+ * Future versions will:
+ * 1. Commit to SQLite first
+ * 2. Run IVM pipelines second
+ * 3. Start processing the next write while the IVM pipelines are running
+ *
+ * This requires some modification to IVM pipelines if they'll be using a `pull` model
+ * to use the DB as memory. The DB will be ahead of what the pipelines expect so we'll need
+ * to patch the return value of the pipeline with the inverse of the currently queued set of information.
+ *
+ * That seems a bit complex so, medium term, we'll likely block writes on IVM pipelines but
+ * allow IVM to run on many cores.
  */
 export class MessageProcessor {
   readonly #db: DB;
@@ -34,8 +43,9 @@ export class MessageProcessor {
   readonly #ivmContext: ZQLiteContext;
   readonly #serviceProvider: ServiceProvider;
   readonly #tableTrackers = new Map<string, TableTracker>();
+  readonly #writeToSqliteTx;
+  readonly #accumulatedDbChanges: (() => void)[] = [];
   #version: LexiVersion;
-  #inTransaction = false;
 
   constructor(
     serviceProvider: ServiceProvider,
@@ -48,63 +58,58 @@ export class MessageProcessor {
     this.#version = toLexiVersion(ivmContext.lsn);
 
     this.#setCommittedLsnStmt = this.#db.prepare(queries.setCommittedLsn);
+    this.#writeToSqliteTx = this.#db.transaction(this.#writeToSqlite);
   }
 
   processMessage(lc: LogContext, lsn: string, message: Pgoutput.Message) {
     try {
-      this.processMessageImpl(lc, lsn, message);
-    } catch (e) {
-      if (this.#inTransaction) {
-        this.#db.rollbackImperativeTransaction();
+      switch (message.tag) {
+        case 'begin':
+          this.#begin(lsn);
+          break;
+        case 'commit':
+          this.#commit(lsn);
+          break;
+        case 'relation':
+          break;
+        case 'insert':
+          this.#insert(message);
+          break;
+        case 'update':
+          this.#update(message);
+          break;
+        case 'delete':
+          this.#delete(message);
+          break;
+        case 'truncate':
+          this.#truncate(message);
+          break;
+        case 'origin':
+          lc.info?.('Ignoring ORIGIN message in replication stream', message);
+          break;
+        case 'type':
+          throw new Error(
+            `Custom types are not supported (received "${message.typeName}")`,
+          );
+        default:
+          lc.error?.(
+            `Received unexpected message of type ${message.tag}`,
+            message,
+          );
+          throw new Error(
+            `Don't know how to handle message of type ${message.tag}`,
+          );
       }
+    } catch (e) {
+      lc.error?.('Error processing message', e);
+      this.#tableTrackers.clear();
+      this.#accumulatedDbChanges.length = 0;
       throw e;
     }
   }
 
-  processMessageImpl(lc: LogContext, lsn: string, message: Pgoutput.Message) {
-    switch (message.tag) {
-      case 'begin':
-        this.#begin(lsn);
-        break;
-      case 'commit':
-        this.#commit(lsn);
-        break;
-      case 'relation':
-        break;
-      case 'insert':
-        this.#insert(message);
-        break;
-      case 'update':
-        this.#update(message);
-        break;
-      case 'delete':
-        this.#delete(message);
-        break;
-      case 'truncate':
-        this.#truncate(message);
-        break;
-      case 'origin':
-        lc.info?.('Ignoring ORIGIN message in replication stream', message);
-        break;
-      case 'type':
-        throw new Error(
-          `Custom types are not supported (received "${message.typeName}")`,
-        );
-      default:
-        lc.error?.(
-          `Received unexpected message of type ${message.tag}`,
-          message,
-        );
-        throw new Error(
-          `Don't know how to handle message of type ${message.tag}`,
-        );
-    }
-  }
-
   #begin(lsn: string) {
-    this.#inTransaction = true;
     this.#version = toLexiVersion(lsn);
-    this.#db.beginImperativeTransaction();
   }
 
   #insert(insert: Pgoutput.MessageInsert) {
@@ -125,18 +130,21 @@ export class MessageProcessor {
       postValue: row,
     });
 
-    // TODO: in the future we can look up an already prepared statement
-    const columns = Object.keys(row)
-      .map(c => `"${c}"`)
-      .join(', ');
-    const valuePlaceholders = Object.keys(row)
-      .map(c => `@${c}`)
-      .join(', ');
-    this.#db
-      .prepare(
-        `INSERT INTO "${relationName}" (${columns}) VALUES (${valuePlaceholders})`,
-      )
-      .run(row);
+    this.#accumulatedDbChanges.push(() => {
+      // TODO: in the future we can look up an already prepared statement rather
+      // than re-preparing these inserts/updates/deletes each time.
+      const columns = Object.keys(row)
+        .map(c => `"${c}"`)
+        .join(', ');
+      const valuePlaceholders = Object.keys(row)
+        .map(c => `@${c}`)
+        .join(', ');
+      this.#db
+        .prepare(
+          `INSERT INTO "${relationName}" (${columns}) VALUES (${valuePlaceholders})`,
+        )
+        .run(row);
+    });
   }
 
   #update(update: Pgoutput.MessageUpdate) {
@@ -162,21 +170,23 @@ export class MessageProcessor {
     const rowKey = oldKey ?? newKey;
     const keyConditions = getKeyConditions(rowKey);
 
-    // TODO: bring in @databases query builder (https://www.atdatabases.org/docs/sql)
-    // so we don't need to do this manual mangling.
-    // Do _not_ use their SQLite bindings, however. Just the builder.
-    // TODO: accumulate write lambdas into a queue
-    // run them all after IVM is run.
-    this.#db
-      .prepare(
-        `UPDATE "${relationName}" SET ${Object.keys(row)
-          .map(c => `"${c}" = @${c}`)
-          .join(', ')} WHERE ${keyConditions.join(' AND ')}`,
-      )
-      .run({
-        ...row,
-        ...rowKey,
-      });
+    this.#accumulatedDbChanges.push(() => {
+      // TODO: bring in @databases query builder (https://www.atdatabases.org/docs/sql)
+      // so we don't need to do this manual mangling.
+      // Do _not_ use their SQLite bindings, however. Just the builder.
+      // TODO: accumulate write lambdas into a queue
+      // run them all after IVM is run.
+      this.#db
+        .prepare(
+          `UPDATE "${relationName}" SET ${Object.keys(row)
+            .map(c => `"${c}" = @${c}`)
+            .join(', ')} WHERE ${keyConditions.join(' AND ')}`,
+        )
+        .run({
+          ...row,
+          ...rowKey,
+        });
+    });
   }
 
   #delete(del: Pgoutput.MessageDelete) {
@@ -194,32 +204,33 @@ export class MessageProcessor {
       postValue: 'none',
     } as const);
 
-    this.#db
-      .prepare(
-        `DELETE FROM "${relationName}" WHERE ${keyConditions.join(' AND ')}`,
-      )
-      .run(rowKey);
+    this.#accumulatedDbChanges.push(() => {
+      this.#db
+        .prepare(
+          `DELETE FROM "${relationName}" WHERE ${keyConditions.join(' AND ')}`,
+        )
+        .run(rowKey);
+    });
   }
 
-  #truncate(truncate: Pgoutput.MessageTruncate) {
-    for (const relation of truncate.relations) {
-      const relationName =
-        relationRenames[relation.schema]?.[relation.name] ?? relation.name;
-      this.#db.prepare(`DELETE FROM "${relationName}"`).run();
-    }
-    // VACUUM could be rather expensive. How shall we schedule this?
-    this.#db.prepare('VACUUM').run();
+  #truncate(_truncate: Pgoutput.MessageTruncate) {
+    throw new Error('Truncate currently not supported');
+    // for (const relation of truncate.relations) {
+    //   const relationName =
+    //     relationRenames[relation.schema]?.[relation.name] ?? relation.name;
+    //   this.#db.prepare(`DELETE FROM "${relationName}"`).run();
+    // }
+    // // VACUUM could be rather expensive. How shall we schedule this?
+    // this.#db.prepare('VACUUM').run();
   }
 
   #commit(lsn: string) {
     this.#setCommittedLsnStmt.run(lsn);
-    this.#inTransaction = false;
-    this.#db.commitImperativeTransaction();
 
     this.#runIvm();
+    this.#writeToSqliteTx();
     this.#ivmContext.lsn = lsn;
     this.#updateClients();
-    // this.#setIvmLsnStmt.run(lsn);
   }
 
   #runIvm() {
@@ -232,15 +243,28 @@ export class MessageProcessor {
         source.__directlyEnqueueDiffs(tableData.getDiffs());
       }
     });
+    this.#tableTrackers.clear();
   }
+
+  /**
+   * Never call this directly. Call `writeToSqliteTx` instead.
+   */
+  #writeToSqlite = () => {
+    for (const change of this.#accumulatedDbChanges) {
+      change();
+    }
+    this.#accumulatedDbChanges.length = 0;
+  };
 
   #updateClients() {
     this.#serviceProvider.mapViewSyncers(viewSyncer => {
       // Errors handled in the view syncer.
       // If a view syncer fails for a given client connection,
       // it will restart that connection.
-      // TODO: we need a way to monitor this queue such that IVM isn't
+      // TODO: we need a way to monitor this queue such that IVM runs are not
       // generating more events than we can flush to clients.
+      // TODO: if we have a slow client whose connection buffer is filling...
+      //  should we drop that client? Slow everyone for that client?
       void viewSyncer.newQueryResultsReady();
     });
   }

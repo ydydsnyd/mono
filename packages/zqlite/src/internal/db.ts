@@ -4,18 +4,18 @@ export class DB {
   readonly transaction: Database.Database['transaction'];
   readonly prepare: Database.Database['prepare'];
   readonly #db: Database.Database;
-  readonly #beginStmt: Database.Statement;
-  readonly #commitStmt: Database.Statement;
-  readonly #rollbackStmt: Database.Statement;
+  // readonly #beginStmt: Database.Statement;
+  // readonly #commitStmt: Database.Statement;
+  // readonly #rollbackStmt: Database.Statement;
 
   constructor(sqliteDbPath: string) {
     this.#db = DB.open(sqliteDbPath);
     this.transaction = this.#db.transaction.bind(this.#db);
     this.prepare = this.#db.prepare.bind(this.#db);
 
-    this.#beginStmt = this.#db.prepare('BEGIN');
-    this.#commitStmt = this.#db.prepare('COMMIT');
-    this.#rollbackStmt = this.#db.prepare('ROLLBACK');
+    // this.#beginStmt = this.#db.prepare('BEGIN');
+    // this.#commitStmt = this.#db.prepare('COMMIT');
+    // this.#rollbackStmt = this.#db.prepare('ROLLBACK');
   }
 
   get db(): Database.Database {
@@ -42,18 +42,6 @@ export class DB {
     db.pragma('synchronous = NORMAL');
     DB.ensureSchema(db);
     return db;
-  }
-
-  beginImperativeTransaction() {
-    this.#beginStmt.run();
-  }
-
-  commitImperativeTransaction() {
-    this.#commitStmt.run();
-  }
-
-  rollbackImperativeTransaction() {
-    this.#rollbackStmt.run();
   }
 }
 
