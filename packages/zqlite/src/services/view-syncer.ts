@@ -3,7 +3,7 @@ import type {LogContext} from '@rocicorp/logger';
 import type {InitConnectionBody} from 'zero-protocol/src/connect.js';
 import type {QueriesPatch} from 'zero-protocol/src/queries-patch.js';
 import type {AST} from 'zql/src/zql/ast/ast.js';
-import type {PipelineEntity} from 'zql/src/zql/ivm/types.js';
+import {isJoinResult, PipelineEntity} from 'zql/src/zql/ivm/types.js';
 import type {TreeView} from 'zql/src/zql/ivm/view/tree-view.js';
 import {must} from 'shared/src/must.js';
 import {
@@ -21,6 +21,9 @@ import {ClientHandler} from './duped/client-handler.js';
 import {Subscription} from './duped/subscription.js';
 import type {Downstream} from 'zero-protocol/src/down.js';
 import type {LmidTracker} from './lmid-tracker.js';
+import {CustomKeyMap} from 'shared/src/custom-key-map.js';
+import {rowIDHash} from './duped/row-key.js';
+import type {JSONObject, JSONValue} from 'shared/src/json.js';
 
 export type SyncContext = {
   readonly clientID: string;
@@ -208,19 +211,14 @@ export class ViewSyncer {
     //
     // TODO: deal with our row format not matching
     // expectations of client-handler
+    // deleteUnreferencedColumnsAndRows
+    // query ids better map to columns..
   }
 
   async #updateCvrAndClientsWithFirstQueryRuns(
     queryResults: Map<string, TreeView<PipelineEntity>>,
   ) {
     const lc = this.#lc;
-    // - get the right cvr version. This is related to `connection` and the `version` of that connection.
-    //   minimum.
-    // - pull all the component rows from `queryResults`
-    // - commit to cvr
-    // - flush to clients
-    // this function should return what would need to be flushed / poked out to clients...
-
     const minCvrVersion = [...this.#clients.values()]
       .filter((c): c is ClientHandler => c !== null)
       .map(c => c.version())
@@ -246,12 +244,14 @@ export class ViewSyncer {
       c.startPoke(cvrVersion),
     );
 
-    const queriesDone = [...queryResults.values()].map(async view => {
-      const rows = parseFirstRunResults(view);
-      const patches = await updater.received(lc, rows);
+    const queriesDone = [...queryResults.entries()].map(
+      async ([queryId, view]) => {
+        const rows = parseFirstRunResults(queryId, view);
+        const patches = await updater.received(lc, rows);
 
-      patches.forEach(patch => pokers.forEach(p => p.addPatch(patch)));
-    });
+        patches.forEach(patch => pokers.forEach(p => p.addPatch(patch)));
+      },
+    );
 
     pokers.forEach(p => p.setLmids(this.#lmidTracker.getLmids()));
 
@@ -273,12 +273,88 @@ export class ViewSyncer {
 }
 
 function parseFirstRunResults(
+  queryId: string,
   view: TreeView<PipelineEntity>,
 ): Map<RowID, ParsedRow> {
-  // source name
-  // schema
-  // ...
-  return new Map();
+  const ret = new CustomKeyMap<RowID, ParsedRow>(rowIDHash);
+  for (const row of view.data.keys()) {
+    // dive into the row to pull out component parts if needed
+    if (isJoinResult(row)) {
+      for (const [k, v] of Object.entries(row)) {
+        if (k === 'id') {
+          continue;
+        }
+        // TODO: handle aliases in join. This assumes k = table name
+        parseSingleRow(queryId, ret, k, v as unknown as PipelineEntity);
+      }
+    } else {
+      parseSingleRow(queryId, ret, view.name, row);
+    }
+  }
+  return ret;
 }
 
-// TODO: lmid stuff over replication log...
+function parseSingleRow(
+  queryId: string,
+  ret: CustomKeyMap<RowID, ParsedRow>,
+  table: string,
+  row: PipelineEntity,
+) {
+  const sourceRows = (row as TODO).__source_rows;
+  if (sourceRows !== undefined) {
+    const source = (row as TODO).__source as string;
+    for (const row of sourceRows) {
+      const [rowId, parsedRow] = parseSingleRowNoAggregates(
+        queryId,
+        source,
+        row,
+      );
+      const existing = ret.get(rowId);
+      if (existing) {
+        existing.record.queriedColumns ??= {};
+        existing.record.queriedColumns[queryId] =
+          parsedRow.record.queriedColumns?.[queryId] ?? [];
+      } else {
+        ret.set(rowId, parsedRow);
+      }
+    }
+  } else {
+    const [rowId, parsedRow] = parseSingleRowNoAggregates(queryId, table, row);
+    const existing = ret.get(rowId);
+    if (existing) {
+      existing.record.queriedColumns ??= {};
+      existing.record.queriedColumns[queryId] =
+        parsedRow.record.queriedColumns?.[queryId] ?? [];
+    } else {
+      ret.set(rowId, parsedRow);
+    }
+  }
+}
+
+function parseSingleRowNoAggregates(
+  queryId: string,
+  table: string,
+  row: PipelineEntity,
+): [RowID, ParsedRow] {
+  const rowId: RowID = {
+    schema: 'public',
+    table,
+    rowKey: {
+      id: row.id as JSONValue,
+    },
+  };
+  return [
+    rowId,
+    {
+      record: {
+        id: rowId,
+        rowVersion: row._0_version as string,
+        queriedColumns: {[queryId]: Object.keys(row)},
+      },
+      contents: row as JSONObject,
+    },
+  ];
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type TODO = any;

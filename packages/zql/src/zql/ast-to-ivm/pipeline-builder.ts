@@ -212,6 +212,7 @@ function applyGroupBy<T extends PipelineEntity>(
       const first = values[Symbol.iterator]().next().value;
       const ret: Record<string, unknown> = {...first};
       let contributors: PipelineEntity[] | undefined;
+      let contributorSource: string | undefined;
       if (explode) {
         contributors = [];
       }
@@ -219,6 +220,7 @@ function applyGroupBy<T extends PipelineEntity>(
       for (let i = 0; i < aggregations.length; i++) {
         const aggregation = aggregations[i];
         const qualifiedColumn = qualifiedColumns[i];
+        contributorSource = aggregation.field?.[0];
         switch (aggregation.aggregate) {
           case 'count': {
             let count = 0;
@@ -310,6 +312,7 @@ function applyGroupBy<T extends PipelineEntity>(
         }
       }
       if (contributors) {
+        ret.__source = contributorSource;
         ret.__source_rows = contributors;
       }
       return ret;
