@@ -130,6 +130,14 @@ export class MessageProcessor {
       postValue: row,
     });
 
+    if (relationName === '_zero_clients') {
+      this.#updateLmidTracker(
+        insert.new.clientGroupID,
+        insert.new.clientID,
+        insert.new.lastMutationID,
+      );
+    }
+
     this.#accumulatedDbChanges.push(() => {
       // TODO: in the future we can look up an already prepared statement rather
       // than re-preparing these inserts/updates/deletes each time.
@@ -159,6 +167,14 @@ export class MessageProcessor {
     const newKey = Object.fromEntries(
       update.relation.keyColumns.map(col => [col, update.new[col]]),
     );
+
+    if (relationName === '_zero_clients') {
+      this.#updateLmidTracker(
+        update.new.clientGroupID,
+        update.new.clientID,
+        update.new.lastMutationID,
+      );
+    }
 
     this.#getTableTracker(update.relation).add({
       preRowKey: oldKey,
@@ -222,6 +238,21 @@ export class MessageProcessor {
     // }
     // // VACUUM could be rather expensive. How shall we schedule this?
     // this.#db.prepare('VACUUM').run();
+  }
+
+  /**
+   * Updates the cached in-memory LMIDs. These are used when sending down
+   * new query results so the client can understand that its mutations
+   * have been incorporated into the database.
+   */
+  #updateLmidTracker(
+    clientGroupID: string,
+    clientID: string,
+    lastMutationID: string,
+  ) {
+    this.#serviceProvider
+      .maybeGetLmidTracker(clientGroupID)
+      ?.setLmid(clientID, lastMutationID);
   }
 
   #commit(lsn: string) {

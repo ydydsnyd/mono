@@ -1,5 +1,4 @@
 import type Database from 'better-sqlite3';
-import type {LexiVersion} from 'zqlite-zero-cache-shared/src/lexi-version.js';
 import type {ZQLiteContext} from '../context.js';
 
 let lmidStatement: Database.Statement | undefined;
@@ -11,7 +10,7 @@ let lmidStatement: Database.Statement | undefined;
  * The replicator calls the LmidTracker with new LMIDs as they arrive.
  */
 export class LmidTracker {
-  readonly #lmids = new Map<string, LexiVersion>();
+  readonly #lmids: Record<string, number> = {};
 
   constructor(clientGroupId: string, context: ZQLiteContext) {
     // read out the lmids for the current client group.
@@ -22,15 +21,19 @@ export class LmidTracker {
     }
 
     for (const row of lmidStatement.all(clientGroupId)) {
-      this.#lmids.set(row.clientID, row.lastMutationID);
+      this.#lmids[row.clientID] = row.lastMutationID;
     }
   }
 
-  getLmid(clientId: string) {
-    return this.#lmids.get(clientId);
+  getLmids() {
+    return this.#lmids;
   }
 
-  setLmid(clientId: string, lmid: LexiVersion) {
-    this.#lmids.set(clientId, lmid);
+  getLmid(clientId: string) {
+    return this.#lmids[clientId];
+  }
+
+  setLmid(clientId: string, lmid: number) {
+    this.#lmids[clientId] = lmid;
   }
 }

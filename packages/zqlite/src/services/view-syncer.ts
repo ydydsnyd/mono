@@ -249,8 +249,12 @@ export class ViewSyncer {
     const queriesDone = [...queryResults.values()].map(async view => {
       const rows = parseFirstRunResults(view);
       const patches = await updater.received(lc, rows);
+
       patches.forEach(patch => pokers.forEach(p => p.addPatch(patch)));
     });
+
+    pokers.forEach(p => p.setLmids(this.#lmidTracker.getLmids()));
+
     await Promise.all(queriesDone);
 
     for (const patch of await updater.deleteUnreferencedColumnsAndRows(lc)) {

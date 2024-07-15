@@ -74,7 +74,9 @@ export class ServiceProvider {
     }
   }
 
-  getLmidTracker() {}
+  maybeGetLmidTracker(clientGroupId: string) {
+    return this.#lmidTracker.get(clientGroupId);
+  }
 
   mapViewSyncers<R>(cb: (viewSyncer: ViewSyncer) => R) {
     const ret: R[] = [];

@@ -4,7 +4,6 @@ import {
   assertJSONValue,
   JSONObject as SafeJSONObject,
 } from 'shared/src/json.js';
-import * as v from 'shared/src/valita.js';
 import type {Downstream, EntitiesPatchOp, PokePartBody} from 'zero-protocol';
 import type {AST} from 'zql/src/zql/ast/ast.js';
 import type {JSONObject, JSONValue} from './bigint-json.js';
@@ -68,11 +67,13 @@ export type PatchToVersion = {
 
 export interface PokeHandler {
   addPatch(patch: PatchToVersion): void;
+  setLmids(lmids: Record<string, number>): void;
   end(): void;
 }
 
 const NOOP: PokeHandler = {
   addPatch: () => {},
+  setLmids: () => {},
   end: () => {},
 };
 
@@ -170,11 +171,7 @@ export class ClientHandler {
           break;
         }
         case 'row':
-          if (patch.id.schema === 'zero' && patch.id.table === 'clients') {
-            this.#updateLMIDs((body.lastMutationIDChanges ??= {}), patch);
-          } else {
-            (body.entitiesPatch ??= []).push(makeEntityPatch(patch));
-          }
+          (body.entitiesPatch ??= []).push(makeEntityPatch(patch));
           break;
         default:
           patch satisfies never;
@@ -194,6 +191,14 @@ export class ClientHandler {
         }
       },
 
+      setLmids(lmids: Record<string, number>) {
+        body = ensureBody();
+        body.lastMutationIDChanges = ensureSafeJSON(lmids) as Record<
+          string,
+          number
+        >;
+      },
+
       end: () => {
         flushBody();
         this.#pokes.push(['pokeEnd', {pokeID}]);
@@ -201,36 +206,7 @@ export class ClientHandler {
       },
     };
   }
-
-  #updateLMIDs(lmids: Record<string, number>, patch: RowPatch) {
-    if (patch.op === 'put' || patch.op === 'merge') {
-      const row = ensureSafeJSON(patch.contents);
-      const {clientGroupID, clientID, lastMutationID} = v.parse(
-        row,
-        lmidRowSchema,
-      );
-      if (clientGroupID !== this.#clientGroupID) {
-        this.#lc.error?.(
-          `Received zero.clients row for wrong clientGroupID. Ignoring.`,
-          clientGroupID,
-        );
-      } else {
-        lmids[clientID] = lastMutationID;
-      }
-    } else {
-      // The 'constrain' and 'del' ops for zero.clients can be ignored.
-      patch.op satisfies 'constrain' | 'del';
-    }
-  }
 }
-
-// Note: The zero.clients table is set up in replicator/initial-sync.ts.
-const lmidRowSchema = v.object({
-  clientGroupID: v.string(),
-  clientID: v.string(),
-  lastMutationID: v.number(), // Actually returned as a bigint, but converted by ensureSafeJSON().
-  userID: v.string().optional(),
-});
 
 function makeEntityPatch(patch: RowPatch): EntitiesPatchOp {
   const {
