@@ -103,7 +103,6 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
     needsUpdate: boolean,
     reply?: Reply | undefined,
   ): [boolean, BTree<T, undefined>] {
-    console.log('SINKING....');
     const process = (value: T, mult: number) => {
       let newData: BTree<T, undefined>;
       if (mult > 0) {
@@ -128,10 +127,8 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
       !orderingsAreCompatible(reply.order, this.#order)
     ) {
       iterable = c;
-      console.log('GOT UNLIMITED ITERATOR ====');
     } else {
       // We only get the limited iterator if we're receiving historical data.
-      console.log('GOT LIMITED ITERATOR ====');
       iterable = this.#getLimitedIterable(c, reply, this.#limit);
     }
 
@@ -146,11 +143,8 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
         }
       }
     } finally {
-      console.log('FORCED RETURN !!!!!');
       iterator.return?.();
     }
-
-    console.log('DONE SINKING ====');
 
     return [needsUpdate, data];
   }
@@ -187,7 +181,6 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
           return next;
         },
         return() {
-          console.log('RETURNING ITERATOR!!! ');
           if (iterator.return) {
             iterator.return();
           }
@@ -260,7 +253,6 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
         return next;
       },
       return() {
-        console.log('RETURNING ITERATOR222!!! ');
         if (iterator.return) {
           iterator.return();
         }

@@ -65,7 +65,7 @@ export class Replicator {
     this.#replicationService.on(
       'data',
       (lsn: string, message: Pgoutput.Message) => {
-        lc.debug?.('DATA:', lsn, message);
+        lc.debug?.('DATA:', lsn);
         // TODO: if `processMessage` fails, kill the whole process.
         messageProcessor.processMessage(lc, lsn, message);
       },

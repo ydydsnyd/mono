@@ -135,7 +135,7 @@ describe('sorting and limiting with different query operations', async () => {
           .sort(
             makeComparator([
               [['track', 'title'], 'asc'],
-              [['tracl', 'id'], 'asc'],
+              [['track', 'id'], 'asc'],
             ]),
           )
           .slice(0, 3),

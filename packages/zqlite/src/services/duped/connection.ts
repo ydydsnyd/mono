@@ -184,7 +184,15 @@ export class Connection {
           lc.error?.('TODO: implement deleteClients');
           break;
         case 'initConnection': {
-          await viewSyncer.initConnection(this.#syncContext, msg[1]);
+          this.#outboundStream = await viewSyncer.initConnection(
+            this.#syncContext,
+            msg[1],
+          );
+          if (this.#closed) {
+            this.#outboundStream.cancel();
+          } else {
+            void this.#proxyOutbound(this.#outboundStream);
+          }
           break;
         }
         default:
@@ -194,6 +202,18 @@ export class Connection {
       this.#closeWithThrown(e);
     }
   };
+
+  async #proxyOutbound(outboundStream: CancelableAsyncIterable<Downstream>) {
+    try {
+      for await (const outMsg of outboundStream) {
+        this.send(outMsg);
+      }
+      this.#lc.info?.('downstream closed by ViewSyncer');
+      this.close();
+    } catch (e) {
+      this.#closeWithThrown(e);
+    }
+  }
 
   #handleClose = (e: CloseEvent) => {
     const {code, reason, wasClean} = e;

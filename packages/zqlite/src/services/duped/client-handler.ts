@@ -197,6 +197,7 @@ export class ClientHandler {
       },
 
       end: () => {
+        console.log('END!!! AND FLUSH');
         flushBody();
         this.#pokes.push(['pokeEnd', {pokeID}]);
         this.#baseVersion = finalVersion;

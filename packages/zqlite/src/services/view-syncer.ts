@@ -120,6 +120,8 @@ export class ViewSyncer {
 
       await this.#updateCvrAndClientsWithFirstQueryRuns(newQueryResults);
     });
+
+    return downstream;
   }
 
   async changeDesiredQueries(syncContext: SyncContext, patch: QueriesPatch) {
@@ -202,6 +204,10 @@ export class ViewSyncer {
     // 7. Commit the changes and update the CVR snapshot.
     // 8. Signal clients to commit.
     // don't forget LMID throw-in
+    //
+    // Can we merge remove and add?
+    // Or just don't worry about it and see what
+    // happens?
   }
 
   async #updateCvrAndClientsWithFirstQueryRuns(
@@ -229,15 +235,17 @@ export class ViewSyncer {
       minCvrVersion,
     );
 
-    const pokers = [...this.#clients.values()].map(c =>
-      c.startPoke(cvrVersion),
-    );
+    const pokers = [...this.#clients.values()].map(c => {
+      console.log('START POKE!!!;');
+      return c.startPoke(cvrVersion);
+    });
 
     const queriesDone = [...queryResults.entries()].map(
       async ([queryId, view]) => {
         const rows = parseFirstRunResults(queryId, view);
         const patches = await updater.received(lc, rows);
 
+        console.log('adding patches', patches);
         patches.forEach(patch => pokers.forEach(p => p.addPatch(patch)));
       },
     );
@@ -257,6 +265,7 @@ export class ViewSyncer {
     this.#cvr = await updater.flush(lc);
 
     // Signal clients to commit.
+    console.log('END POKE!');
     pokers.forEach(poker => poker.end());
   }
 }

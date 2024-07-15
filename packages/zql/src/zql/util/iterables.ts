@@ -60,7 +60,6 @@ export function genCached<T>(s: Iterable<T>): Iterable<T> {
         }
       } finally {
         if (!lastIteratorResult?.done) {
-          console.log('returning inner iterator from GEN CACHED');
           innerIterator.return?.();
         }
       }
