@@ -703,6 +703,8 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
       });
     }
 
+    // We can't do this. We need to know how many times a row is referenced not just by what queries
+    // it is referenced by. A query can reference the same row many times.
     for (const [rowID, row] of effectiveDeletes) {
       const {
         record: {queriedColumns},

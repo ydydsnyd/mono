@@ -150,7 +150,6 @@ export class TableSource<T extends PipelineEntity> implements Source<T> {
     const stmt = this.#historyStatements.get(sql);
 
     try {
-      console.log('ITERATING: ', sql);
       this.#stream.newDifference(
         this.#materialite.getVersion(),
         // cached since multiple downstreams may pull on the same iterator.
