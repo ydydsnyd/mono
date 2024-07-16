@@ -178,11 +178,16 @@ export async function copy(
   lc.info?.('Schema copied');
 
   let confirmedLsn = '0/00000000';
+  await sql`CREATE SCHEMA IF NOT EXISTS zero;`;
+  await sql`CREATE TABLE IF NOT EXISTS zero.clients (
+      "clientGroupID"  TEXT    NOT NULL,
+      "clientID"       TEXT    NOT NULL,
+      "lastMutationID" BIGINT,
+      "userID"         TEXT,
+      PRIMARY KEY("clientGroupID", "clientID")
+    );`;
   await sql.begin('ISOLATION LEVEL REPEATABLE READ', async sql => {
     await copyDataToSQLite(lc, sql, sqliteDb);
-
-    // Create the `zero` schema if not exists
-    // Create the `zero.clients` table if not exists
 
     const slotExists =
       await sql`SELECT 1 FROM pg_replication_slots WHERE slot_name = ${SLOT_NAME};`;
