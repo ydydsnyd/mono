@@ -61,4 +61,11 @@ CREATE INDEX issue_created_idx ON issue (created);
 CREATE INDEX issue_priority_modified_idx ON issue (priority,modified);
 CREATE INDEX issue_status_modified_idx ON issue (status,modified);
 CREATE INDEX comment_issueid_idx ON "comment" ("issueID");
+
+ALTER TABLE member REPLICA IDENTITY FULL;
+ALTER TABLE issue REPLICA IDENTITY FULL;
+ALTER TABLE comment REPLICA IDENTITY FULL;
+ALTER TABLE label REPLICA IDENTITY FULL;
+ALTER TABLE "issueLabel" REPLICA IDENTITY FULL;
+
 VACUUM;
