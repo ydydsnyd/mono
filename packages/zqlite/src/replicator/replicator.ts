@@ -39,9 +39,6 @@ export class Replicator {
 
   async start(serviceProvider: ServiceProvider, lc: LogContext) {
     try {
-      // TODO: the db will alrdy be open? Since we're sharing the same IVM context
-      // between `Replicator` and `PipelineManager`
-      // So replicator needs to check another way? Or Replicator can return the IVM context!
       await fs.promises.access(this.#sqliteDbPath);
     } catch (e) {
       lc.info?.('Starting initial sync to SQLite');

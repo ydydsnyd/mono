@@ -1,5 +1,4 @@
 DROP TABLE IF EXISTS "member", "issue", "comment", "label", "issueLabel" CASCADE;
-VACUUM;
 CREATE TABLE member (
     "id" VARCHAR PRIMARY KEY,
     "name" VARCHAR NOT NULL
@@ -55,3 +54,11 @@ COPY "comment" FROM PROGRAM 'gzip -cd /docker-entrypoint-initdb.d/comments_3.csv
 COPY "comment" FROM PROGRAM 'gzip -cd /docker-entrypoint-initdb.d/comments_4.csv.gz' WITH CSV HEADER;
 COPY "comment" FROM PROGRAM 'gzip -cd /docker-entrypoint-initdb.d/comments_5.csv.gz' WITH CSV HEADER;
 COPY "comment" FROM PROGRAM 'gzip -cd /docker-entrypoint-initdb.d/comments_6.csv.gz' WITH CSV HEADER;
+
+CREATE INDEX issuelabel_issueid_idx ON "issueLabel" ("issueID");
+CREATE INDEX issue_modified_idx ON issue (modified);
+CREATE INDEX issue_created_idx ON issue (created);
+CREATE INDEX issue_priority_modified_idx ON issue (priority,modified);
+CREATE INDEX issue_status_modified_idx ON issue (status,modified);
+CREATE INDEX comment_issueid_idx ON "comment" ("issueID");
+VACUUM;
