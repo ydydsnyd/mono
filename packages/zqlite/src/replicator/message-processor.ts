@@ -9,7 +9,7 @@ import {assert} from 'shared/src/asserts.js';
 import type {ServiceProvider} from '../services/service-provider.js';
 import {TableTracker} from '../services/duped/table-tracker.js';
 import type {ZQLiteContext} from '../context.js';
-import type {RowKeyType} from '../services/duped/row-key.js';
+import type {RowKeyType, RowValue} from '../services/duped/row-key.js';
 import {must} from '../../../shared/src/must.js';
 
 const relationRenames: Record<string, Record<string, string>> = {
@@ -18,6 +18,9 @@ const relationRenames: Record<string, Record<string, string>> = {
   },
 };
 
+// TODO: temp hack to deal with `REPLICA IDENTITY FULL` making all things key columns.
+// That should be fine but for some reason it isn't working.
+// const keyColumns = ['id'];
 /**
  * Handles incoming messages from the replicator.
  * Applies them to SQLite.
@@ -116,19 +119,12 @@ export class MessageProcessor {
     const relationName =
       relationRenames[insert.relation.schema]?.[insert.relation.name] ??
       insert.relation.name;
-    const row = {
-      ...insert.new,
-      [ZERO_VERSION_COLUMN_NAME]: this.#version,
-    };
+    let row: RowValue;
+    const keyColumns =
+      relationName === '_zero_clients' ? ['clientGroupID', 'clientID'] : ['id'];
     const key = Object.fromEntries(
-      insert.relation.keyColumns.map(col => [col, insert.new[col]]),
+      keyColumns.map(col => [col, insert.new[col]]),
     );
-
-    this.#getTableTracker(insert.relation).add({
-      preValue: 'none',
-      postRowKey: key,
-      postValue: row,
-    });
 
     if (relationName === '_zero_clients') {
       this.#updateLmidTracker(
@@ -136,6 +132,17 @@ export class MessageProcessor {
         insert.new.clientID,
         insert.new.lastMutationID,
       );
+      row = insert.new;
+    } else {
+      row = {
+        ...insert.new,
+        [ZERO_VERSION_COLUMN_NAME]: this.#version,
+      };
+      this.#getTableTracker(insert.relation).add({
+        preValue: 'none',
+        postRowKey: key,
+        postValue: row,
+      });
     }
 
     this.#accumulatedDbChanges.push(() => {
@@ -159,13 +166,16 @@ export class MessageProcessor {
     const relationName =
       relationRenames[update.relation.schema]?.[update.relation.name] ??
       update.relation.name;
-    const row = {
-      ...update.new,
-      [ZERO_VERSION_COLUMN_NAME]: this.#version,
-    };
-    const oldKey = update.key;
+    let row: RowValue;
+    const keyColumns =
+      relationName === '_zero_clients' ? ['clientGroupID', 'clientID'] : ['id'];
+    const oldKey =
+      update.key &&
+      Object.fromEntries(keyColumns.map(col => [col, must(update.key)[col]]));
+    console.log('UPDATE -=====');
+    console.log(update);
     const newKey = Object.fromEntries(
-      update.relation.keyColumns.map(col => [col, update.new[col]]),
+      keyColumns.map(col => [col, update.new[col]]),
     );
 
     if (relationName === '_zero_clients') {
@@ -174,14 +184,20 @@ export class MessageProcessor {
         update.new.clientID,
         update.new.lastMutationID,
       );
-    }
+      row = update.new;
+    } else {
+      row = {
+        ...update.new,
+        [ZERO_VERSION_COLUMN_NAME]: this.#version,
+      };
 
-    this.#getTableTracker(update.relation).add({
-      preRowKey: oldKey,
-      preValue: must(update.old),
-      postRowKey: newKey,
-      postValue: row,
-    } as const);
+      this.#getTableTracker(update.relation).add({
+        preRowKey: oldKey,
+        preValue: must(update.old),
+        postRowKey: newKey,
+        postValue: row,
+      } as const);
+    }
 
     const rowKey = oldKey ?? newKey;
     const keyConditions = getKeyConditions(rowKey);
@@ -192,16 +208,14 @@ export class MessageProcessor {
       // Do _not_ use their SQLite bindings, however. Just the builder.
       // TODO: accumulate write lambdas into a queue
       // run them all after IVM is run.
-      this.#db
-        .prepare(
-          `UPDATE "${relationName}" SET ${Object.keys(row)
-            .map(c => `"${c}" = @${c}`)
-            .join(', ')} WHERE ${keyConditions.join(' AND ')}`,
-        )
-        .run({
-          ...row,
-          ...rowKey,
-        });
+      const sql = `UPDATE "${relationName}" SET ${Object.keys(row)
+        .map(c => `"${c}" = @${c}`)
+        .join(', ')} WHERE ${keyConditions.join(' AND ')}`;
+      console.log('RUNNING UPDATE:', sql, row, rowKey);
+      this.#db.prepare(sql).run({
+        ...row,
+        ...rowKey,
+      });
     });
   }
 
@@ -270,6 +284,7 @@ export class MessageProcessor {
     // they're running.
     this.#ivmContext.materialite.tx(() => {
       for (const [name, tableData] of this.#tableTrackers) {
+        console.log('running IVM for source: ', name);
         const source = this.#ivmContext.getSource(name);
         source.__directlyEnqueueDiffs(tableData.getDiffs());
       }
@@ -281,9 +296,11 @@ export class MessageProcessor {
    * Never call this directly. Call `writeToSqliteTx` instead.
    */
   #writeToSqlite = () => {
+    console.log('writing to sqlite');
     for (const change of this.#accumulatedDbChanges) {
       change();
     }
+    console.log('done writing to sqlite');
     this.#accumulatedDbChanges.length = 0;
   };
 

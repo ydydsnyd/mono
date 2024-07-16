@@ -222,6 +222,9 @@ export function conditionsAndSortToSQL(
       .map(c => {
         if (c.op === 'IN') {
           return `${c.selector[1]} ${c.op} (SELECT value FROM json_each(?))`;
+        } else if (c.op === 'ILIKE') {
+          // The default configuration of SQLite only supports case-insensitive comparisons of ASCII characters
+          return `${c.selector[1]} LIKE ?`;
         }
         return `${c.selector[1]} ${c.op} ?`;
       })
