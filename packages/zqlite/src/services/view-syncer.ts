@@ -269,6 +269,20 @@ export class ViewSyncer {
         patches.forEach(patch => pokers.forEach(p => p.addPatch(patch)));
       },
     );
+
+    await Promise.all(queriesDone);
+    pokers.forEach(p => p.setLmids(this.#lmidTracker.getLmids()));
+
+    for (const patch of updater.computeDeleteDiffs()) {
+      pokers.forEach(p => p.addPatch(patch));
+    }
+    for (const patch of await updater.generateConfigPatches(lc)) {
+      pokers.forEach(poker => poker.addPatch(patch));
+    }
+
+    this.#cvr = await updater.flush(lc);
+    // Signal clients to commit.
+    pokers.forEach(poker => poker.end());
   }
 
   async #updateCvrAndClientsWithFirstQueryRuns(
@@ -308,9 +322,8 @@ export class ViewSyncer {
       },
     );
 
-    pokers.forEach(p => p.setLmids(this.#lmidTracker.getLmids()));
-
     await Promise.all(queriesDone);
+    pokers.forEach(p => p.setLmids(this.#lmidTracker.getLmids()));
 
     for (const patch of await updater.deleteUnreferencedColumnsAndRows(lc)) {
       pokers.forEach(p => p.addPatch(patch));
@@ -343,23 +356,54 @@ function parseFirstRunResults(
           continue;
         }
         // TODO: handle aliases in join. This assumes k = table name
-        parseSingleRow(queryId, ret, k, v as unknown as PipelineEntity);
+        const parsedRows = parseSingleRow(
+          queryId,
+          k,
+          v as unknown as PipelineEntity,
+        );
       }
     } else {
-      parseSingleRow(queryId, ret, view.name, row);
+      const parsedRows = parseSingleRow(queryId, view.name, row);
     }
   }
   return ret;
 }
 
-function parseSingleRow(
+function parseDiffResults(
   queryId: string,
-  ret: CustomKeyMap<RowID, ParsedRow>,
-  table: string,
-  row: PipelineEntity,
-) {
+  view: TreeView<PipelineEntity>,
+): [ParsedRow, number] {
+  const ret: [ParsedRow, number][] = [];
+  for (const diff of view.diffs) {
+    const [row, mult] = diff;
+    // dive into the row to pull out component parts if needed
+    if (isJoinResult(row)) {
+      for (const [k, v] of Object.entries(row)) {
+        if (k === 'id') {
+          continue;
+        }
+        if (v === undefined) {
+          continue;
+        }
+        // TODO: handle aliases in join. This assumes k = table name
+        // Unclear how to deal with the retraction of component rows...
+        // Does it just correctly fall out of everything?
+        const parsedRows = parseSingleRow(
+          queryId,
+          k,
+          v as unknown as PipelineEntity,
+        );
+      }
+    } else {
+      const parsedRows = parseSingleRow(queryId, view.name, row);
+    }
+  }
+}
+
+function parseSingleRow(queryId: string, table: string, row: PipelineEntity) {
+  const ret: ParsedRow[] = [];
   if (row.id === undefined) {
-    return;
+    return [];
   }
 
   // THIS IS WRONG. We can have many aggregations on a single row!
@@ -368,30 +412,12 @@ function parseSingleRow(
   if (sourceRows !== undefined) {
     const source = (row as TODO).__source as string;
     for (const row of sourceRows) {
-      const [rowId, parsedRow] = parseSingleRowNoAggregates(
-        queryId,
-        source,
-        row,
-      );
-      const existing = ret.get(rowId);
-      if (existing) {
-        existing.record.queriedColumns ??= {};
-        existing.record.queriedColumns[queryId] =
-          parsedRow.record.queriedColumns?.[queryId] ?? [];
-      } else {
-        ret.set(rowId, parsedRow);
-      }
+      const [_, parsedRow] = parseSingleRowNoAggregates(queryId, source, row);
+      ret.push(parsedRow);
     }
   }
-  const [rowId, parsedRow] = parseSingleRowNoAggregates(queryId, table, row);
-  const existing = ret.get(rowId);
-  if (existing) {
-    existing.record.queriedColumns ??= {};
-    existing.record.queriedColumns[queryId] =
-      parsedRow.record.queriedColumns?.[queryId] ?? [];
-  } else {
-    ret.set(rowId, parsedRow);
-  }
+  const [_, parsedRow] = parseSingleRowNoAggregates(queryId, table, row);
+  ret.push(parsedRow);
 }
 
 function parseSingleRowNoAggregates(

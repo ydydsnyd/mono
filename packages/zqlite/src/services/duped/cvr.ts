@@ -7,7 +7,6 @@ import {difference, intersection, union} from 'shared/src/set-utils.js';
 import {rowIDHash} from 'zero-cache/src/types/row-key.js';
 import type {AST} from 'zql/src/zql/ast/ast.js';
 import type {LexiVersion} from 'zqlite-zero-cache-shared/src/lexi-version.js';
-import {must} from 'shared/src/must.js';
 import type {CVRStore} from './cvr-store.js';
 import {
   ClientQueryRecord,
@@ -357,6 +356,9 @@ type QueriedColumns = Record<string, string[]>;
 export class CVRQueryDrivenUpdater extends CVRUpdater {
   readonly #removedOrExecutedQueryIDs = new Set<string>();
   readonly #receivedRows = new CustomKeyMap<RowID, QueriedColumns>(rowIDHash);
+  readonly #receivedDeletes = new CustomKeyMap<RowID, QueriedColumns>(
+    rowIDHash,
+  );
   readonly #newConfigPatches: MetadataPatch[] = [];
   #existingRows: Promise<RowRecord[]> | undefined;
   #catchupRowPatches: Promise<[RowPatch, CVRVersion][]> | undefined;
@@ -603,8 +605,6 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
     const existingRows: Map<RowID, RowRecord> =
       await this._cvrStore.getMultipleRowEntries(keys);
 
-    const pendingDeletes = new CustomKeyMap<RowID, QueriedColumns>(rowIDHash);
-
     /**
      * - Remove removals that are later replaced by puts.
      * - Track `receivedDeletes` to see if `queriedColumns` ever goes to 0
@@ -629,70 +629,122 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
      * Then `receivedDeletes` should be applied as patches for each entry where `QueriedColumns` is empty.
      */
 
+    // 1. First pass: remove no-op removals (removals with add after)
+    // 2. Second pass: remove no-op adds (adds with removals after)
+
+    const effectivePuts = new CustomKeyMap<RowID, ParsedRow>(rowIDHash);
+    const effectiveDeletes = new CustomKeyMap<RowID, ParsedRow>(rowIDHash);
+
+    // In our IVM implementation, diffs are currently in modification order.
+    // This means a delete after a put means the row is deleted.
+    // A put after a delete means the row exists.
+    // Note: this code is assuming a mult of `1` always. Not to be carried forward into the production release.
     for (const [row, mult] of diffs) {
+      if (mult > 0) {
+        effectivePuts.set(row.record.id, row);
+        effectiveDeletes.delete(row.record.id);
+      } else if (mult < 0) {
+        effectiveDeletes.set(row.record.id, row);
+        effectivePuts.delete(row.record.id);
+      }
+    }
+
+    for (const [rowID, row] of effectivePuts) {
       const {
         contents,
         record: {id, rowVersion, queriedColumns},
       } = row;
-      const existing = must(existingRows.get(id));
+
+      assert(queriedColumns !== null); // We never "receive" tombstones.
+
+      const existing = existingRows.get(rowID);
+
+      // Accumulate all received columns to determine which columns to prune at the end.
+      const previouslyReceived = this.#receivedRows.get(rowID);
+      const merged = previouslyReceived
+        ? mergeQueriedColumns(previouslyReceived, queriedColumns)
+        : mergeQueriedColumns(
+            existing?.queriedColumns,
+            queriedColumns,
+            this.#removedOrExecutedQueryIDs,
+          );
+
+      this.#receivedRows.set(rowID, merged);
+
+      const patchVersion =
+        existing?.rowVersion === rowVersion &&
+        Object.keys(merged).every(col => existing.queriedColumns?.[col])
+          ? existing.patchVersion
+          : this.#assertNewVersion();
+
       if (existing) {
         this._cvrStore.delRowPatch(existing);
       }
+      const updated = {id, rowVersion, patchVersion, queriedColumns: merged};
+      this._cvrStore.putRowRecord(updated);
+      this._cvrStore.putRowPatch(patchVersion, {
+        type: 'row',
+        op: 'put',
+        id,
+        rowVersion,
+        columns: Object.keys(merged),
+      });
 
-      if (mult > 0) {
-        const previouslyReceived = this.#receivedRows.get(id);
-        const merged = previouslyReceived
-          ? mergeQueriedColumns(previouslyReceived, queriedColumns)
-          : mergeQueriedColumns(
-              existing?.queriedColumns,
-              queriedColumns,
-              this.#removedOrExecutedQueryIDs,
-            );
-
-        this.#receivedRows.set(id, merged);
-
-        const patchVersion =
-          existing?.rowVersion === rowVersion &&
-          Object.keys(merged).every(col => existing.queriedColumns?.[col])
-            ? existing.patchVersion
-            : this.#assertNewVersion();
-
-        const updated = {id, rowVersion, patchVersion, queriedColumns: merged};
-        this._cvrStore.putRowRecord(updated);
-        this._cvrStore.putRowPatch(patchVersion, {
+      // TODO: why compute and return merges here?
+      // Other queries might return the same rows. No need to patch again.
+      merges.push({
+        patch: {
           type: 'row',
-          op: 'put',
+          op: existing?.queriedColumns ? 'merge' : 'put',
           id,
-          rowVersion,
-          columns: Object.keys(merged),
-        });
+          contents,
+        },
+        toVersion: patchVersion,
+      });
+    }
 
-        merges.push({
-          patch: {
-            type: 'row',
-            op: existing?.queriedColumns ? 'merge' : 'put',
-            id,
-            contents,
-          },
-          toVersion: patchVersion,
-        });
-      } else if (mult < 0) {
-        // Delete the row iff it is not referenced by any other query.
+    for (const [rowID, row] of effectiveDeletes) {
+      const {
+        record: {queriedColumns},
+      } = row;
+      const existing = existingRows.get(rowID);
+      // if the delete is already pending, we've already started processing
+      const previouslyReceived = this.#receivedDeletes.get(rowID);
+      const merged = previouslyReceived
+        ? unreferenceQueriedColumns(previouslyReceived, queriedColumns)
+        : unreferenceQueriedColumns(existing?.queriedColumns, queriedColumns);
 
-        const patchVersion = this.#assertNewVersion();
-        this._cvrStore.putRowPatch(patchVersion, {
+      this.#receivedDeletes.set(rowID, merged);
+    }
+
+    return merges;
+  }
+
+  computeDeleteDiffs() {
+    const deletes: PatchToVersion[] = [];
+    for (const [rowID, columns] of this.#receivedDeletes) {
+      if (Object.keys(columns).length === 0) {
+        const newVersion = this.#assertNewVersion();
+        deletes.push({
+          patch: {type: 'row', op: 'del', id: rowID},
+          toVersion: newVersion,
+        });
+        // TODO: any need to do this._cvrStore.delRowPatch(existing); ?
+        this._cvrStore.putRowPatch(newVersion, {
           type: 'row',
           op: 'del',
-          id,
-        });
-        merges.push({
-          patch: {type: 'row', op: 'del', id},
-          toVersion: patchVersion,
+          id: rowID,
         });
       }
     }
 
-    return merges;
+    return deletes;
+  }
+
+  flush(lc: LogContext, lastActive = new Date()): Promise<CVRSnapshot> {
+    this.#receivedDeletes.clear();
+    this.#receivedRows.clear();
+    return super.flush(lc, lastActive);
   }
 
   /**
@@ -903,6 +955,23 @@ function mergeQueriedColumns(
       }
     }
   });
+
+  return merged;
+}
+
+function unreferenceQueriedColumns(
+  existing: QueriedColumns | null | undefined,
+  received: QueriedColumns | null | undefined,
+): QueriedColumns {
+  if (!existing) {
+    return {};
+  }
+  const merged: QueriedColumns = {};
+
+  for (const [col, queries] of Object.entries(existing)) {
+    // Remove from `existing` anything present in `received`
+    merged[col] = queries.filter(q => !received?.[col]?.includes(q));
+  }
 
   return merged;
 }
