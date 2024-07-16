@@ -79,7 +79,8 @@ export class TableSource<T extends PipelineEntity> implements Source<T> {
         }
 
         if (this.#pending !== undefined) {
-          this.#stream.newDifference(version, this.#pending, undefined);
+          // TODO(mlaw): temp spread
+          this.#stream.newDifference(version, [...this.#pending], undefined);
         }
 
         this.#pending = undefined;

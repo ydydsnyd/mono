@@ -94,6 +94,7 @@ export class DifferenceStream<T extends PipelineEntity> {
   }
 
   newDifference(version: Version, data: Multiset<T>, reply: Reply | undefined) {
+    console.log('NEW DIFFERENCE', version, data, reply);
     if (reply) {
       const requestors = this.#requestors.get(reply.replyingTo);
       for (const requestor of must(requestors)) {

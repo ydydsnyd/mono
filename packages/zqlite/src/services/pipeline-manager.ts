@@ -37,11 +37,6 @@ export class PipelineManager {
 
     const existing = this.#pipelines.get(hash);
     if (existing) {
-      console.log(
-        'FOUND EXISTING PIPELINE FOR:',
-        hash,
-        JSON.stringify(ast, null, 2),
-      );
       return existing;
     }
 
@@ -66,15 +61,14 @@ export class PipelineManager {
     );
     this.#pipelines.set(hash, view);
 
-    console.log('====Created pipeline:', hash);
     view.pullHistoricalData();
-    console.log(
-      '====Pulled historical data for:',
-      hash,
-      JSON.stringify(ast, null, 2),
-    );
 
     return view;
+  }
+
+  log() {
+    console.log('====PipelineManager====');
+    console.log('Pipelines:', this.#pipelines);
   }
 
   getActiveQueryHashes(consumer: GroupAndClientIDStr) {

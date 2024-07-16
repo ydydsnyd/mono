@@ -172,8 +172,6 @@ export class MessageProcessor {
     const oldKey =
       update.key &&
       Object.fromEntries(keyColumns.map(col => [col, must(update.key)[col]]));
-    console.log('UPDATE -=====');
-    console.log(update);
     const newKey = Object.fromEntries(
       keyColumns.map(col => [col, update.new[col]]),
     );
@@ -211,7 +209,6 @@ export class MessageProcessor {
       const sql = `UPDATE "${relationName}" SET ${Object.keys(row)
         .map(c => `"${c}" = @${c}`)
         .join(', ')} WHERE ${keyConditions.join(' AND ')}`;
-      console.log('RUNNING UPDATE:', sql, row, rowKey);
       this.#db.prepare(sql).run({
         ...row,
         ...rowKey,

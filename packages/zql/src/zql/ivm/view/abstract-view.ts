@@ -45,7 +45,7 @@ export abstract class AbstractView<T extends PipelineEntity, CT>
           this.#lastSeenVersion = version;
           this.#didVersionChange = false;
         }
-        const changed = this._newDifference(data, reply);
+        const changed = this._newDifference(version, data, reply);
         if (changed) {
           this.#didVersionChange = true;
         }
@@ -109,6 +109,7 @@ export abstract class AbstractView<T extends PipelineEntity, CT>
   }
 
   protected abstract _newDifference(
+    version: number,
     data: Multiset<T>,
     reply?: Reply | undefined,
   ): boolean;

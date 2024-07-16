@@ -30,6 +30,7 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
   #limit: number | undefined;
   #min: T | undefined = undefined;
   #max: T | undefined = undefined;
+  #lastVersion = -1;
   readonly #order;
   readonly id = id++;
   readonly #comparator: Comparator<T>;
@@ -73,10 +74,16 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
   }
 
   protected _newDifference(
+    version: number,
     data: Multiset<T>,
     reply?: Reply | undefined,
   ): boolean {
-    this.diffs = [];
+    if (version > this.#lastVersion) {
+      console.log('RESETTING DIFFS =====');
+      this.diffs = [];
+      this.#lastVersion = version;
+    }
+
     let needsUpdate = this.hydrated === false;
 
     let newData = this.#data;
@@ -112,12 +119,13 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
       } else {
         return;
       }
-      if (newData !== data) {
+      const changed = newData !== data;
+      if (changed) {
         data = newData;
         needsUpdate = true;
       }
 
-      return newData !== data;
+      return changed;
     };
 
     let iterable: Iterable<Entry<T>>;
@@ -126,6 +134,7 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
       this.#limit === undefined ||
       !orderingsAreCompatible(reply.order, this.#order)
     ) {
+      console.log('GOT ITERABLE');
       iterable = c;
     } else {
       // We only get the limited iterator if we're receiving historical data.
@@ -139,7 +148,10 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
         const entry = next.value;
         const [value, mult] = entry;
         if (process(value, mult) && !this.#maintainJsSlice) {
+          console.log('PUSHING DIFF ====');
           this.diffs.push(entry);
+        } else {
+          console.log('NOT PUSHING DIFF ====', this.#maintainJsSlice);
         }
       }
     } finally {

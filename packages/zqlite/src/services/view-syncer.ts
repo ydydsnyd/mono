@@ -131,10 +131,8 @@ export class ViewSyncer {
     });
   }
 
-  async newQueryDeltasReady() {
-    await this.#lock.withLock(async () => {
-      await this.#updateCvrAndClientsWithQueryDeltas();
-    });
+  newQueryDeltasReady() {
+    void this.#updateCvrAndClientsWithQueryDeltas();
   }
 
   async #patchQueries(syncContext: SyncContext, patch: QueriesPatch) {
@@ -222,6 +220,9 @@ export class ViewSyncer {
             const view = must(this.#pipelineManager.getQuery(hash));
             if (view.diffs.length > 0) {
               queriesWithNewResults.set(hash, view);
+              console.log('HAD DIFF!!!!');
+            } else {
+              console.log('--- NO DIFFS! ');
             }
           } else {
             uniqueHashes.add(hash);
@@ -258,33 +259,35 @@ export class ViewSyncer {
       minCvrVersion,
     );
 
-    const pokers = [...clientsToUpdate].map(clientId =>
-      must(this.#clients.get(clientId)).startPoke(cvrVersion),
-    );
+    await this.#lock.withLock(async () => {
+      const pokers = [...clientsToUpdate].map(clientId =>
+        must(this.#clients.get(clientId)).startPoke(cvrVersion),
+      );
 
-    const queriesDone = [...queriesWithNewResults.entries()].map(
-      async ([queryId, view]) => {
-        // TODO: incrementalize rather than this full re-parse of all results.
-        // we need a CVR that tracks row multiplicity to enable incrementalism here.
-        const rows = parseFirstRunResults(queryId, view);
-        const patches = await updater.received(lc, rows);
-        patches.forEach(patch => pokers.forEach(p => p.addPatch(patch)));
-      },
-    );
+      const queriesDone = [...queriesWithNewResults.entries()].map(
+        async ([queryId, view]) => {
+          // TODO: incrementalize rather than this full re-parse of all results.
+          // we need a CVR that tracks row multiplicity to enable incrementalism here.
+          const rows = parseFirstRunResults(queryId, view);
+          const patches = await updater.received(lc, rows);
+          patches.forEach(patch => pokers.forEach(p => p.addPatch(patch)));
+        },
+      );
 
-    await Promise.all(queriesDone);
-    pokers.forEach(p => p.setLmids(this.#lmidTracker.getLmids()));
+      await Promise.all(queriesDone);
+      pokers.forEach(p => p.setLmids(this.#lmidTracker.getLmids()));
 
-    for (const patch of await updater.deleteUnreferencedColumnsAndRows(lc)) {
-      pokers.forEach(p => p.addPatch(patch));
-    }
-    for (const patch of await updater.generateConfigPatches(lc)) {
-      pokers.forEach(poker => poker.addPatch(patch));
-    }
+      for (const patch of await updater.deleteUnreferencedColumnsAndRows(lc)) {
+        pokers.forEach(p => p.addPatch(patch));
+      }
+      for (const patch of await updater.generateConfigPatches(lc)) {
+        pokers.forEach(poker => poker.addPatch(patch));
+      }
 
-    this.#cvr = await updater.flush(lc);
-    // Signal clients to commit.
-    pokers.forEach(poker => poker.end());
+      this.#cvr = await updater.flush(lc);
+      // Signal clients to commit.
+      pokers.forEach(poker => poker.end());
+    });
   }
 
   async #updateCvrAndClientsWithFirstQueryRuns(

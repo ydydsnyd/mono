@@ -10,7 +10,6 @@ import type {LexiVersion} from 'zqlite-zero-cache-shared/src/lexi-version.js';
 import type {CVRStore} from './cvr-store.js';
 import {
   ClientQueryRecord,
-  InternalQueryRecord,
   MetadataPatch,
   NullableCVRVersion,
   QueryPatch,
@@ -95,8 +94,6 @@ export type CVRSnapshot = {
   readonly clients: Readonly<Record<string, ClientRecord>>;
   readonly queries: Readonly<Record<string, QueryRecord>>;
 };
-
-const CLIENT_LMID_QUERY_ID = 'lmids';
 
 function assertNotInternal(
   query: QueryRecord,
@@ -212,49 +209,49 @@ export class CVRConfigDrivenUpdater extends CVRUpdater {
       id,
     });
 
-    const lmidsQuery: InternalQueryRecord = {
-      id: CLIENT_LMID_QUERY_ID,
-      ast: {
-        schema: 'zero',
-        table: 'clients',
-        select: [
-          [['clients', 'clientGroupID'], 'clientGroupID'],
-          [['clients', 'clientID'], 'clientID'],
-          [['clients', 'lastMutationID'], 'lastMutationID'],
-        ],
-        where: {
-          type: 'conjunction',
-          op: 'AND',
-          conditions: [
-            {
-              type: 'simple',
-              field: ['clients', 'clientGroupID'],
-              op: '=',
-              value: {
-                type: 'value',
-                value: this._cvr.id,
-              },
-            },
-            {
-              type: 'conjunction',
-              op: 'OR',
-              conditions: Object.keys(this._cvr.clients).map(clientID => ({
-                type: 'simple',
-                field: ['clients', 'clientID'],
-                op: '=',
-                value: {
-                  type: 'value',
-                  value: clientID,
-                },
-              })),
-            },
-          ],
-        },
-      },
-      internal: true,
-    };
-    this._cvr.queries[CLIENT_LMID_QUERY_ID] = lmidsQuery;
-    this._cvrStore.putQuery(lmidsQuery);
+    // const lmidsQuery: InternalQueryRecord = {
+    //   id: CLIENT_LMID_QUERY_ID,
+    //   ast: {
+    //     schema: 'zero',
+    //     table: 'clients',
+    //     select: [
+    //       [['clients', 'clientGroupID'], 'clientGroupID'],
+    //       [['clients', 'clientID'], 'clientID'],
+    //       [['clients', 'lastMutationID'], 'lastMutationID'],
+    //     ],
+    //     where: {
+    //       type: 'conjunction',
+    //       op: 'AND',
+    //       conditions: [
+    //         {
+    //           type: 'simple',
+    //           field: ['clients', 'clientGroupID'],
+    //           op: '=',
+    //           value: {
+    //             type: 'value',
+    //             value: this._cvr.id,
+    //           },
+    //         },
+    //         {
+    //           type: 'conjunction',
+    //           op: 'OR',
+    //           conditions: Object.keys(this._cvr.clients).map(clientID => ({
+    //             type: 'simple',
+    //             field: ['clients', 'clientID'],
+    //             op: '=',
+    //             value: {
+    //               type: 'value',
+    //               value: clientID,
+    //             },
+    //           })),
+    //         },
+    //       ],
+    //     },
+    //   },
+    //   internal: true,
+    // };
+    // this._cvr.queries[CLIENT_LMID_QUERY_ID] = lmidsQuery;
+    // this._cvrStore.putQuery(lmidsQuery);
 
     return client;
   }
@@ -466,6 +463,9 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
     this.#removedOrExecutedQueryIDs.add(queryID);
 
     const query = this._cvr.queries[queryID];
+    if (!query) {
+      return; // eek.
+    }
     if (query.transformationHash !== transformationHash) {
       const transformationVersion = this._ensureNewVersion();
 
