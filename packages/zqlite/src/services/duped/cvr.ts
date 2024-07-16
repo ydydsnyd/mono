@@ -7,6 +7,7 @@ import {difference, intersection, union} from 'shared/src/set-utils.js';
 import {rowIDHash} from 'zero-cache/src/types/row-key.js';
 import type {AST} from 'zql/src/zql/ast/ast.js';
 import type {LexiVersion} from 'zqlite-zero-cache-shared/src/lexi-version.js';
+import {must} from 'shared/src/must.js';
 import type {CVRStore} from './cvr-store.js';
 import {
   ClientQueryRecord,
@@ -564,17 +565,11 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
 
       this.#receivedRows.set(rowID, merged);
 
-      let patchVersion;
-      try {
-        patchVersion =
-          existing?.rowVersion === rowVersion &&
-          Object.keys(merged).every(col => existing.queriedColumns?.[col])
-            ? existing.patchVersion
-            : this.#assertNewVersion();
-      } catch (e) {
-        console.log('!!!!! ERR', existing, rowVersion, row, rowID);
-        throw e;
-      }
+      const patchVersion =
+        existing?.rowVersion === rowVersion &&
+        Object.keys(merged).every(col => existing.queriedColumns?.[col])
+          ? existing.patchVersion
+          : this.#assertNewVersion();
 
       if (existing) {
         this._cvrStore.delRowPatch(existing);
@@ -599,6 +594,104 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
         toVersion: patchVersion,
       });
     }
+    return merges;
+  }
+
+  async processDiffs(diffs: (readonly [ParsedRow, number])[]) {
+    const merges: PatchToVersion[] = [];
+    const keys = new Set(diffs.map(([row, _]) => row.record.id));
+    const existingRows: Map<RowID, RowRecord> =
+      await this._cvrStore.getMultipleRowEntries(keys);
+
+    const pendingDeletes = new CustomKeyMap<RowID, QueriedColumns>(rowIDHash);
+
+    /**
+     * - Remove removals that are later replaced by puts.
+     * - Track `receivedDeletes` to see if `queriedColumns` ever goes to 0
+     *   - After all `processDiffs` are done, we can visit `pendingDeletes`
+     *
+     * We can do this with `receivedRows` and `receivedDeletes`.
+     * Can we? A put could be followed by a delete. That should retract from `receivedRows`.
+     *
+     * When processing a single query:
+     * Del followed by put: retract from `receivedDeletes`
+     * Put followed by del: retract from `receivedRows`
+     *
+     * At end of `processDiffs` and merging into global `received` structures:
+     * Merge local `receivedRows` into global `receivedRows`
+     *   ^-- merges columns
+     * Merge local `receivedDeletes` into global `receivedDeletes`
+     *   ^-- removes columns
+     *
+     * After all queries processed, anything in the global `receivedRows` should be removed
+     * from the global `receivedDeletes`.
+     *
+     * Then `receivedDeletes` should be applied as patches for each entry where `QueriedColumns` is empty.
+     */
+
+    for (const [row, mult] of diffs) {
+      const {
+        contents,
+        record: {id, rowVersion, queriedColumns},
+      } = row;
+      const existing = must(existingRows.get(id));
+      if (existing) {
+        this._cvrStore.delRowPatch(existing);
+      }
+
+      if (mult > 0) {
+        const previouslyReceived = this.#receivedRows.get(id);
+        const merged = previouslyReceived
+          ? mergeQueriedColumns(previouslyReceived, queriedColumns)
+          : mergeQueriedColumns(
+              existing?.queriedColumns,
+              queriedColumns,
+              this.#removedOrExecutedQueryIDs,
+            );
+
+        this.#receivedRows.set(id, merged);
+
+        const patchVersion =
+          existing?.rowVersion === rowVersion &&
+          Object.keys(merged).every(col => existing.queriedColumns?.[col])
+            ? existing.patchVersion
+            : this.#assertNewVersion();
+
+        const updated = {id, rowVersion, patchVersion, queriedColumns: merged};
+        this._cvrStore.putRowRecord(updated);
+        this._cvrStore.putRowPatch(patchVersion, {
+          type: 'row',
+          op: 'put',
+          id,
+          rowVersion,
+          columns: Object.keys(merged),
+        });
+
+        merges.push({
+          patch: {
+            type: 'row',
+            op: existing?.queriedColumns ? 'merge' : 'put',
+            id,
+            contents,
+          },
+          toVersion: patchVersion,
+        });
+      } else if (mult < 0) {
+        // Delete the row iff it is not referenced by any other query.
+
+        const patchVersion = this.#assertNewVersion();
+        this._cvrStore.putRowPatch(patchVersion, {
+          type: 'row',
+          op: 'del',
+          id,
+        });
+        merges.push({
+          patch: {type: 'row', op: 'del', id},
+          toVersion: patchVersion,
+        });
+      }
+    }
+
     return merges;
   }
 

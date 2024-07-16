@@ -68,6 +68,14 @@ export class PipelineManager {
     return view;
   }
 
+  getActiveQueryHashes(consumer: GroupAndClientIDStr) {
+    return this.#consumersToHashes.get(consumer);
+  }
+
+  getQuery(hash: ASTHash) {
+    return this.#pipelines.get(hash);
+  }
+
   #updateConsumerMapping(consumer: GroupAndClientIDStr, hash: ASTHash) {
     let consumers = this.#pipelineConsumers.get(hash);
     if (!consumers) {

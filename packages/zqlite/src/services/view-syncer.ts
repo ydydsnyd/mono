@@ -14,7 +14,7 @@ import {
 } from './duped/cvr.js';
 import {DurableObjectCVRStore} from './duped/durable-object-cvr-store.js';
 import type {DurableStorage} from './duped/durable-storage.js';
-import type {PipelineManager} from './pipeline-manager.js';
+import type {ASTHash, PipelineManager} from './pipeline-manager.js';
 import {cmpVersions, RowID} from './duped/types.js';
 import {toLexiVersion} from 'zqlite-zero-cache-shared/src/lsn.js';
 import {ClientHandler} from './duped/client-handler.js';
@@ -208,6 +208,67 @@ export class ViewSyncer {
     // Can we merge remove and add?
     // Or just don't worry about it and see what
     // happens?
+
+    const queriesWithNewResults = new Map<ASTHash, TreeView<PipelineEntity>>();
+    const uniqueHashes = new Set<ASTHash>();
+    const clientsToUpdate = new Set<string>();
+    for (const clientId of this.#clients.keys()) {
+      const hashes = this.#pipelineManager.getActiveQueryHashes(
+        `${this.#clientGroupID}:${clientId}`,
+      );
+      if (hashes) {
+        for (const hash of hashes) {
+          if (!uniqueHashes.has(hash)) {
+            const view = must(this.#pipelineManager.getQuery(hash));
+            if (view.diffs.length > 0) {
+              queriesWithNewResults.set(hash, view);
+            }
+          } else {
+            uniqueHashes.add(hash);
+          }
+          if (queriesWithNewResults.has(hash)) {
+            clientsToUpdate.add(clientId);
+          }
+        }
+      }
+    }
+
+    const lc = this.#lc;
+    const minCvrVersion = [...this.#clients.values()]
+      .filter((c): c is ClientHandler => c !== null)
+      .map(c => c.version())
+      .reduce((a, b) => (cmpVersions(a, b) < 0 ? a : b));
+
+    const cvr = must(this.#cvr);
+    const doStore = new DurableObjectCVRStore(this.#lc, this.#storage, cvr.id);
+    const updater = new CVRQueryDrivenUpdater(
+      doStore,
+      cvr,
+      toLexiVersion(this.#pipelineManager.context.lsn),
+    );
+    const cvrVersion = updater.trackQueries(
+      this.#lc,
+      [...queriesWithNewResults.keys()].map(k => ({
+        id: k,
+        transformationHash: k,
+      })),
+      Object.values(cvr.queries)
+        .filter(q => !q.internal && Object.keys(q.desiredBy).length === 0)
+        .map(q => q.id),
+      minCvrVersion,
+    );
+
+    const pokers = [...clientsToUpdate].map(clientId =>
+      must(this.#clients.get(clientId)).startPoke(cvrVersion),
+    );
+
+    const queriesDone = [...queriesWithNewResults.entries()].map(
+      async ([queryId, view]) => {
+        const rows = parseDiffResults(queryId, view);
+        const patches = await updater.received(lc, rows);
+        patches.forEach(patch => pokers.forEach(p => p.addPatch(patch)));
+      },
+    );
   }
 
   async #updateCvrAndClientsWithFirstQueryRuns(
@@ -235,17 +296,14 @@ export class ViewSyncer {
       minCvrVersion,
     );
 
-    const pokers = [...this.#clients.values()].map(c => {
-      console.log('START POKE!!!;');
-      return c.startPoke(cvrVersion);
-    });
+    const pokers = [...this.#clients.values()].map(c =>
+      c.startPoke(cvrVersion),
+    );
 
     const queriesDone = [...queryResults.entries()].map(
       async ([queryId, view]) => {
         const rows = parseFirstRunResults(queryId, view);
         const patches = await updater.received(lc, rows);
-
-        console.log('adding patches', patches);
         patches.forEach(patch => pokers.forEach(p => p.addPatch(patch)));
       },
     );
@@ -265,7 +323,6 @@ export class ViewSyncer {
     this.#cvr = await updater.flush(lc);
 
     // Signal clients to commit.
-    console.log('END POKE!');
     pokers.forEach(poker => poker.end());
   }
 }

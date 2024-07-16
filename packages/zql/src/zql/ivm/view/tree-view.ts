@@ -25,7 +25,7 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
   #data: BTree<T, undefined>;
 
   #jsSlice: T[] = [];
-  #diffs: Entry<T>[] = [];
+  diffs: Entry<T>[] = [];
 
   #limit: number | undefined;
   #min: T | undefined = undefined;
@@ -76,7 +76,7 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
     data: Multiset<T>,
     reply?: Reply | undefined,
   ): boolean {
-    this.#diffs = [];
+    this.diffs = [];
     let needsUpdate = this.hydrated === false;
 
     let newData = this.#data;
@@ -139,7 +139,7 @@ export class TreeView<T extends PipelineEntity> extends AbstractView<T, T[]> {
         const entry = next.value;
         const [value, mult] = entry;
         if (process(value, mult) && !this.#maintainJsSlice) {
-          this.#diffs.push(entry);
+          this.diffs.push(entry);
         }
       }
     } finally {
