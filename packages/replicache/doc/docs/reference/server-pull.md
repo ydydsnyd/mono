@@ -203,12 +203,23 @@ See [Diff Strategies](/strategies/overview) for information on different approac
 
 ## Handling Unknown Clients
 
-Replicache does not currently support [deleting client records from the server](https://github.com/rocicorp/replicache/issues/1033).
+Replicache does not currently support [deleting client records from the
+server](https://github.com/rocicorp/replicache/issues/1033).
 
-As such there is only one valid way a requesting clientID could be unknown to the server: the client is new and the record hasn't been created yet. For these new clients, our recommendation is:
+As such there is only one valid way a requesting `clientGroupID` could be
+unknown to the server: the client is new and the record hasn't been created yet.
+For these new clients, our recommendation is:
 
-1. Validate the requesting client is in fact new (`lastMutationID === 0`). If the client isn't new, then data must have been deleted from the server which is not allowed. The server should abort and return a 500.
-2. Compute a patch and cookie as normal, and return `lastMutationID: 0`. The push handler [should create the client record](./server-push#unknown-client-ids) on first push.
+1. Validate the requesting client is in fact new (`lastMutationID === 0`). If
+   the client isn't new, then data must have been deleted from the server which
+   is not allowed. The server can then reply with a [`ClientStateNotFound` error
+   response](/api/#clientstatenotfoundresponse). This will invoke the
+   [onClientStateNotFound](/api/classes/Replicache#onclientstatenotfound)
+   callback on the [Replicache](/api/classes/Replicache) instance which by
+   default will reload the web page.
+2. Compute a patch and cookie as normal, and return `lastMutationID: 0`. The
+   push handler [should create the client
+   record](./server-push#unknown-client-ids) on first push.
 
 See [Dynamic Pull](../byob/dynamic-pull) for an example implementation.
 
