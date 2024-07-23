@@ -1,9 +1,9 @@
 import {RWLock} from '@rocicorp/lock';
+import {joinIterables} from 'shared/src/iterables.js';
+import {promiseVoid} from 'shared/src/resolved-promises.js';
 import type {Hash} from '../hash.js';
-import {joinIterables} from '../iterables.js';
-import type {MaybePromise} from '../replicache.js';
-import {promiseVoid} from '../resolved-promises.js';
 import {getSizeOfValue} from '../size-of-value.js';
+import type {MaybePromise} from 'shared/src/types.js';
 import {Chunk, ChunkHasher, createChunk} from './chunk.js';
 import {
   HeadChange,
@@ -602,7 +602,7 @@ class ChunksCache {
     this.cacheEntries.delete(hash);
   }
 
-  #delete(hash: Hash): void {
+  #deleteEntryByHash(hash: Hash): void {
     this.#refCounts.delete(hash);
     this.#refs.delete(hash);
     const cacheEntry = this.cacheEntries.get(hash);
@@ -619,7 +619,7 @@ class ChunksCache {
     for (const [hash, count] of refCountUpdates) {
       if (count === 0) {
         if (!this.#evictsAndDeletesSuspended) {
-          this.#delete(hash);
+          this.#deleteEntryByHash(hash);
         } else {
           this.#refCounts.set(hash, 0);
           this.#suspendedDeletes.push(hash);
@@ -663,7 +663,7 @@ class ChunksCache {
       this.#evictsAndDeletesSuspended = false;
       for (const hash of this.#suspendedDeletes) {
         if (this.#refCounts.get(hash) === 0) {
-          this.#delete(hash);
+          this.#deleteEntryByHash(hash);
         }
       }
       this.#ensureCacheSizeLimit();

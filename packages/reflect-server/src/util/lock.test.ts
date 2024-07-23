@@ -1,7 +1,10 @@
 import {describe, test, expect, jest} from '@jest/globals';
 import {LoggingLock} from './lock.js';
 import {LogContext} from '@rocicorp/logger';
-import {TestLogSink, createSilentLogContext} from './test-utils.js';
+import {
+  TestLogSink,
+  createSilentLogContext,
+} from 'shared/src/logging-test-utils.js';
 import {resolver} from './resolver.js';
 import {sleep} from './sleep.js';
 
@@ -17,6 +20,19 @@ describe('LoggingLock', () => {
     await lc.flush();
 
     expect(sink.messages).toHaveLength(0);
+  });
+
+  test('returns return value of fn', async () => {
+    const lock = new LoggingLock(100 /* ms threshold */);
+    const sink = new TestLogSink();
+    const lc = new LogContext('debug', {}, sink);
+
+    const result = await lock.withLock(lc, 'test fn', async () => {
+      await 1;
+      return 'test';
+    });
+    await lc.flush();
+    expect(result).toEqual('test');
   });
 
   test('adds lockHoldID to the LogContext', async () => {

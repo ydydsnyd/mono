@@ -1,4 +1,5 @@
 import {LogContext, LogLevel, LogSink} from '@rocicorp/logger';
+import {createRoomRequestSchema} from 'reflect-protocol';
 import {
   closeBeaconQueryParamsSchema,
   closeBeaconSchema,
@@ -15,15 +16,15 @@ import type {MutatorMap} from '../process/process-mutation.js';
 import {processPending} from '../process/process-pending.js';
 import {processRoomStart} from '../process/process-room-start.js';
 import {DurableStorage} from '../storage/durable-storage.js';
+import {scanUserValues} from '../storage/replicache-transaction.js';
 import {
   ConnectionCountTrackingClientMap,
   type ClientID,
   type ClientMap,
   type ClientState,
-  type Socket,
 } from '../types/client-state.js';
 import type {PendingMutation} from '../types/mutation.js';
-import {decodeHeaderValue} from '../util/headers.js';
+import {decodeHeaderValue} from 'shared/src/headers.js';
 import {LoggingLock} from '../util/lock.js';
 import {populateLogContextFromRequest} from '../util/log-context-common.js';
 import {randomID} from '../util/rand.js';
@@ -35,7 +36,11 @@ import {closeBeacon} from './close-beacon.js';
 import {handleClose} from './close.js';
 import {handleConnection} from './connect.js';
 import {closeConnections, getConnections} from './connections.js';
-import {requireUpgradeHeader, upgradeWebsocketResponse} from './http-util.js';
+import {
+  Socket,
+  requireUpgradeHeader,
+  upgradeWebsocketResponse,
+} from '../util/socket.js';
 import {ROOM_ID_HEADER_NAME} from './internal-headers.js';
 import {handleMessage} from './message.js';
 import {
@@ -43,14 +48,30 @@ import {
   CONNECT_URL_PATTERN,
   CREATE_ROOM_PATH,
   DELETE_ROOM_PATH,
+  GET_CONTENTS_ROOM_PATH,
   INVALIDATE_ALL_CONNECTIONS_PATH,
   INVALIDATE_ROOM_CONNECTIONS_PATH,
   INVALIDATE_USER_CONNECTIONS_PATH,
+  LEGACY_CREATE_ROOM_PATH,
+  LEGACY_DELETE_ROOM_PATH,
+  LEGACY_INVALIDATE_ROOM_CONNECTIONS_PATH,
+  LEGACY_INVALIDATE_USER_CONNECTIONS_PATH,
   TAIL_URL_PATH,
+  roomIDParams,
+  userIDParams,
 } from './paths.js';
 import {initRoomSchema} from './room-schema.js';
 import type {RoomStartHandler} from './room-start.js';
-import {Router, get, inputParams, post, roomID, userID} from './router.js';
+import type {RoomContents} from './rooms.js';
+import {
+  Router,
+  get,
+  inputParams,
+  post,
+  queryParams,
+  roomID,
+  userID,
+} from 'cf-shared/src/router.js';
 import {connectTail} from './tail.js';
 import {registerUnhandledRejectionHandler} from './unhandled-rejection-handler.js';
 
@@ -60,7 +81,7 @@ const deletedKey = '/system/deleted';
 export interface RoomDOOptions<MD extends MutatorDefs> {
   mutators: MD;
   state: DurableObjectState;
-  roomStartHandler: RoomStartHandler;
+  onRoomStart: RoomStartHandler;
   onClientDisconnect: ClientDisconnectHandler;
   onClientDelete: ClientDeleteHandler;
   logSink: LogSink;
@@ -72,11 +93,16 @@ export interface RoomDOOptions<MD extends MutatorDefs> {
 
 export const ROOM_ROUTES = {
   deletePath: DELETE_ROOM_PATH,
+  legacyDeletePath: LEGACY_DELETE_ROOM_PATH,
+  getContents: GET_CONTENTS_ROOM_PATH,
   authInvalidateAll: INVALIDATE_ALL_CONNECTIONS_PATH,
   authInvalidateForUser: INVALIDATE_USER_CONNECTIONS_PATH,
   authInvalidateForRoom: INVALIDATE_ROOM_CONNECTIONS_PATH,
+  legacyAuthInvalidateForUser: LEGACY_INVALIDATE_USER_CONNECTIONS_PATH,
+  legacyAuthInvalidateForRoom: LEGACY_INVALIDATE_ROOM_CONNECTIONS_PATH,
   authConnections: AUTH_CONNECTIONS_PATH,
   createRoom: CREATE_ROOM_PATH,
+  legacyCreateRoom: LEGACY_CREATE_ROOM_PATH,
   connect: CONNECT_URL_PATTERN,
   closeBeacon: CLOSE_BEACON_PATH,
   tail: TAIL_URL_PATH,
@@ -94,7 +120,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   #maxProcessedMutationTimestamp = 0;
   readonly #lock = new LoggingLock();
   readonly #mutators: MutatorMap;
-  readonly #roomStartHandler: RoomStartHandler;
+  readonly #onRoomStart: RoomStartHandler;
   readonly #onClientDisconnect: ClientDisconnectHandler;
   readonly #onClientDelete: ClientDeleteHandler;
   readonly #maxMutationsPerTurn: number;
@@ -115,7 +141,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   constructor(options: RoomDOOptions<MD>) {
     const {
       mutators,
-      roomStartHandler,
+      onRoomStart,
       onClientDisconnect,
       onClientDelete,
       state,
@@ -126,7 +152,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     } = options;
 
     this.#mutators = new Map([...Object.entries(mutators)]) as MutatorMap;
-    this.#roomStartHandler = roomStartHandler;
+    this.#onRoomStart = onRoomStart;
     this.#onClientDisconnect = onClientDisconnect;
     this.#onClientDelete = onClientDelete;
     this.#maxMutationsPerTurn = maxMutationsPerTurn;
@@ -166,7 +192,9 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
   }
 
   #initRoutes() {
-    this.#router.register(ROOM_ROUTES.deletePath, this.#deleteAllData);
+    this.#router.register(ROOM_ROUTES.deletePath, this.#deleteRoom);
+    this.#router.register(ROOM_ROUTES.legacyDeletePath, this.#legacyDeleteRoom);
+    this.#router.register(ROOM_ROUTES.getContents, this.#getContents);
     this.#router.register(
       ROOM_ROUTES.authInvalidateAll,
       this.#authInvalidateAll,
@@ -179,8 +207,17 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       ROOM_ROUTES.authInvalidateForRoom,
       this.#authInvalidateForRoom,
     );
+    this.#router.register(
+      ROOM_ROUTES.legacyAuthInvalidateForUser,
+      this.#legacyAuthInvalidateForUser,
+    );
+    this.#router.register(
+      ROOM_ROUTES.legacyAuthInvalidateForRoom,
+      this.#legacyAuthInvalidateForRoom,
+    );
     this.#router.register(ROOM_ROUTES.authConnections, this.#authConnections);
     this.#router.register(ROOM_ROUTES.createRoom, this.#createRoom);
+    this.#router.register(ROOM_ROUTES.legacyCreateRoom, this.#legacyCreateRoom);
     this.#router.register(ROOM_ROUTES.connect, this.#connect);
     this.#router.register(ROOM_ROUTES.tail, this.#tail);
     if (getConfig('closeBeacon')) {
@@ -210,7 +247,7 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
           await processRoomStart(
             lcInLock,
             this.#env,
-            this.#roomStartHandler,
+            this.#onRoomStart,
             this.#storage,
             roomID,
           );
@@ -239,7 +276,10 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     return this.#storage.get(roomIDKey, valita.string());
   }
 
-  #setDeleted() {
+  async #setDeleted(roomID: string | undefined) {
+    if (roomID) {
+      await this.#setRoomID(roomID);
+    }
     return this.#storage.put(deletedKey, true);
   }
 
@@ -254,6 +294,18 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
    *
    */
   #createRoom = post()
+    .with(inputParams(roomIDParams, createRoomRequestSchema))
+    .handle(async ctx => {
+      const {roomID} = ctx.query;
+      this.#lc.info?.('Handling create room request for roomID', roomID);
+      await this.#setRoomID(roomID);
+      await this.#storage.flush();
+      this.#lc.debug?.('Flushed roomID to storage', roomID);
+      return new Response('ok');
+    });
+
+  // TODO: Delete
+  #legacyCreateRoom = post()
     .with(roomID())
     .handle(async ctx => {
       const {roomID} = ctx;
@@ -264,21 +316,48 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
       return new Response('ok');
     });
 
-  // There's a bit of a question here about whether we really want to delete *all* the
-  // data when a room is deleted. This deletes everything, including values kept by the
-  // system e.g. the roomID. If we store more system keys in the future we might want to have
-  // delete room only delete the room user data and not the system keys, because once
-  // system keys are deleted who knows what behavior the room will have when its apis are
-  // called. Maybe it's fine if they error out, dunno.
-  #deleteAllData = post().handle(async ctx => {
-    const {lc} = ctx;
-    // Maybe we should validate that the roomID in the request matches?
-    lc.info?.('delete all data');
+  #deleteRoom = post()
+    .with(queryParams(roomIDParams))
+    .handle(ctx => {
+      const {
+        lc,
+        query: {roomID},
+      } = ctx;
+      return this.#invalidateConnectionsAndDeleteRoom(lc, roomID);
+    });
+
+  #legacyDeleteRoom = post()
+    .with(roomID())
+    .handle(ctx => {
+      const {lc, roomID} = ctx;
+      return this.#invalidateConnectionsAndDeleteRoom(lc, roomID);
+    });
+
+  // - Invalidates all connections
+  // - Deletes all data
+  // - Restores: system/roomID
+  // - Sets: system/deleted
+  // If we store more system keys in the future we might want to add logic to fetch
+  // all system entries and restore them after deleteAll().
+  #invalidateConnectionsAndDeleteRoom = async (
+    lc: LogContext,
+    roomID: string,
+  ) => {
+    const myRoomID = await this.maybeRoomID();
+    if (myRoomID && myRoomID !== roomID) {
+      // Sanity check. This would indicate a bug in the AuthDO.
+      throw new Error(
+        `Specified roomID ${roomID} does not match expected ${myRoomID}`,
+      );
+    }
+    lc.debug?.(`Closing room ${roomID}'s connections before deleting data.`);
+    await this.#closeConnections(_ => true);
+    lc.info?.(`delete all data for ${roomID}`);
     await this.#storage.deleteAll();
     lc.info?.('done deleting all data');
-    await this.#setDeleted();
+    await this.#setDeleted(myRoomID);
     return new Response('ok');
-  });
+  };
 
   #connect = get().handle((ctx, request) => {
     const {lc} = ctx;
@@ -351,7 +430,37 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     return upgradeWebsocketResponse(clientWS, request.headers);
   });
 
+  #getContents = get().handleAPIResult((ctx, _req): Promise<RoomContents> => {
+    const {lc} = ctx;
+    lc.info?.('getting room contents');
+    return this.#lock.withLock(lc, 'getContents', async () => {
+      const response: RoomContents = {contents: {}};
+      for await (const [key, value] of scanUserValues(
+        this.#storage,
+        {},
+      ).entries()) {
+        response.contents[key] = value;
+      }
+      return response;
+    });
+  });
+
   #authInvalidateForRoom = post()
+    .with(queryParams(roomIDParams))
+    .handle(async ctx => {
+      const {
+        lc,
+        query: {roomID},
+      } = ctx;
+      lc.debug?.(
+        `Closing room ${roomID}'s connections fulfilling auth api invalidateForRoom request.`,
+      );
+      await this.#closeConnections(_ => true);
+      return new Response('Success', {status: 200});
+    });
+
+  // TODO: Delete
+  #legacyAuthInvalidateForRoom = post()
     .with(roomID())
     .handle(async ctx => {
       const {lc, roomID} = ctx;
@@ -363,6 +472,23 @@ export class BaseRoomDO<MD extends MutatorDefs> implements DurableObject {
     });
 
   #authInvalidateForUser = post()
+    .with(queryParams(userIDParams))
+    .handle(async ctx => {
+      const {
+        lc,
+        query: {userID},
+      } = ctx;
+      lc.debug?.(
+        `Closing user ${userID}'s connections fulfilling auth api invalidateForUser request.`,
+      );
+      await this.#closeConnections(
+        clientState => clientState.auth.userID === userID,
+      );
+      return new Response('Success', {status: 200});
+    });
+
+  // TODO: Delete
+  #legacyAuthInvalidateForUser = post()
     .with(userID())
     .handle(async ctx => {
       const {lc, userID} = ctx;

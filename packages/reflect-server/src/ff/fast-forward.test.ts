@@ -5,7 +5,8 @@ import type {ClientPoke} from '../types/client-poke.js';
 import {ClientRecordMap, putClientRecord} from '../types/client-record.js';
 import type {ClientID} from '../types/client-state.js';
 import {UserValue, putUserValue} from '../types/user-value.js';
-import {createSilentLogContext, mockMathRandom} from '../util/test-utils.js';
+import {mockMathRandom} from '../util/test-utils.js';
+import {createSilentLogContext} from 'shared/src/logging-test-utils.js';
 
 const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();
@@ -499,6 +500,59 @@ test('fastForward', async () => {
             baseCookie: 41,
             cookie: CURRENT_VERSION_FOR_TEST,
             lastMutationIDChanges: {c4: 4},
+            presence: [],
+            patch: [
+              {
+                op: 'del',
+                key: 'hot',
+              },
+            ],
+            timestamp: undefined,
+          },
+        },
+      ],
+    },
+
+    {
+      name: 'two clients, one of them deleted',
+      state: new Map([
+        ['foo', {value: 'bar', version: 41, deleted: false}],
+        [
+          'hot',
+          {value: 'dog', version: CURRENT_VERSION_FOR_TEST, deleted: true},
+        ],
+      ]),
+      clientRecords: new Map([
+        [
+          'c1',
+          {
+            lastMutationID: 3,
+            baseCookie: 40,
+            clientGroupID: 'cg1',
+            lastMutationIDVersion: 41,
+            userID: 'u1',
+            deleted: true,
+          },
+        ],
+        [
+          'c2',
+          {
+            lastMutationID: 4,
+            baseCookie: 41,
+            clientGroupID: 'cg1',
+            lastMutationIDVersion: CURRENT_VERSION_FOR_TEST,
+            userID: 'u1',
+          },
+        ],
+      ]),
+      clients: ['c2'],
+      expectedPokes: [
+        {
+          clientID: 'c2',
+          poke: {
+            baseCookie: 41,
+            cookie: CURRENT_VERSION_FOR_TEST,
+            lastMutationIDChanges: {c2: 4},
             presence: [],
             patch: [
               {

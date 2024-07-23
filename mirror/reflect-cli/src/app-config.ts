@@ -1,6 +1,7 @@
 import {doc, getDoc, getFirestore} from 'firebase/firestore';
 import {createApp} from 'mirror-protocol/src/app.js';
 import {ensureTeam} from 'mirror-protocol/src/team.js';
+import {isValidAppName} from 'mirror-schema/src/external/app.js';
 import {
   appNameIndexDataConverter,
   appNameIndexPath,
@@ -8,13 +9,12 @@ import {
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {pkgUpSync} from 'pkg-up';
-
 import * as v from 'shared/src/valita.js';
 import {ErrorWrapper, UserError} from './error.js';
 import type {AuthContext} from './handler.js';
 import {logErrorAndExit} from './log-error-and-exit.js';
+import {getLogger} from './logger.js';
 import {makeRequester} from './requester.js';
-import {isValidAppName} from 'mirror-schema/src/external/app.js';
 // { srcFile: destFile }
 const templateFiles = v.record(v.string());
 
@@ -207,12 +207,12 @@ export async function getAppID(
     return appID;
   }
   if (!create) {
-    console.log(
+    getLogger().log(
       `The "${app}" app must first be published with "npx reflect publish"`,
     );
     process.exit(-1);
   }
-  console.log(`Creating the "${app}" app ...`);
+  getLogger().log(`Creating the "${app}" app ...`);
   const requester = makeRequester(authContext.user.userID);
   const resp = await createApp.call({
     requester,
@@ -280,7 +280,7 @@ function copyAndEditFile(
     }
     fs.writeFileSync(dstPath, edited, 'utf-8');
     if (logConsole) {
-      console.log(`Updated ${dst} from ${src}`);
+      getLogger().log(`Updated ${dst} from ${src}`);
     }
   } catch (e) {
     // In case the user has deleted the template source file, classify this as a

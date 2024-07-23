@@ -1,7 +1,6 @@
 import {expect} from 'chai';
 import * as sinon from 'sinon';
 import type {VersionNotSupportedResponse} from './error-responses.js';
-import type {Poke, UpdateNeededReason} from './replicache.js';
 import {
   addData,
   disableAllBackgroundProcesses,
@@ -10,6 +9,7 @@ import {
   replicacheForTesting,
 } from './test-util.js';
 import type {WriteTransaction} from './transactions.js';
+import type {Poke, UpdateNeededReason} from './types.js';
 
 initReplicacheTesting();
 
@@ -84,13 +84,18 @@ test('poke', async () => {
 });
 
 test('overlapped pokes not supported', async () => {
-  const rep = await replicacheForTesting('multiple-pokes', {
-    mutators: {
-      addData,
+  const rep = await replicacheForTesting(
+    'multiple-pokes',
+    {
+      mutators: {
+        addData,
+      },
     },
-    ...disableAllBackgroundProcesses,
-    enablePullAndPushInOpen: false,
-  });
+    {
+      ...disableAllBackgroundProcesses,
+      enablePullAndPushInOpen: false,
+    },
+  );
 
   const {clientID} = rep;
   const poke: Poke = {
@@ -173,9 +178,11 @@ test('Version not supported on server', async () => {
     response: VersionNotSupportedResponse,
     reason: UpdateNeededReason,
   ) => {
-    const rep = await replicacheForTesting('version-not-supported-poke', {
-      ...disableAllBackgroundProcesses,
-    });
+    const rep = await replicacheForTesting(
+      'version-not-supported-poke',
+      undefined,
+      disableAllBackgroundProcesses,
+    );
 
     const onUpdateNeededStub = (rep.onUpdateNeeded = sinon.stub());
 

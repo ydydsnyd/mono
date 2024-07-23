@@ -1,4 +1,5 @@
 import {resolver, type Resolver} from '@rocicorp/resolver';
+import {assert} from './asserts.js';
 
 /**
  * A Queue allows the consumers to await (possibly future) values,
@@ -6,54 +7,106 @@ import {resolver, type Resolver} from '@rocicorp/resolver';
  */
 export class Queue<T> {
   // Consumers waiting for entries to be produced.
-  readonly #consumers: Resolver<T>[] = [];
+  readonly #consumers: Consumer<T>[] = [];
   // Produced entries waiting to be consumed.
-  readonly #produced: {value: Promise<T>; consumed: () => void}[] = [];
+  readonly #produced: Produced<T>[] = [];
 
-  /** @returns A Promise that resolves when the value is consumed. */
+  /**
+   * @returns A Promise that resolves when the value is consumed.
+   */
   enqueue(value: T): Promise<void> {
     const consumer = this.#consumers.shift();
     if (consumer) {
-      consumer.resolve(value);
+      consumer.resolver.resolve(value);
+      clearTimeout(consumer.timeoutID);
       return Promise.resolve();
     }
-    return this.#enqueueProduced(Promise.resolve(value));
+    return this.#enqueueProduced(Promise.resolve(value), value);
   }
 
   /** @returns A Promise that resolves when the rejection is consumed. */
   enqueueRejection(reason?: unknown): Promise<void> {
     const consumer = this.#consumers.shift();
     if (consumer) {
-      consumer.reject(reason);
+      consumer.resolver.reject(reason);
+      clearTimeout(consumer.timeoutID);
       return Promise.resolve();
     }
     return this.#enqueueProduced(Promise.reject(reason));
   }
 
-  #enqueueProduced(value: Promise<T>): Promise<void> {
+  #enqueueProduced(produced: Promise<T>, value?: T): Promise<void> {
     const {promise, resolve: consumed} = resolver<void>();
-    this.#produced.push({value, consumed});
+    this.#produced.push({produced, value, consumed});
     return promise;
   }
 
-  /** @returns A Promise that resolves to the next enqueued value. */
-  dequeue(): Promise<T> {
+  /**
+   * Deletes all unconsumed entries matching the specified `value` based on identity equality.
+   * The consumed callback(s) are resolved as if the values were dequeued.
+   *
+   * Note: deletion of `undefined` values is not supported. This method will assert
+   * if `value` is undefined.
+   *
+   * @returns The number of entries deleted.
+   */
+  delete(value: T): number {
+    assert(value !== undefined);
+
+    let count = 0;
+    for (let i = this.#produced.length - 1; i >= 0; i--) {
+      const p = this.#produced[i];
+      if (p.value === value) {
+        this.#produced.splice(i, 1);
+        p.consumed();
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /**
+   * @param timeoutValue An optional value to resolve if `timeoutMs` is reached.
+   * @param timeoutMs The milliseconds after which the `timeoutValue` is resolved
+   *                  if nothing is produced for the consumer.
+   * @returns A Promise that resolves to the next enqueued value.
+   */
+  dequeue(timeoutValue?: T, timeoutMs: number = 0): Promise<T> {
     const produced = this.#produced.shift();
     if (produced) {
       produced.consumed();
-      return produced.value;
+      return produced.produced;
     }
-    const consumer = resolver<T>();
-    this.#consumers.push(consumer);
-    return consumer.promise;
+    const r = resolver<T>();
+    const timeoutID =
+      timeoutValue === undefined
+        ? undefined
+        : setTimeout(() => {
+            const i = this.#consumers.findIndex(c => c.resolver === r);
+            if (i >= 0) {
+              const [consumer] = this.#consumers.splice(i, 1);
+              consumer.resolver.resolve(timeoutValue);
+            }
+          }, timeoutMs);
+    this.#consumers.push({resolver: r, timeoutID});
+    return r.promise;
   }
 
-  //todo(darick): add a test for this
-  asAsyncIterator(
-    cleanup = () => {
-      /* nop */
-    },
-  ): AsyncIterator<T> {
+  /**
+   * @returns The instantaneous number of outstanding values waiting to be
+   *          dequeued. Note that if a value was enqueued while a consumer
+   *          was waiting (with `await dequeue()`), the value is immediately
+   *          handed to the consumer and the Queue's size remains 0.
+   */
+  size(): number {
+    return this.#produced.length;
+  }
+
+  asAsyncIterable(cleanup = NOOP): AsyncIterable<T> {
+    return {[Symbol.asyncIterator]: () => this.asAsyncIterator(cleanup)};
+  }
+
+  asAsyncIterator(cleanup = NOOP): AsyncIterator<T> {
     return {
       next: async () => {
         try {
@@ -71,3 +124,16 @@ export class Queue<T> {
     };
   }
 }
+
+const NOOP = () => {};
+
+type Consumer<T> = {
+  resolver: Resolver<T>;
+  timeoutID: ReturnType<typeof setTimeout> | undefined;
+};
+
+type Produced<T> = {
+  produced: Promise<T>;
+  value: T | undefined;
+  consumed: () => void;
+};

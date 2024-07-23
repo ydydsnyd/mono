@@ -27,6 +27,7 @@ import {makeRequester} from '../requester.js';
 
 import {must} from 'shared/src/must.js';
 import type {AuthContext} from '../handler.js';
+import {getLogger} from '../logger.js';
 import {padColumns} from '../table.js';
 import {getSingleTeam} from '../teams.js';
 import type {CommonYargsArgv, YargvToInterface} from '../yarg-types.js';
@@ -51,7 +52,7 @@ export async function createKeyHandler(
 ): Promise<void> {
   const {name} = yargs;
   if (!isValidApiKeyName(name)) {
-    console.error(
+    getLogger().error(
       color.yellow(`Invalid name "${name}"\n`) +
         'Names must be lowercased alphanumeric, starting with a letter and not ending with a hyphen.',
     );
@@ -60,7 +61,7 @@ export async function createKeyHandler(
 
   const {userID} = authContext.user;
   const firestore = getFirestore();
-  const teamID = await getSingleTeam(firestore, userID, 'admin');
+  const teamID = await getSingleTeam(firestore, authContext, 'admin');
   const requester = makeRequester(userID);
 
   const {allPermissions} = await listApiKeys.call({
@@ -83,7 +84,7 @@ export async function createKeyHandler(
     appIDs,
     permissions: Object.fromEntries(perms.map(perm => [perm, true])),
   });
-  console.log(`Created key "${color.bold(name)}": ${value}`);
+  getLogger().log(`Created key "${color.bold(name)}": ${value}`);
 }
 
 export async function promptForKeyConfiguration(

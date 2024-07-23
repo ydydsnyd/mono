@@ -5,6 +5,7 @@ import {processRoom} from '../process/process-room.js';
 import {DurableStorage} from '../storage/durable-storage.js';
 import {
   ClientRecordMap,
+  IncludeDeleted,
   getClientRecord,
   putClientRecord,
 } from '../types/client-record.js';
@@ -16,11 +17,11 @@ import {getVersion, versionKey} from '../types/version.js';
 import {
   client,
   clientRecord,
-  createSilentLogContext,
   fail,
   mockMathRandom,
   pendingMutation,
 } from '../util/test-utils.js';
+import {createSilentLogContext} from 'shared/src/logging-test-utils.js';
 
 const {roomDO} = getMiniflareBindings();
 const id = roomDO.newUniqueId();
@@ -756,7 +757,9 @@ describe('processRoom', () => {
       }
 
       for (const [clientID, record] of c.expectedClientRecords ?? new Map()) {
-        expect(await getClientRecord(clientID, storage)).toEqual(record);
+        expect(
+          await getClientRecord(clientID, IncludeDeleted.Include, storage),
+        ).toEqual(record);
       }
 
       for (const [key, value] of c.expectedUserValues ?? new Map()) {

@@ -1,5 +1,4 @@
 import {TEST_LICENSE_KEY} from '@rocicorp/licensing/src/client';
-import type {Context, LogLevel, LogSink} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
 import {expect} from 'chai';
 import type {JSONValue} from 'shared/src/json.js';
@@ -8,7 +7,6 @@ import {SinonFakeTimers, useFakeTimers} from 'sinon';
 import type {Cookie} from './cookies.js';
 import type {Store} from './dag/store.js';
 import type {Hash} from './hash.js';
-import {dropStore as dropIDBStore} from './kv/idb-util.js';
 import {MemStore} from './kv/mem-store.js';
 import type {Store as KVStore} from './kv/store.js';
 import type {PatchOperation} from './patch-operation.js';
@@ -17,42 +15,47 @@ import {
   teardownForTest as teardownIDBDatabasesStoreForTest,
 } from './persist/idb-databases-store-db-name.js';
 import type {PullResponseV1} from './puller.js';
-import type {
-  ReplicacheInternalAPI,
-  ReplicacheInternalOptions,
-  ReplicacheOptions,
-} from './replicache-options.js';
+import type {ReplicacheOptions} from './replicache-options.js';
 import {
-  BeginPullResult,
-  MutatorDefs,
   Replicache,
-  getTestInstance,
+  restoreMakeImplForTest,
+  setMakeImplForTest,
 } from './replicache.js';
 import type {DiffComputationConfig} from './sync/diff.js';
 import type {ClientID} from './sync/ids.js';
 import type {WriteTransaction} from './transactions.js';
+import type {BeginPullResult, MutatorDefs} from './types.js';
 import {uuid} from './uuid.js';
+import {must} from 'shared/src/must.js';
 
 // fetch-mock has invalid d.ts file so we removed that on npm install.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
+import {dropIDBStoreWithMemFallback} from './kv/idb-store-with-mem-fallback.js';
+import {ReplicacheImpl, ReplicacheImplOptions} from './replicache-impl.js';
 
 export class ReplicacheTest<
   // eslint-disable-next-line @typescript-eslint/ban-types
   MD extends MutatorDefs = {},
 > extends Replicache<MD> {
-  readonly #internalAPI!: ReplicacheInternalAPI;
+  readonly #impl: ReplicacheImpl<MD>;
+  recoverMutationsFake: sinon.SinonSpy<[r: Promise<boolean>], Promise<boolean>>;
 
-  constructor(options: ReplicacheOptions<MD>) {
-    let internalAPI!: ReplicacheInternalAPI;
-    super({
-      ...options,
-      exposeInternalAPI: (api: ReplicacheInternalAPI) => {
-        internalAPI = api;
-      },
-    } as ReplicacheOptions<MD>);
-    this.#internalAPI = internalAPI;
+  constructor(
+    options: ReplicacheOptions<MD>,
+    implOptions?: ReplicacheImplOptions | undefined,
+  ) {
+    let impl: ReplicacheImpl<MD> | undefined = undefined;
+    setMakeImplForTest(<M extends MutatorDefs>(ops: ReplicacheOptions<M>) => {
+      const repImpl = new ReplicacheImpl<M>(ops, implOptions);
+      impl = repImpl as unknown as ReplicacheImpl<MD>;
+      return repImpl;
+    });
+    super(options);
+    restoreMakeImplForTest();
+    this.#impl = must<ReplicacheImpl<MD>>(impl);
+    this.recoverMutationsFake = this.onRecoverMutations = sinon.fake(r => r);
   }
 
   pullIgnorePromise(opts?: Parameters<Replicache['pull']>[0]): void {
@@ -60,47 +63,68 @@ export class ReplicacheTest<
   }
 
   beginPull(): Promise<BeginPullResult> {
-    return getTestInstance(this).beginPull();
+    return this.#impl.beginPull();
   }
 
   maybeEndPull(syncHead: Hash, requestID: string): Promise<void> {
-    return getTestInstance(this).maybeEndPull(syncHead, requestID);
+    return this.#impl.maybeEndPull(syncHead, requestID);
   }
 
   persist() {
-    return this.#internalAPI.persist();
+    return this.#impl.persist();
   }
 
-  recoverMutationsFake = (getTestInstance(this).onRecoverMutations = sinon.fake(
-    r => r,
-  ));
-
   recoverMutations(): Promise<boolean> {
-    return getTestInstance(this).recoverMutations();
+    return this.#impl.recoverMutations();
   }
 
   licenseActive(): Promise<boolean> {
-    return getTestInstance(this).licenseActivePromise;
+    return this.#impl.licenseActivePromise;
   }
 
   licenseValid(): Promise<boolean> {
-    return getTestInstance(this).licenseCheckPromise;
+    return this.#impl.licenseCheckPromise;
   }
 
   get perdag() {
-    return getTestInstance(this).perdag;
+    return this.#impl.perdag;
   }
 
   get isClientGroupDisabled(): boolean {
-    return getTestInstance(this).isClientGroupDisabled();
+    return this.#impl.isClientGroupDisabled;
   }
 
   get memdag(): Store {
-    return getTestInstance(this).memdag;
+    return this.#impl.memdag;
   }
 
   get lastMutationID(): number {
-    return getTestInstance(this).lastMutationID();
+    return this.#impl.lastMutationID;
+  }
+
+  get onBeginPull() {
+    return this.#impl.onBeginPull;
+  }
+  set onBeginPull(v) {
+    this.#impl.onBeginPull = v;
+  }
+
+  get onPushInvoked() {
+    return this.#impl.onPushInvoked;
+  }
+  set onPushInvoked(v) {
+    this.#impl.onPushInvoked = v;
+  }
+
+  get onRecoverMutations() {
+    return this.#impl.onRecoverMutations;
+  }
+  set onRecoverMutations(v) {
+    this.#impl.onRecoverMutations = v;
+  }
+
+  get impl() {
+    return this.#impl;
   }
 }
 
@@ -133,7 +157,7 @@ async function closeAllCloseables(): Promise<void> {
 export const dbsToDrop: Set<string> = new Set();
 export async function deleteAllDatabases(): Promise<void> {
   for (const name of dbsToDrop) {
-    await dropIDBStore(name);
+    await dropIDBStoreWithMemFallback(name);
   }
   dbsToDrop.clear();
 }
@@ -144,7 +168,7 @@ type ReplicacheTestOptions<MD extends MutatorDefs> = Omit<
 > & {
   onClientStateNotFound?: (() => void) | null | undefined;
   licenseKey?: string | undefined;
-} & ReplicacheInternalOptions;
+};
 
 export async function replicacheForTesting<
   // eslint-disable-next-line @typescript-eslint/ban-types
@@ -152,6 +176,7 @@ export async function replicacheForTesting<
 >(
   name: string,
   options: ReplicacheTestOptions<MD> = {},
+  implOptions: ReplicacheImplOptions = {},
   testOptions: {
     useDefaultURLs?: boolean | undefined; // default true
     useUniqueName?: boolean | undefined; // default true
@@ -177,14 +202,17 @@ export async function replicacheForTesting<
     ? {...defaultURLs, ...options}
     : options;
 
-  const rep = new ReplicacheTest<MD>({
-    pullURL,
-    pushDelay,
-    pushURL,
-    name: useUniqueName ? `${uuid()}:${name}` : name,
-    licenseKey: licenseKey ?? TEST_LICENSE_KEY,
-    ...rest,
-  });
+  const rep = new ReplicacheTest<MD>(
+    {
+      pullURL,
+      pushDelay,
+      pushURL,
+      name: useUniqueName ? `${uuid()}:${name}` : name,
+      licenseKey: licenseKey ?? TEST_LICENSE_KEY,
+      ...rest,
+    },
+    implOptions,
+  );
   dbsToDrop.add(rep.idbName);
   reps.add(rep);
 
@@ -193,7 +221,7 @@ export async function replicacheForTesting<
   const {clientID} = rep;
   // Wait for open to be done.
   await rep.clientGroupID;
-  fetchMock.post(pullURL, makePullResponseV1(clientID, 0, [], null));
+  fetchMock.post(pullURL, makePullResponseV1(clientID, undefined, [], null));
   fetchMock.post(pushURL, 'ok');
   await tickAFewTimes();
   return rep;
@@ -210,6 +238,7 @@ export function initReplicacheTesting(): void {
   });
 
   teardown(async () => {
+    restoreMakeImplForTest();
     clock.restore();
     fetchMock.restore();
     sinon.restore();
@@ -316,13 +345,14 @@ export const testSubscriptionsManagerOptions: DiffComputationConfig = {
 
 export function makePullResponseV1(
   clientID: ClientID,
-  lastMutationID: number,
+  lastMutationID: number | undefined,
   patch: PatchOperation[] = [],
   cookie: Cookie = '',
 ): PullResponseV1 {
   return {
     cookie,
-    lastMutationIDChanges: {[clientID]: lastMutationID},
+    lastMutationIDChanges:
+      lastMutationID === undefined ? {} : {[clientID]: lastMutationID},
     patch,
   };
 }
@@ -367,11 +397,3 @@ export const disableAllBackgroundProcesses = {
   enableScheduledRefresh: false,
   enableScheduledPersist: false,
 };
-
-export class TestLogSink implements LogSink {
-  messages: [LogLevel, Context | undefined, unknown[]][] = [];
-
-  log(level: LogLevel, context: Context | undefined, ...args: unknown[]): void {
-    this.messages.push([level, context, args]);
-  }
-}

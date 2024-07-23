@@ -6,6 +6,7 @@ import {EntryCache} from '../storage/entry-cache.js';
 import type {Storage} from '../storage/storage.js';
 import {
   ClientRecord,
+  IncludeDeleted,
   getClientRecord,
   putClientRecord,
 } from '../types/client-record.js';
@@ -13,7 +14,8 @@ import type {ClientID} from '../types/client-state.js';
 import {putConnectedClients} from '../types/connected-clients.js';
 import {getUserValue, putUserValue} from '../types/user-value.js';
 import {putVersion} from '../types/version.js';
-import {createSilentLogContext, setUserEntries} from '../util/test-utils.js';
+import {setUserEntries} from '../util/test-utils.js';
+import {createSilentLogContext} from 'shared/src/logging-test-utils.js';
 import type {ClientDeleteHandler} from './client-delete-handler.js';
 import {
   collectClientIfDeleted,
@@ -317,15 +319,21 @@ Map {
 
     expect(await storage.list({}, jsonSchema)).toMatchInlineSnapshot(`
 Map {
-  "clientTombstone/client-b" => {
-    "userID": "u1",
-  },
   "clientV1/client-a" => {
     "baseCookie": 1,
     "clientGroupID": "client-group-id",
     "lastMutationID": 2,
     "lastMutationIDVersion": 3,
     "lastSeen": 1000,
+    "userID": "u1",
+  },
+  "clientV1/client-b" => {
+    "baseCookie": 1,
+    "clientGroupID": "client-group-id",
+    "deleted": true,
+    "lastMutationID": 2,
+    "lastMutationIDVersion": 3,
+    "lastSeen": 2000,
     "userID": "u1",
   },
   "clientV1/client-c" => {
@@ -435,15 +443,21 @@ Map {
 
     expect(await storage.list({}, jsonSchema)).toMatchInlineSnapshot(`
 Map {
-  "clientTombstone/client-b" => {
-    "userID": "u1",
-  },
   "clientV1/client-a" => {
     "baseCookie": 1,
     "clientGroupID": "client-group-id",
     "lastMutationID": 2,
     "lastMutationIDVersion": 3,
     "lastSeen": 1000,
+    "userID": "u1",
+  },
+  "clientV1/client-b" => {
+    "baseCookie": 1,
+    "clientGroupID": "client-group-id",
+    "deleted": true,
+    "lastMutationID": 2,
+    "lastMutationIDVersion": 3,
+    "lastSeen": 2000,
     "userID": "u1",
   },
   "clientV1/client-c" => {
@@ -506,7 +520,9 @@ Map {
     await storage.flush();
 
     // no lastSeen
-    expect(await getClientRecord('client-b', storage)).toEqual({
+    expect(
+      await getClientRecord('client-b', IncludeDeleted.Include, storage),
+    ).toEqual({
       baseCookie: 1,
       clientGroupID: 'client-group-id',
       lastMutationID: 2,
@@ -531,9 +547,6 @@ Map {
     // client-b gets a lastSeen of now
     expect(await storage.list({}, jsonSchema)).toMatchInlineSnapshot(`
 Map {
-  "clientTombstone/client-d" => {
-    "userID": "u1",
-  },
   "clientV1/client-a" => {
     "baseCookie": 1,
     "clientGroupID": "client-group-id",
@@ -556,6 +569,15 @@ Map {
     "lastMutationID": 2,
     "lastMutationIDVersion": 3,
     "lastSeen": 3000,
+    "userID": "u1",
+  },
+  "clientV1/client-d" => {
+    "baseCookie": 1,
+    "clientGroupID": "client-group-id",
+    "deleted": true,
+    "lastMutationID": 2,
+    "lastMutationIDVersion": 3,
+    "lastSeen": 1500,
     "userID": "u1",
   },
   "connectedclients" => [

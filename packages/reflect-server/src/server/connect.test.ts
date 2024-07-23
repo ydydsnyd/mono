@@ -19,16 +19,12 @@ import type {
   ClientGroupID,
   ClientID,
   ClientMap,
-  Socket,
 } from '../types/client-state.js';
+import type {Socket} from '../util/socket.js';
 import {putVersion} from '../types/version.js';
-import {encodeHeaderValue} from '../util/headers.js';
-import {
-  Mocket,
-  client,
-  clientRecord,
-  createSilentLogContext,
-} from '../util/test-utils.js';
+import {encodeHeaderValue} from 'shared/src/headers.js';
+import {Mocket, client, clientRecord} from '../util/test-utils.js';
+import {createSilentLogContext} from 'shared/src/logging-test-utils.js';
 import {AUTH_DATA_HEADER_NAME} from './internal-headers.js';
 
 const START_TIME = 1686690000000;
@@ -414,6 +410,20 @@ describe('handleConnection', () => {
       }),
       expectErrorKind: 'InvalidConnectionRequest',
       expectErrorMessage: `Unexpected userID`,
+      version: 6,
+    },
+    {
+      name: 'client was previously deleted',
+      url: 'http://google.com/?clientID=c1&clientGroupID=cg1&baseCookie=7&ts=42&lmid=0&wsid=wsidx',
+      headers: createHeadersWithValidAuthData(userID),
+      existingClients: new Map(),
+      existingRecord: clientRecord({
+        clientGroupID: 'cg1',
+        deleted: true,
+      }),
+      expectedClients: () => new Map(),
+      expectErrorKind: 'InvalidConnectionRequestClientDeleted',
+      expectErrorMessage: `Client is deleted`,
       version: 6,
     },
   ];

@@ -18,9 +18,9 @@ import {
 import {rebaseMutationAndPutCommit} from '../db/rebase.js';
 import type {FormatVersion} from '../format-version.js';
 import type {Hash} from '../hash.js';
-import type {MutatorDefs} from '../replicache.js';
 import {DiffComputationConfig, DiffsMap, diffCommits} from '../sync/diff.js';
 import type {ClientID} from '../sync/ids.js';
+import type {MutatorDefs} from '../types.js';
 import {withRead, withWrite} from '../with-transactions.js';
 import {
   ClientStateNotFoundError,
@@ -45,7 +45,6 @@ type RefreshResult =
     }
   | {
       type: 'complete';
-      newMemdagHeadHash: Hash;
       diffs: DiffsMap;
       newPerdagClientHeadHash: Hash;
     };
@@ -63,7 +62,7 @@ export async function refresh(
   diffConfig: DiffComputationConfig,
   closed: () => boolean,
   formatVersion: FormatVersion,
-): Promise<[newMemdagHeadHash: Hash, diffs: DiffsMap] | undefined> {
+): Promise<DiffsMap | undefined> {
   if (closed()) {
     return;
   }
@@ -253,7 +252,6 @@ export async function refresh(
         await memdagWrite.setHead(DEFAULT_HEAD_NAME, newMemdagHeadHash);
         return {
           type: 'complete',
-          newMemdagHeadHash,
           diffs,
           newPerdagClientHeadHash: perdagClientGroupHeadHash,
         };
@@ -284,7 +282,7 @@ export async function refresh(
     return undefined;
   }
   await setRefreshHashes([result.newPerdagClientHeadHash]);
-  return [result.newMemdagHeadHash, result.diffs];
+  return result.diffs;
 }
 
 function shouldAbortRefresh(

@@ -20,8 +20,6 @@ import {version} from 'reflect-shared/src/version.js';
 import {
   ClientGroupID,
   ClientID,
-  ExperimentalCreateKVStore,
-  ExperimentalMemKVStore,
   ExperimentalWatchCallbackForOptions,
   ExperimentalWatchNoIndexCallback,
   ExperimentalWatchOptions,
@@ -35,16 +33,17 @@ import {
   PushRequestV1,
   Pusher,
   PusherResult,
-  Replicache,
   ReplicacheOptions,
   UpdateNeededReason as ReplicacheUpdateNeededReason,
   SubscribeOptions,
   dropDatabase,
 } from 'replicache';
+import {ReplicacheImpl} from 'replicache/src/replicache-impl.js';
 import {assert} from 'shared/src/asserts.js';
 import {getDocumentVisibilityWatcher} from 'shared/src/document-visible.js';
 import {getDocument} from 'shared/src/get-document.js';
 import {getWindow} from 'shared/src/get-window.js';
+import {navigator} from 'shared/src/navigator.js';
 import {sleep, sleepWithAbort} from 'shared/src/sleep.js';
 import * as valita from 'shared/src/valita.js';
 import {nanoid} from '../util/nanoid.js';
@@ -89,15 +88,15 @@ export const exposedToTestingSymbol = Symbol();
 export const createLogOptionsSymbol = Symbol();
 
 interface TestReflect {
-  [exposedToTestingSymbol]: TestingContext;
-  [onSetConnectionStateSymbol]: (state: ConnectionState) => void;
-  [createLogOptionsSymbol]: (options: {
+  [exposedToTestingSymbol]?: TestingContext;
+  [onSetConnectionStateSymbol]?: (state: ConnectionState) => void;
+  [createLogOptionsSymbol]?: (options: {
     consoleLogLevel: LogLevel;
     server: string | null;
   }) => LogOptions;
 }
 
-function forTesting<MD extends MutatorDefs>(r: Reflect<MD>): TestReflect {
+function asTestReflect<MD extends MutatorDefs>(r: Reflect<MD>): TestReflect {
   return r as unknown as TestReflect;
 }
 
@@ -168,15 +167,10 @@ const enum PingResult {
   Success = 1,
 }
 
-// Keep in sync with packages/replicache/src/replicache-options.ts
-export interface ReplicacheInternalAPI {
-  lastMutationID(): number;
-}
-
 export class Reflect<MD extends MutatorDefs> {
   readonly version = version;
 
-  readonly #rep: Replicache<MD>;
+  readonly #rep: ReplicacheImpl<MD>;
   readonly #server: HTTPString | null;
   readonly userID: string;
   readonly roomID: string;
@@ -217,7 +211,6 @@ export class Reflect<MD extends MutatorDefs> {
     // intentionally empty
   };
 
-  #internalAPI: ReplicacheInternalAPI;
   readonly #closeBeaconManager: CloseBeaconManager;
 
   /**
@@ -284,7 +277,7 @@ export class Reflect<MD extends MutatorDefs> {
     this.#connectionStateChangeResolver = resolver();
 
     if (TESTING) {
-      forTesting(this)[onSetConnectionStateSymbol](state);
+      asTestReflect(this)[onSetConnectionStateSymbol]?.(state);
     }
   }
 
@@ -315,6 +308,7 @@ export class Reflect<MD extends MutatorDefs> {
       onOnlineChange,
       jurisdiction,
       hiddenTabDisconnectDelay = DEFAULT_DISCONNECT_HIDDEN_DELAY_MS,
+      kvStore = 'mem',
     } = options;
     if (!userID) {
       throw new Error('ReflectOptions.userID must not be empty.');
@@ -364,21 +358,14 @@ export class Reflect<MD extends MutatorDefs> {
         minDelayMs: 0,
       },
       licenseKey: 'reflect-client-static-key',
-      experimentalCreateKVStore: getCreateKVStore(options),
+      kvStore,
     };
-    let internalAPI: ReplicacheInternalAPI;
-    const replicacheInternalOptions = {
+    const replicacheImplOptions = {
       enableLicensing: false,
-      exposeInternalAPI: (api: ReplicacheInternalAPI) => {
-        internalAPI = api;
-      },
     };
 
-    this.#rep = new Replicache({
-      ...replicacheOptions,
-      ...replicacheInternalOptions,
-    });
-    this.#internalAPI = internalAPI!;
+    this.#rep = new ReplicacheImpl(replicacheOptions, replicacheImplOptions);
+
     this.#rep.getAuth = this.#getAuthToken;
     this.#onUpdateNeeded = this.#rep.onUpdateNeeded; // defaults to reload.
     this.#server = server;
@@ -425,7 +412,7 @@ export class Reflect<MD extends MutatorDefs> {
       this.#lc,
       server,
       () => this.#rep.auth,
-      () => this.#internalAPI.lastMutationID(),
+      () => this.#rep.lastMutationID,
       this.#closeAbortController.signal,
       getWindow(),
     );
@@ -433,7 +420,7 @@ export class Reflect<MD extends MutatorDefs> {
     void this.#runLoop();
 
     if (TESTING) {
-      forTesting(this)[exposedToTestingSymbol] = {
+      asTestReflect(this)[exposedToTestingSymbol] = {
         puller: this.#puller,
         pusher: this.#pusher,
         setReload: (r: () => void) => {
@@ -453,7 +440,10 @@ export class Reflect<MD extends MutatorDefs> {
     enableAnalytics: boolean;
   }): LogOptions {
     if (TESTING) {
-      return forTesting(this)[createLogOptionsSymbol](options);
+      const testReflect = asTestReflect(this);
+      if (testReflect[createLogOptionsSymbol]) {
+        return testReflect[createLogOptionsSymbol](options);
+      }
     }
     return createLogOptions(options);
   }
@@ -648,7 +638,7 @@ export class Reflect<MD extends MutatorDefs> {
       const now = Date.now();
       const timeToOpenMs = now - this.#connectStart;
       l.info?.('Got socket open event', {
-        navigatorOnline: navigator.onLine,
+        navigatorOnline: navigator?.onLine,
         timeToOpenMs,
       });
     }
@@ -740,7 +730,7 @@ export class Reflect<MD extends MutatorDefs> {
     this.#metrics.setConnected(timeToConnectMs ?? 0, totalTimeToConnectMs ?? 0);
 
     lc.info?.('Connected', {
-      navigatorOnline: navigator.onLine,
+      navigatorOnline: navigator?.onLine,
       timeToConnectMs,
       totalTimeToConnectMs,
       connectMsgLatencyMs,
@@ -778,7 +768,7 @@ export class Reflect<MD extends MutatorDefs> {
 
     const wsid = nanoid();
     l = addWebSocketIDToLogContext(wsid, l);
-    l.info?.('Connecting...', {navigatorOnline: navigator.onLine});
+    l.info?.('Connecting...', {navigatorOnline: navigator?.onLine});
 
     this.#setConnectionState(ConnectionState.Connecting);
 
@@ -848,7 +838,7 @@ export class Reflect<MD extends MutatorDefs> {
       this.#connectErrorCount++;
     }
     l.info?.('disconnecting', {
-      navigatorOnline: navigator.onLine,
+      navigatorOnline: navigator?.onLine,
       reason,
       connectStart: this.#connectStart,
       totalToConnectStart: this.#totalToConnectStart,
@@ -1437,7 +1427,7 @@ export class Reflect<MD extends MutatorDefs> {
   // Total hack to get base cookie, see #puller for how the promise is resolved.
   #getBaseCookie(): Promise<NullableVersion> {
     this.#baseCookieResolver ??= resolver();
-    void this.#rep.pull();
+    void this.#rep.pull().catch(() => {});
     return this.#baseCookieResolver.promise;
   }
 }
@@ -1518,23 +1508,3 @@ class TimedOutError extends Error {
 }
 
 class CloseError extends Error {}
-
-function createMemStore(name: string): ExperimentalMemKVStore {
-  return new ExperimentalMemKVStore(name);
-}
-
-function getCreateKVStore<MD extends MutatorDefs>(
-  options: ReflectOptions<MD>,
-): ExperimentalCreateKVStore | undefined {
-  switch (options.kvStore) {
-    case 'idb':
-      return undefined;
-
-    case 'mem':
-    case undefined:
-      return createMemStore;
-
-    default:
-      return options.kvStore;
-  }
-}

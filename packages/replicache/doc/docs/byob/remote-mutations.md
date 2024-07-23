@@ -7,7 +7,7 @@ Replicache will periodically invoke your [push endpoint](/reference/server-push)
 
 The implementation of push will depend on the backend strategy you are using. For the [Global Version](/strategies/global-version) strategy we're using, the basics steps are:
 
-1. Open an exclusive (serializable) transaction.
+1. Open a transaction.
 1. Read the current global version and compute the next one.
 1. Create a client record for the requesting client if the client is new.
 1. Validate that the received mutation is the next expected one. If the received mutation has already been processed (by a previous push), skip it. If the received mutation is not expected, then error.
@@ -15,24 +15,34 @@ The implementation of push will depend on the backend strategy you are using. Fo
 1. Update the stored `version` and `lastMutationID` for the pushing client, so that `pull` can later report the last-processed mutationID.
 1. Store the new global version.
 
-At minimum, all of these changes **must** happen atomically in a serialized transaction for each mutation in a push. However, putting multiple mutations together in a single wider transaction is also acceptable.
+At minimum, all of these changes **must** happen atomically in a single transaction for each mutation in a push. However, putting multiple mutations together in a single wider transaction is also acceptable.
 
 ## Implement Push
 
-Create a new file `pages/api/replicache-push.ts` and copy the below code into it.
+Create a file in the project at `server/src/push.ts` and copy the below code into it.
 
 This looks like a lot of code, but it's just implementing the description above. See the inline comments for additional details.
 
 ```ts
-import {NextApiRequest, NextApiResponse} from 'next';
-import {serverID, tx} from '../../db';
-import Pusher from 'pusher';
-import {ITask} from 'pg-promise';
-import {MessageWithID} from '../../types';
-import {MutationV1} from 'replicache';
+import {serverID, tx, type Transaction} from './db';
+import type {MessageWithID} from 'shared';
+import type {MutationV1, PushRequestV1} from 'replicache';
+import type {Request, Response, NextFunction} from 'express';
 
-export default async function (req: NextApiRequest, res: NextApiResponse) {
-  const push = req.body;
+export async function handlePush(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    await push(req, res);
+  } catch (e) {
+    next(e);
+  }
+}
+
+async function push(req: Request, res: Response) {
+  const push: PushRequestV1 = req.body;
   console.log('Processing push', JSON.stringify(push));
 
   const t0 = Date.now();
@@ -49,29 +59,10 @@ export default async function (req: NextApiRequest, res: NextApiResponse) {
         // Handle errors inside mutations by skipping and moving on. This is
         // convenient in development but you may want to reconsider as your app
         // gets close to production:
-        //
-        // https://doc.replicache.dev/server-push#error-handling
-        //
-        // Ideally we would run the mutator itself in a nested transaction, and
-        // if that fails, rollback just the mutator and allow the lmid and
-        // version updates to commit. However, nested transaction support in
-        // Postgres is not great:
-        //
-        // https://postgres.ai/blog/20210831-postgresql-subtransactions-considered-harmful
-        //
-        // Instead we implement skipping of failed mutations by *re-runing*
-        // them, but passing a flag that causes the mutator logic to be skipped.
-        //
-        // This ensures that the lmid and version bookkeeping works exactly the
-        // same way as in the happy path. A way to look at this is that for the
-        // error-case we replay the mutation but it just does something
-        // different the second time.
-        //
-        // This is allowed in Replicache because mutators don't have to be
-        // deterministic!:
-        //
-        // https://doc.replicache.dev/concepts/how-it-works#speculative-execution-and-confirmation
-        await tx(t => processMutation(t, push.clientGroupID, mutation, e));
+        // https://doc.replicache.dev/reference/server-push#error-handling
+        await tx(t =>
+          processMutation(t, push.clientGroupID, mutation, e as string),
+        );
       }
 
       console.log('Processed mutation in', Date.now() - t1);
@@ -79,19 +70,17 @@ export default async function (req: NextApiRequest, res: NextApiResponse) {
 
     res.send('{}');
 
-    // We need to await here otherwise, Next.js will frequently kill the request
-    // and the poke won't get sent.
     await sendPoke();
   } catch (e) {
     console.error(e);
-    res.status(500).send(e.toString());
+    res.status(500).send(e);
   } finally {
     console.log('Processed push in', Date.now() - t0);
   }
 }
 
 async function processMutation(
-  t: ITask<{}>,
+  t: Transaction,
   clientGroupID: string,
   mutation: MutationV1,
   error?: string | undefined,
@@ -167,7 +156,7 @@ async function processMutation(
   ]);
 }
 
-export async function getLastMutationID(t: ITask<{}>, clientID: string) {
+export async function getLastMutationID(t: Transaction, clientID: string) {
   const clientRow = await t.oneOrNone(
     'select last_mutation_id from replicache_client where id = $1',
     clientID,
@@ -179,7 +168,7 @@ export async function getLastMutationID(t: ITask<{}>, clientID: string) {
 }
 
 async function setLastMutationID(
-  t: ITask<{}>,
+  t: Transaction,
   clientID: string,
   clientGroupID: string,
   mutationID: number,
@@ -207,7 +196,7 @@ async function setLastMutationID(
 }
 
 async function createMessage(
-  t: ITask<{}>,
+  t: Transaction,
   {id, from, content, order}: MessageWithID,
   version: number,
 ) {
@@ -224,13 +213,27 @@ async function sendPoke() {
 }
 ```
 
+Add the handler to Express modifying the file `server/src/main.ts` with the `app.post` route:
+
+```ts {6}
+import { handlePush } from './push';
+//...
+app.use(express.urlencoded({extended: true}), express.json(), errorHandler);
+
+app.post('/api/replicache/pull', handlePull);
+app.post('/api/replicache/push', handlePush);
+
+if (process.env.NODE_ENV === 'production') {
+//...
+```
+
 :::info
 
 You may be wondering if it possible to share mutator code between the client and server. It is, but constrains how you can design your backend. See [Share Mutators](/howto/share-mutators) for more information.
 
 :::
 
-Restart the server, navigate to [http://localhost:3000/](http://localhost:3000/) and make some changes. You should now see changes getting saved in the server console output.
+Restart the server, navigate to [http://localhost:5173/](http://localhost:5173/) and make some changes. You should now see changes getting saved in the server console output.
 
 <p class="text--center">
   <img src="/img/setup/remote-mutation.webp" width="650"/>

@@ -253,26 +253,21 @@ test('begin try pull SDD', async () => {
       },
     },
     {
-      name: 'new patch, same lmid, same cookie -> beginPull succeeds w/syncHead set',
+      name: 'new patch, same lmid, same cookie -> beginPull succeeds w/no syncHead set',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
         lastMutationID: baseLastMutationID,
         cookie: baseCookie,
       },
-      expNewSyncHead: {
-        cookie: baseCookie,
-        lastMutationID: baseLastMutationID,
-        valueMap: goodPullRespValueMap,
-        indexes: ['2'],
-      },
+      expNewSyncHead: undefined,
       expBeginPullResult: {
         httpRequestInfo: goodHttpRequestInfo,
         syncHead: emptyHash,
       },
     },
     {
-      name: 'no patch, new lmid, same cookie -> beginPull succeeds w/syncHead set',
+      name: 'no patch, new lmid, same cookie -> beginPull succeeds w/no syncHead set',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
@@ -280,12 +275,7 @@ test('begin try pull SDD', async () => {
         cookie: baseCookie,
         patch: [],
       },
-      expNewSyncHead: {
-        cookie: baseCookie,
-        lastMutationID: baseLastMutationID + 1,
-        valueMap: baseValueMap,
-        indexes: ['2'],
-      },
+      expNewSyncHead: undefined,
       expBeginPullResult: {
         httpRequestInfo: goodHttpRequestInfo,
         syncHead: emptyHash,
@@ -312,18 +302,13 @@ test('begin try pull SDD', async () => {
       },
     },
     {
-      name: 'new patch, new lmid, same cookie -> beginPull succeeds w/syncHead set',
+      name: 'new patch, new lmid, same cookie -> beginPull succeeds w/no syncHead set',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
         cookie: baseCookie,
       },
-      expNewSyncHead: {
-        cookie: baseCookie,
-        lastMutationID: goodPullResp.lastMutationID,
-        valueMap: goodPullRespValueMap,
-        indexes: ['2'],
-      },
+      expNewSyncHead: undefined,
       expBeginPullResult: {
         httpRequestInfo: goodHttpRequestInfo,
         syncHead: emptyHash,
@@ -753,26 +738,21 @@ test('begin try pull DD31', async () => {
       },
     },
     {
-      name: 'new patch, same lmid, same cookie -> beginPull succeeds w/syncHead set',
+      name: 'new patch, same lmid, same cookie -> beginPull succeeds w/no syncHead set',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
         lastMutationIDChanges: {[clientID]: baseLastMutationID},
         cookie: baseCookie,
       },
-      expNewSyncHead: {
-        cookie: baseCookie,
-        lastMutationID: baseLastMutationID,
-        valueMap: goodPullRespValueMap,
-        indexes: ['2'],
-      },
+      expNewSyncHead: undefined,
       expBeginPullResult: {
         httpRequestInfo: goodHttpRequestInfo,
         syncHead: emptyHash,
       },
     },
     {
-      name: 'no patch, new lmid, same cookie -> beginPull succeeds w/syncHead set',
+      name: 'no patch, new lmid, same cookie -> beginPull succeeds w/no syncHead set',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
@@ -780,12 +760,7 @@ test('begin try pull DD31', async () => {
         cookie: baseCookie,
         patch: [],
       },
-      expNewSyncHead: {
-        cookie: baseCookie,
-        lastMutationID: baseLastMutationID + 1,
-        valueMap: baseValueMap,
-        indexes: ['2'],
-      },
+      expNewSyncHead: undefined,
       expBeginPullResult: {
         httpRequestInfo: goodHttpRequestInfo,
         syncHead: emptyHash,
@@ -812,18 +787,13 @@ test('begin try pull DD31', async () => {
       },
     },
     {
-      name: 'new patch, new lmid, same cookie -> beginPull succeeds w/syncHead set',
+      name: 'new patch, new lmid, same cookie -> beginPull succeeds w/no syncHead set',
       numPendingMutations: 0,
       pullResult: {
         ...goodPullResp,
         cookie: baseCookie,
       },
-      expNewSyncHead: {
-        cookie: baseCookie,
-        lastMutationID: goodPullResp.lastMutationIDChanges[clientID],
-        valueMap: goodPullRespValueMap,
-        indexes: ['2'],
-      },
+      expNewSyncHead: undefined,
       expBeginPullResult: {
         httpRequestInfo: goodHttpRequestInfo,
         syncHead: emptyHash,
@@ -903,7 +873,21 @@ test('begin try pull DD31', async () => {
       },
       expNewSyncHead: undefined,
       expBeginPullResult:
-        'Received cookie cookie_0 is < than last snapshot cookie cookie_1; ignoring client view',
+        'Received cookie "cookie_0" is < than last snapshot cookie "cookie_1"; ignoring client view',
+    },
+    {
+      name: 'pulls new state w/lesser cookie using _order -> beginPull errors',
+      numPendingMutations: 0,
+      pullResult: {
+        ...goodPullResp,
+        cookie: {
+          foo: 'bar',
+          order: 'cookie_0',
+        },
+      },
+      expNewSyncHead: undefined,
+      expBeginPullResult:
+        'Received cookie {"foo":"bar","order":"cookie_0"} is < than last snapshot cookie "cookie_1"; ignoring client view',
     },
     {
       name: 'pulls new state with identical client-lmid-changes in response (identical cookie and no patch)',
@@ -1718,7 +1702,7 @@ test('pull for client group with multiple client local changes', async () => {
   const lc = new LogContext();
 
   const pullResponse = {
-    cookie: 1,
+    cookie: 2,
     lastMutationIDChanges: {
       [clientID1]: 11,
       [clientID2]: 21,

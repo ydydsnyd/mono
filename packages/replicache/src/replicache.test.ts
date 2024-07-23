@@ -12,6 +12,7 @@ import {resolver} from '@rocicorp/resolver';
 import {assert as chaiAssert, expect} from 'chai';
 import {assert} from 'shared/src/asserts.js';
 import type {JSONValue, ReadonlyJSONValue} from 'shared/src/json.js';
+import {promiseVoid} from 'shared/src/resolved-promises.js';
 import {sleep} from 'shared/src/sleep.js';
 import * as sinon from 'sinon';
 import {asyncIterableToArray} from './async-iterable-to-array.js';
@@ -20,13 +21,7 @@ import {TestMemStore} from './kv/test-mem-store.js';
 import type {PatchOperation} from './patch-operation.js';
 import {deleteClientForTesting} from './persist/clients-test-helpers.js';
 import type {ReplicacheOptions} from './replicache-options.js';
-import {
-  MutatorDefs,
-  Poke,
-  Replicache,
-  getTestInstance,
-  httpStatusUnauthorized,
-} from './replicache.js';
+import {Replicache, httpStatusUnauthorized} from './replicache.js';
 import type {ScanOptions} from './scan-options.js';
 import type {ClientID} from './sync/ids.js';
 import {
@@ -47,11 +42,14 @@ import {
 } from './test-util.js';
 import {TransactionClosedError} from './transaction-closed-error.js';
 import type {ReadTransaction, WriteTransaction} from './transactions.js';
+import type {MutatorDefs, Poke} from './types.js';
 
 // fetch-mock has invalid d.ts file so we removed that on npm install.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
+import {withRead} from './with-transactions.js';
+import {getClientGroup} from './persist/client-groups.js';
 
 const {fail} = chaiAssert;
 
@@ -70,6 +68,28 @@ test('name cannot be empty', () => {
   expect(
     () => new Replicache({licenseKey: TEST_LICENSE_KEY, name: ''}),
   ).to.throw(/name.*must be non-empty/);
+});
+
+test('cookie', async () => {
+  const pullURL = 'https://pull.com/rep';
+  const rep = await replicacheForTesting('test2', {
+    pullURL,
+  });
+  expect(await rep.impl.cookie).to.equal(null);
+
+  let pullDone = false;
+  fetchMock.post(pullURL, () => {
+    pullDone = true;
+    return makePullResponseV1(rep.clientID, 0, [], 'newCookie');
+  });
+
+  await rep.pull();
+
+  await tickUntil(() => pullDone);
+  await tickAFewTimes();
+
+  expect(await rep.impl.cookie).to.equal('newCookie');
+  fetchMock.reset();
 });
 
 test('get, has, scan on empty db', async () => {
@@ -442,7 +462,7 @@ test('reauth push', async () => {
   expectConsoleLogContextStub(
     rep.name,
     consoleErrorStub.firstCall,
-    'Got error response doing push: 401: xxx',
+    'Got a non 200 response doing push: 401: xxx',
     ['push', requestIDLogContextRegex],
   );
 
@@ -481,9 +501,13 @@ test('HTTP status pull', async () => {
         return {body: 'internal error', status: 500};
       case 1:
         return {body: 'not found', status: 404};
+      case 2:
+        return {body: 'created', status: 201};
+      case 3:
+        return {status: 204};
       default: {
         okCalled = true;
-        return {body: makePullResponseV1(clientID, 0), status: 200};
+        return {body: makePullResponseV1(clientID, undefined), status: 200};
       }
     }
   });
@@ -492,19 +516,31 @@ test('HTTP status pull', async () => {
 
   rep.pullIgnorePromise({now: true});
 
-  await tickAFewTimes(20, 10);
+  await tickAFewTimes(60, 10);
 
-  expect(consoleErrorStub.callCount).to.equal(2);
+  expect(consoleErrorStub.callCount).to.equal(4);
   expectConsoleLogContextStub(
     rep.name,
     consoleErrorStub.firstCall,
-    'Got error response doing pull: 500: internal error',
+    'Got a non 200 response doing pull: 500: internal error',
+    ['pull', requestIDLogContextRegex],
+  );
+  expectConsoleLogContextStub(
+    rep.name,
+    consoleErrorStub.secondCall,
+    'Got a non 200 response doing pull: 404: not found',
+    ['pull', requestIDLogContextRegex],
+  );
+  expectConsoleLogContextStub(
+    rep.name,
+    consoleErrorStub.thirdCall,
+    'Got a non 200 response doing pull: 201: created',
     ['pull', requestIDLogContextRegex],
   );
   expectConsoleLogContextStub(
     rep.name,
     consoleErrorStub.lastCall,
-    'Got error response doing pull: 404: not found',
+    'Got a non 200 response doing pull: 204',
     ['pull', requestIDLogContextRegex],
   );
 
@@ -529,6 +565,10 @@ test('HTTP status push', async () => {
         return {body: 'internal error', status: 500};
       case 1:
         return {body: 'not found', status: 404};
+      case 2:
+        return {body: 'created', status: 201};
+      case 3:
+        return {status: 204};
       default:
         okCalled = true;
         return {body: {}, status: 200};
@@ -541,19 +581,31 @@ test('HTTP status push', async () => {
     a: 0,
   });
 
-  await tickAFewTimes(20, 10);
+  await tickAFewTimes(60, 10);
 
-  expect(consoleErrorStub.callCount).to.equal(2);
+  expect(consoleErrorStub.callCount).to.equal(4);
   expectConsoleLogContextStub(
     rep.name,
     consoleErrorStub.firstCall,
-    'Got error response doing push: 500: internal error',
+    'Got a non 200 response doing push: 500: internal error',
+    ['push', requestIDLogContextRegex],
+  );
+  expectConsoleLogContextStub(
+    rep.name,
+    consoleErrorStub.secondCall,
+    'Got a non 200 response doing push: 404: not found',
+    ['push', requestIDLogContextRegex],
+  );
+  expectConsoleLogContextStub(
+    rep.name,
+    consoleErrorStub.thirdCall,
+    'Got a non 200 response doing push: 201: created',
     ['push', requestIDLogContextRegex],
   );
   expectConsoleLogContextStub(
     rep.name,
     consoleErrorStub.lastCall,
-    'Got error response doing push: 404: not found',
+    'Got a non 200 response doing push: 204',
     ['push', requestIDLogContextRegex],
   );
 
@@ -630,6 +682,12 @@ test('index in options', async () => {
     [['4', 'a/4'], {a: '4'}],
   ]);
 
+  await testScanResult(rep, {indexName: 'aIndex', limit: 3}, [
+    [['0', 'a/0'], {a: '0'}],
+    [['1', 'a/1'], {a: '1'}],
+    [['2', 'a/2'], {a: '2'}],
+  ]);
+
   await testScanResult(rep, {indexName: 'bc'}, [[['8', 'c/0'], {bc: '8'}]]);
   await add({
     'c/1': {bc: '88'},
@@ -653,14 +711,19 @@ test('index in options', async () => {
 });
 
 test('allow redefinition of indexes', async () => {
-  const rep = await replicacheForTesting('index-redefinition', {
-    mutators: {addData},
-    indexes: {
-      aIndex: {jsonPointer: '/a'},
+  const rep = await replicacheForTesting(
+    'index-redefinition',
+    {
+      mutators: {addData},
+      indexes: {
+        aIndex: {jsonPointer: '/a'},
+      },
     },
-    ...disableAllBackgroundProcesses,
-    enablePullAndPushInOpen: false,
-  });
+    {
+      ...disableAllBackgroundProcesses,
+      enablePullAndPushInOpen: false,
+    },
+  );
 
   await populateDataUsingPull(rep, {
     'a/0': {a: '0'},
@@ -685,6 +748,8 @@ test('allow redefinition of indexes', async () => {
       indexes: {
         aIndex: {jsonPointer: '/a', prefix: 'b'},
       },
+    },
+    {
       enablePullAndPushInOpen: false,
     },
     {useUniqueName: false},
@@ -699,13 +764,16 @@ test('allow redefinition of indexes', async () => {
 });
 
 test('add more indexes', async () => {
-  const rep = await replicacheForTesting('index-add-more', {
-    mutators: {addData},
-    indexes: {
-      aIndex: {jsonPointer: '/a'},
+  const rep = await replicacheForTesting(
+    'index-add-more',
+    {
+      mutators: {addData},
+      indexes: {
+        aIndex: {jsonPointer: '/a'},
+      },
     },
-    ...disableAllBackgroundProcesses,
-  });
+    disableAllBackgroundProcesses,
+  );
 
   await populateDataUsingPull(rep, {
     'a/0': {a: '0'},
@@ -731,6 +799,7 @@ test('add more indexes', async () => {
         bIndex: {jsonPointer: '/b'},
       },
     },
+    undefined,
     {useUniqueName: false},
   );
 
@@ -746,11 +815,16 @@ test('add more indexes', async () => {
 });
 
 test('add index definition with prefix', async () => {
-  const rep = await replicacheForTesting('index-add-more', {
-    mutators: {addData},
-    ...disableAllBackgroundProcesses,
-    enablePullAndPushInOpen: false,
-  });
+  const rep = await replicacheForTesting(
+    'index-add-more',
+    {
+      mutators: {addData},
+    },
+    {
+      ...disableAllBackgroundProcesses,
+      enablePullAndPushInOpen: false,
+    },
+  );
 
   await populateDataUsingPull(rep, {
     'a/0': {a: '0'},
@@ -768,6 +842,8 @@ test('add index definition with prefix', async () => {
       indexes: {
         aIndex: {jsonPointer: '/a', prefix: 'a'},
       },
+    },
+    {
       enablePullAndPushInOpen: false,
     },
     {useUniqueName: false},
@@ -779,14 +855,17 @@ test('add index definition with prefix', async () => {
 });
 
 test('rename indexes', async () => {
-  const rep = await replicacheForTesting('index-add-more', {
-    mutators: {addData},
-    indexes: {
-      aIndex: {jsonPointer: '/a'},
-      bIndex: {jsonPointer: '/b'},
+  const rep = await replicacheForTesting(
+    'index-add-more',
+    {
+      mutators: {addData},
+      indexes: {
+        aIndex: {jsonPointer: '/a'},
+        bIndex: {jsonPointer: '/b'},
+      },
     },
-    ...disableAllBackgroundProcesses,
-  });
+    disableAllBackgroundProcesses,
+  );
   await populateDataUsingPull(rep, {
     'a/0': {a: '0'},
     'b/1': {a: '1'},
@@ -813,6 +892,7 @@ test('rename indexes', async () => {
         aIndex: {jsonPointer: '/b'},
       },
     },
+    undefined,
     {useUniqueName: false},
   );
 
@@ -1239,13 +1319,18 @@ test('onSync', async () => {
   const pullURL = 'https://pull.com/pull';
   const pushURL = 'https://push.com/push';
 
-  const rep = await replicacheForTesting('onSync', {
-    pullURL,
-    pushURL,
-    pushDelay: 5,
-    mutators: {addData},
-    enablePullAndPushInOpen: false,
-  });
+  const rep = await replicacheForTesting(
+    'onSync',
+    {
+      pullURL,
+      pushURL,
+      pushDelay: 5,
+      mutators: {addData},
+    },
+    {
+      enablePullAndPushInOpen: false,
+    },
+  );
   const add = rep.mutate.addData;
 
   const onSync = sinon.fake();
@@ -1254,7 +1339,7 @@ test('onSync', async () => {
   expect(onSync.callCount).to.equal(0);
 
   const {clientID} = rep;
-  fetchMock.postOnce(pullURL, makePullResponseV1(clientID, 2));
+  fetchMock.postOnce(pullURL, makePullResponseV1(clientID, 2, undefined, 1));
   await rep.pull();
   await tickAFewTimes(15);
 
@@ -1297,7 +1382,7 @@ test('onSync', async () => {
     expectConsoleLogContextStub(
       rep.name,
       consoleErrorStub.firstCall,
-      'Got error response doing push: 401: xxx',
+      'Got a non 200 response doing push: 401: xxx',
       ['push', requestIDLogContextRegex],
     );
 
@@ -1324,7 +1409,7 @@ test('push timing', async () => {
     mutators: {addData},
   });
 
-  const onInvokePush = (getTestInstance(rep).onPushInvoked = sinon.fake());
+  const onInvokePush = (rep.onPushInvoked = sinon.fake());
 
   const add = rep.mutate.addData;
 
@@ -1373,17 +1458,22 @@ test('push and pull concurrently', async () => {
   const pushURL = 'https://push.com/push';
   const pullURL = 'https://pull.com/pull';
 
-  const rep = await replicacheForTesting('concurrently', {
-    pullURL,
-    pushURL,
-    pushDelay: 10,
-    mutators: {addData},
-    enablePullAndPushInOpen: false,
-  });
+  const rep = await replicacheForTesting(
+    'concurrently',
+    {
+      pullURL,
+      pushURL,
+      pushDelay: 10,
+      mutators: {addData},
+    },
+    {
+      enablePullAndPushInOpen: false,
+    },
+  );
 
-  const onBeginPull = (getTestInstance(rep).onBeginPull = sinon.fake());
+  const onBeginPull = (rep.onBeginPull = sinon.fake());
   const commitSpy = sinon.spy(Write.prototype, 'commitWithDiffs');
-  const onPushInvoked = (getTestInstance(rep).onPushInvoked = sinon.fake());
+  const onPushInvoked = (rep.onPushInvoked = sinon.fake());
 
   function resetSpies() {
     onBeginPull.resetHistory();
@@ -1412,7 +1502,7 @@ test('push and pull concurrently', async () => {
   });
   fetchMock.post(pullURL, () => {
     requests.push(pullURL);
-    return makePullResponseV1(clientID, 0, [], null);
+    return makePullResponseV1(clientID, 0, [], 1);
   });
 
   await add({a: 0});
@@ -1542,6 +1632,7 @@ test('pull and index update', async () => {
   const {clientID} = rep;
 
   let lastMutationID = 0;
+  let lastCookie = 0;
   async function testPull(opt: {
     patch: PatchOperation[];
     expectedResult: JSONValue;
@@ -1549,7 +1640,12 @@ test('pull and index update', async () => {
     let pullDone = false;
     fetchMock.post(pullURL, () => {
       pullDone = true;
-      return makePullResponseV1(clientID, lastMutationID++, opt.patch);
+      return makePullResponseV1(
+        clientID,
+        lastMutationID++,
+        opt.patch,
+        lastCookie++,
+      );
     });
 
     await rep.pull();
@@ -1648,18 +1744,23 @@ async function tickUntilTimeIs(time: number, tick = 10) {
 
 test('pull mutate options', async () => {
   const pullURL = 'https://diff.com/pull';
-  const rep = await replicacheForTesting('pull-mutate-options', {
-    pullURL,
-    pushURL: '',
-    ...disableAllBackgroundProcesses,
-    enablePullAndPushInOpen: false,
-  });
+  const rep = await replicacheForTesting(
+    'pull-mutate-options',
+    {
+      pullURL,
+      pushURL: '',
+    },
+    {
+      ...disableAllBackgroundProcesses,
+      enablePullAndPushInOpen: false,
+    },
+  );
   const {clientID} = rep;
   const log: number[] = [];
 
   fetchMock.post(pullURL, () => {
     log.push(Date.now());
-    return makePullResponseV1(clientID, 0, [], '');
+    return makePullResponseV1(clientID, undefined, [], '');
   });
 
   await tickUntilTimeIs(1000);
@@ -1774,12 +1875,10 @@ async function licenseKeyCheckTest(tc: LicenseKeyCheckTestCase) {
 
   const rep = await replicacheForTesting(
     name,
+    {licenseKey: tc.licenseKey},
     tc.enableLicensing !== undefined
-      ? {
-          licenseKey: tc.licenseKey,
-          enableLicensing: tc.enableLicensing,
-        }
-      : {licenseKey: tc.licenseKey},
+      ? {enableLicensing: tc.enableLicensing}
+      : undefined,
   );
 
   expect(await rep.licenseValid()).to.equal(tc.expectValid);
@@ -1932,12 +2031,10 @@ async function licenseActiveTest(tc: LicenseActiveTestCase) {
   fetchMock.catch();
   const rep = await replicacheForTesting(
     'license-active-test',
+    {licenseKey: tc.licenseKey},
     tc.enableLicensing !== undefined
-      ? {
-          licenseKey: tc.licenseKey,
-          enableLicensing: tc.enableLicensing,
-        }
-      : {licenseKey: tc.licenseKey},
+      ? {enableLicensing: tc.enableLicensing}
+      : undefined,
   );
   const licenseActive = await rep.licenseActive();
   expect(licenseActive).to.equal(tc.expectActive);
@@ -2083,21 +2180,33 @@ async function testMemStoreWithCounters<MD extends MutatorDefs>(
   expect(store.closeCount).to.equal(1, 'closeCount');
 }
 
-test('Experimental Create KV Store', async () => {
+test('Create KV Store', async () => {
   let store: MemStoreWithCounters | undefined;
 
-  const rep = await replicacheForTesting('experiment-kv-store', {
-    experimentalCreateKVStore: name => {
-      if (!store && name.includes('experiment-kv-store')) {
-        store = new MemStoreWithCounters(name);
-        return store;
-      }
+  const rep = await replicacheForTesting(
+    'kv-store',
+    {
+      kvStore: {
+        create: name => {
+          if (!store && name.includes('kv-store')) {
+            store = new MemStoreWithCounters(name);
+            return store;
+          }
 
-      return new MemStoreWithCounters(name);
+          return new MemStoreWithCounters(name);
+        },
+        drop: (_name: string) => {
+          if (store) {
+            store = undefined;
+            return promiseVoid;
+          }
+          return promiseVoid;
+        },
+      },
+      mutators: {addData},
     },
-    mutators: {addData},
-    ...disableAllBackgroundProcesses,
-  });
+    disableAllBackgroundProcesses,
+  );
 
   expect(store).instanceOf(MemStoreWithCounters);
   assert(store);
@@ -2137,7 +2246,7 @@ test('mutate args in mutation throws due to frozen', async () => {
   // store in the kv.Store.
   const store = new TestMemStore();
   const rep = await replicacheForTesting('mutate-args-in-mutation', {
-    experimentalCreateKVStore: () => store,
+    kvStore: {create: () => store, drop: () => promiseVoid},
     mutators: {
       async mutArgs(tx: WriteTransaction, args: {v: number}) {
         args.v = 42;
@@ -2310,6 +2419,39 @@ suite('check for client not found in visibilitychange', () => {
 
   t('hidden', false);
   t('visible', true);
+});
+
+test('disableClientGroup', async () => {
+  const rep = await replicacheForTesting(
+    'disable-client-group',
+    {
+      mutators: {
+        noop: () => undefined,
+      },
+    },
+    disableAllBackgroundProcesses,
+  );
+  const clientGroupID = await rep.clientGroupID;
+
+  expect(rep.isClientGroupDisabled).false;
+  expect(
+    (
+      await withRead(rep.perdag, dagRead =>
+        getClientGroup(clientGroupID, dagRead),
+      )
+    )?.disabled,
+  ).false;
+
+  await rep.impl.disableClientGroup();
+
+  expect(rep.isClientGroupDisabled).true;
+  expect(
+    (
+      await withRead(rep.perdag, dagRead =>
+        getClientGroup(clientGroupID, dagRead),
+      )
+    )?.disabled,
+  ).true;
 });
 
 test('scan in write transaction', async () => {

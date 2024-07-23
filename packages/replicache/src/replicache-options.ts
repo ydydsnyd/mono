@@ -1,9 +1,9 @@
 import type {LogLevel, LogSink} from '@rocicorp/logger';
 import type {IndexDefinitions} from './index-defs.js';
-import type {CreateStore} from './kv/store.js';
+import type {StoreProvider} from './kv/store.js';
 import type {Puller} from './puller.js';
 import type {Pusher} from './pusher.js';
-import type {MutatorDefs, RequestOptions} from './replicache.js';
+import type {MutatorDefs, RequestOptions} from './types.js';
 
 /**
  * The options passed to {@link Replicache}.
@@ -209,54 +209,11 @@ export interface ReplicacheOptions<MD extends MutatorDefs> {
 
   /**
    * Allows providing a custom implementation of the underlying storage layer.
-   *
-   * @experimental This option is experimental and might be removed or changed
-   * in the future without following semver versioning. Please be cautious.
    */
-  experimentalCreateKVStore?: CreateStore | undefined;
+  kvStore?: 'mem' | 'idb' | StoreProvider | undefined;
 
   /**
    * Defines the indexes, if any, to use on the data.
    */
   readonly indexes?: IndexDefinitions | undefined;
-}
-
-export type ReplicacheInternalOptions = {
-  /**
-   * Defaults to true.
-   * Does not use a symbol because it is used by reflect.
-   */
-  enableLicensing?: boolean | undefined;
-
-  /**
-   * Defaults to true.
-   */
-  enableMutationRecovery?: boolean | undefined;
-
-  /**
-   * Defaults to true.
-   */
-  enableScheduledPersist?: boolean | undefined;
-
-  /**
-   * Defaults to true.
-   */
-  enableScheduledRefresh?: boolean | undefined;
-
-  /**
-   * Defaults to true.
-   */
-  enablePullAndPushInOpen?: boolean | undefined;
-
-  /**
-   * Allows exposing parts of the internal API to a subclass. This works when
-   * thing have been minified and with the npm package.
-   */
-  exposeInternalAPI?: (api: ReplicacheInternalAPI) => void;
-};
-
-export interface ReplicacheInternalAPI {
-  persist(): Promise<void>;
-  refresh(): Promise<void>;
-  lastMutationID(): number;
 }

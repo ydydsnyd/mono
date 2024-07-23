@@ -5,20 +5,15 @@ slug: /byob/setup
 
 Replicache is framework agnostic, and you can use most any libraries and frameworks you like.
 
-We're going to use [Next.js](https://nextjs.org/) for this sample app, just because it's a convenient way to build a monorepo JavaScript-based web app.
-
-Create an empty Next.js project:
+In this guide, we're going to use Express/Vite/React. To start, clone the [BYOB starter](https://github.com/rocicorp/byob-starter) repo:
 
 ```bash
-npx create-next-app --example=basic-css chat
-cd chat
+git clone git@github.com:rocicorp/byob-starter.git
+cd byob-starter
+npm install
 ```
 
-Install Replicache and a few other utilities we'll use for this sample:
-
-```bash
-npm install replicache replicache-react nanoid pg pg-mem pg-promise pusher pusher-js
-```
+This project is a monorepo web app with three workspaces: `client`, `server`, and `shared`. The `client` workspace contains the client-side UI, developed with [Vite](https://vitejs.dev/) and [React](https://react.dev/). The `server` workspace contains the server-side logic, implemented using [Express](https://expressjs.com/). And the `shared` workspace contains types and classes that are shared between client and server.
 
 ## Next
 

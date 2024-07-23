@@ -1,13 +1,13 @@
-import {afterEach, expect, jest, test} from '@jest/globals';
+import {afterEach, expect, test, vi} from 'vitest';
 import {CustomHostnames} from './custom-hostnames.js';
 import {mockFetch} from './fetch-test-helper.js';
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 test('custom-hostnames', async () => {
-  const fetch = mockFetch().default({});
+  const fetch = mockFetch(vi).default({});
 
   const resource = new CustomHostnames({
     apiToken: 'api-token',

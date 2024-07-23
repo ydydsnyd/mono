@@ -46,7 +46,8 @@ module.exports = {
         'concepts/performance',
         'concepts/offline',
         'concepts/consistency',
-        'concepts/faq',
+        'concepts/isolation',
+        'concepts/licensing',
       ],
     },
     {
@@ -64,11 +65,13 @@ module.exports = {
       ],
     },
     {
-      HOWTO: [
-        'howto/licensing',
-        'howto/share-mutators',
+      'How To': [
         'howto/blobs',
         'howto/launch',
+        'howto/share-mutators',
+        'howto/source-access',
+        'howto/text',
+        'howto/unit-test',
       ],
     },
     {

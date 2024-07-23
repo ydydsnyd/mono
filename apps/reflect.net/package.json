@@ -32,8 +32,8 @@
     "generate-puzzle-pieces": "node raw-assets/puzzle-pieces/generate-puzzle-pieces.js"
   },
   "dependencies": {
-    "@rocicorp/logger": "^5.2.1",
-    "@rocicorp/reflect": "0.39.202402052206+7f0050",
+    "@rocicorp/logger": "^5.2.2",
+    "@rocicorp/reflect": "0.39.202405110706+9cdeac",
     "firebase": "9.23.0",
     "firebaseui": "^6.0.2",
     "nanoid": "^4.0.2",
@@ -46,13 +46,13 @@
     "tslib": "^2.6.2"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^3.8.0",
+    "@cloudflare/workers-types": "^4.20231010.0",
     "@datadog/browser-logs": "^4.11.3",
     "@next/font": "13.1.5",
     "@rocicorp/eslint-config": "^0.5.1",
     "@rocicorp/prettier-config": "^0.2.0",
     "@rocicorp/rails": "^0.10.0",
-    "@rocicorp/resolver": "^1.0.1",
+    "@rocicorp/resolver": "^1.0.2",
     "@types/react": "18.2.13",
     "@types/react-dom": "18.2.6",
     "@types/react-scroll": "^1.8.6",
@@ -67,7 +67,7 @@
     "mirror-protocol": "0.0.0",
     "mobx": "^6.9.0",
     "mobx-react": "^7.6.0",
-    "next": "13.1.5",
+    "next": "13.5.6",
     "path-browserify": "^1.0.1",
     "process": "^0.11.10",
     "puppeteer": "^19.9.0",
@@ -80,7 +80,7 @@
     "styled-components": "^5.3.6",
     "ts-loader": "^9.4.4",
     "ts-node": "^10.9.1",
-    "typescript": "^5.2.2",
+    "typescript": "^5.4.2",
     "vercel": "^28.12.7",
     "zod": "^3.21.4"
   },

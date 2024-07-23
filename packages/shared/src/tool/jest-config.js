@@ -23,10 +23,14 @@ export const jestConfig = {
     ],
   },
   moduleNameMapper: {
+    '^cf-shared/(.*)\\.js$': '<rootDir>/../../packages/cf-shared/$1',
+    '^datadog$': '<rootDir>/../../packages/datadog/src/mod.ts',
+    '^datadog/(.*)\\.js$': '<rootDir>/../../packages/datadog/$1',
     '^shared/(.*)\\.js$': '<rootDir>/../../packages/shared/$1',
     '^reflect-shared/(.*)\\.js$': '<rootDir>/../../packages/reflect-shared/$1',
     '^reflect-protocol/(.*)\\.js$':
       '<rootDir>/../../packages/reflect-protocol/$1',
+    '^zql/(.*)\\.js$': '<rootDir>/../../packages/zql/$1',
     '^mirror-protocol/(.*)\\.js$': '<rootDir>/../../mirror/mirror-protocol/$1',
     '^mirror-schema/(.*)\\.js$': '<rootDir>/../../mirror/mirror-schema/$1',
     '^mirror-workers/(.*)\\.js$': '<rootDir>/../../mirror/mirror-workers/$1',

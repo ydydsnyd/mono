@@ -1,6 +1,8 @@
 import type {LogContext} from '@rocicorp/logger';
+import {navigator} from 'shared/src/navigator.js';
+import {promiseVoid} from 'shared/src/resolved-promises.js';
 import {IDBStore} from './idb-store.js';
-import {MemStore} from './mem-store.js';
+import {MemStore, dropMemStore} from './mem-store.js';
 import type {Read, Store, Write} from './store.js';
 
 /**
@@ -75,7 +77,7 @@ function isFirefoxPrivateBrowsingError(e: unknown): e is DOMException {
 }
 
 function isFirefox(): boolean {
-  return navigator.userAgent.includes('Firefox');
+  return navigator?.userAgent.includes('Firefox') ?? false;
 }
 
 export function newIDBStoreWithMemFallback(
@@ -86,4 +88,26 @@ export function newIDBStoreWithMemFallback(
     return new IDBStoreWithMemFallback(lc, name);
   }
   return new IDBStore(name);
+}
+
+export function dropIDBStoreWithMemFallback(name: string): Promise<void> {
+  if (!isFirefox()) {
+    return dropIDBStore(name);
+  }
+  try {
+    return dropIDBStore(name);
+  } catch (e) {
+    if (isFirefoxPrivateBrowsingError(e)) {
+      return dropMemStore(name);
+    }
+  }
+  return promiseVoid;
+}
+
+function dropIDBStore(name: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.deleteDatabase(name);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
 }

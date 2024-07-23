@@ -8,7 +8,6 @@ import type {IndexDefinitions} from './index-defs.js';
 import type {PatchOperation} from './patch-operation.js';
 import type {ScanOptions} from './scan-options.js';
 import {
-  TestLogSink,
   clock,
   disableAllBackgroundProcesses,
   initReplicacheTesting,
@@ -17,13 +16,13 @@ import {
   tickAFewTimes,
   tickUntil,
 } from './test-util.js';
+import {TestLogSink} from 'shared/src/logging-test-utils.js';
 import type {ReadTransaction, WriteTransaction} from './transactions.js';
 
 // fetch-mock has invalid d.ts file so we removed that on npm install.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import fetchMock from 'fetch-mock/esm/client';
-import type {TestingReplicacheWithTesting} from './replicache.js';
 
 initReplicacheTesting();
 
@@ -651,12 +650,15 @@ test('subscribe with error', async () => {
 test('subscribe pull and index update', async () => {
   const pullURL = 'https://pull.com/rep';
   const indexName = 'idx1';
-  const rep = await replicacheForTesting('subscribe-pull-and-index-update', {
-    pullURL,
-    mutators: {addData},
-    indexes: {[indexName]: {jsonPointer: '/id'}},
-    ...disableAllBackgroundProcesses,
-  });
+  const rep = await replicacheForTesting(
+    'subscribe-pull-and-index-update',
+    {
+      pullURL,
+      mutators: {addData},
+      indexes: {[indexName]: {jsonPointer: '/id'}},
+    },
+    disableAllBackgroundProcesses,
+  );
 
   const log: ReadonlyJSONValue[] = [];
   let queryCallCount = 0;
@@ -674,6 +676,7 @@ test('subscribe pull and index update', async () => {
   );
 
   let lastMutationID = 0;
+  let cookie = 0;
 
   let expectedQueryCallCount = 1;
 
@@ -689,7 +692,7 @@ test('subscribe pull and index update', async () => {
     const {clientID} = rep;
     fetchMock.post(
       pullURL,
-      makePullResponseV1(clientID, lastMutationID++, opt.patch),
+      makePullResponseV1(clientID, lastMutationID++, opt.patch, cookie++),
     );
 
     rep.pullIgnorePromise();
@@ -820,13 +823,18 @@ test('subscribe pull and index update', async () => {
 });
 
 test('subscription coalescing', async () => {
-  const rep = await replicacheForTesting('subscription-coalescing', {
-    mutators: {addData},
-    ...disableAllBackgroundProcesses,
-    enablePullAndPushInOpen: false,
-  });
+  const rep = await replicacheForTesting(
+    'subscription-coalescing',
+    {
+      mutators: {addData},
+    },
+    {
+      ...disableAllBackgroundProcesses,
+      enablePullAndPushInOpen: false,
+    },
+  );
 
-  const store = sinon.spy((rep as TestingReplicacheWithTesting).memdag);
+  const store = sinon.spy(rep.memdag);
   const resetCounters = () => {
     store.read.resetHistory();
     store.write.resetHistory();

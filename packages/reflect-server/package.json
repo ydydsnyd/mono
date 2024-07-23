@@ -17,30 +17,36 @@
   },
   "dependencies": {
     "@badrap/valita": "^0.3.0",
-    "@rocicorp/lock": "^1.0.3",
-    "@rocicorp/logger": "^5.2.1"
+    "@rocicorp/lock": "^1.0.4",
+    "@rocicorp/logger": "^5.2.2"
   },
   "//1": "Note: we need these precise versions of miniflare and jest-environment-miniflare due to: https://github.com/rocicorp/reflect-server/issues/148",
   "devDependencies": {
-    "@cloudflare/workers-types": "^3.8.0",
+    "@cloudflare/workers-types": "^4.20231010.0",
     "@rocicorp/eslint-config": "^0.5.1",
     "@rocicorp/prettier-config": "^0.2.0",
+    "cf-shared": "0.0.0",
     "compare-utf8": "^0.1.1",
     "datadog": "0.0.0",
-    "esbuild": "^0.19.4",
+    "esbuild": "^0.20.2",
     "esbuild-plugin-polyfill-node": "^0.3.0",
     "jest-environment-miniflare": "^2.11.0",
     "miniflare": "^3.20231030.4",
     "reflect-protocol": "0.0.0",
     "reflect-shared": "0.0.0",
-    "replicache": "14.2.2",
+    "replicache": "15.0.1",
     "rollup": "^3.24.0",
     "shared": "0.0.0",
     "ts-jest": "^29.1.0",
-    "typescript": "^5.2.2"
+    "typescript": "^5.4.2"
   },
   "exports": {
-    ".": "./src/mod.ts"
+    ".": "./src/mod.ts",
+    "./router": "./src/server/router.ts",
+    "./http-util": "./src/server/http-util.ts",
+    "./connect": "./src/server/connect.ts",
+    "./socket": "./src/util/socket.ts",
+    "./ping": "./src/server/ping.ts"
   },
   "eslintConfig": {
     "extends": "@rocicorp/eslint-config"

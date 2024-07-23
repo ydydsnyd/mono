@@ -7,6 +7,7 @@
     "packages/*",
     "mirror/*"
   ],
+  "type": "module",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
@@ -17,28 +18,15 @@
     "check-types": "turbo run check-types"
   },
   "devDependencies": {
-    "prettier": "^3.0.3",
     "@rocicorp/eslint-config": "^0.5.1",
     "@rocicorp/prettier-config": "^0.2.0",
-    "syncpack": "^9.8.4",
-    "turbo": "^1.10.3"
+    "prettier": "^3.0.3",
+    "syncpack": "^12.3.2",
+    "turbo": "^1.13.2",
+    "vitest": "^1.6.0"
   },
   "eslintConfig": {
     "extends": "@rocicorp/eslint-config"
   },
-  "prettier": "@rocicorp/prettier-config",
-  "syncpack": {
-    "versionGroups": [
-      {
-        "dependencies": [
-          "@cloudflare/workers-types"
-        ],
-        "packages": [
-          "mirror-cli",
-          "mirror-workers"
-        ],
-        "label": "TODO: Move reflect packages to 4.x.x"
-      }
-    ]
-  }
+  "prettier": "@rocicorp/prettier-config"
 }

@@ -8,7 +8,7 @@ import {deleteApp} from 'mirror-protocol/src/app.js';
 import {publish} from 'mirror-protocol/src/publish.js';
 import {deleteVars, listVars, setVars} from 'mirror-protocol/src/vars.js';
 import {hideBin} from 'yargs/helpers';
-import {appListHandler} from './apps.js';
+import {appListHandler, appListOptions} from './apps.js';
 import {authenticate} from './auth-config.js';
 import {
   CommandLineArgsError,
@@ -30,6 +30,7 @@ import {deleteVarsHandler, deleteVarsOptions} from './vars/delete.js';
 import {listVarsHandler, listVarsOptions} from './vars/list.js';
 import {setVarsHandler, setVarsOptions} from './vars/set.js';
 import type {CommonYargsArgv, YargvToInterface} from './yarg-types.js';
+import {getLogger} from './logger.js';
 
 async function main(argv: string[]): Promise<void> {
   const reflectCLI = createCLIParser(argv);
@@ -38,8 +39,9 @@ async function main(argv: string[]): Promise<void> {
     await reflectCLI.parse();
   } catch (e) {
     if (e instanceof CommandLineArgsError) {
-      console.log(e.message);
+      getLogger().error(e.message);
       await createCLIParser([...argv, '--help']).parse();
+      process.exit(-1);
     } else {
       throw e;
     }
@@ -54,8 +56,7 @@ function createCLIParser(argv: string[]) {
       .command(
         'list',
         'List apps',
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
-        () => {},
+        appListOptions,
         authenticateAndHandleWith(appListHandler).andCleanup(),
       )
       .command(
@@ -120,7 +121,7 @@ function createCLIParser(argv: string[]) {
         _yargs: YargvToInterface<CommonYargsArgv>,
         authContext: AuthContext,
       ): Promise<void> => {
-        console.log(
+        getLogger().log(
           `Team: ${authContext.user.additionalUserInfo?.username}\nProvider: ${authContext.user.additionalUserInfo?.providerId}\nEmail: ${authContext.user.email}\nName: ${authContext.user.additionalUserInfo?.profile?.name}`,
         );
         return Promise.resolve();

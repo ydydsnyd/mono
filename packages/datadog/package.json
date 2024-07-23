@@ -5,14 +5,14 @@
   "type": "module",
   "devDependencies": {
     "@rocicorp/eslint-config": "^0.5.1",
-    "@rocicorp/lock": "^1.0.3",
-    "@rocicorp/logger": "^5.2.1",
+    "@rocicorp/lock": "^1.0.4",
+    "@rocicorp/logger": "^5.2.2",
     "@rocicorp/prettier-config": "^0.2.0",
     "@types/node-fetch": "^2.6.2",
     "cross-fetch": "^3.1.5",
-    "replicache": "14.2.2",
+    "replicache": "15.0.1",
     "ts-jest": "^29.1.0",
-    "typescript": "^5.2.2"
+    "typescript": "^5.4.2"
   },
   "scripts": {
     "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js",
@@ -20,12 +20,7 @@
     "check-types": "tsc --noEmit",
     "format": "prettier --write *",
     "check-format": "prettier --check *",
-    "lint": "eslint --ext .ts,.tsx,.js,.jsx src/",
-    "build": "tsc"
-  },
-  "exports": {
-    ".": "./out/mod.js",
-    "./src/mod.js": "./out/mod.js"
+    "lint": "eslint --ext .ts,.tsx,.js,.jsx src/"
   },
   "eslintConfig": {
     "extends": "@rocicorp/eslint-config"

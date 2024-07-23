@@ -4,14 +4,14 @@ import {
   isValidRoomID,
   makeInvalidRoomIDMessage,
 } from 'reflect-shared/src/room-id.js';
-import type {ReadonlyJSONValue} from 'shared/src/json.js';
 import * as valita from 'shared/src/valita.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
 import type {ListOptions} from '../storage/storage.js';
-import {APIError, roomNotFoundAPIError} from './api-errors.js';
+import {APIError, roomNotFoundAPIError} from 'cf-shared/src/api-errors.js';
 import {roomDOFetch} from './auth-do.js';
-import {ErrorWithForwardedResponse} from './errors.js';
+import {ErrorWithForwardedResponse} from 'cf-shared/src/errors.js';
 import {CREATE_ROOM_PATH, fmtPath} from './paths.js';
+import {jsonSchema} from 'shared/src/json-schema.js';
 
 export enum RoomStatus {
   // An Open room can be used by users. We will accept connect()s to it.
@@ -85,6 +85,12 @@ export const roomPropertiesSchema = roomRecordSchema.chain(record =>
 
 export type RoomProperties = valita.Infer<typeof roomPropertiesSchema>;
 
+export const roomContentsSchema = valita.object({
+  contents: valita.record(jsonSchema),
+});
+
+export type RoomContents = valita.Infer<typeof roomContentsSchema>;
+
 export function internalCreateRoom(
   lc: LogContext,
   roomDO: DurableObjectNamespace,
@@ -92,9 +98,10 @@ export function internalCreateRoom(
   roomID: string,
   jurisdiction: 'eu' | undefined,
 ): Promise<void> {
-  const url = `https://unused-reflect-room-do.dev${fmtPath(CREATE_ROOM_PATH, {
-    roomID,
-  })}`;
+  const url = `https://unused-reflect-room-do.dev${fmtPath(
+    CREATE_ROOM_PATH,
+    new URLSearchParams({roomID}),
+  )}`;
   const req: CreateRoomRequest = {jurisdiction};
   const request = new Request(url, {
     method: 'POST',
@@ -227,7 +234,7 @@ export async function deleteRoom(
     roomID,
     lc,
   );
-  if (!response.ok) {
+  if (!response.ok && response.status !== 410 /* Gone */) {
     lc.debug?.(
       `Received error response from ${roomID}. ${
         response.status
@@ -236,6 +243,24 @@ export async function deleteRoom(
     throw new ErrorWithForwardedResponse(response);
   }
 
+  await markRoomDeleted(lc, storage, roomID, roomRecord);
+}
+
+export async function markRoomDeleted(
+  lc: LogContext,
+  storage: DurableStorage,
+  roomID: string,
+  roomRecord?: RoomRecord,
+) {
+  roomRecord ??= await roomRecordByRoomID(storage, roomID);
+  if (!roomRecord) {
+    lc.error?.(`No RoomRecord for ${roomID}. Nothing to mark deleted.`);
+    return;
+  }
+  if (roomRecord.status === RoomStatus.Deleted) {
+    lc.debug?.(`RoomRecord for ${roomID} already marked Deleted.`);
+    return;
+  }
   roomRecord.status = RoomStatus.Deleted;
   const roomRecordKey = roomKeyToString(roomRecord);
   await storage.put(roomRecordKey, roomRecord);
@@ -265,25 +290,19 @@ export async function objectIDByRoomID(
 // Caller must enforce no other concurrent calls to
 // functions that create or modify the room record.
 export function roomRecordByRoomID(storage: DurableStorage, roomID: string) {
-  return roomDataByRoomID(storage, roomID, roomRecordSchema);
+  const roomRecordKey = roomKeyToString({roomID});
+  return storage.get(roomRecordKey, roomRecordSchema);
 }
 
 // Caller must enforce no other concurrent calls to
 // functions that create or modify the room record.
-export function roomPropertiesByRoomID(
+export async function roomPropertiesByRoomIDs(
   storage: DurableStorage,
-  roomID: string,
+  roomIDs: string[],
 ) {
-  return roomDataByRoomID(storage, roomID, roomPropertiesSchema);
-}
-
-function roomDataByRoomID<T extends ReadonlyJSONValue>(
-  storage: DurableStorage,
-  roomID: string,
-  schema: valita.Type<T>,
-) {
-  const roomRecordKey = roomKeyToString({roomID});
-  return storage.get(roomRecordKey, schema);
+  const roomRecordKeys = roomIDs.map(roomID => roomKeyToString({roomID}));
+  const map = await storage.getEntries(roomRecordKeys, roomPropertiesSchema);
+  return [...map.values()];
 }
 
 export async function roomRecordByObjectIDForTest(

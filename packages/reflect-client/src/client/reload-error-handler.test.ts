@@ -1,19 +1,19 @@
 import {LogContext} from '@rocicorp/logger';
-import {expect} from 'chai';
 import sinon from 'sinon';
+import {afterEach, expect, test} from 'vitest';
 import {
   RELOAD_REASON_STORAGE_KEY,
   reloadWithReason,
   reportReloadReason,
 } from './reload-error-handler.js';
-import {TestLogSink} from './test-utils.js';
+import {TestLogSink} from 'shared/src/logging-test-utils.js';
 
 const localStorageDescriptor = Object.getOwnPropertyDescriptor(
   globalThis,
   'localStorage',
 )!;
 
-teardown(() => {
+afterEach(() => {
   sinon.restore();
   Object.defineProperty(globalThis, 'localStorage', localStorageDescriptor);
 });

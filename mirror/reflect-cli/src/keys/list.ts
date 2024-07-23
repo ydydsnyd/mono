@@ -3,6 +3,7 @@ import {listApiKeys} from 'mirror-protocol/src/api-keys.js';
 import {APP_CREATE_PERMISSION} from 'mirror-schema/src/external/api-key.js';
 import color from 'picocolors';
 import type {AuthContext} from '../handler.js';
+import {getLogger} from '../logger.js';
 import {makeRequester} from '../requester.js';
 import {padColumns} from '../table.js';
 import {getSingleTeam} from '../teams.js';
@@ -28,7 +29,7 @@ export async function listKeysHandler(
 
   const {userID} = authContext.user;
   const firestore = getFirestore();
-  const teamID = await getSingleTeam(firestore, userID, 'admin');
+  const teamID = await getSingleTeam(firestore, authContext, 'admin');
 
   const {keys, allPermissions} = await listApiKeys.call({
     requester: makeRequester(userID),
@@ -61,7 +62,7 @@ export async function listKeysHandler(
     if (i === 0) {
       row = row.map(header => color.gray(header));
     }
-    console.log(row.join('     '));
+    getLogger().log(row.join('     '));
   });
 }
 

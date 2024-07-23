@@ -3,6 +3,8 @@
 # build outputs
 **/*.tgz
 
+# sqlite dbs
+*.db
 
 # turbo
 .turbo
@@ -67,3 +69,5 @@ next-env.d.ts
 
 reflect.config.json
 .reflect/
+bundle-sizes.json
+packages/zero-cache/coverage

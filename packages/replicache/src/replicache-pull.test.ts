@@ -5,7 +5,7 @@ import type {VersionNotSupportedResponse} from './error-responses.js';
 import {getDefaultPuller} from './get-default-puller.js';
 import {Hash, emptyHash} from './hash.js';
 import type {Puller} from './puller.js';
-import {UpdateNeededReason, httpStatusUnauthorized} from './replicache.js';
+import {httpStatusUnauthorized} from './replicache.js';
 import {
   disableAllBackgroundProcesses,
   expectConsoleLogContextStub,
@@ -17,6 +17,7 @@ import {
   waitForSync,
 } from './test-util.js';
 import type {WriteTransaction} from './transactions.js';
+import type {UpdateNeededReason} from './types.js';
 
 // fetch-mock has invalid d.ts file so we removed that on npm install.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -28,28 +29,33 @@ initReplicacheTesting();
 test('pull', async () => {
   const pullURL = 'https://diff.com/pull';
 
-  const rep = await replicacheForTesting('pull', {
-    auth: '1',
-    pullURL,
-    mutators: {
-      createTodo: async <A extends {id: number}>(
-        tx: WriteTransaction,
-        args: A,
-      ) => {
-        createCount++;
-        await tx.set(`/todo/${args.id}`, args);
-      },
-      deleteTodo: async <A extends {id: number}>(
-        tx: WriteTransaction,
-        args: A,
-      ) => {
-        deleteCount++;
-        await tx.del(`/todo/${args.id}`);
+  const rep = await replicacheForTesting(
+    'pull',
+    {
+      auth: '1',
+      pullURL,
+      mutators: {
+        createTodo: async <A extends {id: number}>(
+          tx: WriteTransaction,
+          args: A,
+        ) => {
+          createCount++;
+          await tx.set(`/todo/${args.id}`, args);
+        },
+        deleteTodo: async <A extends {id: number}>(
+          tx: WriteTransaction,
+          args: A,
+        ) => {
+          deleteCount++;
+          await tx.del(`/todo/${args.id}`);
+        },
       },
     },
-    ...disableAllBackgroundProcesses,
-    enablePullAndPushInOpen: false,
-  });
+    {
+      ...disableAllBackgroundProcesses,
+      enablePullAndPushInOpen: false,
+    },
+  );
 
   let createCount = 0;
   let deleteCount = 0;
@@ -68,24 +74,33 @@ test('pull', async () => {
   await deleteTodo({id: id1});
   await deleteTodo({id: id2});
 
+  let cookie = 1;
   expect(deleteCount).to.equal(2);
   const {clientID} = rep;
   fetchMock.postOnce(
     pullURL,
-    makePullResponseV1(clientID, 2, [
-      {op: 'del', key: ''},
-      {
-        op: 'put',
-        key: '/list/1',
-        value: {id: 1, ownerUserID: 1},
-      },
-    ]),
+    makePullResponseV1(
+      clientID,
+      2,
+      [
+        {op: 'del', key: ''},
+        {
+          op: 'put',
+          key: '/list/1',
+          value: {id: 1, ownerUserID: 1},
+        },
+      ],
+      cookie,
+    ),
   );
   rep.pullIgnorePromise();
   await tickAFewTimes();
   expect(deleteCount).to.equal(2);
 
-  fetchMock.postOnce(pullURL, makePullResponseV1(clientID, 2));
+  fetchMock.postOnce(
+    pullURL,
+    makePullResponseV1(clientID, 2, undefined, cookie),
+  );
   beginPullResult = await rep.beginPull();
   ({syncHead} = beginPullResult);
   expect(syncHead).to.equal(emptyHash);
@@ -102,13 +117,18 @@ test('pull', async () => {
 
   fetchMock.postOnce(
     pullURL,
-    makePullResponseV1(clientID, 3, [
-      {
-        op: 'put',
-        key: '/todo/14323534',
-        value: {id: 14323534, text: 'Test'},
-      },
-    ]),
+    makePullResponseV1(
+      clientID,
+      3,
+      [
+        {
+          op: 'put',
+          key: '/todo/14323534',
+          value: {id: 14323534, text: 'Test'},
+        },
+      ],
+      ++cookie,
+    ),
   );
   beginPullResult = await rep.beginPull();
   ({syncHead} = beginPullResult);
@@ -129,7 +149,10 @@ test('pull', async () => {
     ((await rep.query(tx => tx.get(`/todo/${id2}`))) as {text: string}).text,
   ).to.equal('Test 2');
 
-  fetchMock.postOnce(pullURL, makePullResponseV1(clientID, 3));
+  fetchMock.postOnce(
+    pullURL,
+    makePullResponseV1(clientID, 3, undefined, ++cookie),
+  );
   await rep.maybeEndPull(syncHead, beginPullResult.requestID);
 
   expect(createCount).to.equal(3);
@@ -145,7 +168,12 @@ test('pull', async () => {
 
   fetchMock.postOnce(
     pullURL,
-    makePullResponseV1(clientID, 6, [{op: 'del', key: '/todo/14323534'}], ''),
+    makePullResponseV1(
+      clientID,
+      6,
+      [{op: 'del', key: '/todo/14323534'}],
+      ++cookie,
+    ),
   );
   rep.pullIgnorePromise();
   await tickAFewTimes();
@@ -159,12 +187,17 @@ test('pull', async () => {
 test('reauth pull', async () => {
   const pullURL = 'https://diff.com/pull';
 
-  const rep = await replicacheForTesting('reauth', {
-    pullURL,
-    auth: 'wrong',
-    ...disableAllBackgroundProcesses,
-    enablePullAndPushInOpen: false,
-  });
+  const rep = await replicacheForTesting(
+    'reauth',
+    {
+      pullURL,
+      auth: 'wrong',
+    },
+    {
+      ...disableAllBackgroundProcesses,
+      enablePullAndPushInOpen: false,
+    },
+  );
 
   fetchMock.post(pullURL, {body: 'xxx', status: httpStatusUnauthorized});
 
@@ -186,7 +219,7 @@ test('reauth pull', async () => {
   expectConsoleLogContextStub(
     rep.name,
     consoleErrorStub.lastCall,
-    `Got error response doing pull: 401: xxx`,
+    `Got a non 200 response doing pull: 401: xxx`,
     ['pull', requestIDLogContextRegex],
   );
   {
@@ -214,6 +247,7 @@ test('pull request is only sent when pullURL or non-default puller are set', asy
       auth: '1',
       pushURL: 'https://diff.com/push',
     },
+    undefined,
     {useDefaultURLs: false},
   );
 
@@ -273,7 +307,7 @@ test('pull request is only sent when pullURL or non-default puller are set', asy
   expectConsoleLogContextStub(
     rep.name,
     consoleErrorStub.firstCall,
-    'Got error response doing pull: 500: Test failure',
+    'Got a non 200 response doing pull: 500: Test failure',
     ['pull', requestIDLogContextRegex],
   );
   consoleErrorStub.restore();
@@ -295,11 +329,16 @@ test('pull request is only sent when pullURL or non-default puller are set', asy
 test('Client Group not found on server', async () => {
   const onClientStateNotFound = sinon.stub();
 
-  const rep = await replicacheForTesting('client-group-not-found-pull', {
-    ...disableAllBackgroundProcesses,
-    enablePullAndPushInOpen: false,
-    onClientStateNotFound,
-  });
+  const rep = await replicacheForTesting(
+    'client-group-not-found-pull',
+    {
+      onClientStateNotFound,
+    },
+    {
+      ...disableAllBackgroundProcesses,
+      enablePullAndPushInOpen: false,
+    },
+  );
 
   // eslint-disable-next-line require-await
   const puller: Puller = async () => ({
@@ -326,9 +365,11 @@ test('Version not supported on server', async () => {
     response: VersionNotSupportedResponse,
     reason: UpdateNeededReason,
   ) => {
-    const rep = await replicacheForTesting('version-not-supported-pull', {
-      ...disableAllBackgroundProcesses,
-    });
+    const rep = await replicacheForTesting(
+      'version-not-supported-pull',
+      undefined,
+      disableAllBackgroundProcesses,
+    );
 
     const {resolve, promise} = resolver();
     const onUpdateNeededStub = (rep.onUpdateNeeded = sinon

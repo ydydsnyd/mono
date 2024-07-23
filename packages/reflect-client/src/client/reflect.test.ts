@@ -1,7 +1,6 @@
 import type {Context, LogLevel} from '@rocicorp/logger';
 import {LogContext} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
-import {expect} from 'chai';
 import {Mutation, NullableVersion, pushMessageSchema} from 'reflect-protocol';
 import {resetAllConfig, setConfig} from 'reflect-shared/src/config.js';
 import type {
@@ -9,16 +8,12 @@ import type {
   ReadonlyJSONValue,
   WriteTransaction,
 } from 'reflect-shared/src/mod.js';
-import {
-  ExperimentalCreateKVStore,
-  ExperimentalMemKVStore,
-  PullRequestV1,
-  PushRequestV1,
-} from 'replicache';
+import type {PullRequestV1, PushRequestV1} from 'replicache';
 import {assert} from 'shared/src/asserts.js';
 import type {JSONValue} from 'shared/src/json.js';
 import * as valita from 'shared/src/valita.js';
 import * as sinon from 'sinon';
+import {afterEach, beforeEach, expect, suite, test} from 'vitest';
 import type {WSString} from './http-string.js';
 import {REPORT_INTERVAL_MS} from './metrics.js';
 import type {ReflectOptions} from './options.js';
@@ -37,12 +32,12 @@ import {RELOAD_REASON_STORAGE_KEY} from './reload-error-handler.js';
 import {ServerError} from './server-error.js';
 import {
   MockSocket,
-  TestLogSink,
   TestReflect,
   reflectForTest,
   tickAFewTimes,
   waitForUpstreamMessage,
 } from './test-utils.js'; // Why use fakes when we can use the real thing!
+import {TestLogSink} from 'shared/src/logging-test-utils.js';
 
 let clock: sinon.SinonFakeTimers;
 const startTime = 1678829450000;
@@ -52,7 +47,7 @@ let fetchStub: sinon.SinonStub<
   ReturnType<typeof fetch>
 >;
 
-setup(() => {
+beforeEach(() => {
   clock = sinon.useFakeTimers();
   clock.setSystemTime(startTime);
   sinon.replace(
@@ -65,7 +60,7 @@ setup(() => {
     .returns(Promise.resolve(new Response()));
 });
 
-teardown(() => {
+afterEach(() => {
   sinon.restore();
   resetAllConfig();
 });
@@ -1599,11 +1594,6 @@ test('kvStore option', async () => {
   await t('idb', 'kv-store-test-user-id-1', true, 'bar');
   await t('mem', 'kv-store-test-user-id-2', false);
   await t(undefined, 'kv-store-test-user-id-3', false);
-
-  const kvStore: ExperimentalCreateKVStore = name =>
-    new ExperimentalMemKVStore(name);
-  await t(kvStore, 'kv-store-test-user-id-4', false, undefined);
-  await t(kvStore, 'kv-store-test-user-id-4', false, 'bar');
 });
 
 test('Close during connect should sleep', async () => {

@@ -10,18 +10,14 @@ import {assert} from 'shared/src/asserts.js';
 import type {DurableStorage} from '../storage/durable-storage.js';
 import {
   ClientRecord,
+  IncludeDeleted,
   getClientRecord,
   putClientRecord,
 } from '../types/client-record.js';
-import type {
-  ClientID,
-  ClientMap,
-  ClientState,
-  Socket,
-} from '../types/client-state.js';
+import type {ClientID, ClientMap, ClientState} from '../types/client-state.js';
 import {compareVersions, getVersion} from '../types/version.js';
-import {decodeHeaderValue} from '../util/headers.js';
-import {closeWithError, send} from '../util/socket.js';
+import {decodeHeaderValue} from 'shared/src/headers.js';
+import {closeWithError, send, Socket} from '../util/socket.js';
 import {AUTH_DATA_HEADER_NAME} from './internal-headers.js';
 
 export type MessageHandler = (
@@ -73,10 +69,27 @@ export async function handleConnection(
     baseCookie: requestBaseCookie,
     clientGroupID: requestClientGroupID,
   } = result;
-  const existingRecord = await getClientRecord(requestClientID, storage);
+  const existingRecord = await getClientRecord(
+    requestClientID,
+    IncludeDeleted.Include,
+    storage,
+  );
   lc.debug?.('Existing client record', existingRecord);
 
   if (existingRecord) {
+    if (existingRecord.deleted) {
+      lc.info?.(
+        'Client with clientID',
+        requestClientID,
+        'is deleted and cannot reconnect.',
+      );
+      closeWithErrorLocal(
+        'InvalidConnectionRequestClientDeleted',
+        'Client is deleted',
+      );
+      return;
+    }
+
     if (requestClientGroupID !== existingRecord.clientGroupID) {
       lc.info?.(
         'Unexpected client group id ',

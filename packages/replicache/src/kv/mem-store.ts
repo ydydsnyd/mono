@@ -1,6 +1,6 @@
 import {RWLock} from '@rocicorp/lock';
+import {promiseVoid} from 'shared/src/resolved-promises.js';
 import type {FrozenJSONValue} from '../frozen-json.js';
-import {promiseVoid} from '../resolved-promises.js';
 import {ReadImpl} from './read-impl.js';
 import type {Read, Store, Write} from './store.js';
 import {WriteImpl} from './write-impl.js';
@@ -13,6 +13,15 @@ const stores = new Map<string, Value>();
 
 export function clearAllNamedMemStoresForTesting(): void {
   stores.clear();
+}
+
+export function dropMemStore(name: string): Promise<void> {
+  stores.delete(name);
+  return promiseVoid;
+}
+
+export function hasMemStore(name: string): boolean {
+  return stores.has(name);
 }
 
 /**

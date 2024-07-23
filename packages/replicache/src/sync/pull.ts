@@ -40,7 +40,7 @@ import type {
   PullerResultV0,
   PullerResultV1,
   PullResponseOKV0,
-  PullResponseOKV1,
+  PullResponseOKV1Internal,
   PullResponseV0,
   PullResponseV1,
 } from '../puller.js';
@@ -51,6 +51,7 @@ import type {ClientGroupID, ClientID} from './ids.js';
 import * as patch from './patch.js';
 import {PullError} from './pull-error.js';
 import {SYNC_HEAD_NAME} from './sync-head-name.js';
+import {ReportError} from '../replicache.js';
 
 export const PULL_VERSION_SDD = 0;
 export const PULL_VERSION_DD31 = 1;
@@ -270,23 +271,26 @@ async function callPuller(
 ): Promise<PullerResult> {
   lc.debug?.('Starting pull...');
   const pullStart = Date.now();
+  let pullerResult: PullerResult;
   try {
-    const pullerResult = await puller(pullReq, requestID);
+    pullerResult = await puller(pullReq, requestID);
     lc.debug?.(
       `...Pull ${pullerResult.response ? 'complete' : 'failed'} in `,
       Date.now() - pullStart,
       'ms',
     );
-
+  } catch (e) {
+    throw new PullError(toError(e));
+  }
+  try {
     if (isPullRequestV1(pullReq)) {
       assertPullerResultV1(pullerResult);
     } else {
       assertPullerResultV0(pullerResult);
     }
-
     return pullerResult;
   } catch (e) {
-    throw new PullError(toError(e));
+    throw new ReportError('Invalid puller result', toError(e));
   }
 }
 
@@ -332,22 +336,32 @@ export function handlePullResponseV0(
       throw new Error(
         badOrderMessage(
           `lastMutationID`,
-          response.lastMutationID,
-          baseLastMutationID,
+          String(response.lastMutationID),
+          String(baseLastMutationID),
         ),
       );
     }
 
     const frozenCookie = deepFreeze(response.cookie ?? null);
 
-    // If there is no patch and the lmid and cookie don't change, it's a nop.
+    // If the cookie didn't change, it's a nop.
     // Otherwise, we will write a new commit, including for the case of just
     // a cookie change.
-    if (
-      response.patch.length === 0 &&
-      response.lastMutationID === baseLastMutationID &&
-      deepEqual(frozenCookie, baseCookie)
-    ) {
+    if (deepEqual(frozenCookie, baseCookie)) {
+      if (response.patch.length > 0) {
+        lc.error?.(
+          `handlePullResponse: cookie ${JSON.stringify(
+            baseCookie,
+          )} did not change, but patch is not empty`,
+        );
+      }
+      if (response.lastMutationID !== baseLastMutationID) {
+        lc.error?.(
+          `handlePullResponse: cookie ${JSON.stringify(
+            baseCookie,
+          )} did not change, but lastMutationID did change`,
+        );
+      }
       return {
         type: HandlePullResponseResultType.NoOp,
       };
@@ -441,8 +455,8 @@ type HandlePullResponseResult =
 
 function badOrderMessage(
   name: string,
-  receivedValue: unknown,
-  lastSnapshotValue: unknown,
+  receivedValue: string,
+  lastSnapshotValue: string,
 ) {
   return `Received ${name} ${receivedValue} is < than last snapshot ${name} ${lastSnapshotValue}; ignoring client view`;
 }
@@ -451,7 +465,7 @@ export function handlePullResponseV1(
   lc: LogContext,
   store: Store,
   expectedBaseCookie: FrozenJSONValue,
-  response: PullResponseOKV1,
+  response: PullResponseOKV1Internal,
   clientID: ClientID,
   formatVersion: FormatVersion,
 ): Promise<HandlePullResponseResult> {
@@ -475,7 +489,7 @@ export function handlePullResponseV1(
     // In DD31 this is expected to happen if a refresh occurs during a pull.
     if (!deepEqual(expectedBaseCookie, baseCookie)) {
       lc.debug?.(
-        'handlePullResponse: cookie mismatch, pull response is not applicable',
+        'handlePullResponse: cookie mismatch, response is not applicable',
       );
       return {
         type: HandlePullResponseResultType.CookieMismatch,
@@ -491,8 +505,8 @@ export function handlePullResponseV1(
         throw new Error(
           badOrderMessage(
             `${clientID} lastMutationID`,
-            lmidChange,
-            lastMutationID,
+            String(lmidChange),
+            String(lastMutationID),
           ),
         );
       }
@@ -501,21 +515,31 @@ export function handlePullResponseV1(
     const frozenResponseCookie = deepFreeze(response.cookie);
     if (compareCookies(frozenResponseCookie, baseCookie) < 0) {
       throw new Error(
-        badOrderMessage('cookie', frozenResponseCookie, baseCookie),
+        badOrderMessage(
+          'cookie',
+          JSON.stringify(frozenResponseCookie),
+          JSON.stringify(baseCookie),
+        ),
       );
     }
 
-    if (
-      response.patch.length === 0 &&
-      deepEqual(frozenResponseCookie, baseCookie) &&
-      !anyMutationsToApply(
-        response.lastMutationIDChanges,
-        baseSnapshotMeta.lastMutationIDs,
-      )
-    ) {
-      // If there is no patch and there are no lmid changes and cookie doesn't
-      // change, it's a nop. Otherwise, something changed (maybe just the cookie)
-      // and we will write a new commit.
+    if (deepEqual(frozenResponseCookie, baseCookie)) {
+      if (response.patch.length > 0) {
+        lc.error?.(
+          `handlePullResponse: cookie ${JSON.stringify(
+            baseCookie,
+          )} did not change, but patch is not empty`,
+        );
+      }
+      if (Object.keys(response.lastMutationIDChanges).length > 0) {
+        console.log(response.lastMutationIDChanges);
+        lc.error?.(
+          `handlePullResponse: cookie ${JSON.stringify(
+            baseCookie,
+          )} did not change, but lastMutationIDChanges is not empty`,
+        );
+      }
+      // If the cookie doesn't change, it's a nop.
       return {
         type: HandlePullResponseResultType.NoOp,
       };
@@ -703,18 +727,4 @@ export function maybeEndPull<M extends LocalMeta>(
       diffs: diffsMap,
     };
   });
-}
-
-function anyMutationsToApply(
-  lastMutationIDChanges: Record<string, number>,
-  lastMutationIDs: Record<string, number>,
-) {
-  for (const [clientID, lastMutationIDChange] of Object.entries(
-    lastMutationIDChanges,
-  )) {
-    if (lastMutationIDChange !== lastMutationIDs[clientID]) {
-      return true;
-    }
-  }
-  return false;
 }

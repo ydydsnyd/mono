@@ -2,6 +2,7 @@ import {getFirestore} from 'firebase/firestore';
 import {editApiKey, listApiKeys} from 'mirror-protocol/src/api-keys.js';
 import color from 'picocolors';
 import type {AuthContext} from '../handler.js';
+import {getLogger} from '../logger.js';
 import {makeRequester} from '../requester.js';
 import {getSingleTeam} from '../teams.js';
 import type {CommonYargsArgv, YargvToInterface} from '../yarg-types.js';
@@ -24,7 +25,7 @@ export async function editKeyHandler(
   const {name} = yargs;
   const {userID} = authContext.user;
   const firestore = getFirestore();
-  const teamID = await getSingleTeam(firestore, userID, 'admin');
+  const teamID = await getSingleTeam(firestore, authContext, 'admin');
   const requester = makeRequester(userID);
 
   const {keys, allPermissions} = await listApiKeys.call({
@@ -34,7 +35,7 @@ export async function editKeyHandler(
   });
   const key = keys.find(key => key.name === name);
   if (!key) {
-    console.warn(color.yellow(`Key named "${name}" was not found.`));
+    getLogger().warn(color.yellow(`Key named "${name}" was not found.`));
     process.exit(-1);
   }
 
@@ -57,5 +58,5 @@ export async function editKeyHandler(
       remove: Object.keys(key.apps).filter(id => !appIDs.includes(id)),
     },
   });
-  console.log(`Edited key "${color.bold(name)}".`);
+  getLogger().log(`Edited key "${color.bold(name)}".`);
 }

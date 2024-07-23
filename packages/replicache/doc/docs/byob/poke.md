@@ -3,34 +3,48 @@ title: Poke
 slug: /byob/poke
 ---
 
-Many realtime systems use WebSockets to push live updates to clients. This has performance benefits, but comes at a steep operational cost. WebSocket-based services are more complex to scale because they have to keep state in memory for each connected client.
+By default, Replicache pulls new changes periodically. The frequency is controlled by the [`pullInterval`](/api/interfaces/ReplicacheOptions#pullInterval) parameter which defaults to 60 seconds.
 
-Replicache instead uses WebSockets only to hint the client that it should pull again. No data is sent over the socket. This enables developers to build their realtime web applications in the standard stateless request/response style. You can even build Replicache-enabled apps serverlessly (as we are here with Next.js)! We have found that we can get most of the performance back with HTTP/2, anyway.
+To get more responsive updates, you could reduce the pull interval, but that gets expensive quick. Most Replicache applications instead have the server send a special message called a _poke_ to the app, telling it when it should pull again.
 
-We refer to this WebSocket hint as a _poke_, to go along with _push_ and _pull_. You can use any hosted WebSocket service to send pokes, such as [socket.io](https://socket.io) or [Pusher](https://pusher.com/), and it's trivial to setup.
+A Replicache poke caries no data – it's only a hint telling the client to pull soon. This enables developers to build their realtime apps in the standard stateless request/response style. You can even build Replicache-enabled apps serverlessly (as we are here with Next.js)!
 
-For this sample, we'll use Pusher. Get thee to [pusher.com](https://pusher.com) and setup a free "Channels" project with client type "React" and server type "Node.js".
+Because pokes are simple, you can implement them many ways. Any hosted WebSocket service like [Pusher](https://pusher.com/) or [PubNub](https://www.pubnub.com/) works. You can also implement your own WebSocket server or use server-sent events. And some databases come with features that can be used for pokes. For several different examples to implementing pokes, see [Todo, Three Ways](/examples/todo).
+
+For this sample, we'll use Pusher. Go to [pusher.com](https://pusher.com) and setup a free "Channels" project with client type "React" and server type "Node.js".
 
 Store the settings from the project in the following environment variables:
 
 ```bash
-export NEXT_PUBLIC_REPLICHAT_PUSHER_APP_ID=<app id>
-export NEXT_PUBLIC_REPLICHAT_PUSHER_KEY=<key>
-export NEXT_PUBLIC_REPLICHAT_PUSHER_SECRET=<secret>
-export NEXT_PUBLIC_REPLICHAT_PUSHER_CLUSTER=<cluster>
+export REPLICHAT_PUSHER_APP_ID=<app id>
+export REPLICHAT_PUSHER_KEY=<key>
+export REPLICHAT_PUSHER_SECRET=<secret>
+export REPLICHAT_PUSHER_CLUSTER=<cluster>
+export VITE_PUBLIC_REPLICHAT_PUSHER_KEY=<key>
+export VITE_PUBLIC_REPLICHAT_PUSHER_CLUSTER=<cluster>
 ```
 
 Typically you'll establish one WebSocket _channel_ per-document or whatever the unit of collaboration is in your application. For this simple demo, we just create one channel, `"default"`.
 
-Replace the implementation of `sendPoke()` in `replicache-push.ts`:
+Replace the implementation of `sendPoke()` in `push.ts`:
 
 ```ts
+import Pusher from 'pusher';
+//...
 async function sendPoke() {
+  if (
+    !process.env.REPLICHAT_PUSHER_APP_ID ||
+    !process.env.REPLICHAT_PUSHER_KEY ||
+    !process.env.REPLICHAT_PUSHER_SECRET ||
+    !process.env.REPLICHAT_PUSHER_CLUSTER
+  ) {
+    throw new Error('Missing Pusher environment variables');
+  }
   const pusher = new Pusher({
-    appId: process.env.NEXT_PUBLIC_REPLICHAT_PUSHER_APP_ID,
-    key: process.env.NEXT_PUBLIC_REPLICHAT_PUSHER_KEY,
-    secret: process.env.NEXT_PUBLIC_REPLICHAT_PUSHER_SECRET,
-    cluster: process.env.NEXT_PUBLIC_REPLICHAT_PUSHER_CLUSTER,
+    appId: process.env.REPLICHAT_PUSHER_APP_ID,
+    key: process.env.REPLICHAT_PUSHER_KEY,
+    secret: process.env.REPLICHAT_PUSHER_SECRET,
+    cluster: process.env.REPLICHAT_PUSHER_CLUSTER,
     useTLS: true,
   });
   const t0 = Date.now();
@@ -39,24 +53,26 @@ async function sendPoke() {
 }
 ```
 
-Then on the client, in `index.tsx`, replace the implementation of `listen()` to tell Replicache to `pull()` whenever a poke is received:
+Then on the client, in `client/src/index.tsx`, replace the implementation of `listen()` to tell Replicache to `pull()` whenever a poke is received:
 
 ```ts
-function listen() {
-  if (!rep) {
-    return;
-  }
-
+function listen(rep: Replicache<M>) {
   console.log('listening');
   // Listen for pokes, and pull whenever we get one.
   Pusher.logToConsole = true;
-  const pusher = new Pusher(process.env.NEXT_PUBLIC_REPLICHAT_PUSHER_KEY, {
-    cluster: process.env.NEXT_PUBLIC_REPLICHAT_PUSHER_CLUSTER,
+  if (
+    !import.meta.env.VITE_PUBLIC_REPLICHAT_PUSHER_KEY ||
+    !import.meta.env.VITE_PUBLIC_REPLICHAT_PUSHER_CLUSTER
+  ) {
+    throw new Error('Missing PUSHER_KEY or PUSHER_CLUSTER in env');
+  }
+  const pusher = new Pusher(import.meta.env.VITE_PUBLIC_REPLICHAT_PUSHER_KEY, {
+    cluster: import.meta.env.VITE_PUBLIC_REPLICHAT_PUSHER_CLUSTER,
   });
   const channel = pusher.subscribe('default');
-  channel.bind('poke', () => {
+  channel.bind('poke', async () => {
     console.log('got poked');
-    rep.pull();
+    await rep.pull();
   });
 }
 ```

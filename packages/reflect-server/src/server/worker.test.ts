@@ -4,8 +4,10 @@ import {version} from 'reflect-shared/src/version.js';
 import {createAPIHeaders} from 'shared/src/api/headers.js';
 import {assertString} from 'shared/src/asserts.js';
 import type {Series} from '../types/report-metrics.js';
-import {Mocket, TestLogSink, fail} from '../util/test-utils.js';
+import {Mocket, fail} from '../util/test-utils.js';
+import {TestLogSink} from 'shared/src/logging-test-utils.js';
 import {
+  IncomingRequest,
   TestDurableObjectId,
   TestDurableObjectStub,
   TestExecutionContext,
@@ -14,9 +16,13 @@ import {
 import {
   CLOSE_ROOM_PATH,
   DELETE_ROOM_PATH,
-  GET_ROOM_PATH,
   INVALIDATE_ROOM_CONNECTIONS_PATH,
   INVALIDATE_USER_CONNECTIONS_PATH,
+  LEGACY_CLOSE_ROOM_PATH,
+  LEGACY_DELETE_ROOM_PATH,
+  LEGACY_GET_ROOM_PATH,
+  LEGACY_INVALIDATE_ROOM_CONNECTIONS_PATH,
+  LEGACY_INVALIDATE_USER_CONNECTIONS_PATH,
   LIST_ROOMS_PATH,
   LOG_LOGS_PATH,
   REPORT_METRICS_PATH,
@@ -78,7 +84,7 @@ function createWorkerWithTestLogSink() {
   }));
 }
 
-function testDisabled(testRequest: Request) {
+function testDisabled(testRequest: IncomingRequest) {
   return testNotForwardedToAuthDo(
     testRequest,
     new Response('Disabled', {status: 503}),
@@ -87,7 +93,7 @@ function testDisabled(testRequest: Request) {
 }
 
 async function testNotForwardedToAuthDo(
-  testRequest: Request,
+  testRequest: IncomingRequest,
   expectedResponse: Response,
   disable?: string | undefined,
 ) {
@@ -127,8 +133,10 @@ async function testNotForwardedToAuthDo(
 }
 
 async function testForwardedToAuthDO(
-  testRequest: Request,
-  authDoResponse = new Response('success', {status: 200}),
+  testRequest: IncomingRequest,
+  authDoResponse = new Response('success', {
+    status: 200,
+  }),
 ) {
   // Don't clone response if it has a websocket, otherwise CloudFlare's Response
   // class will throw
@@ -184,7 +192,7 @@ test('worker forwards connect requests to authDO', async () => {
     new Request('ws://test.roci.dev/api/sync/v1/connect'),
     new Response(null, {
       status: 101,
-      webSocket: new Mocket(),
+      webSocket: new Mocket() as unknown as WebSocket,
     }),
   );
 });
@@ -198,31 +206,48 @@ test('worker does not forward connect requests to authDO when DISABLE is true', 
 });
 
 test('worker forwards authDO api requests to authDO', async () => {
-  const roomStatusByRoomIDPathWithRoomID = fmtPath(GET_ROOM_PATH, {
-    roomID: 'ae4565',
+  const roomID = 'ae4565';
+  const roomStatusByRoomIDPathWithRoomID = fmtPath(LEGACY_GET_ROOM_PATH, {
+    roomID,
   });
   type TestCase = {
     path: string;
     method: string;
     body: undefined | Record<string, unknown>;
   };
-  const closeRoomPathWithRoomID = fmtPath(CLOSE_ROOM_PATH, {roomID: 'ae4565'});
-  const deleteRoomPathWithRoomID = fmtPath(DELETE_ROOM_PATH, {
-    roomID: 'ae4656',
-  });
+  const closeRoomPathWithRoomID = fmtPath(LEGACY_CLOSE_ROOM_PATH, {roomID});
+  const deleteRoomPathWithRoomID = fmtPath(LEGACY_DELETE_ROOM_PATH, {roomID});
   const testCases: TestCase[] = [
     // Auth API calls.
     {
-      path: `https://test.roci.dev${fmtPath(INVALIDATE_USER_CONNECTIONS_PATH, {
-        userID: 'userID1',
-      })}`,
+      path: `https://test.roci.dev${fmtPath(
+        LEGACY_INVALIDATE_USER_CONNECTIONS_PATH,
+        {userID: 'userID1'},
+      )}`,
       method: 'post',
       body: undefined,
     },
     {
-      path: `https://test.roci.dev${fmtPath(INVALIDATE_ROOM_CONNECTIONS_PATH, {
-        roomID: 'roomID1',
-      })}`,
+      path: `https://test.roci.dev${fmtPath(
+        INVALIDATE_USER_CONNECTIONS_PATH,
+        new URLSearchParams({userID: 'userID1'}),
+      )}`,
+      method: 'post',
+      body: undefined,
+    },
+    {
+      path: `https://test.roci.dev${fmtPath(
+        LEGACY_INVALIDATE_ROOM_CONNECTIONS_PATH,
+        {roomID: 'roomID1'},
+      )}`,
+      method: 'post',
+      body: undefined,
+    },
+    {
+      path: `https://test.roci.dev${fmtPath(
+        INVALIDATE_ROOM_CONNECTIONS_PATH,
+        new URLSearchParams({roomID}),
+      )}`,
       method: 'post',
       body: undefined,
     },
@@ -244,7 +269,23 @@ test('worker forwards authDO api requests to authDO', async () => {
       body: undefined,
     },
     {
+      path: `https://test.roci.dev${fmtPath(
+        CLOSE_ROOM_PATH,
+        new URLSearchParams({roomID}),
+      )}`,
+      method: 'post',
+      body: undefined,
+    },
+    {
       path: `https://test.roci.dev${closeRoomPathWithRoomID}`,
+      method: 'post',
+      body: undefined,
+    },
+    {
+      path: `https://test.roci.dev${fmtPath(
+        DELETE_ROOM_PATH,
+        new URLSearchParams({roomID}),
+      )}`,
       method: 'post',
       body: undefined,
     },
@@ -353,11 +394,14 @@ async function testLogging(
 test('fetch logging', async () => {
   // eslint-disable-next-line require-await
   await testLogging(async (worker, testEnv, testExecutionContext) => {
-    const testRequest = new Request('ws://test.roci.dev/connect');
     if (!worker.fetch) {
       throw new Error('Expected fetch to be defined');
     }
-    return worker.fetch(testRequest, testEnv, testExecutionContext);
+    return worker.fetch(
+      new Request('ws://test.roci.dev/connect'),
+      testEnv,
+      testExecutionContext,
+    );
   });
 });
 
@@ -561,20 +605,20 @@ describe('reportMetrics', () => {
       },
     }));
 
-    const testRequest = new Request(
-      // The client appends common query parameters to the URL (which are ignored on the server)
-      reportMetricsURL.toString() +
-        '?clientID=foo&clientGroupID=bar&roomID=bax&userID=bonk&requestID=12345',
-      {
-        method: tc.method,
-        body: tc.method === 'post' && tc.body ? JSON.stringify(tc.body) : null,
-      },
-    );
     if (worker.fetch === undefined) {
       throw new Error('Expect fetch to be defined');
     }
     const response = await worker.fetch(
-      testRequest,
+      new Request(
+        // The client appends common query parameters to the URL (which are ignored on the server)
+        reportMetricsURL.toString() +
+          '?clientID=foo&clientGroupID=bar&roomID=bax&userID=bonk&requestID=12345',
+        {
+          method: tc.method,
+          body:
+            tc.method === 'post' && tc.body ? JSON.stringify(tc.body) : null,
+        },
+      ),
       testEnv,
       new TestExecutionContext(),
     );
@@ -652,15 +696,14 @@ describe('log logs', () => {
 
     const testBody = 'test-body';
 
-    const testRequest = new Request(logLogsURL.toString(), {
-      method: 'POST',
-      body: testBody,
-    });
     if (worker.fetch === undefined) {
       throw new Error('Expect fetch to be defined');
     }
     const response = await worker.fetch(
-      testRequest,
+      new Request(logLogsURL.toString(), {
+        method: 'POST',
+        body: testBody,
+      }),
       testEnv,
       new TestExecutionContext(),
     );
@@ -726,12 +769,11 @@ test('hello', async () => {
     },
   }));
 
-  const testRequest = new Request('https://test.roci.dev/'.toString());
   if (worker.fetch === undefined) {
     throw new Error('Expect fetch to be defined');
   }
   const response = await worker.fetch(
-    testRequest,
+    new Request('https://test.roci.dev/'.toString()),
     testEnv,
     new TestExecutionContext(),
   );

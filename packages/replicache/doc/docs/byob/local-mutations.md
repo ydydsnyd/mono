@@ -13,9 +13,11 @@ The two implementations need not match exactly. Replicache replaces the result o
 
 First, let's register a _mutator_ that speculatively creates a message. In `index.tsx`, expand the options passed to the `Replicache` constructor with:
 
-```js
-new Replicache({
-  //...
+```js {5-16}
+//...
+const r = new Replicache({
+  name: 'chat-user-id',
+  licenseKey,
   mutators: {
     async createMessage(
       tx: WriteTransaction,
@@ -28,27 +30,40 @@ new Replicache({
       });
     },
   },
+  pushURL: `/api/replicache/push`,
+  pullURL: `/api/replicache/pull`,
+  logLevel: 'debug',
 });
+//...
 ```
 
-This creates a mutator named "createMessage". When invoked, the implementation is run within a transaction (`tx`) and it `put`s the new message into the local map.
+When invoked, the implementation is run within a transaction (`tx`) and it `put`s the new message into the local map.
 
 Now let's invoke the mutator when the user types a message. Replace the content of `onSubmit` so that it invokes the mutator:
 
 ```js
-const onSubmit = (e: FormEvent) => {
-  e.preventDefault();
-  const last = messages.length && messages[messages.length - 1][1];
-  const order = (last?.order ?? 0) + 1;
+    const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      let last: Message | null = null;
+      if (messages.length) {
+        const lastMessageTuple = messages[messages.length - 1];
+        last = lastMessageTuple[1];
+      }
+      const order = (last?.order ?? 0) + 1;
+      const username = usernameRef.current?.value ?? '';
+      const content = contentRef.current?.value ?? '';
 
-  rep.mutate.createMessage({
-    id: nanoid(),
-    from: usernameRef.current.value,
-    content: contentRef.current.value,
-    order,
-  });
-  contentRef.current.value = '';
-};
+      await r?.mutate.createMessage({
+        id: nanoid(),
+        from: username,
+        content,
+        order,
+      });
+
+      if (contentRef.current) {
+        contentRef.current.value = '';
+      }
+    };
 ```
 
 Previously we mentioned that Replicache has a mechanism that ensures that local, speculative changes are always applied on top of changes from the server. The way this works is that when Replicache pulls and applies changes from the server, any mutator invocations that have not yet been confirmed by the server are _replayed_ on top of the new server state. This is much like a git rebase, and the effects of the patch-and-replay are revealed atomically to your app.
