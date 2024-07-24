@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721825254133,
+  "lastUpdate": 1721829992640,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -48129,6 +48129,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/f40341f87a98c1da382562e86996a727651ae6db"
         },
         "date": 1721825236041,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 317068,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55147,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 116847,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32534,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "011cc7c2990de5b44f6d7dbacbcd641d43678343",
+          "message": "chore: Update rollup dependency to version 4.19.0 (#2080)\n\nAnd rollup-plugin-dts etc",
+          "timestamp": "2024-07-24T14:03:26Z",
+          "tree_id": "aa9a8da6c294e1b131730757a076245df8299c4c",
+          "url": "https://github.com/rocicorp/mono/commit/011cc7c2990de5b44f6d7dbacbcd641d43678343"
+        },
+        "date": 1721829975217,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
