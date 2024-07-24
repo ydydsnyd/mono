@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721829992640,
+  "lastUpdate": 1721834340191,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -48173,6 +48173,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/011cc7c2990de5b44f6d7dbacbcd641d43678343"
         },
         "date": 1721829975217,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 317068,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55147,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 116847,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32534,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d88383f6048d9481828977a8c505a86b39e3c7f1",
+          "message": "feat(replicache): Export internal Replicache impl (#2081)\n\nThis is in preparation for open sourcing Reflect which will depend on\r\nReplicache using the replicache npm package.\r\n\r\nThis exports ReplicacheImpl as \"replicache/impl\" and Replicache as\r\n\"replicache\".\r\n\r\nThis requires us to use code splitting for the replicache build (both\r\nthe esbuild and rollup-dts builds) so that we can export the impl\r\nseparately from the main Replicache class.",
+          "timestamp": "2024-07-24T17:15:49+02:00",
+          "tree_id": "0c0a2b90875128207cc6d5c0c3c3013c1c58225c",
+          "url": "https://github.com/rocicorp/mono/commit/d88383f6048d9481828977a8c505a86b39e3c7f1"
+        },
+        "date": 1721834298361,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
