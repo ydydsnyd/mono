@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721702192055,
+  "lastUpdate": 1721825254133,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -48105,6 +48105,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32513,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f40341f87a98c1da382562e86996a727651ae6db",
+          "message": "chore(replicache): Use public licensing npm package (#2079)\n\nThe `@rocicorp/licensing` npm package is now public so we do not need\r\nto configure the npm auth token.",
+          "timestamp": "2024-07-24T12:43:23Z",
+          "tree_id": "360badd22bda1dfd0370709cc80f0acfbc2fea12",
+          "url": "https://github.com/rocicorp/mono/commit/f40341f87a98c1da382562e86996a727651ae6db"
+        },
+        "date": 1721825236041,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 317068,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55147,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 116847,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32534,
             "unit": "bytes"
           }
         ]
