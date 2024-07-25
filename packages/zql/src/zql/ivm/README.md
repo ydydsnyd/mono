@@ -173,7 +173,7 @@ entire thing makes more sense than sorting them first.
 ## Identity
 
 It's important to understand that the pipeline doesn't inherently have any
-notion of row identity. If a row `{id: "r1", v: 1}` got updated to `{id: "r2",
+notion of row identity. If a row `{id: "r1", v: 1}` got updated to `{id: "r1",
 v: 2}`, we would see the following Multiset flow through the pipeline:
 
 ```
