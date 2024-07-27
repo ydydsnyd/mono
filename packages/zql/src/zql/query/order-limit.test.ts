@@ -292,11 +292,10 @@ describe('pulling from an infinite source is possible if we set a limit', () => 
       .prepare();
 
     const data = await stmt.exec();
-    checkIssueUsers(data, limit);
+    checkIssueUsers(data, limit, 'inner');
     stmt.destroy();
   });
 
-  // this should be the same as join, no?
   test('bare select with a left join', async () => {
     const limit = 50;
     const stmt = issueQuery
@@ -306,7 +305,7 @@ describe('pulling from an infinite source is possible if we set a limit', () => 
       .prepare();
 
     const data = await stmt.exec();
-    checkIssueUsers(data, limit);
+    checkIssueUsers(data, 25, 'left');
     stmt.destroy();
   });
 
@@ -411,12 +410,24 @@ describe('pulling from an infinite source is possible if we set a limit', () => 
       readonly issue: Issue;
       readonly user?: User | undefined;
     }[],
-    limit: number,
+    usersSelected: number,
+    joinType: 'inner' | 'left',
   ) {
-    const expected = Array.from({length: limit}, (_, i) => ({
-      id: numToPaddedString(i + 1),
-      owner: `User ${numToPaddedString((i % numUsers) + 1)}`,
-    }));
+    const expected = [];
+    for (let i = 0; i < usersSelected; i++) {
+      if (joinType === 'left') {
+        // left join always emits an unmatched entry in addition to any
+        // matches.
+        expected.push({
+          id: numToPaddedString(i + 1),
+          owner: undefined,
+        });
+      }
+      expected.push({
+        id: numToPaddedString(i + 1),
+        owner: `User ${numToPaddedString((i % numUsers) + 1)}`,
+      });
+    }
     expect(data.map(x => ({id: x.issue.id, owner: x.user?.name}))).toEqual(
       expected,
     );
