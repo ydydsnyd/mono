@@ -4,12 +4,10 @@ import {genCached, genConcat, genFlatMap} from '../../../util/iterables.js';
 import type {Entry, Multiset} from '../../multiset.js';
 import type {Source} from '../../source/source.js';
 import {
-  getPrimaryKey,
   getPrimaryKeyValuesAsStringUnqualified,
   getValueFromEntityAsStringOrNumberOrUndefined,
 } from '../../source/util.js';
-import {
-  isJoinResult,
+import type {
   JoinResult,
   PipelineEntity,
   StringOrNumber,
@@ -41,18 +39,6 @@ export class LeftJoinOperator<
     AValue
   >;
   readonly #indexB: DifferenceIndex<StringOrNumber, BValue>;
-
-  // Tracks the cumulative multiplicity of each row in A that we have seen.
-  // Example with issues and comments: the issue will be side A and the child
-  // comments will be side B. As issue rows flow through join we accumulate
-  // their multiplicity here, keyed by A's PK.
-  //
-  // The reason to do this is so that we know when to retract a join result
-  // where A had no child B rows. See comment in #joinOneInner.
-  readonly #aMatches: Map<
-    StringOrNumber,
-    [JoinResult<AValue, BValue, ATable, BAlias>, number]
-  > = new Map();
 
   readonly #getAPrimaryKey: (value: AValue) => string;
   readonly #getBPrimaryKey: (value: BValue) => string;
@@ -181,56 +167,54 @@ export class LeftJoinOperator<
     const aMult = aEntry[1];
 
     const ret: Entry<JoinResult<AValue, BValue, ATable, BAlias>>[] = [];
-    const aPrimaryKey = isJoinResult(aValue)
-      ? aValue.id
-      : this.#getAPrimaryKey(aValue);
-
     const {aTable} = this.#joinArgs;
     const bAs = must(this.#joinArgs.bAs);
 
+    // Unlike the traditional SQL output of left join, our left-join operator
+    // *always* emits an "unmatched" entry containing just the left side of the
+    // join, regardless of whether there are any matching right sides.
+    //
+    // This output makes implementation of left-join easier because we don't
+    // have to remember if we previously emitted an unmatched entry that should
+    // be retracted when a matching right side subsequently comes in. Instead
+    // the unmatched entry is always emitted when a new left-side entry is
+    // encountered, and always retracted when the left-side entry is retracted.
+    //
+    // It also makes implementing heirarchical output easier since the unmatched
+    // entry can be treated as the "parent" and the matched entries as the
+    // "children".
+    //
+    // If consumers want the traditional SQL output they can just have the
+    // first matched entry override the unmatched entry.
+    const unmatchedEntry = [
+      makeJoinResult(
+        aValue,
+        undefined,
+        aTable,
+        bAs,
+        this.#getAPrimaryKey,
+        this.#getBPrimaryKey,
+      ),
+      aMult,
+    ] as const;
+    ret.push(unmatchedEntry);
+
     const bEntries = aKey !== undefined ? this.#indexB.get(aKey) : undefined;
-    if (bEntries === undefined || bEntries.length === 0) {
-      const joinEntry = [
-        makeJoinResult(
-          aValue,
-          undefined,
-          aTable,
-          bAs,
-          this.#getAPrimaryKey,
-          this.#getBPrimaryKey,
-        ),
-        aMult,
-      ] as const;
-      ret.push(joinEntry);
-      this.#aMatches.set(aPrimaryKey, [joinEntry[0], 0]);
-      return ret;
-    }
+    if (bEntries) {
+      for (const [bValue, bMult] of bEntries) {
+        const matchedEntry = [
+          makeJoinResult(
+            aValue,
+            bValue,
+            aTable,
+            bAs,
+            this.#getAPrimaryKey,
+            this.#getBPrimaryKey,
+          ) as JoinResult<AValue, BValue, ATable, BAlias>,
+          aMult * bMult,
+        ] as const;
 
-    for (const [bValue, bMult] of bEntries) {
-      const joinEntry = [
-        makeJoinResult(
-          aValue,
-          bValue,
-          aTable,
-          bAs,
-          this.#getAPrimaryKey,
-          this.#getBPrimaryKey,
-        ) as JoinResult<AValue, BValue, ATable, BAlias>,
-        aMult * bMult,
-      ] as const;
-
-      ret.push(joinEntry);
-
-      const existing = this.#aMatches.get(aPrimaryKey);
-      if (existing) {
-        // TODO(aa): This is a bug. We need to update the reference to the row
-        // here, like:
-        // existing[0] = joinEntry[0];
-        // because otherwise when we retract/reassert later, we will send the
-        // wrong version of the row.
-        existing[1] += joinEntry[1];
-      } else {
-        this.#aMatches.set(aPrimaryKey, [joinEntry[0], joinEntry[1]]);
+        ret.push(matchedEntry);
       }
     }
 
@@ -271,40 +255,6 @@ export class LeftJoinOperator<
         aMult * bMult,
       ] as const;
       ret.push(joinEntry);
-
-      const aPrimaryKey = getPrimaryKey(aRow);
-
-      // This is tricky -- can we do it differently?
-      //
-      // The problem is that if we get a left row, and there are no right rows,
-      // then we will emit a join result with a left side and null for right
-      // side. If a right side then comes in, we need to know to retract the
-      // left side. The reason this doesn't work as it does in inner join is
-      // that inner join doesn't have this problem because it doesn't emit the
-      // left side if there's no right side. So if a new right side comes in,
-      // it's an edit and we get the right side retraction which naturally
-      // leads to the join retraction. Here in left join that doesn't happen
-      // and we need to synthesize the join retraction somehow.
-      //
-      // TODO(aa): also explore first-class subqueries as a solution.
-      const existing = this.#aMatches.get(aPrimaryKey);
-      if (joinEntry[1] > 0 && existing && existing[1] === 0) {
-        // Row `a` now has matches. Send the retraction for the join entry with
-        // left side but no right side.
-        ret.push([existing[0], -1]);
-      } else if (
-        joinEntry[1] < 0 &&
-        existing &&
-        existing[1] + joinEntry[1] === 0
-      ) {
-        // We went back to row `a` being an unmatch. Send the assertion for the
-        // join entry with left.
-        ret.push([existing[0], 1]);
-      }
-
-      if (existing) {
-        existing[1] += joinEntry[1];
-      }
     }
 
     return ret;
