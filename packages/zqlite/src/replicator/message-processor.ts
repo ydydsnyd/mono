@@ -1,11 +1,11 @@
 import type {LogContext} from '@rocicorp/logger';
 import type Database from 'better-sqlite3';
 import type {Pgoutput} from 'pg-logical-replication';
-import {toLexiVersion} from 'zqlite-zero-cache-shared/src/lsn.js';
+import {assert} from 'shared/src/asserts.js';
 import type {LexiVersion} from 'zqlite-zero-cache-shared/src/lexi-version.js';
-import {DB, queries} from '../internal/db.js';
+import {toLexiVersion} from 'zqlite-zero-cache-shared/src/lsn.js';
 import {ZERO_VERSION_COLUMN_NAME} from '../consts.js';
-import {assert} from '../../../shared/src/asserts.js';
+import {DB, queries} from '../internal/db.js';
 
 const relationRenames: Record<string, Record<string, string>> = {
   zero: {

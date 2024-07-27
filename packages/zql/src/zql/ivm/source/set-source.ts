@@ -1,7 +1,7 @@
 import type {ISortedMap} from 'btree';
 import BTree from 'btree';
+import {assert} from 'shared/src/asserts.js';
 import {must} from 'shared/src/must.js';
-import {assert} from '../../../../../shared/src/asserts.js';
 import type {Ordering, Primitive, Selector} from '../../ast/ast.js';
 import {gen} from '../../util/iterables.js';
 import {makeComparator} from '../compare.js';

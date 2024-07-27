@@ -1,9 +1,9 @@
 import {RWLock} from '@rocicorp/lock';
 import {promiseVoid} from 'shared/src/resolved-promises.js';
 import type {FrozenJSONValue} from '../frozen-json.js';
-import {ReadImpl} from './read-impl.js';
+import {MemReadImpl} from './mem-read-impl.js';
+import {MemWriteImpl} from './mem-write-impl.js';
 import type {Read, Store, Write} from './store.js';
-import {WriteImpl} from './write-impl.js';
 
 type StorageMap = Map<string, FrozenJSONValue>;
 
@@ -56,12 +56,12 @@ export class MemStore implements Store {
 
   async read(): Promise<Read> {
     const release = await this.#rwLock.read();
-    return new ReadImpl(this.#map, release);
+    return new MemReadImpl(this.#map, release);
   }
 
   async write(): Promise<Write> {
     const release = await this.#rwLock.write();
-    return new WriteImpl(this.#map, release);
+    return new MemWriteImpl(this.#map, release);
   }
 
   close(): Promise<void> {

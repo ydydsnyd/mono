@@ -2,7 +2,7 @@ import {expect} from 'chai';
 import {assert} from 'shared/src/asserts.js';
 import {Hash, fakeHash} from '../hash.js';
 import {Chunk} from './chunk.js';
-import type {MustGetChunk} from './store.js';
+import type {GetChunkRange, MustGetChunk} from './store.js';
 import {Visitor} from './visitor.js';
 
 test('Ensure only visited once', async () => {
@@ -24,11 +24,20 @@ test('Ensure only visited once', async () => {
     [c3.hash, c3],
   ]);
 
-  const dagRead: MustGetChunk = {
+  const dagRead: MustGetChunk & GetChunkRange = {
     mustGetChunk(h: Hash) {
       const chunk = chunks.get(h);
       assert(chunk);
       return Promise.resolve(chunk);
+    },
+    getChunkRange(start: Hash, end: Hash) {
+      const result = [];
+      for (const [k, v] of chunks) {
+        if (k >= start && k <= end) {
+          result.push(v);
+        }
+      }
+      return Promise.resolve(result);
     },
   };
 

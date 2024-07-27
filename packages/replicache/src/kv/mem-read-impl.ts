@@ -1,7 +1,8 @@
+import {compareUTF8} from 'compare-utf8';
 import type {FrozenJSONValue} from '../frozen-json.js';
 import type {Read} from './store.js';
 
-export class ReadImpl implements Read {
+export class MemReadImpl implements Read {
   readonly #map: Map<string, FrozenJSONValue>;
   readonly #release: () => void;
   #closed = false;
@@ -18,6 +19,20 @@ export class ReadImpl implements Read {
 
   get closed(): boolean {
     return this.#closed;
+  }
+
+  getRange(
+    firstKey: string,
+    lastKey: string,
+  ): Promise<Map<string, FrozenJSONValue>> {
+    const entries: [string, FrozenJSONValue][] = [];
+    this.#map.forEach((v, k) => {
+      if (k >= firstKey && k <= lastKey) {
+        entries.push([k, v]);
+      }
+    });
+    entries.sort((a, b) => compareUTF8(a[0], b[0]));
+    return Promise.resolve(new Map(entries));
   }
 
   has(key: string): Promise<boolean> {

@@ -1,14 +1,14 @@
 import {promiseVoid} from 'shared/src/resolved-promises.js';
 import type {FrozenJSONValue} from '../frozen-json.js';
-import {ReadImpl} from './read-impl.js';
+import {MemReadImpl} from './mem-read-impl.js';
 import type {Write} from './store.js';
 import {deleteSentinel, WriteImplBase} from './write-impl-base.js';
 
-export class WriteImpl extends WriteImplBase implements Write {
+export class MemWriteImpl extends WriteImplBase implements Write {
   readonly #map: Map<string, FrozenJSONValue>;
 
   constructor(map: Map<string, FrozenJSONValue>, release: () => void) {
-    super(new ReadImpl(map, release));
+    super(new MemReadImpl(map, release));
     this.#map = map;
   }
 

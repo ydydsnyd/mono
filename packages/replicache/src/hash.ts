@@ -72,8 +72,7 @@ function makeNewUUIDHashFunctionInternal(
       // request.
       base = makeBase(hashPrefix, makeUUID());
     }
-    const tail = String(tempHashCounter++);
-    return makeHash(base, tail);
+    return makeHashForNumber(base, tempHashCounter++);
   };
 }
 
@@ -84,6 +83,10 @@ function makeBase(hashPrefix: string, uuid: string): string {
 function makeHash(base: string, tail: string): Hash {
   assert(tail.length <= 12);
   return (base + tail.padStart(12, '0')) as unknown as Hash;
+}
+
+function makeHashForNumber(base: string, n: number): Hash {
+  return makeHash(base, String(n).padStart(12, '0'));
 }
 
 /**
@@ -105,3 +108,48 @@ export function assertHash(value: unknown): asserts value is Hash {
 }
 
 export const hashSchema = valita.string().assert(isHash, 'Invalid hash');
+
+/**
+ * Hashes have the shape `<prefix><number>` where `<prefix>` is a fixed string (usually a UUID) and
+ * `<number>` is a number with fixed length 12 (using base 10) padded with zeroes.
+ *  This function returns the number part of the hash.
+ */
+function hashNumber(h: Hash): number {
+  return Number(h.slice(-12));
+}
+/**
+ * This determines if next is the next hash after h.
+ */
+function isNextHash(h: Hash, next: Hash): boolean {
+  return hashNumber(next) === hashNumber(h) + 1;
+}
+
+/**
+ * This creates an iterator that yields ranges of hashes. The ranges are
+ * guaranteed to be in order and non-overlapping.
+ * @param refs The hashes to create ranges from.
+ */
+export function* splitHashRanges(refs: Iterable<Hash>): Iterable<[Hash, Hash]> {
+  let start: Hash | undefined;
+  let prev: Hash | undefined;
+  for (const h of refs) {
+    if (prev === undefined) {
+      start = h;
+    } else if (!isNextHash(prev, h)) {
+      yield [start!, prev];
+      start = h;
+    }
+    prev = h;
+  }
+  if (prev !== undefined) {
+    yield [start!, prev];
+  }
+}
+
+export function* hashRange(start: Hash, end: Hash): Iterable<Hash> {
+  const startNum = hashNumber(start);
+  const endNum = hashNumber(end);
+  for (let i = startNum; i <= endNum; i++) {
+    yield makeHash(start.slice(0, -12), String(i).padStart(12, '0'));
+  }
+}

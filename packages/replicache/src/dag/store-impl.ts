@@ -8,7 +8,13 @@ import type {
 } from '../kv/store.js';
 import {Chunk, ChunkHasher, assertMeta, createChunk} from './chunk.js';
 import {RefCountUpdatesDelegate, computeRefCountUpdates} from './gc.js';
-import {chunkDataKey, chunkMetaKey, chunkRefCountKey, headKey} from './key.js';
+import {
+  chunkDataKey,
+  chunkMetaKey,
+  chunkRefCountKey,
+  headKey,
+  maybeParseAsChunkData,
+} from './key.js';
 import {Read, Store, Write, mustGetChunk} from './store.js';
 
 export class StoreImpl implements Store {
@@ -71,6 +77,32 @@ export class ReadImpl implements Read {
       refs = [];
     }
     return new Chunk(hash, data, refs);
+  }
+
+  async getChunkRange(start: Hash, end: Hash): Promise<Chunk[]> {
+    const chunks: Chunk[] = [];
+    const entries = await this._tx.getRange(
+      chunkDataKey(start),
+      chunkMetaKey(end),
+    );
+    for await (const [key, data] of entries) {
+      const hash = maybeParseAsChunkData(key);
+      if (!hash) {
+        continue;
+      }
+
+      const metaKey = chunkMetaKey(hash);
+      const refsVal = entries.get(metaKey);
+      let refs: readonly Hash[];
+      if (refsVal !== undefined) {
+        assertMeta(refsVal);
+        refs = refsVal;
+      } else {
+        refs = [];
+      }
+      chunks.push(new Chunk(hash, data, refs));
+    }
+    return chunks;
   }
 
   mustGetChunk(hash: Hash): Promise<Chunk> {

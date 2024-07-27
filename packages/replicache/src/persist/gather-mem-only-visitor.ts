@@ -25,6 +25,20 @@ export class GatherMemoryOnlyVisitor extends Visitor {
     return super.visit(h);
   }
 
+  override visitMultiple(refs: readonly Hash[]) {
+    // for (const h of refs) {
+    //   await this.visit(h);
+    // }
+    //     this.#gatheredChunks.set(h, this.#lazyRead.getMemOnlyChunk(h));
+    //   }
+    // }
+    const memOnlyRefs = refs.filter(h => this.#lazyRead.isMemOnlyChunkHash(h));
+    // for (const h of nonMemOnlyRefs) {
+    //   await super.visit(h);
+    // }
+    return super.visitMultiple(memOnlyRefs);
+  }
+
   override visitChunk(chunk: Chunk): Promise<void> {
     this.#gatheredChunks.set(chunk.hash, chunk);
     return super.visitChunk(chunk);

@@ -67,6 +67,18 @@ export interface Read extends Release {
   // want to FrozenJSONValue to be part of our public API. Our implementations
   // really return FrozenJSONValue but it is not required by the interface.
   get(key: string): Promise<ReadonlyJSONValue | undefined>;
+
+  /**
+   * Gets multiple key values in a single call. This is more efficient than
+   * calling {@link get} multiple times because of how indexeddb creates a macro
+   * task for the callbacks.
+   * @param startKey Range start key (inclusive)
+   * @param endKey Range end key (inclusive)
+   */
+  getRange(
+    startKey: string,
+    endKey: string,
+  ): Promise<Map<string, ReadonlyJSONValue>>;
   closed: boolean;
 }
 

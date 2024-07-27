@@ -1,7 +1,12 @@
 import {resolver} from '@rocicorp/resolver';
-import {assertNotNull} from 'shared/src/asserts.js';
+import {assert, assertNotNull} from 'shared/src/asserts.js';
+import {ReadonlyJSONValue} from 'shared/src/json.js';
 import {promiseVoid} from 'shared/src/resolved-promises.js';
-import {FrozenJSONValue, deepFreezeAllowUndefined} from '../frozen-json.js';
+import {
+  FrozenJSONValue,
+  deepFreeze,
+  deepFreezeAllowUndefined,
+} from '../frozen-json.js';
 import type {Read, Store, Write} from './store.js';
 import {WriteImplBase, deleteSentinel} from './write-impl-base.js';
 
@@ -117,6 +122,31 @@ class ReadImpl implements Read {
     });
   }
 
+  async getRange(
+    fistKey: string,
+    lastKey: string,
+  ): Promise<Map<string, FrozenJSONValue>> {
+    const range = IDBKeyRange.bound(fistKey, lastKey);
+    const store = objectStore(this.#tx);
+    const keysP = new Promise<IDBValidKey[]>((resolve, reject) => {
+      const req = store.getAllKeys(range);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    const valuesP = new Promise<unknown[]>((resolve, reject) => {
+      const req = store.getAll(range);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    const [keys, values] = await Promise.all([keysP, valuesP]);
+    assert(keys.length === values.length);
+    const result = new Map<string, FrozenJSONValue>();
+    for (let i = 0; i < keys.length; i++) {
+      result.set(keys[i] as string, deepFreeze(values[i] as ReadonlyJSONValue));
+    }
+    return result;
+  }
+
   release(): void {
     this.#closed = true;
     // Do nothing. We rely on IDB locking.
@@ -127,7 +157,7 @@ class ReadImpl implements Read {
   }
 }
 
-class WriteImpl extends WriteImplBase {
+class WriteImpl extends WriteImplBase implements Write {
   readonly #tx: IDBTransaction;
   #closed = false;
 
@@ -153,6 +183,7 @@ class WriteImpl extends WriteImplBase {
       }
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
+      this.#tx.commit();
     });
   }
 

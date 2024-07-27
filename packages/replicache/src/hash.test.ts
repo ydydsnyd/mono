@@ -5,11 +5,13 @@ import {
   STRING_LENGTH,
   emptyHash,
   fakeHash,
+  hashRange,
   hashSchema,
   isHash,
   makeNewFakeHashFunction,
   newUUIDHash,
   parse,
+  splitHashRanges,
 } from './hash.js';
 
 const emptyUUID = '00000000-0000-4000-8000-000000000000';
@@ -109,4 +111,83 @@ test('valita schema', () => {
   expect(() => valita.assert('xyz', hashSchema)).to.throw(
     'Invalid hash. Got "xyz"',
   );
+});
+
+test('hashRanges', () => {
+  const t = (input: string[], expected: [string, string][]) => {
+    expect([...splitHashRanges(input.map(fakeHash))]).to.deep.equal(
+      expected.map(([a, b]) => [fakeHash(a), fakeHash(b)]),
+    );
+  };
+
+  t([], []);
+  t(['1'], [['1', '1']]);
+  t(['1', '2'], [['1', '2']]);
+  t(['1', '2', '3'], [['1', '3']]);
+  t(
+    ['1', '3'],
+    [
+      ['1', '1'],
+      ['3', '3'],
+    ],
+  );
+  t(
+    ['1', '3', '4'],
+    [
+      ['1', '1'],
+      ['3', '4'],
+    ],
+  );
+  t(
+    ['1', '3', '4', '5'],
+    [
+      ['1', '1'],
+      ['3', '5'],
+    ],
+  );
+  t(
+    ['1', '3', '4', '5', '7'],
+    [
+      ['1', '1'],
+      ['3', '5'],
+      ['7', '7'],
+    ],
+  );
+  t(
+    ['1', '3', '4', '5', '7', '8'],
+    [
+      ['1', '1'],
+      ['3', '5'],
+      ['7', '8'],
+    ],
+  );
+  t(
+    ['1', '3', '4', '5', '7', '8', '9'],
+    [
+      ['1', '1'],
+      ['3', '5'],
+      ['7', '9'],
+    ],
+  );
+  t(
+    ['3', '4', '5', '7', '8', '9', '10'],
+    [
+      ['3', '5'],
+      ['7', '10'],
+    ],
+  );
+});
+
+test('hashRange', () => {
+  const t = (start: string, end: string, expected: string[]) => {
+    expect([...hashRange(fakeHash(start), fakeHash(end))]).to.deep.equal(
+      expected.map(fakeHash),
+    );
+  };
+
+  t('1', '1', ['1']);
+  t('1', '2', ['1', '2']);
+  t('1', '5', ['1', '2', '3', '4', '5']);
+  t('5', '5', ['5']);
+  t('500', '505', ['500', '501', '502', '503', '504', '505']);
 });

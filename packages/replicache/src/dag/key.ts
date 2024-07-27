@@ -1,4 +1,10 @@
-import {Hash, parse as parseHash} from '../hash.js';
+import {Hash, isHash, parse as parseHash} from '../hash.js';
+
+// The lexical order of the keys is important to allow lookahead.
+// The expected order is:
+// 1. Chunk data
+// 2. Chunk meta (optional)
+// 3. Chunk ref count
 
 export function chunkDataKey(hash: Hash): string {
   return `c/${hash}/d`;
@@ -80,4 +86,24 @@ export function parse(key: string): Key {
     }
   }
   throw invalidKey();
+}
+
+/**
+ * If the key is a chunk data key, return the hash, otherwise return undefined.
+ * @param key The key coming out of the key value store
+ */
+export function maybeParseAsChunkData(key: string): Hash | undefined {
+  const c = 99;
+  const slash = 47;
+  const d = 100;
+  if (
+    key.charCodeAt(0) === c &&
+    key.charCodeAt(1) === slash &&
+    key.charCodeAt(key.length - 2) === slash &&
+    key.charCodeAt(key.length - 1) === d
+  ) {
+    const hash = key.slice(2, -2);
+    return isHash(hash) ? hash : undefined;
+  }
+  return undefined;
 }
