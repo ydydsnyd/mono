@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1721834340191,
+  "lastUpdate": 1722073572303,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -48217,6 +48217,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/d88383f6048d9481828977a8c505a86b39e3c7f1"
         },
         "date": 1721834298361,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 317068,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55147,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 116847,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32534,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cesar@roci.dev",
+            "name": "Cesar Alaestante",
+            "username": "cesara"
+          },
+          "committer": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "distinct": true,
+          "id": "bca257bd7e1fc287883d87d309d5f02fb79320e2",
+          "message": "add more notes about rails and replicache-transaction",
+          "timestamp": "2024-07-26T23:43:22-10:00",
+          "tree_id": "6e09f153c640861da92c1239988c5a4bdc59787f",
+          "url": "https://github.com/rocicorp/mono/commit/bca257bd7e1fc287883d87d309d5f02fb79320e2"
+        },
+        "date": 1722073553843,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
