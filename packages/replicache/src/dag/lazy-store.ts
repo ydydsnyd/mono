@@ -2,7 +2,7 @@ import {RWLock} from '@rocicorp/lock';
 import {joinIterables} from 'shared/src/iterables.js';
 import {promiseVoid} from 'shared/src/resolved-promises.js';
 import type {MaybePromise} from 'shared/src/types.js';
-import {hashRange, type Hash} from '../hash.js';
+import {hashRange, splitHashRanges, type Hash} from '../hash.js';
 import {getSizeOfValue} from '../size-of-value.js';
 import {Chunk, ChunkHasher, createChunk} from './chunk.js';
 import {
@@ -255,28 +255,52 @@ export class LazyRead implements Read {
     return chunk;
   }
 
+  // eslint-disable-next-line require-await
   async getChunkRange(start: Hash, end: Hash): Promise<Chunk[]> {
-    // debugger;
-    const chunks: Chunk[] = [];
+    const chunks = [];
+    const chunksToGetFromSource = [];
     for (const hash of hashRange(start, end)) {
       const memOnlyChunk = this._memOnlyChunks.get(hash);
       if (memOnlyChunk !== undefined) {
         chunks.push(memOnlyChunk);
-        continue;
-      }
-      const chunk = await this.getChunk(hash);
-      if (chunk !== undefined) {
-        chunks.push(chunk);
+      } else {
+        chunksToGetFromSource.push(hash);
       }
     }
-    const entries = await (
-      await this._getSourceRead()
-    ).getChunkRange(start, end);
-    for (const chunk of entries) {
-      this._sourceChunksCache.put(chunk);
-      chunks.push(chunk);
+
+    for (const [start, end] of splitHashRanges(chunksToGetFromSource)) {
+      const entries = await (
+        await this._getSourceRead()
+      ).getChunkRange(start, end);
+      for (const chunk of entries) {
+        this._sourceChunksCache.put(chunk);
+      }
+      chunks.push(...entries);
     }
+
     return chunks;
+
+    // // debugger;
+    // const chunks: Chunk[] = [];
+    // for (const hash of hashRange(start, end)) {
+    //   const memOnlyChunk = this._memOnlyChunks.get(hash);
+    //   if (memOnlyChunk !== undefined) {
+    //     chunks.push(memOnlyChunk);
+    //     continue;
+    //   }
+    //   const chunk = await this.getChunk(hash);
+    //   if (chunk !== undefined) {
+    //     chunks.push(chunk);
+    //   }
+    // }
+    // const entries = await (
+    //   await this._getSourceRead()
+    // ).getChunkRange(start, end);
+    // for (const chunk of entries) {
+    //   this._sourceChunksCache.put(chunk);
+    //   chunks.push(chunk);
+    // }
+    // return chunks;
   }
 
   mustGetChunk(hash: Hash): Promise<Chunk> {
