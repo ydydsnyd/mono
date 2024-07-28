@@ -25,27 +25,23 @@ export class Visitor {
   async visitChunk(chunk: Chunk<unknown>) {
     this.#seen.add(chunk.hash);
     await this.visitMultiple(chunk.meta);
-    // await Promise.all(chunk.meta.map(ref => this.visit(ref)));
   }
 
-  async visitMultiple(refs: readonly Hash[]) {
+  async visitMultiple(refs: readonly Hash[]): Promise<void> {
+    const ps: Promise<void>[] = [];
     for (const range of splitHashRanges(filterSeen(refs, this.#seen))) {
       if (range[0] === range[1]) {
-        await this.visit(range[0]);
+        ps.push(this.visit(range[0]));
       } else {
-        await this.visitRange(range[0], range[1]);
+        ps.push(this.visitRange(range[0], range[1]));
       }
     }
+    await Promise.all(ps);
   }
 
-  async visitRange(first: Hash, last: Hash) {
-    const chunks: Iterable<Chunk> = await this.#dagRead.getChunkRange(
-      first,
-      last,
-    );
-    for (const chunk of chunks) {
-      await this.visitChunk(chunk);
-    }
+  async visitRange(first: Hash, last: Hash): Promise<void> {
+    const chunks = await this.#dagRead.getChunkRange(first, last);
+    await Promise.all(chunks.map(chunk => this.visitChunk(chunk)));
   }
 }
 

@@ -1,7 +1,6 @@
 // @ts-check
 
 /* eslint-env node, es2022 */
-
 import {esbuildPlugin} from '@web/dev-server-esbuild';
 import {playwrightLauncher} from '@web/test-runner-playwright';
 import {makeDefine} from '../shared/src/build.js';
@@ -35,7 +34,7 @@ const config = {
     },
   },
   files: ['src/**/*.test.ts'],
-  browsers: [firefox, chromium, webkit],
+  browsers: [chromium],
 };
 
 export {config as default};

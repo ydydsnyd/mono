@@ -1,8 +1,9 @@
 import {deepEqual} from 'shared/src/json.js';
+import {Chunk} from '../dag/chunk.js';
 import type {Read} from '../dag/store.js';
 import type {FormatVersion} from '../format-version.js';
 import type {FrozenJSONValue} from '../frozen-json.js';
-import {Hash, emptyHash} from '../hash.js';
+import {Hash, emptyHash, splitHashRanges} from '../hash.js';
 import {getSizeOfEntry} from '../size-of-value.js';
 import {
   DataNodeImpl,
@@ -116,26 +117,58 @@ export class BTreeRead implements AsyncIterable<Entry<FrozenJSONValue>> {
   // encoded IndexKey in an index map. Without encoding regular map keys the
   // caller has to deal with encoding and decoding the keys for the index map.
   scan(fromKey: string): AsyncIterableIterator<Entry<FrozenJSONValue>> {
+    const readNode = async (hash: Hash): Promise<ReadNodeResult> => {
+      const cached = await this.getNode(hash);
+      if (cached) {
+        return [
+          cached.level,
+          cached.isMutable ? cached.entries.slice() : cached.entries,
+        ];
+      }
+      const chunk = await this._dagRead.mustGetChunk(hash);
+      return parseBTreeNode(chunk.data, this._formatVersion, this.getEntrySize);
+    };
+
+    const readNodes = async (hashes: Hash[]): Promise<ReadNodeResult[]> => {
+      const ps: Promise<Chunk | Chunk[]>[] = [];
+      const isCached = (h: Hash) => this._cache.has(h);
+      for (const range of splitHashRanges(hashes.filter(h => !isCached(h)))) {
+        if (range[0] === range[1]) {
+          ps.push(this._dagRead.mustGetChunk(range[0]));
+        } else {
+          ps.push(this._dagRead.getChunkRange(range[0], range[1]));
+        }
+      }
+      const chunks = (await Promise.all(ps)).flat();
+
+      const results: ReadNodeResult[] = [];
+      let i = 0;
+      for (const hash of hashes) {
+        const cached = await this.getNode(hash);
+        if (cached) {
+          results.push([
+            cached.level,
+            cached.isMutable ? cached.entries.slice() : cached.entries,
+          ]);
+        } else {
+          const chunk = chunks[i++];
+          results.push(
+            parseBTreeNode(chunk.data, this._formatVersion, this.getEntrySize),
+          );
+        }
+      }
+
+      return results;
+    };
+
     return scanForHash(
       this.rootHash,
       () => this.rootHash,
       this.rootHash,
+      undefined,
       fromKey,
-      async hash => {
-        const cached = await this.getNode(hash);
-        if (cached) {
-          return [
-            cached.level,
-            cached.isMutable ? cached.entries.slice() : cached.entries,
-          ];
-        }
-        const chunk = await this._dagRead.mustGetChunk(hash);
-        return parseBTreeNode(
-          chunk.data,
-          this._formatVersion,
-          this.getEntrySize,
-        );
-      },
+      readNode,
+      readNodes,
     );
   }
 
@@ -286,32 +319,39 @@ type ReadNodeResult = readonly [
 ];
 
 type ReadNode = (hash: Hash) => Promise<ReadNodeResult>;
+type ReadNodes = (hashes: Hash[]) => Promise<ReadNodeResult[]>;
 
 async function* scanForHash(
   expectedRootHash: Hash,
   getRootHash: () => Hash,
   hash: Hash,
+  maybeNodeResult: ReadNodeResult | undefined,
   fromKey: string,
   readNode: ReadNode,
+  readNodes: ReadNodes,
 ): AsyncIterableIterator<Entry<FrozenJSONValue>> {
   if (hash === emptyHash) {
     return;
   }
 
-  const data = await readNode(hash);
+  const data = maybeNodeResult ?? (await readNode(hash));
   const entries = data[NODE_ENTRIES];
   let i = 0;
   if (fromKey) {
     i = binarySearch(fromKey, entries);
   }
   if (data[NODE_LEVEL] > 0) {
+    const nodes = await readNodes(entries.slice(i).map(e => e[1] as Hash));
+    // console.log('XXX', entries.slice(i), nodes);
     for (; i < entries.length; i++) {
       yield* scanForHash(
         expectedRootHash,
         getRootHash,
         (entries[i] as Entry<Hash>)[1],
+        nodes[i],
         fromKey,
         readNode,
+        readNodes,
       );
       fromKey = '';
     }
@@ -324,8 +364,10 @@ async function* scanForHash(
           rootHash,
           getRootHash,
           rootHash,
+          undefined,
           entries[i][0],
           readNode,
+          readNodes,
         );
         return;
       }
