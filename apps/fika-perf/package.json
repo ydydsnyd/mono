@@ -1,0 +1,23 @@
+{
+  "name": "fika-perf",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@rocicorp/eslint-config": "^0.5.1",
+    "@rocicorp/prettier-config": "^0.2.0",
+    "@rocicorp/resolver": "^1.0.2",
+    "replicache": "15.0.1",
+    "typescript": "^5.5.3",
+    "vite": "^5.2.0"
+  },
+  "eslintConfig": {
+    "extends": "@rocicorp/eslint-config"
+  },
+  "prettier": "@rocicorp/prettier-config"
+}
