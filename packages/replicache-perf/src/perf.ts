@@ -3,7 +3,11 @@ import {benchmarks as hashBenchmarks} from './benchmarks/hash.js';
 import {
   benchmarkIDBReadGet,
   benchmarkIDBReadGetAll,
+  benchmarkIDBReadGetAllGetAllKeys,
+  benchmarkIDBReadGetAllWithInlineKey,
+  benchmarkIDBReadGetWithInlineKeys,
   benchmarkIDBWrite,
+  benchmarkIDBWriteWithInlineKey,
 } from './benchmarks/idb.js';
 import {benchmarks as replicacheBenchmarks} from './benchmarks/replicache.js';
 import {benchmarks as storageBenchmarks} from './benchmarks/storage.js';
@@ -153,8 +157,12 @@ export const benchmarks = [
 
 for (const b of [
   benchmarkIDBReadGet,
+  benchmarkIDBReadGetWithInlineKeys,
   benchmarkIDBReadGetAll,
+  benchmarkIDBReadGetAllGetAllKeys,
+  benchmarkIDBReadGetAllWithInlineKey,
   benchmarkIDBWrite,
+  benchmarkIDBWriteWithInlineKey,
 ]) {
   for (const numKeys of [1, 10, 100, 1000]) {
     const dataTypes: RandomDataType[] = ['string', 'object', 'arraybuffer'];
