@@ -1,3 +1,4 @@
+import {LogContext} from '@rocicorp/logger';
 import {expect} from 'chai';
 import {assertNotUndefined} from 'shared/src/asserts.js';
 import {SinonFakeTimers, useFakeTimers} from 'sinon';
@@ -6,7 +7,9 @@ import {TestStore} from '../dag/test-store.js';
 import {FormatVersion} from '../format-version.js';
 import {fakeHash} from '../hash.js';
 import {IDBStore} from '../kv/idb-store.js';
+import {hasMemStore} from '../kv/mem-store.js';
 import {TestMemStore} from '../kv/test-mem-store.js';
+import {getKVStoreProvider} from '../replicache.js';
 import {withWrite, withWriteNoImplicitCommit} from '../with-transactions.js';
 import {ClientGroupMap, setClientGroups} from './client-groups.js';
 import {makeClientGroupMap} from './client-groups.test.js';
@@ -25,9 +28,6 @@ import {
   IndexedDBDatabase,
   IndexedDBName,
 } from './idb-databases-store.js';
-import {getKVStoreProvider} from '../replicache.js';
-import {LogContext} from '@rocicorp/logger';
-import {hasMemStore} from '../kv/mem-store.js';
 
 suite('collectIDBDatabases', () => {
   let clock: SinonFakeTimers;
@@ -410,7 +410,7 @@ test('dropDatabases idb', async () => {
       const objectStore = transaction.objectStore('chunks');
       const getRequest = objectStore.get('foo');
       getRequest.onsuccess = _event => {
-        expect(getRequest.result).to.deep.equal({baz: 'bar'});
+        expect(getRequest.result).to.deep.equal(['foo', {baz: 'bar'}]);
         db.close();
       };
     };

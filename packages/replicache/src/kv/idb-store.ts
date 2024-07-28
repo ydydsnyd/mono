@@ -1,12 +1,8 @@
 import {resolver} from '@rocicorp/resolver';
-import {assert, assertNotNull} from 'shared/src/asserts.js';
+import {assertNotNull} from 'shared/src/asserts.js';
 import {ReadonlyJSONValue} from 'shared/src/json.js';
 import {promiseVoid} from 'shared/src/resolved-promises.js';
-import {
-  FrozenJSONValue,
-  deepFreeze,
-  deepFreezeAllowUndefined,
-} from '../frozen-json.js';
+import {FrozenJSONValue, deepFreeze} from '../frozen-json.js';
 import type {Read, Store, Write} from './store.js';
 import {WriteImplBase, deleteSentinel} from './write-impl-base.js';
 
@@ -117,7 +113,10 @@ class ReadImpl implements Read {
   get(key: string): Promise<FrozenJSONValue | undefined> {
     return new Promise((resolve, reject) => {
       const req = objectStore(this.#tx).get(key);
-      req.onsuccess = () => resolve(deepFreezeAllowUndefined(req.result));
+      req.onsuccess = () =>
+        resolve(
+          req.result === undefined ? undefined : deepFreeze(req.result[1]),
+        );
       req.onerror = () => reject(req.error);
     });
   }
@@ -128,21 +127,19 @@ class ReadImpl implements Read {
   ): Promise<Map<string, FrozenJSONValue>> {
     const range = IDBKeyRange.bound(fistKey, lastKey);
     const store = objectStore(this.#tx);
-    const keysP = new Promise<IDBValidKey[]>((resolve, reject) => {
-      const req = store.getAllKeys(range);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-    const valuesP = new Promise<unknown[]>((resolve, reject) => {
-      const req = store.getAll(range);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-    const [keys, values] = await Promise.all([keysP, valuesP]);
-    assert(keys.length === values.length);
+    const entries = await new Promise<[string, unknown][]>(
+      (resolve, reject) => {
+        const req = store.getAll(range);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      },
+    );
     const result = new Map<string, FrozenJSONValue>();
-    for (let i = 0; i < keys.length; i++) {
-      result.set(keys[i] as string, deepFreeze(values[i] as ReadonlyJSONValue));
+    for (let i = 0; i < entries.length; i++) {
+      result.set(
+        entries[i][0] as string,
+        deepFreeze(entries[i][1] as ReadonlyJSONValue),
+      );
     }
     return result;
   }
@@ -174,16 +171,16 @@ class WriteImpl extends WriteImplBase implements Write {
     return new Promise((resolve, reject) => {
       const tx = this.#tx;
       const store = objectStore(tx);
-      for (const [key, val] of this._pending) {
-        if (val === deleteSentinel) {
-          store.delete(key);
+      for (const entry of this._pending) {
+        if (entry[1] === deleteSentinel) {
+          store.delete(entry[0]);
         } else {
-          store.put(val, key);
+          store.put(entry, entry[0]);
         }
       }
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
-      this.#tx.commit();
+      tx.commit();
     });
   }
 
