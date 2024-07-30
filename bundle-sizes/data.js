@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722073572303,
+  "lastUpdate": 1722337007141,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -48261,6 +48261,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/bca257bd7e1fc287883d87d309d5f02fb79320e2"
         },
         "date": 1722073553843,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 317068,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55147,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 116847,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32534,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1037690a381403aa5308d5820e18fb7435abaa7c",
+          "message": "feat(replicache): Export MakeMutator (#2088)\n\nand MakeMutators. They are needed for Reflect",
+          "timestamp": "2024-07-30T10:54:51Z",
+          "tree_id": "df9f3de47f990cb6a5ace47a66bcedc59b4ca6e5",
+          "url": "https://github.com/rocicorp/mono/commit/1037690a381403aa5308d5820e18fb7435abaa7c"
+        },
+        "date": 1722336988802,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
