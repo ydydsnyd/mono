@@ -11,11 +11,11 @@ import {
   Request,
 } from 'zql/src/zql/ivm/graph/message.js';
 import type {MaterialiteForSourceInternal} from 'zql/src/zql/ivm/materialite.js';
-import type {Multiset} from 'zql/src/zql/ivm/multiset.js';
+import type {Entry, Multiset} from 'zql/src/zql/ivm/multiset.js';
 import type {Source, SourceInternal} from 'zql/src/zql/ivm/source/source.js';
 import type {PipelineEntity, Version} from 'zql/src/zql/ivm/types.js';
-import {genMap, genCached} from 'zql/src/zql/util/iterables.js';
-import type {Database} from 'better-sqlite3';
+import {genMap, genCached, gen} from 'zql/src/zql/util/iterables.js';
+import type {Database, Statement} from 'better-sqlite3';
 import type {HoistedCondition} from 'zql/src/zql/ivm/graph/message.js';
 import type {HashIndex} from 'zql/src/zql/ivm/source/source-hash-index.js';
 import {StatementCache} from './internal/statement-cache.js';
@@ -51,7 +51,8 @@ export class TableSource<T extends PipelineEntity> implements Source<T> {
   // once.
   readonly #historyStatements: StatementCache;
   readonly #historyRequests: Map<number, PullMsg> = new Map();
-  readonly #columns: string[];
+  readonly #insertStmt: Statement;
+  readonly #deleteStmt: Statement;
 
   // Field for debugging.
   #id = id++;
@@ -76,7 +77,19 @@ export class TableSource<T extends PipelineEntity> implements Source<T> {
     });
     this.#db = db;
     this.#historyStatements = new StatementCache(db);
-    this.#columns = columns;
+    this.#insertStmt = db.prepare(
+      compile(
+        sql`INSERT INTO ${sql.ident(name)} (${sql.join(
+          columns.map(c => sql.ident(c)),
+          sql`, `,
+        )}) VALUES (${sql.__dangerous__rawValue(
+          new Array(columns.length).fill('?').join(', '),
+        )})`,
+      ),
+    );
+    this.#deleteStmt = db.prepare(
+      compile(sql`DELETE FROM ${sql.ident(name)} WHERE ${sql.ident('id')} = ?`),
+    );
 
     this.#internal = {
       onCommitEnqueue: (version: Version) => {
@@ -93,8 +106,37 @@ export class TableSource<T extends PipelineEntity> implements Source<T> {
           return;
         }
 
-        if (this.#pending !== undefined) {
-          this.#stream.newDifference(version, this.#pending, undefined);
+        const pending = this.#pending;
+        if (pending !== undefined) {
+          this.#stream.newDifference(
+            version,
+            // we'd need to ensure that the iterable is never
+            // re-entered.
+            // We need to re-work the pipelines to take an `Iterator` and not an `Iterable`.
+            // Only allowing things to be pulled once.
+            // Places this fails:
+            // 1. self join
+            // 2. `or` or any branch in the pipeline
+            // The other option of course is `genCached` which ensures that side-effects
+            // are not re-run if the same iterable is pulled many times.
+            // Well does branching break the whole plan of writing to the DB as we go?
+            // If a branch pulls values before another side is ready. Branches getting ahead.
+            // This happens, right? The source could have 10 pipelines attached.
+            // The first pipeline will exhaust the iterator and run all the writes.
+            // The next pipeline will restart the iterator but the writes are already
+            // applied.
+            //
+            // so... we must write before we enqueue and enqueue things item by item :/
+            gen<Entry<T>>(() =>
+              vendAndWrite(
+                this.#db,
+                this.#insertStmt,
+                this.#deleteStmt,
+                pending,
+              ),
+            ),
+            undefined,
+          );
         }
 
         this.#pending = undefined;
@@ -232,6 +274,18 @@ export class TableSource<T extends PipelineEntity> implements Source<T> {
 
   toString(): string {
     return this.#name + ' ' + this.#id;
+  }
+}
+
+function* vendAndWrite<T>(
+  db: Database,
+  insertStmt: Statement,
+  deleteStmt: Statement,
+  diffs: Multiset<T>,
+) {
+  for (const diff of diffs) {
+    // do the sqlite write
+    yield diff;
   }
 }
 
