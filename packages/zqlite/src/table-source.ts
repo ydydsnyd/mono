@@ -22,6 +22,7 @@ import {StatementCache} from './internal/statement-cache.js';
 import {TableSourceHashIndex} from './table-source-hash-index.js';
 import {mergeRequests} from 'zql/src/zql/ivm/source/set-source.js';
 import {assert} from 'shared/src/asserts.js';
+import {compile, sql} from './internal/sql.js';
 
 const resolved = Promise.resolve();
 
@@ -50,6 +51,7 @@ export class TableSource<T extends PipelineEntity> implements Source<T> {
   // once.
   readonly #historyStatements: StatementCache;
   readonly #historyRequests: Map<number, PullMsg> = new Map();
+  readonly #columns: string[];
 
   // Field for debugging.
   #id = id++;
@@ -60,6 +62,7 @@ export class TableSource<T extends PipelineEntity> implements Source<T> {
     db: Database,
     materialite: MaterialiteForSourceInternal,
     name: string,
+    columns: string[],
   ) {
     this.#materialite = materialite;
     this.#name = name;
@@ -73,6 +76,7 @@ export class TableSource<T extends PipelineEntity> implements Source<T> {
     });
     this.#db = db;
     this.#historyStatements = new StatementCache(db);
+    this.#columns = columns;
 
     this.#internal = {
       onCommitEnqueue: (version: Version) => {
@@ -241,28 +245,34 @@ export function conditionsAndSortToSQL(
   conditions: HoistedCondition[],
   sort: Ordering | undefined,
 ) {
-  let sql = `SELECT * FROM ${table}`;
+  let query = sql`SELECT * FROM ${sql.ident(table)}`;
   if (conditions.length > 0) {
-    sql += ' WHERE ';
-    sql += conditions
-      .map(c => {
+    query = sql`${query} WHERE ${sql.join(
+      conditions.map(c => {
         if (c.op === 'IN') {
           // we use `json_each` so we do not create a different number of bind params each time we see an `IN`
-          return `${c.selector[1]} ${c.op} (SELECT value FROM json_each(?))`;
+          return sql`${sql.ident(c.selector[1])} ${sql.__dangerous__rawValue(
+            c.op,
+          )} (SELECT value FROM json_each(?))`;
         } else if (c.op === 'ILIKE') {
           // The default configuration of SQLite only supports case-insensitive comparisons of ASCII characters
-          return `${c.selector[1]} LIKE ?`;
+          return sql`${sql.ident(c.selector[1])} LIKE ?`;
         }
-        return `${c.selector[1]} ${c.op} ?`;
-      })
-      .join(' AND ');
+        return sql`${sql.ident(c.selector[1])} ${sql.__dangerous__rawValue(
+          c.op,
+        )} ?`;
+      }),
+      sql` AND `,
+    )}`;
   }
   if (sort) {
-    sql += ' ORDER BY ';
-    sql += sort.map(s => `"${s[0][1]}" ${s[1]}`).join(', ');
+    query = sql`${query} ORDER BY ${sql.join(
+      sort.map(s => sql`${sql.ident(s[0][1])} ${s[1]}`),
+      sql`, `,
+    )}`;
   }
 
-  return sql;
+  return compile(query);
 }
 
 export function getConditionBindParams(conditions: HoistedCondition[]) {
