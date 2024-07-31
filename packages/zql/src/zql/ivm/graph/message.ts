@@ -81,12 +81,15 @@ function nextMessageID() {
  * E.g., if there is a filter against the primary key. The source
  * can use that information to restrict the rows it returns.
  */
-export function createPullMessage(order: Ordering | undefined): Request {
+export function createPullMessage(
+  order: Ordering | undefined,
+  hoistedConditions: readonly HoistedCondition[] = [],
+): Request {
   return {
     id: nextMessageID(),
     type: 'pull',
     order,
-    hoistedConditions: [],
+    hoistedConditions,
   };
 }
 

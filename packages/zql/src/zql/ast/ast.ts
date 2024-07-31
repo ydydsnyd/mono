@@ -9,6 +9,13 @@ export type Selector = readonly [table: string, column: string];
 export type OrderPart = readonly [field: Selector, direction: 'asc' | 'desc'];
 export type Ordering = readonly OrderPart[];
 
+export function reverseOrdering(ordering: Ordering): Ordering {
+  return ordering.map(([field, direction]) => [
+    field,
+    direction === 'asc' ? 'desc' : 'asc',
+  ]);
+}
+
 export type Primitive = string | number | boolean | null;
 export type PrimitiveArray = string[] | number[] | boolean[];
 
