@@ -67,6 +67,34 @@ const commentSource: Entry<'comment', Comment>[] = [
   },
 ];
 
+type CommentRevision = {id: number; commentId: number; text: string};
+const commentRevisionSource: Entry<'commentRevision', CommentRevision>[] = [
+  {
+    commentRevision: {
+      id: 1,
+      commentId: 1,
+      text: 'comment revision 1',
+    },
+    [event]: ADD,
+  },
+  {
+    commentRevision: {
+      id: 2,
+      commentId: 1,
+      text: 'comment revision 2',
+    },
+    [event]: ADD,
+  },
+  {
+    commentRevision: {
+      id: 3,
+      commentId: 2,
+      text: 'comment revision 3',
+    },
+    [event]: ADD,
+  },
+];
+
 type ResultType = {
   [table: string]: JSONObject | ResultType;
 }[];
@@ -134,6 +162,28 @@ function* loopJoin(
           cb,
         ),
       } as Entry;
+    }
+  }
+}
+
+function* topk(
+  items: Iterable<Entry>,
+  path: string[],
+  comparator: (l: unknown, r: unknown) => number,
+  k: number,
+): IterableIterator<Entry> {
+  const [head, ...tail] = path;
+  if (head === undefined) {
+    const sorted = [...items].sort(comparator);
+    for (let i = 0; i < k; i++) {
+      yield sorted[i];
+    }
+  } else {
+    for (const row of items) {
+      yield {
+        ...row,
+        [head]: topk(row[head] as Iterable<Entry>, tail, comparator, k),
+      };
     }
   }
 }
@@ -251,6 +301,161 @@ test('loop join', () => {
       issue: {
         id: 2,
         title: 'issue 2',
+      },
+    },
+  ]);
+});
+
+test('loop join with a loop join', () => {
+  const stream = loopJoin(
+    loopJoin(
+      issueSource,
+      commentSource,
+      ['issue'],
+      'comment',
+      'comments',
+      (left, right) => (left as Issue).id === (right as Comment).issueId,
+    ),
+    commentRevisionSource,
+    ['comments', 'comment'],
+    'commentRevision',
+    'commentRevisions',
+    (left, right) =>
+      (left as Comment).id === (right as CommentRevision).commentId,
+  );
+
+  const result = view(stream);
+  expect(result).toEqual([
+    {
+      comments: [
+        {
+          comment: {
+            id: 1,
+            issueId: 1,
+            text: 'comment 1',
+          },
+          commentRevisions: [
+            {
+              commentRevision: {
+                commentId: 1,
+                id: 1,
+                text: 'comment revision 1',
+              },
+            },
+            {
+              commentRevision: {
+                commentId: 1,
+                id: 2,
+                text: 'comment revision 2',
+              },
+            },
+          ],
+        },
+        {
+          comment: {
+            id: 2,
+            issueId: 1,
+            text: 'comment 2',
+          },
+          commentRevisions: [
+            {
+              commentRevision: {
+                commentId: 2,
+                id: 3,
+                text: 'comment revision 3',
+              },
+            },
+          ],
+        },
+      ],
+      issue: {
+        id: 1,
+        title: 'issue 1',
+      },
+    },
+    {
+      comments: [
+        {
+          comment: {
+            id: 3,
+            issueId: 2,
+            text: 'comment 3',
+          },
+          commentRevisions: [],
+        },
+      ],
+      issue: {
+        id: 2,
+        title: 'issue 2',
+      },
+    },
+  ]);
+});
+
+test('topk actually sorts and limits a branch', () => {
+  const stream = topk(
+    loopJoin(
+      issueSource,
+      commentSource,
+      ['issue'],
+      'comment',
+      'comments',
+      (left, right) => (left as Issue).id === (right as Comment).issueId,
+    ),
+    ['comments'],
+    (l, r) => (l as Comment).id - (r as Comment).id,
+    1,
+  );
+
+  const result = view(stream);
+  expect(result).toEqual([
+    {
+      comments: [
+        {
+          comment: {
+            id: 1,
+            issueId: 1,
+            text: 'comment 1',
+          },
+        },
+      ],
+      issue: {
+        id: 1,
+        title: 'issue 1',
+      },
+    },
+    {
+      comments: [
+        {
+          comment: {
+            id: 3,
+            issueId: 2,
+            text: 'comment 3',
+          },
+        },
+      ],
+      issue: {
+        id: 2,
+        title: 'issue 2',
+      },
+    },
+  ]);
+});
+
+test('topk actually sorts and limits a parent', () => {
+  const stream = topk(
+    issueSource,
+    [],
+    (l, r) => (l as Issue).id - (r as Issue).id,
+    1,
+  );
+
+  const result = view(stream);
+  expect(result).toEqual([
+    {
+      issue: {
+        id: 1,
+        title: 'issue 1',
       },
     },
   ]);
