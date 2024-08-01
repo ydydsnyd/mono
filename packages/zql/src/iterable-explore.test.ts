@@ -1,13 +1,12 @@
 import {expect, test} from 'vitest';
 import type {JSONObject} from '../../shared/src/json.js';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type TODO = any;
 type Issue = {
   id: number;
   title: string;
 };
 const event = Symbol();
+const node = Symbol();
 type Event = Add | Remove | NoOp;
 const ADD = 1;
 const REMOVE = -1;
@@ -16,22 +15,22 @@ const NO_OP = 0;
 type Add = typeof ADD;
 type Remove = typeof REMOVE;
 type NoOp = typeof NO_OP;
-type Entry<Table = string, Type = JSONObject> =
-  | ({
-      [t in Table & string]: Type;
-    } & {[event]: Event})
-  | (Record<string, Iterable<Entry> | JSONObject> & {[event]: Event});
+type Entry<Type = JSONObject> = {
+  [node]: Type;
+  [event]: Event;
+  [children: string]: Iterable<Entry>;
+};
 
-const issueSource: Entry<'issue', Issue>[] = [
+const issueSource: Entry<Issue>[] = [
   {
-    issue: {
+    [node]: {
       id: 1,
       title: 'issue 1',
     },
     [event]: ADD,
   },
   {
-    issue: {
+    [node]: {
       id: 2,
       title: 'issue 2',
     },
@@ -40,9 +39,9 @@ const issueSource: Entry<'issue', Issue>[] = [
 ];
 
 type Comment = {id: number; issueId: number; text: string};
-const commentSource: Entry<'comment', Comment>[] = [
+const commentSource: Entry<Comment>[] = [
   {
-    comment: {
+    [node]: {
       id: 1,
       issueId: 1,
       text: 'comment 1',
@@ -50,7 +49,7 @@ const commentSource: Entry<'comment', Comment>[] = [
     [event]: ADD,
   },
   {
-    comment: {
+    [node]: {
       id: 2,
       issueId: 1,
       text: 'comment 2',
@@ -58,7 +57,7 @@ const commentSource: Entry<'comment', Comment>[] = [
     [event]: ADD,
   },
   {
-    comment: {
+    [node]: {
       id: 3,
       issueId: 2,
       text: 'comment 3',
@@ -68,9 +67,9 @@ const commentSource: Entry<'comment', Comment>[] = [
 ];
 
 type CommentRevision = {id: number; commentId: number; text: string};
-const commentRevisionSource: Entry<'commentRevision', CommentRevision>[] = [
+const commentRevisionSource: Entry<CommentRevision>[] = [
   {
-    commentRevision: {
+    [node]: {
       id: 1,
       commentId: 1,
       text: 'comment revision 1',
@@ -78,7 +77,7 @@ const commentRevisionSource: Entry<'commentRevision', CommentRevision>[] = [
     [event]: ADD,
   },
   {
-    commentRevision: {
+    [node]: {
       id: 2,
       commentId: 1,
       text: 'comment revision 2',
@@ -86,7 +85,7 @@ const commentRevisionSource: Entry<'commentRevision', CommentRevision>[] = [
     [event]: ADD,
   },
   {
-    commentRevision: {
+    [node]: {
       id: 3,
       commentId: 2,
       text: 'comment revision 3',
@@ -100,14 +99,14 @@ type ResultType = {
 }[];
 
 function* filter(
-  path: string[],
+  path: (string | typeof node)[],
   iterable: Iterable<Entry>,
   cb: (v: unknown) => boolean,
 ): IterableIterator<Entry> {
   const [head, ...tail] = path;
   for (const row of iterable) {
     if (tail.length === 0) {
-      if (cb(row[head] as Entry<unknown>)) {
+      if (cb(row[head])) {
         yield row;
       }
     } else {
@@ -122,8 +121,7 @@ function* filter(
 function* loopJoin(
   left: Iterable<Entry>,
   right: Iterable<Entry>,
-  leftItemPath: string[],
-  rightItem: string,
+  leftItemPath: (string | typeof node)[],
   insertAs: string,
   cb: (left: unknown, right: unknown) => boolean,
 ): IterableIterator<Entry> {
@@ -139,12 +137,7 @@ function* loopJoin(
         ...leftRow,
         [insertAs]: (function* () {
           for (const rightRow of right) {
-            if (
-              cb(
-                leftRow[leftHead] as Entry<unknown>,
-                rightRow[rightItem] as Entry<unknown>,
-              )
-            ) {
+            if (cb(leftRow[leftHead], rightRow[node])) {
               yield rightRow;
             }
           }
@@ -157,7 +150,6 @@ function* loopJoin(
           leftRow[leftHead] as Iterable<Entry>,
           right,
           leftTail,
-          rightItem,
           insertAs,
           cb,
         ),
@@ -223,7 +215,7 @@ function* merge(streams: Iterable<Entry>[]): Iterable<Entry> {
 
 test('fork and merge', () => {
   const stream = restartable(() =>
-    filter(['issue'], issueSource, v => (v as Issue).title === 'issue 1'),
+    filter([node], issueSource, v => (v as Issue).title === 'issue 1'),
   );
 
   const forked = fork(stream, 2);
@@ -232,14 +224,14 @@ test('fork and merge', () => {
   const result = [...merged];
   expect(result).toEqual([
     {
-      issue: {
+      [node]: {
         id: 1,
         title: 'issue 1',
       },
       [event]: ADD,
     },
     {
-      issue: {
+      [node]: {
         id: 1,
         title: 'issue 1',
       },
@@ -282,12 +274,12 @@ function restartable<T>(generatorFunc: () => IterableIterator<T>) {
 
 test('filter against a root source', () => {
   const result = [
-    ...filter(['issue'], issueSource, v => (v as Issue).title === 'issue 1'),
+    ...filter([node], issueSource, v => (v as Issue).title === 'issue 1'),
   ];
 
   expect(result).toEqual([
     {
-      issue: {
+      [node]: {
         id: 1,
         title: 'issue 1',
       },
@@ -298,14 +290,14 @@ test('filter against a root source', () => {
 
 test('re-pulling the stream', () => {
   const stream = restartable(() =>
-    filter(['issue'], issueSource, v => (v as Issue).title === 'issue 1'),
+    filter([node], issueSource, v => (v as Issue).title === 'issue 1'),
   );
 
   const result = [...stream];
 
   expect(result).toEqual([
     {
-      issue: {
+      [node]: {
         id: 1,
         title: 'issue 1',
       },
@@ -321,8 +313,7 @@ test('loop join', () => {
   const stream = loopJoin(
     issueSource,
     commentSource,
-    ['issue'],
-    'comment',
+    [node],
     'comments',
     (left, right) => (left as Issue).id === (right as Comment).issueId,
   );
@@ -332,21 +323,21 @@ test('loop join', () => {
     {
       comments: [
         {
-          comment: {
+          node: {
             id: 1,
             issueId: 1,
             text: 'comment 1',
           },
         },
         {
-          comment: {
+          node: {
             id: 2,
             issueId: 1,
             text: 'comment 2',
           },
         },
       ],
-      issue: {
+      node: {
         id: 1,
         title: 'issue 1',
       },
@@ -354,14 +345,14 @@ test('loop join', () => {
     {
       comments: [
         {
-          comment: {
+          node: {
             id: 3,
             issueId: 2,
             text: 'comment 3',
           },
         },
       ],
-      issue: {
+      node: {
         id: 2,
         title: 'issue 2',
       },
@@ -374,14 +365,12 @@ test('loop join with a loop join', () => {
     loopJoin(
       issueSource,
       commentSource,
-      ['issue'],
-      'comment',
+      [node],
       'comments',
       (left, right) => (left as Issue).id === (right as Comment).issueId,
     ),
     commentRevisionSource,
-    ['comments', 'comment'],
-    'commentRevision',
+    ['comments', node],
     'commentRevisions',
     (left, right) =>
       (left as Comment).id === (right as CommentRevision).commentId,
@@ -392,21 +381,21 @@ test('loop join with a loop join', () => {
     {
       comments: [
         {
-          comment: {
+          node: {
             id: 1,
             issueId: 1,
             text: 'comment 1',
           },
           commentRevisions: [
             {
-              commentRevision: {
+              node: {
                 commentId: 1,
                 id: 1,
                 text: 'comment revision 1',
               },
             },
             {
-              commentRevision: {
+              node: {
                 commentId: 1,
                 id: 2,
                 text: 'comment revision 2',
@@ -415,14 +404,14 @@ test('loop join with a loop join', () => {
           ],
         },
         {
-          comment: {
+          node: {
             id: 2,
             issueId: 1,
             text: 'comment 2',
           },
           commentRevisions: [
             {
-              commentRevision: {
+              node: {
                 commentId: 2,
                 id: 3,
                 text: 'comment revision 3',
@@ -431,7 +420,7 @@ test('loop join with a loop join', () => {
           ],
         },
       ],
-      issue: {
+      node: {
         id: 1,
         title: 'issue 1',
       },
@@ -439,7 +428,7 @@ test('loop join with a loop join', () => {
     {
       comments: [
         {
-          comment: {
+          node: {
             id: 3,
             issueId: 2,
             text: 'comment 3',
@@ -447,7 +436,7 @@ test('loop join with a loop join', () => {
           commentRevisions: [],
         },
       ],
-      issue: {
+      node: {
         id: 2,
         title: 'issue 2',
       },
@@ -460,8 +449,7 @@ test('topk actually sorts and limits a branch', () => {
     loopJoin(
       issueSource,
       commentSource,
-      ['issue'],
-      'comment',
+      [node],
       'comments',
       (left, right) => (left as Issue).id === (right as Comment).issueId,
     ),
@@ -475,14 +463,14 @@ test('topk actually sorts and limits a branch', () => {
     {
       comments: [
         {
-          comment: {
+          node: {
             id: 1,
             issueId: 1,
             text: 'comment 1',
           },
         },
       ],
-      issue: {
+      node: {
         id: 1,
         title: 'issue 1',
       },
@@ -490,14 +478,14 @@ test('topk actually sorts and limits a branch', () => {
     {
       comments: [
         {
-          comment: {
+          node: {
             id: 3,
             issueId: 2,
             text: 'comment 3',
           },
         },
       ],
-      issue: {
+      node: {
         id: 2,
         title: 'issue 2',
       },
@@ -516,7 +504,7 @@ test('topk actually sorts and limits a parent', () => {
   const result = view(stream);
   expect(result).toEqual([
     {
-      issue: {
+      node: {
         id: 1,
         title: 'issue 1',
       },
@@ -529,12 +517,9 @@ function view(iterable: Iterable<Entry>): ResultType {
   for (const row of iterable) {
     const newRow: {[table: string]: JSONObject | ResultType} = {};
     for (const [key, value] of Object.entries(row)) {
-      if ((value as TODO)[Symbol.iterator]) {
-        newRow[key] = view(value as Iterable<Entry>);
-      } else {
-        newRow[key] = value as Entry<unknown> as JSONObject;
-      }
+      newRow[key] = view(value as Iterable<Entry>);
     }
+    newRow.node = row[node];
     ret.push(newRow);
   }
 
@@ -543,7 +528,7 @@ function view(iterable: Iterable<Entry>): ResultType {
 
 // This works via `restartable2` -- both sides see the same values.
 test('forked stream -- both sides see the same values via `restartable2`', () => {
-  const stream = restartable(() => filter(['issue'], issueSource, _ => true));
+  const stream = restartable(() => filter([node], issueSource, _ => true));
 
   const side1 = stream[Symbol.iterator]();
   const side2 = stream[Symbol.iterator]();
