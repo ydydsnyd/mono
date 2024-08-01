@@ -188,6 +188,68 @@ function* topk(
   }
 }
 
+function fork(stream: Iterable<Entry>, numTimes: number): Iterable<Entry>[] {
+  const streams = Array.from({length: numTimes}, () =>
+    stream[Symbol.iterator](),
+  );
+  return streams as IterableIterator<Entry>[];
+}
+
+function* merge(streams: Iterable<Entry>[]): Iterable<Entry> {
+  const iters = streams.map(s => s[Symbol.iterator]());
+  for (;;) {
+    let done = true;
+    for (const iter of iters) {
+      const next = iter.next();
+      if (next.done) {
+        continue;
+      }
+      done = false;
+      yield next.value;
+    }
+
+    if (done) {
+      break;
+    }
+  }
+
+  for (const iter of iters) {
+    iter.return!();
+  }
+}
+
+// I think we can do a `mergeDistinct` this way (and remove tx-distinct). Same thing as `merge` but only output distinct values
+// in a given pass through the list of iterators.
+
+test('fork and merge', () => {
+  const stream = restartable2(() =>
+    filter(['issue'], issueSource, v => (v as Issue).title === 'issue 1'),
+  );
+
+  const forked = fork(stream, 2);
+  const merged = merge(forked);
+
+  const result = [...merged];
+  expect(result).toEqual([
+    {
+      issue: {
+        id: 1,
+        title: 'issue 1',
+      },
+      [event]: ADD,
+    },
+    {
+      issue: {
+        id: 1,
+        title: 'issue 1',
+      },
+      [event]: ADD,
+    },
+  ]);
+});
+
+// and then lets test a `fork and merge distinct`
+
 function restartable<T>(generatorFunc: () => IterableIterator<T>) {
   let iter: Iterator<T>;
   return {
@@ -205,6 +267,36 @@ function restartable<T>(generatorFunc: () => IterableIterator<T>) {
       return iter.throw!(e);
     },
   };
+}
+
+class RestartableIterableIterator<T> {
+  readonly #iter: Iterator<T> | undefined;
+  readonly #func: () => IterableIterator<T>;
+
+  constructor(func: () => IterableIterator<T>, invoke: boolean) {
+    if (invoke) {
+      this.#iter = func();
+    }
+
+    this.#func = func;
+  }
+
+  [Symbol.iterator]() {
+    return new RestartableIterableIterator(this.#func, true);
+  }
+  next() {
+    return this.#iter!.next();
+  }
+  return() {
+    return this.#iter!.return!();
+  }
+  throw(e: unknown) {
+    return this.#iter!.throw!(e);
+  }
+}
+
+function restartable2<T>(generatorFunc: () => IterableIterator<T>) {
+  return new RestartableIterableIterator(generatorFunc, false);
 }
 
 function restartableFilter(
@@ -234,7 +326,7 @@ test('filter against a root source', () => {
 test('re-pulling the stream', () => {
   const stream = restartableFilter(
     ['issue'],
-    restartable(() => issueSource[Symbol.iterator]()),
+    issueSource,
     v => (v as Issue).title === 'issue 1',
   );
 
@@ -479,30 +571,48 @@ function view(iterable: Iterable<Entry>): ResultType {
 }
 
 // This fails. Side 1 gets the first value, side 2 gets the second value.
-// test('forked stream -- both sides see the same values', () => {
-//   const stream = restartableFilter(
-//     ['issue'],
-//     restartable(() => sourceToStream('issue', issueSource)),
-//     _ => true,
-//   );
+test('forked stream -- both sides do not see the same values via `restartable` :(', () => {
+  const stream = restartableFilter(['issue'], issueSource, _ => true);
 
-//   const side1 = stream[Symbol.iterator]();
-//   const side2 = stream[Symbol.iterator]();
+  const side1 = stream[Symbol.iterator]();
+  const side2 = stream[Symbol.iterator]();
 
-//   const side1Results = [];
-//   const side2Results = [];
-//   for (;;) {
-//     const side1Next = side1.next();
-//     const side2Next = side2.next();
-//     if (side1Next.done && side2Next.done) {
-//       break;
-//     }
-//     side1Results.push(side1Next.value);
-//     side2Results.push(side2Next.value);
-//   }
+  const side1Results = [];
+  const side2Results = [];
+  for (;;) {
+    const side1Next = side1.next();
+    const side2Next = side2.next();
+    if (side1Next.done && side2Next.done) {
+      break;
+    }
+    side1Results.push(side1Next.value);
+    side2Results.push(side2Next.value);
+  }
 
-//   expect(side1Results).toEqual(side2Results);
-//   expect(side1Results.length).toEqual(issueSource.length);
-//   expect(side1Results).toEqual([...stream]);
-//   console.log(side1Results);
-// });
+  expect(side1Results).not.toEqual(side2Results);
+  expect(side1Results.length).not.toEqual(issueSource.length);
+  expect(side1Results).not.toEqual([...stream]);
+});
+
+test('forked stream -- both sides see the same values via `restartable2`', () => {
+  const stream = restartable2(() => filter(['issue'], issueSource, _ => true));
+
+  const side1 = stream[Symbol.iterator]();
+  const side2 = stream[Symbol.iterator]();
+
+  const side1Results = [];
+  const side2Results = [];
+  for (;;) {
+    const side1Next = side1.next();
+    const side2Next = side2.next();
+    if (side1Next.done && side2Next.done) {
+      break;
+    }
+    side1Results.push(side1Next.value);
+    side2Results.push(side2Next.value);
+  }
+
+  expect(side1Results).toEqual(side2Results);
+  expect(side1Results.length).toEqual(issueSource.length);
+  expect(side1Results).toEqual([...stream]);
+});
