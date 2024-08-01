@@ -222,7 +222,7 @@ function* merge(streams: Iterable<Entry>[]): Iterable<Entry> {
 // in a given pass through the list of iterators.
 
 test('fork and merge', () => {
-  const stream = restartable2(() =>
+  const stream = restartable(() =>
     filter(['issue'], issueSource, v => (v as Issue).title === 'issue 1'),
   );
 
@@ -250,25 +250,6 @@ test('fork and merge', () => {
 
 // and then lets test a `fork and merge distinct`
 
-function restartable<T>(generatorFunc: () => IterableIterator<T>) {
-  let iter: Iterator<T>;
-  return {
-    [Symbol.iterator]() {
-      iter = generatorFunc();
-      return this;
-    },
-    next() {
-      return iter.next();
-    },
-    return() {
-      return iter.return!();
-    },
-    throw(e: unknown) {
-      return iter.throw!(e);
-    },
-  };
-}
-
 class RestartableIterableIterator<T> {
   readonly #iter: Iterator<T> | undefined;
   readonly #func: () => IterableIterator<T>;
@@ -295,16 +276,8 @@ class RestartableIterableIterator<T> {
   }
 }
 
-function restartable2<T>(generatorFunc: () => IterableIterator<T>) {
+function restartable<T>(generatorFunc: () => IterableIterator<T>) {
   return new RestartableIterableIterator(generatorFunc, false);
-}
-
-function restartableFilter(
-  path: string[],
-  iterable: Iterable<Entry>,
-  predicate: (v: unknown) => boolean,
-) {
-  return restartable(() => filter(path, iterable, predicate));
 }
 
 test('filter against a root source', () => {
@@ -324,10 +297,8 @@ test('filter against a root source', () => {
 });
 
 test('re-pulling the stream', () => {
-  const stream = restartableFilter(
-    ['issue'],
-    issueSource,
-    v => (v as Issue).title === 'issue 1',
+  const stream = restartable(() =>
+    filter(['issue'], issueSource, v => (v as Issue).title === 'issue 1'),
   );
 
   const result = [...stream];
@@ -570,32 +541,9 @@ function view(iterable: Iterable<Entry>): ResultType {
   return ret;
 }
 
-// This fails. Side 1 gets the first value, side 2 gets the second value.
-test('forked stream -- both sides do not see the same values via `restartable` :(', () => {
-  const stream = restartableFilter(['issue'], issueSource, _ => true);
-
-  const side1 = stream[Symbol.iterator]();
-  const side2 = stream[Symbol.iterator]();
-
-  const side1Results = [];
-  const side2Results = [];
-  for (;;) {
-    const side1Next = side1.next();
-    const side2Next = side2.next();
-    if (side1Next.done && side2Next.done) {
-      break;
-    }
-    side1Results.push(side1Next.value);
-    side2Results.push(side2Next.value);
-  }
-
-  expect(side1Results).not.toEqual(side2Results);
-  expect(side1Results.length).not.toEqual(issueSource.length);
-  expect(side1Results).not.toEqual([...stream]);
-});
-
+// This works via `restartable2` -- both sides see the same values.
 test('forked stream -- both sides see the same values via `restartable2`', () => {
-  const stream = restartable2(() => filter(['issue'], issueSource, _ => true));
+  const stream = restartable(() => filter(['issue'], issueSource, _ => true));
 
   const side1 = stream[Symbol.iterator]();
   const side2 = stream[Symbol.iterator]();
