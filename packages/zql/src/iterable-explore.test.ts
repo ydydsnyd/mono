@@ -1,6 +1,8 @@
 import {expect, test} from 'vitest';
 import type {JSONObject} from '../../shared/src/json.js';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type TODO = any;
 type Issue = {
   id: number;
   title: string;
@@ -118,6 +120,27 @@ function* filter(
   }
 }
 
+function* map(
+  path: (string | typeof node)[],
+  iterable: Iterable<Entry>,
+  cb: (v: unknown) => unknown,
+): IterableIterator<Entry> {
+  const [head, ...tail] = path;
+  for (const row of iterable) {
+    if (tail.length === 0) {
+      yield {
+        ...row,
+        [head]: cb(row[head]) as TODO,
+      };
+    } else {
+      yield {
+        ...row,
+        [head]: map(tail, row[head] as Iterable<Entry>, cb),
+      };
+    }
+  }
+}
+
 function* loopJoin(
   left: Iterable<Entry>,
   right: Iterable<Entry>,
@@ -210,8 +233,33 @@ function* merge(streams: Iterable<Entry>[]): Iterable<Entry> {
   }
 }
 
-// I think we can do a `mergeDistinct` this way (and remove tx-distinct). Same thing as `merge` but only output distinct values
-// in a given pass through the list of iterators.
+function* mergeDistinct(streams: Iterable<Entry>[]): Iterable<Entry> {
+  const iters = streams.map(s => s[Symbol.iterator]());
+  for (;;) {
+    let done = true;
+    const seenIds = new Set<number>();
+    for (const iter of iters) {
+      const next = iter.next();
+      if (next.done) {
+        continue;
+      }
+      done = false;
+      if (seenIds.has(next.value[node].id as number)) {
+        continue;
+      }
+      seenIds.add(next.value[node].id as number);
+      yield next.value;
+    }
+
+    if (done) {
+      break;
+    }
+  }
+
+  for (const iter of iters) {
+    iter.return?.();
+  }
+}
 
 test('fork and merge', () => {
   const stream = restartable(() =>
@@ -240,7 +288,22 @@ test('fork and merge', () => {
   ]);
 });
 
-// and then lets test a `fork and merge distinct`
+test('fork and merge distinct', () => {
+  let numVisits = 0;
+  const stream = restartable(() =>
+    map([node], issueSource, x => {
+      numVisits++;
+      return x;
+    }),
+  );
+
+  const forked = fork(stream, 4);
+  const merged = mergeDistinct(forked);
+
+  const result = [...merged];
+  expect(result).toEqual(issueSource);
+  expect(numVisits).toEqual(4 * issueSource.length);
+});
 
 class RestartableIterableIterator<T> {
   readonly #iter: Iterator<T> | undefined;
