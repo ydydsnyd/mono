@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722609695261,
+  "lastUpdate": 1722612738218,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -48545,6 +48545,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32673,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9a50afe05d9f5aeea27e5c6209bafd1eb0e6db94",
+          "message": "feat(replicache): Shorten client IDs (#2110)\n\nclientID and clientGroupID are now 13 characters long, down from 36.\r\n\r\nThe ID is generated from a random uint64, which is then base32 encoded\r\nand padded with '0' to 13 characters.",
+          "timestamp": "2024-08-02T15:29:43Z",
+          "tree_id": "5e821b0adf0f27759210cfd61fc96be432527456",
+          "url": "https://github.com/rocicorp/mono/commit/9a50afe05d9f5aeea27e5c6209bafd1eb0e6db94"
+        },
+        "date": 1722612720008,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 317239,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55253,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 117043,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32526,
             "unit": "bytes"
           }
         ]
