@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722582728361,
+  "lastUpdate": 1722590023783,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -48413,6 +48413,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32604,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d3ae24f87a43fb797a2667ffb7d66124adca8b9c",
+          "message": "feat(replicache): Add clientMaxAgeMs option (#2104)\n\nThe maximum age of a client in milliseconds. If a client hasn't been seen\r\nand has no pending mutations for this long, it will be removed from the\r\ncache. Default is 7 days.\r\n\r\nThis means that this is the maximum time a tab can be in the background\r\n(frozen) and still be able to sync when it comes back to the foreground. If\r\ntab comes back after this time the {@linkcode onClientStateNotFound}\r\ncallback is called on the Replicache instance.\r\n\r\nThis does not change the actual times.",
+          "timestamp": "2024-08-02T11:11:04+02:00",
+          "tree_id": "4df5c3785ca405a35dd586ae5746c27f4f6f2422",
+          "url": "https://github.com/rocicorp/mono/commit/d3ae24f87a43fb797a2667ffb7d66124adca8b9c"
+        },
+        "date": 1722590006284,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 318676,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55559,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 117430,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32637,
             "unit": "bytes"
           }
         ]
