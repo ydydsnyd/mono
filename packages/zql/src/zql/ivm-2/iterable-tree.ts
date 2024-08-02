@@ -11,14 +11,14 @@ import type {Entity} from './types.js';
 export const event = Symbol();
 export const entity = Symbol();
 
-export type Event = Add | Remove | NoOp;
+export type Event = Add | Remove | Nop;
 export const ADD = 1;
 export const REMOVE = -1;
 export const NOP = 0;
 
 export type Add = typeof ADD;
 export type Remove = typeof REMOVE;
-export type NoOp = typeof NOP;
+export type Nop = typeof NOP;
 
 /**
  * Please see: https://www.notion.so/replicache/NestedIterable-5123f11b877e41b7bc9f00486d491d8b?pm=c
