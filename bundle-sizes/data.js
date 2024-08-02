@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722604802641,
+  "lastUpdate": 1722609695261,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -48501,6 +48501,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32666,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1e333ab54248ab10369b3329bfd966f1fb230be0",
+          "message": "feat(replicache): Change hash length to 22 bytes (#2108)\n\nThe hash used to be 44 bytes because it used to adhere to the UUID spec.\r\n\r\nNow it consists of:\r\n- 12 bytes coming from random Uint64 encoded as base32\r\n- 10 bytes coming from a counter also encoded as base32",
+          "timestamp": "2024-08-02T16:38:27+02:00",
+          "tree_id": "aa935ca603306135100d76b7bbc05c97692f1278",
+          "url": "https://github.com/rocicorp/mono/commit/1e333ab54248ab10369b3329bfd966f1fb230be0"
+        },
+        "date": 1722609676273,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 318618,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55432,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 117427,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32673,
             "unit": "bytes"
           }
         ]
