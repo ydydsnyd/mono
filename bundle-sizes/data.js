@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722590023783,
+  "lastUpdate": 1722604802641,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -48457,6 +48457,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32637,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8c2ada41494ae2e0975497456204845298000a8b",
+          "message": "feat(replicache): Change max age for client and db (#2107)\n\nclientMaxAge is now 1 day and db max age is now 2 days",
+          "timestamp": "2024-08-02T13:16:51Z",
+          "tree_id": "3c2351954d2a578f63e3bcf333485394192cb086",
+          "url": "https://github.com/rocicorp/mono/commit/8c2ada41494ae2e0975497456204845298000a8b"
+        },
+        "date": 1722604784446,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 318612,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55448,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 117429,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32666,
             "unit": "bytes"
           }
         ]
