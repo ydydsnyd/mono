@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722356580662,
+  "lastUpdate": 1722582728361,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -48369,6 +48369,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32528,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c3f8269c181d0415777b04037dace3e81146aa26",
+          "message": "chore(replicache): Ensure refs are ordered (#2105)\n\nand have no duplicates.\r\n\r\nThis is mostly a way to ensure that we do not do extra work when walking\r\nthe DAG. It is not strictly necessary, but it is a good idea.\r\n\r\nTo keep the code clean I made Refs an opaque type which implies that the\r\narray is sorted and has no duplicates.",
+          "timestamp": "2024-08-02T07:09:34Z",
+          "tree_id": "60085831dac36722896fc19d9c025a9a4bb0fe55",
+          "url": "https://github.com/rocicorp/mono/commit/c3f8269c181d0415777b04037dace3e81146aa26"
+        },
+        "date": 1722582710693,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 317751,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55289,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 117171,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32604,
             "unit": "bytes"
           }
         ]
