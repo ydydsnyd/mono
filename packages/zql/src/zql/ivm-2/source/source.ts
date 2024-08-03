@@ -52,7 +52,7 @@ export class MemorySource<T extends Entity> implements Source<T> {
     this.#tree = new BTree(undefined, this.comparator);
     this.name = name;
     this.#materialite = materialite;
-    this.#stream = new DifferenceStream<T>();
+    this.#stream = new DifferenceStream<T>(this);
   }
 
   get stream() {

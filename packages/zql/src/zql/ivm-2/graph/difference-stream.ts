@@ -1,4 +1,3 @@
-import {assert} from 'shared/src/asserts.js';
 import {must} from 'shared/src/must.js';
 import type {IterableTree} from '../iterable-tree.js';
 import type {Entity} from '../types.js';
@@ -16,18 +15,16 @@ import type {PullRequest} from './pull.js';
  * Acquiring the capability through composition over inheritance feels much cleaner
  * and causes less problems (class hierarchy struggles) down the line.
  */
-export class DifferenceStream<T extends Entity> {
+export class DifferenceStream<T extends Entity = Entity> {
   readonly #downstreams = new Set<DownstreamNode<T>>();
-  #upstream: UpstreamNode<T> | undefined;
+  #upstream: UpstreamNode<T>;
+
+  constructor(upstream: UpstreamNode<T>) {
+    this.#upstream = upstream;
+  }
 
   addDownstream(listener: DownstreamNode<T>) {
     this.#downstreams.add(listener);
-  }
-
-  setUpstream(operator: UpstreamNode<T>) {
-    assert(this.#upstream === undefined, 'upstream already set');
-    this.#upstream = operator;
-    return this;
   }
 
   newDifference(version: number, data: IterableTree<T>) {

@@ -1,6 +1,7 @@
 import type {Ordering} from '../../ast-2/ast.js';
 import type {Comparator} from '../../ivm/types.js';
 import {makeComparator} from '../compare.js';
+import {DifferenceStream} from '../graph/difference-stream.js';
 import type {DownstreamNode} from '../graph/node.js';
 import {
   ADD,
@@ -50,14 +51,25 @@ export type View = {
 export class MutableArrayView implements DownstreamNode {
   readonly #comparators: ComparatorTree;
   readonly #view: View;
+  readonly #upstream: DifferenceStream;
 
-  constructor(orderingTree: OrderingTree) {
+  constructor(upstream: DifferenceStream, orderingTree: OrderingTree) {
+    this.#upstream = upstream;
     this.#comparators = makeComparatorTree(orderingTree);
     this.#view = [];
   }
 
   get data() {
     return this.#view;
+  }
+
+  pull() {
+    this.newDifference(
+      0,
+      this.#upstream.pull({
+        optionalConstraints: [],
+      }),
+    );
   }
 
   newDifference(_version: number, data: IterableTree<Entity>): void {
