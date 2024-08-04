@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722756130842,
+  "lastUpdate": 1722756696720,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -48633,6 +48633,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32526,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8cbf5d59680196c4a8b6ded25f00b489a0dc6179",
+          "message": "fix(replicache): clientIDs needs a little bit more entropy (#2111)\n\nhttps://zelark.github.io/nano-id-cc/\r\n\r\nLength 13 will lead to conflicts after 1o days if there are 1000\r\nclients per second. Maybe OK but it makes me feel uncomfortable.\r\n\r\nChanging length to 18 => 158 years before conflict.",
+          "timestamp": "2024-08-04T07:28:51Z",
+          "tree_id": "c2bb52057008d7007d25cc2f61e307f782663466",
+          "url": "https://github.com/rocicorp/mono/commit/8cbf5d59680196c4a8b6ded25f00b489a0dc6179"
+        },
+        "date": 1722756678725,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 317362,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55234,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 117060,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32565,
             "unit": "bytes"
           }
         ]
