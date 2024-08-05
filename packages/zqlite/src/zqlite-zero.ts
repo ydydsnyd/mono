@@ -15,6 +15,7 @@ import type {
   UpdateOp,
 } from 'zero-protocol/src/push.js';
 import type {Database} from 'better-sqlite3';
+import type { EntityID } from 'zero-protocol/src/entity.js';
 
 export type Parse<E extends Entity> = (v: ReadonlyJSONObject) => E;
 export type Update<E extends Entity> = Entity & Partial<E>;
@@ -40,7 +41,7 @@ type EntityCRUDMutate<E extends Entity> = {
   create: (value: E) => Promise<void>;
   set: (value: E) => Promise<void>;
   update: (value: Update<E>) => Promise<void>;
-  delete: (value: E) => Promise<void>;
+  delete: (id: EntityID) => Promise<void>;
 };
 
 export type CRUDBatch<QD extends QueryDefs> = <R>(
@@ -95,7 +96,6 @@ export class ZqlLiteZero<QD extends QueryDefs> {
         }
 
         const rv = await body(m as BaseCRUDMutate<QD>);
-        //await zeroCRUD({ops});
         return rv;
       } finally {
         inBatch = false;
@@ -158,12 +158,11 @@ export class ZqlLiteZero<QD extends QueryDefs> {
         ops.push(op);
         return Promise.resolve();
       },
-      delete: (value: E) => {
-        const {id} = value;
+      delete: (id: EntityID) => {
         const op: DeleteOp = {
           op: 'delete',
           entityType,
-          id: {id},
+          id,
         };
         ops.push(op);
         return Promise.resolve();
@@ -179,42 +178,28 @@ export class ZqlLiteZero<QD extends QueryDefs> {
     return {
       create: async (value: E) => {
         assertNotInBatch(entityType, 'create');
-        const {id, ...rest} = value;
-        const columns = Object.keys(rest).join(', ');
-        const placeholders = Object.keys(rest)
-          .map(() => '?')
-          .join(', ');
-        const stmt = db.prepare(
-          `INSERT INTO ${entityType} (id, ${columns}) VALUES (?, ${placeholders})`,
-        );
-        await stmt.run(id, ...Object.values(rest));
+        const existingEntity = await db.prepare(`SELECT * FROM ${entityType} WHERE id = ?`).get(value.id);
+        if (existingEntity) return;
+        console.log('Adding', value);
+        await this.zqlContext.getSource(entityType).add(value);
       },
       set: async (value: E) => {
         assertNotInBatch(entityType, 'set');
-        const {id, ...rest} = value;
-        const columns = Object.keys(rest)
-          .map(col => `${col} = ?`)
-          .join(', ');
-        const stmt = db.prepare(
-          `REPLACE INTO ${entityType} SET id = ?, ${columns}`,
-        );
-        await stmt.run(id, ...Object.values(rest));
+        await this.zqlContext.getSource(entityType).add(value);
       },
       update: async (value: Update<E>) => {
         assertNotInBatch(entityType, 'update');
-        const {id, ...rest} = value;
-        const columns = Object.keys(rest)
-          .map(col => `${col} = ?`)
-          .join(', ');
-        const stmt = db.prepare(
-          `UPDATE ${entityType} SET ${columns} WHERE id = ?`,
-        );
-        await stmt.run(...Object.values(rest), id);
+        const existingEntity = await db.prepare(`SELECT * FROM ${entityType} WHERE id = ?`).get(value.id);
+        if (!existingEntity) throw new Error(`Entity with id ${value.id} not found`);
+        const mergedValue = { ...existingEntity, ...value };
+        await this.zqlContext.getSource(entityType).delete(existingEntity);
+        await this.zqlContext.getSource(entityType).add(mergedValue);
       },
-      delete: async (value: E) => {
+      delete: async (id: EntityID) => {
         assertNotInBatch(entityType, 'delete');
-        const stmt = db.prepare(`DELETE FROM ${entityType} WHERE id = ?`);
-        await stmt.run(value.id);
+        const existingEntity = await db.prepare(`SELECT * FROM ${entityType} WHERE id = ?`).get(id);
+        if (!existingEntity) throw new Error(`Entity with id ${id} not found`);
+        await this.zqlContext.getSource(entityType).delete(existingEntity);
       },
     };
   }
