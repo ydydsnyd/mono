@@ -9,6 +9,7 @@
     "check-format": "prettier --check *",
     "lint": "eslint --ext .ts,.tsx,.js,.jsx src/"
   },
+  "export": "./src/crud.ts",
   "dependencies": {
     "@badrap/valita": "^0.3.0",
     "@rocicorp/logger": "^5.2.2",

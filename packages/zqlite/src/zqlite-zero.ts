@@ -1,4 +1,4 @@
-import {EntityQuery, FromSet} from 'zql/src/zql/query/entity-query.js';
+import {EntityQuery, FromSet, newEntityQuery} from 'zql/src/zql/query/entity-query.js';
 import type {Entity} from 'zql/src/zql/schema/entity-schema.js';
 import type {QueryParseDefs, ZqlLiteZeroOptions} from './options.js';
 import type {Context as ZQLContext} from 'zql/src/zql/context/context.js';
@@ -10,12 +10,14 @@ import {
   makeBatchCRUDMutate,
   MakeCRUDMutate,
   MakeEntityQueriesFromQueryDefs,
-  QueryDefs,
+  NoRelations,
   Update,
 } from 'zqlite-zero-cache-shared/src/crud.js';
 import type {CRUDOp, CRUDOpKind} from 'zero-protocol/src/push.js';
 import type {Database} from 'better-sqlite3';
 import type {EntityID} from 'zero-protocol/src/entity.js';
+import type {QueryDefs} from 'zero-client/src/client/zero.js';
+
 
 export class ZqlLiteZero<QD extends QueryDefs> {
   readonly zqlContext: ZQLContext;
@@ -36,11 +38,11 @@ export class ZqlLiteZero<QD extends QueryDefs> {
   #registerQueries(
     queryDefs: QueryParseDefs<QD>,
   ): MakeEntityQueriesFromQueryDefs<QD> {
-    const rv = {} as Record<string, EntityQuery<FromSet, []>>;
+    const rv = {} as Record<string, EntityQuery<FromSet, NoRelations, []>>;
     const context = this.zqlContext;
     // Not using parse yet
     for (const name of Object.keys(queryDefs)) {
-      rv[name] = new EntityQuery(context, name);
+      rv[name] = newEntityQuery(context, name);
     }
     return rv as MakeEntityQueriesFromQueryDefs<QD>;
   }

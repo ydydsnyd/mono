@@ -13,11 +13,12 @@ import type {MaybePromise} from 'shared/src/types.js';
 import type {EntityQuery} from 'zql/src/zql/query/entity-query.js';
 import {promiseVoid} from 'shared/src/resolved-promises.js';
 
-export type Parse<E extends Entity> = (v: ReadonlyJSONObject) => E;
-export type Update<E extends Entity> = Entity & Partial<E>;
-export type QueryDefs = {
+type QueryDefs = {
   readonly [name: string]: Entity;
 };
+
+export type Parse<E extends Entity> = (v: ReadonlyJSONObject) => E;
+export type Update<E extends Entity> = Entity & Partial<E>;
 
 export interface EntityCRUDMutate<E extends Entity> {
   create: (value: E) => Promise<void>;
@@ -28,8 +29,10 @@ export interface EntityCRUDMutate<E extends Entity> {
 
 export type AssertNotInBatchFn = (entityType: string, op: CRUDOpKind) => void;
 
+export type NoRelations = Record<string, never>;
+
 export type MakeEntityQueriesFromQueryDefs<QD extends QueryDefs> = {
-  readonly [K in keyof QD]: EntityQuery<{[P in K]: QD[K]}, []>;
+  readonly [K in keyof QD]: EntityQuery<{[P in K]: QD[K]}, NoRelations, []>;
 };
 
 export type BaseCRUDMutate<QD extends QueryDefs> = {
