@@ -15,7 +15,6 @@ import {
 import type {NullableVersion} from 'zero-protocol/src/version.js';
 import type {AST} from '../../../zql/src/zql/ast/ast.js';
 import type {EntityQuery} from '../mod.js';
-import type {Update} from './crud.js';
 import type {WSString} from './http-string.js';
 import type {ZeroOptions} from './options.js';
 import {RELOAD_REASON_STORAGE_KEY} from './reload-error-handler.js';
@@ -39,6 +38,7 @@ import {
   createSocket,
   serverAheadReloadReason,
 } from './zero.js';
+import { Update } from 'zqlite-zero-cache-shared/src/crud.js';
 
 let clock: sinon.SinonFakeTimers;
 const startTime = 1678829450000;

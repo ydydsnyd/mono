@@ -4,7 +4,7 @@ import {TableSource} from './table-source.js';
 import type {PipelineEntity} from 'zql/src/zql/ivm/types.js';
 import type {Source} from 'zql/src/zql/ivm/source/source.js';
 import type {ZQLite} from './ZQLite.js';
-import type { Materialite } from 'zql/src/zql/ivm/materialite.js';
+import type {Materialite} from 'zql/src/zql/ivm/materialite.js';
 
 const emptyFunction = () => {};
 export class ZqliteContext implements Context {
@@ -13,10 +13,7 @@ export class ZqliteContext implements Context {
   readonly #sources = new Map<string, Source<PipelineEntity>>();
   readonly #columnsStatement: Statement;
 
-  constructor(
-    materialite: Materialite,
-    db: Database,
-  ) {
+  constructor(materialite: Materialite, db: Database) {
     this.materialite = materialite;
     this.#db = db;
     const sql = `SELECT name FROM pragma_table_info(?)`;

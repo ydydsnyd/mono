@@ -32,19 +32,19 @@ test('add track', () => {
     'CREATE TABLE track (id TEXT PRIMARY KEY,  length NUMBER, title TEXT, albumId TEXT)',
   ).run();
   const source = context.getSource('track');
-  source.add(  {
+  source.add({
     id: '1',
     length: 100,
     title: 'a',
     albumId: '1',
   });
-  source.add(  {
+  source.add({
     id: '2',
     length: 200,
     title: 'b',
     albumId: '1',
   });
-  source.add( {
+  source.add({
     id: '3',
     length: 300,
     title: 'c',
@@ -73,7 +73,6 @@ test('add track', () => {
       albumId: '1',
     },
   ]);
-
 
   const stmt2 = db.prepare('SELECT * FROM track where length > 100');
   const rows2 = stmt2.all();

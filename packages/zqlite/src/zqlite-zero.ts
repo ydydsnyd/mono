@@ -4,49 +4,18 @@ import type {QueryParseDefs, ZqlLiteZeroOptions} from './options.js';
 import type {Context as ZQLContext} from 'zql/src/zql/context/context.js';
 import {createContext} from './context.js';
 import {ZQLite} from './ZQLite.js';
-import type {MaybePromise} from 'shared/src/types.js';
-import type {ReadonlyJSONObject} from 'shared/src/json.js';
-import type {
-  CRUDOp,
-  CRUDOpKind,
-  CreateOp,
-  DeleteOp,
-  SetOp,
-  UpdateOp,
-} from 'zero-protocol/src/push.js';
+import {
+  BaseCRUDMutate,
+  EntityCRUDMutate,
+  makeBatchCRUDMutate,
+  MakeCRUDMutate,
+  MakeEntityQueriesFromQueryDefs,
+  QueryDefs,
+  Update,
+} from 'zqlite-zero-cache-shared/src/crud.js';
+import type {CRUDOp, CRUDOpKind} from 'zero-protocol/src/push.js';
 import type {Database} from 'better-sqlite3';
-import type { EntityID } from 'zero-protocol/src/entity.js';
-
-export type Parse<E extends Entity> = (v: ReadonlyJSONObject) => E;
-export type Update<E extends Entity> = Entity & Partial<E>;
-export type QueryDefs = {
-  readonly [name: string]: Entity;
-};
-
-type MakeEntityQueriesFromQueryDefs<QD extends QueryDefs> = {
-  readonly [K in keyof QD]: EntityQuery<{[P in K]: QD[K]}, []>;
-};
-
-export type MakeCRUDMutate<QD extends QueryDefs> = BaseCRUDMutate<QD> &
-  CRUDBatch<QD>;
-
-export type BaseCRUDMutate<QD extends QueryDefs> = {
-  [K in keyof QD]: EntityCRUDMutate<QD[K]>;
-};
-
-/**
- * This is the type of the generated mutate.<name>.<verb> function.
- */
-type EntityCRUDMutate<E extends Entity> = {
-  create: (value: E) => Promise<void>;
-  set: (value: E) => Promise<void>;
-  update: (value: Update<E>) => Promise<void>;
-  delete: (id: EntityID) => Promise<void>;
-};
-
-export type CRUDBatch<QD extends QueryDefs> = <R>(
-  body: (m: BaseCRUDMutate<QD>) => MaybePromise<R>,
-) => Promise<R>;
+import type {EntityID} from 'zero-protocol/src/entity.js';
 
 export class ZqlLiteZero<QD extends QueryDefs> {
   readonly zqlContext: ZQLContext;
@@ -94,7 +63,7 @@ export class ZqlLiteZero<QD extends QueryDefs> {
         const ops: CRUDOp[] = [];
         const m = {} as Record<string, unknown>;
         for (const name of Object.keys(queries)) {
-          m[name] = this.makeBatchCRUDMutate(name, ops);
+          m[name] = makeBatchCRUDMutate(name, ops);
         }
 
         const rv = await body(m as BaseCRUDMutate<QD>);
@@ -119,59 +88,6 @@ export class ZqlLiteZero<QD extends QueryDefs> {
     return mutate as MakeCRUDMutate<QD>;
   }
 
-  /**
-   * Creates the `{create, set, update, delete}` object for use inside a batch.
-   */
-  makeBatchCRUDMutate<E extends Entity>(
-    entityType: string,
-    ops: CRUDOp[],
-  ): EntityCRUDMutate<E> {
-    return {
-      create: (value: E) => {
-        const {id} = value;
-        const op: CreateOp = {
-          op: 'create',
-          entityType,
-          id: {id},
-          value,
-        };
-        ops.push(op);
-        return Promise.resolve();
-      },
-      set: (value: E) => {
-        const {id} = value;
-        const op: SetOp = {
-          op: 'set',
-          entityType,
-          id: {id},
-          value,
-        };
-        ops.push(op);
-        return Promise.resolve();
-      },
-      update: (value: Update<E>) => {
-        const {id} = value;
-        const op: UpdateOp = {
-          op: 'update',
-          entityType,
-          id: {id},
-          partialValue: value,
-        };
-        ops.push(op);
-        return Promise.resolve();
-      },
-      delete: (id: EntityID) => {
-        const op: DeleteOp = {
-          op: 'delete',
-          entityType,
-          id,
-        };
-        ops.push(op);
-        return Promise.resolve();
-      },
-    };
-  }
-
   makeEntityCRUDMutate<E extends Entity>(
     entityType: string,
     db: Database,
@@ -180,9 +96,11 @@ export class ZqlLiteZero<QD extends QueryDefs> {
     return {
       create: async (value: E) => {
         assertNotInBatch(entityType, 'create');
-        const existingEntity = await db.prepare(`SELECT * FROM ${entityType} WHERE id = ?`).get(value.id);
+        const existingEntity = await db
+          .prepare(`SELECT * FROM ${entityType} WHERE id = ?`)
+          .get(value.id);
         if (existingEntity) return;
-        console.log('Adding', value);
+        //console.log('Adding', value);
         await this.zqlContext.getSource(entityType).add(value);
       },
       set: async (value: E) => {
@@ -191,15 +109,20 @@ export class ZqlLiteZero<QD extends QueryDefs> {
       },
       update: async (value: Update<E>) => {
         assertNotInBatch(entityType, 'update');
-        const existingEntity = await db.prepare(`SELECT * FROM ${entityType} WHERE id = ?`).get(value.id);
-        if (!existingEntity) throw new Error(`Entity with id ${value.id} not found`);
-        const mergedValue = { ...existingEntity, ...value };
+        const existingEntity = await db
+          .prepare(`SELECT * FROM ${entityType} WHERE id = ?`)
+          .get(value.id);
+        if (!existingEntity)
+          throw new Error(`Entity with id ${value.id} not found`);
+        const mergedValue = {...existingEntity, ...value};
         await this.zqlContext.getSource(entityType).delete(existingEntity);
         await this.zqlContext.getSource(entityType).add(mergedValue);
       },
       delete: async (id: EntityID) => {
         assertNotInBatch(entityType, 'delete');
-        const existingEntity = await db.prepare(`SELECT * FROM ${entityType} WHERE id = ?`).get(id);
+        const existingEntity = await db
+          .prepare(`SELECT * FROM ${entityType} WHERE id = ?`)
+          .get(id);
         if (!existingEntity) throw new Error(`Entity with id ${id} not found`);
         await this.zqlContext.getSource(entityType).delete(existingEntity);
       },

@@ -56,7 +56,6 @@ import type {Entity} from 'zql/src/zql/schema/entity-schema.js';
 import {nanoid} from '../util/nanoid.js';
 import {send} from '../util/socket.js';
 import {
-  MakeCRUDMutate,
   WithCRUD,
   makeCRUDMutate,
   makeCRUDMutator,
@@ -84,6 +83,7 @@ import {
 } from './subscriptions.js';
 import {version} from './version.js';
 import {PokeHandler} from './zero-poke-handler.js';
+import { MakeCRUDMutate } from 'zqlite-zero-cache-shared/src/crud.js';
 
 export type QueryDefs = {
   readonly [name: string]: Entity;

@@ -1,6 +1,3 @@
-import type {ReadonlyJSONObject} from 'shared/src/json.js';
-import {promiseVoid} from 'shared/src/resolved-promises.js';
-import type {MaybePromise} from 'shared/src/types.js';
 import type {EntityID} from 'zero-protocol/src/entity.js';
 import {
   CRUDMutationArg,
@@ -17,34 +14,14 @@ import {toEntitiesKey} from './keys.js';
 import type {QueryParseDefs} from './options.js';
 import type {MutatorDefs, WriteTransaction} from './replicache-types.js';
 import type {QueryDefs} from './zero.js';
-
-export type Parse<E extends Entity> = (v: ReadonlyJSONObject) => E;
-
-export type Update<E extends Entity> = Entity & Partial<E>;
-
-/**
- * This is the type of the generated mutate.<name>.<verb> function.
- */
-type EntityCRUDMutate<E extends Entity> = {
-  create: (value: E) => Promise<void>;
-  set: (value: E) => Promise<void>;
-  update: (value: Update<E>) => Promise<void>;
-  delete: (id: EntityID) => Promise<void>;
-};
-
-/**
- * This is the type of the generated mutate.<name> object.
- */
-export type MakeCRUDMutate<QD extends QueryDefs> = BaseCRUDMutate<QD> &
-  CRUDBatch<QD>;
-
-export type BaseCRUDMutate<QD extends QueryDefs> = {
-  [K in keyof QD]: EntityCRUDMutate<QD[K]>;
-};
-
-export type CRUDBatch<QD extends QueryDefs> = <R>(
-  body: (m: BaseCRUDMutate<QD>) => MaybePromise<R>,
-) => Promise<R>;
+import {
+  makeBatchCRUDMutate,
+  type BaseCRUDMutate,
+  type EntityCRUDMutate,
+  type MakeCRUDMutate,
+  type Parse,
+  type Update,
+} from 'zqlite-zero-cache-shared/src/crud.js';
 
 type ZeroCRUDMutate = {
   [CRUD_MUTATION_NAME]: CRUDMutate;
@@ -137,50 +114,6 @@ function makeEntityCRUDMutate<E extends Entity>(
       assertNotInBatch(entityType, 'delete');
       const op: DeleteOp = {op: 'delete', entityType, id};
       return zeroCRUD({ops: [op]});
-    },
-  };
-}
-
-/**
- * Creates the `{create, set, update, delete}` object for use inside a batch.
- */
-function makeBatchCRUDMutate<E extends Entity>(
-  entityType: string,
-  ops: CRUDOp[],
-): EntityCRUDMutate<E> {
-  return {
-    create: (value: E) => {
-      const {id} = value;
-      const op: CreateOp = {
-        op: 'create',
-        entityType,
-        id: {id},
-        value,
-      };
-      ops.push(op);
-      return promiseVoid;
-    },
-    set: (value: E) => {
-      const {id} = value;
-      const op: SetOp = {op: 'set', entityType, id: {id}, value};
-      ops.push(op);
-      return promiseVoid;
-    },
-    update: (value: Update<E>) => {
-      const {id} = value;
-      const op: UpdateOp = {
-        op: 'update',
-        entityType,
-        id: {id},
-        partialValue: value,
-      };
-      ops.push(op);
-      return promiseVoid;
-    },
-    delete: (id: EntityID) => {
-      const op: DeleteOp = {op: 'delete', entityType, id};
-      ops.push(op);
-      return promiseVoid;
     },
   };
 }
