@@ -53,9 +53,11 @@ export class ZqlLiteZero<QD extends QueryDefs> {
   readonly query: MakeEntityQueriesFromQueryDefs<QD>;
   readonly zqlLite: ZQLite;
   readonly mutate: MakeCRUDMutate<QD>;
+  db: Database;
 
   constructor(options: ZqlLiteZeroOptions<QD>) {
     const {queries = {} as QueryParseDefs<QD>, db} = options;
+    this.db = db;
     this.zqlLite = new ZQLite(db);
     this.zqlContext = createContext(this.zqlLite, db);
     this.query = this.#registerQueries(queries);

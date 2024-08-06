@@ -4,6 +4,7 @@ import {joinSymbol} from 'zql/src/zql/ivm/types.js';
 
 describe('distinct', async () => {
   const z = newZero();
+ 
   const artists = [
     {
       id: '1',
@@ -81,6 +82,7 @@ describe('distinct', async () => {
     await z.mutate.trackArtist.create(trackArtist);
   }
   await new Promise(r => setTimeout(r, 100));
+  console.log(await z.db.prepare('SELECT * FROM track').all());
 
   test.each([
     {

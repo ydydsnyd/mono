@@ -45,30 +45,5 @@ export class ZqliteContext implements Context {
 }
 
 export function createContext(materialite: ZQLite, db: Database): Context {
-  const sources = new Map<string, Source<PipelineEntity>>();
-  const sql = `SELECT name FROM pragma_table_info(?)`;
-  const columnsStatement = db.prepare(sql);
-
-  return {
-    materialite,
-    getSource: <T extends PipelineEntity>(name: string): Source<T> => {
-      let existing = sources.get(name);
-      if (existing) {
-        return existing as Source<T>;
-      }
-      const columns = columnsStatement.all(name);
-      existing = materialite.constructSource(
-        internal =>
-          new TableSource(
-            db,
-            internal,
-            name,
-            columns.map(c => c.name),
-          ),
-      );
-      sources.set(name, existing);
-      return existing as Source<T>;
-    },
-    subscriptionAdded: () => emptyFunction,
-  };
+  return new ZqliteContext(materialite, db);
 }

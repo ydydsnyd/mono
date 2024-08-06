@@ -37,7 +37,7 @@ export function newZero(dbInit?: Database.Database | undefined) {
     'CREATE TABLE album (id TEXT PRIMARY KEY, title TEXT, artistId TEXT)',
   ).run();
   db.prepare(
-    'CREATE TABLE track (id TEXT PRIMARY KEY, title TEXT, length NUMBER, albumId TEXT)',
+    'CREATE TABLE track (id TEXT PRIMARY KEY, length NUMBER, title TEXT, albumId TEXT)',
   ).run();
   db.prepare(
     'CREATE TABLE trackArtist (id TEXT PRIMARY KEY, artistId TEXT, trackId TEXT)',
@@ -91,7 +91,7 @@ export async function bulkRemove(
   await z.mutate(async tx => {
     const promises: Promise<void>[] = [];
     for (const track of items.tracks ?? []) {
-      promises.push(tx.track.delete(track));
+      promises.push(tx.track.delete({id: track.id}));
     }
     for (const album of items.albums ?? []) {
       promises.push(tx.album.delete(album));

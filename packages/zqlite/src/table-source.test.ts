@@ -24,6 +24,75 @@ test('add', () => {
   ]);
 });
 
+test('add track', () => {
+  const db = new Database(':memory:');
+  const context = createContext(new ZQLite(db), db);
+
+  db.prepare(
+    'CREATE TABLE track (id TEXT PRIMARY KEY,  length NUMBER, title TEXT, albumId TEXT)',
+  ).run();
+  const source = context.getSource('track');
+  source.add(  {
+    id: '1',
+    length: 100,
+    title: 'a',
+    albumId: '1',
+  });
+  source.add(  {
+    id: '2',
+    length: 200,
+    title: 'b',
+    albumId: '1',
+  });
+  source.add( {
+    id: '3',
+    length: 300,
+    title: 'c',
+    albumId: '1',
+  });
+
+  const stmt = db.prepare('SELECT * FROM track');
+  const rows = stmt.all();
+  expect(rows).toEqual([
+    {
+      id: '1',
+      length: 100,
+      title: 'a',
+      albumId: '1',
+    },
+    {
+      id: '2',
+      length: 200,
+      title: 'b',
+      albumId: '1',
+    },
+    {
+      id: '3',
+      length: 300,
+      title: 'c',
+      albumId: '1',
+    },
+  ]);
+
+
+  const stmt2 = db.prepare('SELECT * FROM track where length > 100');
+  const rows2 = stmt2.all();
+  expect(rows2).toEqual([
+    {
+      id: '2',
+      length: 200,
+      title: 'b',
+      albumId: '1',
+    },
+    {
+      id: '3',
+      length: 300,
+      title: 'c',
+      albumId: '1',
+    },
+  ]);
+});
+
 test('delete', () => {
   const db = new Database(':memory:');
   const context = createContext(new ZQLite(db), db);

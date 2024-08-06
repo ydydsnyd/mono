@@ -2,8 +2,8 @@ import {nanoid} from 'nanoid';
 
 export type Track = {
   id: string;
-  title: string;
   length: number;
+  title: string;
   albumId: string;
 };
 

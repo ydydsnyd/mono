@@ -1,0 +1,45 @@
+{
+  "name": "zero-integration-test",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "format": "prettier --write *",
+    "check-format": "prettier --check *",
+    "lint": "eslint --ext .ts,.tsx,.js,.jsx src/",
+    "check-types": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@rocicorp/eslint-config": "^0.5.1",
+    "@rocicorp/prettier-config": "^0.2.0",
+    "esbuild": "^0.20.2",
+    "rollup": "^4.19.0",
+    "@rocicorp/rails": "^0.10.0",
+    "@types/sinon": "^10.0.11",
+    "@types/xxhashjs": "^0.2.4",
+    "datadog": "0.0.0",
+    "playwright": "^1.43.1",
+    "shared": "0.0.0",
+    "sinon": "^13.0.1",
+    "typescript": "^5.5.3",
+    "xxhashjs": "^0.2.2",
+    "zero-protocol": "0.0.0",
+    "@types/better-sqlite3": "^7.6.0",
+    "fast-check": "^3.18.0",
+    "nanoid": "^4.0.2"
+  },
+  "dependencies": {
+    "@databases/escape-identifier": "^1.0.3",
+    "@databases/sql": "^3.3.0",
+    "@rocicorp/logger": "^5.2.2",
+    "better-sqlite3": "^11.0.0",
+    "pg-logical-replication": "^2.0.5",
+    "zql": "0.0.0"
+  },
+  "eslintConfig": {
+    "extends": "@rocicorp/eslint-config"
+  },
+  "prettier": "@rocicorp/prettier-config"
+}

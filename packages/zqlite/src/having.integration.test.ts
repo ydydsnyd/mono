@@ -33,6 +33,7 @@ describe('having against scalar', async () => {
   ];
 
   await bulkSet(z, {tracks});
+  console.log(z.db.prepare('SELECT * FROM track').all());
   test.each([
     [['>', 50], ['1']],
     [['>', 300], []],
