@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722758386351,
+  "lastUpdate": 1722920151841,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -48721,6 +48721,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32577,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "cesar@roci.dev",
+            "name": "Cesar Alaestante",
+            "username": "cesara"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2d6941eb05c2a8fc1dd63d0269dbfd9f5fd00785",
+          "message": "fix (replicache): remove unecessary ref sorted assert (#2117)",
+          "timestamp": "2024-08-05T21:53:17-07:00",
+          "tree_id": "1c976dc688ab39e8ee50f64b37d2dfaaf582fd76",
+          "url": "https://github.com/rocicorp/mono/commit/2d6941eb05c2a8fc1dd63d0269dbfd9f5fd00785"
+        },
+        "date": 1722920134225,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 317285,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55260,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 117000,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32544,
             "unit": "bytes"
           }
         ]
