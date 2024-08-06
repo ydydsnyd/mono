@@ -1,4 +1,8 @@
-import {EntityQuery, FromSet, newEntityQuery} from 'zql/src/zql/query/entity-query.js';
+import {
+  EntityQuery,
+  FromSet,
+  newEntityQuery,
+} from 'zql/src/zql/query/entity-query.js';
 import type {Entity} from 'zql/src/zql/schema/entity-schema.js';
 import type {QueryParseDefs, ZqlLiteZeroOptions} from './options.js';
 import type {Context as ZQLContext} from 'zql/src/zql/context/context.js';
@@ -17,7 +21,6 @@ import type {CRUDOp, CRUDOpKind} from 'zero-protocol/src/push.js';
 import type {Database} from 'better-sqlite3';
 import type {EntityID} from 'zero-protocol/src/entity.js';
 import type {QueryDefs} from 'zero-client/src/client/zero.js';
-
 
 export class ZqlLiteZero<QD extends QueryDefs> {
   readonly zqlContext: ZQLContext;

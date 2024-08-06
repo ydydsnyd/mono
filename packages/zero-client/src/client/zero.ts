@@ -54,11 +54,7 @@ import type {FromSet} from 'zql/src/zql/query/entity-query.js';
 import {EntityQuery, newEntityQuery} from 'zql/src/zql/query/entity-query.js';
 import {nanoid} from '../util/nanoid.js';
 import {send} from '../util/socket.js';
-import {
-  WithCRUD,
-  makeCRUDMutate,
-  makeCRUDMutator,
-} from './crud.js';
+import {WithCRUD, makeCRUDMutate, makeCRUDMutator} from './crud.js';
 import {shouldEnableAnalytics} from './enable-analytics.js';
 import {toWSString, type HTTPString, type WSString} from './http-string.js';
 import {ENTITIES_KEY_PREFIX} from './keys.js';
@@ -82,7 +78,11 @@ import {
 } from './subscriptions.js';
 import {version} from './version.js';
 import {PokeHandler} from './zero-poke-handler.js';
-import { MakeCRUDMutate, MakeEntityQueriesFromQueryDefs, NoRelations } from 'zqlite-zero-cache-shared/src/crud.js';
+import {
+  MakeCRUDMutate,
+  MakeEntityQueriesFromQueryDefs,
+  NoRelations,
+} from 'zqlite-zero-cache-shared/src/crud.js';
 import type {Entity} from 'zql/src/zql/schema/entity-schema.js';
 
 export type QueryDefs = {

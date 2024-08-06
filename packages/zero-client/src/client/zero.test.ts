@@ -38,7 +38,7 @@ import {
   createSocket,
   serverAheadReloadReason,
 } from './zero.js';
-import { Update } from 'zqlite-zero-cache-shared/src/crud.js';
+import {Update} from 'zqlite-zero-cache-shared/src/crud.js';
 
 let clock: sinon.SinonFakeTimers;
 const startTime = 1678829450000;

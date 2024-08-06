@@ -21,7 +21,7 @@ import {
   type Parse,
   type Update,
 } from 'zqlite-zero-cache-shared/src/crud.js';
-import { QueryDefs } from './zero.js';
+import {QueryDefs} from './zero.js';
 
 type ZeroCRUDMutate = {
   [CRUD_MUTATION_NAME]: CRUDMutate;
