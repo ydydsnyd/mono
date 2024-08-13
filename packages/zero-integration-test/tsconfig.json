@@ -1,8 +1,7 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "lib": ["ESNext.Array", "ESNext", "dom"],
-    "outDir": "dist"
+    "lib": ["dom", "esnext"]
   },
   "include": ["src/**/*.ts"]
 }
