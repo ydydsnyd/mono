@@ -1,119 +1,11 @@
 import {describe, expect, test} from 'vitest';
-import {z} from 'zod';
 import type {AST, Condition, SimpleCondition} from '../ast/ast.js';
-import {makeTestContext} from '../context/test-context.js';
 import {getOperator} from '../ivm/graph/operators/filter-operator.js';
 import {Materialite} from '../ivm/materialite.js';
 import type {Source} from '../ivm/source/source.js';
 import type {PipelineEntity} from '../ivm/types.js';
-import * as agg from '../query/agg.js';
-import {conditionToString} from '../query/condition-to-string.js';
-import {astForTesting as ast, newEntityQuery} from '../query/entity-query.js';
 
 import {buildPipeline} from './pipeline-builder.js';
-
-const e1 = z.object({
-  id: z.string(),
-  a: z.number(),
-  b: z.number(),
-  c: z.string().optional(),
-  d: z.boolean(),
-});
-type E1 = z.infer<typeof e1>;
-
-const context = makeTestContext();
-
-const ordering = [[['e1', 'id'], 'asc']] as const;
-test('A simple select', () => {
-  const q = newEntityQuery<{e1: E1}>(context, 'e1');
-  const m = new Materialite();
-  let s = m.newSetSource<E1>(ordering, 'e1');
-  let pipeline = buildPipeline(
-    () => s as unknown as Source<PipelineEntity>,
-    ast(q.select('id', 'a', 'b', 'c', 'd')),
-  );
-
-  let effectRunCount = 0;
-  pipeline.effect(x => {
-    expect(x).toEqual(expected[effectRunCount++]);
-  });
-
-  const expected = [
-    {id: 'a', a: 1, b: 1, c: '', d: true},
-    {id: 'b', a: 2, b: 2, d: false},
-  ] as const;
-
-  s.add(expected[0]);
-  s.add(expected[1]);
-  expect(effectRunCount).toBe(2);
-
-  s = m.newSetSource(ordering, 'e1');
-  pipeline = buildPipeline(
-    () => s as unknown as Source<PipelineEntity>,
-    ast(q.select('a', 'd')),
-  );
-  effectRunCount = 0;
-  pipeline.effect(x => {
-    // We actually return the full data. It is just the types that change based on selection.
-    expect(x).toEqual(expected[effectRunCount++]);
-  });
-
-  s.add(expected[0]);
-  s.add(expected[1]);
-  expect(effectRunCount).toBe(2);
-});
-
-test('Count', () => {
-  const q = newEntityQuery<{e1: E1}>(context, 'e1');
-  const m = new Materialite();
-  const s = m.newSetSource<E1>(ordering, 'e1');
-  const pipeline = buildPipeline(
-    () => s as unknown as Source<PipelineEntity>,
-    ast(q.select(agg.count())),
-  );
-
-  let effectRunCount = 0;
-  pipeline.effect((x, mult) => {
-    if (mult > 0) {
-      expect(x).toEqual(expected[effectRunCount++]);
-    }
-  });
-  const expected = [1, 2, 1, 0].map(x => ({
-    a: 1,
-    b: 1,
-    count: x,
-    d: false,
-    id: '1',
-  }));
-
-  s.add({id: '1', a: 1, b: 1, d: false});
-  s.add({id: '2', a: 1, b: 1, d: false});
-  s.delete({id: '1', a: 1, b: 1, d: false});
-  s.delete({id: '2', a: 1, b: 1, d: false});
-  expect(effectRunCount).toBe(4);
-});
-
-test('Where', () => {
-  const q = newEntityQuery<{e1: E1}>(context, 'e1');
-  const m = new Materialite();
-  const s = m.newSetSource<E1>(ordering, 'e1');
-  const pipeline = buildPipeline(
-    () => s as unknown as Source<PipelineEntity>,
-    ast(q.select('id').where('a', '>', 1).where('b', '<', 2)),
-  );
-
-  let effectRunCount = 0;
-  pipeline.effect(x => {
-    expect(x).toEqual(expected[effectRunCount++]);
-  });
-  const expected = [{id: 'b', a: 2, b: 1, d: false}];
-
-  s.add({id: 'a', a: 1, b: 1, d: false});
-  s.add({id: 'b', a: 2, b: 1, d: false});
-  s.add({id: 'c', a: 1, b: 2, d: false});
-  s.add({id: 'd', a: 2, b: 2, d: false});
-  expect(effectRunCount).toBe(1);
-});
 
 describe('OR', () => {
   type E = {
@@ -798,3 +690,27 @@ describe('getOperator', () => {
 
 // order-by and limit are properties of the materialize view
 // and not a part of the pipeline.
+
+export function conditionToString(c: Condition, paren = false): string {
+  if (c.op === 'AND' || c.op === 'OR') {
+    let s = '';
+    if (paren) {
+      s += '(';
+    }
+    {
+      const paren = c.op === 'AND' && c.conditions.length > 1;
+      s += c.conditions.map(c => conditionToString(c, paren)).join(` ${c.op} `);
+    }
+    if (paren) {
+      s += ')';
+    }
+    return s;
+  }
+  return `${
+    c.type === 'simple'
+      ? typeof c.field === 'string'
+        ? c.field
+        : c.field.join('.')
+      : ''
+  } ${c.op} ${(c as {value: {value: unknown}}).value.value}`;
+}

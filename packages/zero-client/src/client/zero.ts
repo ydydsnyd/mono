@@ -50,9 +50,8 @@ import type {
 import type {Context as ZQLContext} from 'zql/src/zql/context/context.js';
 import {ZeroContext} from 'zql/src/zql/context/zero-context.js';
 import {Materialite} from 'zql/src/zql/ivm/materialite.js';
-import type {FromSet} from 'zql/src/zql/query/entity-query.js';
-import {EntityQuery, newEntityQuery} from 'zql/src/zql/query/entity-query.js';
-import type {Entity} from 'zql/src/zql/schema/entity-schema.js';
+import {EntityQuery, EntitySchema} from 'zql/src/zql/query2/entity-query.js';
+import {newEntityQuery} from 'zql/src/zql/query2/entity-query-impl.js';
 import {nanoid} from '../util/nanoid.js';
 import {send} from '../util/socket.js';
 import {
@@ -86,13 +85,13 @@ import {version} from './version.js';
 import {PokeHandler} from './zero-poke-handler.js';
 
 export type QueryDefs = {
-  readonly [name: string]: Entity;
+  readonly [name: string]: EntitySchema;
 };
 
 export type NoRelations = Record<string, never>;
 
 export type MakeEntityQueriesFromQueryDefs<QD extends QueryDefs> = {
-  readonly [K in keyof QD]: EntityQuery<{[P in K]: QD[K]}, NoRelations, []>;
+  readonly [K in keyof QD]: EntityQuery<QD[K], []>;
 };
 
 declare const TESTING: boolean;
@@ -1471,7 +1470,7 @@ export class Zero<QD extends QueryDefs> {
   #registerQueries(
     queryDefs: QueryParseDefs<QD>,
   ): MakeEntityQueriesFromQueryDefs<QD> {
-    const rv = {} as Record<string, EntityQuery<FromSet, NoRelations, []>>;
+    const rv = {} as Record<string, EntityQuery<EntitySchema, []>>;
     const context = this.#zqlContext;
     // Not using parse yet
     for (const name of Object.keys(queryDefs)) {

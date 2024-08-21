@@ -3,9 +3,12 @@ import type {KVStoreProvider} from 'replicache';
 import type {ReadonlyJSONObject} from 'shared/src/json.js';
 import type {MaybePromise} from 'shared/src/types.js';
 import type {QueryDefs} from './zero.js';
+import type {EntitySchemaToEntity} from 'zql/src/zql/query2/entity-query.js';
 
 export type QueryParseDefs<QD extends QueryDefs> = {
-  readonly [K in keyof QD]: (value: ReadonlyJSONObject) => QD[K];
+  readonly [K in keyof QD]: (
+    value: ReadonlyJSONObject,
+  ) => EntitySchemaToEntity<QD[K]>;
 };
 
 /**

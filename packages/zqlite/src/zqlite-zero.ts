@@ -1,9 +1,9 @@
 import {
+  Entity,
   EntityQuery,
-  FromSet,
-  newEntityQuery,
-} from 'zql/src/zql/query/entity-query.js';
-import type {Entity} from 'zql/src/zql/schema/entity-schema.js';
+  EntitySchema,
+} from 'zql/src/zql/query2/entity-query.js';
+import {newEntityQuery} from 'zql/src/zql/query2/entity-query-impl.js';
 import type {ZqlLiteZeroOptions} from './options.js';
 import type {Context as ZQLContext} from 'zql/src/zql/context/context.js';
 import {createContext} from './context.js';
@@ -21,7 +21,6 @@ import type {EntityID} from 'zero-protocol/src/entity.js';
 import {
   QueryDefs,
   MakeEntityQueriesFromQueryDefs,
-  NoRelations,
 } from 'zero-client/src/client/zero.js';
 import {QueryParseDefs} from 'zero-client/src/client/options.js';
 
@@ -44,7 +43,7 @@ export class ZqlLiteZero<QD extends QueryDefs> {
   #registerQueries(
     queryDefs: QueryParseDefs<QD>,
   ): MakeEntityQueriesFromQueryDefs<QD> {
-    const rv = {} as Record<string, EntityQuery<FromSet, NoRelations, []>>;
+    const rv = {} as Record<string, EntityQuery<EntitySchema, []>>;
     const context = this.zqlContext;
     // Not using parse yet
     for (const name of Object.keys(queryDefs)) {

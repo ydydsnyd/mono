@@ -1,7 +1,7 @@
 import {Row} from '../ivm2/data.js';
 import {ValueType} from '../ivm2/schema.js';
 
-type Entity = Row;
+export type Entity = Row;
 
 /**
  * `related` calls need to know what the available relationships are.
@@ -106,6 +106,10 @@ type GetFieldType<
   TField extends keyof TSchema['fields'],
 > = SchemaValueToTSType<TSchema['fields'][TField]>;
 
+export type EntitySchemaToEntity<T extends EntitySchema> = {
+  [K in keyof T['fields']]: SchemaValueToTSType<T['fields'][K]>;
+};
+
 /**
  * A query can have:
  * 1. Selections and
@@ -185,7 +189,7 @@ type PickSubselect<TSubquery extends EntityQuery<EntitySchema>> = {
  * }]
  * ```
  */
-type QueryResultRow = {
+export type QueryResultRow = {
   entity: Partial<Entity>;
   subselects: Record<string, QueryResultRow[]> | undefined;
 };

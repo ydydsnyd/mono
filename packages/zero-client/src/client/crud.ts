@@ -12,7 +12,10 @@ import {
   SetOp,
   UpdateOp,
 } from 'zero-protocol/src/push.js';
-import type {Entity} from 'zql/src/zql/schema/entity-schema.js';
+import type {
+  EntitySchemaToEntity,
+  Entity,
+} from 'zql/src/zql/query2/entity-query.js';
 import {toEntitiesKey} from './keys.js';
 import type {QueryParseDefs} from './options.js';
 import type {MutatorDefs, WriteTransaction} from './replicache-types.js';
@@ -20,7 +23,7 @@ import type {QueryDefs} from './zero.js';
 
 export type Parse<E extends Entity> = (v: ReadonlyJSONObject) => E;
 
-export type Update<E extends Entity> = Entity & Partial<E>;
+export type Update<E extends Entity> = Partial<E>;
 
 /**
  * This is the type of the generated mutate.<name>.<verb> function.
@@ -39,7 +42,7 @@ export type MakeCRUDMutate<QD extends QueryDefs> = BaseCRUDMutate<QD> &
   CRUDBatch<QD>;
 
 export type BaseCRUDMutate<QD extends QueryDefs> = {
-  [K in keyof QD]: EntityCRUDMutate<QD[K]>;
+  [K in keyof QD]: EntityCRUDMutate<EntitySchemaToEntity<QD[K]>>;
 };
 
 export type CRUDBatch<QD extends QueryDefs> = <R>(
@@ -111,7 +114,7 @@ function makeEntityCRUDMutate<E extends Entity>(
       const op: CreateOp = {
         op: 'create',
         entityType,
-        id: {id},
+        id: {id: id as string},
         value,
       };
       return zeroCRUD({ops: [op]});
@@ -119,7 +122,7 @@ function makeEntityCRUDMutate<E extends Entity>(
     set: (value: E) => {
       assertNotInBatch(entityType, 'set');
       const {id} = value;
-      const op: SetOp = {op: 'set', entityType, id: {id}, value};
+      const op: SetOp = {op: 'set', entityType, id: {id: id as string}, value};
       return zeroCRUD({ops: [op]});
     },
     update: (value: Update<E>) => {
@@ -128,7 +131,7 @@ function makeEntityCRUDMutate<E extends Entity>(
       const op: UpdateOp = {
         op: 'update',
         entityType,
-        id: {id},
+        id: {id: id as string},
         partialValue: value,
       };
       return zeroCRUD({ops: [op]});
@@ -154,7 +157,7 @@ export function makeBatchCRUDMutate<E extends Entity>(
       const op: CreateOp = {
         op: 'create',
         entityType,
-        id: {id},
+        id: {id: id as string},
         value,
       };
       ops.push(op);
@@ -162,7 +165,7 @@ export function makeBatchCRUDMutate<E extends Entity>(
     },
     set: (value: E) => {
       const {id} = value;
-      const op: SetOp = {op: 'set', entityType, id: {id}, value};
+      const op: SetOp = {op: 'set', entityType, id: {id: id as string}, value};
       ops.push(op);
       return promiseVoid;
     },
@@ -171,7 +174,7 @@ export function makeBatchCRUDMutate<E extends Entity>(
       const op: UpdateOp = {
         op: 'update',
         entityType,
-        id: {id},
+        id: {id: id as string},
         partialValue: value,
       };
       ops.push(op);
