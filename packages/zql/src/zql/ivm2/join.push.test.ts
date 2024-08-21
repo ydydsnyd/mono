@@ -869,12 +869,12 @@ function pushTest(t: PushTest) {
 
   const sources = t.sources.map((hydrate, i) => {
     const ordering = t.sorts?.[i] ?? [['id', 'asc']];
-    const source = new MemorySource(ordering);
+    const source = new MemorySource({}, [], [ordering]);
     for (const row of hydrate) {
       source.push({type: 'add', row});
     }
     const snitch = new Snitch(source, String(i), log);
-    source.addOutput(snitch);
+    source.addOutput(snitch, ordering);
     return {
       source,
       snitch,

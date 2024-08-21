@@ -9,8 +9,8 @@ import {ValueType} from '../schema.js';
 type SourceFactory = (
   name: string,
   columns: Record<string, ValueType>,
-  order: Ordering,
-  primaryKeys: readonly [string, ...string[]],
+  requiredIndexes: Ordering[],
+  primaryKey: readonly [string, ...string[]],
 ) => Source;
 
 function asNodes(rows: Row[]) {
@@ -53,9 +53,10 @@ const cases = {
   'simple-pull': (createSource: SourceFactory) => {
     // works the same for hydrate and fetch.
     for (const m of ['hydrate', 'fetch'] as const) {
-      const ms = createSource('table', {a: 'number'}, [['a', 'asc']], ['a']);
+      const sort = [['a', 'asc']] as const;
+      const ms = createSource('table', {a: 'number'}, [sort], ['a']);
       const out = new Catch(ms);
-      ms.addOutput(out);
+      ms.addOutput(out, sort);
       expect(out[m]()).toEqual([]);
 
       ms.push({type: 'add', row: {a: 3}});
@@ -77,6 +78,7 @@ const cases = {
   'pull-with-constraint': (createSource: SourceFactory) => {
     // works the same for hydrate and fetch.
     for (const m of ['hydrate', 'fetch'] as const) {
+      const sort = [['a', 'asc']] as const;
       const ms = createSource(
         'table',
         {
@@ -85,11 +87,11 @@ const cases = {
           c: 'number',
           d: 'string',
         },
-        [['a', 'asc']],
+        [sort],
         ['a'],
       );
       const out = new Catch(ms);
-      ms.addOutput(out);
+      ms.addOutput(out, sort);
       ms.push({type: 'add', row: {a: 3, b: true, c: 1, d: null}});
       ms.push({type: 'add', row: {a: 1, b: true, c: 2, d: null}});
       ms.push({type: 'add', row: {a: 2, b: false, c: null, d: null}});
@@ -133,16 +135,17 @@ const cases = {
   },
 
   'fetch-start': (createSource: SourceFactory) => {
+    const sort = [['a', 'asc']] as const;
     const ms = createSource(
       'table',
       {
         a: 'number',
       },
-      [['a', 'asc']],
+      [sort],
       ['a'],
     );
     const out = new Catch(ms);
-    ms.addOutput(out);
+    ms.addOutput(out, sort);
 
     expect(out.fetch({start: {row: {a: 2}, basis: 'before'}})).toEqual(
       asNodes([]),
@@ -187,9 +190,10 @@ const cases = {
   },
 
   'push': (createSource: SourceFactory) => {
-    const ms = createSource('table', {a: 'number'}, [['a', 'asc']], ['a']);
+    const sort = [['a', 'asc']] as const;
+    const ms = createSource('table', {a: 'number'}, [sort], ['a']);
     const out = new Catch(ms);
-    ms.addOutput(out);
+    ms.addOutput(out, sort);
 
     expect(out.pushes).toEqual([]);
 
@@ -240,13 +244,14 @@ const cases = {
     // *other* outputs are pushed to. Then we can observe that the overlay
     // only shows up in the cases it is supposed to.
 
-    const ms = createSource('table', {a: 'number'}, [['a', 'asc']], ['a']);
+    const sort = [['a', 'asc']] as const;
+    const ms = createSource('table', {a: 'number'}, [sort], ['a']);
     const o1 = new OverlaySpy(ms);
     const o2 = new OverlaySpy(ms);
     const o3 = new OverlaySpy(ms);
-    ms.addOutput(o1);
-    ms.addOutput(o2);
-    ms.addOutput(o3);
+    ms.addOutput(o1, sort);
+    ms.addOutput(o2, sort);
+    ms.addOutput(o3, sort);
 
     function fetchAll() {
       o1.fetch({});
@@ -548,12 +553,13 @@ const cases = {
     ];
 
     for (const c of cases) {
-      const ms = createSource('table', {a: 'number'}, [['a', 'asc']], ['a']);
+      const sort = [['a', 'asc']] as const;
+      const ms = createSource('table', {a: 'number'}, [sort], ['a']);
       for (const row of c.startData) {
         ms.push({type: 'add', row});
       }
       const out = new OverlaySpy(ms);
-      ms.addOutput(out);
+      ms.addOutput(out, sort);
       out.onPush = () =>
         out.fetch({
           start: c.start,
@@ -598,20 +604,21 @@ const cases = {
     ];
 
     for (const c of cases) {
+      const sort = [['a', 'asc']] as const;
       const ms = createSource(
         'table',
         {
           a: 'number',
           b: 'boolean',
         },
-        [['a', 'asc']],
+        [sort],
         ['a'],
       );
       for (const row of c.startData) {
         ms.push({type: 'add', row});
       }
       const out = new OverlaySpy(ms);
-      ms.addOutput(out);
+      ms.addOutput(out, sort);
       out.onPush = () =>
         out.fetch({
           constraint: c.constraint,
@@ -623,6 +630,31 @@ const cases = {
         expect(out.fetches, JSON.stringify(c)).toEqual([asNodes(c.expected)]);
       }
     }
+  },
+
+  'per-output-sorts': (createSource: SourceFactory) => {
+    const sort1 = [['a', 'asc']] as const;
+    const sort2 = [['b', 'asc']] as const;
+    const ms = createSource(
+      'table',
+      {
+        a: 'number',
+        b: 'number',
+      },
+      [sort1, sort2],
+      ['a'],
+    );
+    const out1 = new Catch(ms);
+    const out2 = new Catch(ms);
+    ms.addOutput(out1, sort1);
+    ms.addOutput(out2, sort2);
+
+    ms.push({type: 'add', row: {a: 2, b: 3}});
+    ms.push({type: 'add', row: {a: 1, b: 2}});
+    ms.push({type: 'add', row: {a: 3, b: 1}});
+
+    expect(out1.fetch({})).toEqual(asNodes([{a: 1, b: 2}, {a: 2, b: 3}, {a: 3, b: 1}]));
+    expect(out2.fetch({})).toEqual(asNodes([{a: 3, b: 1}, {a: 1, b: 2}, {a: 2, b: 3}]));
   },
 };
 

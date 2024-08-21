@@ -5,17 +5,27 @@ import type {
   HydrateRequest,
   Constraint,
 } from './operator.js';
-import {makeComparator, valuesEqual, type Node, type Row} from './data.js';
+import {Comparator, makeComparator, valuesEqual, type Node, type Row} from './data.js';
 import type {Ordering} from '../ast2/ast.js';
 import {assert} from 'shared/src/asserts.js';
 import {LookaheadIterator} from './lookahead-iterator.js';
 import type {Stream} from './stream.js';
 import {Source, SourceChange} from './source.js';
-import {Schema} from './schema.js';
+import {Schema, ValueType} from './schema.js';
 
 export type Overlay = {
   outputIndex: number;
   change: SourceChange;
+};
+
+type Index = {
+  comparator: Comparator;
+  data: BTree<Row, undefined>;
+};
+
+type OutputRegistration = {
+  output: Output;
+  sort: Ordering;
 };
 
 /**
@@ -24,29 +34,67 @@ export type Overlay = {
  *
  * This data is kept in sorted order as downstream pipelines will always expect
  * the data they receive from `pull` to be in sorted order.
+ * 
+ * MemorySource currently requires all sorts that will be needed by any output
+ * to be specified at creation time as 'requiredIndexes'. This will likely be
+ * relaxed over time as we gain experience.
  */
 export class MemorySource implements Source {
-  readonly #schema: Schema;
-  readonly #data: BTree<Row, undefined>;
-  readonly #outputs: Output[] = [];
+  readonly #columns: Record<string, ValueType>;
+  readonly #primaryKeys: readonly string[];
+
+  // We maintain one sorted index for each sort order
+  readonly #indexes: Map<string, Index>;
+  readonly #outputs: OutputRegistration[] = [];
 
   #overlay: Overlay | undefined;
 
-  constructor(order: Ordering) {
-    this.#schema = {
-      compareRows: makeComparator(order),
-      columns: {},
-      primaryKey: [],
+  constructor(
+    columns: Record<string, ValueType>,
+    primaryKeys: readonly string[],
+    requiredIndexes: Ordering[],
+  ) {
+    this.#columns = columns;
+    this.#primaryKeys = primaryKeys;
+    this.#indexes = new Map();
+    for (const sort of requiredIndexes) {
+      const comparator = makeComparator(sort);
+      this.#indexes.set(JSON.stringify(sort), {
+        comparator,
+        data: new BTree(undefined, comparator),
+      });
+    }
+  }
+
+  #getRegistrationForOutput(output: Output): OutputRegistration {
+    const reg = this.#outputs.find(r => r.output === output);
+    assert(reg, 'Output not found');
+    return reg;
+  }
+
+  getSchema(output: Output): Schema {
+    const reg = this.#getRegistrationForOutput(output);
+    const key = JSON.stringify(reg.sort);
+    const index = this.#indexes.get(key);
+    assert(index, `Required index not found`);
+    return {
+      columns: this.#columns,
+      primaryKey: this.#primaryKeys,
+      compareRows: index.comparator,
     };
-    this.#data = new BTree(undefined, this.#schema.compareRows);
   }
 
-  get schema(): Schema {
-    return this.#schema;
-  }
-
-  addOutput(output: Output): void {
-    this.#outputs.push(output);
+  addOutput(output: Output, sort: Ordering): void {
+    const key = JSON.stringify(sort);
+    const index = this.#indexes.get(key);
+    if (!index) {
+      throw new Error(`Required index not found: ${sort}`);
+    }
+    assert(
+      !this.#outputs.some(r => r.output === output),
+      'Output already added',
+    );
+    this.#outputs.push({output, sort});
   }
 
   hydrate(req: HydrateRequest, output: Output) {
@@ -56,13 +104,19 @@ export class MemorySource implements Source {
   *fetch(req: FetchRequest, output: Output): Stream<Node> {
     let overlay: Overlay | undefined;
 
+    const callingOutputNum = this.#outputs.findIndex(r => r.output === output);
+    assert(callingOutputNum !== -1, 'Output not found');
+    const reg = this.#outputs[callingOutputNum];
+    const {sort} = reg;
+    const index = this.#indexes.get(JSON.stringify(sort));
+    assert(index, `Required index not found`);
+    const {data, comparator} = index;
+
     // When we receive a push, we send it to each output one at a time. Once the
     // push is sent to an output, it should keep being sent until all datastores
     // have received it and the change has been made to the datastore.
     if (this.#overlay) {
-      const callingOutputIndex = this.#outputs.indexOf(output);
-      assert(callingOutputIndex !== -1, 'Output not found');
-      if (callingOutputIndex <= this.#overlay.outputIndex) {
+      if (callingOutputNum <= this.#overlay.outputIndex) {
         overlay = this.#overlay;
       }
     }
@@ -79,18 +133,18 @@ export class MemorySource implements Source {
     }
 
     const startAt = req.start?.row
-      ? this.#data.nextLowerKey(req.start.row)
+      ? data.nextLowerKey(req.start.row)
       : undefined;
     yield* generateWithStart(
       generateWithOverlay(
         startAt,
-        this.#pullWithConstraint(startAt, req.constraint),
+        this.#pullWithConstraint(data, startAt, req.constraint),
         req.constraint,
         overlay,
-        this.#schema.compareRows,
+        comparator,
       ),
       req,
-      this.#schema.compareRows,
+      comparator,
     );
   }
 
@@ -99,10 +153,11 @@ export class MemorySource implements Source {
   }
 
   *#pullWithConstraint(
+    data: BTree<Row, undefined>,
     startAt: Row | undefined,
     constraint: Constraint | undefined,
   ): IterableIterator<Row> {
-    const it = this.#data.keys(startAt);
+    const it = data.keys(startAt);
 
     // Process all items in the iterator, applying overlay as needed.
     for (const row of it) {
@@ -113,40 +168,38 @@ export class MemorySource implements Source {
   }
 
   push(change: SourceChange) {
-    if (change.type === 'add') {
-      if (this.#data.has(change.row)) {
-        throw new Error('Row already exists');
+    for (const [_, {data}] of this.#indexes) {
+      if (change.type === 'add') {
+        assert(!data.has(change.row), 'Row already exists');
+      } else {
+        assert(change.type === 'remove');
+        assert(data.has(change.row), 'Row not found');
       }
-    } else {
-      assert(change.type === 'remove');
-      if (!this.#data.has(change.row)) {
-        throw new Error('Row not found');
-      }
-    }
 
-    for (const [outputIndex, output] of this.#outputs.entries()) {
-      this.#overlay = {outputIndex, change};
-      output.push(
-        {
-          type: change.type,
-          node: {
-            row: change.row,
-            relationships: {},
+      for (const [outputIndex, {output}] of this.#outputs.entries()) {
+        this.#overlay = {outputIndex, change};
+        output.push(
+          {
+            type: change.type,
+            node: {
+              row: change.row,
+              relationships: {},
+            },
           },
-        },
-        this,
-      );
-    }
-    this.#overlay = undefined;
-    if (change.type === 'add') {
-      const added = this.#data.add(change.row, undefined);
-      // must suceed since we checked has() above.
-      assert(added);
-    } else {
-      assert(change.type === 'remove');
-      const removed = this.#data.delete(change.row);
-      // must suceed since we checked has() above.
-      assert(removed);
+          this,
+        );
+      }
+      this.#overlay = undefined;
+      if (change.type === 'add') {
+        const added = data.add(change.row, undefined);
+        // must suceed since we checked has() above.
+        assert(added);
+      } else {
+        assert(change.type === 'remove');
+        const removed = data.delete(change.row);
+        // must suceed since we checked has() above.
+        assert(removed);
+      }
     }
   }
 }

@@ -667,12 +667,12 @@ function fetchTest(t: FetchTest) {
 
   const sources = t.sources.map((rows, i) => {
     const ordering = t.sorts?.[i] ?? [['id', 'asc']];
-    const source = new MemorySource(ordering);
+    const source = new MemorySource({}, [], [ordering]);
     for (const row of rows) {
       source.push({type: 'add', row});
     }
     const snitch = new Snitch(source, String(i), log);
-    source.addOutput(snitch);
+    source.addOutput(snitch, ordering);
     return {
       source,
       snitch,
