@@ -20,6 +20,32 @@ export type Schema = {
 };
 
 /**
+ * IVM operators take a slightly different form of `Schema`
+ *
+ * 1. `columns` don't encode optionality. They probably should.
+ * 2. `relationships` does not encode the type of the relationship (junction vs field edge).
+ * 3. `relationships` doesn't support recursive relationships
+ * 4. IVM schema requires a `compareRows` function.
+ * 5. Query schema requires a `table` field.
+ *
+ * 1, 2 and 3 can probably be made common between the two types.
+ * 5 could be thrown into `IVM Schema` and ignored
+ * 4 is fundamentally different but can be computed
+ * from the other information allowing `IVMSchema` to be a subtype of `EntitySchema`.
+ */
+export function toInputArgs(schema: Schema) {
+  const columns: Record<string, ValueType> = {};
+  for (const [key, value] of Object.entries(schema.fields)) {
+    columns[key] = value.type;
+  }
+  return {
+    primaryKey: schema.primaryKey,
+    columns,
+    table: schema.table,
+  };
+}
+
+/**
  * A schema might have a relationship to itself.
  * Given we cannot reference a variable in the same statement we initialize
  * the variable, we use a lazy function to get around this.
