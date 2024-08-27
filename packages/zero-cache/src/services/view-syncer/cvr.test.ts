@@ -5,7 +5,6 @@ import type {PostgresDB} from '../../types/pg.js';
 import {CVRStore} from './cvr-store.js';
 
 import {expect} from 'vitest';
-import {and, cond, or} from 'zero-cache/src/db/query-test-util.js';
 import type {PatchToVersion} from './client-handler.js';
 import {
   CVRConfigDrivenUpdater,
@@ -424,21 +423,16 @@ describe('view-syncer/cvr', () => {
           id: 'lmids',
           internal: true,
           ast: {
-            schema: 'zero',
             table: 'clients',
-            select: [
-              [['clients', 'clientGroupID'], 'clientGroupID'],
-              [['clients', 'clientID'], 'clientID'],
-              [['clients', 'lastMutationID'], 'lastMutationID'],
+            schema: 'zero',
+            where: [
+              {
+                type: 'simple',
+                op: '=',
+                field: 'clientGroupID',
+                value: 'abc123',
+              },
             ],
-            where: and(
-              cond(['clients', 'clientGroupID'], '=', 'abc123'),
-              or(
-                ...['dooClient', 'fooClient', 'barClient', 'bonkClient'].map(
-                  id => cond(['clients', 'clientID'], '=', id),
-                ),
-              ),
-            ),
           },
         },
         oneHash: {
@@ -527,69 +521,15 @@ describe('view-syncer/cvr', () => {
         {
           clientAST: {
             schema: 'zero',
-            select: [
-              [['clients', 'clientGroupID'], 'clientGroupID'],
-              [['clients', 'clientID'], 'clientID'],
-              [['clients', 'lastMutationID'], 'lastMutationID'],
-            ],
             table: 'clients',
-            where: {
-              conditions: [
-                {
-                  field: ['clients', 'clientGroupID'],
-                  op: '=',
-                  type: 'simple',
-                  value: {
-                    type: 'value',
-                    value: 'abc123',
-                  },
-                },
-                {
-                  conditions: [
-                    {
-                      field: ['clients', 'clientID'],
-                      op: '=',
-                      type: 'simple',
-                      value: {
-                        type: 'value',
-                        value: 'dooClient',
-                      },
-                    },
-                    {
-                      field: ['clients', 'clientID'],
-                      op: '=',
-                      type: 'simple',
-                      value: {
-                        type: 'value',
-                        value: 'fooClient',
-                      },
-                    },
-                    {
-                      field: ['clients', 'clientID'],
-                      op: '=',
-                      type: 'simple',
-                      value: {
-                        type: 'value',
-                        value: 'barClient',
-                      },
-                    },
-                    {
-                      field: ['clients', 'clientID'],
-                      op: '=',
-                      type: 'simple',
-                      value: {
-                        type: 'value',
-                        value: 'bonkClient',
-                      },
-                    },
-                  ],
-                  op: 'OR',
-                  type: 'conjunction',
-                },
-              ],
-              op: 'AND',
-              type: 'conjunction',
-            },
+            where: [
+              {
+                field: 'clientGroupID',
+                op: '=',
+                type: 'simple',
+                value: 'abc123',
+              },
+            ],
           },
           clientGroupID: 'abc123',
           deleted: false,

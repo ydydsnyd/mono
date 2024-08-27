@@ -13,7 +13,7 @@ import {
 import {toInputArgs} from './schema.js';
 import {must} from 'shared/src/must.js';
 import {Host} from '../builder/builder.js';
-import {TypedView} from './typed-view.js';
+import {SubscriptionDelegate} from '../context/context.js';
 
 /**
  * Some basic manual tests to get us started.
@@ -139,7 +139,7 @@ function addData(host: Host) {
   });
 }
 
-function makeHost() {
+function makeHost(): Host & SubscriptionDelegate {
   const sources = makeSources();
   return {
     getSource(tableName: string) {
@@ -148,6 +148,9 @@ function makeHost() {
     createStorage() {
       return new MemoryStorage();
     },
+    subscriptionAdded() {
+      return () => {};
+    },
   };
 }
 
@@ -155,39 +158,36 @@ describe('bare select', () => {
   test('empty source', () => {
     const host = makeHost();
     const issueQuery = newQuery(host, issueSchema).select('id');
-    const view = issueQuery.materialize();
+    const m = issueQuery.materialize();
+    m.hydrate();
 
-    let rows: {id: string}[] = [];
+    let rows: readonly {id: string}[] = [];
     let called = false;
-    view.addListener(data => {
+    m.addListener(data => {
       called = true;
-      rows = [...data];
+      rows = data;
     });
-
-    view.hydrate();
 
     expect(called).toBe(true);
     expect(rows).toEqual([]);
 
     called = false;
-    view.addListener(_ => {
+    m.addListener(_ => {
       called = true;
     });
-    // Hmm.. we probably want a `wantInitialData` sort of API
-    // for late comers to a view.
-    expect(called).toBe(false);
+    expect(called).toBe(true);
   });
 
   test('empty source followed by changes', () => {
     const host = makeHost();
     const issueQuery = newQuery(host, issueSchema).select('id');
-    const view = issueQuery.materialize();
+    const m = issueQuery.materialize();
+    m.hydrate();
 
     let rows: {id: string}[] = [];
-    view.addListener(data => {
+    m.addListener(data => {
       rows = [...data];
     });
-    view.hydrate();
 
     expect(rows).toEqual([]);
 
@@ -236,13 +236,13 @@ describe('bare select', () => {
     });
 
     const issueQuery = newQuery(host, issueSchema).select('id');
-    const view = issueQuery.materialize();
+    const m = issueQuery.materialize();
+    m.hydrate();
 
     let rows: {id: string}[] = [];
-    view.addListener(data => {
+    m.addListener(data => {
       rows = [...data];
     });
-    view.hydrate();
 
     expect(rows).toEqual([
       {
@@ -270,13 +270,13 @@ describe('bare select', () => {
     });
 
     const issueQuery = newQuery(host, issueSchema).select('id');
-    const view = issueQuery.materialize();
+    const m = issueQuery.materialize();
+    m.hydrate();
 
     let rows: {id: string}[] = [];
-    view.addListener(data => {
+    m.addListener(data => {
       rows = [...data];
     });
-    view.hydrate();
 
     expect(rows).toEqual([
       {
@@ -328,15 +328,18 @@ describe('joins and filters', () => {
       .where('title', '=', 'issue 1');
 
     const singleFilterView = issueQuery.materialize();
+    singleFilterView.hydrate();
     let singleFilterRows: {id: string}[] = [];
     let doubleFilterRows: {id: string}[] = [];
     let doubleFilterWithNoResultsRows: {id: string}[] = [];
     const doubleFilterView = issueQuery
       .where('closed', '=', false)
       .materialize();
+    doubleFilterView.hydrate();
     const doubleFilterViewWithNoResults = issueQuery
       .where('closed', '=', true)
       .materialize();
+    doubleFilterViewWithNoResults.hydrate();
 
     singleFilterView.addListener(data => {
       singleFilterRows = [...data];
@@ -347,10 +350,6 @@ describe('joins and filters', () => {
     doubleFilterViewWithNoResults.addListener(data => {
       doubleFilterWithNoResultsRows = [...data];
     });
-
-    singleFilterView.hydrate();
-    doubleFilterView.hydrate();
-    doubleFilterViewWithNoResults.hydrate();
 
     expect(singleFilterRows.map(r => r.id)).toEqual(['0001']);
     expect(doubleFilterRows.map(r => r.id)).toEqual(['0001']);
@@ -398,8 +397,10 @@ describe('joins and filters', () => {
       .related('comments', q => q.select('text'))
       .select('id');
     const view = issueQuery.materialize();
+    view.hydrate();
 
-    let rows: typeof view extends TypedView<infer TRow> ? TRow : never[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let rows: any[] = [];
     view.addListener(data => {
       rows = [...data].map(row => ({
         ...row,
@@ -416,8 +417,6 @@ describe('joins and filters', () => {
         comments: [...row.comments],
       }));
     });
-
-    view.hydrate();
 
     expect(rows).toEqual([
       {
