@@ -769,7 +769,7 @@ describe('view-syncer/cvr', () => {
           clientGroupID: 'abc123',
           rowKey: ROW_KEY1,
           rowVersion: '03',
-          queriedColumns: {twoHash: ['id']},
+          refCounts: {twoHash: 1},
           patchVersion: '1a0',
           schema: 'public',
           table: 'issues',
@@ -778,7 +778,7 @@ describe('view-syncer/cvr', () => {
           clientGroupID: 'abc123',
           rowKey: ROW_KEY2,
           rowVersion: '03',
-          queriedColumns: {twoHash: ['id']},
+          refCounts: {twoHash: 1},
           patchVersion: '1a0',
           schema: 'public',
           table: 'issues',
@@ -787,7 +787,7 @@ describe('view-syncer/cvr', () => {
           clientGroupID: 'abc123',
           rowKey: ROW_KEY3,
           rowVersion: '03',
-          queriedColumns: null,
+          refCounts: null,
           patchVersion: '19z',
           schema: 'public',
           table: 'issues',
@@ -796,7 +796,7 @@ describe('view-syncer/cvr', () => {
           clientGroupID: 'abc123',
           rowKey: IN_OLD_PATCH_ROW_KEY,
           rowVersion: '03',
-          queriedColumns: null,
+          refCounts: null,
           patchVersion: '189',
           schema: 'public',
           table: 'issues',
@@ -805,7 +805,7 @@ describe('view-syncer/cvr', () => {
           clientGroupID: 'abc123',
           rowKey: DELETE_ROW_KEY,
           rowVersion: '03',
-          queriedColumns: null,
+          refCounts: null,
           patchVersion: '1aa',
           schema: 'public',
           table: 'issues',
@@ -836,7 +836,7 @@ describe('view-syncer/cvr', () => {
               record: {
                 id: ROW_ID1,
                 rowVersion: '03',
-                queriedColumns: {oneHash: ['id']},
+                refCounts: {oneHash: 1},
               },
               contents: {id: 'should-show-up-in-patch'},
             },
@@ -848,7 +848,7 @@ describe('view-syncer/cvr', () => {
         toVersion: {stateVersion: '1a0'},
         patch: {
           type: 'row',
-          op: 'merge',
+          op: 'put',
           id: ROW_ID1,
           contents: {id: 'should-show-up-in-patch'},
         },
@@ -859,26 +859,12 @@ describe('view-syncer/cvr', () => {
         lc,
         new Map([
           [
-            ROW_ID1,
-            {
-              record: {
-                id: ROW_ID1,
-                rowVersion: '03',
-                queriedColumns: {oneHash: ['id', 'name']},
-              },
-              contents: {
-                id: 'new version patch',
-                name: 'because of new field',
-              },
-            },
-          ],
-          [
             ROW_ID2,
             {
               record: {
                 id: ROW_ID2,
                 rowVersion: '03',
-                queriedColumns: {oneHash: ['id']},
+                refCounts: {oneHash: 1},
               },
               contents: {id: 'same column selection as twoHash'},
             },
@@ -889,7 +875,7 @@ describe('view-syncer/cvr', () => {
               record: {
                 id: ROW_ID3,
                 rowVersion: '09',
-                queriedColumns: {oneHash: ['id']},
+                refCounts: {oneHash: 1},
               },
               contents: {id: 'new version patch'},
             },
@@ -898,19 +884,10 @@ describe('view-syncer/cvr', () => {
       ),
     ).toEqual([
       {
-        toVersion: {stateVersion: '1aa', minorVersion: 1},
-        patch: {
-          type: 'row',
-          op: 'merge',
-          id: ROW_ID1,
-          contents: {id: 'new version patch', name: 'because of new field'},
-        },
-      },
-      {
         toVersion: {stateVersion: '1a0'},
         patch: {
           type: 'row',
-          op: 'merge',
+          op: 'put',
           id: ROW_ID2,
           contents: {id: 'same column selection as twoHash'},
         },
@@ -935,30 +912,26 @@ describe('view-syncer/cvr', () => {
               record: {
                 id: ROW_ID1,
                 rowVersion: '03',
-                queriedColumns: {oneHash: ['id']},
+                refCounts: {oneHash: 1},
               },
-              contents: {id: 'patch stays at new version'},
+              contents: {id: 'should-show-up-in-patch'},
             },
           ],
         ]),
       ),
     ).toEqual([
       {
-        toVersion: {stateVersion: '1aa', minorVersion: 1},
+        toVersion: {stateVersion: '1a0'},
         patch: {
           type: 'row',
-          op: 'merge',
+          op: 'put',
           id: ROW_ID1,
-          contents: {id: 'patch stays at new version'},
+          contents: {id: 'should-show-up-in-patch'},
         },
       },
     ] satisfies PatchToVersion[]);
 
-    expect(await updater.deleteUnreferencedColumnsAndRows(lc)).toEqual([
-      {
-        patch: {id: ROW_ID2, op: 'constrain', type: 'row', columns: ['id']},
-        toVersion: {stateVersion: '1a0'},
-      },
+    expect(await updater.deleteUnreferencedRows(lc)).toEqual([
       {
         patch: {type: 'row', op: 'del', id: DELETED_ROW_ID},
         toVersion: {stateVersion: '1aa'},
@@ -1079,7 +1052,7 @@ describe('view-syncer/cvr', () => {
         {
           clientGroupID: 'abc123',
           patchVersion: '189',
-          queriedColumns: null,
+          refCounts: null,
           rowKey: IN_OLD_PATCH_ROW_KEY,
           rowVersion: '03',
           schema: 'public',
@@ -1088,7 +1061,7 @@ describe('view-syncer/cvr', () => {
         {
           clientGroupID: 'abc123',
           patchVersion: '1aa',
-          queriedColumns: null,
+          refCounts: null,
           rowKey: DELETE_ROW_KEY,
           rowVersion: '03',
           schema: 'public',
@@ -1097,9 +1070,9 @@ describe('view-syncer/cvr', () => {
         {
           clientGroupID: 'abc123',
           patchVersion: '1a0',
-          queriedColumns: {
-            oneHash: ['id'],
-            twoHash: ['id'],
+          refCounts: {
+            oneHash: 1,
+            twoHash: 1,
           },
           rowKey: ROW_KEY2,
           rowVersion: '03',
@@ -1109,8 +1082,8 @@ describe('view-syncer/cvr', () => {
         {
           clientGroupID: 'abc123',
           patchVersion: '1aa:01',
-          queriedColumns: {
-            oneHash: ['id'],
+          refCounts: {
+            oneHash: 1,
           },
           rowKey: ROW_KEY3,
           rowVersion: '09',
@@ -1119,10 +1092,10 @@ describe('view-syncer/cvr', () => {
         },
         {
           clientGroupID: 'abc123',
-          patchVersion: '1aa:01',
-          queriedColumns: {
-            oneHash: ['id', 'name'],
-            twoHash: ['id'],
+          patchVersion: '1a0',
+          refCounts: {
+            oneHash: 2,
+            twoHash: 1,
           },
           rowKey: ROW_KEY1,
           rowVersion: '03',
@@ -1196,9 +1169,9 @@ describe('view-syncer/cvr', () => {
           clientGroupID: 'abc123',
           rowKey: ROW_KEY1,
           rowVersion: '03',
-          queriedColumns: {
-            oneHash: ['id', 'name'],
-            twoHash: ['id'],
+          refCounts: {
+            oneHash: 1,
+            twoHash: 1,
           },
           patchVersion: '1aa:01',
           schema: 'public',
@@ -1208,7 +1181,7 @@ describe('view-syncer/cvr', () => {
           clientGroupID: 'abc123',
           rowKey: ROW_KEY2,
           rowVersion: '03',
-          queriedColumns: {twoHash: ['id']},
+          refCounts: {twoHash: 1},
           patchVersion: '1a0',
           schema: 'public',
           table: 'issues',
@@ -1217,7 +1190,7 @@ describe('view-syncer/cvr', () => {
           clientGroupID: 'abc123',
           rowKey: ROW_KEY3,
           rowVersion: '09',
-          queriedColumns: {oneHash: ['id']},
+          refCounts: {oneHash: 1},
           patchVersion: '1aa:01',
           schema: 'public',
           table: 'issues',
@@ -1226,7 +1199,7 @@ describe('view-syncer/cvr', () => {
           clientGroupID: 'abc123',
           rowKey: IN_OLD_PATCH_ROW_KEY,
           rowVersion: '03',
-          queriedColumns: null,
+          refCounts: null,
           patchVersion: '189',
           schema: 'public',
           table: 'issues',
@@ -1235,7 +1208,7 @@ describe('view-syncer/cvr', () => {
           clientGroupID: 'abc123',
           rowKey: DELETE_ROW_KEY,
           rowVersion: '03',
-          queriedColumns: null,
+          refCounts: null,
           patchVersion: '1ba',
           schema: 'public',
           table: 'issues',
@@ -1264,7 +1237,7 @@ describe('view-syncer/cvr', () => {
               record: {
                 id: ROW_ID1,
                 rowVersion: '03',
-                queriedColumns: {oneHash: ['id']}, // No longer referencing "name"
+                refCounts: {oneHash: 1},
               },
               contents: {id: 'existing patch'},
             },
@@ -1276,7 +1249,7 @@ describe('view-syncer/cvr', () => {
         toVersion: {stateVersion: '1aa', minorVersion: 1},
         patch: {
           type: 'row',
-          op: 'merge',
+          op: 'put',
           id: ROW_ID1,
           contents: {id: 'existing patch'},
         },
@@ -1299,7 +1272,7 @@ describe('view-syncer/cvr', () => {
               record: {
                 id: ROW_ID2,
                 rowVersion: '09',
-                queriedColumns: {oneHash: ['id']},
+                refCounts: {oneHash: 1},
               },
               contents: {id: 'new-row-version-should-bump-cvr-version'},
             },
@@ -1311,7 +1284,7 @@ describe('view-syncer/cvr', () => {
         toVersion: {stateVersion: '1ba', minorVersion: 1},
         patch: {
           type: 'row',
-          op: 'merge',
+          op: 'put',
           id: ROW_ID2,
           contents: {id: 'new-row-version-should-bump-cvr-version'},
         },
@@ -1320,11 +1293,7 @@ describe('view-syncer/cvr', () => {
 
     const newVersion = {stateVersion: '1ba', minorVersion: 1};
 
-    expect(await updater.deleteUnreferencedColumnsAndRows(lc)).toEqual([
-      {
-        patch: {type: 'row', op: 'constrain', id: ROW_ID1, columns: ['id']},
-        toVersion: newVersion,
-      },
+    expect(await updater.deleteUnreferencedRows(lc)).toEqual([
       {
         patch: {type: 'row', op: 'del', id: ROW_ID3},
         toVersion: newVersion,
@@ -1426,8 +1395,20 @@ describe('view-syncer/cvr', () => {
       rows: [
         {
           clientGroupID: 'abc123',
+          patchVersion: '1aa:01',
+          refCounts: {
+            oneHash: 1,
+            twoHash: 1,
+          },
+          rowKey: ROW_KEY1,
+          rowVersion: '03',
+          schema: 'public',
+          table: 'issues',
+        },
+        {
+          clientGroupID: 'abc123',
           patchVersion: '189',
-          queriedColumns: null,
+          refCounts: null,
           rowKey: IN_OLD_PATCH_ROW_KEY,
           rowVersion: '03',
           schema: 'public',
@@ -1436,7 +1417,7 @@ describe('view-syncer/cvr', () => {
         {
           clientGroupID: 'abc123',
           patchVersion: '1ba',
-          queriedColumns: null,
+          refCounts: null,
           rowKey: DELETE_ROW_KEY,
           rowVersion: '03',
           schema: 'public',
@@ -1445,9 +1426,9 @@ describe('view-syncer/cvr', () => {
         {
           clientGroupID: 'abc123',
           patchVersion: '1ba:01',
-          queriedColumns: {
-            oneHash: ['id'],
-            twoHash: ['id'],
+          refCounts: {
+            oneHash: 1,
+            twoHash: 1,
           },
           rowKey: ROW_KEY2,
           rowVersion: '09',
@@ -1457,19 +1438,7 @@ describe('view-syncer/cvr', () => {
         {
           clientGroupID: 'abc123',
           patchVersion: '1ba:01',
-          queriedColumns: {
-            oneHash: ['id'],
-            twoHash: ['id'],
-          },
-          rowKey: ROW_KEY1,
-          rowVersion: '03',
-          schema: 'public',
-          table: 'issues',
-        },
-        {
-          clientGroupID: 'abc123',
-          patchVersion: '1ba:01',
-          queriedColumns: null,
+          refCounts: null,
           rowKey: ROW_KEY3,
           rowVersion: '09',
           schema: 'public',
@@ -1559,7 +1528,7 @@ describe('view-syncer/cvr', () => {
           clientGroupID: 'abc123',
           rowKey: IN_OLD_PATCH_ROW_KEY,
           rowVersion: '03',
-          queriedColumns: null,
+          refCounts: null,
           patchVersion: '189',
           schema: 'public',
           table: 'issues',
@@ -1568,7 +1537,7 @@ describe('view-syncer/cvr', () => {
           clientGroupID: 'abc123',
           rowKey: DELETE_ROW_KEY,
           rowVersion: '03',
-          queriedColumns: null,
+          refCounts: null,
           patchVersion: '1ba',
           schema: 'public',
           table: 'issues',
@@ -1577,9 +1546,9 @@ describe('view-syncer/cvr', () => {
           clientGroupID: 'abc123',
           rowKey: ROW_KEY1,
           rowVersion: '03',
-          queriedColumns: {
-            oneHash: ['id', 'name'],
-            twoHash: ['id'],
+          refCounts: {
+            oneHash: 1,
+            twoHash: 1,
           },
           patchVersion: '1aa:01',
           schema: 'public',
@@ -1589,7 +1558,7 @@ describe('view-syncer/cvr', () => {
           clientGroupID: 'abc123',
           rowKey: ROW_KEY2,
           rowVersion: '03',
-          queriedColumns: {twoHash: ['id']},
+          refCounts: {twoHash: 1},
           patchVersion: '1a0',
           schema: 'public',
           table: 'issues',
@@ -1598,7 +1567,7 @@ describe('view-syncer/cvr', () => {
           clientGroupID: 'abc123',
           rowKey: ROW_KEY3,
           rowVersion: '09',
-          queriedColumns: {oneHash: ['id']},
+          refCounts: {oneHash: 1},
           patchVersion: '1aa:01',
           schema: 'public',
           table: 'issues',
@@ -1631,7 +1600,7 @@ describe('view-syncer/cvr', () => {
               record: {
                 id: ROW_ID1,
                 rowVersion: '03',
-                queriedColumns: {oneHash: ['id']}, // No longer referencing "name"
+                refCounts: {oneHash: 1},
               },
               contents: {id: 'existing-patch'},
             },
@@ -1643,7 +1612,7 @@ describe('view-syncer/cvr', () => {
         toVersion: {stateVersion: '1aa', minorVersion: 1},
         patch: {
           type: 'row',
-          op: 'merge',
+          op: 'put',
           id: ROW_ID1,
           contents: {id: 'existing-patch'},
         },
@@ -1659,23 +1628,23 @@ describe('view-syncer/cvr', () => {
               record: {
                 id: ROW_ID1,
                 rowVersion: '03',
-                queriedColumns: {
-                  twoHash: ['desc', 'id'], // Now referencing "desc"
+                refCounts: {
+                  twoHash: 1,
                 },
               },
-              contents: {id: 'new-column-bumps-cvr-version'},
+              contents: {id: 'existing-patch'},
             },
           ],
         ]),
       ),
     ).toEqual([
       {
-        toVersion: {stateVersion: '1ba', minorVersion: 1},
+        toVersion: {stateVersion: '1aa', minorVersion: 1},
         patch: {
           type: 'row',
-          op: 'merge',
+          op: 'put',
           id: ROW_ID1,
-          contents: {id: 'new-column-bumps-cvr-version'},
+          contents: {id: 'existing-patch'},
         },
       },
     ] satisfies PatchToVersion[]);
@@ -1689,7 +1658,7 @@ describe('view-syncer/cvr', () => {
             record: {
               id: ROW_ID2,
               rowVersion: '09',
-              queriedColumns: {oneHash: ['id']},
+              refCounts: {oneHash: 1},
             },
             contents: {
               /* ignored */
@@ -1707,7 +1676,7 @@ describe('view-syncer/cvr', () => {
             record: {
               id: ROW_ID2,
               rowVersion: '09',
-              queriedColumns: {twoHash: ['id']},
+              refCounts: {twoHash: 1},
             },
             contents: {
               /* ignored */
@@ -1719,16 +1688,7 @@ describe('view-syncer/cvr', () => {
 
     const newVersion = {stateVersion: '1ba', minorVersion: 1};
 
-    expect(await updater.deleteUnreferencedColumnsAndRows(lc)).toEqual([
-      {
-        patch: {
-          type: 'row',
-          op: 'constrain',
-          id: ROW_ID1,
-          columns: ['desc', 'id'],
-        },
-        toVersion: newVersion,
-      },
+    expect(await updater.deleteUnreferencedRows(lc)).toEqual([
       {
         patch: {type: 'row', op: 'del', id: ROW_ID3},
         toVersion: newVersion,
@@ -1855,7 +1815,7 @@ describe('view-syncer/cvr', () => {
         {
           clientGroupID: 'abc123',
           patchVersion: '189',
-          queriedColumns: null,
+          refCounts: null,
           rowKey: IN_OLD_PATCH_ROW_KEY,
           rowVersion: '03',
           schema: 'public',
@@ -1864,7 +1824,7 @@ describe('view-syncer/cvr', () => {
         {
           clientGroupID: 'abc123',
           patchVersion: '1ba',
-          queriedColumns: null,
+          refCounts: null,
           rowKey: DELETE_ROW_KEY,
           rowVersion: '03',
           schema: 'public',
@@ -1872,22 +1832,10 @@ describe('view-syncer/cvr', () => {
         },
         {
           clientGroupID: 'abc123',
-          patchVersion: '1ba:01',
-          queriedColumns: {
-            oneHash: ['id'],
-            twoHash: ['id'],
-          },
-          rowKey: ROW_KEY2,
-          rowVersion: '09',
-          schema: 'public',
-          table: 'issues',
-        },
-        {
-          clientGroupID: 'abc123',
-          patchVersion: '1ba:01',
-          queriedColumns: {
-            oneHash: ['id'],
-            twoHash: ['desc', 'id'],
+          patchVersion: '1aa:01',
+          refCounts: {
+            oneHash: 1,
+            twoHash: 1,
           },
           rowKey: ROW_KEY1,
           rowVersion: '03',
@@ -1897,7 +1845,19 @@ describe('view-syncer/cvr', () => {
         {
           clientGroupID: 'abc123',
           patchVersion: '1ba:01',
-          queriedColumns: null,
+          refCounts: {
+            oneHash: 1,
+            twoHash: 1,
+          },
+          rowKey: ROW_KEY2,
+          rowVersion: '09',
+          schema: 'public',
+          table: 'issues',
+        },
+        {
+          clientGroupID: 'abc123',
+          patchVersion: '1ba:01',
+          refCounts: null,
           rowKey: ROW_KEY3,
           rowVersion: '09',
           schema: 'public',
@@ -1956,7 +1916,7 @@ describe('view-syncer/cvr', () => {
           patchVersion: '189',
           rowKey: IN_OLD_PATCH_ROW_KEY,
           rowVersion: '03',
-          queriedColumns: null,
+          refCounts: null,
           schema: 'public',
           table: 'issues',
         },
@@ -1965,7 +1925,7 @@ describe('view-syncer/cvr', () => {
           patchVersion: '19z',
           rowKey: DELETE_ROW_KEY,
           rowVersion: '03',
-          queriedColumns: null,
+          refCounts: null,
           schema: 'public',
           table: 'issues',
         },
@@ -1973,9 +1933,9 @@ describe('view-syncer/cvr', () => {
           clientGroupID: 'abc123',
           patchVersion: '1aa:01',
           rowKey: ROW_KEY1,
-          queriedColumns: {
-            oneHash: ['id', 'name'],
-            twoHash: ['id'],
+          refCounts: {
+            oneHash: 1,
+            twoHash: 1,
           },
           rowVersion: '03',
           schema: 'public',
@@ -1985,7 +1945,7 @@ describe('view-syncer/cvr', () => {
           clientGroupID: 'abc123',
           patchVersion: '1ba',
           rowKey: ROW_KEY2,
-          queriedColumns: {twoHash: ['id']},
+          refCounts: {twoHash: 1},
           rowVersion: '03',
           schema: 'public',
           table: 'issues',
@@ -1994,7 +1954,7 @@ describe('view-syncer/cvr', () => {
           clientGroupID: 'abc123',
           patchVersion: '1aa:01',
           rowKey: ROW_KEY3,
-          queriedColumns: {oneHash: ['id']},
+          refCounts: {oneHash: 1},
           rowVersion: '09',
           schema: 'public',
           table: 'issues',
@@ -2011,11 +1971,7 @@ describe('view-syncer/cvr', () => {
     updater.trackQueries(lc, [], ['oneHash'], {stateVersion: '189'});
 
     const newVersion = {stateVersion: '1ba', minorVersion: 1};
-    expect(await updater.deleteUnreferencedColumnsAndRows(lc)).toEqual([
-      {
-        patch: {type: 'row', op: 'constrain', id: ROW_ID1, columns: ['id']},
-        toVersion: newVersion,
-      },
+    expect(await updater.deleteUnreferencedRows(lc)).toEqual([
       {
         patch: {type: 'row', op: 'del', id: ROW_ID3},
         toVersion: newVersion,
@@ -2023,10 +1979,6 @@ describe('view-syncer/cvr', () => {
       {
         patch: {type: 'row', op: 'del', id: DELETED_ROW_ID},
         toVersion: {stateVersion: '19z'},
-      },
-      {
-        patch: {type: 'row', op: 'constrain', id: ROW_ID2, columns: ['id']},
-        toVersion: {stateVersion: '1ba'},
       },
     ] satisfies PatchToVersion[]);
 
@@ -2097,7 +2049,7 @@ describe('view-syncer/cvr', () => {
         {
           clientGroupID: 'abc123',
           patchVersion: '189',
-          queriedColumns: null,
+          refCounts: null,
           rowKey: IN_OLD_PATCH_ROW_KEY,
           rowVersion: '03',
           schema: 'public',
@@ -2106,7 +2058,7 @@ describe('view-syncer/cvr', () => {
         {
           clientGroupID: 'abc123',
           patchVersion: '19z',
-          queriedColumns: null,
+          refCounts: null,
           rowKey: DELETE_ROW_KEY,
           rowVersion: '03',
           schema: 'public',
@@ -2115,8 +2067,8 @@ describe('view-syncer/cvr', () => {
         {
           clientGroupID: 'abc123',
           patchVersion: '1ba',
-          queriedColumns: {
-            twoHash: ['id'],
+          refCounts: {
+            twoHash: 1,
           },
           rowKey: ROW_KEY2,
           rowVersion: '03',
@@ -2126,8 +2078,8 @@ describe('view-syncer/cvr', () => {
         {
           clientGroupID: 'abc123',
           patchVersion: '1ba:01',
-          queriedColumns: {
-            twoHash: ['id'],
+          refCounts: {
+            twoHash: 1,
           },
           rowKey: ROW_KEY1,
           rowVersion: '03',
@@ -2137,7 +2089,7 @@ describe('view-syncer/cvr', () => {
         {
           clientGroupID: 'abc123',
           patchVersion: '1ba:01',
-          queriedColumns: null,
+          refCounts: null,
           rowKey: ROW_KEY3,
           rowVersion: '09',
           schema: 'public',
@@ -2228,7 +2180,7 @@ describe('view-syncer/cvr', () => {
           patchVersion: '189',
           rowKey: IN_OLD_PATCH_ROW_KEY,
           rowVersion: '03',
-          queriedColumns: null,
+          refCounts: null,
           schema: 'public',
           table: 'issues',
         },
@@ -2237,7 +2189,7 @@ describe('view-syncer/cvr', () => {
           patchVersion: '1ba',
           rowKey: DELETE_ROW_KEY,
           rowVersion: '03',
-          queriedColumns: null,
+          refCounts: null,
           schema: 'public',
           table: 'issues',
         },
@@ -2246,9 +2198,9 @@ describe('view-syncer/cvr', () => {
           patchVersion: '1aa:01',
           rowKey: ROW_KEY1,
           rowVersion: '03',
-          queriedColumns: {
-            oneHash: ['id', 'name'],
-            twoHash: ['id'],
+          refCounts: {
+            oneHash: 1,
+            twoHash: 1,
           },
           schema: 'public',
           table: 'issues',
@@ -2258,7 +2210,7 @@ describe('view-syncer/cvr', () => {
           patchVersion: '1a0',
           rowKey: ROW_KEY2,
           rowVersion: '03',
-          queriedColumns: {twoHash: ['id']},
+          refCounts: {twoHash: 1},
           schema: 'public',
           table: 'issues',
         },
@@ -2267,7 +2219,7 @@ describe('view-syncer/cvr', () => {
           patchVersion: '1aa:01',
           rowKey: ROW_KEY3,
           rowVersion: '09',
-          queriedColumns: {oneHash: ['id']},
+          refCounts: {oneHash: 1},
           schema: 'public',
           table: 'issues',
         },
@@ -2365,8 +2317,8 @@ describe('view-syncer/cvr', () => {
               record: {
                 id: ROW_ID1,
                 rowVersion: '03',
-                queriedColumns: {
-                  oneHash: ['id', 'name'],
+                refCounts: {
+                  oneHash: 1,
                 },
               },
               contents: {id: 'existing-patch'},
@@ -2379,7 +2331,7 @@ describe('view-syncer/cvr', () => {
         toVersion: {stateVersion: '1aa', minorVersion: 1},
         patch: {
           type: 'row',
-          op: 'merge',
+          op: 'put',
           id: ROW_ID1,
           contents: {id: 'existing-patch'},
         },
@@ -2395,7 +2347,7 @@ describe('view-syncer/cvr', () => {
               record: {
                 id: ROW_ID1,
                 rowVersion: '03',
-                queriedColumns: {twoHash: ['id']},
+                refCounts: {twoHash: 1},
               },
               contents: {id: 'existing-patch'},
             },
@@ -2407,7 +2359,7 @@ describe('view-syncer/cvr', () => {
         toVersion: {stateVersion: '1aa', minorVersion: 1},
         patch: {
           type: 'row',
-          op: 'merge',
+          op: 'put',
           id: ROW_ID1,
           contents: {id: 'existing-patch'},
         },
@@ -2422,7 +2374,7 @@ describe('view-syncer/cvr', () => {
             record: {
               id: ROW_ID3,
               rowVersion: '09',
-              queriedColumns: {oneHash: ['id']},
+              refCounts: {oneHash: 1},
             },
             contents: {
               /* ignored */
@@ -2440,7 +2392,7 @@ describe('view-syncer/cvr', () => {
             record: {
               id: ROW_ID2,
               rowVersion: '03',
-              queriedColumns: {twoHash: ['id']},
+              refCounts: {twoHash: 1},
             },
             contents: {
               /* ignored */
@@ -2450,35 +2402,8 @@ describe('view-syncer/cvr', () => {
       ]),
     );
 
-    expect(new Set(await updater.deleteUnreferencedColumnsAndRows(lc))).toEqual(
+    expect(new Set(await updater.deleteUnreferencedRows(lc))).toEqual(
       new Set([
-        {
-          patch: {
-            type: 'row',
-            op: 'constrain',
-            id: ROW_ID2,
-            columns: ['id'],
-          },
-          toVersion: {stateVersion: '1a0'}, // Same patch.
-        },
-        {
-          patch: {
-            type: 'row',
-            op: 'constrain',
-            id: ROW_ID1,
-            columns: ['id', 'name'],
-          },
-          toVersion: {stateVersion: '1aa', minorVersion: 1}, // Same patch.
-        },
-        {
-          patch: {
-            type: 'row',
-            op: 'constrain',
-            id: ROW_ID3,
-            columns: ['id'],
-          },
-          toVersion: {stateVersion: '1aa', minorVersion: 1}, // Same patch.
-        },
         {
           patch: {type: 'row', op: 'del', id: DELETED_ROW_ID},
           toVersion: {stateVersion: '1ba'},
