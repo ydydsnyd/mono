@@ -21,8 +21,7 @@ LOG_LEVEL = "debug"
 Open two windows one with docker-compose and the other workers:
 
 ```
-# note: on mac os, this might be `docker compose` (with a space not dash)
-cd docker && docker-compose up
+cd docker && docker compose up
 npm run start-zero-cache
 ```
 
