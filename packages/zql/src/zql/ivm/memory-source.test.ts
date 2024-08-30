@@ -1,16 +1,16 @@
 import {expect, test} from 'vitest';
 import {Ordering} from '../ast/ast.js';
+import {Catch} from './catch.js';
 import {compareRowsTest} from './data.test.js';
 import {MemorySource} from './memory-source.js';
+import {PrimaryKeys, ValueType} from './schema.js';
 import {runCases} from './test/source-cases.js';
-import {ValueType} from './schema.js';
-import {Catch} from './catch.js';
 
 runCases(
   (
     name: string,
     columns: Record<string, ValueType>,
-    primaryKeys: readonly string[],
+    primaryKeys: PrimaryKeys,
   ) => new MemorySource(name, columns, primaryKeys),
 );
 
