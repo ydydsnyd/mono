@@ -4,7 +4,7 @@ import {Catch} from 'zql/src/zql/ivm/catch.js';
 import {makeComparator} from 'zql/src/zql/ivm/data.js';
 import {ValueType} from 'zql/src/zql/ivm/schema.js';
 import {runCases} from 'zql/src/zql/ivm/test/source-cases.js';
-import {compile, sql} from '../internal/sql.js';
+import {compile, sql} from './internal/sql.js';
 import {TableSource} from './table-source.js';
 
 const columns = {
