@@ -1,6 +1,5 @@
 import {describe, expect, test} from 'vitest';
-import {newQuery, QueryDelegate} from './query-impl.js';
-import {MemoryStorage} from '../ivm/memory-storage.js';
+import {CommitListener, newQuery, QueryDelegate} from './query-impl.js';
 import {MemorySource} from '../ivm/memory-source.js';
 import {
   commentSchema,
@@ -11,7 +10,38 @@ import {
   userSchema,
 } from './test/testSchemas.js';
 import {toInputArgs} from './schema.js';
-import {must} from 'shared/src/must.js';
+import {Storage} from '../ivm/operator.js';
+import {Source} from '../ivm/source.js';
+import {deepClone} from 'shared/src/deep-clone.js';
+import {MemoryStorage} from '../ivm/memory-storage.js';
+
+class QueryDelegateImpl implements QueryDelegate {
+  #sources: Record<string, Source> = makeSources();
+  #commitListeners: Set<CommitListener> = new Set();
+
+  onTransactionCommit(listener: CommitListener): () => void {
+    this.#commitListeners.add(listener);
+    return () => {
+      this.#commitListeners.delete(listener);
+    };
+  }
+
+  commit() {
+    for (const listener of this.#commitListeners) {
+      listener();
+    }
+  }
+
+  addServerQuery(): () => void {
+    return () => {};
+  }
+  getSource(name: string): Source {
+    return this.#sources[name];
+  }
+  createStorage(): Storage {
+    return new MemoryStorage();
+  }
+}
 
 /**
  * Some basic manual tests to get us started.
@@ -137,33 +167,18 @@ function addData(queryDelegate: QueryDelegate) {
   });
 }
 
-function makeQueryDelegate(): QueryDelegate {
-  const sources = makeSources();
-  return {
-    getSource(tableName: string) {
-      return must(sources[tableName as keyof typeof sources]);
-    },
-    createStorage() {
-      return new MemoryStorage();
-    },
-    addServerQuery() {
-      return () => {};
-    },
-  };
-}
-
 describe('bare select', () => {
   test('empty source', () => {
-    const queryDelegate = makeQueryDelegate();
+    const queryDelegate = new QueryDelegateImpl();
     const issueQuery = newQuery(queryDelegate, issueSchema).select('id');
     const m = issueQuery.materialize();
     m.hydrate();
 
-    let rows: readonly {id: string}[] = [];
+    let rows: readonly unknown[] = [];
     let called = false;
     m.addListener(data => {
       called = true;
-      rows = data;
+      rows = deepClone(data) as unknown[];
     });
 
     expect(called).toBe(true);
@@ -177,14 +192,14 @@ describe('bare select', () => {
   });
 
   test('empty source followed by changes', () => {
-    const queryDelegate = makeQueryDelegate();
+    const queryDelegate = new QueryDelegateImpl();
     const issueQuery = newQuery(queryDelegate, issueSchema).select('id');
     const m = issueQuery.materialize();
     m.hydrate();
 
-    let rows: {id: string}[] = [];
+    let rows: unknown[] = [];
     m.addListener(data => {
-      rows = [...data];
+      rows = deepClone(data) as unknown[];
     });
 
     expect(rows).toEqual([]);
@@ -199,6 +214,7 @@ describe('bare select', () => {
         ownerId: '0001',
       },
     });
+    queryDelegate.commit();
 
     expect(rows).toEqual([
       {
@@ -216,12 +232,13 @@ describe('bare select', () => {
         id: '0001',
       },
     });
+    queryDelegate.commit();
 
     expect(rows).toEqual([]);
   });
 
   test('source with initial data', () => {
-    const queryDelegate = makeQueryDelegate();
+    const queryDelegate = new QueryDelegateImpl();
     queryDelegate.getSource('issue').push({
       type: 'add',
       row: {
@@ -237,9 +254,9 @@ describe('bare select', () => {
     const m = issueQuery.materialize();
     m.hydrate();
 
-    let rows: {id: string}[] = [];
+    let rows: unknown[] = [];
     m.addListener(data => {
-      rows = [...data];
+      rows = deepClone(data) as unknown[];
     });
 
     expect(rows).toEqual([
@@ -254,7 +271,7 @@ describe('bare select', () => {
   });
 
   test('source with initial data followed by changes', () => {
-    const queryDelegate = makeQueryDelegate();
+    const queryDelegate = new QueryDelegateImpl();
 
     queryDelegate.getSource('issue').push({
       type: 'add',
@@ -271,9 +288,9 @@ describe('bare select', () => {
     const m = issueQuery.materialize();
     m.hydrate();
 
-    let rows: {id: string}[] = [];
+    let rows: unknown[] = [];
     m.addListener(data => {
-      rows = [...data];
+      rows = deepClone(data) as unknown[];
     });
 
     expect(rows).toEqual([
@@ -296,6 +313,7 @@ describe('bare select', () => {
         ownerId: '0002',
       },
     });
+    queryDelegate.commit();
 
     expect(rows).toEqual([
       {
@@ -318,7 +336,7 @@ describe('bare select', () => {
 
 describe('joins and filters', () => {
   test('filter', () => {
-    const queryDelegate = makeQueryDelegate();
+    const queryDelegate = new QueryDelegateImpl();
     addData(queryDelegate);
 
     const issueQuery = newQuery(queryDelegate, issueSchema)
@@ -340,13 +358,13 @@ describe('joins and filters', () => {
     doubleFilterViewWithNoResults.hydrate();
 
     singleFilterView.addListener(data => {
-      singleFilterRows = [...data];
+      singleFilterRows = deepClone(data) as {id: string}[];
     });
     doubleFilterView.addListener(data => {
-      doubleFilterRows = [...data];
+      doubleFilterRows = deepClone(data) as {id: string}[];
     });
     doubleFilterViewWithNoResults.addListener(data => {
-      doubleFilterWithNoResultsRows = [...data];
+      doubleFilterWithNoResultsRows = deepClone(data) as {id: string}[];
     });
 
     expect(singleFilterRows.map(r => r.id)).toEqual(['0001']);
@@ -363,6 +381,7 @@ describe('joins and filters', () => {
         ownerId: '0001',
       },
     });
+    queryDelegate.commit();
 
     expect(singleFilterRows).toEqual([]);
     expect(doubleFilterRows).toEqual([]);
@@ -379,6 +398,13 @@ describe('joins and filters', () => {
       },
     });
 
+    // no commit
+    expect(singleFilterRows).toEqual([]);
+    expect(doubleFilterRows).toEqual([]);
+    expect(doubleFilterWithNoResultsRows).toEqual([]);
+
+    queryDelegate.commit();
+
     expect(singleFilterRows.map(r => r.id)).toEqual(['0001']);
     expect(doubleFilterRows).toEqual([]);
     // has results since we changed closed to true in the mutation
@@ -386,7 +412,7 @@ describe('joins and filters', () => {
   });
 
   test('join', () => {
-    const queryDelegate = makeQueryDelegate();
+    const queryDelegate = new QueryDelegateImpl();
     addData(queryDelegate);
 
     const issueQuery = newQuery(queryDelegate, issueSchema)
@@ -397,15 +423,9 @@ describe('joins and filters', () => {
     const view = issueQuery.materialize();
     view.hydrate();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let rows: any[] = [];
+    let rows: unknown[] = [];
     view.addListener(data => {
-      rows = [...data].map(row => ({
-        ...row,
-        owner: [...row.owner],
-        labels: [...row.labels],
-        comments: [...row.comments],
-      }));
+      rows = deepClone(data) as unknown[];
     });
 
     expect(rows).toEqual([
@@ -479,6 +499,7 @@ describe('joins and filters', () => {
         ownerId: '0002',
       },
     });
+    queryDelegate.commit();
 
     expect(rows).toEqual([]);
   });
