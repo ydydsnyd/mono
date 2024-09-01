@@ -6,6 +6,7 @@ import {EntryList, ArrayView} from './array-view.js';
 import {Immutable} from 'shared/src/immutable.js';
 import {Schema} from './schema.js';
 import {Change} from './change.js';
+import {deepClone} from 'shared/src/deep-clone.js';
 
 test('basics', () => {
   const ms = new MemorySource('table', {a: 'number', b: 'string'}, ['a']);
@@ -15,10 +16,10 @@ test('basics', () => {
   const view = new ArrayView(ms.connect([['b', 'asc']]));
 
   let callCount = 0;
-  let data: Immutable<EntryList> = [];
+  let data: unknown[] = [];
   const listener = (d: Immutable<EntryList>) => {
     ++callCount;
-    data = d;
+    data = deepClone(d) as unknown[];
   };
   const unlisten = view.addListener(listener);
 
@@ -32,6 +33,11 @@ test('basics', () => {
   expect(() => view.hydrate()).toThrow("Can't hydrate twice");
 
   ms.push({row: {a: 3, b: 'c'}, type: 'add'});
+
+  // We don't get called until flush.
+  expect(callCount).toBe(1);
+
+  view.flush();
   expect(callCount).toBe(2);
   expect(data).toEqual([
     {a: 1, b: 'a'},
@@ -40,20 +46,21 @@ test('basics', () => {
   ]);
 
   ms.push({row: {a: 2, b: 'b'}, type: 'remove'});
+  expect(callCount).toBe(2);
+  ms.push({row: {a: 1, b: 'a'}, type: 'remove'});
+  expect(callCount).toBe(2);
+
+  view.flush();
   expect(callCount).toBe(3);
-  expect(data).toEqual([
-    {a: 1, b: 'a'},
-    {a: 3, b: 'c'},
-  ]);
+  expect(data).toEqual([{a: 3, b: 'c'}]);
 
   unlisten();
-  ms.push({row: {a: 1, b: 'a'}, type: 'remove'});
+  ms.push({row: {a: 3, b: 'c'}, type: 'remove'});
   expect(callCount).toBe(3);
 
-  view.addListener(listener);
-  ms.push({row: {a: 3, b: 'c'}, type: 'remove'});
-  expect(callCount).toBe(5);
-  expect(data).toEqual([]);
+  view.flush();
+  expect(callCount).toBe(3);
+  expect(data).toEqual([{a: 3, b: 'c'}]);
 });
 
 test('tree', () => {
@@ -86,9 +93,9 @@ test('tree', () => {
   });
 
   const view = new ArrayView(join);
-  let data: Immutable<EntryList> = [];
+  let data: unknown[] = [];
   const listener = (d: Immutable<EntryList>) => {
-    data = d;
+    data = deepClone(d) as unknown[];
   };
   view.addListener(listener);
 
@@ -134,6 +141,7 @@ test('tree', () => {
 
   // add parent with child
   ms.push({type: 'add', row: {id: 5, name: 'chocolate', childID: 2}});
+  view.flush();
   expect(data).toEqual([
     {
       id: 5,
@@ -187,6 +195,7 @@ test('tree', () => {
 
   // remove parent with child
   ms.push({type: 'remove', row: {id: 5, name: 'chocolate', childID: 2}});
+  view.flush();
   expect(data).toEqual([
     {
       id: 1,
@@ -235,6 +244,7 @@ test('tree', () => {
       childID: null,
     },
   });
+  view.flush();
   expect(data).toEqual([
     {
       id: 1,
@@ -271,6 +281,7 @@ test('tree', () => {
       childID: null,
     },
   });
+  view.flush();
   expect(data).toEqual([
     {
       id: 1,
@@ -312,9 +323,6 @@ test('tree', () => {
 });
 
 test('collapse hidden relationships', () => {
-  // add
-  // remove
-  // child change
   const schema: Schema = {
     tableName: 'issue',
     primaryKey: ['id'],
@@ -370,6 +378,11 @@ test('collapse hidden relationships', () => {
   };
 
   const view = new ArrayView(input);
+  let data: unknown[] = [];
+  view.addListener(d => {
+    data = deepClone(d) as unknown[];
+  });
+
   const changeSansType = {
     node: {
       row: {
@@ -404,8 +417,9 @@ test('collapse hidden relationships', () => {
     type: 'add',
     ...changeSansType,
   });
+  view.flush();
 
-  expect(view.data).toEqual([
+  expect(data).toEqual([
     {
       id: 1,
       labels: [
@@ -422,13 +436,17 @@ test('collapse hidden relationships', () => {
     type: 'remove',
     ...changeSansType,
   });
+  view.flush();
 
-  expect(view.data).toEqual([]);
+  expect(data).toEqual([]);
 
   view.push({
     type: 'add',
     ...changeSansType,
   });
+  // no commit
+  expect(data).toEqual([]);
+
   view.push({
     type: 'child',
     row: {
@@ -460,8 +478,9 @@ test('collapse hidden relationships', () => {
       },
     },
   });
+  view.flush();
 
-  expect(view.data).toEqual([
+  expect(data).toEqual([
     {
       id: 1,
       labels: [

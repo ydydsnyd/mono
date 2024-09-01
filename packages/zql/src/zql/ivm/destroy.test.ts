@@ -6,6 +6,7 @@ import {Filter} from './filter.js';
 import {MemoryStorage} from './memory-storage.js';
 import {ArrayView, EntryList} from './array-view.js';
 import {Immutable} from 'shared/src/immutable.js';
+import {deepClone} from 'shared/src/deep-clone.js';
 
 test('destroy source connections', () => {
   const ms = new MemorySource('table', {a: 'string', b: 'string'}, ['a']);
@@ -80,10 +81,11 @@ test('destroy a pipeline from the view', () => {
     relationshipName: 'stuff',
     hidden: false,
   });
+
   const view = new ArrayView(join);
-  let data: Immutable<EntryList> = [];
+  let data: unknown[] = [];
   const listener = (d: Immutable<EntryList>) => {
-    data = d;
+    data = deepClone(d) as unknown[];
   };
   view.addListener(listener);
   view.hydrate();
@@ -102,6 +104,7 @@ test('destroy a pipeline from the view', () => {
       b: 'b-source-2',
     },
   });
+  view.flush();
 
   const expected = [
     {
@@ -126,6 +129,7 @@ test('destroy a pipeline from the view', () => {
       b: 'b-source-2',
     },
   });
+  view.flush();
 
   // view was destroyed before last push so data is unchanged
   expect(data).toEqual(expected);
