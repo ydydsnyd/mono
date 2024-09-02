@@ -17,7 +17,7 @@ test('basics', () => {
   ms.push({row: {a: 1, b: 'a'}, type: 'add'});
   ms.push({row: {a: 2, b: 'b'}, type: 'add'});
 
-  const view = new ArrayView(ms.connect([['b', 'asc']]));
+  const view = new ArrayView(ms.connect([['b', 'asc'], ['a', 'asc']]));
 
   let callCount = 0;
   let data: unknown[] = [];
@@ -91,8 +91,8 @@ test('tree', () => {
   });
 
   const join = new Join({
-    parent: ms.connect([['name', 'asc']]),
-    child: ms.connect([['name', 'desc']]),
+    parent: ms.connect([['name', 'asc'], ['id', 'asc']]),
+    child: ms.connect([['name', 'desc'], ['id', 'desc']]),
     storage: new MemoryStorage(),
     parentKey: 'childID',
     childKey: 'id',
@@ -338,12 +338,14 @@ test('collapse hidden relationships', () => {
       id: {type: 'number'},
       name: {type: 'string'},
     },
+    sort: [['id', 'asc']],
     isHidden: false,
     compareRows: (r1, r2) => (r1.id as number) - (r2.id as number),
     relationships: {
       labels: {
         tableName: 'issueLabel',
         primaryKey: ['id'],
+        sort: [['id', 'asc']],
         columns: {
           id: {type: 'number'},
           issueId: {type: 'number'},
@@ -360,6 +362,7 @@ test('collapse hidden relationships', () => {
               name: {type: 'string'},
             },
             isHidden: false,
+            sort: [['id', 'asc']],
             compareRows: (r1, r2) => (r1.id as number) - (r2.id as number),
             relationships: {},
           },
