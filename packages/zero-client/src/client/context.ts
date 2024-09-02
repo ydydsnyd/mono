@@ -77,6 +77,7 @@ export class ZeroContext implements QueryDelegate {
 
   processChanges(changes: ExperimentalNoIndexDiff) {
     console.log('processChanges', changes);
+    let entityAdded = false;
     try {
       for (const diff of changes) {
         const {key} = diff;
@@ -94,6 +95,7 @@ export class ZeroContext implements QueryDelegate {
         }
         if (diff.op === 'add' || diff.op === 'change') {
           assert(typeof diff.newValue === 'object');
+          entityAdded = true;
           source.push({
             type: 'add',
             row: diff.newValue as Row,
@@ -103,7 +105,7 @@ export class ZeroContext implements QueryDelegate {
     } finally {
       this.#endTransaction();
     }
-    if (changes.length > 0 && !this.#initialized) {
+    if (entityAdded && !this.#initialized) {
       console.log('context initialized');
       this.#initialized = true;
       this.#initializedResolver.resolve();
