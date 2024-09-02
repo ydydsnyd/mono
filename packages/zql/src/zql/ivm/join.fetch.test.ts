@@ -850,14 +850,14 @@ function fetchTest(t: FetchTest) {
 
 type FetchTest = {
   name: string;
-  columns: readonly Readonly<Record<string, ValueType>>[];
+  columns: readonly Record<string, ValueType>[];
   primaryKeys: readonly PrimaryKeys[];
   sources: Row[][];
   sorts?: (Ordering | undefined)[] | undefined;
   joins: readonly {
-    readonly parentKey: string;
-    readonly childKey: string;
-    readonly relationshipName: string;
+    parentKey: string;
+    childKey: string;
+    relationshipName: string;
   }[];
   expectedMessages: SnitchMessage[];
   expectedPrimaryKeySetStorageKeys: NormalizedValue[][][];

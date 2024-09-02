@@ -370,14 +370,14 @@ function pushSiblingTest(t: PushTestSibling) {
 
 type PushTestSibling = {
   name: string;
-  columns: readonly {readonly [key: string]: ValueType}[];
+  columns: readonly Record<string, ValueType>[];
   primaryKeys: readonly PrimaryKeys[];
   sources: Row[][];
   sorts?: Record<number, Ordering> | undefined;
   joins: readonly {
-    readonly parentKey: string;
-    readonly childKey: string;
-    readonly relationshipName: string;
+    parentKey: string;
+    childKey: string;
+    relationshipName: string;
   }[];
   pushes: [sourceIndex: number, change: SourceChange][];
   expectedLog: SnitchMessage[];
