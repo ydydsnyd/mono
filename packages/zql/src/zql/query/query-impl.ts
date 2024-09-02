@@ -345,14 +345,17 @@ class ProxyView<T> implements TypedView<T> {
   #hydrated = false;
 
   constructor(ast: AST, delegate: QueryDelegate) {
+    console.log('huh');
     this.#ast = ast;
     this.#delegate = delegate;
     const isInitialized = delegate.isInitialized();
+    console.log('isInitialized', isInitialized);
     if (isInitialized === true) {
       this.#initArrayView();
     } else {
       isInitialized
         .then(() => {
+          console.log('delayedInit');
           this.#initArrayView();
         })
         .catch(e => {
@@ -376,14 +379,20 @@ class ProxyView<T> implements TypedView<T> {
       return;
     }
     this.#arrayView = new ArrayView(buildPipeline(this.#ast, this.#delegate));
+    for (const meta of this.#listeners) {
+      console.log('adding listeners');
+      // Kill any
+      meta.arrayViewCleanup = this.#arrayView.addListener(meta.listener as any);
+    }
     if (this.#hydrated) {
+      console.log('hydrating');
       this.#arrayView.hydrate();
     }
   }
 
   addListener(listener: Listener<T>): () => void {
     if (this.#arrayView) {
-      // DO BETTER
+      // Kill any
       return this.#arrayView.addListener(listener as any);
     }
     const listenerMeta: ListenerMeta<T> = {

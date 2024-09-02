@@ -257,6 +257,7 @@ export class PipelineDriver {
   *#push(table: string, change: SourceChange): Iterable<RowChange> {
     const source = this.#tables.get(table);
     assert(source, `TableSource for ${table} not found`);
+    console.log('Pushing change', change);
 
     this.#startAccumulating();
     source.push(change);

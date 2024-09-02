@@ -76,6 +76,7 @@ export class ZeroContext implements QueryDelegate {
   }
 
   processChanges(changes: ExperimentalNoIndexDiff) {
+    console.log('processChanges', changes);
     try {
       for (const diff of changes) {
         const {key} = diff;
@@ -102,8 +103,11 @@ export class ZeroContext implements QueryDelegate {
     } finally {
       this.#endTransaction();
     }
-    this.#initialized = true;
-    this.#initializedResolver.resolve();
+    if (changes.length > 0 && !this.#initialized) {
+      console.log('context initialized');
+      this.#initialized = true;
+      this.#initializedResolver.resolve();
+    }
   }
 
   #endTransaction() {
