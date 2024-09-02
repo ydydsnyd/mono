@@ -1,23 +1,23 @@
-import {expect, suite, test} from 'vitest';
-import {Join, createPrimaryKeySetStorageKey} from './join.js';
-import {MemorySource} from './memory-source.js';
-import {MemoryStorage} from './memory-storage.js';
-import {SnitchMessage, Snitch} from './snitch.js';
-import type {NormalizedValue, Row} from './data.js';
 import {assert} from 'shared/src/asserts.js';
+import {expect, suite, test} from 'vitest';
 import type {Ordering} from '../ast/ast.js';
 import {Catch} from './catch.js';
 import type {Change} from './change.js';
-import type {SourceChange} from './source.js';
-import type {ValueType} from './schema.js';
+import type {NormalizedValue, Row} from './data.js';
+import {Join, createPrimaryKeySetStorageKey} from './join.js';
+import {MemorySource} from './memory-source.js';
+import {MemoryStorage} from './memory-storage.js';
 import {Input} from './operator.js';
+import type {PrimaryKeys, ValueType} from './schema.js';
+import {Snitch, SnitchMessage} from './snitch.js';
+import type {SourceChange} from './source.js';
 
 suite('sibling relationships tests with issues, comments, and owners', () => {
   const base = {
     columns: [
-      {id: 'string', ownerId: 'string'} as const,
-      {id: 'string', issueId: 'string'} as const,
-      {id: 'string'} as const,
+      {id: 'string', ownerId: 'string'},
+      {id: 'string', issueId: 'string'},
+      {id: 'string'},
     ],
     primaryKeys: [['id'], ['id'], ['id']],
     joins: [
@@ -32,7 +32,7 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
         relationshipName: 'owners',
       },
     ],
-  };
+  } as const;
 
   pushSiblingTest({
     ...base,
@@ -370,11 +370,11 @@ function pushSiblingTest(t: PushTestSibling) {
 
 type PushTestSibling = {
   name: string;
-  columns: Record<string, ValueType>[];
-  primaryKeys: readonly string[][];
+  columns: readonly Record<string, ValueType>[];
+  primaryKeys: readonly PrimaryKeys[];
   sources: Row[][];
   sorts?: Record<number, Ordering> | undefined;
-  joins: {
+  joins: readonly {
     parentKey: string;
     childKey: string;
     relationshipName: string;

@@ -1,22 +1,19 @@
-import {expect, suite, test} from 'vitest';
-import {Join, createPrimaryKeySetStorageKey} from './join.js';
-import {MemorySource} from './memory-source.js';
-import {MemoryStorage} from './memory-storage.js';
-import {SnitchMessage, Snitch} from './snitch.js';
-import type {NormalizedValue, Row} from './data.js';
 import {assert} from 'shared/src/asserts.js';
+import {expect, suite, test} from 'vitest';
 import type {Ordering} from '../ast/ast.js';
 import {Catch} from './catch.js';
 import type {Change} from './change.js';
+import type {NormalizedValue, Row} from './data.js';
+import {Join, createPrimaryKeySetStorageKey} from './join.js';
+import {MemorySource} from './memory-source.js';
+import {MemoryStorage} from './memory-storage.js';
+import type {PrimaryKeys, ValueType} from './schema.js';
+import {Snitch, SnitchMessage} from './snitch.js';
 import type {SourceChange} from './source.js';
-import type {ValueType} from './schema.js';
 
 suite('push one:many', () => {
   const base = {
-    columns: [
-      {id: 'string' as const},
-      {id: 'string', issueID: 'string'} as const,
-    ],
+    columns: [{id: 'string'}, {id: 'string', issueID: 'string'}],
     primaryKeys: [['id'], ['id']],
     joins: [
       {
@@ -25,7 +22,7 @@ suite('push one:many', () => {
         relationshipName: 'comments',
       },
     ],
-  };
+  } as const;
 
   pushTest({
     ...base,
@@ -364,10 +361,7 @@ suite('push one:many', () => {
 
 suite('push many:one', () => {
   const base = {
-    columns: [
-      {id: 'string', ownerID: 'string'} as const,
-      {id: 'string'} as const,
-    ],
+    columns: [{id: 'string', ownerID: 'string'}, {id: 'string'}],
     primaryKeys: [['id'], ['id']],
     joins: [
       {
@@ -376,7 +370,7 @@ suite('push many:one', () => {
         relationshipName: 'owner',
       },
     ],
-  };
+  } as const;
 
   pushTest({
     ...base,
@@ -530,9 +524,9 @@ suite('push many:one', () => {
 suite('push one:many:many', () => {
   const base = {
     columns: [
-      {id: 'string'} as const,
-      {id: 'string', issueID: 'string'} as const,
-      {id: 'string', labelID: 'string'} as const,
+      {id: 'string'},
+      {id: 'string', issueID: 'string'},
+      {id: 'string', labelID: 'string'},
     ],
     primaryKeys: [['id'], ['id'], ['id']],
     joins: [
@@ -547,7 +541,7 @@ suite('push one:many:many', () => {
         relationshipName: 'revisions',
       },
     ],
-  };
+  } as const;
 
   pushTest({
     ...base,
@@ -709,9 +703,9 @@ suite('push one:many:many', () => {
 suite('push one:many:one', () => {
   const base = {
     columns: [
-      {id: 'string'} as const,
-      {issueID: 'string', labelID: 'string'} as const,
-      {id: 'string'} as const,
+      {id: 'string'},
+      {issueID: 'string', labelID: 'string'},
+      {id: 'string'},
     ],
     primaryKeys: [['id'], ['issueID', 'labelID'], ['id']],
     joins: [
@@ -726,7 +720,7 @@ suite('push one:many:one', () => {
         relationshipName: 'labels',
       },
     ],
-  };
+  } as const;
 
   const sorts = {
     1: [
@@ -980,11 +974,11 @@ function pushTest(t: PushTest) {
 
 type PushTest = {
   name: string;
-  columns: Record<string, ValueType>[];
-  primaryKeys: readonly string[][];
+  columns: readonly Record<string, ValueType>[];
+  primaryKeys: readonly PrimaryKeys[];
   sources: Row[][];
   sorts?: Record<number, Ordering> | undefined;
-  joins: {
+  joins: readonly {
     parentKey: string;
     childKey: string;
     relationshipName: string;

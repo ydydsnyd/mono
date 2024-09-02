@@ -1,29 +1,29 @@
-import {test, expect, suite} from 'vitest';
+import {JSONValue} from 'shared/src/json.js';
+import {expect, suite, test} from 'vitest';
 import {Ordering} from '../ast/ast.js';
+import {Catch} from './catch.js';
+import {Change} from './change.js';
 import {Row, Value} from './data.js';
-import {ValueType} from './schema.js';
-import {Snitch, SnitchMessage} from './snitch.js';
-import {Take} from './take.js';
 import {MemorySource} from './memory-source.js';
 import {MemoryStorage} from './memory-storage.js';
-import {Catch} from './catch.js';
-import {JSONValue} from 'shared/src/json.js';
+import {PrimaryKeys, ValueType} from './schema.js';
+import {Snitch, SnitchMessage} from './snitch.js';
 import {SourceChange} from './source.js';
-import {Change} from './change.js';
+import {Take} from './take.js';
 
 suite('take with no partition', () => {
   const base = {
     columns: {
-      id: 'string' as const,
-      created: 'number' as const,
+      id: 'string',
+      created: 'number',
     },
     primaryKeys: ['id'],
     sort: [
       ['created', 'asc'],
       ['id', 'asc'],
-    ] as const,
+    ],
     partition: undefined,
-  };
+  } as const;
 
   suite('add', () => {
     takeTest({
@@ -497,16 +497,16 @@ suite('take with no partition', () => {
 suite('take with partition', () => {
   const base = {
     columns: {
-      id: 'string' as const,
-      issueID: 'string' as const,
-      created: 'number' as const,
+      id: 'string',
+      issueID: 'string',
+      created: 'number',
     },
     primaryKeys: ['id'],
     sort: [
       ['created', 'asc'],
       ['id', 'asc'],
-    ] as const,
-  };
+    ],
+  } as const;
 
   suite('add', () => {
     takeTest({
@@ -805,7 +805,7 @@ function takeTest(t: TakeTest) {
 type TakeTest = {
   name: string;
   columns: Record<string, ValueType>;
-  primaryKeys: readonly string[];
+  primaryKeys: PrimaryKeys;
   sourceRows: Row[];
   sort?: Ordering | undefined;
   limit: number;
