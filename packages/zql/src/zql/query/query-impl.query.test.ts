@@ -1,6 +1,10 @@
+import {deepClone} from 'shared/src/deep-clone.js';
 import {describe, expect, test} from 'vitest';
-import {CommitListener, newQuery, QueryDelegate} from './query-impl.js';
 import {MemorySource} from '../ivm/memory-source.js';
+import {MemoryStorage} from '../ivm/memory-storage.js';
+import {Storage} from '../ivm/operator.js';
+import {Source} from '../ivm/source.js';
+import {CommitListener, newQuery, QueryDelegate} from './query-impl.js';
 import {
   commentSchema,
   issueLabelSchema,
@@ -9,11 +13,6 @@ import {
   revisionSchema,
   userSchema,
 } from './test/testSchemas.js';
-import {toInputArgs} from './schema.js';
-import {Storage} from '../ivm/operator.js';
-import {Source} from '../ivm/source.js';
-import {deepClone} from 'shared/src/deep-clone.js';
-import {MemoryStorage} from '../ivm/memory-storage.js';
 
 class QueryDelegateImpl implements QueryDelegate {
   #sources: Record<string, Source> = makeSources();
@@ -59,12 +58,12 @@ class QueryDelegateImpl implements QueryDelegate {
  */
 
 function makeSources() {
-  const userArgs = toInputArgs(userSchema);
-  const issueArgs = toInputArgs(issueSchema);
-  const commentArgs = toInputArgs(commentSchema);
-  const revisionArgs = toInputArgs(revisionSchema);
-  const labelArgs = toInputArgs(labelSchema);
-  const issueLabelArgs = toInputArgs(issueLabelSchema);
+  const userArgs = userSchema;
+  const issueArgs = issueSchema;
+  const commentArgs = commentSchema;
+  const revisionArgs = revisionSchema;
+  const labelArgs = labelSchema;
+  const issueLabelArgs = issueLabelSchema;
   return {
     user: new MemorySource('user', userArgs.columns, userArgs.primaryKey),
     issue: new MemorySource('issue', issueArgs.columns, issueArgs.primaryKey),
