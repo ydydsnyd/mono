@@ -31,8 +31,6 @@ export class ArrayView implements Output {
   readonly #listeners = new Set<Listener>();
   readonly #schema: Schema;
 
-  onDestroy: (() => void) | undefined;
-
   #hydrated = false;
   #dirty = false;
 
@@ -68,7 +66,6 @@ export class ArrayView implements Output {
 
   destroy() {
     this.#input.destroy();
-    this.onDestroy?.();
   }
 
   hydrate() {
@@ -84,6 +81,9 @@ export class ArrayView implements Output {
   }
 
   push(change: Change): void {
+    if (!this.#hydrated) {
+      return;
+    }
     this.#dirty = true;
     applyChange(this.#view, change, this.#schema);
   }

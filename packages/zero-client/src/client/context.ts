@@ -12,6 +12,7 @@ import {
 } from '../../../zql/src/zql/query/query-impl.js';
 import {Schema} from '../../../zql/src/zql/query/schema.js';
 import {ENTITIES_KEY_PREFIX} from './keys.js';
+import {Resolver, resolver} from '@rocicorp/resolver';
 
 export type AddQuery = (ast: AST) => () => void;
 
@@ -29,10 +30,20 @@ export class ZeroContext implements QueryDelegate {
   readonly #schemas: Record<string, Schema>;
   readonly #addQuery: AddQuery;
   readonly #commitListeners: Set<CommitListener> = new Set();
+  readonly #initializedResolver: Resolver<void>;
+  #initialized = false;
 
   constructor(schemas: Record<string, Schema>, addQuery: AddQuery) {
     this.#schemas = schemas;
     this.#addQuery = addQuery;
+    this.#initializedResolver = resolver();
+  }
+
+  isInitialized(): true | Promise<void> {
+    if (this.#initialized) {
+      return true;
+    }
+    return this.#initializedResolver.promise;
   }
 
   getSource(name: string): Source {
@@ -91,6 +102,8 @@ export class ZeroContext implements QueryDelegate {
     } finally {
       this.#endTransaction();
     }
+    this.#initialized = true;
+    this.#initializedResolver.resolve();
   }
 
   #endTransaction() {

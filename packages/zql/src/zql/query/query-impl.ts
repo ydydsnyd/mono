@@ -22,8 +22,8 @@ import {
   PullSchemaForRelationship,
   Schema,
 } from './schema.js';
-import {TypedView} from './typed-view.js';
-import { Row } from '../ivm/data.js';
+import {Listener, TypedView} from './typed-view.js';
+import {Row} from '../ivm/data.js';
 
 export function newQuery<
   TSchema extends Schema,
@@ -48,6 +48,7 @@ export type CommitListener = () => void;
 export interface QueryDelegate extends BuilderDelegate {
   addServerQuery(ast: AST): () => void;
   onTransactionCommit(cb: CommitListener): () => void;
+  isInitialized(): true | Promise<void>;
 }
 
 class QueryImpl<
@@ -81,16 +82,7 @@ class QueryImpl<
 
   materialize(): TypedView<Smash<TReturn>> {
     const ast = this.#completeAst();
-    const removeServerQuery = this.#delegate.addServerQuery(ast);
-    const view = new ArrayView(buildPipeline(ast, this.#delegate));
-    const removeCommitObserver = this.#delegate.onTransactionCommit(() => {
-      view.flush();
-    });
-    view.onDestroy = () => {
-      removeCommitObserver();
-      removeServerQuery();
-    };
-    return view as unknown as TypedView<Smash<TReturn>>;
+    return new ProxyView<Smash<TReturn>>(ast, this.#delegate);
   }
 
   preload(): {
@@ -337,4 +329,93 @@ function addPrimaryKeysToAst(schema: Schema, ast: AST): AST {
     ...ast,
     orderBy: addPrimaryKeys(schema, ast.orderBy),
   };
+}
+
+type ListenerMeta<T> = {
+  arrayViewCleanup: () => void;
+  listener: Listener<T>;
+};
+class ProxyView<T> implements TypedView<T> {
+  readonly #ast: AST;
+  readonly #delegate: QueryDelegate;
+  readonly #onDestroy: () => void;
+  readonly #listeners = new Set<ListenerMeta<T>>();
+  #arrayView: ArrayView | undefined;
+  #destroyed = false;
+  #hydrated = false;
+
+  constructor(ast: AST, delegate: QueryDelegate) {
+    this.#ast = ast;
+    this.#delegate = delegate;
+    const isInitialized = delegate.isInitialized();
+    if (isInitialized === true) {
+      this.#initArrayView();
+    } else {
+      isInitialized
+        .then(() => {
+          this.#initArrayView();
+        })
+        .catch(e => {
+          // DO SOMETHING BETTER
+          console.log(e);
+        });
+    }
+
+    const removeServerQuery = this.#delegate.addServerQuery(ast);
+    const removeCommitObserver = this.#delegate.onTransactionCommit(() => {
+      this.flush();
+    });
+    this.#onDestroy = () => {
+      removeServerQuery();
+      removeCommitObserver();
+    };
+  }
+
+  #initArrayView() {
+    if (this.#destroyed) {
+      return;
+    }
+    this.#arrayView = new ArrayView(buildPipeline(this.#ast, this.#delegate));
+    if (this.#hydrated) {
+      this.#arrayView.hydrate();
+    }
+  }
+
+  addListener(listener: Listener<T>): () => void {
+    if (this.#arrayView) {
+      // DO BETTER
+      return this.#arrayView.addListener(listener as any);
+    }
+    const listenerMeta: ListenerMeta<T> = {
+      arrayViewCleanup: () => {},
+      listener,
+    };
+    this.#listeners.add(listenerMeta);
+    return () => {
+      listenerMeta.arrayViewCleanup();
+      this.#listeners.delete(listenerMeta);
+    };
+  }
+
+  destroy(): void {
+    this.#destroyed = true;
+    this.#onDestroy();
+    this.#arrayView?.destroy();
+  }
+
+  hydrate(): void {
+    if (this.#hydrated) {
+      throw new Error("Can't hydrate twice");
+    }
+    this.#hydrated = true;
+    this.#arrayView?.hydrate();
+  }
+
+  flush(): void {
+    this.#arrayView?.flush();
+  }
+
+  get data(): T {
+    return (this.#arrayView?.data ?? []) as unknown as T;
+  }
 }
