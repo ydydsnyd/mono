@@ -8,7 +8,7 @@ import {Join, createPrimaryKeySetStorageKey} from './join.js';
 import {MemorySource} from './memory-source.js';
 import {MemoryStorage} from './memory-storage.js';
 import {Input} from './operator.js';
-import type {PrimaryKeys, SchemaValue} from './schema.js';
+import type {PrimaryKey, SchemaValue} from './schema.js';
 import {Snitch, SnitchMessage} from './snitch.js';
 import type {SourceChange} from './source.js';
 
@@ -371,7 +371,7 @@ function pushSiblingTest(t: PushTestSibling) {
 type PushTestSibling = {
   name: string;
   columns: readonly Record<string, SchemaValue>[];
-  primaryKeys: readonly PrimaryKeys[];
+  primaryKeys: readonly PrimaryKey[];
   sources: Row[][];
   sorts?: Record<number, Ordering> | undefined;
   joins: readonly {
