@@ -2,10 +2,10 @@
 
 import {assert} from 'shared/src/asserts.js';
 import {deepEqual} from 'shared/src/json.js';
-import {sleep} from 'shared/src/sleep.js';
 import sinon from 'sinon';
 import {MockSocket, zeroForTest} from './test-utils.js';
 import {version} from './version.js';
+import {Resolver, resolver} from '@rocicorp/resolver';
 
 onmessage = async (e: MessageEvent) => {
   const {userID} = e.data;
@@ -18,7 +18,7 @@ onmessage = async (e: MessageEvent) => {
     await testBasics(userID);
     postMessage(undefined);
   } catch (ex) {
-    postMessage(ex);
+    postMessage(String(ex));
   } finally {
     sinon.restore();
   }
@@ -56,29 +56,34 @@ async function testBasics(userID: string) {
 
   await r.triggerConnected();
 
-  await sleep(1);
-  assert(deepEqual(log, [[]]));
-
   await r.mutate.e.set({id: 'foo', value: 1});
-  assert(deepEqual(log, [[], [{id: 'foo', value: 1}]]));
+  assert(
+    deepEqual(log, [[{id: 'foo', value: 1}]]),
+    `log has foo value 1 ${JSON.stringify(log)}`,
+  );
 
   await r.mutate.e.set({id: 'foo', value: 2});
   assert(
-    deepEqual(log, [[], [{id: 'foo', value: 1}], [{id: 'foo', value: 2}]]),
+    deepEqual(log, [[{id: 'foo', value: 1}], [{id: 'foo', value: 2}]]),
+    `log has foo value 1 and foo value 2 ${JSON.stringify(log)}`,
   );
 
   removeListener();
 
   await r.mutate.e.set({id: 'foo', value: 3});
   assert(
-    deepEqual(log, [[], [{id: 'foo', value: 1}], [{id: 'foo', value: 2}]]),
+    deepEqual(log, [[{id: 'foo', value: 1}], [{id: 'foo', value: 2}]]),
+    `log unchanged after listener removed ${JSON.stringify(log)}`,
   );
 
   const view2 = q.materialize();
   view2.hydrate();
-  let data: E[] = [];
+  const data: Resolver<E[]> = resolver();
   view2.addListener(rows => {
-    data = [...rows];
+    data.resolve([...rows]);
   });
-  assert(deepEqual(data, [{id: 'foo', value: 3}]));
+  assert(
+    deepEqual(await data.promise, [{id: 'foo', value: 3}]),
+    `data has foo value 3 ${JSON.stringify(data)}`,
+  );
 }

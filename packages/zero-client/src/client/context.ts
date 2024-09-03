@@ -18,7 +18,7 @@ export type AddQuery = (ast: AST) => () => void;
 
 /**
  * ZeroContext glues together zql and Replicache. It listens to changes in
- * Repliache data and pushes them into IVM and on tells the server about new
+ * Replicache data and pushes them into IVM and tells the server about new
  * queries.
  */
 export class ZeroContext implements QueryDelegate {
@@ -39,10 +39,7 @@ export class ZeroContext implements QueryDelegate {
     this.#initializedResolver = resolver();
   }
 
-  isInitialized(): true | Promise<void> {
-    if (this.#initialized) {
-      return true;
-    }
+  get initialized(): Promise<void> {
     return this.#initializedResolver.promise;
   }
 
@@ -75,8 +72,18 @@ export class ZeroContext implements QueryDelegate {
     };
   }
 
+  processGotQueryChanges(changes: ExperimentalNoIndexDiff) {
+    if (this.#initialized) {
+      return;
+    }
+    if (changes.find(v => v.op === 'add')) {
+      // At least one query got.
+      this.#initialized = true;
+      this.#initializedResolver.resolve();
+    }
+  }
+
   processChanges(changes: ExperimentalNoIndexDiff) {
-    console.log('processChanges', changes);
     let entityAdded = false;
     try {
       for (const diff of changes) {
@@ -106,7 +113,6 @@ export class ZeroContext implements QueryDelegate {
       this.#endTransaction();
     }
     if (entityAdded && !this.#initialized) {
-      console.log('context initialized');
       this.#initialized = true;
       this.#initializedResolver.resolve();
     }

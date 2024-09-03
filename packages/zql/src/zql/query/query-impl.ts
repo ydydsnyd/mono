@@ -2,7 +2,11 @@
 import {assert} from 'shared/src/asserts.js';
 import {AST, Ordering} from '../ast/ast.js';
 import {BuilderDelegate, buildPipeline} from '../builder/builder.js';
-import {ArrayView} from '../ivm/array-view.js';
+import {
+  Listener as ArrayViewListener,
+  ArrayView,
+  EntryList,
+} from '../ivm/array-view.js';
 import {
   AddSelections,
   AddSubselect,
@@ -48,7 +52,7 @@ export type CommitListener = () => void;
 export interface QueryDelegate extends BuilderDelegate {
   addServerQuery(ast: AST): () => void;
   onTransactionCommit(cb: CommitListener): () => void;
-  isInitialized(): true | Promise<void>;
+  initialized: Promise<void>;
 }
 
 class QueryImpl<
@@ -331,38 +335,25 @@ function addPrimaryKeysToAst(schema: Schema, ast: AST): AST {
   };
 }
 
-type ListenerMeta<T> = {
+type ListenerMeta = {
   arrayViewCleanup: () => void;
-  listener: Listener<T>;
+  listener: ArrayViewListener;
 };
-class ProxyView<T> implements TypedView<T> {
+class ProxyView<T extends EntryList> implements TypedView<T> {
   readonly #ast: AST;
   readonly #delegate: QueryDelegate;
   readonly #onDestroy: () => void;
-  readonly #listeners = new Set<ListenerMeta<T>>();
+  readonly #listeners = new Set<ListenerMeta>();
   #arrayView: ArrayView | undefined;
   #destroyed = false;
   #hydrated = false;
 
   constructor(ast: AST, delegate: QueryDelegate) {
-    console.log('huh');
     this.#ast = ast;
     this.#delegate = delegate;
-    const isInitialized = delegate.isInitialized();
-    console.log('isInitialized', isInitialized);
-    if (isInitialized === true) {
+    void delegate.initialized.then(() => {
       this.#initArrayView();
-    } else {
-      isInitialized
-        .then(() => {
-          console.log('delayedInit');
-          this.#initArrayView();
-        })
-        .catch(e => {
-          // DO SOMETHING BETTER
-          console.log(e);
-        });
-    }
+    });
 
     const removeServerQuery = this.#delegate.addServerQuery(ast);
     const removeCommitObserver = this.#delegate.onTransactionCommit(() => {
@@ -380,24 +371,21 @@ class ProxyView<T> implements TypedView<T> {
     }
     this.#arrayView = new ArrayView(buildPipeline(this.#ast, this.#delegate));
     for (const meta of this.#listeners) {
-      console.log('adding listeners');
-      // Kill any
-      meta.arrayViewCleanup = this.#arrayView.addListener(meta.listener as any);
+      meta.arrayViewCleanup = this.#arrayView.addListener(meta.listener);
     }
     if (this.#hydrated) {
-      console.log('hydrating');
       this.#arrayView.hydrate();
     }
   }
 
   addListener(listener: Listener<T>): () => void {
+    const arrayViewListener: ArrayViewListener = listener as ArrayViewListener;
     if (this.#arrayView) {
-      // Kill any
-      return this.#arrayView.addListener(listener as any);
+      return this.#arrayView.addListener(arrayViewListener);
     }
-    const listenerMeta: ListenerMeta<T> = {
+    const listenerMeta: ListenerMeta = {
       arrayViewCleanup: () => {},
-      listener,
+      listener: arrayViewListener,
     };
     this.#listeners.add(listenerMeta);
     return () => {

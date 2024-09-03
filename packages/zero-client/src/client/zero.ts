@@ -1,6 +1,6 @@
 import {LogContext, LogLevel} from '@rocicorp/logger';
 import {Resolver, resolver} from '@rocicorp/resolver';
-import type {ExperimentalNoIndexDiff, MutatorDefs} from 'replicache';
+import type {MutatorDefs} from 'replicache';
 import {dropDatabase} from 'replicache/src/persist/collect-idb-databases.js';
 import type {Puller, PullerResultV1} from 'replicache/src/puller.js';
 import type {Pusher, PusherResult} from 'replicache/src/pusher.js';
@@ -59,7 +59,7 @@ import {
 } from './crud.js';
 import {shouldEnableAnalytics} from './enable-analytics.js';
 import {toWSString, type HTTPString, type WSString} from './http-string.js';
-import {ENTITIES_KEY_PREFIX} from './keys.js';
+import {ENTITIES_KEY_PREFIX, GOT_QUERIES_KEY_PREFIX} from './keys.js';
 import {LogOptions, createLogOptions} from './log-options.js';
 import {
   DID_NOT_CONNECT_VALUE,
@@ -427,10 +427,15 @@ export class Zero<QD extends SchemaDefs> {
       this.#queryManager.add(ast),
     );
 
+    rep.experimentalWatch(diff => this.#zeroContext.processChanges(diff), {
+      prefix: ENTITIES_KEY_PREFIX,
+      initialValuesInFirstDiff: true,
+    });
+
     rep.experimentalWatch(
-      diff => this.#zeroContext.processChanges(diff as ExperimentalNoIndexDiff),
+      diff => this.#zeroContext.processGotQueryChanges(diff),
       {
-        prefix: ENTITIES_KEY_PREFIX,
+        prefix: GOT_QUERIES_KEY_PREFIX,
         initialValuesInFirstDiff: true,
       },
     );

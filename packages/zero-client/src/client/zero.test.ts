@@ -1909,6 +1909,7 @@ suite('CRUD', () => {
     const view = await z.query.comment
       .select('id', 'issueID', 'text')
       .materialize();
+    view.hydrate();
     await z.mutate.comment.create({id: 'a', issueID: '1', text: 'A text'});
     expect(view.data).toEqual([{id: 'a', issueID: '1', text: 'A text'}]);
 
@@ -1931,6 +1932,7 @@ suite('CRUD', () => {
   test('update', async () => {
     const z = makeZero();
     const view = z.query.comment.select('id', 'issueID').materialize();
+    view.hydrate();
     await z.mutate.comment.create({id: 'a', issueID: '1', text: 'A text'});
     expect(view.data).toEqual([{id: 'a', issueID: '1', text: 'A text'}]);
 
