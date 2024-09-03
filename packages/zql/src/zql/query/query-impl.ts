@@ -52,6 +52,16 @@ export type CommitListener = () => void;
 export interface QueryDelegate extends BuilderDelegate {
   addServerQuery(ast: AST): () => void;
   onTransactionCommit(cb: CommitListener): () => void;
+  /**
+   * A promise that resolves to true once sources have any data loaded into
+   * them
+   * 1. query results (including empty results)
+   * 2. locally created entities
+   * This allows deferring connecting and hydrating pipelines until sources
+   * have initial data, which can result in a significant latency reduction
+   * vs hydrating with no initial data and then having all initial data
+   * pushed into the pipelines.
+   */
   initialized: Promise<void>;
 }
 
