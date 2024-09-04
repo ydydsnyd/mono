@@ -5,7 +5,7 @@ import {Change} from './change.js';
 import {Comparator, Row, Value} from './data.js';
 import {Input, Output} from './operator.js';
 import {Schema} from './schema.js';
-import { assertOrderingIncludesPK } from '../builder/builder.js';
+import {assertOrderingIncludesPK} from '../builder/builder.js';
 
 /**
  * Called when the view changes. The received data should be considered
@@ -81,6 +81,7 @@ export class ArrayView implements Output {
   }
 
   push(change: Change): void {
+    console.log(change, this.#hydrated);
     if (!this.#hydrated) {
       return;
     }

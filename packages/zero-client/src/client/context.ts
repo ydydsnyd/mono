@@ -39,8 +39,8 @@ export class ZeroContext implements QueryDelegate {
     this.#initializedResolver = resolver();
   }
 
-  get initialized(): Promise<void> {
-    return this.#initializedResolver.promise;
+  isInitialized(): true | Promise<void> {
+    return this.#initialized || this.#initializedResolver.promise;
   }
 
   getSource(name: string): Source {

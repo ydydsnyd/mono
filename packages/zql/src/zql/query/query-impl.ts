@@ -28,6 +28,7 @@ import {
 } from './schema.js';
 import {Listener, TypedView} from './typed-view.js';
 import {Row} from '../ivm/data.js';
+import {Immutable} from 'shared/src/immutable.js';
 
 export function newQuery<
   TSchema extends Schema,
@@ -53,16 +54,18 @@ export interface QueryDelegate extends BuilderDelegate {
   addServerQuery(ast: AST): () => void;
   onTransactionCommit(cb: CommitListener): () => void;
   /**
-   * A promise that resolves to true once sources have any data loaded into
-   * them
-   * 1. query results (including empty results)
-   * 2. locally created entities
-   * This allows deferring connecting and hydrating pipelines until sources
+   * Enables deferring connecting and hydrating pipelines until sources
    * have initial data, which can result in a significant latency reduction
    * vs hydrating with no initial data and then having all initial data
    * pushed into the pipelines.
+   * Sources are considered to have initial data if they contain any
+   * 1. query results (including empty results)
+   * 2. locally created entities
+   *
+   * Returns `true` if sources already have initial data, otherwise
+   * a promise that will resolve when sources have initial data.
    */
-  initialized: Promise<void>;
+  isInitialized(): true | Promise<void>;
 }
 
 class QueryImpl<
@@ -361,9 +364,14 @@ class ProxyView<T extends EntryList> implements TypedView<T> {
   constructor(ast: AST, delegate: QueryDelegate) {
     this.#ast = ast;
     this.#delegate = delegate;
-    void delegate.initialized.then(() => {
+    const initialized = delegate.isInitialized();
+    if (initialized === true) {
       this.#initArrayView();
-    });
+    } else {
+      void initialized.then(() => {
+        this.#initArrayView();
+      });
+    }
 
     const removeServerQuery = this.#delegate.addServerQuery(ast);
     const removeCommitObserver = this.#delegate.onTransactionCommit(() => {
@@ -398,6 +406,11 @@ class ProxyView<T extends EntryList> implements TypedView<T> {
       listener: arrayViewListener,
     };
     this.#listeners.add(listenerMeta);
+
+    if (this.#hydrated) {
+      listener([] as Immutable<T>);
+    }
+
     return () => {
       listenerMeta.arrayViewCleanup();
       this.#listeners.delete(listenerMeta);

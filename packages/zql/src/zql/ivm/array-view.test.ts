@@ -17,7 +17,12 @@ test('basics', () => {
   ms.push({row: {a: 1, b: 'a'}, type: 'add'});
   ms.push({row: {a: 2, b: 'b'}, type: 'add'});
 
-  const view = new ArrayView(ms.connect([['b', 'asc'], ['a', 'asc']]));
+  const view = new ArrayView(
+    ms.connect([
+      ['b', 'asc'],
+      ['a', 'asc'],
+    ]),
+  );
 
   let callCount = 0;
   let data: unknown[] = [];
@@ -91,8 +96,14 @@ test('tree', () => {
   });
 
   const join = new Join({
-    parent: ms.connect([['name', 'asc'], ['id', 'asc']]),
-    child: ms.connect([['name', 'desc'], ['id', 'desc']]),
+    parent: ms.connect([
+      ['name', 'asc'],
+      ['id', 'asc'],
+    ]),
+    child: ms.connect([
+      ['name', 'desc'],
+      ['id', 'desc'],
+    ]),
     storage: new MemoryStorage(),
     parentKey: 'childID',
     childKey: 'id',

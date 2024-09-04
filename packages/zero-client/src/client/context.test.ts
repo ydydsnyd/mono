@@ -5,11 +5,7 @@ import {MemorySource} from 'zql/src/zql/ivm/memory-source.js';
 import {MemoryStorage} from 'zql/src/zql/ivm/memory-storage.js';
 import {Catch} from '../../../zql/src/zql/ivm/catch.js';
 import {AddQuery, ZeroContext} from './context.js';
-import {
-  ENTITIES_KEY_PREFIX,
-  GOT_QUERIES_KEY_PREFIX,
-  toGotQueriesKey,
-} from './keys.js';
+import {ENTITIES_KEY_PREFIX, toGotQueriesKey} from './keys.js';
 import {sleep} from 'shared/src/sleep.js';
 
 test('getSource', () => {
@@ -64,7 +60,7 @@ test('getSource', () => {
   });
 });
 
-test('processChanges', () => {
+test('processChanges', async () => {
   const schemas = {
     t1: {
       tableName: 't1',
@@ -83,6 +79,14 @@ test('processChanges', () => {
       ['id', 'desc'],
     ]),
   );
+
+  let initialized = false;
+  const initializedP = context.initialized.then(() => {
+    initialized = true;
+  });
+
+  await sleep(1);
+  expect(initialized).false;
 
   context.processChanges([
     {
@@ -114,6 +118,9 @@ test('processChanges', () => {
     {row: {id: 'e2', name: 'name2'}, relationships: {}},
     {row: {id: 'e1', name: 'name1.1'}, relationships: {}},
   ]);
+
+  await initializedP;
+  expect(initialized).true;
 });
 
 test('processGotQueryChanges', async () => {
@@ -146,7 +153,7 @@ test('processGotQueryChanges', async () => {
   ]);
 
   await initializedP;
-  expect(initialized);
+  expect(initialized).true;
 });
 
 test('transactions', () => {
