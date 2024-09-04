@@ -80,13 +80,11 @@ test('processChanges', async () => {
     ]),
   );
 
-  let initialized = false;
-  const initializedP = context.initialized.then(() => {
-    initialized = true;
-  });
+  const initializedP = context.isInitialized();
+  expect(initializedP).not.toEqual(true);
 
   await sleep(1);
-  expect(initialized).false;
+  expect(context.isInitialized()).not.toEqual(true);
 
   context.processChanges([
     {
@@ -119,8 +117,8 @@ test('processChanges', async () => {
     {row: {id: 'e1', name: 'name1.1'}, relationships: {}},
   ]);
 
-  await initializedP;
-  expect(initialized).true;
+  expect(context.isInitialized()).toEqual(true);
+  expect(await initializedP).toBeUndefined();
 });
 
 test('processGotQueryChanges', async () => {
@@ -136,13 +134,12 @@ test('processGotQueryChanges', async () => {
   } as const;
 
   const context = new ZeroContext(schemas, null as unknown as AddQuery);
-  let initialized = false;
-  const initializedP = context.initialized.then(() => {
-    initialized = true;
-  });
+
+  const initializedP = context.isInitialized();
+  expect(initializedP).not.toEqual(true);
 
   await sleep(1);
-  expect(initialized).false;
+  expect(context.isInitialized()).not.toEqual(true);
 
   context.processGotQueryChanges([
     {
@@ -152,8 +149,8 @@ test('processGotQueryChanges', async () => {
     },
   ]);
 
-  await initializedP;
-  expect(initialized).true;
+  expect(context.isInitialized()).toEqual(true);
+  expect(await initializedP).toBeUndefined();
 });
 
 test('transactions', () => {
