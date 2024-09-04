@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722921371819,
+  "lastUpdate": 1725441928514,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -48809,6 +48809,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32528,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2fc01aa9789a18eb2b609fab2e36d483f49d1d4b",
+          "message": "chore: Improve unreachable function (#2313)\n\nAllow it to take a an argument of type never which gives us static type\r\nchecking that the function call is unreachable.",
+          "timestamp": "2024-09-04T11:22:52+02:00",
+          "tree_id": "b4a1b6b011083381182f5cbfdeb5322ba4438434",
+          "url": "https://github.com/rocicorp/mono/commit/2fc01aa9789a18eb2b609fab2e36d483f49d1d4b"
+        },
+        "date": 1725441911396,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 317294,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55253,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 117003,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32563,
             "unit": "bytes"
           }
         ]
