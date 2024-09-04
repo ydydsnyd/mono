@@ -81,7 +81,6 @@ export class ArrayView implements Output {
   }
 
   push(change: Change): void {
-    console.log(change, this.#hydrated);
     if (!this.#hydrated) {
       return;
     }

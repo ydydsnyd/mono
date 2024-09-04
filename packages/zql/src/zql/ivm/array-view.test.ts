@@ -387,7 +387,7 @@ test('collapse hidden relationships', () => {
       throw new Error('not implemented');
     },
     fetch() {
-      throw new Error('not implemented');
+      return [];
     },
     destroy() {},
     getSchema() {
@@ -400,6 +400,7 @@ test('collapse hidden relationships', () => {
   };
 
   const view = new ArrayView(input);
+  view.hydrate();
   let data: unknown[] = [];
   view.addListener(d => {
     data = deepClone(d) as unknown[];

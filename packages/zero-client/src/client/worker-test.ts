@@ -58,13 +58,13 @@ async function testBasics(userID: string) {
 
   await r.mutate.e.set({id: 'foo', value: 1});
   assert(
-    deepEqual(log, [[{id: 'foo', value: 1}]]),
+    deepEqual(log, [[], [{id: 'foo', value: 1}]]),
     `log has foo value 1 ${JSON.stringify(log)}`,
   );
 
   await r.mutate.e.set({id: 'foo', value: 2});
   assert(
-    deepEqual(log, [[{id: 'foo', value: 1}], [{id: 'foo', value: 2}]]),
+    deepEqual(log, [[], [{id: 'foo', value: 1}], [{id: 'foo', value: 2}]]),
     `log has foo value 1 and foo value 2 ${JSON.stringify(log)}`,
   );
 
@@ -72,7 +72,7 @@ async function testBasics(userID: string) {
 
   await r.mutate.e.set({id: 'foo', value: 3});
   assert(
-    deepEqual(log, [[{id: 'foo', value: 1}], [{id: 'foo', value: 2}]]),
+    deepEqual(log, [[], [{id: 'foo', value: 1}], [{id: 'foo', value: 2}]]),
     `log unchanged after listener removed ${JSON.stringify(log)}`,
   );
 
