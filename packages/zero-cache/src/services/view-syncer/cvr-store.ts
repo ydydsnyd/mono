@@ -465,6 +465,9 @@ export class CVRStore {
   }
 
   async flush(): Promise<number> {
+    console.log(
+      JSON.stringify([...this.#pendingRowRecordPuts.values()], undefined, 2),
+    );
     const statements = await this.#db.begin(tx => {
       let statements = 0;
       if (this.#pendingRowRecordPuts.size > 0) {

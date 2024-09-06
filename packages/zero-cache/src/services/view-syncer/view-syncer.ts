@@ -562,6 +562,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
       total += rows.size;
       lc.debug?.(`processing ${rows.size} (of ${total}) rows (${elapsed} ms)`);
       const patches = await updater.received(this.#lc, rows);
+      console.log(JSON.stringify(patches, undefined, 2));
       patches.forEach(patch => pokers.forEach(poker => poker.addPatch(patch)));
       rows.clear();
     };

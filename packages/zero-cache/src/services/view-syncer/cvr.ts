@@ -459,7 +459,17 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
       const rowVersion = version ?? existing?.rowVersion;
       assert(rowVersion, `Cannot delete a row that is not in the CVR`);
 
-      if (merged === null && !existing) {
+      const updated = {
+        id,
+        rowVersion,
+        patchVersion,
+        refCounts: merged,
+      };
+      if (
+        deepEqual(updated as ReadonlyJSONValue, existing as ReadonlyJSONValue)
+      ) {
+        this._cvrStore.cancelPendingRowRecordWrite(id);
+      } else if (merged === null && !existing) {
         this._cvrStore.cancelPendingRowRecordWrite(id);
       } else {
         this._cvrStore.putRowRecord({
