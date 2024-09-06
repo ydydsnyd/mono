@@ -2908,12 +2908,6 @@ describe('view-syncer/cvr', () => {
     // Same last active day (no index change), but different hour.
     const updated = await updater.flush(lc, new Date(Date.UTC(2024, 3, 23, 1)));
 
-    // expect(updated).toEqual({
-    //   ...cvr,
-    //   version: newVerison,
-    //   lastActive: {epochMillis: 1713834000000},
-    // } satisfies CVRSnapshot);
-
     // Verify round tripping.
     const cvrStore2 = new CVRStore(lc, db, 'abc123');
     const reloaded = await cvrStore2.load();
