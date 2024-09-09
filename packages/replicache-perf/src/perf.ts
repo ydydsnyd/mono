@@ -13,12 +13,14 @@ import {
 import {benchmarks as mapLoopBenchmarks} from './benchmarks/map-loop.js';
 import {benchmarks as replicacheBenchmarks} from './benchmarks/replicache.js';
 import {benchmarks as storageBenchmarks} from './benchmarks/storage.js';
+import {benchmarks as xxhashBenchmarks} from './benchmarks/xx-hash.js';
 import type {RandomDataType} from './data.js';
 import {formatAsReplicache} from './format.js';
 
 export const benchmarks = [
   ...replicacheBenchmarks(),
   ...hashBenchmarks(),
+  ...xxhashBenchmarks(),
   ...storageBenchmarks(),
   ...compareBenchmarks(),
   ...mapLoopBenchmarks(),
