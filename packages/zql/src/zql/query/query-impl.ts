@@ -82,6 +82,10 @@ class QueryImpl<
     return this.#ast;
   }
 
+  get format() {
+    return this.#format;
+  }
+
   select<TFields extends Selector<TSchema>[]>(
     ..._fields: TFields
   ): Query<TSchema, AddSelections<TSchema, TFields, TReturn>[], TAs> {
@@ -188,8 +192,22 @@ class QueryImpl<
     const related2 = related;
     if (isFieldRelationship(related1)) {
       const destSchema = resolveSchema(related1.dest.schema);
+
+      const sq = cb(
+        newQueryWithAST(
+          this.#delegate,
+          destSchema,
+          {
+            table: destSchema.tableName,
+            alias: relationship as string,
+          },
+          ['multiple', {}],
+        ),
+      );
+
       const destFormat = deepClone(this.#format as ReadonlyJSONValue) as Format;
-      destFormat[1]![relationship as string] = ['multiple', {}];
+      destFormat[1]![relationship as string] = sq.format;
+
       return newQueryWithAST(
         this.#delegate,
         this.#schema,
@@ -203,20 +221,7 @@ class QueryImpl<
                 childField: related1.dest.field,
                 op: '=',
               },
-              subquery: addPrimaryKeysToAst(
-                destSchema,
-                cb(
-                  newQueryWithAST(
-                    this.#delegate,
-                    destSchema,
-                    {
-                      table: destSchema.tableName,
-                      alias: relationship as string,
-                    },
-                    destFormat,
-                  ),
-                ).ast,
-              ),
+              subquery: addPrimaryKeysToAst(destSchema, sq.ast),
             },
           ],
         },
@@ -227,11 +232,22 @@ class QueryImpl<
     if (isJunctionRelationship(related2)) {
       const destSchema = resolveSchema(related2.dest.schema);
       const junctionSchema = resolveSchema(related2.junction.schema);
+
+      const sq = cb(
+        newQueryWithAST(
+          this.#delegate,
+          destSchema,
+          {
+            table: destSchema.tableName,
+            alias: relationship as string,
+          },
+          ['multiple', {}],
+        ),
+      );
+
       const destFormat = deepClone(this.#format as ReadonlyJSONValue) as Format;
-      destFormat[1]![relationship as string] = [
-        'multiple',
-        {[relationship as string]: ['multiple', {}]},
-      ];
+      destFormat[1]![relationship as string] = sq.format;
+
       return newQueryWithAST(
         this.#delegate,
         this.#schema,
@@ -257,27 +273,14 @@ class QueryImpl<
                       op: '=',
                     },
                     hidden: true,
-                    subquery: addPrimaryKeysToAst(
-                      destSchema,
-                      cb(
-                        newQueryWithAST(
-                          this.#delegate,
-                          destSchema,
-                          {
-                            table: destSchema.tableName,
-                            alias: relationship as string,
-                          },
-                          destFormat,
-                        ),
-                      ).ast,
-                    ),
+                    subquery: addPrimaryKeysToAst(destSchema, sq.ast),
                   },
                 ],
               },
             },
           ],
         },
-        this.#format,
+        destFormat,
       );
     }
     throw new Error(`Invalid relationship ${relationship as string}`);

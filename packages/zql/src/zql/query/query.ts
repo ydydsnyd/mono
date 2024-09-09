@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import {AST} from '../ast/ast.js';
+import {Format} from '../ivm/array-view.js';
 import {Row} from '../ivm/data.js';
 import {SchemaValue} from '../ivm/schema.js';
 import {Source} from '../ivm/source.js';
@@ -174,6 +175,7 @@ export interface Query<
   TAs extends string = string,
 > {
   readonly ast: AST;
+  readonly format: Format;
 
   select<TFields extends Selector<TSchema>[]>(
     ...x: TFields
