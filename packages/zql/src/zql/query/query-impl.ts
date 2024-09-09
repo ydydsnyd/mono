@@ -2,7 +2,7 @@
 import {assert} from 'shared/src/asserts.js';
 import {AST, Ordering} from '../ast/ast.js';
 import {BuilderDelegate, buildPipeline} from '../builder/builder.js';
-import {ArrayView} from '../ivm/array-view.js';
+import {ArrayView, Format} from '../ivm/array-view.js';
 import {
   AddSelections,
   AddSubselect,
@@ -23,7 +23,9 @@ import {
   Schema,
 } from './schema.js';
 import {TypedView} from './typed-view.js';
-import { Row } from '../ivm/data.js';
+import {Row} from '../ivm/data.js';
+import {deepClone} from 'shared/src/deep-clone.js';
+import {ReadonlyJSONValue} from 'shared/src/json.js';
 
 export function newQuery<
   TSchema extends Schema,
@@ -40,8 +42,9 @@ function newQueryWithAST<
   delegate: QueryDelegate,
   schema: TSchema,
   ast: AST,
+  format: Format,
 ): Query<TSchema, TReturn, TAs> {
-  return new QueryImpl(delegate, schema, ast);
+  return new QueryImpl(delegate, schema, ast, format);
 }
 
 export type CommitListener = () => void;
@@ -59,13 +62,20 @@ class QueryImpl<
   readonly #ast: AST;
   readonly #delegate: QueryDelegate;
   readonly #schema: TSchema;
+  readonly #format: Format;
 
-  constructor(delegate: QueryDelegate, schema: TSchema, ast?: AST | undefined) {
+  constructor(
+    delegate: QueryDelegate,
+    schema: TSchema,
+    ast?: AST | undefined,
+    format?: Format | undefined,
+  ) {
     this.#ast = ast ?? {
       table: schema.tableName,
     };
     this.#delegate = delegate;
     this.#schema = schema;
+    this.#format = format ?? ['multiple', {}];
   }
 
   get ast() {
@@ -76,13 +86,21 @@ class QueryImpl<
     ..._fields: TFields
   ): Query<TSchema, AddSelections<TSchema, TFields, TReturn>[], TAs> {
     // we return all columns for now so we ignore the selection set and only use it for type inference
-    return newQueryWithAST(this.#delegate, this.#schema, this.#ast);
+    return newQueryWithAST(
+      this.#delegate,
+      this.#schema,
+      this.#ast,
+      this.#format,
+    );
   }
 
   materialize(): TypedView<Smash<TReturn>> {
     const ast = this.#completeAst();
     const removeServerQuery = this.#delegate.addServerQuery(ast);
-    const view = new ArrayView(buildPipeline(ast, this.#delegate));
+    const view = new ArrayView(
+      buildPipeline(ast, this.#delegate),
+      this.#format,
+    );
     const removeCommitObserver = this.#delegate.onTransactionCommit(() => {
       view.flush();
     });
@@ -170,70 +188,97 @@ class QueryImpl<
     const related2 = related;
     if (isFieldRelationship(related1)) {
       const destSchema = resolveSchema(related1.dest.schema);
-      return newQueryWithAST(this.#delegate, this.#schema, {
-        ...this.#ast,
-        related: [
-          ...(this.#ast.related ?? []),
-          {
-            correlation: {
-              parentField: related1.source,
-              childField: related1.dest.field,
-              op: '=',
+      const destFormat = deepClone(this.#format as ReadonlyJSONValue) as Format;
+      destFormat[1]![relationship as string] = ['multiple', {}];
+      return newQueryWithAST(
+        this.#delegate,
+        this.#schema,
+        {
+          ...this.#ast,
+          related: [
+            ...(this.#ast.related ?? []),
+            {
+              correlation: {
+                parentField: related1.source,
+                childField: related1.dest.field,
+                op: '=',
+              },
+              subquery: addPrimaryKeysToAst(
+                destSchema,
+                cb(
+                  newQueryWithAST(
+                    this.#delegate,
+                    destSchema,
+                    {
+                      table: destSchema.tableName,
+                      alias: relationship as string,
+                    },
+                    destFormat,
+                  ),
+                ).ast,
+              ),
             },
-            subquery: addPrimaryKeysToAst(
-              destSchema,
-              cb(
-                newQueryWithAST(this.#delegate, destSchema, {
-                  table: destSchema.tableName,
-                  alias: relationship as string,
-                }),
-              ).ast,
-            ),
-          },
-        ],
-      });
+          ],
+        },
+        destFormat,
+      );
     }
 
     if (isJunctionRelationship(related2)) {
       const destSchema = resolveSchema(related2.dest.schema);
       const junctionSchema = resolveSchema(related2.junction.schema);
-      return newQueryWithAST(this.#delegate, this.#schema, {
-        ...this.#ast,
-        related: [
-          ...(this.#ast.related ?? []),
-          {
-            correlation: {
-              parentField: related2.source,
-              childField: related2.junction.sourceField,
-              op: '=',
-            },
-            subquery: {
-              table: junctionSchema.tableName,
-              alias: relationship as string,
-              orderBy: addPrimaryKeys(junctionSchema, undefined),
-              related: [
-                {
-                  correlation: {
-                    parentField: related2.junction.destField,
-                    childField: related2.dest.field,
-                    op: '=',
+      const destFormat = deepClone(this.#format as ReadonlyJSONValue) as Format;
+      destFormat[1]![relationship as string] = [
+        'multiple',
+        {[relationship as string]: ['multiple', {}]},
+      ];
+      return newQueryWithAST(
+        this.#delegate,
+        this.#schema,
+        {
+          ...this.#ast,
+          related: [
+            ...(this.#ast.related ?? []),
+            {
+              correlation: {
+                parentField: related2.source,
+                childField: related2.junction.sourceField,
+                op: '=',
+              },
+              subquery: {
+                table: junctionSchema.tableName,
+                alias: relationship as string,
+                orderBy: addPrimaryKeys(junctionSchema, undefined),
+                related: [
+                  {
+                    correlation: {
+                      parentField: related2.junction.destField,
+                      childField: related2.dest.field,
+                      op: '=',
+                    },
+                    hidden: true,
+                    subquery: addPrimaryKeysToAst(
+                      destSchema,
+                      cb(
+                        newQueryWithAST(
+                          this.#delegate,
+                          destSchema,
+                          {
+                            table: destSchema.tableName,
+                            alias: relationship as string,
+                          },
+                          destFormat,
+                        ),
+                      ).ast,
+                    ),
                   },
-                  hidden: true,
-                  subquery: addPrimaryKeysToAst(
-                    destSchema,
-                    cb(
-                      newQueryWithAST(this.#delegate, destSchema, {
-                        table: destSchema.tableName,
-                        alias: relationship as string,
-                      }),
-                    ).ast,
-                  ),
-                },
-              ],
+                ],
+              },
             },
-          },
-        ],
-      });
+          ],
+        },
+        this.#format,
+      );
     }
     throw new Error(`Invalid relationship ${relationship as string}`);
   }
@@ -243,38 +288,53 @@ class QueryImpl<
     op: Operator,
     value: GetFieldTypeNoNullOrUndefined<TSchema, TSelector, Operator>,
   ): Query<TSchema, TReturn, TAs> {
-    return newQueryWithAST(this.#delegate, this.#schema, {
-      ...this.#ast,
-      where: [
-        ...(this.#ast.where ?? []),
-        {
-          type: 'simple',
-          op,
-          field: field as string,
-          value,
-        },
-      ],
-    });
+    return newQueryWithAST(
+      this.#delegate,
+      this.#schema,
+      {
+        ...this.#ast,
+        where: [
+          ...(this.#ast.where ?? []),
+          {
+            type: 'simple',
+            op,
+            field: field as string,
+            value,
+          },
+        ],
+      },
+      this.#format,
+    );
   }
 
   as<TAs2 extends string>(alias: TAs2): Query<TSchema, TReturn, TAs2> {
-    return newQueryWithAST(this.#delegate, this.#schema, {
-      ...this.#ast,
-      alias,
-    });
+    return newQueryWithAST(
+      this.#delegate,
+      this.#schema,
+      {
+        ...this.#ast,
+        alias,
+      },
+      this.#format,
+    );
   }
 
   start(
     row: Partial<SchemaToRow<TSchema>>,
     opts?: {inclusive: boolean} | undefined,
   ): Query<TSchema, TReturn, TAs> {
-    return newQueryWithAST(this.#delegate, this.#schema, {
-      ...this.#ast,
-      start: {
-        row,
-        exclusive: !opts?.inclusive,
+    return newQueryWithAST(
+      this.#delegate,
+      this.#schema,
+      {
+        ...this.#ast,
+        start: {
+          row,
+          exclusive: !opts?.inclusive,
+        },
       },
-    });
+      this.#format,
+    );
   }
 
   limit(limit: number): Query<TSchema, TReturn, TAs> {
@@ -285,20 +345,30 @@ class QueryImpl<
       throw new Error('Limit must be an integer');
     }
 
-    return newQueryWithAST(this.#delegate, this.#schema, {
-      ...this.#ast,
-      limit,
-    });
+    return newQueryWithAST(
+      this.#delegate,
+      this.#schema,
+      {
+        ...this.#ast,
+        limit,
+      },
+      this.#format,
+    );
   }
 
   orderBy<TSelector extends keyof TSchema['columns']>(
     field: TSelector,
     direction: 'asc' | 'desc',
   ): Query<TSchema, TReturn, TAs> {
-    return newQueryWithAST(this.#delegate, this.#schema, {
-      ...this.#ast,
-      orderBy: [...(this.#ast.orderBy ?? []), [field as string, direction]],
-    });
+    return newQueryWithAST(
+      this.#delegate,
+      this.#schema,
+      {
+        ...this.#ast,
+        orderBy: [...(this.#ast.orderBy ?? []), [field as string, direction]],
+      },
+      this.#format,
+    );
   }
 }
 

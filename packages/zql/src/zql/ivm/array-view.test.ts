@@ -1,12 +1,13 @@
 import {deepClone} from 'shared/src/deep-clone.js';
 import {Immutable} from 'shared/src/immutable.js';
 import {expect, test} from 'vitest';
-import {ArrayView, EntryList} from './array-view.js';
+import {ArrayView, View} from './array-view.js';
 import {Change} from './change.js';
 import {Join} from './join.js';
 import {MemorySource} from './memory-source.js';
 import {MemoryStorage} from './memory-storage.js';
 import {Schema} from './schema.js';
+import {Take} from './take.js';
 
 test('basics', () => {
   const ms = new MemorySource(
@@ -17,11 +18,17 @@ test('basics', () => {
   ms.push({row: {a: 1, b: 'a'}, type: 'add'});
   ms.push({row: {a: 2, b: 'b'}, type: 'add'});
 
-  const view = new ArrayView(ms.connect([['b', 'asc'], ['a', 'asc']]));
+  const view = new ArrayView(
+    ms.connect([
+      ['b', 'asc'],
+      ['a', 'asc'],
+    ]),
+    ['multiple', {}],
+  );
 
   let callCount = 0;
   let data: unknown[] = [];
-  const listener = (d: Immutable<EntryList>) => {
+  const listener = (d: Immutable<View>) => {
     ++callCount;
     data = deepClone(d) as unknown[];
   };
@@ -67,6 +74,53 @@ test('basics', () => {
   expect(data).toEqual([{a: 3, b: 'c'}]);
 });
 
+test('single-format', () => {
+  const ms = new MemorySource(
+    'table',
+    {a: {type: 'number'}, b: {type: 'string'}},
+    ['a'],
+  );
+  ms.push({row: {a: 1, b: 'a'}, type: 'add'});
+
+  const view = new ArrayView(
+    ms.connect([
+      ['b', 'asc'],
+      ['a', 'asc'],
+    ]),
+    ['single', {}],
+  );
+
+  let callCount = 0;
+  let data: unknown[] = [];
+  const listener = (d: Immutable<View>) => {
+    ++callCount;
+    data = deepClone(d) as unknown[];
+  };
+  const unlisten = view.addListener(listener);
+
+  view.hydrate();
+  expect(data).toEqual({a: 1, b: 'a'});
+  expect(callCount).toBe(1);
+
+  // trying to add another element should be an error
+  // pipeline should have been configured with a limit of one
+  expect(() => ms.push({row: {a: 2, b: 'b'}, type: 'add'})).toThrow(
+    'single output already exists',
+  );
+
+  ms.push({row: {a: 1, b: 'a'}, type: 'remove'});
+
+  // no call until flush
+  expect(data).toEqual({a: 1, b: 'a'});
+  expect(callCount).toBe(1);
+  view.flush();
+
+  expect(data).toEqual(undefined);
+  expect(callCount).toBe(2);
+
+  unlisten();
+});
+
 test('tree', () => {
   const ms = new MemorySource(
     'table',
@@ -91,8 +145,14 @@ test('tree', () => {
   });
 
   const join = new Join({
-    parent: ms.connect([['name', 'asc'], ['id', 'asc']]),
-    child: ms.connect([['name', 'desc'], ['id', 'desc']]),
+    parent: ms.connect([
+      ['name', 'asc'],
+      ['id', 'asc'],
+    ]),
+    child: ms.connect([
+      ['name', 'desc'],
+      ['id', 'desc'],
+    ]),
     storage: new MemoryStorage(),
     parentKey: 'childID',
     childKey: 'id',
@@ -100,9 +160,9 @@ test('tree', () => {
     hidden: false,
   });
 
-  const view = new ArrayView(join);
+  const view = new ArrayView(join, ['multiple', {children: ['multiple', {}]}]);
   let data: unknown[] = [];
-  const listener = (d: Immutable<EntryList>) => {
+  const listener = (d: Immutable<View>) => {
     data = deepClone(d) as unknown[];
   };
   view.addListener(listener);
@@ -330,7 +390,86 @@ test('tree', () => {
   ]);
 });
 
-test('collapse hidden relationships', () => {
+test('tree-single', () => {
+  const ms = new MemorySource(
+    'table',
+    {id: {type: 'number'}, name: {type: 'string'}},
+    ['id'],
+  );
+  ms.push({
+    type: 'add',
+    row: {id: 1, name: 'foo', childID: 2},
+  });
+  ms.push({
+    type: 'add',
+    row: {id: 2, name: 'foobar', childID: null},
+  });
+
+  const take = new Take(
+    ms.connect([
+      ['name', 'asc'],
+      ['id', 'asc'],
+    ]),
+    new MemoryStorage(),
+    1,
+  );
+
+  const join = new Join({
+    parent: take,
+    child: ms.connect([
+      ['name', 'desc'],
+      ['id', 'desc'],
+    ]),
+    storage: new MemoryStorage(),
+    parentKey: 'childID',
+    childKey: 'id',
+    relationshipName: 'child',
+    hidden: false,
+  });
+
+  const view = new ArrayView(join, ['single', {child: ['single', {}]}]);
+  let data: unknown[] = [];
+  const listener = (d: Immutable<View>) => {
+    data = deepClone(d) as unknown[];
+  };
+  view.addListener(listener);
+
+  view.hydrate();
+  expect(data).toEqual({
+    id: 1,
+    name: 'foo',
+    childID: 2,
+    child: {
+      id: 2,
+      name: 'foobar',
+      childID: null,
+    },
+  });
+
+  // remove the child
+  ms.push({
+    type: 'remove',
+    row: {id: 2, name: 'foobar', childID: null},
+  });
+  view.flush();
+
+  expect(data).toEqual({
+    id: 1,
+    name: 'foo',
+    childID: 2,
+    child: undefined,
+  });
+
+  // remove the parent
+  ms.push({
+    type: 'remove',
+    row: {id: 1, name: 'foo', childID: 2},
+  });
+  view.flush();
+  expect(data).toEqual(undefined);
+});
+
+test('collapse', () => {
   const schema: Schema = {
     tableName: 'issue',
     primaryKey: ['id'],
@@ -388,7 +527,7 @@ test('collapse hidden relationships', () => {
     },
   };
 
-  const view = new ArrayView(input);
+  const view = new ArrayView(input, ['multiple', {labels: ['multiple', {}]}]);
   let data: unknown[] = [];
   view.addListener(d => {
     data = deepClone(d) as unknown[];
@@ -504,6 +643,118 @@ test('collapse hidden relationships', () => {
           name: 'label2',
         },
       ],
+      name: 'issue',
+    },
+  ]);
+});
+
+test('collapse-single', () => {
+  const schema: Schema = {
+    tableName: 'issue',
+    primaryKey: ['id'],
+    columns: {
+      id: {type: 'number'},
+      name: {type: 'string'},
+    },
+    sort: [['id', 'asc']],
+    isHidden: false,
+    compareRows: (r1, r2) => (r1.id as number) - (r2.id as number),
+    relationships: {
+      labels: {
+        tableName: 'issueLabel',
+        primaryKey: ['id'],
+        sort: [['id', 'asc']],
+        columns: {
+          id: {type: 'number'},
+          issueId: {type: 'number'},
+          labelId: {type: 'number'},
+        },
+        isHidden: true,
+        compareRows: (r1, r2) => (r1.id as number) - (r2.id as number),
+        relationships: {
+          labels: {
+            tableName: 'label',
+            primaryKey: ['id'],
+            columns: {
+              id: {type: 'number'},
+              name: {type: 'string'},
+            },
+            isHidden: false,
+            sort: [['id', 'asc']],
+            compareRows: (r1, r2) => (r1.id as number) - (r2.id as number),
+            relationships: {},
+          },
+        },
+      },
+    },
+  };
+
+  const input = {
+    cleanup() {
+      throw new Error('not implemented');
+    },
+    fetch() {
+      throw new Error('not implemented');
+    },
+    destroy() {},
+    getSchema() {
+      return schema;
+    },
+    setOutput() {},
+    push(change: Change) {
+      view.push(change);
+    },
+  };
+
+  const view = new ArrayView(input, ['multiple', {labels: ['single', {}]}]);
+  let data: unknown[] = [];
+  view.addListener(d => {
+    data = deepClone(d) as unknown[];
+  });
+
+  const changeSansType = {
+    node: {
+      row: {
+        id: 1,
+        name: 'issue',
+      },
+      relationships: {
+        labels: [
+          {
+            row: {
+              id: 1,
+              issueId: 1,
+              labelId: 1,
+            },
+            relationships: {
+              labels: [
+                {
+                  row: {
+                    id: 1,
+                    name: 'label',
+                  },
+                  relationships: {},
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  } as const;
+  view.push({
+    type: 'add',
+    ...changeSansType,
+  });
+  view.flush();
+
+  expect(data).toEqual([
+    {
+      id: 1,
+      labels: {
+        id: 1,
+        name: 'label',
+      },
       name: 'issue',
     },
   ]);
