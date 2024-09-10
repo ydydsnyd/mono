@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1725441928514,
+  "lastUpdate": 1725993453361,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -48843,6 +48843,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.mjs.br (Brotli compressed)",
             "value": 55253,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 117003,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32563,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bfb246b96a8f3225c714645eb2ac5b902eecc684",
+          "message": "chore(zero-cache): review feedback on https://github.com/rocicorp/mono/pull/2337 (#2345)",
+          "timestamp": "2024-09-10T11:34:57-07:00",
+          "tree_id": "310faf5980db5e722328af10e5a2c0ef588a6a04",
+          "url": "https://github.com/rocicorp/mono/commit/bfb246b96a8f3225c714645eb2ac5b902eecc684"
+        },
+        "date": 1725993436161,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 317304,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55261,
             "unit": "bytes"
           },
           {
