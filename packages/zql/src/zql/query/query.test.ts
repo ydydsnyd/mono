@@ -190,6 +190,24 @@ describe('types', () => {
     >();
   });
 
+  test('sub', () => {
+    const query = mockQuery as unknown as Query<TestSchemaWithRelationships>;
+
+    const q = query.sub('foo', r => query.where('a', '=', r.a));
+    const {data} = q.materialize();
+
+    expectTypeOf(data).toMatchTypeOf<
+      Array<{
+        s: string;
+        a: string;
+        b: boolean;
+        foo: Array<{s: string; a: string; b: boolean}>;
+      }>
+    >();
+
+    void q;
+  });
+
   test('where', () => {
     const query = mockQuery as unknown as Query<TestSchema>;
 

@@ -52,13 +52,17 @@ type SchemaValueToTSType<T extends SchemaValue> =
 export type GetFieldTypeNoNullOrUndefined<
   TSchema extends Schema,
   TColumn extends keyof TSchema['columns'],
+> = Exclude<SchemaValueToTSType<TSchema['columns'][TColumn]>, null | undefined>;
+
+export type GetWhereFieldType<
+  TSchema extends Schema,
+  TColumn extends keyof TSchema['columns'],
   TOperator extends Operator,
 > = TOperator extends 'IN' | 'NOT IN'
-  ? Exclude<
-      SchemaValueToTSType<TSchema['columns'][TColumn]>,
-      null | undefined
-    >[]
-  : Exclude<SchemaValueToTSType<TSchema['columns'][TColumn]>, null | undefined>;
+  ? GetFieldTypeNoNullOrUndefined<TSchema, TColumn>[]
+  :
+      | GetFieldTypeNoNullOrUndefined<TSchema, TColumn>
+      | ColumnReference<TSchema['columns'][TColumn]>;
 
 export type SchemaToRow<T extends Schema> = {
   [K in keyof T['columns']]: SchemaValueToTSType<T['columns'][K]>;
@@ -72,7 +76,7 @@ export type QueryReturnType<T extends Query<Schema>> = T extends Query<
   : never;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type QueryRowType<T extends Query<any, any, any>> =
+export type QueryRowType<T extends Query<any, any>> =
   QueryReturnType<T>[number];
 
 /**
@@ -102,37 +106,30 @@ export type AddSelections<
     : {};
 };
 
-/**
- * Just like `AddSelections` but adds a subselect
- * to the return type (TReturn).
- */
+// Adds TSubquery to TReturn under the alias TAs.
 export type AddSubselect<
   TSubquery extends Query<Schema>,
   TReturn extends Array<QueryResultRow>,
+  TAs extends string,
 > = {
   row: TReturn extends Array<infer TRow extends QueryResultRow>
     ? TRow['row']
     : {};
   related: TReturn extends Array<infer TRow extends QueryResultRow>
-    ? PickSubselect<TSubquery> & TRow['related']
-    : PickSubselect<TSubquery>;
+    ? {
+        [K in TAs]: InferSubreturn<TSubquery>;
+      } & TRow['related']
+    : {
+        [K in TAs]: InferSubreturn<TSubquery>;
+      };
 };
 
-/**
- * Subselects have aliases which is how they're inserted
- * into the tree of values. This function takes a subquery
- * and infers its alias to be used in the return type.
- *
- * `sub(query => query.select('foo').as('bar'))` would
- * return `{bar: {foo: string}}`.
- */
-export type PickSubselect<TSubquery extends Query<Schema>> = {
-  [K in TSubquery extends Query<Schema, Array<QueryResultRow>, infer TAs>
-    ? TAs
-    : never]: TSubquery extends Query<Schema, infer TSubreturn>
-    ? TSubreturn
-    : EmptyQueryResultRow;
-};
+type InferSubreturn<TSubquery> = TSubquery extends Query<
+  Schema,
+  infer TSubreturn
+>
+  ? TSubreturn
+  : EmptyQueryResultRow;
 
 /**
  * The result of a ZQL query.
@@ -168,18 +165,29 @@ export type DefaultQueryResultRow<TSchema extends Schema> = {
   related: {};
 };
 
+export type RowReference<TSchema extends Schema> = {
+  [K in keyof TSchema['columns']]: ColumnReference<TSchema['columns'][K]>;
+};
+
+export class ColumnReference<T> {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  #unused: T | undefined = undefined;
+  constructor(
+    readonly query: unknown,
+    readonly column: string,
+  ) {}
+}
+
 export interface Query<
   TSchema extends Schema,
   TReturn extends Array<QueryResultRow> = Array<DefaultQueryResultRow<TSchema>>,
-  TAs extends string = string,
 > {
   readonly ast: AST;
 
   select<TFields extends Selector<TSchema>[]>(
     ...x: TFields
-  ): Query<TSchema, Array<AddSelections<TSchema, TFields, TReturn>>, TAs>;
-
-  as<TAs2 extends string>(as: TAs2): Query<TSchema, TReturn, TAs2>;
+  ): Query<TSchema, Array<AddSelections<TSchema, TFields, TReturn>>>;
 
   related<TRelationship extends keyof TSchema['relationships']>(
     relationship: TRelationship,
@@ -193,18 +201,17 @@ export interface Query<
             DefaultQueryResultRow<
               PullSchemaForRelationship<TSchema, TRelationship>
             >
-          >,
-          TRelationship & string
+          >
         >,
-        TReturn
+        TReturn,
+        TRelationship & string
       >
-    >,
-    TAs
+    >
   >;
   related<
     TRelationship extends keyof TSchema['relationships'],
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    TSub extends Query<any, any, any>,
+    TSub extends Query<any, any>,
   >(
     relationship: TRelationship,
     cb: (
@@ -214,29 +221,37 @@ export interface Query<
           DefaultQueryResultRow<
             PullSchemaForRelationship<TSchema, TRelationship>
           >
-        >,
-        TRelationship & string
+        >
       >,
     ) => TSub,
-  ): Query<TSchema, Array<AddSubselect<TSub, TReturn>>, TAs>;
+  ): Query<TSchema, Array<AddSubselect<TSub, TReturn, TRelationship & string>>>;
+
+  sub<
+    TRelationship extends string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    TSub extends Query<any, any>,
+  >(
+    relationship: TRelationship,
+    cb: (parent: RowReference<TSchema>) => TSub,
+  ): Query<TSchema, Array<AddSubselect<TSub, TReturn, TRelationship>>>;
 
   where<TSelector extends Selector<TSchema>>(
     field: TSelector,
     op: Operator,
-    value: GetFieldTypeNoNullOrUndefined<TSchema, TSelector, Operator>,
-  ): Query<TSchema, TReturn, TAs>;
+    value: GetWhereFieldType<TSchema, TSelector, Operator>,
+  ): Query<TSchema, TReturn>;
 
   start(
     row: Partial<SchemaToRow<TSchema>>,
     opts?: {inclusive: boolean} | undefined,
-  ): Query<TSchema, TReturn, TAs>;
+  ): Query<TSchema, TReturn>;
 
-  limit(limit: number): Query<TSchema, TReturn, TAs>;
+  limit(limit: number): Query<TSchema, TReturn>;
 
   orderBy<TSelector extends Selector<TSchema>>(
     field: TSelector,
     direction: 'asc' | 'desc',
-  ): Query<TSchema, TReturn, TAs>;
+  ): Query<TSchema, TReturn>;
 
   materialize(): TypedView<Smash<TReturn>>;
   preload(): {

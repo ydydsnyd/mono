@@ -13,7 +13,7 @@ import {
   revisionSchema,
   userSchema,
 } from './test/testSchemas.js';
-import { AST } from '../ast/ast.js';
+import {AST} from '../ast/ast.js';
 
 export class QueryDelegateImpl implements QueryDelegate {
   #sources: Record<string, Source> = makeSources();
@@ -33,8 +33,8 @@ export class QueryDelegateImpl implements QueryDelegate {
     }
   }
   addServerQuery(ast: AST): () => void {
-      this.addedServerQueries.push(ast);
-      return () => {};
+    this.addedServerQueries.push(ast);
+    return () => {};
   }
   getSource(name: string): Source {
     return this.#sources[name];
@@ -410,6 +410,158 @@ describe('joins and filters', () => {
     expect(doubleFilterRows).toEqual([]);
     // has results since we changed closed to true in the mutation
     expect(doubleFilterWithNoResultsRows.map(r => r.id)).toEqual(['0001']);
+  });
+
+  test('sub', () => {
+    const queryDelegate = new QueryDelegateImpl();
+    addData(queryDelegate);
+
+    const issueQuery = newQuery(queryDelegate, issueSchema)
+      .sub('labels', parent =>
+        newQuery(queryDelegate, issueLabelSchema)
+          .where('issueId', '=', parent.id)
+          .sub('label', parent =>
+            newQuery(queryDelegate, labelSchema)
+              .where('id', '=', parent.labelId)
+              .select('name'),
+          ),
+      )
+      .sub('owner', parent =>
+        newQuery(queryDelegate, userSchema).where('id', '=', parent.ownerId),
+      )
+      .sub('comments', parent =>
+        newQuery(queryDelegate, commentSchema).where('issueId', '=', parent.id),
+      );
+
+    const view = issueQuery.materialize();
+    view.hydrate();
+
+    let rows: unknown[] = [];
+    view.addListener(data => {
+      rows = deepClone(data) as unknown[];
+    });
+
+    expect(rows).toEqual([
+      {
+        closed: false,
+        comments: [
+          {
+            authorId: '0001',
+            body: 'comment 1',
+            id: '0001',
+            issueId: '0001',
+          },
+          {
+            authorId: '0002',
+            body: 'comment 2',
+            id: '0002',
+            issueId: '0001',
+          },
+        ],
+        description: 'description 1',
+        id: '0001',
+        labels: [
+          {
+            issueId: '0001',
+            labelId: '0001',
+            label: [
+              {
+                id: '0001',
+                name: 'label 1',
+              },
+            ],
+          },
+        ],
+        owner: [
+          {
+            id: '0001',
+            name: 'Alice',
+          },
+        ],
+        ownerId: '0001',
+        title: 'issue 1',
+      },
+      {
+        closed: false,
+        comments: [],
+        description: 'description 2',
+        id: '0002',
+        labels: [],
+        owner: [
+          {
+            id: '0002',
+            name: 'Bob',
+          },
+        ],
+        ownerId: '0002',
+        title: 'issue 2',
+      },
+    ]);
+
+    queryDelegate.getSource('issue').push({
+      type: 'remove',
+      row: {
+        id: '0001',
+        title: 'issue 1',
+        description: 'description 1',
+        closed: false,
+        ownerId: '0001',
+      },
+    });
+    queryDelegate.getSource('issue').push({
+      type: 'remove',
+      row: {
+        id: '0002',
+        title: 'issue 2',
+        description: 'description 2',
+        closed: false,
+        ownerId: '0002',
+      },
+    });
+    queryDelegate.commit();
+
+    expect(rows).toEqual([]);
+  });
+
+  test('sub-bad-calls', () => {
+    const queryDelegate = new QueryDelegateImpl();
+    addData(queryDelegate);
+
+    expect(() => {
+      newQuery(queryDelegate, issueSchema).sub('labels', parent =>
+        newQuery(queryDelegate, issueLabelSchema)
+          .where('issueId', '=', parent.id)
+          .where('labelId', '=', parent.id),
+      );
+    }).throws('Subqueries only support one reference');
+
+    expect(() => {
+      newQuery(queryDelegate, issueSchema).sub('labels', parent =>
+        newQuery(queryDelegate, issueLabelSchema).where(
+          'issueId',
+          '!=',
+          parent.id,
+        ),
+      );
+    }).throws('Only equality is supported for subqueries correlations');
+
+    expect(() => {
+      newQuery(queryDelegate, issueSchema).sub('labels', () =>
+        newQuery(queryDelegate, issueLabelSchema),
+      );
+    }).throws(
+      "subqueries must include a correlation with parent query by using `where('field', '=', parentQuery.ref('field'))`",
+    );
+
+    expect(() => {
+      newQuery(queryDelegate, issueSchema).sub('labels', p1 =>
+        newQuery(queryDelegate, issueLabelSchema).sub('label', () =>
+          newQuery(queryDelegate, labelSchema).where('id', '=', p1.id),
+        ),
+      );
+    }).throws(
+      'Invalid reference in subquery. Subqueries can only reference fields from immediate parent query.',
+    );
   });
 
   test('join', () => {
