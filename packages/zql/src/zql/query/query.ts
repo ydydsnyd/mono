@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import {AST} from '../ast/ast.js';
-import {Row} from '../ivm/data.js';
+import {Row, Value} from '../ivm/data.js';
 import {SchemaValue} from '../ivm/schema.js';
 import {Source} from '../ivm/source.js';
 import {PullSchemaForRelationship, Schema} from './schema.js';
@@ -54,6 +54,8 @@ export type GetFieldTypeNoNullOrUndefined<
   TColumn extends keyof TSchema['columns'],
 > = Exclude<SchemaValueToTSType<TSchema['columns'][TColumn]>, null | undefined>;
 
+export type Param<T extends NonNullable<Value>> = T | FieldReference<T>;
+
 export type GetWhereFieldType<
   TSchema extends Schema,
   TColumn extends keyof TSchema['columns'],
@@ -62,7 +64,7 @@ export type GetWhereFieldType<
   ? GetFieldTypeNoNullOrUndefined<TSchema, TColumn>[]
   :
       | GetFieldTypeNoNullOrUndefined<TSchema, TColumn>
-      | ColumnReference<TSchema['columns'][TColumn]>;
+      | FieldReference<SchemaValueToTSType<TSchema['columns'][TColumn]>>;
 
 export type SchemaToRow<T extends Schema> = {
   [K in keyof T['columns']]: SchemaValueToTSType<T['columns'][K]>;
@@ -166,10 +168,12 @@ export type DefaultQueryResultRow<TSchema extends Schema> = {
 };
 
 export type RowReference<TSchema extends Schema> = {
-  [K in keyof TSchema['columns']]: ColumnReference<TSchema['columns'][K]>;
+  [K in keyof TSchema['columns']]: FieldReference<
+    SchemaValueToTSType<TSchema['columns'][K]>
+  >;
 };
 
-export class ColumnReference<T> {
+export class FieldReference<T> {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
   #unused: T | undefined = undefined;

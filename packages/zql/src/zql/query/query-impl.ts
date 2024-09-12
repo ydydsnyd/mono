@@ -10,7 +10,7 @@ import {
   Operator,
   Query,
   QueryResultRow,
-  ColumnReference,
+  FieldReference,
   SchemaToRow,
   Selector,
   Smash,
@@ -53,7 +53,7 @@ export interface QueryDelegate extends BuilderDelegate {
 }
 
 type Correlation = {
-  parentField: ColumnReference<unknown>;
+  parentField: FieldReference<unknown>;
   childField: string;
 };
 
@@ -294,7 +294,7 @@ class QueryImpl<
     const rowReference = Object.fromEntries(
       Object.keys(this.#schema.columns).map(k => [
         k,
-        new ColumnReference(this, k),
+        new FieldReference(this, k),
       ]),
     );
 
@@ -343,7 +343,7 @@ class QueryImpl<
     op: Operator,
     value: GetWhereFieldType<TSchema, TSelector, Operator>,
   ): Query<TSchema, TReturn> {
-    if (value instanceof ColumnReference) {
+    if (value instanceof FieldReference) {
       if (this.#correlation) {
         throw new Error('Subqueries only support one reference');
       }

@@ -14,6 +14,7 @@ import {
   userSchema,
 } from './test/testSchemas.js';
 import {AST} from '../ast/ast.js';
+import {Param} from './query.js';
 
 export class QueryDelegateImpl implements QueryDelegate {
   #sources: Record<string, Source> = makeSources();
@@ -562,6 +563,59 @@ describe('joins and filters', () => {
     }).throws(
       'Invalid reference in subquery. Subqueries can only reference fields from immediate parent query.',
     );
+  });
+
+  test('parameterized-subquery', () => {
+    const queryDelegate = new QueryDelegateImpl();
+    addData(queryDelegate);
+
+    const commentsQuery = (issueID: Param<string>) =>
+      newQuery(queryDelegate, commentSchema).where('issueId', '=', issueID);
+
+    const issuesWithComments = newQuery(queryDelegate, issueSchema).sub(
+      'comments',
+      issue => commentsQuery(issue.id),
+    );
+
+    const view = issuesWithComments.materialize();
+    view.hydrate();
+
+    let rows: unknown[] = [];
+    view.addListener(data => {
+      rows = deepClone(data) as unknown[];
+    });
+
+    expect(rows).toEqual([
+      {
+        closed: false,
+        comments: [
+          {
+            authorId: '0001',
+            body: 'comment 1',
+            id: '0001',
+            issueId: '0001',
+          },
+          {
+            authorId: '0002',
+            body: 'comment 2',
+            id: '0002',
+            issueId: '0001',
+          },
+        ],
+        description: 'description 1',
+        id: '0001',
+        ownerId: '0001',
+        title: 'issue 1',
+      },
+      {
+        closed: false,
+        comments: [],
+        description: 'description 2',
+        id: '0002',
+        ownerId: '0002',
+        title: 'issue 2',
+      },
+    ]);
   });
 
   test('join', () => {
