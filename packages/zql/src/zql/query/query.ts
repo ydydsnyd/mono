@@ -17,7 +17,7 @@ export type Context = {
   createStorage: () => Storage;
 };
 
-export type Smash<T extends Array<QueryResultRow>> = Array<
+export type Smash<T> = Array<
   T extends Array<infer TRow extends QueryResultRow>
     ? Collapse<
         TRow['row'] & {
@@ -92,7 +92,7 @@ export type QueryRowType<T extends Query<any, any>> =
 export type AddSelections<
   TSchema extends Schema,
   TSelections extends Selector<TSchema>[],
-  TReturn extends Array<QueryResultRow>,
+  TReturn,
 > = {
   row: {
     [K in TSelections[number]]: SchemaValueToTSType<TSchema['columns'][K]>;
@@ -105,7 +105,7 @@ export type AddSelections<
 // Adds TSubquery to TReturn under the alias TAs.
 export type AddSubselect<
   TSubquery extends Query<Schema>,
-  TReturn extends Array<QueryResultRow>,
+  TReturn,
   TAs extends string,
 > = {
   row: TReturn extends Array<infer TRow extends QueryResultRow>
@@ -163,7 +163,7 @@ export type DefaultQueryResultRow<TSchema extends Schema> = {
 
 export interface Query<
   TSchema extends Schema,
-  TReturn extends Array<QueryResultRow> = Array<DefaultQueryResultRow<TSchema>>,
+  TReturn = Array<DefaultQueryResultRow<TSchema>>,
 > {
   readonly ast: AST;
 
