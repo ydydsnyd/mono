@@ -17,17 +17,25 @@ export type Context = {
   createStorage: () => Storage;
 };
 
-export type Smash<T> = Array<
-  T extends Array<infer TRow extends QueryResultRow>
-    ? Collapse<
+export type Smash<T> = T extends Array<infer TRow extends QueryResultRow>
+  ? Array<
+      Collapse<
         TRow['row'] & {
           [K in keyof TRow['related']]: TRow['related'][K] extends Array<QueryResultRow>
             ? Smash<TRow['related'][K]>
             : undefined;
         }
       >
-    : never
->;
+    >
+  : T extends QueryResultRow
+  ? Collapse<
+      T['row'] & {
+        [K in keyof T['related']]: T['related'][K] extends Array<QueryResultRow>
+          ? Smash<T['related'][K]>
+          : undefined;
+      }
+    >
+  : never;
 
 type Collapse<T> = T extends object ? {[K in keyof T]: T[K]} : T;
 
@@ -166,6 +174,8 @@ export interface Query<
   TReturn = Array<DefaultQueryResultRow<TSchema>>,
 > {
   readonly ast: AST;
+
+  one(): Query<TSchema, TReturn extends Array<infer TElem> ? TElem : TReturn>;
 
   select<TFields extends Selector<TSchema>[]>(
     ...x: TFields
