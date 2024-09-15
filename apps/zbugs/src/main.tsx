@@ -4,6 +4,7 @@ import {Zero} from 'zero-client';
 import {ZeroProvider} from './hooks/use-zero.jsx';
 import './index.css';
 import {Schema, schema} from './schema.js';
+import {StrictMode} from 'react';
 
 const z = new Zero({
   logLevel: 'info',
@@ -21,15 +22,10 @@ v.hydrate();
 // Exposed so we can mess around in the terminal and add/remove issues
 (window as {z?: Zero<Schema>}).z = z;
 
-function Home({zero}: {zero: Zero<Schema>}) {
-  return (
-    <div>
-      <ZeroProvider zero={zero}>
-        <div>hi</div>
-      </ZeroProvider>
-    </div>
-  );
-}
-
-const root = must(document.getElementById('root'));
-createRoot(root).render(<Home zero={z} />);
+createRoot(must(document.getElementById('root'))).render(
+  <StrictMode>
+    <ZeroProvider zero={z}>
+      <div>hi</div>
+    </ZeroProvider>
+  </StrictMode>,
+);
