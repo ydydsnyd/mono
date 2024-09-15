@@ -2,9 +2,9 @@ import {Ordering, SimpleCondition} from '../ast/ast.js';
 import {Row} from './data.js';
 import {Input} from './operator.js';
 
-declare const TESTING: boolean;
+//declare const TESTING: boolean
 
-let editChangesEnabledState = TESTING;
+let editChangesEnabledState = false;
 
 export function setEditChangesEnabled(b: boolean): void {
   editChangesEnabledState = b;
