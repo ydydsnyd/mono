@@ -11,7 +11,7 @@
     "check-format": "prettier --check './**/*.{js,jsx,json,ts,tsx,html,css,md}'",
     "lint": "eslint --ext .ts,.tsx,.js,.jsx src/",
     "preview": "vite preview",
-    "start-zero-cache": "cd ../../packages/zero-cache && npm run start -- dotenv_config_path=../../apps/zeppliear/.env"
+    "zero": "cd ../../packages/zero-cache && npm run start -- dotenv_config_path=../../apps/zeppliear/.env"
   },
   "dependencies": {
     "@tailwindcss/forms": "^0.5.0",
