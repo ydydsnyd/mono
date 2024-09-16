@@ -648,7 +648,7 @@ suite('take with no partition', () => {
             bound: {
               created: 400,
               id: 'i4',
-              text: 'd2',
+              text: 'd',
             },
             size: 4,
           },
@@ -782,7 +782,7 @@ suite('take with no partition', () => {
             bound: {
               created: 300,
               id: 'i3',
-              text: 'c2',
+              text: 'c',
             },
             size: 3,
           },
@@ -1044,6 +1044,60 @@ suite('take with no partition', () => {
           },
         ],
       });
+    });
+
+    takeTest({
+      ...base,
+      name: 'at limit 1',
+      limit: 1,
+      pushes: [
+        {
+          type: 'edit',
+          oldRow: {id: 'i1', created: 100, text: 'a'},
+          row: {id: 'i1', created: 50, text: 'a2'},
+        },
+      ],
+      expectedMessages: [
+        [
+          'takeSnitch',
+          'push',
+          {
+            type: 'edit',
+            oldRow: {id: 'i1', created: 100, text: 'a'},
+            row: {id: 'i1', created: 50, text: 'a2'},
+          },
+        ],
+      ],
+      expectedStorage: {
+        '["take",null]': {
+          bound: {
+            created: 50,
+            id: 'i1',
+            text: 'a2',
+          },
+          size: 1,
+        },
+        'maxBound': {
+          created: 100,
+          id: 'i1',
+          text: 'a',
+        },
+      },
+      expectedOutput: [
+        {
+          oldRow: {
+            created: 100,
+            id: 'i1',
+            text: 'a',
+          },
+          row: {
+            created: 50,
+            id: 'i1',
+            text: 'a2',
+          },
+          type: 'edit',
+        },
+      ],
     });
   });
 });
@@ -1515,7 +1569,7 @@ suite('take with partition', () => {
               created: 500,
               id: 'c5',
               issueID: 'i2',
-              text: 'e2',
+              text: 'e',
             },
             size: 2,
           },
@@ -1673,7 +1727,7 @@ suite('take with partition', () => {
               created: 300,
               id: 'c3',
               issueID: 'i1',
-              text: 'c2',
+              text: 'c',
             },
             size: 3,
           },
