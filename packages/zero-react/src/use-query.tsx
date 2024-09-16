@@ -12,7 +12,9 @@ export function useQuery<
   dependencies: readonly unknown[] = [],
   enabled = true,
 ): Smash<TReturn> {
-  const [snapshot, setSnapshot] = useState<Smash<TReturn>>([]);
+  const [snapshot, setSnapshot] = useState<Smash<TReturn>>(
+    [] as unknown as Smash<TReturn>,
+  );
   const [, setView] = useState<TypedView<Smash<TReturn>> | undefined>(
     undefined,
   );
@@ -36,4 +38,11 @@ export function useQuery<
   }, dependencies);
 
   return snapshot;
+}
+
+export function useQueryAutoDeps<
+  TSchema extends Schema,
+  TReturn extends Array<QueryResultRow>,
+>(q: Query<TSchema, TReturn> | undefined, enabled = true): Smash<TReturn> {
+  return useQuery(q, [JSON.stringify(q?.ast)], enabled);
 }
