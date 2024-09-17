@@ -3,21 +3,30 @@ import {makeRandomStrings} from '../data.js';
 import type {Benchmark} from '../perf.js';
 
 export function benchmarks(): Array<Benchmark> {
-  return [json(), xxhash32(), xxhash64()];
+  return [
+    json({stringLength: 100}),
+    xxhash32({stringLength: 100}),
+    xxhash64({stringLength: 100}),
+    json({stringLength: 1000}),
+    xxhash32({stringLength: 1000}),
+    xxhash64({stringLength: 1000}),
+    json({stringLength: 10000}),
+    xxhash32({stringLength: 10000}),
+    xxhash64({stringLength: 10000}),
+  ];
 }
 
 const NUM_STRINGS = 1000;
-const STRING_LENGTH = 1_000;
 
-function xxhash32(): Benchmark {
+function xxhash32({stringLength}: {stringLength: number}): Benchmark {
   let randomStrings: string[];
   let results = 0;
 
   return {
-    name: `h32 from string`,
+    name: `h32 from string (${stringLength})`,
     group: 'xxhash',
     setup() {
-      randomStrings = makeRandomStrings(NUM_STRINGS, STRING_LENGTH);
+      randomStrings = makeRandomStrings(NUM_STRINGS, stringLength);
     },
     run() {
       for (let i = 0; i < randomStrings.length; i++) {
@@ -29,15 +38,15 @@ function xxhash32(): Benchmark {
   };
 }
 
-function xxhash64(): Benchmark {
+function xxhash64({stringLength}: {stringLength: number}): Benchmark {
   let randomStrings: string[];
   let results = 0n;
 
   return {
-    name: `h64 from string`,
+    name: `h64 from string (${stringLength})`,
     group: 'xxhash',
     setup() {
-      randomStrings = makeRandomStrings(NUM_STRINGS, STRING_LENGTH);
+      randomStrings = makeRandomStrings(NUM_STRINGS, stringLength);
     },
     run() {
       for (let i = 0; i < randomStrings.length; i++) {
@@ -49,15 +58,15 @@ function xxhash64(): Benchmark {
   };
 }
 
-function json(): Benchmark {
+function json({stringLength}: {stringLength: number}): Benchmark {
   let randomStrings: string[];
   let results = 0;
 
   return {
-    name: `json from string`,
+    name: `json from string (${stringLength})`,
     group: 'xxhash',
     setup() {
-      randomStrings = makeRandomStrings(NUM_STRINGS, STRING_LENGTH);
+      randomStrings = makeRandomStrings(NUM_STRINGS, stringLength);
     },
     run() {
       for (let i = 0; i < randomStrings.length; i++) {
