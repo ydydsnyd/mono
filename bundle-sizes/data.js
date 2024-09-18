@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1726179741941,
+  "lastUpdate": 1726693972630,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -48941,6 +48941,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32639,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "300d6f75ee2d683dec6f83f18bac37bc68712842",
+          "message": "fix(replicache): Remove abort listeners (#2410)\n\nThis ensures we use once in a few places but the more impactful change\r\nis to ensure we remove the event listener from the abort signal in sleep\r\nwhen sleep's setTimeout fires.",
+          "timestamp": "2024-09-18T23:09:58+02:00",
+          "tree_id": "a2a6684f318036528803b6491cfd0bf0f599f0cb",
+          "url": "https://github.com/rocicorp/mono/commit/300d6f75ee2d683dec6f83f18bac37bc68712842"
+        },
+        "date": 1726693954467,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 317872,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 55376,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 117267,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 32658,
             "unit": "bytes"
           }
         ]
