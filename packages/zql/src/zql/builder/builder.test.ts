@@ -53,11 +53,15 @@ test('source-only', () => {
     buildPipeline(
       {
         table: 'users',
-        orderBy: [['name', 'asc'],['id','asc']],
+        orderBy: [
+          ['name', 'asc'],
+          ['id', 'asc'],
+        ],
       },
       {
         getSource,
         createStorage: () => new MemoryStorage(),
+        staticQueryParameters: undefined,
       },
     ),
   );
@@ -100,6 +104,7 @@ test('filter', () => {
       {
         getSource,
         createStorage: () => new MemoryStorage(),
+        staticQueryParameters: undefined,
       },
     ),
   );
@@ -152,6 +157,7 @@ test('self-join', () => {
       {
         getSource,
         createStorage: () => new MemoryStorage(),
+        staticQueryParameters: undefined,
       },
     ),
   );
@@ -341,6 +347,7 @@ test('multi-join', () => {
       {
         getSource,
         createStorage: () => new MemoryStorage(),
+        staticQueryParameters: undefined,
       },
     ),
   );
@@ -452,6 +459,7 @@ test('join with limit', () => {
       {
         getSource,
         createStorage: () => new MemoryStorage(),
+        staticQueryParameters: undefined,
       },
     ),
   );
@@ -525,6 +533,7 @@ test('skip', () => {
       {
         getSource,
         createStorage: () => new MemoryStorage(),
+        staticQueryParameters: undefined,
       },
     ),
   );

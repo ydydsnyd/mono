@@ -17,6 +17,7 @@ export function bench() {
   const sources = new Map<string, Source>();
   const tableSpecs = new Map(listTables(db).map(spec => [spec.name, spec]));
   const host: QueryDelegate = {
+    staticQueryParameters: undefined,
     getSource: (name: string) => {
       let source = sources.get(name);
       if (source) {
