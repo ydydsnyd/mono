@@ -30,7 +30,7 @@ type Index = {
   usedBy: Set<Connection>;
 };
 
-type Connection = {
+export type Connection = {
   input: Input;
   output: Output | undefined;
   sort: Ordering;
